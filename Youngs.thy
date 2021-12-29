@@ -51,31 +51,28 @@ lemma integrable_mono_on:
 proof -
   have fborel: "f \<in> borel_measurable (lebesgue_on {a..b})"
     by (smt (verit, best) assms atLeastAtMost_borel borel_measurable_mono_on_fnc borel_measurable_subalgebra mono_restrict_space sets_completionI_sets sets_lborel space_restrict_space2 subset_eq)
-  then obtain ff where ff: "incseq ff" and simple: "\<And>i. simple_function (lebesgue_on {a..b}) (ff i)" 
-    and bdd: " (\<forall>x. bdd_above (range (\<lambda>i. ff i x)))" and nonneg: "\<forall>i x. 0 \<le> ff i x"
-    and fsup: "f = (SUP i. ff i)"
+  then obtain g where g: "incseq g" and simple: "\<And>i. simple_function (lebesgue_on {a..b}) (g i)" 
+    and bdd: " (\<forall>x. bdd_above (range (\<lambda>i. g i x)))" and nonneg: "\<forall>i x. 0 \<le> g i x"
+    and fsup: "f = (SUP i. g i)"
     using borel_measurable_implies_simple_function_sequence_real 0
     by metis
   have "f ` {a..b} \<subseteq> {f a..f b}" 
     using assms by (auto simp: mono_on_def)
-  have *: "ff i x \<le> f x" for i x
-    apply (simp add: fsup)
-    apply (rule cSup_upper)
-     apply (simp add: image_iff)
-     apply blast
-    using bdd cSUP_lessD linorder_not_less by fastforce
-  then have *: "ff i x \<le> f b" if "x \<in> {a..b}" for i x
+  have "g i x \<le> f x" for i x
+  proof -
+    have "bdd_above ((\<lambda>xa. xa x) ` range g)"
+      using bdd cSUP_lessD linorder_not_less by fastforce
+    then show ?thesis
+      by (metis SUP_apply UNIV_I bdd cSUP_upper fsup)
+  qed
+  then have gf: "g i x \<le> f b" if "x \<in> {a..b}" for i x
     by (smt (verit, best) assms(1) atLeastAtMost_iff mono_on_def that)
-
-  have "ff j \<ge> ff i" if "j\<ge>i" for j i 
-    using ff by (simp add: incseq_def that)
-  then have \<section>: "ff j x \<ge> ff i x" if "j\<ge>i"  for j i  x
-    apply (simp add: le_fun_def)
-    using that by presburger
+  have g_le: "g i x \<le> g j x" if "i\<le>j"  for i j x
+    using g by (simp add: incseq_def le_funD that)
   show "integrable (lebesgue_on {a..b}) ( f)"
-    apply (rule integrable_dominated_convergence [where s=ff and w = "\<lambda>x. f b"])
+    apply (rule integrable_dominated_convergence [where s=g and w = "\<lambda>x. f b"])
     using fborel apply blast
-    using ff
+    using g
     using borel_measurable_simple_function simple apply blast
       apply blast
      apply (simp add: fsup)
@@ -85,12 +82,12 @@ proof -
         apply (force simp add: )
        apply (smt (verit, best) bdd image_cong range_composition)
       apply clarify
-    using ff
-      apply (smt (verit, del_insts) "\<section>" eventually_sequentially)
+    using g
+      apply (smt (verit, del_insts) g_le eventually_sequentially)
      apply (metis (mono_tags) SUP_apply Sup_apply UNIV_I bdd cSUP_lessD eventuallyI)
     apply (rule Measure_Space.AE_I' [of "{}"])
      apply (auto simp: )
-    by (simp add: "*" nonneg)
+    by (simp add: gf nonneg)
 qed
 
 
