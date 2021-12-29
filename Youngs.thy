@@ -44,13 +44,15 @@ lemma strict_mono_continuous_inv':
    shows "continuous_on {f a..f b} g"
   by (metis assms compact_Icc continuous_on_inv strict_mono_image_endpoints)
 
-lemma integrable_mono_on:
+lemma integrable_mono_on_nonneg:
   fixes f :: "real \<Rightarrow> real"
-  assumes "mono_on f {a..b}" and 0: "\<And>x. 0 \<le> f x"
+  assumes mon: "mono_on f {a..b}" and 0: "\<And>x. 0 \<le> f x"
   shows "integrable (lebesgue_on {a..b}) f" 
 proof -
-  have fborel: "f \<in> borel_measurable (lebesgue_on {a..b})"
-    by (smt (verit, best) assms atLeastAtMost_borel borel_measurable_mono_on_fnc borel_measurable_subalgebra mono_restrict_space sets_completionI_sets sets_lborel space_restrict_space2 subset_eq)
+  have "space lborel = space lebesgue" "sets borel \<subseteq> sets lebesgue"
+    by force+
+  then have fborel: "f \<in> borel_measurable (lebesgue_on {a..b})"
+    by (metis mon borel_measurable_mono_on_fnc borel_measurable_subalgebra mono_restrict_space space_lborel space_restrict_space)
   then obtain g where g: "incseq g" and simple: "\<And>i. simple_function (lebesgue_on {a..b}) (g i)" 
     and bdd: " (\<forall>x. bdd_above (range (\<lambda>i. g i x)))" and nonneg: "\<forall>i x. 0 \<le> g i x"
     and fsup: "f = (SUP i. g i)"
@@ -58,41 +60,71 @@ proof -
     by metis
   have "f ` {a..b} \<subseteq> {f a..f b}" 
     using assms by (auto simp: mono_on_def)
-  have "g i x \<le> f x" for i x
+  have g_le_f: "g i x \<le> f x" for i x
   proof -
-    have "bdd_above ((\<lambda>xa. xa x) ` range g)"
+    have "bdd_above ((\<lambda>h. h x) ` range g)"
       using bdd cSUP_lessD linorder_not_less by fastforce
     then show ?thesis
       by (metis SUP_apply UNIV_I bdd cSUP_upper fsup)
   qed
-  then have gf: "g i x \<le> f b" if "x \<in> {a..b}" for i x
+  then have gfb: "g i x \<le> f b" if "x \<in> {a..b}" for i x
     by (smt (verit, best) assms(1) atLeastAtMost_iff mono_on_def that)
   have g_le: "g i x \<le> g j x" if "i\<le>j"  for i j x
     using g by (simp add: incseq_def le_funD that)
   show "integrable (lebesgue_on {a..b}) ( f)"
-    apply (rule integrable_dominated_convergence [where s=g and w = "\<lambda>x. f b"])
-    using fborel apply blast
-    using g
-    using borel_measurable_simple_function simple apply blast
-      apply blast
-     apply (simp add: fsup)
-     apply (rule eventuallyI)
-     apply (rule order_tendstoI)
-      apply (subst (asm)less_cSUP_iff)
-        apply (force simp add: )
-       apply (smt (verit, best) bdd image_cong range_composition)
-      apply clarify
-    using g
-      apply (smt (verit, del_insts) g_le eventually_sequentially)
-     apply (metis (mono_tags) SUP_apply Sup_apply UNIV_I bdd cSUP_lessD eventuallyI)
-    apply (rule Measure_Space.AE_I' [of "{}"])
-     apply (auto simp: )
-    by (simp add: gf nonneg)
+  proof (rule integrable_dominated_convergence)
+    show "f \<in> borel_measurable (lebesgue_on {a..b})"
+      using fborel by blast
+    have "\<And>x. (\<lambda>i. g i x) \<longlonglongrightarrow> (SUP h \<in> range g. h  x)"
+    proof (rule order_tendstoI)
+      show "\<forall>\<^sub>F i in sequentially. y < g i x"
+        if "y < (SUP h\<in>range g. h x)" for x y
+      proof -
+        from that obtain h where h: "h \<in> range g" "y < h x"
+          using g_le_f by (subst (asm)less_cSUP_iff) fastforce+
+        then show ?thesis
+          by (smt (verit, ccfv_SIG) eventually_sequentially g_le imageE)
+      qed
+      show "\<forall>\<^sub>F i in sequentially. g i x < y"
+        if "(SUP h\<in>range g. h x) < y" for x y
+        by (smt (verit, best) that Sup_apply g_le_f always_eventually fsup image_cong)
+    qed
+    then show "AE x in lebesgue_on {a..b}. (\<lambda>i. g i x) \<longlonglongrightarrow> f x"
+      by (simp add: fsup)
+    fix i
+    show "g i \<in> borel_measurable (lebesgue_on {a..b})"
+      using borel_measurable_simple_function simple by blast
+    show "AE x in lebesgue_on {a..b}. norm (g i x) \<le> f b"
+      by (simp add: gfb nonneg Measure_Space.AE_I' [of "{}"])
+  qed auto
+qed
+
+lemma integrable_mono_on:
+  fixes f :: "real \<Rightarrow> real"
+  assumes "mono_on f {a..b}" 
+  shows "integrable (lebesgue_on {a..b}) f" 
+proof -
+  define f' where "f' \<equiv> \<lambda>x. if x \<in> {a..b} then f x - f a else 0"
+  have "mono_on f' {a..b}"
+    by (smt (verit, best) assms f'_def mono_on_def)
+  moreover have 0: "\<And>x. 0 \<le> f' x"
+    by (smt (verit, best) assms atLeastAtMost_iff f'_def mono_on_def)
+  ultimately have "integrable (lebesgue_on {a..b}) f'"
+    using integrable_mono_on_nonneg by presburger
+  then have "integrable (lebesgue_on {a..b}) (\<lambda>x. f' x + f a)"
+    by force
+  moreover have "space lborel = space lebesgue" "sets borel \<subseteq> sets lebesgue"
+    by force+
+  then have fborel: "f \<in> borel_measurable (lebesgue_on {a..b})"
+    by (metis assms borel_measurable_mono_on_fnc borel_measurable_subalgebra mono_restrict_space space_lborel space_restrict_space)
+  ultimately show ?thesis
+    by (rule integrable_cong_AE_imp) (auto simp add: f'_def)
 qed
 
 
 
 
+(*ALL THIS APPARENTLY USELESS*)
 definition "segment \<equiv> \<lambda>n k. {real k / real n..(1 + k) / real n}"
 
 lemma segment_nonempty: "segment n k \<noteq> {}"
