@@ -54,10 +54,9 @@ proof -
   then have fborel: "f \<in> borel_measurable (lebesgue_on {a..b})"
     by (metis mon borel_measurable_mono_on_fnc borel_measurable_subalgebra mono_restrict_space space_lborel space_restrict_space)
   then obtain g where g: "incseq g" and simple: "\<And>i. simple_function (lebesgue_on {a..b}) (g i)" 
-    and bdd: " (\<forall>x. bdd_above (range (\<lambda>i. g i x)))" and nonneg: "\<forall>i x. 0 \<le> g i x"
-    and fsup: "f = (SUP i. g i)"
-    using borel_measurable_implies_simple_function_sequence_real 0
-    by metis
+                and bdd: " (\<forall>x. bdd_above (range (\<lambda>i. g i x)))" and nonneg: "\<forall>i x. 0 \<le> g i x"
+                and fsup: "f = (SUP i. g i)"
+    by (metis borel_measurable_implies_simple_function_sequence_real 0)
   have "f ` {a..b} \<subseteq> {f a..f b}" 
     using assms by (auto simp: mono_on_def)
   have g_le_f: "g i x \<le> f x" for i x
@@ -68,7 +67,7 @@ proof -
       by (metis SUP_apply UNIV_I bdd cSUP_upper fsup)
   qed
   then have gfb: "g i x \<le> f b" if "x \<in> {a..b}" for i x
-    by (smt (verit, best) assms(1) atLeastAtMost_iff mono_on_def that)
+    by (smt (verit, best) mon atLeastAtMost_iff mono_on_def that)
   have g_le: "g i x \<le> g j x" if "i\<le>j"  for i j x
     using g by (simp add: incseq_def le_funD that)
   show "integrable (lebesgue_on {a..b}) ( f)"
@@ -120,6 +119,69 @@ proof -
   ultimately show ?thesis
     by (rule integrable_cong_AE_imp) (auto simp add: f'_def)
 qed
+
+lemma integrable_on_mono_on:
+  fixes f :: "real \<Rightarrow> real"
+  assumes "mono_on f {a..b}" 
+  shows "f integrable_on {a..b}"
+  by (simp add: assms integrable_mono_on integrable_on_lebesgue_on) 
+
+
+lemma D:
+  fixes f :: "real \<Rightarrow> real"
+  assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and "0 \<le> a" "0 \<le> b" "f 0 = 0" "f a = b"
+  shows "a*b = integral {0..a} f + integral {0..b} (inv_into {0..a} f)"
+proof -
+  have "continuous_on {0..a} f"
+    using cont continuous_on_subset by fastforce
+  with sm have "continuous_on {0..b} (inv_into {0..a} f)"
+    apply (simp add: strict_mono_on_def)
+    by (metis assms(3) assms(5) assms(6) atLeastAtMost_iff strict_mono_continuous_inv strict_mono_onI)
+  have intf: "f integrable_on {0..a}"
+    using \<open>continuous_on {0..a} f\<close> integrable_continuous_real by blast
+  { fix \<epsilon> :: real
+    assume "\<epsilon> > 0"
+    with intf integrable_Cauchy [of f 0 a] 
+    obtain \<gamma> where "gauge \<gamma>"
+    and \<gamma>: "\<And>\<D>1 \<D>2. \<D>1 tagged_division_of {0..a} \<and> \<gamma> fine \<D>1 \<and>
+            \<D>2 tagged_division_of {0..a} \<and> \<gamma> fine \<D>2 \<longrightarrow>
+            norm ((\<Sum>(x,K)\<in>\<D>1. content K *\<^sub>R f x) - (\<Sum>(x,K)\<in>\<D>2. content K *\<^sub>R f x)) < \<epsilon>"
+      by auto
+    obtain \<D> where \<D>: "\<D> tagged_division_of {0..a} \<and> \<gamma> fine \<D>"
+      by (meson \<open>gauge \<gamma>\<close> fine_division_exists_real)
+    define \<D>1 where "\<D>1 \<equiv> (\<lambda>(x,K). (Inf K, K)) ` \<D>"
+    have "\<D>1 tagged_division_of {0..a}"
+      using \<D>
+      apply (auto simp: \<D>1_def tagged_division_of_def tagged_partial_division_of_def)
+      apply (metis atLeastAtMost_subset_contains_Inf atLeastatMost_empty' emptyE subset_refl)
+      apply blast
+      apply blast
+      apply blast
+      by (smt (verit, best) UnionE \<D>1_def atLeastAtMost_iff mem_Collect_eq pair_imageI)
+(*This can't work. Riemann integrability is a stronger property. The fineness condition can't be satisfied.*)
+
+    sorry
+  }
+  show ?thesis
+    sorry
+qed
+
+
+lemma D:
+  fixes f :: "real \<Rightarrow> real"
+  assumes *: "strict_mono_on f {0..a}"  "continuous_on {0..a} f"  "0 \<le> a" "0 \<le> b"
+  shows "a*b \<le> integral {0..a} f + integral {0..b} (inv_into {0..a} f)"
+  sorry
+
+  obtains f1 f2 where "\<And>x. x \<in> {0..a} \<Longrightarrow> f1 x \<le> f x \<and> f x \<le> f2 x"
+  using strict_mono_image_endpoints assms(1) assms(2) assms(3) compact_Icc continuous_on_inv 
+
+
+lemma D:
+  fixes f :: "real \<Rightarrow> real"
+  assumes *: "strict_mono_on f {0..a}"  "continuous_on {0..a} f"  "0 \<le> a"
+  obtains f1 f2 where "\<And>x. x \<in> {0..a} \<Longrightarrow> f1 x \<le> f x \<and> f x \<le> f2 x"
+  using strict_mono_image_endpoints assms(1) assms(2) assms(3) compact_Icc continuous_on_inv 
 
 
 
@@ -227,14 +289,6 @@ proof (rule division_ofI)
       by (simp add: inf_commute)
   qed
 qed
-
-
-
-lemma D:
-  fixes f :: "real \<Rightarrow> real"
-  assumes *: "strict_mono_on f {0..a}"  "continuous_on {0..a} f"  "0 \<le> a"
-  obtains f1 f2 where "\<And>x. x \<in> {0..a} \<Longrightarrow> f1 x \<le> f x \<and> f x \<le> f2 x"
-  by (metis strict_mono_image_endpoints assms(1) assms(2) assms(3) compact_Icc continuous_on_inv g)
 
 
 lemma B:
