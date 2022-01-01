@@ -1,8 +1,21 @@
 theory Youngs imports 
-  "HOL-Library.Sum_of_Squares" "HOL-Analysis.Analysis"
+  "HOL-Library.Sum_of_Squares" "HOL-Analysis.Analysis" "HOL-Computational_Algebra.Fundamental_Theorem_Algebra"
   "HOL-ex.Sketch_and_Explore"
    
 begin
+
+
+thm deriv_add
+lemma deriv_sum [simp]:
+  "\<lbrakk>\<And>i. f i field_differentiable at z\<rbrakk>
+   \<Longrightarrow> deriv (\<lambda>w. sum (\<lambda>i. f i w) S) z = sum (\<lambda>i. deriv (f i) z) S"
+  unfolding DERIV_deriv_iff_field_differentiable[symmetric]
+  by (auto intro!: DERIV_imp_deriv derivative_intros)
+
+lemma deriv_pow: "\<lbrakk>f field_differentiable at z\<rbrakk>
+   \<Longrightarrow> deriv (\<lambda>w. f w ^ n) z = (if n=0 then 0 else n * deriv f z * f z ^ (n - Suc 0))"
+  unfolding DERIV_deriv_iff_field_differentiable[symmetric]
+  by (auto intro!: DERIV_imp_deriv derivative_eq_intros)
 
 text \<open>Kevin Buzzard's example\<close>
 lemma
@@ -12,14 +25,14 @@ lemma
 
 
 
-definition hf where "hf \<equiv> \<lambda>n x. (x^n * (1 - x)^n) / real (fact n)"
+definition hf where "hf \<equiv> \<lambda>n. \<lambda>x::real. (x^n * (1 - x)^n) / fact n"
 
 (*?*)
 lemma hf_Suc: "hf (Suc n) x = hf n x * x * (1-x) / Suc n"
   by (simp add: hf_def algebra_simps)
 
 lemma hf_int_poly:
-  obtains c where "\<And>x. hf n x = (1 / real (fact n)) * (\<Sum>i=n..2*n. real_of_int (c i) * x^i)"
+  obtains c where "\<And>x. hf n x = (1 / fact n) * (\<Sum>i=n..2*n. real_of_int (c i) * x^i)"
 proof
   fix x::real
   define c where "c \<equiv> \<lambda>i. (n choose (i-n)) * (-1)^(i-n)"
@@ -35,7 +48,7 @@ proof
     by (simp add: sum_distrib_left mult_ac power_add)
   also have "... = (\<Sum>i=n..2*n. real_of_int (c i) * x^i)"
     by (simp add: sum.reindex [OF inj, simplified] c_def)
-  finally show "hf n x = (1 / real (fact n)) * (\<Sum>i = n..2 * n. real_of_int (c i) * x ^ i)"
+  finally show "hf n x = (1 / fact n) * (\<Sum>i = n..2 * n. real_of_int (c i) * x ^ i)"
     by (simp add: hf_def)
 qed
 
@@ -43,11 +56,121 @@ lemma hf_range:
   assumes "0 < x" "x < 1" "n > 0"
   shows "hf n x \<in> {0<..< 1/fact n}"
 proof -
-  have "x ^ n * (1 - x) ^ n < 1"
-    by (smt (verit, del_insts) assms(1) assms(2) assms(3) mult_le_one mult_less_cancel_left_pos mult_pos_pos power_0 power_mult_distrib power_strict_decreasing)
-  then show ?thesis
-  using assms by (simp add: hf_def divide_strict_right_mono)
+  have "x ^ n * (1 - x) ^ n \<le> 1"
+    by (smt (verit) assms mult_le_one power_le_one zero_le_power)
+  moreover have "x ^ n * (1 - x) ^ n \<noteq> 1"
+    by (smt (verit) assms mult_left_le power_0 power_strict_decreasing zero_less_power)
+  ultimately show ?thesis
+    using assms by (simp add: hf_def divide_strict_right_mono)
 qed
+
+
+lemma power_Suc_expand:
+  fixes x :: "'a::comm_ring_1"
+  assumes "n > 0"
+  shows "x * x ^ (n - Suc 0) = x ^ n" 
+  by (metis assms Suc_pred power_Suc)
+
+
+
+context comm_monoid_set
+begin
+
+lemma atLeast_atMost_pred_shift:
+  "F (g \<circ> (\<lambda>n. n - Suc 0)) {Suc m..Suc n} = F g {m..n}"
+  unfolding atLeast_Suc_atMost_Suc_shift by simp
+
+end
+
+
+lemma DD: "Suc (n - Suc i) = (if i<n then n-i else 1)"
+  by force
+
+
+lemma deriv_sum_int:
+  "deriv (\<lambda>x. \<Sum>i=m..n. real_of_int (c i) * x^i) x 
+     = (if n<m \<or> n=0 then 0 else (\<Sum>i=m-1..n-1. real_of_int ((int i + 1) * c (Suc i)) * x^i))"
+  unfolding DERIV_deriv_iff_field_differentiable[symmetric]
+  apply (clarsimp simp add: not_less)
+  apply (rule DERIV_imp_deriv)
+  apply (intro derivative_eq_intros | rule refl)+
+  apply (simp add: )
+  apply (subst sum.atLeast_atMost_pred_shift [symmetric]) back
+  apply (simp only: DD)
+  apply (simp add: )
+  apply (auto simp: )
+  subgoal
+    by (auto intro!: DERIV_imp_deriv derivative_eq_intros sum.cong
+        simp: sum.atLeast_Suc_atMost_Suc_shift simp del: comm_monoid_add_class.sum.cl_ivl_Suc)
+  subgoal
+    apply (subst sum.atLeast_Suc_atMost)
+    by (auto intro!: DERIV_imp_deriv derivative_eq_intros sum.cong
+        simp: sum.atLeast_Suc_atMost_Suc_shift simp del: comm_monoid_add_class.sum.cl_ivl_Suc)
+  done
+
+lemma deriv_sum_intXX:
+    "deriv (\<lambda>x. \<Sum>i=Suc m..Suc n. real_of_int (c i) * x^i) x = (\<Sum>i=m..n. real_of_int ((int i + 1) * c (Suc i)) * x^i)"
+  unfolding DERIV_deriv_iff_field_differentiable[symmetric]
+  apply (auto intro!: DERIV_imp_deriv derivative_eq_intros sum.cong
+      simp: sum.atLeast_Suc_atMost_Suc_shift simp del: comm_monoid_add_class.sum.cl_ivl_Suc)
+  apply (simp add: algebra_simps power_Suc_expand cong: conj_cong)
+  done
+
+
+lemma hf_deriv_int_poly:
+  shows "\<exists>c. (deriv^^k) (hf n) = (\<lambda>x. (1 / fact n) * (\<Sum>i=n-k..2*n-k. real_of_int (c i) * x^i))"
+proof (induction k)
+  case 0
+  show ?case 
+     by (rule hf_int_poly) auto
+next
+  case (Suc k)
+  then obtain c where c: "(deriv^^k) (hf n) = (\<lambda>x. (1 / fact n) * (\<Sum>i=n-k..2*n-k. real_of_int (c i) * x^i))"
+    by blast
+  define d where "d \<equiv> \<lambda>i. if 2 * n \<le> k then 0 else Suc i * c (Suc i)"
+  have "deriv (\<lambda>x. (\<Sum>i = n - k..2*n - k. real_of_int (c i) * x ^ i) / fact n) x 
+      = (\<Sum>i = n - Suc k..2 * n - Suc k. real_of_int (d i) * x ^ i) / fact n" for x
+    apply (subst deriv_cdivide_right)
+    unfolding c field_differentiable_def
+     apply (rule derivative_eq_intros exI | simp)+
+    apply (simp add: deriv_sum_int d_def add.commute)
+    done
+  then show ?case
+    by (force simp add: c)
+qed
+
+
+lemma hf_deriv_int_poly:
+  shows "\<exists>c. (deriv^^k) (hf n) 0 = real_of_int c"
+proof -
+  obtain c where c: "(deriv^^k) (hf n) = (\<lambda>x. (1 / fact n) * (\<Sum>i=n-k..2*n-k. real_of_int (c i) * x^i))"
+    using hf_deriv_int_poly by blast
+  show ?thesis
+apply (simp add: c)
+
+
+lemma "(deriv^^k) (hf n) field_differentiable at x"
+  oops
+proof -
+  obtain c where c: "\<And>x. hf n x = (1 / real (fact n)) * (\<Sum>i=n..2*n. real_of_int (c i) * x^i)"
+    using hf_int_poly by blast
+  show ?thesis
+
+
+
+    oops
+proof (induction k)
+  case 0
+  then show ?case 
+    unfolding hf_def field_differentiable_def 
+    by (rule derivative_eq_intros exI | simp)+
+next
+  case (Suc k)
+  then show ?case
+    apply (simp add: hf_Suc)
+    sorry
+qed
+
 
 
 thm strict_mono_inv_on_range
@@ -251,7 +374,7 @@ lemma segments_0 [simp]: "segments 0 = {}"
 lemma Union_segments: "\<Union> (segments n) = (if n=0 then {} else {0..1})"
   by (simp add: segments_def Union_segment_image)
 
-definition "regular_division \<equiv> \<lambda>a b n. image (image ((+) a o (*) (b-a))) (segments n)"
+definition "regular_division \<equiv> \<lambda>a b n. image (image ((+) a \<circ> (*) (b-a))) (segments n)"
 
 lemma translate_scale_01:
   assumes "a \<le> b" 
@@ -281,9 +404,9 @@ lemma regular_divisionE:
   assumes "K \<in> regular_division a b n" "a<b"
   obtains k where "K = {a + (b-a)*(real k / real n) .. a + (b-a)*((1 + real k) / real n)}"
 proof -
-  have eq: "(\<lambda>x. a + (b - a) * x) = (\<lambda>x. a + x) o (\<lambda>x. (b - a) * x)"
+  have eq: "(\<lambda>x. a + (b - a) * x) = (\<lambda>x. a + x) \<circ> (\<lambda>x. (b - a) * x)"
     by (simp add: o_def)
-  obtain k where "K = ((\<lambda>x. a + x) o (\<lambda>x. (b - a) * x)) ` {real k / real n .. (1 + real k) / real n}"
+  obtain k where "K = ((\<lambda>x. a + x) \<circ> (\<lambda>x. (b - a) * x)) ` {real k / real n .. (1 + real k) / real n}"
     using assms by (auto simp: regular_division_def segments_def segment_def)
   with that \<open>a<b\<close> show ?thesis
     unfolding image_comp [symmetric]  by auto
