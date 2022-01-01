@@ -11,6 +11,45 @@ lemma
   by (simp add: algebra_simps eval_nat_numeral)
 
 
+
+definition hf where "hf \<equiv> \<lambda>n x. (x^n * (1 - x)^n) / real (fact n)"
+
+(*?*)
+lemma hf_Suc: "hf (Suc n) x = hf n x * x * (1-x) / Suc n"
+  by (simp add: hf_def algebra_simps)
+
+lemma hf_int_poly:
+  obtains c where "\<And>x. hf n x = (1 / real (fact n)) * (\<Sum>i=n..2*n. real_of_int (c i) * x^i)"
+proof
+  fix x::real
+  define c where "c \<equiv> \<lambda>i. (n choose (i-n)) * (-1)^(i-n)"
+  have inj: "inj_on ((+)n) {..n}" 
+    by (auto simp: inj_on_def)
+  have [simp]: "((+)n) ` {..n} = {n..2*n}"
+    using nat_le_iff_add by fastforce
+  have "(x^n * (-x + 1)^n) = x ^ n * (\<Sum>k\<le>n. real (n choose k) * (- x) ^ k)"
+    unfolding binomial_ring by simp
+  also have "... = x ^ n * (\<Sum>k\<le>n. real_of_int ((n choose k) * (-1)^k) * x ^ k)"
+    by (simp add: mult.assoc flip: power_minus)
+  also have "... = (\<Sum>k\<le>n. real_of_int ((n choose k) * (-1)^k) * x ^ (n+k))"
+    by (simp add: sum_distrib_left mult_ac power_add)
+  also have "... = (\<Sum>i=n..2*n. real_of_int (c i) * x^i)"
+    by (simp add: sum.reindex [OF inj, simplified] c_def)
+  finally show "hf n x = (1 / real (fact n)) * (\<Sum>i = n..2 * n. real_of_int (c i) * x ^ i)"
+    by (simp add: hf_def)
+qed
+
+lemma hf_range:
+  assumes "0 < x" "x < 1" "n > 0"
+  shows "hf n x \<in> {0<..< 1/fact n}"
+proof -
+  have "x ^ n * (1 - x) ^ n < 1"
+    by (smt (verit, del_insts) assms(1) assms(2) assms(3) mult_le_one mult_less_cancel_left_pos mult_pos_pos power_0 power_mult_distrib power_strict_decreasing)
+  then show ?thesis
+  using assms by (simp add: hf_def divide_strict_right_mono)
+qed
+
+
 thm strict_mono_inv_on_range
 lemma strict_mono_on_inv_into:
   fixes f :: "'a::linorder \<Rightarrow> 'b::order"
@@ -131,40 +170,38 @@ lemma D:
   fixes f :: "real \<Rightarrow> real"
   assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and "0 \<le> a" "0 \<le> b" "f 0 = 0" "f a = b"
   shows "a*b = integral {0..a} f + integral {0..b} (inv_into {0..a} f)"
-proof -
+proof (cases "a=0")
+  case False
+  then have "a > 0"
+    using assms(3) by linarith
   have "continuous_on {0..a} f"
     using cont continuous_on_subset by fastforce
   with sm have "continuous_on {0..b} (inv_into {0..a} f)"
     apply (simp add: strict_mono_on_def)
     by (metis assms(3) assms(5) assms(6) atLeastAtMost_iff strict_mono_continuous_inv strict_mono_onI)
-  have intf: "f integrable_on {0..a}"
+  obtain S where S: "(f has_integral S) {0..a}"
     using \<open>continuous_on {0..a} f\<close> integrable_continuous_real by blast
   { fix \<epsilon> :: real
     assume "\<epsilon> > 0"
-    with intf integrable_Cauchy [of f 0 a] 
+    with \<open>a > 0\<close> have "\<epsilon> / (2 * a) > 0"
+      by simp
+    with S \<open>a > 0\<close> has_integral_factor_content_real [of f S 0 a] 
     obtain \<gamma> where "gauge \<gamma>"
-    and \<gamma>: "\<And>\<D>1 \<D>2. \<D>1 tagged_division_of {0..a} \<and> \<gamma> fine \<D>1 \<and>
-            \<D>2 tagged_division_of {0..a} \<and> \<gamma> fine \<D>2 \<longrightarrow>
-            norm ((\<Sum>(x,K)\<in>\<D>1. content K *\<^sub>R f x) - (\<Sum>(x,K)\<in>\<D>2. content K *\<^sub>R f x)) < \<epsilon>"
+    and \<gamma>: "\<And>p. p tagged_division_of {0..a} \<and> \<gamma> fine p \<longrightarrow>
+            norm ((\<Sum>(x,K)\<in>p. content K *\<^sub>R f x) - S) \<le> (\<epsilon> / (2*a)) * content {0..a}"
       by auto
     obtain \<D> where \<D>: "\<D> tagged_division_of {0..a} \<and> \<gamma> fine \<D>"
       by (meson \<open>gauge \<gamma>\<close> fine_division_exists_real)
-    define \<D>1 where "\<D>1 \<equiv> (\<lambda>(x,K). (Inf K, K)) ` \<D>"
-    have "\<D>1 tagged_division_of {0..a}"
-      using \<D>
-      apply (auto simp: \<D>1_def tagged_division_of_def tagged_partial_division_of_def)
-      apply (metis atLeastAtMost_subset_contains_Inf atLeastatMost_empty' emptyE subset_refl)
-      apply blast
-      apply blast
-      apply blast
-      by (smt (verit, best) UnionE \<D>1_def atLeastAtMost_iff mem_Collect_eq pair_imageI)
+    then have "norm ((\<Sum>(x,K)\<in>\<D>. content K *\<^sub>R f x) - S) \<le> \<epsilon>/2"
+      using False \<gamma> assms(3) by auto
+
 (*This can't work. Riemann integrability is a stronger property. The fineness condition can't be satisfied.*)
 
     sorry
   }
   show ?thesis
     sorry
-qed
+qed (use assms in force)
 
 
 lemma D:
