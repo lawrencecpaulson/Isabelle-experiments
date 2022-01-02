@@ -142,7 +142,7 @@ lemma deriv_sum_intXX:
 
 
 lemma hf_deriv_int_poly:
-  shows "(deriv^^k) (hf n) = (\<lambda>x. (1 / fact n) * (\<Sum>i=0..2*n-k. real_of_int (int(\<Prod>{i<..i+k}) * cf n (i+k)) * x^i))"
+   "(deriv^^k) (hf n) = (\<lambda>x. (1 / fact n) * (\<Sum>i=0..2*n-k. real_of_int (int(\<Prod>{i<..i+k}) * cf n (i+k)) * x^i))"
 proof (induction k)
   case 0
   show ?case 
@@ -166,6 +166,24 @@ next
   then show ?case
     by (simp add: Suc)
 qed
+
+lemma hf_deriv_0:
+  "(deriv^^k) (hf n) 0 \<in> Ints"
+proof (cases "n \<le> k")
+  case True
+  then obtain j where "(fact k::real) = real_of_int j * fact n"
+    using fact_dvd 
+    by (metis dvd_def fact_nonzero mult.commute nonzero_mult_div_cancel_left of_int_fact real_of_int_div) 
+  moreover have "prod real {0<..k} = fact k"
+    by (simp add: fact_prod atLeastSucAtMost_greaterThanAtMost)
+  ultimately show ?thesis
+    by (simp add: hf_deriv_int_poly dvd_def)
+next
+  case False
+  then show ?thesis
+    by (simp add: hf_deriv_int_poly cf_def)
+qed
+
 
 
 lemma hf_deriv_int_poly:
