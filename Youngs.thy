@@ -117,25 +117,25 @@ lemma DD: "Suc (n - Suc i) = (if i<n then n-i else 1)"
 
 lemma deriv_sum_int:
   "deriv (\<lambda>x. \<Sum>i=0..n. real_of_int (c i) * x^i) x 
-     = (if n=0 then 0 else (\<Sum>i=0..n-1. real_of_int ((int i + 1) * c (Suc i)) * x^i))"
-  apply (clarsimp simp add: )
-  apply (rule DERIV_imp_deriv)
-  apply (rule derivative_eq_intros | simp)+
-  apply (subst sum.atLeast_atMost_pred_shift [symmetric]) back
-  apply (simp add: )
-  apply (subst sum.atLeast_Suc_atMost)
-apply (force simp add: )
-    by (auto intro!: DERIV_imp_deriv derivative_eq_intros sum.cong
-        simp: sum.atLeast_Suc_atMost_Suc_shift simp del: comm_monoid_add_class.sum.cl_ivl_Suc)
-
-
-lemma deriv_sum_intXX:
-    "deriv (\<lambda>x. \<Sum>i=Suc m..Suc n. real_of_int (c i) * x^i) x = (\<Sum>i=m..n. real_of_int ((int i + 1) * c (Suc i)) * x^i)"
-  unfolding DERIV_deriv_iff_field_differentiable[symmetric]
-  apply (auto intro!: DERIV_imp_deriv derivative_eq_intros sum.cong
-      simp: sum.atLeast_Suc_atMost_Suc_shift simp del: comm_monoid_add_class.sum.cl_ivl_Suc)
-  apply (simp add: algebra_simps power_Suc_expand cong: conj_cong)
-  done
+     = (if n=0 then 0 else (\<Sum>i=0..n - Suc 0. real_of_int ((int i + 1) * c (Suc i)) * x^i))"
+  (is "deriv ?f x = (if n=0 then 0 else ?g)")
+proof -
+  have "(?f has_real_derivative ?g) (at x)" if "n > 0"
+  proof -
+    have "(\<Sum>i = 0..n. i * x ^ (i - Suc 0) * (c i))
+        = (\<Sum>i = Suc 0..n. (real (i - Suc 0) + 1) * real_of_int (c i) * x ^ (i - Suc 0))"
+      using that by (auto simp add: sum.atLeast_Suc_atMost intro!: sum.cong)
+    also have "... = sum ((\<lambda>i. (real i + 1) * real_of_int (c (Suc i)) * x ^ i) \<circ> (\<lambda>n. n - Suc 0)) {Suc 0..Suc (n - Suc 0)}"
+      using that by simp
+    also have "... = ?g"
+      by (simp flip: sum.atLeast_atMost_pred_shift)
+    finally have \<section>: "(\<Sum>a = 0..n. a * x ^ (a - Suc 0) * (c a)) = ?g" .
+    show ?thesis
+      by (rule derivative_eq_intros \<section> | simp)+
+  qed
+  then show ?thesis
+    by (force intro: DERIV_imp_deriv)
+qed
 
 
 lemma hf_deriv_int_poly:
