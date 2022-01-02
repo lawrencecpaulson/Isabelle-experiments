@@ -4,6 +4,22 @@ theory Youngs imports
    
 begin
 
+thm fact_div_fact
+lemma fact_eq_fact_times:
+  assumes "m \<ge> n"
+  shows "fact m = fact n * \<Prod>{Suc n..m}"
+  unfolding fact_prod
+  by (metis add.commute assms le_add1 le_add_diff_inverse of_nat_id plus_1_eq_Suc prod.ub_add_nat)
+
+lemma fact_div_fact:
+  assumes "m \<ge> n"
+  shows "fact m div fact n = \<Prod>{n + 1..m}"
+  by (simp add: fact_eq_fact_times [OF assms])
+
+lemma field_differentiable_diff_const [simp,derivative_intros]:
+  "(-)c field_differentiable F"
+  unfolding field_differentiable_def
+  by (rule derivative_eq_intros exI | force)+
 
 thm deriv_add
 lemma deriv_sum [simp]:
@@ -25,7 +41,7 @@ lemma
 
 
 
-definition hf where "hf \<equiv> \<lambda>n. \<lambda>x::real. (x^n * (1 - x)^n) / fact n"
+definition hf where "hf \<equiv> \<lambda>n. \<lambda>x::real. (x^n * (1-x)^n) / fact n"
 
 definition cf where "cf \<equiv> \<lambda>n i. if i < n then 0 else (n choose (i-n)) * (-1)^(i-n)"
 
@@ -35,8 +51,9 @@ lemma hf_Suc: "hf (Suc n) x = hf n x * x * (1-x) / Suc n"
 
 lemma hf_int_poly:
   fixes x::real
-  shows "hf n x = (1 / fact n) * (\<Sum>i=0..2*n. real_of_int (cf n i) * x^i)"
-proof -
+  shows "hf n = (\<lambda>x. (1 / fact n) * (\<Sum>i=0..2*n. real_of_int (cf n i) * x^i))"
+proof 
+  fix x
   have inj: "inj_on ((+)n) {..n}" 
     by (auto simp: inj_on_def)
   have [simp]: "((+)n) ` {..n} = {n..2*n}"
@@ -62,13 +79,17 @@ lemma hf_range:
   assumes "0 < x" "x < 1" "n > 0"
   shows "hf n x \<in> {0<..< 1/fact n}"
 proof -
-  have "x ^ n * (1 - x) ^ n \<le> 1"
+  have "x ^ n * (1-x) ^ n \<le> 1"
     by (smt (verit) assms mult_le_one power_le_one zero_le_power)
-  moreover have "x ^ n * (1 - x) ^ n \<noteq> 1"
+  moreover have "x ^ n * (1-x) ^ n \<noteq> 1"
     by (smt (verit) assms mult_left_le power_0 power_strict_decreasing zero_less_power)
   ultimately show ?thesis
     using assms by (simp add: hf_def divide_strict_right_mono)
 qed
+
+lemma hf_differt [iff]: "hf n differentiable at x"
+  unfolding hf_int_poly differentiable_def
+  by (intro derivative_eq_intros exI | simp)+
 
 
 lemma power_Suc_expand:
@@ -110,28 +131,7 @@ apply (force simp add: )
     by (auto intro!: DERIV_imp_deriv derivative_eq_intros sum.cong
         simp: sum.atLeast_Suc_atMost_Suc_shift simp del: comm_monoid_add_class.sum.cl_ivl_Suc)
 
-(*
-lemma deriv_sum_int:
-  "deriv (\<lambda>x. \<Sum>i=m..n. real_of_int (c i) * x^i) x 
-     = (if n<m \<or> n=0 then 0 else (\<Sum>i=m-1..n-1. real_of_int ((int i + 1) * c (Suc i)) * x^i))"
-  unfolding DERIV_deriv_iff_field_differentiable[symmetric]
-  apply (clarsimp simp add: not_less)
-  apply (rule DERIV_imp_deriv)
-  apply (intro derivative_eq_intros | rule refl)+
-  apply (simp add: )
-  apply (subst sum.atLeast_atMost_pred_shift [symmetric]) back
-  apply (simp only: DD)
-  apply (simp add: )
-  apply (auto simp: )
-  subgoal
-    by (auto intro!: DERIV_imp_deriv derivative_eq_intros sum.cong
-        simp: sum.atLeast_Suc_atMost_Suc_shift simp del: comm_monoid_add_class.sum.cl_ivl_Suc)
-  subgoal
-    apply (subst sum.atLeast_Suc_atMost)
-    by (auto intro!: DERIV_imp_deriv derivative_eq_intros sum.cong
-        simp: sum.atLeast_Suc_atMost_Suc_shift simp del: comm_monoid_add_class.sum.cl_ivl_Suc)
-  done
-*)
+
 lemma deriv_sum_intXX:
     "deriv (\<lambda>x. \<Sum>i=Suc m..Suc n. real_of_int (c i) * x^i) x = (\<Sum>i=m..n. real_of_int ((int i + 1) * c (Suc i)) * x^i)"
   unfolding DERIV_deriv_iff_field_differentiable[symmetric]
@@ -184,61 +184,100 @@ next
     by (simp add: hf_deriv_int_poly cf_def)
 qed
 
-
-
-lemma hf_deriv_int_poly:
-  shows "\<exists>c. (deriv^^k) (hf n) = (\<lambda>x. (1 / fact n) * (\<Sum>i=0..2*n-k. real_of_int (c i) * x^i))"
-proof (induction k)
-  case 0
-  show ?case 
-     by (rule hf_int_poly) auto
-next
-  case (Suc k)oops
-  then obtain c where c: "(deriv^^k) (hf n) = (\<lambda>x. (1 / fact n) * (\<Sum>i=n-k..2*n-k. real_of_int (c i) * x^i))"
-    by blast
-  define d where "d \<equiv> \<lambda>i. if 2 * n \<le> k then 0 else Suc i * c (Suc i)"
-  have "deriv (\<lambda>x. (\<Sum>i = n - k..2*n - k. real_of_int (c i) * x ^ i) / fact n) x 
-      = (\<Sum>i = n - Suc k..2 * n - Suc k. real_of_int (d i) * x ^ i) / fact n" for x
-    apply (subst deriv_cdivide_right)
-    unfolding c field_differentiable_def
-     apply (rule derivative_eq_intros exI | simp)+
-    apply (simp add: deriv_sum_int d_def add.commute)
-    done
-  then show ?case
-    by (force simp add: c)
+lemma deriv_hf_minus: "deriv (hf n) = (\<lambda>x. - deriv (hf n) (1-x))"
+proof 
+  fix x
+  have "hf n = hf n \<circ> (\<lambda>x. (1-x))"
+    by (simp add: fun_eq_iff hf_def mult.commute)
+  then have "deriv (hf n) x = deriv (hf n \<circ> (\<lambda>x. (1-x))) x"
+    by fastforce
+  also have "... = deriv (hf n) (1-x) * deriv ((-) 1) x"
+    by (intro real_derivative_chain) auto
+  finally show "deriv (hf n) x = - deriv (hf n) (1-x)"
+    by simp
 qed
 
 
-lemma hf_deriv_int_poly:
-  shows "\<exists>c. (deriv^^k) (hf n) 0 = real_of_int c"
+lemma deriv_minus [simp]:
+  "f field_differentiable at z \<Longrightarrow> deriv (\<lambda>w. - f w) z = - deriv f z"
+  by (simp add: DERIV_deriv_iff_field_differentiable DERIV_imp_deriv Deriv.field_differentiable_minus)
+
+lemma F [iff]: "((deriv^^k) (hf n)) field_differentiable at x"
+  unfolding field_differentiable_def hf_deriv_int_poly
+  by (rule derivative_eq_intros exI | force)+
+
+lemma G [iff]: "((deriv^^k) (hf n) \<circ> (-) 1) field_differentiable at x"
+  by (force intro: field_differentiable_compose)
+
+
+
+lemma deriv_hf_minus2: "deriv (deriv (hf n)) = (\<lambda>x. deriv (deriv (hf n)) (1-x))"
 proof -
-  obtain c where c: "(deriv^^k) (hf n) = (\<lambda>x. (1 / fact n) * (\<Sum>i=n-k..2*n-k. real_of_int (c i) * x^i))"
-    using hf_deriv_int_poly by blast
+  have *: "(\<lambda>x. deriv (hf n) (1 - x)) = deriv (hf n) \<circ> (-) 1"
+    by auto
   show ?thesis
-apply (simp add: c)
+    apply (rule )
+    apply (subst deriv_hf_minus)
+    apply (subst deriv_minus)
+    using G [of 1] apply (force simp add: o_def)
+    apply (subst *)
+    apply (subst deriv_chain)
+      apply (auto simp: )
+    using G [of 1]  using Derivative.field_differentiable_minus deriv_hf_minus by fastforce
+qed
 
-
-lemma "(deriv^^k) (hf n) field_differentiable at x"
-  oops
-proof -
-  obtain c where c: "\<And>x. hf n x = (1 / real (fact n)) * (\<Sum>i=n..2*n. real_of_int (c i) * x^i)"
-    using hf_int_poly by blast
-  show ?thesis
-
-
-
-    oops
+lemma deriv_n_minus [simp]:
+assumes "f field_differentiable at z"
+shows "(deriv^^k) (\<lambda>w. - f w) = (\<lambda>z. (-1) ^ Suc k * (deriv^^k) f z)"
 proof (induction k)
-  case 0
-  then show ?case 
-    unfolding hf_def field_differentiable_def 
-    by (rule derivative_eq_intros exI | simp)+
-next
   case (Suc k)
   then show ?case
-    apply (simp add: hf_Suc)
+    apply (simp add: )
+    sorry
+qed auto
+
+
+
+lemma "(deriv^^k) (hf n) = (\<lambda>x. (-1)^k * (deriv^^k) (hf n) (1-x))"
+proof (induction k)
+  case 0
+  then show ?case
+    by (simp add: fun_eq_iff hf_def)
+next
+  case (Suc k)
+  show ?case
+    unfolding funpow.simps
+    apply (simp add: )
+    apply (subst Suc)
+apply (rule ext)
+    apply (subst deriv_cmult)
+     defer
+
+    using deriv_cmult
+    oops
+    unfolding funpow_Suc_right
+    apply (simp add: )
+    apply (rule )
+    apply (subst deriv_hf_minus)
+unfolding Suc
+    using Suc
+
+    oops
+apply (simp add: Suc)
+    unfolding funpow.simps
+    apply (simp add: )
+    apply (subst EE)
+
+    apply (subst \<section>)
+
+    apply (erule ssubst)
+    apply (simp add: algebra_simps)
     sorry
 qed
+
+    sorry
+
+
 
 
 
