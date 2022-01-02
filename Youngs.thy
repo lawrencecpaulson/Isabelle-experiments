@@ -118,14 +118,11 @@ lemma DD: "Suc (n - Suc i) = (if i<n then n-i else 1)"
 lemma deriv_sum_int:
   "deriv (\<lambda>x. \<Sum>i=0..n. real_of_int (c i) * x^i) x 
      = (if n=0 then 0 else (\<Sum>i=0..n-1. real_of_int ((int i + 1) * c (Suc i)) * x^i))"
-  unfolding DERIV_deriv_iff_field_differentiable[symmetric]
-  apply (clarsimp simp add: not_less)
+  apply (clarsimp simp add: )
   apply (rule DERIV_imp_deriv)
-  apply (intro derivative_eq_intros | rule refl)+
-  apply (simp add: )
+  apply (rule derivative_eq_intros | simp)+
   apply (subst sum.atLeast_atMost_pred_shift [symmetric]) back
-  apply (simp only: DD)
-  apply (simp add: )thm sum.atLeast_Suc_atMost
+  apply (simp add: )
   apply (subst sum.atLeast_Suc_atMost)
 apply (force simp add: )
     by (auto intro!: DERIV_imp_deriv derivative_eq_intros sum.cong
