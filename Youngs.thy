@@ -146,22 +146,18 @@ proof (induction k)
     by (simp add: hf_int_poly)
 next
   case (Suc k)
-  have "deriv (\<lambda>x. (\<Sum>i = 0..2*n - k. real_of_int (int(\<Prod>{i<..i+k}) * cf n (i+k)) * x ^ i) / fact n) x 
+  define F where "F \<equiv> \<lambda>x. (\<Sum>i = 0..2*n - k. real_of_int (int(\<Prod>{i<..i+k}) * cf n (i+k)) * x ^ i)"
+  have Fd: "F field_differentiable at x" for x
+    unfolding field_differentiable_def F_def
+    by (rule derivative_eq_intros exI | force)+
+  have "deriv (\<lambda>x. F x / fact n) x 
       = (\<Sum>i = 0..2 * n - Suc k. real_of_int (int(\<Prod>{i<..i+ Suc k}) * cf n (Suc (i+k))) * x ^ i) / fact n" for x
-    apply (subst deriv_cdivide_right)
-    unfolding field_differentiable_def
-     apply (rule derivative_eq_intros exI | force)+
-    apply (simp add: deriv_sum_int cf_def add.commute flip: of_int_mult of_nat_prod)
-    apply (auto simp: )
-     apply (rule sum.cong)
-      apply (force simp add: )
-    apply (simp add: )
-    apply (auto simp: )
-    apply (metis add_le_cancel_left atLeastSucAtMost_greaterThanAtMost le_add1 of_nat_Suc plus_1_eq_Suc prod.head)
-    apply (smt (verit, best) One_nat_def add_Suc atLeastSucAtMost_greaterThanAtMost gr0I le_add1 of_nat_0 of_nat_1 prod.head)
-    done
+    unfolding deriv_cdivide_right [OF Fd]
+    apply (simp add: F_def deriv_sum_int cf_def add.commute flip: of_int_mult)
+    apply (auto intro!: sum.cong)
+    by (metis Suc_le_mono atLeastSucAtMost_greaterThanAtMost le_add1 of_nat_Suc prod.head)+
   then show ?case
-    by (simp add: Suc)
+    by (simp add: Suc F_def)
 qed
 
 lemma hf_deriv_0: "(deriv^^k) (hf n) 0 \<in> Ints"
@@ -276,7 +272,25 @@ proof
     by (smt (verit, best) s_le ab(1) assms of_int_1 of_int_le_iff of_int_mult zero_less_power)
   then have n: "fact n > a * s ^ (2*n+1)"
     using fact_bounds(1) by (smt (verit, best) \<open>0 < n\<close> of_int_fact of_int_less_iff)
+  define F where "F \<equiv> \<lambda>x. \<Sum>i\<le>2*n. (-1)^i * s^(2*n-i) * (deriv^^i) (hf n) x"
+  have "(F has_field_derivative -s * F x + s ^ (2*n+1) * hf n x) (at x)" for x
+    unfolding F_def
+    apply (rule derivative_eq_intros DERIV_deriv_iff_real_differentiable [THEN iffD2] | simp add: field_differentiable_imp_differentiable)+
+    apply (induction n)
+     apply (simp add: )
+    defer
+apply (simp add: )
 
+
+    apply (simp add: field_differentiable_imp_differentiable)
+    using field_differentiable_def real_differentiable_def apply blast
+    apply blast
+
+    apply (simp add: sum_divide_distrib sum_distrib_left sum_distrib_right field_simps flip: sum.distrib)
+
+    apply (simp add: algebra_simps sum_divide_distrib sum_distrib_left sum_distrib_right flip: sum.distrib)
+    apply (simp add: field_simps)
+    sorry
   show False
     sorry
 qed
