@@ -225,6 +225,26 @@ qed
 lemma hf_deriv_1: "(deriv^^k) (hf n) 1 \<in> Ints"
   by (smt (verit, best) Ints_1 Ints_minus Ints_mult Ints_power deriv_n_hf_minus hf_deriv_0)
 
+lemma exp_nat_irrational:
+  assumes "n > 0"
+  shows "exp (real n) \<notin> \<rat>"
+  sorry
+
+theorem exp_irrational:
+  fixes q::real
+  assumes "q \<in> \<rat>" "q \<noteq> 0"
+  shows "exp q \<notin> \<rat>"
+proof 
+  assume q: "exp q \<in> \<rat>"
+  obtain a b where ab: "a \<noteq> 0" "b > 0" "q = of_int a / of_int b"
+    by (metis Rats_cases' assms div_0 of_int_0)
+  then have "(exp q) ^ (nat b) = exp (real_of_int a)"
+    by (smt (verit, best) exp_divide_power_eq of_nat_nat zero_less_nat_eq)
+  moreover  have "exp q ^ (nat b) \<in> \<rat>"
+    by (simp add: q)
+  ultimately show False
+    by (smt (verit, best) Rats_inverse ab(1) exp_minus exp_nat_irrational of_int_of_nat zero_less_nat_eq)
+qed
 
 
 subsection \<open>Experiments involving Young's Inequality\<close>
