@@ -226,6 +226,14 @@ qed
 lemma hf_deriv_1: "(deriv^^k) (hf n) 1 \<in> Ints"
   by (smt (verit, best) Ints_1 Ints_minus Ints_mult Ints_power deriv_n_hf_minus hf_deriv_0)
 
+thm of_int_less_iff
+context linordered_idom
+begin
+
+lemma of_nat_nat_eq_iff: "of_nat (nat i) = of_int i \<longleftrightarrow> 0 \<le> i"
+  using local.of_int_le_iff by fastforce
+
+end
 
 lemma exp_nat_irrational:
   assumes "s > 0"
@@ -249,15 +257,25 @@ proof
   also have "... \<le> (n / exp 1) ^ n"
     using exp_le \<open>n > 0\<close>
     by (auto simp add: divide_simps)
-  finally have "s ^ (2*n+1) \<le> (n / exp 1) ^ n"
+  finally have s_le: "s ^ (2*n+1) \<le> (n / exp 1) ^ n"
     by presburger 
-
-  obtain n where "n>0" "sqrt (2*pi*n) * (n / exp 1) ^ n > a * s ^ (2*n+1)"
-    sorry
+  have a_less: "a < sqrt (2*pi*n)"
+  proof -
+    have "a = sqrt (a^2)"
+      by (simp add: ab(1) order_less_imp_le)
+    also have "... \<le> sqrt n"
+      unfolding n_def
+      using of_nat_nat_eq_iff
+      by (smt (verit, ccfv_SIG) int_nat_eq of_nat_less_of_int_iff real_sqrt_le_mono)
+    also have "... < sqrt (2*pi*n)"
+      by (smt (verit, ccfv_SIG) \<open>0 < n\<close> divide_le_eq_1_pos mult.commute nonzero_mult_div_cancel_left of_nat_0_less_iff pi_gt_zero real_sqrt_less_mono sin_gt_zero_02 sin_le_zero)
+    finally show ?thesis .
+  qed
+  have "sqrt (2*pi*n) * (n / exp 1) ^ n > a * s ^ (2*n+1)"
+    using mult_strict_right_mono [OF a_less] mult_left_mono [OF s_le]
+    by (smt (verit, best) s_le ab(1) assms of_int_1 of_int_le_iff of_int_mult zero_less_power)
   then have n: "fact n > a * s ^ (2*n+1)"
-    using fact_bounds
-    by (smt (verit, best) of_int_fact of_int_less_iff)
-    sorry
+    using fact_bounds(1) by (smt (verit, best) \<open>0 < n\<close> of_int_fact of_int_less_iff)
 
   show False
     sorry
