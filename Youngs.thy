@@ -2,6 +2,7 @@ section \<open>Misc experiments\<close>
 
 theory Youngs imports
   "HOL-Library.Sum_of_Squares" "HOL-Analysis.Analysis" "HOL-Computational_Algebra.Fundamental_Theorem_Algebra"
+  "Stirling_Formula.Stirling_Formula"
   "HOL-ex.Sketch_and_Explore"
    
 begin
@@ -225,10 +226,42 @@ qed
 lemma hf_deriv_1: "(deriv^^k) (hf n) 1 \<in> Ints"
   by (smt (verit, best) Ints_1 Ints_minus Ints_mult Ints_power deriv_n_hf_minus hf_deriv_0)
 
+
 lemma exp_nat_irrational:
-  assumes "n > 0"
-  shows "exp (real n) \<notin> \<rat>"
-  sorry
+  assumes "s > 0"
+  shows "exp (real_of_int s) \<notin> \<rat>"
+proof
+  assume "exp (real_of_int s) \<in> \<rat>"
+  then obtain a b where ab: "a > 0" "b > 0" "coprime a b" "exp s = of_int a / of_int b"
+    using Rats_cases' div_0 exp_not_eq_zero of_int_0
+    by (smt (verit, best) exp_gt_zero of_int_0_less_iff zero_less_divide_iff)
+  define n where "n \<equiv> nat (max (a^2) (3 * s^3))"
+  then have ns3: "s^3 \<le> real n / 3"
+    by linarith
+  have "n > 0"
+    using \<open>a > 0\<close> n_def by (smt (verit, best) zero_less_nat_eq zero_less_power)
+  then have "s ^ (2*n+1) \<le> s ^ (3*n)"
+    using \<open>a > 0\<close> assms by (intro power_increasing) auto
+  also have "... = real_of_int(s^3) ^ n"
+    by (simp add: power_mult)
+  also have "... \<le> (n / 3) ^ n"
+    using assms ns3 by (simp add: power_mono)
+  also have "... \<le> (n / exp 1) ^ n"
+    using exp_le \<open>n > 0\<close>
+    by (auto simp add: divide_simps)
+  finally have "s ^ (2*n+1) \<le> (n / exp 1) ^ n"
+    by presburger 
+
+  obtain n where "n>0" "sqrt (2*pi*n) * (n / exp 1) ^ n > a * s ^ (2*n+1)"
+    sorry
+  then have n: "fact n > a * s ^ (2*n+1)"
+    using fact_bounds
+    by (smt (verit, best) of_int_fact of_int_less_iff)
+    sorry
+
+  show False
+    sorry
+qed
 
 theorem exp_irrational:
   fixes q::real
@@ -236,14 +269,14 @@ theorem exp_irrational:
   shows "exp q \<notin> \<rat>"
 proof 
   assume q: "exp q \<in> \<rat>"
-  obtain a b where ab: "a \<noteq> 0" "b > 0" "q = of_int a / of_int b"
+  obtain s t where "s \<noteq> 0" "t > 0" "q = of_int s / of_int t"
     by (metis Rats_cases' assms div_0 of_int_0)
-  then have "(exp q) ^ (nat b) = exp (real_of_int a)"
+  then have "(exp q) ^ (nat t) = exp (real_of_int s)"
     by (smt (verit, best) exp_divide_power_eq of_nat_nat zero_less_nat_eq)
-  moreover  have "exp q ^ (nat b) \<in> \<rat>"
+  moreover  have "exp q ^ (nat t) \<in> \<rat>"
     by (simp add: q)
   ultimately show False
-    by (smt (verit, best) Rats_inverse ab(1) exp_minus exp_nat_irrational of_int_of_nat zero_less_nat_eq)
+    by (smt (verit, del_insts) Rats_inverse \<open>s \<noteq> 0\<close> exp_minus exp_nat_irrational of_int_of_nat)
 qed
 
 
