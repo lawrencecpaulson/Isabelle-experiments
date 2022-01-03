@@ -1,8 +1,26 @@
-theory Youngs imports 
+section \<open>Misc experiments\<close>
+
+theory Youngs imports
   "HOL-Library.Sum_of_Squares" "HOL-Analysis.Analysis" "HOL-Computational_Algebra.Fundamental_Theorem_Algebra"
   "HOL-ex.Sketch_and_Explore"
    
 begin
+
+subsection \<open>Possible library additions\<close>
+
+thm sum.atLeast_Suc_lessThan_Suc_shift
+context comm_monoid_set
+begin
+
+lemma atLeast_atMost_pred_shift:
+  "F (g \<circ> (\<lambda>n. n - Suc 0)) {Suc m..Suc n} = F g {m..n}"
+  unfolding atLeast_Suc_atMost_Suc_shift by simp
+
+lemma atLeast_lessThan_pred_shift:
+  "F (g \<circ> (\<lambda>n. n - Suc 0)) {Suc m..<Suc n} = F g {m..<n}"
+  unfolding atLeast_Suc_lessThan_Suc_shift by simp
+
+end
 
 thm fact_div_fact
 lemma fact_eq_fact_times:
@@ -33,13 +51,17 @@ lemma deriv_pow: "\<lbrakk>f field_differentiable at z\<rbrakk>
   unfolding DERIV_deriv_iff_field_differentiable[symmetric]
   by (auto intro!: DERIV_imp_deriv derivative_eq_intros)
 
+lemma deriv_minus [simp]:
+  "f field_differentiable at z \<Longrightarrow> deriv (\<lambda>w. - f w) z = - deriv f z"
+  by (simp add: DERIV_deriv_iff_field_differentiable DERIV_imp_deriv Deriv.field_differentiable_minus)
+
 text \<open>Kevin Buzzard's example\<close>
 lemma
   fixes x::real
   shows "(x+y)*(x+2*y)*(x+3*y) = x^3 + 6*x^2*y + 11*x*y^2 + 6*y^3"
   by (simp add: algebra_simps eval_nat_numeral)
 
-
+subsection \<open>Some irrational numbers\<close>
 
 definition hf where "hf \<equiv> \<lambda>n. \<lambda>x::real. (x^n * (1-x)^n) / fact n"
 
@@ -92,27 +114,6 @@ lemma hf_differt [iff]: "hf n differentiable at x"
   by (intro derivative_eq_intros exI | simp)+
 
 
-lemma power_Suc_expand:
-  fixes x :: "'a::comm_ring_1"
-  assumes "n > 0"
-  shows "x * x ^ (n - Suc 0) = x ^ n" 
-  by (metis assms Suc_pred power_Suc)
-
-
-
-context comm_monoid_set
-begin
-
-lemma atLeast_atMost_pred_shift:
-  "F (g \<circ> (\<lambda>n. n - Suc 0)) {Suc 0..Suc n} = F g {0..n}"
-  unfolding atLeast_Suc_atMost_Suc_shift by (simp add: atLeast0AtMost)
-
-end
-
-
-lemma DD: "Suc (n - Suc i) = (if i<n then n-i else 1)"
-  by force
-
 lemma deriv_sum_int:
   "deriv (\<lambda>x. \<Sum>i=0..n. real_of_int (c i) * x^i) x 
      = (if n=0 then 0 else (\<Sum>i=0..n - Suc 0. real_of_int ((int i + 1) * c (Suc i)) * x^i))"
@@ -126,7 +127,7 @@ proof -
     also have "... = sum ((\<lambda>i. (real i + 1) * real_of_int (c (Suc i)) * x ^ i) \<circ> (\<lambda>n. n - Suc 0)) {Suc 0..Suc (n - Suc 0)}"
       using that by simp
     also have "... = ?g"
-      by (simp flip: sum.atLeast_atMost_pred_shift)
+      by (simp flip: sum.atLeast_atMost_pred_shift [where m=0])
     finally have \<section>: "(\<Sum>a = 0..n. a * x ^ (a - Suc 0) * (c a)) = ?g" .
     show ?thesis
       by (rule derivative_eq_intros \<section> | simp)+
@@ -162,8 +163,7 @@ next
     by (simp add: Suc)
 qed
 
-lemma hf_deriv_0:
-  "(deriv^^k) (hf n) 0 \<in> Ints"
+lemma hf_deriv_0: "(deriv^^k) (hf n) 0 \<in> Ints"
 proof (cases "n \<le> k")
   case True
   then obtain j where "(fact k::real) = real_of_int j * fact n"
@@ -193,32 +193,12 @@ proof
 qed
 
 
-lemma deriv_minus [simp]:
-  "f field_differentiable at z \<Longrightarrow> deriv (\<lambda>w. - f w) z = - deriv f z"
-  by (simp add: DERIV_deriv_iff_field_differentiable DERIV_imp_deriv Deriv.field_differentiable_minus)
-
 lemma deriv_n_hf_diffr [iff]: "(deriv^^k) (hf n) field_differentiable at x"
   unfolding field_differentiable_def hf_deriv_int_poly
   by (rule derivative_eq_intros exI | force)+
 
 lemma G [iff]: "((deriv^^k) (hf n) \<circ> (-) 1) field_differentiable at x"
   by (force intro: field_differentiable_compose)
-
-lemma deriv_hf_minus2: "deriv (deriv (hf n)) = (\<lambda>x. deriv (deriv (hf n)) (1-x))"
-proof -
-  have *: "(\<lambda>x. deriv (hf n) (1-x)) = deriv (hf n) \<circ> (-) 1"
-    by auto
-  show ?thesis
-    apply (rule )
-    apply (subst deriv_hf_minus)
-    apply (subst deriv_minus)
-    using G [of 1] apply (force simp add: o_def)
-    apply (subst *)
-    apply (subst deriv_chain)
-      apply (auto simp: )
-    using G [of 1]  using Derivative.field_differentiable_minus deriv_hf_minus by fastforce
-qed
-
 
 lemma deriv_n_hf_minus: "(deriv^^k) (hf n) = (\<lambda>x. (-1)^k * (deriv^^k) (hf n) (1-x))"
 proof (induction k)
@@ -242,8 +222,12 @@ next
   qed
 qed
 
+lemma hf_deriv_1: "(deriv^^k) (hf n) 1 \<in> Ints"
+  by (smt (verit, best) Ints_1 Ints_minus Ints_mult Ints_power deriv_n_hf_minus hf_deriv_0)
 
 
+
+subsection \<open>Experiments involving Young's Inequality\<close>
 
 thm strict_mono_inv_on_range
 lemma strict_mono_on_inv_into:
