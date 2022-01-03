@@ -113,8 +113,6 @@ end
 lemma DD: "Suc (n - Suc i) = (if i<n then n-i else 1)"
   by force
 
-
-
 lemma deriv_sum_int:
   "deriv (\<lambda>x. \<Sum>i=0..n. real_of_int (c i) * x^i) x 
      = (if n=0 then 0 else (\<Sum>i=0..n - Suc 0. real_of_int ((int i + 1) * c (Suc i)) * x^i))"
@@ -206,20 +204,9 @@ lemma deriv_n_hf_diffr [iff]: "(deriv^^k) (hf n) field_differentiable at x"
 lemma G [iff]: "((deriv^^k) (hf n) \<circ> (-) 1) field_differentiable at x"
   by (force intro: field_differentiable_compose)
 
-lemma 
-  assumes "\<And>z. f field_differentiable at z"
-  shows "deriv f (1 - x) = - deriv f x"
-proof -
-  have "deriv f (1 - x) = (deriv f \<circ> (-) 1) x"
-    by auto
-  also have "... = - deriv f x"
-    apply (subst deriv_chain)
-    using deriv_chain
-    sorry
-
 lemma deriv_hf_minus2: "deriv (deriv (hf n)) = (\<lambda>x. deriv (deriv (hf n)) (1-x))"
 proof -
-  have *: "(\<lambda>x. deriv (hf n) (1 - x)) = deriv (hf n) \<circ> (-) 1"
+  have *: "(\<lambda>x. deriv (hf n) (1-x)) = deriv (hf n) \<circ> (-) 1"
     by auto
   show ?thesis
     apply (rule )
@@ -232,17 +219,6 @@ proof -
     using G [of 1]  using Derivative.field_differentiable_minus deriv_hf_minus by fastforce
 qed
 
-lemma deriv_n_minus [simp]:
-assumes "f field_differentiable at z"
-shows "(deriv^^k) (\<lambda>w. - f w) = (\<lambda>z. (-1) ^ Suc k * (deriv^^k) f z)"
-proof (induction k)
-  case (Suc k)
-  then show ?case
-    apply (simp add: )
-    sorry
-qed auto
-
-
 
 lemma deriv_n_hf_minus: "(deriv^^k) (hf n) = (\<lambda>x. (-1)^k * (deriv^^k) (hf n) (1-x))"
 proof (induction k)
@@ -251,21 +227,19 @@ proof (induction k)
     by (simp add: fun_eq_iff hf_def)
 next
   case (Suc k)
-  have *: "(\<lambda>x. deriv (hf n) (1 - x)) = deriv (hf n) \<circ> (-) 1"
-    by auto
-  have **: "(\<lambda>x. (deriv ^^ k) (hf n) (1 - x)) = (deriv ^^ k) (hf n) \<circ> (-) 1"
+  have o: "(\<lambda>x. (deriv ^^ k) (hf n) (1-x)) = (deriv ^^ k) (hf n) \<circ> (-) 1"
     by auto
   show ?case
-    unfolding funpow.simps
-    apply (simp add: )
-    apply (rule ext)
-    apply (subst Suc)
-    apply (subst deriv_cmult)
-    defer
-     apply (subst **)
-    apply (subst deriv_chain)
-      apply (auto simp: )
-    by (simp add: "**")
+  proof
+    fix x
+    have "(deriv ^^ Suc k) (hf n) x = deriv (\<lambda>x. (-1) ^ k * (deriv ^^ k) (hf n) (1-x)) x"
+      by simp (metis Suc)
+    also have "... = (-1) ^ k * deriv (\<lambda>x. (deriv ^^ k) (hf n) (1-x)) x"
+      using o by fastforce
+    also have "... = (-1) ^ Suc k * (deriv ^^ Suc k) (hf n) (1-x)"
+      by (subst o, subst deriv_chain, auto)
+    finally show "(deriv ^^ Suc k) (hf n) x = (-1) ^ Suc k * (deriv ^^ Suc k) (hf n) (1-x)" .
+  qed
 qed
 
 
