@@ -199,14 +199,23 @@ lemma deriv_minus [simp]:
   "f field_differentiable at z \<Longrightarrow> deriv (\<lambda>w. - f w) z = - deriv f z"
   by (simp add: DERIV_deriv_iff_field_differentiable DERIV_imp_deriv Deriv.field_differentiable_minus)
 
-lemma F [iff]: "((deriv^^k) (hf n)) field_differentiable at x"
+lemma deriv_n_hf_diffr [iff]: "(deriv^^k) (hf n) field_differentiable at x"
   unfolding field_differentiable_def hf_deriv_int_poly
   by (rule derivative_eq_intros exI | force)+
 
 lemma G [iff]: "((deriv^^k) (hf n) \<circ> (-) 1) field_differentiable at x"
   by (force intro: field_differentiable_compose)
 
-
+lemma 
+  assumes "\<And>z. f field_differentiable at z"
+  shows "deriv f (1 - x) = - deriv f x"
+proof -
+  have "deriv f (1 - x) = (deriv f \<circ> (-) 1) x"
+    by auto
+  also have "... = - deriv f x"
+    apply (subst deriv_chain)
+    using deriv_chain
+    sorry
 
 lemma deriv_hf_minus2: "deriv (deriv (hf n)) = (\<lambda>x. deriv (deriv (hf n)) (1-x))"
 proof -
@@ -235,45 +244,29 @@ qed auto
 
 
 
-lemma "(deriv^^k) (hf n) = (\<lambda>x. (-1)^k * (deriv^^k) (hf n) (1-x))"
+lemma deriv_n_hf_minus: "(deriv^^k) (hf n) = (\<lambda>x. (-1)^k * (deriv^^k) (hf n) (1-x))"
 proof (induction k)
   case 0
   then show ?case
     by (simp add: fun_eq_iff hf_def)
 next
   case (Suc k)
+  have *: "(\<lambda>x. deriv (hf n) (1 - x)) = deriv (hf n) \<circ> (-) 1"
+    by auto
+  have **: "(\<lambda>x. (deriv ^^ k) (hf n) (1 - x)) = (deriv ^^ k) (hf n) \<circ> (-) 1"
+    by auto
   show ?case
     unfolding funpow.simps
     apply (simp add: )
+    apply (rule ext)
     apply (subst Suc)
-apply (rule ext)
     apply (subst deriv_cmult)
-     defer
-
-    using deriv_cmult
-    oops
-    unfolding funpow_Suc_right
-    apply (simp add: )
-    apply (rule )
-    apply (subst deriv_hf_minus)
-unfolding Suc
-    using Suc
-
-    oops
-apply (simp add: Suc)
-    unfolding funpow.simps
-    apply (simp add: )
-    apply (subst EE)
-
-    apply (subst \<section>)
-
-    apply (erule ssubst)
-    apply (simp add: algebra_simps)
-    sorry
+    defer
+     apply (subst **)
+    apply (subst deriv_chain)
+      apply (auto simp: )
+    by (simp add: "**")
 qed
-
-    sorry
-
 
 
 
