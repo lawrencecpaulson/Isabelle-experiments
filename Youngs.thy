@@ -160,7 +160,7 @@ next
     by (simp add: Suc F_def)
 qed
 
-lemma hf_deriv_0: "(deriv^^k) (hf n) 0 \<in> Ints"
+lemma hf_deriv_0: "(deriv^^k) (hf n) 0 \<in> \<int>"
 proof (cases "n \<le> k")
   case True
   then obtain j where "(fact k::real) = real_of_int j * fact n"
@@ -194,9 +194,6 @@ lemma deriv_n_hf_diffr [iff]: "(deriv^^k) (hf n) field_differentiable at x"
   unfolding field_differentiable_def hf_deriv_int_poly
   by (rule derivative_eq_intros exI | force)+
 
-lemma G [iff]: "((deriv^^k) (hf n) \<circ> (-) 1) field_differentiable at x"
-  by (force intro: field_differentiable_compose)
-
 lemma deriv_n_hf_minus: "(deriv^^k) (hf n) = (\<lambda>x. (-1)^k * (deriv^^k) (hf n) (1-x))"
 proof (induction k)
   case 0
@@ -209,6 +206,8 @@ next
   show ?case
   proof
     fix x
+    have [simp]: "((deriv^^k) (hf n) \<circ> (-) 1) field_differentiable at x"
+      by (force intro: field_differentiable_compose)
     have "(deriv ^^ Suc k) (hf n) x = deriv (\<lambda>x. (-1) ^ k * (deriv ^^ k) (hf n) (1-x)) x"
       by simp (metis Suc)
     also have "... = (-1) ^ k * deriv (\<lambda>x. (deriv ^^ k) (hf n) (1-x)) x"
@@ -219,7 +218,7 @@ next
   qed
 qed
 
-lemma hf_deriv_1: "(deriv^^k) (hf n) 1 \<in> Ints"
+lemma hf_deriv_1: "(deriv^^k) (hf n) 1 \<in> \<int>"
   by (smt (verit, best) Ints_1 Ints_minus Ints_mult Ints_power deriv_n_hf_minus hf_deriv_0)
 
 
@@ -237,17 +236,12 @@ lemma of_nat_nat_eq_iff: "of_nat (nat i) = of_int i \<longleftrightarrow> 0 \<le
 
 end
 
-lemma "n = (0::nat) \<Longrightarrow> sum f {..n} = sum f {..<n} + f n"
-  using lessThan_Suc_atMost sum.lessThan_Suc by auto
-
-
-
 lemma exp_nat_irrational:
   assumes "s > 0"
   shows "exp (real_of_int s) \<notin> \<rat>"
 proof
   assume "exp (real_of_int s) \<in> \<rat>"
-  then obtain a b where ab: "a > 0" "b > 0" "coprime a b" "exp s = of_int a / of_int b"
+  then obtain a b where ab: "a > 0" "b > 0" "coprime a b" and exp_s: "exp s = of_int a / of_int b"
     using Rats_cases' div_0 exp_not_eq_zero of_int_0
     by (smt (verit, best) exp_gt_zero of_int_0_less_iff zero_less_divide_iff)
   define n where "n \<equiv> nat (max (a^2) (3 * s^3))"
@@ -284,7 +278,7 @@ proof
   then have n: "fact n > a * s ^ (2*n+1)"
     using fact_bounds(1) by (smt (verit, best) \<open>0 < n\<close> of_int_fact of_int_less_iff)
   define F where "F \<equiv> \<lambda>x. \<Sum>i\<le>2*n. (-1)^i * s^(2*n-i) * (deriv^^i) (hf n) x"
-  have Fder [derivative_intros]: "(F has_field_derivative -s * F x + s ^ (2*n+1) * hf n x) (at x)" for x
+  have Fder [derivative_intros]: "(F has_real_derivative -s * F x + s ^ (2*n+1) * hf n x) (at x)" for x
   proof -
     have *: "sum f {..n+n} = sum f {..<n+n}" if "f (n+n) = 0" for f::"nat \<Rightarrow> real"
       by (smt (verit, best) lessThan_Suc_atMost sum.lessThan_Suc that)
@@ -304,11 +298,27 @@ proof
       apply (rule derivative_eq_intros field_differentiable_derivI | simp)+
       using \<section> by (simp add: algebra_simps atLeast0AtMost eval_nat_numeral)
   qed
-  have "((\<lambda>x. exp (s*x) * F x) has_field_derivative s^Suc(2*n) * exp (s*x) * hf n x) (at x)" 
-    for x::real
+
+  have F01_Ints: "F 0 \<in> \<int>" "F 1 \<in> \<int>"
+    by (simp_all add: F_def hf_deriv_0 hf_deriv_1 Ints_sum)
+
+  define sF where "sF \<equiv> \<lambda>x. exp (of_int s * x) * F x"
+  define sF' where "sF' \<equiv> \<lambda>x. of_int s ^ Suc(2*n) * exp (of_int s * x) * hf n x"
+  have sF_der: "(sF has_real_derivative sF' x) (at x)" for x
+    unfolding sF_def sF'_def
     apply (rule derivative_eq_intros | simp)+
     apply (simp add: algebra_simps)
     done
+  let ?N = "b * integral {0..1} sF'"
+  have "(sF' has_integral sF 1 - sF 0) {0..1}"
+    by (smt (verit, best) fundamental_theorem_of_calculus has_field_derivative_iff_has_vector_derivative has_vector_derivative_at_within sF_der)
+  then have "?N = a * F 1 - b * F 0"
+    using \<open>b > 0\<close> by (simp add: integral_unique exp_s sF_def algebra_simps)
+  also have "... \<in> \<int>"
+    using hf_deriv_1 by (simp add: F01_Ints)
+  finally have N_Ints: "?N \<in> \<int>" .
+
+    sorry
 
 
   show False
