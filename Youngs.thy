@@ -284,26 +284,33 @@ proof
   then have n: "fact n > a * s ^ (2*n+1)"
     using fact_bounds(1) by (smt (verit, best) \<open>0 < n\<close> of_int_fact of_int_less_iff)
   define F where "F \<equiv> \<lambda>x. \<Sum>i\<le>2*n. (-1)^i * s^(2*n-i) * (deriv^^i) (hf n) x"
-  have Fder: "(F has_field_derivative -s * F x + s ^ (2*n+1) * hf n x) (at x)" for x
+  have Fder [derivative_intros]: "(F has_field_derivative -s * F x + s ^ (2*n+1) * hf n x) (at x)" for x
   proof -
     have *: "sum f {..n+n} = sum f {..<n+n}" if "f (n+n) = 0" for f::"nat \<Rightarrow> real"
       by (smt (verit, best) lessThan_Suc_atMost sum.lessThan_Suc that)
     have [simp]: "(deriv ((deriv ^^ (n+n)) (hf n)) x) = 0"
       using hf_deriv_eq_0 [where k= "Suc(n+n)"] by simp
-    have \<section>: "(\<Sum>k\<le>n+n. (-1) ^ k * ((deriv ^^ Suc k) (hf n) x * real_of_int s ^ (n+n - k))) 
-           + s * (\<Sum>j=0..n+n. (-1) ^ j * ((deriv ^^ j) (hf n) x * real_of_int s ^ (n+n - j))) 
-           = s * (hf n x * real_of_int s ^ (n+n))" 
+    have \<section>: "(\<Sum>k\<le>n+n. (-1) ^ k * ((deriv ^^ Suc k) (hf n) x * of_int s ^ (n+n - k))) 
+           + s * (\<Sum>j=0..n+n. (-1) ^ j * ((deriv ^^ j) (hf n) x * of_int s ^ (n+n - j))) 
+           = s * (hf n x * of_int s ^ (n+n))" 
       using \<open>n>0\<close>
       apply (subst sum_Suc_reindex)
       apply (simp add: algebra_simps atLeast0AtMost)
-      apply (force simp add: * mult.left_commute [of "real_of_int s"] minus_nat.diff_Suc sum_distrib_left 
+      apply (force simp add: * mult.left_commute [of "of_int s"] minus_nat.diff_Suc sum_distrib_left 
                    simp flip: sum.distrib intro!: comm_monoid_add_class.sum.neutral split: nat.split_asm)
       done
     show ?thesis
       unfolding F_def 
-      apply (rule derivative_eq_intros field_differentiable_imp_differentiable DERIV_deriv_iff_real_differentiable [THEN iffD2] | simp)+
+      apply (rule derivative_eq_intros field_differentiable_derivI | simp)+
       using \<section> by (simp add: algebra_simps atLeast0AtMost eval_nat_numeral)
   qed
+  have "((\<lambda>x. exp (s*x) * F x) has_field_derivative s^Suc(2*n) * exp (s*x) * hf n x) (at x)" 
+    for x::real
+    apply (rule derivative_eq_intros | simp)+
+    apply (simp add: algebra_simps)
+    done
+
+
   show False
     sorry
 qed
