@@ -222,6 +222,12 @@ qed
 lemma hf_deriv_1: "(deriv^^k) (hf n) 1 \<in> Ints"
   by (smt (verit, best) Ints_1 Ints_minus Ints_mult Ints_power deriv_n_hf_minus hf_deriv_0)
 
+
+lemma hf_deriv_eq_0 [simp]:
+  assumes "k > 2*n"
+  shows "(deriv^^k) (hf n) = (\<lambda>x. 0)"
+  using assms by (force simp add: cf_def hf_deriv_int_poly)
+
 thm of_int_less_iff
 context linordered_idom
 begin
@@ -230,6 +236,11 @@ lemma of_nat_nat_eq_iff: "of_nat (nat i) = of_int i \<longleftrightarrow> 0 \<le
   using local.of_int_le_iff by fastforce
 
 end
+
+lemma "n = (0::nat) \<Longrightarrow> sum f {..n} = sum f {..<n} + f n"
+  using lessThan_Suc_atMost sum.lessThan_Suc by auto
+
+
 
 lemma exp_nat_irrational:
   assumes "s > 0"
@@ -273,24 +284,28 @@ proof
   then have n: "fact n > a * s ^ (2*n+1)"
     using fact_bounds(1) by (smt (verit, best) \<open>0 < n\<close> of_int_fact of_int_less_iff)
   define F where "F \<equiv> \<lambda>x. \<Sum>i\<le>2*n. (-1)^i * s^(2*n-i) * (deriv^^i) (hf n) x"
+
   have "(F has_field_derivative -s * F x + s ^ (2*n+1) * hf n x) (at x)" for x
-    unfolding F_def
-    apply (rule derivative_eq_intros DERIV_deriv_iff_real_differentiable [THEN iffD2] | simp add: field_differentiable_imp_differentiable)+
-    apply (induction n)
-     apply (simp add: )
-    defer
-apply (simp add: )
+  proof -
+    have [simp]: "(deriv ((deriv ^^ (n+n)) (hf n)) x) = 0"
+      by (metis funpow.simps(2) hf_deriv_eq_0 less_iff_Suc_add mult_2 nat_arith.rule0 o_apply)
 
-
-    apply (simp add: field_differentiable_imp_differentiable)
-    using field_differentiable_def real_differentiable_def apply blast
-    apply blast
-
-    apply (simp add: sum_divide_distrib sum_distrib_left sum_distrib_right field_simps flip: sum.distrib)
-
-    apply (simp add: algebra_simps sum_divide_distrib sum_distrib_left sum_distrib_right flip: sum.distrib)
-    apply (simp add: field_simps)
-    sorry
+    have \<section>: "(\<Sum>k\<le>n + n. (-1) ^ k * ((deriv ^^ Suc k) (hf n) x * real_of_int s ^ (n + n - k))) 
+      + s * (\<Sum>j=0..n + n. (-1) ^ j * ((deriv ^^ j) (hf n) x * real_of_int s ^ (n + n - j))) 
+      = s * (hf n x * real_of_int s ^ (n + n))" 
+      using \<open>n>0\<close>
+      apply (subst sum_Suc_reindex)
+      apply (simp add: algebra_simps atLeast0AtMost)
+      apply (simp add: mult.left_commute [of "real_of_int s"] sum_distrib_left flip: sum.distrib)
+      apply (rule comm_monoid_add_class.sum.neutral)
+      apply (auto simp: )
+      by (metis Suc_diff_Suc \<open>deriv ((deriv ^^ (n + n)) (hf n)) x = 0\<close> le_eq_less_or_eq power_Suc)
+    show ?thesis
+      unfolding F_def 
+      apply (rule derivative_eq_intros DERIV_deriv_iff_real_differentiable [THEN iffD2] | simp add: field_differentiable_imp_differentiable eval_nat_numeral)+
+      using \<section>
+      by (simp add: algebra_simps atLeast0AtMost)
+  qed
   show False
     sorry
 qed
