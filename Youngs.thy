@@ -42,6 +42,7 @@ lemma fact_eq_fact_times:
   unfolding fact_prod
   by (metis add.commute assms le_add1 le_add_diff_inverse of_nat_id plus_1_eq_Suc prod.ub_add_nat)
 
+(*REPLACE THE UGLY ORIGINAL*)
 lemma fact_div_fact:
   assumes "m \<ge> n"
   shows "fact m div fact n = \<Prod>{n + 1..m}"
@@ -369,21 +370,26 @@ proof
     using hf_deriv_1 by (simp add: F01_Ints)
   finally have N_Ints: "?N \<in> \<int>" .
 
-  have "exp (of_int s * (1/3)) * hf n (1/ 3) * (1/3) \<le> integral {1/3..2/3} sF'"
-    using integral_le exp_hf_lowerbound
-    sorry
-  have "integral {0..1} (hf n) > 0"
-    sorry
-  then have "integral {0..1} sF' > 0"
-    apply (simp add: sF'_def)
-
-
-  have "integral {0..1} sF' \<ge> 0"
-    using sF'_integral assms by (intro integral_nonneg) (auto simp: sF'_def hf_def)
-  moreover have "integral {0..1} sF' \<noteq> 0"
-    using integral_le
-    sorry
-  ultimately have "0 < ?N"
+  define l13 where "l13 \<equiv> of_int s ^ Suc (2 * n) * exp (of_int s * (1/3)) * hf n (1/3)"
+  have subset01: "{1/3..2/3} \<subseteq> {0..1::real}"
+    by auto
+  have integ_13_23: "sF' integrable_on {1/3..2/3}"
+    by (meson subset01 integrable_on_def integrable_on_subinterval sF'_integral)
+  have "0 < l13/3"
+    by (simp add: hf_def l13_def assms)
+  also have "... = integral {1/3..2/3} (\<lambda>x::real. l13)"
+    by simp
+  also have "\<dots> \<le> integral {1/3..2/3} sF'"
+  proof (rule integral_le)
+    fix x::real
+    assume "x \<in> {1/3..2/3}"
+    with exp_hf_lowerbound assms show "l13 \<le> sF' x"
+      by (auto simp: l13_def sF'_def)
+  qed (use integ_13_23 in auto)
+  also have "... \<le> integral {0..1} sF'"
+    using integral_subset_le [OF subset01 integ_13_23] sF'_integral assms hf_nonneg sF'_def by auto
+  finally have "integral {0..1} sF' > 0" .
+  then have "0 < ?N"
     by (simp add: \<open>b > 0\<close>)
 
   show False
@@ -400,7 +406,7 @@ proof
     by (metis Rats_cases' assms div_0 of_int_0)
   then have "(exp q) ^ (nat t) = exp (real_of_int s)"
     by (smt (verit, best) exp_divide_power_eq of_nat_nat zero_less_nat_eq)
-  moreover  have "exp q ^ (nat t) \<in> \<rat>"
+  moreover have "exp q ^ (nat t) \<in> \<rat>"
     by (simp add: q)
   ultimately show False
     by (smt (verit, del_insts) Rats_inverse \<open>s \<noteq> 0\<close> exp_minus exp_nat_irrational of_int_of_nat)
