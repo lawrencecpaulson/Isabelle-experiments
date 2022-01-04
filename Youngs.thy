@@ -23,6 +23,18 @@ lemma atLeast_lessThan_pred_shift:
 
 end
 
+
+thm of_int_less_iff
+context linordered_idom
+begin
+
+lemma of_nat_nat_eq_iff: "of_nat (nat i) = of_int i \<longleftrightarrow> 0 \<le> i"
+  using local.of_int_le_iff by fastforce
+
+end
+
+
+
 thm fact_div_fact
 lemma fact_eq_fact_times:
   assumes "m \<ge> n"
@@ -67,10 +79,6 @@ subsection \<open>Some irrational numbers\<close>
 definition hf where "hf \<equiv> \<lambda>n. \<lambda>x::real. (x^n * (1-x)^n) / fact n"
 
 definition cf where "cf \<equiv> \<lambda>n i. if i < n then 0 else (n choose (i-n)) * (-1)^(i-n)"
-
-(*?*)
-lemma hf_Suc: "hf (Suc n) x = hf n x * x * (1-x) / Suc n"
-  by (simp add: hf_def algebra_simps)
 
 lemma hf_int_poly:
   fixes x::real
@@ -227,14 +235,57 @@ lemma hf_deriv_eq_0:
   shows "(deriv^^k) (hf n) = (\<lambda>x. 0)"
   using assms by (force simp add: cf_def hf_deriv_int_poly)
 
-thm of_int_less_iff
-context linordered_idom
-begin
+lemma hf_nonneg:
+  assumes "0 \<le> x" "x \<le> 1" 
+  shows "0 \<le> hf n x" 
+    using assms by (simp add: hf_def)
 
-lemma of_nat_nat_eq_iff: "of_nat (nat i) = of_int i \<longleftrightarrow> 0 \<le> i"
-  using local.of_int_le_iff by fastforce
+lemma hf_Suc: "hf (Suc n) x = hf n x * x * (1-x) / Suc n"
+  by (simp add: hf_def algebra_simps)
 
-end
+lemma hf_lowerbound:
+  assumes "1/3 \<le> x" "x \<le> 2/3" 
+  shows "hf n (1/3) \<le> hf n x"
+proof (induction n)
+  case 0
+  then show ?case
+    by (auto simp: hf_def)
+next
+  case (Suc n)
+  have [simp]: "0 \<le> hf n x"
+    using assms by (simp add: hf_def)
+  have "2 \<le> 9 * x * (1 - x)"
+    using assms by sos
+  then have "2 * (1 + real n) * hf n x \<le> (9 * x * (1 - x)) * (1 + real n) * hf n x"
+    by (intro mult_mono) auto
+  then show ?case 
+    apply (simp add: Suc hf_Suc field_simps)
+    by (smt (verit, best) Suc mult_left_mono of_nat_0_le_iff)
+qed
+
+lemma exp_hf_lowerbound:
+  assumes x: "1/3 \<le> x" "x \<le> 2/3" and "s \<ge> 0"
+  shows "exp (of_int s * (1/3)) * hf n (1/3) \<le> exp (of_int s * x) * hf n x"
+proof -
+  have hf: "hf n (1/3) \<le> hf n x"
+  proof (induction n)
+    case 0
+    then show ?case
+      by (auto simp: hf_def)
+  next
+    case (Suc n)
+    have "2 \<le> 9 * x * (1 - x)"
+      using x by sos
+    then have "2 * (1 + real n) * hf n x \<le> (9 * x * (1 - x)) * (1 + real n) * hf n x"
+      using assms by (intro mult_mono hf_nonneg) auto
+    then show ?case 
+      apply (simp add: Suc hf_Suc field_simps)
+      by (smt (verit, best) Suc mult_left_mono of_nat_0_le_iff)
+  qed
+  show ?thesis
+    using assms by (intro mult_mono exp_le_cancel_iff [THEN iffD2] hf_lowerbound hf_nonneg) auto
+qed
+
 
 lemma exp_nat_irrational:
   assumes "s > 0"
@@ -310,7 +361,7 @@ proof
     apply (simp add: algebra_simps)
     done
   let ?N = "b * integral {0..1} sF'"
-  have "(sF' has_integral sF 1 - sF 0) {0..1}"
+  have sF'_integral: "(sF' has_integral sF 1 - sF 0) {0..1}"
     by (smt (verit, best) fundamental_theorem_of_calculus has_field_derivative_iff_has_vector_derivative has_vector_derivative_at_within sF_der)
   then have "?N = a * F 1 - b * F 0"
     using \<open>b > 0\<close> by (simp add: integral_unique exp_s sF_def algebra_simps)
@@ -318,8 +369,22 @@ proof
     using hf_deriv_1 by (simp add: F01_Ints)
   finally have N_Ints: "?N \<in> \<int>" .
 
+  have "exp (of_int s * (1/3)) * hf n (1/ 3) * (1/3) \<le> integral {1/3..2/3} sF'"
+    using integral_le exp_hf_lowerbound
     sorry
+  have "integral {0..1} (hf n) > 0"
+    sorry
+  then have "integral {0..1} sF' > 0"
+    apply (simp add: sF'_def)
 
+
+  have "integral {0..1} sF' \<ge> 0"
+    using sF'_integral assms by (intro integral_nonneg) (auto simp: sF'_def hf_def)
+  moreover have "integral {0..1} sF' \<noteq> 0"
+    using integral_le
+    sorry
+  ultimately have "0 < ?N"
+    by (simp add: \<open>b > 0\<close>)
 
   show False
     sorry
