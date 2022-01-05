@@ -76,11 +76,13 @@ lemma
   by (simp add: algebra_simps eval_nat_numeral)
 
 subsection \<open>Some irrational numbers\<close>
+text \<open>From Aigner and Ziegler, Proofs from THE BOOK (Springer, 2018), Chapter 8, pp. 50--51.\<close>
 
 definition hf where "hf \<equiv> \<lambda>n. \<lambda>x::real. (x^n * (1-x)^n) / fact n"
 
 definition cf where "cf \<equiv> \<lambda>n i. if i < n then 0 else (n choose (i-n)) * (-1)^(i-n)"
 
+text \<open>Mere knowledge that the coefficients are integers is not enough later on.\<close>
 lemma hf_int_poly:
   fixes x::real
   shows "hf n = (\<lambda>x. (1 / fact n) * (\<Sum>i=0..2*n. real_of_int (cf n i) * x^i))"
@@ -98,38 +100,27 @@ proof
     by (simp add: sum_distrib_left mult_ac power_add)
   also have "... = (\<Sum>i=n..2*n. real_of_int (cf n i) * x^i)"
     by (simp add: sum.reindex [OF inj, simplified] cf_def)
-  finally have "hf n x = (1 / fact n) * (\<Sum>i = n..2 * n. real_of_int (cf n i) * x ^ i)"
+  finally have "hf n x = (1 / fact n) * (\<Sum>i = n..2 * n. real_of_int (cf n i) * x^i)"
     by (simp add: hf_def)
-  moreover have "(\<Sum>i = 0..<n. real_of_int (cf n i) * x ^ i) = 0"
+  moreover have "(\<Sum>i = 0..<n. real_of_int (cf n i) * x^i) = 0"
     by (simp add: cf_def)
-  ultimately show "hf n x = (1 / fact n) * (\<Sum>i = 0..2 * n. real_of_int (cf n i) * x ^ i)"
-    using sum.union_disjoint [of "{0..<n}" "{n..2*n}" "\<lambda>i. real_of_int (cf n i) * x ^ i"]
+  ultimately show "hf n x = (1 / fact n) * (\<Sum>i = 0..2 * n. real_of_int (cf n i) * x^i)"
+    using sum.union_disjoint [of "{0..<n}" "{n..2*n}" "\<lambda>i. real_of_int (cf n i) * x^i"]
     by (simp add: ivl_disj_int_two(7) ivl_disj_un_two(7) mult_2)
 qed
 
-lemma hf_le_inverse_fact:
-  assumes "0 \<le> x" "x \<le> 1" 
-  shows "hf n x \<le> 1/fact n"
-  using assms
-  by (auto simp: hf_def divide_simps mult_le_one power_le_one)
+text \<open>Lemma (ii) with strict inequalities is more work and less useful.\<close>
+lemma hf_nonneg:
+  assumes "0 \<le> x" "x \<le> 1" shows "0 \<le> hf n x" 
+    using assms by (simp add: hf_def)
 
-(*UNUSED?*)
-lemma hf_range:
-  assumes "0 < x" "x < 1" "n > 0"
-  shows "hf n x \<in> {0<..< 1/fact n}"
-proof -
-  have "x ^ n * (1-x) ^ n \<le> 1"
-    by (smt (verit) assms mult_le_one power_le_one zero_le_power)
-  moreover have "x ^ n * (1-x) ^ n \<noteq> 1"
-    by (smt (verit) assms mult_left_le power_0 power_strict_decreasing zero_less_power)
-  ultimately show ?thesis
-    using assms by (simp add: hf_def divide_strict_right_mono)
-qed
+lemma hf_le_inverse_fact:
+  assumes "0 \<le> x" "x \<le> 1" shows "hf n x \<le> 1/fact n"
+  using assms by (auto simp: hf_def divide_simps mult_le_one power_le_one)
 
 lemma hf_differt [iff]: "hf n differentiable at x"
   unfolding hf_int_poly differentiable_def
   by (intro derivative_eq_intros exI | simp)+
-
 
 lemma deriv_sum_int:
   "deriv (\<lambda>x. \<Sum>i=0..n. real_of_int (c i) * x^i) x 
@@ -141,7 +132,7 @@ proof -
     have "(\<Sum>i = 0..n. i * x ^ (i - Suc 0) * (c i))
         = (\<Sum>i = Suc 0..n. (real (i - Suc 0) + 1) * real_of_int (c i) * x ^ (i - Suc 0))"
       using that by (auto simp add: sum.atLeast_Suc_atMost intro!: sum.cong)
-    also have "... = sum ((\<lambda>i. (real i + 1) * real_of_int (c (Suc i)) * x ^ i) \<circ> (\<lambda>n. n - Suc 0)) {Suc 0..Suc (n - Suc 0)}"
+    also have "... = sum ((\<lambda>i. (real i + 1) * real_of_int (c (Suc i)) * x^i) \<circ> (\<lambda>n. n - Suc 0)) {Suc 0..Suc (n - Suc 0)}"
       using that by simp
     also have "... = ?g"
       by (simp flip: sum.atLeast_atMost_pred_shift [where m=0])
@@ -153,7 +144,7 @@ proof -
     by (force intro: DERIV_imp_deriv)
 qed
 
-
+text \<open>We calculate the coefficients of the $k$th derivative precisely.\<close>
 lemma hf_deriv_int_poly:
    "(deriv^^k) (hf n) = (\<lambda>x. (1 / fact n) * (\<Sum>i=0..2*n-k. real_of_int (int(\<Prod>{i<..i+k}) * cf n (i+k)) * x^i))"
 proof (induction k)
@@ -162,12 +153,12 @@ proof (induction k)
     by (simp add: hf_int_poly)
 next
   case (Suc k)
-  define F where "F \<equiv> \<lambda>x. (\<Sum>i = 0..2*n - k. real_of_int (int(\<Prod>{i<..i+k}) * cf n (i+k)) * x ^ i)"
+  define F where "F \<equiv> \<lambda>x. (\<Sum>i = 0..2*n - k. real_of_int (int(\<Prod>{i<..i+k}) * cf n (i+k)) * x^i)"
   have Fd: "F field_differentiable at x" for x
     unfolding field_differentiable_def F_def
     by (rule derivative_eq_intros exI | force)+
   have "deriv (\<lambda>x. F x / fact n) x 
-      = (\<Sum>i = 0..2 * n - Suc k. real_of_int (int(\<Prod>{i<..i+ Suc k}) * cf n (Suc (i+k))) * x ^ i) / fact n" for x
+      = (\<Sum>i = 0..2 * n - Suc k. real_of_int (int(\<Prod>{i<..i+ Suc k}) * cf n (Suc (i+k))) * x^i) / fact n" for x
     unfolding deriv_cdivide_right [OF Fd]
     apply (simp add: F_def deriv_sum_int cf_def add.commute flip: of_int_mult)
     apply (auto intro!: sum.cong)
@@ -205,7 +196,6 @@ proof
     by simp
 qed
 
-
 lemma deriv_n_hf_diffr [iff]: "(deriv^^k) (hf n) field_differentiable at x"
   unfolding field_differentiable_def hf_deriv_int_poly
   by (rule derivative_eq_intros exI | force)+
@@ -237,39 +227,11 @@ qed
 lemma hf_deriv_1: "(deriv^^k) (hf n) 1 \<in> \<int>"
   by (smt (verit, best) Ints_1 Ints_minus Ints_mult Ints_power deriv_n_hf_minus hf_deriv_0)
 
-
-lemma hf_deriv_eq_0:
-  assumes "k > 2*n"
-  shows "(deriv^^k) (hf n) = (\<lambda>x. 0)"
-  using assms by (force simp add: cf_def hf_deriv_int_poly)
-
-lemma hf_nonneg:
-  assumes "0 \<le> x" "x \<le> 1" 
-  shows "0 \<le> hf n x" 
-    using assms by (simp add: hf_def)
+lemma hf_deriv_eq_0: "k > 2*n \<Longrightarrow> (deriv^^k) (hf n) = (\<lambda>x. 0)"
+  by (force simp add: cf_def hf_deriv_int_poly)
 
 lemma hf_Suc: "hf (Suc n) x = hf n x * x * (1-x) / Suc n"
   by (simp add: hf_def algebra_simps)
-
-lemma hf_lowerbound:
-  assumes "1/3 \<le> x" "x \<le> 2/3" 
-  shows "hf n (1/3) \<le> hf n x"
-proof (induction n)
-  case 0
-  then show ?case
-    by (auto simp: hf_def)
-next
-  case (Suc n)
-  have [simp]: "0 \<le> hf n x"
-    using assms by (simp add: hf_def)
-  have "2 \<le> 9 * x * (1 - x)"
-    using assms by sos
-  then have "2 * (1 + real n) * hf n x \<le> (9 * x * (1 - x)) * (1 + real n) * hf n x"
-    by (intro mult_mono) auto
-  then show ?case 
-    apply (simp add: Suc hf_Suc field_simps)
-    by (smt (verit, best) Suc mult_left_mono of_nat_0_le_iff)
-qed
 
 lemma exp_hf_lowerbound:
   assumes x: "1/3 \<le> x" "x \<le> 2/3" and "s \<ge> 0"
@@ -277,10 +239,6 @@ lemma exp_hf_lowerbound:
 proof -
   have hf: "hf n (1/3) \<le> hf n x"
   proof (induction n)
-    case 0
-    then show ?case
-      by (auto simp: hf_def)
-  next
     case (Suc n)
     have "2 \<le> 9 * x * (1 - x)"
       using x by sos
@@ -289,11 +247,10 @@ proof -
     then show ?case 
       apply (simp add: Suc hf_Suc field_simps)
       by (smt (verit, best) Suc mult_left_mono of_nat_0_le_iff)
-  qed
+  qed (auto simp: hf_def)
   show ?thesis
-    using assms by (intro mult_mono exp_le_cancel_iff [THEN iffD2] hf_lowerbound hf_nonneg) auto
-qed
-
+    using assms by (intro mult_mono exp_le_cancel_iff [THEN iffD2] hf hf_nonneg) auto
+qed 
 
 lemma exp_nat_irrational:
   assumes "s > 0"
@@ -359,17 +316,14 @@ proof
 
   have F01_Ints: "F 0 \<in> \<int>" "F 1 \<in> \<int>"
     by (simp_all add: F_def hf_deriv_0 hf_deriv_1 Ints_sum)
-
   define sF where "sF \<equiv> \<lambda>x. exp (of_int s * x) * F x"
   define sF' where "sF' \<equiv> \<lambda>x. of_int s ^ Suc(2*n) * (exp (of_int s * x) * hf n x)"
   have sF_der: "(sF has_real_derivative sF' x) (at x)" for x
     unfolding sF_def sF'_def
-    apply (rule derivative_eq_intros | simp)+
-    apply (simp add: algebra_simps)
-    done
+    by (rule refl derivative_eq_intros | force simp: algebra_simps)+
   let ?N = "b * integral {0..1} sF'"
   have sF'_integral: "(sF' has_integral sF 1 - sF 0) {0..1}"
-    by (smt (verit, best) fundamental_theorem_of_calculus has_field_derivative_iff_has_vector_derivative has_vector_derivative_at_within sF_der)
+    by (smt (verit) fundamental_theorem_of_calculus has_field_derivative_iff_has_vector_derivative has_vector_derivative_at_within sF_der)
   then have "?N = a * F 1 - b * F 0"
     using \<open>b > 0\<close> by (simp add: integral_unique exp_s sF_def algebra_simps)
   also have "... \<in> \<int>"
@@ -381,14 +335,11 @@ proof
     by auto
   have integ_13_23: "sF' integrable_on {1/3..2/3}"
     by (meson subset01 integrable_on_def integrable_on_subinterval sF'_integral)
-  have "0 < l13/3"
+  have "0 < integral {1/3..2/3} (\<lambda>x::real. l13)"
     by (simp add: hf_def l13_def assms)
-  also have "... = integral {1/3..2/3} (\<lambda>x::real. l13)"
-    by simp
   also have "\<dots> \<le> integral {1/3..2/3} sF'"
   proof (rule integral_le)
-    fix x::real
-    assume "x \<in> {1/3..2/3}"
+    fix x::real assume "x \<in> {1/3..2/3}"
     with exp_hf_lowerbound assms show "l13 \<le> sF' x"
       by (auto simp: l13_def sF'_def)
   qed (use integ_13_23 in auto)
@@ -397,23 +348,18 @@ proof
   finally have "integral {0..1} sF' > 0" .
   then have "0 < ?N"
     by (simp add: \<open>b > 0\<close>)
-
-  have "integral {0..1} sF' = of_int s ^ Suc(2*n) * integral {0..1} (\<lambda>x. exp (of_int s * x) * hf n x)"
+  have "integral {0..1} sF' = of_int s ^ Suc(2*n) * integral {0..1} (\<lambda>x. exp (s*x) * hf n x)"
     unfolding sF'_def by force 
   also have "... \<le> of_int s ^ Suc(2*n) * (exp s * (1 / fact n))"
   proof (rule mult_left_mono)
-    have "integral {0..1} (\<lambda>x. exp (of_int s * x) * hf n x) 
-       \<le> integral {0..1} (\<lambda>x::real. exp (of_int s) * (1 / fact n))"
-       apply (intro mult_mono integral_le)
-      using \<open>0 < ?N\<close> not_integrable_integral sF'_def apply fastforce
-       apply blast
-      apply (simp add: assms)
-      using hf_le_inverse_fact apply presburger
-      using exp_ge_zero apply blast
-      using hf_nonneg by presburger
-    also have "... = exp (of_int s) * (1 / fact n)"
+    have "integral {0..1} (\<lambda>x. exp (s*x) * hf n x)  \<le> integral {0..1} (\<lambda>x::real. exp s * (1 / fact n))"
+    proof (intro mult_mono integral_le)
+      show "(\<lambda>x. exp (s*x) * hf n x) integrable_on {0..1}"
+        using \<open>0 < ?N\<close> not_integrable_integral sF'_def by fastforce
+    qed (use assms hf_nonneg hf_le_inverse_fact in auto)
+    also have "... = exp s * (1 / fact n)"
       by simp
-    finally show "integral {0..1} (\<lambda>x. exp (of_int s * x) * hf n x) \<le> exp (of_int s) * (1 / fact n)" .
+    finally show "integral {0..1} (\<lambda>x. exp (s*x) * hf n x) \<le> exp s * (1 / fact n)" .
   qed (use assms in auto)
   finally have "?N \<le> b * of_int s ^ Suc(2*n) * exp s * (1 / fact n)"
     using \<open>b > 0\<close> by (simp add: sF'_def mult_ac divide_simps)
@@ -432,7 +378,7 @@ proof
   assume q: "exp q \<in> \<rat>"
   obtain s t where "s \<noteq> 0" "t > 0" "q = of_int s / of_int t"
     by (metis Rats_cases' assms div_0 of_int_0)
-  then have "(exp q) ^ (nat t) = exp (real_of_int s)"
+  then have "(exp q) ^ (nat t) = exp s"
     by (smt (verit, best) exp_divide_power_eq of_nat_nat zero_less_nat_eq)
   moreover have "exp q ^ (nat t) \<in> \<rat>"
     by (simp add: q)
