@@ -355,7 +355,7 @@ proof
     by (simp_all add: F_def hf_deriv_0 hf_deriv_1 Ints_sum)
 
   define sF where "sF \<equiv> \<lambda>x. exp (of_int s * x) * F x"
-  define sF' where "sF' \<equiv> \<lambda>x. of_int s ^ Suc(2*n) * exp (of_int s * x) * hf n x"
+  define sF' where "sF' \<equiv> \<lambda>x. of_int s ^ Suc(2*n) * (exp (of_int s * x) * hf n x)"
   have sF_der: "(sF has_real_derivative sF' x) (at x)" for x
     unfolding sF_def sF'_def
     apply (rule derivative_eq_intros | simp)+
@@ -370,7 +370,7 @@ proof
     using hf_deriv_1 by (simp add: F01_Ints)
   finally have N_Ints: "?N \<in> \<int>" .
 
-  define l13 where "l13 \<equiv> of_int s ^ Suc (2 * n) * exp (of_int s * (1/3)) * hf n (1/3)"
+  define l13 where "l13 \<equiv> of_int s ^ Suc (2*n) * exp (of_int s * (1/3)) * hf n (1/3)"
   have subset01: "{1/3..2/3} \<subseteq> {0..1::real}"
     by auto
   have integ_13_23: "sF' integrable_on {1/3..2/3}"
@@ -392,8 +392,20 @@ proof
   then have "0 < ?N"
     by (simp add: \<open>b > 0\<close>)
 
-  show False
-    sorry
+  have "integral {0..1} sF' = of_int s ^ Suc(2*n) * integral {0..1} (\<lambda>x. exp (of_int s * x) * hf n x)"
+    unfolding sF'_def by force 
+  also have "... \<le> of_int s ^ Suc(2*n) * (exp s * (1 / fact n))"
+  proof (rule mult_left_mono)
+    show "integral {0..1} (\<lambda>x. exp (of_int s * x) * hf n x) \<le> exp (of_int s) * (1 / fact n)"
+      sorry
+  qed (use assms in auto)
+  finally have "?N \<le> b * of_int s ^ Suc(2*n) * exp s * (1 / fact n)"
+    using \<open>b > 0\<close> by (simp add: sF'_def mult_ac divide_simps)
+  also have "... < 1"
+    using n apply (simp add: field_simps exp_s)
+    by (metis of_int_fact of_int_less_iff of_int_mult of_int_power)
+  finally show False
+    using \<open>0 < ?N\<close> Ints_cases N_Ints by force
 qed
 
 theorem exp_irrational:
