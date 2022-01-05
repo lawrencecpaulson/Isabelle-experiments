@@ -107,6 +107,13 @@ proof
     by (simp add: ivl_disj_int_two(7) ivl_disj_un_two(7) mult_2)
 qed
 
+lemma hf_le_inverse_fact:
+  assumes "0 \<le> x" "x \<le> 1" 
+  shows "hf n x \<le> 1/fact n"
+  using assms
+  by (auto simp: hf_def divide_simps mult_le_one power_le_one)
+
+(*UNUSED?*)
 lemma hf_range:
   assumes "0 < x" "x < 1" "n > 0"
   shows "hf n x \<in> {0<..< 1/fact n}"
@@ -318,7 +325,6 @@ proof
       by (simp add: ab(1) order_less_imp_le)
     also have "... \<le> sqrt n"
       unfolding n_def
-      using of_nat_nat_eq_iff
       by (smt (verit, ccfv_SIG) int_nat_eq of_nat_less_of_int_iff real_sqrt_le_mono)
     also have "... < sqrt (2*pi*n)"
       by (smt (verit, ccfv_SIG) \<open>0 < n\<close> divide_le_eq_1_pos mult.commute nonzero_mult_div_cancel_left of_nat_0_less_iff pi_gt_zero real_sqrt_less_mono sin_gt_zero_02 sin_le_zero)
@@ -396,8 +402,18 @@ proof
     unfolding sF'_def by force 
   also have "... \<le> of_int s ^ Suc(2*n) * (exp s * (1 / fact n))"
   proof (rule mult_left_mono)
-    show "integral {0..1} (\<lambda>x. exp (of_int s * x) * hf n x) \<le> exp (of_int s) * (1 / fact n)"
-      sorry
+    have "integral {0..1} (\<lambda>x. exp (of_int s * x) * hf n x) 
+       \<le> integral {0..1} (\<lambda>x::real. exp (of_int s) * (1 / fact n))"
+       apply (intro mult_mono integral_le)
+      using \<open>0 < ?N\<close> not_integrable_integral sF'_def apply fastforce
+       apply blast
+      apply (simp add: assms)
+      using hf_le_inverse_fact apply presburger
+      using exp_ge_zero apply blast
+      using hf_nonneg by presburger
+    also have "... = exp (of_int s) * (1 / fact n)"
+      by simp
+    finally show "integral {0..1} (\<lambda>x. exp (of_int s * x) * hf n x) \<le> exp (of_int s) * (1 / fact n)" .
   qed (use assms in auto)
   finally have "?N \<le> b * of_int s ^ Suc(2*n) * exp s * (1 / fact n)"
     using \<open>b > 0\<close> by (simp add: sF'_def mult_ac divide_simps)
