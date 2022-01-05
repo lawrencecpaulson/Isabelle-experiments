@@ -2,7 +2,6 @@ section \<open>Misc experiments\<close>
 
 theory Youngs imports
   "HOL-Library.Sum_of_Squares" "HOL-Analysis.Analysis" "HOL-Computational_Algebra.Fundamental_Theorem_Algebra"
-  "Stirling_Formula.Stirling_Formula"
   "HOL-ex.Sketch_and_Explore"
    
 begin
@@ -21,34 +20,32 @@ end
 
 
 
-thm fact_div_fact
-lemma fact_eq_fact_times:
-  assumes "m \<ge> n"
-  shows "fact m = fact n * \<Prod>{Suc n..m}"
-  unfolding fact_prod
-  by (metis add.commute assms le_add1 le_add_diff_inverse of_nat_id plus_1_eq_Suc prod.ub_add_nat)
+  lemma fact_eq_fact_times:
+    assumes "m \<ge> n"
+    shows "fact m = fact n * \<Prod>{Suc n..m}"
+    unfolding fact_prod
+    by (metis add.commute assms le_add1 le_add_diff_inverse of_nat_id plus_1_eq_Suc prod.ub_add_nat)
+  
+  (*REPLACE THE UGLY ORIGINAL*)
+  lemma fact_div_fact:
+    assumes "m \<ge> n"
+    shows "fact m div fact n = \<Prod>{n + 1..m}"
+    by (simp add: fact_eq_fact_times [OF assms])
 
-(*REPLACE THE UGLY ORIGINAL*)
-lemma fact_div_fact:
-  assumes "m \<ge> n"
-  shows "fact m div fact n = \<Prod>{n + 1..m}"
-  by (simp add: fact_eq_fact_times [OF assms])
-
-thm deriv_add
-lemma deriv_sum [simp]:
-  "\<lbrakk>\<And>i. f i field_differentiable at z\<rbrakk>
-   \<Longrightarrow> deriv (\<lambda>w. sum (\<lambda>i. f i w) S) z = sum (\<lambda>i. deriv (f i) z) S"
-  unfolding DERIV_deriv_iff_field_differentiable[symmetric]
-  by (auto intro!: DERIV_imp_deriv derivative_intros)
-
-lemma deriv_pow: "\<lbrakk>f field_differentiable at z\<rbrakk>
-   \<Longrightarrow> deriv (\<lambda>w. f w ^ n) z = (if n=0 then 0 else n * deriv f z * f z ^ (n - Suc 0))"
-  unfolding DERIV_deriv_iff_field_differentiable[symmetric]
-  by (auto intro!: DERIV_imp_deriv derivative_eq_intros)
-
-lemma deriv_minus [simp]:
-  "f field_differentiable at z \<Longrightarrow> deriv (\<lambda>w. - f w) z = - deriv f z"
-  by (simp add: DERIV_deriv_iff_field_differentiable DERIV_imp_deriv Deriv.field_differentiable_minus)
+  lemma deriv_sum [simp]:
+    "\<lbrakk>\<And>i. f i field_differentiable at z\<rbrakk>
+     \<Longrightarrow> deriv (\<lambda>w. sum (\<lambda>i. f i w) S) z = sum (\<lambda>i. deriv (f i) z) S"
+    unfolding DERIV_deriv_iff_field_differentiable[symmetric]
+    by (auto intro!: DERIV_imp_deriv derivative_intros)
+  
+  lemma deriv_pow: "\<lbrakk>f field_differentiable at z\<rbrakk>
+     \<Longrightarrow> deriv (\<lambda>w. f w ^ n) z = (if n=0 then 0 else n * deriv f z * f z ^ (n - Suc 0))"
+    unfolding DERIV_deriv_iff_field_differentiable[symmetric]
+    by (auto intro!: DERIV_imp_deriv derivative_eq_intros)
+  
+  lemma deriv_minus [simp]:
+    "f field_differentiable at z \<Longrightarrow> deriv (\<lambda>w. - f w) z = - deriv f z"
+    by (simp add: DERIV_deriv_iff_field_differentiable DERIV_imp_deriv Deriv.field_differentiable_minus)
 
 text \<open>Kevin Buzzard's example\<close>
 lemma
@@ -57,39 +54,6 @@ lemma
   by (simp add: algebra_simps eval_nat_numeral)
 
 subsection \<open>Experiments involving Young's Inequality\<close>
-
-thm strict_mono_inv_on_range
-lemma strict_mono_on_inv_into:
-  fixes f :: "'a::linorder \<Rightarrow> 'b::order"
-  assumes "strict_mono_on f S"
-  shows "strict_mono_on (inv_into S f) (f ` S)"
-  using assms
-  unfolding strict_mono_on_def
-  by (metis f_inv_into_f inv_into_into less_asym' neqE)
-
-lemma strict_mono_image_endpoints:
-  fixes f :: "'a::linear_continuum_topology \<Rightarrow> 'b::linorder_topology"
-  assumes "strict_mono_on f {a..b}" and f: "continuous_on {a..b} f" and "a \<le> b"
-  shows "f ` {a..b} = {f a..f b}"
-proof
-  show "f ` {a..b} \<subseteq> {f a..f b}"
-    using assms(1) strict_mono_on_leD by fastforce
-  show "{f a..f b} \<subseteq> f ` {a..b}"
-    using assms IVT'[OF _ _ _ f] by (force simp add: Bex_def)
-qed
-
-lemma strict_mono_continuous_inv:
-  fixes f :: "real \<Rightarrow> real"
-  assumes "strict_mono_on f {a..b}" and "continuous_on {a..b} f" and "a \<le> b"
-  shows "continuous_on {f a..f b} (inv_into {a..b} f)"
-  by (metis strict_mono_image_endpoints assms compact_interval continuous_on_inv inv_into_f_eq strict_mono_on_imp_inj_on)
-
-lemma strict_mono_continuous_inv':
-  fixes f :: "real \<Rightarrow> real"
-  assumes "strict_mono_on f {a..b}" "continuous_on {a..b} f" "a \<le> b"
-     and "\<forall>x\<in>{a..b}. g (f x) = x"
-   shows "continuous_on {f a..f b} g"
-  by (metis assms compact_Icc continuous_on_inv strict_mono_image_endpoints)
 
 lemma integrable_mono_on_nonneg:
   fixes f :: "real \<Rightarrow> real"
@@ -172,6 +136,39 @@ lemma integrable_on_mono_on:
   assumes "mono_on f {a..b}" 
   shows "f integrable_on {a..b}"
   by (simp add: assms integrable_mono_on integrable_on_lebesgue_on) 
+
+thm strict_mono_inv_on_range
+lemma strict_mono_on_inv_into:
+  fixes f :: "'a::linorder \<Rightarrow> 'b::order"
+  assumes "strict_mono_on f S"
+  shows "strict_mono_on (inv_into S f) (f ` S)"
+  using assms
+  unfolding strict_mono_on_def
+  by (metis f_inv_into_f inv_into_into less_asym' neqE)
+
+lemma strict_mono_image_endpoints:
+  fixes f :: "'a::linear_continuum_topology \<Rightarrow> 'b::linorder_topology"
+  assumes "strict_mono_on f {a..b}" and f: "continuous_on {a..b} f" and "a \<le> b"
+  shows "f ` {a..b} = {f a..f b}"
+proof
+  show "f ` {a..b} \<subseteq> {f a..f b}"
+    using assms(1) strict_mono_on_leD by fastforce
+  show "{f a..f b} \<subseteq> f ` {a..b}"
+    using assms IVT'[OF _ _ _ f] by (force simp add: Bex_def)
+qed
+
+lemma strict_mono_continuous_inv:
+  fixes f :: "real \<Rightarrow> real"
+  assumes "strict_mono_on f {a..b}" and "continuous_on {a..b} f" and "a \<le> b"
+  shows "continuous_on {f a..f b} (inv_into {a..b} f)"
+  by (metis strict_mono_image_endpoints assms compact_interval continuous_on_inv inv_into_f_eq strict_mono_on_imp_inj_on)
+
+lemma strict_mono_continuous_inv':
+  fixes f :: "real \<Rightarrow> real"
+  assumes "strict_mono_on f {a..b}" "continuous_on {a..b} f" "a \<le> b"
+     and "\<forall>x\<in>{a..b}. g (f x) = x"
+   shows "continuous_on {f a..f b} g"
+  by (metis assms compact_Icc continuous_on_inv strict_mono_image_endpoints)
 
 
 lemma D:
