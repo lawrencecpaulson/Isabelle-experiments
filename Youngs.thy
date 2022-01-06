@@ -8,6 +8,10 @@ begin
 
 subsection \<open>Possible library additions\<close>
 
+lemma mono_on_compose: "mono_on f (g ` S) \<Longrightarrow> mono_on g S \<Longrightarrow> mono_on (f \<circ> g) S"
+  by (simp add: mono_on_def)
+
+
 
 thm of_int_less_iff
 context linordered_idom
@@ -170,65 +174,8 @@ lemma strict_mono_continuous_inv':
    shows "continuous_on {f a..f b} g"
   by (metis assms compact_Icc continuous_on_inv strict_mono_image_endpoints)
 
+subsection \<open>Regular divisions\<close>
 
-lemma D:
-  fixes f :: "real \<Rightarrow> real"
-  assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and "0 \<le> a" "0 \<le> b" "f 0 = 0" "f a = b"
-  shows "a*b = integral {0..a} f + integral {0..b} (inv_into {0..a} f)"
-proof (cases "a=0")
-  case False
-  then have "a > 0"
-    using assms(3) by linarith
-  have "continuous_on {0..a} f"
-    using cont continuous_on_subset by fastforce
-  with sm have "continuous_on {0..b} (inv_into {0..a} f)"
-    apply (simp add: strict_mono_on_def)
-    by (metis assms(3) assms(5) assms(6) atLeastAtMost_iff strict_mono_continuous_inv strict_mono_onI)
-  obtain S where S: "(f has_integral S) {0..a}"
-    using \<open>continuous_on {0..a} f\<close> integrable_continuous_real by blast
-  { fix \<epsilon> :: real
-    assume "\<epsilon> > 0"
-    with \<open>a > 0\<close> have "\<epsilon> / (2 * a) > 0"
-      by simp
-    with S \<open>a > 0\<close> has_integral_factor_content_real [of f S 0 a] 
-    obtain \<gamma> where "gauge \<gamma>"
-    and \<gamma>: "\<And>p. p tagged_division_of {0..a} \<and> \<gamma> fine p \<longrightarrow>
-            norm ((\<Sum>(x,K)\<in>p. content K *\<^sub>R f x) - S) \<le> (\<epsilon> / (2*a)) * content {0..a}"
-      by auto
-    obtain \<D> where \<D>: "\<D> tagged_division_of {0..a} \<and> \<gamma> fine \<D>"
-      by (meson \<open>gauge \<gamma>\<close> fine_division_exists_real)
-    then have "norm ((\<Sum>(x,K)\<in>\<D>. content K *\<^sub>R f x) - S) \<le> \<epsilon>/2"
-      using False \<gamma> assms(3) by auto
-
-(*This can't work. Riemann integrability is a stronger property. The fineness condition can't be satisfied.*)
-
-    sorry
-  }
-  show ?thesis
-    sorry
-qed (use assms in force)
-
-
-lemma D:
-  fixes f :: "real \<Rightarrow> real"
-  assumes *: "strict_mono_on f {0..a}"  "continuous_on {0..a} f"  "0 \<le> a" "0 \<le> b"
-  shows "a*b \<le> integral {0..a} f + integral {0..b} (inv_into {0..a} f)"
-  sorry
-
-  obtains f1 f2 where "\<And>x. x \<in> {0..a} \<Longrightarrow> f1 x \<le> f x \<and> f x \<le> f2 x"
-  using strict_mono_image_endpoints assms(1) assms(2) assms(3) compact_Icc continuous_on_inv 
-
-
-lemma D:
-  fixes f :: "real \<Rightarrow> real"
-  assumes *: "strict_mono_on f {0..a}"  "continuous_on {0..a} f"  "0 \<le> a"
-  obtains f1 f2 where "\<And>x. x \<in> {0..a} \<Longrightarrow> f1 x \<le> f x \<and> f x \<le> f2 x"
-  using strict_mono_image_endpoints assms(1) assms(2) assms(3) compact_Icc continuous_on_inv 
-
-
-
-
-(*ALL THIS APPARENTLY USELESS*)
 definition "segment \<equiv> \<lambda>n k. {real k / real n..(1 + k) / real n}"
 
 lemma segment_nonempty: "segment n k \<noteq> {}"
@@ -239,14 +186,10 @@ lemma segment_Suc: "segment n ` {..<Suc k} = insert {k/n..(1 + real k) / n} (seg
 
 lemma Union_segment_image: "\<Union> (segment n ` {..<k}) = (if k=0 then {} else {0..real k/real n})"
 proof (induction k)
-  case 0
-  then show ?case
-    by (auto simp: segment_def)
-next
   case (Suc k)
   then show ?case
     by (simp add: divide_simps segment_Suc Un_commute ivl_disj_un_two_touch split: if_split_asm)
-qed
+qed (auto simp: segment_def)
 
 definition "segments \<equiv> \<lambda>n. segment n ` {..<n}"
 
@@ -315,7 +258,7 @@ proof (rule division_ofI)
   fix K'
   assume K': "K' \<in> regular_division a b n" and "K \<noteq> K'"
   then obtain k' where Keq': "K' = {a + (b-a)*(real k' / real n) .. a + (b-a)*((1 + real k') / real n)}" 
-    using K \<open>a<b\<close> regular_divisionE by blast
+    using K \<open>a<b\<close> regular_divisionE by meson
   consider "1 + real k \<le> k'" | "1 + real k' \<le> k"
     using Keq Keq' \<open>K \<noteq> K'\<close> by force
   then show "interior K \<inter> interior K' = {}"
@@ -331,6 +274,136 @@ proof (rule division_ofI)
       by (simp add: inf_commute)
   qed
 qed
+
+
+lemma D:
+  fixes f :: "real \<Rightarrow> real"
+  assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and "0 \<le> a" "0 \<le> b" "f 0 = 0" "f a = b"
+  shows "a*b = integral {0..a} f + integral {0..b} (inv_into {0..a} f)"
+proof (cases "a=0")
+  case False
+  then have "a > 0"
+    using assms(3) by linarith
+  have cont_0a: "continuous_on {0..a} f"
+    using cont continuous_on_subset by fastforce
+  with sm have "continuous_on {0..b} (inv_into {0..a} f)"
+    apply (simp add: strict_mono_on_def)
+    by (metis \<open>0 \<le> a\<close> \<open>f 0 = 0\<close> \<open>f a = b\<close> atLeastAtMost_iff strict_mono_continuous_inv strict_mono_onI)
+  have "uniformly_continuous_on {0..a} f"
+    using compact_uniformly_continuous cont_0a by blast
+  then
+  obtain del where del_gt0: "\<And>e. e>0 \<Longrightarrow> del e > 0" 
+                   and del:  "\<And>e x x'. \<lbrakk>dist x' x < del e; e>0; x \<in> {0..a}; x' \<in> {0..a}\<rbrakk> \<Longrightarrow> dist (f x') (f x) < e"
+    unfolding uniformly_continuous_on_def by metis
+
+  obtain S where S: "(f has_integral S) {0..a}"
+    using \<open>continuous_on {0..a} f\<close> integrable_continuous_real by blast
+  { fix \<epsilon> :: real
+    assume "\<epsilon> > 0"
+    with \<open>a > 0\<close> have gt0: "\<epsilon>/(2*a) > 0"
+      by simp
+    define \<delta> where "\<delta> = min a (del (\<epsilon>/(2*a)))"
+    define n where "n \<equiv> ceiling (a/\<delta>)"
+    have "\<delta> \<le> a"
+      by (simp add: \<delta>_def)
+    then have "real_of_int \<lceil>a/\<delta>\<rceil> \<le> 2 * a / \<delta>"
+      using of_int_ceiling_le_add_one [of "a/\<delta>"]
+      by (smt (verit, best) False \<delta>_def add_divide_distrib del_gt0 divide_le_eq_1_pos divide_self_if gt0)
+    moreover have "2 * a * (\<epsilon> / (2 * a)) \<le> \<epsilon>"
+      using \<open>0 < a\<close> by auto
+    ultimately have "n * \<delta> * (\<epsilon>/(2*a)) \<le> \<epsilon>"
+      unfolding n_def
+      by (smt (verit) \<delta>_def \<open>0 < a\<close> del_gt0 gt0 pos_le_divide_eq) 
+
+    define f_lwr where "f_lwr \<equiv> \<lambda>x. f (floor (n*x/a) * a/n)"
+
+    define n where "n \<equiv> ceiling (a / del (\<epsilon>/a))"
+    define \<delta> where "\<delta> = a/n"
+    have "n > 0"
+      by (simp add: \<open>0 < a\<close> \<open>0 < \<epsilon>\<close> del_gt0 n_def)
+    have "n * \<delta> * (\<epsilon>/a) \<le> \<epsilon>"
+      using \<delta>_def \<open>0 < \<epsilon>\<close> n_def by force
+ 
+
+    define lower where "lower \<equiv> \<lambda>x. \<lfloor>(of_int n * x) / a\<rfloor> * a/n"
+    define f1 where "f1 \<equiv> f o lower"
+    have mo_lower: "mono_on lower {0..a}"
+      using \<open>0 < n\<close> unfolding lower_def mono_on_def
+      by (auto simp: divide_right_mono floor_mono mult.commute mult_left_mono order_less_imp_le)
+    have lower_im: "lower ` {0..a} \<subseteq> {0..}"
+      using \<open>0 < n\<close> by (auto simp: lower_def)
+    have f1_lower: "f1 x \<le> f x" if "0 \<le> x" "x \<le> a" for x
+    proof -
+      have "lower x \<le> x"
+        unfolding lower_def using \<open>n > 0\<close> \<open>a > 0\<close> 
+        by (metis floor_divide_lower divide_le_eq mult_of_int_commute of_int_0_less_iff)
+      moreover have "lower x \<ge> 0"
+        unfolding lower_def using \<open>0 < n\<close> \<open>0 \<le> a\<close> \<open>0 \<le> x\<close> by force
+      ultimately show ?thesis
+        using sm strict_mono_on_leD by (fastforce simp add: f1_def)
+    qed
+    define upper where "upper \<equiv> \<lambda>x. ceiling((of_int n * x) / a)* a/n"
+    define f2 where "f2 \<equiv> f o upper"
+
+    have mo_upper: "mono_on upper {0..a}"
+      using \<open>0 < n\<close> unfolding upper_def mono_on_def
+      by (simp add: ceiling_mono divide_right_mono mult_right_mono)
+    have upper_im: "upper ` {0..a} \<subseteq> {0..}"
+      using \<open>0 < n\<close>
+      apply (clarsimp simp: upper_def field_split_simps)
+      by (smt (verit, best) mult_nonneg_nonneg of_int_pos)
+
+    have f2_upper: "f2 x \<ge> f x" if "0 \<le> x" "x \<le> a" for x
+    proof -
+      have "x \<le> upper x"
+        using \<open>n > 0\<close> ceiling_divide_upper [OF \<open>a > 0\<close>] by (simp add: upper_def field_simps)
+      then show ?thesis
+        using sm strict_mono_on_leD \<open>0 \<le> x\<close> by (force simp add: f2_def)
+    qed
+    let ?\<D> = "regular_division 0 a (nat n)"
+    have div: "?\<D> division_of {0..a}"
+      using \<open>0 < a\<close> \<open>0 < n\<close> regular_division_division_of zero_less_nat_eq by presburger
+
+    have f1: "(f1 has_integral (\<Sum>i\<in>?\<D>. integral i f1)) {0..a}"
+    proof (rule has_integral_combine_division_topdown)
+      have "mono_on f (lower ` {0..a})"
+        by (meson lower_im mono_on_subset sm strict_mono_on_imp_mono_on)
+      then show "f1 integrable_on {0..a}"
+        unfolding f1_def by (intro integrable_on_mono_on mono_on_compose mo_lower)
+    qed (use div in auto)
+
+    have f2: "(f2 has_integral (\<Sum>i\<in>?\<D>. integral i f2)) {0..a}"
+    proof (rule has_integral_combine_division_topdown)
+      have "mono_on f (upper ` {0..a})"
+        by (meson upper_im mono_on_subset sm strict_mono_on_imp_mono_on)
+      then show "f2 integrable_on {0..a}"
+        unfolding f2_def by (intro integrable_on_mono_on mono_on_compose mo_upper)
+    qed (use div in auto)
+
+  }
+  show ?thesis
+    sorry
+qed (use assms in force)
+
+
+lemma D:
+  fixes f :: "real \<Rightarrow> real"
+  assumes *: "strict_mono_on f {0..a}"  "continuous_on {0..a} f"  "0 \<le> a" "0 \<le> b"
+  shows "a*b \<le> integral {0..a} f + integral {0..b} (inv_into {0..a} f)"
+  sorry
+
+  obtains f1 f2 where "\<And>x. x \<in> {0..a} \<Longrightarrow> f1 x \<le> f x \<and> f x \<le> f2 x"
+  using strict_mono_image_endpoints assms(1) assms(2) assms(3) compact_Icc continuous_on_inv 
+
+
+lemma D:
+  fixes f :: "real \<Rightarrow> real"
+  assumes *: "strict_mono_on f {0..a}"  "continuous_on {0..a} f"  "0 \<le> a"
+  obtains f1 f2 where "\<And>x. x \<in> {0..a} \<Longrightarrow> f1 x \<le> f x \<and> f x \<le> f2 x"
+  using strict_mono_image_endpoints assms(1) assms(2) assms(3) compact_Icc continuous_on_inv 
+
+
+
 
 
 lemma B:
