@@ -6,6 +6,48 @@ theory Youngs imports
    
 begin
 
+
+lemma
+  fixes f :: "real \<Rightarrow> real"
+  assumes contf: "continuous_on {0..1} f" and intf: "(f has_integral 0) {0..1}"
+    and f_ge0: "\<And>x. x \<in> {0..1} \<Longrightarrow> f x \<ge> 0"
+  shows "\<forall>x \<in> {0..1}. f x = 0"
+proof (rule ccontr)
+  assume "\<not> (\<forall>x\<in>{0..1}. f x = 0)"
+  then obtain a where a: "a \<in> {0..1}" "f a > 0"
+    using assms by force
+  then obtain \<delta> where "\<delta> > 0" and \<delta>: "\<And>x. x \<in> {0..1} \<Longrightarrow> abs (a - x) < \<delta> \<Longrightarrow> abs (f a - f x) < f a / 2"
+    using contf unfolding continuous_on_real_range
+    by (metis abs_minus_commute half_gt_zero_iff real_norm_def)
+  define l where "l \<equiv> max 0 (a-\<delta>)"
+  define u where "u \<equiv> min 1 (a+\<delta>)"
+  have [simp]: "max 0 l = l" "min 1 u = u" "min l u = l" "max u l = u" 
+               "{0..l} \<union> {u..1} \<union> {l..u} = {0..1}"
+    using a \<open>\<delta> > 0\<close> by (auto simp add: l_def u_def)
+  have "l < u"
+    using \<open>0 < \<delta>\<close> a(1) l_def u_def by auto
+  define I where "I \<equiv> (u-l) * f a / 2"
+  have "I > 0"
+    by (simp add: I_def \<open>l < u\<close> a(2))
+  define g where "g \<equiv> \<lambda>x. if x \<in> {0..l} \<union> {u..1} then 0 else f a / 2"
+  have g_le_f: "g x \<le> f x" if "x \<in> {0..1}" for x
+    using that \<delta>  by (simp add: l_def u_def g_def f_ge0) (smt (verit, best))
+  have "(g has_integral 0) ({0..l} \<union> {u..1})"
+    by (meson g_def has_integral_is_0)
+  moreover  have "((\<lambda>x. f a / 2) has_integral I) {l..u}"
+    unfolding I_def g_def
+    using has_integral_const_real [of "f a / 2" l u] using \<open>l < u\<close> by force
+  then have "(g has_integral I) {l..u}"
+    using has_integral_spike_interior_eq [of l u "\<lambda>x. f a / 2" g I]
+    by (simp add: g_def)
+  ultimately have "(g has_integral I) {0..1}"
+    using has_integral_Un [of g 0 "{0..l} \<union> {u..1}" _ "{l..u}"]
+    by (simp add: Int_Un_distrib2)
+  with g_le_f has_integral_le intf have "I \<le> 0"
+    by blast
+  with \<open>0 < I\<close> show False by fastforce
+qed
+
 subsection \<open>Possible library additions\<close>
 
 lemma mono_on_compose: "mono_on f (g ` S) \<Longrightarrow> mono_on g S \<Longrightarrow> mono_on (f \<circ> g) S"
@@ -380,6 +422,9 @@ proof (cases "a=0")
         unfolding f2_def by (intro integrable_on_mono_on mono_on_compose mo_upper)
     qed (use div in auto)
 
+
+    have "integral i f1 = f i * (\<epsilon>/(2*a))" if "i\<in>?\<D>" for i
+    sorry
   }
   show ?thesis
     sorry
