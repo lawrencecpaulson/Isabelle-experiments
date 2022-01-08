@@ -14,39 +14,9 @@ lemma integral_eq_0_iff:
 proof
   assume int0: ?lhs
   show ?rhs
-  proof (rule ccontr)
-    assume "\<not> (\<forall>x\<in>{a..b}. f x = 0)"
-    then obtain \<xi> where \<xi>: "\<xi> \<in> {a..b}" "f \<xi> > 0"
-      using assms by force
-    then obtain \<delta> where "\<delta> > 0" and \<delta>: "\<And>x. \<lbrakk>x \<in> {a..b}; \<bar>\<xi>-x\<bar> < \<delta>\<rbrakk> \<Longrightarrow> \<bar>f \<xi> - f x\<bar> < f \<xi> / 2"
-      using contf unfolding continuous_on_real_range
-      by (metis abs_minus_commute half_gt_zero_iff real_norm_def)
-    define l where "l \<equiv> max a (\<xi>-\<delta>)"
-    define u where "u \<equiv> min b (\<xi>+\<delta>)"
-    have [simp]: "max a l = l" "min b u = u" "min l u = l" "max u l = u" 
-      "{a..l} \<union> {u..b} \<union> {l..u} = {a..b}"
-      using \<xi> \<open>\<delta> > 0\<close> by (auto simp add: l_def u_def)
-    have "l < u"
-      using \<open>0 < \<delta>\<close> \<open>a < b\<close> \<xi> l_def u_def by auto
-    define I where "I \<equiv> (u-l) * f \<xi> / 2"
-    have "I > 0"
-      by (simp add: I_def \<open>l < u\<close> \<xi>)
-    define g where "g \<equiv> \<lambda>x. if x \<in> {a..l} \<union> {u..b} then 0 else f \<xi> / 2"
-    have g_le_f: "g x \<le> f x" if "x \<in> {a..b}" for x
-      using that \<delta>  by (simp add: l_def u_def g_def f_ge0) (smt (verit, best))
-    have "(g has_integral 0) ({a..l} \<union> {u..b})"
-      by (meson g_def has_integral_is_0)
-    moreover have "((\<lambda>x. f \<xi> / 2) has_integral I) {l..u}"
-      using has_integral_const_real [of "f \<xi> / 2" l u] \<open>l < u\<close> by (force simp: I_def)
-    then have "(g has_integral I) {l..u}"
-      using has_integral_spike_interior_eq [of l u "\<lambda>x. f \<xi> / 2" g I] by (simp add: g_def)
-    ultimately have "(g has_integral I) {a..b}"
-      using has_integral_Un [of g 0 "{a..l} \<union> {u..b}" _ "{l..u}"]
-      by (simp add: Int_Un_distrib2)
-    with g_le_f has_integral_le  have "I \<le> 0"
-      by (metis contf int0 integrable_continuous_real integrable_integral)
-    with \<open>0 < I\<close> show False by fastforce
-  qed
+    using has_integral_0_cbox_imp_0 [of a b f] assms 
+    by (smt (verit, best) box_real box_subset_cbox greaterThanLessThan_empty_iff int0 integrable_continuous_real 
+                          integrable_integral subsetD)
 next
   assume ?rhs then show ?lhs
     by (metis Henstock_Kurzweil_Integration.integral_cong has_integral_const_real has_integral_iff
