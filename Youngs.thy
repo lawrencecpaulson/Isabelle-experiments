@@ -6,7 +6,6 @@ theory Youngs imports
    
 begin
 
-
 lemma integral_eq_0_iff:
   fixes f :: "real \<Rightarrow> real"
   assumes contf: "continuous_on {a..b} f" and "a < b"
@@ -37,12 +36,10 @@ proof
       using that \<delta>  by (simp add: l_def u_def g_def f_ge0) (smt (verit, best))
     have "(g has_integral 0) ({a..l} \<union> {u..b})"
       by (meson g_def has_integral_is_0)
-    moreover  have "((\<lambda>x. f \<xi> / 2) has_integral I) {l..u}"
-      unfolding I_def g_def
-      using has_integral_const_real [of "f \<xi> / 2" l u] using \<open>l < u\<close> by force
+    moreover have "((\<lambda>x. f \<xi> / 2) has_integral I) {l..u}"
+      using has_integral_const_real [of "f \<xi> / 2" l u] \<open>l < u\<close> by (force simp: I_def)
     then have "(g has_integral I) {l..u}"
-      using has_integral_spike_interior_eq [of l u "\<lambda>x. f \<xi> / 2" g I]
-      by (simp add: g_def)
+      using has_integral_spike_interior_eq [of l u "\<lambda>x. f \<xi> / 2" g I] by (simp add: g_def)
     ultimately have "(g has_integral I) {a..b}"
       using has_integral_Un [of g 0 "{a..l} \<union> {u..b}" _ "{l..u}"]
       by (simp add: Int_Un_distrib2)
@@ -55,6 +52,17 @@ next
     by (metis Henstock_Kurzweil_Integration.integral_cong has_integral_const_real has_integral_iff
               mult_zero_right real_scaleR_def)
 qed
+
+lemma integralL_eq_0_iff:
+  fixes f :: "real \<Rightarrow> real"
+  assumes contf: "continuous_on {a..b} f" and "a < b"
+    and "\<And>x. x \<in> {a..b} \<Longrightarrow> f x \<ge> 0"
+  shows "integral\<^sup>L (lebesgue_on {a..b}) f = 0 \<longleftrightarrow> (\<forall>x \<in> {a..b}. f x = 0)" 
+  using integral_eq_0_iff [OF assms]
+  by (simp add: contf continuous_imp_integrable_real lebesgue_integral_eq_integral)
+
+
+
 
 subsection \<open>Possible library additions\<close>
 
