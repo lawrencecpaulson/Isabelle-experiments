@@ -5,34 +5,36 @@ theory Youngs imports
   "HOL-ex.Sketch_and_Explore"
    
 begin
-
-lemma integral_eq_0_iff:
-  fixes f :: "real \<Rightarrow> real"
-  assumes contf: "continuous_on {a..b} f" and "a < b"
-    and f_ge0: "\<And>x. x \<in> {a..b} \<Longrightarrow> f x \<ge> 0"
-  shows "integral {a..b} f = 0 \<longleftrightarrow> (\<forall>x \<in> {a..b}. f x = 0)" (is "?lhs = ?rhs")
-proof
-  assume int0: ?lhs
-  show ?rhs
-    using has_integral_0_cbox_imp_0 [of a b f] assms 
-    by (smt (verit, best) box_real box_subset_cbox greaterThanLessThan_empty_iff int0 integrable_continuous_real 
-                          integrable_integral subsetD)
-next
-  assume ?rhs then show ?lhs
-    by (metis Henstock_Kurzweil_Integration.integral_cong has_integral_const_real has_integral_iff
-              mult_zero_right real_scaleR_def)
-qed
-
-lemma integralL_eq_0_iff:
-  fixes f :: "real \<Rightarrow> real"
-  assumes contf: "continuous_on {a..b} f" and "a < b"
-    and "\<And>x. x \<in> {a..b} \<Longrightarrow> f x \<ge> 0"
-  shows "integral\<^sup>L (lebesgue_on {a..b}) f = 0 \<longleftrightarrow> (\<forall>x \<in> {a..b}. f x = 0)" 
-  using integral_eq_0_iff [OF assms]
-  by (simp add: contf continuous_imp_integrable_real lebesgue_integral_eq_integral)
-
-
-
+  
+  corollary integral_cbox_eq_0_iff:
+    fixes f :: "'a::euclidean_space \<Rightarrow> real"
+    assumes "continuous_on (cbox a b) f" and "box a b \<noteq> {}"
+      and "\<And>x. x \<in> (cbox a b) \<Longrightarrow> f x \<ge> 0"
+    shows "integral (cbox a b) f = 0 \<longleftrightarrow> (\<forall>x \<in> (cbox a b). f x = 0)" (is "?lhs = ?rhs")
+  proof
+    assume int0: ?lhs
+    show ?rhs
+      using has_integral_0_cbox_imp_0 [of a b f] assms
+      by (metis box_subset_cbox eq_integralD int0 integrable_continuous subsetD) 
+  next
+    assume ?rhs then show ?lhs
+      by (meson has_integral_is_0_cbox integral_unique)
+  qed
+  
+  lemma integral_eq_0_iff:
+    fixes f :: "real \<Rightarrow> real"
+    assumes contf: "continuous_on {a..b} f" and "a < b"
+      and f_ge0: "\<And>x. x \<in> {a..b} \<Longrightarrow> f x \<ge> 0"
+    shows "integral {a..b} f = 0 \<longleftrightarrow> (\<forall>x \<in> {a..b}. f x = 0)" (is "?lhs = ?rhs")
+    using integral_cbox_eq_0_iff [of a b f] assms by simp
+  
+  lemma integralL_eq_0_iff:
+    fixes f :: "real \<Rightarrow> real"
+    assumes contf: "continuous_on {a..b} f" and "a < b"
+      and "\<And>x. x \<in> {a..b} \<Longrightarrow> f x \<ge> 0"
+    shows "integral\<^sup>L (lebesgue_on {a..b}) f = 0 \<longleftrightarrow> (\<forall>x \<in> {a..b}. f x = 0)" 
+    using integral_eq_0_iff [OF assms]
+    by (simp add: contf continuous_imp_integrable_real lebesgue_integral_eq_integral)
 
 subsection \<open>Possible library additions\<close>
 
@@ -255,11 +257,11 @@ lemma Union_regular_division:
 
 lemma regular_divisionE:
   assumes "K \<in> regular_division a b n" "a<b"
-  obtains k where "K = {a + (b-a)*(real k / real n) .. a + (b-a)*((1 + real k) / real n)}"
+  obtains k where "k<n" "K = {a + (b-a)*(real k / n) .. a + (b-a)*((1 + real k) / n)}"
 proof -
   have eq: "(\<lambda>x. a + (b - a) * x) = (\<lambda>x. a + x) \<circ> (\<lambda>x. (b - a) * x)"
     by (simp add: o_def)
-  obtain k where "K = ((\<lambda>x. a + x) \<circ> (\<lambda>x. (b - a) * x)) ` {real k / real n .. (1 + real k) / real n}"
+  obtain k where "k<n" "K = ((\<lambda>x. a + x) \<circ> (\<lambda>x. (b - a) * x)) ` {real k / real n .. (1 + real k) / real n}"
     using assms by (auto simp: regular_division_def segments_def segment_def)
   with that \<open>a<b\<close> show ?thesis
     unfolding image_comp [symmetric]  by auto
@@ -276,7 +278,7 @@ proof (rule division_ofI)
   fix K
   assume K: "K \<in> regular_division a b n"
   then obtain k where Keq: "K = {a + (b-a)*(real k / real n) .. a + (b-a)*((1 + real k) / real n)}" 
-    using \<open>a<b\<close> regular_divisionE by blast
+    using \<open>a<b\<close> regular_divisionE by meson
   show "K \<subseteq> {a..b}"
     using K Union_regular_division \<open>n>0\<close> by (metis Union_upper \<section>)
   show "(K::real set) \<noteq> {}"
@@ -407,9 +409,7 @@ proof (cases "a=0")
       then show "f2 integrable_on {0..a}"
         unfolding f2_def by (intro integrable_on_mono_on mono_on_compose mo_upper)
     qed (use div in auto)
-
-
-    have "integral i f1 = f i * (\<epsilon>/(2*a))" if "i\<in>?\<D>" for i
+    have "integral i f1 = f (Inf i) * (\<epsilon>/(2*a))" if "i\<in>?\<D>" for i
     sorry
   }
   show ?thesis
