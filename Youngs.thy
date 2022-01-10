@@ -223,6 +223,9 @@ qed (auto simp: segment_def)
 
 definition "segments \<equiv> \<lambda>n. segment n ` {..<n}"
 
+lemma card_segments [simp]: "card (segments n) = n"
+  by (simp add: segments_def segment_def card_image divide_right_mono inj_on_def)
+
 lemma segments_0 [simp]: "segments 0 = {}"
   by (simp add: segments_def)
 
@@ -246,6 +249,30 @@ proof
   show "(\<lambda>x. a + (b - a) * x) ` {0..1} \<subseteq> {a..b}"
     using assms 
     by (smt (verit, best) atLeastAtMost_iff image_subset_iff mult_left_le mult_nonneg_nonneg)
+qed
+
+lemma finite_regular_division [simp]: "finite (regular_division a b n)"
+  by (simp add: regular_division_def segments_def)
+
+lemma card_regular_division [simp]: 
+  assumes "a<b"
+  shows "card (regular_division a b n) = n"
+proof -
+  have "inj_on ((`) ((+) a \<circ> (*) (b - a))) (segments n)"
+  proof
+    fix x y
+    assume "((+) a \<circ> (*) (b - a)) ` x = ((+) a \<circ> (*) (b - a)) ` y"
+    then have "(+) (-a) ` ((+) a \<circ> (*) (b - a)) ` x = (+) (-a) ` ((+) a \<circ> (*) (b - a)) ` y"
+      by simp
+    then have "((*) (b - a)) ` x = ((*) (b - a)) ` y"
+      by (simp add: image_comp)
+    then have "(*) (inverse(b - a)) ` (*) (b - a) ` x = (*) (inverse(b - a)) ` (*) (b - a) ` y"
+      by simp
+    then show "x = y"
+      using assms by (simp add: image_comp mult_ac)
+  qed
+  then show ?thesis
+    by (metis card_image card_segments regular_division_def)
 qed
 
 lemma Union_regular_division:
@@ -305,7 +332,6 @@ proof (rule division_ofI)
   qed
 qed
 
-
 lemma D:
   fixes f :: "real \<Rightarrow> real"
   assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and "0 \<le> a" "0 \<le> b" "f 0 = 0" "f a = b"
@@ -330,28 +356,31 @@ proof (cases "a=0")
     using \<open>continuous_on {0..a} f\<close> integrable_continuous_real by blast
   { fix \<epsilon> :: real
     assume "\<epsilon> > 0"
-    with \<open>a > 0\<close> have gt0: "\<epsilon>/(2*a) > 0"
+    with \<open>a > 0\<close> have gt0: "\<epsilon>/a > 0"
       by simp
-    define \<delta> where "\<delta> = min a (del (\<epsilon>/(2*a)))"
-    define n where "n \<equiv> ceiling (a/\<delta>)"
-    have "\<delta> \<le> a"
-      by (simp add: \<delta>_def)
-    then have "real_of_int \<lceil>a/\<delta>\<rceil> \<le> 2 * a / \<delta>"
-      using of_int_ceiling_le_add_one [of "a/\<delta>"]
-      by (smt (verit, best) False \<delta>_def add_divide_distrib del_gt0 divide_le_eq_1_pos divide_self_if gt0)
-    moreover have "2 * a * (\<epsilon> / (2 * a)) \<le> \<epsilon>"
-      using \<open>0 < a\<close> by auto
-    ultimately have "n * \<delta> * (\<epsilon>/(2*a)) \<le> \<epsilon>"
-      unfolding n_def
-      by (smt (verit) \<delta>_def \<open>0 < a\<close> del_gt0 gt0 pos_le_divide_eq) 
+    define \<delta> where "\<delta> = min a (del (\<epsilon>/a)) / 2"
+    have "\<delta> > 0" "\<delta> \<le> a"
+      using \<open>a > 0\<close> \<open>\<epsilon> > 0\<close> del_gt0 by (auto simp add: \<delta>_def)
 
-    define n where "n \<equiv> \<lceil>a / del (\<epsilon> / (2 * a))\<rceil>"
-    define \<delta> where "\<delta> = a/n"
-    have nd_ge_a: "n * del (\<epsilon> / (2 * a)) \<ge> a" and "n > 0"
-      using \<open>0 < a\<close> by (simp_all add: ceiling_divide_upper del_gt0 gt0 n_def)
+    have \<delta>:  "\<And>x x'. \<lbrakk>abs (x'-x) \<le> \<delta>; x \<in> {0..a}; x' \<in> {0..a}\<rbrakk> \<Longrightarrow> abs (f x' - f x) < \<epsilon>/a"
+      apply (rule del [unfolded dist_real_def])
+         apply (simp add: \<delta>_def)
+      using del_gt0 gt0 apply fastforce
+        apply (auto simp: )
+      using gt0 by blast
 
-        have "n * \<delta> * (\<epsilon>/a) \<le> \<epsilon>"
-          using \<delta>_def \<open>0 < \<epsilon>\<close> n_def by force
+    define n where "n \<equiv> \<lfloor>a / \<delta>\<rfloor>"
+    have "n > 0"
+      using  \<open>a > 0\<close> \<open>\<delta> > 0\<close> \<open>\<delta> \<le> a\<close> by (simp add: n_def)
+    have "real_of_int \<lfloor>a / \<delta>\<rfloor> \<le> a / \<delta>"
+      by linarith
+    with \<open>a > 0\<close> \<open>\<epsilon> > 0\<close> \<open>\<delta> > 0\<close> have "n * \<delta> * (\<epsilon>/a) \<le> \<epsilon>"
+      unfolding n_def by (smt (verit, best) gt0 mult.commute pos_le_divide_eq)
+
+    have "a/d < real_of_int \<lfloor>a * 2 / min a d\<rfloor>" if "d>0" for d
+      by (smt (verit, best) \<open>0 < \<delta>\<close> \<open>\<delta> \<le> a\<close> add_divide_distrib divide_less_eq_1_pos floor_eq_iff that)
+    then have an_less_del: "a/n < del (\<epsilon>/a)"
+      using \<open>a > 0\<close> \<open>\<epsilon> > 0\<close> del_gt0  by (simp add: n_def \<delta>_def field_simps)
 
     define lower where "lower \<equiv> \<lambda>x. \<lfloor>(of_int n * x) / a\<rfloor> * a/n"
     define f1 where "f1 \<equiv> f o lower"
@@ -390,47 +419,35 @@ proof (cases "a=0")
     qed
     let ?\<D> = "regular_division 0 a (nat n)"
     have div: "?\<D> division_of {0..a}"
-      using \<open>0 < a\<close> \<open>0 < n\<close> regular_division_division_of zero_less_nat_eq by presburger
+      using \<open>a > 0\<close> \<open>0 < n\<close> regular_division_division_of zero_less_nat_eq by presburger
 
-    have f1: "(f1 has_integral (\<Sum>i\<in>?\<D>. integral i f1)) {0..a}"
-    proof (rule has_integral_combine_division_topdown)
-      have "mono_on f (lower ` {0..a})"
-        by (meson lower_im mono_on_subset sm strict_mono_on_imp_mono_on)
-      then show "f1 integrable_on {0..a}"
-        unfolding f1_def by (intro integrable_on_mono_on mono_on_compose mo_lower)
-    qed (use div in auto)
-
-    have f2: "(f2 has_integral (\<Sum>i\<in>?\<D>. integral i f2)) {0..a}"
-    proof (rule has_integral_combine_division_topdown)
-      have "mono_on f (upper ` {0..a})"
-        by (meson upper_im mono_on_subset sm strict_mono_on_imp_mono_on)
-      then show "f2 integrable_on {0..a}"
-        unfolding f2_def by (intro integrable_on_mono_on mono_on_compose mo_upper)
-    qed (use div in auto)
-
-    have int21: "((\<lambda>x. f2 x - f1 x) has_integral (f(Sup K) - f(Inf K)) * (a/n)) K" if "K\<in>?\<D>" for K
+    have int21: "((\<lambda>x. f2 x - f1 x) has_integral (f(Sup K) - f(Inf K)) * (a/n)) K" 
+            and less: "\<bar>f(Sup K) - f(Inf K)\<bar> < \<epsilon>/a"
+      if "K\<in>?\<D>" for K
     proof -
-      from regular_divisionE [OF that] \<open>0 < a\<close>
+      from regular_divisionE [OF that] \<open>a > 0\<close>
       obtain k where "k<n" and k: "K = {a * (real k / n) .. a * (1 + real k) / n}"
         by (auto simp add: zless_nat_eq_int_zless)
       define u where "u \<equiv> a * (real k / n)"
       define v where "v \<equiv> a * (1 + real k) / n"
-      have "u < v" and Kuv: "K = {u..v}"
-        using \<open>n > 0\<close> \<open>0 < a\<close> by (auto simp: k u_def v_def divide_simps)
+      have "u < v" "0 \<le> u" "0 \<le> v" and Kuv: "K = {u..v}"
+        using \<open>n > 0\<close> \<open>a > 0\<close> by (auto simp: k u_def v_def divide_simps)
+      have "u \<le> a" "v \<le> a"
+        using \<open>k < n\<close> \<open>a > 0\<close> by (auto simp: u_def v_def divide_simps)
       have InfK: "Inf K = u" and SupK: "Sup K = v"
-        using \<open>0 < n\<close> \<open>0 < a\<close> by (auto simp: divide_right_mono k u_def v_def)
+        using \<open>0 < n\<close> \<open>a > 0\<close> by (auto simp: divide_right_mono k u_def v_def)
       have f1: "f (Inf K) = f1 x" if "x \<in> K - {v}" for x
       proof -
         have "x \<in> {u..<v}"
           using that Kuv atLeastLessThan_eq_atLeastAtMost_diff by blast
         then have "\<lfloor>real_of_int n * x / a\<rfloor> = int k"
-          using \<open>n > 0\<close> \<open>0 < a\<close> by (simp add: field_simps u_def v_def floor_eq_iff)
+          using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: field_simps u_def v_def floor_eq_iff)
         then show ?thesis
           by (simp add: InfK f1_def lower_def mult.commute u_def) 
       qed
       have "((\<lambda>x. f (Inf K)) has_integral (f (Inf K) * (a/n))) K"
         using has_integral_const_real [of "f (Inf K)" u v] 
-              \<open>n > 0\<close> \<open>0 < a\<close> by (simp add: Kuv field_simps u_def v_def)
+              \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: Kuv field_simps u_def v_def)
       then have intf1: "(f1 has_integral (f (Inf K) * (a/n))) K"
         using has_integral_spike_finite_eq [of "{v}" K "\<lambda>x. f (Inf K)" f1] f1 by simp
       have f2: "f (Sup K) = f2 x" if "x \<in> K - {u}" for x
@@ -438,35 +455,45 @@ proof (cases "a=0")
         have "x \<in> {u<..v}"
           using that Kuv greaterThanAtMost_eq_atLeastAtMost_diff by blast 
         then have "\<lceil>x * real_of_int n / a\<rceil>  = 1 + int k"
-          using \<open>n > 0\<close> \<open>0 < a\<close> by (simp add: field_simps u_def v_def ceiling_eq_iff)
+          using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: field_simps u_def v_def ceiling_eq_iff)
         then show ?thesis 
           by (simp add: mult.commute f2_def upper_def SupK v_def)
       qed
       have "((\<lambda>x. f (Sup K)) has_integral (f (Sup K) * (a/n))) K"
-        using has_integral_const_real [of "f (Sup K)" u v] 
-              \<open>n > 0\<close> \<open>0 < a\<close> by (simp add: Kuv field_simps u_def v_def)
+        using  \<open>n > 0\<close> \<open>a > 0\<close> has_integral_const_real [of "f (Sup K)" u v]
+        by (simp add: Kuv field_simps u_def v_def)
       then have intf2: "(f2 has_integral (f (Sup K) * (a/n))) K"
         using has_integral_spike_finite_eq [of "{u}" K "\<lambda>x. f (Sup K)" f2] f2 by simp
-      show ?thesis
+      show "((\<lambda>x. f2 x - f1 x) has_integral (f(Sup K) - f(Inf K)) * (a/n)) K"
         using has_integral_diff [OF intf2 intf1] by (simp add: algebra_simps)
-      have "abs (v-u) = a/n"
-        using \<open>n > 0\<close> \<open>0 < a\<close> by (simp add: v_def u_def field_simps)
-      also have "... \<le> del (\<epsilon>/(2*a))"
-        using \<open>n > 0\<close> \<open>0 < a\<close> nd_ge_a by (simp add: mult.commute pos_divide_le_eq)
 
-      have "abs (v-u) < (del (\<epsilon>/(2*a)))"
-apply (simp add: v_def u_def)
-    sorry
-      have "(f (Sup K) - f (Inf K)) = f v - f u"
-        using InfK SupK by fastforce
-      also have "... < \<epsilon>/(2*a)"
-
-        sorry
-      have "(f (Sup K) - f (Inf K)) < \<epsilon>/(2*a)"
-
-        sorry
-
+      have "\<bar>v - u\<bar> < del (\<epsilon>/a)"
+        using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: v_def u_def field_simps an_less_del)
+      then have "\<bar>f v - f u\<bar> < \<epsilon>/a"
+        using \<open>\<epsilon> > 0\<close> \<open>a > 0\<close> \<open>0 \<le> u\<close> \<open>u \<le> a\<close> \<open>0 \<le> v\<close> \<open>v \<le> a\<close>
+        by (intro del [unfolded dist_real_def]) auto
+      then show "\<bar>f(Sup K) - f(Inf K)\<bar> < \<epsilon>/a"
+        using InfK SupK by blast
     qed
+
+    have D_ne: "?\<D> \<noteq> {}"
+      by (metis \<open>0 < a\<close> \<open>0 < n\<close> card_gt_0_iff card_regular_division zero_less_nat_eq)
+    have f12: "((\<lambda>x. f2 x - f1 x) has_integral (\<Sum>K\<in>?\<D>. (f(Sup K) - f(Inf K)) * (a/n))) {0..a}"
+      by (intro div int21 has_integral_combine_division)
+    moreover have "(\<Sum>K\<in>?\<D>. (f(Sup K) - f(Inf K)) * (a/n)) < \<epsilon>"
+    proof -
+      have "(\<Sum>K\<in>?\<D>. (f(Sup K) - f(Inf K)) * (a/n)) \<le> (\<Sum>K\<in>?\<D>. \<bar>f(Sup K) - f(Inf K)\<bar> * (a/n))"
+        using \<open>n > 0\<close> \<open>a > 0\<close>
+        by (smt (verit, best) divide_pos_pos of_int_0_less_iff sum_mono zero_le_mult_iff)
+      also have "... < (\<Sum>K\<in>?\<D>. \<epsilon>/n)"
+        using \<open>n > 0\<close> \<open>a > 0\<close> less
+        by (intro sum_strict_mono finite_regular_division D_ne) (simp add: field_simps)
+      also have "... = \<epsilon>"
+        using \<open>n > 0\<close> \<open>a > 0\<close> by simp
+      finally show ?thesis .
+    qed
+    ultimately have "integral {0..a} (\<lambda>x. f2 x - f1 x) < \<epsilon>"
+      by (simp add: integral_unique)
   }
   show ?thesis
     sorry
