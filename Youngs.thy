@@ -345,13 +345,13 @@ proof (cases "a=0")
       unfolding n_def
       by (smt (verit) \<delta>_def \<open>0 < a\<close> del_gt0 gt0 pos_le_divide_eq) 
 
-    define n where "n \<equiv> ceiling (a / del (\<epsilon>/a))"
+    define n where "n \<equiv> \<lceil>a / del (\<epsilon> / (2 * a))\<rceil>"
     define \<delta> where "\<delta> = a/n"
-    have "n > 0"
-      by (simp add: \<open>0 < a\<close> \<open>0 < \<epsilon>\<close> del_gt0 n_def)
-    have "n * \<delta> * (\<epsilon>/a) \<le> \<epsilon>"
-      using \<delta>_def \<open>0 < \<epsilon>\<close> n_def by force
- 
+    have nd_ge_a: "n * del (\<epsilon> / (2 * a)) \<ge> a" and "n > 0"
+      using \<open>0 < a\<close> by (simp_all add: ceiling_divide_upper del_gt0 gt0 n_def)
+
+        have "n * \<delta> * (\<epsilon>/a) \<le> \<epsilon>"
+          using \<delta>_def \<open>0 < \<epsilon>\<close> n_def by force
 
     define lower where "lower \<equiv> \<lambda>x. \<lfloor>(of_int n * x) / a\<rfloor> * a/n"
     define f1 where "f1 \<equiv> f o lower"
@@ -407,67 +407,66 @@ proof (cases "a=0")
       then show "f2 integrable_on {0..a}"
         unfolding f2_def by (intro integrable_on_mono_on mono_on_compose mo_upper)
     qed (use div in auto)
-    have int1: "(f1 has_integral (f (Inf K) * (a/n))) K" if "K\<in>?\<D>" for K
-    proof -
-      from regular_divisionE [OF that] \<open>0 < a\<close>
-      obtain k where "k<n" and k: "K = {a*(real k / n) .. a * (1 + real k) / n}"
-        by (auto simp add: zless_nat_eq_int_zless)
-      have InfK: "Inf K = a*(real k / n)"
-        using \<open>0 < n\<close> \<open>0 < a\<close> by (simp add: divide_simps k)
-      have *: "f (Inf K) = f1 x" if "x \<in> K - {a * (1 + real k) / n}" for x
-      proof -
-        have "x \<in> {a*(real k / n) ..< a * ((1 + real k) / n)}"
-          using that k by auto
-        then have "\<lfloor>real_of_int n * x / a\<rfloor> = int k"
-          using \<open>n > 0\<close> \<open>0 < a\<close>
-          by (simp add: field_simps floor_eq_iff)
-        then show ?thesis 
-          by (simp add: mult.commute f1_def lower_def InfK)
-      qed
 
-      have "((\<lambda>x. f (Inf K)) has_integral (f (Inf K) * (a/n))) K"
-        using has_integral_const_real [of "f (Inf K)" "a*(real k / n)" "a * (1 + real k) / n"] 
-              \<open>n > 0\<close> \<open>0 < a\<close> by (simp add: k field_simps)
-      then show ?thesis
-        apply (subst has_integral_spike_finite_eq)
-          defer
-          apply (rule *)
-          apply assumption+
-        apply (auto simp: )
-        done
-        by (meson "*" has_integral_spike_finite_eq negligible_sing)
-    qed
-    have int2: "integral K f2 = f (Sup K) * (a/n)" if "K\<in>?\<D>" for K
+    have int21: "((\<lambda>x. f2 x - f1 x) has_integral (f(Sup K) - f(Inf K)) * (a/n)) K" if "K\<in>?\<D>" for K
     proof -
       from regular_divisionE [OF that] \<open>0 < a\<close>
-      obtain k where "k<n" and k: "K = {a*(real k / n) .. a * ((1 + real k) / n)}"
+      obtain k where "k<n" and k: "K = {a * (real k / n) .. a * (1 + real k) / n}"
         by (auto simp add: zless_nat_eq_int_zless)
-      have SupK: "Sup K = a*((1 + real k) / n)"
-        using \<open>0 < n\<close> \<open>0 < a\<close> by (simp add: divide_simps k)
-      have *: "f (Sup K) = f2 x" if "x \<in> K -  {a * (real k / n)}" for x
+      define u where "u \<equiv> a * (real k / n)"
+      define v where "v \<equiv> a * (1 + real k) / n"
+      have "u < v" and Kuv: "K = {u..v}"
+        using \<open>n > 0\<close> \<open>0 < a\<close> by (auto simp: k u_def v_def divide_simps)
+      have InfK: "Inf K = u" and SupK: "Sup K = v"
+        using \<open>0 < n\<close> \<open>0 < a\<close> by (auto simp: divide_right_mono k u_def v_def)
+      have f1: "f (Inf K) = f1 x" if "x \<in> K - {v}" for x
       proof -
-        have "x \<in> {a*(real k / n) <.. a * ((1 + real k) / n)}"
-          using that k by auto
-        then have "\<lceil>x * real_of_int n / a\<rceil>  = 1 + int k"
-          using \<open>n > 0\<close> \<open>0 < a\<close> by (simp add: field_simps ceiling_eq_iff)
-        then show ?thesis 
-          by (simp add: mult.commute f2_def upper_def SupK)
+        have "x \<in> {u..<v}"
+          using that Kuv atLeastLessThan_eq_atLeastAtMost_diff by blast
+        then have "\<lfloor>real_of_int n * x / a\<rfloor> = int k"
+          using \<open>n > 0\<close> \<open>0 < a\<close> by (simp add: field_simps u_def v_def floor_eq_iff)
+        then show ?thesis
+          by (simp add: InfK f1_def lower_def mult.commute u_def) 
       qed
-      have "integral K f2 = integral K (\<lambda>x. f (Sup K))"
-        by (meson "*" integral_spike negligible_sing)
-      also have "\<dots> = f (Sup K) * (a/n)"
-        using \<open>n > 0\<close> \<open>0 < a\<close> by (simp add: k field_simps)
-      finally show ?thesis .
+      have "((\<lambda>x. f (Inf K)) has_integral (f (Inf K) * (a/n))) K"
+        using has_integral_const_real [of "f (Inf K)" u v] 
+              \<open>n > 0\<close> \<open>0 < a\<close> by (simp add: Kuv field_simps u_def v_def)
+      then have intf1: "(f1 has_integral (f (Inf K) * (a/n))) K"
+        using has_integral_spike_finite_eq [of "{v}" K "\<lambda>x. f (Inf K)" f1] f1 by simp
+      have f2: "f (Sup K) = f2 x" if "x \<in> K - {u}" for x
+      proof -
+        have "x \<in> {u<..v}"
+          using that Kuv greaterThanAtMost_eq_atLeastAtMost_diff by blast 
+        then have "\<lceil>x * real_of_int n / a\<rceil>  = 1 + int k"
+          using \<open>n > 0\<close> \<open>0 < a\<close> by (simp add: field_simps u_def v_def ceiling_eq_iff)
+        then show ?thesis 
+          by (simp add: mult.commute f2_def upper_def SupK v_def)
+      qed
+      have "((\<lambda>x. f (Sup K)) has_integral (f (Sup K) * (a/n))) K"
+        using has_integral_const_real [of "f (Sup K)" u v] 
+              \<open>n > 0\<close> \<open>0 < a\<close> by (simp add: Kuv field_simps u_def v_def)
+      then have intf2: "(f2 has_integral (f (Sup K) * (a/n))) K"
+        using has_integral_spike_finite_eq [of "{u}" K "\<lambda>x. f (Sup K)" f2] f2 by simp
+      show ?thesis
+        using has_integral_diff [OF intf2 intf1] by (simp add: algebra_simps)
+      have "abs (v-u) = a/n"
+        using \<open>n > 0\<close> \<open>0 < a\<close> by (simp add: v_def u_def field_simps)
+      also have "... \<le> del (\<epsilon>/(2*a))"
+        using \<open>n > 0\<close> \<open>0 < a\<close> nd_ge_a by (simp add: mult.commute pos_divide_le_eq)
+
+      have "abs (v-u) < (del (\<epsilon>/(2*a)))"
+apply (simp add: v_def u_def)
+    sorry
+      have "(f (Sup K) - f (Inf K)) = f v - f u"
+        using InfK SupK by fastforce
+      also have "... < \<epsilon>/(2*a)"
+
+        sorry
+      have "(f (Sup K) - f (Inf K)) < \<epsilon>/(2*a)"
+
+        sorry
+
     qed
-    { fix K assume "K\<in>?\<D>"
-      have "integral K (\<lambda>x. f2 x - f1 x) = (f (Sup K) - f (Inf K)) * (a/n)"
-        using int1 int2
-    sorry
-    sorry
-      then show ?thesis
-apply (simp add: )
-apply (simp add: f1_def lower_def)
-    sorry
   }
   show ?thesis
     sorry
