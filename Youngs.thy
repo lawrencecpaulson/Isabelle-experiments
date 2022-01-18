@@ -334,7 +334,8 @@ qed
 
 lemma D:
   fixes f :: "real \<Rightarrow> real"
-  assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and "0 \<le> a" "0 \<le> b" "f 0 = 0" "f a = b"
+  assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and a: "0 \<le> a" "0 \<le> b" 
+      and [simp]: "f 0 = 0" "f a = b"
   shows "a*b = integral {0..a} f + integral {0..b} (inv_into {0..a} f)"
 proof (cases "a=0")
   case False
@@ -353,7 +354,7 @@ proof (cases "a=0")
     unfolding uniformly_continuous_on_def by metis
 
   obtain S where S: "(f has_integral S) {0..a}"
-    using \<open>continuous_on {0..a} f\<close> integrable_continuous_real by blast
+    using cont_0a integrable_continuous_real by blast
   { fix \<epsilon> :: real
     assume "\<epsilon> > 0"
     with \<open>a > 0\<close> have gt0: "\<epsilon>/a > 0"
@@ -369,46 +370,44 @@ proof (cases "a=0")
         apply (auto simp: )
       using gt0 by blast
 
-    define n where "n \<equiv> \<lfloor>a / \<delta>\<rfloor>"
+    define n where "n \<equiv> nat\<lfloor>a / \<delta>\<rfloor>"
     have "n > 0"
       using  \<open>a > 0\<close> \<open>\<delta> > 0\<close> \<open>\<delta> \<le> a\<close> by (simp add: n_def)
-    have "real_of_int \<lfloor>a / \<delta>\<rfloor> \<le> a / \<delta>"
-      by linarith
-    with \<open>a > 0\<close> \<open>\<epsilon> > 0\<close> \<open>\<delta> > 0\<close> have "n * \<delta> * (\<epsilon>/a) \<le> \<epsilon>"
-      unfolding n_def by (smt (verit, best) gt0 mult.commute pos_le_divide_eq)
+    have "n * \<delta> * (\<epsilon>/a) \<le> \<epsilon>"
+      unfolding n_def
+      by (smt (z3) False \<open>0 < \<delta>\<close> \<open>n > 0\<close> gt0 less_imp_of_nat_less mult_imp_div_pos_less n_def nat_eq_iff2 nonzero_eq_divide_eq nonzero_mult_div_cancel_left of_nat_floor zero_le_floor) 
 
     have "a/d < real_of_int \<lfloor>a * 2 / min a d\<rfloor>" if "d>0" for d
       by (smt (verit, best) \<open>0 < \<delta>\<close> \<open>\<delta> \<le> a\<close> add_divide_distrib divide_less_eq_1_pos floor_eq_iff that)
     then have an_less_del: "a/n < del (\<epsilon>/a)"
       using \<open>a > 0\<close> \<open>\<epsilon> > 0\<close> del_gt0  by (simp add: n_def \<delta>_def field_simps)
 
-    define lower where "lower \<equiv> \<lambda>x. \<lfloor>(of_int n * x) / a\<rfloor> * a/n"
-    define f1 where "f1 \<equiv> f o lower"
+    define lower where "lower \<equiv> \<lambda>x. \<lfloor>(real n * x) / a\<rfloor> * a/n"
+    define f1 where "f1 \<equiv> f \<circ> lower"
     have mo_lower: "mono_on lower {0..a}"
-      using \<open>0 < n\<close> unfolding lower_def mono_on_def
+      using \<open>n > 0\<close> unfolding lower_def mono_on_def
       by (auto simp: divide_right_mono floor_mono mult.commute mult_left_mono order_less_imp_le)
     have lower_im: "lower ` {0..a} \<subseteq> {0..}"
-      using \<open>0 < n\<close> by (auto simp: lower_def)
+      using \<open>n > 0\<close> by (auto simp: lower_def)
     have f1_lower: "f1 x \<le> f x" if "0 \<le> x" "x \<le> a" for x
     proof -
       have "lower x \<le> x"
-        unfolding lower_def using \<open>n > 0\<close> \<open>a > 0\<close> 
-        by (metis floor_divide_lower divide_le_eq mult_of_int_commute of_int_0_less_iff)
+        using \<open>n > 0\<close> floor_divide_lower [OF \<open>a > 0\<close>] by (auto simp add: lower_def field_simps)
       moreover have "lower x \<ge> 0"
-        unfolding lower_def using \<open>0 < n\<close> \<open>0 \<le> a\<close> \<open>0 \<le> x\<close> by force
+        unfolding lower_def using \<open>n > 0\<close> \<open>0 \<le> a\<close> \<open>0 \<le> x\<close> by force
       ultimately show ?thesis
         using sm strict_mono_on_leD by (fastforce simp add: f1_def)
     qed
-    define upper where "upper \<equiv> \<lambda>x. ceiling((of_int n * x) / a)* a/n"
-    define f2 where "f2 \<equiv> f o upper"
+    define upper where "upper \<equiv> \<lambda>x. \<lceil>real n * x / a\<rceil> * a/n"
+    define f2 where "f2 \<equiv> f \<circ> upper"
 
     have mo_upper: "mono_on upper {0..a}"
-      using \<open>0 < n\<close> unfolding upper_def mono_on_def
+      using \<open>n > 0\<close> unfolding upper_def mono_on_def
       by (simp add: ceiling_mono divide_right_mono mult_right_mono)
     have upper_im: "upper ` {0..a} \<subseteq> {0..}"
-      using \<open>0 < n\<close>
+      using \<open>n > 0\<close>
       apply (clarsimp simp: upper_def field_split_simps)
-      by (smt (verit, best) mult_nonneg_nonneg of_int_pos)
+      by (smt (verit) mult_nonneg_nonneg of_nat_0_le_iff)
 
     have f2_upper: "f2 x \<ge> f x" if "0 \<le> x" "x \<le> a" for x
     proof -
@@ -417,9 +416,9 @@ proof (cases "a=0")
       then show ?thesis
         using sm strict_mono_on_leD \<open>0 \<le> x\<close> by (force simp add: f2_def)
     qed
-    let ?\<D> = "regular_division 0 a (nat n)"
+    let ?\<D> = "regular_division 0 a n"
     have div: "?\<D> division_of {0..a}"
-      using \<open>a > 0\<close> \<open>0 < n\<close> regular_division_division_of zero_less_nat_eq by presburger
+      using \<open>a > 0\<close> \<open>n > 0\<close> regular_division_division_of zero_less_nat_eq by presburger
 
     have int21: "((\<lambda>x. f2 x - f1 x) has_integral (f(Sup K) - f(Inf K)) * (a/n)) K" 
             and less: "\<bar>f(Sup K) - f(Inf K)\<bar> < \<epsilon>/a"
@@ -435,7 +434,7 @@ proof (cases "a=0")
       have "u \<le> a" "v \<le> a"
         using \<open>k < n\<close> \<open>a > 0\<close> by (auto simp: u_def v_def divide_simps)
       have InfK: "Inf K = u" and SupK: "Sup K = v"
-        using \<open>0 < n\<close> \<open>a > 0\<close> by (auto simp: divide_right_mono k u_def v_def)
+        using \<open>n > 0\<close> \<open>a > 0\<close> by (auto simp: divide_right_mono k u_def v_def)
       have f1: "f (Inf K) = f1 x" if "x \<in> K - {v}" for x
       proof -
         have "x \<in> {u..<v}"
@@ -477,14 +476,14 @@ proof (cases "a=0")
     qed
 
     have D_ne: "?\<D> \<noteq> {}"
-      by (metis \<open>0 < a\<close> \<open>0 < n\<close> card_gt_0_iff card_regular_division zero_less_nat_eq)
+      by (metis \<open>0 < a\<close> \<open>n > 0\<close> card_gt_0_iff card_regular_division)
     have f12: "((\<lambda>x. f2 x - f1 x) has_integral (\<Sum>K\<in>?\<D>. (f(Sup K) - f(Inf K)) * (a/n))) {0..a}"
       by (intro div int21 has_integral_combine_division)
     moreover have "(\<Sum>K\<in>?\<D>. (f(Sup K) - f(Inf K)) * (a/n)) < \<epsilon>"
     proof -
       have "(\<Sum>K\<in>?\<D>. (f(Sup K) - f(Inf K)) * (a/n)) \<le> (\<Sum>K\<in>?\<D>. \<bar>f(Sup K) - f(Inf K)\<bar> * (a/n))"
         using \<open>n > 0\<close> \<open>a > 0\<close>
-        by (smt (verit, best) divide_pos_pos of_int_0_less_iff sum_mono zero_le_mult_iff)
+        by (smt (verit) divide_pos_pos of_nat_0_less_iff sum_mono zero_le_mult_iff)
       also have "... < (\<Sum>K\<in>?\<D>. \<epsilon>/n)"
         using \<open>n > 0\<close> \<open>a > 0\<close> less
         by (intro sum_strict_mono finite_regular_division D_ne) (simp add: field_simps)
@@ -494,27 +493,105 @@ proof (cases "a=0")
     qed
     ultimately have "integral {0..a} (\<lambda>x. f2 x - f1 x) < \<epsilon>"
       by (simp add: integral_unique)
+
+(*So f1 x = 0*)
+    have "real_of_int \<lfloor>real n * x / a\<rfloor> * a / real n = 0" if "x \<in> {0..< a/n}" for x
+      using that \<open>n > 0\<close> \<open>a > 0\<close> floor_le_iff [of _ 0]
+      apply (simp add: f1_def lower_def field_simps)
+      by (smt (verit, best) divide_nonneg_nonneg floor_le_zero le_divide_eq_1_pos mult_nonneg_nonneg of_nat_0_le_iff zero_le_floor)
+
+    define yidx where "yidx \<equiv> \<lambda>y. LEAST k. y < f (real (Suc k) * a/n)"
+
+    have "yidx 0 = 0"
+      unfolding yidx_def
+    proof (rule Least_equality)
+      show "0 < f ((Suc 0) * a / n)"
+        using \<open>0 < a\<close> \<open>n > 0\<close> sm strict_mono_onD by fastforce
+    qed auto
+
+    have "yidx b = n"
+      unfolding yidx_def
+    proof (rule Least_equality)
+      show "b < f ((Suc n) * a / real n)"
+        by (smt (verit, ccfv_SIG) \<open>0 < a\<close> \<open>n > 0\<close> assms(6) atLeast_iff lessI mult_of_nat_commute nonzero_eq_divide_eq of_nat_0_less_iff of_nat_less_iff pos_divide_less_eq sm strict_mono_onD)
+    next
+      fix k
+      assume "b < f ((Suc k) * a / n)"
+      then have "a < (Suc k) * a / n"
+        using strict_mono_onD [OF sm] \<open>0 < a\<close> \<open>n > 0\<close> \<open>f a = b\<close>
+        by (smt (verit, best) atLeast_iff divide_nonneg_nonneg mult_nonneg_nonneg of_nat_0_le_iff)
+      then show "n \<le> k"
+        using \<open>0 < a\<close> frac_less2 by fastforce
+    qed
+
+    have E: "yidx y < n" if "0 \<le> y" "y < b" for y
+    proof -
+      obtain x where "f x = y"
+        using Topological_Spaces.IVT' [OF _ _ _ cont_0a] assms
+        by (metis \<open>0 \<le> y\<close> \<open>y < b\<close> order_le_less)
+      with assms that have "x < a"
+        by (smt (verit, best) atLeast_iff sm strict_mono_onD)
+      have "yidx y \<le> n - Suc 0" 
+        unfolding yidx_def
+      proof (rule Least_le)
+        have "x < (Suc (n - Suc 0)) * a / n"
+          using \<open>x < a\<close> \<open>n > 0\<close> by (simp add: divide_simps)
+        then show "y < f (real (Suc (n - Suc 0)) * a / real n)"
+          by (simp add: \<open>n > 0\<close> that)
+      qed
+      with \<open>n > 0\<close> show ?thesis
+        by linarith
+    qed
+
+    have F: "yidx y \<le> n" if "0 \<le> y" "y \<le> b" for y
+    proof -
+      obtain x where x: "f x = y" "x \<in> {0..a}"
+        using Topological_Spaces.IVT' [OF _ _ _ cont_0a] assms
+        by (metis \<open>0 \<le> y\<close> \<open>y \<le> b\<close> atLeastAtMost_iff)
+      with assms that have "x \<le> a"
+        by (smt (verit, best) atLeast_iff sm strict_mono_onD)
+      show ?thesis
+        unfolding yidx_def
+      proof (rule Least_le)
+        have "\<not> real (Suc n) * a / real n \<le> a"
+          by (simp add: \<open>0 < a\<close> \<open>0 < n\<close> divide_le_eq)
+        with \<open>x \<le> a\<close> have "x < (Suc n) * a / n" by linarith
+        with x show "y < f ((Suc n) * a / n)"
+          using strict_mono_onD [OF sm] by (auto simp add: \<open>n > 0\<close> that)
+      qed
+    qed
+
+    define invf where "invf \<equiv> \<lambda>k. of_int k * a/n"
+
+    define g1 where "g1 \<equiv> \<lambda>y. if y=b then a else invf (Suc (yidx y))"
+    define g2 where "g2 \<equiv> \<lambda>y. if y=0 then 0 else invf (yidx y)"
+
+    have g1: "g1 y \<in> {0..a}" if "y \<in> {0..b}" for y
+      using that \<open>a > 0\<close> E [of y] by (auto simp: g1_def invf_def divide_simps)
+
+    have g2: "g2 y \<in> {0..a}" if "y \<in> {0..b}" for y
+    proof -
+      obtain x where x: "f x = y" "x \<in> {0..a}"
+        using Topological_Spaces.IVT' [OF _ _ _ cont_0a] assms that
+        by (metis \<open>y \<in> {0..b}\<close> atLeastAtMost_iff)
+      with \<open>n > 0\<close> have xless: "x < (Suc n) * a / n"
+        apply (simp add: field_simps)
+        by (smt (verit, best) \<open>0 < a\<close> mult_mono of_nat_0_le_iff)
+      show ?thesis
+        using that \<open>a > 0\<close> by (auto simp: g2_def invf_def divide_simps F)
+    qed
+
+    have g2_le_g1: "g2 y \<le> g1 y" if "y \<in> {0..b}" for y
+      using that \<open>0 \<le> a\<close>
+      by (simp add: g1_def g2_def invf_def \<open>yidx b = n\<close> divide_right_mono mult_right_mono)
+
+    have "f2 (invf k) = f1 (invf ( k))" for k
+      by (simp add: f1_def f2_def upper_def lower_def invf_def)
   }
   show ?thesis
     sorry
 qed (use assms in force)
 
-
-lemma D:
-  fixes f :: "real \<Rightarrow> real"
-  assumes *: "strict_mono_on f {0..a}"  "continuous_on {0..a} f"  "0 \<le> a" "0 \<le> b"
-  shows "a*b \<le> integral {0..a} f + integral {0..b} (inv_into {0..a} f)"
-  sorry
-
-  obtains f1 f2 where "\<And>x. x \<in> {0..a} \<Longrightarrow> f1 x \<le> f x \<and> f x \<le> f2 x"
-  using strict_mono_image_endpoints assms(1) assms(2) assms(3) compact_Icc continuous_on_inv 
-
-
-lemma D:
-  fixes f :: "real \<Rightarrow> real"
-  assumes *: "strict_mono_on f {0..a}"  "continuous_on {0..a} f"  "0 \<le> a"
-  obtains f1 f2 where "\<And>x. x \<in> {0..a} \<Longrightarrow> f1 x \<le> f x \<and> f x \<le> f2 x"
-  using strict_mono_image_endpoints assms(1) assms(2) assms(3) compact_Icc continuous_on_inv 
 
 
 
