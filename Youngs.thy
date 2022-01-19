@@ -332,6 +332,7 @@ proof (rule division_ofI)
   qed
 qed
 
+
 lemma D:
   fixes f :: "real \<Rightarrow> real"
   assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and a: "0 \<le> a" "0 \<le> b" 
@@ -341,9 +342,10 @@ proof (cases "a=0")
   case False
   then have "a > 0"
     using assms(3) by linarith
+  let ?g = "inv_into {0..a} f"
   have cont_0a: "continuous_on {0..a} f"
     using cont continuous_on_subset by fastforce
-  with sm have "continuous_on {0..b} (inv_into {0..a} f)"
+  with sm have "continuous_on {0..b} ?g"
     apply (simp add: strict_mono_on_def)
     by (metis \<open>0 \<le> a\<close> \<open>f 0 = 0\<close> \<open>f a = b\<close> atLeastAtMost_iff strict_mono_continuous_inv strict_mono_onI)
   have "uniformly_continuous_on {0..a} f"
@@ -500,68 +502,59 @@ proof (cases "a=0")
       apply (simp add: f1_def lower_def field_simps)
       by (smt (verit, best) divide_nonneg_nonneg floor_le_zero le_divide_eq_1_pos mult_nonneg_nonneg of_nat_0_le_iff zero_le_floor)
 
-    define yidx where "yidx \<equiv> \<lambda>y. LEAST k. y < f (real (Suc k) * a/n)"
+    define invf where "invf \<equiv> \<lambda>k. k * a/n"
+    define yidx where "yidx \<equiv> \<lambda>y. LEAST k. y < f (invf (Suc k))"
+    have "strict_mono invf"
+      using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: invf_def strict_mono_def divide_simps)
 
-    have "yidx 0 = 0"
-      unfolding yidx_def
-    proof (rule Least_equality)
-      show "0 < f ((Suc 0) * a / n)"
-        using \<open>0 < a\<close> \<open>n > 0\<close> sm strict_mono_onD by fastforce
-    qed auto
-
-    have "yidx b = n"
-      unfolding yidx_def
-    proof (rule Least_equality)
-      show "b < f ((Suc n) * a / real n)"
-        by (smt (verit, ccfv_SIG) \<open>0 < a\<close> \<open>n > 0\<close> assms(6) atLeast_iff lessI mult_of_nat_commute nonzero_eq_divide_eq of_nat_0_less_iff of_nat_less_iff pos_divide_less_eq sm strict_mono_onD)
-    next
-      fix k
-      assume "b < f ((Suc k) * a / n)"
-      then have "a < (Suc k) * a / n"
-        using strict_mono_onD [OF sm] \<open>0 < a\<close> \<open>n > 0\<close> \<open>f a = b\<close>
-        by (smt (verit, best) atLeast_iff divide_nonneg_nonneg mult_nonneg_nonneg of_nat_0_le_iff)
-      then show "n \<le> k"
-        using \<open>0 < a\<close> frac_less2 by fastforce
-    qed
-
-    have E: "yidx y < n" if "0 \<le> y" "y < b" for y
-    proof -
-      obtain x where "f x = y"
-        using Topological_Spaces.IVT' [OF _ _ _ cont_0a] assms
-        by (metis \<open>0 \<le> y\<close> \<open>y < b\<close> order_le_less)
-      with assms that have "x < a"
-        by (smt (verit, best) atLeast_iff sm strict_mono_onD)
-      have "yidx y \<le> n - Suc 0" 
-        unfolding yidx_def
-      proof (rule Least_le)
-        have "x < (Suc (n - Suc 0)) * a / n"
-          using \<open>x < a\<close> \<open>n > 0\<close> by (simp add: divide_simps)
-        then show "y < f (real (Suc (n - Suc 0)) * a / real n)"
-          by (simp add: \<open>n > 0\<close> that)
-      qed
-      with \<open>n > 0\<close> show ?thesis
-        by linarith
-    qed
-
-    have F: "yidx y \<le> n" if "0 \<le> y" "y \<le> b" for y
+    have yidx: "y < f (invf (Suc (yidx y)))" if "y \<in> {0..b}" for y
     proof -
       obtain x where x: "f x = y" "x \<in> {0..a}"
         using Topological_Spaces.IVT' [OF _ _ _ cont_0a] assms
-        by (metis \<open>0 \<le> y\<close> \<open>y \<le> b\<close> atLeastAtMost_iff)
-      with assms that have "x \<le> a"
-        by (smt (verit, best) atLeast_iff sm strict_mono_onD)
-      show ?thesis
-        unfolding yidx_def
-      proof (rule Least_le)
-        have "\<not> real (Suc n) * a / real n \<le> a"
-          by (simp add: \<open>0 < a\<close> \<open>0 < n\<close> divide_le_eq)
-        with \<open>x \<le> a\<close> have "x < (Suc n) * a / n" by linarith
-        with x show "y < f ((Suc n) * a / n)"
-          using strict_mono_onD [OF sm] by (auto simp add: \<open>n > 0\<close> that)
-      qed
+        by (metis \<open>y \<in> {0..b}\<close> atLeastAtMost_iff)
+      define k where "k \<equiv> nat \<lfloor>x/a * n\<rfloor>"
+      have "x < invf(Suc k)"
+        using \<open>n > 0\<close> x
+        by (simp add: k_def invf_def divide_simps) (smt (verit, best) \<open>0 < a\<close> floor_divide_upper)
+      with that x show ?thesis
+        unfolding yidx_def 
+        using strict_mono_onD [OF sm] LeastI
+        by (smt (verit, ccfv_SIG) atLeastAtMost_iff atLeast_iff)
     qed
 
-    define invf where "invf \<equiv> \<lambda>k. of_int k * a/n"
+    have yidx_equality: "yidx y = k" if "y \<in> {0..b}" "y \<in> {f (invf k)..<f (invf (Suc k))}" for y k
+    proof (rule antisym)
+      show "yidx y \<le> k"
+        unfolding yidx_def by (metis atLeastLessThan_iff that(2) Least_le)
+      have "(invf (real k)) <  (invf (1 + real (yidx y)))"
+        using yidx [OF that(1)] that(2) using strict_mono_onD [OF sm]
+        apply (simp add: )
+        by (smt (verit, ccfv_SIG) assms(3) divide_nonneg_nonneg invf_def mult_nonneg_nonneg of_nat_0_le_iff)
+      then have "real k < 1 + real (yidx y)"
+        by (simp add: \<open>strict_mono invf\<close> strict_mono_less)
+      then show "k \<le> yidx y"
+        by simp 
+    qed
+
+    have [simp]: "yidx 0 = 0"
+      using \<open>0 < a\<close> \<open>0 \<le> b\<close> \<open>0 < n\<close> strict_mono_onD [OF sm] by (fastforce simp: invf_def yidx_equality)
+
+    have [simp]: "yidx b = n"
+    proof -
+      have "a < (1 + real n) * a / real n"
+        using \<open>0 < n\<close> \<open>0 < a\<close> by (simp add: divide_simps)
+      then have "b < f (invf (1 + real n))"
+        using \<open>0 \<le> a\<close> invf_def sm strict_mono_onD by fastforce
+      then show ?thesis
+        using \<open>0 \<le> b\<close> by (auto simp: invf_def yidx_equality)
+    qed
+
+    have E: "yidx y < n" if "0 \<le> y" "y < b" for y
+      using yidx [of y] \<open>f a = b\<close>
+      by (smt (verit, del_insts) \<open>0 < n\<close> yidx_def gr0_conv_Suc invf_def less_Suc_eq_le less_imp_of_nat_less nonzero_mult_div_cancel_left of_nat_0 that(2) Least_le)
+
+    have F: "yidx y \<le> n" if "0 \<le> y" "y \<le> b" for y
+      by (metis E \<open>yidx b = n\<close> linorder_not_le not_less_iff_gr_or_eq that)
 
     define g1 where "g1 \<equiv> \<lambda>y. if y=b then a else invf (Suc (yidx y))"
     define g2 where "g2 \<equiv> \<lambda>y. if y=0 then 0 else invf (yidx y)"
@@ -581,9 +574,26 @@ proof (cases "a=0")
         using that \<open>a > 0\<close> by (auto simp: g2_def invf_def divide_simps F)
     qed
 
-    have g2_le_g1: "g2 y \<le> g1 y" if "y \<in> {0..b}" for y
+    have g0 [simp]: "?g 0 = 0"
+      using \<open>f 0 = 0\<close> \<open>0 \<le> a\<close>
+      by (smt (verit, best) Icc_subset_Ici_iff atLeastAtMost_iff f_inv_into_f image_iff in_mono inv_into_into sm strict_mono_on_eqD)
+
+    have g2_le_g: "g2 y \<le> ?g y" if "y \<in> {0..b}" for y
+      using that \<open>0 \<le> a\<close>
+      apply (simp add: g2_def)
+      apply (auto simp: )
+      apply (auto simp: yidx_def)
+
+      sorry
+    have g_le_g1: "?g y \<le> g1 y" if "y \<in> {0..b}" for y
       using that \<open>0 \<le> a\<close>
       by (simp add: g1_def g2_def invf_def \<open>yidx b = n\<close> divide_right_mono mult_right_mono)
+
+    have g2_le_g1: "g2 y \<le> g1 y" if "y \<in> {0..b}" for y
+      using that \<open>0 \<le> a\<close>
+      by (simp add: g1_def g2_def invf_def divide_right_mono mult_right_mono)
+
+
 
     have "f2 (invf k) = f1 (invf ( k))" for k
       by (simp add: f1_def f2_def upper_def lower_def invf_def)
