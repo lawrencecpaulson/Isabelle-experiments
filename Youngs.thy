@@ -332,6 +332,11 @@ proof (rule division_ofI)
   qed
 qed
 
+lemma DD:
+  fixes g :: "nat \<Rightarrow> 'a::comm_ring_1"
+  shows "(\<Sum>i<n. of_nat (Suc i) * (g (Suc i) - g i)) = of_nat n * g n - (\<Sum>i<n. g i)"
+  by (induction n) (auto simp: algebra_simps)
+
 
 theorem Young:
   fixes f :: "real \<Rightarrow> real"
@@ -423,7 +428,7 @@ proof (cases "a=0")
     have div: "?\<D> division_of {0..a}"
       using \<open>a > 0\<close> \<open>n > 0\<close> regular_division_division_of zero_less_nat_eq by presburger
 
-    have int21: "((\<lambda>x. f2 x - f1 x) has_integral (f(Sup K) - f(Inf K)) * (a/n)) K" 
+    have int_f1: "(f1 has_integral f(Inf K) * (a/n)) K" and int_f2: "(f2 has_integral f(Sup K) * (a/n)) K" 
             and less: "\<bar>f(Sup K) - f(Inf K)\<bar> < \<epsilon>/a"
       if "K\<in>?\<D>" for K
     proof -
@@ -450,7 +455,7 @@ proof (cases "a=0")
       have "((\<lambda>x. f (Inf K)) has_integral (f (Inf K) * (a/n))) K"
         using has_integral_const_real [of "f (Inf K)" u v] 
               \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: Kuv field_simps u_def v_def)
-      then have intf1: "(f1 has_integral (f (Inf K) * (a/n))) K"
+      then show "(f1 has_integral (f (Inf K) * (a/n))) K"
         using has_integral_spike_finite_eq [of "{v}" K "\<lambda>x. f (Inf K)" f1] f1 by simp
       have f2: "f (Sup K) = f2 x" if "x \<in> K - {u}" for x
       proof -
@@ -464,11 +469,8 @@ proof (cases "a=0")
       have "((\<lambda>x. f (Sup K)) has_integral (f (Sup K) * (a/n))) K"
         using  \<open>n > 0\<close> \<open>a > 0\<close> has_integral_const_real [of "f (Sup K)" u v]
         by (simp add: Kuv field_simps u_def v_def)
-      then have intf2: "(f2 has_integral (f (Sup K) * (a/n))) K"
+      then show "(f2 has_integral (f (Sup K) * (a/n))) K"
         using has_integral_spike_finite_eq [of "{u}" K "\<lambda>x. f (Sup K)" f2] f2 by simp
-      show "((\<lambda>x. f2 x - f1 x) has_integral (f(Sup K) - f(Inf K)) * (a/n)) K"
-        using has_integral_diff [OF intf2 intf1] by (simp add: algebra_simps)
-
       have "\<bar>v - u\<bar> < del (\<epsilon>/a)"
         using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: v_def u_def field_simps an_less_del)
       then have "\<bar>f v - f u\<bar> < \<epsilon>/a"
@@ -477,6 +479,9 @@ proof (cases "a=0")
       then show "\<bar>f(Sup K) - f(Inf K)\<bar> < \<epsilon>/a"
         using InfK SupK by blast
     qed
+
+    have int21: "((\<lambda>x. f2 x - f1 x) has_integral (f(Sup K) - f(Inf K)) * (a/n)) K" if "K\<in>?\<D>" for K
+      using that has_integral_diff [OF int_f2 int_f1] by (simp add: algebra_simps)
 
     have D_ne: "?\<D> \<noteq> {}"
       by (metis \<open>0 < a\<close> \<open>n > 0\<close> card_gt_0_iff card_regular_division)
@@ -601,6 +606,9 @@ proof (cases "a=0")
     qed
     have g2_le_g1: "g2 y \<le> g1 y" if "y \<in> {0..b}" for y
       using g2_le_g g_le_g1 that by fastforce
+
+
+
   }
   show ?thesis
     sorry
