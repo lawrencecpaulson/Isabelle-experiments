@@ -333,7 +333,7 @@ proof (rule division_ofI)
 qed
 
 
-lemma D:
+theorem Young:
   fixes f :: "real \<Rightarrow> real"
   assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and a: "0 \<le> a" "0 \<le> b" 
       and [simp]: "f 0 = 0" "f a = b"
@@ -494,7 +494,7 @@ proof (cases "a=0")
         using \<open>n > 0\<close> \<open>a > 0\<close> by simp
       finally show ?thesis .
     qed
-    ultimately have "integral {0..a} (\<lambda>x. f2 x - f1 x) < \<epsilon>"
+    ultimately have f2_near_f1: "integral {0..a} (\<lambda>x. f2 x - f1 x) < \<epsilon>"
       by (simp add: integral_unique)
 
 (*So f1 x = 0*)
@@ -503,77 +503,77 @@ proof (cases "a=0")
       apply (simp add: f1_def lower_def field_simps)
       by (smt (verit, best) divide_nonneg_nonneg floor_le_zero le_divide_eq_1_pos mult_nonneg_nonneg of_nat_0_le_iff zero_le_floor)
 
-    define invf where "invf \<equiv> \<lambda>k. k * a/n"
-    define yidx where "yidx \<equiv> \<lambda>y. LEAST k. y < f (invf (Suc k))"
-    have "strict_mono invf"
-      using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: invf_def strict_mono_def divide_simps)
+    define a_seg where "a_seg \<equiv> \<lambda>u::real. u * a/n"
+    define yidx where "yidx \<equiv> \<lambda>y. LEAST k. y < f (a_seg (Suc k))"
+    have "strict_mono a_seg"
+      using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: a_seg_def strict_mono_def divide_simps)
 
-    have yidx_le: "f (invf (yidx y)) \<le> y" and yidx_gt: "y < f (invf (Suc (yidx y)))" 
+    have yidx_le: "f (a_seg (yidx y)) \<le> y" and yidx_gt: "y < f (a_seg (Suc (yidx y)))" 
       if "y \<in> {0..b}" for y
     proof -
       obtain x where x: "f x = y" "x \<in> {0..a}"
         using Topological_Spaces.IVT' [OF _ _ _ cont_0a] assms
         by (metis \<open>y \<in> {0..b}\<close> atLeastAtMost_iff)
       define k where "k \<equiv> nat \<lfloor>x/a * n\<rfloor>"
-      have x_lims: "invf k \<le> x" "x < invf (Suc k)"
+      have x_lims: "a_seg k \<le> x" "x < a_seg (Suc k)"
         using \<open>n > 0\<close> \<open>0 < a\<close> floor_divide_lower floor_divide_upper [of a "x*n"] x
-        by (auto simp add: k_def invf_def field_simps)
-      with that x obtain f_lims: "f (invf k) \<le> y" "y < f (invf (Suc k))"
+        by (auto simp add: k_def a_seg_def field_simps)
+      with that x obtain f_lims: "f (a_seg k) \<le> y" "y < f (a_seg (Suc k))"
         using strict_mono_onD [OF sm] 
-        by (smt (verit, best) \<open>0 \<le> a\<close> atLeast_iff divide_nonneg_nonneg invf_def of_nat_0_le_iff zero_le_mult_iff)
-      then have "invf (yidx y) \<le> invf k"
-        by (simp add: Least_le \<open>strict_mono invf\<close> strict_mono_less_eq yidx_def)
-      then have "f (invf (yidx y)) \<le> f (invf k)"
+        by (smt (verit, best) \<open>0 \<le> a\<close> atLeast_iff divide_nonneg_nonneg a_seg_def of_nat_0_le_iff zero_le_mult_iff)
+      then have "a_seg (yidx y) \<le> a_seg k"
+        by (simp add: Least_le \<open>strict_mono a_seg\<close> strict_mono_less_eq yidx_def)
+      then have "f (a_seg (yidx y)) \<le> f (a_seg k)"
         using strict_mono_onD [OF sm] 
-        by (metis \<open>0 \<le> a\<close> atLeast_iff divide_nonneg_nonneg invf_def less_eq_real_def of_nat_0_le_iff zero_le_mult_iff)
-      then show "f (invf (yidx y)) \<le> y"
+        by (metis \<open>0 \<le> a\<close> atLeast_iff divide_nonneg_nonneg a_seg_def less_eq_real_def of_nat_0_le_iff zero_le_mult_iff)
+      then show "f (a_seg (yidx y)) \<le> y"
         using f_lims by force 
-      show "y < f (invf (Suc (yidx y)))"
+      show "y < f (a_seg (Suc (yidx y)))"
         by (metis LeastI f_lims(2) yidx_def) 
     qed
 
-    have yidx_equality: "yidx y = k" if "y \<in> {0..b}" "y \<in> {f (invf k)..<f (invf (Suc k))}" for y k
+    have yidx_equality: "yidx y = k" if "y \<in> {0..b}" "y \<in> {f (a_seg k)..<f (a_seg (Suc k))}" for y k
     proof (rule antisym)
       show "yidx y \<le> k"
         unfolding yidx_def by (metis atLeastLessThan_iff that(2) Least_le)
-      have "(invf (real k)) < invf (1 + real (yidx y))"
+      have "(a_seg (real k)) < a_seg (1 + real (yidx y))"
         using yidx_gt [OF that(1)] that(2) using strict_mono_onD [OF sm]
         apply (simp add: )
-        by (smt (verit, ccfv_SIG) \<open>0 \<le> a\<close> divide_nonneg_nonneg invf_def mult_nonneg_nonneg of_nat_0_le_iff)
+        by (smt (verit, ccfv_SIG) \<open>0 \<le> a\<close> divide_nonneg_nonneg a_seg_def mult_nonneg_nonneg of_nat_0_le_iff)
       then have "real k < 1 + real (yidx y)"
-        by (simp add: \<open>strict_mono invf\<close> strict_mono_less)
+        by (simp add: \<open>strict_mono a_seg\<close> strict_mono_less)
       then show "k \<le> yidx y"
         by simp 
     qed
 
     have [simp]: "yidx 0 = 0"
-      using \<open>0 < a\<close> \<open>0 \<le> b\<close> \<open>0 < n\<close> strict_mono_onD [OF sm] by (fastforce simp: invf_def yidx_equality)
+      using \<open>0 < a\<close> \<open>0 \<le> b\<close> \<open>0 < n\<close> strict_mono_onD [OF sm] by (fastforce simp: a_seg_def yidx_equality)
 
     have [simp]: "yidx b = n"
     proof -
       have "a < (1 + real n) * a / real n"
         using \<open>0 < n\<close> \<open>0 < a\<close> by (simp add: divide_simps)
-      then have "b < f (invf (1 + real n))"
-        using \<open>0 \<le> a\<close> invf_def sm strict_mono_onD by fastforce
+      then have "b < f (a_seg (1 + real n))"
+        using \<open>0 \<le> a\<close> a_seg_def sm strict_mono_onD by fastforce
       then show ?thesis
-        using \<open>0 \<le> b\<close> by (auto simp: invf_def yidx_equality)
+        using \<open>0 \<le> b\<close> by (auto simp: a_seg_def yidx_equality)
     qed
 
     have E: "yidx y < n" if "y < b" for y
       using yidx_gt [of y] \<open>f a = b\<close>
-      by (metis \<open>0 < n\<close> gr0_conv_Suc invf_def less_Suc_eq_le nonzero_mult_div_cancel_left of_nat_neq_0 that wellorder_Least_lemma(2) yidx_def)
+      by (metis \<open>0 < n\<close> gr0_conv_Suc a_seg_def less_Suc_eq_le nonzero_mult_div_cancel_left of_nat_neq_0 that wellorder_Least_lemma(2) yidx_def)
 
     have F: "yidx y \<le> n" if "y \<le> b" for y
       by (metis E \<open>yidx b = n\<close> dual_order.order_iff_strict that)
 
-    define g1 where "g1 \<equiv> \<lambda>y. if y=b then a else invf (Suc (yidx y))"
-    define g2 where "g2 \<equiv> \<lambda>y. if y=0 then 0 else invf (yidx y)"
+    define g1 where "g1 \<equiv> \<lambda>y. if y=b then a else a_seg (Suc (yidx y))"
+    define g2 where "g2 \<equiv> \<lambda>y. if y=0 then 0 else a_seg (yidx y)"
 
     have g1: "g1 y \<in> {0..a}" if "y \<in> {0..b}" for y
-      using that \<open>a > 0\<close> E [of y] by (auto simp: g1_def invf_def divide_simps)
+      using that \<open>a > 0\<close> E [of y] by (auto simp: g1_def a_seg_def divide_simps)
 
     have g2: "g2 y \<in> {0..a}" if "y \<in> {0..b}" for y
-      using that \<open>a > 0\<close> F [of y] by (simp add: g2_def invf_def divide_simps)
+      using that \<open>a > 0\<close> F [of y] by (simp add: g2_def a_seg_def divide_simps)
 
     have g0 [simp]: "?g 0 = 0"
       using \<open>f 0 = 0\<close> \<open>0 \<le> a\<close>
