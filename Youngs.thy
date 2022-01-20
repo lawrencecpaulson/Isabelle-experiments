@@ -1,7 +1,7 @@
 section \<open>Misc experiments\<close>
 
 theory Youngs imports
-  "HOL-Library.Sum_of_Squares" "HOL-Analysis.Analysis" "HOL-Computational_Algebra.Fundamental_Theorem_Algebra"
+  "HOL-Analysis.Analysis" 
   "HOL-ex.Sketch_and_Explore"
    
 begin
@@ -348,10 +348,11 @@ proof (cases "a=0")
   with sm have "continuous_on {0..b} ?g"
     apply (simp add: strict_mono_on_def)
     by (metis \<open>0 \<le> a\<close> \<open>f 0 = 0\<close> \<open>f a = b\<close> atLeastAtMost_iff strict_mono_continuous_inv strict_mono_onI)
+  have fim: "f ` {0..a} = {0..b}"
+    by (metis \<open>0 \<le> a\<close> \<open>f 0 = 0\<close> \<open>f a = b\<close> atLeastAtMost_iff atLeast_iff cont_0a sm strict_mono_image_endpoints strict_mono_on_def)
   have "uniformly_continuous_on {0..a} f"
     using compact_uniformly_continuous cont_0a by blast
-  then
-  obtain del where del_gt0: "\<And>e. e>0 \<Longrightarrow> del e > 0" 
+  then obtain del where del_gt0: "\<And>e. e>0 \<Longrightarrow> del e > 0" 
                    and del:  "\<And>e x x'. \<lbrakk>dist x' x < del e; e>0; x \<in> {0..a}; x' \<in> {0..a}\<rbrakk> \<Longrightarrow> dist (f x') (f x) < e"
     unfolding uniformly_continuous_on_def by metis
 
@@ -507,7 +508,7 @@ proof (cases "a=0")
     have "strict_mono invf"
       using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: invf_def strict_mono_def divide_simps)
 
-    have yidx: "y < f (invf (Suc (yidx y)))" if "y \<in> {0..b}" for y
+    have yidx_gt: "y < f (invf (Suc (yidx y)))" if "y \<in> {0..b}" for y
     proof -
       obtain x where x: "f x = y" "x \<in> {0..a}"
         using Topological_Spaces.IVT' [OF _ _ _ cont_0a] assms
@@ -518,8 +519,7 @@ proof (cases "a=0")
         by (simp add: k_def invf_def divide_simps) (smt (verit, best) \<open>0 < a\<close> floor_divide_upper)
       with that x show ?thesis
         unfolding yidx_def 
-        using strict_mono_onD [OF sm] LeastI
-        by (smt (verit, ccfv_SIG) atLeastAtMost_iff atLeast_iff)
+        by (smt (verit, ccfv_SIG) atLeastAtMost_iff atLeast_iff strict_mono_onD [OF sm] LeastI)
     qed
 
     have yidx_equality: "yidx y = k" if "y \<in> {0..b}" "y \<in> {f (invf k)..<f (invf (Suc k))}" for y k
@@ -527,13 +527,43 @@ proof (cases "a=0")
       show "yidx y \<le> k"
         unfolding yidx_def by (metis atLeastLessThan_iff that(2) Least_le)
       have "(invf (real k)) <  (invf (1 + real (yidx y)))"
-        using yidx [OF that(1)] that(2) using strict_mono_onD [OF sm]
+        using yidx_gt [OF that(1)] that(2) using strict_mono_onD [OF sm]
         apply (simp add: )
         by (smt (verit, ccfv_SIG) assms(3) divide_nonneg_nonneg invf_def mult_nonneg_nonneg of_nat_0_le_iff)
       then have "real k < 1 + real (yidx y)"
         by (simp add: \<open>strict_mono invf\<close> strict_mono_less)
       then show "k \<le> yidx y"
         by simp 
+    qed
+
+   have yidx_le: "f (invf (yidx y)) \<le> y" if "y \<in> {0..b}" for y
+    proof -
+      obtain x where x: "f x = y" "x \<in> {0..a}"
+        using Topological_Spaces.IVT' [OF _ _ _ cont_0a] assms
+        by (metis \<open>y \<in> {0..b}\<close> atLeastAtMost_iff)
+      define k where "k \<equiv> nat \<lfloor>x/a * n\<rfloor>"
+      have "invf k \<le> x"
+        using \<open>n > 0\<close> \<open>0 < a\<close> floor_divide_lower x
+        by (auto simp add: k_def invf_def divide_simps)
+      with that x have "f (invf k) \<le> y"
+        using strict_mono_onD [OF sm] 
+        by (smt (verit, best) assms(3) atLeast_iff divide_nonneg_nonneg invf_def of_nat_0_le_iff zero_le_mult_iff)
+       have "invf (Suc k) > x"
+        using \<open>n > 0\<close> \<open>a > 0\<close> x
+        apply (simp add: k_def invf_def divide_simps)
+        by (smt (verit, best) floor_divide_upper)
+      then have y: "f (invf (Suc k)) > y"
+        using sm strict_mono_onD x(1) x(2) by fastforce
+      then have "yidx y \<le> k"
+        unfolding yidx_def 
+        by (rule Least_le) 
+      then have "invf (yidx y) \<le> invf k"
+        by (simp add: \<open>strict_mono invf\<close> strict_mono_less_eq)
+      then have "f (invf (yidx y)) \<le> f (invf k)"
+        by (smt (verit) assms(3) atLeast_iff divide_nonneg_nonneg invf_def of_nat_0_le_iff sm strict_mono_onD zero_le_mult_iff)
+      also have "... \<le> y"
+        by (simp add: \<open>f (invf (real k)) \<le> y\<close>)
+      finally show ?thesis .
     qed
 
     have [simp]: "yidx 0 = 0"
@@ -550,7 +580,7 @@ proof (cases "a=0")
     qed
 
     have E: "yidx y < n" if "0 \<le> y" "y < b" for y
-      using yidx [of y] \<open>f a = b\<close>
+      using yidx_gt [of y] \<open>f a = b\<close>
       by (smt (verit, del_insts) \<open>0 < n\<close> yidx_def gr0_conv_Suc invf_def less_Suc_eq_le less_imp_of_nat_less nonzero_mult_div_cancel_left of_nat_0 that(2) Least_le)
 
     have F: "yidx y \<le> n" if "0 \<le> y" "y \<le> b" for y
@@ -563,25 +593,26 @@ proof (cases "a=0")
       using that \<open>a > 0\<close> E [of y] by (auto simp: g1_def invf_def divide_simps)
 
     have g2: "g2 y \<in> {0..a}" if "y \<in> {0..b}" for y
-    proof -
-      obtain x where x: "f x = y" "x \<in> {0..a}"
-        using Topological_Spaces.IVT' [OF _ _ _ cont_0a] assms that
-        by (metis \<open>y \<in> {0..b}\<close> atLeastAtMost_iff)
-      with \<open>n > 0\<close> have xless: "x < (Suc n) * a / n"
-        apply (simp add: field_simps)
-        by (smt (verit, best) \<open>0 < a\<close> mult_mono of_nat_0_le_iff)
-      show ?thesis
-        using that \<open>a > 0\<close> by (auto simp: g2_def invf_def divide_simps F)
-    qed
+      using that \<open>a > 0\<close> F [of y] by (simp add: g2_def invf_def divide_simps)
 
     have g0 [simp]: "?g 0 = 0"
       using \<open>f 0 = 0\<close> \<open>0 \<le> a\<close>
       by (smt (verit, best) Icc_subset_Ici_iff atLeastAtMost_iff f_inv_into_f image_iff in_mono inv_into_into sm strict_mono_on_eqD)
 
     have g2_le_g: "g2 y \<le> ?g y" if "y \<in> {0..b}" for y
+    proof -
+      have "f (g2 y) \<le> y"
+        using that
+      apply (simp add: g2_def)
+        using that yidx_le by blast
+      then have "f (g2 y) \<le> f (?g y)"
+        using that by (simp add: fim f_inv_into_f [where f=f])
+      then show ?thesis
       using that \<open>0 \<le> a\<close>
       apply (simp add: g2_def)
       apply (auto simp: )
+      apply (auto simp: invf_def)
+
       apply (auto simp: yidx_def)
 
       sorry
