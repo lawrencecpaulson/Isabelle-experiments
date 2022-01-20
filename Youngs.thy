@@ -559,12 +559,12 @@ proof (cases "a=0")
         using \<open>0 \<le> b\<close> by (auto simp: invf_def yidx_equality)
     qed
 
-    have E: "yidx y < n" if "0 \<le> y" "y < b" for y
+    have E: "yidx y < n" if "y < b" for y
       using yidx_gt [of y] \<open>f a = b\<close>
-      by (smt (verit, del_insts) \<open>0 < n\<close> yidx_def gr0_conv_Suc invf_def less_Suc_eq_le less_imp_of_nat_less nonzero_mult_div_cancel_left of_nat_0 that(2) Least_le)
+      by (metis \<open>0 < n\<close> gr0_conv_Suc invf_def less_Suc_eq_le nonzero_mult_div_cancel_left of_nat_neq_0 that wellorder_Least_lemma(2) yidx_def)
 
-    have F: "yidx y \<le> n" if "0 \<le> y" "y \<le> b" for y
-      by (metis E \<open>yidx b = n\<close> linorder_not_le not_less_iff_gr_or_eq that)
+    have F: "yidx y \<le> n" if "y \<le> b" for y
+      by (metis E \<open>yidx b = n\<close> dual_order.order_iff_strict that)
 
     define g1 where "g1 \<equiv> \<lambda>y. if y=b then a else invf (Suc (yidx y))"
     define g2 where "g2 \<equiv> \<lambda>y. if y=0 then 0 else invf (yidx y)"
@@ -582,32 +582,25 @@ proof (cases "a=0")
     have g2_le_g: "g2 y \<le> ?g y" if "y \<in> {0..b}" for y
     proof -
       have "f (g2 y) \<le> y"
-        using that
-      apply (simp add: g2_def)
-        using that yidx_le by blast
+        using \<open>f 0 = 0\<close> g2_def that yidx_le by presburger
       then have "f (g2 y) \<le> f (?g y)"
         using that by (simp add: fim f_inv_into_f [where f=f])
       then show ?thesis
-      using that \<open>0 \<le> a\<close>
-      apply (simp add: g2_def)
-      apply (auto simp: )
-      apply (auto simp: invf_def)
+        using strict_mono_onD [OF sm] by (smt (verit, best) atLeastAtMost_iff atLeast_iff fim inv_into_into that)
+    qed
 
-      apply (auto simp: yidx_def)
-
-      sorry
     have g_le_g1: "?g y \<le> g1 y" if "y \<in> {0..b}" for y
-      using that \<open>0 \<le> a\<close>
-      by (simp add: g1_def g2_def invf_def \<open>yidx b = n\<close> divide_right_mono mult_right_mono)
-
+    proof -
+      have "y \<le> f (g1 y)"
+        by (smt (verit, best) \<open>f a = b\<close> g1_def that yidx_gt)
+      then have "f (?g y) \<le> f (g1 y)"
+        using that by (simp add: fim f_inv_into_f [where f=f])
+      then show ?thesis
+        using strict_mono_onD [OF sm]
+        by (smt (verit, best) atLeastAtMost_iff atLeast_iff g1 that) 
+    qed
     have g2_le_g1: "g2 y \<le> g1 y" if "y \<in> {0..b}" for y
-      using that \<open>0 \<le> a\<close>
-      by (simp add: g1_def g2_def invf_def divide_right_mono mult_right_mono)
-
-
-
-    have "f2 (invf k) = f1 (invf ( k))" for k
-      by (simp add: f1_def f2_def upper_def lower_def invf_def)
+      using g2_le_g g_le_g1 that by fastforce
   }
   show ?thesis
     sorry
