@@ -508,62 +508,42 @@ proof (cases "a=0")
     have "strict_mono invf"
       using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: invf_def strict_mono_def divide_simps)
 
-    have yidx_gt: "y < f (invf (Suc (yidx y)))" if "y \<in> {0..b}" for y
+    have yidx_le: "f (invf (yidx y)) \<le> y" and yidx_gt: "y < f (invf (Suc (yidx y)))" 
+      if "y \<in> {0..b}" for y
     proof -
       obtain x where x: "f x = y" "x \<in> {0..a}"
         using Topological_Spaces.IVT' [OF _ _ _ cont_0a] assms
         by (metis \<open>y \<in> {0..b}\<close> atLeastAtMost_iff)
       define k where "k \<equiv> nat \<lfloor>x/a * n\<rfloor>"
-      have "x < invf(Suc k)"
-        using \<open>n > 0\<close> x
-        by (simp add: k_def invf_def divide_simps) (smt (verit, best) \<open>0 < a\<close> floor_divide_upper)
-      with that x show ?thesis
-        unfolding yidx_def 
-        by (smt (verit, ccfv_SIG) atLeastAtMost_iff atLeast_iff strict_mono_onD [OF sm] LeastI)
+      have x_lims: "invf k \<le> x" "x < invf (Suc k)"
+        using \<open>n > 0\<close> \<open>0 < a\<close> floor_divide_lower floor_divide_upper [of a "x*n"] x
+        by (auto simp add: k_def invf_def field_simps)
+      with that x obtain f_lims: "f (invf k) \<le> y" "y < f (invf (Suc k))"
+        using strict_mono_onD [OF sm] 
+        by (smt (verit, best) \<open>0 \<le> a\<close> atLeast_iff divide_nonneg_nonneg invf_def of_nat_0_le_iff zero_le_mult_iff)
+      then have "invf (yidx y) \<le> invf k"
+        by (simp add: Least_le \<open>strict_mono invf\<close> strict_mono_less_eq yidx_def)
+      then have "f (invf (yidx y)) \<le> f (invf k)"
+        using strict_mono_onD [OF sm] 
+        by (metis \<open>0 \<le> a\<close> atLeast_iff divide_nonneg_nonneg invf_def less_eq_real_def of_nat_0_le_iff zero_le_mult_iff)
+      then show "f (invf (yidx y)) \<le> y"
+        using f_lims by force 
+      show "y < f (invf (Suc (yidx y)))"
+        by (metis LeastI f_lims(2) yidx_def) 
     qed
 
     have yidx_equality: "yidx y = k" if "y \<in> {0..b}" "y \<in> {f (invf k)..<f (invf (Suc k))}" for y k
     proof (rule antisym)
       show "yidx y \<le> k"
         unfolding yidx_def by (metis atLeastLessThan_iff that(2) Least_le)
-      have "(invf (real k)) <  (invf (1 + real (yidx y)))"
+      have "(invf (real k)) < invf (1 + real (yidx y))"
         using yidx_gt [OF that(1)] that(2) using strict_mono_onD [OF sm]
         apply (simp add: )
-        by (smt (verit, ccfv_SIG) assms(3) divide_nonneg_nonneg invf_def mult_nonneg_nonneg of_nat_0_le_iff)
+        by (smt (verit, ccfv_SIG) \<open>0 \<le> a\<close> divide_nonneg_nonneg invf_def mult_nonneg_nonneg of_nat_0_le_iff)
       then have "real k < 1 + real (yidx y)"
         by (simp add: \<open>strict_mono invf\<close> strict_mono_less)
       then show "k \<le> yidx y"
         by simp 
-    qed
-
-   have yidx_le: "f (invf (yidx y)) \<le> y" if "y \<in> {0..b}" for y
-    proof -
-      obtain x where x: "f x = y" "x \<in> {0..a}"
-        using Topological_Spaces.IVT' [OF _ _ _ cont_0a] assms
-        by (metis \<open>y \<in> {0..b}\<close> atLeastAtMost_iff)
-      define k where "k \<equiv> nat \<lfloor>x/a * n\<rfloor>"
-      have "invf k \<le> x"
-        using \<open>n > 0\<close> \<open>0 < a\<close> floor_divide_lower x
-        by (auto simp add: k_def invf_def divide_simps)
-      with that x have "f (invf k) \<le> y"
-        using strict_mono_onD [OF sm] 
-        by (smt (verit, best) assms(3) atLeast_iff divide_nonneg_nonneg invf_def of_nat_0_le_iff zero_le_mult_iff)
-       have "invf (Suc k) > x"
-        using \<open>n > 0\<close> \<open>a > 0\<close> x
-        apply (simp add: k_def invf_def divide_simps)
-        by (smt (verit, best) floor_divide_upper)
-      then have y: "f (invf (Suc k)) > y"
-        using sm strict_mono_onD x(1) x(2) by fastforce
-      then have "yidx y \<le> k"
-        unfolding yidx_def 
-        by (rule Least_le) 
-      then have "invf (yidx y) \<le> invf k"
-        by (simp add: \<open>strict_mono invf\<close> strict_mono_less_eq)
-      then have "f (invf (yidx y)) \<le> f (invf k)"
-        by (smt (verit) assms(3) atLeast_iff divide_nonneg_nonneg invf_def of_nat_0_le_iff sm strict_mono_onD zero_le_mult_iff)
-      also have "... \<le> y"
-        by (simp add: \<open>f (invf (real k)) \<le> y\<close>)
-      finally show ?thesis .
     qed
 
     have [simp]: "yidx 0 = 0"
