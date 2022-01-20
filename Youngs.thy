@@ -428,7 +428,7 @@ proof (cases "a=0")
     have div: "?\<D> division_of {0..a}"
       using \<open>a > 0\<close> \<open>n > 0\<close> regular_division_division_of zero_less_nat_eq by presburger
 
-    have int_f1: "(f1 has_integral f(Inf K) * (a/n)) K" and int_f2: "(f2 has_integral f(Sup K) * (a/n)) K" 
+    have int_f1_D: "(f1 has_integral f(Inf K) * (a/n)) K" and int_f2_D: "(f2 has_integral f(Sup K) * (a/n)) K" 
             and less: "\<bar>f(Sup K) - f(Inf K)\<bar> < \<epsilon>/a"
       if "K\<in>?\<D>" for K
     proof -
@@ -480,13 +480,13 @@ proof (cases "a=0")
         using InfK SupK by blast
     qed
 
-    have int21: "((\<lambda>x. f2 x - f1 x) has_integral (f(Sup K) - f(Inf K)) * (a/n)) K" if "K\<in>?\<D>" for K
-      using that has_integral_diff [OF int_f2 int_f1] by (simp add: algebra_simps)
+    have int_21_D: "((\<lambda>x. f2 x - f1 x) has_integral (f(Sup K) - f(Inf K)) * (a/n)) K" if "K\<in>?\<D>" for K
+      using that has_integral_diff [OF int_f2_D int_f1_D] by (simp add: algebra_simps)
 
     have D_ne: "?\<D> \<noteq> {}"
       by (metis \<open>0 < a\<close> \<open>n > 0\<close> card_gt_0_iff card_regular_division)
     have f12: "((\<lambda>x. f2 x - f1 x) has_integral (\<Sum>K\<in>?\<D>. (f(Sup K) - f(Inf K)) * (a/n))) {0..a}"
-      by (intro div int21 has_integral_combine_division)
+      by (intro div int_21_D has_integral_combine_division)
     moreover have "(\<Sum>K\<in>?\<D>. (f(Sup K) - f(Inf K)) * (a/n)) < \<epsilon>"
     proof -
       have "(\<Sum>K\<in>?\<D>. (f(Sup K) - f(Inf K)) * (a/n)) \<le> (\<Sum>K\<in>?\<D>. \<bar>f(Sup K) - f(Inf K)\<bar> * (a/n))"
@@ -551,6 +551,7 @@ proof (cases "a=0")
         by simp 
     qed
 
+    (*LOTS OF EXPERIMENTAL MATERIAL HERE*)
     have [simp]: "yidx 0 = 0"
       using \<open>0 < a\<close> \<open>0 \<le> b\<close> \<open>0 < n\<close> strict_mono_onD [OF sm] by (fastforce simp: a_seg_def yidx_equality)
 
@@ -607,6 +608,30 @@ proof (cases "a=0")
     have g2_le_g1: "g2 y \<le> g1 y" if "y \<in> {0..b}" for y
       using g2_le_g g_le_g1 that by fastforce
 
+    have "card ?\<D> = n"
+      by (simp add: \<open>0 < a\<close>)
+    then obtain Dn where Dn: "bij_betw Dn ?\<D> {..<n}"
+      by (metis finite_regular_division to_nat_on_finite)
+
+    have K: "a_seg (real (Dn K)) = Inf K" if "K \<in> ?\<D>" for K
+      using that \<open>0 < a\<close>
+      apply (rule regular_divisionE)
+apply (auto simp: )
+    sorry
+
+    have int_f1: "(f1 has_integral (\<Sum>i<n. (f(a_seg i)) * (a/n))) {0..a}"
+    proof -
+    have f1: "(f1 has_integral (\<Sum>K\<in>?\<D>. f(Inf K) * (a/n))) {0..a}"
+      by (intro div int_f1_D has_integral_combine_division)
+    moreover have "(\<Sum>K\<in>?\<D>. f(Inf K) * (a/n)) = (\<Sum>i<n. (f(a_seg i)) * (a/n))"
+      by (simp add: K flip: sum.reindex_bij_betw [OF Dn])
+ 
+    have f12: "((\<lambda>x. f2 x - f1 x) has_integral (\<Sum>K\<in>?\<D>. (f(Sup K) - f(Inf K)) * (a/n))) {0..a}"
+      by (intro div int_21_D has_integral_combine_division)
+
+
+    have f12: "((\<lambda>x. f2 x - f1 x) has_integral (\<Sum>K\<in>?\<D>. (f(Sup K) - f(Inf K)) * (a/n))) {0..a}"
+      by (intro div int_21_D has_integral_combine_division)
 
 
   }
