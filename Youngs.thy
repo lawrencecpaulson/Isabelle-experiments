@@ -379,8 +379,18 @@ proof (cases "a=0")
       using gt0 by blast
 
     define n where "n \<equiv> nat\<lfloor>a / \<delta>\<rfloor>"
+    define a_seg where "a_seg \<equiv> \<lambda>u::real. u * a/n"
     have "n > 0"
       using  \<open>a > 0\<close> \<open>\<delta> > 0\<close> \<open>\<delta> \<le> a\<close> by (simp add: n_def)
+    have a_seg_ge_0 [simp]: "a_seg x \<ge> 0 \<longleftrightarrow> x \<ge> 0" and a_seg_le_a [simp]: "a_seg x \<le> a \<longleftrightarrow> x \<le> n" for x
+      using \<open>n > 0\<close> \<open>a > 0\<close> by (auto simp: a_seg_def zero_le_mult_iff divide_simps)
+    have a_seg_le_iff [simp]: "a_seg x \<le> a_seg y \<longleftrightarrow> x \<le> y" 
+      and a_seg_less_iff [simp]: "a_seg x < a_seg y \<longleftrightarrow> x < y" for x y
+      using \<open>n > 0\<close> \<open>a > 0\<close> by (auto simp: a_seg_def zero_le_mult_iff divide_simps)
+    have "strict_mono a_seg"
+      by (simp add: strict_mono_def)
+    have a_seg_eq_a_iff: "a_seg x = a \<longleftrightarrow> x=n" for x
+      using \<open>0 < n\<close> \<open>a > 0\<close> by (simp add: a_seg_def nonzero_divide_eq_eq)
     have "n * \<delta> * (\<epsilon>/a) \<le> \<epsilon>"
       unfolding n_def
       by (smt (z3) False \<open>0 < \<delta>\<close> \<open>n > 0\<close> gt0 less_imp_of_nat_less mult_imp_div_pos_less n_def nat_eq_iff2 nonzero_eq_divide_eq nonzero_mult_div_cancel_left of_nat_floor zero_le_floor) 
@@ -390,37 +400,36 @@ proof (cases "a=0")
     then have an_less_del: "a/n < del (\<epsilon>/a)"
       using \<open>a > 0\<close> \<open>\<epsilon> > 0\<close> del_gt0  by (simp add: n_def \<delta>_def field_simps)
 
-    define lower where "lower \<equiv> \<lambda>x. \<lfloor>(real n * x) / a\<rfloor> * a/n"
+    define lower where "lower \<equiv> \<lambda>x. a_seg\<lfloor>(real n * x) / a\<rfloor>"
     define f1 where "f1 \<equiv> f \<circ> lower"
     have mo_lower: "mono_on lower {0..a}"
-      using \<open>n > 0\<close> unfolding lower_def mono_on_def
+      using \<open>n > 0\<close> unfolding lower_def mono_on_def a_seg_def
       by (auto simp: divide_right_mono floor_mono mult.commute mult_left_mono order_less_imp_le)
     have lower_im: "lower ` {0..a} \<subseteq> {0..}"
-      using \<open>n > 0\<close> by (auto simp: lower_def)
+      by (auto simp: lower_def)
     have f1_lower: "f1 x \<le> f x" if "0 \<le> x" "x \<le> a" for x
     proof -
       have "lower x \<le> x"
-        using \<open>n > 0\<close> floor_divide_lower [OF \<open>a > 0\<close>] by (auto simp add: lower_def field_simps)
+        using \<open>n > 0\<close> floor_divide_lower [OF \<open>a > 0\<close>] by (auto simp add: lower_def a_seg_def field_simps)
       moreover have "lower x \<ge> 0"
         unfolding lower_def using \<open>n > 0\<close> \<open>0 \<le> a\<close> \<open>0 \<le> x\<close> by force
       ultimately show ?thesis
         using sm strict_mono_on_leD by (fastforce simp add: f1_def)
     qed
-    define upper where "upper \<equiv> \<lambda>x. \<lceil>real n * x / a\<rceil> * a/n"
+    define upper where "upper \<equiv> \<lambda>x. a_seg\<lceil>real n * x / a\<rceil>"
     define f2 where "f2 \<equiv> f \<circ> upper"
 
     have mo_upper: "mono_on upper {0..a}"
       using \<open>n > 0\<close> unfolding upper_def mono_on_def
       by (simp add: ceiling_mono divide_right_mono mult_right_mono)
     have upper_im: "upper ` {0..a} \<subseteq> {0..}"
-      using \<open>n > 0\<close>
       apply (clarsimp simp: upper_def field_split_simps)
       by (smt (verit) mult_nonneg_nonneg of_nat_0_le_iff)
 
     have f2_upper: "f2 x \<ge> f x" if "0 \<le> x" "x \<le> a" for x
     proof -
       have "x \<le> upper x"
-        using \<open>n > 0\<close> ceiling_divide_upper [OF \<open>a > 0\<close>] by (simp add: upper_def field_simps)
+        using \<open>n > 0\<close> ceiling_divide_upper [OF \<open>a > 0\<close>] by (simp add: upper_def a_seg_def field_simps)
       then show ?thesis
         using sm strict_mono_on_leD \<open>0 \<le> x\<close> by (force simp add: f2_def)
     qed
@@ -433,46 +442,47 @@ proof (cases "a=0")
       if "K\<in>?\<D>" for K
     proof -
       from regular_divisionE [OF that] \<open>a > 0\<close>
-      obtain k where "k<n" and k: "K = {a * (real k / n) .. a * (1 + real k) / n}"
-        by (auto simp add: zless_nat_eq_int_zless)
-      define u where "u \<equiv> a * (real k / n)"
-      define v where "v \<equiv> a * (1 + real k) / n"
+      obtain k where "k<n" and k: "K = {a_seg(real k)..a_seg(Suc k)}"
+        by (auto simp add: a_seg_def mult.commute)
+      define u where "u \<equiv> a_seg k"
+      define v where "v \<equiv> a_seg (Suc k)"
       have "u < v" "0 \<le> u" "0 \<le> v" and Kuv: "K = {u..v}"
         using \<open>n > 0\<close> \<open>a > 0\<close> by (auto simp: k u_def v_def divide_simps)
       have "u \<le> a" "v \<le> a"
         using \<open>k < n\<close> \<open>a > 0\<close> by (auto simp: u_def v_def divide_simps)
       have InfK: "Inf K = u" and SupK: "Sup K = v"
+        using Kuv \<open>u < v\<close> apply force
         using \<open>n > 0\<close> \<open>a > 0\<close> by (auto simp: divide_right_mono k u_def v_def)
-      have f1: "f (Inf K) = f1 x" if "x \<in> K - {v}" for x
+      have f1: "f1 x = f (Inf K)" if "x \<in> K - {v}" for x
       proof -
         have "x \<in> {u..<v}"
           using that Kuv atLeastLessThan_eq_atLeastAtMost_diff by blast
         then have "\<lfloor>real_of_int n * x / a\<rfloor> = int k"
-          using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: field_simps u_def v_def floor_eq_iff)
+          using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: field_simps u_def v_def a_seg_def floor_eq_iff)
         then show ?thesis
-          by (simp add: InfK f1_def lower_def mult.commute u_def) 
+          by (simp add: InfK f1_def lower_def a_seg_def mult.commute u_def) 
       qed
       have "((\<lambda>x. f (Inf K)) has_integral (f (Inf K) * (a/n))) K"
         using has_integral_const_real [of "f (Inf K)" u v] 
-              \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: Kuv field_simps u_def v_def)
+              \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: Kuv field_simps a_seg_def u_def v_def)
       then show "(f1 has_integral (f (Inf K) * (a/n))) K"
         using has_integral_spike_finite_eq [of "{v}" K "\<lambda>x. f (Inf K)" f1] f1 by simp
-      have f2: "f (Sup K) = f2 x" if "x \<in> K - {u}" for x
+      have f2: "f2 x = f (Sup K)" if "x \<in> K - {u}" for x
       proof -
         have "x \<in> {u<..v}"
           using that Kuv greaterThanAtMost_eq_atLeastAtMost_diff by blast 
         then have "\<lceil>x * real_of_int n / a\<rceil>  = 1 + int k"
-          using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: field_simps u_def v_def ceiling_eq_iff)
+          using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: field_simps u_def v_def a_seg_def ceiling_eq_iff)
         then show ?thesis 
-          by (simp add: mult.commute f2_def upper_def SupK v_def)
+          by (simp add: mult.commute f2_def upper_def a_seg_def SupK v_def)
       qed
       have "((\<lambda>x. f (Sup K)) has_integral (f (Sup K) * (a/n))) K"
         using  \<open>n > 0\<close> \<open>a > 0\<close> has_integral_const_real [of "f (Sup K)" u v]
-        by (simp add: Kuv field_simps u_def v_def)
+        by (simp add: Kuv field_simps u_def v_def a_seg_def)
       then show "(f2 has_integral (f (Sup K) * (a/n))) K"
         using has_integral_spike_finite_eq [of "{u}" K "\<lambda>x. f (Sup K)" f2] f2 by simp
       have "\<bar>v - u\<bar> < del (\<epsilon>/a)"
-        using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: v_def u_def field_simps an_less_del)
+        using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: v_def u_def a_seg_def field_simps an_less_del)
       then have "\<bar>f v - f u\<bar> < \<epsilon>/a"
         using \<open>\<epsilon> > 0\<close> \<open>a > 0\<close> \<open>0 \<le> u\<close> \<open>u \<le> a\<close> \<open>0 \<le> v\<close> \<open>v \<le> a\<close>
         by (intro del [unfolded dist_real_def]) auto
@@ -508,10 +518,7 @@ proof (cases "a=0")
       apply (simp add: f1_def lower_def field_simps)
       by (smt (verit, best) divide_nonneg_nonneg floor_le_zero le_divide_eq_1_pos mult_nonneg_nonneg of_nat_0_le_iff zero_le_floor)
 
-    define a_seg where "a_seg \<equiv> \<lambda>u::real. u * a/n"
     define yidx where "yidx \<equiv> \<lambda>y. LEAST k. y < f (a_seg (Suc k))"
-    have "strict_mono a_seg"
-      using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: a_seg_def strict_mono_def divide_simps)
 
     have yidx_le: "f (a_seg (yidx y)) \<le> y" and yidx_gt: "y < f (a_seg (Suc (yidx y)))" 
       if "y \<in> {0..b}" for y
@@ -542,9 +549,9 @@ proof (cases "a=0")
       show "yidx y \<le> k"
         unfolding yidx_def by (metis atLeastLessThan_iff that(2) Least_le)
       have "(a_seg (real k)) < a_seg (1 + real (yidx y))"
-        using yidx_gt [OF that(1)] that(2) using strict_mono_onD [OF sm]
+        using yidx_gt [OF that(1)] that(2) strict_mono_onD [OF sm]
         apply (simp add: )
-        by (smt (verit, ccfv_SIG) \<open>0 \<le> a\<close> divide_nonneg_nonneg a_seg_def mult_nonneg_nonneg of_nat_0_le_iff)
+        by (smt (verit, ccfv_SIG) a_seg_ge_0 a_seg_le_iff of_nat_0_le_iff)
       then have "real k < 1 + real (yidx y)"
         by (simp add: \<open>strict_mono a_seg\<close> strict_mono_less)
       then show "k \<le> yidx y"
@@ -633,12 +640,11 @@ proof (cases "a=0")
         using \<open>0 < a\<close> by (auto simp: DN_def bij_betw_def image_iff frac_le elim!: regular_divisionE)
     qed
  
-
     have K1: "a_seg (real (DN K)) = Inf K" if "K \<in> ?\<D>" for K
       using that \<open>0 < a\<close>
       by (auto simp: DN_def field_simps a_seg_def elim: regular_divisionE)
 
-    have int_f1: "(f1 has_integral (\<Sum>i<n. (f(a_seg i)) * (a/n))) {0..a}"
+    have int_f1: "(f1 has_integral (\<Sum>i<n. f(a_seg i) * (a/n))) {0..a}"
     proof -
       have f1: "(f1 has_integral (\<Sum>K\<in>?\<D>. f(Inf K) * (a/n))) {0..a}"
         by (intro div int_f1_D has_integral_combine_division)
@@ -652,10 +658,69 @@ proof (cases "a=0")
       using that \<open>0 < a\<close>
       by (auto simp: DN_def field_simps a_seg_def elim: regular_divisionE)
 
-    have int_f2: "(f2 has_integral (\<Sum>i<n. (f(a_seg(Suc i))) * (a/n))) {0..a}"
+    have int_f2: "(f2 has_integral (\<Sum>i<n. f(a_seg(Suc i)) * (a/n))) {0..a}"
     proof -
       have f2: "(f2 has_integral (\<Sum>K\<in>?\<D>. f(Sup K) * (a/n))) {0..a}"
         by (intro div int_f2_D has_integral_combine_division)
+      moreover have "(\<Sum>K\<in>?\<D>. f(Sup K) * (a/n)) = (\<Sum>i<n. (f(a_seg (Suc i))) * (a/n))"
+        using K2 by (simp flip: sum.reindex_bij_betw [OF DN])
+      ultimately show ?thesis
+        by simp
+    qed
+
+
+    have int_g1_D: "(g1 has_integral a_seg (Suc k) * (f (a_seg (Suc k)) - f (a_seg k))) {f(a_seg k)..f(a_seg (Suc k))}" 
+      and int_g2_D: "(g2 has_integral a_seg k * (f (a_seg (Suc k)) - f (a_seg k))) {f(a_seg k)..f(a_seg (Suc k))}" 
+      if "k < n" for k
+    proof -
+      define u where "u \<equiv> f (a_seg k)"
+      define v where "v \<equiv> f (a_seg (Suc k))"
+      obtain "u < v" "0 \<le> u" "0 \<le> v"
+        unfolding u_def v_def 
+        by (smt (verit, best) a_seg_ge_0 a_seg_less_iff assms(5) atLeast_iff lessI of_nat_0_le_iff of_nat_less_iff sm strict_mono_onD) 
+      obtain "u \<le> b" "v \<le> b"
+        apply (simp add: u_def v_def flip: \<open>f a = b\<close>)
+        by (smt (verit, best) \<open>k < n\<close> \<open>yidx b = n\<close> a_seg_ge_0 a_seg_le_a assms(4) assms(6) atLeastAtMost_iff atLeastLessThan_iff atLeast_iff of_nat_0_le_iff of_nat_1 of_nat_add of_nat_less_iff plus_1_eq_Suc sm strict_mono_onD yidx_equality)
+
+      have yidx_eq: "yidx x = k" if "x \<in> {u..<v}" for x
+        using \<open>0 \<le> u\<close> \<open>v \<le> b\<close> that u_def v_def yidx_equality by auto
+
+      have g1: "g1 x = a_seg (Suc k)" if "x \<in> {u..<v}" for x
+        using that \<open>v \<le> b\<close> by (simp add: g1_def yidx_eq)
+
+      have "((\<lambda>x. a_seg (Suc k)) has_integral (a_seg (Suc k) * (v-u))) {u..v}"
+        using has_integral_const_real [of "a_seg (Suc k)" u v] \<open>u < v\<close> 
+        by (simp add: field_simps)
+
+      then show "(g1 has_integral (f (Inf K) * (a/n))) K"
+        using has_integral_spike_finite_eq [of "{v}" K "\<lambda>x. f (Inf K)" g1] g1 by simp
+
+      have g2: "g2 x = a_seg k" if "x \<in> {u<..<v}" for x
+        using that \<open>0 \<le> u\<close> by (simp add: g2_def yidx_eq)
+      
+      
+      have "((\<lambda>x. f (Sup K)) has_integral (f (Sup K) * (a/n))) K"
+        using  \<open>n > 0\<close> \<open>a > 0\<close> has_integral_const_real [of "f (Sup K)" u v]
+        by (simp add: Kuv field_simps u_def v_def)
+      then show "(g2 has_integral (f (Sup K) * (a/n))) K"
+        using has_integral_spike_finite_eq [of "{u}" K "\<lambda>x. f (Sup K)" g2] g2 by simp
+      have "\<bar>v - u\<bar> < del (\<epsilon>/a)"
+        using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: v_def u_def field_simps an_less_del)
+      then have "\<bar>f v - f u\<bar> < \<epsilon>/a"
+        using \<open>\<epsilon> > 0\<close> \<open>a > 0\<close> \<open>0 \<le> u\<close> \<open>u \<le> a\<close> \<open>0 \<le> v\<close> \<open>v \<le> a\<close>
+        by (intro del [unfolded dist_real_def]) auto
+      then show "\<bar>f(Sup K) - f(Inf K)\<bar> < \<epsilon>/a"
+        using InfK SupK by blast
+    qed
+(*
+    have int_g1_D: "(g1 has_integral (Sup K) * (f (Sup K) - f (Inf K))) (f ` K)" 
+      and int_g2_D: "(g2 has_integral (Inf K) * (f (Sup K) - f (Inf K))) (f ` K)" 
+      if "K \<in> ?\<D>" for K
+*)
+    have int_g2: "(g2 has_integral (\<Sum>i<n. a_seg(Suc i) * (f(a_seg(Suc i)) - f(a_seg i)) * (a/n))) {0..a}"
+    proof -
+      have g2: "(g2 has_integral (\<Sum>K\<in>?\<D>. f(Sup K) * (a/n))) {0..a}"
+        by (intro div int_g2_D has_integral_combine_division)
       moreover have "(\<Sum>K\<in>?\<D>. f(Sup K) * (a/n)) = (\<Sum>i<n. (f(a_seg (Suc i))) * (a/n))"
         using K2 by (simp flip: sum.reindex_bij_betw [OF DN])
       ultimately show ?thesis
