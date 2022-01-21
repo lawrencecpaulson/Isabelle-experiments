@@ -608,7 +608,8 @@ proof (cases "a=0")
     have g2_le_g1: "g2 y \<le> g1 y" if "y \<in> {0..b}" for y
       using g2_le_g g_le_g1 that by fastforce
 
-    define DN where "DN \<equiv> \<lambda>K. nat (floor (Inf K * real n / a))"
+    define DN where "DN \<equiv> \<lambda>K. nat \<lfloor>Inf K * real n / a\<rfloor>"
+
     have [simp]: "DN {a * real k / n..a * (1 + real k) / n} = k" for k
       using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: DN_def divide_simps)
     have DN: "bij_betw DN ?\<D> {..<n}"
@@ -633,20 +634,33 @@ proof (cases "a=0")
     qed
  
 
-    have K: "a_seg (real (DN K)) = Inf K" if "K \<in> ?\<D>" for K
+    have K1: "a_seg (real (DN K)) = Inf K" if "K \<in> ?\<D>" for K
       using that \<open>0 < a\<close>
       by (auto simp: DN_def field_simps a_seg_def elim: regular_divisionE)
 
     have int_f1: "(f1 has_integral (\<Sum>i<n. (f(a_seg i)) * (a/n))) {0..a}"
     proof -
-    have f1: "(f1 has_integral (\<Sum>K\<in>?\<D>. f(Inf K) * (a/n))) {0..a}"
-      by (intro div int_f1_D has_integral_combine_division)
-    moreover have "(\<Sum>K\<in>?\<D>. f(Inf K) * (a/n)) = (\<Sum>i<n. (f(a_seg i)) * (a/n))"
-      by (simp add: K flip: sum.reindex_bij_betw [OF DN])
+      have f1: "(f1 has_integral (\<Sum>K\<in>?\<D>. f(Inf K) * (a/n))) {0..a}"
+        by (intro div int_f1_D has_integral_combine_division)
+      moreover have "(\<Sum>K\<in>?\<D>. f(Inf K) * (a/n)) = (\<Sum>i<n. (f(a_seg i)) * (a/n))"
+        using K1 by (simp flip: sum.reindex_bij_betw [OF DN])
+      ultimately show ?thesis
+        by simp
+    qed
 
-    show ?thesis
-      sorry
-  qed
+    have K2: "a_seg (real (Suc (DN K))) = Sup K" if "K \<in> ?\<D>" for K
+      using that \<open>0 < a\<close>
+      by (auto simp: DN_def field_simps a_seg_def elim: regular_divisionE)
+
+    have int_f2: "(f2 has_integral (\<Sum>i<n. (f(a_seg(Suc i))) * (a/n))) {0..a}"
+    proof -
+      have f2: "(f2 has_integral (\<Sum>K\<in>?\<D>. f(Sup K) * (a/n))) {0..a}"
+        by (intro div int_f2_D has_integral_combine_division)
+      moreover have "(\<Sum>K\<in>?\<D>. f(Sup K) * (a/n)) = (\<Sum>i<n. (f(a_seg (Suc i))) * (a/n))"
+        using K2 by (simp flip: sum.reindex_bij_betw [OF DN])
+      ultimately show ?thesis
+        by simp
+    qed
 
     have f12: "((\<lambda>x. f2 x - f1 x) has_integral (\<Sum>K\<in>?\<D>. (f(Sup K) - f(Inf K)) * (a/n))) {0..a}"
       by (intro div int_21_D has_integral_combine_division)
