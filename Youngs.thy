@@ -5,7 +5,59 @@ theory Youngs imports
   "HOL-ex.Sketch_and_Explore"
    
 begin
-  
+
+lemma has_integral_UN:
+  fixes f :: "'n::euclidean_space \<Rightarrow> 'a::banach"
+  assumes "finite I"
+    and int: "\<And>i. i \<in> I \<Longrightarrow> (f has_integral (g i)) (\<T> i)"
+    and neg: "pairwise (\<lambda>i i'. negligible (\<T> i \<inter> \<T> i')) I"
+  shows "(f has_integral (sum g I)) (\<Union>i\<in>I. \<T> i)"
+proof -
+  let ?\<U> = "((\<lambda>(a,b). \<T> a \<inter> \<T> b) ` {(a,b). a \<in> I \<and> b \<in> I-{a}})"
+  have "((\<lambda>x. if x \<in> (\<Union>i\<in>I. \<T> i) then f x else 0) has_integral sum g I) UNIV"
+  proof (rule has_integral_spike)
+    show "negligible (\<Union>?\<U>)"
+    proof (rule negligible_Union)
+      have "finite (I \<times> I)"
+        by (simp add: \<open>finite I\<close>)
+      moreover have "{(a,b). a \<in> I \<and> b \<in> I-{a}} \<subseteq> I \<times> I"
+        by auto
+      ultimately show "finite ?\<U>"
+        by (simp add: finite_subset)
+      show "\<And>t. t \<in> ?\<U> \<Longrightarrow> negligible t"
+        using neg unfolding pairwise_def by auto
+    qed
+  next
+    show "(if x \<in> (\<Union>i\<in>I. \<T> i) then f x else 0) = (\<Sum>i\<in>I. if x \<in> \<T> i then f x else 0)"
+      if "x \<in> UNIV - (\<Union>?\<U>)" for x
+    proof clarsimp
+      fix i assume i: "i \<in> I" "x \<in> \<T> i"
+      then have "\<forall>j\<in>I. x \<in> \<T> j \<longleftrightarrow> j = i"
+        using that by blast
+      with i show "f x = (\<Sum>i\<in>I. if x \<in> \<T> i then f x else 0)"
+        by (simp add: sum.delta[OF \<open>finite I\<close>])
+    qed
+  next
+    show "((\<lambda>x. (\<Sum>i\<in>I. if x \<in> \<T> i then f x else 0)) has_integral sum g I) UNIV"
+      using int by (simp add: has_integral_restrict_UNIV has_integral_sum [OF \<open>finite I\<close>])
+  qed
+  then show ?thesis
+    using has_integral_restrict_UNIV by blast
+qed
+
+lemma has_integral_Union:
+  fixes f :: "'n::euclidean_space \<Rightarrow> 'a::banach"
+  assumes "finite \<T>"
+    and "\<And>S. S \<in> \<T> \<Longrightarrow> (f has_integral (i S)) S"
+    and "pairwise (\<lambda>S S'. negligible (S \<inter> S')) \<T>"
+  shows "(f has_integral (sum i \<T>)) (\<Union>\<T>)"
+proof -
+  have "(f has_integral (sum i \<T>)) (\<Union>S\<in>\<T>. S)"
+    by (intro has_integral_UN assms)
+  then show ?thesis
+    by force
+qed
+
   corollary integral_cbox_eq_0_iff:
     fixes f :: "'a::euclidean_space \<Rightarrow> real"
     assumes "continuous_on (cbox a b) f" and "box a b \<noteq> {}"
@@ -685,42 +737,47 @@ proof (cases "a=0")
       have yidx_eq: "yidx x = k" if "x \<in> {u..<v}" for x
         using \<open>0 \<le> u\<close> \<open>v \<le> b\<close> that u_def v_def yidx_equality by auto
 
-      have g1: "g1 x = a_seg (Suc k)" if "x \<in> {u..<v}" for x
+      have "g1 x = a_seg (Suc k)" if "x \<in> {u..<v}" for x
         using that \<open>v \<le> b\<close> by (simp add: g1_def yidx_eq)
-
-      have "((\<lambda>x. a_seg (Suc k)) has_integral (a_seg (Suc k) * (v-u))) {u..v}"
-        using has_integral_const_real [of "a_seg (Suc k)" u v] \<open>u < v\<close> 
-        by (simp add: field_simps)
-
-      then show "(g1 has_integral (f (Inf K) * (a/n))) K"
-        using has_integral_spike_finite_eq [of "{v}" K "\<lambda>x. f (Inf K)" g1] g1 by simp
+      moreover have "((\<lambda>x. a_seg (Suc k)) has_integral (a_seg (Suc k) * (v-u))) {u..v}"
+        using has_integral_const_real \<open>u < v\<close>
+        by (metis content_real_if less_eq_real_def mult.commute real_scaleR_def)
+      ultimately show "(g1 has_integral (a_seg (Suc k) * (v-u))) {u..v}"
+        using has_integral_spike_finite_eq [of "{v}" "{u..v}" "\<lambda>x. a_seg (Suc k)" g1] by simp
 
       have g2: "g2 x = a_seg k" if "x \<in> {u<..<v}" for x
         using that \<open>0 \<le> u\<close> by (simp add: g2_def yidx_eq)
-      
-      
-      have "((\<lambda>x. f (Sup K)) has_integral (f (Sup K) * (a/n))) K"
-        using  \<open>n > 0\<close> \<open>a > 0\<close> has_integral_const_real [of "f (Sup K)" u v]
-        by (simp add: Kuv field_simps u_def v_def)
-      then show "(g2 has_integral (f (Sup K) * (a/n))) K"
-        using has_integral_spike_finite_eq [of "{u}" K "\<lambda>x. f (Sup K)" g2] g2 by simp
-      have "\<bar>v - u\<bar> < del (\<epsilon>/a)"
-        using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: v_def u_def field_simps an_less_del)
-      then have "\<bar>f v - f u\<bar> < \<epsilon>/a"
-        using \<open>\<epsilon> > 0\<close> \<open>a > 0\<close> \<open>0 \<le> u\<close> \<open>u \<le> a\<close> \<open>0 \<le> v\<close> \<open>v \<le> a\<close>
-        by (intro del [unfolded dist_real_def]) auto
-      then show "\<bar>f(Sup K) - f(Inf K)\<bar> < \<epsilon>/a"
-        using InfK SupK by blast
+      moreover have "((\<lambda>x. a_seg k) has_integral (a_seg k * (v-u))) {u..v}"
+        using has_integral_const_real \<open>u < v\<close>
+        by (metis content_real_if less_eq_real_def mult.commute real_scaleR_def)
+      ultimately show "(g2 has_integral (a_seg k * (v-u))) {u..v}"
+        using has_integral_spike_finite_eq [of "{u,v}" "{u..v}" "\<lambda>x. a_seg k" g2] by simp
     qed
-(*
-    have int_g1_D: "(g1 has_integral (Sup K) * (f (Sup K) - f (Inf K))) (f ` K)" 
-      and int_g2_D: "(g2 has_integral (Inf K) * (f (Sup K) - f (Inf K))) (f ` K)" 
-      if "K \<in> ?\<D>" for K
-*)
-    have int_g2: "(g2 has_integral (\<Sum>i<n. a_seg(Suc i) * (f(a_seg(Suc i)) - f(a_seg i)) * (a/n))) {0..a}"
+
+
+    have int_g2: "(g2 has_integral (\<Sum>i<n. a_seg(Suc i) * (f(a_seg(Suc i)) - f(a_seg i)) * (a/n))) {0..b}"
     proof -
-      have g2: "(g2 has_integral (\<Sum>K\<in>?\<D>. f(Sup K) * (a/n))) {0..a}"
-        by (intro div int_g2_D has_integral_combine_division)
+      have b: "{0..<b} = (\<Union>k<n. {f(a_seg k)..<f(a_seg (Suc k))})" (is "?lhs = ?rhs")
+      proof
+        show "?lhs \<subseteq> ?rhs"
+          apply (simp add: subset_iff Bex_def)
+          by (metis atLeastAtMost_iff of_nat_Suc order_le_less yidx_gt yidx_le E)
+        show "?rhs \<subseteq> ?lhs"
+          apply (auto simp: )
+           apply (smt (verit, ccfv_SIG) a_seg_ge_0 assms(5) atLeast_iff of_nat_0_le_iff sm strict_mono_on_leD)
+          by (smt (verit, best) a_seg_ge_0 a_seg_le_a assms(6) atLeast_iff nat_less_real_le of_nat_0_le_iff sm strict_mono_on_leD)
+      qed
+
+      have g2: "(g2 has_integral (\<Sum>k<n. a_seg k * (f (a_seg (Suc k)) - f (a_seg k)))) {0..<b}"
+        unfolding b
+        apply (intro has_integral_UN)
+          apply (simp add: )
+         apply (simp add: )
+apply (auto simp: )
+        using int_g2_D
+apply (simp add: )
+        thm div int_g2_D has_integral_combine_division
+        apply (intro div int_g2_D has_integral_sum)
       moreover have "(\<Sum>K\<in>?\<D>. f(Sup K) * (a/n)) = (\<Sum>i<n. (f(a_seg (Suc i))) * (a/n))"
         using K2 by (simp flip: sum.reindex_bij_betw [OF DN])
       ultimately show ?thesis
