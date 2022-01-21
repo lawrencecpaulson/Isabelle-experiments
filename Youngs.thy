@@ -237,19 +237,7 @@ definition "regular_division \<equiv> \<lambda>a b n. image (image ((+) a \<circ
 lemma translate_scale_01:
   assumes "a \<le> b" 
   shows "(\<lambda>x. a + (b - a) * x) ` {0..1} = {a..b::real}"
-proof
-  show "{a..b} \<subseteq> (\<lambda>x. a + (b - a) * x) ` {0..1}"
-  proof -
-    have "u \<in> (\<lambda>x. a + (b - a) * x) ` {0..1}"
-      if "a \<le> u" and "u \<le> b" for u
-      using that by (rule_tac x="(u-a)/(b-a)" in image_eqI) (auto simp: divide_simps)
-    then show ?thesis
-      by auto
-  qed
-  show "(\<lambda>x. a + (b - a) * x) ` {0..1} \<subseteq> {a..b}"
-    using assms 
-    by (smt (verit, best) atLeastAtMost_iff image_subset_iff mult_left_le mult_nonneg_nonneg)
-qed
+  using closed_segment_real_eq [of a b] assms closed_segment_eq_real_ivl by auto
 
 lemma finite_regular_division [simp]: "finite (regular_division a b n)"
   by (simp add: regular_division_def segments_def)
@@ -282,6 +270,18 @@ lemma Union_regular_division:
   by (auto simp add: regular_division_def Union_segments translate_scale_01 simp flip: image_Union)
 
 
+lemma regular_division_eqI:
+  assumes K: "K = {a + (b-a)*(real k / n) .. a + (b-a)*((1 + real k) / n)}"
+    and "a<b" "k < n"
+  shows "K \<in> regular_division a b n" 
+  unfolding regular_division_def segments_def image_comp
+proof
+  have "K = (\<lambda>x. (b-a) * x + a) ` {real k / real n..(1 + real k) / real n}"
+    using K \<open>a<b\<close> by (simp add: image_affinity_atLeastAtMost divide_simps)
+  then show "K = ((`) ((+) a \<circ> (*) (b - a)) \<circ> segment n) k" 
+    by (simp add: segment_def add.commute)
+qed (use assms in auto)
+
 lemma regular_divisionE:
   assumes "K \<in> regular_division a b n" "a<b"
   obtains k where "k<n" "K = {a + (b-a)*(real k / n) .. a + (b-a)*((1 + real k) / n)}"
@@ -308,9 +308,9 @@ proof (rule division_ofI)
     using \<open>a<b\<close> regular_divisionE by meson
   show "K \<subseteq> {a..b}"
     using K Union_regular_division \<open>n>0\<close> by (metis Union_upper \<section>)
-  show "(K::real set) \<noteq> {}"
+  show "K \<noteq> {}"
     using K by (auto simp: regular_division_def segment_nonempty segments_def)
-  show "\<exists>a b. K = cbox (a::real) b"
+  show "\<exists>a b. K = cbox a b"
     by (metis K \<open>a<b\<close> box_real(2) regular_divisionE)
   fix K'
   assume K': "K' \<in> regular_division a b n" and "K \<noteq> K'"
@@ -608,24 +608,46 @@ proof (cases "a=0")
     have g2_le_g1: "g2 y \<le> g1 y" if "y \<in> {0..b}" for y
       using g2_le_g g_le_g1 that by fastforce
 
-    have "card ?\<D> = n"
-      by (simp add: \<open>0 < a\<close>)
-    then obtain Dn where Dn: "bij_betw Dn ?\<D> {..<n}"
-      by (metis finite_regular_division to_nat_on_finite)
+    define DN where "DN \<equiv> \<lambda>K. nat (floor (Inf K * real n / a))"
+    have [simp]: "DN {a * real k / n..a * (1 + real k) / n} = k" for k
+      using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: DN_def divide_simps)
+    have DN: "bij_betw DN ?\<D> {..<n}"
+    proof (intro bij_betw_imageI)
+      show "inj_on DN (regular_division 0 a n)"
+      proof
+        fix K K'
+        assume "K \<in> regular_division 0 a n"
+        with \<open>a > 0\<close> obtain k where k: "K = {a * (real k / n) .. a * (1 + real k) / n}"
+          by (force elim: regular_divisionE)
+        assume "K' \<in> regular_division 0 a n"
+        with \<open>a > 0\<close> obtain k' where k': "K' = {a * (real k' / n) .. a * (1 + real k') / n}"
+          by (force elim: regular_divisionE)
+        assume "DN K = DN K'"
+        then show "K = K'" by (simp add: k k')
+      qed
+      have "\<exists>K\<in>regular_division 0 a n. k = nat \<lfloor>Inf K * real n / a\<rfloor>" if "k < n" for k
+        using \<open>n > 0\<close> \<open>a > 0\<close> that
+        by (force simp add: divide_simps intro: regular_division_eqI [OF refl])
+      then show "DN ` regular_division 0 a n = {..<n}"
+        using \<open>0 < a\<close> by (auto simp: DN_def bij_betw_def image_iff frac_le elim!: regular_divisionE)
+    qed
+ 
 
-    have K: "a_seg (real (Dn K)) = Inf K" if "K \<in> ?\<D>" for K
+    have K: "a_seg (real (DN K)) = Inf K" if "K \<in> ?\<D>" for K
       using that \<open>0 < a\<close>
-      apply (rule regular_divisionE)
-apply (auto simp: )
-    sorry
+      by (auto simp: DN_def field_simps a_seg_def elim: regular_divisionE)
 
     have int_f1: "(f1 has_integral (\<Sum>i<n. (f(a_seg i)) * (a/n))) {0..a}"
     proof -
     have f1: "(f1 has_integral (\<Sum>K\<in>?\<D>. f(Inf K) * (a/n))) {0..a}"
       by (intro div int_f1_D has_integral_combine_division)
     moreover have "(\<Sum>K\<in>?\<D>. f(Inf K) * (a/n)) = (\<Sum>i<n. (f(a_seg i)) * (a/n))"
-      by (simp add: K flip: sum.reindex_bij_betw [OF Dn])
- 
+      by (simp add: K flip: sum.reindex_bij_betw [OF DN])
+
+    show ?thesis
+      sorry
+  qed
+
     have f12: "((\<lambda>x. f2 x - f1 x) has_integral (\<Sum>K\<in>?\<D>. (f(Sup K) - f(Inf K)) * (a/n))) {0..a}"
       by (intro div int_21_D has_integral_combine_division)
 
