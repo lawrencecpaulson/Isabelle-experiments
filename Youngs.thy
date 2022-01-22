@@ -387,12 +387,12 @@ qed
 
 lemma DD_Suc:
   fixes g :: "nat \<Rightarrow> 'a::comm_ring_1"
-  shows "(\<Sum>i<n. (1 + of_nat i) * (g (Suc i) - g i)) = of_nat n * g n - (\<Sum>i<n. g i)"
+  shows "(\<Sum>k<n. (1 + of_nat k) * (g (Suc k) - g k)) = of_nat n * g n - (\<Sum>i<n. g i)"
   by (induction n) (auto simp: algebra_simps)
 
 lemma DD:
   fixes g :: "nat \<Rightarrow> 'a::comm_ring_1"
-  shows "(\<Sum>i<n. of_nat i * (g (Suc i) - g i)) = of_nat n * g n - (\<Sum>i<n. g (Suc i))"
+  shows "(\<Sum>k<n. of_nat k * (g (Suc k) - g k)) = of_nat n * g n - (\<Sum>i<n. g (Suc i))"
   by (induction n) (auto simp: algebra_simps)
 
 theorem Young:
@@ -711,11 +711,11 @@ proof (cases "a=0")
       using that \<open>0 < a\<close>
       by (auto simp: DN_def field_simps a_seg_def elim: regular_divisionE)
 
-    have int_f1: "(f1 has_integral (\<Sum>i<n. f(a_seg i) * (a/n))) {0..a}"
+    have int_f1: "(f1 has_integral (\<Sum>k<n. f(a_seg k) * (a/n))) {0..a}"
     proof -
       have f1: "(f1 has_integral (\<Sum>K\<in>?\<D>. f(Inf K) * (a/n))) {0..a}"
         by (intro div int_f1_D has_integral_combine_division)
-      moreover have "(\<Sum>K\<in>?\<D>. f(Inf K) * (a/n)) = (\<Sum>i<n. (f(a_seg i)) * (a/n))"
+      moreover have "(\<Sum>K\<in>?\<D>. f(Inf K) * (a/n)) = (\<Sum>k<n. (f(a_seg k)) * (a/n))"
         using K1 by (simp flip: sum.reindex_bij_betw [OF DN])
       ultimately show ?thesis
         by simp
@@ -725,11 +725,11 @@ proof (cases "a=0")
       using that \<open>0 < a\<close>
       by (auto simp: DN_def field_simps a_seg_def elim: regular_divisionE)
 
-    have int_f2: "(f2 has_integral (\<Sum>i<n. f(a_seg(Suc i)) * (a/n))) {0..a}"
+    have int_f2: "(f2 has_integral (\<Sum>k<n. f(a_seg(Suc k)) * (a/n))) {0..a}"
     proof -
       have f2: "(f2 has_integral (\<Sum>K\<in>?\<D>. f(Sup K) * (a/n))) {0..a}"
         by (intro div int_f2_D has_integral_combine_division)
-      moreover have "(\<Sum>K\<in>?\<D>. f(Sup K) * (a/n)) = (\<Sum>i<n. (f(a_seg (Suc i))) * (a/n))"
+      moreover have "(\<Sum>K\<in>?\<D>. f(Sup K) * (a/n)) = (\<Sum>k<n. (f(a_seg (Suc k))) * (a/n))"
         using K2 by (simp flip: sum.reindex_bij_betw [OF DN])
       ultimately show ?thesis
         by simp
@@ -823,6 +823,11 @@ proof (cases "a=0")
     qed
     ultimately have g2_near_g1: "integral {0..b} (\<lambda>x. g1 x - g2 x) < \<epsilon>"
       by (simp add: integral_unique)
+
+    have "xxxx"
+      using int_f1 int_g1'
+      using int_f2 int_g2'
+    sorry
   }
   show ?thesis
     sorry
