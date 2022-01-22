@@ -763,13 +763,9 @@ proof (cases "a=0")
         using has_integral_spike_finite_eq [of "{u,v}" "{u..v}" "\<lambda>x. a_seg k" g2] by simp
     qed
 
-
     have int_g1: "(g1 has_integral (\<Sum>k<n. a_seg (Suc k) * (f (a_seg (Suc k)) - f (a_seg k)))) {0..b}"
-      unfolding zero_to_b_eq using int_g1_D
-      by (auto simp add: min_def pairwise_def intro!: has_integral_UN negligible_atLeastAtMostI)
-
-    have int_g2: "(g2 has_integral (\<Sum>k<n. a_seg k * (f (a_seg (Suc k)) - f (a_seg k)))) {0..b}"
-      unfolding zero_to_b_eq using int_g2_D
+    and int_g2: "(g2 has_integral (\<Sum>k<n. a_seg k * (f (a_seg (Suc k)) - f (a_seg k)))) {0..b}"
+      unfolding zero_to_b_eq using int_g1_D int_g2_D
       by (auto simp add: min_def pairwise_def intro!: has_integral_UN negligible_atLeastAtMostI)
 
     have a_seg_diff: "a_seg (1 + real k) - a_seg k = a/n" for k
@@ -790,22 +786,17 @@ proof (cases "a=0")
          \<le> (\<Sum>k<n. \<bar>f (a_seg (Suc k)) - f (a_seg k)\<bar> * (a/n))"
         by simp
       also have "... < (\<Sum>k<n. (\<epsilon>/a) * (a/n))"
-        apply (rule sum_strict_mono)
-          apply (force simp add: )
-        using \<open>n > 0\<close> \<open>a > 0\<close>  apply (force simp add: )
-        using \<open>n > 0\<close> \<open>a > 0\<close>  apply (simp add: )
-        apply (intro divide_strict_right_mono)
-        using f_a_seg_diff
-        apply (smt (verit, ccfv_SIG) nonzero_divide_eq_eq pos_le_divide_eq)
-        using \<open>n > 0\<close> \<open>a > 0\<close>  apply (force simp add: )
-        done
+      proof (rule sum_strict_mono)
+        fix k assume "k \<in> {..<n}"
+        with \<open>n > 0\<close> \<open>a > 0\<close> divide_strict_right_mono f_a_seg_diff pos_less_divide_eq
+        show "\<bar>f (a_seg (Suc k)) - f (a_seg k)\<bar> * (a/n) < \<epsilon>/a * (a/n)" by fastforce
+      qed (use \<open>n > 0\<close> in auto)
       also have "... = \<epsilon>"
         using \<open>n > 0\<close> \<open>a > 0\<close> by simp
       finally show ?thesis .
     qed
     ultimately have g2_near_g1: "integral {0..b} (\<lambda>x. g1 x - g2 x) < \<epsilon>"
       by (simp add: integral_unique)
-
   }
   show ?thesis
     sorry
