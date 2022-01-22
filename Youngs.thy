@@ -6,6 +6,7 @@ theory Youngs imports
    
 begin
 
+thm has_integral_Union
 lemma has_integral_UN:
   fixes f :: "'n::euclidean_space \<Rightarrow> 'a::banach"
   assumes "finite I"
@@ -393,7 +394,7 @@ lemma DD:
 theorem Young:
   fixes f :: "real \<Rightarrow> real"
   assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and a: "0 \<le> a" "0 \<le> b" 
-      and [simp]: "f 0 = 0" "f a = b"
+      and f[simp]: "f 0 = 0" "f a = b"
   shows "a*b = integral {0..a} f + integral {0..b} (inv_into {0..a} f)"
 proof (cases "a=0")
   case False
@@ -405,8 +406,12 @@ proof (cases "a=0")
   with sm have "continuous_on {0..b} ?g"
     apply (simp add: strict_mono_on_def)
     by (metis \<open>0 \<le> a\<close> \<open>f 0 = 0\<close> \<open>f a = b\<close> atLeastAtMost_iff strict_mono_continuous_inv strict_mono_onI)
+
+  have f_iff [simp]: "f x < f y \<longleftrightarrow> x < y" "f x \<le> f y \<longleftrightarrow> x \<le> y"
+    if "x \<ge> 0" "y \<ge> 0" for x y
+    using that by (smt (verit, best) atLeast_iff sm strict_mono_onD)+
   have fim: "f ` {0..a} = {0..b}"
-    by (metis \<open>0 \<le> a\<close> \<open>f 0 = 0\<close> \<open>f a = b\<close> atLeastAtMost_iff atLeast_iff cont_0a sm strict_mono_image_endpoints strict_mono_on_def)
+    by (simp add: \<open>0 \<le> a\<close> cont_0a strict_mono_image_endpoints strict_mono_on_def)
   have "uniformly_continuous_on {0..a} f"
     using compact_uniformly_continuous cont_0a by blast
   then obtain del where del_gt0: "\<And>e. e>0 \<Longrightarrow> del e > 0" 
@@ -443,6 +448,7 @@ proof (cases "a=0")
       by (simp add: strict_mono_def)
     have a_seg_eq_a_iff: "a_seg x = a \<longleftrightarrow> x=n" for x
       using \<open>0 < n\<close> \<open>a > 0\<close> by (simp add: a_seg_def nonzero_divide_eq_eq)
+
     have "n * \<delta> * (\<epsilon>/a) \<le> \<epsilon>"
       unfolding n_def
       by (smt (z3) False \<open>0 < \<delta>\<close> \<open>n > 0\<close> gt0 less_imp_of_nat_less mult_imp_div_pos_less n_def nat_eq_iff2 nonzero_eq_divide_eq nonzero_mult_div_cancel_left of_nat_floor zero_le_floor) 
@@ -591,7 +597,7 @@ proof (cases "a=0")
         using strict_mono_onD [OF sm] 
         by (metis \<open>0 \<le> a\<close> atLeast_iff divide_nonneg_nonneg a_seg_def less_eq_real_def of_nat_0_le_iff zero_le_mult_iff)
       then show "f (a_seg (yidx y)) \<le> y"
-        using f_lims by force 
+        using f_lims by linarith
       show "y < f (a_seg (Suc (yidx y)))"
         by (metis LeastI f_lims(2) yidx_def) 
     qed
@@ -601,9 +607,7 @@ proof (cases "a=0")
       show "yidx y \<le> k"
         unfolding yidx_def by (metis atLeastLessThan_iff that(2) Least_le)
       have "(a_seg (real k)) < a_seg (1 + real (yidx y))"
-        using yidx_gt [OF that(1)] that(2) strict_mono_onD [OF sm]
-        apply (simp add: )
-        by (smt (verit, ccfv_SIG) a_seg_ge_0 a_seg_le_iff of_nat_0_le_iff)
+        using yidx_gt [OF that(1)] that(2) strict_mono_onD [OF sm] order_le_less_trans by fastforce
       then have "real k < 1 + real (yidx y)"
         by (simp add: \<open>strict_mono a_seg\<close> strict_mono_less)
       then show "k \<le> yidx y"
@@ -624,18 +628,42 @@ proof (cases "a=0")
         using \<open>0 \<le> b\<close> by (auto simp: a_seg_def yidx_equality)
     qed
 
-    have E: "yidx y < n" if "y < b" for y
+    have yidx_less_n: "yidx y < n" if "y < b" for y
       using yidx_gt [of y] \<open>f a = b\<close>
       by (metis \<open>0 < n\<close> gr0_conv_Suc a_seg_def less_Suc_eq_le nonzero_mult_div_cancel_left of_nat_neq_0 that wellorder_Least_lemma(2) yidx_def)
 
     have F: "yidx y \<le> n" if "y \<le> b" for y
-      by (metis E \<open>yidx b = n\<close> dual_order.order_iff_strict that)
+      by (metis yidx_less_n \<open>yidx b = n\<close> dual_order.order_iff_strict that)
+
+    have zero_to_b_eq: "{0..b} = (\<Union>k<n. {f(a_seg k)..f(a_seg (Suc k))})" (is "?lhs = ?rhs")
+    proof
+      show "?lhs \<subseteq> ?rhs"
+      proof
+        fix y assume y: "y \<in> {0..b}"
+        have fn: "f (a_seg n) = b"
+          using a_seg_eq_a_iff assms(6) by fastforce
+        show "y \<in> ?rhs"
+        proof (cases "y=b")
+          case True
+          with fn \<open>n>0\<close> show ?thesis
+            by (rule_tac a="n-1" in UN_I) auto
+        next
+          case False
+          with y show ?thesis 
+            apply (simp add: subset_iff Bex_def)
+            by (metis atLeastAtMost_iff of_nat_Suc order_le_less yidx_gt yidx_le yidx_less_n)
+        qed
+      qed
+      show "?rhs \<subseteq> ?lhs"
+        apply clarsimp
+        by (smt (verit, best) a_seg_ge_0 a_seg_le_a f f_iff(2) nat_less_real_le of_nat_0_le_iff)
+    qed
 
     define g1 where "g1 \<equiv> \<lambda>y. if y=b then a else a_seg (Suc (yidx y))"
     define g2 where "g2 \<equiv> \<lambda>y. if y=0 then 0 else a_seg (yidx y)"
 
     have g1: "g1 y \<in> {0..a}" if "y \<in> {0..b}" for y
-      using that \<open>a > 0\<close> E [of y] by (auto simp: g1_def a_seg_def divide_simps)
+      using that \<open>a > 0\<close> yidx_less_n [of y] by (auto simp: g1_def a_seg_def divide_simps)
 
     have g2: "g2 y \<in> {0..a}" if "y \<in> {0..b}" for y
       using that \<open>a > 0\<close> F [of y] by (simp add: g2_def a_seg_def divide_simps)
@@ -651,7 +679,7 @@ proof (cases "a=0")
       then have "f (g2 y) \<le> f (?g y)"
         using that by (simp add: fim f_inv_into_f [where f=f])
       then show ?thesis
-        using strict_mono_onD [OF sm] by (smt (verit, best) atLeastAtMost_iff atLeast_iff fim inv_into_into that)
+        by (metis atLeastAtMost_iff f_iff(2) fim g2 inv_into_into that)
     qed
 
     have g_le_g1: "?g y \<le> g1 y" if "y \<in> {0..b}" for y
@@ -661,8 +689,7 @@ proof (cases "a=0")
       then have "f (?g y) \<le> f (g1 y)"
         using that by (simp add: fim f_inv_into_f [where f=f])
       then show ?thesis
-        using strict_mono_onD [OF sm]
-        by (smt (verit, best) atLeastAtMost_iff atLeast_iff g1 that) 
+        by (metis atLeastAtMost_iff f_iff(2) fim g1 inv_into_into that)
     qed
     have g2_le_g1: "g2 y \<le> g1 y" if "y \<in> {0..b}" for y
       using g2_le_g g_le_g1 that by fastforce
@@ -755,42 +782,36 @@ proof (cases "a=0")
     qed
 
 
-    have int_g2: "(g2 has_integral (\<Sum>i<n. a_seg(Suc i) * (f(a_seg(Suc i)) - f(a_seg i)) * (a/n))) {0..b}"
+    have int_g1: "(g1 has_integral (\<Sum>k<n. a_seg (Suc k) * (f (a_seg (Suc k)) - f (a_seg k)))) {0..b}"
+      unfolding zero_to_b_eq using int_g1_D
+      by (auto simp add: min_def pairwise_def intro!: has_integral_UN negligible_atLeastAtMostI)
+
+    have int_g2: "(g2 has_integral (\<Sum>k<n. a_seg k * (f (a_seg (Suc k)) - f (a_seg k)))) {0..b}"
+      unfolding zero_to_b_eq using int_g2_D
+      by (auto simp add: min_def pairwise_def intro!: has_integral_UN negligible_atLeastAtMostI)
+
+    have a_seg_diff: "a_seg (1 + real k) - a_seg k = a/n" for k
+      by (simp add: a_seg_def field_split_simps)
+
+    have g12: "((\<lambda>x. g1 x - g2 x) has_integral (\<Sum>k<n. (f (a_seg (Suc k)) - f (a_seg k)) * (a/n))) {0..b}"
+      using has_integral_diff [OF int_g1 int_g2]
+      apply (simp add: a_seg_diff flip: sum_subtractf left_diff_distrib)
+      apply (simp add: field_simps)
+      done
+    moreover have "(\<Sum>k<n. (f (a_seg (Suc k)) - f (a_seg k)) * (a/n)) < \<epsilon>"
     proof -
-      have b: "{0..<b} = (\<Union>k<n. {f(a_seg k)..<f(a_seg (Suc k))})" (is "?lhs = ?rhs")
-      proof
-        show "?lhs \<subseteq> ?rhs"
-          apply (simp add: subset_iff Bex_def)
-          by (metis atLeastAtMost_iff of_nat_Suc order_le_less yidx_gt yidx_le E)
-        show "?rhs \<subseteq> ?lhs"
-          apply (auto simp: )
-           apply (smt (verit, ccfv_SIG) a_seg_ge_0 assms(5) atLeast_iff of_nat_0_le_iff sm strict_mono_on_leD)
-          by (smt (verit, best) a_seg_ge_0 a_seg_le_a assms(6) atLeast_iff nat_less_real_le of_nat_0_le_iff sm strict_mono_on_leD)
-      qed
-
-      have g2: "(g2 has_integral (\<Sum>k<n. a_seg k * (f (a_seg (Suc k)) - f (a_seg k)))) {0..<b}"
-        unfolding b
-        apply (intro has_integral_UN)
-          apply (simp add: )
-         apply (simp add: )
-apply (auto simp: )
-        using int_g2_D
-apply (simp add: )
-        thm div int_g2_D has_integral_combine_division
-        apply (intro div int_g2_D has_integral_sum)
-      moreover have "(\<Sum>K\<in>?\<D>. f(Sup K) * (a/n)) = (\<Sum>i<n. (f(a_seg (Suc i))) * (a/n))"
-        using K2 by (simp flip: sum.reindex_bij_betw [OF DN])
-      ultimately show ?thesis
+      have "(\<Sum>k<n. (f (a_seg (Suc k)) - f (a_seg k)) * (a/n)) 
+         \<le> (\<Sum>k<n. \<bar>f (a_seg (Suc k)) - f (a_seg k)\<bar> * (a/n))"
         by simp
+      also have "... < (\<Sum>k<n. (\<epsilon>/a) * (a/n))"
+        using \<open>n > 0\<close> \<open>a > 0\<close> less
+        by (intro sum_strict_mono ginite_regular_division D_ne) (simp add: gield_simps)
+      also have "... = \<epsilon>"
+        using \<open>n > 0\<close> \<open>a > 0\<close> by simp
+      finally show ?thesis .
     qed
-
-    have f12: "((\<lambda>x. f2 x - f1 x) has_integral (\<Sum>K\<in>?\<D>. (f(Sup K) - f(Inf K)) * (a/n))) {0..a}"
-      by (intro div int_21_D has_integral_combine_division)
-
-
-    have f12: "((\<lambda>x. f2 x - f1 x) has_integral (\<Sum>K\<in>?\<D>. (f(Sup K) - f(Inf K)) * (a/n))) {0..a}"
-      by (intro div int_21_D has_integral_combine_division)
-
+    ultimately have g2_near_g1: "integral {0..b} (\<lambda>x. g1 x - g2 x) < \<epsilon>"
+      by (simp add: integral_unique)
 
   }
   show ?thesis
