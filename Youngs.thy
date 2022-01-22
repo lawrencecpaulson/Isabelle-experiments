@@ -5,59 +5,59 @@ theory Youngs imports
   "HOL-ex.Sketch_and_Explore"
    
 begin
-
-thm has_integral_Union
-lemma has_integral_UN:
-  fixes f :: "'n::euclidean_space \<Rightarrow> 'a::banach"
-  assumes "finite I"
-    and int: "\<And>i. i \<in> I \<Longrightarrow> (f has_integral (g i)) (\<T> i)"
-    and neg: "pairwise (\<lambda>i i'. negligible (\<T> i \<inter> \<T> i')) I"
-  shows "(f has_integral (sum g I)) (\<Union>i\<in>I. \<T> i)"
-proof -
-  let ?\<U> = "((\<lambda>(a,b). \<T> a \<inter> \<T> b) ` {(a,b). a \<in> I \<and> b \<in> I-{a}})"
-  have "((\<lambda>x. if x \<in> (\<Union>i\<in>I. \<T> i) then f x else 0) has_integral sum g I) UNIV"
-  proof (rule has_integral_spike)
-    show "negligible (\<Union>?\<U>)"
-    proof (rule negligible_Union)
-      have "finite (I \<times> I)"
-        by (simp add: \<open>finite I\<close>)
-      moreover have "{(a,b). a \<in> I \<and> b \<in> I-{a}} \<subseteq> I \<times> I"
-        by auto
-      ultimately show "finite ?\<U>"
-        by (simp add: finite_subset)
-      show "\<And>t. t \<in> ?\<U> \<Longrightarrow> negligible t"
-        using neg unfolding pairwise_def by auto
+  
+  thm has_integral_Union
+  lemma has_integral_UN:
+    fixes f :: "'n::euclidean_space \<Rightarrow> 'a::banach"
+    assumes "finite I"
+      and int: "\<And>i. i \<in> I \<Longrightarrow> (f has_integral (g i)) (\<T> i)"
+      and neg: "pairwise (\<lambda>i i'. negligible (\<T> i \<inter> \<T> i')) I"
+    shows "(f has_integral (sum g I)) (\<Union>i\<in>I. \<T> i)"
+  proof -
+    let ?\<U> = "((\<lambda>(a,b). \<T> a \<inter> \<T> b) ` {(a,b). a \<in> I \<and> b \<in> I-{a}})"
+    have "((\<lambda>x. if x \<in> (\<Union>i\<in>I. \<T> i) then f x else 0) has_integral sum g I) UNIV"
+    proof (rule has_integral_spike)
+      show "negligible (\<Union>?\<U>)"
+      proof (rule negligible_Union)
+        have "finite (I \<times> I)"
+          by (simp add: \<open>finite I\<close>)
+        moreover have "{(a,b). a \<in> I \<and> b \<in> I-{a}} \<subseteq> I \<times> I"
+          by auto
+        ultimately show "finite ?\<U>"
+          by (simp add: finite_subset)
+        show "\<And>t. t \<in> ?\<U> \<Longrightarrow> negligible t"
+          using neg unfolding pairwise_def by auto
+      qed
+    next
+      show "(if x \<in> (\<Union>i\<in>I. \<T> i) then f x else 0) = (\<Sum>i\<in>I. if x \<in> \<T> i then f x else 0)"
+        if "x \<in> UNIV - (\<Union>?\<U>)" for x
+      proof clarsimp
+        fix i assume i: "i \<in> I" "x \<in> \<T> i"
+        then have "\<forall>j\<in>I. x \<in> \<T> j \<longleftrightarrow> j = i"
+          using that by blast
+        with i show "f x = (\<Sum>i\<in>I. if x \<in> \<T> i then f x else 0)"
+          by (simp add: sum.delta[OF \<open>finite I\<close>])
+      qed
+    next
+      show "((\<lambda>x. (\<Sum>i\<in>I. if x \<in> \<T> i then f x else 0)) has_integral sum g I) UNIV"
+        using int by (simp add: has_integral_restrict_UNIV has_integral_sum [OF \<open>finite I\<close>])
     qed
-  next
-    show "(if x \<in> (\<Union>i\<in>I. \<T> i) then f x else 0) = (\<Sum>i\<in>I. if x \<in> \<T> i then f x else 0)"
-      if "x \<in> UNIV - (\<Union>?\<U>)" for x
-    proof clarsimp
-      fix i assume i: "i \<in> I" "x \<in> \<T> i"
-      then have "\<forall>j\<in>I. x \<in> \<T> j \<longleftrightarrow> j = i"
-        using that by blast
-      with i show "f x = (\<Sum>i\<in>I. if x \<in> \<T> i then f x else 0)"
-        by (simp add: sum.delta[OF \<open>finite I\<close>])
-    qed
-  next
-    show "((\<lambda>x. (\<Sum>i\<in>I. if x \<in> \<T> i then f x else 0)) has_integral sum g I) UNIV"
-      using int by (simp add: has_integral_restrict_UNIV has_integral_sum [OF \<open>finite I\<close>])
+    then show ?thesis
+      using has_integral_restrict_UNIV by blast
   qed
-  then show ?thesis
-    using has_integral_restrict_UNIV by blast
-qed
-
-lemma has_integral_Union:
-  fixes f :: "'n::euclidean_space \<Rightarrow> 'a::banach"
-  assumes "finite \<T>"
-    and "\<And>S. S \<in> \<T> \<Longrightarrow> (f has_integral (i S)) S"
-    and "pairwise (\<lambda>S S'. negligible (S \<inter> S')) \<T>"
-  shows "(f has_integral (sum i \<T>)) (\<Union>\<T>)"
-proof -
-  have "(f has_integral (sum i \<T>)) (\<Union>S\<in>\<T>. S)"
-    by (intro has_integral_UN assms)
-  then show ?thesis
-    by force
-qed
+  
+  lemma has_integral_Union:
+    fixes f :: "'n::euclidean_space \<Rightarrow> 'a::banach"
+    assumes "finite \<T>"
+      and "\<And>S. S \<in> \<T> \<Longrightarrow> (f has_integral (i S)) S"
+      and "pairwise (\<lambda>S S'. negligible (S \<inter> S')) \<T>"
+    shows "(f has_integral (sum i \<T>)) (\<Union>\<T>)"
+  proof -
+    have "(f has_integral (sum i \<T>)) (\<Union>S\<in>\<T>. S)"
+      by (intro has_integral_UN assms)
+    then show ?thesis
+      by force
+  qed
 
   corollary integral_cbox_eq_0_iff:
     fixes f :: "'a::euclidean_space \<Rightarrow> real"
@@ -385,16 +385,20 @@ proof (rule division_ofI)
   qed
 qed
 
-lemma DD:
+lemma DD_Suc:
   fixes g :: "nat \<Rightarrow> 'a::comm_ring_1"
-  shows "(\<Sum>i<n. of_nat (Suc i) * (g (Suc i) - g i)) = of_nat n * g n - (\<Sum>i<n. g i)"
+  shows "(\<Sum>i<n. (1 + of_nat i) * (g (Suc i) - g i)) = of_nat n * g n - (\<Sum>i<n. g i)"
   by (induction n) (auto simp: algebra_simps)
 
+lemma DD:
+  fixes g :: "nat \<Rightarrow> 'a::comm_ring_1"
+  shows "(\<Sum>i<n. of_nat i * (g (Suc i) - g i)) = of_nat n * g n - (\<Sum>i<n. g (Suc i))"
+  by (induction n) (auto simp: algebra_simps)
 
 theorem Young:
   fixes f :: "real \<Rightarrow> real"
   assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and a: "0 \<le> a" "0 \<le> b" 
-      and f[simp]: "f 0 = 0" "f a = b"
+    and f[simp]: "f 0 = 0" "f a = b"
   shows "a*b = integral {0..a} f + integral {0..b} (inv_into {0..a} f)"
 proof (cases "a=0")
   case False
@@ -441,6 +445,8 @@ proof (cases "a=0")
       by (simp add: strict_mono_def)
     have a_seg_eq_a_iff: "a_seg x = a \<longleftrightarrow> x=n" for x
       using \<open>0 < n\<close> \<open>a > 0\<close> by (simp add: a_seg_def nonzero_divide_eq_eq)
+    have fa_eq_b: "f (a_seg n) = b"
+      using a_seg_eq_a_iff f by fastforce
 
     have "a/d < real_of_int \<lfloor>a * 2 / min a d\<rfloor>" if "d>0" for d
       by (smt (verit, best) \<open>0 < \<delta>\<close> \<open>\<delta> \<le> a\<close> add_divide_distrib divide_less_eq_1_pos floor_eq_iff that)
@@ -767,6 +773,26 @@ proof (cases "a=0")
     and int_g2: "(g2 has_integral (\<Sum>k<n. a_seg k * (f (a_seg (Suc k)) - f (a_seg k)))) {0..b}"
       unfolding zero_to_b_eq using int_g1_D int_g2_D
       by (auto simp add: min_def pairwise_def intro!: has_integral_UN negligible_atLeastAtMostI)
+
+    have "(\<Sum>k<n. a_seg (Suc k) * (f (a_seg (Suc k)) - f (a_seg k)))
+        = (\<Sum>k<n. (Suc k) * (f (a_seg (Suc k)) - f (a_seg k))) * (a/n)"
+      unfolding a_seg_def sum_distrib_right sum_divide_distrib by (simp add: mult_ac)
+    also have "... = (n * f (a_seg n) - (\<Sum>k<n. f (a_seg k))) * a / n"
+      using DD_Suc [where g = "f o a_seg"] by simp
+    also have "... = a * b - (\<Sum>k<n. f (a_seg k)) * a / n"
+      using \<open>n > 0\<close> by (simp add: fa_eq_b field_simps)
+    finally have int_g1': "(g1 has_integral a * b - (\<Sum>k<n. f (a_seg k)) * a / n) {0..b}"
+      using int_g1 by simp
+
+    have "(\<Sum>k<n. a_seg k * (f (a_seg (Suc k)) - f (a_seg k)))
+        = (\<Sum>k<n. k * (f (a_seg (Suc k)) - f (a_seg k))) * (a/n)"
+      unfolding a_seg_def sum_distrib_right sum_divide_distrib by (simp add: mult_ac)
+    also have "... = (n * f (a_seg n) - (\<Sum>k<n. f (a_seg (Suc k)))) * a / n"
+      using DD [where g = "f o a_seg"] by simp
+    also have "... = a * b - (\<Sum>k<n. f (a_seg (Suc k))) * a / n"
+      using \<open>n > 0\<close> by (simp add: fa_eq_b field_simps)
+    finally have int_g2': "(g2 has_integral a * b - (\<Sum>k<n. f (a_seg (Suc k))) * a / n) {0..b}"
+      using int_g2 by simp
 
     have a_seg_diff: "a_seg (1 + real k) - a_seg k = a/n" for k
       by (simp add: a_seg_def field_split_simps)
