@@ -415,8 +415,8 @@ proof (cases "a=0")
   have "uniformly_continuous_on {0..a} f"
     using compact_uniformly_continuous cont_0a by blast
   then obtain del where del_gt0: "\<And>e. e>0 \<Longrightarrow> del e > 0" 
-                   and del:  "\<And>e x x'. \<lbrakk>dist x' x < del e; e>0; x \<in> {0..a}; x' \<in> {0..a}\<rbrakk> \<Longrightarrow> dist (f x') (f x) < e"
-    unfolding uniformly_continuous_on_def by metis
+                   and del:  "\<And>e x x'. \<lbrakk>\<bar>x' - x\<bar> < del e; e>0; x \<in> {0..a}; x' \<in> {0..a}\<rbrakk> \<Longrightarrow> \<bar>f x' - f x\<bar> < e"
+    unfolding uniformly_continuous_on_def dist_real_def by metis
 
   obtain S where S: "(f has_integral S) {0..a}"
     using cont_0a integrable_continuous_real by blast
@@ -427,13 +427,6 @@ proof (cases "a=0")
     define \<delta> where "\<delta> = min a (del (\<epsilon>/a)) / 2"
     have "\<delta> > 0" "\<delta> \<le> a"
       using \<open>a > 0\<close> \<open>\<epsilon> > 0\<close> del_gt0 by (auto simp add: \<delta>_def)
-
-    have \<delta>:  "\<And>x x'. \<lbrakk>abs (x'-x) \<le> \<delta>; x \<in> {0..a}; x' \<in> {0..a}\<rbrakk> \<Longrightarrow> abs (f x' - f x) < \<epsilon>/a"
-      apply (rule del [unfolded dist_real_def])
-         apply (simp add: \<delta>_def)
-      using del_gt0 gt0 apply fastforce
-        apply (auto simp: )
-      using gt0 by blast
 
     define n where "n \<equiv> nat\<lfloor>a / \<delta>\<rfloor>"
     define a_seg where "a_seg \<equiv> \<lambda>u::real. u * a/n"
@@ -448,10 +441,6 @@ proof (cases "a=0")
       by (simp add: strict_mono_def)
     have a_seg_eq_a_iff: "a_seg x = a \<longleftrightarrow> x=n" for x
       using \<open>0 < n\<close> \<open>a > 0\<close> by (simp add: a_seg_def nonzero_divide_eq_eq)
-
-    have "n * \<delta> * (\<epsilon>/a) \<le> \<epsilon>"
-      unfolding n_def
-      by (smt (z3) False \<open>0 < \<delta>\<close> \<open>n > 0\<close> gt0 less_imp_of_nat_less mult_imp_div_pos_less n_def nat_eq_iff2 nonzero_eq_divide_eq nonzero_mult_div_cancel_left of_nat_floor zero_le_floor) 
 
     have "a/d < real_of_int \<lfloor>a * 2 / min a d\<rfloor>" if "d>0" for d
       by (smt (verit, best) \<open>0 < \<delta>\<close> \<open>\<delta> \<le> a\<close> add_divide_distrib divide_less_eq_1_pos floor_eq_iff that)
@@ -543,7 +532,7 @@ proof (cases "a=0")
         using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: v_def u_def a_seg_def field_simps an_less_del)
       then have "\<bar>f v - f u\<bar> < \<epsilon>/a"
         using \<open>\<epsilon> > 0\<close> \<open>a > 0\<close> \<open>0 \<le> u\<close> \<open>u \<le> a\<close> \<open>0 \<le> v\<close> \<open>v \<le> a\<close>
-        by (intro del [unfolded dist_real_def]) auto
+        by (intro del) auto
       then show "\<bar>f(Sup K) - f(Inf K)\<bar> < \<epsilon>/a"
         using InfK SupK by blast
     qed
@@ -570,14 +559,7 @@ proof (cases "a=0")
     ultimately have f2_near_f1: "integral {0..a} (\<lambda>x. f2 x - f1 x) < \<epsilon>"
       by (simp add: integral_unique)
 
-(*So f1 x = 0*)
-    have "real_of_int \<lfloor>real n * x / a\<rfloor> * a / real n = 0" if "x \<in> {0..< a/n}" for x
-      using that \<open>n > 0\<close> \<open>a > 0\<close> floor_le_iff [of _ 0]
-      apply (simp add: f1_def lower_def field_simps)
-      by (smt (verit, best) divide_nonneg_nonneg floor_le_zero le_divide_eq_1_pos mult_nonneg_nonneg of_nat_0_le_iff zero_le_floor)
-
     define yidx where "yidx \<equiv> \<lambda>y. LEAST k. y < f (a_seg (Suc k))"
-
     have yidx_le: "f (a_seg (yidx y)) \<le> y" and yidx_gt: "y < f (a_seg (Suc (yidx y)))" 
       if "y \<in> {0..b}" for y
     proof -
@@ -793,6 +775,10 @@ proof (cases "a=0")
     have a_seg_diff: "a_seg (1 + real k) - a_seg k = a/n" for k
       by (simp add: a_seg_def field_split_simps)
 
+    have f_a_seg_diff: "abs (f (a_seg (1 + real k)) - f (a_seg k)) < \<epsilon>/a" if "k<n" for k
+      using that \<open>a > 0\<close> a_seg_diff an_less_del gt0
+      by (intro del) auto
+
     have g12: "((\<lambda>x. g1 x - g2 x) has_integral (\<Sum>k<n. (f (a_seg (Suc k)) - f (a_seg k)) * (a/n))) {0..b}"
       using has_integral_diff [OF int_g1 int_g2]
       apply (simp add: a_seg_diff flip: sum_subtractf left_diff_distrib)
@@ -804,8 +790,15 @@ proof (cases "a=0")
          \<le> (\<Sum>k<n. \<bar>f (a_seg (Suc k)) - f (a_seg k)\<bar> * (a/n))"
         by simp
       also have "... < (\<Sum>k<n. (\<epsilon>/a) * (a/n))"
-        using \<open>n > 0\<close> \<open>a > 0\<close> less
-        by (intro sum_strict_mono ginite_regular_division D_ne) (simp add: gield_simps)
+        apply (rule sum_strict_mono)
+          apply (force simp add: )
+        using \<open>n > 0\<close> \<open>a > 0\<close>  apply (force simp add: )
+        using \<open>n > 0\<close> \<open>a > 0\<close>  apply (simp add: )
+        apply (intro divide_strict_right_mono)
+        using f_a_seg_diff
+        apply (smt (verit, ccfv_SIG) nonzero_divide_eq_eq pos_le_divide_eq)
+        using \<open>n > 0\<close> \<open>a > 0\<close>  apply (force simp add: )
+        done
       also have "... = \<epsilon>"
         using \<open>n > 0\<close> \<open>a > 0\<close> by simp
       finally show ?thesis .
