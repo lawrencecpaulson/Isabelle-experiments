@@ -399,17 +399,20 @@ theorem Young:
   fixes f :: "real \<Rightarrow> real"
   assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and a: "0 \<le> a" "0 \<le> b" 
     and f[simp]: "f 0 = 0" "f a = b"
-  shows "a*b = integral {0..a} f + integral {0..b} (inv_into {0..a} f)"
+  shows "a*b = integral {0..a} f + integral {0..b} (inv_into {0..a} f)" (is "_ = _ + integral {0..b} ?g")
 proof (cases "a=0")
   case False
   then have "a > 0"
     using assms(3) by linarith
-  let ?g = "inv_into {0..a} f"
   have cont_0a: "continuous_on {0..a} f"
     using cont continuous_on_subset by fastforce
   with sm have "continuous_on {0..b} ?g"
     apply (simp add: strict_mono_on_def)
     by (metis \<open>0 \<le> a\<close> \<open>f 0 = 0\<close> \<open>f a = b\<close> atLeastAtMost_iff strict_mono_continuous_inv strict_mono_onI)
+  then have intgb_g: "?g integrable_on {0..b}"
+    using integrable_continuous_interval by blast
+  have intgb_f: "f integrable_on {0..a}"
+    using cont_0a integrable_continuous_real by blast
 
   have f_iff [simp]: "f x < f y \<longleftrightarrow> x < y" "f x \<le> f y \<longleftrightarrow> x \<le> y"
     if "x \<ge> 0" "y \<ge> 0" for x y
@@ -422,8 +425,6 @@ proof (cases "a=0")
                    and del:  "\<And>e x x'. \<lbrakk>\<bar>x' - x\<bar> < del e; e>0; x \<in> {0..a}; x' \<in> {0..a}\<rbrakk> \<Longrightarrow> \<bar>f x' - f x\<bar> < e"
     unfolding uniformly_continuous_on_def dist_real_def by metis
 
-  obtain S where S: "(f has_integral S) {0..a}"
-    using cont_0a integrable_continuous_real by blast
   { fix \<epsilon> :: real
     assume "\<epsilon> > 0"
     with \<open>a > 0\<close> have gt0: "\<epsilon>/a > 0"
@@ -711,28 +712,28 @@ proof (cases "a=0")
       using that \<open>0 < a\<close>
       by (auto simp: DN_def field_simps a_seg_def elim: regular_divisionE)
 
-    have int_f1: "(f1 has_integral (\<Sum>k<n. f(a_seg k) * (a/n))) {0..a}"
+    have int_f1: "(f1 has_integral (\<Sum>k<n. f(a_seg k)) * (a/n)) {0..a}"
     proof -
       have f1: "(f1 has_integral (\<Sum>K\<in>?\<D>. f(Inf K) * (a/n))) {0..a}"
         by (intro div int_f1_D has_integral_combine_division)
       moreover have "(\<Sum>K\<in>?\<D>. f(Inf K) * (a/n)) = (\<Sum>k<n. (f(a_seg k)) * (a/n))"
         using K1 by (simp flip: sum.reindex_bij_betw [OF DN])
       ultimately show ?thesis
-        by simp
+        by (metis sum_distrib_right)
     qed
 
     have K2: "a_seg (real (Suc (DN K))) = Sup K" if "K \<in> ?\<D>" for K
       using that \<open>0 < a\<close>
       by (auto simp: DN_def field_simps a_seg_def elim: regular_divisionE)
 
-    have int_f2: "(f2 has_integral (\<Sum>k<n. f(a_seg(Suc k)) * (a/n))) {0..a}"
+    have int_f2: "(f2 has_integral (\<Sum>k<n. f(a_seg(Suc k))) * (a/n)) {0..a}"
     proof -
       have f2: "(f2 has_integral (\<Sum>K\<in>?\<D>. f(Sup K) * (a/n))) {0..a}"
         by (intro div int_f2_D has_integral_combine_division)
       moreover have "(\<Sum>K\<in>?\<D>. f(Sup K) * (a/n)) = (\<Sum>k<n. (f(a_seg (Suc k))) * (a/n))"
         using K2 by (simp flip: sum.reindex_bij_betw [OF DN])
       ultimately show ?thesis
-        by simp
+        by (metis sum_distrib_right)
     qed
 
 
@@ -824,10 +825,39 @@ proof (cases "a=0")
     ultimately have g2_near_g1: "integral {0..b} (\<lambda>x. g1 x - g2 x) < \<epsilon>"
       by (simp add: integral_unique)
 
+    have ab1: "integral {0..a} f1 + integral {0..b} g1 = a*b"
+      using int_f1 int_g1' by (simp add: integral_unique)
+    have ab2: "integral {0..a} f2 + integral {0..b} g2 = a*b"
+      using int_f2 int_g2' by (simp add: integral_unique)
+
+    have "integral {0..a} (\<lambda>x. f x - f1 x) \<le> integral {0..a} (\<lambda>x. f2 x - f1 x)"
+    proof (rule integral_le)
+      show "(\<lambda>x. f x - f1 x) integrable_on {0..a}" "(\<lambda>x. f2 x - f1 x) integrable_on {0..a}"
+        using Henstock_Kurzweil_Integration.integrable_diff int_f1 intgb_f f12 by blast+
+    qed (auto simp add: f2_upper)
+    with f2_near_f1 have "integral {0..a} (\<lambda>x. f x - f1 x) < \<epsilon>"
+      by simp
+    moreover have "integral {0..a} f1 \<le> integral {0..a} f"
+      by (intro integral_le has_integral_integral intgb_f has_integral_integrable [OF int_f1]) (simp add: f1_lower)
+    ultimately have f_error: "\<bar>integral {0..a} f - integral {0..a} f1\<bar> < \<epsilon>"
+      using Henstock_Kurzweil_Integration.integral_diff int_f1 intgb_f by fastforce
+
+    have "integral {0..b} (\<lambda>x. g1 x - ?g x) \<le> integral {0..b} (\<lambda>x. g1 x - g2 x)"
+    proof (rule integral_le)
+      show "(\<lambda>x. g1 x - ?g x) integrable_on {0..b}" "(\<lambda>x. g1 x - g2 x) integrable_on {0..b}"
+        using Henstock_Kurzweil_Integration.integrable_diff int_g1 int_g2 intgb_g by blast+
+    qed (auto simp add: g2_le_g)
+    with g2_near_g1 have "integral {0..b} (\<lambda>x. g1 x - ?g x) < \<epsilon>"
+      by simp
+    moreover have "integral {0..b} ?g \<le> integral {0..b} g1"
+      by (intro integral_le has_integral_integral intgb_g has_integral_integrable [OF int_g1]) (simp add: g_le_g1)
+    ultimately have g_error: "\<bar>integral {0..b} g1 - integral {0..b} ?g\<bar> < \<epsilon>"
+      using integral_diff int_g1 intgb_g by fastforce
+
     have "xxxx"
       using int_f1 int_g1'
       using int_f2 int_g2'
-    sorry
+      sorry
   }
   show ?thesis
     sorry
