@@ -399,14 +399,9 @@ proof (rule division_ofI)
   qed
 qed
 
-lemma DD_Suc:
+lemma weighted_nesting_sum:
   fixes g :: "nat \<Rightarrow> 'a::comm_ring_1"
   shows "(\<Sum>k<n. (1 + of_nat k) * (g (Suc k) - g k)) = of_nat n * g n - (\<Sum>i<n. g i)"
-  by (induction n) (auto simp: algebra_simps)
-
-lemma DD:
-  fixes g :: "nat \<Rightarrow> 'a::comm_ring_1"
-  shows "(\<Sum>k<n. of_nat k * (g (Suc k) - g k)) = of_nat n * g n - (\<Sum>i<n. g (Suc i))"
   by (induction n) (auto simp: algebra_simps)
 
 theorem Young:
@@ -416,8 +411,7 @@ theorem Young:
   shows "a*b = integral {0..a} f + integral {0..b} (inv_into {0..a} f)" (is "_ = _ + integral {0..b} ?g")
 proof (cases "a=0")
   case False
-  then have "a > 0"
-    using assms(3) by linarith
+  with \<open>0 \<le> a\<close> have "a > 0" by linarith
   have cont_0a: "continuous_on {0..a} f"
     using cont continuous_on_subset by fastforce
   with sm have "continuous_on {0..b} ?g"
@@ -468,11 +462,6 @@ proof (cases "a=0")
 
     define lower where "lower \<equiv> \<lambda>x. a_seg\<lfloor>(real n * x) / a\<rfloor>"
     define f1 where "f1 \<equiv> f \<circ> lower"
-    have mo_lower: "mono_on lower {0..a}"
-      using \<open>n > 0\<close> unfolding lower_def mono_on_def a_seg_def
-      by (auto simp: divide_right_mono floor_mono mult.commute mult_left_mono order_less_imp_le)
-    have lower_im: "lower ` {0..a} \<subseteq> {0..}"
-      by (auto simp: lower_def)
     have f1_lower: "f1 x \<le> f x" if "0 \<le> x" "x \<le> a" for x
     proof -
       have "lower x \<le> x"
@@ -484,14 +473,6 @@ proof (cases "a=0")
     qed
     define upper where "upper \<equiv> \<lambda>x. a_seg\<lceil>real n * x / a\<rceil>"
     define f2 where "f2 \<equiv> f \<circ> upper"
-
-    have mo_upper: "mono_on upper {0..a}"
-      using \<open>n > 0\<close> unfolding upper_def mono_on_def
-      by (simp add: ceiling_mono divide_right_mono mult_right_mono)
-    have upper_im: "upper ` {0..a} \<subseteq> {0..}"
-      apply (clarsimp simp: upper_def field_split_simps)
-      by (smt (verit) mult_nonneg_nonneg of_nat_0_le_iff)
-
     have f2_upper: "f2 x \<ge> f x" if "0 \<le> x" "x \<le> a" for x
     proof -
       have "x \<le> upper x"
@@ -512,10 +493,8 @@ proof (cases "a=0")
         by (auto simp add: a_seg_def mult.commute)
       define u where "u \<equiv> a_seg k"
       define v where "v \<equiv> a_seg (Suc k)"
-      have "u < v" "0 \<le> u" "0 \<le> v" and Kuv: "K = {u..v}"
-        using \<open>n > 0\<close> \<open>a > 0\<close> by (auto simp: k u_def v_def divide_simps)
-      have "u \<le> a" "v \<le> a"
-        using \<open>k < n\<close> \<open>a > 0\<close> by (auto simp: u_def v_def divide_simps)
+      have "u < v" "0 \<le> u" "0 \<le> v" "u \<le> a" "v \<le> a" and Kuv: "K = {u..v}"
+        using \<open>n > 0\<close> \<open>k < n\<close> \<open>a > 0\<close> by (auto simp: k u_def v_def divide_simps)
       have InfK: "Inf K = u" and SupK: "Sup K = v"
         using Kuv \<open>u < v\<close> apply force
         using \<open>n > 0\<close> \<open>a > 0\<close> by (auto simp: divide_right_mono k u_def v_def)
@@ -590,13 +569,11 @@ proof (cases "a=0")
         using \<open>n > 0\<close> \<open>0 < a\<close> floor_divide_lower floor_divide_upper [of a "x*n"] x
         by (auto simp add: k_def a_seg_def field_simps)
       with that x obtain f_lims: "f (a_seg k) \<le> y" "y < f (a_seg (Suc k))"
-        using strict_mono_onD [OF sm] 
-        by (smt (verit, best) \<open>0 \<le> a\<close> atLeast_iff divide_nonneg_nonneg a_seg_def of_nat_0_le_iff zero_le_mult_iff)
+        using strict_mono_onD [OF sm] by force
       then have "a_seg (yidx y) \<le> a_seg k"
         by (simp add: Least_le \<open>strict_mono a_seg\<close> strict_mono_less_eq yidx_def)
       then have "f (a_seg (yidx y)) \<le> f (a_seg k)"
-        using strict_mono_onD [OF sm] 
-        by (metis \<open>0 \<le> a\<close> atLeast_iff divide_nonneg_nonneg a_seg_def less_eq_real_def of_nat_0_le_iff zero_le_mult_iff)
+        using strict_mono_onD [OF sm] by simp
       then show "f (a_seg (yidx y)) \<le> y"
         using f_lims by linarith
       show "y < f (a_seg (Suc (yidx y)))"
@@ -614,12 +591,7 @@ proof (cases "a=0")
       then show "k \<le> yidx y"
         by simp 
     qed
-
-    (*LOTS OF EXPERIMENTAL MATERIAL HERE*)
-    have [simp]: "yidx 0 = 0"
-      using \<open>0 < a\<close> \<open>0 \<le> b\<close> \<open>0 < n\<close> strict_mono_onD [OF sm] by (fastforce simp: a_seg_def yidx_equality)
-
-    have [simp]: "yidx b = n"
+    have "yidx b = n"
     proof -
       have "a < (1 + real n) * a / real n"
         using \<open>0 < n\<close> \<open>0 < a\<close> by (simp add: divide_simps)
@@ -628,13 +600,10 @@ proof (cases "a=0")
       then show ?thesis
         using \<open>0 \<le> b\<close> by (auto simp: a_seg_def yidx_equality)
     qed
-
-    have yidx_less_n: "yidx y < n" if "y < b" for y
-      using yidx_gt [of y] \<open>f a = b\<close>
-      by (metis \<open>0 < n\<close> gr0_conv_Suc a_seg_def less_Suc_eq_le nonzero_mult_div_cancel_left of_nat_neq_0 that wellorder_Least_lemma(2) yidx_def)
-
-    have F: "yidx y \<le> n" if "y \<le> b" for y
-      by (metis yidx_less_n \<open>yidx b = n\<close> dual_order.order_iff_strict that)
+    moreover have yidx_less_n: "yidx y < n" if "y < b" for y
+      by (metis \<open>0 < n\<close> fa_eq_b gr0_conv_Suc less_Suc_eq_le that Least_le yidx_def)
+    ultimately have yidx_le_n: "yidx y \<le> n" if "y \<le> b" for y
+      by (metis dual_order.order_iff_strict that)
 
     have zero_to_b_eq: "{0..b} = (\<Union>k<n. {f(a_seg k)..f(a_seg (Suc k))})" (is "?lhs = ?rhs")
     proof
@@ -662,16 +631,10 @@ proof (cases "a=0")
 
     define g1 where "g1 \<equiv> \<lambda>y. if y=b then a else a_seg (Suc (yidx y))"
     define g2 where "g2 \<equiv> \<lambda>y. if y=0 then 0 else a_seg (yidx y)"
-
     have g1: "g1 y \<in> {0..a}" if "y \<in> {0..b}" for y
       using that \<open>a > 0\<close> yidx_less_n [of y] by (auto simp: g1_def a_seg_def divide_simps)
-
     have g2: "g2 y \<in> {0..a}" if "y \<in> {0..b}" for y
-      using that \<open>a > 0\<close> F [of y] by (simp add: g2_def a_seg_def divide_simps)
-
-    have g0 [simp]: "?g 0 = 0"
-      using \<open>f 0 = 0\<close> \<open>0 \<le> a\<close>
-      by (smt (verit, best) Icc_subset_Ici_iff atLeastAtMost_iff f_inv_into_f image_iff in_mono inv_into_into sm strict_mono_on_eqD)
+      using that \<open>a > 0\<close> yidx_le_n [of y] by (simp add: g2_def a_seg_def divide_simps)
 
     have g2_le_g: "g2 y \<le> ?g y" if "y \<in> {0..b}" for y
     proof -
@@ -682,7 +645,6 @@ proof (cases "a=0")
       then show ?thesis
         by (metis atLeastAtMost_iff f_iff(2) fim g2 inv_into_into that)
     qed
-
     have g_le_g1: "?g y \<le> g1 y" if "y \<in> {0..b}" for y
     proof -
       have "y \<le> f (g1 y)"
@@ -692,11 +654,8 @@ proof (cases "a=0")
       then show ?thesis
         by (metis atLeastAtMost_iff f_iff(2) fim g1 inv_into_into that)
     qed
-    have g2_le_g1: "g2 y \<le> g1 y" if "y \<in> {0..b}" for y
-      using g2_le_g g_le_g1 that by fastforce
 
     define DN where "DN \<equiv> \<lambda>K. nat \<lfloor>Inf K * real n / a\<rfloor>"
-
     have [simp]: "DN {a * real k / n..a * (1 + real k) / n} = k" for k
       using \<open>n > 0\<close> \<open>a > 0\<close> by (simp add: DN_def divide_simps)
     have DN: "bij_betw DN ?\<D> {..<n}"
@@ -720,34 +679,18 @@ proof (cases "a=0")
         using \<open>0 < a\<close> by (auto simp: DN_def bij_betw_def image_iff frac_le elim!: regular_divisionE)
     qed
  
-    have K1: "a_seg (real (DN K)) = Inf K" if "K \<in> ?\<D>" for K
-      using that \<open>0 < a\<close>
-      by (auto simp: DN_def field_simps a_seg_def elim: regular_divisionE)
-
     have int_f1: "(f1 has_integral (\<Sum>k<n. f(a_seg k)) * (a/n)) {0..a}"
     proof -
-      have f1: "(f1 has_integral (\<Sum>K\<in>?\<D>. f(Inf K) * (a/n))) {0..a}"
+      have "a_seg (real (DN K)) = Inf K" if "K \<in> ?\<D>" for K
+        using that \<open>0 < a\<close> by (auto simp: DN_def field_simps a_seg_def elim: regular_divisionE)
+      then have "(\<Sum>K\<in>?\<D>. f(Inf K) * (a/n)) = (\<Sum>k<n. (f(a_seg k)) * (a/n))"
+        by (simp flip: sum.reindex_bij_betw [OF DN])
+      moreover have "(f1 has_integral (\<Sum>K\<in>?\<D>. f(Inf K) * (a/n))) {0..a}"
         by (intro div int_f1_D has_integral_combine_division)
-      moreover have "(\<Sum>K\<in>?\<D>. f(Inf K) * (a/n)) = (\<Sum>k<n. (f(a_seg k)) * (a/n))"
-        using K1 by (simp flip: sum.reindex_bij_betw [OF DN])
       ultimately show ?thesis
         by (metis sum_distrib_right)
     qed
-
-    have K2: "a_seg (real (Suc (DN K))) = Sup K" if "K \<in> ?\<D>" for K
-      using that \<open>0 < a\<close>
-      by (auto simp: DN_def field_simps a_seg_def elim: regular_divisionE)
-
-    have int_f2: "(f2 has_integral (\<Sum>k<n. f(a_seg(Suc k))) * (a/n)) {0..a}"
-    proof -
-      have f2: "(f2 has_integral (\<Sum>K\<in>?\<D>. f(Sup K) * (a/n))) {0..a}"
-        by (intro div int_f2_D has_integral_combine_division)
-      moreover have "(\<Sum>K\<in>?\<D>. f(Sup K) * (a/n)) = (\<Sum>k<n. (f(a_seg (Suc k))) * (a/n))"
-        using K2 by (simp flip: sum.reindex_bij_betw [OF DN])
-      ultimately show ?thesis
-        by (metis sum_distrib_right)
-    qed
-
+    text \<open>{term "(f2 has_integral (\<Sum>k<n. f(a_seg(Suc k))) * (a/n)) {0..a}"} can similarly be proved\<close>
 
     have int_g1_D: "(g1 has_integral a_seg (Suc k) * (f (a_seg (Suc k)) - f (a_seg k))) {f(a_seg k)..f(a_seg (Suc k))}" 
       and int_g2_D: "(g2 has_integral a_seg k * (f (a_seg (Suc k)) - f (a_seg k))) {f(a_seg k)..f(a_seg (Suc k))}" 
@@ -791,21 +734,13 @@ proof (cases "a=0")
         = (\<Sum>k<n. (Suc k) * (f (a_seg (Suc k)) - f (a_seg k))) * (a/n)"
       unfolding a_seg_def sum_distrib_right sum_divide_distrib by (simp add: mult_ac)
     also have "... = (n * f (a_seg n) - (\<Sum>k<n. f (a_seg k))) * a / n"
-      using DD_Suc [where g = "f o a_seg"] by simp
+      using weighted_nesting_sum [where g = "f o a_seg"] by simp
     also have "... = a * b - (\<Sum>k<n. f (a_seg k)) * a / n"
       using \<open>n > 0\<close> by (simp add: fa_eq_b field_simps)
     finally have int_g1': "(g1 has_integral a * b - (\<Sum>k<n. f (a_seg k)) * a / n) {0..b}"
       using int_g1 by simp
 
-    have "(\<Sum>k<n. a_seg k * (f (a_seg (Suc k)) - f (a_seg k)))
-        = (\<Sum>k<n. k * (f (a_seg (Suc k)) - f (a_seg k))) * (a/n)"
-      unfolding a_seg_def sum_distrib_right sum_divide_distrib by (simp add: mult_ac)
-    also have "... = (n * f (a_seg n) - (\<Sum>k<n. f (a_seg (Suc k)))) * a / n"
-      using DD [where g = "f o a_seg"] by simp
-    also have "... = a * b - (\<Sum>k<n. f (a_seg (Suc k))) * a / n"
-      using \<open>n > 0\<close> by (simp add: fa_eq_b field_simps)
-    finally have int_g2': "(g2 has_integral a * b - (\<Sum>k<n. f (a_seg (Suc k))) * a / n) {0..b}"
-      using int_g2 by simp
+    text \<open>@{term "(g2 has_integral a * b - (\<Sum>k<n. f (a_seg (Suc k))) * a / n) {0..b}"} can similarly be proved.\<close> 
 
     have a_seg_diff: "a_seg (1 + real k) - a_seg k = a/n" for k
       by (simp add: a_seg_def field_split_simps)
@@ -814,7 +749,7 @@ proof (cases "a=0")
       using that \<open>a > 0\<close> a_seg_diff an_less_del \<open>\<epsilon> > 0\<close>
       by (intro del) auto
 
-    have g12: "((\<lambda>x. g1 x - g2 x) has_integral (\<Sum>k<n. (f (a_seg (Suc k)) - f (a_seg k)) * (a/n))) {0..b}"
+    have "((\<lambda>x. g1 x - g2 x) has_integral (\<Sum>k<n. (f (a_seg (Suc k)) - f (a_seg k)) * (a/n))) {0..b}"
       using has_integral_diff [OF int_g1 int_g2]
       apply (simp add: a_seg_diff flip: sum_subtractf left_diff_distrib)
       apply (simp add: field_simps)
@@ -839,8 +774,6 @@ proof (cases "a=0")
 
     have ab1: "integral {0..a} f1 + integral {0..b} g1 = a*b"
       using int_f1 int_g1' by (simp add: integral_unique)
-    have ab2: "integral {0..a} f2 + integral {0..b} g2 = a*b"
-      using int_f2 int_g2' by (simp add: integral_unique)
 
     have "integral {0..a} (\<lambda>x. f x - f1 x) \<le> integral {0..a} (\<lambda>x. f2 x - f1 x)"
     proof (rule integral_le)
@@ -865,7 +798,6 @@ proof (cases "a=0")
       by (intro integral_le has_integral_integral intgb_g has_integral_integrable [OF int_g1]) (simp add: g_le_g1)
     ultimately have g_error: "\<bar>integral {0..b} g1 - integral {0..b} ?g\<bar> < \<epsilon>"
       using integral_diff int_g1 intgb_g by fastforce
-
     show ?thesis
       using f_error g_error ab1 by linarith
   qed
@@ -911,110 +843,5 @@ proof -
 qed
 
 
-lemma Y:
-  fixes a::real
-  assumes f_mono: "strict_mono_on f {0..a}" and f_int: "(f has_integral I) {0..a}" 
-    and f_cont: "continuous_on {0..a} f"
-    and g: "\<forall>x\<in>{0..a}. g (f x) = x"
-    and g_int: "(g has_integral J) {f 0..f a}"
-    and "a \<ge> 0"
-  shows "I \<le> a * f a"
-proof -
-  have feq: "(f ` {0..a}) = {f 0..f a}"
-    using IVT' f_mono
-    by (smt (z3) f_cont \<open>a \<ge> 0\<close> atLeastAtMost_iff atLeastatMost_subset_iff continuous_image_closed_interval image_subset_iff strict_mono_on_leD)
-  have "continuous_on {f 0..f a} g"
-    using continuous_on_inv [where f=f, OF _ _ g]
-    by (metis feq f_cont compact_Icc) 
-  then have g_int: "g integrable_on {f 0..f a}"
-    using integrable_continuous_real by blast 
-  have "((\<lambda>x. f a) has_integral a * f a) {0..a}"
-    using has_integral_const_real [of "f a" 0 a] \<open>a \<ge> 0\<close>
-    by simp
-  then show ?thesis
-    using has_integral_le [OF f]
-qed
-  oops
-
-declare [[show_consts=true]]
-
-
-lemma poly_dvd_tendsto_0_at_top_pos_coeff: 
-  fixes p q :: "real poly"
-  assumes "degree p > degree q" "coeff p (degree p) > 0"
-  shows "((\<lambda>x. poly q x / poly p x) ---> 0 ) at_top" using assms
-proof (induct "degree q" arbitrary: q p)
-  case 0 
-  then obtain c where "\<forall>x. poly q x=c" 
-    by (metis smult_eq_0_iff synthetic_div_correct synthetic_div_eq_0_iff synthetic_div_unique)
-  hence "eventually (\<lambda>x. poly q x = c) at_top" 
-    using Topological_Spaces.always_eventually[of "\<lambda>x. poly q x=c" at_top]
-    by simp
-  hence "(poly q ---> c) at_top" by (metis `\<forall>x. poly q x = c` ext tendsto_const)
-  moreover have "filterlim (poly p) at_infinity at_top" 
-    using poly_inf_at_top[of p] `0 = degree q` `degree q < degree p` by auto
-  ultimately show ?case using Limits.tendsto_divide_0[of "poly q" _ at_top "poly p" ] by auto 
-next
-  case (Suc n) print_facts
-  have "filterlim (poly p) at_top at_top" 
-    using poly_at_top_at_top[of p] Suc by auto
-  moreover have "eventually (\<lambda>x. poly (pderiv p) x \<noteq> 0) at_top" 
-    apply (rule filter_leD,rule Limits.at_top_le_at_infinity, rule poly_neq_0_at_infinity)
-    by (metis Suc.prems(1) less_nat_zero_code pderiv_eq_0_iff)
-  moreover have "eventually (\<lambda>x. DERIV (poly q) x :> poly (pderiv q) x) at_top" 
-    by (metis (mono_tags) always_eventually poly_DERIV)
-  moreover have " eventually (\<lambda>x. DERIV (poly p) x :> poly (pderiv p) x) at_top" 
-    by (metis (lifting) always_eventually poly_DERIV)
-  moreover have "((\<lambda>x. poly (pderiv q) x / poly (pderiv p) x) ---> 0) at_top" 
-    proof -
-      have "n = degree (pderiv q)" 
-        using degree_pderiv[of q] `Suc n = degree q` by auto
-      moreover have "0 < coeff (pderiv p) (degree (pderiv p))"  
-        proof -
-          have "degree p>0" using Suc by auto
-          hence "Suc (degree (pderiv p))=degree p" using degree_pderiv[of p] by auto
-          thus ?thesis 
-            using Poly_Deriv.coeff_pderiv[of p "degree (pderiv p)"] ` 0 < coeff p (degree p)`
-            by (metis `0 < degree p` mult_pos_pos of_nat_0_less_iff)
-        qed
-      moreover  have "degree (pderiv q) < degree (pderiv p)" 
-        using Suc 
-        by (metis (hide_lams, no_types) Nat.add_0_right One_nat_def add_Suc_right calculation 
-          degree_pderiv less_diff_conv)
-      ultimately show ?thesis using Suc(1)[of "pderiv q" "pderiv p"] by auto
-    qed
-  ultimately show ?case
-    using lhospital_at_top_at_top[of "poly p" "poly (pderiv p)" "poly q" "poly (pderiv q)" 0] 
-    by auto
-qed
-
-lemma poly_dvd_tendsto_0_at_top_neg_coeff: 
-  fixes p q :: "real poly"
-  assumes "degree p > degree q" "coeff p (degree p) < 0"
-  shows "((\<lambda>x. poly q x / poly p x) ---> 0 ) at_top" using assms
-proof -
-  have "((\<lambda>x. poly q x / poly (- p) x) ---> 0 ) at_top"
-    using poly_dvd_tendsto_0_at_top_pos_coeff[of q "-p"] 
-    by (metis assms(1) assms(2) coeff_minus degree_minus neg_0_less_iff_less)  
-  moreover have "(\<lambda>x. poly q x / poly (- p) x)=   (\<lambda>x. - poly q x / poly ( p) x)" by auto
-  ultimately have "((\<lambda>x.- poly q x / poly ( p) x) ---> 0 ) at_top" 
-    using Polynomial.poly_minus[of p] by auto
-  thus ?thesis 
-    using Limits.tendsto_minus_cancel_left[of "(\<lambda>x. poly q x / poly p x)" 0 at_top] by auto
-qed
-
-lemma poly_dvd_tendsto_0_at_top: 
-  fixes p q :: "real poly"
-  assumes "degree p > degree q"
-  shows "((\<lambda>x. poly q x / poly p x) ---> 0 ) at_top" 
-proof -
-  have "coeff p (degree p) > 0 \<Longrightarrow> ?thesis" 
-    by (metis (full_types) assms poly_dvd_tendsto_0_at_top_pos_coeff)
-  moreover have "coeff p (degree p) = 0 \<Longrightarrow> ?thesis" 
-    by (metis assms degree_0 leading_coeff_0_iff less_nat_zero_code)
-  moreover have "coeff p (degree p) < 0 \<Longrightarrow> ?thesis" 
-    by (metis (full_types) assms poly_dvd_tendsto_0_at_top_neg_coeff)
-  ultimately show ?thesis by (metis linorder_neqE_linordered_idom)
-qed
 
 end
