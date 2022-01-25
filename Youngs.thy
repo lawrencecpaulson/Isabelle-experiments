@@ -5,6 +5,26 @@ theory Youngs imports
   "HOL-ex.Sketch_and_Explore"
    
 begin
+
+text \<open>Kevin Buzzard's examples\<close>
+lemma
+  fixes x::real
+  shows "(x+y)*(x+2*y)*(x+3*y) = x^3 + 6*x^2*y + 11*x*y^2 + 6*y^3"
+  by (simp add: algebra_simps eval_nat_numeral)
+
+lemma "sqrt 2 + sqrt 3 < sqrt 10"
+proof -
+  have "(sqrt 2 + sqrt 3)^2 < (sqrt 10)^2"
+  proof (simp add: algebra_simps eval_nat_numeral)
+    have "(2 * (sqrt 2 * sqrt 3))^2 < 5 ^ 2"
+      by (simp add: algebra_simps eval_nat_numeral)
+    then show "2 * (sqrt 2 * sqrt 3) < 5"
+      by (smt (verit, best) power_mono)
+  qed
+  then show ?thesis
+    by (simp add: real_less_rsqrt)
+qed
+
   
   thm has_integral_Union
   lemma has_integral_UN:
@@ -133,12 +153,6 @@ end
   lemma deriv_minus [simp]:
     "f field_differentiable at z \<Longrightarrow> deriv (\<lambda>w. - f w) z = - deriv f z"
     by (simp add: DERIV_deriv_iff_field_differentiable DERIV_imp_deriv Deriv.field_differentiable_minus)
-
-text \<open>Kevin Buzzard's example\<close>
-lemma
-  fixes x::real
-  shows "(x+y)*(x+2*y)*(x+3*y) = x^3 + 6*x^2*y + 11*x*y^2 + 6*y^3"
-  by (simp add: algebra_simps eval_nat_numeral)
 
 subsection \<open>Experiments involving Young's Inequality\<close>
   
@@ -425,10 +439,8 @@ proof (cases "a=0")
                    and del:  "\<And>e x x'. \<lbrakk>\<bar>x' - x\<bar> < del e; e>0; x \<in> {0..a}; x' \<in> {0..a}\<rbrakk> \<Longrightarrow> \<bar>f x' - f x\<bar> < e"
     unfolding uniformly_continuous_on_def dist_real_def by metis
 
-  { fix \<epsilon> :: real
-    assume "\<epsilon> > 0"
-    with \<open>a > 0\<close> have gt0: "\<epsilon>/a > 0"
-      by simp
+  have *: "\<bar>a * b - integral {0..a} f - integral {0..b} (inv_into {0..a} f)\<bar> < 2*\<epsilon>" if "\<epsilon> > 0" for \<epsilon>
+  proof -
     define \<delta> where "\<delta> = min a (del (\<epsilon>/a)) / 2"
     have "\<delta> > 0" "\<delta> \<le> a"
       using \<open>a > 0\<close> \<open>\<epsilon> > 0\<close> del_gt0 by (auto simp add: \<delta>_def)
@@ -799,7 +811,7 @@ proof (cases "a=0")
       by (simp add: a_seg_def field_split_simps)
 
     have f_a_seg_diff: "abs (f (a_seg (1 + real k)) - f (a_seg k)) < \<epsilon>/a" if "k<n" for k
-      using that \<open>a > 0\<close> a_seg_diff an_less_del gt0
+      using that \<open>a > 0\<close> a_seg_diff an_less_del \<open>\<epsilon> > 0\<close>
       by (intro del) auto
 
     have g12: "((\<lambda>x. g1 x - g2 x) has_integral (\<Sum>k<n. (f (a_seg (Suc k)) - f (a_seg k)) * (a/n))) {0..b}"
@@ -854,13 +866,11 @@ proof (cases "a=0")
     ultimately have g_error: "\<bar>integral {0..b} g1 - integral {0..b} ?g\<bar> < \<epsilon>"
       using integral_diff int_g1 intgb_g by fastforce
 
-    have "xxxx"
-      using int_f1 int_g1'
-      using int_f2 int_g2'
-      sorry
-  }
+    show ?thesis
+      using f_error g_error ab1 by linarith
+  qed
   show ?thesis
-    sorry
+    using * [of "\<bar>a * b - integral {0..a} f - integral {0..b} ?g\<bar> / 2"] by fastforce
 qed (use assms in force)
 
 
@@ -882,14 +892,7 @@ lemma C:
    shows "strict_mono_on (inv_into {a..b} f) {f a..f b}"
     by (metis assms strict_mono_image_endpoints strict_mono_on_inv_into)
 
-  thm has_integral
-proof -
-  have "((\<lambda>x. f a) has_integral a * f a) {0..a}"
-    using has_integral_const_real [of "f a" 0 a] \<open>a \<ge> 0\<close>
-    by simp
-  then show ?thesis
-    using has_integral_le [OF f]
-qed
+
 
 
 
