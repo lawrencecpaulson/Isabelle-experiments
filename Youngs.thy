@@ -773,12 +773,10 @@ proof (cases "a=0")
       define u where "u \<equiv> f (a_seg k)"
       define v where "v \<equiv> f (a_seg (Suc k))"
       obtain "u < v" "0 \<le> u" "0 \<le> v"
-        unfolding u_def v_def 
-        by (smt (verit, best) a_seg_ge_0 a_seg_less_iff \<open>f 0 = 0\<close> atLeast_iff lessI of_nat_0_le_iff of_nat_less_iff sm strict_mono_onD) 
-      obtain "u \<le> b" "v \<le> b"
-        apply (simp add: u_def v_def flip: \<open>f a = b\<close>)
-        by (smt (verit, best) \<open>k < n\<close> a_seg_ge_0 a_seg_le_a f_iff(2) nat_less_real_le of_nat_0_le_iff)
-
+        unfolding u_def v_def assms
+        by (smt (verit, best) a_seg_ge_0 a_seg_le_iff f(1) f_iff(1) of_nat_0_le_iff of_nat_Suc)
+      have "u \<le> b" "v \<le> b"
+        using \<open>k < n\<close> \<open>a \<ge> 0\<close> by (simp_all add: u_def v_def flip: \<open>f a = b\<close>)
       have yidx_eq: "yidx x = k" if "x \<in> {u..<v}" for x
         using \<open>0 \<le> u\<close> \<open>v \<le> b\<close> that u_def v_def yidx_equality by auto
 
@@ -813,12 +811,10 @@ proof (cases "a=0")
       using \<open>n > 0\<close> by (simp add: fa_eq_b field_simps)
     finally have int_g1': "(g1 has_integral a * b - (\<Sum>k<n. f (a_seg k)) * a / n) {0..b}"
       using int_g1 by simp
-
     text \<open>@{term "(g2 has_integral a * b - (\<Sum>k<n. f (a_seg (Suc k))) * a / n) {0..b}"} can similarly be proved.\<close> 
 
     have a_seg_diff: "a_seg (1 + real k) - a_seg k = a/n" for k
       by (simp add: a_seg_def field_split_simps)
-
     have f_a_seg_diff: "abs (f (a_seg (1 + real k)) - f (a_seg k)) < \<epsilon>/a" if "k<n" for k
       using that \<open>a > 0\<close> a_seg_diff an_less_del \<open>\<epsilon> > 0\<close>
       by (intro del) auto
@@ -932,45 +928,27 @@ proof (cases "f a < b")
       using \<open>0 \<le> f a\<close> sm_gx strict_mono_onD y(1) by fastforce
     finally show ?thesis .
   qed
-  have "g integrable_on {?b'..b}"
-  proof -
-    have "mono_on g {0..}"
-      by (simp add: sm_gx strict_mono_on_imp_mono_on)
-    moreover have "{f a..b} \<subseteq> {0..}"
-      by (simp add: \<open>0 \<le> f a\<close>)
-    ultimately show ?thesis
-      using integrable_on_mono_on mono_on_subset by blast
-  qed
-  have F: "continuous_on {f a..} g"
-    by (metis (no_types, opaque_lifting) \<open>0 \<le> f a\<close> atLeast_subset_iff cont continuous_on_subset f(1) fim g sm strict_mono_continuous_invD)
+  have "mono_on g {0..}"
+    by (simp add: sm_gx strict_mono_on_imp_mono_on)
+  then have int_g0b: "g integrable_on {0..b}"
+    by (meson Icc_subset_Ici_iff \<open>mono_on g {0..}\<close> dual_order.refl integrable_on_mono_on mono_on_subset)
+  then have int_gb'b: "g integrable_on {?b'..b}"
+    by (simp add: \<open>0 \<le> f a\<close> integrable_on_subinterval)
+  have contg: "continuous_on {f a..b} g"
+    by (metis (no_types, opaque_lifting) Icc_subset_Ici_iff \<open>0 \<le> f a\<close> cont continuous_on_subset f(1) fim g sm strict_mono_continuous_invD)
   have "a * (b - ?b') = integral {?b'..b} (\<lambda>y. a)"
     using True by force
   also have "\<dots> < integral {?b'..b} g"
-    apply (rule integral_less_real)
-    using continuous_on_const apply blast
-    using F continuous_on_subset apply fastforce
-    using True apply fastforce
-    using gt_a by force
+    using contg True gt_a by (intro integral_less_real) auto
   finally have *: "a * (b - f a) < integral {f a..b} g" .
   have "a*b = a * f a + a * (b - ?b')"
     by (simp add: algebra_simps)
   also have "\<dots> = integral {0..a} f + integral {0..f a} g + a * (b - ?b')"
-    apply (simp add: )
-    apply (rule Young_exact)
-    apply (simp add: sm)
-    using cont apply blast
-    using a apply linarith
-    apply (simp add: f(1))
-    apply simp
-    using g by blast
+    using Young_exact a cont \<open>f 0 = 0\<close> g sm by force
   also have "\<dots> < integral {0..a} f + integral {0..f a} g + integral {f a..b} g"
     by (simp add: *)
   also have "\<dots> = integral {0..a} f + integral {0..b} g"
-    apply (simp add: )
-    apply (rule Henstock_Kurzweil_Integration.integral_combine)
-    apply (simp add: \<open>0 \<le> f a\<close>)
-    using True apply fastforce
-    by (smt (verit, best) Icc_subset_Ici_iff integrable_on_mono_on mono_on_subset sm_gx strict_mono_on_imp_mono_on)
+    by (smt (verit, best) Henstock_Kurzweil_Integration.integral_combine True \<open>0 \<le> f a\<close> int_g0b)
   finally show ?thesis .
 next
   case False
