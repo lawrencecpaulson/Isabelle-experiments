@@ -24,9 +24,41 @@ proof -
   then show ?thesis
     by (simp add: real_less_rsqrt)
 qed
-
   
-  thm has_integral_Union
+  text \<open>In fact, strict inequality is required only at a single point within the box.\<close>
+  lemma integral_less:
+    fixes f :: "'n::euclidean_space \<Rightarrow> real"
+    assumes cont: "continuous_on (cbox a b) f" "continuous_on (cbox a b) g" and "box a b \<noteq> {}"
+      and fg: "\<And>x. x \<in> box a b \<Longrightarrow> f x < g x"
+    shows "integral (cbox a b) f < integral (cbox a b) g"
+  proof -
+    obtain int: "f integrable_on (cbox a b)" "g integrable_on (cbox a b)"
+      using cont integrable_continuous by blast
+    then have "integral (cbox a b) f \<le> integral (cbox a b) g"
+      by (metis fg integrable_on_open_interval integral_le integral_open_interval less_eq_real_def)
+    moreover have "integral (cbox a b) f \<noteq> integral (cbox a b) g"
+    proof (rule ccontr)
+      assume "\<not> integral (cbox a b) f \<noteq> integral (cbox a b) g"
+      then have 0: "((\<lambda>x. g x - f x) has_integral 0) (cbox a b)"
+        by (metis (full_types) cancel_comm_monoid_add_class.diff_cancel has_integral_diff int integrable_integral)
+      have cgf: "continuous_on (cbox a b) (\<lambda>x. g x - f x)"
+        using cont continuous_on_diff by blast
+      show False
+        using has_integral_0_cbox_imp_0 [OF cgf _ 0] assms(3) box_subset_cbox fg less_eq_real_def by fastforce
+    qed
+    ultimately show ?thesis
+      by linarith
+  qed
+  
+  lemma integral_less_real:
+    fixes f :: "real \<Rightarrow> real"
+    assumes "continuous_on {a..b} f" "continuous_on {a..b} g" and "{a<..<b} \<noteq> {}"
+      and "\<And>x. x \<in> {a<..<b} \<Longrightarrow> f x < g x"
+    shows "integral {a..b} f < integral {a..b} g"
+    by (metis assms box_real integral_less)
+
+
+thm has_integral_Union
   lemma has_integral_UN:
     fixes f :: "'n::euclidean_space \<Rightarrow> 'a::banach"
     assumes "finite I"
@@ -229,7 +261,7 @@ subsection \<open>Experiments involving Young's Inequality\<close>
     then have fborel: "f \<in> borel_measurable (lebesgue_on {a..b})"
       by (metis assms borel_measurable_mono_on_fnc borel_measurable_subalgebra mono_restrict_space space_lborel space_restrict_space)
     ultimately show ?thesis
-      by (rule integrable_cong_AE_imp) (auto simp add: f'_def)
+      by (rule integrable_cong_AE_imp) (auto simp: f'_def)
   qed
   
   lemma integrable_on_mono_on:
@@ -255,7 +287,44 @@ proof
   show "f ` {a..b} \<subseteq> {f a..f b}"
     using assms(1) strict_mono_on_leD by fastforce
   show "{f a..f b} \<subseteq> f ` {a..b}"
-    using assms IVT'[OF _ _ _ f] by (force simp add: Bex_def)
+    using assms IVT'[OF _ _ _ f] by (force simp: Bex_def)
+qed
+
+text \<open>Generalisations of the type of @{term f} are not obvious\<close>
+lemma strict_mono_continuous_invD:
+  fixes f :: "real \<Rightarrow> real"
+  assumes sm: "strict_mono_on f {a..}" and contf: "continuous_on {a..} f" and fim: "f ` {a..} = {f a..}"
+    and g: "\<forall>x\<ge>a. g (f x) = x"
+  shows "continuous_on {f a..} g"
+proof (clarsimp simp add: continuous_on_eq_continuous_within)
+  fix y
+  assume "f a \<le> y"
+  then obtain u where u: "y+1 = f u" "u \<ge> a"
+    by (smt (verit, best) atLeast_iff fim imageE)
+  have "continuous_on {f a..y+1} g" 
+  proof -
+    obtain "continuous_on {a..u} f"  "strict_mono_on f {a..u}"
+      using contf sm continuous_on_subset by (force simp add: strict_mono_on_def)
+    moreover have "continuous_on (f ` {a..u}) g"
+      using assms continuous_on_subset
+      by (intro continuous_on_inv) fastforce+
+    ultimately show ?thesis
+      using strict_mono_image_endpoints [of f]
+      by (simp add: strict_mono_image_endpoints u)
+  qed
+  then have *: "continuous (at y within {f a..y+1}) g"
+    by (simp add: \<open>f a \<le> y\<close> continuous_on_imp_continuous_within)
+  show "continuous (at y within {f a..}) g"
+  proof (clarsimp simp add: continuous_within_topological Ball_def)
+    fix B
+    assume "open B" and "g y \<in> B"
+    with * obtain A where A: "open A" "y \<in> A" and "\<And>x. f a \<le> x \<and> x \<le> y + 1 \<Longrightarrow> x \<in> A \<longrightarrow> g x \<in> B"
+      by (force simp: continuous_within_topological)
+    then have "\<forall>x\<ge>f a. x \<in> A \<inter> ball y 1 \<longrightarrow> g x \<in> B"
+      by (smt (verit, ccfv_threshold) IntE dist_norm mem_ball real_norm_def)
+    then show "\<exists>A. open A \<and> y \<in> A \<and> (\<forall>x\<ge>f a. x \<in> A \<longrightarrow> g x \<in> B)"
+      by (metis Elementary_Metric_Spaces.open_ball Int_iff A centre_in_ball open_Int zero_less_one)
+  qed
 qed
 
 lemma strict_mono_continuous_inv:
@@ -334,7 +403,7 @@ lemma Union_regular_division:
   assumes "a \<le> b" 
   shows "\<Union>(regular_division a b n) = (if n=0 then {} else {a..b})"
   using assms
-  by (auto simp add: regular_division_def Union_segments translate_scale_01 simp flip: image_Union)
+  by (auto simp: regular_division_def Union_segments translate_scale_01 simp flip: image_Union)
 
 
 lemma regular_division_eqI:
@@ -404,14 +473,17 @@ lemma weighted_nesting_sum:
   shows "(\<Sum>k<n. (1 + of_nat k) * (g (Suc k) - g k)) = of_nat n * g n - (\<Sum>i<n. g i)"
   by (induction n) (auto simp: algebra_simps)
 
-theorem Young:
+
+theorem Young_exact:
   fixes f :: "real \<Rightarrow> real"
-  assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and a: "0 \<le> a" "0 \<le> b" 
-    and f[simp]: "f 0 = 0" "f a = b"
+  assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and a: "0 \<le> a" 
+    and f: "f 0 = 0" "f a = b"
   shows "a*b = integral {0..a} f + integral {0..b} (inv_into {0..a} f)" (is "_ = _ + integral {0..b} ?g")
 proof (cases "a=0")
   case False
   with \<open>0 \<le> a\<close> have "a > 0" by linarith
+  have "b \<ge> 0"
+    by (smt (verit, best) \<open>0 < a\<close> atLeast_iff f sm strict_mono_onD)
   have cont_0a: "continuous_on {0..a} f"
     using cont continuous_on_subset by fastforce
   with sm have "continuous_on {0..b} ?g"
@@ -426,7 +498,7 @@ proof (cases "a=0")
     if "x \<ge> 0" "y \<ge> 0" for x y
     using that by (smt (verit, best) atLeast_iff sm strict_mono_onD)+
   have fim: "f ` {0..a} = {0..b}"
-    by (simp add: \<open>0 \<le> a\<close> cont_0a strict_mono_image_endpoints strict_mono_on_def)
+    by (simp add: \<open>0 \<le> a\<close> cont_0a strict_mono_image_endpoints strict_mono_on_def f)
   have "uniformly_continuous_on {0..a} f"
     using compact_uniformly_continuous cont_0a by blast
   then obtain del where del_gt0: "\<And>e. e>0 \<Longrightarrow> del e > 0" 
@@ -437,7 +509,7 @@ proof (cases "a=0")
   proof -
     define \<delta> where "\<delta> = min a (del (\<epsilon>/a)) / 2"
     have "\<delta> > 0" "\<delta> \<le> a"
-      using \<open>a > 0\<close> \<open>\<epsilon> > 0\<close> del_gt0 by (auto simp add: \<delta>_def)
+      using \<open>a > 0\<close> \<open>\<epsilon> > 0\<close> del_gt0 by (auto simp: \<delta>_def)
 
     define n where "n \<equiv> nat\<lfloor>a / \<delta>\<rfloor>"
     define a_seg where "a_seg \<equiv> \<lambda>u::real. u * a/n"
@@ -465,7 +537,7 @@ proof (cases "a=0")
     have f1_lower: "f1 x \<le> f x" if "0 \<le> x" "x \<le> a" for x
     proof -
       have "lower x \<le> x"
-        using \<open>n > 0\<close> floor_divide_lower [OF \<open>a > 0\<close>] by (auto simp add: lower_def a_seg_def field_simps)
+        using \<open>n > 0\<close> floor_divide_lower [OF \<open>a > 0\<close>] by (auto simp: lower_def a_seg_def field_simps)
       moreover have "lower x \<ge> 0"
         unfolding lower_def using \<open>n > 0\<close> \<open>0 \<le> a\<close> \<open>0 \<le> x\<close> by force
       ultimately show ?thesis
@@ -478,7 +550,7 @@ proof (cases "a=0")
       have "x \<le> upper x"
         using \<open>n > 0\<close> ceiling_divide_upper [OF \<open>a > 0\<close>] by (simp add: upper_def a_seg_def field_simps)
       then show ?thesis
-        using sm strict_mono_on_leD \<open>0 \<le> x\<close> by (force simp add: f2_def)
+        using sm strict_mono_on_leD \<open>0 \<le> x\<close> by (force simp: f2_def)
     qed
     let ?\<D> = "regular_division 0 a n"
     have div: "?\<D> division_of {0..a}"
@@ -490,7 +562,7 @@ proof (cases "a=0")
     proof -
       from regular_divisionE [OF that] \<open>a > 0\<close>
       obtain k where "k<n" and k: "K = {a_seg(real k)..a_seg(Suc k)}"
-        by (auto simp add: a_seg_def mult.commute)
+        by (auto simp: a_seg_def mult.commute)
       define u where "u \<equiv> a_seg k"
       define v where "v \<equiv> a_seg (Suc k)"
       have "u < v" "0 \<le> u" "0 \<le> v" "u \<le> a" "v \<le> a" and Kuv: "K = {u..v}"
@@ -567,7 +639,7 @@ proof (cases "a=0")
       define k where "k \<equiv> nat \<lfloor>x/a * n\<rfloor>"
       have x_lims: "a_seg k \<le> x" "x < a_seg (Suc k)"
         using \<open>n > 0\<close> \<open>0 < a\<close> floor_divide_lower floor_divide_upper [of a "x*n"] x
-        by (auto simp add: k_def a_seg_def field_simps)
+        by (auto simp: k_def a_seg_def field_simps)
       with that x obtain f_lims: "f (a_seg k) \<le> y" "y < f (a_seg (Suc k))"
         using strict_mono_onD [OF sm] by force
       then have "a_seg (yidx y) \<le> a_seg k"
@@ -596,9 +668,9 @@ proof (cases "a=0")
       have "a < (1 + real n) * a / real n"
         using \<open>0 < n\<close> \<open>0 < a\<close> by (simp add: divide_simps)
       then have "b < f (a_seg (1 + real n))"
-        using \<open>0 \<le> a\<close> a_seg_def sm strict_mono_onD by fastforce
+        using f \<open>0 \<le> a\<close> a_seg_def sm strict_mono_onD by fastforce
       then show ?thesis
-        using \<open>0 \<le> b\<close> by (auto simp: a_seg_def yidx_equality)
+        using \<open>0 \<le> b\<close> by (auto simp: f a_seg_def yidx_equality)
     qed
     moreover have yidx_less_n: "yidx y < n" if "y < b" for y
       by (metis \<open>0 < n\<close> fa_eq_b gr0_conv_Suc less_Suc_eq_le that Least_le yidx_def)
@@ -611,7 +683,7 @@ proof (cases "a=0")
       proof
         fix y assume y: "y \<in> {0..b}"
         have fn: "f (a_seg n) = b"
-          using a_seg_eq_a_iff assms(6) by fastforce
+          using a_seg_eq_a_iff \<open>f a = b\<close> by fastforce
         show "y \<in> ?rhs"
         proof (cases "y=b")
           case True
@@ -674,7 +746,7 @@ proof (cases "a=0")
       qed
       have "\<exists>K\<in>regular_division 0 a n. k = nat \<lfloor>Inf K * real n / a\<rfloor>" if "k < n" for k
         using \<open>n > 0\<close> \<open>a > 0\<close> that
-        by (force simp add: divide_simps intro: regular_division_eqI [OF refl])
+        by (force simp: divide_simps intro: regular_division_eqI [OF refl])
       then show "DN ` regular_division 0 a n = {..<n}"
         using \<open>0 < a\<close> by (auto simp: DN_def bij_betw_def image_iff frac_le elim!: regular_divisionE)
     qed
@@ -700,10 +772,10 @@ proof (cases "a=0")
       define v where "v \<equiv> f (a_seg (Suc k))"
       obtain "u < v" "0 \<le> u" "0 \<le> v"
         unfolding u_def v_def 
-        by (smt (verit, best) a_seg_ge_0 a_seg_less_iff assms(5) atLeast_iff lessI of_nat_0_le_iff of_nat_less_iff sm strict_mono_onD) 
+        by (smt (verit, best) a_seg_ge_0 a_seg_less_iff \<open>f 0 = 0\<close> atLeast_iff lessI of_nat_0_le_iff of_nat_less_iff sm strict_mono_onD) 
       obtain "u \<le> b" "v \<le> b"
         apply (simp add: u_def v_def flip: \<open>f a = b\<close>)
-        by (smt (verit, best) \<open>k < n\<close> \<open>yidx b = n\<close> a_seg_ge_0 a_seg_le_a assms(4) assms(6) atLeastAtMost_iff atLeastLessThan_iff atLeast_iff of_nat_0_le_iff of_nat_1 of_nat_add of_nat_less_iff plus_1_eq_Suc sm strict_mono_onD yidx_equality)
+        by (smt (verit, best) \<open>k < n\<close> a_seg_ge_0 a_seg_le_a f_iff(2) nat_less_real_le of_nat_0_le_iff)
 
       have yidx_eq: "yidx x = k" if "x \<in> {u..<v}" for x
         using \<open>0 \<le> u\<close> \<open>v \<le> b\<close> that u_def v_def yidx_equality by auto
@@ -728,7 +800,7 @@ proof (cases "a=0")
     have int_g1: "(g1 has_integral (\<Sum>k<n. a_seg (Suc k) * (f (a_seg (Suc k)) - f (a_seg k)))) {0..b}"
     and int_g2: "(g2 has_integral (\<Sum>k<n. a_seg k * (f (a_seg (Suc k)) - f (a_seg k)))) {0..b}"
       unfolding zero_to_b_eq using int_g1_D int_g2_D
-      by (auto simp add: min_def pairwise_def intro!: has_integral_UN negligible_atLeastAtMostI)
+      by (auto simp: min_def pairwise_def intro!: has_integral_UN negligible_atLeastAtMostI)
 
     have "(\<Sum>k<n. a_seg (Suc k) * (f (a_seg (Suc k)) - f (a_seg k)))
         = (\<Sum>k<n. (Suc k) * (f (a_seg (Suc k)) - f (a_seg k))) * (a/n)"
@@ -779,7 +851,7 @@ proof (cases "a=0")
     proof (rule integral_le)
       show "(\<lambda>x. f x - f1 x) integrable_on {0..a}" "(\<lambda>x. f2 x - f1 x) integrable_on {0..a}"
         using Henstock_Kurzweil_Integration.integrable_diff int_f1 intgb_f f12 by blast+
-    qed (auto simp add: f2_upper)
+    qed (auto simp: f2_upper)
     with f2_near_f1 have "integral {0..a} (\<lambda>x. f x - f1 x) < \<epsilon>"
       by simp
     moreover have "integral {0..a} f1 \<le> integral {0..a} f"
@@ -791,7 +863,7 @@ proof (cases "a=0")
     proof (rule integral_le)
       show "(\<lambda>x. g1 x - ?g x) integrable_on {0..b}" "(\<lambda>x. g1 x - g2 x) integrable_on {0..b}"
         using Henstock_Kurzweil_Integration.integrable_diff int_g1 int_g2 intgb_g by blast+
-    qed (auto simp add: g2_le_g)
+    qed (auto simp: g2_le_g)
     with g2_near_g1 have "integral {0..b} (\<lambda>x. g1 x - ?g x) < \<epsilon>"
       by simp
     moreover have "integral {0..b} ?g \<le> integral {0..b} g1"
@@ -809,13 +881,12 @@ qed (use assms in force)
 
 
 
-
-lemma B:
-  fixes f :: "'a::linorder \<Rightarrow> 'b::linorder"
-  assumes "strict_mono_on f S"  
-  shows "bij_betw (inv_into S f) (f ` S) S"
-  by (meson assms bij_betw_imageI strict_mono_on_imp_inj_on assms bij_betw_inv_into)
-
+lemma C'':
+  fixes f :: "'a::linear_continuum_topology \<Rightarrow> 'b::linorder_topology"
+  assumes "strict_mono_on f {a..b}"  "continuous_on {a..b} f"  "a \<le> b"
+    and g: "\<And>x. \<lbrakk>a \<le> x; x \<le> b\<rbrakk> \<Longrightarrow> g (f x) = x"
+  shows "strict_mono_on g {f a..f b}"
+  by (smt (verit, del_insts) IVT' assms atLeastAtMost_iff le_less linorder_not_le strict_mono_on_def)
 
 
 lemma C:
@@ -823,6 +894,87 @@ lemma C:
   assumes "strict_mono_on f {a..b}"  "continuous_on {a..b} f"  "a \<le> b"
    shows "strict_mono_on (inv_into {a..b} f) {f a..f b}"
     by (metis assms strict_mono_image_endpoints strict_mono_on_inv_into)
+
+lemma C':
+  fixes f :: "'a::linear_continuum_topology \<Rightarrow> 'b::linorder_topology"
+  assumes sm: "strict_mono_on f {a..}" and "continuous_on {a..} f" and "b \<ge> a"
+  shows "strict_mono_on (inv_into {a..} f) {f a..f b}" 
+  by (smt (verit, ccfv_threshold) C'' Icc_subset_Ici_iff assms(2) assms(3) atLeastAtMost_iff atLeast_iff continuous_on_subset dual_order.refl inv_into_f_f sm strict_mono_on_def strict_mono_on_imp_inj_on)
+
+
+
+
+lemma Young_strict:
+  fixes f :: "real \<Rightarrow> real"
+  assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and a: "0 < a" 
+    and f: "f 0 = 0" "f a \<noteq> b" "f ` {0..} = {0..}"
+  shows "a*b < integral {0..a} f + integral {0..b} (inv_into {0..} f)" (is "_ < _ + integral {0..b} ?g")
+proof (cases "f a < b")
+  case True
+  have f_iff [simp]: "f x < f y \<longleftrightarrow> x < y" "f x \<le> f y \<longleftrightarrow> x \<le> y"
+    if "x \<ge> 0" "y \<ge> 0" for x y
+    using that by (smt (verit, best) atLeast_iff sm strict_mono_onD)+
+  let ?b' = "f a"
+  have "?b' \<ge> 0"
+    by (smt (verit, best) \<open>0 < a\<close> atLeast_iff f sm strict_mono_onD)
+  then have sm_gx: "strict_mono_on ?g {0..}"
+    by (metis f(3) sm strict_mono_on_inv_into)
+  have gt_a: "a < ?g y" if "y \<in> {?b'<..b}" for y
+  proof -
+    have y: "?b' < y" "y \<le> b"
+      using that by auto
+    have "a = ?g ?b'"
+      using a sm strict_mono_on_imp_inj_on by fastforce
+    also have "... < ?g y"
+      using \<open>0 \<le> f a\<close> sm_gx strict_mono_onD y(1) by fastforce
+    finally show ?thesis .
+  qed
+  have "?g integrable_on {?b'..b}"
+  proof -
+    have "mono_on ?g {0..}"
+      by (simp add: sm_gx strict_mono_on_imp_mono_on)
+    moreover have "{f a..b} \<subseteq> {0..}"
+      by (simp add: \<open>0 \<le> f a\<close>)
+    ultimately show ?thesis
+      using integrable_on_mono_on mono_on_subset by blast
+  qed
+  have F: "continuous_on {f a..} ?g"
+    by (metis \<open>0 \<le> f a\<close> atLeast_iff atLeast_subset_iff cont continuous_on_subset f(1) f(3) inv_into_f_f sm strict_mono_continuous_invD strict_mono_on_imp_inj_on)
+  have "a * (b - ?b') = integral {?b'..b} (\<lambda>y. a)"
+    using True by force
+  also have "... < integral {?b'..b} ?g"
+    apply (rule integral_less_real)
+    using continuous_on_const apply blast
+    using F continuous_on_subset apply fastforce
+    using True apply fastforce
+    using gt_a by force
+  finally have "a * (b - f a) < integral {f a..b} ?g" .
+  have "a*b = a * f a + a * (b - ?b')"
+    by (simp add: algebra_simps)
+  have "a*b = integral {0..a} f + integral {0..b} ?g"
+    sorry
+  then show ?thesis
+    
+    sorry
+next
+  case False
+  then show ?thesis sorry
+qed
+
+lemma Young_less:
+  fixes f :: "real \<Rightarrow> real"
+  assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and a: "0 \<le> a" "0 \<le> b" 
+    and f[simp]: "f 0 = 0" "f a > b"
+  shows "a*b < integral {0..a} f + integral {0..b} (inv_into {0..a} f)" (is "_ < _ + integral {0..b} ?g")
+proof -
+
+
+lemma B:
+  fixes f :: "'a::linorder \<Rightarrow> 'b::linorder"
+  assumes "strict_mono_on f S"  
+  shows "bij_betw (inv_into S f) (f ` S) S"
+  by (meson assms bij_betw_imageI strict_mono_on_imp_inj_on assms bij_betw_inv_into)
+
 
 
 
