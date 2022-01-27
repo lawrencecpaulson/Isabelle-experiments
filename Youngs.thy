@@ -901,15 +901,13 @@ lemma C':
 
 
 
-
 lemma Young_strict:
   fixes f :: "real \<Rightarrow> real"
-  assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and a: "0 < a" 
+  assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and "0 < a" and "b \<ge> 0"
     and f: "f 0 = 0" "f a \<noteq> b" and fim: "f ` {0..} = {0..}"
     and g: "\<And>x. 0 \<le> x \<Longrightarrow> g (f x) = x"
   shows "a*b < integral {0..a} f + integral {0..b} g"
-proof (cases "f a < b")
-  case True
+proof -
   have f_iff [simp]: "f x < f y \<longleftrightarrow> x < y" "f x \<le> f y \<longleftrightarrow> x \<le> y"
     if "x \<ge> 0" "y \<ge> 0" for x y
     using that by (smt (verit, best) atLeast_iff sm strict_mono_onD)+
@@ -918,42 +916,72 @@ proof (cases "f a < b")
     by (smt (verit, best) \<open>0 < a\<close> atLeast_iff f sm strict_mono_onD)
   then have sm_gx: "strict_mono_on g {0..}"
     by (smt (verit, best) atLeast_iff f_iff(1) f_inv_into_f fim g inv_into_into strict_mono_on_def)
-  have gt_a: "a < g y" if "y \<in> {?b'<..b}" for y
-  proof -
-    have y: "?b' < y" "y \<le> b"
-      using that by auto
-    have "a = g ?b'"
-      using a g by force
-    also have "\<dots> < g y"
-      using \<open>0 \<le> f a\<close> sm_gx strict_mono_onD y(1) by fastforce
+  show ?thesis
+  proof (cases "?b' < b")
+    case True
+    have gt_a: "a < g y" if "y \<in> {?b'<..b}" for y
+    proof -
+      have "a = g ?b'"
+        using \<open>a > 0\<close> g by force
+      also have "\<dots> < g y"
+        using \<open>0 \<le> ?b'\<close> sm_gx strict_mono_onD that by fastforce
+      finally show ?thesis .
+    qed
+    have "mono_on g {0..}"
+      by (simp add: sm_gx strict_mono_on_imp_mono_on)
+    then have int_g0b: "g integrable_on {0..b}"
+      by (meson Icc_subset_Ici_iff \<open>mono_on g {0..}\<close> dual_order.refl integrable_on_mono_on mono_on_subset)
+    then have int_gb'b: "g integrable_on {?b'..b}"
+      by (simp add: \<open>0 \<le> ?b'\<close> integrable_on_subinterval)
+    have contg: "continuous_on {?b'..b} g"
+      by (metis (no_types, opaque_lifting) Icc_subset_Ici_iff \<open>0 \<le> ?b'\<close> cont continuous_on_subset f(1) fim g sm strict_mono_continuous_invD)
+    have "a * (b - ?b') = integral {?b'..b} (\<lambda>y. a)"
+      using True by force
+    also have "\<dots> < integral {?b'..b} g"
+      using contg True gt_a by (intro integral_less_real) auto
+    finally have *: "a * (b - ?b') < integral {?b'..b} g" .
+    have "a*b = a * ?b' + a * (b - ?b')"
+      by (simp add: algebra_simps)
+    also have "\<dots> = integral {0..a} f + integral {0..?b'} g + a * (b - ?b')"
+      using Young_exact \<open>a > 0\<close> cont \<open>f 0 = 0\<close> g sm by force
+    also have "\<dots> < integral {0..a} f + integral {0..?b'} g + integral {?b'..b} g"
+      by (simp add: *)
+    also have "\<dots> = integral {0..a} f + integral {0..b} g"
+      by (smt (verit, best) Henstock_Kurzweil_Integration.integral_combine True \<open>0 \<le> ?b'\<close> int_g0b)
+    finally show ?thesis .
+  next
+    case False
+    with f have "b < ?b'" by force
+    obtain a' where "f a' = b" "a' \<ge> 0"
+      using fim \<open>b \<ge> 0\<close> by force 
+    then have "a' < a"
+      using \<open>b < f a\<close> \<open>a > 0\<close> by force
+    have gt_b: "b < f x" if "x \<in> {a'<..a}" for x
+      using \<open>0 \<le> a'\<close> \<open>f a' = b\<close> that by fastforce
+    have int_f0a: "f integrable_on {0..a}"
+      by (simp add: integrable_on_mono_on mono_on_def)
+    then have int_fa'a: "f integrable_on {a'..a}"
+      by (simp add: \<open>0 \<le> a'\<close> integrable_on_subinterval)
+    have cont_f': "continuous_on {a'..a} f"
+      by (meson Icc_subset_Ici_iff \<open>0 \<le> a'\<close> cont continuous_on_subset)
+    have "b * (a - a') = integral {a'..a} (\<lambda>x. b)"
+      using \<open>a' < a\<close> by simp
+    also have "\<dots> < integral {a'..a} f"
+      using cont_f' \<open>a' < a\<close> gt_b by (intro integral_less_real) auto
+    finally have *: "b * (a - a') < integral {a'..a} f" .
+    have "a*b = a' * b + b * (a - a')"
+      by (simp add: algebra_simps)
+    also have "\<dots> = integral {0..a'} f + integral {0..b} g + b * (a - a')"
+      by (simp add: Young_exact \<open>0 \<le> a'\<close> \<open>f a' = b\<close> cont f g sm)
+    also have "\<dots> < integral {0..a'} f + integral {0..b} g + integral {a'..a} f"
+      by (simp add: *)
+    also have "\<dots> = integral {0..a} f + integral {0..b} g"
+      by (smt (verit, best) Henstock_Kurzweil_Integration.integral_combine \<open>0 \<le> a'\<close> \<open>a' < a\<close> int_f0a)
     finally show ?thesis .
   qed
-  have "mono_on g {0..}"
-    by (simp add: sm_gx strict_mono_on_imp_mono_on)
-  then have int_g0b: "g integrable_on {0..b}"
-    by (meson Icc_subset_Ici_iff \<open>mono_on g {0..}\<close> dual_order.refl integrable_on_mono_on mono_on_subset)
-  then have int_gb'b: "g integrable_on {?b'..b}"
-    by (simp add: \<open>0 \<le> f a\<close> integrable_on_subinterval)
-  have contg: "continuous_on {f a..b} g"
-    by (metis (no_types, opaque_lifting) Icc_subset_Ici_iff \<open>0 \<le> f a\<close> cont continuous_on_subset f(1) fim g sm strict_mono_continuous_invD)
-  have "a * (b - ?b') = integral {?b'..b} (\<lambda>y. a)"
-    using True by force
-  also have "\<dots> < integral {?b'..b} g"
-    using contg True gt_a by (intro integral_less_real) auto
-  finally have *: "a * (b - f a) < integral {f a..b} g" .
-  have "a*b = a * f a + a * (b - ?b')"
-    by (simp add: algebra_simps)
-  also have "\<dots> = integral {0..a} f + integral {0..f a} g + a * (b - ?b')"
-    using Young_exact a cont \<open>f 0 = 0\<close> g sm by force
-  also have "\<dots> < integral {0..a} f + integral {0..f a} g + integral {f a..b} g"
-    by (simp add: *)
-  also have "\<dots> = integral {0..a} f + integral {0..b} g"
-    by (smt (verit, best) Henstock_Kurzweil_Integration.integral_combine True \<open>0 \<le> f a\<close> int_g0b)
-  finally show ?thesis .
-next
-  case False
-  then show ?thesis sorry
 qed
+
+
 
 
 lemma B:
