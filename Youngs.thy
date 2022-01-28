@@ -6,6 +6,12 @@ theory Youngs imports
    
 begin
 
+lemma inv_into_subset_eq:
+  assumes "inj_on f A" "B \<subseteq> A" "b \<in> f ` B"
+  shows "inv_into A f b = inv_into B f b"
+  using assms inj_on_subset by fastforce
+
+
 text \<open>Kevin Buzzard's examples\<close>
 lemma
   fixes x::real
@@ -901,7 +907,7 @@ lemma C':
 
 
 
-lemma Young_strict:
+corollary Young_strict:
   fixes f :: "real \<Rightarrow> real"
   assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and "0 < a" and "b \<ge> 0"
     and f: "f 0 = 0" "f a \<noteq> b" and fim: "f ` {0..} = {0..}"
@@ -981,6 +987,25 @@ proof -
   qed
 qed
 
+corollary Young_inequality:
+  fixes f :: "real \<Rightarrow> real"
+  assumes sm: "strict_mono_on f {0..}" and cont: "continuous_on {0..} f" and "a \<ge> 0" and "b \<ge> 0"
+    and f: "f 0 = 0" and fim: "f ` {0..} = {0..}"
+    and g: "\<And>x. 0 \<le> x \<Longrightarrow> g (f x) = x"
+  shows "a*b \<le> integral {0..a} f + integral {0..b} g"
+proof (cases "a=0")
+  case True
+  have "g x \<ge> 0" if "x \<ge> 0" for x
+    by (metis atLeast_iff fim g imageE that)
+  then have "0 \<le> integral {0..b} g"
+    by (metis Henstock_Kurzweil_Integration.integral_nonneg atLeastAtMost_iff not_integrable_integral order_refl)
+  then show ?thesis 
+    by (simp add: True)
+next
+  case False
+  then show ?thesis
+    by (smt (verit) assms Young_exact Young_strict)
+qed
 
 
 
