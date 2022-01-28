@@ -1,4 +1,4 @@
-section \<open>Young's inequality for increasing functions\<close>
+section \<open>Young's Inequality for Increasing Functions\<close>
 
 text \<open>From the following paper: 
 Cunningham, F., and Nathaniel Grossman. “On Young’s Inequality.” 
