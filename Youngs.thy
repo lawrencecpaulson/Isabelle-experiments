@@ -1,7 +1,8 @@
 section \<open>Young's inequality for increasing functions\<close>
 
-text \<open>From the paper "On Young's Inequality" by F. Cunningham, Jr. and N. Grossman
-The American Mathematical Monthly 78:7 (1971), 781-783, 
+text \<open>From the following paper: 
+Cunningham, F., and Nathaniel Grossman. “On Young’s Inequality.” 
+The American Mathematical Monthly 78, no. 7 (1971): 781–83. 
 \url{https://doi.org/10.2307/2318018}\<close>
 
 theory Youngs imports
@@ -216,6 +217,9 @@ proof (clarsimp simp add: continuous_on_eq_continuous_within)
 qed
 
 subsection \<open>Regular divisions\<close>
+
+text \<open>Our lack of the Riemann integral forces us to construct explicitly
+the step functions mentioned in the text.\<close>
 
 definition "segment \<equiv> \<lambda>n k. {real k / real n..(1 + k) / real n}"
 
