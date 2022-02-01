@@ -5,6 +5,8 @@ theory Sets imports "ZFC_in_HOL.ZFC_Typeclasses" "HOL-Complex_Analysis.Complex_A
    
 begin
 
+subsection \<open>For the libraries\<close>
+
 thm real_non_denum
 theorem complex_non_denum: "\<nexists>f :: nat \<Rightarrow> complex. surj f"
   by (metis (full_types) Re_complex_of_real comp_surj real_non_denum surj_def)
@@ -12,11 +14,7 @@ theorem complex_non_denum: "\<nexists>f :: nat \<Rightarrow> complex. surj f"
 lemma uncountable_UNIV_complex: "uncountable (UNIV :: complex set)"
   using complex_non_denum unfolding uncountable_def by auto
 
-lemma "(UNIV :: V set) \<notin> range elts"
-  using mem_not_refl by blast
-
-lemma "ON \<notin> range elts"
-  using big_ON by fastforce
+subsection \<open>Making the embedding explicit (possibly add to the AFP entry?\<close>
 
 definition V_of :: "'a::embeddable \<Rightarrow> V"
   where "V_of \<equiv> SOME f. inj f"
@@ -32,37 +30,25 @@ lemma infinite_V_of: "infinite (UNIV::'a set) \<Longrightarrow> infinite (range 
 lemma countable_V_of: "countable (range (V_of::'a::countable\<Rightarrow>V))"
   by blast
 
+subsection \<open>The cardinality of the continuum\<close>
+
 definition "Real_set \<equiv> ZFC_in_HOL.set (range (V_of::real\<Rightarrow>V))"
-    
-lemma V_of_real: "bij_betw V_of (UNIV::real set) (range (V_of::real\<Rightarrow>V))"
-  by (metis V_of_def embeddable_class.ex_inj inj_on_imp_bij_betw someI_ex)
+definition "Complex_set \<equiv> ZFC_in_HOL.set (range (V_of::complex\<Rightarrow>V))"
+definition "C_continuum \<equiv> vcard Real_set"
 
 lemma V_of_Real_set: "bij_betw V_of (UNIV::real set) (elts Real_set)"
-  by (simp add: Real_set_def V_of_real)
-
-lemma infinite_Real_set: "infinite (elts Real_set)"
-  using V_of_Real_set bij_betw_finite infinite_UNIV_char_0 by blast
+  by (simp add: Real_set_def bij_betw_def inj_V_of)
 
 lemma uncountable_Real_set: "uncountable (elts Real_set)"
   using V_of_Real_set countable_iff_bij uncountable_UNIV_real by blast
-
-definition "Complex_set \<equiv> ZFC_in_HOL.set (range (V_of::complex\<Rightarrow>V))"
     
-lemma V_of_complex: "bij_betw V_of (UNIV::complex set) (range (V_of::complex\<Rightarrow>V))"
-  by (metis V_of_def embeddable_class.ex_inj inj_on_imp_bij_betw someI_ex)
-
 lemma V_of_Complex_set: "bij_betw V_of (UNIV::complex set) (elts Complex_set)"
-  by (simp add: Complex_set_def V_of_complex)
+  by (simp add: Complex_set_def bij_betw_def inj_V_of)
 
 lemma uncountable_Complex_set: "uncountable (elts Complex_set)"
   using V_of_Complex_set countableI_bij2 uncountable_UNIV_complex by blast
 
-lemma infinite_Complex_set: "infinite (elts Complex_set)"
-  by (simp add: uncountable_Complex_set uncountable_infinite)
-
-definition "C_Continuum \<equiv> vcard Real_set"
-
-lemma Complex_vcard: "C_Continuum = vcard Complex_set"
+lemma Complex_vcard: "C_continuum = vcard Complex_set"
 proof -
   define emb1 where "emb1 \<equiv> V_of o complex_of_real o inv V_of"
   have "elts Real_set \<approx> elts Complex_set"
@@ -87,12 +73,38 @@ proof -
         by (simp add: emb2_def Real_set_def Complex_set_def image_subset_iff)
     qed
     also have "...  \<approx> elts Real_set"
-      by (metis infinite_Real_set infinite_times_eqpoll_self)
+      by (simp add: infinite_times_eqpoll_self uncountable_Real_set uncountable_infinite)
     finally show "elts Complex_set \<lesssim> elts Real_set" .
   qed
   then show ?thesis
-    by (simp add: C_Continuum_def cardinal_cong)
+    by (simp add: C_continuum_def cardinal_cong)
 qed
+
+subsection \<open>Wetzel's property\<close>
+
+definition Wetzel :: "(complex \<Rightarrow> complex) set \<Rightarrow> bool"
+  where "Wetzel \<equiv> \<lambda>F. (\<forall>f\<in>F. f analytic_on UNIV) \<and> (\<forall>z. countable((\<lambda>f. f z) ` F))"
+
+
+proposition Erdos_Wetzel_nonCH:
+  assumes W: "Wetzel F" and NCH: "C_continuum > Aleph 1"
+  shows "countable F"
+  sorry
+
+
+
+proposition Erdos_Wetzel_CH:
+  assumes CH: "C_continuum = Aleph 1"
+  obtains F where "Wetzel F" and "uncountable F"
+  sorry
+
+
+theorem Erdos_Wetzel: "C_continuum = Aleph 1 \<longleftrightarrow> (\<exists>F. Wetzel F \<and> uncountable F)"
+  by (metis C_continuum_def Erdos_Wetzel_CH Erdos_Wetzel_nonCH Ord_\<omega>1 Ord_cardinal Ord_linear_lt cardinal_idem countable_iff_le_Aleph0 countable_iff_less_\<omega>1 uncountable_Real_set)
+
+
+
+subsection \<open>random junk\<close>
 
 text \<open>Every small, embeddable HOL type is in bijection with a ZF set. Example, the reals:\<close>
 lemma "\<exists>f R. bij_betw f (UNIV::real set) (elts R)"
