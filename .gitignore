@@ -1,2 +1,5 @@
 *.bbl
 root.pdf
+document/root.aux
+document/root.log
+document/root.toc
