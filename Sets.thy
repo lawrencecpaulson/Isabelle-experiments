@@ -30,6 +30,9 @@ lemma infinite_V_of: "infinite (UNIV::'a set) \<Longrightarrow> infinite (range 
 lemma countable_V_of: "countable (range (V_of::'a::countable\<Rightarrow>V))"
   by blast
 
+lemma elts_set_V_of: "small X \<Longrightarrow> elts (ZFC_in_HOL.set (V_of ` X)) \<approx> X"
+  by (metis inj_V_of inj_eq inj_on_def inj_on_image_eqpoll_self replacement set_of_elts small_iff)
+
 subsection \<open>The cardinality of the continuum\<close>
 
 definition "Real_set \<equiv> ZFC_in_HOL.set (range (V_of::real\<Rightarrow>V))"
@@ -62,7 +65,7 @@ proof -
       show "emb1 ` elts Real_set \<subseteq> elts Complex_set"
         by (simp add: emb1_def Real_set_def Complex_set_def image_subset_iff)
     qed
-  define emb2 where "emb2 \<equiv> (\<lambda>z. (V_of (Re z), V_of (Im z))) o inv V_of"
+    define emb2 where "emb2 \<equiv> (\<lambda>z. (V_of (Re z), V_of (Im z))) o inv V_of"
     have "elts Complex_set \<lesssim> elts Real_set \<times> elts Real_set"
       unfolding lepoll_def
     proof (intro conjI exI)
@@ -85,11 +88,73 @@ subsection \<open>Wetzel's property\<close>
 definition Wetzel :: "(complex \<Rightarrow> complex) set \<Rightarrow> bool"
   where "Wetzel \<equiv> \<lambda>F. (\<forall>f\<in>F. f analytic_on UNIV) \<and> (\<forall>z. countable((\<lambda>f. f z) ` F))"
 
+text \<open>Cardinality of an arbitrary HOL set\<close>
+definition gcard :: "'a::embeddable set \<Rightarrow> V" 
+  where "gcard X \<equiv> vcard (ZFC_in_HOL.set (V_of ` X))"
+
+lemma gcard_eq_vcard [simp]: "gcard (elts x) = vcard x"
+  by (metis cardinal_cong elts_set_V_of gcard_def small_elts)
+
+
+thm countable_iff_le_Aleph0
+lemma finite_iff_less_Aleph0: "finite (elts x) \<longleftrightarrow> vcard x < \<omega>"
+proof
+  show "finite (elts x) \<Longrightarrow> vcard x < \<omega>"
+    by (metis Card_\<omega> Card_def finite_lesspoll_infinite infinite_\<omega> lesspoll_imp_Card_less)
+  show "vcard x < \<omega> \<Longrightarrow> finite (elts x)"
+    by (meson Ord_\<omega> Ord_cardinal Ord_mem_iff_lt cardinal_eqpoll eqpoll_finite_iff finite_Ord_omega)
+qed
+
+lemma D: "inv V_of ` (V_of ` X) = X"
+  by (auto simp: image_comp)
+
+lemma E: "small X \<Longrightarrow> elts (gcard X) \<approx> X"
+  by (metis cardinal_eqpoll elts_set_V_of eqpoll_trans gcard_def)
+
+lemma countable_iff_g_le_Aleph0: "small X \<Longrightarrow> countable X \<longleftrightarrow> gcard X \<le> \<aleph>0"
+  by (metis D countable_iff_le_Aleph0 countable_image elts_of_set gcard_def replacement)
+
+lemma countable_imp_g_le_Aleph0: "countable X \<Longrightarrow> gcard X \<le> \<aleph>0"
+  by (meson countable countable_iff_g_le_Aleph0)
+
+lemma finite_iff_g_le_Aleph0: "small X \<Longrightarrow> finite X \<longleftrightarrow> gcard X < \<aleph>0"
+  by (metis Aleph_0 elts_set_V_of eqpoll_finite_iff finite_iff_less_Aleph0 gcard_def)
+
+lemma finite_imp_g_le_Aleph0: "finite X \<Longrightarrow> gcard X < \<aleph>0"
+  by (meson finite_iff_g_le_Aleph0 finite_imp_small)
+
+lemma countable_infinite_vcard: "countable (elts x) \<and> infinite (elts x) \<longleftrightarrow> vcard x = Aleph 0"
+  by (metis Aleph_0 countable_iff_le_Aleph0 dual_order.refl finite_iff_less_Aleph0 less_V_def)
+
+lemma countable_infinite_gcard: "countable X \<and> infinite X \<longleftrightarrow> gcard X = Aleph 0"
+proof -
+  have "gcard X = \<omega>"
+    if "countable X" and "infinite X"
+    using that countable countable_imp_g_le_Aleph0 finite_iff_g_le_Aleph0 less_V_def by auto
+  moreover have "countable X" if "gcard X = \<omega>"
+    by (metis Aleph_0 D countable_image countable_infinite_vcard elts_of_set finite.emptyI gcard_def that)
+  moreover have False if "gcard X = \<omega>" and "finite X"
+    by (metis Aleph_0 dual_order.irrefl finite_iff_g_le_Aleph0 finite_imp_small that)
+  ultimately show ?thesis
+    by auto
+qed
 
 proposition Erdos_Wetzel_nonCH:
   assumes W: "Wetzel F" and NCH: "C_continuum > Aleph 1"
   shows "countable F"
-  sorry
+proof -
+  have "\<exists>z0. inj_on (\<lambda>f. f z0) F" if "uncountable F"
+  proof -
+     have "gcard F \<ge> Aleph 1"
+       by (metis that Aleph_0 Aleph_succ Card_\<omega> Ord_\<omega>1 Ord_cardinal Ord_linear2 TC_small cardinal_idem countable_iff_g_le_Aleph0 gcard_def lt_csucc_iff one_V_def)
+     then obtain F' where "F' \<subseteq> F" "gcard F' = Aleph 1"
+       sorry
+    show ?thesis
+      sorry thm less_V_def
+  qed
+  with W show ?thesis
+    unfolding Wetzel_def by (meson countable_image_inj_on)
+qed
 
 
 
