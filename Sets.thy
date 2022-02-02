@@ -123,10 +123,10 @@ lemma finite_iff_g_le_Aleph0: "small X \<Longrightarrow> finite X \<longleftrigh
 lemma finite_imp_g_le_Aleph0: "finite X \<Longrightarrow> gcard X < \<aleph>0"
   by (meson finite_iff_g_le_Aleph0 finite_imp_small)
 
-lemma countable_infinite_vcard: "countable (elts x) \<and> infinite (elts x) \<longleftrightarrow> vcard x = Aleph 0"
+lemma countable_infinite_vcard: "countable (elts x) \<and> infinite (elts x) \<longleftrightarrow> vcard x = \<aleph>0"
   by (metis Aleph_0 countable_iff_le_Aleph0 dual_order.refl finite_iff_less_Aleph0 less_V_def)
 
-lemma countable_infinite_gcard: "countable X \<and> infinite X \<longleftrightarrow> gcard X = Aleph 0"
+lemma countable_infinite_gcard: "countable X \<and> infinite X \<longleftrightarrow> gcard X = \<aleph>0"
 proof -
   have "gcard X = \<omega>"
     if "countable X" and "infinite X"
@@ -139,16 +139,41 @@ proof -
     by auto
 qed
 
+lemma vcard_set_image: "inj_on f (elts x) \<Longrightarrow> vcard (ZFC_in_HOL.set (f ` elts x)) = vcard x"
+  by (simp add: cardinal_cong)
+
+lemma subset_smaller_vcard:
+  assumes "\<kappa> \<le> vcard x" "Card \<kappa>"
+  obtains y where "y \<le> x" "vcard y = \<kappa>"
+proof -
+  obtain f where f: "bij_betw f (elts (vcard x)) (elts x)"
+    using cardinal_eqpoll eqpoll_def by blast
+  show thesis
+  proof
+    let ?y = "ZFC_in_HOL.set (f ` elts \<kappa>)"
+    show "?y \<le> x"
+      by (meson f assms(1) bij_betwE set_image_le_iff small_elts vsubsetD) 
+    show "vcard ?y = \<kappa>"
+      by (metis vcard_set_image Card_def assms bij_betw_def bij_betw_subset f less_eq_V_def)
+  qed
+qed
+
+lemma subset_smaller_gcard:
+  assumes \<kappa>: "\<kappa> \<le> gcard X" "Card \<kappa>" and "small X"
+  obtains Y where "Y \<subseteq> X" "gcard Y = \<kappa>"
+  using subset_smaller_vcard [OF \<kappa> [unfolded gcard_def]]
+  by (metis \<open>small X\<close> elts_of_set gcard_def less_eq_V_def replacement set_of_elts subset_imageE)
+
 proposition Erdos_Wetzel_nonCH:
-  assumes W: "Wetzel F" and NCH: "C_continuum > Aleph 1"
+  assumes W: "Wetzel F" and NCH: "C_continuum > \<aleph>1" and "small F"
   shows "countable F"
 proof -
   have "\<exists>z0. inj_on (\<lambda>f. f z0) F" if "uncountable F"
   proof -
-     have "gcard F \<ge> Aleph 1"
+     have "gcard F \<ge> \<aleph>1"
        by (metis that Aleph_0 Aleph_succ Card_\<omega> Ord_\<omega>1 Ord_cardinal Ord_linear2 TC_small cardinal_idem countable_iff_g_le_Aleph0 gcard_def lt_csucc_iff one_V_def)
-     then obtain F' where "F' \<subseteq> F" "gcard F' = Aleph 1"
-       sorry
+     then obtain F' where "F' \<subseteq> F" "gcard F' = \<aleph>1"
+       by (meson Card_Aleph Ord_1 subset_smaller_gcard \<open>small F\<close>)
     show ?thesis
       sorry thm less_V_def
   qed
@@ -159,13 +184,13 @@ qed
 
 
 proposition Erdos_Wetzel_CH:
-  assumes CH: "C_continuum = Aleph 1"
+  assumes CH: "C_continuum = \<aleph>1"
   obtains F where "Wetzel F" and "uncountable F"
   sorry
 
 
-theorem Erdos_Wetzel: "C_continuum = Aleph 1 \<longleftrightarrow> (\<exists>F. Wetzel F \<and> uncountable F)"
-  by (metis C_continuum_def Erdos_Wetzel_CH Erdos_Wetzel_nonCH Ord_\<omega>1 Ord_cardinal Ord_linear_lt cardinal_idem countable_iff_le_Aleph0 countable_iff_less_\<omega>1 uncountable_Real_set)
+theorem Erdos_Wetzel: "C_continuum = \<aleph>1 \<longleftrightarrow> (\<exists>F. Wetzel F \<and> uncountable F)"
+  by (metis C_continuum_def Erdos_Wetzel_CH Erdos_Wetzel_nonCH Ord_\<omega>1 Ord_cardinal Ord_linear2 TC_small cardinal_idem countable_iff_le_Aleph0 countable_iff_less_\<omega>1 order_le_less uncountable_Real_set)
 
 
 
