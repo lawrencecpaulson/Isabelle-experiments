@@ -27,6 +27,12 @@ proof -
 qed
 
 
+lemma
+  fixes a::real
+  shows "(a*b + b * c + c*a)^3 \<le> (a^2 + a * b + b^2) * (b^2 + b * c + c^2) * (c^2 + c*a + a^2)"
+  by sos
+
+
 subsection \<open>Possible library additions\<close>
 
 lemma mono_on_compose: "mono_on f (g ` S) \<Longrightarrow> mono_on g S \<Longrightarrow> mono_on (f \<circ> g) S"
@@ -52,6 +58,8 @@ lemma B:
   assumes "strict_mono_on f S"  
   shows "bij_betw (inv_into S f) (f ` S) S"
   by (meson assms bij_betw_imageI strict_mono_on_imp_inj_on assms bij_betw_inv_into)
+
+
 
 
 
@@ -99,10 +107,40 @@ lemma strict_mono_on_inv_into:
   unfolding strict_mono_on_def
   by (metis f_inv_into_f inv_into_into less_asym' neqE)
 
+(*DUPLICATE FROM YOUNG'S*)
+
+lemma strict_mono_image_endpoints:
+  fixes f :: "'a::linear_continuum_topology \<Rightarrow> 'b::linorder_topology"
+  assumes "strict_mono_on f {a..b}" and f: "continuous_on {a..b} f" and "a \<le> b"
+  shows "f ` {a..b} = {f a..f b}"
+proof
+  show "f ` {a..b} \<subseteq> {f a..f b}"
+    using assms(1) strict_mono_on_leD by fastforce
+  show "{f a..f b} \<subseteq> f ` {a..b}"
+    using assms IVT'[OF _ _ _ f] by (force simp: Bex_def)
+qed
+
+
 lemma strict_mono_continuous_inv:
   fixes f :: "real \<Rightarrow> real"
   assumes "strict_mono_on f {a..b}" and "continuous_on {a..b} f" and "a \<le> b"
   shows "continuous_on {f a..f b} (inv_into {a..b} f)"
   by (metis strict_mono_image_endpoints assms compact_interval continuous_on_inv inv_into_f_eq strict_mono_on_imp_inj_on)
+
+
+lemma BB:
+  fixes f :: "'a::linear_continuum_topology \<Rightarrow> 'b::linorder_topology"
+  assumes "strict_mono_on f {a..b}"  "a \<le> b"
+    and g: "\<And>x. \<lbrakk>a \<le> x; x \<le> b\<rbrakk> \<Longrightarrow> g (f x) = x"
+  shows "continuous_on (f ` {a..b}) g"
+proof -
+  have "strict_mono_on g (f ` {a..b})"
+    by (smt (verit) assms(1) atLeastAtMost_iff g imageE linorder_not_le strict_mono_on_def strict_mono_on_leD)
+  show ?thesis
+
+
+    sorry
+  by (smt (verit, del_insts) IVT' assms atLeastAtMost_iff le_less linorder_not_le strict_mono_on_def)
+
 
 end
