@@ -35,17 +35,21 @@ lemma subset_smaller_vcard:
   assumes "\<kappa> \<le> vcard x" "Card \<kappa>"
   obtains y where "y \<le> x" "vcard y = \<kappa>"
 proof -
-  obtain f where f: "bij_betw f (elts (vcard x)) (elts x)"
+  obtain \<phi> where \<phi>: "bij_betw \<phi> (elts (vcard x)) (elts x)"
     using cardinal_eqpoll eqpoll_def by blast
   show thesis
   proof
-    let ?y = "ZFC_in_HOL.set (f ` elts \<kappa>)"
+    let ?y = "ZFC_in_HOL.set (\<phi> ` elts \<kappa>)"
     show "?y \<le> x"
-      by (meson f assms bij_betwE set_image_le_iff small_elts vsubsetD) 
+      by (meson \<phi> assms bij_betwE set_image_le_iff small_elts vsubsetD) 
     show "vcard ?y = \<kappa>"
-      by (metis vcard_set_image Card_def assms bij_betw_def bij_betw_subset f less_eq_V_def)
+      by (metis vcard_set_image Card_def assms bij_betw_def bij_betw_subset \<phi> less_eq_V_def)
   qed
 qed
+
+thm Card_lt_csucc_iff
+lemma csucc_le_Card_iff: "\<lbrakk>Card \<kappa>'; Card \<kappa>\<rbrakk> \<Longrightarrow> csucc \<kappa>' \<le> \<kappa> \<longleftrightarrow> \<kappa>' < \<kappa>"
+  by (metis Card_csucc Card_is_Ord Card_lt_csucc_iff Ord_not_le)
 
 subsection \<open>Making the embedding explicit (possibly add to the AFP entry?\<close>
 
@@ -124,6 +128,9 @@ subsection \<open>Cardinality of an arbitrary HOL set\<close>
 definition gcard :: "'a::embeddable set \<Rightarrow> V" 
   where "gcard X \<equiv> vcard (ZFC_in_HOL.set (V_of ` X))"
 
+lemma Card_gcard [iff]: "Card (gcard X)"
+  by (simp add: Card_def gcard_def)
+
 lemma gcard_eq_vcard [simp]: "gcard (elts x) = vcard x"
   by (metis cardinal_cong elts_set_V_of gcard_def small_elts)
 
@@ -155,11 +162,25 @@ proof -
     by auto
 qed
 
+lemma uncountable_gcard: "small X \<Longrightarrow> uncountable X \<longleftrightarrow> gcard X > \<aleph>0"
+  by (simp add: Ord_not_le countable_iff_g_le_Aleph0 gcard_def)
+
+lemma uncountable_gcard_ge: "small X \<Longrightarrow> uncountable X \<longleftrightarrow> gcard X \<ge> \<aleph>1"
+  by (simp add: uncountable_gcard csucc_le_Card_iff one_V_def)
+
 lemma subset_smaller_gcard:
   assumes \<kappa>: "\<kappa> \<le> gcard X" "Card \<kappa>" and "small X"
   obtains Y where "Y \<subseteq> X" "gcard Y = \<kappa>"
   using subset_smaller_vcard [OF \<kappa> [unfolded gcard_def]]
   by (metis \<open>small X\<close> elts_of_set gcard_def less_eq_V_def replacement set_of_elts subset_imageE)
+
+lemma lepoll_imp_gcard_le:
+  assumes "Y \<subseteq> X" "small X" shows "gcard Y \<le> gcard X"
+  unfolding gcard_def
+  by (metis assms elts_of_set image_mono lepoll_imp_Card_le replacement smaller_than_small subset_imp_lepoll)
+
+
+
 
 subsection \<open>Wetzel's property\<close>
 
@@ -170,17 +191,36 @@ proposition Erdos_Wetzel_nonCH:
   assumes W: "Wetzel F" and NCH: "C_continuum > \<aleph>1" and "small F"
   shows "countable F"
 proof -
-  have "\<exists>z0. inj_on (\<lambda>f. f z0) F" if "uncountable F"
+  have "\<exists>z0. gcard ((\<lambda>f. f z0) ` F) \<ge> \<aleph>1" if "uncountable F"
   proof -
-     have "gcard F \<ge> \<aleph>1"
-       by (metis that Aleph_0 Aleph_succ Card_\<omega> Ord_\<omega>1 Ord_cardinal Ord_linear2 TC_small cardinal_idem countable_iff_g_le_Aleph0 gcard_def lt_csucc_iff one_V_def)
-     then obtain F' where "F' \<subseteq> F" "gcard F' = \<aleph>1"
-       by (meson Card_Aleph Ord_1 subset_smaller_gcard \<open>small F\<close>)
-    show ?thesis
-      sorry thm less_V_def
+    have "gcard F \<ge> \<aleph>1"
+      using \<open>small F\<close> that uncountable_gcard_ge by blast 
+    then obtain F' where "F' \<subseteq> F" "gcard F' = \<aleph>1"
+      by (meson Card_Aleph Ord_1 subset_smaller_gcard \<open>small F\<close>)
+    then obtain \<phi> where \<phi>: "bij_betw \<phi> (elts (\<aleph>1)) F'"
+      by (metis TC_small eqpoll_def gcard_eqpoll)
+    define AB where "AB \<equiv> {(\<alpha>,\<beta>). \<alpha> < \<beta>} \<inter> (elts (\<aleph>1) \<times> elts (\<aleph>1))"
+    have "gcard AB = \<aleph>1"
+    proof (rule antisym)
+      have "small AB"
+        unfolding AB_def by (metis inf_le2 small_Times small_iff smaller_than_small)
+      have "gcard (elts (\<aleph>1) \<times> elts (\<aleph>1)) = \<aleph>1"
+        sorry
+      then show "gcard AB \<le> \<omega>1"
+        sorry
+      have "elts (\<aleph>1) \<lesssim> AB"
+        sorry
+      then show "\<omega>1 \<le> gcard AB"
+        apply (intro lepoll_imp_gcard_le)
+        using lepoll_imp_gcard_le
+    obtain z0 where "gcard ((\<lambda>f. f z0) ` F') = \<aleph>1"
+      sorry
+    then show ?thesis
+      by (metis \<open>F' \<subseteq> F\<close> assms(3) image_mono lepoll_imp_gcard_le replacement)
   qed
   with W show ?thesis
-    unfolding Wetzel_def by (meson countable_image_inj_on)
+    unfolding Wetzel_def
+    by (metis Aleph_0 Aleph_succ Card_\<omega> countable_imp_g_le_Aleph0 leD less_csucc one_V_def order_le_less_trans)
 qed
 
 
