@@ -5,6 +5,8 @@ theory Sets imports "ZFC_in_HOL.ZFC_Typeclasses" "HOL-Complex_Analysis.Complex_A
    
 begin
 
+
+
 subsection \<open>For the libraries\<close>
 
 thm real_non_denum
@@ -13,6 +15,37 @@ theorem complex_non_denum: "\<nexists>f :: nat \<Rightarrow> complex. surj f"
 
 lemma uncountable_UNIV_complex: "uncountable (UNIV :: complex set)"
   using complex_non_denum unfolding uncountable_def by auto
+
+thm countable_iff_le_Aleph0
+lemma finite_iff_less_Aleph0: "finite (elts x) \<longleftrightarrow> vcard x < \<omega>"
+proof
+  show "finite (elts x) \<Longrightarrow> vcard x < \<omega>"
+    by (metis Card_\<omega> Card_def finite_lesspoll_infinite infinite_\<omega> lesspoll_imp_Card_less)
+  show "vcard x < \<omega> \<Longrightarrow> finite (elts x)"
+    by (meson Ord_\<omega> Ord_cardinal Ord_mem_iff_lt cardinal_eqpoll eqpoll_finite_iff finite_Ord_omega)
+qed
+
+lemma countable_infinite_vcard: "countable (elts x) \<and> infinite (elts x) \<longleftrightarrow> vcard x = \<aleph>0"
+  by (metis Aleph_0 countable_iff_le_Aleph0 dual_order.refl finite_iff_less_Aleph0 less_V_def)
+
+lemma vcard_set_image: "inj_on f (elts x) \<Longrightarrow> vcard (ZFC_in_HOL.set (f ` elts x)) = vcard x"
+  by (simp add: cardinal_cong)
+
+lemma subset_smaller_vcard:
+  assumes "\<kappa> \<le> vcard x" "Card \<kappa>"
+  obtains y where "y \<le> x" "vcard y = \<kappa>"
+proof -
+  obtain f where f: "bij_betw f (elts (vcard x)) (elts x)"
+    using cardinal_eqpoll eqpoll_def by blast
+  show thesis
+  proof
+    let ?y = "ZFC_in_HOL.set (f ` elts \<kappa>)"
+    show "?y \<le> x"
+      by (meson f assms bij_betwE set_image_le_iff small_elts vsubsetD) 
+    show "vcard ?y = \<kappa>"
+      by (metis vcard_set_image Card_def assms bij_betw_def bij_betw_subset f less_eq_V_def)
+  qed
+qed
 
 subsection \<open>Making the embedding explicit (possibly add to the AFP entry?\<close>
 
@@ -23,6 +56,9 @@ lemma inj_V_of: "inj V_of"
   unfolding V_of_def by (metis embeddable_class.ex_inj some_eq_imp)
 
 declare inv_f_f [OF inj_V_of, simp]
+
+lemma inv_V_of_image_eq [simp]: "inv V_of ` (V_of ` X) = X"
+  by (auto simp: image_comp)
 
 lemma infinite_V_of: "infinite (UNIV::'a set) \<Longrightarrow> infinite (range (V_of::'a::embeddable\<Rightarrow>V))"
   using finite_imageD inj_V_of by blast
@@ -83,36 +119,19 @@ proof -
     by (simp add: C_continuum_def cardinal_cong)
 qed
 
-subsection \<open>Wetzel's property\<close>
+subsection \<open>Cardinality of an arbitrary HOL set\<close>
 
-definition Wetzel :: "(complex \<Rightarrow> complex) set \<Rightarrow> bool"
-  where "Wetzel \<equiv> \<lambda>F. (\<forall>f\<in>F. f analytic_on UNIV) \<and> (\<forall>z. countable((\<lambda>f. f z) ` F))"
-
-text \<open>Cardinality of an arbitrary HOL set\<close>
 definition gcard :: "'a::embeddable set \<Rightarrow> V" 
   where "gcard X \<equiv> vcard (ZFC_in_HOL.set (V_of ` X))"
 
 lemma gcard_eq_vcard [simp]: "gcard (elts x) = vcard x"
   by (metis cardinal_cong elts_set_V_of gcard_def small_elts)
 
-
-thm countable_iff_le_Aleph0
-lemma finite_iff_less_Aleph0: "finite (elts x) \<longleftrightarrow> vcard x < \<omega>"
-proof
-  show "finite (elts x) \<Longrightarrow> vcard x < \<omega>"
-    by (metis Card_\<omega> Card_def finite_lesspoll_infinite infinite_\<omega> lesspoll_imp_Card_less)
-  show "vcard x < \<omega> \<Longrightarrow> finite (elts x)"
-    by (meson Ord_\<omega> Ord_cardinal Ord_mem_iff_lt cardinal_eqpoll eqpoll_finite_iff finite_Ord_omega)
-qed
-
-lemma D: "inv V_of ` (V_of ` X) = X"
-  by (auto simp: image_comp)
-
-lemma E: "small X \<Longrightarrow> elts (gcard X) \<approx> X"
+lemma gcard_eqpoll: "small X \<Longrightarrow> elts (gcard X) \<approx> X"
   by (metis cardinal_eqpoll elts_set_V_of eqpoll_trans gcard_def)
 
 lemma countable_iff_g_le_Aleph0: "small X \<Longrightarrow> countable X \<longleftrightarrow> gcard X \<le> \<aleph>0"
-  by (metis D countable_iff_le_Aleph0 countable_image elts_of_set gcard_def replacement)
+  by (metis inv_V_of_image_eq countable_iff_le_Aleph0 countable_image elts_of_set gcard_def replacement)
 
 lemma countable_imp_g_le_Aleph0: "countable X \<Longrightarrow> gcard X \<le> \<aleph>0"
   by (meson countable countable_iff_g_le_Aleph0)
@@ -123,39 +142,17 @@ lemma finite_iff_g_le_Aleph0: "small X \<Longrightarrow> finite X \<longleftrigh
 lemma finite_imp_g_le_Aleph0: "finite X \<Longrightarrow> gcard X < \<aleph>0"
   by (meson finite_iff_g_le_Aleph0 finite_imp_small)
 
-lemma countable_infinite_vcard: "countable (elts x) \<and> infinite (elts x) \<longleftrightarrow> vcard x = \<aleph>0"
-  by (metis Aleph_0 countable_iff_le_Aleph0 dual_order.refl finite_iff_less_Aleph0 less_V_def)
-
 lemma countable_infinite_gcard: "countable X \<and> infinite X \<longleftrightarrow> gcard X = \<aleph>0"
 proof -
   have "gcard X = \<omega>"
     if "countable X" and "infinite X"
     using that countable countable_imp_g_le_Aleph0 finite_iff_g_le_Aleph0 less_V_def by auto
   moreover have "countable X" if "gcard X = \<omega>"
-    by (metis Aleph_0 D countable_image countable_infinite_vcard elts_of_set finite.emptyI gcard_def that)
+    by (metis Aleph_0 inv_V_of_image_eq countable_image countable_infinite_vcard elts_of_set finite.emptyI gcard_def that)
   moreover have False if "gcard X = \<omega>" and "finite X"
     by (metis Aleph_0 dual_order.irrefl finite_iff_g_le_Aleph0 finite_imp_small that)
   ultimately show ?thesis
     by auto
-qed
-
-lemma vcard_set_image: "inj_on f (elts x) \<Longrightarrow> vcard (ZFC_in_HOL.set (f ` elts x)) = vcard x"
-  by (simp add: cardinal_cong)
-
-lemma subset_smaller_vcard:
-  assumes "\<kappa> \<le> vcard x" "Card \<kappa>"
-  obtains y where "y \<le> x" "vcard y = \<kappa>"
-proof -
-  obtain f where f: "bij_betw f (elts (vcard x)) (elts x)"
-    using cardinal_eqpoll eqpoll_def by blast
-  show thesis
-  proof
-    let ?y = "ZFC_in_HOL.set (f ` elts \<kappa>)"
-    show "?y \<le> x"
-      by (meson f assms(1) bij_betwE set_image_le_iff small_elts vsubsetD) 
-    show "vcard ?y = \<kappa>"
-      by (metis vcard_set_image Card_def assms bij_betw_def bij_betw_subset f less_eq_V_def)
-  qed
 qed
 
 lemma subset_smaller_gcard:
@@ -163,6 +160,11 @@ lemma subset_smaller_gcard:
   obtains Y where "Y \<subseteq> X" "gcard Y = \<kappa>"
   using subset_smaller_vcard [OF \<kappa> [unfolded gcard_def]]
   by (metis \<open>small X\<close> elts_of_set gcard_def less_eq_V_def replacement set_of_elts subset_imageE)
+
+subsection \<open>Wetzel's property\<close>
+
+definition Wetzel :: "(complex \<Rightarrow> complex) set \<Rightarrow> bool"
+  where "Wetzel \<equiv> \<lambda>F. (\<forall>f\<in>F. f analytic_on UNIV) \<and> (\<forall>z. countable((\<lambda>f. f z) ` F))"
 
 proposition Erdos_Wetzel_nonCH:
   assumes W: "Wetzel F" and NCH: "C_continuum > \<aleph>1" and "small F"
