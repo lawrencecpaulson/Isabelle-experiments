@@ -5,8 +5,6 @@ theory Sets imports "ZFC_in_HOL.ZFC_Typeclasses" "HOL-Complex_Analysis.Complex_A
    
 begin
 
-
-
 subsection \<open>For the libraries\<close>
 
 thm real_non_denum
@@ -179,24 +177,40 @@ lemma lepoll_imp_gcard_le:
   unfolding gcard_def
   by (metis assms elts_of_set image_mono lepoll_imp_Card_le replacement smaller_than_small subset_imp_lepoll)
 
+lemma V_of_image_times: "V_of ` (X \<times> Y) \<approx> (V_of ` X) \<times> (V_of ` Y)"
+proof -
+  have "V_of ` (X \<times> Y) \<approx> X \<times> Y"
+    by (meson inj_V_of inj_eq inj_onI inj_on_image_eqpoll_self)
+  also have "... \<approx> (V_of ` X) \<times> (V_of ` Y)"
+    by (metis eqpoll_sym inj_V_of inj_eq inj_onI inj_on_image_eqpoll_self times_eqpoll_cong)
+  finally show ?thesis .
+qed
 
+lemma G: 
+  assumes "small X" "small Y" 
+  shows "gcard (X \<times> Y) = gcard X \<otimes> gcard Y"
+  using assms
+  apply (simp add: gcard_def)
+  using V_of_image_times [of X Y]
+sledgehammer [isar_proofs, timeout = 77]
+  sorry
 
 
 subsection \<open>Wetzel's property\<close>
 
 definition Wetzel :: "(complex \<Rightarrow> complex) set \<Rightarrow> bool"
-  where "Wetzel \<equiv> \<lambda>F. (\<forall>f\<in>F. f analytic_on UNIV) \<and> (\<forall>z. countable((\<lambda>f. f z) ` F))"
+  where "Wetzel \<equiv> \<lambda>F. (\<forall>f\<in>V_of_image_times. f analytic_on UNIV) \<and> (\<forall>z. countable((\<lambda>f. f z) ` V_of_image_times))"
 
 proposition Erdos_Wetzel_nonCH:
-  assumes W: "Wetzel F" and NCH: "C_continuum > \<aleph>1" and "small F"
-  shows "countable F"
+  assumes W: "Wetzel V_of_image_times" and NCH: "C_continuum > \<aleph>1" and "small V_of_image_times"
+  shows "countable V_of_image_times"
 proof -
-  have "\<exists>z0. gcard ((\<lambda>f. f z0) ` F) \<ge> \<aleph>1" if "uncountable F"
+  have "\<exists>z0. gcard ((\<lambda>f. f z0) ` V_of_image_times) \<ge> \<aleph>1" if "uncountable V_of_image_times"
   proof -
-    have "gcard F \<ge> \<aleph>1"
-      using \<open>small F\<close> that uncountable_gcard_ge by blast 
-    then obtain F' where "F' \<subseteq> F" "gcard F' = \<aleph>1"
-      by (meson Card_Aleph Ord_1 subset_smaller_gcard \<open>small F\<close>)
+    have "gcard V_of_image_times \<ge> \<aleph>1"
+      using \<open>small V_of_image_times\<close> that uncountable_gcard_ge by blast 
+    then obtain F' where "F' \<subseteq> V_of_image_times" and F': "gcard F' = \<aleph>1"
+      by (meson Card_Aleph Ord_1 subset_smaller_gcard \<open>small V_of_image_times\<close>)
     then obtain \<phi> where \<phi>: "bij_betw \<phi> (elts (\<aleph>1)) F'"
       by (metis TC_small eqpoll_def gcard_eqpoll)
     define AB where "AB \<equiv> {(\<alpha>,\<beta>). \<alpha> < \<beta>} \<inter> (elts (\<aleph>1) \<times> elts (\<aleph>1))"
@@ -204,10 +218,14 @@ proof -
     proof (rule antisym)
       have "small AB"
         unfolding AB_def by (metis inf_le2 small_Times small_iff smaller_than_small)
-      have "gcard (elts (\<aleph>1) \<times> elts (\<aleph>1)) = \<aleph>1"
-        sorry
-      then show "gcard AB \<le> \<omega>1"
-        sorry
+      have "gcard (elts (\<aleph>1) \<times> elts (\<aleph>1)) = vcard (\<aleph>1 \<otimes> \<aleph>1)"
+        by (metis G \<open>gcard F' = \<omega>1\<close> cardinal_idem gcard_def gcard_eq_vcard small_elts)
+      also have "... = \<aleph>1 \<otimes> \<aleph>1"
+        by (simp add: cmult_def)
+      also have "\<dots> = \<aleph>1"
+        by (simp add: InfCard_csquare_eq InfCard_def le_csucc one_V_def)
+      finally show "gcard AB \<le> \<omega>1"
+        by (metis AB_def inf_le2 lepoll_imp_gcard_le small_Times small_elts)
       have "elts (\<aleph>1) \<lesssim> AB"
         sorry
       then show "\<omega>1 \<le> gcard AB"
@@ -216,7 +234,7 @@ proof -
     obtain z0 where "gcard ((\<lambda>f. f z0) ` F') = \<aleph>1"
       sorry
     then show ?thesis
-      by (metis \<open>F' \<subseteq> F\<close> assms(3) image_mono lepoll_imp_gcard_le replacement)
+      by (metis \<open>F' \<subseteq> V_of_image_times\<close> assms(3) image_mono lepoll_imp_gcard_le replacement)
   qed
   with W show ?thesis
     unfolding Wetzel_def
@@ -227,11 +245,11 @@ qed
 
 proposition Erdos_Wetzel_CH:
   assumes CH: "C_continuum = \<aleph>1"
-  obtains F where "Wetzel F" and "uncountable F"
+  obtains V_of_image_times where "Wetzel V_of_image_times" and "uncountable V_of_image_times"
   sorry
 
 
-theorem Erdos_Wetzel: "C_continuum = \<aleph>1 \<longleftrightarrow> (\<exists>F. Wetzel F \<and> uncountable F)"
+theorem Erdos_Wetzel: "C_continuum = \<aleph>1 \<longleftrightarrow> (\<exists>V_of_image_times. Wetzel V_of_image_times \<and> uncountable V_of_image_times)"
   by (metis C_continuum_def Erdos_Wetzel_CH Erdos_Wetzel_nonCH Ord_\<omega>1 Ord_cardinal Ord_linear2 TC_small cardinal_idem countable_iff_le_Aleph0 countable_iff_less_\<omega>1 order_le_less uncountable_Real_set)
 
 
