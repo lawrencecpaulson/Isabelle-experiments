@@ -23,7 +23,6 @@ proof
     by (meson Ord_\<omega> Ord_cardinal Ord_mem_iff_lt cardinal_eqpoll eqpoll_finite_iff finite_Ord_omega)
 qed
 
-
 (*Alternative defn of Aleph that's defined on all sets, not just ordinals*)
 
 lemma
@@ -301,6 +300,9 @@ qed
 
 subsection \<open>Wetzel's property\<close>
 
+lemma less_succ_self: "x < succ x"
+  by (simp add: less_eq_V_def order_neq_le_trans subset_insertI)
+
 definition Wetzel :: "(complex \<Rightarrow> complex) set \<Rightarrow> bool"
   where "Wetzel \<equiv> \<lambda>F. (\<forall>f\<in>F. f analytic_on UNIV) \<and> (\<forall>z. countable((\<lambda>f. f z) ` F))"
 
@@ -328,16 +330,19 @@ proof -
       finally show "gcard AB \<le> \<omega>1"
         by (metis AB_def inf_le2 lepoll_imp_gcard_le small_Times small_elts)
       have "elts (\<aleph>1) \<lesssim> AB"
-        unfolding AB_def
-
-        sorry
+        unfolding AB_def lepoll_def
+      proof (intro conjI exI)
+        show "inj_on (\<lambda>x. (x, succ x)) (elts \<omega>1)"
+          by (auto simp: inj_on_def)
+        show "(\<lambda>x. (x, succ x)) ` elts \<omega>1 \<subseteq> Restr {(x, y). x < y} (elts \<omega>1)"
+          by (auto simp: succ_in_Limit_iff less_succ_self)
+      qed
       then show "\<omega>1 \<le> gcard AB"
         by (metis F' Ord_cardinal \<open>small AB\<close> cardinal_idem eqpoll_sym gcard_def gcard_eqpoll lepoll_cardinal_le lepoll_trans2)
     qed
-    define opairs where "opairs \<equiv> \<lambda>\<beta>::V. {(\<alpha>,\<beta>). \<alpha> < \<beta>} \<inter> (ON \<times> ON)"
-    have "countable (opairs \<beta>)" if "\<beta> < \<aleph>1" for \<beta>
-      sorry
-
+    define opairs where "opairs \<equiv> \<lambda>\<beta>. (\<lambda>\<alpha>. (\<alpha>,\<beta>)) ` (elts \<beta>)"
+    have co: "countable (opairs \<beta>)" if "\<beta> \<in> elts (\<aleph>1)" for \<beta>
+      using less_\<omega>1_imp_countable opairs_def that by blast
     obtain z0 where "gcard ((\<lambda>f. f z0) ` F') = \<aleph>1"
       sorry
     then show ?thesis
