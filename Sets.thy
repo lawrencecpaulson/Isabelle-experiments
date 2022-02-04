@@ -23,8 +23,54 @@ proof
     by (meson Ord_\<omega> Ord_cardinal Ord_mem_iff_lt cardinal_eqpoll eqpoll_finite_iff finite_Ord_omega)
 qed
 
+
+(*Alternative defn of Aleph that's defined on all sets, not just ordinals*)
+
+lemma
+  assumes "Ord \<alpha>"
+  shows "Aleph \<alpha> = transrec (\<lambda>f x. \<omega> \<squnion> \<Squnion>((\<lambda>y. csucc(f y)) ` elts x)) \<alpha>"
+  using assms
+proof(induction \<alpha> rule: Ord_induct3)
+  case 0
+  then show ?case 
+    by (simp add: transrec [where a=0])
+next
+  case (succ \<alpha>)
+  then show ?case
+    apply (auto simp: transrec [where a="succ \<alpha>"])
+    apply (rule antisym)
+     apply (auto simp: )
+     apply (metis (no_types, lifting) Card_Aleph Un_iff elts_sup_iff le_csucc transrec vsubsetD)
+
+    sorry
+next
+  case (Limit \<alpha>)
+  then show ?case
+    apply (simp add: transrec [where a="\<alpha>"])
+    apply (rule antisym)
+     apply (auto simp: )
+
+    sorry
+qed
+
+
+lemma Card_Aleph [simp, intro]:
+     "Ord \<alpha> \<Longrightarrow> Card(Aleph \<alpha>)"
+by (induction \<alpha> rule: Ord_induct3) (auto simp: Aleph_def)
+
+
+
 lemma csucc_0 [simp]: "csucc 0 = 1"
   by (simp add: finite_csucc one_V_def)
+
+thm Card_Aleph
+lemma InfCard_Aleph [simp, intro]:
+     "Ord \<alpha> \<Longrightarrow> InfCard(Aleph \<alpha>)"
+  by (metis Aleph_0 Aleph_increasing Card_Aleph InfCard_def Ord_0 Ord_mem_iff_lt dual_order.order_iff_strict mem_0_Ord)
+
+thm InfCard_csquare_eq
+corollary Aleph_csquare_eq [simp]: "Ord \<alpha> \<Longrightarrow> \<aleph>\<alpha> \<otimes> \<aleph>\<alpha> = \<aleph>\<alpha>"
+  using InfCard_csquare_eq by auto
 
 lemma small_Times_iff: "small (X \<times> Y) \<longleftrightarrow> small X \<and> small Y \<or> X={} \<or> Y={}"  (is "_ = ?rhs")
 proof
@@ -277,17 +323,21 @@ proof -
         unfolding AB_def by (metis inf_le2 small_Times small_iff smaller_than_small)
       have "gcard (elts (\<aleph>1) \<times> elts (\<aleph>1)) = vcard (\<aleph>1 \<otimes> \<aleph>1)"
         by (metis gcard_Times \<open>gcard F' = \<omega>1\<close> cardinal_idem gcard_def gcard_eq_vcard)
-      also have "... = \<aleph>1 \<otimes> \<aleph>1"
-        by (simp add: cmult_def)
       also have "\<dots> = \<aleph>1"
-        by (simp add: InfCard_csquare_eq InfCard_def le_csucc one_V_def)
+        by (simp add: Card_cardinal_eq)
       finally show "gcard AB \<le> \<omega>1"
         by (metis AB_def inf_le2 lepoll_imp_gcard_le small_Times small_elts)
       have "elts (\<aleph>1) \<lesssim> AB"
+        unfolding AB_def
+
         sorry
       then show "\<omega>1 \<le> gcard AB"
-        apply (intro lepoll_imp_gcard_le)
-        using lepoll_imp_gcard_le
+        by (metis F' Ord_cardinal \<open>small AB\<close> cardinal_idem eqpoll_sym gcard_def gcard_eqpoll lepoll_cardinal_le lepoll_trans2)
+    qed
+    define opairs where "opairs \<equiv> \<lambda>\<beta>::V. {(\<alpha>,\<beta>). \<alpha> < \<beta>} \<inter> (ON \<times> ON)"
+    have "countable (opairs \<beta>)" if "\<beta> < \<aleph>1" for \<beta>
+      sorry
+
     obtain z0 where "gcard ((\<lambda>f. f z0) ` F') = \<aleph>1"
       sorry
     then show ?thesis
