@@ -1,7 +1,7 @@
 section \<open>Set theory experiments\<close>
 
-theory Sets imports "ZFC_in_HOL.ZFC_Typeclasses" "HOL-Complex_Analysis.Complex_Analysis" 
-  "HOL-ex.Sketch_and_Explore"
+theory Sets imports
+  "HOL-ex.Sketch_and_Explore" "HOL-Complex_Analysis.Complex_Analysis" "ZFC_in_HOL.ZFC_Typeclasses"
    
 begin
 
@@ -22,6 +22,31 @@ proof
   show "vcard x < \<omega> \<Longrightarrow> finite (elts x)"
     by (meson Ord_\<omega> Ord_cardinal Ord_mem_iff_lt cardinal_eqpoll eqpoll_finite_iff finite_Ord_omega)
 qed
+
+lemma csucc_0 [simp]: "csucc 0 = 1"
+  by (simp add: finite_csucc one_V_def)
+
+lemma small_Times_iff: "small (X \<times> Y) \<longleftrightarrow> small X \<and> small Y \<or> X={} \<or> Y={}"  (is "_ = ?rhs")
+proof
+  assume *: "small (X \<times> Y)"
+  { have "small X \<and> small Y" if "x \<in> X" "y \<in> Y" for x y
+    proof -
+      have "X \<subseteq> fst ` (X \<times> Y)" "Y \<subseteq> snd ` (X \<times> Y)"
+        using that by auto
+      with that show ?thesis
+        by (metis * replacement smaller_than_small)
+    qed    }
+  then show ?rhs
+    by (metis equals0I)
+next
+  assume ?rhs
+  then show "small (X \<times> Y)"
+    by auto
+qed
+
+
+lemma DD: "set (insert x Y) = (if small Y then vinsert x (set Y) else 0)"
+  by auto
 
 lemma countable_infinite_vcard: "countable (elts x) \<and> infinite (elts x) \<longleftrightarrow> vcard x = \<aleph>0"
   by (metis Aleph_0 countable_iff_le_Aleph0 dual_order.refl finite_iff_less_Aleph0 less_V_def)
@@ -126,6 +151,21 @@ subsection \<open>Cardinality of an arbitrary HOL set\<close>
 definition gcard :: "'a::embeddable set \<Rightarrow> V" 
   where "gcard X \<equiv> vcard (ZFC_in_HOL.set (V_of ` X))"
 
+lemma gcard_big_0: "\<not> small X \<Longrightarrow> gcard X = 0"
+  by (metis elts_eq_empty_iff elts_of_set gcard_def inv_V_of_image_eq replacement vcard_0)
+
+lemma gcard_empty_0 [simp]: "gcard {} = 0"
+  by (metis gcard_def image_is_empty vcard_0 zero_V_def)
+
+lemma gcard_single_1 [simp]: "gcard {x} = 1"
+  by (simp add: gcard_def)
+
+lemma gcard_finite_set: "\<lbrakk>finite X; a \<notin> X\<rbrakk> \<Longrightarrow> gcard (insert a X) = succ (gcard X)" 
+  by (simp add: gcard_def inj_V_of inj_image_mem_iff finite_csucc vcard_finite_set)
+
+lemma gcard_eq_card: "finite X \<Longrightarrow> gcard X = ord_of_nat (card X)"
+  by (induction X rule: finite_induct) (auto simp add: gcard_finite_set)
+
 lemma Card_gcard [iff]: "Card (gcard X)"
   by (simp add: Card_def gcard_def)
 
@@ -167,10 +207,17 @@ lemma uncountable_gcard_ge: "small X \<Longrightarrow> uncountable X \<longleftr
   by (simp add: uncountable_gcard csucc_le_Card_iff one_V_def)
 
 lemma subset_smaller_gcard:
-  assumes \<kappa>: "\<kappa> \<le> gcard X" "Card \<kappa>" and "small X"
+  assumes \<kappa>: "\<kappa> \<le> gcard X" "Card \<kappa>"
   obtains Y where "Y \<subseteq> X" "gcard Y = \<kappa>"
-  using subset_smaller_vcard [OF \<kappa> [unfolded gcard_def]]
-  by (metis \<open>small X\<close> elts_of_set gcard_def less_eq_V_def replacement set_of_elts subset_imageE)
+proof (cases "small X")
+  case True
+  with  subset_smaller_vcard [OF \<kappa> [unfolded gcard_def]] show ?thesis
+    by (metis elts_of_set gcard_def less_eq_V_def replacement set_of_elts subset_image_iff that)
+next
+  case False
+  with assms show ?thesis
+    by (metis antisym gcard_big_0 le_0 order_refl that)
+qed
 
 lemma lepoll_imp_gcard_le:
   assumes "Y \<subseteq> X" "small X" shows "gcard Y \<le> gcard X"
@@ -186,31 +233,41 @@ proof -
   finally show ?thesis .
 qed
 
-lemma G: 
-  assumes "small X" "small Y" 
-  shows "gcard (X \<times> Y) = gcard X \<otimes> gcard Y"
-  using assms
-  apply (simp add: gcard_def)
-  using V_of_image_times [of X Y]
-sledgehammer [isar_proofs, timeout = 77]
-  sorry
+lemma gcard_Times [simp]: "gcard (X \<times> Y) = gcard X \<otimes> gcard Y"
+proof (cases "small X \<and> small Y")
+  case True
+  have "V_of ` (X \<times> Y) \<approx> (V_of ` X) \<times> (V_of ` Y)"
+    by (metis V_of_image_times)
+  also have "... \<approx> elts (vcard (ZFC_in_HOL.set (V_of ` X))) \<times> elts (vcard (ZFC_in_HOL.set (V_of ` Y)))"
+    by (metis True cardinal_eqpoll eqpoll_sym replacement set_of_elts small_iff times_eqpoll_cong)
+  also have "... \<approx> elts (vtimes (vcard (ZFC_in_HOL.set (V_of ` X))) (vcard (ZFC_in_HOL.set (V_of ` Y))))"
+    using elts_VSigma by auto
+  finally show ?thesis
+    using True cardinal_cong by (simp add: gcard_def cmult_def)
+next
+  case False
+  have "gcard (X \<times> Y) = 0"
+    by (metis False Times_empty gcard_big_0 gcard_empty_0 small_Times_iff)
+  then show ?thesis
+    by (metis False cmult_0 cmult_commute gcard_big_0)
+qed
 
 
 subsection \<open>Wetzel's property\<close>
 
 definition Wetzel :: "(complex \<Rightarrow> complex) set \<Rightarrow> bool"
-  where "Wetzel \<equiv> \<lambda>F. (\<forall>f\<in>V_of_image_times. f analytic_on UNIV) \<and> (\<forall>z. countable((\<lambda>f. f z) ` V_of_image_times))"
+  where "Wetzel \<equiv> \<lambda>F. (\<forall>f\<in>F. f analytic_on UNIV) \<and> (\<forall>z. countable((\<lambda>f. f z) ` F))"
 
 proposition Erdos_Wetzel_nonCH:
-  assumes W: "Wetzel V_of_image_times" and NCH: "C_continuum > \<aleph>1" and "small V_of_image_times"
-  shows "countable V_of_image_times"
+  assumes W: "Wetzel F" and NCH: "C_continuum > \<aleph>1" and "small F"
+  shows "countable F"
 proof -
-  have "\<exists>z0. gcard ((\<lambda>f. f z0) ` V_of_image_times) \<ge> \<aleph>1" if "uncountable V_of_image_times"
+  have "\<exists>z0. gcard ((\<lambda>f. f z0) ` F) \<ge> \<aleph>1" if "uncountable F"
   proof -
-    have "gcard V_of_image_times \<ge> \<aleph>1"
-      using \<open>small V_of_image_times\<close> that uncountable_gcard_ge by blast 
-    then obtain F' where "F' \<subseteq> V_of_image_times" and F': "gcard F' = \<aleph>1"
-      by (meson Card_Aleph Ord_1 subset_smaller_gcard \<open>small V_of_image_times\<close>)
+    have "gcard F \<ge> \<aleph>1"
+      using \<open>small F\<close> that uncountable_gcard_ge by blast 
+    then obtain F' where "F' \<subseteq> F" and F': "gcard F' = \<aleph>1"
+      by (meson Card_Aleph Ord_1 subset_smaller_gcard \<open>small F\<close>)
     then obtain \<phi> where \<phi>: "bij_betw \<phi> (elts (\<aleph>1)) F'"
       by (metis TC_small eqpoll_def gcard_eqpoll)
     define AB where "AB \<equiv> {(\<alpha>,\<beta>). \<alpha> < \<beta>} \<inter> (elts (\<aleph>1) \<times> elts (\<aleph>1))"
@@ -219,7 +276,7 @@ proof -
       have "small AB"
         unfolding AB_def by (metis inf_le2 small_Times small_iff smaller_than_small)
       have "gcard (elts (\<aleph>1) \<times> elts (\<aleph>1)) = vcard (\<aleph>1 \<otimes> \<aleph>1)"
-        by (metis G \<open>gcard F' = \<omega>1\<close> cardinal_idem gcard_def gcard_eq_vcard small_elts)
+        by (metis gcard_Times \<open>gcard F' = \<omega>1\<close> cardinal_idem gcard_def gcard_eq_vcard)
       also have "... = \<aleph>1 \<otimes> \<aleph>1"
         by (simp add: cmult_def)
       also have "\<dots> = \<aleph>1"
@@ -234,7 +291,7 @@ proof -
     obtain z0 where "gcard ((\<lambda>f. f z0) ` F') = \<aleph>1"
       sorry
     then show ?thesis
-      by (metis \<open>F' \<subseteq> V_of_image_times\<close> assms(3) image_mono lepoll_imp_gcard_le replacement)
+      by (metis \<open>F' \<subseteq> F\<close> assms(3) image_mono lepoll_imp_gcard_le replacement)
   qed
   with W show ?thesis
     unfolding Wetzel_def
@@ -245,11 +302,11 @@ qed
 
 proposition Erdos_Wetzel_CH:
   assumes CH: "C_continuum = \<aleph>1"
-  obtains V_of_image_times where "Wetzel V_of_image_times" and "uncountable V_of_image_times"
+  obtains F where "Wetzel F" and "uncountable F"
   sorry
 
 
-theorem Erdos_Wetzel: "C_continuum = \<aleph>1 \<longleftrightarrow> (\<exists>V_of_image_times. Wetzel V_of_image_times \<and> uncountable V_of_image_times)"
+theorem Erdos_Wetzel: "C_continuum = \<aleph>1 \<longleftrightarrow> (\<exists>F. Wetzel F \<and> uncountable F)"
   by (metis C_continuum_def Erdos_Wetzel_CH Erdos_Wetzel_nonCH Ord_\<omega>1 Ord_cardinal Ord_linear2 TC_small cardinal_idem countable_iff_le_Aleph0 countable_iff_less_\<omega>1 order_le_less uncountable_Real_set)
 
 
