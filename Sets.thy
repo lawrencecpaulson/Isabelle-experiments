@@ -23,40 +23,16 @@ proof
     by (meson Ord_\<omega> Ord_cardinal Ord_mem_iff_lt cardinal_eqpoll eqpoll_finite_iff finite_Ord_omega)
 qed
 
-(*Alternative defn of Aleph that's defined on all sets, not just ordinals*)
+thm Card_lt_csucc_iff
+lemma csucc_lt_csucc_iff: "\<lbrakk>Card \<kappa>'; Card \<kappa>\<rbrakk> \<Longrightarrow> (csucc \<kappa>' < csucc \<kappa>) = (\<kappa>' < \<kappa>)"
+  by (metis Card_csucc Card_is_Ord Card_lt_csucc_iff Ord_not_less)
 
-lemma
-  assumes "Ord \<alpha>"
-  shows "Aleph \<alpha> = transrec (\<lambda>f x. \<omega> \<squnion> \<Squnion>((\<lambda>y. csucc(f y)) ` elts x)) \<alpha>"
-  using assms
-proof(induction \<alpha> rule: Ord_induct3)
-  case 0
-  then show ?case 
-    by (simp add: transrec [where a=0])
-next
-  case (succ \<alpha>)
-  then show ?case
-    apply (auto simp: transrec [where a="succ \<alpha>"])
-    apply (rule antisym)
-     apply (auto simp: )
-     apply (metis (no_types, lifting) Card_Aleph Un_iff elts_sup_iff le_csucc transrec vsubsetD)
+lemma csucc_le_csucc_iff: "\<lbrakk>Card \<kappa>'; Card \<kappa>\<rbrakk> \<Longrightarrow> (csucc \<kappa>' \<le> csucc \<kappa>) = (\<kappa>' \<le> \<kappa>)"
+  by (metis Card_csucc Card_is_Ord Card_lt_csucc_iff Ord_not_less)
 
-    sorry
-next
-  case (Limit \<alpha>)
-  then show ?case
-    apply (simp add: transrec [where a="\<alpha>"])
-    apply (rule antisym)
-     apply (auto simp: )
-
-    sorry
-qed
-
-
-lemma Card_Aleph [simp, intro]:
-     "Ord \<alpha> \<Longrightarrow> Card(Aleph \<alpha>)"
-by (induction \<alpha> rule: Ord_induct3) (auto simp: Aleph_def)
-
+lemma Card_Un [simp,intro]:
+  assumes "Card(x)" "Card(y)" shows "Card(x \<squnion> y)"
+  by (metis Card_is_Ord Ord_linear_le assms sup.absorb2 sup.orderE)
 
 
 lemma csucc_0 [simp]: "csucc 0 = 1"
@@ -141,6 +117,15 @@ lemma countable_V_of: "countable (range (V_of::'a::countable\<Rightarrow>V))"
 lemma elts_set_V_of: "small X \<Longrightarrow> elts (ZFC_in_HOL.set (V_of ` X)) \<approx> X"
   by (metis inj_V_of inj_eq inj_on_def inj_on_image_eqpoll_self replacement set_of_elts small_iff)
 
+lemma V_of_image_times: "V_of ` (X \<times> Y) \<approx> (V_of ` X) \<times> (V_of ` Y)"
+proof -
+  have "V_of ` (X \<times> Y) \<approx> X \<times> Y"
+    by (meson inj_V_of inj_eq inj_onI inj_on_image_eqpoll_self)
+  also have "... \<approx> (V_of ` X) \<times> (V_of ` Y)"
+    by (metis eqpoll_sym inj_V_of inj_eq inj_onI inj_on_image_eqpoll_self times_eqpoll_cong)
+  finally show ?thesis .
+qed
+
 subsection \<open>The cardinality of the continuum\<close>
 
 definition "Real_set \<equiv> ZFC_in_HOL.set (range (V_of::real\<Rightarrow>V))"
@@ -159,7 +144,7 @@ lemma V_of_Complex_set: "bij_betw V_of (UNIV::complex set) (elts Complex_set)"
 lemma uncountable_Complex_set: "uncountable (elts Complex_set)"
   using V_of_Complex_set countableI_bij2 uncountable_UNIV_complex by blast
 
-lemma Complex_vcard: "C_continuum = vcard Complex_set"
+lemma Complex_vcard: "vcard Complex_set = C_continuum"
 proof -
   define emb1 where "emb1 \<equiv> V_of o complex_of_real o inv V_of"
   have "elts Real_set \<approx> elts Complex_set"
@@ -269,14 +254,12 @@ lemma lepoll_imp_gcard_le:
   unfolding gcard_def
   by (metis assms elts_of_set image_mono lepoll_imp_Card_le replacement smaller_than_small subset_imp_lepoll)
 
-lemma V_of_image_times: "V_of ` (X \<times> Y) \<approx> (V_of ` X) \<times> (V_of ` Y)"
-proof -
-  have "V_of ` (X \<times> Y) \<approx> X \<times> Y"
-    by (meson inj_V_of inj_eq inj_onI inj_on_image_eqpoll_self)
-  also have "... \<approx> (V_of ` X) \<times> (V_of ` Y)"
-    by (metis eqpoll_sym inj_V_of inj_eq inj_onI inj_on_image_eqpoll_self times_eqpoll_cong)
-  finally show ?thesis .
-qed
+lemma Real_gcard: "gcard (UNIV::real set) = C_continuum"
+  by (simp add: C_continuum_def Real_set_def gcard_def)
+
+lemma Complex_gcard: "gcard (UNIV::complex set) = C_continuum"
+  by (simp add: Complex_set_def Complex_vcard gcard_def)
+
 
 lemma gcard_Times [simp]: "gcard (X \<times> Y) = gcard X \<otimes> gcard Y"
 proof (cases "small X \<and> small Y")
@@ -341,9 +324,21 @@ proof -
         by (metis F' Ord_cardinal \<open>small AB\<close> cardinal_idem eqpoll_sym gcard_def gcard_eqpoll lepoll_cardinal_le lepoll_trans2)
     qed
     define opairs where "opairs \<equiv> \<lambda>\<beta>. (\<lambda>\<alpha>. (\<alpha>,\<beta>)) ` (elts \<beta>)"
-    have co: "countable (opairs \<beta>)" if "\<beta> \<in> elts (\<aleph>1)" for \<beta>
+    have co_opairs: "countable (opairs \<beta>)" if "\<beta> \<in> elts (\<aleph>1)" for \<beta>
       using less_\<omega>1_imp_countable opairs_def that by blast
-    obtain z0 where "gcard ((\<lambda>f. f z0) ` F') = \<aleph>1"
+    define S where "S \<equiv> \<lambda>\<alpha> \<beta>. {z. \<phi> \<alpha> z = \<phi> \<beta> z}"
+    have co_S: "countable (S \<alpha> \<beta>)" if "\<alpha> \<in> elts \<beta>" "\<beta> \<in> elts (\<aleph>1)" for \<alpha> \<beta>
+      sorry
+    define SS where "SS \<equiv> \<Squnion>\<beta> \<in> elts(\<aleph>1). \<Squnion>\<alpha> \<in> elts \<beta>. S \<alpha> \<beta>"
+    have "gcard SS = \<aleph>1"
+      apply (simp add: SS_def)
+
+      sorry
+    with NCH obtain z0 where "z0 \<notin> SS"
+      by (metis Complex_gcard UNIV_eq_I order_less_irrefl)
+    then have "gcard ((\<lambda>f. f z0) ` F') = \<aleph>1"
+      apply (simp add: SS_def S_def)
+
       sorry
     then show ?thesis
       by (metis \<open>F' \<subseteq> F\<close> assms(3) image_mono lepoll_imp_gcard_le replacement)
