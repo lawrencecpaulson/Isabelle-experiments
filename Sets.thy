@@ -7,6 +7,61 @@ begin
 
 subsection \<open>For the libraries\<close>
 
+thm holomorphic_compact_finite_zeros analytic_imp_holomorphic countable_def
+
+lemma fsigma_UNIV [iff]: "fsigma (UNIV :: 'a::real_inner set)"
+proof -
+  have "(UNIV ::'a set) = (\<Union>i. cball 0 (of_nat i))"
+    by (auto simp: real_arch_simple)
+  then show ?thesis
+    by (metis closed_cball fsigma.intros)
+qed
+
+lemma holomorphic_countable_zeros:
+  assumes S: "f holomorphic_on S" "open S" "connected S" and "fsigma S"
+      and "\<not> f constant_on S"
+    shows "countable {z\<in>S. f z = 0}"
+proof -
+  obtain F::"nat \<Rightarrow> complex set" 
+      where F: "range F \<subseteq> Collect compact" and Seq: "S = (\<Union>i. F i)"
+    using \<open>fsigma S\<close> by (meson fsigma_Union_compact)
+  have fin: "finite {z \<in> F i. f z = 0}" for i
+    using holomorphic_compact_finite_zeros assms F Seq Union_iff by blast
+  have "{z \<in> S. f z = 0} = (\<Union>i. {z \<in> F i. f z = 0})"
+    using Seq by auto
+  with fin show ?thesis
+    by (simp add: countable_finite)
+qed
+
+lemma holomorphic_countable_equal:
+  assumes "f holomorphic_on S" "g holomorphic_on S" "open S" "connected S" and "fsigma S"
+    and eq: "uncountable {z\<in>S. f z = g z}"
+  shows "S \<subseteq> {z\<in>S. f z = g z}"
+proof -
+  obtain z where z: "z\<in>S" "f z = g z"
+    using eq not_finite_existsD uncountable_infinite by blast
+  have "(\<lambda>x. f x - g x) holomorphic_on S"
+    by (simp add: assms holomorphic_on_diff)
+  then have "(\<lambda>x. f x - g x) constant_on S"
+    using holomorphic_countable_zeros assms by force
+  with z have "\<And>x. x\<in>S \<Longrightarrow> f x - g x = 0"
+    unfolding constant_on_def by force
+  then show ?thesis
+    by auto
+qed
+
+lemma holomorphic_countable_equal_UNIV:
+  assumes fg: "f holomorphic_on UNIV" "g holomorphic_on UNIV"
+    and eq: "uncountable {z. f z = g z}"
+  shows "f=g"
+  using holomorphic_countable_equal [OF fg] eq by fastforce
+
+thm card_Union_le_sum_card (*RENAME*)
+lemma card_Union_le_sum_cardXXXX:
+  fixes U :: "'a set set"
+  shows "card (\<Union>U) \<le> sum card U"
+  by (metis Union_upper card.infinite card_Union_le_sum_card finite_subset zero_le)
+
 thm real_non_denum
 theorem complex_non_denum: "\<nexists>f :: nat \<Rightarrow> complex. surj f"
   by (metis (full_types) Re_complex_of_real comp_surj real_non_denum surj_def)
@@ -22,6 +77,11 @@ proof
   show "vcard x < \<omega> \<Longrightarrow> finite (elts x)"
     by (meson Ord_\<omega> Ord_cardinal Ord_mem_iff_lt cardinal_eqpoll eqpoll_finite_iff finite_Ord_omega)
 qed
+
+lemma cadd_left_commute: "j \<oplus> (i \<oplus> k) = i \<oplus> (j \<oplus> k)"
+  using cadd_assoc cadd_commute by force
+
+lemmas cadd_ac = cadd_assoc cadd_commute cadd_left_commute
 
 thm Card_lt_csucc_iff
 lemma csucc_lt_csucc_iff: "\<lbrakk>Card \<kappa>'; Card \<kappa>\<rbrakk> \<Longrightarrow> (csucc \<kappa>' < csucc \<kappa>) = (\<kappa>' < \<kappa>)"
@@ -66,9 +126,6 @@ next
 qed
 
 
-lemma DD: "set (insert x Y) = (if small Y then vinsert x (set Y) else 0)"
-  by auto
-
 lemma countable_infinite_vcard: "countable (elts x) \<and> infinite (elts x) \<longleftrightarrow> vcard x = \<aleph>0"
   by (metis Aleph_0 countable_iff_le_Aleph0 dual_order.refl finite_iff_less_Aleph0 less_V_def)
 
@@ -90,6 +147,30 @@ proof -
       by (metis vcard_set_image Card_def assms bij_betw_def bij_betw_subset \<phi> less_eq_V_def)
   qed
 qed
+
+thm vcard_disjoint_sup
+lemma vcard_sup: "vcard (x \<squnion> y) \<le> vcard x \<oplus> vcard y"
+proof -
+  have "elts (x \<squnion> y) \<lesssim> elts (x \<Uplus> y)"
+    unfolding lepoll_def
+  proof (intro exI conjI)
+    let ?f = "\<lambda>z. if z \<in> elts x then Inl z else Inr z"
+    show "inj_on ?f (elts (x \<squnion> y))"
+      by (simp add: inj_on_def)
+    show "?f ` elts (x \<squnion> y) \<subseteq> elts (x \<Uplus> y)" thm add.left_commute
+      by force
+  qed
+  then show ?thesis
+    using cadd_ac
+    by (metis cadd_def cardinal_cong cardinal_idem lepoll_imp_Card_le vsum_0_eqpoll)
+qed
+
+
+lemma 
+  assumes "small U"
+  shows "vcard (\<Squnion>U) \<le> \<Squnion> (vcard ` U)"
+  by (metis Union_upper card.infinite card_Union_le_sum_card finite_subset zero_le)
+
 
 thm Card_lt_csucc_iff
 lemma csucc_le_Card_iff: "\<lbrakk>Card \<kappa>'; Card \<kappa>\<rbrakk> \<Longrightarrow> csucc \<kappa>' \<le> \<kappa> \<longleftrightarrow> \<kappa>' < \<kappa>"
@@ -330,12 +411,12 @@ proof -
     have co_S: "countable (S \<alpha> \<beta>)" if "\<alpha> \<in> elts \<beta>" "\<beta> \<in> elts (\<aleph>1)" for \<alpha> \<beta>
       sorry
     define SS where "SS \<equiv> \<Squnion>\<beta> \<in> elts(\<aleph>1). \<Squnion>\<alpha> \<in> elts \<beta>. S \<alpha> \<beta>"
-    have "gcard SS = \<aleph>1"
+    have "gcard SS \<le> \<aleph>1"
       apply (simp add: SS_def)
 
       sorry
     with NCH obtain z0 where "z0 \<notin> SS"
-      by (metis Complex_gcard UNIV_eq_I order_less_irrefl)
+      by (metis Complex_gcard UNIV_eq_I less_le_not_le)
     then have "gcard ((\<lambda>f. f z0) ` F') = \<aleph>1"
       apply (simp add: SS_def S_def)
 
