@@ -169,8 +169,7 @@ qed
 lemma 
   assumes "small U"
   shows "vcard (\<Squnion>U) \<le> \<Squnion> (vcard ` U)"
-  by (metis Union_upper card.infinite card_Union_le_sum_card finite_subset zero_le)
-
+sorry
 
 thm Card_lt_csucc_iff
 lemma csucc_le_Card_iff: "\<lbrakk>Card \<kappa>'; Card \<kappa>\<rbrakk> \<Longrightarrow> csucc \<kappa>' \<le> \<kappa> \<longleftrightarrow> \<kappa>' < \<kappa>"
@@ -285,6 +284,10 @@ lemma gcard_eq_vcard [simp]: "gcard (elts x) = vcard x"
 
 lemma gcard_eqpoll: "small X \<Longrightarrow> elts (gcard X) \<approx> X"
   by (metis cardinal_eqpoll elts_set_V_of eqpoll_trans gcard_def)
+
+lemma gcard_image: "inj_on f A \<Longrightarrow> gcard (f ` A) = gcard A"
+  by (smt (verit) Card_def Card_gcard cardinal_cong eqpoll_sym eqpoll_trans gcard_big_0 gcard_eqpoll inj_on_image_eqpoll_self small_image_iff)
+
 
 lemma countable_iff_g_le_Aleph0: "small X \<Longrightarrow> countable X \<longleftrightarrow> gcard X \<le> \<aleph>0"
   by (metis inv_V_of_image_eq countable_iff_le_Aleph0 countable_image elts_of_set gcard_def replacement)
@@ -419,16 +422,19 @@ proof -
         using holomorphic_countable_equal_UNIV unfolding S_def by blast
     qed
     define SS where "SS \<equiv> \<Squnion>\<beta> \<in> elts(\<aleph>1). \<Squnion>\<alpha> \<in> elts \<beta>. S \<alpha> \<beta>"
+    have F'_eq: "F' =  \<phi> ` elts \<omega>1"
+      using \<phi> bij_betw_imp_surj_on by auto
     have "gcard SS \<le> \<aleph>1"
       apply (simp add: SS_def)
 
       sorry
     with NCH obtain z0 where "z0 \<notin> SS"
       by (metis Complex_gcard UNIV_eq_I less_le_not_le)
+    then have "inj_on (\<lambda>x. \<phi> x z0) (elts \<omega>1)"
+      apply (simp add: SS_def S_def inj_on_def)
+      by (metis Ord_\<omega>1 Ord_in_Ord Ord_linear)
     then have "gcard ((\<lambda>f. f z0) ` F') = \<aleph>1"
-      apply (simp add: SS_def S_def)
-
-      sorry
+      by (smt (verit) F' F'_eq gcard_image imageE inj_on_def)
     then show ?thesis
       by (metis \<open>F' \<subseteq> F\<close> assms(3) image_mono lepoll_imp_gcard_le replacement)
   qed
