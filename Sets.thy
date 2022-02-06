@@ -409,7 +409,15 @@ proof -
       using less_\<omega>1_imp_countable opairs_def that by blast
     define S where "S \<equiv> \<lambda>\<alpha> \<beta>. {z. \<phi> \<alpha> z = \<phi> \<beta> z}"
     have co_S: "countable (S \<alpha> \<beta>)" if "\<alpha> \<in> elts \<beta>" "\<beta> \<in> elts (\<aleph>1)" for \<alpha> \<beta>
-      sorry
+    proof -
+      have "\<phi> \<alpha> holomorphic_on UNIV" "\<phi> \<beta> holomorphic_on UNIV"
+        using W \<open>F' \<subseteq> F\<close> unfolding Wetzel_def
+        by (meson Ord_\<omega>1 OrdmemD \<phi> analytic_imp_holomorphic bij_betwE less_V_def subsetD that vsubsetD)+
+      moreover have "\<phi> \<alpha> \<noteq> \<phi> \<beta>"
+        by (metis Ord_\<omega>1 Ord_in_Ord Ord_trans OrdmemD \<phi> bij_betw_imp_inj_on inj_on_def less_V_def that)
+      ultimately show ?thesis
+        using holomorphic_countable_equal_UNIV unfolding S_def by blast
+    qed
     define SS where "SS \<equiv> \<Squnion>\<beta> \<in> elts(\<aleph>1). \<Squnion>\<alpha> \<in> elts \<beta>. S \<alpha> \<beta>"
     have "gcard SS \<le> \<aleph>1"
       apply (simp add: SS_def)
