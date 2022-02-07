@@ -125,6 +125,10 @@ next
     by auto
 qed
 
+lemma lepoll_small:
+  assumes "A \<lesssim> B" "small B"
+  shows "small A"
+    by (meson assms lepoll_iff replacement smaller_than_small)
 
 lemma countable_infinite_vcard: "countable (elts x) \<and> infinite (elts x) \<longleftrightarrow> vcard x = \<aleph>0"
   by (metis Aleph_0 countable_iff_le_Aleph0 dual_order.refl finite_iff_less_Aleph0 less_V_def)
@@ -165,11 +169,40 @@ proof -
     by (metis cadd_def cardinal_cong cardinal_idem lepoll_imp_Card_le vsum_0_eqpoll)
 qed
 
+lemma elts_cmult: "elts (\<kappa>' \<otimes> \<kappa>) \<approx> elts \<kappa>' \<times> elts \<kappa>"
+  by (simp add: cmult_def elts_vcard_VSigma_eqpoll)
 
-lemma 
-  assumes "small U"
-  shows "vcard (\<Squnion>U) \<le> \<Squnion> (vcard ` U)"
-sorry
+lemma vcard_Sup_le_cmult:
+  assumes "small U" and \<kappa>: "\<And>x. x \<in> U \<Longrightarrow> vcard x \<le> \<kappa>"
+  shows "vcard (\<Squnion>U) \<le> vcard (set U) \<otimes> \<kappa>"
+proof -
+  have "\<exists>f. f \<in> elts x \<rightarrow> elts \<kappa> \<and> inj_on f (elts x)" if "x \<in> U" for x
+    using \<kappa> [OF that] by (metis cardinal_le_lepoll image_subset_iff_funcset lepoll_def)
+  then obtain \<phi> where \<phi>: "\<And>x. x \<in> U \<Longrightarrow> (\<phi> x) \<in> elts x \<rightarrow> elts \<kappa> \<and> inj_on (\<phi> x) (elts x)"
+    by metis
+  define u where "u \<equiv> \<lambda>y. @x. x \<in> U \<and> y \<in> elts x"
+  have u: "u y \<in> U \<and> y \<in> elts (u y)" if "y \<in> \<Union>(elts ` U)" for y
+    unfolding u_def by (metis (mono_tags, lifting)that someI2_ex UN_iff)  
+  define \<psi> where "\<psi> \<equiv> \<lambda>y. (u y, \<phi> (u y) y)"
+  have U: "elts (vcard (set U)) \<approx> U"
+    by (metis \<open>small U\<close> cardinal_eqpoll elts_of_set)
+  have "elts (\<Squnion>U) = \<Union>(elts ` U)"
+    using \<open>small U\<close> by blast
+  also have "\<dots> \<lesssim> U \<times> elts \<kappa>"
+    unfolding lepoll_def
+  proof (intro exI conjI)
+    show "inj_on \<psi> (\<Union> (elts ` U))"
+      using \<phi> u by (smt (verit) \<psi>_def inj_on_def prod.inject)
+    show "\<psi> ` \<Union> (elts ` U) \<subseteq> U \<times> elts \<kappa>"
+      using \<phi> u by (auto simp: \<psi>_def)
+  qed
+  also have "\<dots>  \<approx> elts (vcard (set U) \<otimes> \<kappa>)"
+    using U elts_cmult eqpoll_sym eqpoll_trans times_eqpoll_cong by blast
+  finally have "elts (\<Squnion> U) \<lesssim> elts (vcard (set U) \<otimes> \<kappa>)" .
+  then show ?thesis
+    by (simp add: cmult_def lepoll_cardinal_le)
+qed
+
 
 thm Card_lt_csucc_iff
 lemma csucc_le_Card_iff: "\<lbrakk>Card \<kappa>'; Card \<kappa>\<rbrakk> \<Longrightarrow> csucc \<kappa>' \<le> \<kappa> \<longleftrightarrow> \<kappa>' < \<kappa>"
@@ -201,7 +234,7 @@ lemma V_of_image_times: "V_of ` (X \<times> Y) \<approx> (V_of ` X) \<times> (V_
 proof -
   have "V_of ` (X \<times> Y) \<approx> X \<times> Y"
     by (meson inj_V_of inj_eq inj_onI inj_on_image_eqpoll_self)
-  also have "... \<approx> (V_of ` X) \<times> (V_of ` Y)"
+  also have "\<dots> \<approx> (V_of ` X) \<times> (V_of ` Y)"
     by (metis eqpoll_sym inj_V_of inj_eq inj_onI inj_on_image_eqpoll_self times_eqpoll_cong)
   finally show ?thesis .
 qed
@@ -248,7 +281,7 @@ proof -
       show "emb2 ` elts Complex_set \<subseteq> elts Real_set \<times> elts Real_set"
         by (simp add: emb2_def Real_set_def Complex_set_def image_subset_iff)
     qed
-    also have "...  \<approx> elts Real_set"
+    also have "\<dots>  \<approx> elts Real_set"
       by (simp add: infinite_times_eqpoll_self uncountable_Real_set uncountable_infinite)
     finally show "elts Complex_set \<lesssim> elts Real_set" .
   qed
@@ -288,6 +321,25 @@ lemma gcard_eqpoll: "small X \<Longrightarrow> elts (gcard X) \<approx> X"
 lemma gcard_image: "inj_on f A \<Longrightarrow> gcard (f ` A) = gcard A"
   by (smt (verit) Card_def Card_gcard cardinal_cong eqpoll_sym eqpoll_trans gcard_big_0 gcard_eqpoll inj_on_image_eqpoll_self small_image_iff)
 
+lemma lepoll_imp_gcard_le:
+  assumes "A \<lesssim> B" "small B"
+  shows "gcard A \<le> gcard B"
+proof -
+  have "elts (ZFC_in_HOL.set (V_of ` A)) \<approx> A" "elts (ZFC_in_HOL.set (V_of ` B)) \<approx> B"
+    by (meson assms elts_set_V_of lepoll_small)+
+  with \<open>A \<lesssim> B\<close> show ?thesis
+  unfolding gcard_def
+  by (meson lepoll_imp_Card_le eqpoll_sym lepoll_iff_leqpoll lepoll_trans)
+qed
+
+lemma gcard_Union_le_cmult:
+  assumes "small U" and \<kappa>: "\<And>x. x \<in> U \<Longrightarrow> gcard x \<le> \<kappa>"
+  shows "gcard (\<Union>U) \<le> gcard U \<otimes> \<kappa>"
+  unfolding gcard_def
+  apply (rule lepoll_trans)
+
+  apply (rule vcard_Sup_le_cmult)
+  using vcard_Sup_le_cmult
 
 lemma countable_iff_g_le_Aleph0: "small X \<Longrightarrow> countable X \<longleftrightarrow> gcard X \<le> \<aleph>0"
   by (metis inv_V_of_image_eq countable_iff_le_Aleph0 countable_image elts_of_set gcard_def replacement)
@@ -339,10 +391,10 @@ lemma lepoll_imp_gcard_le:
   by (metis assms elts_of_set image_mono lepoll_imp_Card_le replacement smaller_than_small subset_imp_lepoll)
 
 lemma Real_gcard: "gcard (UNIV::real set) = C_continuum"
-  by (simp add: C_continuum_def Real_set_def gcard_def)
+  by (metis C_continuum_def Real_set_def gcard_def)
 
 lemma Complex_gcard: "gcard (UNIV::complex set) = C_continuum"
-  by (simp add: Complex_set_def Complex_vcard gcard_def)
+  by (metis Complex_set_def Complex_vcard gcard_def)
 
 
 lemma gcard_Times [simp]: "gcard (X \<times> Y) = gcard X \<otimes> gcard Y"
@@ -350,9 +402,9 @@ proof (cases "small X \<and> small Y")
   case True
   have "V_of ` (X \<times> Y) \<approx> (V_of ` X) \<times> (V_of ` Y)"
     by (metis V_of_image_times)
-  also have "... \<approx> elts (vcard (ZFC_in_HOL.set (V_of ` X))) \<times> elts (vcard (ZFC_in_HOL.set (V_of ` Y)))"
+  also have "\<dots> \<approx> elts (vcard (ZFC_in_HOL.set (V_of ` X))) \<times> elts (vcard (ZFC_in_HOL.set (V_of ` Y)))"
     by (metis True cardinal_eqpoll eqpoll_sym replacement set_of_elts small_iff times_eqpoll_cong)
-  also have "... \<approx> elts (vtimes (vcard (ZFC_in_HOL.set (V_of ` X))) (vcard (ZFC_in_HOL.set (V_of ` Y))))"
+  also have "\<dots> \<approx> elts (vtimes (vcard (ZFC_in_HOL.set (V_of ` X))) (vcard (ZFC_in_HOL.set (V_of ` Y))))"
     using elts_VSigma by auto
   finally show ?thesis
     using True cardinal_cong by (simp add: gcard_def cmult_def)
@@ -385,8 +437,10 @@ proof -
       by (meson Card_Aleph Ord_1 subset_smaller_gcard \<open>small F\<close>)
     then obtain \<phi> where \<phi>: "bij_betw \<phi> (elts (\<aleph>1)) F'"
       by (metis TC_small eqpoll_def gcard_eqpoll)
+
+  (*UNUSED*)
     define AB where "AB \<equiv> {(\<alpha>,\<beta>). \<alpha> < \<beta>} \<inter> (elts (\<aleph>1) \<times> elts (\<aleph>1))"
-    have "gcard AB = \<aleph>1"
+    have gcard_AB: "gcard AB = \<aleph>1"
     proof (rule antisym)
       have "small AB"
         unfolding AB_def by (metis inf_le2 small_Times small_iff smaller_than_small)
@@ -396,6 +450,7 @@ proof -
         by (simp add: Card_cardinal_eq)
       finally show "gcard AB \<le> \<omega>1"
         by (metis AB_def inf_le2 lepoll_imp_gcard_le small_Times small_elts)
+(*do we EVEN NEED THE OTHER DIRECTION?*)
       have "elts (\<aleph>1) \<lesssim> AB"
         unfolding AB_def lepoll_def
       proof (intro conjI exI)
@@ -410,6 +465,8 @@ proof -
     define opairs where "opairs \<equiv> \<lambda>\<beta>. (\<lambda>\<alpha>. (\<alpha>,\<beta>)) ` (elts \<beta>)"
     have co_opairs: "countable (opairs \<beta>)" if "\<beta> \<in> elts (\<aleph>1)" for \<beta>
       using less_\<omega>1_imp_countable opairs_def that by blast
+
+
     define S where "S \<equiv> \<lambda>\<alpha> \<beta>. {z. \<phi> \<alpha> z = \<phi> \<beta> z}"
     have co_S: "countable (S \<alpha> \<beta>)" if "\<alpha> \<in> elts \<beta>" "\<beta> \<in> elts (\<aleph>1)" for \<alpha> \<beta>
     proof -
