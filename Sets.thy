@@ -208,6 +208,23 @@ thm Card_lt_csucc_iff
 lemma csucc_le_Card_iff: "\<lbrakk>Card \<kappa>'; Card \<kappa>\<rbrakk> \<Longrightarrow> csucc \<kappa>' \<le> \<kappa> \<longleftrightarrow> \<kappa>' < \<kappa>"
   by (metis Card_csucc Card_is_Ord Card_lt_csucc_iff Ord_not_le)
 
+lemma cadd_InfCard_le:
+  assumes "\<alpha> \<le> \<kappa>" "\<beta> \<le> \<kappa>" "InfCard \<kappa>"
+  shows "\<alpha> \<oplus> \<beta> \<le> \<kappa>"
+  using assms by (metis InfCard_cdouble_eq cadd_le_mono)
+
+lemma cmult_InfCard_le:
+  assumes "\<alpha> \<le> \<kappa>" "\<beta> \<le> \<kappa>" "InfCard \<kappa>"
+  shows "\<alpha> \<otimes> \<beta> \<le> \<kappa>"
+  using assms
+  by (metis InfCard_csquare_eq cmult_le_mono)
+
+lemma vcard_Aleph [simp]: "Ord \<alpha> \<Longrightarrow> vcard (\<aleph>\<alpha>) = \<aleph>\<alpha>"
+  by (simp add: Card_cardinal_eq)
+
+lemma omega_le_Aleph [simp]: "Ord \<alpha> \<Longrightarrow> \<omega> \<le> \<aleph>\<alpha>"
+  using InfCard_def by auto
+
 subsection \<open>Making the embedding explicit (possibly add to the AFP entry?\<close>
 
 definition V_of :: "'a::embeddable \<Rightarrow> V"
@@ -318,8 +335,18 @@ lemma gcard_eq_vcard [simp]: "gcard (elts x) = vcard x"
 lemma gcard_eqpoll: "small X \<Longrightarrow> elts (gcard X) \<approx> X"
   by (metis cardinal_eqpoll elts_set_V_of eqpoll_trans gcard_def)
 
+lemma gcard_image_le: 
+  assumes "small A"
+  shows "gcard (f ` A) \<le> gcard A"
+proof -
+  have "(V_of ` f ` A) \<lesssim> (V_of ` A)"
+    by (metis Int_UNIV_left image_lepoll inj_V_of inj_on_Int inj_on_image_lepoll_1 inj_on_image_lepoll_2)
+  then show ?thesis
+    by (simp add: assms gcard_def lepoll_imp_Card_le)
+qed
+
 lemma gcard_image: "inj_on f A \<Longrightarrow> gcard (f ` A) = gcard A"
-  by (smt (verit) Card_def Card_gcard cardinal_cong eqpoll_sym eqpoll_trans gcard_big_0 gcard_eqpoll inj_on_image_eqpoll_self small_image_iff)
+  by (metis dual_order.antisym gcard_big_0 gcard_image_le small_image_iff the_inv_into_onto)
 
 lemma lepoll_imp_gcard_le:
   assumes "A \<lesssim> B" "small B"
@@ -449,6 +476,7 @@ lemma less_succ_self: "x < succ x"
 definition Wetzel :: "(complex \<Rightarrow> complex) set \<Rightarrow> bool"
   where "Wetzel \<equiv> \<lambda>F. (\<forall>f\<in>F. f analytic_on UNIV) \<and> (\<forall>z. countable((\<lambda>f. f z) ` F))"
 
+
 proposition Erdos_Wetzel_nonCH:
   assumes W: "Wetzel F" and NCH: "C_continuum > \<aleph>1" and "small F"
   shows "countable F"
@@ -461,46 +489,18 @@ proof -
       by (meson Card_Aleph Ord_1 subset_smaller_gcard \<open>small F\<close>)
     then obtain \<phi> where \<phi>: "bij_betw \<phi> (elts (\<aleph>1)) F'"
       by (metis TC_small eqpoll_def gcard_eqpoll)
-
-  (*UNUSED*)
-    define AB where "AB \<equiv> {(\<alpha>,\<beta>). \<alpha> < \<beta>} \<inter> (elts (\<aleph>1) \<times> elts (\<aleph>1))"
-    have gcard_AB: "gcard AB = \<aleph>1"
-    proof (rule antisym)
-      have "small AB"
-        unfolding AB_def by (metis inf_le2 small_Times small_iff smaller_than_small)
-      have "gcard (elts (\<aleph>1) \<times> elts (\<aleph>1)) = vcard (\<aleph>1 \<otimes> \<aleph>1)"
-        by (metis gcard_Times \<open>gcard F' = \<omega>1\<close> cardinal_idem gcard_def gcard_eq_vcard)
-      also have "\<dots> = \<aleph>1"
-        by (simp add: Card_cardinal_eq)
-      finally show "gcard AB \<le> \<omega>1"
-        by (metis AB_def inf_le2 lepoll_imp_gcard_le small_Times small_elts)
-(*do we EVEN NEED THE OTHER DIRECTION?*)
-      have "elts (\<aleph>1) \<lesssim> AB"
-        unfolding AB_def lepoll_def
-      proof (intro conjI exI)
-        show "inj_on (\<lambda>x. (x, succ x)) (elts \<omega>1)"
-          by (auto simp: inj_on_def)
-        show "(\<lambda>x. (x, succ x)) ` elts \<omega>1 \<subseteq> Restr {(x, y). x < y} (elts \<omega>1)"
-          by (auto simp: succ_in_Limit_iff less_succ_self)
-      qed
-      then show "\<omega>1 \<le> gcard AB"
-        by (metis F' Ord_cardinal \<open>small AB\<close> cardinal_idem eqpoll_sym gcard_def gcard_eqpoll lepoll_cardinal_le lepoll_trans2)
-    qed
-    define opairs where "opairs \<equiv> \<lambda>\<beta>. (\<lambda>\<alpha>. (\<alpha>,\<beta>)) ` (elts \<beta>)"
-    have co_opairs: "countable (opairs \<beta>)" if "\<beta> \<in> elts (\<aleph>1)" for \<beta>
-      using less_\<omega>1_imp_countable opairs_def that by blast
-
-
     define S where "S \<equiv> \<lambda>\<alpha> \<beta>. {z. \<phi> \<alpha> z = \<phi> \<beta> z}"
-    have co_S: "countable (S \<alpha> \<beta>)" if "\<alpha> \<in> elts \<beta>" "\<beta> \<in> elts (\<aleph>1)" for \<alpha> \<beta>
+    have co_S: "gcard (S \<alpha> \<beta>) \<le> \<aleph>0" if "\<alpha> \<in> elts \<beta>" "\<beta> \<in> elts (\<aleph>1)" for \<alpha> \<beta>
     proof -
       have "\<phi> \<alpha> holomorphic_on UNIV" "\<phi> \<beta> holomorphic_on UNIV"
         using W \<open>F' \<subseteq> F\<close> unfolding Wetzel_def
         by (meson Ord_\<omega>1 OrdmemD \<phi> analytic_imp_holomorphic bij_betwE less_V_def subsetD that vsubsetD)+
       moreover have "\<phi> \<alpha> \<noteq> \<phi> \<beta>"
         by (metis Ord_\<omega>1 Ord_in_Ord Ord_trans OrdmemD \<phi> bij_betw_imp_inj_on inj_on_def less_V_def that)
-      ultimately show ?thesis
+      ultimately have "countable (S \<alpha> \<beta>)"
         using holomorphic_countable_equal_UNIV unfolding S_def by blast
+      then show ?thesis
+        using countable_imp_g_le_Aleph0 by blast
     qed
     define SS where "SS \<equiv> \<Squnion>\<beta> \<in> elts(\<aleph>1). \<Squnion>\<alpha> \<in> elts \<beta>. S \<alpha> \<beta>"
     have F'_eq: "F' =  \<phi> ` elts \<omega>1"
@@ -508,11 +508,16 @@ proof -
     have "gcard SS \<le> \<aleph>1"
       apply (simp add: SS_def)
       apply (rule order_trans)
-       apply (rule gcard_Union_le_cmult)
+       apply (rule gcard_Union_le_cmult [where \<kappa> = "\<aleph>0"])
          apply (simp add: )
         apply (simp add: image_iff)
-apply clarify
-      sorry
+        apply (erule bexE)
+        apply (erule ssubst)
+        apply (metis Aleph_0 TC_small co_S countable_UN countable_iff_g_le_Aleph0 less_\<omega>1_imp_countable)
+       apply (force simp add: )
+      apply (rule cmult_InfCard_le )
+      using gcard_image_le  apply fastforce
+      by (simp add: )+
     with NCH obtain z0 where "z0 \<notin> SS"
       by (metis Complex_gcard UNIV_eq_I less_le_not_le)
     then have "inj_on (\<lambda>x. \<phi> x z0) (elts \<omega>1)"
