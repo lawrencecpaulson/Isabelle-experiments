@@ -7,6 +7,17 @@ begin
 
 subsection \<open>For the libraries\<close>
 
+
+subsubsection \<open>HOL\<close>
+
+thm card_Union_le_sum_card (*RENAME*)
+lemma card_Union_le_sum_cardXXXX:
+  fixes U :: "'a set set"
+  shows "card (\<Union>U) \<le> sum card U"
+  by (metis Union_upper card.infinite card_Union_le_sum_card finite_subset zero_le)
+
+subsubsection \<open>Analysis\<close>
+
 thm holomorphic_compact_finite_zeros analytic_imp_holomorphic countable_def
 
 lemma fsigma_UNIV [iff]: "fsigma (UNIV :: 'a::real_inner set)"
@@ -56,18 +67,14 @@ lemma holomorphic_countable_equal_UNIV:
   shows "f=g"
   using holomorphic_countable_equal [OF fg] eq by fastforce
 
-thm card_Union_le_sum_card (*RENAME*)
-lemma card_Union_le_sum_cardXXXX:
-  fixes U :: "'a set set"
-  shows "card (\<Union>U) \<le> sum card U"
-  by (metis Union_upper card.infinite card_Union_le_sum_card finite_subset zero_le)
-
 thm real_non_denum
 theorem complex_non_denum: "\<nexists>f :: nat \<Rightarrow> complex. surj f"
   by (metis (full_types) Re_complex_of_real comp_surj real_non_denum surj_def)
 
 lemma uncountable_UNIV_complex: "uncountable (UNIV :: complex set)"
   using complex_non_denum unfolding uncountable_def by auto
+
+subsubsection \<open>ZFC in HOL\<close>
 
 thm countable_iff_le_Aleph0
 lemma finite_iff_less_Aleph0: "finite (elts x) \<longleftrightarrow> vcard x < \<omega>"
@@ -100,8 +107,10 @@ lemma csucc_0 [simp]: "csucc 0 = 1"
 
 thm Card_Aleph
 lemma InfCard_Aleph [simp, intro]:
-     "Ord \<alpha> \<Longrightarrow> InfCard(Aleph \<alpha>)"
-  by (metis Aleph_0 Aleph_increasing Card_Aleph InfCard_def Ord_0 Ord_mem_iff_lt dual_order.order_iff_strict mem_0_Ord)
+  assumes "Ord \<alpha>"
+  shows "InfCard(Aleph \<alpha>)"
+  unfolding InfCard_def
+  by (metis Aleph_0 Aleph_increasing Card_Aleph antisym_conv1 assms in_succ_iff nless_le zero_in_succ)
 
 thm InfCard_csquare_eq
 corollary Aleph_csquare_eq [simp]: "Ord \<alpha> \<Longrightarrow> \<aleph>\<alpha> \<otimes> \<aleph>\<alpha> = \<aleph>\<alpha>"
@@ -225,7 +234,7 @@ lemma vcard_Aleph [simp]: "Ord \<alpha> \<Longrightarrow> vcard (\<aleph>\<alpha
 lemma omega_le_Aleph [simp]: "Ord \<alpha> \<Longrightarrow> \<omega> \<le> \<aleph>\<alpha>"
   using InfCard_def by auto
 
-subsection \<open>Making the embedding explicit (possibly add to the AFP entry?\<close>
+subsection \<open>Making the embedding explicit (possibly add to the AFP entry?)\<close>
 
 definition V_of :: "'a::embeddable \<Rightarrow> V"
   where "V_of \<equiv> SOME f. inj f"
@@ -306,7 +315,7 @@ proof -
     by (simp add: C_continuum_def cardinal_cong)
 qed
 
-subsection \<open>Cardinality of an arbitrary HOL set\<close>
+subsection \<open>Cardinality of an arbitrary HOL set (add to the AFP entry?)\<close>
 
 definition gcard :: "'a::embeddable set \<Rightarrow> V" 
   where "gcard X \<equiv> vcard (ZFC_in_HOL.set (V_of ` X))"
@@ -363,7 +372,6 @@ lemma subset_imp_gcard_le:
   assumes "A \<subseteq> B" "small B"
   shows "gcard A \<le> gcard B"
   by (simp add: assms lepoll_imp_gcard_le subset_imp_lepoll)
-
 
 lemma gcard_le_lepoll: "\<lbrakk>gcard A \<le> \<alpha>; small A\<rbrakk> \<Longrightarrow> A \<lesssim> elts \<alpha>"
   by (meson eqpoll_sym gcard_eqpoll lepoll_trans1 less_eq_V_def subset_imp_lepoll)
@@ -494,7 +502,7 @@ proof -
     proof -
       have "\<phi> \<alpha> holomorphic_on UNIV" "\<phi> \<beta> holomorphic_on UNIV"
         using W \<open>F' \<subseteq> F\<close> unfolding Wetzel_def
-        by (meson Ord_\<omega>1 OrdmemD \<phi> analytic_imp_holomorphic bij_betwE less_V_def subsetD that vsubsetD)+
+        by (meson Ord_\<omega>1 Ord_trans \<phi> analytic_imp_holomorphic bij_betwE subsetD that)+
       moreover have "\<phi> \<alpha> \<noteq> \<phi> \<beta>"
         by (metis Ord_\<omega>1 Ord_in_Ord Ord_trans OrdmemD \<phi> bij_betw_imp_inj_on inj_on_def less_V_def that)
       ultimately have "countable (S \<alpha> \<beta>)"
@@ -505,19 +513,17 @@ proof -
     define SS where "SS \<equiv> \<Squnion>\<beta> \<in> elts(\<aleph>1). \<Squnion>\<alpha> \<in> elts \<beta>. S \<alpha> \<beta>"
     have F'_eq: "F' =  \<phi> ` elts \<omega>1"
       using \<phi> bij_betw_imp_surj_on by auto
-    have "gcard SS \<le> \<aleph>1"
+    have \<section>: "\<And>x xa. xa \<in> elts \<omega>1 \<Longrightarrow> gcard (\<Union>\<alpha>\<in>elts xa. S \<alpha> xa) \<le> \<omega>"
+      by (metis Aleph_0 TC_small co_S countable_UN countable_iff_g_le_Aleph0 less_\<omega>1_imp_countable)
+    have "gcard SS \<le> gcard ((\<lambda>\<beta>. \<Union>\<alpha>\<in>elts \<beta>. S \<alpha> \<beta>) ` elts \<omega>1) \<otimes> \<aleph>0"
       apply (simp add: SS_def)
-      apply (rule order_trans)
-       apply (rule gcard_Union_le_cmult [where \<kappa> = "\<aleph>0"])
-         apply (simp add: )
-        apply (simp add: image_iff)
-        apply (erule bexE)
-        apply (erule ssubst)
-        apply (metis Aleph_0 TC_small co_S countable_UN countable_iff_g_le_Aleph0 less_\<omega>1_imp_countable)
-       apply (force simp add: )
-      apply (rule cmult_InfCard_le )
-      using gcard_image_le  apply fastforce
-      by (simp add: )+
+      by (metis (no_types, lifting) "\<section>" TC_small gcard_Union_le_cmult imageE)
+    also have "...  \<le> \<aleph>1"
+    proof (rule cmult_InfCard_le)
+      show "gcard ((\<lambda>\<beta>. \<Union>\<alpha>\<in>elts \<beta>. S \<alpha> \<beta>) ` elts \<omega>1) \<le> \<omega>1"
+        using gcard_image_le by fastforce
+    qed auto
+    finally have "gcard SS \<le> \<aleph>1" .
     with NCH obtain z0 where "z0 \<notin> SS"
       by (metis Complex_gcard UNIV_eq_I less_le_not_le)
     then have "inj_on (\<lambda>x. \<phi> x z0) (elts \<omega>1)"
