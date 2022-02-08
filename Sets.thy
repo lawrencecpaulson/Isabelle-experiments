@@ -332,14 +332,43 @@ proof -
   by (meson lepoll_imp_Card_le eqpoll_sym lepoll_iff_leqpoll lepoll_trans)
 qed
 
-lemma gcard_Union_le_cmult:
-  assumes "small U" and \<kappa>: "\<And>x. x \<in> U \<Longrightarrow> gcard x \<le> \<kappa>"
-  shows "gcard (\<Union>U) \<le> gcard U \<otimes> \<kappa>"
-  unfolding gcard_def
-  apply (rule lepoll_trans)
+lemma subset_imp_gcard_le:
+  assumes "A \<subseteq> B" "small B"
+  shows "gcard A \<le> gcard B"
+  by (simp add: assms lepoll_imp_gcard_le subset_imp_lepoll)
 
-  apply (rule vcard_Sup_le_cmult)
-  using vcard_Sup_le_cmult
+
+lemma gcard_le_lepoll: "\<lbrakk>gcard A \<le> \<alpha>; small A\<rbrakk> \<Longrightarrow> A \<lesssim> elts \<alpha>"
+  by (meson eqpoll_sym gcard_eqpoll lepoll_trans1 less_eq_V_def subset_imp_lepoll)
+
+lemma gcard_Union_le_cmult:
+  assumes "small U" and \<kappa>: "\<And>x. x \<in> U \<Longrightarrow> gcard x \<le> \<kappa>" and sm: "\<And>x. x \<in> U \<Longrightarrow> small x"
+  shows "gcard (\<Union>U) \<le> gcard U \<otimes> \<kappa>"
+proof -
+  have "\<exists>f. f \<in> x \<rightarrow> elts \<kappa> \<and> inj_on f x" if "x \<in> U" for x
+    using \<kappa> [OF that] gcard_le_lepoll by (smt (verit) Pi_iff TC_small imageI lepoll_def subset_eq)
+  then obtain \<phi> where \<phi>: "\<And>x. x \<in> U \<Longrightarrow> (\<phi> x) \<in> x \<rightarrow> elts \<kappa> \<and> inj_on (\<phi> x) x"
+    by metis
+  define u where "u \<equiv> \<lambda>y. @x. x \<in> U \<and> y \<in> x"
+  have u: "u y \<in> U \<and> y \<in>  (u y)" if "y \<in> \<Union>( U)" for y
+    unfolding u_def using that by (fast intro!: someI2)
+  define \<psi> where "\<psi> \<equiv> \<lambda>y. (u y, \<phi> (u y) y)"
+  have U: "elts (gcard U) \<approx> U"
+    by (simp add: gcard_eqpoll)
+   have "\<Union>U \<lesssim> U \<times> elts \<kappa>"
+    unfolding lepoll_def
+  proof (intro exI conjI)
+    show "inj_on \<psi> (\<Union> U)"
+      using \<phi> u by (smt (verit) \<psi>_def inj_on_def prod.inject)
+    show "\<psi> ` \<Union> U \<subseteq> U \<times> elts \<kappa>"
+      using \<phi> u by (auto simp: \<psi>_def)
+  qed
+  also have "\<dots>  \<approx> elts (gcard U \<otimes> \<kappa>)"
+    using U elts_cmult eqpoll_sym eqpoll_trans times_eqpoll_cong by blast
+  finally have " (\<Union>U) \<lesssim> elts (gcard U \<otimes> \<kappa>)" .
+  then show ?thesis
+    by (metis cardinal_idem cmult_def gcard_eq_vcard lepoll_imp_gcard_le small_elts)
+qed
 
 lemma countable_iff_g_le_Aleph0: "small X \<Longrightarrow> countable X \<longleftrightarrow> gcard X \<le> \<aleph>0"
   by (metis inv_V_of_image_eq countable_iff_le_Aleph0 countable_image elts_of_set gcard_def replacement)
@@ -384,11 +413,6 @@ next
   with assms show ?thesis
     by (metis antisym gcard_big_0 le_0 order_refl that)
 qed
-
-lemma lepoll_imp_gcard_le:
-  assumes "Y \<subseteq> X" "small X" shows "gcard Y \<le> gcard X"
-  unfolding gcard_def
-  by (metis assms elts_of_set image_mono lepoll_imp_Card_le replacement smaller_than_small subset_imp_lepoll)
 
 lemma Real_gcard: "gcard (UNIV::real set) = C_continuum"
   by (metis C_continuum_def Real_set_def gcard_def)
@@ -483,7 +507,11 @@ proof -
       using \<phi> bij_betw_imp_surj_on by auto
     have "gcard SS \<le> \<aleph>1"
       apply (simp add: SS_def)
-
+      apply (rule order_trans)
+       apply (rule gcard_Union_le_cmult)
+         apply (simp add: )
+        apply (simp add: image_iff)
+apply clarify
       sorry
     with NCH obtain z0 where "z0 \<notin> SS"
       by (metis Complex_gcard UNIV_eq_I less_le_not_le)
@@ -493,7 +521,7 @@ proof -
     then have "gcard ((\<lambda>f. f z0) ` F') = \<aleph>1"
       by (smt (verit) F' F'_eq gcard_image imageE inj_on_def)
     then show ?thesis
-      by (metis \<open>F' \<subseteq> F\<close> assms(3) image_mono lepoll_imp_gcard_le replacement)
+      by (metis TC_small \<open>F' \<subseteq> F\<close> image_mono subset_imp_gcard_le)
   qed
   with W show ?thesis
     unfolding Wetzel_def
