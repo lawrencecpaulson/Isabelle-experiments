@@ -18,7 +18,12 @@ lemma card_Union_le_sum_cardXXXX:
 
 subsubsection \<open>Analysis\<close>
 
-thm holomorphic_compact_finite_zeros analytic_imp_holomorphic countable_def
+lemma Rats_closure_real: "closure \<rat> = (UNIV::real set)"
+proof -
+  have "\<And>x::real. x \<in> closure \<rat>"
+    by (metis closure_approachable dist_real_def rational_approximation)
+  then show ?thesis by auto
+qed
 
 lemma fsigma_UNIV [iff]: "fsigma (UNIV :: 'a::real_inner set)"
 proof -
@@ -540,15 +545,41 @@ proof -
 qed
 
 
+lemma Rats_closure_real2: "closure (\<rat>\<times>\<rat>) = (UNIV::real set)\<times>(UNIV::real set)"
+  by (simp add: Rats_closure_real closure_Times)
 
 proposition Erdos_Wetzel_CH:
   assumes CH: "C_continuum = \<aleph>1"
   obtains F where "Wetzel F" and "uncountable F"
-  sorry
+proof -
+  define D where "D \<equiv> {z. Re z \<in> \<rat> \<and> Im z \<in> \<rat>}"
+  have "D = (\<Union>x\<in>\<rat>. \<Union>y\<in>\<rat>. {Complex x y})"
+    using complex.collapse by (force simp: D_def)
+  with countable_rat have "countable D"
+    by blast
+  have "\<exists>w. Re w \<in> \<rat> \<and> Im w \<in> \<rat> \<and> cmod (w - z) < e" if "e > 0" for z and e::real
+  proof -
+    obtain x y where "x\<in>\<rat>" "y\<in>\<rat>" and xy: "dist (x,y) (Re z, Im z) < e"
+      using \<open>e > 0\<close> Rats_closure_real2 by (force simp: closure_approachable)
+    moreover have "dist (x,y) (Re z, Im z) = cmod (Complex x y - z)"
+      by (simp add: norm_complex_def norm_prod_def dist_norm)
+    ultimately show "\<exists>w. Re w \<in> \<rat> \<and> Im w \<in> \<rat> \<and> cmod (w - z) < e"
+      by (metis complex.sel)
+  qed
+  then have "closure D = UNIV"
+    by (auto simp: D_def closure_approachable dist_complex_def)
+  obtain \<zeta> where \<zeta>: "bij_betw \<zeta> (elts (\<aleph>1)) (UNIV::complex set)"
+    by (metis Complex_gcard TC_small assms eqpoll_def gcard_eqpoll)
+  obtain f where f: "inj_on f (elts (\<aleph>1))" and anf: "\<And>\<beta>. \<beta> \<in> elts (\<aleph>1) \<Longrightarrow> f \<beta> analytic_on UNIV"
+    and D: "\<And>\<alpha> \<beta>. \<lbrakk>\<beta> \<in> elts (\<aleph>1); \<alpha> \<in> elts \<beta>\<rbrakk> \<Longrightarrow> f \<beta> (\<zeta> \<alpha>) \<in> D"
+    sorry
+  show ?thesis
+    sorry
+qed
 
 
 theorem Erdos_Wetzel: "C_continuum = \<aleph>1 \<longleftrightarrow> (\<exists>F. Wetzel F \<and> uncountable F)"
-  by (metis C_continuum_def Erdos_Wetzel_CH Erdos_Wetzel_nonCH Ord_\<omega>1 Ord_cardinal Ord_linear2 TC_small cardinal_idem countable_iff_le_Aleph0 countable_iff_less_\<omega>1 order_le_less uncountable_Real_set)
+  by (metis Complex_vcard Erdos_Wetzel_CH Erdos_Wetzel_nonCH TC_small antisym_conv1 gcard_eq_vcard small_elts uncountable_Complex_set uncountable_gcard_ge)
 
 
 
