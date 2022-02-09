@@ -574,7 +574,29 @@ proof -
     and D: "\<And>\<alpha> \<beta>. \<lbrakk>\<beta> \<in> elts (\<aleph>1); \<alpha> \<in> elts \<beta>\<rbrakk> \<Longrightarrow> f \<beta> (\<zeta> \<alpha>) \<in> D"
     sorry
   show ?thesis
-    sorry
+  proof
+    let ?F = "f ` elts (\<aleph>1)"
+    have "countable ((\<lambda>f. f z) ` f ` elts \<omega>1)" for z
+    proof -
+      obtain \<alpha> where \<alpha>: "\<zeta> \<alpha> = z" "\<alpha> \<in> elts (\<aleph>1)" "Ord \<alpha>"
+        by (meson Ord_\<omega>1 Ord_in_Ord UNIV_I \<zeta> bij_betw_iff_bijections)
+      let ?B = "elts \<omega>1 - elts (succ \<alpha>)"
+      have eq: "elts \<omega>1 = elts (succ \<alpha>) \<union> ?B"
+        using \<alpha> by (metis Diff_partition Ord_\<omega>1 OrdmemD less_eq_V_def succ_le_iff)
+      have "(\<lambda>f. f z) ` f ` ?B \<subseteq> D"
+        using \<alpha> D by clarsimp (meson Ord_\<omega>1 Ord_in_Ord Ord_linear)
+      then have "countable ((\<lambda>f. f z) ` f ` ?B)"
+        by (meson \<open>countable D\<close> countable_subset)
+      moreover have "countable ((\<lambda>f. f z) ` f ` elts (succ \<alpha>))"
+        by (simp add: \<alpha> less_\<omega>1_imp_countable)
+      ultimately show ?thesis
+        using eq by (metis countable_Un_iff image_Un)
+    qed
+    then show "Wetzel ?F"
+      unfolding Wetzel_def by (blast intro: anf)
+    show "uncountable ?F"
+      using Ord_\<omega>1 countable_iff_less_\<omega>1 countable_image_inj_eq f by blast
+  qed
 qed
 
 
