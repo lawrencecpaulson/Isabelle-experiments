@@ -575,7 +575,21 @@ proof -
     assume \<gamma>: "\<gamma> \<in> elts (\<aleph>1)"
     assume f: "\<And>\<beta>. \<beta> \<in> elts \<gamma> \<Longrightarrow> \<Phi> \<beta> f"
     have "\<exists>h. h analytic_on UNIV \<and> (\<forall>\<alpha> \<in> elts \<gamma>. h (\<zeta> \<alpha>) \<in> D)"
-    sorry
+    proof (cases "finite (elts \<gamma>)")
+      case True
+      then obtain \<eta> where \<eta>: "bij_betw \<eta> {..<card (elts \<gamma>)} (elts \<gamma>)"
+        using bij_betw_from_nat_into_finite by blast
+      define g where "g \<equiv> f o \<eta>"
+      define w where "w \<equiv> \<zeta> o \<eta>"
+      then show ?thesis sorry
+    next
+      case False
+      then obtain \<eta> where \<eta>: "bij_betw \<eta> (UNIV::nat set) (elts \<gamma>)"
+        by (meson \<gamma> countable_infiniteE' less_\<omega>1_imp_countable)
+      define g where "g \<equiv> f o \<eta>"
+      define w where "w \<equiv> \<zeta> o \<eta>"
+      then show ?thesis sorry
+    qed
   }
   obtain f where f: "\<And>\<beta>. \<beta> \<in> elts (\<aleph>1) \<Longrightarrow> \<Phi> \<beta> f"
     sorry
