@@ -570,9 +570,31 @@ proof -
     by (auto simp: D_def closure_approachable dist_complex_def)
   obtain \<zeta> where \<zeta>: "bij_betw \<zeta> (elts (\<aleph>1)) (UNIV::complex set)"
     by (metis Complex_gcard TC_small assms eqpoll_def gcard_eqpoll)
-  obtain f where f: "inj_on f (elts (\<aleph>1))" and anf: "\<And>\<beta>. \<beta> \<in> elts (\<aleph>1) \<Longrightarrow> f \<beta> analytic_on UNIV"
-    and D: "\<And>\<alpha> \<beta>. \<lbrakk>\<beta> \<in> elts (\<aleph>1); \<alpha> \<in> elts \<beta>\<rbrakk> \<Longrightarrow> f \<beta> (\<zeta> \<alpha>) \<in> D"
+  define \<Phi> where "\<Phi> \<equiv> \<lambda>\<beta> f. inj_on f (elts \<beta>) \<and> f \<beta> analytic_on UNIV \<and> (\<forall>\<alpha> \<in> elts \<beta>. f \<beta> (\<zeta> \<alpha>) \<in> D)"
+  { fix \<gamma> f
+    assume \<gamma>: "\<gamma> \<in> elts (\<aleph>1)"
+    assume f: "\<And>\<beta>. \<beta> \<in> elts \<gamma> \<Longrightarrow> \<Phi> \<beta> f"
+    have "\<exists>h. h analytic_on UNIV \<and> (\<forall>\<alpha> \<in> elts \<gamma>. h (\<zeta> \<alpha>) \<in> D)"
     sorry
+  }
+  obtain f where f: "\<And>\<beta>. \<beta> \<in> elts (\<aleph>1) \<Longrightarrow> \<Phi> \<beta> f"
+    sorry
+  then have anf: "\<And>\<beta>. \<beta> \<in> elts (\<aleph>1) \<Longrightarrow> f \<beta> analytic_on UNIV"
+    and D: "\<And>\<alpha> \<beta>. \<lbrakk>\<beta> \<in> elts (\<aleph>1); \<alpha> \<in> elts \<beta>\<rbrakk> \<Longrightarrow> f \<beta> (\<zeta> \<alpha>) \<in> D"
+    by (auto simp: \<Phi>_def)
+  have f: "inj_on f (elts (\<aleph>1))" 
+  proof
+    fix x y
+    assume xy: "x \<in> elts \<omega>1" "y \<in> elts \<omega>1" and "f x = f y"
+    with Ord_\<omega>1 Ord_in_Ord obtain oo: "Ord x" "Ord y" by blast
+    define \<beta> where "\<beta> \<equiv> succ (x \<squnion> y)"
+    have "\<beta> \<in> elts \<omega>1"
+      by (metis xy oo Limit_\<omega>1 Ord_linear_le \<beta>_def succ_in_Limit_iff sup.absorb2 sup.orderE)
+    obtain "x \<in> elts \<beta>" "y \<in> elts \<beta>"
+      by (metis oo Ord_sup \<beta>_def in_succ_iff sup.cobounded1 sup.cobounded2)
+    then show "x=y"
+      by (meson \<Phi>_def \<open>\<beta> \<in> elts \<omega>1\<close> \<open>f x = f y\<close> f inj_on_def)
+  qed
   show ?thesis
   proof
     let ?F = "f ` elts (\<aleph>1)"
