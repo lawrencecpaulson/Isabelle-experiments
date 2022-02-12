@@ -10,6 +10,9 @@ subsection \<open>For the libraries\<close>
 
 subsubsection \<open>HOL\<close>
 
+lemma inj_on_restrict_iff: "A \<subseteq> B \<Longrightarrow> inj_on (restrict f B) A \<longleftrightarrow> inj_on f A"
+  by (metis inj_on_cong restrict_def subset_iff)
+
 thm card_Union_le_sum_card (*RENAME*)
 lemma card_Union_le_sum_cardXXXX:
   fixes U :: "'a set set"
@@ -586,12 +589,13 @@ proof -
     by (metis Complex_gcard TC_small assms eqpoll_def gcard_eqpoll)
   define inD where "inD \<equiv> \<lambda>\<beta> f. (\<forall>\<alpha> \<in> elts \<beta>. f (\<zeta> \<alpha>) \<in> D)"
   define \<Phi> where "\<Phi> \<equiv> \<lambda>\<beta> f. f \<beta> analytic_on UNIV \<and> inD \<beta> (f \<beta>) \<and> inj_on f (elts (succ \<beta>))"
-  { fix \<gamma> f
-    assume \<gamma>: "\<gamma> \<in> elts (\<aleph>1)" and "\<forall>\<beta> \<in> elts \<gamma>. \<Phi> \<beta> f"
-    then have f: "\<forall>\<beta> \<in> elts \<gamma>. f \<beta> analytic_on UNIV \<and> inD \<beta> (f \<beta>)" 
-      by (auto simp: \<Phi>_def)
+  have *: "\<exists>h. \<Phi> \<gamma> ((restrict f (elts \<gamma>))(\<gamma>:=h))"
+    if \<gamma>: "\<gamma> \<in> elts (\<aleph>1)" and "\<forall>\<beta> \<in> elts \<gamma>. \<Phi> \<beta> f" for \<gamma> f
+  proof -
+    have f: "\<forall>\<beta> \<in> elts \<gamma>. f \<beta> analytic_on UNIV \<and> inD \<beta> (f \<beta>)" 
+      using that by (auto simp: \<Phi>_def)
     have inj: "inj_on f (elts \<gamma>)"
-      sorry
+      using that by (simp add: \<Phi>_def inj_on_def) (meson Ord_\<omega>1 Ord_in_Ord Ord_linear)
     obtain h where "h analytic_on UNIV" "inD \<gamma> h" "(\<forall>\<beta> \<in> elts \<gamma>. h \<noteq> f \<beta>)"
     proof (cases "finite (elts \<gamma>)")
       case True
@@ -608,84 +612,32 @@ proof -
       define w where "w \<equiv> \<zeta> o \<eta>"
       then show ?thesis sorry
     qed
-    with f have "\<exists>f'. \<Phi> \<gamma> f'"
-      apply (rule_tac x="f(\<gamma>:=h)" in exI)
-      apply (auto simp: \<Phi>_def)
-      by (metis fun_upd_other inj inj_on_cong mem_not_refl)
-  } note * = this
-  define G where "G \<equiv> \<lambda>\<gamma>. @f. \<Phi> \<gamma> f"
-  have nxt: "\<Phi> \<gamma> (G \<gamma>)" if "\<gamma> \<in> elts (\<aleph>1)" "\<forall>\<beta> \<in> elts \<gamma>. \<Phi> \<beta> f" for f \<gamma>
+    with f show ?thesis
+      using inj by (rule_tac x="h" in exI) (auto simp: \<Phi>_def inj_on_def)
+  qed
+  define G where "G \<equiv> \<lambda>f \<gamma>. @h. \<Phi> \<gamma> ((restrict f (elts \<gamma>))(\<gamma>:=h))"
+  have nxt: "\<Phi> \<gamma> ((restrict f (elts \<gamma>))(\<gamma>:= G f \<gamma>))" if "\<gamma> \<in> elts (\<aleph>1)" "\<forall>\<beta> \<in> elts \<gamma>. \<Phi> \<beta> f" for f \<gamma>
     unfolding G_def using * [OF that] by (metis someI) 
-  define H where "H \<equiv> transrec (\<lambda>h \<gamma>. G \<gamma>)"
-(*We have problems because G requires two ordinals rather than one but also because its construction 
-doesn't refer to f, meaning that H is identical to G and there is no actual recursion!*)
-  have "H \<alpha> = xxx"
-    unfolding H_def
-      apply (subst transrec)
-
-    sorry
-  define f where "f \<equiv> H (\<aleph>1)"
-  have "\<Phi> \<beta> f" if "\<beta> \<in> elts (\<aleph>1)" for \<beta>
+  have G_restr: "G (restrict f (elts \<gamma>)) \<gamma> = G f \<gamma>" if "\<gamma> \<in> elts (\<aleph>1)" for f \<gamma>
+    by (auto simp: G_def)
+  define f where "f \<equiv> transrec G"
+  have f: "\<Phi> \<beta> f" if "\<beta> \<in> elts (\<aleph>1)" for \<beta>
     using that
   proof (induction \<beta> rule: eps_induct)
     case (step \<gamma>)
-    then have "\<forall>\<beta>\<in>elts \<gamma>. \<Phi> \<beta> f"
+    then have *: "\<forall>\<beta>\<in>elts \<gamma>. \<Phi> \<beta> f"
       using Ord_\<omega>1 Ord_trans by blast
-    then show ?case
-      unfolding f_def H_def
-      apply (subst transrec)
-apply (rule  nxt [OF step.prems])
-      using nxt [OF step.prems]
-      using nxt
-      sorry
+    have [simp]: "inj_on (\<lambda>\<beta>. G (restrict f (elts \<beta>)) \<beta>) (elts \<gamma>) \<longleftrightarrow> inj_on f (elts \<gamma>)"
+      by (metis (no_types, lifting) f_def Sets.transrec inj_on_cong)
+    show ?case
+      using step.prems nxt [OF step.prems *] *
+      by (metis * G_restr f_def Sets.transrec \<Phi>_def elts_succ fun_upd_idem_iff fun_upd_same inj_on_restrict_eq restrict_upd)
   qed
-
-
-  define \<Phi> where "\<Phi> \<equiv> \<lambda>\<beta> f. inj_on f (elts \<beta>) \<and> f \<beta> analytic_on UNIV \<and> (\<forall>\<alpha> \<in> elts \<beta>. f \<beta> (\<zeta> \<alpha>) \<in> D)"
-  { fix \<gamma> f
-    assume \<gamma>: "\<gamma> \<in> elts (\<aleph>1)"
-    assume f: "\<forall>\<beta> \<in> elts \<gamma>. inD \<beta> f" and inj: "inj_on f (elts \<gamma>)"
-    obtain h where "h analytic_on UNIV" "(\<forall>\<beta> \<in> elts \<gamma>. h (\<zeta> \<beta>) \<in> D \<and> h \<noteq> f \<beta>)"
-    proof (cases "finite (elts \<gamma>)")
-      case True
-      then obtain \<eta> where \<eta>: "bij_betw \<eta> {..<card (elts \<gamma>)} (elts \<gamma>)"
-        using bij_betw_from_nat_into_finite by blast
-      define g where "g \<equiv> f o \<eta>"
-      define w where "w \<equiv> \<zeta> o \<eta>"
-      then show ?thesis sorry
-    next
-      case False
-      then obtain \<eta> where \<eta>: "bij_betw \<eta> (UNIV::nat set) (elts \<gamma>)"
-        by (meson \<gamma> countable_infiniteE' less_\<omega>1_imp_countable)
-      define g where "g \<equiv> f o \<eta>"
-      define w where "w \<equiv> \<zeta> o \<eta>"
-      then show ?thesis sorry
-    qed
-    with inj have "inD \<gamma> (f(\<gamma>:=h))"
-      by (auto simp: \<Phi>_def inj_on_def)
-    then have "\<exists>h'. inD \<gamma> h'"
-      by blast
-  }
-      define G where "G \<equiv> \<lambda>\<gamma> \<AA> x. @(g,\<AA>',x'). \<exists>xn. inD \<gamma> g \<AA> \<AA>' xn \<and> x' = (x(\<gamma>:=xn)) \<and> inD (Suc \<gamma>) \<AA>' x'"
-      define H where "H \<equiv> rec_nat (id,?\<AA>0,undefined) (\<lambda>n (g0,\<AA>,x0). G n \<AA> x0)"
-  obtain f where f: "\<And>\<beta>. \<beta> \<in> elts (\<aleph>1) \<Longrightarrow> \<Phi> \<beta> f"
-    sorry
   then have anf: "\<And>\<beta>. \<beta> \<in> elts (\<aleph>1) \<Longrightarrow> f \<beta> analytic_on UNIV"
     and D: "\<And>\<alpha> \<beta>. \<lbrakk>\<beta> \<in> elts (\<aleph>1); \<alpha> \<in> elts \<beta>\<rbrakk> \<Longrightarrow> f \<beta> (\<zeta> \<alpha>) \<in> D"
-    by (auto simp: \<Phi>_def)
-  have f: "inj_on f (elts (\<aleph>1))" 
-  proof
-    fix x y
-    assume xy: "x \<in> elts \<omega>1" "y \<in> elts \<omega>1" and "f x = f y"
-    with Ord_\<omega>1 Ord_in_Ord obtain oo: "Ord x" "Ord y" by blast
-    define \<beta> where "\<beta> \<equiv> succ (x \<squnion> y)"
-    have "\<beta> \<in> elts \<omega>1"
-      by (metis xy oo Limit_\<omega>1 Ord_linear_le \<beta>_def succ_in_Limit_iff sup.absorb2 sup.orderE)
-    obtain "x \<in> elts \<beta>" "y \<in> elts \<beta>"
-      by (metis oo Ord_sup \<beta>_def in_succ_iff sup.cobounded1 sup.cobounded2)
-    then show "x=y"
-      by (meson \<Phi>_def \<open>\<beta> \<in> elts \<omega>1\<close> \<open>f x = f y\<close> f inj_on_def)
-  qed
+    using \<Phi>_def inD_def by blast+
+  have injf: "inj_on f (elts (\<aleph>1))"
+    using f unfolding inj_on_def \<Phi>_def by (metis Ord_\<omega>1 Ord_in_Ord Ord_linear_le in_succ_iff)
   show ?thesis
   proof
     let ?F = "f ` elts (\<aleph>1)"
@@ -708,7 +660,7 @@ apply (rule  nxt [OF step.prems])
     then show "Wetzel ?F"
       unfolding Wetzel_def by (blast intro: anf)
     show "uncountable ?F"
-      using Ord_\<omega>1 countable_iff_less_\<omega>1 countable_image_inj_eq f by blast
+      using Ord_\<omega>1 countable_iff_less_\<omega>1 countable_image_inj_eq injf by blast
   qed
 qed
 
