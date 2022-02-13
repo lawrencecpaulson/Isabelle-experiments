@@ -603,14 +603,31 @@ proof -
         using bij_betw_from_nat_into_finite by blast
       define g where "g \<equiv> f o \<eta>"
       define w where "w \<equiv> \<zeta> o \<eta>"
-      then show ?thesis sorry
+      have gf: "\<forall>i<card (elts \<gamma>). h \<noteq> g i \<Longrightarrow> \<forall>\<beta>\<in>elts \<gamma>. h \<noteq> f \<beta>" for h
+        using \<eta> by (auto simp: bij_betw_iff_bijections g_def)
+      have "\<exists>h. h analytic_on UNIV \<and> inD \<gamma> h \<and> (\<forall>i<n. h \<noteq> g i)"
+        if "n \<le> card (elts \<gamma>)" for n
+      proof (induction n)
+        case 0
+        with True have "inD \<gamma> (\<lambda>z. 0)"
+          by (auto simp: inD_def D_def)
+        then show ?case
+          using analytic_on_const by blast
+      next
+        case (Suc n)
+        then show ?case
+apply (auto simp: )          
+          sorry
+      qed
+      then show ?thesis using that order_refl gf by meson
     next
       case False
       then obtain \<eta> where \<eta>: "bij_betw \<eta> (UNIV::nat set) (elts \<gamma>)"
         by (meson \<gamma> countable_infiniteE' less_\<omega>1_imp_countable)
       define g where "g \<equiv> f o \<eta>"
       define w where "w \<equiv> \<zeta> o \<eta>"
-      then show ?thesis sorry
+      then show ?thesis 
+        sorry
     qed
     with f show ?thesis
       using inj by (rule_tac x="h" in exI) (auto simp: \<Phi>_def inj_on_def)
