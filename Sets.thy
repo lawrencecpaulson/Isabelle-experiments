@@ -605,21 +605,23 @@ proof -
       define w where "w \<equiv> \<zeta> o \<eta>"
       have gf: "\<forall>i<card (elts \<gamma>). h \<noteq> g i \<Longrightarrow> \<forall>\<beta>\<in>elts \<gamma>. h \<noteq> f \<beta>" for h
         using \<eta> by (auto simp: bij_betw_iff_bijections g_def)
-      have "\<exists>h. h analytic_on UNIV \<and> inD \<gamma> h \<and> (\<forall>i<n. h \<noteq> g i)"
+      have *: "\<exists>h. h analytic_on UNIV \<and> (\<forall>i<n. h (w i) \<in> D \<and> h (w i) \<noteq> g i (w i))"
         if "n \<le> card (elts \<gamma>)" for n
       proof (induction n)
         case 0
-        with True have "inD \<gamma> (\<lambda>z. 0)"
-          by (auto simp: inD_def D_def)
         then show ?case
           using analytic_on_const by blast
       next
         case (Suc n)
+        then obtain h where "h analytic_on UNIV" 
+              and hg: "\<forall>i<n. h (w i) \<in> D \<and> h (w i) \<noteq> g i (w i)"
+          by blast
         then show ?case
-apply (auto simp: )          
           sorry
       qed
-      then show ?thesis using that order_refl gf by meson
+      from * [OF order_refl] \<eta> that gf show ?thesis 
+        apply (auto simp add: w_def bij_betw_iff_bijections inD_def)
+        by (metis )
     next
       case False
       then obtain \<eta> where \<eta>: "bij_betw \<eta> (UNIV::nat set) (elts \<gamma>)"
