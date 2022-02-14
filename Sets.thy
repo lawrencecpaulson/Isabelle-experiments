@@ -36,6 +36,19 @@ proof -
     by (metis closed_cball fsigma.intros)
 qed
 
+thm real_non_denum
+theorem complex_non_denum: "\<nexists>f :: nat \<Rightarrow> complex. surj f"
+  by (metis (full_types) Re_complex_of_real comp_surj real_non_denum surj_def)
+
+lemma uncountable_UNIV_complex: "uncountable (UNIV :: complex set)"
+  using complex_non_denum unfolding uncountable_def by auto
+
+subsubsection \<open>Complex Analysis\<close>
+
+lemma analytic_on_prod [analytic_intros]:
+  "(\<And>i. i \<in> I \<Longrightarrow> (f i) analytic_on S) \<Longrightarrow> (\<lambda>x. prod (\<lambda>i. f i x) I) analytic_on S"
+  by (induct I rule: infinite_finite_induct) (auto simp: analytic_on_mult)
+
 lemma holomorphic_countable_zeros:
   assumes S: "f holomorphic_on S" "open S" "connected S" and "fsigma S"
       and "\<not> f constant_on S"
@@ -74,13 +87,6 @@ lemma holomorphic_countable_equal_UNIV:
     and eq: "uncountable {z. f z = g z}"
   shows "f=g"
   using holomorphic_countable_equal [OF fg] eq by fastforce
-
-thm real_non_denum
-theorem complex_non_denum: "\<nexists>f :: nat \<Rightarrow> complex. surj f"
-  by (metis (full_types) Re_complex_of_real comp_surj real_non_denum surj_def)
-
-lemma uncountable_UNIV_complex: "uncountable (UNIV :: complex set)"
-  using complex_non_denum unfolding uncountable_def by auto
 
 subsubsection \<open>ZFC in HOL\<close>
 
@@ -607,17 +613,53 @@ proof -
         using \<eta> by (auto simp: bij_betw_iff_bijections g_def)
       have *: "\<exists>h. h analytic_on UNIV \<and> (\<forall>i<n. h (w i) \<in> D \<and> h (w i) \<noteq> g i (w i))"
         if "n \<le> card (elts \<gamma>)" for n
+        using that
       proof (induction n)
         case 0
         then show ?case
           using analytic_on_const by blast
       next
         case (Suc n)
-        then obtain h where "h analytic_on UNIV" 
-              and hg: "\<forall>i<n. h (w i) \<in> D \<and> h (w i) \<noteq> g i (w i)"
-          by blast
-        then show ?case
-          sorry
+        then obtain h where "h analytic_on UNIV" and hg: "\<forall>i<n. h (w i) \<in> D \<and> h (w i) \<noteq> g i (w i)"
+          using Suc_leD by blast
+        define p where "p \<equiv> \<lambda>z. \<Prod>i<n. z - w i"
+        have p0: "p z = 0 \<longleftrightarrow> (\<exists>i<n. z = w i)" for z
+          unfolding p_def by force
+        obtain d where d: "d \<in> D - {g n (w n)}"
+          by (metis DiffI \<open>closure D = UNIV\<close> closure_empty closure_insert closure_mono countable_empty countable_insert countable_subset subset_eq uncountable_UNIV_complex)
+        define h' where "h' \<equiv> \<lambda>z. h z + p z * (d - h (w n)) / p (w n)"
+        have h'_eq: "h' (w i) = h (w i)" if "i<n" for i
+          using that by (force simp: h'_def p0)
+        show ?case
+        proof (intro exI strip conjI)
+          have "n < card (elts \<gamma>)"
+            using Suc.prems Suc_le_eq by blast
+          have "\<eta> n \<noteq> \<eta> i" if "i<n" for i
+            by (smt (verit) \<eta> \<open>n < card (elts \<gamma>)\<close> bij_betw_iff_bijections le_trans lessThan_iff less_le_not_le not_less_eq_eq that)
+          with \<zeta> \<eta> have pwn_nonzero: "p (w n) \<noteq> 0"
+            apply (simp add: p0)
+            apply (auto simp: w_def)
+            by (metis Ord_\<omega>1 Ord_trans \<gamma> \<open>n < card (elts \<gamma>)\<close> bij_betw_iff_bijections lessThan_iff order_less_trans)
+          then show "h' analytic_on UNIV"
+            unfolding h'_def p_def
+            by (intro analytic_intros \<open>h analytic_on UNIV\<close>)
+          fix i
+          assume "i < Suc n"
+          then consider "i < n" | "i = n"
+            by linarith
+          then show "h' (w i) \<in> D"
+          proof cases
+            case 1
+            then show ?thesis
+              by (simp add: h'_eq hg)
+          next
+            case 2
+            with pwn_nonzero d show ?thesis
+              by (simp add: h'_def)
+          qed
+          show "h' (w i) \<noteq> g i (w i)"
+            using that sorry
+        qed
       qed
       from * [OF order_refl] \<eta> that gf show ?thesis 
         apply (auto simp add: w_def bij_betw_iff_bijections inD_def)
