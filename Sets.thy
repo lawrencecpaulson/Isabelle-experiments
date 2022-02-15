@@ -13,12 +13,6 @@ subsubsection \<open>HOL\<close>
 lemma inj_on_restrict_iff: "A \<subseteq> B \<Longrightarrow> inj_on (restrict f B) A \<longleftrightarrow> inj_on f A"
   by (metis inj_on_cong restrict_def subset_iff)
 
-thm card_Union_le_sum_card (*RENAME*)
-lemma card_Union_le_sum_cardXXXX:
-  fixes U :: "'a set set"
-  shows "card (\<Union>U) \<le> sum card U"
-  by (metis Union_upper card.infinite card_Union_le_sum_card finite_subset zero_le)
-
 subsubsection \<open>Analysis\<close>
 
 lemma Rats_closure_real: "closure \<rat> = (UNIV::real set)"
@@ -156,6 +150,9 @@ lemma lepoll_small:
 lemma countable_infinite_vcard: "countable (elts x) \<and> infinite (elts x) \<longleftrightarrow> vcard x = \<aleph>0"
   by (metis Aleph_0 countable_iff_le_Aleph0 dual_order.refl finite_iff_less_Aleph0 less_V_def)
 
+lemma countable_iff_vcard_less1: "countable (elts x) \<longleftrightarrow> vcard x < \<aleph>1"
+  by (simp add: countable_iff_le_Aleph0 lt_csucc_iff one_V_def)
+
 lemma vcard_set_image: "inj_on f (elts x) \<Longrightarrow> vcard (ZFC_in_HOL.set (f ` elts x)) = vcard x"
   by (simp add: cardinal_cong)
 
@@ -290,7 +287,24 @@ lemma V_of_Real_set: "bij_betw V_of (UNIV::real set) (elts Real_set)"
 
 lemma uncountable_Real_set: "uncountable (elts Real_set)"
   using V_of_Real_set countable_iff_bij uncountable_UNIV_real by blast
-    
+
+lemma "Card C_continuum"
+  by (simp add: C_continuum_def Card_def)
+
+lemma C_continuum_ge: "C_continuum \<ge> \<aleph>1"
+proof -
+  have "\<not> C_continuum < \<aleph>1"
+  proof -
+    have "\<not> vcard Real_set \<le> \<aleph>0"
+      using countable_iff_le_Aleph0 uncountable_Real_set by presburger
+    then show ?thesis
+      by (simp add: C_continuum_def lt_csucc_iff one_V_def)
+  qed
+  then show ?thesis
+    by (simp add: C_continuum_def Ord_not_less)
+qed
+
+
 lemma V_of_Complex_set: "bij_betw V_of (UNIV::complex set) (elts Complex_set)"
   by (simp add: Complex_set_def bij_betw_def inj_V_of)
 
@@ -593,7 +607,7 @@ proof -
     ultimately show "\<exists>w. Re w \<in> \<rat> \<and> Im w \<in> \<rat> \<and> cmod (w - z) < e"
       by (metis complex.sel)
   qed
-  then have "closure D = UNIV"
+  then have cloD: "closure D = UNIV"
     by (auto simp: D_def closure_approachable dist_complex_def)
   obtain \<zeta> where \<zeta>: "bij_betw \<zeta> (elts (\<aleph>1)) (UNIV::complex set)"
     by (metis Complex_gcard TC_small assms eqpoll_def gcard_eqpoll)
@@ -665,10 +679,44 @@ proof -
       case False
       then obtain \<eta> where \<eta>: "bij_betw \<eta> (UNIV::nat set) (elts \<gamma>)"
         by (meson \<gamma> countable_infiniteE' less_\<omega>1_imp_countable)
+      then have \<eta>_inject [simp]: "\<eta> i = \<eta> j \<longleftrightarrow> i=j" for i j
+        by (simp add: bij_betw_imp_inj_on inj_eq)
       define g where "g \<equiv> f o \<eta>"
       define w where "w \<equiv> \<zeta> o \<eta>"
-      then show ?thesis 
-        sorry
+      then have w_inject [simp]: "w i = w j \<longleftrightarrow> i=j" for i j
+        by (smt (verit, ccfv_SIG) Ord_\<omega>1 Ord_trans UNIV_I \<eta> \<gamma> \<zeta> bij_betw_iff_bijections comp_apply)
+      define p where "p \<equiv> \<lambda>n z. \<Prod>i<n. z - w i"
+      define h where "h \<equiv> \<lambda>n \<epsilon> z. \<Sum>i<n. \<epsilon> i * p i z"
+      define WD where "WD \<equiv> \<lambda>n \<epsilon>. \<forall>i<n. h i \<epsilon> (w i) \<in> D - {g n (w n)}"
+      define E where "E \<equiv> \<lambda>n \<epsilon>. ball (h n \<epsilon> (w n)) (norm (p n (w n)) / fact n)"
+      define DD where "DD \<equiv> \<lambda>n \<epsilon>. D \<inter> E n \<epsilon> - {g n (w n)}"
+      define dd where "dd \<equiv> \<lambda>n \<epsilon>. SOME x. x \<in> DD n \<epsilon>"
+      have p0: "p n z = 0 \<longleftrightarrow> (\<exists>i<n. z = w i)" for z n
+        unfolding p_def by force
+      have "DD n \<epsilon> \<noteq> {}" for n \<epsilon>
+      proof -
+        have "r > 0 \<Longrightarrow> infinite (D \<inter> ball z r)" for z r
+          by (metis islimpt_UNIV limpt_of_closure islimpt_eq_infinite_ball cloD)
+        then have "infinite (D \<inter> E n \<epsilon>)" for n \<epsilon>
+          by (simp add: E_def p0)
+        then show ?thesis
+          by (metis DD_def finite.emptyI infinite_remove)
+      qed
+      then have "dd n \<epsilon> \<in> DD n \<epsilon>" for n \<epsilon>
+        by (simp add: dd_def some_in_eq)
+      define coeff where "coeff \<equiv> wfrec less_than (\<lambda>\<epsilon> n. (dd n \<epsilon> - h n \<epsilon> (w n)) / p n (w n))"
+      define hh where "hh \<equiv> \<lambda>z. suminf (\<lambda>i. coeff i * p i z)"
+
+      thm field_differentiable_series holomorphic_on_exp holomorphic_on_def analytic_on_holomorphic
+      show ?thesis 
+      proof
+        show "hh analytic_on UNIV"
+          sorry
+        show "inD \<gamma> hh"
+          sorry
+        show "\<forall>\<beta>\<in>elts \<gamma>. hh \<noteq> f \<beta>"
+          sorry
+      qed
     qed
     with f show ?thesis
       using inj by (rule_tac x="h" in exI) (auto simp: \<Phi>_def inj_on_def)
@@ -724,8 +772,7 @@ qed
 
 
 theorem Erdos_Wetzel: "C_continuum = \<aleph>1 \<longleftrightarrow> (\<exists>F. Wetzel F \<and> uncountable F)"
-  by (metis Complex_vcard Erdos_Wetzel_CH Erdos_Wetzel_nonCH TC_small antisym_conv1 gcard_eq_vcard small_elts uncountable_Complex_set uncountable_gcard_ge)
-
+  by (metis C_continuum_ge Erdos_Wetzel_CH Erdos_Wetzel_nonCH TC_small less_V_def)
 
 
 subsection \<open>random junk\<close>
