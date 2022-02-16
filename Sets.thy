@@ -7,7 +7,6 @@ begin
 
 subsection \<open>For the libraries\<close>
 
-
 subsubsection \<open>HOL\<close>
 
 lemma inj_on_restrict_iff: "A \<subseteq> B \<Longrightarrow> inj_on (restrict f B) A \<longleftrightarrow> inj_on f A"
@@ -758,29 +757,43 @@ proof -
 
       define hh where "hh \<equiv> \<lambda>z. suminf (\<lambda>i. coeff i * p i z)"
       have hh_eq_dd: "hh (w n) = dd n coeff" for n
-        unfolding hh_def by (auto simp: p0 intro: suminf_finite)
-
-
-      have hhwn: "hh (w n) = (\<Sum>i\<le>n. coeff i * p i (w n))" for n
-        unfolding hh_def by (auto simp: p0 intro: suminf_finite)
-
-
-      thm field_differentiable_series holomorphic_on_exp holomorphic_on_def analytic_on_holomorphic
+      proof -
+        have "hh (w n) = h (Suc n) coeff (w n)"
+          unfolding hh_def h_def
+          by (intro suminf_finite) auto
+        also have "... = dd n coeff"
+          using h_eq_dd by blast
+        finally show ?thesis .
+      qed
+                
+      thm summable_exp_generic  
 
       show ?thesis
       proof
-        show "hh analytic_on UNIV"
-          sorry
-
-
-        then have "hh (w n) \<in> D" for n
-          by (simp add: hhwn)
+        have "hh field_differentiable at z" for z
+          unfolding hh_def
+        proof (intro field_differentiable_series)
+          define f' where "f' \<equiv> \<lambda>n z. coeff n * (\<Sum>k<n.  (\<Prod>j\<in>{..<n} - {k}. z - w j))"
+          show  "((\<lambda>x. coeff n * p n x) has_field_derivative f' n z) (at z)" for n z
+            unfolding p_def has_field_derivative_def f'_def
+            by (rule HOL.ext derivative_eq_intros | simp add: algebra_simps sum_distrib_left)+
+          show "uniformly_convergent_on UNIV (\<lambda>n z. \<Sum>i<n. f' i z)"
+            sorry
+          have "(\<lambda>i. coeff i * p i (w 0)) = (\<lambda>i. if i > 0 then 0 else coeff 0)"
+            by (auto simp: p_simps)
+          then have "(\<lambda>i. coeff i * p i (w 0)) sums coeff 0"
+            by (smt (verit) bot_nat_0.not_eq_extremum sums_cong sums_single)
+          then show "summable (\<lambda>i. coeff i * p i (w 0))"
+            using sums_iff by blast
+        qed auto
+        then show "hh analytic_on UNIV"
+          by (simp add: analytic_on_open holomorphic_on_def)
+        have "hh (w n) \<in> D" for n
+          using DD_def dd_in_DD hh_eq_dd by fastforce
         then show "inD \<gamma> hh"
           unfolding inD_def by (metis \<eta> bij_betw_iff_bijections comp_apply w_def)
         have "hh (w n) \<noteq> f (\<eta> n) (w n)" for n
-          apply (simp add: hhwn)
-
-          sorry
+          using DD_def dd_in_DD g_def hh_eq_dd by auto
         then show "\<forall>\<beta>\<in>elts \<gamma>. hh \<noteq> f \<beta>"
           by (metis \<eta> bij_betw_imp_surj_on imageE)
       qed
@@ -802,9 +815,10 @@ proof -
       using Ord_\<omega>1 Ord_trans by blast
     have [simp]: "inj_on (\<lambda>\<beta>. G (restrict f (elts \<beta>)) \<beta>) (elts \<gamma>) \<longleftrightarrow> inj_on f (elts \<gamma>)"
       by (metis (no_types, lifting) f_def Sets.transrec inj_on_cong)
-    show ?case
-      using step.prems nxt [OF step.prems *] *
-      by (metis * G_restr f_def Sets.transrec \<Phi>_def elts_succ fun_upd_idem_iff fun_upd_same inj_on_restrict_eq restrict_upd)
+    have "f \<gamma> = G f \<gamma>"
+      by (metis G_restr Sets.transrec f_def step.prems)
+    with nxt [OF step.prems] * show ?case
+      by (metis \<Phi>_def elts_succ fun_upd_same fun_upd_triv inj_on_restrict_eq restrict_upd)
   qed
   then have anf: "\<And>\<beta>. \<beta> \<in> elts (\<aleph>1) \<Longrightarrow> f \<beta> analytic_on UNIV"
     and D: "\<And>\<alpha> \<beta>. \<lbrakk>\<beta> \<in> elts (\<aleph>1); \<alpha> \<in> elts \<beta>\<rbrakk> \<Longrightarrow> f \<beta> (\<zeta> \<alpha>) \<in> D"
