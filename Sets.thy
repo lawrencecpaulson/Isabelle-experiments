@@ -693,6 +693,8 @@ proof -
       define dd where "dd \<equiv> \<lambda>n \<epsilon>. SOME x. x \<in> DD n \<epsilon>"
       have p0: "p n z = 0 \<longleftrightarrow> (\<exists>i<n. z = w i)" for z n
         unfolding p_def by force
+      have [simp]: "p n (w i) = 0" if "i<n" for i n
+        using that by (simp add: p0)
       have "DD n \<epsilon> \<noteq> {}" for n \<epsilon>
       proof -
         have "r > 0 \<Longrightarrow> infinite (D \<inter> ball z r)" for z r
@@ -702,20 +704,85 @@ proof -
         then show ?thesis
           by (metis DD_def finite.emptyI infinite_remove)
       qed
-      then have "dd n \<epsilon> \<in> DD n \<epsilon>" for n \<epsilon>
+      then have dd_in_DD: "dd n \<epsilon> \<in> DD n \<epsilon>" for n \<epsilon>
         by (simp add: dd_def some_in_eq)
+
+      have h_cong: "h n \<epsilon> = h n \<epsilon>'" if "\<And>i. i<n \<Longrightarrow> \<epsilon> i = \<epsilon>' i" for n \<epsilon> \<epsilon>'
+        using that by (simp add: h_def)
+      have E_cong: "E n \<epsilon> = E n \<epsilon>'" if "\<And>i. i<n \<Longrightarrow> \<epsilon> i = \<epsilon>' i" for n \<epsilon> \<epsilon>'
+        using that by (metis E_def h_cong) 
+      have DD_cong: "DD n \<epsilon> = DD n \<epsilon>'" if "\<And>i. i<n \<Longrightarrow> \<epsilon> i = \<epsilon>' i" for n \<epsilon> \<epsilon>'
+        using that by (metis DD_def E_cong) 
+      have dd_cong: "dd n \<epsilon> = dd n \<epsilon>'" if "\<And>i. i<n \<Longrightarrow> \<epsilon> i = \<epsilon>' i" for n \<epsilon> \<epsilon>'
+        using that by (metis dd_def DD_cong) 
+
+      have [simp]: "h n (cut \<epsilon> less_than n) = h n \<epsilon>" for n \<epsilon>
+        by (meson cut_apply h_cong less_than_iff)
+      have [simp]: "dd n (cut \<epsilon> less_than n) = dd n \<epsilon>" for n \<epsilon>
+        by (meson cut_apply dd_cong less_than_iff)
+
+
       define coeff where "coeff \<equiv> wfrec less_than (\<lambda>\<epsilon> n. (dd n \<epsilon> - h n \<epsilon> (w n)) / p n (w n))"
+
+      have h_simps: "h 0 \<epsilon> z = 0"  "h (Suc n) \<epsilon> z = h n \<epsilon> z + \<epsilon> n * p n z" for \<epsilon> z n
+        by (auto simp add: h_def)
+
+      have p_simps: "p 0 z = 1"  "p (Suc n) z = p n z * (z - w n)" for z n
+        by (auto simp add: p_def)
+
+      have [simp]: "coeff 0 = dd 0 coeff"
+        by (simp add: def_wfrec [OF coeff_def] p_def h_simps)
+      have coeff_eq: "coeff n = (dd n coeff - h n coeff (w n)) / p n (w n)" for n
+        by (simp add: def_wfrec [OF coeff_def])
+
+      have h_truncated: "h n coeff (w k) = h (Suc k) coeff (w k)" if "k < n" for n k
+      proof -
+        have "(\<Sum>i<n. coeff i * p i (w k)) = (\<Sum>i<Suc k. coeff i * p i (w k)) + (\<Sum>i=Suc k..<n. coeff i * p i (w k))"
+          by (smt (verit) Suc_le_eq atLeast0LessThan le0 sum.atLeastLessThan_concat that)
+        also have "... = (\<Sum>i<Suc k. coeff i * p i (w k))"
+          by simp
+        finally show ?thesis
+          by (simp add: h_def)
+      qed
+
+      have h_eq_dd: "h (Suc n) coeff (w n) = dd n coeff" for n
+      proof (induction n)
+        case 0
+        then show ?case
+          by (simp add: h_simps p_simps)
+      next
+        case (Suc k)
+        then show ?case
+          by (simp add: p0 h_simps p_simps coeff_eq [of "Suc k"])
+      qed
+
       define hh where "hh \<equiv> \<lambda>z. suminf (\<lambda>i. coeff i * p i z)"
+      have hh_eq_dd: "hh (w n) = dd n coeff" for n
+        unfolding hh_def by (auto simp: p0 intro: suminf_finite)
+
+
+      have hhwn: "hh (w n) = (\<Sum>i\<le>n. coeff i * p i (w n))" for n
+        unfolding hh_def by (auto simp: p0 intro: suminf_finite)
+
 
       thm field_differentiable_series holomorphic_on_exp holomorphic_on_def analytic_on_holomorphic
-      show ?thesis 
+
+      show ?thesis
       proof
         show "hh analytic_on UNIV"
           sorry
-        show "inD \<gamma> hh"
+
+
+        then have "hh (w n) \<in> D" for n
+          by (simp add: hhwn)
+        then show "inD \<gamma> hh"
+          unfolding inD_def by (metis \<eta> bij_betw_iff_bijections comp_apply w_def)
+        have "hh (w n) \<noteq> f (\<eta> n) (w n)" for n
+          apply (simp add: hhwn)
+
           sorry
-        show "\<forall>\<beta>\<in>elts \<gamma>. hh \<noteq> f \<beta>"
-          sorry
+        then show "\<forall>\<beta>\<in>elts \<gamma>. hh \<noteq> f \<beta>"
+          by (metis \<eta> bij_betw_imp_surj_on imageE)
       qed
     qed
     with f show ?thesis
