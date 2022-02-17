@@ -697,12 +697,8 @@ proof -
         unfolding p_def by force
       have [simp]: "p n (w i) = 0" if "i<n" for i n
         using that by (simp add: p0)
-      have q_simps: "q 0 = 1"  "q (Suc n) = q n * (1 + norm (w n))" for n
-        by (auto simp add: q_def)
       have q_gt0: "0 < q n" for n
-        apply(induction n)
-         apply (auto simp: q_simps)
-        by (smt (verit) mult_pos_pos norm_not_less_zero)
+        unfolding q_def by (smt (verit) norm_not_less_zero prod_pos)
       have "DD n \<epsilon> \<noteq> {}" for n \<epsilon>
       proof -
         have "r > 0 \<Longrightarrow> infinite (D \<inter> ball z r)" for z r
@@ -717,12 +713,8 @@ proof -
 
       have h_cong: "h n \<epsilon> = h n \<epsilon>'" if "\<And>i. i<n \<Longrightarrow> \<epsilon> i = \<epsilon>' i" for n \<epsilon> \<epsilon>'
         using that by (simp add: h_def)
-      have E_cong: "E n \<epsilon> = E n \<epsilon>'" if "\<And>i. i<n \<Longrightarrow> \<epsilon> i = \<epsilon>' i" for n \<epsilon> \<epsilon>'
-        using that by (metis E_def h_cong) 
-      have DD_cong: "DD n \<epsilon> = DD n \<epsilon>'" if "\<And>i. i<n \<Longrightarrow> \<epsilon> i = \<epsilon>' i" for n \<epsilon> \<epsilon>'
-        using that by (metis DD_def E_cong) 
       have dd_cong: "dd n \<epsilon> = dd n \<epsilon>'" if "\<And>i. i<n \<Longrightarrow> \<epsilon> i = \<epsilon>' i" for n \<epsilon> \<epsilon>'
-        using that by (metis dd_def DD_cong) 
+        using that by (metis dd_def DD_def E_def h_cong) 
 
       have [simp]: "h n (cut \<epsilon> less_than n) = h n \<epsilon>" for n \<epsilon>
         by (meson cut_apply h_cong less_than_iff)
@@ -730,15 +722,6 @@ proof -
         by (meson cut_apply dd_cong less_than_iff)
 
       define coeff where "coeff \<equiv> wfrec less_than (\<lambda>\<epsilon> n. (dd n \<epsilon> - h n \<epsilon> (w n)) / p n (w n))"
-
-      have h_simps: "h 0 \<epsilon> z = 0"  "h (Suc n) \<epsilon> z = h n \<epsilon> z + \<epsilon> n * p n z" for \<epsilon> z n
-        by (auto simp add: h_def)
-
-      have p_simps: "p 0 z = 1"  "p (Suc n) z = p n z * (z - w n)" for z n
-        by (auto simp add: p_def)
-
-      have [simp]: "coeff 0 = dd 0 coeff"
-        by (simp add: def_wfrec [OF coeff_def] p_def h_simps)
       have coeff_eq: "coeff n = (dd n coeff - h n coeff (w n)) / p n (w n)" for n
         by (simp add: def_wfrec [OF coeff_def])
 
@@ -756,22 +739,13 @@ proof -
       qed
 
       have h_eq_dd: "h (Suc n) coeff (w n) = dd n coeff" for n
-      proof (induction n)
-        case 0
-        then show ?case
-          by (simp add: h_simps p_simps)
-      next
-        case (Suc k)
-        then show ?case
-          by (simp add: p0 h_simps p_simps coeff_eq [of "Suc k"])
-      qed
+        by (induction n) (auto simp add: p0 h_def p_def coeff_eq [of "Suc _"] coeff_eq [of 0])
 
       define hh where "hh \<equiv> \<lambda>z. suminf (\<lambda>i. coeff i * p i z)"
       have hh_eq_dd: "hh (w n) = dd n coeff" for n
       proof -
         have "hh (w n) = h (Suc n) coeff (w n)"
-          unfolding hh_def h_def
-          by (intro suminf_finite) auto
+          unfolding hh_def h_def by (intro suminf_finite) auto
         also have "... = dd n coeff"
           using h_eq_dd by blast
         finally show ?thesis .
@@ -781,7 +755,7 @@ proof -
       proof (induction n )
         case 0
         then show ?case
-          by (auto simp: p_simps q_simps)
+          by (auto simp: p_def q_def)
       next
         case (Suc n)
         have "cmod z' - cmod z \<le> 1"
@@ -796,7 +770,7 @@ proof -
           by (simp add: mult_ac)
         finally have "norm (p n z') * norm (z' - w n) \<le> q n * (1 + norm (w n)) * ((1 + norm z) * (1 + norm z) ^ n)" .
         with that show ?case
-          by (auto simp: p_simps q_simps norm_mult simp del: fact_Suc)
+          by (auto simp: p_def q_def norm_mult simp del: fact_Suc)
       qed
 
       show ?thesis
@@ -812,14 +786,13 @@ proof -
             unfolding hh_def h_def
           proof (rule Weierstrass_m_test)
             let ?M = "\<lambda>n. (1 + norm z) ^ n / fact n"
-            have L: "liminf (\<lambda>n. ereal ((1 + real n) / (1 + cmod z))) = \<infinity>"
-              apply (subst liminf_PInfty [symmetric])
-              apply (simp add: Lim_PInfty)
-              apply clarify
+            have "\<And>B. \<exists>N. \<forall>n\<ge>N. B \<le> (1 + real n) / (1 + cmod z)"
               apply (rule_tac x="nat (ceiling (B * (1 + cmod z)))" in exI)
               apply (auto simp: divide_simps)
                apply (smt (verit) norm_ge_zero)+
               done
+            then have L: "liminf (\<lambda>n. ereal ((1 + real n) / (1 + cmod z))) = \<infinity>"
+              by (simp add: Lim_PInfty flip: liminf_PInfty)
             show "summable ?M"
               apply (rule ratio_test_convergence)
                apply (auto simp: add_nonneg_eq_0_iff)
