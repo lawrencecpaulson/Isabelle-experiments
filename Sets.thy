@@ -89,7 +89,7 @@ proof
   show "finite (elts x) \<Longrightarrow> vcard x < \<omega>"
     by (metis Card_\<omega> Card_def finite_lesspoll_infinite infinite_\<omega> lesspoll_imp_Card_less)
   show "vcard x < \<omega> \<Longrightarrow> finite (elts x)"
-    by (meson Ord_\<omega> Ord_cardinal Ord_mem_iff_lt cardinal_eqpoll eqpoll_finite_iff finite_Ord_omega)
+    by (meson Ord_cardinal cardinal_eqpoll eqpoll_finite_iff infinite_Ord_omega less_le_not_le)
 qed
 
 lemma cadd_left_commute: "j \<oplus> (i \<oplus> k) = i \<oplus> (j \<oplus> k)"
@@ -146,14 +146,18 @@ lemma lepoll_small:
   shows "small A"
     by (meson assms lepoll_iff replacement smaller_than_small)
 
-lemma countable_infinite_vcard: "countable (elts x) \<and> infinite (elts x) \<longleftrightarrow> vcard x = \<aleph>0"
-  by (metis Aleph_0 countable_iff_le_Aleph0 dual_order.refl finite_iff_less_Aleph0 less_V_def)
-
 lemma countable_iff_vcard_less1: "countable (elts x) \<longleftrightarrow> vcard x < \<aleph>1"
   by (simp add: countable_iff_le_Aleph0 lt_csucc_iff one_V_def)
 
+lemma countable_infinite_vcard: "countable (elts x) \<and> infinite (elts x) \<longleftrightarrow> vcard x = \<aleph>0"
+  by (metis Aleph_0 countable_iff_le_Aleph0 dual_order.refl finite_iff_less_Aleph0 less_V_def)
+
 lemma vcard_set_image: "inj_on f (elts x) \<Longrightarrow> vcard (ZFC_in_HOL.set (f ` elts x)) = vcard x"
   by (simp add: cardinal_cong)
+
+
+
+
 
 lemma subset_smaller_vcard:
   assumes "\<kappa> \<le> vcard x" "Card \<kappa>"
@@ -562,8 +566,7 @@ proof -
       by (metis TC_small \<open>F' \<subseteq> F\<close> image_mono subset_imp_gcard_le)
   qed
   with W show ?thesis
-    unfolding Wetzel_def
-    by (metis Aleph_0 Aleph_succ Card_\<omega> countable_imp_g_le_Aleph0 leD less_csucc one_V_def order_le_less_trans)
+    unfolding Wetzel_def by (meson countable uncountable_gcard_ge)
 qed
 
 
@@ -766,18 +769,56 @@ proof -
         finally show ?thesis .
       qed
                 
-      thm summable_exp_generic  
+      thm holomorphic_uniform_sequence
+
+      have "coeff 0 * p 0 z = dd 0 coeff" for z
+        by (simp add: h_simps p_simps dd_in_DD)
+      have "coeff (Suc 0) = xxx" 
+        apply (simp add: h_simps p_simps dd_in_DD coeff_eq [of "Suc 0"])
+        sorry
+      have "coeff (Suc (Suc 0)) = xxx" 
+        apply (simp add: h_simps p_simps dd_in_DD coeff_eq [of "Suc (Suc 0)"] coeff_eq [of "Suc 0"])
+        apply (simp add: algebra_simps divide_simps p0)
+apply (auto simp: )
+        sorry
 
       show ?thesis
       proof
+        have "hh holomorphic_on UNIV"
+        proof (rule holomorphic_uniform_sequence)
+          fix n
+          show "h n coeff holomorphic_on UNIV"
+            unfolding h_def p_def by (intro holomorphic_intros)
+        next
+          fix z
+          have "uniform_limit (cball z 1) (\<lambda>n. h n coeff) hh sequentially"
+            unfolding hh_def h_def
+            apply (rule Weierstrass_m_test)
+
+    sorry
+          then show "\<exists>d>0. cball z d \<subseteq> UNIV \<and> uniform_limit (cball z d) (\<lambda>n. h n coeff) hh sequentially"
+            using zero_less_one by blast
+        qed auto
+
+
+
+
         have "hh field_differentiable at z" for z
           unfolding hh_def
         proof (intro field_differentiable_series)
-          define f' where "f' \<equiv> \<lambda>n z. coeff n * (\<Sum>k<n.  (\<Prod>j\<in>{..<n} - {k}. z - w j))"
+          define f' where "f' \<equiv> \<lambda>n z. coeff n * (\<Sum>k<n. \<Prod>j\<in>{..<n} - {k}. z - w j)"
           show  "((\<lambda>x. coeff n * p n x) has_field_derivative f' n z) (at z)" for n z
             unfolding p_def has_field_derivative_def f'_def
             by (rule HOL.ext derivative_eq_intros | simp add: algebra_simps sum_distrib_left)+
           show "uniformly_convergent_on UNIV (\<lambda>n z. \<Sum>i<n. f' i z)"
+            apply (rule Weierstrass_m_test'_ev)
+             apply (simp add: )
+
+            unfolding uniformly_convergent_on_def
+            apply (rule )
+            apply (rule Weierstrass_m_test'_ev)
+
+            using Weierstrass_m_test
             sorry
           have "(\<lambda>i. coeff i * p i (w 0)) = (\<lambda>i. if i > 0 then 0 else coeff 0)"
             by (auto simp: p_simps)
