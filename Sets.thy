@@ -600,13 +600,13 @@ proof -
   have "infinite D"
     unfolding Deq
     by (intro infinite_disjoint_family_imp_infinite_UNION Rats_infinite) (auto simp: disjoint_family_on_def)
-  have "\<exists>w. Re w \<in> \<rat> \<and> Im w \<in> \<rat> \<and> cmod (w - z) < e" if "e > 0" for z and e::real
+  have "\<exists>w. Re w \<in> \<rat> \<and> Im w \<in> \<rat> \<and> norm (w - z) < e" if "e > 0" for z and e::real
   proof -
     obtain x y where "x\<in>\<rat>" "y\<in>\<rat>" and xy: "dist (x,y) (Re z, Im z) < e"
       using \<open>e > 0\<close> Rats_closure_real2 by (force simp: closure_approachable)
-    moreover have "dist (x,y) (Re z, Im z) = cmod (Complex x y - z)"
+    moreover have "dist (x,y) (Re z, Im z) = norm (Complex x y - z)"
       by (simp add: norm_complex_def norm_prod_def dist_norm)
-    ultimately show "\<exists>w. Re w \<in> \<rat> \<and> Im w \<in> \<rat> \<and> cmod (w - z) < e"
+    ultimately show "\<exists>w. Re w \<in> \<rat> \<and> Im w \<in> \<rat> \<and> norm (w - z) < e"
       by (metis complex.sel)
   qed
   then have cloD: "closure D = UNIV"
@@ -688,21 +688,27 @@ proof -
       then have w_inject [simp]: "w i = w j \<longleftrightarrow> i=j" for i j
         by (smt (verit, ccfv_SIG) Ord_\<omega>1 Ord_trans UNIV_I \<eta> \<gamma> \<zeta> bij_betw_iff_bijections comp_apply)
       define p where "p \<equiv> \<lambda>n z. \<Prod>i<n. z - w i"
+      define q where "q \<equiv> \<lambda>n. \<Prod>i<n. 1 + norm (w i)"
       define h where "h \<equiv> \<lambda>n \<epsilon> z. \<Sum>i<n. \<epsilon> i * p i z"
-      define WD where "WD \<equiv> \<lambda>n \<epsilon>. \<forall>i<n. h i \<epsilon> (w i) \<in> D - {g n (w n)}"
-      define E where "E \<equiv> \<lambda>n \<epsilon>. ball (h n \<epsilon> (w n)) (norm (p n (w n)) / fact n)"
+      define E where "E \<equiv> \<lambda>n \<epsilon>. ball (h n \<epsilon> (w n)) (norm (p n (w n)) / (fact n * q n))"
       define DD where "DD \<equiv> \<lambda>n \<epsilon>. D \<inter> E n \<epsilon> - {g n (w n)}"
       define dd where "dd \<equiv> \<lambda>n \<epsilon>. SOME x. x \<in> DD n \<epsilon>"
       have p0: "p n z = 0 \<longleftrightarrow> (\<exists>i<n. z = w i)" for z n
         unfolding p_def by force
       have [simp]: "p n (w i) = 0" if "i<n" for i n
         using that by (simp add: p0)
+      have q_simps: "q 0 = 1"  "q (Suc n) = q n * (1 + norm (w n))" for n
+        by (auto simp add: q_def)
+      have q_gt0: "0 < q n" for n
+        apply(induction n)
+         apply (auto simp: q_simps)
+        by (smt (verit) mult_pos_pos norm_not_less_zero)
       have "DD n \<epsilon> \<noteq> {}" for n \<epsilon>
       proof -
         have "r > 0 \<Longrightarrow> infinite (D \<inter> ball z r)" for z r
           by (metis islimpt_UNIV limpt_of_closure islimpt_eq_infinite_ball cloD)
         then have "infinite (D \<inter> E n \<epsilon>)" for n \<epsilon>
-          by (simp add: E_def p0)
+          by (simp add: E_def p0 q_gt0)
         then show ?thesis
           by (metis DD_def finite.emptyI infinite_remove)
       qed
@@ -736,14 +742,9 @@ proof -
       have coeff_eq: "coeff n = (dd n coeff - h n coeff (w n)) / p n (w n)" for n
         by (simp add: def_wfrec [OF coeff_def])
 
-      have norm_coeff: "norm (coeff n) < 1 / fact n" for n
-        apply (simp add: coeff_eq norm_divide)
-        apply (simp add: divide_simps)
+      have norm_coeff: "norm (coeff n) < 1 / (fact n * q n)" for n
         using dd_in_DD [of n coeff]
-        apply (simp add: DD_def E_def dist_norm)
-        apply (auto simp: )
-        by (simp add: less_divide_eq norm_minus_commute)
-
+        by (simp add: q_gt0 coeff_eq DD_def E_def dist_norm norm_minus_commute norm_divide divide_simps)
       have h_truncated: "h n coeff (w k) = h (Suc k) coeff (w k)" if "k < n" for n k
       proof -
         have "(\<Sum>i<n. coeff i * p i (w k)) = (\<Sum>i<Suc k. coeff i * p i (w k)) + (\<Sum>i=Suc k..<n. coeff i * p i (w k))"
@@ -776,7 +777,27 @@ proof -
         finally show ?thesis .
       qed
                 
-      thm holomorphic_uniform_sequence
+      have J: "norm (p n z') \<le> q n * (1 + norm z) ^ n" if "dist z z' \<le> 1" for n z z'
+      proof (induction n )
+        case 0
+        then show ?case
+          by (auto simp: p_simps q_simps)
+      next
+        case (Suc n)
+        have "cmod z' - cmod z \<le> 1"
+          by (smt (verit) dist_norm norm_triangle_ineq3 that)
+        then have \<section>: "cmod (z' - w n) \<le> (1 + cmod (w n)) * (1 + cmod z)"
+          by (simp add: mult.commute add_mono distrib_left norm_triangle_le_diff)
+        have "norm (p n z') * norm (z' - w n) \<le> (q n * (1 + norm z) ^ n) * norm (z' - w n)"
+          by (metis Suc mult.commute mult_left_mono norm_ge_zero)
+        also have "... \<le> (q n * (1 + norm z) ^ n) * (1 + norm (w n)) * ((1 + norm z))"
+          by (smt (verit) "\<section>" Suc mult.assoc mult_left_mono norm_ge_zero)
+        also have "... \<le> q n * (1 + norm (w n)) * ((1 + norm z) * (1 + norm z) ^ n)"
+          by (simp add: mult_ac)
+        finally have "norm (p n z') * norm (z' - w n) \<le> q n * (1 + norm (w n)) * ((1 + norm z) * (1 + norm z) ^ n)" .
+        with that show ?case
+          by (auto simp: p_simps q_simps norm_mult simp del: fact_Suc)
+      qed
 
       show ?thesis
       proof
@@ -789,40 +810,40 @@ proof -
           fix z
           have "uniform_limit (cball z 1) (\<lambda>n. h n coeff) hh sequentially"
             unfolding hh_def h_def
-            apply (rule Weierstrass_m_test)
-
-    sorry
+          proof (rule Weierstrass_m_test)
+            let ?M = "\<lambda>n. (1 + norm z) ^ n / fact n"
+            have L: "liminf (\<lambda>n. ereal ((1 + real n) / (1 + cmod z))) = \<infinity>"
+              apply (subst liminf_PInfty [symmetric])
+              apply (simp add: Lim_PInfty)
+              apply clarify
+              apply (rule_tac x="nat (ceiling (B * (1 + cmod z)))" in exI)
+              apply (auto simp: divide_simps)
+               apply (smt (verit) norm_ge_zero)+
+              done
+            show "summable ?M"
+              apply (rule ratio_test_convergence)
+               apply (auto simp: add_nonneg_eq_0_iff)
+               apply (metis (no_types, lifting) add_less_zeroD eventually_at_top_dense fact_gt_zero less_add_same_cancel2 linorder_neqE_linordered_idom norm_not_less_zero not_one_less_zero zero_less_divide_iff zero_less_one zero_less_power)
+              apply (simp add: L)
+              done
+            fix n z'
+            assume  "z' \<in> cball z 1"
+            then have "cmod ((coeff n * p n z')) \<le> cmod (coeff n) * q n * (1 + cmod z) ^ n"
+              by (metis J norm_mult mem_cball mult.assoc mult_left_mono norm_ge_zero)
+            also have "... \<le> (1 / fact n) * (1 + cmod z) ^ n"
+              apply (rule mult_right_mono)
+               apply (metis divide_divide_eq_left less_divide_eq less_eq_real_def norm_coeff q_gt0)
+              apply (auto simp: )
+              done
+            also have "... \<le> ?M n"
+              by (simp add: divide_simps)
+            finally show "cmod (coeff n * p n z') \<le> ?M n" .
+          qed
           then show "\<exists>d>0. cball z d \<subseteq> UNIV \<and> uniform_limit (cball z d) (\<lambda>n. h n coeff) hh sequentially"
             using zero_less_one by blast
         qed auto
-
-
-        have "hh field_differentiable at z" for z
-          unfolding hh_def
-        proof (intro field_differentiable_series)
-          define f' where "f' \<equiv> \<lambda>n z. coeff n * (\<Sum>k<n. \<Prod>j\<in>{..<n} - {k}. z - w j)"
-          show  "((\<lambda>x. coeff n * p n x) has_field_derivative f' n z) (at z)" for n z
-            unfolding p_def has_field_derivative_def f'_def
-            by (rule HOL.ext derivative_eq_intros | simp add: algebra_simps sum_distrib_left)+
-          show "uniformly_convergent_on UNIV (\<lambda>n z. \<Sum>i<n. f' i z)"
-            apply (rule Weierstrass_m_test'_ev)
-             apply (simp add: )
-
-            unfolding uniformly_convergent_on_def
-            apply (rule )
-            apply (rule Weierstrass_m_test'_ev)
-
-            using Weierstrass_m_test
-            sorry
-          have "(\<lambda>i. coeff i * p i (w 0)) = (\<lambda>i. if i > 0 then 0 else coeff 0)"
-            by (auto simp: p_simps)
-          then have "(\<lambda>i. coeff i * p i (w 0)) sums coeff 0"
-            by (smt (verit) bot_nat_0.not_eq_extremum sums_cong sums_single)
-          then show "summable (\<lambda>i. coeff i * p i (w 0))"
-            using sums_iff by blast
-        qed auto
         then show "hh analytic_on UNIV"
-          by (simp add: analytic_on_open holomorphic_on_def)
+          by (simp add: analytic_on_open)
         have "hh (w n) \<in> D" for n
           using DD_def dd_in_DD hh_eq_dd by fastforce
         then show "inD \<gamma> hh"
