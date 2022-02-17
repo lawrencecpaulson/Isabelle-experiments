@@ -723,7 +723,6 @@ proof -
       have [simp]: "dd n (cut \<epsilon> less_than n) = dd n \<epsilon>" for n \<epsilon>
         by (meson cut_apply dd_cong less_than_iff)
 
-
       define coeff where "coeff \<equiv> wfrec less_than (\<lambda>\<epsilon> n. (dd n \<epsilon> - h n \<epsilon> (w n)) / p n (w n))"
 
       have h_simps: "h 0 \<epsilon> z = 0"  "h (Suc n) \<epsilon> z = h n \<epsilon> z + \<epsilon> n * p n z" for \<epsilon> z n
@@ -736,6 +735,14 @@ proof -
         by (simp add: def_wfrec [OF coeff_def] p_def h_simps)
       have coeff_eq: "coeff n = (dd n coeff - h n coeff (w n)) / p n (w n)" for n
         by (simp add: def_wfrec [OF coeff_def])
+
+      have norm_coeff: "norm (coeff n) < 1 / fact n" for n
+        apply (simp add: coeff_eq norm_divide)
+        apply (simp add: divide_simps)
+        using dd_in_DD [of n coeff]
+        apply (simp add: DD_def E_def dist_norm)
+        apply (auto simp: )
+        by (simp add: less_divide_eq norm_minus_commute)
 
       have h_truncated: "h n coeff (w k) = h (Suc k) coeff (w k)" if "k < n" for n k
       proof -
@@ -771,17 +778,6 @@ proof -
                 
       thm holomorphic_uniform_sequence
 
-      have "coeff 0 * p 0 z = dd 0 coeff" for z
-        by (simp add: h_simps p_simps dd_in_DD)
-      have "coeff (Suc 0) = xxx" 
-        apply (simp add: h_simps p_simps dd_in_DD coeff_eq [of "Suc 0"])
-        sorry
-      have "coeff (Suc (Suc 0)) = xxx" 
-        apply (simp add: h_simps p_simps dd_in_DD coeff_eq [of "Suc (Suc 0)"] coeff_eq [of "Suc 0"])
-        apply (simp add: algebra_simps divide_simps p0)
-apply (auto simp: )
-        sorry
-
       show ?thesis
       proof
         have "hh holomorphic_on UNIV"
@@ -799,8 +795,6 @@ apply (auto simp: )
           then show "\<exists>d>0. cball z d \<subseteq> UNIV \<and> uniform_limit (cball z d) (\<lambda>n. h n coeff) hh sequentially"
             using zero_less_one by blast
         qed auto
-
-
 
 
         have "hh field_differentiable at z" for z
