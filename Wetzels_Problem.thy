@@ -5,7 +5,7 @@ theory Sets imports
    
 begin
 
-subsection \<open>For the libraries\<close>
+subsection \<open>Added to the developer libraries\<close>
 
 subsubsection \<open>HOL\<close>
 
@@ -29,7 +29,6 @@ proof -
     by (metis closed_cball fsigma.intros)
 qed
 
-thm real_non_denum
 theorem complex_non_denum: "\<nexists>f :: nat \<Rightarrow> complex. surj f"
   by (metis (full_types) Re_complex_of_real comp_surj real_non_denum surj_def)
 
@@ -83,7 +82,6 @@ lemma holomorphic_countable_equal_UNIV:
 
 subsubsection \<open>ZFC in HOL\<close>
 
-thm countable_iff_le_Aleph0
 lemma finite_iff_less_Aleph0: "finite (elts x) \<longleftrightarrow> vcard x < \<omega>"
 proof
   show "finite (elts x) \<Longrightarrow> vcard x < \<omega>"
@@ -97,7 +95,6 @@ lemma cadd_left_commute: "j \<oplus> (i \<oplus> k) = i \<oplus> (j \<oplus> k)"
 
 lemmas cadd_ac = cadd_assoc cadd_commute cadd_left_commute
 
-thm Card_lt_csucc_iff
 lemma csucc_lt_csucc_iff: "\<lbrakk>Card \<kappa>'; Card \<kappa>\<rbrakk> \<Longrightarrow> (csucc \<kappa>' < csucc \<kappa>) = (\<kappa>' < \<kappa>)"
   by (metis Card_csucc Card_is_Ord Card_lt_csucc_iff Ord_not_less)
 
@@ -108,18 +105,15 @@ lemma Card_Un [simp,intro]:
   assumes "Card(x)" "Card(y)" shows "Card(x \<squnion> y)"
   by (metis Card_is_Ord Ord_linear_le assms sup.absorb2 sup.orderE)
 
-
 lemma csucc_0 [simp]: "csucc 0 = 1"
   by (simp add: finite_csucc one_V_def)
 
-thm Card_Aleph
 lemma InfCard_Aleph [simp, intro]:
   assumes "Ord \<alpha>"
   shows "InfCard(Aleph \<alpha>)"
   unfolding InfCard_def
   by (metis Aleph_0 Aleph_increasing Card_Aleph antisym_conv1 assms in_succ_iff nless_le zero_in_succ)
 
-thm InfCard_csquare_eq
 corollary Aleph_csquare_eq [simp]: "Ord \<alpha> \<Longrightarrow> \<aleph>\<alpha> \<otimes> \<aleph>\<alpha> = \<aleph>\<alpha>"
   using InfCard_csquare_eq by auto
 
@@ -156,10 +150,6 @@ lemma vcard_set_image: "inj_on f (elts x) \<Longrightarrow> vcard (ZFC_in_HOL.se
   by (simp add: cardinal_cong)
 
 
-
-
-
-
 (*The same as the library but without the type constraint*)
 definition transrec :: "((V \<Rightarrow> 'a) \<Rightarrow> V \<Rightarrow> 'a) \<Rightarrow> V \<Rightarrow> 'a"
   where "transrec H a \<equiv> wfrec {(x,y). x \<in> elts y} H a"
@@ -193,7 +183,6 @@ proof -
   qed
 qed
 
-thm vcard_disjoint_sup
 lemma vcard_sup: "vcard (x \<squnion> y) \<le> vcard x \<oplus> vcard y"
 proof -
   have "elts (x \<squnion> y) \<lesssim> elts (x \<Uplus> y)"
@@ -202,7 +191,7 @@ proof -
     let ?f = "\<lambda>z. if z \<in> elts x then Inl z else Inr z"
     show "inj_on ?f (elts (x \<squnion> y))"
       by (simp add: inj_on_def)
-    show "?f ` elts (x \<squnion> y) \<subseteq> elts (x \<Uplus> y)" thm add.left_commute
+    show "?f ` elts (x \<squnion> y) \<subseteq> elts (x \<Uplus> y)" 
       by force
   qed
   then show ?thesis
@@ -212,6 +201,7 @@ qed
 
 lemma elts_cmult: "elts (\<kappa>' \<otimes> \<kappa>) \<approx> elts \<kappa>' \<times> elts \<kappa>"
   by (simp add: cmult_def elts_vcard_VSigma_eqpoll)
+
 
 lemma vcard_Sup_le_cmult:
   assumes "small U" and \<kappa>: "\<And>x. x \<in> U \<Longrightarrow> vcard x \<le> \<kappa>"
@@ -244,8 +234,6 @@ proof -
     by (simp add: cmult_def lepoll_cardinal_le)
 qed
 
-
-thm Card_lt_csucc_iff
 lemma csucc_le_Card_iff: "\<lbrakk>Card \<kappa>'; Card \<kappa>\<rbrakk> \<Longrightarrow> csucc \<kappa>' \<le> \<kappa> \<longleftrightarrow> \<kappa>' < \<kappa>"
   by (metis Card_csucc Card_is_Ord Card_lt_csucc_iff Ord_not_le)
 
@@ -884,21 +872,5 @@ qed
 
 theorem Erdos_Wetzel: "C_continuum = \<aleph>1 \<longleftrightarrow> (\<exists>F. Wetzel F \<and> uncountable F)"
   by (metis C_continuum_ge Erdos_Wetzel_CH Erdos_Wetzel_nonCH TC_small less_V_def)
-
-
-subsection \<open>random junk\<close>
-
-text \<open>Every small, embeddable HOL type is in bijection with a ZF set. Example, the reals:\<close>
-lemma "\<exists>f R. bij_betw f (UNIV::real set) (elts R)"
-proof -
-  obtain V_of:: "real \<Rightarrow> V" where "inj V_of"
-    by (metis ZFC_Typeclasses.embeddable_class.ex_inj)
-  moreover
-  obtain R where "range (V_of) = elts R"
-    by (meson replacement small small_iff)
-  ultimately show ?thesis
-    by (metis inj_on_imp_bij_betw)
-qed
-
 
 end
