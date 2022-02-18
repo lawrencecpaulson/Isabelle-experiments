@@ -159,6 +159,24 @@ lemma vcard_set_image: "inj_on f (elts x) \<Longrightarrow> vcard (ZFC_in_HOL.se
 
 
 
+
+(*The same as the library but without the type constraint*)
+definition transrec :: "((V \<Rightarrow> 'a) \<Rightarrow> V \<Rightarrow> 'a) \<Rightarrow> V \<Rightarrow> 'a"
+  where "transrec H a \<equiv> wfrec {(x,y). x \<in> elts y} H a"
+
+lemma transrec: "transrec H a = H (\<lambda>x \<in> elts a. transrec H x) a"
+proof -
+  have "(cut (wfrec {(x, y). x \<in> elts y} H) {(x, y). x \<in> elts y} a)
+      = (\<lambda>x\<in>elts a. wfrec {(x, y). x \<in> elts y} H x)"
+    by (force simp: cut_def)
+  then show ?thesis
+    unfolding transrec_def
+    by (simp add: foundation wfrec)
+qed
+
+lemma less_succ_self: "x < succ x"
+  by (simp add: less_eq_V_def order_neq_le_trans subset_insertI)
+
 lemma subset_smaller_vcard:
   assumes "\<kappa> \<le> vcard x" "Card \<kappa>"
   obtains y where "y \<le> x" "vcard y = \<kappa>"
@@ -380,7 +398,7 @@ lemma gcard_image_le:
   shows "gcard (f ` A) \<le> gcard A"
 proof -
   have "(V_of ` f ` A) \<lesssim> (V_of ` A)"
-    by (metis Int_UNIV_left image_lepoll inj_V_of inj_on_Int inj_on_image_lepoll_1 inj_on_image_lepoll_2)
+    by (metis image_lepoll inv_V_of_image_eq lepoll_trans)
   then show ?thesis
     by (simp add: assms gcard_def lepoll_imp_Card_le)
 qed
@@ -395,8 +413,8 @@ proof -
   have "elts (ZFC_in_HOL.set (V_of ` A)) \<approx> A" "elts (ZFC_in_HOL.set (V_of ` B)) \<approx> B"
     by (meson assms elts_set_V_of lepoll_small)+
   with \<open>A \<lesssim> B\<close> show ?thesis
-  unfolding gcard_def
-  by (meson lepoll_imp_Card_le eqpoll_sym lepoll_iff_leqpoll lepoll_trans)
+    unfolding gcard_def
+    by (meson lepoll_imp_Card_le eqpoll_sym lepoll_iff_leqpoll lepoll_trans)
 qed
 
 lemma subset_imp_gcard_le:
@@ -437,7 +455,8 @@ proof -
 qed
 
 lemma countable_iff_g_le_Aleph0: "small X \<Longrightarrow> countable X \<longleftrightarrow> gcard X \<le> \<aleph>0"
-  by (metis inv_V_of_image_eq countable_iff_le_Aleph0 countable_image elts_of_set gcard_def replacement)
+  unfolding gcard_def
+  by (metis countable_iff_le_Aleph0 countable_image elts_of_set inv_V_of_image_eq replacement)
 
 lemma countable_imp_g_le_Aleph0: "countable X \<Longrightarrow> gcard X \<le> \<aleph>0"
   by (meson countable countable_iff_g_le_Aleph0)
@@ -454,7 +473,7 @@ proof -
     if "countable X" and "infinite X"
     using that countable countable_imp_g_le_Aleph0 finite_iff_g_le_Aleph0 less_V_def by auto
   moreover have "countable X" if "gcard X = \<omega>"
-    by (metis Aleph_0 inv_V_of_image_eq countable_image countable_infinite_vcard elts_of_set finite.emptyI gcard_def that)
+    by (metis Aleph_0 countable_iff_g_le_Aleph0 dual_order.refl gcard_big_0 omega_nonzero that)
   moreover have False if "gcard X = \<omega>" and "finite X"
     by (metis Aleph_0 dual_order.irrefl finite_iff_g_le_Aleph0 finite_imp_small that)
   ultimately show ?thesis
@@ -473,7 +492,7 @@ lemma subset_smaller_gcard:
 proof (cases "small X")
   case True
   with  subset_smaller_vcard [OF \<kappa> [unfolded gcard_def]] show ?thesis
-    by (metis elts_of_set gcard_def less_eq_V_def replacement set_of_elts subset_image_iff that)
+    by (metis elts_of_set gcard_def less_eq_V_def replacement set_of_elts subset_imageE that)
 next
   case False
   with assms show ?thesis
@@ -509,12 +528,8 @@ qed
 
 subsection \<open>Wetzel's property\<close>
 
-lemma less_succ_self: "x < succ x"
-  by (simp add: less_eq_V_def order_neq_le_trans subset_insertI)
-
 definition Wetzel :: "(complex \<Rightarrow> complex) set \<Rightarrow> bool"
   where "Wetzel \<equiv> \<lambda>F. (\<forall>f\<in>F. f analytic_on UNIV) \<and> (\<forall>z. countable((\<lambda>f. f z) ` F))"
-
 
 proposition Erdos_Wetzel_nonCH:
   assumes W: "Wetzel F" and NCH: "C_continuum > \<aleph>1" and "small F"
@@ -549,7 +564,7 @@ proof -
     have "gcard SS \<le> gcard ((\<lambda>\<beta>. \<Union>\<alpha>\<in>elts \<beta>. S \<alpha> \<beta>) ` elts \<omega>1) \<otimes> \<aleph>0"
       apply (simp add: SS_def)
       by (metis (no_types, lifting) "\<section>" TC_small gcard_Union_le_cmult imageE)
-    also have "...  \<le> \<aleph>1"
+    also have "\<dots>  \<le> \<aleph>1"
     proof (rule cmult_InfCard_le)
       show "gcard ((\<lambda>\<beta>. \<Union>\<alpha>\<in>elts \<beta>. S \<alpha> \<beta>) ` elts \<omega>1) \<le> \<omega>1"
         using gcard_image_le by fastforce
@@ -573,20 +588,13 @@ qed
 lemma Rats_closure_real2: "closure (\<rat>\<times>\<rat>) = (UNIV::real set)\<times>(UNIV::real set)"
   by (simp add: Rats_closure_real closure_Times)
 
-(*The same as the library but without the type constraint*)
-definition transrec :: "((V \<Rightarrow> 'a) \<Rightarrow> V \<Rightarrow> 'a) \<Rightarrow> V \<Rightarrow> 'a"
-  where "transrec H a \<equiv> wfrec {(x,y). x \<in> elts y} H a"
-
-lemma transrec: "transrec H a = H (\<lambda>x \<in> elts a. transrec H x) a"
-proof -
-  have "(cut (wfrec {(x, y). x \<in> elts y} H) {(x, y). x \<in> elts y} a)
-      = (\<lambda>x\<in>elts a. wfrec {(x, y). x \<in> elts y} H x)"
-    by (force simp: cut_def)
-  then show ?thesis
-    unfolding transrec_def
-    by (simp add: foundation wfrec)
-qed
-
+(*
+Martin Aigner & Günter M. Ziegler
+Proofs from THE BOOK
+Springer, 2018
+Chapter 19: Sets, functions, and the continuum hypothesis
+Theorem 5, a problem set by Wetzel and solved by Erdös
+*)
 
 proposition Erdos_Wetzel_CH:
   assumes CH: "C_continuum = \<aleph>1"
@@ -655,15 +663,13 @@ proof -
           have nless: "n < card (elts \<gamma>)"
             using Suc.prems Suc_le_eq by blast
           with \<eta> have "\<eta> n \<noteq> \<eta> i" if "i<n" for i
-            using that
-            apply (clarsimp simp: bij_betw_iff_bijections)
+            using that unfolding bij_betw_iff_bijections
             by (metis lessThan_iff less_not_refl order_less_trans)
-          with \<zeta> \<eta> have pwn_nonzero: "p (w n) \<noteq> 0"
-            apply (simp add: p0 w_def bij_betw_iff_bijections)
-            by (metis Ord_\<omega>1 Ord_trans \<gamma> nless  lessThan_iff order_less_trans)
+          with \<zeta> \<eta> \<gamma> have pwn_nonzero: "p (w n) \<noteq> 0"
+            apply (clarsimp simp: p0 w_def bij_betw_iff_bijections)
+            by (metis Ord_\<omega>1 Ord_trans nless lessThan_iff order_less_trans)
           then show "h' analytic_on UNIV"
-            unfolding h'_def p_def
-            by (intro analytic_intros \<open>h analytic_on UNIV\<close>)
+            unfolding h'_def p_def by (intro analytic_intros \<open>h analytic_on UNIV\<close>)
           fix i
           assume "i < Suc n"
           then have \<section>: "i < n \<or> i = n"
@@ -686,12 +692,13 @@ proof -
       define g where "g \<equiv> f o \<eta>"
       define w where "w \<equiv> \<zeta> o \<eta>"
       then have w_inject [simp]: "w i = w j \<longleftrightarrow> i=j" for i j
-        by (smt (verit, ccfv_SIG) Ord_\<omega>1 Ord_trans UNIV_I \<eta> \<gamma> \<zeta> bij_betw_iff_bijections comp_apply)
+        by (smt (verit) Ord_\<omega>1 Ord_trans UNIV_I \<eta> \<gamma> \<zeta> bij_betw_iff_bijections comp_apply)
       define p where "p \<equiv> \<lambda>n z. \<Prod>i<n. z - w i"
       define q where "q \<equiv> \<lambda>n. \<Prod>i<n. 1 + norm (w i)"
       define h where "h \<equiv> \<lambda>n \<epsilon> z. \<Sum>i<n. \<epsilon> i * p i z"
-      define E where "E \<equiv> \<lambda>n \<epsilon>. ball (h n \<epsilon> (w n)) (norm (p n (w n)) / (fact n * q n))"
-      define DD where "DD \<equiv> \<lambda>n \<epsilon>. D \<inter> E n \<epsilon> - {g n (w n)}"
+      define BALL where "BALL \<equiv> \<lambda>n \<epsilon>. ball (h n \<epsilon> (w n)) (norm (p n (w n)) / (fact n * q n))"
+                  \<comment> \<open>The demonimator above is the key to keeping the epsilons small\<close>
+      define DD where "DD \<equiv> \<lambda>n \<epsilon>. D \<inter> BALL n \<epsilon> - {g n (w n)}"
       define dd where "dd \<equiv> \<lambda>n \<epsilon>. SOME x. x \<in> DD n \<epsilon>"
       have p0: "p n z = 0 \<longleftrightarrow> (\<exists>i<n. z = w i)" for z n
         unfolding p_def by force
@@ -703,8 +710,8 @@ proof -
       proof -
         have "r > 0 \<Longrightarrow> infinite (D \<inter> ball z r)" for z r
           by (metis islimpt_UNIV limpt_of_closure islimpt_eq_infinite_ball cloD)
-        then have "infinite (D \<inter> E n \<epsilon>)" for n \<epsilon>
-          by (simp add: E_def p0 q_gt0)
+        then have "infinite (D \<inter> BALL n \<epsilon>)" for n \<epsilon>
+          by (simp add: BALL_def p0 q_gt0)
         then show ?thesis
           by (metis DD_def finite.emptyI infinite_remove)
       qed
@@ -714,7 +721,7 @@ proof -
       have h_cong: "h n \<epsilon> = h n \<epsilon>'" if "\<And>i. i<n \<Longrightarrow> \<epsilon> i = \<epsilon>' i" for n \<epsilon> \<epsilon>'
         using that by (simp add: h_def)
       have dd_cong: "dd n \<epsilon> = dd n \<epsilon>'" if "\<And>i. i<n \<Longrightarrow> \<epsilon> i = \<epsilon>' i" for n \<epsilon> \<epsilon>'
-        using that by (metis dd_def DD_def E_def h_cong) 
+        using that by (metis dd_def DD_def BALL_def h_cong) 
 
       have [simp]: "h n (cut \<epsilon> less_than n) = h n \<epsilon>" for n \<epsilon>
         by (meson cut_apply h_cong less_than_iff)
@@ -727,46 +734,33 @@ proof -
 
       have norm_coeff: "norm (coeff n) < 1 / (fact n * q n)" for n
         using dd_in_DD [of n coeff]
-        by (simp add: q_gt0 coeff_eq DD_def E_def dist_norm norm_minus_commute norm_divide divide_simps)
+        by (simp add: q_gt0 coeff_eq DD_def BALL_def dist_norm norm_minus_commute norm_divide divide_simps)
       have h_truncated: "h n coeff (w k) = h (Suc k) coeff (w k)" if "k < n" for n k
       proof -
         have "(\<Sum>i<n. coeff i * p i (w k)) = (\<Sum>i<Suc k. coeff i * p i (w k)) + (\<Sum>i=Suc k..<n. coeff i * p i (w k))"
           by (smt (verit) Suc_le_eq atLeast0LessThan le0 sum.atLeastLessThan_concat that)
-        also have "... = (\<Sum>i<Suc k. coeff i * p i (w k))"
+        also have "\<dots> = (\<Sum>i<Suc k. coeff i * p i (w k))"
           by simp
         finally show ?thesis
           by (simp add: h_def)
-      qed
-
-      have h_eq_dd: "h (Suc n) coeff (w n) = dd n coeff" for n
-        by (induction n) (auto simp add: p0 h_def p_def coeff_eq [of "Suc _"] coeff_eq [of 0])
-
-      define hh where "hh \<equiv> \<lambda>z. suminf (\<lambda>i. coeff i * p i z)"
-      have hh_eq_dd: "hh (w n) = dd n coeff" for n
-      proof -
-        have "hh (w n) = h (Suc n) coeff (w n)"
-          unfolding hh_def h_def by (intro suminf_finite) auto
-        also have "... = dd n coeff"
-          using h_eq_dd by blast
-        finally show ?thesis .
-      qed
-                
-      have J: "norm (p n z') \<le> q n * (1 + norm z) ^ n" if "dist z z' \<le> 1" for n z z'
+      qed                
+      have norm_p_bound: "norm (p n z') \<le> q n * (1 + norm z) ^ n" 
+          if "dist z z' \<le> 1" for n z z'
       proof (induction n )
         case 0
         then show ?case
           by (auto simp: p_def q_def)
       next
         case (Suc n)
-        have "cmod z' - cmod z \<le> 1"
+        have "norm z' - norm z \<le> 1"
           by (smt (verit) dist_norm norm_triangle_ineq3 that)
-        then have \<section>: "cmod (z' - w n) \<le> (1 + cmod (w n)) * (1 + cmod z)"
+        then have \<section>: "norm (z' - w n) \<le> (1 + norm (w n)) * (1 + norm z)"
           by (simp add: mult.commute add_mono distrib_left norm_triangle_le_diff)
         have "norm (p n z') * norm (z' - w n) \<le> (q n * (1 + norm z) ^ n) * norm (z' - w n)"
           by (metis Suc mult.commute mult_left_mono norm_ge_zero)
-        also have "... \<le> (q n * (1 + norm z) ^ n) * (1 + norm (w n)) * ((1 + norm z))"
+        also have "\<dots> \<le> (q n * (1 + norm z) ^ n) * (1 + norm (w n)) * ((1 + norm z))"
           by (smt (verit) "\<section>" Suc mult.assoc mult_left_mono norm_ge_zero)
-        also have "... \<le> q n * (1 + norm (w n)) * ((1 + norm z) * (1 + norm z) ^ n)"
+        also have "\<dots> \<le> q n * (1 + norm (w n)) * ((1 + norm z) * (1 + norm z) ^ n)"
           by (simp add: mult_ac)
         finally have "norm (p n z') * norm (z' - w n) \<le> q n * (1 + norm (w n)) * ((1 + norm z) * (1 + norm z) ^ n)" .
         with that show ?case
@@ -775,9 +769,10 @@ proof -
 
       show ?thesis
       proof
+        define hh where "hh \<equiv> \<lambda>z. suminf (\<lambda>i. coeff i * p i z)"
         have "hh holomorphic_on UNIV"
         proof (rule holomorphic_uniform_sequence)
-          fix n
+          fix n   \<comment>\<open>Many thanks to Manuel Eberl for suggesting these approach\<close>
           show "h n coeff holomorphic_on UNIV"
             unfolding h_def p_def by (intro holomorphic_intros)
         next
@@ -786,39 +781,45 @@ proof -
             unfolding hh_def h_def
           proof (rule Weierstrass_m_test)
             let ?M = "\<lambda>n. (1 + norm z) ^ n / fact n"
-            have "\<And>B. \<exists>N. \<forall>n\<ge>N. B \<le> (1 + real n) / (1 + cmod z)"
-              apply (rule_tac x="nat (ceiling (B * (1 + cmod z)))" in exI)
-              apply (auto simp: divide_simps)
-               apply (smt (verit) norm_ge_zero)+
-              done
-            then have L: "liminf (\<lambda>n. ereal ((1 + real n) / (1 + cmod z))) = \<infinity>"
+            have "\<exists>N. \<forall>n\<ge>N. B \<le> (1 + real n) / (1 + norm z)" for B
+            proof
+              show "\<forall>n\<ge>nat \<lceil>B * (1 + norm z)\<rceil>. B \<le> (1 + real n) / (1 + norm z)"
+                using norm_ge_zero [of z] by (auto simp: divide_simps simp del: norm_ge_zero)
+            qed
+            then have L: "liminf (\<lambda>n. ereal ((1 + real n) / (1 + norm z))) = \<infinity>"
               by (simp add: Lim_PInfty flip: liminf_PInfty)
-            show "summable ?M"
-              apply (rule ratio_test_convergence)
-               apply (auto simp: add_nonneg_eq_0_iff)
-               apply (metis (no_types, lifting) add_less_zeroD eventually_at_top_dense fact_gt_zero less_add_same_cancel2 linorder_neqE_linordered_idom norm_not_less_zero not_one_less_zero zero_less_divide_iff zero_less_one zero_less_power)
-              apply (simp add: L)
-              done
+            have "\<forall>\<^sub>F n in sequentially. 0 < (1 + cmod z) ^ n / fact n"
+              using norm_ge_zero [of z] by (simp del: norm_ge_zero)
+            then show "summable ?M"
+              by (rule ratio_test_convergence) (auto simp: add_nonneg_eq_0_iff L)
             fix n z'
             assume  "z' \<in> cball z 1"
-            then have "cmod ((coeff n * p n z')) \<le> cmod (coeff n) * q n * (1 + cmod z) ^ n"
-              by (metis J norm_mult mem_cball mult.assoc mult_left_mono norm_ge_zero)
-            also have "... \<le> (1 / fact n) * (1 + cmod z) ^ n"
-              apply (rule mult_right_mono)
-               apply (metis divide_divide_eq_left less_divide_eq less_eq_real_def norm_coeff q_gt0)
-              apply (auto simp: )
-              done
-            also have "... \<le> ?M n"
+            then have "norm (coeff n * p n z') \<le> norm (coeff n) * q n * (1 + norm z) ^ n"
+              by (metis norm_p_bound norm_mult mem_cball mult.assoc mult_left_mono norm_ge_zero)
+            also have "\<dots> \<le> (1 / fact n) * (1 + norm z) ^ n"
+            proof (rule mult_right_mono)
+              show "norm (coeff n) * q n \<le> 1 / fact n"
+                by (metis divide_divide_eq_left less_divide_eq less_eq_real_def norm_coeff q_gt0)
+            qed auto
+            also have "\<dots> \<le> ?M n"
               by (simp add: divide_simps)
-            finally show "cmod (coeff n * p n z') \<le> ?M n" .
+            finally show "norm (coeff n * p n z') \<le> ?M n" .
           qed
           then show "\<exists>d>0. cball z d \<subseteq> UNIV \<and> uniform_limit (cball z d) (\<lambda>n. h n coeff) hh sequentially"
             using zero_less_one by blast
         qed auto
         then show "hh analytic_on UNIV"
           by (simp add: analytic_on_open)
-        have "hh (w n) \<in> D" for n
-          using DD_def dd_in_DD hh_eq_dd by fastforce
+        have hh_eq_dd: "hh (w n) = dd n coeff" for n
+        proof -
+          have "hh (w n) = h (Suc n) coeff (w n)"
+            unfolding hh_def h_def by (intro suminf_finite) auto
+          also have "\<dots> = dd n coeff"
+            by (induction n) (auto simp add: p0 h_def p_def coeff_eq [of "Suc _"] coeff_eq [of 0])
+          finally show ?thesis .
+        qed
+        then have "hh (w n) \<in> D" for n
+          using DD_def dd_in_DD by fastforce
         then show "inD \<gamma> hh"
           unfolding inD_def by (metis \<eta> bij_betw_iff_bijections comp_apply w_def)
         have "hh (w n) \<noteq> f (\<eta> n) (w n)" for n
@@ -831,12 +832,13 @@ proof -
       using inj by (rule_tac x="h" in exI) (auto simp: \<Phi>_def inj_on_def)
   qed
   define G where "G \<equiv> \<lambda>f \<gamma>. @h. \<Phi> \<gamma> ((restrict f (elts \<gamma>))(\<gamma>:=h))"
-  have nxt: "\<Phi> \<gamma> ((restrict f (elts \<gamma>))(\<gamma>:= G f \<gamma>))" if "\<gamma> \<in> elts (\<aleph>1)" "\<forall>\<beta> \<in> elts \<gamma>. \<Phi> \<beta> f" for f \<gamma>
+  have nxt: "\<Phi> \<gamma> ((restrict f (elts \<gamma>))(\<gamma>:= G f \<gamma>))" 
+    if "\<gamma> \<in> elts (\<aleph>1)" "\<forall>\<beta> \<in> elts \<gamma>. \<Phi> \<beta> f" for f \<gamma>
     unfolding G_def using * [OF that] by (metis someI) 
   have G_restr: "G (restrict f (elts \<gamma>)) \<gamma> = G f \<gamma>" if "\<gamma> \<in> elts (\<aleph>1)" for f \<gamma>
     by (auto simp: G_def)
   define f where "f \<equiv> transrec G"
-  have f: "\<Phi> \<beta> f" if "\<beta> \<in> elts (\<aleph>1)" for \<beta>
+  have \<Phi>f: "\<Phi> \<beta> f" if "\<beta> \<in> elts (\<aleph>1)" for \<beta>
     using that
   proof (induction \<beta> rule: eps_induct)
     case (step \<gamma>)
@@ -850,10 +852,10 @@ proof -
       by (metis \<Phi>_def elts_succ fun_upd_same fun_upd_triv inj_on_restrict_eq restrict_upd)
   qed
   then have anf: "\<And>\<beta>. \<beta> \<in> elts (\<aleph>1) \<Longrightarrow> f \<beta> analytic_on UNIV"
-    and D: "\<And>\<alpha> \<beta>. \<lbrakk>\<beta> \<in> elts (\<aleph>1); \<alpha> \<in> elts \<beta>\<rbrakk> \<Longrightarrow> f \<beta> (\<zeta> \<alpha>) \<in> D"
+    and inD: "\<And>\<alpha> \<beta>. \<lbrakk>\<beta> \<in> elts (\<aleph>1); \<alpha> \<in> elts \<beta>\<rbrakk> \<Longrightarrow> f \<beta> (\<zeta> \<alpha>) \<in> D"
     using \<Phi>_def inD_def by blast+
   have injf: "inj_on f (elts (\<aleph>1))"
-    using f unfolding inj_on_def \<Phi>_def by (metis Ord_\<omega>1 Ord_in_Ord Ord_linear_le in_succ_iff)
+    using \<Phi>f unfolding inj_on_def \<Phi>_def by (metis Ord_\<omega>1 Ord_in_Ord Ord_linear_le in_succ_iff)
   show ?thesis
   proof
     let ?F = "f ` elts (\<aleph>1)"
@@ -865,7 +867,7 @@ proof -
       have eq: "elts \<omega>1 = elts (succ \<alpha>) \<union> ?B"
         using \<alpha> by (metis Diff_partition Ord_\<omega>1 OrdmemD less_eq_V_def succ_le_iff)
       have "(\<lambda>f. f z) ` f ` ?B \<subseteq> D"
-        using \<alpha> D by clarsimp (meson Ord_\<omega>1 Ord_in_Ord Ord_linear)
+        using \<alpha> inD by clarsimp (meson Ord_\<omega>1 Ord_in_Ord Ord_linear)
       then have "countable ((\<lambda>f. f z) ` f ` ?B)"
         by (meson \<open>countable D\<close> countable_subset)
       moreover have "countable ((\<lambda>f. f z) ` f ` elts (succ \<alpha>))"
@@ -879,7 +881,6 @@ proof -
       using Ord_\<omega>1 countable_iff_less_\<omega>1 countable_image_inj_eq injf by blast
   qed
 qed
-
 
 theorem Erdos_Wetzel: "C_continuum = \<aleph>1 \<longleftrightarrow> (\<exists>F. Wetzel F \<and> uncountable F)"
   by (metis C_continuum_ge Erdos_Wetzel_CH Erdos_Wetzel_nonCH TC_small less_V_def)
