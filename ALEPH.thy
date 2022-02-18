@@ -5,6 +5,12 @@ theory ALEPH imports
    
 begin
 
+
+lemma Nats_infinite: "\<not> finite \<nat>"
+apply (auto simp: Nats_def)
+  by (auto dest!: finite_imageD simp: inj_on_def infinite_UNIV_char_0 Nats_def)
+
+
 definition ALEPH :: "V \<Rightarrow> V"   (\<open>\<aleph>_\<close> [90] 90) 
   where "ALEPH \<equiv> transrec (\<lambda>f x. \<omega> \<squnion> \<Squnion>((\<lambda>y. csucc(f y)) ` elts x))"
 

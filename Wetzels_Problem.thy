@@ -1,18 +1,18 @@
-section \<open>Set theory experiments\<close>
+section \<open>Wetzel's Problem, Solved by Erdös\<close>
 
-theory Sets imports
-  "HOL-ex.Sketch_and_Explore" "HOL-Complex_Analysis.Complex_Analysis" "ZFC_in_HOL.ZFC_Typeclasses"
+text \<open>Martin Aigner and Günter M. Ziegler. Proofs from THE BOOK. (Springer, 2018).
+Chapter 19: Sets, functions, and the continuum hypothesis
+Theorem 5 (pages 137--8)\<close>
+
+theory Wetzels_Problem imports
+  "HOL-Complex_Analysis.Complex_Analysis" "ZFC_in_HOL.ZFC_Typeclasses"
    
 begin
 
 subsection \<open>Added to the developer libraries\<close>
 
-subsubsection \<open>HOL\<close>
-
 lemma inj_on_restrict_iff: "A \<subseteq> B \<Longrightarrow> inj_on (restrict f B) A \<longleftrightarrow> inj_on f A"
   by (metis inj_on_cong restrict_def subset_iff)
-
-subsubsection \<open>Analysis\<close>
 
 lemma Rats_closure_real: "closure \<rat> = (UNIV::real set)"
 proof -
@@ -34,8 +34,6 @@ theorem complex_non_denum: "\<nexists>f :: nat \<Rightarrow> complex. surj f"
 
 lemma uncountable_UNIV_complex: "uncountable (UNIV :: complex set)"
   using complex_non_denum unfolding uncountable_def by auto
-
-subsubsection \<open>Complex Analysis\<close>
 
 lemma analytic_on_prod [analytic_intros]:
   "(\<And>i. i \<in> I \<Longrightarrow> (f i) analytic_on S) \<Longrightarrow> (\<lambda>x. prod (\<lambda>i. f i x) I) analytic_on S"
@@ -79,8 +77,6 @@ lemma holomorphic_countable_equal_UNIV:
     and eq: "uncountable {z. f z = g z}"
   shows "f=g"
   using holomorphic_countable_equal [OF fg] eq by fastforce
-
-subsubsection \<open>ZFC in HOL\<close>
 
 lemma finite_iff_less_Aleph0: "finite (elts x) \<longleftrightarrow> vcard x < \<omega>"
 proof
@@ -254,7 +250,7 @@ lemma vcard_Aleph [simp]: "Ord \<alpha> \<Longrightarrow> vcard (\<aleph>\<alpha
 lemma omega_le_Aleph [simp]: "Ord \<alpha> \<Longrightarrow> \<omega> \<le> \<aleph>\<alpha>"
   using InfCard_def by auto
 
-subsection \<open>Making the embedding explicit (possibly add to the AFP entry?)\<close>
+subsection \<open>Making the embedding explicit\<close>
 
 definition V_of :: "'a::embeddable \<Rightarrow> V"
   where "V_of \<equiv> SOME f. inj f"
@@ -352,7 +348,7 @@ proof -
     by (simp add: C_continuum_def cardinal_cong)
 qed
 
-subsection \<open>Cardinality of an arbitrary HOL set (add to the AFP entry?)\<close>
+subsection \<open>Cardinality of an arbitrary HOL set\<close>
 
 definition gcard :: "'a::embeddable set \<Rightarrow> V" 
   where "gcard X \<equiv> vcard (ZFC_in_HOL.set (V_of ` X))"
@@ -514,10 +510,12 @@ next
 qed
 
 
-subsection \<open>Wetzel's property\<close>
+subsection \<open>Wetzel's problem\<close>
 
 definition Wetzel :: "(complex \<Rightarrow> complex) set \<Rightarrow> bool"
   where "Wetzel \<equiv> \<lambda>F. (\<forall>f\<in>F. f analytic_on UNIV) \<and> (\<forall>z. countable((\<lambda>f. f z) ` F))"
+
+subsubsection \<open>When the continuum hypothesis is false\<close>
 
 proposition Erdos_Wetzel_nonCH:
   assumes W: "Wetzel F" and NCH: "C_continuum > \<aleph>1" and "small F"
@@ -544,7 +542,8 @@ proof -
       then show ?thesis
         using countable_imp_g_le_Aleph0 by blast
     qed
-    define SS where "SS \<equiv> \<Squnion>\<beta> \<in> elts(\<aleph>1). \<Squnion>\<alpha> \<in> elts \<beta>. S \<alpha> \<beta>"
+    define SS where "SS \<equiv> \<Squnion>((\<lambda>\<beta>. \<Squnion>((\<lambda>\<alpha>. S \<alpha> \<beta>) ` elts \<beta>)) `  elts(\<aleph>1))"
+(*    "SS \<equiv> \<Squnion>\<beta> \<in> elts(\<aleph>1). \<Squnion>\<alpha> \<in> elts \<beta>. S \<alpha> \<beta>"  *)
     have F'_eq: "F' =  \<phi> ` elts \<omega>1"
       using \<phi> bij_betw_imp_surj_on by auto
     have \<section>: "\<And>x xa. xa \<in> elts \<omega>1 \<Longrightarrow> gcard (\<Union>\<alpha>\<in>elts xa. S \<alpha> xa) \<le> \<omega>"
@@ -572,17 +571,10 @@ proof -
     unfolding Wetzel_def by (meson countable uncountable_gcard_ge)
 qed
 
+subsubsection \<open>When the continuum hypothesis is true\<close>
 
 lemma Rats_closure_real2: "closure (\<rat>\<times>\<rat>) = (UNIV::real set)\<times>(UNIV::real set)"
   by (simp add: Rats_closure_real closure_Times)
-
-(*
-Martin Aigner & Günter M. Ziegler
-Proofs from THE BOOK
-Springer, 2018
-Chapter 19: Sets, functions, and the continuum hypothesis
-Theorem 5, a problem set by Wetzel and solved by Erdös
-*)
 
 proposition Erdos_Wetzel_CH:
   assumes CH: "C_continuum = \<aleph>1"
@@ -833,9 +825,9 @@ proof -
     then have *: "\<forall>\<beta>\<in>elts \<gamma>. \<Phi> \<beta> f"
       using Ord_\<omega>1 Ord_trans by blast
     have [simp]: "inj_on (\<lambda>\<beta>. G (restrict f (elts \<beta>)) \<beta>) (elts \<gamma>) \<longleftrightarrow> inj_on f (elts \<gamma>)"
-      by (metis (no_types, lifting) f_def Sets.transrec inj_on_cong)
+      by (metis (no_types, lifting) f_def transrec inj_on_cong)
     have "f \<gamma> = G f \<gamma>"
-      by (metis G_restr Sets.transrec f_def step.prems)
+      by (metis G_restr transrec f_def step.prems)
     with nxt [OF step.prems] * show ?case
       by (metis \<Phi>_def elts_succ fun_upd_same fun_upd_triv inj_on_restrict_eq restrict_upd)
   qed

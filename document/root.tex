@@ -1,7 +1,8 @@
-\documentclass[11pt,a4paper]{report}
+\documentclass[11pt,a4paper]{article}
 \usepackage[T1]{fontenc}
-\usepackage{amsmath}
 \usepackage{isabelle,isabellesym}
+\usepackage{amssymb}
+\usepackage{stmaryrd}
 
 % this should be the last package used
 \usepackage{pdfsetup}
@@ -13,20 +14,33 @@
 
 \begin{document}
 
-\title{Young's Inequality for Increasing Functions}
+\title{Wetzel's Problem from THE BOOK}
 \author{Lawrence C. Paulson}
 \maketitle
 
 \begin{abstract}
-Young's inequality states that
-\[ ab \leq \int_0^a f(x)dx + \int_0^b f^{-1}(y) dy  \]
-where $a\geq 0$, $b\geq 0$ and $f$ is strictly increasing and continuous.
-Its proof is formalised following the development by Cunningham and Grossman~\cite{cunningham-youngs}.
-Their idea is to make the intuitive, geometric proof rigorous by reasoning about step functions.
-The lack of the Riemann integral makes the development longer than necessary, but their argument is reproduced faithfully.
+Let $F$ be a set of analytic functions on the complex plane such that, 
+for each $z\in\mathbb{C}$, the set $\{f(z) \mid f\in F\}$ is countable;
+must then $F$ itself be countable?
+The answer is yes if the Continuum Hypothesis is false, i.e.,
+if the cardinality of $\mathbb{R}$ exceeds $\aleph_1$.
+But if CH is true then such an $F$, of cardinality $\aleph_1$,
+can be constructed by transfinite recursion.
+
+The formal proof illustrates reasoning about complex 
+analysis (analytic and homomorphic functions) and set theory
+(transfinite cardinalities) in a single setting.
+The mathematical text comes from \emph{Proofs from THE BOOK}~\cite[pp.\thinspace137--8]{aigner-proofs}, by Aigner and Ziegler. 
 \end{abstract}
 
+\newpage
 \tableofcontents
+
+\paragraph*{Acknowledgements}
+The author was supported by the ERC Advanced Grant ALEXANDRIA (Project 742178) funded by the European Research Council. 
+Thanks also to Manuel Eberl for advice on proving a function to be holomorphic.
+
+\newpage
 
 % include generated text of all theories
 \input{session}
