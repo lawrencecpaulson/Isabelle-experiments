@@ -47,6 +47,8 @@ lemma of_nat_nat_eq_iff: "of_nat (nat i) = of_int i \<longleftrightarrow> 0 \<le
 
 end
 
+
+
 lemma inv_into_subset_eq:
   assumes "inj_on f A" "B \<subseteq> A" "b \<in> f ` B"
   shows "inv_into A f b = inv_into B f b"
@@ -58,10 +60,6 @@ lemma B:
   assumes "strict_mono_on f S"  
   shows "bij_betw (inv_into S f) (f ` S) S"
   by (meson assms bij_betw_imageI strict_mono_on_imp_inj_on assms bij_betw_inv_into)
-
-
-
-
 
 
 lemma C'':
