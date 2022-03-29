@@ -6,6 +6,40 @@ theory Misc imports
    
 begin
 
+lemma "\<not> (\<exists>q::rat. q^2 = 2)"
+proof
+  assume "\<exists>q::rat. q^2 = 2"
+  then obtain q::rat where "q^2 = 2"
+    by blast 
+  obtain m n where "coprime m n" "q = of_int m / of_int n"
+    by (meson quotient_of_coprime quotient_of_div surj_pair)
+  then have "of_int m ^ 2 / of_int n ^ 2 = (2::rat)"
+    by (metis \<open>q\<^sup>2 = 2\<close> power_divide)
+  then have 2: "of_int m ^ 2 = (2::rat) * of_int n ^ 2"
+    by (metis division_ring_divide_zero double_eq_0_iff mult_2_right mult_zero_right nonzero_divide_eq_eq)
+  then have "2 dvd m"
+    by (metis (mono_tags, lifting) even_mult_iff even_numeral of_int_eq_iff of_int_mult of_int_numeral power2_eq_square)
+  then obtain r where "m = 2*r"
+    by blast
+  then have "2 dvd n"
+    by (smt (verit, ccfv_threshold) "2" Groups.mult_ac(3) dvd_def even_mult_iff mult_cancel_left of_int_1 of_int_add of_int_eq_of_int_power_cancel_iff of_int_mult one_add_one power2_eq_square)
+  then show False
+    using \<open>coprime m n\<close> \<open>m = 2 * r\<close> by auto
+qed
+
+
+lemma "Nats \<noteq> (Ints :: complex set)"
+  by (smt (z3) Ints_minus Nats_altdef1 mem_Collect_eq of_int_eq_iff of_int_minus)
+
+lemma "Nats \<noteq> (Ints :: real set)"
+  by (smt (z3) Ints_minus Nats_altdef1 mem_Collect_eq of_int_eq_iff of_int_minus)
+
+thm of_nat_def Int.of_int_def
+
+lemma "Nats \<noteq> (Ints :: 'a::linordered_idom set)"
+  by (metis Ints_1 Ints_minus Nats_induct neg_0_le_iff_le not_one_le_zero of_nat_0_le_iff)
+
+lemma "m * 2^(2*m) \<le> 2^(2^m)"
 
 text \<open>Kevin Buzzard's examples\<close>
 lemma
