@@ -24,7 +24,7 @@
 % an abbreviated paper title here
 %
 \author{Lawrence C Paulson\orcidID{0000-0003-0288-4279}}
-\institute{Computer Laboratory. University of Cambridge, UK\\
+\institute{Computer Laboratory, University of Cambridge, UK\\
 \email{lp15@cam.ac.uk} \quad
 \url{https://www.cl.cam.ac.uk/~lp15/}}
 %
@@ -36,23 +36,34 @@
 \maketitle              % typeset the header of the contribution
 %
 \begin{abstract}
-In 1964, Paul Erd\H{o}s published a paper~\cite{erdos-interpolation} settling a question that he had seen in a problem book: given a family $\{f_\alpha\}$ of distinct analytic functions on $\mathbb{C}$ such that for each $z$ the set  $\{f_\alpha ( z )\}$ is countable, is the family itself countable~\cite{garcia-wetzels-problem}?
-Erd\H{o}s proved that the answer to the question above was yes if and only if the continuum hypothesis failed.
-Therefore, the answer to this innocent-looking question turns out to be undecidable from the axioms of ZFC\@.
-The formalisation of these proofs in Isabelle/HOL demonstrate the combination of complex analysis (analytic functions) and set theory (a transfinite construction).
+In 1964, Paul Erd\H{o}s published a paper~\cite{erdos-interpolation} settling a question about function spaces that he had seen in a problem book.
+Erd\H{o}s proved that the answer was yes if and only if the continuum hypothesis failed.
+Therefore, an innocent-looking question turned out to be undecidable from the axioms of ZFC\@.
+The formalisation of these proofs in Isabelle/HOL demonstrate the combination of complex analysis and set theory, and in particular how the Isabelle/HOL framework for ZFC is integrated with its basis in higher-order logic.
 %% TODO Uncomment keywords (commented to allow LIVE typesetting)
 %\keywords{Formalisation of mathematics\and  continuum hypothesis \and Isabelle/HOL}
 \end{abstract}
-%
-%
-%
-\section{First Section}
-\subsection{A Subsection Sample}
 
 
+\section{Introduction}
+
+This story~\cite{garcia-wetzels-problem} expresses the richness of mathematics.
+It seemed that Erd\H{o}s found the following question in a problem book belonging to the mathematics department of Ann Arbor University:
+\begin{quote}
+Suppose that $F$ is a family of analytic functions on $\mathbb{C}$ such that for each $z$ the set $\{f (z)\mid f\in F\}$ is countable. (Call this \emph{property $P_0$}.) Then is the family $F$ itself countable?
+\end{quote}
+This question apparently arose naturally in the PhD work of John E. Wetzel, originally in connection with spaces of harmonic functions.
+Ellie was able to show that if the continuum hypothesis failed, every family satisfying $P_0$ had to be countable; but if the hypothesis held, he showed how to create an uncountable family satisfying $P_0$ by a transfinite construction.
+
+The celebrated continuum hypothesis (CH), which was number one on Hilbert's list of fundamental unsolved problems, asks whether there exists a cardinality between that of the natural numbers, namely $\aleph_0$, and that of the real numbers, namely $\frak{c}$.
+Since the next cardinal after $\aleph_0$ is denoted $\aleph_1$, while the cardinality of the continuum is known to equal $2^{\aleph_0}$,  CH can be written symbolically as $2^{\aleph_0}=\aleph_1$.
+It's a fundamental question because the notion of a countable set is straightforward (simply, any set that can be enumerated). 
+The proof that the real numbers cannot be enumerated is a simple diagonalisation: Cantor's theorem.
+There is no obvious way to construct a set lying in between, neither enumerable nor equivalent in cardinality to the reals.
+Cantor's conjecture that no such set existed was shown to be consistent with the axioms of set theory by Gödel and independent from them by Cohen.
 
 
-he continuum hypothesis (CH)
+the continuum hypothesis (CH)
 
 
 \subsubsection{Sample Heading (Third Level)} Only two levels of
