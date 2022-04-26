@@ -1,0 +1,109 @@
+% This is samplepaper.tex, a sample chapter demonstrating the
+% LLNCS Version 2.21 of 2022/01/12
+%
+\documentclass[runningheads]{llncs}
+%
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+%
+\usepackage{graphicx}
+% Used for displaying a sample figure. If possible, figure files should
+% be included in EPS format.
+
+% If you use the hyperref package, please uncomment the following two lines
+% to display URLs in blue roman font according to Springer's eBook style:
+\usepackage{hyperref,color}
+\renewcommand\UrlFont{\color{blue}\rmfamily}
+
+\begin{document}
+%
+\title{Wetzel: Formalisation of an Undecidable Problem}
+%
+%\titlerunning{Abbreviated paper title}
+% If the paper title is too long for the running head, you can set
+% an abbreviated paper title here
+%
+\author{Lawrence C Paulson\orcidID{0000-0003-0288-4279}}
+\institute{Computer Laboratory. University of Cambridge, UK\\
+\email{lp15@cam.ac.uk} \quad
+\url{https://www.cl.cam.ac.uk/~lp15/}}
+%
+\authorrunning{L C Paulson}
+% First names are abbreviated in the running head.
+% If there are more than two authors, 'et al.' is used.
+%
+%
+\maketitle              % typeset the header of the contribution
+%
+\begin{abstract}
+In 1964, Paul Erd\H{o}s published a paper~\cite{erdos-interpolation} settling a question that he had seen in a problem book: given a family $\{f_\alpha\}$ of distinct analytic functions on $\mathbb{C}$ such that for each $z$ the set  $\{f_\alpha ( z )\}$ is countable, is the family itself countable~\cite{garcia-wetzels-problem}?
+Erd\H{o}s proved that the answer to the question above was yes if and only if the continuum hypothesis failed.
+Therefore, the answer to this innocent-looking question turns out to be undecidable from the axioms of ZFC\@.
+The formalisation of these proofs in Isabelle/HOL demonstrate the combination of complex analysis (analytic functions) and set theory (a transfinite construction).
+%% TODO Uncomment keywords (commented to allow LIVE typesetting)
+%\keywords{Formalisation of mathematics\and  continuum hypothesis \and Isabelle/HOL}
+\end{abstract}
+%
+%
+%
+\section{First Section}
+\subsection{A Subsection Sample}
+
+
+
+
+he continuum hypothesis (CH)
+
+
+\subsubsection{Sample Heading (Third Level)} Only two levels of
+headings should be numbered. Lower level headings remain unnumbered;
+they are formatted as run-in headings.
+
+\paragraph{Sample Heading (Fourth Level)}
+The contribution should contain no more than four levels of
+headings. Table~\ref{tab1} gives a summary of all heading levels.
+
+
+
+\noindent Displayed equations are centered and set on a separate
+line.
+\begin{equation}
+x + y = z
+\end{equation}
+Please try to avoid rasterized images for line-art diagrams and
+schemas. Whenever possible, use vector graphics instead (see
+Fig.~\ref{fig1}).
+
+
+\begin{theorem}
+This is a sample theorem. The run-in heading is set in bold, while
+the following text appears in italics. Definitions, lemmas,
+propositions, and corollaries are styled the same way.
+\end{theorem}
+%
+% the environments 'definition', 'lemma', 'proposition', 'corollary',
+% 'remark', and 'example' are defined in the LLNCS documentclass as well.
+%
+\begin{proof}
+Proofs, examples, and remarks have the initial word in italics,
+while the following text appears in normal font.
+\end{proof}
+For citations of references, we prefer the use of square brackets
+and consecutive numbers. Citations using labels or the author/year
+convention are also acceptable. The following bibliography provides
+a sample reference list with entries for journal
+articles~\cite{ref_article1}, an LNCS chapter~\cite{ref_lncs1}, a
+book~\cite{ref_book1}, proceedings without editors~\cite{ref_proc1},
+and a homepage~\cite{ref_url1}. Multiple citations are grouped
+\cite{ref_article1,ref_lncs1,ref_book1},
+\cite{ref_article1,ref_book1,ref_proc1,ref_url1}.
+
+\subsubsection{Acknowledgements} 
+This work was supported by the ERC Advanced Grant ALEXANDRIA (Project GA 742178). 
+
+\bibliographystyle{splncs04}
+\bibliography{string,atp,general,isabelle,theory,crossref}
+
+
+
+\end{document}
