@@ -4,6 +4,7 @@
 \documentclass[runningheads]{llncs}
 %
 \usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
 \usepackage{amsmath,amssymb}
 %
 \usepackage{graphicx}
@@ -53,37 +54,27 @@ It seemed that Erd\H{o}s found the following question in a problem book belongin
 Suppose that $F$ is a family of analytic functions on $\mathbb{C}$ such that for each $z$ the set $\{f (z)\mid f\in F\}$ is countable. (Call this \emph{property $P_0$}.) Then is the family $F$ itself countable?
 \end{quote}
 This question apparently arose naturally in the PhD work of John E. Wetzel, originally in connection with spaces of harmonic functions.
-Ellie was able to show that if the continuum hypothesis failed, every family satisfying $P_0$ had to be countable; but if the hypothesis held, he showed how to create an uncountable family satisfying $P_0$ by a transfinite construction.
+Erd\H{o}s was able to show that if the continuum hypothesis failed, every family satisfying $P_0$ had to be countable; but if the hypothesis held, he showed how to create an uncountable family satisfying $P_0$ by a transfinite construction.
 
-The celebrated continuum hypothesis (CH), which was number one on Hilbert's list of fundamental unsolved problems, asks whether there exists a cardinality between that of the natural numbers, namely $\aleph_0$, and that of the real numbers, namely $\frak{c}$.
-Since the next cardinal after $\aleph_0$ is denoted $\aleph_1$, while the cardinality of the continuum is known to equal $2^{\aleph_0}$,  CH can be written symbolically as $2^{\aleph_0}=\aleph_1$.
-It's a fundamental question because the notion of a countable set is straightforward (simply, any set that can be enumerated). 
-The proof that the real numbers cannot be enumerated is a simple diagonalisation: Cantor's theorem.
-There is no obvious way to construct a set lying in between, neither enumerable nor equivalent in cardinality to the reals.
-Cantor's conjecture that no such set existed was shown to be consistent with the axioms of set theory by Gödel and independent from them by Cohen.
+Cantor's celebrated continuum hypothesis (CH), number one on Hilbert's list of fundamental questions, asks whether there exists a cardinality between that of the natural numbers, namely $\aleph_0$, and that of the real numbers, namely~$\frak{c}$.
+Since the next cardinal after $\aleph_0$ is denoted $\aleph_1$ and the cardinality of the continuum is known to equal $2^{\aleph_0}$,  CH can be written symbolically as $\aleph_1 = 2^{\aleph_0}$.
+It's fundamental because the notion of a countable set is straightforward, as is the proof by diagonalisation that the real numbers cannot be enumerated (Cantor's theorem).
+CH asserts that no set exists of intermediate size between the natural numbers and the reals.
+It was shown to be consistent with the axioms of set theory by Gödel and independent from them by Cohen.
 
+I have formalised Gödel's model for the former result, the constructible sets~\cite{paulson-consistency}, while
+Gunther et al.\ \cite{Independence_CH-AFP} have formalised model constructions both to confirm and refute CH using forcing.
+These formalisation tasks were done using Isabelle/ZF, the instance of Isabelle for first-order logic and set theory.
+However, Isabelle/HOL (the instance of Isabelle for higher-order logic) is much better developed than Isabelle/ZF;
+in particular, the Wetzel problem requires its complex analysis library. So this paper is an exploration of how to tackle a problem that combines the worlds of analysis and set theory, including such mysteries as transfinite cardinals and recursion up to uncountable ordinals.
 
-the continuum hypothesis (CH)
+% TODO paper outline
 
-
-\subsubsection{Sample Heading (Third Level)} Only two levels of
-headings should be numbered. Lower level headings remain unnumbered;
-they are formatted as run-in headings.
-
-\paragraph{Sample Heading (Fourth Level)}
-The contribution should contain no more than four levels of
-headings. Table~\ref{tab1} gives a summary of all heading levels.
+\section{Isabelle and Set Theory}
 
 
 
-\noindent Displayed equations are centered and set on a separate
-line.
-\begin{equation}
-x + y = z
-\end{equation}
-Please try to avoid rasterized images for line-art diagrams and
-schemas. Whenever possible, use vector graphics instead (see
-Fig.~\ref{fig1}).
+\newpage
 
 
 \begin{theorem}
@@ -99,15 +90,7 @@ propositions, and corollaries are styled the same way.
 Proofs, examples, and remarks have the initial word in italics,
 while the following text appears in normal font.
 \end{proof}
-For citations of references, we prefer the use of square brackets
-and consecutive numbers. Citations using labels or the author/year
-convention are also acceptable. The following bibliography provides
-a sample reference list with entries for journal
-articles~\cite{ref_article1}, an LNCS chapter~\cite{ref_lncs1}, a
-book~\cite{ref_book1}, proceedings without editors~\cite{ref_proc1},
-and a homepage~\cite{ref_url1}. Multiple citations are grouped
-\cite{ref_article1,ref_lncs1,ref_book1},
-\cite{ref_article1,ref_book1,ref_proc1,ref_url1}.
+
 
 \subsubsection{Acknowledgements} 
 This work was supported by the ERC Advanced Grant ALEXANDRIA (Project GA 742178). 

@@ -6,6 +6,16 @@ theory Misc imports
    
 begin
 
+lemma whoops: "\<forall>x. P x \<longrightarrow> P (Suc x) \<Longrightarrow> P x \<Longrightarrow> P y"
+sorry
+  by blast
+
+lemma False
+  using whoops [of "\<lambda>x. x\<noteq>0" 1 0]
+  by auto
+
+
+
 lemma "\<lbrakk>0 < N; 0 \<le> x; x < 1\<rbrakk> \<Longrightarrow>  \<lfloor>x * real_of_int N\<rfloor> < N"
   by (simp add: floor_less_iff)
 
