@@ -6,6 +6,7 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath,amssymb}
+\usepackage{isabelle,isabellesym,stmaryrd}
 %
 \usepackage{graphicx}
 % Used for displaying a sample figure. If possible, figure files should
@@ -15,6 +16,8 @@
 % to display URLs in blue roman font according to Springer's eBook style:
 \usepackage{hyperref,color}
 \renewcommand\UrlFont{\color{blue}\rmfamily}
+
+\hyphenation{Isa-belle man-u-script man-u-scripts ap-pen-dix mut-u-al-ly co-induc-tive co-induc-tion}
 
 \begin{document}
 %
@@ -65,14 +68,64 @@ It was shown to be consistent with the axioms of set theory by Gödel and indepe
 I have formalised Gödel's model for the former result, the constructible sets~\cite{paulson-consistency}, while
 Gunther et al.\ \cite{Independence_CH-AFP} have formalised model constructions both to confirm and refute CH using forcing.
 These formalisation tasks were done using Isabelle/ZF, the instance of Isabelle for first-order logic and set theory.
-However, Isabelle/HOL (the instance of Isabelle for higher-order logic) is much better developed than Isabelle/ZF;
-in particular, the Wetzel problem requires its complex analysis library. So this paper is an exploration of how to tackle a problem that combines the worlds of analysis and set theory, including such mysteries as transfinite cardinals and recursion up to uncountable ordinals.
+However, Isabelle/HOL is much better developed than Isabelle/ZF;
+in particular, the Wetzel problem requires its complex analysis library. So this paper is demonstrates how to tackle a problem that combines the worlds of analysis and set theory, including such mysteries as holomorphic functions, transfinite cardinals and recursion up to uncountable ordinals, on the common basis of higher-order logic.
 
 % TODO paper outline
 
 \section{Isabelle and Set Theory}
 
+Isabelle is a generic theorem prover, ultimately based on a uniform representation of logical syntax in the typed lambda calculus, with inference rules expressed syntactically and combined using higher-order unification~\cite{paulson-found}. Although Isabelle/HOL~\cite{isa-tutorial}---the version for higher-order logic---is by far the best known and most developed instance of Isabelle, other instances exist. These include Isabelle/FOL (classical first-order logic) and Isabelle/ZF\@.
+The latter is a faithful development of set theory from the Zermelo-Frawnkel axioms within first-order logic.
+Since the axiom of choice (AC) is kept separate from the other axioms, one can investigate weaker forms of AC and equivalents of AC~\cite{paulson-gr}. 
 
+During the 1990s, I made some significant formal developments using Isabelle/ZF~\cite{paulson-reflection}, culminating in a proof of the relative consistency of the axiom of choice using Gödel's constructible universe~\cite{paulson-consistency}. Recently, several highly impressive formalisations of forcing were done within Isabelle/ZF~\cite{gunther-forcing,Independence_CH-AFP}.
+
+On the other hand, Isabelle/ZF lacks much of the automation found in Isabelle/HOL and has no theory of the real numbers, let alone any complex analysis.
+That makes it unsuitable for the Wetzel problem. However, it is also possible to formalise ZF set theory within higher-order logic.
+
+\subsection{Formalising ZF in Higher-Order Logic}
+
+% TODO should types be italic?
+During the 1990s, Michael JC Gordon conducted several experiments~\cite{gordon-set-theory} involving the formalisation of ZF set theory in his HOL proof assistant. 
+His HOL-ST simply introduced a type $V$ of all sets and a relation ${\in}:V\times V\to bool$, then asserted all the Zermelo-Fraenkel axioms. 
+Sten Agerholm~\cite{agerholm-comparison} formalised Dana Scott's inverse limit construction of the set $D_\infty$, satisfying
+$D_\infty \cong [D_\infty\to D_\infty]$ and yielding a model of the untyped $\lambda$-calculus.
+
+The use of higher-order logic as opposed to first-order logic as the basis makes this version of set theory somewhat stronger than standard ZF\@. 
+In HOL-ST it is possible to define the syntax of first-order logic and the semantics of set-theoretic formulas in terms of~$V$, verifying the ZF axioms and thus proving their consistency.
+On the other hand, a model for HOL-ST can be constructed in ZF plus one inaccessible cardinal. 
+These remarks (which Gordon attributed to set theorist Kenneth Kunen) together imply that 
+the strength of HOL-ST is somewhere between ZF and ZF plus one inaccessible cardinal.
+This is a weak assumption, much weaker than the dependent type theories used in Coq and Lean, which are stronger than any finite number of inaccessible cardinals~\cite{werner-sets-types}.
+
+Some time later, Steven Obua performed a similar experiment~\cite{obua-partizan-games}, using Isabelle/HOL\@.
+He adopted the same axioms and overall approach as Gordon, and demonstrated his system by formalising John H Conway's \textit{partizan games}~\cite{schleicher-conways-games}.
+Obua obtained some interoperability with the existing infrastructure of Isabelle/HOL, such as its recursive function definitions. 
+
+\subsection{The development ZFC-in-HOL}
+
+In developing my own framework for set theory within Isabelle/HOL, I had two aims:
+\begin{enumerate}
+	\item To be able to reproduce as much of Isabelle/ZF as possible,
+	\item while achieving maximum integration with the underlying higher-order logic.
+\end{enumerate}
+To achieve these aims I relied on type classes, whenever possible overloading existing symbols for set theory rather than introducing new vocabulary.
+
+It introduces the type \isa{V} of sets and the function \isa{elts} of type \isa{V~\isasymRightarrow~V~set} mapping  a set to its elements.
+Thus it uses Isabelle/HOL's existing typed sets to represent classes, but not all elements of \isa{V set} correspond to sets.
+The predicate \isa{small} identifies those that are small enough, but here comes the first stage of integration: \isa{small} needs to be polymorphic, accepting a set of any type and with the more general meaning that a set is small if its elements can be put into one-to-one correspondence with the elements of a ZF set.
+A set that is small in this more general sense does not in itself denote a ZF set, but this condition is frequently necessary if it is used in constructions that ultimately lead to a ZF set.
+
+The fundamentals of set theory are built up as usual, starting with the ZF axioms.
+Set membership is expressed using the existing (typed) set membership operator: \isa{x~\isasymin~elts y}.
+Union, intersection and the subset relation are expressed using the type class \isa{distrib\_lattice} (distributive lattices), which already provides the symbols \isa{\isasymsqunion}, \isa{\isasymsqinter}, \isa{\isasymle}, etc.
+Unions and intersections of families rely on the type class \isa{conditionally\_complete\_lattice}, which provides the symbols \isa{\isasymSqunion} and~\isa{\isasymSqinter}.
+Type classes also allow the overloading of \isa{0} to denote the empty set (which is also the natural number zero) and \isa{1} for the natural number one.
+
+On this foundation, it was easy to import significant chunks of Isabelle/ZF, above all, cardinal arithmetic. It was also possible to reuse Isabelle/HOL's existing theory of recursion to obtain transfinite recursion on ordinals, and hence order types, Cantor normal form and much else. So the first aim was met, but more needed to be done to achieve the second.
+
+\subsection{The integration of ZFC-in-HOL with Isabelle/HOL}
 
 \newpage
 
@@ -94,6 +147,7 @@ while the following text appears in normal font.
 
 \subsubsection{Acknowledgements} 
 This work was supported by the ERC Advanced Grant ALEXANDRIA (Project GA 742178). 
+Dmitriy Traytel provided a particularly slick formal axiomatisation of type $V$.  
 
 \bibliographystyle{splncs04}
 \bibliography{string,atp,general,isabelle,theory,crossref}
