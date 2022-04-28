@@ -178,18 +178,18 @@ The ZFC-in-HOL library defined the class of types that can be \textit{embedded} 
 \end{isabelle}
 If a type is embeddable then each of its elements corresponds to some ZF set.
 
-As it happens, Isabelle/HOL already provides the class \texttt{countable} of all types that can be embedded into the natural numbers. The latter are trivially embedded into \texttt{V} as finite ordinals, so it is easy to show that all countable types are \texttt{embeddable}.
-Examples include \texttt{nat}, \texttt{int}, \texttt{rat}, \texttt{bool}.
-Trivially, \texttt{V} can be embedded into itself, and the type constructors $\times$, $+$ and \texttt{list} are straightforwardly shown to preserve the embeddable property.
+As it happens, Isabelle/HOL already provides the class \isa{countable} of all types that can be embedded into the natural numbers. The latter are trivially embedded into \isa{V} as finite ordinals, so it is easy to show that all countable types are \isa{embeddable}.
+Examples include \isa{nat}, \isa{int}, \isa{rat}, \isa{bool}.
+Trivially, \isa{V} can be embedded into itself, and the type constructors $\times$, $+$ and \isa{list} are straightforwardly shown to preserve the embeddable property.
 
-The library also defines the class of types that are small, which means that the type itself corresponds to some ZF set. It is defined in terms of the predicate \texttt{small}:
+The library also defines the class of types that are small, which means that the type itself corresponds to some ZF set. It is defined in terms of the predicate \isa{small}:
 \begin{isabelle}
 \isacommand{class}\ small\ =\isanewline
 \ \ \isakeyword{assumes}\ small:\ "small\ (UNIV::'a\ set)"
 \end{isabelle}
 
-Every \texttt{countable} type (and in particular those listed above) is \texttt{small}, because $\omega$ is a set. And it's obvious that every \texttt{small} type is \texttt{embeddable}. By proving types to be small, we further extend the embeddable class.
-The type constructors $\times$, $+$ and \texttt{list} preserve smallness.
+Every \isa{countable} type (and in particular those listed above) is \isa{small}, because $\omega$ is a set. And it's obvious that every \isa{small} type is \isa{embeddable}. By proving types to be small, we further extend the embeddable class.
+The type constructors $\times$, $+$ and \isa{list} preserve smallness.
 The situation for the function type constructor ($\to$) is a little subtle:
 \begin{isabelle}
 \isacommand{instance}\ "fun"\ ::\ (small,embeddable)\ embeddable\isanewline
@@ -197,7 +197,7 @@ The situation for the function type constructor ($\to$) is a little subtle:
 The (straightforward) proofs are omitted.
 It should be obvious that we cannot expect to embed $\V\to\V$ into $\V$, but any function $f\in A\to\V$ must be a set provided $A$ is a set.
 
-Types \texttt{real} and \texttt{complex} are also \texttt{small}. How do we know? The reals are obtained by quotienting type \texttt{nat \isasymRightarrow\ rat}. The details of their construction do not concern us.
+Types \isa{real} and \isa{complex} are also \isa{small}. How do we know? The reals are obtained by quotienting type \isa{nat \isasymRightarrow\ rat}. The details of their construction do not concern us.
 This is the full text of the proof.
 \begin{isabelle}
 \isacommand{instance}\ real\ ::\ small\ \isanewline
@@ -209,7 +209,69 @@ This is the full text of the proof.
 \ \ \ \ \ \ \ (metis\ Rep\_real\_inverse\ image\_inv\_f\_f\ inj\_on\_def\ replacement)\isanewline
 \isacommand{qed}
 \end{isabelle}
-And type \texttt{complex} is essentially the same thing as $\mathbb{R}^2$.
+And type \isa{complex} is essentially the same thing as $\mathbb{R}^2$.
+
+\section{Wetzel's Problem: the $\neg$CH Case}
+
+We can now define the predicate \texttt{Wetzel}, corresponding to $P_0$ above, on sets of complex-valued functions. It holds if every element of the given set $F$ is analytic on the complex plane and if, for all $z$, the set $\{f(z) \mid f\in F\}$ is countable:
+\begin{isabelle}
+\isacommand{definition}\ Wetzel\ ::\ "(complex\ \isasymRightarrow \ complex)\ set\ \isasymRightarrow \ bool"\isanewline
+\ \ \isakeyword{where}\ "Wetzel\ \isasymequiv \ \isasymlambda F.\ (\isasymforall f\isasymin F.\ f\ analytic\_on\ UNIV)\ \isasymand\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (\isasymforall z.\ countable((\isasymlambda f.\ f\ z)\ `\ F))"
+\end{isabelle}
+
+Remarkably, the Isabelle/HOL proof is barely 50 lines. First, the statement:
+\begin{isabelle}
+\isacommand{proposition}\ Erdos\_Wetzel\_nonCH:\isanewline
+\ \ \isakeyword{assumes}\ W:\ "Wetzel\ F"\ \isakeyword{and}\ NCH:\ "C\_continuum\ >\ \isasymaleph 1"\ \isakeyword{and}\ "small\ F"\isanewline
+\ \ \isakeyword{shows}\ "countable\ F"
+\end{isabelle}
+
+The key step is to prove the contrapositive of the claim:
+\begin{isabelle}
+\ \ \isacommand{have}\ "\isasymexists z0.\ gcard\ ((\isasymlambda f.\ f\ z0)\ `\ F)\ \isasymge \ \isasymaleph 1"\ \isakeyword{if}\ "uncountable\ F"
+\end{isabelle}
+
+\noindent
+For this, given the uncountable family $F$, we find a subset $F'\subseteq F$ of cardinality $\aleph_1$  and thus a bijection $\phi:\aleph_1\to F'$  between the ordinals below $\aleph_1$ and $F'$.
+\begin{isabelle}
+\ \ \ \ \isacommand{have}\ "gcard\ F\ \isasymge \ \isasymaleph 1"\isanewline
+\ \ \ \ \ \ \isacommand{using}\ \isacartoucheopen small\ F\isacartoucheclose \ that\ uncountable\_gcard\_ge\ \isacommand{by}\ blast\ \isanewline
+\ \ \ \ \isacommand{then}\ \isacommand{obtain}\ F'\ \isakeyword{where}\ "F'\ \isasymsubseteq \ F"\ \isakeyword{and}\ F':\ "gcard\ F'\ =\ \isasymaleph 1"\isanewline
+\ \ \ \ \ \ \isacommand{by}\ (meson\ Card\_Aleph\ Ord\_1\ subset\_smaller\_gcard\ \isacartoucheopen small\ F\isacartoucheclose )\isanewline
+\ \ \ \ \isacommand{then}\ \isacommand{obtain}\ \isasymphi \ \isakeyword{where}\ \isasymphi :\ "bij\_betw\ \isasymphi \ (elts\ (\isasymaleph 1))\ F'"\isanewline
+\ \ \ \ \ \ \isacommand{by}\ (metis\ TC\_small\ eqpoll\_def\ gcard\_eqpoll)
+\end{isabelle}
+
+\noindent
+We next define the family of sets $S(\alpha,\beta)$ as  $\{z.\, \phi_\alpha (z) = \phi_\beta (z)\}$,
+recalling that the $\phi_\alpha$ for $\alpha<\aleph_1$ are the given analytic functions.
+\begin{isabelle}
+\ \ \ \ \isacommand{define}\ S\ \isakeyword{where}\ "S\ \isasymequiv \ \isasymlambda \isasymalpha \ \isasymbeta .\ \{z.\ \isasymphi \ \isasymalpha \ z\ =\ \isasymphi \ \isasymbeta \ z\}"
+\end{isabelle}
+
+It takes 10 lines to prove that $S(\alpha,\beta)$ is countable for $\alpha<\beta<\aleph_1$,
+since two distinct holomorphic functions can agree at only countably many arguments.
+\begin{isabelle}
+\ \ \ \ \isacommand{have}\ "gcard\ (S\ \isasymalpha \ \isasymbeta )\ \isasymle \ \isasymaleph 0"\ \isakeyword{if}\ "\isasymalpha\ \isasymin\ elts\ \isasymbeta "\ "\isasymbeta\ \isasymin\ elts(\isasymaleph 1)"\ \isakeyword{for}\ \isasymalpha \ \isasymbeta
+\end{isabelle}
+
+% TODO fix union syntax
+The next step is to define $SS$ as the union of all $S(\alpha,\beta)$ for $\alpha<\beta<\aleph_1$.
+\begin{isabelle}
+\ \ \ \ \isacommand{define}\ SS\ \isakeyword{where}\ "SS\ \isasymequiv \ \isasymSqunion ((\isasymlambda \isasymbeta .\ \isasymSqunion ((\isasymlambda \isasymalpha .\ S\ \isasymalpha \ \isasymbeta )\ `\ elts\ \isasymbeta ))\ `\ \ elts(\isasymaleph 1))"
+\end{isabelle}
+
+A 14 line calculation shows that $|SS|\le\aleph_1$, but we are assuming the negation of CH, so $SS$ cannot be the entire complex plane: there exists some $z_0\not\in SS$.
+\begin{isabelle}
+\ \ \ \ \isacommand{finally}\ \isacommand{have}\ "gcard\ SS\ \isasymle \ \isasymaleph 1"\ \isacommand{.}\isanewline
+\ \ \ \ \isacommand{with}\ NCH\ \isacommand{obtain}\ z0\ \isakeyword{where}\ "z0\ \isasymnotin \ SS"\isanewline
+\ \ \ \ \ \ \isacommand{by}\ (metis\ Complex\_gcard\ UNIV\_eq\_I\ less\_le\_not\_le)
+\end{isabelle}
+
+That $z_0$ satisfies our requirements follows straightforwardly by the definitions of $S$ and $SS$.
+
+\section{Wetzel's Problem: the CH Case}
 
 \begin{isabelle}
 X
@@ -218,6 +280,11 @@ X
 \begin{isabelle}
 X
 \end{isabelle}
+
+\begin{isabelle}
+X
+\end{isabelle}
+
 
 \begin{isabelle}
 X
