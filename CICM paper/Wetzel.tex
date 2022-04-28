@@ -17,6 +17,9 @@
 \usepackage{hyperref,color}
 \renewcommand\UrlFont{\color{blue}\rmfamily}
 
+\newcommand{\V}{\mathbf{V}}
+\newcommand{\bool}{\mathrm{bool}}
+
 \hyphenation{Isa-belle man-u-script man-u-scripts ap-pen-dix mut-u-al-ly co-induc-tive co-induc-tion}
 
 \begin{document}
@@ -63,7 +66,8 @@ Cantor's celebrated continuum hypothesis (CH), number one on Hilbert's list of f
 Since the next cardinal after $\aleph_0$ is denoted $\aleph_1$ and the cardinality of the continuum is known to equal $2^{\aleph_0}$,  CH can be written symbolically as $\aleph_1 = 2^{\aleph_0}$.
 It's fundamental because the notion of a countable set is straightforward, as is the proof by diagonalisation that the real numbers cannot be enumerated (Cantor's theorem).
 CH asserts that no set exists of intermediate size between the natural numbers and the reals.
-It was shown to be consistent with the axioms of set theory by Gödel and independent from them by Cohen.
+It was shown to be consistent with the axioms of set theory by Gödel and to be independent from them by Cohen.
+The details can be found in any set theory text~\cite{kunen80}.
 
 I have formalised Gödel's model for the former result, the constructible sets~\cite{paulson-consistency}, while
 Gunther et al.\ \cite{Independence_CH-AFP} have formalised model constructions both to confirm and refute CH using forcing.
@@ -81,21 +85,21 @@ Since the axiom of choice (AC) is kept separate from the other axioms, one can i
 
 During the 1990s, I made some significant formal developments using Isabelle/ZF~\cite{paulson-reflection}, culminating in a proof of the relative consistency of the axiom of choice using Gödel's constructible universe~\cite{paulson-consistency}. Recently, several highly impressive formalisations of forcing were done within Isabelle/ZF~\cite{gunther-forcing,Independence_CH-AFP}.
 
-On the other hand, Isabelle/ZF lacks much of the automation found in Isabelle/HOL and has no theory of the real numbers, let alone any complex analysis.
+On the other hand, Isabelle/ZF lacks much of the automation found in Isabelle/HOL and has no theory even of the real numbers.
 That makes it unsuitable for the Wetzel problem. However, it is also possible to formalise ZF set theory within higher-order logic.
 
 \subsection{Formalising ZF in Higher-Order Logic}
 
 % TODO should types be italic?
 During the 1990s, Michael JC Gordon conducted several experiments~\cite{gordon-set-theory} involving the formalisation of ZF set theory in his HOL proof assistant. 
-His HOL-ST simply introduced a type $V$ of all sets and a relation ${\in}:V\times V\to bool$, then asserted all the Zermelo-Fraenkel axioms. 
+His HOL-ST simply introduced a type $\V$ of all sets and a relation ${\in}:\V\times \V\to \bool$, then asserted all the Zermelo-Fraenkel axioms. 
 Sten Agerholm~\cite{agerholm-comparison} formalised Dana Scott's inverse limit construction of the set $D_\infty$, satisfying
 $D_\infty \cong [D_\infty\to D_\infty]$ and yielding a model of the untyped $\lambda$-calculus.
 
 The use of higher-order logic as opposed to first-order logic as the basis makes this version of set theory somewhat stronger than standard ZF\@. 
-In HOL-ST it is possible to define the syntax of first-order logic and the semantics of set-theoretic formulas in terms of~$V$, verifying the ZF axioms and thus proving their consistency.
+In HOL-ST it is possible to define the syntax of first-order logic and the semantics of set-theoretic formulas in terms of~$\V$, verifying the ZF axioms and thus proving their consistency.
 On the other hand, a model for HOL-ST can be constructed in ZF plus one inaccessible cardinal. 
-These remarks (which Gordon attributed to set theorist Kenneth Kunen) together imply that 
+These remarks (which Gordon credited to Kenneth Kunen) together imply that 
 the strength of HOL-ST is somewhere between ZF and ZF plus one inaccessible cardinal.
 This is a weak assumption, much weaker than the dependent type theories used in Coq and Lean, which are stronger than any finite number of inaccessible cardinals~\cite{werner-sets-types}.
 
@@ -103,14 +107,30 @@ Some time later, Steven Obua performed a similar experiment~\cite{obua-partizan-
 He adopted the same axioms and overall approach as Gordon, and demonstrated his system by formalising John H Conway's \textit{partizan games}~\cite{schleicher-conways-games}.
 Obua obtained some interoperability with the existing infrastructure of Isabelle/HOL, such as its recursive function definitions. 
 
+\subsection{Axiomatic Type Classes}
+
+Deeper integration requires the use of axiomatic type classes, introduced by Wenzel in 1997.
+An \textit{axiomatic type class}~\cite{wenzel-type} defines an open-ended collection of types on the basis of a signature and a possibly empty list of axioms. The signature specifies certain operations and their types, which will be polymorphic with type variables referring to that type class.
+The operations may also be equipped with concrete syntax, such as infix declarations.
+Any type, whether already existing or defined in the future, can be shown to be an instance of the class if it provides definitions of all the operations in the signature that satisfy the associated axioms.
+
+Isabelle/HOL defines a series of type classes for orderings:
+\begin{itemize}
+	\item \isa{ord} simply introduces the relations $\le$ and $<$, of type \isa{'a\isasymRightarrow'a\isasymRightarrow bool}
+	\item \isa{preorder} extends \isa{ord} with axioms for reflexivity and transitivity
+	\item \isa{order} extends \isa{preorder} with antisymmetry
+	\item \isa{linorder} extends \isa{order} with the axiom \isa{x\isasymle y \isasymor\ y\isasymle x}
+\end{itemize}
+Type \isa{nat} (the natural numbers) belongs to each of these classes, and the type operator $\times$ preserves membership in each of these classes.
+
 \subsection{The development ZFC-in-HOL}
 
-In developing my own framework for set theory within Isabelle/HOL, I had two aims:
+My own framework~\cite{ZFC_in_HOL-AFP} for set theory within Isabelle/HOL had two aims:
 \begin{enumerate}
-	\item To be able to reproduce as much of Isabelle/ZF as possible,
+	\item To reproduce as much of Isabelle/ZF as possible,
 	\item while achieving maximum integration with the underlying higher-order logic.
 \end{enumerate}
-To achieve these aims I relied on type classes, whenever possible overloading existing symbols for set theory rather than introducing new vocabulary.
+To achieve these aims I relied on axiomatic type classes, whenever possible overloading existing symbols for set theory rather than introducing new vocabulary.
 
 It introduces the type \isa{V} of sets and the function \isa{elts} of type \isa{V~\isasymRightarrow~V~set} mapping  a set to its elements.
 Thus it uses Isabelle/HOL's existing typed sets to represent classes, but not all elements of \isa{V set} correspond to sets.
@@ -123,31 +143,123 @@ Union, intersection and the subset relation are expressed using the type class \
 Unions and intersections of families rely on the type class \isa{conditionally\_complete\_lattice}, which provides the symbols \isa{\isasymSqunion} and~\isa{\isasymSqinter}.
 Type classes also allow the overloading of \isa{0} to denote the empty set (which is also the natural number zero) and \isa{1} for the natural number one.
 
-On this foundation, it was easy to import significant chunks of Isabelle/ZF, above all, cardinal arithmetic. It was also possible to reuse Isabelle/HOL's existing theory of recursion to obtain transfinite recursion on ordinals, and hence order types, Cantor normal form and much else. So the first aim was met, but more needed to be done to achieve the second.
+On this foundation, it was easy to import significant chunks of Isabelle/ZF: above all, cardinal arithmetic and  the $\aleph$ operator. It was also possible to reuse Isabelle/HOL's existing theory of recursion to obtain transfinite recursion on ordinals, and hence order types, Cantor normal form and much else. So the first aim was met, but more needed to be done to achieve the second.
 
 \subsection{The integration of ZFC-in-HOL with Isabelle/HOL}
 
-\newpage
+In theory, ZFC suffices for the formalisation of all the mathematics in this problem, and much more. In practice, we absolutely do not want to be forced to develop complex analysis from first principles in set theory when it already exists in the Isabelle/HOL libraries. 
+And while transfinite cardinalities and other constructions are typically understood from the framework of ZFC, they are perfectly intelligible in a broader context.
+
+The simplest generalisation is for cardinality. The \textit{cardinality} $|x|$ of a ZF set~$x$ is simply the minimal ordinal that is equipollent to\footnote{in one-to-one correspondence with}~$x$. This definition generalises naturally to sets of any type. We can now refer to the cardinality of sets of real and complex numbers.
+
+Next comes \textit{transfinite recursion}, also known as $\epsilon$-recursion. It is a sort of fixedpoint operator allowing the definition of functions over the whole of V\@. If a function $H$ is given, then transfinite recursion yields $F$ such that for any $a$,
+\begin{align}
+F(a) = H (F\restriction a), \label{eqn:transrec}
+\end{align}
+where $F\restriction a$ denotes $F$ itself, restricted to the elements of~$a$. It is just an instance of well-founded recursion on the membership relation. The definition is simple:
+\begin{isabelle}
+\isacommand{definition}\ transrec\ ::\ "((V\ \isasymRightarrow \ 'a)\ \isasymRightarrow \ V\ \isasymRightarrow \ 'a)\ \isasymRightarrow \ V\ \isasymRightarrow \ 'a"\isanewline
+\ \ \isakeyword{where}\ "transrec\ H\ a\ \isasymequiv \ wfrec\ \{(x,y).\ x\ \isasymin \ elts\ y\}\ H\ a"
+\end{isabelle}
+This version differs from the original~\cite{ZFC_in_HOL-AFP} only in its type, which is now polymorphic as shown, allowing the recursively defined function to return anything.
+Here, \isa{wfrec} is Isabelle/HOL's built-in operator for well-founded recursion.
+The recursion equation~(\ref{eqn:transrec}) easily follows.
+\begin{isabelle}
+\isacommand{lemma}\ transrec:\ "transrec\ H\ a\ =\ H\ (\isasymlambda x\ \isasymin \ elts\ a.\ transrec\ H\ x)\ a"
+\end{isabelle}
+Although transfinite recursion is typically used to define operations within the set-theoretic universe~$\V$, we can now use it to create an uncountable set of analytic functions.
+
+\subsection{Embedding Isabelle/HOL Types into $\V$}
+
+The ZFC-in-HOL library defined the class of types that can be \textit{embedded} into the set theoretic universe, \isa{V}, by some injective map, \isa{V\_of}:
+\begin{isabelle}
+\isacommand{class}\ embeddable\ =\isanewline
+\ \ \isakeyword{assumes}\ ex\_inj:\ "\isasymexists V\_of\ ::\ 'a\ \isasymRightarrow \ V.\ inj\ V\_of"
+\end{isabelle}
+If a type is embeddable then each of its elements corresponds to some ZF set.
+
+As it happens, Isabelle/HOL already provides the class \texttt{countable} of all types that can be embedded into the natural numbers. The latter are trivially embedded into \texttt{V} as finite ordinals, so it is easy to show that all countable types are \texttt{embeddable}.
+Examples include \texttt{nat}, \texttt{int}, \texttt{rat}, \texttt{bool}.
+Trivially, \texttt{V} can be embedded into itself, and the type constructors $\times$, $+$ and \texttt{list} are straightforwardly shown to preserve the embeddable property.
+
+The library also defines the class of types that are small, which means that the type itself corresponds to some ZF set. It is defined in terms of the predicate \texttt{small}:
+\begin{isabelle}
+\isacommand{class}\ small\ =\isanewline
+\ \ \isakeyword{assumes}\ small:\ "small\ (UNIV::'a\ set)"
+\end{isabelle}
+
+Every \texttt{countable} type (and in particular those listed above) is \texttt{small}, because $\omega$ is a set. And it's obvious that every \texttt{small} type is \texttt{embeddable}. By proving types to be small, we further extend the embeddable class.
+The type constructors $\times$, $+$ and \texttt{list} preserve smallness.
+The situation for the function type constructor ($\to$) is a little subtle:
+\begin{isabelle}
+\isacommand{instance}\ "fun"\ ::\ (small,embeddable)\ embeddable\isanewline
+\isacommand{instance}\ "fun"\ ::\ (small,small)\ small\end{isabelle}
+The (straightforward) proofs are omitted.
+It should be obvious that we cannot expect to embed $\V\to\V$ into $\V$, but any function $f\in A\to\V$ must be a set provided $A$ is a set.
+
+Types \texttt{real} and \texttt{complex} are also \texttt{small}. How do we know? The reals are obtained by quotienting type \texttt{nat \isasymRightarrow\ rat}. The details of their construction do not concern us.
+This is the full text of the proof.
+\begin{isabelle}
+\isacommand{instance}\ real\ ::\ small\ \isanewline
+\isacommand{proof}\ -\isanewline
+\ \ \isacommand{have}\ "small\ (range\ (Rep\_real))"\isanewline
+\ \ \ \ \isacommand{by}\ simp\isanewline
+\ \ \isacommand{then}\ \isacommand{show}\ "OFCLASS(real,\ small\_class)"\isanewline
+\ \ \ \ \isacommand{by}\ intro\_classes\isanewline
+\ \ \ \ \ \ \ (metis\ Rep\_real\_inverse\ image\_inv\_f\_f\ inj\_on\_def\ replacement)\isanewline
+\isacommand{qed}
+\end{isabelle}
+And type \texttt{complex} is essentially the same thing as $\mathbb{R}^2$.
+
+\begin{isabelle}
+X
+\end{isabelle}
+
+\begin{isabelle}
+X
+\end{isabelle}
+
+\begin{isabelle}
+X
+\end{isabelle}
+
+\begin{isabelle}
+X
+\end{isabelle}
+
+\begin{isabelle}
+X
+\end{isabelle}
+
+\begin{isabelle}
+X
+\end{isabelle}
+
+\begin{isabelle}
+X
+\end{isabelle}
+
+\begin{isabelle}
+X
+\end{isabelle}
+
+\begin{isabelle}
+X
+\end{isabelle}
+
+\begin{isabelle}
+X
+\end{isabelle}
 
 
-\begin{theorem}
-This is a sample theorem. The run-in heading is set in bold, while
-the following text appears in italics. Definitions, lemmas,
-propositions, and corollaries are styled the same way.
-\end{theorem}
-%
-% the environments 'definition', 'lemma', 'proposition', 'corollary',
-% 'remark', and 'example' are defined in the LLNCS documentclass as well.
-%
-\begin{proof}
-Proofs, examples, and remarks have the initial word in italics,
-while the following text appears in normal font.
-\end{proof}
+
+% TODO
+15 pages including references
 
 
 \subsubsection{Acknowledgements} 
 This work was supported by the ERC Advanced Grant ALEXANDRIA (Project GA 742178). 
-Dmitriy Traytel provided a particularly slick formal axiomatisation of type $V$.  
+Dmitriy Traytel provided a particularly slick formal axiomatisation of type $V$ and Manuel Eberl provided a crucial tip for the final part.
 
 \bibliographystyle{splncs04}
 \bibliography{string,atp,general,isabelle,theory,crossref}
