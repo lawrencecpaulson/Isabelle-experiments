@@ -1,7 +1,5 @@
-% This is samplepaper.tex, a sample chapter demonstrating the
-% LLNCS Version 2.21 of 2022/01/12
-%
 \documentclass[runningheads]{llncs}
+% LLNCS Version 2.21 of 2022/01/12
 %
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
@@ -55,14 +53,17 @@ The formalisation of these proofs in Isabelle/HOL demonstrate the combination of
 \section{Introduction}
 
 This story~\cite{garcia-wetzels-problem} expresses the richness of mathematics.
-It seemed that Erd\H{o}s found the following question in a problem book belonging to the mathematics department of Ann Arbor University:
+It seemed that Paul Erd\H{o}s found the following question in a problem book belonging to the mathematics department of Ann Arbor University:
 \begin{quote}
-Suppose that $F$ is a family of analytic functions on $\mathbb{C}$ such that for each $z$ the set $\{f (z)\mid f\in F\}$ is countable. (Call this \emph{property $P_0$}.) Then is the family $F$ itself countable?
+Suppose that $F$ is a family of analytic functions on $\mathbb{C}$ such that for each $z$ the set $\{f (z): f\in F\}$ is countable. (Call this \emph{property $P_0$}.) Then is the family $F$ itself countable?
 \end{quote}
-This question apparently arose naturally in the PhD work of John E. Wetzel, originally in connection with spaces of harmonic functions.
+This question apparently arose in the PhD work of John E. Wetzel, in connection with spaces of harmonic functions.
 Erd\H{o}s was able to show that if the continuum hypothesis failed, every family satisfying $P_0$ had to be countable; but if the hypothesis held, he showed how to create an uncountable family satisfying $P_0$ by a transfinite construction.
+His proof appears in \textit{Proofs from THE BOOK}~\cite{aigner-proofs},%
+\footnote{End of Chapter 19. Also  \url{https://doi.org/10.1007/978-3-662-57265-8_19}}
+Aigner and Ziegler's collection of ``perfect proofs'' inspired by  Erd\H{o}s.
 
-Cantor's celebrated continuum hypothesis (CH), number one on Hilbert's list of fundamental questions, asks whether there exists a cardinality between that of the natural numbers, namely $\aleph_0$, and that of the real numbers, namely~$\frak{c}$.
+Cantor's celebrated \textit{continuum hypothesis} (CH), number one on Hilbert's list of fundamental questions, asks whether there exists a cardinality between that of the natural numbers, namely $\aleph_0$, and that of the real numbers, namely~$\mathfrak{c}$.
 Since the next cardinal after $\aleph_0$ is denoted $\aleph_1$ and the cardinality of the continuum is known to equal $2^{\aleph_0}$,  CH can be written symbolically as $\aleph_1 = 2^{\aleph_0}$.
 It's fundamental because the notion of a countable set is straightforward, as is the proof by diagonalisation that the real numbers cannot be enumerated (Cantor's theorem).
 CH asserts that no set exists of intermediate size between the natural numbers and the reals.
@@ -213,7 +214,8 @@ And type \isa{complex} is essentially the same thing as $\mathbb{R}^2$.
 
 \section{Wetzel's Problem: the $\neg$CH Case}
 
-We can now define the predicate \texttt{Wetzel}, corresponding to $P_0$ above, on sets of complex-valued functions. It holds if every element of the given set $F$ is analytic on the complex plane and if, for all $z$, the set $\{f(z) \mid f\in F\}$ is countable:
+Now it is time to formalise the proof itself, following Aigner and Ziegler's presentation~\cite{aigner-proofs}.
+We begin by defining the predicate \texttt{Wetzel}, corresponding to $P_0$ above, on sets of complex-valued functions. It holds if every element of the given set $F$ is analytic on the complex plane and if, for all $z$, the set $\{f(z) : f\in F\}$ is countable:
 \begin{isabelle}
 \isacommand{definition}\ Wetzel\ ::\ "(complex\ \isasymRightarrow \ complex)\ set\ \isasymRightarrow \ bool"\isanewline
 \ \ \isakeyword{where}\ "Wetzel\ \isasymequiv \ \isasymlambda F.\ (\isasymforall f\isasymin F.\ f\ analytic\_on\ UNIV)\ \isasymand\isanewline
@@ -233,7 +235,7 @@ The key step is to prove the contrapositive of the claim:
 \end{isabelle}
 
 \noindent
-For this, given the uncountable family $F$, we find a subset $F'\subseteq F$ of cardinality $\aleph_1$  and thus a bijection $\phi:\aleph_1\to F'$  between the ordinals below $\aleph_1$ and $F'$.
+Given the uncountable family $F$, we find a subset $F'\subseteq F$ of cardinality~$\aleph_1$  and thus a bijection $\phi:\aleph_1\to F'$  between the ordinals below $\aleph_1$ and $F'$.
 \begin{isabelle}
 \ \ \ \ \isacommand{have}\ "gcard\ F\ \isasymge \ \isasymaleph 1"\isanewline
 \ \ \ \ \ \ \isacommand{using}\ \isacartoucheopen small\ F\isacartoucheclose \ that\ uncountable\_gcard\_ge\ \isacommand{by}\ blast\ \isanewline
@@ -244,22 +246,23 @@ For this, given the uncountable family $F$, we find a subset $F'\subseteq F$ of 
 \end{isabelle}
 
 \noindent
-We next define the family of sets $S(\alpha,\beta)$ as  $\{z.\, \phi_\alpha (z) = \phi_\beta (z)\}$,
-recalling that the $\phi_\alpha$ for $\alpha<\aleph_1$ are the given analytic functions.
+We next define the family of sets $S(\alpha,\beta)$ as  $\{z.\, \phi_\alpha (z) = \phi_\beta (z)\}$.
+Here $\alpha$ and $\beta$ range over ordinals, and $\omega_1$ is the first uncountable ordinal (thus the same thing as $\aleph_1$, but regarded as an ordinal).
+The $\phi_\alpha$ for $\alpha<\omega_1$ are the given analytic functions.
 \begin{isabelle}
 \ \ \ \ \isacommand{define}\ S\ \isakeyword{where}\ "S\ \isasymequiv \ \isasymlambda \isasymalpha \ \isasymbeta .\ \{z.\ \isasymphi \ \isasymalpha \ z\ =\ \isasymphi \ \isasymbeta \ z\}"
 \end{isabelle}
 
-It takes 10 lines to prove that $S(\alpha,\beta)$ is countable for $\alpha<\beta<\aleph_1$,
+It takes 10 lines to prove that $S(\alpha,\beta)$ is countable for $\alpha<\beta<\omega_1$,
 since two distinct holomorphic functions can agree at only countably many arguments.
 \begin{isabelle}
-\ \ \ \ \isacommand{have}\ "gcard\ (S\ \isasymalpha \ \isasymbeta )\ \isasymle \ \isasymaleph 0"\ \isakeyword{if}\ "\isasymalpha\ \isasymin\ elts\ \isasymbeta "\ "\isasymbeta\ \isasymin\ elts(\isasymaleph 1)"\ \isakeyword{for}\ \isasymalpha \ \isasymbeta
+\ \ \ \ \isacommand{have}\ "gcard\ (S\ \isasymalpha \ \isasymbeta )\ \isasymle \ \isasymaleph 0"\ \isakeyword{if}\ "\isasymalpha\ \isasymin\ elts\ \isasymbeta "\ "\isasymbeta\ \isasymin\ elts \isasymomega 1"\ \isakeyword{for}\ \isasymalpha \ \isasymbeta
 \end{isabelle}
 
 % TODO fix union syntax
-The next step is to define $SS$ as the union of all $S(\alpha,\beta)$ for $\alpha<\beta<\aleph_1$.
+The next step is to define $SS$ as the union of all $S(\alpha,\beta)$ for $\alpha<\beta<\omega_1$.
 \begin{isabelle}
-\ \ \ \ \isacommand{define}\ SS\ \isakeyword{where}\ "SS\ \isasymequiv \ \isasymSqunion ((\isasymlambda \isasymbeta .\ \isasymSqunion ((\isasymlambda \isasymalpha .\ S\ \isasymalpha \ \isasymbeta )\ `\ elts\ \isasymbeta ))\ `\ \ elts(\isasymaleph 1))"
+\ \ \ \ \isacommand{define}\ SS\ \isakeyword{where}\ "SS\ \isasymequiv \ \isasymSqunion ((\isasymlambda \isasymbeta .\ \isasymSqunion ((\isasymlambda \isasymalpha .\ S\ \isasymalpha \ \isasymbeta )\ `\ elts\ \isasymbeta ))\ `\ elts \isasymomega 1)"
 \end{isabelle}
 
 A 14 line calculation shows that $|SS|\le\aleph_1$, but we are assuming the negation of CH, so $SS$ cannot be the entire complex plane: there exists some $z_0\not\in SS$.
@@ -273,8 +276,220 @@ That $z_0$ satisfies our requirements follows straightforwardly by the definitio
 
 \section{Wetzel's Problem: the CH Case}
 
+Assuming CH, it is possible to construct an uncountable family of analytic functions that makes the Wetzel property $P_0$ fail.
+It's a rather delicate transfinite recursion, so let's review the argument before examining the formal proof.
+
+\subsection{The transfinite construction}
+
+CH implies that $|\mathbb{C}| = \aleph_1$ and we can write $\mathbb{C} = \{\zeta_\alpha : \alpha < \omega_1 \}$.
+Now consider the set $D\subseteq\mathbb{C}$ of \textit{rational} complex numbers: 
+\begin{align*}
+ D = \{p+iq: p,q\in\mathbb{Q}\}.
+\end{align*}
+Suppose that we had a family of functions 
+ $\{f_\beta : \beta < \omega_1 \}$ such that 
+\begin{align}\label{eqn:f_in_D}
+	f_\beta (\zeta_\alpha) \in D\quad\text{if}\quad\alpha<\beta.
+\end{align} 
+ %
+ Since the set $D$ is countable and the $\zeta_\alpha$ for $\alpha < \omega_1$ include all the complex numbers, the desired result would follow.
+Erd\H{o}s showed how to construct this family by transfinite induction: for an arbitrary $\gamma<\omega_1$, assume that a family of distinct analytic functions $\{f_\beta: \beta<\gamma\}$ defined below~$\gamma$.
+To complete the construction and therefore prove the theorem, we must extend it with a new function, $f_\gamma$.
+
+Since $\gamma$ is countable, the set $\{f_\beta: \beta<\gamma\}$ can be enumerated as $\{g_0, g_1, \ldots\}$
+and $\{\zeta_\alpha : \alpha < \gamma\}$ can be enumerated as $\{w_0, w_1, \ldots\}$;
+both are finite or infinite according to whether $\gamma$ itself is finite or infinite.
+The sought-for analytic function $f_\gamma$ should satisfy, for all $n$,
+\begin{align}
+	f_\gamma (w_n) \in D \quad\text{and}\quad f_\gamma (w_n) \not= g_n(w_n). \label{eqn:f_induct}
+\end{align}
+%
+The second condition above ensures that $f_\gamma$ is new, while the first is simply~(\ref{eqn:f_in_D}).
+We construct $f_\gamma$ by putting
+\begin{align*}
+f_\gamma(z) & := \epsilon_0 + \epsilon_1 (z - w_0) + \epsilon_2 (z - w_0)(z - w_1)\\
+	       & \quad + \epsilon_3 (z - w_0)(z - w_1)(z - w_2) + \cdots.	
+\end{align*}
+Again, this sum is finite or infinite according to $\gamma$. 
+The $\{\epsilon_m\}$ are complex numbers chosen one at a time to satisfy conditions~(\ref{eqn:f_induct}) above. 
+In the finite case the sum is a polynomial, so trivially analytic. 
+In the infinite case, the choice of the $\{\epsilon_m\}$ needs to be carefully calibrated in order to satisfy the conditions while converging to zero sufficiently rapidly. 
+We have a lot of leeway and I chose $$|\epsilon_m| < \bigl[m! \cdot \prod_{i<m} (1 + |w_i|)\bigr]^{-1}. $$
+The summation converges to an analytic function by a theorem because the uniform limit of holomorphic functions is holomorphic, and the limit can be shown to be uniform by the Weierstrass $M$-test.%
+\footnote{Thanks to Manuel Eberl for suggesting this argument.}
+
+A clever aspect of the construction is that the conditions~(\ref{eqn:f_induct}) constrain only $f_\gamma(w_n)$, 
+whose value depends only on $\epsilon_m$ for $m\le n$. That is, $f_\gamma(w_0) = \epsilon_0$, $f_\gamma(w_1) = \epsilon_0 + \epsilon_1 (w_1 - w_0)$, etc.
+The desired values of $\epsilon_m$ can be calculated sequentially.
+This
+\subsection{The Isabelle/HOL Formalisation}
+
+Now, let's state the theorem formally:
 \begin{isabelle}
-X
+\isacommand{proposition}\ Erdos\_Wetzel\_CH:\isanewline
+\ \ \isakeyword{assumes}\ CH:\ "C\_continuum\ =\ \isasymaleph 1"\isanewline
+\ \ \isakeyword{obtains}\ F\ \isakeyword{where}\ "Wetzel\ F"\ \isakeyword{and}\ "uncountable\ F"
+\end{isabelle}
+%
+The proof begins with a self-evident definition of $D$. It's then shown to be countably infinite.
+\begin{isabelle}
+\ \ \isacommand{define}\ D\ \isakeyword{where}\ "D\ \isasymequiv \ \{z.\ Re\ z\ \isasymin \ \isasymrat \ \isasymand \ Im\ z\ \isasymin \ \isasymrat \}"\isanewline
+\ \ \isacommand{have}\ Deq:\ "D\ =\ (\isasymUnion x\isasymin \isasymrat .\ \isasymUnion y\isasymin \isasymrat .\ \{Complex\ x\ y\})"\isanewline
+\ \ \ \ \isacommand{using}\ complex.collapse\ \isacommand{by}\ (force\ simp:\ D\_def)\isanewline
+\ \ \isacommand{with}\ countable\_rat\ \isacommand{have}\ "countable\ D"\isanewline
+\ \ \ \ \isacommand{by}\ blast\isanewline
+\ \ \isacommand{have}\ "infinite\ D"\isanewline
+\ \ \ \ XXXX\isanewline
+\ \ \isacommand{have}\ "\isasymexists w.\ Re\ w\ \isasymin \ \isasymrat \ \isasymand \ Im\ w\ \isasymin \ \isasymrat \ \isasymand \ norm\ (w\ -\ z)\ <\ e"\ \isakeyword{if}\ "e\ >\ 0"\ \isakeyword{for}\ z\ e\isanewline
+\ \ \ \ XXXX\isanewline
+\ \ \isacommand{then}\ \isacommand{have}\ cloD:\ "closure\ D\ =\ UNIV"\isanewline
+\ \ \ \ \isacommand{by}\ (auto\ simp:\ D\_def\ closure\_approachable\ dist\_complex\_def)
+\end{isabelle}
+The closure of $D$ equals the universal set \textit{of complex numbers}: the entire complex plane.
+We obtain the transfinite enumeration $\{\zeta_\alpha : \alpha < \omega_1\}$ of the complex plane.
+ \begin{isabelle}
+\ \ \isacommand{obtain}\ \isasymzeta \ \isakeyword{where}\ \isasymzeta :\ "bij\_betw\ \isasymzeta \ (elts\ (\isasymaleph 1))\ (UNIV::complex\ set)"\isanewline
+\ \ \ \ \isacommand{by}\ (metis\ Complex\_gcard\ TC\_small\ assms\ eqpoll\_def\ gcard\_eqpoll)
+\end{isabelle}
+
+ Next come some technical definitions: \texttt{inD} for functions whose range for certain arguments lies within $D$ and $\Phi$ to express that $f$ is a family of analytic functions indexed by the ordinals up to~$\beta$. 
+
+\begin{isabelle}
+\ \ \isacommand{define}\ inD\ \isakeyword{where}\ "inD\ \isasymequiv \ \isasymlambda \isasymbeta \ f.\ (\isasymforall \isasymalpha \ \isasymin \ elts\ \isasymbeta .\ f\ (\isasymzeta \ \isasymalpha )\ \isasymin \ D)"\isanewline
+\ \ \isacommand{define}\ \isasymPhi \ \isakeyword{where}\ "\isasymPhi \ \isasymequiv\isanewline
+\ \  \ \isasymlambda \isasymbeta \ f.\ f\ \isasymbeta \ analytic\_on\ UNIV\ \isasymand \ inD\ \isasymbeta \ (f\ \isasymbeta )\ \isasymand \ inj\_on\ f\ (elts(succ\ \isasymbeta ))"
+\end{isabelle}
+
+The lemma \texttt{*} is the step of the transfinite induction.
+A given family $f$ defined below the ordinal~$\gamma$ is extended with a new function, $h$.
+
+% TODO change to \isasymomega 1 ?
+\begin{isabelle}
+\ \ \isacommand{have}\ *:\ "\isasymexists h.\ \isasymPhi \ \isasymgamma \ ((restrict\ f\ (elts\ \isasymgamma ))(\isasymgamma :=h))"\isanewline
+\ \ \ \ \isakeyword{if}\ \isasymgamma :\ "\isasymgamma \ \isasymin \ elts\ (\isasymaleph 1)"\ \isakeyword{and}\ "\isasymforall \isasymbeta \ \isasymin \ elts\ \isasymgamma .\ \isasymPhi \ \isasymbeta \ f"\ \isakeyword{for}\ \isasymgamma \ f
+\end{isabelle}
+
+\noindent
+
+ccccc???
+\begin{isabelle}
+\ \ \ \ \isacommand{have}\ f:\ "\isasymforall \isasymbeta \ \isasymin \ elts\ \isasymgamma .\ f\ \isasymbeta \ analytic\_on\ UNIV\ \isasymand \ inD\ \isasymbeta \ (f\ \isasymbeta )"\ \isanewline
+\ \ \ \ \ \ \isacommand{using}\ that\ \isacommand{by}\ (auto\ simp:\ \isasymPhi \_def)\isanewline
+\ \ \ \ \isacommand{obtain}\ h\ \isakeyword{where}\ "h\ analytic\_on\ UNIV"\ "inD\ \isasymgamma \ h"\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ "(\isasymforall \isasymbeta \ \isasymin \ elts\ \isasymgamma .\ h\ \isasymnoteq \ f\ \isasymbeta )"\isanewline
+\ \ \ \ \isacommand{proof}\ (cases\ "finite\ (elts\ \isasymgamma )")
+\end{isabelle}
+
+there's a bijection $\eta$ between $\mathbb{N}$ (an initial segment of $\mathbb{N}$ if $\gamma$ is finite) and $\gamma$ (which equals $\{\alpha:\alpha<\gamma\}$). 
+
+  
+The finite case is easier, since the function we have to construct will simply be a polynomial, and trivially analytic. That is the case shown below, including induction on the finite ordinal~$\gamma$. 
+
+\begin{isabelle}
+\ \ \ \ \ \ \isacommand{case}\ True\isanewline
+\ \ \ \ \ \ \isacommand{then}\ \isacommand{obtain}\ \isasymeta \ \isakeyword{where}\ \isasymeta :\ "bij\_betw\ \isasymeta \ \{..<card\ (elts\ \isasymgamma )\}\ (elts\ \isasymgamma )"\isanewline
+\ \ \ \ \ \ \ \ \isacommand{using}\ bij\_betw\_from\_nat\_into\_finite\ \isacommand{by}\ blast\isanewline
+\ \ \ \ \ \ \isacommand{define}\ g\ \isakeyword{where}\ "g\ \isasymequiv \ f\ o\ \isasymeta "\isanewline
+\ \ \ \ \ \ \isacommand{define}\ w\ \isakeyword{where}\ "w\ \isasymequiv \ \isasymzeta \ o\ \isasymeta "\isanewline
+\ \ \ \ \ \ \isacommand{have}\ gf:\ "\isasymforall i<card\ (elts\ \isasymgamma ).\ h\ \isasymnoteq \ g\ i\ \isasymLongrightarrow \ \isasymforall \isasymbeta \isasymin elts\ \isasymgamma .\ h\ \isasymnoteq \ f\ \isasymbeta "\ \isakeyword{for}\ h\isanewline
+\ \ \ \ \ \ \ \ \isacommand{using}\ \isasymeta \ \isacommand{by}\ (auto\ simp:\ bij\_betw\_iff\_bijections\ g\_def)\isanewline
+\ \ \ \ \ \ \isacommand{have}\ *:\ "\isasymexists h.\ h\ analytic\_on\ UNIV\ \isasymand \ (\isasymforall i<n.\ h\ (w\ i)\ \isasymin \ D\ \isasymand \ h\ (w\ i)\ \isasymnoteq \ g\ i\ (w\ i))"\isanewline
+\ \ \ \ \ \ \ \ \isakeyword{if}\ "n\ \isasymle \ card\ (elts\ \isasymgamma )"\ \isakeyword{for}\ n\isanewline
+\ \ \ \ \ \ \ \ \isacommand{using}\ that\isanewline
+\ \ \ \ \ \ \isacommand{proof}\ (induction\ n)\isanewline
+\ \ \ \ \ \ \ \ \isacommand{case}\ 0\isanewline
+\ \ \ \ \ \ \ \ \isacommand{then}\ \isacommand{show}\ ?case\isanewline
+\ \ \ \ \ \ \ \ \ \ \isacommand{using}\ analytic\_on\_const\ \isacommand{by}\ blast\isanewline
+\ \ \ \ \ \ \isacommand{next}\isanewline
+\ \ \ \ \ \ \ \ \isacommand{case}\ (Suc\ n)\isanewline
+\ \ \ \ \ \ \ \ \isacommand{then}\ \isacommand{obtain}\ h\ \isakeyword{where}\ "h\ analytic\_on\ UNIV"\ \isakeyword{and}\ hg:\ "\isasymforall i<n.\ h\ (w\ i)\ \isasymin \ D\ \isasymand \ h\ (w\ i)\ \isasymnoteq \ g\ i\ (w\ i)"\isanewline
+\ \ \ \ \ \ \ \ \ \ \isacommand{using}\ Suc\_leD\ \isacommand{by}\ blast\isanewline
+\ \ \ \ \ \ \ \ \isacommand{define}\ p\ \isakeyword{where}\ "p\ \isasymequiv \ \isasymlambda z.\ \isasymProd i<n.\ z\ -\ w\ i"\isanewline
+\ \ \ \ \ \ \ \ \isacommand{have}\ p0:\ "p\ z\ =\ 0\ \isasymlongleftrightarrow \ (\isasymexists i<n.\ z\ =\ w\ i)"\ \isakeyword{for}\ z\isanewline
+\ \ \ \ \ \ \ \ \ \ \isacommand{unfolding}\ p\_def\ \isacommand{by}\ force\isanewline
+\ \ \ \ \ \ \ \ \isacommand{obtain}\ d\ \isakeyword{where}\ d:\ "d\ \isasymin \ D\ -\ \{g\ n\ (w\ n)\}"\isanewline
+\ \ \ \ \ \ \ \ \ \ \isacommand{using}\ \isacartoucheopen infinite\ D\isacartoucheclose \ \isacommand{by}\ (metis\ ex\_in\_conv\ finite.emptyI\ infinite\_remove)\isanewline
+\ \ \ \ \ \ \ \ \isacommand{define}\ h'\ \isakeyword{where}\ "h'\ \isasymequiv \ \isasymlambda z.\ h\ z\ +\ p\ z\ *\ (d\ -\ h\ (w\ n))\ /\ p\ (w\ n)"\isanewline
+\ \ \ \ \ \ \ \ \isacommand{have}\ h'\_eq:\ "h'\ (w\ i)\ =\ h\ (w\ i)"\ \isakeyword{if}\ "i<n"\ \isakeyword{for}\ i\isanewline
+\ \ \ \ \ \ \ \ \ \ \isacommand{using}\ that\ \isacommand{by}\ (force\ simp:\ h'\_def\ p0)\isanewline
+\ \ \ \ \ \ \ \ \isacommand{show}\ ?case\isanewline
+\ \ \ \ \ \ \ \ \isacommand{proof}\ (intro\ exI\ strip\ conjI)\isanewline
+\ \ \ \ \ \ \ \ \ \ \isacommand{have}\ nless:\ "n\ <\ card\ (elts\ \isasymgamma )"\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \isacommand{using}\ Suc.prems\ Suc\_le\_eq\ \isacommand{by}\ blast\isanewline
+\ \ \ \ \ \ \ \ \ \ \isacommand{with}\ \isasymeta \ \isacommand{have}\ "\isasymeta \ n\ \isasymnoteq \ \isasymeta \ i"\ \isakeyword{if}\ "i<n"\ \isakeyword{for}\ i\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \isacommand{using}\ that\ \isacommand{unfolding}\ bij\_betw\_iff\_bijections\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \isacommand{by}\ (metis\ lessThan\_iff\ less\_not\_refl\ order\_less\_trans)\isanewline
+\ \ \ \ \ \ \ \ \ \ \isacommand{with}\ \isasymzeta \ \isasymeta \ \isasymgamma \ \isacommand{have}\ pwn\_nonzero:\ "p\ (w\ n)\ \isasymnoteq \ 0"\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \isacommand{apply}\ (clarsimp\ simp:\ p0\ w\_def\ bij\_betw\_iff\_bijections)\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \isacommand{by}\ (metis\ Ord\_\isasymomega 1\ Ord\_trans\ nless\ lessThan\_iff\ order\_less\_trans)\isanewline
+\ \ \ \ \ \ \ \ \ \ \isacommand{then}\ \isacommand{show}\ "h'\ analytic\_on\ UNIV"\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \isacommand{unfolding}\ h'\_def\ p\_def\ \isacommand{by}\ (intro\ analytic\_intros\ \isacartoucheopen h\ analytic\_on\ UNIV\isacartoucheclose )\isanewline
+\ \ \ \ \ \ \ \ \ \ \isacommand{fix}\ i\isanewline
+\ \ \ \ \ \ \ \ \ \ \isacommand{assume}\ "i\ <\ Suc\ n"\isanewline
+\ \ \ \ \ \ \ \ \ \ \isacommand{then}\ \isacommand{have}\ \isasymsection :\ "i\ <\ n\ \isasymor \ i\ =\ n"\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \isacommand{by}\ linarith\isanewline
+\ \ \ \ \ \ \ \ \ \ \isacommand{then}\ \isacommand{show}\ "h'\ (w\ i)\ \isasymin \ D"\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \isacommand{using}\ h'\_eq\ hg\ d\ h'\_def\ pwn\_nonzero\ \isacommand{by}\ force\isanewline
+\ \ \ \ \ \ \ \ \ \ \isacommand{show}\ "h'\ (w\ i)\ \isasymnoteq \ g\ i\ (w\ i)"\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \isacommand{using}\ \isasymsection \ h'\_eq\ hg\ h'\_def\ d\ pwn\_nonzero\ \isacommand{by}\ fastforce\isanewline
+\ \ \ \ \ \ \ \ \isacommand{qed}\isanewline
+\ \ \ \ \ \ \isacommand{qed}\isanewline
+\ \ \ \ \ \ \isacommand{show}\ ?thesis\ \isanewline
+\ \ \ \ \ \ \ \ \isacommand{using}\ *\ [OF\ order\_refl]\ \isasymeta \ that\ gf\ \isanewline
+\ \ \ \ \ \ \ \ \isacommand{by}\ (simp\ add:\ w\_def\ bij\_betw\_iff\_bijections\ inD\_def)\ metis
+\end{isabelle}
+
+\begin{isabelle}
+\ \ \isacommand{define}\ G\ \isakeyword{where}\ "G\ \isasymequiv \ \isasymlambda f\ \isasymgamma .\ @h.\ \isasymPhi \ \isasymgamma \ ((restrict\ f\ (elts\ \isasymgamma ))(\isasymgamma :=h))"\isanewline
+\ \ \isacommand{have}\ nxt:\ "\isasymPhi \ \isasymgamma \ ((restrict\ f\ (elts\ \isasymgamma ))(\isasymgamma :=\ G\ f\ \isasymgamma ))"\ \isanewline
+\ \ \ \ \isakeyword{if}\ "\isasymgamma \ \isasymin \ elts\ (\isasymaleph 1)"\ "\isasymforall \isasymbeta \ \isasymin \ elts\ \isasymgamma .\ \isasymPhi \ \isasymbeta \ f"\ \isakeyword{for}\ f\ \isasymgamma \isanewline
+\ \ \ \ \isacommand{unfolding}\ G\_def\ \isacommand{using}\ *\ [OF\ that]\ \isacommand{by}\ (metis\ someI)\ \isanewline
+\ \ \isacommand{have}\ G\_restr:\ "G\ (restrict\ f\ (elts\ \isasymgamma ))\ \isasymgamma \ =\ G\ f\ \isasymgamma "\ \isakeyword{if}\ "\isasymgamma \ \isasymin \ elts\ (\isasymaleph 1)"\ \isakeyword{for}\ f\ \isasymgamma \isanewline
+\ \ \ \ \isacommand{by}\ (auto\ simp:\ G\_def)\isanewline
+\ \ \isacommand{define}\ f\ \isakeyword{where}\ "f\ \isasymequiv \ transrec\ G"\isanewline
+\ \ \isacommand{have}\ \isasymPhi f:\ "\isasymPhi \ \isasymbeta \ f"\ \isakeyword{if}\ "\isasymbeta \ \isasymin \ elts\ (\isasymaleph 1)"\ \isakeyword{for}\ \isasymbeta \isanewline
+\ \ \ \ \isacommand{using}\ that\isanewline
+\ \ \isacommand{proof}\ (induction\ \isasymbeta \ rule:\ eps\_induct)\isanewline
+\ \ \ \ \isacommand{case}\ (step\ \isasymgamma )\isanewline
+\ \ \ \ \isacommand{then}\ \isacommand{have}\ *:\ "\isasymforall \isasymbeta \isasymin elts\ \isasymgamma .\ \isasymPhi \ \isasymbeta \ f"\isanewline
+\ \ \ \ \ \ \isacommand{using}\ Ord\_\isasymomega 1\ Ord\_trans\ \isacommand{by}\ blast\isanewline
+\ \ \ \ \isacommand{have}\ [simp]:\ "inj\_on\ (\isasymlambda \isasymbeta .\ G\ (restrict\ f\ (elts\ \isasymbeta ))\ \isasymbeta )\ (elts\ \isasymgamma )\ \isasymlongleftrightarrow \ inj\_on\ f\ (elts\ \isasymgamma )"\isanewline
+\ \ \ \ \ \ \isacommand{by}\ (metis\ (no\_types,\ lifting)\ f\_def\ transrec\ inj\_on\_cong)\isanewline
+\ \ \ \ \isacommand{have}\ "f\ \isasymgamma \ =\ G\ f\ \isasymgamma "\isanewline
+\ \ \ \ \ \ \isacommand{by}\ (metis\ G\_restr\ transrec\ f\_def\ step.prems)\isanewline
+\ \ \ \ \isacommand{with}\ nxt\ [OF\ step.prems]\ *\ \isacommand{show}\ ?case\isanewline
+\ \ \ \ \ \ \isacommand{by}\ (metis\ \isasymPhi \_def\ elts\_succ\ fun\_upd\_same\ fun\_upd\_triv\ inj\_on\_restrict\_eq\ restrict\_upd)\isanewline
+\ \ \isacommand{qed}\isanewline
+\ \ \isacommand{then}\ \isacommand{have}\ anf:\ "\isasymAnd \isasymbeta .\ \isasymbeta \ \isasymin \ elts\ (\isasymaleph 1)\ \isasymLongrightarrow \ f\ \isasymbeta \ analytic\_on\ UNIV"\isanewline
+\ \ \ \ \isakeyword{and}\ inD:\ "\isasymAnd \isasymalpha \ \isasymbeta .\ \isasymlbrakk \isasymbeta \ \isasymin \ elts\ (\isasymaleph 1);\ \isasymalpha \ \isasymin \ elts\ \isasymbeta \isasymrbrakk \ \isasymLongrightarrow \ f\ \isasymbeta \ (\isasymzeta \ \isasymalpha )\ \isasymin \ D"\isanewline
+\ \ \ \ \isacommand{using}\ \isasymPhi \_def\ inD\_def\ \isacommand{by}\ blast+\isanewline
+\ \ \isacommand{have}\ injf:\ "inj\_on\ f\ (elts\ (\isasymaleph 1))"\isanewline
+\ \ \ \ \isacommand{using}\ \isasymPhi f\ \isacommand{unfolding}\ inj\_on\_def\ \isasymPhi \_def\ \isacommand{by}\ (metis\ Ord\_\isasymomega 1\ Ord\_in\_Ord\ Ord\_linear\_le\ in\_succ\_iff)\isanewline
+\ \ \isacommand{show}\ ?thesis\isanewline
+\ \ \isacommand{proof}\isanewline
+\ \ \ \ \isacommand{let}\ ?F\ =\ "f\ `\ elts\ (\isasymaleph 1)"\isanewline
+\ \ \ \ \isacommand{have}\ "countable\ ((\isasymlambda f.\ f\ z)\ `\ f\ `\ elts\ \isasymomega 1)"\ \isakeyword{for}\ z\isanewline
+\ \ \ \ \isacommand{proof}\ -\isanewline
+\ \ \ \ \ \ \isacommand{obtain}\ \isasymalpha \ \isakeyword{where}\ \isasymalpha :\ "\isasymzeta \ \isasymalpha \ =\ z"\ "\isasymalpha \ \isasymin \ elts\ (\isasymaleph 1)"\ "Ord\ \isasymalpha "\isanewline
+\ \ \ \ \ \ \ \ \isacommand{by}\ (meson\ Ord\_\isasymomega 1\ Ord\_in\_Ord\ UNIV\_I\ \isasymzeta \ bij\_betw\_iff\_bijections)\isanewline
+\ \ \ \ \ \ \isacommand{let}\ ?B\ =\ "elts\ \isasymomega 1\ -\ elts\ (succ\ \isasymalpha )"\isanewline
+\ \ \ \ \ \ \isacommand{have}\ eq:\ "elts\ \isasymomega 1\ =\ elts\ (succ\ \isasymalpha )\ \isasymunion \ ?B"\isanewline
+\ \ \ \ \ \ \ \ \isacommand{using}\ \isasymalpha \ \isacommand{by}\ (metis\ Diff\_partition\ Ord\_\isasymomega 1\ OrdmemD\ less\_eq\_V\_def\ succ\_le\_iff)\isanewline
+\ \ \ \ \ \ \isacommand{have}\ "(\isasymlambda f.\ f\ z)\ `\ f\ `\ ?B\ \isasymsubseteq \ D"\isanewline
+\ \ \ \ \ \ \ \ \isacommand{using}\ \isasymalpha \ inD\ \isacommand{by}\ clarsimp\ (meson\ Ord\_\isasymomega 1\ Ord\_in\_Ord\ Ord\_linear)\isanewline
+\ \ \ \ \ \ \isacommand{then}\ \isacommand{have}\ "countable\ ((\isasymlambda f.\ f\ z)\ `\ f\ `\ ?B)"\isanewline
+\ \ \ \ \ \ \ \ \isacommand{by}\ (meson\ \isacartoucheopen countable\ D\isacartoucheclose \ countable\_subset)\isanewline
+\ \ \ \ \ \ \isacommand{moreover}\ \isacommand{have}\ "countable\ ((\isasymlambda f.\ f\ z)\ `\ f\ `\ elts\ (succ\ \isasymalpha ))"\isanewline
+\ \ \ \ \ \ \ \ \isacommand{by}\ (simp\ add:\ \isasymalpha \ less\_\isasymomega 1\_imp\_countable)\isanewline
+\ \ \ \ \ \ \isacommand{ultimately}\ \isacommand{show}\ ?thesis\isanewline
+\ \ \ \ \ \ \ \ \isacommand{using}\ eq\ \isacommand{by}\ (metis\ countable\_Un\_iff\ image\_Un)\isanewline
+\ \ \ \ \isacommand{qed}\isanewline
+\ \ \ \ \isacommand{then}\ \isacommand{show}\ "Wetzel\ ?F"\isanewline
+\ \ \ \ \ \ \isacommand{unfolding}\ Wetzel\_def\ \isacommand{by}\ (blast\ intro:\ anf)\isanewline
+\ \ \ \ \isacommand{show}\ "uncountable\ ?F"\isanewline
+\ \ \ \ \ \ \isacommand{using}\ Ord\_\isasymomega 1\ countable\_iff\_less\_\isasymomega 1\ countable\_image\_inj\_eq\ injf\ \isacommand{by}\ blast\isanewline
+\ \ \isacommand{qed}
+\isacommand{qed}
 \end{isabelle}
 
 \begin{isabelle}
@@ -285,6 +500,13 @@ X
 X
 \end{isabelle}
 
+\begin{isabelle}
+X
+\end{isabelle}
+
+\begin{isabelle}
+X
+\end{isabelle}
 
 \begin{isabelle}
 X
