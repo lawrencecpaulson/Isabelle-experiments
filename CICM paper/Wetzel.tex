@@ -23,7 +23,7 @@
 
 \begin{document}
 %
-\title{Wetzel: Formalisation of an Undecidable Problem}
+\title{Wetzel: Formalisation of an Undecidable Problem Linked to the Continuum Hypothesis}
 %
 %\titlerunning{Abbreviated paper title}
 % If the paper title is too long for the running head, you can set
@@ -35,6 +35,7 @@
 \url{https://www.cl.cam.ac.uk/~lp15/}}
 %
 \authorrunning{L C Paulson}
+\titlerunning{Wetzel: Formalisation of an Undecidable Problem}
 % First names are abbreviated in the running head.
 % If there are more than two authors, 'et al.' is used.
 %
@@ -43,9 +44,9 @@
 %
 \begin{abstract}
 In 1964, Paul Erd\H{o}s published a paper~\cite{erdos-interpolation} settling a question about function spaces that he had seen in a problem book.
-Erd\H{o}s proved that the answer was yes if and only if the continuum hypothesis failed.
-Therefore, an innocent-looking question turned out to be undecidable from the axioms of ZFC\@.
-The formalisation of these proofs in Isabelle/HOL demonstrate the combination of complex analysis and set theory, and in particular how the Isabelle/HOL framework for ZFC is integrated with its basis in higher-order logic.
+Erd\H{o}s proved that the answer was yes if and only if the continuum hypothesis was false:
+an innocent-looking question turned out to be undecidable from the axioms of ZFC\@.
+The formalisation of these proofs in Isabelle/HOL demonstrate the combined use of complex analysis and set theory, and in particular how the Isabelle/HOL library for ZFC integrates set theory with higher-order logic.
 %% TODO Uncomment keywords (commented to allow LIVE typesetting)
 %\keywords{Formalisation of mathematics\and  continuum hypothesis \and Isabelle/HOL}
 \end{abstract}
@@ -539,19 +540,27 @@ The following corollary to the two cases summarises the equivalence between the 
 \end{isabelle}
 
 
-
 \section{Discussion}
 
-2019-10-24: ZFC-in-HOL created in 2019 for no application in particular but merely to introduce a capability
+The formalisation of mathematics within proof assistants is being pursued actively. There are too many contributions to list, but notable recent ones include the formalisation of perfectoid spaces \cite{buzzard-perfectoid} and the striking progress on the Liquid Tensor Experiment.
+Both of these involve Kevin Buzzard and his colleagues formalising the highly sophisticated work of Fields Medallist Peter Scholze, using Lean.
 
-2020-08-03: formalised ordinal partition theory, which is largely about pure ZFC
+The small example reported here (350 lines; about three weeks' work) cannot be compared with such accomplishments, but shines a light on one issue that makes mathematics difficult: its interconnectedness. If your problem concerns itself with sets of permutations, you might suddenly find yourself needing group theory. If you are trying to count the elements of the group, you might find yourself requiring sophisticated combinatorial arguments. If you find yourself talking about countable sets (and countability is an everyday notion), you could find yourself wandering into the world of cardinals, then into the world of ordinals and then perhaps into the undecidable.
 
-2022-02-18: Wetzel, requiring generalisations of cardinality, etc.
+I created the ZFC-in-HOL library in October 2019 with no specific application in mind but merely thinking that it might be useful occasionally to talk about really big sets.
+Then I decided to apply it to a project that had been proposed by Mirna Džamonja and Angeliki Koutsoukou-Argyraki: to formalise some ordinal partition theory. This concerns advanced generalisations of Ramsey's theorem; the formalisation~\cite{Ordinal_Partitions-AFP} was complete by August 2020 and a paper is now available~\cite{dzamonja-formalising}.
+However, this work essentially belongs to straight set theory, borrowing little from Isabelle/HOL apart from natural numbers and lists.
+
+The Wetzel example showed that there were a few gaps limiting the integration between that theory and Isabelle/HOL, above all, a more general definition of cardinality. It's easy to define the cardinality of an arbitrary Isabelle/HOL set (i.e. having a type of the form \isa{T~set} as the least ordinal whose elements can be put into bijection with that set.
+The equivalent notion of cardinality for ZF sets is a trivial consequence.
+
 
 
 \section{Conclusions}
 
-Can you do it?
+The intriguing solution to Wagner's problem by Erd\H{o}s was easily formalised in Isabelle/HOL, using a library designed to integrate set theory with higher-order logic.
+The ease with which we can intermix analytic functions with ordinals gives reason to hope that more advanced problems will be amendable to formalisation without particular difficulties.
+It would be interesting to see this example tackled using other proof assistants.
 
 \subsubsection{Acknowledgements} 
 This work was supported by the ERC Advanced Grant ALEXANDRIA (Project GA 742178). 
