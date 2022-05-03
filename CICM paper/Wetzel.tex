@@ -118,12 +118,12 @@ Any type, whether already existing or defined in the future, can be shown to be 
 
 Isabelle/HOL defines a series of type classes for orderings:
 \begin{itemize}
-	\item \isa{ord} simply introduces the relations $\le$ and $<$, of type \isa{'a\isasymRightarrow'a\isasymRightarrow bool}
+	\item \isa{ord} introduces the relations $\le$ and $<$, of type \isa{'a\isasymRightarrow'a\isasymRightarrow bool} but no axioms
 	\item \isa{preorder} extends \isa{ord} with axioms for reflexivity and transitivity
 	\item \isa{order} extends \isa{preorder} with antisymmetry
-	\item \isa{linorder} extends \isa{order} with the axiom \isa{x\isasymle y \isasymor\ y\isasymle x}
+	\item \isa{linorder} extends \isa{order} with the axiom \isa{x\isasymle y \isasymor\ y\isasymle x}, for linear orderings
 \end{itemize}
-Type \isa{nat} (the natural numbers) belongs to each of these classes, and the type operator $\times$ preserves membership in each of these classes.
+The arithmetic types \isa{nat}, \isa{int}, \isa{real} belong to each of these classes; the type operator $\times$ preserves membership in each of these classes.
 
 \subsection{The development ZFC-in-HOL}
 
@@ -219,18 +219,17 @@ Now it is time to formalise the proof itself, following Aigner and Ziegler's pre
 We begin by defining the predicate \isa{Wetzel}, corresponding to $P_0$ above, on sets of complex-valued functions. It holds if every element of the given set $F$ is analytic on the complex plane and if, for all $z$, the set $\{f(z) : f\in F\}$ is countable:
 \begin{isabelle}
 \isacommand{definition}\ Wetzel\ ::\ "(complex\ \isasymRightarrow \ complex)\ set\ \isasymRightarrow \ bool"\isanewline
-\ \ \isakeyword{where}\ "Wetzel\ \isasymequiv \ \isasymlambda F.\ (\isasymforall f\isasymin F.\ f\ analytic\_on\ UNIV)\ \isasymand\isanewline
-\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ (\isasymforall z.\ countable((\isasymlambda f.\ f\ z)\ `\ F))"
+\ \ \isakeyword{where}\ "Wetzel\ \isasymequiv \ \isasymlambda F.\ (\isasymforall f\isasymin F.\ f\ analytic\_on\ UNIV)\ \isasymand\ (\isasymforall z.\ countable((\isasymlambda f.\ f\ z)\ `\ F))"
 \end{isabelle}
 
-Remarkably, the Isabelle/HOL proof is barely 50 lines. First, the statement:
+Remarkably, the Isabelle/HOL proof is barely 50 lines. First, here is the theorem statement:
 \begin{isabelle}
 \isacommand{proposition}\ Erdos\_Wetzel\_nonCH:\isanewline
-\ \ \isakeyword{assumes}\ W:\ "Wetzel\ F"\ \isakeyword{and}\ NCH:\ "C\_continuum\ >\ \isasymaleph 1"\ \isakeyword{and}\ "small\ F"\isanewline
+\ \ \isakeyword{assumes}\ W:\ "Wetzel\ F"\ \isakeyword{and}\ NCH:\ "C\_continuum\ >\ \isasymaleph 1"\isanewline
 \ \ \isakeyword{shows}\ "countable\ F"
 \end{isabelle}
 
-The key step is to prove the contrapositive of the claim:
+We set out to prove the contrapositive, negating the conclusion:
 \begin{isabelle}
 \ \ \isacommand{have}\ "\isasymexists z0.\ gcard\ ((\isasymlambda f.\ f\ z0)\ `\ F)\ \isasymge \ \isasymaleph 1"\ \isakeyword{if}\ "uncountable\ F"
 \end{isabelle}
@@ -239,16 +238,16 @@ The key step is to prove the contrapositive of the claim:
 Given the uncountable family $F$, we find a subset $F'\subseteq F$ of cardinality~$\aleph_1$  and thus a bijection $\phi:\aleph_1\to F'$  between the ordinals below $\aleph_1$ and $F'$.
 \begin{isabelle}
 \ \ \ \ \isacommand{have}\ "gcard\ F\ \isasymge \ \isasymaleph 1"\isanewline
-\ \ \ \ \ \ \isacommand{using}\ \isacartoucheopen small\ F\isacartoucheclose \ that\ uncountable\_gcard\_ge\ \isacommand{by}\ blast\ \isanewline
+\ \ \ \ \ \ \isacommand{using}\ that\ uncountable\_gcard\_ge\ \isacommand{by}\ force\ \isanewline
 \ \ \ \ \isacommand{then}\ \isacommand{obtain}\ F'\ \isakeyword{where}\ "F'\ \isasymsubseteq \ F"\ \isakeyword{and}\ F':\ "gcard\ F'\ =\ \isasymaleph 1"\isanewline
-\ \ \ \ \ \ \isacommand{by}\ (meson\ Card\_Aleph\ Ord\_1\ subset\_smaller\_gcard\ \isacartoucheopen small\ F\isacartoucheclose )\isanewline
+\ \ \ \ \ \ \isacommand{by}\ (meson\ Card\_Aleph\ subset\_smaller\_gcard)\isanewline
 \ \ \ \ \isacommand{then}\ \isacommand{obtain}\ \isasymphi \ \isakeyword{where}\ \isasymphi :\ "bij\_betw\ \isasymphi \ (elts\ \isasymomega 1)\ F'"\isanewline
 \ \ \ \ \ \ \isacommand{by}\ (metis\ TC\_small\ eqpoll\_def\ gcard\_eqpoll)
 \end{isabelle}
 
 \noindent
 We next define the family of sets $S(\alpha,\beta)$ as  $\{z.\, \phi_\alpha (z) = \phi_\beta (z)\}$.
-Here $\alpha$ and $\beta$ range over ordinals, and $\omega_1$ is the first uncountable ordinal (thus the same thing as $\aleph_1$, but regarded as an ordinal).
+Here $\alpha$ and $\beta$ range over ordinals, and $\omega_1$ is the first uncountable ordinal (thus the same set as $\aleph_1$, but regarded as an ordinal).
 The $\phi_\alpha$ for $\alpha<\omega_1$ are the given analytic functions.
 \begin{isabelle}
 \ \ \ \ \isacommand{define}\ S\ \isakeyword{where}\ "S\ \isasymequiv \ \isasymlambda \isasymalpha \ \isasymbeta .\ \{z.\ \isasymphi \ \isasymalpha \ z\ =\ \isasymphi \ \isasymbeta \ z\}"
@@ -294,18 +293,19 @@ Suppose that we had a family of functions
 \end{align} 
  %
  Since the set $D$ is countable and the $\zeta_\alpha$ for $\alpha < \omega_1$ include all the complex numbers, the desired result would follow.
-Erd\H{o}s showed how to construct this family by transfinite induction: for an arbitrary $\gamma<\omega_1$, assume that a family of distinct analytic functions $\{f_\beta: \beta<\gamma\}$ defined below~$\gamma$.
-To complete the construction and therefore prove the theorem, we must extend it with a new function, $f_\gamma$.
+
+Erd\H{o}s showed how to construct this family by transfinite induction. For an arbitrary $\gamma<\omega_1$, assume that a family of distinct analytic functions $\{f_\beta: \beta<\gamma\}$ is defined below~$\gamma$.
+To conclude the inductive argument and therefore prove the theorem, we must extend it with a new function, $f_\gamma$.
 
 Since $\gamma$ is countable, the set $\{f_\beta: \beta<\gamma\}$ can be enumerated as $\{g_0, g_1, \ldots\}$
 and $\{\zeta_\alpha : \alpha < \gamma\}$ can be enumerated as $\{w_0, w_1, \ldots\}$;
-both are finite or infinite according to whether $\gamma$ itself is finite or infinite.
+both sets are finite or infinite according to whether $\gamma$ itself is finite or infinite.
 The sought-for analytic function $f_\gamma$ should satisfy, for all $n$,
 \begin{align}
 	f_\gamma (w_n) \in D \quad\text{and}\quad f_\gamma (w_n) \not= g_n(w_n). \label{eqn:f_induct}
 \end{align}
 %
-The second condition above ensures that $f_\gamma$ is new, while the first is simply~(\ref{eqn:f_in_D}).
+The second condition above ensures that $f_\gamma$ is new by diagonalisation, while the first is simply~(\ref{eqn:f_in_D}).
 We construct $f_\gamma$ by putting
 \begin{align}
 \begin{split}
@@ -318,7 +318,10 @@ The $\{\epsilon_m\}$ are complex numbers chosen one at a time to satisfy conditi
 ensuring that $f_\gamma (w_n)$ avoids $g_n(w_n)$ is possible because $D$ is dense in~$\mathbb{C}$\@.
 In the finite case the sum is a polynomial, so trivially analytic. 
 In the infinite case, the choice of the $\{\epsilon_m\}$ needs to be carefully calibrated in order to satisfy the conditions while converging to zero sufficiently rapidly. 
-We have a lot of leeway and I chose $$|\epsilon_m| < \bigl[m! \cdot \prod_{i<m} (1 + |w_i|)\bigr]^{-1}. $$
+We have a lot of leeway and I chose 
+\begin{align}
+|\epsilon_m| < \bigl[m! \cdot \prod_{i<m} (1 + |w_i|)\bigr]^{-1}.  \label{eqn:epsilon_bound}
+\end{align}
 The summation~(\ref{eqn:f_gamma}) converges to an analytic function because the uniform limit of holomorphic functions is holomorphic, and the limit can be shown to be uniform by the Weierstrass $M$-test.%
 \footnote{Thanks to Manuel Eberl for suggesting this argument.}
 
@@ -330,7 +333,8 @@ The desired values of $\epsilon_m$ can be calculated sequentially.
 
 \newcommand{\prf}{$\langle$proof$\,\rangle$}
 
-Now, let's state the theorem formally:
+The full proof is some 280 lines of Isar text. Let's examine some highlights.
+First, let's state the theorem formally:
 \begin{isabelle}
 \isacommand{proposition}\ Erdos\_Wetzel\_CH:\isanewline
 \ \ \isakeyword{assumes}\ CH:\ "C\_continuum\ =\ \isasymaleph 1"\isanewline
@@ -383,9 +387,10 @@ The construction of $h$ depends on whether or not $\gamma$ is finite:
 %
 The finite case is easier, since the function we have to construct will simply be a polynomial, and trivially analytic. The finite ordinal~$\gamma$ is simply some natural number~$n$, and the construction of $f_\gamma$ is by induction on~$n$. 
 
-Let's see some highlights of the infinite case, in which similar ideas are taken to the max.
-
-there's a bijection $\eta$ between $\mathbb{N}$ (an initial segment of $\mathbb{N}$ if $\gamma$ is finite) and $\gamma$ (which equals $\{\alpha:\alpha<\gamma\}$). 
+Let's examine the infinite case, in which similar ideas are taken to the max.
+We formalise the step of writing $\{f_\beta: \beta<\gamma\}$ as $\{g_0, g_1, \ldots\}$
+and $\{\zeta_\alpha : \alpha < \gamma\}$ as $\{w_0, w_1, \ldots\}$
+by picking some bijection $\eta$ between $\mathbb{N}$ and $\gamma$, a countable ordinal which of course equals $\{\alpha:\alpha<\gamma\}$. 
 
 
 \begin{isabelle}
@@ -396,29 +401,36 @@ there's a bijection $\eta$ between $\mathbb{N}$ (an initial segment of $\mathbb{
 \ \ \ \ \ \ \isacommand{define}\ w\ \isakeyword{where}\ "w\ \isasymequiv \ \isasymzeta \ o\ \isasymeta "
 \end{isabelle}
 
+The following three definitions set up the $\epsilon_i$ and the finite approximants of our new analytic function, $h$.
+Note that $q(n)$ is $\prod_{i<n} (1 + |w_i|)$.
+
 \begin{isabelle}
 \ \ \ \ \ \ \isacommand{define}\ p\ \isakeyword{where}\ "p\ \isasymequiv \ \isasymlambda n\ z.\ \isasymProd i<n.\ z\ -\ w\ i"\isanewline
 \ \ \ \ \ \ \isacommand{define}\ q\ \isakeyword{where}\ "q\ \isasymequiv \ \isasymlambda n.\ \isasymProd i<n.\ 1\ +\ norm\ (w\ i)"\isanewline
 \ \ \ \ \ \ \isacommand{define}\ h\ \isakeyword{where}\ "h\ \isasymequiv \ \isasymlambda n\ \isasymepsilon \ z.\ \isasymSum i<n.\ \isasymepsilon \ i\ *\ p\ i\ z"
 \end{isabelle}
 
+The next three definitions constrain the next the value of $\epsilon$. To ensure convergence, each approximant needs to be close to the previous one, hence a neighbourhood (open ball) whose radius has a factorial in the denominator. \isa{DD} is the intersection of this neighbourhood with the set~$D$, excluding the one point that must be avoided. Finally, the function \isa{dd} picks an arbitrary element of~\isa{DD}\@.
+
 \begin{isabelle}
-\ \ \ \ \ \ \isacommand{define}\ BALL\ \isakeyword{where}\ "BALL\ \isasymequiv \ \isasymlambda n\ \isasymepsilon .\ ball\ (h\ n\ \isasymepsilon \ (w\ n))\ (norm\ (p\ n\ (w\ n))\ /\ (fact\ n\ *\ q\ n))"\isanewline
-\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ %
-\isamarkupcmt{The demonimator above is the key to keeping the epsilons small%
-}\isanewline
+\ \ \ \ \ \ \isacommand{define}\ BALL\ \isakeyword{where}\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \ \ "BALL\ \isasymequiv \ \isasymlambda n\ \isasymepsilon .\ ball\ (h\ n\ \isasymepsilon \ (w\ n))\ (norm\ (p\ n\ (w\ n))\ /\ (fact\ n\ *\ q\ n))"\isanewline
 \ \ \ \ \ \ \isacommand{define}\ DD\ \isakeyword{where}\ "DD\ \isasymequiv \ \isasymlambda n\ \isasymepsilon .\ D\ \isasyminter \ BALL\ n\ \isasymepsilon \ -\ \{g\ n\ (w\ n)\}"\isanewline
 \ \ \ \ \ \ \isacommand{define}\ dd\ \isakeyword{where}\ "dd\ \isasymequiv \ \isasymlambda n\ \isasymepsilon .\ SOME\ x.\ x\ \isasymin \ DD\ n\ \isasymepsilon"
 \end{isabelle}
 
+Because $D$ is dense in $\mathbb{C}$, it's possible to show that \isa{DD} is always nonempty and therefore that \isa{dd} always picks out an element satisfying the constraints described above.
+
 \begin{isabelle}
-\ \ \ \ \ \ \isacommand{have}\ p0:\ "p\ n\ z\ =\ 0\ \isasymlongleftrightarrow \ (\isasymexists i<n.\ z\ =\ w\ i)"\ \isakeyword{for}\ z\ n\isanewline
-\ \ \ \ \ \ \ \ \isacommand{unfolding}\ p\_def\ \isacommand{by}\ force\isanewline
 \ \ \ \ \ \ \isacommand{have}\ "DD\ n\ \isasymepsilon \ \isasymnoteq \ \{\}"\ \isakeyword{for}\ n\ \isasymepsilon \isanewline
 \ \ \ \ \ \ \ \ \prf\isanewline
 \ \ \ \ \ \ \isacommand{then}\ \isacommand{have}\ dd\_in\_DD:\ "dd\ n\ \isasymepsilon \ \isasymin \ DD\ n\ \isasymepsilon "\ \isakeyword{for}\ n\ \isasymepsilon \isanewline
 \ \ \ \ \ \ \ \ \isacommand{by}\ (simp\ add:\ dd\_def\ some\_in\_eq)
 \end{isabelle}
+
+Each $\epsilon_n$ (written  \isa{coeff~n} in Isabelle) is defined in terms of the previous epsilons by course of values recursion. 
+The ugly details of the definition are omitted but the following line shows the recursion that it satisfies; note that \hbox{\isa{h\ n\ coeff\ (w\ n)}} refers recursively to all the $\epsilon_i$ for $i<n$. 
+The last line verifies the bound~(\ref{eqn:epsilon_bound}).
 
 \begin{isabelle}
 \ \ \ \ \ \ \isacommand{define}\ coeff\ \isakeyword{where}\ "coeff\ \isasymequiv\ \ldots"\isanewline
@@ -537,7 +549,16 @@ X
 
 \section{Discussion}
 
+2019-10-24: ZFC-in-HOL created in 2019 for no application in particular but merely to introduce a capability
+
+2020-08-03: formalised ordinal partition theory, which is largely about pure ZFC
+
+2022-02-18: Wetzel, requiring generalisations of cardinality, etc.
+
+
 \section{Conclusions}
+
+Can you do it?
 
 \subsubsection{Acknowledgements} 
 This work was supported by the ERC Advanced Grant ALEXANDRIA (Project GA 742178). 
