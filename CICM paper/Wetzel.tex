@@ -92,7 +92,6 @@ That makes it unsuitable for the Wetzel problem. However, it is also possible to
 
 \subsection{Formalising ZF in Higher-Order Logic}
 
-% TODO should types be italic?
 During the 1990s, Michael JC Gordon conducted several experiments~\cite{gordon-set-theory} involving the formalisation of ZF set theory in his HOL proof assistant. 
 His HOL-ST simply introduced a type $\V$ of all sets and a relation ${\in}:\V\times \V\to \bool$, then asserted all the Zermelo-Fraenkel axioms. 
 Sten Agerholm~\cite{agerholm-comparison} formalised Dana Scott's inverse limit construction of the set $D_\infty$, satisfying
@@ -259,10 +258,9 @@ since two distinct holomorphic functions can agree at only countably many argume
 \ \ \ \ \isacommand{have}\ "gcard\ (S\ \isasymalpha \ \isasymbeta )\ \isasymle \ \isasymaleph 0"\ \isakeyword{if}\ "\isasymalpha\ \isasymin\ elts\ \isasymbeta "\ "\isasymbeta\ \isasymin\ elts \isasymomega 1"\ \isakeyword{for}\ \isasymalpha \ \isasymbeta
 \end{isabelle}
 
-% TODO fix union syntax
 The next step is to define $SS$ as the union of all $S(\alpha,\beta)$ for $\alpha<\beta<\omega_1$.
 \begin{isabelle}
-\ \ \ \ \isacommand{define}\ SS\ \isakeyword{where}\ "SS\ \isasymequiv \ \isasymSqunion ((\isasymlambda \isasymbeta .\ \isasymSqunion ((\isasymlambda \isasymalpha .\ S\ \isasymalpha \ \isasymbeta )\ `\ elts\ \isasymbeta ))\ `\ elts \isasymomega 1)"
+\ \ \ \ \isacommand{define}\ SS\ \isakeyword{where}\ "SS\ \isasymequiv\ \isasymSqunion \isasymbeta \ \isasymin \ elts\ \isasymomega 1.\ \isasymSqunion \isasymalpha \ \isasymin \ elts\ \isasymbeta .\ S\ \isasymalpha \ \isasymbeta "
 \end{isabelle}
 
 A 14 line calculation shows that $|SS|\le\aleph_1$, but we are assuming the negation of CH, so $SS$ cannot be the entire complex plane: there exists some $z_0\not\in SS$.
@@ -366,11 +364,12 @@ Next come some technical definitions: \isa{inD} for functions whose range for ce
 
 \begin{isabelle}
 \ \ \isacommand{define}\ inD\ \isakeyword{where}\ "inD\ \isasymequiv \ \isasymlambda \isasymbeta \ f.\ (\isasymforall \isasymalpha \ \isasymin \ elts\ \isasymbeta .\ f\ (\isasymzeta \ \isasymalpha )\ \isasymin \ D)"\isanewline
-\ \ \isacommand{define}\ \isasymPhi \ \isakeyword{where}\ "\isasymPhi \ \isasymequiv\isanewline
-\ \  \ \isasymlambda \isasymbeta \ f.\ f\ \isasymbeta \ analytic\_on\ UNIV\ \isasymand \ inD\ \isasymbeta \ (f\ \isasymbeta )\ \isasymand \ inj\_on\ f\ (elts(succ\ \isasymbeta ))"
+\ \ \isacommand{define}\ "\isasymPhi \ \isasymequiv\ \isasymlambda \isasymbeta \ f.\ f\ \isasymbeta \ analytic\_on\ UNIV\ \isasymand \ inD\ \isasymbeta \ (f\ \isasymbeta )\ \isasymand \ inj\_on\ f\ (elts(succ\ \isasymbeta ))"
 \end{isabelle}
-%
-The lemma \isa{*} is the step of the transfinite induction.
+
+\subsection{The Transfinite Construction}
+
+The following lemma, \isa{*}, is the step of the transfinite induction.
 A family $f$ defined below the ordinal~$\gamma$ is extended with a new function, $f_\gamma$ (the variable $h$ below).
 
 \begin{isabelle}
@@ -401,8 +400,8 @@ by picking some bijection $\eta$ between $\mathbb{N}$ and $\gamma$, a countable 
 \ \ \ \ \ \ \isacommand{define}\ w\ \isakeyword{where}\ "w\ \isasymequiv \ \isasymzeta \ o\ \isasymeta "
 \end{isabelle}
 
-The following three definitions set up the $\epsilon_i$ and the finite approximants of our new analytic function, $h$.
-Note that $q(n)$ is $\prod_{i<n} (1 + |w_i|)$.
+The following three definitions set up the finite approximants of our new analytic function, $h$.
+Note that $p(n)$ is the product of $z - w_i$ for $i<n$, while $q(n)$ is $\prod_{i<n} (1 + |w_i|)$.
 
 \begin{isabelle}
 \ \ \ \ \ \ \isacommand{define}\ p\ \isakeyword{where}\ "p\ \isasymequiv \ \isasymlambda n\ z.\ \isasymProd i<n.\ z\ -\ w\ i"\isanewline
@@ -440,52 +439,69 @@ The last line verifies the bound~(\ref{eqn:epsilon_bound}).
 \ \ \ \ \ \ \ \ \ \prf
 \end{isabelle}
 
+To conclude, define the function~$f_\gamma$ (calling it \isa{hh}) and prove that it is analytic. 
+
 \begin{isabelle}
-\ \ \ \ \ \ \isacommand{have}\ h\_truncated:\ "h\ n\ coeff\ (w\ k)\ =\ h\ (Suc\ k)\ coeff\ (w\ k)"\ \isakeyword{if}\ "k\ <\ n"\ \isakeyword{for}\ n\ k\isanewline
-\ \ \ \ \ \ \ \prf\isanewline
+\ \ \ \ \ \ \isacommand{define}\ hh\ \isakeyword{where}\ "hh\ \isasymequiv \ \isasymlambda z.\ suminf\ (\isasymlambda i.\ coeff\ i\ *\ p\ i\ z)"\isanewline
+\ \ \ \ \ \ \isacommand{have}\ "hh\ holomorphic\_on\ UNIV"\isanewline
+\ \ \ \ \ \ \ \ \prf\isanewline
+\ \ \ \ \ \ \isacommand{then}\ \isacommand{show}\ "hh\ analytic\_on\ UNIV"\isanewline
+\ \ \ \ \ \ \ \ \isacommand{by}\ (simp\ add:\ analytic\_on\_open)
+\end{isabelle}
+
+Here are a few details of the proof that was skipped above.
+For a fixed $n$ and complex number~$z$, we show uniform convergence within a circle of radius 1.
+First, we need a bound on $\prod_{i<n} |z' - w_i|$ for $|z-z'|< 1$:
+
+\begin{isabelle}
 \ \ \ \ \ \ \isacommand{have}\ norm\_p\_bound:\ "norm\ (p\ n\ z')\ \isasymle \ q\ n\ *\ (1\ +\ norm\ z)\ \isacharcircum \ n"\ \isanewline
 \ \ \ \ \ \ \ \ \ \ \isakeyword{if}\ "dist\ z\ z'\ \isasymle \ 1"\ \isakeyword{for}\ n\ z\ z'\isanewline
 \ \ \ \ \ \ \ \prf
 \end{isabelle}
 
-Now we conclude proofs about $f_\gamma$
-
-Weierstrass, also ratio test
+To apply the Weierstrass $M$-test to~\isa{hh}, exhibit a summable series $M$ whose terms bound the finite approximants of the summation, which are given by~$h$:
 \begin{isabelle}
-\ \ \ \ \ \ \ \ \isacommand{define}\ hh\ \isakeyword{where}\ "hh\ \isasymequiv \ \isasymlambda z.\ suminf\ (\isasymlambda i.\ coeff\ i\ *\ p\ i\ z)"\isanewline
-\ \ \ \ \ \ \ \ \isacommand{have}\ "hh\ holomorphic\_on\ UNIV"\isanewline
+\ \ \ \ \ \ \isacommand{have}\ "uniform\_limit\ (cball\ z\ 1)\ (\isasymlambda n.\ h\ n\ coeff)\ hh\ sequentially"\isanewline
+\ \ \ \ \ \ \ \ \isacommand{unfolding}\ hh\_def\ h\_def\isanewline
+\ \ \ \ \ \ \isacommand{proof}\ (rule\ Weierstrass\_m\_test)\isanewline
+\ \ \ \ \ \ \ \ \isacommand{let}\ ?M\ =\ "\isasymlambda n.\ (1\ +\ norm\ z)\ \isacharcircum \ n\ /\ fact\ n"\isanewline
+\ \ \ \ \ \ \ \ \ \ \isacommand{show}\ "summable\ ?M"\isanewline
+\ \ \ \ \ \ \ \ \ \ \ \ \prf\isanewline
+\ \ \ \ \ \ \ \ \isacommand{fix}\ n\ z'\isanewline
+\ \ \ \ \ \ \ \ \isacommand{assume}\ \ "z'\ \isasymin \ cball\ z\ 1"\isanewline
+\ \ \ \ \ \ \ \ \isacommand{show}\ "norm\ (coeff\ n\ *\ p\ n\ z')\ \isasymle \ ?M\ n"\isanewline
 \ \ \ \ \ \ \ \ \ \ \prf\isanewline
-\ \ \ \ \ \ \ \ \isacommand{then}\ \isacommand{show}\ "hh\ analytic\_on\ UNIV"\isanewline
-\ \ \ \ \ \ \ \ \ \ \isacommand{by}\ (simp\ add:\ analytic\_on\_open)
+\ \ \ \ \ \ \isacommand{qed}
 \end{isabelle}
-
-
+%
+The hard part is over. Checking that the image of $\{\zeta_\alpha : \alpha < \gamma\}$ under \isa{hh} lies within $D$ is easy, because for every complex number of the form $w_n$, the summation is actually finite.
 \begin{isabelle}
-\ \ \ \ \ \ \ \ \isacommand{have}\ hh\_eq\_dd:\ "hh\ (w\ n)\ =\ dd\ n\ coeff"\ \isakeyword{for}\ n\isanewline
-\ \ \ \ \ \ \ \ \ \ \prf\isanewline
-\ \ \ \ \ \ \ \ \isacommand{then}\ \isacommand{have}\ "hh\ (w\ n)\ \isasymin \ D"\ \isakeyword{for}\ n\isanewline
-\ \ \ \ \ \ \ \ \ \ \isacommand{using}\ DD\_def\ dd\_in\_DD\ \isacommand{by}\ fastforce\isanewline
-\ \ \ \ \ \ \ \ \isacommand{then}\ \isacommand{show}\ "inD\ \isasymgamma \ hh"\isanewline
-\ \ \ \ \ \ \ \ \ \ \isacommand{unfolding}\ inD\_def\ \isacommand{by}\ (metis\ \isasymeta \ bij\_betw\_iff\_bijections\ comp\_apply\ w\_def)\isanewline
-\ \ \ \ \ \ \ \ \isacommand{have}\ "hh\ (w\ n)\ \isasymnoteq \ f\ (\isasymeta \ n)\ (w\ n)"\ \isakeyword{for}\ n\isanewline
-\ \ \ \ \ \ \ \ \ \ \isacommand{using}\ DD\_def\ dd\_in\_DD\ g\_def\ hh\_eq\_dd\ \isacommand{by}\ auto\isanewline
-\ \ \ \ \ \ \ \ \isacommand{then}\ \isacommand{show}\ "\isasymforall \isasymbeta \isasymin elts\ \isasymgamma .\ hh\ \isasymnoteq \ f\ \isasymbeta "\isanewline
-\ \ \ \ \ \ \ \ \ \ \isacommand{by}\ (metis\ \isasymeta \ bij\_betw\_imp\_surj\_on\ imageE)
+\ \ \ \ \ \ \isacommand{have}\ hh\_eq\_dd:\ "hh\ (w\ n)\ =\ dd\ n\ coeff"\ \isakeyword{for}\ n\isanewline
+\ \ \ \ \ \ \ \ \prf\isanewline
+\ \ \ \ \ \ \isacommand{then}\ \isacommand{have}\ "hh\ (w\ n)\ \isasymin \ D"\ \isakeyword{for}\ n\isanewline
+\ \ \ \ \ \ \ \ \isacommand{using}\ DD\_def\ dd\_in\_DD\ \isacommand{by}\ fastforce
 \end{isabelle}
 
-
+Last comes the diagonalisation argument, showing that the function just constructed is indeed new:
 \begin{isabelle}
-X
+\ \ \ \ \ \ \isacommand{have}\ "hh\ (w\ n)\ \isasymnoteq \ f\ (\isasymeta \ n)\ (w\ n)"\ \isakeyword{for}\ n\isanewline
+\ \ \ \ \ \ \ \ \isacommand{using}\ DD\_def\ dd\_in\_DD\ g\_def\ hh\_eq\_dd\ \isacommand{by}\ auto\isanewline
+\ \ \ \ \ \ \isacommand{then}\ \isacommand{show}\ "\isasymforall \isasymbeta \isasymin elts\ \isasymgamma .\ hh\ \isasymnoteq \ f\ \isasymbeta "\isanewline
+\ \ \ \ \ \ \ \ \isacommand{by}\ (metis\ \isasymeta \ bij\_betw\_imp\_surj\_on\ imageE)
 \end{isabelle}
 
-\begin{isabelle}
-X
-\end{isabelle}
+\subsection{Concluding the Proof}
 
+It's bothersome that about 20 lines of pure boilerplate are needed to code up the formal application of transfinite recursion to the construction formalised above. Skipping over this, let's look at the conclusion of this entire proof.
+We finally have a family of analytic functions $\{f_\beta : \beta < \omega_1 \}$ satisfying~(\ref{eqn:f_in_D}) above. 
 
-DOING THE ACTUAL INDUCTION: skipped
-
-FINALLY the puttng all the bits together
+We now show that for all $z$, the set $\{f_\beta(z) : \beta < \omega_1 \}$ is countable by writing $z=\zeta_\alpha$ for some $\alpha<\gamma$.
+The point is that 
+\begin{align*}
+\{f_\beta(\zeta_\alpha) : \beta < \omega_1 \} = \{f_\beta (\zeta_\alpha): \beta\le\alpha\} \cup \{f_\beta (\zeta_\alpha): \alpha<\beta\}
+\end{align*}
+and that both parts of the union are finite: the first is a collection below $\alpha$, a countable ordinal, and the second is a subset of $D$, a countable set.
+In the proof below, \isa{?B} is the set $\{\beta: \alpha<\beta<\gamma\}$, while \isa{elts\ (succ\ \isasymalpha)} is the set of all ordinals up to~$\alpha$. 
 
 \begin{isabelle}
 \ \ \isacommand{show}\ ?thesis\isanewline
@@ -496,7 +512,7 @@ FINALLY the puttng all the bits together
 \ \ \ \ \ \ \isacommand{obtain}\ \isasymalpha \ \isakeyword{where}\ \isasymalpha :\ "\isasymzeta \ \isasymalpha \ =\ z"\ "\isasymalpha \ \isasymin \ elts\ \isasymomega 1"\ "Ord\ \isasymalpha "\isanewline
 \ \ \ \ \ \ \ \ \isacommand{by}\ (meson\ Ord\_\isasymomega 1\ Ord\_in\_Ord\ UNIV\_I\ \isasymzeta \ bij\_betw\_iff\_bijections)\isanewline
 \ \ \ \ \ \ \isacommand{let}\ ?B\ =\ "elts\ \isasymomega 1\ -\ elts\ (succ\ \isasymalpha )"\isanewline
-\ \ \ \ \ \ \isacommand{have}\ eq:\ "elts\ \isasymomega 1\ =\ elts\ (succ\ \isasymalpha )\ \isasymunion \ ?B"\isanewline
+\ \ \ \ \ \ \isacommand{have}\ eq:\ "elts\ \isasymomega 1\ =\ elts\ (succ\ \isasymalpha)\ \isasymunion \ ?B"\isanewline
 \ \ \ \ \ \ \ \ \isacommand{using}\ \isasymalpha \ \isacommand{by}\ (metis\ Diff\_partition\ Ord\_\isasymomega 1\ OrdmemD\ less\_eq\_V\_def\ succ\_le\_iff)\isanewline
 \ \ \ \ \ \ \isacommand{have}\ "(\isasymlambda f.\ f\ z)\ `\ f\ `\ ?B\ \isasymsubseteq \ D"\isanewline
 \ \ \ \ \ \ \ \ \isacommand{using}\ \isasymalpha \ inD\ \isacommand{by}\ clarsimp\ (meson\ Ord\_\isasymomega 1\ Ord\_in\_Ord\ Ord\_linear)\isanewline
@@ -515,36 +531,13 @@ FINALLY the puttng all the bits together
 \isacommand{qed}
 \end{isabelle}
 
-\begin{isabelle}
-X
-\end{isabelle}
+The following corollary to the two cases summarises the equivalence between the Wetzel property and the negation of CH:
 
 \begin{isabelle}
 \isacommand{theorem}\ Erdos\_Wetzel:\ "C\_continuum\ =\ \isasymaleph 1\ \isasymlongleftrightarrow \ (\isasymexists F.\ Wetzel\ F\ \isasymand \ uncountable\ F)"\isanewline
-\ \ \isacommand{by}\ (metis\ C\_continuum\_ge\ Erdos\_Wetzel\_CH\ Erdos\_Wetzel\_nonCH\isanewline
-\ \ \ \ \ \ \ \ \ \ \ \ \ \ \ TC\_small\ less\_V\_def)
+\ \ \isacommand{by}\ (metis\ C\_continuum\_ge\ Erdos\_Wetzel\_CH\ Erdos\_Wetzel\_nonCH\ less\_V\_def)
 \end{isabelle}
 
-\begin{isabelle}
-X
-\end{isabelle}
-
-\begin{isabelle}
-X
-\end{isabelle}
-
-\begin{isabelle}
-X
-\end{isabelle}
-
-\begin{isabelle}
-X
-\end{isabelle}
-
-
-
-% TODO
-15 pages including references
 
 
 \section{Discussion}
