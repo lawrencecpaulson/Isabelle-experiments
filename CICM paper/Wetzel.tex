@@ -24,18 +24,14 @@
 \begin{document}
 %
 \title{Wetzel: Formalisation of an Undecidable Problem Linked to the Continuum Hypothesis}
-%
-%\titlerunning{Abbreviated paper title}
-% If the paper title is too long for the running head, you can set
-% an abbreviated paper title here
+\titlerunning{Wetzel: Formalisation of an Undecidable Problem}
 %
 \author{Lawrence C Paulson\orcidID{0000-0003-0288-4279}}
+\authorrunning{L C Paulson}
 \institute{Computer Laboratory, University of Cambridge, UK\\
 \email{lp15@cam.ac.uk} \quad
 \url{https://www.cl.cam.ac.uk/~lp15/}}
 %
-\authorrunning{L C Paulson}
-\titlerunning{Wetzel: Formalisation of an Undecidable Problem}
 % First names are abbreviated in the running head.
 % If there are more than two authors, 'et al.' is used.
 %
@@ -48,7 +44,7 @@ Erd\H{o}s proved that the answer was yes if and only if the continuum hypothesis
 an innocent-looking question turned out to be undecidable from the axioms of ZFC\@.
 The formalisation of these proofs in Isabelle/HOL demonstrate the combined use of complex analysis and set theory, and in particular how the Isabelle/HOL library for ZFC integrates set theory with higher-order logic.
 %% TODO Uncomment keywords (commented to allow LIVE typesetting)
-%\keywords{Formalisation of mathematics\and  continuum hypothesis \and Isabelle/HOL}
+\keywords{Isabelle\and Erdős\and continuum hypothesis\and set theory\and complex analysis\and formalisation of mathematics}
 \end{abstract}
 
 
@@ -78,7 +74,9 @@ These formalisation tasks were done using Isabelle/ZF, the instance of Isabelle 
 However, Isabelle/HOL is much better developed than Isabelle/ZF;
 in particular, the Wetzel problem requires its complex analysis library. So this paper is demonstrates how to tackle a problem that combines the worlds of analysis and set theory, including such mysteries as holomorphic functions, transfinite cardinals and recursion up to uncountable ordinals, on the common basis of higher-order logic.
 
-% TODO paper outline
+The paper outlines the development of formal treatments of ZF set theory in Isabelle/HOL (\S2), continuing to the Wetzel problem in the non-CH case (\S3) and the more difficult CH case (\S4). Some discussion that the work in context (\S5) and is followed by conclusions.
+
+The formal development itself is available online~\cite{Wetzels_Problem-AFP} in Isabelle's Archive of Formal Proofs (AFP).
 
 \section{Isabelle and Set Theory}
 
@@ -543,9 +541,9 @@ The following corollary to the two cases summarises the equivalence between the 
 \section{Discussion}
 
 The formalisation of mathematics within proof assistants is being pursued actively. There are too many contributions to list, but notable recent ones include the formalisation of perfectoid spaces \cite{buzzard-perfectoid} and the striking progress on the Liquid Tensor Experiment.
-Both of these involve Kevin Buzzard and his colleagues formalising the highly sophisticated work of Fields Medallist Peter Scholze, using Lean.
+Both of these have Kevin Buzzard and his colleagues formalising the sophisticated work of Fields Medallist Peter Scholze in Lean.
 
-The small example reported here (350 lines; about three weeks' work) cannot be compared with such accomplishments, but shines a light on one issue that makes mathematics difficult: its interconnectedness. If your problem concerns itself with sets of permutations, you might suddenly find yourself needing group theory. If you are trying to count the elements of the group, you might find yourself requiring sophisticated combinatorial arguments. If you find yourself talking about countable sets (and countability is an everyday notion), you could find yourself wandering into the world of cardinals, then into the world of ordinals and then perhaps into the undecidable.
+The small example reported here (350 lines; about three weeks' work) cannot be compared with such accomplishments, but shines a light on an issue that makes mathematics difficult: its interconnectedness. The connections between number theory and complex analysis are well known. If your problem concerns itself with sets of permutations, you might suddenly find yourself needing group theory. If you are trying to count the elements of the group, you might find yourself requiring sophisticated combinatorial arguments. If you find yourself talking about countable sets (and countability is an everyday notion), you could find yourself wandering into the world of cardinals, then into the world of ordinals and then perhaps into the undecidable. To quote Wetzel himself, ``once again a natural analysis question has grown horns''~\cite[p.\ts244]{garcia-wetzels-problem}.
 
 I created the ZFC-in-HOL library in October 2019 with no specific application in mind but merely thinking that it might be useful occasionally to talk about really big sets.
 Then I decided to apply it to a project that had been proposed by Mirna Džamonja and Angeliki Koutsoukou-Argyraki: to formalise some ordinal partition theory. This concerns advanced generalisations of Ramsey's theorem; the formalisation~\cite{Ordinal_Partitions-AFP} was complete by August 2020 and a paper is now available~\cite{dzamonja-formalising}.
@@ -554,17 +552,21 @@ However, this work essentially belongs to straight set theory, borrowing little 
 The Wetzel example showed that there were a few gaps limiting the integration between that theory and Isabelle/HOL, above all, a more general definition of cardinality. It's easy to define the cardinality of an arbitrary Isabelle/HOL set (i.e. having a type of the form \isa{T~set} as the least ordinal whose elements can be put into bijection with that set.
 The equivalent notion of cardinality for ZF sets is a trivial consequence.
 
-
+The original AFP entry~\cite{Wetzels_Problem-AFP}, published online in February 2022, begins with a variety of extensions to the Isabelle/HOL libraries, showing how the original ZFC library needed to be extended.
+It includes an early and rather cumbersome definition of cardinality for HOL sets. In updated versions of the development,%
+\footnote{At \url{https://devel.isa-afp.org/entries/Wetzels_Problem.html}. Future readers should be able to locate the original Wetzel entry via ``Older releases'' on the download page.}
+%
+the library material has been moved elsewhere.
 
 \section{Conclusions}
 
-The intriguing solution to Wagner's problem by Erd\H{o}s was easily formalised in Isabelle/HOL, using a library designed to integrate set theory with higher-order logic.
-The ease with which we can intermix analytic functions with ordinals gives reason to hope that more advanced problems will be amendable to formalisation without particular difficulties.
+The intriguing solution to Wetzel's problem by Erd\H{o}s was easily formalised in Isabelle/HOL, using a library designed to integrate set theory with higher-order logic.
+The ease with which we can intermix analytic functions with ordinals gives reason to hope that harder mixed-domain problems will be amenable to formalisation without particular difficulties.
 It would be interesting to see this example tackled using other proof assistants.
 
 \subsubsection{Acknowledgements} 
 This work was supported by the ERC Advanced Grant ALEXANDRIA (Project GA 742178). 
-Dmitriy Traytel provided a particularly slick formal axiomatisation of type $V$ and Manuel Eberl provided a crucial tip for the final part.
+Dmitriy Traytel provided a particularly slick formal axiomatisation of type $V$ and Manuel Eberl provided a crucial tip for the CH case.
 
 \bibliographystyle{splncs04}
 \bibliography{string,atp,general,isabelle,theory,crossref}
