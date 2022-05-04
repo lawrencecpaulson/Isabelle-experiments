@@ -408,7 +408,7 @@ Note that $p(n)$ is the product of $z - w_i$ for $i<n$, while $q(n)$ is $\prod_{
 \ \ \ \ \ \ \isacommand{define}\ h\ \isakeyword{where}\ "h\ \isasymequiv \ \isasymlambda n\ \isasymepsilon \ z.\ \isasymSum i<n.\ \isasymepsilon \ i\ *\ p\ i\ z"
 \end{isabelle}
 
-The next three definitions constrain the next the value of $\epsilon$. To ensure convergence, each approximant needs to be close to the previous one, hence a neighbourhood (open ball) whose radius has a factorial in the denominator. \isa{DD} is the intersection of this neighbourhood with the set~$D$, excluding the one point that must be avoided. Finally, the function \isa{dd} picks an arbitrary element of~\isa{DD}\@.
+The following three definitions constrain the next value~$\epsilon_n$, a calculation left unspecified by previous authors~\cite{aigner-proofs,erdos-interpolation}. To ensure convergence, each approximant needs to be close to the previous one, hence a neighbourhood (open ball) whose radius has $n!q(n)$ for its denominator. \isa{DD} is the intersection of this neighbourhood with the set~$D$, excluding the one point that must be avoided. Finally, the function \isa{dd} picks an arbitrary element of~\isa{DD}\@.
 
 \begin{isabelle}
 \ \ \ \ \ \ \isacommand{define}\ BALL\ \isakeyword{where}\isanewline
@@ -416,8 +416,8 @@ The next three definitions constrain the next the value of $\epsilon$. To ensure
 \ \ \ \ \ \ \isacommand{define}\ DD\ \isakeyword{where}\ "DD\ \isasymequiv \ \isasymlambda n\ \isasymepsilon .\ D\ \isasyminter \ BALL\ n\ \isasymepsilon \ -\ \{g\ n\ (w\ n)\}"\isanewline
 \ \ \ \ \ \ \isacommand{define}\ dd\ \isakeyword{where}\ "dd\ \isasymequiv \ \isasymlambda n\ \isasymepsilon .\ SOME\ x.\ x\ \isasymin \ DD\ n\ \isasymepsilon"
 \end{isabelle}
-
-Because $D$ is dense in $\mathbb{C}$, it's possible to show that \isa{DD} is always nonempty and therefore that \isa{dd} always picks out an element satisfying the constraints described above.
+%
+Because $D$ is dense in $\mathbb{C}$, the set \isa{DD} is always nonempty. Therefore, \isa{dd} always chooses an element satisfying the constraints described above.
 
 \begin{isabelle}
 \ \ \ \ \ \ \isacommand{have}\ "DD\ n\ \isasymepsilon \ \isasymnoteq \ \{\}"\ \isakeyword{for}\ n\ \isasymepsilon \isanewline
@@ -491,7 +491,7 @@ Last comes the diagonalisation argument, showing that the function just construc
 
 \subsection{Concluding the Proof}
 
-It's bothersome that about 20 lines of pure boilerplate are needed to code up the formal application of transfinite recursion to the construction formalised above. Skipping over this, let's look at the conclusion of this entire proof.
+About 20 lines of boilerplate are needed to code up the formal application of transfinite recursion to the construction formalised above. Skipping over this, let's look at the conclusion of the proof.
 We finally have a family of analytic functions $\{f_\beta : \beta < \omega_1 \}$ satisfying~(\ref{eqn:f_in_D}) above. 
 
 We now show that for all $z$, the set $\{f_\beta(z) : \beta < \omega_1 \}$ is countable by writing $z=\zeta_\alpha$ for some $\alpha<\gamma$.
@@ -499,7 +499,7 @@ The point is that
 \begin{align*}
 \{f_\beta(\zeta_\alpha) : \beta < \omega_1 \} = \{f_\beta (\zeta_\alpha): \beta\le\alpha\} \cup \{f_\beta (\zeta_\alpha): \alpha<\beta\}
 \end{align*}
-and that both parts of the union are finite: the first is a collection below $\alpha$, a countable ordinal, and the second is a subset of $D$, a countable set.
+and that both parts of the union are countable: the first is a collection below $\alpha$, a countable ordinal, and the second is a subset of $D$, a countable set.
 In the proof below, \isa{?B} is the set $\{\beta: \alpha<\beta<\gamma\}$, while \isa{elts\ (succ\ \isasymalpha)} is the set of all ordinals up to~$\alpha$. 
 
 \begin{isabelle}
@@ -543,7 +543,7 @@ The following corollary to the two cases summarises the equivalence between the 
 The formalisation of mathematics within proof assistants is being pursued actively. There are too many contributions to list, but notable recent ones include the formalisation of perfectoid spaces \cite{buzzard-perfectoid} and the striking progress on the Liquid Tensor Experiment.
 Both of these have Kevin Buzzard and his colleagues formalising the sophisticated work of Fields Medallist Peter Scholze in Lean.
 
-The small example reported here (350 lines; about three weeks' work) cannot be compared with such accomplishments, but shines a light on an issue that makes mathematics difficult: its interconnectedness. The connections between number theory and complex analysis are well known. If your problem concerns itself with sets of permutations, you might suddenly find yourself needing group theory. If you are trying to count the elements of the group, you might find yourself requiring sophisticated combinatorial arguments. If you find yourself talking about countable sets (and countability is an everyday notion), you could find yourself wandering into the world of cardinals, then into the world of ordinals and then perhaps into the undecidable. To quote Wetzel himself, ``once again a natural analysis question has grown horns''~\cite[p.\ts244]{garcia-wetzels-problem}.
+The small example reported here (350 lines: about three weeks' work) cannot be compared with such accomplishments, but shines a light on an issue that makes mathematics difficult: its interconnectedness. The connections between number theory and complex analysis are well known. If your problem concerns itself with sets of permutations, you might suddenly find yourself needing group theory. If you are trying to count the elements of the group, you might find yourself requiring sophisticated combinatorial arguments. If you find yourself talking about countable sets (and countability is an everyday notion), you could find yourself wandering into the world of cardinals, then into the world of ordinals and then perhaps into the undecidable. To quote Wetzel himself, ``once again a natural analysis question has grown horns''~\cite[p.\ts244]{garcia-wetzels-problem}.
 
 I created the ZFC-in-HOL library in October 2019 with no specific application in mind but merely thinking that it might be useful occasionally to talk about really big sets.
 Then I decided to apply it to a project that had been proposed by Mirna Džamonja and Angeliki Koutsoukou-Argyraki: to formalise some ordinal partition theory. This concerns advanced generalisations of Ramsey's theorem; the formalisation~\cite{Ordinal_Partitions-AFP} was complete by August 2020 and a paper is now available~\cite{dzamonja-formalising}.
