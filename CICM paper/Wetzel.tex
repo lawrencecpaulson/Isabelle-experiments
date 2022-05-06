@@ -41,8 +41,8 @@
 \begin{abstract}
 In 1964, Paul Erd\H{o}s published a paper~\cite{erdos-interpolation} settling a question about function spaces that he had seen in a problem book.
 Erd\H{o}s proved that the answer was yes if and only if the continuum hypothesis was false:
-an innocent-looking question turned out to be undecidable from the axioms of ZFC\@.
-The formalisation of these proofs in Isabelle/HOL demonstrate the combined use of complex analysis and set theory, and in particular how the Isabelle/HOL library for ZFC integrates set theory with higher-order logic.
+an innocent-looking question turned out to be undecidable in the axioms of ZFC\@.
+The formalisation of these proofs in Isabelle/HOL demonstrate the combined use of complex analysis and set theory, and in particular how the Isabelle/HOL library for ZFC~\cite{ZFC_in_HOL-AFP} integrates set theory with higher-order logic.
 %% TODO Uncomment keywords (commented to allow LIVE typesetting)
 \keywords{Isabelle\and Erdős\and continuum hypothesis\and set theory\and complex analysis\and formalisation of mathematics}
 \end{abstract}
@@ -51,12 +51,12 @@ The formalisation of these proofs in Isabelle/HOL demonstrate the combined use o
 \section{Introduction}
 
 This story~\cite{garcia-wetzels-problem} expresses the richness of mathematics.
-It seemed that Paul Erd\H{o}s found the following question in a problem book belonging to the mathematics department of Ann Arbor University:
+It seems that Paul Erd\H{o}s found the following question in a problem book belonging to the mathematics department of Ann Arbor University:
 \begin{quote}
 Suppose that $F$ is a family of analytic functions on $\mathbb{C}$ such that for each $z$ the set $\{f (z): f\in F\}$ is countable. (Call this \emph{property $P_0$}.) Then is the family $F$ itself countable?
 \end{quote}
 This question apparently arose in the PhD work of John E. Wetzel, in connection with spaces of harmonic functions.
-Erd\H{o}s was able to show that if the continuum hypothesis failed, every family satisfying $P_0$ had to be countable; but if the hypothesis held, he showed how to create an uncountable family satisfying $P_0$ by a transfinite construction.
+Erd\H{o}s was able to show that if the continuum hypothesis failed, every family satisfying $P_0$ had to be countable; but if the hypothesis held, there existed (by a transfinite construction) an uncountable family satisfying~$P_0$.
 His proof appears in \textit{Proofs from THE BOOK}~\cite{aigner-proofs},%
 \footnote{End of Chapter 19. Also  \url{https://doi.org/10.1007/978-3-662-57265-8_19}}
 Aigner and Ziegler's collection of ``perfect proofs'' inspired by  Erd\H{o}s.
@@ -72,16 +72,16 @@ I have formalised Gödel's model for the former result, the constructible sets~\
 Gunther et al.\ \cite{Independence_CH-AFP} have formalised model constructions both to confirm and refute CH using forcing.
 These formalisation tasks were done using Isabelle/ZF, the instance of Isabelle for first-order logic and set theory.
 However, Isabelle/HOL is much better developed than Isabelle/ZF;
-in particular, the Wetzel problem requires its complex analysis library. So this paper is demonstrates how to tackle a problem that combines the worlds of analysis and set theory, including such mysteries as holomorphic functions, transfinite cardinals and recursion up to uncountable ordinals, on the common basis of higher-order logic.
+in particular, the Wetzel problem requires its complex analysis library. So this paper demonstrates how to tackle a problem that combines the worlds of analysis and set theory, including such mysteries as holomorphic functions, transfinite cardinals and recursion up to uncountable ordinals, on the common basis of higher-order logic.
 
-The paper outlines the development of formal treatments of ZF set theory in Isabelle/HOL (\S2), continuing to the Wetzel problem in the non-CH case (\S3) and the more difficult CH case (\S4). Some discussion that the work in context (\S5) and is followed by conclusions.
+The paper outlines the development of formal treatments of ZF set theory in Isabelle/HOL (\S2), continuing to the Wetzel problem in the non-CH case (\S3) and the more difficult CH case (\S4). Next comes some discussion of the work in the context of the formalisation of mathematics ganerally (\S5), and finally conclusions.
 
-The formal development itself is available online~\cite{Wetzels_Problem-AFP} in Isabelle's Archive of Formal Proofs (AFP).
+The formal development itself is available online~\cite{Wetzels_Problem-AFP} in Isabelle's Archive of Formal Proofs (AFP), as is the ZFC formalisation~\cite{ZFC_in_HOL-AFP} on which it is built.
 
 \section{Isabelle and Set Theory}
 
 Isabelle is a generic theorem prover, ultimately based on a uniform representation of logical syntax in the typed lambda calculus, with inference rules expressed syntactically and combined using higher-order unification~\cite{paulson-found}. Although Isabelle/HOL~\cite{isa-tutorial}---the version for higher-order logic---is by far the best known and most developed instance of Isabelle, other instances exist. These include Isabelle/FOL (classical first-order logic) and Isabelle/ZF\@.
-The latter is a faithful development of set theory from the Zermelo-Frawnkel axioms within first-order logic.
+The latter is a faithful development of set theory from the Zermelo-Fraenkel axioms within first-order logic.
 Since the axiom of choice (AC) is kept separate from the other axioms, one can investigate weaker forms of AC and equivalents of AC~\cite{paulson-gr}. 
 
 During the 1990s, I made some significant formal developments using Isabelle/ZF~\cite{paulson-reflection}, culminating in a proof of the relative consistency of the axiom of choice using Gödel's constructible universe~\cite{paulson-consistency}. Recently, several highly impressive formalisations of forcing were done within Isabelle/ZF~\cite{gunther-forcing,Independence_CH-AFP}.
@@ -125,7 +125,8 @@ The arithmetic types \isa{nat}, \isa{int}, \isa{real} belong to each of these cl
 
 \subsection{The development ZFC-in-HOL}
 
-My own framework~\cite{ZFC_in_HOL-AFP} for set theory within Isabelle/HOL had two aims:
+My own framework~\cite{ZFC_in_HOL-AFP} for set theory within Isabelle/HOL is mathematically equivalent to Gordon's and Obua's.
+Its aims were practical:
 \begin{enumerate}
 	\item To reproduce as much of Isabelle/ZF as possible,
 	\item while achieving maximum integration with the underlying higher-order logic.
@@ -135,7 +136,7 @@ To achieve these aims I relied on axiomatic type classes, whenever possible over
 It introduces the type \isa{V} of sets and the function \isa{elts} of type \isa{V~\isasymRightarrow~V~set} mapping  a set to its elements.
 Thus it uses Isabelle/HOL's existing typed sets to represent classes, but not all elements of \isa{V set} correspond to sets.
 The predicate \isa{small} identifies those that are small enough, but here comes the first stage of integration: \isa{small} needs to be polymorphic, accepting a set of any type and with the more general meaning that a set is small if its elements can be put into one-to-one correspondence with the elements of a ZF set.
-A set that is small in this more general sense does not in itself denote a ZF set, but this condition is frequently necessary if it is used in constructions that ultimately lead to a ZF set.
+A set that is small in this more general sense does not in itself denote a ZF set, but this condition can be necessary if it is used in constructions that ultimately lead to a ZF set.
 
 The fundamentals of set theory are built up as usual, starting with the ZF axioms.
 Set membership is expressed using the existing (typed) set membership operator: \isa{x~\isasymin~elts y}.
@@ -409,6 +410,7 @@ Note that $p(n)$ is the product of $z - w_i$ for $i<n$, while $q(n)$ is $\prod_{
 \end{isabelle}
 
 The following three definitions constrain the next value~$\epsilon_n$, a calculation left unspecified by previous authors~\cite{aigner-proofs,erdos-interpolation}. To ensure convergence, each approximant needs to be close to the previous one, hence a neighbourhood (open ball) whose radius has $n!q(n)$ for its denominator. \isa{DD} is the intersection of this neighbourhood with the set~$D$, excluding the one point that must be avoided. Finally, the function \isa{dd} picks an arbitrary element of~\isa{DD}\@.
+In each of these functions, the argument $\epsilon$ is an integer-valued function representing the $\{\epsilon_i\}$ for $i<n$.
 
 \begin{isabelle}
 \ \ \ \ \ \ \isacommand{define}\ BALL\ \isakeyword{where}\isanewline
@@ -499,7 +501,7 @@ The point is that
 \begin{align*}
 \{f_\beta(\zeta_\alpha) : \beta < \omega_1 \} = \{f_\beta (\zeta_\alpha): \beta\le\alpha\} \cup \{f_\beta (\zeta_\alpha): \alpha<\beta\}
 \end{align*}
-and that both parts of the union are countable: the first is a collection below $\alpha$, a countable ordinal, and the second is a subset of $D$, a countable set.
+and that both parts of the union are countable: the first is a collection below~$\alpha$, a countable ordinal, and the second is a subset of~$D$, a countable set.
 In the proof below, \isa{?B} is the set $\{\beta: \alpha<\beta<\gamma\}$, while \isa{elts\ (succ\ \isasymalpha)} is the set of all ordinals up to~$\alpha$. 
 
 \begin{isabelle}
@@ -540,10 +542,12 @@ The following corollary to the two cases summarises the equivalence between the 
 
 \section{Discussion}
 
-The formalisation of mathematics within proof assistants is being pursued actively. There are too many contributions to list, but notable recent ones include the formalisation of perfectoid spaces \cite{buzzard-perfectoid} and the striking progress on the Liquid Tensor Experiment.
-Both of these have Kevin Buzzard and his colleagues formalising the sophisticated work of Fields Medallist Peter Scholze in Lean.
+The formalisation of mathematics within proof assistants is being pursued actively. There are too many contributions to list, but notable recent ones include Kevin Buzzard's formalisation of perfectoid spaces~\cite{buzzard-perfectoid} and the striking progress on the Liquid Tensor Experiment, which is led by Johan Commelin.%
+\footnote{\url{https://tinyurl.com/5n8rh297}}
+% https://xenaproject.wordpress.com/2021/06/05/half-a-year-of-the-liquid-tensor-experiment-amazing-developments/
+Both of these involve formalising the sophisticated work of Fields Medallist Peter Scholze, using Lean.
 
-The small example reported here (350 lines: about three weeks' work) cannot be compared with such accomplishments, but shines a light on an issue that makes mathematics difficult: its interconnectedness. The connections between number theory and complex analysis are well known. If your problem concerns itself with sets of permutations, you might suddenly find yourself needing group theory. If you are trying to count the elements of the group, you might find yourself requiring sophisticated combinatorial arguments. If you find yourself talking about countable sets (and countability is an everyday notion), you could find yourself wandering into the world of cardinals, then into the world of ordinals and then perhaps into the undecidable. To quote Wetzel himself, ``once again a natural analysis question has grown horns''~\cite[p.\ts244]{garcia-wetzels-problem}.
+The small example reported here cannot be compared with such accomplishments, but shines a light on an issue that makes mathematics difficult: its interconnectedness. The connections between number theory and complex analysis are well known. If your problem concerns itself with sets of permutations, you might suddenly find yourself needing group theory. If you are trying to count the elements of the group, you might find yourself requiring sophisticated combinatorial arguments. If you find yourself talking about countable sets (and countability is an everyday notion), you could find yourself wandering into the world of cardinals, then into the world of ordinals and then perhaps into the undecidable. To quote Wetzel himself, ``once again a natural analysis question has grown horns''~\cite[p.\ts244]{garcia-wetzels-problem}.
 
 I created the ZFC-in-HOL library in October 2019 with no specific application in mind but merely thinking that it might be useful occasionally to talk about really big sets.
 Then I decided to apply it to a project that had been proposed by Mirna Džamonja and Angeliki Koutsoukou-Argyraki: to formalise some ordinal partition theory. This concerns advanced generalisations of Ramsey's theorem; the formalisation~\cite{Ordinal_Partitions-AFP} was complete by August 2020 and a paper is now available~\cite{dzamonja-formalising}.
@@ -552,11 +556,13 @@ However, this work essentially belongs to straight set theory, borrowing little 
 The Wetzel example showed that there were a few gaps limiting the integration between that theory and Isabelle/HOL, above all, a more general definition of cardinality. It's easy to define the cardinality of an arbitrary Isabelle/HOL set (i.e. having a type of the form \isa{T~set} as the least ordinal whose elements can be put into bijection with that set.
 The equivalent notion of cardinality for ZF sets is a trivial consequence.
 
-The original AFP entry~\cite{Wetzels_Problem-AFP}, published online in February 2022, begins with a variety of extensions to the Isabelle/HOL libraries, showing how the original ZFC library needed to be extended.
+The original AFP entry~\cite{Wetzels_Problem-AFP}, published online in February 2022, represents about three weeks' work.
+It begins with a variety of extensions to the Isabelle/HOL libraries, showing precisely how the original ZFC library needed to be extended.
 It includes an early and rather cumbersome definition of cardinality for HOL sets. In updated versions of the development,%
 \footnote{At \url{https://devel.isa-afp.org/entries/Wetzels_Problem.html}. Future readers should be able to locate the original Wetzel entry via ``Older releases'' on the download page.}
 %
-the library material has been moved elsewhere.
+the library material has been moved elsewhere. The latest version is 360 lines, 2833 tokens, which is not bad compared with the original text by Erdős~\cite{erdos-interpolation}, which is one and a half pages long. The exposition by Aigner and Ziegler~\cite{aigner-proofs} is two full pages long (67 lines, 1026 tokens). A crude comparison based on compressing the texts by gzip suggests a de Bruijn factor of under~2.3. For the original version, including the material later moved to libraries, the de Bruijn factor is 4.2.
+% PDF text copied into BBEdit; tokens counted by bbedit; compressed by GZip
 
 \section{Conclusions}
 
@@ -567,6 +573,10 @@ It would be interesting to see this example tackled using other proof assistants
 \subsubsection{Acknowledgements} 
 This work was supported by the ERC Advanced Grant ALEXANDRIA (Project GA 742178). 
 Dmitriy Traytel provided a particularly slick formal axiomatisation of type $V$ and Manuel Eberl provided a crucial tip for the CH case.
+
+% Statement for the Rights Retention Pilot, https://www.openaccess.cam.ac.uk/funder-open-access-policies/rights-retention/rights-retention-pilot
+For the purpose of open access, the author has applied a Creative Commons Attribution (CC BY) licence to any Author Accepted Manuscript version arising from this submission.
+
 
 \bibliographystyle{splncs04}
 \bibliography{string,atp,general,isabelle,theory,crossref}
