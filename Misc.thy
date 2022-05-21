@@ -2,18 +2,68 @@ section \<open>Misc experiments\<close>
 
 theory Misc imports
   "HOL-Decision_Procs.Approximation"
+  "HOL-Computational_Algebra.Primes"
   "HOL-ex.Sketch_and_Explore"
    
 begin
 
+definition "minlen vset \<equiv> Inf (length ` vset)"
+
+definition  "initState vset \<equiv> @x. x\<in>vset \<and> length x = minlen vset"
+
+
 lemma whoops: "\<forall>x. P x \<longrightarrow> P (Suc x) \<Longrightarrow> P x \<Longrightarrow> P y"
-sorry
+  sorry
   by blast
 
 lemma False
   using whoops [of "\<lambda>x. x\<noteq>0" 1 0]
   by auto
 
+
+lemma
+  fixes p::nat
+  assumes "prime p"
+  obtains q where "p<q" "q < p*p" "prime q"
+proof -
+  have "p dvd m*n \<longleftrightarrow> p dvd m \<or> p dvd n"
+    by (simp add: assms prime_dvd_mult_iff)
+
+
+  oops
+
+lemma
+  fixes p::nat
+  assumes "prime p"
+  obtains q where "p<q" "q < p*p" "prime q"
+proof -
+  have "p dvd m*n \<longleftrightarrow> p dvd m \<or> p dvd n" for m n
+    by (simp add: assms prime_dvd_mult_iff)
+
+  
+  
+  
+  
+  oops
+
+
+
+lemma
+  fixes p::nat
+  assumes "prime p"
+  obtains q where "p<q" "q < p*p" "prime q"
+proof -
+  have "\<And>m n. p dvd m*n \<longleftrightarrow> p dvd m \<or> p dvd n" 
+    by (simp add: assms prime_dvd_mult_iff)
+
+  oops
+
+lemma
+  assumes "prime p"
+  shows "p > 2"
+
+
+  sorry
 
 
 lemma "\<lbrakk>0 < N; 0 \<le> x; x < 1\<rbrakk> \<Longrightarrow>  \<lfloor>x * real_of_int N\<rfloor> < N"
