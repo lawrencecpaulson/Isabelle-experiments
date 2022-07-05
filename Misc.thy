@@ -1,15 +1,104 @@
 section \<open>Misc experiments\<close>
 
 theory Misc imports
+  "HOL-Analysis.Analysis"
   "HOL-Decision_Procs.Approximation"
   "HOL-Computational_Algebra.Primes"
   "HOL-ex.Sketch_and_Explore"
    
 begin
 
-definition "minlen vset \<equiv> Inf (length ` vset)"
+(*FOR THE LIBRARY?*)
+    
+    lemma wellorder_InfI:
+      fixes k :: "'a::{wellorder,conditionally_complete_lattice}"
+      assumes "k \<in> A" shows "Inf A \<in> A" 
+      using wellorder_class.LeastI [of "\<lambda>x. x \<in> A" k]
+      by (simp add: Least_le assms cInf_eq_minimum)
+    
+    lemma wellorder_Inf_le1:
+      fixes k :: "'a::{wellorder,conditionally_complete_lattice}"
+      assumes "k \<in> A" shows "Inf A \<le> k"
+      by (meson Least_le assms bdd_below.I cInf_lower)
+    
+    lemma sum_Re_le_cmod: "(\<Sum>i\<in>I. Re (z i)) \<le> cmod (\<Sum>i\<in>I. z i)"
+      by (metis Re_sum complex_Re_le_cmod)
+    
+    lemma sum_Im_le_cmod: "(\<Sum>i\<in>I. Im (z i)) \<le> cmod (\<Sum>i\<in>I. z i)"
+      by (smt (verit, best) Im_sum abs_Im_le_cmod sum.cong)
+    
+    lemma cos_gt_neg1:
+      assumes "(t::real) \<in> {-pi<..<pi}"
+      shows   "cos t > -1"
+    proof -
+      have "cos t \<ge> -1"
+        by simp
+      moreover have "cos t \<noteq> -1"
+      proof
+        assume "cos t = -1"
+        then obtain n where n: "t = (2 * of_int n + 1) * pi"
+          by (subst (asm) cos_eq_minus1) auto
+        from assms have "t / pi \<in> {-1<..<1}"
+          by (auto simp: field_simps)
+        also from n have "t / pi = of_int (2 * n + 1)"
+          by auto
+        finally show False
+          by auto
+      qed
+      ultimately show ?thesis by linarith
+    qed
 
-definition  "initState vset \<equiv> @x. x\<in>vset \<and> length x = minlen vset"
+(*** COMBINING / BREAKING SEQUENCES INDEXED BY NATURAL NUMBERS (from original Szemeredi development) **)
+
+text \<open>Some tools for combining integer-indexed sequences or splitting them into parts\<close>
+
+lemma less_sum_nat_iff:
+  fixes b::nat and k::nat
+  shows "b < (\<Sum>i<k. a i) \<longleftrightarrow> (\<exists>j<k. (\<Sum>i<j. a i) \<le> b \<and> b < (\<Sum>i<j. a i) + a j)"
+proof (induction k arbitrary: b)
+  case (Suc k)
+  then show ?case
+    by (simp add: less_Suc_eq) (metis not_less trans_less_add1)
+qed auto
+
+lemma less_sum_nat_iff_uniq:
+  fixes b::nat and k::nat
+  shows "b < (\<Sum>i<k. a i) \<longleftrightarrow> (\<exists>!j. j<k \<and> (\<Sum>i<j. a i) \<le> b \<and> b < (\<Sum>i<j. a i) + a j)"
+  unfolding less_sum_nat_iff by (meson leD less_sum_nat_iff nat_neq_iff)
+
+definition part :: "(nat \<Rightarrow> nat) \<Rightarrow> nat \<Rightarrow> nat \<Rightarrow> nat"
+  where "part a k b \<equiv> (THE j. j<k \<and> (\<Sum>i<j. a i) \<le> b \<and> b < (\<Sum>i<j. a i) + a j)"
+
+lemma part: 
+  "b < (\<Sum>i<k. a i) \<longleftrightarrow> (let j = part a k b in j < k \<and> (\<Sum>i < j. a i) \<le> b \<and> b < (\<Sum>i < j. a i) + a j)"
+  (is "?lhs = ?rhs")
+proof
+  assume ?lhs
+  then show ?rhs
+    unfolding less_sum_nat_iff_uniq part_def by (metis (no_types, lifting) theI')
+qed (auto simp: less_sum_nat_iff Let_def)
+
+lemma part_Suc: "part a (Suc k) b = (if sum a {..<k} \<le> b \<and> b < sum a {..<k} + a k then k else part a k b)"
+  using leD 
+  by (fastforce simp: part_def less_Suc_eq less_sum_nat_iff conj_disj_distribR cong: conj_cong)
+
+lemma part_eq:
+  assumes "i < k" "d < a i"
+  shows "part a k (sum a {..<i} + d) = i"
+proof -
+  have \<section>: "\<And>j. \<lbrakk>sum a {..<j} \<le> sum a {..<i} + d;
+              sum a {..<i} + d < sum a {..<j} + a j\<rbrakk> \<Longrightarrow> j = i"
+    by (meson \<open>d < a i\<close> leD le_add1 less_sum_nat_iff nat_add_left_cancel_less not_less_iff_gr_or_eq)
+  show ?thesis
+    unfolding part_def
+    using assms
+    by (intro the_equality) (auto simp: \<section>)
+qed
+
+lemma sum_layers_less:
+  fixes d::nat and k::nat
+  shows "\<lbrakk>i < k; d < a i\<rbrakk> \<Longrightarrow> sum a {..<i} + d < sum a {..<k}"
+  by (meson le_add1 less_sum_nat_iff nat_add_left_cancel_less)
 
 
 lemma whoops: "\<forall>x. P x \<longrightarrow> P (Suc x) \<Longrightarrow> P x \<Longrightarrow> P y"
