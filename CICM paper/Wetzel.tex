@@ -73,7 +73,7 @@ Han and van Doorn~\cite{han-CH} were the first to mechanise Cohen's proof of the
 \footnote{\url{https://leanprover.github.io}}
 I have formalised Gödel's model, the \textit{constructible sets}~\cite{paulson-consistency}, and some of its properties.
 Gunther et al.\ \cite{Independence_CH-AFP} have formalised model constructions both to confirm and refute CH using forcing.
-These latter formalisations were done using Isabelle/ZF, the instance of Isabelle for first-order logic and set theory.
+These latter formalisations were done using Isabelle/ZF~\cite{paulson-gr}, the instance of Isabelle for first-order logic and set theory.
 However, Isabelle/HOL is much better developed than Isabelle/ZF;
 in particular, the Wetzel problem requires its complex analysis library. So this paper demonstrates how to tackle a problem that combines the worlds of analysis and set theory, including such mysteries as holomorphic functions, transfinite cardinals and recursion up to uncountable ordinals, on the common basis of higher-order logic.
 
@@ -216,7 +216,8 @@ This is the full text of the proof.
 And type \isa{complex} is essentially the same thing as $\mathbb{R}^2$.
 
 The type classes \isa{embeddable} and \isa{small} aren't especially visible in the formalisation below.
-However, they provide the crucial link between type \isa{V} and other Isabelle/HOL types. They allow us to combine set theory and complex analysis. For example, the check that some entity is small (representable by a ZF set) is usually automatic, thanks to this type class setup.
+However, they provide the crucial link between type \isa{V} and other Isabelle/HOL types. 
+They are the key to combining set theory and complex analysis. For example, the check that some entity is small (representable by a ZF set) is usually automatic, thanks to this type class setup.
 Because \isa{real} and \isa{complex} are small, we can reason about their cardinality.
 
 \section{Wetzel's Problem: the $\neg$CH Case}
@@ -260,11 +261,11 @@ The $\phi_\alpha$ for $\alpha<\omega_1$ are the given analytic functions.
 \end{isabelle}
 
 It takes 10 lines to prove that $S(\alpha,\beta)$ is countable for $\alpha<\beta<\omega_1$,
-since two distinct holomorphic functions can agree at only countably many arguments (a fact proved by Aigner and Ziegler).
+since two distinct holomorphic functions on $\mathbb C$ can agree at only countably many arguments (a fact proved by Aigner and Ziegler).
 \begin{isabelle}
 \ \ \ \ \isacommand{have}\ "gcard\ (S\ \isasymalpha \ \isasymbeta )\ \isasymle \ \isasymaleph 0"\ \isakeyword{if}\ "\isasymalpha\ \isasymin\ elts\ \isasymbeta "\ "\isasymbeta\ \isasymin\ elts \isasymomega 1"\ \isakeyword{for}\ \isasymalpha \ \isasymbeta
 \end{isabelle}
-
+%
 The next step is to define $SS$ as the union of all $S(\alpha,\beta)$ for $\alpha<\beta<\omega_1$.
 \begin{isabelle}
 \ \ \ \ \isacommand{define}\ SS\ \isakeyword{where}\ "SS\ \isasymequiv\ \isasymSqunion \isasymbeta \ \isasymin \ elts\ \isasymomega 1.\ \isasymSqunion \isasymalpha \ \isasymin \ elts\ \isasymbeta .\ S\ \isasymalpha \ \isasymbeta "
@@ -376,7 +377,7 @@ Next come some technical definitions: \isa{inD} for functions whose range for ce
 
 \subsection{The Transfinite Construction}
 
-The following lemma, \isa{*}, is the step of the transfinite induction.
+The following lemma is the step of the transfinite induction.
 A family $f$ defined below the ordinal~$\gamma$ is extended with a new function, $f_\gamma$ (the variable $h$ below).
 
 \begin{isabelle}
@@ -458,7 +459,7 @@ To conclude, define the function~$f_\gamma$ (calling it \isa{hh}) and prove that
 \end{isabelle}
 
 Here are a few details of the proof that was skipped above.
-For a fixed $n$ and complex number~$z$, we show uniform convergence within a circle of radius 1.
+For a fixed $n$ and complex number~$z$, we show uniform convergence within a circle of radius~1.
 First, we need a bound on $\prod_{i<n} |z' - w_i|$ for $|z-z'|< 1$:
 
 \begin{isabelle}
