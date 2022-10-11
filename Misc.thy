@@ -1,12 +1,18 @@
 section \<open>Misc experiments\<close>
 
 theory Misc imports
-  "HOL-Analysis.Analysis"
+  Complex_Main
+  (*"HOL-Analysis.Analysis"
   "HOL-Decision_Procs.Approximation"
   "HOL-Computational_Algebra.Primes"
-  "HOL-ex.Sketch_and_Explore"
+  "HOL-ex.Sketch_and_Explore" *)
    
 begin
+
+lemma
+  fixes x::real
+  shows "2*x + y = x+y+x"
+apply (simp add: )
 
 (*FOR THE LIBRARY?*)
     
