@@ -5,7 +5,7 @@
 
 theory Group_Theory 
   
-  imports "HOL-Library.Disjoint_Sets"
+  imports "HOL-Library.Disjoint_Sets" "HOL-Computational_Algebra.Polynomial"
 
 begin
 
@@ -32,7 +32,7 @@ locale gmonoid =
     and associative [intro]: "\<lbrakk> a \<in> M i; b \<in> M j; c \<in> M k\<rbrakk> \<Longrightarrow> (a \<cdot> b) \<cdot> c = a \<cdot> (b \<cdot> c)"
     and left_unit [intro, simp]: "a \<in> M i \<Longrightarrow> \<one> \<cdot> a = a"
     and right_unit [intro, simp]: "a \<in> M i \<Longrightarrow> a \<cdot> \<one> = a"
-    and df: "disjoint_family M"
+    and df: "disjoint_family (\<lambda>i. M i - {\<one>})"
 
 locale gsubmonoid = gmonoid M "(\<cdot>)" \<one>
   for N and M and composition (infixl "\<cdot>" 70) and unit ("\<one>") +
@@ -56,8 +56,8 @@ lemma sub [intro, simp]:
 
 sublocale sub: monoid N "(\<cdot>)" \<one>
 proof
-  show "disjoint_family (\<lambda>_::unit. N)"
-    using df disjoint_family_subset subset by fastforce
+  show "disjoint_family (\<lambda>i::unit. N - {\<one>})"
+    using df subset by (auto simp: disjoint_family_on_def)
 qed (auto simp: sub_composition_closed sub_unit_closed)
 
 sublocale sup: monoid M "(\<cdot>)" \<one>
@@ -65,7 +65,7 @@ sublocale sup: monoid M "(\<cdot>)" \<one>
 
 end (* submonoid *)
 
-locale commutative_monoid = commutative_gmonoid "\<lambda>_. M" composition unit
+locale commutative_monoid = commutative_gmonoid "\<lambda>_::unit. M" composition unit
   for M :: "'a set" and composition (infixl "\<cdot>" 70) and unit ("\<one>")
 
 context monoid begin
@@ -144,7 +144,7 @@ locale gring = multiplicative: gmonoid R "(\<cdot>)" \<one>
   for R :: "'i::monoid_add \<Rightarrow> 'a set" and addition (infixl "\<oplus>" 65) and multiplication (infixl "\<cdot>" 70) and zero ("\<zero>") and unit ("\<one>") +
   assumes distributive: "\<lbrakk> a \<in> R i; b \<in> R j; c \<in> R j\<rbrakk> \<Longrightarrow> a \<cdot> (b \<oplus> c) = a \<cdot> b \<oplus> a \<cdot> c"
     "\<lbrakk> a \<in> R i; b \<in> R j; c \<in> R j\<rbrakk> \<Longrightarrow> (b \<oplus> c) \<cdot> a = b \<cdot> a \<oplus> c \<cdot> a"
-   and ag: "abelian_group (TYPE ('i)) (R i) (\<oplus>) \<zero>"
+   and ag: "abelian_group (R i) (\<oplus>) \<zero>"
 begin
 
 lemma zero: "\<zero> \<in> R i"
@@ -157,6 +157,29 @@ lemma "\<lbrakk>a \<in> R i; b \<in> R j\<rbrakk> \<Longrightarrow> a \<cdot> b 
   by (fact local.multiplicative.composition_closed)
 
 end
+
+definition pgrade :: "nat \<Rightarrow> 'a::ring_no_zero_divisors poly set"
+  where "pgrade \<equiv> \<lambda>k. range (\<lambda>x. monom x k)"
+
+interpretation gmonoid pgrade "(*)" 1
+  apply unfold_locales
+       apply (auto simp: pgrade_def mult.assoc)
+    apply (simp add: mult_monom)
+   apply (simp add: monom_0 one_pCons)
+  apply (auto simp: algebra_simps  disjoint_family_on_def)
+  sorry
+
+interpretation mon_i: monoid "pgrade i" "(+)" 0 for i
+proof qed (auto simp: add_monom add_ac pgrade_def disjoint_family_on_def)
+
+interpretation gring pgrade "(+)" "(*)" 0 1
+  apply unfold_locales
+     apply (auto simp: algebra_simps add_monom disjoint_family_on_def mon_i.invertible_def)
+  apply (auto simp:  pgrade_def add_monom )
+  apply (metis ab_group_add_class.ab_left_minus add.commute)
+  done
+
+
 
 context gsubmonoid
 begin
