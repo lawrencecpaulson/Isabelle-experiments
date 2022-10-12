@@ -18,6 +18,10 @@ no_notation quotient (infixl "'/'/" 90)
 
 section \<open>Monoids and Groups\<close>
 
+instance unit :: monoid_add
+proof qed auto
+
+
 subsection \<open>Monoids of Transformations and Abstract Monoids\<close>
 
 text \<open>Graded monoids\<close>
@@ -28,6 +32,7 @@ locale gmonoid =
     and associative [intro]: "\<lbrakk> a \<in> M i; b \<in> M j; c \<in> M k\<rbrakk> \<Longrightarrow> (a \<cdot> b) \<cdot> c = a \<cdot> (b \<cdot> c)"
     and left_unit [intro, simp]: "a \<in> M i \<Longrightarrow> \<one> \<cdot> a = a"
     and right_unit [intro, simp]: "a \<in> M i \<Longrightarrow> a \<cdot> \<one> = a"
+    and df: "disjoint_family M"
 
 locale gsubmonoid = gmonoid M "(\<cdot>)" \<one>
   for N and M and composition (infixl "\<cdot>" 70) and unit ("\<one>") +
@@ -38,10 +43,10 @@ locale gsubmonoid = gmonoid M "(\<cdot>)" \<one>
 locale commutative_gmonoid = gmonoid +
   assumes commutative: "\<lbrakk> x \<in> M i; y \<in> M i\<rbrakk> \<Longrightarrow> x \<cdot> y = y \<cdot> x"
 
-locale monoid = gmonoid "\<lambda>_. M" composition unit
+locale monoid = gmonoid "\<lambda>_::unit. M" composition unit
   for M :: "'a set" and composition (infixl "\<cdot>" 70) and unit ("\<one>")
 
-locale submonoid = gsubmonoid "\<lambda>_. N" "\<lambda>_. M" composition unit
+locale submonoid = gsubmonoid "\<lambda>_::unit. N" "\<lambda>_::unit. M" composition unit
   for N M:: "'a set" and composition (infixl "\<cdot>" 70) and unit ("\<one>")
 begin
 
@@ -50,7 +55,10 @@ lemma sub [intro, simp]:
   using subset by blast
 
 sublocale sub: monoid N "(\<cdot>)" \<one>
-  by unfold_locales (auto simp: sub_composition_closed sub_unit_closed)
+proof
+  show "disjoint_family (\<lambda>_::unit. N)"
+    using df disjoint_family_subset subset by fastforce
+qed (auto simp: sub_composition_closed sub_unit_closed)
 
 sublocale sup: monoid M "(\<cdot>)" \<one>
   by (simp add: Group_Theory.monoid_def gmonoid_axioms)
@@ -127,7 +135,7 @@ locale ggroup =
 
 locale abelian_ggroup = ggroup + commutative_gmonoid G "(\<cdot>)" \<one>
 
-locale group = ggroup "\<lambda>_. G" composition unit
+locale group = ggroup "\<lambda>_::unit. G" composition unit
   for G :: "'a set" and composition (infixl "\<cdot>" 70) and unit ("\<one>")
 
 locale abelian_group = group + commutative_monoid G "(\<cdot>)" \<one>
