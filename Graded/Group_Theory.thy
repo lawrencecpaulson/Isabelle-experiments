@@ -5,7 +5,7 @@
 
 theory Group_Theory 
   
-  imports Set_Theory "HOL-Library.Disjoint_Sets"
+  imports "HOL-Library.Disjoint_Sets"
 
 begin
 
@@ -29,14 +29,12 @@ locale gmonoid =
     and left_unit [intro, simp]: "a \<in> M i \<Longrightarrow> \<one> \<cdot> a = a"
     and right_unit [intro, simp]: "a \<in> M i \<Longrightarrow> a \<cdot> \<one> = a"
 
-text \<open>p 29, ll 27--28\<close>
 locale gsubmonoid = gmonoid M "(\<cdot>)" \<one>
   for N and M and composition (infixl "\<cdot>" 70) and unit ("\<one>") +
   assumes subset: "N i \<subseteq> M i"
     and sub_composition_closed: "\<lbrakk> a \<in> N i; b \<in> N j\<rbrakk> \<Longrightarrow> a \<cdot> b \<in> N(i+j)"
     and sub_unit_closed: "\<one> \<in> N 0"
 
-text \<open>p 40, l 27; p 41, ll 1--2\<close>
 locale commutative_gmonoid = gmonoid +
   assumes commutative: "\<lbrakk> x \<in> M i; y \<in> M i\<rbrakk> \<Longrightarrow> x \<cdot> y = y \<cdot> x"
 
@@ -46,12 +44,11 @@ locale monoid = gmonoid "\<lambda>_. M" composition unit
 locale submonoid = gsubmonoid "\<lambda>_. N" "\<lambda>_. M" composition unit
   for N M:: "'a set" and composition (infixl "\<cdot>" 70) and unit ("\<one>")
 begin
-text \<open>p 29, ll 27--28\<close>
+
 lemma sub [intro, simp]:
   "a \<in> N \<Longrightarrow> a \<in> M"
   using subset by blast
 
-text \<open>p 29, ll 32--33\<close>
 sublocale sub: monoid N "(\<cdot>)" \<one>
   by unfold_locales (auto simp: sub_composition_closed sub_unit_closed)
 
@@ -67,72 +64,57 @@ context monoid begin
 
 text \<open>Invertible elements\<close>
 
-text \<open>p 31, ll 3--5\<close>
 definition invertible where "u \<in> M \<Longrightarrow> invertible u \<longleftrightarrow> (\<exists>v \<in> M. u \<cdot> v = \<one> \<and> v \<cdot> u = \<one>)"
 
-text \<open>p 31, ll 3--5\<close>
 lemma invertibleI [intro]:
   "\<lbrakk> u \<cdot> v = \<one>; v \<cdot> u = \<one>; u \<in> M; v \<in> M \<rbrakk> \<Longrightarrow> invertible u"
   unfolding invertible_def by fast
 
-text \<open>p 31, ll 3--5\<close>
 lemma invertibleE [elim]:
   "\<lbrakk> invertible u; \<And>v. \<lbrakk> u \<cdot> v = \<one> \<and> v \<cdot> u = \<one>; v \<in> M \<rbrakk> \<Longrightarrow> P; u \<in> M \<rbrakk> \<Longrightarrow> P"
   unfolding invertible_def by fast
 
-text \<open>p 31, ll 6--7\<close>
 theorem inverse_unique:
   "\<lbrakk> u \<cdot> v' = \<one>; v \<cdot> u = \<one>; u \<in> M;  v \<in> M; v' \<in> M \<rbrakk> \<Longrightarrow> v = v'"
   by (metis associative left_unit right_unit)
 
-text \<open>p 31, l 7\<close>
 definition inverse where "inverse = (\<lambda>u \<in> M. THE v. v \<in> M \<and> u \<cdot> v = \<one> \<and> v \<cdot> u = \<one>)"
 
-text \<open>p 31, l 7\<close>
 theorem inverse_equality:
   "\<lbrakk> u \<cdot> v = \<one>; v \<cdot> u = \<one>; u \<in> M; v \<in> M \<rbrakk> \<Longrightarrow> inverse u = v"
   unfolding inverse_def using inverse_unique by simp blast
 
-text \<open>p 31, l 7\<close>
 lemma invertible_inverse_closed [intro, simp]:
   "\<lbrakk> invertible u; u \<in> M \<rbrakk> \<Longrightarrow> inverse u \<in> M"
   using inverse_equality by auto
 
-text \<open>p 31, l 7\<close>
 lemma inverse_undefined [intro, simp]:
   "u \<notin> M \<Longrightarrow> inverse u = undefined"
   by (simp add: inverse_def)
 
-text \<open>p 31, l 7\<close>
 lemma invertible_left_inverse [simp]:
   "\<lbrakk> invertible u; u \<in> M \<rbrakk> \<Longrightarrow> inverse u \<cdot> u = \<one>"
   using inverse_equality by auto
 
-text \<open>p 31, l 7\<close>
 lemma invertible_right_inverse [simp]:
   "\<lbrakk> invertible u; u \<in> M \<rbrakk> \<Longrightarrow> u \<cdot> inverse u = \<one>"
   using inverse_equality by auto
 
-text \<open>p 31, l 7\<close>
 lemma invertible_left_cancel [simp]:
   "\<lbrakk> invertible x; x \<in> M; y \<in> M; z \<in> M \<rbrakk> \<Longrightarrow> x \<cdot> y = x \<cdot> z \<longleftrightarrow> y = z"
   by (metis associative invertible_def left_unit)
 
-text \<open>p 31, l 7\<close>
 lemma invertible_right_cancel [simp]:
   "\<lbrakk> invertible x; x \<in> M; y \<in> M; z \<in> M \<rbrakk> \<Longrightarrow> y \<cdot> x = z \<cdot> x \<longleftrightarrow> y = z"
   by (metis associative invertible_def right_unit)
 
-text \<open>p 31, l 7\<close>
 lemma inverse_unit [simp]: "inverse \<one> = \<one>"
   using inverse_equality by blast
 
-text \<open>p 31, ll 7--8\<close>
 theorem invertible_inverse_invertible [intro, simp]:
   "\<lbrakk> invertible u; u \<in> M \<rbrakk> \<Longrightarrow> invertible (inverse u)"
   using invertible_left_inverse invertible_right_inverse by blast
 
-text \<open>p 31, l 8\<close>
 theorem invertible_inverse_inverse [simp]:
   "\<lbrakk> invertible u; u \<in> M \<rbrakk> \<Longrightarrow> inverse (inverse u) = u"
   by (simp add: inverse_equality)
