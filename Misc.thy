@@ -1,58 +1,53 @@
 section \<open>Misc experiments\<close>
 
 theory Misc imports
-  Complex_Main
-  (*"HOL-Analysis.Analysis"
-  "HOL-Decision_Procs.Approximation"
-  "HOL-Computational_Algebra.Primes"
-  "HOL-ex.Sketch_and_Explore" *)
+  "HOL-Analysis.Analysis"
    
 begin
 
-lemma
-  fixes x::real
-  shows "2*x + y = x+y+x"
-apply (simp add: )
 
-(*FOR THE LIBRARY?*)
-    
-    lemma wellorder_InfI:
-      fixes k :: "'a::{wellorder,conditionally_complete_lattice}"
-      assumes "k \<in> A" shows "Inf A \<in> A" 
-      using wellorder_class.LeastI [of "\<lambda>x. x \<in> A" k]
-      by (simp add: Least_le assms cInf_eq_minimum)
-    
-    lemma wellorder_Inf_le1:
-      fixes k :: "'a::{wellorder,conditionally_complete_lattice}"
-      assumes "k \<in> A" shows "Inf A \<le> k"
-      by (meson Least_le assms bdd_below.I cInf_lower)
-    
-    lemma sum_Re_le_cmod: "(\<Sum>i\<in>I. Re (z i)) \<le> cmod (\<Sum>i\<in>I. z i)"
-      by (metis Re_sum complex_Re_le_cmod)
-    
-    lemma sum_Im_le_cmod: "(\<Sum>i\<in>I. Im (z i)) \<le> cmod (\<Sum>i\<in>I. z i)"
-      by (smt (verit, best) Im_sum abs_Im_le_cmod sum.cong)
-    
-    lemma cos_gt_neg1:
-      assumes "(t::real) \<in> {-pi<..<pi}"
-      shows   "cos t > -1"
-    proof -
-      have "cos t \<ge> -1"
-        by simp
-      moreover have "cos t \<noteq> -1"
-      proof
-        assume "cos t = -1"
-        then obtain n where n: "t = (2 * of_int n + 1) * pi"
-          by (subst (asm) cos_eq_minus1) auto
-        from assms have "t / pi \<in> {-1<..<1}"
-          by (auto simp: field_simps)
-        also from n have "t / pi = of_int (2 * n + 1)"
-          by auto
-        finally show False
-          by auto
-      qed
-      ultimately show ?thesis by linarith
-    qed
+
+
+
+
+lemma cuberoot_irrational:
+  defines "x \<equiv> root 3 2 + root 3 3"
+  shows "x \<notin> \<rat>"
+proof
+  assume "x \<in> \<rat>"
+  moreover
+  have "root 3 8 = 2" "root 3 27 = 3"
+    by auto
+  then have xcubed: "x^3 = 5 + 3 * x * root 3 6"
+    by (simp add: x_def algebra_simps eval_nat_numeral flip: real_root_mult)
+  ultimately have Q: "5 + 3 * x * root 3 6 \<in> \<rat>"
+    by (metis Rats_power \<open>x \<in> \<rat>\<close>)
+  have "root 3 6 \<notin> \<rat>"
+  proof 
+    assume "root 3 6 \<in> \<rat>"
+    then obtain a b where "a / b = root 3 6" and cop: "coprime a b" "b\<noteq>0"
+      by (smt (verit, best) Rats_cases')
+    then have "(a/b)^3 = 6"
+      by auto
+    then have eq: "a^3 = 2*3 * b^3" 
+      using of_int_eq_iff by (fastforce simp: divide_simps \<open>b\<noteq>0\<close>)
+    then have p: "2 dvd a"
+      by (metis coprime_left_2_iff_odd coprime_power_right_iff dvd_triv_left mult.assoc)
+    then obtain c where "a = 2*c"
+      by blast
+    with eq have "2 dvd b"
+      by (simp add: eval_nat_numeral) (metis even_mult_iff even_numeral odd_numeral)
+    with p and cop show False
+      by fastforce
+  qed
+  moreover have "3*x \<in> \<rat> - {0}"
+    using xcubed by (force simp: \<open>x \<in> \<rat>\<close>)
+  ultimately have "3 * x * root 3 6 \<notin> \<rat>"
+    using Rats_divide by force
+  with Q show False
+    using Rats_add_iff Rats_number_of by blast
+qed
+
 
 (*** COMBINING / BREAKING SEQUENCES INDEXED BY NATURAL NUMBERS (from original Szemeredi development) **)
 
@@ -240,15 +235,15 @@ proof
     using \<open>coprime m n\<close> \<open>m = 2 * r\<close> by simp
 qed
 
-lemma "Nats \<noteq> (Ints :: complex set)"
+lemma "\<nat> \<noteq> (Ints :: complex set)"
   by (smt (z3) Ints_minus Nats_altdef1 mem_Collect_eq of_int_eq_iff of_int_minus)
 
-lemma "Nats \<noteq> (Ints :: real set)"
+lemma "\<nat> \<noteq> (Ints :: real set)"
   by (smt (z3) Ints_minus Nats_altdef1 mem_Collect_eq of_int_eq_iff of_int_minus)
 
 thm of_nat_def Int.of_int_def
 
-lemma "Nats \<noteq> (Ints :: 'a::linordered_idom set)"
+lemma "\<nat> \<noteq> (Ints :: 'a::linordered_idom set)"
   by (metis Ints_1 Ints_minus Nats_induct neg_0_le_iff_le not_one_le_zero of_nat_0_le_iff)
 
 lemma "m * 2^(2*m) \<le> 2^(2^m)"
@@ -270,7 +265,7 @@ thm of_int_less_iff
 context linordered_idom
 begin
 
-lemma of_nat_nat_eq_iff: "of_nat (nat i) = of_int i \<longleftrightarrow> 0 \<le> i"
+lemma of_nat_nat_eq_iff: "real (nat i) = of_int i \<longleftrightarrow> 0 \<le> i"
   using local.of_int_le_iff by fastforce
 
 end
