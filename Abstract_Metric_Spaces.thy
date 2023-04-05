@@ -995,6 +995,12 @@ locale metric_space =
   assumes zero: "\<And>x y. \<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> d x y = 0 \<longleftrightarrow> x=y"
   assumes triangle: "\<And>x y z. \<lbrakk>x \<in> M; y \<in> M; z \<in> M\<rbrakk> \<Longrightarrow> d x z \<le> d x y + d y z"
 
+(*DOING THIS CAUSES SOME PROOFS TO FAIL
+text \<open>Link with the type class version\<close>
+interpretation Met: metric_space UNIV dist
+  by (simp add: dist_commute dist_triangle metric_space.intro)
+*)
+
 (*NOT CLEAR WHETHER WE NEED/WANT THIS type definition*)
 typedef 'a metric = "{(M::'a set,d). metric_space M d}"
   morphisms "dest_metric" "metric"
@@ -4682,228 +4688,30 @@ oops
 
 
 
-let real_euclidean_metric = new_definition
-  `real_euclidean_metric = metric (UNIV,\<lambda>(x,y). abs(y-x))`;;
+text \<open>Link with the type class version\<close>
+interpretation MetXX: metric_space UNIV dist
+  by (simp add: dist_commute dist_triangle metric_space.intro)
 
-lemma real_euclidean_metric:
- (`mspace real_euclidean_metric = UNIV \<and>
-   (\<forall>x y. d x y = abs(y-x))"
-oops
-  SUBGOAL_THEN `is_metric_space(UNIV,\ (x,y). abs(y-x))` MP_TAC THENL
-  [REWRITE_TAC[is_metric_space; IN_UNIV] THEN REAL_ARITH_TAC;
-   SIMP_TAC[real_euclidean_metric; metric_tybij; mspace; d]]);;
+lemma mball_eq_ball [simp]: "MetXX.mball = ball"
+  by force
 
-lemma mtopology_real_euclidean_metric:
- (`mtopology real_euclidean_metric = euclideanreal"
-oops
-  REWRITE_TAC[TOPOLOGY_EQ; OPEN_IN_MTOPOLOGY; REAL_EUCLIDEAN_METRIC;
-    GSYM REAL_OPEN_IN; real_open; IN_MBALL; REAL_EUCLIDEAN_METRIC;
-    \<subseteq>; IN_UNIV]);;
+lemma mopen_eq_open [simp]: "MetXX.mopen = open"
+  by (force simp add: open_contains_ball MetXX.mopen_def)
 
-lemma mball_real_interval:
-   "mball x r = real_interval(x - r,x + r)"
-oops
-  REWRITE_TAC[EXTENSION; IN_MBALL; REAL_EUCLIDEAN_METRIC] THEN
-  REWRITE_TAC[IN_UNIV; IN_REAL_INTERVAL] THEN REAL_ARITH_TAC);;
+lemma metrizable_space_euclidean:
+  "metrizable_space (euclidean :: 'a::metric_space topology)"
+  unfolding metrizable_space_def
+  by (metis MetXX.metric_space_axioms MetXX.mtopology_def mopen_eq_open)
 
-lemma mcball_real_interval:
-   "mcball real_euclidean_metric (x,r) = real_interval[x - r,x + r]"
-oops
-  REWRITE_TAC[EXTENSION; IN_MCBALL; REAL_EUCLIDEAN_METRIC] THEN
-  REWRITE_TAC[IN_UNIV; IN_REAL_INTERVAL] THEN REAL_ARITH_TAC);;
+lemma kc_space_euclidean: "kc_space (euclidean :: 'a::metric_space topology)"
+  by (simp add: compact_imp_closed kc_space_def)
 
-lemma metrizable_space_euclideanreal:
- (`metrizable_space euclideanreal"
-oops
-  REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC;
-              METRIZABLE_SPACE_MTOPOLOGY]);;
+lemma t1_space_euclidean: "t1_space (euclidean :: 'a::metric_space topology)"
+  by (simp add: Hausdorff_imp_t1_space)
 
-lemma Hausdorff_space_euclideanreal:
- (`Hausdorff_space euclideanreal"
-oops
-  REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC;
-              HAUSDORFF_SPACE_MTOPOLOGY]);;
-
-lemma kc_space_euclideanreal:
- (`kc_space euclideanreal"
-oops
-  REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC; KC_SPACE_MTOPOLOGY]);;
-
-lemma t1_space_euclideanreal:
- (`t1_space euclideanreal"
-oops
-  SIMP_TAC[HAUSDORFF_SPACE_EUCLIDEANREAL; HAUSDORFF_IMP_T1_SPACE]);;
-
-lemma regular_space_euclideanreal:
- (`regular_space euclideanreal"
-oops
-  MESON_TAC[METRIZABLE_IMP_REGULAR_SPACE; METRIZABLE_SPACE_EUCLIDEANREAL]);;
-
-lemma subbase_subtopology_euclideanreal:
-   "topology
-        (arbitrary union_of
-          (finite intersection_of
-            ({{x. x > a} | a \<in> UNIV} \<union> {{x. x < a} | a \<in> UNIV})
-           relative_to u)) =
-       subtopology euclideanreal u"
-oops
-  GEN_TAC THEN
-  REWRITE_TAC[subtopology; GSYM ARBITRARY_UNION_OF_RELATIVE_TO] THEN
-  AP_TERM_TAC THEN REWRITE_TAC[RELATIVE_TO] THEN
-  GEN_REWRITE_TAC (RAND_CONV \<circ> ONCE_DEPTH_CONV) [INTER_COMM] THEN
-  ONCE_REWRITE_TAC[SIMPLE_IMAGE_GEN] THEN AP_TERM_TAC THEN
-  GEN_REWRITE_TAC id [EXTENSION] THEN REWRITE_TAC[IN_ELIM_THM] THEN
-  X_GEN_TAC `s::real=>bool` THEN AP_THM_TAC THEN CONV_TAC SYM_CONV THEN
-  REWRITE_TAC[OPEN_IN_TOPOLOGY_BASE_UNIQUE] THEN CONJ_TAC THENL
-   [GEN_REWRITE_TAC ONCE_DEPTH_CONV [\<in>] THEN
-    REWRITE_TAC[FORALL_INTERSECTION_OF] THEN
-    X_GEN_TAC `t:(real=>bool)->bool` THEN
-    ASM_CASES_TAC `t:(real=>bool)->bool = {}` THENL
-     [ASM_MESON_TAC[TOPSPACE_EUCLIDEANREAL; INTERS_0; OPEN_IN_TOPSPACE];
-      ALL_TAC] THEN
-    DISCH_THEN(fun th -> MATCH_MP_TAC OPEN_IN_INTERS THEN
-      CONJUNCTS_THEN2 ASSUME_TAC MP_TAC th) THEN
-    ASM_REWRITE_TAC[] THEN MATCH_MP_TAC MONO_FORALL THEN
-    X_GEN_TAC `d::real=>bool` THEN
-    MATCH_MP_TAC MONO_IMP THEN REWRITE_TAC[] THEN
-    SPEC_TAC(`d::real=>bool`,`d::real=>bool`) THEN
-    GEN_REWRITE_TAC (BINDER_CONV \<circ> LAND_CONV) [GSYM \<in>] THEN
-    REWRITE_TAC[FORALL_IN_UNION; FORALL_IN_GSPEC; IN_UNIV] THEN
-    REWRITE_TAC[GSYM REAL_OPEN_IN; REAL_OPEN_HALFSPACE_LT] THEN
-    REWRITE_TAC[REAL_OPEN_HALFSPACE_GT];
-    MAP_EVERY X_GEN_TAC [`u::real=>bool`; `x::real`] THEN
-    REWRITE_TAC[real_open; GSYM REAL_OPEN_IN] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 (MP_TAC \<circ> SPEC `x::real`) ASSUME_TAC) THEN
-    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `d::real` THEN STRIP_TAC THEN
-    EXISTS_TAC `{y::real | y > x - d} \<inter> {y. y < x + d}` THEN
-    CONJ_TAC THENL
-     [GEN_REWRITE_TAC id [\<in>] THEN
-      MATCH_MP_TAC FINITE_INTERSECTION_OF_INTER THEN CONJ_TAC THEN
-      MATCH_MP_TAC FINITE_INTERSECTION_OF_INC THEN
-      GEN_REWRITE_TAC id [GSYM \<in>] THEN
-      REWRITE_TAC[IN_UNION; IN_ELIM_THM] THENL
-       [DISJ1_TAC THEN EXISTS_TAC `x - d::real`;
-        DISJ2_TAC THEN EXISTS_TAC `x + d::real`] THEN
-      REWRITE_TAC[IN_UNIV];
-      REWRITE_TAC[\<subseteq>; IN_INTER; IN_ELIM_THM] THEN
-      CONJ_TAC THENL [ASM_REAL_ARITH_TAC; ALL_TAC] THEN
-      REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-      ASM_REAL_ARITH_TAC]]);;
-
-lemma euclideanreal_closure_of_halfspace_ge:
-   "euclideanreal closure_of {x. x >= a} = {x. x >= a}"
-oops
-  SIMP_TAC[CLOSURE_OF_EQ; GSYM REAL_CLOSED_IN; REAL_CLOSED_HALFSPACE_GE]);;
-
-lemma euclideanreal_closure_of_halfspace_le:
-   "euclideanreal closure_of {x. x \<le> a} = {x. x \<le> a}"
-oops
-  SIMP_TAC[CLOSURE_OF_EQ; GSYM REAL_CLOSED_IN; REAL_CLOSED_HALFSPACE_LE]);;
-
-lemma euclideanreal_closure_of_halfspace_gt:
-   "euclideanreal closure_of {x. x > a} = {x. x >= a}"
-oops
-  GEN_TAC THEN MATCH_MP_TAC SUBSET_ANTISYM THEN CONJ_TAC THENL
-   [GEN_REWRITE_TAC RAND_CONV [GSYM EUCLIDEANREAL_CLOSURE_OF_HALFSPACE_GE] THEN
-    MATCH_MP_TAC CLOSURE_OF_MONO THEN
-    REWRITE_TAC[\<subseteq>; IN_ELIM_THM] THEN REAL_ARITH_TAC;
-    REWRITE_TAC[\<subseteq>; IN_ELIM_THM; real_gt; real_ge] THEN
-    REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC; METRIC_CLOSURE_OF] THEN
-    X_GEN_TAC `b::real` THEN REWRITE_TAC[REAL_EUCLIDEAN_METRIC; mball] THEN
-    DISCH_TAC THEN REWRITE_TAC[IN_ELIM_THM; IN_UNIV] THEN
-    X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-    EXISTS_TAC `b + e / 2` THEN ASM_REAL_ARITH_TAC]);;
-
-lemma euclideanreal_closure_of_halfspace_lt:
-   "euclideanreal closure_of {x. x < a} = {x. x \<le> a}"
-oops
-  GEN_TAC THEN MATCH_MP_TAC SUBSET_ANTISYM THEN CONJ_TAC THENL
-   [GEN_REWRITE_TAC RAND_CONV [GSYM EUCLIDEANREAL_CLOSURE_OF_HALFSPACE_LE] THEN
-    MATCH_MP_TAC CLOSURE_OF_MONO THEN
-    REWRITE_TAC[\<subseteq>; IN_ELIM_THM] THEN REAL_ARITH_TAC;
-    REWRITE_TAC[\<subseteq>; IN_ELIM_THM; real_gt; real_ge] THEN
-    REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC; METRIC_CLOSURE_OF] THEN
-    X_GEN_TAC `b::real` THEN REWRITE_TAC[REAL_EUCLIDEAN_METRIC; mball] THEN
-    DISCH_TAC THEN REWRITE_TAC[IN_ELIM_THM; IN_UNIV] THEN
-    X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-    EXISTS_TAC `b - e / 2` THEN ASM_REAL_ARITH_TAC]);;
-
-lemma euclideanreal_interior_of_halfspace_ge:
-   "euclideanreal interior_of {x. x >= a} = {x. x > a}"
-oops
-  GEN_TAC THEN REWRITE_TAC[INTERIOR_OF_CLOSURE_OF; TOPSPACE_EUCLIDEANREAL] THEN
-  REWRITE_TAC[SET_RULE `- {x. P x} = {x. ~P x}`] THEN
-  REWRITE_TAC[REAL_ARITH `~(x >= a) \<longleftrightarrow> x < a`] THEN
-  REWRITE_TAC[EUCLIDEANREAL_CLOSURE_OF_HALFSPACE_LT; EXTENSION] THEN
-  REWRITE_TAC[IN_DIFF; IN_UNIV; IN_ELIM_THM] THEN REAL_ARITH_TAC);;
-
-lemma euclideanreal_interior_of_halfspace_le:
-   "euclideanreal interior_of {x. x \<le> a} = {x. x < a}"
-oops
-  GEN_TAC THEN REWRITE_TAC[INTERIOR_OF_CLOSURE_OF; TOPSPACE_EUCLIDEANREAL] THEN
-  REWRITE_TAC[SET_RULE `- {x. P x} = {x. ~P x}`] THEN
-  REWRITE_TAC[REAL_ARITH `~(x \<le> a) \<longleftrightarrow> x > a`] THEN
-  REWRITE_TAC[EUCLIDEANREAL_CLOSURE_OF_HALFSPACE_GT; EXTENSION] THEN
-  REWRITE_TAC[IN_DIFF; IN_UNIV; IN_ELIM_THM] THEN REAL_ARITH_TAC);;
-
-lemma euclideanreal_interior_of_halfspace_gt:
-   "euclideanreal interior_of {x. x > a} = {x. x > a}"
-oops
-  SIMP_TAC[INTERIOR_OF_EQ; GSYM REAL_OPEN_IN; REAL_OPEN_HALFSPACE_GT]);;
-
-lemma euclideanreal_interior_of_halfspace_lt:
-   "euclideanreal interior_of {x. x < a} = {x. x < a}"
-oops
-  SIMP_TAC[INTERIOR_OF_EQ; GSYM REAL_OPEN_IN; REAL_OPEN_HALFSPACE_LT]);;
-
-lemma euclideanreal_frontier_of_halfspace_ge:
-   "euclideanreal frontier_of {x. x >= a} = {x. x = a}"
-oops
-  GEN_TAC THEN REWRITE_TAC[frontier_of] THEN
-  REWRITE_TAC[EUCLIDEANREAL_INTERIOR_OF_HALFSPACE_GE;
-              EUCLIDEANREAL_CLOSURE_OF_HALFSPACE_GE] THEN
-  REWRITE_TAC[IN_ELIM_THM; IN_DIFF; EXTENSION] THEN REAL_ARITH_TAC);;
-
-lemma euclideanreal_frontier_of_halfspace_le:
-   "euclideanreal frontier_of {x. x \<le> a} = {x. x = a}"
-oops
-  GEN_TAC THEN REWRITE_TAC[frontier_of] THEN
-  REWRITE_TAC[EUCLIDEANREAL_INTERIOR_OF_HALFSPACE_LE;
-              EUCLIDEANREAL_CLOSURE_OF_HALFSPACE_LE] THEN
-  REWRITE_TAC[IN_ELIM_THM; IN_DIFF; EXTENSION] THEN REAL_ARITH_TAC);;
-
-lemma euclideanreal_frontier_of_halfspace_gt:
-   "euclideanreal frontier_of {x. x > a} = {x. x = a}"
-oops
-  GEN_TAC THEN REWRITE_TAC[frontier_of] THEN
-  REWRITE_TAC[EUCLIDEANREAL_INTERIOR_OF_HALFSPACE_GT;
-              EUCLIDEANREAL_CLOSURE_OF_HALFSPACE_GT] THEN
-  REWRITE_TAC[IN_ELIM_THM; IN_DIFF; EXTENSION] THEN REAL_ARITH_TAC);;
-
-lemma euclideanreal_frontier_of_halfspace_lt:
-   "euclideanreal frontier_of {x. x < a} = {x. x = a}"
-oops
-  GEN_TAC THEN REWRITE_TAC[frontier_of] THEN
-  REWRITE_TAC[EUCLIDEANREAL_INTERIOR_OF_HALFSPACE_LT;
-              EUCLIDEANREAL_CLOSURE_OF_HALFSPACE_LT] THEN
-  REWRITE_TAC[IN_ELIM_THM; IN_DIFF; EXTENSION] THEN REAL_ARITH_TAC);;
-
-lemma euclideanreal_closure_of_rational:
- (`euclideanreal closure_of rational = UNIV"
-oops
-  REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
-  REWRITE_TAC[METRIC_CLOSURE_OF; IN_MBALL; REAL_EUCLIDEAN_METRIC] THEN
-  REWRITE_TAC[IN_ELIM_THM; IN_UNIV; EXTENSION] THEN
-  REWRITE_TAC[\<in>; RATIONAL_APPROXIMATION]);;
-
-lemma euclideanreal_closure_of_irrational:
- (`euclideanreal closure_of {z. ~rational z} = UNIV"
-oops
-  REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
-  REWRITE_TAC[METRIC_CLOSURE_OF; IN_MBALL; REAL_EUCLIDEAN_METRIC] THEN
-  REWRITE_TAC[IN_ELIM_THM; IN_UNIV; EXTENSION] THEN
-  REWRITE_TAC[\<in>; IRRATIONAL_APPROXIMATION]);;
+lemma regular_space_euclidean:
+ "regular_space (euclidean :: 'a::metric_space topology)"
+  by (simp add: metrizable_imp_regular_space metrizable_space_euclidean)
 
 lemma not_locally_compact_space_rational_gen:
    "~(euclideanreal interior_of s = {})
