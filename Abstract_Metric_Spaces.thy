@@ -844,11 +844,12 @@ lemma gdelta_in_gdelta_subtopology:
    "gdelta_in X S \<Longrightarrow> (gdelta_in (subtopology X S) T \<longleftrightarrow> gdelta_in X T \<and> T \<subseteq> S)"
   by (metis gdelta_in_Int gdelta_in_subset gdelta_in_subtopology inf.orderE topspace_subtopology_subset)
 
+
 subsection\<open> Disjoint sum of arbitarily many spaces\<close>
 
 definition sum_topology :: "('a \<Rightarrow> 'b topology) \<Rightarrow> 'a set \<Rightarrow> ('a \<times> 'b) topology" where
   "sum_topology X I \<equiv>
-    topology (\<lambda>U. U \<subseteq> Sigma I (topspace o X) \<and> (\<forall>i \<in> I. openin (X i) {x. (i,x) \<in> U}))"
+    topology (\<lambda>U. U \<subseteq> Sigma I (topspace \<circ> X) \<and> (\<forall>i \<in> I. openin (X i) {x. (i,x) \<in> U}))"
 
 lemma is_sum_topology: "istopology (\<lambda>U. U \<subseteq> Sigma I (topspace \<circ> X) \<and> (\<forall>i\<in>I. openin (X i) {x. (i, x) \<in> U}))"
 proof -
@@ -862,7 +863,7 @@ qed
 
 lemma openin_sum_topology:
    "openin (sum_topology X I) U \<longleftrightarrow>
-        U \<subseteq> Sigma I (topspace o X) \<and> (\<forall>i \<in> I. openin (X i) {x. (i,x) \<in> U})"
+        U \<subseteq> Sigma I (topspace \<circ> X) \<and> (\<forall>i \<in> I. openin (X i) {x. (i,x) \<in> U})"
   by (auto simp: sum_topology_def is_sum_topology)
 
 lemma openin_disjoint_union:
@@ -870,7 +871,7 @@ lemma openin_disjoint_union:
   using openin_subset by (force simp add: openin_sum_topology)
 
 lemma topspace_sum_topology [simp]:
-   "topspace(sum_topology X I) = Sigma I (topspace o X)"
+   "topspace(sum_topology X I) = Sigma I (topspace \<circ> X)"
   by (metis comp_apply openin_disjoint_union openin_subset openin_sum_topology openin_topspace subset_antisym)
 
 lemma openin_sum_topology_alt:
@@ -887,7 +888,7 @@ lemma exists_openin_sum_topology:
   by (auto simp add: openin_sum_topology_alt)
 
 lemma closedin_sum_topology:
-   "closedin (sum_topology X I) U \<longleftrightarrow> U \<subseteq> Sigma I (topspace o X) \<and> (\<forall>i \<in> I. closedin (X i) {x. (i,x) \<in> U})"
+   "closedin (sum_topology X I) U \<longleftrightarrow> U \<subseteq> Sigma I (topspace \<circ> X) \<and> (\<forall>i \<in> I. closedin (X i) {x. (i,x) \<in> U})"
      (is "?lhs = ?rhs")
 proof
   assume L: ?lhs
@@ -979,6 +980,10 @@ next
     by (auto simp: openin_subtopology openin_sum_topology_alt Teq)
 qed
 
+lemma embedding_map_component_injection:
+   "i \<in> I \<Longrightarrow> embedding_map (X i) (sum_topology X I) (\<lambda>x. (i,x))"
+  by (metis injective_open_imp_embedding_map continuous_map_component_injection
+            open_map_component_injection inj_onI prod.inject)
 
 
 subsection\<open>Metric spaces\<close>
@@ -4440,31 +4445,25 @@ next
 qed
 
 lemma locally_compact_space_sum_topology:
-   "locally_compact_space(sum_topology X I) \<longleftrightarrow>
-        (\<forall>i \<in> I. locally_compact_space(X i))"
-oops
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [MATCH_MP_TAC TOPOLOGICAL_PROPERTY_OF_SUM_COMPONENT THEN
-    REWRITE_TAC[HOMEOMORPHIC_LOCALLY_COMPACT_SPACE] THEN
-    SIMP_TAC[LOCALLY_COMPACT_SPACE_CLOSED_SUBSET];
-    REWRITE_TAC[locally_compact_space; FORALL_PAIR_THM] THEN
-    MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `i::K` THEN
-    REWRITE_TAC[TOPSPACE_SUM_TOPOLOGY; Sigma; IN_ELIM_PAIR_THM] THEN
-    ASM_CASES_TAC `(i::K) \<in> k` THEN ASM_REWRITE_TAC[o_THM] THEN
-    MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `x::A` THEN
-    ASM_CASES_TAC `(x::A) \<in> topspace(X(i::K))` THEN
-    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`u::A=>bool`; `l::A=>bool`] THEN STRIP_TAC THEN
-    MAP_EVERY EXISTS_TAC
-     [`image (\<lambda>x::A. (i::K),x) u`; `image (\<lambda>x::A. (i::K),x) l`] THEN
-    ASM_SIMP_TAC[IMAGE_SUBSET] THEN REPEAT CONJ_TAC THENL
-     [MATCH_MP_TAC(REWRITE_RULE[open_map; RIGHT_IMP_FORALL_THM; IMP_IMP]
-        OPEN_MAP_COMPONENT_INJECTION) THEN
-      ASM_REWRITE_TAC[];
-      MATCH_MP_TAC IMAGE_COMPACT_IN THEN
-      EXISTS_TAC `(X::K=>A topology) i` THEN
-      ASM_SIMP_TAC[CONTINUOUS_MAP_COMPONENT_INJECTION];
-      ASM SET_TAC[]]]);;
+   "locally_compact_space (sum_topology X I) \<longleftrightarrow> (\<forall>i \<in> I. locally_compact_space (X i))" (is "?lhs=?rhs")
+proof
+  assume ?lhs then show ?rhs
+    by (metis closed_map_component_injection embedding_map_imp_homeomorphic_space embedding_map_component_injection
+        embedding_imp_closed_map_eq homeomorphic_locally_compact_space locally_compact_space_closed_subset)
+next
+  assume R: ?rhs
+  show ?lhs
+    unfolding locally_compact_space_def
+  proof clarsimp
+    fix i y
+    assume "i \<in> I" and y: "y \<in> topspace (X i)"
+    then obtain U K where UK: "openin (X i) U" "compactin (X i) K" "y \<in> U" "U \<subseteq> K"
+      using R by (fastforce simp add: locally_compact_space_def)
+    then show "\<exists>U. openin (sum_topology X I) U \<and> (\<exists>K. compactin (sum_topology X I) K \<and> (i, y) \<in> U \<and> U \<subseteq> K)"
+      by (metis \<open>i \<in> I\<close> continuous_map_component_injection image_compactin image_mono 
+          imageI open_map_component_injection open_map_def)
+  qed
+qed
 
 lemma quotient_map_prod_right:
    "\<And>(X::A topology) top1 top2 (f::B=>C).
@@ -4682,191 +4681,6 @@ oops
 
 
 
-
-subsection\<open>The most basic facts about usual topology and metric on R\<close>
-
-
-let real_open = new_definition
-  `real_open s \<longleftrightarrow>
-      \<forall>x. x \<in> s \<Longrightarrow> \<exists>e. 0 < e \<and> !x'. abs(x' - x) < e \<Longrightarrow> x' \<in> s`;;
-
-let real_closed = new_definition
- `real_closed s \<longleftrightarrow> real_open(- s)`;;
-
-let euclideanreal = new_definition
- `euclideanreal = topology real_open`;;
-
-lemma real_open_empty:
- (`real_open {}"
-oops
-  REWRITE_TAC[real_open; NOT_IN_EMPTY]);;
-
-lemma real_open_univ:
- (`real_openUNIV"
-oops
-  REWRITE_TAC[real_open; IN_UNIV] THEN MESON_TAC[REAL_LT_01]);;
-
-lemma real_open_inter:
-   "real_open s \<and> real_open t \<Longrightarrow> real_open (s \<inter> t)"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[real_open; AND_FORALL_THM; IN_INTER] THEN
-  MATCH_MP_TAC MONO_FORALL THEN GEN_TAC THEN
-  DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_THEN(CONJUNCTS_THEN2
-   (X_CHOOSE_TAC `d1::real`) (X_CHOOSE_TAC `d2::real`)) THEN
-  MP_TAC(SPECL [`d1::real`; `d2::real`] REAL_DOWN2) THEN
-  ASM_MESON_TAC[REAL_LT_TRANS]);;
-
-lemma real_open_unions:
- (`(\<forall>s. s \<in> f \<Longrightarrow> real_open s) \<Longrightarrow> real_open(\<Union> f)"
-oops
-  REWRITE_TAC[real_open; IN_UNIONS] THEN MESON_TAC[]);;
-
-lemma real_openin:
-   "real_open s \<longleftrightarrow> openin euclideanreal s"
-oops
-  GEN_TAC THEN REWRITE_TAC[euclideanreal] THEN CONV_TAC SYM_CONV THEN
-  AP_THM_TAC THEN REWRITE_TAC[GSYM(CONJUNCT2 topology_tybij)] THEN
-  REWRITE_TAC[REWRITE_RULE[\<in>] istopology] THEN
-  REWRITE_TAC[REAL_OPEN_EMPTY; REAL_OPEN_INTER; \<subseteq>] THEN
-  MESON_TAC[\<in>; REAL_OPEN_UNIONS]);;
-
-lemma topspace_euclideanreal:
- (`topspace euclideanreal = UNIV"
-oops
-  REWRITE_TAC[topspace; EXTENSION; IN_UNIV; IN_UNIONS; IN_ELIM_THM] THEN
-  MESON_TAC[REAL_OPEN_UNIV; IN_UNIV; REAL_OPEN_IN]);;
-
-lemma topspace_euclideanreal_subtopology:
-   "topspace (subtopology euclideanreal s) = s"
-oops
-  REWRITE_TAC[TOPSPACE_EUCLIDEANREAL; TOPSPACE_SUBTOPOLOGY; INTER_UNIV]);;
-
-lemma real_closed_in:
-   "real_closed s \<longleftrightarrow> closedin euclideanreal s"
-oops
-  REWRITE_TAC[real_closed; closedin; TOPSPACE_EUCLIDEANREAL;
-              REAL_OPEN_IN; SUBSET_UNIV]);;
-
-lemma real_open_union:
-   "real_open s \<and> real_open t \<Longrightarrow> real_open(s \<union> t)"
-oops
-  REWRITE_TAC[REAL_OPEN_IN; OPEN_IN_UNION]);;
-
-lemma real_open_subreal_open:
-   "real_open s \<longleftrightarrow> \<forall>x. x \<in> s \<Longrightarrow> \<exists>t. real_open t \<and> x \<in> t \<and> t \<subseteq> s"
-oops
-  REWRITE_TAC[REAL_OPEN_IN; GSYM OPEN_IN_SUBOPEN]);;
-
-lemma real_closed_empty:
- (`real_closed {}"
-oops
-  REWRITE_TAC[REAL_CLOSED_IN; CLOSED_IN_EMPTY]);;
-
-lemma real_closed_univ:
- (`real_closedUNIV"
-oops
-  REWRITE_TAC[REAL_CLOSED_IN; GSYM TOPSPACE_EUCLIDEANREAL;
-              CLOSED_IN_TOPSPACE]);;
-
-lemma real_closed_union:
-   "real_closed s \<and> real_closed t \<Longrightarrow> real_closed(s \<union> t)"
-oops
-  REWRITE_TAC[REAL_CLOSED_IN; CLOSED_IN_UNION]);;
-
-lemma real_closed_inter:
-   "real_closed s \<and> real_closed t \<Longrightarrow> real_closed(s \<inter> t)"
-oops
-  REWRITE_TAC[REAL_CLOSED_IN; CLOSED_IN_INTER]);;
-
-lemma real_closed_inters:
-   "(\<forall>s. s \<in> f \<Longrightarrow> real_closed s) \<Longrightarrow> real_closed(\<Inter> f)"
-oops
-  REWRITE_TAC[REAL_CLOSED_IN] THEN REPEAT STRIP_TAC THEN
-  ASM_CASES_TAC `f:(real=>bool)->bool = {}` THEN
-  ASM_SIMP_TAC[CLOSED_IN_INTERS; INTERS_0] THEN
-  REWRITE_TAC[GSYM TOPSPACE_EUCLIDEANREAL; CLOSED_IN_TOPSPACE]);;
-
-lemma real_open_real_closed:
-   "real_open s \<longleftrightarrow> real_closed(- s)"
-oops
-  SIMP_TAC[REAL_OPEN_IN; REAL_CLOSED_IN; TOPSPACE_EUCLIDEANREAL; SUBSET_UNIV;
-           OPEN_IN_CLOSED_IN_EQ]);;
-
-lemma real_open_diff:
-   "real_open s \<and> real_closed t \<Longrightarrow> real_open(s - t)"
-oops
-  REWRITE_TAC[REAL_OPEN_IN; REAL_CLOSED_IN; OPEN_IN_DIFF]);;
-
-lemma real_closed_diff:
-   "real_closed s \<and> real_open t \<Longrightarrow> real_closed(s - t)"
-oops
-  REWRITE_TAC[REAL_OPEN_IN; REAL_CLOSED_IN; CLOSED_IN_DIFF]);;
-
-lemma real_open_inters:
-   "finite s \<and> (\<forall>t. t \<in> s \<Longrightarrow> real_open t) \<Longrightarrow> real_open(\<Inter> s)"
-oops
-  REWRITE_TAC[IMP_CONJ] THEN MATCH_MP_TAC FINITE_INDUCT_STRONG THEN
-  REWRITE_TAC[INTERS_INSERT; INTERS_0; REAL_OPEN_UNIV; IN_INSERT] THEN
-  MESON_TAC[REAL_OPEN_INTER]);;
-
-lemma real_closed_unions:
-   "finite s \<and> (\<forall>t. t \<in> s \<Longrightarrow> real_closed t) \<Longrightarrow> real_closed(\<Union> s)"
-oops
-  REWRITE_TAC[IMP_CONJ] THEN MATCH_MP_TAC FINITE_INDUCT_STRONG THEN
-  REWRITE_TAC[UNIONS_INSERT; UNIONS_0; REAL_CLOSED_EMPTY; IN_INSERT] THEN
-  MESON_TAC[REAL_CLOSED_UNION]);;
-
-lemma real_open_halfspace_gt:
-   "real_open {x. x > a}"
-oops
-  GEN_TAC THEN REWRITE_TAC[real_open; IN_ELIM_THM] THEN
-  X_GEN_TAC `b::real` THEN DISCH_TAC THEN
-  EXISTS_TAC `abs(a - b):real` THEN ASM_REAL_ARITH_TAC);;
-
-lemma real_open_halfspace_lt:
-   "real_open {x. x < a}"
-oops
-  GEN_TAC THEN REWRITE_TAC[real_open; IN_ELIM_THM] THEN
-  X_GEN_TAC `b::real` THEN DISCH_TAC THEN
-  EXISTS_TAC `abs(a - b):real` THEN ASM_REAL_ARITH_TAC);;
-
-lemma real_open_real_interval:
-   "real_open(real_interval(a,b))"
-oops
-  REWRITE_TAC[real_interval; SET_RULE
-   `{x. P x \<and> Q x} = {x. P x} \<inter> {x. Q x}`] THEN
-  SIMP_TAC[REAL_OPEN_INTER; REAL_OPEN_HALFSPACE_LT;
-           REWRITE_RULE[real_gt] REAL_OPEN_HALFSPACE_GT]);;
-
-lemma real_closed_halfspace_le:
-   "real_closed {x. x \<le> a}"
-oops
-  GEN_TAC THEN
-  REWRITE_TAC[real_closed; real_open; IN_DIFF; IN_UNIV; IN_ELIM_THM] THEN
-  X_GEN_TAC `b::real` THEN DISCH_TAC THEN
-  EXISTS_TAC `abs(a - b):real` THEN ASM_REAL_ARITH_TAC);;
-
-lemma real_closed_halfspace_ge:
-   "real_closed {x. x >= a}"
-oops
-  GEN_TAC THEN
-  REWRITE_TAC[real_closed; real_open; IN_DIFF; IN_UNIV; IN_ELIM_THM] THEN
-  X_GEN_TAC `b::real` THEN DISCH_TAC THEN
-  EXISTS_TAC `abs(a - b):real` THEN ASM_REAL_ARITH_TAC);;
-
-lemma real_closed_real_interval:
-   "real_closed(real_interval[a,b])"
-oops
-  REWRITE_TAC[real_interval; SET_RULE
-   `{x. P x \<and> Q x} = {x. P x} \<inter> {x. Q x}`] THEN
-  SIMP_TAC[REAL_CLOSED_INTER; REAL_CLOSED_HALFSPACE_LE;
-           REWRITE_RULE[real_ge] REAL_CLOSED_HALFSPACE_GE]);;
-
-lemma real_closed_sing:
-   "real_closed {a}"
-oops
-  MESON_TAC[REAL_INTERVAL_SING; REAL_CLOSED_REAL_INTERVAL]);;
 
 let real_euclidean_metric = new_definition
   `real_euclidean_metric = metric (UNIV,\<lambda>(x,y). abs(y-x))`;;
