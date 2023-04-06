@@ -994,7 +994,6 @@ locale metric_space =
   assumes zero: "\<And>x y. \<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> d x y = 0 \<longleftrightarrow> x=y"
   assumes triangle: "\<And>x y z. \<lbrakk>x \<in> M; y \<in> M; z \<in> M\<rbrakk> \<Longrightarrow> d x z \<le> d x y + d y z"
 
-(*DOING THIS CAUSES SOME PROOFS TO FAIL*)
 text \<open>Link with the type class version\<close>
 interpretation Met: metric_space UNIV dist
   by (simp add: dist_commute dist_triangle metric_space.intro)
@@ -1145,6 +1144,12 @@ proof -
   then show ?thesis
     by (auto simp: openin_mtopology)
 qed
+
+lemma mball_eq_ball [simp]: "Met.mball = ball"
+  by force
+
+lemma mopen_eq_open [simp]: "Met.mopen = open"
+  by (force simp: open_contains_ball Met.mopen_def)
 
 (*
 lemma metric_injective_image:
@@ -3388,7 +3393,8 @@ lemma kc_space_prod_topology_right:
 
 
 subsection \<open>Regular spaces\<close>
-(* Regular spaces. These are *not* a priori assumed to be Hausdorff/T_1.     *)
+
+text \<open>Regular spaces. These are *not* a priori assumed to be Hausdorff/T_1\<close>
 
 
 definition regular_space 
@@ -3874,7 +3880,7 @@ lemma closed_map_snd:
   assumes "compact_space X"
   shows "closed_map (prod_topology X Y) Y snd"
 proof -
-  have *: "snd = fst o prod.swap"
+  have "snd = fst o prod.swap"
     by force
   moreover have "closed_map (prod_topology X Y) Y (fst o prod.swap)"
   proof (rule closed_map_compose)
@@ -4614,127 +4620,45 @@ proof -
 qed
 
 lemma quotient_map_prod_left:
-   "\<And>X Y (Z::C topology) f.
-     locally_compact_space Z \<and> (Hausdorff_space Z \<or> regular_space Z) \<and>
-     quotient_map X Y f
-     \<Longrightarrow> quotient_map (prod_topology X Z,prod_topology Y Z)
-                      (\<lambda>(x,y). f x,y)"
-oops
-  REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  SUBGOAL_THEN
-   `(\<lambda>(x,y). f x,(y::C)) =
-    (\<lambda>(x,y). (y,x)) \<circ> (\<lambda>(x,y). x,f y) \<circ> (\<lambda>(x,y). (y,x))`
-  SUBST1_TAC THENL
-   [REWRITE_TAC[FUN_EQ_THM; FORALL_PAIR_THM; o_THM]; ALL_TAC] THEN
-  MATCH_MP_TAC QUOTIENT_MAP_COMPOSE THEN
-  EXISTS_TAC `(prod_topology Z Y):(C#B)topology` THEN
-  SIMP_TAC[HOMEOMORPHIC_MAP_SWAP; HOMEOMORPHIC_IMP_QUOTIENT_MAP] THEN
-  MATCH_MP_TAC QUOTIENT_MAP_COMPOSE THEN
-  EXISTS_TAC `(prod_topology Z X):(C#A)topology` THEN
-  SIMP_TAC[HOMEOMORPHIC_MAP_SWAP; HOMEOMORPHIC_IMP_QUOTIENT_MAP] THEN
-  ASM_SIMP_TAC[QUOTIENT_MAP_PROD_RIGHT]);;
-
-lemma quotient_map_prod:
-   "\<And>top1 top2 top1' top2' f (g::C=>D).
-        (locally_compact_space top1 \<and>
-         (Hausdorff_space top1 \<or> regular_space top1) \<and>
-         locally_compact_space top2' \<and>
-         (Hausdorff_space top2' \<or> regular_space top2') \<or>
-         locally_compact_space top1' \<and>
-         (Hausdorff_space top1' \<or> regular_space top1') \<and>
-         locally_compact_space top2 \<and>
-         (Hausdorff_space top2 \<or> regular_space top2)) \<and>
-        quotient_map top1 top1' f \<and> quotient_map top2 top2' g
-        \<Longrightarrow> quotient_map (prod_topology top1 top2,prod_topology top1' top2')
-                         (\<lambda>(x,y). f x,g y)"
-oops
-  REPEAT GEN_TAC THEN
-  DISCH_THEN(CONJUNCTS_THEN2 DISJ_CASES_TAC STRIP_ASSUME_TAC) THENL
-   [SUBGOAL_THEN
-     `(\<lambda>(x,y). f x,(g::C=>D) y) =
-      (\<lambda>(x,y). f x,y) \<circ> (\<lambda>(x,y). x,g y)`
-    SUBST1_TAC THENL
-     [REWRITE_TAC[FUN_EQ_THM; FORALL_PAIR_THM; o_THM];
-      MATCH_MP_TAC QUOTIENT_MAP_COMPOSE THEN
-      EXISTS_TAC `prod_topology top1 top2':(A#D)topology` THEN
-      ASM_SIMP_TAC[QUOTIENT_MAP_PROD_RIGHT; QUOTIENT_MAP_PROD_LEFT]];
-    SUBGOAL_THEN
-     `(\<lambda>(x,y). f x,(g::C=>D) y) =
-      (\<lambda>(x,y). x,g y) \<circ> (\<lambda>(x,y). f x,y)`
-    SUBST1_TAC THENL
-     [REWRITE_TAC[FUN_EQ_THM; FORALL_PAIR_THM; o_THM];
-      MATCH_MP_TAC QUOTIENT_MAP_COMPOSE THEN
-      EXISTS_TAC `prod_topology top1' top2:(B#C)topology` THEN
-      ASM_SIMP_TAC[QUOTIENT_MAP_PROD_RIGHT; QUOTIENT_MAP_PROD_LEFT]]]);;
+  assumes loc: "locally_compact_space Z" 
+    and reg: "Hausdorff_space Z \<or> regular_space Z" 
+    and f: "quotient_map X Y f"
+  shows "quotient_map (prod_topology X Z) (prod_topology Y Z) (\<lambda>(x,y). (f x,y))"
+proof -
+  have "(\<lambda>(x,y). (f x,y)) = prod.swap \<circ> (\<lambda>(x,y). (x,f y)) \<circ> prod.swap"
+    by force
+  then
+  show ?thesis
+    apply (rule ssubst)
+  proof (intro quotient_map_compose)
+    show "quotient_map (prod_topology X Z) (prod_topology Z X) prod.swap"
+      "quotient_map (prod_topology Z Y) (prod_topology Y Z) prod.swap"
+      using homeomorphic_map_def homeomorphic_map_swap quotient_map_eq by fastforce+
+    show "quotient_map (prod_topology Z X) (prod_topology Z Y) (\<lambda>(x, y). (x, f y))"
+      by (simp add: f loc quotient_map_prod_right reg)
+  qed
+qed
 
 lemma locally_compact_space_perfect_map_preimage:
-   " locally_compact_space X' \<and>
-        perfect_map X X' f
-        \<Longrightarrow> locally_compact_space X"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[locally_compact_space; perfect_map] THEN STRIP_TAC THEN
-  X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `f x`) THEN
-  ANTS_TAC THENL [ASM SET_TAC[]; REWRITE_TAC[LEFT_IMP_EXISTS_THM]] THEN
-  MAP_EVERY X_GEN_TAC [`u::B=>bool`; `k::B=>bool`] THEN STRIP_TAC THEN
-  MAP_EVERY EXISTS_TAC
-   [`{x \<in> topspace X. f x \<in> u}`;
-    `{x \<in> topspace X. f x \<in> k}`] THEN
-  ASM_REWRITE_TAC[IN_ELIM_THM] THEN REPEAT CONJ_TAC THENL
-   [MATCH_MP_TAC OPEN_IN_CONTINUOUS_MAP_PREIMAGE THEN ASM_MESON_TAC[];
-    MATCH_MP_TAC COMPACT_IN_PROPER_MAP_PREIMAGE THEN ASM SET_TAC[];
-    ASM SET_TAC[]]);;
-
-lemma locally_compact_space_perfect_map_image:
-   "\<And>X X' f.
-     (Hausdorff_space X \<or> regular_space X) \<and>
-     locally_compact_space X \<and>
-     perfect_map X X' f
-     \<Longrightarrow> locally_compact_space X'"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[perfect_map] THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  REWRITE_TAC[locally_compact_space] THEN X_GEN_TAC `y::B` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ>
-    MATCH_MP LOCALLY_COMPACT_SPACE_COMPACT_CLOSED_COMPACT) THEN
-  ASM_REWRITE_TAC[] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `{x \<in> topspace X. f x = y}`) THEN
-  FIRST_X_ASSUM(STRIP_ASSUME_TAC \<circ> GEN_REWRITE_RULE id [proper_map]) THEN
-  ASM_SIMP_TAC[LEFT_IMP_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`u::A=>bool`; `k::A=>bool`] THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ>
-    SPECL [`u::A=>bool`; `y::B`] \<circ>
-    CONJUNCT2 \<circ> GEN_REWRITE_RULE id [CLOSED_MAP_FIBRE_NEIGHBOURHOOD]) THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC MONO_EXISTS THEN
-  X_GEN_TAC `v::B=>bool` THEN STRIP_TAC THEN
-  EXISTS_TAC `f ` (X closure_of u)` THEN ASM_REWRITE_TAC[] THEN
-  CONJ_TAC THENL
-   [MATCH_MP_TAC IMAGE_COMPACT_IN THEN
-    EXISTS_TAC `X::A topology` THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC COMPACT_IN_SUBTOPOLOGY_IMP_COMPACT THEN
-    EXISTS_TAC `k::A=>bool` THEN MATCH_MP_TAC CLOSED_IN_COMPACT_SPACE THEN
-    ASM_SIMP_TAC[CLOSED_IN_CLOSED_SUBTOPOLOGY; CLOSED_IN_CLOSURE_OF;
-                 CLOSURE_OF_MINIMAL; COMPACT_SPACE_SUBTOPOLOGY];
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `u::A=>bool` \<circ> CONJUNCT2 \<circ>
-        GEN_REWRITE_RULE id [CLOSED_MAP_CLOSURE_OF_IMAGE]) THEN
-    ASM_SIMP_TAC[OPEN_IN_SUBSET] THEN
-    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] SUBSET_TRANS) THEN
-    TRANS_TAC SUBSET_TRANS `f ` u` THEN CONJ_TAC THENL
-      [ALL_TAC; MATCH_MP_TAC CLOSURE_OF_SUBSET] THEN
-    REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET)) THEN
-    REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET)) THEN
-    ASM SET_TAC[]]);;
-
-lemma locally_compact_space_perfect_map_image_eq:
-   "\<And>X X' f.
-     (Hausdorff_space X \<or> regular_space X) \<and>
-     perfect_map X X' f
-     \<Longrightarrow> (locally_compact_space X \<longleftrightarrow>
-          locally_compact_space X')"
-oops
-  MESON_TAC[LOCALLY_COMPACT_SPACE_PERFECT_MAP_PREIMAGE;
-            LOCALLY_COMPACT_SPACE_PERFECT_MAP_IMAGE]);;
+  assumes "locally_compact_space X'" and f: "perfect_map X X' f"
+  shows "locally_compact_space X"
+  unfolding locally_compact_space_def
+proof (intro strip)
+  fix x
+  assume x: "x \<in> topspace X"
+  then obtain U K where "openin X' U" "compactin X' K" "f x \<in> U" "U \<subseteq> K"
+    using assms unfolding locally_compact_space_def perfect_map_def
+    by (metis (no_types, lifting) continuous_map_closedin)
+  show "\<exists>U K. openin X U \<and> compactin X K \<and> x \<in> U \<and> U \<subseteq> K"
+  proof (intro exI conjI)
+    have "continuous_map X X' f"
+      using f perfect_map_def by blast
+    then show "openin X {x \<in> topspace X. f x \<in> U}"
+      by (simp add: \<open>openin X' U\<close> continuous_map)
+    show "compactin X {x \<in> topspace X. f x \<in> K}"
+      using \<open>compactin X' K\<close> f perfect_imp_proper_map proper_map_alt by blast
+  qed (use x \<open>f x \<in> U\<close> \<open>U \<subseteq> K\<close> in auto)
+qed
 
 
 
