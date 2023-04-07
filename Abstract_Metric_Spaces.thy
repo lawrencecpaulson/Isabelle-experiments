@@ -39,6 +39,10 @@ lemma retract_of_space_subtopology:
   by (metis continuous_map_from_subtopology inf.absorb2 subtopology_subtopology)
 
 
+lemma limitinD: "\<lbrakk>limitin X f l F; openin X U; l \<in> U\<rbrakk> \<Longrightarrow> eventually (\<lambda>x. f x \<in> U) F"
+  by (simp add: limitin_def)
+
+
 thm retract_of_space_disjoint_union
 
 lemma hereditary_imp_retractive_property:
@@ -4778,51 +4782,39 @@ lemma limit_Hausdorff_unique:
   shows "l1 = l2"
 proof (rule ccontr)
   assume "l1 \<noteq> l2"
-  have "\<not> disjnt U V" if "openin X U" "openin X V" "l1 \<in> U" "l2 \<in> V" for U V
-  proof -
-    have "eventually (\<lambda>x. f x \<in> U) F" "eventually (\<lambda>x. f x \<in> V) F"
-      using assms limitin_def that by fastforce+
-    then have "\<exists>x. f x \<in> U \<and> f x \<in> V"
-      using assms eventually_elim2 filter_eq_iff by fastforce
-    then show ?thesis
-      by (metis disjnt_iff)
-  qed
-  with assms show False
-    by (metis Hausdorff_space_def \<open>l1 \<noteq> l2\<close> limitin_topspace)
+  with assms obtain U V where "openin X U" "openin X V" "l1 \<in> U" "l2 \<in> V" "disjnt U V"
+    by (metis Hausdorff_space_def limitin_topspace)
+  then have "eventually (\<lambda>x. f x \<in> U) F" "eventually (\<lambda>x. f x \<in> V) F"
+    using assms limitin_def by fastforce+
+  then have "\<exists>x. f x \<in> U \<and> f x \<in> V"
+    using assms eventually_elim2 filter_eq_iff by fastforce
+  with assms \<open>disjnt U V\<close> show False
+    by (meson disjnt_iff)
 qed
 
 lemma limit_kc_unique:
-   " kc_space X" "limitin X f l1 sequentially" "limitin X f l2 sequentially
-      \<Longrightarrow> l1 = l2"
-oops
-  REPEAT STRIP_TAC THEN
-  GEN_REWRITE_TAC id [TAUT `p \<longleftrightarrow> \<not> p \<Longrightarrow> False`] THEN DISCH_TAC THEN
-  UNDISCH_TAC `limitin X f (l2::A) sequentially` THEN
-  REWRITE_TAC[limitin] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC
-   `topspace X - (l1 insert (f ` UNIV DELETE (l2::A)))`) THEN
-  ASM_REWRITE_TAC[NOT_IMP; IN_DELETE; IN_DIFF; IN_INSERT] THEN CONJ_TAC THENL
-   [ONCE_REWRITE_TAC[SET_RULE
-     `u - (insert a s) = u - (a insert (u \<inter> s))`] THEN
-    MATCH_MP_TAC OPEN_IN_DIFF THEN REWRITE_TAC[OPEN_IN_TOPSPACE] THEN
-    FIRST_X_ASSUM(MATCH_MP_TAC \<circ> GEN_REWRITE_RULE id [kc_space]) THEN
-    MATCH_MP_TAC COMPACT_IN_SEQUENCE_WITH_LIMIT THEN
-    EXISTS_TAC `f::num=>A` THEN ASM_REWRITE_TAC[] THEN SET_TAC[];
-    FIRST_ASSUM(CONJUNCTS_THEN2 ASSUME_TAC
-      (MP_TAC \<circ> SPEC `topspace X::A=>bool`) \<circ>
-      GEN_REWRITE_RULE id [limitin]) THEN
-    ASM_REWRITE_TAC[OPEN_IN_TOPSPACE; TAUT `p \<Longrightarrow> \<not> q \<longleftrightarrow> \<not> (p \<and> q)`] THEN
-    REWRITE_TAC[GSYM EVENTUALLY_AND] THEN REWRITE_TAC[SET_RULE
-     `f x \<in> u \<and> f x \<in> u \<and>
-      \<not> (f x = l1 \<or> f x \<in> f ` UNIV \<and> \<not> (f x = l2)) \<longleftrightarrow>
-      f x \<in> u \<and> \<not> (f x = l1) \<and> f x = l2`] THEN
-    REWRITE_TAC[EVENTUALLY_AND] THEN
-    DISCH_THEN(MP_TAC \<circ> ISPECL [`X::A topology`; `l1::A`] \<circ>
-      MATCH_MP (REWRITE_RULE[IMP_CONJ]
-        LIMIT_TRANSFORM_EVENTUALLY) \<circ> last \<circ> CONJUNCTS) THEN
-    ASM_SIMP_TAC[LIMIT_CONST_EQ; TRIVIAL_LIMIT_SEQUENTIALLY;
-                 KC_IMP_T1_SPACE]]);;
+  assumes "kc_space X" and lim1: "limitin X f l1 sequentially" and lim2: "limitin X f l2 sequentially"
+  shows "l1 = l2"
+proof (rule ccontr)
+  assume "l1 \<noteq> l2"
+  define A where "A \<equiv> insert l1 (range f - {l2})"
+  have "l1 \<in> topspace X"
+    using lim1 limitin_def by fastforce
+  moreover have "compactin X (insert l1 (topspace X \<inter> (range f - {l2})))"
+    by (meson Diff_subset compactin_sequence_with_limit inf_le1 inf_le2 lim1 subset_trans)
+  ultimately have "compactin X (topspace X \<inter> A)"
+    by (simp add: A_def)
+  then have OXA: "openin X (topspace X - A)"
+    by (metis Diff_Diff_Int Diff_subset \<open>kc_space X\<close> kc_space_def openin_closedin_eq)
+  have "l2 \<in> topspace X - A"
+    using \<open>l1 \<noteq> l2\<close> A_def lim2 limitin_topspace by fastforce
+  then have "\<forall>\<^sub>F x in sequentially. f x = l2"
+    using limitinD [OF lim2 OXA] by (auto simp: A_def eventually_conj_iff)
+  then show False
+    using limitin_transform_eventually [OF _ lim1] 
+          limitin_const_iff [OF kc_imp_t1_space trivial_limit_sequentially]
+    using \<open>l1 \<noteq> l2\<close> \<open>kc_space X\<close> by fastforce
+qed
 
 
 subsection\<open>Topological limitin in metric spaces\<close>
@@ -4839,11 +4831,12 @@ lemma (in metric_space) limit_metric_unique:
      \<Longrightarrow> l1 = l2"
   by (meson Hausdorff_space_mtopology limit_Hausdorff_unique)
 
-lemma limit_metric:
+lemma (in metric_space) limit_metric:
    "limitin mtopology f l F \<longleftrightarrow>
-     l \<in> M \<and>
-     (\<forall>e. 0 < e
-          \<Longrightarrow> eventually (\<lambda>x. f x \<in> M \<and> d m (f x, l) < e) F)"
+     l \<in> M \<and> (\<forall>e>0.  eventually (\<lambda>x. f x \<in> M \<and> d (f x) l < e) F)"
+  sorry
+  apply (rule )
+  defer
 oops
   REPEAT GEN_TAC THEN
   REWRITE_TAC[limitin; OPEN_IN_MTOPOLOGY; TOPSPACE_MTOPOLOGY] THEN EQ_TAC THENL
@@ -4871,19 +4864,13 @@ oops
    CLAIM_TAC "rmk" `f (x::A):B \<in> mball l r` THENL
    [ASM_SIMP_TAC[IN_MBALL; MDIST_SYM]; HYP SET_TAC "rmk sub" []]]);;
 
-lemma limit_metric_sequentially:
-   "\<And>m f::num=>A l.
-     limitin mtopology f l sequentially \<longleftrightarrow>
-     l \<in> M \<and>
-     (\<forall>e. 0 < e \<Longrightarrow> (\<exists>N. \<forall>n. N \<le> n
-                              \<Longrightarrow> f n \<in> M \<and> d m (f n,l) < e))"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[LIMIT_METRIC; EVENTUALLY_SEQUENTIALLY] THEN
-  EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[]);;
+lemma (in metric_space) limit_metric_sequentially:
+   "limitin mtopology f l sequentially \<longleftrightarrow>
+     l \<in> M \<and> (\<forall>e>0. \<exists>N. \<forall>n\<ge>N. f n \<in> M \<and> d (f n) l < e)"
+  by (auto simp: limit_metric eventually_sequentially)
 
-lemma limit_in_closed_in:
-   "\<And>F X s f::A=>B l.
-      \<not> trivial_limit F \<and> limitin X f l F \<and>
+lemma limitin_closed_in:
+   "\<not> trivial_limit F \<and> limitin X f l F \<and>
       closedin X s \<and> eventually (\<lambda>x. f x \<in> s) F
       \<Longrightarrow> l \<in> s"
 oops
@@ -4896,9 +4883,8 @@ oops
   REWRITE_TAC[GSYM EVENTUALLY_AND] THEN MATCH_MP_TAC NOT_EVENTUALLY THEN
   ASM_REWRITE_TAC[] THEN MESON_TAC[]);;
 
-lemma limit_submetric_iff:
-   "\<And>F m s f::A=>B l.
-     limitin (mtopology (submetric m s)) f l F \<longleftrightarrow>
+lemma (in metric_space) limit_submetric_iff:
+   "limitin (mtopology (submetric m s)) f l F \<longleftrightarrow>
      l \<in> s \<and> eventually (\<lambda>x. f x \<in> s) F \<and> limitin mtopology f l F"
 oops
   REPEAT GEN_TAC THEN
@@ -4906,9 +4892,8 @@ oops
   EQ_TAC THEN SIMP_TAC[] THENL [INTRO_TAC "l hp"; MESON_TAC[]] THEN
   HYP_TAC "hp" (C MATCH_MP REAL_LT_01) THEN ASM_REWRITE_TAC[]);;
 
-lemma metric_closed_in_iff_sequentially_closed:
-   "\<And>m s::A=>bool.
-     closedin mtopology s \<longleftrightarrow>
+lemma (in metric_space) metric_closed_in_iff_sequentially_closed:
+   "closedin mtopology s \<longleftrightarrow>
      s \<subseteq> M \<and>
      (\<forall>a l. (\<forall>n. a n \<in> s) \<and> limitin mtopology a l sequentially
             \<Longrightarrow> l \<in> s)"
@@ -4946,19 +4931,13 @@ oops
   REWRITE_TAC[REAL_OF_NUM_LT; REAL_OF_NUM_LE; REAL_OF_NUM_ADD] THEN
   ASM_ARITH_TAC);;
 
-lemma limit_atpointof_metric:
-   "\<And>m X f::A=>B x y.
-        limitin X f y (atin mtopology x) \<longleftrightarrow>
+lemma (in metric_space) limit_atpointof_metric:
+   "limitin X f y (atin mtopology x) \<longleftrightarrow>
         y \<in> topspace X \<and>
         (x \<in> M
-         \<Longrightarrow> \<forall>v. openin X v \<and> y \<in> v
-                 \<Longrightarrow> \<exists>d. 0 < d \<and>
-                         !x'. x' \<in> M \<and>
-                              0 < d x' x \<and> d x' x < d
-                              \<Longrightarrow> f x' \<in> v)"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[limitin; EVENTUALLY_ATPOINTOF_METRIC] THEN
-  MESON_TAC[]);;
+         \<longrightarrow> (\<forall>V. openin X V \<and> y \<in> V
+                 \<longrightarrow> (\<exists>\<delta>>0.  \<forall>x'. x' \<in> M \<and> 0 < d x' x \<and> d x' x < \<delta> \<longrightarrow> f x' \<in> V)))"
+  by (force simp add: limitin_def eventually_atin_metric)
 
 lemma limit_metric_dist_null:
    "\<And>F m (f::K=>A) l.
