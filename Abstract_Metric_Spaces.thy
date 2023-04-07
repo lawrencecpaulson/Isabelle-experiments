@@ -4686,11 +4686,22 @@ lemma regular_space_euclidean:
 
 subsection\<open>Limits at a point in a topological space\<close>
 
-(*THIS SHOULD BE IFF*)
 lemma nontrivial_limit_atin:
-   "atin X a \<noteq> bot \<Longrightarrow> a \<in> X derived_set_of topspace X"
-  by (smt (verit) Diff_cancel derived_set_of_topspace empty_iff eventually_atin insertI1 mem_Collect_eq trivial_limit_eq)
-
+   "atin X a \<noteq> bot \<longleftrightarrow> a \<in> X derived_set_of topspace X"
+proof 
+  show "atin X a \<noteq> bot \<Longrightarrow> a \<in> X derived_set_of topspace X"
+    by (smt (verit) Diff_cancel derived_set_of_topspace empty_iff eventually_atin insertI1 mem_Collect_eq trivial_limit_eq)
+next
+  assume a: "a \<in> X derived_set_of topspace X"
+  show "atin X a \<noteq> bot"
+  proof
+    assume "atin X a = bot"
+    then have "eventually (\<lambda>_. False) (atin X a)"
+      by simp
+    then show False
+      by (smt (verit, best) a eventually_atin in_derived_set_of insertE insert_Diff)
+  qed
+qed
 
 lemma (in metric_space) eventually_atin_metric:
    "eventually P (atin mtopology a) \<longleftrightarrow>
@@ -4734,43 +4745,39 @@ next
 qed
 
 lemma compactin_sequence_with_limit:
-   "        limitin X a l sequentially \<and>
-        s \<subseteq> image a UNIV \<and> s \<subseteq> topspace X
-        \<Longrightarrow> compactin X (insert l s)"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[LIMIT_SEQUENTIALLY] THEN STRIP_TAC THEN
-  ASM_REWRITE_TAC[compactin; INSERT_SUBSET] THEN
-  X_GEN_TAC `u:(A=>bool)->bool` THEN
-  REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-  GEN_REWRITE_TAC LAND_CONV [\<subseteq>] THEN REWRITE_TAC[IN_UNIONS] THEN
-  GEN_REWRITE_TAC (LAND_CONV \<circ> ONCE_DEPTH_CONV) [RIGHT_IMP_EXISTS_THM] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [IN_UNIONS]) THEN
-  REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `t::A=>bool` THEN STRIP_TAC THEN
-  X_GEN_TAC `v::A=>A->bool` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `t::A=>bool` \<circ>
-    GEN_REWRITE_RULE BINDER_CONV [RIGHT_IMP_EXISTS_THM]) THEN
-  ASM_SIMP_TAC[LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `N::num` THEN DISCH_TAC THEN EXISTS_TAC
-   `(t::A=>bool) insert image v (s \<inter> image (a::num=>A) {0..N})` THEN
-  ASM_REWRITE_TAC[INSERT_SUBSET; EXISTS_IN_INSERT; UNIONS_INSERT] THEN
-  SIMP_TAC[FINITE_IMAGE; FINITE_INTER; FINITE_INSERT; FINITE_NUMSEG] THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  TRANS_TAC SUBSET_TRANS `image a UNIV \<inter> (s::A=>bool)` THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; REWRITE_TAC[\<subseteq>]] THEN
-  REWRITE_TAC[IN_INTER; FORALL_IN_IMAGE; IMP_CONJ; IN_UNIV] THEN
-  X_GEN_TAC `n::num` THEN DISCH_TAC THEN
-  ASM_CASES_TAC `N::num \<le> n` THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP (ARITH_RULE `~(N \<le> n) \<Longrightarrow> n::num \<le> N`)) THEN
-  REWRITE_TAC[UNIONS_IMAGE; IN_INTER; IN_IMAGE; IN_NUMSEG; LE_0] THEN
-  ASM SET_TAC[]);;
+  assumes lim: "limitin X \<sigma> l sequentially" and "S \<subseteq> range \<sigma>" and SX: "S \<subseteq> topspace X"
+  shows "compactin X (insert l S)"
+unfolding compactin_def
+proof (intro conjI strip)
+  show "insert l S \<subseteq> topspace X"
+    by (meson SX insert_subset lim limitin_topspace)
+  fix \<U>
+  assume \<section>: "Ball \<U> (openin X) \<and> insert l S \<subseteq> \<Union> \<U>"
+  have "\<exists>V. finite V \<and> V \<subseteq> \<U> \<and> (\<exists>t \<in> V. l \<in> t) \<and> S \<subseteq> \<Union> V"
+    if *: "\<forall>x \<in> S. \<exists>T \<in> \<U>. x \<in> T" and "T \<in> \<U>" "l \<in> T" for T
+  proof -
+    obtain V where V: "\<And>x. x \<in> S \<Longrightarrow> V x \<in> \<U> \<and> x \<in> V x"
+      using * by metis
+    obtain N where N: "\<And>n. N \<le> n \<Longrightarrow> \<sigma> n \<in> T"
+      by (meson "\<section>" \<open>T \<in> \<U>\<close> \<open>l \<in> T\<close> lim limitin_sequentially)
+    show ?thesis
+    proof (intro conjI exI)
+      have "x \<in> T"
+        if "x \<in> S" and "\<forall>A. (\<forall>x \<in> S. (\<forall>n\<le>N. x \<noteq> \<sigma> n) \<or> A \<noteq> V x) \<or> x \<notin> A" for x 
+        by (metis (no_types) N V that assms(2) imageE nle_le subsetD)
+      then show "S \<subseteq> \<Union> (insert T (V ` (S \<inter> \<sigma> ` {0..N})))"
+        by force
+    qed (use V that in auto)
+  qed
+  then show "\<exists>\<F>. finite \<F> \<and> \<F> \<subseteq> \<U> \<and> insert l S \<subseteq> \<Union> \<F>"
+    by (smt (verit, best) Union_iff \<section> insert_subset subsetD)
+qed
+
 
 lemma limit_Hausdorff_unique:
-   " ~trivial_limit F \<and>
-     Hausdorff_space X \<and>
-     limitin X f l1 F \<and>
-     limitin X f l2 F
+   " ~trivial_limit F" "Hausdorff_space X" "limitin X f l1 F" "limitin X f l2 F
      \<Longrightarrow> l1 = l2"
+  sorry
 oops
   REWRITE_TAC[limitin; Hausdorff_space] THEN
   INTRO_TAC "! *; nontriv hp (l1 hp1) (l2 hp2)" THEN
@@ -4785,9 +4792,7 @@ oops
    HYP_TAC "rmk" (MATCH_MP EVENTUALLY_HAPPENS) THEN ASM_MESON_TAC[]]);;
 
 lemma limit_kc_unique:
-   " kc_space X \<and>
-      limitin X f l1 sequentially \<and>
-      limitin X f l2 sequentially
+   " kc_space X" "limitin X f l1 sequentially" "limitin X f l2 sequentially
       \<Longrightarrow> l1 = l2"
 oops
   REPEAT STRIP_TAC THEN
@@ -4823,23 +4828,19 @@ oops
 subsection\<open>Topological limitin in metric spaces\<close>
 
 
-lemma limit_in_mspace:
-   "\<And>F m f::A=>B l. limitin mtopology f l F \<Longrightarrow> l \<in> M"
-oops
-  MESON_TAC[LIMIT_IN_TOPSPACE; TOPSPACE_MTOPOLOGY]);;
+lemma (in metric_space) limit_in_mspace:
+   "limitin mtopology f l F \<Longrightarrow> l \<in> M"
+  using limitin_topspace by fastforce
 
-lemma limit_metric_unique:
-   "\<And>F m f::A=>B l1 l2.
-     ~trivial_limit F \<and>
+lemma (in metric_space) limit_metric_unique:
+   "~trivial_limit F \<and>
      limitin mtopology f l1 F \<and>
      limitin mtopology f l2 F
      \<Longrightarrow> l1 = l2"
-oops
-  MESON_TAC[LIMIT_HAUSDORFF_UNIQUE; HAUSDORFF_SPACE_MTOPOLOGY]);;
+  by (meson Hausdorff_space_mtopology limit_Hausdorff_unique)
 
 lemma limit_metric:
-   "\<And>m f::A=>B l F.
-     limitin mtopology f l F \<longleftrightarrow>
+   "limitin mtopology f l F \<longleftrightarrow>
      l \<in> M \<and>
      (\<forall>e. 0 < e
           \<Longrightarrow> eventually (\<lambda>x. f x \<in> M \<and> d m (f x, l) < e) F)"
