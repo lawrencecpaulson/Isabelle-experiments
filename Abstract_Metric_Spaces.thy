@@ -991,7 +991,8 @@ lemma embedding_map_component_injection:
 
 subsection\<open>Metric spaces\<close>
 
-locale metric_space =
+(*Essential to avoid a clash with the existing metric_space locale (from the type class)*)
+locale Metric_space =
   fixes M :: "'a set" and d :: "'a \<Rightarrow> 'a \<Rightarrow> real"
   assumes nonneg: "\<And>x y. 0 \<le> d x y"
   assumes commute: "\<And>x y. d x y = d y x"
@@ -999,15 +1000,15 @@ locale metric_space =
   assumes triangle: "\<And>x y z. \<lbrakk>x \<in> M; y \<in> M; z \<in> M\<rbrakk> \<Longrightarrow> d x z \<le> d x y + d y z"
 
 text \<open>Link with the type class version\<close>
-interpretation Met: metric_space UNIV dist
-  by (simp add: dist_commute dist_triangle metric_space.intro)
+interpretation Met: Metric_space UNIV dist
+  by (simp add: dist_commute dist_triangle Metric_space.intro)
 
 (*NOT CLEAR WHETHER WE NEED/WANT THIS type definition*)
-typedef 'a metric = "{(M::'a set,d). metric_space M d}"
+typedef 'a metric = "{(M::'a set,d). Metric_space M d}"
   morphisms "dest_metric" "metric"
 proof -
-  have "metric_space {} (\<lambda>x y. 0)"
-    by (auto simp: metric_space_def)
+  have "Metric_space {} (\<lambda>x y. 0)"
+    by (auto simp: Metric_space_def)
   then show ?thesis
     by blast
 qed
@@ -1016,20 +1017,20 @@ definition mspace where "mspace m = fst (dest_metric m)"
 
 definition mdist where "mdist m = snd (dest_metric m)"
 
-lemma metric_space_mspace_mdist: "metric_space (mspace m) (mdist m)"
+lemma metric_space_mspace_mdist: "Metric_space (mspace m) (mdist m)"
   by (metis Product_Type.Collect_case_prodD dest_metric mdist_def mspace_def)
 
-context metric_space
+context Metric_space
 begin
 
 (*
 lemma metric [simp]:
    "mspace (metric (M,d)) = M \<and> mdist (metric (M,d)) = d"
-  by (simp add: local.metric_space_axioms mdist_def metric_inverse mspace_def)
+  by (simp add: local.Metric_space_axioms mdist_def metric_inverse mspace_def)
 *)
 
-lemma subspace: "M' \<subseteq> M \<Longrightarrow> metric_space M' d"
-  by (simp add: commute in_mono metric_space.intro nonneg triangle zero)
+lemma subspace: "M' \<subseteq> M \<Longrightarrow> Metric_space M' d"
+  by (simp add: commute in_mono Metric_space.intro nonneg triangle zero)
 
 lemma abs_mdist [simp] : "\<bar>d x y\<bar> = d x y"
   by (simp add: nonneg)
@@ -1053,7 +1054,7 @@ definition mball where "mball x r \<equiv> {y. x \<in> M \<and> y \<in> M \<and>
 definition mcball where "mcball x r \<equiv> {y. x \<in> M \<and> y \<in> M \<and> d x y \<le> r}"
 
 lemma in_mball [simp]: "y \<in> mball x r \<longleftrightarrow> x \<in> M \<and> y \<in> M \<and> d x y < r"
-  by (simp add: local.metric_space_axioms metric_space.mball_def)
+  by (simp add: local.Metric_space_axioms Metric_space.mball_def)
 
 lemma centre_in_mball_iff [iff]: "x \<in> mball x r \<longleftrightarrow> x \<in> M \<and> 0 < r"
   using in_mball mdist_refl by force
@@ -1074,7 +1075,7 @@ lemma mball_subset_concentric: "r \<le> s \<Longrightarrow> mball x r \<subseteq
   by auto
 
 lemma in_mcball [simp]: "y \<in> mcball x r \<longleftrightarrow> x \<in> M \<and> y \<in> M \<and> d x y \<le> r"
-  by (simp add: local.metric_space_axioms metric_space.mcball_def)
+  by (simp add: local.Metric_space_axioms Metric_space.mcball_def)
 
 lemma centre_in_mcball_iff [iff]: "x \<in> mcball x r \<longleftrightarrow> x \<in> M \<and> 0 \<le> r"
   using mdist_refl by force
@@ -1107,7 +1108,7 @@ end
 
 subsection\<open> Metric topology                                                           \<close>
 
-context metric_space
+context Metric_space
 begin
 
 definition mopen where 
@@ -1422,11 +1423,11 @@ end
 
 subsection\<open>Subspace of a metric space\<close>
 
-locale submetric = metric_space + 
+locale submetric = Metric_space + 
   fixes A
   assumes subset: "A \<subseteq> M"
 
-sublocale submetric \<subseteq> sub: metric_space A d
+sublocale submetric \<subseteq> sub: Metric_space A d
   by (simp add: subset subspace)
 
 context submetric
@@ -1492,10 +1493,10 @@ locale discrete_metric =
 definition (in discrete_metric) dd :: "'a \<Rightarrow> 'a \<Rightarrow> real"
   where "dd \<equiv> \<lambda>x y::'a. if x=y then 0 else 1"
 
-lemma metric_M_dd: "metric_space M discrete_metric.dd"
-  by (simp add: discrete_metric.dd_def metric_space.intro)
+lemma metric_M_dd: "Metric_space M discrete_metric.dd"
+  by (simp add: discrete_metric.dd_def Metric_space.intro)
 
-sublocale discrete_metric \<subseteq> disc: metric_space M dd
+sublocale discrete_metric \<subseteq> disc: Metric_space M dd
   by (simp add: metric_M_dd)
 
 
@@ -1534,10 +1535,10 @@ subsection\<open>Metrizable spaces\<close>
 
 
 definition metrizable_space where
-  "metrizable_space X \<equiv> (\<exists>M d. metric_space M d \<and> X = metric_space.mtopology M d)"
+  "metrizable_space X \<equiv> (\<exists>M d. Metric_space M d \<and> X = Metric_space.mtopology M d)"
 
-lemma (in metric_space) metrizable_space_mtopology: "metrizable_space mtopology"
-  using local.metric_space_axioms metrizable_space_def by blast
+lemma (in Metric_space) metrizable_space_mtopology: "metrizable_space mtopology"
+  using local.Metric_space_axioms metrizable_space_def by blast
 
 
 lemma metrizable_space_discrete_topology:
@@ -1548,28 +1549,28 @@ lemma metrizable_space_subtopology:
   assumes "metrizable_space X"
   shows "metrizable_space(subtopology X S)"
 proof -
-  obtain M d where "metric_space M d" and X: "X = metric_space.mtopology M d"
+  obtain M d where "Metric_space M d" and X: "X = Metric_space.mtopology M d"
     using assms metrizable_space_def by blast
   then interpret submetric M d "M \<inter> S"
     by (simp add: submetric.intro submetric_axioms_def)
   show ?thesis
     unfolding metrizable_space_def
-    by (metis X mtopology_submetric sub.metric_space_axioms subtopology_restrict topspace_mtopology)
+    by (metis X mtopology_submetric sub.Metric_space_axioms subtopology_restrict topspace_mtopology)
 qed
 
 lemma homeomorphic_metrizable_space_aux:
   assumes "X homeomorphic_space X'" "metrizable_space X"
   shows "metrizable_space X'"
 proof -
-  obtain M d where "metric_space M d" and X: "X = metric_space.mtopology M d"
+  obtain M d where "Metric_space M d" and X: "X = Metric_space.mtopology M d"
     using assms by (auto simp: metrizable_space_def)
-  then interpret m: metric_space M d 
+  then interpret m: Metric_space M d 
     by simp
   obtain f g where hmf: "homeomorphic_map X X' f" and hmg: "homeomorphic_map X' X g"
     and fg: "(\<forall>x \<in> M. g(f x) = x) \<and> (\<forall>y \<in> topspace X'. f(g y) = y)"
     using assms X homeomorphic_maps_map homeomorphic_space_def by fastforce
   define d' where "d' x y \<equiv> d (g x) (g y)" for x y
-  interpret m': metric_space "topspace X'" "d'"
+  interpret m': Metric_space "topspace X'" "d'"
     unfolding d'_def
   proof
     show "(d (g x) (g y) = 0) = (x = y)" if "x \<in> topspace X'" "y \<in> topspace X'" for x y
@@ -1578,7 +1579,7 @@ proof -
       if "x \<in> topspace X'" and "y \<in> topspace X'" and "z \<in> topspace X'" for x y z
       by (metis X that hmg homeomorphic_eq_everything_map imageI m.topspace_mtopology m.triangle)
   qed (auto simp: m.nonneg m.commute)
-  have "X' = metric_space.mtopology (topspace X') d'"
+  have "X' = Metric_space.mtopology (topspace X') d'"
     unfolding topology_eq
   proof (intro allI)
     fix S
@@ -1637,7 +1638,7 @@ lemma metrizable_space_retraction_map_image:
 
 lemma metrizable_imp_Hausdorff_space:
    "metrizable_space X \<Longrightarrow> Hausdorff_space X"
-  by (metis metric_space.Hausdorff_space_mtopology metrizable_space_def)
+  by (metis Metric_space.Hausdorff_space_mtopology metrizable_space_def)
 
 (**
 lemma metrizable_imp_kc_space:
@@ -1659,9 +1660,9 @@ lemma closed_imp_gdelta_in:
   assumes X: "metrizable_space X" and S: "closedin X S"
   shows "gdelta_in X S"
 proof -
-  obtain M d where "metric_space M d" and Xeq: "X = metric_space.mtopology M d"
+  obtain M d where "Metric_space M d" and Xeq: "X = Metric_space.mtopology M d"
     using X metrizable_space_def by blast
-  then interpret M: metric_space M d
+  then interpret M: Metric_space M d
     by blast
   have "S \<subseteq> M"
     using M.closedin_metric \<open>X = M.mtopology\<close> S by blast
@@ -3554,7 +3555,7 @@ lemma locally_compact_imp_kc_eq_Hausdorff_space:
    "neighbourhood_base_of (compactin X) X \<Longrightarrow> kc_space X \<longleftrightarrow> Hausdorff_space X"
   by (metis Hausdorff_imp_kc_space kc_imp_t1_space kc_space_def neighbourhood_base_of_closedin neighbourhood_base_of_mono regular_t1_imp_Hausdorff_space)
 
-lemma (in metric_space) regular_space_mtopology:
+lemma (in Metric_space) regular_space_mtopology:
    "regular_space mtopology"
 unfolding regular_space_def
 proof clarify
@@ -3575,7 +3576,7 @@ qed
 
 lemma metrizable_imp_regular_space:
    "metrizable_space X \<Longrightarrow> regular_space X"
-  by (metis metric_space.regular_space_mtopology metrizable_space_def)
+  by (metis Metric_space.regular_space_mtopology metrizable_space_def)
 
 lemma regular_space_compact_closed_separation:
   assumes X: "regular_space X"
@@ -4675,7 +4676,7 @@ lemma mopen_eq_open [simp]: "Met.mopen = open"
 lemma metrizable_space_euclidean:
   "metrizable_space (euclidean :: 'a::metric_space topology)"
   unfolding metrizable_space_def
-  by (metis Met.metric_space_axioms Met.mtopology_def mopen_eq_open)
+  by (metis Met.Metric_space_axioms Met.mtopology_def mopen_eq_open)
 
 lemma kc_space_euclidean: "kc_space (euclidean :: 'a::metric_space topology)"
   by (simp add: compact_imp_closed kc_space_def)
@@ -4707,7 +4708,7 @@ next
   qed
 qed
 
-lemma (in metric_space) eventually_atin_metric:
+lemma (in Metric_space) eventually_atin_metric:
    "eventually P (atin mtopology a) \<longleftrightarrow>
         (a \<in> M \<longrightarrow> (\<exists>\<delta>>0. \<forall>x. x \<in> M \<and> 0 < d x a \<and> d x a < \<delta> \<longrightarrow> P x))"  (is "?lhs=?rhs")
 proof (cases "a \<in> M")
@@ -4820,18 +4821,18 @@ qed
 subsection\<open>Topological limitin in metric spaces\<close>
 
 
-lemma (in metric_space) limitin_mspace:
+lemma (in Metric_space) limitin_mspace:
    "limitin mtopology f l F \<Longrightarrow> l \<in> M"
   using limitin_topspace by fastforce
 
-lemma (in metric_space) limitin_metric_unique:
+lemma (in Metric_space) limitin_metric_unique:
    "\<not> trivial_limit F \<and>
      limitin mtopology f l1 F \<and>
      limitin mtopology f l2 F
      \<Longrightarrow> l1 = l2"
   by (meson Hausdorff_space_mtopology limitin_Hausdorff_unique)
 
-lemma (in metric_space) limitin_metric:
+lemma (in Metric_space) limitin_metric:
    "limitin mtopology f l F \<longleftrightarrow>
      l \<in> M \<and> (\<forall>e>0. eventually (\<lambda>x. f x \<in> M \<and> d (f x) l < e) F)" (is "?lhs=?rhs")
 proof
@@ -4854,7 +4855,7 @@ next
     by (force simp: limitin_def commute openin_mtopology subset_eq elim: eventually_mono)
 qed
 
-lemma (in metric_space) limit_metric_sequentially:
+lemma (in Metric_space) limit_metric_sequentially:
    "limitin mtopology f l sequentially \<longleftrightarrow>
      l \<in> M \<and> (\<forall>e>0. \<exists>N. \<forall>n\<ge>N. f n \<in> M \<and> d (f n) l < e)"
   by (auto simp: limitin_metric eventually_sequentially)
@@ -4876,88 +4877,58 @@ lemma (in submetric) limitin_submetric_iff:
      l \<in> A \<and> eventually (\<lambda>x. f x \<in> A) F \<and> limitin mtopology f l F" (is "?lhs=?rhs")
   by (simp add: limitin_subtopology mtopology_submetric)
 
-lemma (in metric_space) metric_closedin_iff_sequentially_closed:
-   "closedin mtopology s \<longleftrightarrow>
-     s \<subseteq> M \<and> (\<forall>a l. (\<forall>n. a n \<in> s) \<and> limitin mtopology a l sequentially \<longrightarrow> l \<in> s)"
-oops
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-  [INTRO_TAC "cl" THEN CONJ_TAC THENL
-   [ASM_MESON_TAC[CLOSED_IN_METRIC]; INTRO_TAC "!a l; a lim"] THEN
-   MATCH_MP_TAC
-     (ISPECL[`sequentially`; `mtopology (m::A metric)`] LIMIT_IN_CLOSED_IN) THEN
-   EXISTS_TAC `a::num=>A` THEN
-   ASM_REWRITE_TAC[TRIVIAL_LIMIT_SEQUENTIALLY; EVENTUALLY_TRUE];
-   ALL_TAC] THEN
-  SIMP_TAC[CLOSED_IN_METRIC; IN_DIFF] THEN
-  INTRO_TAC "sub seq; !x; x diff" THEN
-  REFUTE_THEN (LABEL_TAC "contra" \<circ>
-    REWRITE_RULE[NOT_EXISTS_THM; MESON[] `\<not> (a \<and> b) \<longleftrightarrow> a \<Longrightarrow> \<not> b`]) THEN
-  CLAIM_TAC "@a. a lt"
-    `\<exists>a. (\<forall>n. a n::A \<in> s) \<and> (\<forall>n. d m (x, a n) < inverse(Suc n))` THENL
-  [REWRITE_TAC[GSYM FORALL_AND_THM; GSYM SKOLEM_THM] THEN GEN_TAC THEN
-   REMOVE_THEN "contra" (MP_TAC \<circ> SPEC `inverse (Suc n)`) THEN
-   ANTS_TAC THENL [MATCH_MP_TAC REAL_LT_INV THEN REAL_ARITH_TAC; ALL_TAC] THEN
-   REWRITE_TAC[SET_RULE `\<not> disjnt s t \<longleftrightarrow> \<exists>x::A. x \<in> s \<and> x \<in> t`] THEN
-   ASM_REWRITE_TAC[IN_MBALL] THEN MESON_TAC[];
-   ALL_TAC] THEN
-  CLAIM_TAC "a'" `\<forall>n::num. a n::A \<in> M` THENL
-  [HYP SET_TAC "sub a" []; ALL_TAC] THEN
-  REMOVE_THEN "seq" (MP_TAC \<circ> SPECL[`a::num=>A`;`x::A`]) THEN
-  ASM_REWRITE_TAC[LIMIT_METRIC_SEQUENTIALLY] THEN INTRO_TAC "!e; e" THEN
-  HYP_TAC "e -> @N. NZ Ngt Nlt" (ONCE_REWRITE_RULE[REAL_ARCH_INV]) THEN
-  EXISTS_TAC `N::num` THEN INTRO_TAC "!n; n" THEN
-  TRANS_TAC REAL_LT_TRANS `inverse (Suc n)` THEN CONJ_TAC THENL
-  [HYP MESON_TAC "lt a' x" [MDIST_SYM]; ALL_TAC] THEN
-  TRANS_TAC REAL_LET_TRANS `inverse N` THEN HYP REWRITE_TAC "Nlt" [] THEN
-  MATCH_MP_TAC REAL_LE_INV2 THEN
-  REWRITE_TAC[REAL_OF_NUM_LT; REAL_OF_NUM_LE; REAL_OF_NUM_ADD] THEN
-  ASM_ARITH_TAC);;
+lemma (in Metric_space) metric_closedin_iff_sequentially_closed:
+   "closedin mtopology S \<longleftrightarrow>
+    S \<subseteq> M \<and> (\<forall>\<sigma> l. range \<sigma> \<subseteq> S \<and> limitin mtopology \<sigma> l sequentially \<longrightarrow> l \<in> S)" (is "?lhs=?rhs")
+proof
+  assume ?lhs then show ?rhs
+    by (force simp add: closedin_metric limitin_closedin range_subsetD)
+next
+  assume R: ?rhs
+  show ?lhs
+    unfolding closedin_metric
+  proof (intro conjI strip)
+    show "S \<subseteq> M"
+      using R by blast
+    fix x
+    assume "x \<in> M - S"
+    have False if "\<forall>r>0. \<exists>y. y \<in> M \<and> y \<in> S \<and> d x y < r"
+    proof -
+      have "\<forall>n. \<exists>y. y \<in> M \<and> y \<in> S \<and> d x y < inverse(Suc n)"
+        using that by auto
+      then obtain \<sigma> where \<sigma>: "\<And>n. \<sigma> n \<in> M \<and> \<sigma> n \<in> S \<and> d x (\<sigma> n) < inverse(Suc n)"
+        by metis
+      then have "range \<sigma> \<subseteq> M"
+        by blast
+      have "\<exists>N. \<forall>n\<ge>N. d x (\<sigma> n) < e" if "e>0" for e
+      proof -
+        have "real (Suc (nat \<lceil>inverse e\<rceil>)) \<ge> inverse e"
+          by linarith
+        then have "\<forall>n \<ge> nat \<lceil>inverse e\<rceil>. d x (\<sigma> n) < e"
+          by (metis \<sigma> inverse_inverse_eq inverse_le_imp_le nat_ceiling_le_eq nle_le not_less_eq_eq order.strict_trans2 that)
+        then show ?thesis ..
+      qed
+      with \<sigma> have "limitin mtopology \<sigma> x sequentially"
+        using \<open>x \<in> M - S\<close> commute limit_metric_sequentially by auto
+      then show ?thesis
+        by (metis R DiffD2 \<sigma> image_subset_iff \<open>x \<in> M - S\<close>)
+    qed
+    then show "\<exists>r>0. disjnt S (mball x r)"
+      by (meson disjnt_iff in_mball)
+  qed
+qed
 
-lemma (in metric_space) limit_atpointof_metric:
+lemma (in Metric_space) limit_atin_metric:
    "limitin X f y (atin mtopology x) \<longleftrightarrow>
-        y \<in> topspace X \<and>
-        (x \<in> M
-         \<longrightarrow> (\<forall>V. openin X V \<and> y \<in> V
-                 \<longrightarrow> (\<exists>\<delta>>0.  \<forall>x'. x' \<in> M \<and> 0 < d x' x \<and> d x' x < \<delta> \<longrightarrow> f x' \<in> V)))"
+      y \<in> topspace X \<and>
+      (x \<in> M
+       \<longrightarrow> (\<forall>V. openin X V \<and> y \<in> V
+               \<longrightarrow> (\<exists>\<delta>>0.  \<forall>x'. x' \<in> M \<and> 0 < d x' x \<and> d x' x < \<delta> \<longrightarrow> f x' \<in> V)))"
   by (force simp add: limitin_def eventually_atin_metric)
 
-lemma (in metric_space) limitin_metric_dist_null:
+lemma (in Metric_space) limitin_metric_dist_null:
    "limitin mtopology f l F \<longleftrightarrow> l \<in> M \<and> eventually (\<lambda>x. f x \<in> M) F \<and> ((\<lambda>x. d (f x) l) \<longlongrightarrow> 0) F"
   by (simp add: limitin_metric tendsto_iff eventually_conj_iff all_conj_distrib imp_conjR gt_ex)
-
-lemma limit_null_real:
-   "tendsto f 0 F \<longleftrightarrow> (\<forall>e>0. eventually (\<lambda>a. abs(f a) < e) F)"
-apply (simp add: tendsto_iff)
-oops
-  REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC; LIMIT_METRIC] THEN
-  REWRITE_TAC[REAL_EUCLIDEAN_METRIC; IN_UNIV] THEN
-  REWRITE_TAC[REAL_ARITH `abs(0 - x) = abs x`]);;
-
-lemma limit_null_real_abs:
-   "\<And>F (f::A=>real).
-        tendsto (\<lambda>a. abs(f a)) 0 F \<longleftrightarrow>
-        tendsto f 0 F"
-oops
-  REWRITE_TAC[LIMIT_NULL_REAL; REAL_ABS_ABS]);;
-
-lemma limit_null_real_comparison:
-   "\<And>F f g::A=>real.
-        tendsto f 0 F \<and>
-        eventually (\<lambda>a. abs(g a) \<le> abs(f a)) F
-        \<Longrightarrow> tendsto g 0 F"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[LIMIT_NULL_REAL] THEN
-  STRIP_TAC THEN X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e::real`) THEN
-  UNDISCH_TAC `0 < e` THEN SIMP_TAC[] THEN DISCH_THEN(K ALL_TAC) THEN
-  POP_ASSUM MP_TAC THEN REWRITE_TAC[IMP_IMP; GSYM EVENTUALLY_AND] THEN
-  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] EVENTUALLY_MONO) THEN
-  REWRITE_TAC[] THEN REAL_ARITH_TAC);;
-
-lemma limit_null_real_harmonic_offset:
-   "tendsto (\<lambda>n. inverse(n + a)) 0 sequentially"
-oops
-  REWRITE_TAC[LIMIT_NULL_REAL; ARCH_EVENTUALLY_ABS_INV_OFFSET]);;
 
 
 subsection\<open>More sequential characterizations in a metric space\<close>
