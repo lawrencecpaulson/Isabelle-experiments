@@ -4777,7 +4777,7 @@ proof (intro conjI strip)
     by (smt (verit, best) Union_iff \<section> insert_subset subsetD)
 qed
 
-lemma limit_Hausdorff_unique:
+lemma limitin_Hausdorff_unique:
   assumes "limitin X f l1 F" "limitin X f l2 F" "\<not> trivial_limit F" "Hausdorff_space X"
   shows "l1 = l2"
 proof (rule ccontr)
@@ -4792,7 +4792,7 @@ proof (rule ccontr)
     by (meson disjnt_iff)
 qed
 
-lemma limit_kc_unique:
+lemma limitin_kc_unique:
   assumes "kc_space X" and lim1: "limitin X f l1 sequentially" and lim2: "limitin X f l2 sequentially"
   shows "l1 = l2"
 proof (rule ccontr)
@@ -4820,54 +4820,44 @@ qed
 subsection\<open>Topological limitin in metric spaces\<close>
 
 
-lemma (in metric_space) limit_in_mspace:
+lemma (in metric_space) limitin_mspace:
    "limitin mtopology f l F \<Longrightarrow> l \<in> M"
   using limitin_topspace by fastforce
 
-lemma (in metric_space) limit_metric_unique:
+lemma (in metric_space) limitin_metric_unique:
    "\<not> trivial_limit F \<and>
      limitin mtopology f l1 F \<and>
      limitin mtopology f l2 F
      \<Longrightarrow> l1 = l2"
-  by (meson Hausdorff_space_mtopology limit_Hausdorff_unique)
+  by (meson Hausdorff_space_mtopology limitin_Hausdorff_unique)
 
-lemma (in metric_space) limit_metric:
+lemma (in metric_space) limitin_metric:
    "limitin mtopology f l F \<longleftrightarrow>
-     l \<in> M \<and> (\<forall>e>0.  eventually (\<lambda>x. f x \<in> M \<and> d (f x) l < e) F)"
-  sorry
-  apply (rule )
-  defer
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[limitin; OPEN_IN_MTOPOLOGY; TOPSPACE_MTOPOLOGY] THEN EQ_TAC THENL
-  [INTRO_TAC "l hp" THEN ASM_REWRITE_TAC[] THEN INTRO_TAC "!e; e" THEN
-   REMOVE_THEN "hp" (MP_TAC \<circ> SPEC `mball m (l::B,e)`) THEN
-   ASM_REWRITE_TAC[MBALL_SUBSET_MSPACE] THEN ASM_SIMP_TAC[CENTRE_IN_MBALL] THEN
-   REWRITE_TAC[IN_MBALL] THEN ANTS_TAC THENL
-   [INTRO_TAC "!x; x lt" THEN
-    EXISTS_TAC `e - d m (l::B,x)` THEN
-    CONJ_TAC THENL
-    [ASM_REAL_ARITH_TAC;
-     ASM_REWRITE_TAC[\<subseteq>; IN_MBALL] THEN INTRO_TAC "![y]; y lt'" THEN
-     ASM_REWRITE_TAC[] THEN
-     TRANS_TAC REAL_LET_TRANS `d m (l::B,x) + d x y` THEN
-     ASM_SIMP_TAC[MDIST_TRIANGLE] THEN ASM_REAL_ARITH_TAC];
-    MATCH_MP_TAC (REWRITE_RULE [IMP_CONJ] EVENTUALLY_MONO) THEN
-    GEN_TAC THEN REWRITE_TAC[] THEN ASM_CASES_TAC `f (x::A):B \<in> M` THEN
-    ASM_SIMP_TAC[MDIST_SYM]];
-   INTRO_TAC "l hp" THEN ASM_REWRITE_TAC[] THEN INTRO_TAC "!u; (u hp) l" THEN
-   REMOVE_THEN "hp"
-     (DESTRUCT_TAC "@r. r sub" \<circ> C MATCH_MP (ASSUME `l::B \<in> u`)) THEN
-   REMOVE_THEN "hp" (MP_TAC \<circ> C MATCH_MP (ASSUME `0 < r`)) THEN
-   MATCH_MP_TAC (REWRITE_RULE [IMP_CONJ] EVENTUALLY_MONO) THEN
-   GEN_TAC THEN REWRITE_TAC[] THEN INTRO_TAC "f lt" THEN
-   CLAIM_TAC "rmk" `f (x::A):B \<in> mball l r` THENL
-   [ASM_SIMP_TAC[IN_MBALL; MDIST_SYM]; HYP SET_TAC "rmk sub" []]]);;
+     l \<in> M \<and> (\<forall>e>0. eventually (\<lambda>x. f x \<in> M \<and> d (f x) l < e) F)" (is "?lhs=?rhs")
+proof
+  assume L: ?lhs
+  show ?rhs
+    unfolding limitin_def
+  proof (intro conjI strip)
+    show "l \<in> M"
+      using L limitin_mspace by blast
+    fix e::real
+    assume "e>0"
+    then have "\<forall>\<^sub>F x in F. f x \<in> mball l e"
+      using L limitin_def openin_mball by fastforce
+    then show "\<forall>\<^sub>F x in F. f x \<in> M \<and> d (f x) l < e"
+      using commute eventually_mono by fastforce
+  qed
+next
+  assume R: ?rhs 
+  then show ?lhs
+    by (force simp: limitin_def commute openin_mtopology subset_eq elim: eventually_mono)
+qed
 
 lemma (in metric_space) limit_metric_sequentially:
    "limitin mtopology f l sequentially \<longleftrightarrow>
      l \<in> M \<and> (\<forall>e>0. \<exists>N. \<forall>n\<ge>N. f n \<in> M \<and> d (f n) l < e)"
-  by (auto simp: limit_metric eventually_sequentially)
+  by (auto simp: limitin_metric eventually_sequentially)
 
 lemma limitin_closed_in:
    "\<not> trivial_limit F \<and> limitin X f l F \<and>
@@ -4940,8 +4930,7 @@ lemma (in metric_space) limit_atpointof_metric:
   by (force simp add: limitin_def eventually_atin_metric)
 
 lemma limit_metric_dist_null:
-   "\<And>F m (f::K=>A) l.
-        limitin mtopology f l F \<longleftrightarrow>
+   "limitin mtopology f l F \<longleftrightarrow>
         l \<in> M \<and> eventually (\<lambda>x. f x \<in> M) F \<and>
         limitin euclideanreal (\<lambda>x. d m (f x,l)) 0 F"
 oops
