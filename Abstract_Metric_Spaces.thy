@@ -3930,13 +3930,13 @@ lemma proper_map_paired_closed_map_right:
   assumes "closed_map X Y f" "regular_space X"
     "\<And>y. y \<in> topspace Y \<Longrightarrow> closedin X {x \<in> topspace X. f x = y}"
   shows "proper_map X (prod_topology X Y) (\<lambda>x. (x, f x))"
-  by (simp add: assms closedinjective_imp_proper_map inj_on_def closed_map_paired_closed_map_right)
+  by (simp add: assms closed_injective_imp_proper_map inj_on_def closed_map_paired_closed_map_right)
 
 lemma proper_map_paired_closed_map_left:
   assumes "closed_map X Y f" "regular_space X"
     "\<And>y. y \<in> topspace Y \<Longrightarrow> closedin X {x \<in> topspace X. f x = y}"
   shows "proper_map X (prod_topology Y X) (\<lambda>x. (f x, x))"
-  by (simp add: assms closedinjective_imp_proper_map inj_on_def closed_map_paired_closed_map_left)
+  by (simp add: assms closed_injective_imp_proper_map inj_on_def closed_map_paired_closed_map_left)
 
 lemma regular_space_continuous_proper_map_image:
   assumes "regular_space X" and contf: "continuous_map X Y f" and pmapf: "proper_map X Y f"
@@ -4860,32 +4860,25 @@ lemma (in metric_space) limit_metric_sequentially:
   by (auto simp: limitin_metric eventually_sequentially)
 
 lemma limitin_closedin:
-   "\<not> trivial_limit F \<and> limitin X f l F \<and> closedin X s \<and> eventually (\<lambda>x. f x \<in> s) F
-      \<Longrightarrow> l \<in> s"
-oops
-  INTRO_TAC "! *; ntriv lim cl ev" THEN REFUTE_THEN (LABEL_TAC "contra") THEN
-  HYP_TAC "lim: l lim" (REWRITE_RULE[limitin]) THEN
-  REMOVE_THEN "lim" (MP_TAC \<circ> SPEC `topspace X - s::B=>bool`) THEN
-  ASM_SIMP_TAC[OPEN_IN_DIFF; OPEN_IN_TOPSPACE; IN_DIFF; EVENTUALLY_AND] THEN
-  REWRITE_TAC[DE_MORGAN_THM] THEN DISJ2_TAC THEN INTRO_TAC "nev" THEN
-  HYP (MP_TAC \<circ> CONJ_LIST) "ev nev" [] THEN
-  REWRITE_TAC[GSYM EVENTUALLY_AND] THEN MATCH_MP_TAC NOT_EVENTUALLY THEN
-  ASM_REWRITE_TAC[] THEN MESON_TAC[]);;
+  assumes lim: "limitin X f l F" 
+    and "closedin X S" and ev: "eventually (\<lambda>x. f x \<in> S) F" "\<not> trivial_limit F"
+  shows "l \<in> S"
+proof (rule ccontr)
+  assume "l \<notin> S"
+  have "\<forall>\<^sub>F x in F. f x \<in> topspace X - S"
+    by (metis Diff_iff \<open>l \<notin> S\<close> \<open>closedin X S\<close> closedin_def lim limitin_def)
+  with ev eventually_elim2 trivial_limit_def show False
+    by force
+qed
 
-lemma (in metric_space) limit_submetric_iff:
-   "limitin (mtopology (submetric m s)) f l F \<longleftrightarrow>
-     l \<in> s \<and> eventually (\<lambda>x. f x \<in> s) F \<and> limitin mtopology f l F"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[LIMIT_METRIC; SUBMETRIC; IN_INTER; EVENTUALLY_AND] THEN
-  EQ_TAC THEN SIMP_TAC[] THENL [INTRO_TAC "l hp"; MESON_TAC[]] THEN
-  HYP_TAC "hp" (C MATCH_MP REAL_LT_01) THEN ASM_REWRITE_TAC[]);;
+lemma (in submetric) limitin_submetric_iff:
+   "limitin sub.mtopology f l F \<longleftrightarrow>
+     l \<in> A \<and> eventually (\<lambda>x. f x \<in> A) F \<and> limitin mtopology f l F" (is "?lhs=?rhs")
+  by (simp add: limitin_subtopology mtopology_submetric)
 
 lemma (in metric_space) metric_closedin_iff_sequentially_closed:
    "closedin mtopology s \<longleftrightarrow>
-     s \<subseteq> M \<and>
-     (\<forall>a l. (\<forall>n. a n \<in> s) \<and> limitin mtopology a l sequentially
-            \<Longrightarrow> l \<in> s)"
+     s \<subseteq> M \<and> (\<forall>a l. (\<forall>n. a n \<in> s) \<and> limitin mtopology a l sequentially \<longrightarrow> l \<in> s)"
 oops
   REPEAT GEN_TAC THEN EQ_TAC THENL
   [INTRO_TAC "cl" THEN CONJ_TAC THENL
@@ -4928,24 +4921,13 @@ lemma (in metric_space) limit_atpointof_metric:
                  \<longrightarrow> (\<exists>\<delta>>0.  \<forall>x'. x' \<in> M \<and> 0 < d x' x \<and> d x' x < \<delta> \<longrightarrow> f x' \<in> V)))"
   by (force simp add: limitin_def eventually_atin_metric)
 
-lemma limit_metric_dist_null:
-   "limitin mtopology f l F \<longleftrightarrow>
-        l \<in> M \<and> eventually (\<lambda>x. f x \<in> M) F \<and>
-        limitin euclideanreal (\<lambda>x. d m (f x,l)) 0 F"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[LIMIT_METRIC; GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
-  REWRITE_TAC[REAL_EUCLIDEAN_METRIC; IN_UNIV; EVENTUALLY_AND] THEN
-  ASM_CASES_TAC `(l::A) \<in> M` THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[GSYM EVENTUALLY_AND; MESON[REAL_LT_01]
-   `P \<and> (\<forall>e. 0 < e \<Longrightarrow> Q e) \<longleftrightarrow> (\<forall>e. 0 < e \<Longrightarrow> P \<and> Q e)`] THEN
-  REWRITE_TAC[REAL_ARITH `abs(0 - x) = abs x`] THEN
-  ASM_SIMP_TAC[TAUT `(p \<and> q) \<longleftrightarrow> (p \<noteq>=> \<not> q)`; MDIST_POS_LE; real_abs]);;
+lemma (in metric_space) limitin_metric_dist_null:
+   "limitin mtopology f l F \<longleftrightarrow> l \<in> M \<and> eventually (\<lambda>x. f x \<in> M) F \<and> ((\<lambda>x. d (f x) l) \<longlongrightarrow> 0) F"
+  by (simp add: limitin_metric tendsto_iff eventually_conj_iff all_conj_distrib imp_conjR gt_ex)
 
 lemma limit_null_real:
-   "\<And>F f::A=>real.
-        limitin euclideanreal f 0 F \<longleftrightarrow>
-        \<forall>e. 0 < e \<Longrightarrow> eventually (\<lambda>a. abs(f a) < e) F"
+   "tendsto f 0 F \<longleftrightarrow> (\<forall>e>0. eventually (\<lambda>a. abs(f a) < e) F)"
+apply (simp add: tendsto_iff)
 oops
   REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC; LIMIT_METRIC] THEN
   REWRITE_TAC[REAL_EUCLIDEAN_METRIC; IN_UNIV] THEN
@@ -4953,16 +4935,16 @@ oops
 
 lemma limit_null_real_abs:
    "\<And>F (f::A=>real).
-        limitin euclideanreal (\<lambda>a. abs(f a)) 0 F \<longleftrightarrow>
-        limitin euclideanreal f 0 F"
+        tendsto (\<lambda>a. abs(f a)) 0 F \<longleftrightarrow>
+        tendsto f 0 F"
 oops
   REWRITE_TAC[LIMIT_NULL_REAL; REAL_ABS_ABS]);;
 
 lemma limit_null_real_comparison:
    "\<And>F f g::A=>real.
-        limitin euclideanreal f 0 F \<and>
+        tendsto f 0 F \<and>
         eventually (\<lambda>a. abs(g a) \<le> abs(f a)) F
-        \<Longrightarrow> limitin euclideanreal g 0 F"
+        \<Longrightarrow> tendsto g 0 F"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[LIMIT_NULL_REAL] THEN
   STRIP_TAC THEN X_GEN_TAC `e::real` THEN DISCH_TAC THEN
@@ -4973,7 +4955,7 @@ oops
   REWRITE_TAC[] THEN REAL_ARITH_TAC);;
 
 lemma limit_null_real_harmonic_offset:
-   "limitin euclideanreal (\<lambda>n. inverse(n + a)) 0 sequentially"
+   "tendsto (\<lambda>n. inverse(n + a)) 0 sequentially"
 oops
   REWRITE_TAC[LIMIT_NULL_REAL; ARCH_EVENTUALLY_ABS_INV_OFFSET]);;
 
@@ -5340,8 +5322,8 @@ subsection\<open>Combining theorems for real limits\<close>
 
 lemma limit_real_mul:
    "\<And>(F::A F) f g l m.
-        limitin euclideanreal f l F \<and> limitin euclideanreal g m F
-        \<Longrightarrow> limitin euclideanreal (\<lambda>x. f x * g x) (l * m) F"
+        tendsto f l F \<and> tendsto g m F
+        \<Longrightarrow> tendsto (\<lambda>x. f x * g x) (l * m) F"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
   REWRITE_TAC[LIMIT_METRIC; REAL_EUCLIDEAN_METRIC; IN_UNIV] THEN
@@ -5364,15 +5346,15 @@ oops
 
 lemma limit_real_lmul:
    "\<And>(F::A F) c f l.
-        limitin euclideanreal f l F
-        \<Longrightarrow> limitin euclideanreal (\<lambda>x. c * f x) (c * l) F"
+        tendsto f l F
+        \<Longrightarrow> tendsto (\<lambda>x. c * f x) (c * l) F"
 oops
   SIMP_TAC[LIMIT_REAL_MUL; LIMIT_REAL_CONST]);;
 
 lemma limit_real_lmul_eq:
    "\<And>(F::A F) c f l.
-        limitin euclideanreal (\<lambda>x. c * f x) (c * l) F \<longleftrightarrow>
-        c = 0 \<or> limitin euclideanreal f l F"
+        tendsto (\<lambda>x. c * f x) (c * l) F \<longleftrightarrow>
+        c = 0 \<or> tendsto f l F"
 oops
   REPEAT GEN_TAC THEN ASM_CASES_TAC `c = 0` THEN
   ASM_REWRITE_TAC[REAL_MUL_LZERO; LIMIT_REAL_CONST] THEN
@@ -5382,30 +5364,30 @@ oops
 
 lemma limit_real_rmul:
    "\<And>(F::A F) f c l.
-        limitin euclideanreal f l F
-        \<Longrightarrow> limitin euclideanreal (\<lambda>x. f x * c) (l * c) F"
+        tendsto f l F
+        \<Longrightarrow> tendsto (\<lambda>x. f x * c) (l * c) F"
 oops
   ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN REWRITE_TAC[LIMIT_REAL_LMUL]);;
 
 lemma limit_real_rmul_eq:
    "\<And>(F::A F) f c l.
-        limitin euclideanreal (\<lambda>x. f x * c) (l * c) F \<longleftrightarrow>
-        c = 0 \<or> limitin euclideanreal f l F"
+        tendsto (\<lambda>x. f x * c) (l * c) F \<longleftrightarrow>
+        c = 0 \<or> tendsto f l F"
 oops
   ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN REWRITE_TAC[LIMIT_REAL_LMUL_EQ]);;
 
 lemma limit_real_neg:
    "\<And>(F::A F) f l.
-        limitin euclideanreal f l F
-        \<Longrightarrow> limitin euclideanreal (\<lambda>x. --(f x)) (-l) F"
+        tendsto f l F
+        \<Longrightarrow> tendsto (\<lambda>x. --(f x)) (-l) F"
 oops
   ONCE_REWRITE_TAC[REAL_ARITH `-x::real = -- 1 * x`] THEN
   REWRITE_TAC[LIMIT_REAL_LMUL]);;
 
 lemma limit_real_neg_eq:
    "\<And>(F::A F) f l.
-        limitin euclideanreal (\<lambda>x. --(f x)) l F \<longleftrightarrow>
-        limitin euclideanreal f (-l) F"
+        tendsto (\<lambda>x. --(f x)) l F \<longleftrightarrow>
+        tendsto f (-l) F"
 oops
   REPEAT GEN_TAC THEN EQ_TAC THEN
   DISCH_THEN(MP_TAC \<circ> MATCH_MP LIMIT_REAL_NEG) THEN
@@ -5413,8 +5395,8 @@ oops
 
 lemma limit_real_add:
    "\<And>(F::A F) f g l m.
-        limitin euclideanreal f l F \<and> limitin euclideanreal g m F
-        \<Longrightarrow> limitin euclideanreal (\<lambda>x. f x + g x) (l + m) F"
+        tendsto f l F \<and> tendsto g m F
+        \<Longrightarrow> tendsto (\<lambda>x. f x + g x) (l + m) F"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
   REWRITE_TAC[LIMIT_METRIC; REAL_EUCLIDEAN_METRIC; IN_UNIV] THEN
@@ -5426,15 +5408,15 @@ oops
 
 lemma limit_real_sub:
    "\<And>(F::A F) f g l m.
-        limitin euclideanreal f l F \<and> limitin euclideanreal g m F
-        \<Longrightarrow> limitin euclideanreal (\<lambda>x. f x - g x) (l - m) F"
+        tendsto f l F \<and> tendsto g m F
+        \<Longrightarrow> tendsto (\<lambda>x. f x - g x) (l - m) F"
 oops
   SIMP_TAC[real_sub; LIMIT_REAL_ADD; LIMIT_REAL_NEG]);;
 
 lemma limit_real_abs:
    "\<And>(F::A F) f l.
-        limitin euclideanreal f l F
-        \<Longrightarrow> limitin euclideanreal (\<lambda>x. abs(f x)) (abs l) F"
+        tendsto f l F
+        \<Longrightarrow> tendsto (\<lambda>x. abs(f x)) (abs l) F"
 oops
   REPEAT  GEN_TAC THEN REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
   REWRITE_TAC[LIMIT_METRIC; REAL_EUCLIDEAN_METRIC; IN_UNIV] THEN
@@ -5444,8 +5426,8 @@ oops
 
 lemma limit_real_max:
    "\<And>(F::A F) f g l m.
-        limitin euclideanreal f l F \<and> limitin euclideanreal g m F
-        \<Longrightarrow> limitin euclideanreal (\<lambda>x. max (f x) (g x)) (max l m) F"
+        tendsto f l F \<and> tendsto g m F
+        \<Longrightarrow> tendsto (\<lambda>x. max (f x) (g x)) (max l m) F"
 oops
   REWRITE_TAC[REAL_ARITH `max a b = inverse 2 * (abs(a - b) + a + b)`] THEN
   REPEAT STRIP_TAC THEN MATCH_MP_TAC LIMIT_REAL_LMUL THEN
@@ -5454,8 +5436,8 @@ oops
 
 lemma limit_real_min:
    "\<And>(F::A F) f g l m.
-        limitin euclideanreal f l F \<and> limitin euclideanreal g m F
-        \<Longrightarrow> limitin euclideanreal (\<lambda>x. min (f x) (g x)) (min l m) F"
+        tendsto f l F \<and> tendsto g m F
+        \<Longrightarrow> tendsto (\<lambda>x. min (f x) (g x)) (min l m) F"
 oops
   REWRITE_TAC[REAL_ARITH `min a b = inverse 2 * ((a + b) - abs(a - b))`] THEN
   REPEAT STRIP_TAC THEN MATCH_MP_TAC LIMIT_REAL_LMUL THEN
@@ -5464,8 +5446,8 @@ oops
 lemma limit_sum:
    "\<And>F f::A=>K->real l k.
         finite k \<and>
-        (\<forall>i. i \<in> k \<Longrightarrow> limitin euclideanreal (\<lambda>x. f x i) (l i) F)
-        \<Longrightarrow> limitin euclideanreal (\<lambda>x. sum k (f x)) (sum k l) F"
+        (\<forall>i. i \<in> k \<Longrightarrow> tendsto (\<lambda>x. f x i) (l i) F)
+        \<Longrightarrow> tendsto (\<lambda>x. sum k (f x)) (sum k l) F"
 oops
   REPLICATE_TAC 3 GEN_TAC THEN REWRITE_TAC[IMP_CONJ] THEN
   MATCH_MP_TAC FINITE_INDUCT_STRONG THEN
@@ -5476,8 +5458,8 @@ oops
 lemma limit_product:
    "\<And>F f::A=>K->real l k.
         finite k \<and>
-        (\<forall>i. i \<in> k \<Longrightarrow> limitin euclideanreal (\<lambda>x. f x i) (l i) F)
-        \<Longrightarrow> limitin euclideanreal (\<lambda>x. product k (f x)) (product k l) F"
+        (\<forall>i. i \<in> k \<Longrightarrow> tendsto (\<lambda>x. f x i) (l i) F)
+        \<Longrightarrow> tendsto (\<lambda>x. product k (f x)) (product k l) F"
 oops
   REPLICATE_TAC 3 GEN_TAC THEN REWRITE_TAC[IMP_CONJ] THEN
   MATCH_MP_TAC FINITE_INDUCT_STRONG THEN
@@ -5487,8 +5469,8 @@ oops
 
 lemma limit_real_inv:
    "\<And>(F::A F) f l.
-        limitin euclideanreal f l F \<and> (l \<noteq> 0)
-        \<Longrightarrow> limitin euclideanreal (\<lambda>x. inverse(f x)) (inverse l) F"
+        tendsto f l F \<and> (l \<noteq> 0)
+        \<Longrightarrow> tendsto (\<lambda>x. inverse(f x)) (inverse l) F"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
   REWRITE_TAC[LIMIT_METRIC; REAL_EUCLIDEAN_METRIC; IN_UNIV] THEN
@@ -5511,16 +5493,16 @@ oops
 
 lemma limit_real_div:
    "\<And>(F::A F) f g l m.
-      limitin euclideanreal f l F \<and> limitin euclideanreal g m F \<and> (m \<noteq> 0)
-      \<Longrightarrow> limitin euclideanreal (\<lambda>x. f x / g x) (l / m) F"
+      tendsto f l F \<and> tendsto g m F \<and> (m \<noteq> 0)
+      \<Longrightarrow> tendsto (\<lambda>x. f x / g x) (l / m) F"
 oops
   SIMP_TAC[real_div; LIMIT_REAL_INV; LIMIT_REAL_MUL]);;
 
 lemma limit_inf:
    "\<And>F f::A=>K->real l k.
         finite k \<and>
-        (\<forall>i. i \<in> k \<Longrightarrow> limitin euclideanreal (\<lambda>x. f x i) (l i) F)
-        \<Longrightarrow> limitin euclideanreal
+        (\<forall>i. i \<in> k \<Longrightarrow> tendsto (\<lambda>x. f x i) (l i) F)
+        \<Longrightarrow> tendsto
               (\<lambda>x. inf {f x i | i \<in> k}) (inf {l i | i \<in> k}) F"
 oops
   REPLICATE_TAC 3 GEN_TAC THEN REWRITE_TAC[SIMPLE_IMAGE; IMP_CONJ] THEN
@@ -5536,8 +5518,8 @@ oops
 lemma limit_sup:
    "\<And>F f::A=>K->real l k.
         finite k \<and>
-        (\<forall>i. i \<in> k \<Longrightarrow> limitin euclideanreal (\<lambda>x. f x i) (l i) F)
-        \<Longrightarrow> limitin euclideanreal
+        (\<forall>i. i \<in> k \<Longrightarrow> tendsto (\<lambda>x. f x i) (l i) F)
+        \<Longrightarrow> tendsto
               (\<lambda>x. sup {f x i | i \<in> k}) (sup {l i | i \<in> k}) F"
 oops
   REPLICATE_TAC 3 GEN_TAC THEN REWRITE_TAC[SIMPLE_IMAGE; IMP_CONJ] THEN
@@ -5724,7 +5706,7 @@ lemma cauchy_in_interleaving_gen:
    "\<And>m x y::num=>A.
         cauchy_in m (\<lambda>n. if EVEN n then x(n div 2) else y(n div 2)) \<longleftrightarrow>
         cauchy_in m x \<and> cauchy_in m y \<and>
-        limitin euclideanreal (\<lambda>n. d m (x n,y n)) 0 sequentially"
+        tendsto (\<lambda>n. d m (x n,y n)) 0 sequentially"
 oops
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [DISCH_TAC THEN REPEAT CONJ_TAC THENL
@@ -16357,14 +16339,14 @@ let UNIFORMLY_CONTINUOUS_MAP_SEQUENTIALLY,
         uniformly_continuous_map m1 m2 f \<longleftrightarrow>
         image f (mspace m1) \<subseteq> mspace m2 \<and>
         \<forall>x y. (\<forall>n. x n \<in> mspace m1) \<and> (\<forall>n. y n \<in> mspace m1) \<and>
-              limitin euclideanreal (\<lambda>n. d m1 (x n,y n)) 0 sequentially
-              \<Longrightarrow> limitin euclideanreal
+              tendsto (\<lambda>n. d m1 (x n,y n)) 0 sequentially
+              \<Longrightarrow> tendsto
                     (\<lambda>n. d m2 (f(x n),f(y n))) 0 sequentially) \<and>
    (\<forall>m1 m2 f::A=>B.
         uniformly_continuous_map m1 m2 f \<longleftrightarrow>
         image f (mspace m1) \<subseteq> mspace m2 \<and>
         \<forall>e x y. 0 < e \<and> (\<forall>n. x n \<in> mspace m1) \<and> (\<forall>n. y n \<in> mspace m1) \<and>
-                limitin euclideanreal (\<lambda>n. d m1 (x n,y n)) 0 sequentially
+                tendsto (\<lambda>n. d m1 (x n,y n)) 0 sequentially
                 \<Longrightarrow> \<exists>n. d m2 (f(x n),f(y n)) < e)"
 oops
   REWRITE_TAC[AND_FORALL_THM] THEN REPEAT GEN_TAC THEN
