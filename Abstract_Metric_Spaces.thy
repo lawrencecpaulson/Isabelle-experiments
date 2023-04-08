@@ -3930,13 +3930,13 @@ lemma proper_map_paired_closed_map_right:
   assumes "closed_map X Y f" "regular_space X"
     "\<And>y. y \<in> topspace Y \<Longrightarrow> closedin X {x \<in> topspace X. f x = y}"
   shows "proper_map X (prod_topology X Y) (\<lambda>x. (x, f x))"
-  by (simp add: assms closed_injective_imp_proper_map inj_on_def closed_map_paired_closed_map_right)
+  by (simp add: assms closedinjective_imp_proper_map inj_on_def closed_map_paired_closed_map_right)
 
 lemma proper_map_paired_closed_map_left:
   assumes "closed_map X Y f" "regular_space X"
     "\<And>y. y \<in> topspace Y \<Longrightarrow> closedin X {x \<in> topspace X. f x = y}"
   shows "proper_map X (prod_topology Y X) (\<lambda>x. (f x, x))"
-  by (simp add: assms closed_injective_imp_proper_map inj_on_def closed_map_paired_closed_map_left)
+  by (simp add: assms closedinjective_imp_proper_map inj_on_def closed_map_paired_closed_map_left)
 
 lemma regular_space_continuous_proper_map_image:
   assumes "regular_space X" and contf: "continuous_map X Y f" and pmapf: "proper_map X Y f"
@@ -4859,9 +4859,8 @@ lemma (in metric_space) limit_metric_sequentially:
      l \<in> M \<and> (\<forall>e>0. \<exists>N. \<forall>n\<ge>N. f n \<in> M \<and> d (f n) l < e)"
   by (auto simp: limitin_metric eventually_sequentially)
 
-lemma limitin_closed_in:
-   "\<not> trivial_limit F \<and> limitin X f l F \<and>
-      closedin X s \<and> eventually (\<lambda>x. f x \<in> s) F
+lemma limitin_closedin:
+   "\<not> trivial_limit F \<and> limitin X f l F \<and> closedin X s \<and> eventually (\<lambda>x. f x \<in> s) F
       \<Longrightarrow> l \<in> s"
 oops
   INTRO_TAC "! *; ntriv lim cl ev" THEN REFUTE_THEN (LABEL_TAC "contra") THEN
@@ -4882,7 +4881,7 @@ oops
   EQ_TAC THEN SIMP_TAC[] THENL [INTRO_TAC "l hp"; MESON_TAC[]] THEN
   HYP_TAC "hp" (C MATCH_MP REAL_LT_01) THEN ASM_REWRITE_TAC[]);;
 
-lemma (in metric_space) metric_closed_in_iff_sequentially_closed:
+lemma (in metric_space) metric_closedin_iff_sequentially_closed:
    "closedin mtopology s \<longleftrightarrow>
      s \<subseteq> M \<and>
      (\<forall>a l. (\<forall>n. a n \<in> s) \<and> limitin mtopology a l sequentially
@@ -5689,7 +5688,7 @@ oops
     \<Longrightarrow> d x y < e / 2 \<Longrightarrow> d x z < e`) THEN
   ASM_REWRITE_TAC[] THEN ASM_MESON_TAC[LE_TRANS; MONOTONE_BIGGER]);;
 
-lemma closed_in_mcomplete_imp_mcomplete:
+lemma closedin_mcomplete_imp_mcomplete:
    "\<And>m s::A=>bool. closedin mtopology s \<and> mcomplete m
                  \<Longrightarrow> mcomplete (submetric m s)"
 oops
@@ -5705,7 +5704,7 @@ oops
    EXISTS_TAC `a::num=>A` THEN
    ASM_REWRITE_TAC[TRIVIAL_LIMIT_SEQUENTIALLY; EVENTUALLY_TRUE]]);;
 
-lemma sequentially_closed_in_mcomplete_imp_mcomplete:
+lemma sequentially_closedin_mcomplete_imp_mcomplete:
    "\<And>m s::A=>bool.
      mcomplete m \<and>
      (\<forall>x l. (\<forall>n. x n \<in> s) \<and> limitin mtopology x l sequentially \<Longrightarrow> l \<in> s)
@@ -6688,7 +6687,7 @@ oops
   MATCH_MP_TAC COMPACT_SPACE_IMP_MCOMPLETE THEN
   ASM_REWRITE_TAC[MTOPOLOGY_SUBMETRIC]);;
 
-lemma mcomplete_imp_closed_in:
+lemma mcomplete_imp_closedin:
    "\<And>m s::A=>bool.
        mcomplete(submetric m s) \<and> s \<subseteq> M
        \<Longrightarrow> closedin mtopology s"
@@ -6707,7 +6706,7 @@ oops
   MATCH_MP_TAC(ISPEC `sequentially` LIMIT_METRIC_UNIQUE) THEN
   ASM_MESON_TAC[TRIVIAL_LIMIT_SEQUENTIALLY]);;
 
-lemma closed_in_eq_mcomplete:
+lemma closedin_eq_mcomplete:
    "\<And>m s::A=>bool.
         mcomplete m
         \<Longrightarrow> (closedin mtopology s \<longleftrightarrow>
@@ -10902,7 +10901,7 @@ oops
   EXISTS_TAC `topspace X::A=>bool` THEN
   ASM_REWRITE_TAC[OPEN_IN_TOPSPACE; SUBTOPOLOGY_TOPSPACE]);;
 
-lemma closed_in_path_components_of_locally_path_connected_space:
+lemma closedin_path_components_of_locally_path_connected_space:
    "
         locally_path_connected_space X \<and> c \<in> path_components_of X
         \<Longrightarrow> closedin X c"
@@ -10913,7 +10912,7 @@ oops
   MATCH_MP_TAC OPEN_IN_UNIONS THEN REWRITE_TAC[IN_DELETE] THEN
   ASM_SIMP_TAC[OPEN_IN_PATH_COMPONENTS_OF_LOCALLY_PATH_CONNECTED_SPACE]);;
 
-lemma closed_in_path_component_of_locally_path_connected_space:
+lemma closedin_path_component_of_locally_path_connected_space:
    "locally_path_connected_space X
              \<Longrightarrow> closedin X (path_component_of X x)"
 oops
@@ -12081,7 +12080,7 @@ lemma quasi_components_of_empty_space:
 oops
   REWRITE_TAC[QUASI_COMPONENTS_OF_EQ_EMPTY]);;
 
-lemma closed_in_quasi_component_of:
+lemma closedin_quasi_component_of:
    "closedin X (quasi_component_of X x)"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[QUASI_COMPONENT_OF_SET] THEN
@@ -12091,7 +12090,7 @@ oops
   EXISTS_TAC `topspace X::A=>bool` THEN
   ASM_REWRITE_TAC[OPEN_IN_TOPSPACE; CLOSED_IN_TOPSPACE]);;
 
-lemma closed_in_quasi_components_of:
+lemma closedin_quasi_components_of:
    "
         c \<in> quasi_components_of X \<Longrightarrow> closedin X c"
 oops
@@ -13825,7 +13824,7 @@ oops
   SIMP_TAC[COMPACT_IN_SUBSET_TOPSPACE; OPEN_IN_SUBTOPOLOGY_REFL;
            SET_RULE `s \<subseteq> u \<Longrightarrow> s \<inter> u = s`]);;
 
-lemma closed_in_kification:
+lemma closedin_kification:
    "\<And>X (u::A=>bool).
         closedin (kification X) u \<longleftrightarrow>
         u \<subseteq> topspace X \<and>
@@ -13837,7 +13836,7 @@ oops
   ASM_SIMP_TAC[SET_RULE `u \<subseteq> v \<Longrightarrow> k \<inter> u \<subseteq> v \<inter> k`] THEN
   REWRITE_TAC[SET_RULE `u \<inter> k - k \<inter> s = k \<inter> (u - s)`]);;
 
-lemma closed_in_kification_finer:
+lemma closedin_kification_finer:
    "\<And>X (s::A=>bool).
         closedin X s \<Longrightarrow> closedin (kification X) s"
 oops
@@ -14204,7 +14203,7 @@ oops
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET)) THEN SET_TAC[]);;
 
-lemma closed_in_alexandroff_compactification:
+lemma closedin_alexandroff_compactification:
    "\<And>(X::A topology) c.
         closedin (alexandroff_compactification X) c \<longleftrightarrow>
         (\<exists>k. compactin X k \<and> closedin X k \<and> c = INL ` k) \<or>
@@ -14233,7 +14232,7 @@ oops
   MP_TAC(INST_TYPE [`:1`,`:B`] sum_INJECTIVE) THEN
   ASM SET_TAC[]);;
 
-lemma closed_in_alexandroff_compactification_image_inl:
+lemma closedin_alexandroff_compactification_image_inl:
    "\<And>(X::A topology) k.
         closedin (alexandroff_compactification X) (INL ` k) \<longleftrightarrow>
         compactin X k \<and> closedin X k"
@@ -15789,7 +15788,7 @@ oops
   MATCH_MP_TAC COMPLETELY_METRIZABLE_SPACE_MTOPOLOGY THEN
   REWRITE_TAC[MCOMPLETE_REAL_EUCLIDEAN_METRIC]);;
 
-lemma completely_metrizable_space_closed_in:
+lemma completely_metrizable_space_closedin:
    "
         completely_metrizable_space X \<and> closedin X s
         \<Longrightarrow> completely_metrizable_space(subtopology X s)"
@@ -19447,7 +19446,7 @@ oops
     DISCH_THEN(MP_TAC \<circ> SPEC `m::num`) THEN
     REWRITE_TAC[] THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN ASM_ARITH_TAC]);;
 
-lemma closed_in_euclidean_space:
+lemma closedin_euclidean_space:
    "closedin (product_topology UNIV (\<lambda>i. euclideanreal))
                  (topspace(euclidean_space n))"
 oops
@@ -21723,7 +21722,7 @@ in
 subsection\<open>Embedding in products and hence more about completely metrizable spaces\<close>
 
 
-lemma gdelta_homeomorphic_space_closed_in_product:
+lemma gdelta_homeomorphic_space_closedin_product:
    "\<And>X (s::K=>A->bool) k.
         metrizable_space X \<and> (\<forall>i. i \<in> k \<Longrightarrow> openin X(s i))
         \<Longrightarrow> \<exists>t. closedin
@@ -21954,7 +21953,7 @@ oops
     REWRITE_TAC[IN_REAL_INTERVAL] THEN
     EXPAND_TAC "e" THEN REAL_ARITH_TAC]);;
 
-lemma open_homeomorphic_space_closed_in_product:
+lemma open_homeomorphic_space_closedin_product:
    "\<And>X (s::A=>bool).
         metrizable_space X \<and> openin X s
         \<Longrightarrow> \<exists>t. closedin (prod_topology X euclideanreal) t \<and>
