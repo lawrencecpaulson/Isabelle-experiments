@@ -55,6 +55,18 @@ lemma atin_subtopology_within_if:
   shows "atin (subtopology X S) a = (if a \<in> S then atin_within X a S else bot)"
   by (simp add: atin_subtopology_within)
 
+lemma trivial_limit_atpointof_within:
+   "trivial_limit(atin_within X a S) \<longleftrightarrow>
+        (a \<notin> X derived_set_of S)"
+  by (auto simp: trivial_limit_def eventually_atin_within in_derived_set_of)
+
+lemma derived_set_of_trivial_limit:
+   "a \<in> X derived_set_of S \<longleftrightarrow> \<not> trivial_limit(atin_within X a S)"
+  by (simp add: trivial_limit_atpointof_within)
+
+
+subsection \<open>Misc other\<close>
+
 lemma Sup_unique:
   fixes b :: "'a :: {conditionally_complete_lattice, no_bot}"
   assumes "\<And>c. (\<forall>x \<in> s. x \<le> c) \<longleftrightarrow> b \<le> c"
@@ -5144,65 +5156,77 @@ lemma limit_atin_sequentially_within_inj:
 lemma limit_atin_sequentially_within_decreasing:
   "limitin M2.mtopology f l (atin_within M1.mtopology a S) \<longleftrightarrow>
      l \<in> M2 \<and>
-     (\<forall>\<sigma>. range \<sigma> \<subseteq> S \<inter> M1 - {a} \<and> (\<forall>m n. m<n \<longrightarrow> d1 (\<sigma> n) a < d1 (\<sigma> m) a) \<and> inj \<sigma> \<and> 
-          limitin M1.mtopology \<sigma> a sequentially
+     (\<forall>\<sigma>. range \<sigma> \<subseteq> S \<inter> M1 - {a} \<and> (\<forall>m n. m<n \<longrightarrow> d1 (\<sigma> n) a < d1 (\<sigma> m) a) \<and> 
+          inj \<sigma> \<and> limitin M1.mtopology \<sigma> a sequentially
           \<longrightarrow> limitin M2.mtopology (f \<circ> \<sigma>) l sequentially)"
     by (auto simp add: M1.eventually_atin_within_sequentially_decreasing limitin_def)
 
 lemma limit_atin_sequentially:
    "limitin M2.mtopology f l (atin M1.mtopology a) \<longleftrightarrow>
         l \<in> M2 \<and>
-        (\<forall>\<sigma>. (\<forall>n. \<sigma> n \<in> M1 - {a}) \<and>
+        (\<forall>\<sigma>. range \<sigma> \<subseteq> M1 - {a} \<and>
             limitin M1.mtopology \<sigma> a sequentially
             \<longrightarrow> limitin M2.mtopology (f \<circ> \<sigma>) l sequentially)"
-  using limit_atin_sequentially_within [where S=UNIV] by fastforce
+  using limit_atin_sequentially_within [where S=UNIV] by simp
 
 lemma limit_atin_sequentially_inj:
-   "\<And>m1 m2 f::A=>B a l.
-        limitin (mtopology m2) f l (atin (mtopology m1) a) \<longleftrightarrow>
-        l \<in> mspace m2 \<and>
-        \<forall>\<sigma>. (\<forall>n. \<sigma> n \<in> mspace m1 - {a}) \<and>
-            inj \<sigma> \<and>
-            limitin (mtopology m1) \<sigma> a sequentially
-            \<Longrightarrow> limitin (mtopology m2) (f \<circ> \<sigma>) l sequentially"
-oops
-  REPEAT GEN_TAC THEN
-  GEN_REWRITE_TAC (LAND_CONV \<circ> RAND_CONV) [GSYM NET_WITHIN_UNIV] THEN
-  REWRITE_TAC[LIMIT_ATPOINTOF_SEQUENTIALLY_WITHIN_INJ] THEN
-  REWRITE_TAC[INTER_UNIV]);;
+   "limitin M2.mtopology f l (atin M1.mtopology a) \<longleftrightarrow>
+        l \<in> M2 \<and>
+        (\<forall>\<sigma>. range \<sigma> \<subseteq> M1 - {a} \<and> inj \<sigma> \<and>
+            limitin M1.mtopology \<sigma> a sequentially
+            \<longrightarrow> limitin M2.mtopology (f \<circ> \<sigma>) l sequentially)"
+  using limit_atin_sequentially_within_inj [where S=UNIV] by simp
 
 lemma limit_atin_sequentially_decreasing:
-   "\<And>m1 m2 f::A=>B a l.
-        limitin (mtopology m2) f l (atin (mtopology m1) a) \<longleftrightarrow>
-        l \<in> mspace m2 \<and>
-        \<forall>\<sigma>. (\<forall>n. \<sigma> n \<in> mspace m1 - {a}) \<and>
-            (\<forall>m n. m < n \<Longrightarrow> d m1 (\<sigma> n) a < d m1 (\<sigma> m) a) \<and>
-            inj \<sigma> \<and>
-            limitin (mtopology m1) \<sigma> a sequentially
-            \<Longrightarrow> limitin (mtopology m2) (f \<circ> \<sigma>) l sequentially"
-oops
-  REPEAT GEN_TAC THEN
-  GEN_REWRITE_TAC (LAND_CONV \<circ> RAND_CONV) [GSYM NET_WITHIN_UNIV] THEN
-  REWRITE_TAC[LIMIT_ATPOINTOF_SEQUENTIALLY_WITHIN_DECREASING] THEN
-  REWRITE_TAC[INTER_UNIV]);;
+  "limitin M2.mtopology f l (atin M1.mtopology a) \<longleftrightarrow>
+     l \<in> M2 \<and>
+     (\<forall>\<sigma>. range \<sigma> \<subseteq> M1 - {a} \<and> (\<forall>m n. m<n \<longrightarrow> d1 (\<sigma> n) a < d1 (\<sigma> m) a) \<and> 
+          inj \<sigma> \<and> limitin M1.mtopology \<sigma> a sequentially
+          \<longrightarrow> limitin M2.mtopology (f \<circ> \<sigma>) l sequentially)"
+  using limit_atin_sequentially_within_decreasing [where S=UNIV] by simp
+
+end
+
+
+context Metric_space
+begin
 
 lemma derived_set_of_sequentially:
-   "\<And>met S::A=>bool.
-        mtopology derived_set_of S =
-        {x. x \<in> M \<and>
-             \<exists>f. (\<forall>n. f n \<in> ((S \<inter> M) - {x})) \<and>
-                 limitin mtopology f x sequentially}"
-oops
-  REWRITE_TAC[DERIVED_SET_OF_TRIVIAL_LIMIT; EXTENSION; IN_ELIM_THM] THEN
-  REWRITE_TAC[trivial_limit; EVENTUALLY_ATPOINTOF_WITHIN_SEQUENTIALLY] THEN
-  REWRITE_TAC[EVENTUALLY_FALSE; TRIVIAL_LIMIT_SEQUENTIALLY] THEN
-  REWRITE_TAC[limitin; TOPSPACE_MTOPOLOGY] THEN MESON_TAC[]);;
+  "mtopology derived_set_of S =
+        {x \<in> M. \<exists>\<sigma>. range \<sigma> \<subseteq> S \<inter> M - {x} \<and> limitin mtopology \<sigma> x sequentially}"
+proof -
+  have "x \<in> M"
+    if "atin_within mtopology x S \<noteq> bot" for x
+    by (metis that derived_set_of_trivial_limit in_derived_set_of topspace_mtopology)
+  moreover have "\<exists>\<sigma>. range \<sigma> \<subseteq> S \<inter> M - {x} \<and> limitin mtopology \<sigma> x sequentially"
+    if "atin_within mtopology x S \<noteq> bot" for x
+    by (metis eventually_atin_within_sequentially eventually_False that)
+  moreover have False
+    if "x \<in> M" and "range (\<lambda>x. \<sigma> (x::nat)) \<subseteq> S \<inter> M - {x}"
+      and "limitin mtopology \<sigma> x sequentially"
+      and "atin_within mtopology x S = bot"
+    for x \<sigma>
+  proof -
+    have "\<forall>\<^sub>F n in sequentially. P (\<sigma> n)" for P
+      using that by (metis eventually_atin_within_B eventually_bot)
+    then show False
+      by (meson eventually_False_sequentially eventually_mono)
+  qed
+  ultimately show ?thesis
+    by (auto simp: derived_set_of_trivial_limit)
+qed
 
 lemma derived_set_of_sequentially_alt:
-   "\<And>met S::A=>bool.
-        mtopology derived_set_of S =
-        {x. \<exists>f. (\<forall>n. f n \<in> (S - {x})) \<and>
-                 limitin mtopology f x sequentially}"
+   "mtopology derived_set_of S =
+        {x. \<exists>\<sigma>. range \<sigma> \<subseteq> S - {x} \<and> limitin mtopology \<sigma> x sequentially}"
+  apply (auto simp: derived_set_of_sequentially)
+  using limitin_mspace apply blast
+apply (auto simp: limitin_metric)
+  apply (intro exI conjI)
+  prefer 2
+   apply assumption
+apply (auto simp: limitin_metric)
+
 oops
   REPEAT GEN_TAC THEN
   REWRITE_TAC[DERIVED_SET_OF_TRIVIAL_LIMIT; EXTENSION; IN_ELIM_THM] THEN
