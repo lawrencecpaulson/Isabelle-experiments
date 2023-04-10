@@ -5006,50 +5006,57 @@ qed
 
 lemma A:
   assumes 
-    "(\<And>x. \<lbrakk>range x \<subseteq> (S \<inter> M) - {a}; \<And>m n. m < n \<Longrightarrow> d (x n) a < d (x m) a;
-          inj x; limitin mtopology x a sequentially\<rbrakk>
-      \<Longrightarrow> eventually (\<lambda>n. P (x n)) sequentially)"
+    "(\<And>\<sigma>. \<lbrakk>range \<sigma> \<subseteq> (S \<inter> M) - {a}; \<And>m n. m < n \<Longrightarrow> d (\<sigma> n) a < d (\<sigma> m) a;
+          inj \<sigma>; limitin mtopology \<sigma> a sequentially\<rbrakk>
+      \<Longrightarrow> eventually (\<lambda>n. P (\<sigma> n)) sequentially)"
   shows "eventually P (atin_within mtopology a S)"
 proof -
-  have *: False if "\<forall>\<delta>>0. \<exists>x \<in> M-{a}. d x a < \<delta> \<and> x \<in> S \<and> \<not> P x" "a \<in> M"
+  have False if SP: "\<And>\<delta>. \<delta>>0 \<Longrightarrow> \<exists>x \<in> M-{a}. d x a < \<delta> \<and> x \<in> S \<and> \<not> P x" and "a \<in> M"
   proof -
-    obtain x where x: "\<And>n. x n \<in> M-{a} \<and> d (x n) a < inverse(Suc n) \<and> x n \<in> S \<and> \<not> P(x n)"
-                 and xd: "\<And>n. d (x(Suc n)) a < d (x n) a"
-      sorry
-    have 1: "range x \<subseteq> (S \<inter> M) - {a}"
-      using x by auto
-    have "d (x(Suc (m+n))) a < d (x n) a" for m n
-      by (induction m) (auto intro: order_less_trans xd)
-    then have 2: "d (x n) a < d (x m) a" if "m < n" for m n
+
+    define \<Phi> where "\<Phi> \<equiv> \<lambda>n x. x \<in> M-{a} \<and> d x a < inverse (Suc n) \<and> x \<in> S \<and> \<not> P x"
+    obtain \<sigma> where \<sigma>: "\<And>n. \<Phi> n (\<sigma> n)"
+                 and dless: "\<And>n. d (\<sigma>(Suc n)) a < d (\<sigma> n) a"
+    proof -
+      obtain x0 where x0: "\<Phi> 0 x0"
+        using SP [OF zero_less_one] by (force simp add: \<Phi>_def)
+      have "\<exists>y. \<Phi> (Suc n) y \<and> d y a < d x a" if "\<Phi> n x" for n x
+        using SP [of "min (inverse (Suc (Suc n))) (d x a)"] \<open>a \<in> M\<close> that
+        by (auto simp add: \<Phi>_def)
+      then obtain f where f: "\<And>n x. \<Phi> n x \<Longrightarrow> \<Phi> (Suc n) (f n x) \<and> d (f n x) a < d x a" 
+        by metis
+      show thesis
+        proof
+          show "\<Phi> n (rec_nat x0 f n)" for n
+            by (induction n) (auto simp: x0 dest: f)
+          with f show "d (rec_nat x0 f (Suc n)) a < d (rec_nat x0 f n) a" for n
+            by auto 
+        qed
+    qed
+    have 1: "range \<sigma> \<subseteq> (S \<inter> M) - {a}"
+      using \<sigma> by (auto simp: \<Phi>_def)
+    have "d (\<sigma>(Suc (m+n))) a < d (\<sigma> n) a" for m n
+      by (induction m) (auto intro: order_less_trans dless)
+    then have 2: "d (\<sigma> n) a < d (\<sigma> m) a" if "m < n" for m n
       by (metis add.commute less_imp_Suc_add that)
-    have 3: "inj x"
+    have 3: "inj \<sigma>"
       by (smt (verit, ccfv_threshold) "2" linorder_injI)
-    have "\<forall>\<^sub>F xa in sequentially. d (x xa) a < e" if "e > 0" for e
+    have "\<forall>\<^sub>F xa in sequentially. d (\<sigma> xa) a < e" if "e > 0" for e
     proof -
       obtain N where "inverse (Suc N) < e"
         using \<open>0 < e\<close> reals_Archimedean by blast
-      then show ?thesis
-        by (metis (no_types, lifting) "2" x order_less_trans eventually_at_top_dense)
+      with \<sigma> 2 show ?thesis
+        by (smt (verit, best) \<Phi>_def eventually_at_top_dense)
     qed
-    then have 4: "limitin mtopology x a sequentially"
-      using x \<open>a \<in> M\<close> by (simp add: limitin_metric)
+    then have 4: "limitin mtopology \<sigma> a sequentially"
+      using \<sigma> \<open>a \<in> M\<close> by (simp add: \<Phi>_def limitin_metric)
     show False
-      using assms [OF 1 2 3 4] by (simp add: x)
+      using assms [OF 1 2 3 4] \<Phi>_def \<sigma> by force
   qed
-  show ?thesis
-    using * by (fastforce simp: eventually_atin_within_metric)
+  then show ?thesis
+    by (fastforce simp: eventually_atin_within_metric)
 qed
 
-
-  have "\<exists>x. (\<forall>n. x n \<in> M-{a} \<and> d (x n) a < inverse(Suc n) \<and> x n \<in> S \<and> \<not> P(x n)) \<and>
-          (\<forall>n. d (x(Suc n)) a < d (x n) a)"
-apply (rule dependent_choice)
-    sorry
-  show ?thesis
-    apply (simp add: eventually_atin_within)
-    apply clarify
-    using assms
-    sorry
 
 lemma B:
   assumes "eventually P (atin_within mtopology a S)" "range x \<subseteq> (S \<inter> M) - {a}"
