@@ -5060,18 +5060,18 @@ qed
 
 lemma eventually_atin_within_B:
   assumes ev: "eventually P (atin_within mtopology a S)" 
-    and "range x \<subseteq> (S \<inter> M) - {a}"
-    and lim: "limitin mtopology x a sequentially"
-  shows "eventually (\<lambda>n. P (x n)) sequentially"
+    and "range \<sigma> \<subseteq> (S \<inter> M) - {a}"
+    and lim: "limitin mtopology \<sigma> a sequentially"
+  shows "eventually (\<lambda>n. P (\<sigma> n)) sequentially"
 proof -
   have "a \<in> M"
     using lim limitin_mspace by auto
   with ev obtain \<delta> where "0 < \<delta>" 
-    and \<delta>: "\<And>x. \<lbrakk>x \<in> M; x \<in> S; 0 < d x a; d x a < \<delta>\<rbrakk> \<Longrightarrow> P x"
+    and \<delta>: "\<And>\<sigma>. \<lbrakk>\<sigma> \<in> M; \<sigma> \<in> S; 0 < d \<sigma> a; d \<sigma> a < \<delta>\<rbrakk> \<Longrightarrow> P \<sigma>"
     by (auto simp: eventually_atin_within_metric)
-  then have *: "\<And>n. x n \<in> M \<and> d (x n) a < \<delta> \<Longrightarrow> P (x n)"
+  then have *: "\<And>n. \<sigma> n \<in> M \<and> d (\<sigma> n) a < \<delta> \<Longrightarrow> P (\<sigma> n)"
     using \<open>a \<in> M\<close> assms(2) by auto
-  have "\<forall>\<^sub>F n in sequentially. x n \<in> M \<and> d (x n) a < \<delta>"
+  have "\<forall>\<^sub>F n in sequentially. \<sigma> n \<in> M \<and> d (\<sigma> n) a < \<delta>"
     using lim \<open>0 < \<delta>\<close> by (auto simp: limitin_metric)
   then show ?thesis
     by (simp add: "*" eventually_mono)
@@ -5079,120 +5079,92 @@ qed
 
 lemma eventually_atin_within_sequentially:
      "eventually P (atin_within mtopology a S) \<longleftrightarrow>
-        (\<forall>x. range x \<subseteq> (S \<inter> M) - {a} \<and>
-            limitin mtopology x a sequentially
-            \<longrightarrow> eventually (\<lambda>n. P(x n)) sequentially)"
+        (\<forall>\<sigma>. range \<sigma> \<subseteq> (S \<inter> M) - {a} \<and>
+            limitin mtopology \<sigma> a sequentially
+            \<longrightarrow> eventually (\<lambda>n. P(\<sigma> n)) sequentially)"
   by (metis eventually_atin_within_A eventually_atin_within_B)
 
 lemma eventually_atin_within_sequentially_inj:
      "eventually P (atin_within mtopology a S) \<longleftrightarrow>
-        (\<forall>x. range x \<subseteq> (S \<inter> M) - {a} \<and> inj x \<and>
-            limitin mtopology x a sequentially
-            \<longrightarrow> eventually (\<lambda>n. P(x n)) sequentially)"
+        (\<forall>\<sigma>. range \<sigma> \<subseteq> (S \<inter> M) - {a} \<and> inj \<sigma> \<and>
+            limitin mtopology \<sigma> a sequentially
+            \<longrightarrow> eventually (\<lambda>n. P(\<sigma> n)) sequentially)"
   by (metis eventually_atin_within_A eventually_atin_within_B)
 
 lemma eventually_atin_within_sequentially_decreasing:
      "eventually P (atin_within mtopology a S) \<longleftrightarrow>
-        (\<forall>x. range x \<subseteq> (S \<inter> M) - {a} \<and> (\<forall>m n. m<n \<longrightarrow> d (x n) a < d (x m) a) \<and> inj x \<and>
-            limitin mtopology x a sequentially
-            \<longrightarrow> eventually (\<lambda>n. P(x n)) sequentially)"
+        (\<forall>\<sigma>. range \<sigma> \<subseteq> (S \<inter> M) - {a} \<and> (\<forall>m n. m<n \<longrightarrow> d (\<sigma> n) a < d (\<sigma> m) a) \<and> inj \<sigma> \<and>
+            limitin mtopology \<sigma> a sequentially
+            \<longrightarrow> eventually (\<lambda>n. P(\<sigma> n)) sequentially)"
   by (metis eventually_atin_within_A eventually_atin_within_B)
 
 
 lemma eventually_atin_sequentially:
    "eventually P (atin mtopology a) \<longleftrightarrow>
-    (\<forall>x. range x \<subseteq> M - {a} \<and> limitin mtopology x a sequentially
-         \<longrightarrow> eventually (\<lambda>n. P(x n)) sequentially)"
+    (\<forall>\<sigma>. range \<sigma> \<subseteq> M - {a} \<and> limitin mtopology \<sigma> a sequentially
+         \<longrightarrow> eventually (\<lambda>n. P(\<sigma> n)) sequentially)"
   using eventually_atin_within_sequentially [where S=UNIV] by simp
 
 lemma eventually_atin_sequentially_inj:
    "eventually P (atin mtopology a) \<longleftrightarrow>
-    (\<forall>x. range x \<subseteq> M - {a} \<and> inj x \<and>
-        limitin mtopology x a sequentially
-        \<longrightarrow> eventually (\<lambda>n. P(x n)) sequentially)"
+    (\<forall>\<sigma>. range \<sigma> \<subseteq> M - {a} \<and> inj \<sigma> \<and>
+        limitin mtopology \<sigma> a sequentially
+        \<longrightarrow> eventually (\<lambda>n. P(\<sigma> n)) sequentially)"
   using eventually_atin_within_sequentially_inj [where S=UNIV] by simp
 
 lemma eventually_atin_sequentially_decreasing:
    "eventually P (atin mtopology a) \<longleftrightarrow>
-    (\<forall>x. range x \<subseteq> M - {a} \<and>
-        (\<forall>m n. m < n \<longrightarrow> d (x n) a < d (x m) a) \<and>
-        inj x \<and> limitin mtopology x a sequentially
-        \<longrightarrow> eventually (\<lambda>n. P(x n)) sequentially)"
+    (\<forall>\<sigma>. range \<sigma> \<subseteq> M - {a} \<and>
+        (\<forall>m n. m < n \<longrightarrow> d (\<sigma> n) a < d (\<sigma> m) a) \<and>
+        inj \<sigma> \<and> limitin mtopology \<sigma> a sequentially
+        \<longrightarrow> eventually (\<lambda>n. P(\<sigma> n)) sequentially)"
   using eventually_atin_within_sequentially_decreasing [where S=UNIV] by simp
 
+end
+
+locale Metric_space12 =  M1: Metric_space M1 d1 + M2: Metric_space M2 d2 for M1 d1 M2 d2
+begin
+
 lemma limit_atin_sequentially_within:
-   " limitin (mtopology m2) f l (atin (mtopology m1) a within s) \<longleftrightarrow>
-        l \<in> mspace m2 \<and>
-        \<forall>x. (\<forall>n. x n \<in> (s \<inter> mspace m1) - {a}) \<and>
-            limitin (mtopology m1) x a sequentially
-            \<Longrightarrow> limitin (mtopology m2) (f \<circ> x) l sequentially"
-oops
-  REPEAT GEN_TAC THEN GEN_REWRITE_TAC LAND_CONV [limitin] THEN
-  ASM_CASES_TAC `(l::B) \<in> mspace m2` THEN
-  ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-  GEN_REWRITE_TAC (RAND_CONV \<circ> BINDER_CONV \<circ> RAND_CONV) [limitin] THEN
-  REWRITE_TAC[EVENTUALLY_ATPOINTOF_WITHIN_SEQUENTIALLY] THEN
-  ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY; o_DEF; RIGHT_IMP_FORALL_THM] THEN
-  GEN_REWRITE_TAC RAND_CONV [SWAP_FORALL_THM] THEN
-  REWRITE_TAC[IMP_IMP; CONJ_ACI]);;
+  "limitin M2.mtopology f l (atin_within M1.mtopology a S) \<longleftrightarrow>
+     l \<in> M2 \<and>
+     (\<forall>\<sigma>. range \<sigma> \<subseteq> S \<inter> M1 - {a} \<and>
+          limitin M1.mtopology \<sigma> a sequentially
+          \<longrightarrow> limitin M2.mtopology (f \<circ> \<sigma>) l sequentially)"
+    by (auto simp add: M1.eventually_atin_within_sequentially limitin_def)
 
 lemma limit_atin_sequentially_within_inj:
-   "limitin (mtopology m2) f l (atin (mtopology m1) a within s) \<longleftrightarrow>
-        l \<in> mspace m2 \<and>
-        \<forall>x. (\<forall>n. x n \<in> (s \<inter> mspace m1) - {a}) \<and>
-            inj x \<and>
-            limitin (mtopology m1) x a sequentially
-            \<Longrightarrow> limitin (mtopology m2) (f \<circ> x) l sequentially"
-oops
-  REPEAT GEN_TAC THEN GEN_REWRITE_TAC LAND_CONV [limitin] THEN
-  ASM_CASES_TAC `(l::B) \<in> mspace m2` THEN
-  ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-  GEN_REWRITE_TAC (RAND_CONV \<circ> BINDER_CONV \<circ> RAND_CONV) [limitin] THEN
-  REWRITE_TAC[EVENTUALLY_ATPOINTOF_WITHIN_SEQUENTIALLY_INJ] THEN
-  ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY; o_DEF; RIGHT_IMP_FORALL_THM] THEN
-  GEN_REWRITE_TAC RAND_CONV [SWAP_FORALL_THM] THEN
-  REWRITE_TAC[IMP_IMP; CONJ_ACI]);;
+  "limitin M2.mtopology f l (atin_within M1.mtopology a S) \<longleftrightarrow>
+     l \<in> M2 \<and>
+     (\<forall>\<sigma>. range \<sigma> \<subseteq> S \<inter> M1 - {a} \<and> inj \<sigma> \<and>
+          limitin M1.mtopology \<sigma> a sequentially
+          \<longrightarrow> limitin M2.mtopology (f \<circ> \<sigma>) l sequentially)"
+    by (auto simp add: M1.eventually_atin_within_sequentially_inj limitin_def)
 
 lemma limit_atin_sequentially_within_decreasing:
-   "\<And>m1 m2 s f::A=>B a l.
-        limitin (mtopology m2) f l (atin (mtopology m1) a within s) \<longleftrightarrow>
-        l \<in> mspace m2 \<and>
-        \<forall>x. (\<forall>n. x n \<in> (s \<inter> mspace m1) - {a}) \<and>
-            (\<forall>m n. m < n \<Longrightarrow> d m1 (x n) a < d m1 (x m) a) \<and>
-            inj x \<and>
-            limitin (mtopology m1) x a sequentially
-            \<Longrightarrow> limitin (mtopology m2) (f \<circ> x) l sequentially"
-oops
-  REPEAT GEN_TAC THEN GEN_REWRITE_TAC LAND_CONV [limitin] THEN
-  ASM_CASES_TAC `(l::B) \<in> mspace m2` THEN
-  ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-  GEN_REWRITE_TAC (RAND_CONV \<circ> BINDER_CONV \<circ> RAND_CONV) [limitin] THEN
-  REWRITE_TAC[EVENTUALLY_ATPOINTOF_WITHIN_SEQUENTIALLY_DECREASING] THEN
-  ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY; o_DEF; RIGHT_IMP_FORALL_THM] THEN
-  GEN_REWRITE_TAC RAND_CONV [SWAP_FORALL_THM] THEN
-  REWRITE_TAC[IMP_IMP; CONJ_ACI]);;
+  "limitin M2.mtopology f l (atin_within M1.mtopology a S) \<longleftrightarrow>
+     l \<in> M2 \<and>
+     (\<forall>\<sigma>. range \<sigma> \<subseteq> S \<inter> M1 - {a} \<and> (\<forall>m n. m<n \<longrightarrow> d1 (\<sigma> n) a < d1 (\<sigma> m) a) \<and> inj \<sigma> \<and> 
+          limitin M1.mtopology \<sigma> a sequentially
+          \<longrightarrow> limitin M2.mtopology (f \<circ> \<sigma>) l sequentially)"
+    by (auto simp add: M1.eventually_atin_within_sequentially_decreasing limitin_def)
 
 lemma limit_atin_sequentially:
-   "\<And>m1 m2 f::A=>B a l.
-        limitin (mtopology m2) f l (atin (mtopology m1) a) \<longleftrightarrow>
-        l \<in> mspace m2 \<and>
-        \<forall>x. (\<forall>n. x n \<in> mspace m1 - {a}) \<and>
-            limitin (mtopology m1) x a sequentially
-            \<Longrightarrow> limitin (mtopology m2) (f \<circ> x) l sequentially"
-oops
-  REPEAT GEN_TAC THEN
-  GEN_REWRITE_TAC (LAND_CONV \<circ> RAND_CONV) [GSYM NET_WITHIN_UNIV] THEN
-  REWRITE_TAC[LIMIT_ATPOINTOF_SEQUENTIALLY_WITHIN] THEN
-  REWRITE_TAC[INTER_UNIV]);;
+   "limitin M2.mtopology f l (atin M1.mtopology a) \<longleftrightarrow>
+        l \<in> M2 \<and>
+        (\<forall>\<sigma>. (\<forall>n. \<sigma> n \<in> M1 - {a}) \<and>
+            limitin M1.mtopology \<sigma> a sequentially
+            \<longrightarrow> limitin M2.mtopology (f \<circ> \<sigma>) l sequentially)"
+  using limit_atin_sequentially_within [where S=UNIV] by fastforce
 
 lemma limit_atin_sequentially_inj:
    "\<And>m1 m2 f::A=>B a l.
         limitin (mtopology m2) f l (atin (mtopology m1) a) \<longleftrightarrow>
         l \<in> mspace m2 \<and>
-        \<forall>x. (\<forall>n. x n \<in> mspace m1 - {a}) \<and>
-            inj x \<and>
-            limitin (mtopology m1) x a sequentially
-            \<Longrightarrow> limitin (mtopology m2) (f \<circ> x) l sequentially"
+        \<forall>\<sigma>. (\<forall>n. \<sigma> n \<in> mspace m1 - {a}) \<and>
+            inj \<sigma> \<and>
+            limitin (mtopology m1) \<sigma> a sequentially
+            \<Longrightarrow> limitin (mtopology m2) (f \<circ> \<sigma>) l sequentially"
 oops
   REPEAT GEN_TAC THEN
   GEN_REWRITE_TAC (LAND_CONV \<circ> RAND_CONV) [GSYM NET_WITHIN_UNIV] THEN
@@ -5203,11 +5175,11 @@ lemma limit_atin_sequentially_decreasing:
    "\<And>m1 m2 f::A=>B a l.
         limitin (mtopology m2) f l (atin (mtopology m1) a) \<longleftrightarrow>
         l \<in> mspace m2 \<and>
-        \<forall>x. (\<forall>n. x n \<in> mspace m1 - {a}) \<and>
-            (\<forall>m n. m < n \<Longrightarrow> d m1 (x n) a < d m1 (x m) a) \<and>
-            inj x \<and>
-            limitin (mtopology m1) x a sequentially
-            \<Longrightarrow> limitin (mtopology m2) (f \<circ> x) l sequentially"
+        \<forall>\<sigma>. (\<forall>n. \<sigma> n \<in> mspace m1 - {a}) \<and>
+            (\<forall>m n. m < n \<Longrightarrow> d m1 (\<sigma> n) a < d m1 (\<sigma> m) a) \<and>
+            inj \<sigma> \<and>
+            limitin (mtopology m1) \<sigma> a sequentially
+            \<Longrightarrow> limitin (mtopology m2) (f \<circ> \<sigma>) l sequentially"
 oops
   REPEAT GEN_TAC THEN
   GEN_REWRITE_TAC (LAND_CONV \<circ> RAND_CONV) [GSYM NET_WITHIN_UNIV] THEN
@@ -5215,10 +5187,10 @@ oops
   REWRITE_TAC[INTER_UNIV]);;
 
 lemma derived_set_of_sequentially:
-   "\<And>met s::A=>bool.
-        mtopology derived_set_of s =
+   "\<And>met S::A=>bool.
+        mtopology derived_set_of S =
         {x. x \<in> M \<and>
-             \<exists>f. (\<forall>n. f n \<in> ((s \<inter> M) - {x})) \<and>
+             \<exists>f. (\<forall>n. f n \<in> ((S \<inter> M) - {x})) \<and>
                  limitin mtopology f x sequentially}"
 oops
   REWRITE_TAC[DERIVED_SET_OF_TRIVIAL_LIMIT; EXTENSION; IN_ELIM_THM] THEN
@@ -5227,9 +5199,9 @@ oops
   REWRITE_TAC[limitin; TOPSPACE_MTOPOLOGY] THEN MESON_TAC[]);;
 
 lemma derived_set_of_sequentially_alt:
-   "\<And>met s::A=>bool.
-        mtopology derived_set_of s =
-        {x. \<exists>f. (\<forall>n. f n \<in> (s - {x})) \<and>
+   "\<And>met S::A=>bool.
+        mtopology derived_set_of S =
+        {x. \<exists>f. (\<forall>n. f n \<in> (S - {x})) \<and>
                  limitin mtopology f x sequentially}"
 oops
   REPEAT GEN_TAC THEN
@@ -5250,10 +5222,10 @@ oops
   ASM_REWRITE_TAC[]);;
 
 lemma derived_set_of_sequentially_inj:
-   "\<And>met s::A=>bool.
-        mtopology derived_set_of s =
+   "\<And>met S::A=>bool.
+        mtopology derived_set_of S =
         {x. x \<in> M \<and>
-             \<exists>f. (\<forall>n. f n \<in> ((s \<inter> M) - {x})) \<and>
+             \<exists>f. (\<forall>n. f n \<in> ((S \<inter> M) - {x})) \<and>
                  (\<forall>m n. f m = f n \<longleftrightarrow> m = n) \<and>
                  limitin mtopology f x sequentially}"
 oops
@@ -5265,9 +5237,9 @@ oops
   AP_TERM_TAC THEN ABS_TAC THEN REWRITE_TAC[CONJ_ACI]);;
 
 lemma derived_set_of_sequentially_inj_alt:
-   "\<And>met s::A=>bool.
-        mtopology derived_set_of s =
-        {x. \<exists>f. (\<forall>n. f n \<in> (s - {x})) \<and>
+   "\<And>met S::A=>bool.
+        mtopology derived_set_of S =
+        {x. \<exists>f. (\<forall>n. f n \<in> (S - {x})) \<and>
                  (\<forall>m n. f m = f n \<longleftrightarrow> m = n) \<and>
                  limitin mtopology f x sequentially}"
 oops
@@ -5288,10 +5260,10 @@ oops
   ASM_REWRITE_TAC[]);;
 
 lemma derived_set_of_sequentially_decreasing:
-   "\<And>met s::A=>bool.
-        mtopology derived_set_of s =
+   "\<And>met S::A=>bool.
+        mtopology derived_set_of S =
         {x. x \<in> M \<and>
-             \<exists>f. (\<forall>n. f n \<in> ((s \<inter> M) - {x})) \<and>
+             \<exists>f. (\<forall>n. f n \<in> ((S \<inter> M) - {x})) \<and>
                  (\<forall>m n. m < n \<Longrightarrow> d met (f n,x) < d met (f m,x)) \<and>
                  (\<forall>m n. f m = f n \<longleftrightarrow> m = n) \<and>
                  limitin mtopology f x sequentially}"
@@ -5305,9 +5277,9 @@ oops
   AP_TERM_TAC THEN ABS_TAC THEN REWRITE_TAC[CONJ_ACI]);;
 
 lemma derived_set_of_sequentially_decreasing_alt:
-   "\<And>met s::A=>bool.
-        mtopology derived_set_of s =
-        {x. \<exists>f. (\<forall>n. f n \<in> (s - {x})) \<and>
+   "\<And>met S::A=>bool.
+        mtopology derived_set_of S =
+        {x. \<exists>f. (\<forall>n. f n \<in> (S - {x})) \<and>
                  (\<forall>m n. m < n \<Longrightarrow> d met (f n,x) < d met (f m,x)) \<and>
                  (\<forall>m n. f m = f n \<longleftrightarrow> m = n) \<and>
                  limitin mtopology f x sequentially}"
@@ -5331,10 +5303,10 @@ oops
   ASM_REWRITE_TAC[]);;
 
 lemma closure_of_sequentially:
-   "\<And>met s::A=>bool.
-        mtopology closure_of s =
+   "\<And>met S::A=>bool.
+        mtopology closure_of S =
         {x. x \<in> M \<and>
-             \<exists>f. (\<forall>n. f n \<in> (s \<inter> M)) \<and>
+             \<exists>f. (\<forall>n. f n \<in> (S \<inter> M)) \<and>
                  limitin mtopology f x sequentially}"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[EXTENSION; IN_ELIM_THM] THEN
@@ -5363,30 +5335,30 @@ subsection\<open>Cauchy sequences and complete metric spaces\<close>
 
 
 let cauchy_in = new_definition
-  `\<forall>m::A metric s::num=>A.
-     cauchy_in m s \<longleftrightarrow>
-     (\<forall>n. s n \<in> M) \<and>
+  `\<forall>m::A metric S::num=>A.
+     cauchy_in m S \<longleftrightarrow>
+     (\<forall>n. S n \<in> M) \<and>
      (\<forall>e. 0 < e
           \<Longrightarrow> (\<exists>N. !n n'. N \<le> n \<and> N \<le> n'
-                          \<Longrightarrow> d m (s n,s n') < e))`;;
+                          \<Longrightarrow> d m (S n,S n') < e))`;;
 
 let mcomplete = new_definition
   `\<forall>m::A metric.
      mcomplete m \<longleftrightarrow>
-     (\<forall>s. cauchy_in m s \<Longrightarrow> \<exists>x. limitin mtopology s x sequentially)`;;
+     (\<forall>S. cauchy_in m S \<Longrightarrow> \<exists>x. limitin mtopology S x sequentially)`;;
 
 lemma mcomplete:
    "        mcomplete m \<longleftrightarrow>
-        \<forall>s. eventually (\<lambda>n. s n \<in> M) sequentially \<and>
+        \<forall>S. eventually (\<lambda>n. S n \<in> M) sequentially \<and>
             (\<forall>e. 0 < e
-                 \<Longrightarrow> \<exists>N. !n n'. N \<le> n \<and> N \<le> n' \<Longrightarrow> d m (s n,s n') < e)
-            \<Longrightarrow> \<exists>x. limitin mtopology s x sequentially"
+                 \<Longrightarrow> \<exists>N. !n n'. N \<le> n \<and> N \<le> n' \<Longrightarrow> d m (S n,S n') < e)
+            \<Longrightarrow> \<exists>x. limitin mtopology S x sequentially"
 oops
   GEN_TAC THEN REWRITE_TAC[mcomplete; cauchy_in] THEN EQ_TAC THEN
-  DISCH_TAC THEN X_GEN_TAC `s::num=>A` THEN STRIP_TAC THENL
+  DISCH_TAC THEN X_GEN_TAC `S::num=>A` THEN STRIP_TAC THENL
    [FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [EVENTUALLY_SEQUENTIALLY]) THEN
     REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `N::num` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(s::num=>A) \<circ> (\<lambda>n. N + n)`) THEN
+    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(S::num=>A) \<circ> (\<lambda>n. N + n)`) THEN
     ASM_SIMP_TAC[o_DEF; LE_ADD] THEN ANTS_TAC THENL
      [ASM_MESON_TAC[ARITH_RULE `M::num \<le> n \<Longrightarrow> M \<le> N + n`];
       MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC THEN ONCE_REWRITE_TAC[ADD_SYM] THEN
@@ -5404,8 +5376,8 @@ oops
   SIMP_TAC[MCOMPLETE_EMPTY_MSPACE; SUBMETRIC; INTER_EMPTY]);;
 
 lemma cauchy_in_submetric:
-   "\<And>m s x::num=>A.
-    cauchy_in (submetric m s) x \<longleftrightarrow> (\<forall>n. x n \<in> s) \<and> cauchy_in m x"
+   "\<And>m S x::num=>A.
+    cauchy_in (submetric m S) x \<longleftrightarrow> (\<forall>n. x n \<in> S) \<and> cauchy_in m x"
 oops
   REWRITE_TAC[cauchy_in; SUBMETRIC; IN_INTER] THEN MESON_TAC[]);;
 
@@ -5433,9 +5405,9 @@ oops
 
 lemma mcomplete_alt:
    "        mcomplete m \<longleftrightarrow>
-        \<forall>s. cauchy_in m s \<longleftrightarrow>
-            (\<forall>n. s n \<in> M) \<and>
-            \<exists>x. limitin mtopology s x sequentially"
+        \<forall>S. cauchy_in m S \<longleftrightarrow>
+            (\<forall>n. S n \<in> M) \<and>
+            \<exists>x. limitin mtopology S x sequentially"
 oops
   MESON_TAC[CONVERGENT_IMP_CAUCHY_IN; mcomplete; cauchy_in]);;
 
@@ -5497,10 +5469,10 @@ oops
   ASM_REWRITE_TAC[] THEN ASM_MESON_TAC[LE_TRANS; MONOTONE_BIGGER]);;
 
 lemma closedin_mcomplete_imp_mcomplete:
-   "\<And>m s::A=>bool. closedin mtopology s \<and> mcomplete m
-                 \<Longrightarrow> mcomplete (submetric m s)"
+   "\<And>m S::A=>bool. closedin mtopology S \<and> mcomplete m
+                 \<Longrightarrow> mcomplete (submetric m S)"
 oops
-  INTRO_TAC "!m s; cl cp" THEN REWRITE_TAC[mcomplete] THEN
+  INTRO_TAC "!m S; cl cp" THEN REWRITE_TAC[mcomplete] THEN
   INTRO_TAC "![a]; a" THEN CLAIM_TAC "cy'" `cauchy_in m (a::num=>A)` THENL
   [REMOVE_THEN "a" MP_TAC THEN SIMP_TAC[cauchy_in; SUBMETRIC; IN_INTER];
    HYP_TAC "cp" (GSYM \<circ> REWRITE_RULE[mcomplete]) THEN
@@ -5513,13 +5485,13 @@ oops
    ASM_REWRITE_TAC[TRIVIAL_LIMIT_SEQUENTIALLY; EVENTUALLY_TRUE]]);;
 
 lemma sequentially_closedin_mcomplete_imp_mcomplete:
-   "\<And>m s::A=>bool.
+   "\<And>m S::A=>bool.
      mcomplete m \<and>
-     (\<forall>x l. (\<forall>n. x n \<in> s) \<and> limitin mtopology x l sequentially \<Longrightarrow> l \<in> s)
-            \<Longrightarrow> mcomplete (submetric m s)"
+     (\<forall>x l. (\<forall>n. x n \<in> S) \<and> limitin mtopology x l sequentially \<Longrightarrow> l \<in> S)
+            \<Longrightarrow> mcomplete (submetric m S)"
 oops
-  INTRO_TAC "!m s; cpl seq" THEN SUBGOAL_THEN
-    `submetric m (s::A=>bool) = submetric m (M \<inter> s)` SUBST1_TAC THENL
+  INTRO_TAC "!m S; cpl seq" THEN SUBGOAL_THEN
+    `submetric m (S::A=>bool) = submetric m (M \<inter> S)` SUBST1_TAC THENL
   [REWRITE_TAC[submetric; INTER_ACI]; ALL_TAC] THEN
   MATCH_MP_TAC CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE THEN
   ASM_REWRITE_TAC[METRIC_CLOSED_IN_IFF_SEQUENTIALLY_CLOSED; INTER_SUBSET] THEN
@@ -5661,7 +5633,7 @@ oops
     SIMP_TAC[CLOSURE_OF_MONO; FROM_MONO; IMAGE_SUBSET] THEN
     REWRITE_TAC[CLOSURE_OF_EQ_EMPTY_GEN; TOPSPACE_MTOPOLOGY] THEN
     ASM_SIMP_TAC[FROM_NONEMPTY; SET_RULE
-     `(\<forall>n. x n \<in> s) \<and> (k \<noteq> {}) \<Longrightarrow> \<not> disjnt s (x ` k)`] THEN
+     `(\<forall>n. x n \<in> S) \<and> (k \<noteq> {}) \<Longrightarrow> \<not> disjnt S (x ` k)`] THEN
     REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; INTERS_GSPEC; IN_ELIM_THM] THEN
     ANTS_TAC THENL
      [X_GEN_TAC `e::real` THEN DISCH_TAC THEN
@@ -5709,7 +5681,7 @@ oops
     ASM SET_TAC[];
     ASM_SIMP_TAC[]] THEN
   MATCH_MP_TAC(SET_RULE
-   `l \<in> s \<and> (!l'. \<not> (l' = l) \<Longrightarrow> \<not> (l' \<in> s)) \<Longrightarrow> s = {l}`) THEN
+   `l \<in> S \<and> (!l'. \<not> (l' = l) \<Longrightarrow> \<not> (l' \<in> S)) \<Longrightarrow> S = {l}`) THEN
   ASM_REWRITE_TAC[] THEN X_GEN_TAC `l':A` THEN REPEAT DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC \<circ> SPEC `d m (l::A,l') / 3`) THEN ANTS_TAC THENL
    [ASM_MESON_TAC[MDIST_POS_EQ; REAL_ARITH `0 < e / 3 \<longleftrightarrow> 0 < e`];
@@ -5741,7 +5713,7 @@ oops
       MATCH_MP UPPER_BOUND_FINITE_SET) THEN
     REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `n::num` THEN
     DISCH_TAC THEN MATCH_MP_TAC(SET_RULE
-     `\<forall>t. (t \<noteq> {}) \<and> t \<subseteq> s \<Longrightarrow> (s \<noteq> {})`) THEN
+     `\<forall>t. (t \<noteq> {}) \<and> t \<subseteq> S \<Longrightarrow> (S \<noteq> {})`) THEN
     EXISTS_TAC `(c::num=>A->bool) n` THEN
     ASM_SIMP_TAC[SUBSET_INTERS; FORALL_IN_GSPEC]] THEN
   DISCH_TAC THEN X_GEN_TAC `f:(A=>bool)->bool` THEN STRIP_TAC THEN
@@ -5795,7 +5767,7 @@ oops
       ASM_SIMP_TAC[FINITE_IMAGE; FINITE_NUMSEG_LE; \<subseteq>] THEN
       ASM_REWRITE_TAC[FORALL_IN_IMAGE];
       REPEAT STRIP_TAC THEN MATCH_MP_TAC INTERS_ANTIMONO THEN
-      MATCH_MP_TAC(SET_RULE `s \<subseteq> t \<Longrightarrow> insert x s \<subseteq> insert x t`) THEN
+      MATCH_MP_TAC(SET_RULE `S \<subseteq> t \<Longrightarrow> insert x S \<subseteq> insert x t`) THEN
       ONCE_REWRITE_TAC[SIMPLE_IMAGE_GEN] THEN MATCH_MP_TAC IMAGE_SUBSET THEN
       REWRITE_TAC[\<subseteq>; IN_ELIM_THM] THEN ASM_ARITH_TAC;
       MATCH_MP_TAC FORALL_POS_MONO_1 THEN CONJ_TAC THENL
@@ -5838,7 +5810,7 @@ oops
     ASM SET_TAC[];
     ASM_SIMP_TAC[]] THEN
   MATCH_MP_TAC(SET_RULE
-   `l \<in> s \<and> (!l'. \<not> (l' = l) \<Longrightarrow> \<not> (l' \<in> s)) \<Longrightarrow> s = {l}`) THEN
+   `l \<in> S \<and> (!l'. \<not> (l' = l) \<Longrightarrow> \<not> (l' \<in> S)) \<Longrightarrow> S = {l}`) THEN
   ASM_REWRITE_TAC[] THEN X_GEN_TAC `l':A` THEN REPEAT DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC \<circ> SPEC `d m (l::A,l') / 3`) THEN ANTS_TAC THENL
    [ASM_MESON_TAC[MDIST_POS_EQ; REAL_ARITH `0 < e / 3 \<longleftrightarrow> 0 < e`];
@@ -5853,14 +5825,14 @@ oops
   UNDISCH_TAC `\<not> (l':A = l)` THEN CONV_TAC METRIC_ARITH);;
 
 lemma mcomplete_union:
-   "\<And>m s t::A=>bool.
-        mcomplete(submetric m s) \<and> mcomplete(submetric m t)
-        \<Longrightarrow> mcomplete(submetric m (s \<union> t))"
+   "\<And>m S t::A=>bool.
+        mcomplete(submetric m S) \<and> mcomplete(submetric m t)
+        \<Longrightarrow> mcomplete(submetric m (S \<union> t))"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[mcomplete; CAUCHY_IN_SUBMETRIC] THEN
   DISCH_TAC THEN X_GEN_TAC `x::num=>A` THEN STRIP_TAC THEN
   SUBGOAL_THEN
-   `UNIV = {n. (x::num=>A) n \<in> s} \<union> {n. (x::num=>A) n \<in> t}`
+   `UNIV = {n. (x::num=>A) n \<in> S} \<union> {n. (x::num=>A) n \<in> t}`
    (MP_TAC \<circ> AP_TERM `finite:(num=>bool)->bool`)
   THENL [ASM SET_TAC[]; REWRITE_TAC[FINITE_UNION]] THEN
   REWRITE_TAC[REWRITE_RULE[infinite] num_INFINITE] THEN
@@ -5877,8 +5849,8 @@ oops
   MATCH_MP_TAC CAUCHY_IN_CONVERGENT_SUBSEQUENCE THEN ASM_MESON_TAC[]);;
 
 lemma mcomplete_unions:
-   "finite s \<and> (\<forall>t. t \<in> s \<Longrightarrow> mcomplete(submetric m t))
-         \<Longrightarrow> mcomplete(submetric m (\<Union> s))"
+   "finite S \<and> (\<forall>t. t \<in> S \<Longrightarrow> mcomplete(submetric m t))
+         \<Longrightarrow> mcomplete(submetric m (\<Union> S))"
 oops
   GEN_TAC THEN
   REWRITE_TAC[IMP_CONJ] THEN MATCH_MP_TAC FINITE_INDUCT_STRONG THEN
@@ -5887,9 +5859,9 @@ oops
   MESON_TAC[MCOMPLETE_UNION]);;
 
 lemma mcomplete_inters:
-   "\<And>m s:(A=>bool)->bool.
-        finite s \<and> (s \<noteq> {}) \<and> (\<forall>t. t \<in> s \<Longrightarrow> mcomplete(submetric m t))
-        \<Longrightarrow> mcomplete(submetric m (\<Inter> s))"
+   "\<And>m S:(A=>bool)->bool.
+        finite S \<and> (S \<noteq> {}) \<and> (\<forall>t. t \<in> S \<Longrightarrow> mcomplete(submetric m t))
+        \<Longrightarrow> mcomplete(submetric m (\<Inter> S))"
 oops
   REPEAT GEN_TAC THEN
   REWRITE_TAC[mcomplete; CAUCHY_IN_SUBMETRIC; IN_INTERS] THEN
@@ -5909,9 +5881,9 @@ oops
   ASM_MESON_TAC[LIMIT_METRIC_UNIQUE; TRIVIAL_LIMIT_SEQUENTIALLY]);;
 
 lemma mcomplete_inter:
-   "\<And>m s t::A=>bool.
-        mcomplete(submetric m s) \<and> mcomplete(submetric m t)
-        \<Longrightarrow> mcomplete(submetric m (s \<inter> t))"
+   "\<And>m S t::A=>bool.
+        mcomplete(submetric m S) \<and> mcomplete(submetric m t)
+        \<Longrightarrow> mcomplete(submetric m (S \<inter> t))"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM INTERS_2] THEN
   MATCH_MP_TAC MCOMPLETE_INTERS THEN
@@ -5923,10 +5895,10 @@ subsection\<open>Totally bounded subsets of metric spaces\<close>
 
 
 let totally_bounded_in = new_definition
- `totally_bounded_in m (s::A=>bool) \<longleftrightarrow>
+ `totally_bounded_in m (S::A=>bool) \<longleftrightarrow>
         \<forall>e. 0 < e
-            \<Longrightarrow> \<exists>k. finite k \<and> k \<subseteq> s \<and>
-                    s \<subseteq> \<Union> { mball x e | x \<in> k}`;;
+            \<Longrightarrow> \<exists>k. finite k \<and> k \<subseteq> S \<and>
+                    S \<subseteq> \<Union> { mball x e | x \<in> k}`;;
 
 lemma totally_bounded_in_empty:
    "totally_bounded_in m {}"
@@ -5935,16 +5907,16 @@ oops
   MESON_TAC[FINITE_EMPTY]);;
 
 lemma finite_imp_totally_bounded_in:
-   "\<And>m s::A=>bool. finite s \<and> s \<subseteq> M \<Longrightarrow> totally_bounded_in m s"
+   "\<And>m S::A=>bool. finite S \<and> S \<subseteq> M \<Longrightarrow> totally_bounded_in m S"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
-  X_GEN_TAC `e::real` THEN DISCH_TAC THEN EXISTS_TAC `s::A=>bool` THEN
+  X_GEN_TAC `e::real` THEN DISCH_TAC THEN EXISTS_TAC `S::A=>bool` THEN
   ASM_REWRITE_TAC[SUBSET_REFL] THEN MATCH_MP_TAC(SET_RULE
-   `(\<forall>x. x \<in> s \<Longrightarrow> x \<in> f x) \<Longrightarrow> s \<subseteq> \<Union> {f x | x \<in> s}`) THEN
+   `(\<forall>x. x \<in> S \<Longrightarrow> x \<in> f x) \<Longrightarrow> S \<subseteq> \<Union> {f x | x \<in> S}`) THEN
   ASM_REWRITE_TAC[CENTRE_IN_MBALL_EQ; GSYM \<subseteq>]);;
 
 lemma totally_bounded_in_imp_subset:
-   "\<And>m s::A=>bool. totally_bounded_in m s \<Longrightarrow> s \<subseteq> M"
+   "\<And>m S::A=>bool. totally_bounded_in m S \<Longrightarrow> S \<subseteq> M"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
   DISCH_THEN(MP_TAC \<circ> SPEC `1`) THEN REWRITE_TAC[REAL_LT_01] THEN
@@ -5960,15 +5932,15 @@ oops
   REWRITE_TAC[GSYM SING_SUBSET; TOTALLY_BOUNDED_IN_IMP_SUBSET]);;
 
 lemma totally_bounded_in_sequentially:
-   "\<And>m s::A=>bool.
-        totally_bounded_in m s \<longleftrightarrow>
-        s \<subseteq> M \<and>
-        \<forall>x::num=>A. (\<forall>n. x n \<in> s)
+   "\<And>m S::A=>bool.
+        totally_bounded_in m S \<longleftrightarrow>
+        S \<subseteq> M \<and>
+        \<forall>x::num=>A. (\<forall>n. x n \<in> S)
                    \<Longrightarrow> \<exists>r. (\<forall>m n. m < n \<Longrightarrow> r m < r n) \<and>
                            cauchy_in m (x \<circ> r)"
 oops
   REPEAT GEN_TAC THEN
-  ASM_CASES_TAC `(s::A=>bool) \<subseteq> M` THENL
+  ASM_CASES_TAC `(S::A=>bool) \<subseteq> M` THENL
    [ASM_REWRITE_TAC[]; ASM_MESON_TAC[TOTALLY_BOUNDED_IN_IMP_SUBSET]] THEN
   REWRITE_TAC[totally_bounded_in] THEN
   REPEAT(STRIP_TAC ORELSE EQ_TAC) THENL
@@ -5977,7 +5949,7 @@ oops
       \<not> (\<forall>x. P x \<and> Q x \<Longrightarrow> \<not> R x)`] THEN
     DISCH_TAC THEN
     SUBGOAL_THEN
-      `\<exists>x. (\<forall>n. (x::num=>A) n \<in> s) \<and> (\<forall>n p. p < n \<Longrightarrow> e \<le> d m (x p,x n))`
+      `\<exists>x. (\<forall>n. (x::num=>A) n \<in> S) \<and> (\<forall>n p. p < n \<Longrightarrow> e \<le> d m (x p,x n))`
     STRIP_ASSUME_TAC THENL
      [REWRITE_TAC[AND_FORALL_THM] THEN
       MATCH_MP_TAC (MATCH_MP WF_REC_EXISTS WF_num) THEN SIMP_TAC[] THEN
@@ -6024,7 +5996,7 @@ oops
   MAP_EVERY X_GEN_TAC [`d::num`; `r::num=>num`] THEN
   ABBREV_TAC `y::num=>A = (x::num=>A) \<circ> (r::num=>num)` THEN
   FIRST_X_ASSUM(MP_TAC \<circ> ISPEC `r::num=>num` \<circ> MATCH_MP (MESON[]
-   `(\<forall>n. x n \<in> s) \<Longrightarrow> \<forall>r. (\<forall>n. x(r n) \<in> s)`)) THEN
+   `(\<forall>n. x n \<in> S) \<Longrightarrow> \<forall>r. (\<forall>n. x(r n) \<in> S)`)) THEN
   FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [FUN_EQ_THM]) THEN
   SIMP_TAC[o_THM] THEN DISCH_THEN(K ALL_TAC) THEN
   SPEC_TAC(`y::num=>A`,`x::num=>A`) THEN REPEAT STRIP_TAC THEN
@@ -6054,15 +6026,15 @@ oops
   MP_TAC THENL [ASM SET_TAC[]; CONV_TAC METRIC_ARITH]);;
 
 lemma totally_bounded_in_subset:
-   "\<And>m s t::A=>bool.
-     totally_bounded_in m s \<and> t \<subseteq> s \<Longrightarrow> totally_bounded_in m t"
+   "\<And>m S t::A=>bool.
+     totally_bounded_in m S \<and> t \<subseteq> S \<Longrightarrow> totally_bounded_in m t"
 oops
   REWRITE_TAC[TOTALLY_BOUNDED_IN_SEQUENTIALLY] THEN SET_TAC[]);;
 
 lemma totally_bounded_in_union:
-   "\<And>m s t::A=>bool.
-        totally_bounded_in m s \<and> totally_bounded_in m t
-        \<Longrightarrow> totally_bounded_in m (s \<union> t)"
+   "\<And>m S t::A=>bool.
+        totally_bounded_in m S \<and> totally_bounded_in m t
+        \<Longrightarrow> totally_bounded_in m (S \<union> t)"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
   REWRITE_TAC[AND_FORALL_THM] THEN MATCH_MP_TAC MONO_FORALL THEN
@@ -6075,7 +6047,7 @@ oops
 
 lemma totally_bounded_in_unions:
    "\<And>m f:(A=>bool)->bool.
-        finite f \<and> (\<forall>s. s \<in> f \<Longrightarrow> totally_bounded_in m s)
+        finite f \<and> (\<forall>S. S \<in> f \<Longrightarrow> totally_bounded_in m S)
         \<Longrightarrow> totally_bounded_in m (\<Union> f)"
 oops
   GEN_TAC THEN REWRITE_TAC[IMP_CONJ] THEN
@@ -6084,7 +6056,7 @@ oops
   MESON_TAC[TOTALLY_BOUNDED_IN_UNION]);;
 
 lemma totally_bounded_in_imp_mbounded:
-   "\<And>m s::A=>bool. totally_bounded_in m s \<Longrightarrow> mbounded s"
+   "\<And>m S::A=>bool. totally_bounded_in m S \<Longrightarrow> mbounded S"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
   DISCH_THEN(MP_TAC \<circ> SPEC `1`) THEN
@@ -6096,9 +6068,9 @@ oops
   REWRITE_TAC[MBOUNDED_MBALL]);;
 
 lemma totally_bounded_in_submetric:
-   "\<And>m s t::A=>bool.
-        totally_bounded_in m s \<and> s \<subseteq> t
-        \<Longrightarrow> totally_bounded_in (submetric m t) s"
+   "\<And>m S t::A=>bool.
+        totally_bounded_in m S \<and> S \<subseteq> t
+        \<Longrightarrow> totally_bounded_in (submetric m t) S"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
   SIMP_TAC[UNIONS_GSPEC; \<subseteq>; IN_ELIM_THM] THEN STRIP_TAC THEN
@@ -6109,8 +6081,8 @@ oops
   ASM_SIMP_TAC[MBALL_SUBMETRIC] THEN ASM SET_TAC[]);;
 
 lemma totally_bounded_in_absolute:
-   "\<And>m s::A=>bool.
-        totally_bounded_in (submetric m s) s \<longleftrightarrow> totally_bounded_in m s"
+   "\<And>m S::A=>bool.
+        totally_bounded_in (submetric m S) S \<longleftrightarrow> totally_bounded_in m S"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
   SIMP_TAC[UNIONS_GSPEC; \<subseteq>; IN_ELIM_THM] THEN EQ_TAC THEN STRIP_TAC THEN
@@ -6123,16 +6095,16 @@ oops
   ASM_SIMP_TAC[MBALL_SUBMETRIC] THEN ASM SET_TAC[]);;
 
 lemma totally_bounded_in_closure_of:
-   "\<And>m s::A=>bool.
-        totally_bounded_in m s
-        \<Longrightarrow> totally_bounded_in m (mtopology closure_of s)"
+   "\<And>m S::A=>bool.
+        totally_bounded_in m S
+        \<Longrightarrow> totally_bounded_in m (mtopology closure_of S)"
 oops
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `M \<inter> s::A=>bool` \<circ>
+  DISCH_THEN(MP_TAC \<circ> SPEC `M \<inter> S::A=>bool` \<circ>
    MATCH_MP(REWRITE_RULE[IMP_CONJ] TOTALLY_BOUNDED_IN_SUBSET)) THEN
   REWRITE_TAC[INTER_SUBSET; TOPSPACE_MTOPOLOGY] THEN
-  MP_TAC(SET_RULE `M \<inter> (s::A=>bool) \<subseteq> M`) THEN
-  SPEC_TAC(`M \<inter> (s::A=>bool)`,`s::A=>bool`) THEN
+  MP_TAC(SET_RULE `M \<inter> (S::A=>bool) \<subseteq> M`) THEN
+  SPEC_TAC(`M \<inter> (S::A=>bool)`,`S::A=>bool`) THEN
   GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
   DISCH_TAC THEN X_GEN_TAC `e::real` THEN DISCH_TAC THEN
   FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e / 2`) THEN ASM_REWRITE_TAC[REAL_HALF] THEN
@@ -6147,7 +6119,7 @@ oops
   REWRITE_TAC[IN_MBALL] THEN
   DISCH_THEN(X_CHOOSE_THEN `y::A` STRIP_ASSUME_TAC) THEN
   FIRST_X_ASSUM(MP_TAC \<circ> SPEC `y::A` \<circ> MATCH_MP (SET_RULE
-   `s \<subseteq> {x. P x} \<Longrightarrow> \<forall>a. a \<in> s \<Longrightarrow> P a`)) THEN
+   `S \<subseteq> {x. P x} \<Longrightarrow> \<forall>a. a \<in> S \<Longrightarrow> P a`)) THEN
   ASM_REWRITE_TAC[IN_MBALL] THEN MATCH_MP_TAC MONO_EXISTS THEN
   X_GEN_TAC `z::A` THEN ASM_CASES_TAC `(z::A) \<in> k` THEN ASM_SIMP_TAC[] THEN
   MAP_EVERY UNDISCH_TAC
@@ -6155,10 +6127,10 @@ oops
   CONV_TAC METRIC_ARITH);;
 
 lemma totally_bounded_in_closure_of_eq:
-   "\<And>m s::A=>bool.
-        s \<subseteq> M
-        \<Longrightarrow> (totally_bounded_in m (mtopology closure_of s) \<longleftrightarrow>
-             totally_bounded_in m s)"
+   "\<And>m S::A=>bool.
+        S \<subseteq> M
+        \<Longrightarrow> (totally_bounded_in m (mtopology closure_of S) \<longleftrightarrow>
+             totally_bounded_in m S)"
 oops
   REPEAT STRIP_TAC THEN EQ_TAC THEN
   REWRITE_TAC[TOTALLY_BOUNDED_IN_CLOSURE_OF] THEN
