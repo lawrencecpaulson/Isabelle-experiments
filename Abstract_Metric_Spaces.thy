@@ -2693,7 +2693,7 @@ proof -
     using assms by (auto simp: second_countable_def)
   obtain c where c: "\<And>V. \<lbrakk>V \<in> \<B>; V \<noteq> {}\<rbrakk> \<Longrightarrow> c V \<in> V"
     by (metis all_not_in_conv)
-  then have DD: "\<And>x. x \<in> topspace X \<Longrightarrow> x \<in> X closure_of c ` (\<B> - {{}})"
+  then have **: "\<And>x. x \<in> topspace X \<Longrightarrow> x \<in> X closure_of c ` (\<B> - {{}})"
     using * by (force simp: closure_of_def)
   show ?thesis
     unfolding separable_space_def
@@ -2703,7 +2703,7 @@ proof -
     show "(c ` (\<B>-{{}})) \<subseteq> topspace X"
       using \<B>(2) c openin_subset by fastforce
     show "X closure_of (c ` (\<B>-{{}})) = topspace X"
-      by (meson DD closure_of_subset_topspace subsetI subset_antisym)
+      by (meson ** closure_of_subset_topspace subsetI subset_antisym)
   qed
 qed
 
@@ -4001,15 +4001,14 @@ proof clarify
     using \<open>y \<in> topspace Y\<close> \<open>regular_space X\<close> unfolding regular_space_compact_closed_sets
     by meson
 
-  have DD: "\<And>U T. openin X U \<and> T \<subseteq> topspace Y \<and> {x \<in> topspace X. f x \<in> T} \<subseteq> U \<longrightarrow>
+  have *: "\<And>U T. openin X U \<and> T \<subseteq> topspace Y \<and> {x \<in> topspace X. f x \<in> T} \<subseteq> U \<longrightarrow>
          (\<exists>V. openin Y V \<and> T \<subseteq> V \<and> {x \<in> topspace X. f x \<in> V} \<subseteq> U)"
    using \<open>closed_map X Y f\<close> unfolding closed_map_preimage_neighbourhood by blast
-
   obtain V1 where V1: "openin Y V1 \<and> y \<in> V1" and sub1: "{x \<in> topspace X. f x \<in> V1} \<subseteq> U"
-    using DD [of U "{y}"] UV \<open>y \<in> topspace Y\<close> by auto
+    using * [of U "{y}"] UV \<open>y \<in> topspace Y\<close> by auto
   moreover
   obtain V2 where "openin Y V2 \<and> C \<subseteq> V2" and sub2: "{x \<in> topspace X. f x \<in> V2} \<subseteq> V"
-    by (smt (verit, ccfv_SIG) DD UV \<open>closedin Y C\<close> closedin_subset mem_Collect_eq subset_iff)
+    by (smt (verit, ccfv_SIG) * UV \<open>closedin Y C\<close> closedin_subset mem_Collect_eq subset_iff)
   moreover have "disjnt V1 V2"
   proof -
     have "\<And>x. \<lbrakk>\<forall>x. x \<in> U \<longrightarrow> x \<notin> V; x \<in> V1; x \<in> V2\<rbrakk> \<Longrightarrow> False"
@@ -5013,8 +5012,30 @@ lemma A:
   shows "eventually P (atin_within mtopology a S)"
 proof -
   have *: False if "\<forall>\<delta>>0. \<exists>x \<in> M-{a}. d x a < \<delta> \<and> x \<in> S \<and> \<not> P x" "a \<in> M"
-    using that
-    sorry
+  proof -
+    obtain x where x: "\<And>n. x n \<in> M-{a} \<and> d (x n) a < inverse(Suc n) \<and> x n \<in> S \<and> \<not> P(x n)"
+                 and xd: "\<And>n. d (x(Suc n)) a < d (x n) a"
+      sorry
+    have 1: "range x \<subseteq> (S \<inter> M) - {a}"
+      using x by auto
+    have "d (x(Suc (m+n))) a < d (x n) a" for m n
+      by (induction m) (auto intro: order_less_trans xd)
+    then have 2: "d (x n) a < d (x m) a" if "m < n" for m n
+      by (metis add.commute less_imp_Suc_add that)
+    have 3: "inj x"
+      by (smt (verit, ccfv_threshold) "2" linorder_injI)
+    have "\<forall>\<^sub>F xa in sequentially. d (x xa) a < e" if "e > 0" for e
+    proof -
+      obtain N where "inverse (Suc N) < e"
+        using \<open>0 < e\<close> reals_Archimedean by blast
+      then show ?thesis
+        by (metis (no_types, lifting) "2" x order_less_trans eventually_at_top_dense)
+    qed
+    then have 4: "limitin mtopology x a sequentially"
+      using x \<open>a \<in> M\<close> by (simp add: limitin_metric)
+    show False
+      using assms [OF 1 2 3 4] by (simp add: x)
+  qed
   show ?thesis
     using * by (fastforce simp: eventually_atin_within_metric)
 qed
