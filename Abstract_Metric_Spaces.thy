@@ -4991,10 +4991,15 @@ subsection\<open>More sequential characterizations in a metric space\<close>
 context Metric_space
 begin
 
+definition decreasing_dist :: "(nat \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> bool"
+    where "decreasing_dist \<sigma> x \<equiv> (\<forall>m n. m < n \<longrightarrow> d (\<sigma> n) x < d (\<sigma> m) x)"
+
+lemma decreasing_dist_imp_inj: "decreasing_dist \<sigma> a \<Longrightarrow> inj \<sigma>"
+  by (metis decreasing_dist_def dual_order.irrefl linorder_inj_onI')
 
 lemma eventually_atin_within_metric:
    "eventually P (atin_within mtopology a S) \<longleftrightarrow>
-        (a \<in> M \<longrightarrow> (\<exists>\<delta>>0. \<forall>x. x \<in> M \<and> x \<in> S \<and> 0 < d x a \<and> d x a < \<delta> \<longrightarrow> P x))" (is "?lhs=?rhs")
+    (a \<in> M \<longrightarrow> (\<exists>\<delta>>0. \<forall>x. x \<in> M \<and> x \<in> S \<and> 0 < d x a \<and> d x a < \<delta> \<longrightarrow> P x))" (is "?lhs=?rhs")
 proof
   assume ?lhs then show ?rhs
 unfolding eventually_atin_within openin_mtopology subset_iff
@@ -5020,7 +5025,7 @@ qed
 
 lemma eventually_atin_within_A:
   assumes 
-    "(\<And>\<sigma>. \<lbrakk>range \<sigma> \<subseteq> (S \<inter> M) - {a}; \<And>m n. m < n \<Longrightarrow> d (\<sigma> n) a < d (\<sigma> m) a;
+    "(\<And>\<sigma>. \<lbrakk>range \<sigma> \<subseteq> (S \<inter> M) - {a}; decreasing_dist \<sigma> a;
           inj \<sigma>; limitin mtopology \<sigma> a sequentially\<rbrakk>
       \<Longrightarrow> eventually (\<lambda>n. P (\<sigma> n)) sequentially)"
   shows "eventually P (atin_within mtopology a S)"
@@ -5049,21 +5054,19 @@ proof -
       using \<sigma> by (auto simp: \<Phi>_def)
     have "d (\<sigma>(Suc (m+n))) a < d (\<sigma> n) a" for m n
       by (induction m) (auto intro: order_less_trans dless)
-    then have 2: "d (\<sigma> n) a < d (\<sigma> m) a" if "m < n" for m n
-      by (metis add.commute less_imp_Suc_add that)
-    have 3: "inj \<sigma>"
-      by (smt (verit, ccfv_threshold) "2" linorder_injI)
+    then have 2: "decreasing_dist \<sigma> a"
+      unfolding decreasing_dist_def by (metis add.commute less_imp_Suc_add)
     have "\<forall>\<^sub>F xa in sequentially. d (\<sigma> xa) a < e" if "e > 0" for e
     proof -
       obtain N where "inverse (Suc N) < e"
         using \<open>0 < e\<close> reals_Archimedean by blast
       with \<sigma> 2 show ?thesis
-        by (smt (verit, best) \<Phi>_def eventually_at_top_dense)
+        unfolding decreasing_dist_def by (smt (verit, best) \<Phi>_def eventually_at_top_dense)
     qed
     then have 4: "limitin mtopology \<sigma> a sequentially"
       using \<sigma> \<open>a \<in> M\<close> by (simp add: \<Phi>_def limitin_metric)
     show False
-      using assms [OF 1 2 3 4] \<Phi>_def \<sigma> by force
+      using 2 assms [OF 1 _ decreasing_dist_imp_inj 4] \<sigma> by (force simp add: \<Phi>_def)
   qed
   then show ?thesis
     by (fastforce simp: eventually_atin_within_metric)
@@ -5072,7 +5075,7 @@ qed
 
 lemma eventually_atin_within_B:
   assumes ev: "eventually P (atin_within mtopology a S)" 
-    and "range \<sigma> \<subseteq> (S \<inter> M) - {a}"
+    and ran: "range \<sigma> \<subseteq> (S \<inter> M) - {a}"
     and lim: "limitin mtopology \<sigma> a sequentially"
   shows "eventually (\<lambda>n. P (\<sigma> n)) sequentially"
 proof -
@@ -5082,7 +5085,7 @@ proof -
     and \<delta>: "\<And>\<sigma>. \<lbrakk>\<sigma> \<in> M; \<sigma> \<in> S; 0 < d \<sigma> a; d \<sigma> a < \<delta>\<rbrakk> \<Longrightarrow> P \<sigma>"
     by (auto simp: eventually_atin_within_metric)
   then have *: "\<And>n. \<sigma> n \<in> M \<and> d (\<sigma> n) a < \<delta> \<Longrightarrow> P (\<sigma> n)"
-    using \<open>a \<in> M\<close> assms(2) by auto
+    using \<open>a \<in> M\<close> ran by auto
   have "\<forall>\<^sub>F n in sequentially. \<sigma> n \<in> M \<and> d (\<sigma> n) a < \<delta>"
     using lim \<open>0 < \<delta>\<close> by (auto simp: limitin_metric)
   then show ?thesis
@@ -5105,7 +5108,7 @@ lemma eventually_atin_within_sequentially_inj:
 
 lemma eventually_atin_within_sequentially_decreasing:
      "eventually P (atin_within mtopology a S) \<longleftrightarrow>
-        (\<forall>\<sigma>. range \<sigma> \<subseteq> (S \<inter> M) - {a} \<and> (\<forall>m n. m<n \<longrightarrow> d (\<sigma> n) a < d (\<sigma> m) a) \<and> inj \<sigma> \<and>
+        (\<forall>\<sigma>. range \<sigma> \<subseteq> (S \<inter> M) - {a} \<and> decreasing_dist \<sigma> a \<and>
             limitin mtopology \<sigma> a sequentially
             \<longrightarrow> eventually (\<lambda>n. P(\<sigma> n)) sequentially)"
   by (metis eventually_atin_within_A eventually_atin_within_B)
@@ -5126,9 +5129,8 @@ lemma eventually_atin_sequentially_inj:
 
 lemma eventually_atin_sequentially_decreasing:
    "eventually P (atin mtopology a) \<longleftrightarrow>
-    (\<forall>\<sigma>. range \<sigma> \<subseteq> M - {a} \<and>
-        (\<forall>m n. m < n \<longrightarrow> d (\<sigma> n) a < d (\<sigma> m) a) \<and>
-        inj \<sigma> \<and> limitin mtopology \<sigma> a sequentially
+    (\<forall>\<sigma>. range \<sigma> \<subseteq> M - {a} \<and> decreasing_dist \<sigma> a \<and>
+         limitin mtopology \<sigma> a sequentially
         \<longrightarrow> eventually (\<lambda>n. P(\<sigma> n)) sequentially)"
   using eventually_atin_within_sequentially_decreasing [where S=UNIV] by simp
 
@@ -5156,8 +5158,8 @@ lemma limit_atin_sequentially_within_inj:
 lemma limit_atin_sequentially_within_decreasing:
   "limitin M2.mtopology f l (atin_within M1.mtopology a S) \<longleftrightarrow>
      l \<in> M2 \<and>
-     (\<forall>\<sigma>. range \<sigma> \<subseteq> S \<inter> M1 - {a} \<and> (\<forall>m n. m<n \<longrightarrow> d1 (\<sigma> n) a < d1 (\<sigma> m) a) \<and> 
-          inj \<sigma> \<and> limitin M1.mtopology \<sigma> a sequentially
+     (\<forall>\<sigma>. range \<sigma> \<subseteq> S \<inter> M1 - {a} \<and> M1.decreasing_dist \<sigma> a \<and> 
+          limitin M1.mtopology \<sigma> a sequentially
           \<longrightarrow> limitin M2.mtopology (f \<circ> \<sigma>) l sequentially)"
     by (auto simp add: M1.eventually_atin_within_sequentially_decreasing limitin_def)
 
@@ -5180,8 +5182,8 @@ lemma limit_atin_sequentially_inj:
 lemma limit_atin_sequentially_decreasing:
   "limitin M2.mtopology f l (atin M1.mtopology a) \<longleftrightarrow>
      l \<in> M2 \<and>
-     (\<forall>\<sigma>. range \<sigma> \<subseteq> M1 - {a} \<and> (\<forall>m n. m<n \<longrightarrow> d1 (\<sigma> n) a < d1 (\<sigma> m) a) \<and> 
-          inj \<sigma> \<and> limitin M1.mtopology \<sigma> a sequentially
+     (\<forall>\<sigma>. range \<sigma> \<subseteq> M1 - {a} \<and> M1.decreasing_dist \<sigma> a \<and> 
+          limitin M1.mtopology \<sigma> a sequentially
           \<longrightarrow> limitin M2.mtopology (f \<circ> \<sigma>) l sequentially)"
   using limit_atin_sequentially_within_decreasing [where S=UNIV] by simp
 
@@ -5191,18 +5193,22 @@ end
 context Metric_space
 begin
 
+lemma atin_within_imp_M:
+   "atin_within mtopology x S \<noteq> bot \<Longrightarrow> x \<in> M"
+  by (metis derived_set_of_trivial_limit in_derived_set_of topspace_mtopology)
+
+lemma atin_within_sequentially_sequence:
+  assumes "atin_within mtopology x S \<noteq> bot"
+  obtains \<sigma> where "range \<sigma> \<subseteq> S \<inter> M - {x}" 
+          "decreasing_dist \<sigma> x" "inj \<sigma>" "limitin mtopology \<sigma> x sequentially"
+  by (metis eventually_atin_within_A eventually_False assms)
+
 lemma derived_set_of_sequentially:
   "mtopology derived_set_of S =
-        {x \<in> M. \<exists>\<sigma>. range \<sigma> \<subseteq> S \<inter> M - {x} \<and> limitin mtopology \<sigma> x sequentially}"
+   {x \<in> M. \<exists>\<sigma>. range \<sigma> \<subseteq> S \<inter> M - {x} \<and> limitin mtopology \<sigma> x sequentially}"
 proof -
-  have "x \<in> M"
-    if "atin_within mtopology x S \<noteq> bot" for x
-    by (metis that derived_set_of_trivial_limit in_derived_set_of topspace_mtopology)
-  moreover have "\<exists>\<sigma>. range \<sigma> \<subseteq> S \<inter> M - {x} \<and> limitin mtopology \<sigma> x sequentially"
-    if "atin_within mtopology x S \<noteq> bot" for x
-    by (metis eventually_atin_within_sequentially eventually_False that)
-  moreover have False
-    if "x \<in> M" and "range (\<lambda>x. \<sigma> (x::nat)) \<subseteq> S \<inter> M - {x}"
+  have False
+    if "range \<sigma> \<subseteq> S \<inter> M - {x}"
       and "limitin mtopology \<sigma> x sequentially"
       and "atin_within mtopology x S = bot"
     for x \<sigma>
@@ -5212,13 +5218,14 @@ proof -
     then show False
       by (meson eventually_False_sequentially eventually_mono)
   qed
-  ultimately show ?thesis
-    by (auto simp: derived_set_of_trivial_limit)
+  then show ?thesis
+    using derived_set_of_trivial_limit 
+    by (fastforce elim!: atin_within_sequentially_sequence intro: atin_within_imp_M)
 qed
 
 lemma derived_set_of_sequentially_alt:
   "mtopology derived_set_of S =
-        {x. \<exists>\<sigma>. range \<sigma> \<subseteq> S - {x} \<and> limitin mtopology \<sigma> x sequentially}"
+   {x. \<exists>\<sigma>. range \<sigma> \<subseteq> S - {x} \<and> limitin mtopology \<sigma> x sequentially}"
 proof -
   have *: "\<exists>\<sigma>. range \<sigma> \<subseteq> S \<inter> M - {x} \<and> limitin mtopology \<sigma> x sequentially"
     if \<sigma>: "range \<sigma> \<subseteq> S - {x}" and lim: "limitin mtopology \<sigma> x sequentially" for x \<sigma>
@@ -5239,109 +5246,79 @@ proof -
 qed
 
 lemma derived_set_of_sequentially_inj:
-   "\<And>met S::A=>bool.
-        mtopology derived_set_of S =
-        {x. x \<in> M \<and>
-             \<exists>f. (\<forall>n. f n \<in> ((S \<inter> M) - {x})) \<and>
-                 (\<forall>m n. f m = f n \<longleftrightarrow> m = n) \<and>
-                 limitin mtopology f x sequentially}"
-oops
-  REWRITE_TAC[DERIVED_SET_OF_TRIVIAL_LIMIT; EXTENSION; IN_ELIM_THM] THEN
-  REWRITE_TAC[trivial_limit; EVENTUALLY_ATPOINTOF_WITHIN_SEQUENTIALLY_INJ] THEN
-  REWRITE_TAC[EVENTUALLY_FALSE; TRIVIAL_LIMIT_SEQUENTIALLY] THEN
-  REPEAT GEN_TAC THEN REWRITE_TAC[limitin; TOPSPACE_MTOPOLOGY] THEN
-  REWRITE_TAC[NOT_FORALL_THM; RIGHT_AND_EXISTS_THM] THEN
-  AP_TERM_TAC THEN ABS_TAC THEN REWRITE_TAC[CONJ_ACI]);;
+   "mtopology derived_set_of S =
+    {x \<in> M. \<exists>\<sigma>. range \<sigma> \<subseteq> S \<inter> M - {x} \<and> inj \<sigma> \<and> limitin mtopology \<sigma> x sequentially}"
+proof -
+  have False
+    if "x \<in> M" and "range \<sigma> \<subseteq> S \<inter> M - {x}"
+      and "limitin mtopology \<sigma> x sequentially"
+      and "atin_within mtopology x S = bot"
+    for x \<sigma>
+  proof -
+    have "\<forall>\<^sub>F n in sequentially. P (\<sigma> n)" for P
+      using that derived_set_of_sequentially_alt derived_set_of_trivial_limit by fastforce
+    then show False
+      by (meson eventually_False_sequentially eventually_mono)
+  qed
+  then show ?thesis
+    using derived_set_of_trivial_limit 
+    by (fastforce elim!: atin_within_sequentially_sequence intro: atin_within_imp_M)
+qed
+
 
 lemma derived_set_of_sequentially_inj_alt:
-   "\<And>met S::A=>bool.
-        mtopology derived_set_of S =
-        {x. \<exists>f. (\<forall>n. f n \<in> (S - {x})) \<and>
-                 (\<forall>m n. f m = f n \<longleftrightarrow> m = n) \<and>
-                 limitin mtopology f x sequentially}"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[DERIVED_SET_OF_SEQUENTIALLY_INJ] THEN
-  REWRITE_TAC[EXTENSION; IN_ELIM_THM; IN_INTER; IN_DELETE] THEN
-  X_GEN_TAC `x::A` THEN
-  EQ_TAC THENL [MESON_TAC[]; REWRITE_TAC[LEFT_IMP_EXISTS_THM]] THEN
-  X_GEN_TAC `a::num=>A` THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [limitin]) THEN
-  REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN DISCH_THEN(CONJUNCTS_THEN2
-   ASSUME_TAC (MP_TAC \<circ> SPEC `topspacemtopology:A=>bool`)) THEN
-  REWRITE_TAC[OPEN_IN_TOPSPACE] THEN ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-  REWRITE_TAC[EVENTUALLY_SEQUENTIALLY; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `N::num` THEN DISCH_TAC THEN
-  EXISTS_TAC `\<lambda>n. (a::num=>A) (N + n)` THEN
-  ASM_SIMP_TAC[LE_ADD; EQ_ADD_LCANCEL] THEN
-  ONCE_REWRITE_TAC[ADD_SYM] THEN MATCH_MP_TAC LIMIT_SEQUENTIALLY_OFFSET THEN
-  ASM_REWRITE_TAC[]);;
+   "mtopology derived_set_of S =
+    {x. \<exists>\<sigma>. range \<sigma> \<subseteq> S - {x} \<and> inj \<sigma> \<and> limitin mtopology \<sigma> x sequentially}"
+proof -
+  have "\<exists>\<sigma>. range \<sigma> \<subseteq> S - {x} \<and> inj \<sigma> \<and> limitin mtopology \<sigma> x sequentially"
+    if "atin_within mtopology x S \<noteq> bot" for x
+    by (metis Diff_empty Int_subset_iff atin_within_sequentially_sequence subset_Diff_insert that)
+  moreover have False
+    if "range (\<lambda>x. \<sigma> (x::nat)) \<subseteq> S - {x}"
+      and "limitin mtopology \<sigma> x sequentially"
+      and "atin_within mtopology x S = bot"
+    for x \<sigma>
+  proof -
+    have "\<forall>\<^sub>F n in sequentially. P (\<sigma> n)" for P
+      using that derived_set_of_sequentially_alt derived_set_of_trivial_limit by fastforce
+    then show False
+      by (meson eventually_False_sequentially eventually_mono)
+  qed
+  ultimately show ?thesis
+    using derived_set_of_trivial_limit by (fastforce intro: atin_within_imp_M)
+qed
 
 lemma derived_set_of_sequentially_decreasing:
-   "\<And>met S::A=>bool.
-        mtopology derived_set_of S =
-        {x. x \<in> M \<and>
-             \<exists>f. (\<forall>n. f n \<in> ((S \<inter> M) - {x})) \<and>
-                 (\<forall>m n. m < n \<Longrightarrow> d met (f n,x) < d met (f m,x)) \<and>
-                 (\<forall>m n. f m = f n \<longleftrightarrow> m = n) \<and>
-                 limitin mtopology f x sequentially}"
-oops
-  REWRITE_TAC[DERIVED_SET_OF_TRIVIAL_LIMIT; EXTENSION; IN_ELIM_THM] THEN
-  REWRITE_TAC[trivial_limit;
-    EVENTUALLY_ATPOINTOF_WITHIN_SEQUENTIALLY_DECREASING] THEN
-  REWRITE_TAC[EVENTUALLY_FALSE; TRIVIAL_LIMIT_SEQUENTIALLY] THEN
-  REPEAT GEN_TAC THEN REWRITE_TAC[limitin; TOPSPACE_MTOPOLOGY] THEN
-  REWRITE_TAC[NOT_FORALL_THM; RIGHT_AND_EXISTS_THM] THEN
-  AP_TERM_TAC THEN ABS_TAC THEN REWRITE_TAC[CONJ_ACI]);;
+   "mtopology derived_set_of S =
+    {x \<in> M. \<exists>\<sigma>. range \<sigma> \<subseteq> S - {x} \<and> decreasing_dist \<sigma> x \<and> limitin mtopology \<sigma> x sequentially}"
+proof -
+  have "\<exists>\<sigma>. range \<sigma> \<subseteq> S - {x} \<and> decreasing_dist \<sigma> x \<and> limitin mtopology \<sigma> x sequentially"
+    if "atin_within mtopology x S \<noteq> bot" for x
+    by (metis Diff_empty atin_within_sequentially_sequence le_infE subset_Diff_insert that)
+  moreover have False
+    if "x \<in> M" and "range \<sigma> \<subseteq> S - {x}"
+      and "limitin mtopology \<sigma> x sequentially"
+      and "atin_within mtopology x S = bot"
+    for x \<sigma>
+  proof -
+    have "\<forall>\<^sub>F n in sequentially. P (\<sigma> n)" for P
+      using that derived_set_of_sequentially_alt derived_set_of_trivial_limit by fastforce
+    then show False
+      by (meson eventually_False_sequentially eventually_mono)
+  qed
+  ultimately show ?thesis
+    using derived_set_of_trivial_limit by (fastforce intro: atin_within_imp_M)
+qed
 
 lemma derived_set_of_sequentially_decreasing_alt:
-   "\<And>met S::A=>bool.
-        mtopology derived_set_of S =
-        {x. \<exists>f. (\<forall>n. f n \<in> (S - {x})) \<and>
-                 (\<forall>m n. m < n \<Longrightarrow> d met (f n,x) < d met (f m,x)) \<and>
-                 (\<forall>m n. f m = f n \<longleftrightarrow> m = n) \<and>
-                 limitin mtopology f x sequentially}"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[DERIVED_SET_OF_SEQUENTIALLY_DECREASING] THEN
-  REWRITE_TAC[EXTENSION; IN_ELIM_THM; IN_INTER; IN_DELETE] THEN
-  X_GEN_TAC `x::A` THEN EQ_TAC THENL
-   [DISCH_THEN(MP_TAC \<circ> CONJUNCT2) THEN MATCH_MP_TAC MONO_EXISTS THEN
-    MESON_TAC[];
-    REWRITE_TAC[LEFT_IMP_EXISTS_THM]] THEN
-  X_GEN_TAC `a::num=>A` THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [limitin]) THEN
-  REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN DISCH_THEN(CONJUNCTS_THEN2
-   ASSUME_TAC (MP_TAC \<circ> SPEC `topspacemtopology:A=>bool`)) THEN
-  REWRITE_TAC[OPEN_IN_TOPSPACE] THEN ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-  REWRITE_TAC[EVENTUALLY_SEQUENTIALLY; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `N::num` THEN DISCH_TAC THEN
-  EXISTS_TAC `\<lambda>n. (a::num=>A) (N + n)` THEN
-  ASM_SIMP_TAC[LE_ADD; EQ_ADD_LCANCEL; LT_ADD_LCANCEL] THEN
-  ONCE_REWRITE_TAC[ADD_SYM] THEN MATCH_MP_TAC LIMIT_SEQUENTIALLY_OFFSET THEN
-  ASM_REWRITE_TAC[]);;
+   "mtopology derived_set_of S =
+    {x. \<exists>\<sigma>. range \<sigma> \<subseteq> S - {x} \<and> decreasing_dist \<sigma> x \<and> limitin mtopology \<sigma> x sequentially}"
+  using derived_set_of_sequentially_alt derived_set_of_sequentially_decreasing by auto
 
 lemma closure_of_sequentially:
-   "\<And>met S::A=>bool.
-        mtopology closure_of S =
-        {x. x \<in> M \<and>
-             \<exists>f. (\<forall>n. f n \<in> (S \<inter> M)) \<and>
-                 limitin mtopology f x sequentially}"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[EXTENSION; IN_ELIM_THM] THEN
-  X_GEN_TAC `x::A` THEN EQ_TAC THENL
-   [REWRITE_TAC[CLOSURE_OF; IN_INTER; IN_UNION; TOPSPACE_MTOPOLOGY] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-    ASM_REWRITE_TAC[DERIVED_SET_OF_SEQUENTIALLY; IN_ELIM_THM] THEN
-    REWRITE_TAC[IN_INTER; IN_DELETE] THEN
-    STRIP_TAC THENL [ALL_TAC; ASM_MESON_TAC[]] THEN
-    EXISTS_TAC `(\<lambda>n. x):num=>A` THEN
-    ASM_REWRITE_TAC[LIMIT_CONST; TOPSPACE_MTOPOLOGY];
-    REPEAT STRIP_TAC THEN
-    MATCH_MP_TAC(ISPEC `sequentially` LIMIT_IN_CLOSED_IN) THEN
-    MAP_EVERY EXISTS_TAC [`mtopology met::A topology`; `f::num=>A`] THEN
-    ASM_REWRITE_TAC[CLOSED_IN_CLOSURE_OF; TRIVIAL_LIMIT_SEQUENTIALLY] THEN
-    MATCH_MP_TAC ALWAYS_EVENTUALLY THEN GEN_TAC THEN REWRITE_TAC[] THEN
-    MATCH_MP_TAC(REWRITE_RULE[\<subseteq>] CLOSURE_OF_SUBSET_INTER) THEN
-    REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN ASM SET_TAC[]]);;
+   "mtopology closure_of S = 
+    {x \<in> M. \<exists>\<sigma>. range \<sigma> \<subseteq> S \<inter> M \<and> limitin mtopology \<sigma> x sequentially}"
+  by (auto simp: closure_of derived_set_of_sequentially)
 
 end (*Metric_space*)
 
