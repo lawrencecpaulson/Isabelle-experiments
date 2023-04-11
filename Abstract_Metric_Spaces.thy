@@ -5217,33 +5217,26 @@ proof -
 qed
 
 lemma derived_set_of_sequentially_alt:
-   "mtopology derived_set_of S =
+  "mtopology derived_set_of S =
         {x. \<exists>\<sigma>. range \<sigma> \<subseteq> S - {x} \<and> limitin mtopology \<sigma> x sequentially}"
-  apply (auto simp: derived_set_of_sequentially)
-  using limitin_mspace apply blast
-apply (auto simp: limitin_metric)
-  apply (intro exI conjI)
-  prefer 2
-   apply assumption
-apply (auto simp: limitin_metric)
-
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[DERIVED_SET_OF_TRIVIAL_LIMIT; EXTENSION; IN_ELIM_THM] THEN
-  REWRITE_TAC[trivial_limit; EVENTUALLY_ATPOINTOF_WITHIN_SEQUENTIALLY] THEN
-  REWRITE_TAC[EVENTUALLY_FALSE; TRIVIAL_LIMIT_SEQUENTIALLY] THEN
-  X_GEN_TAC `x::A` THEN REWRITE_TAC[NOT_FORALL_THM; IN_DELETE; IN_INTER] THEN
-  EQ_TAC THENL [MESON_TAC[]; REWRITE_TAC[LEFT_IMP_EXISTS_THM]] THEN
-  X_GEN_TAC `a::num=>A` THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [limitin]) THEN
-  REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN DISCH_THEN(CONJUNCTS_THEN2
-   ASSUME_TAC (MP_TAC \<circ> SPEC `topspacemtopology:A=>bool`)) THEN
-  REWRITE_TAC[OPEN_IN_TOPSPACE] THEN ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-  REWRITE_TAC[EVENTUALLY_SEQUENTIALLY; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `N::num` THEN DISCH_TAC THEN
-  EXISTS_TAC `\<lambda>n. (a::num=>A) (N + n)` THEN ASM_SIMP_TAC[LE_ADD] THEN
-  ONCE_REWRITE_TAC[ADD_SYM] THEN MATCH_MP_TAC LIMIT_SEQUENTIALLY_OFFSET THEN
-  ASM_REWRITE_TAC[]);;
+proof -
+  have *: "\<exists>\<sigma>. range \<sigma> \<subseteq> S \<inter> M - {x} \<and> limitin mtopology \<sigma> x sequentially"
+    if \<sigma>: "range \<sigma> \<subseteq> S - {x}" and lim: "limitin mtopology \<sigma> x sequentially" for x \<sigma>
+  proof -
+    obtain N where "\<forall>n\<ge>N. \<sigma> n \<in> M \<and> d (\<sigma> n) x < 1"
+      using lim limit_metric_sequentially by fastforce
+    with \<sigma> obtain a where a:"a \<in> S \<inter> M - {x}" by auto
+    show ?thesis
+    proof (intro conjI exI)
+      show "range (\<lambda>n. if \<sigma> n \<in> M then \<sigma> n else a) \<subseteq> S \<inter> M - {x}"
+        using a \<sigma> by fastforce
+      show "limitin mtopology (\<lambda>n. if \<sigma> n \<in> M then \<sigma> n else a) x sequentially"
+        using lim limit_metric_sequentially by fastforce
+    qed
+  qed
+  show ?thesis
+    by (auto simp: limitin_mspace derived_set_of_sequentially intro!: *)
+qed
 
 lemma derived_set_of_sequentially_inj:
    "\<And>met S::A=>bool.
