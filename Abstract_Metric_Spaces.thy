@@ -1302,7 +1302,7 @@ proof -
 qed
 
 lemma metric_interior_of:
-   "mtopology interior_of S = {x \<in> M. \<exists>e>0. mball x e \<subseteq> S}" (is "?lhs=?rhs")
+   "mtopology interior_of S = {x \<in> M. \<exists>\<epsilon>>0. mball x \<epsilon> \<subseteq> S}" (is "?lhs=?rhs")
 proof
   show "?lhs \<subseteq> ?rhs"
     using interior_of_maximal_eq openin_mtopology by fastforce
@@ -1311,15 +1311,15 @@ proof
 qed
 
 lemma metric_interior_of_alt:
-   "mtopology interior_of S = {x \<in> M. \<exists>e>0. mcball x e \<subseteq> S}"
+   "mtopology interior_of S = {x \<in> M. \<exists>\<epsilon>>0. mcball x \<epsilon> \<subseteq> S}"
   by (fastforce simp: mball_iff_mcball metric_interior_of)
 
 lemma in_interior_of_mball:
-   "x \<in> mtopology interior_of S \<longleftrightarrow> x \<in> M \<and> (\<exists>e>0. mball x e \<subseteq> S)"
+   "x \<in> mtopology interior_of S \<longleftrightarrow> x \<in> M \<and> (\<exists>\<epsilon>>0. mball x \<epsilon> \<subseteq> S)"
   using metric_interior_of by force
 
 lemma in_interior_of_mcball:
-   "x \<in> mtopology interior_of S \<longleftrightarrow> x \<in> M \<and> (\<exists>e>0. mcball x e \<subseteq> S)"
+   "x \<in> mtopology interior_of S \<longleftrightarrow> x \<in> M \<and> (\<exists>\<epsilon>>0. mcball x \<epsilon> \<subseteq> S)"
   using metric_interior_of_alt by force
 
 lemma Hausdorff_space_mtopology: "Hausdorff_space mtopology"
@@ -4888,8 +4888,8 @@ lemma (in Metric_space) limitin_metric_unique:
   by (meson Hausdorff_space_mtopology limitin_Hausdorff_unique)
 
 lemma (in Metric_space) limitin_metric:
-   "limitin mtopology f l F \<longleftrightarrow>
-     l \<in> M \<and> (\<forall>e>0. eventually (\<lambda>x. f x \<in> M \<and> d (f x) l < e) F)" (is "?lhs=?rhs")
+   "limitin mtopology f l F \<longleftrightarrow> l \<in> M \<and> (\<forall>\<epsilon>>0. eventually (\<lambda>x. f x \<in> M \<and> d (f x) l < \<epsilon>) F)"  
+   (is "?lhs=?rhs")
 proof
   assume L: ?lhs
   show ?rhs
@@ -4897,11 +4897,11 @@ proof
   proof (intro conjI strip)
     show "l \<in> M"
       using L limitin_mspace by blast
-    fix e::real
-    assume "e>0"
-    then have "\<forall>\<^sub>F x in F. f x \<in> mball l e"
+    fix \<epsilon>::real
+    assume "\<epsilon>>0"
+    then have "\<forall>\<^sub>F x in F. f x \<in> mball l \<epsilon>"
       using L limitin_def openin_mball by fastforce
-    then show "\<forall>\<^sub>F x in F. f x \<in> M \<and> d (f x) l < e"
+    then show "\<forall>\<^sub>F x in F. f x \<in> M \<and> d (f x) l < \<epsilon>"
       using commute eventually_mono by fastforce
   qed
 next
@@ -4912,7 +4912,7 @@ qed
 
 lemma (in Metric_space) limit_metric_sequentially:
    "limitin mtopology f l sequentially \<longleftrightarrow>
-     l \<in> M \<and> (\<forall>e>0. \<exists>N. \<forall>n\<ge>N. f n \<in> M \<and> d (f n) l < e)"
+     l \<in> M \<and> (\<forall>\<epsilon>>0. \<exists>N. \<forall>n\<ge>N. f n \<in> M \<and> d (f n) l < \<epsilon>)"
   by (auto simp: limitin_metric eventually_sequentially)
 
 lemma limitin_closedin:
@@ -4955,11 +4955,11 @@ next
         by metis
       then have "range \<sigma> \<subseteq> M"
         by blast
-      have "\<exists>N. \<forall>n\<ge>N. d x (\<sigma> n) < e" if "e>0" for e
+      have "\<exists>N. \<forall>n\<ge>N. d x (\<sigma> n) < \<epsilon>" if "\<epsilon>>0" for \<epsilon>
       proof -
-        have "real (Suc (nat \<lceil>inverse e\<rceil>)) \<ge> inverse e"
+        have "real (Suc (nat \<lceil>inverse \<epsilon>\<rceil>)) \<ge> inverse \<epsilon>"
           by linarith
-        then have "\<forall>n \<ge> nat \<lceil>inverse e\<rceil>. d x (\<sigma> n) < e"
+        then have "\<forall>n \<ge> nat \<lceil>inverse \<epsilon>\<rceil>. d x (\<sigma> n) < \<epsilon>"
           by (metis \<sigma> inverse_inverse_eq inverse_le_imp_le nat_ceiling_le_eq nle_le not_less_eq_eq order.strict_trans2 that)
         then show ?thesis ..
       qed
@@ -5056,10 +5056,10 @@ proof -
       by (induction m) (auto intro: order_less_trans dless)
     then have 2: "decreasing_dist \<sigma> a"
       unfolding decreasing_dist_def by (metis add.commute less_imp_Suc_add)
-    have "\<forall>\<^sub>F xa in sequentially. d (\<sigma> xa) a < e" if "e > 0" for e
+    have "\<forall>\<^sub>F xa in sequentially. d (\<sigma> xa) a < \<epsilon>" if "\<epsilon> > 0" for \<epsilon>
     proof -
-      obtain N where "inverse (Suc N) < e"
-        using \<open>0 < e\<close> reals_Archimedean by blast
+      obtain N where "inverse (Suc N) < \<epsilon>"
+        using \<open>0 < \<epsilon>\<close> reals_Archimedean by blast
       with \<sigma> 2 show ?thesis
         unfolding decreasing_dist_def by (smt (verit, best) \<Phi>_def eventually_at_top_dense)
     qed
@@ -5322,157 +5322,158 @@ lemma closure_of_sequentially:
 
 end (*Metric_space*)
 
-subsection\<open>Combining theorems for real limits\<close>
-
 
 subsection\<open>Cauchy sequences and complete metric spaces\<close>
 
+context Metric_space
+begin
 
-let cauchy_in = new_definition
-  `\<forall>m::A metric S::num=>A.
-     cauchy_in m S \<longleftrightarrow>
-     (\<forall>n. S n \<in> M) \<and>
-     (\<forall>e. 0 < e
-          \<Longrightarrow> (\<exists>N. !n n'. N \<le> n \<and> N \<le> n'
-                          \<Longrightarrow> d m (S n,S n') < e))`;;
+definition MCauchy :: "(nat \<Rightarrow> 'a) \<Rightarrow> bool"
+  where "MCauchy \<sigma> \<equiv> range \<sigma> \<subseteq> M \<and> (\<forall>\<epsilon>>0. \<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>)"
 
-let mcomplete = new_definition
-  `\<forall>m::A metric.
-     mcomplete m \<longleftrightarrow>
-     (\<forall>S. cauchy_in m S \<Longrightarrow> \<exists>x. limitin mtopology S x sequentially)`;;
+definition mcomplete
+  where "mcomplete \<equiv> (\<forall>\<sigma>. MCauchy \<sigma> \<longrightarrow> (\<exists>x. limitin mtopology \<sigma> x sequentially))"
+
+lemma MCauchy_imp_MCauchy_suffix: "MCauchy \<sigma> \<Longrightarrow> MCauchy (\<sigma> \<circ> (+)n)"
+  unfolding MCauchy_def image_subset_iff comp_apply
+  by (metis UNIV_I add.commute trans_le_add1) 
 
 lemma mcomplete:
-   "        mcomplete m \<longleftrightarrow>
-        \<forall>S. eventually (\<lambda>n. S n \<in> M) sequentially \<and>
-            (\<forall>e. 0 < e
-                 \<Longrightarrow> \<exists>N. !n n'. N \<le> n \<and> N \<le> n' \<Longrightarrow> d m (S n,S n') < e)
-            \<Longrightarrow> \<exists>x. limitin mtopology S x sequentially"
-oops
-  GEN_TAC THEN REWRITE_TAC[mcomplete; cauchy_in] THEN EQ_TAC THEN
-  DISCH_TAC THEN X_GEN_TAC `S::num=>A` THEN STRIP_TAC THENL
-   [FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [EVENTUALLY_SEQUENTIALLY]) THEN
-    REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `N::num` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(S::num=>A) \<circ> (\<lambda>n. N + n)`) THEN
-    ASM_SIMP_TAC[o_DEF; LE_ADD] THEN ANTS_TAC THENL
-     [ASM_MESON_TAC[ARITH_RULE `M::num \<le> n \<Longrightarrow> M \<le> N + n`];
-      MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC THEN ONCE_REWRITE_TAC[ADD_SYM] THEN
-      REWRITE_TAC[LIMIT_SEQUENTIALLY_OFFSET_REV]];
-    FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[EVENTUALLY_TRUE]]);;
+   "mcomplete \<longleftrightarrow>
+    (\<forall>\<sigma>. (\<forall>\<^sub>F n in sequentially. \<sigma> n \<in> M) \<and>
+     (\<forall>\<epsilon>>0. \<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>) \<longrightarrow>
+     (\<exists>x. limitin mtopology \<sigma> x sequentially))" (is "?lhs=?rhs")
+proof
+  assume L: ?lhs 
+  show ?rhs
+  proof clarify
+    fix \<sigma>
+    assume "\<forall>\<^sub>F n in sequentially. \<sigma> n \<in> M"
+      and \<sigma>: "\<forall>\<epsilon>>0. \<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>"
+    then obtain N where "\<And>n. n\<ge>N \<Longrightarrow> \<sigma> n \<in> M"
+      by (auto simp add: eventually_sequentially)
+    with \<sigma> have "MCauchy (\<sigma> \<circ> (+)N)"
+      unfolding MCauchy_def image_subset_iff comp_apply by (meson le_add1 trans_le_add2)
+    then obtain x where "limitin mtopology (\<sigma> \<circ> (+)N) x sequentially"
+      using L MCauchy_imp_MCauchy_suffix mcomplete_def by blast
+    then have "limitin mtopology \<sigma> x sequentially"
+      unfolding o_def by (auto simp add: add.commute limitin_sequentially_offset_rev)
+    then show "\<exists>x. limitin mtopology \<sigma> x sequentially" ..
+  qed
+qed (simp add: mcomplete_def MCauchy_def image_subset_iff)
 
-lemma mcomplete_empty_mspace:
-   "M = {} \<Longrightarrow> mcomplete m"
-oops
-  SIMP_TAC[mcomplete; cauchy_in; NOT_IN_EMPTY]);;
+lemma mcomplete_empty_mspace: "M = {} \<Longrightarrow> mcomplete"
+  using MCauchy_def mcomplete_def by blast
+
+lemma MCauchy_const: "MCauchy (\<lambda>n. a) \<longleftrightarrow> a \<in> M"
+  using MCauchy_def mdist_refl by auto
+
+lemma convergent_imp_MCauchy:
+  assumes "range \<sigma> \<subseteq> M" and lim: "limitin mtopology \<sigma> l sequentially"
+  shows "MCauchy \<sigma>"
+  unfolding MCauchy_def image_subset_iff
+proof (intro conjI strip)
+  fix \<epsilon>::real
+  assume "0 < \<epsilon>"
+  then have "\<forall>\<^sub>F n in sequentially. \<sigma> n \<in> M \<and> d (\<sigma> n) l < \<epsilon>/2"
+    using half_gt_zero lim limitin_metric by blast
+  then obtain N where "\<And>n. n\<ge>N \<Longrightarrow> \<sigma> n \<in> M \<and> d (\<sigma> n) l < \<epsilon>/2"
+    by (force simp add: eventually_sequentially)
+  then show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>"
+    by (smt (verit) Metric_space.limitin_mspace Metric_space.mdist_reverse_triangle Metric_space_axioms field_sum_of_halves lim)
+qed (use assms in blast)
+
+
+lemma mcomplete_alt:
+   "mcomplete \<longleftrightarrow> (\<forall>\<sigma>. MCauchy \<sigma> \<longleftrightarrow> range \<sigma> \<subseteq> M \<and> (\<exists>x. limitin mtopology \<sigma> x sequentially))"
+  using MCauchy_def convergent_imp_MCauchy mcomplete_def by blast
+
+lemma MCauchy_subsequence:
+  assumes "strict_mono r" "MCauchy \<sigma>"
+  shows "MCauchy (\<sigma> \<circ> r)"
+proof -
+  have "d (\<sigma> (r n)) (\<sigma> (r n')) < \<epsilon>"
+    if "N \<le> n" "N \<le> n'" "strict_mono r" "\<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>"
+    for \<epsilon> N n n'
+    using that by (meson le_trans strict_mono_imp_increasing)
+  then show ?thesis
+    using assms 
+    by (simp add: MCauchy_def) blast
+qed
+
+lemma MCauchy_offset:
+  assumes cau: "MCauchy (\<sigma> \<circ> (+)k)" and \<sigma>: "\<And>n. n < k \<Longrightarrow> \<sigma> n \<in> M" 
+  shows "MCauchy \<sigma>"
+  unfolding MCauchy_def image_subset_iff
+proof (intro conjI strip)
+  fix n
+  show "\<sigma> n \<in> M"
+    using assms
+    unfolding MCauchy_def image_subset_iff
+    by (metis UNIV_I comp_apply le_iff_add linorder_not_le)
+next
+  fix \<epsilon> :: real
+  assume "0 < \<epsilon>"
+  obtain N where "\<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d ((\<sigma> \<circ> (+)k) n) ((\<sigma> \<circ> (+)k) n') < \<epsilon>"
+    using cau \<open>0 < \<epsilon>\<close> by (fastforce simp: MCauchy_def)
+  then show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>"
+    unfolding o_def
+    apply (rule_tac x="k+N" in exI)
+    by (smt (verit, del_insts) add.assoc le_add1 less_eqE)
+qed
+
+lemma MCauchy_convergent_subsequence:
+  assumes cau: "MCauchy \<sigma>" and "strict_mono r" 
+     and lim: "limitin mtopology (\<sigma> \<circ> r) a sequentially"
+  shows "limitin mtopology \<sigma> a sequentially"
+  unfolding limitin_metric
+proof (intro conjI strip)
+  show "a \<in> M"
+    by (meson assms limitin_mspace)
+  fix \<epsilon> :: real
+  assume "0 < \<epsilon>"
+  then obtain N1 where N1: "\<And>n n'. \<lbrakk>n\<ge>N1; n'\<ge>N1\<rbrakk> \<Longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>/2"
+    using cau unfolding MCauchy_def by (meson half_gt_zero)
+  obtain N2 where N2: "\<And>n. n \<ge> N2 \<Longrightarrow> (\<sigma> \<circ> r) n \<in> M \<and> d ((\<sigma> \<circ> r) n) a < \<epsilon>/2"
+    by (metis (no_types, lifting) lim \<open>0 < \<epsilon>\<close> half_gt_zero limit_metric_sequentially)
+  have "\<sigma> n \<in> M \<and> d (\<sigma> n) a < \<epsilon>" if "n \<ge> max N1 N2" for n
+    using N1 [of n "r n"] N2 [of n] that \<open>strict_mono r\<close>
+    apply (intro conjI)
+    using MCauchy_def cau apply blast
+    unfolding o_def
+    apply (simp add: del: divide_const_simps)
+    apply atomize
+    apply safe
+    using le_trans strict_mono_imp_increasing apply blast
+    using triangle [of concl: "\<sigma> n" a "\<sigma> (r n)"]
+    using Metric_space.MCauchy_def Metric_space_axioms \<open>a \<in> M\<close> cau range_subsetD by fastforce
+  then show "\<forall>\<^sub>F n in sequentially. \<sigma> n \<in> M \<and> d (\<sigma> n) a < \<epsilon>"
+    using eventually_sequentially by blast
+qed
+
 
 lemma mcomplete_submetric_empty:
    "mcomplete(submetric m {})"
 oops
   SIMP_TAC[MCOMPLETE_EMPTY_MSPACE; SUBMETRIC; INTER_EMPTY]);;
 
-lemma cauchy_in_submetric:
+lemma MCauchy_submetric:
    "\<And>m S x::num=>A.
-    cauchy_in (submetric m S) x \<longleftrightarrow> (\<forall>n. x n \<in> S) \<and> cauchy_in m x"
+    MCauchy (submetric m S) x \<longleftrightarrow> (\<forall>n. x n \<in> S) \<and> MCauchy x"
 oops
-  REWRITE_TAC[cauchy_in; SUBMETRIC; IN_INTER] THEN MESON_TAC[]);;
-
-lemma cauchy_in_const:
-   "cauchy_in m (\<lambda>n. a) \<longleftrightarrow> a \<in> M"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[cauchy_in] THEN
-  ASM_CASES_TAC `(a::A) \<in> M` THEN ASM_SIMP_TAC[MDIST_REFL]);;
-
-lemma convergent_imp_cauchy_in:
-   "(\<forall>n. x n \<in> M) \<and> limitin mtopology x l sequentially
-             \<Longrightarrow> cauchy_in m x"
-oops
-  REPEAT GEN_TAC THEN SIMP_TAC[LIMIT_METRIC; cauchy_in] THEN
-  STRIP_TAC THEN X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e / 2`) THEN
-  ASM_REWRITE_TAC[REAL_HALF; EVENTUALLY_SEQUENTIALLY] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `N::num` THEN DISCH_TAC THEN
-  MAP_EVERY X_GEN_TAC [`n::num`; `p::num`] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(fun th ->
-    MP_TAC(SPEC `n::num` th) THEN MP_TAC(SPEC `p::num` th)) THEN
-  ASM_REWRITE_TAC[] THEN UNDISCH_TAC `(l::A) \<in> M` THEN
-  SUBGOAL_THEN `(x::num=>A) n \<in> M \<and> x p \<in> M` MP_TAC THENL
-   [ASM_REWRITE_TAC[]; CONV_TAC METRIC_ARITH]);;
-
-lemma mcomplete_alt:
-   "        mcomplete m \<longleftrightarrow>
-        \<forall>S. cauchy_in m S \<longleftrightarrow>
-            (\<forall>n. S n \<in> M) \<and>
-            \<exists>x. limitin mtopology S x sequentially"
-oops
-  MESON_TAC[CONVERGENT_IMP_CAUCHY_IN; mcomplete; cauchy_in]);;
-
-lemma cauchy_in_subsequence:
-   "\<And>m (x::num=>A) r.
-        (\<forall>m n. m < n \<Longrightarrow> r m < r n) \<and> cauchy_in m x
-        \<Longrightarrow> cauchy_in m (x \<circ> r)"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[cauchy_in; o_DEF] THEN
-  STRIP_TAC THEN ASM_REWRITE_TAC[] THEN X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e::real`) THEN ASM_REWRITE_TAC[] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `N::num` THEN REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN
-  ASM_MESON_TAC[MONOTONE_BIGGER; LE_TRANS]);;
-
-lemma cauchy_in_offset:
-   "\<And>m a x::num=>A.
-        (\<forall>n. n < a \<Longrightarrow> x n \<in> M) \<and> cauchy_in m (\<lambda>n. x(a + n))
-        \<Longrightarrow> cauchy_in m x"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[cauchy_in] THEN STRIP_TAC THEN
-  CONJ_TAC THENL
-   [ASM_MESON_TAC[ARITH_RULE `n::num < a \<or> n = a + (n - a)`]; ALL_TAC] THEN
-  X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e::real`) THEN ASM_REWRITE_TAC[] THEN
-  DISCH_THEN(X_CHOOSE_THEN `N::num` STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC `a + N::num` THEN
-  MAP_EVERY X_GEN_TAC [`m::num`; `n::num`] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`m - a::num`; `n - a::num`]) THEN
-  ANTS_TAC THENL [ASM_ARITH_TAC; MATCH_MP_TAC EQ_IMP] THEN
-  AP_THM_TAC THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
-  BINOP_TAC THEN AP_TERM_TAC THEN ASM_ARITH_TAC);;
-
-lemma cauchy_in_convergent_subsequence:
-   "\<And>m r a x::num=>A.
-        cauchy_in m x \<and>
-        (\<forall>m n. m < n \<Longrightarrow> r m < r n) \<and>
-        limitin mtopology (x \<circ> r) a sequentially
-        \<Longrightarrow> limitin mtopology x a sequentially"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[LIMIT_METRIC] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [LIMIT_METRIC]) THEN
-  STRIP_TAC THEN ASM_REWRITE_TAC[] THEN X_GEN_TAC `e::real` THEN
-  DISCH_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [cauchy_in]) THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC `e / 2`)) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e / 2`) THEN
-  ASM_REWRITE_TAC[REAL_HALF; LEFT_IMP_EXISTS_THM; EVENTUALLY_SEQUENTIALLY] THEN
-  X_GEN_TAC `M::num` THEN ASM_REWRITE_TAC[o_THM] THEN DISCH_TAC THEN
-  X_GEN_TAC `N::num` THEN DISCH_TAC THEN
-  EXISTS_TAC `MAX ((r::num=>num) M) N` THEN X_GEN_TAC `n::num` THEN
-  REWRITE_TAC[ARITH_RULE `MAX M N \<le> n \<longleftrightarrow> M \<le> n \<and> N \<le> n`] THEN
-  STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`n::num`; `(r::num=>num) n`]) THEN ANTS_TAC THENL
-   [ASM_MESON_TAC[LE_TRANS; MONOTONE_BIGGER; LE_REFL]; ALL_TAC] THEN
-  MATCH_MP_TAC(METRIC_ARITH
-   `x \<in> M \<and> y \<in> M \<and> z \<in> M \<and>
-    d m (y::A,z) < e / 2
-    \<Longrightarrow> d x y < e / 2 \<Longrightarrow> d x z < e`) THEN
-  ASM_REWRITE_TAC[] THEN ASM_MESON_TAC[LE_TRANS; MONOTONE_BIGGER]);;
+  REWRITE_TAC[MCauchy; SUBMETRIC; IN_INTER] THEN MESON_TAC[]);;
 
 lemma closedin_mcomplete_imp_mcomplete:
-   "\<And>m S::A=>bool. closedin mtopology S \<and> mcomplete m
+   "\<And>m S::A=>bool. closedin mtopology S \<and> mcomplete
                  \<Longrightarrow> mcomplete (submetric m S)"
 oops
   INTRO_TAC "!m S; cl cp" THEN REWRITE_TAC[mcomplete] THEN
-  INTRO_TAC "![a]; a" THEN CLAIM_TAC "cy'" `cauchy_in m (a::num=>A)` THENL
-  [REMOVE_THEN "a" MP_TAC THEN SIMP_TAC[cauchy_in; SUBMETRIC; IN_INTER];
+  INTRO_TAC "![a]; a" THEN CLAIM_TAC "cy'" `MCauchy (a::num=>A)` THENL
+  [REMOVE_THEN "a" MP_TAC THEN SIMP_TAC[MCauchy; SUBMETRIC; IN_INTER];
    HYP_TAC "cp" (GSYM \<circ> REWRITE_RULE[mcomplete]) THEN
    HYP REWRITE_TAC "cp" [LIMIT_SUBMETRIC_IFF] THEN
    REMOVE_THEN "cp" (HYP_TAC "cy': @l.l" \<circ> MATCH_MP) THEN EXISTS_TAC `l::A` THEN
-   HYP_TAC "a: A cy" (REWRITE_RULE[cauchy_in; SUBMETRIC; IN_INTER]) THEN
+   HYP_TAC "a: A cy" (REWRITE_RULE[MCauchy; SUBMETRIC; IN_INTER]) THEN
    ASM_REWRITE_TAC[EVENTUALLY_TRUE] THEN MATCH_MP_TAC
      (ISPECL [`sequentially`; `mtopology(m::A metric)`] LIMIT_IN_CLOSED_IN) THEN
    EXISTS_TAC `a::num=>A` THEN
@@ -5480,7 +5481,7 @@ oops
 
 lemma sequentially_closedin_mcomplete_imp_mcomplete:
    "\<And>m S::A=>bool.
-     mcomplete m \<and>
+     mcomplete \<and>
      (\<forall>x l. (\<forall>n. x n \<in> S) \<and> limitin mtopology x l sequentially \<Longrightarrow> l \<in> S)
             \<Longrightarrow> mcomplete (submetric m S)"
 oops
@@ -5494,10 +5495,10 @@ oops
    HYP MESON_TAC "lim" [];
    REMOVE_THEN "seq" MATCH_MP_TAC THEN HYP SET_TAC "a lim" []]);;
 
-lemma cauchy_in_interleaving_gen:
+lemma MCauchy_interleaving_gen:
    "\<And>m x y::num=>A.
-        cauchy_in m (\<lambda>n. if EVEN n then x(n div 2) else y(n div 2)) \<longleftrightarrow>
-        cauchy_in m x \<and> cauchy_in m y \<and>
+        MCauchy (\<lambda>n. if EVEN n then x(n div 2) else y(n div 2)) \<longleftrightarrow>
+        MCauchy x \<and> MCauchy y \<and>
         tendsto (\<lambda>n. d m (x n,y n)) 0 sequentially"
 oops
   REPEAT GEN_TAC THEN EQ_TAC THENL
@@ -5515,7 +5516,7 @@ oops
       REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
       REWRITE_TAC[LIMIT_METRIC; REAL_EUCLIDEAN_METRIC; IN_UNIV] THEN
       X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [cauchy_in]) THEN
+      FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [MCauchy]) THEN
       DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC `e::real`)) THEN
       ASM_REWRITE_TAC[EVENTUALLY_SEQUENTIALLY] THEN
       MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `N::num` THEN
@@ -5529,7 +5530,7 @@ oops
       SIMP_TAC[REAL_ARITH `0 \<le> x \<Longrightarrow> abs(0 - x) = x`; MDIST_POS_LE]];
     REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
     REWRITE_TAC[LIMIT_METRIC; REAL_EUCLIDEAN_METRIC; IN_UNIV] THEN
-    REWRITE_TAC[cauchy_in] THEN
+    REWRITE_TAC[MCauchy] THEN
     ASM_CASES_TAC `\<forall>n. (x::num=>A) n \<in> M` THEN ASM_REWRITE_TAC[] THEN
     ASM_CASES_TAC `\<forall>n. (y::num=>A) n \<in> M` THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[AND_FORALL_THM] THEN DISCH_TAC THEN
@@ -5569,26 +5570,26 @@ oops
       ASM_REWRITE_TAC[] THEN CONJ_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
       ASM_ARITH_TAC]]);;
 
-lemma cauchy_in_interleaving:
-   "         cauchy_in m (\<lambda>n. if EVEN n then x(n div 2) else a) \<longleftrightarrow>
+lemma MCauchy_interleaving:
+   "         MCauchy (\<lambda>n. if EVEN n then x(n div 2) else a) \<longleftrightarrow>
          (\<forall>n. x n \<in> M) \<and> limitin mtopology x a sequentially"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[CAUCHY_IN_INTERLEAVING_GEN] THEN
   REWRITE_TAC[CAUCHY_IN_CONST] THEN
   GEN_REWRITE_TAC (RAND_CONV \<circ> RAND_CONV) [LIMIT_METRIC_DIST_NULL] THEN
   EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THENL
-   [RULE_ASSUM_TAC(REWRITE_RULE[cauchy_in]) THEN
+   [RULE_ASSUM_TAC(REWRITE_RULE[MCauchy]) THEN
     ASM_REWRITE_TAC[EVENTUALLY_TRUE];
     MATCH_MP_TAC CONVERGENT_IMP_CAUCHY_IN THEN
     ONCE_REWRITE_TAC[LIMIT_METRIC_DIST_NULL] THEN
     EXISTS_TAC `a::A` THEN ASM_REWRITE_TAC[]]);;
 
 lemma mcomplete_nest:
-   "      mcomplete m \<longleftrightarrow>
+   "      mcomplete \<longleftrightarrow>
       \<forall>c. (\<forall>n. closedin mtopology (c n)) \<and>
           (\<forall>n. \<not> (c n = {})) \<and>
           (\<forall>m n. m \<le> n \<Longrightarrow> c n \<subseteq> c m) \<and>
-          (\<forall>e. 0 < e \<Longrightarrow> \<exists>n a. c n \<subseteq> mcball a e)
+          (\<forall>e>0.  \<exists>n a. c n \<subseteq> mcball a e)
           \<Longrightarrow> \<not> (\<Inter> {c n | n \<in> UNIV} = {})"
 oops
   GEN_TAC THEN REWRITE_TAC[mcomplete] THEN EQ_TAC THEN DISCH_TAC THENL
@@ -5597,7 +5598,7 @@ oops
      [ASM SET_TAC[]; REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM]] THEN
     X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::num=>A`) THEN ANTS_TAC THENL
-     [REWRITE_TAC[cauchy_in] THEN CONJ_TAC THENL
+     [REWRITE_TAC[MCauchy] THEN CONJ_TAC THENL
        [ASM_MESON_TAC[closedin; \<subseteq>; TOPSPACE_MTOPOLOGY]; ALL_TAC] THEN
       X_GEN_TAC `e::real` THEN DISCH_TAC THEN
       FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e / 3`) THEN
@@ -5620,7 +5621,7 @@ oops
       ASM_REWRITE_TAC[TRIVIAL_LIMIT_SEQUENTIALLY] THEN
       REWRITE_TAC[EVENTUALLY_SEQUENTIALLY] THEN EXISTS_TAC `n::num` THEN
       ASM SET_TAC[]];
-    X_GEN_TAC `x::num=>A` THEN REWRITE_TAC[cauchy_in] THEN STRIP_TAC THEN
+    X_GEN_TAC `x::num=>A` THEN REWRITE_TAC[MCauchy] THEN STRIP_TAC THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC
      `\<lambda>n. mtopology closure_of (image (x::num=>A) (from n))`) THEN
     REWRITE_TAC[CLOSED_IN_CLOSURE_OF] THEN
@@ -5656,11 +5657,11 @@ oops
       ASM_REWRITE_TAC[]]]);;
 
 lemma mcomplete_nest_sing:
-   "      mcomplete m \<longleftrightarrow>
+   "      mcomplete \<longleftrightarrow>
       \<forall>c. (\<forall>n. closedin mtopology (c n)) \<and>
           (\<forall>n. \<not> (c n = {})) \<and>
           (\<forall>m n. m \<le> n \<Longrightarrow> c n \<subseteq> c m) \<and>
-          (\<forall>e. 0 < e \<Longrightarrow> \<exists>n a. c n \<subseteq> mcball a e)
+          (\<forall>e>0.  \<exists>n a. c n \<subseteq> mcball a e)
           \<Longrightarrow> \<exists>l. l \<in> M \<and> \<Inter> {c n | n \<in> UNIV} = {l}"
 oops
   GEN_TAC THEN REWRITE_TAC[MCOMPLETE_NEST] THEN
@@ -5688,9 +5689,9 @@ oops
   UNDISCH_TAC `\<not> (l':A = l)` THEN CONV_TAC METRIC_ARITH);;
 
 lemma mcomplete_fip:
-   "        mcomplete m \<longleftrightarrow>
+   "        mcomplete \<longleftrightarrow>
         \<forall>f. (\<forall>c. c \<in> f \<Longrightarrow> closedin mtopology c) \<and>
-            (\<forall>e. 0 < e \<Longrightarrow> \<exists>c a. c \<in> f \<and> c \<subseteq> mcball a e) \<and>
+            (\<forall>e>0.  \<exists>c a. c \<in> f \<and> c \<subseteq> mcball a e) \<and>
             (!f'. finite f' \<and> f' \<subseteq> f \<Longrightarrow> \<not> (\<Inter> f' = {}))
             \<Longrightarrow> \<not> (\<Inter> f = {})"
 oops
@@ -5783,9 +5784,9 @@ oops
     ASM SET_TAC[]]);;
 
 lemma mcomplete_fip_sing:
-   "        mcomplete m \<longleftrightarrow>
+   "        mcomplete \<longleftrightarrow>
         \<forall>f. (\<forall>c. c \<in> f \<Longrightarrow> closedin mtopology c) \<and>
-            (\<forall>e. 0 < e \<Longrightarrow> \<exists>c a. c \<in> f \<and> c \<subseteq> mcball a e) \<and>
+            (\<forall>e>0.  \<exists>c a. c \<in> f \<and> c \<subseteq> mcball a e) \<and>
             (!f'. finite f' \<and> f' \<subseteq> f \<Longrightarrow> \<not> (\<Inter> f' = {}))
             \<Longrightarrow> \<exists>l. l \<in> M \<and> \<Inter> f = {l}"
 oops
@@ -5930,8 +5931,8 @@ lemma totally_bounded_in_sequentially:
         totally_bounded_in m S \<longleftrightarrow>
         S \<subseteq> M \<and>
         \<forall>x::num=>A. (\<forall>n. x n \<in> S)
-                   \<Longrightarrow> \<exists>r. (\<forall>m n. m < n \<Longrightarrow> r m < r n) \<and>
-                           cauchy_in m (x \<circ> r)"
+                   \<Longrightarrow> \<exists>r. strict_mono r \<and>
+                           MCauchy (x \<circ> r)"
 oops
   REPEAT GEN_TAC THEN
   ASM_CASES_TAC `(S::A=>bool) \<subseteq> M` THENL
@@ -5956,7 +5957,7 @@ oops
       FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::num=>A`) THEN ASM_REWRITE_TAC[] THEN
       DISCH_THEN(X_CHOOSE_THEN `r::num=>num` STRIP_ASSUME_TAC) THEN
       FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e::real` \<circ> CONJUNCT2 \<circ>
-        GEN_REWRITE_RULE id [cauchy_in]) THEN
+        GEN_REWRITE_RULE id [MCauchy]) THEN
       ASM_REWRITE_TAC[o_DEF] THEN
       DISCH_THEN(X_CHOOSE_THEN `N::num`
           (MP_TAC \<circ> SPECL [`N::num`; `(r::num=>num) N + 1`])) THEN
@@ -5968,13 +5969,13 @@ oops
         ASM_MESON_TAC[MONOTONE_BIGGER]]]] THEN
   MP_TAC(ISPEC
    `\<lambda>(i::num) (r::num=>num).
-      \<exists>N. !n n'. N \<le> n \<and> N \<le> n'
+      \<exists>N. !n n'. N \<le> n \<longrightarrow> N \<le> n'
                  \<Longrightarrow> d m (x(r n):A,x(r n')) < inverse(Suc i)`
    SUBSEQUENCE_DIAGONALIZATION_LEMMA) THEN
   REWRITE_TAC[o_DEF] THEN ANTS_TAC THENL
    [ALL_TAC;
     DISCH_THEN(MP_TAC \<circ> SPEC `\<lambda>n::num. n`) THEN
-    ASM_REWRITE_TAC[cauchy_in] THEN MATCH_MP_TAC MONO_EXISTS THEN
+    ASM_REWRITE_TAC[MCauchy] THEN MATCH_MP_TAC MONO_EXISTS THEN
     X_GEN_TAC `r::num=>num` THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
     CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
     MATCH_MP_TAC FORALL_POS_MONO_1 THEN ASM_REWRITE_TAC[] THEN
@@ -6133,9 +6134,9 @@ oops
 
 lemma totally_bounded_in_cauchy_sequence:
    "\<And>m x::num=>A.
-        cauchy_in m x \<Longrightarrow> totally_bounded_in m (image x UNIV)"
+        MCauchy x \<Longrightarrow> totally_bounded_in m (image x UNIV)"
 oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[cauchy_in; totally_bounded_in] THEN
+  REPEAT GEN_TAC THEN REWRITE_TAC[MCauchy; totally_bounded_in] THEN
   STRIP_TAC THEN X_GEN_TAC `e::real` THEN DISCH_TAC THEN
   FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e::real`) THEN ASM_REWRITE_TAC[] THEN
   DISCH_THEN(X_CHOOSE_THEN `N::num` (MP_TAC \<circ> SPEC `N::num`)) THEN
@@ -6149,8 +6150,8 @@ oops
     EXISTS_TAC `N::num` THEN ASM_REWRITE_TAC[IN_MBALL; LE_REFL] THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC]);;
 
-lemma cauchy_in_imp_mbounded:
-   "cauchy_in m x \<Longrightarrow> mbounded {x i | i \<in> UNIV}"
+lemma MCauchy_imp_mbounded:
+   "MCauchy x \<Longrightarrow> mbounded {x i | i \<in> UNIV}"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[SIMPLE_IMAGE] THEN
   ASM_SIMP_TAC[TOTALLY_BOUNDED_IN_IMP_MBOUNDED;
@@ -6164,7 +6165,7 @@ lemma bolzano_weierstrass_property:
    "\<And>m u s::A=>bool.
       s \<subseteq> u \<and> s \<subseteq> M
       \<Longrightarrow> ((\<forall>x. (\<forall>n::num. x n \<in> s)
-                \<Longrightarrow> \<exists>l r. l \<in> u \<and> (\<forall>m n. m < n \<Longrightarrow> r m < r n) \<and>
+                \<Longrightarrow> \<exists>l r. l \<in> u \<and> strict_mono r \<and>
                           limitin mtopology (x \<circ> r) l sequentially) \<longleftrightarrow>
            (\<forall>t. t \<subseteq> s \<and> infinite t
                 \<Longrightarrow> \<not> (u \<inter> mtopology derived_set_of t = {})))"
@@ -6262,7 +6263,7 @@ let [COMPACT_IN_EQ_BOLZANO_WEIERSTRASS;
         compactin mtopology s \<longleftrightarrow>
         s \<subseteq> M \<and>
         \<forall>x. (\<forall>n::num. x n \<in> s)
-            \<Longrightarrow> \<exists>l r. l \<in> s \<and> (\<forall>m n. m < n \<Longrightarrow> r m < r n) \<and>
+            \<Longrightarrow> \<exists>l r. l \<in> s \<and> strict_mono r \<and>
                       limitin mtopology (x \<circ> r) l sequentially) \<and>
    (!m (s::A=>bool) e.
         compactin mtopology s \<and> 0 < e
@@ -6360,7 +6361,7 @@ lemma compact_space_sequentially:
    "        compact_spacemtopology \<longleftrightarrow>
         \<forall>x. (\<forall>n::num. x n \<in> M)
             \<Longrightarrow> \<exists>l r. l \<in> M \<and>
-                      (\<forall>m n. m < n \<Longrightarrow> r m < r n) \<and>
+                      strict_mono r \<and>
                       limitin mtopology (x \<circ> r) l sequentially"
 oops
   REWRITE_TAC[compact_space; COMPACT_IN_SEQUENTIALLY; SUBSET_REFL;
@@ -6437,7 +6438,7 @@ oops
 lemma mcomplete_discrete_metric:
    "\<And>s::A=>bool. mcomplete (discrete_metric s)"
 oops
-  GEN_TAC THEN REWRITE_TAC[mcomplete; DISCRETE_METRIC; cauchy_in] THEN
+  GEN_TAC THEN REWRITE_TAC[mcomplete; DISCRETE_METRIC; MCauchy] THEN
   X_GEN_TAC `x::num=>A` THEN
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC `1`)) THEN
   ONCE_REWRITE_TAC[COND_RAND] THEN ONCE_REWRITE_TAC[COND_RATOR] THEN
@@ -6450,7 +6451,7 @@ oops
   REWRITE_TAC[EVENTUALLY_SEQUENTIALLY] THEN ASM_MESON_TAC[]);;
 
 lemma compact_space_imp_mcomplete:
-   "compact_spacemtopology \<Longrightarrow> mcomplete m"
+   "compact_spacemtopology \<Longrightarrow> mcomplete"
 oops
   SIMP_TAC[COMPACT_SPACE_NEST; MCOMPLETE_NEST]);;
 
@@ -6482,7 +6483,7 @@ oops
 
 lemma closedin_eq_mcomplete:
    "\<And>m s::A=>bool.
-        mcomplete m
+        mcomplete
         \<Longrightarrow> (closedin mtopology s \<longleftrightarrow>
              s \<subseteq> M \<and> mcomplete(submetric m s))"
 oops
@@ -6491,7 +6492,7 @@ oops
 
 lemma compact_space_eq_mcomplete_totally_bounded_in:
    "        compact_spacemtopology \<longleftrightarrow>
-        mcomplete m \<and> totally_bounded_in m (M)"
+        mcomplete \<and> totally_bounded_in m (M)"
 oops
   GEN_TAC THEN EQ_TAC THEN
   SIMP_TAC[COMPACT_SPACE_IMP_MCOMPLETE; COMPACT_IN_IMP_TOTALLY_BOUNDED_IN;
@@ -6521,7 +6522,7 @@ oops
 
 lemma totally_bounded_in_eq_compact_closure_of:
    "\<And>m s::A=>bool.
-        mcomplete m
+        mcomplete
         \<Longrightarrow> (totally_bounded_in m s \<longleftrightarrow>
              s \<subseteq> M \<and>
              compactin mtopology (mtopology closure_of s))"
@@ -6655,11 +6656,11 @@ let DERIVED_SET_OF_INFINITE_MBALL,DERIVED_SET_OF_INFINITE_MCBALL =
  (`(\<forall>m s::A=>bool.
         mtopology derived_set_of s =
         {x. x \<in> M \<and>
-             \<forall>e. 0 < e \<Longrightarrow> infinite(s \<inter> mball x e)}) \<and>
+             \<forall>e>0.  infinite(s \<inter> mball x e)}) \<and>
    (\<forall>m s::A=>bool.
         mtopology derived_set_of s =
         {x. x \<in> M \<and>
-             \<forall>e. 0 < e \<Longrightarrow> infinite(s \<inter> mcball x e)})"
+             \<forall>e>0.  infinite(s \<inter> mcball x e)})"
 oops
   REWRITE_TAC[AND_FORALL_THM] THEN REPEAT GEN_TAC THEN
   REWRITE_TAC[EXTENSION; DERIVED_SET_OF_INFINITE_OPEN_IN_METRIC] THEN
@@ -7057,7 +7058,7 @@ oops
   MP_TAC THENL
    [X_GEN_TAC `x::A` THEN DISCH_TAC THEN
     FIRST_ASSUM(MATCH_MP_TAC \<circ> GEN_REWRITE_RULE id [MCOMPLETE]) THEN
-    REWRITE_TAC[cauchy_in] THEN CONJ_TAC THENL
+    REWRITE_TAC[MCauchy] THEN CONJ_TAC THENL
      [FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
         EVENTUALLY_MONO)) THEN
       ASM_SIMP_TAC[continuous_map; TOPSPACE_MTOPOLOGY];
@@ -15513,7 +15514,7 @@ oops
 
 let completely_metrizable_space = new_definition
  `completely_metrizable_space X \<longleftrightarrow>
-  \<exists>m. mcomplete m \<and> X = mtopology`;;
+  \<exists>m. mcomplete \<and> X = mtopology`;;
 
 lemma completely_metrizable_imp_metrizable_space:
    "completely_metrizable_space X \<Longrightarrow> metrizable_space X"
@@ -15522,7 +15523,7 @@ oops
   MESON_TAC[]);;
 
 lemma forall_mcomplete_topology:
-   "(\<forall>m::A metric. mcomplete m \<Longrightarrow> P mtopology (M)) \<longleftrightarrow>
+   "(\<forall>m::A metric. mcomplete \<Longrightarrow> P mtopology (M)) \<longleftrightarrow>
        \<forall>X. completely_metrizable_space X \<Longrightarrow> P X (topspace X)"
 oops
   SIMP_TAC[completely_metrizable_space; LEFT_IMP_EXISTS_THM;
@@ -15531,7 +15532,7 @@ oops
 
 lemma forall_completely_metrizable_space:
  (`(\<forall>X. completely_metrizable_space X \<Longrightarrow> P X (topspace X)) \<longleftrightarrow>
-   (\<forall>m::A metric. mcomplete m \<Longrightarrow> P mtopology (M))"
+   (\<forall>m::A metric. mcomplete \<Longrightarrow> P mtopology (M))"
 oops
   SIMP_TAC[completely_metrizable_space; LEFT_IMP_EXISTS_THM;
            TOPSPACE_MTOPOLOGY] THEN
@@ -15539,13 +15540,13 @@ oops
 
 lemma exists_completely_metrizable_space:
    "(\<exists>X. completely_metrizable_space X \<and> P X (topspace X)) \<longleftrightarrow>
-       (\<exists>m::A metric.mcomplete m \<and>  P mtopology (M))"
+       (\<exists>m::A metric.mcomplete \<and>  P mtopology (M))"
 oops
   REWRITE_TAC[MESON[] `(\<exists>x. P x \<and> Q x) \<longleftrightarrow> \<not> (\<forall>x. P x \<Longrightarrow> \<not> Q x)`] THEN
   REWRITE_TAC[FORALL_MCOMPLETE_TOPOLOGY] THEN MESON_TAC[]);;
 
 lemma completely_metrizable_space_mtopology:
-   "mcomplete m \<Longrightarrow> completely_metrizable_spacemtopology"
+   "mcomplete \<Longrightarrow> completely_metrizable_spacemtopology"
 oops
   REWRITE_TAC[FORALL_MCOMPLETE_TOPOLOGY]);;
 
@@ -15601,7 +15602,7 @@ oops
     MATCH_MP_TAC(TAUT `(q \<Longrightarrow> p) \<and> q \<Longrightarrow> p \<and> q`) THEN CONJ_TAC THENL
      [DISCH_THEN(ASSUME_TAC \<circ> SYM) THEN
       UNDISCH_TAC `mcomplete(m::A metric)` THEN
-      ASM_REWRITE_TAC[mcomplete; cauchy_in; GSYM TOPSPACE_MTOPOLOGY] THEN
+      ASM_REWRITE_TAC[mcomplete; MCauchy; GSYM TOPSPACE_MTOPOLOGY] THEN
       DISCH_TAC THEN X_GEN_TAC `x::num=>B` THEN STRIP_TAC THEN
       FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(g::B=>A) \<circ> (x::num=>B)`) THEN
       ASM_REWRITE_TAC[o_THM] THEN
@@ -15837,14 +15838,14 @@ oops
     MATCH_MP_TAC PROD_TOPOLOGY_HOMEOMORPHIC_SPACE_RIGHT] THEN
   REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN ASM SET_TAC[]);;
 
-lemma cauchy_in_prod_metric:
+lemma MCauchy_prod_metric:
    "\<And>m1 m2 x::num=>A#B.
-        cauchy_in (prod_metric m1 m2) x \<longleftrightarrow>
-        cauchy_in m1 (fst \<circ> x) \<and> cauchy_in m2 (snd \<circ> x)"
+        MCauchy (prod_metric m1 m2) x \<longleftrightarrow>
+        MCauchy m1 (fst \<circ> x) \<and> MCauchy m2 (snd \<circ> x)"
 oops
   REWRITE_TAC[FORALL_PAIR_FUN_THM] THEN MAP_EVERY X_GEN_TAC
    [`m1::A metric`; `m2::B metric`; `a::num=>A`; `b::num=>B`] THEN
-  REWRITE_TAC[cauchy_in; CONJUNCT1 PROD_METRIC; IN_CROSS; o_DEF] THEN
+  REWRITE_TAC[MCauchy; CONJUNCT1 PROD_METRIC; IN_CROSS; o_DEF] THEN
   ASM_CASES_TAC `\<forall>n. (a::num=>A) n \<in> mspace m1` THEN
   ASM_REWRITE_TAC[FORALL_AND_THM] THEN
   ASM_CASES_TAC `\<forall>n. (b::num=>B) n \<in> mspace m2` THEN ASM_REWRITE_TAC[] THEN
@@ -16251,7 +16252,7 @@ oops
 
 let cauchy_continuous_map = new_definition
  `cauchy_continuous_map m1 m2 f \<longleftrightarrow>
-        \<forall>x. cauchy_in m1 x \<Longrightarrow> cauchy_in m2 (f \<circ> x)`;;
+        \<forall>x. MCauchy m1 x \<Longrightarrow> MCauchy m2 (f \<circ> x)`;;
 
 lemma cauchy_continuous_map_image:
    "\<And>m1 m2 f::A=>B.
@@ -16268,7 +16269,7 @@ lemma cauchy_continuous_map_eq:
    "      (\<forall>x. x \<in> mspace m1 \<Longrightarrow> f x = g x) \<and> cauchy_continuous_map m1 m2 f
       \<Longrightarrow> cauchy_continuous_map m1 m2 g"
 oops
-  REWRITE_TAC[cauchy_continuous_map; cauchy_in; o_DEF; IMP_CONJ] THEN
+  REWRITE_TAC[cauchy_continuous_map; MCauchy; o_DEF; IMP_CONJ] THEN
   SIMP_TAC[]);;
 
 lemma cauchy_continuous_map_from_submetric:
@@ -16299,7 +16300,7 @@ oops
       SIMP_TAC[cauchy_continuous_map; CAUCHY_IN_SUBMETRIC; o_THM]];
     REPEAT(POP_ASSUM MP_TAC) THEN
     SIMP_TAC[cauchy_continuous_map; CAUCHY_IN_SUBMETRIC; o_THM] THEN
-    REWRITE_TAC[cauchy_in] THEN SET_TAC[]]);;
+    REWRITE_TAC[MCauchy] THEN SET_TAC[]]);;
 
 lemma cauchy_continuous_map_const:
    "        cauchy_continuous_map m1 m2 (\<lambda>x. c) \<longleftrightarrow>
@@ -16308,7 +16309,7 @@ oops
   REPEAT GEN_TAC THEN REWRITE_TAC[cauchy_continuous_map] THEN
   REWRITE_TAC[o_DEF; CAUCHY_IN_CONST] THEN
   ASM_CASES_TAC `(c::B) \<in> mspace m2` THEN ASM_REWRITE_TAC[] THEN
-  EQ_TAC THENL [ALL_TAC; SIMP_TAC[cauchy_in; NOT_IN_EMPTY]] THEN
+  EQ_TAC THENL [ALL_TAC; SIMP_TAC[MCauchy; NOT_IN_EMPTY]] THEN
   GEN_REWRITE_TAC id [GSYM CONTRAPOS_THM] THEN
   REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; LEFT_IMP_EXISTS_THM] THEN
   X_GEN_TAC `a::A` THEN DISCH_TAC THEN
@@ -16356,7 +16357,7 @@ lemma uniformly_imp_cauchy_continuous_map:
 oops
   REPEAT GEN_TAC THEN
   REWRITE_TAC[uniformly_continuous_map; cauchy_continuous_map] THEN
-  STRIP_TAC THEN X_GEN_TAC `x::num=>A` THEN REWRITE_TAC[cauchy_in] THEN
+  STRIP_TAC THEN X_GEN_TAC `x::num=>A` THEN REWRITE_TAC[MCauchy] THEN
   STRIP_TAC THEN REWRITE_TAC[o_THM] THEN ASM SET_TAC[]);;
 
 lemma locally_cauchy_continuous_map:
@@ -16368,7 +16369,7 @@ lemma locally_cauchy_continuous_map:
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[cauchy_continuous_map] THEN
   X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [cauchy_in]) THEN
+  FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [MCauchy]) THEN
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC `e::real`)) THEN
   ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
   X_GEN_TAC `M::num` THEN STRIP_TAC THEN
@@ -16444,7 +16445,7 @@ oops
   DISCH_THEN(MATCH_MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
         CONVERGENT_IMP_CAUCHY_IN)) THEN
   RULE_ASSUM_TAC(REWRITE_RULE
-   [continuous_map; TOPSPACE_MTOPOLOGY; cauchy_in]) THEN
+   [continuous_map; TOPSPACE_MTOPOLOGY; MCauchy]) THEN
   REWRITE_TAC[o_DEF] THEN ASM SET_TAC[]);;
 
 lemma cauchy_imp_uniformly_continuous_map:
@@ -18057,8 +18058,8 @@ oops
   DISCH_THEN(MP_TAC \<circ> SPEC `y::num=>A`) THEN
   ASM_SIMP_TAC[CAUCHY_IN_SUBMETRIC; SUBMETRIC; SET_RULE
    `s \<subseteq> u \<Longrightarrow> s \<inter> u = s`] THEN
-  ANTS_TAC THENL [UNDISCH_TAC `cauchy_in m1 (x::num=>A)`; ALL_TAC] THEN
-  ASM_REWRITE_TAC[cauchy_in; o_THM] THEN STRIP_TAC THEN
+  ANTS_TAC THENL [UNDISCH_TAC `MCauchy m1 (x::num=>A)`; ALL_TAC] THEN
+  ASM_REWRITE_TAC[MCauchy; o_THM] THEN STRIP_TAC THEN
   FIRST_ASSUM(MP_TAC \<circ> CONJUNCT1 \<circ> GEN_REWRITE_RULE id [continuous_map]) THEN
   ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY; TOPSPACE_MTOPOLOGY;
                SET_RULE `s \<subseteq> t \<Longrightarrow> t \<inter> s = s`] THEN
@@ -18123,7 +18124,7 @@ subsection\<open>Lavrentiev extension etc\<close>
 
 lemma convergent_eq_zero_oscillation_gen:
    "\<And>X m f s a.
-        mcomplete m \<and> image f (topspace X \<inter> s) \<subseteq> M
+        mcomplete \<and> image f (topspace X \<inter> s) \<subseteq> M
         \<Longrightarrow> ((\<exists>l. limitin mtopology f l (atin X a within s)) \<longleftrightarrow>
              \<not> (M = {}) \<and>
              (a \<in> topspace X
@@ -18439,17 +18440,17 @@ oops
   REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
   ASM_REWRITE_TAC[] THEN ASM_REAL_ARITH_TAC);;
 
-lemma cauchy_in_capped_metric:
+lemma MCauchy_capped_metric:
    "\<And>d (m::A metric) x.
-        cauchy_in (capped_metric d m) x \<longleftrightarrow> cauchy_in m x"
+        MCauchy (capped_metric d m) x \<longleftrightarrow> MCauchy x"
 oops
   REPEAT GEN_TAC THEN ASM_CASES_TAC `d \<le> 0` THENL
    [ASM_MESON_TAC[capped_metric]; ALL_TAC] THEN
-  ASM_REWRITE_TAC[cauchy_in; CAPPED_METRIC; REAL_MIN_LT] THEN
+  ASM_REWRITE_TAC[MCauchy; CAPPED_METRIC; REAL_MIN_LT] THEN
   ASM_MESON_TAC[REAL_ARITH `\<not> (d < min d e)`; REAL_LT_MIN; REAL_NOT_LE]);;
 
 lemma mcomplete_capped_metric:
-   "\<And>d (m::A metric). mcomplete(capped_metric d m) \<longleftrightarrow> mcomplete m"
+   "\<And>d (m::A metric). mcomplete(capped_metric d m) \<longleftrightarrow> mcomplete"
 oops
   REWRITE_TAC[mcomplete; CAUCHY_IN_CAPPED_METRIC; MTOPOLOGY_CAPPED_METRIC]);;
 
@@ -18862,7 +18863,7 @@ oops
       REWRITE_TAC[IN_ELIM_THM; o_DEF] THEN
       ASM_MESON_TAC[TOPSPACE_MTOPOLOGY]];
     DISCH_TAC THEN REWRITE_TAC[mcomplete] THEN DISCH_THEN(LABEL_TAC "*") THEN
-    X_GEN_TAC `x::num=>K->A` THEN ASM_REWRITE_TAC[cauchy_in] THEN STRIP_TAC THEN
+    X_GEN_TAC `x::num=>K->A` THEN ASM_REWRITE_TAC[MCauchy] THEN STRIP_TAC THEN
     ASM_REWRITE_TAC[LIMIT_COMPONENTWISE] THEN
     SUBGOAL_THEN
      `\<forall>i. \<exists>y. i \<in> k \<Longrightarrow> limitin (tops i) (\<lambda>n. (x::num=>K->A) n i) y sequentially`
@@ -18870,7 +18871,7 @@ oops
      [X_GEN_TAC `i::K` THEN ASM_CASES_TAC `(i::K) \<in> k` THEN
       ASM_REWRITE_TAC[] THEN REMOVE_THEN "*" (MP_TAC \<circ> SPEC `i::K`) THEN
       ASM_SIMP_TAC[] THEN DISCH_THEN MATCH_MP_TAC THEN
-      REWRITE_TAC[cauchy_in; GSYM TOPSPACE_MTOPOLOGY] THEN CONJ_TAC THENL
+      REWRITE_TAC[MCauchy; GSYM TOPSPACE_MTOPOLOGY] THEN CONJ_TAC THENL
        [RULE_ASSUM_TAC(REWRITE_RULE[TOPSPACE_PRODUCT_TOPOLOGY;
            PiE; IN_ELIM_THM; o_DEF]) THEN ASM_MESON_TAC[];
         X_GEN_TAC `e::real` THEN DISCH_TAC] THEN
@@ -19686,7 +19687,7 @@ oops
 lemma banach_fixpoint_thm:
    "\<And>m f::A=>A k.
      \<not> (M = {}) \<and>
-     mcomplete m \<and>
+     mcomplete \<and>
      (\<forall>x. x \<in> M \<Longrightarrow> f x \<in> M) \<and>
      k < 1 \<and>
      (\<forall>x y. x \<in> M \<and> y \<in> M
@@ -19710,7 +19711,7 @@ oops
   [LABEL_INDUCT_TAC THEN ASM_SIMP_TAC[ITER]; ALL_TAC] THEN
   ASM_CASES_TAC `f a = a::A` THENL
   [ASM_MESON_TAC[]; POP_ASSUM (LABEL_TAC "aneq")] THEN
-  CUT_TAC `cauchy_in (m::A metric) (\<lambda>n. ITER n f (a::A))` THENL
+  CUT_TAC `MCauchy (m::A metric) (\<lambda>n. ITER n f (a::A))` THENL
   [DISCH_THEN (fun cauchy -> HYP_TAC "compl : @l. lim"
     (C MATCH_MP cauchy \<circ> REWRITE_RULE[mcomplete])) THEN
    EXISTS_TAC `l::A` THEN CONJ_TAC THENL
@@ -19730,7 +19731,7 @@ oops
    EXISTS_TAC `k::real` THEN ASM_REWRITE_TAC[];
    ALL_TAC] THEN
   CLAIM_TAC "k1'" `0 < 1 - k` THENL [ASM_REAL_ARITH_TAC; ALL_TAC] THEN
-  ASM_SIMP_TAC[cauchy_in] THEN INTRO_TAC "!e; e" THEN
+  ASM_SIMP_TAC[MCauchy] THEN INTRO_TAC "!e; e" THEN
   CLAIM_TAC "@N. N" `\<exists>N. k ^ N < ((1 - k) * e) / d m (a::A,f a)` THENL
   [MATCH_MP_TAC REAL_ARCH_POW_INV THEN
    ASM_SIMP_TAC[REAL_LT_DIV; MDIST_POS_LT; REAL_LT_MUL];
@@ -19969,13 +19970,13 @@ oops
   MESON_TAC[]);;
 
 lemma mcomplete_funspace:
-   "\<And>s::A=>bool m::B metric. mcomplete m \<Longrightarrow> mcomplete (funspace s m)"
+   "\<And>s::A=>bool m::B metric. mcomplete \<Longrightarrow> mcomplete (funspace s m)"
 oops
   REWRITE_TAC[mcomplete] THEN INTRO_TAC "!s m; cpl; ![f]; cy" THEN
   ASM_CASES_TAC `s::A=>bool = {}` THENL
   [POP_ASSUM SUBST_ALL_TAC THEN EXISTS_TAC `\<lambda>x::A. undefined::B` THEN
    REMOVE_THEN "cy" MP_TAC THEN
-   SIMP_TAC[cauchy_in; LIMIT_METRIC_SEQUENTIALLY; FUNSPACE; NOT_IN_EMPTY;
+   SIMP_TAC[MCauchy; LIMIT_METRIC_SEQUENTIALLY; FUNSPACE; NOT_IN_EMPTY;
      IN_ELIM_THM; IN_EXTENSIONAL; IMAGE_CLAUSES; MBOUNDED_EMPTY];
    POP_ASSUM (LABEL_TAC "nempty")] THEN
   LABEL_ABBREV_TAC
@@ -19984,7 +19985,7 @@ oops
                else undefined::B` THEN
   EXISTS_TAC `g::A=>B` THEN USE_THEN "cy" MP_TAC THEN
   HYP REWRITE_TAC "nempty"
-    [cauchy_in; FUNSPACE; IN_ELIM_THM; FORALL_AND_THM] THEN
+    [MCauchy; FUNSPACE; IN_ELIM_THM; FORALL_AND_THM] THEN
   INTRO_TAC "(fwd fext fbd) cy'" THEN
   ASM_REWRITE_TAC[LIMIT_METRIC_SEQUENTIALLY; FUNSPACE; IN_ELIM_THM] THEN
   CLAIM_TAC "gext" `g::A=>B \<in> EXTENSIONAL s` THENL
@@ -20008,8 +20009,8 @@ oops
    INTRO_TAC "![d]; @y. y d" THEN REMOVE_THEN "d" SUBST1_TAC THEN
    HYP SIMP_TAC "b y" [];
    ALL_TAC] THEN
-  CLAIM_TAC "pcy" `\<forall>x::A. x \<in> s \<Longrightarrow> cauchy_in m (\<lambda>n. f n x::B)` THENL
-  [INTRO_TAC "!x; x" THEN REWRITE_TAC[cauchy_in] THEN
+  CLAIM_TAC "pcy" `\<forall>x::A. x \<in> s \<Longrightarrow> MCauchy (\<lambda>n. f n x::B)` THENL
+  [INTRO_TAC "!x; x" THEN REWRITE_TAC[MCauchy] THEN
    HYP SIMP_TAC "fwd x" [] THEN INTRO_TAC "!e; e" THEN
    USE_THEN "e" (HYP_TAC "cy': @N.N" \<circ> C MATCH_MP) THEN EXISTS_TAC `N::num` THEN
    REPEAT GEN_TAC THEN DISCH_THEN (HYP_TAC "N" \<circ> C MATCH_MP) THEN
@@ -20030,7 +20031,7 @@ oops
    EXISTS_TAC `\<lambda>n::num. f n (x::A):B` THEN HYP SIMP_TAC "glim x" [];
    HYP REWRITE_TAC "gwd" []] THEN
   CLAIM_TAC "unif"
-    `\<forall>e. 0 < e \<Longrightarrow> \<exists>N::num. \<forall>x::A n. x \<in> s \<and> N \<le> n
+    `\<forall>e>0.  \<exists>N::num. \<forall>x::A n. x \<in> s \<and> N \<le> n
                     \<Longrightarrow> d m (f n x::B, g x) < e` THENL
   [INTRO_TAC "!e; e" THEN REMOVE_THEN "cy'" (MP_TAC \<circ> SPEC `e / 2`) THEN
    HYP REWRITE_TAC "e" [REAL_HALF] THEN INTRO_TAC "@N. N" THEN
@@ -20208,7 +20209,7 @@ oops
   ASM_REWRITE_TAC[]);;
 
 lemma mcomplete_cfunspace:
-   "mcomplete m \<Longrightarrow> mcomplete (cfunspace X m)"
+   "mcomplete \<Longrightarrow> mcomplete (cfunspace X m)"
 oops
   INTRO_TAC "!X m; cpl" THEN REWRITE_TAC[cfunspace] THEN
   MATCH_MP_TAC SEQUENTIALLY_CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE THEN
@@ -20358,7 +20359,7 @@ text\<open> The Baire Category Theorem                                          
 
 
 lemma metric_baire_category:
-   "     mcomplete m \<and>
+   "     mcomplete \<and>
      countable g \<and>
      (\<forall>t. t \<in> g \<Longrightarrow> openin mtopology t \<and>
                      mtopology closure_of t = M)
@@ -20501,7 +20502,7 @@ oops
    ALL_TAC] THEN
   CLAIM_TAC "@l. l" `\<exists>l::A. limitin mtopology x l sequentially` THENL
   [HYP_TAC "m" (REWRITE_RULE[mcomplete]) THEN REMOVE_THEN "m" MATCH_MP_TAC THEN
-   HYP REWRITE_TAC "x" [cauchy_in] THEN INTRO_TAC "!e; epos" THEN
+   HYP REWRITE_TAC "x" [MCauchy] THEN INTRO_TAC "!e; epos" THEN
    CLAIM_TAC "@N. N" `\<exists>N. inverse(2 ^ N) < e` THENL
    [REWRITE_TAC[REAL_INV_POW] THEN MATCH_MP_TAC REAL_ARCH_POW_INV THEN
     HYP REWRITE_TAC "epos" [] THEN REAL_ARITH_TAC;
@@ -20535,7 +20536,7 @@ oops
 
 lemma metric_baire_category_alt:
    "\<And>m g:(A=>bool)->bool.
-         mcomplete m \<and>
+         mcomplete \<and>
          countable g \<and>
          (\<forall>t. t \<in> g
               \<Longrightarrow> closedin mtopology t \<and> mtopology interior_of t = {})
