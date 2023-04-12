@@ -5437,16 +5437,14 @@ proof (intro conjI strip)
   obtain N2 where N2: "\<And>n. n \<ge> N2 \<Longrightarrow> (\<sigma> \<circ> r) n \<in> M \<and> d ((\<sigma> \<circ> r) n) a < \<epsilon>/2"
     by (metis (no_types, lifting) lim \<open>0 < \<epsilon>\<close> half_gt_zero limit_metric_sequentially)
   have "\<sigma> n \<in> M \<and> d (\<sigma> n) a < \<epsilon>" if "n \<ge> max N1 N2" for n
-    using N1 [of n "r n"] N2 [of n] that \<open>strict_mono r\<close>
-    apply (intro conjI)
-    using MCauchy_def cau apply blast
-    unfolding o_def
-    apply (simp add: del: divide_const_simps)
-    apply atomize
-    apply safe
-    using le_trans strict_mono_imp_increasing apply blast
-    using triangle [of concl: "\<sigma> n" a "\<sigma> (r n)"]
-    using Metric_space.MCauchy_def Metric_space_axioms \<open>a \<in> M\<close> cau range_subsetD by fastforce
+  proof (intro conjI)
+    show "\<sigma> n \<in> M"
+      using MCauchy_def cau by blast
+    have "N1 \<le> r n"
+      by (meson \<open>strict_mono r\<close> le_trans max.cobounded1 strict_mono_imp_increasing that)
+    then show "d (\<sigma> n) a < \<epsilon>"
+      using N1[of n "r n"] N2[of n] \<open>\<sigma> n \<in> M\<close> \<open>a \<in> M\<close> triangle that by fastforce
+  qed
   then show "\<forall>\<^sub>F n in sequentially. \<sigma> n \<in> M \<and> d (\<sigma> n) a < \<epsilon>"
     using eventually_sequentially by blast
 qed
