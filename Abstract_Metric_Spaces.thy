@@ -5496,30 +5496,26 @@ next
     proof (intro exI strip)
       fix n n'
       assume "N \<le> n" and "N \<le> n'"
-      then have \<section>: "n \<ge> 2 * Nx" "n \<ge> 2 * Ny" "n \<ge> 2 * Nxy" "n' \<ge> 2 * Nx" "n' \<ge> 2 * Ny" "n' \<ge> 2 * Nxy"
+      then have DD: "n div 2 \<ge> Nx" "n div 2 \<ge> Ny" "n div 2 \<ge> Nxy" "n' div 2 \<ge> Nx" "n' div 2 \<ge> Ny" 
         by (auto simp: N_def)
-      then have DD: "n div 2 \<ge> Nx" "n div 2 \<ge> Ny" "n div 2 \<ge> Nxy" "n' div 2 \<ge> Nx" "n' div 2 \<ge> Ny" "n' div 2 \<ge> Nxy"
-        by (auto simp: N_def)
-      have 1: "d (x (n div 2)) (y (n div 2)) < \<epsilon>/2"
+      have dxyn: "d (x (n div 2)) (y (n div 2)) < \<epsilon>/2"
         using DD(3) Nxy by blast
-      have 2: "d (y (n div 2)) (y (n' div 2)) < \<epsilon>/2"
+      have dxnn': "d (x (n div 2)) (x (n' div 2)) < \<epsilon>/2"
+        using DD(1) DD(4) Nx by blast
+      have dynn': "d (y (n div 2)) (y (n' div 2)) < \<epsilon>/2"
         using DD(2) DD(5) Ny by blast
       have inM: "x (n div 2) \<in> M" "x (n' div 2) \<in> M""y (n div 2) \<in> M" "y (n' div 2) \<in> M"
         using Metric_space.MCauchy_def Metric_space_axioms R by blast+
-
-    sorry
-    sorry
       show "d (if even n then x (n div 2) else y (n div 2)) (if even n' then x (n' div 2) else y (n' div 2)) < \<epsilon>"
       proof (cases "even n")
         case nt: True
         show ?thesis
         proof (cases "even n'")
           case True
-          with nt DD Nx \<open>0 < \<epsilon>\<close> show ?thesis
-            by fastforce
+          with \<open>0 < \<epsilon>\<close> nt dxnn' show ?thesis by auto
         next
           case False
-          with nt 1 2 inM triangle show ?thesis
+          with nt dxyn dynn' inM triangle show ?thesis
             by fastforce
         qed
       next
@@ -5527,69 +5523,16 @@ next
         show ?thesis 
         proof (cases "even n'")
           case True
-          have "d (x (n div 2)) (y (n div 2)) < \<epsilon>/2"
-            using DD(3) Nxy by blast
-          moreover have "d (y (n div 2)) (y (n' div 2)) < \<epsilon>/2"
-            using DD(2) DD(5) Ny by blast
-          ultimately show ?thesis
-            using  nf \<section> Nx \<open>0 < \<epsilon>\<close> 
+          then show ?thesis
+            by (smt (verit) \<open>0 < \<epsilon>\<close> dxyn dxnn' triangle commute inM field_sum_of_halves)
         next
           case False
-          with nf \<section> show ?thesis
-            apply (simp add: )
-            sorry
+          with \<open>0 < \<epsilon>\<close> nf dynn' show ?thesis by auto
         qed
       qed
-
     qed
   qed
 qed
-
-oops
- 
-
-    REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
-    REWRITE_TAC[LIMIT_METRIC; REAL_EUCLIDEAN_METRIC; IN_UNIV] THEN
-    REWRITE_TAC[MCauchy] THEN
-    ASM_CASES_TAC `\<forall>n. (x::num=>A) n \<in> M` THEN ASM_REWRITE_TAC[] THEN
-    ASM_CASES_TAC `\<forall>n. (y::num=>A) n \<in> M` THEN ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[AND_FORALL_THM] THEN DISCH_TAC THEN
-    CONJ_TAC THENL [ASM_MESON_TAC[]; ALL_TAC] THEN
-
-    X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e / 2`) THEN
-    ASM_REWRITE_TAC[REAL_HALF; EVENTUALLY_SEQUENTIALLY] THEN
-    ASM_SIMP_TAC[REAL_ARITH `0 \<le> x \<Longrightarrow> abs(0 - x) = x`; MDIST_POS_LE] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_TAC `N1::num`)
-     (CONJUNCTS_THEN2 (X_CHOOSE_TAC `N2::num`) (X_CHOOSE_TAC `N3::num`))) THEN
-    EXISTS_TAC `2 * MAX N1 (MAX N2 N3)` THEN REWRITE_TAC[ARITH_RULE
-     `2 * MAX M N \<le> n \<longleftrightarrow> 2 * M \<le> n \<and> 2 * N \<le> n`] THEN
-    MATCH_MP_TAC(MESON[EVEN_OR_ODD]
-     `(\<forall>m n. P m n \<Longrightarrow> P n m) \<and>
-      (\<forall>m n. even m \<and> even n \<Longrightarrow> P m n) \<and>
-      (\<forall>m n. ODD m \<and> ODD n \<Longrightarrow> P m n) \<and>
-      (\<forall>m n. even m \<and> ODD n \<Longrightarrow> P m n)
-      \<Longrightarrow> (\<forall>m n. P m n)`) THEN
-    CONJ_TAC THENL [ASM_MESON_TAC[MDIST_SYM]; ALL_TAC] THEN
-    REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
-    REWRITE_TAC[MESON[EVEN_EXISTS; ODD_EXISTS; ADD1]
-     `((\<forall>n. even n \<Longrightarrow> P n) \<longleftrightarrow> (\<forall>n. P(2 * n))) \<and>
-      ((\<forall>n. ODD n \<Longrightarrow> P n) \<longleftrightarrow> (\<forall>n. P(2 * n + 1)))`] THEN
-    REWRITE_TAC[EVEN_MULT; EVEN_ADD; ARITH] THEN
-    REWRITE_TAC[ARITH_RULE `(2 * m) div 2 = m \<and> (2 * m + 1) div 2 = m`] THEN
-    REPEAT CONJ_TAC THEN MAP_EVERY X_GEN_TAC [`m::num`; `n::num`] THEN
-    REPEAT DISCH_TAC THENL
-     [MATCH_MP_TAC(REAL_ARITH `0 < e \<and> x < e / 2 \<Longrightarrow> x < e`) THEN
-      ASM_REWRITE_TAC[] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
-      MATCH_MP_TAC(REAL_ARITH `0 < e \<and> x < e / 2 \<Longrightarrow> x < e`) THEN
-      ASM_REWRITE_TAC[] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
-      MATCH_MP_TAC(METRIC_ARITH
-       `\<forall>b. a \<in> M \<and> b \<in> M \<and> c \<in> M \<and>
-            d a b < e / 2 \<and> d b c < e / 2
-            \<Longrightarrow> d a::A c < e`) THEN
-      EXISTS_TAC `(x::num=>A) n` THEN
-      ASM_REWRITE_TAC[] THEN CONJ_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-      ASM_ARITH_TAC]]);;
 
 lemma MCauchy_interleaving:
    "         MCauchy (\<lambda>n. if even n then x(n div 2) else a) \<longleftrightarrow>
