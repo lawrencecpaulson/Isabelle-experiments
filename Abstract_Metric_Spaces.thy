@@ -5365,7 +5365,7 @@ qed (simp add: mcomplete_def MCauchy_def image_subset_iff)
 lemma mcomplete_empty_mspace: "M = {} \<Longrightarrow> mcomplete"
   using MCauchy_def mcomplete_def by blast
 
-lemma MCauchy_const: "MCauchy (\<lambda>n. a) \<longleftrightarrow> a \<in> M"
+lemma MCauchy_const [simp]: "MCauchy (\<lambda>n. a) \<longleftrightarrow> a \<in> M"
   using MCauchy_def mdist_refl by auto
 
 lemma convergent_imp_MCauchy:
@@ -5496,14 +5496,12 @@ next
     proof (intro exI strip)
       fix n n'
       assume "N \<le> n" and "N \<le> n'"
-      then have DD: "n div 2 \<ge> Nx" "n div 2 \<ge> Ny" "n div 2 \<ge> Nxy" "n' div 2 \<ge> Nx" "n' div 2 \<ge> Ny" 
+      then have "n div 2 \<ge> Nx" "n div 2 \<ge> Ny" "n div 2 \<ge> Nxy" "n' div 2 \<ge> Nx" "n' div 2 \<ge> Ny" 
         by (auto simp: N_def)
-      have dxyn: "d (x (n div 2)) (y (n div 2)) < \<epsilon>/2"
-        using DD(3) Nxy by blast
-      have dxnn': "d (x (n div 2)) (x (n' div 2)) < \<epsilon>/2"
-        using DD(1) DD(4) Nx by blast
-      have dynn': "d (y (n div 2)) (y (n' div 2)) < \<epsilon>/2"
-        using DD(2) DD(5) Ny by blast
+      then have dxyn: "d (x (n div 2)) (y (n div 2)) < \<epsilon>/2" 
+            and dxnn': "d (x (n div 2)) (x (n' div 2)) < \<epsilon>/2"
+            and dynn': "d (y (n div 2)) (y (n' div 2)) < \<epsilon>/2"
+        using Nx Ny Nxy by blast+
       have inM: "x (n div 2) \<in> M" "x (n' div 2) \<in> M""y (n div 2) \<in> M" "y (n' div 2) \<in> M"
         using Metric_space.MCauchy_def Metric_space_axioms R by blast+
       show "d (if even n then x (n div 2) else y (n div 2)) (if even n' then x (n' div 2) else y (n' div 2)) < \<epsilon>"
@@ -5535,18 +5533,15 @@ next
 qed
 
 lemma MCauchy_interleaving:
-   "         MCauchy (\<lambda>n. if even n then x(n div 2) else a) \<longleftrightarrow>
-         (\<forall>n. x n \<in> M) \<and> limitin mtopology x a sequentially"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[CAUCHY_IN_INTERLEAVING_GEN] THEN
-  REWRITE_TAC[CAUCHY_IN_CONST] THEN
-  GEN_REWRITE_TAC (RAND_CONV \<circ> RAND_CONV) [LIMIT_METRIC_DIST_NULL] THEN
-  EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THENL
-   [RULE_ASSUM_TAC(REWRITE_RULE[MCauchy]) THEN
-    ASM_REWRITE_TAC[EVENTUALLY_TRUE];
-    MATCH_MP_TAC CONVERGENT_IMP_CAUCHY_IN THEN
-    ONCE_REWRITE_TAC[LIMIT_METRIC_DIST_NULL] THEN
-    EXISTS_TAC `a::A` THEN ASM_REWRITE_TAC[]]);;
+   "MCauchy (\<lambda>n. if even n then \<sigma>(n div 2) else a) \<longleftrightarrow>
+         range \<sigma> \<subseteq> M \<and> limitin mtopology \<sigma> a sequentially" (is "?lhs=?rhs")
+proof -
+  have "?lhs \<longleftrightarrow> (MCauchy \<sigma> \<and> a \<in> M \<and> (\<lambda>n. d (\<sigma> n) a) \<longlonglongrightarrow> 0)"
+    by (simp add: MCauchy_interleaving_gen [where y = "\<lambda>n. a"])
+  also have "... = ?rhs"
+    by (metis MCauchy_def always_eventually convergent_imp_MCauchy limitin_metric_dist_null range_subsetD)
+  finally show ?thesis .
+qed
 
 lemma mcomplete_nest:
    "      mcomplete \<longleftrightarrow>
