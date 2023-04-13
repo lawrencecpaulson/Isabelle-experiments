@@ -1525,14 +1525,14 @@ end
 (**
 lemma submetric_submetric:
    "\<And>m A t::A=>bool.
-        submetric (submetric m A) t = submetric m (A \<inter> t)"
+        submetric (submetric A) t = submetric (A \<inter> t)"
 oops
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[submetric] THEN
   REWRITE_TAC[SUBMETRIC] THEN
   REWRITE_TAC[SET_RULE `(A \<inter> t) \<inter> m = t \<inter> A \<inter> m`]);;
 
 lemma submetric_restrict:
-   "\<And>m A::A=>bool. submetric m A = submetric m (M \<inter> A)"
+   "\<And>m A::A=>bool. submetric A = submetric (M \<inter> A)"
 oops
   REPEAT GEN_TAC THEN
   GEN_REWRITE_TAC (LAND_CONV \<circ> LAND_CONV) [GSYM SUBMETRIC_MSPACE] THEN
@@ -5449,50 +5449,6 @@ proof (intro conjI strip)
     using eventually_sequentially by blast
 qed
 
-
-lemma mcomplete_submetric_empty:
-   "mcomplete(submetric m {})"
-oops
-  SIMP_TAC[MCOMPLETE_EMPTY_MSPACE; SUBMETRIC; INTER_EMPTY]);;
-
-lemma MCauchy_submetric:
-   "\<And>m S x::num=>A.
-    MCauchy (submetric m S) x \<longleftrightarrow> (\<forall>n. x n \<in> S) \<and> MCauchy x"
-oops
-  REWRITE_TAC[MCauchy; SUBMETRIC; IN_INTER] THEN MESON_TAC[]);;
-
-lemma closedin_mcomplete_imp_mcomplete:
-   "\<And>m S::A=>bool. closedin mtopology S \<and> mcomplete
-                 \<Longrightarrow> mcomplete (submetric m S)"
-oops
-  INTRO_TAC "!m S; cl cp" THEN REWRITE_TAC[mcomplete] THEN
-  INTRO_TAC "![a]; a" THEN CLAIM_TAC "cy'" `MCauchy (a::num=>A)` THENL
-  [REMOVE_THEN "a" MP_TAC THEN SIMP_TAC[MCauchy; SUBMETRIC; IN_INTER];
-   HYP_TAC "cp" (GSYM \<circ> REWRITE_RULE[mcomplete]) THEN
-   HYP REWRITE_TAC "cp" [LIMIT_SUBMETRIC_IFF] THEN
-   REMOVE_THEN "cp" (HYP_TAC "cy': @l.l" \<circ> MATCH_MP) THEN EXISTS_TAC `l::A` THEN
-   HYP_TAC "a: A cy" (REWRITE_RULE[MCauchy; SUBMETRIC; IN_INTER]) THEN
-   ASM_REWRITE_TAC[EVENTUALLY_TRUE] THEN MATCH_MP_TAC
-     (ISPECL [`sequentially`; `mtopology(m::A metric)`] LIMIT_IN_CLOSED_IN) THEN
-   EXISTS_TAC `a::num=>A` THEN
-   ASM_REWRITE_TAC[TRIVIAL_LIMIT_SEQUENTIALLY; EVENTUALLY_TRUE]]);;
-
-lemma sequentially_closedin_mcomplete_imp_mcomplete:
-   "\<And>m S::A=>bool.
-     mcomplete \<and>
-     (\<forall>x l. (\<forall>n. x n \<in> S) \<and> limitin mtopology x l sequentially \<Longrightarrow> l \<in> S)
-            \<Longrightarrow> mcomplete (submetric m S)"
-oops
-  INTRO_TAC "!m S; cpl seq" THEN SUBGOAL_THEN
-    `submetric m (S::A=>bool) = submetric m (M \<inter> S)` SUBST1_TAC THENL
-  [REWRITE_TAC[submetric; INTER_ACI]; ALL_TAC] THEN
-  MATCH_MP_TAC CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE THEN
-  ASM_REWRITE_TAC[METRIC_CLOSED_IN_IFF_SEQUENTIALLY_CLOSED; INTER_SUBSET] THEN
-  INTRO_TAC "!a l; a lim" THEN REWRITE_TAC[IN_INTER] THEN CONJ_TAC THENL
-  [MATCH_MP_TAC (ISPEC `sequentially` LIMIT_IN_MSPACE) THEN
-   HYP MESON_TAC "lim" [];
-   REMOVE_THEN "seq" MATCH_MP_TAC THEN HYP SET_TAC "a lim" []]);;
-
 lemma MCauchy_interleaving_gen:
    "\<And>m x y::num=>A.
         MCauchy (\<lambda>n. if EVEN n then x(n div 2) else y(n div 2)) \<longleftrightarrow>
@@ -5815,12 +5771,45 @@ oops
   MATCH_MP_TAC(TAUT
    `(p \<and> p') \<and> \<not> (q \<and> q') \<Longrightarrow> (p \<Longrightarrow> q) \<Longrightarrow> (p' \<Longrightarrow> q') \<Longrightarrow> False`) THEN
   CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  UNDISCH_TAC `\<not> (l':A = l)` THEN CONV_TAC METRIC_ARITH);;
+  UNDISCH_TAC `\<not> (l':A = l)` THEN CONV_TAC METRIC_ARITH);;`
+
+
+context submetric
+begin 
+
+lemma MCauchy_submetric:
+   "sub.MCauchy \<sigma> \<longleftrightarrow> range \<sigma> \<subseteq> A \<and> MCauchy \<sigma>"
+  using MCauchy_def sub.MCauchy_def subset by force
+
+lemma closedin_mcomplete_imp_mcomplete:
+  assumes clo: "closedin mtopology A" and "mcomplete"
+  shows "sub.mcomplete"
+  unfolding sub.mcomplete_def
+proof (intro strip)
+  fix \<sigma>
+  assume "sub.MCauchy \<sigma>"
+  then have \<sigma>: "MCauchy \<sigma>" "range \<sigma> \<subseteq> A"
+    using MCauchy_submetric by blast+
+  then obtain x where x: "limitin mtopology \<sigma> x sequentially"
+    using \<open>mcomplete\<close> unfolding mcomplete_def by blast
+  then have "x \<in> A"
+    using \<sigma> clo metric_closedin_iff_sequentially_closed by force
+  with \<sigma> x show "\<exists>x. limitin sub.mtopology \<sigma> x sequentially"
+    using limitin_submetric_iff range_subsetD by fastforce
+qed
+
+
+lemma sequentially_closedin_mcomplete_imp_mcomplete:
+  assumes "mcomplete" and "\<And>\<sigma> l. range \<sigma> \<subseteq> A \<and> limitin mtopology \<sigma> l sequentially \<Longrightarrow> l \<in> A"
+  shows "sub.mcomplete"
+  using assms closedin_mcomplete_imp_mcomplete metric_closedin_iff_sequentially_closed subset by blast
+
+end
 
 lemma mcomplete_union:
    "\<And>m S t::A=>bool.
-        mcomplete(submetric m S) \<and> mcomplete(submetric m t)
-        \<Longrightarrow> mcomplete(submetric m (S \<union> t))"
+        mcomplete(submetric S) \<and> mcomplete(submetric t)
+        \<Longrightarrow> mcomplete(submetric (S \<union> t))"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[mcomplete; CAUCHY_IN_SUBMETRIC] THEN
   DISCH_TAC THEN X_GEN_TAC `x::num=>A` THEN STRIP_TAC THEN
@@ -5842,19 +5831,19 @@ oops
   MATCH_MP_TAC CAUCHY_IN_CONVERGENT_SUBSEQUENCE THEN ASM_MESON_TAC[]);;
 
 lemma mcomplete_unions:
-   "finite S \<and> (\<forall>t. t \<in> S \<Longrightarrow> mcomplete(submetric m t))
-         \<Longrightarrow> mcomplete(submetric m (\<Union> S))"
+   "finite S \<and> (\<forall>t. t \<in> S \<Longrightarrow> mcomplete(submetric t))
+         \<Longrightarrow> mcomplete(submetric (\<Union> S))"
 oops
   GEN_TAC THEN
   REWRITE_TAC[IMP_CONJ] THEN MATCH_MP_TAC FINITE_INDUCT_STRONG THEN
-  REWRITE_TAC[UNIONS_INSERT; UNIONS_0; MCOMPLETE_SUBMETRIC_EMPTY;
+  REWRITE_TAC[UNIONS_INSERT; UNIONS_0; SUB.MCOMPLETE_EMPTY_MSPACE;
               IN_INSERT] THEN
   MESON_TAC[MCOMPLETE_UNION]);;
 
 lemma mcomplete_inters:
    "\<And>m S:(A=>bool)->bool.
-        finite S \<and> (S \<noteq> {}) \<and> (\<forall>t. t \<in> S \<Longrightarrow> mcomplete(submetric m t))
-        \<Longrightarrow> mcomplete(submetric m (\<Inter> S))"
+        finite S \<and> (S \<noteq> {}) \<and> (\<forall>t. t \<in> S \<Longrightarrow> mcomplete(submetric t))
+        \<Longrightarrow> mcomplete(submetric (\<Inter> S))"
 oops
   REPEAT GEN_TAC THEN
   REWRITE_TAC[mcomplete; CAUCHY_IN_SUBMETRIC; IN_INTERS] THEN
@@ -5875,8 +5864,8 @@ oops
 
 lemma mcomplete_inter:
    "\<And>m S t::A=>bool.
-        mcomplete(submetric m S) \<and> mcomplete(submetric m t)
-        \<Longrightarrow> mcomplete(submetric m (S \<inter> t))"
+        mcomplete(submetric S) \<and> mcomplete(submetric t)
+        \<Longrightarrow> mcomplete(submetric (S \<inter> t))"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM INTERS_2] THEN
   MATCH_MP_TAC MCOMPLETE_INTERS THEN
@@ -6063,7 +6052,7 @@ oops
 lemma totally_bounded_in_submetric:
    "\<And>m S t::A=>bool.
         totally_bounded_in m S \<and> S \<subseteq> t
-        \<Longrightarrow> totally_bounded_in (submetric m t) S"
+        \<Longrightarrow> totally_bounded_in (submetric t) S"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
   SIMP_TAC[UNIONS_GSPEC; \<subseteq>; IN_ELIM_THM] THEN STRIP_TAC THEN
@@ -6075,7 +6064,7 @@ oops
 
 lemma totally_bounded_in_absolute:
    "\<And>m S::A=>bool.
-        totally_bounded_in (submetric m S) S \<longleftrightarrow> totally_bounded_in m S"
+        totally_bounded_in (submetric S) S \<longleftrightarrow> totally_bounded_in m S"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
   SIMP_TAC[UNIONS_GSPEC; \<subseteq>; IN_ELIM_THM] THEN EQ_TAC THEN STRIP_TAC THEN
@@ -6454,7 +6443,7 @@ oops
   SIMP_TAC[COMPACT_SPACE_NEST; MCOMPLETE_NEST]);;
 
 lemma compact_in_imp_mcomplete:
-   "\<And>m s::A=>bool. compactin mtopology s \<Longrightarrow> mcomplete (submetric m s)"
+   "\<And>m s::A=>bool. compactin mtopology s \<Longrightarrow> mcomplete (submetric s)"
 oops
   REWRITE_TAC[COMPACT_IN_SUBSPACE] THEN REPEAT STRIP_TAC THEN
   MATCH_MP_TAC COMPACT_SPACE_IMP_MCOMPLETE THEN
@@ -6462,7 +6451,7 @@ oops
 
 lemma mcomplete_imp_closedin:
    "\<And>m s::A=>bool.
-       mcomplete(submetric m s) \<and> s \<subseteq> M
+       mcomplete(submetric s) \<and> s \<subseteq> M
        \<Longrightarrow> closedin mtopology s"
 oops
   REPEAT STRIP_TAC THEN
@@ -6483,7 +6472,7 @@ lemma closedin_eq_mcomplete:
    "\<And>m s::A=>bool.
         mcomplete
         \<Longrightarrow> (closedin mtopology s \<longleftrightarrow>
-             s \<subseteq> M \<and> mcomplete(submetric m s))"
+             s \<subseteq> M \<and> mcomplete(submetric s))"
 oops
   MESON_TAC[MCOMPLETE_IMP_CLOSED_IN; CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE;
             CLOSED_IN_SUBSET; TOPSPACE_MTOPOLOGY]);;
@@ -15804,7 +15793,7 @@ oops
 lemma submetric_prod_metric:
    "\<And>m1 m2 s::A=>bool t::B=>bool.
         submetric (prod_metric m1 m2) (s \<times> t) =
-        prod_metric (submetric m1 s) (submetric m2 t)"
+        prod_metric (submetric1 s) (submetric2 t)"
 oops
   REPEAT GEN_TAC THEN
   GEN_REWRITE_TAC RAND_CONV [prod_metric] THEN
@@ -16065,20 +16054,20 @@ oops
 lemma lipschitz_continuous_map_from_submetric:
    "\<And>m1 m2 s f::A=>B.
         lipschitz_continuous_map m1 m2 f
-        \<Longrightarrow> lipschitz_continuous_map (submetric m1 s,m2) f"
+        \<Longrightarrow> lipschitz_continuous_map (submetric1 s,m2) f"
 oops
   REWRITE_TAC[lipschitz_continuous_map; SUBMETRIC] THEN SET_TAC[]);;
 
 lemma lipschitz_continuous_map_from_submetric_mono:
-   "           lipschitz_continuous_map (submetric m1 t,m2) f \<and> s \<subseteq> t
-           \<Longrightarrow> lipschitz_continuous_map (submetric m1 s,m2) f"
+   "           lipschitz_continuous_map (submetric1 t,m2) f \<and> s \<subseteq> t
+           \<Longrightarrow> lipschitz_continuous_map (submetric1 s,m2) f"
 oops
   MESON_TAC[LIPSCHITZ_CONTINUOUS_MAP_FROM_SUBMETRIC; SUBMETRIC_SUBMETRIC;
             SET_RULE `s \<subseteq> t \<Longrightarrow> t \<inter> s = s`]);;
 
 lemma lipschitz_continuous_map_into_submetric:
    "\<And>m1 m2 s f::A=>B.
-        lipschitz_continuous_map m1 (submetric m2 s) f \<longleftrightarrow>
+        lipschitz_continuous_map m1 (submetric2 s) f \<longleftrightarrow>
         image f (mspace m1) \<subseteq> s \<and>
         lipschitz_continuous_map m1 m2 f"
 oops
@@ -16196,20 +16185,20 @@ oops
 lemma uniformly_continuous_map_from_submetric:
    "\<And>m1 m2 s f::A=>B.
         uniformly_continuous_map m1 m2 f
-        \<Longrightarrow> uniformly_continuous_map (submetric m1 s,m2) f"
+        \<Longrightarrow> uniformly_continuous_map (submetric1 s,m2) f"
 oops
   REWRITE_TAC[uniformly_continuous_map; SUBMETRIC] THEN SET_TAC[]);;
 
 lemma uniformly_continuous_map_from_submetric_mono:
-   "           uniformly_continuous_map (submetric m1 t,m2) f \<and> s \<subseteq> t
-           \<Longrightarrow> uniformly_continuous_map (submetric m1 s,m2) f"
+   "           uniformly_continuous_map (submetric1 t,m2) f \<and> s \<subseteq> t
+           \<Longrightarrow> uniformly_continuous_map (submetric1 s,m2) f"
 oops
   MESON_TAC[UNIFORMLY_CONTINUOUS_MAP_FROM_SUBMETRIC; SUBMETRIC_SUBMETRIC;
             SET_RULE `s \<subseteq> t \<Longrightarrow> t \<inter> s = s`]);;
 
 lemma uniformly_continuous_map_into_submetric:
    "\<And>m1 m2 s f::A=>B.
-        uniformly_continuous_map m1 (submetric m2 s) f \<longleftrightarrow>
+        uniformly_continuous_map m1 (submetric2 s) f \<longleftrightarrow>
         image f (mspace m1) \<subseteq> s \<and>
         uniformly_continuous_map m1 m2 f"
 oops
@@ -16273,20 +16262,20 @@ oops
 lemma cauchy_continuous_map_from_submetric:
    "\<And>m1 m2 s f::A=>B.
         cauchy_continuous_map m1 m2 f
-        \<Longrightarrow> cauchy_continuous_map (submetric m1 s,m2) f"
+        \<Longrightarrow> cauchy_continuous_map (submetric1 s,m2) f"
 oops
   SIMP_TAC[cauchy_continuous_map; CAUCHY_IN_SUBMETRIC]);;
 
 lemma cauchy_continuous_map_from_submetric_mono:
-   "           cauchy_continuous_map (submetric m1 t,m2) f \<and> s \<subseteq> t
-           \<Longrightarrow> cauchy_continuous_map (submetric m1 s,m2) f"
+   "           cauchy_continuous_map (submetric1 t,m2) f \<and> s \<subseteq> t
+           \<Longrightarrow> cauchy_continuous_map (submetric1 s,m2) f"
 oops
   MESON_TAC[CAUCHY_CONTINUOUS_MAP_FROM_SUBMETRIC; SUBMETRIC_SUBMETRIC;
             SET_RULE `s \<subseteq> t \<Longrightarrow> t \<inter> s = s`]);;
 
 lemma cauchy_continuous_map_into_submetric:
    "\<And>m1 m2 s f::A=>B.
-        cauchy_continuous_map m1 (submetric m2 s) f \<longleftrightarrow>
+        cauchy_continuous_map m1 (submetric2 s) f \<longleftrightarrow>
         image f (mspace m1) \<subseteq> s \<and>
         cauchy_continuous_map m1 m2 f"
 oops
@@ -16362,7 +16351,7 @@ lemma locally_cauchy_continuous_map:
    "\<And>m1 m2 e f::A=>B.
         0 < e \<and>
         (\<forall>x. x \<in> mspace m1
-             \<Longrightarrow> cauchy_continuous_map (submetric m1 (mball x e),m2) f)
+             \<Longrightarrow> cauchy_continuous_map (submetric1 (mball x e),m2) f)
         \<Longrightarrow> cauchy_continuous_map m1 m2 f"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[cauchy_continuous_map] THEN
@@ -17707,7 +17696,7 @@ subsection\<open>Extending Cauchy continuous functions to the closure\<close>
 
 lemma cauchy_continuous_map_extends_to_continuous_closure_of:
    "\<And>m1 m2 f s.
-        mcomplete m2 \<and> cauchy_continuous_map (submetric m1 s,m2) f
+        mcomplete m2 \<and> cauchy_continuous_map (submetric1 s,m2) f
         \<Longrightarrow> \<exists>g. continuous_map
                  (subtopology (mtopology m1) (mtopology m1 closure_of s),
                   mtopology m2) g \<and>
@@ -17798,7 +17787,7 @@ oops
 
 lemma cauchy_continuous_map_extends_to_continuous_intermediate_closure_of:
    "\<And>m1 m2 f s t.
-        mcomplete m2 \<and> cauchy_continuous_map (submetric m1 s,m2) f \<and>
+        mcomplete m2 \<and> cauchy_continuous_map (submetric1 s,m2) f \<and>
         t \<subseteq> mtopology m1 closure_of s
         \<Longrightarrow> \<exists>g. continuous_map(subtopology (mtopology m1) t,mtopology m2) g \<and>
                 \<forall>x. x \<in> s \<Longrightarrow> g x = f x"
@@ -17813,11 +17802,11 @@ lemma lipschitz_continuous_map_on_intermediate_closure:
    "\<And>m1 m2 f::A=>B s t.
         s \<subseteq> t \<and> t \<subseteq> (mtopology m1) closure_of s \<and>
         continuous_map (subtopology (mtopology m1) t,mtopology m2) f \<and>
-        lipschitz_continuous_map (submetric m1 s,m2) f
-        \<Longrightarrow> lipschitz_continuous_map (submetric m1 t,m2) f"
+        lipschitz_continuous_map (submetric1 s,m2) f
+        \<Longrightarrow> lipschitz_continuous_map (submetric1 t,m2) f"
 oops
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
-  SUBGOAL_THEN `submetric m1 (s::A=>bool) = submetric m1 (mspace m1 \<inter> s)`
+  SUBGOAL_THEN `submetric1 (s::A=>bool) = submetric1 (mspace m1 \<inter> s)`
   SUBST1_TAC THENL
    [REWRITE_TAC[GSYM SUBMETRIC_SUBMETRIC; SUBMETRIC_MSPACE];
     DISCH_THEN(CONJUNCTS_THEN2
@@ -17874,9 +17863,9 @@ oops
 
 lemma lipschitz_continuous_map_extends_to_closure_of:
    "\<And>m1 m2 f s.
-        mcomplete m2 \<and> lipschitz_continuous_map (submetric m1 s,m2) f
+        mcomplete m2 \<and> lipschitz_continuous_map (submetric1 s,m2) f
         \<Longrightarrow> \<exists>g. lipschitz_continuous_map
-                   (submetric m1 (mtopology m1 closure_of s),m2) g \<and>
+                   (submetric1 (mtopology m1 closure_of s),m2) g \<and>
                 \<forall>x. x \<in> s \<Longrightarrow> g x = f x"
 oops
   REPEAT STRIP_TAC THEN
@@ -17896,9 +17885,9 @@ oops
 lemma lipschitz_continuous_map_extends_to_intermediate_closure_of:
    "\<And>m1 m2 f s t.
         mcomplete m2 \<and>
-        lipschitz_continuous_map (submetric m1 s,m2) f \<and>
+        lipschitz_continuous_map (submetric1 s,m2) f \<and>
         t \<subseteq> mtopology m1 closure_of s
-        \<Longrightarrow> \<exists>g. lipschitz_continuous_map (submetric m1 t,m2) g \<and>
+        \<Longrightarrow> \<exists>g. lipschitz_continuous_map (submetric1 t,m2) g \<and>
                 \<forall>x. x \<in> s \<Longrightarrow> g x = f x"
 oops
   REPEAT STRIP_TAC THEN
@@ -17911,11 +17900,11 @@ lemma uniformly_continuous_map_on_intermediate_closure:
    "\<And>m1 m2 f::A=>B s t.
         s \<subseteq> t \<and> t \<subseteq> (mtopology m1) closure_of s \<and>
         continuous_map (subtopology (mtopology m1) t,mtopology m2) f \<and>
-        uniformly_continuous_map (submetric m1 s,m2) f
-        \<Longrightarrow> uniformly_continuous_map (submetric m1 t,m2) f"
+        uniformly_continuous_map (submetric1 s,m2) f
+        \<Longrightarrow> uniformly_continuous_map (submetric1 t,m2) f"
 oops
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
-  SUBGOAL_THEN `submetric m1 (s::A=>bool) = submetric m1 (mspace m1 \<inter> s)`
+  SUBGOAL_THEN `submetric1 (s::A=>bool) = submetric1 (mspace m1 \<inter> s)`
   SUBST1_TAC THENL
    [REWRITE_TAC[GSYM SUBMETRIC_SUBMETRIC; SUBMETRIC_MSPACE];
     DISCH_THEN(CONJUNCTS_THEN2
@@ -17972,9 +17961,9 @@ oops
 
 lemma uniformly_continuous_map_extends_to_closure_of:
    "\<And>m1 m2 f s.
-        mcomplete m2 \<and> uniformly_continuous_map (submetric m1 s,m2) f
+        mcomplete m2 \<and> uniformly_continuous_map (submetric1 s,m2) f
         \<Longrightarrow> \<exists>g. uniformly_continuous_map
-                   (submetric m1 (mtopology m1 closure_of s),m2) g \<and>
+                   (submetric1 (mtopology m1 closure_of s),m2) g \<and>
                 \<forall>x. x \<in> s \<Longrightarrow> g x = f x"
 oops
   REPEAT STRIP_TAC THEN
@@ -17994,9 +17983,9 @@ oops
 lemma uniformly_continuous_map_extends_to_intermediate_closure_of:
    "\<And>m1 m2 f s t.
         mcomplete m2 \<and>
-        uniformly_continuous_map (submetric m1 s,m2) f \<and>
+        uniformly_continuous_map (submetric1 s,m2) f \<and>
         t \<subseteq> mtopology m1 closure_of s
-        \<Longrightarrow> \<exists>g. uniformly_continuous_map (submetric m1 t,m2) g \<and>
+        \<Longrightarrow> \<exists>g. uniformly_continuous_map (submetric1 t,m2) g \<and>
                 \<forall>x. x \<in> s \<Longrightarrow> g x = f x"
 oops
   REPEAT STRIP_TAC THEN
@@ -18009,11 +17998,11 @@ lemma cauchy_continuous_map_on_intermediate_closure:
    "\<And>m1 m2 f::A=>B s t.
         s \<subseteq> t \<and> t \<subseteq> (mtopology m1) closure_of s \<and>
         continuous_map (subtopology (mtopology m1) t,mtopology m2) f \<and>
-        cauchy_continuous_map (submetric m1 s,m2) f
-        \<Longrightarrow> cauchy_continuous_map (submetric m1 t,m2) f"
+        cauchy_continuous_map (submetric1 s,m2) f
+        \<Longrightarrow> cauchy_continuous_map (submetric1 t,m2) f"
 oops
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
-  SUBGOAL_THEN `submetric m1 (s::A=>bool) = submetric m1 (mspace m1 \<inter> s)`
+  SUBGOAL_THEN `submetric1 (s::A=>bool) = submetric1 (mspace m1 \<inter> s)`
   SUBST1_TAC THENL
    [REWRITE_TAC[GSYM SUBMETRIC_SUBMETRIC; SUBMETRIC_MSPACE];
     DISCH_THEN(CONJUNCTS_THEN2
@@ -18085,9 +18074,9 @@ oops
 
 lemma cauchy_continuous_map_extends_to_closure_of:
    "\<And>m1 m2 f s.
-        mcomplete m2 \<and> cauchy_continuous_map (submetric m1 s,m2) f
+        mcomplete m2 \<and> cauchy_continuous_map (submetric1 s,m2) f
         \<Longrightarrow> \<exists>g. cauchy_continuous_map
-                   (submetric m1 (mtopology m1 closure_of s),m2) g \<and>
+                   (submetric1 (mtopology m1 closure_of s),m2) g \<and>
                 \<forall>x. x \<in> s \<Longrightarrow> g x = f x"
 oops
   REPEAT GEN_TAC THEN DISCH_TAC THEN FIRST_ASSUM(MP_TAC \<circ> MATCH_MP
@@ -18105,9 +18094,9 @@ oops
 lemma cauchy_continuous_map_extends_to_intermediate_closure_of:
    "\<And>m1 m2 f s t.
         mcomplete m2 \<and>
-        cauchy_continuous_map (submetric m1 s,m2) f \<and>
+        cauchy_continuous_map (submetric1 s,m2) f \<and>
         t \<subseteq> mtopology m1 closure_of s
-        \<Longrightarrow> \<exists>g. cauchy_continuous_map (submetric m1 t,m2) g \<and>
+        \<Longrightarrow> \<exists>g. cauchy_continuous_map (submetric1 t,m2) g \<and>
                 \<forall>x. x \<in> s \<Longrightarrow> g x = f x"
 oops
   REPEAT STRIP_TAC THEN
@@ -18979,13 +18968,13 @@ oops
     MAP_EVERY X_GEN_TAC
      [`x:(num=>bool)->num=>A`; `r:(num=>bool)->num=>real`] THEN
     STRIP_TAC THEN
-    SUBGOAL_THEN `mcomplete (submetric m s::A metric)` MP_TAC THENL
+    SUBGOAL_THEN `mcomplete (submetric s::A metric)` MP_TAC THENL
      [MATCH_MP_TAC CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE THEN
       ASM_REWRITE_TAC[CLOSED_IN_CONTAINS_DERIVED_SET; TOPSPACE_MTOPOLOGY] THEN
       ASM SET_TAC[];
       REWRITE_TAC[MCOMPLETE_NEST_SING]] THEN
     DISCH_THEN(MP_TAC \<circ> MATCH_MP MONO_FORALL \<circ> GEN `b::num=>bool` \<circ>
-      SPEC `\<lambda>n. mcball (submetric m s)
+      SPEC `\<lambda>n. mcball (submetric s)
                        ((x:(num=>bool)->num=>A) b n,r b n)`) THEN
     REWRITE_TAC[SKOLEM_THM] THEN
     SUBGOAL_THEN `(\<forall>b n. (x:(num=>bool)->num=>A) b n \<in> s) \<and>
