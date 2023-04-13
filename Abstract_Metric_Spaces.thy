@@ -5544,17 +5544,50 @@ proof -
 qed
 
 lemma mcomplete_nest:
-   "      mcomplete \<longleftrightarrow>
-      \<forall>c. (\<forall>n. closedin mtopology (c n)) \<and>
-          (\<forall>n. \<not> (c n = {})) \<and>
-          (\<forall>m n. m \<le> n \<Longrightarrow> c n \<subseteq> c m) \<and>
-          (\<forall>e>0.  \<exists>n a. c n \<subseteq> mcball a e)
-          \<Longrightarrow> \<not> (\<Inter> {c n | n \<in> UNIV} = {})"
+   "mcomplete \<longleftrightarrow>
+      (\<forall>C::nat \<Rightarrow>'a set. (\<forall>n. closedin mtopology (C n)) \<and>
+          (\<forall>n. C n \<noteq> {}) \<and> decseq C \<and>
+          (\<forall>\<epsilon>>0. \<exists>n a. C n \<subseteq> mcball a \<epsilon>)
+          \<longrightarrow> \<Inter> (range C) \<noteq> {})" (is "?lhs=?rhs")
+
+proof
+  assume L: ?lhs 
+  show ?rhs
+  proof (intro strip conjI , elim conjE)
+    fix C :: "nat \<Rightarrow> 'a set"
+    assume clo: "\<forall>n. closedin mtopology (C n)"
+      and ne: "\<forall>n. C n \<noteq> ({}::'a set)"
+      and dec:"decseq C"
+      and conv [rule_format]: "\<forall>\<epsilon>>0. \<exists>n a. C n \<subseteq> mcball a \<epsilon>"
+    obtain \<sigma> where \<sigma>: "\<And>n. \<sigma> n \<in> C n"
+      by (meson ne empty_iff set_eq_iff)
+    have "MCauchy \<sigma>"
+      unfolding MCauchy_def
+    proof (intro conjI strip)
+      show "range \<sigma> \<subseteq> M"
+        using \<sigma> clo metric_closedin_iff_sequentially_closed by auto 
+      fix \<epsilon> :: real
+      assume "0 < \<epsilon>"
+      show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>"
+        using conv [OF \<open>\<epsilon> > 0\<close>]
+        using  sorry
+    qed
+    then obtain x where x: "limitin mtopology \<sigma> x sequentially"
+      using L mcomplete_def by blast
+    have "x \<in> C n" for n
+      apply (rule  limitin_closedin [OF x])
+      apply (simp add: clo)
+      using \<sigma> dec
+      apply (metis decseq_def eventually_sequentiallyI subsetD)
+      by simp
+    then show "\<Inter> (range C) \<noteq> {}"
+      by blast
+qed
+next
+  assume ?rhs then show ?lhs
 oops
   GEN_TAC THEN REWRITE_TAC[mcomplete] THEN EQ_TAC THEN DISCH_TAC THENL
-   [X_GEN_TAC `c::num=>A->bool` THEN STRIP_TAC THEN
-    SUBGOAL_THEN `\<forall>n. \<exists>x. x \<in> (c::num=>A->bool) n` MP_TAC THENL
-     [ASM SET_TAC[]; REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM]] THEN
+
     X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::num=>A`) THEN ANTS_TAC THENL
      [REWRITE_TAC[MCauchy] THEN CONJ_TAC THENL
@@ -5575,11 +5608,12 @@ oops
       EXISTS_TAC `a::A` THEN ASM_REWRITE_TAC[];
       REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; INTERS_GSPEC; IN_ELIM_THM] THEN
       MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `l::A` THEN REPEAT STRIP_TAC THEN
-      MATCH_MP_TAC(ISPEC `sequentially` LIMIT_IN_CLOSED_IN) THEN
+      MATCH_MP_TAC(ISPEC `sequentially` LIMITIN_CLOSEDIN) THEN
       MAP_EVERY EXISTS_TAC [`mtopology::A topology`; `x::num=>A`] THEN
       ASM_REWRITE_TAC[TRIVIAL_LIMIT_SEQUENTIALLY] THEN
       REWRITE_TAC[EVENTUALLY_SEQUENTIALLY] THEN EXISTS_TAC `n::num` THEN
       ASM SET_TAC[]];
+
     X_GEN_TAC `x::num=>A` THEN REWRITE_TAC[MCauchy] THEN STRIP_TAC THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC
      `\<lambda>n. mtopology closure_of (image (x::num=>A) (from n))`) THEN
@@ -5613,7 +5647,8 @@ oops
        `x \<in> M \<and> y \<in> M \<and> l \<in> M \<and>
         d l y < e / 2
         \<Longrightarrow> d x y < e / 2 \<Longrightarrow> d x l < e`) THEN
-      ASM_REWRITE_TAC[]]]);;
+      ASM_REWRITE_TAC[]]]);;`
+
 
 lemma mcomplete_nest_sing:
    "      mcomplete \<longleftrightarrow>
