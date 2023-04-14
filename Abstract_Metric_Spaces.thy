@@ -1252,7 +1252,7 @@ proof
     by (metis Diff_subset Diff_triv Int_Diff Int_commute inf.absorb_iff2 mball_subset_mspace topspace_mtopology)
 qed
 
-lemma closedin_mcball: "closedin mtopology (mcball x r)"
+lemma closedin_mcball [iff]: "closedin mtopology (mcball x r)"
 proof -
   have "\<exists>ra>0. disjnt (mcball x r) (mball y ra)" if "x \<notin> M" for y
     by (metis disjnt_empty1 gt_ex mcball_eq_empty that)
@@ -5059,7 +5059,7 @@ proof -
     have "\<forall>\<^sub>F xa in sequentially. d (\<sigma> xa) a < \<epsilon>" if "\<epsilon> > 0" for \<epsilon>
     proof -
       obtain N where "inverse (Suc N) < \<epsilon>"
-        using \<open>0 < \<epsilon>\<close> reals_Archimedean by blast
+        using \<open>\<epsilon> > 0\<close> reals_Archimedean by blast
       with \<sigma> 2 show ?thesis
         unfolding decreasing_dist_def by (smt (verit, best) \<Phi>_def eventually_at_top_dense)
     qed
@@ -5374,7 +5374,7 @@ lemma convergent_imp_MCauchy:
   unfolding MCauchy_def image_subset_iff
 proof (intro conjI strip)
   fix \<epsilon>::real
-  assume "0 < \<epsilon>"
+  assume "\<epsilon> > 0"
   then have "\<forall>\<^sub>F n in sequentially. \<sigma> n \<in> M \<and> d (\<sigma> n) l < \<epsilon>/2"
     using half_gt_zero lim limitin_metric by blast
   then obtain N where "\<And>n. n\<ge>N \<Longrightarrow> \<sigma> n \<in> M \<and> d (\<sigma> n) l < \<epsilon>/2"
@@ -5413,9 +5413,9 @@ proof (intro conjI strip)
     by (metis UNIV_I comp_apply le_iff_add linorder_not_le)
 next
   fix \<epsilon> :: real
-  assume "0 < \<epsilon>"
+  assume "\<epsilon> > 0"
   obtain N where "\<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d ((\<sigma> \<circ> (+)k) n) ((\<sigma> \<circ> (+)k) n') < \<epsilon>"
-    using cau \<open>0 < \<epsilon>\<close> by (fastforce simp: MCauchy_def)
+    using cau \<open>\<epsilon> > 0\<close> by (fastforce simp: MCauchy_def)
   then show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>"
     unfolding o_def
     apply (rule_tac x="k+N" in exI)
@@ -5431,11 +5431,11 @@ proof (intro conjI strip)
   show "a \<in> M"
     by (meson assms limitin_mspace)
   fix \<epsilon> :: real
-  assume "0 < \<epsilon>"
+  assume "\<epsilon> > 0"
   then obtain N1 where N1: "\<And>n n'. \<lbrakk>n\<ge>N1; n'\<ge>N1\<rbrakk> \<Longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>/2"
     using cau unfolding MCauchy_def by (meson half_gt_zero)
   obtain N2 where N2: "\<And>n. n \<ge> N2 \<Longrightarrow> (\<sigma> \<circ> r) n \<in> M \<and> d ((\<sigma> \<circ> r) n) a < \<epsilon>/2"
-    by (metis (no_types, lifting) lim \<open>0 < \<epsilon>\<close> half_gt_zero limit_metric_sequentially)
+    by (metis (no_types, lifting) lim \<open>\<epsilon> > 0\<close> half_gt_zero limit_metric_sequentially)
   have "\<sigma> n \<in> M \<and> d (\<sigma> n) a < \<epsilon>" if "n \<ge> max N1 N2" for n
   proof (intro conjI)
     show "\<sigma> n \<in> M"
@@ -5464,7 +5464,7 @@ proof
       unfolding LIMSEQ_iff
     proof (intro strip)
       fix \<epsilon> :: real
-      assume "0 < \<epsilon>"
+      assume "\<epsilon> > 0"
       then obtain N where N: 
         "\<And>n n'. \<lbrakk>n\<ge>N; n'\<ge>N\<rbrakk> \<Longrightarrow> d (if even n then x (n div 2) else y (n div 2))
                                    (if even n' then x (n' div 2) else y (n' div 2))  < \<epsilon>"
@@ -5483,13 +5483,13 @@ next
     show "range (\<lambda>n. if even n then x (n div 2) else y (n div 2)) \<subseteq> M"
       using R by (auto simp: MCauchy_def)
     fix \<epsilon> :: real
-    assume "0 < \<epsilon>"
+    assume "\<epsilon> > 0"
     obtain Nx where Nx: "\<And>n n'. \<lbrakk>n\<ge>Nx; n'\<ge>Nx\<rbrakk> \<Longrightarrow> d (x n) (x n')  < \<epsilon>/2"
-      by (meson half_gt_zero MCauchy_def R \<open>0 < \<epsilon>\<close>)
+      by (meson half_gt_zero MCauchy_def R \<open>\<epsilon> > 0\<close>)
     obtain Ny where Ny: "\<And>n n'. \<lbrakk>n\<ge>Ny; n'\<ge>Ny\<rbrakk> \<Longrightarrow> d (y n) (y n')  < \<epsilon>/2"
-      by (meson half_gt_zero MCauchy_def R \<open>0 < \<epsilon>\<close>)
+      by (meson half_gt_zero MCauchy_def R \<open>\<epsilon> > 0\<close>)
     obtain Nxy where Nxy: "\<And>n. n\<ge>Nxy \<Longrightarrow> d (x n) (y n) < \<epsilon>/2"
-      using R \<open>0 < \<epsilon>\<close> half_gt_zero unfolding LIMSEQ_iff
+      using R \<open>\<epsilon> > 0\<close> half_gt_zero unfolding LIMSEQ_iff
       by (metis abs_mdist diff_zero real_norm_def)
     define N where "N \<equiv> 2 * Max{Nx,Ny,Nxy}"
     show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (if even n then x (n div 2) else y (n div 2)) (if even n' then x (n' div 2) else y (n' div 2)) < \<epsilon>"
@@ -5510,7 +5510,7 @@ next
         show ?thesis
         proof (cases "even n'")
           case True
-          with \<open>0 < \<epsilon>\<close> nt dxnn' show ?thesis by auto
+          with \<open>\<epsilon> > 0\<close> nt dxnn' show ?thesis by auto
         next
           case False
           with nt dxyn dynn' inM triangle show ?thesis
@@ -5522,10 +5522,10 @@ next
         proof (cases "even n'")
           case True
           then show ?thesis
-            by (smt (verit) \<open>0 < \<epsilon>\<close> dxyn dxnn' triangle commute inM field_sum_of_halves)
+            by (smt (verit) \<open>\<epsilon> > 0\<close> dxyn dxnn' triangle commute inM field_sum_of_halves)
         next
           case False
-          with \<open>0 < \<epsilon>\<close> nf dynn' show ?thesis by auto
+          with \<open>\<epsilon> > 0\<close> nf dynn' show ?thesis by auto
         qed
       qed
     qed
@@ -5558,7 +5558,7 @@ proof
     assume clo: "\<forall>n. closedin mtopology (C n)"
       and ne: "\<forall>n. C n \<noteq> ({}::'a set)"
       and dec:"decseq C"
-      and conv [rule_format]: "\<forall>\<epsilon>>0. \<exists>n a. C n \<subseteq> mcball a \<epsilon>"
+      and cover [rule_format]: "\<forall>\<epsilon>>0. \<exists>n a. C n \<subseteq> mcball a \<epsilon>"
     obtain \<sigma> where \<sigma>: "\<And>n. \<sigma> n \<in> C n"
       by (meson ne empty_iff set_eq_iff)
     have "MCauchy \<sigma>"
@@ -5567,87 +5567,97 @@ proof
       show "range \<sigma> \<subseteq> M"
         using \<sigma> clo metric_closedin_iff_sequentially_closed by auto 
       fix \<epsilon> :: real
-      assume "0 < \<epsilon>"
-      show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>"
-        using conv [OF \<open>\<epsilon> > 0\<close>]
-        using  sorry
+      assume "\<epsilon> > 0"
+      then obtain N a where N: "C N \<subseteq> mcball a (\<epsilon>/3)"
+        using cover by fastforce
+      have "d (\<sigma> m) (\<sigma> n) < \<epsilon>" if "N \<le> m" "N \<le> n" for m n
+      proof -
+        have "d a (\<sigma> m) \<le> \<epsilon>/3" "d a (\<sigma> n) \<le> \<epsilon>/3"
+          using dec N \<sigma> that by (fastforce simp add: decseq_def)+
+        then have "d (\<sigma> m) (\<sigma> n) \<le> \<epsilon>/3 + \<epsilon>/3"
+          using triangle \<sigma> commute dec decseq_def subsetD that N
+          by (smt (verit, ccfv_threshold) in_mcball)
+        also have "... < \<epsilon>"
+          using \<open>\<epsilon> > 0\<close> by auto
+        finally show ?thesis .
+      qed
+      then show "\<exists>N. \<forall>m n. N \<le> m \<longrightarrow> N \<le> n \<longrightarrow> d (\<sigma> m) (\<sigma> n) < \<epsilon>"
+        by blast
     qed
     then obtain x where x: "limitin mtopology \<sigma> x sequentially"
       using L mcomplete_def by blast
     have "x \<in> C n" for n
-      apply (rule  limitin_closedin [OF x])
-      apply (simp add: clo)
-      using \<sigma> dec
-      apply (metis decseq_def eventually_sequentiallyI subsetD)
-      by simp
+    proof (rule limitin_closedin [OF x])
+      show "closedin mtopology (C n)"
+        by (simp add: clo)
+      show "\<forall>\<^sub>F x in sequentially. \<sigma> x \<in> C n"
+        by (metis \<sigma> dec decseq_def eventually_sequentiallyI subsetD)
+    qed auto
     then show "\<Inter> (range C) \<noteq> {}"
       by blast
 qed
 next
-  assume ?rhs then show ?lhs
-oops
-  GEN_TAC THEN REWRITE_TAC[mcomplete] THEN EQ_TAC THEN DISCH_TAC THENL
-
-    X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::num=>A`) THEN ANTS_TAC THENL
-     [REWRITE_TAC[MCauchy] THEN CONJ_TAC THENL
-       [ASM_MESON_TAC[closedin; \<subseteq>; TOPSPACE_MTOPOLOGY]; ALL_TAC] THEN
-      X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e / 3`) THEN
-      ASM_REWRITE_TAC[REAL_ARITH `0 < e / 3 \<longleftrightarrow> 0 < e`] THEN
-      MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `N::num` THEN
-      REWRITE_TAC[\<subseteq>; IN_MCBALL] THEN DISCH_THEN(X_CHOOSE_TAC `a::A`) THEN
-      MAP_EVERY X_GEN_TAC [`m::num`; `n::num`] THEN STRIP_TAC THEN
-      FIRST_X_ASSUM(fun th ->
-       MP_TAC(SPEC `(x::num=>A) m` th) THEN MP_TAC(SPEC `(x::num=>A) n` th)) THEN
-      REPEAT(ANTS_TAC THENL [ASM SET_TAC[]; DISCH_TAC]) THEN
-      MATCH_MP_TAC(METRIC_ARITH
-       `\<forall>a x y::A. a \<in> M \<and> x \<in> M \<and> y \<in> M \<and> 0 < e \<and>
-                  d a x \<le> e / 3 \<and> d a y \<le> e / 3
-                  \<Longrightarrow> d x y < e`) THEN
-      EXISTS_TAC `a::A` THEN ASM_REWRITE_TAC[];
-      REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; INTERS_GSPEC; IN_ELIM_THM] THEN
-      MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `l::A` THEN REPEAT STRIP_TAC THEN
-      MATCH_MP_TAC(ISPEC `sequentially` LIMITIN_CLOSEDIN) THEN
-      MAP_EVERY EXISTS_TAC [`mtopology::A topology`; `x::num=>A`] THEN
-      ASM_REWRITE_TAC[TRIVIAL_LIMIT_SEQUENTIALLY] THEN
-      REWRITE_TAC[EVENTUALLY_SEQUENTIALLY] THEN EXISTS_TAC `n::num` THEN
-      ASM SET_TAC[]];
-
-    X_GEN_TAC `x::num=>A` THEN REWRITE_TAC[MCauchy] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC
-     `\<lambda>n. mtopology closure_of (image (x::num=>A) (from n))`) THEN
-    REWRITE_TAC[CLOSED_IN_CLOSURE_OF] THEN
-    SIMP_TAC[CLOSURE_OF_MONO; FROM_MONO; IMAGE_SUBSET] THEN
-    REWRITE_TAC[CLOSURE_OF_EQ_EMPTY_GEN; TOPSPACE_MTOPOLOGY] THEN
-    ASM_SIMP_TAC[FROM_NONEMPTY; SET_RULE
-     `(\<forall>n. x n \<in> S) \<and> (k \<noteq> {}) \<Longrightarrow> \<not> disjnt S (x ` k)`] THEN
-    REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; INTERS_GSPEC; IN_ELIM_THM] THEN
-    ANTS_TAC THENL
-     [X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e::real`) THEN ASM_REWRITE_TAC[] THEN
-      MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `N::num` THEN DISCH_TAC THEN
-      EXISTS_TAC `(x::num=>A) N` THEN MATCH_MP_TAC CLOSURE_OF_MINIMAL THEN
-      REWRITE_TAC[CLOSED_IN_MCBALL; \<subseteq>; FORALL_IN_IMAGE] THEN
-      ASM_SIMP_TAC[IN_FROM; LE_REFL; IN_MCBALL; REAL_LT_IMP_LE];
-      MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `l::A` THEN
-      REWRITE_TAC[IN_UNIV; METRIC_CLOSURE_OF; IN_ELIM_THM; FORALL_AND_THM] THEN
-      REWRITE_TAC[EXISTS_IN_IMAGE; IN_FROM; IN_MBALL] THEN STRIP_TAC THEN
-      ASM_REWRITE_TAC[LIMIT_METRIC] THEN
-      X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e / 2`) THEN
-      ASM_REWRITE_TAC[REAL_HALF; EVENTUALLY_SEQUENTIALLY] THEN
-      MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `N::num` THEN STRIP_TAC THEN
-      X_GEN_TAC `n::num` THEN DISCH_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`N::num`; `e / 2`]) THEN
-      ASM_REWRITE_TAC[REAL_HALF] THEN
-      DISCH_THEN(X_CHOOSE_THEN `p::num` STRIP_ASSUME_TAC) THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`n::num`; `p::num`]) THEN
-      ASM_REWRITE_TAC[] THEN MATCH_MP_TAC(METRIC_ARITH
-       `x \<in> M \<and> y \<in> M \<and> l \<in> M \<and>
-        d l y < e / 2
-        \<Longrightarrow> d x y < e / 2 \<Longrightarrow> d x l < e`) THEN
-      ASM_REWRITE_TAC[]]]);;`
+  assume R: ?rhs  
+  show ?lhs
+    unfolding mcomplete_def
+  proof (intro strip)
+    fix \<sigma>
+    assume "MCauchy \<sigma>"
+    then have "range \<sigma> \<subseteq> M"
+      using MCauchy_def by blast
+    define C where "C \<equiv> \<lambda>n. mtopology closure_of (\<sigma> ` {n..})"
+    have "\<forall>n. closedin mtopology (C n)" 
+      by (auto simp: C_def)
+    moreover
+    have ne: "\<And>n. C n \<noteq> {}"
+      using \<open>MCauchy \<sigma>\<close> by (auto simp: C_def MCauchy_def disjnt_iff closure_of_eq_empty_gen)
+    moreover
+    have dec: "decseq C"
+      unfolding monotone_on_def
+    proof (intro strip)
+      fix m n::nat
+      assume "m \<le> n"
+      then have "{n..} \<subseteq> {m..}"
+        by auto
+      then show "C n \<subseteq> C m"
+        unfolding C_def by (meson closure_of_mono image_mono)
+    qed
+    moreover
+    have C: "\<exists>N u. C N \<subseteq> mcball u \<epsilon>" if "\<epsilon>>0" for \<epsilon>
+    proof -
+      obtain N where "\<And>m n. N \<le> m \<and> N \<le> n \<Longrightarrow> d (\<sigma> m) (\<sigma> n) < \<epsilon>"
+        by (meson MCauchy_def \<open>0 < \<epsilon>\<close> \<open>MCauchy \<sigma>\<close>)
+      then have "\<sigma> ` {N..} \<subseteq> mcball (\<sigma> N) \<epsilon>"
+        using MCauchy_def \<open>MCauchy \<sigma>\<close> by (force simp: less_eq_real_def)
+      then have "C N \<subseteq> mcball (\<sigma> N) \<epsilon>"
+        by (simp add: C_def closure_of_minimal)
+      then show ?thesis
+        by blast
+    qed
+    ultimately obtain l where x: "l \<in> \<Inter> (range C)"
+      by (metis R ex_in_conv)
+    then have *: "\<And>\<epsilon> N. 0 < \<epsilon> \<Longrightarrow> \<exists>n'. N \<le> n' \<and> l \<in> M \<and> \<sigma> n' \<in> M \<and> d l (\<sigma> n') < \<epsilon>"
+      by (force simp add: C_def metric_closure_of)
+    then have "l \<in> M"
+      using gt_ex by blast
+    show "\<exists>l. limitin mtopology \<sigma> l sequentially"
+      unfolding limitin_metric
+      apply (rule_tac x="l" in exI)
+    proof (intro conjI strip)
+      show "l \<in> M"
+        using \<open>\<forall>n. closedin mtopology (C n)\<close> closedin_subset x by fastforce
+      fix \<epsilon>::real
+      assume "\<epsilon> > 0"
+      obtain N where N: "\<And>m n. N \<le> m \<and> N \<le> n \<Longrightarrow> d (\<sigma> m) (\<sigma> n) < \<epsilon>/2"
+        by (meson MCauchy_def \<open>0 < \<epsilon>\<close> \<open>MCauchy \<sigma>\<close> half_gt_zero)
+      with * [of "\<epsilon>/2" N]
+      have "\<forall>n\<ge>N. \<sigma> n \<in> M \<and> d (\<sigma> n) l < \<epsilon>"
+        by (smt (verit) \<open>range \<sigma> \<subseteq> M\<close> commute field_sum_of_halves range_subsetD triangle)
+      then show "\<forall>\<^sub>F n in sequentially. \<sigma> n \<in> M \<and> d (\<sigma> n) l < \<epsilon>"
+        using eventually_sequentially by blast
+    qed
+  qed
+qed
 
 
 lemma mcomplete_nest_sing:
