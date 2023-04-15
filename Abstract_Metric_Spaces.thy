@@ -5546,10 +5546,8 @@ qed
 lemma mcomplete_nest:
    "mcomplete \<longleftrightarrow>
       (\<forall>C::nat \<Rightarrow>'a set. (\<forall>n. closedin mtopology (C n)) \<and>
-          (\<forall>n. C n \<noteq> {}) \<and> decseq C \<and>
-          (\<forall>\<epsilon>>0. \<exists>n a. C n \<subseteq> mcball a \<epsilon>)
+          (\<forall>n. C n \<noteq> {}) \<and> decseq C \<and> (\<forall>\<epsilon>>0. \<exists>n a. C n \<subseteq> mcball a \<epsilon>)
           \<longrightarrow> \<Inter> (range C) \<noteq> {})" (is "?lhs=?rhs")
-
 proof
   assume L: ?lhs 
   show ?rhs
@@ -5557,7 +5555,7 @@ proof
     fix C :: "nat \<Rightarrow> 'a set"
     assume clo: "\<forall>n. closedin mtopology (C n)"
       and ne: "\<forall>n. C n \<noteq> ({}::'a set)"
-      and dec:"decseq C"
+      and dec: "decseq C"
       and cover [rule_format]: "\<forall>\<epsilon>>0. \<exists>n a. C n \<subseteq> mcball a \<epsilon>"
     obtain \<sigma> where \<sigma>: "\<And>n. \<sigma> n \<in> C n"
       by (meson ne empty_iff set_eq_iff)
@@ -5642,8 +5640,7 @@ next
       using gt_ex by blast
     show "\<exists>l. limitin mtopology \<sigma> l sequentially"
       unfolding limitin_metric
-      apply (rule_tac x="l" in exI)
-    proof (intro conjI strip)
+    proof (intro conjI strip exI)
       show "l \<in> M"
         using \<open>\<forall>n. closedin mtopology (C n)\<close> closedin_subset x by fastforce
       fix \<epsilon>::real
@@ -5661,36 +5658,44 @@ qed
 
 
 lemma mcomplete_nest_sing:
-   "      mcomplete \<longleftrightarrow>
-      \<forall>c. (\<forall>n. closedin mtopology (c n)) \<and>
-          (\<forall>n. \<not> (c n = {})) \<and>
-          (\<forall>m n. m \<le> n \<Longrightarrow> c n \<subseteq> c m) \<and>
-          (\<forall>e>0.  \<exists>n a. c n \<subseteq> mcball a e)
-          \<Longrightarrow> \<exists>l. l \<in> M \<and> \<Inter> {c n | n \<in> UNIV} = {l}"
-oops
-  GEN_TAC THEN REWRITE_TAC[MCOMPLETE_NEST] THEN
-  EQ_TAC THEN MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `c::num=>A->bool` THEN
-  DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[GSYM MEMBER_NOT_EMPTY] THEN MATCH_MP_TAC MONO_EXISTS THEN
-  X_GEN_TAC `l::A` THEN STRIP_TAC THEN ASM_REWRITE_TAC[IN_SING] THEN
-  SUBGOAL_THEN `\<forall>a::A. a \<in> \<Inter> {c n | n \<in> UNIV} \<Longrightarrow> a \<in> M`
-  ASSUME_TAC THENL
-   [REWRITE_TAC[INTERS_GSPEC; IN_ELIM_THM; IN_UNIV] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[closedin; TOPSPACE_MTOPOLOGY]) THEN
-    ASM SET_TAC[];
-    ASM_SIMP_TAC[]] THEN
-  MATCH_MP_TAC(SET_RULE
-   `l \<in> S \<and> (!l'. \<not> (l' = l) \<Longrightarrow> \<not> (l' \<in> S)) \<Longrightarrow> S = {l}`) THEN
-  ASM_REWRITE_TAC[] THEN X_GEN_TAC `l':A` THEN REPEAT DISCH_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> SPEC `d l::A l' / 3`) THEN ANTS_TAC THENL
-   [ASM_MESON_TAC[MDIST_POS_EQ; REAL_ARITH `0 < e / 3 \<longleftrightarrow> 0 < e`];
-    REWRITE_TAC[NOT_EXISTS_THM]] THEN
-  MAP_EVERY X_GEN_TAC [`n::num`; `a::A`] THEN REWRITE_TAC[\<subseteq>; IN_MCBALL] THEN
-  DISCH_THEN(fun th -> MP_TAC(SPEC `l':A` th) THEN MP_TAC(SPEC `l::A` th)) THEN
-  MATCH_MP_TAC(TAUT
-   `(p \<and> p') \<and> \<not> (q \<and> q') \<Longrightarrow> (p \<Longrightarrow> q) \<Longrightarrow> (p' \<Longrightarrow> q') \<Longrightarrow> False`) THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  UNDISCH_TAC `\<not> (l':A = l)` THEN CONV_TAC METRIC_ARITH);;
+   "mcomplete \<longleftrightarrow>
+    (\<forall>C. (\<forall>n. closedin mtopology (C n)) \<and>
+          (\<forall>n. C n \<noteq> {}) \<and> decseq C \<and> (\<forall>e>0. \<exists>n a. C n \<subseteq> mcball a e)
+         \<longrightarrow> (\<exists>l. l \<in> M \<and> \<Inter> (range C) = {l}))"
+proof -
+  have *: False
+    if clo: "\<forall>n. closedin mtopology (C n)"
+      and cover: "\<forall>\<epsilon>>0. \<exists>n a. C n \<subseteq> mcball a \<epsilon>"
+      and no_sing: "\<And>y. y \<in> M \<Longrightarrow> \<Inter> (range C) \<noteq> {y}"
+      and l: "\<forall>n. l \<in> C n"
+    for C :: "nat \<Rightarrow> 'a set" and l
+  proof -
+    have inM: "\<And>x. x \<in> \<Inter> (range C) \<Longrightarrow> x \<in> M"
+      using closedin_metric clo by fastforce
+    then have "l \<in> M"
+      by (simp add: l)
+    have False if l': "l' \<in> \<Inter> (range C)" and "l' \<noteq> l" for l'
+    proof -
+      have "l' \<in> M"
+        using inM l' by blast
+      obtain n a where na: "C n \<subseteq> mcball a (d l l' / 3)"
+        using inM \<open>l \<in> M\<close> l' \<open>l' \<noteq> l\<close> cover by force
+      then have "d a l \<le> (d l l' / 3)" "d a l' \<le> (d l l' / 3)"
+        using l l' na in_mcball by auto
+      then have "d l l' \<le> (d l l' / 3) + (d l l' / 3)"
+        by (smt (verit, ccfv_threshold) \<open>l' \<in> M\<close> commute in_mcball l na subset_iff triangle)
+      then show False
+        using nonneg [of l l'] \<open>l' \<noteq> l\<close> \<open>l \<in> M\<close> \<open>l' \<in> M\<close> zero by force
+    qed
+    then show False
+      by (metis l \<open>l \<in> M\<close> no_sing INT_I empty_iff insertI1 is_singletonE is_singletonI')
+  qed
+  show ?thesis
+    unfolding mcomplete_nest imp_conjL 
+    apply (intro all_cong1 imp_cong refl)
+    using * 
+    by (smt (verit) Inter_iff ex_in_conv range_constant range_eqI)
+qed
 
 lemma mcomplete_fip:
    "        mcomplete \<longleftrightarrow>
