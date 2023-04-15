@@ -5700,16 +5700,66 @@ qed
 lemma mcomplete_fip:
    "mcomplete \<longleftrightarrow>
         (\<forall>\<C>. (\<forall>C \<in> \<C>. closedin mtopology C) \<and>
-            (\<forall>e>0. \<exists>C a. C \<in> \<C> \<and> C \<subseteq> mcball a e) \<and>
-            (\<forall>\<F>. finite \<F> \<and> \<F> \<subseteq> \<C> \<longrightarrow> \<Inter> \<F> \<noteq> {})
-            \<longrightarrow> \<Inter> \<C> \<noteq> {})" (is "?lhs=?rhs")
+             (\<forall>e>0. \<exists>C a. C \<in> \<C> \<and> C \<subseteq> mcball a e) \<and> (\<forall>\<F>. finite \<F> \<and> \<F> \<subseteq> \<C> \<longrightarrow> \<Inter> \<F> \<noteq> {})
+            \<longrightarrow> \<Inter> \<C> \<noteq> {})" 
+   (is "?lhs = ?rhs")
 proof
   assume L: ?lhs 
-  then
   show ?rhs
-    apply (simp add: mcomplete_nest_sing)
-    apply safe
-    sorry
+    unfolding mcomplete_nest_sing
+  proof (intro strip, elim conjE)
+    fix \<C> :: "'a set set"
+    assume clo: "\<forall>C\<in>\<C>. closedin mtopology C"
+      and cover: "\<forall>e>0. \<exists>C a. C \<in> \<C> \<and> C \<subseteq> mcball a e"
+      and fip: "\<forall>\<F>. finite \<F> \<and> \<F> \<subseteq> \<C> \<longrightarrow> \<Inter> \<F> \<noteq> {}"
+    then have "\<forall>n. \<exists>C. C \<in> \<C> \<and> (\<exists>a. C \<subseteq> mcball a (inverse (Suc n)))"
+      by simp
+    then obtain C where C: "\<And>n. C n \<in> \<C>" 
+          and coverC: "\<And>n. \<exists>a. C n \<subseteq> mcball a (inverse (Suc n))"
+      by metis
+    define D where "D \<equiv> \<lambda>n. \<Inter> (C ` {..n})"
+    have cloD: "closedin mtopology (D n)" for n
+      unfolding D_def using clo C by blast
+    have neD: "D n \<noteq> {}" for n
+      using fip C by (simp add: D_def image_subset_iff)
+    have decD: "decseq D"
+      by (force simp: D_def decseq_def)
+    have coverD: "\<exists>n a. D n \<subseteq> mcball a \<epsilon>" if " \<epsilon> >0" for \<epsilon>
+    proof -
+      obtain n where "inverse (Suc n) < \<epsilon>"
+        using \<open>0 < \<epsilon>\<close> reals_Archimedean by blast
+      then obtain a where "C n \<subseteq> mcball a \<epsilon>"
+        by (meson coverC less_eq_real_def mcball_subset_concentric order_trans)
+      then show ?thesis
+        unfolding D_def by blast
+    qed
+    have *: "a \<in> \<Inter>\<C>" if a: "\<Inter> (range D) = {a}" and "a \<in> M" for a
+    proof -
+      have aC: "a \<in> C n" for n
+        using that by (auto simp: D_def)
+      have eqa: "\<And>u. (\<forall>n. u \<in> C n) \<Longrightarrow> a = u"
+        using that by (auto simp: D_def)
+      have "a \<in> T" if "T \<in> \<C>" for T
+      proof -
+        have cloT: "closedin mtopology (T \<inter> D n)" for n
+          using clo cloD that by blast
+        have "\<Inter> (insert T (C ` {..n})) \<noteq> {}" for n
+          using that C by (intro fip [rule_format]) force
+        then have neT: "T \<inter> D n \<noteq> {}" for n
+          by (simp add: D_def)
+        have decT: "decseq (\<lambda>n. T \<inter> D n)"
+          by (force simp: D_def decseq_def)
+        have coverT: "\<exists>n a. T \<inter> D n \<subseteq> mcball a \<epsilon>" if " \<epsilon> >0" for \<epsilon>
+          by (meson coverD le_infI2 that)
+        show ?thesis
+          using L [unfolded mcomplete_nest_sing, rule_format, of "\<lambda>n. T \<inter> D n"] a
+          by (force simp add: cloT neT decT coverT)
+      qed
+      then show ?thesis by auto
+    qed
+    show "\<Inter> \<C> \<noteq> {}"
+      by (metis L cloD neD decD coverD * empty_iff mcomplete_nest_sing)
+  qed
 next
   assume R [rule_format]: ?rhs
   show ?lhs
@@ -5733,84 +5783,6 @@ next
   qed
 qed
 
-
-oops
-  GEN_TAC THEN EQ_TAC THENL
-   [REWRITE_TAC[MCOMPLETE_NEST_SING];
-
-
-
-  DISCH_TAC THEN X_GEN_TAC `f:(A=>bool)->bool` THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> GEN `n::num` \<circ> SPEC `inverse(Suc n)`) THEN
-  REWRITE_TAC[REAL_LT_INV_EQ; RIGHT_EXISTS_AND_THM] THEN
-  REWRITE_TAC[REAL_ARITH `0 < n + 1`; SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `c::num=>A->bool` THEN REWRITE_TAC[FORALL_AND_THM] THEN
-  STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> SPEC `\<lambda>n. \<Inter> {(c::num=>A->bool) m | m \<le> n}`) THEN
-  REWRITE_TAC[] THEN ANTS_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [GEN_TAC THEN MATCH_MP_TAC CLOSED_IN_INTERS THEN
-      ASM_SIMP_TAC[FORALL_IN_GSPEC; GSYM MEMBER_NOT_EMPTY] THEN
-      EXISTS_TAC `(c::num=>A->bool) n` THEN
-      MATCH_MP_TAC(SET_RULE `P n n \<Longrightarrow> c n \<in> {c m | P m n}`) THEN
-      REWRITE_TAC[LE_REFL];
-      GEN_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-      ONCE_REWRITE_TAC[SIMPLE_IMAGE_GEN] THEN
-      ASM_SIMP_TAC[FINITE_IMAGE; FINITE_NUMSEG_LE; \<subseteq>] THEN
-      ASM_REWRITE_TAC[FORALL_IN_IMAGE];
-      REPEAT STRIP_TAC THEN MATCH_MP_TAC INTERS_ANTIMONO THEN
-      ONCE_REWRITE_TAC[SIMPLE_IMAGE_GEN] THEN MATCH_MP_TAC IMAGE_SUBSET THEN
-      REWRITE_TAC[\<subseteq>; IN_ELIM_THM] THEN ASM_ARITH_TAC;
-      MATCH_MP_TAC FORALL_POS_MONO_1 THEN CONJ_TAC THENL
-       [MESON_TAC[MCBALL_SUBSET_CONCENTRIC; SUBSET_TRANS; REAL_LT_IMP_LE];
-        X_GEN_TAC `n::num` THEN EXISTS_TAC `n::num` THEN
-        FIRST_X_ASSUM(X_CHOOSE_TAC `a::A` \<circ> SPEC `n::num`) THEN
-        EXISTS_TAC `a::A` THEN FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP
-         (REWRITE_RULE[IMP_CONJ_ALT] SUBSET_TRANS)) THEN
-        MATCH_MP_TAC(SET_RULE
-         `P n n \<Longrightarrow> \<Inter> {c m | P m n} \<subseteq> c n`) THEN
-        REWRITE_TAC[LE_REFL]]];
-    REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; INTERS_GSPEC; IN_ELIM_THM; IN_UNIV] THEN
-    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `a::A` THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-    REWRITE_TAC[MESON[LE_REFL]
-     `(\<forall>n m::num. m \<le> n \<Longrightarrow> P m) \<longleftrightarrow> (\<forall>n. P n)`] THEN
-    REWRITE_TAC[SET_RULE `{x. P x} = {a} \<longleftrightarrow> P a \<and> (\<forall>b. P b \<Longrightarrow> a = b)`] THEN
-    STRIP_TAC THEN REWRITE_TAC[IN_INTERS] THEN
-    X_GEN_TAC `t::A=>bool` THEN DISCH_TAC] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC
-   `\<lambda>n. t \<inter> \<Inter> {(c::num=>A->bool) m | m \<le> n}`) THEN
-  REWRITE_TAC[GSYM INTERS_INSERT] THEN ANTS_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [GEN_TAC THEN MATCH_MP_TAC CLOSED_IN_INTERS THEN
-      REWRITE_TAC[FORALL_IN_INSERT; NOT_INSERT_EMPTY] THEN
-      ASM_SIMP_TAC[FORALL_IN_GSPEC; GSYM MEMBER_NOT_EMPTY];
-      GEN_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-      ASM_REWRITE_TAC[FINITE_INSERT; INSERT_SUBSET] THEN
-      ONCE_REWRITE_TAC[SIMPLE_IMAGE_GEN] THEN
-      ASM_SIMP_TAC[FINITE_IMAGE; FINITE_NUMSEG_LE; \<subseteq>] THEN
-      ASM_REWRITE_TAC[FORALL_IN_IMAGE];
-      REPEAT STRIP_TAC THEN MATCH_MP_TAC INTERS_ANTIMONO THEN
-      MATCH_MP_TAC(SET_RULE `S \<subseteq> t \<Longrightarrow> insert x S \<subseteq> insert x t`) THEN
-      ONCE_REWRITE_TAC[SIMPLE_IMAGE_GEN] THEN MATCH_MP_TAC IMAGE_SUBSET THEN
-      REWRITE_TAC[\<subseteq>; IN_ELIM_THM] THEN ASM_ARITH_TAC;
-      MATCH_MP_TAC FORALL_POS_MONO_1 THEN CONJ_TAC THENL
-       [MESON_TAC[MCBALL_SUBSET_CONCENTRIC; SUBSET_TRANS; REAL_LT_IMP_LE];
-        X_GEN_TAC `n::num` THEN EXISTS_TAC `n::num` THEN
-        FIRST_X_ASSUM(X_CHOOSE_TAC `x::A` \<circ> SPEC `n::num`) THEN
-        EXISTS_TAC `x::A` THEN FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP
-         (REWRITE_RULE[IMP_CONJ_ALT] SUBSET_TRANS)) THEN
-        MATCH_MP_TAC(SET_RULE
-         `P n n \<Longrightarrow> \<Inter>(t insert {c m | P m n}) \<subseteq> c n`) THEN
-        REWRITE_TAC[LE_REFL]]];
-    REWRITE_TAC[INTERS_INSERT] THEN
-    REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; INTERS_GSPEC; IN_ELIM_THM] THEN
-    REWRITE_TAC[IN_UNIV; IN_INTER; FORALL_AND_THM; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `b::A` THEN REWRITE_TAC[IN_ELIM_THM] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-    REWRITE_TAC[MESON[LE_REFL]
-     `(\<forall>n m::num. m \<le> n \<Longrightarrow> P m) \<longleftrightarrow> (\<forall>n. P n)`] THEN
-    ASM SET_TAC[]]);;
 
 lemma mcomplete_fip_sing:
    "        mcomplete \<longleftrightarrow>
