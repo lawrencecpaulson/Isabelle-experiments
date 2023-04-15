@@ -5698,14 +5698,43 @@ proof -
 qed
 
 lemma mcomplete_fip:
-   "        mcomplete \<longleftrightarrow>
-        \<forall>f. (\<forall>c. c \<in> f \<Longrightarrow> closedin mtopology c) \<and>
-            (\<forall>e>0.  \<exists>c a. c \<in> f \<and> c \<subseteq> mcball a e) \<and>
-            (!f'. finite f' \<and> f' \<subseteq> f \<Longrightarrow> \<not> (\<Inter> f' = {}))
-            \<Longrightarrow> \<not> (\<Inter> f = {})"
+   "mcomplete \<longleftrightarrow>
+        (\<forall>\<C>. (\<forall>C \<in> \<C>. closedin mtopology C) \<and>
+            (\<forall>e>0. \<exists>C a. C \<in> \<C> \<and> C \<subseteq> mcball a e) \<and>
+            (\<forall>\<F>. finite \<F> \<and> \<F> \<subseteq> \<C> \<longrightarrow> \<Inter> \<F> \<noteq> {})
+            \<longrightarrow> \<Inter> \<C> \<noteq> {})" (is "?lhs=?rhs")
+proof
+  assume L: ?lhs 
+  then
+  show ?rhs
+    apply (simp add: mcomplete_nest_sing)
+    apply safe
+    sorry
+next
+  assume R [rule_format]: ?rhs
+  show ?lhs
+    unfolding mcomplete_nest
+  proof (intro strip, elim conjE)
+    fix C :: "nat \<Rightarrow> 'a set"
+    assume clo: "\<forall>n. closedin mtopology (C n)"
+      and ne: "\<forall>n. C n \<noteq> {}"
+      and dec: "decseq C"
+      and cover: "\<forall>\<epsilon>>0. \<exists>n a. C n \<subseteq> mcball a \<epsilon>"
+    have "\<Inter> \<F> \<noteq> {}" if "finite \<F>" "\<F> \<subseteq> range C" for \<F>
+    proof -
+      show ?thesis
+        sorry
+    qed
+    with clo cover R [of "range C"] show "\<Inter> (range C) \<noteq> {}"
+      by force
+  qed
+qed
+
+
 oops
   GEN_TAC THEN EQ_TAC THENL
    [REWRITE_TAC[MCOMPLETE_NEST_SING];
+
     REWRITE_TAC[MCOMPLETE_NEST] THEN
     DISCH_TAC THEN X_GEN_TAC `c::num=>A->bool` THEN STRIP_TAC THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC `image (c::num=>A->bool) UNIV`) THEN
@@ -5720,6 +5749,9 @@ oops
      `\<forall>t. (t \<noteq> {}) \<and> t \<subseteq> S \<Longrightarrow> (S \<noteq> {})`) THEN
     EXISTS_TAC `(c::num=>A->bool) n` THEN
     ASM_SIMP_TAC[SUBSET_INTERS; FORALL_IN_GSPEC]] THEN
+
+
+
   DISCH_TAC THEN X_GEN_TAC `f:(A=>bool)->bool` THEN STRIP_TAC THEN
   FIRST_ASSUM(MP_TAC \<circ> GEN `n::num` \<circ> SPEC `inverse(Suc n)`) THEN
   REWRITE_TAC[REAL_LT_INV_EQ; RIGHT_EXISTS_AND_THM] THEN
