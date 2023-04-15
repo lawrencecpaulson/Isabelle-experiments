@@ -5720,13 +5720,16 @@ next
       and ne: "\<forall>n. C n \<noteq> {}"
       and dec: "decseq C"
       and cover: "\<forall>\<epsilon>>0. \<exists>n a. C n \<subseteq> mcball a \<epsilon>"
-    have "\<Inter> \<F> \<noteq> {}" if "finite \<F>" "\<F> \<subseteq> range C" for \<F>
+    have "\<Inter>(C ` N) \<noteq> {}" if "finite N" for N
     proof -
-      show ?thesis
-        sorry
+      obtain k where "N \<subseteq> {..k}"
+        using \<open>finite N\<close> finite_nat_iff_bounded_le by auto
+      with dec have "C k \<subseteq> \<Inter>(C ` N)" by (auto simp: decseq_def)
+      then show ?thesis
+        using ne by force
     qed
     with clo cover R [of "range C"] show "\<Inter> (range C) \<noteq> {}"
-      by force
+      by (metis (no_types, opaque_lifting) finite_subset_image image_iff UNIV_I)
   qed
 qed
 
@@ -5734,21 +5737,6 @@ qed
 oops
   GEN_TAC THEN EQ_TAC THENL
    [REWRITE_TAC[MCOMPLETE_NEST_SING];
-
-    REWRITE_TAC[MCOMPLETE_NEST] THEN
-    DISCH_TAC THEN X_GEN_TAC `c::num=>A->bool` THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `image (c::num=>A->bool) UNIV`) THEN
-    ASM_REWRITE_TAC[FORALL_IN_IMAGE; RIGHT_EXISTS_AND_THM] THEN
-    ASM_REWRITE_TAC[EXISTS_IN_IMAGE; FORALL_FINITE_SUBSET_IMAGE; IN_UNIV] THEN
-    REWRITE_TAC[GSYM SIMPLE_IMAGE; IN_UNIV; SUBSET_UNIV] THEN
-    DISCH_THEN MATCH_MP_TAC THEN X_GEN_TAC `k::num=>bool` THEN
-    DISCH_THEN(MP_TAC \<circ> ISPEC `\<lambda>n::num. n` \<circ>
-      MATCH_MP UPPER_BOUND_FINITE_SET) THEN
-    REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `n::num` THEN
-    DISCH_TAC THEN MATCH_MP_TAC(SET_RULE
-     `\<forall>t. (t \<noteq> {}) \<and> t \<subseteq> S \<Longrightarrow> (S \<noteq> {})`) THEN
-    EXISTS_TAC `(c::num=>A->bool) n` THEN
-    ASM_SIMP_TAC[SUBSET_INTERS; FORALL_IN_GSPEC]] THEN
 
 
 
