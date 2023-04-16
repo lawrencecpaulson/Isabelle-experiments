@@ -4991,6 +4991,9 @@ subsection\<open>More sequential characterizations in a metric space\<close>
 context Metric_space
 begin
 
+lemma submetric_empty [iff]: "submetric M d {}"
+  by (simp add: Metric_space_axioms submetric.intro submetric_axioms_def)
+
 definition decreasing_dist :: "(nat \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> bool"
     where "decreasing_dist \<sigma> x \<equiv> (\<forall>m n. m < n \<longrightarrow> d (\<sigma> n) x < d (\<sigma> m) x)"
 
@@ -5136,7 +5139,7 @@ lemma eventually_atin_sequentially_decreasing:
 
 end
 
-locale Metric_space12 =  M1: Metric_space M1 d1 + M2: Metric_space M2 d2 for M1 d1 M2 d2
+locale Metric_space12 = M1: Metric_space M1 d1 + M2: Metric_space M2 d2 for M1 d1 M2 d2
 begin
 
 lemma limit_atin_sequentially_within:
@@ -5333,6 +5336,9 @@ definition MCauchy :: "(nat \<Rightarrow> 'a) \<Rightarrow> bool"
 
 definition mcomplete
   where "mcomplete \<equiv> (\<forall>\<sigma>. MCauchy \<sigma> \<longrightarrow> (\<exists>x. limitin mtopology \<sigma> x sequentially))"
+
+lemma mcomplete_empty [iff]: "Metric_space.mcomplete {} d"
+  by (simp add: Metric_space.MCauchy_def Metric_space.mcomplete_def subspace)
 
 lemma MCauchy_imp_MCauchy_suffix: "MCauchy \<sigma> \<Longrightarrow> MCauchy (\<sigma> \<circ> (+)n)"
   unfolding MCauchy_def image_subset_iff comp_apply
@@ -5871,61 +5877,126 @@ lemma sequentially_closedin_mcomplete_imp_mcomplete:
 
 end
 
-lemma mcomplete_union:
-   "\<And>m S t::A=>bool.
-        mcomplete(submetric S) \<and> mcomplete(submetric t)
-        \<Longrightarrow> mcomplete(submetric (S \<union> t))"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[mcomplete; CAUCHY_IN_SUBMETRIC] THEN
-  DISCH_TAC THEN X_GEN_TAC `x::num=>A` THEN STRIP_TAC THEN
-  SUBGOAL_THEN
-   `UNIV = {n. (x::num=>A) n \<in> S} \<union> {n. (x::num=>A) n \<in> t}`
-   (MP_TAC \<circ> AP_TERM `finite:(num=>bool)->bool`)
-  THENL [ASM SET_TAC[]; REWRITE_TAC[FINITE_UNION]] THEN
-  REWRITE_TAC[REWRITE_RULE[infinite] num_INFINITE] THEN
-  REWRITE_TAC[DE_MORGAN_THM; GSYM infinite] THEN
-  DISCH_THEN(DISJ_CASES_THEN (MP_TAC \<circ> MATCH_MP INFINITE_ENUMERATE)) THEN
-  DISCH_THEN(X_CHOOSE_THEN `r::num=>num` STRIP_ASSUME_TAC) THENL
-   [FIRST_X_ASSUM(MP_TAC \<circ> CONJUNCT1); FIRST_X_ASSUM(MP_TAC \<circ> CONJUNCT2)] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `(x::num=>A) \<circ> (r::num=>num)`) THEN
-  ASM_SIMP_TAC[CAUCHY_IN_SUBSEQUENCE; o_THM] THEN
-  (ANTS_TAC THENL [ASM SET_TAC[]; MATCH_MP_TAC MONO_EXISTS]) THEN
-  X_GEN_TAC `l::A` THEN
-  ASM_REWRITE_TAC[MTOPOLOGY_SUBMETRIC; LIMIT_SUBTOPOLOGY] THEN
-  STRIP_TAC THEN ASM_REWRITE_TAC[IN_UNION; EVENTUALLY_TRUE] THEN
-  MATCH_MP_TAC CAUCHY_IN_CONVERGENT_SUBSEQUENCE THEN ASM_MESON_TAC[]);;
 
-lemma mcomplete_unions:
-   "finite S \<and> (\<forall>t. t \<in> S \<Longrightarrow> mcomplete(submetric t))
-         \<Longrightarrow> mcomplete(submetric (\<Union> S))"
-oops
-  GEN_TAC THEN
-  REWRITE_TAC[IMP_CONJ] THEN MATCH_MP_TAC FINITE_INDUCT_STRONG THEN
-  REWRITE_TAC[UNIONS_INSERT; UNIONS_0; SUB.MCOMPLETE_EMPTY_MSPACE;
-              IN_INSERT] THEN
-  MESON_TAC[MCOMPLETE_UNION]);;
+context Metric_space
+begin
 
-lemma mcomplete_inters:
-   "\<And>m S:(A=>bool)->bool.
-        finite S \<and> (S \<noteq> {}) \<and> (\<forall>t. t \<in> S \<Longrightarrow> mcomplete(submetric t))
-        \<Longrightarrow> mcomplete(submetric (\<Inter> S))"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[mcomplete; CAUCHY_IN_SUBMETRIC; IN_INTERS] THEN
-  REWRITE_TAC[MTOPOLOGY_SUBMETRIC; LIMIT_SUBTOPOLOGY; IN_INTERS] THEN
-  STRIP_TAC THEN X_GEN_TAC `x::num=>A` THEN STRIP_TAC THEN
-  ASM_SIMP_TAC[EVENTUALLY_TRUE] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY]) THEN
-  DISCH_THEN(X_CHOOSE_TAC `t::A=>bool`) THEN
-  FIRST_ASSUM(MP_TAC \<circ> SPEC `t::A=>bool`) THEN
-  ANTS_TAC THENL [ASM SET_TAC[]; DISCH_THEN(MP_TAC \<circ> SPEC `x::num=>A`)] THEN
-  ANTS_TAC THENL [ASM SET_TAC[]; MATCH_MP_TAC MONO_EXISTS] THEN
-  X_GEN_TAC `l::A` THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-  X_GEN_TAC `u::A=>bool` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `u::A=>bool`) THEN ASM_REWRITE_TAC[] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `x::num=>A`) THEN
-  ASM_SIMP_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `l':A` THEN
-  ASM_MESON_TAC[LIMIT_METRIC_UNIQUE; TRIVIAL_LIMIT_SEQUENTIALLY]);;
+lemma mcomplete_Un:
+  assumes A: "submetric M d A" "Metric_space.mcomplete A d" 
+      and B: "submetric M d B" "Metric_space.mcomplete B d"
+  shows   "submetric M d (A \<union> B)" "Metric_space.mcomplete (A \<union> B) d" 
+proof -
+  show "submetric M d (A \<union> B)"
+    by (meson assms le_sup_iff submetric_axioms_def submetric_def) 
+  then interpret MAB: Metric_space "A \<union> B" d
+    by (meson submetric.subset subspace)
+  interpret MA: Metric_space A d
+    by (meson A submetric.subset subspace)
+  interpret MB: Metric_space B d
+    by (meson B submetric.subset subspace)
+  show "Metric_space.mcomplete (A \<union> B) d"
+    unfolding MAB.mcomplete_def
+  proof (intro strip)
+    fix \<sigma>
+    assume "MAB.MCauchy \<sigma>"
+    then have "range \<sigma> \<subseteq> A \<union> B"
+      using MAB.MCauchy_def by blast
+    then have "UNIV \<subseteq> \<sigma> -` A \<union> \<sigma> -` B"
+      by blast
+    then consider "infinite (\<sigma> -` A)" | "infinite (\<sigma> -` B)"
+      using finite_subset by auto
+    then show "\<exists>x. limitin MAB.mtopology \<sigma> x sequentially"
+    proof cases
+      case 1
+      then obtain r where "strict_mono r" and r: "\<And>n::nat. r n \<in> \<sigma> -` A"
+        using infinite_enumerate by blast 
+      then have "MA.MCauchy (\<sigma> \<circ> r)"
+        using MA.MCauchy_def MAB.MCauchy_def MAB.MCauchy_subsequence \<open>MAB.MCauchy \<sigma>\<close> by auto
+      with A obtain x where "limitin MA.mtopology (\<sigma> \<circ> r) x sequentially"
+        using MA.mcomplete_def by blast
+      then have "limitin MAB.mtopology (\<sigma> \<circ> r) x sequentially"
+        by (metis MA.limit_metric_sequentially MAB.limit_metric_sequentially UnCI)
+      then show ?thesis
+        using MAB.MCauchy_convergent_subsequence \<open>MAB.MCauchy \<sigma>\<close> \<open>strict_mono r\<close> by blast
+    next
+      case 2
+      then obtain r where "strict_mono r" and r: "\<And>n::nat. r n \<in> \<sigma> -` B"
+        using infinite_enumerate by blast 
+      then have "MB.MCauchy (\<sigma> \<circ> r)"
+        using MB.MCauchy_def MAB.MCauchy_def MAB.MCauchy_subsequence \<open>MAB.MCauchy \<sigma>\<close> by auto
+      with B obtain x where "limitin MB.mtopology (\<sigma> \<circ> r) x sequentially"
+        using MB.mcomplete_def by blast
+      then have "limitin MAB.mtopology (\<sigma> \<circ> r) x sequentially"
+        by (metis MB.limit_metric_sequentially MAB.limit_metric_sequentially UnCI)
+      then show ?thesis
+        using MAB.MCauchy_convergent_subsequence \<open>MAB.MCauchy \<sigma>\<close> \<open>strict_mono r\<close> by blast
+    qed
+  qed
+qed
+
+lemma mcomplete_Union:
+  assumes "finite \<S>"
+    and "\<And>A. A \<in> \<S> \<Longrightarrow> submetric M d A" "\<And>A. A \<in> \<S> \<Longrightarrow> Metric_space.mcomplete A d"
+  shows   "submetric M d (\<Union>\<S>)" "Metric_space.mcomplete (\<Union>\<S>) d" 
+  using assms
+  by (induction rule: finite_induct) (auto simp: mcomplete_Un)
+
+lemma mcomplete_Inter:
+  assumes "finite \<S>" "\<S> \<noteq> {}"
+    and sub: "\<And>A. A \<in> \<S> \<Longrightarrow> submetric M d A" 
+    and comp: "\<And>A. A \<in> \<S> \<Longrightarrow> Metric_space.mcomplete A d"
+  shows "submetric M d (\<Inter>\<S>)" "Metric_space.mcomplete (\<Inter>\<S>) d"
+proof -
+  show "submetric M d (\<Inter>\<S>)"
+    using assms unfolding submetric_def submetric_axioms_def
+    by (metis Inter_lower equals0I inf.orderE le_inf_iff) 
+  then interpret MS: submetric M d "\<Inter>\<S>" 
+    by (meson submetric.subset subspace)
+  show "Metric_space.mcomplete (\<Inter>\<S>) d"
+    unfolding MS.sub.mcomplete_def
+  proof (intro strip)
+    fix \<sigma>
+    assume "MS.sub.MCauchy \<sigma>"
+    then have "range \<sigma> \<subseteq> \<Inter>\<S>"
+      using MS.MCauchy_submetric by blast
+    obtain A where "A \<in> \<S>" and A: "Metric_space.mcomplete A d"
+      using assms by blast
+    then have "range \<sigma> \<subseteq> A"
+      using \<open>range \<sigma> \<subseteq> \<Inter>\<S>\<close> by blast
+    interpret MA: Metric_space A d
+      by (meson \<open>A \<in> \<S>\<close> sub submetric.subset subspace)
+    have "MCauchy \<sigma>"
+      using MS.MCauchy_submetric \<open>MS.sub.MCauchy \<sigma>\<close> by blast
+    then obtain x where x: "limitin MA.mtopology \<sigma> x sequentially"
+      by (metis A MA.MCauchy_def MA.mcomplete_alt MCauchy_def \<open>range \<sigma> \<subseteq> A\<close>)
+    moreover have "x \<in> \<Inter>\<S>"
+    proof clarsimp
+      fix U
+      assume "U \<in> \<S>"
+      interpret MU: Metric_space U d
+        by (meson \<open>U \<in> \<S>\<close> sub submetric.subset subspace)
+      have "range \<sigma> \<subseteq> U"
+        using \<open>U \<in> \<S>\<close> \<open>range \<sigma> \<subseteq> \<Inter> \<S>\<close> by blast
+      moreover have "Metric_space.mcomplete U d"
+        by (simp add: \<open>U \<in> \<S>\<close> comp)
+      ultimately obtain x' where x': "limitin MU.mtopology \<sigma> x' sequentially"
+        using MCauchy_def MU.MCauchy_def MU.mcomplete_alt \<open>MCauchy \<sigma>\<close> by meson 
+      then have "x' = x"
+        by (meson MA.MCauchy_interleaving MCauchy_interleaving MU.MCauchy_interleaving \<open>A \<in> \<S>\<close> \<open>U \<in> \<S>\<close> x \<open>range \<sigma> \<subseteq> A\<close> \<open>range \<sigma> \<subseteq> U\<close> assms(3) limitin_metric_unique submetric.MCauchy_submetric trivial_limit_at_top_linorder)
+      then show "x \<in> U"
+        using MU.limitin_mspace x' by blast
+    qed
+    ultimately show "\<exists>x. limitin MS.sub.mtopology \<sigma> x sequentially"
+      using \<open>range \<sigma> \<subseteq> \<Inter> \<S>\<close> range_subsetD 
+      apply (subst MS.limitin_submetric_iff)
+      apply (rule_tac x="x" in exI)
+      apply (intro conjI)
+      apply blast
+      apply fastforce
+      by (metis MA.limit_metric_sequentially MS.subset limit_metric_sequentially subsetD)
+  qed
+qed
+
 
 lemma mcomplete_inter:
    "\<And>m S t::A=>bool.
