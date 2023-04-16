@@ -4881,10 +4881,7 @@ lemma (in Metric_space) limitin_mspace:
   using limitin_topspace by fastforce
 
 lemma (in Metric_space) limitin_metric_unique:
-   "\<not> trivial_limit F \<and>
-     limitin mtopology f l1 F \<and>
-     limitin mtopology f l2 F
-     \<Longrightarrow> l1 = l2"
+   "\<lbrakk>limitin mtopology f l1 F; limitin mtopology f l2 F; F \<noteq> bot\<rbrakk> \<Longrightarrow> l1 = l2"
   by (meson Hausdorff_space_mtopology limitin_Hausdorff_unique)
 
 lemma (in Metric_space) limitin_metric:
@@ -5540,7 +5537,7 @@ qed
 
 lemma MCauchy_interleaving:
    "MCauchy (\<lambda>n. if even n then \<sigma>(n div 2) else a) \<longleftrightarrow>
-         range \<sigma> \<subseteq> M \<and> limitin mtopology \<sigma> a sequentially" (is "?lhs=?rhs")
+    range \<sigma> \<subseteq> M \<and> limitin mtopology \<sigma> a sequentially"  (is "?lhs=?rhs")
 proof -
   have "?lhs \<longleftrightarrow> (MCauchy \<sigma> \<and> a \<in> M \<and> (\<lambda>n. d (\<sigma> n) a) \<longlonglongrightarrow> 0)"
     by (simp add: MCauchy_interleaving_gen [where y = "\<lambda>n. a"])
@@ -5963,99 +5960,78 @@ proof -
       using assms by blast
     then have "range \<sigma> \<subseteq> A"
       using \<open>range \<sigma> \<subseteq> \<Inter>\<S>\<close> by blast
-    interpret MA: Metric_space A d
+    interpret SA: submetric M d A
       by (meson \<open>A \<in> \<S>\<close> sub submetric.subset subspace)
     have "MCauchy \<sigma>"
       using MS.MCauchy_submetric \<open>MS.sub.MCauchy \<sigma>\<close> by blast
-    then obtain x where x: "limitin MA.mtopology \<sigma> x sequentially"
-      by (metis A MA.MCauchy_def MA.mcomplete_alt MCauchy_def \<open>range \<sigma> \<subseteq> A\<close>)
-    moreover have "x \<in> \<Inter>\<S>"
-    proof clarsimp
-      fix U
-      assume "U \<in> \<S>"
-      interpret MU: Metric_space U d
-        by (meson \<open>U \<in> \<S>\<close> sub submetric.subset subspace)
-      have "range \<sigma> \<subseteq> U"
-        using \<open>U \<in> \<S>\<close> \<open>range \<sigma> \<subseteq> \<Inter> \<S>\<close> by blast
-      moreover have "Metric_space.mcomplete U d"
-        by (simp add: \<open>U \<in> \<S>\<close> comp)
-      ultimately obtain x' where x': "limitin MU.mtopology \<sigma> x' sequentially"
-        using MCauchy_def MU.MCauchy_def MU.mcomplete_alt \<open>MCauchy \<sigma>\<close> by meson 
-      then have "x' = x"
-        by (meson MA.MCauchy_interleaving MCauchy_interleaving MU.MCauchy_interleaving \<open>A \<in> \<S>\<close> \<open>U \<in> \<S>\<close> x \<open>range \<sigma> \<subseteq> A\<close> \<open>range \<sigma> \<subseteq> U\<close> assms(3) limitin_metric_unique submetric.MCauchy_submetric trivial_limit_at_top_linorder)
-      then show "x \<in> U"
-        using MU.limitin_mspace x' by blast
-    qed
-    ultimately show "\<exists>x. limitin MS.sub.mtopology \<sigma> x sequentially"
-      using \<open>range \<sigma> \<subseteq> \<Inter> \<S>\<close> range_subsetD 
-      apply (subst MS.limitin_submetric_iff)
+    then obtain x where x: "limitin SA.sub.mtopology \<sigma> x sequentially"
+      by (metis A SA.sub.MCauchy_def SA.sub.mcomplete_alt MCauchy_def \<open>range \<sigma> \<subseteq> A\<close>)
+    show "\<exists>x. limitin MS.sub.mtopology \<sigma> x sequentially"
       apply (rule_tac x="x" in exI)
-      apply (intro conjI)
-      apply blast
-      apply fastforce
-      by (metis MA.limit_metric_sequentially MS.subset limit_metric_sequentially subsetD)
+      unfolding MS.limitin_submetric_iff
+    proof (intro conjI)
+      show "x \<in> \<Inter> \<S>"
+      proof clarsimp
+        fix U
+        assume "U \<in> \<S>"
+        interpret SU: submetric M d U 
+          by (meson \<open>U \<in> \<S>\<close> sub submetric.subset subspace)
+        have "range \<sigma> \<subseteq> U"
+          using \<open>U \<in> \<S>\<close> \<open>range \<sigma> \<subseteq> \<Inter> \<S>\<close> by blast
+        moreover have "Metric_space.mcomplete U d"
+          by (simp add: \<open>U \<in> \<S>\<close> comp)
+        ultimately obtain x' where x': "limitin SU.sub.mtopology \<sigma> x' sequentially"
+          using MCauchy_def SU.sub.MCauchy_def SU.sub.mcomplete_alt \<open>MCauchy \<sigma>\<close> by meson 
+        have "x' = x"
+        proof (intro limitin_metric_unique)
+          show "limitin mtopology \<sigma> x' sequentially"
+            by (meson SU.submetric_axioms submetric.limitin_submetric_iff x')
+          show "limitin mtopology \<sigma> x sequentially"
+            by (meson SA.submetric_axioms submetric.limitin_submetric_iff x)
+        qed auto
+        then show "x \<in> U"
+          using SU.sub.limitin_mspace x' by blast
+      qed
+      show "\<forall>\<^sub>F n in sequentially. \<sigma> n \<in> \<Inter>\<S>"
+        by (meson \<open>range \<sigma> \<subseteq> \<Inter> \<S>\<close> always_eventually range_subsetD)
+      show "limitin mtopology \<sigma> x sequentially"
+        by (meson SA.submetric_axioms submetric.limitin_submetric_iff x)
+    qed
   qed
 qed
 
 
-lemma mcomplete_inter:
-   "\<And>m S t::A=>bool.
-        mcomplete(submetric S) \<and> mcomplete(submetric t)
-        \<Longrightarrow> mcomplete(submetric (S \<inter> t))"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM INTERS_2] THEN
-  MATCH_MP_TAC MCOMPLETE_INTERS THEN
-  ASM_REWRITE_TAC[FORALL_IN_INSERT; FINITE_INSERT; NOT_INSERT_EMPTY] THEN
-  REWRITE_TAC[FINITE_EMPTY; NOT_IN_EMPTY]);;
+lemma mcomplete_Int:
+  assumes A: "submetric M d A" "Metric_space.mcomplete A d" 
+      and B: "submetric M d B" "Metric_space.mcomplete B d"
+    shows   "submetric M d (A \<inter> B)" "Metric_space.mcomplete (A \<inter> B) d"
+  using mcomplete_Inter [of "{A,B}"] assms by force+
 
 
 subsection\<open>Totally bounded subsets of metric spaces\<close>
 
 
-let totally_bounded_in = new_definition
- `totally_bounded_in m (S::A=>bool) \<longleftrightarrow>
-        \<forall>e. 0 < e
-            \<Longrightarrow> \<exists>k. finite k \<and> k \<subseteq> S \<and>
-                    S \<subseteq> \<Union> { mball x e | x \<in> k}`;;
+definition totally_bounded_in 
+  where "totally_bounded_in S \<equiv>
+        \<forall>e>0. \<exists>K. finite K \<and> K \<subseteq> S \<and> S \<subseteq> (\<Union>x\<in>K. mball x e)"
 
-lemma totally_bounded_in_empty:
-   "totally_bounded_in m {}"
-oops
-  REWRITE_TAC[totally_bounded_in; EMPTY_SUBSET; SUBSET_EMPTY] THEN
-  MESON_TAC[FINITE_EMPTY]);;
+lemma totally_bounded_in_empty [iff]: "totally_bounded_in {}"
+by (simp add: totally_bounded_in_def)
 
 lemma finite_imp_totally_bounded_in:
-   "\<And>m S::A=>bool. finite S \<and> S \<subseteq> M \<Longrightarrow> totally_bounded_in m S"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
-  X_GEN_TAC `e::real` THEN DISCH_TAC THEN EXISTS_TAC `S::A=>bool` THEN
-  ASM_REWRITE_TAC[SUBSET_REFL] THEN MATCH_MP_TAC(SET_RULE
-   `(\<forall>x. x \<in> S \<Longrightarrow> x \<in> f x) \<Longrightarrow> S \<subseteq> \<Union> {f x | x \<in> S}`) THEN
-  ASM_REWRITE_TAC[CENTRE_IN_MBALL_EQ; GSYM \<subseteq>]);;
+   "\<lbrakk>finite S; S \<subseteq> M\<rbrakk> \<Longrightarrow> totally_bounded_in S"
+  by (auto simp: totally_bounded_in_def)
 
-lemma totally_bounded_in_imp_subset:
-   "\<And>m S::A=>bool. totally_bounded_in m S \<Longrightarrow> S \<subseteq> M"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `1`) THEN REWRITE_TAC[REAL_LT_01] THEN
-  STRIP_TAC THEN FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP
-   (REWRITE_RULE[IMP_CONJ] SUBSET_TRANS)) THEN
-  REWRITE_TAC[UNIONS_SUBSET; FORALL_IN_GSPEC; MBALL_SUBSET_MSPACE]);;
+lemma totally_bounded_in_imp_subset: "totally_bounded_in S \<Longrightarrow> S \<subseteq> M"
+  by (force simp: totally_bounded_in_def intro!: zero_less_one)
 
-lemma totally_bounded_in_sing:
-   "totally_bounded_in m {x} \<longleftrightarrow> x \<in> M"
-oops
-  REPEAT GEN_TAC THEN EQ_TAC THEN
-  SIMP_TAC[FINITE_IMP_TOTALLY_BOUNDED_IN; FINITE_SING; SING_SUBSET] THEN
-  REWRITE_TAC[GSYM SING_SUBSET; TOTALLY_BOUNDED_IN_IMP_SUBSET]);;
+lemma totally_bounded_in_sing [simp]:
+   "totally_bounded_in {x} \<longleftrightarrow> x \<in> M"
+  by (meson empty_subsetI finite.simps finite_imp_totally_bounded_in insert_subset totally_bounded_in_imp_subset)
 
 lemma totally_bounded_in_sequentially:
-   "\<And>m S::A=>bool.
-        totally_bounded_in m S \<longleftrightarrow>
-        S \<subseteq> M \<and>
-        \<forall>x::num=>A. (\<forall>n. x n \<in> S)
-                   \<Longrightarrow> \<exists>r. strict_mono r \<and>
-                           MCauchy (x \<circ> r)"
+   "totally_bounded_in S \<longleftrightarrow>
+    S \<subseteq> M \<and> (\<forall>\<sigma>. range \<sigma> \<subseteq> S \<longrightarrow> (\<exists>r. strict_mono r \<and> MCauchy (\<sigma> \<circ> r)))"
 oops
   REPEAT GEN_TAC THEN
   ASM_CASES_TAC `(S::A=>bool) \<subseteq> M` THENL
@@ -6145,14 +6121,14 @@ oops
 
 lemma totally_bounded_in_subset:
    "\<And>m S t::A=>bool.
-     totally_bounded_in m S \<and> t \<subseteq> S \<Longrightarrow> totally_bounded_in m t"
+     totally_bounded_in S \<and> t \<subseteq> S \<Longrightarrow> totally_bounded_in t"
 oops
   REWRITE_TAC[TOTALLY_BOUNDED_IN_SEQUENTIALLY] THEN SET_TAC[]);;
 
 lemma totally_bounded_in_union:
    "\<And>m S t::A=>bool.
-        totally_bounded_in m S \<and> totally_bounded_in m t
-        \<Longrightarrow> totally_bounded_in m (S \<union> t)"
+        totally_bounded_in S \<and> totally_bounded_in t
+        \<Longrightarrow> totally_bounded_in (S \<union> t)"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
   REWRITE_TAC[AND_FORALL_THM] THEN MATCH_MP_TAC MONO_FORALL THEN
@@ -6165,8 +6141,8 @@ oops
 
 lemma totally_bounded_in_unions:
    "\<And>m f:(A=>bool)->bool.
-        finite f \<and> (\<forall>S. S \<in> f \<Longrightarrow> totally_bounded_in m S)
-        \<Longrightarrow> totally_bounded_in m (\<Union> f)"
+        finite f \<and> (\<forall>S. S \<in> f \<Longrightarrow> totally_bounded_in S)
+        \<Longrightarrow> totally_bounded_in (\<Union> f)"
 oops
   GEN_TAC THEN REWRITE_TAC[IMP_CONJ] THEN
   MATCH_MP_TAC FINITE_INDUCT_STRONG THEN
@@ -6174,7 +6150,7 @@ oops
   MESON_TAC[TOTALLY_BOUNDED_IN_UNION]);;
 
 lemma totally_bounded_in_imp_mbounded:
-   "\<And>m S::A=>bool. totally_bounded_in m S \<Longrightarrow> mbounded S"
+   "\<And>m S::A=>bool. totally_bounded_in S \<Longrightarrow> mbounded S"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
   DISCH_THEN(MP_TAC \<circ> SPEC `1`) THEN
@@ -6187,7 +6163,7 @@ oops
 
 lemma totally_bounded_in_submetric:
    "\<And>m S t::A=>bool.
-        totally_bounded_in m S \<and> S \<subseteq> t
+        totally_bounded_in S \<and> S \<subseteq> t
         \<Longrightarrow> totally_bounded_in (submetric t) S"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
@@ -6200,7 +6176,7 @@ oops
 
 lemma totally_bounded_in_absolute:
    "\<And>m S::A=>bool.
-        totally_bounded_in (submetric S) S \<longleftrightarrow> totally_bounded_in m S"
+        totally_bounded_in (submetric S) S \<longleftrightarrow> totally_bounded_in S"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
   SIMP_TAC[UNIONS_GSPEC; \<subseteq>; IN_ELIM_THM] THEN EQ_TAC THEN STRIP_TAC THEN
@@ -6214,8 +6190,8 @@ oops
 
 lemma totally_bounded_in_closure_of:
    "\<And>m S::A=>bool.
-        totally_bounded_in m S
-        \<Longrightarrow> totally_bounded_in m (mtopology closure_of S)"
+        totally_bounded_in S
+        \<Longrightarrow> totally_bounded_in (mtopology closure_of S)"
 oops
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
   DISCH_THEN(MP_TAC \<circ> SPEC `M \<inter> S::A=>bool` \<circ>
@@ -6247,8 +6223,8 @@ oops
 lemma totally_bounded_in_closure_of_eq:
    "\<And>m S::A=>bool.
         S \<subseteq> M
-        \<Longrightarrow> (totally_bounded_in m (mtopology closure_of S) \<longleftrightarrow>
-             totally_bounded_in m S)"
+        \<Longrightarrow> (totally_bounded_in (mtopology closure_of S) \<longleftrightarrow>
+             totally_bounded_in S)"
 oops
   REPEAT STRIP_TAC THEN EQ_TAC THEN
   REWRITE_TAC[TOTALLY_BOUNDED_IN_CLOSURE_OF] THEN
@@ -6257,7 +6233,7 @@ oops
 
 lemma totally_bounded_in_cauchy_sequence:
    "\<And>m x::num=>A.
-        MCauchy x \<Longrightarrow> totally_bounded_in m (image x UNIV)"
+        MCauchy x \<Longrightarrow> totally_bounded_in (image x UNIV)"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[MCauchy; totally_bounded_in] THEN
   STRIP_TAC THEN X_GEN_TAC `e::real` THEN DISCH_TAC THEN
@@ -6553,7 +6529,7 @@ oops
       ASM_MESON_TAC[REAL_LT_TRANS; MDIST_SYM]]]);;
 
 lemma compact_in_imp_totally_bounded_in:
-   "\<And>m (s::A=>bool). compactin mtopology s \<Longrightarrow> totally_bounded_in m s"
+   "\<And>m (s::A=>bool). compactin mtopology s \<Longrightarrow> totally_bounded_in s"
 oops
   REWRITE_TAC[totally_bounded_in] THEN
   MESON_TAC[COMPACT_IN_IMP_TOTALLY_BOUNDED_IN_EXPLICIT]);;
@@ -6615,7 +6591,7 @@ oops
 
 lemma compact_space_eq_mcomplete_totally_bounded_in:
    "        compact_spacemtopology \<longleftrightarrow>
-        mcomplete \<and> totally_bounded_in m (M)"
+        mcomplete \<and> totally_bounded_in (M)"
 oops
   GEN_TAC THEN EQ_TAC THEN
   SIMP_TAC[COMPACT_SPACE_IMP_MCOMPLETE; COMPACT_IN_IMP_TOTALLY_BOUNDED_IN;
@@ -6636,7 +6612,7 @@ oops
 lemma compact_closure_of_imp_totally_bounded_in:
    "\<And>m s::A=>bool.
       s \<subseteq> M \<and> compactin mtopology (mtopology closure_of s)
-      \<Longrightarrow> totally_bounded_in m s"
+      \<Longrightarrow> totally_bounded_in s"
 oops
   REPEAT STRIP_TAC THEN MATCH_MP_TAC TOTALLY_BOUNDED_IN_SUBSET THEN
   EXISTS_TAC `mtopology closure_of s::A=>bool` THEN
@@ -6646,7 +6622,7 @@ oops
 lemma totally_bounded_in_eq_compact_closure_of:
    "\<And>m s::A=>bool.
         mcomplete
-        \<Longrightarrow> (totally_bounded_in m s \<longleftrightarrow>
+        \<Longrightarrow> (totally_bounded_in s \<longleftrightarrow>
              s \<subseteq> M \<and>
              compactin mtopology (mtopology closure_of s))"
 oops
@@ -16094,7 +16070,7 @@ oops
 lemma totally_bounded_in_cross:
    "\<And>(m1::A metric) (m2::B metric) s t.
        totally_bounded_in (prod_metric m1 m2) (s \<times> t) \<longleftrightarrow>
-       s = {} \<or> t = {} \<or> totally_bounded_in m1 s \<and> totally_bounded_in m2 t"
+       s = {} \<or> t = {} \<or> totally_bounded_in1 s \<and> totally_bounded_in2 t"
 oops
   REPEAT GEN_TAC THEN MAP_EVERY ASM_CASES_TAC
    [`s::A=>bool = {}`; `t::B=>bool = {}`] THEN
@@ -16134,8 +16110,8 @@ oops
 lemma totally_bounded_in_prod_metric:
    "\<And>(m1::A metric) (m2::B metric) u.
         totally_bounded_in (prod_metric m1 m2) u \<longleftrightarrow>
-        totally_bounded_in m1 (fst ` u) \<and>
-        totally_bounded_in m2 (snd ` u)"
+        totally_bounded_in1 (fst ` u) \<and>
+        totally_bounded_in2 (snd ` u)"
 oops
   REPEAT GEN_TAC THEN  EQ_TAC THENL
    [REWRITE_TAC[TOTALLY_BOUNDED_IN_SEQUENTIALLY] THEN
@@ -16573,7 +16549,7 @@ oops
 
 lemma cauchy_imp_uniformly_continuous_map:
    "\<And>m1 m2 f::A=>B.
-        totally_bounded_in m1 (mspace m1) \<and>
+        totally_bounded_in1 (mspace m1) \<and>
         cauchy_continuous_map m1 m2 f
         \<Longrightarrow> uniformly_continuous_map m1 m2 f"
 oops
@@ -16646,7 +16622,7 @@ oops
 
 lemma cauchy_eq_uniformly_continuous_map:
    "\<And>m1 m2 f::A=>B.
-        totally_bounded_in m1 (mspace m1)
+        totally_bounded_in1 (mspace m1)
         \<Longrightarrow> (cauchy_continuous_map m1 m2 f \<longleftrightarrow>
              uniformly_continuous_map m1 m2 f)"
 oops
@@ -16769,8 +16745,8 @@ oops
 
 lemma totally_bounded_in_cauchy_continuous_image:
    "\<And>m1 m2 f s.
-        cauchy_continuous_map m1 m2 f \<and> totally_bounded_in m1 s
-        \<Longrightarrow> totally_bounded_in m2 (f ` s)"
+        cauchy_continuous_map m1 m2 f \<and> totally_bounded_in1 s
+        \<Longrightarrow> totally_bounded_in2 (f ` s)"
 oops
   REPEAT GEN_TAC THEN
   REWRITE_TAC[TOTALLY_BOUNDED_IN_SEQUENTIALLY] THEN STRIP_TAC THEN
