@@ -5680,10 +5680,10 @@ proof -
         using inM l' by blast
       obtain n a where na: "C n \<subseteq> mcball a (d l l' / 3)"
         using inM \<open>l \<in> M\<close> l' \<open>l' \<noteq> l\<close> cover by force
-      then have "d a l \<le> (d l l' / 3)" "d a l' \<le> (d l l' / 3)"
+      then have "d a l \<le> (d l l' / 3)" "d a l' \<le> (d l l' / 3)" "a \<in> M"
         using l l' na in_mcball by auto
       then have "d l l' \<le> (d l l' / 3) + (d l l' / 3)"
-        by (smt (verit, ccfv_threshold) \<open>l' \<in> M\<close> commute in_mcball l na subset_iff triangle)
+        using \<open>l \<in> M\<close> \<open>l' \<in> M\<close> mdist_reverse_triangle by fastforce
       then show False
         using nonneg [of l l'] \<open>l' \<noteq> l\<close> \<open>l \<in> M\<close> \<open>l' \<in> M\<close> zero by force
     qed
@@ -5699,9 +5699,9 @@ qed
 
 lemma mcomplete_fip:
    "mcomplete \<longleftrightarrow>
-        (\<forall>\<C>. (\<forall>C \<in> \<C>. closedin mtopology C) \<and>
-             (\<forall>e>0. \<exists>C a. C \<in> \<C> \<and> C \<subseteq> mcball a e) \<and> (\<forall>\<F>. finite \<F> \<and> \<F> \<subseteq> \<C> \<longrightarrow> \<Inter> \<F> \<noteq> {})
-            \<longrightarrow> \<Inter> \<C> \<noteq> {})" 
+    (\<forall>\<C>. (\<forall>C \<in> \<C>. closedin mtopology C) \<and>
+         (\<forall>e>0. \<exists>C a. C \<in> \<C> \<and> C \<subseteq> mcball a e) \<and> (\<forall>\<F>. finite \<F> \<and> \<F> \<subseteq> \<C> \<longrightarrow> \<Inter> \<F> \<noteq> {})
+        \<longrightarrow> \<Inter> \<C> \<noteq> {})" 
    (is "?lhs = ?rhs")
 proof
   assume L: ?lhs 
@@ -5785,41 +5785,59 @@ qed
 
 
 lemma mcomplete_fip_sing:
-   "        mcomplete \<longleftrightarrow>
-        \<forall>f. (\<forall>c. c \<in> f \<Longrightarrow> closedin mtopology c) \<and>
-            (\<forall>e>0.  \<exists>c a. c \<in> f \<and> c \<subseteq> mcball a e) \<and>
-            (!f'. finite f' \<and> f' \<subseteq> f \<Longrightarrow> \<not> (\<Inter> f' = {}))
-            \<Longrightarrow> \<exists>l. l \<in> M \<and> \<Inter> f = {l}"
-oops
-  GEN_TAC THEN REWRITE_TAC[MCOMPLETE_FIP] THEN
-  EQ_TAC THEN MATCH_MP_TAC MONO_FORALL THEN
-  X_GEN_TAC `f:(A=>bool)->bool` THEN
-  DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[GSYM MEMBER_NOT_EMPTY] THEN MATCH_MP_TAC MONO_EXISTS THEN
-  X_GEN_TAC `l::A` THEN STRIP_TAC THEN ASM_REWRITE_TAC[IN_SING] THEN
-  ASM_CASES_TAC `f:(A=>bool)->bool = {}` THENL
-   [ASM_MESON_TAC[MEMBER_NOT_EMPTY; REAL_LT_01]; ALL_TAC] THEN
-  SUBGOAL_THEN `\<forall>a::A. a \<in> \<Inter> f \<Longrightarrow> a \<in> M`
-  ASSUME_TAC THENL
-   [REWRITE_TAC[INTERS_GSPEC; IN_ELIM_THM; IN_UNIV] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[closedin; TOPSPACE_MTOPOLOGY]) THEN
-    ASM SET_TAC[];
-    ASM_SIMP_TAC[]] THEN
-  MATCH_MP_TAC(SET_RULE
-   `l \<in> S \<and> (!l'. \<not> (l' = l) \<Longrightarrow> \<not> (l' \<in> S)) \<Longrightarrow> S = {l}`) THEN
-  ASM_REWRITE_TAC[] THEN X_GEN_TAC `l':A` THEN REPEAT DISCH_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> SPEC `d l::A l' / 3`) THEN ANTS_TAC THENL
-   [ASM_MESON_TAC[MDIST_POS_EQ; REAL_ARITH `0 < e / 3 \<longleftrightarrow> 0 < e`];
-    REWRITE_TAC[NOT_EXISTS_THM]] THEN
-  MAP_EVERY X_GEN_TAC [`c::A=>bool`; `a::A`] THEN
-  REWRITE_TAC[\<subseteq>; IN_MCBALL] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-  DISCH_THEN(fun th -> MP_TAC(SPEC `l':A` th) THEN MP_TAC(SPEC `l::A` th)) THEN
-  MATCH_MP_TAC(TAUT
-   `(p \<and> p') \<and> \<not> (q \<and> q') \<Longrightarrow> (p \<Longrightarrow> q) \<Longrightarrow> (p' \<Longrightarrow> q') \<Longrightarrow> False`) THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  UNDISCH_TAC `\<not> (l':A = l)` THEN CONV_TAC METRIC_ARITH);;`
+   "mcomplete \<longleftrightarrow>
+    (\<forall>\<C>. (\<forall>C\<in>\<C>. closedin mtopology C) \<and>
+     (\<forall>e>0. \<exists>c a. c \<in> \<C> \<and> c \<subseteq> mcball a e) \<and>
+     (\<forall>\<F>. finite \<F> \<and> \<F> \<subseteq> \<C> \<longrightarrow> \<Inter> \<F> \<noteq> {}) \<longrightarrow>
+     (\<exists>l. l \<in> M \<and> \<Inter> \<C> = {l}))"
+   (is "?lhs = ?rhs")
+proof
+  have *: "l \<in> M" "\<Inter> \<C> = {l}"
+    if clo: "Ball \<C> (closedin mtopology)"
+      and cover: "\<forall>e>0. \<exists>C a. C \<in> \<C> \<and> C \<subseteq> mcball a e"
+      and fin: "\<forall>\<F>. finite \<F> \<longrightarrow> \<F> \<subseteq> \<C> \<longrightarrow> \<Inter> \<F> \<noteq> {}"
+      and l: "l \<in> \<Inter> \<C>"
+    for \<C> :: "'a set set" and l
+  proof -
+    show "l \<in> M"
+      by (meson Inf_lower2 clo cover gt_ex metric_closedin_iff_sequentially_closed subsetD that(4))
+    show  "\<Inter> \<C> = {l}"
+    proof (cases "\<C> = {}")
+      case True
+      then show ?thesis
+        using cover mbounded_pos by auto
+    next
+      case False
+      have CM: "\<And>a. a \<in> \<Inter>\<C> \<Longrightarrow> a \<in> M"
+        using False clo closedin_subset by fastforce
+      have "l' \<notin> \<Inter> \<C>" if "l' \<noteq> l" for l'
+      proof 
+        assume l': "l' \<in> \<Inter> \<C>"
+        with CM have "l' \<in> M" by blast
+        with that \<open>l \<in> M\<close> have gt0: "0 < d l l'"
+          by simp
+        then obtain C a where "C \<in> \<C>" and C: "C \<subseteq> mcball a (d l l' / 3)"
+          using cover [rule_format, of "d l l' / 3"] by auto
+        then have "d a l \<le> (d l l' / 3)" "d a l' \<le> (d l l' / 3)" "a \<in> M"
+          using l l' in_mcball by auto
+        then have "d l l' \<le> (d l l' / 3) + (d l l' / 3)"
+          using \<open>l \<in> M\<close> \<open>l' \<in> M\<close> mdist_reverse_triangle by fastforce
+        with gt0 show False by auto
+      qed
+      then show ?thesis
+        using l by fastforce
+    qed
+  qed
+  assume L: ?lhs
+  with * show ?rhs
+    unfolding mcomplete_fip imp_conjL ex_in_conv [symmetric]
+    by (elim all_forward imp_forward2 asm_rl) (blast intro:  elim: )
+next
+  assume ?rhs then show ?lhs
+    unfolding mcomplete_fip by (force elim!: all_forward)
+qed
 
+end
 
 context submetric
 begin 
