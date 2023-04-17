@@ -6031,41 +6031,66 @@ lemma totally_bounded_in_sing [simp]:
 
 lemma totally_bounded_in_sequentially:
    "totally_bounded_in S \<longleftrightarrow>
-    S \<subseteq> M \<and> (\<forall>\<sigma>. range \<sigma> \<subseteq> S \<longrightarrow> (\<exists>r. strict_mono r \<and> MCauchy (\<sigma> \<circ> r)))"
+    S \<subseteq> M \<and> (\<forall>\<sigma>::nat \<Rightarrow> 'a. range \<sigma> \<subseteq> S \<longrightarrow> (\<exists>r. strict_mono r \<and> MCauchy (\<sigma> \<circ> r)))"
+    (is "_ \<longleftrightarrow> _ \<and> ?rhs")
+proof (cases "S \<subseteq> M")
+  case True
+  show ?thesis
+  proof -
+    { fix \<sigma> :: "nat \<Rightarrow> 'a"
+      assume L: "totally_bounded_in S"
+      assume \<sigma>: "range \<sigma> \<subseteq> S"
+      then
+      have "\<exists>r. strict_mono r \<and> MCauchy (\<sigma> \<circ> r)" 
+        sorry }
+    moreover
+    { assume R: ?rhs
+      have "totally_bounded_in S"
+        unfolding totally_bounded_in_def
+      proof (intro strip)
+        fix \<epsilon> :: real
+        assume "\<epsilon> > 0"
+        have False if \<section>: "\<And>K. \<lbrakk>finite K; K \<subseteq> S\<rbrakk> \<Longrightarrow> \<exists>s\<in>S. s \<notin> (\<Union>x\<in>K. mball x \<epsilon>)"
+        proof -
+          obtain f where f: "\<And>K. \<lbrakk>finite K; K \<subseteq> S\<rbrakk> \<Longrightarrow> f K \<in> S \<and> f K \<notin> (\<Union>x\<in>K. mball x \<epsilon>)"
+            using \<section> by metis
+          define \<sigma> where "\<sigma> \<equiv> wfrec less_than (\<lambda>seq n. f (seq ` {..<n}))"
+          have \<sigma>_eq: "\<sigma> n = f (\<sigma> ` {..<n})" for n
+            by (simp add: cut_apply def_wfrec [OF \<sigma>_def])
+          have [simp]: "\<sigma> n \<in> S" for n
+            using wf_less_than
+          proof (induction n rule: wf_induct_rule)
+            case (less n) with f show ?case
+              by (auto simp add: \<sigma>_eq [of n])
+          qed
+          then have "range \<sigma> \<subseteq> S" by blast
+          have \<sigma>: "p < n \<Longrightarrow> \<epsilon> \<le> d (\<sigma> p) (\<sigma> n)" for n p
+            using f[of "\<sigma> ` {..<n}"] True by (fastforce simp add: \<sigma>_eq [of n] Ball_def)
+          then obtain r where "strict_mono r" "MCauchy (\<sigma> \<circ> r)"
+            by (meson R \<open>range \<sigma> \<subseteq> S\<close>)
+          with \<open>0 < \<epsilon>\<close> obtain N 
+              where N: "\<And>n n'. \<lbrakk>n\<ge>N; n'\<ge>N\<rbrakk> \<Longrightarrow> d (\<sigma> (r n)) (\<sigma> (r n')) < \<epsilon>"
+            by (force simp add: MCauchy_def)
+          show ?thesis
+            using N [of N "Suc (r N)"] \<open>strict_mono r\<close>
+            by (smt (verit) Suc_le_eq \<sigma> le_SucI order_refl strict_mono_imp_increasing)
+        qed
+        then show "\<exists>K. finite K \<and> K \<subseteq> S \<and> S \<subseteq> (\<Union>x\<in>K. mball x \<epsilon>)"
+          by blast
+      qed
+    }
+    ultimately show ?thesis 
+      using True by blast
+  qed
+qed (use totally_bounded_in_imp_subset in auto)
+  
+
 oops
-  REPEAT GEN_TAC THEN
-  ASM_CASES_TAC `(S::A=>bool) \<subseteq> M` THENL
-   [ASM_REWRITE_TAC[]; ASM_MESON_TAC[TOTALLY_BOUNDED_IN_IMP_SUBSET]] THEN
   REWRITE_TAC[totally_bounded_in] THEN
   REPEAT(STRIP_TAC ORELSE EQ_TAC) THENL
    [ALL_TAC;
-    ONCE_REWRITE_TAC[MESON[] `(\<exists>x. P x \<and> Q x \<and> R x) \<longleftrightarrow>
-      \<not> (\<forall>x. P x \<and> Q x \<Longrightarrow> \<not> R x)`] THEN
-    DISCH_TAC THEN
-    SUBGOAL_THEN
-      `\<exists>x. (\<forall>n. (x::num=>A) n \<in> S) \<and> (\<forall>n p. p < n \<Longrightarrow> e \<le> d x p x n)`
-    STRIP_ASSUME_TAC THENL
-     [REWRITE_TAC[AND_FORALL_THM] THEN
-      MATCH_MP_TAC (MATCH_MP WF_REC_EXISTS WF_num) THEN SIMP_TAC[] THEN
-      MAP_EVERY X_GEN_TAC [`x::num=>A`; `n::num`] THEN STRIP_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `image (x::num=>A) {i. i < n}`) THEN
-      ASM_SIMP_TAC[FINITE_IMAGE; FINITE_NUMSEG_LT] THEN
-      ASM_SIMP_TAC[UNIONS_GSPEC; \<subseteq>; FORALL_IN_IMAGE; IN_ELIM_THM] THEN
-      REWRITE_TAC[NOT_FORALL_THM; NOT_IMP; EXISTS_IN_IMAGE] THEN
-      REWRITE_TAC[IN_ELIM_THM; IN_MBALL; GSYM REAL_NOT_LT] THEN ASM SET_TAC[];
-      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::num=>A`) THEN ASM_REWRITE_TAC[] THEN
-      DISCH_THEN(X_CHOOSE_THEN `r::num=>num` STRIP_ASSUME_TAC) THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e::real` \<circ> CONJUNCT2 \<circ>
-        GEN_REWRITE_RULE id [MCauchy]) THEN
-      ASM_REWRITE_TAC[o_DEF] THEN
-      DISCH_THEN(X_CHOOSE_THEN `N::num`
-          (MP_TAC \<circ> SPECL [`N::num`; `(r::num=>num) N + 1`])) THEN
-      REWRITE_TAC[LE_REFL; NOT_IMP; REAL_NOT_LT] THEN CONJ_TAC THENL
-       [MATCH_MP_TAC(ARITH_RULE `n \<le> m \<Longrightarrow> n \<le> m + 1`) THEN
-        ASM_MESON_TAC[MONOTONE_BIGGER];
-        FIRST_X_ASSUM MATCH_MP_TAC THEN
-        MATCH_MP_TAC(ARITH_RULE `n + 1 \<le> m \<Longrightarrow> n < m`) THEN
-        ASM_MESON_TAC[MONOTONE_BIGGER]]]] THEN
+
+
   MP_TAC(ISPEC
    `\<lambda>(i::num) (r::num=>num).
       \<exists>N. !n n'. N \<le> n \<longrightarrow> N \<le> n'
@@ -6117,19 +6142,23 @@ oops
   REWRITE_TAC[IN_MBALL] THEN
   SUBGOAL_THEN
    `(z::A) \<in> M \<and> x((r::num=>num) p) \<in> M \<and> x(r q) \<in> M`
-  MP_TAC THENL [ASM SET_TAC[]; CONV_TAC METRIC_ARITH]);;
+  MP_TAC THENL [ASM SET_TAC[]; CONV_TAC METRIC_ARITH]);;`
+
+
+
 
 lemma totally_bounded_in_subset:
-   "\<And>m S t::A=>bool.
-     totally_bounded_in S \<and> t \<subseteq> S \<Longrightarrow> totally_bounded_in t"
-oops
-  REWRITE_TAC[TOTALLY_BOUNDED_IN_SEQUENTIALLY] THEN SET_TAC[]);;
+   "totally_bounded_in S \<and> T \<subseteq> S \<Longrightarrow> totally_bounded_in T"
+  by (meson totally_bounded_in_sequentially order_trans) 
 
 lemma totally_bounded_in_union:
-   "\<And>m S t::A=>bool.
-        totally_bounded_in S \<and> totally_bounded_in t
-        \<Longrightarrow> totally_bounded_in (S \<union> t)"
-oops
+   "totally_bounded_in S \<and> totally_bounded_in T
+        \<Longrightarrow> totally_bounded_in (S \<union> T)"
+  apply (subst totally_bounded_in_sequentially)
+apply (subst(asm) totally_bounded_in_sequentially)+
+  using totally_bounded_in_sequentially
+  
+  oops
   REPEAT GEN_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
   REWRITE_TAC[AND_FORALL_THM] THEN MATCH_MP_TAC MONO_FORALL THEN
   X_GEN_TAC `e::real` THEN ASM_CASES_TAC `0 < e` THEN ASM_REWRITE_TAC[] THEN
@@ -6162,9 +6191,9 @@ oops
   REWRITE_TAC[MBOUNDED_MBALL]);;
 
 lemma totally_bounded_in_submetric:
-   "\<And>m S t::A=>bool.
-        totally_bounded_in S \<and> S \<subseteq> t
-        \<Longrightarrow> totally_bounded_in (submetric t) S"
+   "\<And>m S T::A=>bool.
+        totally_bounded_in S \<and> S \<subseteq> T
+        \<Longrightarrow> totally_bounded_in (submetric T) S"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[totally_bounded_in] THEN
   SIMP_TAC[UNIONS_GSPEC; \<subseteq>; IN_ELIM_THM] THEN STRIP_TAC THEN
@@ -6266,11 +6295,11 @@ lemma bolzano_weierstrass_property:
       \<Longrightarrow> ((\<forall>x. (\<forall>n::num. x n \<in> s)
                 \<Longrightarrow> \<exists>l r. l \<in> u \<and> strict_mono r \<and>
                           limitin mtopology (x \<circ> r) l sequentially) \<longleftrightarrow>
-           (\<forall>t. t \<subseteq> s \<and> infinite t
-                \<Longrightarrow> \<not> (u \<inter> mtopology derived_set_of t = {})))"
+           (\<forall>T. T \<subseteq> s \<and> infinite T
+                \<Longrightarrow> \<not> (u \<inter> mtopology derived_set_of T = {})))"
 oops
   REPEAT STRIP_TAC THEN EQ_TAC THENL
-   [DISCH_TAC THEN X_GEN_TAC `t::A=>bool` THEN STRIP_TAC THEN
+   [DISCH_TAC THEN X_GEN_TAC `T::A=>bool` THEN STRIP_TAC THEN
     FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [INFINITE_CARD_LE]) THEN
     REWRITE_TAC[le_c; INJECTIVE_ON_ALT; LEFT_IMP_EXISTS_THM; IN_UNIV] THEN
     X_GEN_TAC `f::num=>A` THEN STRIP_TAC THEN
@@ -6356,8 +6385,8 @@ let [COMPACT_IN_EQ_BOLZANO_WEIERSTRASS;
  (`(\<forall>m s::A=>bool.
         compactin mtopology s \<longleftrightarrow>
         s \<subseteq> M \<and>
-        \<forall>t. t \<subseteq> s \<and> infinite t
-            \<Longrightarrow> \<not> (s \<inter> mtopology derived_set_of t = {})) \<and>
+        \<forall>T. T \<subseteq> s \<and> infinite T
+            \<Longrightarrow> \<not> (s \<inter> mtopology derived_set_of T = {})) \<and>
    (\<forall>m s::A=>bool.
         compactin mtopology s \<longleftrightarrow>
         s \<subseteq> M \<and>
@@ -6381,8 +6410,8 @@ oops
     ASM_MESON_TAC[COMPACT_IN_SUBSET_TOPSPACE; TOPSPACE_MTOPOLOGY]] THEN
   REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
   REWRITE_TAC[IMP_IMP; GSYM CONJ_ASSOC] THEN MATCH_MP_TAC(TAUT
-   `(p \<Longrightarrow> q) \<and> (q \<Longrightarrow> r) \<and> (r \<Longrightarrow> s) \<and> (r \<Longrightarrow> t) \<and> (s \<and> t \<Longrightarrow> p)
-    \<Longrightarrow> (p \<longleftrightarrow> q) \<and> (p \<longleftrightarrow> r) \<and> (p \<Longrightarrow> s) \<and> (p \<Longrightarrow> t)`) THEN
+   `(p \<Longrightarrow> q) \<and> (q \<Longrightarrow> r) \<and> (r \<Longrightarrow> s) \<and> (r \<Longrightarrow> T) \<and> (s \<and> T \<Longrightarrow> p)
+    \<Longrightarrow> (p \<longleftrightarrow> q) \<and> (p \<longleftrightarrow> r) \<and> (p \<Longrightarrow> s) \<and> (p \<Longrightarrow> T)`) THEN
   REPEAT CONJ_TAC THENL
    [MESON_TAC[COMPACT_IN_IMP_BOLZANO_WEIERSTRASS];
     MATCH_MP_TAC EQ_IMP THEN CONV_TAC SYM_CONV THEN
