@@ -6208,72 +6208,62 @@ proof -
 qed
 
 lemma mtotally_bounded_closure_of:
-   "\<And>m S::A=>bool.
-        mtotally_bounded S
-        \<Longrightarrow> mtotally_bounded (mtopology closure_of S)"
-oops
-  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `M \<inter> S::A=>bool` \<circ>
-   MATCH_MP(REWRITE_RULE[IMP_CONJ] TOTALLY_BOUNDED_IN_SUBSET)) THEN
-  REWRITE_TAC[INTER_SUBSET; TOPSPACE_MTOPOLOGY] THEN
-  MP_TAC(SET_RULE `M \<inter> (S::A=>bool) \<subseteq> M`) THEN
-  SPEC_TAC(`M \<inter> (S::A=>bool)`,`S::A=>bool`) THEN
-  GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[mtotally_bounded] THEN
-  DISCH_TAC THEN X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e / 2`) THEN ASM_REWRITE_TAC[REAL_HALF] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `k::A=>bool` THEN
-  REWRITE_TAC[UNIONS_GSPEC] THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-  CONJ_TAC THENL
-   [ASM_MESON_TAC[SUBSET_TRANS; CLOSURE_OF_SUBSET; TOPSPACE_MTOPOLOGY];
-    ALL_TAC] THEN
-  REWRITE_TAC[\<subseteq>; METRIC_CLOSURE_OF; IN_ELIM_THM] THEN
-  X_GEN_TAC `x::A` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e / 2`) THEN ASM_REWRITE_TAC[REAL_HALF] THEN
-  REWRITE_TAC[IN_MBALL] THEN
-  DISCH_THEN(X_CHOOSE_THEN `y::A` STRIP_ASSUME_TAC) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `y::A` \<circ> MATCH_MP (SET_RULE
-   `S \<subseteq> {x. P x} \<Longrightarrow> \<forall>a. a \<in> S \<Longrightarrow> P a`)) THEN
-  ASM_REWRITE_TAC[IN_MBALL] THEN MATCH_MP_TAC MONO_EXISTS THEN
-  X_GEN_TAC `z::A` THEN ASM_CASES_TAC `(z::A) \<in> k` THEN ASM_SIMP_TAC[] THEN
-  MAP_EVERY UNDISCH_TAC
-   [`(x::A) \<in> M`; `(y::A) \<in> M`; `d x::A y < e / 2`] THEN
-  CONV_TAC METRIC_ARITH);;
+  assumes "mtotally_bounded S"
+  shows "mtotally_bounded (mtopology closure_of S)"
+proof -
+  have "S \<subseteq> M"
+    by (simp add: assms mtotally_bounded_imp_subset)
+  have "mtotally_bounded(mtopology closure_of S)"
+    unfolding mtotally_bounded_def
+  proof (intro strip)
+    fix \<epsilon>::real
+    assume "\<epsilon> > 0"
+    then obtain K where "finite K" "K \<subseteq> S" and K: "S \<subseteq> (\<Union>x\<in>K. mball x (\<epsilon>/2))"
+      by (metis assms mtotally_bounded_def half_gt_zero)
+    have "mtopology closure_of S \<subseteq> (\<Union>x\<in>K. mball x \<epsilon>)"
+      unfolding metric_closure_of
+    proof clarsimp
+      fix x
+      assume "x \<in> M" and x: "\<forall>r>0. \<exists>y\<in>S. y \<in> M \<and> d x y < r"
+      then obtain y where "y \<in> S" and y: "d x y < \<epsilon>/2"
+        using \<open>0 < \<epsilon>\<close> half_gt_zero by blast
+      then obtain x' where "x' \<in> K" "y \<in> mball x' (\<epsilon>/2)"
+        using K by auto
+      then have "d x' x < \<epsilon>/2 + \<epsilon>/2"
+        using triangle y \<open>x \<in> M\<close> commute by fastforce
+      then show "\<exists>x'\<in>K. x' \<in> M \<and> d x' x < \<epsilon>"
+        using \<open>K \<subseteq> S\<close> \<open>S \<subseteq> M\<close> \<open>x' \<in> K\<close> by force
+    qed
+    then show "\<exists>K. finite K \<and> K \<subseteq> mtopology closure_of S \<and> mtopology closure_of S \<subseteq> (\<Union>x\<in>K. mball x \<epsilon>)"
+      using closure_of_subset_Int  \<open>K \<subseteq> S\<close> \<open>finite K\<close> K by fastforce
+  qed
+  then show ?thesis
+    by (simp add: assms inf.absorb2 mtotally_bounded_imp_subset)
+qed
 
 lemma mtotally_bounded_closure_of_eq:
-   "\<And>m S::A=>bool.
-        S \<subseteq> M
-        \<Longrightarrow> (mtotally_bounded (mtopology closure_of S) \<longleftrightarrow>
-             mtotally_bounded S)"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THEN
-  REWRITE_TAC[TOTALLY_BOUNDED_IN_CLOSURE_OF] THEN
-  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] TOTALLY_BOUNDED_IN_SUBSET) THEN
-  ASM_SIMP_TAC[CLOSURE_OF_SUBSET; TOPSPACE_MTOPOLOGY]);;
+   "S \<subseteq> M \<Longrightarrow> mtotally_bounded (mtopology closure_of S) \<longleftrightarrow> mtotally_bounded S"
+  by (metis closure_of_subset mtotally_bounded_closure_of mtotally_bounded_subset topspace_mtopology)
 
 lemma mtotally_bounded_cauchy_sequence:
-   "\<And>m x::num=>A.
-        MCauchy x \<Longrightarrow> mtotally_bounded (image x UNIV)"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[MCauchy; mtotally_bounded] THEN
-  STRIP_TAC THEN X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e::real`) THEN ASM_REWRITE_TAC[] THEN
-  DISCH_THEN(X_CHOOSE_THEN `N::num` (MP_TAC \<circ> SPEC `N::num`)) THEN
-  REWRITE_TAC[LE_REFL] THEN DISCH_TAC THEN
-  EXISTS_TAC `image (x::num=>A) {0..N}` THEN
-  SIMP_TAC[FINITE_IMAGE; FINITE_NUMSEG; IMAGE_SUBSET; SUBSET_UNIV] THEN
-  REWRITE_TAC[\<subseteq>; UNIONS_GSPEC; IN_UNIV; FORALL_IN_IMAGE] THEN
-  REWRITE_TAC[EXISTS_IN_IMAGE; IN_ELIM_THM; IN_NUMSEG; LE_0] THEN
-  X_GEN_TAC `n::num` THEN ASM_CASES_TAC `n::num \<le> N` THENL
-   [EXISTS_TAC `n::num` THEN ASM_SIMP_TAC[CENTRE_IN_MBALL];
-    EXISTS_TAC `N::num` THEN ASM_REWRITE_TAC[IN_MBALL; LE_REFL] THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC]);;
+  assumes "MCauchy \<sigma>"
+  shows "mtotally_bounded (range \<sigma>)"
+  unfolding MCauchy_def mtotally_bounded_def
+proof (intro strip)
+  fix \<epsilon>::real
+  assume "\<epsilon> > 0"
+  then obtain N where "\<And>n. N \<le> n \<Longrightarrow> d (\<sigma> N) (\<sigma> n) < \<epsilon>"
+    using assms by (force simp add: MCauchy_def)
+  then have "\<And>m. \<exists>n\<le>N. \<sigma> n \<in> M \<and> \<sigma> m \<in> M \<and> d (\<sigma> n) (\<sigma> m) < \<epsilon>"
+    by (metis MCauchy_def assms mdist_refl nle_le range_subsetD)
+  then
+  show "\<exists>K. finite K \<and> K \<subseteq> range \<sigma> \<and> range \<sigma> \<subseteq> (\<Union>x\<in>K. mball x \<epsilon>)"
+    by (rule_tac x="\<sigma> ` {0..N}" in exI) force
+qed
 
 lemma MCauchy_imp_mbounded:
-   "MCauchy x \<Longrightarrow> mbounded {x i | i \<in> UNIV}"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[SIMPLE_IMAGE] THEN
-  ASM_SIMP_TAC[TOTALLY_BOUNDED_IN_IMP_MBOUNDED;
-               TOTALLY_BOUNDED_IN_CAUCHY_SEQUENCE]);;
+   "MCauchy \<sigma> \<Longrightarrow> mbounded (range \<sigma>)"
+  by (simp add: mtotally_bounded_cauchy_sequence mtotally_bounded_imp_mbounded)
 
 
 subsection\<open>Compactness in metric spaces\<close>
@@ -6282,9 +6272,9 @@ subsection\<open>Compactness in metric spaces\<close>
 lemma bolzano_weierstrass_property:
    "\<And>m u s::A=>bool.
       s \<subseteq> u \<and> s \<subseteq> M
-      \<Longrightarrow> ((\<forall>x. (\<forall>n::num. x n \<in> s)
+      \<Longrightarrow> ((\<forall>\<sigma>. (\<forall>n::num. \<sigma> n \<in> s)
                 \<Longrightarrow> \<exists>l r. l \<in> u \<and> strict_mono r \<and>
-                          limitin mtopology (x \<circ> r) l sequentially) \<longleftrightarrow>
+                          limitin mtopology (\<sigma> \<circ> r) l sequentially) \<longleftrightarrow>
            (\<forall>T. T \<subseteq> s \<and> infinite T
                 \<Longrightarrow> \<not> (u \<inter> mtopology derived_set_of T = {})))"
 oops
