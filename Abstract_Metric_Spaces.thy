@@ -1094,7 +1094,7 @@ lemma abs_mdist [simp] : "\<bar>d x y\<bar> = d x y"
 lemma mdist_pos_less: "\<lbrakk>x \<noteq> y; x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> 0 < d x y"
   by (metis less_eq_real_def nonneg zero)
 
-lemma mdist_refl: "x \<in> M \<Longrightarrow> d x x = 0"
+lemma mdist_refl [simp]: "x \<in> M \<Longrightarrow> d x x = 0"
   by (simp add: zero)
 
 lemma mdist_pos_eq [simp]: "\<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> 0 < d x y \<longleftrightarrow> x \<noteq> y"
@@ -6287,58 +6287,50 @@ proof
     with L obtain l r where "l \<in> U" "strict_mono r" 
            and lr: "limitin mtopology (\<sigma> \<circ> r) l sequentially"
       by (meson \<open>T \<subseteq> S\<close> subset_trans)
-    then obtain \<epsilon> where "\<epsilon> > 0" and r: "\<And>y. y \<in> T \<Longrightarrow> y = l \<or> \<not> d l y < \<epsilon>"
+    then obtain \<epsilon> where "\<epsilon> > 0" and \<epsilon>: "\<And>y. y \<in> T \<Longrightarrow> y = l \<or> \<not> d l y < \<epsilon>"
       using T \<open>T \<subseteq> S\<close> \<open>S \<subseteq> M\<close> 
       by (force simp add: metric_derived_set_of limitin_metric disjoint_iff)
     with lr have "\<forall>\<^sub>F n in sequentially. \<sigma> (r n) \<in> M \<and> d (\<sigma> (r n)) l < \<epsilon>"
       by (auto simp: limitin_metric)
-    then show False
-apply (auto simp: eventually_sequentially)
-       using lr
-apply (simp add: limitin_metric)
-      sorry
+    then obtain N where N: "d (\<sigma> (r N)) l < \<epsilon>" "d (\<sigma> (r (Suc N))) l < \<epsilon>"
+      using less_le_not_le by (auto simp: eventually_sequentially)
+    moreover have "\<sigma> (r N) \<noteq> l \<or> \<sigma> (r (Suc N)) \<noteq> l"
+      by (meson \<open>inj \<sigma>\<close> \<open>strict_mono r\<close> injD n_not_Suc_n strict_mono_eq)
+    ultimately
+    show False
+       using \<epsilon> \<open>range \<sigma> \<subseteq> T\<close> commute by fastforce
   qed
 next
-  assume ?rhs then show ?lhs
-    by (simp add: Kolmogorov_quotient_def)
+  assume R: ?rhs 
+  show ?lhs
+  proof (intro strip)
+    fix \<sigma> :: "nat \<Rightarrow> 'a"
+    assume "range \<sigma> \<subseteq> S"
+    show "\<exists>l r. l \<in> U \<and> strict_mono r \<and> limitin mtopology (\<sigma> \<circ> r) l sequentially"
+    proof (cases "finite (range \<sigma>)")
+      case True
+      then obtain m where "infinite (\<sigma> -` {\<sigma> m})"
+        by (metis image_iff inf_img_fin_dom nat_not_finite)
+      then obtain r where [iff]: "strict_mono r" and r: "\<And>n::nat. r n \<in> \<sigma> -` {\<sigma> m}"
+        using infinite_enumerate by blast 
+      have [iff]: "\<sigma> m \<in> U" "\<sigma> m \<in> M"
+        using \<open>range \<sigma> \<subseteq> S\<close> assms by blast+
+      show ?thesis
+        apply (rule_tac x="\<sigma> m" in exI)
+        apply (rule_tac x="r" in exI)
+      proof (intro conjI)
+        show "limitin mtopology (\<sigma> \<circ> r) (\<sigma> m) sequentially"
+          using r by (simp add: limitin_metric)
+      qed auto
+    next
+      case False
+      then show ?thesis sorry
+    qed
+  qed
 qed
 
-oops
-    ASM_REWRITE_TAC[IN_INTER] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [LIMIT_METRIC]) THEN
-    REWRITE_TAC[METRIC_DERIVED_SET_OF; IN_ELIM_THM] THEN
-    STRIP_TAC THEN ASM_REWRITE_TAC[] THEN  X_GEN_TAC `r::real` THEN
-    DISCH_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> SPEC `r::real`) THEN
-    ASM_REWRITE_TAC[EVENTUALLY_SEQUENTIALLY; o_THM] THEN
-    DISCH_THEN(X_CHOOSE_THEN `N::num` (fun th ->
-      MP_TAC(SPEC `N + 1` th) THEN MP_TAC(SPEC `N::num` th))) THEN
-    REWRITE_TAC[ARITH_RULE `N \<le> N + 1`; LE_REFL] THEN
-    REPEAT STRIP_TAC THEN MATCH_MP_TAC(MESON[]
-     `(\<exists>x y. P x \<and> P y \<and> (x \<noteq> y)) \<Longrightarrow> (\<exists>z. (z \<noteq> l) \<and> P z)`) THEN
-    MAP_EVERY EXISTS_TAC [`f(r(Suc N))`; `f(r(N::num))`] THEN
-    ASM_SIMP_TAC[IN_MBALL; ARITH_RULE `N < N + 1`;
-       MESON[LT_REFL] `x::num < y \<Longrightarrow> (y \<noteq> x)`] THEN
-    ASM_MESON_TAC[MDIST_SYM; \<subseteq>];
-    ALL_TAC] THEN
+  oops
 
-
-
-  REWRITE_TAC[METRIC_DERIVED_SET_OF; GSYM MEMBER_NOT_EMPTY] THEN
-  REWRITE_TAC[IN_INTER; IN_ELIM_THM] THEN
-  DISCH_TAC THEN X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
-  ASM_CASES_TAC `finite(image (x::num=>A) UNIV)` THENL
-   [FIRST_ASSUM(MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
-      FINITE_IMAGE_INFINITE)) THEN
-    REWRITE_TAC[num_INFINITE; IN_UNIV; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `m::num` THEN
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP INFINITE_ENUMERATE) THEN
-    GEN_REWRITE_TAC RAND_CONV [SWAP_EXISTS_THM] THEN
-    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `r::num=>num` THEN
-    STRIP_TAC THEN EXISTS_TAC `(x::num=>A) m` THEN
-    FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP (SET_RULE
-     `f ` UNIV = {x. P x} \<Longrightarrow> \<forall>n. P(f n)`)) THEN
-    ASM_REWRITE_TAC[o_DEF; LIMIT_CONST; TOPSPACE_MTOPOLOGY] THEN
-    ASM SET_TAC[];
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC `image (x::num=>A) UNIV`) THEN
     ASM_REWRITE_TAC[infinite; \<subseteq>; FORALL_IN_IMAGE] THEN
     MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `l::A` THEN
