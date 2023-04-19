@@ -5,6 +5,25 @@ theory Abstract_Metric_Spaces
     "HOL-Analysis.Analysis" "HOL-ex.Sketch_and_Explore"
 begin
 
+
+lemma Archimedean_eventually_inverse:
+  fixes \<epsilon>::real shows "eventually (\<lambda>n. inverse (Suc n) < \<epsilon>) sequentially \<longleftrightarrow> 0 < \<epsilon>"
+  (is "?lhs=?rhs")
+proof
+  assume ?lhs
+  then show ?rhs
+    by (meson eventually_sequentially inverse_nonnegative_iff_nonnegative nle_le of_nat_0_le_iff order_le_less_trans)
+next
+  assume ?rhs
+  then obtain N where "inverse (Suc N) < \<epsilon>"
+    using reals_Archimedean by blast
+  then have "inverse (Suc n) < \<epsilon>" if "n \<ge> N" for n
+    by (smt (verit, best) inverse_less_iff_less of_nat_0_less_iff of_nat_Suc of_nat_le_iff that zero_less_Suc)
+  then show ?lhs
+    using eventually_sequentially by blast
+qed
+
+
 (*Elementary_Metric_Spaces
 lemma ball_iff_cball: "(\<exists>r>0. ball x r \<subseteq> U) = (\<exists>r>0. cball x r \<subseteq> U)"
   by (meson mem_interior mem_interior_cball)
@@ -6268,7 +6287,6 @@ lemma MCauchy_imp_mbounded:
 
 subsection\<open>Compactness in metric spaces\<close>
 
-
 lemma Bolzano_Weierstrass_property:
   assumes "S \<subseteq> U" "S \<subseteq> M"
   shows
@@ -6324,19 +6342,39 @@ next
       qed auto
     next
       case False
-      then show ?thesis sorry
+      then obtain l where "l \<in> U" and l: "l \<in> mtopology derived_set_of (range \<sigma>)"
+        by (meson R \<open>range \<sigma> \<subseteq> S\<close> disjoint_iff)
+      have "range \<sigma> \<subseteq> M"
+        using \<open>range \<sigma> \<subseteq> S\<close> assms by auto
+      obtain r where r: "\<And>n. (\<forall>p < n. r p < r n) \<and> \<sigma> (r n) \<noteq> l \<and> d (\<sigma>(r n)) l < inverse(Suc n)"
+        using R
+        apply (simp add: metric_derived_set_of)
+        sorry
+      show ?thesis
+        apply (rule_tac x="l" in exI)
+        apply (rule_tac x="r" in exI)
+      proof (intro conjI \<open>l \<in> U\<close>)
+        show "strict_mono r"
+          by (simp add: r strict_monoI)
+        show "limitin mtopology (\<sigma> \<circ> r) l sequentially"
+          unfolding limitin_metric
+        proof (intro conjI strip)
+          show "l \<in> M"
+            using derived_set_of_sequentially_inj l by blast
+          fix \<epsilon> :: real
+          assume "\<epsilon> > 0"
+          then have "\<forall>\<^sub>F n in sequentially. inverse(Suc n) < \<epsilon>"
+            using Archimedean_eventually_inverse by auto
+          then show "\<forall>\<^sub>F n in sequentially. (\<sigma> \<circ> r) n \<in> M \<and> d ((\<sigma> \<circ> r) n) l < \<epsilon>"
+            by eventually_elim (smt (verit, best) \<open>range \<sigma> \<subseteq> M\<close> comp_apply r range_subsetD)
+        qed
+      qed
     qed
   qed
 qed
 
   oops
 
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `image (x::num=>A) UNIV`) THEN
-    ASM_REWRITE_TAC[infinite; \<subseteq>; FORALL_IN_IMAGE] THEN
-    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `l::A` THEN
-    STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-    SUBGOAL_THEN `\<forall>n. (x::num=>A) n \<in> M` ASSUME_TAC THENL
-     [ASM SET_TAC[]; ALL_TAC] THEN
     SUBGOAL_THEN
      `\<exists>r::num=>num.
               (\<forall>n. (\<forall>p. p < n \<Longrightarrow> r p < r n) \<and>
@@ -6360,15 +6398,7 @@ qed
       REWRITE_TAC[EXISTS_IN_IMAGE; IN_UNIV; FORALL_AND_THM] THEN
       MATCH_MP_TAC MONO_EXISTS THEN SIMP_TAC[GSYM NOT_LT; CONJUNCT1 LT] THEN
       ASM_MESON_TAC[MDIST_SYM; REAL_LT_REFL];
-      MATCH_MP_TAC MONO_EXISTS THEN REWRITE_TAC[FORALL_AND_THM] THEN
-      X_GEN_TAC `r::num=>num` THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-      ASM_REWRITE_TAC[LIMIT_METRIC; o_DEF] THEN
-      X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-      MATCH_MP_TAC EVENTUALLY_MONO THEN
-      EXISTS_TAC `\<lambda>n. inverse(Suc n) < e` THEN
-      ASM_REWRITE_TAC[ARCH_EVENTUALLY_INV1] THEN X_GEN_TAC `k::num` THEN
-      MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] REAL_LT_TRANS) THEN
-      ASM_REWRITE_TAC[]]]);;`
+
 
 
 
