@@ -1288,7 +1288,6 @@ lemma openin_mtopology_mcball:
   "openin mtopology U \<longleftrightarrow> U \<subseteq> M \<and> (\<forall>x. x \<in> U \<longrightarrow> (\<exists>r. 0 < r \<and> mcball x r \<subseteq> U))"
   using mball_iff_mcball openin_mtopology by presburger
 
-
 lemma metric_derived_set_of:
   "mtopology derived_set_of S = {x \<in> M. \<forall>r>0. \<exists>y\<in>S. y\<noteq>x \<and> y \<in> mball x r}" (is "?lhs=?rhs")
 proof
@@ -6334,9 +6333,7 @@ next
       have [iff]: "\<sigma> m \<in> U" "\<sigma> m \<in> M"
         using \<open>range \<sigma> \<subseteq> S\<close> assms by blast+
       show ?thesis
-        apply (rule_tac x="\<sigma> m" in exI)
-        apply (rule_tac x="r" in exI)
-      proof (intro conjI)
+      proof (intro conjI exI)
         show "limitin mtopology (\<sigma> \<circ> r) (\<sigma> m) sequentially"
           using r by (simp add: limitin_metric)
       qed auto
@@ -6344,10 +6341,46 @@ next
       case False
       then obtain l where "l \<in> U" and l: "l \<in> mtopology derived_set_of (range \<sigma>)"
         by (meson R \<open>range \<sigma> \<subseteq> S\<close> disjoint_iff)
+      then obtain g where g: "\<And>\<epsilon>. \<epsilon>>0 \<Longrightarrow> \<sigma> (g \<epsilon>) \<noteq> l \<and> d l (\<sigma> (g \<epsilon>)) < \<epsilon>"
+        by (simp add: metric_derived_set_of) metis
       have "range \<sigma> \<subseteq> M"
         using \<open>range \<sigma> \<subseteq> S\<close> assms by auto
-      obtain r where r: "\<And>n. (\<forall>p < n. r p < r n) \<and> \<sigma> (r n) \<noteq> l \<and> d (\<sigma>(r n)) l < inverse(Suc n)"
-        using R
+      have "l \<in> M"
+        using derived_set_of_sequentially_decreasing l by blast
+
+      define r where "r \<equiv> wfrec less_than
+           (\<lambda>rec n. g (Min (insert (inverse (Suc n)) ((\<lambda>i. d l (\<sigma> (rec i))) ` {..<n}))))"
+      define E where "E \<equiv> \<lambda>n. insert (inverse (Suc n)) ((\<lambda>i. d l (\<sigma> (r i))) ` {..<n})"
+      have "(\<lambda>i. d l (\<sigma> (cut r less_than n i))) ` {..<n} = (\<lambda>i. d l (\<sigma> (r i))) ` {..<n}" for n
+        by (auto simp: cut_apply)
+      then have r_eq: "r n = g (Min (E n))" for n
+        unfolding E_def by (metis def_wfrec [OF r_def] wf_less_than) 
+
+      have dl_pos[simp]: "d l (\<sigma> (r n)) > 0" for n
+        using wf_less_than
+      proof (induction n rule: wf_induct_rule)
+        case (less n) 
+        then have *: "Min (E n) > 0"
+          by (auto simp: E_def)
+        show ?case
+          using g [OF *] r_eq [of n]
+          by (metis \<open>l \<in> M\<close> \<open>range \<sigma> \<subseteq> M\<close> mdist_pos_less range_subsetD)
+      qed
+      then have non_l: "\<sigma> (r n) \<noteq> l" for n
+        using \<open>range \<sigma> \<subseteq> M\<close> mdist_pos_eq by blast
+      have d_small: "d (\<sigma>(r n)) l < inverse(Suc n)" for n
+      proof -
+        have "Min (E n) > 0" 
+          using dl_pos by (auto simp: E_def)
+        have "d (\<sigma>(r n)) l < Min (E n)"
+          by (simp add: \<open>0 < Min (E n)\<close> commute g r_eq) 
+        also have "... \<le> inverse(Suc n)"
+          by (simp add: E_def)
+        finally show ?thesis .
+      qed
+
+      have r: "\<And>n. (\<forall>p < n. r p < r n)"
+        using l
         apply (simp add: metric_derived_set_of)
         sorry
       show ?thesis
@@ -6356,7 +6389,7 @@ next
       proof (intro conjI \<open>l \<in> U\<close>)
         show "strict_mono r"
           by (simp add: r strict_monoI)
-        show "limitin mtopology (\<sigma> \<circ> r) l sequentially"
+        show "limitin mtopology (r \<circ> r) l sequentially"
           unfolding limitin_metric
         proof (intro conjI strip)
           show "l \<in> M"
@@ -6385,7 +6418,7 @@ qed
       X_GEN_TAC `n::num`  THEN  DISCH_THEN(K ALL_TAC) THEN
       FIRST_ASSUM(MP_TAC \<circ> SPEC
        `inf((inverse(Suc n)) insert
-        (image (\<lambda>k. d m (l,(x::num=>A) k))
+        (image (\<lambda>k. d l (\<sigma> k))
                (\<Union> (image (\<lambda>p. 0..r p) {p. p < n})) DELETE 0))`) THEN
       SIMP_TAC[REAL_LT_INF_FINITE; FINITE_INSERT; NOT_INSERT_EMPTY; IN_MBALL;
                FINITE_DELETE; FINITE_IMAGE; FINITE_UNIONS;
