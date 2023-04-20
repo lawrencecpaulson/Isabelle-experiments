@@ -6411,11 +6411,53 @@ next
   qed
 qed
 
+lemma A: 
+  assumes "compactin mtopology S" "T \<subseteq> S" "infinite T"
+  shows "S \<inter> mtopology derived_set_of T \<noteq> {}"
+  by (simp add: assms compactin_imp_Bolzano_Weierstrass)
 
+lemma B:
+  fixes \<sigma> :: "nat \<Rightarrow> 'a"
+  assumes "S \<subseteq> M" "range \<sigma> \<subseteq> S"
+    and "\<And>T. \<lbrakk>T \<subseteq> S \<and> infinite T\<rbrakk> \<Longrightarrow> S \<inter> mtopology derived_set_of T \<noteq> {}"
+  shows "\<exists>l r. l \<in> S \<and> strict_mono r \<and> limitin mtopology (\<sigma> o r) l sequentially"
+  using Bolzano_Weierstrass_property assms by blast
 
+lemma C:
+  assumes "S \<subseteq> M"
+  assumes "\<And>\<sigma>:: nat \<Rightarrow> 'a. range \<sigma> \<subseteq> S \<Longrightarrow>
+                (\<exists>l r. l \<in> S \<and> strict_mono r \<and> limitin mtopology (\<sigma> o r) l sequentially)"
+  shows "mtotally_bounded S"
+  unfolding mtotally_bounded_sequentially
+  by (metis convergent_imp_MCauchy assms image_comp image_mono subset_UNIV subset_trans)
 
-let [COMPACT_IN_EQ_BOLZANO_WEIERSTRASS;
-     COMPACT_IN_SEQUENTIALLY;
+lemma D:
+  assumes "S \<subseteq> M" "S \<subseteq> \<Union> \<C>" and opeU: "\<And>U. U \<in> \<C> \<Longrightarrow> openin mtopology U"
+  assumes "(\<forall>\<sigma>::nat\<Rightarrow>'a. range \<sigma> \<subseteq> S
+         \<longrightarrow> (\<exists>l r. l \<in> S \<and> strict_mono r \<and> limitin mtopology (\<sigma> \<circ> r) l sequentially))"
+  shows "\<exists>\<epsilon>>0. \<forall>x \<in> S. \<exists>U \<in> \<C>. mball x \<epsilon> \<subseteq> U"
+  sorry
+
+lemma E:
+  assumes "mtotally_bounded S" "S \<subseteq> M"
+  assumes "\<And>\<C>. \<lbrakk>\<And>u. u \<in> \<C> \<Longrightarrow> openin mtopology u; S \<subseteq> \<Union> \<C>\<rbrakk> \<Longrightarrow> \<exists>\<epsilon>>0. \<forall>x \<in> S. \<exists>U \<in> \<C>. mball x \<epsilon> \<subseteq> U"
+  shows "compactin mtopology S"
+  sorry
+
+lemma compactin_eq_Bolzano_Weierstrass:
+  "compactin mtopology S \<longleftrightarrow>
+   S \<subseteq> M \<and> (\<forall>T. T \<subseteq> S \<and> infinite T \<longrightarrow> S \<inter> mtopology derived_set_of T \<noteq> {})"
+  using C D E
+  by (smt (verit, del_insts) Bolzano_Weierstrass_property Set.basic_monos(1) compactin_imp_Bolzano_Weierstrass compactin_subspace topspace_mtopology)
+
+lemma compactin_sequentially:
+  shows "compactin mtopology S \<longleftrightarrow>
+        S \<subseteq> M \<and>
+        ((\<forall>\<sigma>::nat\<Rightarrow>'a. range \<sigma> \<subseteq> S
+         \<longrightarrow> (\<exists>l r. l \<in> S \<and> strict_mono r \<and> limitin mtopology (\<sigma> \<circ> r) l sequentially)))"
+  by (metis Bolzano_Weierstrass_property compactin_eq_Bolzano_Weierstrass subset_refl)
+
+let [
      COMPACT_IN_IMP_TOTALLY_BOUNDED_IN_EXPLICIT;
      LEBESGUE_NUMBER] = (CONJUNCTS \<circ> prove)
  (`(\<forall>m S::A=>bool.
@@ -6439,29 +6481,8 @@ let [COMPACT_IN_EQ_BOLZANO_WEIERSTRASS;
         \<Longrightarrow> \<exists>e. 0 < e \<and>
                 \<forall>x. x \<in> S \<Longrightarrow> \<exists>U. U \<in> U \<and> mball x e \<subseteq> U)"
 oops
-  REWRITE_TAC[AND_FORALL_THM] THEN
-  MAP_EVERY X_GEN_TAC [`m::A metric`; `S::A=>bool`] THEN
-  ASM_CASES_TAC `(S::A=>bool) \<subseteq> M` THENL
-   [ASM_REWRITE_TAC[];
-    ASM_MESON_TAC[COMPACT_IN_SUBSET_TOPSPACE; TOPSPACE_MTOPOLOGY]] THEN
-  REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
-  REWRITE_TAC[IMP_IMP; GSYM CONJ_ASSOC] THEN MATCH_MP_TAC(TAUT
-   `(p \<Longrightarrow> q) \<and> (q \<Longrightarrow> r) \<and> (r \<Longrightarrow> S) \<and> (r \<Longrightarrow> T) \<and> (S \<and> T \<Longrightarrow> p)
-    \<Longrightarrow> (p \<longleftrightarrow> q) \<and> (p \<longleftrightarrow> r) \<and> (p \<Longrightarrow> S) \<and> (p \<Longrightarrow> T)`) THEN
-  REPEAT CONJ_TAC THENL
-   [MESON_TAC[COMPACT_IN_IMP_BOLZANO_WEIERSTRASS];
-    MATCH_MP_TAC EQ_IMP THEN CONV_TAC SYM_CONV THEN
-    MATCH_MP_TAC BOLZANO_WEIERSTRASS_PROPERTY THEN
-    ASM_REWRITE_TAC[SUBSET_REFL];
-    DISCH_TAC THEN ASM_REWRITE_TAC[GSYM mtotally_bounded] THEN
-    ASM_SIMP_TAC[TOTALLY_BOUNDED_IN_SEQUENTIALLY] THEN
-    X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::num=>A`) THEN ASM_REWRITE_TAC[] THEN
-    GEN_REWRITE_TAC LAND_CONV [SWAP_EXISTS_THM] THEN
-    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `r::num=>num` THEN
-    STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC CONVERGENT_IMP_CAUCHY_IN THEN
-    REWRITE_TAC[o_THM] THEN ASM SET_TAC[];
+
+
     DISCH_TAC THEN X_GEN_TAC `U:(A=>bool)->bool` THEN STRIP_TAC THEN
     ONCE_REWRITE_TAC[MESON[] `(\<exists>x. P x \<and> Q x) \<longleftrightarrow> \<not> (\<forall>x. P x \<Longrightarrow> \<not> Q x)`] THEN
     GEN_REWRITE_TAC (RAND_CONV \<circ> TOP_DEPTH_CONV)
@@ -6506,6 +6527,8 @@ oops
     MATCH_MP_TAC REAL_LE_INV2 THEN
     REWRITE_TAC[REAL_OF_NUM_LE; REAL_LE_RADD; REAL_ARITH `0 < n + 1`] THEN
     ASM_MESON_TAC[MONOTONE_BIGGER];
+
+
     DISCH_TAC THEN ASM_REWRITE_TAC[compactin; TOPSPACE_MTOPOLOGY] THEN
     X_GEN_TAC `U:(A=>bool)->bool` THEN STRIP_TAC THEN FIRST_X_ASSUM
      (CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC `U:(A=>bool)->bool`)) THEN
