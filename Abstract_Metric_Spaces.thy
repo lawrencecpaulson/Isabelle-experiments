@@ -6347,10 +6347,8 @@ next
         using \<open>range \<sigma> \<subseteq> S\<close> assms by auto
       have "l \<in> M"
         using derived_set_of_sequentially_decreasing l by blast
-
-      define E where 
+      define E where  \<comment>\<open>a construction to ensure monotonicity\<close>
         "E \<equiv> \<lambda>rec n. insert (inverse (Suc n)) ((\<lambda>i. d l (\<sigma> i)) ` (\<Union>k<n. {0..rec k})) - {0}"
-
       define r where "r \<equiv> wfrec less_than (\<lambda>rec n. g (Min (E rec n)))"
       have "(\<Union>k<n. {0..cut r less_than n k}) = (\<Union>k<n. {0..r k})" for n
         by (auto simp: cut_apply)
@@ -6378,35 +6376,22 @@ next
           by (simp add: E_def)
         finally show ?thesis .
       qed
-
-      have DD: "d l (\<sigma> (r n)) < d l (\<sigma> i)" if \<section>: "p < n" "i \<le> r p" for i p n
+      have DD: "d l (\<sigma> (r n)) < d l (\<sigma> i)" if \<section>: "p < n" "i \<le> r p" "\<sigma> i \<noteq> l" for i p n
       proof -
-        consider "d l (\<sigma> i) \<in> E r n" | "\<sigma> i = l"
+        have 1: "d l (\<sigma> i) \<in> E r n"
           using \<section> \<open>l \<in> M\<close> \<open>range \<sigma> \<subseteq> M\<close> 
           by (force simp: E_def image_subset_iff image_iff)
-        then show ?thesis
-        proof cases
-          case 1
-          have "d l (\<sigma> (g (Min (E r n)))) < Min (E r n)"
-            by (rule conjunct2 [OF g [OF Min_pos]])
-          also have "Min (E r n) \<le> d l (\<sigma> i)"
-            using 1 unfolding E_def by (force intro!: Min.coboundedI)
-          finally show ?thesis
-            by (simp add: r_eq) 
-        next
-          case 2
-          then show ?thesis
-            by (simp add: \<open>l \<in> M\<close>)
-        qed
+        have "d l (\<sigma> (g (Min (E r n)))) < Min (E r n)"
+          by (rule conjunct2 [OF g [OF Min_pos]])
+        also have "Min (E r n) \<le> d l (\<sigma> i)"
+          using 1 unfolding E_def by (force intro!: Min.coboundedI)
+        finally show ?thesis
+          by (simp add: r_eq) 
       qed
-      have r: "r p < r n"  if "p < n" for p n
-        using DD [OF that]
-        by (meson linorder_not_le order_less_irrefl) 
-
+      have r: "r p < r n" if "p < n" for p n
+        using DD [OF that] non_l by (meson linorder_not_le order_less_irrefl) 
       show ?thesis
-        apply (rule_tac x="l" in exI)
-        apply (rule_tac x="r" in exI)
-      proof (intro conjI \<open>l \<in> U\<close>)
+      proof (intro exI conjI)
         show "strict_mono r"
           by (simp add: r strict_monoI)
         show "limitin mtopology (\<sigma> \<circ> r) l sequentially"
@@ -6419,39 +6404,12 @@ next
           then have "\<forall>\<^sub>F n in sequentially. inverse(Suc n) < \<epsilon>"
             using Archimedean_eventually_inverse by auto
           then show "\<forall>\<^sub>F n in sequentially. (\<sigma> \<circ> r) n \<in> M \<and> d ((\<sigma> \<circ> r) n) l < \<epsilon>"
-            apply eventually_elim
-            by (smt (verit, best) \<open>range \<sigma> \<subseteq> M\<close> comp_apply d_small range_subsetD)
+            by (smt (verit) \<open>range \<sigma> \<subseteq> M\<close> commute comp_apply d_small eventually_mono range_subsetD)
         qed
-      qed
+      qed (use \<open>l \<in> U\<close> in auto)
     qed
   qed
 qed
-
-  oops
-
-    SUBGOAL_THEN
-     `\<exists>r::num=>num.
-              (\<forall>n. (\<forall>p. p < n \<Longrightarrow> r p < r n) \<and>
-                   \<not> (x(r n) = l) \<and> d m (x(r n):A,l) < inverse(Suc n))`
-    MP_TAC THENL
-     [MATCH_MP_TAC (MATCH_MP WF_REC_EXISTS WF_num) THEN SIMP_TAC[] THEN
-      X_GEN_TAC `r::num=>num` THEN
-      X_GEN_TAC `n::num`  THEN  DISCH_THEN(K ALL_TAC) THEN
-      FIRST_ASSUM(MP_TAC \<circ> SPEC
-       `inf((inverse(Suc n)) insert
-        (image (\<lambda>k. d l (\<sigma> k))
-               (\<Union> (image (\<lambda>p. 0..r p) {p. p < n})) DELETE 0))`) THEN
-      SIMP_TAC[REAL_LT_INF_FINITE; FINITE_INSERT; NOT_INSERT_EMPTY; IN_MBALL;
-               FINITE_DELETE; FINITE_IMAGE; FINITE_UNIONS;
-               FORALL_IN_IMAGE; FINITE_NUMSEG; FINITE_NUMSEG_LT] THEN
-      REWRITE_TAC[FORALL_IN_INSERT; REAL_LT_INV_EQ; IN_DELETE; IMP_CONJ] THEN
-      REWRITE_TAC[FORALL_IN_IMAGE; FORALL_IN_UNIONS; IMP_CONJ;
-                  RIGHT_FORALL_IMP_THM; IN_NUMSEG; IN_ELIM_THM] THEN
-      ASM_SIMP_TAC[MDIST_POS_LT; MDIST_0; REAL_ARITH `0 < n + 1`] THEN
-      ONCE_REWRITE_TAC[TAUT `p \<and> q \<and> r \<longleftrightarrow> q \<and> p \<and> r`] THEN
-      REWRITE_TAC[EXISTS_IN_IMAGE; IN_UNIV; FORALL_AND_THM] THEN
-      MATCH_MP_TAC MONO_EXISTS THEN SIMP_TAC[GSYM NOT_LT; CONJUNCT1 LT] THEN
-      ASM_MESON_TAC[MDIST_SYM; REAL_LT_REFL];
 
 
 
