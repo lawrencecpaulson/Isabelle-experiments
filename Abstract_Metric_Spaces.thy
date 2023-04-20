@@ -1069,9 +1069,9 @@ subsection\<open>Metric spaces\<close>
 (*Essential to avoid a clash with the existing metric_space locale (from the type class)*)
 locale Metric_space =
   fixes M :: "'a set" and d :: "'a \<Rightarrow> 'a \<Rightarrow> real"
-  assumes nonneg: "\<And>x y. 0 \<le> d x y"
+  assumes nonneg [simp]: "\<And>x y. 0 \<le> d x y"
   assumes commute: "\<And>x y. d x y = d y x"
-  assumes zero: "\<And>x y. \<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> d x y = 0 \<longleftrightarrow> x=y"
+  assumes zero [simp]: "\<And>x y. \<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> d x y = 0 \<longleftrightarrow> x=y"
   assumes triangle: "\<And>x y z. \<lbrakk>x \<in> M; y \<in> M; z \<in> M\<rbrakk> \<Longrightarrow> d x z \<le> d x y + d y z"
 
 text \<open>Link with the type class version\<close>
@@ -6348,48 +6348,68 @@ next
       have "l \<in> M"
         using derived_set_of_sequentially_decreasing l by blast
 
-      define r where "r \<equiv> wfrec less_than
-           (\<lambda>rec n. g (Min (insert (inverse (Suc n)) ((\<lambda>i. d l (\<sigma> (rec i))) ` {..<n}))))"
-      define E where "E \<equiv> \<lambda>n. insert (inverse (Suc n)) ((\<lambda>i. d l (\<sigma> (r i))) ` {..<n})"
-      have "(\<lambda>i. d l (\<sigma> (cut r less_than n i))) ` {..<n} = (\<lambda>i. d l (\<sigma> (r i))) ` {..<n}" for n
-        by (auto simp: cut_apply)
-      then have r_eq: "r n = g (Min (E n))" for n
-        unfolding E_def by (metis def_wfrec [OF r_def] wf_less_than) 
+      define E where 
+        "E \<equiv> \<lambda>rec n. insert (inverse (Suc n)) ((\<lambda>i. d l (\<sigma> i)) ` (\<Union>k<n. {0..rec k})) - {0}"
 
+      define r where "r \<equiv> wfrec less_than (\<lambda>rec n. g (Min (E rec n)))"
+      have "(\<Union>k<n. {0..cut r less_than n k}) = (\<Union>k<n. {0..r k})" for n
+        by (auto simp: cut_apply)
+      then have r_eq: "r n = g (Min (E r n))" for n
+        by (metis E_def def_wfrec [OF r_def] wf_less_than)
       have dl_pos[simp]: "d l (\<sigma> (r n)) > 0" for n
         using wf_less_than
       proof (induction n rule: wf_induct_rule)
         case (less n) 
-        then have *: "Min (E n) > 0"
-          by (auto simp: E_def)
+        then have *: "Min (E r n) > 0"
+          using \<open>l \<in> M\<close> \<open>range \<sigma> \<subseteq> M\<close> by (auto simp add: E_def image_subset_iff)
         show ?case
           using g [OF *] r_eq [of n]
           by (metis \<open>l \<in> M\<close> \<open>range \<sigma> \<subseteq> M\<close> mdist_pos_less range_subsetD)
       qed
       then have non_l: "\<sigma> (r n) \<noteq> l" for n
         using \<open>range \<sigma> \<subseteq> M\<close> mdist_pos_eq by blast
+      have Min_pos: "Min (E r n) > 0" for n
+        using dl_pos \<open>l \<in> M\<close> \<open>range \<sigma> \<subseteq> M\<close> by (auto simp: E_def image_subset_iff)
       have d_small: "d (\<sigma>(r n)) l < inverse(Suc n)" for n
       proof -
-        have "Min (E n) > 0" 
-          using dl_pos by (auto simp: E_def)
-        have "d (\<sigma>(r n)) l < Min (E n)"
-          by (simp add: \<open>0 < Min (E n)\<close> commute g r_eq) 
+        have "d (\<sigma>(r n)) l < Min (E r n)"
+          by (simp add: \<open>0 < Min (E r n)\<close> commute g r_eq) 
         also have "... \<le> inverse(Suc n)"
           by (simp add: E_def)
         finally show ?thesis .
       qed
 
-      have r: "\<And>n. (\<forall>p < n. r p < r n)"
-        using l
-        apply (simp add: metric_derived_set_of)
-        sorry
+      have DD: "d l (\<sigma> (r n)) < d l (\<sigma> i)" if \<section>: "p < n" "i \<le> r p" for i p n
+      proof -
+        consider "d l (\<sigma> i) \<in> E r n" | "\<sigma> i = l"
+          using \<section> \<open>l \<in> M\<close> \<open>range \<sigma> \<subseteq> M\<close> 
+          by (force simp: E_def image_subset_iff image_iff)
+        then show ?thesis
+        proof cases
+          case 1
+          have "d l (\<sigma> (g (Min (E r n)))) < Min (E r n)"
+            by (rule conjunct2 [OF g [OF Min_pos]])
+          also have "Min (E r n) \<le> d l (\<sigma> i)"
+            using 1 unfolding E_def by (force intro!: Min.coboundedI)
+          finally show ?thesis
+            by (simp add: r_eq) 
+        next
+          case 2
+          then show ?thesis
+            by (simp add: \<open>l \<in> M\<close>)
+        qed
+      qed
+      have r: "r p < r n"  if "p < n" for p n
+        using DD [OF that]
+        by (meson linorder_not_le order_less_irrefl) 
+
       show ?thesis
         apply (rule_tac x="l" in exI)
         apply (rule_tac x="r" in exI)
       proof (intro conjI \<open>l \<in> U\<close>)
         show "strict_mono r"
           by (simp add: r strict_monoI)
-        show "limitin mtopology (r \<circ> r) l sequentially"
+        show "limitin mtopology (\<sigma> \<circ> r) l sequentially"
           unfolding limitin_metric
         proof (intro conjI strip)
           show "l \<in> M"
@@ -6399,7 +6419,8 @@ next
           then have "\<forall>\<^sub>F n in sequentially. inverse(Suc n) < \<epsilon>"
             using Archimedean_eventually_inverse by auto
           then show "\<forall>\<^sub>F n in sequentially. (\<sigma> \<circ> r) n \<in> M \<and> d ((\<sigma> \<circ> r) n) l < \<epsilon>"
-            by eventually_elim (smt (verit, best) \<open>range \<sigma> \<subseteq> M\<close> comp_apply r range_subsetD)
+            apply eventually_elim
+            by (smt (verit, best) \<open>range \<sigma> \<subseteq> M\<close> comp_apply d_small range_subsetD)
         qed
       qed
     qed
