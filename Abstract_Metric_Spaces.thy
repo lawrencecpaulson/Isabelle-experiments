@@ -3286,7 +3286,7 @@ next
     have "compact_space Y"
     proof (rule Alexander_subbase_alt)
       show "\<exists>\<F>'. finite \<F>' \<and> \<F>' \<subseteq> \<C> \<and> topspace X \<subseteq> \<Union> \<F>'" 
-        if \<C>: "\<C> \<subseteq> insert (topspace X - S) (Collect (openin X))" and sub: "topspace X \<subseteq> \<Union> \<C>" for \<C>
+        if \<C>: "\<C> \<subseteq> insert (topspace X - S) (Collect (openin X))" and sub: "topspace X \<subseteq> \<Union>\<C>" for \<C>
       proof -
         consider "\<C> \<subseteq> Collect (openin X)" | \<V> where "\<C> = insert (topspace X - S) \<V>" "\<V> \<subseteq> Collect (openin X)"
           using \<C> by (metis insert_Diff subset_insert_iff)
@@ -6432,62 +6432,49 @@ lemma C:
   by (metis convergent_imp_MCauchy assms image_comp image_mono subset_UNIV subset_trans)
 
 lemma D:
-  assumes "S \<subseteq> M" "S \<subseteq> \<Union> \<C>" and opeU: "\<And>U. U \<in> \<C> \<Longrightarrow> openin mtopology U"
-  assumes "(\<forall>\<sigma>::nat\<Rightarrow>'a. range \<sigma> \<subseteq> S
+  assumes "S \<subseteq> M" "S \<subseteq> \<Union>\<C>" and opeU: "\<And>U. U \<in> \<C> \<Longrightarrow> openin mtopology U"
+  assumes \<section>: "(\<forall>\<sigma>::nat\<Rightarrow>'a. range \<sigma> \<subseteq> S
          \<longrightarrow> (\<exists>l r. l \<in> S \<and> strict_mono r \<and> limitin mtopology (\<sigma> \<circ> r) l sequentially))"
   shows "\<exists>\<epsilon>>0. \<forall>x \<in> S. \<exists>U \<in> \<C>. mball x \<epsilon> \<subseteq> U"
-  sorry
+proof (rule ccontr)
+  assume "\<not> (\<exists>\<epsilon>>0. \<forall>x \<in> S. \<exists>U \<in> \<C>. mball x \<epsilon> \<subseteq> U)"
+  then have "\<forall>n. \<exists>x\<in>S. \<forall>U\<in>\<C>. \<not> mball x (inverse (Suc n)) \<subseteq> U"
+    by simp
+  then obtain \<sigma> where "\<And>n. \<sigma> n \<in> S" 
+       and \<sigma>: "\<And>n U. U \<in> \<C> \<Longrightarrow> \<not> mball (\<sigma> n) (inverse (Suc n)) \<subseteq> U"
+    by metis
+  then obtain l r where "l \<in> S" "strict_mono r" 
+         and lr: "limitin mtopology (\<sigma> \<circ> r) l sequentially"
+    by (meson \<section> image_subsetI)
+  with \<open>S \<subseteq> \<Union>\<C>\<close> obtain B where "l \<in> B" "B \<in> \<C>"
+    by auto
+  then obtain \<epsilon> where "\<epsilon> > 0" and \<epsilon>: "\<And>z. \<lbrakk>z \<in> M; d z l < \<epsilon>\<rbrakk> \<Longrightarrow> z \<in> B"
+    by (metis opeU [OF \<open>B \<in> \<C>\<close>] commute in_mball openin_mtopology subset_iff)
+  then have "\<forall>\<^sub>F n in sequentially. \<sigma> (r n) \<in> M \<and> d (\<sigma> (r n)) l < \<epsilon>/2"
+    using lr half_gt_zero unfolding limitin_metric o_def by blast
+  moreover have "\<forall>\<^sub>F n in sequentially. inverse (real (Suc n)) < \<epsilon>/2"
+    using Archimedean_eventually_inverse \<open>0 < \<epsilon>\<close> half_gt_zero by blast
+  ultimately obtain n where n: "d (\<sigma> (r n)) l < \<epsilon>/2" "inverse (real (Suc n)) < \<epsilon>/2"
+    by (smt (verit, del_insts) eventually_sequentially le_add1 le_add2)
+  have "x \<in> B" if "d (\<sigma> (r n)) x < inverse (Suc(r n))" "x \<in> M" for x
+  proof -
+    have rle: "inverse (real (Suc (r n))) \<le> inverse (real (Suc n))"
+      using \<open>strict_mono r\<close> strict_mono_imp_increasing by auto
+    have "d x l \<le> d (\<sigma> (r n)) x + d (\<sigma> (r n)) l"
+      using that by (metis triangle \<open>\<And>n. \<sigma> n \<in> S\<close> \<open>l \<in> S\<close> \<open>S \<subseteq> M\<close> commute subsetD)
+    also have "... < \<epsilon>"
+      using that n rle by linarith
+    finally show ?thesis
+      by (simp add: \<epsilon> that)
+  qed
+  then show False
+    using \<sigma> [of B "r n"] by (simp add: \<open>B \<in> \<C>\<close> subset_iff)
+qed
 
-oops
-
-    DISCH_TAC THEN X_GEN_TAC `U:(A=>bool)->bool` THEN STRIP_TAC THEN
-    ONCE_REWRITE_TAC[MESON[] `(\<exists>x. P x \<and> Q x) \<longleftrightarrow> \<not> (\<forall>x. P x \<Longrightarrow> \<not> Q x)`] THEN
-    GEN_REWRITE_TAC (RAND_CONV \<circ> TOP_DEPTH_CONV)
-      [NOT_FORALL_THM; RIGHT_IMP_EXISTS_THM; NOT_IMP] THEN
-    DISCH_THEN(MP_TAC \<circ> GEN `n::num` \<circ> SPEC `inverse(Suc n)`) THEN
-    REWRITE_TAC[REAL_LT_INV_EQ; REAL_ARITH `0 < n + 1`] THEN
-    REWRITE_TAC[SKOLEM_THM; NOT_EXISTS_THM; FORALL_AND_THM] THEN
-    X_GEN_TAC `x::num=>A` THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::num=>A`) THEN
-    ASM_REWRITE_TAC[NOT_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`l::A`; `r::num=>num`] THEN STRIP_TAC THEN
-    SUBGOAL_THEN `\<exists>b::A=>bool. l \<in> b \<and> b \<in> U` STRIP_ASSUME_TAC THENL
-     [ASM_MESON_TAC[\<subseteq>; IN_UNIONS]; ALL_TAC] THEN
-    SUBGOAL_THEN
-     `\<exists>e. 0 < e \<and> \<forall>z::A. z \<in> M \<and> d z l < e \<Longrightarrow> z \<in> b`
-    STRIP_ASSUME_TAC THENL
-     [FIRST_X_ASSUM(MP_TAC \<circ> SPEC `b::A=>bool`) THEN
-      ASM_REWRITE_TAC[OPEN_IN_MTOPOLOGY; \<subseteq>; IN_MBALL] THEN
-      DISCH_THEN(CONJUNCTS_THEN (MP_TAC \<circ> SPEC `l::A`)) THEN
-      ASM_MESON_TAC[MDIST_SYM];
-      ALL_TAC] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [LIMIT_METRIC]) THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC `e / 2`)) THEN
-    MP_TAC(ISPEC `e / 2` ARCH_EVENTUALLY_INV1) THEN
-    ASM_REWRITE_TAC[REAL_HALF; TAUT `p \<Longrightarrow> \<not> q \<longleftrightarrow> \<not> (p \<and> q)`] THEN
-    REWRITE_TAC[GSYM EVENTUALLY_AND; o_THM] THEN
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP EVENTUALLY_HAPPENS) THEN
-    REWRITE_TAC[TRIVIAL_LIMIT_SEQUENTIALLY; NOT_EXISTS_THM] THEN
-    X_GEN_TAC `n::num` THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`(r::num=>num) n`; `b::A=>bool`]) THEN
-    ASM_REWRITE_TAC[\<subseteq>; IN_MBALL] THEN X_GEN_TAC `z::A` THEN STRIP_TAC THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[] THEN
-    FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (METRIC_ARITH
-      `d x l < e / 2
-       \<Longrightarrow> x \<in> M \<and> z \<in> M \<and> l \<in> M \<and>
-           d x z < e / 2
-           \<Longrightarrow> d z l < e`)) THEN
-    ASM_REWRITE_TAC[] THEN FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP
-     (REWRITE_RULE[IMP_CONJ_ALT] REAL_LT_TRANS)) THEN
-    FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP
-     (REWRITE_RULE[IMP_CONJ] REAL_LTE_TRANS)) THEN
-    MATCH_MP_TAC REAL_LE_INV2 THEN
-    REWRITE_TAC[REAL_OF_NUM_LE; REAL_LE_RADD; REAL_ARITH `0 < n + 1`] THEN
-    ASM_MESON_TAC[MONOTONE_BIGGER];
 
 lemma E:
   assumes "mtotally_bounded S" "S \<subseteq> M"
-  and S: "\<And>\<C>. \<lbrakk>\<And>U. U \<in> \<C> \<Longrightarrow> openin mtopology U; S \<subseteq> \<Union> \<C>\<rbrakk> \<Longrightarrow> \<exists>\<epsilon>>0. \<forall>x \<in> S. \<exists>U \<in> \<C>. mball x \<epsilon> \<subseteq> U"
+  and S: "\<And>\<C>. \<lbrakk>\<And>U. U \<in> \<C> \<Longrightarrow> openin mtopology U; S \<subseteq> \<Union>\<C>\<rbrakk> \<Longrightarrow> \<exists>\<epsilon>>0. \<forall>x \<in> S. \<exists>U \<in> \<C>. mball x \<epsilon> \<subseteq> U"
   shows "compactin mtopology S"
 proof (clarsimp simp add: compactin_def assms)
   fix \<U> :: "'a set set"
