@@ -6571,9 +6571,11 @@ next
       using metric_closure_of by fastforce+
     then obtain f where f: "\<And>n r. r>0 \<Longrightarrow> f n r \<ge> n \<and> \<sigma> (f n r) \<in> M \<and> d l (\<sigma> (f n r)) < r"
       by metis
-    obtain r where r: "\<And>n. d l (\<sigma>(r n)) < inverse(Suc n)" "\<And>n. r n < r(Suc n)"
-      using l apply (simp add: metric_closure_of)
-      sorry
+    define r where "r = rec_nat (f 0 1) (\<lambda>n rec. (f (Suc rec) (inverse (Suc (Suc n)))))"
+    have r: "d l (\<sigma>(r n)) < inverse(Suc n)" for n
+      by (induction n) (auto simp: rec_nat_0_imp [OF r_def] rec_nat_Suc_imp [OF r_def] f)
+    have "r n < r(Suc n)" for n
+      by (simp add: Suc_le_lessD f r_def)
     then have "strict_mono r"
       using strict_monoI_Suc by blast
     moreover have "limitin mtopology (\<sigma> \<circ> r) l sequentially"
@@ -6583,25 +6585,15 @@ next
         then have "(\<forall>\<^sub>F n in sequentially. inverse (real (Suc n)) < \<epsilon>)"
           using Archimedean_eventually_inverse by blast
         then show "\<forall>\<^sub>F n in sequentially. \<sigma> (r n) \<in> M \<and> d (\<sigma> (r n)) l < \<epsilon>"
-          by eventually_elim (metis commute \<open>range \<sigma> \<subseteq> M\<close>  order_less_trans r(1) range_subsetD)
+          by eventually_elim (metis commute \<open>range \<sigma> \<subseteq> M\<close>  order_less_trans r range_subsetD)
       qed
     ultimately show "\<exists>l r. l \<in> M \<and> strict_mono r \<and> limitin mtopology (\<sigma> \<circ> r) l sequentially"
       using \<open>l \<in> M\<close> by blast
   qed
 qed
 
-  oops
-    MP_TAC THENL
-     [MATCH_MP_TAC DEPENDENT_CHOICE THEN CONJ_TAC THENL
-       [FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`0`; `1`]);
-        MAP_EVERY X_GEN_TAC [`n::num`; `m::num`] THEN STRIP_TAC THEN
-        FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`m + 1`; `inverse((Suc n) + 1)`])] THEN
-      REWRITE_TAC[REAL_LT_INV_EQ; REAL_ARITH `0 < n + 1`] THEN
-      CONV_TAC REAL_RAT_REDUCE_CONV THEN
-      REWRITE_TAC[ARITH_RULE `m + 1 \<le> n \<longleftrightarrow> m < n`] THEN MESON_TAC[];
 
-
-lemma mcomplete_discrete_metric:
+lemma (in discrete_metric) mcomplete_discrete_metric:
    "mcomplete (discrete_metric s)"
 oops
   GEN_TAC THEN REWRITE_TAC[mcomplete; DISCRETE_METRIC; MCauchy] THEN
