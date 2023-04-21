@@ -5,9 +5,10 @@ theory Abstract_Metric_Spaces
     "HOL-Analysis.Analysis" "HOL-ex.Sketch_and_Explore"
 begin
 
+thm compact_space_imp_nest (*NEEDS decseq*)
 
 lemma Archimedean_eventually_inverse:
-  fixes \<epsilon>::real shows "eventually (\<lambda>n. inverse (Suc n) < \<epsilon>) sequentially \<longleftrightarrow> 0 < \<epsilon>"
+  fixes \<epsilon>::real shows "(\<forall>\<^sub>F n in sequentially. inverse (real (Suc n)) < \<epsilon>) \<longleftrightarrow> 0 < \<epsilon>"
   (is "?lhs=?rhs")
 proof
   assume ?lhs
@@ -6519,8 +6520,6 @@ lemma lebesgue_number:
     \<Longrightarrow> \<exists>\<epsilon>>0. \<forall>x \<in> S. \<exists>U \<in> \<C>. mball x \<epsilon> \<subseteq> U"
   by (simp add: D compactin_sequentially)
 
-
-
 lemma compact_space_sequentially:
    "compact_space mtopology \<longleftrightarrow>
     (\<forall>\<sigma>::nat\<Rightarrow>'a. range \<sigma> \<subseteq> M
@@ -6534,41 +6533,64 @@ lemma compact_space_eq_Bolzano_Weierstrass:
   by (force simp add: compact_space_def compactin_eq_Bolzano_Weierstrass)
 
 lemma compact_space_nest:
-   "        compact_spacemtopology \<longleftrightarrow>
-        \<forall>c. (\<forall>n. closedin mtopology (c n)) \<and>
-            (\<forall>n. \<not> (c n = {})) \<and>
-            (\<forall>m n. m \<le> n \<Longrightarrow> c n \<subseteq> c m)
-            \<Longrightarrow> \<not> (\<Inter> {c n | n \<in> UNIV} = {})"
-oops
-  GEN_TAC THEN EQ_TAC THENL
-   [REWRITE_TAC[COMPACT_SPACE_FIP] THEN DISCH_TAC THEN
-    X_GEN_TAC `c::num=>A->bool` THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `image (c::num=>A->bool) UNIV`) THEN
-    ASM_REWRITE_TAC[SIMPLE_IMAGE; FORALL_IN_IMAGE] THEN
-    DISCH_THEN MATCH_MP_TAC THEN
-    REWRITE_TAC[FORALL_FINITE_SUBSET_IMAGE; SUBSET_UNIV] THEN
-    X_GEN_TAC `k::num=>bool` THEN DISCH_THEN(MP_TAC \<circ> ISPEC `\<lambda>n::num. n` \<circ>
-      MATCH_MP UPPER_BOUND_FINITE_SET) THEN
-    REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `n::num` THEN
-    DISCH_TAC THEN MATCH_MP_TAC(SET_RULE
-     `\<forall>t. (t \<noteq> {}) \<and> t \<subseteq> S \<Longrightarrow> (S \<noteq> {})`) THEN
-    EXISTS_TAC `(c::num=>A->bool) n` THEN
-    ASM_SIMP_TAC[SUBSET_INTERS; FORALL_IN_IMAGE];
-    DISCH_TAC THEN REWRITE_TAC[COMPACT_SPACE_SEQUENTIALLY] THEN
-    X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> SPEC
-     `\<lambda>n. mtopology closure_of (image (x::num=>A) (from n))`) THEN
-    REWRITE_TAC[CLOSED_IN_CLOSURE_OF] THEN
-    SIMP_TAC[CLOSURE_OF_MONO; FROM_MONO; IMAGE_SUBSET] THEN
-    REWRITE_TAC[CLOSURE_OF_EQ_EMPTY_GEN; TOPSPACE_MTOPOLOGY] THEN
-    ASM_SIMP_TAC[FROM_NONEMPTY; SET_RULE
-     `(\<forall>n. x n \<in> S) \<and> (k \<noteq> {}) \<Longrightarrow> \<not> disjnt S (x ` k)`] THEN
-    REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; INTERS_GSPEC; IN_ELIM_THM] THEN
-    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `l::A` THEN
-    REWRITE_TAC[IN_UNIV; METRIC_CLOSURE_OF; IN_ELIM_THM; FORALL_AND_THM] THEN
-    REWRITE_TAC[EXISTS_IN_IMAGE; IN_FROM; IN_MBALL] THEN STRIP_TAC THEN
-    SUBGOAL_THEN
-     `\<exists>r. (\<forall>n. d m (l::A,x(r n)) < inverse(Suc n)) \<and>
-          (\<forall>n. (r::num=>num) n < r(Suc n))`
+   "compact_space mtopology \<longleftrightarrow>
+    (\<forall>C. (\<forall>n::nat. closedin mtopology (C n)) \<and> (\<forall>n. C n \<noteq> {}) \<and> decseq C \<longrightarrow> \<Inter>(range C) \<noteq> {})"
+   (is "?lhs=?rhs")
+proof
+  assume L: ?lhs
+  show ?rhs
+  proof clarify
+    fix C :: "nat \<Rightarrow> 'a set"
+    assume "\<forall>n. closedin mtopology (C n)"
+      and "\<forall>n. C n \<noteq> {}"
+      and "decseq C"
+      and "\<Inter> (range C) = {}"
+    then obtain K where K: "finite K" "\<Inter>(C ` K) = {}"
+      by (metis L compact_space_imp_nest decseq_def)
+    then obtain k where "K \<subseteq> {..k}"
+      using finite_nat_iff_bounded_le by auto
+    then have "C k \<subseteq> \<Inter>(C ` K)"
+      using \<open>decseq C\<close> by (auto simp:decseq_def)
+    then show False
+      by (simp add: K \<open>\<forall>n. C n \<noteq> {}\<close>)
+  qed
+next
+  assume ?rhs
+
+  then show ?lhs
+    unfolding compact_space_sequentially
+  proof (intro strip)
+    fix \<sigma> :: "nat \<Rightarrow> 'a"
+    assume \<sigma> [rule_format]: "\<forall>C. (\<forall>n. closedin mtopology (C n)) \<and> (\<forall>n. C n \<noteq> {}) \<and> decseq C \<longrightarrow> \<Inter> (range C) \<noteq> {}"
+      and "range \<sigma> \<subseteq> M"
+    have "mtopology closure_of \<sigma> ` {n..} \<noteq> {}" for n
+      using \<open>range \<sigma> \<subseteq> M\<close> by (auto simp: closure_of_eq_empty image_subset_iff)
+    moreover have "decseq (\<lambda>n. mtopology closure_of \<sigma> ` {n..})"
+      using closure_of_mono image_mono by (smt (verit) atLeast_subset_iff decseq_def) 
+    ultimately obtain l where l: "\<And>n. l \<in> mtopology closure_of \<sigma> ` {n..}"
+      using \<sigma> [of "\<lambda>n. mtopology closure_of (\<sigma> ` {n..})"] by auto
+    then have "l \<in> M"
+      using metric_closure_of by auto
+    obtain r where r: "\<And>n. d (\<sigma>(r n)) l < inverse(Suc n)" "\<And>n. r n < r(Suc n)"
+      sorry
+    then have "strict_mono r"
+      using strict_monoI_Suc by blast
+    moreover have "limitin mtopology (\<sigma> \<circ> r) l sequentially"
+      proof (clarsimp simp: limitin_metric \<open>l \<in> M\<close>)
+        fix \<epsilon> :: real
+        assume "\<epsilon> > 0"
+        then have "(\<forall>\<^sub>F n in sequentially. inverse (real (Suc n)) < \<epsilon>)"
+          using Archimedean_eventually_inverse by blast
+        then
+        show "\<forall>\<^sub>F n in sequentially. \<sigma> (r n) \<in> M \<and> d (\<sigma> (r n)) l < \<epsilon>"
+          by eventually_elim (meson \<open>range \<sigma> \<subseteq> M\<close> order_less_trans r(1) range_subsetD)
+      qed
+    ultimately show "\<exists>l r. l \<in> M \<and> strict_mono r \<and> limitin mtopology (\<sigma> \<circ> r) l sequentially"
+      using \<open>l \<in> M\<close> by blast
+  qed
+qed
+
+  oops
     MP_TAC THENL
      [MATCH_MP_TAC DEPENDENT_CHOICE THEN CONJ_TAC THENL
        [FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`0`; `1`]);
@@ -6577,21 +6599,10 @@ oops
       REWRITE_TAC[REAL_LT_INV_EQ; REAL_ARITH `0 < n + 1`] THEN
       CONV_TAC REAL_RAT_REDUCE_CONV THEN
       REWRITE_TAC[ARITH_RULE `m + 1 \<le> n \<longleftrightarrow> m < n`] THEN MESON_TAC[];
-      MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `r::num=>num` THEN
-      STRIP_TAC THEN ASM_REWRITE_TAC[SUBSEQUENCE_STEPWISE] THEN
-      ASM_REWRITE_TAC[LIMIT_METRIC; o_THM] THEN X_GEN_TAC `e::real` THEN
-      GEN_REWRITE_TAC LAND_CONV [GSYM ARCH_EVENTUALLY_INV1] THEN
-      MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] EVENTUALLY_MONO) THEN
-      ASM_MESON_TAC[REAL_LT_TRANS; MDIST_SYM]]]);;
 
-lemma compact_in_imp_mtotally_bounded:
-   "\<And>m (s::A=>bool). compactin mtopology s \<Longrightarrow> mtotally_bounded s"
-oops
-  REWRITE_TAC[mtotally_bounded] THEN
-  MESON_TAC[COMPACT_IN_IMP_TOTALLY_BOUNDED_IN_EXPLICIT]);;
 
 lemma mcomplete_discrete_metric:
-   "\<And>s::A=>bool. mcomplete (discrete_metric s)"
+   "mcomplete (discrete_metric s)"
 oops
   GEN_TAC THEN REWRITE_TAC[mcomplete; DISCRETE_METRIC; MCauchy] THEN
   X_GEN_TAC `x::num=>A` THEN
@@ -6606,7 +6617,7 @@ oops
   REWRITE_TAC[EVENTUALLY_SEQUENTIALLY] THEN ASM_MESON_TAC[]);;
 
 lemma compact_space_imp_mcomplete:
-   "compact_spacemtopology \<Longrightarrow> mcomplete"
+   "compact_space mtopology \<Longrightarrow> mcomplete"
 oops
   SIMP_TAC[COMPACT_SPACE_NEST; MCOMPLETE_NEST]);;
 
@@ -6646,7 +6657,7 @@ oops
             CLOSED_IN_SUBSET; TOPSPACE_MTOPOLOGY]);;
 
 lemma compact_space_eq_mcomplete_mtotally_bounded:
-   "        compact_spacemtopology \<longleftrightarrow>
+   "        compact_space mtopology \<longleftrightarrow>
         mcomplete \<and> mtotally_bounded (M)"
 oops
   GEN_TAC THEN EQ_TAC THEN
