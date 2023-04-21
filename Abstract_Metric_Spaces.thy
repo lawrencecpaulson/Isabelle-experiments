@@ -6555,23 +6555,24 @@ proof
       by (simp add: K \<open>\<forall>n. C n \<noteq> {}\<close>)
   qed
 next
-  assume ?rhs
-
-  then show ?lhs
+  assume R [rule_format]: ?rhs
+  show ?lhs
     unfolding compact_space_sequentially
   proof (intro strip)
     fix \<sigma> :: "nat \<Rightarrow> 'a"
-    assume \<sigma> [rule_format]: "\<forall>C. (\<forall>n. closedin mtopology (C n)) \<and> (\<forall>n. C n \<noteq> {}) \<and> decseq C \<longrightarrow> \<Inter> (range C) \<noteq> {}"
-      and "range \<sigma> \<subseteq> M"
+    assume \<sigma>: "range \<sigma> \<subseteq> M"
     have "mtopology closure_of \<sigma> ` {n..} \<noteq> {}" for n
       using \<open>range \<sigma> \<subseteq> M\<close> by (auto simp: closure_of_eq_empty image_subset_iff)
     moreover have "decseq (\<lambda>n. mtopology closure_of \<sigma> ` {n..})"
       using closure_of_mono image_mono by (smt (verit) atLeast_subset_iff decseq_def) 
     ultimately obtain l where l: "\<And>n. l \<in> mtopology closure_of \<sigma> ` {n..}"
-      using \<sigma> [of "\<lambda>n. mtopology closure_of (\<sigma> ` {n..})"] by auto
-    then have "l \<in> M"
-      using metric_closure_of by auto
-    obtain r where r: "\<And>n. d (\<sigma>(r n)) l < inverse(Suc n)" "\<And>n. r n < r(Suc n)"
+      using R [of "\<lambda>n. mtopology closure_of (\<sigma> ` {n..})"] by auto
+    then have "l \<in> M" and "\<And>n. \<forall>r>0. \<exists>k\<ge>n. \<sigma> k \<in> M \<and> d l (\<sigma> k) < r"
+      using metric_closure_of by fastforce+
+    then obtain f where f: "\<And>n r. r>0 \<Longrightarrow> f n r \<ge> n \<and> \<sigma> (f n r) \<in> M \<and> d l (\<sigma> (f n r)) < r"
+      by metis
+    obtain r where r: "\<And>n. d l (\<sigma>(r n)) < inverse(Suc n)" "\<And>n. r n < r(Suc n)"
+      using l apply (simp add: metric_closure_of)
       sorry
     then have "strict_mono r"
       using strict_monoI_Suc by blast
@@ -6581,9 +6582,8 @@ next
         assume "\<epsilon> > 0"
         then have "(\<forall>\<^sub>F n in sequentially. inverse (real (Suc n)) < \<epsilon>)"
           using Archimedean_eventually_inverse by blast
-        then
-        show "\<forall>\<^sub>F n in sequentially. \<sigma> (r n) \<in> M \<and> d (\<sigma> (r n)) l < \<epsilon>"
-          by eventually_elim (meson \<open>range \<sigma> \<subseteq> M\<close> order_less_trans r(1) range_subsetD)
+        then show "\<forall>\<^sub>F n in sequentially. \<sigma> (r n) \<in> M \<and> d (\<sigma> (r n)) l < \<epsilon>"
+          by eventually_elim (metis commute \<open>range \<sigma> \<subseteq> M\<close>  order_less_trans r(1) range_subsetD)
       qed
     ultimately show "\<exists>l r. l \<in> M \<and> strict_mono r \<and> limitin mtopology (\<sigma> \<circ> r) l sequentially"
       using \<open>l \<in> M\<close> by blast
