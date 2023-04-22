@@ -6594,36 +6594,39 @@ qed
 
 
 lemma (in discrete_metric) mcomplete_discrete_metric:
-   "mcomplete (discrete_metric s)"
-oops
-  GEN_TAC THEN REWRITE_TAC[mcomplete; DISCRETE_METRIC; MCauchy] THEN
-  X_GEN_TAC `x::num=>A` THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC `1`)) THEN
-  ONCE_REWRITE_TAC[COND_RAND] THEN ONCE_REWRITE_TAC[COND_RATOR] THEN
-  CONV_TAC REAL_RAT_REDUCE_CONV THEN
-  DISCH_THEN(X_CHOOSE_THEN `N::num` (MP_TAC \<circ> SPEC `N::num`)) THEN
-  REWRITE_TAC[LE_REFL; TAUT `(if p then True else False) = p`] THEN
-  DISCH_TAC THEN EXISTS_TAC `(x::num=>A) N` THEN
-  MATCH_MP_TAC LIMIT_EVENTUALLY THEN
-  ASM_REWRITE_TAC[DISCRETE_METRIC; TOPSPACE_MTOPOLOGY] THEN
-  REWRITE_TAC[EVENTUALLY_SEQUENTIALLY] THEN ASM_MESON_TAC[]);;
+  "disc.mcomplete"
+proof (clarsimp simp add: disc.mcomplete_def)
+  fix \<sigma> :: "nat \<Rightarrow> 'a"
+  assume "disc.MCauchy \<sigma>"
+  then obtain N where "\<And>n. N \<le> n \<Longrightarrow> \<sigma> N = \<sigma> n"
+    unfolding disc.MCauchy_def by (metis dd_def dual_order.refl order_less_irrefl zero_less_one)
+  moreover have "range \<sigma> \<subseteq> M"
+    using \<open>disc.MCauchy \<sigma>\<close> disc.MCauchy_def by blast
+  ultimately have "limitin disc.mtopology \<sigma> (\<sigma> N) sequentially"
+    by (metis disc.limit_metric_sequentially disc.zero range_subsetD)
+  then show "\<exists>x. limitin disc.mtopology \<sigma> x sequentially" ..
+qed
 
-lemma compact_space_imp_mcomplete:
-   "compact_space mtopology \<Longrightarrow> mcomplete"
-oops
-  SIMP_TAC[COMPACT_SPACE_NEST; MCOMPLETE_NEST]);;
+lemma compact_space_imp_mcomplete: "compact_space mtopology \<Longrightarrow> mcomplete"
+  by (simp add: compact_space_nest mcomplete_nest)
 
-lemma compact_in_imp_mcomplete:
-   "\<And>m s::A=>bool. compactin mtopology s \<Longrightarrow> mcomplete (submetric s)"
-oops
-  REWRITE_TAC[COMPACT_IN_SUBSPACE] THEN REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC COMPACT_SPACE_IMP_MCOMPLETE THEN
-  ASM_REWRITE_TAC[MTOPOLOGY_SUBMETRIC]);;
+lemma (in submetric) compactin_imp_mcomplete:
+   "compactin mtopology A \<Longrightarrow> sub.mcomplete"
+  by (simp add: compactin_subspace mtopology_submetric sub.compact_space_imp_mcomplete)
 
-lemma mcomplete_imp_closedin:
-   "\<And>m s::A=>bool.
-       mcomplete(submetric s) \<and> s \<subseteq> M
-       \<Longrightarrow> closedin mtopology s"
+lemma (in submetric) mcomplete_imp_closedin:
+  assumes "sub.mcomplete"
+  shows "closedin mtopology A"
+proof -
+  have "l \<in> A"
+    if "range \<sigma> \<subseteq> A" and "limitin mtopology \<sigma> l sequentially"
+    for \<sigma> :: "nat \<Rightarrow> 'a" and l
+    using that sorry
+  then show ?thesis
+  unfolding metric_closedin_iff_sequentially_closed
+  using subset by blast
+qed
+
 oops
   REPEAT STRIP_TAC THEN
   ASM_REWRITE_TAC[METRIC_CLOSED_IN_IFF_SEQUENTIALLY_CLOSED] THEN
@@ -6639,51 +6642,26 @@ oops
   MATCH_MP_TAC(ISPEC `sequentially` LIMIT_METRIC_UNIQUE) THEN
   ASM_MESON_TAC[TRIVIAL_LIMIT_SEQUENTIALLY]);;
 
-lemma closedin_eq_mcomplete:
-   "\<And>m s::A=>bool.
-        mcomplete
-        \<Longrightarrow> (closedin mtopology s \<longleftrightarrow>
-             s \<subseteq> M \<and> mcomplete(submetric s))"
-oops
-  MESON_TAC[MCOMPLETE_IMP_CLOSED_IN; CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE;
-            CLOSED_IN_SUBSET; TOPSPACE_MTOPOLOGY]);;
+lemma (in submetric) closedin_eq_mcomplete:
+   "mcomplete \<Longrightarrow> (closedin mtopology A \<longleftrightarrow> sub.mcomplete)"
+  using closedin_mcomplete_imp_mcomplete mcomplete_imp_closedin by blast
 
 lemma compact_space_eq_mcomplete_mtotally_bounded:
-   "        compact_space mtopology \<longleftrightarrow>
-        mcomplete \<and> mtotally_bounded (M)"
-oops
-  GEN_TAC THEN EQ_TAC THEN
-  SIMP_TAC[COMPACT_SPACE_IMP_MCOMPLETE; COMPACT_IN_IMP_TOTALLY_BOUNDED_IN;
-           GSYM compact_space; GSYM TOPSPACE_MTOPOLOGY] THEN
-  SIMP_TAC[TOTALLY_BOUNDED_IN_SEQUENTIALLY; SUBSET_REFL] THEN
-  REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN STRIP_TAC THEN
-  REWRITE_TAC[compact_space; COMPACT_IN_SEQUENTIALLY] THEN
-  REWRITE_TAC[TOPSPACE_MTOPOLOGY; SUBSET_REFL] THEN
-  X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::num=>A`) THEN
-  ASM_REWRITE_TAC[] THEN ONCE_REWRITE_TAC[SWAP_EXISTS_THM] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `r::num=>num` THEN
-  STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-  FIRST_ASSUM(MP_TAC \<circ> SPEC `(x::num=>A) \<circ> (r::num=>num)` \<circ>
-      REWRITE_RULE[mcomplete]) THEN
-  ASM_REWRITE_TAC[limitin; TOPSPACE_MTOPOLOGY] THEN MESON_TAC[]);;
+   "compact_space mtopology \<longleftrightarrow> mcomplete \<and> mtotally_bounded M"
+  by (meson C compact_space_imp_mcomplete compact_space_sequentially limitin_mspace 
+            mcomplete_alt mtotally_bounded_sequentially subset_refl)
+
 
 lemma compact_closure_of_imp_mtotally_bounded:
-   "\<And>m s::A=>bool.
-      s \<subseteq> M \<and> compactin mtopology (mtopology closure_of s)
-      \<Longrightarrow> mtotally_bounded s"
-oops
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC TOTALLY_BOUNDED_IN_SUBSET THEN
-  EXISTS_TAC `mtopology closure_of s::A=>bool` THEN
-  ASM_SIMP_TAC[CLOSURE_OF_SUBSET; TOPSPACE_MTOPOLOGY] THEN
-  MATCH_MP_TAC COMPACT_IN_IMP_TOTALLY_BOUNDED_IN THEN ASM_REWRITE_TAC[]);;
+   "\<lbrakk>compactin mtopology (mtopology closure_of S); S \<subseteq> M\<rbrakk>
+      \<Longrightarrow> mtotally_bounded S"
+  using compactin_imp_mtotally_bounded mtotally_bounded_closure_of_eq by blast
 
 lemma mtotally_bounded_eq_compact_closure_of:
-   "\<And>m s::A=>bool.
-        mcomplete
-        \<Longrightarrow> (mtotally_bounded s \<longleftrightarrow>
-             s \<subseteq> M \<and>
-             compactin mtopology (mtopology closure_of s))"
+   "mcomplete
+        \<Longrightarrow> (mtotally_bounded S \<longleftrightarrow>
+             S \<subseteq> M \<and>
+             compactin mtopology (mtopology closure_of S))"
 oops
   REPEAT STRIP_TAC THEN EQ_TAC THEN
   SIMP_TAC[COMPACT_CLOSURE_OF_IMP_TOTALLY_BOUNDED_IN] THEN
@@ -6695,40 +6673,40 @@ oops
   ASM_SIMP_TAC[CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE; CLOSED_IN_CLOSURE_OF] THEN
   MATCH_MP_TAC TOTALLY_BOUNDED_IN_SUBMETRIC THEN
   REWRITE_TAC[SUBMETRIC; INTER_SUBSET] THEN
-  SIMP_TAC[SET_RULE `s \<subseteq> u \<Longrightarrow> s \<inter> u = s`;
+  SIMP_TAC[SET_RULE `S \<subseteq> U \<Longrightarrow> S \<inter> U = S`;
            CLOSURE_OF_SUBSET_TOPSPACE; GSYM TOPSPACE_MTOPOLOGY] THEN
   ASM_SIMP_TAC[TOTALLY_BOUNDED_IN_CLOSURE_OF]);;
 
 lemma compact_closure_of_eq_bolzano_weierstrass:
-   "\<And>m s::A=>bool.
-        compactin mtopology (mtopology closure_of s) \<longleftrightarrow>
-        \<forall>t. infinite t \<and> t \<subseteq> s \<and> t \<subseteq> M
-            \<Longrightarrow> \<not> (mtopology derived_set_of t = {})"
+   "\<And>m S::A=>bool.
+        compactin mtopology (mtopology closure_of S) \<longleftrightarrow>
+        \<forall>T. infinite T \<and> T \<subseteq> S \<and> T \<subseteq> M
+            \<Longrightarrow> \<not> (mtopology derived_set_of T = {})"
 oops
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [DISCH_TAC THEN GEN_TAC THEN STRIP_TAC THEN
     MATCH_MP_TAC COMPACT_CLOSURE_OF_IMP_BOLZANO_WEIERSTRASS THEN
-    EXISTS_TAC `s::A=>bool` THEN ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY];
+    EXISTS_TAC `S::A=>bool` THEN ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY];
     REWRITE_TAC[GSYM SUBSET_INTER] THEN ONCE_REWRITE_TAC[INTER_COMM] THEN
     ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
     REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-    MP_TAC(SET_RULE `M \<inter> (s::A=>bool) \<subseteq> M`) THEN
-    SPEC_TAC(`M \<inter> (s::A=>bool)`,`s::A=>bool`)] THEN
+    MP_TAC(SET_RULE `M \<inter> (S::A=>bool) \<subseteq> M`) THEN
+    SPEC_TAC(`M \<inter> (S::A=>bool)`,`S::A=>bool`)] THEN
   REPEAT STRIP_TAC THEN REWRITE_TAC[COMPACT_IN_SEQUENTIALLY] THEN
   REWRITE_TAC[GSYM TOPSPACE_MTOPOLOGY; CLOSURE_OF_SUBSET_TOPSPACE] THEN
-  MP_TAC(ISPECL [`m::A metric`; `mtopology closure_of s::A=>bool`;
-                `s::A=>bool`] BOLZANO_WEIERSTRASS_PROPERTY) THEN
+  MP_TAC(ISPECL [`m::A metric`; `mtopology closure_of S::A=>bool`;
+                `S::A=>bool`] BOLZANO_WEIERSTRASS_PROPERTY) THEN
   ASM_SIMP_TAC[CLOSURE_OF_SUBSET; TOPSPACE_MTOPOLOGY] THEN
   MATCH_MP_TAC(TAUT `q \<and> (p \<Longrightarrow> r) \<Longrightarrow> (p \<longleftrightarrow> q) \<Longrightarrow> r`) THEN CONJ_TAC THENL
-   [X_GEN_TAC `t::A=>bool` THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `t::A=>bool`) THEN ASM_REWRITE_TAC[] THEN
+   [X_GEN_TAC `T::A=>bool` THEN STRIP_TAC THEN
+    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `T::A=>bool`) THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; IN_INTER] THEN
     MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `a::A` THEN
     STRIP_TAC THEN ASM_REWRITE_TAC[CLOSURE_OF; IN_INTER; IN_UNION] THEN
     ASM_MESON_TAC[\<subseteq>; DERIVED_SET_OF_MONO; DERIVED_SET_OF_SUBSET_TOPSPACE];
     ALL_TAC] THEN
   DISCH_TAC THEN X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
-  SUBGOAL_THEN `\<forall>n. \<exists>y. y \<in> s \<and> d m ((x::num=>A) n,y) < inverse(Suc n)`
+  SUBGOAL_THEN `\<forall>n. \<exists>y. y \<in> S \<and> d m ((x::num=>A) n,y) < inverse(Suc n)`
   MP_TAC THENL
    [X_GEN_TAC `n::num` THEN FIRST_ASSUM(MP_TAC \<circ>
         GEN_REWRITE_RULE RAND_CONV [METRIC_CLOSURE_OF] \<circ> SPEC `n::num`) THEN
@@ -6781,16 +6759,16 @@ oops
   SIMP_TAC[LIMIT_SUBTOPOLOGY; MTOPOLOGY_SUBMETRIC]);;
 
 lemma mcomplete_submetric_real_euclidean_metric:
-   "mcomplete(submetric real_euclidean_metric s) \<longleftrightarrow>
-       closedin euclideanreal s"
+   "mcomplete(submetric real_euclidean_metric S) \<longleftrightarrow>
+       closedin euclideanreal S"
 oops
   REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
   SIMP_TAC[CLOSED_IN_EQ_MCOMPLETE; MCOMPLETE_REAL_EUCLIDEAN_METRIC] THEN
   REWRITE_TAC[REAL_EUCLIDEAN_METRIC; SUBSET_UNIV]);;
 
 lemma mtotally_bounded_discrete_metric:
-   "\<And>u s::A=>bool. mtotally_bounded (discrete_metric u) s \<longleftrightarrow>
-                 finite s \<and> s \<subseteq> u"
+   "\<And>U S::A=>bool. mtotally_bounded (discrete_metric U) S \<longleftrightarrow>
+                 finite S \<and> S \<subseteq> U"
 oops
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [ALL_TAC; MESON_TAC[FINITE_IMP_TOTALLY_BOUNDED_IN; DISCRETE_METRIC]] THEN
@@ -6798,27 +6776,27 @@ oops
            MCOMPLETE_DISCRETE_METRIC] THEN
   REWRITE_TAC[MTOPOLOGY_DISCRETE_METRIC; DISCRETE_METRIC] THEN
   SIMP_TAC[DISCRETE_TOPOLOGY_CLOSURE_OF; COMPACT_IN_DISCRETE_TOPOLOGY;
-            IMP_CONJ; SET_RULE `s \<subseteq> u \<Longrightarrow> u \<inter> s = s`]);;
+            IMP_CONJ; SET_RULE `S \<subseteq> U \<Longrightarrow> U \<inter> S = S`]);;
 
 lemma derived_set_of_infinite_openin_metric:
-   "\<And>m s::A=>bool.
-        mtopology derived_set_of s =
+   "\<And>m S::A=>bool.
+        mtopology derived_set_of S =
         {x. x \<in> M \<and>
-             \<forall>u. x \<in> u \<and> openin mtopology u \<Longrightarrow> infinite(s \<inter> u)}"
+             \<forall>U. x \<in> U \<and> openin mtopology U \<Longrightarrow> infinite(S \<inter> U)}"
 oops
   SIMP_TAC[DERIVED_SET_OF_INFINITE_OPEN_IN; HAUSDORFF_SPACE_MTOPOLOGY] THEN
   REWRITE_TAC[TOPSPACE_MTOPOLOGY]);;
 
 let DERIVED_SET_OF_INFINITE_MBALL,DERIVED_SET_OF_INFINITE_MCBALL =
  (CONJ_PAIR \<circ> prove)
- (`(\<forall>m s::A=>bool.
-        mtopology derived_set_of s =
+ (`(\<forall>m S::A=>bool.
+        mtopology derived_set_of S =
         {x. x \<in> M \<and>
-             \<forall>e>0.  infinite(s \<inter> mball x e)}) \<and>
-   (\<forall>m s::A=>bool.
-        mtopology derived_set_of s =
+             \<forall>e>0.  infinite(S \<inter> mball x e)}) \<and>
+   (\<forall>m S::A=>bool.
+        mtopology derived_set_of S =
         {x. x \<in> M \<and>
-             \<forall>e>0.  infinite(s \<inter> mcball x e)})"
+             \<forall>e>0.  infinite(S \<inter> mcball x e)})"
 oops
   REWRITE_TAC[AND_FORALL_THM] THEN REPEAT GEN_TAC THEN
   REWRITE_TAC[EXTENSION; DERIVED_SET_OF_INFINITE_OPEN_IN_METRIC] THEN
@@ -6836,7 +6814,7 @@ oops
     DISCH_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e::real`)] THEN
   ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INFINITE_SUPERSET) THEN
-  MATCH_MP_TAC(SET_RULE `t \<subseteq> u \<Longrightarrow> s \<inter> t \<subseteq> s \<inter> u`) THEN
+  MATCH_MP_TAC(SET_RULE `T \<subseteq> U \<Longrightarrow> S \<inter> T \<subseteq> S \<inter> U`) THEN
   ASM_REWRITE_TAC[MBALL_SUBSET_MCBALL]);;
 
 
