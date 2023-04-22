@@ -6619,12 +6619,19 @@ lemma (in submetric) mcomplete_imp_closedin:
   shows "closedin mtopology A"
 proof -
   have "l \<in> A"
-    if "range \<sigma> \<subseteq> A" and "limitin mtopology \<sigma> l sequentially"
+    if "range \<sigma> \<subseteq> A" and l: "limitin mtopology \<sigma> l sequentially"
     for \<sigma> :: "nat \<Rightarrow> 'a" and l
-    using that sorry
+  proof -
+    have "sub.MCauchy \<sigma>"
+      using convergent_imp_MCauchy subset that by (force simp add: MCauchy_submetric)
+    then have "limitin sub.mtopology \<sigma> l sequentially"
+      using assms unfolding sub.mcomplete_def
+      using l limitin_metric_unique limitin_submetric_iff trivial_limit_sequentially by blast
+    then show ?thesis
+      using limitin_submetric_iff by blast
+  qed
   then show ?thesis
-  unfolding metric_closedin_iff_sequentially_closed
-  using subset by blast
+    using metric_closedin_iff_sequentially_closed subset by auto
 qed
 
 oops
