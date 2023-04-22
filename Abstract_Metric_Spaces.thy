@@ -6634,21 +6634,6 @@ proof -
     using metric_closedin_iff_sequentially_closed subset by auto
 qed
 
-oops
-  REPEAT STRIP_TAC THEN
-  ASM_REWRITE_TAC[METRIC_CLOSED_IN_IFF_SEQUENTIALLY_CLOSED] THEN
-  MAP_EVERY X_GEN_TAC [`x::num=>A`; `l::A`] THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
-        CONVERGENT_IMP_CAUCHY_IN)) THEN
-  ANTS_TAC THENL [ASM SET_TAC[]; STRIP_TAC] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::num=>A` \<circ> REWRITE_RULE[mcomplete]) THEN
-  ASM_REWRITE_TAC[CAUCHY_IN_SUBMETRIC; LIMIT_SUBTOPOLOGY;
-                  MTOPOLOGY_SUBMETRIC] THEN
-  DISCH_THEN(X_CHOOSE_THEN `l':A` STRIP_ASSUME_TAC) THEN
-  SUBGOAL_THEN `l::A = l'` (fun th -> ASM_REWRITE_TAC[th]) THEN
-  MATCH_MP_TAC(ISPEC `sequentially` LIMIT_METRIC_UNIQUE) THEN
-  ASM_MESON_TAC[TRIVIAL_LIMIT_SEQUENTIALLY]);;
-
 lemma (in submetric) closedin_eq_mcomplete:
    "mcomplete \<Longrightarrow> (closedin mtopology A \<longleftrightarrow> sub.mcomplete)"
   using closedin_mcomplete_imp_mcomplete mcomplete_imp_closedin by blast
@@ -6665,66 +6650,83 @@ lemma compact_closure_of_imp_mtotally_bounded:
   using compactin_imp_mtotally_bounded mtotally_bounded_closure_of_eq by blast
 
 lemma mtotally_bounded_eq_compact_closure_of:
-   "mcomplete
-        \<Longrightarrow> (mtotally_bounded S \<longleftrightarrow>
-             S \<subseteq> M \<and>
-             compactin mtopology (mtopology closure_of S))"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THEN
-  SIMP_TAC[COMPACT_CLOSURE_OF_IMP_TOTALLY_BOUNDED_IN] THEN
-  SIMP_TAC[TOTALLY_BOUNDED_IN_IMP_SUBSET] THEN DISCH_TAC THEN
-  FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP TOTALLY_BOUNDED_IN_IMP_SUBSET) THEN
-  REWRITE_TAC[COMPACT_IN_SUBSPACE; CLOSURE_OF_SUBSET_TOPSPACE] THEN
-  REWRITE_TAC[GSYM MTOPOLOGY_SUBMETRIC] THEN
-  REWRITE_TAC[COMPACT_SPACE_EQ_MCOMPLETE_TOTALLY_BOUNDED_IN] THEN
-  ASM_SIMP_TAC[CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE; CLOSED_IN_CLOSURE_OF] THEN
-  MATCH_MP_TAC TOTALLY_BOUNDED_IN_SUBMETRIC THEN
-  REWRITE_TAC[SUBMETRIC; INTER_SUBSET] THEN
-  SIMP_TAC[SET_RULE `S \<subseteq> U \<Longrightarrow> S \<inter> U = S`;
-           CLOSURE_OF_SUBSET_TOPSPACE; GSYM TOPSPACE_MTOPOLOGY] THEN
-  ASM_SIMP_TAC[TOTALLY_BOUNDED_IN_CLOSURE_OF]);;
+  assumes "mcomplete"
+  shows "mtotally_bounded S \<longleftrightarrow> S \<subseteq> M \<and> compactin mtopology (mtopology closure_of S)"
+  (is "?lhs=?rhs")
+proof
+  assume L: ?lhs 
+  show ?rhs
+    unfolding compactin_subspace
+  proof (intro conjI)
+    show "S \<subseteq> M"
+      using L by (simp add: mtotally_bounded_imp_subset)
+    show "mtopology closure_of S \<subseteq> topspace mtopology"
+      by (simp add: \<open>S \<subseteq> M\<close> closure_of_minimal)
+    then have MSM: "mtopology closure_of S \<subseteq> M"
+      by auto
+    interpret S: submetric M d "mtopology closure_of S"
+    proof qed (use MSM in auto)
+    have "S.sub.mtotally_bounded (mtopology closure_of S)"
+      using L mtotally_bounded_absolute mtotally_bounded_closure_of by blast
+    then
+    show "compact_space (subtopology mtopology (mtopology closure_of S))"
+      using S.closedin_mcomplete_imp_mcomplete S.mtopology_submetric S.sub.compact_space_eq_mcomplete_mtotally_bounded assms by force
+  qed
+qed (auto simp: compact_closure_of_imp_mtotally_bounded)
 
-lemma compact_closure_of_eq_bolzano_weierstrass:
-   "\<And>m S::A=>bool.
-        compactin mtopology (mtopology closure_of S) \<longleftrightarrow>
-        \<forall>T. infinite T \<and> T \<subseteq> S \<and> T \<subseteq> M
-            \<Longrightarrow> \<not> (mtopology derived_set_of T = {})"
-oops
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [DISCH_TAC THEN GEN_TAC THEN STRIP_TAC THEN
-    MATCH_MP_TAC COMPACT_CLOSURE_OF_IMP_BOLZANO_WEIERSTRASS THEN
-    EXISTS_TAC `S::A=>bool` THEN ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY];
-    REWRITE_TAC[GSYM SUBSET_INTER] THEN ONCE_REWRITE_TAC[INTER_COMM] THEN
-    ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
-    REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-    MP_TAC(SET_RULE `M \<inter> (S::A=>bool) \<subseteq> M`) THEN
-    SPEC_TAC(`M \<inter> (S::A=>bool)`,`S::A=>bool`)] THEN
-  REPEAT STRIP_TAC THEN REWRITE_TAC[COMPACT_IN_SEQUENTIALLY] THEN
-  REWRITE_TAC[GSYM TOPSPACE_MTOPOLOGY; CLOSURE_OF_SUBSET_TOPSPACE] THEN
-  MP_TAC(ISPECL [`m::A metric`; `mtopology closure_of S::A=>bool`;
-                `S::A=>bool`] BOLZANO_WEIERSTRASS_PROPERTY) THEN
-  ASM_SIMP_TAC[CLOSURE_OF_SUBSET; TOPSPACE_MTOPOLOGY] THEN
-  MATCH_MP_TAC(TAUT `q \<and> (p \<Longrightarrow> r) \<Longrightarrow> (p \<longleftrightarrow> q) \<Longrightarrow> r`) THEN CONJ_TAC THENL
-   [X_GEN_TAC `T::A=>bool` THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `T::A=>bool`) THEN ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; IN_INTER] THEN
-    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `a::A` THEN
-    STRIP_TAC THEN ASM_REWRITE_TAC[CLOSURE_OF; IN_INTER; IN_UNION] THEN
-    ASM_MESON_TAC[\<subseteq>; DERIVED_SET_OF_MONO; DERIVED_SET_OF_SUBSET_TOPSPACE];
-    ALL_TAC] THEN
-  DISCH_TAC THEN X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
-  SUBGOAL_THEN `\<forall>n. \<exists>y. y \<in> S \<and> d m ((x::num=>A) n,y) < inverse(Suc n)`
-  MP_TAC THENL
-   [X_GEN_TAC `n::num` THEN FIRST_ASSUM(MP_TAC \<circ>
-        GEN_REWRITE_RULE RAND_CONV [METRIC_CLOSURE_OF] \<circ> SPEC `n::num`) THEN
-    ASM_REWRITE_TAC[IN_ELIM_THM; IN_MBALL] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `inverse(Suc n)` \<circ> CONJUNCT2) THEN
-    REWRITE_TAC[REAL_LT_INV_EQ; REAL_ARITH `0 < n + 1`] THEN MESON_TAC[];
-    REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM]] THEN
-  X_GEN_TAC `y::num=>A` THEN REWRITE_TAC[FORALL_AND_THM] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `y::num=>A`) THEN ASM_REWRITE_TAC[] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `l::A` THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `r::num=>num` THEN
+
+
+lemma compact_closure_of_eq_Bolzano_Weierstrass:
+   "compactin mtopology (mtopology closure_of S) \<longleftrightarrow>
+    (\<forall>T. infinite T \<and> T \<subseteq> S \<and> T \<subseteq> M \<longrightarrow> mtopology derived_set_of T \<noteq> {})"  (is "?lhs=?rhs")
+proof
+  assume L: ?lhs 
+  show ?rhs
+  proof (intro strip, elim conjE)
+    fix T
+    assume T: "infinite T" "T \<subseteq> S" "T \<subseteq> M"
+    show "mtopology derived_set_of T \<noteq> {}"
+    proof (intro compact_closure_of_imp_Bolzano_Weierstrass)
+      show "compactin mtopology (mtopology closure_of S)"
+        by (simp add: L)
+    qed (use T in auto)
+  qed
+next
+  have "compactin mtopology (mtopology closure_of S)"
+    if \<section>: "\<And>T. \<lbrakk>infinite T; T \<subseteq> S\<rbrakk> \<Longrightarrow> mtopology derived_set_of T \<noteq> {}" and "S \<subseteq> M" for S
+    unfolding compactin_sequentially
+  proof (intro conjI strip)
+    show "mtopology closure_of S \<subseteq> M"
+      using closure_of_subset_topspace by fastforce
+    fix \<sigma> :: "nat \<Rightarrow> 'a"
+    assume "range \<sigma> \<subseteq> mtopology closure_of S"
+    then have "\<exists>y \<in> S. d (\<sigma> n) y < inverse(Suc n)" for n
+      apply (simp add: metric_closure_of subset_iff)
+      by (metis of_nat_0_less_iff of_nat_Suc positive_imp_inverse_positive rangeI zero_less_Suc)
+    then obtain \<tau> where "\<And>n. \<tau> n \<in> S \<and> d (\<sigma> n) (\<tau> n) < inverse(Suc n)"
+      by metis
+    then have "range \<tau> \<subseteq> S"
+      by blast
+    moreover
+    have *: "\<forall>T. T \<subseteq> S \<and> infinite T \<longrightarrow> mtopology closure_of S \<inter> mtopology derived_set_of T \<noteq> {}"
+      using "\<section>"(1) derived_set_of_mono derived_set_of_subset_closure_of by fastforce
+    moreover have "S \<subseteq> mtopology closure_of S"
+      by (simp add: \<open>S \<subseteq> M\<close> closure_of_subset)
+    ultimately obtain l r where lr:
+      "l \<in> mtopology closure_of S" "strict_mono r" "limitin mtopology (\<tau> \<circ> r) l sequentially"
+      using Bolzano_Weierstrass_property \<open>S \<subseteq> M\<close> by metis
+    then have "limitin mtopology (\<sigma> \<circ> r) l sequentially"
+        sorry
+      with lr
+    show "\<exists>l r. l \<in> mtopology closure_of S \<and> strict_mono r \<and> limitin mtopology (\<sigma> \<circ> r) l sequentially"
+      by blast
+  qed
+  then show "?rhs \<Longrightarrow> ?lhs"
+    by (metis Int_subset_iff closure_of_restrict inf_le1 topspace_mtopology)
+qed
+
+      oops
+
   REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
   ASM_REWRITE_TAC[LIMIT_METRIC] THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
   X_GEN_TAC `e::real` THEN STRIP_TAC THEN
