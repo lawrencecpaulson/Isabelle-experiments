@@ -6703,7 +6703,7 @@ next
     then have "\<exists>y \<in> S. d (\<sigma> n) y < inverse(Suc n)" for n
       apply (simp add: metric_closure_of subset_iff)
       by (metis of_nat_0_less_iff of_nat_Suc positive_imp_inverse_positive rangeI zero_less_Suc)
-    then obtain \<tau> where "\<And>n. \<tau> n \<in> S \<and> d (\<sigma> n) (\<tau> n) < inverse(Suc n)"
+    then obtain \<tau> where \<tau>: "\<And>n. \<tau> n \<in> S \<and> d (\<sigma> n) (\<tau> n) < inverse(Suc n)"
       by metis
     then have "range \<tau> \<subseteq> S"
       by blast
@@ -6715,9 +6715,31 @@ next
     ultimately obtain l r where lr:
       "l \<in> mtopology closure_of S" "strict_mono r" "limitin mtopology (\<tau> \<circ> r) l sequentially"
       using Bolzano_Weierstrass_property \<open>S \<subseteq> M\<close> by metis
-    then have "limitin mtopology (\<sigma> \<circ> r) l sequentially"
-        sorry
-      with lr
+    then have "l \<in> M"
+      using limitin_mspace by blast
+    have "limitin mtopology (\<sigma> \<circ> r) l sequentially"
+      unfolding limitin_metric
+    proof (intro conjI strip)
+      show "l \<in> M"
+        using limitin_mspace lr by blast
+      fix \<epsilon> :: real
+      assume "\<epsilon> > 0"
+      then have "\<forall>\<^sub>F n in sequentially. (\<tau> \<circ> r) n \<in> M \<and> d ((\<tau> \<circ> r) n) l < \<epsilon>/2"
+        using lr half_gt_zero limitin_metric by blast 
+      moreover have "\<forall>\<^sub>F n in sequentially. inverse (real (Suc n)) < \<epsilon>/2"
+        using Archimedean_eventually_inverse \<open>0 < \<epsilon>\<close> half_gt_zero by blast
+      then have "\<forall>\<^sub>F n in sequentially. d ((\<sigma> \<circ> r) n) ((\<tau> \<circ> r) n) < \<epsilon>/2"
+        apply eventually_elim
+        using \<tau> dual_order.strict_trans
+        by (smt (verit, ccfv_SIG) Suc_le_mono comp_eq_dest_lhs inverse_le_iff_le lr(2) of_nat_0_less_iff of_nat_le_iff strict_mono_imp_increasing zero_less_Suc) 
+      ultimately have "\<forall>\<^sub>F n in sequentially. d ((\<sigma> \<circ> r) n) l < \<epsilon>/2 + \<epsilon>/2"
+        apply eventually_elim
+        using triangle [of "(\<sigma> \<circ> r) _" "(\<tau> \<circ> r) _" l]
+        by (smt (verit) \<open>l \<in> M\<close> \<open>mtopology closure_of S \<subseteq> M\<close> \<open>range \<sigma> \<subseteq> mtopology closure_of S\<close> comp_apply order_trans range_subsetD)      then show "\<forall>\<^sub>F n in sequentially. (\<sigma> \<circ> r) n \<in> M \<and> d ((\<sigma> \<circ> r) n) l < \<epsilon>"
+        apply eventually_elim
+        using \<open>mtopology closure_of S \<subseteq> M\<close> \<open>range \<sigma> \<subseteq> mtopology closure_of S\<close> by auto
+    qed
+    with lr
     show "\<exists>l r. l \<in> mtopology closure_of S \<and> strict_mono r \<and> limitin mtopology (\<sigma> \<circ> r) l sequentially"
       by blast
   qed
@@ -6725,31 +6747,9 @@ next
     by (metis Int_subset_iff closure_of_restrict inf_le1 topspace_mtopology)
 qed
 
-      oops
-
-  REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-  ASM_REWRITE_TAC[LIMIT_METRIC] THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-  X_GEN_TAC `e::real` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e / 2`) THEN
-  MP_TAC(SPEC `e / 2` ARCH_EVENTUALLY_INV1) THEN
-  ASM_REWRITE_TAC[REAL_HALF; IMP_IMP; GSYM EVENTUALLY_AND] THEN
-  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] EVENTUALLY_MONO) THEN
-  X_GEN_TAC `n::num` THEN REWRITE_TAC[o_THM] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-  SUBGOAL_THEN `d m ((x::num=>A)(r(n::num)),y(r n)) < e / 2` MP_TAC THENL
-   [TRANS_TAC REAL_LT_TRANS `inverse(&(r(n::num)) + 1)` THEN
-    ASM_REWRITE_TAC[] THEN
-    TRANS_TAC REAL_LET_TRANS `inverse(Suc n)` THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC REAL_LE_INV2 THEN
-    CONJ_TAC THENL [REAL_ARITH_TAC; REWRITE_TAC[REAL_LE_RADD]] THEN
-    ASM_MESON_TAC[REAL_OF_NUM_LE; MONOTONE_BIGGER];
-    UNDISCH_TAC `(l::A) \<in> M`] THEN
-  SUBGOAL_THEN `(x::num=>A)(r(n::num)) \<in> M` MP_TAC THENL
-   [ASM_MESON_TAC[\<subseteq>; CLOSURE_OF_SUBSET_TOPSPACE; TOPSPACE_MTOPOLOGY];
-    SIMP_TAC[] THEN CONV_TAC METRIC_ARITH]);;
 
 lemma mcomplete_real_euclidean_metric:
- (`mcomplete real_euclidean_metric"
+ "mcomplete euclidean_metric"
 oops
   REWRITE_TAC[mcomplete] THEN X_GEN_TAC `x::num=>real` THEN
   DISCH_TAC THEN FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CAUCHY_IN_IMP_MBOUNDED) THEN
