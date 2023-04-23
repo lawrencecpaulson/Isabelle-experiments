@@ -7,6 +7,9 @@ begin
 
 thm compact_space_imp_nest (*NEEDS decseq*)
 
+lemma inverse_Suc: "inverse (Suc n) > 0"
+  by simp
+
 lemma Archimedean_eventually_inverse:
   fixes \<epsilon>::real shows "(\<forall>\<^sub>F n in sequentially. inverse (real (Suc n)) < \<epsilon>) \<longleftrightarrow> 0 < \<epsilon>"
   (is "?lhs=?rhs")
@@ -19,7 +22,8 @@ next
   then obtain N where "inverse (Suc N) < \<epsilon>"
     using reals_Archimedean by blast
   then have "inverse (Suc n) < \<epsilon>" if "n \<ge> N" for n
-    by (smt (verit, best) inverse_less_iff_less of_nat_0_less_iff of_nat_Suc of_nat_le_iff that zero_less_Suc)
+    using that \<open>\<epsilon> > 0\<close> apply (simp add: field_simps)
+    by (smt (verit) mult_less_cancel_left_pos of_nat_mono)
   then show ?lhs
     using eventually_sequentially by blast
 qed
@@ -70,6 +74,11 @@ proof -
   then show ?thesis
     by (meson le_filter_def order.eq_iff)
 qed
+
+lemma limit_continuous_map_within:
+   "\<lbrakk>continuous_map (subtopology X S) Y f; a \<in> S; a \<in> topspace X\<rbrakk>
+    \<Longrightarrow> limitin Y f (f a) (atin_within X a S)"
+  by (metis Int_iff atin_subtopology_within continuous_map_atin topspace_subtopology)
 
 lemma atin_subtopology_within_if:
   shows "atin (subtopology X S) a = (if a \<in> S then atin_within X a S else bot)"
@@ -1181,7 +1190,6 @@ end
 
 
 
-
 subsection\<open> Metric topology                                                           \<close>
 
 context Metric_space
@@ -1226,11 +1234,17 @@ proof -
     by (auto simp: openin_mtopology)
 qed
 
+lemma mcball_eq_cball [simp]: "Met.mcball = cball"
+  by force
+
 lemma mball_eq_ball [simp]: "Met.mball = ball"
   by force
 
 lemma mopen_eq_open [simp]: "Met.mopen = open"
   by (force simp: open_contains_ball Met.mopen_def)
+
+lemma limitin_iff_tendsto [iff]: "limitin Met.mtopology \<sigma> x F = tendsto \<sigma> x F"
+  by (simp add: Met.mtopology_def)
 
 (*
 lemma metric_injective_image:
@@ -1356,8 +1370,8 @@ proof clarify
 qed
 
 
-subsection\<open>Bounded sets\<close>
 
+subsection\<open>Bounded sets\<close>
 
 definition mbounded where "mbounded S \<longleftrightarrow> (\<exists>x B. S \<subseteq> mcball x B)"
 
@@ -1615,6 +1629,19 @@ definition metrizable_space where
 lemma (in Metric_space) metrizable_space_mtopology: "metrizable_space mtopology"
   using local.Metric_space_axioms metrizable_space_def by blast
 
+lemma openin_mtopology_eq_open [simp]: "openin Met.mtopology = open"
+  by (simp add: Met.mtopology_def)
+
+lemma closedin_mtopology_eq_closed [simp]: "closedin Met.mtopology = closed"
+proof -
+  have "(euclidean::'a topology) = Met.mtopology"
+    by (simp add: Met.mtopology_def)
+  then show ?thesis
+    using closed_closedin by fastforce
+qed
+
+lemma compactin_mtopology_eq_compact [simp]: "compactin Met.mtopology = compact"
+  by (simp add: compactin_def compact_eq_Heine_Borel fun_eq_iff) meson
 
 lemma metrizable_space_discrete_topology:
    "metrizable_space(discrete_topology U)"
@@ -4860,7 +4887,7 @@ proof (rule ccontr)
   with assms obtain U V where "openin X U" "openin X V" "l1 \<in> U" "l2 \<in> V" "disjnt U V"
     by (metis Hausdorff_space_def limitin_topspace)
   then have "eventually (\<lambda>x. f x \<in> U) F" "eventually (\<lambda>x. f x \<in> V) F"
-    using assms limitin_def by fastforce+
+    using assms by (fastforce simp: limitin_def)+
   then have "\<exists>x. f x \<in> U \<and> f x \<in> V"
     using assms eventually_elim2 filter_eq_iff by fastforce
   with assms \<open>disjnt U V\<close> show False
@@ -4916,7 +4943,7 @@ proof
     fix \<epsilon>::real
     assume "\<epsilon>>0"
     then have "\<forall>\<^sub>F x in F. f x \<in> mball l \<epsilon>"
-      using L limitin_def openin_mball by fastforce
+      using L openin_mball by (fastforce simp add: limitin_def)
     then show "\<forall>\<^sub>F x in F. f x \<in> M \<and> d (f x) l < \<epsilon>"
       using commute eventually_mono by fastforce
   qed
@@ -5861,6 +5888,16 @@ qed
 
 end
 
+lemma MCauchy_iff_Cauchy [iff]: "Met.MCauchy = Cauchy"
+  by (force simp add: Cauchy_def Met.MCauchy_def)
+
+lemma mcomplete_iff_complete [iff]:
+  "Met.mcomplete (Pure.type ::'a::metric_space itself) \<longleftrightarrow> complete (UNIV::'a set)"
+  by (auto simp: Met.mcomplete_def complete_def)
+
+lemma euclidean_metric: "Met.mcomplete (Pure.type ::'a::euclidean_space itself)"
+  by blast
+
 context submetric
 begin 
 
@@ -6701,8 +6738,7 @@ next
     fix \<sigma> :: "nat \<Rightarrow> 'a"
     assume \<sigma>: "range \<sigma> \<subseteq> mtopology closure_of S"
     then have "\<exists>y \<in> S. d (\<sigma> n) y < inverse(Suc n)" for n
-      apply (simp add: metric_closure_of subset_iff)
-      by (metis of_nat_0_less_iff of_nat_Suc positive_imp_inverse_positive rangeI zero_less_Suc)
+      by (simp add: metric_closure_of image_subset_iff) (metis inverse_Suc of_nat_Suc)
     then obtain \<tau> where \<tau>: "\<And>n. \<tau> n \<in> S \<and> d (\<sigma> n) (\<tau> n) < inverse(Suc n)"
       by metis
     then have "range \<tau> \<subseteq> S"
@@ -6751,249 +6787,140 @@ next
     by (metis Int_subset_iff closure_of_restrict inf_le1 topspace_mtopology)
 qed
 
+end
 
-lemma mcomplete_real_euclidean_metric:
- "mcomplete euclidean_metric"
-oops
-  REWRITE_TAC[mcomplete] THEN X_GEN_TAC `x::num=>real` THEN
-  DISCH_TAC THEN FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CAUCHY_IN_IMP_MBOUNDED) THEN
-  SIMP_TAC[mbounded; mcball; \<subseteq>; LEFT_IMP_EXISTS_THM; FORALL_IN_GSPEC] THEN
-  REWRITE_TAC[IN_UNIV; IN_ELIM_THM; REAL_EUCLIDEAN_METRIC] THEN
-  MAP_EVERY X_GEN_TAC [`a::real`; `b::real`] THEN DISCH_TAC THEN
-  MP_TAC(ISPECL [`a - b::real`; `a + b::real`]
-    COMPACT_IN_EUCLIDEANREAL_INTERVAL) THEN
-  REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
-  DISCH_THEN(MP_TAC \<circ> MATCH_MP COMPACT_IN_IMP_MCOMPLETE) THEN
-  ASM_REWRITE_TAC[mcomplete; CAUCHY_IN_SUBMETRIC] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `x::num=>real`) THEN
-  ASM_REWRITE_TAC[IN_REAL_INTERVAL; REAL_ARITH
-   `a - b \<le> x \<and> x \<le> a + b \<longleftrightarrow> abs(x - a) \<le> b`] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN
-  SIMP_TAC[LIMIT_SUBTOPOLOGY; MTOPOLOGY_SUBMETRIC]);;
+lemma (in discrete_metric) mtotally_bounded_discrete_metric:
+   "disc.mtotally_bounded S \<longleftrightarrow> finite S \<and> S \<subseteq> M" (is "?lhs=?rhs")
+proof
+  assume L: ?lhs 
+  show ?rhs
+  proof
+    show "finite S"
+      by (metis (no_types) L closure_of_subset_Int compactin_discrete_topology disc.mtotally_bounded_eq_compact_closure_of
+          disc.topspace_mtopology discrete_metric.mcomplete_discrete_metric inf.absorb_iff2 mtopology_discrete_metric finite_subset)
+    show "S \<subseteq> M"
+      by (simp add: L disc.mtotally_bounded_imp_subset)
+  qed
+qed (simp add: disc.finite_imp_mtotally_bounded)
 
-lemma mcomplete_submetric_real_euclidean_metric:
-   "mcomplete(submetric real_euclidean_metric S) \<longleftrightarrow>
-       closedin euclideanreal S"
-oops
-  REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
-  SIMP_TAC[CLOSED_IN_EQ_MCOMPLETE; MCOMPLETE_REAL_EUCLIDEAN_METRIC] THEN
-  REWRITE_TAC[REAL_EUCLIDEAN_METRIC; SUBSET_UNIV]);;
 
-lemma mtotally_bounded_discrete_metric:
-   "\<And>U S::A=>bool. mtotally_bounded (discrete_metric U) S \<longleftrightarrow>
-                 finite S \<and> S \<subseteq> U"
-oops
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [ALL_TAC; MESON_TAC[FINITE_IMP_TOTALLY_BOUNDED_IN; DISCRETE_METRIC]] THEN
-  SIMP_TAC[TOTALLY_BOUNDED_IN_EQ_COMPACT_CLOSURE_OF;
-           MCOMPLETE_DISCRETE_METRIC] THEN
-  REWRITE_TAC[MTOPOLOGY_DISCRETE_METRIC; DISCRETE_METRIC] THEN
-  SIMP_TAC[DISCRETE_TOPOLOGY_CLOSURE_OF; COMPACT_IN_DISCRETE_TOPOLOGY;
-            IMP_CONJ; SET_RULE `S \<subseteq> U \<Longrightarrow> U \<inter> S = S`]);;
+context Metric_space
+begin
 
 lemma derived_set_of_infinite_openin_metric:
-   "\<And>m S::A=>bool.
-        mtopology derived_set_of S =
-        {x. x \<in> M \<and>
-             \<forall>U. x \<in> U \<and> openin mtopology U \<Longrightarrow> infinite(S \<inter> U)}"
-oops
-  SIMP_TAC[DERIVED_SET_OF_INFINITE_OPEN_IN; HAUSDORFF_SPACE_MTOPOLOGY] THEN
-  REWRITE_TAC[TOPSPACE_MTOPOLOGY]);;
+   "mtopology derived_set_of S =
+    {x \<in> M. \<forall>U. x \<in> U \<and> openin mtopology U \<longrightarrow> infinite(S \<inter> U)}"
+  by (simp add: derived_set_of_infinite_openin Hausdorff_space_mtopology)
 
-let DERIVED_SET_OF_INFINITE_MBALL,DERIVED_SET_OF_INFINITE_MCBALL =
- (CONJ_PAIR \<circ> prove)
- (`(\<forall>m S::A=>bool.
-        mtopology derived_set_of S =
-        {x. x \<in> M \<and>
-             \<forall>e>0.  infinite(S \<inter> mball x e)}) \<and>
-   (\<forall>m S::A=>bool.
-        mtopology derived_set_of S =
-        {x. x \<in> M \<and>
-             \<forall>e>0.  infinite(S \<inter> mcball x e)})"
-oops
-  REWRITE_TAC[AND_FORALL_THM] THEN REPEAT GEN_TAC THEN
-  REWRITE_TAC[EXTENSION; DERIVED_SET_OF_INFINITE_OPEN_IN_METRIC] THEN
-  REWRITE_TAC[IN_ELIM_THM; AND_FORALL_THM] THEN X_GEN_TAC `x::A` THEN
-  ASM_CASES_TAC `(x::A) \<in> M` THEN ASM_REWRITE_TAC[] THEN
-  MATCH_MP_TAC(TAUT
-   `(q \<Longrightarrow> r) \<and> (r \<Longrightarrow> p) \<and> (p \<Longrightarrow> q) \<Longrightarrow> (p \<longleftrightarrow> q) \<and> (p \<longleftrightarrow> r)`) THEN
-  ASM_SIMP_TAC[OPEN_IN_MBALL; CENTRE_IN_MBALL] THEN CONJ_TAC THENL
-   [MATCH_MP_TAC MONO_FORALL THEN GEN_TAC THEN
-    MATCH_MP_TAC MONO_IMP THEN REWRITE_TAC[];
-    REPEAT STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [OPEN_IN_MTOPOLOGY_MCBALL]) THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC `x::A`)) THEN
-    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `e::real` THEN
-    DISCH_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e::real`)] THEN
-  ASM_REWRITE_TAC[] THEN
-  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] INFINITE_SUPERSET) THEN
-  MATCH_MP_TAC(SET_RULE `T \<subseteq> U \<Longrightarrow> S \<inter> T \<subseteq> S \<inter> U`) THEN
-  ASM_REWRITE_TAC[MBALL_SUBSET_MCBALL]);;
+lemma derived_set_of_infinite_1: 
+  assumes "infinite (S \<inter> mball x \<epsilon>)" 
+  shows "infinite (S \<inter> mcball x \<epsilon>)"
+  by (meson Int_mono assms finite_subset mball_subset_mcball subset_refl)
 
+lemma derived_set_of_infinite_2:
+  assumes "openin mtopology U" "\<And>\<epsilon>. 0 < \<epsilon> \<Longrightarrow> infinite (S \<inter> mcball x \<epsilon>)" and "x \<in> U"
+  shows "infinite (S \<inter> U)"
+  by (metis assms openin_mtopology_mcball finite_Int inf.absorb_iff2 inf_assoc)
 
-subsection\<open>Pointwise continuity in topological spaces\<close>
+lemma derived_set_of_infinite_mball:
+  "mtopology derived_set_of S = {x \<in> M. \<forall>e>0. infinite(S \<inter> mball x e)}"
+  unfolding derived_set_of_infinite_openin_metric
+  by (meson centre_in_mball_iff openin_mball derived_set_of_infinite_1 derived_set_of_infinite_2)
 
+lemma derived_set_of_infinite_mcball:
+  "mtopology derived_set_of S = {x \<in> M. \<forall>e>0. infinite(S \<inter> mcball x e)}"
+  unfolding derived_set_of_infinite_openin_metric
+  by (meson centre_in_mball_iff openin_mball derived_set_of_infinite_1 derived_set_of_infinite_2)
 
-let topcontinuous_at = new_definition
-  `!X X' f::A=>B x.
-     topcontinuous_at X X' f x \<longleftrightarrow>
-     x \<in> topspace X \<and>
-     (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> topspace X') \<and>
-     (\<forall>v. openin X' v \<and> f x \<in> v
-          \<Longrightarrow> (\<exists>u. openin X u \<and> x \<in> u \<and> (\<forall>y. y \<in> u \<Longrightarrow> f y \<in> v)))`;;
-
-lemma topcontinuous_at_atin:
-   "\<And>X X' f::A=>B x.
-        topcontinuous_at X X' f x \<longleftrightarrow>
-        x \<in> topspace X \<and>
-        (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> topspace X') \<and>
-        limitin X' f (f x) (atin X x)"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[topcontinuous_at] THEN
-  MATCH_MP_TAC(TAUT
-   `(p \<and> q \<Longrightarrow> (r \<longleftrightarrow> s)) \<Longrightarrow> (p \<and> q \<and> r \<longleftrightarrow> p \<and> q \<and> s)`) THEN
-  STRIP_TAC THEN ASM_SIMP_TAC[LIMIT_ATPOINTOF] THEN
-  AP_TERM_TAC THEN ABS_TAC THEN SET_TAC[]);;
-
-lemma continuous_map_eq_topcontinuous_at:
-   "\<And>X X' f::A=>B.
-     continuous_map X X'  f \<longleftrightarrow>
-     (\<forall>x. x \<in> topspace X \<Longrightarrow> topcontinuous_at X X' f x)"
-oops
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-  [SIMP_TAC[continuous_map; topcontinuous_at] THEN
-   INTRO_TAC "f v; !x; x; !v; v1 v2" THEN
-   REMOVE_THEN "v" (MP_TAC \<circ> C MATCH_MP
-     (ASSUME `openin X' (v::B=>bool)`)) THEN
-   INTRO_TAC "pre" THEN
-   EXISTS_TAC `{x::A | x \<in> topspace X \<and> f x::B \<in> v}` THEN
-   ASM_SIMP_TAC[IN_ELIM_THM];
-   ALL_TAC] THEN
-  SIMP_TAC[continuous_map; topcontinuous_at; \<subseteq>] THEN
-  INTRO_TAC "hp1" THEN CONJ_TAC THENL [ASM_MESON_TAC[]; ALL_TAC] THEN
-  INTRO_TAC "![v]; v" THEN ONCE_REWRITE_TAC[OPEN_IN_SUBOPEN] THEN
-  REWRITE_TAC[IN_ELIM_THM] THEN INTRO_TAC "!x; x1 x2" THEN
-  REMOVE_THEN "hp1" (MP_TAC \<circ> SPEC `x::A`) THEN ASM_SIMP_TAC[] THEN
-  INTRO_TAC "x3 v1" THEN REMOVE_THEN "v1" (MP_TAC \<circ> SPEC `v::B=>bool`) THEN
-  USE_THEN "x1" (LABEL_TAC "x4" \<circ> REWRITE_RULE[IN_ELIM_THM]) THEN
-  ASM_SIMP_TAC[] THEN INTRO_TAC "@u. u1 u2 u3" THEN
-  EXISTS_TAC `u::A=>bool` THEN ASM_REWRITE_TAC[] THEN
-  ASM_SIMP_TAC[\<subseteq>; IN_ELIM_THM] THEN
-  ASM_MESON_TAC[OPEN_IN_SUBSET; \<subseteq>]);;
-
-lemma continuous_map_atin:
-   "\<And>X X' f::A=>B.
-        continuous_map X X' f \<longleftrightarrow>
-        \<forall>x. x \<in> topspace X \<Longrightarrow> limitin X' f (f x) (atin X x)"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[CONTINUOUS_MAP_EQ_TOPCONTINUOUS_AT] THEN
-  ASM_SIMP_TAC[TOPCONTINUOUS_AT_ATPOINTOF] THEN
-  REWRITE_TAC[limitin] THEN SET_TAC[]);;
-
-lemma limit_continuous_map:
-   "\<And>X X' f a b.
-        continuous_map X X' f \<and> a \<in> topspace X \<and> f a = b
-        \<Longrightarrow> limitin X' f b (atin X a)"
-oops
-  REWRITE_TAC[CONTINUOUS_MAP_ATPOINTOF] THEN MESON_TAC[]);;
-
-lemma limit_continuous_map_within:
-   "\<And>X X' f a b.
-        continuous_map(subtopology X s,X') f \<and>
-        a \<in> s \<and> a \<in> topspace X \<and> f a = b
-        \<Longrightarrow> limitin X' f b (atin X a within s)"
-oops
-  SIMP_TAC[GSYM ATPOINTOF_SUBTOPOLOGY] THEN
-  SIMP_TAC[LIMIT_CONTINUOUS_MAP; TOPSPACE_SUBTOPOLOGY; IN_INTER]);;
+end
 
 
 subsection\<open>Continuity via bases/subbases, hence upper and lower semicontinuity\<close>
 
 
 lemma continuous_map_into_topology_base:
-   "\<And>X X' b f::A=>B.
-        openin X' = arbitrary union_of b \<and>
-        (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> topspace X') \<and>
-        (\<forall>u. u \<in> b \<Longrightarrow> openin X {x \<in> topspace X. f x \<in> u})
-        \<Longrightarrow> continuous_map X X' f"
-oops
-  lemma lemma:
-   (`{x. P x \<and> f x \<in> \<Union> u} =
-     \<Union> {{x. P x \<and> f x \<in> b} | b \<in> u}"
-oops
-    REWRITE_TAC[UNIONS_GSPEC] THEN SET_TAC[])
-in
-
-  REPEAT STRIP_TAC THEN REWRITE_TAC[continuous_map] THEN
-  ASM_REWRITE_TAC[FORALL_UNION_OF; arbitrary] THEN
-  REPEAT STRIP_TAC THEN REWRITE_TAC[lemma] THEN
-  MATCH_MP_TAC OPEN_IN_UNIONS THEN ASM SET_TAC[]);;
+  assumes P: "openin Y = arbitrary union_of P"
+    and f: "\<And>x. x \<in> topspace X \<Longrightarrow> f x \<in> topspace Y"
+    and ope: "\<And>U. P U \<Longrightarrow> openin X {x \<in> topspace X. f x \<in> U}"
+  shows "continuous_map X Y f"
+proof -
+  have *: "\<And>\<U>. (\<And>t. t \<in> \<U> \<Longrightarrow> P t) \<Longrightarrow> openin X {x \<in> topspace X. \<exists>U\<in>\<U>. f x \<in> U}"
+    by (smt (verit) Ball_Collect ope mem_Collect_eq openin_subopen)
+  show ?thesis
+    using P by (auto simp: continuous_map_def arbitrary_def union_of_def intro!: f *)
+qed
 
 lemma continuous_map_into_topology_base_eq:
-   "\<And>X X' b f::A=>B.
-      openin X' = arbitrary union_of b
-      \<Longrightarrow> (continuous_map X X' f \<longleftrightarrow>
-           (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> topspace X') \<and>
-           (\<forall>u. u \<in> b \<Longrightarrow> openin X {x \<in> topspace X. f x \<in> u}))"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THENL
-   [REWRITE_TAC[continuous_map] THEN STRIP_TAC THEN
-    ASM_REWRITE_TAC[] THEN REPEAT STRIP_TAC THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC ARBITRARY_UNION_OF_INC THEN ASM SET_TAC[];
-    POP_ASSUM MP_TAC THEN REWRITE_TAC[GSYM IMP_CONJ] THEN
-    REWRITE_TAC[CONTINUOUS_MAP_INTO_TOPOLOGY_BASE]]);;
+  assumes P: "openin Y = arbitrary union_of P"
+  shows
+   "continuous_map X Y f \<longleftrightarrow>
+    (\<forall>x \<in> topspace X. f x \<in> topspace Y) \<and> (\<forall>U. P U \<longrightarrow> openin X {x \<in> topspace X. f x \<in> U})"
+ (is "?lhs=?rhs")
+proof
+  assume L: ?lhs 
+  then have "\<And>x. x \<in> topspace X \<Longrightarrow> f x \<in> topspace Y"
+    by (meson continuous_map_def)
+  moreover have "\<And>U. P U \<Longrightarrow> openin X {x \<in> topspace X. f x \<in> U}"
+    using L assms continuous_map openin_topology_base_unique by fastforce
+  ultimately show ?rhs by auto
+qed (simp add: assms continuous_map_into_topology_base)
 
 lemma continuous_map_into_topology_subbase:
-   "\<And>X X' b u f::A=>B.
-        topology(arbitrary union_of (finite intersection_of b relative_to u)) =
-        X' \<and>
-        (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> topspace X') \<and>
-        (\<forall>u. u \<in> b \<Longrightarrow> openin X {x \<in> topspace X. f x \<in> u})
-        \<Longrightarrow> continuous_map X X' f"
-oops
-  lemma lemma:
-   (`{x. P x \<and> f x \<in> \<Inter>(insert a u)} =
-     \<Inter> {{x. P x \<and> f x \<in> b} | b \<in> (insert a u)}"
-oops
-    REWRITE_TAC[INTERS_GSPEC; INTERS_INSERT] THEN SET_TAC[])
-in
+  assumes P: "topology(arbitrary union_of (finite intersection_of P relative_to U)) = Y"
+    and f: "\<And>x. x \<in> topspace X \<Longrightarrow> f x \<in> topspace Y"
+    and ope: "\<And>U. P U \<Longrightarrow> openin X {x \<in> topspace X. f x \<in> U}"
+  shows "continuous_map X Y f"
+  proof (intro continuous_map_into_topology_base)
+  show "openin Y = arbitrary union_of (finite intersection_of P relative_to U)"
+    using P istopology_subbase topology_inverse' by blast
 
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC CONTINUOUS_MAP_INTO_TOPOLOGY_BASE THEN
-  EXISTS_TAC `(finite intersection_of b relative_to u):(B=>bool)->bool` THEN
-  EXPAND_TAC "X'" THEN REWRITE_TAC[OPEN_IN_SUBBASE; FUN_EQ_THM] THEN
-  ASM_REWRITE_TAC[] THEN
-  GEN_REWRITE_TAC (BINDER_CONV \<circ> LAND_CONV \<circ> ONCE_DEPTH_CONV) [\<in>] THEN
-  REWRITE_TAC[FORALL_RELATIVE_TO; FORALL_INTERSECTION_OF] THEN
-  REWRITE_TAC[GSYM INTERS_INSERT; lemma] THEN
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC OPEN_IN_INTERS THEN
-  ASM_SIMP_TAC[SIMPLE_IMAGE; FINITE_IMAGE; FINITE_INSERT] THEN
-  REWRITE_TAC[IMAGE_EQ_EMPTY; NOT_INSERT_EMPTY; FORALL_IN_IMAGE] THEN
-  REWRITE_TAC[FORALL_IN_INSERT] THEN
-  FIRST_ASSUM(MP_TAC \<circ> AP_TERM `topspace: Btopology=>B->bool`) THEN
-  REWRITE_TAC[TOPSPACE_SUBBASE] THEN DISCH_THEN SUBST1_TAC THEN
-  ASM_SIMP_TAC[OPEN_IN_TOPSPACE; SET_RULE
-    `(\<forall>x. x \<in> s \<Longrightarrow> Q x) \<Longrightarrow> {x. x \<in> s \<and> Q x} = s`] THEN
-  ASM SET_TAC[]);;
+  have *: "{x \<in> topspace X. f x \<in> U \<and> (\<forall>V\<in>\<U>. f x \<in> V)} = 
+           {x \<in> topspace X. f x \<in> U} \<inter> (\<Inter>V\<in>\<U>. {x \<in> topspace X. f x \<in> V})" 
+    for \<U>
+    by auto
+  show "openin X {x \<in> topspace X. f x \<in> V}"
+    if \<section>: "(finite intersection_of P relative_to U) V" for V 
+  proof -
+    obtain \<U> where \<U>: "finite \<U>" "\<And>c. c \<in> \<U> \<Longrightarrow> P c"
+      "{x \<in> topspace X. f x \<in> V} = (\<Inter>V \<in> insert U \<U>. {x \<in> topspace X. f x \<in> V})"
+      using \<section> by (fastforce simp add: intersection_of_def relative_to_def)
+
+    have "U = topspace Y"
+      using P topspace_subbase by fastforce
+
+    show ?thesis
+      unfolding \<U>
+      apply (intro openin_Inter ope)
+      using \<U>(1) apply blast
+      apply force
+      apply (auto simp: )
+      apply (smt (verit, best) Ball_Collect \<open>U = topspace Y\<close> f mem_Collect_eq openin_subopen openin_topspace)
+      using \<U>(2) ope apply blast
+      done
+  qed
+qed (use f in auto)
+
+
+
 
 lemma continuous_map_into_topology_subbase_eq:
-   "\<And>X X' b u f::A=>B.
+   "\<And>X Y P U f::A=>B.
       topology(arbitrary union_of
-                (finite intersection_of b relative_to u)) = X'
-      \<Longrightarrow> (continuous_map X X' f \<longleftrightarrow>
-           (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> topspace X') \<and>
-           (\<forall>u. u \<in> b \<Longrightarrow> openin X {x \<in> topspace X. f x \<in> u}))"
+                (finite intersection_of P relative_to U)) = Y
+      \<Longrightarrow> (continuous_map X Y f \<longleftrightarrow>
+           (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> topspace Y) \<and>
+           (\<forall>U. U \<in> P \<Longrightarrow> openin X {x \<in> topspace X. f x \<in> U}))"
 oops
   REPEAT STRIP_TAC THEN EQ_TAC THENL
    [REWRITE_TAC[continuous_map] THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
     X_GEN_TAC `v::B=>bool` THEN DISCH_TAC THEN
     SUBGOAL_THEN
      `{x \<in> topspace X. f x \<in> v} =
-      {x \<in> topspace X. f x \<in> (u \<inter> v)}`
+      {x \<in> topspace X. f x \<in> (U \<inter> v)}`
     SUBST1_TAC THENL
      [FIRST_ASSUM(MP_TAC \<circ> AP_TERM `topspace: Btopology=>B->bool`) THEN
       REWRITE_TAC[TOPSPACE_SUBBASE] THEN ASM SET_TAC[];
-      FIRST_X_ASSUM MATCH_MP_TAC THEN EXPAND_TAC "X'" THEN
+      FIRST_X_ASSUM MATCH_MP_TAC THEN EXPAND_TAC "Y" THEN
       REWRITE_TAC[OPEN_IN_SUBBASE] THEN
       MATCH_MP_TAC ARBITRARY_UNION_OF_INC THEN
       MATCH_MP_TAC RELATIVE_TO_INC THEN
@@ -7002,15 +6929,15 @@ oops
     REWRITE_TAC[CONTINUOUS_MAP_INTO_TOPOLOGY_SUBBASE]]);;
 
 lemma continuous_map_upper_lower_semicontinuous_lt_gen:
-   "\<And>X u f::A=>real.
-         continuous_map X (subtopology euclideanreal u) f \<longleftrightarrow>
-         (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> u) \<and>
+   "\<And>X U f::A=>real.
+         continuous_map X (subtopology euclideanreal U) f \<longleftrightarrow>
+         (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> U) \<and>
          (\<forall>a. openin X {x \<in> topspace X. f x > a}) \<and>
          (\<forall>a. openin X {x \<in> topspace X. f x < a})"
 oops
   REPEAT GEN_TAC THEN
   REWRITE_TAC[MATCH_MP CONTINUOUS_MAP_INTO_TOPOLOGY_SUBBASE_EQ
-   (SPEC `u::real=>bool` SUBBASE_SUBTOPOLOGY_EUCLIDEANREAL)] THEN
+   (SPEC `U::real=>bool` SUBBASE_SUBTOPOLOGY_EUCLIDEANREAL)] THEN
   REWRITE_TAC[FORALL_IN_UNION; FORALL_IN_GSPEC; IN_UNIV] THEN
   REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY; IN_ELIM_THM]);;
 
@@ -7026,15 +6953,15 @@ oops
   REWRITE_TAC[TOPSPACE_EUCLIDEANREAL; IN_UNIV]);;
 
 lemma continuous_map_upper_lower_semicontinuous_le_gen:
-   "\<And>X u f::A=>real.
-         continuous_map X (subtopology euclideanreal u) f \<longleftrightarrow>
-         (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> u) \<and>
+   "\<And>X U f::A=>real.
+         continuous_map X (subtopology euclideanreal U) f \<longleftrightarrow>
+         (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> U) \<and>
          (\<forall>a. closedin X {x \<in> topspace X. f x >= a}) \<and>
          (\<forall>a. closedin X {x \<in> topspace X. f x \<le> a})"
 oops
-  REWRITE_TAC[REAL_ARITH `a >= b \<longleftrightarrow> \<not> (b > a)`; GSYM REAL_NOT_LT] THEN
+  REWRITE_TAC[REAL_ARITH `a >= P \<longleftrightarrow> \<not> (P > a)`; GSYM REAL_NOT_LT] THEN
   REWRITE_TAC[closedin; SUBSET_RESTRICT] THEN
-  REWRITE_TAC[SET_RULE `u - {x. x \<in> u \<and> \<not> P x} = {x. x \<in> u \<and> P x}`;
+  REWRITE_TAC[SET_RULE `U - {x. x \<in> U \<and> \<not> P x} = {x. x \<in> U \<and> P x}`;
               CONTINUOUS_MAP_UPPER_LOWER_SEMICONTINUOUS_LT_GEN] THEN
   REWRITE_TAC[real_gt; CONJ_ACI]);;
 
@@ -7050,15 +6977,15 @@ oops
   REWRITE_TAC[TOPSPACE_EUCLIDEANREAL; IN_UNIV]);;
 
 lemma continuous_map_upper_lower_semicontinuous_lte_gen:
-   "\<And>X u f::A=>real.
-         continuous_map X (subtopology euclideanreal u) f \<longleftrightarrow>
-         (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> u) \<and>
+   "\<And>X U f::A=>real.
+         continuous_map X (subtopology euclideanreal U) f \<longleftrightarrow>
+         (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> U) \<and>
          (\<forall>a. openin X {x \<in> topspace X. f x < a}) \<and>
          (\<forall>a. closedin X {x \<in> topspace X. f x \<le> a})"
 oops
   REWRITE_TAC[GSYM REAL_NOT_LT] THEN
   REWRITE_TAC[closedin; SUBSET_RESTRICT] THEN
-  REWRITE_TAC[SET_RULE `u - {x. x \<in> u \<and> \<not> P x} = {x. x \<in> u \<and> P x}`;
+  REWRITE_TAC[SET_RULE `U - {x. x \<in> U \<and> \<not> P x} = {x. x \<in> U \<and> P x}`;
               CONTINUOUS_MAP_UPPER_LOWER_SEMICONTINUOUS_LT_GEN] THEN
   REWRITE_TAC[real_gt; CONJ_ACI]);;
 
