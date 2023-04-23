@@ -4790,6 +4790,35 @@ lemma regular_space_euclidean:
   by (simp add: metrizable_imp_regular_space metrizable_space_euclidean)
 
 
+lemma subbase_subtopology_euclidean:
+  fixes U :: "'a::order_topology set"
+  shows
+  "topology
+    (arbitrary union_of
+      (finite intersection_of (\<lambda>x. x \<in> range greaterThan \<union> range lessThan) relative_to U))
+ = subtopology euclidean U"
+proof -
+  have *: "openin (euclidean::'a topology) = 
+           (arbitrary union_of (finite intersection_of (\<lambda>x. x \<in> range greaterThan \<or> x \<in> range lessThan)))" 
+    apply (subst openin_topology_base_unique)
+    apply (auto simp: )
+
+     apply (simp add: intersection_of_def subset_iff)
+     apply (metis imageE open_Inter open_greaterThan open_lessThan)
+
+    apply (simp add: open_generated_order)
+    apply (erule rev_mp) back 
+    apply (erule generate_topology.induct)
+    using finite_intersection_of_empty apply blast
+    apply (meson Int_iff finite_intersection_of_Int inf_mono)
+    apply (meson Sup_upper2 Union_iff)
+    by (metis (mono_tags, lifting) Un_iff finite_intersection_of_inc subset_refl)
+  show ?thesis
+    unfolding subtopology_def arbitrary_union_of_relative_to [symmetric]
+    apply (simp add: relative_to_def flip: *)
+    by (metis Int_commute)
+qed
+
 subsection\<open>Limits at a point in a topological space\<close>
 
 lemma nontrivial_limit_atin:
@@ -6931,11 +6960,33 @@ qed
 
 
 lemma continuous_map_upper_lower_semicontinuous_lt_gen:
-   "\<And>X U f::A=>real.
-         continuous_map X (subtopology euclideanreal U) f \<longleftrightarrow>
-         (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> U) \<and>
+   "continuous_map X (subtopology euclideanreal U) f \<longleftrightarrow>
+         (\<forall>x \<in> topspace X. f x \<in> U) \<and>
          (\<forall>a. openin X {x \<in> topspace X. f x > a}) \<and>
          (\<forall>a. openin X {x \<in> topspace X. f x < a})"
+   (is "?lhs=?rhs")
+proof
+  assume L: ?lhs 
+  then
+  show ?rhs
+apply (auto simp: )
+      apply (simp add: continuous_map_def)
+apply (auto simp: continuous_map_def)
+    sorry
+next
+  assume ?rhs then show ?lhs
+    apply (simp add: continuous_map_def)
+apply (auto simp: )
+
+apply (rule )
+  apply (simp add: continuous_map_def)
+   apply (auto simp: )
+    apply (drule_tac x="greaterThan _" in spec)
+    apply (erule impCE)
+     prefer 2 
+     apply (simp add: )
+
+  apply (simp add: continuous_map_def)
 oops
   REPEAT GEN_TAC THEN
   REWRITE_TAC[MATCH_MP CONTINUOUS_MAP_INTO_TOPOLOGY_SUBBASE_EQ
