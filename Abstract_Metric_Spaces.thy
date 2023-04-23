@@ -6696,10 +6696,10 @@ next
     if \<section>: "\<And>T. \<lbrakk>infinite T; T \<subseteq> S\<rbrakk> \<Longrightarrow> mtopology derived_set_of T \<noteq> {}" and "S \<subseteq> M" for S
     unfolding compactin_sequentially
   proof (intro conjI strip)
-    show "mtopology closure_of S \<subseteq> M"
+    show MSM: "mtopology closure_of S \<subseteq> M"
       using closure_of_subset_topspace by fastforce
     fix \<sigma> :: "nat \<Rightarrow> 'a"
-    assume "range \<sigma> \<subseteq> mtopology closure_of S"
+    assume \<sigma>: "range \<sigma> \<subseteq> mtopology closure_of S"
     then have "\<exists>y \<in> S. d (\<sigma> n) y < inverse(Suc n)" for n
       apply (simp add: metric_closure_of subset_iff)
       by (metis of_nat_0_less_iff of_nat_Suc positive_imp_inverse_positive rangeI zero_less_Suc)
@@ -6717,6 +6717,14 @@ next
       using Bolzano_Weierstrass_property \<open>S \<subseteq> M\<close> by metis
     then have "l \<in> M"
       using limitin_mspace by blast
+    have dr_less: "d ((\<sigma> \<circ> r) n) ((\<tau> \<circ> r) n) < inverse(Suc n)" for n
+    proof -
+      have "d ((\<sigma> \<circ> r) n) ((\<tau> \<circ> r) n) < inverse(Suc (r n))"
+        using \<tau> by auto
+      also have "... \<le> inverse(Suc n)"
+        using lr strict_mono_imp_increasing by auto
+      finally show ?thesis .
+    qed
     have "limitin mtopology (\<sigma> \<circ> r) l sequentially"
       unfolding limitin_metric
     proof (intro conjI strip)
@@ -6729,18 +6737,14 @@ next
       moreover have "\<forall>\<^sub>F n in sequentially. inverse (real (Suc n)) < \<epsilon>/2"
         using Archimedean_eventually_inverse \<open>0 < \<epsilon>\<close> half_gt_zero by blast
       then have "\<forall>\<^sub>F n in sequentially. d ((\<sigma> \<circ> r) n) ((\<tau> \<circ> r) n) < \<epsilon>/2"
-        apply eventually_elim
-        using \<tau> dual_order.strict_trans
-        by (smt (verit, ccfv_SIG) Suc_le_mono comp_eq_dest_lhs inverse_le_iff_le lr(2) of_nat_0_less_iff of_nat_le_iff strict_mono_imp_increasing zero_less_Suc) 
+        by eventually_elim (smt (verit, del_insts) dr_less)
       ultimately have "\<forall>\<^sub>F n in sequentially. d ((\<sigma> \<circ> r) n) l < \<epsilon>/2 + \<epsilon>/2"
+        by eventually_elim (smt (verit) triangle \<open>l \<in> M\<close> MSM \<sigma> comp_apply order_trans range_subsetD)      
+      then show "\<forall>\<^sub>F n in sequentially. (\<sigma> \<circ> r) n \<in> M \<and> d ((\<sigma> \<circ> r) n) l < \<epsilon>"
         apply eventually_elim
-        using triangle [of "(\<sigma> \<circ> r) _" "(\<tau> \<circ> r) _" l]
-        by (smt (verit) \<open>l \<in> M\<close> \<open>mtopology closure_of S \<subseteq> M\<close> \<open>range \<sigma> \<subseteq> mtopology closure_of S\<close> comp_apply order_trans range_subsetD)      then show "\<forall>\<^sub>F n in sequentially. (\<sigma> \<circ> r) n \<in> M \<and> d ((\<sigma> \<circ> r) n) l < \<epsilon>"
-        apply eventually_elim
-        using \<open>mtopology closure_of S \<subseteq> M\<close> \<open>range \<sigma> \<subseteq> mtopology closure_of S\<close> by auto
+        using \<open>mtopology closure_of S \<subseteq> M\<close> \<sigma> by auto
     qed
-    with lr
-    show "\<exists>l r. l \<in> mtopology closure_of S \<and> strict_mono r \<and> limitin mtopology (\<sigma> \<circ> r) l sequentially"
+    with lr show "\<exists>l r. l \<in> mtopology closure_of S \<and> strict_mono r \<and> limitin mtopology (\<sigma> \<circ> r) l sequentially"
       by blast
   qed
   then show "?rhs \<Longrightarrow> ?lhs"
