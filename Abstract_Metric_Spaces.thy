@@ -6866,67 +6866,69 @@ proof
 qed (simp add: assms continuous_map_into_topology_base)
 
 lemma continuous_map_into_topology_subbase:
-  assumes P: "topology(arbitrary union_of (finite intersection_of P relative_to U)) = Y"
-    and f: "\<And>x. x \<in> topspace X \<Longrightarrow> f x \<in> topspace Y"
+  fixes U P
+  defines "Y \<equiv> topology(arbitrary union_of (finite intersection_of P relative_to U))"
+  assumes f: "\<And>x. x \<in> topspace X \<Longrightarrow> f x \<in> topspace Y"
     and ope: "\<And>U. P U \<Longrightarrow> openin X {x \<in> topspace X. f x \<in> U}"
   shows "continuous_map X Y f"
-  proof (intro continuous_map_into_topology_base)
+proof (intro continuous_map_into_topology_base)
   show "openin Y = arbitrary union_of (finite intersection_of P relative_to U)"
-    using P istopology_subbase topology_inverse' by blast
-
-  have *: "{x \<in> topspace X. f x \<in> U \<and> (\<forall>V\<in>\<U>. f x \<in> V)} = 
-           {x \<in> topspace X. f x \<in> U} \<inter> (\<Inter>V\<in>\<U>. {x \<in> topspace X. f x \<in> V})" 
-    for \<U>
-    by auto
+    unfolding Y_def using istopology_subbase topology_inverse' by blast
   show "openin X {x \<in> topspace X. f x \<in> V}"
     if \<section>: "(finite intersection_of P relative_to U) V" for V 
   proof -
-    obtain \<U> where \<U>: "finite \<U>" "\<And>c. c \<in> \<U> \<Longrightarrow> P c"
-      "{x \<in> topspace X. f x \<in> V} = (\<Inter>V \<in> insert U \<U>. {x \<in> topspace X. f x \<in> V})"
-      using \<section> by (fastforce simp add: intersection_of_def relative_to_def)
-
-    have "U = topspace Y"
-      using P topspace_subbase by fastforce
-
+    define finv where "finv \<equiv> \<lambda>V. {x \<in> topspace X. f x \<in> V}"
+    obtain \<U> where \<U>: "finite \<U>" "\<And>V. V \<in> \<U> \<Longrightarrow> P V"
+                      "{x \<in> topspace X. f x \<in> V} = (\<Inter>V \<in> insert U \<U>. finv V)"
+      using \<section> by (fastforce simp: finv_def intersection_of_def relative_to_def)
     show ?thesis
       unfolding \<U>
-      apply (intro openin_Inter ope)
-      using \<U>(1) apply blast
-      apply force
-      apply (auto simp: )
-      apply (smt (verit, best) Ball_Collect \<open>U = topspace Y\<close> f mem_Collect_eq openin_subopen openin_topspace)
-      using \<U>(2) ope apply blast
-      done
+    proof (intro openin_Inter ope)
+      have U: "U = topspace Y"
+        unfolding Y_def using topspace_subbase by fastforce
+      fix V
+      assume V: "V \<in> finv ` insert U \<U>"
+      with U f have "openin X {x \<in> topspace X. f x \<in> U}"
+        by (auto simp: openin_subopen [of X "Collect _"])
+      then show "openin X V"
+        using V \<U>(2) ope by (fastforce simp: finv_def)
+    qed (use \<open>finite \<U>\<close> in auto)
   qed
 qed (use f in auto)
 
 
-
-
 lemma continuous_map_into_topology_subbase_eq:
-   "\<And>X Y P U f::A=>B.
-      topology(arbitrary union_of
-                (finite intersection_of P relative_to U)) = Y
-      \<Longrightarrow> (continuous_map X Y f \<longleftrightarrow>
-           (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> topspace Y) \<and>
-           (\<forall>U. U \<in> P \<Longrightarrow> openin X {x \<in> topspace X. f x \<in> U}))"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THENL
-   [REWRITE_TAC[continuous_map] THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-    X_GEN_TAC `v::B=>bool` THEN DISCH_TAC THEN
-    SUBGOAL_THEN
-     `{x \<in> topspace X. f x \<in> v} =
-      {x \<in> topspace X. f x \<in> (U \<inter> v)}`
-    SUBST1_TAC THENL
-     [FIRST_ASSUM(MP_TAC \<circ> AP_TERM `topspace: Btopology=>B->bool`) THEN
-      REWRITE_TAC[TOPSPACE_SUBBASE] THEN ASM SET_TAC[];
-      FIRST_X_ASSUM MATCH_MP_TAC THEN EXPAND_TAC "Y" THEN
-      REWRITE_TAC[OPEN_IN_SUBBASE] THEN
-      MATCH_MP_TAC ARBITRARY_UNION_OF_INC THEN
-      MATCH_MP_TAC RELATIVE_TO_INC THEN
-      MATCH_MP_TAC FINITE_INTERSECTION_OF_INC THEN ASM SET_TAC[]];
-    POP_ASSUM MP_TAC THEN REWRITE_TAC[GSYM IMP_CONJ] THEN
-    REWRITE_TAC[CONTINUOUS_MAP_INTO_TOPOLOGY_SUBBASE]]);;
+  fixes U P
+  defines "Y \<equiv> topology(arbitrary union_of (finite intersection_of P relative_to U))"
+  shows
+   "continuous_map X Y f \<longleftrightarrow>
+    (\<forall>x \<in> topspace X. f x \<in> topspace Y) \<and> (\<forall>U. P U \<longrightarrow> openin X {x \<in> topspace X. f x \<in> U})"
+   (is "?lhs=?rhs")
+proof
+  assume L: ?lhs 
+  show ?rhs
+    proof (intro conjI strip)
+  show "\<And>x. x \<in> topspace X \<Longrightarrow> f x \<in> topspace Y"
+    using L continuous_map_def by fastforce
+  fix V
+  assume "P V"
+  have "U = topspace Y"
+    unfolding Y_def using topspace_subbase by fastforce
+  then have eq: "{x \<in> topspace X. f x \<in> V} = {x \<in> topspace X. f x \<in> U \<inter> V}"
+    using L by (auto simp: continuous_map)
+  have "openin Y (U \<inter> V)"
+    unfolding Y_def openin_subbase
+    by (meson \<open>P V\<close> arbitrary_union_of_inc finite_intersection_of_inc relative_to_inc)
+  show "openin X {x \<in> topspace X. f x \<in> V}"
+    using L \<open>openin Y (U \<inter> V)\<close> continuous_map eq by fastforce
+qed
+next
+  show "?rhs \<Longrightarrow> ?lhs"
+    unfolding Y_def
+    by (intro continuous_map_into_topology_subbase) auto
+qed 
+
+
 
 lemma continuous_map_upper_lower_semicontinuous_lt_gen:
    "\<And>X U f::A=>real.
