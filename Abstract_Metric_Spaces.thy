@@ -6169,25 +6169,24 @@ proof (cases "S \<subseteq> M")
       have "\<exists>j > i. d (\<sigma> i) (\<sigma> j) < 3*\<epsilon>/2 \<and> infinite (\<sigma> -` mball (\<sigma> j) (\<epsilon>/2))"
         if inf: "infinite (\<sigma> -` mball (\<sigma> i) \<epsilon>)" and "\<epsilon> > 0" for i \<epsilon>
       proof -
-         obtain K where "finite K" "K \<subseteq> S" and K: "S \<subseteq> (\<Union>x\<in>K. mball x (\<epsilon>/4))"
-          using L mtotally_bounded_def \<sigma> \<open>\<epsilon> > 0\<close>
-          by (metis zero_less_divide_iff zero_less_numeral)
+        obtain K where "finite K" "K \<subseteq> S" and K: "S \<subseteq> (\<Union>x\<in>K. mball x (\<epsilon>/4))"
+          by (metis L mtotally_bounded_def \<open>\<epsilon> > 0\<close> zero_less_divide_iff zero_less_numeral)
+        then have K_imp_ex: "\<And>y. y \<in> S \<Longrightarrow> \<exists>x\<in>K. d x y < \<epsilon>/4"
+          by fastforce
         have False if "\<forall>x\<in>K. d x (\<sigma> i) < \<epsilon> + \<epsilon>/4 \<longrightarrow> finite (\<sigma> -` mball x (\<epsilon>/4))"
         proof -
-          have "(\<sigma> -` mball (\<sigma> i) \<epsilon>) \<subseteq> (\<Union>x\<in>K. if d x (\<sigma> i) < \<epsilon> + \<epsilon>/4 then \<sigma> -` mball x (\<epsilon>/4) else {})"
-            using K
-            apply (simp add: subset_iff image_iff Bex_def conj_ac del: divide_const_simps)
-            apply clarify
-            apply (drule spec)
-            apply safe
-             defer
-             apply (rule_tac x="\<sigma> -` mball xa (\<epsilon>/4)" in exI)
-             apply (rule )
-              apply (blast intro:  elim: )
-             apply (rule_tac x="xa" in exI)
-             apply (simp add: del: divide_const_simps)
-            using mdist_reverse_triangle apply fastforce
-            by (meson \<sigma> range_subsetD)
+          have "\<exists>w. w \<in> K \<and> d w (\<sigma> i) < 5 * \<epsilon>/4 \<and> d w (\<sigma> j) < \<epsilon>/4"
+            if "d (\<sigma> i) (\<sigma> j) < \<epsilon>" for j
+          proof -
+            obtain w where w: "d w (\<sigma> j) < \<epsilon>/4" "w \<in> K"
+              using K_imp_ex \<sigma> by blast
+            then have "d w (\<sigma> i) < \<epsilon> + \<epsilon>/4"
+              by (smt (verit, ccfv_SIG) True \<open>K \<subseteq> S\<close> \<sigma> rangeI subset_eq that triangle')
+            with w show ?thesis
+              using in_mball by auto
+          qed
+          then have "(\<sigma> -` mball (\<sigma> i) \<epsilon>) \<subseteq> (\<Union>x\<in>K. if d x (\<sigma> i) < \<epsilon> + \<epsilon>/4 then \<sigma> -` mball x (\<epsilon>/4) else {})"
+            using True \<open>K \<subseteq> S\<close> by force
           then show False
             using finite_subset inf \<open>finite K\<close> that by fastforce
         qed
@@ -6244,10 +6243,8 @@ proof (cases "S \<subseteq> M")
         using strict_monoI_Suc by blast
       have d_less: "d (\<sigma> (r n)) (\<sigma> (r (Suc n))) < 3 * eps n / 2" for n
         using nxt [OF _ inf] by simp
-
       have eps_plus: "eps (k + n) = eps n * (1/2)^k" for k n
         by (simp add: eps_def power_add field_simps)
-
       have *: "d (\<sigma> (r n)) (\<sigma> (r (k + n))) < 3 * eps n" for n k
       proof -
         have "d (\<sigma> (r n)) (\<sigma> (r (k+n))) \<le> 3/2 * eps n * (\<Sum>i<k. (1/2)^i)"
@@ -6256,10 +6253,10 @@ proof (cases "S \<subseteq> M")
             by simp
         next
           case (Suc k)
-          with d_less[of "k+n"] show ?case
-            apply (simp add: algebra_simps eps_plus del: divide_const_simps)
-            using True \<sigma> rangeI subsetD triangle
-            by (smt (verit) True \<sigma> rangeI subsetD triangle)
+          have "d (\<sigma> (r n)) (\<sigma> (r (Suc k + n))) \<le> d (\<sigma> (r n)) (\<sigma> (r (k + n))) + d (\<sigma> (r (k + n))) (\<sigma> (r (Suc (k + n))))"
+            by (metis \<sigma>rM add.commute add_Suc_right triangle)
+          with d_less[of "k+n"] Suc show ?case
+            by (simp add: algebra_simps eps_plus)
         qed
         also have "\<dots> < 3/2 * eps n * 2"
           using geometric_sum [of "1/2::real" k] by simp
@@ -6994,8 +6991,7 @@ qed (use f in auto)
 
 
 lemma continuous_map_into_topology_subbase_eq:
-  fixes U P
-  defines "Y \<equiv> topology(arbitrary union_of (finite intersection_of P relative_to U))"
+  assumes "Y = topology(arbitrary union_of (finite intersection_of P relative_to U))"
   shows
    "continuous_map X Y f \<longleftrightarrow>
     (\<forall>x \<in> topspace X. f x \<in> topspace Y) \<and> (\<forall>U. P U \<longrightarrow> openin X {x \<in> topspace X. f x \<in> U})"
@@ -7009,57 +7005,32 @@ proof
   fix V
   assume "P V"
   have "U = topspace Y"
-    unfolding Y_def using topspace_subbase by fastforce
+    unfolding assms using topspace_subbase by fastforce
   then have eq: "{x \<in> topspace X. f x \<in> V} = {x \<in> topspace X. f x \<in> U \<inter> V}"
     using L by (auto simp: continuous_map)
   have "openin Y (U \<inter> V)"
-    unfolding Y_def openin_subbase
+    unfolding assms openin_subbase
     by (meson \<open>P V\<close> arbitrary_union_of_inc finite_intersection_of_inc relative_to_inc)
   show "openin X {x \<in> topspace X. f x \<in> V}"
     using L \<open>openin Y (U \<inter> V)\<close> continuous_map eq by fastforce
 qed
 next
   show "?rhs \<Longrightarrow> ?lhs"
-    unfolding Y_def
+    unfolding assms
     by (intro continuous_map_into_topology_subbase) auto
 qed 
 
 
 
 lemma continuous_map_upper_lower_semicontinuous_lt_gen:
-   "continuous_map X (subtopology euclideanreal U) f \<longleftrightarrow>
+  fixes U :: "'a::order_topology set"
+  shows
+   "continuous_map X (subtopology euclidean U) f \<longleftrightarrow>
          (\<forall>x \<in> topspace X. f x \<in> U) \<and>
          (\<forall>a. openin X {x \<in> topspace X. f x > a}) \<and>
          (\<forall>a. openin X {x \<in> topspace X. f x < a})"
-   (is "?lhs=?rhs")
-proof
-  assume L: ?lhs 
-  then
-  show ?rhs
-apply (auto simp: )
-      apply (simp add: continuous_map_def)
-apply (auto simp: continuous_map_def)
-    sorry
-next
-  assume ?rhs then show ?lhs
-    apply (simp add: continuous_map_def)
-apply (auto simp: )
-
-apply (rule )
-  apply (simp add: continuous_map_def)
-   apply (auto simp: )
-    apply (drule_tac x="greaterThan _" in spec)
-    apply (erule impCE)
-     prefer 2 
-     apply (simp add: )
-
-  apply (simp add: continuous_map_def)
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[MATCH_MP CONTINUOUS_MAP_INTO_TOPOLOGY_SUBBASE_EQ
-   (SPEC `U::real=>bool` SUBBASE_SUBTOPOLOGY_EUCLIDEANREAL)] THEN
-  REWRITE_TAC[FORALL_IN_UNION; FORALL_IN_GSPEC; IN_UNIV] THEN
-  REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY; IN_ELIM_THM]);;
+  by (auto simp add: continuous_map_into_topology_subbase_eq [OF subbase_subtopology_euclidean [symmetric, of U]] 
+           greaterThan_def lessThan_def image_iff   simp flip: all_simps)
 
 lemma continuous_map_upper_lower_semicontinuous_lt:
    "\<And>X f::A=>real.
