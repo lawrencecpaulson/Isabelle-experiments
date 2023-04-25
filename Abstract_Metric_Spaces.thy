@@ -1231,7 +1231,7 @@ lemma open_in_mspace [iff]: "openin mtopology M"
 lemma closedin_mspace [iff]: "closedin mtopology M"
   by (metis closedin_topspace topspace_mtopology)
 
-lemma openin_mball: "openin mtopology (mball x r)"
+lemma openin_mball [iff]: "openin mtopology (mball x r)"
 proof -
   have "\<And>y. \<lbrakk>x \<in> M; d x y < r\<rbrakk> \<Longrightarrow> \<exists>s>0. mball y s \<subseteq> mball x r"
     by (metis add_diff_cancel_left' add_diff_eq commute less_add_same_cancel1 mball_subset order_refl)
@@ -6165,7 +6165,6 @@ proof (cases "S \<subseteq> M")
   proof -
     { fix \<sigma> :: "nat \<Rightarrow> 'a"                                                            
       assume L: "mtotally_bounded S" and \<sigma>: "range \<sigma> \<subseteq> S"
-
       have "\<exists>j > i. d (\<sigma> i) (\<sigma> j) < 3*\<epsilon>/2 \<and> infinite (\<sigma> -` mball (\<sigma> j) (\<epsilon>/2))"
         if inf: "infinite (\<sigma> -` mball (\<sigma> i) \<epsilon>)" and "\<epsilon> > 0" for i \<epsilon>
       proof -
@@ -6989,7 +6988,6 @@ proof (intro continuous_map_into_topology_base)
   qed
 qed (use f in auto)
 
-
 lemma continuous_map_into_topology_subbase_eq:
   assumes "Y = topology(arbitrary union_of (finite intersection_of P relative_to U))"
   shows
@@ -7020,12 +7018,9 @@ next
     by (intro continuous_map_into_topology_subbase) auto
 qed 
 
-
-
 lemma continuous_map_upper_lower_semicontinuous_lt_gen:
   fixes U :: "'a::order_topology set"
-  shows
-   "continuous_map X (subtopology euclidean U) f \<longleftrightarrow>
+  shows "continuous_map X (subtopology euclidean U) f \<longleftrightarrow>
          (\<forall>x \<in> topspace X. f x \<in> U) \<and>
          (\<forall>a. openin X {x \<in> topspace X. f x > a}) \<and>
          (\<forall>a. openin X {x \<in> topspace X. f x < a})"
@@ -7033,97 +7028,77 @@ lemma continuous_map_upper_lower_semicontinuous_lt_gen:
            greaterThan_def lessThan_def image_iff   simp flip: all_simps)
 
 lemma continuous_map_upper_lower_semicontinuous_lt:
-   "\<And>X f::A=>real.
-         continuous_map X euclideanreal f \<longleftrightarrow>
+  fixes f :: "'a \<Rightarrow> 'b::order_topology"
+  shows "continuous_map X euclidean f \<longleftrightarrow>
          (\<forall>a. openin X {x \<in> topspace X. f x > a}) \<and>
          (\<forall>a. openin X {x \<in> topspace X. f x < a})"
-oops
-  REPEAT GEN_TAC THEN GEN_REWRITE_TAC
-   (LAND_CONV \<circ> LAND_CONV \<circ> RAND_CONV) [GSYM SUBTOPOLOGY_TOPSPACE] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_UPPER_LOWER_SEMICONTINUOUS_LT_GEN] THEN
-  REWRITE_TAC[TOPSPACE_EUCLIDEANREAL; IN_UNIV]);;
+  using continuous_map_upper_lower_semicontinuous_lt_gen [where U=UNIV]
+  by auto
+
+lemma Int_Collect_imp_eq: "A \<inter> {x. x\<in>A \<longrightarrow> P x} = {x\<in>A. P x}"
+  by blast
 
 lemma continuous_map_upper_lower_semicontinuous_le_gen:
-   "\<And>X U f::A=>real.
-         continuous_map X (subtopology euclideanreal U) f \<longleftrightarrow>
-         (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> U) \<and>
-         (\<forall>a. closedin X {x \<in> topspace X. f x >= a}) \<and>
+  shows
+    "continuous_map X (subtopology euclideanreal U) f \<longleftrightarrow>
+         (\<forall>x \<in> topspace X. f x \<in> U) \<and>
+         (\<forall>a. closedin X {x \<in> topspace X. f x \<ge> a}) \<and>
          (\<forall>a. closedin X {x \<in> topspace X. f x \<le> a})"
-oops
-  REWRITE_TAC[REAL_ARITH `a >= P \<longleftrightarrow> \<not> (P > a)`; GSYM REAL_NOT_LT] THEN
-  REWRITE_TAC[closedin; SUBSET_RESTRICT] THEN
-  REWRITE_TAC[SET_RULE `U - {x. x \<in> U \<and> \<not> P x} = {x. x \<in> U \<and> P x}`;
-              CONTINUOUS_MAP_UPPER_LOWER_SEMICONTINUOUS_LT_GEN] THEN
-  REWRITE_TAC[real_gt; CONJ_ACI]);;
+  unfolding continuous_map_upper_lower_semicontinuous_lt_gen
+  by (auto simp add: closedin_def Diff_eq Compl_eq not_le Int_Collect_imp_eq)
 
 lemma continuous_map_upper_lower_semicontinuous_le:
-   "\<And>X f::A=>real.
-         continuous_map X euclideanreal f \<longleftrightarrow>
-         (\<forall>a. closedin X {x \<in> topspace X. f x >= a}) \<and>
+   "continuous_map X euclideanreal f \<longleftrightarrow>
+         (\<forall>a. closedin X {x \<in> topspace X. f x \<ge> a}) \<and>
          (\<forall>a. closedin X {x \<in> topspace X. f x \<le> a})"
-oops
-  REPEAT GEN_TAC THEN GEN_REWRITE_TAC
-   (LAND_CONV \<circ> LAND_CONV \<circ> RAND_CONV) [GSYM SUBTOPOLOGY_TOPSPACE] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_UPPER_LOWER_SEMICONTINUOUS_LE_GEN] THEN
-  REWRITE_TAC[TOPSPACE_EUCLIDEANREAL; IN_UNIV]);;
+  using continuous_map_upper_lower_semicontinuous_le_gen [where U=UNIV]
+  by auto
 
 lemma continuous_map_upper_lower_semicontinuous_lte_gen:
-   "\<And>X U f::A=>real.
-         continuous_map X (subtopology euclideanreal U) f \<longleftrightarrow>
-         (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> U) \<and>
+   "continuous_map X (subtopology euclideanreal U) f \<longleftrightarrow>
+         (\<forall>x \<in> topspace X. f x \<in> U) \<and>
          (\<forall>a. openin X {x \<in> topspace X. f x < a}) \<and>
          (\<forall>a. closedin X {x \<in> topspace X. f x \<le> a})"
-oops
-  REWRITE_TAC[GSYM REAL_NOT_LT] THEN
-  REWRITE_TAC[closedin; SUBSET_RESTRICT] THEN
-  REWRITE_TAC[SET_RULE `U - {x. x \<in> U \<and> \<not> P x} = {x. x \<in> U \<and> P x}`;
-              CONTINUOUS_MAP_UPPER_LOWER_SEMICONTINUOUS_LT_GEN] THEN
-  REWRITE_TAC[real_gt; CONJ_ACI]);;
+  unfolding continuous_map_upper_lower_semicontinuous_lt_gen
+  by (auto simp add: closedin_def Diff_eq Compl_eq not_le Int_Collect_imp_eq)
 
 lemma continuous_map_upper_lower_semicontinuous_lte:
-   "\<And>X f::A=>real.
-         continuous_map X euclideanreal f \<longleftrightarrow>
+   "continuous_map X euclideanreal f \<longleftrightarrow>
          (\<forall>a. openin X {x \<in> topspace X. f x < a}) \<and>
          (\<forall>a. closedin X {x \<in> topspace X. f x \<le> a})"
-oops
-  REPEAT GEN_TAC THEN GEN_REWRITE_TAC
-   (LAND_CONV \<circ> LAND_CONV \<circ> RAND_CONV) [GSYM SUBTOPOLOGY_TOPSPACE] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_UPPER_LOWER_SEMICONTINUOUS_LTE_GEN] THEN
-  REWRITE_TAC[TOPSPACE_EUCLIDEANREAL; IN_UNIV]);;
+  using continuous_map_upper_lower_semicontinuous_lte_gen [where U=UNIV]
+  by auto
 
 
 subsection\<open>Continuous functions on metric spaces\<close>
 
-
-lemma metric_continuous_map:
-   "\<And>m m' f::A=>B.
-     continuous_map mtopology (mtopology m') f \<longleftrightarrow>
-     (\<forall>x. x \<in> M \<Longrightarrow> f x \<in> mspace m') \<and>
-     (\<forall>a e. 0 < e \<and> a \<in> M
-            \<Longrightarrow> (\<exists>d. 0 < d \<and>
-                     (\<forall>x. x \<in> M \<and> d a x < d
-                          \<Longrightarrow> d m' (f a, f x) < e)))"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[continuous_map; TOPSPACE_MTOPOLOGY] THEN
-  EQ_TAC THEN SIMP_TAC[] THENL
-  [INTRO_TAC "f cont; !a e; e a" THEN
-   REMOVE_THEN "cont" (MP_TAC \<circ> SPEC `mball m' (f (a::A):B,e)`) THEN
-   REWRITE_TAC[OPEN_IN_MBALL] THEN
-   ASM_SIMP_TAC[OPEN_IN_MTOPOLOGY; \<subseteq>; IN_MBALL; IN_ELIM_THM] THEN
-   DISCH_THEN (MP_TAC \<circ> SPEC `a::A`) THEN ASM_SIMP_TAC[MDIST_REFL];
-   SIMP_TAC[OPEN_IN_MTOPOLOGY; \<subseteq>; IN_MBALL; IN_ELIM_THM] THEN
-   ASM_MESON_TAC[]]);;
+context Metric_space
+begin
 
 lemma continuous_map_to_metric:
-   "\<And>t m f::A=>B.
-     continuous_map t mtopology f \<longleftrightarrow>
-     (\<forall>x. x \<in> topspace t
-          \<Longrightarrow> (\<forall>r. 0 < r
-                   \<Longrightarrow> (\<exists>u. openin t u \<and>
-                            x \<in> u \<and>
-                            (\<forall>y. y \<in> u \<Longrightarrow> f y \<in> mball m (f x,r)))))"
+   "continuous_map X mtopology f \<longleftrightarrow>
+     (\<forall>x \<in> topspace X. \<forall>r>0. \<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>y\<in>U. f y \<in> mball (f x) r))"
+   (is "?lhs=?rhs")
+proof
+  assume L: ?lhs 
+  then
+  show ?rhs
+    apply (simp add: continuous_map_eq_topcontinuous_at topcontinuous_at_def)
+    by (metis centre_in_mball_iff in_mball openin_mball)
+next
+  show "?rhs \<Longrightarrow> ?lhs"
+    apply (simp add: continuous_map_eq_topcontinuous_at topcontinuous_at_def Ball_def)
+    apply (erule all_forward imp_forward2 asm_rl)+
+    apply (drule_tac x="1" in spec)
+    apply (simp add: )
+    apply safe
+    defer
+
+qed 
+
+
 oops
-  INTRO_TAC "!t m f" THEN
+  INTRO_TAC "!X m f" THEN
   REWRITE_TAC[CONTINUOUS_MAP_EQ_TOPCONTINUOUS_AT; topcontinuous_at;
               TOPSPACE_MTOPOLOGY] THEN
   EQ_TAC THENL
@@ -7138,24 +7113,24 @@ lemma continuous_map_from_metric:
         continuous_map mtopology X f \<longleftrightarrow>
         f ` (M) \<subseteq> topspace X \<and>
         \<forall>a. a \<in> M
-            \<Longrightarrow> \<forall>u. openin X u \<and> f a \<in> u
+            \<Longrightarrow> \<forall>U. openin X U \<and> f a \<in> U
                     \<Longrightarrow> \<exists>d. 0 < d \<and>
                             \<forall>x. x \<in> M \<and> d a x < d
-                                \<Longrightarrow> f x \<in> u"
+                                \<Longrightarrow> f x \<in> U"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[CONTINUOUS_MAP; TOPSPACE_MTOPOLOGY] THEN
   ASM_CASES_TAC `f ` (M) \<subseteq> topspace X` THEN
   ASM_REWRITE_TAC[OPEN_IN_MTOPOLOGY] THEN EQ_TAC THEN DISCH_TAC THENL
    [X_GEN_TAC `a::A` THEN DISCH_TAC THEN
-    X_GEN_TAC `u::B=>bool` THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `u::B=>bool`) THEN
+    X_GEN_TAC `U::B=>bool` THEN STRIP_TAC THEN
+    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `U::B=>bool`) THEN
     ASM_REWRITE_TAC[] THEN DISCH_THEN(MP_TAC \<circ> SPEC `a::A` \<circ> CONJUNCT2) THEN
     ASM_REWRITE_TAC[IN_ELIM_THM; \<subseteq>; IN_MBALL] THEN MESON_TAC[];
-    X_GEN_TAC `u::B=>bool` THEN DISCH_TAC THEN
+    X_GEN_TAC `U::B=>bool` THEN DISCH_TAC THEN
     REWRITE_TAC[SUBSET_RESTRICT; IN_ELIM_THM] THEN
     X_GEN_TAC `a::A` THEN STRIP_TAC THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC `a::A`) THEN ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `u::B=>bool`) THEN ASM_REWRITE_TAC[] THEN
+    DISCH_THEN(MP_TAC \<circ> SPEC `U::B=>bool`) THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[\<subseteq>; IN_MBALL; IN_ELIM_THM] THEN MESON_TAC[]]);;
 
 lemma continuous_map_uniform_limit:
@@ -7259,6 +7234,22 @@ oops
     RULE_ASSUM_TAC(REWRITE_RULE[limitin; TOPSPACE_MTOPOLOGY]) THEN
     ASM_SIMP_TAC[\<subseteq>; FORALL_IN_IMAGE]]);;
 
+
+lemma metric_continuous_map:
+   "continuous_map mtopology (mtopology m') f \<longleftrightarrow>
+     (\<forall>x \<in> M. f x \<in> mspace m') \<and>
+     (\<forall>a \<in> M. \<forall>e>0. \<exists>d>0.  (\<forall>x. x \<in> M \<and> d a x < d
+                          \<longrightarrow> d m' (f a, f x) < e)))"
+oops
+  REPEAT GEN_TAC THEN REWRITE_TAC[continuous_map; TOPSPACE_MTOPOLOGY] THEN
+  EQ_TAC THEN SIMP_TAC[] THENL
+  [INTRO_TAC "f cont; !a e; e a" THEN
+   REMOVE_THEN "cont" (MP_TAC \<circ> SPEC `mball m' (f (a::A):B,e)`) THEN
+   REWRITE_TAC[OPEN_IN_MBALL] THEN
+   ASM_SIMP_TAC[OPEN_IN_MTOPOLOGY; \<subseteq>; IN_MBALL; IN_ELIM_THM] THEN
+   DISCH_THEN (MP_TAC \<circ> SPEC `a::A`) THEN ASM_SIMP_TAC[MDIST_REFL];
+   SIMP_TAC[OPEN_IN_MTOPOLOGY; \<subseteq>; IN_MBALL; IN_ELIM_THM] THEN
+   ASM_MESON_TAC[]]);;
 
 subsection\<open>Combining theorems for continuous functions into the reals\<close>
 
