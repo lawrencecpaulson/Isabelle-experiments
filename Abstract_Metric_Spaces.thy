@@ -6123,10 +6123,37 @@ lemma finite_imp_mtotally_bounded:
 lemma mtotally_bounded_imp_subset: "mtotally_bounded S \<Longrightarrow> S \<subseteq> M"
   by (force simp: mtotally_bounded_def intro!: zero_less_one)
 
-
 lemma mtotally_bounded_sing [simp]:
    "mtotally_bounded {x} \<longleftrightarrow> x \<in> M"
   by (meson empty_subsetI finite.simps finite_imp_mtotally_bounded insert_subset mtotally_bounded_imp_subset)
+
+lemma mtotally_bounded_Un:
+  assumes  "mtotally_bounded S" "mtotally_bounded T"
+  shows "mtotally_bounded (S \<union> T)"
+proof -
+  have "\<exists>K. finite K \<and> K \<subseteq> S \<union> T \<and> S \<union> T \<subseteq> (\<Union>x\<in>K. mball x e)"
+    if  "e>0" and K: "finite K \<and> K \<subseteq> S \<and> S \<subseteq> (\<Union>x\<in>K. mball x e)"
+      and L: "finite L \<and> L \<subseteq> T \<and> T \<subseteq> (\<Union>x\<in>L. mball x e)" for K L e
+    using that by (rule_tac x="K \<union> L" in exI) auto
+  with assms show ?thesis
+    unfolding mtotally_bounded_def by presburger
+qed
+ 
+lemma mtotally_bounded_Union:
+  assumes "finite f" "\<And>S. S \<in> f \<Longrightarrow> mtotally_bounded S"
+  shows "mtotally_bounded (\<Union>f)"
+  using assms by (induction f) (auto simp: mtotally_bounded_Un)
+
+lemma mtotally_bounded_imp_mbounded:
+  assumes "mtotally_bounded S"
+  shows "mbounded S"
+proof -
+  obtain K where "finite K \<and> K \<subseteq> S \<and> S \<subseteq> (\<Union>x\<in>K. mball x 1)" 
+    using assms by (force simp add: mtotally_bounded_def)
+  then show ?thesis
+    by (smt (verit) finite_imageI image_iff mbounded_Union mbounded_mball mbounded_subset)
+qed
+
 
 lemma mtotally_bounded_sequentially:
   "mtotally_bounded S \<longleftrightarrow>
@@ -6139,10 +6166,11 @@ proof (cases "S \<subseteq> M")
     { fix \<sigma> :: "nat \<Rightarrow> 'a"                                                            
       assume L: "mtotally_bounded S" and \<sigma>: "range \<sigma> \<subseteq> S"
 
-      { fix i::nat and \<epsilon>::real
-        assume inf: "infinite (\<sigma> -` mball (\<sigma> i) \<epsilon>)" and "\<epsilon> > 0"
-        then obtain K where "finite K" "K \<subseteq> S" and K: "S \<subseteq> (\<Union>x\<in>K. mball x (\<epsilon>/4))"
-          using L mtotally_bounded_def \<sigma>
+      have "\<exists>j > i. d (\<sigma> i) (\<sigma> j) < 3*\<epsilon>/2 \<and> infinite (\<sigma> -` mball (\<sigma> j) (\<epsilon>/2))"
+        if inf: "infinite (\<sigma> -` mball (\<sigma> i) \<epsilon>)" and "\<epsilon> > 0" for i \<epsilon>
+      proof -
+         obtain K where "finite K" "K \<subseteq> S" and K: "S \<subseteq> (\<Union>x\<in>K. mball x (\<epsilon>/4))"
+          using L mtotally_bounded_def \<sigma> \<open>\<epsilon> > 0\<close>
           by (metis zero_less_divide_iff zero_less_numeral)
         have False if "\<forall>x\<in>K. d x (\<sigma> i) < \<epsilon> + \<epsilon>/4 \<longrightarrow> finite (\<sigma> -` mball x (\<epsilon>/4))"
         proof -
@@ -6171,7 +6199,7 @@ proof (cases "S \<subseteq> M")
           by auto
         have "(\<sigma> -` mball x (\<epsilon>/4)) \<subseteq> (\<sigma> -` mball y (\<epsilon>/2))" if "d x y < \<epsilon>/4" "y \<in> M" for y
           using that by (simp add: mball_subset Metric_space_axioms vimage_mono)
-        then have "infinite (\<sigma> -` mball (\<sigma> j) (\<epsilon>/2))"
+        then have infj: "infinite (\<sigma> -` mball (\<sigma> j) (\<epsilon>/2))"
           by (meson True \<open>d x (\<sigma> j) < \<epsilon>/4\<close> \<sigma> in_mono infx rangeI finite_subset)
         have "\<sigma> i \<in> M" "\<sigma> j \<in> M" "x \<in> M"  
           using True \<open>K \<subseteq> S\<close> \<open>x \<in> K\<close> \<sigma> by force+
@@ -6180,36 +6208,81 @@ proof (cases "S \<subseteq> M")
         also have "\<dots> < 3*\<epsilon>/2"
           using dxi dxj by auto
         finally have "d (\<sigma> i) (\<sigma> j) < 3*\<epsilon>/2" .
-        have True by blast
-      }
-      have "\<exists>r. strict_mono r \<and> MCauchy (\<sigma> \<circ> r)"      
-      proof (cases "infinite S")
-        case True
-        then show ?thesis
-          (*Is Nash-Williams relevant here?*)
-          (*make a series x0, x1, ... from S where mball xn (inverse (Suc n)) is infinite *)
-          using subsequence_diagonalization_lemma
-          using convergent_imp_MCauchy limitin_sequentially
-          sorry          
-      next
-        case False
-        then have "finite (range \<sigma>)"
-          using \<sigma> finite_subset by blast
-        then obtain x where x: "infinite (\<sigma> -` {x})"
-          using inf_img_fin_dom by blast
-        define r where "r \<equiv> enumerate (\<sigma> -` {x})"
-        show ?thesis
-        proof (intro exI conjI)
-          show "strict_mono r"
-            by (simp add: r_def strict_mono_enumerate x)
-          have [simp]: "\<sigma> (r n) = x" for n
-            using x range_enumerate by (auto simp: r_def)
-          then have "x \<in> M"
-            using True \<sigma> by fastforce
-          then show "MCauchy (\<sigma> \<circ> r)"
-            using MCauchy_def \<open>x \<in> M\<close> by auto
-        qed
+        with \<open>i < j\<close> infj show ?thesis by blast
       qed
+      then obtain nxt where nxt: "\<And>i \<epsilon>. \<lbrakk>\<epsilon> > 0; infinite (\<sigma> -` mball (\<sigma> i) \<epsilon>)\<rbrakk> \<Longrightarrow> 
+                 nxt i \<epsilon> > i \<and> d (\<sigma> i) (\<sigma> (nxt i \<epsilon>)) < 3*\<epsilon>/2 \<and> infinite (\<sigma> -` mball (\<sigma> (nxt i \<epsilon>)) (\<epsilon>/2))"
+        by metis
+      have "mbounded S"
+        using L by (simp add: mtotally_bounded_imp_mbounded)
+      then obtain B where B: "\<forall>y \<in> S. d (\<sigma> 0) y \<le> B" and "B > 0"
+        by (meson \<sigma> mbounded_alt_pos range_subsetD)
+      define eps where "eps \<equiv> \<lambda>n. (B+1) / 2^n"
+      have [simp]: "eps (Suc n) = eps n / 2" "eps n > 0" for n
+        using \<open>B > 0\<close> by (auto simp add: eps_def)
+      have "UNIV \<subseteq> \<sigma> -` mball (\<sigma> 0) (B+1)"
+        using B True \<sigma> unfolding image_iff subset_iff
+        by (smt (verit, best) UNIV_I in_mball vimageI)
+      then have inf0: "infinite (\<sigma> -` mball (\<sigma> 0) (eps 0))"
+        using finite_subset by (auto simp: eps_def)
+      define r where "r \<equiv> rec_nat 0 (\<lambda>n rec. nxt rec (eps n))"
+      have [simp]: "r 0 = 0" "r (Suc n) = nxt (r n) (eps n)" for n
+        by (auto simp add: r_def)
+      have \<sigma>rM[simp]: "\<sigma> (r n) \<in> M" for n
+        using True \<sigma> by blast
+      have inf: "infinite (\<sigma> -` mball (\<sigma> (r n)) (eps n))" for n
+      proof (induction n)
+        case 0 then show ?case  
+          by (simp add: inf0)
+      next
+        case (Suc n) then show ?case
+          using nxt [of "eps n" "r n"] by simp
+      qed
+      then have "r (Suc n) > r n" for n
+        by (simp add: nxt)
+      then have "strict_mono r"
+        using strict_monoI_Suc by blast
+      have d_less: "d (\<sigma> (r n)) (\<sigma> (r (Suc n))) < 3 * eps n / 2" for n
+        using nxt [OF _ inf] by simp
+
+      have eps_plus: "eps (k + n) = eps n * (1/2)^k" for k n
+        by (simp add: eps_def power_add field_simps)
+
+      have *: "d (\<sigma> (r n)) (\<sigma> (r (k + n))) < 3 * eps n" for n k
+      proof -
+        have "d (\<sigma> (r n)) (\<sigma> (r (k+n))) \<le> 3/2 * eps n * (\<Sum>i<k. (1/2)^i)"
+        proof (induction k)
+          case 0 then show ?case 
+            by simp
+        next
+          case (Suc k)
+          with d_less[of "k+n"] show ?case
+            apply (simp add: algebra_simps eps_plus del: divide_const_simps)
+            using True \<sigma> rangeI subsetD triangle
+            by (smt (verit) True \<sigma> rangeI subsetD triangle)
+        qed
+        also have "\<dots> < 3/2 * eps n * 2"
+          using geometric_sum [of "1/2::real" k] by simp
+        finally show ?thesis by simp
+      qed
+      have "\<exists>N. \<forall>n\<ge>N. \<forall>n'\<ge>N. d (\<sigma> (r n)) (\<sigma> (r n')) < \<epsilon>" if "\<epsilon> > 0" for \<epsilon>
+      proof -
+        define N where "N \<equiv> nat \<lceil>(log 2 (6*(B+1) / \<epsilon>))\<rceil>"
+        have \<section>: "b \<le> 2 ^ nat \<lceil>log 2 b\<rceil>" for b
+          by (smt (verit) less_log_of_power real_nat_ceiling_ge)
+        have N: "6 * eps N \<le> \<epsilon>"
+          using \<section> [of "(6*(B+1) / \<epsilon>)"] that by (auto simp: N_def eps_def field_simps)
+        have "d (\<sigma> (r N)) (\<sigma> (r n)) < 3 * eps N" if "n \<ge> N" for n
+          by (metis * add.commute nat_le_iff_add that)
+        then have "\<forall>n\<ge>N. \<forall>n'\<ge>N. d (\<sigma> (r n)) (\<sigma> (r n')) < 3 * eps N + 3 * eps N"
+          by (smt (verit, best) \<sigma>rM triangle'')
+        with N show ?thesis
+          by fastforce
+      qed
+      then have "MCauchy (\<sigma> \<circ> r)"
+        unfolding MCauchy_def using True \<sigma> by auto
+      then have "\<exists>r. strict_mono r \<and> MCauchy (\<sigma> \<circ> r)"
+        using \<open>strict_mono r\<close> by blast      
     }
     moreover
     { assume R: ?rhs
@@ -6253,97 +6326,9 @@ proof (cases "S \<subseteq> M")
 qed (use mtotally_bounded_imp_subset in auto)
 
 
-oops
-  REWRITE_TAC[mtotally_bounded] THEN
-  REPEAT(STRIP_TAC ORELSE EQ_TAC) THENL
-   [ALL_TAC;
-
-
-  MP_TAC(ISPEC
-   `\<lambda>(i::num) (r::num=>num).
-      \<exists>N. !n n'. N \<le> n \<longrightarrow> N \<le> n'
-                 \<Longrightarrow> d m (x(r n):A,x(r n')) < inverse(Suc i)`
-   SUBSEQUENCE_DIAGONALIZATION_LEMMA) THEN
-  REWRITE_TAC[o_DEF] THEN ANTS_TAC THENL
-   [ALL_TAC;
-    DISCH_THEN(MP_TAC \<circ> SPEC `\<lambda>n::num. n`) THEN
-    ASM_REWRITE_TAC[MCauchy] THEN MATCH_MP_TAC MONO_EXISTS THEN
-    X_GEN_TAC `r::num=>num` THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-    CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-    MATCH_MP_TAC FORALL_POS_MONO_1 THEN ASM_REWRITE_TAC[] THEN
-    MESON_TAC[REAL_LT_TRANS]] THEN
-  CONJ_TAC THENL
-   [ALL_TAC;
-    MAP_EVERY X_GEN_TAC
-     [`i::num`; `r::num=>num`; `k1::num=>num`; `k2::num=>num`; `M::num`] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_TAC `N::num`) ASSUME_TAC) THEN
-    EXISTS_TAC `MAX M N` THEN
-    ASM_REWRITE_TAC[ARITH_RULE `MAX M N \<le> n \<longleftrightarrow> M \<le> n \<and> N \<le> n`] THEN
-    ASM_METIS_TAC [LE_TRANS]] THEN
-  MAP_EVERY X_GEN_TAC [`d::num`; `r::num=>num`] THEN
-  ABBREV_TAC `y::num=>A = (x::num=>A) \<circ> (r::num=>num)` THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> ISPEC `r::num=>num` \<circ> MATCH_MP (MESON[]
-   `(\<forall>n. x n \<in> S) \<Longrightarrow> \<forall>r. (\<forall>n. x(r n) \<in> S)`)) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [FUN_EQ_THM]) THEN
-  SIMP_TAC[o_THM] THEN DISCH_THEN(K ALL_TAC) THEN
-  SPEC_TAC(`y::num=>A`,`x::num=>A`) THEN REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `inverse(Suc d) / 2`) THEN
-  REWRITE_TAC[REAL_HALF; REAL_LT_INV_EQ; REAL_ARITH `0 < n + 1`] THEN
-  REWRITE_TAC[UNIONS_GSPEC; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `k::A=>bool` THEN STRIP_TAC THEN
-  SUBGOAL_THEN
-    `UNIV \<subseteq> \<Union> {{i. x i \<in> mball m (z,inverse(Suc d) / 2)} |
-                           (z::A) \<in> k}`
-  MP_TAC THENL [REWRITE_TAC[UNIONS_GSPEC] THEN ASM SET_TAC[]; ALL_TAC] THEN
-  DISCH_THEN(MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT] FINITE_SUBSET)) THEN
-  ASM_SIMP_TAC[SIMPLE_IMAGE; FINITE_UNIONS; FINITE_IMAGE] THEN
-  REWRITE_TAC[REWRITE_RULE[infinite] num_INFINITE; FORALL_IN_IMAGE] THEN
-  REWRITE_TAC[NOT_FORALL_THM; NOT_IMP; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `z::A` THEN REWRITE_TAC[GSYM infinite] THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP INFINITE_ENUMERATE) THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `r::num=>num` THEN
-  STRIP_TAC THEN ASM_REWRITE_TAC[] THEN EXISTS_TAC `0` THEN
-  MAP_EVERY X_GEN_TAC [`p::num`; `q::num`] THEN DISCH_THEN(K ALL_TAC) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP (SET_RULE
-    `f ` UNIV = {x. P x} \<Longrightarrow> \<forall>a. P(f a)`)) THEN
-  DISCH_THEN(fun t ->MP_TAC(SPEC `q::num` t) THEN MP_TAC(SPEC `p::num` t)) THEN
-  REWRITE_TAC[IN_MBALL] THEN
-  SUBGOAL_THEN
-   `(z::A) \<in> M \<and> x((r::num=>num) p) \<in> M \<and> x(r q) \<in> M`
-  MP_TAC THENL [ASM SET_TAC[]; CONV_TAC METRIC_ARITH]);;`
-
-
-
 lemma mtotally_bounded_subset:
    "\<lbrakk>mtotally_bounded S; T \<subseteq> S\<rbrakk> \<Longrightarrow> mtotally_bounded T"
   by (meson mtotally_bounded_sequentially order_trans) 
-
-lemma mtotally_bounded_Un:
-  assumes  "mtotally_bounded S" "mtotally_bounded T"
-  shows "mtotally_bounded (S \<union> T)"
-proof -
-  have "\<exists>K. finite K \<and> K \<subseteq> S \<union> T \<and> S \<union> T \<subseteq> (\<Union>x\<in>K. mball x e)"
-    if  "e>0" and K: "finite K \<and> K \<subseteq> S \<and> S \<subseteq> (\<Union>x\<in>K. mball x e)"
-      and L: "finite L \<and> L \<subseteq> T \<and> T \<subseteq> (\<Union>x\<in>L. mball x e)" for K L e
-    using that by (rule_tac x="K \<union> L" in exI) auto
-  with assms show ?thesis
-    unfolding mtotally_bounded_def by presburger
-qed
- 
-lemma mtotally_bounded_Union:
-  assumes "finite f" "\<And>S. S \<in> f \<Longrightarrow> mtotally_bounded S"
-  shows "mtotally_bounded (\<Union>f)"
-  using assms by (induction f) (auto simp: mtotally_bounded_Un)
-
-lemma mtotally_bounded_imp_mbounded:
-  assumes "mtotally_bounded S"
-  shows "mbounded S"
-proof -
-  obtain K where "finite K \<and> K \<subseteq> S \<and> S \<subseteq> (\<Union>x\<in>K. mball x 1)" 
-    using assms by (force simp add: mtotally_bounded_def)
-  then show ?thesis
-    by (smt (verit) finite_imageI image_iff mbounded_Union mbounded_mball mbounded_subset)
-qed
 
 lemma mtotally_bounded_submetric:
   assumes "mtotally_bounded S" "S \<subseteq> T" "T \<subseteq> M"
