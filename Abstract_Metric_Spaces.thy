@@ -633,15 +633,15 @@ lemma closed_map_from_closed_subtopology:
   using closed_map_in_subtopology by blast
 
 lemma closed_map_from_composition_left:
-  assumes "closed_map X Z (g \<circ> f)" "continuous_map X Y f" and fim: "f ` topspace X = topspace Y"
+  assumes cmf: "closed_map X Z (g \<circ> f)" and contf: "continuous_map X Y f" and fim: "f ` topspace X = topspace Y"
   shows "closed_map Y Z g"
   unfolding closed_map_def
 proof (intro strip)
   fix U assume "closedin Y U"
   then have "closedin X {x \<in> topspace X. f x \<in> U}"
-    using assms(2) closedin_continuous_map_preimage by blast
+    using contf closedin_continuous_map_preimage by blast
   then have "closedin Z ((g \<circ> f) ` {x \<in> topspace X. f x \<in> U})"
-    using assms(1) closed_map_def by blast
+    using cmf closed_map_def by blast
   moreover 
   have "\<And>y. y \<in> U \<Longrightarrow> \<exists>x \<in> topspace X. f x \<in> U \<and> g y = g (f x)"
     by (smt (verit, ccfv_SIG) \<open>closedin Y U\<close> closedin_subset fim image_iff subsetD)
@@ -652,15 +652,15 @@ qed
 
 text \<open>identical proof as the above\<close>
 lemma open_map_from_composition_left:
-  assumes "open_map X Z (g \<circ> f)" "continuous_map X Y f" and fim: "f ` topspace X = topspace Y"
+  assumes cmf: "open_map X Z (g \<circ> f)" and contf: "continuous_map X Y f" and fim: "f ` topspace X = topspace Y"
   shows "open_map Y Z g"
   unfolding open_map_def
 proof (intro strip)
   fix U assume "openin Y U"
   then have "openin X {x \<in> topspace X. f x \<in> U}"
-    using assms(2) openin_continuous_map_preimage by blast
+    using contf openin_continuous_map_preimage by blast
   then have "openin Z ((g \<circ> f) ` {x \<in> topspace X. f x \<in> U})"
-    using assms(1) open_map_def by blast
+    using cmf open_map_def by blast
   moreover 
   have "\<And>y. y \<in> U \<Longrightarrow> \<exists>x \<in> topspace X. f x \<in> U \<and> g y = g (f x)"
     by (smt (verit, ccfv_SIG) \<open>openin Y U\<close> openin_subset fim image_iff subsetD)
@@ -670,7 +670,7 @@ proof (intro strip)
 qed
 
 lemma closed_map_from_composition_right:
-  assumes "closed_map X Z (g \<circ> f)" "f ` topspace X \<subseteq> topspace Y" "continuous_map Y Z g" "inj_on g (topspace Y)"
+  assumes cmf: "closed_map X Z (g \<circ> f)" "f ` topspace X \<subseteq> topspace Y" "continuous_map Y Z g" "inj_on g (topspace Y)"
   shows "closed_map X Y f"
   unfolding closed_map_def
 proof (intro strip)
@@ -681,7 +681,7 @@ proof (intro strip)
   have "f ` C = {x \<in> topspace Y. g x \<in> (g \<circ> f) ` C}"
     using \<open>closedin X C\<close> assms(2) closedin_subset by fastforce
   moreover have "closedin Z ((g \<circ> f) ` C)"
-    using \<open>closedin X C\<close> assms(1) closed_map_def by blast
+    using \<open>closedin X C\<close> cmf closed_map_def by blast
   ultimately show "closedin Y (f ` C)"
     using assms(3) closedin_continuous_map_preimage by fastforce
 qed
@@ -1359,8 +1359,7 @@ lemma Hausdorff_space_mtopology: "Hausdorff_space mtopology"
   unfolding Hausdorff_space_def
 proof clarify
   fix x y
-  assume x: "x \<in> topspace mtopology" and y: "y \<in> topspace mtopology"
-      and "x \<noteq> y"
+  assume x: "x \<in> topspace mtopology" and y: "y \<in> topspace mtopology" and "x \<noteq> y"
   then have gt0: "d x y / 2 > 0"
     by auto
   have "disjnt (mball x (d x y / 2)) (mball y (d x y / 2))"
@@ -4798,23 +4797,34 @@ lemma subbase_subtopology_euclidean:
       (finite intersection_of (\<lambda>x. x \<in> range greaterThan \<union> range lessThan) relative_to U))
  = subtopology euclidean U"
 proof -
-  have *: "openin (euclidean::'a topology) = 
+  have "\<exists>V. (finite intersection_of (\<lambda>x. x \<in> range greaterThan \<or> x \<in> range lessThan)) V \<and> x \<in> V \<and> V \<subseteq> W"
+    if "open W" "x \<in> W" for W and x::'a
+    using \<open>open W\<close> [unfolded open_generated_order] \<open>x \<in> W\<close>
+  proof (induct rule: generate_topology.induct)
+    case UNIV
+    then show ?case
+      using finite_intersection_of_empty by blast
+  next
+    case (Int a b)
+    then show ?case 
+        by (meson Int_iff finite_intersection_of_Int inf_mono)
+  next
+    case (UN K)
+    then show ?case
+      by (meson Union_iff subset_iff)
+  next
+    case (Basis s)
+    then show ?case
+      by (metis (no_types, lifting) Un_iff finite_intersection_of_inc order_refl)
+  qed
+  moreover 
+  have "\<And>V::'a set. (finite intersection_of (\<lambda>x. x \<in> range greaterThan \<or> x \<in> range lessThan)) V \<Longrightarrow> open V"
+    by (force simp add: intersection_of_def subset_iff)
+  ultimately have *: "openin (euclidean::'a topology) = 
            (arbitrary union_of (finite intersection_of (\<lambda>x. x \<in> range greaterThan \<or> x \<in> range lessThan)))" 
-    apply (subst openin_topology_base_unique)
-    apply (auto simp: )
-
-     apply (simp add: intersection_of_def subset_iff)
-     apply (metis imageE open_Inter open_greaterThan open_lessThan)
-
-    apply (simp add: open_generated_order)
-    apply (erule rev_mp) back 
-    apply (erule generate_topology.induct)
-    using finite_intersection_of_empty apply blast
-    apply (meson Int_iff finite_intersection_of_Int inf_mono)
-    apply (meson Sup_upper2 Union_iff)
-    by (metis (mono_tags, lifting) Un_iff finite_intersection_of_inc subset_refl)
+    by (smt (verit, best) openin_topology_base_unique open_openin)
   show ?thesis
-    unfolding subtopology_def arbitrary_union_of_relative_to [symmetric]
+    unfolding subtopology_def arbitrary_union_of_relative_to [symmetric] 
     apply (simp add: relative_to_def flip: *)
     by (metis Int_commute)
 qed
@@ -6108,6 +6118,7 @@ lemma finite_imp_mtotally_bounded:
 lemma mtotally_bounded_imp_subset: "mtotally_bounded S \<Longrightarrow> S \<subseteq> M"
   by (force simp: mtotally_bounded_def intro!: zero_less_one)
 
+
 lemma mtotally_bounded_sing [simp]:
    "mtotally_bounded {x} \<longleftrightarrow> x \<in> M"
   by (meson empty_subsetI finite.simps finite_imp_mtotally_bounded insert_subset mtotally_bounded_imp_subset)
@@ -6120,14 +6131,74 @@ proof (cases "S \<subseteq> M")
   case True
   show ?thesis
   proof -
-    { fix \<sigma> :: "nat \<Rightarrow> 'a"
-      assume L: "mtotally_bounded S"
-      assume \<sigma>: "range \<sigma> \<subseteq> S"
-      then
-      have "\<exists>r. strict_mono r \<and> MCauchy (\<sigma> \<circ> r)" 
-        (*Is Nash-Williams relevant here?*)
-        using subsequence_diagonalization_lemma
-        sorry }
+    { fix \<sigma> :: "nat \<Rightarrow> 'a"                                                            
+      assume L: "mtotally_bounded S" and \<sigma>: "range \<sigma> \<subseteq> S"
+
+      { fix i::nat and \<epsilon>::real
+        assume inf: "infinite (\<sigma> -` mball (\<sigma> i) \<epsilon>)" and "\<epsilon> > 0"
+        then obtain K where "finite K" "K \<subseteq> S" and K: "S \<subseteq> (\<Union>x\<in>K. mball x (\<epsilon>/4))"
+          using L mtotally_bounded_def \<sigma>
+          by (metis zero_less_divide_iff zero_less_numeral)
+        have False if "\<forall>x\<in>K. d x (\<sigma> i) < \<epsilon> + \<epsilon>/4 \<longrightarrow> finite (\<sigma> -` mball x (\<epsilon>/4))"
+        proof -
+          have "(\<sigma> -` mball (\<sigma> i) \<epsilon>) \<subseteq> (\<Union>x\<in>K. if d x (\<sigma> i) < \<epsilon> + \<epsilon>/4 then \<sigma> -` mball x (\<epsilon>/4) else {})"
+            using K
+            apply (simp add: subset_iff image_iff Bex_def conj_ac del: divide_const_simps)
+            apply clarify
+            apply (drule spec)
+            apply safe
+             defer
+             apply (rule_tac x="\<sigma> -` mball xa (\<epsilon>/4)" in exI)
+             apply (rule )
+              apply (blast intro:  elim: )
+             apply (rule_tac x="xa" in exI)
+             apply (simp add: del: divide_const_simps)
+            using mdist_reverse_triangle apply fastforce
+            by (meson \<sigma> range_subsetD)
+          then show False
+            using finite_subset inf \<open>finite K\<close> that by fastforce
+        qed
+        then obtain x where "x \<in> K" and dxi: "d x (\<sigma> i) < \<epsilon> + \<epsilon>/4" and infx: "infinite (\<sigma> -` mball x (\<epsilon>/4))"
+          by blast
+        then obtain j where "j \<in> ((\<sigma> -` mball x (\<epsilon>/4)) - {..i})"
+          using bounded_nat_set_is_finite by (meson Diff_infinite_finite finite_atMost)
+        then have "j > i" and dxj: "d x (\<sigma> j) < \<epsilon>/4" 
+          by auto
+        have "(\<sigma> -` mball x (\<epsilon>/4)) \<subseteq> (\<sigma> -` mball y (\<epsilon>/2))" if "d x y < \<epsilon>/4" "y \<in> M" for y
+          using that by (simp add: mball_subset Metric_space_axioms vimage_mono)
+        then have "infinite (\<sigma> -` mball (\<sigma> j) (\<epsilon>/2))"
+          by (meson True \<open>d x (\<sigma> j) < \<epsilon> / 4\<close> \<sigma> in_mono infx rangeI finite_subset)
+            have True by blast
+          }
+          have "\<exists>r. strict_mono r \<and> MCauchy (\<sigma> \<circ> r)"      
+          proof (cases "infinite S")
+            case True
+            then show ?thesis
+              (*Is Nash-Williams relevant here?*)
+              (*make a series x0, x1, ... from S where mball xn (inverse (Suc n)) is infinite *)
+              using subsequence_diagonalization_lemma
+              using convergent_imp_MCauchy limitin_sequentially
+          sorry          
+      next
+        case False
+        then have "finite (range \<sigma>)"
+          using \<sigma> finite_subset by blast
+        then obtain x where x: "infinite (\<sigma> -` {x})"
+          using inf_img_fin_dom by blast
+        define r where "r \<equiv> enumerate (\<sigma> -` {x})"
+        show ?thesis
+        proof (intro exI conjI)
+          show "strict_mono r"
+            by (simp add: r_def strict_mono_enumerate x)
+          have [simp]: "\<sigma> (r n) = x" for n
+            using x range_enumerate by (auto simp: r_def)
+          then have "x \<in> M"
+            using True \<sigma> by fastforce
+          then show "MCauchy (\<sigma> \<circ> r)"
+            using MCauchy_def \<open>x \<in> M\<close> by auto
+        qed
+      qed
+    }
     moreover
     { assume R: ?rhs
       have "mtotally_bounded S"
@@ -6154,7 +6225,7 @@ proof (cases "S \<subseteq> M")
           then obtain r where "strict_mono r" "MCauchy (\<sigma> \<circ> r)"
             by (meson R \<open>range \<sigma> \<subseteq> S\<close>)
           with \<open>0 < \<epsilon>\<close> obtain N 
-              where N: "\<And>n n'. \<lbrakk>n\<ge>N; n'\<ge>N\<rbrakk> \<Longrightarrow> d (\<sigma> (r n)) (\<sigma> (r n')) < \<epsilon>"
+            where N: "\<And>n n'. \<lbrakk>n\<ge>N; n'\<ge>N\<rbrakk> \<Longrightarrow> d (\<sigma> (r n)) (\<sigma> (r n')) < \<epsilon>"
             by (force simp add: MCauchy_def)
           show ?thesis
             using N [of N "Suc (r N)"] \<open>strict_mono r\<close>
@@ -6168,7 +6239,7 @@ proof (cases "S \<subseteq> M")
       using True by blast
   qed
 qed (use mtotally_bounded_imp_subset in auto)
-  
+
 
 oops
   REWRITE_TAC[mtotally_bounded] THEN
@@ -6228,7 +6299,6 @@ oops
   SUBGOAL_THEN
    `(z::A) \<in> M \<and> x((r::num=>num) p) \<in> M \<and> x(r q) \<in> M`
   MP_TAC THENL [ASM SET_TAC[]; CONV_TAC METRIC_ARITH]);;`
-
 
 
 
