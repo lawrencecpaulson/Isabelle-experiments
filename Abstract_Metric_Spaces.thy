@@ -1115,23 +1115,28 @@ lemma metric [simp]:
 *)
 
 lemma subspace: "M' \<subseteq> M \<Longrightarrow> Metric_space M' d"
-  by (simp add: commute in_mono Metric_space.intro nonneg triangle zero)
+  by (simp add: commute in_mono Metric_space.intro triangle)
 
 lemma abs_mdist [simp] : "\<bar>d x y\<bar> = d x y"
-  by (simp add: nonneg)
+  by simp
 
 lemma mdist_pos_less: "\<lbrakk>x \<noteq> y; x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> 0 < d x y"
   by (metis less_eq_real_def nonneg zero)
 
 lemma mdist_refl [simp]: "x \<in> M \<Longrightarrow> d x x = 0"
-  by (simp add: zero)
+  by simp
 
 lemma mdist_pos_eq [simp]: "\<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> 0 < d x y \<longleftrightarrow> x \<noteq> y"
   using mdist_pos_less zero by fastforce
 
+lemma triangle': "\<lbrakk>x \<in> M; y \<in> M; z \<in> M\<rbrakk> \<Longrightarrow> d x z \<le> d x y + d z y"
+  by (simp add: commute triangle)
+
+lemma triangle'': "\<lbrakk>x \<in> M; y \<in> M; z \<in> M\<rbrakk> \<Longrightarrow> d x z \<le> d y x + d y z"
+  by (simp add: commute triangle)
+
 lemma mdist_reverse_triangle: "\<lbrakk>x \<in> M; y \<in> M; z \<in> M\<rbrakk> \<Longrightarrow> \<bar>d x y - d y z\<bar> \<le> d x z"
   by (smt (verit) commute triangle)
-
 
 text\<open> Open and closed balls                                                                \<close>
 
@@ -6124,9 +6129,9 @@ lemma mtotally_bounded_sing [simp]:
   by (meson empty_subsetI finite.simps finite_imp_mtotally_bounded insert_subset mtotally_bounded_imp_subset)
 
 lemma mtotally_bounded_sequentially:
-   "mtotally_bounded S \<longleftrightarrow>
+  "mtotally_bounded S \<longleftrightarrow>
     S \<subseteq> M \<and> (\<forall>\<sigma>::nat \<Rightarrow> 'a. range \<sigma> \<subseteq> S \<longrightarrow> (\<exists>r. strict_mono r \<and> MCauchy (\<sigma> \<circ> r)))"
-    (is "_ \<longleftrightarrow> _ \<and> ?rhs")
+  (is "_ \<longleftrightarrow> _ \<and> ?rhs")
 proof (cases "S \<subseteq> M")
   case True
   show ?thesis
@@ -6167,17 +6172,24 @@ proof (cases "S \<subseteq> M")
         have "(\<sigma> -` mball x (\<epsilon>/4)) \<subseteq> (\<sigma> -` mball y (\<epsilon>/2))" if "d x y < \<epsilon>/4" "y \<in> M" for y
           using that by (simp add: mball_subset Metric_space_axioms vimage_mono)
         then have "infinite (\<sigma> -` mball (\<sigma> j) (\<epsilon>/2))"
-          by (meson True \<open>d x (\<sigma> j) < \<epsilon> / 4\<close> \<sigma> in_mono infx rangeI finite_subset)
-            have True by blast
-          }
-          have "\<exists>r. strict_mono r \<and> MCauchy (\<sigma> \<circ> r)"      
-          proof (cases "infinite S")
-            case True
-            then show ?thesis
-              (*Is Nash-Williams relevant here?*)
-              (*make a series x0, x1, ... from S where mball xn (inverse (Suc n)) is infinite *)
-              using subsequence_diagonalization_lemma
-              using convergent_imp_MCauchy limitin_sequentially
+          by (meson True \<open>d x (\<sigma> j) < \<epsilon>/4\<close> \<sigma> in_mono infx rangeI finite_subset)
+        have "\<sigma> i \<in> M" "\<sigma> j \<in> M" "x \<in> M"  
+          using True \<open>K \<subseteq> S\<close> \<open>x \<in> K\<close> \<sigma> by force+
+        then have "d (\<sigma> i) (\<sigma> j) \<le> d x (\<sigma> i) + d x (\<sigma> j)"
+          using triangle'' by blast
+        also have "\<dots> < 3*\<epsilon>/2"
+          using dxi dxj by auto
+        finally have "d (\<sigma> i) (\<sigma> j) < 3*\<epsilon>/2" .
+        have True by blast
+      }
+      have "\<exists>r. strict_mono r \<and> MCauchy (\<sigma> \<circ> r)"      
+      proof (cases "infinite S")
+        case True
+        then show ?thesis
+          (*Is Nash-Williams relevant here?*)
+          (*make a series x0, x1, ... from S where mball xn (inverse (Suc n)) is infinite *)
+          using subsequence_diagonalization_lemma
+          using convergent_imp_MCauchy limitin_sequentially
           sorry          
       next
         case False
