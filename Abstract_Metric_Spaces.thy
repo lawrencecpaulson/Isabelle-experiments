@@ -7077,51 +7077,52 @@ begin
 
 lemma continuous_map_to_metric:
    "continuous_map X mtopology f \<longleftrightarrow>
-     (\<forall>x \<in> topspace X. \<forall>r>0. \<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>y\<in>U. f y \<in> mball (f x) r))"
+    (\<forall>x \<in> topspace X. \<forall>r>0. \<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>y\<in>U. f y \<in> mball (f x) r))"
    (is "?lhs=?rhs")
 proof
-  assume L: ?lhs 
-  then
-  show ?rhs
-sledgehammer [isar_proofs, provers = cvc4 vampire verit e spass z3 zipperposition, timeout = 99]
-    apply (simp add: continuous_map_eq_topcontinuous_at topcontinuous_at_def)
-    by (metis centre_in_mball_iff in_mball openin_mball)
+  show "?lhs \<Longrightarrow> ?rhs"
+    unfolding continuous_map_eq_topcontinuous_at topcontinuous_at_def
+    by (metis centre_in_mball_iff openin_mball topspace_mtopology)
 next
-  show "?rhs \<Longrightarrow> ?lhs"
-    apply (simp add: continuous_map_eq_topcontinuous_at topcontinuous_at_def flip: in_mball)
-    apply clarify
-    apply safe
-    using mbounded_empty mbounded_pos apply auto[1]
-     apply (meson mbounded_mball mbounded_pos)
-    apply (simp add: openin_mtopology flip: in_mball)
-    by (metis Int_iff inf.orderE)
-  qed 
+  assume R: ?rhs
+  then have "\<forall>x\<in>topspace X. f x \<in> M"
+    by (meson gt_ex in_mball)
+  moreover 
+  have "\<And>x V. \<lbrakk>x \<in> topspace X; openin mtopology V; f x \<in> V\<rbrakk> \<Longrightarrow> \<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>y\<in>U. f y \<in> V)"
+    unfolding openin_mtopology by (metis Int_iff R inf.orderE)
+  ultimately
+  show ?lhs
+    by (simp add: continuous_map_eq_topcontinuous_at topcontinuous_at_def)
+qed 
 
 
 lemma continuous_map_from_metric:
-   "\<And>m X f::A=>B.
-        continuous_map mtopology X f \<longleftrightarrow>
-        f ` (M) \<subseteq> topspace X \<and>
-        \<forall>a. a \<in> M
-            \<Longrightarrow> \<forall>U. openin X U \<and> f a \<in> U
-                    \<Longrightarrow> \<exists>d. 0 < d \<and>
-                            \<forall>x. x \<in> M \<and> d a x < d
-                                \<Longrightarrow> f x \<in> U"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[CONTINUOUS_MAP; TOPSPACE_MTOPOLOGY] THEN
-  ASM_CASES_TAC `f ` (M) \<subseteq> topspace X` THEN
-  ASM_REWRITE_TAC[OPEN_IN_MTOPOLOGY] THEN EQ_TAC THEN DISCH_TAC THENL
-   [X_GEN_TAC `a::A` THEN DISCH_TAC THEN
-    X_GEN_TAC `U::B=>bool` THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `U::B=>bool`) THEN
-    ASM_REWRITE_TAC[] THEN DISCH_THEN(MP_TAC \<circ> SPEC `a::A` \<circ> CONJUNCT2) THEN
-    ASM_REWRITE_TAC[IN_ELIM_THM; \<subseteq>; IN_MBALL] THEN MESON_TAC[];
-    X_GEN_TAC `U::B=>bool` THEN DISCH_TAC THEN
-    REWRITE_TAC[SUBSET_RESTRICT; IN_ELIM_THM] THEN
-    X_GEN_TAC `a::A` THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `a::A`) THEN ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `U::B=>bool`) THEN ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[\<subseteq>; IN_MBALL; IN_ELIM_THM] THEN MESON_TAC[]]);;
+   "continuous_map mtopology X f \<longleftrightarrow>
+        f ` M \<subseteq> topspace X \<and>
+        (\<forall>a \<in> M. \<forall>U. openin X U \<and> f a \<in> U
+              \<longrightarrow> (\<exists>r>0. \<forall>x. x \<in> M \<and> d a x < r \<longrightarrow> f x \<in> U))"
+proof (cases "f ` M \<subseteq> topspace X")
+  case True
+  have "\<exists>r>0. \<forall>x \<in> M. d a x < r \<longrightarrow> f x \<in> U"
+    if "continuous_map mtopology X f" and "a \<in> M" and "openin X U" and "f a \<in> U"
+    for a U
+  proof -
+    have "\<And>x. x \<in> M \<and> f x \<in> U \<Longrightarrow> (\<exists>r. 0 < r \<and> mball x r \<subseteq> {x. x \<in> M \<and> f x \<in> U})"
+      using that by (simp add: continuous_map openin_mtopology)
+    with that show ?thesis
+      by fastforce
+  qed
+  moreover have "continuous_map mtopology X f"
+    if "f ` M \<subseteq> topspace X"
+      and "\<forall>a\<in>M. \<forall>U. openin X U \<and> f a \<in> U \<longrightarrow> (\<exists>r>0. \<forall>x. x \<in> M \<and> d a x < r \<longrightarrow> f x \<in> U)"
+    using that by (force simp add: continuous_map openin_mtopology)
+  ultimately show ?thesis
+    using True unfolding openin_mtopology by meson
+next
+  case False
+  then show ?thesis
+    by (simp add: continuous_map_eq_image_closure_subset_gen)
+qed
 
 lemma continuous_map_uniform_limit:
    "\<And>F X m f::K=>A->B g.
