@@ -7083,30 +7083,20 @@ proof
   assume L: ?lhs 
   then
   show ?rhs
+sledgehammer [isar_proofs, provers = cvc4 vampire verit e spass z3 zipperposition, timeout = 99]
     apply (simp add: continuous_map_eq_topcontinuous_at topcontinuous_at_def)
     by (metis centre_in_mball_iff in_mball openin_mball)
 next
   show "?rhs \<Longrightarrow> ?lhs"
-    apply (simp add: continuous_map_eq_topcontinuous_at topcontinuous_at_def Ball_def)
-    apply (erule all_forward imp_forward2 asm_rl)+
-    apply (drule_tac x="1" in spec)
-    apply (simp add: )
+    apply (simp add: continuous_map_eq_topcontinuous_at topcontinuous_at_def flip: in_mball)
+    apply clarify
     apply safe
-    defer
+    using mbounded_empty mbounded_pos apply auto[1]
+     apply (meson mbounded_mball mbounded_pos)
+    apply (simp add: openin_mtopology flip: in_mball)
+    by (metis Int_iff inf.orderE)
+  qed 
 
-qed 
-
-
-oops
-  INTRO_TAC "!X m f" THEN
-  REWRITE_TAC[CONTINUOUS_MAP_EQ_TOPCONTINUOUS_AT; topcontinuous_at;
-              TOPSPACE_MTOPOLOGY] THEN
-  EQ_TAC THENL
-  [INTRO_TAC "A; !x; x" THEN REMOVE_THEN "A" (MP_TAC \<circ> SPEC `x::A`) THEN
-   ASM_SIMP_TAC[OPEN_IN_MBALL; CENTRE_IN_MBALL];
-   INTRO_TAC "A; !x; x" THEN ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
-   [ASM_MESON_TAC[REAL_LT_01; IN_MBALL];
-    ASM_MESON_TAC[OPEN_IN_MTOPOLOGY; \<subseteq>]]]);;
 
 lemma continuous_map_from_metric:
    "\<And>m X f::A=>B.
