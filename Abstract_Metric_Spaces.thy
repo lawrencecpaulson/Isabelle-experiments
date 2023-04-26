@@ -7095,29 +7095,14 @@ next
     by (simp add: continuous_map_eq_topcontinuous_at topcontinuous_at_def)
 qed 
 
-
 lemma continuous_map_from_metric:
    "continuous_map mtopology X f \<longleftrightarrow>
-        f ` M \<subseteq> topspace X \<and>
-        (\<forall>a \<in> M. \<forall>U. openin X U \<and> f a \<in> U
-              \<longrightarrow> (\<exists>r>0. \<forall>x. x \<in> M \<and> d a x < r \<longrightarrow> f x \<in> U))"
+    f ` M \<subseteq> topspace X \<and>
+    (\<forall>a \<in> M. \<forall>U. openin X U \<and> f a \<in> U \<longrightarrow> (\<exists>r>0. \<forall>x. x \<in> M \<and> d a x < r \<longrightarrow> f x \<in> U))"
 proof (cases "f ` M \<subseteq> topspace X")
   case True
-  have "\<exists>r>0. \<forall>x \<in> M. d a x < r \<longrightarrow> f x \<in> U"
-    if "continuous_map mtopology X f" and "a \<in> M" and "openin X U" and "f a \<in> U"
-    for a U
-  proof -
-    have "\<And>x. x \<in> M \<and> f x \<in> U \<Longrightarrow> (\<exists>r. 0 < r \<and> mball x r \<subseteq> {x. x \<in> M \<and> f x \<in> U})"
-      using that by (simp add: continuous_map openin_mtopology)
-    with that show ?thesis
-      by fastforce
-  qed
-  moreover have "continuous_map mtopology X f"
-    if "f ` M \<subseteq> topspace X"
-      and "\<forall>a\<in>M. \<forall>U. openin X U \<and> f a \<in> U \<longrightarrow> (\<exists>r>0. \<forall>x. x \<in> M \<and> d a x < r \<longrightarrow> f x \<in> U)"
-    using that by (force simp add: continuous_map openin_mtopology)
-  ultimately show ?thesis
-    using True unfolding openin_mtopology by meson
+  then show ?thesis
+    by (fastforce simp add: continuous_map openin_mtopology subset_eq)
 next
   case False
   then show ?thesis
