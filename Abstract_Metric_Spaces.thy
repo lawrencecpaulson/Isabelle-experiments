@@ -7077,7 +7077,7 @@ begin
 
 lemma continuous_map_to_metric:
    "continuous_map X mtopology f \<longleftrightarrow>
-    (\<forall>x \<in> topspace X. \<forall>r>0. \<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>y\<in>U. f y \<in> mball (f x) r))"
+    (\<forall>x \<in> topspace X. \<forall>\<epsilon>>0. \<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>y\<in>U. f y \<in> mball (f x) \<epsilon>))"
    (is "?lhs=?rhs")
 proof
   show "?lhs \<Longrightarrow> ?rhs"
@@ -7110,15 +7110,26 @@ next
 qed
 
 lemma continuous_map_uniform_limit:
-   "\<And>F X m f::K=>A->B g.
-        \<not> trivial_limit F \<and>
-        eventually (\<lambda>n. continuous_map X mtopology (f n)) F \<and>
-        (\<forall>e. 0 < e
-             \<Longrightarrow> eventually
-                   (\<lambda>n. \<forall>x. x \<in> topspace X
-                            \<Longrightarrow> g x \<in> M \<and> d f n x g x < e)
-                 F)
-        \<Longrightarrow> continuous_map X mtopology g"
+  assumes contf: "\<forall>\<^sub>F n in F. continuous_map X mtopology (f n)"
+    and D: "\<And>\<epsilon>. 0 < \<epsilon> \<Longrightarrow> \<forall>\<^sub>F n in F. \<forall>x \<in> topspace X. g x \<in> M \<and> d (f n x) (g x) < \<epsilon>"
+    and nontriv: "\<not> trivial_limit F"
+  shows "continuous_map X mtopology g"
+  unfolding continuous_map_to_metric
+proof (intro strip)
+  fix x and \<epsilon>::real
+  assume "x \<in> topspace X" and "\<epsilon> > 0"
+  then obtain k where k: "continuous_map X mtopology (f k)" and gM: "\<forall>x \<in> topspace X. g x \<in> M" and third: "d (f k x) (g x) < \<epsilon>/3"
+    using eventually_conj [OF contf] contf D [of "\<epsilon>/3"] eventually_happens' [OF nontriv]
+    by (smt (verit, ccfv_SIG) zero_less_divide_iff)
+  then obtain U where U: "openin X U" "x \<in> U" and Uthird: "\<forall>y\<in>U. d (f k y) (f k x) < \<epsilon>/3"
+    unfolding continuous_map_to_metric
+    by (metis \<open>0 < \<epsilon>\<close> \<open>x \<in> topspace X\<close> commute divide_pos_pos in_mball zero_less_numeral)
+  then have "\<forall>y\<in>U. d (g y) (g x) < \<epsilon>"
+    sorry
+  with U gM show "\<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>y\<in>U. g y \<in> mball (g x) \<epsilon>)"
+    by (metis commute in_mball in_mono openin_subset)
+qed
+
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[CONTINUOUS_MAP_TO_METRIC] THEN
   DISCH_THEN(CONJUNCTS_THEN ASSUME_TAC) THEN X_GEN_TAC `x::A` THEN
@@ -7139,6 +7150,7 @@ oops
   SUBGOAL_THEN `(y::A) \<in> topspace X` ASSUME_TAC THENL
    [ASM_MESON_TAC[\<subseteq>; OPEN_IN_SUBSET]; ASM_REWRITE_TAC[]] THEN
   ASM_SIMP_TAC[IN_MBALL] THEN CONV_TAC METRIC_ARITH);;
+
 
 lemma continuous_map_uniform_limit_alt:
    "\<And>F X m f::K=>A->B g.
