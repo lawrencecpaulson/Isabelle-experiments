@@ -7147,32 +7147,34 @@ qed
 
 
 lemma continuous_map_uniform_limit_alt:
-   "\<not> trivial_limit F \<and>
-        image g (topspace X) \<subseteq> M \<and>
-        eventually (\<lambda>n. continuous_map X mtopology (f n)) F \<and>
-        (\<forall>e. 0 < e
-             \<Longrightarrow> eventually
-                   (\<lambda>n. \<forall>x. x \<in> topspace X \<Longrightarrow> d f n x g x < e)
-                 F)
-        \<Longrightarrow> continuous_map X mtopology g"
-oops
-  REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE] THEN REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC(ISPEC `F::K F` CONTINUOUS_MAP_UNIFORM_LIMIT) THEN
-  EXISTS_TAC `f::K=>A->B` THEN ASM_SIMP_TAC[]);;
+  assumes contf: "\<forall>\<^sub>F \<xi> in F. continuous_map X mtopology (f \<xi>)"
+    and gim: "g ` (topspace X) \<subseteq> M"
+    and dfg: "\<And>\<epsilon>. 0 < \<epsilon> \<Longrightarrow> \<forall>\<^sub>F \<xi> in F. \<forall>x \<in> topspace X. d (f \<xi> x) (g x) < \<epsilon>"
+    and nontriv: "\<not> trivial_limit F"
+  shows "continuous_map X mtopology g"
+proof (rule continuous_map_uniform_limit [OF contf])
+  fix \<epsilon> :: real
+  assume "\<epsilon> > 0"
+  with gim dfg show "\<forall>\<^sub>F \<xi> in F. \<forall>x\<in>topspace X. g x \<in> M \<and> d (f \<xi> x) (g x) < \<epsilon>"
+    by (simp add: image_subset_iff)
+qed (use nontriv in auto)
 
-lemma continuous_map_uniformly_cauchy_limit:
-   "\<And>X ms f::num=>A->B.
-      \<not> trivial_limit sequentially \<and> mcomplete ms \<and>
-      eventually (\<lambda>n. continuous_map X (mtopology ms) (f n)) sequentially \<and>
-      (\<forall>e. 0 < e
-           \<Longrightarrow> \<exists>N. \<forall>m n x. N \<le> m \<and> N \<le> n \<and> x \<in> topspace X
-                           \<Longrightarrow> d ms (f m x,f n x) < e)
-      \<Longrightarrow> \<exists>g. continuous_map X (mtopology ms) g \<and>
-              \<forall>e. 0 < e
-                  \<Longrightarrow> eventually
-                       (\<lambda>n. \<forall>x. x \<in> topspace X
-                                \<Longrightarrow> d ms (f n x,g x) < e)
-                       sequentially"
+
+lemma continuous_map_uniformly_Cauchy_limit:
+  assumes "mcomplete"
+  assumes contf: "\<forall>\<^sub>F n in sequentially. continuous_map X mtopology (f n)"
+    and Cauchy': "\<And>\<epsilon>. \<epsilon> > 0 \<Longrightarrow> \<exists>N. \<forall>m n x. N \<le> m \<longrightarrow> N \<le> n \<longrightarrow> x \<in> topspace X \<longrightarrow> d (f m x) (f n x) < \<epsilon>"
+  obtains g where
+    "continuous_map X mtopology g"
+    "\<And>\<epsilon>. 0 < \<epsilon> \<Longrightarrow> \<forall>\<^sub>F n in sequentially. \<forall>x\<in>topspace X. d (f n x) (g x) < \<epsilon>"
+proof -
+  have "\<And>x. x \<in> topspace X \<Longrightarrow> \<exists>l. limitin mtopology (\<lambda>n. f n x) l sequentially"
+    using \<open>mcomplete\<close> [unfolded mcomplete, rule_format] assms
+    by (smt (verit) contf continuous_map_def eventually_mono topspace_mtopology)
+  then obtain g where g: "\<And>x. x \<in> topspace X \<Longrightarrow> limitin mtopology (\<lambda>n. f n x) (g x) sequentially"
+    by metis
+
+    sorry
 oops
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN
@@ -7187,7 +7189,9 @@ oops
       ASM_SIMP_TAC[continuous_map; TOPSPACE_MTOPOLOGY];
       ASM_MESON_TAC[]];
     GEN_REWRITE_TAC (LAND_CONV \<circ> BINDER_CONV) [RIGHT_IMP_EXISTS_THM] THEN
+
     REWRITE_TAC[SKOLEM_THM]] THEN
+
   MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `g::A=>B` THEN DISCH_TAC THEN
   MATCH_MP_TAC(TAUT `q \<and> (q \<Longrightarrow> p) \<Longrightarrow> p \<and> q`) THEN CONJ_TAC THENL
    [X_GEN_TAC `e::real` THEN DISCH_TAC THEN
