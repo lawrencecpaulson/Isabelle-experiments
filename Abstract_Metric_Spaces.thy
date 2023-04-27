@@ -7173,51 +7173,37 @@ proof -
     by (smt (verit) contf continuous_map_def eventually_mono topspace_mtopology)
   then obtain g where g: "\<And>x. x \<in> topspace X \<Longrightarrow> limitin mtopology (\<lambda>n. f n x) (g x) sequentially"
     by metis
-
-    sorry
-oops
-  REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN
-   `\<forall>x. x \<in> topspace X
-        \<Longrightarrow> \<exists>l. limitin (mtopology ms) (\<lambda>n. (f::num=>A->B) n x) l sequentially`
-  MP_TAC THENL
-   [X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-    FIRST_ASSUM(MATCH_MP_TAC \<circ> GEN_REWRITE_RULE id [MCOMPLETE]) THEN
-    REWRITE_TAC[MCauchy] THEN CONJ_TAC THENL
-     [FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
-        EVENTUALLY_MONO)) THEN
-      ASM_SIMP_TAC[continuous_map; TOPSPACE_MTOPOLOGY];
-      ASM_MESON_TAC[]];
-    GEN_REWRITE_TAC (LAND_CONV \<circ> BINDER_CONV) [RIGHT_IMP_EXISTS_THM] THEN
-
-    REWRITE_TAC[SKOLEM_THM]] THEN
-
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `g::A=>B` THEN DISCH_TAC THEN
-  MATCH_MP_TAC(TAUT `q \<and> (q \<Longrightarrow> p) \<Longrightarrow> p \<and> q`) THEN CONJ_TAC THENL
-   [X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e / 2`) THEN
-    ASM_REWRITE_TAC[REAL_HALF; EVENTUALLY_SEQUENTIALLY] THEN
-    DISCH_THEN(X_CHOOSE_THEN `N::num` STRIP_ASSUME_TAC) THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [EVENTUALLY_SEQUENTIALLY]) THEN
-    REWRITE_TAC[continuous_map; LEFT_IMP_EXISTS_THM; TOPSPACE_MTOPOLOGY] THEN
-    X_GEN_TAC `P::num` THEN DISCH_TAC THEN EXISTS_TAC `MAX N P` THEN
-    ASM_REWRITE_TAC[ARITH_RULE `MAX N P \<le> n \<longleftrightarrow> N \<le> n \<and> P \<le> n`] THEN
-    X_GEN_TAC `n::num` THEN STRIP_TAC THEN X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::A`) THEN ASM_REWRITE_TAC[LIMIT_METRIC] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC `e / 2`)) THEN
-    ASM_REWRITE_TAC[REAL_HALF; EVENTUALLY_SEQUENTIALLY] THEN
-    DISCH_THEN(X_CHOOSE_THEN `M::num` (MP_TAC \<circ> SPEC `MAX M (MAX N P)`)) THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`n::num`; `MAX M (MAX N P)`; `x::A`]) THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `n::num`) THEN
-    ASM_SIMP_TAC[ARITH_RULE `n \<le> MAX M N \<longleftrightarrow> n \<le> M \<or> n \<le> N`; LE_REFL] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `x::A` \<circ> CONJUNCT1) THEN
-    UNDISCH_TAC `(g::A=>B) x \<in> mspace ms` THEN ASM_REWRITE_TAC[] THEN
-    CONV_TAC METRIC_ARITH;
-    DISCH_TAC THEN
-    MATCH_MP_TAC(ISPEC `sequentially` CONTINUOUS_MAP_UNIFORM_LIMIT_ALT) THEN
-    EXISTS_TAC `f::num=>A->B` THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[limitin; TOPSPACE_MTOPOLOGY]) THEN
-    ASM_SIMP_TAC[\<subseteq>; FORALL_IN_IMAGE]]);;
+  show thesis
+  proof
+    show "\<forall>\<^sub>F n in sequentially. \<forall>x\<in>topspace X. d (f n x) (g x) < \<epsilon>"
+      if "\<epsilon> > 0" for \<epsilon> :: real
+    proof -
+      obtain N where N: "\<And>m n x. \<lbrakk>N \<le> m; N \<le> n; x \<in> topspace X\<rbrakk> \<Longrightarrow> d (f m x) (f n x) < \<epsilon>/2"
+        by (meson Cauchy' \<open>0 < \<epsilon>\<close> half_gt_zero)
+      obtain P where P: "\<And>n x. \<lbrakk>n \<ge> P; x \<in> topspace X\<rbrakk> \<Longrightarrow> f n x \<in> M"
+        using contf by (auto simp: eventually_sequentially continuous_map_def)
+      show ?thesis
+      proof (intro eventually_sequentiallyI strip)
+        fix n x
+        assume "max N P \<le> n" and x: "x \<in> topspace X"
+        obtain L where "g x \<in> M" and L: "\<forall>n\<ge>L. f n x \<in> M \<and> d (f n x) (g x) < \<epsilon>/2"
+          using g [OF x] \<open>\<epsilon> > 0\<close> unfolding limitin_metric
+          by (metis (no_types, lifting) eventually_sequentially half_gt_zero)
+        define n' where "n' \<equiv> Max{L,N,P}"
+        have L': "\<forall>m \<ge> n'. f m x \<in> M \<and> d (f m x) (g x) < \<epsilon>/2"
+          using L by (simp add: n'_def)
+        moreover
+        have "d (f n x) (f n' x) < \<epsilon>/2"
+          using N [of n n' x] \<open>max N P \<le> n\<close> n'_def x by fastforce
+        ultimately have "d (f n x) (g x) < \<epsilon>/2 + \<epsilon>/2"
+          by (smt (verit, ccfv_SIG) P \<open>g x \<in> M\<close> \<open>max N P \<le> n\<close> le_refl max.bounded_iff mdist_refl triangle' x)
+        then show "d (f n x) (g x) < \<epsilon>" by simp
+      qed
+    qed
+    then show "continuous_map X mtopology g"
+      by (smt (verit, del_insts) eventually_mono g limitin_mspace trivial_limit_sequentially continuous_map_uniform_limit [OF contf])
+  qed
+qed
 
 
 lemma metric_continuous_map:
