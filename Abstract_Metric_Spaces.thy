@@ -7109,52 +7109,45 @@ next
     by (simp add: continuous_map_eq_image_closure_subset_gen)
 qed
 
+text \<open>An abstract formulation, since the limits do not have to be sequential\<close>
 lemma continuous_map_uniform_limit:
-  assumes contf: "\<forall>\<^sub>F n in F. continuous_map X mtopology (f n)"
-    and D: "\<And>\<epsilon>. 0 < \<epsilon> \<Longrightarrow> \<forall>\<^sub>F n in F. \<forall>x \<in> topspace X. g x \<in> M \<and> d (f n x) (g x) < \<epsilon>"
+  assumes contf: "\<forall>\<^sub>F \<xi> in F. continuous_map X mtopology (f \<xi>)"
+    and dfg: "\<And>\<epsilon>. 0 < \<epsilon> \<Longrightarrow> \<forall>\<^sub>F \<xi> in F. \<forall>x \<in> topspace X. g x \<in> M \<and> d (f \<xi> x) (g x) < \<epsilon>"
     and nontriv: "\<not> trivial_limit F"
   shows "continuous_map X mtopology g"
   unfolding continuous_map_to_metric
 proof (intro strip)
   fix x and \<epsilon>::real
   assume "x \<in> topspace X" and "\<epsilon> > 0"
-  then obtain k where k: "continuous_map X mtopology (f k)" and gM: "\<forall>x \<in> topspace X. g x \<in> M" and third: "d (f k x) (g x) < \<epsilon>/3"
-    using eventually_conj [OF contf] contf D [of "\<epsilon>/3"] eventually_happens' [OF nontriv]
+  then obtain \<xi> where k: "continuous_map X mtopology (f \<xi>)" 
+    and gM: "\<forall>x \<in> topspace X. g x \<in> M" 
+    and third: "\<forall>x \<in> topspace X. d (f \<xi> x) (g x) < \<epsilon>/3"
+    using eventually_conj [OF contf] contf dfg [of "\<epsilon>/3"] eventually_happens' [OF nontriv]
     by (smt (verit, ccfv_SIG) zero_less_divide_iff)
-  then obtain U where U: "openin X U" "x \<in> U" and Uthird: "\<forall>y\<in>U. d (f k y) (f k x) < \<epsilon>/3"
+  then obtain U where U: "openin X U" "x \<in> U" and Uthird: "\<forall>y\<in>U. d (f \<xi> y) (f \<xi> x) < \<epsilon>/3"
     unfolding continuous_map_to_metric
     by (metis \<open>0 < \<epsilon>\<close> \<open>x \<in> topspace X\<close> commute divide_pos_pos in_mball zero_less_numeral)
-  then have "\<forall>y\<in>U. d (g y) (g x) < \<epsilon>"
-    sorry
+  have f_inM: "f \<xi> y \<in> M" if "y\<in>U" for y
+    using U k openin_subset that by (fastforce simp: continuous_map_def)
+  have "d (g y) (g x) < \<epsilon>" if "y\<in>U" for y
+  proof -
+    have "g y \<in> M"
+      using U gM openin_subset that by blast
+    have "d (g y) (g x) \<le> d (g y) (f \<xi> x) + d (f \<xi> x) (g x)"
+      by (simp add: U \<open>g y \<in> M\<close> \<open>x \<in> topspace X\<close> f_inM gM triangle)
+    also have "\<dots> \<le> d (g y) (f \<xi> y) + d (f \<xi> y) (f \<xi> x) + d (f \<xi> x) (g x)"
+      by (simp add: U \<open>g y \<in> M\<close> commute f_inM that triangle')
+    also have "\<dots> < \<epsilon>/3 + \<epsilon>/3 + \<epsilon>/3"
+      by (smt (verit) U(1) Uthird \<open>x \<in> topspace X\<close> commute openin_subset subsetD that third)
+    finally show ?thesis by simp
+  qed
   with U gM show "\<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>y\<in>U. g y \<in> mball (g x) \<epsilon>)"
     by (metis commute in_mball in_mono openin_subset)
 qed
 
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[CONTINUOUS_MAP_TO_METRIC] THEN
-  DISCH_THEN(CONJUNCTS_THEN ASSUME_TAC) THEN X_GEN_TAC `x::A` THEN
-  DISCH_TAC THEN X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(CONJUNCTS_THEN2 MP_TAC (MP_TAC \<circ> SPEC `e / 3`)) THEN
-  ASM_REWRITE_TAC[REAL_ARITH `0 < e / 3 \<longleftrightarrow> 0 < e`; IMP_IMP] THEN
-  REWRITE_TAC[GSYM EVENTUALLY_AND] THEN
-  DISCH_THEN(MP_TAC \<circ> MATCH_MP EVENTUALLY_HAPPENS) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `k::K` THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC `x::A`)) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_THEN(MP_TAC \<circ> SPEC `e / 3`) THEN
-  ASM_REWRITE_TAC[REAL_ARITH `0 < e / 3 \<longleftrightarrow> 0 < e`] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `u::A=>bool` THEN
-  REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `y::A` THEN
-  DISCH_THEN(fun th -> DISCH_TAC THEN MP_TAC th) THEN FIRST_X_ASSUM(fun th ->
-    MP_TAC(SPEC `y::A` th) THEN MP_TAC(SPEC `x::A` th)) THEN
-  SUBGOAL_THEN `(y::A) \<in> topspace X` ASSUME_TAC THENL
-   [ASM_MESON_TAC[\<subseteq>; OPEN_IN_SUBSET]; ASM_REWRITE_TAC[]] THEN
-  ASM_SIMP_TAC[IN_MBALL] THEN CONV_TAC METRIC_ARITH);;
-
 
 lemma continuous_map_uniform_limit_alt:
-   "\<And>F X m f::K=>A->B g.
-        \<not> trivial_limit F \<and>
+   "\<not> trivial_limit F \<and>
         image g (topspace X) \<subseteq> M \<and>
         eventually (\<lambda>n. continuous_map X mtopology (f n)) F \<and>
         (\<forall>e. 0 < e
