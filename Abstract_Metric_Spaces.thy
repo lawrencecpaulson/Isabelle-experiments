@@ -7303,75 +7303,63 @@ lemma homeomorphic_maps_real_shrink:
 subsection\<open>Paths and path-connectedness\<close>
 
 lemma path_connected_space_quotient_map_image:
-   "\<lbrakk>quotient_map X X' q; path_connected_space X\<rbrakk> \<Longrightarrow> path_connected_space X'"
+   "\<lbrakk>quotient_map X Y q; path_connected_space X\<rbrakk> \<Longrightarrow> path_connected_space Y"
   by (metis path_connectedin_continuous_map_image path_connectedin_topspace quotient_imp_continuous_map quotient_imp_surjective_map)
 
 lemma path_connected_space_retraction_map_image:
-   "\<lbrakk>retraction_map X X' r; path_connected_space X\<rbrakk> \<Longrightarrow> path_connected_space X'"
+   "\<lbrakk>retraction_map X Y r; path_connected_space X\<rbrakk> \<Longrightarrow> path_connected_space Y"
   using path_connected_space_quotient_map_image retraction_imp_quotient_map by blast
 
 lemma path_connected_space_prod_topology:
-   "        path_connected_space(prod_topology top1 top2) \<longleftrightarrow>
-        topspace(prod_topology top1 top2) = {} \<or>
-        path_connected_space top1 \<and> path_connected_space top2"
-oops
-  REPEAT STRIP_TAC THEN
-  ASM_CASES_TAC `topspace(prod_topology top1 top2):A#B=>bool = {}` THEN
-  ASM_SIMP_TAC[PATH_CONNECTED_SPACE_TOPSPACE_EMPTY] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[TOPSPACE_PROD_TOPOLOGY;
-        CROSS_EQ_EMPTY; DE_MORGAN_THM]) THEN
-  EQ_TAC THENL
-   [REWRITE_TAC[GSYM PATH_CONNECTED_IN_TOPSPACE] THEN REPEAT STRIP_TAC THENL
-     [MP_TAC(ISPECL [`fst::A#B=>A`; `prod_topology top1 top2:(A#B)topology`;
-                     `top1::A topology`;
-                     `topspace(prod_topology top1 top2:(A#B)topology)`]
-        PATH_CONNECTED_IN_CONTINUOUS_MAP_IMAGE);
-      MP_TAC(ISPECL [`snd::A#B=>B`; `prod_topology top1 top2:(A#B)topology`;
-                     `top2::B topology`;
-                     `topspace(prod_topology top1 top2:(A#B)topology)`]
-        PATH_CONNECTED_IN_CONTINUOUS_MAP_IMAGE)] THEN
-    ASM_REWRITE_TAC[CONTINUOUS_MAP_FST; CONTINUOUS_MAP_SND] THEN
-    REWRITE_TAC[TOPSPACE_PROD_TOPOLOGY] THEN
-    ASM_REWRITE_TAC[IMAGE_FST_CROSS; IMAGE_SND_CROSS];
-    REWRITE_TAC[path_connected_space; NOT_EXISTS_THM] THEN STRIP_TAC] THEN
-  REWRITE_TAC[FORALL_PAIR_THM; TOPSPACE_PROD_TOPOLOGY; IN_CROSS] THEN
-  MAP_EVERY X_GEN_TAC [`x1::A`; `x2::B`; `y1::A`; `y2::B`] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`x2::B`; `y2::B`]) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`x1::A`; `y1::A`]) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `g1::real=>A` THEN STRIP_TAC THEN
-  X_GEN_TAC `g2::real=>B` THEN STRIP_TAC THEN
-  EXISTS_TAC `(\<lambda>t. g1 t,g2 t):real=>A#B` THEN
-  ASM_REWRITE_TAC[pathin; CONTINUOUS_MAP_PAIRWISE; o_DEF; ETA_AX] THEN
-  ASM_REWRITE_TAC[GSYM pathin]);;
+  "path_connected_space(prod_topology X Y) \<longleftrightarrow>
+        topspace(prod_topology X Y) = {} \<or> path_connected_space X \<and> path_connected_space Y"
+proof (cases "topspace(prod_topology X Y) = {}")
+  case True
+  then show ?thesis
+    by (simp add: path_connected_space_topspace_empty)
+next
+  case False
+  have "path_connected_space (prod_topology X Y)" 
+    if X: "path_connected_space X" and Y: "path_connected_space Y"
+  proof (clarsimp simp: path_connected_space_def)
+    fix x y x' y'
+    assume "x \<in> topspace X" and "y \<in> topspace Y" and "x' \<in> topspace X" and "y' \<in> topspace Y"
+    obtain f where "pathin X f" "f 0 = x" "f 1 = x'"
+      by (meson X \<open>x \<in> topspace X\<close> \<open>x' \<in> topspace X\<close> path_connected_space_def)
+    obtain g where "pathin Y g" "g 0 = y" "g 1 = y'"
+      by (meson Y \<open>y \<in> topspace Y\<close> \<open>y' \<in> topspace Y\<close> path_connected_space_def)
+    show "\<exists>h. pathin (prod_topology X Y) h \<and> h 0 = (x,y) \<and> h 1 = (x',y')"
+    proof (intro exI conjI)
+      show "pathin (prod_topology X Y) (\<lambda>t. (f t, g t))"
+        using \<open>pathin X f\<close> \<open>pathin Y g\<close> by (simp add: continuous_map_paired pathin_def)
+      show "(\<lambda>t. (f t, g t)) 0 = (x, y)"
+        using \<open>f 0 = x\<close> \<open>g 0 = y\<close> by blast
+      show "(\<lambda>t. (f t, g t)) 1 = (x', y')"
+        using \<open>f 1 = x'\<close> \<open>g 1 = y'\<close> by blast
+    qed
+  qed
+  then show ?thesis
+    by (metis False Sigma_empty1 Sigma_empty2 topspace_prod_topology path_connected_space_retraction_map_image
+        retraction_map_fst  retraction_map_snd) 
+qed
 
-lemma path_connectedin_cross:
-   "\<And>top1 top2 s::A=>bool t::B=>bool.
-        path_connectedin (prod_topology top1 top2) (s \<times> t) \<longleftrightarrow>
-        s = {} \<or> t = {} \<or>
-        path_connectedin top1 s \<and> path_connectedin top2 t"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[path_connectedin; SUBTOPOLOGY_CROSS] THEN
-  REWRITE_TAC[PATH_CONNECTED_SPACE_PROD_TOPOLOGY; TOPSPACE_PROD_TOPOLOGY] THEN
-  REWRITE_TAC[SUBSET_CROSS; CROSS_EQ_EMPTY; TOPSPACE_SUBTOPOLOGY] THEN
-  ASM_CASES_TAC `s::A=>bool = {}` THEN ASM_REWRITE_TAC[INTER_EMPTY] THEN
-  ASM_CASES_TAC `t::B=>bool = {}` THEN ASM_REWRITE_TAC[INTER_EMPTY] THEN
-  ASM_CASES_TAC `(s::A=>bool) \<subseteq> topspace top1` THEN ASM_REWRITE_TAC[] THEN
-  ASM_CASES_TAC `(t::B=>bool) \<subseteq> topspace top2` THEN ASM_REWRITE_TAC[] THEN
-  ASM_SIMP_TAC[SET_RULE `s \<subseteq> u \<Longrightarrow> u \<inter> s = s`]);;
+lemma path_connectedin_Times:
+   "path_connectedin (prod_topology X Y) (S \<times> T) \<longleftrightarrow>
+        S = {} \<or> T = {} \<or> path_connectedin X S \<and> path_connectedin Y T"
+  by (auto simp add: path_connectedin_def subtopology_Times path_connected_space_prod_topology)
 
 lemma path_connected_space_product_topology:
-   "\<And>tops::K=>A topology k.
-        path_connected_space(product_topology k tops) \<longleftrightarrow>
-        topspace(product_topology k tops) = {} \<or>
-        \<forall>i. i \<in> k \<Longrightarrow> path_connected_space(tops i)"
+   "\<And>X::K=>A topology k.
+        path_connected_space(product_topology k X) \<longleftrightarrow>
+        topspace(product_topology k X) = {} \<or>
+        \<forall>i. i \<in> k \<Longrightarrow> path_connected_space(X i)"
 oops
   REPEAT GEN_TAC THEN
-  ASM_CASES_TAC `topspace(product_topology k (tops::K=>A topology)) = {}` THEN
+  ASM_CASES_TAC `topspace(product_topology k (X::K=>A topology)) = {}` THEN
   ASM_SIMP_TAC[PATH_CONNECTED_SPACE_TOPSPACE_EMPTY] THEN EQ_TAC THENL
    [REWRITE_TAC[GSYM PATH_CONNECTED_IN_TOPSPACE] THEN DISCH_TAC THEN
     X_GEN_TAC `i::K` THEN DISCH_TAC THEN FIRST_ASSUM(MP_TAC \<circ>
-      ISPECL [`\<lambda>(f::K=>A). f i`; `(tops::K=>A topology) i`] \<circ>
+      ISPECL [`\<lambda>(f::K=>A). f i`; `(X::K=>A topology) i`] \<circ>
       MATCH_MP(REWRITE_RULE[IMP_CONJ_ALT]
         PATH_CONNECTED_IN_CONTINUOUS_MAP_IMAGE)) THEN
     ASM_SIMP_TAC[CONTINUOUS_MAP_PRODUCT_PROJECTION] THEN
@@ -7383,7 +7371,7 @@ oops
   MAP_EVERY X_GEN_TAC [`x::K=>A`; `y::K=>A`] THEN STRIP_TAC THEN
   SUBGOAL_THEN
    `\<forall>i. \<exists>g. i \<in> k
-            \<Longrightarrow> pathin ((tops::K=>A topology) i) g \<and>
+            \<Longrightarrow> pathin ((X::K=>A topology) i) g \<and>
                 g 0 = x i \<and> g 1 = y i`
   MP_TAC THENL
    [X_GEN_TAC `i::K` THEN ASM_CASES_TAC `(i::K) \<in> k` THEN ASM_REWRITE_TAC[] THEN
@@ -7399,16 +7387,16 @@ oops
     SIMP_TAC[\<subseteq>; FORALL_IN_IMAGE; EXTENSIONAL; IN_ELIM_THM] THEN
     ASM_SIMP_TAC[GSYM pathin; ETA_AX];
     CONJ_TAC THENL
-     [UNDISCH_TAC `(x::K=>A) \<in> PiE k (topspace \<circ> tops)`;
-      UNDISCH_TAC `(y::K=>A) \<in> PiE k (topspace \<circ> tops)`] THEN
+     [UNDISCH_TAC `(x::K=>A) \<in> PiE k (topspace \<circ> X)`;
+      UNDISCH_TAC `(y::K=>A) \<in> PiE k (topspace \<circ> X)`] THEN
     SIMP_TAC[PiE; EXTENSIONAL; IN_ELIM_THM] THEN
     REWRITE_TAC[FUN_EQ_THM; o_THM] THEN ASM_MESON_TAC[]]);;
 
 lemma path_connectedin_cartesian_product:
-   "\<And>tops::K=>A topology s k.
-        path_connectedin (product_topology k tops) (PiE k s) \<longleftrightarrow>
+   "\<And>X::K=>A topology s k.
+        path_connectedin (product_topology k X) (PiE k s) \<longleftrightarrow>
         PiE k s = {} \<or>
-        \<forall>i. i \<in> k \<Longrightarrow> path_connectedin (tops i) (s i)"
+        \<forall>i. i \<in> k \<Longrightarrow> path_connectedin (X i) (s i)"
 oops
   REWRITE_TAC[path_connectedin; SUBTOPOLOGY_CARTESIAN_PRODUCT] THEN
   REWRITE_TAC[PATH_CONNECTED_SPACE_PRODUCT_TOPOLOGY] THEN
@@ -7419,120 +7407,7 @@ oops
 
 subsection\<open>Path components\<close>
 
-
-let path_component_of = new_definition
- `path_component_of X x y \<longleftrightarrow>
-        \<exists>g. pathin X g \<and> g 0 = x \<and> g 1 = y`;;
-
-let path_components_of = new_definition
- `path_components_of X = {path_component_of X x |x| x \<in> topspace X}`;;
-
-lemma path_component_in_topspace:
-   "        path_component_of X x y \<Longrightarrow> x \<in> topspace X \<and> y \<in> topspace X"
-oops
-  REWRITE_TAC[path_component_of; pathin; continuous_map] THEN
-  REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY] THEN
-  REPEAT STRIP_TAC THEN REPEAT(FIRST_X_ASSUM(SUBST1_TAC \<circ> SYM)) THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN REWRITE_TAC[IN_REAL_INTERVAL] THEN
-  REAL_ARITH_TAC);;
-
-lemma path_component_of_refl:
-   "path_component_of X x x \<longleftrightarrow> x \<in> topspace X"
-oops
-  REPEAT GEN_TAC THEN
-  EQ_TAC THENL [MESON_TAC[PATH_COMPONENT_IN_TOPSPACE]; DISCH_TAC] THEN
-  REWRITE_TAC[path_component_of] THEN
-  EXISTS_TAC `(\<lambda>t. x):real=>A` THEN ASM_REWRITE_TAC[PATH_IN_CONST]);;
-
-lemma path_component_of_sym:
-   "path_component_of X x y \<longleftrightarrow> path_component_of X y x"
-oops
-  REPEAT GEN_TAC THEN EQ_TAC THEN
-  REWRITE_TAC[path_component_of; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `g::real=>A` THEN REWRITE_TAC[pathin] THEN STRIP_TAC THEN
-  EXISTS_TAC `(g::real=>A) \<circ> (\<lambda>t. 1 - t)` THEN
-  REWRITE_TAC[o_THM] THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
-  EXISTS_TAC `subtopology euclideanreal (real_interval [0,1])` THEN
-  ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN
-  REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY; \<subseteq>; FORALL_IN_IMAGE] THEN
-  REWRITE_TAC[IN_REAL_INTERVAL] THEN
-  (CONJ_TAC THENL [ALL_TAC; REAL_ARITH_TAC]) THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_FROM_SUBTOPOLOGY THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_REAL_SUB THEN
-  REWRITE_TAC[CONTINUOUS_MAP_REAL_CONST; CONTINUOUS_MAP_ID]);;
-
-lemma path_component_of_trans:
-   "        path_component_of X x y \<and> path_component_of X y z
-        \<Longrightarrow> path_component_of X x z"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[path_component_of; pathin] THEN
-  DISCH_THEN(CONJUNCTS_THEN2
-   (X_CHOOSE_THEN `g1::real=>A` STRIP_ASSUME_TAC)
-   (X_CHOOSE_THEN `g2::real=>A` STRIP_ASSUME_TAC)) THEN
-  EXISTS_TAC
-   `\<lambda>x. if x \<le> 1 / 2 then ((g1::real=>A) \<circ> (\<lambda>t. 2 * t)) x
-        else (g2 \<circ> (\<lambda>t. 2 * t - 1)) x` THEN
-  REWRITE_TAC[o_THM] THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC CONTINUOUS_MAP_CASES_LE THEN
-  REWRITE_TAC[CONTINUOUS_MAP_REAL_CONST] THEN
-  SIMP_TAC[CONTINUOUS_MAP_FROM_SUBTOPOLOGY; CONTINUOUS_MAP_ID] THEN
-  CONV_TAC REAL_RAT_REDUCE_CONV THEN ASM_REWRITE_TAC[] THEN
-  CONJ_TAC THEN GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
-  EXISTS_TAC `subtopology euclideanreal (real_interval [0,1])` THEN
-  ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; SUBTOPOLOGY_SUBTOPOLOGY;
-        TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY; \<subseteq>; FORALL_IN_IMAGE; IN_INTER;
-        IN_REAL_INTERVAL; IN_ELIM_THM] THEN
-  (CONJ_TAC THENL [ALL_TAC; REAL_ARITH_TAC]) THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_FROM_SUBTOPOLOGY THEN
-  REPEAT(MATCH_MP_TAC CONTINUOUS_MAP_REAL_SUB) THEN REPEAT CONJ_TAC THEN
-  REPEAT(MATCH_MP_TAC CONTINUOUS_MAP_REAL_MUL) THEN
-  REWRITE_TAC[CONTINUOUS_MAP_REAL_CONST; CONTINUOUS_MAP_ID]);;
-
-lemma path_component_of_subtopology:
-   "        path_component_of (subtopology X s) x y
-        \<Longrightarrow> path_component_of X x y"
-oops
-  REWRITE_TAC[path_component_of; PATH_IN_SUBTOPOLOGY] THEN
-  MESON_TAC[]);;
-
-lemma path_component_of_mono:
-   "        path_component_of (subtopology X s) x y \<and> s \<subseteq> t
-        \<Longrightarrow> path_component_of (subtopology X t) x y"
-oops
-  REWRITE_TAC[path_component_of; PATH_IN_SUBTOPOLOGY] THEN
-  MESON_TAC[\<subseteq>]);;
-
-lemma path_component_of:
-   "        path_component_of X x y \<longleftrightarrow>
-        \<exists>t. path_connectedin X t \<and> x \<in> t \<and> y \<in> t"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[path_component_of] THEN
-  EQ_TAC THENL [ALL_TAC; MESON_TAC[PATH_CONNECTED_IN]] THEN
-  DISCH_THEN(X_CHOOSE_THEN `g::real=>A` STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC `image (g::real=>A) ({0..1})` THEN
-  ASM_SIMP_TAC[PATH_CONNECTED_IN_PATH_IMAGE] THEN
-  REPEAT(FIRST_X_ASSUM(SUBST1_TAC \<circ> SYM)) THEN CONJ_TAC THEN
-  MATCH_MP_TAC FUN_IN_IMAGE THEN REWRITE_TAC[IN_REAL_INTERVAL] THEN
-  CONV_TAC REAL_RAT_REDUCE_CONV);;
-
-lemma path_component_of_set:
-   "        path_component_of X x =
-        {y. \<exists>g. pathin X g \<and> g 0 = x \<and> g 1 = y}"
-oops
-  REWRITE_TAC[EXTENSION; IN_ELIM_THM] THEN
-  REWRITE_TAC[\<in>; path_component_of]);;
-
-lemma path_component_of_set_alt:
-   "         path_component_of X x =
-         {y. \<exists>t. path_connectedin X t \<and> x \<in> t \<and> y \<in> t}"
-oops
-  REPEAT GEN_TAC THEN GEN_REWRITE_TAC id [EXTENSION] THEN
-  GEN_TAC THEN GEN_REWRITE_TAC LAND_CONV [\<in>] THEN
-  REWRITE_TAC[PATH_COMPONENT_OF; IN_ELIM_THM]);;
+thm path_components_of_subtopology
 
 lemma path_component_of_subtopology_eq:
    "      path_component_of (subtopology X u) x =
@@ -7556,17 +7431,6 @@ oops
   REWRITE_TAC[IN_ELIM_THM] THEN EXISTS_TAC `x::A` THEN
   ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY; IN_INTER] THEN
   ASM_MESON_TAC[PATH_COMPONENT_OF_SUBTOPOLOGY_EQ]);;
-
-lemma path_component_of_subset_topspace:
-   "(path_component_of X x) \<subseteq> topspace X"
-oops
-  REWRITE_TAC[\<subseteq>; \<in>] THEN MESON_TAC[PATH_COMPONENT_IN_TOPSPACE; \<in>]);;
-
-lemma path_component_of_eq_empty:
-   "path_component_of X x = {} \<longleftrightarrow> (x \<notin> topspace X)"
-oops
-  REWRITE_TAC[EXTENSION; NOT_IN_EMPTY] THEN
-  MESON_TAC[\<in>; PATH_COMPONENT_OF_REFL; PATH_COMPONENT_IN_TOPSPACE]);;
 
 lemma path_connected_space_iff_path_component:
    "        path_connected_space X \<longleftrightarrow>
@@ -7596,15 +7460,6 @@ oops
   REWRITE_TAC[\<subseteq>; PATH_COMPONENT_OF_SET; IN_ELIM_THM] THEN
   ASM_MESON_TAC[]);;
 
-lemma path_component_of_equiv:
-   "        path_component_of X x y \<longleftrightarrow>
-        x \<in> topspace X \<and> y \<in> topspace X \<and>
-        path_component_of X x = path_component_of X y"
-oops
-  REWRITE_TAC[FUN_EQ_THM] THEN
-  MESON_TAC[PATH_COMPONENT_OF_REFL; PATH_COMPONENT_OF_TRANS;
-            PATH_COMPONENT_OF_SYM]);;
-
 lemma path_component_of_disjoint:
    "        disjnt (path_component_of X x) (path_component_of X y) \<longleftrightarrow>
         \<not> (path_component_of X x y)"
@@ -7612,14 +7467,6 @@ oops
   REWRITE_TAC[disjnt; EXTENSION; IN_INTER; NOT_IN_EMPTY] THEN
   REWRITE_TAC[\<in>] THEN
   MESON_TAC[PATH_COMPONENT_OF_SYM; PATH_COMPONENT_OF_TRANS]);;
-
-lemma path_component_of_eq:
-   "        path_component_of X x = path_component_of X y \<longleftrightarrow>
-        (x \<notin> topspace X) \<and> (y \<notin> topspace X) \<or>
-        x \<in> topspace X \<and> y \<in> topspace X \<and> path_component_of X x y"
-oops
-  MESON_TAC[PATH_COMPONENT_OF_REFL; PATH_COMPONENT_OF_EQUIV;
-            PATH_COMPONENT_OF_EQ_EMPTY]);;
 
 lemma path_connectedin_path_component_of:
    "path_connectedin X (path_component_of X x)"
