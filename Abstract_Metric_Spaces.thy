@@ -43,6 +43,19 @@ lemma tendsto_Sup:
   by (induction K rule: finite_induct) (auto simp: cSup_insert_If tendsto_sup)
 
 
+lemma continuous_map_Inf:
+  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c::ordered_euclidean_space"
+  assumes "finite K" "\<And>i. i \<in> K \<Longrightarrow> continuous_map X euclidean (\<lambda>x. f x i)"
+  shows "continuous_map X euclidean (\<lambda>x. INF i\<in>K. f x i)"
+  using assms by (simp add: continuous_map_atin tendsto_Inf)
+
+lemma continuous_map_Sup:
+  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c::ordered_euclidean_space"
+  assumes "finite K" "\<And>i. i \<in> K \<Longrightarrow> continuous_map X euclidean (\<lambda>x. f x i)"
+  shows "continuous_map X euclidean (\<lambda>x. SUP i\<in>K. f x i)"
+  using assms by (simp add: continuous_map_atin tendsto_Sup)
+
+
 (*Elementary_Metric_Spaces
 lemma ball_iff_cball: "(\<exists>r>0. ball x r \<subseteq> U) = (\<exists>r>0. cball x r \<subseteq> U)"
   by (meson mem_interior mem_interior_cball)
@@ -743,7 +756,7 @@ proof -
 qed
 
 lemma fsigma_in_subset: "fsigma_in X S \<Longrightarrow> S \<subseteq> topspace X"
-  using closedin_subset by (fastforce simp add: fsigma_in_def union_of_def subset_iff)
+  using closedin_subset by (fastforce simp: fsigma_in_def union_of_def subset_iff)
 
 lemma gdelta_in_subset: "gdelta_in X S \<Longrightarrow> S \<subseteq> topspace X"
   by (simp add: gdelta_in_alt)
@@ -978,16 +991,16 @@ lemma topspace_sum_topology [simp]:
 
 lemma openin_sum_topology_alt:
    "openin (sum_topology X I) U \<longleftrightarrow> (\<exists>T. U = Sigma I T \<and> (\<forall>i \<in> I. openin (X i) (T i)))"
-  by (bestsimp simp add: openin_sum_topology dest: openin_subset)
+  by (bestsimp simp: openin_sum_topology dest: openin_subset)
 
 lemma forall_openin_sum_topology:
    "(\<forall>U. openin (sum_topology X I) U \<longrightarrow> P U) \<longleftrightarrow> (\<forall>T. (\<forall>i \<in> I. openin (X i) (T i)) \<longrightarrow> P(Sigma I T))"
-  by (auto simp add: openin_sum_topology_alt)
+  by (auto simp: openin_sum_topology_alt)
 
 lemma exists_openin_sum_topology:
    "(\<exists>U. openin (sum_topology X I) U \<and> P U) \<longleftrightarrow>
     (\<exists>T. (\<forall>i \<in> I. openin (X i) (T i)) \<and> P(Sigma I T))"
-  by (auto simp add: openin_sum_topology_alt)
+  by (auto simp: openin_sum_topology_alt)
 
 lemma closedin_sum_topology:
    "closedin (sum_topology X I) U \<longleftrightarrow> U \<subseteq> Sigma I (topspace \<circ> X) \<and> (\<forall>i \<in> I. closedin (X i) {x. (i,x) \<in> U})"
@@ -1442,7 +1455,7 @@ proof -
            \<Longrightarrow> \<exists>y. y \<in> M \<and> (\<exists>B \<ge> d y a. \<forall>x\<in>S. d y x \<le> B)"
     by (metis order.trans nle_le)
   then show ?thesis
-    by (auto simp add: mbounded)
+    by (auto simp: mbounded)
 qed
 
 lemma mbounded_Int: "mbounded S \<Longrightarrow> mbounded (S \<inter> T)"
@@ -1809,7 +1822,7 @@ proof -
     ultimately have Seq: "S = \<Inter>(range (\<lambda>n. {x\<in>M. \<exists>y\<in>S. d x y < inverse(Suc n)}))"
       using \<open>S \<subseteq> M\<close> by force
     have "openin M.mtopology {xa \<in> M. \<exists>y\<in>S. d xa y < inverse (1 + real n)}" for n
-    proof (clarsimp simp add: M.openin_mtopology)
+    proof (clarsimp simp: M.openin_mtopology)
       fix x y
       assume "x \<in> M" "y \<in> S" and dxy: "d x y < inverse (1 + real n)"
       then have "\<And>z. \<lbrakk>z \<in> M; d x z < inverse (1 + real n) - d x y\<rbrakk> \<Longrightarrow> \<exists>y\<in>S. d z y < inverse (1 + real n)"
@@ -1958,7 +1971,7 @@ next
       have oX: "openin X {x \<in> topspace X. (x,y) \<in> U}" "openin X {x \<in> topspace X. (x,y) \<in> V}"
        and oY: "openin Y {y \<in> topspace Y. (a,y) \<in> U}" "openin Y {y \<in> topspace Y. (a,y) \<in> V}"
         by (force intro: openin_continuous_map_preimage [where Y = "prod_topology X Y"] 
-            simp add: that continuous_map_pairwise o_def x y a)+
+            simp: that continuous_map_pairwise o_def x y a)+
       have 1: "topspace Y \<subseteq> {y \<in> topspace Y. (a,y) \<in> U} \<union> {y \<in> topspace Y. (a,y) \<in> V}"
         using a that(3) by auto
       have 2: "{y \<in> topspace Y. (a,y) \<in> U} \<inter> {y \<in> topspace Y. (a,y) \<in> V} = {}"
@@ -2150,7 +2163,7 @@ next
     qed
     then show "separated_between X S (X closure_of T)"
       by (simp add: R separated_between_closure_of')
-  qed (auto simp add: R closure_of_subset)
+  qed (auto simp: R closure_of_subset)
 qed
 
 lemma separated_between_frontier_of_eq:
@@ -2449,7 +2462,7 @@ proof (rule ccontr)
     "U \<noteq> {}" "V \<noteq> {}" and topUV: "topspace X \<subseteq> U \<union> V"
     by (auto simp: connected_space_def)
   then have UVsub: "U \<subseteq> topspace X" "V \<subseteq> topspace X"
-    by (auto simp add: openin_subset)
+    by (auto simp: openin_subset)
   have "\<not> connected_space Y"
     unfolding connected_space_def not_not
   proof (intro exI conjI)
@@ -2670,7 +2683,7 @@ proof
       using \<B> openin_subtopology_Int2 that by fastforce
     show "\<exists>V\<in>((\<inter>)S) ` \<B>. x \<in> V \<and> V \<subseteq> U"
       if "openin (subtopology X S) U \<and> x \<in> U" for U 
-      using that \<B>(2) by (clarsimp simp add: openin_subtopology) (meson le_infI2)
+      using that \<B>(2) by (clarsimp simp: openin_subtopology) (meson le_infI2)
   qed
 qed
 
@@ -3028,7 +3041,7 @@ lemma Kolmogorov_quotient_in_closed:
 lemma continuous_map_Kolmogorov_quotient:
    "continuous_map X X (Kolmogorov_quotient X)"
   using Kolmogorov_quotient_in_open openin_subopen openin_subset 
-    by (fastforce simp add: continuous_map_def Kolmogorov_quotient_in_topspace)
+    by (fastforce simp: continuous_map_def Kolmogorov_quotient_in_topspace)
 
 lemma open_map_Kolmogorov_quotient_explicit:
    "openin X U \<Longrightarrow> Kolmogorov_quotient X ` U = Kolmogorov_quotient X ` topspace X \<inter> U"
@@ -3037,7 +3050,7 @@ lemma open_map_Kolmogorov_quotient_explicit:
 
 lemma open_map_Kolmogorov_quotient_gen:
    "open_map (subtopology X S) (subtopology X (image (Kolmogorov_quotient X) S)) (Kolmogorov_quotient X)"
-proof (clarsimp simp add: open_map_def openin_subtopology_alt image_iff)
+proof (clarsimp simp: open_map_def openin_subtopology_alt image_iff)
   fix U
   assume "openin X U"
   then have "Kolmogorov_quotient X ` (S \<inter> U) = Kolmogorov_quotient X ` S \<inter> U"
@@ -3053,7 +3066,7 @@ lemma open_map_Kolmogorov_quotient:
 
 lemma closed_map_Kolmogorov_quotient_explicit:
    "closedin X U \<Longrightarrow> Kolmogorov_quotient X ` U = Kolmogorov_quotient X ` topspace X \<inter> U"
-  using closedin_subset by (fastforce simp add: Kolmogorov_quotient_in_closed)
+  using closedin_subset by (fastforce simp: Kolmogorov_quotient_in_closed)
 
 lemma closed_map_Kolmogorov_quotient_gen:
    "closed_map (subtopology X S) (subtopology X (Kolmogorov_quotient X ` S))
@@ -3073,7 +3086,7 @@ proof (intro continuous_open_imp_quotient_map)
   show "open_map (subtopology X S) (subtopology X (Kolmogorov_quotient X ` S)) (Kolmogorov_quotient X)"
     using open_map_Kolmogorov_quotient_gen by blast
   show "Kolmogorov_quotient X ` topspace (subtopology X S) = topspace (subtopology X (Kolmogorov_quotient X ` S))"
-    by (force simp add: Kolmogorov_quotient_in_open)
+    by (force simp: Kolmogorov_quotient_in_open)
 qed
 
 lemma quotient_map_Kolmogorov_quotient:
@@ -3110,7 +3123,7 @@ lemma Kolmogorov_quotient_continuous_map:
 
 lemma t0_space_Kolmogorov_quotient:
   "t0_space (subtopology X (Kolmogorov_quotient X ` topspace X))"
-  apply (clarsimp simp add: t0_space_def )
+  apply (clarsimp simp: t0_space_def )
   by (smt (verit, best) Kolmogorov_quotient_eq imageE image_eqI open_map_Kolmogorov_quotient open_map_def)
 
 lemma Kolmogorov_quotient_id:
@@ -3630,7 +3643,7 @@ lemma regular_space_retraction_map_image:
 
 lemma regular_t0_imp_Hausdorff_space:
    "\<lbrakk>regular_space X; t0_space X\<rbrakk> \<Longrightarrow> Hausdorff_space X"
-  apply (clarsimp simp add: regular_space_def t0_space Hausdorff_space_def)
+  apply (clarsimp simp: regular_space_def t0_space Hausdorff_space_def)
   by (metis disjnt_sym subsetD)
 
 lemma regular_t0_eq_Hausdorff_space:
@@ -3995,10 +4008,10 @@ proof -
             {x \<in> topspace X \<times> topspace Y. fst x = y} \<subseteq> U\<rbrakk>
            \<Longrightarrow> \<exists>V. openin X V \<and> y \<in> V \<and> V \<times> topspace Y \<subseteq> U"
     using tube_lemma_right[of X Y _ "topspace Y"] assms compact_space_def
-    by (force simp add: )
+    by force
   show ?thesis
     unfolding closed_map_fibre_neighbourhood
-    by (force simp add: * openin_subset cong: conj_cong intro: **)
+    by (force simp: * openin_subset cong: conj_cong intro: **)
 qed
 
 lemma closed_map_snd:
@@ -4653,7 +4666,7 @@ next
     fix i y
     assume "i \<in> I" and y: "y \<in> topspace (X i)"
     then obtain U K where UK: "openin (X i) U" "compactin (X i) K" "y \<in> U" "U \<subseteq> K"
-      using R by (fastforce simp add: locally_compact_space_def)
+      using R by (fastforce simp: locally_compact_space_def)
     then show "\<exists>U. openin (sum_topology X I) U \<and> (\<exists>K. compactin (sum_topology X I) K \<and> (i, y) \<in> U \<and> U \<subseteq> K)"
       by (metis \<open>i \<in> I\<close> continuous_map_component_injection image_compactin image_mono 
           imageI open_map_component_injection open_map_def)
@@ -4705,7 +4718,7 @@ proof -
         by (auto simp: )
       define V where "V \<equiv> {z \<in> topspace Y. U' \<times> {y \<in> topspace X. f y = z} \<subseteq> S}"
       have "z0 \<in> V"
-        using D y0 Int_Collect fim by (fastforce simp add: h_def V_def S_def)
+        using D y0 Int_Collect fim by (fastforce simp: h_def V_def S_def)
       have "openin X {x \<in> topspace X. f x \<in> V} \<Longrightarrow> openin Y V"
         using f unfolding V_def quotient_map_def subset_iff
         by (smt (verit, del_insts) Collect_cong mem_Collect_eq)
@@ -4838,7 +4851,7 @@ proof -
   qed
   moreover 
   have "\<And>V::'a set. (finite intersection_of (\<lambda>x. x \<in> range greaterThan \<or> x \<in> range lessThan)) V \<Longrightarrow> open V"
-    by (force simp add: intersection_of_def subset_iff)
+    by (force simp: intersection_of_def subset_iff)
   ultimately have *: "openin (euclidean::'a topology) = 
            (arbitrary union_of (finite intersection_of (\<lambda>x. x \<in> range greaterThan \<or> x \<in> range lessThan)))" 
     by (smt (verit, best) openin_topology_base_unique open_openin)
@@ -4876,7 +4889,7 @@ proof (cases "a \<in> M")
   proof
     assume L: ?lhs 
     with True obtain U where "openin mtopology U" "a \<in> U" and U: "\<forall>x\<in>U - {a}. P x"
-      by (auto simp add: eventually_atin)
+      by (auto simp: eventually_atin)
     then obtain r where "r>0" and "mball a r \<subseteq> U"
       by (meson openin_mtopology)
     with U show ?rhs
@@ -5001,7 +5014,7 @@ proof
     fix \<epsilon>::real
     assume "\<epsilon>>0"
     then have "\<forall>\<^sub>F x in F. f x \<in> mball l \<epsilon>"
-      using L openin_mball by (fastforce simp add: limitin_def)
+      using L openin_mball by (fastforce simp: limitin_def)
     then show "\<forall>\<^sub>F x in F. f x \<in> M \<and> d (f x) l < \<epsilon>"
       using commute eventually_mono by fastforce
   qed
@@ -5038,7 +5051,7 @@ lemma (in Metric_space) metric_closedin_iff_sequentially_closed:
     S \<subseteq> M \<and> (\<forall>\<sigma> l. range \<sigma> \<subseteq> S \<and> limitin mtopology \<sigma> l sequentially \<longrightarrow> l \<in> S)" (is "?lhs=?rhs")
 proof
   assume ?lhs then show ?rhs
-    by (force simp add: closedin_metric limitin_closedin range_subsetD)
+    by (force simp: closedin_metric limitin_closedin range_subsetD)
 next
   assume R: ?rhs
   show ?lhs
@@ -5080,7 +5093,7 @@ lemma (in Metric_space) limit_atin_metric:
       (x \<in> M
        \<longrightarrow> (\<forall>V. openin X V \<and> y \<in> V
                \<longrightarrow> (\<exists>\<delta>>0.  \<forall>x'. x' \<in> M \<and> 0 < d x' x \<and> d x' x < \<delta> \<longrightarrow> f x' \<in> V)))"
-  by (force simp add: limitin_def eventually_atin_metric)
+  by (force simp: limitin_def eventually_atin_metric)
 
 lemma (in Metric_space) limitin_metric_dist_null:
    "limitin mtopology f l F \<longleftrightarrow> l \<in> M \<and> eventually (\<lambda>x. f x \<in> M) F \<and> ((\<lambda>x. d (f x) l) \<longlongrightarrow> 0) F"
@@ -5140,10 +5153,10 @@ proof -
     obtain \<sigma> where \<sigma>: "\<And>n. \<Phi> n (\<sigma> n)" and dless: "\<And>n. d (\<sigma>(Suc n)) a < d (\<sigma> n) a"
     proof -
       obtain x0 where x0: "\<Phi> 0 x0"
-        using SP [OF zero_less_one] by (force simp add: \<Phi>_def)
+        using SP [OF zero_less_one] by (force simp: \<Phi>_def)
       have "\<exists>y. \<Phi> (Suc n) y \<and> d y a < d x a" if "\<Phi> n x" for n x
         using SP [of "min (inverse (Suc (Suc n))) (d x a)"] \<open>a \<in> M\<close> that
-        by (auto simp add: \<Phi>_def)
+        by (auto simp: \<Phi>_def)
       then obtain f where f: "\<And>n x. \<Phi> n x \<Longrightarrow> \<Phi> (Suc n) (f n x) \<and> d (f n x) a < d x a" 
         by metis
       show thesis
@@ -5170,7 +5183,7 @@ proof -
     then have 4: "limitin mtopology \<sigma> a sequentially"
       using \<sigma> \<open>a \<in> M\<close> by (simp add: \<Phi>_def limitin_metric)
     show False
-      using 2 assms [OF 1 _ decreasing_dist_imp_inj 4] \<sigma> by (force simp add: \<Phi>_def)
+      using 2 assms [OF 1 _ decreasing_dist_imp_inj 4] \<sigma> by (force simp: \<Phi>_def)
   qed
   then show ?thesis
     by (fastforce simp: eventually_atin_within_metric)
@@ -5249,7 +5262,7 @@ lemma limit_atin_sequentially_within:
      (\<forall>\<sigma>. range \<sigma> \<subseteq> S \<inter> M1 - {a} \<and>
           limitin M1.mtopology \<sigma> a sequentially
           \<longrightarrow> limitin M2.mtopology (f \<circ> \<sigma>) l sequentially)"
-    by (auto simp add: M1.eventually_atin_within_sequentially limitin_def)
+    by (auto simp: M1.eventually_atin_within_sequentially limitin_def)
 
 lemma limit_atin_sequentially_within_inj:
   "limitin M2.mtopology f l (atin_within M1.mtopology a S) \<longleftrightarrow>
@@ -5257,7 +5270,7 @@ lemma limit_atin_sequentially_within_inj:
      (\<forall>\<sigma>. range \<sigma> \<subseteq> S \<inter> M1 - {a} \<and> inj \<sigma> \<and>
           limitin M1.mtopology \<sigma> a sequentially
           \<longrightarrow> limitin M2.mtopology (f \<circ> \<sigma>) l sequentially)"
-    by (auto simp add: M1.eventually_atin_within_sequentially_inj limitin_def)
+    by (auto simp: M1.eventually_atin_within_sequentially_inj limitin_def)
 
 lemma limit_atin_sequentially_within_decreasing:
   "limitin M2.mtopology f l (atin_within M1.mtopology a S) \<longleftrightarrow>
@@ -5265,7 +5278,7 @@ lemma limit_atin_sequentially_within_decreasing:
      (\<forall>\<sigma>. range \<sigma> \<subseteq> S \<inter> M1 - {a} \<and> M1.decreasing_dist \<sigma> a \<and> 
           limitin M1.mtopology \<sigma> a sequentially
           \<longrightarrow> limitin M2.mtopology (f \<circ> \<sigma>) l sequentially)"
-    by (auto simp add: M1.eventually_atin_within_sequentially_decreasing limitin_def)
+    by (auto simp: M1.eventually_atin_within_sequentially_decreasing limitin_def)
 
 lemma limit_atin_sequentially:
    "limitin M2.mtopology f l (atin M1.mtopology a) \<longleftrightarrow>
@@ -5458,13 +5471,13 @@ proof
     assume "\<forall>\<^sub>F n in sequentially. \<sigma> n \<in> M"
       and \<sigma>: "\<forall>\<epsilon>>0. \<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>"
     then obtain N where "\<And>n. n\<ge>N \<Longrightarrow> \<sigma> n \<in> M"
-      by (auto simp add: eventually_sequentially)
+      by (auto simp: eventually_sequentially)
     with \<sigma> have "MCauchy (\<sigma> \<circ> (+)N)"
       unfolding MCauchy_def image_subset_iff comp_apply by (meson le_add1 trans_le_add2)
     then obtain x where "limitin mtopology (\<sigma> \<circ> (+)N) x sequentially"
       using L MCauchy_imp_MCauchy_suffix mcomplete_def by blast
     then have "limitin mtopology \<sigma> x sequentially"
-      unfolding o_def by (auto simp add: add.commute limitin_sequentially_offset_rev)
+      unfolding o_def by (auto simp: add.commute limitin_sequentially_offset_rev)
     then show "\<exists>x. limitin mtopology \<sigma> x sequentially" ..
   qed
 qed (simp add: mcomplete_def MCauchy_def image_subset_iff)
@@ -5485,7 +5498,7 @@ proof (intro conjI strip)
   then have "\<forall>\<^sub>F n in sequentially. \<sigma> n \<in> M \<and> d (\<sigma> n) l < \<epsilon>/2"
     using half_gt_zero lim limitin_metric by blast
   then obtain N where "\<And>n. n\<ge>N \<Longrightarrow> \<sigma> n \<in> M \<and> d (\<sigma> n) l < \<epsilon>/2"
-    by (force simp add: eventually_sequentially)
+    by (force simp: eventually_sequentially)
   then show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>"
     by (smt (verit) Metric_space.limitin_mspace Metric_space.mdist_reverse_triangle Metric_space_axioms field_sum_of_halves lim)
 qed (use assms in blast)
@@ -5678,7 +5691,7 @@ proof
       have "d (\<sigma> m) (\<sigma> n) < \<epsilon>" if "N \<le> m" "N \<le> n" for m n
       proof -
         have "d a (\<sigma> m) \<le> \<epsilon>/3" "d a (\<sigma> n) \<le> \<epsilon>/3"
-          using dec N \<sigma> that by (fastforce simp add: decseq_def)+
+          using dec N \<sigma> that by (fastforce simp: decseq_def)+
         then have "d (\<sigma> m) (\<sigma> n) \<le> \<epsilon>/3 + \<epsilon>/3"
           using triangle \<sigma> commute dec decseq_def subsetD that N
           by (smt (verit, ccfv_threshold) in_mcball)
@@ -5742,7 +5755,7 @@ next
     ultimately obtain l where x: "l \<in> \<Inter> (range C)"
       by (metis R ex_in_conv)
     then have *: "\<And>\<epsilon> N. 0 < \<epsilon> \<Longrightarrow> \<exists>n'. N \<le> n' \<and> l \<in> M \<and> \<sigma> n' \<in> M \<and> d l (\<sigma> n') < \<epsilon>"
-      by (force simp add: C_def metric_closure_of)
+      by (force simp: C_def metric_closure_of)
     then have "l \<in> M"
       using gt_ex by blast
     show "\<exists>l. limitin mtopology \<sigma> l sequentially"
@@ -5860,7 +5873,7 @@ proof
           by (meson coverD le_infI2 that)
         show ?thesis
           using L [unfolded mcomplete_nest_sing, rule_format, of "\<lambda>n. T \<inter> D n"] a
-          by (force simp add: cloT neT decT coverT)
+          by (force simp: cloT neT decT coverT)
       qed
       then show ?thesis by auto
     qed
@@ -5947,7 +5960,7 @@ qed
 end
 
 lemma MCauchy_iff_Cauchy [iff]: "Met.MCauchy = Cauchy"
-  by (force simp add: Cauchy_def Met.MCauchy_def)
+  by (force simp: Cauchy_def Met.MCauchy_def)
 
 lemma mcomplete_iff_complete [iff]:
   "Met.mcomplete (Pure.type ::'a::metric_space itself) \<longleftrightarrow> complete (UNIV::'a set)"
@@ -6163,7 +6176,7 @@ lemma mtotally_bounded_imp_mbounded:
   shows "mbounded S"
 proof -
   obtain K where "finite K \<and> K \<subseteq> S \<and> S \<subseteq> (\<Union>x\<in>K. mball x 1)" 
-    using assms by (force simp add: mtotally_bounded_def)
+    using assms by (force simp: mtotally_bounded_def)
   then show ?thesis
     by (smt (verit) finite_imageI image_iff mbounded_Union mbounded_mball mbounded_subset)
 qed
@@ -6231,7 +6244,7 @@ proof (cases "S \<subseteq> M")
         by (meson \<sigma> mbounded_alt_pos range_subsetD)
       define eps where "eps \<equiv> \<lambda>n. (B+1) / 2^n"
       have [simp]: "eps (Suc n) = eps n / 2" "eps n > 0" for n
-        using \<open>B > 0\<close> by (auto simp add: eps_def)
+        using \<open>B > 0\<close> by (auto simp: eps_def)
       have "UNIV \<subseteq> \<sigma> -` mball (\<sigma> 0) (B+1)"
         using B True \<sigma> unfolding image_iff subset_iff
         by (smt (verit, best) UNIV_I in_mball vimageI)
@@ -6239,7 +6252,7 @@ proof (cases "S \<subseteq> M")
         using finite_subset by (auto simp: eps_def)
       define r where "r \<equiv> rec_nat 0 (\<lambda>n rec. nxt rec (eps n))"
       have [simp]: "r 0 = 0" "r (Suc n) = nxt (r n) (eps n)" for n
-        by (auto simp add: r_def)
+        by (auto simp: r_def)
       have \<sigma>rM[simp]: "\<sigma> (r n) \<in> M" for n
         using True \<sigma> by blast
       have inf: "infinite (\<sigma> -` mball (\<sigma> (r n)) (eps n))" for n
@@ -6312,16 +6325,16 @@ proof (cases "S \<subseteq> M")
             using wf_less_than
           proof (induction n rule: wf_induct_rule)
             case (less n) with f show ?case
-              by (auto simp add: \<sigma>_eq [of n])
+              by (auto simp: \<sigma>_eq [of n])
           qed
           then have "range \<sigma> \<subseteq> S" by blast
           have \<sigma>: "p < n \<Longrightarrow> \<epsilon> \<le> d (\<sigma> p) (\<sigma> n)" for n p
-            using f[of "\<sigma> ` {..<n}"] True by (fastforce simp add: \<sigma>_eq [of n] Ball_def)
+            using f[of "\<sigma> ` {..<n}"] True by (fastforce simp: \<sigma>_eq [of n] Ball_def)
           then obtain r where "strict_mono r" "MCauchy (\<sigma> \<circ> r)"
             by (meson R \<open>range \<sigma> \<subseteq> S\<close>)
           with \<open>0 < \<epsilon>\<close> obtain N 
             where N: "\<And>n n'. \<lbrakk>n\<ge>N; n'\<ge>N\<rbrakk> \<Longrightarrow> d (\<sigma> (r n)) (\<sigma> (r n')) < \<epsilon>"
-            by (force simp add: MCauchy_def)
+            by (force simp: MCauchy_def)
           show ?thesis
             using N [of N "Suc (r N)"] \<open>strict_mono r\<close>
             by (smt (verit) Suc_le_eq \<sigma> le_SucI order_refl strict_mono_imp_increasing)
@@ -6415,7 +6428,7 @@ proof (intro strip)
   fix \<epsilon>::real
   assume "\<epsilon> > 0"
   then obtain N where "\<And>n. N \<le> n \<Longrightarrow> d (\<sigma> N) (\<sigma> n) < \<epsilon>"
-    using assms by (force simp add: MCauchy_def)
+    using assms by (force simp: MCauchy_def)
   then have "\<And>m. \<exists>n\<le>N. \<sigma> n \<in> M \<and> \<sigma> m \<in> M \<and> d (\<sigma> n) (\<sigma> m) < \<epsilon>"
     by (metis MCauchy_def assms mdist_refl nle_le range_subsetD)
   then
@@ -6450,7 +6463,7 @@ proof
       by (meson \<open>T \<subseteq> S\<close> subset_trans)
     then obtain \<epsilon> where "\<epsilon> > 0" and \<epsilon>: "\<And>y. y \<in> T \<Longrightarrow> y = l \<or> \<not> d l y < \<epsilon>"
       using T \<open>T \<subseteq> S\<close> \<open>S \<subseteq> M\<close> 
-      by (force simp add: metric_derived_set_of limitin_metric disjoint_iff)
+      by (force simp: metric_derived_set_of limitin_metric disjoint_iff)
     with lr have "\<forall>\<^sub>F n in sequentially. \<sigma> (r n) \<in> M \<and> d (\<sigma> (r n)) l < \<epsilon>"
       by (auto simp: limitin_metric)
     then obtain N where N: "d (\<sigma> (r N)) l < \<epsilon>" "d (\<sigma> (r (Suc N))) l < \<epsilon>"
@@ -6503,7 +6516,7 @@ next
       proof (induction n rule: wf_induct_rule)
         case (less n) 
         then have *: "Min (E r n) > 0"
-          using \<open>l \<in> M\<close> \<open>range \<sigma> \<subseteq> M\<close> by (auto simp add: E_def image_subset_iff)
+          using \<open>l \<in> M\<close> \<open>range \<sigma> \<subseteq> M\<close> by (auto simp: E_def image_subset_iff)
         show ?case
           using g [OF *] r_eq [of n]
           by (metis \<open>l \<in> M\<close> \<open>range \<sigma> \<subseteq> M\<close> mdist_pos_less range_subsetD)
@@ -6620,7 +6633,7 @@ lemma E:
   assumes "mtotally_bounded S" "S \<subseteq> M"
   and S: "\<And>\<C>. \<lbrakk>\<And>U. U \<in> \<C> \<Longrightarrow> openin mtopology U; S \<subseteq> \<Union>\<C>\<rbrakk> \<Longrightarrow> \<exists>\<epsilon>>0. \<forall>x \<in> S. \<exists>U \<in> \<C>. mball x \<epsilon> \<subseteq> U"
   shows "compactin mtopology S"
-proof (clarsimp simp add: compactin_def assms)
+proof (clarsimp simp: compactin_def assms)
   fix \<U> :: "'a set set"
   assume \<U>: "\<forall>x\<in>\<U>. openin mtopology x" and "S \<subseteq> \<Union> \<U>"
   then obtain \<epsilon> where "\<epsilon>>0" and \<epsilon>: "\<And>x. x \<in> S \<Longrightarrow> \<exists>U \<in> \<U>. mball x \<epsilon> \<subseteq> U"
@@ -6673,7 +6686,7 @@ lemma compact_space_eq_Bolzano_Weierstrass:
    "compact_space mtopology \<longleftrightarrow>
     (\<forall>S. S \<subseteq> M \<and> infinite S \<longrightarrow> mtopology derived_set_of S \<noteq> {})"
   using Int_absorb1 [OF derived_set_of_subset_topspace [of mtopology]]
-  by (force simp add: compact_space_def compactin_eq_Bolzano_Weierstrass)
+  by (force simp: compact_space_def compactin_eq_Bolzano_Weierstrass)
 
 lemma compact_space_nest:
    "compact_space mtopology \<longleftrightarrow>
@@ -6738,7 +6751,7 @@ qed
 
 lemma (in discrete_metric) mcomplete_discrete_metric:
   "disc.mcomplete"
-proof (clarsimp simp add: disc.mcomplete_def)
+proof (clarsimp simp: disc.mcomplete_def)
   fix \<sigma> :: "nat \<Rightarrow> 'a"
   assume "disc.MCauchy \<sigma>"
   then obtain N where "\<And>n. N \<le> n \<Longrightarrow> \<sigma> N = \<sigma> n"
@@ -6766,7 +6779,7 @@ proof -
     for \<sigma> :: "nat \<Rightarrow> 'a" and l
   proof -
     have "sub.MCauchy \<sigma>"
-      using convergent_imp_MCauchy subset that by (force simp add: MCauchy_submetric)
+      using convergent_imp_MCauchy subset that by (force simp: MCauchy_submetric)
     then have "limitin sub.mtopology \<sigma> l sequentially"
       using assms unfolding sub.mcomplete_def
       using l limitin_metric_unique limitin_submetric_iff trivial_limit_sequentially by blast
@@ -7038,7 +7051,7 @@ lemma continuous_map_upper_lower_semicontinuous_lt_gen:
          (\<forall>x \<in> topspace X. f x \<in> U) \<and>
          (\<forall>a. openin X {x \<in> topspace X. f x > a}) \<and>
          (\<forall>a. openin X {x \<in> topspace X. f x < a})"
-  by (auto simp add: continuous_map_into_topology_subbase_eq [OF subbase_subtopology_euclidean [symmetric, of U]] 
+  by (auto simp: continuous_map_into_topology_subbase_eq [OF subbase_subtopology_euclidean [symmetric, of U]] 
            greaterThan_def lessThan_def image_iff   simp flip: all_simps)
 
 lemma continuous_map_upper_lower_semicontinuous_lt:
@@ -7059,7 +7072,7 @@ lemma continuous_map_upper_lower_semicontinuous_le_gen:
          (\<forall>a. closedin X {x \<in> topspace X. f x \<ge> a}) \<and>
          (\<forall>a. closedin X {x \<in> topspace X. f x \<le> a})"
   unfolding continuous_map_upper_lower_semicontinuous_lt_gen
-  by (auto simp add: closedin_def Diff_eq Compl_eq not_le Int_Collect_imp_eq)
+  by (auto simp: closedin_def Diff_eq Compl_eq not_le Int_Collect_imp_eq)
 
 lemma continuous_map_upper_lower_semicontinuous_le:
    "continuous_map X euclideanreal f \<longleftrightarrow>
@@ -7074,7 +7087,7 @@ lemma continuous_map_upper_lower_semicontinuous_lte_gen:
          (\<forall>a. openin X {x \<in> topspace X. f x < a}) \<and>
          (\<forall>a. closedin X {x \<in> topspace X. f x \<le> a})"
   unfolding continuous_map_upper_lower_semicontinuous_lt_gen
-  by (auto simp add: closedin_def Diff_eq Compl_eq not_le Int_Collect_imp_eq)
+  by (auto simp: closedin_def Diff_eq Compl_eq not_le Int_Collect_imp_eq)
 
 lemma continuous_map_upper_lower_semicontinuous_lte:
    "continuous_map X euclideanreal f \<longleftrightarrow>
@@ -7116,7 +7129,7 @@ lemma continuous_map_from_metric:
 proof (cases "f ` M \<subseteq> topspace X")
   case True
   then show ?thesis
-    by (fastforce simp add: continuous_map openin_mtopology subset_eq)
+    by (fastforce simp: continuous_map openin_mtopology subset_eq)
 next
   case False
   then show ?thesis
@@ -7219,7 +7232,6 @@ proof -
   qed
 qed
 
-
 lemma metric_continuous_map:
   assumes "Metric_space M' d'"
   shows
@@ -7259,20 +7271,11 @@ proof -
   qed
 qed
 
+end (*Metric_space*)
+
 subsection\<open>Combining theorems for continuous functions into the reals\<close>
 
-
-lemma continuous_map_Inf:
-  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c::ordered_euclidean_space"
-  assumes "finite K" "\<And>i. i \<in> K \<Longrightarrow> continuous_map X euclidean (\<lambda>x. f x i)"
-  shows "continuous_map X euclidean (\<lambda>x. INF i\<in>K. f x i)"
-  using assms by (simp add: continuous_map_atin tendsto_Inf)
-
-lemma continuous_map_Sup:
-  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c::ordered_euclidean_space"
-  assumes "finite K" "\<And>i. i \<in> K \<Longrightarrow> continuous_map X euclidean (\<lambda>x. f x i)"
-  shows "continuous_map X euclidean (\<lambda>x. SUP i\<in>K. f x i)"
-  using assms by (simp add: continuous_map_atin tendsto_Sup)
+text \<open>The homeomorphism between the real line and the open interval $(-1,1)$\<close>
 
 lemma continuous_map_real_shrink:
   "continuous_map euclideanreal (top_of_set {-1<..<1}) (\<lambda>x. x / (1 + \<bar>x\<bar>))"
@@ -7280,429 +7283,32 @@ proof -
   have "continuous_on UNIV (\<lambda>x::real. x / (1 + \<bar>x\<bar>))"
     by (intro continuous_intros) auto
   then show ?thesis
-    by (auto simp add: continuous_map_in_subtopology divide_simps)
+    by (auto simp: continuous_map_in_subtopology divide_simps)
 qed
 
-lemma continuous_map_real_grow:
-  "continuous_map (top_of_set {-1<..<1}) euclideanreal (\<lambda>x. x / (1 - \<bar>x\<bar>))"
-proof -
-  have "continuous_on {-1<..<1} (\<lambda>x::real. x / (1 - \<bar>x\<bar>))"
-    by (intro continuous_intros) auto
-  then show ?thesis
-    by (auto simp add: continuous_map_from_subtopology divide_simps)
-qed
+lemma continuous_on_real_grow:
+  "continuous_on {-1<..<1} (\<lambda>x::real. x / (1 - \<bar>x\<bar>))"
+  by (intro continuous_intros) auto
+
+lemma real_grow_shrink:
+  fixes x::real 
+  shows "x / (1 + \<bar>x\<bar>) / (1 - \<bar>x / (1 + \<bar>x\<bar>)\<bar>) = x"
+  by (simp add: divide_simps)
 
 lemma homeomorphic_maps_real_shrink:
- (`homeomorphic_maps
-     (euclideanreal,subtopology euclideanreal (real_interval(-- 1,1)))
-     ((\<lambda>x. x / (1 + abs x)),(\<lambda>y. y / (1 - abs y)))"
-oops
-  REWRITE_TAC[homeomorphic_maps] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_REAL_SHRINK; CONTINUOUS_MAP_REAL_GROW] THEN
-  REWRITE_TAC[REAL_GROW_SHRINK; REAL_SHRINK_GROW_EQ] THEN
-  REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY; IN_REAL_INTERVAL] THEN
-  REAL_ARITH_TAC);;
-
-lemma continuous_map_cases_le:
-   "\<And>X X' p q f (g::A=>B).
-        continuous_map X euclideanreal p \<and>
-        continuous_map X euclideanreal q \<and>
-        continuous_map
-         (subtopology X {x \<in> topspace X. p x \<le> q x},X') f \<and>
-        continuous_map
-         (subtopology X {x \<in> topspace X. q x \<le> p x},X') g \<and>
-        (\<forall>x \<in> topspace X. p x = q x \<Longrightarrow> f x = g x)
-        \<Longrightarrow> continuous_map X X' (\<lambda>x. if p x \<le> q x then f x else g x)"
-oops
-  REPEAT STRIP_TAC THEN
-  ONCE_REWRITE_TAC[REAL_ARITH `x \<le> y \<longleftrightarrow> y - x >= 0`] THEN
-  ONCE_REWRITE_TAC[SET_RULE `x >= 0 \<longleftrightarrow> x \<in> {t. t >= 0}`] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_CASES_FUNCTION THEN
-  EXISTS_TAC `euclideanreal` THEN ASM_SIMP_TAC[CONTINUOUS_MAP_REAL_SUB] THEN
-  REWRITE_TAC[TOPSPACE_EUCLIDEANREAL; REAL_ARITH `\<not> (x >= y) \<longleftrightarrow> x::real < y`;
-    SET_RULE `- {x. P x} = {x. \<not> P x}`] THEN
-  REWRITE_TAC[EUCLIDEANREAL_CLOSURE_OF_HALFSPACE_GE;
-              EUCLIDEANREAL_CLOSURE_OF_HALFSPACE_LT;
-              EUCLIDEANREAL_FRONTIER_OF_HALFSPACE_GE] THEN
-  ASM_REWRITE_TAC[IN_ELIM_THM; REAL_SUB_0; real_ge; REAL_SUB_LE] THEN
-  ASM_REWRITE_TAC[REAL_ARITH `p - q \<le> 0 \<longleftrightarrow> p \<le> q`] THEN
-  ASM_MESON_TAC[]);;
-
-lemma continuous_map_cases_lt:
-   "\<And>X X' p q f (g::A=>B).
-        continuous_map X euclideanreal p \<and>
-        continuous_map X euclideanreal q \<and>
-        continuous_map
-         (subtopology X {x \<in> topspace X. p x \<le> q x},X') f \<and>
-        continuous_map
-         (subtopology X {x \<in> topspace X. q x \<le> p x},X') g \<and>
-        (\<forall>x \<in> topspace X. p x = q x \<Longrightarrow> f x = g x)
-        \<Longrightarrow> continuous_map X X' (\<lambda>x. if p x < q x then f x else g x)"
-oops
-  REPEAT STRIP_TAC THEN
-  ONCE_REWRITE_TAC[REAL_ARITH `x < y \<longleftrightarrow> y - x > 0`] THEN
-  ONCE_REWRITE_TAC[SET_RULE `x > 0 \<longleftrightarrow> x \<in> {t. t > 0}`] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_CASES_FUNCTION THEN
-  EXISTS_TAC `euclideanreal` THEN ASM_SIMP_TAC[CONTINUOUS_MAP_REAL_SUB] THEN
-  REWRITE_TAC[TOPSPACE_EUCLIDEANREAL; REAL_ARITH `\<not> (x > y) \<longleftrightarrow> x::real \<le> y`;
-    SET_RULE `- {x. P x} = {x. \<not> P x}`] THEN
-  REWRITE_TAC[EUCLIDEANREAL_CLOSURE_OF_HALFSPACE_GT;
-              EUCLIDEANREAL_CLOSURE_OF_HALFSPACE_LE;
-              EUCLIDEANREAL_FRONTIER_OF_HALFSPACE_GT] THEN
-  ASM_REWRITE_TAC[IN_ELIM_THM; REAL_SUB_0; real_ge; REAL_SUB_LE] THEN
-  ASM_REWRITE_TAC[REAL_ARITH `p - q \<le> 0 \<longleftrightarrow> p \<le> q`] THEN
-  ASM_MESON_TAC[]);;
-
+  "homeomorphic_maps euclideanreal (subtopology euclideanreal {-1<..<1}) 
+     (\<lambda>x. x / (1 + \<bar>x\<bar>))  (\<lambda>y. y / (1 - \<bar>y\<bar>))"
+  by (force simp: homeomorphic_maps_def continuous_map_real_shrink continuous_on_real_grow divide_simps)
 
 subsection\<open>Paths and path-connectedness\<close>
 
-
-let path_in = new_definition
- `path_in X (g::real=>A) \<longleftrightarrow>
-  continuous_map (subtopology euclideanreal (real_interval[0,1]),X) g`;;
-
-lemma path_in_compose:
-   "\<And>X X' f::A=>B g::real=>A.
-        path_in X g \<and> continuous_map X X' f \<Longrightarrow> path_in X' (f \<circ> g)"
-oops
-  REWRITE_TAC[path_in; CONTINUOUS_MAP_COMPOSE]);;
-
-lemma path_in_subtopology:
-   "\<And>X s g::real=>A.
-        path_in (subtopology X s) g \<longleftrightarrow>
-        path_in X g \<and> (\<forall>x. x \<in> real_interval[0,1] \<Longrightarrow> g x \<in> s)"
-oops
-  REWRITE_TAC[path_in; CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN
-  SIMP_TAC[continuous_map; TOPSPACE_SUBTOPOLOGY; TOPSPACE_EUCLIDEANREAL] THEN
-  SET_TAC[]);;
-
-lemma path_in_const:
-   "path_in X (\<lambda>x. a) \<longleftrightarrow> a \<in> topspace X"
-oops
-  REWRITE_TAC[path_in; CONTINUOUS_MAP_CONST] THEN
-  REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY; REAL_INTERVAL_EQ_EMPTY] THEN
-  CONV_TAC REAL_RAT_REDUCE_CONV);;
-
-let path_connected_space = new_definition
- `path_connected_space X \<longleftrightarrow>
-        \<forall>x y::A. x \<in> topspace X \<and> y \<in> topspace X
-                \<Longrightarrow> \<exists>g. path_in X g \<and> g 0 = x \<and> g 1 = y`;;
-
-let path_connectedin = new_definition
- `path_connectedin X (s::A=>bool) \<longleftrightarrow>
-  s \<subseteq> topspace X \<and> path_connected_space(subtopology X s)`;;
-
-lemma path_connectedin_absolute:
-   "
-        path_connectedin (subtopology X s) s \<longleftrightarrow> path_connectedin X s"
-oops
-  REWRITE_TAC[path_connectedin; SUBTOPOLOGY_SUBTOPOLOGY] THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; SUBSET_INTER; SUBSET_REFL] THEN
-  REWRITE_TAC[INTER_ACI]);;
-
-lemma path_connectedin_subset_topspace:
-   " path_connectedin X s \<Longrightarrow> s \<subseteq> topspace X"
-oops
-  SIMP_TAC[path_connectedin]);;
-
-lemma path_connectedin_subtopology:
-   "\<And>X s t::A=>bool.
-      path_connectedin (subtopology X s) t \<longleftrightarrow>
-      path_connectedin X t \<and> t \<subseteq> s"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[path_connectedin; SUBTOPOLOGY_SUBTOPOLOGY] THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; SUBSET_INTER] THEN
-  ASM_CASES_TAC `(t::A=>bool) \<subseteq> s` THEN ASM_REWRITE_TAC[] THEN
-  ASM_SIMP_TAC[SET_RULE `t \<subseteq> s \<Longrightarrow> s \<inter> t = t`]);;
-
-lemma path_connectedin:
-   "
-        path_connectedin X s \<longleftrightarrow>
-        s \<subseteq> topspace X \<and>
-        \<forall>x y. x \<in> s \<and> y \<in> s
-              \<Longrightarrow> \<exists>g. path_in X g \<and>
-                      image g (real_interval[0,1]) \<subseteq> s \<and>
-                      g 0 = x \<and> g 1 = y"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[path_connectedin; path_connected_space] THEN
-  ASM_CASES_TAC `(s::A=>bool) \<subseteq> topspace X` THEN ASM_REWRITE_TAC[] THEN
-  ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY; path_in; CONTINUOUS_MAP_IN_SUBTOPOLOGY;
-               SET_RULE `s \<subseteq> u \<Longrightarrow> u \<inter> s = s`] THEN
-  REWRITE_TAC[TOPSPACE_EUCLIDEANREAL; INTER_UNIV; GSYM CONJ_ASSOC]);;
-
-lemma path_connectedin_topspace:
-   "path_connectedin X (topspace X) \<longleftrightarrow>
-                    path_connected_space X"
-oops
-  REWRITE_TAC[path_connectedin; SUBSET_REFL; SUBTOPOLOGY_TOPSPACE]);;
-
-lemma path_connected_imp_connected_space:
-   "path_connected_space X \<Longrightarrow> connected_space X"
-oops
-  REWRITE_TAC[path_connected_space; CONNECTED_SPACE_SUBCONNECTED] THEN
-  GEN_TAC THEN STRIP_TAC THEN
-  MAP_EVERY X_GEN_TAC [`x::A`; `y::A`] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`x::A`; `y::A`]) THEN
-  ASM_REWRITE_TAC[path_in; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `g::real=>A` THEN STRIP_TAC THEN
-  EXISTS_TAC `image (g::real=>A) (real_interval [0,1])` THEN
-  REPEAT CONJ_TAC THENL
-   [FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ]
-      CONNECTED_IN_CONTINUOUS_MAP_IMAGE)) THEN
-    REWRITE_TAC[CONNECTED_IN_ABSOLUTE] THEN
-    REWRITE_TAC[CONNECTED_IN_EUCLIDEANREAL_INTERVAL];
-    REWRITE_TAC[IN_IMAGE] THEN EXISTS_TAC `0` THEN
-    ASM_REWRITE_TAC[IN_REAL_INTERVAL; REAL_POS];
-    REWRITE_TAC[IN_IMAGE] THEN EXISTS_TAC `1` THEN
-    ASM_REWRITE_TAC[IN_REAL_INTERVAL; REAL_POS; REAL_LE_REFL]]);;
-
-lemma path_connectedin_imp_connectedin:
-   " path_connectedin X s \<Longrightarrow> connectedin X s"
-oops
-  SIMP_TAC[path_connectedin; connectedin] THEN
-  SIMP_TAC[PATH_CONNECTED_IMP_CONNECTED_SPACE]);;
-
-lemma path_connected_space_topspace_empty:
-   "topspace X = {} \<Longrightarrow> path_connected_space X"
-oops
-  SIMP_TAC[path_connected_space; NOT_IN_EMPTY]);;
-
-lemma path_connectedin_empty:
-   "path_connectedin X {}"
-oops
-  SIMP_TAC[path_connectedin; PATH_CONNECTED_SPACE_TOPSPACE_EMPTY;
-           EMPTY_SUBSET; TOPSPACE_SUBTOPOLOGY; INTER_EMPTY]);;
-
-lemma path_connectedin_sing:
-   "path_connectedin X {a} \<longleftrightarrow> a \<in> topspace X"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[PATH_CONNECTED_IN; SING_SUBSET] THEN
-  ASM_CASES_TAC `(a::A) \<in> topspace X` THEN ASM_REWRITE_TAC[IN_SING] THEN
-  REPEAT STRIP_TAC THEN EXISTS_TAC `(\<lambda>x. a):real=>A` THEN
-  ASM_REWRITE_TAC[path_in; CONTINUOUS_MAP_CONST] THEN SET_TAC[]);;
-
-lemma path_connectedin_continuous_map_image:
-   "\<And>f::A=>B X X' s.
-        continuous_map X X' f \<and> path_connectedin X s
-        \<Longrightarrow> path_connectedin X' (f ` s)"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[PATH_CONNECTED_IN] THEN
-  STRIP_TAC THEN FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP
-   CONTINUOUS_MAP_IMAGE_SUBSET_TOPSPACE) THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; REWRITE_TAC[FORALL_IN_IMAGE_2]] THEN
-  MAP_EVERY X_GEN_TAC [`x::A`; `y::A`] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`x::A`; `y::A`]) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `g::real=>A` THEN STRIP_TAC THEN
-  EXISTS_TAC `f \<circ> (g::real=>A)` THEN
-  ASM_SIMP_TAC[o_THM; IMAGE_o; IMAGE_SUBSET] THEN
-  ASM_MESON_TAC[PATH_IN_COMPOSE]);;
-
-lemma homeomorphic_path_connected_space:
-   "\<And>(X::A topology) (X':B topology).
-        X homeomorphic_space X'
-        \<Longrightarrow> (path_connected_space X \<longleftrightarrow> path_connected_space X')"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[homeomorphic_space; homeomorphic_maps; LEFT_IMP_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`f::A=>B`; `g::B=>A`] THEN STRIP_TAC THEN
-  REWRITE_TAC[GSYM PATH_CONNECTED_IN_TOPSPACE] THEN EQ_TAC THEN DISCH_TAC THENL
-   [SUBGOAL_THEN `topspace X' = f ` (topspace X)` SUBST1_TAC
-    THENL [ALL_TAC; ASM_MESON_TAC[PATH_CONNECTED_IN_CONTINUOUS_MAP_IMAGE]];
-    SUBGOAL_THEN `topspace X = image (g::B=>A) (topspace X')` SUBST1_TAC
-    THENL [ALL_TAC; ASM_MESON_TAC[PATH_CONNECTED_IN_CONTINUOUS_MAP_IMAGE]]] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[continuous_map]) THEN ASM SET_TAC[]);;
-
-lemma homeomorphic_map_path_connectedness:
-   "\<And>f X X' u.
-        homeomorphic_map X X' f \<and> u \<subseteq> topspace X
-        \<Longrightarrow> (path_connectedin X' (f ` u) \<longleftrightarrow> path_connectedin X u)"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[path_connectedin] THEN
-  BINOP_TAC THENL
-   [ALL_TAC;
-    MATCH_MP_TAC HOMEOMORPHIC_PATH_CONNECTED_SPACE THEN
-    ONCE_REWRITE_TAC[HOMEOMORPHIC_SPACE_SYM] THEN
-    REWRITE_TAC[HOMEOMORPHIC_SPACE] THEN EXISTS_TAC `f::A=>B` THEN
-    MATCH_MP_TAC HOMEOMORPHIC_MAP_SUBTOPOLOGIES THEN
-    ASM_REWRITE_TAC[]] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP]) THEN
-  ASM SET_TAC[]);;
-
-lemma homeomorphic_map_path_connectedness_eq:
-   "\<And>f X X' u.
-        homeomorphic_map X X' f
-        \<Longrightarrow> (path_connectedin X u \<longleftrightarrow>
-             u \<subseteq> topspace X \<and> path_connectedin X' (f ` u))"
-oops
-  MESON_TAC[HOMEOMORPHIC_MAP_PATH_CONNECTEDNESS;
-            PATH_CONNECTED_IN_SUBSET_TOPSPACE]);;
-
 lemma path_connected_space_quotient_map_image:
-   "\<And>X X' (q::A=>B).
-        quotient_map X X' q \<and> path_connected_space X
-        \<Longrightarrow> path_connected_space X'"
-oops
-  REWRITE_TAC[GSYM PATH_CONNECTED_IN_TOPSPACE] THEN REPEAT STRIP_TAC THEN
-  FIRST_ASSUM(SUBST1_TAC \<circ> SYM \<circ> MATCH_MP QUOTIENT_IMP_SURJECTIVE_MAP) THEN
-  MATCH_MP_TAC PATH_CONNECTED_IN_CONTINUOUS_MAP_IMAGE THEN
-  ASM_MESON_TAC[QUOTIENT_IMP_CONTINUOUS_MAP]);;
+   "\<lbrakk>quotient_map X X' q; path_connected_space X\<rbrakk> \<Longrightarrow> path_connected_space X'"
+  by (metis path_connectedin_continuous_map_image path_connectedin_topspace quotient_imp_continuous_map quotient_imp_surjective_map)
 
 lemma path_connected_space_retraction_map_image:
-   "\<And>X X' (r::A=>B).
-        retraction_map X X' r \<and> path_connected_space X
-        \<Longrightarrow> path_connected_space X'"
-oops
-  MESON_TAC[PATH_CONNECTED_SPACE_QUOTIENT_MAP_IMAGE;
-            RETRACTION_IMP_QUOTIENT_MAP]);;
-
-lemma path_connectedin_euclideanreal_interval:
- (`(\<forall>a b. path_connectedin euclideanreal (real_interval[a,b])) \<and>
-   (\<forall>a b. path_connectedin euclideanreal (real_interval(a,b)))"
-oops
-  REPEAT STRIP_TAC THEN
-  REWRITE_TAC[PATH_CONNECTED_IN; TOPSPACE_EUCLIDEANREAL] THEN
-  REWRITE_TAC[IN_UNIV; SUBSET_UNIV] THEN
-  MAP_EVERY X_GEN_TAC [`x::real`; `y::real`] THEN
-  REWRITE_TAC[IN_REAL_INTERVAL] THEN STRIP_TAC THEN
-  EXISTS_TAC `\<lambda>u. (1 - u) * x + u * y` THEN
-  REWRITE_TAC[REAL_SUB_REFL; REAL_SUB_RZERO; REAL_MUL_LZERO] THEN
-  REWRITE_TAC[REAL_MUL_LID; REAL_ADD_LID; REAL_ADD_RID] THEN
-  (CONV_TAC \<circ> GEN_SIMPLIFY_CONV TOP_DEPTH_SQCONV (basic_ss []) 4)
-   [path_in; CONTINUOUS_MAP_REAL_ADD; CONTINUOUS_MAP_REAL_RMUL;
-    CONTINUOUS_MAP_ID; CONTINUOUS_MAP_REAL_SUB; CONTINUOUS_MAP_REAL_CONST;
-    CONTINUOUS_MAP_FROM_SUBTOPOLOGY] THEN
-  REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; IN_REAL_INTERVAL] THEN
-  X_GEN_TAC `t::real` THEN STRIP_TAC THENL
-   [MATCH_MP_TAC(REAL_ARITH
-     `\<forall>x y::real.
-       (a \<le> x \<and> y \<le> b) \<and> (x \<le> r \<and> r \<le> y) \<Longrightarrow> a \<le> r \<and> r \<le> b`);
-    MATCH_MP_TAC(REAL_ARITH
-     `\<forall>x y::real.
-       (a < x \<and> y < b) \<and> (x \<le> r \<and> r \<le> y) \<Longrightarrow> a < r \<and> r < b`)] THEN
-  MAP_EVERY EXISTS_TAC [`min x y::real`; `max x y::real`] THEN
-  (CONJ_TAC THENL [ASM_REAL_ARITH_TAC; ALL_TAC]) THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC(REAL_ARITH
-      `(0 \<le> t * (y - x) \<or> 0 \<le> (1 - t) * (x - y)) \<and>
-       (0 \<le> t * (x - y) \<or> 0 \<le> (1 - t) * (y - x))
-       \<Longrightarrow> min x y \<le> (1 - t) * x + t * y \<and>
-           (1 - t) * x + t * y \<le> max x y`) THEN
-  ASM_MESON_TAC[REAL_SUB_LE; REAL_LE_MUL;
-                REAL_ARITH `0 \<le> x - y \<or> 0 \<le> y - x`]);;
-
-lemma path_connectedin_path_image:
-   "\<And>X g::real=>A.
-     path_in X g \<Longrightarrow> path_connectedin X (image g (real_interval[0,1]))"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[path_in] THEN REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC PATH_CONNECTED_IN_CONTINUOUS_MAP_IMAGE THEN
-  EXISTS_TAC `subtopology euclideanreal (real_interval [0,1])` THEN
-  ASM_REWRITE_TAC[PATH_CONNECTED_IN_SUBTOPOLOGY; SUBSET_REFL] THEN
-  REWRITE_TAC[PATH_CONNECTED_IN_EUCLIDEANREAL_INTERVAL]);;
-
-lemma connectedin_path_image:
-   "\<And>X g::real=>A.
-     path_in X g \<Longrightarrow> connectedin X (image g (real_interval[0,1]))"
-oops
-  SIMP_TAC[PATH_CONNECTED_IN_IMP_CONNECTED_IN; PATH_CONNECTED_IN_PATH_IMAGE]);;
-
-lemma compact_in_path_image:
-   "\<And>X g::real=>A.
-     path_in X g \<Longrightarrow> compactin X (image g (real_interval[0,1]))"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[path_in] THEN
-  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] IMAGE_COMPACT_IN) THEN
-  REWRITE_TAC[COMPACT_IN_SUBTOPOLOGY; SUBSET_REFL] THEN
-  REWRITE_TAC[COMPACT_IN_EUCLIDEANREAL_INTERVAL]);;
-
-lemma path_start_in_topspace:
-   "\<And>X g::real=>A. path_in X g \<Longrightarrow> g 0 \<in> topspace X"
-oops
-  REWRITE_TAC[path_in; continuous_map] THEN REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; TOPSPACE_EUCLIDEANREAL] THEN
-  REWRITE_TAC[INTER_UNIV; IN_REAL_INTERVAL] THEN REAL_ARITH_TAC);;
-
-lemma path_finish_in_topspace:
-   "\<And>X g::real=>A. path_in X g \<Longrightarrow> g 1 \<in> topspace X"
-oops
-  REWRITE_TAC[path_in; continuous_map] THEN REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; TOPSPACE_EUCLIDEANREAL] THEN
-  REWRITE_TAC[INTER_UNIV; IN_REAL_INTERVAL] THEN REAL_ARITH_TAC);;
-
-lemma path_image_subset_topspace:
-   "\<And>X g::real=>A.
-    path_in X g \<Longrightarrow> image g (real_interval[0,1]) \<subseteq> topspace X"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[path_in] THEN
-  DISCH_THEN(MP_TAC \<circ> MATCH_MP CONTINUOUS_MAP_IMAGE_SUBSET_TOPSPACE) THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; INTER_UNIV; TOPSPACE_EUCLIDEANREAL]);;
-
-lemma path_connected_space_subconnected:
-   "path_connected_space X \<longleftrightarrow>
-         \<forall>x y::A. x \<in> topspace X \<and> y \<in> topspace X
-                 \<Longrightarrow> \<exists>s. path_connectedin X s \<and>
-                         x \<in> s \<and>
-                         y \<in> s"
-oops
-  GEN_TAC THEN REWRITE_TAC[path_connected_space] THEN EQ_TAC THEN
-  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `x::A` THEN
-  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `y::A` THEN
-  DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN
-  ASM_REWRITE_TAC[] THENL
-   [DISCH_THEN(X_CHOOSE_THEN `g::real=>A` STRIP_ASSUME_TAC) THEN
-    EXISTS_TAC `image (g::real=>A) (real_interval[0,1])` THEN
-    ASM_SIMP_TAC[PATH_CONNECTED_IN_PATH_IMAGE; PATH_IMAGE_SUBSET_TOPSPACE] THEN
-    REWRITE_TAC[IN_IMAGE; IN_REAL_INTERVAL] THEN CONJ_TAC THENL
-     [EXISTS_TAC `0`; EXISTS_TAC `1`] THEN
-    ASM_REWRITE_TAC[] THEN CONV_TAC REAL_RAT_REDUCE_CONV;
-    DISCH_THEN(X_CHOOSE_THEN `s::A=>bool` STRIP_ASSUME_TAC) THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [PATH_CONNECTED_IN]) THEN
-    ASM_MESON_TAC[]]);;
-
-lemma path_connectedin_euclideanreal:
-   "path_connectedin euclideanreal s \<longleftrightarrow> is_interval s"
-oops
-  GEN_TAC THEN EQ_TAC THENL
-   [MESON_TAC[CONNECTED_IN_EUCLIDEANREAL; PATH_CONNECTED_IN_IMP_CONNECTED_IN];
-    REWRITE_TAC[is_interval] THEN DISCH_TAC] THEN
-  REWRITE_TAC[path_connectedin; TOPSPACE_EUCLIDEANREAL; SUBSET_UNIV] THEN
-  REWRITE_TAC[PATH_CONNECTED_SPACE_SUBCONNECTED] THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; TOPSPACE_EUCLIDEANREAL; INTER_UNIV] THEN
-  MAP_EVERY X_GEN_TAC [`x::real`; `y::real`] THEN STRIP_TAC THEN
-  EXISTS_TAC `real_interval[min x y,max x y]` THEN
-  REWRITE_TAC[PATH_CONNECTED_IN_EUCLIDEANREAL_INTERVAL; IN_REAL_INTERVAL;
-              PATH_CONNECTED_IN_SUBTOPOLOGY] THEN
-  REWRITE_TAC[REAL_LE_MAX; REAL_MIN_LE; REAL_LE_REFL] THEN
-  REWRITE_TAC[\<subseteq>; IN_REAL_INTERVAL] THEN
-  X_GEN_TAC `z::real` THEN STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-  MAP_EVERY EXISTS_TAC [`min x y::real`; `max x y::real`] THEN
-  ASM_REWRITE_TAC[] THEN REWRITE_TAC[real_min; real_max] THEN
-  COND_CASES_TAC THEN ASM_REWRITE_TAC[]);;
-
-lemma path_connectedin_discrete_topology:
-   "\<And>u s::A=>bool.
-       path_connectedin (discrete_topology u) s \<longleftrightarrow>
-       s \<subseteq> u \<and> \<exists>a. s \<subseteq> {a}"
-oops
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [MESON_TAC[PATH_CONNECTED_IN_IMP_CONNECTED_IN;
-              CONNECTED_IN_DISCRETE_TOPOLOGY];
-    REWRITE_TAC[SET_RULE `s \<subseteq> u \<and> (\<exists>a. s \<subseteq> {a}) \<longleftrightarrow>
-                          s = {} \<or> \<exists>a. a \<in> u \<and> s = {a}`] THEN
-    STRIP_TAC THEN ASM_REWRITE_TAC[PATH_CONNECTED_IN_EMPTY] THEN
-    ASM_REWRITE_TAC[PATH_CONNECTED_IN_SING; TOPSPACE_DISCRETE_TOPOLOGY]]);;
-
-lemma path_connected_space_discrete_topology:
-   "\<And>u::A=>bool.
-        path_connected_space (discrete_topology u) \<longleftrightarrow>
-        \<exists>a. u \<subseteq> {a}"
-oops
-  REWRITE_TAC[GSYM PATH_CONNECTED_IN_TOPSPACE;
-              PATH_CONNECTED_IN_DISCRETE_TOPOLOGY] THEN
-  REWRITE_TAC[TOPSPACE_DISCRETE_TOPOLOGY] THEN SET_TAC[]);;
+   "\<lbrakk>retraction_map X X' r; path_connected_space X\<rbrakk> \<Longrightarrow> path_connected_space X'"
+  using path_connected_space_quotient_map_image retraction_imp_quotient_map by blast
 
 lemma path_connected_space_prod_topology:
    "        path_connected_space(prod_topology top1 top2) \<longleftrightarrow>
@@ -7736,8 +7342,8 @@ oops
   X_GEN_TAC `g1::real=>A` THEN STRIP_TAC THEN
   X_GEN_TAC `g2::real=>B` THEN STRIP_TAC THEN
   EXISTS_TAC `(\<lambda>t. g1 t,g2 t):real=>A#B` THEN
-  ASM_REWRITE_TAC[path_in; CONTINUOUS_MAP_PAIRWISE; o_DEF; ETA_AX] THEN
-  ASM_REWRITE_TAC[GSYM path_in]);;
+  ASM_REWRITE_TAC[pathin; CONTINUOUS_MAP_PAIRWISE; o_DEF; ETA_AX] THEN
+  ASM_REWRITE_TAC[GSYM pathin]);;
 
 lemma path_connectedin_cross:
    "\<And>top1 top2 s::A=>bool t::B=>bool.
@@ -7777,7 +7383,7 @@ oops
   MAP_EVERY X_GEN_TAC [`x::K=>A`; `y::K=>A`] THEN STRIP_TAC THEN
   SUBGOAL_THEN
    `\<forall>i. \<exists>g. i \<in> k
-            \<Longrightarrow> path_in ((tops::K=>A topology) i) g \<and>
+            \<Longrightarrow> pathin ((tops::K=>A topology) i) g \<and>
                 g 0 = x i \<and> g 1 = y i`
   MP_TAC THENL
    [X_GEN_TAC `i::K` THEN ASM_CASES_TAC `(i::K) \<in> k` THEN ASM_REWRITE_TAC[] THEN
@@ -7789,9 +7395,9 @@ oops
   X_GEN_TAC `g::K=>real->A` THEN STRIP_TAC THEN
   EXISTS_TAC `\<lambda>a i. if i \<in> k then (g::K=>real->A) i a else undefined` THEN
   REWRITE_TAC[] THEN CONJ_TAC THENL
-   [SIMP_TAC[path_in; CONTINUOUS_MAP_COMPONENTWISE] THEN
+   [SIMP_TAC[pathin; CONTINUOUS_MAP_COMPONENTWISE] THEN
     SIMP_TAC[\<subseteq>; FORALL_IN_IMAGE; EXTENSIONAL; IN_ELIM_THM] THEN
-    ASM_SIMP_TAC[GSYM path_in; ETA_AX];
+    ASM_SIMP_TAC[GSYM pathin; ETA_AX];
     CONJ_TAC THENL
      [UNDISCH_TAC `(x::K=>A) \<in> PiE k (topspace \<circ> tops)`;
       UNDISCH_TAC `(y::K=>A) \<in> PiE k (topspace \<circ> tops)`] THEN
@@ -7816,7 +7422,7 @@ subsection\<open>Path components\<close>
 
 let path_component_of = new_definition
  `path_component_of X x y \<longleftrightarrow>
-        \<exists>g. path_in X g \<and> g 0 = x \<and> g 1 = y`;;
+        \<exists>g. pathin X g \<and> g 0 = x \<and> g 1 = y`;;
 
 let path_components_of = new_definition
  `path_components_of X = {path_component_of X x |x| x \<in> topspace X}`;;
@@ -7824,7 +7430,7 @@ let path_components_of = new_definition
 lemma path_component_in_topspace:
    "        path_component_of X x y \<Longrightarrow> x \<in> topspace X \<and> y \<in> topspace X"
 oops
-  REWRITE_TAC[path_component_of; path_in; continuous_map] THEN
+  REWRITE_TAC[path_component_of; pathin; continuous_map] THEN
   REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY] THEN
   REPEAT STRIP_TAC THEN REPEAT(FIRST_X_ASSUM(SUBST1_TAC \<circ> SYM)) THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN REWRITE_TAC[IN_REAL_INTERVAL] THEN
@@ -7843,7 +7449,7 @@ lemma path_component_of_sym:
 oops
   REPEAT GEN_TAC THEN EQ_TAC THEN
   REWRITE_TAC[path_component_of; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `g::real=>A` THEN REWRITE_TAC[path_in] THEN STRIP_TAC THEN
+  X_GEN_TAC `g::real=>A` THEN REWRITE_TAC[pathin] THEN STRIP_TAC THEN
   EXISTS_TAC `(g::real=>A) \<circ> (\<lambda>t. 1 - t)` THEN
   REWRITE_TAC[o_THM] THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN
   ASM_REWRITE_TAC[] THEN MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
@@ -7861,7 +7467,7 @@ lemma path_component_of_trans:
    "        path_component_of X x y \<and> path_component_of X y z
         \<Longrightarrow> path_component_of X x z"
 oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[path_component_of; path_in] THEN
+  REPEAT GEN_TAC THEN REWRITE_TAC[path_component_of; pathin] THEN
   DISCH_THEN(CONJUNCTS_THEN2
    (X_CHOOSE_THEN `g1::real=>A` STRIP_ASSUME_TAC)
    (X_CHOOSE_THEN `g2::real=>A` STRIP_ASSUME_TAC)) THEN
@@ -7907,7 +7513,7 @@ oops
   REPEAT GEN_TAC THEN REWRITE_TAC[path_component_of] THEN
   EQ_TAC THENL [ALL_TAC; MESON_TAC[PATH_CONNECTED_IN]] THEN
   DISCH_THEN(X_CHOOSE_THEN `g::real=>A` STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC `image (g::real=>A) (real_interval[0,1])` THEN
+  EXISTS_TAC `image (g::real=>A) ({0..1})` THEN
   ASM_SIMP_TAC[PATH_CONNECTED_IN_PATH_IMAGE] THEN
   REPEAT(FIRST_X_ASSUM(SUBST1_TAC \<circ> SYM)) THEN CONJ_TAC THEN
   MATCH_MP_TAC FUN_IN_IMAGE THEN REWRITE_TAC[IN_REAL_INTERVAL] THEN
@@ -7915,7 +7521,7 @@ oops
 
 lemma path_component_of_set:
    "        path_component_of X x =
-        {y. \<exists>g. path_in X g \<and> g 0 = x \<and> g 1 = y}"
+        {y. \<exists>g. pathin X g \<and> g 0 = x \<and> g 1 = y}"
 oops
   REWRITE_TAC[EXTENSION; IN_ELIM_THM] THEN
   REWRITE_TAC[\<in>; path_component_of]);;
@@ -8534,7 +8140,7 @@ oops
    [FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [path_connected_space]) THEN
     DISCH_THEN(MP_TAC \<circ> SPECL [`u::A`; `v::A`]) THEN ASM_REWRITE_TAC[] THEN
     DISCH_THEN(X_CHOOSE_THEN `h::real=>A` STRIP_ASSUME_TAC) THEN
-    EXISTS_TAC `image (h::real=>A) (real_interval[0,1])` THEN
+    EXISTS_TAC `image (h::real=>A) ({0..1})` THEN
     ASM_SIMP_TAC[COMPACT_IN_PATH_IMAGE; CONNECTED_IN_PATH_IMAGE] THEN
     MAP_EVERY EXPAND_TAC ["u"; "v"] THEN CONJ_TAC THEN
     MATCH_MP_TAC FUN_IN_IMAGE THEN REWRITE_TAC[IN_REAL_INTERVAL] THEN
@@ -8815,7 +8421,7 @@ oops
     REWRITE_TAC[] THEN CONJ_TAC THENL [MESON_TAC[]; ALL_TAC] THEN
     MAP_EVERY X_GEN_TAC [`a::real`; `b::real`] THEN REPEAT STRIP_TAC THEN
     SUBGOAL_THEN
-     `\<exists>u v. image (f::real=>real) (real_interval[a,b]) = real_interval[u,v]`
+     `\<exists>u v. image (f::real=>real) {a..b} = real_interval[u,v]`
     STRIP_ASSUME_TAC THENL
      [REWRITE_TAC[GSYM REAL_COMPACT_IS_REALINTERVAL] THEN CONJ_TAC THENL
        [REWRITE_TAC[real_compact_def] THEN
@@ -9290,14 +8896,14 @@ lemma urysohn_lemma:
         a \<le> b \<and> normal_space X \<and>
         closedin X s \<and> closedin X t \<and> disjnt s t
         \<Longrightarrow> \<exists>f. continuous_map
-                    (X,subtopology euclideanreal (real_interval[a,b])) f \<and>
+                    (X,subtopology euclideanreal {a..b}) f \<and>
                 (\<forall>x. x \<in> s \<Longrightarrow> f x = a) \<and>
                 (\<forall>x. x \<in> t \<Longrightarrow> f x = b)"
 oops
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN
    `\<exists>f. continuous_map
-         (X,subtopology euclideanreal (real_interval[0,1])) (f::A=>real) \<and>
+         (X,subtopology euclideanreal ({0..1})) (f::A=>real) \<and>
          (\<forall>x. x \<in> s \<Longrightarrow> f x = 0) \<and>
          (\<forall>x. x \<in> t \<Longrightarrow> f x = 1)`
   MP_TAC THENL
@@ -9341,7 +8947,7 @@ oops
     ASM_SIMP_TAC[CLOSED_IN_CLOSURE_OF] THEN ASM SET_TAC[];
     ALL_TAC] THEN
   ABBREV_TAC `dint = {k / 2 ^ n | k \<le> 2 ^ n}` THEN
-  SUBGOAL_THEN `dint \<subseteq> real_interval[0,1]` ASSUME_TAC THENL
+  SUBGOAL_THEN `dint \<subseteq> {0..1}` ASSUME_TAC THENL
    [EXPAND_TAC "dint" THEN SIMP_TAC[\<subseteq>; IN_ELIM_THM; IN_REAL_INTERVAL] THEN
     REPEAT STRIP_TAC THEN
     ASM_SIMP_TAC[REAL_LE_LDIV_EQ; REAL_LE_RDIV_EQ; REAL_LT_POW2] THEN
@@ -9359,7 +8965,7 @@ oops
     MATCH_MP_TAC REAL_INF_BOUNDS THEN
     REWRITE_TAC[FORALL_IN_INSERT; NOT_INSERT_EMPTY] THEN
     CONV_TAC REAL_RAT_REDUCE_CONV THEN
-    UNDISCH_TAC `dint \<subseteq> real_interval[0,1]` THEN
+    UNDISCH_TAC `dint \<subseteq> {0..1}` THEN
     SIMP_TAC[IN_REAL_INTERVAL; IN_ELIM_THM; \<subseteq>];
     ASM_REWRITE_TAC[]] THEN
   SUBGOAL_THEN `0 \<in> dint \<and> 1 \<in> dint` STRIP_ASSUME_TAC THENL
@@ -9372,7 +8978,7 @@ oops
   ASSUME_TAC THENL
    [X_GEN_TAC `r::real` THEN DISCH_TAC THEN
     SUBGOAL_THEN `0 < r \<or> r < 1` MP_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-    SUBGOAL_THEN `r \<in> real_interval[0,1]` MP_TAC THENL
+    SUBGOAL_THEN `r \<in> {0..1}` MP_TAC THENL
      [ASM SET_TAC[]; REWRITE_TAC[IN_REAL_INTERVAL] THEN REAL_ARITH_TAC];
     ALL_TAC] THEN
   REPEAT CONJ_TAC THENL
@@ -9384,7 +8990,7 @@ oops
     EXPAND_TAC "f" THEN MATCH_MP_TAC INF_LE_ELEMENT THEN CONJ_TAC THENL
      [EXISTS_TAC `0` THEN REWRITE_TAC[FORALL_IN_INSERT; REAL_POS] THEN
       REWRITE_TAC[FORALL_IN_GSPEC] THEN
-      UNDISCH_TAC `dint \<subseteq> real_interval[0,1]` THEN
+      UNDISCH_TAC `dint \<subseteq> {0..1}` THEN
       SIMP_TAC[IN_REAL_INTERVAL; IN_ELIM_THM; \<subseteq>];
       REWRITE_TAC[IN_INSERT; IN_ELIM_THM] THEN ASM SET_TAC[]];
     X_GEN_TAC `x::A` THEN DISCH_TAC THEN
@@ -9411,7 +9017,7 @@ oops
   DISCH_THEN(MP_TAC \<circ> MATCH_MP MONO_FORALL) THEN ANTS_TAC THENL
    [GEN_TAC THEN EXISTS_TAC `0::real` THEN
     REWRITE_TAC[IN_ELIM_THM; REAL_POS] THEN
-    UNDISCH_TAC `dint \<subseteq> real_interval[0,1]` THEN
+    UNDISCH_TAC `dint \<subseteq> {0..1}` THEN
     SIMP_TAC[IN_REAL_INTERVAL; IN_ELIM_THM; \<subseteq>];
     REWRITE_TAC[FORALL_AND_THM; IN_ELIM_THM]] THEN
   DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC (LABEL_TAC "*")) THEN
@@ -9420,7 +9026,7 @@ oops
   ASSUME_TAC THENL
    [MAP_EVERY X_GEN_TAC [`z::A`; `r::real`] THEN STRIP_TAC THEN
     REMOVE_THEN "*" MATCH_MP_TAC THEN CONJ_TAC THENL
-     [UNDISCH_TAC `dint \<subseteq> real_interval[0,1]` THEN
+     [UNDISCH_TAC `dint \<subseteq> {0..1}` THEN
       ASM_SIMP_TAC[IN_REAL_INTERVAL; IN_ELIM_THM; \<subseteq>];
       X_GEN_TAC `s::real` THEN STRIP_TAC] THEN
     ONCE_REWRITE_TAC[GSYM REAL_NOT_LT] THEN DISCH_TAC THEN
@@ -9598,7 +9204,7 @@ lemma normal_space_eq_urysohn_gen:
           \<forall>s t. closedin X s \<and> closedin X t \<and> disjnt s t
                 \<Longrightarrow> \<exists>f. continuous_map
                          (X,
-                          subtopology euclideanreal (real_interval[a,b])) f \<and>
+                          subtopology euclideanreal {a..b}) f \<and>
                         (\<forall>x. x \<in> s \<Longrightarrow> f x = a) \<and>
                         (\<forall>x. x \<in> t \<Longrightarrow> f x = b))"
 oops
@@ -9622,7 +9228,7 @@ lemma normal_space_eq_urysohn:
    "     normal_space X \<longleftrightarrow>
      \<forall>s t. closedin X s \<and> closedin X t \<and> disjnt s t
            \<Longrightarrow> \<exists>f. continuous_map
-                    (X,subtopology euclideanreal (real_interval[0,1])) f \<and>
+                    (X,subtopology euclideanreal ({0..1})) f \<and>
                    (\<forall>x. x \<in> s \<Longrightarrow> f x = 0) \<and>
                    (\<forall>x. x \<in> t \<Longrightarrow> f x = 1)"
 oops
@@ -10198,7 +9804,7 @@ let completely_regular_space = new_definition
  `completely_regular_space (X::A topology) \<longleftrightarrow>
     \<forall>s x. closedin X s \<and> x \<in> topspace X - s
           \<Longrightarrow> \<exists>f. continuous_map
-                   (X,subtopology euclideanreal (real_interval[0,1])) f \<and>
+                   (X,subtopology euclideanreal ({0..1})) f \<and>
                   f x = 0 \<and> \<forall>x. x \<in> s \<Longrightarrow> f x = 1`;;
 
 lemma homeomorphic_completely_regular_space:
@@ -10281,7 +9887,7 @@ lemma completely_regular_space_gen:
              \<forall>s x. closedin X s \<and> x \<in> topspace X - s
                    \<Longrightarrow> \<exists>f. continuous_map
                               (X,subtopology euclideanreal
-                                     (real_interval[a,b])) f \<and>
+                                     {a..b}) f \<and>
                            f x = a \<and> \<forall>x. x \<in> s \<Longrightarrow> f x = b)"
 oops
   REPEAT STRIP_TAC THEN
@@ -10876,9 +10482,9 @@ oops
 
 lemma locally_path_connected_real_interval:
  (`(\<forall>a b. locally_path_connected_space
-           (subtopology euclideanreal(real_interval[a,b]))) \<and>
+           (subtopology euclideanreal{a..b})) \<and>
    (\<forall>a b. locally_path_connected_space
-           (subtopology euclideanreal(real_interval(a,b))))"
+           (subtopology euclideanreal{a<..<b}))"
 oops
   REPEAT STRIP_TAC THEN
   MATCH_MP_TAC LOCALLY_PATH_CONNECTED_IS_REALINTERVAL THEN
@@ -11381,9 +10987,9 @@ oops
 
 lemma locally_connected_real_interval:
  (`(\<forall>a b. locally_connected_space
-           (subtopology euclideanreal(real_interval[a,b]))) \<and>
+           (subtopology euclideanreal{a..b})) \<and>
    (\<forall>a b. locally_connected_space
-           (subtopology euclideanreal(real_interval(a,b))))"
+           (subtopology euclideanreal{a<..<b}))"
 oops
   REPEAT STRIP_TAC THEN
   MATCH_MP_TAC LOCALLY_CONNECTED_IS_REALINTERVAL THEN
@@ -14645,10 +14251,10 @@ text\<open> the case of loop homotopy it's convenient to have a general property
 let homotopic_with = new_definition
   `homotopic_with P (X,Y) p q \<longleftrightarrow>
    \<exists>h. continuous_map
-       (prod_topology (subtopology euclideanreal (real_interval[0,1])) X,
+       (prod_topology (subtopology euclideanreal ({0..1})) X,
         Y) h \<and>
        (\<forall>x. h(0,x) = p x) \<and> (\<forall>x. h(1,x) = q x) \<and>
-       (\<forall>t. t \<in> real_interval[0,1] \<Longrightarrow> P(\<lambda>x. h(t,x)))`;;
+       (\<forall>t. t \<in> {0..1} \<Longrightarrow> P(\<lambda>x. h(t,x)))`;;
 
 lemma homotopic_with:
    "\<And>P X Y p q::A=>B.
@@ -14660,7 +14266,7 @@ lemma homotopic_with:
                    Y) h \<and>
                 (\<forall>x. x \<in> topspace X \<Longrightarrow> h (0,x) = p x) \<and>
                 (\<forall>x. x \<in> topspace X \<Longrightarrow> h (1,x) = q x) \<and>
-                (\<forall>t. t \<in> real_interval[0,1] \<Longrightarrow> P (\<lambda>x. h (t,x))))"
+                (\<forall>t. t \<in> {0..1} \<Longrightarrow> P (\<lambda>x. h (t,x))))"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[homotopic_with] THEN EQ_TAC THENL
    [MATCH_MP_TAC MONO_EXISTS THEN SIMP_TAC[]; ALL_TAC] THEN
@@ -14901,14 +14507,14 @@ lemma homotopic_constant_maps:
 oops
   REPEAT GEN_TAC THEN ASM_CASES_TAC `topspace X::A=>bool = {}` THEN
   ASM_SIMP_TAC[HOMOTOPIC_ON_EMPTY] THEN
-  REWRITE_TAC[path_component_of; path_in; homotopic_with] THEN EQ_TAC THENL
+  REWRITE_TAC[path_component_of; pathin; homotopic_with] THEN EQ_TAC THENL
    [DISCH_THEN(X_CHOOSE_THEN `h::real#A=>B` STRIP_ASSUME_TAC) THEN
     FIRST_X_ASSUM(X_CHOOSE_TAC `a::A` \<circ>
       GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY]) THEN
     EXISTS_TAC `(h::real#A=>B) \<circ> (\<lambda>t. t,a)` THEN
     ASM_REWRITE_TAC[o_THM] THEN MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
     EXISTS_TAC
-     `prod_topology (subtopology euclideanreal (real_interval[0,1]))
+     `prod_topology (subtopology euclideanreal ({0..1}))
                     (X::A topology)` THEN
     ASM_REWRITE_TAC[CONTINUOUS_MAP_PAIRED; CONTINUOUS_MAP_ID] THEN
     ASM_REWRITE_TAC[CONTINUOUS_MAP_CONST];
@@ -15202,9 +14808,9 @@ oops
     ASM_MESON_TAC[PATH_COMPONENT_OF_TRANS; PATH_COMPONENT_OF_SYM]] THEN
   X_GEN_TAC `b::A` THEN DISCH_TAC THEN REWRITE_TAC[path_component_of] THEN
   EXISTS_TAC `(h::real#A=>A) \<circ> (\<lambda>x. x,b)` THEN
-  ASM_REWRITE_TAC[o_THM] THEN REWRITE_TAC[path_in] THEN
+  ASM_REWRITE_TAC[o_THM] THEN REWRITE_TAC[pathin] THEN
   MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN EXISTS_TAC
-   `prod_topology (subtopology euclideanreal (real_interval[0,1]))
+   `prod_topology (subtopology euclideanreal ({0..1}))
                   (X::A topology)` THEN
   ASM_REWRITE_TAC[CONTINUOUS_MAP_PAIRWISE; o_DEF] THEN
   ASM_REWRITE_TAC[CONTINUOUS_MAP_ID; CONTINUOUS_MAP_CONST]);;
@@ -20853,7 +20459,7 @@ lemma real_sierpinski_lemma:
          \<Longrightarrow> u = {real_interval[a,b]}"
 oops
   REPEAT STRIP_TAC THEN
-  MP_TAC(ISPEC `subtopology euclideanreal (real_interval[a,b])`
+  MP_TAC(ISPEC `subtopology euclideanreal {a..b}`
     LOCALLY_CONNECTED_NOT_COUNTABLE_CLOSED_UNION) THEN
   REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY] THEN
   DISCH_THEN MATCH_MP_TAC THEN
@@ -20882,7 +20488,7 @@ oops
   FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN
   SUBGOAL_THEN `\<exists>a::A. a \<in> topspace X \<and> (a \<notin> s)` STRIP_ASSUME_TAC THENL
    [ASM SET_TAC[]; ALL_TAC] THEN
-  TRANS_TAC CARD_LE_TRANS `real_interval[0,1]` THEN CONJ_TAC THENL
+  TRANS_TAC CARD_LE_TRANS `{0..1}` THEN CONJ_TAC THENL
    [MATCH_MP_TAC CARD_EQ_IMP_LE THEN ONCE_REWRITE_TAC[CARD_EQ_SYM] THEN
     MATCH_MP_TAC CARD_EQ_REAL_SUBSET THEN
     MAP_EVERY EXISTS_TAC [`0::real`; `1::real`] THEN
@@ -20912,7 +20518,7 @@ lemma connected_space_imp_card_ge_gen:
         \<Longrightarrow> UNIV \<lesssim> topspace X"
 oops
   REPEAT STRIP_TAC THEN
-  TRANS_TAC CARD_LE_TRANS `real_interval[0,1]` THEN CONJ_TAC THENL
+  TRANS_TAC CARD_LE_TRANS `{0..1}` THEN CONJ_TAC THENL
    [MATCH_MP_TAC CARD_EQ_IMP_LE THEN ONCE_REWRITE_TAC[CARD_EQ_SYM] THEN
     MATCH_MP_TAC CARD_EQ_REAL_SUBSET THEN
     MAP_EVERY EXISTS_TAC [`0::real`; `1::real`] THEN
@@ -21069,11 +20675,11 @@ oops
   MAP_EVERY X_GEN_TAC [`a::A`; `b::A`] THEN STRIP_TAC THEN
   FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`a::A`; `b::A`] \<circ>
     REWRITE_RULE[path_connected_space]) THEN
-  ASM_REWRITE_TAC[NOT_EXISTS_THM; path_in] THEN
+  ASM_REWRITE_TAC[NOT_EXISTS_THM; pathin] THEN
   X_GEN_TAC `g::real=>A` THEN STRIP_TAC THEN
   MP_TAC(ISPECL
    [`0::real`; `1::real`;
-   `{{x. x \<in> topspace(subtopology euclideanreal (real_interval[0,1])) \<and>
+   `{{x. x \<in> topspace(subtopology euclideanreal ({0..1})) \<and>
           (g::real=>A) x \<in> {a}} |
      a \<in> topspace X} DELETE {}`] REAL_SIERPINSKI_LEMMA) THEN
   ASM_SIMP_TAC[SIMPLE_IMAGE; COUNTABLE_IMAGE; COUNTABLE_DELETE] THEN
@@ -21085,7 +20691,7 @@ oops
     X_GEN_TAC `x::A` THEN REWRITE_TAC[IMP_IMP] THEN
     STRIP_TAC THEN ASM_REWRITE_TAC[REAL_CLOSED_IN] THEN
     MATCH_MP_TAC CLOSED_IN_TRANS_FULL THEN
-    EXISTS_TAC `real_interval[0,1]` THEN
+    EXISTS_TAC `{0..1}` THEN
     REWRITE_TAC[GSYM REAL_CLOSED_IN; REAL_CLOSED_REAL_INTERVAL] THEN
     FIRST_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ]
         CLOSED_IN_CONTINUOUS_MAP_PREIMAGE)) THEN
@@ -21125,7 +20731,7 @@ oops
   MAP_EVERY ABBREV_TAC
    [`k = mspace(submetric (cfunspace X real_euclidean_metric)
                           {f. image f (topspace X::A=>bool) \<subseteq>
-                               real_interval[0,1]})`;
+                               {0..1}})`;
     `e = \<lambda>x. RESTRICTION k (\<lambda>f::A=>real. f x)`] THEN
   SUBGOAL_THEN
    `\<forall>x y. x \<in> topspace X \<and> y \<in> topspace X
@@ -21181,8 +20787,8 @@ oops
   EXISTS_TAC
    `PiE (k:(A=>real)->bool)
       (\<lambda>f. if f = RESTRICTION (topspace X) g
-           then real_interval[0,1] DELETE 1
-           else real_interval[0,1])` THEN
+           then {0..1} DELETE 1
+           else {0..1})` THEN
   REWRITE_TAC[OPEN_IN_CARTESIAN_PRODUCT_GEN] THEN
   REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY] THEN
   REPEAT(CONJ_TAC ORELSE DISJ2_TAC) THENL
@@ -21219,7 +20825,7 @@ oops
     ASM_SIMP_TAC[IMAGE_RESTRICTION; SUBSET_REFL] THEN
     ASM_REWRITE_TAC[REAL_EUCLIDEAN_METRIC; MTOPOLOGY_REAL_EUCLIDEAN_METRIC;
                     IN_UNIV] THEN
-    MATCH_MP_TAC MBOUNDED_SUBSET THEN EXISTS_TAC `real_interval[0,1]` THEN
+    MATCH_MP_TAC MBOUNDED_SUBSET THEN EXISTS_TAC `{0..1}` THEN
     ASM_REWRITE_TAC[MBOUNDED_REAL_EUCLIDEAN_METRIC;
                     REAL_BOUNDED_REAL_INTERVAL]]);;
 
@@ -21229,7 +20835,7 @@ lemma completely_regular_space_cube_embedding:
                embedding_map
                 (X,
                  product_topology k
-                  (\<lambda>f. subtopology euclideanreal (real_interval[0,1])))
+                  (\<lambda>f. subtopology euclideanreal ({0..1})))
                 e"
 oops
   REPEAT GEN_TAC THEN DISCH_THEN(MP_TAC \<circ> MATCH_MP
@@ -21247,14 +20853,14 @@ lemma urysohn_completely_regular_closed_compact:
         a \<le> b \<and> completely_regular_space X \<and>
         closedin X s \<and> compactin X t \<and> disjnt s t
         \<Longrightarrow> \<exists>f. continuous_map
-                  (X,subtopology euclideanreal (real_interval[a,b])) f \<and>
+                  (X,subtopology euclideanreal {a..b}) f \<and>
                 (\<forall>x. x \<in> t \<Longrightarrow> f x = a) \<and>
                 (\<forall>x. x \<in> s \<Longrightarrow> f x = b)"
 oops
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN
    `\<exists>f. continuous_map
-          (X,subtopology euclideanreal (real_interval[0,1])) f \<and>
+          (X,subtopology euclideanreal ({0..1})) f \<and>
         (\<forall>x. x \<in> t \<Longrightarrow> f x = 0) \<and>
         (\<forall>x::A. x \<in> s \<Longrightarrow> f x = 1)`
   MP_TAC THENL
@@ -21279,7 +20885,7 @@ oops
   SUBGOAL_THEN
    `\<forall>a. a \<in> t
         \<Longrightarrow> \<exists>f. continuous_map
-                  (X,subtopology euclideanreal (real_interval[0,1])) f \<and>
+                  (X,subtopology euclideanreal ({0..1})) f \<and>
                 f a = 0 \<and> \<forall>x. x \<in> s \<Longrightarrow> (f::A=>real) x = 1`
   MP_TAC THENL
    [REPEAT STRIP_TAC THEN
@@ -21353,7 +20959,7 @@ lemma urysohn_completely_regular_compact_closed:
         a \<le> b \<and> completely_regular_space X \<and>
         compactin X s \<and> closedin X t \<and> disjnt s t
         \<Longrightarrow> \<exists>f. continuous_map
-                  (X,subtopology euclideanreal (real_interval[a,b])) f \<and>
+                  (X,subtopology euclideanreal {a..b}) f \<and>
                 (\<forall>x. x \<in> t \<Longrightarrow> f x = a) \<and>
                 (\<forall>x. x \<in> s \<Longrightarrow> f x = b)"
 oops
