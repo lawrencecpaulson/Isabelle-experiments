@@ -28,6 +28,20 @@ next
     using eventually_sequentially by blast
 qed
 
+lemma tendsto_Inf:
+  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c::ordered_euclidean_space"
+  assumes "finite K" "\<And>i. i \<in> K \<Longrightarrow> ((\<lambda>x. f x i) \<longlongrightarrow> l i) F"
+  shows "((\<lambda>x. Inf (f x ` K)) \<longlongrightarrow> Inf (l ` K)) F"
+  using assms
+  by (induction K rule: finite_induct) (auto simp: cInf_insert_If tendsto_inf)
+
+lemma tendsto_Sup:
+  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c::ordered_euclidean_space"
+  assumes "finite K" "\<And>i. i \<in> K \<Longrightarrow> ((\<lambda>x. f x i) \<longlongrightarrow> l i) F"
+  shows "((\<lambda>x. Sup (f x ` K)) \<longlongrightarrow> Sup (l ` K)) F"
+  using assms
+  by (induction K rule: finite_induct) (auto simp: cSup_insert_If tendsto_sup)
+
 
 (*Elementary_Metric_Spaces
 lemma ball_iff_cball: "(\<exists>r>0. ball x r \<subseteq> U) = (\<exists>r>0. cball x r \<subseteq> U)"
@@ -7207,212 +7221,76 @@ qed
 
 
 lemma metric_continuous_map:
-   "continuous_map mtopology (mtopology m') f \<longleftrightarrow>
-     (\<forall>x \<in> M. f x \<in> mspace m') \<and>
-     (\<forall>a \<in> M. \<forall>e>0. \<exists>d>0.  (\<forall>x. x \<in> M \<and> d a x < d
-                          \<longrightarrow> d m' (f a, f x) < e)))"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[continuous_map; TOPSPACE_MTOPOLOGY] THEN
-  EQ_TAC THEN SIMP_TAC[] THENL
-  [INTRO_TAC "f cont; !a e; e a" THEN
-   REMOVE_THEN "cont" (MP_TAC \<circ> SPEC `mball m' (f (a::A):B,e)`) THEN
-   REWRITE_TAC[OPEN_IN_MBALL] THEN
-   ASM_SIMP_TAC[OPEN_IN_MTOPOLOGY; \<subseteq>; IN_MBALL; IN_ELIM_THM] THEN
-   DISCH_THEN (MP_TAC \<circ> SPEC `a::A`) THEN ASM_SIMP_TAC[MDIST_REFL];
-   SIMP_TAC[OPEN_IN_MTOPOLOGY; \<subseteq>; IN_MBALL; IN_ELIM_THM] THEN
-   ASM_MESON_TAC[]]);;
+  assumes "Metric_space M' d'"
+  shows
+   "continuous_map mtopology (Metric_space.mtopology M' d') f \<longleftrightarrow>
+    f ` M \<subseteq> M' \<and> (\<forall>a \<in> M. \<forall>\<epsilon>>0. \<exists>\<delta>>0.  (\<forall>x. x \<in> M \<and> d a x < \<delta> \<longrightarrow> d' (f a) (f x) < \<epsilon>))"
+   (is "?lhs = ?rhs")
+proof -
+  interpret M': Metric_space M' d'
+    by (simp add: assms)
+  show ?thesis
+  proof
+    assume L: ?lhs
+    show ?rhs
+    proof (intro conjI strip)
+      show "f ` M \<subseteq> M'"
+        using L by (auto simp: continuous_map_def)
+      fix a and \<epsilon> :: real
+      assume "a \<in> M" and "\<epsilon> > 0"
+      then have "openin mtopology {x \<in> M. f x \<in> M'.mball (f a) \<epsilon>}" "f a \<in> M'"
+        using L unfolding continuous_map_def by fastforce+
+      then obtain \<delta> where "\<delta> > 0" "mball a \<delta> \<subseteq> {x \<in> M. f x \<in> M' \<and> d' (f a) (f x) < \<epsilon>}"
+        using \<open>0 < \<epsilon>\<close> \<open>a \<in> M\<close> openin_mtopology by auto
+      then show "\<exists>\<delta>>0. \<forall>x. x \<in> M \<and> d a x < \<delta> \<longrightarrow> d' (f a) (f x) < \<epsilon>"
+        using \<open>a \<in> M\<close> in_mball by blast
+    qed
+  next
+    assume R: ?rhs    
+    show ?lhs
+      unfolding continuous_map_def
+    proof (intro conjI strip)
+      fix U
+      assume "openin M'.mtopology U"
+      then show "openin mtopology {x \<in> topspace mtopology. f x \<in> U}"
+        apply (simp add: continuous_map_def openin_mtopology M'.openin_mtopology subset_iff)
+        by (metis R image_subset_iff)
+    qed (use R in auto)
+  qed
+qed
 
 subsection\<open>Combining theorems for continuous functions into the reals\<close>
 
 
-lemma continuous_map_real_const:
-   "continuous_map X euclideanreal (\<lambda>x::A. c)"
-oops
-  REWRITE_TAC[CONTINUOUS_MAP_CONST; TOPSPACE_EUCLIDEANREAL; IN_UNIV]);;
+lemma continuous_map_Inf:
+  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c::ordered_euclidean_space"
+  assumes "finite K" "\<And>i. i \<in> K \<Longrightarrow> continuous_map X euclidean (\<lambda>x. f x i)"
+  shows "continuous_map X euclidean (\<lambda>x. INF i\<in>K. f x i)"
+  using assms by (simp add: continuous_map_atin tendsto_Inf)
 
-lemma continuous_map_real_mul:
-   "\<And>X f g::A=>real.
-        continuous_map X euclideanreal f \<and>
-        continuous_map X euclideanreal g
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. f x * g x)"
-oops
-  SIMP_TAC[CONTINUOUS_MAP_ATPOINTOF; LIMIT_REAL_MUL]);;
-
-lemma continuous_map_real_pow:
-   "\<And>X (f::A=>real) n.
-        continuous_map X euclideanreal f
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. f x ^ n)"
-oops
-  REWRITE_TAC[RIGHT_FORALL_IMP_THM] THEN REPEAT GEN_TAC THEN DISCH_TAC THEN
-  INDUCT_TAC THEN
-  ASM_SIMP_TAC[real_pow; CONTINUOUS_MAP_REAL_CONST; CONTINUOUS_MAP_REAL_MUL]);;
-
-lemma continuous_map_real_lmul:
-   "\<And>X c f::A=>real.
-        continuous_map X euclideanreal f
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. c * f x)"
-oops
-  SIMP_TAC[CONTINUOUS_MAP_ATPOINTOF; LIMIT_REAL_LMUL]);;
-
-lemma continuous_map_real_lmul_eq:
-   "\<And>X c f::A=>real.
-        continuous_map X euclideanreal (\<lambda>x. c * f x) \<longleftrightarrow>
-        c = 0 \<or> continuous_map X euclideanreal f"
-oops
-  REPEAT GEN_TAC THEN ASM_CASES_TAC `c = 0` THEN
-  ASM_REWRITE_TAC[REAL_MUL_LZERO; CONTINUOUS_MAP_REAL_CONST] THEN
-  EQ_TAC THEN REWRITE_TAC[CONTINUOUS_MAP_REAL_LMUL] THEN DISCH_THEN(MP_TAC \<circ>
-   SPEC `inverse c:real` \<circ> MATCH_MP CONTINUOUS_MAP_REAL_LMUL) THEN
-  ASM_SIMP_TAC[REAL_MUL_ASSOC; REAL_MUL_LINV; REAL_MUL_LID; ETA_AX]);;
-
-lemma continuous_map_real_rmul:
-   "\<And>X c f::A=>real.
-        continuous_map X euclideanreal f
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. f x * c)"
-oops
-  SIMP_TAC[CONTINUOUS_MAP_ATPOINTOF; LIMIT_REAL_RMUL]);;
-
-lemma continuous_map_real_rmul_eq:
-   "\<And>X c f::A=>real.
-        continuous_map X euclideanreal (\<lambda>x. f x * c) \<longleftrightarrow>
-        c = 0 \<or> continuous_map X euclideanreal f"
-oops
-  ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_REAL_LMUL_EQ]);;
-
-lemma continuous_map_real_neg:
-   "\<And>X f::A=>real.
-        continuous_map X euclideanreal f
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. --(f x))"
-oops
-  SIMP_TAC[CONTINUOUS_MAP_ATPOINTOF; LIMIT_REAL_NEG]);;
-
-lemma continuous_map_real_neg_eq:
-   "\<And>X f::A=>real.
-        continuous_map X euclideanreal (\<lambda>x. --(f x)) \<longleftrightarrow>
-        continuous_map X euclideanreal f"
-oops
-  ONCE_REWRITE_TAC[REAL_NEG_MINUS1] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_REAL_LMUL_EQ] THEN
-  CONV_TAC REAL_RAT_REDUCE_CONV);;
-
-lemma continuous_map_real_add:
-   "\<And>X f g::A=>real.
-        continuous_map X euclideanreal f \<and>
-        continuous_map X euclideanreal g
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. f x + g x)"
-oops
-  SIMP_TAC[CONTINUOUS_MAP_ATPOINTOF; LIMIT_REAL_ADD]);;
-
-lemma continuous_map_real_sub:
-   "\<And>X f g::A=>real.
-        continuous_map X euclideanreal f \<and>
-        continuous_map X euclideanreal g
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. f x - g x)"
-oops
-  SIMP_TAC[CONTINUOUS_MAP_ATPOINTOF; LIMIT_REAL_SUB]);;
-
-lemma continuous_map_real_abs:
-   "\<And>X f::A=>real.
-        continuous_map X euclideanreal f
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. abs(f x))"
-oops
-  SIMP_TAC[CONTINUOUS_MAP_ATPOINTOF; LIMIT_REAL_ABS]);;
-
-lemma continuous_map_real_max:
-   "\<And>X f g::A=>real.
-        continuous_map X euclideanreal f \<and>
-        continuous_map X euclideanreal g
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. max (f x) (g x))"
-oops
-  SIMP_TAC[CONTINUOUS_MAP_ATPOINTOF; LIMIT_REAL_MAX]);;
-
-lemma continuous_map_real_min:
-   "\<And>X f g::A=>real.
-        continuous_map X euclideanreal f \<and>
-        continuous_map X euclideanreal g
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. min (f x) (g x))"
-oops
-  SIMP_TAC[CONTINUOUS_MAP_ATPOINTOF; LIMIT_REAL_MIN]);;
-
-lemma continuous_map_sum:
-   "\<And>X f::A=>K->real k.
-        finite k \<and>
-        (\<forall>i. i \<in> k \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. f x i))
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. sum k (f x))"
-oops
-  SIMP_TAC[CONTINUOUS_MAP_ATPOINTOF; LIMIT_SUM]);;
-
-lemma continuous_map_real_product:
-   "\<And>X f::A=>K->real k.
-        finite k \<and>
-        (\<forall>i. i \<in> k \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. f x i))
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. product k (f x))"
-oops
-  SIMP_TAC[CONTINUOUS_MAP_ATPOINTOF; LIMIT_PRODUCT]);;
-
-lemma continuous_map_real_inv:
-   "\<And>X f::A=>real.
-        continuous_map X euclideanreal f \<and>
-        (\<forall>x. x \<in> topspace X \<Longrightarrow> \<not> (f x = 0))
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. inverse(f x))"
-oops
-  SIMP_TAC[CONTINUOUS_MAP_ATPOINTOF; LIMIT_REAL_INV]);;
-
-lemma continuous_map_real_div:
-   "\<And>X f g::A=>real.
-        continuous_map X euclideanreal f \<and>
-        continuous_map X euclideanreal g \<and>
-        (\<forall>x. x \<in> topspace X \<Longrightarrow> \<not> (g x = 0))
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. f x / g x)"
-oops
-  SIMP_TAC[CONTINUOUS_MAP_ATPOINTOF; LIMIT_REAL_DIV]);;
-
-lemma continuous_map_inf:
-   "\<And>X f::A=>K->real k.
-        finite k \<and>
-        (\<forall>i. i \<in> k \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. f x i))
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. inf {f x i | i \<in> k})"
-oops
-  SIMP_TAC[CONTINUOUS_MAP_ATPOINTOF; LIMIT_INF]);;
-
-lemma continuous_map_sup:
-   "\<And>X f::A=>K->real k.
-        finite k \<and>
-        (\<forall>i. i \<in> k \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. f x i))
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. sup {f x i | i \<in> k})"
-oops
-  SIMP_TAC[CONTINUOUS_MAP_ATPOINTOF; LIMIT_SUP]);;
+lemma continuous_map_Sup:
+  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c::ordered_euclidean_space"
+  assumes "finite K" "\<And>i. i \<in> K \<Longrightarrow> continuous_map X euclidean (\<lambda>x. f x i)"
+  shows "continuous_map X euclidean (\<lambda>x. SUP i\<in>K. f x i)"
+  using assms by (simp add: continuous_map_atin tendsto_Sup)
 
 lemma continuous_map_real_shrink:
- (`continuous_map euclideanreal (
-                   subtopology euclideanreal (real_interval(-- 1,1)))
-                  (\<lambda>x. x / (1 + abs x))"
-oops
-  REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; \<subseteq>; FORALL_IN_IMAGE] THEN
-  REWRITE_TAC[IN_REAL_INTERVAL; REAL_BOUNDS_LT; REAL_SHRINK_RANGE] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_REAL_DIV THEN
-  REWRITE_TAC[CONTINUOUS_MAP_ID; REAL_ARITH `\<not> (1 + abs x = 0)`] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_REAL_ADD THEN
-  REWRITE_TAC[CONTINUOUS_MAP_REAL_CONST] THEN
-  GEN_REWRITE_TAC RAND_CONV [GSYM ETA_AX] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_REAL_ABS THEN
-  REWRITE_TAC[CONTINUOUS_MAP_ID]);;
+  "continuous_map euclideanreal (top_of_set {-1<..<1}) (\<lambda>x. x / (1 + \<bar>x\<bar>))"
+proof -
+  have "continuous_on UNIV (\<lambda>x::real. x / (1 + \<bar>x\<bar>))"
+    by (intro continuous_intros) auto
+  then show ?thesis
+    by (auto simp add: continuous_map_in_subtopology divide_simps)
+qed
 
 lemma continuous_map_real_grow:
- (`continuous_map (subtopology euclideanreal (real_interval(-- 1,1)),
-                   euclideanreal)
-                  (\<lambda>x. x / (1 - abs x))"
-oops
-  MATCH_MP_TAC CONTINUOUS_MAP_REAL_DIV THEN
-  SIMP_TAC[CONTINUOUS_MAP_FROM_SUBTOPOLOGY; CONTINUOUS_MAP_ID] THEN
-  SIMP_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY; IN_REAL_INTERVAL] THEN
-  CONJ_TAC THENL [MATCH_MP_TAC CONTINUOUS_MAP_REAL_SUB; REAL_ARITH_TAC] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_REAL_CONST] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_FROM_SUBTOPOLOGY THEN
-  GEN_REWRITE_TAC RAND_CONV [GSYM ETA_AX] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_REAL_ABS THEN
-  REWRITE_TAC[CONTINUOUS_MAP_ID]);;
+  "continuous_map (top_of_set {-1<..<1}) euclideanreal (\<lambda>x. x / (1 - \<bar>x\<bar>))"
+proof -
+  have "continuous_on {-1<..<1} (\<lambda>x::real. x / (1 - \<bar>x\<bar>))"
+    by (intro continuous_intros) auto
+  then show ?thesis
+    by (auto simp add: continuous_map_from_subtopology divide_simps)
+qed
 
 lemma homeomorphic_maps_real_shrink:
  (`homeomorphic_maps
