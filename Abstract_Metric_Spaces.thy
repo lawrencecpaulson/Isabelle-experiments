@@ -7375,14 +7375,14 @@ lemma path_imp_connected_component_of:
 
 
 lemma finite_path_components_of_finite:
-   "        finite(topspace X) \<Longrightarrow> finite(path_components_of X)"
+   "finite(topspace X) \<Longrightarrow> finite(path_components_of X)"
   by (simp add: Union_path_components_of finite_UnionD)
 
 lemma path_component_of_continuous_image:
   "\<lbrakk>continuous_map X X' f; path_component_of X x y\<rbrakk> \<Longrightarrow> path_component_of X' (f x) (f y)"
   by (meson image_eqI path_component_of path_connectedin_continuous_map_image)
 
-lemma path_component_of_pair:
+lemma path_component_of_pair [simp]:
    "path_component_of_set (prod_topology X Y) (x,y) =
     path_component_of_set X x \<times> path_component_of_set Y y"   (is "?lhs = ?rhs")
 proof (cases "?lhs = {}")
@@ -7391,30 +7391,17 @@ proof (cases "?lhs = {}")
     by (metis Sigma_empty1 Sigma_empty2 mem_Sigma_iff path_component_of_eq_empty topspace_prod_topology) 
 next
   case False
-  then show ?thesis sorry
+  then have "path_component_of X x x" "path_component_of Y y y"
+    using path_component_of_eq_empty path_component_of_refl by fastforce+
+  moreover
+  have "path_connectedin (prod_topology X Y) (path_component_of_set X x \<times> path_component_of_set Y y)"
+    by (metis path_connectedin_Times path_connectedin_path_component_of)
+  moreover have "path_component_of X x a" "path_component_of Y y b"
+    if "(x, y) \<in> C'" "(a,b) \<in> C'" and "path_connectedin (prod_topology X Y) C'" for C' a b
+    by (smt (verit, best) that continuous_map_fst continuous_map_snd fst_conv snd_conv path_component_of path_component_of_continuous_image)+
+  ultimately show ?thesis
+    by (intro path_component_of_unique) auto
 qed
-
-oops
-  REPEAT GEN_TAC THEN MATCH_MP_TAC(SET_RULE
-   `(s = {} \<longleftrightarrow> t = {}) \<and> ((s \<noteq> {}) \<Longrightarrow> (s = t)) \<Longrightarrow> s = t`) THEN
-  REWRITE_TAC[CROSS_EQ_EMPTY; PATH_COMPONENT_OF_EQ_EMPTY;
-              TOPSPACE_PROD_TOPOLOGY; IN_CROSS; DE_MORGAN_THM] THEN
-  STRIP_TAC THEN MATCH_MP_TAC PATH_COMPONENT_OF_UNIQUE THEN
-  SIMP_TAC[PATH_CONNECTED_IN_CROSS; PATH_CONNECTED_IN_PATH_COMPONENT_OF] THEN
-  REWRITE_TAC[IN_CROSS] THEN
-  GEN_REWRITE_TAC (LAND_CONV \<circ> ONCE_DEPTH_CONV) [\<in>] THEN
-  REWRITE_TAC[PATH_COMPONENT_OF_REFL] THEN ASM_REWRITE_TAC[] THEN
-  X_GEN_TAC `c::A#B=>bool` THEN STRIP_TAC THEN
-  TRANS_TAC SUBSET_TRANS `(fst ` c \<times> snd ` c):A#B=>bool` THEN
-  CONJ_TAC THENL
-   [REWRITE_TAC[\<subseteq>; FORALL_PAIR_THM; IN_CROSS] THEN
-    REWRITE_TAC[IN_IMAGE; EXISTS_PAIR_THM] THEN MESON_TAC[];
-    REWRITE_TAC[SUBSET_CROSS] THEN REPEAT DISJ2_TAC THEN
-    CONJ_TAC THEN MATCH_MP_TAC PATH_COMPONENT_OF_MAXIMAL THEN
-    REWRITE_TAC[IN_IMAGE; EXISTS_PAIR_THM] THEN
-    (CONJ_TAC THENL [ALL_TAC; ASM_MESON_TAC[]]) THEN
-    MATCH_MP_TAC PATH_CONNECTED_IN_CONTINUOUS_MAP_IMAGE THEN
-    ASM_MESON_TAC[CONTINUOUS_MAP_FST; CONTINUOUS_MAP_SND]]);;
 
 lemma path_components_of_prod_topology:
    "\<And>(X::A topology) (Y::B topology).
