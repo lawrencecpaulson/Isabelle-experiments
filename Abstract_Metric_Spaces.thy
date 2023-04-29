@@ -7404,45 +7404,77 @@ next
 qed
 
 lemma path_components_of_prod_topology:
-   "\<And>(X::A topology) (Y::B topology).
-        path_components_of (prod_topology X Y) =
-        {c1 \<times> c2 | c1 \<in> path_components_of X \<and>
-                       c2 \<in> path_components_of Y}"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[path_components_of; TOPSPACE_PROD_TOPOLOGY; \<times>] THEN
-  REWRITE_TAC[SET_RULE `{f z | z \<in> {x,y | P x y}} = {f(x,y) | P x y}`] THEN
-  REWRITE_TAC[GSYM \<times>; PATH_COMPONENT_OF_PAIR] THEN SET_TAC[]);;
+   "path_components_of (prod_topology X Y) =
+    (\<lambda>(C,D). C \<times> D) ` (path_components_of X \<times> path_components_of Y)"
+  by (force simp add: image_iff path_components_of_def)
+
+lemma path_components_of_prod_topology':
+   "path_components_of (prod_topology X Y) =
+    {C \<times> D |C D. C \<in> path_components_of X \<and> D \<in> path_components_of Y}"
+  by (auto simp: path_components_of_prod_topology)
 
 lemma path_component_of_product_topology:
-   "\<And>k (X::K=>A topology) x.
-        path_component_of (product_topology k X) x =
-        if EXTENSIONAL k x
-        then PiE k (\<lambda>i. path_component_of (X i) (x i))
-        else {}"
+   "path_component_of_set (product_topology X I) f =
+        (if f \<in> extensional I
+        then PiE I (\<lambda>i. path_component_of_set (X i) (f i))
+        else {})"
+proof (cases "path_component_of_set (product_topology X I) f = {}")
+  case True
+  then show ?thesis
+    by (smt (verit) PiE_eq_empty_iff PiE_iff path_component_of_eq_empty topspace_product_topology)
+next
+  case False
+  then have [simp]: "f \<in> extensional I"
+    by (auto simp: path_component_of_eq_empty PiE_iff path_component_of_equiv)
+  show ?thesis
+    apply (intro path_component_of_unique)   
+      apply (simp add: PiE_iff)
+    using False path_component_of_eq_empty path_component_of_refl apply force
+     apply (simp add: path_connectedin_PiE path_connectedin_path_component_of)
+    using False
+    apply (simp add: PiE_iff subset_iff)
+    apply (auto simp: )
+     apply (smt (verit) continuous_map_product_projection path_component_of path_component_of_continuous_image)
+    by (metis PiE_iff path_connectedin_subset_topspace subsetD topspace_product_topology)
+qed
+
+apply (simp add: connected_component_of_product_topology)
+apply (simp add: subset_iff PiE_iff connected_component_of_product_topology)
+    by (metis (mono_tags, lifting) connected_component_of_eq_empty connected_component_of_product_topology continuous_map_product_projection path_component_of path_component_of_continuous_image path_component_of_refl)
+    oops
+apply (auto simp: )
+    using False path_component_of_eq_empty path_component_of_refl apply force
+    apply (meson \<open>f \<in> extensional I\<close> extensional_arb)
+    apply (simp add: path_connectedin_PiE path_connectedin_path_component_of)
+    apply (smt (verit) continuous_map_product_projection path_component_of path_component_of_continuous_image)
+    by (smt (verit, ccfv_SIG) PiE_arb path_connectedin_subset_topspace subsetD topspace_product_topology)
+
+qed
+
 oops
   REPEAT GEN_TAC THEN MATCH_MP_TAC(SET_RULE
    `(s = {} \<longleftrightarrow> t = {}) \<and> ((s \<noteq> {}) \<Longrightarrow> (s = t)) \<Longrightarrow> s = t`) THEN
-  REWRITE_TAC[MESON[] `(if p then x else y) = y \<longleftrightarrow> p \<Longrightarrow> x = y`] THEN
+  REWRITE_TAC[MESON[] `(if p then f else y) = y \<longleftrightarrow> p \<Longrightarrow> f = y`] THEN
   REWRITE_TAC[PATH_COMPONENT_OF_EQ_EMPTY; CARTESIAN_PRODUCT_EQ_EMPTY] THEN
   REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY; PiE; IN_ELIM_THM] THEN
   REWRITE_TAC[o_THM; GSYM PiE] THEN
   CONJ_TAC THENL [MESON_TAC[]; STRIP_TAC THEN ASM_REWRITE_TAC[]] THEN
+
   MATCH_MP_TAC PATH_COMPONENT_OF_UNIQUE THEN
   SIMP_TAC[PATH_CONNECTED_IN_CARTESIAN_PRODUCT;
            PATH_CONNECTED_IN_PATH_COMPONENT_OF] THEN
   ASM_REWRITE_TAC[PiE; IN_ELIM_THM] THEN
   CONJ_TAC THENL [ASM_MESON_TAC[PATH_COMPONENT_OF_REFL; \<in>]; ALL_TAC] THEN
-  X_GEN_TAC `c:(K=>A)->bool` THEN STRIP_TAC THEN
+  X_GEN_TAC `c:(I=>A)->bool` THEN STRIP_TAC THEN
   TRANS_TAC SUBSET_TRANS
-   `PiE k (\<lambda>i. image (\<lambda>x. x i) c):(K=>A)->bool` THEN
+   `PiE I (\<lambda>i. image (\<lambda>x. f i) c):(I=>A)->bool` THEN
   REWRITE_TAC[GSYM PiE; SUBSET_CARTESIAN_PRODUCT] THEN
   CONJ_TAC THENL
    [FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP PATH_CONNECTED_IN_SUBSET_TOPSPACE) THEN
     REWRITE_TAC[\<subseteq>; PiE; IN_ELIM_THM;
                 TOPSPACE_PRODUCT_TOPOLOGY; o_THM; IN_IMAGE] THEN
     ASM_MESON_TAC[];
-    DISJ2_TAC THEN X_GEN_TAC `i::K` THEN STRIP_TAC THEN
+    DISJ2_TAC THEN X_GEN_TAC `i::I` THEN STRIP_TAC THEN
     MATCH_MP_TAC PATH_COMPONENT_OF_MAXIMAL THEN
     REWRITE_TAC[IN_IMAGE] THEN CONJ_TAC THENL [ALL_TAC; ASM_MESON_TAC[]] THEN
     MATCH_MP_TAC PATH_CONNECTED_IN_CONTINUOUS_MAP_IMAGE THEN
