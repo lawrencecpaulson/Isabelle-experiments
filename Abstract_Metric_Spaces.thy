@@ -7415,9 +7415,8 @@ lemma path_components_of_prod_topology':
 
 lemma path_component_of_product_topology:
    "path_component_of_set (product_topology X I) f =
-        (if f \<in> extensional I
-        then PiE I (\<lambda>i. path_component_of_set (X i) (f i))
-        else {})"
+    (if f \<in> extensional I then PiE I (\<lambda>i. path_component_of_set (X i) (f i)) else {})"
+    (is "?lhs = ?rhs")
 proof (cases "path_component_of_set (product_topology X I) f = {}")
   case True
   then show ?thesis
@@ -7427,65 +7426,31 @@ next
   then have [simp]: "f \<in> extensional I"
     by (auto simp: path_component_of_eq_empty PiE_iff path_component_of_equiv)
   show ?thesis
-    apply (intro path_component_of_unique)   
-      apply (simp add: PiE_iff)
-    using False path_component_of_eq_empty path_component_of_refl apply force
-     apply (simp add: path_connectedin_PiE path_connectedin_path_component_of)
-    using False
-    apply (simp add: PiE_iff subset_iff)
-    apply (auto simp: )
-     apply (smt (verit) continuous_map_product_projection path_component_of path_component_of_continuous_image)
-    by (metis PiE_iff path_connectedin_subset_topspace subsetD topspace_product_topology)
+  proof (intro path_component_of_unique)
+    show "f \<in> ?rhs"
+      using False path_component_of_eq_empty path_component_of_refl by force
+    show "path_connectedin (product_topology X I) (if f \<in> extensional I then \<Pi>\<^sub>E i\<in>I. path_component_of_set (X i) (f i) else {})"
+      by (simp add: path_connectedin_PiE path_connectedin_path_component_of)
+    fix C'
+    assume "f \<in> C'" and C': "path_connectedin (product_topology X I) C'" 
+    show "C' \<subseteq> ?rhs"
+    proof -
+      have "C' \<subseteq> extensional I"
+        using PiE_def C' path_connectedin_subset_topspace by fastforce
+      with \<open>f \<in> C'\<close> C' show ?thesis
+        apply (clarsimp simp: PiE_iff subset_iff)
+        by (smt (verit, ccfv_threshold) continuous_map_product_projection path_component_of path_component_of_continuous_image)
+    qed   
+  qed
 qed
-
-apply (simp add: connected_component_of_product_topology)
-apply (simp add: subset_iff PiE_iff connected_component_of_product_topology)
-    by (metis (mono_tags, lifting) connected_component_of_eq_empty connected_component_of_product_topology continuous_map_product_projection path_component_of path_component_of_continuous_image path_component_of_refl)
-    oops
-apply (auto simp: )
-    using False path_component_of_eq_empty path_component_of_refl apply force
-    apply (meson \<open>f \<in> extensional I\<close> extensional_arb)
-    apply (simp add: path_connectedin_PiE path_connectedin_path_component_of)
-    apply (smt (verit) continuous_map_product_projection path_component_of path_component_of_continuous_image)
-    by (smt (verit, ccfv_SIG) PiE_arb path_connectedin_subset_topspace subsetD topspace_product_topology)
-
-qed
-
-oops
-  REPEAT GEN_TAC THEN MATCH_MP_TAC(SET_RULE
-   `(s = {} \<longleftrightarrow> t = {}) \<and> ((s \<noteq> {}) \<Longrightarrow> (s = t)) \<Longrightarrow> s = t`) THEN
-  REWRITE_TAC[MESON[] `(if p then f else y) = y \<longleftrightarrow> p \<Longrightarrow> f = y`] THEN
-  REWRITE_TAC[PATH_COMPONENT_OF_EQ_EMPTY; CARTESIAN_PRODUCT_EQ_EMPTY] THEN
-  REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY; PiE; IN_ELIM_THM] THEN
-  REWRITE_TAC[o_THM; GSYM PiE] THEN
-  CONJ_TAC THENL [MESON_TAC[]; STRIP_TAC THEN ASM_REWRITE_TAC[]] THEN
-
-  MATCH_MP_TAC PATH_COMPONENT_OF_UNIQUE THEN
-  SIMP_TAC[PATH_CONNECTED_IN_CARTESIAN_PRODUCT;
-           PATH_CONNECTED_IN_PATH_COMPONENT_OF] THEN
-  ASM_REWRITE_TAC[PiE; IN_ELIM_THM] THEN
-  CONJ_TAC THENL [ASM_MESON_TAC[PATH_COMPONENT_OF_REFL; \<in>]; ALL_TAC] THEN
-  X_GEN_TAC `c:(I=>A)->bool` THEN STRIP_TAC THEN
-  TRANS_TAC SUBSET_TRANS
-   `PiE I (\<lambda>i. image (\<lambda>x. f i) c):(I=>A)->bool` THEN
-  REWRITE_TAC[GSYM PiE; SUBSET_CARTESIAN_PRODUCT] THEN
-  CONJ_TAC THENL
-   [FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP PATH_CONNECTED_IN_SUBSET_TOPSPACE) THEN
-    REWRITE_TAC[\<subseteq>; PiE; IN_ELIM_THM;
-                TOPSPACE_PRODUCT_TOPOLOGY; o_THM; IN_IMAGE] THEN
-    ASM_MESON_TAC[];
-    DISJ2_TAC THEN X_GEN_TAC `i::I` THEN STRIP_TAC THEN
-    MATCH_MP_TAC PATH_COMPONENT_OF_MAXIMAL THEN
-    REWRITE_TAC[IN_IMAGE] THEN CONJ_TAC THENL [ALL_TAC; ASM_MESON_TAC[]] THEN
-    MATCH_MP_TAC PATH_CONNECTED_IN_CONTINUOUS_MAP_IMAGE THEN
-    ASM_MESON_TAC[CONTINUOUS_MAP_PRODUCT_PROJECTION]]);;
 
 lemma path_components_of_product_topology:
-   "\<And>k (X::K=>A topology).
-        path_components_of (product_topology k X) =
-        { PiE k c |c|
-          \<forall>i. i \<in> k \<Longrightarrow> c i \<in> path_components_of(X i)}"
-oops
+   "path_components_of (product_topology X I) =
+    {PiE I B |B. \<forall>i \<in> I. B i \<in> path_components_of(X i)}"  (is "?lhs=?rhs")
+  oops
+
+
+
   REPEAT GEN_TAC THEN
   REWRITE_TAC[path_components_of; PATH_COMPONENT_OF_PRODUCT_TOPOLOGY] THEN
   MATCH_MP_TAC(SET_RULE
@@ -7510,7 +7475,7 @@ oops
     REWRITE_TAC[GSYM CONJ_ASSOC; UNWIND_THM2] THEN
     EXISTS_TAC `RESTRICTION k (x::K=>A)` THEN
     SIMP_TAC[RESTRICTION; EXTENSIONAL; IN_ELIM_THM] THEN
-    ASM_MESON_TAC[]]);;
+    ASM_MESON_TAC[]]);;`
 
 
 subsection\<open>Special characterizations of classes of functions into and out of R\<close>
