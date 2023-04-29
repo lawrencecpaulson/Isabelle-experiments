@@ -7519,48 +7519,60 @@ next
   proof (intro strip)
     fix K :: "real set"
     assume "is_interval K"
-    show "connectedin X {x \<in> topspace X. f x \<in> K}"
-      unfolding connectedin_closedin
-      apply (intro conjI)
-       apply (blast intro:  elim: )
+    have False
+      if \<section>: "a \<in> K" "b \<in> K" "closedin X U" "closedin X V" 
+         "{x. x \<in> topspace X \<and> f x \<in> K} \<subseteq> U \<union> V"
+         "U \<inter> V \<inter> {x. x \<in> topspace X \<and> f x \<in> K} = {}" 
+         "\<not> disjnt U {x. x \<in> topspace X \<and> f x = a}"
+         "\<not> disjnt V {x. x \<in> topspace X \<and> f x = b}" 
+     for a b U V
+    proof -
+      have F: "\<forall>y. connectedin X {x. x \<in> topspace X \<and> f x = y}"
+        using R monotone_map by fastforce
+
+      have False if "p \<in> U \<and> q \<in> V \<and> f p = f q \<and> f q \<in> K" for p q
+        using F
+        apply (simp add: connectedin_closedin)
+        apply (drule_tac x="f q" in spec)
+        apply (drule_tac x="U" in spec)
+        apply (simp add: \<open>closedin X U\<close>)
+        apply (drule_tac x="V" in spec)
+        apply (simp add: \<open>closedin X V\<close>)
+        apply (auto simp: )
+        using "\<section>"(6) that apply fastforce
+        using "\<section>"(5) that apply fastforce
+        using "\<section>"(3) closedin_subset that apply blast
+        using "\<section>"(4) closedin_subset that by blast
+      then have **: "f ` U \<inter> f ` V \<inter> K = {}"
+        by fastforce
+
+      consider "a \<le> b" | "b \<le> a"
+        by linarith
+      then show ?thesis
+      proof cases
+        case 1
+        then show ?thesis
+          apply (auto simp: )
+          sorry
+      next
+        case 2
+        then show ?thesis sorry
+      qed
+
       using *
+      apply (auto simp: disjnt_def)
 
       sorry
+    then
+    show "connectedin X {x \<in> topspace X. f x \<in> K}"
+      unfolding connectedin_closedin disjnt_iff by blast
   qed
+qed
 
 oops
 
 
 
-    X_GEN_TAC `k::real=>bool` THEN DISCH_TAC THEN
-    REWRITE_TAC[CONNECTED_IN_CLOSED_IN; SUBSET_RESTRICT; SET_RULE
-     `P \<and> Q \<and> R \<and> S \<and>
-      \<not> (u \<inter> {x. x \<in> t \<and> f x \<in> k} = {}) \<and>
-      \<not> (v \<inter> {x. x \<in> t \<and> f x \<in> k} = {}) \<longleftrightarrow>
-      \<exists>a b. a \<in> k \<and> b \<in> k \<and> P \<and> Q \<and> R \<and> S \<and>
-            \<not> disjnt u {x. x \<in> t \<and> f x = a} \<and>
-            \<not> disjnt v {x. x \<in> t \<and> f x = b}`] THEN
-    ONCE_REWRITE_TAC[MESON[]
-     `\<not> (\<exists>a b c d. P a b c d) \<longleftrightarrow> \<forall>c d a b. \<not> P a b c d`] THEN
-    MATCH_MP_TAC REAL_WLOG_LE THEN CONJ_TAC THENL
-     [MESON_TAC[INTER_ACI; UNION_COMM]; ALL_TAC] THEN
-    MAP_EVERY X_GEN_TAC [`a::real`; `b::real`] THEN DISCH_TAC THEN
-    MAP_EVERY X_GEN_TAC [`u::A=>bool`; `v::A=>bool`] THEN STRIP_TAC THEN
-    SUBGOAL_THEN
-      `image f u \<inter> f ` v \<inter> k = {}`
-    ASSUME_TAC THENL
-     [REWRITE_TAC[SET_RULE
-       `(f ` u) \<inter> f ` v \<inter> k = {} \<longleftrightarrow>
-        \<forall>a b. a \<in> u \<and> b \<in> v \<and> f a = f b \<and> f b \<in> k \<Longrightarrow> False`] THEN
-      MAP_EVERY X_GEN_TAC [`p::A`; `q::A`] THEN REPEAT STRIP_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [CONNECTED_IN_CLOSED_IN] \<circ>
-       SPEC `f q`) THEN
-      REWRITE_TAC[SUBSET_RESTRICT] THEN
-      MAP_EVERY EXISTS_TAC [`u::A=>bool`; `v::A=>bool`] THEN
-      ASM_REWRITE_TAC[] THEN
-      REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET)) THEN
-      ASM SET_TAC[];
-      ALL_TAC] THEN
     FIRST_X_ASSUM(DISJ_CASES_TAC \<circ> GEN_REWRITE_RULE id [REAL_LE_LT])
     THENL [ALL_TAC; ASM SET_TAC[]] THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPECL
@@ -7583,16 +7595,15 @@ oops
        [FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [is_interval]) THEN
         REWRITE_TAC[\<subseteq>; IN_REAL_INTERVAL] THEN REPEAT STRIP_TAC THEN
         ASM_MESON_TAC[];
-        ASM SET_TAC[]]]]);;
+        ASM SET_TAC[]]]]);;`
 
 lemma monotone_map_into_euclideanreal:
-   "\<And>X f.
-        connected_space X \<and> continuous_map X euclideanreal f
-        \<Longrightarrow> (monotone_map X euclideanreal f \<longleftrightarrow>
-             \<forall>k. is_interval k
-                  \<Longrightarrow> connectedin X {x \<in> topspace X. f x \<in> k})"
-oops
-  SIMP_TAC[MONOTONE_MAP_INTO_EUCLIDEANREAL_ALT]);;
+   "connected_space X \<and> continuous_map X euclideanreal f
+        \<Longrightarrow> monotone_map X euclideanreal f \<longleftrightarrow>
+             (\<forall>k. is_interval k
+                  \<longrightarrow> connectedin X {x \<in> topspace X. f x \<in> k})"
+  by (simp add: monotone_map_into_euclideanreal_alt)
+
 
 lemma monotone_map_euclideanreal_alt:
    "      (\<forall>c. is_interval c \<Longrightarrow> is_interval {x. x \<in> s \<and> f x \<in> c}) \<longleftrightarrow>
