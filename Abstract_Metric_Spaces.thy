@@ -7520,82 +7520,74 @@ next
     fix K :: "real set"
     assume "is_interval K"
     have False
-      if \<section>: "a \<in> K" "b \<in> K" "closedin X U" "closedin X V" 
-         "{x. x \<in> topspace X \<and> f x \<in> K} \<subseteq> U \<union> V"
-         "U \<inter> V \<inter> {x. x \<in> topspace X \<and> f x \<in> K} = {}" 
-         "\<not> disjnt U {x. x \<in> topspace X \<and> f x = a}"
-         "\<not> disjnt V {x. x \<in> topspace X \<and> f x = b}" 
+      if "a \<in> K" "b \<in> K" and clo: "closedin X U" "closedin X V" 
+         and UV: "{x. x \<in> topspace X \<and> f x \<in> K} \<subseteq> U \<union> V"
+                 "U \<inter> V \<inter> {x. x \<in> topspace X \<and> f x \<in> K} = {}" 
+         and nondis: "\<not> disjnt U {x. x \<in> topspace X \<and> f x = a}"
+                     "\<not> disjnt V {x. x \<in> topspace X \<and> f x = b}" 
      for a b U V
     proof -
       have F: "\<forall>y. connectedin X {x. x \<in> topspace X \<and> f x = y}"
         using R monotone_map by fastforce
-
-      have False if "p \<in> U \<and> q \<in> V \<and> f p = f q \<and> f q \<in> K" for p q
+      have FF: False if "p \<in> U \<and> q \<in> V \<and> f p = f q \<and> f q \<in> K" for p q
         using F
-        apply (simp add: connectedin_closedin)
-        apply (drule_tac x="f q" in spec)
-        apply (drule_tac x="U" in spec)
-        apply (simp add: \<open>closedin X U\<close>)
-        apply (drule_tac x="V" in spec)
-        apply (simp add: \<open>closedin X V\<close>)
-        apply (auto simp: )
-        using "\<section>"(6) that apply fastforce
-        using "\<section>"(5) that apply fastforce
-        using "\<section>"(3) closedin_subset that apply blast
-        using "\<section>"(4) closedin_subset that by blast
+        unfolding connectedin_closedin
+        using \<open>a \<in> K\<close> \<open>b \<in> K\<close> UV clo
+        by (smt (verit, ccfv_threshold) closedin_subset disjoint_iff mem_Collect_eq subset_iff that)
       then have **: "f ` U \<inter> f ` V \<inter> K = {}"
         by fastforce
 
-      consider "a \<le> b" | "b \<le> a"
+      consider "a < b" | "a = b" | "b < a"
         by linarith
       then show ?thesis
       proof cases
         case 1
-        then show ?thesis
-          apply (auto simp: )
-          sorry
+        show ?thesis
+        proof (rule * [OF 1 , of "U \<inter> {x \<in> topspace X. f x \<in> {a..b}}" "V \<inter> {x \<in> topspace X. f x \<in> {a..b}}"])
+          show "closedin X (U \<inter> {x \<in> topspace X. f x \<in> {a..b}})" "closedin X (V \<inter> {x \<in> topspace X. f x \<in> {a..b}})"
+            using assms by (intro closedin_Int closedin_continuous_map_preimage clo | force)+
+          show "U \<inter> {x \<in> topspace X. f x \<in> {a..b}} \<noteq> {}" "V \<inter> {x \<in> topspace X. f x \<in> {a..b}} \<noteq> {}"
+            using nondis 1 by (auto simp: disjnt_iff)
+          show "disjnt (U \<inter> {x \<in> topspace X. f x \<in> {a..b}}) (V \<inter> {x \<in> topspace X. f x \<in> {a..b}})"
+            using \<open>is_interval K\<close> unfolding is_interval_1 disjnt_iff
+            by (metis (mono_tags, lifting) \<open>a \<in> K\<close> \<open>b \<in> K\<close> FF Int_Collect atLeastAtMost_iff)
+          have "\<And>x. \<lbrakk>x \<in> topspace X; a \<le> f x; f x \<le> b\<rbrakk> \<Longrightarrow> x \<in> U \<or> x \<in> V"
+            using \<open>a \<in> K\<close> \<open>b \<in> K\<close> \<open>is_interval K\<close> UV unfolding is_interval_1 disjnt_iff
+            by blast
+          then show "{x \<in> topspace X. f x \<in> {a..b}} = U \<inter> {x \<in> topspace X. f x \<in> {a..b}} \<union> V \<inter> {x \<in> topspace X. f x \<in> {a..b}}"
+            by auto
+          show "disjnt (U \<inter> {x \<in> topspace X. f x \<in> {a..b}}) {x \<in> topspace X. f x = b}" "disjnt (V \<inter> {x \<in> topspace X. f x \<in> {a..b}}) {x \<in> topspace X. f x = a}"
+            using FF \<open>a \<in> K\<close> \<open>b \<in> K\<close> nondis by (force simp: disjnt_iff)+
+        qed
       next
         case 2
-        then show ?thesis sorry
+        then show ?thesis
+          using FF nondis \<open>b \<in> K\<close> by (force simp add: disjnt_iff)
+      next
+        case 3
+        show ?thesis
+        proof (rule * [OF 3, of "V \<inter> {x \<in> topspace X. f x \<in> {b..a}}" "U \<inter> {x \<in> topspace X. f x \<in> {b..a}}"])
+          show "closedin X (U \<inter> {x \<in> topspace X. f x \<in> {b..a}})" "closedin X (V \<inter> {x \<in> topspace X. f x \<in> {b..a}})"
+            using assms by (intro closedin_Int closedin_continuous_map_preimage clo | force)+
+          show "U \<inter> {x \<in> topspace X. f x \<in> {b..a}} \<noteq> {}" "V \<inter> {x \<in> topspace X. f x \<in> {b..a}} \<noteq> {}"
+            using nondis 3 by (auto simp: disjnt_iff)
+          show "disjnt (V \<inter> {x \<in> topspace X. f x \<in> {b..a}}) (U \<inter> {x \<in> topspace X. f x \<in> {b..a}})"
+            using \<open>is_interval K\<close> unfolding is_interval_1 disjnt_iff
+            by (metis (mono_tags, lifting) \<open>a \<in> K\<close> \<open>b \<in> K\<close> FF Int_Collect atLeastAtMost_iff)
+          have "\<And>x. \<lbrakk>x \<in> topspace X; b \<le> f x; f x \<le> a\<rbrakk> \<Longrightarrow> x \<in> U \<or> x \<in> V"
+            using \<open>a \<in> K\<close> \<open>b \<in> K\<close> \<open>is_interval K\<close> UV unfolding is_interval_1 disjnt_iff
+            by blast
+          then show "{x \<in> topspace X. f x \<in> {b..a}} = V \<inter> {x \<in> topspace X. f x \<in> {b..a}} \<union> U \<inter> {x \<in> topspace X. f x \<in> {b..a}}"
+            by auto
+          show "disjnt (V \<inter> {x \<in> topspace X. f x \<in> {b..a}}) {x \<in> topspace X. f x = a}" "disjnt (U \<inter> {x \<in> topspace X. f x \<in> {b..a}}) {x \<in> topspace X. f x = b}"
+            using FF \<open>a \<in> K\<close> \<open>b \<in> K\<close> nondis by (force simp: disjnt_iff)+
+        qed      
       qed
-
-      using *
-      apply (auto simp: disjnt_def)
-
-      sorry
-    then
-    show "connectedin X {x \<in> topspace X. f x \<in> K}"
+    qed
+    then show "connectedin X {x \<in> topspace X. f x \<in> K}"
       unfolding connectedin_closedin disjnt_iff by blast
   qed
 qed
-
-oops
-
-
-
-    FIRST_X_ASSUM(DISJ_CASES_TAC \<circ> GEN_REWRITE_RULE id [REAL_LE_LT])
-    THENL [ALL_TAC; ASM SET_TAC[]] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL
-     [`a::real`; `b::real`;
-      `u \<inter> {x::A | x \<in> topspace X \<and> f x \<in> {a..b}}`;
-      `v \<inter> {x::A | x \<in> topspace X \<and> f x \<in> {a..b}}`]) THEN
-    ASM_REWRITE_TAC[] THEN GEN_REWRITE_TAC id [CONJ_ASSOC] THEN CONJ_TAC THENL
-     [CONJ_TAC THEN MATCH_MP_TAC CLOSED_IN_INTER THEN ASM_REWRITE_TAC[] THEN
-      MATCH_MP_TAC CLOSED_IN_CONTINUOUS_MAP_PREIMAGE THEN
-      EXISTS_TAC `euclideanreal` THEN ASM_REWRITE_TAC[GSYM REAL_CLOSED_IN] THEN
-      REWRITE_TAC[REAL_CLOSED_REAL_INTERVAL];
-      ALL_TAC] THEN
-    GEN_REWRITE_TAC id [CONJ_ASSOC] THEN CONJ_TAC THENL
-     [CONJ_TAC THEN FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (SET_RULE
-       `\<not> disjnt u {x. x \<in> t \<and> f x = a}
-        \<Longrightarrow> a \<in> s
-            \<Longrightarrow> \<not> (u \<inter> {x. x \<in> t \<and> f x \<in> s} = {})`)) THEN
-      REWRITE_TAC[IN_REAL_INTERVAL] THEN ASM_REAL_ARITH_TAC;
-      SUBGOAL_THEN `{a..b} \<subseteq> k` ASSUME_TAC THENL
-       [FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [is_interval]) THEN
-        REWRITE_TAC[\<subseteq>; IN_REAL_INTERVAL] THEN REPEAT STRIP_TAC THEN
-        ASM_MESON_TAC[];
-        ASM SET_TAC[]]]]);;`
 
 lemma monotone_map_into_euclideanreal:
    "connected_space X \<and> continuous_map X euclideanreal f
