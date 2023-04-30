@@ -7527,60 +7527,62 @@ next
                      "\<not> disjnt V {x. x \<in> topspace X \<and> f x = b}" 
      for a b U V
     proof -
-      have F: "\<forall>y. connectedin X {x. x \<in> topspace X \<and> f x = y}"
+      have "\<forall>y. connectedin X {x. x \<in> topspace X \<and> f x = y}"
         using R monotone_map by fastforce
-      have FF: False if "p \<in> U \<and> q \<in> V \<and> f p = f q \<and> f q \<in> K" for p q
-        using F
+      then have **: False if "p \<in> U \<and> q \<in> V \<and> f p = f q \<and> f q \<in> K" for p q
         unfolding connectedin_closedin
-        using \<open>a \<in> K\<close> \<open>b \<in> K\<close> UV clo
-        by (smt (verit, ccfv_threshold) closedin_subset disjoint_iff mem_Collect_eq subset_iff that)
-      then have **: "f ` U \<inter> f ` V \<inter> K = {}"
-        by fastforce
-
+        using \<open>a \<in> K\<close> \<open>b \<in> K\<close> UV clo that 
+        by (smt (verit, ccfv_threshold) closedin_subset disjoint_iff mem_Collect_eq subset_iff)
       consider "a < b" | "a = b" | "b < a"
         by linarith
       then show ?thesis
       proof cases
         case 1
+        define W where "W \<equiv> {x \<in> topspace X. f x \<in> {a..b}}"
+        have "closedin X W"
+          unfolding W_def using assms closed_closedin continuous_map_closedin by fastforce
         show ?thesis
-        proof (rule * [OF 1 , of "U \<inter> {x \<in> topspace X. f x \<in> {a..b}}" "V \<inter> {x \<in> topspace X. f x \<in> {a..b}}"])
-          show "closedin X (U \<inter> {x \<in> topspace X. f x \<in> {a..b}})" "closedin X (V \<inter> {x \<in> topspace X. f x \<in> {a..b}})"
-            using assms by (intro closedin_Int closedin_continuous_map_preimage clo | force)+
-          show "U \<inter> {x \<in> topspace X. f x \<in> {a..b}} \<noteq> {}" "V \<inter> {x \<in> topspace X. f x \<in> {a..b}} \<noteq> {}"
-            using nondis 1 by (auto simp: disjnt_iff)
-          show "disjnt (U \<inter> {x \<in> topspace X. f x \<in> {a..b}}) (V \<inter> {x \<in> topspace X. f x \<in> {a..b}})"
-            using \<open>is_interval K\<close> unfolding is_interval_1 disjnt_iff
-            by (metis (mono_tags, lifting) \<open>a \<in> K\<close> \<open>b \<in> K\<close> FF Int_Collect atLeastAtMost_iff)
+        proof (rule * [OF 1 , of "U \<inter> W" "V \<inter> W"])
+          show "closedin X (U \<inter> W)" "closedin X (V \<inter> W)"
+            using \<open>closedin X W\<close> clo by auto
+          show "U \<inter> W \<noteq> {}" "V \<inter> W \<noteq> {}"
+            using nondis 1 by (auto simp: disjnt_iff W_def)
+          show "disjnt (U \<inter> W) (V \<inter> W)"
+            using \<open>is_interval K\<close> unfolding is_interval_1 disjnt_iff W_def
+            by (metis (mono_tags, lifting) \<open>a \<in> K\<close> \<open>b \<in> K\<close> ** Int_Collect atLeastAtMost_iff)
           have "\<And>x. \<lbrakk>x \<in> topspace X; a \<le> f x; f x \<le> b\<rbrakk> \<Longrightarrow> x \<in> U \<or> x \<in> V"
             using \<open>a \<in> K\<close> \<open>b \<in> K\<close> \<open>is_interval K\<close> UV unfolding is_interval_1 disjnt_iff
             by blast
-          then show "{x \<in> topspace X. f x \<in> {a..b}} = U \<inter> {x \<in> topspace X. f x \<in> {a..b}} \<union> V \<inter> {x \<in> topspace X. f x \<in> {a..b}}"
-            by auto
-          show "disjnt (U \<inter> {x \<in> topspace X. f x \<in> {a..b}}) {x \<in> topspace X. f x = b}" "disjnt (V \<inter> {x \<in> topspace X. f x \<in> {a..b}}) {x \<in> topspace X. f x = a}"
-            using FF \<open>a \<in> K\<close> \<open>b \<in> K\<close> nondis by (force simp: disjnt_iff)+
+          then show "{x \<in> topspace X. f x \<in> {a..b}} = U \<inter> W \<union> V \<inter> W"
+            by (auto simp: W_def)
+          show "disjnt (U \<inter> W) {x \<in> topspace X. f x = b}" "disjnt (V \<inter> W) {x \<in> topspace X. f x = a}"
+            using ** \<open>a \<in> K\<close> \<open>b \<in> K\<close> nondis by (force simp: disjnt_iff)+
         qed
       next
         case 2
         then show ?thesis
-          using FF nondis \<open>b \<in> K\<close> by (force simp add: disjnt_iff)
+          using ** nondis \<open>b \<in> K\<close> by (force simp add: disjnt_iff)
       next
         case 3
+        define W where "W \<equiv> {x \<in> topspace X. f x \<in> {b..a}}"
+        have "closedin X W"
+          unfolding W_def using assms closed_closedin continuous_map_closedin by fastforce
         show ?thesis
-        proof (rule * [OF 3, of "V \<inter> {x \<in> topspace X. f x \<in> {b..a}}" "U \<inter> {x \<in> topspace X. f x \<in> {b..a}}"])
-          show "closedin X (U \<inter> {x \<in> topspace X. f x \<in> {b..a}})" "closedin X (V \<inter> {x \<in> topspace X. f x \<in> {b..a}})"
-            using assms by (intro closedin_Int closedin_continuous_map_preimage clo | force)+
-          show "U \<inter> {x \<in> topspace X. f x \<in> {b..a}} \<noteq> {}" "V \<inter> {x \<in> topspace X. f x \<in> {b..a}} \<noteq> {}"
-            using nondis 3 by (auto simp: disjnt_iff)
-          show "disjnt (V \<inter> {x \<in> topspace X. f x \<in> {b..a}}) (U \<inter> {x \<in> topspace X. f x \<in> {b..a}})"
-            using \<open>is_interval K\<close> unfolding is_interval_1 disjnt_iff
-            by (metis (mono_tags, lifting) \<open>a \<in> K\<close> \<open>b \<in> K\<close> FF Int_Collect atLeastAtMost_iff)
+        proof (rule * [OF 3, of "V \<inter> W" "U \<inter> W"])
+          show "closedin X (U \<inter> W)" "closedin X (V \<inter> W)"
+            using \<open>closedin X W\<close> clo by auto
+          show "U \<inter> W \<noteq> {}" "V \<inter> W \<noteq> {}"
+            using nondis 3 by (auto simp: disjnt_iff W_def)
+          show "disjnt (V \<inter> W) (U \<inter> W)"
+            using \<open>is_interval K\<close> unfolding is_interval_1 disjnt_iff W_def
+            by (metis (mono_tags, lifting) \<open>a \<in> K\<close> \<open>b \<in> K\<close> ** Int_Collect atLeastAtMost_iff)
           have "\<And>x. \<lbrakk>x \<in> topspace X; b \<le> f x; f x \<le> a\<rbrakk> \<Longrightarrow> x \<in> U \<or> x \<in> V"
             using \<open>a \<in> K\<close> \<open>b \<in> K\<close> \<open>is_interval K\<close> UV unfolding is_interval_1 disjnt_iff
             by blast
-          then show "{x \<in> topspace X. f x \<in> {b..a}} = V \<inter> {x \<in> topspace X. f x \<in> {b..a}} \<union> U \<inter> {x \<in> topspace X. f x \<in> {b..a}}"
-            by auto
-          show "disjnt (V \<inter> {x \<in> topspace X. f x \<in> {b..a}}) {x \<in> topspace X. f x = a}" "disjnt (U \<inter> {x \<in> topspace X. f x \<in> {b..a}}) {x \<in> topspace X. f x = b}"
-            using FF \<open>a \<in> K\<close> \<open>b \<in> K\<close> nondis by (force simp: disjnt_iff)+
+          then show "{x \<in> topspace X. f x \<in> {b..a}} = V \<inter> W \<union> U \<inter> W"
+            by (auto simp: W_def)
+          show "disjnt (V \<inter> W) {x \<in> topspace X. f x = a}" "disjnt (U \<inter> W) {x \<in> topspace X. f x = b}"
+            using ** \<open>a \<in> K\<close> \<open>b \<in> K\<close> nondis by (force simp: disjnt_iff)+
         qed      
       qed
     qed
