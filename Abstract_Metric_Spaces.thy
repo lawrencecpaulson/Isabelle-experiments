@@ -7,6 +7,45 @@ begin
 
 thm compact_space_imp_nest (*NEEDS decseq*)
 
+thm mono_on_def
+context ord begin
+
+abbreviation antimono_on :: "'a set \<Rightarrow> ('a \<Rightarrow> 'b :: ord) \<Rightarrow> bool"
+  where "antimono_on A \<equiv> monotone_on A (\<le>) (\<ge>)"
+
+abbreviation strict_antimono_on :: "'a set \<Rightarrow> ('a \<Rightarrow> 'b :: ord) \<Rightarrow> bool"
+  where "strict_antimono_on A \<equiv> monotone_on A (<) (>)"
+
+end
+
+
+lemma mono_imp_strict_mono:
+  fixes f :: "'a::order \<Rightarrow> 'b::order"
+  shows "\<lbrakk>mono_on S f; inj_on f S\<rbrakk> \<Longrightarrow> strict_mono_on S f"
+  by (metis (full_types) inj_on_eq_iff mono_onD ord.strict_mono_onI order_less_le)
+
+lemma strict_mono_iff_mono:
+  fixes f :: "'a::linorder \<Rightarrow> 'b::order"
+  shows "strict_mono_on S f \<longleftrightarrow> mono_on S f \<and> inj_on f S"
+proof
+  show "strict_mono_on S f \<Longrightarrow> mono_on S f \<and> inj_on f S"
+    by (simp add: strict_mono_on_imp_inj_on strict_mono_on_imp_mono_on)
+qed (auto intro: mono_imp_strict_mono)
+
+lemma mono_imp_strict_antimono:
+  fixes f :: "'a::order \<Rightarrow> 'b::order"
+  shows "\<lbrakk>antimono_on S f; inj_on f S\<rbrakk> \<Longrightarrow> strict_antimono_on S f"
+  by (smt (verit, best) dual_order.strict_iff_order inj_onD monotone_on_def)
+
+lemma strict_antimono_iff_mono:
+  fixes f :: "'a::linorder \<Rightarrow> 'b::order"
+  shows "strict_antimono_on S f \<longleftrightarrow> antimono_on S f \<and> inj_on f S"
+proof
+  show "strict_antimono_on S f \<Longrightarrow> antimono_on S f \<and> inj_on f S"
+    by (smt (verit) dual_order.order_iff_strict linorder_inj_onI monotone_on_def nle_le order_less_le)
+qed (auto intro: mono_imp_strict_antimono)
+
+
 lemma inverse_Suc: "inverse (Suc n) > 0"
   by simp
 
@@ -122,6 +161,12 @@ lemma derived_set_of_trivial_limit:
 
 
 subsection \<open>Misc other\<close>
+
+lemma connected_space_iff_is_interval_1 [iff]:
+  fixes S :: "real set"
+  shows "connected_space (top_of_set S) \<longleftrightarrow> is_interval S"
+  using contractible_imp_connected_space contractible_space_subtopology_euclideanreal
+  by (simp add: connected_clopen connected_space_clopen_in is_interval_connected_1)
 
 lemma Sup_unique:
   fixes b :: "'a :: {conditionally_complete_lattice, no_bot}"
@@ -7592,18 +7637,14 @@ next
 qed
 
 lemma monotone_map_into_euclideanreal:
-   "connected_space X \<and> continuous_map X euclideanreal f
-        \<Longrightarrow> monotone_map X euclideanreal f \<longleftrightarrow>
-             (\<forall>k. is_interval k
-                  \<longrightarrow> connectedin X {x \<in> topspace X. f x \<in> k})"
+   "\<lbrakk>connected_space X; continuous_map X euclideanreal f\<rbrakk>
+    \<Longrightarrow> monotone_map X euclideanreal f \<longleftrightarrow>
+        (\<forall>k. is_interval k \<longrightarrow> connectedin X {x \<in> topspace X. f x \<in> k})"
   by (simp add: monotone_map_into_euclideanreal_alt)
 
-
 lemma monotone_map_euclideanreal_alt:
-  shows
    "(\<forall>I::real set. is_interval I \<longrightarrow> is_interval {x::real. x \<in> S \<and> f x \<in> I}) \<longleftrightarrow>
-    is_interval S \<and>
-    ((\<forall>x \<in> S. \<forall>y \<in> S. x \<le> y \<longrightarrow> f x \<le> f y) \<or> (\<forall>x \<in> S. \<forall>y \<in> S. x \<le> y \<longrightarrow> f y \<le> f x))" (is "?lhs=?rhs")
+    is_interval S \<and> (mono_on S f \<or> antimono_on S f)" (is "?lhs=?rhs")
 proof
   assume L [rule_format]: ?lhs 
   show ?rhs
@@ -7623,43 +7664,30 @@ proof
         using L [of "{y.  y > f b}"] unfolding is_interval_1
         by (smt (verit, best) mem_Collect_eq that)
     qed
-    then show "(\<forall>x\<in>S. \<forall>y\<in>S. x \<le> y \<longrightarrow> f x \<le> f y) \<or> (\<forall>x\<in>S. \<forall>y\<in>S. x \<le> y \<longrightarrow> f y \<le> f x)"
-      by (smt (verit))
+    then show "mono_on S f \<or> monotone_on S (\<le>) (\<ge>) f"
+      unfolding monotone_on_def by (smt (verit))
   qed
 next
   assume ?rhs then show ?lhs
-    unfolding is_interval_1
-    by simp meson
+    unfolding is_interval_1 monotone_on_def by simp meson
 qed
 
+
+
 lemma monotone_map_euclideanreal:
-   "is_interval S \<and>
-         continuous_map(subtopology euclideanreal S,euclideanreal) f
-         \<Longrightarrow> (monotone_map(subtopology euclideanreal S,euclideanreal) f \<longleftrightarrow>
-              (\<forall>x y. x \<in> S \<and> y \<in> S \<and> x \<le> y \<Longrightarrow> f x \<le> f y) \<or>
-              (\<forall>x y. x \<in> S \<and> y \<in> S \<and> x \<le> y \<Longrightarrow> f y \<le> f x))"
-oops
-  REPEAT STRIP_TAC THEN
-  ASM_SIMP_TAC[MONOTONE_MAP_INTO_EUCLIDEANREAL; CONNECTED_SPACE_SUBTOPOLOGY;
-               CONNECTED_IN_EUCLIDEANREAL; CONNECTED_IN_SUBTOPOLOGY] THEN
-  REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY; SUBSET_RESTRICT] THEN
-  ASM_REWRITE_TAC[MONOTONE_MAP_EUCLIDEANREAL_ALT]);;
+  fixes S :: "real set"
+  shows
+   "\<lbrakk>is_interval S; continuous_on S f\<rbrakk> \<Longrightarrow> 
+    monotone_map (top_of_set S) euclideanreal f \<longleftrightarrow> (mono_on S f \<or> monotone_on S (\<le>) (\<ge>) f)"
+  using monotone_map_euclideanreal_alt 
+  by (simp add: monotone_map_into_euclideanreal connectedin_subtopology is_interval_connected_1)
 
 lemma injective_eq_monotone_map:
-   "is_interval S \<and>
-         continuous_map(subtopology euclideanreal S,euclideanreal) f
-         \<Longrightarrow> ((\<forall>x y. x \<in> S \<and> y \<in> S \<and> f x = f y \<Longrightarrow> x = y) \<longleftrightarrow>
-              (\<forall>x y. x \<in> S \<and> y \<in> S \<and> x < y \<Longrightarrow> f x < f y) \<or>
-              (\<forall>x y. x \<in> S \<and> y \<in> S \<and> x < y \<Longrightarrow> f y < f x))"
-oops
-  REPEAT STRIP_TAC THEN
-  REWRITE_TAC[STRICTLY_INCREASING_ALT; STRICTLY_DECREASING_ALT] THEN
-  REWRITE_TAC[TAUT `(p \<longleftrightarrow> q \<and> p \<or> r \<and> p) \<longleftrightarrow> (p \<Longrightarrow> q \<or> r)`] THEN
-  REWRITE_TAC[INJECTIVE_ON_ALT] THEN DISCH_TAC THEN
-  ASM_SIMP_TAC[GSYM MONOTONE_MAP_EUCLIDEANREAL] THEN
-  MATCH_MP_TAC INJECTIVE_IMP_MONOTONE_MAP THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; TOPSPACE_EUCLIDEANREAL; INTER_UNIV] THEN
-  ASM SET_TAC[]);;
+  fixes f :: "real \<Rightarrow> real"
+  assumes "is_interval S" "continuous_on S f"
+  shows "inj_on f S \<longleftrightarrow> strict_mono_on S f \<or> strict_antimono_on S f"
+  by (metis assms injective_imp_monotone_map monotone_map_euclideanreal strict_antimono_iff_mono 
+        strict_mono_iff_mono top_greatest topspace_euclidean topspace_euclidean_subtopology)
 
 lemma injective_eq_real_open_map_euclideanreal:
    "is_interval S \<and>
