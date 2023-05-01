@@ -905,26 +905,26 @@ lemma gdelta_in_descending:
    "gdelta_in X S \<longleftrightarrow> (\<exists>c. (\<forall>n. openin X (c n)) \<and> (\<forall>n. c(Suc n) \<subseteq> c n) \<and> \<Inter>(range c) = S)" (is "?lhs=?rhs")
 proof
   assume ?lhs
-  then obtain c where c: "S \<subseteq> topspace X" "\<And>n. closedin X (c n)" 
-                         "\<And>n. c n \<subseteq> c(Suc n)" "\<Union>(range c) = topspace X - S"
+  then obtain C where C: "S \<subseteq> topspace X" "\<And>n. closedin X (C n)" 
+                         "\<And>n. C n \<subseteq> C(Suc n)" "\<Union>(range C) = topspace X - S"
     by (meson fsigma_in_ascending gdelta_in_fsigma_in)
-  define d where "d \<equiv> \<lambda>n. topspace X - c n"
-  have "\<And>n. openin X (d n) \<and> d (Suc n) \<subseteq> d n"
-    by (simp add: Diff_mono c d_def openin_diff)
-  moreover have "\<Inter>(range d) = S"
-    by (simp add: Diff_Diff_Int Int_absorb1 c d_def)
+  define D where "D \<equiv> \<lambda>n. topspace X - C n"
+  have "\<And>n. openin X (D n) \<and> D (Suc n) \<subseteq> D n"
+    by (simp add: Diff_mono C D_def openin_diff)
+  moreover have "\<Inter>(range D) = S"
+    by (simp add: Diff_Diff_Int Int_absorb1 C D_def)
   ultimately show ?rhs
     by metis
 next
   assume ?rhs
-  then obtain c where "S \<subseteq> topspace X" 
-                and c: "\<And>n. openin X (c n)" "\<And>n. c(Suc n) \<subseteq> c n" "\<Inter>(range c) = S"
+  then obtain C where "S \<subseteq> topspace X" 
+                and C: "\<And>n. openin X (C n)" "\<And>n. C(Suc n) \<subseteq> C n" "\<Inter>(range C) = S"
     using openin_subset by fastforce
-  define d where "d \<equiv> \<lambda>n. topspace X - c n"
-  have "\<And>n. closedin X (d n) \<and> d n \<subseteq> d(Suc n)"
-    by (simp add: Diff_mono c closedin_diff d_def)
-  moreover have "\<Union>(range d) = topspace X - S"
-    using c d_def by blast
+  define D where "D \<equiv> \<lambda>n. topspace X - C n"
+  have "\<And>n. closedin X (D n) \<and> D n \<subseteq> D(Suc n)"
+    by (simp add: Diff_mono C closedin_diff D_def)
+  moreover have "\<Union>(range D) = topspace X - S"
+    using C D_def by blast
   ultimately show ?lhs
     by (metis \<open>S \<subseteq> topspace X\<close> fsigma_in_ascending gdelta_in_fsigma_in)
 qed
@@ -1207,7 +1207,7 @@ lemma abs_mdist [simp] : "\<bar>d x y\<bar> = d x y"
 lemma mdist_pos_less: "\<lbrakk>x \<noteq> y; x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> 0 < d x y"
   by (metis less_eq_real_def nonneg zero)
 
-lemma mdist_refl [simp]: "x \<in> M \<Longrightarrow> d x x = 0"
+lemma mdist_zero [simp]: "x \<in> M \<Longrightarrow> d x x = 0"
   by simp
 
 lemma mdist_pos_eq [simp]: "\<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> 0 < d x y \<longleftrightarrow> x \<noteq> y"
@@ -1231,7 +1231,7 @@ lemma in_mball [simp]: "y \<in> mball x r \<longleftrightarrow> x \<in> M \<and>
   by (simp add: local.Metric_space_axioms Metric_space.mball_def)
 
 lemma centre_in_mball_iff [iff]: "x \<in> mball x r \<longleftrightarrow> x \<in> M \<and> 0 < r"
-  using in_mball mdist_refl by force
+  using in_mball mdist_zero by force
 
 lemma mball_subset_mspace: "mball x r \<subseteq> M"
   by auto
@@ -1252,7 +1252,7 @@ lemma in_mcball [simp]: "y \<in> mcball x r \<longleftrightarrow> x \<in> M \<an
   by (simp add: local.Metric_space_axioms Metric_space.mcball_def)
 
 lemma centre_in_mcball_iff [iff]: "x \<in> mcball x r \<longleftrightarrow> x \<in> M \<and> 0 \<le> r"
-  using mdist_refl by force
+  using mdist_zero by force
 
 lemma mcball_eq_empty: "mcball x r = {} \<longleftrightarrow> (x \<notin> M) \<or> r < 0"
   by (smt (verit, best) Collect_empty_eq centre_in_mcball_iff empty_iff mcball_def nonneg)
@@ -1563,7 +1563,7 @@ proof -
     by (metis all_not_in_conv assms mbounded mdist_reverse_triangle that) 
   moreover have "d x y \<le> r"
     if "\<And>z. z \<in> S \<Longrightarrow> \<bar>d x z - d z y\<bar> \<le> r" for r :: real
-    using that assms mbounded_subset_mspace mdist_refl by fastforce
+    using that assms mbounded_subset_mspace mdist_zero by fastforce
   ultimately show ?thesis
     by (intro cSup_eq [symmetric]) auto
 qed
@@ -1864,7 +1864,7 @@ proof -
   next
     case False
     have "\<exists>y\<in>S. d x y < inverse (1 + real n)" if "x \<in> S" for x n
-      using \<open>S \<subseteq> M\<close> M.mdist_refl [of x] that by force
+      using \<open>S \<subseteq> M\<close> M.mdist_zero [of x] that by force
     moreover
     have "x \<in> S" if "x \<in> M" and \<section>: "\<And>n. \<exists>y\<in>S. d x y < inverse(Suc n)" for x
     proof -
@@ -5177,7 +5177,7 @@ lemma eventually_atin_within_metric:
 proof
   assume ?lhs then show ?rhs
 unfolding eventually_atin_within openin_mtopology subset_iff
-  by (metis commute in_mball mdist_refl order_less_irrefl topspace_mtopology)
+  by (metis commute in_mball mdist_zero order_less_irrefl topspace_mtopology)
 next
   assume R: ?rhs 
   show ?lhs
@@ -5543,7 +5543,7 @@ lemma mcomplete_empty_mspace: "M = {} \<Longrightarrow> mcomplete"
   using MCauchy_def mcomplete_def by blast
 
 lemma MCauchy_const [simp]: "MCauchy (\<lambda>n. a) \<longleftrightarrow> a \<in> M"
-  using MCauchy_def mdist_refl by auto
+  using MCauchy_def mdist_zero by auto
 
 lemma convergent_imp_MCauchy:
   assumes "range \<sigma> \<subseteq> M" and lim: "limitin mtopology \<sigma> l sequentially"
@@ -6487,7 +6487,7 @@ proof (intro strip)
   then obtain N where "\<And>n. N \<le> n \<Longrightarrow> d (\<sigma> N) (\<sigma> n) < \<epsilon>"
     using assms by (force simp: MCauchy_def)
   then have "\<And>m. \<exists>n\<le>N. \<sigma> n \<in> M \<and> \<sigma> m \<in> M \<and> d (\<sigma> n) (\<sigma> m) < \<epsilon>"
-    by (metis MCauchy_def assms mdist_refl nle_le range_subsetD)
+    by (metis MCauchy_def assms mdist_zero nle_le range_subsetD)
   then
   show "\<exists>K. finite K \<and> K \<subseteq> range \<sigma> \<and> range \<sigma> \<subseteq> (\<Union>x\<in>K. mball x \<epsilon>)"
     by (rule_tac x="\<sigma> ` {0..N}" in exI) force
@@ -7280,7 +7280,7 @@ proof -
         have "d (f n x) (f n' x) < \<epsilon>/2"
           using N [of n n' x] \<open>max N P \<le> n\<close> n'_def x by fastforce
         ultimately have "d (f n x) (g x) < \<epsilon>/2 + \<epsilon>/2"
-          by (smt (verit, ccfv_SIG) P \<open>g x \<in> M\<close> \<open>max N P \<le> n\<close> le_refl max.bounded_iff mdist_refl triangle' x)
+          by (smt (verit, ccfv_SIG) P \<open>g x \<in> M\<close> \<open>max N P \<le> n\<close> le_refl max.bounded_iff mdist_zero triangle' x)
         then show "d (f n x) (g x) < \<epsilon>" by simp
       qed
     qed
@@ -7872,61 +7872,50 @@ lemma compact_Hausdorff_or_regular_imp_normal_space:
   by (metis Hausdorff_space_compact_sets closedin_compact_space normal_space_def regular_space_compact_closed_sets)
 
 
-lemma normal_space_mtopology:
+lemma (in Metric_space) normal_space_mtopology:
    "normal_space mtopology"
-oops
-  GEN_TAC THEN REWRITE_TAC[normal_space] THEN
-  MAP_EVERY X_GEN_TAC [`s::A=>bool`; `t::A=>bool`] THEN STRIP_TAC THEN
-  MP_TAC(ISPEC `m::A metric` OPEN_IN_MTOPOLOGY) THEN DISCH_THEN(fun th ->
-   MP_TAC(SPEC `topspace mtopology - t::A=>bool` th) THEN
-   MP_TAC(SPEC `topspace mtopology - s::A=>bool` th)) THEN
-  ASM_SIMP_TAC[OPEN_IN_DIFF; CLOSED_IN_DIFF; OPEN_IN_TOPSPACE;
-               CLOSED_IN_TOPSPACE; IMP_IMP] THEN
-  GEN_REWRITE_TAC (LAND_CONV \<circ> ONCE_DEPTH_CONV) [RIGHT_IMP_EXISTS_THM] THEN
-  REWRITE_TAC[IMP_IMP; SKOLEM_THM] THEN
-  REWRITE_TAC[TOPSPACE_MTOPOLOGY; SUBSET_DIFF] THEN
-  SIMP_TAC[\<subseteq>; mball; IN_DIFF; IN_ELIM_THM] THEN
-  DISCH_THEN(CONJUNCTS_THEN2
-   (X_CHOOSE_THEN `d::A=>real` (LABEL_TAC "d"))
-   (X_CHOOSE_THEN `e::A=>real` (LABEL_TAC "e"))) THEN
-  MAP_EVERY EXISTS_TAC
-   [`\<Union> {mball m (x::A,e x / 2) | x \<in> s}`;
-    `\<Union> {mball m (x::A,d x / 2) | x \<in> t}`] THEN
-  REWRITE_TAC[SET_RULE
-   `disjnt (\<Union> s) (\<Union> t) \<longleftrightarrow>
-    \<forall>u. u \<in> s \<Longrightarrow> \<forall>v. v \<in> t \<Longrightarrow> disjnt u v`] THEN
-  SIMP_TAC[OPEN_IN_UNIONS; FORALL_IN_GSPEC; OPEN_IN_MBALL] THEN
-  REWRITE_TAC[IN_UNIONS; EXISTS_IN_GSPEC] THEN
-  REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET)) THEN
-  REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN REPEAT DISCH_TAC THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[SET_RULE
-   `disjnt s t \<longleftrightarrow> \<forall>x. (x \<notin> s \<and> x \<in> t)`]) THEN
-  REPEAT(CONJ_TAC THENL
-   [ASM_MESON_TAC[REAL_HALF; CENTRE_IN_MBALL; \<subseteq>]; ALL_TAC]) THEN
-  X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-  X_GEN_TAC `y::A` THEN DISCH_TAC THEN
-  SUBGOAL_THEN `(x::A) \<in> M \<and> (y::A) \<in> M` STRIP_ASSUME_TAC THENL
-   [ASM SET_TAC[]; ALL_TAC] THEN
-  REMOVE_THEN "e" (MP_TAC \<circ> SPEC `x::A`) THEN
-  ANTS_TAC THENL [ASM SET_TAC[]; DISCH_THEN(MP_TAC \<circ> CONJUNCT2)] THEN
-  REMOVE_THEN "d" (MP_TAC \<circ> SPEC `y::A`) THEN
-  ANTS_TAC THENL [ASM SET_TAC[]; DISCH_THEN(MP_TAC \<circ> CONJUNCT2)] THEN
-  REWRITE_TAC[IMP_IMP] THEN DISCH_THEN(CONJUNCTS_THEN2
-   (MP_TAC \<circ> SPEC `x::A`) (MP_TAC \<circ> SPEC `y::A`)) THEN
-  ASM_SIMP_TAC[REAL_NOT_LT; disjnt; EXTENSION; NOT_IN_EMPTY; IN_INTER] THEN
-  MAP_EVERY UNDISCH_TAC [`(x::A) \<in> M`; `(y::A) \<in> M`] THEN
-  REWRITE_TAC[mball; IN_ELIM_THM] THEN CONV_TAC METRIC_ARITH);;
+  unfolding normal_space_def
+proof clarify
+  fix S T
+  assume "closedin mtopology S"
+  then have "\<And>x. x \<in> M - S \<Longrightarrow> (\<exists>r>0. mball x r \<subseteq> M - S)"
+    by (simp add: closedin_def openin_mtopology)
+  then obtain \<delta> where d0: "\<And>x. x \<in> M - S \<Longrightarrow> \<delta> x > 0 \<and> mball x (\<delta> x) \<subseteq> M - S"
+    by metis
+  assume "closedin mtopology T"
+  then have "\<And>x. x \<in> M - T \<Longrightarrow> (\<exists>r>0. mball x r \<subseteq> M - T)"
+    by (simp add: closedin_def openin_mtopology)
+  then obtain \<epsilon> where e: "\<And>x. x \<in> M - T \<Longrightarrow> \<epsilon> x > 0 \<and> mball x (\<epsilon> x) \<subseteq> M - T"
+    by metis
+  assume "disjnt S T"
+  have "S \<subseteq> M" "T \<subseteq> M"
+    using \<open>closedin mtopology S\<close> \<open>closedin mtopology T\<close> closedin_metric by blast+
+  have \<delta>: "\<And>x. x \<in> T \<Longrightarrow> \<delta> x > 0 \<and> mball x (\<delta> x) \<subseteq> M - S"
+    by (meson DiffI \<open>T \<subseteq> M\<close> \<open>disjnt S T\<close> d0 disjnt_iff subsetD)
+  have \<epsilon>: "\<And>x. x \<in> S \<Longrightarrow> \<epsilon> x > 0 \<and> mball x (\<epsilon> x) \<subseteq> M - T"
+    by (meson Diff_iff \<open>S \<subseteq> M\<close> \<open>disjnt S T\<close> disjnt_iff e subsetD)
+  show "\<exists>U V. openin mtopology U \<and> openin mtopology V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
+    apply (rule_tac x="\<Union>x\<in>S. mball x (\<epsilon> x / 2)" in exI)
+    apply (rule_tac x="\<Union>x\<in>T. mball x (\<delta> x / 2)" in exI)
+    apply (intro conjI)
+        apply (force simp add: )
+       apply (force simp add: )
+    using \<epsilon> \<open>S \<subseteq> M\<close> apply force
+    using \<delta> \<open>T \<subseteq> M\<close> apply force
+    apply (auto simp: )
+    using \<epsilon> \<delta>
+    apply (simp add: disjnt_iff subset_iff del: divide_const_simps)
+    apply clarify
+    by (smt (verit, ccfv_SIG) field_sum_of_halves triangle')
+qed
 
 lemma metrizable_imp_normal_space:
    "metrizable_space X \<Longrightarrow> normal_space X"
-oops
-  REWRITE_TAC[FORALL_METRIZABLE_SPACE; NORMAL_SPACE_MTOPOLOGY]);;
+  by (metis Metric_space.normal_space_mtopology metrizable_space_def)
 
 lemma normal_space_discrete_topology:
-   "\<And>u::A=>bool. normal_space(discrete_topology u)"
-oops
-  SIMP_TAC[METRIZABLE_SPACE_DISCRETE_TOPOLOGY;
-           METRIZABLE_IMP_NORMAL_SPACE]);;
+   "normal_space(discrete_topology U)"
+  by (metis discrete_topology_closure_of inf_le2 normal_space_alt)
 
 lemma normal_space_fsigmas:
    "        normal_space X \<longleftrightarrow>
