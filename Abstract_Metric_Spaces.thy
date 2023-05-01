@@ -5,7 +5,7 @@ theory Abstract_Metric_Spaces
     "HOL-Analysis.Analysis" "HOL-ex.Sketch_and_Explore"
 begin
 
-thm compact_space_imp_nest (*NEEDS decseq*)
+thm compact_space_imp_nest (*NEEDS decseq in formulation*)
 
 thm mono_on_def
 context ord begin
@@ -81,6 +81,18 @@ lemma tendsto_Sup:
   using assms
   by (induction K rule: finite_induct) (auto simp: cSup_insert_If tendsto_sup)
 
+
+lemma all_openin: "(\<forall>U. openin X U \<longrightarrow> P U) \<longleftrightarrow> (\<forall>U. closedin X U \<longrightarrow> P (topspace X - U))"
+  by (metis Diff_Diff_Int closedin_def inf.absorb_iff2 openin_closedin_eq)
+
+lemma all_closedin: "(\<forall>U. closedin X U \<longrightarrow> P U) \<longleftrightarrow> (\<forall>U. openin X U \<longrightarrow> P (topspace X - U))"
+  by (metis Diff_Diff_Int closedin_subset inf.absorb_iff2 openin_closedin_eq)
+
+lemma ex_openin: "(\<exists>U. openin X U \<and> P U) \<longleftrightarrow> (\<exists>U. closedin X U \<and> P (topspace X - U))"
+  by (metis Diff_Diff_Int closedin_def inf.absorb_iff2 openin_closedin_eq)
+
+lemma ex_closedin: "(\<exists>U. closedin X U \<and> P U) \<longleftrightarrow> (\<exists>U. openin X U \<and> P (topspace X - U))"
+  by (metis Diff_Diff_Int closedin_subset inf.absorb_iff2 openin_closedin_eq)
 
 lemma continuous_map_Inf:
   fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c::ordered_euclidean_space"
@@ -7517,7 +7529,6 @@ qed
 
 subsection\<open>Special characterizations of classes of functions into and out of R\<close>
 
-
 lemma monotone_map_into_euclideanreal_alt:
   assumes "continuous_map X euclideanreal f" 
   shows "(\<forall>k. is_interval k \<longrightarrow> connectedin X {x \<in> topspace X. f x \<in> k}) \<longleftrightarrow>
@@ -7673,7 +7684,6 @@ next
 qed
 
 
-
 lemma monotone_map_euclideanreal:
   fixes S :: "real set"
   shows
@@ -7691,7 +7701,6 @@ lemma injective_eq_monotone_map:
 
 
 subsection\<open>Normal spaces including Urysohn's lemma and the Tietze extension theorem\<close>
-
 
 definition normal_space 
   where "normal_space X \<equiv>
@@ -7792,96 +7801,79 @@ proof
 qed
 
 lemma normal_space_disjoint_closures:
-   "        normal_space X \<longleftrightarrow>
-        \<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
-              \<Longrightarrow> \<exists>U V. openin X U \<and> openin X V \<and>
-                        S \<subseteq> U \<and> T \<subseteq> V \<and>
-                        disjnt (X closure_of U) (X closure_of V)"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[normal_space] THEN EQ_TAC THENL
-   [DISCH_TAC;
-    REPEAT(MATCH_MP_TAC MONO_FORALL THEN GEN_TAC) THEN
-    MATCH_MP_TAC MONO_IMP THEN REWRITE_TAC[] THEN
-    REPEAT(MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC) THEN
-    REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-    ASM_REWRITE_TAC[] THEN MATCH_MP_TAC(SET_RULE
-     `S \<subseteq> s' \<and> T \<subseteq> t' \<Longrightarrow> disjnt s' t' \<Longrightarrow> disjnt S T`) THEN
-    ASM_SIMP_TAC[CLOSURE_OF_SUBSET; OPEN_IN_SUBSET]] THEN
-  MAP_EVERY X_GEN_TAC [`S::A=>bool`; `T::A=>bool`] THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> SPECL [`S::A=>bool`; `T::A=>bool`]) THEN
-  ANTS_TAC THENL [ASM_REWRITE_TAC[]; REWRITE_TAC[LEFT_IMP_EXISTS_THM]] THEN
-  MAP_EVERY X_GEN_TAC [`U::A=>bool`; `V::A=>bool`] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL
-   [`S::A=>bool`; `topspace X - U::A=>bool`]) THEN
-  ASM_SIMP_TAC[CLOSED_IN_DIFF; CLOSED_IN_TOPSPACE] THEN
-  ANTS_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `u':A=>bool` THEN
-  DISCH_THEN(X_CHOOSE_THEN `v':A=>bool` STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC `V::A=>bool` THEN ASM_REWRITE_TAC[] THEN
-  MATCH_MP_TAC(SET_RULE
-   `!t'. t' \<inter> S = {} \<and> T \<subseteq> t' \<Longrightarrow> disjnt S T`) THEN
-  EXISTS_TAC `v':A=>bool` THEN
-  ASM_SIMP_TAC[OPEN_IN_INTER_CLOSURE_OF_EQ_EMPTY] THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  TRANS_TAC SUBSET_TRANS `topspace X - U::A=>bool` THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC CLOSURE_OF_MINIMAL THEN
-  ASM_SIMP_TAC[CLOSED_IN_DIFF; CLOSED_IN_TOPSPACE] THEN
-  REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET)) THEN
-  ASM SET_TAC[]);;
+   "normal_space X \<longleftrightarrow>
+    (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
+          \<longrightarrow> (\<exists>U V. openin X U \<and> openin X V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and>
+                    disjnt (X closure_of U) (X closure_of V)))"
+   (is "?lhs=?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs"
+    by (metis closedin_closure_of normal_space)
+  show "?rhs \<Longrightarrow> ?lhs"
+    by (smt (verit) closure_of_subset disjnt_iff normal_space openin_subset subset_eq)
+qed
 
 lemma normal_space_dual:
-   "        normal_space X \<longleftrightarrow>
-        \<forall>U V. openin X U \<and> openin X V \<and> U \<union> V = topspace X
-              \<Longrightarrow> \<exists>S T. closedin X S \<and> closedin X T \<and>
-                        S \<subseteq> U \<and> T \<subseteq> V \<and> S \<union> T = topspace X"
-oops
-  GEN_TAC THEN REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
-  REWRITE_TAC[RIGHT_EXISTS_AND_THM] THEN
-  REWRITE_TAC[FORALL_OPEN_IN; EXISTS_CLOSED_IN] THEN
-  REWRITE_TAC[RIGHT_AND_EXISTS_THM; GSYM CONJ_ASSOC] THEN
-  ONCE_REWRITE_TAC[TAUT `p \<and> q \<and> r \<longleftrightarrow> \<not> (p \<and> q \<Longrightarrow> \<not> r)`] THEN
-  SIMP_TAC[OPEN_IN_SUBSET; CLOSED_IN_SUBSET; SET_RULE
-   `U \<subseteq> T \<and> V \<subseteq> T
-    \<Longrightarrow> (T - U \<subseteq> T - V \<longleftrightarrow> V \<subseteq> U) \<and>
-        (T - U \<union> T - V = T \<longleftrightarrow> disjnt U V)`] THEN
-  REWRITE_TAC[normal_space] THEN MESON_TAC[]);;
+   "normal_space X \<longleftrightarrow>
+    (\<forall>U V. openin X U \<longrightarrow> openin X V \<and> U \<union> V = topspace X
+          \<longrightarrow> (\<exists>S T. closedin X S \<and> closedin X T \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> S \<union> T = topspace X))"
+   (is "_ = ?rhs")
+proof -
+  have "normal_space X \<longleftrightarrow>
+        (\<forall>U V. closedin X U \<longrightarrow> closedin X V \<longrightarrow> disjnt U V \<longrightarrow>
+              (\<exists>S T. \<not> (openin X S \<and> openin X T \<longrightarrow>
+                         \<not> (U \<subseteq> S \<and> V \<subseteq> T \<and> disjnt S T))))"
+    unfolding normal_space_def by meson
+  also have "... \<longleftrightarrow> (\<forall>U V. openin X U \<longrightarrow> openin X V \<and> disjnt (topspace X - U) (topspace X - V) \<longrightarrow>
+              (\<exists>S T. \<not> (openin X S \<and> openin X T \<longrightarrow>
+                         \<not> (topspace X - U \<subseteq> S \<and> topspace X - V \<subseteq> T \<and> disjnt S T))))"
+    by (auto simp: all_closedin)
+  also have "... \<longleftrightarrow> ?rhs"
+  proof -
+    have *: "disjnt (topspace X - U) (topspace X - V) \<longleftrightarrow> U \<union> V = topspace X"
+      if "U \<subseteq> topspace X" "V \<subseteq> topspace X" for U V
+      using that by (auto simp: disjnt_iff)
+    show ?thesis
+      using ex_closedin *
+      apply (simp add: ex_closedin * [OF openin_subset openin_subset] cong: conj_cong)
+      apply (intro all_cong1 ex_cong1 imp_cong refl)
+      by (smt (verit, best) "*" Diff_Diff_Int Diff_subset Diff_subset_conv inf.orderE inf_commute openin_subset sup_commute)
+  qed
+  finally show ?thesis .
+qed
+
 
 lemma normal_t1_imp_Hausdorff_space:
-   "        normal_space X \<and> t1_space X \<Longrightarrow> Hausdorff_space X"
-oops
-  REWRITE_TAC[T1_SPACE_CLOSED_IN_SING; normal_space; Hausdorff_space] THEN
-  GEN_TAC THEN STRIP_TAC THEN MAP_EVERY X_GEN_TAC [`x::A`; `y::A`] THEN
-  STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`{x::A}`; `{y::A}`]) THEN
-  ASM_SIMP_TAC[SING_SUBSET; SET_RULE `disjnt {x} {y} \<longleftrightarrow> (x \<noteq> y)`]);;
+  assumes "normal_space X" "t1_space X"
+  shows "Hausdorff_space X"
+  unfolding Hausdorff_space_def
+proof clarify
+  fix x y
+  assume xy: "x \<in> topspace X" "y \<in> topspace X" "x \<noteq> y"
+  then have "disjnt {x} {y}"
+    by (auto simp: disjnt_iff)
+  then show "\<exists>U V. openin X U \<and> openin X V \<and> x \<in> U \<and> y \<in> V \<and> disjnt U V"
+    using assms xy closedin_t1_singleton normal_space_def
+    by (metis singletonI subsetD)
+qed
+
 
 lemma normal_t1_eq_Hausdorff_space:
-   "        normal_space X \<Longrightarrow> (t1_space X \<longleftrightarrow> Hausdorff_space X)"
-oops
-  MESON_TAC[NORMAL_T1_IMP_HAUSDORFF_SPACE; HAUSDORFF_IMP_T1_SPACE]);;
+   "normal_space X \<Longrightarrow> t1_space X \<longleftrightarrow> Hausdorff_space X"
+  using normal_t1_imp_Hausdorff_space t1_or_Hausdorff_space by blast
 
 lemma normal_t1_imp_regular_space:
-   "        normal_space X \<and> t1_space X \<Longrightarrow> regular_space X"
-oops
-  REWRITE_TAC[T1_SPACE_CLOSED_IN_SING; normal_space; regular_space] THEN
-  GEN_TAC THEN STRIP_TAC THEN MAP_EVERY X_GEN_TAC [`s::A=>bool`; `x::A`] THEN
-  STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`{x::A}`; `s::A=>bool`]) THEN
-  ASM_SIMP_TAC[SING_SUBSET] THEN DISCH_THEN MATCH_MP_TAC THEN
-  ASM SET_TAC[]);;
+   "\<lbrakk>normal_space X; t1_space X\<rbrakk> \<Longrightarrow> regular_space X"
+  by (metis compactin_imp_closedin normal_space_def normal_t1_eq_Hausdorff_space regular_space_compact_closed_sets)
 
 lemma compact_Hausdorff_or_regular_imp_normal_space:
-   "        compact_space X \<and> (Hausdorff_space X \<or> regular_space X)
+   "\<lbrakk>compact_space X; Hausdorff_space X \<or> regular_space X\<rbrakk>
         \<Longrightarrow> normal_space X"
-oops
-  REWRITE_TAC[HAUSDORFF_SPACE_COMPACT_SETS;
-              REGULAR_SPACE_COMPACT_CLOSED_SETS] THEN
-  REPEAT STRIP_TAC THEN REWRITE_TAC[normal_space] THEN
-  REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-  ASM_MESON_TAC[CLOSED_IN_COMPACT_SPACE]);;
+  by (metis Hausdorff_space_compact_sets closedin_compact_space normal_space_def regular_space_compact_closed_sets)
+
 
 lemma normal_space_mtopology:
-   "normal_spacemtopology"
+   "normal_space mtopology"
 oops
   GEN_TAC THEN REWRITE_TAC[normal_space] THEN
   MAP_EVERY X_GEN_TAC [`s::A=>bool`; `t::A=>bool`] THEN STRIP_TAC THEN
