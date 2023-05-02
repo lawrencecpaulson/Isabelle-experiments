@@ -7983,36 +7983,40 @@ next
 qed
 
 lemma normal_space_fsigma_subtopology:
-   "normal_space X \<and> fsigma_in X s
-        \<Longrightarrow> normal_space(subtopology X s)"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[NORMAL_SPACE_FSIGMAS] THEN STRIP_TAC THEN
-  ASM_SIMP_TAC[FSIGMA_IN_FSIGMA_SUBTOPOLOGY; SEPARATED_IN_SUBTOPOLOGY] THEN
-  MAP_EVERY X_GEN_TAC [`t::A=>bool`; `u::A=>bool`] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`t::A=>bool`; `u::A=>bool`]) THEN
-  ASM_REWRITE_TAC[OPEN_IN_SUBTOPOLOGY_ALT; RIGHT_EXISTS_AND_THM] THEN
-  REWRITE_TAC[EXISTS_IN_GSPEC] THEN REWRITE_TAC[RIGHT_AND_EXISTS_THM] THEN
-  REPEAT(MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC) THEN STRIP_TAC THEN
-  ASM_REWRITE_TAC[SUBSET_INTER] THEN ASM SET_TAC[]);;
+  assumes "normal_space X" "fsigma_in X S"
+  shows "normal_space (subtopology X S)"
+  unfolding normal_space_fsigmas
+proof clarify
+  fix T U
+  assume "fsigma_in (subtopology X S) T"
+      and "fsigma_in (subtopology X S) U"
+      and TU: "separatedin (subtopology X S) T U"
+  then obtain A B where "openin X A \<and> openin X B \<and> T \<subseteq> A \<and> U \<subseteq> B \<and> disjnt A B"
+    by (metis assms fsigma_in_fsigma_subtopology normal_space_fsigmas separatedin_subtopology)
+  then
+  show "\<exists>A B. openin (subtopology X S) A \<and> openin (subtopology X S) B \<and> T \<subseteq> A \<and>
+   U \<subseteq> B \<and> disjnt A B"
+    using TU
+    by (force simp add: separatedin_subtopology openin_subtopology_alt disjnt_iff)
+qed
 
 lemma normal_space_closed_subtopology:
-   "normal_space X \<and> closedin X s
-        \<Longrightarrow> normal_space (subtopology X s)"
-oops
-  MESON_TAC[NORMAL_SPACE_FSIGMA_SUBTOPOLOGY; CLOSED_IMP_FSIGMA_IN]);;
+  assumes "normal_space X" "closedin X S"
+  shows "normal_space (subtopology X S)"
+  by (simp add: assms closed_imp_fsigma_in normal_space_fsigma_subtopology)
 
 lemma normal_space_continuous_closed_map_image:
-   "\<And>X X' f::A=>B.
-        continuous_map X X' f \<and> closed_map X X' f \<and>
-        f ` (topspace X) = topspace X' \<and>
+   "\<And>X Y f::A=>B.
+        continuous_map X Y f \<and> closed_map X Y f \<and>
+        f ` (topspace X) = topspace Y \<and>
         normal_space X
-        \<Longrightarrow> normal_space X'"
+        \<Longrightarrow> normal_space Y"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[normal_space; closed_map] THEN STRIP_TAC THEN
-  MAP_EVERY X_GEN_TAC [`s::B=>bool`; `t::B=>bool`] THEN STRIP_TAC THEN
+  MAP_EVERY X_GEN_TAC [`S::B=>bool`; `T::B=>bool`] THEN STRIP_TAC THEN
   FIRST_X_ASSUM(MP_TAC \<circ> SPECL
-   [`{x \<in> topspace X. f x \<in> s}`;
-    `{x \<in> topspace X. f x \<in> t}`]) THEN
+   [`{x \<in> topspace X. f x \<in> S}`;
+    `{x \<in> topspace X. f x \<in> T}`]) THEN
   ASM_REWRITE_TAC[CONJ_ASSOC] THEN ANTS_TAC THENL
    [CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN CONJ_TAC THEN
     MATCH_MP_TAC CLOSED_IN_CONTINUOUS_MAP_PREIMAGE THEN ASM_MESON_TAC[];
@@ -8026,17 +8030,17 @@ oops
     ASM SET_TAC[]]);;
 
 lemma hereditarily_normal_space_continuous_closed_map_image:
-   "\<And>X X' f::A=>B.
-        continuous_map X X' f \<and>
-        closed_map X X' f \<and>
-        f ` (topspace X) = topspace X' \<and>
+   "\<And>X Y f::A=>B.
+        continuous_map X Y f \<and>
+        closed_map X Y f \<and>
+        f ` (topspace X) = topspace Y \<and>
         hereditarily normal_space X
-        \<Longrightarrow> hereditarily normal_space X'"
+        \<Longrightarrow> hereditarily normal_space Y"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[hereditarily] THEN
-  X_GEN_TAC `t::B=>bool` THEN STRIP_TAC THEN
+  X_GEN_TAC `T::B=>bool` THEN STRIP_TAC THEN
   FIRST_X_ASSUM(MP_TAC \<circ>
-   SPEC `{x \<in> topspace X. f x \<in> t}` \<circ>
+   SPEC `{x \<in> topspace X. f x \<in> T}` \<circ>
    GEN_REWRITE_RULE id [hereditarily]) THEN
   REWRITE_TAC[SUBSET_RESTRICT] THEN MATCH_MP_TAC(ONCE_REWRITE_RULE[IMP_CONJ]
    (REWRITE_RULE[CONJ_ASSOC] NORMAL_SPACE_CONTINUOUS_CLOSED_MAP_IMAGE)) THEN
@@ -8048,9 +8052,9 @@ oops
   ASM SET_TAC[]);;
 
 lemma homeomorphic_hereditarily_normal_space:
-   "\<And>(X::A topology) (X':B topology).
-      X homeomorphic_space X'
-      \<Longrightarrow> (hereditarily normal_space X \<longleftrightarrow> hereditarily normal_space X')"
+   "\<And>(X::A topology) (Y:B topology).
+      X homeomorphic_space Y
+      \<Longrightarrow> (hereditarily normal_space X \<longleftrightarrow> hereditarily normal_space Y)"
 oops
   REWRITE_TAC[homeomorphic_space; HOMEOMORPHIC_MAPS_MAP] THEN
   MESON_TAC[HEREDITARILY_NORMAL_SPACE_CONTINUOUS_CLOSED_MAP_IMAGE;
@@ -8059,29 +8063,29 @@ oops
             HOMEOMORPHIC_IMP_CLOSED_MAP]);;
 
 lemma hereditarily_normal_space_retraction_map_image:
-   "\<And>X X' r.
-        retraction_map X X' r \<and> hereditarily normal_space X
-        \<Longrightarrow> hereditarily normal_space X'"
+   "\<And>X Y r.
+        retraction_map X Y r \<and> hereditarily normal_space X
+        \<Longrightarrow> hereditarily normal_space Y"
 oops
   MATCH_MP_TAC HEREDITARY_IMP_RETRACTIVE_PROPERTY THEN
   REWRITE_TAC[HEREDITARILY_SUBTOPOLOGY;
               HOMEOMORPHIC_HEREDITARILY_NORMAL_SPACE]);;
 
 lemma urysohn_lemma:
-   "\<And>(X::A topology) s t a b.
+   "\<And>(X::A topology) S T a b.
         a \<le> b \<and> normal_space X \<and>
-        closedin X s \<and> closedin X t \<and> disjnt s t
+        closedin X S \<and> closedin X T \<and> disjnt S T
         \<Longrightarrow> \<exists>f. continuous_map
                     (X,subtopology euclideanreal {a..b}) f \<and>
-                (\<forall>x. x \<in> s \<Longrightarrow> f x = a) \<and>
-                (\<forall>x. x \<in> t \<Longrightarrow> f x = b)"
+                (\<forall>x. x \<in> S \<Longrightarrow> f x = a) \<and>
+                (\<forall>x. x \<in> T \<Longrightarrow> f x = b)"
 oops
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN
    `\<exists>f. continuous_map
          (X,subtopology euclideanreal ({0..1})) f \<and>
-         (\<forall>x. x \<in> s \<Longrightarrow> f x = 0) \<and>
-         (\<forall>x. x \<in> t \<Longrightarrow> f x = 1)`
+         (\<forall>x. x \<in> S \<Longrightarrow> f x = 0) \<and>
+         (\<forall>x. x \<in> T \<Longrightarrow> f x = 1)`
   MP_TAC THENL
    [UNDISCH_THEN `a::real \<le> b` (K ALL_TAC);
     REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; LEFT_IMP_EXISTS_THM] THEN
@@ -8095,15 +8099,15 @@ oops
     REWRITE_TAC[REAL_ARITH
       `a + (b - a) * y \<le> b \<longleftrightarrow> 0 \<le> (b - a) * (1 - y)`] THEN
     ASM_SIMP_TAC[REAL_LE_MUL; REAL_SUB_LE]] THEN
-  FIRST_ASSUM(MP_TAC \<circ> SPECL [`s::A=>bool`; `topspace X - t::A=>bool`] \<circ>
+  FIRST_ASSUM(MP_TAC \<circ> SPECL [`S::A=>bool`; `topspace X - T::A=>bool`] \<circ>
     REWRITE_RULE[NORMAL_SPACE_ALT]) THEN
   ASM_SIMP_TAC[OPEN_IN_DIFF; OPEN_IN_TOPSPACE] THEN
-  ASM_SIMP_TAC[SET_RULE `s \<subseteq> u - t \<longleftrightarrow> s \<subseteq> u \<and> disjnt s t`;
+  ASM_SIMP_TAC[SET_RULE `S \<subseteq> u - T \<longleftrightarrow> S \<subseteq> u \<and> disjnt S T`;
                CLOSED_IN_SUBSET] THEN
   DISCH_THEN(X_CHOOSE_THEN `u::A=>bool` STRIP_ASSUME_TAC) THEN
   SUBGOAL_THEN
    `\<exists>g::real=>A->bool.
-        g 0 = u \<and> g 1 = topspace X - t \<and>
+        g 0 = u \<and> g 1 = topspace X - T \<and>
         \<forall>x y. x \<in> {k / 2 ^ n | k \<le> 2 ^ n} \<and>
               y \<in> {k / 2 ^ n | k \<le> 2 ^ n} \<and>
               x < y
@@ -8112,7 +8116,7 @@ oops
   STRIP_ASSUME_TAC THENL
    [MATCH_MP_TAC RECURSION_ON_DYADIC_FRACTIONS THEN
     ASM_SIMP_TAC[OPEN_IN_DIFF; OPEN_IN_TOPSPACE] THEN
-    ASM_SIMP_TAC[SET_RULE `s \<subseteq> u - t \<longleftrightarrow> s \<subseteq> u \<and> disjnt s t`;
+    ASM_SIMP_TAC[SET_RULE `S \<subseteq> u - T \<longleftrightarrow> S \<subseteq> u \<and> disjnt S T`;
                  CLOSED_IN_SUBSET] THEN
     CONJ_TAC THENL
      [ASM_MESON_TAC[CLOSURE_OF_SUBSET; OPEN_IN_SUBSET; SUBSET_TRANS];
@@ -8183,7 +8187,7 @@ oops
     ASM_REWRITE_TAC[] THEN
     REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
     MATCH_MP_TAC(SET_RULE
-     `x \<in> t \<and> g \<subseteq> g' \<Longrightarrow> g' \<subseteq> u - t \<Longrightarrow> (x \<notin> g)`) THEN
+     `x \<in> T \<and> g \<subseteq> g' \<Longrightarrow> g' \<subseteq> u - T \<Longrightarrow> (x \<notin> g)`) THEN
     ASM_MESON_TAC[OPEN_IN_SUBSET; CLOSURE_OF_SUBSET]] THEN
   MP_TAC(GEN `z::A`
    (SPEC `1 insert {r. r \<in> dint \<and> z \<in> (g::real=>A->bool) r}` INF)) THEN
@@ -8204,12 +8208,12 @@ oops
     REMOVE_THEN "*" MATCH_MP_TAC THEN CONJ_TAC THENL
      [UNDISCH_TAC `dint \<subseteq> {0..1}` THEN
       ASM_SIMP_TAC[IN_REAL_INTERVAL; IN_ELIM_THM; \<subseteq>];
-      X_GEN_TAC `s::real` THEN STRIP_TAC] THEN
+      X_GEN_TAC `S::real` THEN STRIP_TAC] THEN
     ONCE_REWRITE_TAC[GSYM REAL_NOT_LT] THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`s::real`; `r::real`]) THEN
+    FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`S::real`; `r::real`]) THEN
     ASM_REWRITE_TAC[] THEN
     REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-    MP_TAC(ISPECL [`X::A topology`; `(g::real=>A->bool) s`]
+    MP_TAC(ISPECL [`X::A topology`; `(g::real=>A->bool) S`]
       CLOSURE_OF_SUBSET) THEN
     ASM_SIMP_TAC[OPEN_IN_SUBSET] THEN ASM SET_TAC[];
     REMOVE_THEN "*" (K ALL_TAC)] THEN
@@ -8325,14 +8329,14 @@ oops
     ASM_SIMP_TAC[OPEN_IN_SUBSET] THEN ASM SET_TAC[]]);;
 
 lemma urysohn_lemma_alt:
-   "\<And>(X::A topology) s t a b.
-        normal_space X \<and> closedin X s \<and> closedin X t \<and> disjnt s t
+   "\<And>(X::A topology) S T a b.
+        normal_space X \<and> closedin X S \<and> closedin X T \<and> disjnt S T
         \<Longrightarrow> \<exists>f. continuous_map X euclideanreal f \<and>
-                (\<forall>x. x \<in> s \<Longrightarrow> f x = a) \<and>
-                (\<forall>x. x \<in> t \<Longrightarrow> f x = b)"
+                (\<forall>x. x \<in> S \<Longrightarrow> f x = a) \<and>
+                (\<forall>x. x \<in> T \<Longrightarrow> f x = b)"
 oops
   GEN_TAC THEN ONCE_REWRITE_TAC[MESON[]
-   `(\<forall>s t a b. P s t a b) \<longleftrightarrow> (\<forall>a b s t. P s t a b)`] THEN
+   `(\<forall>S T a b. P S T a b) \<longleftrightarrow> (\<forall>a b S T. P S T a b)`] THEN
   MATCH_MP_TAC REAL_WLOG_LE THEN CONJ_TAC THENL
    [REPEAT GEN_TAC THEN
     GEN_REWRITE_TAC LAND_CONV [SWAP_FORALL_THM] THEN
@@ -8344,15 +8348,15 @@ oops
 lemma normal_space_eq_urysohn_gen_alt:
    "     (a \<noteq> b)
      \<Longrightarrow> (normal_space X \<longleftrightarrow>
-          \<forall>s t. closedin X s \<and> closedin X t \<and> disjnt s t
+          \<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
                 \<Longrightarrow> \<exists>f. continuous_map X euclideanreal f \<and>
-                        (\<forall>x. x \<in> s \<Longrightarrow> f x = a) \<and>
-                        (\<forall>x. x \<in> t \<Longrightarrow> f x = b))"
+                        (\<forall>x. x \<in> S \<Longrightarrow> f x = a) \<and>
+                        (\<forall>x. x \<in> T \<Longrightarrow> f x = b))"
 oops
   REPEAT STRIP_TAC THEN EQ_TAC THEN ASM_SIMP_TAC[URYSOHN_LEMMA_ALT] THEN
   REWRITE_TAC[normal_space] THEN
-  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `s::A=>bool` THEN
-  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `t::A=>bool` THEN
+  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `S::A=>bool` THEN
+  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `T::A=>bool` THEN
   DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN
   ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
   X_GEN_TAC `f::A=>real` THEN STRIP_TAC THEN
@@ -8377,12 +8381,12 @@ oops
 lemma normal_space_eq_urysohn_gen:
    "     a < b
      \<Longrightarrow> (normal_space X \<longleftrightarrow>
-          \<forall>s t. closedin X s \<and> closedin X t \<and> disjnt s t
+          \<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
                 \<Longrightarrow> \<exists>f. continuous_map
                          (X,
                           subtopology euclideanreal {a..b}) f \<and>
-                        (\<forall>x. x \<in> s \<Longrightarrow> f x = a) \<and>
-                        (\<forall>x. x \<in> t \<Longrightarrow> f x = b))"
+                        (\<forall>x. x \<in> S \<Longrightarrow> f x = a) \<and>
+                        (\<forall>x. x \<in> T \<Longrightarrow> f x = b))"
 oops
   REPEAT STRIP_TAC THEN EQ_TAC THEN
   ASM_SIMP_TAC[URYSOHN_LEMMA; REAL_LT_IMP_LE] THEN
@@ -8392,21 +8396,21 @@ oops
 
 lemma normal_space_eq_urysohn_alt:
    "     normal_space X \<longleftrightarrow>
-     \<forall>s t. closedin X s \<and> closedin X t \<and> disjnt s t
+     \<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
            \<Longrightarrow> \<exists>f. continuous_map X euclideanreal f \<and>
-                   (\<forall>x. x \<in> s \<Longrightarrow> f x = 0) \<and>
-                   (\<forall>x. x \<in> t \<Longrightarrow> f x = 1)"
+                   (\<forall>x. x \<in> S \<Longrightarrow> f x = 0) \<and>
+                   (\<forall>x. x \<in> T \<Longrightarrow> f x = 1)"
 oops
   GEN_TAC THEN MATCH_MP_TAC NORMAL_SPACE_EQ_URYSOHN_GEN_ALT THEN
   CONV_TAC REAL_RAT_REDUCE_CONV);;
 
 lemma normal_space_eq_urysohn:
    "     normal_space X \<longleftrightarrow>
-     \<forall>s t. closedin X s \<and> closedin X t \<and> disjnt s t
+     \<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
            \<Longrightarrow> \<exists>f. continuous_map
                     (X,subtopology euclideanreal ({0..1})) f \<and>
-                   (\<forall>x. x \<in> s \<Longrightarrow> f x = 0) \<and>
-                   (\<forall>x. x \<in> t \<Longrightarrow> f x = 1)"
+                   (\<forall>x. x \<in> S \<Longrightarrow> f x = 0) \<and>
+                   (\<forall>x. x \<in> T \<Longrightarrow> f x = 1)"
 oops
   GEN_TAC THEN MATCH_MP_TAC NORMAL_SPACE_EQ_URYSOHN_GEN THEN
   REWRITE_TAC[REAL_LT_01]);;
