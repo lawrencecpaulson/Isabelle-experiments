@@ -8036,9 +8036,32 @@ proof clarify
     by (force simp add: ex_openin)
 qed
 
+subsection \<open>Hereditary topological properties\<close>
+
+
+definition hereditarily 
+  where "hereditarily P X \<equiv>
+        \<forall>S. S \<subseteq> topspace X \<longrightarrow> P(subtopology X S)"
+
+lemma hereditarily:
+   "hereditarily P X \<longleftrightarrow> (\<forall>S. P(subtopology X S))"
+  by (metis Int_lower1 hereditarily_def subtopology_restrict)
+
+lemma hereditarily_mono:
+   "\<lbrakk>hereditarily P X; \<And>x. P x \<Longrightarrow> Q x\<rbrakk> \<Longrightarrow> hereditarily Q X"
+  by (simp add: hereditarily)
+
+lemma hereditarily_inc:
+   "hereditarily P X \<Longrightarrow> P X"
+  by (metis hereditarily subtopology_topspace)
+
+lemma hereditarily_subtopology:
+   "hereditarily P X \<Longrightarrow> hereditarily P (subtopology X S)"
+  by (simp add: hereditarily subtopology_subtopology)
+
+
 lemma hereditarily_normal_space_continuous_closed_map_image:
-   "\<And>X Y f::A=>B.
-        continuous_map X Y f \<and>
+   "continuous_map X Y f \<and>
         closed_map X Y f \<and>
         f ` (topspace X) = topspace Y \<and>
         hereditarily normal_space X
@@ -8078,7 +8101,7 @@ oops
   REWRITE_TAC[HEREDITARILY_SUBTOPOLOGY;
               HOMEOMORPHIC_HEREDITARILY_NORMAL_SPACE]);;
 
-lemma urysohn_lemma:
+lemma Urysohn_lemma:
    "\<And>(X::A topology) S T a b.
         a \<le> b \<and> normal_space X \<and>
         closedin X S \<and> closedin X T \<and> disjnt S T
@@ -8335,7 +8358,7 @@ oops
               CLOSURE_OF_SUBSET) THEN
     ASM_SIMP_TAC[OPEN_IN_SUBSET] THEN ASM SET_TAC[]]);;
 
-lemma urysohn_lemma_alt:
+lemma Urysohn_lemma_alt:
    "\<And>(X::A topology) S T a b.
         normal_space X \<and> closedin X S \<and> closedin X T \<and> disjnt S T
         \<Longrightarrow> \<exists>f. continuous_map X euclideanreal f \<and>
@@ -8352,7 +8375,7 @@ oops
     DISCH_THEN(MP_TAC \<circ> MATCH_MP URYSOHN_LEMMA) THEN
     REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN MESON_TAC[]]);;
 
-lemma normal_space_eq_urysohn_gen_alt:
+lemma normal_space_eq_Urysohn_gen_alt:
    "     (a \<noteq> b)
      \<Longrightarrow> (normal_space X \<longleftrightarrow>
           \<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
@@ -8385,7 +8408,7 @@ oops
                mball; REAL_EUCLIDEAN_METRIC] THEN
       REAL_ARITH_TAC]]);;
 
-lemma normal_space_eq_urysohn_gen:
+lemma normal_space_eq_Urysohn_gen:
    "     a < b
      \<Longrightarrow> (normal_space X \<longleftrightarrow>
           \<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
@@ -8401,7 +8424,7 @@ oops
   REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN
   REPEAT(MATCH_MP_TAC MONO_FORALL THEN GEN_TAC) THEN MESON_TAC[]);;
 
-lemma normal_space_eq_urysohn_alt:
+lemma normal_space_eq_Urysohn_alt:
    "     normal_space X \<longleftrightarrow>
      \<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
            \<Longrightarrow> \<exists>f. continuous_map X euclideanreal f \<and>
@@ -8411,7 +8434,7 @@ oops
   GEN_TAC THEN MATCH_MP_TAC NORMAL_SPACE_EQ_URYSOHN_GEN_ALT THEN
   CONV_TAC REAL_RAT_REDUCE_CONV);;
 
-lemma normal_space_eq_urysohn:
+lemma normal_space_eq_Urysohn:
    "     normal_space X \<longleftrightarrow>
      \<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
            \<Longrightarrow> \<exists>f. continuous_map
@@ -20035,7 +20058,7 @@ oops
 text\<open> required: inside () proof we factor through the Kolmogorov quotient.     \<close>
 
 
-lemma urysohn_completely_regular_closed_compact:
+lemma Urysohn_completely_regular_closed_compact:
    "\<And>X s (t::A=>bool) a b.
         a \<le> b \<and> completely_regular_space X \<and>
         closedin X s \<and> compactin X t \<and> disjnt s t
@@ -20141,7 +20164,7 @@ oops
   REWRITE_TAC[FORALL_IN_GSPEC] THEN
   ASM_MESON_TAC[REAL_LT_IMP_LE; REAL_LE_REFL]);;
 
-lemma urysohn_completely_regular_compact_closed:
+lemma Urysohn_completely_regular_compact_closed:
    "\<And>X s (t::A=>bool) a b.
         a \<le> b \<and> completely_regular_space X \<and>
         compactin X s \<and> closedin X t \<and> disjnt s t
@@ -20162,7 +20185,7 @@ oops
   EXISTS_TAC `\<lambda>x. --(f x)` THEN
   ASM_REWRITE_TAC[CONTINUOUS_MAP_REAL_NEG_EQ]);;
 
-lemma urysohn_completely_regular_compact_closed_alt:
+lemma Urysohn_completely_regular_compact_closed_alt:
    "\<And>X s (t::A=>bool) a b.
         completely_regular_space X \<and>
         compactin X s \<and> closedin X t \<and> disjnt s t
