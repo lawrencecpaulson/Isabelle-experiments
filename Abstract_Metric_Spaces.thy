@@ -7934,7 +7934,9 @@ proof
       by (metis D(3) \<open>separatedin X S T\<close> disjnt_Union1 disjnt_def rangeI separatedin_def)
     then have "\<And>n. \<exists>V V'. openin X V \<and> openin X V' \<and> D n \<subseteq> V \<and> X closure_of S \<subseteq> V' \<and> disjnt V V'"
       by (metis D(1) L closedin_closure_of normal_space_def)
-    then obtain V V' where V: "\<And>n. openin X (V n) \<and> openin X (V' n) \<and> D n \<subseteq> V n \<and> X closure_of S \<subseteq> V' n \<and> disjnt (V n) (V' n)"
+    then obtain V V' where V: "\<And>n. openin X (V n)" and "\<And>n. openin X (V' n)" "\<And>n. disjnt (V n) (V' n)"
+          and DV:  "\<And>n. D n \<subseteq> V n" 
+          and subV': "\<And>n. X closure_of S \<subseteq> V' n"
       by metis
     then have VV: "V' n \<inter> X closure_of V n = {}" for n
       using openin_Int_closure_of_eq_empty [of X "V' n" "V n"] by (simp add: Int_commute disjnt_def)
@@ -7943,84 +7945,42 @@ proof
       by (metis C(3) \<open>separatedin X S T\<close> disjnt_Union1 disjnt_def rangeI separatedin_def)
     then have "\<And>n. \<exists>U U'. openin X U \<and> openin X U' \<and> C n \<subseteq> U \<and> X closure_of T \<subseteq> U' \<and> disjnt U U'"
       by (metis C(1) L closedin_closure_of normal_space_def)
-    then obtain U U' where U: "\<And>n. openin X (U n) \<and> openin X (U' n) \<and> C n \<subseteq> U n \<and> X closure_of T \<subseteq> U' n \<and> disjnt (U n) (U' n)"
+    then obtain U U' where U: "\<And>n. openin X (U n)" and "\<And>n. openin X (U' n)" "\<And>n. disjnt (U n) (U' n)"
+          and CU:  "\<And>n. C n \<subseteq> U n" 
+          and subU': "\<And>n. X closure_of T \<subseteq> U' n"
       by metis
     then have UU: "U' n \<inter> X closure_of U n = {}" for n
       using openin_Int_closure_of_eq_empty [of X "U' n" "U n"] by (simp add: Int_commute disjnt_def)
-
     show "\<exists>U B. openin X U \<and> openin X B \<and> S \<subseteq> U \<and> T \<subseteq> B \<and> disjnt U B"
-      apply (rule_tac x="\<Union>n. U n - (\<Union>m\<le>n. X closure_of V m)" in exI)
-      apply (rule_tac x="\<Union>n. V n - (\<Union>m\<le>n. X closure_of U m)" in exI)
-      apply (intro conjI)
-          apply (rule openin_Union)
-          apply clarify
-          apply (rule openin_diff)
-           apply (simp add: U)
-          apply (smt (verit) closedin_Union closedin_closure_of finite_atMost finite_imageI image_iff)
-         apply (rule openin_Union)
-         apply clarify
-         apply (rule openin_diff)
-          apply (simp add: V)
-         apply (smt (verit) closedin_Union closedin_closure_of finite_atMost finite_imageI image_iff)
-        prefer 3
-        apply (auto simp: disjnt_iff Ball_def)[1]
-        apply (meson U V closure_of_subset nat_le_linear openin_subset subsetD)
-      using VV
-       apply (auto simp: Ball_def)
-       apply (metis C(3) Int_commute U UN_E V \<open>fsigma_in X S\<close> closure_of_subset_Int disjnt_def disjnt_iff fsigma_in_subset inf.orderE subsetD)
-      using UU
-      apply (metis D(3) Int_commute U UN_E V \<open>fsigma_in X T\<close> closure_of_subset_Int disjnt_def disjnt_iff fsigma_in_subset inf.orderE subsetD)
-      done
+    proof (intro conjI exI)
+      have "\<And>S n. closedin X (\<Union>m\<le>n. X closure_of V m)"
+        by (force intro: closedin_Union)
+      then show "openin X (\<Union>n. U n - (\<Union>m\<le>n. X closure_of V m))"
+        using U by blast
+      have "\<And>S n. closedin X (\<Union>m\<le>n. X closure_of U m)"
+        by (force intro: closedin_Union)
+      then show "openin X (\<Union>n. V n - (\<Union>m\<le>n. X closure_of U m))"
+        using V by blast
+      have "S \<subseteq> topspace X"
+        by (simp add: \<open>fsigma_in X S\<close> fsigma_in_subset)
+      then show "S \<subseteq> (\<Union>n. U n - (\<Union>m\<le>n. X closure_of V m))"
+        apply (clarsimp simp: Ball_def)
+        by (metis VV C(3) CU IntI UN_E closure_of_subset empty_iff subV' subsetD)
+      have "T \<subseteq> topspace X"
+        by (simp add: \<open>fsigma_in X T\<close> fsigma_in_subset)
+      then show "T \<subseteq> (\<Union>n. V n - (\<Union>m\<le>n. X closure_of U m))"
+        apply (clarsimp simp: Ball_def)
+        by (metis UU D(3) DV IntI UN_E closure_of_subset empty_iff subU' subsetD)
+      have "\<And>x m n. \<lbrakk>x \<in> U n; x \<in> V m; \<forall>k\<le>m. x \<notin> X closure_of U k\<rbrakk> \<Longrightarrow> \<exists>k\<le>n. x \<in> X closure_of V k"
+        by (meson U V closure_of_subset nat_le_linear openin_subset subsetD)
+      then show "disjnt (\<Union>n. U n - (\<Union>m\<le>n. X closure_of V m)) (\<Union>n. V n - (\<Union>m\<le>n. X closure_of U m))"
+        by (force simp: disjnt_iff)
+    qed
   qed
 next
   show "?rhs \<Longrightarrow> ?lhs"
     by (simp add: closed_imp_fsigma_in normal_space_def separatedin_closed_sets)
 qed
-
-oops
-
-  STRIP_TAC THEN MAP_EVERY EXISTS_TAC
-   [`\<Union> {U n - \<Union> {X closure_of (v m) | m \<le> n} |
-             n \<in> UNIV}`;
-    `\<Union> {V n - \<Union> {X closure_of (u m) | m \<le> n} |
-             n \<in> UNIV}`] THEN
-  GEN_REWRITE_TAC id [CONJ_ASSOC] THEN CONJ_TAC THENL
-   [CONJ_TAC THEN MATCH_MP_TAC OPEN_IN_UNIONS THEN
-    REWRITE_TAC[FORALL_IN_GSPEC] THEN REPEAT STRIP_TAC THEN
-    MATCH_MP_TAC OPEN_IN_DIFF THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC CLOSED_IN_UNIONS THEN
-    ASM_REWRITE_TAC[FORALL_IN_GSPEC; CLOSED_IN_CLOSURE_OF] THEN
-    ONCE_REWRITE_TAC[SIMPLE_IMAGE_GEN] THEN MATCH_MP_TAC FINITE_IMAGE THEN
-    REWRITE_TAC[FINITE_NUMSEG_LE];
-    ALL_TAC] THEN
-  GEN_REWRITE_TAC id [CONJ_ASSOC] THEN CONJ_TAC THENL
-   [REWRITE_TAC[\<subseteq>; UNIONS_GSPEC; IN_ELIM_THM; IN_UNIV] THEN
-    CONJ_TAC THEN X_GEN_TAC `x::A` THEN
-    DISCH_THEN(fun th -> ASSUME_TAC th THEN MP_TAC th) THEN FIRST_X_ASSUM
-     (fun th -> GEN_REWRITE_TAC (LAND_CONV \<circ> RAND_CONV) [SYM th]) THEN
-    REWRITE_TAC[UNIONS_GSPEC; IN_ELIM_THM; IN_DIFF; IN_UNIV] THEN
-    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `n::num` THEN DISCH_TAC THEN
-    (CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC]) THEN
-    DISCH_THEN(X_CHOOSE_THEN `m::num` (MP_TAC \<circ> CONJUNCT2)) THENL
-     [MP_TAC(ISPECL
-       [`X::A topology`; `(v':num=>A->bool) m`; `V m`]
-       OPEN_IN_INTER_CLOSURE_OF_EQ_EMPTY) THEN
-      MP_TAC(ISPECL [`X::A topology`; `s::A=>bool`] CLOSURE_OF_SUBSET);
-      MP_TAC(ISPECL
-       [`X::A topology`; `(u':num=>A->bool) m`; `U m`]
-       OPEN_IN_INTER_CLOSURE_OF_EQ_EMPTY) THEN
-      MP_TAC(ISPECL [`X::A topology`; `t::A=>bool`] CLOSURE_OF_SUBSET)] THEN
-    ASM_SIMP_TAC[FSIGMA_IN_SUBSET] THEN ASM SET_TAC[];
-    REWRITE_TAC[disjnt; INTER_UNIONS; EMPTY_UNIONS; FORALL_IN_GSPEC] THEN
-    REWRITE_TAC[IN_UNIV] THEN MAP_EVERY X_GEN_TAC [`m::num`; `n::num`] THEN
-    DISJ_CASES_TAC(SPECL [`m::num`; `n::num`] LE_CASES) THENL
-     [ALL_TAC; ONCE_REWRITE_TAC[INTER_COMM]] THEN
-    MATCH_MP_TAC(SET_RULE
-       `u \<subseteq> u' \<Longrightarrow> (u - v') \<inter> (v - u') = {}`) THEN
-    MATCH_MP_TAC(SET_RULE
-     `(\<exists>n. P n \<and> s \<subseteq> t n) \<Longrightarrow> s \<subseteq> \<Union> {t n | P n}`)
-    THENL [EXISTS_TAC `m::num`; EXISTS_TAC `n::num`] THEN
-    ASM_SIMP_TAC[CLOSURE_OF_SUBSET; OPEN_IN_SUBSET]]);;
 
 lemma normal_space_fsigma_subtopology:
    "normal_space X \<and> fsigma_in X s
