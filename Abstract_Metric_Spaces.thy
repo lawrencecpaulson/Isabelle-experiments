@@ -8006,11 +8006,43 @@ lemma normal_space_closed_subtopology:
   by (simp add: assms closed_imp_fsigma_in normal_space_fsigma_subtopology)
 
 lemma normal_space_continuous_closed_map_image:
-   "\<And>X Y f::A=>B.
-        continuous_map X Y f \<and> closed_map X Y f \<and>
-        f ` (topspace X) = topspace Y \<and>
-        normal_space X
-        \<Longrightarrow> normal_space Y"
+  assumes contf: "continuous_map X Y f" and clof: "closed_map X Y f" 
+  and fim: "f ` topspace X = topspace Y" and "normal_space X"
+shows "normal_space Y"
+  unfolding normal_space_def
+proof clarify
+  fix S T
+  assume "closedin Y S" and "closedin Y T" and "disjnt S T"
+  have "closedin X {x \<in> topspace X. f x \<in> S}" "closedin X {x. x \<in> topspace X \<and> f x \<in> T}"
+    using \<open>closedin Y S\<close> \<open>closedin Y T\<close> closedin_continuous_map_preimage contf by auto
+  moreover
+  have "disjnt {x \<in> topspace X. f x \<in> S} {x \<in> topspace X. f x \<in> T}"
+    using \<open>disjnt S T\<close> by (auto simp: disjnt_iff)
+  ultimately
+  obtain U V where "closedin X U" "closedin X V" 
+    and subXU: "{x \<in> topspace X. f x \<in> S} \<subseteq> topspace X - U" 
+    and subXV: "{x \<in> topspace X. f x \<in> T} \<subseteq> topspace X - V" 
+    and dis: "disjnt (topspace X - U) (topspace X -V)"
+    using \<open>normal_space X\<close>  
+    by (force simp add: normal_space_def ex_openin)
+  show "\<exists>U V. openin Y U \<and> openin Y V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
+    apply (simp add: ex_openin)
+    apply (rule_tac x="f ` U" in exI)
+    apply (rule )
+    using \<open>closedin X U\<close> clof closed_map_def apply blast
+    apply (rule_tac x="f ` V" in exI)
+    apply (intro conjI)
+    using \<open>closedin X V\<close> clof closed_map_def apply blast
+      apply (auto simp: )
+    using \<open>closedin Y S\<close> closedin_subset apply fastforce
+    using \<open>closedin X U\<close> \<open>{x \<in> topspace X. f x \<in> S} \<subseteq> topspace X - U\<close> closedin_subset apply auto[1]
+    using \<open>closedin Y T\<close> closedin_subset apply blast
+    using \<open>closedin X V\<close> closedin_subset subXV apply fastforce
+    using dis
+    apply (auto simp: disjnt_iff)
+    by (metis (full_types) fim image_iff)
+qed
+
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[normal_space; closed_map] THEN STRIP_TAC THEN
   MAP_EVERY X_GEN_TAC [`S::B=>bool`; `T::B=>bool`] THEN STRIP_TAC THEN
