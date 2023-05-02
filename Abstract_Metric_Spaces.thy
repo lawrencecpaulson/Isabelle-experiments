@@ -8013,7 +8013,7 @@ shows "normal_space Y"
 proof clarify
   fix S T
   assume "closedin Y S" and "closedin Y T" and "disjnt S T"
-  have "closedin X {x \<in> topspace X. f x \<in> S}" "closedin X {x. x \<in> topspace X \<and> f x \<in> T}"
+  have "closedin X {x \<in> topspace X. f x \<in> S}" "closedin X {x \<in> topspace X. f x \<in> T}"
     using \<open>closedin Y S\<close> \<open>closedin Y T\<close> closedin_continuous_map_preimage contf by auto
   moreover
   have "disjnt {x \<in> topspace X. f x \<in> S} {x \<in> topspace X. f x \<in> T}"
@@ -8023,43 +8023,18 @@ proof clarify
     and subXU: "{x \<in> topspace X. f x \<in> S} \<subseteq> topspace X - U" 
     and subXV: "{x \<in> topspace X. f x \<in> T} \<subseteq> topspace X - V" 
     and dis: "disjnt (topspace X - U) (topspace X -V)"
-    using \<open>normal_space X\<close>  
-    by (force simp add: normal_space_def ex_openin)
-  show "\<exists>U V. openin Y U \<and> openin Y V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
-    apply (simp add: ex_openin)
-    apply (rule_tac x="f ` U" in exI)
-    apply (rule )
-    using \<open>closedin X U\<close> clof closed_map_def apply blast
-    apply (rule_tac x="f ` V" in exI)
-    apply (intro conjI)
-    using \<open>closedin X V\<close> clof closed_map_def apply blast
-      apply (auto simp: )
-    using \<open>closedin Y S\<close> closedin_subset apply fastforce
-    using \<open>closedin X U\<close> \<open>{x \<in> topspace X. f x \<in> S} \<subseteq> topspace X - U\<close> closedin_subset apply auto[1]
-    using \<open>closedin Y T\<close> closedin_subset apply blast
-    using \<open>closedin X V\<close> closedin_subset subXV apply fastforce
-    using dis
-    apply (auto simp: disjnt_iff)
-    by (metis (full_types) fim image_iff)
+    using \<open>normal_space X\<close> by (force simp add: normal_space_def ex_openin)
+  have "closedin Y (f ` U)" "closedin Y (f ` V)"
+    using \<open>closedin X U\<close> \<open>closedin X V\<close> clof closed_map_def by blast+
+  moreover have "S \<subseteq> topspace Y - f ` U"
+    using \<open>closedin Y S\<close> \<open>closedin X U\<close> subXU by (force dest: closedin_subset)
+  moreover have "T \<subseteq> topspace Y - f ` V"
+    using \<open>closedin Y T\<close> \<open>closedin X V\<close> subXV by (force dest: closedin_subset)
+  moreover have "disjnt (topspace Y - f ` U) (topspace Y - f ` V)"
+    using fim dis by (force simp add: disjnt_iff)
+  ultimately show "\<exists>U V. openin Y U \<and> openin Y V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
+    by (force simp add: ex_openin)
 qed
-
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[normal_space; closed_map] THEN STRIP_TAC THEN
-  MAP_EVERY X_GEN_TAC [`S::B=>bool`; `T::B=>bool`] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL
-   [`{x \<in> topspace X. f x \<in> S}`;
-    `{x \<in> topspace X. f x \<in> T}`]) THEN
-  ASM_REWRITE_TAC[CONJ_ASSOC] THEN ANTS_TAC THENL
-   [CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN CONJ_TAC THEN
-    MATCH_MP_TAC CLOSED_IN_CONTINUOUS_MAP_PREIMAGE THEN ASM_MESON_TAC[];
-    REWRITE_TAC[GSYM CONJ_ASSOC; RIGHT_EXISTS_AND_THM] THEN
-    REWRITE_TAC[EXISTS_OPEN_IN] THEN REWRITE_TAC[RIGHT_AND_EXISTS_THM] THEN
-    REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`u::A=>bool`; `v::A=>bool`] THEN STRIP_TAC THEN
-    MAP_EVERY EXISTS_TAC [`f ` u`; `f ` v`] THEN
-    ASM_SIMP_TAC[] THEN REPEAT STRIP_TAC THEN
-    REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET)) THEN
-    ASM SET_TAC[]]);;
 
 lemma hereditarily_normal_space_continuous_closed_map_image:
    "\<And>X Y f::A=>B.
