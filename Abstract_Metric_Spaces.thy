@@ -7376,10 +7376,6 @@ lemma hereditarily_normal_space_retraction_map_image:
 
 subsubsection\<open> Definition by recursion on dyadic rationals in [0,1]\<close>
 
-lemma "dyadics \<inter> {0..1} = {real k / 2 ^ n |k n. k \<le> 2 ^ n}"
-  by (force simp: dyadics_def)
-
-
 lemma recursion_on_dyadic_fractions:
   assumes base: "R a b"
     and step: "\<And>x y. R x y \<Longrightarrow> \<exists>z. R x z \<and> R z y" and trans: "\<And>x y z. \<lbrakk>R x y; R y z\<rbrakk> \<Longrightarrow> R x z"
@@ -7387,22 +7383,15 @@ lemma recursion_on_dyadic_fractions:
     where "f 0 = a" "f 1 = b" 
        "\<And>x y. \<lbrakk>x \<in> dyadics \<inter> {0..1}; y \<in> dyadics \<inter> {0..1}; x < y\<rbrakk> \<Longrightarrow> R (f x) (f y)"
 proof -
-  obtain mid where mid: "\<And>x y. R x y \<Longrightarrow> R x (mid x y) \<and> R (mid x y) y"
+  obtain mid where mid: "R x y \<Longrightarrow> R x (mid x y)" "R x y \<Longrightarrow> R (mid x y) y" for x y 
     using step by metis
-
-  then have mid: "\<lbrakk>R x y; z = x\<rbrakk> \<Longrightarrow> R x (mid z y)" "\<lbrakk>R x y; z = y\<rbrakk> \<Longrightarrow> R (mid x z) y" for x y z
-    by auto
-
-  then have mid: "R x y \<Longrightarrow> R x (mid x y)" "R x y \<Longrightarrow> R (mid x y) y" for x y 
-    by auto
-
   define g where "g \<equiv> rec_nat (\<lambda>k. if k = 0 then a else b) (\<lambda>n r k. if even k then r (k div 2) else mid (r ((k - 1) div 2)) (r ((Suc k) div 2)))"
-  have g0: "g 0 = (\<lambda>k. if k = 0 then a else b)"
+  have g0 [simp]: "g 0 = (\<lambda>k. if k = 0 then a else b)"
     by (simp add: g_def)
-  have gSuc: "\<And>n. g(Suc n) = (\<lambda>k. if even k then g n (k div 2) else mid (g n ((k - 1) div 2)) (g n ((Suc k) div 2)))"
+  have gSuc [simp]: "\<And>n. g(Suc n) = (\<lambda>k. if even k then g n (k div 2) else mid (g n ((k - 1) div 2)) (g n ((Suc k) div 2)))"
     by (auto simp: g_def)
   have g_eq_g: "2 ^ d * k = k' \<Longrightarrow> g n k = g (n + d) k'" for n d k k'
-    by (induction d arbitrary: k k') (auto simp: gSuc)
+    by (induction d arbitrary: k k') auto
   have "g n k = g n' k'" if "real k / 2^n = real k' / 2^n'" "n' \<le> n" for k n k' n'
   proof -
     have "real k = real k' * 2 ^ (n-n')"
@@ -7440,23 +7429,51 @@ proof -
       proof (induction n arbitrary: j k)
         case 0
         then show ?case
-          by (simp add: g0 base)
+          by (simp add: base)
       next
         case (Suc n)
         show ?case
-          using Suc.prems
-          apply (simp add: gSuc)
-          apply (auto simp:  elim!: evenE oddE)
-          using Suc.IH Suc.prems apply force
-          apply (case_tac "b=ba")
-          apply (simp add: Suc.IH mid(1))
-            apply (rule trans)
-             apply (rule_tac k="ba" in Suc.IH)
-          apply linarith
-          apply linarith
-          apply (simp add: Suc.IH mid(1))
-          apply (smt (verit) Suc.IH Suc_leI Suc_lessD le_trans lessI linorder_neqE_nat linorder_not_le local.trans mid(2) nat_mult_less_cancel1 pos2)
-          by (smt (verit, best) Suc.IH Suc_leI le_trans lessI less_or_eq_imp_le linorder_neqE_nat linorder_not_le local.trans mid(1) mid(2) nat_mult_less_cancel1 pos2)
+        proof (cases "even j")
+          case True
+          then obtain a where [simp]: "j = 2*a"
+            by blast
+          show ?thesis 
+          proof (cases "even k")
+            case True
+            with Suc show ?thesis
+              by (auto elim!: evenE)
+          next
+            case False
+            then obtain b where [simp]: "k = Suc (2*b)"
+              using oddE by fastforce
+            show ?thesis
+              using Suc
+              apply simp
+              by (smt (verit, ccfv_SIG) less_Suc_eq linorder_not_le local.trans mid(1) nat_mult_less_cancel1 pos2)
+          qed
+        next
+          case False
+          then obtain a where [simp]: "j = Suc (2*a)"
+            using oddE by fastforce
+          show ?thesis
+          proof (cases "even k")
+            case True
+            then obtain b where [simp]: "k = 2*b"
+              by blast
+            show ?thesis
+              using Suc 
+              apply simp
+              by (smt (verit, ccfv_SIG) Suc_leI Suc_lessD le_trans lessI linorder_neqE_nat linorder_not_le local.trans mid(2) nat_mult_less_cancel1 pos2)
+          next
+            case False
+            then obtain b where [simp]: "k = Suc (2*b)"
+              using oddE by fastforce
+            show ?thesis
+              using Suc 
+              apply simp
+              by (smt (verit) Suc_leI le_trans lessI less_or_eq_imp_le linorder_neqE_nat linorder_not_le local.trans mid(1) mid(2) nat_mult_less_cancel1 pos2)
+            qed
+        qed
       qed
       show ?thesis
         unfolding xcommon ycommon f_eq_g
@@ -7469,57 +7486,6 @@ proof -
     qed
   qed
 qed
-
-oops 
-    REWRITE_TAC[REAL_OF_NUM_LT; REAL_OF_NUM_LE] THEN
-    REPEAT(FIRST_X_ASSUM(K ALL_TAC o GEN_REWRITE_RULE id [GSYM NOT_LT]))] THEN
-  MATCH_MP_TAC num_INDUCTION THEN CONJ_TAC THENL
-   [ASM_SIMP_TAC[ARITH_RULE `j1 < j2 \<and> j2 \<le> 2 ^ 0 \<longleftrightarrow> j1 = 0 \<and> j2 = 1`;
-                 ARITH_EQ];
-    X_GEN_TAC `n::num` THEN DISCH_TAC THEN X_GEN_TAC `j::num`] THEN
-  X_GEN_TAC `k::num` THEN REWRITE_TAC[^] THEN STRIP_TAC THEN
-  DISJ_CASES_THEN MP_TAC (SPEC `j::num` EVEN_OR_ODD) THEN
-  DISJ_CASES_THEN MP_TAC (SPEC `k::num` EVEN_OR_ODD) THEN
-  REWRITE_TAC[EVEN_EXISTS; ODD_EXISTS; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `b::num` THEN DISCH_THEN SUBST_ALL_TAC THEN
-  X_GEN_TAC `a::num` THEN DISCH_THEN SUBST_ALL_TAC THEN
-  ASM_REWRITE_TAC[ADD1; ADD_SUB; EVEN_ADD; EVEN_MULT; ARITH_EVEN;
-                  ARITH_RULE `(2 * a) div 2 = a`;
-                  ARITH_RULE `((2 * a + 1) + 1) div 2 = a + 1`]
-  THENL
-   [FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
-    ALL_TAC; ALL_TAC; ALL_TAC] THEN
-  (ABBREV_TAC `w = @z. R ((g::num=>num->A) n a) z \<and>  R z (g n (Suc a))` THEN
-   SUBGOAL_THEN `R ((g::num=>num->A) n a) w \<and> R w (g n (Suc a))`
-   STRIP_ASSUME_TAC THENL
-    [EXPAND_TAC "w" THEN CONV_TAC SELECT_CONV THEN
-     FIRST_X_ASSUM MATCH_MP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-     ASM_ARITH_TAC;
-     ALL_TAC])
-  THENL
-   [ALL_TAC;
-    ASM_CASES_TAC `b::num = a + 1` THEN ASM_REWRITE_TAC[] THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    EXISTS_TAC `(g::num=>num->A) n (Suc a)` THEN
-    ASM_REWRITE_TAC[] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
-    ALL_TAC] THEN
-  (ABBREV_TAC `z = @z. R ((g::num=>num->A) n b) z \<and> R z (g n (Suc b))` THEN
-   SUBGOAL_THEN `R ((g::num=>num->A) n b) z \<and> R z (g n (Suc b))`
-   STRIP_ASSUME_TAC THENL
-    [EXPAND_TAC "z" THEN CONV_TAC SELECT_CONV THEN
-     FIRST_X_ASSUM MATCH_MP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-     ASM_ARITH_TAC;
-     ALL_TAC])
-  THENL
-   [ASM_CASES_TAC `a::num = b` THEN ASM_REWRITE_TAC[] THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN EXISTS_TAC `(g::num=>num->A) n b` THEN
-    ASM_REWRITE_TAC[] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-    ASM_ARITH_TAC;
-    ASM_CASES_TAC `a + 1 = b` THENL [ASM_MESON_TAC[]; ALL_TAC] THEN
-    FIRST_ASSUM MATCH_MP_TAC THEN EXISTS_TAC `(g::num=>num->A) n (Suc a)` THEN
-    ASM_REWRITE_TAC[] THEN
-    FIRST_ASSUM MATCH_MP_TAC THEN EXISTS_TAC `(g::num=>num->A) n b`] THEN
-  ASM_REWRITE_TAC[] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC);;
 
 
 lemma Urysohn_lemma:
