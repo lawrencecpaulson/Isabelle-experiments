@@ -7357,68 +7357,28 @@ proof (intro strip)
   assume "T \<subseteq> topspace Y"
   then have nx: "normal_space (subtopology X {x \<in> topspace X. f x \<in> T})"
     by (meson X hereditarily)
-  then show "normal_space (subtopology Y T)"
-    apply (rule normal_space_continuous_closed_map_image [where f=f])
-      apply (simp_all add: )
-    apply (simp add: contf continuous_map_from_subtopology continuous_map_in_subtopology image_subset_iff)
-    apply (simp add: clof closed_map_restriction)
-    using fim by auto
+  moreover have "continuous_map (subtopology X {x \<in> topspace X. f x \<in> T}) (subtopology Y T) f"
+    by (simp add: contf continuous_map_from_subtopology continuous_map_in_subtopology image_subset_iff)
+  moreover have "closed_map (subtopology X {x \<in> topspace X. f x \<in> T}) (subtopology Y T) f"
+    by (simp add: clof closed_map_restriction)
+  ultimately show "normal_space (subtopology Y T)"
+    using fim normal_space_continuous_closed_map_image by fastforce
 qed
-
-
-moreover have "continuous_map X (subtopology Y T) f"
-    apply (simp add: contf continuous_map_from_subtopology continuous_map_in_subtopology image_subset_iff)
-
-    sorry
-  then have "f ` topspace X = topspace Y \<inter> T"
-    using continuous_map_image_subset_topspace fim by force
-    using fim \<open>T \<subseteq> topspace Y\<close> by auto
-
-      sorry
-    ultimately
-
-    using normal_space_continuous_closed_map_image
-     sorry
-qed
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[hereditarily] THEN
-  X_GEN_TAC `T::B=>bool` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ>
-   SPEC `{x \<in> topspace X. f x \<in> T}` \<circ>
-   GEN_REWRITE_RULE id [hereditarily]) THEN
-  REWRITE_TAC[SUBSET_RESTRICT] THEN MATCH_MP_TAC(ONCE_REWRITE_RULE[IMP_CONJ]
-   (REWRITE_RULE[CONJ_ASSOC] NORMAL_SPACE_CONTINUOUS_CLOSED_MAP_IMAGE)) THEN
-  EXISTS_TAC `f::A=>B` THEN
-  ASM_SIMP_TAC[CLOSED_MAP_RESTRICTION] THEN
-  ASM_SIMP_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY;
-               GSYM CONJ_ASSOC; CONTINUOUS_MAP_FROM_SUBTOPOLOGY] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_MAP_IMP_SUBSET_TOPSPACE) THEN
-  ASM SET_TAC[]);;
 
 lemma homeomorphic_hereditarily_normal_space:
    "X homeomorphic_space Y
       \<Longrightarrow> (hereditarily normal_space X \<longleftrightarrow> hereditarily normal_space Y)"
-oops
-  REWRITE_TAC[homeomorphic_space; HOMEOMORPHIC_MAPS_MAP] THEN
-  MESON_TAC[HEREDITARILY_NORMAL_SPACE_CONTINUOUS_CLOSED_MAP_IMAGE;
-            HOMEOMORPHIC_IMP_SURJECTIVE_MAP;
-            HOMEOMORPHIC_IMP_CONTINUOUS_MAP;
-            HOMEOMORPHIC_IMP_CLOSED_MAP]);;
+  by (meson hereditarily_normal_space_continuous_closed_map_image homeomorphic_eq_everything_map 
+      homeomorphic_space homeomorphic_space_sym)
 
 lemma hereditarily_normal_space_retraction_map_image:
-   "        retraction_map X Y r \<and> hereditarily normal_space X
-        \<Longrightarrow> hereditarily normal_space Y"
-oops
-  MATCH_MP_TAC HEREDITARY_IMP_RETRACTIVE_PROPERTY THEN
-  REWRITE_TAC[HEREDITARILY_SUBTOPOLOGY;
-              HOMEOMORPHIC_HEREDITARILY_NORMAL_SPACE]);;
+   "\<lbrakk>retraction_map X Y r; hereditarily normal_space X\<rbrakk> \<Longrightarrow> hereditarily normal_space Y"
+  by (smt (verit) hereditarily_subtopology hereditary_imp_retractive_property homeomorphic_hereditarily_normal_space)
 
 lemma Urysohn_lemma:
-   " a \<le> b" "normal_space X" "closedin X S" "closedin X T" "disjnt S T
-        \<Longrightarrow> \<exists>f. continuous_map
-                    (X,subtopology euclideanreal {a..b}) f \<and>
-                (\<forall>x. x \<in> S \<Longrightarrow> f x = a) \<and>
-                (\<forall>x. x \<in> T \<Longrightarrow> f x = b)"
+  fixes a b :: real
+  assumes "normal_space X" "closedin X S" "closedin X T" "disjnt S T" "a \<le> b" 
+  obtains f where "continuous_map X (top_of_set {a..b}) f" "f ` S \<subseteq> {a}" "f ` T \<subseteq> {b}"
 oops
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN
