@@ -7051,8 +7051,7 @@ qed
 
 lemma normal_space_alt:
    "normal_space X \<longleftrightarrow>
-    (\<forall>S U. closedin X S \<and> openin X U \<and> S \<subseteq> U
-           \<longrightarrow> (\<exists>V. openin X V \<and> S \<subseteq> V \<and> X closure_of V \<subseteq> U))"
+    (\<forall>S U. closedin X S \<and> openin X U \<and> S \<subseteq> U \<longrightarrow> (\<exists>V. openin X V \<and> S \<subseteq> V \<and> X closure_of V \<subseteq> U))"
 proof -
   have "\<exists>V. openin X V \<and> S \<subseteq> V \<and> X closure_of V \<subseteq> U"
     if "\<And>T. closedin X T \<longrightarrow> disjnt S T \<longrightarrow> (\<exists>U. openin X U \<and> S \<subseteq> U \<and> disjnt T (X closure_of U))"
@@ -7375,36 +7374,148 @@ lemma hereditarily_normal_space_retraction_map_image:
    "\<lbrakk>retraction_map X Y r; hereditarily normal_space X\<rbrakk> \<Longrightarrow> hereditarily normal_space Y"
   by (smt (verit) hereditarily_subtopology hereditary_imp_retractive_property homeomorphic_hereditarily_normal_space)
 
+subsubsection\<open> Definition by recursion on dyadic rationals in [0,1]\<close>
+
+lemma "dyadics \<inter> {0..1} = {real k / 2 ^ n |k n. k \<le> 2 ^ n}"
+  by (force simp: dyadics_def)
+
+
+lemma recursion_on_dyadic_fractions:
+  assumes base: "R a b"
+    and step: "\<And>x y. R x y \<Longrightarrow> \<exists>z. R x z \<and> R z y" and trans: "\<And>x y z. R x y \<and> R y z \<Longrightarrow> R x z"
+  shows "\<exists>f. f 0 = a \<and> f 1 = b \<and> (\<forall>x y. x \<in> dyadics \<inter> {0..1} \<and> y \<in> dyadics \<inter> {0..1} \<and> x < y \<longrightarrow> R (f x) (f y))"
+proof -
+  obtain mid where "\<And>x y. R x y \<Longrightarrow> R x (mid x y) \<and> R (mid x y) y"
+    using step by metis
+  define g where "g \<equiv> rec_nat (\<lambda>k. if k = 0 then a else b) (\<lambda>n r k. if even k then r (k div 2) else mid (r ((k - 1) div 2)) (r ((Suc k) div 2)))"
+  have g0: "g 0 = (\<lambda>k. if k = 0 then a else b)"
+    by (simp add: g_def)
+  have gSuc: "\<And>n. g(Suc n) = (\<lambda>k. if even k then g n (k div 2) else mid (g n ((k - 1) div 2)) (g n ((Suc k) div 2)))"
+    by (auto simp: g_def)
+  have g_eq_g: "2 ^ d * k = k' \<Longrightarrow> g n k = g (n + d) k'" for n d k k'
+    by (induction d arbitrary: k k') (auto simp: gSuc)
+  have "g n k = g n' k'" if "real k / 2^n = real k' / 2^n'" "n' \<le> n" for k n k' n'
+  proof -
+    have "real k = real k' * 2 ^ (n-n')"
+      using that by (simp add: power_diff divide_simps)
+    then have "k = k' * 2 ^ (n-n')"
+      using of_nat_eq_iff by fastforce
+    with g_eq_g show ?thesis
+      by (metis le_add_diff_inverse mult.commute that(2))
+  qed
+  then have "g n k = g n' k'" if "real k / 2 ^ n = real k' / 2 ^ n'" for k n k' n'
+    by (metis nat_le_linear that)
+  then obtain f where "(\<lambda>(k,n). g n k) = f \<circ> (\<lambda>(k,n). k / 2 ^ n)"
+    using function_factors_left by (smt (verit, del_insts) case_prod_beta')
+
+
+  obtain f where "\<And>k n. f(real k / 2 ^ n) = g n k"
+
+oops 
+  X_GEN_TAC `f::real=>A` THEN STRIP_TAC THEN REPEAT CONJ_TAC THENL
+   [SUBST1_TAC(REAL_ARITH `0 = 0 / 2 ^ 0`) THEN
+    ASM_REWRITE_TAC[];
+    SUBST1_TAC(REAL_ARITH `1 = 1 / 2 ^ 0`) THEN
+    ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV;
+    REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM; FORALL_IN_GSPEC] THEN
+    MAP_EVERY X_GEN_TAC [`k1::num`; `n1::num`] THEN DISCH_TAC THEN
+    MAP_EVERY X_GEN_TAC [`k2::num`; `n2::num`] THEN DISCH_TAC THEN
+    CONJUNCTS_THEN SUBST1_TAC (REAL_FIELD
+     `k1 / 2 ^ n1 = (2 ^ n2 * k1) / 2 ^ (n1 + n2) \<and>
+      k2 / 2 ^ n2 = (2 ^ n1 * k2) / 2 ^ (n1 + n2)`) THEN
+    SIMP_TAC[REAL_LT_DIV2_EQ; REAL_LT_POW2;
+        MESON[REAL_OF_NUM_MUL; REAL_OF_NUM_POW]
+         `2 ^ n * k = (2 ^ n * k)`] THEN
+    SUBGOAL_THEN `(2 ^ n1 * k2) \<le> 2 ^ (n1 + n2)` MP_TAC THENL
+     [REWRITE_TAC[REAL_OF_NUM_POW; REAL_OF_NUM_LE; EXP_ADD] THEN
+      ASM_REWRITE_TAC[LE_MULT_LCANCEL];
+      SPEC_TAC(`2 ^ n1 * k2`,`j2::num`) THEN
+      SPEC_TAC(`2 ^ n2 * k1`,`j1::num`) THEN
+      SPEC_TAC(`n1 + n2::num`,`n::num`)] THEN
+    ASM_REWRITE_TAC[] THEN REWRITE_TAC[REAL_OF_NUM_POW; GSYM IMP_CONJ_ALT] THEN
+    REWRITE_TAC[REAL_OF_NUM_LT; REAL_OF_NUM_LE] THEN
+    REPEAT(FIRST_X_ASSUM(K ALL_TAC o GEN_REWRITE_RULE id [GSYM NOT_LT]))] THEN
+  MATCH_MP_TAC num_INDUCTION THEN CONJ_TAC THENL
+   [ASM_SIMP_TAC[ARITH_RULE `j1 < j2 \<and> j2 \<le> 2 ^ 0 \<longleftrightarrow> j1 = 0 \<and> j2 = 1`;
+                 ARITH_EQ];
+    X_GEN_TAC `n::num` THEN DISCH_TAC THEN X_GEN_TAC `j::num`] THEN
+  X_GEN_TAC `k::num` THEN REWRITE_TAC[^] THEN STRIP_TAC THEN
+  DISJ_CASES_THEN MP_TAC (SPEC `j::num` EVEN_OR_ODD) THEN
+  DISJ_CASES_THEN MP_TAC (SPEC `k::num` EVEN_OR_ODD) THEN
+  REWRITE_TAC[EVEN_EXISTS; ODD_EXISTS; LEFT_IMP_EXISTS_THM] THEN
+  X_GEN_TAC `b::num` THEN DISCH_THEN SUBST_ALL_TAC THEN
+  X_GEN_TAC `a::num` THEN DISCH_THEN SUBST_ALL_TAC THEN
+  ASM_REWRITE_TAC[ADD1; ADD_SUB; EVEN_ADD; EVEN_MULT; ARITH_EVEN;
+                  ARITH_RULE `(2 * a) div 2 = a`;
+                  ARITH_RULE `((2 * a + 1) + 1) div 2 = a + 1`]
+  THENL
+   [FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+    ALL_TAC; ALL_TAC; ALL_TAC] THEN
+  (ABBREV_TAC `w = @z. R ((g::num=>num->A) n a) z \<and>  R z (g n (Suc a))` THEN
+   SUBGOAL_THEN `R ((g::num=>num->A) n a) w \<and> R w (g n (Suc a))`
+   STRIP_ASSUME_TAC THENL
+    [EXPAND_TAC "w" THEN CONV_TAC SELECT_CONV THEN
+     FIRST_X_ASSUM MATCH_MP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+     ASM_ARITH_TAC;
+     ALL_TAC])
+  THENL
+   [ALL_TAC;
+    ASM_CASES_TAC `b::num = a + 1` THEN ASM_REWRITE_TAC[] THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN
+    EXISTS_TAC `(g::num=>num->A) n (Suc a)` THEN
+    ASM_REWRITE_TAC[] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC;
+    ALL_TAC] THEN
+  (ABBREV_TAC `z = @z. R ((g::num=>num->A) n b) z \<and> R z (g n (Suc b))` THEN
+   SUBGOAL_THEN `R ((g::num=>num->A) n b) z \<and> R z (g n (Suc b))`
+   STRIP_ASSUME_TAC THENL
+    [EXPAND_TAC "z" THEN CONV_TAC SELECT_CONV THEN
+     FIRST_X_ASSUM MATCH_MP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+     ASM_ARITH_TAC;
+     ALL_TAC])
+  THENL
+   [ASM_CASES_TAC `a::num = b` THEN ASM_REWRITE_TAC[] THEN
+    FIRST_X_ASSUM MATCH_MP_TAC THEN EXISTS_TAC `(g::num=>num->A) n b` THEN
+    ASM_REWRITE_TAC[] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+    ASM_ARITH_TAC;
+    ASM_CASES_TAC `a + 1 = b` THENL [ASM_MESON_TAC[]; ALL_TAC] THEN
+    FIRST_ASSUM MATCH_MP_TAC THEN EXISTS_TAC `(g::num=>num->A) n (Suc a)` THEN
+    ASM_REWRITE_TAC[] THEN
+    FIRST_ASSUM MATCH_MP_TAC THEN EXISTS_TAC `(g::num=>num->A) n b`] THEN
+  ASM_REWRITE_TAC[] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC);;
+
+
 lemma Urysohn_lemma:
   fixes a b :: real
   assumes "normal_space X" "closedin X S" "closedin X T" "disjnt S T" "a \<le> b" 
   obtains f where "continuous_map X (top_of_set {a..b}) f" "f ` S \<subseteq> {a}" "f ` T \<subseteq> {b}"
+proof -
+  obtain U where "openin X U" "S \<subseteq> U" "X closure_of U \<subseteq> topspace X - T"
+    using assms unfolding normal_space_alt disjnt_def
+    by (metis Diff_mono Un_Diff_Int closedin_def subset_eq sup_bot_right)
+  obtain G :: "real \<Rightarrow> 'a set"
+      where G0: "G 0 = U" and G1: "G 1 = topspace X - T"
+        and G: "\<And>x y. x \<in> dyadics \<inter> {0..1} \<and> y \<in> dyadics \<inter> {0..1} \<and> x < y
+                      \<Longrightarrow> openin X (G x) \<and> openin X (G y) \<and> X closure_of (G x) \<subseteq> (G y)"
+    sorry
+  obtain f :: "'a \<Rightarrow> real" where contf: "continuous_map X (top_of_set {0..1}) f" and fim: "f ` S \<subseteq> {0}" "f ` T \<subseteq> {1}"
+    sorry
+  define g where "g \<equiv> \<lambda>x. a + (b - a) * f x"
+  show thesis
+  proof
+    have "continuous_map X euclideanreal g"
+      using contf \<open>a \<le> b\<close> unfolding g_def by (auto simp: continuous_intros continuous_map_in_subtopology)
+    moreover have "g ` (topspace X) \<subseteq> {a..b}"
+      using mult_left_le [of "f _" "b-a"] contf \<open>a \<le> b\<close>   
+      by (simp add: g_def add.commute continuous_map_in_subtopology image_subset_iff le_diff_eq)
+    ultimately show "continuous_map X (top_of_set {a..b}) g"
+      by (meson continuous_map_in_subtopology)
+    show "g ` S \<subseteq> {a}" "g ` T \<subseteq> {b}"
+      using fim by (auto simp: g_def)
+qed
+
 oops
-  REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN
-   `\<exists>f. continuous_map
-         (X,subtopology euclideanreal ({0..1})) f \<and>
-         (\<forall>x. x \<in> S \<Longrightarrow> f x = 0) \<and>
-         (\<forall>x. x \<in> T \<Longrightarrow> f x = 1)`
-  MP_TAC THENL
-   [UNDISCH_THEN `a::real \<le> b` (K ALL_TAC);
-    REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `f::A=>real` THEN STRIP_TAC THEN
-    EXISTS_TAC `\<lambda>x. a + (b - a) * f x` THEN
-    ASM_SIMP_TAC[] THEN CONJ_TAC THENL [ALL_TAC; REAL_ARITH_TAC] THEN
-    ASM_SIMP_TAC[CONTINUOUS_MAP_REAL_ADD; CONTINUOUS_MAP_REAL_LMUL;
-                 CONTINUOUS_MAP_REAL_CONST] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [\<subseteq>]) THEN
-    REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; IN_REAL_INTERVAL; REAL_LE_ADDR] THEN
-    REWRITE_TAC[REAL_ARITH
-      `a + (b - a) * y \<le> b \<longleftrightarrow> 0 \<le> (b - a) * (1 - y)`] THEN
-    ASM_SIMP_TAC[REAL_LE_MUL; REAL_SUB_LE]] THEN
-  FIRST_ASSUM(MP_TAC \<circ> SPECL [`S::A=>bool`; `topspace X - T::A=>bool`] \<circ>
-    REWRITE_RULE[NORMAL_SPACE_ALT]) THEN
-  ASM_SIMP_TAC[OPEN_IN_DIFF; OPEN_IN_TOPSPACE] THEN
-  ASM_SIMP_TAC[SET_RULE `S \<subseteq> u - T \<longleftrightarrow> S \<subseteq> u \<and> disjnt S T`;
-               CLOSED_IN_SUBSET] THEN
-  DISCH_THEN(X_CHOOSE_THEN `u::A=>bool` STRIP_ASSUME_TAC) THEN
+
+THEN
   SUBGOAL_THEN
    `\<exists>g::real=>A->bool.
         g 0 = u \<and> g 1 = topspace X - T \<and>
@@ -7426,6 +7537,7 @@ oops
       REWRITE_RULE[NORMAL_SPACE_ALT]) THEN
     ASM_SIMP_TAC[CLOSED_IN_CLOSURE_OF] THEN ASM SET_TAC[];
     ALL_TAC] THEN
+
   ABBREV_TAC `dint = {k / 2 ^ n | k \<le> 2 ^ n}` THEN
   SUBGOAL_THEN `dint \<subseteq> {0..1}` ASSUME_TAC THENL
    [EXPAND_TAC "dint" THEN SIMP_TAC[\<subseteq>; IN_ELIM_THM; IN_REAL_INTERVAL] THEN
