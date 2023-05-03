@@ -6979,7 +6979,7 @@ lemma injective_eq_monotone_map:
   fixes f :: "real \<Rightarrow> real"
   assumes "is_interval S" "continuous_on S f"
   shows "inj_on f S \<longleftrightarrow> strict_mono_on S f \<or> strict_antimono_on S f"
-  by (metis assms injective_imp_monotone_map monotone_map_euclideanreal strict_antimono_iff_mono 
+  by (metis assms injective_imp_monotone_map monotone_map_euclideanreal strict_antimono_iff_antimono 
         strict_mono_iff_mono top_greatest topspace_euclidean topspace_euclidean_subtopology)
 
 
@@ -7383,7 +7383,9 @@ lemma "dyadics \<inter> {0..1} = {real k / 2 ^ n |k n. k \<le> 2 ^ n}"
 lemma recursion_on_dyadic_fractions:
   assumes base: "R a b"
     and step: "\<And>x y. R x y \<Longrightarrow> \<exists>z. R x z \<and> R z y" and trans: "\<And>x y z. R x y \<and> R y z \<Longrightarrow> R x z"
-  shows "\<exists>f. f 0 = a \<and> f 1 = b \<and> (\<forall>x y. x \<in> dyadics \<inter> {0..1} \<and> y \<in> dyadics \<inter> {0..1} \<and> x < y \<longrightarrow> R (f x) (f y))"
+  obtains f :: "real \<Rightarrow> 'a" 
+    where "f 0 = a" "f 1 = b" 
+       "\<And>x y. \<lbrakk>x \<in> dyadics \<inter> {0..1}; y \<in> dyadics \<inter> {0..1}; x < y\<rbrakk> \<Longrightarrow> R (f x) (f y)"
 proof -
   obtain mid where "\<And>x y. R x y \<Longrightarrow> R x (mid x y) \<and> R (mid x y) y"
     using step by metis
@@ -7407,25 +7409,40 @@ proof -
     by (metis nat_le_linear that)
   then obtain f where "(\<lambda>(k,n). g n k) = f \<circ> (\<lambda>(k,n). k / 2 ^ n)"
     using function_factors_left by (smt (verit, del_insts) case_prod_beta')
-
-
-  obtain f where "\<And>k n. f(real k / 2 ^ n) = g n k"
+  then have f_eq_g: "\<And>k n. f(real k / 2 ^ n) = g n k"
+    by (simp add: fun_eq_iff)
+  show thesis
+  proof
+    show "f 0 = a"
+      by (metis f_eq_g g0 div_0 of_nat_0)
+    show "f 1 = b"
+      by (metis f_eq_g g0 div_by_1 of_nat_1_eq_iff power_0 zero_neq_one)
+    show "R (f x) (f y)" 
+      if x: "x \<in> dyadics \<inter> {0..1}" and y: "y \<in> dyadics \<inter> {0..1}" and "x < y" for x y
+    proof -
+      obtain n1 k1 where xeq: "x = real k1 / 2^n1" "k1 \<le> 2^n1"
+        using x by (auto simp: dyadics_def)
+      obtain n2 k2 where yeq: "y = real k2 / 2^n2" "k2 \<le> 2^n2"
+        using y by (auto simp: dyadics_def)
+      have xcommon: "x = real(2^n2 * k1) / 2 ^ (n1+n2)"
+        using xeq by (simp add: power_add)
+      have ycommon: "y = real(2^n1 * k2) / 2 ^ (n1+n2)"
+        using yeq by (simp add: power_add)
+      have *: "R (g n j1) (g n j2)" if "j1 < j2" "j2 \<le> (2 ^ n)" for n j1 j2
+        sorry
+      show ?thesis
+        unfolding xcommon ycommon f_eq_g
+      proof (rule *)
+        show "2 ^ n2 * k1 < 2 ^ n1 * k2"
+          using of_nat_less_iff \<open>x < y\<close> by (fastforce simp: xeq yeq field_simps)
+        show "2 ^ n1 * k2 \<le> 2 ^ (n1 + n2)"
+          by (simp add: power_add yeq)
+      qed
+    qed
+  qed
+qed
 
 oops 
-  X_GEN_TAC `f::real=>A` THEN STRIP_TAC THEN REPEAT CONJ_TAC THENL
-   [SUBST1_TAC(REAL_ARITH `0 = 0 / 2 ^ 0`) THEN
-    ASM_REWRITE_TAC[];
-    SUBST1_TAC(REAL_ARITH `1 = 1 / 2 ^ 0`) THEN
-    ASM_REWRITE_TAC[] THEN CONV_TAC NUM_REDUCE_CONV;
-    REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM; FORALL_IN_GSPEC] THEN
-    MAP_EVERY X_GEN_TAC [`k1::num`; `n1::num`] THEN DISCH_TAC THEN
-    MAP_EVERY X_GEN_TAC [`k2::num`; `n2::num`] THEN DISCH_TAC THEN
-    CONJUNCTS_THEN SUBST1_TAC (REAL_FIELD
-     `k1 / 2 ^ n1 = (2 ^ n2 * k1) / 2 ^ (n1 + n2) \<and>
-      k2 / 2 ^ n2 = (2 ^ n1 * k2) / 2 ^ (n1 + n2)`) THEN
-    SIMP_TAC[REAL_LT_DIV2_EQ; REAL_LT_POW2;
-        MESON[REAL_OF_NUM_MUL; REAL_OF_NUM_POW]
-         `2 ^ n * k = (2 ^ n * k)`] THEN
     SUBGOAL_THEN `(2 ^ n1 * k2) \<le> 2 ^ (n1 + n2)` MP_TAC THENL
      [REWRITE_TAC[REAL_OF_NUM_POW; REAL_OF_NUM_LE; EXP_ADD] THEN
       ASM_REWRITE_TAC[LE_MULT_LCANCEL];
