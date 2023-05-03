@@ -7382,13 +7382,20 @@ lemma "dyadics \<inter> {0..1} = {real k / 2 ^ n |k n. k \<le> 2 ^ n}"
 
 lemma recursion_on_dyadic_fractions:
   assumes base: "R a b"
-    and step: "\<And>x y. R x y \<Longrightarrow> \<exists>z. R x z \<and> R z y" and trans: "\<And>x y z. R x y \<and> R y z \<Longrightarrow> R x z"
+    and step: "\<And>x y. R x y \<Longrightarrow> \<exists>z. R x z \<and> R z y" and trans: "\<And>x y z. \<lbrakk>R x y; R y z\<rbrakk> \<Longrightarrow> R x z"
   obtains f :: "real \<Rightarrow> 'a" 
     where "f 0 = a" "f 1 = b" 
        "\<And>x y. \<lbrakk>x \<in> dyadics \<inter> {0..1}; y \<in> dyadics \<inter> {0..1}; x < y\<rbrakk> \<Longrightarrow> R (f x) (f y)"
 proof -
-  obtain mid where "\<And>x y. R x y \<Longrightarrow> R x (mid x y) \<and> R (mid x y) y"
+  obtain mid where mid: "\<And>x y. R x y \<Longrightarrow> R x (mid x y) \<and> R (mid x y) y"
     using step by metis
+
+  then have mid: "\<lbrakk>R x y; z = x\<rbrakk> \<Longrightarrow> R x (mid z y)" "\<lbrakk>R x y; z = y\<rbrakk> \<Longrightarrow> R (mid x z) y" for x y z
+    by auto
+
+  then have mid: "R x y \<Longrightarrow> R x (mid x y)" "R x y \<Longrightarrow> R (mid x y) y" for x y 
+    by auto
+
   define g where "g \<equiv> rec_nat (\<lambda>k. if k = 0 then a else b) (\<lambda>n r k. if even k then r (k div 2) else mid (r ((k - 1) div 2)) (r ((Suc k) div 2)))"
   have g0: "g 0 = (\<lambda>k. if k = 0 then a else b)"
     by (simp add: g_def)
@@ -7405,7 +7412,7 @@ proof -
     with g_eq_g show ?thesis
       by (metis le_add_diff_inverse mult.commute that(2))
   qed
-  then have "g n k = g n' k'" if "real k / 2 ^ n = real k' / 2 ^ n'" for k n k' n'
+  then have g_eq_g: "g n k = g n' k'" if "real k / 2 ^ n = real k' / 2 ^ n'" for k n k' n'
     by (metis nat_le_linear that)
   then obtain f where "(\<lambda>(k,n). g n k) = f \<circ> (\<lambda>(k,n). k / 2 ^ n)"
     using function_factors_left by (smt (verit, del_insts) case_prod_beta')
@@ -7428,8 +7435,29 @@ proof -
         using xeq by (simp add: power_add)
       have ycommon: "y = real(2^n1 * k2) / 2 ^ (n1+n2)"
         using yeq by (simp add: power_add)
-      have *: "R (g n j1) (g n j2)" if "j1 < j2" "j2 \<le> (2 ^ n)" for n j1 j2
-        sorry
+      have *: "R (g n j) (g n k)" if "j < k" "k \<le> 2^n" for n j k
+        using that
+      proof (induction n arbitrary: j k)
+        case 0
+        then show ?case
+          by (simp add: g0 base)
+      next
+        case (Suc n)
+        show ?case
+          using Suc.prems
+          apply (simp add: gSuc)
+          apply (auto simp:  elim!: evenE oddE)
+          using Suc.IH Suc.prems apply force
+          apply (case_tac "b=ba")
+          apply (simp add: Suc.IH mid(1))
+            apply (rule trans)
+             apply (rule_tac k="ba" in Suc.IH)
+          apply linarith
+          apply linarith
+          apply (simp add: Suc.IH mid(1))
+          apply (smt (verit) Suc.IH Suc_leI Suc_lessD le_trans lessI linorder_neqE_nat linorder_not_le local.trans mid(2) nat_mult_less_cancel1 pos2)
+          by (smt (verit, best) Suc.IH Suc_leI le_trans lessI less_or_eq_imp_le linorder_neqE_nat linorder_not_le local.trans mid(1) mid(2) nat_mult_less_cancel1 pos2)
+      qed
       show ?thesis
         unfolding xcommon ycommon f_eq_g
       proof (rule *)
@@ -7443,13 +7471,6 @@ proof -
 qed
 
 oops 
-    SUBGOAL_THEN `(2 ^ n1 * k2) \<le> 2 ^ (n1 + n2)` MP_TAC THENL
-     [REWRITE_TAC[REAL_OF_NUM_POW; REAL_OF_NUM_LE; EXP_ADD] THEN
-      ASM_REWRITE_TAC[LE_MULT_LCANCEL];
-      SPEC_TAC(`2 ^ n1 * k2`,`j2::num`) THEN
-      SPEC_TAC(`2 ^ n2 * k1`,`j1::num`) THEN
-      SPEC_TAC(`n1 + n2::num`,`n::num`)] THEN
-    ASM_REWRITE_TAC[] THEN REWRITE_TAC[REAL_OF_NUM_POW; GSYM IMP_CONJ_ALT] THEN
     REWRITE_TAC[REAL_OF_NUM_LT; REAL_OF_NUM_LE] THEN
     REPEAT(FIRST_X_ASSUM(K ALL_TAC o GEN_REWRITE_RULE id [GSYM NOT_LT]))] THEN
   MATCH_MP_TAC num_INDUCTION THEN CONJ_TAC THENL
