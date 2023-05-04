@@ -9,6 +9,105 @@ begin
 lemma ball_iff_cball: "(\<exists>r>0. ball x r \<subseteq> U) = (\<exists>r>0. cball x r \<subseteq> U)"
   by (meson mem_interior mem_interior_cball)
 
+text\<open> Arbitrarily good rational approximations.                                 \<close>
+text\<open> ------------------------------------------------------------------------- \<close>
+
+
+lemma padic_rational_approximation_straddle:
+   "0 < e \<and> 1 < p
+           \<Longrightarrow> \<exists>n q r. of_int q / p ^ n < x \<and> x < of_int r / p ^ n \<and>
+                       abs(q / p ^ n - r / p ^ n) < e"
+using closure_dyadic_rationals [where 'a=real, simplified]
+
+  
+  oops
+  REPEAT STRIP_TAC THEN
+  MP_TAC(ISPECL [`p::real`; `2 / e::real`] REAL_ARCH_POW) THEN
+  ASM_SIMP_TAC[REAL_LT_LDIV_EQ] THEN MATCH_MP_TAC MONO_EXISTS THEN
+  X_GEN_TAC `n::num` THEN
+  GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [REAL_MUL_SYM] THEN
+  ASM_SIMP_TAC[GSYM REAL_LT_LDIV_EQ; REAL_POW_LT;
+               REAL_ARITH `1 < p \<Longrightarrow> 0 < p`] THEN
+  DISCH_TAC THEN MAP_EVERY EXISTS_TAC
+   [`floor(p ^ n * x) - 1`; `floor(p ^ n * x) + 1`] THEN
+  REWRITE_TAC[REAL_ARITH
+   `abs((x - 1) / p - (Suc x) / p) = abs(2 / p)`] THEN
+  ASM_SIMP_TAC[FLOOR; INTEGER_CLOSED; REAL_LT_LDIV_EQ; REAL_LT_RDIV_EQ;
+               REAL_POW_LT; REAL_ARITH `1 < p \<Longrightarrow> 0 < p`] THEN
+  REWRITE_TAC[REAL_ABS_DIV; REAL_ABS_POW; REAL_ABS_NUM] THEN
+  ASM_SIMP_TAC[REAL_ARITH `1 < p \<Longrightarrow> abs p = p`] THEN
+  MP_TAC(ISPEC `p ^ n * x::real` FLOOR) THEN REAL_ARITH_TAC);;
+
+let PADIC_RATIONAL_APPROXIMATION_STRADDLE_POS,
+    PADIC_RATIONAL_APPROXIMATION_STRADDLE_POS_LE = (CONJ_PAIR o prove)
+ (`(\<forall>p x e. 0 < e \<and> 1 < p \<and> 0 < x
+            \<Longrightarrow> \<exists>n q r. q / p ^ n < x \<and> x < r / p ^ n \<and>
+                        abs(q / p ^ n - r / p ^ n) < e) \<and>
+   (\<forall>p x e. 0 < e \<and> 1 < p \<and> 0 \<le> x
+           \<Longrightarrow> \<exists>n q r. q / p ^ n \<le> x \<and> x < r / p ^ n \<and>
+                       abs(q / p ^ n - r / p ^ n) < e)"
+oops 
+  REPEAT STRIP_TAC THEN
+ (SUBGOAL_THEN `0 < p \<and> 0 \<le> p` STRIP_ASSUME_TAC THENL
+   [ASM_REAL_ARITH_TAC; ALL_TAC] THEN
+  MP_TAC(ISPECL [`p::real`; `x::real`; `e::real`]
+    PADIC_RATIONAL_APPROXIMATION_STRADDLE) THEN
+  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `n::num` THEN
+  ASM_SIMP_TAC[REAL_LT_LDIV_EQ; REAL_LT_RDIV_EQ; REAL_POW_LT;
+               REAL_LE_LDIV_EQ; REAL_LE_RDIV_EQ; LEFT_IMP_EXISTS_THM] THEN
+  REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
+  MAP_EVERY X_GEN_TAC [`q::real`; `r::real`] THEN STRIP_TAC THEN
+  MP_TAC(ISPEC `r::real` integer) THEN
+  MP_TAC(ISPEC `max q 0` integer) THEN
+  ASM_SIMP_TAC[INTEGER_CLOSED] THEN
+  REWRITE_TAC[IMP_IMP; LEFT_AND_EXISTS_THM] THEN
+  REWRITE_TAC[RIGHT_AND_EXISTS_THM] THEN
+  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `a::num` THEN
+  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `b::num` THEN
+  REWRITE_TAC[REAL_ARITH `abs(max q 0) = max q 0`] THEN
+  SUBGOAL_THEN `0 < r` ASSUME_TAC THENL
+   [FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP (REAL_ARITH
+     `a < r \<Longrightarrow> 0 \<le> a \<Longrightarrow> 0 < r`)) THEN
+    MATCH_MP_TAC REAL_LE_MUL THEN ASM_SIMP_TAC[REAL_LT_IMP_LE] THEN
+    MATCH_MP_TAC REAL_POW_LE THEN ASM_REAL_ARITH_TAC;
+    ASM_SIMP_TAC[REAL_ARITH `0 < r \<Longrightarrow> abs r = r`]] THEN
+  DISCH_THEN(CONJUNCTS_THEN (SUBST1_TAC o SYM)) THEN
+  REWRITE_TAC[REAL_ARITH `max q 0 = if 0 \<le> q then q else 0`] THEN
+  COND_CASES_TAC THEN ASM_SIMP_TAC[REAL_LT_IMP_LE] THEN
+  ASM_SIMP_TAC[REAL_LE_MUL; REAL_LT_MUL; REAL_POW_LE; REAL_POW_LT] THEN
+  FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP (REAL_ARITH
+   `abs(q - r) < e \<Longrightarrow> 0 <-q \<and> z = 0 \<and> 0 < r
+    \<Longrightarrow> abs(z - r) < e`)) THEN
+  ASM_SIMP_TAC[REAL_LT_DIV; REAL_POW_LT] THEN
+  REWRITE_TAC[real_div; REAL_MUL_LZERO; GSYM REAL_MUL_LNEG] THEN
+  MATCH_MP_TAC REAL_LT_MUL THEN
+  ASM_SIMP_TAC[REAL_LT_INV_EQ; REAL_POW_LT] THEN ASM_REAL_ARITH_TAC));;
+
+lemma rational_approximation:
+   "0 < e \<Longrightarrow> \<exists>r. rational r \<and> abs(r - x) < e"
+oops 
+  REPEAT STRIP_TAC THEN
+  MP_TAC(ISPECL [`2::real`; `x::real`; `e::real`]
+    PADIC_RATIONAL_APPROXIMATION_STRADDLE) THEN
+  ANTS_TAC THENL [ASM_REAL_ARITH_TAC; REWRITE_TAC[LEFT_IMP_EXISTS_THM]] THEN
+  MAP_EVERY X_GEN_TAC [`n::num`; `q::real`; `r::real`] THEN
+  STRIP_TAC THEN EXISTS_TAC `q / 2 ^ n` THEN
+  ASM_SIMP_TAC[RATIONAL_CLOSED] THEN ASM_REAL_ARITH_TAC);;
+
+lemma rational_between:
+   "a < b \<Longrightarrow> \<exists>q. rational q \<and> a < q \<and> q < b"
+oops 
+  REPEAT STRIP_TAC THEN
+  MP_TAC(SPECL [`(a + b) / 2`; `(b - a) / 4`] RATIONAL_APPROXIMATION) THEN
+  ANTS_TAC THENL [ALL_TAC; MATCH_MP_TAC MONO_EXISTS THEN SIMP_TAC[]] THEN
+  ASM_REAL_ARITH_TAC);;
+
+lemma rational_between_eq:
+   "(\<exists>q. rational q \<and> a < q \<and> q < b) \<longleftrightarrow> a < b"
+oops 
+  MESON_TAC[RATIONAL_BETWEEN; REAL_LT_TRANS]);;
+
+
 subsection \<open>ATIN-WITHIN\<close>
 
 (*REPLACE ORIGINAL DEFINITION TO USE ABBREVIATION, LIKE AT / AT_WITHIN
@@ -616,6 +715,9 @@ lemma mopen_eq_open [simp]: "Met.mopen = open"
   by (force simp: open_contains_ball Met.mopen_def)
 
 lemma limitin_iff_tendsto [iff]: "limitin Met.mtopology \<sigma> x F = tendsto \<sigma> x F"
+  by (simp add: Met.mtopology_def)
+
+lemma mtopology_is_euclideanreal [simp]: "Met.mtopology = euclideanreal"
   by (simp add: Met.mtopology_def)
 
 (*
@@ -7533,24 +7635,51 @@ proof -
   then have opeG: "openin X (G r)" if "r \<in> dyadics \<inter> {0..1}" for r
     using G G0 \<open>openin X U\<close> less_eq_real_def that by auto
 
-  have contf: "continuous_map X (top_of_set {0..1}) f"
-    apply (simp add: continuous_map_in_subtopology)
-    apply (rule )
-
-    sorry
-
   have "x \<in> G 0" if "x \<in> S" for x
     using G0 \<open>S \<subseteq> U\<close> that by blast
   with 0 have fimS: "f ` S \<subseteq> {0}"
     unfolding f_def by (force intro!: cInf_eq_minimum)
-  have False if "r \<in> dyadics" "0 \<le> r \<and> r < 1 \<and> x \<in> G r" "x \<in> T" for r x
+  have False if "r \<in> dyadics" "0 \<le> r" "r < 1" "x \<in> G r" "x \<in> T" for r x
     using G [of r 1] 1
     by (smt (verit, best) DiffD2 G1 Int_iff closure_of_subset inf.orderE openin_subset that)
-  then have "r\<ge>1" if "r \<in> dyadics" "0 \<le> r \<and> r \<le> 1 \<and> x \<in> G r" "x \<in> T" for r x
+  then have "r\<ge>1" if "r \<in> dyadics" "0 \<le> r" "r \<le> 1" "x \<in> G r" "x \<in> T" for r x
     using linorder_not_le that by blast
   then have fimT: "f ` T \<subseteq> {1}"
     unfolding f_def by (force intro!: cInf_eq_minimum)
+  have f1: "f z \<le> 1" for z
+    by (force simp: f_def intro: cInf_lower)
+  have fle: "f z \<le> x" if "x \<in> dyadics \<inter> {0..1}" "z \<in> G x" for z x
+    using that by (force simp: f_def intro: cInf_lower)
+  have *: "b \<le> f z" if "b \<le> 1" "\<And>x. \<lbrakk>x \<in> dyadics \<inter> {0..1}; z \<in> G x\<rbrakk> \<Longrightarrow> b \<le> x" for z b
+    using that by (force simp: f_def intro: cInf_greatest)
+  have "r \<le> f x" if r: "r \<in> dyadics \<inter> {0..1}" "x \<notin> G r" for r x
+  proof (rule *)
+    show "r \<le> s" if "s \<in> dyadics \<inter> {0..1}" and "x \<in> G s" for s :: real
+      using that r G [of s r] by (force simp add: dest: closure_of_subset openin_subset)
+  qed (use that in force)
 
+  have "\<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>y \<in> U. \<bar>f y - f x\<bar> < \<epsilon>)"
+    if "x \<in> topspace X" and "0 < \<epsilon>" for x \<epsilon>
+  proof -
+    have "\<exists>r. r \<in> dyadics \<inter> {0..1} \<and> r < y \<and> \<bar>r - y\<bar> < d" if "0 < y" "y \<le> 1" "0 < d" for y d::real
+    proof -
+      have "(\<exists>n q r. q / 2 ^ n < y \<and> y < r / 2 ^ n \<and> abs (q / 2 ^ n - r / 2 ^ n) < d)"
+        unfolding DINT
+
+    sorry
+      show ?thesis
+        using padic_rational_approximation_straddle_pos
+        sorry
+    qed
+    moreover
+    have "\<exists>r. r \<in> dyadics \<inter> {0..1} \<and> y < r \<and> \<bar>r - y\<bar> < d" if "0 \<le> y" "y < 1" "0 < d" for y d::real
+    sorry
+
+    show ?thesis
+      sorry
+  qed
+  then have contf: "continuous_map X (top_of_set {0..1}) f"
+    by (force simp add: Met.continuous_map_to_metric dist_real_def continuous_map_in_subtopology fim simp flip: Met.mtopology_is_euclideanreal)
   define g where "g \<equiv> \<lambda>x. a + (b - a) * f x"
   show thesis
   proof
@@ -7567,80 +7696,19 @@ qed
 
 oops
 
-  REPEAT CONJ_TAC THENL
-   [ALL_TAC;
-    X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-    SUBGOAL_THEN `(x::A) \<in> topspace X` ASSUME_TAC THENL
-     [ASM_MESON_TAC[\<subseteq>; CLOSED_IN_SUBSET];
-      ASM_SIMP_TAC[GSYM REAL_LE_ANTISYM]] THEN
-    EXPAND_TAC "f" THEN MATCH_MP_TAC INF_LE_ELEMENT THEN CONJ_TAC THENL
-     [EXISTS_TAC `0` THEN REWRITE_TAC[FORALL_IN_INSERT; REAL_POS] THEN
-      REWRITE_TAC[FORALL_IN_GSPEC] THEN
-      UNDISCH_TAC `dint \<subseteq> {0..1}` THEN
-      SIMP_TAC[IN_REAL_INTERVAL; IN_ELIM_THM; \<subseteq>];
-      REWRITE_TAC[IN_INSERT; IN_ELIM_THM] THEN ASM SET_TAC[]];
-    X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-    SUBGOAL_THEN `(x::A) \<in> topspace X` ASSUME_TAC THENL
-     [ASM_MESON_TAC[\<subseteq>; CLOSED_IN_SUBSET];
-      ASM_SIMP_TAC[GSYM REAL_LE_ANTISYM]] THEN
-    EXPAND_TAC "f" THEN MATCH_MP_TAC REAL_LE_INF THEN
-    REWRITE_TAC[NOT_INSERT_EMPTY; FORALL_IN_INSERT; REAL_LE_REFL] THEN
-    X_GEN_TAC `r::real` THEN REWRITE_TAC[IN_ELIM_THM] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-    GEN_REWRITE_TAC id [GSYM CONTRAPOS_THM] THEN
-    REWRITE_TAC[REAL_NOT_LE] THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`r::real`; `1`]) THEN
-    ASM_REWRITE_TAC[] THEN
-    REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-    MATCH_MP_TAC(SET_RULE
-     `x \<in> T \<and> g \<subseteq> g' \<Longrightarrow> g' \<subseteq> u - T \<Longrightarrow> (x \<notin> g)`) THEN
-    ASM_MESON_TAC[OPEN_IN_SUBSET; CLOSURE_OF_SUBSET]] THEN
-
-  MP_TAC(GEN `z::A`
-   (SPEC `1 insert {r. r \<in> dint \<and> z \<in> G r}` INF)) THEN
-  FIRST_ASSUM(fun th ->
-   REWRITE_TAC[REWRITE_RULE[] (GEN_REWRITE_RULE id [FUN_EQ_THM] th)]) THEN
-  REWRITE_TAC[NOT_INSERT_EMPTY; FORALL_IN_INSERT] THEN
-  DISCH_THEN(MP_TAC \<circ> MATCH_MP MONO_FORALL) THEN ANTS_TAC THENL
-   [GEN_TAC THEN EXISTS_TAC `0::real` THEN
-    REWRITE_TAC[IN_ELIM_THM; REAL_POS] THEN
-    UNDISCH_TAC `dint \<subseteq> {0..1}` THEN
-    SIMP_TAC[IN_REAL_INTERVAL; IN_ELIM_THM; \<subseteq>];
-    REWRITE_TAC[FORALL_AND_THM; IN_ELIM_THM]] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC (LABEL_TAC "*")) THEN
-  SUBGOAL_THEN
-   `\<forall>z x. x \<in> dint \<and> (z \<notin> G x) \<Longrightarrow> x \<le> f z`
-  ASSUME_TAC THENL
-   [MAP_EVERY X_GEN_TAC [`z::A`; `r::real`] THEN STRIP_TAC THEN
-    REMOVE_THEN "*" MATCH_MP_TAC THEN CONJ_TAC THENL
-     [UNDISCH_TAC `dint \<subseteq> {0..1}` THEN
-      ASM_SIMP_TAC[IN_REAL_INTERVAL; IN_ELIM_THM; \<subseteq>];
-      X_GEN_TAC `S::real` THEN STRIP_TAC] THEN
-    ONCE_REWRITE_TAC[GSYM REAL_NOT_LT] THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`S::real`; `r::real`]) THEN
-    ASM_REWRITE_TAC[] THEN
-    REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-    MP_TAC(ISPECL [`X::A topology`; `G S`]
-      CLOSURE_OF_SUBSET) THEN
-    ASM_SIMP_TAC[OPEN_IN_SUBSET] THEN ASM SET_TAC[];
-    REMOVE_THEN "*" (K ALL_TAC)] THEN
-  REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_TO_METRIC; IN_MBALL; REAL_EUCLIDEAN_METRIC] THEN
-  X_GEN_TAC `x::A` THEN DISCH_TAC THEN X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-  REWRITE_TAC[IN_UNIV] THEN
   SUBGOAL_THEN
    `(\<forall>y d. 0 < y \<and> y \<le> 1 \<and> 0 < d
-           \<Longrightarrow> \<exists>r. r \<in> dint \<and> r < y \<and> abs(r - y) < d) \<and>
+           \<Longrightarrow> \<exists>r. r \<in> dyadics \<inter> {0..1} \<and> r < y \<and> abs(r - y) < d) \<and>
     (\<forall>y d. 0 \<le> y \<and> y < 1 \<and> 0 < d
-           \<Longrightarrow> \<exists>r. r \<in> dint \<and> y < r \<and> abs(r - y) < d)`
+           \<Longrightarrow> \<exists>r. r \<in> dyadics \<inter> {0..1} \<and> y < r \<and> abs(r - y) < d)`
   ASSUME_TAC THENL
    [REPEAT STRIP_TAC THENL
      [MP_TAC(ISPECL [`2`; `y::real`; `d::real`]
-        PADIC_RATIONAL_APPROXIMATION_STRADDLE_POS) THEN ANTS_TAC
+        padic_rational_approximation_straddle_pos) THEN ANTS_TAC
       THENL [ASM_REAL_ARITH_TAC; REWRITE_TAC[LEFT_IMP_EXISTS_THM]] THEN
       MAP_EVERY X_GEN_TAC [`n::num`; `q::num`; `r::num`] THEN STRIP_TAC THEN
       EXISTS_TAC `q / 2 ^ n` THEN CONJ_TAC THENL
-       [EXPAND_TAC "dint"; ASM_REAL_ARITH_TAC] THEN
+       [EXPAND_TAC "dyadics \<inter> {0..1}"; ASM_REAL_ARITH_TAC] THEN
       REWRITE_TAC[IN_ELIM_THM] THEN
       MAP_EVERY EXISTS_TAC [`q::num`; `n::num`] THEN ASM_REWRITE_TAC[] THEN
       SUBGOAL_THEN `q / 2 ^ n \<le> 1` MP_TAC THENL
@@ -7653,7 +7721,7 @@ oops
       EXISTS_TAC `min 1 (r / 2 ^ n)` THEN CONJ_TAC THENL
        [REWRITE_TAC[real_min]; ASM_REAL_ARITH_TAC] THEN
       COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
-      EXPAND_TAC "dint" THEN REWRITE_TAC[IN_ELIM_THM] THEN
+      EXPAND_TAC "dyadics \<inter> {0..1}" THEN REWRITE_TAC[IN_ELIM_THM] THEN
       MAP_EVERY EXISTS_TAC [`r::num`; `n::num`] THEN ASM_REWRITE_TAC[] THEN
       SUBGOAL_THEN `r / 2 ^ n \<le> 1` MP_TAC THENL
        [ASM_REAL_ARITH_TAC; SIMP_TAC[REAL_LE_LDIV_EQ; REAL_LT_POW2]] THEN
