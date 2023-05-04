@@ -14,98 +14,63 @@ text\<open> --------------------------------------------------------------------
 
 
 lemma padic_rational_approximation_straddle:
-   "0 < e \<and> 1 < p
-           \<Longrightarrow> \<exists>n q r. of_int q / p ^ n < x \<and> x < of_int r / p ^ n \<and>
-                       abs(q / p ^ n - r / p ^ n) < e"
-using closure_dyadic_rationals [where 'a=real, simplified]
+  assumes "\<epsilon> > 0" "p > 1"
+  obtains n q r 
+    where "of_int q / p^n < x" "x < of_int r / p^n" "\<bar>q / p^n - r / p^n \<bar> < \<epsilon>"
+proof -
+  obtain n where n: "2 / \<epsilon> < p ^ n"
+    using \<open>p>1\<close> real_arch_pow by blast
+  define q where "q \<equiv> \<lfloor>p ^ n * x\<rfloor> - 1"
+  show thesis
+    proof
+      show "q / p ^ n < x" "x < real_of_int (q+2) / p ^ n"
+        using assms by (simp_all add: q_def divide_simps floor_less_cancel mult.commute)
+      show "\<bar>q / p ^ n - real_of_int (q+2) / p ^ n\<bar> < \<epsilon>"
+        using assms n by (simp add: q_def divide_simps mult.commute)
+    qed
+qed
 
-  
-  oops
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL [`p::real`; `2 / e::real`] REAL_ARCH_POW) THEN
-  ASM_SIMP_TAC[REAL_LT_LDIV_EQ] THEN MATCH_MP_TAC MONO_EXISTS THEN
-  X_GEN_TAC `n::num` THEN
-  GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [REAL_MUL_SYM] THEN
-  ASM_SIMP_TAC[GSYM REAL_LT_LDIV_EQ; REAL_POW_LT;
-               REAL_ARITH `1 < p \<Longrightarrow> 0 < p`] THEN
-  DISCH_TAC THEN MAP_EVERY EXISTS_TAC
-   [`floor(p ^ n * x) - 1`; `floor(p ^ n * x) + 1`] THEN
-  REWRITE_TAC[REAL_ARITH
-   `abs((x - 1) / p - (Suc x) / p) = abs(2 / p)`] THEN
-  ASM_SIMP_TAC[FLOOR; INTEGER_CLOSED; REAL_LT_LDIV_EQ; REAL_LT_RDIV_EQ;
-               REAL_POW_LT; REAL_ARITH `1 < p \<Longrightarrow> 0 < p`] THEN
-  REWRITE_TAC[REAL_ABS_DIV; REAL_ABS_POW; REAL_ABS_NUM] THEN
-  ASM_SIMP_TAC[REAL_ARITH `1 < p \<Longrightarrow> abs p = p`] THEN
-  MP_TAC(ISPEC `p ^ n * x::real` FLOOR) THEN REAL_ARITH_TAC);;
+lemma padic_rational_approximation_straddle_pos:
+  assumes "\<epsilon> > 0" "p > 1" "x > 0"
+  obtains n q r 
+    where "of_nat q / p^n < x" "x < of_nat r / p^n" "\<bar>q / p^n - r / p^n \<bar> < \<epsilon>"
+proof -
+  obtain n q r 
+    where *: "of_int q / p^n < x" "x < of_int r / p^n" "\<bar>q / p^n - r / p^n \<bar> < \<epsilon>"
+    using padic_rational_approximation_straddle assms by metis
+  then have "r \<ge> 0"
+    using assms by (smt (verit, best) divide_nonpos_pos of_int_0_le_iff zero_less_power)
+  show thesis
+  proof
+    show "real (max 0 (nat q)) / p ^ n < x"
+      using * by (metis assms(3) div_0 max_nat.left_neutral nat_eq_iff2 of_nat_0 of_nat_nat) 
+    show "x < real (nat r) / p ^ n"
+      using \<open>r \<ge> 0\<close> * by force
+    show "\<bar>real (max 0 (nat q)) / p ^ n - real (nat r) / p ^ n\<bar> < \<epsilon>"
+      using * assms by (simp add: divide_simps)
+  qed
+qed
 
-let PADIC_RATIONAL_APPROXIMATION_STRADDLE_POS,
-    PADIC_RATIONAL_APPROXIMATION_STRADDLE_POS_LE = (CONJ_PAIR o prove)
- (`(\<forall>p x e. 0 < e \<and> 1 < p \<and> 0 < x
-            \<Longrightarrow> \<exists>n q r. q / p ^ n < x \<and> x < r / p ^ n \<and>
-                        abs(q / p ^ n - r / p ^ n) < e) \<and>
-   (\<forall>p x e. 0 < e \<and> 1 < p \<and> 0 \<le> x
-           \<Longrightarrow> \<exists>n q r. q / p ^ n \<le> x \<and> x < r / p ^ n \<and>
-                       abs(q / p ^ n - r / p ^ n) < e)"
-oops 
-  REPEAT STRIP_TAC THEN
- (SUBGOAL_THEN `0 < p \<and> 0 \<le> p` STRIP_ASSUME_TAC THENL
-   [ASM_REAL_ARITH_TAC; ALL_TAC] THEN
-  MP_TAC(ISPECL [`p::real`; `x::real`; `e::real`]
-    PADIC_RATIONAL_APPROXIMATION_STRADDLE) THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `n::num` THEN
-  ASM_SIMP_TAC[REAL_LT_LDIV_EQ; REAL_LT_RDIV_EQ; REAL_POW_LT;
-               REAL_LE_LDIV_EQ; REAL_LE_RDIV_EQ; LEFT_IMP_EXISTS_THM] THEN
-  REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`q::real`; `r::real`] THEN STRIP_TAC THEN
-  MP_TAC(ISPEC `r::real` integer) THEN
-  MP_TAC(ISPEC `max q 0` integer) THEN
-  ASM_SIMP_TAC[INTEGER_CLOSED] THEN
-  REWRITE_TAC[IMP_IMP; LEFT_AND_EXISTS_THM] THEN
-  REWRITE_TAC[RIGHT_AND_EXISTS_THM] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `a::num` THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `b::num` THEN
-  REWRITE_TAC[REAL_ARITH `abs(max q 0) = max q 0`] THEN
-  SUBGOAL_THEN `0 < r` ASSUME_TAC THENL
-   [FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP (REAL_ARITH
-     `a < r \<Longrightarrow> 0 \<le> a \<Longrightarrow> 0 < r`)) THEN
-    MATCH_MP_TAC REAL_LE_MUL THEN ASM_SIMP_TAC[REAL_LT_IMP_LE] THEN
-    MATCH_MP_TAC REAL_POW_LE THEN ASM_REAL_ARITH_TAC;
-    ASM_SIMP_TAC[REAL_ARITH `0 < r \<Longrightarrow> abs r = r`]] THEN
-  DISCH_THEN(CONJUNCTS_THEN (SUBST1_TAC o SYM)) THEN
-  REWRITE_TAC[REAL_ARITH `max q 0 = if 0 \<le> q then q else 0`] THEN
-  COND_CASES_TAC THEN ASM_SIMP_TAC[REAL_LT_IMP_LE] THEN
-  ASM_SIMP_TAC[REAL_LE_MUL; REAL_LT_MUL; REAL_POW_LE; REAL_POW_LT] THEN
-  FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP (REAL_ARITH
-   `abs(q - r) < e \<Longrightarrow> 0 <-q \<and> z = 0 \<and> 0 < r
-    \<Longrightarrow> abs(z - r) < e`)) THEN
-  ASM_SIMP_TAC[REAL_LT_DIV; REAL_POW_LT] THEN
-  REWRITE_TAC[real_div; REAL_MUL_LZERO; GSYM REAL_MUL_LNEG] THEN
-  MATCH_MP_TAC REAL_LT_MUL THEN
-  ASM_SIMP_TAC[REAL_LT_INV_EQ; REAL_POW_LT] THEN ASM_REAL_ARITH_TAC));;
-
-lemma rational_approximation:
-   "0 < e \<Longrightarrow> \<exists>r. rational r \<and> abs(r - x) < e"
-oops 
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL [`2::real`; `x::real`; `e::real`]
-    PADIC_RATIONAL_APPROXIMATION_STRADDLE) THEN
-  ANTS_TAC THENL [ASM_REAL_ARITH_TAC; REWRITE_TAC[LEFT_IMP_EXISTS_THM]] THEN
-  MAP_EVERY X_GEN_TAC [`n::num`; `q::real`; `r::real`] THEN
-  STRIP_TAC THEN EXISTS_TAC `q / 2 ^ n` THEN
-  ASM_SIMP_TAC[RATIONAL_CLOSED] THEN ASM_REAL_ARITH_TAC);;
-
-lemma rational_between:
-   "a < b \<Longrightarrow> \<exists>q. rational q \<and> a < q \<and> q < b"
-oops 
-  REPEAT STRIP_TAC THEN
-  MP_TAC(SPECL [`(a + b) / 2`; `(b - a) / 4`] RATIONAL_APPROXIMATION) THEN
-  ANTS_TAC THENL [ALL_TAC; MATCH_MP_TAC MONO_EXISTS THEN SIMP_TAC[]] THEN
-  ASM_REAL_ARITH_TAC);;
-
-lemma rational_between_eq:
-   "(\<exists>q. rational q \<and> a < q \<and> q < b) \<longleftrightarrow> a < b"
-oops 
-  MESON_TAC[RATIONAL_BETWEEN; REAL_LT_TRANS]);;
+lemma padic_rational_approximation_straddle_pos_le:
+  assumes "\<epsilon> > 0" "p > 1" "x \<ge> 0"
+  obtains n q r 
+    where "of_nat q / p^n \<le> x" "x < of_nat r / p^n" "\<bar>q / p^n - r / p^n \<bar> < \<epsilon>"
+proof -
+  obtain n q r 
+    where *: "of_int q / p^n < x" "x < of_int r / p^n" "\<bar>q / p^n - r / p^n \<bar> < \<epsilon>"
+    using padic_rational_approximation_straddle assms by metis
+  then have "r \<ge> 0"
+    using assms by (smt (verit, best) divide_nonpos_pos of_int_0_le_iff zero_less_power)
+  show thesis
+  proof
+    show "real (max 0 (nat q)) / p ^ n \<le> x"
+      using * assms(3) nle_le by fastforce
+    show "x < real (nat r) / p ^ n"
+      using \<open>r \<ge> 0\<close> * by force
+    show "\<bar>real (max 0 (nat q)) / p ^ n - real (nat r) / p ^ n\<bar> < \<epsilon>"
+       using * assms by (simp add: divide_simps)
+  qed
+qed
 
 
 subsection \<open>ATIN-WITHIN\<close>
