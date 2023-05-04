@@ -7554,6 +7554,45 @@ proof -
 qed
 
 
+
+lemma dyadics_add:
+  assumes "x \<in> dyadics" "y \<in> dyadics"
+  shows "x+y \<in> dyadics"
+proof -
+  obtain i j m n where x: "x = of_nat i / 2 ^ m" and y: "y = of_nat j / 2 ^ n"
+    using assms by (auto simp: dyadics_def)
+  have xcommon: "x = of_nat(2^n * i) / 2 ^ (m+n)"
+    using x by (simp add: power_add)
+  moreover
+  have ycommon: "y = of_nat(2^m * j) / 2 ^ (m+n)"
+    using y by (simp add: power_add)
+  ultimately have "x+y = (of_nat(2^n * i + 2^m * j)) / 2 ^ (m+n)"
+    by (simp add: field_simps)
+  then show ?thesis
+    unfolding dyadics_def by blast
+qed
+
+lemma dyadics_diff:
+  fixes x :: "'a::linordered_field"
+  assumes "x \<in> dyadics" "y \<in> dyadics" "y \<le> x"
+  shows "x-y \<in> dyadics"
+proof -
+  obtain i j m n where x: "x = of_nat i / 2 ^ m" and y: "y = of_nat j / 2 ^ n"
+    using assms by (auto simp: dyadics_def)
+  have j_le_i: "j * 2 ^ m \<le> i * 2 ^ n"
+    using of_nat_le_iff \<open>y \<le> x\<close> unfolding x y by (fastforce simp add: divide_simps)
+  have xcommon: "x = of_nat(2^n * i) / 2 ^ (m+n)"
+    using x by (simp add: power_add)
+  moreover
+  have ycommon: "y = of_nat(2^m * j) / 2 ^ (m+n)"
+    using y by (simp add: power_add)
+  ultimately have "x-y = (of_nat(2^n * i - 2^m * j)) / 2 ^ (m+n)"
+    by (simp add: xcommon ycommon field_simps j_le_i of_nat_diff)
+  then show ?thesis
+    unfolding dyadics_def by blast
+qed
+
+
 lemma Urysohn_lemma:
   fixes a b :: real
   assumes "normal_space X" "closedin X S" "closedin X T" "disjnt S T" "a \<le> b" 
@@ -7584,9 +7623,9 @@ proof -
     by (force simp: dyadics_def)
 
   define f where "f \<equiv> \<lambda>x. Inf(insert 1 {r. r \<in> dyadics \<inter> {0..1} \<and> x \<in> G r})"
-  have "f x \<ge> 0" if "x \<in> topspace X" for x
+  have f_ge: "f x \<ge> 0" if "x \<in> topspace X" for x
     unfolding f_def by (force intro: cInf_greatest)
-  moreover have "f x \<le> 1" if "x \<in> topspace X" for x
+  moreover have f_le1: "f x \<le> 1" if "x \<in> topspace X" for x
   proof -
     have "bdd_below {r \<in> dyadics \<inter> {0..1}. x \<in> G r}"
       by (metis (no_types) Collect_subset Int_lower2 bdd_below_Icc bdd_below_mono)
@@ -7617,7 +7656,7 @@ proof -
     using that by (force simp: f_def intro: cInf_lower)
   have *: "b \<le> f z" if "b \<le> 1" "\<And>x. \<lbrakk>x \<in> dyadics \<inter> {0..1}; z \<in> G x\<rbrakk> \<Longrightarrow> b \<le> x" for z b
     using that by (force simp: f_def intro: cInf_greatest)
-  have "r \<le> f x" if r: "r \<in> dyadics \<inter> {0..1}" "x \<notin> G r" for r x
+  have **: "r \<le> f x" if r: "r \<in> dyadics \<inter> {0..1}" "x \<notin> G r" for r x
   proof (rule *)
     show "r \<le> s" if "s \<in> dyadics \<inter> {0..1}" and "x \<in> G s" for s :: real
       using that r G [of s r] by (force simp add: dest: closure_of_subset openin_subset)
@@ -7626,22 +7665,74 @@ proof -
   have "\<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>y \<in> U. \<bar>f y - f x\<bar> < \<epsilon>)"
     if "x \<in> topspace X" and "0 < \<epsilon>" for x \<epsilon>
   proof -
-    have "\<exists>r. r \<in> dyadics \<inter> {0..1} \<and> r < y \<and> \<bar>r - y\<bar> < d" if "0 < y" "y \<le> 1" "0 < d" for y d::real
+    have A: "\<exists>r. r \<in> dyadics \<inter> {0..1} \<and> r < y \<and> \<bar>r - y\<bar> < d" if "0 < y" "y \<le> 1" "0 < d" for y d::real
     proof -
-      have "(\<exists>n q r. q / 2 ^ n < y \<and> y < r / 2 ^ n \<and> abs (q / 2 ^ n - r / 2 ^ n) < d)"
-        unfolding DINT
-
-    sorry
+      obtain n q r 
+        where "of_nat q / 2^n < y" "y < of_nat r / 2^n" "\<bar>q / 2^n - r / 2^n \<bar> < d"
+        using padic_rational_approximation_straddle_pos 
+        by (smt (verit, del_insts) \<open>0 < d\<close> \<open>0 < y\<close>) 
+      then
       show ?thesis
-        using padic_rational_approximation_straddle_pos
-        sorry
+        apply (auto simp: dyadics_def)
+        using divide_eq_0_iff that(2) by fastforce
     qed
-    moreover
-    have "\<exists>r. r \<in> dyadics \<inter> {0..1} \<and> y < r \<and> \<bar>r - y\<bar> < d" if "0 \<le> y" "y < 1" "0 < d" for y d::real
-    sorry
-
+    have B: "\<exists>r. r \<in> dyadics \<inter> {0..1} \<and> y < r \<and> \<bar>r - y\<bar> < d" if "0 \<le> y" "y < 1" "0 < d" for y d::real
+    proof -
+      obtain n q r 
+        where "of_nat q / 2^n \<le> y" "y < of_nat r / 2^n" "\<bar>q / 2^n - r / 2^n \<bar> < d"
+        using padic_rational_approximation_straddle_pos_le
+        by (smt (verit, del_insts) \<open>0 < d\<close> \<open>0 \<le> y\<close>) 
+      then
+      show ?thesis
+        apply (auto simp: dyadics_def)
+        using divide_eq_0_iff \<open>y < 1\<close>
+        by (smt (verit) divide_nonneg_nonneg divide_self of_nat_0_le_iff of_nat_1 power_0 zero_le_power) 
+    qed
     show ?thesis
-      sorry
+    proof (cases "f x = 0")
+      case True
+      with B obtain r where r: "r \<in> dyadics \<inter> {0..1}" "0 < r" "\<bar>r\<bar> < \<epsilon>/2"
+        by (smt (verit) \<open>0 < \<epsilon>\<close> half_gt_zero)
+      show ?thesis
+      proof (intro exI conjI)
+        show "openin X (G r)"
+          using opeG r(1) by blast
+        show "x \<in> G r"
+          using True ** r by force
+        show "\<forall>y \<in> G r. \<bar>f y - f x\<bar> < \<epsilon>"
+          using f_ge \<open>openin X (G r)\<close> fle openin_subset r by (fastforce simp: True)
+      qed
+    next
+      case False
+      show ?thesis 
+      proof (cases "f x = 1")
+        case True
+        with A obtain r where r: "r \<in> dyadics \<inter> {0..1}" "r < 1" "\<bar>r-1\<bar> < \<epsilon>/2"
+          by (smt (verit) \<open>0 < \<epsilon>\<close> half_gt_zero)
+        define G' where "G' \<equiv> topspace X - X closure_of G r"
+        show ?thesis
+        proof (intro exI conjI)
+          show "openin X G'"
+            unfolding G'_def by fastforce
+          have "1 - r \<in> dyadics"
+            using 1 r(1,2) dyadics_diff by force
+          then show "x \<in> G'"
+            unfolding G'_def
+            using G [of r "1-r"] r that apply atomize
+            apply safe
+            using atLeastAtMost_iff apply blast
+              apply (simp add: )
+            prefer 2 apply (simp add: )
+            apply (auto simp: that)
+            using True ** r by force
+          show "\<forall>y \<in> G'. \<bar>f y - f x\<bar> < \<epsilon>"
+            using "**" f_le1 in_closure_of r by (fastforce simp add: True G'_def)
+        qed
+      next
+        case False
+        then show ?thesis sorry
+      qed
+    qed
   qed
   then have contf: "continuous_map X (top_of_set {0..1}) f"
     by (force simp add: Met.continuous_map_to_metric dist_real_def continuous_map_in_subtopology fim simp flip: Met.mtopology_is_euclideanreal)
@@ -7657,61 +7748,17 @@ proof -
       by (meson continuous_map_in_subtopology)
     show "g ` S \<subseteq> {a}" "g ` T \<subseteq> {b}"
       using fimS fimT by (auto simp: g_def)
-qed
+  qed
 
 oops
 
-  SUBGOAL_THEN
-   `(\<forall>y d. 0 < y \<and> y \<le> 1 \<and> 0 < d
-           \<Longrightarrow> \<exists>r. r \<in> dyadics \<inter> {0..1} \<and> r < y \<and> abs(r - y) < d) \<and>
-    (\<forall>y d. 0 \<le> y \<and> y < 1 \<and> 0 < d
-           \<Longrightarrow> \<exists>r. r \<in> dyadics \<inter> {0..1} \<and> y < r \<and> abs(r - y) < d)`
-  ASSUME_TAC THENL
-   [REPEAT STRIP_TAC THENL
-     [MP_TAC(ISPECL [`2`; `y::real`; `d::real`]
-        padic_rational_approximation_straddle_pos) THEN ANTS_TAC
-      THENL [ASM_REAL_ARITH_TAC; REWRITE_TAC[LEFT_IMP_EXISTS_THM]] THEN
-      MAP_EVERY X_GEN_TAC [`n::num`; `q::num`; `r::num`] THEN STRIP_TAC THEN
-      EXISTS_TAC `q / 2 ^ n` THEN CONJ_TAC THENL
-       [EXPAND_TAC "dyadics \<inter> {0..1}"; ASM_REAL_ARITH_TAC] THEN
-      REWRITE_TAC[IN_ELIM_THM] THEN
-      MAP_EVERY EXISTS_TAC [`q::num`; `n::num`] THEN ASM_REWRITE_TAC[] THEN
-      SUBGOAL_THEN `q / 2 ^ n \<le> 1` MP_TAC THENL
-       [ASM_REAL_ARITH_TAC; SIMP_TAC[REAL_LE_LDIV_EQ; REAL_LT_POW2]] THEN
-      REWRITE_TAC[REAL_MUL_LID; REAL_OF_NUM_POW; REAL_OF_NUM_LE];
-      MP_TAC(ISPECL [`2`; `y::real`; `d::real`]
-        PADIC_RATIONAL_APPROXIMATION_STRADDLE_POS_LE) THEN ANTS_TAC
-      THENL [ASM_REAL_ARITH_TAC; REWRITE_TAC[LEFT_IMP_EXISTS_THM]] THEN
-      MAP_EVERY X_GEN_TAC [`n::num`; `q::num`; `r::num`] THEN STRIP_TAC THEN
-      EXISTS_TAC `min 1 (r / 2 ^ n)` THEN CONJ_TAC THENL
-       [REWRITE_TAC[real_min]; ASM_REAL_ARITH_TAC] THEN
-      COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
-      EXPAND_TAC "dyadics \<inter> {0..1}" THEN REWRITE_TAC[IN_ELIM_THM] THEN
-      MAP_EVERY EXISTS_TAC [`r::num`; `n::num`] THEN ASM_REWRITE_TAC[] THEN
-      SUBGOAL_THEN `r / 2 ^ n \<le> 1` MP_TAC THENL
-       [ASM_REAL_ARITH_TAC; SIMP_TAC[REAL_LE_LDIV_EQ; REAL_LT_POW2]] THEN
-      REWRITE_TAC[REAL_MUL_LID; REAL_OF_NUM_POW; REAL_OF_NUM_LE]];
-    ALL_TAC] THEN
-  ASM_CASES_TAC `f x = 0` THENL
-   [FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`f x`; `e / 2`] \<circ> CONJUNCT2) THEN
-    ASM_SIMP_TAC[REAL_LT_01; REAL_HALF] THEN
-    DISCH_THEN(X_CHOOSE_THEN `r::real` STRIP_ASSUME_TAC) THEN
-    EXISTS_TAC `G r` THEN ASM_SIMP_TAC[] THEN CONJ_TAC THENL
-     [MATCH_MP_TAC(TAUT `(\<not> p \<Longrightarrow> False) \<Longrightarrow> p`) THEN DISCH_TAC THEN
-      SUBGOAL_THEN `r \<le> f x` MP_TAC THENL
-       [FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]; ASM_REAL_ARITH_TAC];
-      X_GEN_TAC `y::A` THEN DISCH_TAC THEN
-      SUBGOAL_THEN `f y \<le> r` MP_TAC THENL
-       [FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
-      SUBGOAL_THEN `0 \<le> f y \<and> f y \<le> 1` MP_TAC THENL
-       [FIRST_X_ASSUM MATCH_MP_TAC; ASM_REAL_ARITH_TAC] THEN
-      ASM_MESON_TAC[\<subseteq>; OPEN_IN_SUBSET]];
-    ALL_TAC] THEN
+
   ASM_CASES_TAC `f x = 1` THENL
    [FIRST_ASSUM(MP_TAC \<circ> SPECL [`f x`; `e / 2`] \<circ> CONJUNCT1) THEN
     ANTS_TAC THENL [ASM SIMP_TAC[] THEN ASM_REAL_ARITH_TAC; ALL_TAC] THEN
     ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `r::real` THEN
     STRIP_TAC THEN
+
     EXISTS_TAC `topspace X - X closure_of G r` THEN
     ASM_SIMP_TAC[OPEN_IN_DIFF; OPEN_IN_TOPSPACE; CLOSED_IN_CLOSURE_OF] THEN
     ASM_REWRITE_TAC[IN_DIFF] THEN CONJ_TAC THENL
@@ -7733,6 +7780,7 @@ oops
         SUBGOAL_THEN `f y \<le> 1` MP_TAC THENL
          [ASM_MESON_TAC[\<subseteq>; IN_REAL_INTERVAL]; ASM_REAL_ARITH_TAC]]];
     ALL_TAC] THEN
+
   FIRST_ASSUM(CONJUNCTS_THEN(MP_TAC \<circ> SPECL [`f x`; `e / 2`])) THEN
   SUBGOAL_THEN `0 \<le> f x \<and> f x \<le> 1` STRIP_ASSUME_TAC THENL
    [ASM_MESON_TAC[\<subseteq>; IN_REAL_INTERVAL]; ALL_TAC] THEN
