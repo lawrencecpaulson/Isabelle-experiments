@@ -5558,7 +5558,7 @@ proof (cases "S \<subseteq> M")
         qed
         then obtain x where "x \<in> K" and dxi: "d x (\<sigma> i) < \<epsilon> + \<epsilon>/4" and infx: "infinite (\<sigma> -` mball x (\<epsilon>/4))"
           by blast
-        then obtain j where "j \<in> ((\<sigma> -` mball x (\<epsilon>/4)) - {..i})"
+        then obtain j where "j \<in> (\<sigma> -` mball x (\<epsilon>/4)) - {..i}"
           using bounded_nat_set_is_finite by (meson Diff_infinite_finite finite_atMost)
         then have "j > i" and dxj: "d x (\<sigma> j) < \<epsilon>/4" 
           by auto
@@ -7379,9 +7379,8 @@ subsubsection\<open> Definition by recursion on dyadic rationals in [0,1]\<close
 lemma recursion_on_dyadic_fractions:
   assumes base: "R a b"
     and step: "\<And>x y. R x y \<Longrightarrow> \<exists>z. R x z \<and> R z y" and trans: "\<And>x y z. \<lbrakk>R x y; R y z\<rbrakk> \<Longrightarrow> R x z"
-  obtains f :: "real \<Rightarrow> 'a" 
-    where "f 0 = a" "f 1 = b" 
-       "\<And>x y. \<lbrakk>x \<in> dyadics \<inter> {0..1}; y \<in> dyadics \<inter> {0..1}; x < y\<rbrakk> \<Longrightarrow> R (f x) (f y)"
+  shows "\<exists>f :: real \<Rightarrow> 'a. f 0 = a \<and> f 1 = b \<and>
+               (\<forall>x \<in> dyadics \<inter> {0..1}. \<forall>y \<in> dyadics \<inter> {0..1}. x < y \<longrightarrow> R (f x) (f y))"
 proof -
   obtain mid where mid: "R x y \<Longrightarrow> R x (mid x y)" "R x y \<Longrightarrow> R (mid x y) y" for x y 
     using step by metis
@@ -7407,8 +7406,8 @@ proof -
     using function_factors_left by (smt (verit, del_insts) case_prod_beta')
   then have f_eq_g: "\<And>k n. f(real k / 2 ^ n) = g n k"
     by (simp add: fun_eq_iff)
-  show thesis
-  proof
+  show ?thesis
+  proof (intro exI conjI strip)
     show "f 0 = a"
       by (metis f_eq_g g0 div_0 of_nat_0)
     show "f 1 = b"
@@ -7496,13 +7495,62 @@ proof -
   obtain U where "openin X U" "S \<subseteq> U" "X closure_of U \<subseteq> topspace X - T"
     using assms unfolding normal_space_alt disjnt_def
     by (metis Diff_mono Un_Diff_Int closedin_def subset_eq sup_bot_right)
-  obtain G :: "real \<Rightarrow> 'a set"
+  have "\<exists>G :: real \<Rightarrow> 'a set. G 0 = U \<and> G 1 = topspace X - T \<and>
+               (\<forall>x \<in> dyadics \<inter> {0..1}. \<forall>y \<in> dyadics \<inter> {0..1}. x < y \<longrightarrow> openin X (G x) \<and> openin X (G y) \<and> X closure_of (G x) \<subseteq> G y)"
+  proof (rule recursion_on_dyadic_fractions)
+    show "openin X U \<and> openin X (topspace X - T) \<and> X closure_of U \<subseteq> topspace X - T"
+      using \<open>X closure_of U \<subseteq> topspace X - T\<close> \<open>openin X U\<close> \<open>closedin X T\<close> by blast
+    show "\<exists>z. (openin X x \<and> openin X z \<and> X closure_of x \<subseteq> z) \<and> openin X z \<and> openin X y \<and> X closure_of z \<subseteq> y"
+      if "openin X x \<and> openin X y \<and> X closure_of x \<subseteq> y" for x y
+      by (meson that closedin_closure_of normal_space_alt \<open>normal_space X\<close>)
+    show "openin X x \<and> openin X z \<and> X closure_of x \<subseteq> z"
+      if "openin X x \<and> openin X y \<and> X closure_of x \<subseteq> y" and "openin X y \<and> openin X z \<and> X closure_of y \<subseteq> z" for x y z
+      by (meson that closure_of_subset openin_subset subset_trans)
+  qed
+  then obtain G :: "real \<Rightarrow> 'a set"
       where G0: "G 0 = U" and G1: "G 1 = topspace X - T"
-        and G: "\<And>x y. x \<in> dyadics \<inter> {0..1} \<and> y \<in> dyadics \<inter> {0..1} \<and> x < y
-                      \<Longrightarrow> openin X (G x) \<and> openin X (G y) \<and> X closure_of (G x) \<subseteq> (G y)"
+        and G: "\<And>x y. \<lbrakk>x \<in> dyadics; y \<in> dyadics; 0 \<le> x; x < y; y \<le> 1\<rbrakk>
+                      \<Longrightarrow> openin X (G x) \<and> openin X (G y) \<and> X closure_of (G x) \<subseteq> G y"
+    by (smt (verit, del_insts) Int_iff atLeastAtMost_iff)
+
+  have DINT: "dyadics \<inter> {0..1} = {real k / 2 ^ n |n k. k \<le> 2 ^ n}"
+    by (force simp: dyadics_def)
+
+  define f where "f \<equiv> \<lambda>x. Inf(insert 1 {r. r \<in> dyadics \<inter> {0..1} \<and> x \<in> G r})"
+  have "f x \<ge> 0" if "x \<in> topspace X" for x
+    unfolding f_def by (force intro: cInf_greatest)
+  moreover have "f x \<le> 1" if "x \<in> topspace X" for x
+  proof -
+    have "bdd_below {r \<in> dyadics \<inter> {0..1}. x \<in> G r}"
+      by (metis (no_types) Collect_subset Int_lower2 bdd_below_Icc bdd_below_mono)
+    then show ?thesis
+      unfolding f_def by (meson bdd_below_insert cInf_lower insertCI)
+  qed
+  ultimately have fim: "f ` topspace X \<subseteq> {0..1}"
+    by (auto simp: f_def)
+  have 0: "0 \<in> dyadics \<inter> {0..1::real}" and 1: "1 \<in> dyadics \<inter> {0..1::real}"
+    by (force simp: dyadics_def)+
+  then have opeG: "openin X (G r)" if "r \<in> dyadics \<inter> {0..1}" for r
+    using G G0 \<open>openin X U\<close> less_eq_real_def that by auto
+
+  have contf: "continuous_map X (top_of_set {0..1}) f"
+    apply (simp add: continuous_map_in_subtopology)
+    apply (rule )
+
     sorry
-  obtain f :: "'a \<Rightarrow> real" where contf: "continuous_map X (top_of_set {0..1}) f" and fim: "f ` S \<subseteq> {0}" "f ` T \<subseteq> {1}"
-    sorry
+
+  have "x \<in> G 0" if "x \<in> S" for x
+    using G0 \<open>S \<subseteq> U\<close> that by blast
+  with 0 have fimS: "f ` S \<subseteq> {0}"
+    unfolding f_def by (force intro!: cInf_eq_minimum)
+  have False if "r \<in> dyadics" "0 \<le> r \<and> r < 1 \<and> x \<in> G r" "x \<in> T" for r x
+    using G [of r 1] 1
+    by (smt (verit, best) DiffD2 G1 Int_iff closure_of_subset inf.orderE openin_subset that)
+  then have "r\<ge>1" if "r \<in> dyadics" "0 \<le> r \<and> r \<le> 1 \<and> x \<in> G r" "x \<in> T" for r x
+    using linorder_not_le that by blast
+  then have fimT: "f ` T \<subseteq> {1}"
+    unfolding f_def by (force intro!: cInf_eq_minimum)
+
   define g where "g \<equiv> \<lambda>x. a + (b - a) * f x"
   show thesis
   proof
@@ -7514,69 +7562,11 @@ proof -
     ultimately show "continuous_map X (top_of_set {a..b}) g"
       by (meson continuous_map_in_subtopology)
     show "g ` S \<subseteq> {a}" "g ` T \<subseteq> {b}"
-      using fim by (auto simp: g_def)
+      using fimS fimT by (auto simp: g_def)
 qed
 
 oops
 
-THEN
-  SUBGOAL_THEN
-   `\<exists>g::real=>A->bool.
-        g 0 = u \<and> g 1 = topspace X - T \<and>
-        \<forall>x y. x \<in> {k / 2 ^ n | k \<le> 2 ^ n} \<and>
-              y \<in> {k / 2 ^ n | k \<le> 2 ^ n} \<and>
-              x < y
-              \<Longrightarrow> openin X (g x) \<and> openin X (g y) \<and>
-                  X closure_of (g x) \<subseteq> (g y)`
-  STRIP_ASSUME_TAC THENL
-   [MATCH_MP_TAC RECURSION_ON_DYADIC_FRACTIONS THEN
-    ASM_SIMP_TAC[OPEN_IN_DIFF; OPEN_IN_TOPSPACE] THEN
-    ASM_SIMP_TAC[SET_RULE `S \<subseteq> u - T \<longleftrightarrow> S \<subseteq> u \<and> disjnt S T`;
-                 CLOSED_IN_SUBSET] THEN
-    CONJ_TAC THENL
-     [ASM_MESON_TAC[CLOSURE_OF_SUBSET; OPEN_IN_SUBSET; SUBSET_TRANS];
-      ALL_TAC] THEN
-    MAP_EVERY X_GEN_TAC [`w::A=>bool`; `z::A=>bool`] THEN STRIP_TAC THEN
-    FIRST_ASSUM(MP_TAC \<circ> SPECL [`X closure_of w::A=>bool`; `z::A=>bool`] \<circ>
-      REWRITE_RULE[NORMAL_SPACE_ALT]) THEN
-    ASM_SIMP_TAC[CLOSED_IN_CLOSURE_OF] THEN ASM SET_TAC[];
-    ALL_TAC] THEN
-
-  ABBREV_TAC `dint = {k / 2 ^ n | k \<le> 2 ^ n}` THEN
-  SUBGOAL_THEN `dint \<subseteq> {0..1}` ASSUME_TAC THENL
-   [EXPAND_TAC "dint" THEN SIMP_TAC[\<subseteq>; IN_ELIM_THM; IN_REAL_INTERVAL] THEN
-    REPEAT STRIP_TAC THEN
-    ASM_SIMP_TAC[REAL_LE_LDIV_EQ; REAL_LE_RDIV_EQ; REAL_LT_POW2] THEN
-    REWRITE_TAC[REAL_MUL_LZERO; REAL_POS; REAL_MUL_LID] THEN
-    ASM_REWRITE_TAC[REAL_OF_NUM_LE; REAL_OF_NUM_POW];
-    ALL_TAC] THEN
-  ABBREV_TAC
-   `f = \<lambda>x::A. inf(1 insert {r. r \<in> dint \<and> x \<in> g r})` THEN
-  EXISTS_TAC `f::A=>real` THEN REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN
-  REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; IN_REAL_INTERVAL] THEN
-  SUBGOAL_THEN
-   `\<forall>x. x \<in> topspace X \<Longrightarrow> 0 \<le> f x \<and> f x \<le> 1`
-  ASSUME_TAC THENL
-   [GEN_TAC THEN DISCH_TAC THEN EXPAND_TAC "f" THEN REWRITE_TAC[] THEN
-    MATCH_MP_TAC REAL_INF_BOUNDS THEN
-    REWRITE_TAC[FORALL_IN_INSERT; NOT_INSERT_EMPTY] THEN
-    CONV_TAC REAL_RAT_REDUCE_CONV THEN
-    UNDISCH_TAC `dint \<subseteq> {0..1}` THEN
-    SIMP_TAC[IN_REAL_INTERVAL; IN_ELIM_THM; \<subseteq>];
-    ASM_REWRITE_TAC[]] THEN
-  SUBGOAL_THEN `0 \<in> dint \<and> 1 \<in> dint` STRIP_ASSUME_TAC THENL
-   [EXPAND_TAC "dint" THEN REWRITE_TAC[IN_ELIM_THM] THEN
-    CONJ_TAC THENL [EXISTS_TAC `0`; EXISTS_TAC `1`] THEN
-    EXISTS_TAC `0` THEN CONV_TAC NUM_REDUCE_CONV THEN
-    CONV_TAC REAL_RAT_REDUCE_CONV;
-    ALL_TAC] THEN
-  SUBGOAL_THEN `\<forall>r. r \<in> dint \<Longrightarrow> openin X ((g::real=>A->bool) r)`
-  ASSUME_TAC THENL
-   [X_GEN_TAC `r::real` THEN DISCH_TAC THEN
-    SUBGOAL_THEN `0 < r \<or> r < 1` MP_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-    SUBGOAL_THEN `r \<in> {0..1}` MP_TAC THENL
-     [ASM SET_TAC[]; REWRITE_TAC[IN_REAL_INTERVAL] THEN REAL_ARITH_TAC];
-    ALL_TAC] THEN
   REPEAT CONJ_TAC THENL
    [ALL_TAC;
     X_GEN_TAC `x::A` THEN DISCH_TAC THEN
@@ -7605,8 +7595,9 @@ THEN
     MATCH_MP_TAC(SET_RULE
      `x \<in> T \<and> g \<subseteq> g' \<Longrightarrow> g' \<subseteq> u - T \<Longrightarrow> (x \<notin> g)`) THEN
     ASM_MESON_TAC[OPEN_IN_SUBSET; CLOSURE_OF_SUBSET]] THEN
+
   MP_TAC(GEN `z::A`
-   (SPEC `1 insert {r. r \<in> dint \<and> z \<in> (g::real=>A->bool) r}` INF)) THEN
+   (SPEC `1 insert {r. r \<in> dint \<and> z \<in> G r}` INF)) THEN
   FIRST_ASSUM(fun th ->
    REWRITE_TAC[REWRITE_RULE[] (GEN_REWRITE_RULE id [FUN_EQ_THM] th)]) THEN
   REWRITE_TAC[NOT_INSERT_EMPTY; FORALL_IN_INSERT] THEN
@@ -7618,7 +7609,7 @@ THEN
     REWRITE_TAC[FORALL_AND_THM; IN_ELIM_THM]] THEN
   DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC (LABEL_TAC "*")) THEN
   SUBGOAL_THEN
-   `\<forall>z x. x \<in> dint \<and> (z \<notin> (g::real=>A->bool) x) \<Longrightarrow> x \<le> f z`
+   `\<forall>z x. x \<in> dint \<and> (z \<notin> G x) \<Longrightarrow> x \<le> f z`
   ASSUME_TAC THENL
    [MAP_EVERY X_GEN_TAC [`z::A`; `r::real`] THEN STRIP_TAC THEN
     REMOVE_THEN "*" MATCH_MP_TAC THEN CONJ_TAC THENL
@@ -7629,7 +7620,7 @@ THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`S::real`; `r::real`]) THEN
     ASM_REWRITE_TAC[] THEN
     REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-    MP_TAC(ISPECL [`X::A topology`; `(g::real=>A->bool) S`]
+    MP_TAC(ISPECL [`X::A topology`; `G S`]
       CLOSURE_OF_SUBSET) THEN
     ASM_SIMP_TAC[OPEN_IN_SUBSET] THEN ASM SET_TAC[];
     REMOVE_THEN "*" (K ALL_TAC)] THEN
@@ -7672,7 +7663,7 @@ THEN
    [FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`f x`; `e / 2`] \<circ> CONJUNCT2) THEN
     ASM_SIMP_TAC[REAL_LT_01; REAL_HALF] THEN
     DISCH_THEN(X_CHOOSE_THEN `r::real` STRIP_ASSUME_TAC) THEN
-    EXISTS_TAC `(g::real=>A->bool) r` THEN ASM_SIMP_TAC[] THEN CONJ_TAC THENL
+    EXISTS_TAC `G r` THEN ASM_SIMP_TAC[] THEN CONJ_TAC THENL
      [MATCH_MP_TAC(TAUT `(\<not> p \<Longrightarrow> False) \<Longrightarrow> p`) THEN DISCH_TAC THEN
       SUBGOAL_THEN `r \<le> f x` MP_TAC THENL
        [FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]; ASM_REAL_ARITH_TAC];
@@ -7688,7 +7679,7 @@ THEN
     ANTS_TAC THENL [ASM SIMP_TAC[] THEN ASM_REAL_ARITH_TAC; ALL_TAC] THEN
     ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `r::real` THEN
     STRIP_TAC THEN
-    EXISTS_TAC `topspace X - X closure_of (g::real=>A->bool) r` THEN
+    EXISTS_TAC `topspace X - X closure_of G r` THEN
     ASM_SIMP_TAC[OPEN_IN_DIFF; OPEN_IN_TOPSPACE; CLOSED_IN_CLOSURE_OF] THEN
     ASM_REWRITE_TAC[IN_DIFF] THEN CONJ_TAC THENL
      [DISCH_TAC THEN
@@ -7703,7 +7694,7 @@ THEN
       X_GEN_TAC `y::A` THEN STRIP_TAC THEN
       SUBGOAL_THEN `r \<le> f y` MP_TAC THENL
        [FIRST_X_ASSUM MATCH_MP_TAC THEN
-        MP_TAC(ISPECL [`X::A topology`; `(g::real=>A->bool) r`]
+        MP_TAC(ISPECL [`X::A topology`; `G r`]
                 CLOSURE_OF_SUBSET) THEN
         ASM_SIMP_TAC[OPEN_IN_SUBSET] THEN ASM SET_TAC[];
         SUBGOAL_THEN `f y \<le> 1` MP_TAC THENL
@@ -7716,7 +7707,7 @@ THEN
   X_GEN_TAC `r':real` THEN STRIP_TAC THEN
   ANTS_TAC THENL [ASM_REAL_ARITH_TAC; REWRITE_TAC[LEFT_IMP_EXISTS_THM]] THEN
   X_GEN_TAC `r::real` THEN STRIP_TAC THEN
-  EXISTS_TAC `(g::real=>A->bool) r' - X closure_of g r` THEN
+  EXISTS_TAC `G r' - X closure_of g r` THEN
   ASM_SIMP_TAC[IN_DIFF; OPEN_IN_DIFF; CLOSED_IN_CLOSURE_OF] THEN
   REPEAT CONJ_TAC THENL
    [MATCH_MP_TAC(TAUT `(\<not> p \<Longrightarrow> False) \<Longrightarrow> p`) THEN DISCH_TAC THEN
@@ -7740,7 +7731,7 @@ THEN
      [ALL_TAC; ASM_REAL_ARITH_TAC] THEN
     CONJ_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
     ASM_REWRITE_TAC[] THEN
-    MP_TAC(ISPECL [`X::A topology`; `(g::real=>A->bool) r`]
+    MP_TAC(ISPECL [`X::A topology`; `G r`]
               CLOSURE_OF_SUBSET) THEN
     ASM_SIMP_TAC[OPEN_IN_SUBSET] THEN ASM SET_TAC[]]);;
 
