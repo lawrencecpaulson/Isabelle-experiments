@@ -7397,20 +7397,43 @@ lemma Urysohn_lemma_alt:
   by (metis Urysohn_lemma assms continuous_map_in_subtopology disjnt_sym linear)
 
 lemma normal_space_eq_Urysohn_gen_alt:
-   "(a \<noteq> b)
-     \<Longrightarrow> (normal_space X \<longleftrightarrow>
-          \<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
-                \<Longrightarrow> \<exists>f. continuous_map X euclideanreal f \<and>
-                        (\<forall>x. x \<in> S \<Longrightarrow> f x = a) \<and>
-                        (\<forall>x. x \<in> T \<Longrightarrow> f x = b))"
+  assumes "a \<noteq> b"
+  shows "normal_space X \<longleftrightarrow>
+         (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
+                \<longrightarrow> (\<exists>f. continuous_map X euclideanreal f \<and> f ` S \<subseteq> {a} \<and> f ` T \<subseteq> {b}))"
+ (is "?lhs=?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs" 
+    by (metis Urysohn_lemma_alt)
+next
+  assume R: ?rhs 
+  show ?lhs
+    unfolding normal_space_def
+  proof clarify
+    fix S T
+    assume "closedin X S" and "closedin X T" and "disjnt S T"
+    with R obtain f where contf: "continuous_map X euclideanreal f" and "f ` S \<subseteq> {a}" "f ` T \<subseteq> {b}"
+      by meson
+    show "\<exists>U V. openin X U \<and> openin X V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
+      apply (rule_tac x="{x \<in> topspace X. f x \<in> ball a (\<bar>a-b\<bar> / 2)}" in exI)
+      apply (rule_tac x="{x \<in> topspace X. f x \<in> ball b (\<bar>a-b\<bar> / 2)}" in exI)
+      apply (intro conjI)
+          apply (rule openin_continuous_map_preimage [OF contf])
+          apply (force simp add: )
+         apply (rule openin_continuous_map_preimage [OF contf])
+         apply (force simp add: )
+      using \<open>closedin X S\<close> closedin_subset
+      using \<open>f ` S \<subseteq> {a}\<close> assms apply auto[1]
+      using \<open>f ` T \<subseteq> {b}\<close> assms apply auto[1]
+      apply (meson \<open>closedin X T\<close> closedin_subset subsetD)
+
+
+     sorry
+qed
+
+qed 
+
 oops
-  REPEAT STRIP_TAC THEN EQ_TAC THEN ASM_SIMP_TAC[URYSOHN_LEMMA_ALT] THEN
-  REWRITE_TAC[normal_space] THEN
-  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `S::A=>bool` THEN
-  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `T::A=>bool` THEN
-  DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `f::A=>real` THEN STRIP_TAC THEN
   MAP_EVERY EXISTS_TAC
    [`{x::A | x \<in> topspace X \<and>
             f x \<in> mball real_euclidean_metric (a,abs(a - b) / 2)}`;
