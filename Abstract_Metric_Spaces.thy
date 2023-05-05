@@ -7248,19 +7248,15 @@ proof -
         and G: "\<And>x y. \<lbrakk>x \<in> dyadics; y \<in> dyadics; 0 \<le> x; x < y; y \<le> 1\<rbrakk>
                       \<Longrightarrow> openin X (G x) \<and> openin X (G y) \<and> X closure_of (G x) \<subseteq> G y"
     by (smt (verit, del_insts) Int_iff atLeastAtMost_iff)
-
-  have DINT: "dyadics \<inter> {0..1} = {real k / 2 ^ n |n k. k \<le> 2 ^ n}"
-    by (force simp: dyadics_def)
-
   define f where "f \<equiv> \<lambda>x. Inf(insert 1 {r. r \<in> dyadics \<inter> {0..1} \<and> x \<in> G r})"
   have f_ge: "f x \<ge> 0" if "x \<in> topspace X" for x
     unfolding f_def by (force intro: cInf_greatest)
   moreover have f_le1: "f x \<le> 1" if "x \<in> topspace X" for x
   proof -
     have "bdd_below {r \<in> dyadics \<inter> {0..1}. x \<in> G r}"
-      by (metis (no_types) Collect_subset Int_lower2 bdd_below_Icc bdd_below_mono)
+      by (auto simp: bdd_below_def)
     then show ?thesis
-      unfolding f_def by (meson bdd_below_insert cInf_lower insertCI)
+       by (auto simp: f_def cInf_lower)
   qed
   ultimately have fim: "f ` topspace X \<subseteq> {0..1}"
     by (auto simp: f_def)
@@ -7268,7 +7264,6 @@ proof -
     by (force simp: dyadics_def)+
   then have opeG: "openin X (G r)" if "r \<in> dyadics \<inter> {0..1}" for r
     using G G0 \<open>openin X U\<close> less_eq_real_def that by auto
-
   have "x \<in> G 0" if "x \<in> S" for x
     using G0 \<open>S \<subseteq> U\<close> that by blast
   with 0 have fimS: "f ` S \<subseteq> {0}"
@@ -7280,7 +7275,7 @@ proof -
     using linorder_not_le that by blast
   then have fimT: "f ` T \<subseteq> {1}"
     unfolding f_def by (force intro!: cInf_eq_minimum)
-  have f1: "f z \<le> 1" for z
+  have fle1: "f z \<le> 1" for z
     by (force simp: f_def intro: cInf_lower)
   have fle: "f z \<le> x" if "x \<in> dyadics \<inter> {0..1}" "z \<in> G x" for z x
     using that by (force simp: f_def intro: cInf_lower)
@@ -7318,7 +7313,7 @@ proof -
     show ?thesis
     proof (cases "f x = 0")
       case True
-      with B obtain r where r: "r \<in> dyadics \<inter> {0..1}" "0 < r" "\<bar>r\<bar> < \<epsilon>/2"
+      with B[of 0] obtain r where r: "r \<in> dyadics \<inter> {0..1}" "0 < r" "\<bar>r\<bar> < \<epsilon>/2"
         by (smt (verit) \<open>0 < \<epsilon>\<close> half_gt_zero)
       show ?thesis
       proof (intro exI conjI)
@@ -7334,7 +7329,7 @@ proof -
       show ?thesis 
       proof (cases "f x = 1")
         case True
-        with A obtain r where r: "r \<in> dyadics \<inter> {0..1}" "r < 1" "\<bar>r-1\<bar> < \<epsilon>/2"
+        with A[of 1] obtain r where r: "r \<in> dyadics \<inter> {0..1}" "r < 1" "\<bar>r-1\<bar> < \<epsilon>/2"
           by (smt (verit) \<open>0 < \<epsilon>\<close> half_gt_zero)
         define G' where "G' \<equiv> topspace X - X closure_of G r"
         show ?thesis
@@ -7356,7 +7351,7 @@ proof -
       next
         case False
         have "0 < f x" "f x < 1"
-          using f1 f_ge that(1) \<open>f x \<noteq> 0\<close> \<open>f x \<noteq> 1\<close> by (metis order_le_less) +
+          using fle1 f_ge that(1) \<open>f x \<noteq> 0\<close> \<open>f x \<noteq> 1\<close> by (metis order_le_less) +
         obtain r where r: "r \<in> dyadics \<inter> {0..1}" "r < f x" "\<bar>r - f x\<bar> < \<epsilon> / 2"
           using A \<open>0 < \<epsilon>\<close> \<open>0 < f x\<close> \<open>f x < 1\<close> by (smt (verit, best) half_gt_zero)
         obtain r' where r': "r' \<in> dyadics \<inter> {0..1}" "f x < r'" "\<bar>r' - f x\<bar> < \<epsilon> / 2"
@@ -7364,16 +7359,17 @@ proof -
         have "r < 1"
           using \<open>f x < 1\<close> r(2) by force
         show ?thesis
-          apply (rule_tac x="G r' - X closure_of G r" in exI)
-          apply (intro conjI)
-          using closedin_closure_of opeG r'(1) apply blast
-           apply (auto simp: )
-          using "**" r' apply fastforce
-          using B [of r "f x - r"] r \<open>r < 1\<close>
-           apply (auto simp: )
-           apply (smt (verit, ccfv_SIG) G Int_iff atLeastAtMost_iff fle insert_absorb insert_subset)
-          using r r' 
-          by (smt (verit) "**" G closure_of_subset field_sum_of_halves fle openin_subset subset_eq)
+        proof (intro conjI exI)
+          show "openin X (G r' - X closure_of G r)"
+            using closedin_closure_of opeG r' by blast
+          have "x \<in> X closure_of G r \<Longrightarrow> False"
+            using B [of r "f x - r"] r \<open>r < 1\<close> G [of r] fle by force
+          then show "x \<in> G r' - X closure_of G r"
+            using "**" r' by fastforce
+          show "\<forall>y\<in>G r' - X closure_of G r. \<bar>f y - f x\<bar> < \<epsilon>"
+            using r r'  "**" G closure_of_subset field_sum_of_halves fle openin_subset subset_eq
+            by (smt (verit) DiffE opeG)
+        qed
       qed
     qed
   qed
@@ -7394,55 +7390,14 @@ proof -
   qed
 qed
 
-oops
-
-  EXISTS_TAC `G r' - X closure_of g r` THEN
-  ASM_SIMP_TAC[IN_DIFF; OPEN_IN_DIFF; CLOSED_IN_CLOSURE_OF] THEN
-  REPEAT CONJ_TAC THENL
-   [MATCH_MP_TAC(TAUT `(\<not> p \<Longrightarrow> False) \<Longrightarrow> p`) THEN DISCH_TAC THEN
-    SUBGOAL_THEN `r' \<le> f x` MP_TAC THENL
-     [FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]; ASM_REAL_ARITH_TAC];
-    DISCH_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ>
-      SPECL [`r::real`; `f(x::A) - r::real`] \<circ> CONJUNCT2) THEN
-    ANTS_TAC THENL
-     [ASM_REWRITE_TAC[REAL_SUB_LT] THEN CONJ_TAC THENL
-       [ASM_MESON_TAC[\<subseteq>; IN_REAL_INTERVAL]; ASM_REAL_ARITH_TAC];
-      DISCH_THEN(X_CHOOSE_THEN `r'':real` STRIP_ASSUME_TAC)] THEN
-    SUBGOAL_THEN `f x \<le> r''` MP_TAC THENL
-     [FIRST_X_ASSUM MATCH_MP_TAC THEN ASM SET_TAC[];
-      ASM_REAL_ARITH_TAC];
-    X_GEN_TAC `y::A` THEN STRIP_TAC THEN
-    SUBGOAL_THEN `(y::A) \<in> topspace X` ASSUME_TAC THENL
-     [ASM_MESON_TAC[\<subseteq>; OPEN_IN_SUBSET]; ALL_TAC] THEN
-    SUBGOAL_THEN `0 \<le> f y \<and> f y \<le> 1` STRIP_ASSUME_TAC THENL
-     [FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[]; ALL_TAC] THEN
-    SUBGOAL_THEN `r \<le> f y \<and> f y \<le> r'` MP_TAC THENL
-     [ALL_TAC; ASM_REAL_ARITH_TAC] THEN
-    CONJ_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-    ASM_REWRITE_TAC[] THEN
-    MP_TAC(ISPECL [`X::A topology`; `G r`]
-              CLOSURE_OF_SUBSET) THEN
-    ASM_SIMP_TAC[OPEN_IN_SUBSET] THEN ASM SET_TAC[]]);;
-
 lemma Urysohn_lemma_alt:
-   "\<And>(X::A topology) S T a b.
-        normal_space X \<and> closedin X S \<and> closedin X T \<and> disjnt S T
-        \<Longrightarrow> \<exists>f. continuous_map X euclideanreal f \<and>
-                (\<forall>x. x \<in> S \<Longrightarrow> f x = a) \<and>
-                (\<forall>x. x \<in> T \<Longrightarrow> f x = b)"
-oops
-  GEN_TAC THEN ONCE_REWRITE_TAC[MESON[]
-   `(\<forall>S T a b. P S T a b) \<longleftrightarrow> (\<forall>a b S T. P S T a b)`] THEN
-  MATCH_MP_TAC REAL_WLOG_LE THEN CONJ_TAC THENL
-   [REPEAT GEN_TAC THEN
-    GEN_REWRITE_TAC LAND_CONV [SWAP_FORALL_THM] THEN
-    REPEAT(AP_TERM_TAC THEN ABS_TAC) THEN MESON_TAC[DISJOINT_SYM];
-    REWRITE_TAC[RIGHT_IMP_FORALL_THM; IMP_IMP] THEN REPEAT GEN_TAC THEN
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP URYSOHN_LEMMA) THEN
-    REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN MESON_TAC[]]);;
+  fixes a b :: real
+  assumes "normal_space X" "closedin X S" "closedin X T" "disjnt S T"
+  obtains f where "continuous_map X euclideanreal f" "f ` S \<subseteq> {a}" "f ` T \<subseteq> {b}"
+  by (metis Urysohn_lemma assms continuous_map_in_subtopology disjnt_sym linear)
 
 lemma normal_space_eq_Urysohn_gen_alt:
-   "     (a \<noteq> b)
+   "(a \<noteq> b)
      \<Longrightarrow> (normal_space X \<longleftrightarrow>
           \<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
                 \<Longrightarrow> \<exists>f. continuous_map X euclideanreal f \<and>
@@ -7475,7 +7430,7 @@ oops
       REAL_ARITH_TAC]]);;
 
 lemma normal_space_eq_Urysohn_gen:
-   "     a < b
+   "a < b
      \<Longrightarrow> (normal_space X \<longleftrightarrow>
           \<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
                 \<Longrightarrow> \<exists>f. continuous_map
@@ -7491,7 +7446,7 @@ oops
   REPEAT(MATCH_MP_TAC MONO_FORALL THEN GEN_TAC) THEN MESON_TAC[]);;
 
 lemma normal_space_eq_Urysohn_alt:
-   "     normal_space X \<longleftrightarrow>
+   "normal_space X \<longleftrightarrow>
      \<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
            \<Longrightarrow> \<exists>f. continuous_map X euclideanreal f \<and>
                    (\<forall>x. x \<in> S \<Longrightarrow> f x = 0) \<and>
