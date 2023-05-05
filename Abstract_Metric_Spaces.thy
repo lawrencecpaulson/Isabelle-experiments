@@ -72,843 +72,6 @@ proof -
   qed
 qed
 
-
-subsection \<open>ATIN-WITHIN\<close>
-
-(*REPLACE ORIGINAL DEFINITION TO USE ABBREVIATION, LIKE AT / AT_WITHIN
-    ("atin (_) (_)/ within (_)" [1000, 60] 60)*)
-thm atin_def at_within_def
-definition atin_within :: "['a topology, 'a, 'a set] \<Rightarrow> 'a filter"
-  where "atin_within X a S = inf (nhdsin X a) (principal (topspace X \<inter> S - {a}))"
-
-lemma atin_within_UNIV [simp]:
-  shows "atin_within X a UNIV = atin X a"
-  by (simp add: atin_def atin_within_def)
-
-lemma eventually_atin_subtopology:
-  assumes "a \<in> topspace X"
-  shows "eventually P (atin (subtopology X S) a) \<longleftrightarrow> 
-    (a \<in> S \<longrightarrow> (\<exists>U. openin (subtopology X S) U \<and> a \<in> U \<and> (\<forall>x\<in>U - {a}. P x)))"
-  using assms by (simp add: eventually_atin)
-
-lemma eventually_atin_within:
-  "eventually P (atin_within X a S) \<longleftrightarrow> a \<notin> topspace X \<or>
-   (\<exists>T. openin X T \<and> a \<in> T \<and> (\<forall>x\<in>T. x \<in> S \<and> x \<noteq> a \<longrightarrow> P x))"
-proof (cases "a \<in> topspace X")
-  case True
-  hence "eventually P (atin_within X a S) \<longleftrightarrow> 
-         (\<exists>T. openin X T \<and> a \<in> T \<and>
-          (\<forall>x\<in>T. x \<in> topspace X \<and> x \<in> S \<and> x \<noteq> a \<longrightarrow> P x))"
-    by (simp add: atin_within_def eventually_inf_principal eventually_nhdsin)
-  also have "\<dots> \<longleftrightarrow> (\<exists>T. openin X T \<and> a \<in> T \<and> (\<forall>x\<in>T. x \<in> S \<and> x \<noteq> a \<longrightarrow> P x))"
-    using openin_subset by (intro ex_cong) auto
-  finally show ?thesis by (simp add: True)
-qed (simp add: atin_within_def)
-
-lemma atin_subtopology_within:
-  assumes "a \<in> S"
-  shows "atin (subtopology X S) a = atin_within X a S"
-proof -
-  have "eventually P (atin (subtopology X S) a) \<longleftrightarrow> eventually P (atin_within X a S)" for P
-    unfolding eventually_atin eventually_atin_within openin_subtopology
-    using assms by auto
-  then show ?thesis
-    by (meson le_filter_def order.eq_iff)
-qed
-
-lemma limit_continuous_map_within:
-   "\<lbrakk>continuous_map (subtopology X S) Y f; a \<in> S; a \<in> topspace X\<rbrakk>
-    \<Longrightarrow> limitin Y f (f a) (atin_within X a S)"
-  by (metis Int_iff atin_subtopology_within continuous_map_atin topspace_subtopology)
-
-lemma atin_subtopology_within_if:
-  shows "atin (subtopology X S) a = (if a \<in> S then atin_within X a S else bot)"
-  by (simp add: atin_subtopology_within)
-
-lemma trivial_limit_atpointof_within:
-   "trivial_limit(atin_within X a S) \<longleftrightarrow>
-        (a \<notin> X derived_set_of S)"
-  by (auto simp: trivial_limit_def eventually_atin_within in_derived_set_of)
-
-lemma derived_set_of_trivial_limit:
-   "a \<in> X derived_set_of S \<longleftrightarrow> \<not> trivial_limit(atin_within X a S)"
-  by (simp add: trivial_limit_atpointof_within)
-
-
-subsection \<open>Misc other\<close>
-      
-subsection\<open>Metric spaces\<close>
-
-(*Avoid a clash with the existing metric_space locale (from the type class)*)
-locale Metric_space =
-  fixes M :: "'a set" and d :: "'a \<Rightarrow> 'a \<Rightarrow> real"
-  assumes nonneg [simp]: "\<And>x y. 0 \<le> d x y"
-  assumes commute: "\<And>x y. d x y = d y x"
-  assumes zero [simp]: "\<And>x y. \<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> d x y = 0 \<longleftrightarrow> x=y"
-  assumes triangle: "\<And>x y z. \<lbrakk>x \<in> M; y \<in> M; z \<in> M\<rbrakk> \<Longrightarrow> d x z \<le> d x y + d y z"
-
-text \<open>Link with the type class version\<close>
-interpretation Met: Metric_space UNIV dist
-  by (simp add: dist_commute dist_triangle Metric_space.intro)
-
-(*NOT CLEAR WHETHER WE NEED/WANT THIS type definition*)
-typedef 'a metric = "{(M::'a set,d). Metric_space M d}"
-  morphisms "dest_metric" "metric"
-proof -
-  have "Metric_space {} (\<lambda>x y. 0)"
-    by (auto simp: Metric_space_def)
-  then show ?thesis
-    by blast
-qed
-
-definition mspace where "mspace m = fst (dest_metric m)"
-
-definition mdist where "mdist m = snd (dest_metric m)"
-
-lemma metric_space_mspace_mdist: "Metric_space (mspace m) (mdist m)"
-  by (metis Product_Type.Collect_case_prodD dest_metric mdist_def mspace_def)
-
-context Metric_space
-begin
-
-(*
-lemma metric [simp]:
-   "mspace (metric (M,d)) = M \<and> mdist (metric (M,d)) = d"
-  by (simp add: local.Metric_space_axioms mdist_def metric_inverse mspace_def)
-*)
-
-lemma subspace: "M' \<subseteq> M \<Longrightarrow> Metric_space M' d"
-  by (simp add: commute in_mono Metric_space.intro triangle)
-
-lemma abs_mdist [simp] : "\<bar>d x y\<bar> = d x y"
-  by simp
-
-lemma mdist_pos_less: "\<lbrakk>x \<noteq> y; x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> 0 < d x y"
-  by (metis less_eq_real_def nonneg zero)
-
-lemma mdist_zero [simp]: "x \<in> M \<Longrightarrow> d x x = 0"
-  by simp
-
-lemma mdist_pos_eq [simp]: "\<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> 0 < d x y \<longleftrightarrow> x \<noteq> y"
-  using mdist_pos_less zero by fastforce
-
-lemma triangle': "\<lbrakk>x \<in> M; y \<in> M; z \<in> M\<rbrakk> \<Longrightarrow> d x z \<le> d x y + d z y"
-  by (simp add: commute triangle)
-
-lemma triangle'': "\<lbrakk>x \<in> M; y \<in> M; z \<in> M\<rbrakk> \<Longrightarrow> d x z \<le> d y x + d y z"
-  by (simp add: commute triangle)
-
-lemma mdist_reverse_triangle: "\<lbrakk>x \<in> M; y \<in> M; z \<in> M\<rbrakk> \<Longrightarrow> \<bar>d x y - d y z\<bar> \<le> d x z"
-  by (smt (verit) commute triangle)
-
-text\<open> Open and closed balls                                                                \<close>
-
-definition mball where "mball x r \<equiv> {y. x \<in> M \<and> y \<in> M \<and> d x y < r}"
-definition mcball where "mcball x r \<equiv> {y. x \<in> M \<and> y \<in> M \<and> d x y \<le> r}"
-
-lemma in_mball [simp]: "y \<in> mball x r \<longleftrightarrow> x \<in> M \<and> y \<in> M \<and> d x y < r"
-  by (simp add: local.Metric_space_axioms Metric_space.mball_def)
-
-lemma centre_in_mball_iff [iff]: "x \<in> mball x r \<longleftrightarrow> x \<in> M \<and> 0 < r"
-  using in_mball mdist_zero by force
-
-lemma mball_subset_mspace: "mball x r \<subseteq> M"
-  by auto
-
-lemma mball_eq_empty: "mball x r = {} \<longleftrightarrow> (x \<notin> M) \<or> r \<le> 0"
-  by (smt (verit, best) Collect_empty_eq centre_in_mball_iff mball_def nonneg)
-
-lemma mball_subset: "\<lbrakk>d x y + a \<le> b; y \<in> M\<rbrakk> \<Longrightarrow> mball x a \<subseteq> mball y b"
-  by (smt (verit) commute in_mball subsetI triangle)
-
-lemma disjoint_mball: "r + r' \<le> d x x' \<Longrightarrow> disjnt (mball x r) (mball x' r')"
-  by (smt (verit) commute disjnt_iff in_mball triangle)
-
-lemma mball_subset_concentric: "r \<le> s \<Longrightarrow> mball x r \<subseteq> mball x s"
-  by auto
-
-lemma in_mcball [simp]: "y \<in> mcball x r \<longleftrightarrow> x \<in> M \<and> y \<in> M \<and> d x y \<le> r"
-  by (simp add: local.Metric_space_axioms Metric_space.mcball_def)
-
-lemma centre_in_mcball_iff [iff]: "x \<in> mcball x r \<longleftrightarrow> x \<in> M \<and> 0 \<le> r"
-  using mdist_zero by force
-
-lemma mcball_eq_empty: "mcball x r = {} \<longleftrightarrow> (x \<notin> M) \<or> r < 0"
-  by (smt (verit, best) Collect_empty_eq centre_in_mcball_iff empty_iff mcball_def nonneg)
-
-lemma mcball_subset_mspace: "mcball x r \<subseteq> M"
-  by auto
-
-lemma mball_subset_mcball: "mball x r \<subseteq> mcball x r"
-  by auto
-
-lemma mcball_subset: "\<lbrakk>d x y + a \<le> b; y \<in> M\<rbrakk> \<Longrightarrow> mcball x a \<subseteq> mcball y b"
-  by (smt (verit) in_mcball mdist_reverse_triangle subsetI)
-
-lemma mcball_subset_concentric: "r \<le> s \<Longrightarrow> mcball x r \<subseteq> mcball x s"
-  by force
-
-lemma mcball_subset_mball: "\<lbrakk>d x y + a < b; y \<in> M\<rbrakk> \<Longrightarrow> mcball x a \<subseteq> mball y b"
-  by (smt (verit) commute in_mball in_mcball subsetI triangle)
-
-lemma mcball_subset_mball_concentric: "a < b \<Longrightarrow> mcball x a \<subseteq> mball x b"
-  by force
-
-end
-
-
-
-subsection\<open> Metric topology                                                           \<close>
-
-context Metric_space
-begin
-
-definition mopen where 
-  "mopen U \<equiv> U \<subseteq> M \<and> (\<forall>x. x \<in> U \<longrightarrow> (\<exists>r>0. mball x r \<subseteq> U))"
-
-definition mtopology :: "'a topology" where 
-  "mtopology \<equiv> topology mopen"
-
-lemma is_topology_metric_topology [iff]: "istopology mopen"
-proof -
-  have "\<And>S T. \<lbrakk>mopen S; mopen T\<rbrakk> \<Longrightarrow> mopen (S \<inter> T)"
-    by (smt (verit, del_insts) Int_iff in_mball mopen_def subset_eq)
-  moreover have "\<And>\<K>. (\<forall>K\<in>\<K>. mopen K) \<longrightarrow> mopen (\<Union>\<K>)"
-    using mopen_def by fastforce
-  ultimately show ?thesis
-    by (simp add: istopology_def)
-qed
-
-lemma openin_mtopology: "openin mtopology U \<longleftrightarrow> U \<subseteq> M \<and> (\<forall>x. x \<in> U \<longrightarrow> (\<exists>r>0. mball x r \<subseteq> U))"
-  by (simp add: mopen_def mtopology_def)
-
-lemma topspace_mtopology [simp]: "topspace mtopology = M"
-  by (meson order.refl mball_subset_mspace openin_mtopology openin_subset openin_topspace subset_antisym zero_less_one)
-
-lemma subtopology_mspace [simp]: "subtopology mtopology M = mtopology"
-  by (metis subtopology_topspace topspace_mtopology)
-
-lemma open_in_mspace [iff]: "openin mtopology M"
-  by (metis openin_topspace topspace_mtopology)
-
-lemma closedin_mspace [iff]: "closedin mtopology M"
-  by (metis closedin_topspace topspace_mtopology)
-
-lemma openin_mball [iff]: "openin mtopology (mball x r)"
-proof -
-  have "\<And>y. \<lbrakk>x \<in> M; d x y < r\<rbrakk> \<Longrightarrow> \<exists>s>0. mball y s \<subseteq> mball x r"
-    by (metis add_diff_cancel_left' add_diff_eq commute less_add_same_cancel1 mball_subset order_refl)
-  then show ?thesis
-    by (auto simp: openin_mtopology)
-qed
-
-lemma mcball_eq_cball [simp]: "Met.mcball = cball"
-  by force
-
-lemma mball_eq_ball [simp]: "Met.mball = ball"
-  by force
-
-lemma mopen_eq_open [simp]: "Met.mopen = open"
-  by (force simp: open_contains_ball Met.mopen_def)
-
-lemma limitin_iff_tendsto [iff]: "limitin Met.mtopology \<sigma> x F = tendsto \<sigma> x F"
-  by (simp add: Met.mtopology_def)
-
-lemma mtopology_is_euclideanreal [simp]: "Met.mtopology = euclideanreal"
-  by (simp add: Met.mtopology_def)
-
-(*
-lemma metric_injective_image:
-   "\<And>f m s.
-        f ` s \<subseteq> M \<and>
-        (\<forall>x y. x \<in> s \<and> y \<in> s \<and> f x = f y \<Longrightarrow> x = y)
-        \<Longrightarrow> (mspace(metric(s,\<lambda>(x,y). d (f x) (f y))) = s) \<and>
-            (d(metric(s,\<lambda>(x,y). d (f x) (f y))) =
-             \<lambda>(x,y). d (f x) (f y))"
-oops
-  REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; INJECTIVE_ON_ALT] THEN
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
-  REWRITE_TAC[mspace; d; GSYM PAIR_EQ] THEN
-  REWRITE_TAC[GSYM(CONJUNCT2 metric_tybij); is_metric_space] THEN
-  REWRITE_TAC[GSYM mspace; GSYM d] THEN
-  ASM_SIMP_TAC[MDIST_POS_LE; MDIST_TRIANGLE; MDIST_0] THEN
-  ASM_MESON_TAC[MDIST_SYM]);;
-*)
-
-lemma mtopology_base:
-   "mtopology = topology(arbitrary union_of (\<lambda>U. \<exists>x \<in> M. \<exists>r>0. U = mball x r))"
-proof -
-  have "\<And>S. \<exists>x r. x \<in> M \<and> 0 < r \<and> S = mball x r \<Longrightarrow> openin mtopology S"
-    using openin_mball by blast
-  moreover have "\<And>U x. \<lbrakk>openin mtopology U; x \<in> U\<rbrakk> \<Longrightarrow> \<exists>B. (\<exists>x r. x \<in> M \<and> 0 < r \<and> B = mball x r) \<and> x \<in> B \<and> B \<subseteq> U"
-    by (metis centre_in_mball_iff in_mono openin_mtopology)
-  ultimately show ?thesis
-    by (smt (verit) topology_base_unique)
-qed
-
-lemma closedin_metric:
-   "closedin mtopology C \<longleftrightarrow> C \<subseteq> M \<and> (\<forall>x. x \<in> M - C \<longrightarrow> (\<exists>r>0. disjnt C (mball x r)))"  (is "?lhs = ?rhs")
-proof
-  show "?lhs \<Longrightarrow> ?rhs"
-    unfolding closedin_def openin_mtopology
-    by (metis Diff_disjoint disjnt_def disjnt_subset2 topspace_mtopology)
-  show "?rhs \<Longrightarrow> ?lhs"
-    unfolding closedin_def openin_mtopology disjnt_def
-    by (metis Diff_subset Diff_triv Int_Diff Int_commute inf.absorb_iff2 mball_subset_mspace topspace_mtopology)
-qed
-
-lemma closedin_mcball [iff]: "closedin mtopology (mcball x r)"
-proof -
-  have "\<exists>ra>0. disjnt (mcball x r) (mball y ra)" if "x \<notin> M" for y
-    by (metis disjnt_empty1 gt_ex mcball_eq_empty that)
-  moreover have "disjnt (mcball x r) (mball y (d x y - r))" if "y \<in> M" "d x y > r" for y
-    using that disjnt_iff in_mball in_mcball mdist_reverse_triangle by force
-  ultimately show ?thesis
-    using closedin_metric mcball_subset_mspace by fastforce
-qed
-
-lemma mball_iff_mcball: "(\<exists>r>0. mball x r \<subseteq> U) = (\<exists>r>0. mcball x r \<subseteq> U)"
-  by (meson dense mball_subset_mcball mcball_subset_mball_concentric order_trans)
-
-lemma openin_mtopology_mcball:
-  "openin mtopology U \<longleftrightarrow> U \<subseteq> M \<and> (\<forall>x. x \<in> U \<longrightarrow> (\<exists>r. 0 < r \<and> mcball x r \<subseteq> U))"
-  using mball_iff_mcball openin_mtopology by presburger
-
-lemma metric_derived_set_of:
-  "mtopology derived_set_of S = {x \<in> M. \<forall>r>0. \<exists>y\<in>S. y\<noteq>x \<and> y \<in> mball x r}" (is "?lhs=?rhs")
-proof
-  show "?lhs \<subseteq> ?rhs"
-    unfolding openin_mtopology derived_set_of_def 
-    by clarsimp (metis in_mball openin_mball openin_mtopology zero)
-  show "?rhs \<subseteq> ?lhs"
-    unfolding openin_mtopology derived_set_of_def 
-    by clarify (metis subsetD topspace_mtopology)
-qed
-
-lemma metric_closure_of:
-   "mtopology closure_of S = {x \<in> M. \<forall>r>0. \<exists>y \<in> S. y \<in> mball x r}"
-proof -
-  have "\<And>x r. \<lbrakk>0 < r; x \<in> mtopology closure_of S\<rbrakk> \<Longrightarrow> \<exists>y\<in>S. y \<in> mball x r"
-    by (metis centre_in_mball_iff in_closure_of openin_mball topspace_mtopology)
-  moreover have "\<And>x T. \<lbrakk>x \<in> M; \<forall>r>0. \<exists>y\<in>S. y \<in> mball x r\<rbrakk> \<Longrightarrow> x \<in> mtopology closure_of S"
-    by (smt (verit) in_closure_of in_mball openin_mtopology subsetD topspace_mtopology)
-  ultimately show ?thesis
-    by (auto simp: in_closure_of)
-qed
-
-lemma metric_closure_of_alt:
-  "mtopology closure_of S = {x \<in> M. \<forall>r>0. \<exists>y \<in> S. y \<in> mcball x r}"
-proof -
-  have "\<And>x r. \<lbrakk>\<forall>r>0. x \<in> M \<and> (\<exists>y\<in>S. y \<in> mcball x r); 0 < r\<rbrakk> \<Longrightarrow> \<exists>y\<in>S. y \<in> M \<and> d x y < r"
-    by (meson dense in_mcball le_less_trans)
-  then show ?thesis
-    by (fastforce simp: metric_closure_of in_closure_of)
-qed
-
-lemma metric_interior_of:
-   "mtopology interior_of S = {x \<in> M. \<exists>\<epsilon>>0. mball x \<epsilon> \<subseteq> S}" (is "?lhs=?rhs")
-proof
-  show "?lhs \<subseteq> ?rhs"
-    using interior_of_maximal_eq openin_mtopology by fastforce
-  show "?rhs \<subseteq> ?lhs"
-    using interior_of_def openin_mball by fastforce
-qed
-
-lemma metric_interior_of_alt:
-   "mtopology interior_of S = {x \<in> M. \<exists>\<epsilon>>0. mcball x \<epsilon> \<subseteq> S}"
-  by (fastforce simp: mball_iff_mcball metric_interior_of)
-
-lemma in_interior_of_mball:
-   "x \<in> mtopology interior_of S \<longleftrightarrow> x \<in> M \<and> (\<exists>\<epsilon>>0. mball x \<epsilon> \<subseteq> S)"
-  using metric_interior_of by force
-
-lemma in_interior_of_mcball:
-   "x \<in> mtopology interior_of S \<longleftrightarrow> x \<in> M \<and> (\<exists>\<epsilon>>0. mcball x \<epsilon> \<subseteq> S)"
-  using metric_interior_of_alt by force
-
-lemma Hausdorff_space_mtopology: "Hausdorff_space mtopology"
-  unfolding Hausdorff_space_def
-proof clarify
-  fix x y
-  assume x: "x \<in> topspace mtopology" and y: "y \<in> topspace mtopology" and "x \<noteq> y"
-  then have gt0: "d x y / 2 > 0"
-    by auto
-  have "disjnt (mball x (d x y / 2)) (mball y (d x y / 2))"
-    by (simp add: disjoint_mball)
-  then show "\<exists>U V. openin mtopology U \<and> openin mtopology V \<and> x \<in> U \<and> y \<in> V \<and> disjnt U V"
-    by (metis centre_in_mball_iff gt0 openin_mball topspace_mtopology x y)
-qed
-
-
-
-subsection\<open>Bounded sets\<close>
-
-definition mbounded where "mbounded S \<longleftrightarrow> (\<exists>x B. S \<subseteq> mcball x B)"
-
-lemma mbounded_pos: "mbounded S \<longleftrightarrow> (\<exists>x B. 0 < B \<and> S \<subseteq> mcball x B)"
-proof -
-  have "\<exists>x' r'. 0 < r' \<and> S \<subseteq> mcball x' r'" if "S \<subseteq> mcball x r" for x r
-    by (metis gt_ex less_eq_real_def linorder_not_le mcball_subset_concentric order_trans that)
-  then show ?thesis
-    by (auto simp: mbounded_def)
-qed
-
-lemma mbounded_alt:
-  "mbounded S \<longleftrightarrow> S \<subseteq> M \<and> (\<exists>B. \<forall>x \<in> S. \<forall>y \<in> S. d x y \<le> B)"
-proof -
-  have "\<And>x B. S \<subseteq> mcball x B \<Longrightarrow> \<forall>x\<in>S. \<forall>y\<in>S. d x y \<le> 2 * B"
-    by (smt (verit, best) commute in_mcball subsetD triangle)
-  then show ?thesis
-    apply (auto simp: mbounded_def subset_iff)
-     apply blast+
-    done
-qed
-
-
-lemma mbounded_alt_pos:
-  "mbounded S \<longleftrightarrow> S \<subseteq> M \<and> (\<exists>B>0. \<forall>x \<in> S. \<forall>y \<in> S. d x y \<le> B)"
-  by (smt (verit, del_insts) gt_ex mbounded_alt)
-
-lemma mbounded_subset: "\<lbrakk>mbounded T; S \<subseteq> T\<rbrakk> \<Longrightarrow> mbounded S"
-  by (meson mbounded_def order_trans)
-
-lemma mbounded_subset_mspace: "mbounded S \<Longrightarrow> S \<subseteq> M"
-  by (simp add: mbounded_alt)
-
-lemma mbounded:
-   "mbounded S \<longleftrightarrow> S = {} \<or> (\<forall>x \<in> S. x \<in> M) \<and> (\<exists>y B. y \<in> M \<and> (\<forall>x \<in> S. d y x \<le> B))"
-  by (meson all_not_in_conv in_mcball mbounded_def subset_iff)
-
-lemma mbounded_empty [iff]: "mbounded {}"
-  by (simp add: mbounded)
-
-lemma mbounded_mcball: "mbounded (mcball x r)"
-  using mbounded_def by auto
-
-lemma mbounded_mball [iff]: "mbounded (mball x r)"
-  by (meson mball_subset_mcball mbounded_def)
-
-lemma mbounded_insert: "mbounded (insert a S) \<longleftrightarrow> a \<in> M \<and> mbounded S"
-proof -
-  have "\<And>y B. \<lbrakk>y \<in> M; \<forall>x\<in>S. d y x \<le> B\<rbrakk>
-           \<Longrightarrow> \<exists>y. y \<in> M \<and> (\<exists>B \<ge> d y a. \<forall>x\<in>S. d y x \<le> B)"
-    by (metis order.trans nle_le)
-  then show ?thesis
-    by (auto simp: mbounded)
-qed
-
-lemma mbounded_Int: "mbounded S \<Longrightarrow> mbounded (S \<inter> T)"
-  by (meson inf_le1 mbounded_subset)
-
-lemma mbounded_Un: "mbounded (S \<union> T) \<longleftrightarrow> mbounded S \<and> mbounded T" (is "?lhs=?rhs")
-proof
-  assume R: ?rhs
-  show ?lhs
-  proof (cases "S={} \<or> T={}")
-    case True then show ?thesis
-      using R by auto
-  next
-    case False
-    obtain x y B C where "S \<subseteq> mcball x B" "T \<subseteq> mcball y C" "B > 0" "C > 0" "x \<in> M" "y \<in> M"
-      using R mbounded_pos
-      by (metis False mcball_eq_empty subset_empty)
-    then have "S \<union> T \<subseteq> mcball x (B + C + d x y)"
-      by (smt (verit) commute dual_order.trans le_supI mcball_subset mdist_pos_eq)
-    then show ?thesis
-      using mbounded_def by blast
-  qed
-next
-  show "?lhs \<Longrightarrow> ?rhs"
-    using mbounded_def by auto
-qed
-
-lemma mbounded_Union:
-  "\<lbrakk>finite \<F>; \<And>X. X \<in> \<F> \<Longrightarrow> mbounded X\<rbrakk> \<Longrightarrow> mbounded (\<Union>\<F>)"
-  by (induction \<F> rule: finite_induct) (auto simp: mbounded_Un)
-
-lemma mbounded_closure_of:
-   "mbounded S \<Longrightarrow> mbounded (mtopology closure_of S)"
-  by (meson closedin_mcball closure_of_minimal mbounded_def)
-
-lemma mbounded_closure_of_eq:
-   "S \<subseteq> M \<Longrightarrow> (mbounded (mtopology closure_of S) \<longleftrightarrow> mbounded S)"
-  by (metis closure_of_subset mbounded_closure_of mbounded_subset topspace_mtopology)
-
-
-lemma maxdist_thm:
-  assumes "mbounded S"
-      and "x \<in> S"
-      and "y \<in> S"
-    shows  "d x y = (SUP z\<in>S. \<bar>d x z - d z y\<bar>)"
-proof -
-  have "\<bar>d x z - d z y\<bar> \<le> d x y" if "z \<in> S" for z
-    by (metis all_not_in_conv assms mbounded mdist_reverse_triangle that) 
-  moreover have "d x y \<le> r"
-    if "\<And>z. z \<in> S \<Longrightarrow> \<bar>d x z - d z y\<bar> \<le> r" for r :: real
-    using that assms mbounded_subset_mspace mdist_zero by fastforce
-  ultimately show ?thesis
-    by (intro cSup_eq [symmetric]) auto
-qed
-
-
-lemma metric_eq_thm: "\<lbrakk>S \<subseteq> M; x \<in> S; y \<in> S\<rbrakk> \<Longrightarrow> (x = y) = (\<forall>z\<in>S. d x z = d y z)"
-  by (metis commute  subset_iff zero)
-
-lemma compactin_imp_mbounded:
-  assumes "compactin mtopology S"
-  shows "mbounded S"
-proof -
-  have "S \<subseteq> M"
-    and com: "\<And>\<U>. \<lbrakk>\<forall>U\<in>\<U>. openin mtopology U; S \<subseteq> \<Union>\<U>\<rbrakk> \<Longrightarrow> \<exists>\<F>. finite \<F> \<and> \<F> \<subseteq> \<U> \<and> S \<subseteq> \<Union>\<F>"
-    using assms by (auto simp: compactin_def mbounded_def)
-  show ?thesis
-  proof (cases "S = {}")
-    case False
-    with \<open>S \<subseteq> M\<close> obtain a where "a \<in> S" "a \<in> M"
-      by blast
-    with \<open>S \<subseteq> M\<close> gt_ex have "S \<subseteq> \<Union>(range (mball a))"
-      by force
-    moreover have "\<forall>U \<in> range (mball a). openin mtopology U"
-      by (simp add: openin_mball)
-    ultimately obtain \<F> where "finite \<F>" "\<F> \<subseteq> range (mball a)" "S \<subseteq> \<Union>\<F>"
-      by (meson com)
-  then show ?thesis
-      using mbounded_Union mbounded_subset by fastforce
-  qed auto
-qed
-
-end
-
-
-subsection\<open>Subspace of a metric space\<close>
-
-locale submetric = Metric_space + 
-  fixes A
-  assumes subset: "A \<subseteq> M"
-
-sublocale submetric \<subseteq> sub: Metric_space A d
-  by (simp add: subset subspace)
-
-context submetric
-begin 
-
-lemma mball_submetric_eq: "sub.mball a r = (if a \<in> A then A \<inter> mball a r else {})"
-and mcball_submetric_eq: "sub.mcball a r = (if a \<in> A then A \<inter> mcball a r else {})"
-  using subset by force+
-
-lemma mtopology_submetric: "sub.mtopology = subtopology mtopology A"
-  unfolding topology_eq
-proof (intro allI iffI)
-  fix S
-  assume "openin sub.mtopology S"
-  then have "\<exists>T. openin (subtopology mtopology A) T \<and> x \<in> T \<and> T \<subseteq> S" if "x \<in> S" for x
-    by (metis mball_submetric_eq openin_mball openin_subtopology_Int2 sub.centre_in_mball_iff sub.openin_mtopology subsetD that)
-  then show "openin (subtopology mtopology A) S"
-    by (meson openin_subopen)
-next
-  fix S
-  assume "openin (subtopology mtopology A) S"
-  then obtain T where "openin mtopology T" "S = T \<inter> A"
-    by (meson openin_subtopology)
-  then have "mopen T"
-    by (simp add: mopen_def openin_mtopology)
-  then have "sub.mopen (T \<inter> A)"
-    unfolding sub.mopen_def mopen_def
-    by (metis inf.coboundedI2 mball_submetric_eq Int_iff \<open>S = T \<inter> A\<close> inf.bounded_iff subsetI)
-  then show "openin sub.mtopology S"
-    using \<open>S = T \<inter> A\<close> sub.mopen_def sub.openin_mtopology by force
-qed
-
-lemma mbounded_submetric: "sub.mbounded T \<longleftrightarrow> mbounded T \<and> T \<subseteq> A"
-  by (meson mbounded_alt sub.mbounded_alt subset subset_trans)
-
-end
-  
-
-(**
-lemma submetric_submetric:
-   "\<And>m A t::A=>bool.
-        submetric (submetric A) t = submetric (A \<inter> t)"
-oops
-  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[submetric] THEN
-  REWRITE_TAC[SUBMETRIC] THEN
-  REWRITE_TAC[SET_RULE `(A \<inter> t) \<inter> m = t \<inter> A \<inter> m`]);;
-
-lemma submetric_restrict:
-   "\<And>m A::A=>bool. submetric A = submetric (M \<inter> A)"
-oops
-  REPEAT GEN_TAC THEN
-  GEN_REWRITE_TAC (LAND_CONV \<circ> LAND_CONV) [GSYM SUBMETRIC_MSPACE] THEN
-  REWRITE_TAC[SUBMETRIC_SUBMETRIC]);;
-**)
-
-
-subsection\<open>The discrete metric\<close>
-
-
-locale discrete_metric =
-  fixes M :: "'a set"
-
-definition (in discrete_metric) dd :: "'a \<Rightarrow> 'a \<Rightarrow> real"
-  where "dd \<equiv> \<lambda>x y::'a. if x=y then 0 else 1"
-
-lemma metric_M_dd: "Metric_space M discrete_metric.dd"
-  by (simp add: discrete_metric.dd_def Metric_space.intro)
-
-sublocale discrete_metric \<subseteq> disc: Metric_space M dd
-  by (simp add: metric_M_dd)
-
-
-lemma (in discrete_metric) mopen_singleton:
-  assumes "x \<in> M" shows "disc.mopen {x}"
-proof -
-  have "disc.mball x (1/2) \<subseteq> {x}"
-    by (smt (verit) dd_def disc.in_mball less_divide_eq_1_pos singleton_iff subsetI)
-  with assms show ?thesis
-    using disc.mopen_def half_gt_zero_iff zero_less_one by blast
-qed
-
-lemma (in discrete_metric) mtopology_discrete_metric:
-   "disc.mtopology = discrete_topology M"
-proof -
-  have "\<And>x. x \<in> M \<Longrightarrow> openin disc.mtopology {x}"
-    by (simp add: disc.mtopology_def mopen_singleton)
-  then show ?thesis
-    by (metis disc.topspace_mtopology discrete_topology_unique)
-qed
-
-lemma (in discrete_metric) discrete_ultrametric:
-   "dd x z \<le> max (dd x y) (dd y z)"
-  by (simp add: dd_def)
-
-
-lemma (in discrete_metric) dd_le1: "dd x y \<le> 1"
-  by (simp add: dd_def)
-
-lemma (in discrete_metric) mbounded_discrete_metric: "disc.mbounded S \<longleftrightarrow> S \<subseteq> M"
-  by (meson dd_le1 disc.mbounded_alt)
-
-
-
-subsection\<open>Metrizable spaces\<close>
-
-
-definition metrizable_space where
-  "metrizable_space X \<equiv> (\<exists>M d. Metric_space M d \<and> X = Metric_space.mtopology M d)"
-
-lemma (in Metric_space) metrizable_space_mtopology: "metrizable_space mtopology"
-  using local.Metric_space_axioms metrizable_space_def by blast
-
-lemma openin_mtopology_eq_open [simp]: "openin Met.mtopology = open"
-  by (simp add: Met.mtopology_def)
-
-lemma closedin_mtopology_eq_closed [simp]: "closedin Met.mtopology = closed"
-proof -
-  have "(euclidean::'a topology) = Met.mtopology"
-    by (simp add: Met.mtopology_def)
-  then show ?thesis
-    using closed_closedin by fastforce
-qed
-
-lemma compactin_mtopology_eq_compact [simp]: "compactin Met.mtopology = compact"
-  by (simp add: compactin_def compact_eq_Heine_Borel fun_eq_iff) meson
-
-lemma metrizable_space_discrete_topology:
-   "metrizable_space(discrete_topology U)"
-  by (metis discrete_metric.mtopology_discrete_metric metric_M_dd metrizable_space_def)
-
-lemma metrizable_space_subtopology:
-  assumes "metrizable_space X"
-  shows "metrizable_space(subtopology X S)"
-proof -
-  obtain M d where "Metric_space M d" and X: "X = Metric_space.mtopology M d"
-    using assms metrizable_space_def by blast
-  then interpret submetric M d "M \<inter> S"
-    by (simp add: submetric.intro submetric_axioms_def)
-  show ?thesis
-    unfolding metrizable_space_def
-    by (metis X mtopology_submetric sub.Metric_space_axioms subtopology_restrict topspace_mtopology)
-qed
-
-lemma homeomorphic_metrizable_space_aux:
-  assumes "X homeomorphic_space X'" "metrizable_space X"
-  shows "metrizable_space X'"
-proof -
-  obtain M d where "Metric_space M d" and X: "X = Metric_space.mtopology M d"
-    using assms by (auto simp: metrizable_space_def)
-  then interpret m: Metric_space M d 
-    by simp
-  obtain f g where hmf: "homeomorphic_map X X' f" and hmg: "homeomorphic_map X' X g"
-    and fg: "(\<forall>x \<in> M. g(f x) = x) \<and> (\<forall>y \<in> topspace X'. f(g y) = y)"
-    using assms X homeomorphic_maps_map homeomorphic_space_def by fastforce
-  define d' where "d' x y \<equiv> d (g x) (g y)" for x y
-  interpret m': Metric_space "topspace X'" "d'"
-    unfolding d'_def
-  proof
-    show "(d (g x) (g y) = 0) = (x = y)" if "x \<in> topspace X'" "y \<in> topspace X'" for x y
-      by (metis fg X hmg homeomorphic_imp_surjective_map imageI m.topspace_mtopology m.zero that)
-    show "d (g x) (g z) \<le> d (g x) (g y) + d (g y) (g z)"
-      if "x \<in> topspace X'" and "y \<in> topspace X'" and "z \<in> topspace X'" for x y z
-      by (metis X that hmg homeomorphic_eq_everything_map imageI m.topspace_mtopology m.triangle)
-  qed (auto simp: m.nonneg m.commute)
-  have "X' = Metric_space.mtopology (topspace X') d'"
-    unfolding topology_eq
-  proof (intro allI)
-    fix S
-    have "openin m'.mtopology S" if S: "S \<subseteq> topspace X'" and "openin X (g ` S)"
-      unfolding m'.openin_mtopology
-    proof (intro conjI that strip)
-      fix y
-      assume "y \<in> S"
-      then obtain r where "r>0" and r: "m.mball (g y) r \<subseteq> g ` S" 
-        using X \<open>openin X (g ` S)\<close> m.openin_mtopology using \<open>y \<in> S\<close> by auto
-      then have "g ` m'.mball y r \<subseteq> m.mball (g y) r"
-        using X d'_def hmg homeomorphic_imp_surjective_map by fastforce
-      with S fg have "m'.mball y r \<subseteq> S"
-        by (smt (verit, del_insts) image_iff m'.in_mball r subset_iff)
-      then show "\<exists>r>0. m'.mball y r \<subseteq> S"
-        using \<open>0 < r\<close> by blast 
-    qed
-    moreover have "openin X (g ` S)" if ope': "openin m'.mtopology S"
-    proof -
-      have "\<exists>r>0. m.mball (g y) r \<subseteq> g ` S" if "y \<in> S" for y
-      proof -
-        have y: "y \<in> topspace X'"
-          using m'.openin_mtopology ope' that by blast
-        obtain r where "r > 0" and r: "m'.mball y r \<subseteq> S"
-          using ope' by (meson \<open>y \<in> S\<close> m'.openin_mtopology)
-        moreover have "\<And>x. \<lbrakk>x \<in> M; d (g y) x < r\<rbrakk> \<Longrightarrow> \<exists>u. u \<in> topspace X' \<and> d' y u < r \<and> x = g u"
-          using fg X d'_def hmf homeomorphic_imp_surjective_map by fastforce
-        ultimately have "m.mball (g y) r \<subseteq> g ` m'.mball y r"
-          using y by (force simp: m'.openin_mtopology)
-        then show ?thesis
-          using \<open>0 < r\<close> r by blast
-      qed
-      then show ?thesis
-        using X hmg homeomorphic_imp_surjective_map m.openin_mtopology ope' openin_subset by fastforce
-    qed
-    ultimately have "(S \<subseteq> topspace X' \<and> openin X (g ` S)) = openin m'.mtopology S"
-      using m'.topspace_mtopology openin_subset by blast
-    then show "openin X' S = openin m'.mtopology S"
-      by (simp add: m'.mopen_def homeomorphic_map_openness_eq [OF hmg])
-  qed
-  then show ?thesis
-    using m'.metrizable_space_mtopology by force
-qed
-
-lemma homeomorphic_metrizable_space:
-  assumes "X homeomorphic_space X'"
-  shows "metrizable_space X \<longleftrightarrow> metrizable_space X'"
-  using assms homeomorphic_metrizable_space_aux homeomorphic_space_sym by metis
-
-lemma metrizable_space_retraction_map_image:
-   "retraction_map X X' r \<and> metrizable_space X
-        \<Longrightarrow> metrizable_space X'"
-  using hereditary_imp_retractive_property metrizable_space_subtopology homeomorphic_metrizable_space
-  by blast
-
-
-lemma metrizable_imp_Hausdorff_space:
-   "metrizable_space X \<Longrightarrow> Hausdorff_space X"
-  by (metis Metric_space.Hausdorff_space_mtopology metrizable_space_def)
-
-(**
-lemma metrizable_imp_kc_space:
-   "metrizable_space X \<Longrightarrow> kc_space X"
-oops
-  MESON_TAC[METRIZABLE_IMP_HAUSDORFF_SPACE; HAUSDORFF_IMP_KC_SPACE]);;
-
-lemma kc_space_mtopology:
-   "kc_space mtopology"
-oops
-  REWRITE_TAC[GSYM FORALL_METRIZABLE_SPACE; METRIZABLE_IMP_KC_SPACE]);;
-**)
-
-lemma metrizable_imp_t1_space:
-   "metrizable_space X \<Longrightarrow> t1_space X"
-  by (simp add: Hausdorff_imp_t1_space metrizable_imp_Hausdorff_space)
-
-lemma closed_imp_gdelta_in:
-  assumes X: "metrizable_space X" and S: "closedin X S"
-  shows "gdelta_in X S"
-proof -
-  obtain M d where "Metric_space M d" and Xeq: "X = Metric_space.mtopology M d"
-    using X metrizable_space_def by blast
-  then interpret M: Metric_space M d
-    by blast
-  have "S \<subseteq> M"
-    using M.closedin_metric \<open>X = M.mtopology\<close> S by blast
-  show ?thesis
-  proof (cases "S = {}")
-    case True
-    then show ?thesis
-      by simp
-  next
-    case False
-    have "\<exists>y\<in>S. d x y < inverse (1 + real n)" if "x \<in> S" for x n
-      using \<open>S \<subseteq> M\<close> M.mdist_zero [of x] that by force
-    moreover
-    have "x \<in> S" if "x \<in> M" and \<section>: "\<And>n. \<exists>y\<in>S. d x y < inverse(Suc n)" for x
-    proof -
-      have *: "\<exists>y\<in>S. d x y < \<epsilon>" if "\<epsilon> > 0" for \<epsilon>
-        by (metis \<section> that not0_implies_Suc order_less_le order_less_le_trans real_arch_inverse)
-      have "closedin M.mtopology S"
-        using S by (simp add: Xeq)
-      then show ?thesis
-        apply (simp add: M.closedin_metric)
-        by (metis * \<open>x \<in> M\<close> M.in_mball disjnt_insert1 insert_absorb subsetD)
-    qed
-    ultimately have Seq: "S = \<Inter>(range (\<lambda>n. {x\<in>M. \<exists>y\<in>S. d x y < inverse(Suc n)}))"
-      using \<open>S \<subseteq> M\<close> by force
-    have "openin M.mtopology {xa \<in> M. \<exists>y\<in>S. d xa y < inverse (1 + real n)}" for n
-    proof (clarsimp simp: M.openin_mtopology)
-      fix x y
-      assume "x \<in> M" "y \<in> S" and dxy: "d x y < inverse (1 + real n)"
-      then have "\<And>z. \<lbrakk>z \<in> M; d x z < inverse (1 + real n) - d x y\<rbrakk> \<Longrightarrow> \<exists>y\<in>S. d z y < inverse (1 + real n)"
-        by (smt (verit) M.commute M.triangle \<open>S \<subseteq> M\<close> in_mono)
-      with dxy show "\<exists>r>0. M.mball x r \<subseteq> {z \<in> M. \<exists>y\<in>S. d z y < inverse (1 + real n)}"
-        by (rule_tac x="inverse(Suc n) - d x y" in exI) auto
-    qed
-    then show ?thesis
-      apply (subst Seq)
-      apply (force simp: Xeq intro: gdelta_in_Inter open_imp_gdelta_in)
-      done
-  qed
-qed
-
-lemma open_imp_fsigma_in:
-   "\<lbrakk>metrizable_space X; openin X S\<rbrakk> \<Longrightarrow> fsigma_in X S"
-  by (meson closed_imp_gdelta_in fsigma_in_gdelta_in openin_closedin openin_subset)
-
-(*NEEDS first_countable
-lemma first_countable_mtopology:
-   "first_countable mtopology"
-oops
-  GEN_TAC THEN REWRITE_TAC[first_countable; TOPSPACE_MTOPOLOGY] THEN
-  X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-  EXISTS_TAC `{ mball m (x::A,r) | rational r \<and> 0 < r}` THEN
-  REWRITE_TAC[FORALL_IN_GSPEC; OPEN_IN_MBALL; EXISTS_IN_GSPEC] THEN
-  ONCE_REWRITE_TAC[SET_RULE
-   `{f x | S x \<and> Q x} = f ` {x. x \<in> S \<and> Q x}`] THEN
-  SIMP_TAC[COUNTABLE_IMAGE; COUNTABLE_RATIONAL; COUNTABLE_RESTRICT] THEN
-  REWRITE_TAC[OPEN_IN_MTOPOLOGY] THEN
-  X_GEN_TAC `U::A=>bool` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::A`) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `r::real` THEN STRIP_TAC THEN FIRST_ASSUM
-   (MP_TAC \<circ> SPEC `r::real` \<circ> MATCH_MP RATIONAL_APPROXIMATION_BELOW) THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `q::real` THEN
-  REWRITE_TAC[REAL_SUB_REFL] THEN STRIP_TAC THEN
-  ASM_SIMP_TAC[CENTRE_IN_MBALL] THEN
-  TRANS_TAC SUBSET_TRANS `mball m (x::A,r)` THEN
-  ASM_SIMP_TAC[MBALL_SUBSET_CONCENTRIC; REAL_LT_IMP_LE]);;
-
-lemma metrizable_imp_first_countable:
-   "metrizable_space X \<Longrightarrow> first_countable X"
-oops
-  REWRITE_TAC[FORALL_METRIZABLE_SPACE; FIRST_COUNTABLE_MTOPOLOGY]);;
-*)
-
 subsection\<open>Connected topological spaces\<close>
 
 lemma connected_space_eq_frontier_eq_empty:
@@ -1030,7 +193,6 @@ next
       unfolding connected_space_def topspace_prod_topology by blast 
   qed
 qed
-
 
 lemma connectedin_Times:
    "connectedin (prod_topology X Y) (S \<times> T) \<longleftrightarrow>
@@ -2727,29 +1889,6 @@ lemma locally_compact_imp_kc_eq_Hausdorff_space:
    "neighbourhood_base_of (compactin X) X \<Longrightarrow> kc_space X \<longleftrightarrow> Hausdorff_space X"
   by (metis Hausdorff_imp_kc_space kc_imp_t1_space kc_space_def neighbourhood_base_of_closedin neighbourhood_base_of_mono regular_t1_imp_Hausdorff_space)
 
-lemma (in Metric_space) regular_space_mtopology:
-   "regular_space mtopology"
-unfolding regular_space_def
-proof clarify
-  fix C a
-  assume C: "closedin mtopology C" and a: "a \<in> topspace mtopology" and "a \<notin> C"
-  have "openin mtopology (topspace mtopology - C)"
-    by (simp add: C openin_diff)
-  then obtain r where "r>0" and r: "mball a r \<subseteq> topspace mtopology - C"
-    unfolding openin_mtopology using \<open>a \<notin> C\<close> a by auto
-  show "\<exists>U V. openin mtopology U \<and> openin mtopology V \<and> a \<in> U \<and> C \<subseteq> V \<and> disjnt U V"
-  proof (intro exI conjI)
-    show "a \<in> mball a (r/2)"
-      using \<open>0 < r\<close> a by force
-    show "C \<subseteq> topspace mtopology - mcball a (r/2)"
-      using C \<open>0 < r\<close> r by (fastforce simp: closedin_metric)
-  qed (auto simp: openin_mball closedin_mcball openin_diff disjnt_iff)
-qed
-
-lemma metrizable_imp_regular_space:
-   "metrizable_space X \<Longrightarrow> regular_space X"
-  by (metis Metric_space.regular_space_mtopology metrizable_space_def)
-
 lemma regular_space_compact_closed_separation:
   assumes X: "regular_space X"
       and S: "compactin X S"
@@ -3838,6 +2977,842 @@ qed
 
 
 
+subsection \<open>ATIN-WITHIN\<close>
+
+(*REPLACE ORIGINAL DEFINITION TO USE ABBREVIATION, LIKE AT / AT_WITHIN
+    ("atin (_) (_)/ within (_)" [1000, 60] 60)*)
+thm atin_def at_within_def
+definition atin_within :: "['a topology, 'a, 'a set] \<Rightarrow> 'a filter"
+  where "atin_within X a S = inf (nhdsin X a) (principal (topspace X \<inter> S - {a}))"
+
+lemma atin_within_UNIV [simp]:
+  shows "atin_within X a UNIV = atin X a"
+  by (simp add: atin_def atin_within_def)
+
+lemma eventually_atin_subtopology:
+  assumes "a \<in> topspace X"
+  shows "eventually P (atin (subtopology X S) a) \<longleftrightarrow> 
+    (a \<in> S \<longrightarrow> (\<exists>U. openin (subtopology X S) U \<and> a \<in> U \<and> (\<forall>x\<in>U - {a}. P x)))"
+  using assms by (simp add: eventually_atin)
+
+lemma eventually_atin_within:
+  "eventually P (atin_within X a S) \<longleftrightarrow> a \<notin> topspace X \<or>
+   (\<exists>T. openin X T \<and> a \<in> T \<and> (\<forall>x\<in>T. x \<in> S \<and> x \<noteq> a \<longrightarrow> P x))"
+proof (cases "a \<in> topspace X")
+  case True
+  hence "eventually P (atin_within X a S) \<longleftrightarrow> 
+         (\<exists>T. openin X T \<and> a \<in> T \<and>
+          (\<forall>x\<in>T. x \<in> topspace X \<and> x \<in> S \<and> x \<noteq> a \<longrightarrow> P x))"
+    by (simp add: atin_within_def eventually_inf_principal eventually_nhdsin)
+  also have "\<dots> \<longleftrightarrow> (\<exists>T. openin X T \<and> a \<in> T \<and> (\<forall>x\<in>T. x \<in> S \<and> x \<noteq> a \<longrightarrow> P x))"
+    using openin_subset by (intro ex_cong) auto
+  finally show ?thesis by (simp add: True)
+qed (simp add: atin_within_def)
+
+lemma atin_subtopology_within:
+  assumes "a \<in> S"
+  shows "atin (subtopology X S) a = atin_within X a S"
+proof -
+  have "eventually P (atin (subtopology X S) a) \<longleftrightarrow> eventually P (atin_within X a S)" for P
+    unfolding eventually_atin eventually_atin_within openin_subtopology
+    using assms by auto
+  then show ?thesis
+    by (meson le_filter_def order.eq_iff)
+qed
+
+lemma limit_continuous_map_within:
+   "\<lbrakk>continuous_map (subtopology X S) Y f; a \<in> S; a \<in> topspace X\<rbrakk>
+    \<Longrightarrow> limitin Y f (f a) (atin_within X a S)"
+  by (metis Int_iff atin_subtopology_within continuous_map_atin topspace_subtopology)
+
+lemma atin_subtopology_within_if:
+  shows "atin (subtopology X S) a = (if a \<in> S then atin_within X a S else bot)"
+  by (simp add: atin_subtopology_within)
+
+lemma trivial_limit_atpointof_within:
+   "trivial_limit(atin_within X a S) \<longleftrightarrow>
+        (a \<notin> X derived_set_of S)"
+  by (auto simp: trivial_limit_def eventually_atin_within in_derived_set_of)
+
+lemma derived_set_of_trivial_limit:
+   "a \<in> X derived_set_of S \<longleftrightarrow> \<not> trivial_limit(atin_within X a S)"
+  by (simp add: trivial_limit_atpointof_within)
+
+
+subsection \<open>Misc other\<close>
+      
+subsection\<open>Metric spaces\<close>
+
+(*Avoid a clash with the existing metric_space locale (from the type class)*)
+locale Metric_space =
+  fixes M :: "'a set" and d :: "'a \<Rightarrow> 'a \<Rightarrow> real"
+  assumes nonneg [simp]: "\<And>x y. 0 \<le> d x y"
+  assumes commute: "\<And>x y. d x y = d y x"
+  assumes zero [simp]: "\<And>x y. \<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> d x y = 0 \<longleftrightarrow> x=y"
+  assumes triangle: "\<And>x y z. \<lbrakk>x \<in> M; y \<in> M; z \<in> M\<rbrakk> \<Longrightarrow> d x z \<le> d x y + d y z"
+
+text \<open>Link with the type class version\<close>
+interpretation Met: Metric_space UNIV dist
+  by (simp add: dist_commute dist_triangle Metric_space.intro)
+
+(*NOT CLEAR WHETHER WE NEED/WANT THIS type definition*)
+typedef 'a metric = "{(M::'a set,d). Metric_space M d}"
+  morphisms "dest_metric" "metric"
+proof -
+  have "Metric_space {} (\<lambda>x y. 0)"
+    by (auto simp: Metric_space_def)
+  then show ?thesis
+    by blast
+qed
+
+definition mspace where "mspace m = fst (dest_metric m)"
+
+definition mdist where "mdist m = snd (dest_metric m)"
+
+lemma metric_space_mspace_mdist: "Metric_space (mspace m) (mdist m)"
+  by (metis Product_Type.Collect_case_prodD dest_metric mdist_def mspace_def)
+
+context Metric_space
+begin
+
+(*
+lemma metric [simp]:
+   "mspace (metric (M,d)) = M \<and> mdist (metric (M,d)) = d"
+  by (simp add: local.Metric_space_axioms mdist_def metric_inverse mspace_def)
+*)
+
+lemma subspace: "M' \<subseteq> M \<Longrightarrow> Metric_space M' d"
+  by (simp add: commute in_mono Metric_space.intro triangle)
+
+lemma abs_mdist [simp] : "\<bar>d x y\<bar> = d x y"
+  by simp
+
+lemma mdist_pos_less: "\<lbrakk>x \<noteq> y; x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> 0 < d x y"
+  by (metis less_eq_real_def nonneg zero)
+
+lemma mdist_zero [simp]: "x \<in> M \<Longrightarrow> d x x = 0"
+  by simp
+
+lemma mdist_pos_eq [simp]: "\<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> 0 < d x y \<longleftrightarrow> x \<noteq> y"
+  using mdist_pos_less zero by fastforce
+
+lemma triangle': "\<lbrakk>x \<in> M; y \<in> M; z \<in> M\<rbrakk> \<Longrightarrow> d x z \<le> d x y + d z y"
+  by (simp add: commute triangle)
+
+lemma triangle'': "\<lbrakk>x \<in> M; y \<in> M; z \<in> M\<rbrakk> \<Longrightarrow> d x z \<le> d y x + d y z"
+  by (simp add: commute triangle)
+
+lemma mdist_reverse_triangle: "\<lbrakk>x \<in> M; y \<in> M; z \<in> M\<rbrakk> \<Longrightarrow> \<bar>d x y - d y z\<bar> \<le> d x z"
+  by (smt (verit) commute triangle)
+
+text\<open> Open and closed balls                                                                \<close>
+
+definition mball where "mball x r \<equiv> {y. x \<in> M \<and> y \<in> M \<and> d x y < r}"
+definition mcball where "mcball x r \<equiv> {y. x \<in> M \<and> y \<in> M \<and> d x y \<le> r}"
+
+lemma in_mball [simp]: "y \<in> mball x r \<longleftrightarrow> x \<in> M \<and> y \<in> M \<and> d x y < r"
+  by (simp add: local.Metric_space_axioms Metric_space.mball_def)
+
+lemma centre_in_mball_iff [iff]: "x \<in> mball x r \<longleftrightarrow> x \<in> M \<and> 0 < r"
+  using in_mball mdist_zero by force
+
+lemma mball_subset_mspace: "mball x r \<subseteq> M"
+  by auto
+
+lemma mball_eq_empty: "mball x r = {} \<longleftrightarrow> (x \<notin> M) \<or> r \<le> 0"
+  by (smt (verit, best) Collect_empty_eq centre_in_mball_iff mball_def nonneg)
+
+lemma mball_subset: "\<lbrakk>d x y + a \<le> b; y \<in> M\<rbrakk> \<Longrightarrow> mball x a \<subseteq> mball y b"
+  by (smt (verit) commute in_mball subsetI triangle)
+
+lemma disjoint_mball: "r + r' \<le> d x x' \<Longrightarrow> disjnt (mball x r) (mball x' r')"
+  by (smt (verit) commute disjnt_iff in_mball triangle)
+
+lemma mball_subset_concentric: "r \<le> s \<Longrightarrow> mball x r \<subseteq> mball x s"
+  by auto
+
+lemma in_mcball [simp]: "y \<in> mcball x r \<longleftrightarrow> x \<in> M \<and> y \<in> M \<and> d x y \<le> r"
+  by (simp add: local.Metric_space_axioms Metric_space.mcball_def)
+
+lemma centre_in_mcball_iff [iff]: "x \<in> mcball x r \<longleftrightarrow> x \<in> M \<and> 0 \<le> r"
+  using mdist_zero by force
+
+lemma mcball_eq_empty: "mcball x r = {} \<longleftrightarrow> (x \<notin> M) \<or> r < 0"
+  by (smt (verit, best) Collect_empty_eq centre_in_mcball_iff empty_iff mcball_def nonneg)
+
+lemma mcball_subset_mspace: "mcball x r \<subseteq> M"
+  by auto
+
+lemma mball_subset_mcball: "mball x r \<subseteq> mcball x r"
+  by auto
+
+lemma mcball_subset: "\<lbrakk>d x y + a \<le> b; y \<in> M\<rbrakk> \<Longrightarrow> mcball x a \<subseteq> mcball y b"
+  by (smt (verit) in_mcball mdist_reverse_triangle subsetI)
+
+lemma mcball_subset_concentric: "r \<le> s \<Longrightarrow> mcball x r \<subseteq> mcball x s"
+  by force
+
+lemma mcball_subset_mball: "\<lbrakk>d x y + a < b; y \<in> M\<rbrakk> \<Longrightarrow> mcball x a \<subseteq> mball y b"
+  by (smt (verit) commute in_mball in_mcball subsetI triangle)
+
+lemma mcball_subset_mball_concentric: "a < b \<Longrightarrow> mcball x a \<subseteq> mball x b"
+  by force
+
+end
+
+
+
+subsection\<open> Metric topology                                                           \<close>
+
+context Metric_space
+begin
+
+definition mopen where 
+  "mopen U \<equiv> U \<subseteq> M \<and> (\<forall>x. x \<in> U \<longrightarrow> (\<exists>r>0. mball x r \<subseteq> U))"
+
+definition mtopology :: "'a topology" where 
+  "mtopology \<equiv> topology mopen"
+
+lemma is_topology_metric_topology [iff]: "istopology mopen"
+proof -
+  have "\<And>S T. \<lbrakk>mopen S; mopen T\<rbrakk> \<Longrightarrow> mopen (S \<inter> T)"
+    by (smt (verit, del_insts) Int_iff in_mball mopen_def subset_eq)
+  moreover have "\<And>\<K>. (\<forall>K\<in>\<K>. mopen K) \<longrightarrow> mopen (\<Union>\<K>)"
+    using mopen_def by fastforce
+  ultimately show ?thesis
+    by (simp add: istopology_def)
+qed
+
+lemma openin_mtopology: "openin mtopology U \<longleftrightarrow> U \<subseteq> M \<and> (\<forall>x. x \<in> U \<longrightarrow> (\<exists>r>0. mball x r \<subseteq> U))"
+  by (simp add: mopen_def mtopology_def)
+
+lemma topspace_mtopology [simp]: "topspace mtopology = M"
+  by (meson order.refl mball_subset_mspace openin_mtopology openin_subset openin_topspace subset_antisym zero_less_one)
+
+lemma subtopology_mspace [simp]: "subtopology mtopology M = mtopology"
+  by (metis subtopology_topspace topspace_mtopology)
+
+lemma open_in_mspace [iff]: "openin mtopology M"
+  by (metis openin_topspace topspace_mtopology)
+
+lemma closedin_mspace [iff]: "closedin mtopology M"
+  by (metis closedin_topspace topspace_mtopology)
+
+lemma openin_mball [iff]: "openin mtopology (mball x r)"
+proof -
+  have "\<And>y. \<lbrakk>x \<in> M; d x y < r\<rbrakk> \<Longrightarrow> \<exists>s>0. mball y s \<subseteq> mball x r"
+    by (metis add_diff_cancel_left' add_diff_eq commute less_add_same_cancel1 mball_subset order_refl)
+  then show ?thesis
+    by (auto simp: openin_mtopology)
+qed
+
+lemma mcball_eq_cball [simp]: "Met.mcball = cball"
+  by force
+
+lemma mball_eq_ball [simp]: "Met.mball = ball"
+  by force
+
+lemma mopen_eq_open [simp]: "Met.mopen = open"
+  by (force simp: open_contains_ball Met.mopen_def)
+
+lemma limitin_iff_tendsto [iff]: "limitin Met.mtopology \<sigma> x F = tendsto \<sigma> x F"
+  by (simp add: Met.mtopology_def)
+
+lemma mtopology_is_euclideanreal [simp]: "Met.mtopology = euclideanreal"
+  by (simp add: Met.mtopology_def)
+
+(*
+lemma metric_injective_image:
+   "\<And>f m s.
+        f ` s \<subseteq> M \<and>
+        (\<forall>x y. x \<in> s \<and> y \<in> s \<and> f x = f y \<Longrightarrow> x = y)
+        \<Longrightarrow> (mspace(metric(s,\<lambda>(x,y). d (f x) (f y))) = s) \<and>
+            (d(metric(s,\<lambda>(x,y). d (f x) (f y))) =
+             \<lambda>(x,y). d (f x) (f y))"
+oops
+  REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; INJECTIVE_ON_ALT] THEN
+  REPEAT GEN_TAC THEN STRIP_TAC THEN
+  REWRITE_TAC[mspace; d; GSYM PAIR_EQ] THEN
+  REWRITE_TAC[GSYM(CONJUNCT2 metric_tybij); is_metric_space] THEN
+  REWRITE_TAC[GSYM mspace; GSYM d] THEN
+  ASM_SIMP_TAC[MDIST_POS_LE; MDIST_TRIANGLE; MDIST_0] THEN
+  ASM_MESON_TAC[MDIST_SYM]);;
+*)
+
+lemma mtopology_base:
+   "mtopology = topology(arbitrary union_of (\<lambda>U. \<exists>x \<in> M. \<exists>r>0. U = mball x r))"
+proof -
+  have "\<And>S. \<exists>x r. x \<in> M \<and> 0 < r \<and> S = mball x r \<Longrightarrow> openin mtopology S"
+    using openin_mball by blast
+  moreover have "\<And>U x. \<lbrakk>openin mtopology U; x \<in> U\<rbrakk> \<Longrightarrow> \<exists>B. (\<exists>x r. x \<in> M \<and> 0 < r \<and> B = mball x r) \<and> x \<in> B \<and> B \<subseteq> U"
+    by (metis centre_in_mball_iff in_mono openin_mtopology)
+  ultimately show ?thesis
+    by (smt (verit) topology_base_unique)
+qed
+
+lemma closedin_metric:
+   "closedin mtopology C \<longleftrightarrow> C \<subseteq> M \<and> (\<forall>x. x \<in> M - C \<longrightarrow> (\<exists>r>0. disjnt C (mball x r)))"  (is "?lhs = ?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs"
+    unfolding closedin_def openin_mtopology
+    by (metis Diff_disjoint disjnt_def disjnt_subset2 topspace_mtopology)
+  show "?rhs \<Longrightarrow> ?lhs"
+    unfolding closedin_def openin_mtopology disjnt_def
+    by (metis Diff_subset Diff_triv Int_Diff Int_commute inf.absorb_iff2 mball_subset_mspace topspace_mtopology)
+qed
+
+lemma closedin_mcball [iff]: "closedin mtopology (mcball x r)"
+proof -
+  have "\<exists>ra>0. disjnt (mcball x r) (mball y ra)" if "x \<notin> M" for y
+    by (metis disjnt_empty1 gt_ex mcball_eq_empty that)
+  moreover have "disjnt (mcball x r) (mball y (d x y - r))" if "y \<in> M" "d x y > r" for y
+    using that disjnt_iff in_mball in_mcball mdist_reverse_triangle by force
+  ultimately show ?thesis
+    using closedin_metric mcball_subset_mspace by fastforce
+qed
+
+lemma mball_iff_mcball: "(\<exists>r>0. mball x r \<subseteq> U) = (\<exists>r>0. mcball x r \<subseteq> U)"
+  by (meson dense mball_subset_mcball mcball_subset_mball_concentric order_trans)
+
+lemma openin_mtopology_mcball:
+  "openin mtopology U \<longleftrightarrow> U \<subseteq> M \<and> (\<forall>x. x \<in> U \<longrightarrow> (\<exists>r. 0 < r \<and> mcball x r \<subseteq> U))"
+  using mball_iff_mcball openin_mtopology by presburger
+
+lemma metric_derived_set_of:
+  "mtopology derived_set_of S = {x \<in> M. \<forall>r>0. \<exists>y\<in>S. y\<noteq>x \<and> y \<in> mball x r}" (is "?lhs=?rhs")
+proof
+  show "?lhs \<subseteq> ?rhs"
+    unfolding openin_mtopology derived_set_of_def 
+    by clarsimp (metis in_mball openin_mball openin_mtopology zero)
+  show "?rhs \<subseteq> ?lhs"
+    unfolding openin_mtopology derived_set_of_def 
+    by clarify (metis subsetD topspace_mtopology)
+qed
+
+lemma metric_closure_of:
+   "mtopology closure_of S = {x \<in> M. \<forall>r>0. \<exists>y \<in> S. y \<in> mball x r}"
+proof -
+  have "\<And>x r. \<lbrakk>0 < r; x \<in> mtopology closure_of S\<rbrakk> \<Longrightarrow> \<exists>y\<in>S. y \<in> mball x r"
+    by (metis centre_in_mball_iff in_closure_of openin_mball topspace_mtopology)
+  moreover have "\<And>x T. \<lbrakk>x \<in> M; \<forall>r>0. \<exists>y\<in>S. y \<in> mball x r\<rbrakk> \<Longrightarrow> x \<in> mtopology closure_of S"
+    by (smt (verit) in_closure_of in_mball openin_mtopology subsetD topspace_mtopology)
+  ultimately show ?thesis
+    by (auto simp: in_closure_of)
+qed
+
+lemma metric_closure_of_alt:
+  "mtopology closure_of S = {x \<in> M. \<forall>r>0. \<exists>y \<in> S. y \<in> mcball x r}"
+proof -
+  have "\<And>x r. \<lbrakk>\<forall>r>0. x \<in> M \<and> (\<exists>y\<in>S. y \<in> mcball x r); 0 < r\<rbrakk> \<Longrightarrow> \<exists>y\<in>S. y \<in> M \<and> d x y < r"
+    by (meson dense in_mcball le_less_trans)
+  then show ?thesis
+    by (fastforce simp: metric_closure_of in_closure_of)
+qed
+
+lemma metric_interior_of:
+   "mtopology interior_of S = {x \<in> M. \<exists>\<epsilon>>0. mball x \<epsilon> \<subseteq> S}" (is "?lhs=?rhs")
+proof
+  show "?lhs \<subseteq> ?rhs"
+    using interior_of_maximal_eq openin_mtopology by fastforce
+  show "?rhs \<subseteq> ?lhs"
+    using interior_of_def openin_mball by fastforce
+qed
+
+lemma metric_interior_of_alt:
+   "mtopology interior_of S = {x \<in> M. \<exists>\<epsilon>>0. mcball x \<epsilon> \<subseteq> S}"
+  by (fastforce simp: mball_iff_mcball metric_interior_of)
+
+lemma in_interior_of_mball:
+   "x \<in> mtopology interior_of S \<longleftrightarrow> x \<in> M \<and> (\<exists>\<epsilon>>0. mball x \<epsilon> \<subseteq> S)"
+  using metric_interior_of by force
+
+lemma in_interior_of_mcball:
+   "x \<in> mtopology interior_of S \<longleftrightarrow> x \<in> M \<and> (\<exists>\<epsilon>>0. mcball x \<epsilon> \<subseteq> S)"
+  using metric_interior_of_alt by force
+
+lemma Hausdorff_space_mtopology: "Hausdorff_space mtopology"
+  unfolding Hausdorff_space_def
+proof clarify
+  fix x y
+  assume x: "x \<in> topspace mtopology" and y: "y \<in> topspace mtopology" and "x \<noteq> y"
+  then have gt0: "d x y / 2 > 0"
+    by auto
+  have "disjnt (mball x (d x y / 2)) (mball y (d x y / 2))"
+    by (simp add: disjoint_mball)
+  then show "\<exists>U V. openin mtopology U \<and> openin mtopology V \<and> x \<in> U \<and> y \<in> V \<and> disjnt U V"
+    by (metis centre_in_mball_iff gt0 openin_mball topspace_mtopology x y)
+qed
+
+
+
+subsection\<open>Bounded sets\<close>
+
+definition mbounded where "mbounded S \<longleftrightarrow> (\<exists>x B. S \<subseteq> mcball x B)"
+
+lemma mbounded_pos: "mbounded S \<longleftrightarrow> (\<exists>x B. 0 < B \<and> S \<subseteq> mcball x B)"
+proof -
+  have "\<exists>x' r'. 0 < r' \<and> S \<subseteq> mcball x' r'" if "S \<subseteq> mcball x r" for x r
+    by (metis gt_ex less_eq_real_def linorder_not_le mcball_subset_concentric order_trans that)
+  then show ?thesis
+    by (auto simp: mbounded_def)
+qed
+
+lemma mbounded_alt:
+  "mbounded S \<longleftrightarrow> S \<subseteq> M \<and> (\<exists>B. \<forall>x \<in> S. \<forall>y \<in> S. d x y \<le> B)"
+proof -
+  have "\<And>x B. S \<subseteq> mcball x B \<Longrightarrow> \<forall>x\<in>S. \<forall>y\<in>S. d x y \<le> 2 * B"
+    by (smt (verit, best) commute in_mcball subsetD triangle)
+  then show ?thesis
+    apply (auto simp: mbounded_def subset_iff)
+     apply blast+
+    done
+qed
+
+
+lemma mbounded_alt_pos:
+  "mbounded S \<longleftrightarrow> S \<subseteq> M \<and> (\<exists>B>0. \<forall>x \<in> S. \<forall>y \<in> S. d x y \<le> B)"
+  by (smt (verit, del_insts) gt_ex mbounded_alt)
+
+lemma mbounded_subset: "\<lbrakk>mbounded T; S \<subseteq> T\<rbrakk> \<Longrightarrow> mbounded S"
+  by (meson mbounded_def order_trans)
+
+lemma mbounded_subset_mspace: "mbounded S \<Longrightarrow> S \<subseteq> M"
+  by (simp add: mbounded_alt)
+
+lemma mbounded:
+   "mbounded S \<longleftrightarrow> S = {} \<or> (\<forall>x \<in> S. x \<in> M) \<and> (\<exists>y B. y \<in> M \<and> (\<forall>x \<in> S. d y x \<le> B))"
+  by (meson all_not_in_conv in_mcball mbounded_def subset_iff)
+
+lemma mbounded_empty [iff]: "mbounded {}"
+  by (simp add: mbounded)
+
+lemma mbounded_mcball: "mbounded (mcball x r)"
+  using mbounded_def by auto
+
+lemma mbounded_mball [iff]: "mbounded (mball x r)"
+  by (meson mball_subset_mcball mbounded_def)
+
+lemma mbounded_insert: "mbounded (insert a S) \<longleftrightarrow> a \<in> M \<and> mbounded S"
+proof -
+  have "\<And>y B. \<lbrakk>y \<in> M; \<forall>x\<in>S. d y x \<le> B\<rbrakk>
+           \<Longrightarrow> \<exists>y. y \<in> M \<and> (\<exists>B \<ge> d y a. \<forall>x\<in>S. d y x \<le> B)"
+    by (metis order.trans nle_le)
+  then show ?thesis
+    by (auto simp: mbounded)
+qed
+
+lemma mbounded_Int: "mbounded S \<Longrightarrow> mbounded (S \<inter> T)"
+  by (meson inf_le1 mbounded_subset)
+
+lemma mbounded_Un: "mbounded (S \<union> T) \<longleftrightarrow> mbounded S \<and> mbounded T" (is "?lhs=?rhs")
+proof
+  assume R: ?rhs
+  show ?lhs
+  proof (cases "S={} \<or> T={}")
+    case True then show ?thesis
+      using R by auto
+  next
+    case False
+    obtain x y B C where "S \<subseteq> mcball x B" "T \<subseteq> mcball y C" "B > 0" "C > 0" "x \<in> M" "y \<in> M"
+      using R mbounded_pos
+      by (metis False mcball_eq_empty subset_empty)
+    then have "S \<union> T \<subseteq> mcball x (B + C + d x y)"
+      by (smt (verit) commute dual_order.trans le_supI mcball_subset mdist_pos_eq)
+    then show ?thesis
+      using mbounded_def by blast
+  qed
+next
+  show "?lhs \<Longrightarrow> ?rhs"
+    using mbounded_def by auto
+qed
+
+lemma mbounded_Union:
+  "\<lbrakk>finite \<F>; \<And>X. X \<in> \<F> \<Longrightarrow> mbounded X\<rbrakk> \<Longrightarrow> mbounded (\<Union>\<F>)"
+  by (induction \<F> rule: finite_induct) (auto simp: mbounded_Un)
+
+lemma mbounded_closure_of:
+   "mbounded S \<Longrightarrow> mbounded (mtopology closure_of S)"
+  by (meson closedin_mcball closure_of_minimal mbounded_def)
+
+lemma mbounded_closure_of_eq:
+   "S \<subseteq> M \<Longrightarrow> (mbounded (mtopology closure_of S) \<longleftrightarrow> mbounded S)"
+  by (metis closure_of_subset mbounded_closure_of mbounded_subset topspace_mtopology)
+
+
+lemma maxdist_thm:
+  assumes "mbounded S"
+      and "x \<in> S"
+      and "y \<in> S"
+    shows  "d x y = (SUP z\<in>S. \<bar>d x z - d z y\<bar>)"
+proof -
+  have "\<bar>d x z - d z y\<bar> \<le> d x y" if "z \<in> S" for z
+    by (metis all_not_in_conv assms mbounded mdist_reverse_triangle that) 
+  moreover have "d x y \<le> r"
+    if "\<And>z. z \<in> S \<Longrightarrow> \<bar>d x z - d z y\<bar> \<le> r" for r :: real
+    using that assms mbounded_subset_mspace mdist_zero by fastforce
+  ultimately show ?thesis
+    by (intro cSup_eq [symmetric]) auto
+qed
+
+
+lemma metric_eq_thm: "\<lbrakk>S \<subseteq> M; x \<in> S; y \<in> S\<rbrakk> \<Longrightarrow> (x = y) = (\<forall>z\<in>S. d x z = d y z)"
+  by (metis commute  subset_iff zero)
+
+lemma compactin_imp_mbounded:
+  assumes "compactin mtopology S"
+  shows "mbounded S"
+proof -
+  have "S \<subseteq> M"
+    and com: "\<And>\<U>. \<lbrakk>\<forall>U\<in>\<U>. openin mtopology U; S \<subseteq> \<Union>\<U>\<rbrakk> \<Longrightarrow> \<exists>\<F>. finite \<F> \<and> \<F> \<subseteq> \<U> \<and> S \<subseteq> \<Union>\<F>"
+    using assms by (auto simp: compactin_def mbounded_def)
+  show ?thesis
+  proof (cases "S = {}")
+    case False
+    with \<open>S \<subseteq> M\<close> obtain a where "a \<in> S" "a \<in> M"
+      by blast
+    with \<open>S \<subseteq> M\<close> gt_ex have "S \<subseteq> \<Union>(range (mball a))"
+      by force
+    moreover have "\<forall>U \<in> range (mball a). openin mtopology U"
+      by (simp add: openin_mball)
+    ultimately obtain \<F> where "finite \<F>" "\<F> \<subseteq> range (mball a)" "S \<subseteq> \<Union>\<F>"
+      by (meson com)
+  then show ?thesis
+      using mbounded_Union mbounded_subset by fastforce
+  qed auto
+qed
+
+end
+
+
+subsection\<open>Subspace of a metric space\<close>
+
+locale submetric = Metric_space + 
+  fixes A
+  assumes subset: "A \<subseteq> M"
+
+sublocale submetric \<subseteq> sub: Metric_space A d
+  by (simp add: subset subspace)
+
+context submetric
+begin 
+
+lemma mball_submetric_eq: "sub.mball a r = (if a \<in> A then A \<inter> mball a r else {})"
+and mcball_submetric_eq: "sub.mcball a r = (if a \<in> A then A \<inter> mcball a r else {})"
+  using subset by force+
+
+lemma mtopology_submetric: "sub.mtopology = subtopology mtopology A"
+  unfolding topology_eq
+proof (intro allI iffI)
+  fix S
+  assume "openin sub.mtopology S"
+  then have "\<exists>T. openin (subtopology mtopology A) T \<and> x \<in> T \<and> T \<subseteq> S" if "x \<in> S" for x
+    by (metis mball_submetric_eq openin_mball openin_subtopology_Int2 sub.centre_in_mball_iff sub.openin_mtopology subsetD that)
+  then show "openin (subtopology mtopology A) S"
+    by (meson openin_subopen)
+next
+  fix S
+  assume "openin (subtopology mtopology A) S"
+  then obtain T where "openin mtopology T" "S = T \<inter> A"
+    by (meson openin_subtopology)
+  then have "mopen T"
+    by (simp add: mopen_def openin_mtopology)
+  then have "sub.mopen (T \<inter> A)"
+    unfolding sub.mopen_def mopen_def
+    by (metis inf.coboundedI2 mball_submetric_eq Int_iff \<open>S = T \<inter> A\<close> inf.bounded_iff subsetI)
+  then show "openin sub.mtopology S"
+    using \<open>S = T \<inter> A\<close> sub.mopen_def sub.openin_mtopology by force
+qed
+
+lemma mbounded_submetric: "sub.mbounded T \<longleftrightarrow> mbounded T \<and> T \<subseteq> A"
+  by (meson mbounded_alt sub.mbounded_alt subset subset_trans)
+
+end
+  
+
+(**
+lemma submetric_submetric:
+   "\<And>m A t::A=>bool.
+        submetric (submetric A) t = submetric (A \<inter> t)"
+oops
+  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[submetric] THEN
+  REWRITE_TAC[SUBMETRIC] THEN
+  REWRITE_TAC[SET_RULE `(A \<inter> t) \<inter> m = t \<inter> A \<inter> m`]);;
+
+lemma submetric_restrict:
+   "\<And>m A::A=>bool. submetric A = submetric (M \<inter> A)"
+oops
+  REPEAT GEN_TAC THEN
+  GEN_REWRITE_TAC (LAND_CONV \<circ> LAND_CONV) [GSYM SUBMETRIC_MSPACE] THEN
+  REWRITE_TAC[SUBMETRIC_SUBMETRIC]);;
+**)
+
+
+subsection\<open>The discrete metric\<close>
+
+
+locale discrete_metric =
+  fixes M :: "'a set"
+
+definition (in discrete_metric) dd :: "'a \<Rightarrow> 'a \<Rightarrow> real"
+  where "dd \<equiv> \<lambda>x y::'a. if x=y then 0 else 1"
+
+lemma metric_M_dd: "Metric_space M discrete_metric.dd"
+  by (simp add: discrete_metric.dd_def Metric_space.intro)
+
+sublocale discrete_metric \<subseteq> disc: Metric_space M dd
+  by (simp add: metric_M_dd)
+
+
+lemma (in discrete_metric) mopen_singleton:
+  assumes "x \<in> M" shows "disc.mopen {x}"
+proof -
+  have "disc.mball x (1/2) \<subseteq> {x}"
+    by (smt (verit) dd_def disc.in_mball less_divide_eq_1_pos singleton_iff subsetI)
+  with assms show ?thesis
+    using disc.mopen_def half_gt_zero_iff zero_less_one by blast
+qed
+
+lemma (in discrete_metric) mtopology_discrete_metric:
+   "disc.mtopology = discrete_topology M"
+proof -
+  have "\<And>x. x \<in> M \<Longrightarrow> openin disc.mtopology {x}"
+    by (simp add: disc.mtopology_def mopen_singleton)
+  then show ?thesis
+    by (metis disc.topspace_mtopology discrete_topology_unique)
+qed
+
+lemma (in discrete_metric) discrete_ultrametric:
+   "dd x z \<le> max (dd x y) (dd y z)"
+  by (simp add: dd_def)
+
+
+lemma (in discrete_metric) dd_le1: "dd x y \<le> 1"
+  by (simp add: dd_def)
+
+lemma (in discrete_metric) mbounded_discrete_metric: "disc.mbounded S \<longleftrightarrow> S \<subseteq> M"
+  by (meson dd_le1 disc.mbounded_alt)
+
+
+
+subsection\<open>Metrizable spaces\<close>
+
+
+definition metrizable_space where
+  "metrizable_space X \<equiv> (\<exists>M d. Metric_space M d \<and> X = Metric_space.mtopology M d)"
+
+lemma (in Metric_space) metrizable_space_mtopology: "metrizable_space mtopology"
+  using local.Metric_space_axioms metrizable_space_def by blast
+
+lemma openin_mtopology_eq_open [simp]: "openin Met.mtopology = open"
+  by (simp add: Met.mtopology_def)
+
+lemma closedin_mtopology_eq_closed [simp]: "closedin Met.mtopology = closed"
+proof -
+  have "(euclidean::'a topology) = Met.mtopology"
+    by (simp add: Met.mtopology_def)
+  then show ?thesis
+    using closed_closedin by fastforce
+qed
+
+lemma compactin_mtopology_eq_compact [simp]: "compactin Met.mtopology = compact"
+  by (simp add: compactin_def compact_eq_Heine_Borel fun_eq_iff) meson
+
+lemma metrizable_space_discrete_topology:
+   "metrizable_space(discrete_topology U)"
+  by (metis discrete_metric.mtopology_discrete_metric metric_M_dd metrizable_space_def)
+
+lemma metrizable_space_subtopology:
+  assumes "metrizable_space X"
+  shows "metrizable_space(subtopology X S)"
+proof -
+  obtain M d where "Metric_space M d" and X: "X = Metric_space.mtopology M d"
+    using assms metrizable_space_def by blast
+  then interpret submetric M d "M \<inter> S"
+    by (simp add: submetric.intro submetric_axioms_def)
+  show ?thesis
+    unfolding metrizable_space_def
+    by (metis X mtopology_submetric sub.Metric_space_axioms subtopology_restrict topspace_mtopology)
+qed
+
+lemma homeomorphic_metrizable_space_aux:
+  assumes "X homeomorphic_space X'" "metrizable_space X"
+  shows "metrizable_space X'"
+proof -
+  obtain M d where "Metric_space M d" and X: "X = Metric_space.mtopology M d"
+    using assms by (auto simp: metrizable_space_def)
+  then interpret m: Metric_space M d 
+    by simp
+  obtain f g where hmf: "homeomorphic_map X X' f" and hmg: "homeomorphic_map X' X g"
+    and fg: "(\<forall>x \<in> M. g(f x) = x) \<and> (\<forall>y \<in> topspace X'. f(g y) = y)"
+    using assms X homeomorphic_maps_map homeomorphic_space_def by fastforce
+  define d' where "d' x y \<equiv> d (g x) (g y)" for x y
+  interpret m': Metric_space "topspace X'" "d'"
+    unfolding d'_def
+  proof
+    show "(d (g x) (g y) = 0) = (x = y)" if "x \<in> topspace X'" "y \<in> topspace X'" for x y
+      by (metis fg X hmg homeomorphic_imp_surjective_map imageI m.topspace_mtopology m.zero that)
+    show "d (g x) (g z) \<le> d (g x) (g y) + d (g y) (g z)"
+      if "x \<in> topspace X'" and "y \<in> topspace X'" and "z \<in> topspace X'" for x y z
+      by (metis X that hmg homeomorphic_eq_everything_map imageI m.topspace_mtopology m.triangle)
+  qed (auto simp: m.nonneg m.commute)
+  have "X' = Metric_space.mtopology (topspace X') d'"
+    unfolding topology_eq
+  proof (intro allI)
+    fix S
+    have "openin m'.mtopology S" if S: "S \<subseteq> topspace X'" and "openin X (g ` S)"
+      unfolding m'.openin_mtopology
+    proof (intro conjI that strip)
+      fix y
+      assume "y \<in> S"
+      then obtain r where "r>0" and r: "m.mball (g y) r \<subseteq> g ` S" 
+        using X \<open>openin X (g ` S)\<close> m.openin_mtopology using \<open>y \<in> S\<close> by auto
+      then have "g ` m'.mball y r \<subseteq> m.mball (g y) r"
+        using X d'_def hmg homeomorphic_imp_surjective_map by fastforce
+      with S fg have "m'.mball y r \<subseteq> S"
+        by (smt (verit, del_insts) image_iff m'.in_mball r subset_iff)
+      then show "\<exists>r>0. m'.mball y r \<subseteq> S"
+        using \<open>0 < r\<close> by blast 
+    qed
+    moreover have "openin X (g ` S)" if ope': "openin m'.mtopology S"
+    proof -
+      have "\<exists>r>0. m.mball (g y) r \<subseteq> g ` S" if "y \<in> S" for y
+      proof -
+        have y: "y \<in> topspace X'"
+          using m'.openin_mtopology ope' that by blast
+        obtain r where "r > 0" and r: "m'.mball y r \<subseteq> S"
+          using ope' by (meson \<open>y \<in> S\<close> m'.openin_mtopology)
+        moreover have "\<And>x. \<lbrakk>x \<in> M; d (g y) x < r\<rbrakk> \<Longrightarrow> \<exists>u. u \<in> topspace X' \<and> d' y u < r \<and> x = g u"
+          using fg X d'_def hmf homeomorphic_imp_surjective_map by fastforce
+        ultimately have "m.mball (g y) r \<subseteq> g ` m'.mball y r"
+          using y by (force simp: m'.openin_mtopology)
+        then show ?thesis
+          using \<open>0 < r\<close> r by blast
+      qed
+      then show ?thesis
+        using X hmg homeomorphic_imp_surjective_map m.openin_mtopology ope' openin_subset by fastforce
+    qed
+    ultimately have "(S \<subseteq> topspace X' \<and> openin X (g ` S)) = openin m'.mtopology S"
+      using m'.topspace_mtopology openin_subset by blast
+    then show "openin X' S = openin m'.mtopology S"
+      by (simp add: m'.mopen_def homeomorphic_map_openness_eq [OF hmg])
+  qed
+  then show ?thesis
+    using m'.metrizable_space_mtopology by force
+qed
+
+lemma homeomorphic_metrizable_space:
+  assumes "X homeomorphic_space X'"
+  shows "metrizable_space X \<longleftrightarrow> metrizable_space X'"
+  using assms homeomorphic_metrizable_space_aux homeomorphic_space_sym by metis
+
+lemma metrizable_space_retraction_map_image:
+   "retraction_map X X' r \<and> metrizable_space X
+        \<Longrightarrow> metrizable_space X'"
+  using hereditary_imp_retractive_property metrizable_space_subtopology homeomorphic_metrizable_space
+  by blast
+
+
+lemma metrizable_imp_Hausdorff_space:
+   "metrizable_space X \<Longrightarrow> Hausdorff_space X"
+  by (metis Metric_space.Hausdorff_space_mtopology metrizable_space_def)
+
+(**
+lemma metrizable_imp_kc_space:
+   "metrizable_space X \<Longrightarrow> kc_space X"
+oops
+  MESON_TAC[METRIZABLE_IMP_HAUSDORFF_SPACE; HAUSDORFF_IMP_KC_SPACE]);;
+
+lemma kc_space_mtopology:
+   "kc_space mtopology"
+oops
+  REWRITE_TAC[GSYM FORALL_METRIZABLE_SPACE; METRIZABLE_IMP_KC_SPACE]);;
+**)
+
+lemma metrizable_imp_t1_space:
+   "metrizable_space X \<Longrightarrow> t1_space X"
+  by (simp add: Hausdorff_imp_t1_space metrizable_imp_Hausdorff_space)
+
+lemma closed_imp_gdelta_in:
+  assumes X: "metrizable_space X" and S: "closedin X S"
+  shows "gdelta_in X S"
+proof -
+  obtain M d where "Metric_space M d" and Xeq: "X = Metric_space.mtopology M d"
+    using X metrizable_space_def by blast
+  then interpret M: Metric_space M d
+    by blast
+  have "S \<subseteq> M"
+    using M.closedin_metric \<open>X = M.mtopology\<close> S by blast
+  show ?thesis
+  proof (cases "S = {}")
+    case True
+    then show ?thesis
+      by simp
+  next
+    case False
+    have "\<exists>y\<in>S. d x y < inverse (1 + real n)" if "x \<in> S" for x n
+      using \<open>S \<subseteq> M\<close> M.mdist_zero [of x] that by force
+    moreover
+    have "x \<in> S" if "x \<in> M" and \<section>: "\<And>n. \<exists>y\<in>S. d x y < inverse(Suc n)" for x
+    proof -
+      have *: "\<exists>y\<in>S. d x y < \<epsilon>" if "\<epsilon> > 0" for \<epsilon>
+        by (metis \<section> that not0_implies_Suc order_less_le order_less_le_trans real_arch_inverse)
+      have "closedin M.mtopology S"
+        using S by (simp add: Xeq)
+      then show ?thesis
+        apply (simp add: M.closedin_metric)
+        by (metis * \<open>x \<in> M\<close> M.in_mball disjnt_insert1 insert_absorb subsetD)
+    qed
+    ultimately have Seq: "S = \<Inter>(range (\<lambda>n. {x\<in>M. \<exists>y\<in>S. d x y < inverse(Suc n)}))"
+      using \<open>S \<subseteq> M\<close> by force
+    have "openin M.mtopology {xa \<in> M. \<exists>y\<in>S. d xa y < inverse (1 + real n)}" for n
+    proof (clarsimp simp: M.openin_mtopology)
+      fix x y
+      assume "x \<in> M" "y \<in> S" and dxy: "d x y < inverse (1 + real n)"
+      then have "\<And>z. \<lbrakk>z \<in> M; d x z < inverse (1 + real n) - d x y\<rbrakk> \<Longrightarrow> \<exists>y\<in>S. d z y < inverse (1 + real n)"
+        by (smt (verit) M.commute M.triangle \<open>S \<subseteq> M\<close> in_mono)
+      with dxy show "\<exists>r>0. M.mball x r \<subseteq> {z \<in> M. \<exists>y\<in>S. d z y < inverse (1 + real n)}"
+        by (rule_tac x="inverse(Suc n) - d x y" in exI) auto
+    qed
+    then show ?thesis
+      apply (subst Seq)
+      apply (force simp: Xeq intro: gdelta_in_Inter open_imp_gdelta_in)
+      done
+  qed
+qed
+
+lemma open_imp_fsigma_in:
+   "\<lbrakk>metrizable_space X; openin X S\<rbrakk> \<Longrightarrow> fsigma_in X S"
+  by (meson closed_imp_gdelta_in fsigma_in_gdelta_in openin_closedin openin_subset)
+
+(*NEEDS first_countable
+lemma first_countable_mtopology:
+   "first_countable mtopology"
+oops
+  GEN_TAC THEN REWRITE_TAC[first_countable; TOPSPACE_MTOPOLOGY] THEN
+  X_GEN_TAC `x::A` THEN DISCH_TAC THEN
+  EXISTS_TAC `{ mball m (x::A,r) | rational r \<and> 0 < r}` THEN
+  REWRITE_TAC[FORALL_IN_GSPEC; OPEN_IN_MBALL; EXISTS_IN_GSPEC] THEN
+  ONCE_REWRITE_TAC[SET_RULE
+   `{f x | S x \<and> Q x} = f ` {x. x \<in> S \<and> Q x}`] THEN
+  SIMP_TAC[COUNTABLE_IMAGE; COUNTABLE_RATIONAL; COUNTABLE_RESTRICT] THEN
+  REWRITE_TAC[OPEN_IN_MTOPOLOGY] THEN
+  X_GEN_TAC `U::A=>bool` THEN STRIP_TAC THEN
+  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::A`) THEN
+  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
+  X_GEN_TAC `r::real` THEN STRIP_TAC THEN FIRST_ASSUM
+   (MP_TAC \<circ> SPEC `r::real` \<circ> MATCH_MP RATIONAL_APPROXIMATION_BELOW) THEN
+  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `q::real` THEN
+  REWRITE_TAC[REAL_SUB_REFL] THEN STRIP_TAC THEN
+  ASM_SIMP_TAC[CENTRE_IN_MBALL] THEN
+  TRANS_TAC SUBSET_TRANS `mball m (x::A,r)` THEN
+  ASM_SIMP_TAC[MBALL_SUBSET_CONCENTRIC; REAL_LT_IMP_LE]);;
+
+lemma metrizable_imp_first_countable:
+   "metrizable_space X \<Longrightarrow> first_countable X"
+oops
+  REWRITE_TAC[FORALL_METRIZABLE_SPACE; FIRST_COUNTABLE_MTOPOLOGY]);;
+*)
+
 lemma mball_eq_ball [simp]: "Met.mball = ball"
   by force
 
@@ -3854,6 +3829,29 @@ lemma kc_space_euclidean: "kc_space (euclidean :: 'a::metric_space topology)"
 
 lemma t1_space_euclidean: "t1_space (euclidean :: 'a::metric_space topology)"
   by (simp add: Hausdorff_imp_t1_space)
+
+lemma (in Metric_space) regular_space_mtopology:
+   "regular_space mtopology"
+unfolding regular_space_def
+proof clarify
+  fix C a
+  assume C: "closedin mtopology C" and a: "a \<in> topspace mtopology" and "a \<notin> C"
+  have "openin mtopology (topspace mtopology - C)"
+    by (simp add: C openin_diff)
+  then obtain r where "r>0" and r: "mball a r \<subseteq> topspace mtopology - C"
+    unfolding openin_mtopology using \<open>a \<notin> C\<close> a by auto
+  show "\<exists>U V. openin mtopology U \<and> openin mtopology V \<and> a \<in> U \<and> C \<subseteq> V \<and> disjnt U V"
+  proof (intro exI conjI)
+    show "a \<in> mball a (r/2)"
+      using \<open>0 < r\<close> a by force
+    show "C \<subseteq> topspace mtopology - mcball a (r/2)"
+      using C \<open>0 < r\<close> r by (fastforce simp: closedin_metric)
+  qed (auto simp: openin_mball closedin_mcball openin_diff disjnt_iff)
+qed
+
+lemma metrizable_imp_regular_space:
+   "metrizable_space X \<Longrightarrow> regular_space X"
+  by (metis Metric_space.regular_space_mtopology metrizable_space_def)
 
 lemma regular_space_euclidean:
  "regular_space (euclidean :: 'a::metric_space topology)"
