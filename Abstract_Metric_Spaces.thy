@@ -7415,79 +7415,47 @@ next
     with R obtain f where contf: "continuous_map X euclideanreal f" and "f ` S \<subseteq> {a}" "f ` T \<subseteq> {b}"
       by meson
     show "\<exists>U V. openin X U \<and> openin X V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
-      apply (rule_tac x="{x \<in> topspace X. f x \<in> ball a (\<bar>a-b\<bar> / 2)}" in exI)
-      apply (rule_tac x="{x \<in> topspace X. f x \<in> ball b (\<bar>a-b\<bar> / 2)}" in exI)
-      apply (intro conjI)
-          apply (rule openin_continuous_map_preimage [OF contf])
-          apply (force simp add: )
-         apply (rule openin_continuous_map_preimage [OF contf])
-         apply (force simp add: )
-      using \<open>closedin X S\<close> closedin_subset
-      using \<open>f ` S \<subseteq> {a}\<close> assms apply auto[1]
-      using \<open>f ` T \<subseteq> {b}\<close> assms apply auto[1]
-      apply (meson \<open>closedin X T\<close> closedin_subset subsetD)
-
-
-     sorry
-qed
-
+    proof (intro conjI exI)
+      show "openin X {x \<in> topspace X. f x \<in> ball a (\<bar>a - b\<bar> / 2)}"
+        by (force intro!: openin_continuous_map_preimage [OF contf])
+      show "openin X {x \<in> topspace X. f x \<in> ball b (\<bar>a - b\<bar> / 2)}"
+        by (force intro!: openin_continuous_map_preimage [OF contf])
+      show "S \<subseteq> {x \<in> topspace X. f x \<in> ball a (\<bar>a - b\<bar> / 2)}"
+        using \<open>closedin X S\<close> closedin_subset \<open>f ` S \<subseteq> {a}\<close> assms by force
+      show "T \<subseteq> {x \<in> topspace X. f x \<in> ball b (\<bar>a - b\<bar> / 2)}"
+        using \<open>closedin X T\<close> closedin_subset \<open>f ` T \<subseteq> {b}\<close> assms by force
+      have "\<And>x. \<lbrakk>x \<in> topspace X; dist a (f x) < \<bar>a-b\<bar>/2; dist b (f x) < \<bar>a-b\<bar>/2\<rbrakk>
+         \<Longrightarrow> False"
+        by (smt (verit, best) dist_real_def dist_triangle_half_l)
+      then show "disjnt {x \<in> topspace X. f x \<in> ball a (\<bar>a - b\<bar> / 2)} {x \<in> topspace X. f x \<in> ball b (\<bar>a - b\<bar> / 2)}"
+        using disjnt_iff by fastforce
+    qed
+  qed
 qed 
 
-oops
-  MAP_EVERY EXISTS_TAC
-   [`{x::A | x \<in> topspace X \<and>
-            f x \<in> mball real_euclidean_metric (a,abs(a - b) / 2)}`;
-    `{x::A | x \<in> topspace X \<and>
-            f x \<in> mball real_euclidean_metric (b,abs(a - b) / 2)}`] THEN
-  ONCE_REWRITE_TAC[CONJ_ASSOC] THEN CONJ_TAC THENL
-   [CONJ_TAC THEN MATCH_MP_TAC OPEN_IN_CONTINUOUS_MAP_PREIMAGE THEN
-    EXISTS_TAC `euclideanreal` THEN ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[OPEN_IN_MBALL; GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC];
-    ONCE_REWRITE_TAC[CONJ_ASSOC] THEN CONJ_TAC THENL
-     [ASM_SIMP_TAC[\<subseteq>; IN_ELIM_THM; CENTRE_IN_MBALL_EQ] THEN
-      ASM_REWRITE_TAC[REAL_ARITH `0 < abs(a - b) / 2 \<longleftrightarrow> (a \<noteq> b)`] THEN
-      REWRITE_TAC[REAL_EUCLIDEAN_METRIC; IN_UNIV] THEN
-      ASM_SIMP_TAC[GSYM \<subseteq>; CLOSED_IN_SUBSET];
-      SIMP_TAC[EXTENSION; disjnt; IN_INTER; NOT_IN_EMPTY; IN_ELIM_THM;
-               mball; REAL_EUCLIDEAN_METRIC] THEN
-      REAL_ARITH_TAC]]);;
-
 lemma normal_space_eq_Urysohn_gen:
-   "a < b
-     \<Longrightarrow> (normal_space X \<longleftrightarrow>
-          \<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
-                \<Longrightarrow> \<exists>f. continuous_map
-                         (X,
-                          subtopology euclideanreal {a..b}) f \<and>
-                        (\<forall>x. x \<in> S \<Longrightarrow> f x = a) \<and>
-                        (\<forall>x. x \<in> T \<Longrightarrow> f x = b))"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THEN
-  ASM_SIMP_TAC[URYSOHN_LEMMA; REAL_LT_IMP_LE] THEN
-  ASM_SIMP_TAC[NORMAL_SPACE_EQ_URYSOHN_GEN_ALT; REAL_LT_IMP_NE] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN
-  REPEAT(MATCH_MP_TAC MONO_FORALL THEN GEN_TAC) THEN MESON_TAC[]);;
+  fixes a b::real
+  shows
+   "a < b \<Longrightarrow> 
+      normal_space X \<longleftrightarrow>
+        (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
+               \<longrightarrow> (\<exists>f. continuous_map X (top_of_set {a..b}) f \<and>
+                        f ` S \<subseteq> {a} \<and> f ` T \<subseteq> {b}))"
+  by (metis linear not_le Urysohn_lemma normal_space_eq_Urysohn_gen_alt continuous_map_in_subtopology)
 
 lemma normal_space_eq_Urysohn_alt:
    "normal_space X \<longleftrightarrow>
-     \<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
-           \<Longrightarrow> \<exists>f. continuous_map X euclideanreal f \<and>
-                   (\<forall>x. x \<in> S \<Longrightarrow> f x = 0) \<and>
-                   (\<forall>x. x \<in> T \<Longrightarrow> f x = 1)"
-oops
-  GEN_TAC THEN MATCH_MP_TAC NORMAL_SPACE_EQ_URYSOHN_GEN_ALT THEN
-  CONV_TAC REAL_RAT_REDUCE_CONV);;
+     (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
+           \<longrightarrow> (\<exists>f. continuous_map X euclideanreal f \<and>
+                   f ` S \<subseteq> {0} \<and> f ` T \<subseteq> {1}))"
+  by (rule normal_space_eq_Urysohn_gen_alt) auto
 
 lemma normal_space_eq_Urysohn:
-   "     normal_space X \<longleftrightarrow>
-     \<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
-           \<Longrightarrow> \<exists>f. continuous_map
-                    (X,subtopology euclideanreal ({0..1})) f \<and>
-                   (\<forall>x. x \<in> S \<Longrightarrow> f x = 0) \<and>
-                   (\<forall>x. x \<in> T \<Longrightarrow> f x = 1)"
-oops
-  GEN_TAC THEN MATCH_MP_TAC NORMAL_SPACE_EQ_URYSOHN_GEN THEN
-  REWRITE_TAC[REAL_LT_01]);;
+   "normal_space X \<longleftrightarrow>
+     (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
+            \<longrightarrow> (\<exists>f::'a\<Rightarrow>real. continuous_map X (top_of_set {0..1}) f \<and> 
+                               f ` S \<subseteq> {0} \<and> f ` T \<subseteq> {1}))"
+  by (rule normal_space_eq_Urysohn_gen) auto
 
 lemma tietze_extension_closed_real_interval:
    "\<And>X f::A=>real s a b.
