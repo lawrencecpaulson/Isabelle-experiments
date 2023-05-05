@@ -7343,20 +7343,39 @@ proof -
         proof (intro exI conjI)
           show "openin X G'"
             unfolding G'_def by fastforce
+          obtain r' where "r' \<in> dyadics \<and> 0 \<le> r' \<and> r' \<le> 1 \<and> r < r' \<and> \<bar>r' - r\<bar> < 1 - r"
+            using B r by force 
+          moreover
           have "1 - r \<in> dyadics" "0 \<le> r"
-            using 1 r(1,2) dyadics_diff by force+
+            using 1 r dyadics_diff by force+
+          ultimately have "x \<notin> X closure_of G r"
+            using G True r fle by force
           then show "x \<in> G'"
-            unfolding G'_def
-            using B [of r "1-r"] r that apply atomize
-            apply safe
-              apply (simp add: )
-            by (smt (verit) G Int_iff True fle subsetD)
+            by (simp add: G'_def that)
           show "\<forall>y \<in> G'. \<bar>f y - f x\<bar> < \<epsilon>"
-            using "**" f_le1 in_closure_of r by (fastforce simp add: True G'_def)
+            using ** f_le1 in_closure_of r by (fastforce simp add: True G'_def)
         qed
       next
         case False
-        then show ?thesis sorry
+        have "0 < f x" "f x < 1"
+          using f1 f_ge that(1) \<open>f x \<noteq> 0\<close> \<open>f x \<noteq> 1\<close> by (metis order_le_less) +
+        obtain r where r: "r \<in> dyadics \<inter> {0..1}" "r < f x" "\<bar>r - f x\<bar> < \<epsilon> / 2"
+          using A \<open>0 < \<epsilon>\<close> \<open>0 < f x\<close> \<open>f x < 1\<close> by (smt (verit, best) half_gt_zero)
+        obtain r' where r': "r' \<in> dyadics \<inter> {0..1}" "f x < r'" "\<bar>r' - f x\<bar> < \<epsilon> / 2"
+          using B \<open>0 < \<epsilon>\<close> \<open>0 < f x\<close> \<open>f x < 1\<close> by (smt (verit, best) half_gt_zero)
+        have "r < 1"
+          using \<open>f x < 1\<close> r(2) by force
+        show ?thesis
+          apply (rule_tac x="G r' - X closure_of G r" in exI)
+          apply (intro conjI)
+          using closedin_closure_of opeG r'(1) apply blast
+           apply (auto simp: )
+          using "**" r' apply fastforce
+          using B [of r "f x - r"] r \<open>r < 1\<close>
+           apply (auto simp: )
+           apply (smt (verit, ccfv_SIG) G Int_iff atLeastAtMost_iff fle insert_absorb insert_subset)
+          using r r' 
+          by (smt (verit) "**" G closure_of_subset field_sum_of_halves fle openin_subset subset_eq)
       qed
     qed
   qed
@@ -7375,45 +7394,10 @@ proof -
     show "g ` S \<subseteq> {a}" "g ` T \<subseteq> {b}"
       using fimS fimT by (auto simp: g_def)
   qed
+qed
 
 oops
 
-
-  ASM_CASES_TAC `f x = 1` THENL
-   [FIRST_ASSUM(MP_TAC \<circ> SPECL [`f x`; `e / 2`] \<circ> CONJUNCT1) THEN
-    ANTS_TAC THENL [ASM SIMP_TAC[] THEN ASM_REAL_ARITH_TAC; ALL_TAC] THEN
-    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `r::real` THEN
-    STRIP_TAC THEN
-
-    EXISTS_TAC `topspace X - X closure_of G r` THEN
-    ASM_SIMP_TAC[OPEN_IN_DIFF; OPEN_IN_TOPSPACE; CLOSED_IN_CLOSURE_OF] THEN
-    ASM_REWRITE_TAC[IN_DIFF] THEN CONJ_TAC THENL
-     [DISCH_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`r::real`; `1 - r`] \<circ> CONJUNCT2) THEN
-      ANTS_TAC THENL
-       [ASM_REWRITE_TAC[REAL_SUB_LT] THEN
-        ASM_MESON_TAC[\<subseteq>; IN_REAL_INTERVAL];
-        DISCH_THEN(X_CHOOSE_THEN `r':real` STRIP_ASSUME_TAC)] THEN
-      SUBGOAL_THEN `f x \<le> r'` MP_TAC THENL
-       [FIRST_X_ASSUM MATCH_MP_TAC THEN ASM SET_TAC[];
-        ASM_REAL_ARITH_TAC];
-      X_GEN_TAC `y::A` THEN STRIP_TAC THEN
-      SUBGOAL_THEN `r \<le> f y` MP_TAC THENL
-       [FIRST_X_ASSUM MATCH_MP_TAC THEN
-        MP_TAC(ISPECL [`X::A topology`; `G r`]
-                CLOSURE_OF_SUBSET) THEN
-        ASM_SIMP_TAC[OPEN_IN_SUBSET] THEN ASM SET_TAC[];
-        SUBGOAL_THEN `f y \<le> 1` MP_TAC THENL
-         [ASM_MESON_TAC[\<subseteq>; IN_REAL_INTERVAL]; ASM_REAL_ARITH_TAC]]];
-    ALL_TAC] THEN
-
-  FIRST_ASSUM(CONJUNCTS_THEN(MP_TAC \<circ> SPECL [`f x`; `e / 2`])) THEN
-  SUBGOAL_THEN `0 \<le> f x \<and> f x \<le> 1` STRIP_ASSUME_TAC THENL
-   [ASM_MESON_TAC[\<subseteq>; IN_REAL_INTERVAL]; ALL_TAC] THEN
-  ANTS_TAC THENL [ASM_REAL_ARITH_TAC; REWRITE_TAC[LEFT_IMP_EXISTS_THM]] THEN
-  X_GEN_TAC `r':real` THEN STRIP_TAC THEN
-  ANTS_TAC THENL [ASM_REAL_ARITH_TAC; REWRITE_TAC[LEFT_IMP_EXISTS_THM]] THEN
-  X_GEN_TAC `r::real` THEN STRIP_TAC THEN
   EXISTS_TAC `G r' - X closure_of g r` THEN
   ASM_SIMP_TAC[IN_DIFF; OPEN_IN_DIFF; CLOSED_IN_CLOSURE_OF] THEN
   REPEAT CONJ_TAC THENL
