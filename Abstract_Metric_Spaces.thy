@@ -9,6 +9,11 @@ begin
 lemma ball_iff_cball: "(\<exists>r>0. ball x r \<subseteq> U) = (\<exists>r>0. cball x r \<subseteq> U)"
   by (meson mem_interior mem_interior_cball)
 
+thm closedin_closed_subtopology
+lemma closedin_trans_full:
+   "\<lbrakk>closedin (subtopology X U) S; closedin X U\<rbrakk> \<Longrightarrow> closedin X S"
+  using closedin_closed_subtopology by blast
+
 thm real_arch_pow_inv
 lemma Archimedean_eventually_pow:
   fixes x::real
@@ -2696,7 +2701,7 @@ next
           by (simp add: E_def)
         finally show ?thesis .
       qed
-      have DD: "d l (\<sigma> (r n)) < d l (\<sigma> i)" if \<section>: "p < n" "i \<le> r p" "\<sigma> i \<noteq> l" for i p n
+      have d_lt_d: "d l (\<sigma> (r n)) < d l (\<sigma> i)" if \<section>: "p < n" "i \<le> r p" "\<sigma> i \<noteq> l" for i p n
       proof -
         have 1: "d l (\<sigma> i) \<in> E r n"
           using \<section> \<open>l \<in> M\<close> \<open>range \<sigma> \<subseteq> M\<close> 
@@ -2709,7 +2714,7 @@ next
           by (simp add: r_eq) 
       qed
       have r: "r p < r n" if "p < n" for p n
-        using DD [OF that] non_l by (meson linorder_not_le order_less_irrefl) 
+        using d_lt_d [OF that] non_l by (meson linorder_not_le order_less_irrefl) 
       show ?thesis
       proof (intro exI conjI)
         show "strict_mono r"
@@ -4583,11 +4588,6 @@ lemma normal_space_eq_Urysohn:
                                f ` S \<subseteq> {0} \<and> f ` T \<subseteq> {1}))"
   by (rule normal_space_eq_Urysohn_gen) auto
 
-thm closedin_closed_subtopology
-lemma closedin_trans_full:
-   "\<lbrakk>closedin (subtopology X U) S; closedin X U\<rbrakk> \<Longrightarrow> closedin X S"
-  using closedin_closed_subtopology by blast
-
 
 lemma Tietze_extension_closed_real_interval:
   assumes "normal_space X"
@@ -4610,8 +4610,7 @@ proof -
     have pos: "0 < c * (2/3) ^ n"
       by (simp add: \<open>0 < c\<close>)
     have S_eq: "S = topspace(subtopology X S)" and "S \<subseteq> topspace X"
-      using assms(3) closedin_subset by auto
-
+      using \<open>closedin X S\<close> closedin_subset by auto
     define d where "d \<equiv> c/3 * (2/3) ^ n"
     define SA where "SA \<equiv> {x \<in> S. f x - h x \<in> {..-d}}"
     define SB where "SB \<equiv> {x \<in> S. f x - h x \<in> {d..}}"
@@ -4643,7 +4642,6 @@ proof -
       using ga by (auto simp: SA_def)
     have g_eq_negd: "\<And>x. \<lbrakk>x \<in> S; f x - h x \<ge> d\<rbrakk> \<Longrightarrow> g x = d"
       using gb by (auto simp: SB_def)
-
     show ?thesis
       unfolding good_def
     proof (intro conjI strip exI)
@@ -4683,7 +4681,7 @@ proof -
   have *: "\<And>n x. x \<in> topspace X \<Longrightarrow> \<bar>g(Suc n) x - g n x\<bar> \<le> c * (2/3) ^ n / 3"
     using nxtg g_Suc good by presburger
   obtain h where conth:  "continuous_map X Met.mtopology h"
-         and h: "\<And>\<epsilon>. 0 < \<epsilon> \<Longrightarrow> \<forall>\<^sub>F n in sequentially. \<forall>x\<in>topspace X. dist (g n x) (h x) < \<epsilon>"
+    and h: "\<And>\<epsilon>. 0 < \<epsilon> \<Longrightarrow> \<forall>\<^sub>F n in sequentially. \<forall>x\<in>topspace X. dist (g n x) (h x) < \<epsilon>"
   proof (rule Met.continuous_map_uniformly_Cauchy_limit)
     show "\<forall>\<^sub>F n in sequentially. continuous_map X (Met.mtopology) (g n)"
       using good good_def by fastforce
@@ -4703,7 +4701,7 @@ proof -
         case True
         have 23: "(\<Sum>k = m..<n. (2/3)^k) = 3 * ((2/3) ^ m - (2/3::real) ^ n)"
           using \<open>m \<le> n\<close>
-        by (induction n) (auto simp: le_Suc_eq)
+          by (induction n) (auto simp: le_Suc_eq)
         have "\<bar>g m x - g n x\<bar> \<le> \<bar>\<Sum>k = m..<n. g (Suc k) x - g k x\<bar>"
           by (subst sum_Suc_diff' [OF \<open>m \<le> n\<close>]) linarith
         also have "\<dots> \<le> (\<Sum>k = m..<n. \<bar>g (Suc k) x - g k x\<bar>)"
@@ -4724,47 +4722,40 @@ proof -
       then show ?thesis
         by (metis dist_commute_lessI dist_real_def nle_le)
     qed
-    show ?thesis
-      using that
-      
-      sorry
   qed auto
-
-  show ?thesis
-    sorry
+  define \<phi> where "\<phi> \<equiv> \<lambda>x. max a (min (h x) b)"
+  show thesis
+  proof
+    show "continuous_map X euclidean \<phi>"
+      unfolding \<phi>_def using conth by (intro continuous_intros) auto
+    show "\<phi> x = f x" if "x \<in> S" for x 
+    proof -
+      have x: "x \<in> topspace X"
+        using \<open>closedin X S\<close> closedin_subset that by blast
+      have "h x = f x"
+      proof (rule Met.limitin_metric_unique)
+        show "limitin Met.mtopology (\<lambda>n. g n x) (h x) sequentially"
+          using h x by (force simp: tendsto_iff eventually_sequentially)
+        show "limitin Met.mtopology (\<lambda>n. g n x) (f x) sequentially"
+        proof (clarsimp simp: tendsto_iff)
+          fix \<epsilon>::real
+          assume "\<epsilon> > 0"
+          then have "\<forall>\<^sub>F n in sequentially. \<bar>(2/3) ^ n\<bar> < \<epsilon>/c"
+            by (intro Archimedean_eventually_pow_inverse) (auto simp: \<open>c > 0\<close>)
+          then show "\<forall>\<^sub>F n in sequentially. dist (g n x) (f x) < \<epsilon>"
+            apply eventually_elim
+          using good x
+          apply (simp add: good_def \<open>c > 0\<close> dist_real_def)
+          by (smt (verit, ccfv_SIG) \<open>0 < c\<close> mult.commute pos_less_divide_eq that)
+        qed
+      qed auto
+      then show ?thesis
+        using that fim by (auto simp: \<phi>_def)
+    qed
+    then show "\<phi> ` S \<subseteq> {a..b}"
+      by (simp add: fim)
+  qed
 qed
-  oops
-
-    EXISTS_TAC `\<lambda>x. max a (min ((h::S=>real) x) b)` THEN
-    ASM_SIMP_TAC[CONTINUOUS_MAP_REAL_MAX; CONTINUOUS_MAP_REAL_MIN;
-                 CONTINUOUS_MAP_REAL_CONST] THEN
-    CONJ_TAC THEN X_GEN_TAC `x::S` THEN DISCH_TAC THENL
-     [ASM_REAL_ARITH_TAC; ALL_TAC] THEN
-    MATCH_MP_TAC(REAL_ARITH
-     `a \<le> x \<and> x \<le> b \<and> y = x \<Longrightarrow> max a (min y b) = x`) THEN
-    ASM_SIMP_TAC[] THEN
-    MATCH_MP_TAC(ISPEC `sequentially` LIMIT_METRIC_UNIQUE) THEN
-    MAP_EVERY EXISTS_TAC
-     [`real_euclidean_metric`; `\<lambda>n. (g::num=>A->real) n x`] THEN
-    REWRITE_TAC[TRIVIAL_LIMIT_SEQUENTIALLY; LIMIT_METRIC] THEN
-    REWRITE_TAC[REAL_EUCLIDEAN_METRIC; IN_UNIV] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN
-    REWRITE_TAC[\<subseteq>] THEN DISCH_THEN(MP_TAC \<circ> SPEC `x::S`) THEN
-    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN CONJ_TAC THEN
-    X_GEN_TAC `e::real` THEN DISCH_TAC THENL
-     [FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e::real`) THEN
-      ASM_REWRITE_TAC[] THEN
-      MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] EVENTUALLY_MONO) THEN
-      ASM_SIMP_TAC[];
-      MP_TAC(ISPECL [`2 / 3`; `e / c::real`] ARCH_EVENTUALLY_POW_INV) THEN
-      CONV_TAC REAL_RAT_REDUCE_CONV THEN ASM_SIMP_TAC[REAL_LT_DIV] THEN
-      MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] EVENTUALLY_MONO) THEN
-      ASM_SIMP_TAC[REAL_LT_RDIV_EQ] THEN X_GEN_TAC `n::num` THEN
-      MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] REAL_LET_TRANS) THEN
-      REWRITE_TAC[REAL_ARITH
-       `abs x * c = c * (if 0 \<le> x then x else-x)`] THEN
-      ASM_SIMP_TAC[REAL_POW_LE; REAL_ARITH `0 \<le> 2 / 3`]]]);;
-
 
 
 lemma Tietze_extension_realinterval:
