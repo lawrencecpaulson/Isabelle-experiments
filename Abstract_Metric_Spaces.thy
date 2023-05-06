@@ -4570,11 +4570,11 @@ proof -
   define c where "c \<equiv> max \<bar>a\<bar> \<bar>b\<bar> + 1"
   have "0 < c" and c: "\<And>x. x \<in> S \<Longrightarrow> \<bar>f x\<bar> \<le> c"
     using fim by (auto simp: c_def image_subset_iff)
-  have step: "\<exists>y. (continuous_map X euclideanreal y \<and>
-              (\<forall>x \<in> S. abs (f x - y x) \<le> c * (2/3) ^ Suc n)) \<and>
-              (\<forall>x \<in> topspace X. abs (y x - h x) \<le> c * (2/3) ^ n / 3)"
-    if conth: "continuous_map X euclideanreal h"
-      and IH: "\<And>x. x \<in> S \<Longrightarrow> abs (f x - h x) \<le> c * (2/3) ^ n" for n h
+  define good where 
+    "good \<equiv> \<lambda>g n. continuous_map X euclideanreal g \<and> (\<forall>x \<in> S. \<bar>f x - g x\<bar> \<le> c * (2/3)^n)"
+  have step: "\<exists>g. good g (Suc n) \<and>
+              (\<forall>x \<in> topspace X. \<bar>g x - h x\<bar> \<le> c * (2/3)^n / 3)"
+    if h: "good h n" for n h
   proof -
     have pos: "0 < c * (2/3) ^ n"
       by (simp add: \<open>0 < c\<close>)
@@ -4585,7 +4585,8 @@ proof -
     define SA where "SA \<equiv> {x \<in> S. f x - h x \<in> {..-d}}"
     define SB where "SB \<equiv> {x \<in> S. f x - h x \<in> {d..}}"
     have contfh: "continuous_map (subtopology X S) euclideanreal (\<lambda>x. f x - h x)"
-      by (simp add: contf conth continuous_map_diff continuous_map_from_subtopology)
+      using that
+      by (simp add: contf good_def continuous_map_diff continuous_map_from_subtopology)
     then have "closedin (subtopology X S) SA"
       unfolding SA_def
       by (smt (verit, del_insts) closed_closedin continuous_map_closedin Collect_cong S_eq closed_real_atMost)
@@ -4612,18 +4613,20 @@ proof -
     have g_eq_negd: "\<And>x. \<lbrakk>x \<in> S; f x - h x \<ge> d\<rbrakk> \<Longrightarrow> g x = d"
       using gb by (auto simp: SB_def)
 
-    have "\<exists>y. (continuous_map X euclideanreal y \<and>
-              (\<forall>x \<in> S. abs (f x - y x) \<le> c * (2/3) ^ Suc n)) \<and>
-              (\<forall>x \<in> topspace X. abs (y x - h x) \<le> c * (2/3) ^ n / 3)"
+    show ?thesis
+      unfolding good_def
     proof (intro conjI strip exI)
       show "continuous_map X euclideanreal (\<lambda>x. h x + g x)"
-        using contg conth continuous_map_add continuous_map_in_subtopology by blast
+        using contg continuous_map_add continuous_map_in_subtopology that
+        unfolding good_def by blast
       show "\<bar>f x - (h x + g x)\<bar> \<le> c * (2 / 3) ^ Suc n" if "x \<in> S" for x
       proof -
         have x: "x \<in> topspace X"
           using \<open>S \<subseteq> topspace X\<close> that by auto
+        have "\<bar>f x - h x\<bar> \<le> c * (2/3) ^ n"
+          using good_def h that by blast
+        with g_eq_d [OF that] g_eq_negd [OF that] g_le_d [OF x] 
         have "\<bar>f x - (h x + g x)\<bar> \<le> d + d"
-          using g_eq_d [OF that] g_eq_negd [OF that] IH [OF that] g_le_d [OF x] 
           unfolding d_def by linarith
         then show ?thesis 
           by (simp add: d_def)
@@ -4631,35 +4634,27 @@ proof -
       show "\<bar>h x + g x - h x\<bar> \<le> c * (2 / 3) ^ n / 3" if "x \<in> topspace X" for x
         using that d_def g_le_d by auto
     qed
+  qed
+  then obtain nxtg where nxtg: "\<And>h n. good h n \<Longrightarrow> 
+          good (nxtg h n) (Suc n) \<and> (\<forall>x \<in> topspace X. \<bar>nxtg h n x - h x\<bar> \<le> c * (2/3)^n / 3)"
+    by metis
 
-    define \<Phi> where 
-      "\<Phi> \<equiv> \<lambda>g. (\<forall>n. continuous_map X euclideanreal (g n) \<and>
-                  (\<forall>x\<in>S. \<bar>f x - g n x\<bar> \<le> c * (2/3) ^ n)) \<and>
-                  (\<forall>n. \<forall>x\<in>topspace X. \<bar>g (Suc n) x - g n x\<bar> \<le> c * (2/3) ^ n/3)"
-
-      then
-    have "\<Phi> (\<lambda>n. g)"
-apply (auto simp: \<Phi>_def SA_def SB_def image_subset_iff)
-      using contg continuous_map_in_subtopology apply blast
-
-
-    sorry
-    oops
-
-  SUBGOAL_THEN
-   `\<exists>g::num=>A->real.
-        (\<forall>n. continuous_map X euclideanreal (g n) \<and>
-             \<forall>x. x \<in> S \<Longrightarrow> abs(f x - g n x) \<le> c * (2/3) ^ n) \<and>
-        (\<forall>n x. x \<in> topspace X
-               \<Longrightarrow> abs(g(Suc n) x - g n x) \<le> c * (2/3) ^ n/3)`
-  MP_TAC THENL
-   [MATCH_MP_TAC DEPENDENT_CHOICE THEN CONJ_TAC THENL
-     [EXISTS_TAC `(\<lambda>x. 0):S=>real` THEN
-      REWRITE_TAC[CONTINUOUS_MAP_REAL_CONST] THEN
-      ASM_REWRITE_TAC[real_pow; REAL_MUL_RID; REAL_SUB_RZERO];
+  define g where "g \<equiv> rec_nat (\<lambda>x. 0) (\<lambda>n r. nxtg r n)"
+  have [simp]: "g 0 x = 0" for x
+    by (auto simp: g_def)
+  have g_Suc[simp]: "g(Suc n) = nxtg (g n) n" for n
+    by (auto simp: g_def)
+  have good: "good (g n) n" for n
+  proof (induction n)
+    case 0
+    with c show ?case
+      by (auto simp: good_def)
+  qed (simp add: nxtg)
+  have *: "\<And>n x. x \<in> topspace X \<Longrightarrow> \<bar>g(Suc n) x - g n x\<bar> \<le> c * (2/3) ^ n / 3"
+    using nxtg g_Suc good by presburger
 
 
-
+  oops
 
   X_GEN_TAC `g::num=>A->real` THEN STRIP_TAC THEN
   MP_TAC(ISPECL
@@ -4679,6 +4674,7 @@ apply (auto simp: \<Phi>_def SA_def SB_def image_subset_iff)
     X_GEN_TAC `x::S` THEN STRIP_TAC THEN
     TRANS_TAC REAL_LET_TRANS
      `abs(sum(m..n - 1) (\<lambda>n. g (Suc n) (x::S) - g n x))` THEN
+
     CONJ_TAC THENL
      [REWRITE_TAC[SUM_DIFFS_ALT; ADD1] THEN
       FIRST_ASSUM(MP_TAC \<circ> MATCH_MP (ARITH_RULE
@@ -4695,7 +4691,9 @@ apply (auto simp: \<Phi>_def SA_def SB_def image_subset_iff)
       MATCH_MP_TAC(REAL_ARITH `abs x < y \<and> 0 \<le> z \<Longrightarrow> x - z < y`) THEN
       ASM_SIMP_TAC[] THEN MATCH_MP_TAC REAL_POW_LE THEN
       CONV_TAC REAL_RAT_REDUCE_CONV];
+
     DISCH_THEN(X_CHOOSE_THEN `h::S=>real` STRIP_ASSUME_TAC) THEN
+
     EXISTS_TAC `\<lambda>x. max a (min ((h::S=>real) x) b)` THEN
     ASM_SIMP_TAC[CONTINUOUS_MAP_REAL_MAX; CONTINUOUS_MAP_REAL_MIN;
                  CONTINUOUS_MAP_REAL_CONST] THEN
@@ -4725,6 +4723,7 @@ apply (auto simp: \<Phi>_def SA_def SB_def image_subset_iff)
       REWRITE_TAC[REAL_ARITH
        `abs x * c = c * (if 0 \<le> x then x else-x)`] THEN
       ASM_SIMP_TAC[REAL_POW_LE; REAL_ARITH `0 \<le> 2 / 3`]]]);;
+
 
 
 lemma Tietze_extension_realinterval:
