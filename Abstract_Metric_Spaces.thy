@@ -9,6 +9,36 @@ begin
 lemma ball_iff_cball: "(\<exists>r>0. ball x r \<subseteq> U) = (\<exists>r>0. cball x r \<subseteq> U)"
   by (meson mem_interior mem_interior_cball)
 
+thm real_arch_pow_inv
+lemma Archimedean_eventually_pow:
+  fixes x::real
+  assumes "1 < x"
+  shows "\<forall>\<^sub>F n in sequentially. b < x ^ n"
+proof -
+  obtain N where "\<And>n. n\<ge>N \<Longrightarrow> b < x ^ n"
+    by (metis assms le_less order_less_trans power_strict_increasing_iff real_arch_pow)
+  then show ?thesis
+    using eventually_sequentially by blast
+qed
+
+lemma Archimedean_eventually_pow_inverse:
+  fixes x::real
+  assumes "\<bar>x\<bar> < 1" "\<epsilon> > 0"
+  shows "\<forall>\<^sub>F n in sequentially. \<bar>x^n\<bar> < \<epsilon>"
+proof (cases "x = 0")
+  case True
+  then show ?thesis
+    by (simp add: assms eventually_at_top_dense zero_power)
+next
+  case False
+  then have "\<forall>\<^sub>F n in sequentially. inverse \<epsilon> < inverse \<bar>x\<bar> ^ n"
+    by (simp add: Archimedean_eventually_pow assms(1) one_less_inverse)
+  then show ?thesis
+    apply eventually_elim
+    by (metis \<open>\<epsilon> > 0\<close> inverse_less_imp_less power_abs power_inverse)
+qed
+
+
 text\<open>Arbitrarily good rational approximations\<close>
 
 thm rational_approximation
@@ -4558,6 +4588,7 @@ lemma closedin_trans_full:
    "\<lbrakk>closedin (subtopology X U) S; closedin X U\<rbrakk> \<Longrightarrow> closedin X S"
   using closedin_closed_subtopology by blast
 
+
 lemma Tietze_extension_closed_real_interval:
   assumes "normal_space X"
     and contf: "continuous_map (subtopology X S) euclideanreal f"
@@ -4638,61 +4669,71 @@ proof -
   then obtain nxtg where nxtg: "\<And>h n. good h n \<Longrightarrow> 
           good (nxtg h n) (Suc n) \<and> (\<forall>x \<in> topspace X. \<bar>nxtg h n x - h x\<bar> \<le> c * (2/3)^n / 3)"
     by metis
-
   define g where "g \<equiv> rec_nat (\<lambda>x. 0) (\<lambda>n r. nxtg r n)"
   have [simp]: "g 0 x = 0" for x
     by (auto simp: g_def)
-  have g_Suc[simp]: "g(Suc n) = nxtg (g n) n" for n
+  have g_Suc: "g(Suc n) = nxtg (g n) n" for n
     by (auto simp: g_def)
   have good: "good (g n) n" for n
   proof (induction n)
     case 0
     with c show ?case
       by (auto simp: good_def)
-  qed (simp add: nxtg)
+  qed (simp add: g_Suc nxtg)
   have *: "\<And>n x. x \<in> topspace X \<Longrightarrow> \<bar>g(Suc n) x - g n x\<bar> \<le> c * (2/3) ^ n / 3"
     using nxtg g_Suc good by presburger
+  obtain h where conth:  "continuous_map X Met.mtopology h"
+         and h: "\<And>\<epsilon>. 0 < \<epsilon> \<Longrightarrow> \<forall>\<^sub>F n in sequentially. \<forall>x\<in>topspace X. dist (g n x) (h x) < \<epsilon>"
+  proof (rule Met.continuous_map_uniformly_Cauchy_limit)
+    show "\<forall>\<^sub>F n in sequentially. continuous_map X (Met.mtopology) (g n)"
+      using good good_def by fastforce
+    show "\<exists>N. \<forall>m n x. N \<le> m \<longrightarrow> N \<le> n \<longrightarrow> x \<in> topspace X \<longrightarrow> dist (g m x) (g n x) < \<epsilon>"
+      if "\<epsilon> > 0" for \<epsilon> 
+    proof -
+      have "\<forall>\<^sub>F n in sequentially. \<bar>(2/3) ^ n\<bar> < \<epsilon>/c"
+      proof (rule Archimedean_eventually_pow_inverse)
+        show "0 < \<epsilon> / c"
+          by (simp add: \<open>0 < c\<close> that)
+      qed auto
+      then obtain N where N: "\<And>n. n \<ge> N \<Longrightarrow> \<bar>(2/3) ^ n\<bar> < \<epsilon>/c"
+        by (meson eventually_sequentially order_le_less_trans)
+      have "\<bar>g m x - g n x\<bar> < \<epsilon>"
+        if "N \<le> m" "N \<le> n" and x: "x \<in> topspace X" "m \<le> n" for m n x
+      proof (cases "m < n")
+        case True
+        have 23: "(\<Sum>k = m..<n. (2/3)^k) = 3 * ((2/3) ^ m - (2/3::real) ^ n)"
+          using \<open>m \<le> n\<close>
+        by (induction n) (auto simp: le_Suc_eq)
+        have "\<bar>g m x - g n x\<bar> \<le> \<bar>\<Sum>k = m..<n. g (Suc k) x - g k x\<bar>"
+          by (subst sum_Suc_diff' [OF \<open>m \<le> n\<close>]) linarith
+        also have "\<dots> \<le> (\<Sum>k = m..<n. \<bar>g (Suc k) x - g k x\<bar>)"
+          by (rule sum_abs)
+        also have "\<dots> \<le> (\<Sum>k = m..<n. c * (2/3)^k / 3)"
+          apply (rule sum_mono)
+          using * x by blast
+        also have "\<dots> = (c/3) * (\<Sum>k = m..<n. (2/3)^k)"
+          by (simp add: sum_distrib_left)
+        also have "\<dots> = (c/3) * 3 * ((2/3) ^ m - (2/3) ^ n)"
+          by (simp add: sum_distrib_left 23)
+        also have "... < (c/3) * 3 * ((2/3) ^ m)"
+          using \<open>0 < c\<close> by auto
+        also have "\<dots> < \<epsilon>"
+          using N [OF \<open>N \<le> m\<close>] \<open>0 < c\<close> by (simp add: field_simps)
+        finally show ?thesis .
+      qed (use \<open>0 < \<epsilon>\<close> \<open>m \<le> n\<close> in auto)
+      then show ?thesis
+        by (metis dist_commute_lessI dist_real_def nle_le)
+    qed
+    show ?thesis
+      using that
+      
+      sorry
+  qed auto
 
-
+  show ?thesis
+    sorry
+qed
   oops
-
-  X_GEN_TAC `g::num=>A->real` THEN STRIP_TAC THEN
-  MP_TAC(ISPECL
-   [`X::S topology`; `real_euclidean_metric`; `g::num=>A->real`]
-   CONTINUOUS_MAP_UNIFORMLY_CAUCHY_LIMIT) THEN
-  ASM_REWRITE_TAC[TRIVIAL_LIMIT_SEQUENTIALLY; MTOPOLOGY_REAL_EUCLIDEAN_METRIC;
-                  EVENTUALLY_TRUE; MCOMPLETE_REAL_EUCLIDEAN_METRIC] THEN
-  REWRITE_TAC[REAL_EUCLIDEAN_METRIC] THEN ANTS_TAC THENL
-   [X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-    MP_TAC(ISPECL [`2/3`; `e / c::real`] ARCH_EVENTUALLY_POW_INV) THEN
-    CONV_TAC REAL_RAT_REDUCE_CONV THEN ASM_SIMP_TAC[REAL_LT_DIV] THEN
-    REWRITE_TAC[EVENTUALLY_SEQUENTIALLY] THEN MATCH_MP_TAC MONO_EXISTS THEN
-    X_GEN_TAC `N::num` THEN DISCH_TAC THEN MATCH_MP_TAC WLOG_LT THEN
-    ASM_REWRITE_TAC[REAL_SUB_REFL; REAL_ABS_NUM] THEN
-    CONJ_TAC THENL [ASM_MESON_TAC[REAL_ABS_SUB]; ALL_TAC] THEN
-    MAP_EVERY X_GEN_TAC [`m::num`; `n::num`] THEN STRIP_TAC THEN
-    X_GEN_TAC `x::S` THEN STRIP_TAC THEN
-    TRANS_TAC REAL_LET_TRANS
-     `abs(sum(m..n - 1) (\<lambda>n. g (Suc n) (x::S) - g n x))` THEN
-
-    CONJ_TAC THENL
-     [REWRITE_TAC[SUM_DIFFS_ALT; ADD1] THEN
-      FIRST_ASSUM(MP_TAC \<circ> MATCH_MP (ARITH_RULE
-       `m < n \<Longrightarrow> m \<le> n - 1 \<and> n - 1 + 1 = n`)) THEN
-      SIMP_TAC[REAL_LE_REFL];
-      TRANS_TAC REAL_LET_TRANS
-       `sum (m..n-1) (\<lambda>j. c * (2/3) ^ j / 3)` THEN
-      ASM_SIMP_TAC[SUM_ABS_LE; FINITE_NUMSEG] THEN
-      REWRITE_TAC[real_div; SUM_LMUL; SUM_RMUL; SUM_GP] THEN
-      CONV_TAC REAL_RAT_REDUCE_CONV THEN
-      COND_CASES_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-      REWRITE_TAC[REAL_ARITH `c * (x * 3) * 1 / 3 = x * c`] THEN
-      ASM_SIMP_TAC[GSYM REAL_LT_RDIV_EQ] THEN
-      MATCH_MP_TAC(REAL_ARITH `abs x < y \<and> 0 \<le> z \<Longrightarrow> x - z < y`) THEN
-      ASM_SIMP_TAC[] THEN MATCH_MP_TAC REAL_POW_LE THEN
-      CONV_TAC REAL_RAT_REDUCE_CONV];
-
-    DISCH_THEN(X_CHOOSE_THEN `h::S=>real` STRIP_ASSUME_TAC) THEN
 
     EXISTS_TAC `\<lambda>x. max a (min ((h::S=>real) x) b)` THEN
     ASM_SIMP_TAC[CONTINUOUS_MAP_REAL_MAX; CONTINUOUS_MAP_REAL_MIN;
