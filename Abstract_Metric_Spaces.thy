@@ -889,7 +889,7 @@ oops
   EXISTS_TAC `{ mball m (x::A,r) | rational r \<and> 0 < r}` THEN
   REWRITE_TAC[FORALL_IN_GSPEC; OPEN_IN_MBALL; EXISTS_IN_GSPEC] THEN
   ONCE_REWRITE_TAC[SET_RULE
-   `{f x | S x \<and> Q x} = f ` {x. x \<in> S \<and> Q x}`] THEN
+   `{f x | S x \<and> Q x} = f ` {x \<in> S. Q x}`] THEN
   SIMP_TAC[COUNTABLE_IMAGE; COUNTABLE_RATIONAL; COUNTABLE_RESTRICT] THEN
   REWRITE_TAC[OPEN_IN_MTOPOLOGY] THEN
   X_GEN_TAC `U::A=>bool` THEN STRIP_TAC THEN
@@ -4553,98 +4553,139 @@ lemma normal_space_eq_Urysohn:
                                f ` S \<subseteq> {0} \<and> f ` T \<subseteq> {1}))"
   by (rule normal_space_eq_Urysohn_gen) auto
 
+thm closedin_closed_subtopology
+lemma closedin_trans_full:
+   "\<lbrakk>closedin (subtopology X U) S; closedin X U\<rbrakk> \<Longrightarrow> closedin X S"
+  using closedin_closed_subtopology by blast
+
 lemma Tietze_extension_closed_real_interval:
   assumes "normal_space X"
-    and contf: "continuous_map (subtopology X A) euclideanreal f"
-    and "closedin X A"
+    and contf: "continuous_map (subtopology X S) euclideanreal f"
+    and "closedin X S"
     and "a \<le> b"
-    and fim: "f ` A \<subseteq> {a..b}"
+    and fim: "f ` S \<subseteq> {a..b}"
   obtains g 
-  where "continuous_map X euclideanreal g" "\<And>x. x \<in> A \<Longrightarrow> g x = f x" "g ` A \<subseteq> {a..b}"
+  where "continuous_map X euclideanreal g" "\<And>x. x \<in> S \<Longrightarrow> g x = f x" "g ` S \<subseteq> {a..b}"
 proof -
   define c where "c \<equiv> max \<bar>a\<bar> \<bar>b\<bar> + 1"
-  have "0 < c" and c: "\<And>x. x \<in> A \<Longrightarrow> \<bar>f x\<bar> \<le> c"
+  have "0 < c" and c: "\<And>x. x \<in> S \<Longrightarrow> \<bar>f x\<bar> \<le> c"
     using fim by (auto simp: c_def image_subset_iff)
-oops
+  have step: "\<exists>y. (continuous_map X euclideanreal y \<and>
+              (\<forall>x \<in> S. abs (f x - y x) \<le> c * (2/3) ^ Suc n)) \<and>
+              (\<forall>x \<in> topspace X. abs (y x - h x) \<le> c * (2/3) ^ n / 3)"
+    if conth: "continuous_map X euclideanreal h"
+      and IH: "\<And>x. x \<in> S \<Longrightarrow> abs (f x - h x) \<le> c * (2/3) ^ n" for n h
+  proof -
+    have pos: "0 < c * (2/3) ^ n"
+      by (simp add: \<open>0 < c\<close>)
+    have S_eq: "S = topspace(subtopology X S)" and "S \<subseteq> topspace X"
+      using assms(3) closedin_subset by auto
+
+    define d where "d \<equiv> c/3 * (2/3) ^ n"
+    define SA where "SA \<equiv> {x \<in> S. f x - h x \<in> {..-d}}"
+    define SB where "SB \<equiv> {x \<in> S. f x - h x \<in> {d..}}"
+    have contfh: "continuous_map (subtopology X S) euclideanreal (\<lambda>x. f x - h x)"
+      by (simp add: contf conth continuous_map_diff continuous_map_from_subtopology)
+    then have "closedin (subtopology X S) SA"
+      unfolding SA_def
+      by (smt (verit, del_insts) closed_closedin continuous_map_closedin Collect_cong S_eq closed_real_atMost)
+    then have "closedin X SA"
+      using \<open>closedin X S\<close> closedin_trans_full by blast
+    moreover have  "closedin (subtopology X S) SB"      
+      unfolding SB_def
+      using closedin_continuous_map_preimage_gen [OF contfh]
+      by (metis (full_types) S_eq closed_atLeast closed_closedin closedin_topspace)
+    then have "closedin X SB"
+      using \<open>closedin X S\<close> closedin_trans_full by blast
+    moreover have "disjnt SA SB"
+      using pos by (auto simp: d_def disjnt_def SA_def SB_def)
+    moreover have "-d \<le> d"
+      using pos by (auto simp: d_def)
+    ultimately
+    obtain g where contg: "continuous_map X (top_of_set {- d..d}) g"
+      and ga: "g ` SA \<subseteq> {- d}" and gb: "g ` SB \<subseteq> {d}"
+      using Urysohn_lemma \<open>normal_space X\<close> by metis
+    then have g_le_d: "\<And>x. x \<in> topspace X \<Longrightarrow> \<bar>g x\<bar> \<le> d"
+      by (simp add: abs_le_iff continuous_map_def minus_le_iff)
+    have g_eq_d: "\<And>x. \<lbrakk>x \<in> S; f x - h x \<le> -d\<rbrakk> \<Longrightarrow> g x = -d"
+      using ga by (auto simp: SA_def)
+    have g_eq_negd: "\<And>x. \<lbrakk>x \<in> S; f x - h x \<ge> d\<rbrakk> \<Longrightarrow> g x = d"
+      using gb by (auto simp: SB_def)
+
+    have "\<exists>y. (continuous_map X euclideanreal y \<and>
+              (\<forall>x \<in> S. abs (f x - y x) \<le> c * (2/3) ^ Suc n)) \<and>
+              (\<forall>x \<in> topspace X. abs (y x - h x) \<le> c * (2/3) ^ n / 3)"
+    proof (intro conjI strip exI)
+      show "continuous_map X euclideanreal (\<lambda>x. h x + g x)"
+        using contg conth continuous_map_add continuous_map_in_subtopology by blast
+      show "\<bar>f x - (h x + g x)\<bar> \<le> c * (2 / 3) ^ Suc n" if "x \<in> S" for x
+      proof -
+        have x: "x \<in> topspace X"
+          using \<open>S \<subseteq> topspace X\<close> that by auto
+        have "\<bar>f x - (h x + g x)\<bar> \<le> d + d"
+          using g_eq_d [OF that] g_eq_negd [OF that] IH [OF that] g_le_d [OF x] 
+          unfolding d_def by linarith
+        then show ?thesis 
+          by (simp add: d_def)
+      qed
+      show "\<bar>h x + g x - h x\<bar> \<le> c * (2 / 3) ^ n / 3" if "x \<in> topspace X" for x
+        using that d_def g_le_d by auto
+    qed
+
+    define \<Phi> where 
+      "\<Phi> \<equiv> \<lambda>g. (\<forall>n. continuous_map X euclideanreal (g n) \<and>
+                  (\<forall>x\<in>S. \<bar>f x - g n x\<bar> \<le> c * (2/3) ^ n)) \<and>
+                  (\<forall>n. \<forall>x\<in>topspace X. \<bar>g (Suc n) x - g n x\<bar> \<le> c * (2/3) ^ n/3)"
+
+      then
+    have "\<Phi> (\<lambda>n. g)"
+apply (auto simp: \<Phi>_def SA_def SB_def image_subset_iff)
+      using contg continuous_map_in_subtopology apply blast
+
+
+    sorry
+    oops
 
   SUBGOAL_THEN
    `\<exists>g::num=>A->real.
         (\<forall>n. continuous_map X euclideanreal (g n) \<and>
-             \<forall>x. x \<in> A \<Longrightarrow> abs(f x - g n x) \<le> c * (2 / 3) ^ n) \<and>
+             \<forall>x. x \<in> S \<Longrightarrow> abs(f x - g n x) \<le> c * (2/3) ^ n) \<and>
         (\<forall>n x. x \<in> topspace X
-               \<Longrightarrow> abs(g(Suc n) x - g n x) \<le> c * (2 / 3) ^ n / 3)`
+               \<Longrightarrow> abs(g(Suc n) x - g n x) \<le> c * (2/3) ^ n/3)`
   MP_TAC THENL
    [MATCH_MP_TAC DEPENDENT_CHOICE THEN CONJ_TAC THENL
-     [EXISTS_TAC `(\<lambda>x. 0):A=>real` THEN
+     [EXISTS_TAC `(\<lambda>x. 0):S=>real` THEN
       REWRITE_TAC[CONTINUOUS_MAP_REAL_CONST] THEN
       ASM_REWRITE_TAC[real_pow; REAL_MUL_RID; REAL_SUB_RZERO];
-      MAP_EVERY X_GEN_TAC [`n::num`; `h::A=>real`] THEN STRIP_TAC] THEN
-    MP_TAC(ISPECL
-     [`X::A topology`;
-      `{x. x \<in> A \<and> (f x - h x) \<in>
-                      {y. y \<le> --(c / 3 * (2 / 3) ^ n)}}`;
-      `{x. x \<in> A \<and> (f x - h x) \<in>
-                      {y. y >= c / 3 * (2 / 3) ^ n}}`;
-      `--(c / 3 * (2 / 3) ^ n)`; `c / 3 * (2 / 3) ^ n`]
-     URYSOHN_LEMMA) THEN
-    REWRITE_TAC[REAL_ARITH `--(c / 3 * x) \<le> c / 3 * x \<longleftrightarrow> 0 \<le> c * x`] THEN
-    SUBGOAL_THEN `0 < c * (2 / 3) ^ n` ASSUME_TAC THENL
-     [MATCH_MP_TAC REAL_LT_MUL THEN ASM_REWRITE_TAC[] THEN
-      MATCH_MP_TAC REAL_POW_LT THEN CONV_TAC REAL_RAT_REDUCE_CONV;
-      ASM_SIMP_TAC[REAL_LT_IMP_LE]] THEN
-    ANTS_TAC THENL
-     [REWRITE_TAC[CONJ_ASSOC] THEN CONJ_TAC THENL
-       [SUBGOAL_THEN `A::A=>bool = topspace(subtopology X A)` SUBST1_TAC THENL
-         [ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY; CLOSED_IN_SUBSET;
-                       SET_RULE `A = u \<inter> A \<longleftrightarrow> A \<subseteq> u`];
-          CONJ_TAC THEN MATCH_MP_TAC CLOSED_IN_TRANS_FULL THEN
-          EXISTS_TAC `A::A=>bool` THEN ASM_REWRITE_TAC[] THEN
-          MATCH_MP_TAC CLOSED_IN_CONTINUOUS_MAP_PREIMAGE THEN
-          EXISTS_TAC `euclideanreal` THEN
-          ASM_SIMP_TAC[CONTINUOUS_MAP_REAL_SUB; GSYM REAL_CLOSED_IN;
-                       CONTINUOUS_MAP_FROM_SUBTOPOLOGY] THEN
-          REWRITE_TAC[REAL_CLOSED_HALFSPACE_LE; REAL_CLOSED_HALFSPACE_GE]];
-        SIMP_TAC[disjnt; EXTENSION; IN_INTER; NOT_IN_EMPTY; IN_ELIM_THM] THEN
-        ASM_REAL_ARITH_TAC];
-      REWRITE_TAC[IN_ELIM_THM; LEFT_IMP_EXISTS_THM] THEN
-      REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; \<subseteq>; FORALL_IN_IMAGE] THEN
-      REWRITE_TAC[IN_REAL_INTERVAL; GSYM REAL_ABS_BOUNDS; IN_ELIM_THM] THEN
-      X_GEN_TAC `g::A=>real` THEN STRIP_TAC THEN
-      EXISTS_TAC `\<lambda>x. h x + (g::A=>real) x` THEN
-      ASM_SIMP_TAC[CONTINUOUS_MAP_REAL_ADD; REAL_ADD_SUB] THEN
-      ASM_REWRITE_TAC[REAL_ARITH `x * y / 3 = x / 3 * y`] THEN
-      X_GEN_TAC `x::A` THEN DISCH_TAC THEN REWRITE_TAC[real_pow] THEN
-      REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::A`)) THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN
-      ASM_SIMP_TAC[\<subseteq>] THEN ASM_REAL_ARITH_TAC];
-    REWRITE_TAC[LEFT_IMP_EXISTS_THM; FORALL_AND_THM]] THEN
+
+
 
 
   X_GEN_TAC `g::num=>A->real` THEN STRIP_TAC THEN
   MP_TAC(ISPECL
-   [`X::A topology`; `real_euclidean_metric`; `g::num=>A->real`]
+   [`X::S topology`; `real_euclidean_metric`; `g::num=>A->real`]
    CONTINUOUS_MAP_UNIFORMLY_CAUCHY_LIMIT) THEN
   ASM_REWRITE_TAC[TRIVIAL_LIMIT_SEQUENTIALLY; MTOPOLOGY_REAL_EUCLIDEAN_METRIC;
                   EVENTUALLY_TRUE; MCOMPLETE_REAL_EUCLIDEAN_METRIC] THEN
   REWRITE_TAC[REAL_EUCLIDEAN_METRIC] THEN ANTS_TAC THENL
    [X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-    MP_TAC(ISPECL [`2 / 3`; `e / c::real`] ARCH_EVENTUALLY_POW_INV) THEN
+    MP_TAC(ISPECL [`2/3`; `e / c::real`] ARCH_EVENTUALLY_POW_INV) THEN
     CONV_TAC REAL_RAT_REDUCE_CONV THEN ASM_SIMP_TAC[REAL_LT_DIV] THEN
     REWRITE_TAC[EVENTUALLY_SEQUENTIALLY] THEN MATCH_MP_TAC MONO_EXISTS THEN
     X_GEN_TAC `N::num` THEN DISCH_TAC THEN MATCH_MP_TAC WLOG_LT THEN
     ASM_REWRITE_TAC[REAL_SUB_REFL; REAL_ABS_NUM] THEN
     CONJ_TAC THENL [ASM_MESON_TAC[REAL_ABS_SUB]; ALL_TAC] THEN
     MAP_EVERY X_GEN_TAC [`m::num`; `n::num`] THEN STRIP_TAC THEN
-    X_GEN_TAC `x::A` THEN STRIP_TAC THEN
+    X_GEN_TAC `x::S` THEN STRIP_TAC THEN
     TRANS_TAC REAL_LET_TRANS
-     `abs(sum(m..n - 1) (\<lambda>n. g (Suc n) (x::A) - g n x))` THEN
+     `abs(sum(m..n - 1) (\<lambda>n. g (Suc n) (x::S) - g n x))` THEN
     CONJ_TAC THENL
      [REWRITE_TAC[SUM_DIFFS_ALT; ADD1] THEN
       FIRST_ASSUM(MP_TAC \<circ> MATCH_MP (ARITH_RULE
        `m < n \<Longrightarrow> m \<le> n - 1 \<and> n - 1 + 1 = n`)) THEN
       SIMP_TAC[REAL_LE_REFL];
       TRANS_TAC REAL_LET_TRANS
-       `sum (m..n-1) (\<lambda>j. c * (2 / 3) ^ j / 3)` THEN
+       `sum (m..n-1) (\<lambda>j. c * (2/3) ^ j / 3)` THEN
       ASM_SIMP_TAC[SUM_ABS_LE; FINITE_NUMSEG] THEN
       REWRITE_TAC[real_div; SUM_LMUL; SUM_RMUL; SUM_GP] THEN
       CONV_TAC REAL_RAT_REDUCE_CONV THEN
@@ -4654,11 +4695,11 @@ oops
       MATCH_MP_TAC(REAL_ARITH `abs x < y \<and> 0 \<le> z \<Longrightarrow> x - z < y`) THEN
       ASM_SIMP_TAC[] THEN MATCH_MP_TAC REAL_POW_LE THEN
       CONV_TAC REAL_RAT_REDUCE_CONV];
-    DISCH_THEN(X_CHOOSE_THEN `h::A=>real` STRIP_ASSUME_TAC) THEN
-    EXISTS_TAC `\<lambda>x. max a (min ((h::A=>real) x) b)` THEN
+    DISCH_THEN(X_CHOOSE_THEN `h::S=>real` STRIP_ASSUME_TAC) THEN
+    EXISTS_TAC `\<lambda>x. max a (min ((h::S=>real) x) b)` THEN
     ASM_SIMP_TAC[CONTINUOUS_MAP_REAL_MAX; CONTINUOUS_MAP_REAL_MIN;
                  CONTINUOUS_MAP_REAL_CONST] THEN
-    CONJ_TAC THEN X_GEN_TAC `x::A` THEN DISCH_TAC THENL
+    CONJ_TAC THEN X_GEN_TAC `x::S` THEN DISCH_TAC THENL
      [ASM_REAL_ARITH_TAC; ALL_TAC] THEN
     MATCH_MP_TAC(REAL_ARITH
      `a \<le> x \<and> x \<le> b \<and> y = x \<Longrightarrow> max a (min y b) = x`) THEN
@@ -4669,7 +4710,7 @@ oops
     REWRITE_TAC[TRIVIAL_LIMIT_SEQUENTIALLY; LIMIT_METRIC] THEN
     REWRITE_TAC[REAL_EUCLIDEAN_METRIC; IN_UNIV] THEN
     FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN
-    REWRITE_TAC[\<subseteq>] THEN DISCH_THEN(MP_TAC \<circ> SPEC `x::A`) THEN
+    REWRITE_TAC[\<subseteq>] THEN DISCH_THEN(MP_TAC \<circ> SPEC `x::S`) THEN
     ASM_REWRITE_TAC[] THEN DISCH_TAC THEN CONJ_TAC THEN
     X_GEN_TAC `e::real` THEN DISCH_TAC THENL
      [FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e::real`) THEN
@@ -4685,15 +4726,16 @@ oops
        `abs x * c = c * (if 0 \<le> x then x else-x)`] THEN
       ASM_SIMP_TAC[REAL_POW_LE; REAL_ARITH `0 \<le> 2 / 3`]]]);;
 
+
 lemma Tietze_extension_realinterval:
-   "\<And>X f::A=>real A t.
-        normal_space X \<and> closedin X A \<and>
+   "\<And>X f::S=>real S t.
+        normal_space X \<and> closedin X S \<and>
         is_interval t \<and> (t \<noteq> {}) \<and>
-        continuous_map (subtopology X A,euclideanreal) f \<and>
-        (\<forall>x. x \<in> A \<Longrightarrow> f x \<in> t)
+        continuous_map (subtopology X S,euclideanreal) f \<and>
+        (\<forall>x. x \<in> S \<Longrightarrow> f x \<in> t)
         \<Longrightarrow> \<exists>g. continuous_map X euclideanreal g \<and>
                 (\<forall>x. x \<in> topspace X \<Longrightarrow> g x \<in> t) \<and>
-                (\<forall>x. x \<in> A \<Longrightarrow> g x = f x)"
+                (\<forall>x. x \<in> S \<Longrightarrow> g x = f x)"
 oops
   GEN_TAC THEN GEN_REWRITE_TAC id [SWAP_FORALL_THM] THEN
   GEN_TAC THEN GEN_REWRITE_TAC id [SWAP_FORALL_THM] THEN
@@ -4703,7 +4745,7 @@ oops
     \<Longrightarrow> \<forall>t. P t`) THEN
   CONJ_TAC THENL
    [DISCH_TAC THEN
-    MAP_EVERY X_GEN_TAC [`t::real=>bool`; `f::A=>real`] THEN STRIP_TAC THEN
+    MAP_EVERY X_GEN_TAC [`t::real=>bool`; `f::S=>real`] THEN STRIP_TAC THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC `image (\<lambda>x. x / (1 + abs x)) t`) THEN
     ASM_REWRITE_TAC[IS_REALINTERVAL_SHRINK; REAL_BOUNDED_SHRINK] THEN
     DISCH_THEN(MP_TAC \<circ> SPEC `(\<lambda>x. x / (1 + abs x)) \<circ> f`) THEN
@@ -4714,8 +4756,8 @@ oops
       REWRITE_TAC[REWRITE_RULE[CONTINUOUS_MAP_IN_SUBTOPOLOGY]
         CONTINUOUS_MAP_REAL_SHRINK];
 
-      DISCH_THEN(X_CHOOSE_THEN `g::A=>real` STRIP_ASSUME_TAC) THEN
-      EXISTS_TAC `(\<lambda>x. x / (1 - abs x)) \<circ> (g::A=>real)` THEN
+      DISCH_THEN(X_CHOOSE_THEN `g::S=>real` STRIP_ASSUME_TAC) THEN
+      EXISTS_TAC `(\<lambda>x. x / (1 - abs x)) \<circ> (g::S=>real)` THEN
       ASM_SIMP_TAC[o_THM; REAL_GROW_SHRINK] THEN CONJ_TAC THENL
        [MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
         EXISTS_TAC `subtopology euclideanreal (real_interval(-1,1))` THEN
@@ -4731,7 +4773,7 @@ oops
               \<Longrightarrow> (\<forall>x. x \<in> u \<Longrightarrow> f(g x) \<in> t)`)) THEN
         REWRITE_TAC[REAL_GROW_SHRINK]]];
     X_GEN_TAC `t::real=>bool` THEN DISCH_TAC THEN
-    X_GEN_TAC `f::A=>real` THEN STRIP_TAC] THEN
+    X_GEN_TAC `f::S=>real` THEN STRIP_TAC] THEN
   MP_TAC(SPEC `euclideanreal closure_of t` REAL_COMPACT_IS_REALINTERVAL) THEN
   ASM_SIMP_TAC[IS_REALINTERVAL_CLOSURE_OF] THEN
   REWRITE_TAC[REAL_COMPACT_EQ_BOUNDED_CLOSED; REAL_CLOSED_IN] THEN
@@ -4743,16 +4785,16 @@ oops
   ASM_CASES_TAC `{a..b} = {}` THEN
   ASM_SIMP_TAC[CLOSURE_OF_EQ_EMPTY; TOPSPACE_EUCLIDEANREAL; SUBSET_UNIV] THEN
   RULE_ASSUM_TAC(REWRITE_RULE[REAL_INTERVAL_NE_EMPTY]) THEN DISCH_TAC THEN
-  MP_TAC(ISPECL[`X::A topology`; `f::A=>real`; `A::A=>bool`; `a::real`; `b::real`]
+  MP_TAC(ISPECL[`X::S topology`; `f::S=>real`; `S::S=>bool`; `a::real`; `b::real`]
         TIETZE_EXTENSION_CLOSED_REAL_INTERVAL) THEN
   ASM_REWRITE_TAC[] THEN ANTS_TAC THENL
    [ASM_MESON_TAC[CLOSURE_OF_SUBSET; \<subseteq>; IN_UNIV; TOPSPACE_EUCLIDEANREAL];
-    DISCH_THEN(X_CHOOSE_THEN `g::A=>real` STRIP_ASSUME_TAC)] THEN
+    DISCH_THEN(X_CHOOSE_THEN `g::S=>real` STRIP_ASSUME_TAC)] THEN
   MP_TAC(ISPECL
-   [`X::A topology`;
+   [`X::S topology`;
     `{x \<in> topspace X.
-          (g::A=>real) x \<in> euclideanreal closure_of t - t}`;
-    `A::A=>bool`; `0`; `1`] URYSOHN_LEMMA) THEN
+          (g::S=>real) x \<in> euclideanreal closure_of t - t}`;
+    `S::S=>bool`; `0`; `1`] URYSOHN_LEMMA) THEN
   ASM_REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; REAL_POS] THEN
   ANTS_TAC THENL
    [CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
@@ -4764,25 +4806,25 @@ oops
     REWRITE_TAC[TOPSPACE_EUCLIDEANREAL; SUBSET_UNIV] THEN
     MATCH_MP_TAC FINITE_SUBSET THEN EXISTS_TAC `{a::real,b}` THEN
     REWRITE_TAC[FINITE_INSERT; FINITE_EMPTY] THEN
-    MATCH_MP_TAC(SET_RULE `A - u \<subseteq> t \<Longrightarrow> A - t \<subseteq> u`) THEN
+    MATCH_MP_TAC(SET_RULE `S - u \<subseteq> t \<Longrightarrow> S - t \<subseteq> u`) THEN
     REWRITE_TAC[GSYM REAL_OPEN_CLOSED_INTERVAL] THEN
     ASM_SIMP_TAC[GSYM REAL_OPEN_SUBSET_CLOSURE_OF_REALINTERVAL_ALT;
                  REAL_OPEN_REAL_INTERVAL; REAL_INTERVAL_OPEN_SUBSET_CLOSED];
     REWRITE_TAC[LEFT_IMP_EXISTS_THM; \<subseteq>; FORALL_IN_IMAGE] THEN
-    X_GEN_TAC `h::A=>real` THEN
+    X_GEN_TAC `h::S=>real` THEN
     REWRITE_TAC[IN_REAL_INTERVAL; IN_ELIM_THM] THEN
     REWRITE_TAC[IN_DIFF] THEN STRIP_TAC THEN
     FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY]) THEN
     DISCH_THEN(X_CHOOSE_TAC `z::real`) THEN
-    EXISTS_TAC `\<lambda>x. z + (h::A=>real) x * (g x - z)` THEN
+    EXISTS_TAC `\<lambda>x. z + (h::S=>real) x * (g x - z)` THEN
     ASM_SIMP_TAC[REAL_ARITH `z + 1 * (x - z) = x`] THEN
     ASM_SIMP_TAC[CONTINUOUS_MAP_REAL_ADD; CONTINUOUS_MAP_REAL_SUB;
       CONTINUOUS_MAP_REAL_MUL; CONTINUOUS_MAP_REAL_CONST; ETA_AX] THEN
-    X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-    ASM_CASES_TAC `(g::A=>real) x \<in> t` THEN
+    X_GEN_TAC `x::S` THEN DISCH_TAC THEN
+    ASM_CASES_TAC `(g::S=>real) x \<in> t` THEN
     ASM_SIMP_TAC[REAL_MUL_LZERO; REAL_ADD_RID] THEN
     SUBGOAL_THEN
-     `z \<le> z + h x * (g x - z) \<and> z + h x * ((g::A=>real) x - z) \<le> g x \<or>
+     `z \<le> z + h x * (g x - z) \<and> z + h x * ((g::S=>real) x - z) \<le> g x \<or>
       g x \<le> z + h x * (g x - z) \<and> z + h x * (g x - z) \<le> z`
     MP_TAC THENL [ALL_TAC; ASM_MESON_TAC[is_interval]] THEN
     MATCH_MP_TAC(REAL_ARITH
@@ -4797,22 +4839,22 @@ oops
 
 lemma normal_space_eq_Tietze:
    "        normal_space X \<longleftrightarrow>
-        \<forall>f A. closedin X A \<and>
-              continuous_map (subtopology X A,euclideanreal) f
+        \<forall>f S. closedin X S \<and>
+              continuous_map (subtopology X S,euclideanreal) f
               \<Longrightarrow> \<exists>g. continuous_map X euclideanreal g \<and>
-                      \<forall>x. x \<in> A \<Longrightarrow> g x = f x"
+                      \<forall>x. x \<in> S \<Longrightarrow> g x = f x"
 oops
   GEN_TAC THEN EQ_TAC THENL
    [REPEAT STRIP_TAC THEN
-    MP_TAC(ISPECL [`X::A topology`; `f::A=>real`; `A::A=>bool`; `UNIV`]
+    MP_TAC(ISPECL [`X::S topology`; `f::S=>real`; `S::S=>bool`; `UNIV`]
         TIETZE_EXTENSION_REALINTERVAL) THEN
     ASM_REWRITE_TAC[IS_REALINTERVAL_UNIV; IN_UNIV; UNIV_NOT_EMPTY];
     DISCH_TAC THEN REWRITE_TAC[NORMAL_SPACE_EQ_URYSOHN_ALT] THEN
-    MAP_EVERY X_GEN_TAC [`A::A=>bool`; `t::A=>bool`] THEN STRIP_TAC THEN
+    MAP_EVERY X_GEN_TAC [`S::S=>bool`; `t::S=>bool`] THEN STRIP_TAC THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPECL
-     [`(\<lambda>x. if x \<in> A then 0 else 1):A=>real`; `A \<union> t::A=>bool`]) THEN
+     [`(\<lambda>x. if x \<in> S then 0 else 1):S=>real`; `S \<union> t::S=>bool`]) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[SET_RULE
-     `disjnt A t \<longleftrightarrow> \<forall>x. x \<in> t \<Longrightarrow> (x \<notin> A)`]) THEN
+     `disjnt S t \<longleftrightarrow> \<forall>x. x \<in> t \<Longrightarrow> (x \<notin> S)`]) THEN
     ASM_SIMP_TAC[CLOSED_IN_UNION; FORALL_IN_UNION] THEN
     DISCH_THEN MATCH_MP_TAC THEN
     REWRITE_TAC[CONTINUOUS_MAP_CLOSED_IN; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
@@ -4826,9 +4868,9 @@ oops
     ASM_SIMP_TAC[COND_EXPAND; TAUT
      `(q \<Longrightarrow> \<not> p) \<Longrightarrow> ((\<not> p \<or> z) \<and> (p \<or> q \<and> w) \<longleftrightarrow> p \<and> z \<or> q \<and> w)`] THEN
     ASM_SIMP_TAC[CLOSED_IN_SUBSET; SET_RULE
-     `A \<subseteq> u \<and> t \<subseteq> u
-      \<Longrightarrow> {x. x \<in> u \<and> (x \<in> A \<and> P \<or> x \<in> t \<and> Q)} =
-          {x. x \<in> A \<and> P} \<union> {x. x \<in> t \<and> Q}`] THEN
+     `S \<subseteq> u \<and> t \<subseteq> u
+      \<Longrightarrow> {x \<in> u. (x \<in> S \<and> P \<or> x \<in> t \<and> Q)} =
+          {x \<in> S. P} \<union> {x \<in> t. Q}`] THEN
     MAP_EVERY ASM_CASES_TAC [`(0::real) \<in> c`; `(1::real) \<in> c`] THEN
     ASM_REWRITE_TAC[EMPTY_GSPEC; CLOSED_IN_EMPTY; UNION_EMPTY; IN_GSPEC] THEN
     ASM_SIMP_TAC[CLOSED_IN_UNION]]);;
@@ -5369,7 +5411,7 @@ oops
   X_GEN_TAC `c::real=>bool` THEN DISCH_TAC THEN
   SUBGOAL_THEN
    `{x \<in> topspace X. (if x \<in> m then g x else 1) \<in> c} =
-    {x. x \<in> m \<and> (g::A=>real) x \<in> c} \<union>
+    {x \<in> m. (g::A=>real) x \<in> c} \<union>
     (if 1 \<in> c then topspace X - u else {})`
   SUBST1_TAC THENL
    [REWRITE_TAC[EXTENSION; IN_UNION; IN_ELIM_THM; IN_DIFF] THEN
@@ -5709,8 +5751,8 @@ oops
     REWRITE_TAC[SIMPLE_IMAGE; ETA_AX] THEN MATCH_MP_TAC FUN_IN_IMAGE;
     GEN_REWRITE_TAC id [\<in>] THEN REWRITE_TAC[PATH_COMPONENT_OF_REFL];
     MATCH_MP_TAC(SET_RULE
-     `\<forall>v. s \<subseteq> u \<inter> {x. x \<in> u \<and> f x \<in> v} \<and> f ` s \<subseteq> c
-          \<Longrightarrow> s \<subseteq> {x. x \<in> u \<and> f x \<in> c}`) THEN
+     `\<forall>v. s \<subseteq> u \<inter> {x \<in> u. f x \<in> v} \<and> f ` s \<subseteq> c
+          \<Longrightarrow> s \<subseteq> {x \<in> u. f x \<in> c}`) THEN
     EXISTS_TAC `v::B=>bool` THEN
     REWRITE_TAC[PATH_COMPONENT_OF_SUBSET_TOPSPACE;
                 GSYM TOPSPACE_SUBTOPOLOGY] THEN
@@ -6246,8 +6288,8 @@ oops
     REWRITE_TAC[SIMPLE_IMAGE; ETA_AX] THEN MATCH_MP_TAC FUN_IN_IMAGE;
     GEN_REWRITE_TAC id [\<in>] THEN REWRITE_TAC[CONNECTED_COMPONENT_OF_REFL];
     MATCH_MP_TAC(SET_RULE
-     `\<forall>v. s \<subseteq> u \<inter> {x. x \<in> u \<and> f x \<in> v} \<and> f ` s \<subseteq> c
-          \<Longrightarrow> s \<subseteq> {x. x \<in> u \<and> f x \<in> c}`) THEN
+     `\<forall>v. s \<subseteq> u \<inter> {x \<in> u. f x \<in> v} \<and> f ` s \<subseteq> c
+          \<Longrightarrow> s \<subseteq> {x \<in> u. f x \<in> c}`) THEN
     EXISTS_TAC `v::B=>bool` THEN
     REWRITE_TAC[CONNECTED_COMPONENT_OF_SUBSET_TOPSPACE;
                 GSYM TOPSPACE_SUBTOPOLOGY] THEN
@@ -9547,7 +9589,7 @@ in
   CONJ_TAC THENL [MESON_TAC[]; ALL_TAC] THEN
   REWRITE_TAC[TAUT `(if p then True else q) \<longleftrightarrow> p \<or> q`] THEN
   REWRITE_TAC[SET_RULE
-   `u - {x. x \<in> u \<and> (x = a \<or> x \<in> s)} = u - {a} - s`] THEN
+   `u - {x \<in> u. (x = a \<or> x \<in> s)} = u - {a} - s`] THEN
   ONCE_REWRITE_TAC[MESON[CLOSED_IN_SUBSET]
    `closedin X s \<and> P s \<longleftrightarrow>
     \<not> (s \<subseteq> topspace X \<Longrightarrow> closedin X s \<Longrightarrow> \<not> P s)`] THEN
@@ -12781,7 +12823,7 @@ oops
    `s \<subseteq> t \<Longrightarrow> t \<inter> s = s \<and> s \<inter> t = s`] THEN
   ANTS_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
   ONCE_REWRITE_TAC[GSYM REAL_SUB_LE] THEN REWRITE_TAC[SET_RULE
-   `{x. x \<in> s \<and> 0 \<le> f x} = {x. x \<in> s \<and> f x \<in> {y. 0 \<le> y}}`] THEN
+   `{x \<in> s. 0 \<le> f x} = {x \<in> s. f x \<in> {y. 0 \<le> y}}`] THEN
   MATCH_MP_TAC CLOSED_IN_CONTINUOUS_MAP_PREIMAGE THEN
   EXISTS_TAC `euclideanreal` THEN REWRITE_TAC[GSYM REAL_CLOSED_IN] THEN
   REWRITE_TAC[REWRITE_RULE[real_ge] REAL_CLOSED_HALFSPACE_GE] THEN
@@ -12884,9 +12926,9 @@ oops
   ONCE_REWRITE_TAC[GSYM REAL_NOT_LE] THEN
   ONCE_REWRITE_TAC[GSYM REAL_SUB_LE] THEN
   REWRITE_TAC[SET_RULE
-   `{x. x \<in> s \<and> (\<not> (0 \<le> f x) \<Longrightarrow> 0 \<le> g x)} =
-    {x. x \<in> s \<and> g x \<in> {y. 0 \<le> y}} \<union>
-    {x. x \<in> s \<and> f x \<in> {y. 0 \<le> y}}`] THEN
+   `{x \<in> s. (\<not> (0 \<le> f x) \<Longrightarrow> 0 \<le> g x)} =
+    {x \<in> s. g x \<in> {y. 0 \<le> y}} \<union>
+    {x \<in> s. f x \<in> {y. 0 \<le> y}}`] THEN
   MATCH_MP_TAC CLOSED_IN_UNION THEN CONJ_TAC THEN
   MATCH_MP_TAC CLOSED_IN_CONTINUOUS_MAP_PREIMAGE THEN
   EXISTS_TAC `euclideanreal` THEN REWRITE_TAC[GSYM REAL_CLOSED_IN] THEN
