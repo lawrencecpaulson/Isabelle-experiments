@@ -3554,7 +3554,7 @@ proof -
     fix f
     assume contf: "continuous_map (subtopology X S) euclideanreal f"
       and "f ` S \<subseteq> T"
-    have "\<Phi> ((\<lambda>x. x / (1 + \<bar>x\<bar>)) ` T)"
+    have \<Phi>T: "\<Phi> ((\<lambda>x. x / (1 + \<bar>x\<bar>)) ` T)"
     proof (rule *)
       show "bounded ((\<lambda>x. x / (1 + \<bar>x\<bar>)) ` T)"
         using shrink_range [of T] by (force intro: boundedI [where B=1])
@@ -3563,18 +3563,26 @@ proof -
       show "(\<lambda>x. x / (1 + \<bar>x\<bar>)) ` T \<noteq> {}"
         using \<open>T \<noteq> {}\<close> by auto
     qed
-    then
+    moreover have "continuous_map (subtopology X S) euclidean ((\<lambda>x. x / (1 + \<bar>x\<bar>)) \<circ> f)"
+      by (metis contf continuous_map_compose continuous_map_into_fulltopology continuous_map_real_shrink)
+    moreover have "((\<lambda>x. x / (1 + \<bar>x\<bar>)) \<circ> f) ` S \<subseteq> (\<lambda>x. x / (1 + \<bar>x\<bar>)) ` T"
+      using \<open>f ` S \<subseteq> T\<close> by auto
+    ultimately obtain g 
+       where contg: "continuous_map X euclidean g" 
+         and gim: "g ` topspace X \<subseteq> (\<lambda>x. x / (1 + \<bar>x\<bar>)) ` T"
+         and geq: "\<And>x. x \<in> S \<Longrightarrow> g x = ((\<lambda>x. x / (1 + \<bar>x\<bar>)) \<circ> f) x"
+      using \<Phi>T unfolding \<Phi>_def by force
     show "\<exists>g. continuous_map X euclideanreal g \<and> g ` topspace X \<subseteq> T \<and> (\<forall>x\<in>S. g x = f x)"
-      unfolding \<Phi>_def
-      apply (drule_tac x="(\<lambda>x. x / (1 + abs x)) \<circ> f" in spec)
-      apply safe
-        apply (metis contf continuous_map_compose continuous_map_into_fulltopology continuous_map_real_shrink)
-      using \<open>f ` S \<subseteq> T\<close> apply auto[1]
-      apply (rule_tac x="(\<lambda>x. x / (1 - abs x)) \<circ> g" in exI)
-      apply (intro conjI)
-        apply (metis (no_types, lifting) continuous_map_compose continuous_map_iff_continuous continuous_map_in_subtopology continuous_on_real_grow dual_order.trans shrink_range)
-       apply (smt (verit) comp_apply image_iff image_subset_iff real_shrink_Galois)
-      by (metis (no_types, lifting) comp_apply real_shrink_Galois)
+    proof (intro conjI exI)
+      have "continuous_map X (top_of_set {-1<..<1}) g"
+        using contg continuous_map_in_subtopology gim shrink_range by blast
+      then show "continuous_map X euclideanreal ((\<lambda>x. x / (1 - \<bar>x\<bar>)) \<circ> g)"
+        by (rule continuous_map_compose) (auto simp: continuous_on_real_grow)
+      show "((\<lambda>x. x / (1 - \<bar>x\<bar>)) \<circ> g) ` topspace X \<subseteq> T"
+        using gim real_grow_shrink by fastforce
+      show "\<forall>x\<in>S. ((\<lambda>x. x / (1 - \<bar>x\<bar>)) \<circ> g) x = f x"
+        using geq real_grow_shrink by force
+    qed
   qed
   moreover have "\<Phi> T"
     if "bounded T" "is_interval T" "T \<noteq> {}" for T
@@ -3584,36 +3592,6 @@ proof -
 qed
 
 oops
-   [DISCH_TAC THEN
-    MAP_EVERY X_GEN_TAC [`T::real=>bool`; `f::S=>real`] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `image (\<lambda>x. x / (1 + abs x)) T`) THEN
-    ASM_REWRITE_TAC[IS_REALINTERVAL_SHRINK; REAL_BOUNDED_SHRINK] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `(\<lambda>x. x / (1 + abs x)) \<circ> f`) THEN
-    ASM_REWRITE_TAC[IMAGE_EQ_EMPTY] THEN ANTS_TAC THENL
-     [CONJ_TAC THENL [ALL_TAC; REWRITE_TAC[o_DEF] THEN ASM SET_TAC[]] THEN
-      FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ]
-        CONTINUOUS_MAP_COMPOSE)) THEN
-      REWRITE_TAC[REWRITE_RULE[CONTINUOUS_MAP_IN_SUBTOPOLOGY]
-        CONTINUOUS_MAP_REAL_SHRINK];
-
-      DISCH_THEN(X_CHOOSE_THEN `g::S=>real` STRIP_ASSUME_TAC) THEN
-      EXISTS_TAC `(\<lambda>x. x / (1 - abs x)) \<circ> g` THEN
-      ASM_SIMP_TAC[o_THM; REAL_GROW_SHRINK] THEN CONJ_TAC THENL
-       [MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
-        EXISTS_TAC `subtopology euclideanreal (real_interval(-1,1))` THEN
-        REWRITE_TAC[CONTINUOUS_MAP_REAL_GROW] THEN
-        ASM_REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN
-        FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (SET_RULE
-         `(\<forall>x. x \<in> T \<Longrightarrow> g x \<in> h ` u) \<Longrightarrow> (\<forall>x. x \<in> u \<Longrightarrow> h x \<in> v)
-          \<Longrightarrow> g ` T \<subseteq> v`)) THEN
-        REWRITE_TAC[IN_REAL_INTERVAL; REAL_BOUNDS_LT; REAL_SHRINK_RANGE];
-        FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (SET_RULE
-         `(\<forall>x. x \<in> u \<Longrightarrow> g x \<in> h ` T)
-          \<Longrightarrow> (\<forall>x. x \<in> T \<Longrightarrow> f(h x) = x)
-              \<Longrightarrow> (\<forall>x. x \<in> u \<Longrightarrow> f(g x) \<in> T)`)) THEN
-        REWRITE_TAC[REAL_GROW_SHRINK]]];
-    X_GEN_TAC `T::real=>bool` THEN DISCH_TAC THEN
-    X_GEN_TAC `f::S=>real` THEN STRIP_TAC] THEN
 
 
   MP_TAC(SPEC `euclideanreal closure_of T` REAL_COMPACT_IS_REALINTERVAL) THEN
