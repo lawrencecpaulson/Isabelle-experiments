@@ -829,13 +829,8 @@ next
         case 1
         define W where "W \<equiv> {x \<in> topspace X. f x \<in> {a..b}}"
         have "closedin X W"
-          unfolding W_def using assms closed_closedin continuous_map_closedin
-        proof -
-          have "\<exists>t. closedin t {a..b} \<and> continuous_map X t f"
-            using assms closed_closedin by blast
-          then show "closedin X {aa \<in> topspace X. f aa \<in> {a..b}}"
-            using continuous_map_closedin by force
-        qed
+          unfolding W_def
+          by (metis (no_types) assms closed_real_atLeastAtMost closed_closedin continuous_map_closedin)
         show ?thesis
         proof (rule * [OF 1 , of "U \<inter> W" "V \<inter> W"])
           show "closedin X (U \<inter> W)" "closedin X (V \<inter> W)"
@@ -861,13 +856,8 @@ next
         case 3
         define W where "W \<equiv> {x \<in> topspace X. f x \<in> {b..a}}"
         have "closedin X W"
-          unfolding W_def using assms closed_closedin continuous_map_closedin
-        proof -
-          have "\<exists>t. closedin t {b..a} \<and> continuous_map X t f"
-            using assms closed_closedin by blast
-          then show "closedin X {aa \<in> topspace X. f aa \<in> {b..a}}"
-            using continuous_map_closedin by fastforce
-        qed
+          unfolding W_def
+          by (metis (no_types) assms closed_real_atLeastAtMost closed_closedin continuous_map_closedin)
         show ?thesis
         proof (rule * [OF 3, of "V \<inter> W" "U \<inter> W"])
           show "closedin X (U \<inter> W)" "closedin X (V \<inter> W)"
@@ -4772,21 +4762,23 @@ qed
 
 
 lemma Tietze_extension_realinterval:
-  assumes
-  shows
-   "normal_space X" "closedin X S" "is_interval t" "(t \<noteq> {})" "continuous_map (subtopology X S,euclideanreal) f" "(\<forall>x. x \<in> S \<Longrightarrow> f x \<in> t)
-        \<Longrightarrow> \<exists>g. continuous_map X euclideanreal g" "(\<forall>x. x \<in> topspace X \<Longrightarrow> g x \<in> t)" "(\<forall>x. x \<in> S \<Longrightarrow> g x = f x)"
+  assumes "normal_space X" "closedin X S" "is_interval T" "T \<noteq> {}" 
+    and contf: "continuous_map (subtopology X S) euclideanreal f" 
+    and fim: "f ` S \<subseteq> T"
+  obtains g where "continuous_map X euclideanreal g" 
+           "g ` topspace X \<subseteq> T"  "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
+
 oops
   GEN_TAC THEN GEN_REWRITE_TAC id [SWAP_FORALL_THM] THEN
   GEN_TAC THEN GEN_REWRITE_TAC id [SWAP_FORALL_THM] THEN
   MATCH_MP_TAC(MESON[]
-   `((\<forall>t. real_bounded t \<Longrightarrow> P t) \<Longrightarrow> (\<forall>t. P t)) \<and>
-    (\<forall>t. real_bounded t \<Longrightarrow> P t)
-    \<Longrightarrow> \<forall>t. P t`) THEN
+   `((\<forall>T. real_bounded T \<Longrightarrow> P T) \<Longrightarrow> (\<forall>T. P T)) \<and>
+    (\<forall>T. real_bounded T \<Longrightarrow> P T)
+    \<Longrightarrow> \<forall>T. P T`) THEN
   CONJ_TAC THENL
    [DISCH_TAC THEN
-    MAP_EVERY X_GEN_TAC [`t::real=>bool`; `f::S=>real`] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `image (\<lambda>x. x / (1 + abs x)) t`) THEN
+    MAP_EVERY X_GEN_TAC [`T::real=>bool`; `f::S=>real`] THEN STRIP_TAC THEN
+    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `image (\<lambda>x. x / (1 + abs x)) T`) THEN
     ASM_REWRITE_TAC[IS_REALINTERVAL_SHRINK; REAL_BOUNDED_SHRINK] THEN
     DISCH_THEN(MP_TAC \<circ> SPEC `(\<lambda>x. x / (1 + abs x)) \<circ> f`) THEN
     ASM_REWRITE_TAC[IMAGE_EQ_EMPTY] THEN ANTS_TAC THENL
@@ -4804,17 +4796,17 @@ oops
         REWRITE_TAC[CONTINUOUS_MAP_REAL_GROW] THEN
         ASM_REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN
         FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (SET_RULE
-         `(\<forall>x. x \<in> t \<Longrightarrow> g x \<in> h ` u) \<Longrightarrow> (\<forall>x. x \<in> u \<Longrightarrow> h x \<in> v)
-          \<Longrightarrow> g ` t \<subseteq> v`)) THEN
+         `(\<forall>x. x \<in> T \<Longrightarrow> g x \<in> h ` u) \<Longrightarrow> (\<forall>x. x \<in> u \<Longrightarrow> h x \<in> v)
+          \<Longrightarrow> g ` T \<subseteq> v`)) THEN
         REWRITE_TAC[IN_REAL_INTERVAL; REAL_BOUNDS_LT; REAL_SHRINK_RANGE];
         FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (SET_RULE
-         `(\<forall>x. x \<in> u \<Longrightarrow> g x \<in> h ` t)
-          \<Longrightarrow> (\<forall>x. x \<in> t \<Longrightarrow> f(h x) = x)
-              \<Longrightarrow> (\<forall>x. x \<in> u \<Longrightarrow> f(g x) \<in> t)`)) THEN
+         `(\<forall>x. x \<in> u \<Longrightarrow> g x \<in> h ` T)
+          \<Longrightarrow> (\<forall>x. x \<in> T \<Longrightarrow> f(h x) = x)
+              \<Longrightarrow> (\<forall>x. x \<in> u \<Longrightarrow> f(g x) \<in> T)`)) THEN
         REWRITE_TAC[REAL_GROW_SHRINK]]];
-    X_GEN_TAC `t::real=>bool` THEN DISCH_TAC THEN
+    X_GEN_TAC `T::real=>bool` THEN DISCH_TAC THEN
     X_GEN_TAC `f::S=>real` THEN STRIP_TAC] THEN
-  MP_TAC(SPEC `euclideanreal closure_of t` REAL_COMPACT_IS_REALINTERVAL) THEN
+  MP_TAC(SPEC `euclideanreal closure_of T` REAL_COMPACT_IS_REALINTERVAL) THEN
   ASM_SIMP_TAC[IS_REALINTERVAL_CLOSURE_OF] THEN
   REWRITE_TAC[REAL_COMPACT_EQ_BOUNDED_CLOSED; REAL_CLOSED_IN] THEN
   REWRITE_TAC[CLOSED_IN_CLOSURE_OF; GSYM MBOUNDED_REAL_EUCLIDEAN_METRIC] THEN
@@ -4833,7 +4825,7 @@ oops
   MP_TAC(ISPECL
    [`X::S topology`;
     `{x \<in> topspace X.
-          (g::S=>real) x \<in> euclideanreal closure_of t - t}`;
+          (g::S=>real) x \<in> euclideanreal closure_of T - T}`;
     `S::S=>bool`; `0`; `1`] URYSOHN_LEMMA) THEN
   ASM_REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; REAL_POS] THEN
   ANTS_TAC THENL
@@ -4846,7 +4838,7 @@ oops
     REWRITE_TAC[TOPSPACE_EUCLIDEANREAL; SUBSET_UNIV] THEN
     MATCH_MP_TAC FINITE_SUBSET THEN EXISTS_TAC `{a::real,b}` THEN
     REWRITE_TAC[FINITE_INSERT; FINITE_EMPTY] THEN
-    MATCH_MP_TAC(SET_RULE `S - u \<subseteq> t \<Longrightarrow> S - t \<subseteq> u`) THEN
+    MATCH_MP_TAC(SET_RULE `S - u \<subseteq> T \<Longrightarrow> S - T \<subseteq> u`) THEN
     REWRITE_TAC[GSYM REAL_OPEN_CLOSED_INTERVAL] THEN
     ASM_SIMP_TAC[GSYM REAL_OPEN_SUBSET_CLOSURE_OF_REALINTERVAL_ALT;
                  REAL_OPEN_REAL_INTERVAL; REAL_INTERVAL_OPEN_SUBSET_CLOSED];
@@ -4861,7 +4853,7 @@ oops
     ASM_SIMP_TAC[CONTINUOUS_MAP_REAL_ADD; CONTINUOUS_MAP_REAL_SUB;
       CONTINUOUS_MAP_REAL_MUL; CONTINUOUS_MAP_REAL_CONST; ETA_AX] THEN
     X_GEN_TAC `x::S` THEN DISCH_TAC THEN
-    ASM_CASES_TAC `(g::S=>real) x \<in> t` THEN
+    ASM_CASES_TAC `(g::S=>real) x \<in> T` THEN
     ASM_SIMP_TAC[REAL_MUL_LZERO; REAL_ADD_RID] THEN
     SUBGOAL_THEN
      `z \<le> z + h x * (g x - z) \<and> z + h x * ((g::S=>real) x - z) \<le> g x \<or>
