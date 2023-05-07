@@ -3554,8 +3554,27 @@ proof -
     fix f
     assume contf: "continuous_map (subtopology X S) euclideanreal f"
       and "f ` S \<subseteq> T"
+    have "\<Phi> ((\<lambda>x. x / (1 + \<bar>x\<bar>)) ` T)"
+    proof (rule *)
+      show "bounded ((\<lambda>x. x / (1 + \<bar>x\<bar>)) ` T)"
+        using shrink_range [of T] by (force intro: boundedI [where B=1])
+      show "is_interval ((\<lambda>x. x / (1 + \<bar>x\<bar>)) ` T)"
+        using is_interval_shrink that(2) by blast
+      show "(\<lambda>x. x / (1 + \<bar>x\<bar>)) ` T \<noteq> {}"
+        using \<open>T \<noteq> {}\<close> by auto
+    qed
+    then
     show "\<exists>g. continuous_map X euclideanreal g \<and> g ` topspace X \<subseteq> T \<and> (\<forall>x\<in>S. g x = f x)"
-      sorry
+      unfolding \<Phi>_def
+      apply (drule_tac x="(\<lambda>x. x / (1 + abs x)) \<circ> f" in spec)
+      apply safe
+        apply (metis contf continuous_map_compose continuous_map_into_fulltopology continuous_map_real_shrink)
+      using \<open>f ` S \<subseteq> T\<close> apply auto[1]
+      apply (rule_tac x="(\<lambda>x. x / (1 - abs x)) \<circ> g" in exI)
+      apply (intro conjI)
+        apply (metis (no_types, lifting) continuous_map_compose continuous_map_iff_continuous continuous_map_in_subtopology continuous_on_real_grow dual_order.trans shrink_range)
+       apply (smt (verit) comp_apply image_iff image_subset_iff real_shrink_Galois)
+      by (metis (no_types, lifting) comp_apply real_shrink_Galois)
   qed
   moreover have "\<Phi> T"
     if "bounded T" "is_interval T" "T \<noteq> {}" for T
@@ -3578,7 +3597,7 @@ oops
         CONTINUOUS_MAP_REAL_SHRINK];
 
       DISCH_THEN(X_CHOOSE_THEN `g::S=>real` STRIP_ASSUME_TAC) THEN
-      EXISTS_TAC `(\<lambda>x. x / (1 - abs x)) \<circ> (g::S=>real)` THEN
+      EXISTS_TAC `(\<lambda>x. x / (1 - abs x)) \<circ> g` THEN
       ASM_SIMP_TAC[o_THM; REAL_GROW_SHRINK] THEN CONJ_TAC THENL
        [MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
         EXISTS_TAC `subtopology euclideanreal (real_interval(-1,1))` THEN
