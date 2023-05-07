@@ -8,6 +8,57 @@ begin
 lemma ball_iff_cball: "(\<exists>r>0. ball x r \<subseteq> U) \<longleftrightarrow> (\<exists>r>0. cball x r \<subseteq> U)"
   by (meson mem_interior mem_interior_cball)
 
+
+thm real_grow_shrink
+lemma real_shrink_Galois:
+  fixes x::real
+  shows "(x / (1 + \<bar>x\<bar>) = y) \<longleftrightarrow> (\<bar>y\<bar> < 1 \<and> y / (1 - \<bar>y\<bar>) = x)"
+  using real_grow_shrink by (fastforce simp add: distrib_left)
+
+lemma real_shrink_lt:
+  fixes x::real
+  shows "x / (1 + \<bar>x\<bar>) < y / (1 + \<bar>y\<bar>) \<longleftrightarrow> x < y"
+  using zero_less_mult_iff [of x y] by (auto simp: field_simps abs_if not_less)
+
+lemma real_shrink_le:
+  fixes x::real
+  shows "x / (1 + \<bar>x\<bar>) \<le> y / (1 + \<bar>y\<bar>) \<longleftrightarrow> x \<le> y"
+  by (meson linorder_not_le real_shrink_lt)
+
+lemma real_shrink_grow:
+  fixes x::real
+  shows "\<bar>x\<bar> < 1 \<Longrightarrow> x / (1 - \<bar>x\<bar>) / (1 + \<bar>x / (1 - \<bar>x\<bar>)\<bar>) = x"
+  using real_shrink_Galois by blast
+
+lemma continuous_shrink:
+  "continuous_on UNIV (\<lambda>x::real. x / (1 + \<bar>x\<bar>))"
+  by (intro continuous_intros) auto
+
+lemma strict_mono_shrink:
+  "strict_mono (\<lambda>x::real. x / (1 + \<bar>x\<bar>))"
+  by (simp add: monotoneI real_shrink_lt)
+
+lemma shrink_range: "(\<lambda>x::real. x / (1 + \<bar>x\<bar>)) ` S \<subseteq> {-1<..<1}"
+  by (auto simp: divide_simps)
+
+lemma is_interval_shrink:
+  fixes S :: "real set"
+  shows "is_interval ((\<lambda>x. x / (1 + \<bar>x\<bar>)) ` S) \<longleftrightarrow> is_interval S"  (is "?lhs = ?rhs")
+proof 
+  assume "?lhs"
+  then have "is_interval ((\<lambda>x. x / (1 - \<bar>x\<bar>)) ` (\<lambda>x. x / (1 + \<bar>x\<bar>)) ` S)"
+    by (metis continuous_on_real_grow shrink_range connected_continuous_image 
+              is_interval_connected_1 continuous_on_subset)
+  then show "?rhs"
+    using real_grow_shrink by (force simp add: image_comp)
+next
+  assume ?rhs
+  then show ?lhs
+    using connected_continuous_image is_interval_connected_1
+    by (metis continuous_on_subset continuous_shrink subset_UNIV)
+qed
+
+
 subsection \<open>ATIN-WITHIN\<close>
 
 (*REPLACE ORIGINAL DEFINITION TO USE ABBREVIATION, LIKE AT / AT_WITHIN
@@ -3493,25 +3544,27 @@ lemma Tietze_extension_realinterval:
            "g ` topspace X \<subseteq> T"  "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
 proof -
   define \<Phi> where 
-        "\<Phi> \<equiv> \<lambda>T::real set. \<forall>f. continuous_map (subtopology X S) euclidean f \<and> f`S \<subseteq> T
+        "\<Phi> \<equiv> \<lambda>T::real set. \<forall>f. continuous_map (subtopology X S) euclidean f \<longrightarrow> f`S \<subseteq> T
                \<longrightarrow> (\<exists>g. continuous_map X euclidean g \<and> g ` topspace X \<subseteq> T \<and> (\<forall>x \<in> S. g x = f x))"
-  have "\<forall>T. is_interval T \<longrightarrow> T \<noteq> {} \<longrightarrow> \<Phi> T"
-    if "\<forall>T. bounded T \<longrightarrow> is_interval T \<longrightarrow> T \<noteq> {} \<longrightarrow> \<Phi> T"
-    sorry
-  moreover have "\<forall>T. bounded T \<longrightarrow> is_interval T \<longrightarrow> T \<noteq> {} \<longrightarrow> \<Phi> T"
+  have "\<Phi> T"
+    if *: "\<And>T. \<lbrakk>bounded T; is_interval T; T \<noteq> {}\<rbrakk> \<Longrightarrow> \<Phi> T"
+      and "is_interval T" "T \<noteq> {}" for T
+    unfolding \<Phi>_def
+  proof (intro strip)
+    fix f
+    assume contf: "continuous_map (subtopology X S) euclideanreal f"
+      and "f ` S \<subseteq> T"
+    show "\<exists>g. continuous_map X euclideanreal g \<and> g ` topspace X \<subseteq> T \<and> (\<forall>x\<in>S. g x = f x)"
+      sorry
+  qed
+  moreover have "\<Phi> T"
+    if "bounded T" "is_interval T" "T \<noteq> {}" for T
     sorry
   ultimately show thesis
     using assms that unfolding \<Phi>_def by best
 qed
 
 oops
-  GEN_TAC THEN GEN_REWRITE_TAC id [SWAP_FORALL_THM] THEN
-  GEN_TAC THEN GEN_REWRITE_TAC id [SWAP_FORALL_THM] THEN
-  MATCH_MP_TAC(MESON[]
-   `((\<forall>T. real_bounded T \<Longrightarrow> P T) \<Longrightarrow> (\<forall>T. P T)) \<and>
-    (\<forall>T. real_bounded T \<Longrightarrow> P T)
-    \<Longrightarrow> \<forall>T. P T`) THEN
-  CONJ_TAC THENL
    [DISCH_TAC THEN
     MAP_EVERY X_GEN_TAC [`T::real=>bool`; `f::S=>real`] THEN STRIP_TAC THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC `image (\<lambda>x. x / (1 + abs x)) T`) THEN
