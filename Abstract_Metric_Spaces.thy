@@ -3638,23 +3638,13 @@ proof -
         show "z + h x * (g x - z) \<in> T"
         proof (cases "g x \<in> T")
           case True
-          have "\<bar>h x\<bar> * \<bar>g x - z\<bar> \<le> \<bar>g x - z\<bar>"
-            using him01
-            by (metis \<open>x \<in> topspace X\<close> abs_ge_zero abs_of_nonneg atLeastAtMost_iff image_subset_iff mult_1 mult_right_mono)
-          moreover have "\<bar>1 - h x\<bar> * \<bar>g x - z\<bar> \<le> \<bar>g x - z\<bar>"
-            using him01
-             \<open>x \<in> topspace X\<close> abs_ge_zero abs_of_nonneg atLeastAtMost_iff image_subset_iff mult_1 mult_right_mono
-            by (smt (verit, del_insts) mult_cancel_right2)
-
-              sorry
-    sorry
-          then have "z \<le> z + h x * (g x - z) \<and> z + h x * (g x - z) \<le> g x \<or>
-                     g x \<le> z + h x * (g x - z) \<and> z + h x * (g x - z) \<le> z"
-            apply (auto simp: algebra_simps)
-
-              sorry
+          define w where "w \<equiv> z + h x * (g x - z)"
+          have "\<bar>h x\<bar> * \<bar>g x - z\<bar> \<le> \<bar>g x - z\<bar>" "\<bar>1 - h x\<bar> * \<bar>g x - z\<bar> \<le> \<bar>g x - z\<bar>"
+            using him01 \<open>x \<in> topspace X\<close> by (force simp: intro: mult_left_le_one_le)+
+          then consider "z \<le> w \<and> w \<le> g x" | "g x \<le> w \<and> w \<le> z"
+            unfolding w_def by (smt (verit) left_diff_distrib mult_cancel_right2 mult_minus_right zero_less_mult_iff)
           then show ?thesis
-            by (meson True \<open>z \<in> T\<close> is_interval_1 \<open>is_interval T\<close>)
+            using \<open>is_interval T\<close> unfolding w_def is_interval_1 by (metis True \<open>z \<in> T\<close>)
         next
           case False
           then have "g x \<in> closure T"
@@ -3672,19 +3662,6 @@ proof -
   ultimately show thesis
     using assms that unfolding \<Phi>_def by best
 qed
-
-oops
-
-    MATCH_MP_TAC(REAL_ARITH
-     `abs(x - a) \<le> abs(b - a) \<and> abs(x - b) \<le> abs(b - a)
-      \<Longrightarrow> a \<le> x \<and> x \<le> b \<or> b \<le> x \<and> x \<le> a`) THEN
-    REWRITE_TAC[REAL_ARITH `(z + h * (g - z)) - g = --(1 - h) * (g - z)`] THEN
-    REWRITE_TAC[REAL_ADD_SUB; REAL_ABS_MUL; REAL_ABS_NEG] THEN
-    CONJ_TAC THEN GEN_REWRITE_TAC RAND_CONV [GSYM REAL_MUL_LID] THEN
-    MATCH_MP_TAC REAL_LE_RMUL THEN REWRITE_TAC[REAL_ABS_POS] THEN
-    ASM_SIMP_TAC[REAL_ARITH
-     `0 \<le> x \<and> x \<le> 1 \<Longrightarrow> abs x \<le> 1 \<and> abs(1 - x) \<le> 1`]]);;`
-
 
 lemma normal_space_eq_Tietze:
    "        normal_space X \<longleftrightarrow>
