@@ -9,6 +9,11 @@ lemma ball_iff_cball: "(\<exists>r>0. ball x r \<subseteq> U) \<longleftrightarr
   by (meson mem_interior mem_interior_cball)
 
 
+lemma open_subset_closure_of_interval:
+  assumes "open U" "is_interval S"
+  shows "U \<subseteq> closure S \<longleftrightarrow> U \<subseteq> interior S"
+  by (metis assms convex_interior_closure is_interval_convex open_subset_interior)
+
 thm real_grow_shrink
 lemma real_shrink_Galois:
   fixes x::real
@@ -3368,13 +3373,13 @@ lemma normal_space_eq_Urysohn:
 
 
 lemma Tietze_extension_closed_real_interval:
-  assumes "normal_space X"
+  assumes "normal_space X" and "closedin X S"
     and contf: "continuous_map (subtopology X S) euclideanreal f"
-    and "closedin X S"
-    and "a \<le> b"
     and fim: "f ` S \<subseteq> {a..b}"
+    and "a \<le> b"
   obtains g 
-  where "continuous_map X euclideanreal g" "\<And>x. x \<in> S \<Longrightarrow> g x = f x" "g ` S \<subseteq> {a..b}"
+  where "continuous_map X euclideanreal g" 
+        "\<And>x. x \<in> S \<Longrightarrow> g x = f x" "g ` topspace X \<subseteq> {a..b}"
 proof -
   define c where "c \<equiv> max \<bar>a\<bar> \<bar>b\<bar> + 1"
   have "0 < c" and c: "\<And>x. x \<in> S \<Longrightarrow> \<bar>f x\<bar> \<le> c"
@@ -3530,16 +3535,16 @@ proof -
       then show ?thesis
         using that fim by (auto simp: \<phi>_def)
     qed
-    then show "\<phi> ` S \<subseteq> {a..b}"
-      by (simp add: fim)
+    then show "\<phi> ` topspace X \<subseteq> {a..b}"
+      using fim \<open>a \<le> b\<close> by (auto simp: \<phi>_def)
   qed
 qed
 
 
 lemma Tietze_extension_realinterval:
-  assumes "normal_space X" "closedin X S" "is_interval T" "T \<noteq> {}" 
+  assumes XS: "normal_space X" "closedin X S" and T: "is_interval T" "T \<noteq> {}" 
     and contf: "continuous_map (subtopology X S) euclideanreal f" 
-    and fim: "f ` S \<subseteq> T"
+    and "f ` S \<subseteq> T"
   obtains g where "continuous_map X euclideanreal g" 
            "g ` topspace X \<subseteq> T"  "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
 proof -
@@ -3586,63 +3591,73 @@ proof -
   qed
   moreover have "\<Phi> T"
     if "bounded T" "is_interval T" "T \<noteq> {}" for T
-    sorry
+    unfolding \<Phi>_def
+  proof (intro strip)
+    fix f
+    assume contf: "continuous_map (subtopology X S) euclideanreal f"
+      and "f ` S \<subseteq> T"
+    obtain a b where ab: "closure T = {a..b}"
+      by (meson \<open>bounded T\<close> \<open>is_interval T\<close> compact_closure connected_compact_interval_1 
+            connected_imp_connected_closure is_interval_connected)
+    with \<open>T \<noteq> {}\<close> have "a \<le> b" by auto
+    have "f ` S \<subseteq> {a..b}"
+      using \<open>f ` S \<subseteq> T\<close> ab closure_subset by auto
+    then obtain g where contg: "continuous_map X euclideanreal g"
+      and gf: "\<And>x. x \<in> S \<Longrightarrow> g x = f x" and gim: "g ` topspace X \<subseteq> {a..b}"
+      using Tietze_extension_closed_real_interval [OF XS contf _ \<open>a \<le> b\<close>] by metis
+    define W where "W \<equiv> {x \<in> topspace X. g x \<in> closure T - T}"
+    have "{a..b} - {a, b} \<subseteq> T"
+      using that
+      by (metis ab atLeastAtMost_diff_ends convex_interior_closure interior_atLeastAtMost_real 
+          interior_subset is_interval_convex)
+    with finite_imp_compact have "compact (closure T - T)"
+      by (metis Diff_eq_empty_iff Diff_insert2 ab finite.emptyI finite_Diff_insert)
+    then have "closedin X W"
+      unfolding W_def using closedin_continuous_map_preimage [OF contg] compact_imp_closed by force
+    moreover have "disjnt W S"
+      unfolding W_def disjnt_iff using \<open>f ` S \<subseteq> T\<close> gf by blast
+    ultimately obtain h :: "'a \<Rightarrow> real" 
+      where conth: "continuous_map X (top_of_set {0..1}) h" 
+            and him: "h ` W \<subseteq> {0}" "h ` S \<subseteq> {1}"
+      by (metis XS normal_space_eq_Urysohn) 
+    obtain z where "z \<in> T"
+      using \<open>T \<noteq> {}\<close> by blast
+    define g' where "g' \<equiv> \<lambda>x. z + h x * (g x - z)"
+    show "\<exists>g. continuous_map X euclidean g \<and> g ` topspace X \<subseteq> T \<and> (\<forall>x\<in>S. g x = f x)"
+    proof (intro exI conjI)
+      show "continuous_map X euclideanreal g'"
+        unfolding g'_def using contg conth continuous_map_in_subtopology
+        by (intro continuous_intros) auto
+      show "g' ` topspace X \<subseteq> T"
+        unfolding g'_def 
+      proof clarify
+        fix x
+        assume "x \<in> topspace X"
+        show "z + h x * (g x - z) \<in> T"
+        proof (cases "g x \<in> T")
+          case True
+          then show ?thesis
+            sorry
+        next
+          case False
+          then have "g x \<in> closure T"
+            using \<open>x \<in> topspace X\<close> ab gim by blast
+          then have "h x = 0"
+            using him False \<open>x \<in> topspace X\<close> by (auto simp: W_def image_subset_iff)
+          then show ?thesis
+            by (simp add: \<open>z \<in> T\<close>)
+        qed
+      qed
+      show "\<forall>x\<in>S. g' x = f x"
+        using gf him by (auto simp: W_def g'_def)
+    qed 
+  qed
   ultimately show thesis
     using assms that unfolding \<Phi>_def by best
 qed
 
 oops
 
-
-  MP_TAC(SPEC `euclideanreal closure_of T` REAL_COMPACT_IS_REALINTERVAL) THEN
-  ASM_SIMP_TAC[IS_REALINTERVAL_CLOSURE_OF] THEN
-  REWRITE_TAC[REAL_COMPACT_EQ_BOUNDED_CLOSED; REAL_CLOSED_IN] THEN
-  REWRITE_TAC[CLOSED_IN_CLOSURE_OF; GSYM MBOUNDED_REAL_EUCLIDEAN_METRIC] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[SYM MBOUNDED_REAL_EUCLIDEAN_METRIC]) THEN
-  ASM_SIMP_TAC[MBOUNDED_CLOSURE_OF; GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
-  REWRITE_TAC[LEFT_IMP_EXISTS_THM; MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
-  MAP_EVERY X_GEN_TAC [`a::real`; `b::real`] THEN
-  ASM_CASES_TAC `{a..b} = {}` THEN
-  ASM_SIMP_TAC[CLOSURE_OF_EQ_EMPTY; TOPSPACE_EUCLIDEANREAL; SUBSET_UNIV] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[REAL_INTERVAL_NE_EMPTY]) THEN DISCH_TAC THEN
-  MP_TAC(ISPECL[`X::S topology`; `f::S=>real`; `S::S=>bool`; `a::real`; `b::real`]
-        TIETZE_EXTENSION_CLOSED_REAL_INTERVAL) THEN
-  ASM_REWRITE_TAC[] THEN ANTS_TAC THENL
-   [ASM_MESON_TAC[CLOSURE_OF_SUBSET; \<subseteq>; IN_UNIV; TOPSPACE_EUCLIDEANREAL];
-    DISCH_THEN(X_CHOOSE_THEN `g::S=>real` STRIP_ASSUME_TAC)] THEN
-  MP_TAC(ISPECL
-   [`X::S topology`;
-    `{x \<in> topspace X.
-          (g::S=>real) x \<in> euclideanreal closure_of T - T}`;
-    `S::S=>bool`; `0`; `1`] URYSOHN_LEMMA) THEN
-  ASM_REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; REAL_POS] THEN
-  ANTS_TAC THENL
-   [CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-    MATCH_MP_TAC CLOSED_IN_CONTINUOUS_MAP_PREIMAGE THEN
-    EXISTS_TAC `euclideanreal` THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC COMPACT_IN_IMP_CLOSED_IN THEN
-    REWRITE_TAC[HAUSDORFF_SPACE_EUCLIDEANREAL] THEN
-    MATCH_MP_TAC FINITE_IMP_COMPACT_IN THEN
-    REWRITE_TAC[TOPSPACE_EUCLIDEANREAL; SUBSET_UNIV] THEN
-    MATCH_MP_TAC FINITE_SUBSET THEN EXISTS_TAC `{a::real,b}` THEN
-    REWRITE_TAC[FINITE_INSERT; FINITE_EMPTY] THEN
-    MATCH_MP_TAC(SET_RULE `S - u \<subseteq> T \<Longrightarrow> S - T \<subseteq> u`) THEN
-    REWRITE_TAC[GSYM REAL_OPEN_CLOSED_INTERVAL] THEN
-    ASM_SIMP_TAC[GSYM REAL_OPEN_SUBSET_CLOSURE_OF_REALINTERVAL_ALT;
-                 REAL_OPEN_REAL_INTERVAL; REAL_INTERVAL_OPEN_SUBSET_CLOSED];
-    REWRITE_TAC[LEFT_IMP_EXISTS_THM; \<subseteq>; FORALL_IN_IMAGE] THEN
-    X_GEN_TAC `h::S=>real` THEN
-    REWRITE_TAC[IN_REAL_INTERVAL; IN_ELIM_THM] THEN
-    REWRITE_TAC[IN_DIFF] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY]) THEN
-    DISCH_THEN(X_CHOOSE_TAC `z::real`) THEN
-    EXISTS_TAC `\<lambda>x. z + (h::S=>real) x * (g x - z)` THEN
-    ASM_SIMP_TAC[REAL_ARITH `z + 1 * (x - z) = x`] THEN
-    ASM_SIMP_TAC[CONTINUOUS_MAP_REAL_ADD; CONTINUOUS_MAP_REAL_SUB;
-      CONTINUOUS_MAP_REAL_MUL; CONTINUOUS_MAP_REAL_CONST; ETA_AX] THEN
-    X_GEN_TAC `x::S` THEN DISCH_TAC THEN
-    ASM_CASES_TAC `(g::S=>real) x \<in> T` THEN
-    ASM_SIMP_TAC[REAL_MUL_LZERO; REAL_ADD_RID] THEN
     SUBGOAL_THEN
      `z \<le> z + h x * (g x - z) \<and> z + h x * ((g::S=>real) x - z) \<le> g x \<or>
       g x \<le> z + h x * (g x - z) \<and> z + h x * (g x - z) \<le> z`
