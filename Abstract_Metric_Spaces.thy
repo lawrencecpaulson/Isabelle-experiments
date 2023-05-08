@@ -3803,85 +3803,81 @@ qed
 
 subsection\<open>Hereditarily normal spaces\<close>
 
+lemma hereditarily_B:
+  assumes "\<And>S T. separatedin X S T
+      \<Longrightarrow> \<exists>U V. openin X U \<and> openin X V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
+  shows "hereditarily normal_space X"
+  unfolding hereditarily_def
+proof (intro strip)
+  fix W
+  assume "W \<subseteq> topspace X"
+  show "normal_space (subtopology X W)"
+    unfolding normal_space_def
+  proof clarify
+    fix S T
+    assume clo: "closedin (subtopology X W) S" "closedin (subtopology X W) T"
+      and "disjnt S T"
+    then have "separatedin (subtopology X W) S T"
+      by (simp add: separatedin_closed_sets)
+    then obtain U V where "openin X U \<and> openin X V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
+      using assms [of S T] by (meson separatedin_subtopology)
+    then show "\<exists>U V. openin (subtopology X W) U \<and> openin (subtopology X W) V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
+      apply (simp add: openin_subtopology_alt)
+      by (meson clo closedin_imp_subset disjnt_subset1 disjnt_subset2 inf_le2)
+  qed
+qed
 
-let HEREDITARILY_NORMAL_SPACE,HEREDITARILY_NORMAL_SEPARATION =
- (CONJ_PAIR \<circ> prove)
- (`(\<forall>X::A topology.
-        hereditarily normal_space X \<longleftrightarrow>
-        \<forall>U. openin X U \<Longrightarrow> normal_space(subtopology X U)) \<and>
-   (\<forall>X::A topology.
-        hereditarily normal_space X \<longleftrightarrow>
-        \<forall>A T. separatedin X A T
-              \<Longrightarrow> \<exists>U V. openin X U \<and> openin X V \<and>
-                        A \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V)"
-oops
-  REWRITE_TAC[AND_FORALL_THM] THEN GEN_TAC THEN MATCH_MP_TAC(TAUT
-   `(p \<Longrightarrow> q) \<and> (r \<Longrightarrow> p) \<and> (q \<Longrightarrow> r) \<Longrightarrow> (p \<longleftrightarrow> q) \<and> (p \<longleftrightarrow> r)`) THEN
-  REPEAT CONJ_TAC THENL
-   [SIMP_TAC[HEREDITARILY];
-    DISCH_TAC THEN REWRITE_TAC[hereditarily] THEN
-    X_GEN_TAC `U::A=>bool` THEN DISCH_TAC THEN
-    REWRITE_TAC[normal_space] THEN
-    MAP_EVERY X_GEN_TAC [`A::A=>bool`; `T::A=>bool`] THEN STRIP_TAC THEN
-    SUBGOAL_THEN `separatedin (subtopology X U) (A::A=>bool) T`
-    MP_TAC THENL
-     [ASM_SIMP_TAC[SEPARATED_IN_CLOSED_SETS];
-      REWRITE_TAC[SEPARATED_IN_SUBTOPOLOGY]] THEN
-    STRIP_TAC THEN REWRITE_TAC[RIGHT_EXISTS_AND_THM] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`A::A=>bool`; `T::A=>bool`]) THEN
-    ASM_REWRITE_TAC[OPEN_IN_SUBTOPOLOGY_ALT; EXISTS_IN_GSPEC] THEN
-    REWRITE_TAC[RIGHT_AND_EXISTS_THM] THEN
-    REPEAT(MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC) THEN ASM SET_TAC[];
-    DISCH_TAC THEN
-    MAP_EVERY X_GEN_TAC [`A::A=>bool`; `T::A=>bool`] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC
-     `topspace X -
-      (X closure_of A) \<inter> (X closure_of T):A=>bool`) THEN
-    SIMP_TAC[OPEN_IN_DIFF; CLOSED_IN_INTER; OPEN_IN_TOPSPACE;
-             CLOSED_IN_CLOSURE_OF; NORMAL_SPACE_CLOSURES] THEN
-    DISCH_THEN(MP_TAC \<circ> SPECL [`A::A=>bool`; `T::A=>bool`]) THEN ANTS_TAC THENL
-     [REWRITE_TAC[CLOSURE_OF_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY] THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[separatedin]) THEN
-      REPLICATE_TAC 2 (CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC]) THEN
-      MATCH_MP_TAC(SET_RULE
-       `X closure_of (U \<inter> s') \<subseteq> X closure_of s' \<and>
-        X closure_of (V \<inter> t') \<subseteq> X closure_of t' \<and>
-        A \<inter> T \<inter> X closure_of s' \<inter> X closure_of t' = {}
-        \<Longrightarrow>
-        disjnt (A \<inter> X closure_of (U \<inter> s'))
-                 (T \<inter> X closure_of (V \<inter> t'))`) THEN
-      SIMP_TAC[CLOSURE_OF_MONO; INTER_SUBSET] THEN ASM SET_TAC[];
-      REPEAT(MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC) THEN
-      REPEAT(MATCH_MP_TAC MONO_AND THEN CONJ_TAC) THEN REWRITE_TAC[] THEN
-      MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] OPEN_IN_TRANS_FULL) THEN
-     SIMP_TAC[OPEN_IN_DIFF; CLOSED_IN_INTER; OPEN_IN_TOPSPACE;
-             CLOSED_IN_CLOSURE_OF]]]);;
+lemma hereditarily_C: 
+  assumes "separatedin X S T" and norm: "\<And>U. openin X U \<Longrightarrow> normal_space (subtopology X U)"
+  shows "\<exists>U V. openin X U \<and> openin X V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
+proof -
+  define ST where "ST \<equiv> X closure_of S \<inter> X closure_of T"
+  have subX: "S \<subseteq> topspace X" "T \<subseteq> topspace X"
+    by (meson \<open>separatedin X S T\<close> separation_closedin_Un_gen)+
+  have sub: "S \<subseteq> topspace X - ST" "T \<subseteq> topspace X - ST"
+    unfolding ST_def
+    by (metis Diff_mono Diff_triv \<open>separatedin X S T\<close> Int_lower1 Int_lower2 separatedin_def)+
+  have "normal_space (subtopology X (topspace X - ST))"
+    by (simp add: ST_def norm closedin_Int openin_diff)
+  moreover have " disjnt (subtopology X (topspace X - ST) closure_of S)
+                         (subtopology X (topspace X - ST) closure_of T)"
+    using Int_absorb1 ST_def sub by (fastforce simp: disjnt_iff closure_of_subtopology)
+  ultimately show ?thesis
+    using sub subX
+    apply (simp add: normal_space_closures)
+    by (metis ST_def closedin_Int closedin_closure_of closedin_def openin_trans_full)
+qed
+
+lemma hereditarily_normal_space: 
+  "hereditarily normal_space X \<longleftrightarrow> (\<forall>U. openin X U \<longrightarrow> normal_space(subtopology X U))"
+  by (metis hereditarily_B hereditarily_C hereditarily)
+
+lemma hereditarily_normal_separation:
+  "hereditarily normal_space X \<longleftrightarrow>
+        (\<forall>A T. separatedin X A T
+             \<longrightarrow> (\<exists>U V. openin X U \<and> openin X V \<and> A \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V))"
+  by (metis hereditarily_B hereditarily_C hereditarily)
+
 
 lemma metrizable_imp_hereditarily_normal_space:
    "metrizable_space X \<Longrightarrow> hereditarily normal_space X"
-oops
-  SIMP_TAC[hereditarily; METRIZABLE_IMP_NORMAL_SPACE;
-           METRIZABLE_SPACE_SUBTOPOLOGY]);;
+  by (simp add: hereditarily metrizable_imp_normal_space metrizable_space_subtopology)
 
 lemma metrizable_space_separation:
-   "\<And>X A T::A=>bool.
-        metrizable_space X \<and> separatedin X A T
-        \<Longrightarrow> \<exists>U V. openin X U \<and> openin X V \<and>
-                  A \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
-oops
-  REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
-  REWRITE_TAC[GSYM HEREDITARILY_NORMAL_SEPARATION] THEN
-  REWRITE_TAC[METRIZABLE_IMP_HEREDITARILY_NORMAL_SPACE]);;
+   "\<lbrakk>metrizable_space X; separatedin X S T\<rbrakk>
+    \<Longrightarrow> \<exists>U V. openin X U \<and> openin X V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
+  by (metis hereditarily hereditarily_C metrizable_imp_hereditarily_normal_space)
 
 lemma hereditarily_normal_separation_pairwise:
-   "        hereditarily normal_space X \<longleftrightarrow>
-        \<forall>U. finite U \<and> (\<forall>A. A \<in> U \<Longrightarrow> A \<subseteq> topspace X) \<and>
+   "hereditarily normal_space X \<longleftrightarrow>
+        (\<forall>U. finite U \<and> (\<forall>A \<in> U. A \<subseteq> topspace X) \<and>
             pairwise (separatedin X) U
-            \<Longrightarrow> \<exists>f. (\<forall>A. A \<in> U \<Longrightarrow> openin X (f A) \<and> A \<subseteq> f A) \<and>
-                    pairwise (\<lambda>s T. disjnt (f A) (f T)) U"
+            \<longrightarrow> (\<exists>f. (\<forall>A \<in> U. openin X (f A) \<and> A \<subseteq> f A) \<and>
+                    pairwise (\<lambda>s T. disjnt (f A) (f T)) U))"
+  sorry
 oops
   GEN_TAC THEN REWRITE_TAC[HEREDITARILY_NORMAL_SEPARATION] THEN EQ_TAC THENL
-   [DISCH_TAC THEN X_GEN_TAC `U:(A=>bool)->bool` THEN STRIP_TAC THEN
+  [DISCH_TAC THEN X_GEN_TAC `U:(A=>bool)->bool` THEN STRIP_TAC THEN
     SUBGOAL_THEN
      `\<forall>A. A \<in> U
           \<Longrightarrow> \<exists>V w. openin X V \<and> openin X w \<and> A \<subseteq> V \<and>
@@ -3922,22 +3918,20 @@ oops
       REWRITE_TAC[IMP_CONJ; FORALL_UNWIND_THM2] THEN ASM_MESON_TAC[]]]);;
 
 lemma hereditarily_normal_space_perfect_map_image:
-   "\<And>X X' f.
-    hereditarily normal_space X \<and> perfect_map X X' f
-    \<Longrightarrow> hereditarily normal_space X'"
-oops
-  REWRITE_TAC[perfect_map; proper_map] THEN
-  MESON_TAC[HEREDITARILY_NORMAL_SPACE_CONTINUOUS_CLOSED_MAP_IMAGE]);;
+   "\<lbrakk>hereditarily normal_space X; perfect_map X Y f\<rbrakk> \<Longrightarrow> hereditarily normal_space Y"
+  unfolding perfect_map_def proper_map_def
+  by (meson hereditarily_normal_space_continuous_closed_map_image)
 
 lemma regular_second_countable_imp_hereditarily_normal_space:
-   "        regular_space X \<and> second_countable X
-        \<Longrightarrow> hereditarily normal_space X"
-oops
-  REWRITE_TAC[hereditarily] THEN REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC REGULAR_LINDELOF_IMP_NORMAL_SPACE THEN
-  ASM_SIMP_TAC[REGULAR_SPACE_SUBTOPOLOGY] THEN
-  MATCH_MP_TAC SECOND_COUNTABLE_IMP_LINDELOF_SPACE THEN
-  ASM_SIMP_TAC[SECOND_COUNTABLE_SUBTOPOLOGY]);;
+  assumes "regular_space X \<and> second_countable X"
+  shows  "hereditarily normal_space X"
+  unfolding hereditarily
+  proof (intro regular_Lindelof_imp_normal_space strip)
+  show "regular_space (subtopology X S)" for S
+    by (simp add: assms regular_space_subtopology)
+  show "Lindelof_space (subtopology X S)" for S
+    using assms by (simp add: second_countable_imp_Lindelof_space second_countable_subtopology)
+qed
 
 
 subsection\<open>Completely regular spaces\<close>
@@ -3951,9 +3945,9 @@ let completely_regular_space = new_definition
                   f x = 0 \<and> \<forall>x. x \<in> A \<Longrightarrow> f x = 1`;;
 
 lemma homeomorphic_completely_regular_space:
-   "\<And>(X::A topology) (X':B topology).
-        X homeomorphic_space X'
-        \<Longrightarrow> (completely_regular_space X \<longleftrightarrow> completely_regular_space X')"
+   "\<And>(X::A topology) (Y:B topology).
+        X homeomorphic_space Y
+        \<Longrightarrow> (completely_regular_space X \<longleftrightarrow> completely_regular_space Y)"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[homeomorphic_space] THEN
   REWRITE_TAC[HOMEOMORPHIC_MAPS_MAP; LEFT_IMP_EXISTS_THM] THEN
@@ -4117,9 +4111,9 @@ oops
   SIMP_TAC[CONTINUOUS_MAP_FROM_SUBTOPOLOGY]);;
 
 lemma completely_regular_space_retraction_map_image:
-   "\<And>X X' r.
-        retraction_map X X' r \<and> completely_regular_space X
-        \<Longrightarrow> completely_regular_space X'"
+   "\<And>X Y r.
+        retraction_map X Y r \<and> completely_regular_space X
+        \<Longrightarrow> completely_regular_space Y"
 oops
   MATCH_MP_TAC HEREDITARY_IMP_RETRACTIVE_PROPERTY THEN
   REWRITE_TAC[COMPLETELY_REGULAR_SPACE_SUBTOPOLOGY;
@@ -4615,9 +4609,9 @@ oops
            SUBSET_INTER]);;
 
 lemma locally_connected_space_quotient_map_image:
-   "\<And>X X' f::A=>B.
-        quotient_map X X' f \<and> locally_connected_space X
-        \<Longrightarrow> locally_connected_space X'"
+   "\<And>X Y f::A=>B.
+        quotient_map X Y f \<and> locally_connected_space X
+        \<Longrightarrow> locally_connected_space Y"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[quotient_map] THEN
   REWRITE_TAC[LOCALLY_CONNECTED_SPACE_OPEN_CONNECTED_COMPONENTS] THEN
