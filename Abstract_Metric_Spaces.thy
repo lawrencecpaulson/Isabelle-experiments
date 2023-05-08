@@ -3620,6 +3620,8 @@ proof -
       where conth: "continuous_map X (top_of_set {0..1}) h" 
             and him: "h ` W \<subseteq> {0}" "h ` S \<subseteq> {1}"
       by (metis XS normal_space_eq_Urysohn) 
+    then have him01: "h ` topspace X \<subseteq> {0..1}"
+      by (meson continuous_map_in_subtopology)
     obtain z where "z \<in> T"
       using \<open>T \<noteq> {}\<close> by blast
     define g' where "g' \<equiv> \<lambda>x. z + h x * (g x - z)"
@@ -3636,8 +3638,23 @@ proof -
         show "z + h x * (g x - z) \<in> T"
         proof (cases "g x \<in> T")
           case True
+          have "\<bar>h x\<bar> * \<bar>g x - z\<bar> \<le> \<bar>g x - z\<bar>"
+            using him01
+            by (metis \<open>x \<in> topspace X\<close> abs_ge_zero abs_of_nonneg atLeastAtMost_iff image_subset_iff mult_1 mult_right_mono)
+          moreover have "\<bar>1 - h x\<bar> * \<bar>g x - z\<bar> \<le> \<bar>g x - z\<bar>"
+            using him01
+             \<open>x \<in> topspace X\<close> abs_ge_zero abs_of_nonneg atLeastAtMost_iff image_subset_iff mult_1 mult_right_mono
+            by (smt (verit, del_insts) mult_cancel_right2)
+
+              sorry
+    sorry
+          then have "z \<le> z + h x * (g x - z) \<and> z + h x * (g x - z) \<le> g x \<or>
+                     g x \<le> z + h x * (g x - z) \<and> z + h x * (g x - z) \<le> z"
+            apply (auto simp: algebra_simps)
+
+              sorry
           then show ?thesis
-            sorry
+            by (meson True \<open>z \<in> T\<close> is_interval_1 \<open>is_interval T\<close>)
         next
           case False
           then have "g x \<in> closure T"
@@ -3658,10 +3675,6 @@ qed
 
 oops
 
-    SUBGOAL_THEN
-     `z \<le> z + h x * (g x - z) \<and> z + h x * ((g::S=>real) x - z) \<le> g x \<or>
-      g x \<le> z + h x * (g x - z) \<and> z + h x * (g x - z) \<le> z`
-    MP_TAC THENL [ALL_TAC; ASM_MESON_TAC[is_interval]] THEN
     MATCH_MP_TAC(REAL_ARITH
      `abs(x - a) \<le> abs(b - a) \<and> abs(x - b) \<le> abs(b - a)
       \<Longrightarrow> a \<le> x \<and> x \<le> b \<or> b \<le> x \<and> x \<le> a`) THEN
