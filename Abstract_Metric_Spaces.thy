@@ -3684,21 +3684,25 @@ next
     assume "closedin X S"
       and "closedin X T"
       and "disjnt S T"
-    then have "closedin X (S \<union> T)"
+    then have cloST: "closedin X (S \<union> T)"
       by (simp add: closedin_Un)
     moreover 
-    have "\<And>C. closed C \<Longrightarrow>
-         closedin (subtopology X (S \<union> T)) {x \<in> S \<union> T. (if x \<in> S then 0 else 1) \<in> C}"
-      apply (rule closedin_subset_topspace)
-       defer
-       apply (force simp add: )
-      sorry
-    then have "continuous_map (subtopology X (S \<union> T)) euclideanreal (\<lambda>x. if x \<in> S then 0 else 1)"
+    have "continuous_map (subtopology X (S \<union> T)) euclideanreal (\<lambda>x. if x \<in> S then 0 else 1)"
       unfolding continuous_map_closedin
-      apply (intro conjI strip)
-       apply (force simp add: )
-      apply (simp add: )
-      by (smt (verit, ccfv_SIG) Collect_cong Un_iff \<open>\<And>C. closed C \<Longrightarrow> closedin (subtopology X (S \<union> T)) {x \<in> S \<union> T. (if x \<in> S then 0 else 1) \<in> C}\<close> calculation closedin_subset subsetD)
+    proof (intro conjI strip)
+      fix C :: "real set"
+      define D where "D \<equiv> {x \<in> topspace X. if x \<in> S then 0 \<in> C else x \<in> T \<and> 1 \<in> C}"
+      have "D \<in> {{}, S, T, S \<union> T}"
+        unfolding D_def
+        using closedin_subset [OF \<open>closedin X S\<close>] closedin_subset [OF \<open>closedin X T\<close>] \<open>disjnt S T\<close>
+        by (auto simp add: disjnt_iff)
+      then have "closedin X D"
+        using \<open>closedin X S\<close> \<open>closedin X T\<close> closedin_empty by blast
+      with closedin_subset_topspace
+      show "closedin (subtopology X (S \<union> T)) {x \<in> topspace (subtopology X (S \<union> T)). (if x \<in> S then 0::real else 1) \<in> C}"
+        apply (simp add: D_def)
+        by (smt (verit, best) Collect_cong Collect_mono_iff Un_def closedin_subset_topspace)
+    qed auto
     ultimately obtain g :: "'a \<Rightarrow> real"  where 
       contg: "continuous_map X euclidean g" and gf: "\<forall>x \<in> S \<union> T. g x = (if x \<in> S then 0 else 1)"
       using R by blast
@@ -3706,32 +3710,6 @@ next
       by (smt (verit) Un_iff \<open>disjnt S T\<close> disjnt_iff image_subset_iff insert_iff)
   qed
 qed
-
-oops
-
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL
-     [`(\<lambda>x. if x \<in> S then 0 else 1)`; `S \<union> T`]) THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[SET_RULE
-     `disjnt S T \<longleftrightarrow> \<forall>x. x \<in> T \<Longrightarrow> (x \<notin> S)`]) THEN
-    ASM_SIMP_TAC[CLOSED_IN_UNION; FORALL_IN_UNION] THEN
-    DISCH_THEN MATCH_MP_TAC THEN
-    REWRITE_TAC[CONTINUOUS_MAP_CLOSED_IN; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
-    X_GEN_TAC `c::real=>bool` THEN STRIP_TAC THEN
-    MATCH_MP_TAC CLOSED_IN_SUBSET_TOPSPACE THEN
-    REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN
-    CONJ_TAC THENL [ALL_TAC; SET_TAC[]] THEN
-    ONCE_REWRITE_TAC[COND_RAND] THEN ONCE_REWRITE_TAC[COND_RATOR] THEN
-    REWRITE_TAC[IN_INTER; GSYM CONJ_ASSOC] THEN
-    ONCE_REWRITE_TAC[COND_RAND] THEN SIMP_TAC[IN_UNION] THEN
-    ASM_SIMP_TAC[COND_EXPAND; TAUT
-     `(q \<Longrightarrow> \<not> p) \<Longrightarrow> ((\<not> p \<or> z) \<and> (p \<or> q \<and> w) \<longleftrightarrow> p \<and> z \<or> q \<and> w)`] THEN
-    ASM_SIMP_TAC[CLOSED_IN_SUBSET; SET_RULE
-     `S \<subseteq> u \<and> T \<subseteq> u
-      \<Longrightarrow> {x \<in> u. (x \<in> S \<and> P \<or> x \<in> T \<and> Q)} =
-          {x \<in> S. P} \<union> {x \<in> T. Q}`] THEN
-    MAP_EVERY ASM_CASES_TAC [`(0::real) \<in> c`; `(1::real) \<in> c`] THEN
-    ASM_REWRITE_TAC[EMPTY_GSPEC; CLOSED_IN_EMPTY; UNION_EMPTY; IN_GSPEC] THEN
-    ASM_SIMP_TAC[CLOSED_IN_UNION]]);;
 
 lemma normal_space_perfect_map_image:
    "\<lbrakk>normal_space X; perfect_map X Y f\<rbrakk> \<Longrightarrow> normal_space Y"
