@@ -2576,19 +2576,21 @@ next
   qed
 qed
 
-lemma A: 
+subsubsection \<open>More on Bolzano Weierstrass\<close>
+
+lemma Bolzano_Weierstrass_A: 
   assumes "compactin mtopology S" "T \<subseteq> S" "infinite T"
   shows "S \<inter> mtopology derived_set_of T \<noteq> {}"
   by (simp add: assms compactin_imp_Bolzano_Weierstrass)
 
-lemma B:
+lemma Bolzano_Weierstrass_B:
   fixes \<sigma> :: "nat \<Rightarrow> 'a"
   assumes "S \<subseteq> M" "range \<sigma> \<subseteq> S"
     and "\<And>T. \<lbrakk>T \<subseteq> S \<and> infinite T\<rbrakk> \<Longrightarrow> S \<inter> mtopology derived_set_of T \<noteq> {}"
   shows "\<exists>l r. l \<in> S \<and> strict_mono r \<and> limitin mtopology (\<sigma> o r) l sequentially"
   using Bolzano_Weierstrass_property assms by blast
 
-lemma C:
+lemma Bolzano_Weierstrass_C:
   assumes "S \<subseteq> M"
   assumes "\<And>\<sigma>:: nat \<Rightarrow> 'a. range \<sigma> \<subseteq> S \<Longrightarrow>
                 (\<exists>l r. l \<in> S \<and> strict_mono r \<and> limitin mtopology (\<sigma> o r) l sequentially)"
@@ -2596,7 +2598,7 @@ lemma C:
   unfolding mtotally_bounded_sequentially
   by (metis convergent_imp_MCauchy assms image_comp image_mono subset_UNIV subset_trans)
 
-lemma D:
+lemma Bolzano_Weierstrass_D:
   assumes "S \<subseteq> M" "S \<subseteq> \<Union>\<C>" and opeU: "\<And>U. U \<in> \<C> \<Longrightarrow> openin mtopology U"
   assumes \<section>: "(\<forall>\<sigma>::nat\<Rightarrow>'a. range \<sigma> \<subseteq> S
          \<longrightarrow> (\<exists>l r. l \<in> S \<and> strict_mono r \<and> limitin mtopology (\<sigma> \<circ> r) l sequentially))"
@@ -2637,7 +2639,7 @@ proof (rule ccontr)
 qed
 
 
-lemma E:
+lemma Bolzano_Weierstrass_E:
   assumes "mtotally_bounded S" "S \<subseteq> M"
   and S: "\<And>\<C>. \<lbrakk>\<And>U. U \<in> \<C> \<Longrightarrow> openin mtopology U; S \<subseteq> \<Union>\<C>\<rbrakk> \<Longrightarrow> \<exists>\<epsilon>>0. \<forall>x \<in> S. \<exists>U \<in> \<C>. mball x \<epsilon> \<subseteq> U"
   shows "compactin mtopology S"
@@ -2665,8 +2667,8 @@ qed
 lemma compactin_eq_Bolzano_Weierstrass:
   "compactin mtopology S \<longleftrightarrow>
    S \<subseteq> M \<and> (\<forall>T. T \<subseteq> S \<and> infinite T \<longrightarrow> S \<inter> mtopology derived_set_of T \<noteq> {})"
-  using C D E
-  by (smt (verit, del_insts) Bolzano_Weierstrass_property Set.basic_monos(1) compactin_imp_Bolzano_Weierstrass compactin_subspace topspace_mtopology)
+  using Bolzano_Weierstrass_C Bolzano_Weierstrass_D Bolzano_Weierstrass_E
+  by (smt (verit, del_insts) Bolzano_Weierstrass_property compactin_imp_Bolzano_Weierstrass compactin_subspace subset_refl topspace_mtopology)
 
 lemma compactin_sequentially:
   shows "compactin mtopology S \<longleftrightarrow>
@@ -2677,12 +2679,12 @@ lemma compactin_sequentially:
 
 lemma compactin_imp_mtotally_bounded: 
   "compactin mtopology S \<Longrightarrow> mtotally_bounded S"
-  by (simp add: C compactin_sequentially)
+  by (simp add: Bolzano_Weierstrass_C compactin_sequentially)
 
 lemma lebesgue_number:
     "\<lbrakk>compactin mtopology S; S \<subseteq> \<Union>\<C>; \<And>U. U \<in> \<C> \<Longrightarrow> openin mtopology U\<rbrakk>
     \<Longrightarrow> \<exists>\<epsilon>>0. \<forall>x \<in> S. \<exists>U \<in> \<C>. mball x \<epsilon> \<subseteq> U"
-  by (simp add: D compactin_sequentially)
+  by (simp add: Bolzano_Weierstrass_D compactin_sequentially)
 
 lemma compact_space_sequentially:
    "compact_space mtopology \<longleftrightarrow>
@@ -2710,7 +2712,7 @@ proof
       and "decseq C"
       and "\<Inter> (range C) = {}"
     then obtain K where K: "finite K" "\<Inter>(C ` K) = {}"
-      by (metis L compact_space_imp_nest decseq_def)
+      by (metis L compact_space_imp_nest)
     then obtain k where "K \<subseteq> {..k}"
       using finite_nat_iff_bounded_le by auto
     then have "C k \<subseteq> \<Inter>(C ` K)"
@@ -2757,8 +2759,7 @@ next
 qed
 
 
-lemma (in discrete_metric) mcomplete_discrete_metric:
-  "disc.mcomplete"
+lemma (in discrete_metric) mcomplete_discrete_metric: "disc.mcomplete"
 proof (clarsimp simp: disc.mcomplete_def)
   fix \<sigma> :: "nat \<Rightarrow> 'a"
   assume "disc.MCauchy \<sigma>"
@@ -2804,7 +2805,7 @@ lemma (in submetric) closedin_eq_mcomplete:
 
 lemma compact_space_eq_mcomplete_mtotally_bounded:
    "compact_space mtopology \<longleftrightarrow> mcomplete \<and> mtotally_bounded M"
-  by (meson C compact_space_imp_mcomplete compact_space_sequentially limitin_mspace 
+  by (meson Bolzano_Weierstrass_C compact_space_imp_mcomplete compact_space_sequentially limitin_mspace 
             mcomplete_alt mtotally_bounded_sequentially subset_refl)
 
 
@@ -3279,9 +3280,9 @@ proof -
           have "x \<in> X closure_of G r \<Longrightarrow> False"
             using B [of r "f x - r"] r \<open>r < 1\<close> G [of r] fle by force
           then show "x \<in> G r' - X closure_of G r"
-            using "**" r' by fastforce
+            using ** r' by fastforce
           show "\<forall>y\<in>G r' - X closure_of G r. \<bar>f y - f x\<bar> < \<epsilon>"
-            using r r'  "**" G closure_of_subset field_sum_of_halves fle openin_subset subset_eq
+            using r r' ** G closure_of_subset field_sum_of_halves fle openin_subset subset_eq
             by (smt (verit) DiffE opeG)
         qed
       qed
@@ -3338,10 +3339,9 @@ next
         using \<open>closedin X S\<close> closedin_subset \<open>f ` S \<subseteq> {a}\<close> assms by force
       show "T \<subseteq> {x \<in> topspace X. f x \<in> ball b (\<bar>a - b\<bar> / 2)}"
         using \<open>closedin X T\<close> closedin_subset \<open>f ` T \<subseteq> {b}\<close> assms by force
-      have "\<And>x. \<lbrakk>x \<in> topspace X; dist a (f x) < \<bar>a-b\<bar>/2; dist b (f x) < \<bar>a-b\<bar>/2\<rbrakk>
-         \<Longrightarrow> False"
+      have "\<And>x. \<lbrakk>x \<in> topspace X; dist a (f x) < \<bar>a-b\<bar>/2; dist b (f x) < \<bar>a-b\<bar>/2\<rbrakk> \<Longrightarrow> False"
         by (smt (verit, best) dist_real_def dist_triangle_half_l)
-      then show "disjnt {x \<in> topspace X. f x \<in> ball a (\<bar>a - b\<bar> / 2)} {x \<in> topspace X. f x \<in> ball b (\<bar>a - b\<bar> / 2)}"
+      then show "disjnt {x \<in> topspace X. f x \<in> ball a (\<bar>a-b\<bar> / 2)} {x \<in> topspace X. f x \<in> ball b (\<bar>a-b\<bar> / 2)}"
         using disjnt_iff by fastforce
     qed
   qed
@@ -3375,8 +3375,7 @@ lemma normal_space_eq_Urysohn:
 lemma Tietze_extension_closed_real_interval:
   assumes "normal_space X" and "closedin X S"
     and contf: "continuous_map (subtopology X S) euclideanreal f"
-    and fim: "f ` S \<subseteq> {a..b}"
-    and "a \<le> b"
+    and fim: "f ` S \<subseteq> {a..b}" and "a \<le> b"
   obtains g 
   where "continuous_map X euclideanreal g" 
         "\<And>x. x \<in> S \<Longrightarrow> g x = f x" "g ` topspace X \<subseteq> {a..b}"
@@ -3719,7 +3718,7 @@ lemma normal_Hausdorff_space_closed_continuous_map_image:
   by (meson normal_space_continuous_closed_map_image normal_t1_eq_Hausdorff_space t1_space_closed_map_image)
 
 lemma regular_lindelof_imp_normal_space:
-   "        regular_space X \<and> lindelof_space X \<Longrightarrow> normal_space X"
+   "        regular_space X \<and> Lindelof_space X \<Longrightarrow> normal_space X"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[normal_space] THEN
   MAP_EVERY X_GEN_TAC [`A::A=>bool`; `t::A=>bool`] THEN STRIP_TAC THEN
