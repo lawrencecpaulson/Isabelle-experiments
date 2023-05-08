@@ -8,6 +8,10 @@ begin
 lemma ball_iff_cball: "(\<exists>r>0. ball x r \<subseteq> U) \<longleftrightarrow> (\<exists>r>0. cball x r \<subseteq> U)"
   by (meson mem_interior mem_interior_cball)
 
+thm closedin_subtopology
+lemma closedin_subset_topspace:
+   "\<lbrakk>closedin X S; S \<subseteq> T\<rbrakk> \<Longrightarrow> closedin (subtopology X T) S"
+  using closedin_subtopology by fastforce
 
 lemma open_subset_closure_of_interval:
   assumes "open U" "is_interval S"
@@ -3311,7 +3315,7 @@ lemma Urysohn_lemma_alt:
   obtains f where "continuous_map X euclideanreal f" "f ` S \<subseteq> {a}" "f ` T \<subseteq> {b}"
   by (metis Urysohn_lemma assms continuous_map_in_subtopology disjnt_sym linear)
 
-lemma normal_space_eq_Urysohn_gen_alt:
+lemma normal_space_iff_Urysohn_gen_alt:
   assumes "a \<noteq> b"
   shows "normal_space X \<longleftrightarrow>
          (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
@@ -3347,7 +3351,7 @@ next
   qed
 qed 
 
-lemma normal_space_eq_Urysohn_gen:
+lemma normal_space_iff_Urysohn_gen:
   fixes a b::real
   shows
    "a < b \<Longrightarrow> 
@@ -3355,21 +3359,21 @@ lemma normal_space_eq_Urysohn_gen:
         (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
                \<longrightarrow> (\<exists>f. continuous_map X (top_of_set {a..b}) f \<and>
                         f ` S \<subseteq> {a} \<and> f ` T \<subseteq> {b}))"
-  by (metis linear not_le Urysohn_lemma normal_space_eq_Urysohn_gen_alt continuous_map_in_subtopology)
+  by (metis linear not_le Urysohn_lemma normal_space_iff_Urysohn_gen_alt continuous_map_in_subtopology)
 
-lemma normal_space_eq_Urysohn_alt:
+lemma normal_space_iff_Urysohn_alt:
    "normal_space X \<longleftrightarrow>
      (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
            \<longrightarrow> (\<exists>f. continuous_map X euclideanreal f \<and>
                    f ` S \<subseteq> {0} \<and> f ` T \<subseteq> {1}))"
-  by (rule normal_space_eq_Urysohn_gen_alt) auto
+  by (rule normal_space_iff_Urysohn_gen_alt) auto
 
-lemma normal_space_eq_Urysohn:
+lemma normal_space_iff_Urysohn:
    "normal_space X \<longleftrightarrow>
      (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
             \<longrightarrow> (\<exists>f::'a\<Rightarrow>real. continuous_map X (top_of_set {0..1}) f \<and> 
                                f ` S \<subseteq> {0} \<and> f ` T \<subseteq> {1}))"
-  by (rule normal_space_eq_Urysohn_gen) auto
+  by (rule normal_space_iff_Urysohn_gen) auto
 
 
 lemma Tietze_extension_closed_real_interval:
@@ -3544,8 +3548,7 @@ lemma Tietze_extension_realinterval:
   assumes XS: "normal_space X" "closedin X S" and T: "is_interval T" "T \<noteq> {}" 
     and contf: "continuous_map (subtopology X S) euclideanreal f" 
     and "f ` S \<subseteq> T"
-  obtains g where "continuous_map X euclideanreal g" 
-           "g ` topspace X \<subseteq> T"  "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
+  obtains g where "continuous_map X euclideanreal g"  "g ` topspace X \<subseteq> T"  "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
 proof -
   define \<Phi> where 
         "\<Phi> \<equiv> \<lambda>T::real set. \<forall>f. continuous_map (subtopology X S) euclidean f \<longrightarrow> f`S \<subseteq> T
@@ -3618,7 +3621,7 @@ proof -
     ultimately obtain h :: "'a \<Rightarrow> real" 
       where conth: "continuous_map X (top_of_set {0..1}) h" 
             and him: "h ` W \<subseteq> {0}" "h ` S \<subseteq> {1}"
-      by (metis XS normal_space_eq_Urysohn) 
+      by (metis XS normal_space_iff_Urysohn) 
     then have him01: "h ` topspace X \<subseteq> {0..1}"
       by (meson continuous_map_in_subtopology)
     obtain z where "z \<in> T"
@@ -3662,24 +3665,54 @@ proof -
     using assms that unfolding \<Phi>_def by best
 qed
 
-lemma normal_space_eq_Tietze:
-   "        normal_space X \<longleftrightarrow>
-        \<forall>f S. closedin X S \<and>
-              continuous_map (subtopology X S,euclideanreal) f
-              \<Longrightarrow> \<exists>g. continuous_map X euclideanreal g \<and>
-                      \<forall>x. x \<in> S \<Longrightarrow> g x = f x"
+lemma normal_space_iff_Tietze:
+   "normal_space X \<longleftrightarrow>
+    (\<forall>f S. closedin X S \<and>
+           continuous_map (subtopology X S) euclidean f
+           \<longrightarrow> (\<exists>g:: 'a \<Rightarrow> real. continuous_map X euclidean g \<and> (\<forall>x \<in> S. g x = f x)))" 
+   (is "?lhs=?rhs")
+proof
+  assume ?lhs 
+  then show ?rhs
+    by (metis Tietze_extension_realinterval empty_not_UNIV is_interval_univ subset_UNIV)
+next
+  assume R: ?rhs 
+  show ?lhs
+    unfolding normal_space_iff_Urysohn_alt
+  proof clarify
+    fix S T
+    assume "closedin X S"
+      and "closedin X T"
+      and "disjnt S T"
+    then have "closedin X (S \<union> T)"
+      by (simp add: closedin_Un)
+    moreover 
+    have "\<And>C. closed C \<Longrightarrow>
+         closedin (subtopology X (S \<union> T)) {x \<in> S \<union> T. (if x \<in> S then 0 else 1) \<in> C}"
+      apply (rule closedin_subset_topspace)
+       defer
+       apply (force simp add: )
+      sorry
+    then have "continuous_map (subtopology X (S \<union> T)) euclideanreal (\<lambda>x. if x \<in> S then 0 else 1)"
+      unfolding continuous_map_closedin
+      apply (intro conjI strip)
+       apply (force simp add: )
+      apply (simp add: )
+      by (smt (verit, ccfv_SIG) Collect_cong Un_iff \<open>\<And>C. closed C \<Longrightarrow> closedin (subtopology X (S \<union> T)) {x \<in> S \<union> T. (if x \<in> S then 0 else 1) \<in> C}\<close> calculation closedin_subset subsetD)
+    ultimately obtain g :: "'a \<Rightarrow> real"  where 
+      contg: "continuous_map X euclidean g" and gf: "\<forall>x \<in> S \<union> T. g x = (if x \<in> S then 0 else 1)"
+      using R by blast
+    then show "\<exists>f. continuous_map X euclideanreal f \<and> f ` S \<subseteq> {0} \<and> f ` T \<subseteq> {1}"
+      by (smt (verit) Un_iff \<open>disjnt S T\<close> disjnt_iff image_subset_iff insert_iff)
+  qed
+qed
+
 oops
-  GEN_TAC THEN EQ_TAC THENL
-   [REPEAT STRIP_TAC THEN
-    MP_TAC(ISPECL [`X::S topology`; `f::S=>real`; `S::S=>bool`; `UNIV`]
-        TIETZE_EXTENSION_REALINTERVAL) THEN
-    ASM_REWRITE_TAC[IS_REALINTERVAL_UNIV; IN_UNIV; UNIV_NOT_EMPTY];
-    DISCH_TAC THEN REWRITE_TAC[NORMAL_SPACE_EQ_URYSOHN_ALT] THEN
-    MAP_EVERY X_GEN_TAC [`S::S=>bool`; `t::S=>bool`] THEN STRIP_TAC THEN
+
     FIRST_X_ASSUM(MP_TAC \<circ> SPECL
-     [`(\<lambda>x. if x \<in> S then 0 else 1):S=>real`; `S \<union> t::S=>bool`]) THEN
+     [`(\<lambda>x. if x \<in> S then 0 else 1)`; `S \<union> T`]) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[SET_RULE
-     `disjnt S t \<longleftrightarrow> \<forall>x. x \<in> t \<Longrightarrow> (x \<notin> S)`]) THEN
+     `disjnt S T \<longleftrightarrow> \<forall>x. x \<in> T \<Longrightarrow> (x \<notin> S)`]) THEN
     ASM_SIMP_TAC[CLOSED_IN_UNION; FORALL_IN_UNION] THEN
     DISCH_THEN MATCH_MP_TAC THEN
     REWRITE_TAC[CONTINUOUS_MAP_CLOSED_IN; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
@@ -3693,9 +3726,9 @@ oops
     ASM_SIMP_TAC[COND_EXPAND; TAUT
      `(q \<Longrightarrow> \<not> p) \<Longrightarrow> ((\<not> p \<or> z) \<and> (p \<or> q \<and> w) \<longleftrightarrow> p \<and> z \<or> q \<and> w)`] THEN
     ASM_SIMP_TAC[CLOSED_IN_SUBSET; SET_RULE
-     `S \<subseteq> u \<and> t \<subseteq> u
-      \<Longrightarrow> {x \<in> u. (x \<in> S \<and> P \<or> x \<in> t \<and> Q)} =
-          {x \<in> S. P} \<union> {x \<in> t. Q}`] THEN
+     `S \<subseteq> u \<and> T \<subseteq> u
+      \<Longrightarrow> {x \<in> u. (x \<in> S \<and> P \<or> x \<in> T \<and> Q)} =
+          {x \<in> S. P} \<union> {x \<in> T. Q}`] THEN
     MAP_EVERY ASM_CASES_TAC [`(0::real) \<in> c`; `(1::real) \<in> c`] THEN
     ASM_REWRITE_TAC[EMPTY_GSPEC; CLOSED_IN_EMPTY; UNION_EMPTY; IN_GSPEC] THEN
     ASM_SIMP_TAC[CLOSED_IN_UNION]]);;
@@ -4081,7 +4114,7 @@ lemma normal_imp_completely_regular_space_gen:
         (t1_space X \<or> Hausdorff_space X \<or> regular_space X)
         \<Longrightarrow> completely_regular_space X"
 oops
-  GEN_TAC THEN REWRITE_TAC[NORMAL_SPACE_EQ_URYSOHN_ALT] THEN
+  GEN_TAC THEN REWRITE_TAC[NORMAL_SPACE_IFF_URYSOHN_ALT] THEN
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
   REWRITE_TAC[COMPLETELY_REGULAR_SPACE_ALT; IN_DIFF] THEN
   MATCH_MP_TAC(TAUT
@@ -14693,7 +14726,7 @@ oops
     MAP_EVERY EXISTS_TAC [`0::real`; `1::real`] THEN
     ASM_SIMP_TAC[IN_REAL_INTERVAL; REAL_LT_01; REAL_LT_IMP_LE];
     ALL_TAC] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [NORMAL_SPACE_EQ_URYSOHN]) THEN
+  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [NORMAL_SPACE_IFF_URYSOHN]) THEN
   DISCH_THEN(MP_TAC \<circ> SPECL [`s::A=>bool`; `t::A=>bool`]) THEN
   ASM_REWRITE_TAC[LE_C; CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN
   MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `f::A=>real` THEN STRIP_TAC THEN
