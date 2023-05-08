@@ -3728,7 +3728,7 @@ lemma normal_Hausdorff_space_closed_continuous_map_image:
     \<Longrightarrow> normal_space Y \<and> Hausdorff_space Y"
   by (meson normal_space_continuous_closed_map_image normal_t1_eq_Hausdorff_space t1_space_closed_map_image)
 
-lemma regular_lindelof_imp_normal_space:
+lemma regular_Lindelof_imp_normal_space:
    "        regular_space X \<and> Lindelof_space X \<Longrightarrow> normal_space X"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[normal_space] THEN
@@ -3761,7 +3761,7 @@ oops
       GEN_REWRITE_TAC (LAND_CONV \<circ> BINDER_CONV) [RIGHT_IMP_EXISTS_THM]] THEN
     REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
     X_GEN_TAC `h::A=>A->bool` THEN DISCH_TAC THEN
-    SUBGOAL_THEN `lindelof_space(subtopology X (A::A=>bool))` MP_TAC THENL
+    SUBGOAL_THEN `Lindelof_space(subtopology X (A::A=>bool))` MP_TAC THENL
      [ASM_SIMP_TAC[LINDELOF_SPACE_CLOSED_IN_SUBTOPOLOGY];
       ASM_SIMP_TAC[LINDELOF_SPACE_SUBTOPOLOGY_SUBSET; CLOSED_IN_SUBSET]] THEN
     DISCH_THEN(MP_TAC \<circ> SPEC `image (h::A=>A->bool) A`) THEN
@@ -3792,7 +3792,7 @@ oops
       GEN_REWRITE_TAC (LAND_CONV \<circ> BINDER_CONV) [RIGHT_IMP_EXISTS_THM]] THEN
     REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
     X_GEN_TAC `k::A=>A->bool` THEN DISCH_TAC THEN
-    SUBGOAL_THEN `lindelof_space(subtopology X (t::A=>bool))` MP_TAC THENL
+    SUBGOAL_THEN `Lindelof_space(subtopology X (t::A=>bool))` MP_TAC THENL
      [ASM_SIMP_TAC[LINDELOF_SPACE_CLOSED_IN_SUBTOPOLOGY];
       ASM_SIMP_TAC[LINDELOF_SPACE_SUBTOPOLOGY_SUBSET; CLOSED_IN_SUBSET]] THEN
     DISCH_THEN(MP_TAC \<circ> SPEC `image (k::A=>A->bool) t`) THEN
@@ -4364,277 +4364,11 @@ oops
     ASM_REWRITE_TAC[PiE; IN_ELIM_THM] THEN ASM_MESON_TAC[]]);;
 
 
-subsection\<open>Locally path-connected spaces\<close>
-
-
-let weakly_locally_path_connected_at = new_definition
- `weakly_locally_path_connected_at x X \<longleftrightarrow>
-    neighbourhood_base_at x (path_connectedin X) X`;;
-
-let locally_path_connected_at = new_definition
- `locally_path_connected_at x X \<longleftrightarrow>
-    neighbourhood_base_at x
-      (\<lambda>u. openin X u \<and> path_connectedin X u ) X`;;
-
-let locally_path_connected_space = new_definition
- `locally_path_connected_space X \<longleftrightarrow>
-        neighbourhood_base_of (path_connectedin X) X`;;
-
-let LOCALLY_PATH_CONNECTED_SPACE_ALT,
-    LOCALLY_PATH_CONNECTED_SPACE_EQ_OPEN_PATH_COMPONENT_OF =
- (CONJ_PAIR \<circ> prove)
- (`(\<forall>X::A topology.
-        locally_path_connected_space X \<longleftrightarrow>
-        neighbourhood_base_of
-          (\<lambda>u. openin X u \<and> path_connectedin X u) X) \<and>
-   (\<forall>X::A topology.
-        locally_path_connected_space X \<longleftrightarrow>
-        \<forall>u x. openin X u \<and> x \<in> u
-              \<Longrightarrow> openin X (path_component_of (subtopology X u) x))"
-oops
-  SIMP_TAC[OPEN_NEIGHBOURHOOD_BASE_OF] THEN
-  REWRITE_TAC[AND_FORALL_THM; locally_path_connected_space] THEN
-  REWRITE_TAC[NEIGHBOURHOOD_BASE_OF] THEN
-  X_GEN_TAC `X::A topology` THEN
-  MATCH_MP_TAC(TAUT
-   `(q \<Longrightarrow> p) \<and> (p \<Longrightarrow> r) \<and> (r \<Longrightarrow> q) \<Longrightarrow> (p \<longleftrightarrow> q) \<and> (p \<longleftrightarrow> r)`) THEN
-  REPEAT CONJ_TAC THENL
-   [MESON_TAC[SUBSET_REFL];
-    DISCH_TAC THEN
-    MAP_EVERY X_GEN_TAC [`u::A=>bool`; `y::A`] THEN STRIP_TAC THEN
-    ONCE_REWRITE_TAC[OPEN_IN_SUBOPEN] THEN
-    X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-    FIRST_ASSUM(SUBST1_TAC \<circ> last \<circ> CONJUNCTS \<circ>
-     GEN_REWRITE_RULE id [PATH_COMPONENT_OF_EQUIV] \<circ>
-     GEN_REWRITE_RULE id [\<in>]) THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`u::A=>bool`; `x::A`]) THEN ANTS_TAC THENL
-     [FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP (REWRITE_RULE[\<subseteq>]
-        PATH_COMPONENT_OF_SUBSET_TOPSPACE)) THEN
-      ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY; IN_INTER];
-      REWRITE_TAC[LEFT_IMP_EXISTS_THM]] THEN
-    MAP_EVERY X_GEN_TAC [`v::A=>bool`; `w::A=>bool`] THEN STRIP_TAC THEN
-    EXISTS_TAC `v::A=>bool` THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC SUBSET_TRANS THEN EXISTS_TAC `w::A=>bool` THEN
-    ASM_REWRITE_TAC[] THEN MATCH_MP_TAC PATH_COMPONENT_OF_MAXIMAL THEN
-    ASM_REWRITE_TAC[PATH_CONNECTED_IN_SUBTOPOLOGY] THEN ASM SET_TAC[];
-    DISCH_TAC THEN
-    MAP_EVERY X_GEN_TAC [`u::A=>bool`; `x::A`] THEN STRIP_TAC THEN
-    EXISTS_TAC `path_component_of (subtopology X u) (x::A)` THEN
-    ASM_SIMP_TAC[] THEN REPEAT CONJ_TAC THENL
-     [W(MP_TAC \<circ> PART_MATCH rand PATH_CONNECTED_IN_PATH_COMPONENT_OF \<circ>
-        rand \<circ> snd) THEN
-      SIMP_TAC[PATH_CONNECTED_IN_SUBTOPOLOGY];
-      REWRITE_TAC[\<in>] THEN REWRITE_TAC[PATH_COMPONENT_OF_REFL] THEN
-      REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; IN_INTER] THEN
-      ASM_MESON_TAC[OPEN_IN_SUBSET; \<subseteq>];
-      W(MP_TAC \<circ> PART_MATCH lhand PATH_COMPONENT_OF_SUBSET_TOPSPACE \<circ>
-        lhand \<circ> snd) THEN
-      SIMP_TAC[TOPSPACE_SUBTOPOLOGY; SUBSET_INTER]]]);;
-
-lemma locally_path_connected_space:
-   "        locally_path_connected_space X \<longleftrightarrow>
-        \<forall>v x. openin X v \<and> x \<in> v
-              \<Longrightarrow> \<exists>u. openin X u \<and>
-                      path_connectedin X u \<and>
-                      x \<in> u \<and> u \<subseteq> v"
-oops
-  SIMP_TAC[LOCALLY_PATH_CONNECTED_SPACE_ALT; OPEN_NEIGHBOURHOOD_BASE_OF] THEN
-  REWRITE_TAC[GSYM CONJ_ASSOC]);;
-
-lemma locally_path_connected_space_open_path_components:
-   "        locally_path_connected_space X \<longleftrightarrow>
-        \<forall>u c. openin X u \<and> c \<in> path_components_of(subtopology X u)
-              \<Longrightarrow> openin X c"
-oops
-  REWRITE_TAC[LOCALLY_PATH_CONNECTED_SPACE_EQ_OPEN_PATH_COMPONENT_OF] THEN
-  REWRITE_TAC[path_components_of; IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
-  REWRITE_TAC[FORALL_IN_GSPEC; TOPSPACE_SUBTOPOLOGY; IN_INTER] THEN
-  MESON_TAC[\<subseteq>; OPEN_IN_SUBSET]);;
-
-lemma openin_path_component_of_locally_path_connected_space:
-   "locally_path_connected_space X
-             \<Longrightarrow> openin X (path_component_of X x)"
-oops
-  METIS_TAC[LOCALLY_PATH_CONNECTED_SPACE_EQ_OPEN_PATH_COMPONENT_OF;
-            SUBTOPOLOGY_TOPSPACE; OPEN_IN_TOPSPACE;
-            OPEN_IN_EMPTY; PATH_COMPONENT_OF_EQ_EMPTY]);;
-
-lemma openin_path_components_of_locally_path_connected_space:
-   "
-        locally_path_connected_space X \<and> c \<in> path_components_of X
-        \<Longrightarrow> openin X c"
-oops
-  REWRITE_TAC[LOCALLY_PATH_CONNECTED_SPACE_OPEN_PATH_COMPONENTS] THEN
-  REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-  EXISTS_TAC `topspace X::A=>bool` THEN
-  ASM_REWRITE_TAC[OPEN_IN_TOPSPACE; SUBTOPOLOGY_TOPSPACE]);;
-
-lemma closedin_path_components_of_locally_path_connected_space:
-   "
-        locally_path_connected_space X \<and> c \<in> path_components_of X
-        \<Longrightarrow> closedin X c"
-oops
-  REPEAT STRIP_TAC THEN
-  ASM_SIMP_TAC[closedin; PATH_COMPONENTS_OF_SUBSET] THEN
-  ASM_SIMP_TAC[COMPLEMENT_PATH_COMPONENTS_OF_UNIONS] THEN
-  MATCH_MP_TAC OPEN_IN_UNIONS THEN REWRITE_TAC[IN_DELETE] THEN
-  ASM_SIMP_TAC[OPEN_IN_PATH_COMPONENTS_OF_LOCALLY_PATH_CONNECTED_SPACE]);;
-
-lemma closedin_path_component_of_locally_path_connected_space:
-   "locally_path_connected_space X
-             \<Longrightarrow> closedin X (path_component_of X x)"
-oops
-  REPEAT STRIP_TAC THEN ASM_CASES_TAC `(x::A) \<in> topspace X` THEN
-  ASM_SIMP_TAC[PATH_COMPONENT_IN_PATH_COMPONENTS_OF;
-               CLOSED_IN_PATH_COMPONENTS_OF_LOCALLY_PATH_CONNECTED_SPACE] THEN
-  ASM_MESON_TAC[CLOSED_IN_EMPTY; PATH_COMPONENT_OF_EQ_EMPTY]);;
-
-lemma weakly_locally_path_connected_at:
-   "        weakly_locally_path_connected_at x X \<longleftrightarrow>
-        \<forall>v. openin X v \<and> x \<in> v
-            \<Longrightarrow> \<exists>u. openin X u \<and>
-                    x \<in> u \<and> u \<subseteq> v \<and>
-                    \<forall>y. y \<in> u
-                        \<Longrightarrow> \<exists>c. path_connectedin X c \<and>
-                                c \<subseteq> v \<and> x \<in> c \<and> y \<in> c"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[neighbourhood_base_at; weakly_locally_path_connected_at] THEN
-  EQ_TAC THEN DISCH_TAC THEN X_GEN_TAC `v::A=>bool` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `v::A=>bool`) THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC MONO_EXISTS THEN
-  X_GEN_TAC `u::A=>bool` THENL [ASM_MESON_TAC[\<subseteq>]; STRIP_TAC] THEN
-  EXISTS_TAC `path_component_of (subtopology X v) (x::A)` THEN
-  ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-   [MESON_TAC[PATH_CONNECTED_IN_PATH_COMPONENT_OF;
-              PATH_CONNECTED_IN_SUBTOPOLOGY];
-    REWRITE_TAC[\<subseteq>] THEN X_GEN_TAC `y::A` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `y::A`) THEN ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(X_CHOOSE_THEN `c::A=>bool` MP_TAC) THEN
-    REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-    MATCH_MP_TAC(SET_RULE `s \<subseteq> t \<Longrightarrow> x \<in> s \<Longrightarrow> x \<in> t`) THEN
-    MATCH_MP_TAC PATH_COMPONENT_OF_MAXIMAL THEN
-    ASM_REWRITE_TAC[PATH_CONNECTED_IN_SUBTOPOLOGY];
-    MESON_TAC[PATH_COMPONENT_OF_SUBSET_TOPSPACE; TOPSPACE_SUBTOPOLOGY;
-              SUBSET_INTER]]);;
-
-lemma locally_path_connected_space_im_kleinen:
-   "        locally_path_connected_space X \<longleftrightarrow>
-        \<forall>v x. openin X v \<and> x \<in> v
-            \<Longrightarrow> \<exists>u. openin X u \<and>
-                    x \<in> u \<and> u \<subseteq> v \<and>
-                    \<forall>y. y \<in> u
-                        \<Longrightarrow> \<exists>c. path_connectedin X c \<and>
-                                c \<subseteq> v \<and> x \<in> c \<and> y \<in> c"
-oops
-  REWRITE_TAC[locally_path_connected_space; neighbourhood_base_of] THEN
-  GEN_TAC THEN REWRITE_TAC[GSYM weakly_locally_path_connected_at] THEN
-  REWRITE_TAC[WEAKLY_LOCALLY_PATH_CONNECTED_AT] THEN
-  REWRITE_TAC[RIGHT_IMP_FORALL_THM; IMP_IMP] THEN
-  EQ_TAC THEN REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-  ASM_MESON_TAC[REWRITE_RULE[\<subseteq>] OPEN_IN_SUBSET]);;
-
-lemma locally_path_connected_space_open_subset:
-   "
-        locally_path_connected_space X \<and> openin X s
-        \<Longrightarrow> locally_path_connected_space (subtopology X s)"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[locally_path_connected_space] THEN
-  DISCH_THEN(MP_TAC \<circ> MATCH_MP NEIGHBOURHOOD_BASE_OF_OPEN_SUBSET) THEN
-  GEN_REWRITE_TAC LAND_CONV [NEIGHBOURHOOD_BASE_OF_WITH_SUBSET] THEN
-  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] NEIGHBOURHOOD_BASE_OF_MONO) THEN
-  SIMP_TAC[TOPSPACE_SUBTOPOLOGY; PATH_CONNECTED_IN_SUBTOPOLOGY;
-           SUBSET_INTER]);;
-
-lemma locally_path_connected_space_quotient_map_image:
-   "\<And>X X' f::A=>B.
-        quotient_map X X' f \<and> locally_path_connected_space X
-        \<Longrightarrow> locally_path_connected_space X'"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[quotient_map] THEN
-  REWRITE_TAC[LOCALLY_PATH_CONNECTED_SPACE_OPEN_PATH_COMPONENTS] THEN
-  STRIP_TAC THEN MAP_EVERY X_GEN_TAC [`v::B=>bool`; `c::B=>bool`] THEN
-  STRIP_TAC THEN
-  FIRST_ASSUM(fun th -> W(MP_TAC \<circ> PART_MATCH (rand \<circ> rand) th \<circ> snd)) THEN
-  ANTS_TAC THENL
-   [FIRST_ASSUM(MP_TAC \<circ> MATCH_MP PATH_COMPONENTS_OF_SUBSET) THEN
-    ASM_REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; SUBSET_INTER] THEN ASM SET_TAC[];
-    DISCH_THEN(SUBST1_TAC \<circ> SYM)] THEN
-  GEN_REWRITE_TAC id [OPEN_IN_SUBOPEN] THEN X_GEN_TAC `x::A` THEN
-  REWRITE_TAC[IN_ELIM_THM] THEN STRIP_TAC THEN
-  EXISTS_TAC
-   `path_component_of
-      (subtopology X {z. z \<in> topspace X \<and> f z \<in> v}) x` THEN
-  REPEAT CONJ_TAC THENL
-   [FIRST_X_ASSUM MATCH_MP_TAC THEN
-    EXISTS_TAC `{z. z \<in> topspace X \<and> f z \<in> v}` THEN
-    ASM_SIMP_TAC[OPEN_IN_SUBSET; path_components_of] THEN
-    REWRITE_TAC[SIMPLE_IMAGE; ETA_AX] THEN MATCH_MP_TAC FUN_IN_IMAGE;
-    GEN_REWRITE_TAC id [\<in>] THEN REWRITE_TAC[PATH_COMPONENT_OF_REFL];
-    MATCH_MP_TAC(SET_RULE
-     `\<forall>v. s \<subseteq> u \<inter> {x \<in> u. f x \<in> v} \<and> f ` s \<subseteq> c
-          \<Longrightarrow> s \<subseteq> {x \<in> u. f x \<in> c}`) THEN
-    EXISTS_TAC `v::B=>bool` THEN
-    REWRITE_TAC[PATH_COMPONENT_OF_SUBSET_TOPSPACE;
-                GSYM TOPSPACE_SUBTOPOLOGY] THEN
-    MATCH_MP_TAC PATH_COMPONENTS_OF_MAXIMAL THEN
-    EXISTS_TAC `subtopology X' (v::B=>bool)` THEN ASM_REWRITE_TAC[] THEN
-    CONJ_TAC THENL
-     [MATCH_MP_TAC PATH_CONNECTED_IN_CONTINUOUS_MAP_IMAGE THEN EXISTS_TAC
-       `subtopology X {z. z \<in> topspace X \<and> f z \<in> v}` THEN
-      REWRITE_TAC[PATH_CONNECTED_IN_PATH_COMPONENT_OF] THEN
-      REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; \<subseteq>; FORALL_IN_IMAGE] THEN
-      SIMP_TAC[TOPSPACE_SUBTOPOLOGY; IN_INTER; IN_ELIM_THM] THEN
-      MATCH_MP_TAC CONTINUOUS_MAP_FROM_SUBTOPOLOGY THEN
-      MATCH_MP_TAC QUOTIENT_IMP_CONTINUOUS_MAP THEN
-      ASM_REWRITE_TAC[quotient_map];
-      REWRITE_TAC[SET_RULE
-       `\<not> disjnt t (f ` s) \<longleftrightarrow> \<exists>x. x \<in> s \<and> f x \<in> t`] THEN
-      EXISTS_TAC `x::A` THEN ASM_REWRITE_TAC[] THEN
-      GEN_REWRITE_TAC id [\<in>] THEN REWRITE_TAC[PATH_COMPONENT_OF_REFL]]] THEN
-  ASM_REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; IN_INTER; IN_ELIM_THM] THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP PATH_COMPONENTS_OF_SUBSET) THEN
-  ASM_REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; SUBSET_INTER] THEN ASM SET_TAC[]);;
-
-lemma homeomorphic_locally_path_connected_space:
-   "\<And>(X::A topology) (X':B topology).
-        X homeomorphic_space X'
-        \<Longrightarrow> (locally_path_connected_space X \<longleftrightarrow>
-             locally_path_connected_space X')"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[homeomorphic_space] THEN
-  REWRITE_TAC[HOMEOMORPHIC_MAPS_MAP; homeomorphic_map] THEN
-  MESON_TAC[LOCALLY_PATH_CONNECTED_SPACE_QUOTIENT_MAP_IMAGE]);;
-
-lemma locally_path_connected_space_retraction_map_image:
-   "\<And>X X' r.
-        retraction_map X X' r \<and> locally_path_connected_space X
-        \<Longrightarrow> locally_path_connected_space X'"
-oops
-  MESON_TAC[LOCALLY_PATH_CONNECTED_SPACE_QUOTIENT_MAP_IMAGE;
-            RETRACTION_IMP_QUOTIENT_MAP]);;
-
-lemma locally_path_connected_space_euclideanreal:
- (`locally_path_connected_space euclideanreal"
-oops
-  REWRITE_TAC[locally_path_connected_space; NEIGHBOURHOOD_BASE_OF] THEN
-  MAP_EVERY X_GEN_TAC [`w::real=>bool`; `x::real`] THEN
-  REWRITE_TAC[GSYM REAL_OPEN_IN] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
-  GEN_REWRITE_TAC LAND_CONV [real_open] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `x::real`) THEN
-  ASM_REWRITE_TAC[] THEN
-  DISCH_THEN(X_CHOOSE_THEN `e::real` STRIP_ASSUME_TAC) THEN
-  REPEAT(EXISTS_TAC `real_interval(x - e,x + e)`) THEN
-  REWRITE_TAC[SUBSET_REFL; REAL_OPEN_REAL_INTERVAL;
-              PATH_CONNECTED_IN_EUCLIDEANREAL_INTERVAL] THEN
-  REWRITE_TAC[\<subseteq>; IN_REAL_INTERVAL] THEN CONJ_TAC THENL
-   [ALL_TAC; REPEAT STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC] THEN
-  ASM_REAL_ARITH_TAC);;
 
 lemma locally_path_connected_is_realinterval:
    "is_interval s
        \<Longrightarrow> locally_path_connected_space(subtopology euclideanreal s)"
+  using locally_path_connected_space_euclideanreal
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[locally_path_connected_space] THEN
   REWRITE_TAC[NEIGHBOURHOOD_BASE_OF; TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY] THEN
@@ -4668,65 +4402,16 @@ lemma locally_path_connected_real_interval:
 oops
   REPEAT STRIP_TAC THEN
   MATCH_MP_TAC LOCALLY_PATH_CONNECTED_IS_REALINTERVAL THEN
-  REWRITE_TAC[IS_REALINTERVAL_INTERVAL]);;
+  REWRITE_TAC[IS_REALINTERVAL_INTERVAL]);;`
 
-lemma locally_path_connected_space_discrete_topology:
-   "\<And>u::A=>bool. locally_path_connected_space (discrete_topology u)"
-oops
-  GEN_TAC THEN REWRITE_TAC[LOCALLY_PATH_CONNECTED_SPACE] THEN
-  SIMP_TAC[OPEN_IN_DISCRETE_TOPOLOGY; PATH_CONNECTED_IN_DISCRETE_TOPOLOGY] THEN
-  MAP_EVERY X_GEN_TAC [`v::A=>bool`; `x::A`] THEN STRIP_TAC THEN
-  EXISTS_TAC `{x::A}` THEN ASM SET_TAC[]);;
-
-lemma path_component_eq_connected_component_of:
-   "locally_path_connected_space X
-             \<Longrightarrow> (path_component_of X x = connected_component_of X x)"
-oops
-  REPEAT STRIP_TAC THEN
-  ASM_CASES_TAC `(x::A) \<in> topspace X` THENL
-   [ALL_TAC;
-    ASM_MESON_TAC[PATH_COMPONENT_OF_EQ_EMPTY;
-                  CONNECTED_COMPONENT_OF_EQ_EMPTY]] THEN
-  MP_TAC(ISPECL
-   [`X::A topology`; `x::A`] CONNECTED_IN_CONNECTED_COMPONENT_OF) THEN
-  REWRITE_TAC[connectedin; CONNECTED_SPACE_CLOPEN_IN] THEN
-  REWRITE_TAC[TAUT `p \<Longrightarrow> q \<or> r \<longleftrightarrow> p \<and> \<not> q \<Longrightarrow> r`] THEN
-  SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET;
-           CONNECTED_COMPONENT_OF_SUBSET_TOPSPACE] THEN
-  DISCH_THEN MATCH_MP_TAC THEN REPEAT CONJ_TAC THENL
-   [MATCH_MP_TAC OPEN_IN_SUBSET_TOPSPACE;
-    MATCH_MP_TAC CLOSED_IN_SUBSET_TOPSPACE;
-    ASM_REWRITE_TAC[PATH_COMPONENT_OF_EQ_EMPTY]] THEN
-  REWRITE_TAC[PATH_COMPONENT_SUBSET_CONNECTED_COMPONENT_OF] THEN
-  ASM_SIMP_TAC[OPEN_IN_PATH_COMPONENT_OF_LOCALLY_PATH_CONNECTED_SPACE;
-               CLOSED_IN_PATH_COMPONENT_OF_LOCALLY_PATH_CONNECTED_SPACE]);;
-
-lemma path_components_eq_connected_components_of:
-   "        locally_path_connected_space X
-        \<Longrightarrow> (path_components_of X = connected_components_of X)"
-oops
-  REPEAT STRIP_TAC THEN
-  REWRITE_TAC[path_components_of; connected_components_of] THEN
-  MATCH_MP_TAC(SET_RULE
-   `(\<forall>x. x \<in> s \<Longrightarrow> f x = g x) \<Longrightarrow> {f x | x \<in> s} = {g x | x \<in> s}`) THEN
-  ASM_SIMP_TAC[PATH_COMPONENT_EQ_CONNECTED_COMPONENT_OF]);;
-
-lemma path_connected_eq_connected_space:
-   "locally_path_connected_space X
-         \<Longrightarrow> (path_connected_space X \<longleftrightarrow> connected_space X)"
-oops
-  REPEAT STRIP_TAC THEN
-  REWRITE_TAC[PATH_CONNECTED_SPACE_IFF_PATH_COMPONENT;
-              CONNECTED_SPACE_IFF_CONNECTED_COMPONENT] THEN
-  ASM_SIMP_TAC[PATH_COMPONENT_EQ_CONNECTED_COMPONENT_OF]);;
 
 lemma locally_path_connected_space_prod_topology:
-   "      locally_path_connected_space (prod_topology top1 top2) \<longleftrightarrow>
-      topspace (prod_topology top1 top2) = {} \<or>
-      locally_path_connected_space top1 \<and> locally_path_connected_space top2"
+   "locally_path_connected_space (prod_topology X Y) \<longleftrightarrow>
+      topspace (prod_topology X Y) = {} \<or>
+      locally_path_connected_space X \<and> locally_path_connected_space Y"
 oops
   REPEAT GEN_TAC THEN
-  ASM_CASES_TAC `topspace(prod_topology top1 top2):A#B=>bool = {}` THENL
+  ASM_CASES_TAC `topspace(prod_topology X Y):A#B=>bool = {}` THENL
    [ASM_REWRITE_TAC[locally_path_connected_space; NEIGHBOURHOOD_BASE_OF] THEN
     ASM_MESON_TAC[OPEN_IN_SUBSET; \<subseteq>; NOT_IN_EMPTY];
     ALL_TAC] THEN
@@ -4760,123 +4445,6 @@ oops
                 IN_CROSS; SUBSET_CROSS] THEN
     TRANS_TAC SUBSET_TRANS `(w1 \<times> w2):A#B=>bool` THEN
     ASM_REWRITE_TAC[] THEN ASM_REWRITE_TAC[SUBSET_CROSS]]);;
-
-lemma locally_path_connected_space_product_topology:
-   "\<And>(tops::K=>A topology) k.
-        locally_path_connected_space(product_topology k tops) \<longleftrightarrow>
-        topspace(product_topology k tops) = {} \<or>
-        finite {i. i \<in> k \<and> \<not> path_connected_space(tops i)} \<and>
-        \<forall>i. i \<in> k \<Longrightarrow> locally_path_connected_space(tops i)"
-oops
-  REPEAT GEN_TAC THEN
-  ASM_CASES_TAC `topspace(product_topology k (tops::K=>A topology)) = {}` THENL
-   [ASM_REWRITE_TAC[locally_path_connected_space; NEIGHBOURHOOD_BASE_OF] THEN
-    ASM_MESON_TAC[OPEN_IN_SUBSET; \<subseteq>; NOT_IN_EMPTY];
-    ALL_TAC] THEN
-  ASM_REWRITE_TAC[locally_path_connected_space; NEIGHBOURHOOD_BASE_OF] THEN
-  EQ_TAC THENL
-   [DISCH_TAC THEN
-    FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY]) THEN
-    DISCH_THEN(X_CHOOSE_TAC `z::K=>A`) THEN CONJ_TAC THENL
-     [FIRST_X_ASSUM(MP_TAC \<circ> SPECL
-       [`topspace(product_topology k (tops::K=>A topology))`; `z::K=>A`]) THEN
-      ASM_REWRITE_TAC[OPEN_IN_TOPSPACE; LEFT_IMP_EXISTS_THM] THEN
-      MAP_EVERY X_GEN_TAC [`u:(K=>A)->bool`; `c:(K=>A)->bool`] THEN
-      STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> SPEC `z::K=>A` \<circ>
-        REWRITE_RULE[OPEN_IN_PRODUCT_TOPOLOGY_ALT]) THEN
-      ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-      X_GEN_TAC `v::K=>A->bool` THEN STRIP_TAC THEN
-      FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ]
-        FINITE_SUBSET)) THEN
-      REWRITE_TAC[\<subseteq>; IN_ELIM_THM] THEN X_GEN_TAC `i::K` THEN
-      ASM_CASES_TAC `(i::K) \<in> k` THEN ASM_REWRITE_TAC[CONTRAPOS_THM] THEN
-      DISCH_TAC THEN
-      FIRST_ASSUM(MP_TAC \<circ> ISPECL [`\<lambda>x::K=>A. x i`; `(tops::K=>A topology) i`] \<circ>
-        MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
-            PATH_CONNECTED_IN_CONTINUOUS_MAP_IMAGE)) THEN
-      ASM_SIMP_TAC[CONTINUOUS_MAP_PRODUCT_PROJECTION;
-                   GSYM PATH_CONNECTED_IN_TOPSPACE] THEN
-      MATCH_MP_TAC EQ_IMP THEN AP_TERM_TAC THEN FIRST_X_ASSUM(MATCH_MP_TAC \<circ>
-       MATCH_MP (SET_RULE `v = u \<Longrightarrow> v \<subseteq> s \<and> s \<subseteq> u \<Longrightarrow> s = u`)) THEN
-      CONJ_TAC THENL
-       [TRANS_TAC SUBSET_TRANS `image (\<lambda>x::K=>A. x i) u` THEN
-        ASM_SIMP_TAC[IMAGE_SUBSET] THEN TRANS_TAC SUBSET_TRANS
-         `image (\<lambda>x::K=>A. x i) (PiE k v)` THEN
-        ASM_SIMP_TAC[IMAGE_SUBSET] THEN
-        REWRITE_TAC[IMAGE_PROJECTION_CARTESIAN_PRODUCT] THEN
-        COND_CASES_TAC THEN ASM_REWRITE_TAC[SUBSET_REFL] THEN
-        ASM SET_TAC[];
-        TRANS_TAC SUBSET_TRANS
-          `image (\<lambda>x::K=>A. x i) (topspace(product_topology k tops))` THEN
-        ASM_SIMP_TAC[IMAGE_SUBSET; PATH_CONNECTED_IN_SUBSET_TOPSPACE] THEN
-        RULE_ASSUM_TAC(REWRITE_RULE[TOPSPACE_PRODUCT_TOPOLOGY]) THEN
-        ASM_REWRITE_TAC[IMAGE_PROJECTION_CARTESIAN_PRODUCT;
-                        TOPSPACE_PRODUCT_TOPOLOGY] THEN
-        REWRITE_TAC[o_THM; SUBSET_REFL]];
-      X_GEN_TAC `i::K` THEN DISCH_TAC THEN
-      REWRITE_TAC[GSYM locally_path_connected_space; ETA_AX;
-                  GSYM NEIGHBOURHOOD_BASE_OF] THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[GSYM locally_path_connected_space; ETA_AX;
-                                  GSYM NEIGHBOURHOOD_BASE_OF]) THEN
-      FIRST_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ_ALT]
-        (REWRITE_RULE[CONJ_ASSOC]
-                LOCALLY_PATH_CONNECTED_SPACE_QUOTIENT_MAP_IMAGE)))  THEN
-      EXISTS_TAC `\<lambda>x::K=>A. x i` THEN
-      ASM_SIMP_TAC[OPEN_MAP_PRODUCT_PROJECTION; TOPSPACE_PRODUCT_TOPOLOGY;
-                   QUOTIENT_MAP_PRODUCT_PROJECTION;
-                   IMAGE_PROJECTION_CARTESIAN_PRODUCT] THEN
-      ASM_REWRITE_TAC[GSYM TOPSPACE_PRODUCT_TOPOLOGY; o_THM]];
-    STRIP_TAC THEN
-    MAP_EVERY X_GEN_TAC [`ww:(K=>A)->bool`; `z::K=>A`] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
-    GEN_REWRITE_TAC LAND_CONV [OPEN_IN_PRODUCT_TOPOLOGY_ALT] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `z::K=>A`) THEN ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(X_CHOOSE_THEN `w::K=>A->bool` STRIP_ASSUME_TAC) THEN
-    SUBGOAL_THEN
-     `\<forall>i. i \<in> k
-          \<Longrightarrow> \<exists>u c. openin (tops i) u \<and>
-                    path_connectedin (tops i) c \<and>
-                    ((z::K=>A) i) \<in> u \<and>
-                    u \<subseteq> c \<and>
-                    c \<subseteq> w i \<and>
-                    (w i = topspace(tops i) \<and> path_connected_space(tops i)
-                     \<Longrightarrow> u = topspace(tops i) \<and> c = topspace(tops i))`
-    MP_TAC THENL
-     [X_GEN_TAC `i::K` THEN DISCH_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`i::K`; `(w::K=>A->bool) i`] \<circ>
-        GEN_REWRITE_RULE BINDER_CONV [RIGHT_IMP_FORALL_THM]) THEN
-      ASM_REWRITE_TAC[] THEN DISCH_THEN(MP_TAC \<circ> SPEC `(z::K=>A) i`) THEN
-      ANTS_TAC THENL
-       [FIRST_X_ASSUM(MP_TAC \<circ>
-         GEN_REWRITE_RULE RAND_CONV [PiE]) THEN
-        ASM_SIMP_TAC[IN_ELIM_THM];
-        ASM_CASES_TAC `path_connected_space((tops::K=>A topology) i)` THEN
-        ASM_REWRITE_TAC[] THEN
-        ASM_CASES_TAC `(w::K=>A->bool) i = topspace(tops i)` THEN
-        ASM_REWRITE_TAC[] THEN DISCH_THEN(K ALL_TAC) THEN
-        REPEAT(EXISTS_TAC `topspace((tops::K=>A topology) i)`) THEN
-        ASM_REWRITE_TAC[PATH_CONNECTED_IN_TOPSPACE; SUBSET_REFL] THEN
-        REWRITE_TAC[OPEN_IN_TOPSPACE] THEN
-        RULE_ASSUM_TAC(REWRITE_RULE[PiE; IN_ELIM_THM]) THEN
-        ASM SET_TAC[]];
-      GEN_REWRITE_TAC (LAND_CONV \<circ> TOP_DEPTH_CONV) [RIGHT_IMP_EXISTS_THM] THEN
-      REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM]] THEN
-    MAP_EVERY X_GEN_TAC [`u::K=>A->bool`; `c::K=>A->bool`] THEN DISCH_TAC THEN
-    MAP_EVERY EXISTS_TAC
-     [`PiE k (u::K=>A->bool)`;
-      `PiE k (c::K=>A->bool)`] THEN
-    ASM_SIMP_TAC[PATH_CONNECTED_IN_CARTESIAN_PRODUCT] THEN
-    ASM_SIMP_TAC[SUBSET_CARTESIAN_PRODUCT] THEN
-    REWRITE_TAC[OPEN_IN_CARTESIAN_PRODUCT_GEN] THEN REPEAT CONJ_TAC THENL
-     [DISJ2_TAC THEN ASM_SIMP_TAC[] THEN MATCH_MP_TAC FINITE_SUBSET THEN
-      EXISTS_TAC `{i. i \<in> k \<and> \<not> path_connected_space (tops i)} \<union>
-                  {i. i \<in> k \<and> \<not> ((w::K=>A->bool) i = topspace (tops i))}` THEN
-      ASM_REWRITE_TAC[FINITE_UNION] THEN ASM SET_TAC[];
-      UNDISCH_TAC `(z::K=>A) \<in> PiE k w` THEN
-      REWRITE_TAC[PiE; IN_ELIM_THM] THEN ASM SET_TAC[];
-      TRANS_TAC SUBSET_TRANS `PiE k (w::K=>A->bool)` THEN
-      ASM_REWRITE_TAC[] THEN REWRITE_TAC[SUBSET_CARTESIAN_PRODUCT] THEN
-      ASM SET_TAC[]]]);;
 
 lemma locally_path_connected_space_sum_topology:
    "\<And>k (X::K=>A topology).
