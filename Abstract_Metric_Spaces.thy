@@ -3728,115 +3728,78 @@ lemma normal_Hausdorff_space_closed_continuous_map_image:
     \<Longrightarrow> normal_space Y \<and> Hausdorff_space Y"
   by (meson normal_space_continuous_closed_map_image normal_t1_eq_Hausdorff_space t1_space_closed_map_image)
 
-lemma regular_Lindelof_imp_normal_space:
-   "        regular_space X \<and> Lindelof_space X \<Longrightarrow> normal_space X"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[normal_space] THEN
-  MAP_EVERY X_GEN_TAC [`A::A=>bool`; `t::A=>bool`] THEN STRIP_TAC THEN
-  ASM_CASES_TAC `A::A=>bool = {}` THENL
-   [MAP_EVERY EXISTS_TAC [`{}:A=>bool`; `topspace X::A=>bool`] THEN
-    ASM_SIMP_TAC[OPEN_IN_TOPSPACE; OPEN_IN_EMPTY; CLOSED_IN_SUBSET] THEN
-    SET_TAC[];
-    ALL_TAC] THEN
-  ASM_CASES_TAC `t::A=>bool = {}` THENL
-   [MAP_EVERY EXISTS_TAC [`topspace X::A=>bool`; `{}:A=>bool`] THEN
-    ASM_SIMP_TAC[OPEN_IN_TOPSPACE; OPEN_IN_EMPTY; CLOSED_IN_SUBSET] THEN
-    SET_TAC[];
-    ALL_TAC] THEN
-  SUBGOAL_THEN
-   `\<exists>h::num=>A->bool.
-        (\<forall>n. openin X (h n)) \<and>
-        (\<forall>n. disjnt t (X closure_of (h n))) \<and>
-        A \<subseteq> \<Union> (image h UNIV)`
-  STRIP_ASSUME_TAC THENL
-   [SUBGOAL_THEN
-     `\<forall>x. x \<in> A
-          \<Longrightarrow> \<exists>u. openin X u \<and> (x::A) \<in> u \<and>
-                  disjnt t (X closure_of u)`
-    MP_TAC THENL
-     [X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-      FIRST_ASSUM(MATCH_MP_TAC \<circ> REWRITE_RULE[REGULAR_SPACE]) THEN
-      ASM_REWRITE_TAC[IN_DIFF] THEN CONJ_TAC THENL
-       [ASM_MESON_TAC[CLOSED_IN_SUBSET; \<subseteq>]; ASM SET_TAC[]];
-      GEN_REWRITE_TAC (LAND_CONV \<circ> BINDER_CONV) [RIGHT_IMP_EXISTS_THM]] THEN
-    REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `h::A=>A->bool` THEN DISCH_TAC THEN
-    SUBGOAL_THEN `Lindelof_space(subtopology X (A::A=>bool))` MP_TAC THENL
-     [ASM_SIMP_TAC[LINDELOF_SPACE_CLOSED_IN_SUBTOPOLOGY];
-      ASM_SIMP_TAC[LINDELOF_SPACE_SUBTOPOLOGY_SUBSET; CLOSED_IN_SUBSET]] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `image (h::A=>A->bool) A`) THEN
-    ANTS_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-    DISCH_THEN(X_CHOOSE_THEN `U:(A=>bool)->bool`
-     (CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-    ASM_CASES_TAC `U:(A=>bool)->bool = {}` THEN
-    ASM_REWRITE_TAC[UNIONS_0; SUBSET_EMPTY] THEN STRIP_TAC THEN
-    MP_TAC(ISPEC `U:(A=>bool)->bool` COUNTABLE_AS_IMAGE) THEN
-    ASM_REWRITE_TAC[] THEN MATCH_MP_TAC MONO_EXISTS THEN
-    GEN_TAC THEN DISCH_THEN SUBST_ALL_TAC THEN ASM SET_TAC[];
-    ALL_TAC] THEN
-  SUBGOAL_THEN
-   `\<exists>k::num=>A->bool.
-        (\<forall>n. openin X (k n)) \<and>
-        (\<forall>n. disjnt A (X closure_of (k n))) \<and>
-        t \<subseteq> \<Union> (image k UNIV)`
-  STRIP_ASSUME_TAC THENL
-   [SUBGOAL_THEN
-     `\<forall>x. x \<in> t
-          \<Longrightarrow> \<exists>u. openin X u \<and> (x::A) \<in> u \<and>
-                  disjnt A (X closure_of u)`
-    MP_TAC THENL
-     [X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-      FIRST_ASSUM(MATCH_MP_TAC \<circ> REWRITE_RULE[REGULAR_SPACE]) THEN
-      ASM_REWRITE_TAC[IN_DIFF] THEN CONJ_TAC THENL
-       [ASM_MESON_TAC[CLOSED_IN_SUBSET; \<subseteq>]; ASM SET_TAC[]];
-      GEN_REWRITE_TAC (LAND_CONV \<circ> BINDER_CONV) [RIGHT_IMP_EXISTS_THM]] THEN
-    REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `k::A=>A->bool` THEN DISCH_TAC THEN
-    SUBGOAL_THEN `Lindelof_space(subtopology X (t::A=>bool))` MP_TAC THENL
-     [ASM_SIMP_TAC[LINDELOF_SPACE_CLOSED_IN_SUBTOPOLOGY];
-      ASM_SIMP_TAC[LINDELOF_SPACE_SUBTOPOLOGY_SUBSET; CLOSED_IN_SUBSET]] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `image (k::A=>A->bool) t`) THEN
-    ANTS_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-    DISCH_THEN(X_CHOOSE_THEN `U:(A=>bool)->bool`
-     (CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-    ASM_CASES_TAC `U:(A=>bool)->bool = {}` THEN
-    ASM_REWRITE_TAC[UNIONS_0; SUBSET_EMPTY] THEN STRIP_TAC THEN
-    MP_TAC(ISPEC `U:(A=>bool)->bool` COUNTABLE_AS_IMAGE) THEN
-    ASM_REWRITE_TAC[] THEN MATCH_MP_TAC MONO_EXISTS THEN
-    GEN_TAC THEN DISCH_THEN SUBST_ALL_TAC THEN ASM SET_TAC[];
-    ALL_TAC] THEN
-  MAP_EVERY EXISTS_TAC
-   [`\<Union> (image (\<lambda>i. h i - \<Union> {X closure_of (k j) | j < i})
-                   UNIV):A=>bool`;
-    `\<Union> (image (\<lambda>i. k i - \<Union> {X closure_of (h j) | j \<le> i})
-                   UNIV):A=>bool`] THEN
-  REWRITE_TAC[] THEN GEN_REWRITE_TAC id [CONJ_ASSOC] THEN CONJ_TAC THENL
-   [CONJ_TAC THEN MATCH_MP_TAC OPEN_IN_UNIONS THEN
-    REWRITE_TAC[FORALL_IN_IMAGE; IN_UNIV] THEN
-    X_GEN_TAC `n::num` THEN MATCH_MP_TAC OPEN_IN_DIFF THEN
-    ASM_REWRITE_TAC[] THEN MATCH_MP_TAC CLOSED_IN_UNIONS THEN
-    ONCE_REWRITE_TAC[SIMPLE_IMAGE_GEN] THEN
-    SIMP_TAC[FINITE_IMAGE; FINITE_NUMSEG_LT; FINITE_NUMSEG_LE] THEN
-    ASM_REWRITE_TAC[FORALL_IN_IMAGE; CLOSED_IN_CLOSURE_OF];
-    ALL_TAC] THEN
-  GEN_REWRITE_TAC id [CONJ_ASSOC] THEN CONJ_TAC THENL
-   [REWRITE_TAC[UNIONS_IMAGE; UNIONS_GSPEC] THEN ASM SET_TAC[];
-    ALL_TAC] THEN
-  REWRITE_TAC[SET_RULE
-   `disjnt (\<Union> u) (\<Union> v) \<longleftrightarrow>
-    \<forall>A. A \<in> u \<Longrightarrow> \<forall>t. t \<in> v \<Longrightarrow> disjnt A t`] THEN
-  REWRITE_TAC[FORALL_IN_IMAGE; IN_UNIV] THEN
-  MAP_EVERY X_GEN_TAC [`m::num`; `n::num`] THEN
-  DISJ_CASES_TAC(ARITH_RULE `n::num < m \<or> m \<le> n`) THENL
-   [ALL_TAC; ONCE_REWRITE_TAC[DISJOINT_SYM]] THEN
-  MATCH_MP_TAC(SET_RULE
-   `(\<exists>i. i \<in> f \<and> k \<subseteq> i)
-    \<Longrightarrow> disjnt (h - \<Union> f) (k - u)`) THEN
-  REWRITE_TAC[EXISTS_IN_GSPEC] THENL
-   [EXISTS_TAC `n::num`; EXISTS_TAC `m::num`] THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC CLOSURE_OF_SUBSET THEN
-  ASM_SIMP_TAC[OPEN_IN_SUBSET]);;
+lemma Lindelof_cover:
+  assumes "regular_space X" and "Lindelof_space X" and "S \<noteq> {}" 
+    and clo: "closedin X S" "closedin X T" "disjnt S T"
+  obtains h :: "nat \<Rightarrow> 'a set" where 
+    "\<And>n. openin X (h n)" "\<And>n. disjnt T (X closure_of (h n))" and  "S \<subseteq> \<Union> (range h)"
+proof -
+  have "\<exists>U. openin X U \<and> x \<in> U \<and> disjnt T (X closure_of U)"
+    if "x \<in> S" for x
+    using \<open>regular_space X\<close> unfolding regular_space 
+    by (metis (full_types) Diff_iff \<open>disjnt S T\<close> clo closure_of_eq disjnt_iff in_closure_of that)
+  then obtain h where oh: "\<And>x. x \<in> S \<Longrightarrow> openin X (h x)"
+    and xh: "\<And>x. x \<in> S \<Longrightarrow> x \<in> h x"
+    and dh: "\<And>x. x \<in> S \<Longrightarrow> disjnt T (X closure_of h x)"
+    by metis
+  have "Lindelof_space(subtopology X S)"
+    by (simp add: Lindelof_space_closedin_subtopology \<open>Lindelof_space X\<close> \<open>closedin X S\<close>)
+  then obtain U where U: "countable U \<and> U \<subseteq> h ` S \<and> S \<subseteq> \<Union> U"
+    unfolding Lindelof_space_subtopology_subset [OF closedin_subset [OF \<open>closedin X S\<close>]]
+    by (smt (verit, del_insts) oh xh UN_I image_iff subsetI)
+  with \<open>S \<noteq> {}\<close> have "U \<noteq> {}"
+    by blast
+  show ?thesis
+  proof
+    show "openin X (from_nat_into U n)" for n
+      by (metis U from_nat_into image_iff \<open>U \<noteq> {}\<close> oh subsetD)
+    show "disjnt T (X closure_of (from_nat_into U) n)" for n
+      using dh from_nat_into [OF \<open>U \<noteq> {}\<close>]
+      by (metis U f_inv_into_f inv_into_into subset_eq)
+    show "S \<subseteq> \<Union> (range (from_nat_into U))"
+      by (simp add: U \<open>U \<noteq> {}\<close>)
+  qed
+qed
 
+lemma regular_Lindelof_imp_normal_space:
+  assumes "regular_space X" and "Lindelof_space X"
+  shows "normal_space X"
+  unfolding normal_space_def
+proof clarify
+  fix S T
+  assume clo: "closedin X S" "closedin X T" and "disjnt S T"
+  show "\<exists>U V. openin X U \<and> openin X V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
+  proof (cases "S={} \<or> T={}")
+    case True
+    with clo show ?thesis
+      by (meson closedin_def disjnt_empty1 disjnt_empty2 openin_empty openin_topspace subset_empty)
+  next
+    case False
+    obtain h :: "nat \<Rightarrow> 'a set" where 
+      opeh: "\<And>n. openin X (h n)" and dish: "\<And>n. disjnt T (X closure_of (h n))"
+      and Sh: "S \<subseteq> \<Union> (range h)"
+      by (metis Lindelof_cover False \<open>disjnt S T\<close> assms clo)
+    obtain k :: "nat \<Rightarrow> 'a set" where 
+      opek: "\<And>n. openin X (k n)" and disk: "\<And>n. disjnt S (X closure_of (k n))"
+      and Tk: "T \<subseteq> \<Union> (range k)"
+      by (metis Lindelof_cover False \<open>disjnt S T\<close> assms clo disjnt_sym)
+    define U where "U \<equiv> \<Union>i. h i - (\<Union>j<i. X closure_of k j)"
+    define V where "V \<equiv> \<Union>i. k i - (\<Union>j\<le>i. X closure_of h j)"
+    show ?thesis
+    proof (intro exI conjI)
+      show "openin X U" "openin X V"
+        unfolding U_def V_def
+        by (force intro!: opek opeh closedin_Union closedin_closure_of)+
+      show "S \<subseteq> U" "T \<subseteq> V"
+        using Sh Tk dish disk by (fastforce simp: U_def V_def disjnt_iff)+
+      have "\<And>x i j. \<lbrakk>x \<in> k i; x \<in> h j; \<forall>j\<le>i. x \<notin> X closure_of h j\<rbrakk>
+                 \<Longrightarrow> \<exists>i<j. x \<in> X closure_of k i"
+        by (metis in_closure_of linorder_not_less opek openin_subset subsetD)
+      then show "disjnt U V"
+        by (force simp add: U_def V_def disjnt_iff)
+    qed
+  qed
+qed
 
 subsection\<open>Hereditarily normal spaces\<close>
 
@@ -3845,48 +3808,48 @@ let HEREDITARILY_NORMAL_SPACE,HEREDITARILY_NORMAL_SEPARATION =
  (CONJ_PAIR \<circ> prove)
  (`(\<forall>X::A topology.
         hereditarily normal_space X \<longleftrightarrow>
-        \<forall>u. openin X u \<Longrightarrow> normal_space(subtopology X u)) \<and>
+        \<forall>U. openin X U \<Longrightarrow> normal_space(subtopology X U)) \<and>
    (\<forall>X::A topology.
         hereditarily normal_space X \<longleftrightarrow>
-        \<forall>A t. separatedin X A t
-              \<Longrightarrow> \<exists>u v. openin X u \<and> openin X v \<and>
-                        A \<subseteq> u \<and> t \<subseteq> v \<and> disjnt u v)"
+        \<forall>A T. separatedin X A T
+              \<Longrightarrow> \<exists>U V. openin X U \<and> openin X V \<and>
+                        A \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V)"
 oops
   REWRITE_TAC[AND_FORALL_THM] THEN GEN_TAC THEN MATCH_MP_TAC(TAUT
    `(p \<Longrightarrow> q) \<and> (r \<Longrightarrow> p) \<and> (q \<Longrightarrow> r) \<Longrightarrow> (p \<longleftrightarrow> q) \<and> (p \<longleftrightarrow> r)`) THEN
   REPEAT CONJ_TAC THENL
    [SIMP_TAC[HEREDITARILY];
     DISCH_TAC THEN REWRITE_TAC[hereditarily] THEN
-    X_GEN_TAC `u::A=>bool` THEN DISCH_TAC THEN
+    X_GEN_TAC `U::A=>bool` THEN DISCH_TAC THEN
     REWRITE_TAC[normal_space] THEN
-    MAP_EVERY X_GEN_TAC [`A::A=>bool`; `t::A=>bool`] THEN STRIP_TAC THEN
-    SUBGOAL_THEN `separatedin (subtopology X u) (A::A=>bool) t`
+    MAP_EVERY X_GEN_TAC [`A::A=>bool`; `T::A=>bool`] THEN STRIP_TAC THEN
+    SUBGOAL_THEN `separatedin (subtopology X U) (A::A=>bool) T`
     MP_TAC THENL
      [ASM_SIMP_TAC[SEPARATED_IN_CLOSED_SETS];
       REWRITE_TAC[SEPARATED_IN_SUBTOPOLOGY]] THEN
     STRIP_TAC THEN REWRITE_TAC[RIGHT_EXISTS_AND_THM] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`A::A=>bool`; `t::A=>bool`]) THEN
+    FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`A::A=>bool`; `T::A=>bool`]) THEN
     ASM_REWRITE_TAC[OPEN_IN_SUBTOPOLOGY_ALT; EXISTS_IN_GSPEC] THEN
     REWRITE_TAC[RIGHT_AND_EXISTS_THM] THEN
     REPEAT(MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC) THEN ASM SET_TAC[];
     DISCH_TAC THEN
-    MAP_EVERY X_GEN_TAC [`A::A=>bool`; `t::A=>bool`] THEN STRIP_TAC THEN
+    MAP_EVERY X_GEN_TAC [`A::A=>bool`; `T::A=>bool`] THEN STRIP_TAC THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC
      `topspace X -
-      (X closure_of A) \<inter> (X closure_of t):A=>bool`) THEN
+      (X closure_of A) \<inter> (X closure_of T):A=>bool`) THEN
     SIMP_TAC[OPEN_IN_DIFF; CLOSED_IN_INTER; OPEN_IN_TOPSPACE;
              CLOSED_IN_CLOSURE_OF; NORMAL_SPACE_CLOSURES] THEN
-    DISCH_THEN(MP_TAC \<circ> SPECL [`A::A=>bool`; `t::A=>bool`]) THEN ANTS_TAC THENL
+    DISCH_THEN(MP_TAC \<circ> SPECL [`A::A=>bool`; `T::A=>bool`]) THEN ANTS_TAC THENL
      [REWRITE_TAC[CLOSURE_OF_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY] THEN
       RULE_ASSUM_TAC(REWRITE_RULE[separatedin]) THEN
       REPLICATE_TAC 2 (CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC]) THEN
       MATCH_MP_TAC(SET_RULE
-       `X closure_of (u \<inter> s') \<subseteq> X closure_of s' \<and>
-        X closure_of (v \<inter> t') \<subseteq> X closure_of t' \<and>
-        A \<inter> t \<inter> X closure_of s' \<inter> X closure_of t' = {}
+       `X closure_of (U \<inter> s') \<subseteq> X closure_of s' \<and>
+        X closure_of (V \<inter> t') \<subseteq> X closure_of t' \<and>
+        A \<inter> T \<inter> X closure_of s' \<inter> X closure_of t' = {}
         \<Longrightarrow>
-        disjnt (A \<inter> X closure_of (u \<inter> s'))
-                 (t \<inter> X closure_of (v \<inter> t'))`) THEN
+        disjnt (A \<inter> X closure_of (U \<inter> s'))
+                 (T \<inter> X closure_of (V \<inter> t'))`) THEN
       SIMP_TAC[CLOSURE_OF_MONO; INTER_SUBSET] THEN ASM SET_TAC[];
       REPEAT(MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC) THEN
       REPEAT(MATCH_MP_TAC MONO_AND THEN CONJ_TAC) THEN REWRITE_TAC[] THEN
@@ -3901,10 +3864,10 @@ oops
            METRIZABLE_SPACE_SUBTOPOLOGY]);;
 
 lemma metrizable_space_separation:
-   "\<And>X A t::A=>bool.
-        metrizable_space X \<and> separatedin X A t
-        \<Longrightarrow> \<exists>u v. openin X u \<and> openin X v \<and>
-                  A \<subseteq> u \<and> t \<subseteq> v \<and> disjnt u v"
+   "\<And>X A T::A=>bool.
+        metrizable_space X \<and> separatedin X A T
+        \<Longrightarrow> \<exists>U V. openin X U \<and> openin X V \<and>
+                  A \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
 oops
   REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
   REWRITE_TAC[GSYM HEREDITARILY_NORMAL_SEPARATION] THEN
@@ -3912,22 +3875,22 @@ oops
 
 lemma hereditarily_normal_separation_pairwise:
    "        hereditarily normal_space X \<longleftrightarrow>
-        \<forall>u. finite u \<and> (\<forall>A. A \<in> u \<Longrightarrow> A \<subseteq> topspace X) \<and>
-            pairwise (separatedin X) u
-            \<Longrightarrow> \<exists>f. (\<forall>A. A \<in> u \<Longrightarrow> openin X (f A) \<and> A \<subseteq> f A) \<and>
-                    pairwise (\<lambda>s t. disjnt (f A) (f t)) u"
+        \<forall>U. finite U \<and> (\<forall>A. A \<in> U \<Longrightarrow> A \<subseteq> topspace X) \<and>
+            pairwise (separatedin X) U
+            \<Longrightarrow> \<exists>f. (\<forall>A. A \<in> U \<Longrightarrow> openin X (f A) \<and> A \<subseteq> f A) \<and>
+                    pairwise (\<lambda>s T. disjnt (f A) (f T)) U"
 oops
   GEN_TAC THEN REWRITE_TAC[HEREDITARILY_NORMAL_SEPARATION] THEN EQ_TAC THENL
-   [DISCH_TAC THEN X_GEN_TAC `u:(A=>bool)->bool` THEN STRIP_TAC THEN
+   [DISCH_TAC THEN X_GEN_TAC `U:(A=>bool)->bool` THEN STRIP_TAC THEN
     SUBGOAL_THEN
-     `\<forall>A. A \<in> u
-          \<Longrightarrow> \<exists>v w. openin X v \<and> openin X w \<and> A \<subseteq> v \<and>
-                    (\<forall>t::A=>bool. t \<in> u \<and> (t \<noteq> A) \<Longrightarrow> t \<subseteq> w) \<and>
-                    disjnt v w`
+     `\<forall>A. A \<in> U
+          \<Longrightarrow> \<exists>V w. openin X V \<and> openin X w \<and> A \<subseteq> V \<and>
+                    (\<forall>T::A=>bool. T \<in> U \<and> (T \<noteq> A) \<Longrightarrow> T \<subseteq> w) \<and>
+                    disjnt V w`
     MP_TAC THENL
      [X_GEN_TAC `A::A=>bool` THEN STRIP_TAC THEN
       FIRST_X_ASSUM(MP_TAC \<circ> SPECL
-       [`A::A=>bool`; `\<Union>(u DELETE (A::A=>bool))`]) THEN
+       [`A::A=>bool`; `\<Union>(U DELETE (A::A=>bool))`]) THEN
       ASM_SIMP_TAC[SEPARATED_IN_UNIONS; FINITE_DELETE] THEN
       REWRITE_TAC[UNIONS_SUBSET; IN_DELETE] THEN
       DISCH_THEN MATCH_MP_TAC THEN
@@ -3939,20 +3902,20 @@ oops
      [`f:(A=>bool)->(A=>bool)`; `g:(A=>bool)->(A=>bool)`] THEN
     STRIP_TAC THEN
     EXISTS_TAC `\<lambda>s. (f:(A=>bool)->(A=>bool)) A \<inter>
-                    \<Inter> {g t | t \<in> u - {A}}` THEN
+                    \<Inter> {g T | T \<in> U - {A}}` THEN
     REWRITE_TAC[GSYM INTERS_INSERT; SUBSET_INTERS] THEN
     REWRITE_TAC[SIMPLE_IMAGE; pairwise] THEN
     ASM_SIMP_TAC[OPEN_IN_INTERS; NOT_INSERT_EMPTY; FINITE_INSERT; FINITE_IMAGE;
                  IN_DELETE; FORALL_IN_INSERT; FORALL_IN_IMAGE; IN_DELETE;
                  FINITE_DELETE] THEN
     REWRITE_TAC[INTERS_INSERT; INTERS_IMAGE] THEN ASM SET_TAC[];
-    DISCH_TAC THEN MAP_EVERY X_GEN_TAC [`A::A=>bool`; `t::A=>bool`] THEN
-    DISCH_TAC THEN ASM_CASES_TAC `t::A=>bool = A` THENL
+    DISCH_TAC THEN MAP_EVERY X_GEN_TAC [`A::A=>bool`; `T::A=>bool`] THEN
+    DISCH_TAC THEN ASM_CASES_TAC `T::A=>bool = A` THENL
      [FIRST_X_ASSUM SUBST_ALL_TAC THEN
       FIRST_X_ASSUM(SUBST1_TAC \<circ> GEN_REWRITE_RULE id [SEPARATED_IN_REFL]) THEN
       REPEAT(EXISTS_TAC `{}:A=>bool`) THEN
       ASM_REWRITE_TAC[OPEN_IN_EMPTY] THEN SET_TAC[];
-      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `{(A::A=>bool),t}`) THEN
+      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `{(A::A=>bool),T}`) THEN
       REWRITE_TAC[PAIRWISE_INSERT; FINITE_INSERT; FORALL_IN_INSERT] THEN
       REWRITE_TAC[FINITE_EMPTY; NOT_IN_EMPTY; PAIRWISE_EMPTY; IN_SING] THEN
       ANTS_TAC THENL [ASM_MESON_TAC[separatedin]; ALL_TAC] THEN
