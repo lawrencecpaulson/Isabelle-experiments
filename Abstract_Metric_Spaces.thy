@@ -3744,20 +3744,20 @@ proof -
     by metis
   have "Lindelof_space(subtopology X S)"
     by (simp add: Lindelof_space_closedin_subtopology \<open>Lindelof_space X\<close> \<open>closedin X S\<close>)
-  then obtain U where U: "countable U \<and> U \<subseteq> h ` S \<and> S \<subseteq> \<Union> U"
+  then obtain \<U> where \<U>: "countable \<U> \<and> \<U> \<subseteq> h ` S \<and> S \<subseteq> \<Union> \<U>"
     unfolding Lindelof_space_subtopology_subset [OF closedin_subset [OF \<open>closedin X S\<close>]]
     by (smt (verit, del_insts) oh xh UN_I image_iff subsetI)
-  with \<open>S \<noteq> {}\<close> have "U \<noteq> {}"
+  with \<open>S \<noteq> {}\<close> have "\<U> \<noteq> {}"
     by blast
   show ?thesis
   proof
-    show "openin X (from_nat_into U n)" for n
-      by (metis U from_nat_into image_iff \<open>U \<noteq> {}\<close> oh subsetD)
-    show "disjnt T (X closure_of (from_nat_into U) n)" for n
-      using dh from_nat_into [OF \<open>U \<noteq> {}\<close>]
-      by (metis U f_inv_into_f inv_into_into subset_eq)
-    show "S \<subseteq> \<Union> (range (from_nat_into U))"
-      by (simp add: U \<open>U \<noteq> {}\<close>)
+    show "openin X (from_nat_into \<U> n)" for n
+      by (metis \<U> from_nat_into image_iff \<open>\<U> \<noteq> {}\<close> oh subsetD)
+    show "disjnt T (X closure_of (from_nat_into \<U>) n)" for n
+      using dh from_nat_into [OF \<open>\<U> \<noteq> {}\<close>]
+      by (metis \<U> f_inv_into_f inv_into_into subset_eq)
+    show "S \<subseteq> \<Union> (range (from_nat_into \<U>))"
+      by (simp add: \<U> \<open>\<U> \<noteq> {}\<close>)
   qed
 qed
 
@@ -3854,8 +3854,8 @@ lemma hereditarily_normal_space:
 
 lemma hereditarily_normal_separation:
   "hereditarily normal_space X \<longleftrightarrow>
-        (\<forall>A T. separatedin X A T
-             \<longrightarrow> (\<exists>U V. openin X U \<and> openin X V \<and> A \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V))"
+        (\<forall>S T. separatedin X S T
+             \<longrightarrow> (\<exists>U V. openin X U \<and> openin X V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V))"
   by (metis hereditarily_B hereditarily_C hereditarily)
 
 
@@ -3870,48 +3870,79 @@ lemma metrizable_space_separation:
 
 lemma hereditarily_normal_separation_pairwise:
    "hereditarily normal_space X \<longleftrightarrow>
-        (\<forall>U. finite U \<and> (\<forall>A \<in> U. A \<subseteq> topspace X) \<and>
-            pairwise (separatedin X) U
-            \<longrightarrow> (\<exists>f. (\<forall>A \<in> U. openin X (f A) \<and> A \<subseteq> f A) \<and>
-                    pairwise (\<lambda>s T. disjnt (f A) (f T)) U))"
-  sorry
+    (\<forall>\<U>. finite \<U> \<and> (\<forall>S \<in> \<U>. S \<subseteq> topspace X) \<and> pairwise (separatedin X) \<U>
+        \<longrightarrow> (\<exists>\<F>. (\<forall>S \<in> \<U>. openin X (\<F> S) \<and> S \<subseteq> \<F> S) \<and>
+                pairwise (\<lambda>S T. disjnt (\<F> S) (\<F> T)) \<U>))"
+   (is "?lhs=?rhs")
+proof
+  assume L: ?lhs 
+  show ?rhs
+  proof clarify
+    fix \<U>
+    assume "finite \<U>" and \<U>: "\<forall>S\<in>\<U>. S \<subseteq> topspace X" 
+      and pw\<U>: "pairwise (separatedin X) \<U>"
+    have "\<exists>V W. openin X V \<and> openin X W \<and> S \<subseteq> V \<and>
+                    (\<forall>T. T \<in> \<U> \<and> T \<noteq> S \<longrightarrow> T \<subseteq> W) \<and> disjnt V W" 
+      if "S \<in> \<U>" for S
+    proof -
+      have "separatedin X S (\<Union>(\<U> - {S}))"
+        by (metis \<U> \<open>finite \<U>\<close> pw\<U> finite_Diff pairwise_alt separatedin_Union(1) that)
+      with L show ?thesis
+        unfolding hereditarily_normal_separation
+        by (smt (verit) Diff_iff UnionI empty_iff insert_iff subset_iff)
+    qed
+    then obtain \<F> \<G> 
+        where fg: "\<And>S. S \<in> \<U> \<Longrightarrow> openin X (\<F> S) \<and> openin X (\<G> S) \<and> S \<subseteq> \<F> S \<and>
+                    (\<forall>T. T \<in> \<U> \<and> T \<noteq> S \<longrightarrow> T \<subseteq> \<G> S) \<and> disjnt (\<F> S) (\<G> S)" 
+      by metis
+    show "\<exists>\<F>. (\<forall>S\<in>\<U>. openin X (\<F> S) \<and> S \<subseteq> \<F> S) \<and> pairwise (\<lambda>S T. disjnt (\<F> S) (\<F> T)) \<U>"
+      apply (rule_tac x="\<lambda>S. \<F> S \<inter> (\<Inter>T \<in> \<U> - {S}. \<G> T)" in exI)
+      apply (intro conjI strip)
+      apply (smt (verit) DiffD1 \<open>finite \<U>\<close> fg finite_Diff finite_imageI imageE openin_Int_Inter)
+      using fg apply auto[1]
+      by (smt (verit) DiffD1 INT_insert IntE disjnt_iff fg mk_disjoint_insert pairwise_alt)
+  qed
+next
+  assume R [rule_format]: ?rhs 
+  show ?lhs
+    unfolding hereditarily_normal_separation
+  proof (intro strip)
+    fix S T
+    assume "separatedin X S T"
+    show "\<exists>U V. openin X U \<and> openin X V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
+    proof (cases "T=S")
+      case True
+      then show ?thesis
+        using \<open>separatedin X S T\<close> by force
+    next
+      case False
+      then show ?thesis
+        using R [of "{S,T}"]
+        apply (simp add: Ball_def)
+        apply atomize
+        apply safe
+               apply (meson \<open>separatedin X S T\<close> separation_openin_Un_gen subsetD)
+              apply (meson \<open>separatedin X S T\<close> separation_openin_Un_gen subsetD)
+             apply (simp add: \<open>separatedin X S T\<close> pairwise_insert separatedin_sym)
+            apply (simp add: pairwise_insert)
+           apply (meson \<open>separatedin X S T\<close> separation_openin_Un_gen subsetD)
+          apply (meson \<open>separatedin X S T\<close> separation_openin_Un_gen subsetD)
+         apply (simp add: \<open>separatedin X S T\<close> pairwise_insert separatedin_sym)
+        by (simp add: pairwise_insert)
+    qed
+  qed
+qed
+
 oops
-  GEN_TAC THEN REWRITE_TAC[HEREDITARILY_NORMAL_SEPARATION] THEN EQ_TAC THENL
-  [DISCH_TAC THEN X_GEN_TAC `U:(A=>bool)->bool` THEN STRIP_TAC THEN
-    SUBGOAL_THEN
-     `\<forall>A. A \<in> U
-          \<Longrightarrow> \<exists>V w. openin X V \<and> openin X w \<and> A \<subseteq> V \<and>
-                    (\<forall>T::A=>bool. T \<in> U \<and> (T \<noteq> A) \<Longrightarrow> T \<subseteq> w) \<and>
-                    disjnt V w`
-    MP_TAC THENL
-     [X_GEN_TAC `A::A=>bool` THEN STRIP_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPECL
-       [`A::A=>bool`; `\<Union>(U DELETE (A::A=>bool))`]) THEN
-      ASM_SIMP_TAC[SEPARATED_IN_UNIONS; FINITE_DELETE] THEN
-      REWRITE_TAC[UNIONS_SUBSET; IN_DELETE] THEN
-      DISCH_THEN MATCH_MP_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [pairwise]) THEN
-      ASM_MESON_TAC[];
-      GEN_REWRITE_TAC (LAND_CONV \<circ> TOP_DEPTH_CONV) [RIGHT_IMP_EXISTS_THM] THEN
-      REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM]] THEN
-    MAP_EVERY X_GEN_TAC
-     [`f:(A=>bool)->(A=>bool)`; `g:(A=>bool)->(A=>bool)`] THEN
-    STRIP_TAC THEN
-    EXISTS_TAC `\<lambda>s. (f:(A=>bool)->(A=>bool)) A \<inter>
-                    \<Inter> {g T | T \<in> U - {A}}` THEN
-    REWRITE_TAC[GSYM INTERS_INSERT; SUBSET_INTERS] THEN
-    REWRITE_TAC[SIMPLE_IMAGE; pairwise] THEN
-    ASM_SIMP_TAC[OPEN_IN_INTERS; NOT_INSERT_EMPTY; FINITE_INSERT; FINITE_IMAGE;
-                 IN_DELETE; FORALL_IN_INSERT; FORALL_IN_IMAGE; IN_DELETE;
-                 FINITE_DELETE] THEN
-    REWRITE_TAC[INTERS_INSERT; INTERS_IMAGE] THEN ASM SET_TAC[];
-    DISCH_TAC THEN MAP_EVERY X_GEN_TAC [`A::A=>bool`; `T::A=>bool`] THEN
-    DISCH_TAC THEN ASM_CASES_TAC `T::A=>bool = A` THENL
+
+    DISCH_TAC THEN MAP_EVERY X_GEN_TAC [`S::S=>bool`; `T::S=>bool`] THEN
+    DISCH_TAC THEN ASM_CASES_TAC `T::S=>bool = S` THENL
      [FIRST_X_ASSUM SUBST_ALL_TAC THEN
       FIRST_X_ASSUM(SUBST1_TAC \<circ> GEN_REWRITE_RULE id [SEPARATED_IN_REFL]) THEN
-      REPEAT(EXISTS_TAC `{}:A=>bool`) THEN
+      REPEAT(EXISTS_TAC `{}:S=>bool`) THEN
       ASM_REWRITE_TAC[OPEN_IN_EMPTY] THEN SET_TAC[];
-      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `{(A::A=>bool),T}`) THEN
+
+      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `{(S::S=>bool),T}`) THEN
       REWRITE_TAC[PAIRWISE_INSERT; FINITE_INSERT; FORALL_IN_INSERT] THEN
       REWRITE_TAC[FINITE_EMPTY; NOT_IN_EMPTY; PAIRWISE_EMPTY; IN_SING] THEN
       ANTS_TAC THENL [ASM_MESON_TAC[separatedin]; ALL_TAC] THEN
