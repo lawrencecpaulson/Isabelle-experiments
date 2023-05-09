@@ -3992,96 +3992,68 @@ lemma completely_regular_space_alt:
      (\<forall>A x. closedin X A \<and> x \<in> topspace X - A
            \<longrightarrow> (\<exists>f. continuous_map X euclideanreal f \<and> f x = 0 \<and> f ` A \<subseteq> {1}))"
 proof -
-  have "continuous_map X (top_of_set {0..1::real}) f \<and> f x = 0 \<and> f ` A \<subseteq> {1} 
-    \<Longrightarrow> \<exists>f. continuous_map X euclideanreal f \<and> f x = 0 \<and> f ` A \<subseteq> {1}" 
-    if "closedin X A" "x \<in> topspace X - A" for A x f
-    by (meson continuous_map_in_subtopology)
-
-
-  have "(\<exists>f. continuous_map X (top_of_set {0..1::real}) f \<and> f x = 0 \<and> f ` A \<subseteq> {1}) 
-    \<longleftrightarrow> (\<exists>f. continuous_map X euclideanreal f \<and> f x = 0 \<and> f ` A \<subseteq> {1})" 
-    if "closedin X A" "x \<in> topspace X - A" for A x
-
-    using that
-    apply (auto simp: )
-     apply (meson continuous_map_in_subtopology)
-    apply (rule_tac x="\<lambda>x. max 0 (min (f x) 1)" in exI)
-    apply (simp add: continuous_map_in_subtopology)
-    apply (auto simp: )
-    apply (intro continuous_map_real_max continuous_map_real_min )
-      apply (auto simp: )
-    done
-  then show ?thesis
-    unfolding completely_regular_space_def 
-    
-    by (blast intro!: all_cong1)
+  have "\<exists>f. continuous_map X (top_of_set {0..1::real}) f \<and> f x = 0 \<and> f ` A \<subseteq> {1}" 
+    if "closedin X A" "x \<in> topspace X - A" and f: "continuous_map X euclideanreal f \<and> f x = 0 \<and> f ` A \<subseteq> {1}"
+    for A x f
+  proof (intro exI conjI)
+    show "continuous_map X (top_of_set {0..1}) (\<lambda>x. max 0 (min (f x) 1))"
+      using that
+      by (auto simp: continuous_map_in_subtopology intro!: continuous_map_real_max continuous_map_real_min)
+  qed (use that in auto)
+  with continuous_map_in_subtopology show ?thesis
+    unfolding completely_regular_space_def by metis 
 qed
 
 
-
-oops
-  GEN_TAC THEN REWRITE_TAC[completely_regular_space] THEN EQ_TAC THEN
-  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `A::A=>bool` THEN
-  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `x::A` THEN
-  DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN
-  ASM_REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY] THENL
-   [MESON_TAC[]; ALL_TAC] THEN
-  DISCH_THEN(X_CHOOSE_THEN `f` STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC `\<lambda>x. max 0 (min (f x) 1)` THEN
-  ASM_SIMP_TAC[\<subseteq>; FORALL_IN_IMAGE; IN_REAL_INTERVAL; GSYM CONJ_ASSOC] THEN
-  CONJ_TAC THENL [ALL_TAC; REAL_ARITH_TAC] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_REAL_MAX THEN
-  REWRITE_TAC[CONTINUOUS_MAP_REAL_CONST] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_REAL_MIN THEN
-  ASM_REWRITE_TAC[CONTINUOUS_MAP_REAL_CONST]);;
-
 lemma completely_regular_space_gen_alt:
+  fixes a b::real
   assumes "a \<noteq> b"
   shows "completely_regular_space X \<longleftrightarrow>
-             (\<forall>A x. closedin X A \<and> x \<in> topspace X - A
-                   \<longrightarrow> (\<exists>f. continuous_map X euclideanreal f \<and>
-                           f x = a \<and> (f ` A \<subseteq> {b})))"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[COMPLETELY_REGULAR_SPACE_ALT] THEN
-  EQ_TAC THEN  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `A::A=>bool` THEN
-  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `x::A` THEN
-  DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `f::A=>real` THEN STRIP_TAC THENL
-   [EXISTS_TAC `\<lambda>x. a + (b - a) * f x`;
-    EXISTS_TAC `\<lambda>x. inverse(b - a) * (f x - a)`] THEN
-  ASM_SIMP_TAC[CONTINUOUS_MAP_REAL_ADD; CONTINUOUS_MAP_REAL_LMUL; ETA_AX;
-               CONTINUOUS_MAP_REAL_SUB;
-               CONTINUOUS_MAP_REAL_CONST] THEN
-  REPEAT STRIP_TAC THEN UNDISCH_TAC `\<not> (a::real = b)` THEN
-  CONV_TAC REAL_FIELD);;
+         (\<forall>A x. closedin X A \<and> x \<in> topspace X - A
+               \<longrightarrow> (\<exists>f. continuous_map X euclidean f \<and> f x = a \<and> (f ` A \<subseteq> {b})))"
+proof -
+  have "\<exists>f. continuous_map X euclideanreal f \<and> f x = 0 \<and> f ` A \<subseteq> {1}" 
+    if "closedin X A" "x \<in> topspace X - A" 
+        and f: "continuous_map X euclidean f \<and> f x = a \<and> f ` A \<subseteq> {b}"
+    for A x f
+  proof (intro exI conjI)
+    show "continuous_map X euclideanreal ((\<lambda>x. inverse(b - a) * (x - a)) o f)"
+      using that by (intro continuous_intros) auto
+  qed (use that assms in auto)
+  moreover
+  have "\<exists>f. continuous_map X euclidean f \<and> f x = a \<and> f ` A \<subseteq> {b}" 
+    if "closedin X A" "x \<in> topspace X - A" 
+        and f: "continuous_map X euclideanreal f \<and> f x = 0 \<and> f ` A \<subseteq> {1}"
+    for A x f
+  proof (intro exI conjI)
+    show "continuous_map X euclideanreal ((\<lambda>x. a + (b - a) * x) o f)"
+      using that by (intro continuous_intros) auto
+  qed (use that in auto)
+  ultimately show ?thesis
+    unfolding completely_regular_space_alt by meson
+qed
 
 lemma completely_regular_space_gen:
-   "\<And>(X::A topology) a b.
-        a < b
-        \<Longrightarrow> (completely_regular_space X \<longleftrightarrow>
-             \<forall>A x. closedin X A \<and> x \<in> topspace X - A
-                   \<Longrightarrow> \<exists>f. continuous_map
-                              (X,subtopology euclideanreal
-                                     {a..b}) f \<and>
-                           f x = a \<and> \<forall>x. x \<in> A \<Longrightarrow> f x = b)"
-oops
-  REPEAT STRIP_TAC THEN
-  ASM_SIMP_TAC[COMPLETELY_REGULAR_SPACE_GEN_ALT; REAL_LT_IMP_NE] THEN
-  EQ_TAC THEN
-  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `A::A=>bool` THEN
-  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `x::A` THEN
-  DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN
-  ASM_REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY] THENL
-   [ALL_TAC; MESON_TAC[]] THEN
-  DISCH_THEN(X_CHOOSE_THEN `f::A=>real` STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC `\<lambda>x. max a (min (f x) b)` THEN
-  ASM_SIMP_TAC[\<subseteq>; FORALL_IN_IMAGE; IN_REAL_INTERVAL; GSYM CONJ_ASSOC] THEN
-  CONJ_TAC THENL [ALL_TAC; ASM_REAL_ARITH_TAC] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_REAL_MAX THEN
-  REWRITE_TAC[CONTINUOUS_MAP_REAL_CONST] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_REAL_MIN THEN
-  ASM_REWRITE_TAC[CONTINUOUS_MAP_REAL_CONST]);;
+  fixes a b::real
+  assumes "a < b"
+  shows "completely_regular_space X \<longleftrightarrow>
+         (\<forall>A x. closedin X A \<and> x \<in> topspace X - A
+               \<longrightarrow> (\<exists>f. continuous_map X (top_of_set {a..b}) f \<and>
+                        f x = a \<and> (f ` A \<subseteq> {b})))"
+proof -
+  have "\<exists>f. continuous_map X (top_of_set {a..b}) f \<and> f x = a \<and> f ` A \<subseteq> {b}" 
+    if "closedin X A" "x \<in> topspace X - A" 
+      and f: "continuous_map X euclidean f \<and> f x = a \<and> f ` A \<subseteq> {b}"
+    for A x f
+  proof (intro exI conjI)
+    show "continuous_map X (top_of_set {a..b}) (\<lambda>x. max a (min (f x) b))"
+      using that assms
+      by (auto simp: continuous_map_in_subtopology intro!: continuous_map_real_max continuous_map_real_min)
+  qed (use that assms in auto)
+  with continuous_map_in_subtopology assms show ?thesis
+    using completely_regular_space_gen_alt [of a b]
+    by (smt (verit) atLeastAtMost_singleton atLeastatMost_empty singletonI)
+qed
 
 lemma normal_imp_completely_regular_space_gen:
    "        normal_space X \<and>
