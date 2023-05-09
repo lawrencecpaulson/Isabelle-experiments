@@ -726,31 +726,31 @@ proof -
 qed
 
 lemma homeomorphic_metrizable_space_aux:
-  assumes "X homeomorphic_space X'" "metrizable_space X"
-  shows "metrizable_space X'"
+  assumes "X homeomorphic_space Y" "metrizable_space X"
+  shows "metrizable_space Y"
 proof -
   obtain M d where "Metric_space M d" and X: "X = Metric_space.mtopology M d"
     using assms by (auto simp: metrizable_space_def)
   then interpret m: Metric_space M d 
     by simp
-  obtain f g where hmf: "homeomorphic_map X X' f" and hmg: "homeomorphic_map X' X g"
-    and fg: "(\<forall>x \<in> M. g(f x) = x) \<and> (\<forall>y \<in> topspace X'. f(g y) = y)"
+  obtain f g where hmf: "homeomorphic_map X Y f" and hmg: "homeomorphic_map Y X g"
+    and fg: "(\<forall>x \<in> M. g(f x) = x) \<and> (\<forall>y \<in> topspace Y. f(g y) = y)"
     using assms X homeomorphic_maps_map homeomorphic_space_def by fastforce
   define d' where "d' x y \<equiv> d (g x) (g y)" for x y
-  interpret m': Metric_space "topspace X'" "d'"
+  interpret m': Metric_space "topspace Y" "d'"
     unfolding d'_def
   proof
-    show "(d (g x) (g y) = 0) = (x = y)" if "x \<in> topspace X'" "y \<in> topspace X'" for x y
+    show "(d (g x) (g y) = 0) = (x = y)" if "x \<in> topspace Y" "y \<in> topspace Y" for x y
       by (metis fg X hmg homeomorphic_imp_surjective_map imageI m.topspace_mtopology m.zero that)
     show "d (g x) (g z) \<le> d (g x) (g y) + d (g y) (g z)"
-      if "x \<in> topspace X'" and "y \<in> topspace X'" and "z \<in> topspace X'" for x y z
+      if "x \<in> topspace Y" and "y \<in> topspace Y" and "z \<in> topspace Y" for x y z
       by (metis X that hmg homeomorphic_eq_everything_map imageI m.topspace_mtopology m.triangle)
   qed (auto simp: m.nonneg m.commute)
-  have "X' = Metric_space.mtopology (topspace X') d'"
+  have "Y = Metric_space.mtopology (topspace Y) d'"
     unfolding topology_eq
   proof (intro allI)
     fix S
-    have "openin m'.mtopology S" if S: "S \<subseteq> topspace X'" and "openin X (g ` S)"
+    have "openin m'.mtopology S" if S: "S \<subseteq> topspace Y" and "openin X (g ` S)"
       unfolding m'.openin_mtopology
     proof (intro conjI that strip)
       fix y
@@ -768,11 +768,11 @@ proof -
     proof -
       have "\<exists>r>0. m.mball (g y) r \<subseteq> g ` S" if "y \<in> S" for y
       proof -
-        have y: "y \<in> topspace X'"
+        have y: "y \<in> topspace Y"
           using m'.openin_mtopology ope' that by blast
         obtain r where "r > 0" and r: "m'.mball y r \<subseteq> S"
           using ope' by (meson \<open>y \<in> S\<close> m'.openin_mtopology)
-        moreover have "\<And>x. \<lbrakk>x \<in> M; d (g y) x < r\<rbrakk> \<Longrightarrow> \<exists>u. u \<in> topspace X' \<and> d' y u < r \<and> x = g u"
+        moreover have "\<And>x. \<lbrakk>x \<in> M; d (g y) x < r\<rbrakk> \<Longrightarrow> \<exists>u. u \<in> topspace Y \<and> d' y u < r \<and> x = g u"
           using fg X d'_def hmf homeomorphic_imp_surjective_map by fastforce
         ultimately have "m.mball (g y) r \<subseteq> g ` m'.mball y r"
           using y by (force simp: m'.openin_mtopology)
@@ -782,9 +782,9 @@ proof -
       then show ?thesis
         using X hmg homeomorphic_imp_surjective_map m.openin_mtopology ope' openin_subset by fastforce
     qed
-    ultimately have "(S \<subseteq> topspace X' \<and> openin X (g ` S)) = openin m'.mtopology S"
+    ultimately have "(S \<subseteq> topspace Y \<and> openin X (g ` S)) = openin m'.mtopology S"
       using m'.topspace_mtopology openin_subset by blast
-    then show "openin X' S = openin m'.mtopology S"
+    then show "openin Y S = openin m'.mtopology S"
       by (simp add: m'.mopen_def homeomorphic_map_openness_eq [OF hmg])
   qed
   then show ?thesis
@@ -792,13 +792,13 @@ proof -
 qed
 
 lemma homeomorphic_metrizable_space:
-  assumes "X homeomorphic_space X'"
-  shows "metrizable_space X \<longleftrightarrow> metrizable_space X'"
+  assumes "X homeomorphic_space Y"
+  shows "metrizable_space X \<longleftrightarrow> metrizable_space Y"
   using assms homeomorphic_metrizable_space_aux homeomorphic_space_sym by metis
 
 lemma metrizable_space_retraction_map_image:
-   "retraction_map X X' r \<and> metrizable_space X
-        \<Longrightarrow> metrizable_space X'"
+   "retraction_map X Y r \<and> metrizable_space X
+        \<Longrightarrow> metrizable_space Y"
   using hereditary_imp_retractive_property metrizable_space_subtopology homeomorphic_metrizable_space
   by blast
 
@@ -3951,49 +3951,74 @@ qed
 
 subsection\<open>Completely regular spaces\<close>
 
-
-let completely_regular_space = new_definition
- `completely_regular_space (X::A topology) \<longleftrightarrow>
+definition completely_regular_space where
+ "completely_regular_space X \<equiv>
     \<forall>A x. closedin X A \<and> x \<in> topspace X - A
-          \<Longrightarrow> \<exists>f. continuous_map
-                   (X,subtopology euclideanreal ({0..1})) f \<and>
-                  f x = 0 \<and> \<forall>x. x \<in> A \<Longrightarrow> f x = 1`;;
+          \<longrightarrow> (\<exists>f::'a\<Rightarrow>real. continuous_map X (top_of_set {0..1}) f \<and>
+                  f x = 0 \<and> (f ` A \<subseteq> {1}))"
+
+lemma homeomorphic_completely_regular_space_aux:
+  assumes X: "completely_regular_space X" and hom: "X homeomorphic_space Y"
+  shows "completely_regular_space Y"
+proof -
+  obtain f g where hmf: "homeomorphic_map X Y f" and hmg: "homeomorphic_map Y X g"
+    and fg: "(\<forall>x \<in> topspace X. g(f x) = x) \<and> (\<forall>y \<in> topspace Y. f(g y) = y)"
+    using assms X homeomorphic_maps_map homeomorphic_space_def by fastforce
+  show ?thesis
+    unfolding completely_regular_space_def
+  proof clarify
+    fix A x
+    assume A: "closedin Y A" and x: "x \<in> topspace Y" and "x \<notin> A"
+    then have "closedin X (g`A)"
+      using hmg homeomorphic_map_closedness_eq by blast
+    moreover have "g x \<notin> g`A"
+      by (meson A x \<open>x \<notin> A\<close> closedin_subset hmg homeomorphic_imp_injective_map inj_on_image_mem_iff)
+    ultimately obtain \<phi> where \<phi>: "continuous_map X (top_of_set {0..1::real}) \<phi> \<and> \<phi> (g x) = 0 \<and> \<phi> ` g`A \<subseteq> {1}"
+      by (metis DiffI X completely_regular_space_def hmg homeomorphic_imp_surjective_map image_eqI x)
+    then have "continuous_map Y (top_of_set {0..1::real}) (\<phi> o g)"
+      by (meson continuous_map_compose hmg homeomorphic_imp_continuous_map)
+    then show "\<exists>\<psi>. continuous_map Y (top_of_set {0..1::real}) \<psi> \<and> \<psi> x = 0 \<and> \<psi> ` A \<subseteq> {1}"
+      by (metis \<phi> comp_apply image_comp)
+  qed
+qed
 
 lemma homeomorphic_completely_regular_space:
-   "\<And>(X::A topology) (Y:B topology).
-        X homeomorphic_space Y
-        \<Longrightarrow> (completely_regular_space X \<longleftrightarrow> completely_regular_space Y)"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[homeomorphic_space] THEN
-  REWRITE_TAC[HOMEOMORPHIC_MAPS_MAP; LEFT_IMP_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`f::A=>B`; `g::B=>A`] THEN STRIP_TAC THEN
-  REWRITE_TAC[completely_regular_space; IN_DIFF] THEN
-  EQ_TAC THEN DISCH_TAC THENL
-   [MAP_EVERY X_GEN_TAC [`d::B=>bool`; `y::B`] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`image (g::B=>A) d`; `(g::B=>A) y`]);
-    MAP_EVERY X_GEN_TAC [`c::A=>bool`; `x::A`] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`f ` c`; `f x`])] THEN
-  (ANTS_TAC THENL
-   [CONJ_TAC THENL
-     [ASM_MESON_TAC[HOMEOMORPHIC_MAP_CLOSEDNESS_EQ];
-      FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP]) THEN
-      ASM SET_TAC[]];
-    ALL_TAC])
-  THENL
-   [DISCH_THEN(X_CHOOSE_THEN `h::A=>real` STRIP_ASSUME_TAC) THEN
-    EXISTS_TAC `(h::A=>real) \<circ> (g::B=>A)`;
-    DISCH_THEN(X_CHOOSE_THEN `h::B=>real` STRIP_ASSUME_TAC) THEN
-    EXISTS_TAC `(h::B=>real) \<circ> f`] THEN
-  ASM_REWRITE_TAC[o_THM] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP]) THEN
-  (CONJ_TAC THENL [ASM_MESON_TAC[CONTINUOUS_MAP_COMPOSE]; ASM SET_TAC[]]));;
+  assumes "X homeomorphic_space Y"
+  shows "completely_regular_space X \<longleftrightarrow> completely_regular_space Y"
+  by (meson assms homeomorphic_completely_regular_space_aux homeomorphic_space_sym)
 
 lemma completely_regular_space_alt:
-   "        completely_regular_space X \<longleftrightarrow>
-        \<forall>A x. closedin X A \<and> x \<in> topspace X - A
-              \<Longrightarrow> \<exists>f. continuous_map X euclideanreal f \<and>
-                      f x = 0 \<and> (\<forall>x. x \<in> A \<Longrightarrow> f x = 1)"
+   "completely_regular_space X \<longleftrightarrow>
+     (\<forall>A x. closedin X A \<and> x \<in> topspace X - A
+           \<longrightarrow> (\<exists>f. continuous_map X euclideanreal f \<and> f x = 0 \<and> f ` A \<subseteq> {1}))"
+proof -
+  have "continuous_map X (top_of_set {0..1::real}) f \<and> f x = 0 \<and> f ` A \<subseteq> {1} 
+    \<Longrightarrow> \<exists>f. continuous_map X euclideanreal f \<and> f x = 0 \<and> f ` A \<subseteq> {1}" 
+    if "closedin X A" "x \<in> topspace X - A" for A x f
+    by (meson continuous_map_in_subtopology)
+
+
+  have "(\<exists>f. continuous_map X (top_of_set {0..1::real}) f \<and> f x = 0 \<and> f ` A \<subseteq> {1}) 
+    \<longleftrightarrow> (\<exists>f. continuous_map X euclideanreal f \<and> f x = 0 \<and> f ` A \<subseteq> {1})" 
+    if "closedin X A" "x \<in> topspace X - A" for A x
+
+    using that
+    apply (auto simp: )
+     apply (meson continuous_map_in_subtopology)
+    apply (rule_tac x="\<lambda>x. max 0 (min (f x) 1)" in exI)
+    apply (simp add: continuous_map_in_subtopology)
+    apply (auto simp: )
+    apply (intro continuous_map_real_max continuous_map_real_min )
+      apply (auto simp: )
+    done
+  then show ?thesis
+    unfolding completely_regular_space_def 
+    
+    by (blast intro!: all_cong1)
+qed
+
+
+
 oops
   GEN_TAC THEN REWRITE_TAC[completely_regular_space] THEN EQ_TAC THEN
   MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `A::A=>bool` THEN
@@ -4001,7 +4026,7 @@ oops
   DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN
   ASM_REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY] THENL
    [MESON_TAC[]; ALL_TAC] THEN
-  DISCH_THEN(X_CHOOSE_THEN `f::A=>real` STRIP_ASSUME_TAC) THEN
+  DISCH_THEN(X_CHOOSE_THEN `f` STRIP_ASSUME_TAC) THEN
   EXISTS_TAC `\<lambda>x. max 0 (min (f x) 1)` THEN
   ASM_SIMP_TAC[\<subseteq>; FORALL_IN_IMAGE; IN_REAL_INTERVAL; GSYM CONJ_ASSOC] THEN
   CONJ_TAC THENL [ALL_TAC; REAL_ARITH_TAC] THEN
@@ -4011,12 +4036,11 @@ oops
   ASM_REWRITE_TAC[CONTINUOUS_MAP_REAL_CONST]);;
 
 lemma completely_regular_space_gen_alt:
-   "\<And>(X::A topology) a b.
-        (a \<noteq> b)
-        \<Longrightarrow> (completely_regular_space X \<longleftrightarrow>
-             \<forall>A x. closedin X A \<and> x \<in> topspace X - A
-                   \<Longrightarrow> \<exists>f. continuous_map X euclideanreal f \<and>
-                           f x = a \<and> \<forall>x. x \<in> A \<Longrightarrow> f x = b)"
+  assumes "a \<noteq> b"
+  shows "completely_regular_space X \<longleftrightarrow>
+             (\<forall>A x. closedin X A \<and> x \<in> topspace X - A
+                   \<longrightarrow> (\<exists>f. continuous_map X euclideanreal f \<and>
+                           f x = a \<and> (f ` A \<subseteq> {b})))"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[COMPLETELY_REGULAR_SPACE_ALT] THEN
   EQ_TAC THEN  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `A::A=>bool` THEN
