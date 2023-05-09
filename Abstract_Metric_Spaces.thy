@@ -3892,18 +3892,24 @@ proof
         by (smt (verit) Diff_iff UnionI empty_iff insert_iff subset_iff)
     qed
     then obtain \<F> \<G> 
-        where fg: "\<And>S. S \<in> \<U> \<Longrightarrow> openin X (\<F> S) \<and> openin X (\<G> S) \<and> S \<subseteq> \<F> S \<and>
-                    (\<forall>T. T \<in> \<U> \<and> T \<noteq> S \<longrightarrow> T \<subseteq> \<G> S) \<and> disjnt (\<F> S) (\<G> S)" 
+        where *: "\<And>S. S \<in> \<U> \<Longrightarrow> S \<subseteq> \<F> S \<and> (\<forall>T. T \<in> \<U> \<and> T \<noteq> S \<longrightarrow> T \<subseteq> \<G> S)" 
+        and ope: "\<And>S. S \<in> \<U> \<Longrightarrow> openin X (\<F> S) \<and> openin X (\<G> S)" 
+        and dis: "\<And>S. S \<in> \<U> \<Longrightarrow> disjnt (\<F> S) (\<G> S)" 
       by metis
+    define \<H> where "\<H> \<equiv> \<lambda>S. \<F> S \<inter> (\<Inter>T \<in> \<U> - {S}. \<G> T)"
     show "\<exists>\<F>. (\<forall>S\<in>\<U>. openin X (\<F> S) \<and> S \<subseteq> \<F> S) \<and> pairwise (\<lambda>S T. disjnt (\<F> S) (\<F> T)) \<U>"
-      apply (rule_tac x="\<lambda>S. \<F> S \<inter> (\<Inter>T \<in> \<U> - {S}. \<G> T)" in exI)
-      apply (intro conjI strip)
-      apply (smt (verit) DiffD1 \<open>finite \<U>\<close> fg finite_Diff finite_imageI imageE openin_Int_Inter)
-      using fg apply auto[1]
-      by (smt (verit) DiffD1 INT_insert IntE disjnt_iff fg mk_disjoint_insert pairwise_alt)
+    proof (intro exI conjI strip)
+      show "openin X (\<H> S)" if "S \<in> \<U>" for S
+        unfolding \<H>_def 
+        by (smt (verit) ope that DiffD1 \<open>finite \<U>\<close> finite_Diff finite_imageI imageE openin_Int_Inter)
+      show "S \<subseteq> \<H> S" if "S \<in> \<U>" for S
+        unfolding \<H>_def using "*" that by auto 
+    show "pairwise (\<lambda>S T. disjnt (\<H> S) (\<H> T)) \<U>"
+      using dis by (fastforce simp: disjnt_iff pairwise_alt \<H>_def)
+    qed
   qed
 next
-  assume R [rule_format]: ?rhs 
+  assume R: ?rhs 
   show ?lhs
     unfolding hereditarily_normal_separation
   proof (intro strip)
@@ -3916,37 +3922,15 @@ next
         using \<open>separatedin X S T\<close> by force
     next
       case False
-      then show ?thesis
-        using R [of "{S,T}"]
-        apply (simp add: Ball_def)
-        apply atomize
-        apply safe
-               apply (meson \<open>separatedin X S T\<close> separation_openin_Un_gen subsetD)
-              apply (meson \<open>separatedin X S T\<close> separation_openin_Un_gen subsetD)
-             apply (simp add: \<open>separatedin X S T\<close> pairwise_insert separatedin_sym)
-            apply (simp add: pairwise_insert)
-           apply (meson \<open>separatedin X S T\<close> separation_openin_Un_gen subsetD)
-          apply (meson \<open>separatedin X S T\<close> separation_openin_Un_gen subsetD)
-         apply (simp add: \<open>separatedin X S T\<close> pairwise_insert separatedin_sym)
-        by (simp add: pairwise_insert)
+      have "pairwise (separatedin X) {S, T}"
+        by (simp add: \<open>separatedin X S T\<close> pairwise_insert separatedin_sym)
+      moreover have "\<forall>S\<in>{S, T}. S \<subseteq> topspace X"
+        by (metis \<open>separatedin X S T\<close> insertE separatedin_def singletonD)
+        ultimately show ?thesis
+        using R by (smt (verit) False finite.emptyI finite.insertI insertCI pairwiseD)
     qed
   qed
 qed
-
-oops
-
-    DISCH_TAC THEN MAP_EVERY X_GEN_TAC [`S::S=>bool`; `T::S=>bool`] THEN
-    DISCH_TAC THEN ASM_CASES_TAC `T::S=>bool = S` THENL
-     [FIRST_X_ASSUM SUBST_ALL_TAC THEN
-      FIRST_X_ASSUM(SUBST1_TAC \<circ> GEN_REWRITE_RULE id [SEPARATED_IN_REFL]) THEN
-      REPEAT(EXISTS_TAC `{}:S=>bool`) THEN
-      ASM_REWRITE_TAC[OPEN_IN_EMPTY] THEN SET_TAC[];
-
-      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `{(S::S=>bool),T}`) THEN
-      REWRITE_TAC[PAIRWISE_INSERT; FINITE_INSERT; FORALL_IN_INSERT] THEN
-      REWRITE_TAC[FINITE_EMPTY; NOT_IN_EMPTY; PAIRWISE_EMPTY; IN_SING] THEN
-      ANTS_TAC THENL [ASM_MESON_TAC[separatedin]; ALL_TAC] THEN
-      REWRITE_TAC[IMP_CONJ; FORALL_UNWIND_THM2] THEN ASM_MESON_TAC[]]]);;
 
 lemma hereditarily_normal_space_perfect_map_image:
    "\<lbrakk>hereditarily normal_space X; perfect_map X Y f\<rbrakk> \<Longrightarrow> hereditarily normal_space Y"
