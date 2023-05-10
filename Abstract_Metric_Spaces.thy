@@ -4342,51 +4342,25 @@ next
               f i (x i) = 0 \<and>
               (\<forall>x \<in> topspace (X i). x \<notin> U i \<longrightarrow> f i x = 1)"
         by metis
+      have "continuous_map (product_topology X I)
+                euclideanreal (f i o (\<lambda>x. x i))" if "i\<in>I" for i
+          apply (intro continuous_intros)
+         apply (rule continuous_map_product_projection)
+         apply (rule that)
+        using f that by blast
+      then
       show "\<exists>f. continuous_map (product_topology X I) euclideanreal f \<and> f x = 0 \<and> f ` (topspace (product_topology X I) - W) \<subseteq> {1}"
         apply (rule_tac x="\<lambda>z. 1 - prod (\<lambda>i. 1 - f i (z i)) {i\<in>I. U i \<noteq> topspace(X i)}" in exI)
         apply (intro conjI)
           apply (intro continuous_intros)
-             apply (auto simp: )
+             apply (auto simp: o_def)
             apply (simp add: \<open>finite {i \<in> I. U i \<noteq> topspace (X i)}\<close>)
-        using ope openin_subset apply blast
-        using continuous_map_product_projection
-apply (simp add: continuous_map_product_projection)
-        defer
-          apply (simp add: f)
-apply (simp add: )
+        apply (simp add: f)
         apply (smt (verit, del_insts) PiE_iff \<open>Pi\<^sub>E I U \<subseteq> W\<close> \<open>finite {i \<in> I. U i \<noteq> topspace (X i)}\<close> f mem_Collect_eq prod_zero_iff subsetD)
-        using that sorry
+        done
     qed      
   qed (force simp: completely_regular_space_def)
 qed
-
-  oops
-
-
-EXISTS_TAC
-`\<lambda>z. 1 - product {i. i \<in> k \<and> \<not> (u i :A=>bool = topspace(X i))}
-                     (\<lambda>i. 1 - (f::K=>A->real) i (z i))` THEN
-REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY; PiE; IN_ELIM_THM] THEN
-REPEAT CONJ_TAC THENL
-[MATCH_MP_TAC CONTINUOUS_MAP_REAL_SUB THEN
-  REWRITE_TAC[CONTINUOUS_MAP_CONST; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_REAL_PRODUCT THEN
-  ASM_REWRITE_TAC[IN_ELIM_THM] THEN X_GEN_TAC `i::K` THEN STRIP_TAC THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_REAL_SUB THEN
-  REWRITE_TAC[CONTINUOUS_MAP_CONST; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
-  GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
-  EXISTS_TAC `(X::K=>A topology) i` THEN
-  ASM_SIMP_TAC[
-  apply (smt (verit, del_insts) PiE_iff \<open>Pi\<^sub>E I U \<subseteq> W\<close> \<open>finite {i \<in> I. U i \<noteq> topspace (X i)}\<close> f mem_Collect_eq prod_zero_iff subsetD)];
-    REWRITE_TAC[REAL_ARITH `1 - x = 0 \<longleftrightarrow> x = 1`] THEN
-    MATCH_MP_TAC PRODUCT_EQ_1 THEN
-    ASM_SIMP_TAC[IN_ELIM_THM; REAL_ARITH `1 - x = 1 \<longleftrightarrow> x = 0`];
-    X_GEN_TAC `y::K=>A` THEN REWRITE_TAC[o_THM] THEN STRIP_TAC THEN
-    REWRITE_TAC[REAL_ARITH `1 - x = 1 \<longleftrightarrow> x = 0`] THEN
-    ASM_SIMP_TAC[PRODUCT_EQ_0; REAL_ARITH `1 - x = 0 \<longleftrightarrow> x = 1`] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `y::K=>A` \<circ> GEN_REWRITE_RULE id [\<subseteq>]) THEN
-    ASM_REWRITE_TAC[PiE; IN_ELIM_THM] THEN ASM_MESON_TAC[]]);;
 
 
 
