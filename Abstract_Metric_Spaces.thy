@@ -4286,16 +4286,27 @@ next
         and g1: "\<And>y. y \<in> topspace Y \<Longrightarrow> y \<notin> V \<Longrightarrow> g y = 1"
         using Y \<open>openin Y V\<close> \<open>y \<in> V\<close> unfolding completely_regular_space_alt'
         by (smt (verit, best) Diff_iff image_subset_iff singletonD)
-      show "\<exists>f. continuous_map (prod_topology X Y) euclideanreal f \<and> f (x,y) = 0 \<and> f ` (topspace (prod_topology X Y) - W) \<subseteq> {1}"
-        apply (rule_tac x="\<lambda>(x,y). 1 - (1 - f x) * (1 - g y)" in exI)
-        unfolding case_prod_unfold
-        apply (intro conjI continuous_intros)
-              apply (auto simp: contf contg continuous_map_of_fst [unfolded o_def] continuous_map_of_snd [unfolded o_def])
-        apply (simp add: \<open>f x = 0\<close> \<open>g y = 0\<close>)
-        using \<open>U \<times> V \<subseteq> W\<close> f1 g1 by blast
+      define h where "h \<equiv> \<lambda>(x,y). 1 - (1 - f x) * (1 - g y)"
+      show "\<exists>h. continuous_map (prod_topology X Y) euclideanreal h \<and> h (x,y) = 0 \<and> h ` (topspace (prod_topology X Y) - W) \<subseteq> {1}"
+      proof (intro exI conjI)
+        have "continuous_map (prod_topology X Y) euclideanreal (f o fst)"
+          using contf continuous_map_of_fst by blast
+        moreover
+        have "continuous_map (prod_topology X Y) euclideanreal (g o snd)"
+          using contg continuous_map_of_snd by blast
+        ultimately
+        show "continuous_map (prod_topology X Y) euclideanreal h"
+          unfolding o_def h_def case_prod_unfold
+          by (intro continuous_intros) auto
+        show "h (x, y) = 0"
+          by (simp add: h_def \<open>f x = 0\<close> \<open>g y = 0\<close>)
+        show "h ` (topspace (prod_topology X Y) - W) \<subseteq> {1}"
+          using \<open>U \<times> V \<subseteq> W\<close> f1 g1 by (force simp: h_def)
+      qed
     qed
   qed (auto simp: completely_regular_space_def)
 qed
+
 
 lemma completely_regular_space_product_topology:
    "\<And>(X::K=>A topology) k.
