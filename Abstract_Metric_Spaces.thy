@@ -3989,12 +3989,12 @@ lemma homeomorphic_completely_regular_space:
 
 lemma completely_regular_space_alt:
    "completely_regular_space X \<longleftrightarrow>
-     (\<forall>S x. closedin X S \<and> x \<in> topspace X - S
+     (\<forall>S x. closedin X S \<longrightarrow> x \<in> topspace X - S
            \<longrightarrow> (\<exists>f. continuous_map X euclideanreal f \<and> f x = 0 \<and> f ` S \<subseteq> {1}))"
 proof -
-  have "\<exists>f. continuous_map X (top_of_set {0..1::real}) f \<and> f x = 0 \<and> f ` A \<subseteq> {1}" 
-    if "closedin X A" "x \<in> topspace X - A" and f: "continuous_map X euclideanreal f \<and> f x = 0 \<and> f ` A \<subseteq> {1}"
-    for A x f
+  have "\<exists>f. continuous_map X (top_of_set {0..1::real}) f \<and> f x = 0 \<and> f ` S \<subseteq> {1}" 
+    if "closedin X S" "x \<in> topspace X - S" and f: "continuous_map X euclideanreal f \<and> f x = 0 \<and> f ` S \<subseteq> {1}"
+    for S x f
   proof (intro exI conjI)
     show "continuous_map X (top_of_set {0..1}) (\<lambda>x. max 0 (min (f x) 1))"
       using that
@@ -4004,13 +4004,20 @@ proof -
     unfolding completely_regular_space_def by metis 
 qed
 
+text \<open>As above, but with @{term openin}\<close>
+lemma completely_regular_space_alt':
+   "completely_regular_space X \<longleftrightarrow>
+     (\<forall>S x. openin X S \<longrightarrow> x \<in> S
+           \<longrightarrow> (\<exists>f. continuous_map X euclideanreal f \<and> f x = 0 \<and> f ` (topspace X - S) \<subseteq> {1}))"
+  apply (simp add: completely_regular_space_alt all_closedin)
+  by (meson openin_subset subsetD)
 
 lemma completely_regular_space_gen_alt:
   fixes a b::real
   assumes "a \<noteq> b"
   shows "completely_regular_space X \<longleftrightarrow>
-         (\<forall>A x. closedin X A \<and> x \<in> topspace X - A
-               \<longrightarrow> (\<exists>f. continuous_map X euclidean f \<and> f x = a \<and> (f ` A \<subseteq> {b})))"
+         (\<forall>S x. closedin X S \<longrightarrow> x \<in> topspace X - S
+               \<longrightarrow> (\<exists>f. continuous_map X euclidean f \<and> f x = a \<and> (f ` S \<subseteq> {b})))"
 proof -
   have "\<exists>f. continuous_map X euclideanreal f \<and> f x = 0 \<and> f ` S \<subseteq> {1}" 
     if "closedin X S" "x \<in> topspace X - S" 
@@ -4032,6 +4039,16 @@ proof -
   ultimately show ?thesis
     unfolding completely_regular_space_alt by meson
 qed
+
+text \<open>As above, but with @{term openin}\<close>
+lemma completely_regular_space_gen_alt':
+  fixes a b::real
+  assumes "a \<noteq> b"
+  shows "completely_regular_space X \<longleftrightarrow>
+         (\<forall>S x. openin X S \<longrightarrow> x \<in> S
+               \<longrightarrow> (\<exists>f. continuous_map X euclidean f \<and> f x = a \<and> (f ` (topspace X - S) \<subseteq> {b})))"
+  apply (simp add: completely_regular_space_gen_alt[OF assms] all_closedin)
+  by (meson openin_subset subsetD)
 
 lemma completely_regular_space_gen:
   fixes a b::real
@@ -4164,7 +4181,9 @@ proof clarify
   then obtain U M where "openin X U \<and> compactin X M \<and> closedin X M \<and> x \<in> U \<and>
      U \<subseteq> M \<and> M \<subseteq> topspace X - S"
     unfolding neighbourhood_base_of by (metis (no_types, lifting) Diff_iff \<open>closedin X S\<close> \<open>x \<in> topspace X\<close> \<open>x \<notin> S\<close> closedin_def)
+  then
   show "\<exists>f::'a\<Rightarrow>real. continuous_map X (top_of_set {0..1}) f \<and> f x = 0 \<and> f ` S \<subseteq> {1}"
+    using neighbourhood_base_of
      sorry
 qed
 oops
@@ -4179,6 +4198,7 @@ oops
   MP_TAC(ISPECL [`subtopology X (m::A=>bool)`;
                  `k::A=>bool`; `m - u::A=>bool`; `0::real`; `1::real`]
         URYSOHN_LEMMA) THEN
+
   REWRITE_TAC[REAL_POS; IN_DIFF] THEN ANTS_TAC THENL
    [REPEAT CONJ_TAC THENL
      [MATCH_MP_TAC COMPACT_HAUSDORFF_OR_REGULAR_IMP_NORMAL_SPACE THEN
@@ -4190,17 +4210,22 @@ oops
       FIRST_ASSUM(MP_TAC \<circ> MATCH_MP COMPACT_IN_SUBSET_TOPSPACE) THEN
       ASM SET_TAC[];
       ASM SET_TAC[]];
+
     REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; \<subseteq>; FORALL_IN_IMAGE] THEN
     ASM_SIMP_TAC[COMPACT_IN_SUBSET_TOPSPACE; TOPSPACE_SUBTOPOLOGY;
                  SET_RULE `s \<subseteq> u \<Longrightarrow> u \<inter> s = s`] THEN
-    DISCH_THEN(X_CHOOSE_THEN `g::A=>real` STRIP_ASSUME_TAC)] THEN
+    DISCH_THEN(X_CHOOSE_THEN `g::A=>real` STRIP_ASSUME_TAC)]
+
+ THEN
   EXISTS_TAC `\<lambda>x. if x \<in> m then (g::A=>real) x else 1` THEN
   ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
    [ALL_TAC; REPEAT STRIP_TAC THEN COND_CASES_TAC THEN ASM SET_TAC[]] THEN
   CONJ_TAC THENL
+
    [ALL_TAC; ASM_MESON_TAC[ENDS_IN_UNIT_REAL_INTERVAL]] THEN
   REWRITE_TAC[CONTINUOUS_MAP_CLOSED_IN; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
   X_GEN_TAC `c::real=>bool` THEN DISCH_TAC THEN
+
   SUBGOAL_THEN
    `{x \<in> topspace X. (if x \<in> m then g x else 1) \<in> c} =
     {x \<in> m. (g::A=>real) x \<in> c} \<union>
@@ -4212,6 +4237,7 @@ oops
     COND_CASES_TAC THEN ASM_REWRITE_TAC[IN_DIFF; NOT_IN_EMPTY] THEN
     FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP COMPACT_IN_SUBSET_TOPSPACE) THEN
     ASM SET_TAC[];
+
     MATCH_MP_TAC CLOSED_IN_UNION THEN CONJ_TAC THENL
      [MATCH_MP_TAC CLOSED_IN_TRANS_FULL THEN EXISTS_TAC `m::A=>bool` THEN
       ASM_REWRITE_TAC[] THEN
@@ -4225,63 +4251,64 @@ oops
 lemma completely_regular_eq_regular_space:
    "locally_compact_space X
         \<Longrightarrow> (completely_regular_space X \<longleftrightarrow> regular_space X)"
-  using completely_regular_imp_regular_space locally_compact_regular_imp_completely_regular_space by blast
+  using completely_regular_imp_regular_space locally_compact_regular_imp_completely_regular_space 
+  by blast
 
 lemma completely_regular_space_prod_topology:
-   "\<And>(top1::A topology) (top2::B topology).
-        completely_regular_space (prod_topology top1 top2) \<longleftrightarrow>
-        topspace (prod_topology top1 top2) = {} \<or>
-        completely_regular_space top1 \<and> completely_regular_space top2"
-oops
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [MATCH_MP_TAC TOPOLOGICAL_PROPERTY_OF_PROD_COMPONENT THEN
-    REWRITE_TAC[HOMEOMORPHIC_COMPLETELY_REGULAR_SPACE] THEN
-    SIMP_TAC[COMPLETELY_REGULAR_SPACE_SUBTOPOLOGY];
-    ALL_TAC] THEN
-  ASM_CASES_TAC `topspace(prod_topology top1 top2):A#B=>bool = {}` THENL
-   [ASM_REWRITE_TAC[completely_regular_space; IN_DIFF; NOT_IN_EMPTY];
-    ASM_REWRITE_TAC[]] THEN
-  REWRITE_TAC[COMPLETELY_REGULAR_SPACE_ALT] THEN
-  REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
-  REWRITE_TAC[FORALL_CLOSED_IN] THEN SIMP_TAC[IN_DIFF; IMP_CONJ] THEN
-  GEN_REWRITE_TAC (BINOP_CONV \<circ> TOP_DEPTH_CONV) [RIGHT_IMP_FORALL_THM] THEN
-  REWRITE_TAC[IMP_IMP; GSYM CONJ_ASSOC] THEN STRIP_TAC THEN
-  REWRITE_TAC[FORALL_PAIR_THM; TOPSPACE_PROD_TOPOLOGY; IN_CROSS] THEN
-  MAP_EVERY X_GEN_TAC [`w::A#B=>bool`; `x::A`; `y::B`] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [OPEN_IN_PROD_TOPOLOGY_ALT]) THEN
-  DISCH_THEN(MP_TAC \<circ> SPECL [`x::A`; `y::B`]) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`u::A=>bool`; `v::B=>bool`] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`v::B=>bool`; `y::B`]) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`u::A=>bool`; `x::A`]) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM; IN_REAL_INTERVAL] THEN
-  X_GEN_TAC `f::A=>real` THEN STRIP_TAC THEN
-  X_GEN_TAC `g::B=>real` THEN STRIP_TAC THEN
-  EXISTS_TAC `\<lambda>(x,y). 1 - (1 - f x) * (1 - (g::B=>real) y)` THEN
-  ASM_REWRITE_TAC[FORALL_PAIR_THM; TOPSPACE_PROD_TOPOLOGY; IN_CROSS] THEN
-  CONV_TAC REAL_RAT_REDUCE_CONV THEN CONJ_TAC THENL
-   [REWRITE_TAC[LAMBDA_PAIR] THEN
-    REPEAT((MATCH_MP_TAC CONTINUOUS_MAP_REAL_SUB ORELSE
-            MATCH_MP_TAC CONTINUOUS_MAP_REAL_MUL) THEN CONJ_TAC) THEN
-    REWRITE_TAC[CONTINUOUS_MAP_CONST; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
-    ASM_REWRITE_TAC[CONTINUOUS_MAP_OF_FST; CONTINUOUS_MAP_OF_SND];
-    REWRITE_TAC[REAL_RING
-     `1 - (1 - x) * (1 - y) = 1 \<longleftrightarrow> x = 1 \<or> y = 1`] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[\<subseteq>; FORALL_PAIR_THM; IN_CROSS]) THEN
-    ASM SET_TAC[]]);;
+   "completely_regular_space (prod_topology X Y) \<longleftrightarrow>
+      topspace (prod_topology X Y) = {} \<or>
+      completely_regular_space X \<and> completely_regular_space Y" (is "?lhs=?rhs")
+proof
+  assume ?lhs then show ?rhs
+    by (rule topological_property_of_prod_component) 
+      (auto simp: completely_regular_space_subtopology homeomorphic_completely_regular_space)
+next
+  assume R: ?rhs
+  show ?lhs
+  proof (cases "topspace(prod_topology X Y) = {}")
+    case False
+    then have X: "completely_regular_space X" and Y: "completely_regular_space Y"
+      using R by blast+
+    show ?thesis
+      unfolding completely_regular_space_alt'
+    proof clarify
+      fix W x y
+      assume "openin (prod_topology X Y) W" and "(x, y) \<in> W"
+      then obtain U V where "openin X U" "openin Y V" "x \<in> U" "y \<in> V" "U\<times>V \<subseteq> W"
+        by (force simp: openin_prod_topology_alt)
+      then have "x \<in> topspace X" "y \<in> topspace Y"
+        using openin_subset by fastforce+
+      obtain f where contf: "continuous_map X euclideanreal f" and "f x = 0" 
+        and f1: "\<And>x. x \<in> topspace X \<Longrightarrow> x \<notin> U \<Longrightarrow> f x = 1"
+        using X \<open>openin X U\<close> \<open>x \<in> U\<close> unfolding completely_regular_space_alt'
+        by (smt (verit, best) Diff_iff image_subset_iff singletonD)
+      obtain g where contg: "continuous_map Y euclideanreal g" and "g y = 0" 
+        and g1: "\<And>y. y \<in> topspace Y \<Longrightarrow> y \<notin> V \<Longrightarrow> g y = 1"
+        using Y \<open>openin Y V\<close> \<open>y \<in> V\<close> unfolding completely_regular_space_alt'
+        by (smt (verit, best) Diff_iff image_subset_iff singletonD)
+      show "\<exists>f. continuous_map (prod_topology X Y) euclideanreal f \<and> f (x,y) = 0 \<and> f ` (topspace (prod_topology X Y) - W) \<subseteq> {1}"
+        apply (rule_tac x="\<lambda>(x,y). 1 - (1 - f x) * (1 - g y)" in exI)
+        unfolding case_prod_unfold
+        apply (intro conjI continuous_intros)
+              apply (auto simp: contf contg continuous_map_of_fst [unfolded o_def] continuous_map_of_snd [unfolded o_def])
+        apply (simp add: \<open>f x = 0\<close> \<open>g y = 0\<close>)
+        using \<open>U \<times> V \<subseteq> W\<close> f1 g1 by blast
+    qed
+  qed (auto simp: completely_regular_space_def)
+qed
 
 lemma completely_regular_space_product_topology:
-   "\<And>(tops::K=>A topology) k.
-        completely_regular_space (product_topology k tops) \<longleftrightarrow>
-        topspace (product_topology k tops) = {} \<or>
-        \<forall>i. i \<in> k \<Longrightarrow> completely_regular_space (tops i)"
+   "\<And>(X::K=>A topology) k.
+        completely_regular_space (product_topology k X) \<longleftrightarrow>
+        topspace (product_topology k X) = {} \<or>
+        \<forall>i. i \<in> k \<Longrightarrow> completely_regular_space (X i)"
 oops
   REPEAT GEN_TAC THEN EQ_TAC THENL
    [MATCH_MP_TAC TOPOLOGICAL_PROPERTY_OF_PRODUCT_COMPONENT THEN
     REWRITE_TAC[HOMEOMORPHIC_COMPLETELY_REGULAR_SPACE] THEN
     SIMP_TAC[COMPLETELY_REGULAR_SPACE_SUBTOPOLOGY];
     ALL_TAC] THEN
-  ASM_CASES_TAC `topspace (product_topology k (tops::K=>A topology)) = {}` THENL
+  ASM_CASES_TAC `topspace (product_topology k (X::K=>A topology)) = {}` THENL
    [ASM_REWRITE_TAC[completely_regular_space; NOT_IN_EMPTY; IN_DIFF];
     ASM_REWRITE_TAC[]] THEN
   REWRITE_TAC[COMPLETELY_REGULAR_SPACE_ALT] THEN
@@ -4310,7 +4337,7 @@ oops
   REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; IN_REAL_INTERVAL] THEN
   X_GEN_TAC `f::K=>A->real` THEN DISCH_TAC THEN
   EXISTS_TAC
-   `\<lambda>z. 1 - product {i. i \<in> k \<and> \<not> (u i :A=>bool = topspace(tops i))}
+   `\<lambda>z. 1 - product {i. i \<in> k \<and> \<not> (u i :A=>bool = topspace(X i))}
                      (\<lambda>i. 1 - (f::K=>A->real) i (z i))` THEN
   REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY; PiE; IN_ELIM_THM] THEN
   REPEAT CONJ_TAC THENL
@@ -4322,7 +4349,7 @@ oops
     REWRITE_TAC[CONTINUOUS_MAP_CONST; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
     GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
     MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
-    EXISTS_TAC `(tops::K=>A topology) i` THEN
+    EXISTS_TAC `(X::K=>A topology) i` THEN
     ASM_SIMP_TAC[CONTINUOUS_MAP_PRODUCT_PROJECTION];
     REWRITE_TAC[REAL_ARITH `1 - x = 0 \<longleftrightarrow> x = 1`] THEN
     MATCH_MP_TAC PRODUCT_EQ_1 THEN
