@@ -4108,50 +4108,50 @@ lemma completely_regular_space_discrete_topology:
   by (simp add: normal_imp_completely_regular_space normal_space_discrete_topology)
 
 lemma completely_regular_space_subtopology:
-   "completely_regular_space X
-        \<Longrightarrow> completely_regular_space (subtopology X s)"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[completely_regular_space; IN_DIFF] THEN
-  STRIP_TAC THEN
-  REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM; CLOSED_IN_SUBTOPOLOGY_ALT] THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; IN_INTER; FORALL_IN_GSPEC] THEN
-  X_GEN_TAC `t::A=>bool` THEN DISCH_TAC THEN
-  X_GEN_TAC `x::A` THEN STRIP_TAC THEN
-  ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`t::A=>bool`; `x::A`]) THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC MONO_EXISTS THEN
-  SIMP_TAC[CONTINUOUS_MAP_FROM_SUBTOPOLOGY]);;
+  assumes "completely_regular_space X"
+  shows "completely_regular_space (subtopology X S)"
+  unfolding completely_regular_space_def
+proof clarify
+  fix A x
+  assume "closedin (subtopology X S) A" and x: "x \<in> topspace (subtopology X S)" and "x \<notin> A"
+  then obtain T where "closedin X T" "A = S \<inter> T" "x \<in> topspace X" "x \<in> S"
+    by (force simp: closedin_subtopology_alt image_iff)
+  then show "\<exists>f. continuous_map (subtopology X S) (top_of_set {0::real..1}) f \<and> f x = 0 \<and> f ` A \<subseteq> {1}"
+    using assms \<open>x \<notin> A\<close>  
+    apply (simp add: completely_regular_space_def continuous_map_from_subtopology)
+    using continuous_map_from_subtopology by fastforce
+qed
 
 lemma completely_regular_space_retraction_map_image:
-   "retraction_map X Y r \<and> completely_regular_space X
-        \<Longrightarrow> completely_regular_space Y"
-oops
-  MATCH_MP_TAC HEREDITARY_IMP_RETRACTIVE_PROPERTY THEN
-  REWRITE_TAC[COMPLETELY_REGULAR_SPACE_SUBTOPOLOGY;
-              HOMEOMORPHIC_COMPLETELY_REGULAR_SPACE]);;
+   " \<lbrakk>retraction_map X Y r; completely_regular_space X\<rbrakk> \<Longrightarrow> completely_regular_space Y"
+  using completely_regular_space_subtopology hereditary_imp_retractive_property homeomorphic_completely_regular_space by blast
 
 lemma completely_regular_imp_regular_space:
-   "completely_regular_space X \<Longrightarrow> regular_space X"
-oops
-  GEN_TAC THEN REWRITE_TAC[completely_regular_space; regular_space] THEN
-  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `c::A=>bool` THEN
-  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `x::A` THEN REWRITE_TAC[IN_DIFF] THEN
-  DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM; CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN
-  X_GEN_TAC `f::A=>real` THEN STRIP_TAC THEN
-  MAP_EVERY EXISTS_TAC
-   [`{x::A | x \<in> topspace X \<and> f x \<in> {x. x < 1 / 2}}`;
-    `{x::A | x \<in> topspace X \<and> f x \<in> {x. x > 1 / 2}}`] THEN
-  ONCE_REWRITE_TAC[CONJ_ASSOC] THEN CONJ_TAC THENL
-   [CONJ_TAC THEN MATCH_MP_TAC OPEN_IN_CONTINUOUS_MAP_PREIMAGE THEN
-    EXISTS_TAC `euclideanreal` THEN ASM_REWRITE_TAC[GSYM REAL_OPEN_IN] THEN
-    REWRITE_TAC[REAL_OPEN_HALFSPACE_LT; REAL_OPEN_HALFSPACE_GT];
-    ONCE_REWRITE_TAC[CONJ_ASSOC] THEN CONJ_TAC THENL
-     [ASM_SIMP_TAC[\<subseteq>; IN_ELIM_THM] THEN
-      CONV_TAC REAL_RAT_REDUCE_CONV THEN
-      ASM_MESON_TAC[CLOSED_IN_SUBSET; \<subseteq>];
-      SIMP_TAC[EXTENSION; disjnt; IN_INTER; NOT_IN_EMPTY; IN_ELIM_THM] THEN
-      REAL_ARITH_TAC]]);;
+  assumes "completely_regular_space X" 
+  shows "regular_space X"
+proof -
+  have *: "\<exists>U V. openin X U \<and> openin X V \<and> a \<in> U \<and> C \<subseteq> V \<and> disjnt U V"
+    if contf: "continuous_map X euclideanreal f" and "a \<in> topspace X - C" and "closedin X C"
+      and fim: "f ` topspace X \<subseteq> {0..1}" and f0: "f a = 0" and f1: "f ` C \<subseteq> {1}"
+    for C a f
+    apply (rule_tac x="{x \<in> topspace X. f x \<in> {..<1/2}}" in exI)
+    apply (rule_tac x="{x \<in> topspace X. f x \<in> {1/2<..}}" in exI)
+    apply (intro conjI openin_continuous_map_preimage [OF contf])
+        apply simp
+       apply (simp add: )
+      apply (auto simp: )
+    using that(2) apply blast
+       apply (simp add: f0)
+    using closedin_subset that(3) apply blast
+    using f1 apply fastforce
+    apply (auto simp: disjnt_iff)
+    done
+  show ?thesis
+    using assms
+    unfolding completely_regular_space_def regular_space_def continuous_map_in_subtopology
+    by (meson "*")
+qed
+
 
 lemma locally_compact_regular_imp_completely_regular_space:
    "locally_compact_space X \<and> (Hausdorff_space X \<or> regular_space X)
