@@ -4131,21 +4131,18 @@ lemma completely_regular_imp_regular_space:
   shows "regular_space X"
 proof -
   have *: "\<exists>U V. openin X U \<and> openin X V \<and> a \<in> U \<and> C \<subseteq> V \<and> disjnt U V"
-    if contf: "continuous_map X euclideanreal f" and "a \<in> topspace X - C" and "closedin X C"
+    if contf: "continuous_map X euclideanreal f" and a: "a \<in> topspace X - C" and "closedin X C"
       and fim: "f ` topspace X \<subseteq> {0..1}" and f0: "f a = 0" and f1: "f ` C \<subseteq> {1}"
     for C a f
-    apply (rule_tac x="{x \<in> topspace X. f x \<in> {..<1/2}}" in exI)
-    apply (rule_tac x="{x \<in> topspace X. f x \<in> {1/2<..}}" in exI)
-    apply (intro conjI openin_continuous_map_preimage [OF contf])
-        apply simp
-       apply (simp add: )
-      apply (auto simp: )
-    using that(2) apply blast
-       apply (simp add: f0)
-    using closedin_subset that(3) apply blast
-    using f1 apply fastforce
-    apply (auto simp: disjnt_iff)
-    done
+  proof (intro exI conjI)
+    show "openin X {x \<in> topspace X. f x \<in> {..<1 / 2}}" "openin X {x \<in> topspace X. f x \<in> {1 / 2<..}}"
+      using openin_continuous_map_preimage [OF contf]
+      by (meson open_lessThan open_greaterThan open_openin)+
+    show "a \<in> {x \<in> topspace X. f x \<in> {..<1 / 2}}"
+      using a f0 by auto
+    show "C \<subseteq> {x \<in> topspace X. f x \<in> {1 / 2<..}}"
+      using \<open>closedin X C\<close> f1 closedin_subset by auto
+  qed (auto simp: disjnt_iff)
   show ?thesis
     using assms
     unfolding completely_regular_space_def regular_space_def continuous_map_in_subtopology
@@ -4154,18 +4151,24 @@ qed
 
 
 lemma locally_compact_regular_imp_completely_regular_space:
-   "locally_compact_space X \<and> (Hausdorff_space X \<or> regular_space X)
-        \<Longrightarrow> completely_regular_space X"
+  assumes "locally_compact_space X" "Hausdorff_space X \<or> regular_space X"
+  shows "completely_regular_space X"
+  unfolding completely_regular_space_def
+proof clarify
+  fix S x
+  assume "closedin X S" and "x \<in> topspace X" and "x \<notin> S"
+  have "regular_space X"
+    using assms locally_compact_Hausdorff_imp_regular_space by blast
+  then have "neighbourhood_base_of (\<lambda>C. compactin X C \<and> closedin X C) X"
+    using assms(1) locally_compact_regular_space_neighbourhood_base by blast
+  then obtain U M where "openin X U \<and> compactin X M \<and> closedin X M \<and> x \<in> U \<and>
+     U \<subseteq> M \<and> M \<subseteq> topspace X - S"
+    unfolding neighbourhood_base_of by (metis (no_types, lifting) Diff_iff \<open>closedin X S\<close> \<open>x \<in> topspace X\<close> \<open>x \<notin> S\<close> closedin_def)
+  show "\<exists>f::'a\<Rightarrow>real. continuous_map X (top_of_set {0..1}) f \<and> f x = 0 \<and> f ` S \<subseteq> {1}"
+     sorry
+qed
 oops
-  REWRITE_TAC[LOCALLY_COMPACT_HAUSDORFF_OR_REGULAR] THEN
-  REPEAT STRIP_TAC THEN REWRITE_TAC[completely_regular_space; IN_DIFF] THEN
-  MAP_EVERY X_GEN_TAC [`s::A=>bool`; `x::A`] THEN STRIP_TAC THEN
-  MP_TAC(ISPEC `X::A topology`
-   LOCALLY_COMPACT_REGULAR_SPACE_NEIGHBOURHOOD_BASE) THEN
-  ASM_REWRITE_TAC[NEIGHBOURHOOD_BASE_OF] THEN
-  DISCH_THEN(MP_TAC \<circ> SPECL [`topspace X - s::A=>bool`; `x::A`]) THEN
-  ASM_SIMP_TAC[OPEN_IN_DIFF; OPEN_IN_TOPSPACE; IN_DIFF;
-               LEFT_IMP_EXISTS_THM] THEN
+
   MAP_EVERY X_GEN_TAC [`u::A=>bool`; `m::A=>bool`] THEN STRIP_TAC THEN
   FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM
    NEIGHBOURHOOD_BASE_OF_CLOSED_IN]) THEN
@@ -4218,12 +4221,11 @@ oops
       COND_CASES_TAC THEN REWRITE_TAC[CLOSED_IN_EMPTY] THEN
       ASM_SIMP_TAC[CLOSED_IN_DIFF; CLOSED_IN_TOPSPACE]]]);;
 
+
 lemma completely_regular_eq_regular_space:
    "locally_compact_space X
         \<Longrightarrow> (completely_regular_space X \<longleftrightarrow> regular_space X)"
-oops
-  MESON_TAC[COMPLETELY_REGULAR_IMP_REGULAR_SPACE;
-            LOCALLY_COMPACT_REGULAR_IMP_COMPLETELY_REGULAR_SPACE]);;
+  using completely_regular_imp_regular_space locally_compact_regular_imp_completely_regular_space by blast
 
 lemma completely_regular_space_prod_topology:
    "\<And>(top1::A topology) (top2::B topology).
@@ -8079,7 +8081,7 @@ oops
   DISCH_THEN(CONJUNCTS_THEN2
    (X_CHOOSE_THEN `h::real#A=>B` STRIP_ASSUME_TAC)
    (X_CHOOSE_THEN `k::real#A=>B` STRIP_ASSUME_TAC)) THEN
-  EXISTS_TAC `\<lambda>z. if fst z \<le> 1 / 2
+  EXISTS_TAC `\<lambda>z. if fst z \<le> 1/2
                   then (h::real#A=>B)(2 * fst z,snd z)
                   else (k::real#A=>B)(2 * fst z - 1,snd z)` THEN
   REWRITE_TAC[] THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN
@@ -8111,7 +8113,7 @@ oops
       MATCH_MP_TAC CONTINUOUS_MAP_FROM_SUBTOPOLOGY THEN
       REWRITE_TAC[CONTINUOUS_MAP_FST; ETA_AX]];
     X_GEN_TAC `t::real` THEN STRIP_TAC THEN
-    ASM_CASES_TAC `t \<le> 1 / 2` THEN ASM_REWRITE_TAC[] THEN
+    ASM_CASES_TAC `t \<le> 1/2` THEN ASM_REWRITE_TAC[] THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REAL_ARITH_TAC]);;
 
 lemma homotopic_with_compose_continuous_map_left:
@@ -12926,7 +12928,7 @@ oops
     STRIP_TAC THEN REWRITE_TAC[FUN_EQ_THM; REAL_SUB_0] THEN
     GEN_REWRITE_TAC RAND_CONV [GSYM FUN_EQ_THM] THEN
     MATCH_MP_TAC(MESON[]
-     `(a = b \<Longrightarrow> t = 1 / 2) \<and> (t = 1 / 2 \<Longrightarrow> (a \<noteq> b))
+     `(a = b \<Longrightarrow> t = 1/2) \<and> (t = 1/2 \<Longrightarrow> (a \<noteq> b))
       \<Longrightarrow> (a \<noteq> b)`) THEN
     CONJ_TAC THENL
      [DISCH_THEN(MP_TAC \<circ> AP_TERM `\<lambda>x. sum(1..p+1) (\<lambda>i. x i ^ 2)`) THEN
@@ -12938,7 +12940,7 @@ oops
       DISCH_TAC THEN CONV_TAC REAL_RING;
       DISCH_THEN SUBST1_TAC THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN
       REWRITE_TAC[FUN_EQ_THM; REAL_ARITH
-       `1 / 2 * x = 1 / 2 * y \<longleftrightarrow> x = y`] THEN
+       `1/2 * x = 1/2 * y \<longleftrightarrow> x = y`] THEN
       GEN_REWRITE_TAC RAND_CONV [GSYM FUN_EQ_THM] THEN
       REWRITE_TAC[ETA_AX] THEN ASM SET_TAC[]];
     REWRITE_TAC[NSPHERE; CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN
@@ -13692,7 +13694,7 @@ oops
    REWRITE_TAC[OPEN_IN_MTOPOLOGY] THEN INTRO_TAC "u0w hp" THEN
    REMOVE_THEN "hp" (MP_TAC \<circ> SPEC `x0::A`) THEN
    ANTS_TAC THENL [HYP REWRITE_TAC "x0" []; ALL_TAC] THEN
-   INTRO_TAC "@r. rpos ball" THEN EXISTS_TAC `min r 1 / 2` THEN
+   INTRO_TAC "@r. rpos ball" THEN EXISTS_TAC `min r 1/2` THEN
    CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
    CONJ_TAC THENL [REAL_ARITH_TAC; ALL_TAC] THEN
    TRANS_TAC SUBSET_TRANS `mball m (x0::A,r)` THEN
@@ -14590,7 +14592,7 @@ oops
   X_GEN_TAC `g::A=>A->real` THEN DISCH_TAC THEN
   FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [compactin]) THEN
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC
-    `{{x \<in> topspace X. (g::A=>A->real) a x \<in> {t. t < 1 / 2}} |
+    `{{x \<in> topspace X. (g::A=>A->real) a x \<in> {t. t < 1/2}} |
       a \<in> t}`)) THEN
   REWRITE_TAC[SIMPLE_IMAGE; EXISTS_FINITE_SUBSET_IMAGE; FORALL_IN_IMAGE] THEN
   ANTS_TAC THENL
@@ -14608,14 +14610,14 @@ oops
   ASM_CASES_TAC `k::A=>bool = {}` THEN
   ASM_REWRITE_TAC[IMAGE_CLAUSES; UNIONS_0; SUBSET_EMPTY] THEN STRIP_TAC THEN
   EXISTS_TAC
-   `\<lambda>x. 2 * max 0 (inf {(g::A=>A->real) a x | a \<in> k} - 1 / 2)` THEN
+   `\<lambda>x. 2 * max 0 (inf {(g::A=>A->real) a x | a \<in> k} - 1/2)` THEN
   REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; \<subseteq>; FORALL_IN_IMAGE] THEN
-  REWRITE_TAC[REAL_ARITH `2 * max 0 (x - 1 / 2) = 0 \<longleftrightarrow> x \<le> 1 / 2`;
-              REAL_ARITH `2 * max 0 (x - 1 / 2) = 1 \<longleftrightarrow> x = 1`] THEN
+  REWRITE_TAC[REAL_ARITH `2 * max 0 (x - 1/2) = 0 \<longleftrightarrow> x \<le> 1/2`;
+              REAL_ARITH `2 * max 0 (x - 1/2) = 1 \<longleftrightarrow> x = 1`] THEN
   RULE_ASSUM_TAC(REWRITE_RULE[CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
   REWRITE_TAC[IN_REAL_INTERVAL] THEN
   REWRITE_TAC[REAL_ARITH `0 \<le> 2 * max 0 a`;
-              REAL_ARITH  `2 * max 0 (x - 1 / 2) \<le> 1 \<longleftrightarrow> x \<le> 1`] THEN
+              REAL_ARITH  `2 * max 0 (x - 1/2) \<le> 1 \<longleftrightarrow> x \<le> 1`] THEN
   REWRITE_TAC[GSYM CONJ_ASSOC] THEN CONJ_TAC THENL
    [MATCH_MP_TAC CONTINUOUS_MAP_REAL_LMUL THEN
     MATCH_MP_TAC CONTINUOUS_MAP_REAL_MAX THEN
