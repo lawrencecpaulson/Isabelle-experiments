@@ -4176,77 +4176,56 @@ proof clarify
   assume "closedin X S" and "x \<in> topspace X" and "x \<notin> S"
   have "regular_space X"
     using assms locally_compact_Hausdorff_imp_regular_space by blast
-  then have "neighbourhood_base_of (\<lambda>C. compactin X C \<and> closedin X C) X"
+  then have nbase: "neighbourhood_base_of (\<lambda>C. compactin X C \<and> closedin X C) X"
     using assms(1) locally_compact_regular_space_neighbourhood_base by blast
-  then obtain U M where "openin X U \<and> compactin X M \<and> closedin X M \<and> x \<in> U \<and>
-     U \<subseteq> M \<and> M \<subseteq> topspace X - S"
+  then obtain U M where "openin X U" "compactin X M" "closedin X M" "x \<in> U" "U \<subseteq> M" "M \<subseteq> topspace X - S"
     unfolding neighbourhood_base_of by (metis (no_types, lifting) Diff_iff \<open>closedin X S\<close> \<open>x \<in> topspace X\<close> \<open>x \<notin> S\<close> closedin_def)
-  then
+  then have "M \<subseteq> topspace X"
+    by blast
+  obtain V K where "openin X V" "closedin X K" "x \<in> V" "V \<subseteq> K" "K \<subseteq> U"
+    by (metis (no_types, lifting) \<open>openin X U\<close> \<open>x \<in> U\<close> neighbourhood_base_of nbase)
+  have "compact_space (subtopology X M)"
+    by (simp add: \<open>compactin X M\<close> compact_space_subtopology)
+  then have "normal_space (subtopology X M)"
+    by (simp add: \<open>regular_space X\<close> compact_Hausdorff_or_regular_imp_normal_space regular_space_subtopology)
+  moreover have "closedin (subtopology X M) K"
+    using \<open>K \<subseteq> U\<close> \<open>U \<subseteq> M\<close> \<open>closedin X K\<close> closedin_subset_topspace by fastforce
+  moreover have "closedin (subtopology X M) (M - U)"
+    by (simp add: \<open>closedin X M\<close> \<open>openin X U\<close> closedin_diff closedin_subset_topspace)
+  moreover have "disjnt K (M - U)"
+    by (meson DiffD2 \<open>K \<subseteq> U\<close> disjnt_iff subsetD)
+  ultimately obtain f::"'a\<Rightarrow>real" where contf: "continuous_map (subtopology X M) (top_of_set {0..1}) f" 
+    and f0: "f ` K \<subseteq> {0}" and f1: "f ` (M - U) \<subseteq> {1}"
+    using Urysohn_lemma [of "subtopology X M" K "M-U" 0 1] by auto
+  then obtain g::"'a\<Rightarrow>real" where contg: "continuous_map (subtopology X M) euclidean g" and gim: "g ` M \<subseteq> {0..1}"
+    and g0: "\<And>x. x \<in> K \<Longrightarrow> g x = 0" and g1: "\<And>x. \<lbrakk>x \<in> M; x \<notin> U\<rbrakk> \<Longrightarrow> g x = 1"
+    using \<open>M \<subseteq> topspace X\<close> by (force simp add: continuous_map_in_subtopology image_subset_iff)
   show "\<exists>f::'a\<Rightarrow>real. continuous_map X (top_of_set {0..1}) f \<and> f x = 0 \<and> f ` S \<subseteq> {1}"
-    using neighbourhood_base_of
-     sorry
+  proof (intro exI conjI)
+    show "continuous_map X (top_of_set {0..1}) (\<lambda>x. if x \<in> M then g x else 1)"
+      unfolding continuous_map_closedin
+    proof (intro strip conjI)
+      fix C
+      assume C: "closedin (top_of_set {0::real..1}) C"
+      have eq: "{x \<in> topspace X. (if x \<in> M then g x else 1) \<in> C} = {x \<in> M. g x \<in> C} \<union> (if 1 \<in> C then topspace X - U else {})"
+        using \<open>U \<subseteq> M\<close> \<open>M \<subseteq> topspace X\<close> g1 by auto
+      show "closedin X {x \<in> topspace X. (if x \<in> M then g x else 1) \<in> C}"
+        unfolding eq
+      proof (intro closedin_Un)
+        have "closedin euclidean C"
+          using C closed_closedin closedin_closed_trans by blast
+        then have "closedin (subtopology X M) {x \<in> M. g x \<in> C}"
+          using closedin_continuous_map_preimage_gen [OF contg] \<open>M \<subseteq> topspace X\<close> by auto
+        then show "closedin X {x \<in> M. g x \<in> C}"
+          using \<open>closedin X M\<close> closedin_trans_full by blast
+      qed (use \<open>openin X U\<close> in force)
+    qed (use gim in force)
+    show "(if x \<in> M then g x else 1) = 0"
+      using \<open>U \<subseteq> M\<close> \<open>V \<subseteq> K\<close> g0 \<open>x \<in> U\<close> \<open>x \<in> V\<close> by auto
+    show "(\<lambda>x. if x \<in> M then g x else 1) ` S \<subseteq> {1}"
+      using \<open>M \<subseteq> topspace X - S\<close> by auto
+  qed
 qed
-oops
-
-  MAP_EVERY X_GEN_TAC [`u::A=>bool`; `m::A=>bool`] THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM
-   NEIGHBOURHOOD_BASE_OF_CLOSED_IN]) THEN
-  REWRITE_TAC[NEIGHBOURHOOD_BASE_OF] THEN
-  DISCH_THEN(MP_TAC \<circ> SPECL [`u::A=>bool`; `x::A`]) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`v::A=>bool`; `k::A=>bool`] THEN STRIP_TAC THEN
-  MP_TAC(ISPECL [`subtopology X (m::A=>bool)`;
-                 `k::A=>bool`; `m - u::A=>bool`; `0::real`; `1::real`]
-        URYSOHN_LEMMA) THEN
-
-  REWRITE_TAC[REAL_POS; IN_DIFF] THEN ANTS_TAC THENL
-   [REPEAT CONJ_TAC THENL
-     [MATCH_MP_TAC COMPACT_HAUSDORFF_OR_REGULAR_IMP_NORMAL_SPACE THEN
-      ASM_SIMP_TAC[COMPACT_SPACE_SUBTOPOLOGY; REGULAR_SPACE_SUBTOPOLOGY];
-      MATCH_MP_TAC CLOSED_IN_SUBSET_TOPSPACE THEN ASM SET_TAC[];
-      REWRITE_TAC[CLOSED_IN_SUBTOPOLOGY] THEN
-      EXISTS_TAC `topspace X - u::A=>bool` THEN
-      ASM_SIMP_TAC[CLOSED_IN_DIFF; CLOSED_IN_TOPSPACE] THEN
-      FIRST_ASSUM(MP_TAC \<circ> MATCH_MP COMPACT_IN_SUBSET_TOPSPACE) THEN
-      ASM SET_TAC[];
-      ASM SET_TAC[]];
-
-    REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; \<subseteq>; FORALL_IN_IMAGE] THEN
-    ASM_SIMP_TAC[COMPACT_IN_SUBSET_TOPSPACE; TOPSPACE_SUBTOPOLOGY;
-                 SET_RULE `s \<subseteq> u \<Longrightarrow> u \<inter> s = s`] THEN
-    DISCH_THEN(X_CHOOSE_THEN `g::A=>real` STRIP_ASSUME_TAC)]
-
- THEN
-  EXISTS_TAC `\<lambda>x. if x \<in> m then (g::A=>real) x else 1` THEN
-  ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
-   [ALL_TAC; REPEAT STRIP_TAC THEN COND_CASES_TAC THEN ASM SET_TAC[]] THEN
-  CONJ_TAC THENL
-
-   [ALL_TAC; ASM_MESON_TAC[ENDS_IN_UNIT_REAL_INTERVAL]] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_CLOSED_IN; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
-  X_GEN_TAC `c::real=>bool` THEN DISCH_TAC THEN
-
-  SUBGOAL_THEN
-   `{x \<in> topspace X. (if x \<in> m then g x else 1) \<in> c} =
-    {x \<in> m. (g::A=>real) x \<in> c} \<union>
-    (if 1 \<in> c then topspace X - u else {})`
-  SUBST1_TAC THENL
-   [REWRITE_TAC[EXTENSION; IN_UNION; IN_ELIM_THM; IN_DIFF] THEN
-    X_GEN_TAC `y::A` THEN ASM_CASES_TAC `(y::A) \<in> m` THEN
-    ASM_REWRITE_TAC[] THENL [ALL_TAC; ASM SET_TAC[]] THEN
-    COND_CASES_TAC THEN ASM_REWRITE_TAC[IN_DIFF; NOT_IN_EMPTY] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP COMPACT_IN_SUBSET_TOPSPACE) THEN
-    ASM SET_TAC[];
-
-    MATCH_MP_TAC CLOSED_IN_UNION THEN CONJ_TAC THENL
-     [MATCH_MP_TAC CLOSED_IN_TRANS_FULL THEN EXISTS_TAC `m::A=>bool` THEN
-      ASM_REWRITE_TAC[] THEN
-      MATCH_MP_TAC CLOSED_IN_CONTINUOUS_MAP_PREIMAGE_GEN THEN
-      EXISTS_TAC `euclideanreal` THEN
-      ASM_SIMP_TAC[CLOSED_IN_SUBSET_TOPSPACE; SUBSET_REFL];
-      COND_CASES_TAC THEN REWRITE_TAC[CLOSED_IN_EMPTY] THEN
-      ASM_SIMP_TAC[CLOSED_IN_DIFF; CLOSED_IN_TOPSPACE]]]);;
-
 
 lemma completely_regular_eq_regular_space:
    "locally_compact_space X
