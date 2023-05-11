@@ -4355,67 +4355,60 @@ proof (clarsimp simp add: neighbourhood_base_of openin_subtopology_alt)
   then obtain r where "r > 0" and r: "ball a r \<subseteq> U"
     by (metis open_contains_ball_eq)
   show "\<exists>W. open W \<and> (\<exists>V. path_connectedin (top_of_set S) V \<and> a \<in> W \<and> S \<inter> W \<subseteq> V \<and> V \<subseteq> S \<and> V \<subseteq> U)"
-    apply (rule_tac x="ball a r" in exI)
-    apply (intro conjI)
-    using open_real_greaterThanLessThan apply blast
-    apply (rule_tac x="S \<inter> ball a r" in exI)
-    apply (auto simp: )
-    apply (simp add: assms is_interval_Int is_interval_ball_real is_interval_path_connected path_connectedin_subtopology)
-    apply (simp add: \<open>0 < r\<close>)
-    using r by fastforce
+  proof (intro exI conjI)
+    show "path_connectedin (top_of_set S) (S \<inter> ball a r)"
+      by (simp add: assms is_interval_Int is_interval_ball_real is_interval_path_connected path_connectedin_subtopology)
+    show "a \<in> ball a r"
+      by (simp add: \<open>0 < r\<close>)
+  qed (use \<open>0 < r\<close> r in auto)
 qed
 
 lemma locally_path_connected_real_interval:
- (`(\<forall>a b. locally_path_connected_space
-           (subtopology euclideanreal{a..b})) \<and>
-   (\<forall>a b. locally_path_connected_space
-           (subtopology euclideanreal{a<..<b}))"
-oops
-  REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC LOCALLY_PATH_CONNECTED_IS_REALINTERVAL THEN
-  REWRITE_TAC[IS_REALINTERVAL_INTERVAL]);;`
-
+ "locally_path_connected_space (subtopology euclideanreal{a..b})"
+  "locally_path_connected_space (subtopology euclideanreal{a<..<b})"
+  using locally_path_connected_is_realinterval by auto
 
 lemma locally_path_connected_space_prod_topology:
    "locally_path_connected_space (prod_topology X Y) \<longleftrightarrow>
       topspace (prod_topology X Y) = {} \<or>
-      locally_path_connected_space X \<and> locally_path_connected_space Y"
-oops
-  REPEAT GEN_TAC THEN
-  ASM_CASES_TAC `topspace(prod_topology X Y):A#B=>bool = {}` THENL
-   [ASM_REWRITE_TAC[locally_path_connected_space; NEIGHBOURHOOD_BASE_OF] THEN
-    ASM_MESON_TAC[OPEN_IN_SUBSET; \<subseteq>; NOT_IN_EMPTY];
-    ALL_TAC] THEN
-  ASM_REWRITE_TAC[] THEN RULE_ASSUM_TAC(REWRITE_RULE
-   [TOPSPACE_PROD_TOPOLOGY; CROSS_EQ_EMPTY; DE_MORGAN_THM]) THEN
-  ASM_REWRITE_TAC[] THEN EQ_TAC THENL
-   [DISCH_THEN(fun th -> CONJ_TAC THEN MP_TAC th) THEN
-    MATCH_MP_TAC(ONCE_REWRITE_RULE[IMP_CONJ] (REWRITE_RULE[CONJ_ASSOC]
-      LOCALLY_PATH_CONNECTED_SPACE_QUOTIENT_MAP_IMAGE))
-    THENL [EXISTS_TAC `fst::A#B=>A`; EXISTS_TAC `snd::A#B=>B`] THEN
-    ASM_REWRITE_TAC[QUOTIENT_MAP_FST; QUOTIENT_MAP_SND];
-    FIRST_X_ASSUM(CONJUNCTS_THEN MP_TAC) THEN
-    REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `z::B` THEN DISCH_TAC THEN X_GEN_TAC `w::A` THEN DISCH_TAC THEN
-    REWRITE_TAC[locally_path_connected_space; FORALL_PAIR_THM; IN_CROSS;
-      NEIGHBOURHOOD_BASE_OF; TOPSPACE_PROD_TOPOLOGY] THEN STRIP_TAC THEN
-    MAP_EVERY X_GEN_TAC [`uv::A#B=>bool`; `x::A`; `y::B`] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
-    GEN_REWRITE_TAC LAND_CONV [OPEN_IN_PROD_TOPOLOGY_ALT] THEN
-    DISCH_THEN(MP_TAC \<circ> SPECL [`x::A`; `y::B`]) THEN
-    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`w1::A=>bool`; `w2::B=>bool`] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`w2::B=>bool`; `y::B`]) THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`w1::A=>bool`; `x::A`]) THEN
-    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`u1::A=>bool`; `k1::A=>bool`] THEN STRIP_TAC THEN
-    MAP_EVERY X_GEN_TAC [`u2::B=>bool`; `k2::B=>bool`] THEN STRIP_TAC THEN
-    EXISTS_TAC `(u1::A=>bool) \<times> (u2::B=>bool)` THEN
-    EXISTS_TAC `(k1::A=>bool) \<times> (k2::B=>bool)` THEN
-    ASM_SIMP_TAC[OPEN_IN_CROSS; PATH_CONNECTED_IN_CROSS;
-                IN_CROSS; SUBSET_CROSS] THEN
-    TRANS_TAC SUBSET_TRANS `(w1 \<times> w2):A#B=>bool` THEN
-    ASM_REWRITE_TAC[] THEN ASM_REWRITE_TAC[SUBSET_CROSS]]);;
+      locally_path_connected_space X \<and> locally_path_connected_space Y" (is "?lhs=?rhs")
+proof (cases "topspace(prod_topology X Y) = {}")
+  case True
+  then show ?thesis
+    by (metis equals0D locally_path_connected_space_def neighbourhood_base_of_def)
+next
+  case False
+  then have ne: "topspace X \<noteq> {}" "topspace Y \<noteq> {}"
+    by simp_all
+  show ?thesis
+    proof
+  assume ?lhs then show ?rhs
+    by (metis ne locally_path_connected_space_retraction_map_image retraction_map_fst retraction_map_snd)
+next
+  assume ?rhs
+  with False have X: "locally_path_connected_space X" and Y: "locally_path_connected_space Y"
+    by auto
+  obtain a b where "a \<in> topspace X" "b \<in> topspace Y"
+    using ne by auto
+  show ?lhs
+    unfolding locally_path_connected_space_def neighbourhood_base_of
+  proof clarify
+    fix UV x y
+    assume UV: "openin (prod_topology X Y) UV" and "(x,y) \<in> UV"
+    obtain A B where W12: "openin X A \<and> openin Y B \<and> x \<in> A \<and> y \<in> B \<and> A \<times> B \<subseteq> UV"
+      using X Y by (metis UV \<open>(x,y) \<in> UV\<close> openin_prod_topology_alt)
+    then obtain C D K L
+        where "openin X C" "path_connectedin X K" "x \<in> C" "C \<subseteq> K" "K \<subseteq> A"
+              "openin Y D" "path_connectedin Y L" "y \<in> D" "D \<subseteq> L" "L \<subseteq> B"
+      by (metis X Y locally_path_connected_space)
+    with W12 \<open>openin X C\<close> \<open>openin Y D\<close>
+    show "\<exists>U V. openin (prod_topology X Y) U \<and> path_connectedin (prod_topology X Y) V \<and> (x, y) \<in> U \<and> U \<subseteq> V \<and> V \<subseteq> UV"
+      apply (rule_tac x="C \<times> D" in exI)
+      apply (rule_tac x="K \<times> L" in exI)
+      apply (auto simp: openin_prod_Times_iff path_connectedin_Times)
+      done
+  qed
+qed
 
 lemma locally_path_connected_space_sum_topology:
    "\<And>k (X::K=>A topology).
