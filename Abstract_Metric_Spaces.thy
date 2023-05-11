@@ -8,6 +8,24 @@ begin
 lemma ball_iff_cball: "(\<exists>r>0. ball x r \<subseteq> U) \<longleftrightarrow> (\<exists>r>0. cball x r \<subseteq> U)"
   by (meson mem_interior mem_interior_cball)
 
+
+lemma topological_property_of_sum_component:
+  assumes major: "P (sum_topology X I)"
+    and minor: "\<And>X S. \<lbrakk>P X; closedin X S; openin X S\<rbrakk> \<Longrightarrow> P(subtopology X S)"
+    and PQ:  "\<And>X X'. X homeomorphic_space X' \<Longrightarrow> (P X \<longleftrightarrow> Q X')"
+  shows "(\<forall>i \<in> I. Q(X i))"
+proof -
+  have "Q(X i)" if "i \<in> I" for i
+  proof -
+    have "P(subtopology (sum_topology X I) (Pair i ` topspace (X i)))"
+      by (meson closed_map_component_injection closed_map_def closedin_topspace major minor open_map_component_injection open_map_def openin_topspace that)
+    then show ?thesis
+      by (metis PQ embedding_map_component_injection embedding_map_imp_homeomorphic_space homeomorphic_space_sym that)
+  qed
+  then show ?thesis by metis
+qed
+
+
 thm closedin_subtopology
 lemma closedin_subset_topspace:
    "\<lbrakk>closedin X S; S \<subseteq> T\<rbrakk> \<Longrightarrow> closedin (subtopology X T) S"
@@ -4381,56 +4399,73 @@ next
   then have ne: "topspace X \<noteq> {}" "topspace Y \<noteq> {}"
     by simp_all
   show ?thesis
-    proof
-  assume ?lhs then show ?rhs
-    by (metis ne locally_path_connected_space_retraction_map_image retraction_map_fst retraction_map_snd)
-next
-  assume ?rhs
-  with False have X: "locally_path_connected_space X" and Y: "locally_path_connected_space Y"
-    by auto
-  obtain a b where "a \<in> topspace X" "b \<in> topspace Y"
-    using ne by auto
-  show ?lhs
-    unfolding locally_path_connected_space_def neighbourhood_base_of
-  proof clarify
-    fix UV x y
-    assume UV: "openin (prod_topology X Y) UV" and "(x,y) \<in> UV"
-    obtain A B where W12: "openin X A \<and> openin Y B \<and> x \<in> A \<and> y \<in> B \<and> A \<times> B \<subseteq> UV"
-      using X Y by (metis UV \<open>(x,y) \<in> UV\<close> openin_prod_topology_alt)
-    then obtain C D K L
+  proof
+    assume ?lhs then show ?rhs
+      by (metis ne locally_path_connected_space_retraction_map_image retraction_map_fst retraction_map_snd)
+  next
+    assume ?rhs
+    with False have X: "locally_path_connected_space X" and Y: "locally_path_connected_space Y"
+      by auto
+    obtain a b where "a \<in> topspace X" "b \<in> topspace Y"
+      using ne by auto
+    show ?lhs
+      unfolding locally_path_connected_space_def neighbourhood_base_of
+    proof clarify
+      fix UV x y
+      assume UV: "openin (prod_topology X Y) UV" and "(x,y) \<in> UV"
+      obtain A B where W12: "openin X A \<and> openin Y B \<and> x \<in> A \<and> y \<in> B \<and> A \<times> B \<subseteq> UV"
+        using X Y by (metis UV \<open>(x,y) \<in> UV\<close> openin_prod_topology_alt)
+      then obtain C D K L
         where "openin X C" "path_connectedin X K" "x \<in> C" "C \<subseteq> K" "K \<subseteq> A"
-              "openin Y D" "path_connectedin Y L" "y \<in> D" "D \<subseteq> L" "L \<subseteq> B"
-      by (metis X Y locally_path_connected_space)
-    with W12 \<open>openin X C\<close> \<open>openin Y D\<close>
-    show "\<exists>U V. openin (prod_topology X Y) U \<and> path_connectedin (prod_topology X Y) V \<and> (x, y) \<in> U \<and> U \<subseteq> V \<and> V \<subseteq> UV"
-      apply (rule_tac x="C \<times> D" in exI)
-      apply (rule_tac x="K \<times> L" in exI)
-      apply (auto simp: openin_prod_Times_iff path_connectedin_Times)
-      done
+          "openin Y D" "path_connectedin Y L" "y \<in> D" "D \<subseteq> L" "L \<subseteq> B"
+        by (metis X Y locally_path_connected_space)
+      with W12 \<open>openin X C\<close> \<open>openin Y D\<close>
+      show "\<exists>U V. openin (prod_topology X Y) U \<and> path_connectedin (prod_topology X Y) V \<and> (x, y) \<in> U \<and> U \<subseteq> V \<and> V \<subseteq> UV"
+        apply (rule_tac x="C \<times> D" in exI)
+        apply (rule_tac x="K \<times> L" in exI)
+        apply (auto simp: openin_prod_Times_iff path_connectedin_Times)
+        done
+    qed
   qed
 qed
 
 lemma locally_path_connected_space_sum_topology:
-   "\<And>k (X::K=>A topology).
-        locally_path_connected_space(sum_topology k X) \<longleftrightarrow>
-        \<forall>i. i \<in> k \<Longrightarrow> locally_path_connected_space(X i)"
+   "locally_path_connected_space(sum_topology X I) \<longleftrightarrow>
+    (\<forall>i \<in> I. locally_path_connected_space (X i))" (is "?lhs=?rhs")
+proof
+  assume ?lhs then show ?rhs
+    apply (rule topological_property_of_sum_component)
+    apply (simp add: locally_path_connected_space_open_subset)
+    by (simp add: homeomorphic_locally_path_connected_space)
+next
+  assume R: ?rhs
+  show ?lhs
+  proof (clarsimp simp add: locally_path_connected_space_def neighbourhood_base_of forall_openin_sum_topology imp_conjL)
+    fix W i x
+    assume ope: "\<forall>i\<in>I. openin (X i) (W i)" 
+      and "i \<in> I" and "x \<in> W i"
+
+    then have "openin (X i) (W i)"
+      by blast
+    then obtain U V where U: "openin (X i) U" and V: "path_connectedin (X i) V" 
+           and "x \<in> U" "U \<subseteq> V" "V \<subseteq> W i"
+      by (metis R \<open>i \<in> I\<close> \<open>x \<in> W i\<close> locally_path_connected_space)
+
+
+    show "\<exists>U. openin (sum_topology X I) U \<and> (\<exists>V. path_connectedin (sum_topology X I) V \<and> (i, x) \<in> U \<and> U \<subseteq> V \<and> V \<subseteq> Sigma I W)"
+      apply (rule_tac x="Pair i ` U" in exI)
+      apply (intro conjI)
+      defer
+      apply (rule_tac x="Pair i ` V" in exI)
+       apply (intro conjI)
+      apply (meson \<open>i \<in> I\<close> \<open>path_connectedin (X i) V\<close> continuous_map_component_injection path_connectedin_continuous_map_image)
+      using \<open>x \<in> U\<close> \<open>U \<subseteq> V\<close> \<open>i \<in> I\<close> \<open>V \<subseteq> W i\<close> apply auto
+      by (meson U open_map_component_injection open_map_def)
+  qed
+qed
+
+
 oops
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [MATCH_MP_TAC TOPOLOGICAL_PROPERTY_OF_SUM_COMPONENT THEN
-    REWRITE_TAC[HOMEOMORPHIC_LOCALLY_PATH_CONNECTED_SPACE] THEN
-    SIMP_TAC[LOCALLY_PATH_CONNECTED_SPACE_OPEN_SUBSET];
-    REWRITE_TAC[locally_path_connected_space; NEIGHBOURHOOD_BASE_OF] THEN
-    REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
-    REWRITE_TAC[FORALL_OPEN_IN_SUM_TOPOLOGY] THEN
-    DISCH_TAC THEN X_GEN_TAC `w::K=>A->bool` THEN DISCH_TAC THEN
-    REWRITE_TAC[FORALL_PAIR_THM; Sigma; IN_ELIM_PAIR_THM] THEN
-    MAP_EVERY X_GEN_TAC [`i::K`; `x::A`] THEN STRIP_TAC THEN
-    REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> SPEC `i::K`)) THEN
-    ASM_REWRITE_TAC[] THEN REPEAT DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(w::K=>A->bool) i`) THEN ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `x::A`) THEN
-    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`u::A=>bool`; `v::A=>bool`] THEN STRIP_TAC THEN
     EXISTS_TAC `image (\<lambda>x. (i::K),(x::A)) u` THEN
     EXISTS_TAC `image (\<lambda>x. (i::K),(x::A)) v` THEN
     ASM_SIMP_TAC[IMAGE_SUBSET] THEN
