@@ -4346,33 +4346,24 @@ qed
 
 
 lemma locally_path_connected_is_realinterval:
-   "is_interval s
-       \<Longrightarrow> locally_path_connected_space(subtopology euclideanreal s)"
-  using locally_path_connected_space_euclideanreal
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[locally_path_connected_space] THEN
-  REWRITE_TAC[NEIGHBOURHOOD_BASE_OF; TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY] THEN
-  REWRITE_TAC[OPEN_IN_SUBTOPOLOGY_ALT; IMP_CONJ] THEN
-  REWRITE_TAC[RIGHT_FORALL_IMP_THM; RIGHT_EXISTS_AND_THM] THEN
-  REWRITE_TAC[FORALL_IN_GSPEC; EXISTS_IN_GSPEC; IN_INTER; INTER_SUBSET] THEN
-  X_GEN_TAC `u::real=>bool` THEN DISCH_TAC THEN
-  X_GEN_TAC `a::real` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE LAND_CONV
-   [GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC]) THEN
-  REWRITE_TAC[OPEN_IN_MTOPOLOGY; MBALL_REAL_INTERVAL] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `a::real` \<circ> CONJUNCT2) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `r::real` THEN STRIP_TAC THEN
-  EXISTS_TAC `real_interval(a - r,a + r)` THEN
-  REWRITE_TAC[GSYM REAL_OPEN_IN; REAL_OPEN_REAL_INTERVAL] THEN
-  EXISTS_TAC `s \<inter> real_interval(a - r,a + r)` THEN
-  ASM_REWRITE_TAC[IN_REAL_INTERVAL; PATH_CONNECTED_IN_SUBTOPOLOGY] THEN
-  REWRITE_TAC[INTER_SUBSET; SUBSET_INTER] THEN
-  ASM_REWRITE_TAC[REAL_ARITH `a - r::real < a \<and> a < a + r \<longleftrightarrow> 0 < r`] THEN
-  CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-  REWRITE_TAC[PATH_CONNECTED_IN_EUCLIDEANREAL] THEN
-  MATCH_MP_TAC IS_REALINTERVAL_INTER THEN
-  ASM_REWRITE_TAC[IS_REALINTERVAL_INTERVAL]);;
+  assumes "is_interval S"
+  shows "locally_path_connected_space(subtopology euclideanreal S)"
+  unfolding locally_path_connected_space_def
+proof (clarsimp simp add: neighbourhood_base_of openin_subtopology_alt)
+  fix a U
+  assume "a \<in> S" and "a \<in> U" and "open U"
+  then obtain r where "r > 0" and r: "ball a r \<subseteq> U"
+    by (metis open_contains_ball_eq)
+  show "\<exists>W. open W \<and> (\<exists>V. path_connectedin (top_of_set S) V \<and> a \<in> W \<and> S \<inter> W \<subseteq> V \<and> V \<subseteq> S \<and> V \<subseteq> U)"
+    apply (rule_tac x="ball a r" in exI)
+    apply (intro conjI)
+    using open_real_greaterThanLessThan apply blast
+    apply (rule_tac x="S \<inter> ball a r" in exI)
+    apply (auto simp: )
+    apply (simp add: assms is_interval_Int is_interval_ball_real is_interval_path_connected path_connectedin_subtopology)
+    apply (simp add: \<open>0 < r\<close>)
+    using r by fastforce
+qed
 
 lemma locally_path_connected_real_interval:
  (`(\<forall>a b. locally_path_connected_space
