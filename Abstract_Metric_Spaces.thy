@@ -4472,12 +4472,12 @@ definition locally_connected_space
   where "locally_connected_space X \<equiv> neighbourhood_base_of (connectedin X) X"
 
 
-lemma A: "(\<forall>U x. openin X U \<and> x \<in> U
+lemma locally_connected_A: "(\<forall>U x. openin X U \<and> x \<in> U
               \<longrightarrow> openin X (connected_component_of_set (subtopology X U) x))
        \<Longrightarrow> neighbourhood_base_of (\<lambda>U. openin X U \<and> connectedin X U) X"
   by (smt (verit, best) connected_component_of_refl connectedin_connected_component_of connectedin_subtopology mem_Collect_eq neighbourhood_base_of openin_subset topspace_subtopology_subset)
 
-lemma B: "locally_connected_space X \<Longrightarrow> 
+lemma locally_connected_B: "locally_connected_space X \<Longrightarrow> 
           (\<forall>U x. openin X U \<and> x \<in> U \<longrightarrow> openin X (connected_component_of_set (subtopology X U) x))"
   unfolding locally_connected_space_def neighbourhood_base_of
   apply (erule all_forward)
@@ -4485,19 +4485,19 @@ lemma B: "locally_connected_space X \<Longrightarrow>
   apply (subst openin_subopen)
   by (smt (verit, ccfv_threshold) Ball_Collect connected_component_of_def connected_component_of_equiv connectedin_subtopology in_mono mem_Collect_eq)
 
-lemma C: "neighbourhood_base_of (\<lambda>U. openin X U \<and> connectedin X U) X \<Longrightarrow> locally_connected_space X"
+lemma locally_connected_C: "neighbourhood_base_of (\<lambda>U. openin X U \<and> connectedin X U) X \<Longrightarrow> locally_connected_space X"
   using locally_connected_space_def neighbourhood_base_of_mono by auto
 
 
 lemma locally_connected_space_alt: 
   "locally_connected_space X \<longleftrightarrow> neighbourhood_base_of (\<lambda>U. openin X U \<and> connectedin X U) X"
-  using A B C by blast
+  using locally_connected_A locally_connected_B locally_connected_C by blast
 
 lemma locally_connected_space_eq_open_connected_component_of:
   "locally_connected_space X \<longleftrightarrow>
         (\<forall>U x. openin X U \<and> x \<in> U
               \<longrightarrow> openin X (connected_component_of_set (subtopology X U) x))"
-  by (meson A B C)
+  by (meson locally_connected_A locally_connected_B locally_connected_C)
 
 lemma locally_connected_space:
    "locally_connected_space X \<longleftrightarrow>
@@ -4510,8 +4510,7 @@ lemma locally_path_connected_imp_locally_connected_space:
 
 lemma locally_connected_space_open_connected_components:
   "locally_connected_space X \<longleftrightarrow>
-        (\<forall>U C. openin X U \<and> C \<in> connected_components_of(subtopology X U)
-                \<longrightarrow> openin X C)"
+   (\<forall>U C. openin X U \<and> C \<in> connected_components_of(subtopology X U) \<longrightarrow> openin X C)"
   apply (simp add: locally_connected_space_eq_open_connected_component_of connected_components_of_def)
   by (smt (verit) imageE image_eqI inf.orderE inf_commute openin_subset)
 
@@ -4568,8 +4567,7 @@ lemma locally_connected_space_im_kleinen:
   using openin_subset subsetD by fastforce
 
 lemma locally_connected_space_open_subset:
-   "\<lbrakk>locally_connected_space X; openin X S\<rbrakk>
-        \<Longrightarrow> locally_connected_space (subtopology X S)"
+   "\<lbrakk>locally_connected_space X; openin X S\<rbrakk> \<Longrightarrow> locally_connected_space (subtopology X S)"
   apply (simp add: locally_connected_space_def)
   by (smt (verit, ccfv_threshold) connectedin_subtopology neighbourhood_base_of openin_open_subtopology subset_trans)
 
@@ -4589,25 +4587,31 @@ proof clarify
   proof (clarsimp simp: openin_subopen [where S = "{x \<in> topspace X. f x \<in> C}"])
     fix x
     assume "x \<in> topspace X" and "f x \<in> C"
-
-    have \<section>: "quotient_map (subtopology X Vf) (subtopology Y V) f"
-      by (simp add: Vf_def \<open>openin Y V\<close> f quotient_map_restriction)
-    have *: "connected_component_of_set (subtopology X Vf) x \<subseteq>
-      topspace X \<inter> {x. x \<in> topspace X \<and> f x \<in> V} \<and> image f (connected_component_of_set (subtopology X Vf)
-      x) \<subseteq> C"
-      apply (intro conjI)
-      using Vf_def connected_component_of_subset_topspace apply force
-      apply (rule connected_components_of_maximal [where X = "subtopology Y V"])
-      apply (simp add: local.C)
-      apply (meson "\<section>" connectedin_connected_component_of connectedin_continuous_map_image quotient_imp_continuous_map)
-      by (metis (no_types, lifting) Vf_def \<open>f x \<in> C\<close> \<open>openin Y V\<close> \<open>x \<in> topspace X\<close> connected_component_of_refl connected_components_of_subset disjnt_iff image_eqI local.C mem_Collect_eq ope1 openin_subset subsetD topspace_subtopology_subset)
     show "\<exists>T. openin X T \<and> x \<in> T \<and> T \<subseteq> {x \<in> topspace X. f x \<in> C}"
-      apply (rule_tac x="connected_component_of_set (subtopology X Vf) x" in exI)
-      apply (intro conjI)
-      using X ope1 locally_connected_space_open_subset openin_connected_component_of_locally_connected_space openin_open_subtopology Vf_def
-      apply metis
-      using \<open>f x \<in> C\<close> \<open>x \<in> topspace X\<close> connected_component_of_refl connected_components_of_subset local.C Vf_def apply fastforce
-      using * by blast
+    proof (intro exI conjI)
+      show "openin X (connected_component_of_set (subtopology X Vf) x)"
+        by (metis Vf_def X connected_component_of_eq_empty locally_connected_B ope1 openin_empty
+                  openin_subset topspace_subtopology_subset)
+      show x_in_conn: "x \<in> connected_component_of_set (subtopology X Vf) x"
+        using C Vf_def \<open>f x \<in> C\<close> \<open>x \<in> topspace X\<close> connected_component_of_refl connected_components_of_subset by fastforce
+      have "connected_component_of_set (subtopology X Vf) x \<subseteq> topspace X \<inter> Vf"
+        using connected_component_of_subset_topspace by fastforce
+      moreover
+      have "f ` connected_component_of_set (subtopology X Vf) x \<subseteq> C"
+      proof (rule connected_components_of_maximal [where X = "subtopology Y V"])
+        show "C \<in> connected_components_of (subtopology Y V)"
+          by (simp add: C)
+        have \<section>: "quotient_map (subtopology X Vf) (subtopology Y V) f"
+          by (simp add: Vf_def \<open>openin Y V\<close> f quotient_map_restriction)
+        then show "connectedin (subtopology Y V) (f ` connected_component_of_set (subtopology X Vf) x)"
+          by (metis connectedin_connected_component_of connectedin_continuous_map_image quotient_imp_continuous_map)
+        show "\<not> disjnt C (f ` connected_component_of_set (subtopology X Vf) x)"
+          using \<open>f x \<in> C\<close> x_in_conn by (auto simp: disjnt_iff)
+      qed
+      ultimately
+      show "connected_component_of_set (subtopology X Vf) x \<subseteq> {x \<in> topspace X. f x \<in> C}"
+        by blast
+    qed
   qed
   then show "openin Y C"
     using \<open>C \<subseteq> topspace Y\<close> f quotient_map_def by fastforce
@@ -4615,101 +4619,90 @@ qed
 
 
 lemma locally_connected_space_retraction_map_image:
-   "retraction_map X Y r \<and> locally_connected_space X
+   "\<lbrakk>retraction_map X Y r; locally_connected_space X\<rbrakk>
         \<Longrightarrow> locally_connected_space Y"
   using locally_connected_space_quotient_map_image retraction_imp_quotient_map by blast
 
 lemma homeomorphic_locally_connected_space:
-   "X homeomorphic_space Y \<Longrightarrow> (locally_connected_space X \<longleftrightarrow> locally_connected_space Y)"
+   "X homeomorphic_space Y \<Longrightarrow> locally_connected_space X \<longleftrightarrow> locally_connected_space Y"
   by (meson homeomorphic_map_def homeomorphic_space homeomorphic_space_sym locally_connected_space_quotient_map_image)
 
 lemma locally_connected_space_euclideanreal: "locally_connected_space euclideanreal"
   by (simp add: locally_path_connected_imp_locally_connected_space locally_path_connected_space_euclideanreal)
 
 lemma locally_connected_is_realinterval:
-   "is_interval s
-       \<Longrightarrow> locally_connected_space(subtopology euclideanreal s)"
+   "is_interval S \<Longrightarrow> locally_connected_space(subtopology euclideanreal S)"
   by (simp add: locally_path_connected_imp_locally_connected_space locally_path_connected_is_realinterval)
 
 lemma locally_connected_real_interval:
     "locally_connected_space (subtopology euclideanreal{a..b})"
     "locally_connected_space (subtopology euclideanreal{a<..<b})"
-oops
-  REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC LOCALLY_CONNECTED_IS_REALINTERVAL THEN
-  REWRITE_TAC[IS_REALINTERVAL_INTERVAL]);;
+  using locally_connected_is_realinterval by auto
 
 lemma locally_connected_space_discrete_topology:
-   "locally_connected_space (discrete_topology u)"
-oops
-  GEN_TAC THEN REWRITE_TAC[LOCALLY_CONNECTED_SPACE] THEN
-  SIMP_TAC[OPEN_IN_DISCRETE_TOPOLOGY; CONNECTED_IN_DISCRETE_TOPOLOGY] THEN
-  MAP_EVERY X_GEN_TAC [`v::A=>bool`; `x::A`] THEN STRIP_TAC THEN
-  EXISTS_TAC `{x::A}` THEN ASM SET_TAC[]);;
+   "locally_connected_space (discrete_topology U)"
+  by (simp add: locally_path_connected_imp_locally_connected_space locally_path_connected_space_discrete_topology)
 
 lemma locally_path_connected_imp_locally_connected_at:
    "locally_path_connected_at x X \<Longrightarrow> locally_connected_at x X"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[locally_path_connected_at; locally_connected_at] THEN
-  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] NEIGHBOURHOOD_BASE_AT_MONO) THEN
-  SIMP_TAC[PATH_CONNECTED_IN_IMP_CONNECTED_IN]);;
+  by (simp add: locally_connected_at_def locally_path_connected_at_def neighbourhood_base_at_mono path_connectedin_imp_connectedin)
 
 lemma weakly_locally_path_connected_imp_weakly_locally_connected_at:
    "weakly_locally_path_connected_at x X
              \<Longrightarrow> weakly_locally_connected_at x X"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[weakly_locally_path_connected_at;
-              weakly_locally_connected_at] THEN
-  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] NEIGHBOURHOOD_BASE_AT_MONO) THEN
-  SIMP_TAC[PATH_CONNECTED_IN_IMP_CONNECTED_IN]);;
+  by (simp add: neighbourhood_base_at_mono path_connectedin_imp_connectedin weakly_locally_connected_at_def weakly_locally_path_connected_at_def)
+
 
 lemma interior_of_locally_connected_subspace_component:
-   "locally_connected_space X \<and>
-        c \<in> connected_components_of (subtopology X s)
-        \<Longrightarrow> X interior_of c = c \<inter> X interior_of s"
-oops
-  REPEAT STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CONNECTED_COMPONENTS_OF_SUBSET) THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; SUBSET_INTER] THEN STRIP_TAC THEN
-  MATCH_MP_TAC SUBSET_ANTISYM THEN
-  ASM_SIMP_TAC[SUBSET_INTER; INTERIOR_OF_MONO; INTERIOR_OF_SUBSET] THEN
-  MP_TAC(ISPEC `subtopology X (X interior_of s::A=>bool)`
-        UNIONS_CONNECTED_COMPONENTS_OF) THEN
-  SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET; INTERIOR_OF_SUBSET_TOPSPACE] THEN
-  DISCH_THEN(SUBST1_TAC \<circ> SYM) THEN
-  REWRITE_TAC[UNIONS_SUBSET; INTER_UNIONS; FORALL_IN_GSPEC] THEN
-  X_GEN_TAC `d::A=>bool` THEN DISCH_TAC THEN
-  ASM_CASES_TAC `c \<inter> d::A=>bool = {}` THEN
-  ASM_REWRITE_TAC[EMPTY_SUBSET] THEN
-  MATCH_MP_TAC(SET_RULE `d \<subseteq> e \<Longrightarrow> c \<inter> d \<subseteq> e`) THEN
-  MATCH_MP_TAC INTERIOR_OF_MAXIMAL THEN CONJ_TAC THENL
-   [MATCH_MP_TAC CONNECTED_COMPONENTS_OF_MAXIMAL THEN
-    EXISTS_TAC `subtopology X (s::A=>bool)` THEN
-    ASM_REWRITE_TAC[] THEN CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-    REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP
-      CONNECTED_IN_CONNECTED_COMPONENTS_OF)) THEN
-    ASM_SIMP_TAC[CONNECTED_IN_SUBTOPOLOGY] THEN
-    ASM_MESON_TAC[SUBSET_TRANS; INTERIOR_OF_SUBSET];
-    FIRST_X_ASSUM(MATCH_MP_TAC \<circ> GEN_REWRITE_RULE id
-     [LOCALLY_CONNECTED_SPACE_OPEN_CONNECTED_COMPONENTS]) THEN
-    EXISTS_TAC `X interior_of (s::A=>bool)` THEN
-    ASM_REWRITE_TAC[OPEN_IN_INTERIOR_OF]]);;
+  assumes X: "locally_connected_space X"
+    and C: "C \<in> connected_components_of (subtopology X S)"
+  shows "X interior_of C = C \<inter> X interior_of S"
+proof -
+  obtain Csub: "C \<subseteq> topspace X" "C \<subseteq> S"
+    by (meson C connectedin_connected_components_of connectedin_subset_topspace connectedin_subtopology)
+  show ?thesis
+  proof
+    show "X interior_of C \<subseteq> C \<inter> X interior_of S"
+      by (simp add: Csub interior_of_mono interior_of_subset)
+    have eq: "X interior_of S = \<Union> (connected_components_of (subtopology X (X interior_of S)))"
+      by (metis Union_connected_components_of interior_of_subset_topspace topspace_subtopology_subset)
+    moreover have "C \<inter> D \<subseteq> X interior_of C"
+      if "D \<in> connected_components_of (subtopology X (X interior_of S))" for D
+    proof (cases "C \<inter> D = {}")
+      case False
+      have "D \<subseteq> X interior_of C"
+      proof (rule interior_of_maximal)
+        have "connectedin (subtopology X S) D"
+          by (meson connectedin_connected_components_of connectedin_subtopology interior_of_subset subset_trans that)
+        then show "D \<subseteq> C"
+          by (meson C False connected_components_of_maximal disjnt_def)
+        show "openin X D"
+          using X locally_connected_space_open_connected_components openin_interior_of that by blast
+      qed
+      then show ?thesis 
+        by blast
+    qed auto
+    ultimately show "C \<inter> X interior_of S \<subseteq> X interior_of C"
+      by blast
+  qed
+qed
+
 
 lemma frontier_of_locally_connected_subspace_component:
-   "locally_connected_space X \<and>
-        closedin X s \<and>
-        c \<in> connected_components_of (subtopology X s)
-        \<Longrightarrow> X frontier_of c = c \<inter> X frontier_of s"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[frontier_of] THEN
-  REWRITE_TAC[SET_RULE `s \<inter> (t - u) = s \<inter> t - s \<inter> u`] THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_CONNECTED_COMPONENTS_OF) THEN
-  ASM_SIMP_TAC[CLOSED_IN_CLOSED_SUBTOPOLOGY] THEN STRIP_TAC THEN
-  ASM_SIMP_TAC[CLOSURE_OF_CLOSED_IN] THEN
-  ASM_SIMP_TAC[GSYM INTERIOR_OF_LOCALLY_CONNECTED_SUBSPACE_COMPONENT] THEN
-  ASM SET_TAC[]);;
+  assumes X: "locally_connected_space X" and "closedin X S" 
+    and C: "C \<in> connected_components_of (subtopology X S)"
+  shows "X frontier_of C = C \<inter> X frontier_of S"
+proof -
+  obtain Csub: "C \<subseteq> topspace X" "C \<subseteq> S"
+    by (meson C connectedin_connected_components_of connectedin_subset_topspace connectedin_subtopology)
+  then have "X closure_of C - X interior_of C = C \<inter> X closure_of S - C \<inter> X interior_of S"
+    using assms
+    apply (simp add: closure_of_closedin flip: interior_of_locally_connected_subspace_component)
+    by (metis closedin_connected_components_of closedin_trans_full closure_of_eq inf.orderE)
+  then show ?thesis
+    by (simp add: Diff_Int_distrib frontier_of_def)
+qed
+
 
 lemma locally_connected_space_prod_topology:
    "locally_connected_space (prod_topology X Y) \<longleftrightarrow>
@@ -4753,8 +4746,7 @@ oops
     ASM_REWRITE_TAC[] THEN ASM_REWRITE_TAC[SUBSET_CROSS]]);;
 
 lemma locally_connected_space_product_topology:
-   "\<And>(X::K=>A topology) k.
-        locally_connected_space(product_topology k X) \<longleftrightarrow>
+   "locally_connected_space(product_topology k X) \<longleftrightarrow>
         topspace(product_topology k X) = {} \<or>
         finite {i. i \<in> k \<and> \<not> connected_space(X i)} \<and>
         \<forall>i. i \<in> k \<Longrightarrow> locally_connected_space(X i)"
@@ -4870,8 +4862,7 @@ oops
       ASM SET_TAC[]]]);;
 
 lemma locally_connected_space_sum_topology:
-   "\<And>k (X::K=>A topology).
-        locally_connected_space(sum_topology k X) \<longleftrightarrow>
+   "locally_connected_space(sum_topology k X) \<longleftrightarrow>
         \<forall>i. i \<in> k \<Longrightarrow> locally_connected_space(X i)"
 oops
   REPEAT GEN_TAC THEN EQ_TAC THENL
