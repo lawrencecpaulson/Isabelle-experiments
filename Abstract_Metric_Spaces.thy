@@ -4363,6 +4363,8 @@ qed
 
 
 
+thm locally_path_connected_space
+
 lemma locally_path_connected_is_realinterval:
   assumes "is_interval S"
   shows "locally_path_connected_space(subtopology euclideanreal S)"
@@ -4457,7 +4459,6 @@ qed
 
 
 subsection\<open>Locally connected spaces\<close>
-
 
 definition weakly_locally_connected_at 
   where "weakly_locally_connected_at x X \<equiv> neighbourhood_base_at x (connectedin X) X"
@@ -4744,6 +4745,116 @@ next
   qed
 qed
 
+(*Same proof as locally_path_connected_space_product_topology*)
+lemma locally_connected_space_product_topology:
+   "locally_connected_space(product_topology X I) \<longleftrightarrow>
+        topspace(product_topology X I) = {} \<or>
+        finite {i. i \<in> I \<and> ~connected_space(X i)} \<and>
+        (\<forall>i \<in> I. locally_connected_space(X i))"
+    (is "?lhs \<longleftrightarrow> ?empty \<or> ?rhs")
+proof (cases ?empty)
+  case True
+  then show ?thesis
+    by (simp add: locally_connected_space_def neighbourhood_base_of openin_closedin_eq)
+next
+  case False
+  then obtain z where z: "z \<in> (\<Pi>\<^sub>E i\<in>I. topspace (X i))"
+    by auto
+  have ?rhs if L: ?lhs
+  proof -
+    obtain U C where U: "openin (product_topology X I) U"
+      and V: "connectedin (product_topology X I) C"
+      and "z \<in> U" "U \<subseteq> C" and Csub: "C \<subseteq> (\<Pi>\<^sub>E i\<in>I. topspace (X i))"
+      using L apply (clarsimp simp add: locally_connected_space_def neighbourhood_base_of)
+      by (metis openin_topspace topspace_product_topology z)
+    then obtain V where finV: "finite {i \<in> I. V i \<noteq> topspace (X i)}"
+      and XV: "\<And>i. i\<in>I \<Longrightarrow> openin (X i) (V i)" and "z \<in> Pi\<^sub>E I V" and subU: "Pi\<^sub>E I V \<subseteq> U"
+      by (force simp: openin_product_topology_alt)
+    show ?thesis
+    proof (intro conjI ballI)
+      have "connected_space (X i)" if "i \<in> I" "V i = topspace (X i)" for i
+      proof -
+        have pc: "connectedin (X i) ((\<lambda>x. x i) ` C)"
+          apply (rule connectedin_continuous_map_image [OF _ V])
+          by (simp add: continuous_map_product_projection \<open>i \<in> I\<close>)
+        moreover have "((\<lambda>x. x i) ` C) = topspace (X i)"
+        proof
+          show "(\<lambda>x. x i) ` C \<subseteq> topspace (X i)"
+            by (simp add: pc connectedin_subset_topspace)
+          have "V i \<subseteq> (\<lambda>x. x i) ` (\<Pi>\<^sub>E i\<in>I. V i)"
+            by (metis \<open>z \<in> Pi\<^sub>E I V\<close> empty_iff image_projection_PiE order_refl that(1))
+          also have "\<dots> \<subseteq> (\<lambda>x. x i) ` U"
+            using subU by blast
+          finally show "topspace (X i) \<subseteq> (\<lambda>x. x i) ` C"
+            using \<open>U \<subseteq> C\<close> that by blast
+        qed
+        ultimately show ?thesis
+          by (simp add: connectedin_topspace)
+      qed
+      then have "{i \<in> I. \<not> connected_space (X i)} \<subseteq> {i \<in> I. V i \<noteq> topspace (X i)}"
+        by blast
+      with finV show "finite {i \<in> I. \<not> connected_space (X i)}"
+        using finite_subset by blast
+    next
+      show "locally_connected_space (X i)" if "i \<in> I" for i
+        by (meson False L locally_connected_space_quotient_map_image quotient_map_product_projection that)
+    qed
+  qed
+  moreover have ?lhs if R: ?rhs
+  proof (clarsimp simp add: locally_connected_space_def neighbourhood_base_of)
+    fix F z
+    assume "openin (product_topology X I) F" and "z \<in> F"
+    then obtain W where finW: "finite {i \<in> I. W i \<noteq> topspace (X i)}"
+            and opeW: "\<And>i. i \<in> I \<Longrightarrow> openin (X i) (W i)" and "z \<in> Pi\<^sub>E I W" "Pi\<^sub>E I W \<subseteq> F"
+      by (auto simp: openin_product_topology_alt)
+    have "\<forall>i \<in> I. \<exists>U C. openin (X i) U \<and> connectedin (X i) C \<and> z i \<in> U \<and> U \<subseteq> C \<and> C \<subseteq> W i \<and>
+                        (W i = topspace (X i) \<and>
+                         connected_space (X i) \<longrightarrow> U = topspace (X i) \<and> C = topspace (X i))"
+          (is "\<forall>i \<in> I. ?\<Phi> i")
+    proof
+      fix i assume "i \<in> I"
+      have "locally_connected_space (X i)"
+        by (simp add: R \<open>i \<in> I\<close>)
+      moreover have "openin (X i) (W i) " "z i \<in> W i"
+        using \<open>z \<in> Pi\<^sub>E I W\<close> opeW \<open>i \<in> I\<close> by auto
+      ultimately obtain U C where UC: "openin (X i) U" "connectedin (X i) C" "z i \<in> U" "U \<subseteq> C" "C \<subseteq> W i"
+        using \<open>i \<in> I\<close> by (force simp: locally_connected_space_def neighbourhood_base_of)
+      show "?\<Phi> i"
+      proof (cases "W i = topspace (X i) \<and> connected_space(X i)")
+        case True
+        then show ?thesis
+          using \<open>z i \<in> W i\<close> connectedin_topspace by blast
+      next
+        case False
+        then show ?thesis
+          by (meson UC)
+      qed
+    qed
+    then obtain U C where
+      *: "\<And>i. i \<in> I \<Longrightarrow> openin (X i) (U i) \<and> connectedin (X i) (C i) \<and> z i \<in> (U i) \<and> (U i) \<subseteq> (C i) \<and> (C i) \<subseteq> W i \<and>
+                        (W i = topspace (X i) \<and> connected_space (X i)
+                         \<longrightarrow> (U i) = topspace (X i) \<and> (C i) = topspace (X i))"
+      by metis
+    let ?A = "{i \<in> I. \<not> connected_space (X i)} \<union> {i \<in> I. W i \<noteq> topspace (X i)}"
+    have "{i \<in> I. U i \<noteq> topspace (X i)} \<subseteq> ?A"
+      by (clarsimp simp add: "*")
+    moreover have "finite ?A"
+      by (simp add: that finW)
+    ultimately have "finite {i \<in> I. U i \<noteq> topspace (X i)}"
+      using finite_subset by auto
+    then have "openin (product_topology X I) (Pi\<^sub>E I U)"
+      using * by (simp add: openin_PiE_gen)
+    then show "\<exists>U. openin (product_topology X I) U \<and>
+            (\<exists>V. connectedin (product_topology X I) V \<and> z \<in> U \<and> U \<subseteq> V \<and> V \<subseteq> F)"
+      apply (rule_tac x="PiE I U" in exI, simp)
+      apply (rule_tac x="PiE I C" in exI)
+      using \<open>z \<in> Pi\<^sub>E I W\<close> \<open>Pi\<^sub>E I W \<subseteq> F\<close> *
+      apply (simp add: connectedin_PiE subset_PiE PiE_iff PiE_mono dual_order.trans)
+      done
+  qed
+  ultimately show ?thesis
+    using False by blast
+qed
 
 lemma locally_connected_space_product_topology:
    "locally_connected_space(product_topology k X) \<longleftrightarrow>
@@ -4861,38 +4972,34 @@ oops
       ASM_REWRITE_TAC[] THEN REWRITE_TAC[SUBSET_CARTESIAN_PRODUCT] THEN
       ASM SET_TAC[]]]);;
 
+
 lemma locally_connected_space_sum_topology:
-   "locally_connected_space(sum_topology k X) \<longleftrightarrow>
-        \<forall>i. i \<in> k \<Longrightarrow> locally_connected_space(X i)"
-oops
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [MATCH_MP_TAC TOPOLOGICAL_PROPERTY_OF_SUM_COMPONENT THEN
-    REWRITE_TAC[HOMEOMORPHIC_LOCALLY_CONNECTED_SPACE] THEN
-    SIMP_TAC[LOCALLY_CONNECTED_SPACE_OPEN_SUBSET];
-    REWRITE_TAC[locally_connected_space; NEIGHBOURHOOD_BASE_OF] THEN
-    REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
-    REWRITE_TAC[FORALL_OPEN_IN_SUM_TOPOLOGY] THEN
-    DISCH_TAC THEN X_GEN_TAC `w::K=>A->bool` THEN DISCH_TAC THEN
-    REWRITE_TAC[FORALL_PAIR_THM; Sigma; IN_ELIM_PAIR_THM] THEN
-    MAP_EVERY X_GEN_TAC [`i::K`; `x::A`] THEN STRIP_TAC THEN
-    REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> SPEC `i::K`)) THEN
-    ASM_REWRITE_TAC[] THEN REPEAT DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(w::K=>A->bool) i`) THEN ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `x::A`) THEN
-    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`u::A=>bool`; `v::A=>bool`] THEN STRIP_TAC THEN
-    EXISTS_TAC `image (\<lambda>x. (i::K),(x::A)) u` THEN
-    EXISTS_TAC `image (\<lambda>x. (i::K),(x::A)) v` THEN
-    ASM_SIMP_TAC[IMAGE_SUBSET] THEN
-    REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; IN_ELIM_PAIR_THM] THEN
-    ASM_REWRITE_TAC[GSYM \<subseteq>] THEN REPEAT CONJ_TAC THENL
-     [MATCH_MP_TAC(REWRITE_RULE[open_map; RIGHT_IMP_FORALL_THM; IMP_IMP]
-        OPEN_MAP_COMPONENT_INJECTION) THEN
-      ASM_REWRITE_TAC[];
-      MATCH_MP_TAC CONNECTED_IN_CONTINUOUS_MAP_IMAGE THEN
-      EXISTS_TAC `(X::K=>A topology) i` THEN
-      ASM_SIMP_TAC[CONTINUOUS_MAP_COMPONENT_INJECTION];
-      ASM SET_TAC[]]]);;
+   "locally_connected_space(sum_topology X I) \<longleftrightarrow>
+    (\<forall>i \<in> I. locally_connected_space (X i))" (is "?lhs=?rhs")
+proof
+  assume ?lhs then show ?rhs
+    by (smt (verit) homeomorphic_locally_connected_space locally_connected_space_open_subset topological_property_of_sum_component)
+next
+  assume R: ?rhs
+  show ?lhs
+  proof (clarsimp simp add: locally_connected_space_def neighbourhood_base_of forall_openin_sum_topology imp_conjL)
+    fix W i x
+    assume ope: "\<forall>i\<in>I. openin (X i) (W i)" 
+      and "i \<in> I" and "x \<in> W i"
+    then obtain U V where U: "openin (X i) U" and V: "connectedin (X i) V" 
+           and "x \<in> U" "U \<subseteq> V" "V \<subseteq> W i"
+      by (metis R \<open>i \<in> I\<close> \<open>x \<in> W i\<close> locally_connected_space)
+    show "\<exists>U. openin (sum_topology X I) U \<and> (\<exists>V. connectedin (sum_topology X I) V \<and> (i, x) \<in> U \<and> U \<subseteq> V \<and> V \<subseteq> Sigma I W)"
+    proof (intro exI conjI)
+      show "openin (sum_topology X I) (Pair i ` U)"
+        by (meson U \<open>i \<in> I\<close> open_map_component_injection open_map_def)
+      show "connectedin (sum_topology X I) (Pair i ` V)"
+        by (meson V \<open>i \<in> I\<close> continuous_map_component_injection connectedin_continuous_map_image)
+      show "Pair i ` V \<subseteq> Sigma I W"
+        using \<open>V \<subseteq> W i\<close> \<open>i \<in> I\<close> by force
+    qed (use \<open>x \<in> U\<close> \<open>U \<subseteq> V\<close> in auto)
+  qed
+qed
 
 
 subsection\<open>Quasi-components\<close>
