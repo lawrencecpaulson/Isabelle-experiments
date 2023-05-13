@@ -2,7 +2,8 @@ section \<open>Abstract Metric Spaces\<close>
 
 theory Abstract_Metric_Spaces
   imports
-    "HOL-Analysis.Analysis" "HOL-ex.Sketch_and_Explore"
+    "HOL-Analysis.Analysis" "HOL-Library.Equipollence"
+    "HOL-ex.Sketch_and_Explore"
 begin
 
 lemma ball_iff_cball: "(\<exists>r>0. ball x r \<subseteq> U) \<longleftrightarrow> (\<exists>r>0. cball x r \<subseteq> U)"
@@ -85,330 +86,6 @@ next
     by (metis continuous_on_subset continuous_shrink subset_UNIV)
 qed
 
-
-
-lemma Urysohn_lemma:
-  fixes a b :: real
-  assumes "normal_space X" "closedin X S" "closedin X T" "disjnt S T" "a \<le> b" 
-  obtains f where "continuous_map X (top_of_set {a..b}) f" "f ` S \<subseteq> {a}" "f ` T \<subseteq> {b}"
-proof -
-  obtain U where "openin X U" "S \<subseteq> U" "X closure_of U \<subseteq> topspace X - T"
-    using assms unfolding normal_space_alt disjnt_def
-    by (metis Diff_mono Un_Diff_Int closedin_def subset_eq sup_bot_right)
-  have "\<exists>G :: real \<Rightarrow> 'a set. G 0 = U \<and> G 1 = topspace X - T \<and>
-               (\<forall>x \<in> dyadics \<inter> {0..1}. \<forall>y \<in> dyadics \<inter> {0..1}. x < y \<longrightarrow> openin X (G x) \<and> openin X (G y) \<and> X closure_of (G x) \<subseteq> G y)"
-  proof (rule recursion_on_dyadic_fractions)
-    show "openin X U \<and> openin X (topspace X - T) \<and> X closure_of U \<subseteq> topspace X - T"
-      using \<open>X closure_of U \<subseteq> topspace X - T\<close> \<open>openin X U\<close> \<open>closedin X T\<close> by blast
-    show "\<exists>z. (openin X x \<and> openin X z \<and> X closure_of x \<subseteq> z) \<and> openin X z \<and> openin X y \<and> X closure_of z \<subseteq> y"
-      if "openin X x \<and> openin X y \<and> X closure_of x \<subseteq> y" for x y
-      by (meson that closedin_closure_of normal_space_alt \<open>normal_space X\<close>)
-    show "openin X x \<and> openin X z \<and> X closure_of x \<subseteq> z"
-      if "openin X x \<and> openin X y \<and> X closure_of x \<subseteq> y" and "openin X y \<and> openin X z \<and> X closure_of y \<subseteq> z" for x y z
-      by (meson that closure_of_subset openin_subset subset_trans)
-  qed
-  then obtain G :: "real \<Rightarrow> 'a set"
-      where G0: "G 0 = U" and G1: "G 1 = topspace X - T"
-        and G: "\<And>x y. \<lbrakk>x \<in> dyadics; y \<in> dyadics; 0 \<le> x; x < y; y \<le> 1\<rbrakk>
-                      \<Longrightarrow> openin X (G x) \<and> openin X (G y) \<and> X closure_of (G x) \<subseteq> G y"
-    by (smt (verit, del_insts) Int_iff atLeastAtMost_iff)
-  define f where "f \<equiv> \<lambda>x. Inf(insert 1 {r. r \<in> dyadics \<inter> {0..1} \<and> x \<in> G r})"
-  have f_ge: "f x \<ge> 0" if "x \<in> topspace X" for x
-    unfolding f_def by (force intro: cInf_greatest)
-  moreover have f_le1: "f x \<le> 1" if "x \<in> topspace X" for x
-  proof -
-    have "bdd_below {r \<in> dyadics \<inter> {0..1}. x \<in> G r}"
-      by (auto simp: bdd_below_def)
-    then show ?thesis
-       by (auto simp: f_def cInf_lower)
-  qed
-  ultimately have fim: "f ` topspace X \<subseteq> {0..1}"
-    by (auto simp: f_def)
-  have 0: "0 \<in> dyadics \<inter> {0..1::real}" and 1: "1 \<in> dyadics \<inter> {0..1::real}"
-    by (force simp: dyadics_def)+
-  then have opeG: "openin X (G r)" if "r \<in> dyadics \<inter> {0..1}" for r
-    using G G0 \<open>openin X U\<close> less_eq_real_def that by auto
-  have "x \<in> G 0" if "x \<in> S" for x
-    using G0 \<open>S \<subseteq> U\<close> that by blast
-  with 0 have fimS: "f ` S \<subseteq> {0}"
-    unfolding f_def by (force intro!: cInf_eq_minimum)
-  have False if "r \<in> dyadics" "0 \<le> r" "r < 1" "x \<in> G r" "x \<in> T" for r x
-    using G [of r 1] 1
-    by (smt (verit, best) DiffD2 G1 Int_iff closure_of_subset inf.orderE openin_subset that)
-  then have "r\<ge>1" if "r \<in> dyadics" "0 \<le> r" "r \<le> 1" "x \<in> G r" "x \<in> T" for r x
-    using linorder_not_le that by blast
-  then have fimT: "f ` T \<subseteq> {1}"
-    unfolding f_def by (force intro!: cInf_eq_minimum)
-  have fle1: "f z \<le> 1" for z
-    by (force simp: f_def intro: cInf_lower)
-  have fle: "f z \<le> x" if "x \<in> dyadics \<inter> {0..1}" "z \<in> G x" for z x
-    using that by (force simp: f_def intro: cInf_lower)
-  have *: "b \<le> f z" if "b \<le> 1" "\<And>x. \<lbrakk>x \<in> dyadics \<inter> {0..1}; z \<in> G x\<rbrakk> \<Longrightarrow> b \<le> x" for z b
-    using that by (force simp: f_def intro: cInf_greatest)
-  have **: "r \<le> f x" if r: "r \<in> dyadics \<inter> {0..1}" "x \<notin> G r" for r x
-  proof (rule *)
-    show "r \<le> s" if "s \<in> dyadics \<inter> {0..1}" and "x \<in> G s" for s :: real
-      using that r G [of s r] by (force simp add: dest: closure_of_subset openin_subset)
-  qed (use that in force)
-
-  have "\<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>y \<in> U. \<bar>f y - f x\<bar> < \<epsilon>)"
-    if "x \<in> topspace X" and "0 < \<epsilon>" for x \<epsilon>
-  proof -
-    have A: "\<exists>r. r \<in> dyadics \<inter> {0..1} \<and> r < y \<and> \<bar>r - y\<bar> < d" if "0 < y" "y \<le> 1" "0 < d" for y d::real
-    proof -
-      obtain n q r 
-        where "of_nat q / 2^n < y" "y < of_nat r / 2^n" "\<bar>q / 2^n - r / 2^n \<bar> < d"
-        by (smt (verit, del_insts) padic_rational_approximation_straddle_pos  \<open>0 < d\<close> \<open>0 < y\<close>) 
-      then show ?thesis
-        unfolding dyadics_def
-        using divide_eq_0_iff that(2) by fastforce
-    qed
-    have B: "\<exists>r. r \<in> dyadics \<inter> {0..1} \<and> y < r \<and> \<bar>r - y\<bar> < d" if "0 \<le> y" "y < 1" "0 < d" for y d::real
-    proof -
-      obtain n q r 
-        where "of_nat q / 2^n \<le> y" "y < of_nat r / 2^n" "\<bar>q / 2^n - r / 2^n \<bar> < d"
-        using padic_rational_approximation_straddle_pos_le
-        by (smt (verit, del_insts) \<open>0 < d\<close> \<open>0 \<le> y\<close>) 
-      then show ?thesis
-        apply (clarsimp simp: dyadics_def)
-        using divide_eq_0_iff \<open>y < 1\<close>
-        by (smt (verit) divide_nonneg_nonneg divide_self of_nat_0_le_iff of_nat_1 power_0 zero_le_power) 
-    qed
-    show ?thesis
-    proof (cases "f x = 0")
-      case True
-      with B[of 0] obtain r where r: "r \<in> dyadics \<inter> {0..1}" "0 < r" "\<bar>r\<bar> < \<epsilon>/2"
-        by (smt (verit) \<open>0 < \<epsilon>\<close> half_gt_zero)
-      show ?thesis
-      proof (intro exI conjI)
-        show "openin X (G r)"
-          using opeG r(1) by blast
-        show "x \<in> G r"
-          using True ** r by force
-        show "\<forall>y \<in> G r. \<bar>f y - f x\<bar> < \<epsilon>"
-          using f_ge \<open>openin X (G r)\<close> fle openin_subset r by (fastforce simp: True)
-      qed
-    next
-      case False
-      show ?thesis 
-      proof (cases "f x = 1")
-        case True
-        with A[of 1] obtain r where r: "r \<in> dyadics \<inter> {0..1}" "r < 1" "\<bar>r-1\<bar> < \<epsilon>/2"
-          by (smt (verit) \<open>0 < \<epsilon>\<close> half_gt_zero)
-        define G' where "G' \<equiv> topspace X - X closure_of G r"
-        show ?thesis
-        proof (intro exI conjI)
-          show "openin X G'"
-            unfolding G'_def by fastforce
-          obtain r' where "r' \<in> dyadics \<and> 0 \<le> r' \<and> r' \<le> 1 \<and> r < r' \<and> \<bar>r' - r\<bar> < 1 - r"
-            using B r by force 
-          moreover
-          have "1 - r \<in> dyadics" "0 \<le> r"
-            using 1 r dyadics_diff by force+
-          ultimately have "x \<notin> X closure_of G r"
-            using G True r fle by force
-          then show "x \<in> G'"
-            by (simp add: G'_def that)
-          show "\<forall>y \<in> G'. \<bar>f y - f x\<bar> < \<epsilon>"
-            using ** f_le1 in_closure_of r by (fastforce simp add: True G'_def)
-        qed
-      next
-        case False
-        have "0 < f x" "f x < 1"
-          using fle1 f_ge that(1) \<open>f x \<noteq> 0\<close> \<open>f x \<noteq> 1\<close> by (metis order_le_less) +
-        obtain r where r: "r \<in> dyadics \<inter> {0..1}" "r < f x" "\<bar>r - f x\<bar> < \<epsilon> / 2"
-          using A \<open>0 < \<epsilon>\<close> \<open>0 < f x\<close> \<open>f x < 1\<close> by (smt (verit, best) half_gt_zero)
-        obtain r' where r': "r' \<in> dyadics \<inter> {0..1}" "f x < r'" "\<bar>r' - f x\<bar> < \<epsilon> / 2"
-          using B \<open>0 < \<epsilon>\<close> \<open>0 < f x\<close> \<open>f x < 1\<close> by (smt (verit, best) half_gt_zero)
-        have "r < 1"
-          using \<open>f x < 1\<close> r(2) by force
-        show ?thesis
-        proof (intro conjI exI)
-          show "openin X (G r' - X closure_of G r)"
-            using closedin_closure_of opeG r' by blast
-          have "x \<in> X closure_of G r \<Longrightarrow> False"
-            using B [of r "f x - r"] r \<open>r < 1\<close> G [of r] fle by force
-          then show "x \<in> G r' - X closure_of G r"
-            using ** r' by fastforce
-          show "\<forall>y\<in>G r' - X closure_of G r. \<bar>f y - f x\<bar> < \<epsilon>"
-            using r r' ** G closure_of_subset field_sum_of_halves fle openin_subset subset_eq
-            by (smt (verit) DiffE opeG)
-        qed
-      qed
-    qed
-  qed
-  then have contf: "continuous_map X (top_of_set {0..1}) f"
-    by (force simp add: Met.continuous_map_to_metric dist_real_def continuous_map_in_subtopology fim simp flip: Met.mtopology_is_euclideanreal)
-  define g where "g \<equiv> \<lambda>x. a + (b - a) * f x"
-  show thesis
-  proof
-    have "continuous_map X euclideanreal g"
-      using contf \<open>a \<le> b\<close> unfolding g_def by (auto simp: continuous_intros continuous_map_in_subtopology)
-    moreover have "g ` (topspace X) \<subseteq> {a..b}"
-      using mult_left_le [of "f _" "b-a"] contf \<open>a \<le> b\<close>   
-      by (simp add: g_def add.commute continuous_map_in_subtopology image_subset_iff le_diff_eq)
-    ultimately show "continuous_map X (top_of_set {a..b}) g"
-      by (meson continuous_map_in_subtopology)
-    show "g ` S \<subseteq> {a}" "g ` T \<subseteq> {b}"
-      using fimS fimT by (auto simp: g_def)
-  qed
-qed
-
-lemma Urysohn_lemma_alt:
-  fixes a b :: real
-  assumes "normal_space X" "closedin X S" "closedin X T" "disjnt S T"
-  obtains f where "continuous_map X euclideanreal f" "f ` S \<subseteq> {a}" "f ` T \<subseteq> {b}"
-  by (metis Urysohn_lemma assms continuous_map_in_subtopology disjnt_sym linear)
-
-lemma normal_space_iff_Urysohn_gen_alt:
-  assumes "a \<noteq> b"
-  shows "normal_space X \<longleftrightarrow>
-         (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
-                \<longrightarrow> (\<exists>f. continuous_map X euclideanreal f \<and> f ` S \<subseteq> {a} \<and> f ` T \<subseteq> {b}))"
- (is "?lhs=?rhs")
-proof
-  show "?lhs \<Longrightarrow> ?rhs" 
-    by (metis Urysohn_lemma_alt)
-next
-  assume R: ?rhs 
-  show ?lhs
-    unfolding normal_space_def
-  proof clarify
-    fix S T
-    assume "closedin X S" and "closedin X T" and "disjnt S T"
-    with R obtain f where contf: "continuous_map X euclideanreal f" and "f ` S \<subseteq> {a}" "f ` T \<subseteq> {b}"
-      by meson
-    show "\<exists>U V. openin X U \<and> openin X V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
-    proof (intro conjI exI)
-      show "openin X {x \<in> topspace X. f x \<in> ball a (\<bar>a - b\<bar> / 2)}"
-        by (force intro!: openin_continuous_map_preimage [OF contf])
-      show "openin X {x \<in> topspace X. f x \<in> ball b (\<bar>a - b\<bar> / 2)}"
-        by (force intro!: openin_continuous_map_preimage [OF contf])
-      show "S \<subseteq> {x \<in> topspace X. f x \<in> ball a (\<bar>a - b\<bar> / 2)}"
-        using \<open>closedin X S\<close> closedin_subset \<open>f ` S \<subseteq> {a}\<close> assms by force
-      show "T \<subseteq> {x \<in> topspace X. f x \<in> ball b (\<bar>a - b\<bar> / 2)}"
-        using \<open>closedin X T\<close> closedin_subset \<open>f ` T \<subseteq> {b}\<close> assms by force
-      have "\<And>x. \<lbrakk>x \<in> topspace X; dist a (f x) < \<bar>a-b\<bar>/2; dist b (f x) < \<bar>a-b\<bar>/2\<rbrakk> \<Longrightarrow> False"
-        by (smt (verit, best) dist_real_def dist_triangle_half_l)
-      then show "disjnt {x \<in> topspace X. f x \<in> ball a (\<bar>a-b\<bar> / 2)} {x \<in> topspace X. f x \<in> ball b (\<bar>a-b\<bar> / 2)}"
-        using disjnt_iff by fastforce
-    qed
-  qed
-qed 
-
-lemma normal_space_iff_Urysohn_gen:
-  fixes a b::real
-  shows
-   "a < b \<Longrightarrow> 
-      normal_space X \<longleftrightarrow>
-        (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
-               \<longrightarrow> (\<exists>f. continuous_map X (top_of_set {a..b}) f \<and>
-                        f ` S \<subseteq> {a} \<and> f ` T \<subseteq> {b}))"
-  by (metis linear not_le Urysohn_lemma normal_space_iff_Urysohn_gen_alt continuous_map_in_subtopology)
-
-lemma normal_space_iff_Urysohn_alt:
-   "normal_space X \<longleftrightarrow>
-     (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
-           \<longrightarrow> (\<exists>f. continuous_map X euclideanreal f \<and>
-                   f ` S \<subseteq> {0} \<and> f ` T \<subseteq> {1}))"
-  by (rule normal_space_iff_Urysohn_gen_alt) auto
-
-lemma normal_space_iff_Urysohn:
-   "normal_space X \<longleftrightarrow>
-     (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
-            \<longrightarrow> (\<exists>f::'a\<Rightarrow>real. continuous_map X (top_of_set {0..1}) f \<and> 
-                               f ` S \<subseteq> {0} \<and> f ` T \<subseteq> {1}))"
-  by (rule normal_space_iff_Urysohn_gen) auto
-
-lemma normal_space_perfect_map_image:
-   "\<lbrakk>normal_space X; perfect_map X Y f\<rbrakk> \<Longrightarrow> normal_space Y"
-  unfolding perfect_map_def proper_map_def
-  using normal_space_continuous_closed_map_image by fastforce
-
-lemma Hausdorff_normal_space_closed_continuous_map_image:
-   "\<lbrakk>normal_space X; closed_map X Y f; continuous_map X Y f;
-     f ` topspace X = topspace Y; t1_space Y\<rbrakk>
-    \<Longrightarrow> Hausdorff_space Y"
-  by (metis normal_space_continuous_closed_map_image normal_t1_imp_Hausdorff_space)
-
-lemma normal_Hausdorff_space_closed_continuous_map_image:
-   "\<lbrakk>normal_space X; Hausdorff_space X; closed_map X Y f;
-     continuous_map X Y f; f ` topspace X = topspace Y\<rbrakk>
-    \<Longrightarrow> normal_space Y \<and> Hausdorff_space Y"
-  by (meson normal_space_continuous_closed_map_image normal_t1_eq_Hausdorff_space t1_space_closed_map_image)
-
-lemma Lindelof_cover:
-  assumes "regular_space X" and "Lindelof_space X" and "S \<noteq> {}" 
-    and clo: "closedin X S" "closedin X T" "disjnt S T"
-  obtains h :: "nat \<Rightarrow> 'a set" where 
-    "\<And>n. openin X (h n)" "\<And>n. disjnt T (X closure_of (h n))" and  "S \<subseteq> \<Union> (range h)"
-proof -
-  have "\<exists>U. openin X U \<and> x \<in> U \<and> disjnt T (X closure_of U)"
-    if "x \<in> S" for x
-    using \<open>regular_space X\<close> unfolding regular_space 
-    by (metis (full_types) Diff_iff \<open>disjnt S T\<close> clo closure_of_eq disjnt_iff in_closure_of that)
-  then obtain h where oh: "\<And>x. x \<in> S \<Longrightarrow> openin X (h x)"
-    and xh: "\<And>x. x \<in> S \<Longrightarrow> x \<in> h x"
-    and dh: "\<And>x. x \<in> S \<Longrightarrow> disjnt T (X closure_of h x)"
-    by metis
-  have "Lindelof_space(subtopology X S)"
-    by (simp add: Lindelof_space_closedin_subtopology \<open>Lindelof_space X\<close> \<open>closedin X S\<close>)
-  then obtain \<U> where \<U>: "countable \<U> \<and> \<U> \<subseteq> h ` S \<and> S \<subseteq> \<Union> \<U>"
-    unfolding Lindelof_space_subtopology_subset [OF closedin_subset [OF \<open>closedin X S\<close>]]
-    by (smt (verit, del_insts) oh xh UN_I image_iff subsetI)
-  with \<open>S \<noteq> {}\<close> have "\<U> \<noteq> {}"
-    by blast
-  show ?thesis
-  proof
-    show "openin X (from_nat_into \<U> n)" for n
-      by (metis \<U> from_nat_into image_iff \<open>\<U> \<noteq> {}\<close> oh subsetD)
-    show "disjnt T (X closure_of (from_nat_into \<U>) n)" for n
-      using dh from_nat_into [OF \<open>\<U> \<noteq> {}\<close>]
-      by (metis \<U> f_inv_into_f inv_into_into subset_eq)
-    show "S \<subseteq> \<Union> (range (from_nat_into \<U>))"
-      by (simp add: \<U> \<open>\<U> \<noteq> {}\<close>)
-  qed
-qed
-
-lemma regular_Lindelof_imp_normal_space:
-  assumes "regular_space X" and "Lindelof_space X"
-  shows "normal_space X"
-  unfolding normal_space_def
-proof clarify
-  fix S T
-  assume clo: "closedin X S" "closedin X T" and "disjnt S T"
-  show "\<exists>U V. openin X U \<and> openin X V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
-  proof (cases "S={} \<or> T={}")
-    case True
-    with clo show ?thesis
-      by (meson closedin_def disjnt_empty1 disjnt_empty2 openin_empty openin_topspace subset_empty)
-  next
-    case False
-    obtain h :: "nat \<Rightarrow> 'a set" where 
-      opeh: "\<And>n. openin X (h n)" and dish: "\<And>n. disjnt T (X closure_of (h n))"
-      and Sh: "S \<subseteq> \<Union> (range h)"
-      by (metis Lindelof_cover False \<open>disjnt S T\<close> assms clo)
-    obtain k :: "nat \<Rightarrow> 'a set" where 
-      opek: "\<And>n. openin X (k n)" and disk: "\<And>n. disjnt S (X closure_of (k n))"
-      and Tk: "T \<subseteq> \<Union> (range k)"
-      by (metis Lindelof_cover False \<open>disjnt S T\<close> assms clo disjnt_sym)
-    define U where "U \<equiv> \<Union>i. h i - (\<Union>j<i. X closure_of k j)"
-    define V where "V \<equiv> \<Union>i. k i - (\<Union>j\<le>i. X closure_of h j)"
-    show ?thesis
-    proof (intro exI conjI)
-      show "openin X U" "openin X V"
-        unfolding U_def V_def
-        by (force intro!: opek opeh closedin_Union closedin_closure_of)+
-      show "S \<subseteq> U" "T \<subseteq> V"
-        using Sh Tk dish disk by (fastforce simp: U_def V_def disjnt_iff)+
-      have "\<And>x i j. \<lbrakk>x \<in> k i; x \<in> h j; \<forall>j\<le>i. x \<notin> X closure_of h j\<rbrakk>
-                 \<Longrightarrow> \<exists>i<j. x \<in> X closure_of k i"
-        by (metis in_closure_of linorder_not_less opek openin_subset subsetD)
-      then show "disjnt U V"
-        by (force simp add: U_def V_def disjnt_iff)
-    qed
-  qed
-qed
 
 subsection \<open>Locally etc\<close>
 thm locally_path_connected_space
@@ -4010,6 +3687,330 @@ end (*Metric_space*)
 subsection \<open>Tietze XXX\<close>
 
 
+
+lemma Urysohn_lemma:
+  fixes a b :: real
+  assumes "normal_space X" "closedin X S" "closedin X T" "disjnt S T" "a \<le> b" 
+  obtains f where "continuous_map X (top_of_set {a..b}) f" "f ` S \<subseteq> {a}" "f ` T \<subseteq> {b}"
+proof -
+  obtain U where "openin X U" "S \<subseteq> U" "X closure_of U \<subseteq> topspace X - T"
+    using assms unfolding normal_space_alt disjnt_def
+    by (metis Diff_mono Un_Diff_Int closedin_def subset_eq sup_bot_right)
+  have "\<exists>G :: real \<Rightarrow> 'a set. G 0 = U \<and> G 1 = topspace X - T \<and>
+               (\<forall>x \<in> dyadics \<inter> {0..1}. \<forall>y \<in> dyadics \<inter> {0..1}. x < y \<longrightarrow> openin X (G x) \<and> openin X (G y) \<and> X closure_of (G x) \<subseteq> G y)"
+  proof (rule recursion_on_dyadic_fractions)
+    show "openin X U \<and> openin X (topspace X - T) \<and> X closure_of U \<subseteq> topspace X - T"
+      using \<open>X closure_of U \<subseteq> topspace X - T\<close> \<open>openin X U\<close> \<open>closedin X T\<close> by blast
+    show "\<exists>z. (openin X x \<and> openin X z \<and> X closure_of x \<subseteq> z) \<and> openin X z \<and> openin X y \<and> X closure_of z \<subseteq> y"
+      if "openin X x \<and> openin X y \<and> X closure_of x \<subseteq> y" for x y
+      by (meson that closedin_closure_of normal_space_alt \<open>normal_space X\<close>)
+    show "openin X x \<and> openin X z \<and> X closure_of x \<subseteq> z"
+      if "openin X x \<and> openin X y \<and> X closure_of x \<subseteq> y" and "openin X y \<and> openin X z \<and> X closure_of y \<subseteq> z" for x y z
+      by (meson that closure_of_subset openin_subset subset_trans)
+  qed
+  then obtain G :: "real \<Rightarrow> 'a set"
+      where G0: "G 0 = U" and G1: "G 1 = topspace X - T"
+        and G: "\<And>x y. \<lbrakk>x \<in> dyadics; y \<in> dyadics; 0 \<le> x; x < y; y \<le> 1\<rbrakk>
+                      \<Longrightarrow> openin X (G x) \<and> openin X (G y) \<and> X closure_of (G x) \<subseteq> G y"
+    by (smt (verit, del_insts) Int_iff atLeastAtMost_iff)
+  define f where "f \<equiv> \<lambda>x. Inf(insert 1 {r. r \<in> dyadics \<inter> {0..1} \<and> x \<in> G r})"
+  have f_ge: "f x \<ge> 0" if "x \<in> topspace X" for x
+    unfolding f_def by (force intro: cInf_greatest)
+  moreover have f_le1: "f x \<le> 1" if "x \<in> topspace X" for x
+  proof -
+    have "bdd_below {r \<in> dyadics \<inter> {0..1}. x \<in> G r}"
+      by (auto simp: bdd_below_def)
+    then show ?thesis
+       by (auto simp: f_def cInf_lower)
+  qed
+  ultimately have fim: "f ` topspace X \<subseteq> {0..1}"
+    by (auto simp: f_def)
+  have 0: "0 \<in> dyadics \<inter> {0..1::real}" and 1: "1 \<in> dyadics \<inter> {0..1::real}"
+    by (force simp: dyadics_def)+
+  then have opeG: "openin X (G r)" if "r \<in> dyadics \<inter> {0..1}" for r
+    using G G0 \<open>openin X U\<close> less_eq_real_def that by auto
+  have "x \<in> G 0" if "x \<in> S" for x
+    using G0 \<open>S \<subseteq> U\<close> that by blast
+  with 0 have fimS: "f ` S \<subseteq> {0}"
+    unfolding f_def by (force intro!: cInf_eq_minimum)
+  have False if "r \<in> dyadics" "0 \<le> r" "r < 1" "x \<in> G r" "x \<in> T" for r x
+    using G [of r 1] 1
+    by (smt (verit, best) DiffD2 G1 Int_iff closure_of_subset inf.orderE openin_subset that)
+  then have "r\<ge>1" if "r \<in> dyadics" "0 \<le> r" "r \<le> 1" "x \<in> G r" "x \<in> T" for r x
+    using linorder_not_le that by blast
+  then have fimT: "f ` T \<subseteq> {1}"
+    unfolding f_def by (force intro!: cInf_eq_minimum)
+  have fle1: "f z \<le> 1" for z
+    by (force simp: f_def intro: cInf_lower)
+  have fle: "f z \<le> x" if "x \<in> dyadics \<inter> {0..1}" "z \<in> G x" for z x
+    using that by (force simp: f_def intro: cInf_lower)
+  have *: "b \<le> f z" if "b \<le> 1" "\<And>x. \<lbrakk>x \<in> dyadics \<inter> {0..1}; z \<in> G x\<rbrakk> \<Longrightarrow> b \<le> x" for z b
+    using that by (force simp: f_def intro: cInf_greatest)
+  have **: "r \<le> f x" if r: "r \<in> dyadics \<inter> {0..1}" "x \<notin> G r" for r x
+  proof (rule *)
+    show "r \<le> s" if "s \<in> dyadics \<inter> {0..1}" and "x \<in> G s" for s :: real
+      using that r G [of s r] by (force simp add: dest: closure_of_subset openin_subset)
+  qed (use that in force)
+
+  have "\<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>y \<in> U. \<bar>f y - f x\<bar> < \<epsilon>)"
+    if "x \<in> topspace X" and "0 < \<epsilon>" for x \<epsilon>
+  proof -
+    have A: "\<exists>r. r \<in> dyadics \<inter> {0..1} \<and> r < y \<and> \<bar>r - y\<bar> < d" if "0 < y" "y \<le> 1" "0 < d" for y d::real
+    proof -
+      obtain n q r 
+        where "of_nat q / 2^n < y" "y < of_nat r / 2^n" "\<bar>q / 2^n - r / 2^n \<bar> < d"
+        by (smt (verit, del_insts) padic_rational_approximation_straddle_pos  \<open>0 < d\<close> \<open>0 < y\<close>) 
+      then show ?thesis
+        unfolding dyadics_def
+        using divide_eq_0_iff that(2) by fastforce
+    qed
+    have B: "\<exists>r. r \<in> dyadics \<inter> {0..1} \<and> y < r \<and> \<bar>r - y\<bar> < d" if "0 \<le> y" "y < 1" "0 < d" for y d::real
+    proof -
+      obtain n q r 
+        where "of_nat q / 2^n \<le> y" "y < of_nat r / 2^n" "\<bar>q / 2^n - r / 2^n \<bar> < d"
+        using padic_rational_approximation_straddle_pos_le
+        by (smt (verit, del_insts) \<open>0 < d\<close> \<open>0 \<le> y\<close>) 
+      then show ?thesis
+        apply (clarsimp simp: dyadics_def)
+        using divide_eq_0_iff \<open>y < 1\<close>
+        by (smt (verit) divide_nonneg_nonneg divide_self of_nat_0_le_iff of_nat_1 power_0 zero_le_power) 
+    qed
+    show ?thesis
+    proof (cases "f x = 0")
+      case True
+      with B[of 0] obtain r where r: "r \<in> dyadics \<inter> {0..1}" "0 < r" "\<bar>r\<bar> < \<epsilon>/2"
+        by (smt (verit) \<open>0 < \<epsilon>\<close> half_gt_zero)
+      show ?thesis
+      proof (intro exI conjI)
+        show "openin X (G r)"
+          using opeG r(1) by blast
+        show "x \<in> G r"
+          using True ** r by force
+        show "\<forall>y \<in> G r. \<bar>f y - f x\<bar> < \<epsilon>"
+          using f_ge \<open>openin X (G r)\<close> fle openin_subset r by (fastforce simp: True)
+      qed
+    next
+      case False
+      show ?thesis 
+      proof (cases "f x = 1")
+        case True
+        with A[of 1] obtain r where r: "r \<in> dyadics \<inter> {0..1}" "r < 1" "\<bar>r-1\<bar> < \<epsilon>/2"
+          by (smt (verit) \<open>0 < \<epsilon>\<close> half_gt_zero)
+        define G' where "G' \<equiv> topspace X - X closure_of G r"
+        show ?thesis
+        proof (intro exI conjI)
+          show "openin X G'"
+            unfolding G'_def by fastforce
+          obtain r' where "r' \<in> dyadics \<and> 0 \<le> r' \<and> r' \<le> 1 \<and> r < r' \<and> \<bar>r' - r\<bar> < 1 - r"
+            using B r by force 
+          moreover
+          have "1 - r \<in> dyadics" "0 \<le> r"
+            using 1 r dyadics_diff by force+
+          ultimately have "x \<notin> X closure_of G r"
+            using G True r fle by force
+          then show "x \<in> G'"
+            by (simp add: G'_def that)
+          show "\<forall>y \<in> G'. \<bar>f y - f x\<bar> < \<epsilon>"
+            using ** f_le1 in_closure_of r by (fastforce simp add: True G'_def)
+        qed
+      next
+        case False
+        have "0 < f x" "f x < 1"
+          using fle1 f_ge that(1) \<open>f x \<noteq> 0\<close> \<open>f x \<noteq> 1\<close> by (metis order_le_less) +
+        obtain r where r: "r \<in> dyadics \<inter> {0..1}" "r < f x" "\<bar>r - f x\<bar> < \<epsilon> / 2"
+          using A \<open>0 < \<epsilon>\<close> \<open>0 < f x\<close> \<open>f x < 1\<close> by (smt (verit, best) half_gt_zero)
+        obtain r' where r': "r' \<in> dyadics \<inter> {0..1}" "f x < r'" "\<bar>r' - f x\<bar> < \<epsilon> / 2"
+          using B \<open>0 < \<epsilon>\<close> \<open>0 < f x\<close> \<open>f x < 1\<close> by (smt (verit, best) half_gt_zero)
+        have "r < 1"
+          using \<open>f x < 1\<close> r(2) by force
+        show ?thesis
+        proof (intro conjI exI)
+          show "openin X (G r' - X closure_of G r)"
+            using closedin_closure_of opeG r' by blast
+          have "x \<in> X closure_of G r \<Longrightarrow> False"
+            using B [of r "f x - r"] r \<open>r < 1\<close> G [of r] fle by force
+          then show "x \<in> G r' - X closure_of G r"
+            using ** r' by fastforce
+          show "\<forall>y\<in>G r' - X closure_of G r. \<bar>f y - f x\<bar> < \<epsilon>"
+            using r r' ** G closure_of_subset field_sum_of_halves fle openin_subset subset_eq
+            by (smt (verit) DiffE opeG)
+        qed
+      qed
+    qed
+  qed
+  then have contf: "continuous_map X (top_of_set {0..1}) f"
+    by (force simp add: Met.continuous_map_to_metric dist_real_def continuous_map_in_subtopology fim simp flip: Met.mtopology_is_euclideanreal)
+  define g where "g \<equiv> \<lambda>x. a + (b - a) * f x"
+  show thesis
+  proof
+    have "continuous_map X euclideanreal g"
+      using contf \<open>a \<le> b\<close> unfolding g_def by (auto simp: continuous_intros continuous_map_in_subtopology)
+    moreover have "g ` (topspace X) \<subseteq> {a..b}"
+      using mult_left_le [of "f _" "b-a"] contf \<open>a \<le> b\<close>   
+      by (simp add: g_def add.commute continuous_map_in_subtopology image_subset_iff le_diff_eq)
+    ultimately show "continuous_map X (top_of_set {a..b}) g"
+      by (meson continuous_map_in_subtopology)
+    show "g ` S \<subseteq> {a}" "g ` T \<subseteq> {b}"
+      using fimS fimT by (auto simp: g_def)
+  qed
+qed
+
+lemma Urysohn_lemma_alt:
+  fixes a b :: real
+  assumes "normal_space X" "closedin X S" "closedin X T" "disjnt S T"
+  obtains f where "continuous_map X euclideanreal f" "f ` S \<subseteq> {a}" "f ` T \<subseteq> {b}"
+  by (metis Urysohn_lemma assms continuous_map_in_subtopology disjnt_sym linear)
+
+lemma normal_space_iff_Urysohn_gen_alt:
+  assumes "a \<noteq> b"
+  shows "normal_space X \<longleftrightarrow>
+         (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
+                \<longrightarrow> (\<exists>f. continuous_map X euclideanreal f \<and> f ` S \<subseteq> {a} \<and> f ` T \<subseteq> {b}))"
+ (is "?lhs=?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs" 
+    by (metis Urysohn_lemma_alt)
+next
+  assume R: ?rhs 
+  show ?lhs
+    unfolding normal_space_def
+  proof clarify
+    fix S T
+    assume "closedin X S" and "closedin X T" and "disjnt S T"
+    with R obtain f where contf: "continuous_map X euclideanreal f" and "f ` S \<subseteq> {a}" "f ` T \<subseteq> {b}"
+      by meson
+    show "\<exists>U V. openin X U \<and> openin X V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
+    proof (intro conjI exI)
+      show "openin X {x \<in> topspace X. f x \<in> ball a (\<bar>a - b\<bar> / 2)}"
+        by (force intro!: openin_continuous_map_preimage [OF contf])
+      show "openin X {x \<in> topspace X. f x \<in> ball b (\<bar>a - b\<bar> / 2)}"
+        by (force intro!: openin_continuous_map_preimage [OF contf])
+      show "S \<subseteq> {x \<in> topspace X. f x \<in> ball a (\<bar>a - b\<bar> / 2)}"
+        using \<open>closedin X S\<close> closedin_subset \<open>f ` S \<subseteq> {a}\<close> assms by force
+      show "T \<subseteq> {x \<in> topspace X. f x \<in> ball b (\<bar>a - b\<bar> / 2)}"
+        using \<open>closedin X T\<close> closedin_subset \<open>f ` T \<subseteq> {b}\<close> assms by force
+      have "\<And>x. \<lbrakk>x \<in> topspace X; dist a (f x) < \<bar>a-b\<bar>/2; dist b (f x) < \<bar>a-b\<bar>/2\<rbrakk> \<Longrightarrow> False"
+        by (smt (verit, best) dist_real_def dist_triangle_half_l)
+      then show "disjnt {x \<in> topspace X. f x \<in> ball a (\<bar>a-b\<bar> / 2)} {x \<in> topspace X. f x \<in> ball b (\<bar>a-b\<bar> / 2)}"
+        using disjnt_iff by fastforce
+    qed
+  qed
+qed 
+
+lemma normal_space_iff_Urysohn_gen:
+  fixes a b::real
+  shows
+   "a < b \<Longrightarrow> 
+      normal_space X \<longleftrightarrow>
+        (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
+               \<longrightarrow> (\<exists>f. continuous_map X (top_of_set {a..b}) f \<and>
+                        f ` S \<subseteq> {a} \<and> f ` T \<subseteq> {b}))"
+  by (metis linear not_le Urysohn_lemma normal_space_iff_Urysohn_gen_alt continuous_map_in_subtopology)
+
+lemma normal_space_iff_Urysohn_alt:
+   "normal_space X \<longleftrightarrow>
+     (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
+           \<longrightarrow> (\<exists>f. continuous_map X euclideanreal f \<and>
+                   f ` S \<subseteq> {0} \<and> f ` T \<subseteq> {1}))"
+  by (rule normal_space_iff_Urysohn_gen_alt) auto
+
+lemma normal_space_iff_Urysohn:
+   "normal_space X \<longleftrightarrow>
+     (\<forall>S T. closedin X S \<and> closedin X T \<and> disjnt S T
+            \<longrightarrow> (\<exists>f::'a\<Rightarrow>real. continuous_map X (top_of_set {0..1}) f \<and> 
+                               f ` S \<subseteq> {0} \<and> f ` T \<subseteq> {1}))"
+  by (rule normal_space_iff_Urysohn_gen) auto
+
+lemma normal_space_perfect_map_image:
+   "\<lbrakk>normal_space X; perfect_map X Y f\<rbrakk> \<Longrightarrow> normal_space Y"
+  unfolding perfect_map_def proper_map_def
+  using normal_space_continuous_closed_map_image by fastforce
+
+lemma Hausdorff_normal_space_closed_continuous_map_image:
+   "\<lbrakk>normal_space X; closed_map X Y f; continuous_map X Y f;
+     f ` topspace X = topspace Y; t1_space Y\<rbrakk>
+    \<Longrightarrow> Hausdorff_space Y"
+  by (metis normal_space_continuous_closed_map_image normal_t1_imp_Hausdorff_space)
+
+lemma normal_Hausdorff_space_closed_continuous_map_image:
+   "\<lbrakk>normal_space X; Hausdorff_space X; closed_map X Y f;
+     continuous_map X Y f; f ` topspace X = topspace Y\<rbrakk>
+    \<Longrightarrow> normal_space Y \<and> Hausdorff_space Y"
+  by (meson normal_space_continuous_closed_map_image normal_t1_eq_Hausdorff_space t1_space_closed_map_image)
+
+lemma Lindelof_cover:
+  assumes "regular_space X" and "Lindelof_space X" and "S \<noteq> {}" 
+    and clo: "closedin X S" "closedin X T" "disjnt S T"
+  obtains h :: "nat \<Rightarrow> 'a set" where 
+    "\<And>n. openin X (h n)" "\<And>n. disjnt T (X closure_of (h n))" and  "S \<subseteq> \<Union> (range h)"
+proof -
+  have "\<exists>U. openin X U \<and> x \<in> U \<and> disjnt T (X closure_of U)"
+    if "x \<in> S" for x
+    using \<open>regular_space X\<close> unfolding regular_space 
+    by (metis (full_types) Diff_iff \<open>disjnt S T\<close> clo closure_of_eq disjnt_iff in_closure_of that)
+  then obtain h where oh: "\<And>x. x \<in> S \<Longrightarrow> openin X (h x)"
+    and xh: "\<And>x. x \<in> S \<Longrightarrow> x \<in> h x"
+    and dh: "\<And>x. x \<in> S \<Longrightarrow> disjnt T (X closure_of h x)"
+    by metis
+  have "Lindelof_space(subtopology X S)"
+    by (simp add: Lindelof_space_closedin_subtopology \<open>Lindelof_space X\<close> \<open>closedin X S\<close>)
+  then obtain \<U> where \<U>: "countable \<U> \<and> \<U> \<subseteq> h ` S \<and> S \<subseteq> \<Union> \<U>"
+    unfolding Lindelof_space_subtopology_subset [OF closedin_subset [OF \<open>closedin X S\<close>]]
+    by (smt (verit, del_insts) oh xh UN_I image_iff subsetI)
+  with \<open>S \<noteq> {}\<close> have "\<U> \<noteq> {}"
+    by blast
+  show ?thesis
+  proof
+    show "openin X (from_nat_into \<U> n)" for n
+      by (metis \<U> from_nat_into image_iff \<open>\<U> \<noteq> {}\<close> oh subsetD)
+    show "disjnt T (X closure_of (from_nat_into \<U>) n)" for n
+      using dh from_nat_into [OF \<open>\<U> \<noteq> {}\<close>]
+      by (metis \<U> f_inv_into_f inv_into_into subset_eq)
+    show "S \<subseteq> \<Union> (range (from_nat_into \<U>))"
+      by (simp add: \<U> \<open>\<U> \<noteq> {}\<close>)
+  qed
+qed
+
+lemma regular_Lindelof_imp_normal_space:
+  assumes "regular_space X" and "Lindelof_space X"
+  shows "normal_space X"
+  unfolding normal_space_def
+proof clarify
+  fix S T
+  assume clo: "closedin X S" "closedin X T" and "disjnt S T"
+  show "\<exists>U V. openin X U \<and> openin X V \<and> S \<subseteq> U \<and> T \<subseteq> V \<and> disjnt U V"
+  proof (cases "S={} \<or> T={}")
+    case True
+    with clo show ?thesis
+      by (meson closedin_def disjnt_empty1 disjnt_empty2 openin_empty openin_topspace subset_empty)
+  next
+    case False
+    obtain h :: "nat \<Rightarrow> 'a set" where 
+      opeh: "\<And>n. openin X (h n)" and dish: "\<And>n. disjnt T (X closure_of (h n))"
+      and Sh: "S \<subseteq> \<Union> (range h)"
+      by (metis Lindelof_cover False \<open>disjnt S T\<close> assms clo)
+    obtain k :: "nat \<Rightarrow> 'a set" where 
+      opek: "\<And>n. openin X (k n)" and disk: "\<And>n. disjnt S (X closure_of (k n))"
+      and Tk: "T \<subseteq> \<Union> (range k)"
+      by (metis Lindelof_cover False \<open>disjnt S T\<close> assms clo disjnt_sym)
+    define U where "U \<equiv> \<Union>i. h i - (\<Union>j<i. X closure_of k j)"
+    define V where "V \<equiv> \<Union>i. k i - (\<Union>j\<le>i. X closure_of h j)"
+    show ?thesis
+    proof (intro exI conjI)
+      show "openin X U" "openin X V"
+        unfolding U_def V_def
+        by (force intro!: opek opeh closedin_Union closedin_closure_of)+
+      show "S \<subseteq> U" "T \<subseteq> V"
+        using Sh Tk dish disk by (fastforce simp: U_def V_def disjnt_iff)+
+      have "\<And>x i j. \<lbrakk>x \<in> k i; x \<in> h j; \<forall>j\<le>i. x \<notin> X closure_of h j\<rbrakk>
+                 \<Longrightarrow> \<exists>i<j. x \<in> X closure_of k i"
+        by (metis in_closure_of linorder_not_less opek openin_subset subsetD)
+      then show "disjnt U V"
+        by (force simp add: U_def V_def disjnt_iff)
+    qed
+  qed
+qed
+
 lemma Tietze_extension_closed_real_interval:
   assumes "normal_space X" and "closedin X S"
     and contf: "continuous_map (subtopology X S) euclideanreal f"
@@ -4164,9 +4165,7 @@ proof -
             by (intro Archimedean_eventually_pow_inverse) (auto simp: \<open>c > 0\<close>)
           then show "\<forall>\<^sub>F n in sequentially. dist (g n x) (f x) < \<epsilon>"
             apply eventually_elim
-            using good x
-            apply (simp add: good_def \<open>c > 0\<close> dist_real_def)
-            by (smt (verit, ccfv_SIG) \<open>0 < c\<close> mult.commute pos_less_divide_eq that)
+            by (smt (verit) good x good_def \<open>c > 0\<close> dist_real_def mult.commute pos_less_divide_eq that)
         qed
       qed auto
       then show ?thesis
@@ -4891,18 +4890,17 @@ qed
 
 subsection\<open>Quasi-components\<close>
 
-
 definition quasi_component_of :: "'a topology \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool"
   where
   "quasi_component_of X x y \<equiv>
         x \<in> topspace X \<and> y \<in> topspace X \<and>
         (\<forall>T. closedin X T \<and> openin X T \<longrightarrow> (x \<in> T \<longleftrightarrow> y \<in> T))"
 
-definition quasi_components_of :: "'a topology \<Rightarrow> ('a \<Rightarrow> bool) set"
-  where
-  "quasi_components_of X = quasi_component_of X ` topspace X"
-
 abbreviation "quasi_component_of_set S x \<equiv> Collect (quasi_component_of S x)"
+
+definition quasi_components_of :: "'a topology \<Rightarrow> ('a set) set"
+  where
+  "quasi_components_of X = quasi_component_of_set X ` topspace X"
 
 lemma quasi_component_in_topspace:
    "quasi_component_of X x y \<Longrightarrow> x \<in> topspace X \<and> y \<in> topspace X"
@@ -4935,8 +4933,9 @@ lemma quasi_component_of:
 
 lemma quasi_component_of_alt:
   "quasi_component_of X x y \<longleftrightarrow>
-    x \<in> topspace X \<and> y \<in> topspace X \<and>
-    \<not> (\<exists>U V. openin X U \<and> openin X V \<and> U \<union> V = topspace X \<and> disjnt U V \<and> x \<in> U \<and> y \<in> V)" (is "?lhs=?rhs")
+      x \<in> topspace X \<and> y \<in> topspace X \<and>
+      \<not> (\<exists>U V. openin X U \<and> openin X V \<and> U \<union> V = topspace X \<and> disjnt U V \<and> x \<in> U \<and> y \<in> V)" 
+  (is "?lhs = ?rhs")
 proof
   show "?lhs \<Longrightarrow> ?rhs"
     unfolding quasi_component_of_def
@@ -4979,334 +4978,235 @@ lemma quasi_component_of_eq:
 
 lemma topspace_imp_quasi_components_of:
   assumes "x \<in> topspace X"
-  obtains Q where "Q \<in> quasi_components_of X" "Q x"
-  by (metis assms that image_iff quasi_component_of_equiv quasi_components_of_def)
+  obtains C where "C \<in> quasi_components_of X" "x \<in> C"
+  by (metis assms imageI mem_Collect_eq quasi_component_of_refl quasi_components_of_def)
 
-lemma unions_quasi_components_of:
-  "\<Union> (Collect ` quasi_components_of X) = topspace X"
-  apply (simp add: set_eq_iff)
-  by (metis image_iff quasi_component_of_equiv quasi_components_of_def)
+lemma Union_quasi_components_of: "\<Union> (quasi_components_of X) = topspace X"
+  by (auto simp: quasi_components_of_def quasi_component_of_def)
 
 lemma pairwise_disjoint_quasi_components_of:
-   "pairwise disjnt (Collect ` quasi_components_of X)"
-  by (smt (verit) disjnt_iff imageE mem_Collect_eq pairwise_imageI quasi_component_of_equiv quasi_components_of_def)
+   "pairwise disjnt (quasi_components_of X)"
+  by (auto simp: quasi_components_of_def quasi_component_of_def disjoint_def)
 
 lemma complement_quasi_components_of_Union:
-   "c \<in> quasi_components_of X
-      \<Longrightarrow> topspace X - c = \<Union> (Collect ` (quasi_components_of X - {c}))"
-oops
-  REWRITE_TAC[SET_RULE `s - {a} = s - {a}`] THEN
-  ASM_SIMP_TAC[GSYM DIFF_UNIONS_PAIRWISE_DISJOINT;
-               PAIRWISE_DISJOINT_QUASI_COMPONENTS_OF; SING_SUBSET] THEN
-  REWRITE_TAC[UNIONS_QUASI_COMPONENTS_OF; UNIONS_1]);;
+  assumes "C \<in> quasi_components_of X"
+  shows "topspace X - C = \<Union> (quasi_components_of X - {C})"  (is "?lhs = ?rhs")
+proof
+  show "?lhs \<subseteq> ?rhs"
+    using Union_quasi_components_of by fastforce
+  show "?rhs \<subseteq> ?lhs"
+    using assms
+    using quasi_component_of_equiv by (fastforce simp add: quasi_components_of_def image_iff subset_iff)
+qed
 
 lemma nonempty_quasi_components_of:
-   "c \<in> quasi_components_of X \<Longrightarrow> (c \<noteq> {})"
-oops
-  SIMP_TAC[quasi_components_of; FORALL_IN_GSPEC;
-           QUASI_COMPONENT_OF_EQ_EMPTY]);;
+   "C \<in> quasi_components_of X \<Longrightarrow> C \<noteq> {}"
+  by (metis imageE quasi_component_of_eq_empty quasi_components_of_def)
 
 lemma quasi_components_of_subset:
-   "c \<in> quasi_components_of X \<Longrightarrow> c \<subseteq> topspace X"
-oops
-  SIMP_TAC[quasi_components_of; FORALL_IN_GSPEC;
-           QUASI_COMPONENT_OF_SUBSET_TOPSPACE]);;
+   "C \<in> quasi_components_of X \<Longrightarrow> C \<subseteq> topspace X"
+  using Union_quasi_components_of by force
 
 lemma quasi_component_in_quasi_components_of:
-   "quasi_component_of X a \<in> quasi_components_of X \<longleftrightarrow>
-        a \<in> topspace X"
-oops
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [GEN_REWRITE_TAC id [GSYM CONTRAPOS_THM] THEN
-    SIMP_TAC[GSYM QUASI_COMPONENT_OF_EQ_EMPTY] THEN
-    MESON_TAC[NONEMPTY_QUASI_COMPONENTS_OF];
-    REWRITE_TAC[quasi_components_of] THEN SET_TAC[]]);;
+   "quasi_component_of_set X a \<in> quasi_components_of X \<longleftrightarrow> a \<in> topspace X"
+  by (metis (no_types, lifting) image_iff quasi_component_of_eq_empty quasi_components_of_def)
 
-lemma quasi_components_of_eq_empty:
+lemma quasi_components_of_eq_empty [simp]:
    "quasi_components_of X = {} \<longleftrightarrow> topspace X = {}"
-oops
-  REWRITE_TAC[quasi_components_of] THEN SET_TAC[]);;
+  by (simp add: quasi_components_of_def)
 
 lemma quasi_components_of_empty_space:
    "topspace X = {} \<Longrightarrow> quasi_components_of X = {}"
-oops
-  REWRITE_TAC[QUASI_COMPONENTS_OF_EQ_EMPTY]);;
+  by simp
 
-lemma closedin_quasi_component_of:
-   "closedin X (quasi_component_of X x)"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[QUASI_COMPONENT_OF_SET] THEN
-  COND_CASES_TAC THEN ASM_REWRITE_TAC[CLOSED_IN_EMPTY] THEN
-  MATCH_MP_TAC CLOSED_IN_INTERS THEN
-  SIMP_TAC[IN_ELIM_THM; GSYM MEMBER_NOT_EMPTY] THEN
-  EXISTS_TAC `topspace X::A=>bool` THEN
-  ASM_REWRITE_TAC[OPEN_IN_TOPSPACE; CLOSED_IN_TOPSPACE]);;
+lemma quasi_component_of_set:
+   "quasi_component_of_set X x =
+        (if x \<in> topspace X
+        then \<Inter> {t. closedin X t \<and> openin X t \<and> x \<in> t}
+        else {})"
+  by (auto simp: quasi_component_of)
+
+lemma closedin_quasi_component_of: "closedin X (quasi_component_of_set X x)"
+  by (auto simp: quasi_component_of_set)
 
 lemma closedin_quasi_components_of:
-   "c \<in> quasi_components_of X \<Longrightarrow> closedin X c"
-oops
-  REWRITE_TAC[quasi_components_of; FORALL_IN_GSPEC] THEN
-  REWRITE_TAC[CLOSED_IN_QUASI_COMPONENT_OF]);;
+   "C \<in> quasi_components_of X \<Longrightarrow> closedin X C"
+  by (auto simp: quasi_components_of_def closedin_quasi_component_of)
 
 lemma openin_finite_quasi_components:
-   "finite(quasi_components_of X) \<and>
-        c \<in> quasi_components_of X
-        \<Longrightarrow> openin X c"
-oops
-  REPEAT STRIP_TAC THEN
-  ASM_SIMP_TAC[OPEN_IN_CLOSED_IN_EQ; QUASI_COMPONENTS_OF_SUBSET] THEN
-  ASM_SIMP_TAC[COMPLEMENT_QUASI_COMPONENTS_OF_UNIONS] THEN
-  MATCH_MP_TAC CLOSED_IN_UNIONS THEN
-  ASM_SIMP_TAC[FINITE_DELETE; IN_DELETE; CLOSED_IN_QUASI_COMPONENTS_OF]);;
+  "\<lbrakk>finite(quasi_components_of X); C \<in> quasi_components_of X\<rbrakk> \<Longrightarrow> openin X C"
+  apply (simp add:openin_closedin_eq quasi_components_of_subset complement_quasi_components_of_Union)
+  by (meson DiffD1 closedin_Union closedin_quasi_components_of finite_Diff)
 
 lemma quasi_component_of_eq_overlap:
    "quasi_component_of X x = quasi_component_of X y \<longleftrightarrow>
-      (x \<notin> topspace X) \<and> (y \<notin> topspace X) \<or>
-      \<not> (quasi_component_of X x \<inter> quasi_component_of X y = {})"
-oops
-  REWRITE_TAC[GSYM disjnt; QUASI_COMPONENT_OF_DISJOINT] THEN
-  REWRITE_TAC[QUASI_COMPONENT_OF_EQ] THEN
-  MESON_TAC[QUASI_COMPONENT_IN_TOPSPACE]);;
+      (x \<notin> topspace X \<and> y \<notin> topspace X) \<or>
+      \<not> (quasi_component_of_set X x \<inter> quasi_component_of_set X y = {})"
+  using quasi_component_of_equiv by fastforce
 
 lemma quasi_component_of_nonoverlap:
-   "quasi_component_of X x \<inter> quasi_component_of X y = {} \<longleftrightarrow>
+   "quasi_component_of_set X x \<inter> quasi_component_of_set X y = {} \<longleftrightarrow>
      (x \<notin> topspace X) \<or> (y \<notin> topspace X) \<or>
      \<not> (quasi_component_of X x = quasi_component_of X y)"
-oops
-  REWRITE_TAC[GSYM disjnt; QUASI_COMPONENT_OF_DISJOINT] THEN
-  REWRITE_TAC[QUASI_COMPONENT_OF_EQ] THEN
-  MESON_TAC[QUASI_COMPONENT_IN_TOPSPACE]);;
+  by (metis inf.idem quasi_component_of_eq_empty quasi_component_of_eq_overlap)
 
 lemma quasi_component_of_overlap:
-   "\<not> (quasi_component_of X x \<inter> quasi_component_of X y = {}) \<longleftrightarrow>
-    x \<in> topspace X \<and> y \<in> topspace X \<and>
-    quasi_component_of X x = quasi_component_of X y"
-oops
-  REWRITE_TAC[GSYM disjnt; QUASI_COMPONENT_OF_DISJOINT] THEN
-  REWRITE_TAC[QUASI_COMPONENT_OF_EQ] THEN
-  MESON_TAC[QUASI_COMPONENT_IN_TOPSPACE]);;
+   "\<not> (quasi_component_of_set X x \<inter> quasi_component_of_set X y = {}) \<longleftrightarrow>
+    x \<in> topspace X \<and> y \<in> topspace X \<and> quasi_component_of X x = quasi_component_of X y"
+  by (meson quasi_component_of_nonoverlap)
 
 lemma quasi_components_of_disjoint:
-   "\<And>X c c'.
-        c \<in> quasi_components_of X \<and> c' \<in> quasi_components_of X
-        \<Longrightarrow> (disjnt c c' \<longleftrightarrow> (c \<noteq> c'))"
-oops
-  REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM; quasi_components_of] THEN
-  SIMP_TAC[FORALL_IN_GSPEC; disjnt; QUASI_COMPONENT_OF_NONOVERLAP]);;
+   "\<lbrakk>C \<in> quasi_components_of X; D \<in> quasi_components_of X\<rbrakk> \<Longrightarrow> disjnt C D \<longleftrightarrow> C \<noteq> D"
+  by (metis disjnt_self_iff_empty nonempty_quasi_components_of pairwiseD pairwise_disjoint_quasi_components_of)
 
 lemma quasi_components_of_overlap:
-   "\<And>X c c'.
-        c \<in> quasi_components_of X \<and> c' \<in> quasi_components_of X
-        \<Longrightarrow> (\<not> (c \<inter> c' = {}) \<longleftrightarrow> c = c')"
-oops
-  REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM; quasi_components_of] THEN
-  SIMP_TAC[FORALL_IN_GSPEC; disjnt; QUASI_COMPONENT_OF_NONOVERLAP]);;
+   "\<lbrakk>C \<in> quasi_components_of X; D \<in> quasi_components_of X\<rbrakk> \<Longrightarrow> \<not> (C \<inter> D = {}) \<longleftrightarrow> C = D"
+  by (metis disjnt_def quasi_components_of_disjoint)
 
 lemma pairwise_separated_quasi_components_of:
    "pairwise (separatedin X) (quasi_components_of X)"
-oops
-  REWRITE_TAC[pairwise] THEN
-  SIMP_TAC[CLOSED_IN_QUASI_COMPONENTS_OF; SEPARATED_IN_CLOSED_SETS] THEN
-  REWRITE_TAC[GSYM pairwise; PAIRWISE_DISJOINT_QUASI_COMPONENTS_OF]);;
+  by (metis closedin_quasi_components_of pairwise_def pairwise_disjoint_quasi_components_of separatedin_closed_sets)
 
 lemma card_le_quasi_components_of_topspace:
-   "quasi_components_of X \<lesssim> topspace X"
-oops
-  GEN_TAC THEN MATCH_MP_TAC CARD_LE_RELATIONAL_FULL THEN
-  EXISTS_TAC `(\<in>):A->(A=>bool)->bool` THEN CONJ_TAC THENL
-   [REPEAT STRIP_TAC THEN
-    FIRST_ASSUM(MP_TAC \<circ> MATCH_MP QUASI_COMPONENTS_OF_SUBSET) THEN
-    FIRST_ASSUM(MP_TAC \<circ> MATCH_MP NONEMPTY_QUASI_COMPONENTS_OF) THEN
-    SET_TAC[];
-    MESON_TAC[REWRITE_RULE[GSYM MEMBER_NOT_EMPTY; IN_INTER]
-                QUASI_COMPONENTS_OF_OVERLAP]]);;
+  "quasi_components_of X \<lesssim> topspace X"
+  unfolding lepoll_def
+  by (metis bot.extremum image_empty inj_on_empty inj_on_iff_surj quasi_components_of_def)
 
 lemma finite_quasi_components_of_finite:
    "finite(topspace X) \<Longrightarrow> finite(quasi_components_of X)"
-oops
-  GEN_TAC THEN
-  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] CARD_LE_FINITE) THEN
-  REWRITE_TAC[CARD_LE_QUASI_COMPONENTS_OF_TOPSPACE]);;
+  by (simp add: Union_quasi_components_of finite_UnionD)
 
 lemma connected_imp_quasi_component_of:
-   "connected_component_of X x y \<Longrightarrow> quasi_component_of X x y"
-oops
-  REPEAT STRIP_TAC THEN
-  FIRST_ASSUM(STRIP_ASSUME_TAC \<circ> MATCH_MP CONNECTED_COMPONENT_IN_TOPSPACE) THEN
-  ASM_REWRITE_TAC[QUASI_COMPONENT_OF] THEN
-  X_GEN_TAC `t::A=>bool` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [connected_component_of]) THEN
-  DISCH_THEN(X_CHOOSE_THEN `c::A=>bool` STRIP_ASSUME_TAC) THEN
-  MP_TAC(ISPECL [`X::A topology`; `c::A=>bool`; `t::A=>bool`]
-        CONNECTED_IN_CLOPEN_CASES) THEN
-  ASM_REWRITE_TAC[] THEN ASM SET_TAC[]);;
+  assumes "connected_component_of X x y"
+  shows "quasi_component_of X x y"
+proof -
+  have "x \<in> topspace X" "y \<in> topspace X"
+    by (meson assms connected_component_of_equiv)+
+  with assms show ?thesis
+    apply (clarsimp simp add: quasi_component_of connected_component_of_def)
+    by (meson connectedin_clopen_cases disjnt_iff subsetD)
+qed
 
 lemma connected_component_subset_quasi_component_of:
-   "connected_component_of X x \<subseteq> quasi_component_of X x"
-oops
-  REWRITE_TAC[\<subseteq>; \<in>; CONNECTED_IMP_QUASI_COMPONENT_OF]);;
+   "connected_component_of_set X x \<subseteq> quasi_component_of_set X x"
+  using connected_imp_quasi_component_of by force
 
-lemma quasi_component_as_connected_component_unions:
-   "quasi_component_of X x =
-        \<Union> {connected_component_of X y |y| quasi_component_of X x y}"
-oops
-  REPEAT GEN_TAC THEN MATCH_MP_TAC SUBSET_ANTISYM THEN
-  REWRITE_TAC[UNIONS_SUBSET; FORALL_IN_GSPEC] THEN CONJ_TAC THENL
-   [GEN_REWRITE_TAC id [\<subseteq>] THEN X_GEN_TAC `y::A` THEN
-    REWRITE_TAC[UNIONS_GSPEC; IN_ELIM_THM] THEN
-    REWRITE_TAC[\<in>] THEN DISCH_TAC THEN EXISTS_TAC `y::A` THEN
-    ASM_MESON_TAC[CONNECTED_COMPONENT_OF_REFL; QUASI_COMPONENT_IN_TOPSPACE];
-    X_GEN_TAC `y::A` THEN SIMP_TAC[QUASI_COMPONENT_OF_EQUIV] THEN
-    REWRITE_TAC[CONNECTED_COMPONENT_SUBSET_QUASI_COMPONENT_OF]]);;
+lemma quasi_component_as_connected_component_Union:
+   "quasi_component_of_set X x =
+    \<Union> (connected_component_of_set X ` quasi_component_of_set X x)" 
+    (is "?lhs = ?rhs")
+proof
+  show "?lhs \<subseteq> ?rhs"
+    using connected_component_of_refl quasi_component_of by fastforce
+  show "?rhs \<subseteq> ?lhs"
+    apply (rule SUP_least)
+    by (simp add: connected_component_subset_quasi_component_of quasi_component_of_equiv)
+qed
 
-lemma quasi_components_as_connected_components_unions:
-   "c \<in> quasi_components_of X
-        \<Longrightarrow> \<exists>t. t \<subseteq> connected_components_of X \<and> \<Union> t = c"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[quasi_components_of; IN_ELIM_THM] THEN
-  DISCH_THEN(X_CHOOSE_THEN `x::A` (CONJUNCTS_THEN2 ASSUME_TAC SUBST1_TAC)) THEN
-  EXISTS_TAC
-   `{connected_component_of X (y::A) |y| quasi_component_of X x y}` THEN
-  REWRITE_TAC[GSYM QUASI_COMPONENT_AS_CONNECTED_COMPONENT_UNIONS] THEN
-  REWRITE_TAC[\<subseteq>; connected_components_of; FORALL_IN_GSPEC] THEN
-  X_GEN_TAC `y::A` THEN DISCH_TAC THEN REWRITE_TAC[IN_ELIM_THM] THEN
-  ASM_MESON_TAC[QUASI_COMPONENT_IN_TOPSPACE]);;
+lemma quasi_components_as_connected_components_Union:
+  assumes "C \<in> quasi_components_of X"
+  obtains \<T> where "\<T> \<subseteq> connected_components_of X" "\<Union>\<T> = C"
+proof -
+  obtain x where "x \<in> topspace X" and Ceq: "C = quasi_component_of_set X x"
+    by (metis assms imageE quasi_components_of_def)
+  define \<T> where "\<T> \<equiv> connected_component_of_set X ` quasi_component_of_set X x"
+  show thesis
+  proof
+    show "\<T> \<subseteq> connected_components_of X"
+      by (simp add: \<T>_def connected_components_of_def image_mono quasi_component_of_subset_topspace)
+    show "\<Union>\<T> = C"
+      by (metis \<T>_def Ceq quasi_component_as_connected_component_Union)
+  qed
+qed
 
 lemma path_imp_quasi_component_of:
    "path_component_of X x y \<Longrightarrow> quasi_component_of X x y"
-oops
-  MESON_TAC[CONNECTED_IMP_QUASI_COMPONENT_OF;
-            PATH_IMP_CONNECTED_COMPONENT_OF]);;
+  by (simp add: connected_imp_quasi_component_of path_imp_connected_component_of)
 
 lemma path_component_subset_quasi_component_of:
-   "path_component_of X x \<subseteq> quasi_component_of X x"
-oops
-  REWRITE_TAC[\<subseteq>; \<in>; PATH_IMP_QUASI_COMPONENT_OF]);;
+   "path_component_of_set X x \<subseteq> quasi_component_of_set X x"
+  by (simp add: Collect_mono path_imp_quasi_component_of)
 
 lemma connected_space_iff_quasi_component:
-   "connected_space X \<longleftrightarrow>
-        \<forall>x y. x \<in> topspace X \<and> y \<in> topspace X
-              \<Longrightarrow> quasi_component_of X x y"
-oops
-  GEN_TAC THEN REWRITE_TAC[CONNECTED_SPACE_CLOPEN_IN] THEN
-  REWRITE_TAC[QUASI_COMPONENT_OF] THEN
-  REWRITE_TAC[closedin] THEN SET_TAC[]);;
+   "connected_space X \<longleftrightarrow> (\<forall>x \<in> topspace X. \<forall>y \<in> topspace X. quasi_component_of X x y)"
+  unfolding connected_space_clopen_in closedin_def quasi_component_of
+  by blast
 
 lemma connected_space_imp_quasi_component_of:
-   "connected_space X \<and> a \<in> topspace X \<and> b \<in> topspace X
-        \<Longrightarrow> quasi_component_of X a b"
-oops
-  MESON_TAC[CONNECTED_SPACE_IFF_QUASI_COMPONENT]);;
+   " \<lbrakk>connected_space X; a \<in> topspace X; b \<in> topspace X\<rbrakk> \<Longrightarrow> quasi_component_of X a b"
+  by (simp add: connected_space_iff_quasi_component)
 
 lemma connected_space_quasi_component_set:
-   "connected_space X \<longleftrightarrow>
-         \<forall>x::A. x \<in> topspace X
-               \<Longrightarrow> quasi_component_of X x = topspace X"
-oops
-  REWRITE_TAC[CONNECTED_SPACE_IFF_QUASI_COMPONENT;
-              GSYM SUBSET_ANTISYM_EQ] THEN
-  REWRITE_TAC[QUASI_COMPONENT_OF_SUBSET_TOPSPACE] THEN SET_TAC[]);;
+   "connected_space X \<longleftrightarrow> (\<forall>x \<in> topspace X. quasi_component_of_set X x = topspace X)"
+  by (metis Ball_Collect connected_space_iff_quasi_component quasi_component_of_subset_topspace subset_antisym)
 
 lemma connected_space_iff_quasi_components_eq:
-   "connected_space X \<longleftrightarrow>
-        !c c'. c \<in> quasi_components_of X \<and>
-               c' \<in> quasi_components_of X
-               \<Longrightarrow> c = c'"
-oops
-  REWRITE_TAC[quasi_components_of; IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
-  REWRITE_TAC[FORALL_IN_GSPEC; CONNECTED_SPACE_IFF_QUASI_COMPONENT] THEN
-  SIMP_TAC[QUASI_COMPONENT_OF_EQ] THEN MESON_TAC[]);;
+  "connected_space X \<longleftrightarrow>
+    (\<forall>C \<in> quasi_components_of X. \<forall>D \<in> quasi_components_of X. C = D)"
+  apply (simp add: quasi_components_of_def)
+  by (metis connected_space_iff_quasi_component mem_Collect_eq quasi_component_of_equiv)
 
 lemma quasi_components_of_subset_sing:
-   "quasi_components_of X \<subseteq> {s} \<longleftrightarrow>
-        connected_space X \<and> (topspace X = {} \<or> topspace X = s)"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[CONNECTED_SPACE_IFF_QUASI_COMPONENTS_EQ; SET_RULE
-   `(\<forall>x y. x \<in> s \<and> y \<in> s \<Longrightarrow> x = y) \<longleftrightarrow> s = {} \<or> \<exists>a. s = {a}`] THEN
-  ASM_CASES_TAC `topspace X::A=>bool = {}` THEN
-  ASM_SIMP_TAC[QUASI_COMPONENTS_OF_EMPTY_SPACE; EMPTY_SUBSET] THEN
-  ASM_REWRITE_TAC[QUASI_COMPONENTS_OF_EQ_EMPTY; SET_RULE
-   `s \<subseteq> {a} \<longleftrightarrow> s = {} \<or> s = {a}`] THEN
-  MESON_TAC[UNIONS_QUASI_COMPONENTS_OF; UNIONS_1]);;
+   "quasi_components_of X \<subseteq> {S} \<longleftrightarrow> connected_space X \<and> (topspace X = {} \<or> topspace X = S)"
+proof (cases "quasi_components_of X = {}")
+  case True
+  then show ?thesis
+    by (simp add: connected_space_topspace_empty subset_singleton_iff)
+next
+  case False
+  then show ?thesis
+    apply (simp add: connected_space_iff_quasi_components_eq subset_iff Ball_def)
+    by (metis quasi_components_of_subset subsetI subset_antisym subset_empty topspace_imp_quasi_components_of)
+qed
 
 lemma connected_space_iff_quasi_components_subset_sing:
-   "connected_space X \<longleftrightarrow> \<exists>a. quasi_components_of X \<subseteq> {a}"
-oops
-  MESON_TAC[QUASI_COMPONENTS_OF_SUBSET_SING]);;
+   "connected_space X \<longleftrightarrow> (\<exists>a. quasi_components_of X \<subseteq> {a})"
+  by (simp add: quasi_components_of_subset_sing)
 
-lemma quasi_components_of_eq_sing:
-   "quasi_components_of X = {s} \<longleftrightarrow>
-        connected_space X \<and> \<not> (topspace X = {}) \<and> s = topspace X"
-oops
-  REWRITE_TAC[QUASI_COMPONENTS_OF_SUBSET_SING;
-              QUASI_COMPONENTS_OF_EQ_EMPTY;
-              SET_RULE `s = {a} \<longleftrightarrow> s \<subseteq> {a} \<and> (s \<noteq> {})`] THEN
-  MESON_TAC[]);;
+lemma quasi_components_of_eq_singleton:
+   "quasi_components_of X = {S} \<longleftrightarrow>
+        connected_space X \<and> \<not> (topspace X = {}) \<and> S = topspace X"
+  by (metis ccpo_Sup_singleton insert_not_empty quasi_components_of_subset_sing subset_singleton_iff)
 
 lemma quasi_components_of_connected_space:
    "connected_space X
-        \<Longrightarrow> quasi_components_of X =
-            if topspace X = {} then {} else {topspace X}"
-oops
-  ASM_MESON_TAC[QUASI_COMPONENTS_OF_EMPTY_SPACE;
-                QUASI_COMPONENTS_OF_EQ_SING]);;
+        \<Longrightarrow> quasi_components_of X = (if topspace X = {} then {} else {topspace X})"
+  by (simp add: quasi_components_of_eq_singleton)
 
 lemma separated_between_sings:
    "separated_between X {x} {y} \<longleftrightarrow>
-        x \<in> topspace X \<and> y \<in> topspace X \<and>
-        \<not> (quasi_component_of X x y)"
-oops
-  REPEAT GEN_TAC THEN
-  ASM_CASES_TAC `(x::A) \<in> topspace X` THENL
-   [ALL_TAC; ASM_MESON_TAC[SEPARATED_BETWEEN_IMP_SUBSET; SING_SUBSET]] THEN
-  ASM_CASES_TAC `(y::A) \<in> topspace X` THENL
-   [ALL_TAC; ASM_MESON_TAC[SEPARATED_BETWEEN_IMP_SUBSET; SING_SUBSET]] THEN
-  ASM_REWRITE_TAC[separated_between; QUASI_COMPONENT_OF_ALT; SING_SUBSET]);;
+    x \<in> topspace X \<and> y \<in> topspace X \<and> \<not> (quasi_component_of X x y)"
+proof (cases "x \<in> topspace X \<and> y \<in> topspace X")
+  case True
+  then show ?thesis
+    by (auto simp add: separated_between_def quasi_component_of_alt)
+qed (use separated_between_imp_subset in blast)
 
 lemma quasi_component_nonseparated:
-   "quasi_component_of X x y \<longleftrightarrow>
-        x \<in> topspace X \<and> y \<in> topspace X \<and>
-        \<not> (separated_between X {x} {y})"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[SEPARATED_BETWEEN_SINGS] THEN
-  MESON_TAC[QUASI_COMPONENT_IN_TOPSPACE]);;
+   "quasi_component_of X x y \<longleftrightarrow> x \<in> topspace X \<and> y \<in> topspace X \<and> \<not> (separated_between X {x} {y})"
+  by (metis quasi_component_of_equiv separated_between_sings)
 
 lemma separated_between_quasi_component_pointwise_left:
-   "\<And>X c s::A=>bool.
-        c \<in> quasi_components_of X
-        \<Longrightarrow> (separated_between X c s \<longleftrightarrow>
-             \<exists>x. x \<in> c \<and> separated_between X {x} s)"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THENL
-   [ASM_MESON_TAC[NONEMPTY_QUASI_COMPONENTS_OF; SING_SUBSET; MEMBER_NOT_EMPTY;
-                  SEPARATED_BETWEEN_MONO; SUBSET_REFL];
-    DISCH_THEN(X_CHOOSE_THEN `y::A` (CONJUNCTS_THEN2 ASSUME_TAC MP_TAC))] THEN
-  REWRITE_TAC[SEPARATED_BETWEEN; SING_SUBSET] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `u::A=>bool` THEN
-  STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE RAND_CONV [quasi_components_of]) THEN
-  REWRITE_TAC[IN_ELIM_THM] THEN
-  DISCH_THEN(X_CHOOSE_THEN `x::A` STRIP_ASSUME_TAC) THEN
-  UNDISCH_TAC `(y::A) \<in> c` THEN ASM_REWRITE_TAC[] THEN
-  GEN_REWRITE_TAC LAND_CONV [\<in>] THEN REWRITE_TAC[quasi_component_of] THEN
-  DISCH_TAC THEN REWRITE_TAC[\<subseteq>] THEN X_GEN_TAC `z::A` THEN
-  GEN_REWRITE_TAC LAND_CONV [\<in>] THEN REWRITE_TAC[quasi_component_of] THEN
-  ASM_MESON_TAC[]);;
+  assumes "C \<in> quasi_components_of X"
+  shows "separated_between X C S \<longleftrightarrow> (\<exists>x \<in> C. separated_between X {x} S)"  (is "?lhs = ?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs"
+    using assms quasi_components_of_disjoint separated_between_mono by fastforce
+next
+  assume ?rhs
+  then obtain y where "separated_between X {y} S" and "y \<in> C"
+    by metis
+  with assms show ?lhs
+    by (force simp add: separated_between quasi_components_of_def quasi_component_of_def)
+qed
 
 lemma separated_between_quasi_component_pointwise_right:
-   "\<And>X s c::A=>bool.
-        c \<in> quasi_components_of X
-        \<Longrightarrow> (separated_between X s c \<longleftrightarrow>
-             \<exists>x. x \<in> c \<and> separated_between X s {x})"
-oops
-  ONCE_REWRITE_TAC[SEPARATED_BETWEEN_SYM] THEN
-  REWRITE_TAC[SEPARATED_BETWEEN_QUASI_COMPONENT_POINTWISE_LEFT]);;
+   "C \<in> quasi_components_of X \<Longrightarrow> separated_between X S C \<longleftrightarrow> (\<exists>x \<in> C. separated_between X S {x})"
+  by (simp add: separated_between_quasi_component_pointwise_left separated_between_sym)
 
 lemma separated_between_quasi_component_point:
-   "c \<in> quasi_components_of X
-        \<Longrightarrow> (separated_between X c {x} \<longleftrightarrow> x \<in> topspace X - c)"
+   "C \<in> quasi_components_of X
+        \<Longrightarrow> (separated_between X C {x} \<longleftrightarrow> x \<in> topspace X - C)"
 oops
   REWRITE_TAC[IN_DIFF] THEN REPEAT STRIP_TAC THEN EQ_TAC THENL
    [ASM_MESON_TAC[SEPARATED_BETWEEN_IMP_DISJOINT; DISJOINT_SING;
@@ -5322,17 +5222,17 @@ oops
   REWRITE_TAC[\<in>] THEN ASM_REWRITE_TAC[quasi_component_of]);;
 
 lemma separated_between_point_quasi_component:
-   "\<And>X (x::A) c.
-        c \<in> quasi_components_of X
-        \<Longrightarrow> (separated_between X {x} c \<longleftrightarrow> x \<in> topspace X - c)"
+   "\<And>X (x::A) C.
+        C \<in> quasi_components_of X
+        \<Longrightarrow> (separated_between X {x} C \<longleftrightarrow> x \<in> topspace X - C)"
 oops
   ONCE_REWRITE_TAC[SEPARATED_BETWEEN_SYM] THEN
   REWRITE_TAC[SEPARATED_BETWEEN_QUASI_COMPONENT_POINT]);;
 
 lemma separated_between_quasi_component_compact:
-   "\<And>X c k::A=>bool.
-        c \<in> quasi_components_of X \<and> compactin X k
-        \<Longrightarrow> (separated_between X c k \<longleftrightarrow> disjnt c k)"
+   "\<And>X C K::A=>bool.
+        C \<in> quasi_components_of X \<and> compactin X K
+        \<Longrightarrow> (separated_between X C K \<longleftrightarrow> disjnt C K)"
 oops
   REPEAT STRIP_TAC THEN EQ_TAC THEN
   REWRITE_TAC[SEPARATED_BETWEEN_IMP_DISJOINT] THEN
@@ -5343,23 +5243,23 @@ oops
   ASM SET_TAC[]);;
 
 lemma separated_between_compact_quasi_component:
-   "\<And>X k c::A=>bool.
-        compactin X k \<and> c \<in> quasi_components_of X
-        \<Longrightarrow> (separated_between X k c \<longleftrightarrow> disjnt k c)"
+   "\<And>X K C::A=>bool.
+        compactin X K \<and> C \<in> quasi_components_of X
+        \<Longrightarrow> (separated_between X K C \<longleftrightarrow> disjnt K C)"
 oops
   ONCE_REWRITE_TAC[SEPARATED_BETWEEN_SYM; DISJOINT_SYM] THEN
   SIMP_TAC[SEPARATED_BETWEEN_QUASI_COMPONENT_COMPACT]);;
 
 lemma separated_between_quasi_components:
-   "\<And>X c c':A=>bool.
-        c \<in> quasi_components_of X \<and> c' \<in> quasi_components_of X
-        \<Longrightarrow> (separated_between X c c' \<longleftrightarrow> disjnt c c')"
+   "\<And>X C c':A=>bool.
+        C \<in> quasi_components_of X \<and> c' \<in> quasi_components_of X
+        \<Longrightarrow> (separated_between X C c' \<longleftrightarrow> disjnt C c')"
 oops
   REPEAT STRIP_TAC THEN EQ_TAC THEN
   REWRITE_TAC[SEPARATED_BETWEEN_IMP_DISJOINT] THEN DISCH_TAC THEN
   ASM_SIMP_TAC[SEPARATED_BETWEEN_QUASI_COMPONENT_POINTWISE_RIGHT;
                SEPARATED_BETWEEN_QUASI_COMPONENT_POINTWISE_LEFT] THEN
-  UNDISCH_TAC `(c::A=>bool) \<in> quasi_components_of X` THEN
+  UNDISCH_TAC `(C::A=>bool) \<in> quasi_components_of X` THEN
   REWRITE_TAC[quasi_components_of; IN_ELIM_THM] THEN
   MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `x::A` THEN
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC SUBST_ALL_TAC) THEN
@@ -5390,31 +5290,31 @@ oops
   ASM_REWRITE_TAC[QUASI_COMPONENT_OF_REFL]);;
 
 lemma connected_quasi_component_of:
-   "c \<in> quasi_components_of X
-        \<Longrightarrow> (c \<in> connected_components_of X \<longleftrightarrow> connectedin X c)"
+   "C \<in> quasi_components_of X
+        \<Longrightarrow> (C \<in> connected_components_of X \<longleftrightarrow> connectedin X C)"
 oops
   REPEAT STRIP_TAC THEN EQ_TAC THEN
   REWRITE_TAC[CONNECTED_IN_CONNECTED_COMPONENTS_OF] THEN
   DISCH_TAC THEN
-  UNDISCH_TAC `(c::A=>bool) \<in> quasi_components_of X` THEN
+  UNDISCH_TAC `(C::A=>bool) \<in> quasi_components_of X` THEN
   REWRITE_TAC[quasi_components_of; connected_components_of] THEN
   REWRITE_TAC[IN_ELIM_THM] THEN MATCH_MP_TAC MONO_EXISTS THEN
   ASM_MESON_TAC[QUASI_EQ_CONNECTED_COMPONENT_OF_EQ]);;
 
 lemma quasi_component_of_clopen_cases:
-   "\<And>X c t::A=>bool.
-        c \<in> quasi_components_of X \<and> closedin X t \<and> openin X t
-        \<Longrightarrow> c \<subseteq> t \<or> disjnt c t"
+   "\<And>X C T::A=>bool.
+        C \<in> quasi_components_of X \<and> closedin X T \<and> openin X T
+        \<Longrightarrow> C \<subseteq> T \<or> disjnt C T"
 oops
   REPEAT GEN_TAC THEN
   REWRITE_TAC[IMP_CONJ; quasi_components_of; IN_ELIM_THM; LEFT_IMP_EXISTS_THM;
-              SET_RULE `c = s \<longleftrightarrow> \<forall>x. x \<in> c \<longleftrightarrow> s x`] THEN
+              SET_RULE `C = S \<longleftrightarrow> \<forall>x. x \<in> C \<longleftrightarrow> S x`] THEN
   REWRITE_TAC[quasi_component_of] THEN
   REWRITE_TAC[closedin] THEN SET_TAC[]);;
 
 lemma quasi_components_of_set:
-   "c \<in> quasi_components_of X
-        \<Longrightarrow> \<Inter> {t. closedin X t \<and> openin X t \<and> c \<subseteq> t} = c"
+   "C \<in> quasi_components_of X
+        \<Longrightarrow> \<Inter> {T. closedin X T \<and> openin X T \<and> C \<subseteq> T} = C"
 oops
   REPEAT STRIP_TAC THEN MATCH_MP_TAC SUBSET_ANTISYM THEN
   SIMP_TAC[SUBSET_INTERS; FORALL_IN_GSPEC] THEN
@@ -5429,11 +5329,11 @@ oops
   REWRITE_TAC[SEPARATED_BETWEEN] THEN SET_TAC[]);;
 
 lemma open_quasi_eq_connected_components_of:
-   "openin X c
-        \<Longrightarrow> (c \<in> quasi_components_of X \<longleftrightarrow>
-             c \<in> connected_components_of X)"
+   "openin X C
+        \<Longrightarrow> (C \<in> quasi_components_of X \<longleftrightarrow>
+             C \<in> connected_components_of X)"
 oops
-  REPEAT GEN_TAC THEN ASM_CASES_TAC `closedin X (c::A=>bool)` THENL
+  REPEAT GEN_TAC THEN ASM_CASES_TAC `closedin X (C::A=>bool)` THENL
    [STRIP_TAC;
     ASM_MESON_TAC[CLOSED_IN_CONNECTED_COMPONENTS_OF;
                   CLOSED_IN_QUASI_COMPONENTS_OF]] THEN
@@ -5442,12 +5342,12 @@ oops
     SIMP_TAC[connectedin; QUASI_COMPONENTS_OF_SUBSET] THEN DISCH_TAC THEN
     REWRITE_TAC[CONNECTED_SPACE_CLOPEN_IN] THEN
     ASM_SIMP_TAC[OPEN_IN_OPEN_SUBTOPOLOGY; CLOSED_IN_CLOSED_SUBTOPOLOGY] THEN
-    X_GEN_TAC `t::A=>bool` THEN STRIP_TAC THEN MATCH_MP_TAC(SET_RULE
-     `(\<forall>x. x \<in> s \<Longrightarrow> P) \<Longrightarrow> s = {} \<or> P`) THEN
+    X_GEN_TAC `T::A=>bool` THEN STRIP_TAC THEN MATCH_MP_TAC(SET_RULE
+     `(\<forall>x. x \<in> S \<Longrightarrow> P) \<Longrightarrow> S = {} \<or> P`) THEN
     X_GEN_TAC `z::A` THEN DISCH_TAC THEN
     ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET; QUASI_COMPONENTS_OF_SUBSET] THEN
     ASM_REWRITE_TAC[GSYM SUBSET_ANTISYM_EQ] THEN
-    MP_TAC(ISPECL [`X::A topology`; `c::A=>bool`; `t::A=>bool`]
+    MP_TAC(ISPECL [`X::A topology`; `C::A=>bool`; `T::A=>bool`]
         QUASI_COMPONENT_OF_CLOPEN_CASES) THEN
     ASM SET_TAC[];
     REWRITE_TAC[connected_components_of; quasi_components_of] THEN
@@ -5457,7 +5357,7 @@ oops
     REWRITE_TAC[CONNECTED_COMPONENT_SUBSET_QUASI_COMPONENT_OF] THEN
     ASM_SIMP_TAC[QUASI_COMPONENT_OF_SET] THEN
     MATCH_MP_TAC INTERS_SUBSET_STRONG THEN
-    EXISTS_TAC `c::A=>bool` THEN REWRITE_TAC[IN_ELIM_THM] THEN
+    EXISTS_TAC `C::A=>bool` THEN REWRITE_TAC[IN_ELIM_THM] THEN
     ASM_REWRITE_TAC[SUBSET_REFL] THEN REWRITE_TAC[\<in>] THEN
     ASM_REWRITE_TAC[CONNECTED_COMPONENT_OF_REFL]]);;
 
