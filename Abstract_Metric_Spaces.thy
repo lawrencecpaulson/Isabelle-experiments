@@ -4892,170 +4892,108 @@ qed
 subsection\<open>Quasi-components\<close>
 
 
-let quasi_component_of = new_definition
- `quasi_component_of X x y \<longleftrightarrow>
+definition quasi_component_of :: "'a topology \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool"
+  where
+  "quasi_component_of X x y \<equiv>
         x \<in> topspace X \<and> y \<in> topspace X \<and>
-        \<forall>t. closedin X t \<and> openin X t \<Longrightarrow> (x \<in> t \<longleftrightarrow> y \<in> t)`;;
+        (\<forall>T. closedin X T \<and> openin X T \<longrightarrow> (x \<in> T \<longleftrightarrow> y \<in> T))"
 
-let quasi_components_of = new_definition
- `quasi_components_of X =
-    {quasi_component_of X x |x| x \<in> topspace X}`;;
+definition quasi_components_of :: "'a topology \<Rightarrow> ('a \<Rightarrow> bool) set"
+  where
+  "quasi_components_of X = quasi_component_of X ` topspace X"
+
+abbreviation "quasi_component_of_set S x \<equiv> Collect (quasi_component_of S x)"
 
 lemma quasi_component_in_topspace:
-   "quasi_component_of X x y
-        \<Longrightarrow> x \<in> topspace X \<and> y \<in> topspace X"
-oops
-  REWRITE_TAC[quasi_component_of] THEN MESON_TAC[]);;
+   "quasi_component_of X x y \<Longrightarrow> x \<in> topspace X \<and> y \<in> topspace X"
+  by (simp add: quasi_component_of_def)
 
-lemma quasi_component_of_refl:
+lemma quasi_component_of_refl [simp]:
    "quasi_component_of X x x \<longleftrightarrow> x \<in> topspace X"
-oops
-  REWRITE_TAC[quasi_component_of] THEN MESON_TAC[]);;
+  by (simp add: quasi_component_of_def)
 
 lemma quasi_component_of_sym:
    "quasi_component_of X x y \<longleftrightarrow> quasi_component_of X y x"
-oops
-  REWRITE_TAC[quasi_component_of] THEN MESON_TAC[]);;
+  by (meson quasi_component_of_def)
 
 lemma quasi_component_of_trans:
-   "quasi_component_of X x y \<and> quasi_component_of X y z
-        \<Longrightarrow> quasi_component_of X x z"
-oops
-  REWRITE_TAC[quasi_component_of] THEN MESON_TAC[]);;
+   "\<lbrakk>quasi_component_of X x y; quasi_component_of X y z\<rbrakk> \<Longrightarrow> quasi_component_of X x z"
+  by (simp add: quasi_component_of_def)
 
 lemma quasi_component_of_subset_topspace:
-   "(quasi_component_of X x) \<subseteq> topspace X"
-oops
-  REWRITE_TAC[\<subseteq>; \<in>] THEN MESON_TAC[QUASI_COMPONENT_IN_TOPSPACE; \<in>]);;
+   "quasi_component_of_set X x \<subseteq> topspace X"
+  using quasi_component_of_def by fastforce
 
 lemma quasi_component_of_eq_empty:
-   "quasi_component_of X x = {} \<longleftrightarrow> (x \<notin> topspace X)"
-oops
-  REWRITE_TAC[EXTENSION; NOT_IN_EMPTY] THEN
-  MESON_TAC[\<in>; QUASI_COMPONENT_OF_REFL; QUASI_COMPONENT_IN_TOPSPACE]);;
+   "quasi_component_of_set X x = {} \<longleftrightarrow> (x \<notin> topspace X)"
+  using quasi_component_of_def by fastforce
 
 lemma quasi_component_of:
    "quasi_component_of X x y \<longleftrightarrow>
-        x \<in> topspace X \<and> y \<in> topspace X \<and>
-        \<forall>t. x \<in> t \<and> closedin X t \<and> openin X t \<Longrightarrow> y \<in> t"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[quasi_component_of] THEN
-  EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THENL
-   [ASM_MESON_TAC[]; ALL_TAC] THEN
-  X_GEN_TAC `s::A=>bool` THEN STRIP_TAC THEN EQ_TAC THEN ASM_SIMP_TAC[] THEN
-  GEN_REWRITE_TAC id [GSYM CONTRAPOS_THM] THEN REPEAT DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `topspace X - s::A=>bool`) THEN
-  ASM_REWRITE_TAC[IN_DIFF] THEN
-  ASM_MESON_TAC[OPEN_IN_CLOSED_IN_EQ; closedin]);;
+    x \<in> topspace X \<and> y \<in> topspace X \<and> (\<forall>T. x \<in> T \<and> closedin X T \<and> openin X T \<longrightarrow> y \<in> T)"
+  unfolding quasi_component_of_def by blast
 
 lemma quasi_component_of_alt:
-   "quasi_component_of X x y \<longleftrightarrow>
-        x \<in> topspace X \<and> y \<in> topspace X \<and>
-        \<not> (\<exists>u v. openin X u \<and> openin X v \<and>
-                u \<union> v = topspace X \<and>
-                disjnt u v \<and> x \<in> u \<and> y \<in> v)"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[QUASI_COMPONENT_OF] THEN
-  ASM_CASES_TAC `(x::A) \<in> topspace X` THEN ASM_REWRITE_TAC[] THEN
-  ASM_CASES_TAC `(y::A) \<in> topspace X` THEN ASM_REWRITE_TAC[] THEN
-  ASM_REWRITE_TAC[SET_RULE
-   `u \<union> v = s \<and> disjnt u v \<and> x \<in> u \<and> y \<in> v \<longleftrightarrow>
-    u \<subseteq> s \<and> v = s - u \<and> x \<in> u \<and> y \<in> s \<and> (y \<notin> u)`] THEN
-  ONCE_REWRITE_TAC[TAUT `p \<and> q \<and> r \<and> s \<and> t \<longleftrightarrow> s \<and> p \<and> q \<and> r \<and> t`] THEN
-  REWRITE_TAC[UNWIND_THM2; closedin] THEN SET_TAC[]);;
-
-lemma quasi_component_of_set:
-   "quasi_component_of X x =
-        if x \<in> topspace X
-        then \<Inter> {t. closedin X t \<and> openin X t \<and> x \<in> t}
-        else {}"
-oops
-  REPEAT GEN_TAC THEN GEN_REWRITE_TAC id [EXTENSION] THEN X_GEN_TAC `y::A` THEN
-  GEN_REWRITE_TAC LAND_CONV [\<in>] THEN REWRITE_TAC[QUASI_COMPONENT_OF] THEN
-  ASM_CASES_TAC `(x::A) \<in> topspace X` THEN
-  ASM_REWRITE_TAC[IN_INTERS; NOT_IN_EMPTY; IN_ELIM_THM] THEN
-  ASM_MESON_TAC[OPEN_IN_TOPSPACE; CLOSED_IN_TOPSPACE]);;
+  "quasi_component_of X x y \<longleftrightarrow>
+    x \<in> topspace X \<and> y \<in> topspace X \<and>
+    \<not> (\<exists>U V. openin X U \<and> openin X V \<and> U \<union> V = topspace X \<and> disjnt U V \<and> x \<in> U \<and> y \<in> V)" (is "?lhs=?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs"
+    unfolding quasi_component_of_def
+    by (metis disjnt_iff separatedin_full separatedin_open_sets)
+  show "?rhs \<Longrightarrow> ?lhs"
+    unfolding quasi_component_of_def
+    by (metis Diff_disjoint Diff_iff Un_Diff_cancel closedin_def disjnt_def inf_commute sup.orderE sup_commute)
+qed
 
 lemma quasi_component_of_separated:
    "quasi_component_of X x y \<longleftrightarrow>
-        x \<in> topspace X \<and> y \<in> topspace X \<and>
-        \<not> (\<exists>u v. separatedin X u v \<and> u \<union> v = topspace X \<and>
-                x \<in> u \<and> y \<in> v)"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[QUASI_COMPONENT_OF_ALT] THEN
-  MESON_TAC[SEPARATED_IN_OPEN_SETS; SEPARATED_IN_FULL]);;
+     x \<in> topspace X \<and> y \<in> topspace X \<and>
+     \<not> (\<exists>U V. separatedin X U V \<and> U \<union> V = topspace X \<and> x \<in> U \<and> y \<in> V)"
+  by (meson quasi_component_of_alt separatedin_full separatedin_open_sets)
 
 lemma quasi_component_of_subtopology:
-   "quasi_component_of (subtopology X s) x y
-        \<Longrightarrow> quasi_component_of X x y"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[quasi_component_of] THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; IN_INTER] THEN STRIP_TAC THEN
-  ASM_REWRITE_TAC[] THEN X_GEN_TAC `t::A=>bool` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `s \<inter> t::A=>bool`) THEN
-  ASM_REWRITE_TAC[IN_INTER] THEN DISCH_THEN MATCH_MP_TAC THEN
-  ASM_SIMP_TAC[OPEN_IN_SUBTOPOLOGY_INTER_OPEN] THEN
-  ASM_SIMP_TAC[CLOSED_IN_SUBTOPOLOGY_INTER_CLOSED]);;
+  "quasi_component_of (subtopology X s) x y \<Longrightarrow> quasi_component_of X x y"
+  unfolding quasi_component_of_def
+  by (simp add: closedin_subtopology) (metis Int_iff inf_commute openin_subtopology_Int2)
 
 lemma quasi_component_of_mono:
-   "quasi_component_of (subtopology X s) x y \<and> s \<subseteq> t
-        \<Longrightarrow> quasi_component_of (subtopology X t) x y"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[IMP_CONJ_ALT] THEN DISCH_THEN(SUBST1_TAC \<circ>
-   MATCH_MP (SET_RULE `s \<subseteq> t \<Longrightarrow> s = t \<inter> s`)) THEN
-  REWRITE_TAC[GSYM SUBTOPOLOGY_SUBTOPOLOGY] THEN
-  REWRITE_TAC[QUASI_COMPONENT_OF_SUBTOPOLOGY]);;
+   "quasi_component_of (subtopology X S) x y \<and> S \<subseteq> T
+        \<Longrightarrow> quasi_component_of (subtopology X T) x y"
+  by (metis inf.absorb_iff2 quasi_component_of_subtopology subtopology_subtopology)
 
 lemma quasi_component_of_equiv:
    "quasi_component_of X x y \<longleftrightarrow>
-        x \<in> topspace X \<and> y \<in> topspace X \<and>
-        quasi_component_of X x = quasi_component_of X y"
-oops
-  REWRITE_TAC[FUN_EQ_THM] THEN
-  MESON_TAC[QUASI_COMPONENT_OF_REFL; QUASI_COMPONENT_OF_TRANS;
-            QUASI_COMPONENT_OF_SYM]);;
+    x \<in> topspace X \<and> y \<in> topspace X \<and> quasi_component_of X x = quasi_component_of X y"
+  using quasi_component_of_def by fastforce
 
-lemma quasi_component_of_disjoint:
-   "disjnt (quasi_component_of X x)
-                 (quasi_component_of X y) \<longleftrightarrow>
-        \<not> (quasi_component_of X x y)"
-oops
-  REWRITE_TAC[disjnt; EXTENSION; IN_INTER; NOT_IN_EMPTY] THEN
-  REWRITE_TAC[\<in>] THEN
-  MESON_TAC[QUASI_COMPONENT_OF_SYM; QUASI_COMPONENT_OF_TRANS]);;
+lemma quasi_component_of_disjoint [simp]:
+   "disjnt (quasi_component_of_set X x) (quasi_component_of_set X y) \<longleftrightarrow> \<not> (quasi_component_of X x y)"
+  by (metis disjnt_iff quasi_component_of_equiv mem_Collect_eq)
 
 lemma quasi_component_of_eq:
    "quasi_component_of X x = quasi_component_of X y \<longleftrightarrow>
-        (x \<notin> topspace X) \<and> (y \<notin> topspace X) \<or>
-        x \<in> topspace X \<and> y \<in> topspace X \<and>
-        quasi_component_of X x y"
-oops
-  MESON_TAC[QUASI_COMPONENT_OF_REFL; QUASI_COMPONENT_OF_EQUIV;
-            QUASI_COMPONENT_OF_EQ_EMPTY]);;
+    (x \<notin> topspace X \<and> y \<notin> topspace X) 
+  \<or> x \<in> topspace X \<and> y \<in> topspace X \<and> quasi_component_of X x y"
+  by (metis Collect_empty_eq_bot quasi_component_of_eq_empty quasi_component_of_equiv)
+
+lemma topspace_imp_quasi_components_of:
+  assumes "x \<in> topspace X"
+  obtains Q where "Q \<in> quasi_components_of X" "Q x"
+  by (metis assms that image_iff quasi_component_of_equiv quasi_components_of_def)
 
 lemma unions_quasi_components_of:
-   "\<Union> (quasi_components_of X) = topspace X"
-oops
-  GEN_TAC THEN REWRITE_TAC[quasi_components_of] THEN
-  MATCH_MP_TAC SUBSET_ANTISYM THEN
-  REWRITE_TAC[UNIONS_SUBSET; FORALL_IN_GSPEC;
-              QUASI_COMPONENT_OF_SUBSET_TOPSPACE] THEN
-  REWRITE_TAC[\<subseteq>; UNIONS_GSPEC; IN_ELIM_THM] THEN
-  X_GEN_TAC `x::A` THEN DISCH_TAC THEN EXISTS_TAC `x::A` THEN
-  ASM_REWRITE_TAC[] THEN REWRITE_TAC[\<in>] THEN
-  ASM_REWRITE_TAC[QUASI_COMPONENT_OF_REFL]);;
+  "\<Union> (Collect ` quasi_components_of X) = topspace X"
+  apply (simp add: set_eq_iff)
+  by (metis image_iff quasi_component_of_equiv quasi_components_of_def)
 
 lemma pairwise_disjoint_quasi_components_of:
-   "pairwise disjnt (quasi_components_of X)"
-oops
-  SIMP_TAC[pairwise; IMP_CONJ; quasi_components_of;
-           RIGHT_IMP_FORALL_THM] THEN
-  REWRITE_TAC[FORALL_IN_GSPEC; RIGHT_FORALL_IMP_THM] THEN
-  SIMP_TAC[QUASI_COMPONENT_OF_EQ; QUASI_COMPONENT_OF_DISJOINT]);;
+   "pairwise disjnt (Collect ` quasi_components_of X)"
+  by (smt (verit) disjnt_iff imageE mem_Collect_eq pairwise_imageI quasi_component_of_equiv quasi_components_of_def)
 
-lemma complement_quasi_components_of_unions:
+lemma complement_quasi_components_of_Union:
    "c \<in> quasi_components_of X
-      \<Longrightarrow> topspace X - c = \<Union> (quasi_components_of X - {c})"
+      \<Longrightarrow> topspace X - c = \<Union> (Collect ` (quasi_components_of X - {c}))"
 oops
   REWRITE_TAC[SET_RULE `s - {a} = s - {a}`] THEN
   ASM_SIMP_TAC[GSYM DIFF_UNIONS_PAIRWISE_DISJOINT;
@@ -6136,12 +6074,12 @@ oops
 (* k-spaces (with no Hausdorff-ness assumptions built in).                   *)
 
 
-let k_space = new_definition
- `k_space (X::A topology) \<longleftrightarrow>
+definition k_space where
+  "k_space (X::A topology) \<longleftrightarrow>
         \<forall>s. s \<subseteq> topspace X
             \<Longrightarrow> (closedin X s \<longleftrightarrow>
                  \<forall>k. compactin X k
-                     \<Longrightarrow> closedin (subtopology X k) (k \<inter> s))`;;
+                     \<Longrightarrow> closedin (subtopology X k) (k \<inter> s))"
 
 lemma k_space:
    "k_space X \<longleftrightarrow>
@@ -6781,10 +6719,10 @@ subsection\<open>More generally, the k-ification functor\<close>
 
 
 let kification = define
- `kification (X::A topology) =
+  "kification (X::A topology) =
         topology {s. s \<subseteq> topspace X \<and>
                       \<forall>k. compactin X k
-                           \<Longrightarrow> openin (subtopology X k) (k \<inter> s)}`;;
+                           \<Longrightarrow> openin (subtopology X k) (k \<inter> s)}"
 
 lemma openin_kification:
    "\<And>X (u::A=>bool).
@@ -7083,11 +7021,11 @@ oops
   FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[IN_INTER] THEN
   MATCH_MP_TAC CLOSED_INTER_COMPACT_IN THEN ASM_SIMP_TAC[]);;
 
-let alexandroff_compactification = new_definition
- `alexandroff_compactification (X::A topology) =
+definition alexandroff_compactification where
+  "alexandroff_compactification (X::A topology) =
         topology ({ INL ` u | openin X u} \<union>
                   { INR () insert image INL (topspace X - c) | c |
-                    compactin X c \<and> closedin X c})`;;
+                    compactin X c \<and> closedin X c})"
 
 lemma openin_alexandroff_compactification:
    "\<And>(X::A topology) v.
@@ -7859,13 +7797,13 @@ subsection\<open>We often just want to require that it fixes some subset, but to
 text\<open> the case of loop homotopy it's convenient to have a general property P\<close>
 
 
-let homotopic_with = new_definition
+definition homotopic_with where
   `homotopic_with P (X,Y) p q \<longleftrightarrow>
    \<exists>h. continuous_map
        (prod_topology (subtopology euclideanreal ({0..1})) X,
         Y) h \<and>
        (\<forall>x. h(0,x) = p x) \<and> (\<forall>x. h(1,x) = q x) \<and>
-       (\<forall>t. t \<in> {0..1} \<Longrightarrow> P(\<lambda>x. h(t,x)))`;;
+       (\<forall>t. t \<in> {0..1} \<Longrightarrow> P(\<lambda>x. h(t,x)))"
 
 lemma homotopic_with:
    "\<And>P X Y p q::A=>B.
@@ -8228,12 +8166,12 @@ subsection\<open>Homotopy equivalence of topological spaces\<close>
 
 parse_as_infix("homotopy_equivalent_space",(12,"right"));;
 
-let homotopy_equivalent_space = new_definition
+definition homotopy_equivalent_space where
  `(X::A topology) homotopy_equivalent_space (X':B topology) \<longleftrightarrow>
         \<exists>f g. continuous_map X X' f \<and>
               continuous_map X' X g \<and>
               homotopic_with (\<lambda>x. True) (X,X) (g \<circ> f) id \<and>
-              homotopic_with (\<lambda>x. True) (X',X') (f \<circ> g) id`;;
+              homotopic_with (\<lambda>x. True) (X',X') (f \<circ> g) id"
 
 lemma homeomorphic_imp_homotopy_equivalent_space:
    "\<And>(X::A topology) (X':B topology).
@@ -8351,9 +8289,9 @@ text\<open> assume that the constant "a" is in the space. This forces the conven
 text\<open> that the empty space / set is contractible, avoiding some special cases.  \<close>
 
 
-let contractible_space = new_definition
+definition contractible_space where
  `contractible_space (X::A topology) \<longleftrightarrow>
-        \<exists>a. homotopic_with (\<lambda>x. True) (X,X) (\<lambda>x. x) (\<lambda>x. a)`;;
+        \<exists>a. homotopic_with (\<lambda>x. True) (X,X) (\<lambda>x. x) (\<lambda>x. a)"
 
 lemma contractible_space_empty:
    "topspace X = {} \<Longrightarrow> contractible_space X"
@@ -8735,9 +8673,9 @@ oops
 (* Completely metrizable (a.k.a. "topologically complete") spaces.           *)
 
 
-let completely_metrizable_space = new_definition
+definition completely_metrizable_space where
  `completely_metrizable_space X \<longleftrightarrow>
-  \<exists>m. mcomplete \<and> X = mtopology`;;
+  \<exists>m. mcomplete \<and> X = mtopology"
 
 lemma completely_metrizable_imp_metrizable_space:
    "completely_metrizable_space X \<Longrightarrow> metrizable_space X"
@@ -8882,11 +8820,11 @@ text\<open> Product metric. For the nicest fit with the main Euclidean theories,
 text\<open> make this the Euclidean product, though others would work topologically.  \<close>
 
 
-let prod_metric = new_definition
+definition prod_metric where
  `prod_metric m1 m2 =
   metric((mspace m1 \<times> mspace m2):A#B=>bool,
          \<lambda>((x,y),(x',y')).
-            sqrt(d x x' ^ 2 + d y y' ^ 2))`;;
+            sqrt(d x x' ^ 2 + d y y' ^ 2))"
 
 lemma prod_metric:
  (`(!(m1::A metric) (m2::B metric).
@@ -9256,11 +9194,11 @@ oops
 text\<open> Three more restrictive notions of continuity for metric spaces.           \<close>
 
 
-let lipschitz_continuous_map = new_definition
+definition lipschitz_continuous_map where
  `lipschitz_continuous_map m1 m2 f \<longleftrightarrow>
         image f (mspace m1) \<subseteq> mspace m2 \<and>
         \<exists>B. \<forall>x y. x \<in> mspace m1 \<and> y \<in> mspace m1
-                  \<Longrightarrow> d m2 (f x,f y) \<le> B * d x y`;;
+                  \<Longrightarrow> d m2 (f x,f y) \<le> B * d x y"
 
 lemma lipschitz_continuous_map_pos:
    "\<And>m1 m2 f::A=>B.
@@ -9339,14 +9277,14 @@ oops
   TRANS_TAC REAL_LE_TRANS `C * d m2 (f x,f y)` THEN
   ASM_SIMP_TAC[GSYM REAL_MUL_ASSOC; REAL_LE_LMUL_EQ]);;
 
-let uniformly_continuous_map = new_definition
+definition uniformly_continuous_map where
  `uniformly_continuous_map m1 m2 f \<longleftrightarrow>
         image f (mspace m1) \<subseteq> mspace m2 \<and>
         \<forall>e. 0 < e
             \<Longrightarrow> \<exists>d. 0 < d \<and>
                     !x x'. x \<in> mspace m1 \<and> x' \<in> mspace m1 \<and>
                            d x' x < d
-                           \<Longrightarrow> d m2 (f x',f x) < e`;;
+                           \<Longrightarrow> d m2 (f x',f x) < e"
 
 let UNIFORMLY_CONTINUOUS_MAP_SEQUENTIALLY,
     UNIFORMLY_CONTINUOUS_MAP_SEQUENTIALLY_ALT = (CONJ_PAIR \<circ> prove)
@@ -9472,9 +9410,9 @@ oops
   DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC) THEN
   MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `e::real` THEN ASM_MESON_TAC[]);;
 
-let cauchy_continuous_map = new_definition
+definition cauchy_continuous_map where
  `cauchy_continuous_map m1 m2 f \<longleftrightarrow>
-        \<forall>x. MCauchy m1 x \<Longrightarrow> MCauchy m2 (f \<circ> x)`;;
+        \<forall>x. MCauchy m1 x \<Longrightarrow> MCauchy m2 (f \<circ> x)"
 
 lemma cauchy_continuous_map_image:
    "\<And>m1 m2 f::A=>B.
@@ -11611,10 +11549,10 @@ oops
 subsection\<open>"Capped" equivalent bounded metrics and general product metrics\<close>
 
 
-let capped_metric = new_definition
+definition capped_metric where
  `capped_metric d (m::A metric) =
         if d \<le> 0 then m
-        else metric(M,(\<lambda>(x,y). min d (d x y)))`;;
+        else metric(M,(\<lambda>(x,y). min d (d x y)))"
 
 lemma capped_metric:
    "mspace (capped_metric d m) = M \<and>
@@ -12407,9 +12345,9 @@ oops
 subsection\<open>Euclidean space and n-spheres, as subtopologies of infinite product R^N\<close>
 
 
-let euclidean_space = new_definition
+definition euclidean_space where
  `euclidean_space n = subtopology (product_topology UNIV (\<lambda>i. euclideanreal))
-                         {x. \<forall>i. (i \<notin> 1..n) \<Longrightarrow> x i = 0}`;;
+                         {x. \<forall>i. (i \<notin> 1..n) \<Longrightarrow> x i = 0}"
 
 lemma topspace_euclidean_space:
    "topspace(euclidean_space n) = {x. \<forall>i. (i \<notin> 1..n) \<Longrightarrow> x i = 0}"
@@ -12613,9 +12551,9 @@ oops
   REWRITE_TAC[GSYM NOT_EXISTS_THM; MEMBER_NOT_EMPTY] THEN
   REWRITE_TAC[NUMSEG_EMPTY] THEN ARITH_TAC);;
 
-let nsphere = new_definition
+definition nsphere where
  `nsphere n = subtopology (euclidean_space (Suc n))
-                          { x | sum(1..n+1) (\<lambda>i. x i ^ 2) = 1 }`;;
+                          { x | sum(1..n+1) (\<lambda>i. x i ^ 2) = 1 }"
 
 lemma nsphere:
    "nsphere n = subtopology (product_topology UNIV (\<lambda>i. euclideanreal))
@@ -13023,13 +12961,13 @@ oops
 subsection\<open>Metric space of bounded functions\<close>
 
 
-let funspace = new_definition
+definition funspace where
   `funspace s m =
    metric ({f::A=>B | (\<forall>x. x \<in> s \<Longrightarrow> f x \<in> M) \<and>
                      f \<in> EXTENSIONAL s \<and>
                      mbounded (f ` s)},
            (\<lambda>(f,g). if s = {} then 0 else
-                    sup {d (f x) g x | x | x \<in> s}))`;;
+                    sup {d (f x) g x | x | x \<in> s}))"
 
 let FUNSPACE = (REWRITE_RULE[GSYM FORALL_AND_THM] \<circ> prove)
    "mspace (funspace s m) =
@@ -13323,10 +13261,10 @@ oops
 subsection\<open>Metric space of continuous bounded functions\<close>
 
 
-let cfunspace = new_definition
+definition cfunspace where
   `cfunspace X m =
    submetric (funspace (topspace X) m)
-     {f::A=>B | continuous_map X mtopology f}`;;
+     {f::A=>B | continuous_map X mtopology f}"
 
 let CFUNSPACE = (REWRITE_RULE[GSYM FORALL_AND_THM] \<circ> prove)
  (`(\<forall>X m.
@@ -15104,7 +15042,7 @@ let DIMENSION_LE_RULES,DIMENSION_LE_INDUCT,DIMENSION_LE_CASES =
                   \<Longrightarrow> \<exists>u. a \<in> u \<and> u \<subseteq> v \<and> openin X u \<and>
                           subtopology X (X frontier_of u)
                           dimension_le (n - 1))
-            \<Longrightarrow> (X::A topology) dimension_le (n::int)`;;
+            \<Longrightarrow> (X::A topology) dimension_le (n::int)"
 
 lemma dimension_le_neighbourhood_base:
    "\<And>(X::A topology) n.
