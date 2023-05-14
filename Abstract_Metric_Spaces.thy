@@ -5338,54 +5338,33 @@ next
     using closedin_connected_components_of closedin_quasi_components_of by blast
 qed
 
-oops
-
-    REWRITE_TAC[connected_components_of; quasi_components_of] THEN
-    REWRITE_TAC[IN_ELIM_THM] THEN MATCH_MP_TAC MONO_EXISTS THEN
-    X_GEN_TAC `x::A` THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC SUBSET_ANTISYM THEN
-    REWRITE_TAC[CONNECTED_COMPONENT_SUBSET_QUASI_COMPONENT_OF] THEN
-    ASM_SIMP_TAC[QUASI_COMPONENT_OF_SET] THEN
-    MATCH_MP_TAC INTERS_SUBSET_STRONG THEN
-    EXISTS_TAC `C::A=>bool` THEN REWRITE_TAC[IN_ELIM_THM] THEN
-    ASM_REWRITE_TAC[SUBSET_REFL] THEN REWRITE_TAC[\<in>] THEN
-    ASM_REWRITE_TAC[CONNECTED_COMPONENT_OF_REFL]]);;
-
 lemma quasi_component_of_continuous_image:
-   "continuous_map X X' f \<and>
-        quasi_component_of X x y
-        \<Longrightarrow> quasi_component_of X' (f x) (f y)"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[quasi_component_of] THEN
-  STRIP_TAC THEN
-  REPEAT(CONJ_TAC THENL [ASM_MESON_TAC[continuous_map]; ALL_TAC]) THEN
-  X_GEN_TAC `t::B=>bool` THEN STRIP_TAC THEN FIRST_X_ASSUM
-   (MP_TAC \<circ> SPEC `{x \<in> topspace X. f x \<in> t}`) THEN
-  ASM_REWRITE_TAC[IN_ELIM_THM] THEN DISCH_THEN MATCH_MP_TAC THEN CONJ_TAC THENL
-   [MATCH_MP_TAC CLOSED_IN_CONTINUOUS_MAP_PREIMAGE;
-    MATCH_MP_TAC OPEN_IN_CONTINUOUS_MAP_PREIMAGE] THEN
-  ASM_MESON_TAC[]);;
+  assumes f:  "continuous_map X X' f" and qc: "quasi_component_of X x y"
+  shows "quasi_component_of X' (f x) (f y)"
+  unfolding quasi_component_of_def
+proof (intro strip conjI)
+  show "f x \<in> topspace X'" "f y \<in> topspace X'"
+    using assms by (simp_all add: continuous_map_def quasi_component_of_def)
+  fix T
+  assume "closedin X' T \<and> openin X' T"
+  with assms show "(f x \<in> T) = (f y \<in> T)"
+    by (smt (verit) continuous_map_closedin continuous_map_def mem_Collect_eq quasi_component_of_def)
+qed
 
 lemma quasi_component_of_discrete_topology:
-   "quasi_component_of (discrete_topology u) x =
-           (if x \<in> u then {x} else {})"
-oops
-  REPEAT GEN_TAC THEN GEN_REWRITE_TAC id [EXTENSION] THEN
-  X_GEN_TAC `y::A` THEN GEN_REWRITE_TAC LAND_CONV [\<in>] THEN
-  REWRITE_TAC[quasi_component_of; TOPSPACE_DISCRETE_TOPOLOGY] THEN
-  REWRITE_TAC[OPEN_IN_DISCRETE_TOPOLOGY; CLOSED_IN_DISCRETE_TOPOLOGY] THEN
-  COND_CASES_TAC THEN ASM_REWRITE_TAC[IN_SING; NOT_IN_EMPTY] THEN
-  EQ_TAC THEN ASM_SIMP_TAC[] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `{x::A}`) THEN
-  ASM_REWRITE_TAC[IN_SING; SING_SUBSET]);;
+   "quasi_component_of_set (discrete_topology U) x = (if x \<in> U then {x} else {})"
+proof -
+  have "quasi_component_of_set (discrete_topology U) y = {y}" if "y \<in> U" for y
+    using that
+    apply (simp add: set_eq_iff quasi_component_of_def)
+    by (metis Set.set_insert insertE subset_insertI)
+  then show ?thesis
+    by (simp add: quasi_component_of)
+qed
 
 lemma quasi_components_of_discrete_topology:
-   "quasi_components_of (discrete_topology u) = {{x} | x \<in> u}"
-oops
-  GEN_TAC THEN REWRITE_TAC[quasi_components_of] THEN
-  REWRITE_TAC[TOPSPACE_DISCRETE_TOPOLOGY;
-              QUASI_COMPONENT_OF_DISCRETE_TOPOLOGY] THEN
-  SET_TAC[]);;
+   "quasi_components_of (discrete_topology U) = (\<lambda>x. {x}) ` U"
+  by (auto simp add: quasi_components_of_def quasi_component_of_discrete_topology)
 
 lemma homeomorphic_map_quasi_component_of:
    "homeomorphic_map X X' f \<and> x \<in> topspace X
