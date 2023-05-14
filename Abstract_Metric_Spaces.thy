@@ -5205,151 +5205,141 @@ lemma separated_between_quasi_component_pointwise_right:
   by (simp add: separated_between_quasi_component_pointwise_left separated_between_sym)
 
 lemma separated_between_quasi_component_point:
-   "C \<in> quasi_components_of X
-        \<Longrightarrow> (separated_between X C {x} \<longleftrightarrow> x \<in> topspace X - C)"
-oops
-  REWRITE_TAC[IN_DIFF] THEN REPEAT STRIP_TAC THEN EQ_TAC THENL
-   [ASM_MESON_TAC[SEPARATED_BETWEEN_IMP_DISJOINT; DISJOINT_SING;
-                  SEPARATED_BETWEEN_IMP_SUBSET; SING_SUBSET];
-    ASM_SIMP_TAC[SEPARATED_BETWEEN_QUASI_COMPONENT_POINTWISE_LEFT]] THEN
-  REWRITE_TAC[SEPARATED_BETWEEN_SINGS; RIGHT_IMP_EXISTS_THM] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE RAND_CONV [quasi_components_of]) THEN
-  REWRITE_TAC[IN_ELIM_THM] THEN MATCH_MP_TAC MONO_EXISTS THEN
-  X_GEN_TAC `y::A` THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC SUBST1_TAC) THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-  ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[\<in>] THEN ASM_REWRITE_TAC[quasi_component_of]);;
+  assumes "C \<in> quasi_components_of X"
+  shows "separated_between X C {x} \<longleftrightarrow> x \<in> topspace X - C" (is "?lhs = ?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs"
+    by (meson DiffI disjnt_insert2 insert_subset separated_between_imp_disjoint separated_between_imp_subset)
+next
+  assume ?rhs
+  with assms show ?lhs
+    unfolding quasi_components_of_def image_iff Diff_iff separated_between_quasi_component_pointwise_left [OF assms]
+    by (metis mem_Collect_eq quasi_component_of_refl separated_between_sings)
+qed
 
 lemma separated_between_point_quasi_component:
-   "\<And>X (x::A) C.
-        C \<in> quasi_components_of X
-        \<Longrightarrow> (separated_between X {x} C \<longleftrightarrow> x \<in> topspace X - C)"
-oops
-  ONCE_REWRITE_TAC[SEPARATED_BETWEEN_SYM] THEN
-  REWRITE_TAC[SEPARATED_BETWEEN_QUASI_COMPONENT_POINT]);;
+   "C \<in> quasi_components_of X \<Longrightarrow> separated_between X {x} C \<longleftrightarrow> x \<in> topspace X - C"
+  by (simp add: separated_between_quasi_component_point separated_between_sym)
 
 lemma separated_between_quasi_component_compact:
-   "\<And>X C K::A=>bool.
-        C \<in> quasi_components_of X \<and> compactin X K
-        \<Longrightarrow> (separated_between X C K \<longleftrightarrow> disjnt C K)"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THEN
-  REWRITE_TAC[SEPARATED_BETWEEN_IMP_DISJOINT] THEN
-  DISCH_TAC THEN ASM_SIMP_TAC[SEPARATED_BETWEEN_POINTWISE_RIGHT] THEN
-  ASM_SIMP_TAC[SEPARATED_BETWEEN_QUASI_COMPONENT_POINT] THEN
-  FIRST_X_ASSUM(ASSUME_TAC \<circ> MATCH_MP COMPACT_IN_SUBSET_TOPSPACE) THEN
-  FIRST_X_ASSUM(ASSUME_TAC \<circ> MATCH_MP QUASI_COMPONENTS_OF_SUBSET) THEN
-  ASM SET_TAC[]);;
+   "\<lbrakk>C \<in> quasi_components_of X; compactin X K\<rbrakk> \<Longrightarrow> (separated_between X C K \<longleftrightarrow> disjnt C K)"
+  unfolding disjnt_iff
+  using compactin_subset_topspace quasi_components_of_subset separated_between_pointwise_right separated_between_quasi_component_point by fastforce
 
 lemma separated_between_compact_quasi_component:
-   "\<And>X K C::A=>bool.
-        compactin X K \<and> C \<in> quasi_components_of X
-        \<Longrightarrow> (separated_between X K C \<longleftrightarrow> disjnt K C)"
-oops
-  ONCE_REWRITE_TAC[SEPARATED_BETWEEN_SYM; DISJOINT_SYM] THEN
-  SIMP_TAC[SEPARATED_BETWEEN_QUASI_COMPONENT_COMPACT]);;
+   "\<lbrakk>compactin X K; C \<in> quasi_components_of X\<rbrakk> \<Longrightarrow> separated_between X K C \<longleftrightarrow> disjnt K C"
+  using disjnt_sym separated_between_quasi_component_compact separated_between_sym by blast
 
 lemma separated_between_quasi_components:
-   "\<And>X C c':A=>bool.
-        C \<in> quasi_components_of X \<and> c' \<in> quasi_components_of X
-        \<Longrightarrow> (separated_between X C c' \<longleftrightarrow> disjnt C c')"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THEN
-  REWRITE_TAC[SEPARATED_BETWEEN_IMP_DISJOINT] THEN DISCH_TAC THEN
-  ASM_SIMP_TAC[SEPARATED_BETWEEN_QUASI_COMPONENT_POINTWISE_RIGHT;
-               SEPARATED_BETWEEN_QUASI_COMPONENT_POINTWISE_LEFT] THEN
-  UNDISCH_TAC `(C::A=>bool) \<in> quasi_components_of X` THEN
-  REWRITE_TAC[quasi_components_of; IN_ELIM_THM] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `x::A` THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC SUBST_ALL_TAC) THEN
-  CONJ_TAC THENL [ASM_MESON_TAC[QUASI_COMPONENT_OF_REFL; \<in>]; ALL_TAC] THEN
-  UNDISCH_TAC `(c':A=>bool) \<in> quasi_components_of X` THEN
-  REWRITE_TAC[quasi_components_of; IN_ELIM_THM] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `y::A` THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC SUBST_ALL_TAC) THEN
-  CONJ_TAC THENL [ASM_MESON_TAC[QUASI_COMPONENT_OF_REFL; \<in>]; ALL_TAC] THEN
-  ASM_REWRITE_TAC[SEPARATED_BETWEEN_SINGS] THEN
-  ASM_REWRITE_TAC[GSYM QUASI_COMPONENT_OF_DISJOINT]);;
+  assumes C: "C \<in> quasi_components_of X" and D: "D \<in> quasi_components_of X"
+  shows "separated_between X C D \<longleftrightarrow> disjnt C D"   (is "?lhs = ?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs"
+    by (simp add: separated_between_imp_disjoint)
+next
+  assume ?rhs
+  obtain x y where x: "C = quasi_component_of_set X x" and "x \<in> C"
+               and y: "D = quasi_component_of_set X y" and "y \<in> D"
+    using assms by (auto simp: quasi_components_of_def)
+  then have "separated_between X {x} {y}"
+    using \<open>disjnt C D\<close> separated_between_sings by fastforce
+  with \<open>x \<in> C\<close> \<open>y \<in> D\<close> show ?lhs
+    by (auto simp: assms separated_between_quasi_component_pointwise_left separated_between_quasi_component_pointwise_right)
+qed
 
 lemma quasi_eq_connected_component_of_eq:
    "quasi_component_of X x = connected_component_of X x \<longleftrightarrow>
-             connectedin X (quasi_component_of X x)"
-oops
-  REPEAT STRIP_TAC THEN ASM_CASES_TAC `(x::A) \<in> topspace X` THENL
-   [ALL_TAC;
-    ASM_MESON_TAC[QUASI_COMPONENT_OF_EQ_EMPTY; CONNECTED_COMPONENT_OF_EQ_EMPTY;
-                  CONNECTED_IN_EMPTY]] THEN
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [MESON_TAC[CONNECTED_IN_CONNECTED_COMPONENT_OF];
-    DISCH_TAC] THEN
-  MATCH_MP_TAC SUBSET_ANTISYM THEN
-  REWRITE_TAC[CONNECTED_COMPONENT_SUBSET_QUASI_COMPONENT_OF] THEN
-  MATCH_MP_TAC CONNECTED_COMPONENT_OF_MAXIMAL THEN
-  ASM_REWRITE_TAC[\<in>] THEN
-  ASM_REWRITE_TAC[QUASI_COMPONENT_OF_REFL]);;
+    connectedin X (quasi_component_of_set X x)"  (is "?lhs = ?rhs")
+proof (cases "x \<in> topspace X")
+  case True
+  show ?thesis
+  proof
+    show "?lhs \<Longrightarrow> ?rhs"
+      by (simp add: connectedin_connected_component_of)
+  next
+    assume ?rhs
+    then have "\<And>y. quasi_component_of X x y = connected_component_of X x y"
+      by (metis connected_component_of_def connected_imp_quasi_component_of mem_Collect_eq quasi_component_of_equiv)
+    then show ?lhs
+      by force
+  qed
+next
+  case False
+  then show ?thesis
+    by (metis Collect_empty_eq_bot connected_component_of_eq_empty connectedin_empty quasi_component_of_eq_empty)
+qed
 
 lemma connected_quasi_component_of:
-   "C \<in> quasi_components_of X
-        \<Longrightarrow> (C \<in> connected_components_of X \<longleftrightarrow> connectedin X C)"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THEN
-  REWRITE_TAC[CONNECTED_IN_CONNECTED_COMPONENTS_OF] THEN
-  DISCH_TAC THEN
-  UNDISCH_TAC `(C::A=>bool) \<in> quasi_components_of X` THEN
-  REWRITE_TAC[quasi_components_of; connected_components_of] THEN
-  REWRITE_TAC[IN_ELIM_THM] THEN MATCH_MP_TAC MONO_EXISTS THEN
-  ASM_MESON_TAC[QUASI_EQ_CONNECTED_COMPONENT_OF_EQ]);;
+  assumes "C \<in> quasi_components_of X"
+  shows "C \<in> connected_components_of X \<longleftrightarrow> connectedin X C"  (is "?lhs = ?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs"
+    using assms
+    by (simp add: connectedin_connected_components_of)
+next
+  assume ?rhs
+  with assms show ?lhs
+    unfolding quasi_components_of_def connected_components_of_def image_iff
+    by (metis quasi_eq_connected_component_of_eq)
+qed
 
 lemma quasi_component_of_clopen_cases:
-   "\<And>X C T::A=>bool.
-        C \<in> quasi_components_of X \<and> closedin X T \<and> openin X T
-        \<Longrightarrow> C \<subseteq> T \<or> disjnt C T"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[IMP_CONJ; quasi_components_of; IN_ELIM_THM; LEFT_IMP_EXISTS_THM;
-              SET_RULE `C = S \<longleftrightarrow> \<forall>x. x \<in> C \<longleftrightarrow> S x`] THEN
-  REWRITE_TAC[quasi_component_of] THEN
-  REWRITE_TAC[closedin] THEN SET_TAC[]);;
+   "\<lbrakk>C \<in> quasi_components_of X; closedin X T; openin X T\<rbrakk> \<Longrightarrow> C \<subseteq> T \<or> disjnt C T"
+  by (smt (verit) disjnt_iff image_iff mem_Collect_eq quasi_component_of_def quasi_components_of_def subset_iff)
 
 lemma quasi_components_of_set:
-   "C \<in> quasi_components_of X
-        \<Longrightarrow> \<Inter> {T. closedin X T \<and> openin X T \<and> C \<subseteq> T} = C"
-oops
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC SUBSET_ANTISYM THEN
-  SIMP_TAC[SUBSET_INTERS; FORALL_IN_GSPEC] THEN
-  GEN_REWRITE_TAC id [\<subseteq>] THEN X_GEN_TAC `x::A` THEN
-  REWRITE_TAC[INTERS_GSPEC; IN_ELIM_THM] THEN
-  ONCE_REWRITE_TAC[TAUT `p \<Longrightarrow> q \<longleftrightarrow> p \<Longrightarrow> \<not> q \<Longrightarrow> \<not> p`] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `topspace X::A=>bool`) THEN
-  ASM_SIMP_TAC[QUASI_COMPONENTS_OF_SUBSET] THEN
-  REWRITE_TAC[OPEN_IN_TOPSPACE; CLOSED_IN_TOPSPACE] THEN
-  REWRITE_TAC[GSYM IN_DIFF; IMP_IMP] THEN
-  ASM_SIMP_TAC[GSYM SEPARATED_BETWEEN_QUASI_COMPONENT_POINT] THEN
-  REWRITE_TAC[SEPARATED_BETWEEN] THEN SET_TAC[]);;
+  assumes "C \<in> quasi_components_of X"
+  shows "\<Inter> {T. closedin X T \<and> openin X T \<and> C \<subseteq> T} = C"  (is "?lhs = ?rhs")
+proof
+  have "x \<in> C" if "x \<in> \<Inter> {T. closedin X T \<and> openin X T \<and> C \<subseteq> T}" for x
+  proof (rule ccontr)
+    assume "x \<notin> C"
+    have "x \<in> topspace X"
+      using assms quasi_components_of_subset that by force
+    then have "separated_between X C {x}"
+      by (simp add: \<open>x \<notin> C\<close> assms separated_between_quasi_component_point)
+    with that show False
+      by (auto simp: separated_between)
+  qed
+  then show "?lhs \<subseteq> ?rhs"
+    by auto
+qed blast
 
 lemma open_quasi_eq_connected_components_of:
-   "openin X C
-        \<Longrightarrow> (C \<in> quasi_components_of X \<longleftrightarrow>
-             C \<in> connected_components_of X)"
+  assumes "openin X C"
+  shows "C \<in> quasi_components_of X \<longleftrightarrow> C \<in> connected_components_of X"  (is "?lhs = ?rhs")
+proof (cases "closedin X C")
+  case True
+  show ?thesis
+  proof
+    assume L: ?lhs
+    have "T = {} \<or> T = topspace X \<inter> C"
+      if "openin (subtopology X C) T" "closedin (subtopology X C) T" for T
+    proof -
+      have "C \<subseteq> T \<or> disjnt C T"
+        by (meson L True assms closedin_trans_full openin_trans_full quasi_component_of_clopen_cases that)
+      with that show ?thesis
+        by (metis Int_absorb2 True closedin_imp_subset closure_of_subset_eq disjnt_def inf_absorb2)
+    qed
+    with L assms show "?rhs"
+      by (simp add: connected_quasi_component_of connected_space_clopen_in connectedin_def openin_subset)
+  next
+    assume ?rhs
+    then obtain x where "x \<in> topspace X" and x: "C = connected_component_of_set X x"
+      by (metis connected_components_of_def imageE)
+    have "C = quasi_component_of_set X x"
+      using True assms connected_component_of_refl connected_imp_quasi_component_of quasi_component_of_def x by fastforce
+    then show ?lhs
+      using \<open>x \<in> topspace X\<close> quasi_components_of_def by fastforce
+  qed
+next
+  case False
+  then show ?thesis
+    using closedin_connected_components_of closedin_quasi_components_of by blast
+qed
+
 oops
-  REPEAT GEN_TAC THEN ASM_CASES_TAC `closedin X (C::A=>bool)` THENL
-   [STRIP_TAC;
-    ASM_MESON_TAC[CLOSED_IN_CONNECTED_COMPONENTS_OF;
-                  CLOSED_IN_QUASI_COMPONENTS_OF]] THEN
-  EQ_TAC THENL
-   [SIMP_TAC[CONNECTED_QUASI_COMPONENT_OF] THEN
-    SIMP_TAC[connectedin; QUASI_COMPONENTS_OF_SUBSET] THEN DISCH_TAC THEN
-    REWRITE_TAC[CONNECTED_SPACE_CLOPEN_IN] THEN
-    ASM_SIMP_TAC[OPEN_IN_OPEN_SUBTOPOLOGY; CLOSED_IN_CLOSED_SUBTOPOLOGY] THEN
-    X_GEN_TAC `T::A=>bool` THEN STRIP_TAC THEN MATCH_MP_TAC(SET_RULE
-     `(\<forall>x. x \<in> S \<Longrightarrow> P) \<Longrightarrow> S = {} \<or> P`) THEN
-    X_GEN_TAC `z::A` THEN DISCH_TAC THEN
-    ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET; QUASI_COMPONENTS_OF_SUBSET] THEN
-    ASM_REWRITE_TAC[GSYM SUBSET_ANTISYM_EQ] THEN
-    MP_TAC(ISPECL [`X::A topology`; `C::A=>bool`; `T::A=>bool`]
-        QUASI_COMPONENT_OF_CLOPEN_CASES) THEN
-    ASM SET_TAC[];
+
     REWRITE_TAC[connected_components_of; quasi_components_of] THEN
     REWRITE_TAC[IN_ELIM_THM] THEN MATCH_MP_TAC MONO_EXISTS THEN
     X_GEN_TAC `x::A` THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -5362,8 +5352,7 @@ oops
     ASM_REWRITE_TAC[CONNECTED_COMPONENT_OF_REFL]]);;
 
 lemma quasi_component_of_continuous_image:
-   "\<And>X X' f x y.
-        continuous_map X X' f \<and>
+   "continuous_map X X' f \<and>
         quasi_component_of X x y
         \<Longrightarrow> quasi_component_of X' (f x) (f y)"
 oops
@@ -5379,7 +5368,7 @@ oops
 
 lemma quasi_component_of_discrete_topology:
    "quasi_component_of (discrete_topology u) x =
-           if x \<in> u then {x} else {}"
+           (if x \<in> u then {x} else {})"
 oops
   REPEAT GEN_TAC THEN GEN_REWRITE_TAC id [EXTENSION] THEN
   X_GEN_TAC `y::A` THEN GEN_REWRITE_TAC LAND_CONV [\<in>] THEN
@@ -5391,8 +5380,7 @@ oops
   ASM_REWRITE_TAC[IN_SING; SING_SUBSET]);;
 
 lemma quasi_components_of_discrete_topology:
-   "\<And>u::A=>bool.
-        quasi_components_of (discrete_topology u) = {{x} | x \<in> u}"
+   "quasi_components_of (discrete_topology u) = {{x} | x \<in> u}"
 oops
   GEN_TAC THEN REWRITE_TAC[quasi_components_of] THEN
   REWRITE_TAC[TOPSPACE_DISCRETE_TOPOLOGY;
@@ -5400,8 +5388,7 @@ oops
   SET_TAC[]);;
 
 lemma homeomorphic_map_quasi_component_of:
-   "\<And>f X X' x.
-        homeomorphic_map X X' f \<and> x \<in> topspace X
+   "homeomorphic_map X X' f \<and> x \<in> topspace X
         \<Longrightarrow> quasi_component_of X' (f x) =
             f ` (quasi_component_of X x)"
 oops
@@ -5420,8 +5407,7 @@ oops
   ASM SET_TAC[]);;
 
 lemma homeomorphic_map_quasi_components_of:
-   "\<And>f X X'.
-      homeomorphic_map X X' f
+   "homeomorphic_map X X' f
       \<Longrightarrow> quasi_components_of X' =
           image (image f) (quasi_components_of X)"
 oops
@@ -5595,6 +5581,13 @@ oops
   REPEAT GEN_TAC THEN
   DISCH_THEN(MP_TAC \<circ> MATCH_MP QUASI_EQ_CONNECTED_COMPONENTS_OF) THEN
   SIMP_TAC[QUASI_EQ_CONNECTED_COMPONENTS_OF_POINTWISE_ALT]);;
+
+
+
+
+
+
+
 
 
 subsection\<open>Additional quasicomponent and continuum properties like Boundary Bumping\<close>
