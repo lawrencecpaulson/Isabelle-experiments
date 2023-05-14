@@ -5367,51 +5367,56 @@ lemma quasi_components_of_discrete_topology:
   by (auto simp add: quasi_components_of_def quasi_component_of_discrete_topology)
 
 lemma homeomorphic_map_quasi_component_of:
-   "homeomorphic_map X Y f \<and> x \<in> topspace X
-        \<Longrightarrow> quasi_component_of Y (f x) =
-            f ` (quasi_component_of X x)"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[HOMEOMORPHIC_MAP_MAPS; homeomorphic_maps] THEN
-  DISCH_THEN(CONJUNCTS_THEN2
-   (X_CHOOSE_THEN `g::B=>A` STRIP_ASSUME_TAC) ASSUME_TAC) THEN
-  REWRITE_TAC[EXTENSION; IN_IMAGE] THEN REWRITE_TAC[\<in>] THEN
-  MP_TAC(ISPEC `Y:B topology` QUASI_COMPONENT_IN_TOPSPACE) THEN
-  MP_TAC(ISPECL [`X::A topology`; `Y:B topology`; `f::A=>B`]
-        QUASI_COMPONENT_OF_CONTINUOUS_IMAGE) THEN
-  MP_TAC(ISPECL [`Y:B topology`; `X::A topology`; `g::B=>A`]
-        QUASI_COMPONENT_OF_CONTINUOUS_IMAGE) THEN
-  ASM_REWRITE_TAC[] THEN REPEAT
-   (FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CONTINUOUS_MAP_IMAGE_SUBSET_TOPSPACE)) THEN
-  ASM SET_TAC[]);;
+  assumes hmf: "homeomorphic_map X Y f" and "x \<in> topspace X"
+  shows "quasi_component_of_set Y (f x) = f ` (quasi_component_of_set X x)"
+proof -
+  obtain g where hmg: "homeomorphic_map Y X g"
+    and contf: "continuous_map X Y f" and contg: "continuous_map Y X g"
+    and fg: "(\<forall>x \<in> topspace X. g(f x) = x) \<and> (\<forall>y \<in> topspace Y. f(g y) = y)"
+    by (smt (verit, best) hmf homeomorphic_map_maps homeomorphic_maps_def)
+  show ?thesis
+  proof
+    show "quasi_component_of_set Y (f x) \<subseteq> f ` quasi_component_of_set X x"
+      using quasi_component_of_continuous_image [OF contg]
+         \<open>x \<in> topspace X\<close> fg image_iff quasi_component_of_subset_topspace by fastforce
+    show "f ` quasi_component_of_set X x \<subseteq> quasi_component_of_set Y (f x)"
+      using quasi_component_of_continuous_image [OF contf] by blast
+  qed
+qed
+
 
 lemma homeomorphic_map_quasi_components_of:
-   "homeomorphic_map X Y f
-      \<Longrightarrow> quasi_components_of Y =
-          image (image f) (quasi_components_of X)"
-oops
-  REPEAT STRIP_TAC THEN
-  REWRITE_TAC[quasi_components_of; SIMPLE_IMAGE] THEN
-  FIRST_ASSUM(SUBST1_TAC \<circ> SYM \<circ> MATCH_MP HOMEOMORPHIC_IMP_SURJECTIVE_MAP) THEN
-  REWRITE_TAC[GSYM IMAGE_o; o_DEF] THEN MATCH_MP_TAC(SET_RULE
-   `(\<forall>x. x \<in> s \<Longrightarrow> f x = g x) \<Longrightarrow> f ` s = g ` s`) THEN
-  REWRITE_TAC[] THEN ASM_MESON_TAC[HOMEOMORPHIC_MAP_QUASI_COMPONENT_OF]);;
+  assumes "homeomorphic_map X Y f"
+  shows "quasi_components_of Y = image (image f) (quasi_components_of X)"
+  using assms
+proof -
+  have "\<exists>x\<in>topspace X. quasi_component_of_set Y y = f ` quasi_component_of_set X x"
+    if "y \<in> topspace Y" for y 
+    by (metis that assms homeomorphic_imp_surjective_map homeomorphic_map_quasi_component_of image_iff)
+  moreover have "\<exists>x\<in>topspace Y. f ` quasi_component_of_set X u = quasi_component_of_set Y x"
+    if  "u \<in> topspace X" for u
+    by (metis that assms homeomorphic_imp_surjective_map homeomorphic_map_quasi_component_of imageI)
+  ultimately show ?thesis
+    by (auto simp: quasi_components_of_def image_iff)
+qed
 
 lemma openin_quasi_component_of_locally_connected_space:
-   "locally_connected_space X
-        \<Longrightarrow> openin X (quasi_component_of X x)"
-oops
-  REPEAT STRIP_TAC THEN
-  ONCE_REWRITE_TAC[QUASI_COMPONENT_AS_CONNECTED_COMPONENT_UNIONS] THEN
-  MATCH_MP_TAC OPEN_IN_UNIONS THEN REWRITE_TAC[FORALL_IN_GSPEC] THEN
-  ASM_SIMP_TAC[OPEN_IN_CONNECTED_COMPONENT_OF_LOCALLY_CONNECTED_SPACE]);;
+  assumes "locally_connected_space X"
+  shows "openin X (quasi_component_of_set X x)"
+proof -
+  have *: "openin X (connected_component_of_set X x)"
+    by (simp add: assms openin_connected_component_of_locally_connected_space)
+  moreover have "connected_component_of_set X x = quasi_component_of_set X x"
+    using * closedin_connected_component_of connected_component_of_refl connected_imp_quasi_component_of
+            quasi_component_of_def by fastforce
+  ultimately show ?thesis
+    by simp
+qed
 
 lemma openin_quasi_components_of_locally_connected_space:
    "locally_connected_space X \<and> c \<in> quasi_components_of X
         \<Longrightarrow> openin X c"
-oops
-  REWRITE_TAC[quasi_components_of; IN_ELIM_THM] THEN
-  MESON_TAC[OPEN_IN_QUASI_COMPONENT_OF_LOCALLY_CONNECTED_SPACE]);;
+  by (smt (verit, best) image_iff openin_quasi_component_of_locally_connected_space quasi_components_of_def)
 
 lemma quasi_eq_connected_components_of_alt:
    "quasi_components_of X = connected_components_of X \<longleftrightarrow>
