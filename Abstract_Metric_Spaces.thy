@@ -898,7 +898,7 @@ lemma quasi_components_of_connected_space:
         \<Longrightarrow> quasi_components_of X = (if topspace X = {} then {} else {topspace X})"
   by (simp add: quasi_components_of_eq_singleton)
 
-lemma separated_between_sings:
+lemma separated_between_singletons:
    "separated_between X {x} {y} \<longleftrightarrow>
     x \<in> topspace X \<and> y \<in> topspace X \<and> \<not> (quasi_component_of X x y)"
 proof (cases "x \<in> topspace X \<and> y \<in> topspace X")
@@ -909,7 +909,7 @@ qed (use separated_between_imp_subset in blast)
 
 lemma quasi_component_nonseparated:
    "quasi_component_of X x y \<longleftrightarrow> x \<in> topspace X \<and> y \<in> topspace X \<and> \<not> (separated_between X {x} {y})"
-  by (metis quasi_component_of_equiv separated_between_sings)
+  by (metis quasi_component_of_equiv separated_between_singletons)
 
 lemma separated_between_quasi_component_pointwise_left:
   assumes "C \<in> quasi_components_of X"
@@ -939,7 +939,7 @@ next
   assume ?rhs
   with assms show ?lhs
     unfolding quasi_components_of_def image_iff Diff_iff separated_between_quasi_component_pointwise_left [OF assms]
-    by (metis mem_Collect_eq quasi_component_of_refl separated_between_sings)
+    by (metis mem_Collect_eq quasi_component_of_refl separated_between_singletons)
 qed
 
 lemma separated_between_point_quasi_component:
@@ -967,7 +967,7 @@ next
                and y: "D = quasi_component_of_set X y" and "y \<in> D"
     using assms by (auto simp: quasi_components_of_def)
   then have "separated_between X {x} {y}"
-    using \<open>disjnt C D\<close> separated_between_sings by fastforce
+    using \<open>disjnt C D\<close> separated_between_singletons by fastforce
   with \<open>x \<in> C\<close> \<open>y \<in> D\<close> show ?lhs
     by (auto simp: assms separated_between_quasi_component_pointwise_left separated_between_quasi_component_pointwise_right)
 qed
@@ -5557,46 +5557,34 @@ subsection\<open>Additional quasicomponent and continuum properties like Boundar
 lemma cut_wire_fence_theorem_gen:
   assumes "compact_space X" and X: "Hausdorff_space X \<or> regular_space X \<or> normal_space X"
     and S: "compactin X S" and T: "closedin X T"
-    and "\<And>C. connectedin X C \<Longrightarrow> disjnt C S \<or> disjnt C T"
+    and dis: "\<And>C. connectedin X C \<Longrightarrow> disjnt C S \<or> disjnt C T"
   shows "separated_between X S T"
-  using assms
-  apply (simp add: separated_between_pointwise_left closedin_compact_space)
-  apply (simp add: separated_between_pointwise_right closedin_compact_space)
-  apply (simp add: closedin_subset)
-  apply (auto simp: )
-  using compactin_subset_topspace apply blast
-  apply (smt (verit) closedin_subset compactin_subset_topspace disjnt_insert2 insert_Diff insert_subset mem_Collect_eq quasi_component_of_equiv quasi_eq_connected_component_of quasi_eq_connected_component_of_eq separated_between_sings)
-  using compactin_subset_topspace apply blast
-  apply (smt (verit) closedin_subset compactin_subset_topspace disjnt_insert2 insert_Diff insert_subset mem_Collect_eq quasi_component_of_equiv quasi_eq_connected_component_of quasi_eq_connected_component_of_eq separated_between_sings)
-  using compactin_subset_topspace apply blast
-  apply (smt (verit) closedin_subset compactin_subset_topspace disjnt_insert2 insert_Diff insert_subset mem_Collect_eq quasi_component_of_equiv quasi_eq_connected_component_of quasi_eq_connected_component_of_eq separated_between_sings)
-  done
-oops
-  REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  asm_simp_tac[separated_between_pointwise_left; closed_in_compact_space] then
-  asm_simp_tac[separated_between_pointwise_right; closed_in_compact_space] then
-  asm_simp_tac[closedin_subset; sing_subset] then
-  X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-  ASM_CASES_TAC `(x::A) \<in> topspace X` THENL
-   [ASM_REWRITE_TAC[]; ASM_MESON_TAC[COMPACT_IN_SUBSET_TOPSPACE; \<subseteq>]] THEN
-  X_GEN_TAC `y::A` THEN DISCH_TAC THEN
-  ASM_CASES_TAC `(y::A) \<in> topspace X` THENL
-   [ASM_REWRITE_TAC[SEPARATED_BETWEEN_SINGS];
-    ASM_MESON_TAC[CLOSED_IN_SUBSET; \<subseteq>]] THEN
-  ASM_SIMP_TAC[QUASI_EQ_CONNECTED_COMPONENT_OF] THEN
-  REWRITE_TAC[connected_component_of; NOT_EXISTS_THM] THEN
-  X_GEN_TAC `C::A=>bool` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `C::A=>bool`) THEN
-  ASM_REWRITE_TAC[] THEN ASM SET_TAC[]);;
+  proof -
+  have "x \<in> topspace X" if "x \<in> S" and "T = {}" for x
+    using that S compactin_subset_topspace by auto
+  moreover have "separated_between X {x} {y}" if "x \<in> S" and "y \<in> T" for x y
+  proof (cases "x \<in> topspace X \<and> y \<in> topspace X")
+    case True
+    then have "\<not> connected_component_of X x y"
+      by (meson dis connected_component_of_def disjnt_iff that)
+    with True X \<open>compact_space X\<close> show ?thesis
+      by (metis quasi_component_nonseparated quasi_eq_connected_component_of)
+  next
+    case False
+    then show ?thesis
+      using S T compactin_subset_topspace closedin_subset that by blast
+  qed
+  ultimately show ?thesis
+    using assms
+    by (simp add: separated_between_pointwise_left separated_between_pointwise_right 
+              closedin_compact_space closedin_subset)
+qed
 
 lemma cut_wire_fence_theorem:
-   "compact_space X \<and> Hausdorff_space X \<and>
-        closedin X S \<and> closedin X T \<and>
-        (\<forall>C. connectedin X C \<Longrightarrow> disjnt C S \<or> disjnt C T)
+   "\<lbrakk>compact_space X; Hausdorff_space X; closedin X S; closedin X T;
+     \<And>C. connectedin X C \<Longrightarrow> disjnt C S \<or> disjnt C T\<rbrakk>
         \<Longrightarrow> separated_between X S T"
-oops
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC CUT_WIRE_FENCE_THEOREM_GEN THEN
-  ASM_SIMP_TAC[CLOSED_IN_COMPACT_SPACE]);;
+  by (simp add: closedin_compact_space cut_wire_fence_theorem_gen)
 
 lemma separated_between_from_closed_subtopology:
    "separated_between (subtopology X C) S (X frontier_of C) \<and>
