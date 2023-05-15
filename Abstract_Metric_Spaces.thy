@@ -5555,16 +5555,27 @@ subsection\<open>Additional quasicomponent and continuum properties like Boundar
 
 
 lemma cut_wire_fence_theorem_gen:
-   "compact_space X \<and>
-        (Hausdorff_space X \<or> regular_space X \<or> normal_space X) \<and>
-        compactin X s \<and> closedin X t \<and>
-        (\<forall>c. connectedin X c \<Longrightarrow> disjnt c s \<or> disjnt c t)
-        \<Longrightarrow> separated_between X s t"
+  assumes "compact_space X" and X: "Hausdorff_space X \<or> regular_space X \<or> normal_space X"
+    and S: "compactin X S" and T: "closedin X T"
+    and "\<And>C. connectedin X C \<Longrightarrow> disjnt C S \<or> disjnt C T"
+  shows "separated_between X S T"
+  using assms
+  apply (simp add: separated_between_pointwise_left closedin_compact_space)
+  apply (simp add: separated_between_pointwise_right closedin_compact_space)
+  apply (simp add: closedin_subset)
+  apply (auto simp: )
+  using compactin_subset_topspace apply blast
+  apply (smt (verit) closedin_subset compactin_subset_topspace disjnt_insert2 insert_Diff insert_subset mem_Collect_eq quasi_component_of_equiv quasi_eq_connected_component_of quasi_eq_connected_component_of_eq separated_between_sings)
+  using compactin_subset_topspace apply blast
+  apply (smt (verit) closedin_subset compactin_subset_topspace disjnt_insert2 insert_Diff insert_subset mem_Collect_eq quasi_component_of_equiv quasi_eq_connected_component_of quasi_eq_connected_component_of_eq separated_between_sings)
+  using compactin_subset_topspace apply blast
+  apply (smt (verit) closedin_subset compactin_subset_topspace disjnt_insert2 insert_Diff insert_subset mem_Collect_eq quasi_component_of_equiv quasi_eq_connected_component_of quasi_eq_connected_component_of_eq separated_between_sings)
+  done
 oops
   REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  ASM_SIMP_TAC[SEPARATED_BETWEEN_POINTWISE_LEFT; CLOSED_IN_COMPACT_SPACE] THEN
-  ASM_SIMP_TAC[SEPARATED_BETWEEN_POINTWISE_RIGHT; CLOSED_IN_COMPACT_SPACE] THEN
-  ASM_SIMP_TAC[CLOSED_IN_SUBSET; SING_SUBSET] THEN
+  asm_simp_tac[separated_between_pointwise_left; closed_in_compact_space] then
+  asm_simp_tac[separated_between_pointwise_right; closed_in_compact_space] then
+  asm_simp_tac[closedin_subset; sing_subset] then
   X_GEN_TAC `x::A` THEN DISCH_TAC THEN
   ASM_CASES_TAC `(x::A) \<in> topspace X` THENL
    [ASM_REWRITE_TAC[]; ASM_MESON_TAC[COMPACT_IN_SUBSET_TOPSPACE; \<subseteq>]] THEN
@@ -5574,23 +5585,23 @@ oops
     ASM_MESON_TAC[CLOSED_IN_SUBSET; \<subseteq>]] THEN
   ASM_SIMP_TAC[QUASI_EQ_CONNECTED_COMPONENT_OF] THEN
   REWRITE_TAC[connected_component_of; NOT_EXISTS_THM] THEN
-  X_GEN_TAC `c::A=>bool` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `c::A=>bool`) THEN
+  X_GEN_TAC `C::A=>bool` THEN STRIP_TAC THEN
+  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `C::A=>bool`) THEN
   ASM_REWRITE_TAC[] THEN ASM SET_TAC[]);;
 
 lemma cut_wire_fence_theorem:
    "compact_space X \<and> Hausdorff_space X \<and>
-        closedin X s \<and> closedin X t \<and>
-        (\<forall>c. connectedin X c \<Longrightarrow> disjnt c s \<or> disjnt c t)
-        \<Longrightarrow> separated_between X s t"
+        closedin X S \<and> closedin X T \<and>
+        (\<forall>C. connectedin X C \<Longrightarrow> disjnt C S \<or> disjnt C T)
+        \<Longrightarrow> separated_between X S T"
 oops
   REPEAT STRIP_TAC THEN MATCH_MP_TAC CUT_WIRE_FENCE_THEOREM_GEN THEN
   ASM_SIMP_TAC[CLOSED_IN_COMPACT_SPACE]);;
 
 lemma separated_between_from_closed_subtopology:
-   "separated_between (subtopology X c) s (X frontier_of c) \<and>
-        separated_between (subtopology X c) s t
-        \<Longrightarrow> separated_between X s t"
+   "separated_between (subtopology X C) S (X frontier_of C) \<and>
+        separated_between (subtopology X C) S T
+        \<Longrightarrow> separated_between X S T"
 oops
   REPEAT GEN_TAC THEN
   REWRITE_TAC[GSYM SEPARATED_BETWEEN_UNION] THEN
@@ -5598,26 +5609,26 @@ oops
   GEN_TAC THEN REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN STRIP_TAC THEN
   ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
    [MP_TAC(ISPECL
-      [`X::A topology`; `topspace X \<inter> c::A=>bool`; `u::A=>bool`]
+      [`X::A topology`; `topspace X \<inter> C::A=>bool`; `U::A=>bool`]
       CLOSED_IN_CLOSED_SUBTOPOLOGY) THEN
     ASM_REWRITE_TAC[GSYM SUBTOPOLOGY_RESTRICT] THEN
     ANTS_TAC THENL [ALL_TAC; SIMP_TAC[]] THEN
     SIMP_TAC[GSYM FRONTIER_OF_SUBSET_EQ; INTER_SUBSET] THEN
     REWRITE_TAC[GSYM FRONTIER_OF_RESTRICT] THEN ASM SET_TAC[];
-    MP_TAC(ISPECL [`X::A topology`; `c::A=>bool`; `u::A=>bool`]
+    MP_TAC(ISPECL [`X::A topology`; `C::A=>bool`; `U::A=>bool`]
       OPEN_IN_SUBSET_TOPSPACE_EQ) THEN
     ASM SET_TAC[];
     ASM SET_TAC[]]);;
 
 lemma separated_between_from_closed_subtopology_frontier:
-   "separated_between (subtopology X t) s (X frontier_of t)
-        \<Longrightarrow> separated_between X s (X frontier_of t)"
+   "separated_between (subtopology X T) S (X frontier_of T)
+        \<Longrightarrow> separated_between X S (X frontier_of T)"
 oops
   ASM_MESON_TAC[SEPARATED_BETWEEN_FROM_CLOSED_SUBTOPOLOGY]);;
 
 lemma separated_between_from_frontier_of_closed_subtopology:
-   "separated_between (subtopology X t) s (X frontier_of t)
-        \<Longrightarrow> separated_between X s (topspace X - t)"
+   "separated_between (subtopology X T) S (X frontier_of T)
+        \<Longrightarrow> separated_between X S (topspace X - T)"
 oops
   REPEAT STRIP_TAC THEN
   GEN_REWRITE_TAC id [CONJUNCT2 SEPARATED_BETWEEN_FRONTIER_OF_EQ] THEN
@@ -5631,9 +5642,9 @@ oops
 
 lemma separated_between_compact_connected_component:
    "locally_compact_space X \<and> Hausdorff_space X \<and>
-        c \<in> connected_components_of X \<and> compactin X c \<and>
-        closedin X t \<and> disjnt c t
-        \<Longrightarrow> separated_between X c t"
+        C \<in> connected_components_of X \<and> compactin X C \<and>
+        closedin X T \<and> disjnt C T
+        \<Longrightarrow> separated_between X C T"
 oops
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN
@@ -5641,20 +5652,20 @@ oops
         openin X n \<and>
         compactin X l \<and>
         closedin X l \<and>
-        c \<subseteq> n \<and> n \<subseteq> l \<and> l \<subseteq> topspace X - t`
+        C \<subseteq> n \<and> n \<subseteq> l \<and> l \<subseteq> topspace X - T`
   STRIP_ASSUME_TAC THENL
-   [MP_TAC(ISPEC `subtopology X (topspace X - t::A=>bool)`
+   [MP_TAC(ISPEC `subtopology X (topspace X - T::A=>bool)`
         LOCALLY_COMPACT_SPACE_COMPACT_CLOSED_COMPACT) THEN
     ASM_SIMP_TAC[HAUSDORFF_SPACE_SUBTOPOLOGY; COMPACT_IN_SUBTOPOLOGY] THEN
     ASM_SIMP_TAC[LOCALLY_COMPACT_SPACE_OPEN_SUBSET; OPEN_IN_OPEN_SUBTOPOLOGY;
                  OPEN_IN_DIFF; OPEN_IN_TOPSPACE] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `c::A=>bool`) THEN ANTS_TAC THENL
+    DISCH_THEN(MP_TAC \<circ> SPEC `C::A=>bool`) THEN ANTS_TAC THENL
      [FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CONNECTED_COMPONENTS_OF_SUBSET) THEN
       ASM SET_TAC[];
       REPEAT(MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC) THEN
       STRIP_TAC THEN ASM_SIMP_TAC[COMPACT_IN_IMP_CLOSED_IN]];
     ALL_TAC] THEN
-  MP_TAC(ISPECL [`X::A topology`; `c::A=>bool`;
+  MP_TAC(ISPECL [`X::A topology`; `C::A=>bool`;
                  `topspace X - l::A=>bool`]
            (CONJUNCT2 SEPARATED_BETWEEN_FRONTIER_OF)) THEN
   ANTS_TAC THENL [ASM SET_TAC[]; DISCH_THEN(MP_TAC \<circ> fst \<circ> EQ_IMP_RULE)] THEN
@@ -5674,26 +5685,26 @@ oops
   REWRITE_TAC[CLOSED_IN_FRONTIER_OF; CONNECTED_IN_SUBTOPOLOGY] THEN
   CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
   X_GEN_TAC `d::A=>bool` THEN STRIP_TAC THEN
-  MP_TAC(ISPECL [`X::A topology`; `d::A=>bool`; `c::A=>bool`]
+  MP_TAC(ISPECL [`X::A topology`; `d::A=>bool`; `C::A=>bool`]
         CONNECTED_COMPONENTS_OF_MAXIMAL) THEN
   ASM_REWRITE_TAC[TAUT `p \<or> q \<longleftrightarrow> \<not> p \<Longrightarrow> q`] THEN
   MATCH_MP_TAC MONO_IMP THEN CONJ_TAC THENL [SET_TAC[]; ALL_TAC] THEN
   REWRITE_TAC[frontier_of] THEN MATCH_MP_TAC(SET_RULE
-   `c \<subseteq> v \<Longrightarrow> d \<subseteq> c \<Longrightarrow> disjnt d (u - v)`) THEN
+   `C \<subseteq> V \<Longrightarrow> d \<subseteq> C \<Longrightarrow> disjnt d (U - V)`) THEN
   TRANS_TAC SUBSET_TRANS `n::A=>bool` THEN ASM_REWRITE_TAC[] THEN
   ASM_SIMP_TAC[INTERIOR_OF_MAXIMAL]);;
 
 lemma wilder_locally_compact_component_thm:
-   "\<And>X c w::A=>bool.
+   "\<And>X C w::A=>bool.
         locally_compact_space X \<and> Hausdorff_space X \<and>
-        c \<in> connected_components_of X \<and> compactin X c \<and>
-        openin X w \<and> c \<subseteq> w
-        \<Longrightarrow> \<exists>u v. openin X u \<and> openin X v \<and>
-                  disjnt u v \<and> u \<union> v = topspace X \<and>
-                  c \<subseteq> u \<and> u \<subseteq> w"
+        C \<in> connected_components_of X \<and> compactin X C \<and>
+        openin X w \<and> C \<subseteq> w
+        \<Longrightarrow> \<exists>U V. openin X U \<and> openin X V \<and>
+                  disjnt U V \<and> U \<union> V = topspace X \<and>
+                  C \<subseteq> U \<and> U \<subseteq> w"
 oops
   REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL [`X::A topology`; `c::A=>bool`; `topspace X - w::A=>bool`]
+  MP_TAC(ISPECL [`X::A topology`; `C::A=>bool`; `topspace X - w::A=>bool`]
         SEPARATED_BETWEEN_COMPACT_CONNECTED_COMPONENT) THEN
   ASM_SIMP_TAC[CLOSED_IN_DIFF; CLOSED_IN_TOPSPACE] THEN
   ANTS_TAC THENL [ASM SET_TAC[]; REWRITE_TAC[separated_between]] THEN
@@ -5701,9 +5712,9 @@ oops
 
 lemma compact_quasi_eq_connected_components_of:
    "locally_compact_space X \<and> Hausdorff_space X \<and>
-        compactin X c
-        \<Longrightarrow> (c \<in> quasi_components_of X \<longleftrightarrow>
-             c \<in> connected_components_of X)"
+        compactin X C
+        \<Longrightarrow> (C \<in> quasi_components_of X \<longleftrightarrow>
+             C \<in> connected_components_of X)"
 oops
   REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
   GEN_TAC THEN REPEAT DISCH_TAC THEN
@@ -5711,7 +5722,7 @@ oops
   MATCH_MP_TAC(SET_RULE
    `(\<forall>x. P x \<and> Q(g x) \<Longrightarrow> Q(f x)) \<and>
     (\<forall>x. P x \<and> Q(f x) \<Longrightarrow> f x = g x)
-    \<Longrightarrow> \<forall>c. Q c \<Longrightarrow> (c \<in> {g x | P x} \<longleftrightarrow> c \<in> {f x | P x})`) THEN
+    \<Longrightarrow> \<forall>C. Q C \<Longrightarrow> (C \<in> {g x | P x} \<longleftrightarrow> C \<in> {f x | P x})`) THEN
   REWRITE_TAC[] THEN CONJ_TAC THEN X_GEN_TAC `x::A` THEN STRIP_TAC THENL
    [MATCH_MP_TAC CLOSED_COMPACT_IN THEN
     EXISTS_TAC `quasi_component_of X (x::A)` THEN
@@ -5737,18 +5748,18 @@ oops
   ASM_REWRITE_TAC[CONNECTED_COMPONENT_OF_REFL] THEN ASM_MESON_TAC[\<in>]);;
 
 lemma boundary_bumping_theorem_closed_gen:
-   "\<And>X s c::A=>bool.
+   "\<And>X S C::A=>bool.
         connected_space X \<and>
         locally_compact_space X \<and>
         Hausdorff_space X \<and>
-        closedin X s \<and>
-        (s \<noteq> topspace X) \<and>
-        compactin X c \<and>
-        c \<in> connected_components_of(subtopology X s)
-        \<Longrightarrow> \<not> (c \<inter> X frontier_of s = {})"
+        closedin X S \<and>
+        (S \<noteq> topspace X) \<and>
+        compactin X C \<and>
+        C \<in> connected_components_of(subtopology X S)
+        \<Longrightarrow> \<not> (C \<inter> X frontier_of S = {})"
 oops
   REPEAT STRIP_TAC THEN MP_TAC(ISPECL
-   [`subtopology X (s::A=>bool)`; `c::A=>bool`; `X frontier_of s::A=>bool`]
+   [`subtopology X (S::A=>bool)`; `C::A=>bool`; `X frontier_of S::A=>bool`]
        SEPARATED_BETWEEN_COMPACT_CONNECTED_COMPONENT) THEN
   ASM_REWRITE_TAC[NOT_IMP] THEN REPEAT CONJ_TAC THENL
    [MATCH_MP_TAC LOCALLY_COMPACT_SPACE_CLOSED_SUBSET THEN ASM_REWRITE_TAC[];
@@ -5765,16 +5776,16 @@ oops
   ASM_SIMP_TAC[CONNECTED_SPACE_FRONTIER_EQ_EMPTY; CLOSED_IN_SUBSET] THEN
   FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CONNECTED_COMPONENTS_OF_SUBSET) THEN
   FIRST_ASSUM(MP_TAC \<circ> MATCH_MP NONEMPTY_CONNECTED_COMPONENTS_OF) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP (SET_RULE `c \<in> s \<Longrightarrow> (s \<noteq> {})`)) THEN
+  FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP (SET_RULE `C \<in> S \<Longrightarrow> (S \<noteq> {})`)) THEN
   REWRITE_TAC[CONNECTED_COMPONENTS_OF_EQ_EMPTY; TOPSPACE_SUBTOPOLOGY] THEN
   SET_TAC[]);;
 
 lemma boundary_bumping_theorem_closed:
-   "\<And>X s c::A=>bool.
+   "\<And>X S C::A=>bool.
         connected_space X \<and> compact_space X \<and> Hausdorff_space X \<and>
-        closedin X s \<and> (s \<noteq> topspace X) \<and>
-        c \<in> connected_components_of(subtopology X s)
-        \<Longrightarrow> \<not> (c \<inter> X frontier_of s = {})"
+        closedin X S \<and> (S \<noteq> topspace X) \<and>
+        C \<in> connected_components_of(subtopology X S)
+        \<Longrightarrow> \<not> (C \<inter> X frontier_of S = {})"
 oops
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC BOUNDARY_BUMPING_THEOREM_CLOSED_GEN THEN
@@ -5784,29 +5795,29 @@ oops
   ASM_SIMP_TAC[CLOSED_IN_CLOSED_SUBTOPOLOGY]);;
 
 lemma intermediate_continuum_exists:
-   "\<And>X c u::A=>bool.
+   "\<And>X C U::A=>bool.
         connected_space X \<and>
         locally_compact_space X \<and>
         Hausdorff_space X \<and>
-        compactin X c \<and> connectedin X c \<and>
-        (c \<noteq> {}) \<and> (c \<noteq> topspace X) \<and>
-        openin X u \<and> c \<subseteq> u
+        compactin X C \<and> connectedin X C \<and>
+        (C \<noteq> {}) \<and> (C \<noteq> topspace X) \<and>
+        openin X U \<and> C \<subseteq> U
         \<Longrightarrow> \<exists>d. compactin X d \<and> connectedin X d \<and>
-                c \<subset> d \<and> d \<subset> u"
+                C \<subset> d \<and> d \<subset> U"
 oops
   REPEAT STRIP_TAC THEN
   FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP CONNECTED_IN_SUBSET_TOPSPACE) THEN
-  SUBGOAL_THEN `\<exists>a::A. a \<in> topspace X \<and> (a \<notin> c)` STRIP_ASSUME_TAC THENL
+  SUBGOAL_THEN `\<exists>a::A. a \<in> topspace X \<and> (a \<notin> C)` STRIP_ASSUME_TAC THENL
    [ASM SET_TAC[]; ALL_TAC] THEN
-  MP_TAC(ISPEC `subtopology X (u DELETE (a::A))`
+  MP_TAC(ISPEC `subtopology X (U DELETE (a::A))`
         LOCALLY_COMPACT_SPACE_COMPACT_CLOSED_COMPACT) THEN
   ASM_SIMP_TAC[HAUSDORFF_SPACE_SUBTOPOLOGY; COMPACT_IN_SUBTOPOLOGY] THEN
   ASM_SIMP_TAC[LOCALLY_COMPACT_SPACE_OPEN_SUBSET; OPEN_IN_OPEN_SUBTOPOLOGY;
                OPEN_IN_HAUSDORFF_DELETE; SUBSET_DELETE] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `c::A=>bool`) THEN
+  DISCH_THEN(MP_TAC \<circ> SPEC `C::A=>bool`) THEN
   ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`v::A=>bool`; `k::A=>bool`] THEN STRIP_TAC THEN
-  MP_TAC(SPECL [`subtopology X (k::A=>bool)`; `c::A=>bool`]
+  MAP_EVERY X_GEN_TAC [`V::A=>bool`; `k::A=>bool`] THEN STRIP_TAC THEN
+  MP_TAC(SPECL [`subtopology X (k::A=>bool)`; `C::A=>bool`]
         EXISTS_CONNECTED_COMPONENT_OF_SUPERSET) THEN
   ASM_REWRITE_TAC[CONNECTED_IN_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY] THEN
   ANTS_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
@@ -5824,27 +5835,27 @@ oops
    [ALL_TAC;
     ASM SET_TAC[];
     DISCH_THEN SUBST_ALL_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `u::A=>bool` \<circ>
+    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `U::A=>bool` \<circ>
         GEN_REWRITE_RULE id [CONNECTED_SPACE_CLOPEN_IN]) THEN
     ASM_SIMP_TAC[COMPACT_IN_IMP_CLOSED_IN] THEN ASM SET_TAC[]] THEN
   DISCH_THEN(SUBST_ALL_TAC \<circ> SYM) THEN
-  MP_TAC(ISPECL [`X::A topology`; `k::A=>bool`; `c::A=>bool`]
+  MP_TAC(ISPECL [`X::A topology`; `k::A=>bool`; `C::A=>bool`]
         BOUNDARY_BUMPING_THEOREM_CLOSED_GEN) THEN
   ASM_SIMP_TAC[COMPACT_IN_IMP_CLOSED_IN; NOT_IMP] THEN
   CONJ_TAC THENL [ASM SET_TAC[]; REWRITE_TAC[frontier_of]] THEN
-  MATCH_MP_TAC(SET_RULE `s \<subseteq> u \<Longrightarrow> s \<inter> (t - u) = {}`) THEN
-  TRANS_TAC SUBSET_TRANS `v::A=>bool` THEN
+  MATCH_MP_TAC(SET_RULE `S \<subseteq> U \<Longrightarrow> S \<inter> (T - U) = {}`) THEN
+  TRANS_TAC SUBSET_TRANS `V::A=>bool` THEN
   ASM_SIMP_TAC[INTERIOR_OF_MAXIMAL_EQ]);;
 
 lemma boundary_bumping_theorem_gen:
-   "\<And>X s c::A=>bool.
+   "\<And>X S C::A=>bool.
         connected_space X \<and>
         locally_compact_space X \<and>
         Hausdorff_space X \<and>
-        s \<subset> topspace X \<and>
-        c \<in> connected_components_of(subtopology X s) \<and>
-        compactin X (X closure_of c)
-        \<Longrightarrow> \<not> (X frontier_of c \<inter> X frontier_of s = {})"
+        S \<subset> topspace X \<and>
+        C \<in> connected_components_of(subtopology X S) \<and>
+        compactin X (X closure_of C)
+        \<Longrightarrow> \<not> (X frontier_of C \<inter> X frontier_of S = {})"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[\<subset>] THEN STRIP_TAC THEN
   REWRITE_TAC[frontier_of] THEN
@@ -5854,45 +5865,45 @@ oops
   REWRITE_TAC[CONNECTED_IN_SUBTOPOLOGY] THEN STRIP_TAC THEN
   FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP NONEMPTY_CONNECTED_COMPONENTS_OF) THEN
   MATCH_MP_TAC(SET_RULE
-   `i \<subseteq> i' \<and> c \<subseteq> c' \<and> \<not> (c \<subseteq> i')
-    \<Longrightarrow> \<not> ((c - i) \<inter> (c' - i') = {})`) THEN
+   `i \<subseteq> i' \<and> C \<subseteq> c' \<and> \<not> (C \<subseteq> i')
+    \<Longrightarrow> \<not> ((C - i) \<inter> (c' - i') = {})`) THEN
   REPEAT CONJ_TAC THENL
    [ASM_MESON_TAC[INTERIOR_OF_MONO];
     ASM_MESON_TAC[CLOSURE_OF_MONO];
     DISCH_TAC] THEN
-  SUBGOAL_THEN `X closure_of c::A=>bool = c` SUBST_ALL_TAC THENL
+  SUBGOAL_THEN `X closure_of C::A=>bool = C` SUBST_ALL_TAC THENL
    [MATCH_MP_TAC SUBSET_ANTISYM THEN ASM_SIMP_TAC[CLOSURE_OF_SUBSET] THEN
     MATCH_MP_TAC CONNECTED_COMPONENTS_OF_MAXIMAL THEN
-    EXISTS_TAC `subtopology X (s::A=>bool)`THEN
+    EXISTS_TAC `subtopology X (S::A=>bool)`THEN
     ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
      [ASM_SIMP_TAC[CONNECTED_IN_SUBTOPOLOGY; CONNECTED_IN_CLOSURE_OF] THEN
-      MP_TAC(ISPECL [`X::A topology`; `s::A=>bool`] INTERIOR_OF_SUBSET) THEN
+      MP_TAC(ISPECL [`X::A topology`; `S::A=>bool`] INTERIOR_OF_SUBSET) THEN
       ASM SET_TAC[];
-      MATCH_MP_TAC(SET_RULE `c \<subseteq> d \<and> (c \<noteq> {}) \<Longrightarrow> \<not> disjnt c d`) THEN
+      MATCH_MP_TAC(SET_RULE `C \<subseteq> d \<and> (C \<noteq> {}) \<Longrightarrow> \<not> disjnt C d`) THEN
       ASM_SIMP_TAC[CLOSURE_OF_SUBSET]];
     ALL_TAC] THEN
   MP_TAC(ISPECL
-   [`X::A topology`; `c::A=>bool`; `X interior_of s::A=>bool`]
+   [`X::A topology`; `C::A=>bool`; `X interior_of S::A=>bool`]
         INTERMEDIATE_CONTINUUM_EXISTS) THEN
   ASM_REWRITE_TAC[OPEN_IN_INTERIOR_OF; NOT_IMP] THEN
   CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
   DISCH_THEN(X_CHOOSE_THEN `d::A=>bool` STRIP_ASSUME_TAC) THEN
-  MP_TAC(SET_RULE `(c::A=>bool) \<subset> d \<Longrightarrow> \<not> (d \<subseteq> c)`) THEN
+  MP_TAC(SET_RULE `(C::A=>bool) \<subset> d \<Longrightarrow> \<not> (d \<subseteq> C)`) THEN
   ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC CONNECTED_COMPONENTS_OF_MAXIMAL THEN
-  EXISTS_TAC `subtopology X (s::A=>bool)` THEN
+  EXISTS_TAC `subtopology X (S::A=>bool)` THEN
   ASM_REWRITE_TAC[CONNECTED_IN_SUBTOPOLOGY] THEN
-  MP_TAC(ISPECL [`X::A topology`; `s::A=>bool`] INTERIOR_OF_SUBSET) THEN
+  MP_TAC(ISPECL [`X::A topology`; `S::A=>bool`] INTERIOR_OF_SUBSET) THEN
   ASM SET_TAC[]);;
 
 lemma boundary_bumping_theorem:
-   "\<And>X s c::A=>bool.
+   "\<And>X S C::A=>bool.
         connected_space X \<and>
         compact_space X \<and>
         Hausdorff_space X \<and>
-        s \<subset> topspace X \<and>
-        c \<in> connected_components_of(subtopology X s)
-        \<Longrightarrow> \<not> (X frontier_of c \<inter> X frontier_of s = {})"
+        S \<subset> topspace X \<and>
+        C \<in> connected_components_of(subtopology X S)
+        \<Longrightarrow> \<not> (X frontier_of C \<inter> X frontier_of S = {})"
 oops
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   MATCH_MP_TAC BOUNDARY_BUMPING_THEOREM_GEN THEN
@@ -5907,7 +5918,7 @@ oops
   MAP_EVERY X_GEN_TAC [`m::A metric`; `x::A`; `y::A`] THEN STRIP_TAC THEN
   EXISTS_TAC `mball m (x::A,d x y / 2)` THEN
   EXISTS_TAC `mball m (y::A,d x y / 2)` THEN
-  REWRITE_TAC[SET_RULE `disjnt s t \<longleftrightarrow> \<forall>x. x \<in> s \<and> x \<in> t \<Longrightarrow> False`] THEN
+  REWRITE_TAC[SET_RULE `disjnt S T \<longleftrightarrow> \<forall>x. x \<in> S \<and> x \<in> T \<Longrightarrow> False`] THEN
   REWRITE_TAC[OPEN_IN_MBALL; IN_MBALL] THEN
   POP_ASSUM_LIST(MP_TAC \<circ> end_itlist CONJ) THEN CONV_TAC METRIC_ARITH);;
 
