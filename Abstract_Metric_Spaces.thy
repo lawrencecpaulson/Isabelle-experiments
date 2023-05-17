@@ -5051,9 +5051,9 @@ qed
 
 lemma separated_between_compact_connected_component:
   assumes "locally_compact_space X" "Hausdorff_space X" 
-          "C \<in> connected_components_of X"  "compactin X C" 
-          "closedin X T" "disjnt C T"
-        shows "separated_between X C T"
+    and C: "C \<in> connected_components_of X" 
+    and "compactin X C" "closedin X T" "disjnt C T"
+  shows "separated_between X C T"
 proof -
   have Csub: "C \<subseteq> topspace X"
     by (simp add: assms(4) compactin_subset_topspace)
@@ -5065,112 +5065,98 @@ proof -
     by (meson assms closedin_def locally_compact_Hausdorff_imp_regular_space locally_compact_space_open_subset)
   ultimately
   obtain N L where "openin X N" "compactin X L" "closedin X L" "C \<subseteq> N" "N \<subseteq> L" 
-                   and Lsub: "L \<subseteq> topspace X - T"
+    and Lsub: "L \<subseteq> topspace X - T"
     using \<open>Hausdorff_space X\<close> \<open>closedin X T\<close>
     apply (simp add: locally_compact_space_compact_closed_compact compactin_subtopology)
     by (meson closedin_def compactin_imp_closedin  openin_trans_full)
   then have disC: "disjnt C (topspace X - L)"
     by (meson DiffD2 disjnt_iff subset_iff)
   have "separated_between (subtopology X L) C (X frontier_of L)"
-     apply (rule cut_wire_fence_theorem)
-    apply (simp add: \<open>compactin X L\<close> compact_space_subtopology)
-    apply (simp add: Hausdorff_space_subtopology assms(2))
-    apply (meson \<open>C \<subseteq> N\<close> \<open>N \<subseteq> L\<close> assms(2) assms(4) closedin_subset_topspace compactin_imp_closedin subset_trans)
-    apply (simp add: \<open>closedin X L\<close> closedin_frontier_of closedin_subset_topspace frontier_of_subset_closedin)
-    by (smt (verit, ccfv_SIG) Diff_eq_empty_iff Int_Diff \<open>C \<subseteq> N\<close> \<open>N \<subseteq> L\<close> \<open>openin X N\<close> assms(3) connected_components_of_maximal connectedin_subtopology disjnt_def disjnt_empty2 disjnt_subset1 disjnt_sym frontier_of_complement frontier_of_empty frontier_of_subtopology_open topspace_subtopology)
-  then   have "separated_between X (X frontier_of C) (topspace X - L)"
+  proof (rule cut_wire_fence_theorem)
+    show "compact_space (subtopology X L)"
+      by (simp add: \<open>compactin X L\<close> compact_space_subtopology)
+    show "Hausdorff_space (subtopology X L)"
+      by (simp add: Hausdorff_space_subtopology \<open>Hausdorff_space X\<close>)
+    show "closedin (subtopology X L) C"
+      by (meson \<open>C \<subseteq> N\<close> \<open>N \<subseteq> L\<close> \<open>Hausdorff_space X\<close> \<open>compactin X C\<close> closedin_subset_topspace compactin_imp_closedin subset_trans)
+    show "closedin (subtopology X L) (X frontier_of L)"
+      by (simp add: \<open>closedin X L\<close> closedin_frontier_of closedin_subset_topspace frontier_of_subset_closedin)
+    show "disjnt D C \<or> disjnt D (X frontier_of L)"
+      if "connectedin (subtopology X L) D" for D 
+    proof (rule ccontr)
+      assume "\<not> (disjnt D C \<or> disjnt D (X frontier_of L))"
+      moreover have "connectedin X D"
+        using connectedin_subtopology that by blast
+      ultimately show False
+        using that connected_components_of_maximal [of C X D] C
+        apply (simp add: disjnt_iff)
+        by (metis Diff_eq_empty_iff \<open>C \<subseteq> N\<close> \<open>N \<subseteq> L\<close> \<open>openin X N\<close> disjoint_iff frontier_of_openin_straddle_Int(2) subsetD)
+    qed
+  qed
+  then have "separated_between X (X frontier_of C) (topspace X - L)"
     using separated_between_from_frontier_of_closed_subtopology separated_between_frontier_of_eq by blast
   with \<open>closedin X T\<close>  
-  separated_between_frontier_of [of C X "topspace X - L"]
+    separated_between_frontier_of [OF Csub disC] 
   show ?thesis
-    by (smt (verit) Csub Diff_iff Lsub closedin_subset disC separated_between subsetD subsetI)
+    unfolding separated_between by (smt (verit) Diff_iff Lsub closedin_subset subset_iff)
 qed
 
-oops
-    
-
-
-  MATCH_MP_TAC SEPARATED_BETWEEN_FROM_CLOSED_SUBTOPOLOGY THEN
-  EXISTS_TAC `l::A=>bool` THEN
-  ASM_REWRITE_TAC[FRONTIER_OF_COMPLEMENT] THEN
-  MATCH_MP_TAC CUT_WIRE_FENCE_THEOREM THEN
-  ASM_SIMP_TAC[CLOSED_IN_CLOSED_SUBTOPOLOGY] THEN
-  ASM_SIMP_TAC[COMPACT_SPACE_SUBTOPOLOGY; HAUSDORFF_SPACE_SUBTOPOLOGY] THEN
-  ASM_SIMP_TAC[FRONTIER_OF_SUBSET_CLOSED_IN; COMPACT_IN_IMP_CLOSED_IN] THEN
-  REWRITE_TAC[CLOSED_IN_FRONTIER_OF; CONNECTED_IN_SUBTOPOLOGY] THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  X_GEN_TAC `d::A=>bool` THEN STRIP_TAC THEN
-  MP_TAC(ISPECL [`X::A topology`; `d::A=>bool`; `C::A=>bool`]
-        CONNECTED_COMPONENTS_OF_MAXIMAL) THEN
-  ASM_REWRITE_TAC[TAUT `p \<or> q \<longleftrightarrow> \<not> p \<Longrightarrow> q`] THEN
-
-  MATCH_MP_TAC MONO_IMP THEN CONJ_TAC THENL [SET_TAC[]; ALL_TAC] THEN
-  REWRITE_TAC[frontier_of] THEN MATCH_MP_TAC(SET_RULE
-   `C \<subseteq> V \<Longrightarrow> d \<subseteq> C \<Longrightarrow> disjnt d (U - V)`) THEN
-  TRANS_TAC SUBSET_TRANS `n::A=>bool` THEN ASM_REWRITE_TAC[] THEN
-  ASM_SIMP_TAC[INTERIOR_OF_MAXIMAL]);;
-
 lemma wilder_locally_compact_component_thm:
-   "locally_compact_space X \<and> Hausdorff_space X \<and>
-        C \<in> connected_components_of X \<and> compactin X C \<and>
-        openin X w \<and> C \<subseteq> w
-        \<Longrightarrow> \<exists>U V. openin X U \<and> openin X V \<and>
-                  disjnt U V \<and> U \<union> V = topspace X \<and>
-                  C \<subseteq> U \<and> U \<subseteq> w"
-oops
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL [`X::A topology`; `C::A=>bool`; `topspace X - w::A=>bool`]
-        SEPARATED_BETWEEN_COMPACT_CONNECTED_COMPONENT) THEN
-  ASM_SIMP_TAC[CLOSED_IN_DIFF; CLOSED_IN_TOPSPACE] THEN
-  ANTS_TAC THENL [ASM SET_TAC[]; REWRITE_TAC[separated_between]] THEN
-  REPEAT(MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC) THEN ASM SET_TAC[]);;
+  assumes "locally_compact_space X" "Hausdorff_space X" 
+    and "C \<in> connected_components_of X" "compactin X C" "openin X W" "C \<subseteq> W"
+  obtains U V where "openin X U" "openin X V" "disjnt U V" "U \<union> V = topspace X" "C \<subseteq> U" "U \<subseteq> W"
+proof -
+  have "closedin X (topspace X - W)"
+    using \<open>openin X W\<close> by blast
+  moreover have "disjnt C (topspace X - W)"
+    using \<open>C \<subseteq> W\<close> disjnt_def by fastforce
+  ultimately have "separated_between X C (topspace X - W)"
+    using separated_between_compact_connected_component assms by blast
+  then show thesis
+    by (smt (verit, del_insts) DiffI disjnt_iff openin_subset separated_between_def subset_iff that)
+qed
 
 lemma compact_quasi_eq_connected_components_of:
-   "locally_compact_space X \<and> Hausdorff_space X \<and>
-        compactin X C
-        \<Longrightarrow> (C \<in> quasi_components_of X \<longleftrightarrow>
-             C \<in> connected_components_of X)"
-oops
-  REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
-  GEN_TAC THEN REPEAT DISCH_TAC THEN
-  REWRITE_TAC[quasi_components_of; connected_components_of] THEN
-  MATCH_MP_TAC(SET_RULE
-   `(\<forall>x. P x \<and> Q(g x) \<Longrightarrow> Q(f x)) \<and>
-    (\<forall>x. P x \<and> Q(f x) \<Longrightarrow> f x = g x)
-    \<Longrightarrow> \<forall>C. Q C \<Longrightarrow> (C \<in> {g x | P x} \<longleftrightarrow> C \<in> {f x | P x})`) THEN
-  REWRITE_TAC[] THEN CONJ_TAC THEN X_GEN_TAC `x::A` THEN STRIP_TAC THENL
-   [MATCH_MP_TAC CLOSED_COMPACT_IN THEN
-    EXISTS_TAC `quasi_component_of X (x::A)` THEN
-    ASM_REWRITE_TAC[CLOSED_IN_CONNECTED_COMPONENT_OF;
-                    CONNECTED_COMPONENT_SUBSET_QUASI_COMPONENT_OF];
-    ALL_TAC] THEN
-  MATCH_MP_TAC SUBSET_ANTISYM THEN
-  REWRITE_TAC[CONNECTED_COMPONENT_SUBSET_QUASI_COMPONENT_OF] THEN
-  REWRITE_TAC[\<subseteq>] THEN X_GEN_TAC `y::A` THEN
-  REWRITE_TAC[TAUT `p \<Longrightarrow> q \<longleftrightarrow> \<not> (p \<and> \<not> q)`] THEN STRIP_TAC THEN
-  MP_TAC(ISPECL
-   [`X::A topology`; `connected_component_of X (x::A)`; `{y::A}`]
-        SEPARATED_BETWEEN_COMPACT_CONNECTED_COMPONENT) THEN
-  ASM_REWRITE_TAC[CONNECTED_COMPONENT_IN_CONNECTED_COMPONENTS_OF] THEN
-  ASM_REWRITE_TAC[NOT_IMP; DISJOINT_SING] THEN
-  SUBGOAL_THEN `(y::A) \<in> topspace X` ASSUME_TAC THENL
-   [ASM_MESON_TAC[\<subseteq>; QUASI_COMPONENT_OF_SUBSET_TOPSPACE];
-    ASM_SIMP_TAC[CLOSED_IN_HAUSDORFF_SING]] THEN
-  DISCH_THEN(MP_TAC \<circ> SPECL [`{x::A}`; `{y::A}`] \<circ> MATCH_MP
-   (ONCE_REWRITE_RULE[IMP_CONJ] SEPARATED_BETWEEN_MONO)) THEN
-  ASM_REWRITE_TAC[SUBSET_REFL; SEPARATED_BETWEEN_SINGS; SING_SUBSET] THEN
-  REWRITE_TAC[IN_SING] THEN REWRITE_TAC[\<in>] THEN
-  ASM_REWRITE_TAC[CONNECTED_COMPONENT_OF_REFL] THEN ASM_MESON_TAC[\<in>]);;
+  assumes "locally_compact_space X" "Hausdorff_space X" "compactin X C"
+  shows "C \<in> quasi_components_of X \<longleftrightarrow> C \<in> connected_components_of X"
+proof -
+  have "compactin X (connected_component_of_set X x)" 
+    if "x \<in> topspace X" "compactin X (quasi_component_of_set X x)" for x
+  proof (rule closed_compactin)
+    show "compactin X (quasi_component_of_set X x)"
+      by (simp add: that)
+    show "connected_component_of_set X x \<subseteq> quasi_component_of_set X x"
+      by (simp add: connected_component_subset_quasi_component_of)
+    show "closedin X (connected_component_of_set X x)"
+      by (simp add: closedin_connected_component_of)
+  qed
+  moreover have "connected_component_of X x = quasi_component_of X x"
+    if \<section>: "x \<in> topspace X" "compactin X (connected_component_of_set X x)" for x
+  proof -
+    have "\<And>y. connected_component_of X x y \<Longrightarrow> quasi_component_of X x y"
+      by (simp add: connected_imp_quasi_component_of)
+    moreover have False if non: "\<not> connected_component_of X x y" and quasi: "quasi_component_of X x y" for y
+    proof -
+      have "y \<in> topspace X"
+        by (meson quasi_component_of_equiv that)
+      then have "closedin X {y}"
+        by (simp add: \<open>Hausdorff_space X\<close> compactin_imp_closedin)
+      moreover have "disjnt (connected_component_of_set X x) {y}"
+        by (simp add: non)
+      moreover have "\<not> separated_between X (connected_component_of_set X x) {y}"
+        using \<section> quasi separated_between_pointwise_left 
+        by (fastforce simp: quasi_component_nonseparated connected_component_of_refl)
+      ultimately show False
+        using assms by (metis \<section> connected_component_in_connected_components_of separated_between_compact_connected_component)
+    qed
+  ultimately show ?thesis
+    using \<open>compactin X C\<close> unfolding connected_components_of_def image_iff quasi_components_of_def by blast
+qed
+
 
 lemma boundary_bumping_theorem_closed_gen:
    "\<And>X S C::A=>bool.
-        connected_space X \<and>
-        locally_compact_space X \<and>
-        Hausdorff_space X \<and>
-        closedin X S \<and>
-        (S \<noteq> topspace X) \<and>
-        compactin X C \<and>
-        C \<in> connected_components_of(subtopology X S)
+        connected_space X" "locally_compact_space X" "Hausdorff_space X" "closedin X S" "(S \<noteq> topspace X)" "compactin X C" "C \<in> connected_components_of(subtopology X S)
         \<Longrightarrow> \<not> (C \<inter> X frontier_of S = {})"
 oops
   REPEAT STRIP_TAC THEN MP_TAC(ISPECL
@@ -5197,9 +5183,8 @@ oops
 
 lemma boundary_bumping_theorem_closed:
    "\<And>X S C::A=>bool.
-        connected_space X \<and> compact_space X \<and> Hausdorff_space X \<and>
-        closedin X S \<and> (S \<noteq> topspace X) \<and>
-        C \<in> connected_components_of(subtopology X S)
+        connected_space X" "compact_space X" "Hausdorff_space X \<and>
+        closedin X S" "(S \<noteq> topspace X)" "C \<in> connected_components_of(subtopology X S)
         \<Longrightarrow> \<not> (C \<inter> X frontier_of S = {})"
 oops
   REPEAT GEN_TAC THEN STRIP_TAC THEN
@@ -5211,14 +5196,8 @@ oops
 
 lemma intermediate_continuum_exists:
    "\<And>X C U::A=>bool.
-        connected_space X \<and>
-        locally_compact_space X \<and>
-        Hausdorff_space X \<and>
-        compactin X C \<and> connectedin X C \<and>
-        (C \<noteq> {}) \<and> (C \<noteq> topspace X) \<and>
-        openin X U \<and> C \<subseteq> U
-        \<Longrightarrow> \<exists>d. compactin X d \<and> connectedin X d \<and>
-                C \<subset> d \<and> d \<subset> U"
+        connected_space X" "locally_compact_space X" "Hausdorff_space X" "compactin X C" "connectedin X C" "(C \<noteq> {})" "(C \<noteq> topspace X)" "openin X U" "C \<subseteq> U
+        \<Longrightarrow> \<exists>D. compactin X D" "connectedin X D" "C \<subset> D" "D \<subset> U"
 oops
   REPEAT STRIP_TAC THEN
   FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP CONNECTED_IN_SUBSET_TOPSPACE) THEN
@@ -5236,7 +5215,7 @@ oops
         EXISTS_CONNECTED_COMPONENT_OF_SUPERSET) THEN
   ASM_REWRITE_TAC[CONNECTED_IN_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY] THEN
   ANTS_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `d::A=>bool` THEN
+  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `D::A=>bool` THEN
   STRIP_TAC THEN
     FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_CONNECTED_COMPONENTS_OF) THEN
   DISCH_THEN(MP_TAC \<circ> MATCH_MP
@@ -5264,12 +5243,7 @@ oops
 
 lemma boundary_bumping_theorem_gen:
    "\<And>X S C::A=>bool.
-        connected_space X \<and>
-        locally_compact_space X \<and>
-        Hausdorff_space X \<and>
-        S \<subset> topspace X \<and>
-        C \<in> connected_components_of(subtopology X S) \<and>
-        compactin X (X closure_of C)
+        connected_space X" "locally_compact_space X" "Hausdorff_space X" "S \<subset> topspace X" "C \<in> connected_components_of(subtopology X S)" "compactin X (X closure_of C)
         \<Longrightarrow> \<not> (X frontier_of C \<inter> X frontier_of S = {})"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[\<subset>] THEN STRIP_TAC THEN
