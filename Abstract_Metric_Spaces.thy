@@ -5238,7 +5238,7 @@ qed
 
 lemma completely_regular_space_product_topology:
    "completely_regular_space (product_topology X I) \<longleftrightarrow>
-    (\<Pi>\<^sub>E i\<in>I. topspace(X i)) = {} \<or> (\<forall>i \<in> I. completely_regular_space (X i))" (is "?lhs=?rhs")
+    (\<Pi>\<^sub>E i\<in>I. topspace(X i)) = {} \<or> (\<forall>i \<in> I. completely_regular_space (X i))"  (is "?lhs=?rhs")
 proof
   assume ?lhs then show ?rhs
     by (rule topological_property_of_product_component) 
@@ -5298,58 +5298,48 @@ lemma (in Metric_space) t1_space_mtopology:
   using Hausdorff_space_mtopology t1_or_Hausdorff_space by blast
 
 
+subsection \<open>Compactly generated spaces (k-spaces)\<close>
 
-(* k-spaces (with no Hausdorff-ness assumptions built in).                   *)
+text \<open>These don't have to be Hausdorff\<close>
 
 
 definition k_space where
-  "k_space (X::A topology) \<longleftrightarrow>
-        \<forall>s. s \<subseteq> topspace X
-            \<Longrightarrow> (closedin X s \<longleftrightarrow>
-                 \<forall>k. compactin X k
-                     \<Longrightarrow> closedin (subtopology X k) (k \<inter> s))"
+  "k_space X \<equiv>
+    \<forall>S. S \<subseteq> topspace X \<longrightarrow> 
+        (closedin X S \<longleftrightarrow> (\<forall>K. compactin X K \<longrightarrow> closedin (subtopology X K) (K \<inter> S)))"
 
 lemma k_space:
    "k_space X \<longleftrightarrow>
-        \<forall>s. s \<subseteq> topspace X \<and>
-            (\<forall>k. compactin X k
-                 \<Longrightarrow> closedin (subtopology X k) (k \<inter> s))
-            \<Longrightarrow> closedin X s"
-oops
-  GEN_TAC THEN REWRITE_TAC[k_space] THEN
-  MESON_TAC[CLOSED_IN_SUBTOPOLOGY_INTER_CLOSED]);;
+    (\<forall>S. S \<subseteq> topspace X \<and>
+         (\<forall>K. compactin X K \<longrightarrow> closedin (subtopology X K) (K \<inter> S)) \<longrightarrow> closedin X S)"
+  by (metis closedin_subtopology inf_commute k_space_def)
 
 lemma k_space_open:
    "k_space X \<longleftrightarrow>
-        \<forall>s. s \<subseteq> topspace X \<and>
-            (\<forall>k. compactin X k
-                 \<Longrightarrow> openin (subtopology X k) (k \<inter> s))
-            \<Longrightarrow> openin X s"
-oops
-  GEN_TAC THEN REWRITE_TAC[K_SPACE] THEN
-  EQ_TAC THEN DISCH_TAC THEN X_GEN_TAC `s::A=>bool` THEN STRIP_TAC THEN
-  GEN_REWRITE_TAC id [OPEN_IN_CLOSED_IN_EQ; closedin] THEN
-  ASM_REWRITE_TAC[] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-  REWRITE_TAC[SUBSET_DIFF] THEN X_GEN_TAC `k::A=>bool` THEN DISCH_TAC THEN
-  GEN_REWRITE_TAC id [OPEN_IN_CLOSED_IN_EQ; closedin] THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN
-  (CONJ_TAC THENL [SET_TAC[]; ALL_TAC]) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `k::A=>bool`) THEN ASM_REWRITE_TAC[] THEN
-  MATCH_MP_TAC EQ_IMP THEN AP_TERM_TAC THEN ASM SET_TAC[]);;
+    (\<forall>S. S \<subseteq> topspace X \<and>
+         (\<forall>K. compactin X K \<longrightarrow> openin (subtopology X K) (K \<inter> S)) \<longrightarrow> openin X S)"
+proof -
+  have "openin X S"
+    if "k_space X" "S \<subseteq> topspace X"
+      and "\<forall>K. compactin X K \<longrightarrow> openin (subtopology X K) (K \<inter> S)" for S
+    using that unfolding k_space openin_closedin_eq
+    by (metis Diff_Int_distrib2 Diff_subset inf_commute topspace_subtopology)
+  moreover have "k_space X"
+    if "\<forall>S. S \<subseteq> topspace X \<and> (\<forall>K. compactin X K \<longrightarrow> openin (subtopology X K) (K \<inter> S)) \<longrightarrow> openin X S"
+    unfolding k_space openin_closedin_eq
+    by (simp add: Diff_Int_distrib closedin_def inf_commute that)
+  ultimately show ?thesis
+    by blast
+qed
 
 lemma k_space_alt:
    "k_space X \<longleftrightarrow>
-        \<forall>s. s \<subseteq> topspace X
-            \<Longrightarrow> (openin X s \<longleftrightarrow>
-                 \<forall>k. compactin X k
-                     \<Longrightarrow> openin (subtopology X k) (k \<inter> s))"
-oops
-  GEN_TAC THEN REWRITE_TAC[K_SPACE_OPEN] THEN
-  MESON_TAC[OPEN_IN_SUBTOPOLOGY_INTER_OPEN]);;
+    (\<forall>S. S \<subseteq> topspace X
+        \<longrightarrow> (openin X S \<longleftrightarrow> (\<forall>K. compactin X K \<longrightarrow> openin (subtopology X K) (K \<inter> S))))"
+  by (meson k_space_open openin_subtopology_Int2)
 
 lemma k_space_quotient_map_image:
-   "\<And>X Y (q::A=>B).
-        quotient_map X Y q \<and> k_space X \<Longrightarrow> k_space Y"
+   "quotient_map X Y q \<and> k_space X \<Longrightarrow> k_space Y"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[K_SPACE] THEN
   STRIP_TAC THEN X_GEN_TAC `s::B=>bool` THEN STRIP_TAC THEN
