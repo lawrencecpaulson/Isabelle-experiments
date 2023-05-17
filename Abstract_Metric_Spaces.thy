@@ -697,6 +697,324 @@ lemma quasi_eq_connected_component_of:
   by (metis quasi_eq_connected_components_of quasi_eq_connected_components_of_pointwise_alt)
 
 
+
+subsection\<open>Additional quasicomponent and continuum properties like Boundary Bumping\<close>
+
+
+lemma cut_wire_fence_theorem_gen:
+  assumes "compact_space X" and X: "Hausdorff_space X \<or> regular_space X \<or> normal_space X"
+    and S: "compactin X S" and T: "closedin X T"
+    and dis: "\<And>C. connectedin X C \<Longrightarrow> disjnt C S \<or> disjnt C T"
+  shows "separated_between X S T"
+  proof -
+  have "x \<in> topspace X" if "x \<in> S" and "T = {}" for x
+    using that S compactin_subset_topspace by auto
+  moreover have "separated_between X {x} {y}" if "x \<in> S" and "y \<in> T" for x y
+  proof (cases "x \<in> topspace X \<and> y \<in> topspace X")
+    case True
+    then have "\<not> connected_component_of X x y"
+      by (meson dis connected_component_of_def disjnt_iff that)
+    with True X \<open>compact_space X\<close> show ?thesis
+      by (metis quasi_component_nonseparated quasi_eq_connected_component_of)
+  next
+    case False
+    then show ?thesis
+      using S T compactin_subset_topspace closedin_subset that by blast
+  qed
+  ultimately show ?thesis
+    using assms
+    by (simp add: separated_between_pointwise_left separated_between_pointwise_right 
+              closedin_compact_space closedin_subset)
+qed
+
+lemma cut_wire_fence_theorem:
+   "\<lbrakk>compact_space X; Hausdorff_space X; closedin X S; closedin X T;
+     \<And>C. connectedin X C \<Longrightarrow> disjnt C S \<or> disjnt C T\<rbrakk>
+        \<Longrightarrow> separated_between X S T"
+  by (simp add: closedin_compact_space cut_wire_fence_theorem_gen)
+
+lemma separated_between_from_closed_subtopology:
+  assumes XC: "separated_between (subtopology X C) S (X frontier_of C)" 
+    and ST: "separated_between (subtopology X C) S T"
+  shows "separated_between X S T"
+proof -
+  obtain U where clo: "closedin (subtopology X C) U" and ope: "openin (subtopology X C) U" 
+             and "S \<subseteq> U" and sub: "X frontier_of C \<union> T \<subseteq> topspace (subtopology X C) - U"
+    by (meson assms separated_between separated_between_Un)
+  then have "X frontier_of C \<union> T \<subseteq> topspace X \<inter> C - U"
+    by auto
+  have "closedin X (topspace X \<inter> C)"
+    by (metis XC frontier_of_restrict frontier_of_subset_eq inf_le1 separated_between_imp_subset topspace_subtopology)
+  then have "closedin X U"
+    by (metis clo closedin_closed_subtopology subtopology_restrict)
+  moreover have "openin (subtopology X C) U \<longleftrightarrow> openin X U \<and> U \<subseteq> C"
+    using disjnt_iff sub by (force intro!: openin_subset_topspace_eq)
+  with ope have "openin X U"
+    by blast
+  moreover have "T \<subseteq> topspace X - U"
+    using ope openin_closedin_eq sub by auto
+  ultimately show ?thesis
+    using \<open>S \<subseteq> U\<close> separated_between by blast
+qed
+
+lemma separated_between_from_closed_subtopology_frontier:
+   "separated_between (subtopology X T) S (X frontier_of T)
+        \<Longrightarrow> separated_between X S (X frontier_of T)"
+  using separated_between_from_closed_subtopology by blast
+
+lemma separated_between_from_frontier_of_closed_subtopology:
+  assumes "separated_between (subtopology X T) S (X frontier_of T)"
+  shows "separated_between X S (topspace X - T)"
+proof -
+  have "disjnt S (topspace X - T)"
+    using assms disjnt_iff separated_between_imp_subset by fastforce
+  then show ?thesis
+    by (metis Diff_subset assms frontier_of_complement separated_between_from_closed_subtopology separated_between_frontier_of_eq')
+qed
+
+lemma separated_between_compact_connected_component:
+  assumes "locally_compact_space X" "Hausdorff_space X" 
+    and C: "C \<in> connected_components_of X" 
+    and "compactin X C" "closedin X T" "disjnt C T"
+  shows "separated_between X C T"
+proof -
+  have Csub: "C \<subseteq> topspace X"
+    by (simp add: assms(4) compactin_subset_topspace)
+  have "Hausdorff_space (subtopology X (topspace X - T))"
+    using Hausdorff_space_subtopology assms(2) by blast
+  moreover have "compactin (subtopology X (topspace X - T)) C"
+    using assms Csub by (metis Diff_Int_distrib Diff_empty compact_imp_compactin_subtopology disjnt_def le_iff_inf)
+  moreover have "locally_compact_space (subtopology X (topspace X - T))"
+    by (meson assms closedin_def locally_compact_Hausdorff_imp_regular_space locally_compact_space_open_subset)
+  ultimately
+  obtain N L where "openin X N" "compactin X L" "closedin X L" "C \<subseteq> N" "N \<subseteq> L" 
+    and Lsub: "L \<subseteq> topspace X - T"
+    using \<open>Hausdorff_space X\<close> \<open>closedin X T\<close>
+    apply (simp add: locally_compact_space_compact_closed_compact compactin_subtopology)
+    by (meson closedin_def compactin_imp_closedin  openin_trans_full)
+  then have disC: "disjnt C (topspace X - L)"
+    by (meson DiffD2 disjnt_iff subset_iff)
+  have "separated_between (subtopology X L) C (X frontier_of L)"
+  proof (rule cut_wire_fence_theorem)
+    show "compact_space (subtopology X L)"
+      by (simp add: \<open>compactin X L\<close> compact_space_subtopology)
+    show "Hausdorff_space (subtopology X L)"
+      by (simp add: Hausdorff_space_subtopology \<open>Hausdorff_space X\<close>)
+    show "closedin (subtopology X L) C"
+      by (meson \<open>C \<subseteq> N\<close> \<open>N \<subseteq> L\<close> \<open>Hausdorff_space X\<close> \<open>compactin X C\<close> closedin_subset_topspace compactin_imp_closedin subset_trans)
+    show "closedin (subtopology X L) (X frontier_of L)"
+      by (simp add: \<open>closedin X L\<close> closedin_frontier_of closedin_subset_topspace frontier_of_subset_closedin)
+    show "disjnt D C \<or> disjnt D (X frontier_of L)"
+      if "connectedin (subtopology X L) D" for D 
+    proof (rule ccontr)
+      assume "\<not> (disjnt D C \<or> disjnt D (X frontier_of L))"
+      moreover have "connectedin X D"
+        using connectedin_subtopology that by blast
+      ultimately show False
+        using that connected_components_of_maximal [of C X D] C
+        apply (simp add: disjnt_iff)
+        by (metis Diff_eq_empty_iff \<open>C \<subseteq> N\<close> \<open>N \<subseteq> L\<close> \<open>openin X N\<close> disjoint_iff frontier_of_openin_straddle_Int(2) subsetD)
+    qed
+  qed
+  then have "separated_between X (X frontier_of C) (topspace X - L)"
+    using separated_between_from_frontier_of_closed_subtopology separated_between_frontier_of_eq by blast
+  with \<open>closedin X T\<close>  
+    separated_between_frontier_of [OF Csub disC] 
+  show ?thesis
+    unfolding separated_between by (smt (verit) Diff_iff Lsub closedin_subset subset_iff)
+qed
+
+lemma wilder_locally_compact_component_thm:
+  assumes "locally_compact_space X" "Hausdorff_space X" 
+    and "C \<in> connected_components_of X" "compactin X C" "openin X W" "C \<subseteq> W"
+  obtains U V where "openin X U" "openin X V" "disjnt U V" "U \<union> V = topspace X" "C \<subseteq> U" "U \<subseteq> W"
+proof -
+  have "closedin X (topspace X - W)"
+    using \<open>openin X W\<close> by blast
+  moreover have "disjnt C (topspace X - W)"
+    using \<open>C \<subseteq> W\<close> disjnt_def by fastforce
+  ultimately have "separated_between X C (topspace X - W)"
+    using separated_between_compact_connected_component assms by blast
+  then show thesis
+    by (smt (verit, del_insts) DiffI disjnt_iff openin_subset separated_between_def subset_iff that)
+qed
+
+lemma compact_quasi_eq_connected_components_of:
+  assumes "locally_compact_space X" "Hausdorff_space X" "compactin X C"
+  shows "C \<in> quasi_components_of X \<longleftrightarrow> C \<in> connected_components_of X"
+proof -
+  have "compactin X (connected_component_of_set X x)" 
+    if "x \<in> topspace X" "compactin X (quasi_component_of_set X x)" for x
+  proof (rule closed_compactin)
+    show "compactin X (quasi_component_of_set X x)"
+      by (simp add: that)
+    show "connected_component_of_set X x \<subseteq> quasi_component_of_set X x"
+      by (simp add: connected_component_subset_quasi_component_of)
+    show "closedin X (connected_component_of_set X x)"
+      by (simp add: closedin_connected_component_of)
+  qed
+  moreover have "connected_component_of X x = quasi_component_of X x"
+    if \<section>: "x \<in> topspace X" "compactin X (connected_component_of_set X x)" for x
+  proof -
+    have "\<And>y. connected_component_of X x y \<Longrightarrow> quasi_component_of X x y"
+      by (simp add: connected_imp_quasi_component_of)
+    moreover have False if non: "\<not> connected_component_of X x y" and quasi: "quasi_component_of X x y" for y
+    proof -
+      have "y \<in> topspace X"
+        by (meson quasi_component_of_equiv that)
+      then have "closedin X {y}"
+        by (simp add: \<open>Hausdorff_space X\<close> compactin_imp_closedin)
+      moreover have "disjnt (connected_component_of_set X x) {y}"
+        by (simp add: non)
+      moreover have "\<not> separated_between X (connected_component_of_set X x) {y}"
+        using \<section> quasi separated_between_pointwise_left 
+        by (fastforce simp: quasi_component_nonseparated connected_component_of_refl)
+      ultimately show False
+        using assms by (metis \<section> connected_component_in_connected_components_of separated_between_compact_connected_component)
+    qed
+    ultimately show ?thesis
+      by blast
+  qed
+  ultimately show ?thesis
+    using \<open>compactin X C\<close> unfolding connected_components_of_def image_iff quasi_components_of_def by metis
+qed
+
+
+lemma boundary_bumping_theorem_closed_gen:
+  assumes "connected_space X" "locally_compact_space X" "Hausdorff_space X" "closedin X S" 
+    "S \<noteq> topspace X" and C: "compactin X C" "C \<in> connected_components_of (subtopology X S)"
+  shows "C \<inter> X frontier_of S \<noteq> {}"
+proof 
+  assume \<section>: "C \<inter> X frontier_of S = {}"
+  consider "C \<noteq> {}" "X frontier_of S \<subseteq> topspace X" | "C \<subseteq> topspace X" "S = {}"
+    using C by (metis frontier_of_subset_topspace nonempty_connected_components_of)
+  then show False
+  proof cases
+    case 1
+    have "separated_between (subtopology X S) C (X frontier_of S)"
+    proof (rule separated_between_compact_connected_component)
+      show "compactin (subtopology X S) C"
+        using C compact_imp_compactin_subtopology connected_components_of_subset by fastforce
+      show "closedin (subtopology X S) (X frontier_of S)"
+        by (simp add: \<open>closedin X S\<close> closedin_frontier_of closedin_subset_topspace frontier_of_subset_closedin)
+      show "disjnt C (X frontier_of S)"
+        using \<section> by (simp add: disjnt_def)
+    qed (use assms Hausdorff_space_subtopology locally_compact_space_closed_subset in auto)
+    then have "separated_between X C (X frontier_of S)"
+      using separated_between_from_closed_subtopology by auto
+    then have "X frontier_of S = {}"
+      using \<open>C \<noteq> {}\<close> \<open>connected_space X\<close> connected_space_separated_between by blast
+    moreover have "C \<subseteq> S"
+      using C connected_components_of_subset by fastforce
+    ultimately show False
+      using 1 assms by (metis closedin_subset connected_space_eq_frontier_eq_empty subset_empty)
+  next
+    case 2
+    then show False
+      using C connected_components_of_eq_empty by fastforce
+  qed
+qed
+
+lemma boundary_bumping_theorem_closed:
+  assumes "connected_space X" "compact_space X" "Hausdorff_space X" "closedin X S" 
+          "S \<noteq> topspace X" "C \<in> connected_components_of(subtopology X S)"
+  shows "C \<inter> X frontier_of S \<noteq> {}"
+  by (meson assms boundary_bumping_theorem_closed_gen closedin_compact_space closedin_connected_components_of
+            closedin_trans_full compact_imp_locally_compact_space)
+
+
+lemma intermediate_continuum_exists:
+  assumes "connected_space X" "locally_compact_space X" "Hausdorff_space X" 
+    and C: "compactin X C" "connectedin X C" "C \<noteq> {}" "C \<noteq> topspace X"
+    and U: "openin X U" "C \<subseteq> U"
+  obtains D where "compactin X D" "connectedin X D" "C \<subset> D" "D \<subset> U"
+proof -
+  have "C \<subseteq> topspace X"
+    by (simp add: C compactin_subset_topspace)
+  with C obtain a where a: "a \<in> topspace X" "a \<notin> C"
+    by blast
+  moreover have "compactin (subtopology X (U - {a})) C"
+    by (simp add: C U a compact_imp_compactin_subtopology subset_Diff_insert)
+  moreover have "Hausdorff_space (subtopology X (U - {a}))"
+    using Hausdorff_space_subtopology assms(3) by blast
+  moreover
+  have "locally_compact_space (subtopology X (U - {a}))"
+    by (rule locally_compact_space_open_subset)
+       (auto simp: locally_compact_Hausdorff_imp_regular_space open_in_Hausdorff_delete assms)
+  ultimately obtain V K where V: "openin X V" "a \<notin> V" "V \<subseteq> U" and K: "compactin X K" "a \<notin> K" "K \<subseteq> U" 
+    and cloK: "closedin (subtopology X (U - {a})) K" and "C \<subseteq> V" "V \<subseteq> K"
+    using locally_compact_space_compact_closed_compact [of "subtopology X (U - {a})"] assms
+    by (smt (verit, del_insts) Diff_empty compactin_subtopology open_in_Hausdorff_delete openin_open_subtopology subset_Diff_insert)
+  then obtain D where D: "D \<in> connected_components_of (subtopology X K)" and "C \<subseteq> D"
+    using C by (metis bot.extremum_unique connectedin_subtopology order.trans exists_connected_component_of_superset subtopology_topspace)
+  show thesis
+  proof
+    have cloD: "closedin (subtopology X K) D"
+      by (simp add: D closedin_connected_components_of)
+    then have XKD: "compactin (subtopology X K) D"
+      by (simp add: K closedin_compact_space compact_space_subtopology)
+    then show "compactin X D"
+      using compactin_subtopology_imp_compact by blast
+    show "connectedin X D"
+      using D connectedin_connected_components_of connectedin_subtopology by blast
+    have "K \<noteq> topspace X"
+      using K a by blast
+    moreover have "V \<subseteq> X interior_of K"
+      by (simp add: \<open>openin X V\<close> \<open>V \<subseteq> K\<close> interior_of_maximal)
+    ultimately have "C \<noteq> D"
+      using boundary_bumping_theorem_closed_gen [of X K C] D \<open>C \<subseteq> V\<close> 
+      by (auto simp add: assms K compactin_imp_closedin frontier_of_def)
+    then show "C \<subset> D"
+      using \<open>C \<subseteq> D\<close> by blast
+    have "D \<subseteq> U"
+      using K(3) \<open>closedin (subtopology X K) D\<close> closedin_imp_subset by blast
+    moreover have "D \<noteq> U"
+      using K XKD \<open>C \<subset> D\<close> assms
+      by (metis \<open>K \<noteq> topspace X\<close> cloD closedin_imp_subset compactin_imp_closedin connected_space_clopen_in
+                inf_bot_left inf_le2 subset_antisym)
+    ultimately
+    show "D \<subset> U" by blast
+  qed
+qed
+
+lemma boundary_bumping_theorem_gen:
+  assumes X: "connected_space X" "locally_compact_space X" "Hausdorff_space X" 
+   and "S \<subset> topspace X" and C: "C \<in> connected_components_of(subtopology X S)" 
+   and compC: "compactin X (X closure_of C)"
+ shows "X frontier_of C \<inter> X frontier_of S \<noteq> {}"
+proof -
+  have Csub: "C \<subseteq> topspace X" "C \<subseteq> S" and "connectedin X C"
+    using C connectedin_connected_components_of connectedin_subset_topspace connectedin_subtopology
+    by fastforce+
+  have "C \<noteq> {}"
+    using C nonempty_connected_components_of by blast
+  obtain "X interior_of C \<subseteq> X interior_of S" "X closure_of C \<subseteq> X closure_of S"
+    by (simp add: Csub closure_of_mono interior_of_mono)
+  moreover have False if "X closure_of C \<subseteq> X interior_of S"
+  proof -
+    have "X closure_of C = C"
+      by (meson C closedin_connected_component_of_subtopology closure_of_eq interior_of_subset order_trans that)
+    with that have "C \<subseteq> X interior_of S"
+      by simp
+    then obtain D where  "compactin X D" and "connectedin X D" and "C \<subset> D" and "D \<subset> X interior_of S"
+      using intermediate_continuum_exists assms  \<open>X closure_of C = C\<close> compC Csub
+      by (metis \<open>C \<noteq> {}\<close> \<open>connectedin X C\<close> openin_interior_of psubsetE)
+    then have "D \<subseteq> C"
+      by (metis C \<open>C \<noteq> {}\<close> connected_components_of_maximal connectedin_subtopology disjnt_def inf.orderE interior_of_subset order_trans psubsetE)
+    then show False
+      using \<open>C \<subset> D\<close> by blast
+  qed
+  ultimately show ?thesis
+    by (smt (verit, ccfv_SIG) DiffI disjoint_iff_not_equal frontier_of_def subset_eq)
+qed
+
+lemma boundary_bumping_theorem:
+   "\<lbrakk>connected_space X; compact_space X; Hausdorff_space X; S \<subset> topspace X; 
+     C \<in> connected_components_of(subtopology X S)\<rbrakk>
+    \<Longrightarrow> X frontier_of C \<inter> X frontier_of S \<noteq> {}"
+  by (simp add: boundary_bumping_theorem_gen closedin_compact_space compact_imp_locally_compact_space)
+
+
 subsection \<open>ATIN-WITHIN\<close>
 
 (*REPLACE ORIGINAL DEFINITION TO USE ABBREVIATION, LIKE AT / AT_WITHIN
@@ -4973,323 +5291,6 @@ next
     qed      
   qed (force simp: completely_regular_space_def)
 qed
-
-
-subsection\<open>Additional quasicomponent and continuum properties like Boundary Bumping\<close>
-
-
-lemma cut_wire_fence_theorem_gen:
-  assumes "compact_space X" and X: "Hausdorff_space X \<or> regular_space X \<or> normal_space X"
-    and S: "compactin X S" and T: "closedin X T"
-    and dis: "\<And>C. connectedin X C \<Longrightarrow> disjnt C S \<or> disjnt C T"
-  shows "separated_between X S T"
-  proof -
-  have "x \<in> topspace X" if "x \<in> S" and "T = {}" for x
-    using that S compactin_subset_topspace by auto
-  moreover have "separated_between X {x} {y}" if "x \<in> S" and "y \<in> T" for x y
-  proof (cases "x \<in> topspace X \<and> y \<in> topspace X")
-    case True
-    then have "\<not> connected_component_of X x y"
-      by (meson dis connected_component_of_def disjnt_iff that)
-    with True X \<open>compact_space X\<close> show ?thesis
-      by (metis quasi_component_nonseparated quasi_eq_connected_component_of)
-  next
-    case False
-    then show ?thesis
-      using S T compactin_subset_topspace closedin_subset that by blast
-  qed
-  ultimately show ?thesis
-    using assms
-    by (simp add: separated_between_pointwise_left separated_between_pointwise_right 
-              closedin_compact_space closedin_subset)
-qed
-
-lemma cut_wire_fence_theorem:
-   "\<lbrakk>compact_space X; Hausdorff_space X; closedin X S; closedin X T;
-     \<And>C. connectedin X C \<Longrightarrow> disjnt C S \<or> disjnt C T\<rbrakk>
-        \<Longrightarrow> separated_between X S T"
-  by (simp add: closedin_compact_space cut_wire_fence_theorem_gen)
-
-lemma separated_between_from_closed_subtopology:
-  assumes XC: "separated_between (subtopology X C) S (X frontier_of C)" 
-    and ST: "separated_between (subtopology X C) S T"
-  shows "separated_between X S T"
-proof -
-  obtain U where clo: "closedin (subtopology X C) U" and ope: "openin (subtopology X C) U" 
-             and "S \<subseteq> U" and sub: "X frontier_of C \<union> T \<subseteq> topspace (subtopology X C) - U"
-    by (meson assms separated_between separated_between_Un)
-  then have "X frontier_of C \<union> T \<subseteq> topspace X \<inter> C - U"
-    by auto
-  have "closedin X (topspace X \<inter> C)"
-    by (metis XC frontier_of_restrict frontier_of_subset_eq inf_le1 separated_between_imp_subset topspace_subtopology)
-  then have "closedin X U"
-    by (metis clo closedin_closed_subtopology subtopology_restrict)
-  moreover have "openin (subtopology X C) U \<longleftrightarrow> openin X U \<and> U \<subseteq> C"
-    using disjnt_iff sub by (force intro!: openin_subset_topspace_eq)
-  with ope have "openin X U"
-    by blast
-  moreover have "T \<subseteq> topspace X - U"
-    using ope openin_closedin_eq sub by auto
-  ultimately show ?thesis
-    using \<open>S \<subseteq> U\<close> separated_between by blast
-qed
-
-lemma separated_between_from_closed_subtopology_frontier:
-   "separated_between (subtopology X T) S (X frontier_of T)
-        \<Longrightarrow> separated_between X S (X frontier_of T)"
-  using separated_between_from_closed_subtopology by blast
-
-lemma separated_between_from_frontier_of_closed_subtopology:
-  assumes "separated_between (subtopology X T) S (X frontier_of T)"
-  shows "separated_between X S (topspace X - T)"
-proof -
-  have "disjnt S (topspace X - T)"
-    using assms disjnt_iff separated_between_imp_subset by fastforce
-  then show ?thesis
-    by (metis Diff_subset assms frontier_of_complement separated_between_from_closed_subtopology separated_between_frontier_of_eq')
-qed
-
-lemma separated_between_compact_connected_component:
-  assumes "locally_compact_space X" "Hausdorff_space X" 
-    and C: "C \<in> connected_components_of X" 
-    and "compactin X C" "closedin X T" "disjnt C T"
-  shows "separated_between X C T"
-proof -
-  have Csub: "C \<subseteq> topspace X"
-    by (simp add: assms(4) compactin_subset_topspace)
-  have "Hausdorff_space (subtopology X (topspace X - T))"
-    using Hausdorff_space_subtopology assms(2) by blast
-  moreover have "compactin (subtopology X (topspace X - T)) C"
-    using assms Csub by (metis Diff_Int_distrib Diff_empty compact_imp_compactin_subtopology disjnt_def le_iff_inf)
-  moreover have "locally_compact_space (subtopology X (topspace X - T))"
-    by (meson assms closedin_def locally_compact_Hausdorff_imp_regular_space locally_compact_space_open_subset)
-  ultimately
-  obtain N L where "openin X N" "compactin X L" "closedin X L" "C \<subseteq> N" "N \<subseteq> L" 
-    and Lsub: "L \<subseteq> topspace X - T"
-    using \<open>Hausdorff_space X\<close> \<open>closedin X T\<close>
-    apply (simp add: locally_compact_space_compact_closed_compact compactin_subtopology)
-    by (meson closedin_def compactin_imp_closedin  openin_trans_full)
-  then have disC: "disjnt C (topspace X - L)"
-    by (meson DiffD2 disjnt_iff subset_iff)
-  have "separated_between (subtopology X L) C (X frontier_of L)"
-  proof (rule cut_wire_fence_theorem)
-    show "compact_space (subtopology X L)"
-      by (simp add: \<open>compactin X L\<close> compact_space_subtopology)
-    show "Hausdorff_space (subtopology X L)"
-      by (simp add: Hausdorff_space_subtopology \<open>Hausdorff_space X\<close>)
-    show "closedin (subtopology X L) C"
-      by (meson \<open>C \<subseteq> N\<close> \<open>N \<subseteq> L\<close> \<open>Hausdorff_space X\<close> \<open>compactin X C\<close> closedin_subset_topspace compactin_imp_closedin subset_trans)
-    show "closedin (subtopology X L) (X frontier_of L)"
-      by (simp add: \<open>closedin X L\<close> closedin_frontier_of closedin_subset_topspace frontier_of_subset_closedin)
-    show "disjnt D C \<or> disjnt D (X frontier_of L)"
-      if "connectedin (subtopology X L) D" for D 
-    proof (rule ccontr)
-      assume "\<not> (disjnt D C \<or> disjnt D (X frontier_of L))"
-      moreover have "connectedin X D"
-        using connectedin_subtopology that by blast
-      ultimately show False
-        using that connected_components_of_maximal [of C X D] C
-        apply (simp add: disjnt_iff)
-        by (metis Diff_eq_empty_iff \<open>C \<subseteq> N\<close> \<open>N \<subseteq> L\<close> \<open>openin X N\<close> disjoint_iff frontier_of_openin_straddle_Int(2) subsetD)
-    qed
-  qed
-  then have "separated_between X (X frontier_of C) (topspace X - L)"
-    using separated_between_from_frontier_of_closed_subtopology separated_between_frontier_of_eq by blast
-  with \<open>closedin X T\<close>  
-    separated_between_frontier_of [OF Csub disC] 
-  show ?thesis
-    unfolding separated_between by (smt (verit) Diff_iff Lsub closedin_subset subset_iff)
-qed
-
-lemma wilder_locally_compact_component_thm:
-  assumes "locally_compact_space X" "Hausdorff_space X" 
-    and "C \<in> connected_components_of X" "compactin X C" "openin X W" "C \<subseteq> W"
-  obtains U V where "openin X U" "openin X V" "disjnt U V" "U \<union> V = topspace X" "C \<subseteq> U" "U \<subseteq> W"
-proof -
-  have "closedin X (topspace X - W)"
-    using \<open>openin X W\<close> by blast
-  moreover have "disjnt C (topspace X - W)"
-    using \<open>C \<subseteq> W\<close> disjnt_def by fastforce
-  ultimately have "separated_between X C (topspace X - W)"
-    using separated_between_compact_connected_component assms by blast
-  then show thesis
-    by (smt (verit, del_insts) DiffI disjnt_iff openin_subset separated_between_def subset_iff that)
-qed
-
-lemma compact_quasi_eq_connected_components_of:
-  assumes "locally_compact_space X" "Hausdorff_space X" "compactin X C"
-  shows "C \<in> quasi_components_of X \<longleftrightarrow> C \<in> connected_components_of X"
-proof -
-  have "compactin X (connected_component_of_set X x)" 
-    if "x \<in> topspace X" "compactin X (quasi_component_of_set X x)" for x
-  proof (rule closed_compactin)
-    show "compactin X (quasi_component_of_set X x)"
-      by (simp add: that)
-    show "connected_component_of_set X x \<subseteq> quasi_component_of_set X x"
-      by (simp add: connected_component_subset_quasi_component_of)
-    show "closedin X (connected_component_of_set X x)"
-      by (simp add: closedin_connected_component_of)
-  qed
-  moreover have "connected_component_of X x = quasi_component_of X x"
-    if \<section>: "x \<in> topspace X" "compactin X (connected_component_of_set X x)" for x
-  proof -
-    have "\<And>y. connected_component_of X x y \<Longrightarrow> quasi_component_of X x y"
-      by (simp add: connected_imp_quasi_component_of)
-    moreover have False if non: "\<not> connected_component_of X x y" and quasi: "quasi_component_of X x y" for y
-    proof -
-      have "y \<in> topspace X"
-        by (meson quasi_component_of_equiv that)
-      then have "closedin X {y}"
-        by (simp add: \<open>Hausdorff_space X\<close> compactin_imp_closedin)
-      moreover have "disjnt (connected_component_of_set X x) {y}"
-        by (simp add: non)
-      moreover have "\<not> separated_between X (connected_component_of_set X x) {y}"
-        using \<section> quasi separated_between_pointwise_left 
-        by (fastforce simp: quasi_component_nonseparated connected_component_of_refl)
-      ultimately show False
-        using assms by (metis \<section> connected_component_in_connected_components_of separated_between_compact_connected_component)
-    qed
-    ultimately show ?thesis
-      by blast
-  qed
-  ultimately show ?thesis
-    using \<open>compactin X C\<close> unfolding connected_components_of_def image_iff quasi_components_of_def by metis
-qed
-
-
-lemma boundary_bumping_theorem_closed_gen:
-  assumes "connected_space X" "locally_compact_space X" "Hausdorff_space X" "closedin X S" 
-    "S \<noteq> topspace X" and C: "compactin X C" "C \<in> connected_components_of (subtopology X S)"
-  shows "C \<inter> X frontier_of S \<noteq> {}"
-proof 
-  assume \<section>: "C \<inter> X frontier_of S = {}"
-  consider "C \<noteq> {}" "X frontier_of S \<subseteq> topspace X" | "C \<subseteq> topspace X" "S = {}"
-    using C by (metis frontier_of_subset_topspace nonempty_connected_components_of)
-  then show False
-  proof cases
-    case 1
-    have "separated_between (subtopology X S) C (X frontier_of S)"
-    proof (rule separated_between_compact_connected_component)
-      show "compactin (subtopology X S) C"
-        using C compact_imp_compactin_subtopology connected_components_of_subset by fastforce
-      show "closedin (subtopology X S) (X frontier_of S)"
-        by (simp add: \<open>closedin X S\<close> closedin_frontier_of closedin_subset_topspace frontier_of_subset_closedin)
-      show "disjnt C (X frontier_of S)"
-        using \<section> by (simp add: disjnt_def)
-    qed (use assms Hausdorff_space_subtopology locally_compact_space_closed_subset in auto)
-    then have "separated_between X C (X frontier_of S)"
-      using separated_between_from_closed_subtopology by auto
-    then have "X frontier_of S = {}"
-      using \<open>C \<noteq> {}\<close> \<open>connected_space X\<close> connected_space_separated_between by blast
-    moreover have "C \<subseteq> S"
-      using C connected_components_of_subset by fastforce
-    ultimately show False
-      using 1 assms by (metis closedin_subset connected_space_eq_frontier_eq_empty subset_empty)
-  next
-    case 2
-    then show False
-      using C connected_components_of_eq_empty by fastforce
-  qed
-qed
-
-lemma boundary_bumping_theorem_closed:
-  assumes "connected_space X" "compact_space X" "Hausdorff_space X" "closedin X S" 
-          "S \<noteq> topspace X" "C \<in> connected_components_of(subtopology X S)"
-  shows "C \<inter> X frontier_of S \<noteq> {}"
-  by (meson assms boundary_bumping_theorem_closed_gen closedin_compact_space closedin_connected_components_of
-            closedin_trans_full compact_imp_locally_compact_space)
-
-
-lemma intermediate_continuum_exists:
-  assumes "connected_space X" "locally_compact_space X" "Hausdorff_space X" 
-    and C: "compactin X C" "connectedin X C" "C \<noteq> {}" "C \<noteq> topspace X"
-    and U: "openin X U" "C \<subseteq> U"
-  obtains D where "compactin X D" "connectedin X D" "C \<subset> D" "D \<subset> U"
-proof -
-  have "C \<subseteq> topspace X"
-    by (simp add: C compactin_subset_topspace)
-  with C obtain a where a: "a \<in> topspace X" "a \<notin> C"
-    by blast
-  moreover have "compactin (subtopology X (U - {a})) C"
-    by (simp add: C U a compact_imp_compactin_subtopology subset_Diff_insert)
-  moreover have "Hausdorff_space (subtopology X (U - {a}))"
-    using Hausdorff_space_subtopology assms(3) by blast
-  moreover
-  have "locally_compact_space (subtopology X (U - {a}))"
-    by (rule locally_compact_space_open_subset)
-       (auto simp: locally_compact_Hausdorff_imp_regular_space open_in_Hausdorff_delete assms)
-  ultimately obtain V K where V: "openin X V" "a \<notin> V" "V \<subseteq> U" and K: "compactin X K" "a \<notin> K" "K \<subseteq> U" 
-    and cloK: "closedin (subtopology X (U - {a})) K" and "C \<subseteq> V" "V \<subseteq> K"
-    using locally_compact_space_compact_closed_compact [of "subtopology X (U - {a})"] assms
-    by (smt (verit, del_insts) Diff_empty compactin_subtopology open_in_Hausdorff_delete openin_open_subtopology subset_Diff_insert)
-  then obtain D where D: "D \<in> connected_components_of (subtopology X K)" and "C \<subseteq> D"
-    using C by (metis bot.extremum_unique connectedin_subtopology order.trans exists_connected_component_of_superset subtopology_topspace)
-  show thesis
-  proof
-    have cloD: "closedin (subtopology X K) D"
-      by (simp add: D closedin_connected_components_of)
-    then have XKD: "compactin (subtopology X K) D"
-      by (simp add: K closedin_compact_space compact_space_subtopology)
-    then show "compactin X D"
-      using compactin_subtopology_imp_compact by blast
-    show "connectedin X D"
-      using D connectedin_connected_components_of connectedin_subtopology by blast
-    have "K \<noteq> topspace X"
-      using K a by blast
-    moreover have "V \<subseteq> X interior_of K"
-      by (simp add: \<open>openin X V\<close> \<open>V \<subseteq> K\<close> interior_of_maximal)
-    ultimately have "C \<noteq> D"
-      using boundary_bumping_theorem_closed_gen [of X K C] D \<open>C \<subseteq> V\<close> 
-      by (auto simp add: assms K compactin_imp_closedin frontier_of_def)
-    then show "C \<subset> D"
-      using \<open>C \<subseteq> D\<close> by blast
-    have "D \<subseteq> U"
-      using K(3) \<open>closedin (subtopology X K) D\<close> closedin_imp_subset by blast
-    moreover have "D \<noteq> U"
-      using K XKD \<open>C \<subset> D\<close> assms
-      by (metis \<open>K \<noteq> topspace X\<close> cloD closedin_imp_subset compactin_imp_closedin connected_space_clopen_in
-                inf_bot_left inf_le2 subset_antisym)
-    ultimately
-    show "D \<subset> U" by blast
-  qed
-qed
-
-lemma boundary_bumping_theorem_gen:
-  assumes X: "connected_space X" "locally_compact_space X" "Hausdorff_space X" 
-   and "S \<subset> topspace X" and C: "C \<in> connected_components_of(subtopology X S)" 
-   and compC: "compactin X (X closure_of C)"
- shows "X frontier_of C \<inter> X frontier_of S \<noteq> {}"
-proof -
-  have Csub: "C \<subseteq> topspace X" "C \<subseteq> S" and "connectedin X C"
-    using C connectedin_connected_components_of connectedin_subset_topspace connectedin_subtopology
-    by fastforce+
-  have "C \<noteq> {}"
-    using C nonempty_connected_components_of by blast
-  obtain "X interior_of C \<subseteq> X interior_of S" "X closure_of C \<subseteq> X closure_of S"
-    by (simp add: Csub closure_of_mono interior_of_mono)
-  moreover have False if "X closure_of C \<subseteq> X interior_of S"
-  proof -
-    have "X closure_of C = C"
-      by (meson C closedin_connected_component_of_subtopology closure_of_eq interior_of_subset order_trans that)
-    with that have "C \<subseteq> X interior_of S"
-      by simp
-    then obtain D where  "compactin X D" and "connectedin X D" and "C \<subset> D" and "D \<subset> X interior_of S"
-      using intermediate_continuum_exists assms  \<open>X closure_of C = C\<close> compC Csub
-      by (metis \<open>C \<noteq> {}\<close> \<open>connectedin X C\<close> openin_interior_of psubsetE)
-    then have "D \<subseteq> C"
-      by (metis C \<open>C \<noteq> {}\<close> connected_components_of_maximal connectedin_subtopology disjnt_def inf.orderE interior_of_subset order_trans psubsetE)
-    then show False
-      using \<open>C \<subset> D\<close> by blast
-  qed
-  ultimately show ?thesis
-    by (smt (verit, ccfv_SIG) DiffI disjoint_iff_not_equal frontier_of_def subset_eq)
-qed
-
-lemma boundary_bumping_theorem:
-   "\<lbrakk>connected_space X; compact_space X; Hausdorff_space X; S \<subset> topspace X; 
-     C \<in> connected_components_of(subtopology X S)\<rbrakk>
-    \<Longrightarrow> X frontier_of C \<inter> X frontier_of S \<noteq> {}"
-  by (simp add: boundary_bumping_theorem_gen closedin_compact_space compact_imp_locally_compact_space)
 
 
 lemma (in Metric_space) t1_space_mtopology:
