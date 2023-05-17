@@ -5159,48 +5159,49 @@ qed
 
 lemma boundary_bumping_theorem_closed_gen:
   assumes "connected_space X" "locally_compact_space X" "Hausdorff_space X" "closedin X S" 
-    "S \<noteq> topspace X" "compactin X C" "C \<in> connected_components_of (subtopology X S)"
+    "S \<noteq> topspace X" and C: "compactin X C" "C \<in> connected_components_of (subtopology X S)"
   shows "C \<inter> X frontier_of S \<noteq> {}"
-oops
-  REPEAT STRIP_TAC THEN MP_TAC(ISPECL
-   [`subtopology X (S::A=>bool)`; `C::A=>bool`; `X frontier_of S::A=>bool`]
-       SEPARATED_BETWEEN_COMPACT_CONNECTED_COMPONENT) THEN
-  ASM_REWRITE_TAC[NOT_IMP] THEN REPEAT CONJ_TAC THENL
-   [MATCH_MP_TAC LOCALLY_COMPACT_SPACE_CLOSED_SUBSET THEN ASM_REWRITE_TAC[];
-    ASM_SIMP_TAC[HAUSDORFF_SPACE_SUBTOPOLOGY];
-    ASM_REWRITE_TAC[COMPACT_IN_SUBTOPOLOGY] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CONNECTED_COMPONENTS_OF_SUBSET) THEN
-    SIMP_TAC[TOPSPACE_SUBTOPOLOGY; SUBSET_INTER];
-    ASM_SIMP_TAC[CLOSED_IN_CLOSED_SUBTOPOLOGY; CLOSED_IN_FRONTIER_OF] THEN
-    ASM_SIMP_TAC[FRONTIER_OF_SUBSET_CLOSED_IN];
-    ASM SET_TAC[];
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP
-     SEPARATED_BETWEEN_FROM_CLOSED_SUBTOPOLOGY_FRONTIER)] THEN
-  ASM_SIMP_TAC[CONNECTED_SPACE_IMP_SEPARATED_BETWEEN_TRIVIAL] THEN
-  ASM_SIMP_TAC[CONNECTED_SPACE_FRONTIER_EQ_EMPTY; CLOSED_IN_SUBSET] THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CONNECTED_COMPONENTS_OF_SUBSET) THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP NONEMPTY_CONNECTED_COMPONENTS_OF) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP (SET_RULE `C \<in> S \<Longrightarrow> (S \<noteq> {})`)) THEN
-  REWRITE_TAC[CONNECTED_COMPONENTS_OF_EQ_EMPTY; TOPSPACE_SUBTOPOLOGY] THEN
-  SET_TAC[]);;
+proof 
+  assume \<section>: "C \<inter> X frontier_of S = {}"
+  consider "C \<noteq> {}" "X frontier_of S \<subseteq> topspace X" | "C \<subseteq> topspace X" "S = {}"
+    using C by (metis frontier_of_subset_topspace nonempty_connected_components_of)
+  then show False
+  proof cases
+    case 1
+    have "separated_between (subtopology X S) C (X frontier_of S)"
+    proof (rule separated_between_compact_connected_component)
+      show "compactin (subtopology X S) C"
+        using C compact_imp_compactin_subtopology connected_components_of_subset by fastforce
+      show "closedin (subtopology X S) (X frontier_of S)"
+        by (simp add: \<open>closedin X S\<close> closedin_frontier_of closedin_subset_topspace frontier_of_subset_closedin)
+      show "disjnt C (X frontier_of S)"
+        using \<section> by (simp add: disjnt_def)
+    qed (use assms Hausdorff_space_subtopology locally_compact_space_closed_subset in auto)
+    then have "separated_between X C (X frontier_of S)"
+      using separated_between_from_closed_subtopology by auto
+    then have "X frontier_of S = {}"
+      using \<open>C \<noteq> {}\<close> \<open>connected_space X\<close> connected_space_separated_between by blast
+    moreover have "C \<subseteq> S"
+      using C connected_components_of_subset by fastforce
+    ultimately show ?thesis
+      using 1 assms by (metis closedin_subset connected_space_eq_frontier_eq_empty subset_empty)
+  next
+    case 2
+    then show ?thesis
+      using C connected_components_of_eq_empty by fastforce
+  qed
+qed
 
 lemma boundary_bumping_theorem_closed:
-   "\<And>X S C::A=>bool.
-        connected_space X" "compact_space X" "Hausdorff_space X \<and>
-        closedin X S" "(S \<noteq> topspace X)" "C \<in> connected_components_of(subtopology X S)
-        \<Longrightarrow> \<not> (C \<inter> X frontier_of S = {})"
-oops
-  REPEAT GEN_TAC THEN STRIP_TAC THEN
-  MATCH_MP_TAC BOUNDARY_BUMPING_THEOREM_CLOSED_GEN THEN
-  ASM_SIMP_TAC[COMPACT_IMP_LOCALLY_COMPACT_SPACE] THEN
-  MATCH_MP_TAC CLOSED_IN_COMPACT_SPACE THEN ASM_REWRITE_TAC[] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_CONNECTED_COMPONENTS_OF) THEN
-  ASM_SIMP_TAC[CLOSED_IN_CLOSED_SUBTOPOLOGY]);;
+  assumes "connected_space X" "compact_space X" "Hausdorff_space X" "closedin X S" 
+          "S \<noteq> topspace X" "C \<in> connected_components_of(subtopology X S)"
+  shows "C \<inter> X frontier_of S \<noteq> {}"
+  by (meson assms boundary_bumping_theorem_closed_gen closedin_compact_space closedin_connected_components_of closedin_trans_full compact_imp_locally_compact_space)
 
 lemma intermediate_continuum_exists:
-   "\<And>X C U::A=>bool.
-        connected_space X" "locally_compact_space X" "Hausdorff_space X" "compactin X C" "connectedin X C" "(C \<noteq> {})" "(C \<noteq> topspace X)" "openin X U" "C \<subseteq> U
-        \<Longrightarrow> \<exists>D. compactin X D" "connectedin X D" "C \<subset> D" "D \<subset> U"
+  assumes "connected_space X" "locally_compact_space X" "Hausdorff_space X" 
+    and C: "compactin X C" "connectedin X C" "C \<noteq> {}" "C \<noteq> topspace X" "openin X U" "C \<subseteq> U"
+  obtains D where "compactin X D" "connectedin X D" "C \<subset> D" "D \<subset> U"
 oops
   REPEAT STRIP_TAC THEN
   FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP CONNECTED_IN_SUBSET_TOPSPACE) THEN
