@@ -5183,11 +5183,11 @@ proof
       using \<open>C \<noteq> {}\<close> \<open>connected_space X\<close> connected_space_separated_between by blast
     moreover have "C \<subseteq> S"
       using C connected_components_of_subset by fastforce
-    ultimately show ?thesis
+    ultimately show False
       using 1 assms by (metis closedin_subset connected_space_eq_frontier_eq_empty subset_empty)
   next
     case 2
-    then show ?thesis
+    then show False
       using C connected_components_of_eq_empty by fastforce
   qed
 qed
@@ -5196,46 +5196,63 @@ lemma boundary_bumping_theorem_closed:
   assumes "connected_space X" "compact_space X" "Hausdorff_space X" "closedin X S" 
           "S \<noteq> topspace X" "C \<in> connected_components_of(subtopology X S)"
   shows "C \<inter> X frontier_of S \<noteq> {}"
-  by (meson assms boundary_bumping_theorem_closed_gen closedin_compact_space closedin_connected_components_of closedin_trans_full compact_imp_locally_compact_space)
+  by (meson assms boundary_bumping_theorem_closed_gen closedin_compact_space closedin_connected_components_of
+            closedin_trans_full compact_imp_locally_compact_space)
+
 
 lemma intermediate_continuum_exists:
   assumes "connected_space X" "locally_compact_space X" "Hausdorff_space X" 
-    and C: "compactin X C" "connectedin X C" "C \<noteq> {}" "C \<noteq> topspace X" "openin X U" "C \<subseteq> U"
+    and C: "compactin X C" "connectedin X C" "C \<noteq> {}" "C \<noteq> topspace X"
+    and U: "openin X U" "C \<subseteq> U"
   obtains D where "compactin X D" "connectedin X D" "C \<subset> D" "D \<subset> U"
+proof -
+  have "C \<subseteq> topspace X"
+    by (simp add: assms(4) compactin_subset_topspace)
+  with C obtain a where a: "a \<in> topspace X" "a \<notin> C"
+    by blast
+  moreover have "compactin (subtopology X (U - {a})) C"
+    by (simp add: assms(4) assms(9) a compact_imp_compactin_subtopology subset_Diff_insert)
+  moreover have "Hausdorff_space (subtopology X (U - {a}))"
+    using Hausdorff_space_subtopology assms(3) by blast
+  moreover
+  have "locally_compact_space (subtopology X (U - {a}))"
+    by (simp add: assms(2) assms(3) assms(8) locally_compact_Hausdorff_imp_regular_space locally_compact_space_open_subset open_in_Hausdorff_delete)
+  ultimately obtain V K where V: "openin X V" "a \<notin> V" "V \<subseteq> U" and K: "compactin X K" "a \<notin> K" "K \<subseteq> U" 
+    and cloK: "closedin (subtopology X (U - {a})) K" and "C \<subseteq> V" "V \<subseteq> K"
+    using locally_compact_space_compact_closed_compact [of "subtopology X (U - {a})"] assms
+    by (smt (verit, del_insts) Diff_empty compactin_subtopology open_in_Hausdorff_delete openin_open_subtopology subset_Diff_insert)
+  then obtain D where D: "D \<in> connected_components_of (subtopology X K)" and "C \<subseteq> D"
+    using C by (metis bot.extremum_unique connectedin_subtopology dual_order.trans exists_connected_component_of_superset subtopology_topspace)
+  show thesis
+  proof
+    have "closedin (subtopology X K) D"
+      by (simp add: D closedin_connected_components_of)
+    then have "compactin (subtopology X K) D"
+      by (simp add: K closedin_compact_space compact_space_subtopology)
+    then show "compactin X D"
+      using compactin_subtopology_imp_compact by blast
+    show "connectedin X D"
+      using D connectedin_connected_components_of connectedin_subtopology by blast
+    have "C \<noteq> D"
+      using boundary_bumping_theorem_closed_gen [of X K C]
+      apply atomize
+      apply (simp add: assms K compactin_imp_closedin frontier_of_def)
+      apply safe
+      using K(2) a(1) apply blast
+       apply (simp add: D)
+      using V(1) \<open>C \<subseteq> V\<close> \<open>V \<subseteq> K\<close> interior_of_maximal by blast
+    then show "C \<subset> D"
+      using \<open>C \<subseteq> D\<close> by blast
+    have "D \<subseteq> U"
+      using K(3) \<open>closedin (subtopology X K) D\<close> closedin_imp_subset by blast
+    moreover have "D \<noteq> U"
+      by (metis K(2) K(3) \<open>C \<subset> D\<close> \<open>compactin (subtopology X K) D\<close> a(1) assms(1) assms(3) assms(8) bot.extremum_strict compactin_imp_closedin compactin_subtopology connected_space_clopen_in dual_order.antisym)
+    ultimately
+    show "D \<subset> U" by blast
+  qed
+qed
+
 oops
-  REPEAT STRIP_TAC THEN
-  FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP CONNECTED_IN_SUBSET_TOPSPACE) THEN
-  SUBGOAL_THEN `\<exists>a::A. a \<in> topspace X \<and> (a \<notin> C)` STRIP_ASSUME_TAC THENL
-   [ASM SET_TAC[]; ALL_TAC] THEN
-  MP_TAC(ISPEC `subtopology X (U DELETE (a::A))`
-        LOCALLY_COMPACT_SPACE_COMPACT_CLOSED_COMPACT) THEN
-  ASM_SIMP_TAC[HAUSDORFF_SPACE_SUBTOPOLOGY; COMPACT_IN_SUBTOPOLOGY] THEN
-  ASM_SIMP_TAC[LOCALLY_COMPACT_SPACE_OPEN_SUBSET; OPEN_IN_OPEN_SUBTOPOLOGY;
-               OPEN_IN_HAUSDORFF_DELETE; SUBSET_DELETE] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `C::A=>bool`) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`V::A=>bool`; `k::A=>bool`] THEN STRIP_TAC THEN
-  MP_TAC(SPECL [`subtopology X (k::A=>bool)`; `C::A=>bool`]
-        EXISTS_CONNECTED_COMPONENT_OF_SUPERSET) THEN
-  ASM_REWRITE_TAC[CONNECTED_IN_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY] THEN
-  ANTS_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `D::A=>bool` THEN
-  STRIP_TAC THEN
-    FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_CONNECTED_COMPONENTS_OF) THEN
-  DISCH_THEN(MP_TAC \<circ> MATCH_MP
-   (REWRITE_RULE[IMP_CONJ_ALT] CLOSED_IN_COMPACT_SPACE)) THEN
-  ASM_SIMP_TAC[COMPACT_SPACE_SUBTOPOLOGY] THEN
-  REWRITE_TAC[COMPACT_IN_SUBTOPOLOGY] THEN STRIP_TAC THEN
-  ASM_REWRITE_TAC[] THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CONNECTED_IN_CONNECTED_COMPONENTS_OF) THEN
-  ASM_REWRITE_TAC[CONNECTED_IN_SUBTOPOLOGY] THEN
-  DISCH_TAC THEN ASM_REWRITE_TAC[\<subset>] THEN REPEAT CONJ_TAC THENL
-   [ALL_TAC;
-    ASM SET_TAC[];
-    DISCH_THEN SUBST_ALL_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `U::A=>bool` \<circ>
-        GEN_REWRITE_RULE id [CONNECTED_SPACE_CLOPEN_IN]) THEN
-    ASM_SIMP_TAC[COMPACT_IN_IMP_CLOSED_IN] THEN ASM SET_TAC[]] THEN
   DISCH_THEN(SUBST_ALL_TAC \<circ> SYM) THEN
   MP_TAC(ISPECL [`X::A topology`; `k::A=>bool`; `C::A=>bool`]
         BOUNDARY_BUMPING_THEOREM_CLOSED_GEN) THEN
