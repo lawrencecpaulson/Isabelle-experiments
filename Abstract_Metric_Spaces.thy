@@ -5149,15 +5149,18 @@ proof -
       ultimately show False
         using assms by (metis \<section> connected_component_in_connected_components_of separated_between_compact_connected_component)
     qed
+    ultimately show ?thesis
+      by blast
+  qed
   ultimately show ?thesis
-    using \<open>compactin X C\<close> unfolding connected_components_of_def image_iff quasi_components_of_def by blast
+    using \<open>compactin X C\<close> unfolding connected_components_of_def image_iff quasi_components_of_def by metis
 qed
 
 
 lemma boundary_bumping_theorem_closed_gen:
-   "\<And>X S C::A=>bool.
-        connected_space X" "locally_compact_space X" "Hausdorff_space X" "closedin X S" "(S \<noteq> topspace X)" "compactin X C" "C \<in> connected_components_of(subtopology X S)
-        \<Longrightarrow> \<not> (C \<inter> X frontier_of S = {})"
+  assumes "connected_space X" "locally_compact_space X" "Hausdorff_space X" "closedin X S" 
+    "S \<noteq> topspace X" "compactin X C" "C \<in> connected_components_of (subtopology X S)"
+  shows "C \<inter> X frontier_of S \<noteq> {}"
 oops
   REPEAT STRIP_TAC THEN MP_TAC(ISPECL
    [`subtopology X (S::A=>bool)`; `C::A=>bool`; `X frontier_of S::A=>bool`]
