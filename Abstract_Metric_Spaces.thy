@@ -4423,11 +4423,44 @@ lemma k_space_discrete_topology: "k_space(discrete_topology U)"
 lemma metrizable_imp_k_space:
   assumes "metrizable_space X"
   shows "k_space X"
+proof -
+  obtain M d where "Metric_space M d" and Xeq: "X = Metric_space.mtopology M d"
+    using assms unfolding metrizable_space_def by metis
+  then interpret Metric_space M d 
+    by blast
+  show ?thesis
+    unfolding k_space Xeq
+  proof clarsimp
+    fix S
+    assume "S \<subseteq> M" and S: "\<forall>K. compactin mtopology K \<longrightarrow> closedin (subtopology mtopology K) (K \<inter> S)"
+    have "l \<in> S"
+      if \<sigma>: "range \<sigma> \<subseteq> S" and l: "limitin mtopology \<sigma> l sequentially" for \<sigma> l
+    proof -
+      define K where "K \<equiv> insert l (range \<sigma>)"
+      interpret submetric M d K
+        by (metis K_def MCauchy_imp_mbounded Metric_space.mbounded_subset_mspace Metric_space_axioms \<open>S \<subseteq> M\<close> convergent_imp_MCauchy l limitin_mspace mbounded_insert submetric.intro submetric_axioms.intro subset_trans that(1))
+      have "compactin mtopology K"
+        unfolding K_def
+        apply (rule compactin_sequence_with_limit [OF l order_refl])
+        using \<open>S \<subseteq> M\<close> that(1) by auto
+      then have "closedin (subtopology mtopology K) (K \<inter> S)"
+        by (simp add: S)
+      have "\<sigma> n \<in> K \<inter> S" for n
+        by (simp add: K_def range_subsetD \<sigma>)
+      moreover have "limitin sub.mtopology \<sigma> l sequentially"
+        by (metis (no_types, lifting) K_def \<open>S \<subseteq> M\<close> \<open>compactin mtopology K\<close> \<sigma> compactin_imp_mcomplete convergent_imp_MCauchy insertCI l sub.mcomplete_alt submetric.MCauchy_submetric submetric.limitin_submetric_iff submetric_axioms subset_insertI subset_trans)
+      ultimately have "l \<in> K \<inter> S"
+        by (metis \<open>closedin (subtopology mtopology K) (K \<inter> S)\<close> image_subset_iff mtopology_submetric sub.metric_closedin_iff_sequentially_closed)
+      then show ?thesis
+        by simp
+    qed
+    then show "closedin mtopology S"
+      unfolding metric_closedin_iff_sequentially_closed
+      using \<open>S \<subseteq> M\<close> by blast
+  qed
+qed
+
 oops
-  REWRITE_TAC[FORALL_METRIZABLE_SPACE] THEN X_GEN_TAC `m::A metric` THEN
-  REWRITE_TAC[K_SPACE] THEN X_GEN_TAC `s::A=>bool` THEN
-  REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN STRIP_TAC THEN
-  ASM_REWRITE_TAC[METRIC_CLOSED_IN_IFF_SEQUENTIALLY_CLOSED] THEN
   MAP_EVERY X_GEN_TAC [`a::num=>A`; `l::A`] THEN STRIP_TAC THEN
   FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(l::A) insert image a UNIV`) THEN
   ANTS_TAC THENL
