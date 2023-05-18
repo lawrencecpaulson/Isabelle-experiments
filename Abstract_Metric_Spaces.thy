@@ -4438,19 +4438,23 @@ proof -
     proof -
       define K where "K \<equiv> insert l (range \<sigma>)"
       interpret submetric M d K
-        by (metis K_def MCauchy_imp_mbounded Metric_space.mbounded_subset_mspace Metric_space_axioms \<open>S \<subseteq> M\<close> convergent_imp_MCauchy l limitin_mspace mbounded_insert submetric.intro submetric_axioms.intro subset_trans that(1))
+      proof
+        show "K \<subseteq> M"
+          unfolding K_def using l limitin_mspace \<open>S \<subseteq> M\<close> \<sigma> by blast
+      qed
       have "compactin mtopology K"
-        unfolding K_def
-        apply (rule compactin_sequence_with_limit [OF l order_refl])
-        using \<open>S \<subseteq> M\<close> that(1) by auto
-      then have "closedin (subtopology mtopology K) (K \<inter> S)"
-        by (simp add: S)
+        unfolding K_def using \<open>S \<subseteq> M\<close> \<sigma>
+        by (force intro: compactin_sequence_with_limit [OF l])
+      then have *: "closedin sub.mtopology (K \<inter> S)"
+        by (simp add: S mtopology_submetric)
       have "\<sigma> n \<in> K \<inter> S" for n
         by (simp add: K_def range_subsetD \<sigma>)
       moreover have "limitin sub.mtopology \<sigma> l sequentially"
-        by (metis (no_types, lifting) K_def \<open>S \<subseteq> M\<close> \<open>compactin mtopology K\<close> \<sigma> compactin_imp_mcomplete convergent_imp_MCauchy insertCI l sub.mcomplete_alt submetric.MCauchy_submetric submetric.limitin_submetric_iff submetric_axioms subset_insertI subset_trans)
+        using l 
+        unfolding sub.limit_metric_sequentially limit_metric_sequentially
+        by (force simp: K_def)
       ultimately have "l \<in> K \<inter> S"
-        by (metis \<open>closedin (subtopology mtopology K) (K \<inter> S)\<close> image_subset_iff mtopology_submetric sub.metric_closedin_iff_sequentially_closed)
+        by (meson * \<sigma> image_subsetI sub.metric_closedin_iff_sequentially_closed) 
       then show ?thesis
         by simp
     qed
@@ -4460,31 +4464,11 @@ proof -
   qed
 qed
 
-oops
-  MAP_EVERY X_GEN_TAC [`a::num=>A`; `l::A`] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(l::A) insert image a UNIV`) THEN
-  ANTS_TAC THENL
-   [MATCH_MP_TAC COMPACT_IN_SEQUENCE_WITH_LIMIT THEN
-    EXISTS_TAC `a::num=>A` THEN REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-    ASM SET_TAC[];
-    REWRITE_TAC[GSYM MTOPOLOGY_SUBMETRIC] THEN
-    REWRITE_TAC[METRIC_CLOSED_IN_IFF_SEQUENTIALLY_CLOSED] THEN
-    DISCH_THEN(MP_TAC \<circ> SPECL [`a::num=>A`; `l::A`] \<circ> CONJUNCT2) THEN
-    ANTS_TAC THENL [ALL_TAC; SIMP_TAC[IN_INTER]] THEN
-    CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-    ASM_REWRITE_TAC[LIMIT_SUBTOPOLOGY; MTOPOLOGY_SUBMETRIC] THEN
-    REWRITE_TAC[IN_INSERT] THEN MATCH_MP_TAC ALWAYS_EVENTUALLY THEN
-    REWRITE_TAC[] THEN SET_TAC[]]);;
+lemma (in Metric_space) k_space_mtopology: "k_space mtopology"
+  by (simp add: metrizable_imp_k_space metrizable_space_mtopology)
 
-lemma k_space_mtopology:
-   "k_space mtopology"
-oops
-  REWRITE_TAC[GSYM FORALL_METRIZABLE_SPACE; METRIZABLE_IMP_K_SPACE]);;
-
-lemma k_space_euclideanreal:
- (`k_space euclideanreal"
-oops
-  REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC; K_SPACE_MTOPOLOGY]);;
+lemma k_space_euclideanreal: "k_space (euclidean :: 'a::metric_space topology)"
+  using metrizable_imp_k_space metrizable_space_euclidean by auto
 
 lemma k_space_closed_subtopology:
    "k_space X \<and> closedin X s \<Longrightarrow> k_space(subtopology X s)"
