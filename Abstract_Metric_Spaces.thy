@@ -4360,7 +4360,7 @@ proof clarify
     then have *: "subtopology X K = subtopology (subtopology X {x \<in> topspace X. q x \<in> q ` K}) K"
       by (simp add: subtopology_subtopology)
     have **: "K \<inter> {x \<in> topspace X. q x \<in> S} =
-                  K \<inter> {x \<in> topspace (subtopology X {x \<in> topspace X. q x \<in> q ` K}). q x \<in> q ` K \<inter> S}"
+              K \<inter> {x \<in> topspace (subtopology X {x \<in> topspace X. q x \<in> q ` K}). q x \<in> q ` K \<inter> S}"
       by auto
     have "K \<subseteq> topspace X"
       by (simp add: compactin_subset_topspace that)
@@ -4393,35 +4393,29 @@ lemma k_space_perfect_map_image:
 lemma locally_compact_imp_k_space:
   assumes "locally_compact_space X"
   shows "k_space X"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[K_SPACE] THEN
-  X_GEN_TAC `s::A=>bool` THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-  GEN_REWRITE_TAC id [GSYM CONTRAPOS_THM] THEN
-  GEN_REWRITE_TAC (LAND_CONV \<circ> RAND_CONV) [GSYM CLOSURE_OF_SUBSET_EQ] THEN
-  ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[\<subseteq>; NOT_FORALL_THM; NOT_IMP; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `x::A` THEN STRIP_TAC THEN
-  SUBGOAL_THEN `(x::A) \<in> topspace X` ASSUME_TAC THENL
-   [ASM_MESON_TAC[CLOSURE_OF_SUBSET_TOPSPACE; \<subseteq>]; ALL_TAC] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [locally_compact_space]) THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `x::A`) THEN ASM_REWRITE_TAC[] THEN
-  DISCH_THEN(X_CHOOSE_THEN `u::A=>bool` MP_TAC) THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `k::A=>bool` THEN
-  STRIP_TAC THEN ASM_REWRITE_TAC[GSYM CLOSURE_OF_SUBSET_EQ] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `x::A` \<circ> REWRITE_RULE[\<subseteq>] \<circ> CONJUNCT2) THEN
-  ASM_REWRITE_TAC[IN_INTER; CLOSURE_OF_SUBTOPOLOGY] THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  ASM_REWRITE_TAC[SET_RULE `k \<inter> k \<inter> s = s \<inter> k`; IN_CLOSURE_OF] THEN
-  X_GEN_TAC `v::A=>bool` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [IN_CLOSURE_OF]) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_THEN(MP_TAC \<circ> SPEC `u \<inter> v::A=>bool`) THEN
-  ASM_SIMP_TAC[OPEN_IN_INTER] THEN ASM SET_TAC[]);;
+  unfolding k_space
+proof clarify
+  fix S
+  assume "S \<subseteq> topspace X" and S: "\<forall>K. compactin X K \<longrightarrow> closedin (subtopology X K) (K \<inter> S)"
+  have False if non: "\<not> (X closure_of S \<subseteq> S)"
+  proof -
+    obtain x where "x \<in> X closure_of S" "x \<notin> S"
+      using non by blast
+    then have "x \<in> topspace X"
+      by (simp add: in_closure_of)
+    then obtain K U where "openin X U" "compactin X K" "x \<in> U" "U \<subseteq> K"
+      by (meson assms locally_compact_space_def)
+    then show False
+      using \<open>x \<in> X closure_of S\<close>  openin_Int_closure_of_eq [OF \<open>openin X U\<close>]
+      by (smt (verit, ccfv_threshold) Int_iff S \<open>x \<notin> S\<close> closedin_Int_closure_of inf.orderE inf_assoc)
+  qed
+  then show "closedin X S"
+    using S \<open>S \<subseteq> topspace X\<close> closure_of_subset_eq by blast
+qed
 
 lemma compact_imp_k_space:
    "compact_space X \<Longrightarrow> k_space X"
-oops
-  MESON_TAC[LOCALLY_COMPACT_IMP_K_SPACE;
-            COMPACT_IMP_LOCALLY_COMPACT_SPACE]);;
+  by (simp add: compact_imp_locally_compact_space locally_compact_imp_k_space)
 
 lemma k_space_discrete_topology: "k_space(discrete_topology U)"
   by (simp add: k_space_open)
