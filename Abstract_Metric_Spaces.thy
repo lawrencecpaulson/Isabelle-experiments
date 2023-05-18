@@ -4471,107 +4471,103 @@ lemma k_space_euclideanreal: "k_space (euclidean :: 'a::metric_space topology)"
   using metrizable_imp_k_space metrizable_space_euclidean by auto
 
 lemma k_space_closed_subtopology:
-   "k_space X \<and> closedin X s \<Longrightarrow> k_space(subtopology X s)"
-oops
-  MAP_EVERY X_GEN_TAC [`X::A topology`; `c::A=>bool`] THEN
-  REWRITE_TAC[K_SPACE] THEN STRIP_TAC THEN
-  X_GEN_TAC `s::A=>bool` THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; SUBSET_INTER; COMPACT_IN_SUBTOPOLOGY] THEN
-  STRIP_TAC THEN
-  MATCH_MP_TAC CLOSED_IN_SUBSET_TOPSPACE THEN ASM_REWRITE_TAC[] THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[] THEN
-  X_GEN_TAC `k::A=>bool` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `k \<inter> c::A=>bool`) THEN
-  REWRITE_TAC[INTER_SUBSET] THEN ANTS_TAC THENL
-   [MP_TAC(ISPECL [`subtopology X (k::A=>bool)`; `k \<inter> c::A=>bool`]
-        CLOSED_IN_COMPACT_SPACE) THEN
-    ASM_SIMP_TAC[CLOSED_IN_SUBTOPOLOGY_INTER_CLOSED] THEN
-    ASM_SIMP_TAC[COMPACT_SPACE_SUBTOPOLOGY; COMPACT_IN_SUBTOPOLOGY];
-    ASM_SIMP_TAC[SET_RULE `s \<subseteq> c \<Longrightarrow> (k \<inter> c) \<inter> s = k \<inter> s`;
-                 SUBTOPOLOGY_SUBTOPOLOGY] THEN
-    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] CLOSED_IN_TRANS) THEN
-    REWRITE_TAC[SET_RULE `c \<inter> k \<inter> c = k \<inter> c`] THEN
-    ASM_SIMP_TAC[CLOSED_IN_SUBTOPOLOGY_INTER_CLOSED]]);;
+  assumes "k_space X" "closedin X C"
+  shows "k_space (subtopology X C)"
+unfolding k_space compactin_subtopology
+proof clarsimp
+  fix S
+  assume Ssub: "S \<subseteq> topspace X" "S \<subseteq> C"
+      and S: "\<forall>K. compactin X K \<and> K \<subseteq> C \<longrightarrow> closedin (subtopology (subtopology X C) K) (K \<inter> S)"
+  have "closedin (subtopology X K) (K \<inter> S)" if "compactin X K" for K
+  proof -
+    have "closedin (subtopology (subtopology X C) (K \<inter> C)) ((K \<inter> C) \<inter> S)"
+      by (simp add: S \<open>closedin X C\<close> compact_Int_closedin that)
+    then show ?thesis
+      using \<open>closedin X C\<close> Ssub by (auto simp add: closedin_subtopology)
+  qed
+  then show "closedin (subtopology X C) S"
+    by (metis Ssub \<open>k_space X\<close> closedin_subset_topspace k_space_def)
+qed
 
 lemma k_space_subtopology:
-   "(\<forall>t. t \<subseteq> topspace X \<and> t \<subseteq> s \<and>
-             (\<forall>k. compactin X k
-                  \<Longrightarrow> closedin (subtopology X (k \<inter> s)) (k \<inter> t))
-             \<Longrightarrow> closedin (subtopology X s) t) \<and>
-        (\<forall>k. compactin X k
-             \<Longrightarrow> k_space(subtopology X (k \<inter> s)))
-        \<Longrightarrow> k_space(subtopology X s)"
+   "(\<forall>T. T \<subseteq> topspace X \<and> T \<subseteq> S \<and>
+             (\<forall>K. compactin X K
+                  \<Longrightarrow> closedin (subtopology X (K \<inter> S)) (K \<inter> T))
+             \<Longrightarrow> closedin (subtopology X S) T) \<and>
+        (\<forall>K. compactin X K
+             \<Longrightarrow> k_space(subtopology X (K \<inter> S)))
+        \<Longrightarrow> k_space(subtopology X S)"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[K_SPACE] THEN
   X_GEN_TAC `u::A=>bool` THEN
   REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; SUBSET_INTER; COMPACT_IN_SUBTOPOLOGY] THEN
   STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[] THEN
-  X_GEN_TAC `k::A=>bool` THEN DISCH_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ>
+  X_GEN_TAC `K::A=>bool` THEN DISCH_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ>
     GEN_REWRITE_RULE RAND_CONV [K_SPACE] \<circ>
-    SPEC `k::A=>bool`) THEN
+    SPEC `K::A=>bool`) THEN
   ASM_REWRITE_TAC[] THEN DISCH_THEN MATCH_MP_TAC THEN
   ASM_REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY] THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; X_GEN_TAC `c::A=>bool`] THEN
+  CONJ_TAC THENL [ASM SET_TAC[]; X_GEN_TAC `C::A=>bool`] THEN
   REWRITE_TAC[COMPACT_IN_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY; SUBSET_INTER] THEN
-  STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> SPEC `c::A=>bool`) THEN
+  STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> SPEC `C::A=>bool`) THEN
   ASM_REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY] THEN
   MATCH_MP_TAC EQ_IMP THEN BINOP_TAC THENL [AP_TERM_TAC; ALL_TAC] THEN
   ASM SET_TAC[]);;
 
 lemma k_space_subtopology_open:
-   "(\<forall>t. t \<subseteq> topspace X \<and> t \<subseteq> s \<and>
-             (\<forall>k. compactin X k
-                  \<Longrightarrow> openin (subtopology X (k \<inter> s)) (k \<inter> t))
-             \<Longrightarrow> openin (subtopology X s) t) \<and>
-        (\<forall>k. compactin X k
-             \<Longrightarrow> k_space(subtopology X (k \<inter> s)))
-        \<Longrightarrow> k_space(subtopology X s)"
+   "(\<forall>T. T \<subseteq> topspace X \<and> T \<subseteq> S \<and>
+             (\<forall>K. compactin X K
+                  \<Longrightarrow> openin (subtopology X (K \<inter> S)) (K \<inter> T))
+             \<Longrightarrow> openin (subtopology X S) T) \<and>
+        (\<forall>K. compactin X K
+             \<Longrightarrow> k_space(subtopology X (K \<inter> S)))
+        \<Longrightarrow> k_space(subtopology X S)"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[K_SPACE_OPEN] THEN
   X_GEN_TAC `u::A=>bool` THEN
   REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; SUBSET_INTER; COMPACT_IN_SUBTOPOLOGY] THEN
   STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[] THEN
-  X_GEN_TAC `k::A=>bool` THEN DISCH_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ>
+  X_GEN_TAC `K::A=>bool` THEN DISCH_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ>
     GEN_REWRITE_RULE RAND_CONV [K_SPACE_OPEN] \<circ>
-    SPEC `k::A=>bool`) THEN
+    SPEC `K::A=>bool`) THEN
   ASM_REWRITE_TAC[] THEN DISCH_THEN MATCH_MP_TAC THEN
   ASM_REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY] THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; X_GEN_TAC `c::A=>bool`] THEN
+  CONJ_TAC THENL [ASM SET_TAC[]; X_GEN_TAC `C::A=>bool`] THEN
   REWRITE_TAC[COMPACT_IN_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY; SUBSET_INTER] THEN
-  STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> SPEC `c::A=>bool`) THEN
+  STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> SPEC `C::A=>bool`) THEN
   ASM_REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY] THEN
   MATCH_MP_TAC EQ_IMP THEN BINOP_TAC THENL [AP_TERM_TAC; ALL_TAC] THEN
   ASM SET_TAC[]);;
 
 lemma k_space_open_subtopology:
    "(kc_space X \<or> Hausdorff_space X \<or> regular_space X) \<and>
-        k_space X \<and> openin X s
-        \<Longrightarrow> k_space(subtopology X s)"
+        k_space X \<and> openin X S
+        \<Longrightarrow> k_space(subtopology X S)"
 oops
   lemma lemma:
-   "\<And>X (v::A=>bool).
-          kc_space X \<and> compact_space X \<and> openin X v
-          \<Longrightarrow> k_space(subtopology X v)"
+   "\<And>X (V::A=>bool).
+          kc_space X \<and> compact_space X \<and> openin X V
+          \<Longrightarrow> k_space(subtopology X V)"
 oops
     REPEAT STRIP_TAC THEN
     REWRITE_TAC[K_SPACE; TOPSPACE_SUBTOPOLOGY; SUBTOPOLOGY_SUBTOPOLOGY;
                 COMPACT_IN_SUBTOPOLOGY; SUBSET_INTER] THEN
-    X_GEN_TAC `s::A=>bool` THEN
-    SIMP_TAC[SET_RULE `k \<subseteq> v \<Longrightarrow> v \<inter> k = k`] THEN
+    X_GEN_TAC `S::A=>bool` THEN
+    SIMP_TAC[SET_RULE `K \<subseteq> V \<Longrightarrow> V \<inter> K = K`] THEN
     DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC (LABEL_TAC "*")) THEN
     FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP OPEN_IN_SUBSET) THEN
     SUBGOAL_THEN
-     `s::A=>bool = v \<inter> ((topspace X - v) \<union> s)` SUBST1_TAC
+     `S::A=>bool = V \<inter> ((topspace X - V) \<union> S)` SUBST1_TAC
     THENL [ASM SET_TAC[]; MATCH_MP_TAC CLOSED_IN_SUBTOPOLOGY_INTER_CLOSED] THEN
     MATCH_MP_TAC COMPACT_IN_IMP_CLOSED_IN_GEN THEN ASM_REWRITE_TAC[] THEN
     ASM_REWRITE_TAC[compactin; UNION_SUBSET; SUBSET_DIFF] THEN
     X_GEN_TAC `U:(A=>bool)->bool` THEN STRIP_TAC THEN
-    SUBGOAL_THEN `compactin X (topspace X - v::A=>bool)` MP_TAC THENL
+    SUBGOAL_THEN `compactin X (topspace X - V::A=>bool)` MP_TAC THENL
      [MATCH_MP_TAC CLOSED_IN_COMPACT_SPACE THEN
       ASM_SIMP_TAC[CLOSED_IN_DIFF; CLOSED_IN_TOPSPACE];
       REWRITE_TAC[compactin; SUBSET_DIFF]] THEN
     DISCH_THEN(MP_TAC \<circ> SPEC `U:(A=>bool)->bool`) THEN
-    ASM_SIMP_TAC[SET_RULE `s \<subseteq> t \<Longrightarrow> (t - u) \<inter> s = s - u`] THEN
+    ASM_SIMP_TAC[SET_RULE `S \<subseteq> T \<Longrightarrow> (T - u) \<inter> S = S - u`] THEN
     DISCH_THEN(X_CHOOSE_THEN `V1:(A=>bool)->bool` STRIP_ASSUME_TAC) THEN
     REMOVE_THEN "*" (MP_TAC \<circ> SPEC `topspace X - \<Union> V1::A=>bool`) THEN
     SUBGOAL_THEN `openin X (\<Union> V1::A=>bool)` ASSUME_TAC THENL
@@ -4591,23 +4587,23 @@ in
 
   REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   MATCH_MP_TAC K_SPACE_SUBTOPOLOGY_OPEN THEN CONJ_TAC THENL
-   [X_GEN_TAC `t::A=>bool` THEN STRIP_TAC THEN
+   [X_GEN_TAC `T::A=>bool` THEN STRIP_TAC THEN
     MATCH_MP_TAC OPEN_IN_SUBSET_TOPSPACE THEN ASM_REWRITE_TAC[] THEN
     FIRST_X_ASSUM(MATCH_MP_TAC \<circ> GEN_REWRITE_RULE id
      [K_SPACE_OPEN]) THEN
-    ASM_REWRITE_TAC[] THEN X_GEN_TAC `k::A=>bool` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `k::A=>bool`) THEN ASM_REWRITE_TAC[] THEN
+    ASM_REWRITE_TAC[] THEN X_GEN_TAC `K::A=>bool` THEN DISCH_TAC THEN
+    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `K::A=>bool`) THEN ASM_REWRITE_TAC[] THEN
     MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] OPEN_IN_TRANS) THEN
     ASM_SIMP_TAC[OPEN_IN_SUBTOPOLOGY_INTER_OPEN];
-    X_GEN_TAC `k::A=>bool` THEN DISCH_TAC THEN
+    X_GEN_TAC `K::A=>bool` THEN DISCH_TAC THEN
     FIRST_X_ASSUM DISJ_CASES_TAC THENL
-     [MP_TAC(ISPECL [`subtopology X (k::A=>bool)`; `k \<inter> s::A=>bool`]
+     [MP_TAC(ISPECL [`subtopology X (K::A=>bool)`; `K \<inter> S::A=>bool`]
         lemma) THEN
       ASM_SIMP_TAC[KC_SPACE_SUBTOPOLOGY; OPEN_IN_SUBTOPOLOGY_INTER_OPEN] THEN
       ASM_SIMP_TAC[COMPACT_SPACE_SUBTOPOLOGY] THEN
       REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY; INTER_ACI];
       MATCH_MP_TAC LOCALLY_COMPACT_IMP_K_SPACE THEN
-      ONCE_REWRITE_TAC[SET_RULE `k \<inter> s = k \<inter> (k \<inter> s)`] THEN
+      ONCE_REWRITE_TAC[SET_RULE `K \<inter> S = K \<inter> (K \<inter> S)`] THEN
       ONCE_REWRITE_TAC[GSYM SUBTOPOLOGY_SUBTOPOLOGY] THEN
       MATCH_MP_TAC LOCALLY_COMPACT_SPACE_OPEN_SUBSET THEN
       ASM_SIMP_TAC[OPEN_IN_SUBTOPOLOGY_INTER_OPEN] THEN
@@ -4618,15 +4614,15 @@ in
 
 lemma k_kc_space_subtopology:
    "k_space X \<and> kc_space X \<and>
-        (openin X s \<or> closedin X s)
-        \<Longrightarrow> k_space(subtopology X s) \<and> kc_space(subtopology X s)"
+        (openin X S \<or> closedin X S)
+        \<Longrightarrow> k_space(subtopology X S) \<and> kc_space(subtopology X S)"
 oops
   MESON_TAC[K_SPACE_OPEN_SUBTOPOLOGY; K_SPACE_CLOSED_SUBTOPOLOGY;
             KC_SPACE_SUBTOPOLOGY]);;
 
 lemma k_space_as_quotient_explicit:
    "k_space X \<longleftrightarrow>
-        quotient_map (sum_topology {k. compactin X k} (subtopology X),
+        quotient_map (sum_topology {K. compactin X K} (subtopology X),
                       X)
                      snd"
 oops
