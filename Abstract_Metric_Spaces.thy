@@ -4366,12 +4366,12 @@ proof clarify
       by (simp add: compactin_subset_topspace that)
     show ?thesis
       unfolding * **
-      apply (intro closedin_subtopology_Int_closed)
-      apply (intro closedin_continuous_map_preimage [where Y = "subtopology Y (image q K)"])
-       apply (simp add: continuous_map_in_subtopology)
-       apply (auto simp: )
-       apply (simp add: continuous_map_from_subtopology q quotient_imp_continuous_map)
-      by (meson S image_compactin q quotient_imp_continuous_map that)
+    proof (intro closedin_continuous_map_preimage closedin_subtopology_Int_closed)
+      show "continuous_map (subtopology X {x \<in> topspace X. q x \<in> q ` K}) (subtopology Y (q ` K)) q"
+        by (auto simp add: continuous_map_in_subtopology continuous_map_from_subtopology q quotient_imp_continuous_map)
+      show "closedin (subtopology Y (q ` K)) (q ` K \<inter> S)"
+        by (meson S image_compactin q quotient_imp_continuous_map that)
+    qed
   qed
   then have "closedin X {x. x \<in> topspace X \<and> q x \<in> S}"
     by (metis (no_types, lifting) X k_space mem_Collect_eq subsetI)
@@ -4379,29 +4379,20 @@ proof clarify
 qed
 
 lemma k_space_retraction_map_image:
-   "retraction_map X Y r \<and> k_space X \<Longrightarrow> k_space Y"
-oops
-  MESON_TAC[K_SPACE_QUOTIENT_MAP_IMAGE;
-            RETRACTION_IMP_QUOTIENT_MAP]);;
+   "\<lbrakk>retraction_map X Y r; k_space X\<rbrakk> \<Longrightarrow> k_space Y"
+  using k_space_quotient_map_image retraction_imp_quotient_map by blast
 
 lemma homeomorphic_k_space:
-   "\<And>(X::A topology) (Y:B topology).
-      X homeomorphic_space Y
-      \<Longrightarrow> (k_space X \<longleftrightarrow> k_space Y)"
-oops
-  REWRITE_TAC[homeomorphic_space; HOMEOMORPHIC_MAPS_MAP] THEN
-  REWRITE_TAC[GSYM SECTION_AND_RETRACTION_EQ_HOMEOMORPHIC_MAP] THEN
-  MESON_TAC[K_SPACE_RETRACTION_MAP_IMAGE]);;
+   "X homeomorphic_space Y \<Longrightarrow> k_space X \<longleftrightarrow> k_space Y"
+  by (meson homeomorphic_map_def homeomorphic_space homeomorphic_space_sym k_space_quotient_map_image)
 
 lemma k_space_perfect_map_image:
-   "\<And>X Y f.
-        k_space X \<and> perfect_map X Y f
-        \<Longrightarrow> k_space Y"
-oops
-  MESON_TAC[PERFECT_IMP_QUOTIENT_MAP; K_SPACE_QUOTIENT_MAP_IMAGE]);;
+   "\<lbrakk>k_space X; perfect_map X Y f\<rbrakk> \<Longrightarrow> k_space Y"
+  using k_space_quotient_map_image perfect_imp_quotient_map by blast
 
 lemma locally_compact_imp_k_space:
-   "locally_compact_space X \<Longrightarrow> k_space X"
+  assumes "locally_compact_space X"
+  shows "k_space X"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[K_SPACE] THEN
   X_GEN_TAC `s::A=>bool` THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
@@ -4432,14 +4423,12 @@ oops
   MESON_TAC[LOCALLY_COMPACT_IMP_K_SPACE;
             COMPACT_IMP_LOCALLY_COMPACT_SPACE]);;
 
-lemma k_space_discrete_topology:
-   "\<And>u::A=>bool. k_space(discrete_topology u)"
-oops
-  SIMP_TAC[K_SPACE; CLOSED_IN_DISCRETE_TOPOLOGY;
-           TOPSPACE_DISCRETE_TOPOLOGY]);;
+lemma k_space_discrete_topology: "k_space(discrete_topology U)"
+  by (simp add: k_space_open)
 
 lemma metrizable_imp_k_space:
-   "metrizable_space X \<Longrightarrow> k_space X"
+  assumes "metrizable_space X"
+  shows "k_space X"
 oops
   REWRITE_TAC[FORALL_METRIZABLE_SPACE] THEN X_GEN_TAC `m::A metric` THEN
   REWRITE_TAC[K_SPACE] THEN X_GEN_TAC `s::A=>bool` THEN
@@ -4461,7 +4450,7 @@ oops
     REWRITE_TAC[] THEN SET_TAC[]]);;
 
 lemma k_space_mtopology:
-   "k_spacemtopology"
+   "k_space mtopology"
 oops
   REWRITE_TAC[GSYM FORALL_METRIZABLE_SPACE; METRIZABLE_IMP_K_SPACE]);;
 
