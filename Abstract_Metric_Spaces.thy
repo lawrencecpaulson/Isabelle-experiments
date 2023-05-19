@@ -4702,7 +4702,6 @@ proof -
 qed
 
 
-
 lemma continuous_map_from_k_space:
   assumes "k_space X" and f: "\<And>K. compactin X K \<Longrightarrow> continuous_map(subtopology X K) Y f"
   shows "continuous_map X Y f"
@@ -4733,97 +4732,121 @@ qed
 
 
 lemma closed_map_into_k_space:
-   "k_space Y" "f ` (topspace X) \<subseteq> topspace Y \<and>
-      (\<forall>k. compactin Y k
-           \<Longrightarrow> closed_map(subtopology X {x \<in> topspace X. f x \<in> k}, subtopology Y k) f)
-      \<Longrightarrow> closed_map X Y f"
-oops
-  REWRITE_TAC[K_SPACE] THEN REPEAT STRIP_TAC THEN
-  REWRITE_TAC[closed_map] THEN X_GEN_TAC `c::A=>bool` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN CONJ_TAC THENL
-   [FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN ASM SET_TAC[];
-    X_GEN_TAC `k::B=>bool` THEN DISCH_TAC] THEN
-  SUBGOAL_THEN
-   `k \<inter> f ` c =
-    image f ({x \<in> topspace X. f x \<in> k} \<inter> c)`
-  SUBST1_TAC THENL
-   [FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN ASM SET_TAC[];
-    ALL_TAC] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `k::B=>bool`) THEN
-  ASM_REWRITE_TAC[closed_map] THEN DISCH_THEN MATCH_MP_TAC THEN
-  ASM_SIMP_TAC[CLOSED_IN_SUBTOPOLOGY_INTER_CLOSED]);;
+  assumes "k_space Y" and fim: "f ` (topspace X) \<subseteq> topspace Y"
+    and f: "\<And>K. compactin Y K
+                \<Longrightarrow> closed_map(subtopology X {x \<in> topspace X. f x \<in> K}) (subtopology Y K) f"
+  shows "closed_map X Y f"
+  unfolding closed_map_def
+proof (intro strip)
+  fix C
+  assume "closedin X C"
+  have "closedin (subtopology Y K) (K \<inter> f ` C)"
+    if "compactin Y K" for K
+  proof -
+    have eq: "K \<inter> f ` C = f ` ({x \<in> topspace X. f x \<in> K} \<inter> C)"
+      using \<open>closedin X C\<close> closedin_subset by auto
+    show ?thesis
+      unfolding eq
+      by (metis (no_types, lifting) \<open>closedin X C\<close> closed_map_def closedin_subtopology f inf_commute that)
+  qed
+  then show "closedin Y (f ` C)"
+    using \<open>k_space Y\<close> unfolding k_space
+    by (meson \<open>closedin X C\<close> closedin_subset dual_order.trans fim image_mono)
+qed
 
+
+text \<open>Essentially the same proof\<close>
 lemma open_map_into_k_space:
-   "k_space Y" "f ` (topspace X) \<subseteq> topspace Y \<and>
-      (\<forall>k. compactin Y k
-           \<Longrightarrow> open_map(subtopology X {x \<in> topspace X. f x \<in> k},
-                        subtopology Y k) f)
-      \<Longrightarrow> open_map X Y f"
-oops
-  REWRITE_TAC[K_SPACE_OPEN] THEN REPEAT STRIP_TAC THEN
-  REWRITE_TAC[open_map] THEN X_GEN_TAC `c::A=>bool` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN CONJ_TAC THENL
-   [FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET) THEN ASM SET_TAC[];
-    X_GEN_TAC `k::B=>bool` THEN DISCH_TAC] THEN
-  SUBGOAL_THEN
-   `k \<inter> f ` c =
-    image f ({x \<in> topspace X. f x \<in> k} \<inter> c)`
-  SUBST1_TAC THENL
-   [FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET) THEN ASM SET_TAC[];
-    ALL_TAC] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `k::B=>bool`) THEN
-  ASM_REWRITE_TAC[open_map] THEN DISCH_THEN MATCH_MP_TAC THEN
-  ASM_SIMP_TAC[OPEN_IN_SUBTOPOLOGY_INTER_OPEN]);;
+  assumes "k_space Y" and fim: "f ` (topspace X) \<subseteq> topspace Y"
+    and f: "\<And>K. compactin Y K
+             \<Longrightarrow> open_map (subtopology X {x \<in> topspace X. f x \<in> K}) (subtopology Y K) f"
+  shows "open_map X Y f"
+  unfolding open_map_def
+proof (intro strip)
+  fix C
+  assume "openin X C"
+  have "openin (subtopology Y K) (K \<inter> f ` C)"
+    if "compactin Y K" for K
+  proof -
+    have eq: "K \<inter> f ` C = f ` ({x \<in> topspace X. f x \<in> K} \<inter> C)"
+      using \<open>openin X C\<close> openin_subset by auto
+    show ?thesis
+      unfolding eq
+      by (metis (no_types, lifting) \<open>openin X C\<close> open_map_def openin_subtopology f inf_commute that)
+  qed
+  then show "openin Y (f ` C)"
+    using \<open>k_space Y\<close> unfolding k_space_open
+    by (meson \<open>openin X C\<close> openin_subset dual_order.trans fim image_mono)
+qed
 
 lemma quotient_map_into_k_space:
-   "k_space Y" "continuous_map X Y f \<and>
-     f ` (topspace X) = topspace Y \<and>
-     (\<forall>k. compactin Y k
-          \<Longrightarrow> quotient_map(subtopology X {x \<in> topspace X. f x \<in> k},
-                           subtopology Y k) f)
-     \<Longrightarrow> quotient_map X Y f"
-oops
-  REWRITE_TAC[K_SPACE] THEN REPEAT STRIP_TAC THEN
-  ASM_REWRITE_TAC[QUOTIENT_MAP] THEN X_GEN_TAC `c::B=>bool` THEN DISCH_TAC THEN
-  EQ_TAC THENL
-   [DISCH_TAC; ASM_MESON_TAC[CLOSED_IN_CONTINUOUS_MAP_PREIMAGE]] THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[] THEN
-  X_GEN_TAC `k::B=>bool` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `k::B=>bool`) THEN
-  ASM_REWRITE_TAC[QUOTIENT_MAP; TOPSPACE_SUBTOPOLOGY; SUBSET_INTER] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `k \<inter> c::B=>bool` \<circ> CONJUNCT2) THEN
-  ANTS_TAC THENL [ASM SET_TAC[]; DISCH_THEN(SUBST1_TAC \<circ> SYM)] THEN
-  REWRITE_TAC[SET_RULE
-   `{x. x \<in> topspace X \<inter> {x \<in> topspace X. f x \<in> k} \<and>
-         f x \<in> k \<inter> c} =
-    {x \<in> topspace X. f x \<in> k} \<inter>
-    {x \<in> topspace X. f x \<in> c}`] THEN
-  ASM_SIMP_TAC[CLOSED_IN_SUBTOPOLOGY_INTER_CLOSED]);;
+  fixes f :: "'a \<Rightarrow> 'b"
+  assumes "k_space Y" and cmf: "continuous_map X Y f" 
+    and fim: "f ` (topspace X) = topspace Y"
+    and f: "\<And>k. compactin Y k
+                 \<Longrightarrow> quotient_map (subtopology X {x \<in> topspace X. f x \<in> k})
+                                  (subtopology Y k) f"
+  shows "quotient_map X Y f"
+proof -
+  have "closedin Y C"
+    if "C \<subseteq> topspace Y" and K: "closedin X {x \<in> topspace X. f x \<in> C}" for C
+  proof -
+    have "closedin (subtopology Y K) (K \<inter> C)" if "compactin Y K" for K
+    proof -
+      define Kf where "Kf \<equiv> {x \<in> topspace X. f x \<in> K}"
+      have *: "K \<inter> C \<subseteq> topspace Y \<and> K \<inter> C \<subseteq> K"
+        using \<open>C \<subseteq> topspace Y\<close> by blast
+      have dd: "{x \<in> topspace X \<inter> Kf. f x \<in> K \<inter> C} = Kf \<inter> {x \<in> topspace X. f x \<in> C}"
+        by (auto simp add: Kf_def)
+      have eq: "closedin (subtopology Y K) (K \<inter> C) \<longleftrightarrow>
+                closedin (subtopology X Kf) (Kf \<inter> {x \<in> topspace X. f x \<in> C})"
+        apply safe
+         apply (simp add: K closedin_subtopology_Int_closed)
+        sorry
+      then have eq: "closedin (subtopology Y K) (K \<inter> C) \<longleftrightarrow>
+                closedin (subtopology X Kf) {x \<in> topspace X \<inter> Kf. f x \<in> K \<inter> C}"
+        using dd by auto
+        apply (smt (verit) "*" Collect_cong Kf_def compactin_subset_topspace f quotient_map_closedin that topspace_subtopology topspace_subtopology_subset)
+        using closedin_subtopology_Int_closed f *
+        by (smt (verit, ccfv_SIG) Collect_cong Kf_def inf_assoc inf_le1 quotient_map_closedin subtopology_restrict that topspace_subtopology_subset)
+      have "closedin (subtopology X Kf) {x \<in> topspace X. x \<in> Kf \<and> f x \<in> K \<and> f x \<in> C}"
+        using K closedin_subtopology by (fastforce simp add: Kf_def)
+      then show ?thesis
+        unfolding eq by force
+    qed
+    then show ?thesis 
+      using \<open>k_space Y\<close> that unfolding k_space by blast
+  qed
+  moreover have "closedin X {x \<in> topspace X. f x \<in> K}"
+    if "K \<subseteq> topspace Y" "closedin Y K" for K
+    using that cmf continuous_map_closedin by fastforce
+  ultimately show ?thesis
+    unfolding quotient_map_closedin using fim by blast
+qed
+
 
 lemma quotient_map_into_k_space_eq:
-   "k_space Y" "kc_space Y
-        \<Longrightarrow> (quotient_map X Y f \<longleftrightarrow>
-             continuous_map X Y f \<and>
-             f ` (topspace X) = topspace Y \<and>
-             \<forall>k. compactin Y k
-                  \<Longrightarrow> quotient_map
-                       (subtopology X {x \<in> topspace X. f x \<in> k},
-                        subtopology Y k) f)"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL
-   [ASM_SIMP_TAC[QUOTIENT_IMP_SURJECTIVE_MAP; QUOTIENT_IMP_CONTINUOUS_MAP] THEN
-    REPEAT STRIP_TAC THEN MATCH_MP_TAC QUOTIENT_MAP_RESTRICTION THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[kc_space]) THEN ASM_SIMP_TAC[];
-    MATCH_MP_TAC QUOTIENT_MAP_INTO_K_SPACE THEN ASM_REWRITE_TAC[]]);;
+  assumes "k_space Y" "kc_space Y"
+  shows "quotient_map X Y f \<longleftrightarrow>
+         continuous_map X Y f \<and> f ` (topspace X) = topspace Y \<and>
+         (\<forall>K. compactin Y K
+              \<longrightarrow> quotient_map (subtopology X {x \<in> topspace X. f x \<in> K}) (subtopology Y K) f)"
+  using assms
+  by (auto simp: kc_space_def intro: quotient_map_into_k_space quotient_map_restriction
+       dest: quotient_imp_continuous_map quotient_imp_surjective_map)
 
 lemma open_map_into_k_space_eq:
    "k_space Y
-        \<Longrightarrow> (open_map X Y f \<longleftrightarrow>
-             f ` (topspace X) \<subseteq> topspace Y \<and>
-             \<forall>k. compactin Y k
-                  \<Longrightarrow> open_map
-                       (subtopology X {x \<in> topspace X. f x \<in> k},
-                        subtopology Y k) f)"
+        \<Longrightarrow> open_map X Y f \<longleftrightarrow>
+            f ` (topspace X) \<subseteq> topspace Y \<and>
+            (\<forall>k. compactin Y k
+                 \<longrightarrow> open_map (subtopology X {x \<in> topspace X. f x \<in> k})
+                       (subtopology Y k) f)"
+proof -
+  assume "k_space Y"
+  with open_map_into_k_space show ?thesis
+    using open_map_imp_subset_topspace open_map_restriction
+qed
 oops
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THEN
   ASM_SIMP_TAC[OPEN_MAP_INTO_K_SPACE] THEN
@@ -4834,10 +4857,10 @@ lemma closed_map_into_k_space_eq:
    "k_space Y
         \<Longrightarrow> (closed_map X Y f \<longleftrightarrow>
              f ` (topspace X) \<subseteq> topspace Y \<and>
-             \<forall>k. compactin Y k
-                  \<Longrightarrow> closed_map
+             (\<forall>k. compactin Y k
+                  \<longrightarrow> closed_map
                        (subtopology X {x \<in> topspace X. f x \<in> k},
-                        subtopology Y k) f)"
+                        subtopology Y k) f))"
 oops
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THEN
   ASM_SIMP_TAC[CLOSED_MAP_INTO_K_SPACE] THEN
