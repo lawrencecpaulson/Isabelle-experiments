@@ -4490,63 +4490,54 @@ proof clarsimp
 qed
 
 lemma k_space_subtopology:
-   "(\<forall>T. T \<subseteq> topspace X \<and> T \<subseteq> S \<and>
-             (\<forall>K. compactin X K
-                  \<Longrightarrow> closedin (subtopology X (K \<inter> S)) (K \<inter> T))
-             \<Longrightarrow> closedin (subtopology X S) T) \<and>
-        (\<forall>K. compactin X K
-             \<Longrightarrow> k_space(subtopology X (K \<inter> S)))
-        \<Longrightarrow> k_space(subtopology X S)"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[K_SPACE] THEN
-  X_GEN_TAC `u::A=>bool` THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; SUBSET_INTER; COMPACT_IN_SUBTOPOLOGY] THEN
-  STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[] THEN
-  X_GEN_TAC `K::A=>bool` THEN DISCH_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ>
-    GEN_REWRITE_RULE RAND_CONV [K_SPACE] \<circ>
-    SPEC `K::A=>bool`) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_THEN MATCH_MP_TAC THEN
-  ASM_REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY] THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; X_GEN_TAC `C::A=>bool`] THEN
-  REWRITE_TAC[COMPACT_IN_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY; SUBSET_INTER] THEN
-  STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> SPEC `C::A=>bool`) THEN
-  ASM_REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY] THEN
-  MATCH_MP_TAC EQ_IMP THEN BINOP_TAC THENL [AP_TERM_TAC; ALL_TAC] THEN
-  ASM SET_TAC[]);;
+  assumes 1: "\<And>T. \<lbrakk>T \<subseteq> topspace X; T \<subseteq> S;
+                   \<And>K. compactin X K \<Longrightarrow> closedin (subtopology X (K \<inter> S)) (K \<inter> T)\<rbrakk> \<Longrightarrow> closedin (subtopology X S) T"
+  assumes 2: "\<And>K. compactin X K \<Longrightarrow> k_space(subtopology X (K \<inter> S))"
+  shows "k_space (subtopology X S)"
+  unfolding k_space
+proof (intro conjI strip)
+  fix U
+  assume \<section>: "U \<subseteq> topspace (subtopology X S) \<and> (\<forall>K. compactin (subtopology X S) K \<longrightarrow> closedin (subtopology (subtopology X S) K) (K \<inter> U))"
+  have "closedin (subtopology X (K \<inter> S)) (K \<inter> U)" if "compactin X K" for K
+  proof -
+    have "K \<inter> U \<subseteq> topspace (subtopology X (K \<inter> S))"
+      using "\<section>" by auto
+    moreover
+    have "\<And>K'. compactin (subtopology X (K \<inter> S)) K' \<Longrightarrow> closedin (subtopology (subtopology X (K \<inter> S)) K') (K' \<inter> K \<inter> U)"
+      by (metis "\<section>" compactin_subtopology inf.orderE inf_commute subtopology_subtopology)
+    ultimately show ?thesis
+      by (metis (no_types, opaque_lifting) "2" inf.assoc k_space_def that)
+  qed
+  then show "closedin (subtopology X S) U"
+    using "1" \<section> by auto
+qed
 
 lemma k_space_subtopology_open:
-   "(\<forall>T. T \<subseteq> topspace X \<and> T \<subseteq> S \<and>
-             (\<forall>K. compactin X K
-                  \<Longrightarrow> openin (subtopology X (K \<inter> S)) (K \<inter> T))
-             \<Longrightarrow> openin (subtopology X S) T) \<and>
-        (\<forall>K. compactin X K
-             \<Longrightarrow> k_space(subtopology X (K \<inter> S)))
-        \<Longrightarrow> k_space(subtopology X S)"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[K_SPACE_OPEN] THEN
-  X_GEN_TAC `u::A=>bool` THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; SUBSET_INTER; COMPACT_IN_SUBTOPOLOGY] THEN
-  STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[] THEN
-  X_GEN_TAC `K::A=>bool` THEN DISCH_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ>
-    GEN_REWRITE_RULE RAND_CONV [K_SPACE_OPEN] \<circ>
-    SPEC `K::A=>bool`) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_THEN MATCH_MP_TAC THEN
-  ASM_REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY] THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; X_GEN_TAC `C::A=>bool`] THEN
-  REWRITE_TAC[COMPACT_IN_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY; SUBSET_INTER] THEN
-  STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> SPEC `C::A=>bool`) THEN
-  ASM_REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY] THEN
-  MATCH_MP_TAC EQ_IMP THEN BINOP_TAC THENL [AP_TERM_TAC; ALL_TAC] THEN
-  ASM SET_TAC[]);;
+  assumes 1: "\<And>T. \<lbrakk>T \<subseteq> topspace X; T \<subseteq> S;
+                    \<And>K. compactin X K \<Longrightarrow> openin (subtopology X (K \<inter> S)) (K \<inter> T)\<rbrakk> \<Longrightarrow> openin (subtopology X S) T"
+  assumes 2: "\<And>K. compactin X K \<Longrightarrow> k_space(subtopology X (K \<inter> S))"
+  shows "k_space (subtopology X S)"
+  unfolding k_space_open
+proof (intro conjI strip)
+  fix U
+  assume \<section>: "U \<subseteq> topspace (subtopology X S) \<and> (\<forall>K. compactin (subtopology X S) K \<longrightarrow> openin (subtopology (subtopology X S) K) (K \<inter> U))"
+  have "openin (subtopology X (K \<inter> S)) (K \<inter> U)" if "compactin X K" for K
+  proof -
+    have "K \<inter> U \<subseteq> topspace (subtopology X (K \<inter> S))"
+      using "\<section>" by auto
+    moreover
+    have "\<And>K'. compactin (subtopology X (K \<inter> S)) K' \<Longrightarrow> openin (subtopology (subtopology X (K \<inter> S)) K') (K' \<inter> K \<inter> U)"
+      by (metis "\<section>" compactin_subtopology inf.orderE inf_commute subtopology_subtopology)
+    ultimately show ?thesis
+      by (metis (no_types, opaque_lifting) "2" inf.assoc k_space_open that)
+  qed
+  then show "openin (subtopology X S) U"
+    using "1" \<section> by auto
+qed
 
-lemma k_space_open_subtopology:
-   "(kc_space X \<or> Hausdorff_space X \<or> regular_space X) \<and>
-        k_space X \<and> openin X S
-        \<Longrightarrow> k_space(subtopology X S)"
-oops
-  lemma lemma:
-   "\<And>X (V::A=>bool).
-          kc_space X \<and> compact_space X \<and> openin X V
+
+lemma k_space_open_subtopology_aux:
+   "kc_space X \<and> compact_space X \<and> openin X V
           \<Longrightarrow> k_space(subtopology X V)"
 oops
     REPEAT STRIP_TAC THEN
@@ -4583,7 +4574,12 @@ oops
     DISCH_THEN(X_CHOOSE_THEN `V2:(A=>bool)->bool` STRIP_ASSUME_TAC) THEN
     EXISTS_TAC `V1 \<union> V2:(A=>bool)->bool` THEN
     ASM_REWRITE_TAC[FINITE_UNION] THEN ASM SET_TAC[])
-in
+
+
+lemma k_space_open_subtopology:
+   "(kc_space X \<or> Hausdorff_space X \<or> regular_space X) \<and> k_space X \<and> openin X S
+        \<Longrightarrow> k_space(subtopology X S)"
+oops
 
   REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   MATCH_MP_TAC K_SPACE_SUBTOPOLOGY_OPEN THEN CONJ_TAC THENL
@@ -4613,8 +4609,7 @@ in
                     REGULAR_SPACE_SUBTOPOLOGY]]]);;
 
 lemma k_kc_space_subtopology:
-   "k_space X \<and> kc_space X \<and>
-        (openin X S \<or> closedin X S)
+   "k_space X \<and> kc_space X \<and> (openin X S \<or> closedin X S)
         \<Longrightarrow> k_space(subtopology X S) \<and> kc_space(subtopology X S)"
 oops
   MESON_TAC[K_SPACE_OPEN_SUBTOPOLOGY; K_SPACE_CLOSED_SUBTOPOLOGY;
@@ -4656,10 +4651,7 @@ oops
     MESON_TAC[LOCALLY_COMPACT_IMP_K_SPACE; K_SPACE_QUOTIENT_MAP_IMAGE]]);;
 
 lemma k_space_prod_topology_left:
-   "\<And>(X::A topology) (Y:B topology).
-        locally_compact_space X \<and>
-        (Hausdorff_space X \<or> regular_space X) \<and>
-        k_space Y
+   "locally_compact_space X \<and> (Hausdorff_space X \<or> regular_space X) \<and> k_space Y
         \<Longrightarrow> k_space(prod_topology X Y)"
 oops
   REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
@@ -4676,10 +4668,7 @@ oops
   ASM_REWRITE_TAC[LOCALLY_COMPACT_SPACE_PROD_TOPOLOGY]);;
 
 lemma k_space_prod_topology_right:
-   "\<And>(X::A topology) (Y:B topology).
-        k_space X \<and>
-        locally_compact_space Y \<and>
-        (Hausdorff_space Y \<or> regular_space Y)
+   "k_space X \<and> locally_compact_space Y \<and> (Hausdorff_space Y \<or> regular_space Y)
         \<Longrightarrow> k_space(prod_topology X Y)"
 oops
   REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
@@ -4696,9 +4685,7 @@ oops
   ASM_REWRITE_TAC[LOCALLY_COMPACT_SPACE_PROD_TOPOLOGY]);;
 
 lemma continuous_map_from_k_space:
-   "\<And>X Y f.
-        k_space X \<and>
-        (\<forall>k. compactin X k \<Longrightarrow> continuous_map(subtopology X k,Y) f)
+   "k_space X \<and> (\<forall>k. compactin X k \<Longrightarrow> continuous_map(subtopology X k,Y) f)
         \<Longrightarrow> continuous_map X Y f"
 oops
   REWRITE_TAC[K_SPACE] THEN REPEAT STRIP_TAC THEN
@@ -4727,12 +4714,9 @@ oops
   SET_TAC[]);;
 
 lemma closed_map_into_k_space:
-   "\<And>X Y f.
-      k_space Y \<and>
-      f ` (topspace X) \<subseteq> topspace Y \<and>
+   "k_space Y \<and> f ` (topspace X) \<subseteq> topspace Y \<and>
       (\<forall>k. compactin Y k
-           \<Longrightarrow> closed_map(subtopology X {x \<in> topspace X. f x \<in> k},
-                          subtopology Y k) f)
+           \<Longrightarrow> closed_map(subtopology X {x \<in> topspace X. f x \<in> k}, subtopology Y k) f)
       \<Longrightarrow> closed_map X Y f"
 oops
   REWRITE_TAC[K_SPACE] THEN REPEAT STRIP_TAC THEN
@@ -4751,9 +4735,7 @@ oops
   ASM_SIMP_TAC[CLOSED_IN_SUBTOPOLOGY_INTER_CLOSED]);;
 
 lemma open_map_into_k_space:
-   "\<And>X Y f.
-      k_space Y \<and>
-      f ` (topspace X) \<subseteq> topspace Y \<and>
+   "k_space Y \<and> f ` (topspace X) \<subseteq> topspace Y \<and>
       (\<forall>k. compactin Y k
            \<Longrightarrow> open_map(subtopology X {x \<in> topspace X. f x \<in> k},
                         subtopology Y k) f)
@@ -4775,9 +4757,7 @@ oops
   ASM_SIMP_TAC[OPEN_IN_SUBTOPOLOGY_INTER_OPEN]);;
 
 lemma quotient_map_into_k_space:
-   "\<And>X Y f.
-     k_space Y \<and>
-     continuous_map X Y f \<and>
+   "k_space Y \<and> continuous_map X Y f \<and>
      f ` (topspace X) = topspace Y \<and>
      (\<forall>k. compactin Y k
           \<Longrightarrow> quotient_map(subtopology X {x \<in> topspace X. f x \<in> k},
@@ -4802,8 +4782,7 @@ oops
   ASM_SIMP_TAC[CLOSED_IN_SUBTOPOLOGY_INTER_CLOSED]);;
 
 lemma quotient_map_into_k_space_eq:
-   "\<And>X Y f.
-        k_space Y \<and> kc_space Y
+   "k_space Y \<and> kc_space Y
         \<Longrightarrow> (quotient_map X Y f \<longleftrightarrow>
              continuous_map X Y f \<and>
              f ` (topspace X) = topspace Y \<and>
@@ -4819,8 +4798,7 @@ oops
     MATCH_MP_TAC QUOTIENT_MAP_INTO_K_SPACE THEN ASM_REWRITE_TAC[]]);;
 
 lemma open_map_into_k_space_eq:
-   "\<And>X Y f.
-        k_space Y
+   "k_space Y
         \<Longrightarrow> (open_map X Y f \<longleftrightarrow>
              f ` (topspace X) \<subseteq> topspace Y \<and>
              \<forall>k. compactin Y k
@@ -4834,8 +4812,7 @@ oops
   ASM_SIMP_TAC[OPEN_MAP_RESTRICTION]);;
 
 lemma closed_map_into_k_space_eq:
-   "\<And>X Y f.
-        k_space Y
+   "k_space Y
         \<Longrightarrow> (closed_map X Y f \<longleftrightarrow>
              f ` (topspace X) \<subseteq> topspace Y \<and>
              \<forall>k. compactin Y k
@@ -4849,8 +4826,7 @@ oops
   ASM_SIMP_TAC[CLOSED_MAP_RESTRICTION]);;
 
 lemma proper_map_into_k_space:
-   "\<And>X Y f.
-      k_space Y \<and>
+   "k_space Y \<and>
       f ` (topspace X) \<subseteq> topspace Y \<and>
       (\<forall>k. compactin Y k
            \<Longrightarrow> proper_map(subtopology X {x \<in> topspace X. f x \<in> k},
@@ -4867,8 +4843,7 @@ oops
     SIMP_TAC[COMPACT_IN_SUBTOPOLOGY]]);;
 
 lemma proper_map_into_k_space_eq:
-   "\<And>X Y f.
-        k_space Y
+   "k_space Y
         \<Longrightarrow> (proper_map X Y f \<longleftrightarrow>
              f ` (topspace X) \<subseteq> topspace Y \<and>
              \<forall>k. compactin Y k
@@ -4882,8 +4857,7 @@ oops
   ASM_SIMP_TAC[PROPER_MAP_RESTRICTION]);;
 
 lemma compact_imp_proper_map:
-   "\<And>X Y f.
-        k_space Y \<and> kc_space Y \<and>
+   "k_space Y \<and> kc_space Y \<and>
         f ` (topspace X) \<subseteq> topspace Y \<and>
         (continuous_map X Y f \<or> kc_space X) \<and>
         (\<forall>k. compactin Y k
@@ -4904,8 +4878,7 @@ oops
   ASM_MESON_TAC[INTER_COMM]);;
 
 lemma proper_eq_compact_map:
-   "\<And>X Y f.
-        k_space Y \<and> kc_space Y \<and>
+   "k_space Y \<and> kc_space Y \<and>
         (continuous_map X Y f \<or> kc_space X)
         \<Longrightarrow> (proper_map X Y f \<longleftrightarrow>
              f ` (topspace X) \<subseteq> topspace Y \<and>
@@ -4919,8 +4892,7 @@ oops
     ASM_REWRITE_TAC[]]);;
 
 lemma compact_imp_perfect_map:
-   "\<And>X Y f.
-        k_space Y \<and> kc_space Y \<and>
+   "k_space Y \<and> kc_space Y \<and>
         continuous_map X Y f \<and> f ` (topspace X) = topspace Y \<and>
         (\<forall>k. compactin Y k
              \<Longrightarrow> compactin X {x \<in> topspace X. f x \<in> k})
@@ -4941,8 +4913,7 @@ let kification = define
                            \<Longrightarrow> openin (subtopology X k) (k \<inter> s)}"
 
 lemma openin_kification:
-   "\<And>X (u::A=>bool).
-        openin (kification X) u \<longleftrightarrow>
+   "openin (kification X) u \<longleftrightarrow>
         u \<subseteq> topspace X \<and>
         \<forall>k. compactin X k  \<Longrightarrow> openin (subtopology X k) (k \<inter> u)"
 oops
