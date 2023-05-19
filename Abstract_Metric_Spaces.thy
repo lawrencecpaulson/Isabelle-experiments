@@ -4652,102 +4652,85 @@ lemma k_kc_space_subtopology:
 
 
 lemma k_space_as_quotient_explicit:
-   "k_space X \<longleftrightarrow>
-        quotient_map (sum_topology {K. compactin X K} (subtopology X),
-                      X)
-                     snd"
-oops
-  REWRITE_TAC[quotient_map; OPEN_IN_SUM_TOPOLOGY] THEN
-  REWRITE_TAC[IN_ELIM_THM; TOPSPACE_SUM_TOPOLOGY; SUBSET_RESTRICT] THEN
-  REWRITE_TAC[Sigma; IN_ELIM_PAIR_THM] THEN
-  GEN_TAC THEN SIMP_TAC[K_SPACE_ALT; IN_ELIM_THM] THEN
-  SIMP_TAC[o_THM; TOPSPACE_SUBTOPOLOGY_SUBSET; COMPACT_IN_SUBSET_TOPSPACE] THEN
-  REWRITE_TAC[GSYM \<inter>] THEN MATCH_MP_TAC(TAUT
-   `(p \<longleftrightarrow> p') \<and> q \<Longrightarrow> (p \<longleftrightarrow> q \<and> p')`) THEN
-  CONJ_TAC THENL [MESON_TAC[]; ALL_TAC] THEN
-  REWRITE_TAC[SET_RULE `image f {x,y | P x y} = {f(x,y) | P x y}`] THEN
-  MATCH_MP_TAC SUBSET_ANTISYM THEN REWRITE_TAC[\<subseteq>; FORALL_IN_GSPEC] THEN
-  SIMP_TAC[TOPSPACE_SUBTOPOLOGY; IN_INTER; IN_ELIM_THM] THEN
-  X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-  MAP_EVERY EXISTS_TAC [`{x::A}`; `x::A`] THEN
-  ASM_REWRITE_TAC[COMPACT_IN_SING; IN_SING]);;
+  "k_space X \<longleftrightarrow> quotient_map (sum_topology (subtopology X) {K. compactin X K}) X snd"
+proof -
+  have [simp]: "{x \<in> topspace X. x \<in> K \<and> x \<in> U} = K \<inter> U" if "U \<subseteq> topspace X" for K U
+    using that by blast
+  show "?thesis"
+    apply (simp add: quotient_map_def openin_sum_topology snd_image_Sigma k_space_alt)
+    by (smt (verit, del_insts) Union_iff compactin_sing inf.orderE mem_Collect_eq singletonI subsetI)
+qed
 
 lemma k_space_as_quotient:
-   "k_space X \<longleftrightarrow>
-        ?q (Y:((A=>bool)#A)topology).
-                locally_compact_space Y \<and> quotient_map Y X q"
-oops
-  GEN_TAC THEN EQ_TAC THENL
-   [DISCH_TAC THEN MAP_EVERY EXISTS_TAC
-     [`snd:(A=>bool)#A=>A`;
-      `sum_topology {k::A=>bool | compactin X k} (subtopology X)`] THEN
-    ASM_REWRITE_TAC[GSYM K_SPACE_AS_QUOTIENT_EXPLICIT] THEN
-    REWRITE_TAC[LOCALLY_COMPACT_SPACE_SUM_TOPOLOGY; IN_ELIM_THM] THEN
-    SIMP_TAC[COMPACT_IMP_LOCALLY_COMPACT_SPACE; COMPACT_SPACE_SUBTOPOLOGY];
-    MESON_TAC[LOCALLY_COMPACT_IMP_K_SPACE; K_SPACE_QUOTIENT_MAP_IMAGE]]);;
+  fixes X :: "'a topology"
+  shows "k_space X \<longleftrightarrow> (\<exists>q. \<exists>Y:: ('a set * 'a) topology. locally_compact_space Y \<and> quotient_map Y X q)" (is "?lhs=?rhs")
+proof
+  show "k_space X" if ?rhs
+    using that k_space_quotient_map_image locally_compact_imp_k_space by blast 
+next
+  assume "k_space X"
+  show ?rhs
+  proof (intro exI conjI)
+    show "locally_compact_space (sum_topology (subtopology X) {K. compactin X K})"
+      by (simp add: compact_imp_locally_compact_space compact_space_subtopology locally_compact_space_sum_topology)
+    show "quotient_map (sum_topology (subtopology X) {K. compactin X K}) X snd"
+      using \<open>k_space X\<close> k_space_as_quotient_explicit by blast
+  qed
+qed
 
 lemma k_space_prod_topology_left:
-   "locally_compact_space X" "(Hausdorff_space X \<or> regular_space X)" "k_space Y
-        \<Longrightarrow> k_space(prod_topology X Y)"
-oops
-  REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [K_SPACE_AS_QUOTIENT]) THEN
-  REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`q:(B=>bool)#B=>B`; `top'':((B=>bool)#B)topology`] THEN
-  STRIP_TAC THEN
-  MP_TAC(ISPECL
-   [`X::A topology`; `top'':((B=>bool)#B)topology`; `Y:B topology`;
-    `q:(B=>bool)#B=>B`] QUOTIENT_MAP_PROD_RIGHT) THEN
-  ASM_REWRITE_TAC[] THEN
-  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] K_SPACE_QUOTIENT_MAP_IMAGE) THEN
-  MATCH_MP_TAC LOCALLY_COMPACT_IMP_K_SPACE THEN
-  ASM_REWRITE_TAC[LOCALLY_COMPACT_SPACE_PROD_TOPOLOGY]);;
+  assumes X: "locally_compact_space X" "Hausdorff_space X \<or> regular_space X" and "k_space Y"
+  shows "k_space (prod_topology X Y)"
+proof -
+  obtain q and Z :: "('b set * 'b) topology" where "locally_compact_space Z" and q: "quotient_map Z Y q"
+    using \<open>k_space Y\<close> k_space_as_quotient by blast
+  then show ?thesis
+    using quotient_map_prod_right [OF X q] X k_space_quotient_map_image locally_compact_imp_k_space 
+          locally_compact_space_prod_topology by blast
+qed
 
+text \<open>Essentially the same proof\<close>
 lemma k_space_prod_topology_right:
-   "k_space X" "locally_compact_space Y" "(Hausdorff_space Y \<or> regular_space Y)
-        \<Longrightarrow> k_space(prod_topology X Y)"
-oops
-  REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [K_SPACE_AS_QUOTIENT]) THEN
-  REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`q:(A=>bool)#A=>A`; `top'':((A=>bool)#A)topology`] THEN
-  STRIP_TAC THEN
-  MP_TAC(ISPECL
-   [`top'':((A=>bool)#A)topology`; `X::A topology`; `Y:B topology`;
-    `q:(A=>bool)#A=>A`] QUOTIENT_MAP_PROD_LEFT) THEN
-  ASM_REWRITE_TAC[] THEN
-  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] K_SPACE_QUOTIENT_MAP_IMAGE) THEN
-  MATCH_MP_TAC LOCALLY_COMPACT_IMP_K_SPACE THEN
-  ASM_REWRITE_TAC[LOCALLY_COMPACT_SPACE_PROD_TOPOLOGY]);;
+  assumes "k_space X" and Y: "locally_compact_space Y" "Hausdorff_space Y \<or> regular_space Y"
+  shows "k_space (prod_topology X Y)"
+proof -
+  obtain q and Z :: "('a set * 'a) topology" where "locally_compact_space Z" and q: "quotient_map Z X q"
+    using \<open>k_space X\<close> k_space_as_quotient by blast
+  then show ?thesis
+    using quotient_map_prod_left [OF Y q] using Y k_space_quotient_map_image locally_compact_imp_k_space 
+          locally_compact_space_prod_topology by blast
+qed
+
+
 
 lemma continuous_map_from_k_space:
-   "k_space X" "(\<forall>k. compactin X k \<Longrightarrow> continuous_map(subtopology X k,Y) f)
-        \<Longrightarrow> continuous_map X Y f"
-oops
-  REWRITE_TAC[K_SPACE] THEN REPEAT STRIP_TAC THEN
-  REWRITE_TAC[CONTINUOUS_MAP_CLOSED_IN] THEN
-  MATCH_MP_TAC(TAUT `p \<and> (p \<Longrightarrow> q) \<Longrightarrow> p \<and> q`) THEN
-  CONJ_TAC THENL
-   [X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-    REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> SPEC `{x::A}`)) THEN
-    ASM_REWRITE_TAC[SING_SUBSET; COMPACT_IN_SING] THEN
-    REWRITE_TAC[continuous_map; TOPSPACE_SUBTOPOLOGY] THEN ASM SET_TAC[];
-    DISCH_TAC] THEN
-  X_GEN_TAC `c::B=>bool` THEN DISCH_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-  REWRITE_TAC[SUBSET_RESTRICT] THEN X_GEN_TAC `k::A=>bool` THEN DISCH_TAC THEN
-  SUBGOAL_THEN
-   `k \<inter> {x \<in> topspace X. f x \<in> c} =
-    {x. x \<in> topspace(subtopology X k) \<and> f x \<in> (f ` k \<inter> c)}`
-  SUBST1_TAC THENL
-   [REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN
-    FIRST_ASSUM(MP_TAC \<circ> MATCH_MP COMPACT_IN_SUBSET_TOPSPACE) THEN
-    ASM SET_TAC[];
-    ALL_TAC] THEN
-  MATCH_MP_TAC CLOSED_IN_CONTINUOUS_MAP_PREIMAGE THEN
-  EXISTS_TAC `subtopology Y (image f k)` THEN
-  ASM_SIMP_TAC[CLOSED_IN_SUBTOPOLOGY_INTER_CLOSED] THEN
-  ASM_SIMP_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY] THEN
-  SET_TAC[]);;
+  assumes "k_space X" and f: "\<And>K. compactin X K \<Longrightarrow> continuous_map(subtopology X K) Y f"
+  shows "continuous_map X Y f"
+proof -
+  have "\<And>x. x \<in> topspace X \<Longrightarrow> f x \<in> topspace Y"
+    by (metis compactin_absolute compactin_sing f image_compactin image_empty image_insert)
+  moreover have "closedin X {x. x \<in> topspace X \<and> f x \<in> C}" if "closedin Y C" for C
+  proof -
+    have "{x. x \<in> topspace X \<and> f x \<in> C} \<subseteq> topspace X"
+      by fastforce
+    moreover 
+    have eq: "K \<inter> {x \<in> topspace X. f x \<in> C} = {x. x \<in> topspace(subtopology X K) \<and> f x \<in> (f ` K \<inter> C)}" for K
+      by auto
+    have "closedin (subtopology X K) (K \<inter> {x. x \<in> topspace X \<and> f x \<in> C})" if "compactin X K" for K
+      unfolding eq
+    proof (rule closedin_continuous_map_preimage)
+      show "continuous_map (subtopology X K) (subtopology Y (f`K)) f"
+        by (simp add: continuous_map_in_subtopology f image_mono that)
+      show "closedin (subtopology Y (f`K)) (f ` K \<inter> C)"
+        using \<open>closedin Y C\<close> closedin_subtopology by blast
+    qed
+    ultimately show ?thesis
+      using \<open>k_space X\<close> k_space by blast
+  qed
+  ultimately show ?thesis
+    by (simp add: continuous_map_closedin)
+qed
+
 
 lemma closed_map_into_k_space:
    "k_space Y" "f ` (topspace X) \<subseteq> topspace Y \<and>
