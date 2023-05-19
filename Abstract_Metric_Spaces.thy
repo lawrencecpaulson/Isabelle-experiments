@@ -12,6 +12,35 @@ lemma closedin_subtopology_Int_closed:
    "closedin X T \<Longrightarrow> closedin (subtopology X S) (S \<inter> T)"
   using closedin_subtopology inf_commute by blast
 
+thm openin_subtopology
+lemma subset_openin_subtopology:
+   "\<lbrakk>openin X S; S \<subseteq> T\<rbrakk> \<Longrightarrow> openin (subtopology X T) S"
+  by (metis inf.orderE openin_subtopology)
+
+thm locally_compact_space_open_subset (*REPLACE*)
+lemma locally_compact_space_open_subset:
+  assumes X: "Hausdorff_space X \<or> regular_space X" and loc: "locally_compact_space X" and "openin X S"
+  shows "locally_compact_space (subtopology X S)"
+proof (clarsimp simp: locally_compact_space_def)
+  fix x assume x: "x \<in> topspace X" "x \<in> S"
+  then obtain U K where UK: "openin X U" "compactin X K" "x \<in> U" "U \<subseteq> K"
+    by (meson loc locally_compact_space_def)
+  moreover have reg: "regular_space X"
+    using assms loc locally_compact_Hausdorff_imp_regular_space locally_compact_space_open_subset by blast
+  moreover have "openin X (U \<inter> S)"
+    by (simp add: UK \<open>openin X S\<close> openin_Int)
+  ultimately obtain V C 
+      where VC: "openin X V" "closedin X C" "x \<in> V" "V \<subseteq> C" "C \<subseteq> U" "C \<subseteq> S"
+    by (metis \<open>x \<in> S\<close> IntI le_inf_iff neighbourhood_base_of neighbourhood_base_of_closedin)
+  show "\<exists>U. openin (subtopology X S) U \<and> 
+            (\<exists>K. compactin (subtopology X S) K \<and> x \<in> U \<and> U \<subseteq> K)"
+  proof (intro conjI exI)
+    show "openin (subtopology X S) V"
+      using VC by (meson \<open>openin X S\<close> openin_open_subtopology order_trans)
+    show "compactin (subtopology X S) (C \<inter> K)"
+      using UK VC closed_Int_compactin compactin_subtopology by fastforce
+  qed (use UK VC x in auto)
+qed
 
 
 (*NEEDS LEPOLL*)
@@ -2602,20 +2631,20 @@ lemma Bolzano_Weierstrass_E:
   shows "compactin mtopology S"
 proof (clarsimp simp: compactin_def assms)
   fix \<U> :: "'a set set"
-  assume \<U>: "\<forall>x\<in>\<U>. openin mtopology x" and "S \<subseteq> \<Union> \<U>"
+  assume \<U>: "\<forall>x\<in>\<U>. openin mtopology x" and "S \<subseteq> \<Union>\<U>"
   then obtain \<epsilon> where "\<epsilon>>0" and \<epsilon>: "\<And>x. x \<in> S \<Longrightarrow> \<exists>U \<in> \<U>. mball x \<epsilon> \<subseteq> U"
     by (metis S)
   then obtain f where f: "\<And>x. x \<in> S \<Longrightarrow> f x \<in> \<U> \<and> mball x \<epsilon> \<subseteq> f x"
     by metis
   then obtain K where "finite K" "K \<subseteq> S" and K: "S \<subseteq> (\<Union>x\<in>K. mball x \<epsilon>)"
     by (metis \<open>0 < \<epsilon>\<close> \<open>mtotally_bounded S\<close> mtotally_bounded_def)
-  show "\<exists>\<F>. finite \<F> \<and> \<F> \<subseteq> \<U> \<and> S \<subseteq> \<Union> \<F>"
+  show "\<exists>\<F>. finite \<F> \<and> \<F> \<subseteq> \<U> \<and> S \<subseteq> \<Union>\<F>"
   proof (intro conjI exI)
     show "finite (f ` K)"
       by (simp add: \<open>finite K\<close>)
     show "f ` K \<subseteq> \<U>"
       using \<open>K \<subseteq> S\<close> f by blast
-    show "S \<subseteq> \<Union> (f ` K)"
+    show "S \<subseteq> \<Union>(f ` K)"
       using K \<open>K \<subseteq> S\<close> by (force dest: f)
   qed
 qed
@@ -3353,7 +3382,7 @@ lemma Lindelof_cover:
   assumes "regular_space X" and "Lindelof_space X" and "S \<noteq> {}" 
     and clo: "closedin X S" "closedin X T" "disjnt S T"
   obtains h :: "nat \<Rightarrow> 'a set" where 
-    "\<And>n. openin X (h n)" "\<And>n. disjnt T (X closure_of (h n))" and  "S \<subseteq> \<Union> (range h)"
+    "\<And>n. openin X (h n)" "\<And>n. disjnt T (X closure_of (h n))" and  "S \<subseteq> \<Union>(range h)"
 proof -
   have "\<exists>U. openin X U \<and> x \<in> U \<and> disjnt T (X closure_of U)"
     if "x \<in> S" for x
@@ -3365,7 +3394,7 @@ proof -
     by metis
   have "Lindelof_space(subtopology X S)"
     by (simp add: Lindelof_space_closedin_subtopology \<open>Lindelof_space X\<close> \<open>closedin X S\<close>)
-  then obtain \<U> where \<U>: "countable \<U> \<and> \<U> \<subseteq> h ` S \<and> S \<subseteq> \<Union> \<U>"
+  then obtain \<U> where \<U>: "countable \<U> \<and> \<U> \<subseteq> h ` S \<and> S \<subseteq> \<Union>\<U>"
     unfolding Lindelof_space_subtopology_subset [OF closedin_subset [OF \<open>closedin X S\<close>]]
     by (smt (verit, del_insts) oh xh UN_I image_iff subsetI)
   with \<open>S \<noteq> {}\<close> have "\<U> \<noteq> {}"
@@ -3377,7 +3406,7 @@ proof -
     show "disjnt T (X closure_of (from_nat_into \<U>) n)" for n
       using dh from_nat_into [OF \<open>\<U> \<noteq> {}\<close>]
       by (metis \<U> f_inv_into_f inv_into_into subset_eq)
-    show "S \<subseteq> \<Union> (range (from_nat_into \<U>))"
+    show "S \<subseteq> \<Union>(range (from_nat_into \<U>))"
       by (simp add: \<U> \<open>\<U> \<noteq> {}\<close>)
   qed
 qed
@@ -3398,11 +3427,11 @@ proof clarify
     case False
     obtain h :: "nat \<Rightarrow> 'a set" where 
       opeh: "\<And>n. openin X (h n)" and dish: "\<And>n. disjnt T (X closure_of (h n))"
-      and Sh: "S \<subseteq> \<Union> (range h)"
+      and Sh: "S \<subseteq> \<Union>(range h)"
       by (metis Lindelof_cover False \<open>disjnt S T\<close> assms clo)
     obtain k :: "nat \<Rightarrow> 'a set" where 
       opek: "\<And>n. openin X (k n)" and disk: "\<And>n. disjnt S (X closure_of (k n))"
-      and Tk: "T \<subseteq> \<Union> (range k)"
+      and Tk: "T \<subseteq> \<Union>(range k)"
       by (metis Lindelof_cover False \<open>disjnt S T\<close> assms clo disjnt_sym)
     define U where "U \<equiv> \<Union>i. h i - (\<Union>j<i. X closure_of k j)"
     define V where "V \<equiv> \<Union>i. k i - (\<Union>j\<le>i. X closure_of h j)"
@@ -4537,83 +4566,90 @@ qed
 
 
 lemma k_space_open_subtopology_aux:
-   "kc_space X \<and> compact_space X \<and> openin X V
-          \<Longrightarrow> k_space(subtopology X V)"
-oops
-    REPEAT STRIP_TAC THEN
-    REWRITE_TAC[K_SPACE; TOPSPACE_SUBTOPOLOGY; SUBTOPOLOGY_SUBTOPOLOGY;
-                COMPACT_IN_SUBTOPOLOGY; SUBSET_INTER] THEN
-    X_GEN_TAC `S::A=>bool` THEN
-    SIMP_TAC[SET_RULE `K \<subseteq> V \<Longrightarrow> V \<inter> K = K`] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC (LABEL_TAC "*")) THEN
-    FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP OPEN_IN_SUBSET) THEN
-    SUBGOAL_THEN
-     `S::A=>bool = V \<inter> ((topspace X - V) \<union> S)` SUBST1_TAC
-    THENL [ASM SET_TAC[]; MATCH_MP_TAC CLOSED_IN_SUBTOPOLOGY_INTER_CLOSED] THEN
-    MATCH_MP_TAC COMPACT_IN_IMP_CLOSED_IN_GEN THEN ASM_REWRITE_TAC[] THEN
-    ASM_REWRITE_TAC[compactin; UNION_SUBSET; SUBSET_DIFF] THEN
-    X_GEN_TAC `U:(A=>bool)->bool` THEN STRIP_TAC THEN
-    SUBGOAL_THEN `compactin X (topspace X - V::A=>bool)` MP_TAC THENL
-     [MATCH_MP_TAC CLOSED_IN_COMPACT_SPACE THEN
-      ASM_SIMP_TAC[CLOSED_IN_DIFF; CLOSED_IN_TOPSPACE];
-      REWRITE_TAC[compactin; SUBSET_DIFF]] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `U:(A=>bool)->bool`) THEN
-    ASM_SIMP_TAC[SET_RULE `S \<subseteq> T \<Longrightarrow> (T - u) \<inter> S = S - u`] THEN
-    DISCH_THEN(X_CHOOSE_THEN `V1:(A=>bool)->bool` STRIP_ASSUME_TAC) THEN
-    REMOVE_THEN "*" (MP_TAC \<circ> SPEC `topspace X - \<Union> V1::A=>bool`) THEN
-    SUBGOAL_THEN `openin X (\<Union> V1::A=>bool)` ASSUME_TAC THENL
-     [ASM_MESON_TAC[OPEN_IN_UNIONS; \<subseteq>]; ALL_TAC] THEN
-    ASM_SIMP_TAC[CLOSED_IN_COMPACT_SPACE; CLOSED_IN_DIFF; CLOSED_IN_TOPSPACE;
-                 CLOSED_IN_CLOSED_SUBTOPOLOGY] THEN
-    ANTS_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
-      CLOSED_IN_COMPACT_SPACE) \<circ> CONJUNCT1) THEN
-    ASM_REWRITE_TAC[compactin] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `U:(A=>bool)->bool` \<circ> CONJUNCT2) THEN
-    ANTS_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-    DISCH_THEN(X_CHOOSE_THEN `V2:(A=>bool)->bool` STRIP_ASSUME_TAC) THEN
-    EXISTS_TAC `V1 \<union> V2:(A=>bool)->bool` THEN
-    ASM_REWRITE_TAC[FINITE_UNION] THEN ASM SET_TAC[])
+  assumes "kc_space X" "compact_space X" "openin X V"
+  shows "k_space (subtopology X V)"
+proof (clarsimp simp: k_space subtopology_subtopology compactin_subtopology Int_absorb1)
+  fix S
+  assume "S \<subseteq> topspace X"
+    and "S \<subseteq> V"
+    and S: "\<forall>K. compactin X K \<and> K \<subseteq> V \<longrightarrow> closedin (subtopology X K) (K \<inter> S)"
+  then have "V \<subseteq> topspace X"
+    using assms openin_subset by blast
+  have "S = V \<inter> ((topspace X - V) \<union> S)"
+    using \<open>S \<subseteq> V\<close> by auto
+  moreover have "closedin (subtopology X V) (V \<inter> ((topspace X - V) \<union> S))"
+  proof (intro closedin_subtopology_Int_closed compactin_imp_closedin_gen \<open>kc_space X\<close>)
+    show "compactin X (topspace X - V \<union> S)"
+      unfolding compactin_def
+    proof (intro conjI strip)
+      show "topspace X - V \<union> S \<subseteq> topspace X"
+        by (simp add: \<open>S \<subseteq> topspace X\<close>)
+      fix \<U>
+      assume \<U>: "Ball \<U> (openin X) \<and> topspace X - V \<union> S \<subseteq> \<Union>\<U>"
+      moreover
+      have "compactin X (topspace X - V)"
+        using assms closedin_compact_space by blast
+      ultimately obtain \<G> where "finite \<G>" "\<G> \<subseteq> \<U>" and \<G>: "topspace X - V \<subseteq> \<Union>\<G>"
+        unfolding compactin_def using \<open>V \<subseteq> topspace X\<close> by (metis le_sup_iff)
+      then have "topspace X - \<Union>\<G> \<subseteq> V"
+        by blast
+      then have "closedin (subtopology X (topspace X - \<Union>\<G>)) ((topspace X - \<Union>\<G>) \<inter> S)"
+        by (meson S \<U> \<open>\<G> \<subseteq> \<U>\<close> \<open>compact_space X\<close> closedin_compact_space openin_Union openin_closedin_eq subset_iff)
+      then have "compactin X ((topspace X - \<Union>\<G>) \<inter> S)"
+        by (meson \<U> \<open>\<G> \<subseteq> \<U>\<close>\<open>compact_space X\<close> closedin_compact_space closedin_trans_full openin_Union openin_closedin_eq subset_iff)
+      then obtain \<H> where "finite \<H>" "\<H> \<subseteq> \<U>" "(topspace X - \<Union>\<G>) \<inter> S \<subseteq> \<Union>\<H>"
+        unfolding compactin_def by (smt (verit, best) \<U> inf_le2 subset_trans sup.boundedE)
+      with \<G> have "topspace X - V \<union> S \<subseteq> \<Union>(\<G> \<union> \<H>)"
+        using \<open>S \<subseteq> topspace X\<close> by auto
+      then show "\<exists>\<F>. finite \<F> \<and> \<F> \<subseteq> \<U> \<and> topspace X - V \<union> S \<subseteq> \<Union>\<F>"
+        by (metis \<open>\<G> \<subseteq> \<U>\<close> \<open>\<H> \<subseteq> \<U>\<close> \<open>finite \<G>\<close> \<open>finite \<H>\<close> finite_Un le_sup_iff)
+    qed
+  qed
+  ultimately show "closedin (subtopology X V) S"
+    by metis
+qed
 
 
 lemma k_space_open_subtopology:
-   "(kc_space X \<or> Hausdorff_space X \<or> regular_space X) \<and> k_space X \<and> openin X S
-        \<Longrightarrow> k_space(subtopology X S)"
-oops
-
-  REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  MATCH_MP_TAC K_SPACE_SUBTOPOLOGY_OPEN THEN CONJ_TAC THENL
-   [X_GEN_TAC `T::A=>bool` THEN STRIP_TAC THEN
-    MATCH_MP_TAC OPEN_IN_SUBSET_TOPSPACE THEN ASM_REWRITE_TAC[] THEN
-    FIRST_X_ASSUM(MATCH_MP_TAC \<circ> GEN_REWRITE_RULE id
-     [K_SPACE_OPEN]) THEN
-    ASM_REWRITE_TAC[] THEN X_GEN_TAC `K::A=>bool` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `K::A=>bool`) THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] OPEN_IN_TRANS) THEN
-    ASM_SIMP_TAC[OPEN_IN_SUBTOPOLOGY_INTER_OPEN];
-    X_GEN_TAC `K::A=>bool` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM DISJ_CASES_TAC THENL
-     [MP_TAC(ISPECL [`subtopology X (K::A=>bool)`; `K \<inter> S::A=>bool`]
-        lemma) THEN
-      ASM_SIMP_TAC[KC_SPACE_SUBTOPOLOGY; OPEN_IN_SUBTOPOLOGY_INTER_OPEN] THEN
-      ASM_SIMP_TAC[COMPACT_SPACE_SUBTOPOLOGY] THEN
-      REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY; INTER_ACI];
-      MATCH_MP_TAC LOCALLY_COMPACT_IMP_K_SPACE THEN
-      ONCE_REWRITE_TAC[SET_RULE `K \<inter> S = K \<inter> (K \<inter> S)`] THEN
-      ONCE_REWRITE_TAC[GSYM SUBTOPOLOGY_SUBTOPOLOGY] THEN
-      MATCH_MP_TAC LOCALLY_COMPACT_SPACE_OPEN_SUBSET THEN
-      ASM_SIMP_TAC[OPEN_IN_SUBTOPOLOGY_INTER_OPEN] THEN
-      ASM_SIMP_TAC[COMPACT_SPACE_SUBTOPOLOGY;
-                   COMPACT_IMP_LOCALLY_COMPACT_SPACE] THEN
-      ASM_MESON_TAC[HAUSDORFF_SPACE_SUBTOPOLOGY;
-                    REGULAR_SPACE_SUBTOPOLOGY]]]);;
+  assumes X: "kc_space X \<or> Hausdorff_space X \<or> regular_space X" and "k_space X" "openin X S"
+  shows "k_space(subtopology X S)"
+proof (rule k_space_subtopology_open)
+  fix T
+  assume "T \<subseteq> topspace X"
+    and "T \<subseteq> S"
+    and T: "\<And>K. compactin X K \<Longrightarrow> openin (subtopology X (K \<inter> S)) (K \<inter> T)"
+  have "openin (subtopology X K) (K \<inter> T)" if "compactin X K" for K
+    by (smt (verit, ccfv_threshold) T assms(3) inf_assoc inf_commute openin_Int openin_subtopology that)
+  then show "openin (subtopology X S) T"
+    by (metis \<open>T \<subseteq> S\<close> \<open>T \<subseteq> topspace X\<close> assms(2) k_space_alt subset_openin_subtopology)
+next
+  fix K
+  assume "compactin X K"
+  then have KS: "openin (subtopology X K) (K \<inter> S)"
+    by (simp add: \<open>openin X S\<close> openin_subtopology_Int2)
+  have XK: "compact_space (subtopology X K)"
+    by (simp add: \<open>compactin X K\<close> compact_space_subtopology)
+  show "k_space (subtopology X (K \<inter> S))"
+    using X
+  proof (rule disjE)
+    assume "kc_space X"
+    then show "k_space (subtopology X (K \<inter> S))"
+      using k_space_open_subtopology_aux [of "subtopology X K" "K \<inter> S"]
+      by (simp add: KS XK kc_space_subtopology subtopology_subtopology)
+  next
+    assume "Hausdorff_space X \<or> regular_space X"
+    then have "locally_compact_space (subtopology (subtopology X K) (K \<inter> S))"
+      using locally_compact_space_open_subset Hausdorff_space_subtopology KS XK 
+        compact_imp_locally_compact_space regular_space_subtopology by blast
+    then show "k_space (subtopology X (K \<inter> S))"
+      by (simp add: locally_compact_imp_k_space subtopology_subtopology)
+  qed
+qed
 
 lemma k_kc_space_subtopology:
-   "k_space X \<and> kc_space X \<and> (openin X S \<or> closedin X S)
-        \<Longrightarrow> k_space(subtopology X S) \<and> kc_space(subtopology X S)"
-oops
-  MESON_TAC[K_SPACE_OPEN_SUBTOPOLOGY; K_SPACE_CLOSED_SUBTOPOLOGY;
-            KC_SPACE_SUBTOPOLOGY]);;
+   "\<lbrakk>k_space X; kc_space X; openin X S \<or> closedin X S\<rbrakk> \<Longrightarrow> k_space(subtopology X S) \<and> kc_space(subtopology X S)"
+  by (metis k_space_closed_subtopology k_space_open_subtopology kc_space_subtopology)
+
 
 lemma k_space_as_quotient_explicit:
    "k_space X \<longleftrightarrow>
@@ -4651,7 +4687,7 @@ oops
     MESON_TAC[LOCALLY_COMPACT_IMP_K_SPACE; K_SPACE_QUOTIENT_MAP_IMAGE]]);;
 
 lemma k_space_prod_topology_left:
-   "locally_compact_space X \<and> (Hausdorff_space X \<or> regular_space X) \<and> k_space Y
+   "locally_compact_space X" "(Hausdorff_space X \<or> regular_space X)" "k_space Y
         \<Longrightarrow> k_space(prod_topology X Y)"
 oops
   REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
@@ -4668,7 +4704,7 @@ oops
   ASM_REWRITE_TAC[LOCALLY_COMPACT_SPACE_PROD_TOPOLOGY]);;
 
 lemma k_space_prod_topology_right:
-   "k_space X \<and> locally_compact_space Y \<and> (Hausdorff_space Y \<or> regular_space Y)
+   "k_space X" "locally_compact_space Y" "(Hausdorff_space Y \<or> regular_space Y)
         \<Longrightarrow> k_space(prod_topology X Y)"
 oops
   REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
@@ -4685,7 +4721,7 @@ oops
   ASM_REWRITE_TAC[LOCALLY_COMPACT_SPACE_PROD_TOPOLOGY]);;
 
 lemma continuous_map_from_k_space:
-   "k_space X \<and> (\<forall>k. compactin X k \<Longrightarrow> continuous_map(subtopology X k,Y) f)
+   "k_space X" "(\<forall>k. compactin X k \<Longrightarrow> continuous_map(subtopology X k,Y) f)
         \<Longrightarrow> continuous_map X Y f"
 oops
   REWRITE_TAC[K_SPACE] THEN REPEAT STRIP_TAC THEN
@@ -4714,7 +4750,7 @@ oops
   SET_TAC[]);;
 
 lemma closed_map_into_k_space:
-   "k_space Y \<and> f ` (topspace X) \<subseteq> topspace Y \<and>
+   "k_space Y" "f ` (topspace X) \<subseteq> topspace Y \<and>
       (\<forall>k. compactin Y k
            \<Longrightarrow> closed_map(subtopology X {x \<in> topspace X. f x \<in> k}, subtopology Y k) f)
       \<Longrightarrow> closed_map X Y f"
@@ -4735,7 +4771,7 @@ oops
   ASM_SIMP_TAC[CLOSED_IN_SUBTOPOLOGY_INTER_CLOSED]);;
 
 lemma open_map_into_k_space:
-   "k_space Y \<and> f ` (topspace X) \<subseteq> topspace Y \<and>
+   "k_space Y" "f ` (topspace X) \<subseteq> topspace Y \<and>
       (\<forall>k. compactin Y k
            \<Longrightarrow> open_map(subtopology X {x \<in> topspace X. f x \<in> k},
                         subtopology Y k) f)
@@ -4757,7 +4793,7 @@ oops
   ASM_SIMP_TAC[OPEN_IN_SUBTOPOLOGY_INTER_OPEN]);;
 
 lemma quotient_map_into_k_space:
-   "k_space Y \<and> continuous_map X Y f \<and>
+   "k_space Y" "continuous_map X Y f \<and>
      f ` (topspace X) = topspace Y \<and>
      (\<forall>k. compactin Y k
           \<Longrightarrow> quotient_map(subtopology X {x \<in> topspace X. f x \<in> k},
@@ -4782,7 +4818,7 @@ oops
   ASM_SIMP_TAC[CLOSED_IN_SUBTOPOLOGY_INTER_CLOSED]);;
 
 lemma quotient_map_into_k_space_eq:
-   "k_space Y \<and> kc_space Y
+   "k_space Y" "kc_space Y
         \<Longrightarrow> (quotient_map X Y f \<longleftrightarrow>
              continuous_map X Y f \<and>
              f ` (topspace X) = topspace Y \<and>
@@ -4857,7 +4893,7 @@ oops
   ASM_SIMP_TAC[PROPER_MAP_RESTRICTION]);;
 
 lemma compact_imp_proper_map:
-   "k_space Y \<and> kc_space Y \<and>
+   "k_space Y" "kc_space Y \<and>
         f ` (topspace X) \<subseteq> topspace Y \<and>
         (continuous_map X Y f \<or> kc_space X) \<and>
         (\<forall>k. compactin Y k
@@ -4943,7 +4979,7 @@ lemma topspace_kification:
 oops
   REPEAT GEN_TAC THEN GEN_REWRITE_TAC LAND_CONV [topspace] THEN
   MATCH_MP_TAC(SET_RULE
-   `s \<in> u \<and> (\<forall>t. t \<in> u \<Longrightarrow> t \<subseteq> s) \<Longrightarrow> \<Union> u = s`) THEN
+   `s \<in> u \<and> (\<forall>t. t \<in> u \<Longrightarrow> t \<subseteq> s) \<Longrightarrow> \<Union>u = s`) THEN
   SIMP_TAC[IN_ELIM_THM; OPEN_IN_KIFICATION; SUBSET_REFL] THEN
   SIMP_TAC[COMPACT_IN_SUBSET_TOPSPACE; OPEN_IN_SUBTOPOLOGY_REFL;
            SET_RULE `s \<subseteq> u \<Longrightarrow> s \<inter> u = s`]);;
@@ -5275,7 +5311,7 @@ oops
     ASM_CASES_TAC `cc:(A=>bool)->bool = {}` THENL
      [ASM_REWRITE_TAC[IMAGE_CLAUSES; UNION_EMPTY] THEN
       REWRITE_TAC[IN_UNION; IN_IMAGE] THEN DISJ1_TAC THEN
-      EXISTS_TAC `\<Union> uu::A=>bool` THEN
+      EXISTS_TAC `\<Union>uu::A=>bool` THEN
       ASM_SIMP_TAC[IN_ELIM_THM; OPEN_IN_UNIONS] THEN
       REWRITE_TAC[UNIONS_IMAGE] THEN SET_TAC[];
       REWRITE_TAC[IN_UNION; IN_IMAGE] THEN DISJ2_TAC THEN EXISTS_TAC
@@ -5320,7 +5356,7 @@ lemma topspace_alexandroff_compactification:
         INR () insert image INL (topspace X)"
 oops
   GEN_TAC THEN GEN_REWRITE_TAC LAND_CONV [topspace] THEN MATCH_MP_TAC(SET_RULE
-   `u \<in> s \<and> (\<forall>c. c \<in> s \<Longrightarrow> c \<subseteq> u) \<Longrightarrow> \<Union> s = u`) THEN
+   `u \<in> s \<and> (\<forall>c. c \<in> s \<Longrightarrow> c \<subseteq> u) \<Longrightarrow> \<Union>s = u`) THEN
   REWRITE_TAC[FORALL_IN_GSPEC; OPEN_IN_ALEXANDROFF_COMPACTIFICATION] THEN
   REWRITE_TAC[IN_ELIM_THM] THEN CONJ_TAC THENL
    [MESON_TAC[COMPACT_IN_EMPTY; CLOSED_IN_EMPTY; DIFF_EMPTY]; ALL_TAC] THEN
@@ -9613,14 +9649,14 @@ oops
   FIRST_X_ASSUM(DISJ_CASES_THEN STRIP_ASSUME_TAC) THENL
    [EXISTS_TAC
      `topspace X \<inter>
-      \<Inter> {\<Union> {u. openin X u \<and>
+      \<Inter> {\<Union>{u. openin X u \<and>
                           \<forall>x y. x \<in> (s \<inter> u) \<and>
                                 y \<in> (s \<inter> u)
                                 \<Longrightarrow> d (f x) f y < inverse(Suc n)}
               | n \<in> UNIV}`;
     EXISTS_TAC
      `topspace X \<inter>
-      \<Inter> {\<Union> {u. openin X u \<and>
+      \<Inter> {\<Union>{u. openin X u \<and>
                           \<exists>b. b \<in> topspace X \<and>
                               \<forall>x y. x \<in> (s \<inter> u) - {b} \<and>
                                     y \<in> (s \<inter> u) - {b}
@@ -9973,7 +10009,7 @@ oops
     FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [metrizable_space]) THEN
     DISCH_THEN(X_CHOOSE_TAC `m:(K=>A)metric`) THEN
     MATCH_MP_TAC COUNTABLE_SUBSET THEN
-    EXISTS_TAC `\<Union> {{i. i \<in> l \<and>
+    EXISTS_TAC `\<Union>{{i. i \<in> l \<and>
                              \<not> ((q::K=>K->A) i \<in> mball m (p,inverse(Suc n)))} |
                         n \<in> UNIV}` THEN
     CONJ_TAC THENL
@@ -11886,7 +11922,7 @@ lemma metric_baire_category_alt:
          countable g \<and>
          (\<forall>t. t \<in> g
               \<Longrightarrow> closedin mtopology t \<and> mtopology interior_of t = {})
-         \<Longrightarrow> mtopology interior_of (\<Union> g) = {}"
+         \<Longrightarrow> mtopology interior_of (\<Union>g) = {}"
 oops
   REPEAT STRIP_TAC THEN
   MP_TAC(ISPECL [`m::A metric`; `image (\<lambda>u::A=>bool. M - u) g`]
@@ -11914,7 +11950,7 @@ lemma baire_category_alt:
          (Hausdorff_space X \<or> regular_space X)) \<and>
         countable g \<and>
         (\<forall>t. t \<in> g \<Longrightarrow> closedin X t \<and> X interior_of t = {})
-        \<Longrightarrow> X interior_of (\<Union> g) = {}"
+        \<Longrightarrow> X interior_of (\<Union>g) = {}"
 oops
   REWRITE_TAC[TAUT `(p \<or> q) \<and> r \<Longrightarrow> s \<longleftrightarrow>
                     (p \<Longrightarrow> r \<Longrightarrow> s) \<and> (q \<and> r \<Longrightarrow> s)`] THEN
@@ -12055,12 +12091,12 @@ lemma locally_connected_not_countable_closed_union:
          locally_compact_space X \<and> Hausdorff_space X) \<and>
         countable u \<and> pairwise disjnt u \<and>
         (\<forall>c. c \<in> u \<Longrightarrow> closedin X c \<and> (c \<noteq> {})) \<and>
-        \<Union> u = topspace X
+        \<Union>u = topspace X
          \<Longrightarrow> u = {topspace X}"
 oops
   lemma lemma:
-   (`\<Union> (f ` s \<union> g ` s) =
-     \<Union> (image (\<lambda>x. f x \<union> g x) s)"
+   (`\<Union>(f ` s \<union> g ` s) =
+     \<Union>(image (\<lambda>x. f x \<union> g x) s)"
 oops
     REWRITE_TAC[UNIONS_UNION; UNIONS_IMAGE] THEN SET_TAC[])
 in
@@ -12068,7 +12104,7 @@ in
   REWRITE_TAC[REAL_CLOSED_IN] THEN REPEAT GEN_TAC THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
   ABBREV_TAC `v = image (\<lambda>c::A=>bool. X frontier_of c) u` THEN
-  ABBREV_TAC `b::A=>bool = \<Union> v` THEN
+  ABBREV_TAC `b::A=>bool = \<Union>v` THEN
   MATCH_MP_TAC(TAUT `(\<not> p \<Longrightarrow> False) \<Longrightarrow> p`) THEN DISCH_TAC THEN
   SUBGOAL_THEN `(b::A=>bool) \<subseteq> topspace X` ASSUME_TAC THENL
    [EXPAND_TAC "b" THEN REWRITE_TAC[UNIONS_SUBSET] THEN
@@ -12087,8 +12123,8 @@ in
      `s \<subseteq> u \<Longrightarrow> u \<inter> s = s`] THEN
     DISCH_THEN SUBST1_TAC THEN EXPAND_TAC "b" THEN
     EXPAND_TAC "v" THEN MATCH_MP_TAC(SET_RULE
-     `(\<forall>s. s \<in> u \<and> s \<subseteq> \<Union> u \<and> f s = {} \<Longrightarrow> s = {}) \<and>
-      \<not> (\<Union> u = {})
+     `(\<forall>s. s \<in> u \<and> s \<subseteq> \<Union>u \<and> f s = {} \<Longrightarrow> s = {}) \<and>
+      \<not> (\<Union>u = {})
       \<Longrightarrow> \<not> (\<Union>(f ` u) = {})`) THEN
     ASM_SIMP_TAC[IMP_CONJ; FRONTIER_OF_EQ_EMPTY; GSYM TOPSPACE_MTOPOLOGY] THEN
     ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
@@ -12107,7 +12143,7 @@ in
   SUBGOAL_THEN `closedin X (b::A=>bool)` ASSUME_TAC THENL
    [SUBGOAL_THEN
      `b = topspace X -
-          \<Union> (image (\<lambda>c::A=>bool. X interior_of c) u)`
+          \<Union>(image (\<lambda>c::A=>bool. X interior_of c) u)`
     SUBST1_TAC THENL
      [MAP_EVERY EXPAND_TAC ["b"; "v"] THEN MATCH_MP_TAC(SET_RULE
        `s \<union> t = u \<and> disjnt s t \<Longrightarrow> s = u - t`) THEN
@@ -12120,7 +12156,7 @@ in
          `(\<forall>x. x \<in> s \<Longrightarrow> f x = x) \<Longrightarrow> f ` s = s`) THEN
         ASM_SIMP_TAC[CLOSURE_OF_EQ];
         REWRITE_TAC[SET_RULE
-         `disjnt (\<Union> s) (\<Union> t) \<longleftrightarrow>
+         `disjnt (\<Union>s) (\<Union>t) \<longleftrightarrow>
           \<forall>x. x \<in> s \<Longrightarrow> \<forall>y. y \<in> t \<Longrightarrow> disjnt x y`] THEN
         REWRITE_TAC[FORALL_IN_IMAGE] THEN
         X_GEN_TAC `s::A=>bool` THEN DISCH_TAC THEN
@@ -12188,7 +12224,7 @@ lemma real_sierpinski_lemma:
    "a \<le> b \<and>
         countable u \<and> pairwise disjnt u \<and>
         (\<forall>c. c \<in> u \<Longrightarrow> real_closed c \<and> (c \<noteq> {})) \<and>
-        \<Union> u = {a..b}
+        \<Union>u = {a..b}
          \<Longrightarrow> u = {{a..b}}"
 oops
   REPEAT STRIP_TAC THEN
@@ -13496,13 +13532,13 @@ lemma separation_by_closed_intermediates_count:
         (\<exists>u. u HAS_SIZE n \<and>
              pairwise (separatedin X) u \<and>
              (\<forall>t. t \<in> u \<Longrightarrow> (t \<noteq> {})) \<and>
-             \<Union> u = topspace X - s)
+             \<Union>u = topspace X - s)
         \<Longrightarrow>  \<exists>c. closedin X c \<and> c \<subseteq> s \<and>
                  \<forall>d. closedin X d \<and> c \<subseteq> d \<and> d \<subseteq> s
                      \<Longrightarrow> \<exists>u. u HAS_SIZE n \<and>
                              pairwise (separatedin X) u \<and>
                              (\<forall>t. t \<in> u \<Longrightarrow> (t \<noteq> {})) \<and>
-                             \<Union> u = topspace X - d"
+                             \<Union>u = topspace X - d"
 oops
   REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC
    (X_CHOOSE_THEN `u:(A=>bool)->bool` STRIP_ASSUME_TAC)) THEN
@@ -13512,7 +13548,7 @@ oops
    [CONJ_TAC THENL [ASM_MESON_TAC[HAS_SIZE]; ASM SET_TAC[]];
     DISCH_THEN(X_CHOOSE_THEN `f:(A=>bool)->(A=>bool)` STRIP_ASSUME_TAC)] THEN
   EXISTS_TAC
-   `topspace X - \<Union> (image (f:(A=>bool)->(A=>bool)) u)` THEN
+   `topspace X - \<Union>(image (f:(A=>bool)->(A=>bool)) u)` THEN
   ASM_SIMP_TAC[CLOSED_IN_DIFF; CLOSED_IN_TOPSPACE; OPEN_IN_UNIONS;
                FORALL_IN_IMAGE] THEN
   CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
@@ -13564,13 +13600,13 @@ lemma separation_by_closed_intermediates_eq_count:
         \<Longrightarrow> ((\<exists>u. u HAS_SIZE n \<and>
                   pairwise (separatedin X) u \<and>
                   (\<forall>t. t \<in> u \<Longrightarrow> (t \<noteq> {})) \<and>
-                  \<Union> u = topspace X - s) \<longleftrightarrow>
+                  \<Union>u = topspace X - s) \<longleftrightarrow>
              (\<exists>c. closedin X c \<and> c \<subseteq> s \<and>
                   \<forall>d. closedin X d \<and> c \<subseteq> d \<and> d \<subseteq> s
                       \<Longrightarrow> \<exists>u. u HAS_SIZE n \<and>
                               pairwise (separatedin X) u \<and>
                               (\<forall>t. t \<in> u \<Longrightarrow> (t \<noteq> {})) \<and>
-                              \<Union> u = topspace X - d))"
+                              \<Union>u = topspace X - d))"
 oops
   REPEAT STRIP_TAC THEN EQ_TAC THENL
    [MATCH_MP_TAC(ONCE_REWRITE_RULE [IMP_CONJ]
@@ -13621,7 +13657,7 @@ oops
      [REWRITE_TAC[MEMBER_NOT_EMPTY] THEN ASM_MESON_TAC[HAS_SIZE_0; HAS_SIZE];
       ALL_TAC] THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC
-     `(topspace X - s - \<Union> (v - {t})) insert
+     `(topspace X - s - \<Union>(v - {t})) insert
       image (\<lambda>d::A=>bool. d - s) (v - {t})`) THEN
     REWRITE_TAC[] THEN
     MATCH_MP_TAC(TAUT
@@ -13698,7 +13734,7 @@ oops
         RULE_ASSUM_TAC(REWRITE_RULE[pairwise]) THEN
         FIRST_X_ASSUM MATCH_MP_TAC THEN ASM SET_TAC[]]];
     ALL_TAC] THEN
-  REMOVE_THEN "*" (MP_TAC \<circ> SPEC `topspace X - \<Union> u::A=>bool`) THEN
+  REMOVE_THEN "*" (MP_TAC \<circ> SPEC `topspace X - \<Union>u::A=>bool`) THEN
   REWRITE_TAC[NOT_IMP] THEN REPEAT CONJ_TAC THENL
    [MATCH_MP_TAC CLOSED_IN_DIFF THEN
     ASM_SIMP_TAC[OPEN_IN_UNIONS; CLOSED_IN_TOPSPACE];
@@ -13799,10 +13835,10 @@ oops
   and lemur = prove
    (`pairwise (separatedin (subtopology X (topspace X - s))) u \<and>
      (\<forall>t. t \<in> u \<Longrightarrow> (t \<noteq> {})) \<and>
-     \<Union> u = topspace(subtopology X (topspace X - s)) \<longleftrightarrow>
+     \<Union>u = topspace(subtopology X (topspace X - s)) \<longleftrightarrow>
      pairwise (separatedin X) u \<and>
      (\<forall>t. t \<in> u \<Longrightarrow> (t \<noteq> {})) \<and>
-     \<Union> u = topspace X - s"
+     \<Union>u = topspace X - s"
 oops
     REWRITE_TAC[pairwise; SEPARATED_IN_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY] THEN
     SET_TAC[])
