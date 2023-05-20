@@ -43,6 +43,111 @@ proof (clarsimp simp: locally_compact_space_def)
 qed
 
 
+
+lemma proper_map_restriction:
+  assumes "proper_map X Y f" "{x \<in> topspace X. f x \<in> V} = U"
+  shows "proper_map (subtopology X U) (subtopology Y V) f"
+proof -
+  have [simp]: "{x \<in> topspace X. f x \<in> V \<and> f x = y} = {x \<in> topspace X. f x = y}" 
+    if "y \<in> V" for y
+    using that by auto
+  show ?thesis
+    using assms unfolding proper_map_def using closed_map_restriction
+    by (force simp: compactin_subtopology)
+qed
+
+
+lemma compact_imp_proper_map_gen:
+  assumes Y: "\<And>S. \<lbrakk>S \<subseteq> topspace Y; \<And>K. compactin Y K \<Longrightarrow> compactin Y (S \<inter> K)\<rbrakk>
+               \<Longrightarrow> closedin Y S"
+    and fim: "f ` (topspace X) \<subseteq> topspace Y"
+    and f: "continuous_map X Y f \<or> kc_space X"
+    and YX: "\<And>K. compactin Y K \<Longrightarrow> compactin X {x \<in> topspace X. f x \<in> K}"
+  shows "proper_map X Y f"
+  unfolding proper_map_alt closed_map_def
+proof (intro conjI strip)
+  fix C
+  assume C: "closedin X C"
+  show "closedin Y (f ` C)"
+  proof (intro Y)
+    show "f ` C \<subseteq> topspace Y"
+      using C closedin_subset fim by blast
+    fix K
+    assume K: "compactin Y K"
+    define A where "A \<equiv> {x \<in> topspace X. f x \<in> K}"
+    have eq: "f ` C \<inter> K = f ` ({x \<in> topspace X. f x \<in> K} \<inter> C)"
+      using C closedin_subset by auto
+    show "compactin Y (f ` C \<inter> K)"
+      unfolding eq
+    proof (rule image_compactin)
+      show "compactin (subtopology X A) ({x \<in> topspace X. f x \<in> K} \<inter> C)"
+      proof (rule closedin_compact_space)
+        show "compact_space (subtopology X A)"
+          by (simp add: A_def K YX compact_space_subtopology)
+        show "closedin (subtopology X A) ({x \<in> topspace X. f x \<in> K} \<inter> C)"
+          using A_def C closedin_subtopology by blast
+      qed
+      have "continuous_map (subtopology X A) (subtopology Y K) f" if "kc_space X"
+        apply (simp add: continuous_map_closedin)
+        apply (auto simp: A_def)
+        using fim apply blast
+        using closedin_compact_space [OF compact_space_subtopology] compactin_subtopology
+          compactin_imp_closedin_gen [OF that] kc_space_subtopology
+        by (smt (verit) Collect_cong Collect_mono_iff Int_iff K YX closedin_subtopology inf.orderE)
+      with f show "continuous_map (subtopology X A) Y f"
+        using continuous_map_from_subtopology continuous_map_in_subtopology by blast
+    qed
+  qed
+qed (simp add: YX)
+
+
+  oops
+  FIRST_X_ASSUM DISJ_CASES_TAC THENL
+   [ASM_SIMP_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY;
+                 CONTINUOUS_MAP_FROM_SUBTOPOLOGY] THEN
+    ASM SET_TAC[];
+    MATCH_MP_TAC(MESON[CONTINUOUS_MAP_IN_SUBTOPOLOGY]
+     `\<forall>t. continuous_map(X,subtopology Y t) f
+          \<Longrightarrow> continuous_map X Y f`) THEN
+    EXISTS_TAC `k::B=>bool` THEN
+    REWRITE_TAC[CONTINUOUS_MAP_CLOSED_IN; TOPSPACE_SUBTOPOLOGY] THEN
+    CONJ_TAC THENL [ASM SET_TAC[]; X_GEN_TAC `t::B=>bool`] THEN
+    DISCH_THEN(MP_TAC o MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
+       CLOSED_IN_COMPACT_SPACE)) THEN
+
+    ASM_SIMP_TAC[COMPACT_SPACE_SUBTOPOLOGY; COMPACT_IN_SUBTOPOLOGY] THEN
+    STRIP_TAC THEN MATCH_MP_TAC COMPACT_IN_IMP_CLOSED_IN_GEN THEN
+    ASM_SIMP_TAC[KC_SPACE_SUBTOPOLOGY] THEN
+    ASM_SIMP_TAC[COMPACT_IN_SUBTOPOLOGY; SET_RULE
+     `c \<subseteq> k
+      \<Longrightarrow> {x. x \<in> u \<inter> {x. x \<in> u \<and> f x \<in> k} \<and> f x \<in> c} =
+          {x. x \<in> u \<and> f x \<in> c}`] THEN
+    ASM SET_TAC[]]);;
+
+lemma continuous_closed_imp_proper_map:
+   "compact_space X \<and>
+        t1_space Y \<and>
+        continuous_map X Y f \<and>
+        closed_map  X Y f
+        \<Longrightarrow> proper_map X Y f"
+oops 
+  REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[proper_map] THEN
+  REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM IN_SING] THEN
+  MATCH_MP_TAC CLOSED_IN_COMPACT_SPACE THEN ASM_REWRITE_TAC[] THEN
+  MATCH_MP_TAC CLOSED_IN_CONTINUOUS_MAP_PREIMAGE THEN
+  ASM_MESON_TAC[T1_SPACE_CLOSED_IN_SING]);;
+
+lemma continuous_imp_proper_map:
+   "\<And>X Y f.
+        compact_space X \<and>
+        kc_space Y \<and>
+        continuous_map X Y f
+        \<Longrightarrow> proper_map X Y f"
+oops 
+  MESON_TAC[CONTINUOUS_IMP_CLOSED_MAP_GEN;
+            CONTINUOUS_CLOSED_IMP_PROPER_MAP; KC_IMP_T1_SPACE]);;
+
+
 (*NEEDS LEPOLL*)
 lemma card_lepoll_quasi_components_of_topspace:
   "quasi_components_of X \<lesssim> topspace X"
@@ -4663,7 +4768,8 @@ qed
 
 lemma k_space_as_quotient:
   fixes X :: "'a topology"
-  shows "k_space X \<longleftrightarrow> (\<exists>q. \<exists>Y:: ('a set * 'a) topology. locally_compact_space Y \<and> quotient_map Y X q)" (is "?lhs=?rhs")
+  shows "k_space X \<longleftrightarrow> (\<exists>q. \<exists>Y:: ('a set * 'a) topology. locally_compact_space Y \<and> quotient_map Y X q)" 
+         (is "?lhs=?rhs")
 proof
   show "k_space X" if ?rhs
     using that k_space_quotient_map_image locally_compact_imp_k_space by blast 
@@ -4730,7 +4836,6 @@ proof -
     by (simp add: continuous_map_closedin)
 qed
 
-
 lemma closed_map_into_k_space:
   assumes "k_space Y" and fim: "f ` (topspace X) \<subseteq> topspace Y"
     and f: "\<And>K. compactin Y K
@@ -4759,7 +4864,7 @@ text \<open>Essentially the same proof\<close>
 lemma open_map_into_k_space:
   assumes "k_space Y" and fim: "f ` (topspace X) \<subseteq> topspace Y"
     and f: "\<And>K. compactin Y K
-             \<Longrightarrow> open_map (subtopology X {x \<in> topspace X. f x \<in> K}) (subtopology Y K) f"
+                 \<Longrightarrow> open_map (subtopology X {x \<in> topspace X. f x \<in> K}) (subtopology Y K) f"
   shows "open_map X Y f"
   unfolding open_map_def
 proof (intro strip)
@@ -4828,75 +4933,67 @@ lemma quotient_map_into_k_space_eq:
        dest: quotient_imp_continuous_map quotient_imp_surjective_map)
 
 lemma open_map_into_k_space_eq:
-   "k_space Y
-        \<Longrightarrow> open_map X Y f \<longleftrightarrow>
-            f ` (topspace X) \<subseteq> topspace Y \<and>
-            (\<forall>k. compactin Y k
-                 \<longrightarrow> open_map (subtopology X {x \<in> topspace X. f x \<in> k})
-                       (subtopology Y k) f)"
-proof -
-  assume "k_space Y"
-  with open_map_into_k_space show ?thesis
-    using open_map_imp_subset_topspace open_map_restriction
+  assumes "k_space Y"
+  shows "open_map X Y f \<longleftrightarrow>
+         f ` (topspace X) \<subseteq> topspace Y \<and>
+         (\<forall>k. compactin Y k
+              \<longrightarrow> open_map (subtopology X {x \<in> topspace X. f x \<in> k}) (subtopology Y k) f)"
+       (is "?lhs=?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs"
+    by (simp add: open_map_imp_subset_topspace open_map_restriction)
+  show "?rhs \<Longrightarrow> ?lhs"
+    by (simp add: assms open_map_into_k_space)
 qed
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THEN
-  ASM_SIMP_TAC[OPEN_MAP_INTO_K_SPACE] THEN
-  ASM_SIMP_TAC[OPEN_MAP_IMP_SUBSET_TOPSPACE] THEN
-  ASM_SIMP_TAC[OPEN_MAP_RESTRICTION]);;
 
 lemma closed_map_into_k_space_eq:
-   "k_space Y
-        \<Longrightarrow> (closed_map X Y f \<longleftrightarrow>
-             f ` (topspace X) \<subseteq> topspace Y \<and>
-             (\<forall>k. compactin Y k
-                  \<longrightarrow> closed_map
-                       (subtopology X {x \<in> topspace X. f x \<in> k},
-                        subtopology Y k) f))"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THEN
-  ASM_SIMP_TAC[CLOSED_MAP_INTO_K_SPACE] THEN
-  ASM_SIMP_TAC[CLOSED_MAP_IMP_SUBSET_TOPSPACE] THEN
-  ASM_SIMP_TAC[CLOSED_MAP_RESTRICTION]);;
+  assumes "k_space Y"
+  shows "closed_map X Y f \<longleftrightarrow>
+         f ` (topspace X) \<subseteq> topspace Y \<and>
+         (\<forall>k. compactin Y k
+              \<longrightarrow> closed_map (subtopology X {x \<in> topspace X. f x \<in> k}) (subtopology Y k) f)"
+       (is "?lhs \<longleftrightarrow> ?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs"
+    by (simp add: closed_map_imp_subset_topspace closed_map_restriction)
+  show "?rhs \<Longrightarrow> ?lhs"
+    by (simp add: assms closed_map_into_k_space)
+qed
 
 lemma proper_map_into_k_space:
-   "k_space Y \<and>
-      f ` (topspace X) \<subseteq> topspace Y \<and>
-      (\<forall>k. compactin Y k
-           \<Longrightarrow> proper_map(subtopology X {x \<in> topspace X. f x \<in> k},
-                          subtopology Y k) f)
-      \<Longrightarrow> proper_map X Y f"
-oops
-  REWRITE_TAC[proper_map] THEN REPEAT STRIP_TAC THENL
-   [MATCH_MP_TAC CLOSED_MAP_INTO_K_SPACE THEN ASM_SIMP_TAC[];
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `{y::B}`) THEN
-    ASM_REWRITE_TAC[COMPACT_IN_SING] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `y::B` \<circ> CONJUNCT2) THEN
-    ASM_REWRITE_TAC[IN_ELIM_THM; IN_INTER; TOPSPACE_SUBTOPOLOGY; IN_SING] THEN
-    REWRITE_TAC[TAUT  `(p \<and> p \<and> q) \<and> q \<longleftrightarrow> p \<and> q`] THEN
-    SIMP_TAC[COMPACT_IN_SUBTOPOLOGY]]);;
+  assumes "k_space Y" and fim: "f ` (topspace X) \<subseteq> topspace Y"
+    and f: "\<And>K. compactin Y K
+                 \<Longrightarrow> proper_map (subtopology X {x \<in> topspace X. f x \<in> K})
+                                (subtopology Y K) f"
+  shows "proper_map X Y f"
+proof -
+  have "closed_map X Y f"
+    by (meson assms closed_map_into_k_space fim proper_map_def)
+  with f topspace_subtopology_subset show ?thesis
+    apply (simp add: proper_map_alt)
+    by (smt (verit, best) Collect_cong compactin_absolute)
+qed
 
 lemma proper_map_into_k_space_eq:
-   "k_space Y
-        \<Longrightarrow> (proper_map X Y f \<longleftrightarrow>
-             f ` (topspace X) \<subseteq> topspace Y \<and>
-             \<forall>k. compactin Y k
-                  \<Longrightarrow> proper_map
-                       (subtopology X {x \<in> topspace X. f x \<in> k},
-                        subtopology Y k) f)"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THEN
-  ASM_SIMP_TAC[PROPER_MAP_INTO_K_SPACE] THEN
-  ASM_SIMP_TAC[PROPER_MAP_IMP_SUBSET_TOPSPACE] THEN
-  ASM_SIMP_TAC[PROPER_MAP_RESTRICTION]);;
+  assumes "k_space Y"
+  shows "proper_map X Y f \<longleftrightarrow>
+         f ` (topspace X) \<subseteq> topspace Y \<and>
+         (\<forall>k. compactin Y k
+              \<longrightarrow> proper_map (subtopology X {x \<in> topspace X. f x \<in> k}) (subtopology Y k) f)"
+         (is "?lhs \<longleftrightarrow> ?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs"
+    by (simp add: proper_map_imp_subset_topspace proper_map_restriction)
+  show "?rhs \<Longrightarrow> ?lhs"
+    by (simp add: assms proper_map_into_k_space)
+qed
 
 lemma compact_imp_proper_map:
-   "k_space Y" "kc_space Y \<and>
-        f ` (topspace X) \<subseteq> topspace Y \<and>
-        (continuous_map X Y f \<or> kc_space X) \<and>
-        (\<forall>k. compactin Y k
-             \<Longrightarrow> compactin X {x \<in> topspace X. f x \<in> k})
-        \<Longrightarrow> proper_map X Y f"
+  assumes "k_space Y" "kc_space Y" and fim: "f ` (topspace X) \<subseteq> topspace Y" 
+    and f: "continuous_map X Y f \<or> kc_space X" 
+    and comp: "\<And>K. compactin Y K \<Longrightarrow> compactin X {x \<in> topspace X. f x \<in> K}"
+  shows "proper_map X Y f"
+apply (rule compact_imp_proper_map_gen)
 oops
   REPEAT GEN_TAC THEN
   DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
