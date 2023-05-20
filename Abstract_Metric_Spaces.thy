@@ -88,41 +88,31 @@ proof (intro conjI strip)
           using A_def C closedin_subtopology by blast
       qed
       have "continuous_map (subtopology X A) (subtopology Y K) f" if "kc_space X"
-        apply (simp add: continuous_map_closedin)
-        apply (auto simp: A_def)
-        using fim apply blast
-        using closedin_compact_space [OF compact_space_subtopology] compactin_subtopology
-          compactin_imp_closedin_gen [OF that] kc_space_subtopology
-        by (smt (verit) Collect_cong Collect_mono_iff Int_iff K YX closedin_subtopology inf.orderE)
+        unfolding continuous_map_closedin
+      proof (intro conjI strip)
+        show "f x \<in> topspace (subtopology Y K)"
+          if "x \<in> topspace (subtopology X A)" for x
+          using that A_def K compactin_subset_topspace by auto
+      next
+        fix C
+        assume C: "closedin (subtopology Y K) C"
+        show "closedin (subtopology X A) {x \<in> topspace (subtopology X A). f x \<in> C}"
+        proof (rule compactin_imp_closedin_gen)
+          show "kc_space (subtopology X A)"
+            by (simp add: kc_space_subtopology that)
+          show "compactin (subtopology X A) {x \<in> topspace (subtopology X A). f x \<in> C}"
+            apply (simp add: compactin_subtopology)
+            apply (intro conjI)
+            apply (smt (verit) A_def C Collect_cong K YX closedin_compact_space compact_space_subtopology compactin_subtopology mem_Collect_eq subset_iff)
+            by blast
+        qed
+      qed
       with f show "continuous_map (subtopology X A) Y f"
         using continuous_map_from_subtopology continuous_map_in_subtopology by blast
     qed
   qed
 qed (simp add: YX)
 
-
-  oops
-  FIRST_X_ASSUM DISJ_CASES_TAC THENL
-   [ASM_SIMP_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY;
-                 CONTINUOUS_MAP_FROM_SUBTOPOLOGY] THEN
-    ASM SET_TAC[];
-    MATCH_MP_TAC(MESON[CONTINUOUS_MAP_IN_SUBTOPOLOGY]
-     `\<forall>t. continuous_map(X,subtopology Y t) f
-          \<Longrightarrow> continuous_map X Y f`) THEN
-    EXISTS_TAC `k::B=>bool` THEN
-    REWRITE_TAC[CONTINUOUS_MAP_CLOSED_IN; TOPSPACE_SUBTOPOLOGY] THEN
-    CONJ_TAC THENL [ASM SET_TAC[]; X_GEN_TAC `t::B=>bool`] THEN
-    DISCH_THEN(MP_TAC o MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
-       CLOSED_IN_COMPACT_SPACE)) THEN
-
-    ASM_SIMP_TAC[COMPACT_SPACE_SUBTOPOLOGY; COMPACT_IN_SUBTOPOLOGY] THEN
-    STRIP_TAC THEN MATCH_MP_TAC COMPACT_IN_IMP_CLOSED_IN_GEN THEN
-    ASM_SIMP_TAC[KC_SPACE_SUBTOPOLOGY] THEN
-    ASM_SIMP_TAC[COMPACT_IN_SUBTOPOLOGY; SET_RULE
-     `c \<subseteq> k
-      \<Longrightarrow> {x. x \<in> u \<inter> {x. x \<in> u \<and> f x \<in> k} \<and> f x \<in> c} =
-          {x. x \<in> u \<and> f x \<in> c}`] THEN
-    ASM SET_TAC[]]);;
 
 lemma continuous_closed_imp_proper_map:
    "compact_space X \<and>
