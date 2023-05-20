@@ -4796,23 +4796,16 @@ proof -
       define Kf where "Kf \<equiv> {x \<in> topspace X. f x \<in> K}"
       have *: "K \<inter> C \<subseteq> topspace Y \<and> K \<inter> C \<subseteq> K"
         using \<open>C \<subseteq> topspace Y\<close> by blast
+      then have eq: "closedin (subtopology X Kf) (Kf \<inter> {x \<in> topspace X. f x \<in> C}) =
+                 closedin (subtopology Y K) (K \<inter> C)"
+        using f [OF that] * unfolding quotient_map_closedin Kf_def
+        by (smt (verit, ccfv_SIG) Collect_cong Int_def compactin_subset_topspace mem_Collect_eq that topspace_subtopology topspace_subtopology_subset)
       have dd: "{x \<in> topspace X \<inter> Kf. f x \<in> K \<inter> C} = Kf \<inter> {x \<in> topspace X. f x \<in> C}"
         by (auto simp add: Kf_def)
-      have eq: "closedin (subtopology Y K) (K \<inter> C) \<longleftrightarrow>
-                closedin (subtopology X Kf) (Kf \<inter> {x \<in> topspace X. f x \<in> C})"
-        apply safe
-         apply (simp add: K closedin_subtopology_Int_closed)
-        sorry
-      then have eq: "closedin (subtopology Y K) (K \<inter> C) \<longleftrightarrow>
-                closedin (subtopology X Kf) {x \<in> topspace X \<inter> Kf. f x \<in> K \<inter> C}"
-        using dd by auto
-        apply (smt (verit) "*" Collect_cong Kf_def compactin_subset_topspace f quotient_map_closedin that topspace_subtopology topspace_subtopology_subset)
-        using closedin_subtopology_Int_closed f *
-        by (smt (verit, ccfv_SIG) Collect_cong Kf_def inf_assoc inf_le1 quotient_map_closedin subtopology_restrict that topspace_subtopology_subset)
       have "closedin (subtopology X Kf) {x \<in> topspace X. x \<in> Kf \<and> f x \<in> K \<and> f x \<in> C}"
         using K closedin_subtopology by (fastforce simp add: Kf_def)
-      then show ?thesis
-        unfolding eq by force
+      with K closedin_subtopology_Int_closed eq show ?thesis
+        by blast
     qed
     then show ?thesis 
       using \<open>k_space Y\<close> that unfolding k_space by blast
@@ -4823,7 +4816,6 @@ proof -
   ultimately show ?thesis
     unfolding quotient_map_closedin using fim by blast
 qed
-
 
 lemma quotient_map_into_k_space_eq:
   assumes "k_space Y" "kc_space Y"
