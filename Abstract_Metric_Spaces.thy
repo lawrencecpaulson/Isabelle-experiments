@@ -128,6 +128,278 @@ lemma continuous_imp_proper_map:
   by (simp add: continuous_closed_imp_proper_map continuous_imp_closed_map_gen kc_imp_t1_space)
 
 
+thm closed_map_from_composition_left
+
+
+lemma proper_map_into_subtopology:
+   "\<lbrakk>proper_map X Y f; f ` topspace X \<subseteq> C\<rbrakk> \<Longrightarrow> proper_map X (subtopology Y C) f"
+  by (simp add: closed_map_into_subtopology compactin_subtopology proper_map_alt)
+
+lemma proper_map_from_composition_left:
+  assumes gf: "proper_map X Z (g \<circ> f)" and contf: "continuous_map X Y f" and fim: "f ` topspace X = topspace Y"
+  shows "proper_map Y Z g"
+  unfolding proper_map_def
+proof (intro strip conjI)
+  show "closed_map Y Z g"
+    by (meson closed_map_from_composition_left gf contf fim proper_imp_closed_map)
+  fix z assume "z \<in> topspace Z"
+  have eq: "{y \<in> topspace Y. g y = z} = f ` {x \<in> topspace X. (g \<circ> f) x = z}"
+    using fim by force
+  show "compactin Y {x \<in> topspace Y. g x = z}"
+    unfolding eq
+  proof (rule image_compactin [OF _ contf])
+    show "compactin X {x \<in> topspace X. (g \<circ> f) x = z}"
+      using \<open>z \<in> topspace Z\<close> gf proper_map_def by fastforce
+  qed
+qed
+
+thm closed_map_from_composition_right
+
+
+lemma proper_map_from_composition_right_inj:
+  assumes gf: "proper_map X Z (g \<circ> f)" and fim: "f ` topspace X \<subseteq> topspace Y" 
+    and contf: "continuous_map Y Z g" and inj: "inj_on g (topspace Y)"
+  shows "proper_map X Y f"
+  unfolding proper_map_def
+proof (intro strip conjI)
+  show "closed_map X Y f"
+    by (meson closed_map_from_composition_right assms proper_imp_closed_map)
+  fix y
+  assume "y \<in> topspace Y"
+  with fim inj have eq: "{x \<in> topspace X. f x = y} = {x \<in> topspace X. (g \<circ> f) x = g y}"
+    by (auto simp: image_subset_iff inj_onD)
+  show "compactin X {x \<in> topspace X. f x = y}"
+    unfolding eq
+    by (smt (verit) Collect_cong \<open>y \<in> topspace Y\<close> contf continuous_map_closedin gf proper_map_def)
+qed
+
+thm proper_map_from_composition_left
+lemma perfect_map_from_composition_left:
+  assumes "perfect_map X Z (g \<circ> f)" and "continuous_map X Y f"
+    and "continuous_map Y Z g" and "f ` topspace X = topspace Y"
+  shows "perfect_map Y Z g"
+  using assms unfolding perfect_map_def
+  by (metis image_comp proper_map_from_composition_left)
+
+lemma proper_map_diag_eq [simp]:
+   "proper_map X (prod_topology X X) (\<lambda>x. (x,x)) \<longleftrightarrow> Hausdorff_space X"
+  by (simp add: closed_map_diag_eq inj_on_convol_ident injective_imp_proper_eq_closed_map)
+
+lemma proper_map_prod:
+   "proper_map (prod_topology X Y) (prod_topology X' Y') (\<lambda> (x,y). (f x, g y)) \<longleftrightarrow>
+    topspace(prod_topology X Y) = {} \<or> proper_map X X' f \<and> proper_map Y Y' g"
+proof (cases "topspace(prod_topology X Y) = {}")
+  case True
+  then show ?thesis
+    by (simp add: proper_map_on_empty)
+next
+  case False
+  then show ?thesis sorry
+qed
+
+oops 
+  ASM_SIMP_TAC[PROPER_MAP_ON_EMPTY] THEN EQ_TAC THENL
+   [REWRITE_TAC[proper_map] THEN STRIP_TAC THEN
+    FIRST_X_ASSUM(MP_TAC o MATCH_MP CLOSED_MAP_PROD) THEN
+    ASM_REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[TOPSPACE_PROD_TOPOLOGY]) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[CROSS_EQ_EMPTY; DE_MORGAN_THM]) THEN
+    REPEAT(FIRST_X_ASSUM(ASSUME_TAC o
+      MATCH_MP CLOSED_MAP_IMP_SUBSET_TOPSPACE)) THEN
+    CONJ_TAC THENL
+     [X_GEN_TAC `y::C` THEN DISCH_TAC THEN FIRST_ASSUM(MP_TAC o
+       GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY] o CONJUNCT2) THEN
+      DISCH_THEN(X_CHOOSE_TAC `z::B`) THEN
+      SUBGOAL_THEN
+       `{x. x \<in> topspace X \<and> f x = y} =
+        image fst {x. x \<in> topspace X \<times> topspace Y \<and>
+                  (\<lambda> x y. (f::A=>C) x,(g::B=>D) y) x = y,g z}`
+      SUBST1_TAC THENL
+       [REWRITE_TAC[EXTENSION; IN_IMAGE; EXISTS_PAIR_THM; IN_ELIM_PAIR_THM;
+                    IN_CROSS; PAIR_EQ] THEN
+        ASM SET_TAC[];
+        MATCH_MP_TAC IMAGE_COMPACT_IN THEN
+        EXISTS_TAC `prod_topology X Y:(A#B)topology` THEN
+        REWRITE_TAC[CONTINUOUS_MAP_FST] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+        REWRITE_TAC[IN_CROSS] THEN ASM SET_TAC[]];
+      X_GEN_TAC `y::D` THEN DISCH_TAC THEN FIRST_ASSUM(MP_TAC o
+      GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY] o CONJUNCT1) THEN
+      DISCH_THEN(X_CHOOSE_TAC `z::A`) THEN
+      SUBGOAL_THEN
+       `{x. x \<in> topspace Y \<and> g x = y} =
+        image snd {x. x \<in> topspace X \<times> topspace Y \<and>
+                  (\<lambda> x y. (f::A=>C) x,(g::B=>D) y) x = f z,y}`
+      SUBST1_TAC THENL
+       [REWRITE_TAC[EXTENSION; IN_IMAGE; EXISTS_PAIR_THM; IN_ELIM_PAIR_THM;
+                    IN_CROSS; PAIR_EQ] THEN
+        ASM SET_TAC[];
+        MATCH_MP_TAC IMAGE_COMPACT_IN THEN
+        EXISTS_TAC `prod_topology X Y:(A#B)topology` THEN
+        REWRITE_TAC[CONTINUOUS_MAP_SND] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
+        REWRITE_TAC[IN_CROSS] THEN ASM SET_TAC[]]];
+    STRIP_TAC THEN REWRITE_TAC[proper_map] THEN CONJ_TAC THENL
+     [ALL_TAC;
+      REWRITE_TAC[FORALL_PAIR_THM; TOPSPACE_PROD_TOPOLOGY; IN_CROSS] THEN
+      MAP_EVERY X_GEN_TAC [`w::C`; `z::D`] THEN STRIP_TAC THEN
+      SUBGOAL_THEN
+       `{x. x \<in> topspace X \<times> topspace Y \<and>
+             (\<lambda> x y. (f::A=>C) x,(g::B=>D) y) x = w,z} =
+        {x. x \<in> topspace X \<and> f x = w} \<times>
+        {y. y \<in> topspace Y \<and> g y = z}`
+      SUBST1_TAC THENL
+       [REWRITE_TAC[EXTENSION; IN_ELIM_THM; FORALL_PAIR_THM; IN_CROSS] THEN
+        REWRITE_TAC[PAIR_EQ] THEN MESON_TAC[];
+        REWRITE_TAC[COMPACT_IN_CROSS] THEN
+        RULE_ASSUM_TAC(REWRITE_RULE[proper_map]) THEN ASM_SIMP_TAC[]]] THEN
+    REPEAT(FIRST_X_ASSUM(fun th ->
+      ASSUME_TAC(MATCH_MP PROPER_MAP_IMP_SUBSET_TOPSPACE th) THEN
+      STRIP_ASSUME_TAC(REWRITE_RULE[proper_map] th))) THEN
+    REWRITE_TAC[CLOSED_MAP_FIBRE_NEIGHBOURHOOD] THEN CONJ_TAC THENL
+     [REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; TOPSPACE_PROD_TOPOLOGY] THEN
+      REWRITE_TAC[FORALL_PAIR_THM; IN_CROSS] THEN ASM SET_TAC[];
+      REWRITE_TAC[FORALL_PAIR_THM; TOPSPACE_PROD_TOPOLOGY; IN_CROSS]] THEN
+    MAP_EVERY X_GEN_TAC [`w::A#B=>bool`; `y1::C`; `y2::D`] THEN
+    SUBGOAL_THEN
+     `{x. x \<in> topspace X \<times> topspace Y \<and>
+           (\<lambda> x y. (f::A=>C) x,(g::B=>D) y) x = y1,y2} =
+      {x. x \<in> topspace X \<and> f x = y1} \<times>
+      {y. y \<in> topspace Y \<and> g y = y2}`
+    SUBST1_TAC THENL
+     [REWRITE_TAC[EXTENSION; IN_ELIM_THM; FORALL_PAIR_THM; IN_CROSS] THEN
+      REWRITE_TAC[PAIR_EQ] THEN MESON_TAC[];
+      STRIP_TAC] THEN
+    MP_TAC(ISPECL [`X::A topology`; `Y::B topology`; `w::A#B=>bool`;
+                   `{x. x \<in> topspace X \<and> (f::A=>C) x = y1}`;
+                   `{x. x \<in> topspace Y \<and> (g::B=>D) x = y2}`]
+        WALLACE_THEOREM_PROD_TOPOLOGY) THEN
+    ASM_SIMP_TAC[LEFT_IMP_EXISTS_THM] THEN
+    MAP_EVERY X_GEN_TAC [`u::A=>bool`; `v::B=>bool`] THEN STRIP_TAC THEN
+    MAP_EVERY UNDISCH_TAC
+     [`closed_map(Y,Y') (g::B=>D)`;
+      `closed_map(X,X') (f::A=>C)`] THEN
+    REWRITE_TAC[IMP_IMP; CLOSED_MAP_FIBRE_NEIGHBOURHOOD] THEN
+    DISCH_THEN(CONJUNCTS_THEN(MP_TAC o CONJUNCT2)) THEN
+    REWRITE_TAC[IMP_IMP] THEN DISCH_THEN(CONJUNCTS_THEN2
+     (MP_TAC o SPECL [`v::B=>bool`; `y2::D`])
+     (MP_TAC o SPECL [`u::A=>bool`; `y1::C`])) THEN
+    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
+    X_GEN_TAC `u':C=>bool` THEN STRIP_TAC THEN
+    X_GEN_TAC `v':D=>bool` THEN STRIP_TAC THEN
+    EXISTS_TAC `(u':C=>bool) \<times> (v':D=>bool)` THEN
+    ASM_REWRITE_TAC[IN_CROSS; OPEN_IN_CROSS] THEN
+    REPEAT(FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id [\<subseteq>])) THEN
+    REWRITE_TAC[FORALL_IN_IMAGE; FORALL_PAIR_THM;
+                IN_ELIM_THM; IN_CROSS; \<subseteq>] THEN
+    SET_TAC[]]);;
+
+
+thm proper_map_id
+
+
+lemma proper_map_paired:
+  assumes "Hausdorff_space X \<and> proper_map X Y f \<and> proper_map X Z g \<or>
+        Hausdorff_space Y \<and> continuous_map X Y f \<and> proper_map X Z g \<or>
+        Hausdorff_space Z \<and> proper_map X Y f \<and> continuous_map X Z g"
+  shows "proper_map X (prod_topology Y Z) (\<lambda>x. (f x,g x))"
+  using assms
+proof (elim disjE conjE)
+  assume \<section>: "Hausdorff_space X" "proper_map X Y f" "proper_map X Z g"
+  have eq: "(\<lambda>x. (f x, g x)) = (\<lambda>(x, y). (f x, g y)) \<circ> (\<lambda>x. (x, x))"
+    by auto
+  show "proper_map X (prod_topology Y Z) (\<lambda>x. (f x, g x))"
+    unfolding eq
+  proof (rule proper_map_compose)
+    show "proper_map X (prod_topology X X) (\<lambda>x. (x,x))"
+      by (simp add: \<section>)
+    show "proper_map (prod_topology X X) (prod_topology Y Z) (\<lambda>(x,y). (f x, g y))"
+      by (simp add: \<section> proper_map_prod)
+  qed
+next
+  assume \<section>: "Hausdorff_space Y" "continuous_map X Y f" "proper_map X Z g"
+  have eq: "(\<lambda>x. (f x, g x)) = (\<lambda>(x,y). (x,g y)) o (\<lambda>x. (f x,x))"
+    by auto
+  show "proper_map X (prod_topology Y Z) (\<lambda>x. (f x, g x))"
+    unfolding eq
+  proof (rule proper_map_compose)
+    show "proper_map X (prod_topology Y X) (\<lambda>x. (f x,x))"
+      by (simp add: \<section> proper_map_paired_continuous_map_left)
+    show "proper_map (prod_topology Y X) (prod_topology Y Z) (\<lambda>(x,y). (x,g y))"
+      by (simp add: \<section> proper_map_prod proper_map_id [unfolded id_def])
+  qed
+next
+  assume \<section>: "Hausdorff_space Z" "proper_map X Y f" "continuous_map X Z g"
+  have eq: "(\<lambda>x. (f x, g x)) = (\<lambda>(x,y). (f x,y)) o (\<lambda>x. (x,g x))"
+    by auto
+  show "proper_map X (prod_topology Y Z) (\<lambda>x. (f x, g x))"
+    unfolding eq
+  proof (rule proper_map_compose)
+    show "proper_map X (prod_topology X Z) (\<lambda>x. (x, g x))"
+      using \<section> proper_map_paired_continuous_map_right by auto
+    show "proper_map (prod_topology X Z) (prod_topology Y Z) (\<lambda>(x,y). (f x,y))"
+      by (simp add: \<section> proper_map_prod proper_map_id [unfolded id_def])
+  qed
+qed
+
+lemma proper_map_pairwise:
+  assumes
+    "Hausdorff_space X \<and> proper_map X Y (fst o f) \<and> proper_map X Z (snd o f) \<or>
+     Hausdorff_space Y \<and> continuous_map X Y (fst o f) \<and> proper_map X Z (snd o f) \<or>
+     Hausdorff_space Z \<and> proper_map X Y (fst o f) \<and> continuous_map X Z (snd o f)"
+  shows "proper_map X (prod_topology Y Z) f"
+  using proper_map_paired [OF assms] by (simp add: o_def)
+
+lemma proper_map_from_composition_right:
+  assumes "Hausdorff_space Y" "proper_map X Z (g \<circ> f)" and "continuous_map X Y f"
+    and contg: "continuous_map Y Z g"
+  shows "proper_map X Y f"
+proof -
+  define YZ where "YZ \<equiv> subtopology (prod_topology Y Z) ((\<lambda>x. (x, g x)) ` topspace Y)"
+  have "proper_map X Y (fst \<circ> (\<lambda>x. (f x, (g \<circ> f) x)))"
+  proof (rule proper_map_compose)
+    have [simp]: "x \<in> topspace X \<Longrightarrow> f x \<in> topspace Y" for x
+      by (meson assms(3) continuous_map_def)
+    show "proper_map X YZ (\<lambda>x. (f x, (g \<circ> f) x))"
+      unfolding YZ_def
+      using assms
+      by (force intro!: proper_map_into_subtopology proper_map_paired simp: o_def image_iff)+
+    show "proper_map YZ Y fst"
+      using contg 
+      by (simp flip: homeomorphic_maps_graph add: YZ_def homeomorphic_maps_map homeomorphic_imp_proper_map)
+  qed
+  moreover have "fst \<circ> (\<lambda>x. (f x, (g \<circ> f) x)) = f"
+    by auto
+  ultimately show ?thesis
+    by auto
+qed
+
+
+lemma perfect_map_from_composition_right:
+   "\<And>X Y Z f g.
+        Hausdorff_space Y \<and>
+        perfect_map X Z (g o f) \<and>
+        continuous_map X Y f \<and>
+        continuous_map Y Z g \<and>
+        image f (topspace X) = topspace Y
+        \<Longrightarrow> perfect_map X Y f"
+oops 
+  REWRITE_TAC[perfect_map] THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
+  ASM_MESON_TAC[PROPER_MAP_FROM_COMPOSITION_RIGHT]);;
+
+lemma perfect_map_from_composition_right_inj:
+   "\<And>X Y Z f g.
+        perfect_map X Z (g o f) \<and>
+        image f (topspace X) = topspace Y \<and>
+        continuous_map X Y f \<and>
+        continuous_map Y Z g \<and>
+        (\<forall>x y. x \<in> topspace Y \<and> y \<in> topspace Y \<and> g x = g y
+               \<Longrightarrow> x = y)
+        \<Longrightarrow> perfect_map X Y f"
+oops 
+  REPEAT GEN_TAC THEN REWRITE_TAC[perfect_map] THEN STRIP_TAC THEN
+  ASM_REWRITE_TAC[] THEN
+  ASM_METIS_TAC[PROPER_MAP_FROM_COMPOSITION_RIGHT_INJ; SUBSET_REFL]);;
+
+
 
 subsection \<open>Compactly generated spaces (k-spaces)\<close>
 
@@ -619,8 +891,8 @@ lemma proper_map_into_k_space_eq:
   assumes "k_space Y"
   shows "proper_map X Y f \<longleftrightarrow>
          f ` (topspace X) \<subseteq> topspace Y \<and>
-         (\<forall>k. compactin Y k
-              \<longrightarrow> proper_map (subtopology X {x \<in> topspace X. f x \<in> k}) (subtopology Y k) f)"
+         (\<forall>K. compactin Y K
+              \<longrightarrow> proper_map (subtopology X {x \<in> topspace X. f x \<in> K}) (subtopology Y K) f)"
          (is "?lhs \<longleftrightarrow> ?rhs")
 proof
   show "?lhs \<Longrightarrow> ?rhs"
@@ -5089,135 +5361,113 @@ lemma compact_space_kification [simp]:
 
 lemma kification_kification [simp]:
    "kification(kification X) = kification X"
-oops
-  REWRITE_TAC[TOPOLOGY_EQ; OPEN_IN_KIFICATION; TOPSPACE_KIFICATION;
-              COMPACT_IN_KIFICATION] THEN
-  REPEAT GEN_TAC THEN REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN EQ_TAC THENL
-   [ALL_TAC; ASM_MESON_TAC[OPEN_IN_KIFICATION_FINER]] THEN
-  STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-  X_GEN_TAC `k::A=>bool` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `k::A=>bool`) THEN
-  ASM_REWRITE_TAC[] THEN
-  DISCH_THEN(X_CHOOSE_THEN `t::A=>bool` STRIP_ASSUME_TAC) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [OPEN_IN_KIFICATION]) THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC `k::A=>bool`)) THEN
-  ASM_REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN ASM SET_TAC[]);;
+  unfolding openin_inject [symmetric]
+proof
+  fix U
+  show "openin (kification (kification X)) U = openin (kification X) U"
+  proof
+    show "openin (kification (kification X)) U \<Longrightarrow> openin (kification X) U"
+      by (metis compactin_kification inf_commute openin_kification openin_subtopology topspace_kification)
+  qed (simp add: openin_kification_finer)
+qed
 
-lemma k_space_kification:
-   "k_space(kification X)"
-oops
-  REWRITE_TAC[GSYM KIFICATION_EQ_SELF; KIFICATION_KIFICATION]);;
+lemma k_space_kification [iff]: "k_space(kification X)"
+  using kification_eq_self by fastforce
 
 lemma continuous_map_into_kification:
-   "\<And>X Y f.
-        k_space X
-        \<Longrightarrow> (continuous_map X (kification Y) f \<longleftrightarrow>
-             continuous_map X Y f)"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[continuous_map; TOPSPACE_KIFICATION] THEN
-  EQ_TAC THEN SIMP_TAC[OPEN_IN_KIFICATION_FINER] THEN
-  STRIP_TAC THEN X_GEN_TAC `v::B=>bool` THEN
-  REWRITE_TAC[OPEN_IN_KIFICATION] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (LABEL_TAC "*")) THEN
-  FIRST_X_ASSUM(fun th -> GEN_REWRITE_TAC LAND_CONV
-    [GSYM(REWRITE_RULE[GSYM KIFICATION_EQ_SELF] th)]) THEN
-  REWRITE_TAC[OPEN_IN_KIFICATION; SUBSET_RESTRICT] THEN
-  X_GEN_TAC `k::A=>bool` THEN DISCH_TAC THEN
-  REMOVE_THEN "*" (MP_TAC \<circ> SPEC `image f k`) THEN ANTS_TAC THENL
-   [MATCH_MP_TAC IMAGE_COMPACT_IN THEN EXISTS_TAC `X::A topology` THEN
-    ASM_REWRITE_TAC[continuous_map];
-    REWRITE_TAC[OPEN_IN_SUBTOPOLOGY; LEFT_IMP_EXISTS_THM]] THEN
-  X_GEN_TAC `u::B=>bool` THEN STRIP_TAC THEN
-  EXISTS_TAC `{x \<in> topspace X. f x \<in> u}` THEN
-  ASM_SIMP_TAC[] THEN ASM SET_TAC[]);;
+  assumes "k_space X"
+  shows "continuous_map X (kification Y) f \<longleftrightarrow> continuous_map X Y f" (is "?lhs \<longleftrightarrow> ?rhs")
+proof
+  assume ?lhs then show ?rhs
+    by (simp add: continuous_map_def openin_kification_finer)
+next
+  assume R: ?rhs
+  have "openin X {x \<in> topspace X. f x \<in> V}" if V: "openin (kification Y) V" for V
+  proof -
+    have "openin (subtopology X K) (K \<inter> {x \<in> topspace X. f x \<in> V})"
+      if "compactin X K" for K
+    proof -
+      have "compactin Y (f ` K)"
+        using R image_compactin that by blast
+      then have "openin (subtopology Y (f ` K)) (f ` K \<inter> V)"
+        by (meson V openin_kification)
+      then obtain U where U: "openin Y U" "f`K \<inter> V = U \<inter> f`K"
+        by (meson openin_subtopology)
+      show ?thesis
+        unfolding openin_subtopology
+      proof (intro conjI exI)
+        show "openin X {x \<in> topspace X. f x \<in> U}"
+          using R U openin_continuous_map_preimage_gen by blast
+      qed (use U in auto)
+    qed
+    then show ?thesis
+      by (metis (full_types) Collect_subset assms k_space_open)
+  qed
+  with R show ?lhs
+    by (simp add: continuous_map_def)
+qed
 
 lemma continuous_map_from_kification:
-   "\<And>X Y f.
-        continuous_map X Y f \<Longrightarrow> continuous_map(kification X,Y) f"
-oops
-  REWRITE_TAC[continuous_map; TOPSPACE_KIFICATION] THEN
-  REPEAT STRIP_TAC THEN ASM_SIMP_TAC[OPEN_IN_KIFICATION_FINER]);;
+   "continuous_map X Y f \<Longrightarrow> continuous_map (kification X) Y f"
+  by (simp add: continuous_map_openin_preimage_eq openin_kification_finer)
 
 lemma continuous_map_kification:
-   "\<And>X Y f.
-        continuous_map X Y f
-        \<Longrightarrow> continuous_map(kification X,kification Y) f"
-oops
-  SIMP_TAC[CONTINUOUS_MAP_INTO_KIFICATION; K_SPACE_KIFICATION] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_FROM_KIFICATION]);;
+   "continuous_map X Y f \<Longrightarrow> continuous_map (kification X) (kification Y) f"
+  by (simp add: continuous_map_from_kification continuous_map_into_kification)
 
 lemma subtopology_kification_compact:
-   "\<And>X (k::A=>bool).
-        compactin X k
-        \<Longrightarrow> subtopology (kification X) k = subtopology X k"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[TOPOLOGY_EQ; OPEN_IN_SUBTOPOLOGY] THEN
-  X_GEN_TAC `u::A=>bool` THEN EQ_TAC THENL
-   [ALL_TAC; MESON_TAC[OPEN_IN_KIFICATION_FINER]] THEN
-  REWRITE_TAC[OPEN_IN_KIFICATION] THEN
-  DISCH_THEN(X_CHOOSE_THEN `t::A=>bool` STRIP_ASSUME_TAC) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `k::A=>bool`) THEN
-  ASM_REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN
-  MESON_TAC[INTER_COMM]);;
+  assumes "compactin X K"
+  shows "subtopology (kification X) K = subtopology X K"
+  unfolding openin_inject [symmetric]
+proof
+  fix U
+  show "openin (subtopology (kification X) K) U = openin (subtopology X K) U"
+    by (metis assms inf_commute openin_kification openin_subset openin_subtopology)
+qed
+
 
 lemma subtopology_kification_finer:
-   "\<And>X (s::A=>bool) u.
-        openin (subtopology (kification X) s) u
-        \<Longrightarrow> openin (kification (subtopology X s)) u"
-oops
-  REWRITE_TAC[OPEN_IN_SUBTOPOLOGY_ALT; FORALL_IN_GSPEC] THEN
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[OPEN_IN_KIFICATION; TOPSPACE_SUBTOPOLOGY] THEN
-  REWRITE_TAC[COMPACT_IN_SUBTOPOLOGY] THEN
-  STRIP_TAC THEN CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  X_GEN_TAC `k::A=>bool` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `k::A=>bool`) THEN
-  ASM_REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY] THEN
-  REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN MATCH_MP_TAC MONO_EXISTS THEN
-  SET_TAC[]);;
+   "openin (subtopology (kification X) S) U
+        \<Longrightarrow> openin (kification (subtopology X S)) U"
+  unfolding openin_subtopology_alt
+  apply clarify
+  by (smt (verit, ccfv_SIG) compactin_subtopology inf.orderE inf_le1 inf_sup_aci(1) openin_kification subtopology_subtopology topspace_subtopology)
 
 lemma proper_map_from_kification:
-   "\<And>X Y f.
-        k_space Y
-        \<Longrightarrow> (proper_map(kification X,Y) f \<longleftrightarrow>
-             proper_map X Y f)"
-oops
-  REPEAT STRIP_TAC THEN ASM_SIMP_TAC[PROPER_MAP_INTO_K_SPACE_EQ] THEN
-  REWRITE_TAC[TOPSPACE_KIFICATION; PROPER_MAP_ALT] THEN
-  REWRITE_TAC[COMPACT_IN_SUBTOPOLOGY; COMPACT_IN_KIFICATION;
-              TOPSPACE_SUBTOPOLOGY; IN_ELIM_THM; IN_INTER;
-              TOPSPACE_KIFICATION] THEN
-  MATCH_MP_TAC(MESON[]
-   `(P \<and> (\<forall>k. Q k \<Longrightarrow> S k) \<Longrightarrow> (\<forall>k. Q k \<Longrightarrow> (R k \<longleftrightarrow> R' k)))
-    \<Longrightarrow> (P \<and> (\<forall>k. Q k \<Longrightarrow> R k \<and> S k) \<longleftrightarrow>
-         P \<and> (\<forall>k. Q k \<Longrightarrow> R' k \<and> S k))`) THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> MATCH_MP (MESON[]
-   `(\<forall>x. P x \<Longrightarrow> (\<forall>y. P y \<and> Q x y \<Longrightarrow> R x y))
-    \<Longrightarrow> (\<forall>x. P x \<and> Q x x \<Longrightarrow> R x x)`))) THEN
-  REWRITE_TAC[TAUT `(p \<and> p \<and> q) \<and> q \<longleftrightarrow> p \<and> q`; SUBSET_REFL] THEN
-  SIMP_TAC[SUBTOPOLOGY_KIFICATION_COMPACT]);;
+  assumes "k_space Y"
+  shows "proper_map (kification X) Y f \<longleftrightarrow> proper_map X Y f"   (is "?lhs \<longleftrightarrow> ?rhs")
+proof
+  assume ?lhs then show ?rhs
+    by (simp add: closed_map_def closedin_kification_finer proper_map_alt)
+next
+  assume R: ?rhs
+  have "compactin Y K
+      \<Longrightarrow> compactin X {x \<in> topspace X. f x \<in> K}" for K
+    using R proper_map_alt by auto
+  with R show ?lhs
+    by (simp add: assms proper_map_into_k_space_eq subtopology_kification_compact)
+qed
 
 lemma perfect_map_from_kification:
-   "\<And>X Y f.
-        k_space Y \<and> perfect_map X Y f
-        \<Longrightarrow> perfect_map(kification X,Y) f"
-oops
-  SIMP_TAC[perfect_map; PROPER_MAP_FROM_KIFICATION;
-           CONTINUOUS_MAP_FROM_KIFICATION; TOPSPACE_KIFICATION]);;
+   "\<lbrakk>k_space Y; perfect_map X Y f\<rbrakk> \<Longrightarrow> perfect_map(kification X) Y f"
+  by (simp add: continuous_map_from_kification perfect_map_def proper_map_from_kification)
 
 lemma k_space_perfect_map_image_eq:
-   "\<And>X Y f.
-     Hausdorff_space X \<and> perfect_map X Y f
-     \<Longrightarrow> (k_space X \<longleftrightarrow> k_space Y)"
+  assumes "Hausdorff_space X" "perfect_map X Y f"
+  shows "k_space X \<longleftrightarrow> k_space Y"
+proof
+  show "k_space X \<Longrightarrow> k_space Y"
+    using k_space_perfect_map_image assms by blast
+  assume "k_space Y"
+  have "homeomorphic_map (kification X) X id"
+    apply (simp add: homeomorphic_eq_injective_perfect_map)
+    using perfect_map_from_composition_right
+    sorry
+  then show "k_space X"
+    using homeomorphic_k_space homeomorphic_space by blast 
+qed
+
 oops
-  REPEAT STRIP_TAC THEN EQ_TAC THENL
-   [ASM_MESON_TAC[K_SPACE_PERFECT_MAP_IMAGE]; DISCH_TAC] THEN
-  MP_TAC(ISPECL [`kification X::A topology`; `X::A topology`]
-        HOMEOMORPHIC_K_SPACE) THEN
-  ASM_REWRITE_TAC[HOMEOMORPHIC_SPACE; K_SPACE_KIFICATION] THEN
-  DISCH_THEN MATCH_MP_TAC THEN EXISTS_TAC `\<lambda>x::A. x` THEN
-  REWRITE_TAC[HOMEOMORPHIC_EQ_INJECTIVE_PERFECT_MAP] THEN
   MP_TAC(ISPECL
    [`kification X::A topology`; `X::A topology`; `Y:B topology`;
     `\<lambda>x::A. x`; `f::A=>B`] PERFECT_MAP_FROM_COMPOSITION_RIGHT) THEN
@@ -5229,7 +5479,6 @@ oops
 
 
 subsection\<open>One-point compactifications and the Alexandroff extension construction\<close>
-
 
 lemma one_point_compactification_dense:
    "compact_space X \<and> \<not> compactin X (topspace X - {a})
@@ -5294,13 +5543,13 @@ oops
   MATCH_MP_TAC CLOSED_INTER_COMPACT_IN THEN ASM_SIMP_TAC[]);;
 
 definition alexandroff_compactification where
-  "alexandroff_compactification (X::A topology) =
+  "alexandroff_compactification X =
         topology ({ INL ` u | openin X u} \<union>
                   { INR () insert image INL (topspace X - c) | c |
                     compactin X c \<and> closedin X c})"
 
 lemma openin_alexandroff_compactification:
-   "\<And>(X::A topology) v.
+   "\<And>X v.
         openin(alexandroff_compactification X) v \<longleftrightarrow>
         (\<exists>u. openin X u \<and> v = INL ` u) \<or>
         (\<exists>c. compactin X c \<and> closedin X c \<and>
@@ -5413,7 +5662,7 @@ oops
   REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET)) THEN SET_TAC[]);;
 
 lemma closedin_alexandroff_compactification:
-   "\<And>(X::A topology) c.
+   "\<And>X c.
         closedin (alexandroff_compactification X) c \<longleftrightarrow>
         (\<exists>k. compactin X k \<and> closedin X k \<and> c = INL ` k) \<or>
         (\<exists>u. openin X u \<and>
@@ -5442,7 +5691,7 @@ oops
   ASM SET_TAC[]);;
 
 lemma closedin_alexandroff_compactification_image_inl:
-   "\<And>(X::A topology) k.
+   "\<And>X k.
         closedin (alexandroff_compactification X) (INL ` k) \<longleftrightarrow>
         compactin X k \<and> closedin X k"
 oops
@@ -5489,7 +5738,7 @@ oops
   FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [IN_UNIONS]) THEN
   DISCH_THEN(X_CHOOSE_THEN `u::A+1=>bool` STRIP_ASSUME_TAC) THEN
   SUBGOAL_THEN
-   `compactin (alexandroff_compactification(X::A topology))
+   `compactin (alexandroff_compactificationX)
                (topspace(alexandroff_compactification X) - u)`
   MP_TAC THENL
    [SUBGOAL_THEN
@@ -5571,7 +5820,7 @@ lemma t0_space_alexandroff_compactification:
         t0_space X"
 oops
   GEN_TAC THEN MP_TAC(ISPECL
-   [`alexandroff_compactification(X::A topology)`; `INR ()::A+1`]
+   [`alexandroff_compactificationX`; `INR ()::A+1`]
    T0_SPACE_ONE_POINT_COMPACTIFICATION) THEN
   REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN ANTS_TAC THENL
    [REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN
@@ -5608,7 +5857,7 @@ lemma t1_space_alexandroff_compactification:
         t1_space X"
 oops
   GEN_TAC THEN MP_TAC(ISPECL
-   [`alexandroff_compactification(X::A topology)`; `INR ()::A+1`]
+   [`alexandroff_compactificationX`; `INR ()::A+1`]
    T1_SPACE_ONE_POINT_COMPACTIFICATION) THEN
   REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN ANTS_TAC THENL
    [SIMP_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN CONJ_TAC THENL
@@ -5650,7 +5899,7 @@ lemma kc_space_alexandroff_compactification:
         k_space X \<and> kc_space X"
 oops
   GEN_TAC THEN MP_TAC(ISPECL
-   [`alexandroff_compactification(X::A topology)`; `INR ()::A+1`]
+   [`alexandroff_compactificationX`; `INR ()::A+1`]
    KC_SPACE_ONE_POINT_COMPACTIFICATION) THEN
   REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN ANTS_TAC THENL
    [SIMP_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN CONJ_TAC THENL
@@ -5725,7 +5974,7 @@ lemma regular_space_alexandroff_compactification:
         regular_space X \<and> locally_compact_space X"
 oops
   GEN_TAC THEN MP_TAC(ISPECL
-   [`alexandroff_compactification(X::A topology)`; `INR ()::A+1`]
+   [`alexandroff_compactificationX`; `INR ()::A+1`]
    REGULAR_SPACE_ONE_POINT_COMPACTIFICATION) THEN
   REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN ANTS_TAC THENL
    [SIMP_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN CONJ_TAC THENL
@@ -5774,7 +6023,7 @@ lemma Hausdorff_space_alexandroff_compactification:
         Hausdorff_space X \<and> locally_compact_space X"
 oops
   GEN_TAC THEN MP_TAC(ISPECL
-   [`alexandroff_compactification(X::A topology)`; `INR ()::A+1`]
+   [`alexandroff_compactificationX`; `INR ()::A+1`]
    HAUSDORFF_SPACE_ONE_POINT_COMPACTIFICATION) THEN
   REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN ANTS_TAC THENL
    [SIMP_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN CONJ_TAC THENL
@@ -5949,7 +6198,7 @@ oops
    [ASM_REWRITE_TAC[IN_ELIM_THM; IN_INTER; IN_CROSS; TOPSPACE_PROD_TOPOLOGY;
                     IN_DELETE];
     MATCH_MP_TAC OPEN_IN_CONTINUOUS_MAP_PREIMAGE THEN
-    EXISTS_TAC `prod_topology (X::A topology) X` THEN
+    EXISTS_TAC `prod_topology X X` THEN
     REWRITE_TAC[CONTINUOUS_MAP_PAIRED] THEN
     REWRITE_TAC[CONTINUOUS_MAP_FST; CONTINUOUS_MAP_SND] THEN
      MATCH_MP_TAC OPEN_IN_INTER THEN
@@ -5963,7 +6212,7 @@ lemma Hausdorff_space_alexandroff_compactification_asymmetric_prod:
         k_space(prod_topology (alexandroff_compactification X) X)"
 oops
   GEN_TAC THEN MP_TAC(ISPECL
-   [`alexandroff_compactification(X::A topology)`; `INR ()::A+1`]
+   [`alexandroff_compactificationX`; `INR ()::A+1`]
    HAUSDORFF_SPACE_ONE_POINT_COMPACTIFICATION_ASYMMETRIC_PROD) THEN
   REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN
   DISCH_THEN SUBST1_TAC THEN MATCH_MP_TAC
@@ -6177,7 +6426,7 @@ oops
     GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
     MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN EXISTS_TAC
       `prod_topology (subtopology euclideanreal (real_interval [0,1]))
-                     (X::A topology)` THEN
+                     X` THEN
     ASM_REWRITE_TAC[CONTINUOUS_MAP_PAIRED; CONTINUOUS_MAP_SND] THEN
     REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; \<subseteq>; FORALL_IN_IMAGE] THEN
     REWRITE_TAC[TOPSPACE_PROD_TOPOLOGY; TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY;
@@ -6217,7 +6466,7 @@ oops
       GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
       MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN EXISTS_TAC
        `prod_topology (subtopology euclideanreal (real_interval [0,1]))
-                      (X::A topology)` THEN
+                      X` THEN
       ASM_REWRITE_TAC[] THEN
       REWRITE_TAC[CONTINUOUS_MAP_PAIRWISE; o_DEF; ETA_AX] THEN
       SIMP_TAC[CONTINUOUS_MAP_FROM_SUBTOPOLOGY; CONTINUOUS_MAP_SND] THEN
@@ -6322,7 +6571,7 @@ oops
   ASM_REWRITE_TAC[ETA_AX]);;
 
 lemma homotopic_constant_maps:
-   "\<And>(X::A topology) (Y:B topology) a b.
+   "\<And>X (Y:B topology) a b.
         homotopic_with (\<lambda>x. True) (X,Y) (\<lambda>x. a) (\<lambda>x. b) \<longleftrightarrow>
         topspace X = {} \<or> path_component_of Y a b"
 oops
@@ -6336,7 +6585,7 @@ oops
     ASM_REWRITE_TAC[o_THM] THEN MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
     EXISTS_TAC
      `prod_topology (subtopology euclideanreal ({0..1}))
-                    (X::A topology)` THEN
+                    X` THEN
     ASM_REWRITE_TAC[CONTINUOUS_MAP_PAIRED; CONTINUOUS_MAP_ID] THEN
     ASM_REWRITE_TAC[CONTINUOUS_MAP_CONST];
     DISCH_THEN(X_CHOOSE_THEN `g::real=>B` STRIP_ASSUME_TAC) THEN
@@ -6439,14 +6688,14 @@ subsection\<open>Homotopy equivalence of topological spaces\<close>
 parse_as_infix("homotopy_equivalent_space",(12,"right"));;
 
 definition homotopy_equivalent_space where
- `(X::A topology) homotopy_equivalent_space (Y:B topology) \<longleftrightarrow>
+ `X homotopy_equivalent_space (Y:B topology) \<longleftrightarrow>
         \<exists>f g. continuous_map X Y f \<and>
               continuous_map Y X g \<and>
               homotopic_with (\<lambda>x. True) (X,X) (g \<circ> f) id \<and>
               homotopic_with (\<lambda>x. True) (Y,Y) (f \<circ> g) id"
 
 lemma homeomorphic_imp_homotopy_equivalent_space:
-   "\<And>(X::A topology) (Y:B topology).
+   "\<And>X (Y:B topology).
         X homeomorphic_space Y
         \<Longrightarrow> X homotopy_equivalent_space Y"
 oops
@@ -6465,7 +6714,7 @@ oops
            HOMEOMORPHIC_SPACE_REFL]);;
 
 lemma homotopy_equivalent_space_sym:
-   "\<And>(X::A topology) (Y:B topology).
+   "\<And>X (Y:B topology).
         X homotopy_equivalent_space Y \<longleftrightarrow>
         Y homotopy_equivalent_space X"
 oops
@@ -6562,7 +6811,7 @@ text\<open> that the empty space / set is contractible, avoiding some special ca
 
 
 definition contractible_space where
- `contractible_space (X::A topology) \<longleftrightarrow>
+ `contractible_space X \<longleftrightarrow>
         \<exists>a. homotopic_with (\<lambda>x. True) (X,X) (\<lambda>x. x) (\<lambda>x. a)"
 
 lemma contractible_space_empty:
@@ -6631,7 +6880,7 @@ oops
   ASM_REWRITE_TAC[o_THM] THEN REWRITE_TAC[pathin] THEN
   MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN EXISTS_TAC
    `prod_topology (subtopology euclideanreal ({0..1}))
-                  (X::A topology)` THEN
+                  X` THEN
   ASM_REWRITE_TAC[CONTINUOUS_MAP_PAIRWISE; o_DEF] THEN
   ASM_REWRITE_TAC[CONTINUOUS_MAP_ID; CONTINUOUS_MAP_CONST]);;
 
@@ -6658,7 +6907,7 @@ oops
     DISCH_TAC THEN REWRITE_TAC[CONTRACTIBLE_SPACE] THEN ASM SET_TAC[]]);;
 
 lemma nullhomotopic_through_contractible_space:
-   "\<And>f (g::B=>C) top1 top2 top3.
+   "\<And>f g top1 top2 top3.
         continuous_map top1 top2 f \<and>
         continuous_map top2 top3 g \<and>
         contractible_space top2
@@ -6673,7 +6922,7 @@ oops
   DISCH_THEN(MP_TAC \<circ> ISPECL [`f::A=>B`; `top1::A topology`] \<circ> MATCH_MP
    (ONCE_REWRITE_RULE[IMP_CONJ] HOMOTOPIC_COMPOSE_CONTINUOUS_MAP_RIGHT)) THEN
   ASM_REWRITE_TAC[o_DEF] THEN DISCH_TAC THEN
-  EXISTS_TAC `(g::B=>C) b` THEN ASM_REWRITE_TAC[]);;
+  EXISTS_TAC `g b` THEN ASM_REWRITE_TAC[]);;
 
 lemma nullhomotopic_into_contractible_space:
    "\<And>f top1 top2.
@@ -6698,7 +6947,7 @@ oops
     EXISTS_TAC `top1::A topology` THEN ASM_REWRITE_TAC[CONTINUOUS_MAP_ID]]);;
 
 lemma homotopic_through_contractible_space:
-   "\<And>f (g::B=>C) f' g' top1 top2 top3.
+   "\<And>f g f' g' top1 top2 top3.
         continuous_map top1 top2 f \<and>
         continuous_map top1 top2 f' \<and>
         continuous_map top2 top3 g \<and>
@@ -6780,7 +7029,7 @@ oops
   EXISTS_TAC `X::A topology` THEN ASM_REWRITE_TAC[]);;
 
 lemma homotopy_equivalent_space_contractibility:
-   "\<And>(X::A topology) (Y:B topology).
+   "\<And>X (Y:B topology).
         X homotopy_equivalent_space Y
         \<Longrightarrow> (contractible_space X \<longleftrightarrow> contractible_space Y)"
 oops
@@ -6790,7 +7039,7 @@ oops
   ASM_MESON_TAC[]);;
 
 lemma homeomorphic_space_contractibility:
-   "\<And>(X::A topology) (Y:B topology).
+   "\<And>X (Y:B topology).
         X homeomorphic_space Y
         \<Longrightarrow> (contractible_space X \<longleftrightarrow> contractible_space Y)"
 oops
@@ -7007,13 +7256,13 @@ oops
   MATCH_MP_TAC CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE THEN ASM_REWRITE_TAC[]);;
 
 lemma homeomorphic_completely_metrizable_space:
-   "\<And>(X::A topology) (Y:B topology).
+   "\<And>X (Y:B topology).
         X homeomorphic_space Y
         \<Longrightarrow> (completely_metrizable_space X \<longleftrightarrow>
              completely_metrizable_space Y)"
 oops
   lemma lemma:
-   "\<And>(X::A topology) (Y:B topology).
+   "\<And>X (Y:B topology).
           X homeomorphic_space Y
           \<Longrightarrow> completely_metrizable_space X
               \<Longrightarrow> completely_metrizable_space Y"
@@ -11592,7 +11841,7 @@ lemma cfunspace_mdist_lt:
      x \<in> topspace X
      \<Longrightarrow> d (f x) g x < a"
 oops
-  REPEAT GEN_TAC THEN ASM_CASES_TAC `topspace (X::A topology) = {}` THEN
+  REPEAT GEN_TAC THEN ASM_CASES_TAC `topspace X = {}` THEN
   ASM_REWRITE_TAC[NOT_IN_EMPTY] THEN INTRO_TAC "cpt f g lt x" THEN
   REMOVE_THEN "lt" MP_TAC THEN ASM_REWRITE_TAC[CFUNSPACE] THEN
   INTRO_TAC "lt" THEN
@@ -12454,7 +12703,7 @@ oops
     MATCH_MP PATH_IMAGE_SUBSET_TOPSPACE) THEN
   MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] CARD_LE_TRANS) THEN
   MP_TAC(ISPEC
-   `subtopology (X::A topology)
+   `subtopology X
      (image g (topspace (subtopology euclideanreal (real_interval [0,1]))))`
    CONNECTED_SPACE_IMP_CARD_GE) THEN
   FIRST_ASSUM(MP_TAC \<circ> MATCH_MP PATH_IMAGE_SUBSET_TOPSPACE) THEN
@@ -13170,7 +13419,7 @@ oops
   ASM_REWRITE_TAC[SET_RULE `\<Inter> {s.i| i \<in> {a}} = s`] THEN
   DISCH_THEN(X_CHOOSE_THEN `t::A#(1=>real)->bool` STRIP_ASSUME_TAC) THEN
   SUBGOAL_THEN
-   `prod_topology (X::A topology) (product_topology {()} (\<lambda>i. euclideanreal))
+   `prod_topology X (product_topology {()} (\<lambda>i. euclideanreal))
     homeomorphic_space prod_topology X euclideanreal`
   MP_TAC THENL
    [MATCH_MP_TAC HOMEOMORPHIC_SPACE_PROD_TOPOLOGY THEN
@@ -13314,10 +13563,10 @@ let DIMENSION_LE_RULES,DIMENSION_LE_INDUCT,DIMENSION_LE_CASES =
                   \<Longrightarrow> \<exists>u. a \<in> u \<and> u \<subseteq> v \<and> openin X u \<and>
                           subtopology X (X frontier_of u)
                           dimension_le (n - 1))
-            \<Longrightarrow> (X::A topology) dimension_le (n::int)"
+            \<Longrightarrow> X dimension_le (n::int)"
 
 lemma dimension_le_neighbourhood_base:
-   "\<And>(X::A topology) n.
+   "\<And>X n.
         X dimension_le n \<longleftrightarrow>
  -1 \<le> n \<and>
         neighbourhood_base_of
@@ -13462,12 +13711,12 @@ oops
   STRIP_TAC THEN ONCE_REWRITE_TAC[INTER_COMM] THEN ASM_REWRITE_TAC[]);;
 
 lemma homeomorphic_space_dimension_le:
-   "\<And>(X::A topology) (Y:B topology) n.
+   "\<And>X (Y:B topology) n.
         X homeomorphic_space Y
         \<Longrightarrow> (X dimension_le n \<longleftrightarrow> Y dimension_le n)"
 oops
   lemma lemma:
-   "\<And>n (X::A topology) (Y:B topology).
+   "\<And>n X (Y:B topology).
         X homeomorphic_space Y \<and> X dimension_le (n - 1)
         \<Longrightarrow> Y dimension_le (n - 1)"
 oops
@@ -13576,7 +13825,7 @@ text\<open> hypotheses more explicitly, which do not however include connectedne
 
 
 lemma separation_by_closed_intermediates_count:
-   "\<And>(X::A topology) s n.
+   "\<And>X s n.
         hereditarily normal_space X \<and>
         (\<exists>u. u HAS_SIZE n \<and>
              pairwise (separatedin X) u \<and>
@@ -13618,7 +13867,7 @@ oops
     ASM SET_TAC[]]);;
 
 lemma separation_by_closed_intermediates_gen:
-   "\<And>(X::A topology) s.
+   "\<And>X s.
         hereditarily normal_space X \<and>
         \<not> connectedin X (topspace X - s)
         \<Longrightarrow>  \<exists>c. closedin X c \<and> c \<subseteq> s \<and>
@@ -13644,7 +13893,7 @@ oops
   SIMP_TAC[]);;
 
 lemma separation_by_closed_intermediates_eq_count:
-   "\<And>(X::A topology) s n.
+   "\<And>X s n.
         locally_connected_space X \<and> hereditarily normal_space X
         \<Longrightarrow> ((\<exists>u. u HAS_SIZE n \<and>
                   pairwise (separatedin X) u \<and>
@@ -13824,7 +14073,7 @@ oops
   REWRITE_TAC[IN_DELETE] THEN ASM_MESON_TAC[separatedin]);;
 
 lemma separation_by_closed_intermediates_eq_gen:
-   "\<And>(X::A topology) s.
+   "\<And>X s.
         locally_connected_space X \<and> hereditarily normal_space X
         \<Longrightarrow> (\<not> connectedin X (topspace X - s) \<longleftrightarrow>
              \<exists>c. closedin X c \<and> c \<subseteq> s \<and>
