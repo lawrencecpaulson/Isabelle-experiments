@@ -200,15 +200,15 @@ qed
 oops 
   ASM_SIMP_TAC[PROPER_MAP_ON_EMPTY] THEN EQ_TAC THENL
    [REWRITE_TAC[proper_map] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC o MATCH_MP CLOSED_MAP_PROD) THEN
+    FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_MAP_PROD) THEN
     ASM_REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
     RULE_ASSUM_TAC(REWRITE_RULE[TOPSPACE_PROD_TOPOLOGY]) THEN
     RULE_ASSUM_TAC(REWRITE_RULE[CROSS_EQ_EMPTY; DE_MORGAN_THM]) THEN
-    REPEAT(FIRST_X_ASSUM(ASSUME_TAC o
+    REPEAT(FIRST_X_ASSUM(ASSUME_TAC \<circ>
       MATCH_MP CLOSED_MAP_IMP_SUBSET_TOPSPACE)) THEN
     CONJ_TAC THENL
-     [X_GEN_TAC `y::C` THEN DISCH_TAC THEN FIRST_ASSUM(MP_TAC o
-       GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY] o CONJUNCT2) THEN
+     [X_GEN_TAC `y::C` THEN DISCH_TAC THEN FIRST_ASSUM(MP_TAC \<circ>
+       GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY] \<circ> CONJUNCT2) THEN
       DISCH_THEN(X_CHOOSE_TAC `z::B`) THEN
       SUBGOAL_THEN
        `{x. x \<in> topspace X \<and> f x = y} =
@@ -222,8 +222,8 @@ oops
         EXISTS_TAC `prod_topology X Y:(A#B)topology` THEN
         REWRITE_TAC[CONTINUOUS_MAP_FST] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
         REWRITE_TAC[IN_CROSS] THEN ASM SET_TAC[]];
-      X_GEN_TAC `y::D` THEN DISCH_TAC THEN FIRST_ASSUM(MP_TAC o
-      GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY] o CONJUNCT1) THEN
+      X_GEN_TAC `y::D` THEN DISCH_TAC THEN FIRST_ASSUM(MP_TAC \<circ>
+      GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY] \<circ> CONJUNCT1) THEN
       DISCH_THEN(X_CHOOSE_TAC `z::A`) THEN
       SUBGOAL_THEN
        `{x. x \<in> topspace Y \<and> g x = y} =
@@ -278,16 +278,16 @@ oops
      [`closed_map(Y,Y') (g::B=>D)`;
       `closed_map(X,X') (f::A=>C)`] THEN
     REWRITE_TAC[IMP_IMP; CLOSED_MAP_FIBRE_NEIGHBOURHOOD] THEN
-    DISCH_THEN(CONJUNCTS_THEN(MP_TAC o CONJUNCT2)) THEN
+    DISCH_THEN(CONJUNCTS_THEN(MP_TAC \<circ> CONJUNCT2)) THEN
     REWRITE_TAC[IMP_IMP] THEN DISCH_THEN(CONJUNCTS_THEN2
-     (MP_TAC o SPECL [`v::B=>bool`; `y2::D`])
-     (MP_TAC o SPECL [`u::A=>bool`; `y1::C`])) THEN
+     (MP_TAC \<circ> SPECL [`v::B=>bool`; `y2::D`])
+     (MP_TAC \<circ> SPECL [`u::A=>bool`; `y1::C`])) THEN
     ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
     X_GEN_TAC `u':C=>bool` THEN STRIP_TAC THEN
     X_GEN_TAC `v':D=>bool` THEN STRIP_TAC THEN
     EXISTS_TAC `(u':C=>bool) \<times> (v':D=>bool)` THEN
     ASM_REWRITE_TAC[IN_CROSS; OPEN_IN_CROSS] THEN
-    REPEAT(FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id [\<subseteq>])) THEN
+    REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [\<subseteq>])) THEN
     REWRITE_TAC[FORALL_IN_IMAGE; FORALL_PAIR_THM;
                 IN_ELIM_THM; IN_CROSS; \<subseteq>] THEN
     SET_TAC[]]);;
@@ -316,7 +316,7 @@ proof (elim disjE conjE)
   qed
 next
   assume \<section>: "Hausdorff_space Y" "continuous_map X Y f" "proper_map X Z g"
-  have eq: "(\<lambda>x. (f x, g x)) = (\<lambda>(x,y). (x,g y)) o (\<lambda>x. (f x,x))"
+  have eq: "(\<lambda>x. (f x, g x)) = (\<lambda>(x,y). (x,g y)) \<circ> (\<lambda>x. (f x,x))"
     by auto
   show "proper_map X (prod_topology Y Z) (\<lambda>x. (f x, g x))"
     unfolding eq
@@ -328,7 +328,7 @@ next
   qed
 next
   assume \<section>: "Hausdorff_space Z" "proper_map X Y f" "continuous_map X Z g"
-  have eq: "(\<lambda>x. (f x, g x)) = (\<lambda>(x,y). (f x,y)) o (\<lambda>x. (x,g x))"
+  have eq: "(\<lambda>x. (f x, g x)) = (\<lambda>(x,y). (f x,y)) \<circ> (\<lambda>x. (x,g x))"
     by auto
   show "proper_map X (prod_topology Y Z) (\<lambda>x. (f x, g x))"
     unfolding eq
@@ -342,9 +342,9 @@ qed
 
 lemma proper_map_pairwise:
   assumes
-    "Hausdorff_space X \<and> proper_map X Y (fst o f) \<and> proper_map X Z (snd o f) \<or>
-     Hausdorff_space Y \<and> continuous_map X Y (fst o f) \<and> proper_map X Z (snd o f) \<or>
-     Hausdorff_space Z \<and> proper_map X Y (fst o f) \<and> continuous_map X Z (snd o f)"
+    "Hausdorff_space X \<and> proper_map X Y (fst \<circ> f) \<and> proper_map X Z (snd \<circ> f) \<or>
+     Hausdorff_space Y \<and> continuous_map X Y (fst \<circ> f) \<and> proper_map X Z (snd \<circ> f) \<or>
+     Hausdorff_space Z \<and> proper_map X Y (fst \<circ> f) \<and> continuous_map X Z (snd \<circ> f)"
   shows "proper_map X (prod_topology Y Z) f"
   using proper_map_paired [OF assms] by (simp add: o_def)
 
@@ -374,31 +374,16 @@ qed
 
 
 lemma perfect_map_from_composition_right:
-   "\<And>X Y Z f g.
-        Hausdorff_space Y \<and>
-        perfect_map X Z (g o f) \<and>
-        continuous_map X Y f \<and>
-        continuous_map Y Z g \<and>
-        image f (topspace X) = topspace Y
-        \<Longrightarrow> perfect_map X Y f"
-oops 
-  REWRITE_TAC[perfect_map] THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-  ASM_MESON_TAC[PROPER_MAP_FROM_COMPOSITION_RIGHT]);;
+   "\<lbrakk>Hausdorff_space Y; perfect_map X Z (g \<circ> f);
+     continuous_map X Y f; continuous_map Y Z g; f ` topspace X = topspace Y\<rbrakk>
+    \<Longrightarrow> perfect_map X Y f"
+  by (meson perfect_map_def proper_map_from_composition_right)
 
 lemma perfect_map_from_composition_right_inj:
-   "\<And>X Y Z f g.
-        perfect_map X Z (g o f) \<and>
-        image f (topspace X) = topspace Y \<and>
-        continuous_map X Y f \<and>
-        continuous_map Y Z g \<and>
-        (\<forall>x y. x \<in> topspace Y \<and> y \<in> topspace Y \<and> g x = g y
-               \<Longrightarrow> x = y)
-        \<Longrightarrow> perfect_map X Y f"
-oops 
-  REPEAT GEN_TAC THEN REWRITE_TAC[perfect_map] THEN STRIP_TAC THEN
-  ASM_REWRITE_TAC[] THEN
-  ASM_METIS_TAC[PROPER_MAP_FROM_COMPOSITION_RIGHT_INJ; SUBSET_REFL]);;
-
+   "\<lbrakk>perfect_map X Z (g \<circ> f); f ` topspace X = topspace Y;
+     continuous_map X Y f; continuous_map Y Z g; inj_on g (topspace Y)\<rbrakk>
+    \<Longrightarrow> perfect_map X Y f"
+  by (meson continuous_map_image_subset_topspace perfect_map_def proper_map_from_composition_right_inj)
 
 
 subsection \<open>Compactly generated spaces (k-spaces)\<close>
@@ -3464,13 +3449,13 @@ lemma Bolzano_Weierstrass_B:
   fixes \<sigma> :: "nat \<Rightarrow> 'a"
   assumes "S \<subseteq> M" "range \<sigma> \<subseteq> S"
     and "\<And>T. \<lbrakk>T \<subseteq> S \<and> infinite T\<rbrakk> \<Longrightarrow> S \<inter> mtopology derived_set_of T \<noteq> {}"
-  shows "\<exists>l r. l \<in> S \<and> strict_mono r \<and> limitin mtopology (\<sigma> o r) l sequentially"
+  shows "\<exists>l r. l \<in> S \<and> strict_mono r \<and> limitin mtopology (\<sigma> \<circ> r) l sequentially"
   using Bolzano_Weierstrass_property assms by blast
 
 lemma Bolzano_Weierstrass_C:
   assumes "S \<subseteq> M"
   assumes "\<And>\<sigma>:: nat \<Rightarrow> 'a. range \<sigma> \<subseteq> S \<Longrightarrow>
-                (\<exists>l r. l \<in> S \<and> strict_mono r \<and> limitin mtopology (\<sigma> o r) l sequentially)"
+                (\<exists>l r. l \<in> S \<and> strict_mono r \<and> limitin mtopology (\<sigma> \<circ> r) l sequentially)"
   shows "mtotally_bounded S"
   unfolding mtotally_bounded_sequentially
   by (metis convergent_imp_MCauchy assms image_comp image_mono subset_UNIV subset_trans)
@@ -4903,7 +4888,7 @@ proof -
       by (meson A x \<open>x \<notin> S\<close> closedin_subset hmg homeomorphic_imp_injective_map inj_on_image_mem_iff)
     ultimately obtain \<phi> where \<phi>: "continuous_map X (top_of_set {0..1::real}) \<phi> \<and> \<phi> (g x) = 0 \<and> \<phi> ` g`S \<subseteq> {1}"
       by (metis DiffI X completely_regular_space_def hmg homeomorphic_imp_surjective_map image_eqI x)
-    then have "continuous_map Y (top_of_set {0..1::real}) (\<phi> o g)"
+    then have "continuous_map Y (top_of_set {0..1::real}) (\<phi> \<circ> g)"
       by (meson continuous_map_compose hmg homeomorphic_imp_continuous_map)
     then show "\<exists>\<psi>. continuous_map Y (top_of_set {0..1::real}) \<psi> \<and> \<psi> x = 0 \<and> \<psi> ` S \<subseteq> {1}"
       by (metis \<phi> comp_apply image_comp)
@@ -4952,7 +4937,7 @@ proof -
         and f: "continuous_map X euclidean f \<and> f x = a \<and> f ` S \<subseteq> {b}"
     for S x f
   proof (intro exI conjI)
-    show "continuous_map X euclideanreal ((\<lambda>x. inverse(b - a) * (x - a)) o f)"
+    show "continuous_map X euclideanreal ((\<lambda>x. inverse(b - a) * (x - a)) \<circ> f)"
       using that by (intro continuous_intros) auto
   qed (use that assms in auto)
   moreover
@@ -4961,7 +4946,7 @@ proof -
         and f: "continuous_map X euclideanreal f \<and> f x = 0 \<and> f ` S \<subseteq> {1}"
     for S x f
   proof (intro exI conjI)
-    show "continuous_map X euclideanreal ((\<lambda>x. a + (b - a) * x) o f)"
+    show "continuous_map X euclideanreal ((\<lambda>x. a + (b - a) * x) \<circ> f)"
       using that by (intro continuous_intros) auto
   qed (use that in auto)
   ultimately show ?thesis
@@ -5196,10 +5181,10 @@ next
       define h where "h \<equiv> \<lambda>(x,y). 1 - (1 - f x) * (1 - g y)"
       show "\<exists>h. continuous_map (prod_topology X Y) euclideanreal h \<and> h (x,y) = 0 \<and> h ` (topspace (prod_topology X Y) - W) \<subseteq> {1}"
       proof (intro exI conjI)
-        have "continuous_map (prod_topology X Y) euclideanreal (f o fst)"
+        have "continuous_map (prod_topology X Y) euclideanreal (f \<circ> fst)"
           using contf continuous_map_of_fst by blast
         moreover
-        have "continuous_map (prod_topology X Y) euclideanreal (g o snd)"
+        have "continuous_map (prod_topology X Y) euclideanreal (g \<circ> snd)"
           using contg continuous_map_of_snd by blast
         ultimately
         show "continuous_map (prod_topology X Y) euclideanreal h"
@@ -5252,7 +5237,7 @@ next
       show "\<exists>h. continuous_map (product_topology X I) euclideanreal h \<and> h x = 0 \<and>
                      h ` (topspace (product_topology X I) - W) \<subseteq> {1}"
       proof (intro conjI exI)
-        have "continuous_map (product_topology X I) euclidean (f i o (\<lambda>x. x i))" if "i\<in>I" for i
+        have "continuous_map (product_topology X I) euclidean (f i \<circ> (\<lambda>x. x i))" if "i\<in>I" for i
           using f that
           by (blast intro: continuous_intros continuous_map_product_projection)
         then show "continuous_map (product_topology X I) euclideanreal h"
@@ -5460,23 +5445,16 @@ proof
     using k_space_perfect_map_image assms by blast
   assume "k_space Y"
   have "homeomorphic_map (kification X) X id"
-    apply (simp add: homeomorphic_eq_injective_perfect_map)
-    using perfect_map_from_composition_right
-    sorry
+    unfolding homeomorphic_eq_injective_perfect_map
+    proof (intro conjI perfect_map_from_composition_right [where f = id])
+  show "perfect_map (kification X) Y (f \<circ> id)"
+    by (simp add: \<open>k_space Y\<close> assms(2) perfect_map_from_kification)
+  show "continuous_map (kification X) X id"
+    by (simp add: continuous_map_from_kification)
+qed (use assms perfect_map_def in auto)
   then show "k_space X"
     using homeomorphic_k_space homeomorphic_space by blast 
 qed
-
-oops
-  MP_TAC(ISPECL
-   [`kification X::A topology`; `X::A topology`; `Y:B topology`;
-    `\<lambda>x::A. x`; `f::A=>B`] PERFECT_MAP_FROM_COMPOSITION_RIGHT) THEN
-  DISCH_THEN MATCH_MP_TAC THEN
-  ASM_REWRITE_TAC[o_DEF; ETA_AX; IMAGE_ID; TOPSPACE_KIFICATION] THEN
-  ASM_SIMP_TAC[PERFECT_MAP_FROM_KIFICATION] THEN
-  SIMP_TAC[CONTINUOUS_MAP_FROM_KIFICATION; CONTINUOUS_MAP_ID] THEN
-  ASM_SIMP_TAC[PERFECT_IMP_CONTINUOUS_MAP]);;
-
 
 subsection\<open>One-point compactifications and the Alexandroff extension construction\<close>
 
