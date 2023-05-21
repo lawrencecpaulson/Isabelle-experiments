@@ -185,13 +185,13 @@ lemma proper_map_diag_eq [simp]:
    "proper_map X (prod_topology X X) (\<lambda>x. (x,x)) \<longleftrightarrow> Hausdorff_space X"
   by (simp add: closed_map_diag_eq inj_on_convol_ident injective_imp_proper_eq_closed_map)
 
-
+text \<open>Missing the opposite direction [does it hold?]\<close>
 lemma closed_map_prod:
   assumes "closed_map (prod_topology X Y) (prod_topology X' Y') (\<lambda>(x,y). (f x, g y))"
   shows "topspace(prod_topology X Y) = {} \<or> closed_map X X' f \<and> closed_map Y Y' g"
 proof (cases "topspace(prod_topology X Y) = {}")
   case False
-  then have "topspace X \<noteq> {}" "topspace Y \<noteq> {}"
+  then have ne: "topspace X \<noteq> {}" "topspace Y \<noteq> {}"
     by auto
   have "closed_map X X' f"
     unfolding closed_map_def
@@ -203,7 +203,7 @@ proof (cases "topspace(prod_topology X Y) = {}")
       case False
       with assms have "closedin (prod_topology X' Y') ((\<lambda>(x,y). (f x, g y)) ` (C \<times> topspace Y))"
         by (simp add: \<open>closedin X C\<close> closed_map_def closedin_prod_Times_iff)
-      with False \<open>topspace Y \<noteq> {}\<close> show ?thesis
+      with False ne show ?thesis
         by (simp add: image_paired_Times closedin_Times closedin_prod_Times_iff)
     qed auto
   qed
@@ -218,7 +218,7 @@ proof (cases "topspace(prod_topology X Y) = {}")
       case False
       with assms have "closedin (prod_topology X' Y') ((\<lambda>(x,y). (f x, g y)) ` (topspace X \<times> C))"
         by (simp add: \<open>closedin Y C\<close> closed_map_def closedin_prod_Times_iff)
-      with False \<open>topspace X \<noteq> {}\<close> show ?thesis
+      with False ne show ?thesis
         by (simp add: image_paired_Times closedin_Times closedin_prod_Times_iff)
     qed auto
   qed
@@ -236,74 +236,77 @@ proof (cases "topspace(prod_topology X Y) = {}")
     by (simp add: proper_map_on_empty)
 next
   case False
-  then obtain x y where "x \<in> topspace X" "y \<in> topspace Y"
+  then have ne: "topspace X \<noteq> {}" "topspace Y \<noteq> {}"
     by auto
+  define h where "h \<equiv> \<lambda>(x,y). (f x, g y)"
   have "proper_map X X' f" "proper_map Y Y' g" if ?lhs
-    using that
-     apply (simp add: proper_map_def)
-apply (simp add: closed_map_prod)
-apply (auto simp: )
-    sorry
+  proof -
+    have cm: "closed_map X X' f" "closed_map Y Y' g"
+      using that False closed_map_prod proper_imp_closed_map by blast+
+    show "proper_map X X' f"
+    proof (clarsimp simp add: proper_map_def cm)
+      fix y
+      assume y: "y \<in> topspace X'"
+      obtain z where z: "z \<in> topspace Y"
+        using ne by blast
+      then have eq: "{x \<in> topspace X. f x = y} =
+                     fst ` {u \<in> topspace X \<times> topspace Y. h u = (y,g z)}"
+        by (force simp: h_def)
+      show "compactin X {x \<in> topspace X. f x = y}"
+        unfolding eq
+      proof (intro image_compactin)
+        have "g z \<in> topspace Y'"
+          by (meson closed_map_def closedin_subset closedin_topspace cm image_subset_iff z)
+        with y show "compactin (prod_topology X Y) {u \<in> topspace X \<times> topspace Y. (h u) = (y, g z)}"
+          using that by (simp add: h_def proper_map_def)
+        show "continuous_map (prod_topology X Y) X fst"
+          by (simp add: continuous_map_fst)
+      qed
+    qed
+    show "proper_map Y Y' g"
+    proof (clarsimp simp add: proper_map_def cm)
+      fix y
+      assume y: "y \<in> topspace Y'"
+      obtain z where z: "z \<in> topspace X"
+        using ne by blast
+      then have eq: "{x \<in> topspace Y. g x = y} =
+                     snd ` {u \<in> topspace X \<times> topspace Y. h u = (f z,y)}"
+        by (force simp: h_def)
+      show "compactin Y {x \<in> topspace Y. g x = y}"
+        unfolding eq
+      proof (intro image_compactin)
+        have "f z \<in> topspace X'"
+          by (meson closed_map_def closedin_subset closedin_topspace cm image_subset_iff z)
+        with y show "compactin (prod_topology X Y) {u \<in> topspace X \<times> topspace Y. (h u) = (f z, y)}"
+          using that by (simp add: proper_map_def h_def)
+        show "continuous_map (prod_topology X Y) Y snd"
+          by (simp add: continuous_map_snd)
+      qed
+    qed
+  qed
   moreover
-  have ?lhs if ?rhs
-    sorry
+  { assume R: ?rhs
+    have "closed_map (prod_topology X Y) (prod_topology X' Y') h"
+      sorry
+    moreover
+    have "compactin (prod_topology X Y) {u \<in> topspace X \<times> topspace Y. h u = (w, z)}"
+      if "w \<in> topspace X'" and "z \<in> topspace Y'" for w z
+    proof -
+      have eq: "{u \<in> topspace X \<times> topspace Y. h u = (w,z)} =
+                {u \<in> topspace X. f u = w} \<times> {y. y \<in> topspace Y \<and> g y = z}"
+        by (auto simp: h_def)
+      show ?thesis
+        using R that by (simp add: eq compactin_Times proper_map_def)
+    qed
+  ultimately have ?lhs
+    by (auto simp: h_def proper_map_def) 
+  }
   ultimately show ?thesis using False by metis
 qed
 
 oops 
-  ASM_SIMP_TAC[PROPER_MAP_ON_EMPTY] THEN EQ_TAC THENL
-   [REWRITE_TAC[proper_map] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_MAP_PROD) THEN
-    ASM_REWRITE_TAC[] THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[TOPSPACE_PROD_TOPOLOGY]) THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[CROSS_EQ_EMPTY; DE_MORGAN_THM]) THEN
-    REPEAT(FIRST_X_ASSUM(ASSUME_TAC \<circ>
-      MATCH_MP CLOSED_MAP_IMP_SUBSET_TOPSPACE)) THEN
-    CONJ_TAC THENL
-     [X_GEN_TAC `y::C` THEN DISCH_TAC THEN FIRST_ASSUM(MP_TAC \<circ>
-       GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY] \<circ> CONJUNCT2) THEN
-      DISCH_THEN(X_CHOOSE_TAC `z::B`) THEN
-      SUBGOAL_THEN
-       `{x. x \<in> topspace X \<and> f x = y} =
-        image fst {x. x \<in> topspace X \<times> topspace Y \<and>
-                  (\<lambda> x y. (f::A=>C) x,(g::B=>D) y) x = y,g z}`
-      SUBST1_TAC THENL
-       [REWRITE_TAC[EXTENSION; IN_IMAGE; EXISTS_PAIR_THM; IN_ELIM_PAIR_THM;
-                    IN_CROSS; PAIR_EQ] THEN
-        ASM SET_TAC[];
-        MATCH_MP_TAC IMAGE_COMPACT_IN THEN
-        EXISTS_TAC `prod_topology X Y:(A#B)topology` THEN
-        REWRITE_TAC[CONTINUOUS_MAP_FST] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-        REWRITE_TAC[IN_CROSS] THEN ASM SET_TAC[]];
-      X_GEN_TAC `y::D` THEN DISCH_TAC THEN FIRST_ASSUM(MP_TAC \<circ>
-      GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY] \<circ> CONJUNCT1) THEN
-      DISCH_THEN(X_CHOOSE_TAC `z::A`) THEN
-      SUBGOAL_THEN
-       `{x. x \<in> topspace Y \<and> g x = y} =
-        image snd {x. x \<in> topspace X \<times> topspace Y \<and>
-                  (\<lambda> x y. (f::A=>C) x,(g::B=>D) y) x = f z,y}`
-      SUBST1_TAC THENL
-       [REWRITE_TAC[EXTENSION; IN_IMAGE; EXISTS_PAIR_THM; IN_ELIM_PAIR_THM;
-                    IN_CROSS; PAIR_EQ] THEN
-        ASM SET_TAC[];
-        MATCH_MP_TAC IMAGE_COMPACT_IN THEN
-        EXISTS_TAC `prod_topology X Y:(A#B)topology` THEN
-        REWRITE_TAC[CONTINUOUS_MAP_SND] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-        REWRITE_TAC[IN_CROSS] THEN ASM SET_TAC[]]];
-    STRIP_TAC THEN REWRITE_TAC[proper_map] THEN CONJ_TAC THENL
-     [ALL_TAC;
-      REWRITE_TAC[FORALL_PAIR_THM; TOPSPACE_PROD_TOPOLOGY; IN_CROSS] THEN
-      MAP_EVERY X_GEN_TAC [`w::C`; `z::D`] THEN STRIP_TAC THEN
-      SUBGOAL_THEN
-       `{x. x \<in> topspace X \<times> topspace Y \<and>
-             (\<lambda> x y. (f::A=>C) x,(g::B=>D) y) x = w,z} =
-        {x. x \<in> topspace X \<and> f x = w} \<times>
-        {y. y \<in> topspace Y \<and> g y = z}`
-      SUBST1_TAC THENL
-       [REWRITE_TAC[EXTENSION; IN_ELIM_THM; FORALL_PAIR_THM; IN_CROSS] THEN
-        REWRITE_TAC[PAIR_EQ] THEN MESON_TAC[];
-        REWRITE_TAC[COMPACT_IN_CROSS] THEN
-        RULE_ASSUM_TAC(REWRITE_RULE[proper_map]) THEN ASM_SIMP_TAC[]]] THEN
+
+
     REPEAT(FIRST_X_ASSUM(fun th ->
       ASSUME_TAC(MATCH_MP PROPER_MAP_IMP_SUBSET_TOPSPACE th) THEN
       STRIP_ASSUME_TAC(REWRITE_RULE[proper_map] th))) THEN
