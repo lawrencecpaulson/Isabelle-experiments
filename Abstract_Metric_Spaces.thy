@@ -185,16 +185,69 @@ lemma proper_map_diag_eq [simp]:
    "proper_map X (prod_topology X X) (\<lambda>x. (x,x)) \<longleftrightarrow> Hausdorff_space X"
   by (simp add: closed_map_diag_eq inj_on_convol_ident injective_imp_proper_eq_closed_map)
 
+
+lemma closed_map_prod:
+  assumes "closed_map (prod_topology X Y) (prod_topology X' Y') (\<lambda>(x,y). (f x, g y))"
+  shows "topspace(prod_topology X Y) = {} \<or> closed_map X X' f \<and> closed_map Y Y' g"
+proof (cases "topspace(prod_topology X Y) = {}")
+  case False
+  then have "topspace X \<noteq> {}" "topspace Y \<noteq> {}"
+    by auto
+  have "closed_map X X' f"
+    unfolding closed_map_def
+  proof (intro strip)
+    fix C
+    assume "closedin X C"
+    show "closedin X' (f ` C)"
+    proof (cases "C={}")
+      case False
+      with assms have "closedin (prod_topology X' Y') ((\<lambda>(x,y). (f x, g y)) ` (C \<times> topspace Y))"
+        by (simp add: \<open>closedin X C\<close> closed_map_def closedin_prod_Times_iff)
+      with False \<open>topspace Y \<noteq> {}\<close> show ?thesis
+        by (simp add: image_paired_Times closedin_Times closedin_prod_Times_iff)
+    qed auto
+  qed
+  moreover
+  have "closed_map Y Y' g"
+    unfolding closed_map_def
+  proof (intro strip)
+    fix C
+    assume "closedin Y C"
+    show "closedin Y' (g ` C)"
+    proof (cases "C={}")
+      case False
+      with assms have "closedin (prod_topology X' Y') ((\<lambda>(x,y). (f x, g y)) ` (topspace X \<times> C))"
+        by (simp add: \<open>closedin Y C\<close> closed_map_def closedin_prod_Times_iff)
+      with False \<open>topspace X \<noteq> {}\<close> show ?thesis
+        by (simp add: image_paired_Times closedin_Times closedin_prod_Times_iff)
+    qed auto
+  qed
+  ultimately show ?thesis
+    by (auto simp: False)
+qed auto
+
 lemma proper_map_prod:
-   "proper_map (prod_topology X Y) (prod_topology X' Y') (\<lambda> (x,y). (f x, g y)) \<longleftrightarrow>
+   "proper_map (prod_topology X Y) (prod_topology X' Y') (\<lambda>(x,y). (f x, g y)) \<longleftrightarrow>
     topspace(prod_topology X Y) = {} \<or> proper_map X X' f \<and> proper_map Y Y' g"
+   (is "?lhs \<longleftrightarrow> _ \<or> ?rhs")
 proof (cases "topspace(prod_topology X Y) = {}")
   case True
   then show ?thesis
     by (simp add: proper_map_on_empty)
 next
   case False
-  then show ?thesis sorry
+  then obtain x y where "x \<in> topspace X" "y \<in> topspace Y"
+    by auto
+  have "proper_map X X' f" "proper_map Y Y' g" if ?lhs
+    using that
+     apply (simp add: proper_map_def)
+apply (simp add: closed_map_prod)
+apply (auto simp: )
+    sorry
+  moreover
+  have ?lhs if ?rhs
+    sorry
+  ultimately show ?thesis using False by metis
 qed
 
 oops 
