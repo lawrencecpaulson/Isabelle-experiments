@@ -1662,9 +1662,8 @@ lemma (in discrete_metric) mbounded_discrete_metric: "disc.mbounded S \<longleft
 
 subsection\<open>Metrizable spaces\<close>
 
-
 definition metrizable_space where
-  "metrizable_space X \<equiv> (\<exists>M d. Metric_space M d \<and> X = Metric_space.mtopology M d)"
+  "metrizable_space X \<equiv> \<exists>M d. Metric_space M d \<and> X = Metric_space.mtopology M d"
 
 lemma (in Metric_space) metrizable_space_mtopology: "metrizable_space mtopology"
   using local.Metric_space_axioms metrizable_space_def by blast
@@ -6505,244 +6504,59 @@ oops
   MATCH_MP_TAC HOMOTOPIC_COMPOSE_CONTINUOUS_MAP_RIGHT THEN
   EXISTS_TAC `X::A topology` THEN ASM_REWRITE_TAC[]);;
 
-lemma homotopy_equivalent_space_contractibility:
-   "\<And>X (Y:B topology).
-        X homotopy_equivalent_space Y
-        \<Longrightarrow> (contractible_space X \<longleftrightarrow> contractible_space Y)"
-oops
-  REWRITE_TAC[homotopy_equivalent_space] THEN REPEAT STRIP_TAC THEN EQ_TAC THEN
-  MATCH_MP_TAC(ONCE_REWRITE_RULE[IMP_CONJ]
-   (REWRITE_RULE[CONJ_ASSOC] HOMOTOPY_DOMINATED_CONTRACTIBILITY)) THEN
-  ASM_MESON_TAC[]);;
 
-lemma homeomorphic_space_contractibility:
-   "\<And>X (Y:B topology).
-        X homeomorphic_space Y
-        \<Longrightarrow> (contractible_space X \<longleftrightarrow> contractible_space Y)"
-oops
-  MESON_TAC[HOMOTOPY_EQUIVALENT_SPACE_CONTRACTIBILITY;
-            HOMEOMORPHIC_IMP_HOMOTOPY_EQUIVALENT_SPACE]);;
+subsection \<open>Completely metrizable spaces\<close>
 
-lemma contractible_eq_homotopy_equivalent_singleton_subtopology:
-   "contractible_space X \<longleftrightarrow>
-        topspace X = {} \<or>
-        \<exists>a. a \<in> topspace X \<and>
-            X homotopy_equivalent_space (subtopology X {a})"
-oops
-  GEN_TAC THEN ASM_CASES_TAC `topspace X::A=>bool = {}` THEN
-  ASM_SIMP_TAC[CONTRACTIBLE_SPACE_EMPTY] THEN EQ_TAC THENL
-   [ASM_REWRITE_TAC[CONTRACTIBLE_SPACE] THEN MATCH_MP_TAC MONO_EXISTS THEN
-    X_GEN_TAC `a::A` THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[homotopy_equivalent_space] THEN
-    MAP_EVERY EXISTS_TAC [`(\<lambda>x. a):A=>A`; `(\<lambda>x. x):A=>A`] THEN
-    ASM_SIMP_TAC[o_DEF; CONTINUOUS_MAP_FROM_SUBTOPOLOGY; CONTINUOUS_MAP_ID;
-      IN_INTER; CONTINUOUS_MAP_CONST; TOPSPACE_SUBTOPOLOGY; IN_SING] THEN
-    ONCE_REWRITE_TAC[HOMOTOPIC_WITH_SYM] THEN
-    ASM_REWRITE_TAC[I_DEF] THEN MATCH_MP_TAC HOMOTOPIC_WITH_EQUAL THEN
-    REWRITE_TAC[CONTINUOUS_MAP_ID; TOPSPACE_SUBTOPOLOGY] THEN SET_TAC[];
-    DISCH_THEN(X_CHOOSE_THEN `a::A` STRIP_ASSUME_TAC) THEN
-    FIRST_ASSUM(SUBST1_TAC \<circ>
-      MATCH_MP HOMOTOPY_EQUIVALENT_SPACE_CONTRACTIBILITY) THEN
-    MATCH_MP_TAC CONTRACTIBLE_SPACE_SING THEN
-    EXISTS_TAC `a::A` THEN ASM_REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN
-    ASM SET_TAC[]]);;
-
-lemma contractible_space_retraction_map_image:
-   "\<And>X Y f.
-        retraction_map X Y f \<and> contractible_space X
-        \<Longrightarrow> contractible_space Y"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[IMP_CONJ; retraction_map; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `g::B=>A` THEN REWRITE_TAC[retraction_maps] THEN STRIP_TAC THEN
-  REWRITE_TAC[contractible_space; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `a::A` THEN STRIP_TAC THEN EXISTS_TAC `f a` THEN
-  MATCH_MP_TAC HOMOTOPIC_WITH_EQ THEN
-  EXISTS_TAC `f \<circ> (\<lambda>x. x) \<circ> (g::B=>A)` THEN
-  EXISTS_TAC `f \<circ> (\<lambda>x. a) \<circ> (g::B=>A)` THEN
-  ASM_SIMP_TAC[o_THM] THEN
-  MATCH_MP_TAC HOMOTOPIC_COMPOSE_CONTINUOUS_MAP_LEFT THEN
-  EXISTS_TAC `X::A topology` THEN ASM_REWRITE_TAC[] THEN
-  MATCH_MP_TAC HOMOTOPIC_COMPOSE_CONTINUOUS_MAP_RIGHT THEN
-  EXISTS_TAC `X::A topology` THEN ASM_REWRITE_TAC[]);;
-
-lemma contractible_space_prod_topology:
-   "\<And>(top1::A topology) (top2::B topology).
-        contractible_space(prod_topology top1 top2) \<longleftrightarrow>
-        topspace top1 = {} \<or> topspace top2 = {} \<or>
-        contractible_space top1 \<and> contractible_space top2"
-oops
-  REPEAT GEN_TAC THEN
-  ASM_CASES_TAC `topspace top1::A=>bool = {}` THEN
-  ASM_SIMP_TAC[CONTRACTIBLE_SPACE_EMPTY; TOPSPACE_PROD_TOPOLOGY;
-               CROSS_EQ_EMPTY] THEN
-  ASM_CASES_TAC `topspace top2::B=>bool = {}` THEN
-  ASM_SIMP_TAC[CONTRACTIBLE_SPACE_EMPTY; TOPSPACE_PROD_TOPOLOGY;
-               CROSS_EQ_EMPTY] THEN
-  EQ_TAC THENL
-   [DISCH_THEN(fun th -> CONJ_TAC THEN MP_TAC th) THEN
-    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ]
-     CONTRACTIBLE_SPACE_RETRACTION_MAP_IMAGE)
-    THENL [EXISTS_TAC `fst::A#B=>A`; EXISTS_TAC `snd::A#B=>B`] THEN
-    ASM_REWRITE_TAC[RETRACTION_MAP_FST; RETRACTION_MAP_SND];
-    ASM_REWRITE_TAC[CONTRACTIBLE_SPACE; TOPSPACE_PROD_TOPOLOGY;
-                    CROSS_EQ_EMPTY; EXISTS_PAIR_THM] THEN
-    REWRITE_TAC[IN_CROSS; LEFT_AND_EXISTS_THM] THEN
-    REWRITE_TAC[RIGHT_AND_EXISTS_THM; GSYM CONJ_ASSOC] THEN
-    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `a::A` THEN
-    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `b::B` THEN
-    ASM_CASES_TAC `(a::A) \<in> topspace top1` THEN ASM_REWRITE_TAC[] THEN
-    ASM_CASES_TAC `(b::B) \<in> topspace top2` THEN ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP (ONCE_REWRITE_RULE[TAUT
-     `p \<and> q \<and> r \<Longrightarrow> s \<longleftrightarrow> p \<and> q \<Longrightarrow> r \<Longrightarrow> s`]
-    HOMOTOPIC_WITH_PROD_TOPOLOGY)) THEN SIMP_TAC[]]);;
-
-lemma contractible_space_product_topology:
-   "\<And>k (tops::K=>A topology).
-        contractible_space(product_topology k tops) \<longleftrightarrow>
-        topspace (product_topology k tops) = {} \<or>
-        \<forall>i. i \<in> k \<Longrightarrow> contractible_space(tops i)"
-oops
-  REPEAT GEN_TAC THEN
-  ASM_CASES_TAC `topspace(product_topology k (tops::K=>A topology)) = {}` THEN
-  ASM_SIMP_TAC[CONTRACTIBLE_SPACE_EMPTY] THEN EQ_TAC THENL
-   [DISCH_TAC THEN X_GEN_TAC `i::K` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
-     CONTRACTIBLE_SPACE_RETRACTION_MAP_IMAGE)) THEN
-    EXISTS_TAC `\<lambda>x::K=>A. x i` THEN
-    ASM_SIMP_TAC[RETRACTION_MAP_PRODUCT_PROJECTION];
-    REWRITE_TAC[contractible_space] THEN
-    GEN_REWRITE_TAC (LAND_CONV \<circ> BINDER_CONV) [RIGHT_IMP_EXISTS_THM] THEN
-    REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `a::K=>A` THEN DISCH_TAC THEN
-    EXISTS_TAC `RESTRICTION k (a::K=>A)` THEN FIRST_X_ASSUM
-     (MP_TAC \<circ> ISPEC `\<lambda>z:(K=>A)->(K=>A). True` \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ]
-        HOMOTOPIC_WITH_PRODUCT_TOPOLOGY)) THEN
-    REWRITE_TAC[] THEN MATCH_MP_TAC(ONCE_REWRITE_RULE[IMP_CONJ_ALT]
-        HOMOTOPIC_WITH_EQ) THEN
-    REWRITE_TAC[ETA_AX] THEN REWRITE_TAC[FUN_EQ_THM] THEN
-    REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY; PiE; IN_ELIM_THM] THEN
-    REWRITE_TAC[EXTENSIONAL; IN_ELIM_THM; RESTRICTION] THEN MESON_TAC[]]);;
-
-lemma contractible_space_subtopology_euclideanreal:
-   "contractible_space(subtopology euclideanreal s) \<longleftrightarrow> is_interval s"
-oops
-  GEN_TAC THEN EQ_TAC THENL
-   [DISCH_THEN(MP_TAC \<circ> MATCH_MP CONTRACTIBLE_IMP_PATH_CONNECTED_SPACE) THEN
-    REWRITE_TAC[GSYM PATH_CONNECTED_IN_TOPSPACE] THEN
-    REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY] THEN
-    REWRITE_TAC[PATH_CONNECTED_IN_SUBTOPOLOGY; SUBSET_REFL] THEN
-    REWRITE_TAC[PATH_CONNECTED_IN_EUCLIDEANREAL];
-    ALL_TAC] THEN
-  ASM_CASES_TAC `s::real=>bool = {}` THEN
-  ASM_SIMP_TAC[CONTRACTIBLE_SPACE_EMPTY;
-               TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY]) THEN
-  DISCH_THEN(X_CHOOSE_TAC `z::real`) THEN REWRITE_TAC[is_interval] THEN
-  STRIP_TAC THEN REWRITE_TAC[contractible_space; homotopic_with] THEN
-  EXISTS_TAC `z::real` THEN
-  EXISTS_TAC `\<lambda>(t::real,x). (1 - t) * x + t * z` THEN REWRITE_TAC[] THEN
-  CONJ_TAC THENL [ALL_TAC; REAL_ARITH_TAC] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN CONJ_TAC THENL
-   [REWRITE_TAC[LAMBDA_PAIR; GSYM SUBTOPOLOGY_CROSS] THEN
-    MATCH_MP_TAC CONTINUOUS_MAP_REAL_ADD THEN
-    CONJ_TAC THEN MATCH_MP_TAC CONTINUOUS_MAP_REAL_MUL THEN
-    SIMP_TAC[CONTINUOUS_MAP_REAL_CONST; CONTINUOUS_MAP_FROM_SUBTOPOLOGY;
-             CONTINUOUS_MAP_FST; CONTINUOUS_MAP_SND;
-             CONTINUOUS_MAP_REAL_SUB];
-    REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; FORALL_PAIR_THM] THEN
-    MAP_EVERY X_GEN_TAC [`t::real`; `x::real`] THEN
-    REWRITE_TAC[TOPSPACE_PROD_TOPOLOGY; IN_CROSS] THEN
-    REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY; IN_REAL_INTERVAL] THEN
-    STRIP_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-    MAP_EVERY EXISTS_TAC [`min x z::real`; `max z x::real`] THEN
-    GEN_REWRITE_TAC id [CONJ_ASSOC] THEN CONJ_TAC THENL
-     [REWRITE_TAC[real_max; real_min] THEN ASM_MESON_TAC[]; ALL_TAC] THEN
-    MATCH_MP_TAC REAL_CONVEX_BOUNDS_LE THEN ASM_REAL_ARITH_TAC]);;
-
-lemma contractible_space_euclideanreal:
- (`contractible_space euclideanreal"
-oops
-  ONCE_REWRITE_TAC[GSYM SUBTOPOLOGY_UNIV] THEN
-  REWRITE_TAC[CONTRACTIBLE_SPACE_SUBTOPOLOGY_EUCLIDEANREAL] THEN
-  REWRITE_TAC[IS_REALINTERVAL_UNIV]);;
-
-
-(* Completely metrizable (a.k.a. "topologically complete") spaces.           *)
-
+text \<open>These are topologically complete\<close>
 
 definition completely_metrizable_space where
- `completely_metrizable_space X \<longleftrightarrow>
-  \<exists>m. mcomplete \<and> X = mtopology"
+ "completely_metrizable_space X \<equiv> 
+     \<exists>M d. Metric_space M d \<and> Metric_space.mcomplete M d \<and> X = Metric_space.mtopology M d"
 
 lemma completely_metrizable_imp_metrizable_space:
    "completely_metrizable_space X \<Longrightarrow> metrizable_space X"
-oops
-  REWRITE_TAC[completely_metrizable_space; metrizable_space] THEN
-  MESON_TAC[]);;
+  using completely_metrizable_space_def metrizable_space_def by auto
 
-lemma forall_mcomplete_topology:
-   "(\<forall>m::A metric. mcomplete \<Longrightarrow> P mtopology (M)) \<longleftrightarrow>
-       \<forall>X. completely_metrizable_space X \<Longrightarrow> P X (topspace X)"
-oops
-  SIMP_TAC[completely_metrizable_space; LEFT_IMP_EXISTS_THM;
-           TOPSPACE_MTOPOLOGY] THEN
-  MESON_TAC[]);;
-
-lemma forall_completely_metrizable_space:
- (`(\<forall>X. completely_metrizable_space X \<Longrightarrow> P X (topspace X)) \<longleftrightarrow>
-   (\<forall>m::A metric. mcomplete \<Longrightarrow> P mtopology (M))"
-oops
-  SIMP_TAC[completely_metrizable_space; LEFT_IMP_EXISTS_THM;
-           TOPSPACE_MTOPOLOGY] THEN
-  MESON_TAC[]);;
-
-lemma exists_completely_metrizable_space:
-   "(\<exists>X. completely_metrizable_space X \<and> P X (topspace X)) \<longleftrightarrow>
-       (\<exists>m::A metric.mcomplete \<and>  P mtopology (M))"
-oops
-  REWRITE_TAC[MESON[] `(\<exists>x. P x \<and> Q x) \<longleftrightarrow> \<not> (\<forall>x. P x \<Longrightarrow> \<not> Q x)`] THEN
-  REWRITE_TAC[FORALL_MCOMPLETE_TOPOLOGY] THEN MESON_TAC[]);;
-
-lemma completely_metrizable_space_mtopology:
-   "mcomplete \<Longrightarrow> completely_metrizable_spacemtopology"
-oops
-  REWRITE_TAC[FORALL_MCOMPLETE_TOPOLOGY]);;
+lemma (in Metric_space) completely_metrizable_space_mtopology:
+   "mcomplete \<Longrightarrow> completely_metrizable_space mtopology"
+  using Metric_space_axioms completely_metrizable_space_def by blast
 
 lemma completely_metrizable_space_discrete_topology:
-   "\<And>u::A=>bool. completely_metrizable_space(discrete_topology u)"
-oops
-  REWRITE_TAC[completely_metrizable_space] THEN
-  MESON_TAC[MTOPOLOGY_DISCRETE_METRIC; MCOMPLETE_DISCRETE_METRIC]);;
+   "completely_metrizable_space (discrete_topology U)"
+  unfolding completely_metrizable_space_def
+  by (metis discrete_metric.mcomplete_discrete_metric discrete_metric.mtopology_discrete_metric metric_M_dd)
 
 lemma completely_metrizable_space_euclideanreal:
- (`completely_metrizable_space euclideanreal"
-oops
-  REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
-  MATCH_MP_TAC COMPLETELY_METRIZABLE_SPACE_MTOPOLOGY THEN
-  REWRITE_TAC[MCOMPLETE_REAL_EUCLIDEAN_METRIC]);;
+    "completely_metrizable_space euclideanreal"
+  by (metis Met.mtopology_is_euclideanreal Met.completely_metrizable_space_mtopology euclidean_metric)
 
 lemma completely_metrizable_space_closedin:
-   "completely_metrizable_space X \<and> closedin X s
-        \<Longrightarrow> completely_metrizable_space(subtopology X s)"
-oops
-  REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
-  REWRITE_TAC[GSYM FORALL_MCOMPLETE_TOPOLOGY] THEN
-  REWRITE_TAC[GSYM MTOPOLOGY_SUBMETRIC] THEN
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC COMPLETELY_METRIZABLE_SPACE_MTOPOLOGY THEN
-  MATCH_MP_TAC CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE THEN ASM_REWRITE_TAC[]);;
+  assumes X: "completely_metrizable_space X" and S: "closedin X S"
+  shows "completely_metrizable_space(subtopology X S)"
+proof -
+  obtain M d where "Metric_space M d" and comp: "Metric_space.mcomplete M d" 
+                and Xeq: "X = Metric_space.mtopology M d"
+    using assms completely_metrizable_space_def by blast
+  then interpret Metric_space M d
+    by blast
+  show ?thesis
+    unfolding completely_metrizable_space_def
+  proof (intro conjI exI)
+    show "Metric_space S d"
+      using S Xeq closedin_subset subspace by force
+    have sub: "submetric_axioms M S"
+      by (metis S Xeq closedin_metric submetric_axioms_def)
+    then show "Metric_space.mcomplete S d"
+      using S Xeq comp submetric.closedin_eq_mcomplete submetric_def by blast
+    show "subtopology X S = Metric_space.mtopology S d"
+      by (metis Metric_space_axioms Xeq sub submetric.intro submetric.mtopology_submetric)
+  qed
+qed
 
-lemma homeomorphic_completely_metrizable_space:
-   "\<And>X (Y:B topology).
-        X homeomorphic_space Y
-        \<Longrightarrow> (completely_metrizable_space X \<longleftrightarrow>
-             completely_metrizable_space Y)"
-oops
-  lemma lemma:
-   "\<And>X (Y:B topology).
-          X homeomorphic_space Y
-          \<Longrightarrow> completely_metrizable_space X
-              \<Longrightarrow> completely_metrizable_space Y"
+lemma homeomorphic_completely_metrizable_space_aux:
+  assumes homXY: "X homeomorphic_space Y" and X: "completely_metrizable_space X"
+  shows "completely_metrizable_space Y"
+  sorry
 oops
     REPEAT GEN_TAC THEN REWRITE_TAC[completely_metrizable_space] THEN
     REWRITE_TAC[homeomorphic_space; LEFT_IMP_EXISTS_THM] THEN
@@ -6797,15 +6611,18 @@ oops
      [X_GEN_TAC `y::B` THEN STRIP_TAC THEN
       FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(g::B=>A) y`) THEN ASM SET_TAC[];
       ASM SET_TAC[]])
-in
 
-  REPEAT STRIP_TAC THEN EQ_TAC THEN MATCH_MP_TAC lemma THEN
-  ASM_MESON_TAC[HOMEOMORPHIC_SPACE_SYM]);;
+
+lemma homeomorphic_completely_metrizable_space:
+   "X homeomorphic_space Y
+        \<Longrightarrow> completely_metrizable_space X \<longleftrightarrow> completely_metrizable_space Y"
+  by (meson homeomorphic_completely_metrizable_space_aux homeomorphic_space_sym)
 
 lemma completely_metrizable_space_retraction_map_image:
-   "\<And>X Y r.
-        retraction_map X Y r \<and> completely_metrizable_space X
-        \<Longrightarrow> completely_metrizable_space Y"
+  assumes r: "retraction_map X Y r" and X: "completely_metrizable_space X"
+  shows "completely_metrizable_space Y"
+  sorry
+ 
 oops
   MATCH_MP_TAC WEAKLY_HEREDITARY_IMP_RETRACTIVE_PROPERTY THEN
   REWRITE_TAC[HOMEOMORPHIC_COMPLETELY_METRIZABLE_SPACE] THEN
@@ -6814,7 +6631,9 @@ oops
             METRIZABLE_IMP_HAUSDORFF_SPACE]);;
 
 
-text\<open> Product metric. For the nicest fit with the main Euclidean theories, we   \<close>
+subsection \<open>Product metric\<close>
+
+text\<open> Product metric. ? ? ? ? ? For the nicest fit with the main Euclidean theories, we   \<close>
 text\<open> make this the Euclidean product, though others would work topologically.  \<close>
 
 
@@ -7186,7 +7005,7 @@ oops
     EXISTS_TAC `((fst ` u) \<times> (snd ` u)):A#B=>bool` THEN
     ASM_REWRITE_TAC[TOTALLY_BOUNDED_IN_CROSS; IMAGE_EQ_EMPTY] THEN
     REWRITE_TAC[\<subseteq>; FORALL_PAIR_THM; IN_CROSS] THEN
-    REWRITE_TAC[IN_IMAGE; EXISTS_PAIR_THM] THEN MESON_TAC[]]);;
+    REWRITE_TAC[IN_IMAGE; EXISTS_PAIR_THM] THEN MESON_TAC[]]);;`
 
 
 text\<open> Three more restrictive notions of continuity for metric spaces.           \<close>
@@ -7485,8 +7304,7 @@ oops
   REWRITE_TAC[cauchy_continuous_map; o_DEF; ETA_AX]);;
 
 lemma cauchy_continuous_map_compose:
-   "\<And>m1 m2 f::A=>B g::B=>C.
-    cauchy_continuous_map m1 m2 f \<and> cauchy_continuous_map m2 m3 g
+   "cauchy_continuous_map m1 m2 f \<and> cauchy_continuous_map m2 m3 g
     \<Longrightarrow> cauchy_continuous_map m1 m3 (g \<circ> f)"
 oops
   REWRITE_TAC[cauchy_continuous_map; o_DEF; \<subseteq>; FORALL_IN_IMAGE] THEN
