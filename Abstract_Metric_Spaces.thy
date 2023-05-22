@@ -185,7 +185,7 @@ lemma proper_map_diag_eq [simp]:
    "proper_map X (prod_topology X X) (\<lambda>x. (x,x)) \<longleftrightarrow> Hausdorff_space X"
   by (simp add: closed_map_diag_eq inj_on_convol_ident injective_imp_proper_eq_closed_map)
 
-text \<open>Missing the opposite direction [does it hold?]\<close>
+text \<open>Missing the opposite direction. Does it hold? A converse is proved for proper maps, a stronger condition\<close>
 lemma closed_map_prod:
   assumes "closed_map (prod_topology X Y) (prod_topology X' Y') (\<lambda>(x,y). (f x, g y))"
   shows "topspace(prod_topology X Y) = {} \<or> closed_map X X' f \<and> closed_map Y Y' g"
@@ -225,6 +225,48 @@ proof (cases "topspace(prod_topology X Y) = {}")
   ultimately show ?thesis
     by (auto simp: False)
 qed auto
+
+thm closed_map_snd
+
+lemma Wallace_theorem_prod_topology:
+  assumes "compactin X K" "compactin Y L" "openin (prod_topology X Y) W" "K \<times> L \<subseteq> W"
+  obtains U V where "openin X U" "openin Y V" "K \<subseteq> U" "L \<subseteq> V" "U \<times> V \<subseteq> W"
+  sorry
+oops 
+  REPEAT STRIP_TAC THEN
+  SUBGOAL_THEN
+   `\<forall>y. y \<in> L
+        \<Longrightarrow> \<exists>U V. openin X U \<and> openin Y V \<and>
+                  K \<subseteq> U \<and> y \<in> V \<and>
+                  U \<times> V \<subseteq> (W::A#B=>bool)`
+  MP_TAC THENL
+   [REPEAT STRIP_TAC THEN MATCH_MP_TAC TUBE_LEMMA_LEFT THEN
+    ASM_REWRITE_TAC[] THEN
+    REPEAT(FIRST_X_ASSUM(MP_TAC o MATCH_MP COMPACT_IN_SUBSET_TOPSPACE)) THEN
+    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id [\<subseteq>]) THEN
+    REWRITE_TAC[\<subseteq>; FORALL_PAIR_THM; IN_CROSS] THEN ASM SET_TAC[];
+    GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [RIGHT_IMP_EXISTS_THM] THEN
+    REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
+    MAP_EVERY X_GEN_TAC [`U::B=>A->bool`; `V::B=>B->bool`] THEN DISCH_TAC THEN
+    UNDISCH_TAC `compactin Y (L::B=>bool)` THEN REWRITE_TAC[compactin] THEN
+    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC
+     (MP_TAC o SPEC `image (V::B=>B->bool) L`)) THEN
+    ANTS_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
+    REWRITE_TAC[EXISTS_FINITE_SUBSET_IMAGE] THEN
+    DISCH_THEN(X_CHOOSE_THEN `m::B=>bool` MP_TAC) THEN
+    ASM_CASES_TAC `m::B=>bool = {}` THEN
+    ASM_REWRITE_TAC[IMAGE_CLAUSES; UNIONS_0; SUBSET_EMPTY] THEN
+    DISCH_THEN(STRIP_ASSUME_TAC o REWRITE_RULE[\<subseteq>]) THENL
+     [MAP_EVERY EXISTS_TAC [`topspace X::A=>bool`; `{}:B=>bool`] THEN
+      ASM_REWRITE_TAC[OPEN_IN_EMPTY; OPEN_IN_TOPSPACE; CROSS_EMPTY] THEN
+      ASM_SIMP_TAC[COMPACT_IN_SUBSET_TOPSPACE; EMPTY_SUBSET];
+      EXISTS_TAC `\<Inter>(image (U::B=>A->bool) m)` THEN
+      EXISTS_TAC `\<Union>(image (V::B=>B->bool) m)` THEN
+      ASM_SIMP_TAC[OPEN_IN_UNIONS; FORALL_IN_IMAGE; OPEN_IN_INTERS;
+                   FINITE_IMAGE; IMAGE_EQ_EMPTY; IN_INTERS] THEN
+      ASM_REWRITE_TAC[\<subseteq>; FORALL_PAIR_THM; IN_CROSS] THEN
+      RULE_ASSUM_TAC(REWRITE_RULE[\<subseteq>; FORALL_PAIR_THM; IN_CROSS]) THEN
+      ASM SET_TAC[]]]);;
 
 lemma proper_map_prod:
    "proper_map (prod_topology X Y) (prod_topology X' Y') (\<lambda>(x,y). (f x, g y)) \<longleftrightarrow>
@@ -286,8 +328,46 @@ next
   qed
   moreover
   { assume R: ?rhs
+    then have fgim: "f ` topspace X \<subseteq> topspace X'" "g ` topspace Y \<subseteq> topspace Y'" 
+          and cm: "closed_map X X' f" "closed_map Y Y' g"
+      by (auto simp: proper_map_def closed_map_imp_subset_topspace)
     have "closed_map (prod_topology X Y) (prod_topology X' Y') h"
-      sorry
+      unfolding closed_map_fibre_neighbourhood imp_conjL
+    proof (intro conjI strip)
+      show "h ` topspace (prod_topology X Y) \<subseteq> topspace (prod_topology X' Y')"
+        unfolding h_def using fgim by auto
+      fix W w
+      assume W: "openin (prod_topology X Y) W"
+        and w: "w \<in> topspace (prod_topology X' Y')"
+        and subW: "{x \<in> topspace (prod_topology X Y). h x = w} \<subseteq> W"
+      then obtain x' y' where weq: "w = (x',y')" "x' \<in> topspace X'" "y' \<in> topspace Y'"
+        by auto
+      have eq: "{u \<in> topspace X \<times> topspace Y. h u = (x',y')} = {x \<in> topspace X. f x = x'} \<times> {y \<in> topspace Y. g y = y'}"
+        by (auto simp: h_def)
+
+      obtain U V where "openin X U" "openin Y V" "U \<times> V \<subseteq> W"
+        and U: "{x \<in> topspace X. f x = x'} \<subseteq> U" 
+        and V: "{x \<in> topspace Y. g x = y'} \<subseteq> V" 
+      proof (rule Wallace_theorem_prod_topology)
+        show "compactin X {x \<in> topspace X. f x = x'}" "compactin Y {x \<in> topspace Y. g x = y'}"
+          using R weq unfolding proper_map_def closed_map_fibre_neighbourhood by fastforce+
+        show "{x \<in> topspace X. f x = x'} \<times> {x \<in> topspace Y. g x = y'} \<subseteq> W"
+          using weq subW by (auto simp: h_def)
+      qed (use W in auto)
+      obtain U' where "openin X' U'" "x' \<in> U'" and U': "{x \<in> topspace X. f x \<in> U'} \<subseteq> U"
+        using cm U \<open>openin X U\<close> weq unfolding closed_map_fibre_neighbourhood by meson
+      obtain V' where "openin Y' V'" "y' \<in> V'" and V': "{x \<in> topspace Y. g x \<in> V'} \<subseteq> V"
+        using cm V \<open>openin Y V\<close> weq unfolding closed_map_fibre_neighbourhood by meson
+      show "\<exists>V. openin (prod_topology X' Y') V \<and> w \<in> V \<and> {x \<in> topspace (prod_topology X Y). h x \<in> V} \<subseteq> W"
+      proof (intro conjI exI)
+        show "openin (prod_topology X' Y') (U' \<times> V')"
+          by (simp add: \<open>openin X' U'\<close> \<open>openin Y' V'\<close> openin_prod_Times_iff)
+        show "w \<in> U' \<times> V'"
+          using \<open>x' \<in> U'\<close> \<open>y' \<in> V'\<close> weq by blast
+        show "{x \<in> topspace (prod_topology X Y). h x \<in> U' \<times> V'} \<subseteq> W"
+          using \<open>U \<times> V \<subseteq> W\<close> U' V' h_def by auto
+      qed
+    qed
     moreover
     have "compactin (prod_topology X Y) {u \<in> topspace X \<times> topspace Y. h u = (w, z)}"
       if "w \<in> topspace X'" and "z \<in> topspace Y'" for w z
@@ -298,59 +378,11 @@ next
       show ?thesis
         using R that by (simp add: eq compactin_Times proper_map_def)
     qed
-  ultimately have ?lhs
-    by (auto simp: h_def proper_map_def) 
+    ultimately have ?lhs
+      by (auto simp: h_def proper_map_def) 
   }
   ultimately show ?thesis using False by metis
 qed
-
-oops 
-
-
-    REPEAT(FIRST_X_ASSUM(fun th ->
-      ASSUME_TAC(MATCH_MP PROPER_MAP_IMP_SUBSET_TOPSPACE th) THEN
-      STRIP_ASSUME_TAC(REWRITE_RULE[proper_map] th))) THEN
-    REWRITE_TAC[CLOSED_MAP_FIBRE_NEIGHBOURHOOD] THEN CONJ_TAC THENL
-     [REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; TOPSPACE_PROD_TOPOLOGY] THEN
-      REWRITE_TAC[FORALL_PAIR_THM; IN_CROSS] THEN ASM SET_TAC[];
-      REWRITE_TAC[FORALL_PAIR_THM; TOPSPACE_PROD_TOPOLOGY; IN_CROSS]] THEN
-    MAP_EVERY X_GEN_TAC [`w::A#B=>bool`; `y1::C`; `y2::D`] THEN
-    SUBGOAL_THEN
-     `{x. x \<in> topspace X \<times> topspace Y \<and>
-           (\<lambda> x y. (f::A=>C) x,(g::B=>D) y) x = y1,y2} =
-      {x. x \<in> topspace X \<and> f x = y1} \<times>
-      {y. y \<in> topspace Y \<and> g y = y2}`
-    SUBST1_TAC THENL
-     [REWRITE_TAC[EXTENSION; IN_ELIM_THM; FORALL_PAIR_THM; IN_CROSS] THEN
-      REWRITE_TAC[PAIR_EQ] THEN MESON_TAC[];
-      STRIP_TAC] THEN
-    MP_TAC(ISPECL [`X::A topology`; `Y::B topology`; `w::A#B=>bool`;
-                   `{x. x \<in> topspace X \<and> (f::A=>C) x = y1}`;
-                   `{x. x \<in> topspace Y \<and> (g::B=>D) x = y2}`]
-        WALLACE_THEOREM_PROD_TOPOLOGY) THEN
-    ASM_SIMP_TAC[LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`u::A=>bool`; `v::B=>bool`] THEN STRIP_TAC THEN
-    MAP_EVERY UNDISCH_TAC
-     [`closed_map(Y,Y') (g::B=>D)`;
-      `closed_map(X,X') (f::A=>C)`] THEN
-    REWRITE_TAC[IMP_IMP; CLOSED_MAP_FIBRE_NEIGHBOURHOOD] THEN
-    DISCH_THEN(CONJUNCTS_THEN(MP_TAC \<circ> CONJUNCT2)) THEN
-    REWRITE_TAC[IMP_IMP] THEN DISCH_THEN(CONJUNCTS_THEN2
-     (MP_TAC \<circ> SPECL [`v::B=>bool`; `y2::D`])
-     (MP_TAC \<circ> SPECL [`u::A=>bool`; `y1::C`])) THEN
-    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `u':C=>bool` THEN STRIP_TAC THEN
-    X_GEN_TAC `v':D=>bool` THEN STRIP_TAC THEN
-    EXISTS_TAC `(u':C=>bool) \<times> (v':D=>bool)` THEN
-    ASM_REWRITE_TAC[IN_CROSS; OPEN_IN_CROSS] THEN
-    REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [\<subseteq>])) THEN
-    REWRITE_TAC[FORALL_IN_IMAGE; FORALL_PAIR_THM;
-                IN_ELIM_THM; IN_CROSS; \<subseteq>] THEN
-    SET_TAC[]]);;
-
-
-thm proper_map_id
-
 
 lemma proper_map_paired:
   assumes "Hausdorff_space X \<and> proper_map X Y f \<and> proper_map X Z g \<or>
@@ -428,7 +460,6 @@ proof -
     by auto
 qed
 
-
 lemma perfect_map_from_composition_right:
    "\<lbrakk>Hausdorff_space Y; perfect_map X Z (g \<circ> f);
      continuous_map X Y f; continuous_map Y Z g; f ` topspace X = topspace Y\<rbrakk>
@@ -489,7 +520,7 @@ lemma k_space_quotient_map_image:
 proof clarify
   fix S
   assume "S \<subseteq> topspace Y" and S: "\<forall>K. compactin Y K \<longrightarrow> closedin (subtopology Y K) (K \<inter> S)"
-  then have iff: "closedin X {x. x \<in> topspace X \<and> q x \<in> S} \<longleftrightarrow> closedin Y S"
+  then have iff: "closedin X {x \<in> topspace X. q x \<in> S} \<longleftrightarrow> closedin Y S"
     using q quotient_map_closedin by fastforce
   have "closedin (subtopology X K) (K \<inter> {x \<in> topspace X. q x \<in> S})" if "compactin X K" for K
   proof -
@@ -511,7 +542,7 @@ proof clarify
         by (meson S image_compactin q quotient_imp_continuous_map that)
     qed
   qed
-  then have "closedin X {x. x \<in> topspace X \<and> q x \<in> S}"
+  then have "closedin X {x \<in> topspace X. q x \<in> S}"
     by (metis (no_types, lifting) X k_space mem_Collect_eq subsetI)
   with iff show "closedin Y S" by simp
 qed
@@ -768,14 +799,14 @@ lemma continuous_map_from_k_space:
 proof -
   have "\<And>x. x \<in> topspace X \<Longrightarrow> f x \<in> topspace Y"
     by (metis compactin_absolute compactin_sing f image_compactin image_empty image_insert)
-  moreover have "closedin X {x. x \<in> topspace X \<and> f x \<in> C}" if "closedin Y C" for C
+  moreover have "closedin X {x \<in> topspace X. f x \<in> C}" if "closedin Y C" for C
   proof -
-    have "{x. x \<in> topspace X \<and> f x \<in> C} \<subseteq> topspace X"
+    have "{x \<in> topspace X. f x \<in> C} \<subseteq> topspace X"
       by fastforce
     moreover 
     have eq: "K \<inter> {x \<in> topspace X. f x \<in> C} = {x. x \<in> topspace(subtopology X K) \<and> f x \<in> (f ` K \<inter> C)}" for K
       by auto
-    have "closedin (subtopology X K) (K \<inter> {x. x \<in> topspace X \<and> f x \<in> C})" if "compactin X K" for K
+    have "closedin (subtopology X K) (K \<inter> {x \<in> topspace X. f x \<in> C})" if "compactin X K" for K
       unfolding eq
     proof (rule closedin_continuous_map_preimage)
       show "continuous_map (subtopology X K) (subtopology Y (f`K)) f"
@@ -2597,7 +2628,8 @@ lemma mcomplete_nest:
 proof
   assume L: ?lhs 
   show ?rhs
-  proof (intro strip conjI , elim conjE)
+    unfolding imp_conjL
+  proof (intro strip)
     fix C :: "nat \<Rightarrow> 'a set"
     assume clo: "\<forall>n. closedin mtopology (C n)"
       and ne: "\<forall>n. C n \<noteq> ({}::'a set)"
@@ -2752,12 +2784,12 @@ lemma mcomplete_fip:
 proof
   assume L: ?lhs 
   show ?rhs
-    unfolding mcomplete_nest_sing
-  proof (intro strip, elim conjE)
+    unfolding mcomplete_nest_sing imp_conjL
+  proof (intro strip)
     fix \<C> :: "'a set set"
     assume clo: "\<forall>C\<in>\<C>. closedin mtopology C"
       and cover: "\<forall>e>0. \<exists>C a. C \<in> \<C> \<and> C \<subseteq> mcball a e"
-      and fip: "\<forall>\<F>. finite \<F> \<and> \<F> \<subseteq> \<C> \<longrightarrow> \<Inter> \<F> \<noteq> {}"
+      and fip: "\<forall>\<F>. finite \<F> \<longrightarrow> \<F> \<subseteq> \<C> \<longrightarrow> \<Inter> \<F> \<noteq> {}"
     then have "\<forall>n. \<exists>C. C \<in> \<C> \<and> (\<exists>a. C \<subseteq> mcball a (inverse (Suc n)))"
       by simp
     then obtain C where C: "\<And>n. C n \<in> \<C>" 
@@ -2790,7 +2822,7 @@ proof
         have cloT: "closedin mtopology (T \<inter> D n)" for n
           using clo cloD that by blast
         have "\<Inter> (insert T (C ` {..n})) \<noteq> {}" for n
-          using that C by (intro fip [rule_format]) force
+          using that C by (intro fip [rule_format]) auto
         then have neT: "T \<inter> D n \<noteq> {}" for n
           by (simp add: D_def)
         have decT: "decseq (\<lambda>n. T \<inter> D n)"
@@ -2809,8 +2841,8 @@ proof
 next
   assume R [rule_format]: ?rhs
   show ?lhs
-    unfolding mcomplete_nest
-  proof (intro strip, elim conjE)
+    unfolding mcomplete_nest imp_conjL
+  proof (intro strip)
     fix C :: "nat \<Rightarrow> 'a set"
     assume clo: "\<forall>n. closedin mtopology (C n)"
       and ne: "\<forall>n. C n \<noteq> {}"
@@ -3765,9 +3797,9 @@ lemma compact_closure_of_eq_Bolzano_Weierstrass:
 proof
   assume L: ?lhs 
   show ?rhs
-  proof (intro strip, elim conjE)
+  proof (intro strip)
     fix T
-    assume T: "infinite T" "T \<subseteq> S" "T \<subseteq> M"
+    assume T: "infinite T \<and> T \<subseteq> S \<and> T \<subseteq> M"
     show "mtopology derived_set_of T \<noteq> {}"
     proof (intro compact_closure_of_imp_Bolzano_Weierstrass)
       show "compactin mtopology (mtopology closure_of S)"
