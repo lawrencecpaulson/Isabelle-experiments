@@ -5621,11 +5621,12 @@ next
         proof
           show "openin (subtopology X (topspace X - {a})) (topspace X - {a})"
             using R openin_open_subtopology by blast
-          have "closedin (subtopology X (topspace X - {a} \<inter> K)) (K \<inter> S - {a})"
-            if "compactin X K" "a \<notin> K" "K \<subseteq> topspace X" for K
+          have "closedin (subtopology X ((topspace X - {a}) \<inter> K)) (K \<inter> (S - {a}))"
+            if "compactin X K" "K \<subseteq> topspace X - {a}" for K
           proof (intro closedin_subset_topspace)
-            show "closedin X (K \<inter> S - {a})"
-              using that by (metis Diff_empty Diff_insert0 IntE R \<open>compactin X S\<close> compact_Int_closedin inf_commute)
+            show "closedin X (K \<inter> (S - {a}))"
+              using that
+              by (metis IntD1 Int_insert_right_if0 R True \<open>compactin X S\<close> closed_Int_compactin insert_Diff subset_Diff_insert)
           qed (use that in auto)
           moreover have "k_space (subtopology X (topspace X - {a}))"
             using R by blast
@@ -5633,12 +5634,7 @@ next
             using \<open>S \<subseteq> topspace X\<close> by auto
           ultimately show "closedin (subtopology X (topspace X - {a})) (S - {a})"
             using \<open>S \<subseteq> topspace X\<close> True
-            apply (simp add: k_space_def compactin_subtopology subtopology_subtopology)
-            apply (drule_tac x="S - {a}" in spec)
-            apply (erule impCE)
-             apply (erule notE)
-             apply (simp add: subset_iff)
-            by (smt (verit) Int_Diff closedin_subset_topspace inf.absorb_iff2 inf_commute inf_le1 subset_Diff_insert)
+            by (simp add: k_space_def compactin_subtopology subtopology_subtopology)
         qed 
         show "openin X (topspace X - {a})"
           by (simp add: R)
@@ -5654,36 +5650,20 @@ next
 qed
 
   
-  oops
-  MATCH_MP_TAC OPEN_IN_TRANS_FULL THEN
-  EXISTS_TAC `topspace X DELETE (a::A)` THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC OPEN_IN_DIFF THEN
-  ASM_SIMP_TAC[OPEN_IN_OPEN_SUBTOPOLOGY; SUBSET_REFL] THEN
-  FIRST_X_ASSUM(MATCH_MP_TAC \<circ> GEN_REWRITE_RULE id [K_SPACE]) THEN
-  REWRITE_TAC[COMPACT_IN_SUBTOPOLOGY; SUBTOPOLOGY_SUBTOPOLOGY;
-              TOPSPACE_SUBTOPOLOGY; SUBSET_INTER; SUBSET_DELETE] THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  X_GEN_TAC `k::A=>bool` THEN STRIP_TAC THEN
-  MATCH_MP_TAC CLOSED_IN_SUBSET_TOPSPACE THEN
-  CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-  ASM_SIMP_TAC[SET_RULE `(a \<notin> k) \<Longrightarrow> k \<inter> s - {a} = k \<inter> s`] THEN
-  FIRST_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[IN_INTER] THEN
-  MATCH_MP_TAC CLOSED_INTER_COMPACT_IN THEN ASM_SIMP_TAC[]);;
 
-definition alexandroff_compactification where
-  "alexandroff_compactification X =
-        topology ({ INL ` u | openin X u} \<union>
-                  { INR () insert image INL (topspace X - c) | c |
-                    compactin X c \<and> closedin X c})"
+definition Alexandroff_compactification where
+  "Alexandroff_compactification X =
+        topology ({ Inl ` u | openin X u} \<union>
+                  { insert (Inr ()) (Inl ` (topspace X - c)) | c. compactin X c \<and> closedin X c})"
 
-lemma openin_alexandroff_compactification:
+lemma openin_Alexandroff_compactification:
    "\<And>X v.
-        openin(alexandroff_compactification X) v \<longleftrightarrow>
+        openin(Alexandroff_compactification X) v \<longleftrightarrow>
         (\<exists>u. openin X u \<and> v = INL ` u) \<or>
         (\<exists>c. compactin X c \<and> closedin X c \<and>
              v = INR () insert image INL (topspace X - c))"
 oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[alexandroff_compactification] THEN
+  REPEAT GEN_TAC THEN REWRITE_TAC[Alexandroff_compactification] THEN
   W(MP_TAC \<circ> fst \<circ> EQ_IMP_RULE \<circ>
     PART_MATCH (lhand \<circ> rand) (CONJUNCT2 topology_tybij) \<circ>
     rator \<circ> lhand \<circ> snd) THEN
@@ -5777,8 +5757,8 @@ oops
         CONJ_TAC THENL [ASM SET_TAC[]; REWRITE_TAC[FORALL_IN_UNION]] THEN
         ASM_SIMP_TAC[FORALL_IN_IMAGE; CLOSED_IN_DIFF; CLOSED_IN_TOPSPACE]]]]);;
 
-lemma topspace_alexandroff_compactification:
-   "topspace(alexandroff_compactification X) =
+lemma topspace_Alexandroff_compactification:
+   "topspace(Alexandroff_compactification X) =
         INR () insert image INL (topspace X)"
 oops
   GEN_TAC THEN GEN_REWRITE_TAC LAND_CONV [topspace] THEN MATCH_MP_TAC(SET_RULE
@@ -5789,12 +5769,12 @@ oops
   REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
   REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET)) THEN SET_TAC[]);;
 
-lemma closedin_alexandroff_compactification:
+lemma closedin_Alexandroff_compactification:
    "\<And>X c.
-        closedin (alexandroff_compactification X) c \<longleftrightarrow>
+        closedin (Alexandroff_compactification X) c \<longleftrightarrow>
         (\<exists>k. compactin X k \<and> closedin X k \<and> c = INL ` k) \<or>
         (\<exists>u. openin X u \<and>
-             c = topspace(alexandroff_compactification X) - INL ` u)"
+             c = topspace(Alexandroff_compactification X) - INL ` u)"
 oops
   REPEAT GEN_TAC THEN GEN_REWRITE_TAC LAND_CONV [closedin] THEN
   REWRITE_TAC[OPEN_IN_ALEXANDROFF_COMPACTIFICATION] THEN
@@ -5818,9 +5798,9 @@ oops
   MP_TAC(INST_TYPE [`:1`,`:B`] sum_INJECTIVE) THEN
   ASM SET_TAC[]);;
 
-lemma closedin_alexandroff_compactification_image_inl:
+lemma closedin_Alexandroff_compactification_image_inl:
    "\<And>X k.
-        closedin (alexandroff_compactification X) (INL ` k) \<longleftrightarrow>
+        closedin (Alexandroff_compactification X) (INL ` k) \<longleftrightarrow>
         compactin X k \<and> closedin X k"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[CLOSED_IN_ALEXANDROFF_COMPACTIFICATION] THEN
@@ -5833,13 +5813,13 @@ oops
   MP_TAC(INST_TYPE [`:1`,`:B`] sum_DISTINCT) THEN SET_TAC[]);;
 
 lemma open_map_inl:
-   "open_map X (alexandroff_compactification X) INL"
+   "open_map X (Alexandroff_compactification X) INL"
 oops
   REWRITE_TAC[open_map; OPEN_IN_ALEXANDROFF_COMPACTIFICATION] THEN
   MESON_TAC[]);;
 
 lemma continuous_map_inl:
-   "continuous_map X (alexandroff_compactification X) INL"
+   "continuous_map X (Alexandroff_compactification X) INL"
 oops
   REWRITE_TAC[continuous_map; OPEN_IN_ALEXANDROFF_COMPACTIFICATION] THEN
   REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION; IN_INSERT] THEN
@@ -5851,13 +5831,13 @@ oops
                OPEN_IN_SUBSET; IN_GSPEC; OPEN_IN_DIFF; OPEN_IN_TOPSPACE]);;
 
 lemma embedding_map_inl:
-   "embedding_map X (alexandroff_compactification X) INL"
+   "embedding_map X (Alexandroff_compactification X) INL"
 oops
   GEN_TAC THEN MATCH_MP_TAC INJECTIVE_OPEN_IMP_EMBEDDING_MAP THEN
   REWRITE_TAC[CONTINUOUS_MAP_INL; OPEN_MAP_INL; sum_INJECTIVE]);;
 
-lemma compact_space_alexandroff_compactification:
-   "compact_space(alexandroff_compactification X)"
+lemma compact_space_Alexandroff_compactification:
+   "compact_space(Alexandroff_compactification X)"
 oops
   GEN_TAC THEN REWRITE_TAC[COMPACT_SPACE_ALT] THEN
   REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION] THEN
@@ -5866,12 +5846,12 @@ oops
   FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [IN_UNIONS]) THEN
   DISCH_THEN(X_CHOOSE_THEN `u::A+1=>bool` STRIP_ASSUME_TAC) THEN
   SUBGOAL_THEN
-   `compactin (alexandroff_compactificationX)
-               (topspace(alexandroff_compactification X) - u)`
+   `compactin (Alexandroff_compactificationX)
+               (topspace(Alexandroff_compactification X) - u)`
   MP_TAC THENL
    [SUBGOAL_THEN
      `\<exists>c. compactin X c \<and> closedin X c \<and>
-          topspace(alexandroff_compactification X) - u =
+          topspace(Alexandroff_compactification X) - u =
           image INL (c::A=>bool)`
     STRIP_ASSUME_TAC THENL
      [ALL_TAC; ASM_MESON_TAC[IMAGE_COMPACT_IN; CONTINUOUS_MAP_INL]] THEN
@@ -5895,8 +5875,8 @@ oops
     EXISTS_TAC `(u::A+1=>bool) insert vv` THEN
     ASM_REWRITE_TAC[FINITE_INSERT] THEN ASM SET_TAC[]]);;
 
-lemma topspace_alexandroff_compactification_delete:
-   "topspace(alexandroff_compactification X) DELETE (INR ()) =
+lemma topspace_Alexandroff_compactification_delete:
+   "topspace(Alexandroff_compactification X) DELETE (INR ()) =
         image INL (topspace X)"
 oops
   GEN_TAC THEN
@@ -5904,11 +5884,11 @@ oops
   REWRITE_TAC[SET_RULE `(insert a s) - {a} = s \<longleftrightarrow> (a \<notin> s)`] THEN
   REWRITE_TAC[IN_IMAGE; sum_DISTINCT]);;
 
-lemma alexandroff_compactification_dense:
+lemma Alexandroff_compactification_dense:
    "\<not> compact_space X
-        \<Longrightarrow> (alexandroff_compactification X)
+        \<Longrightarrow> (Alexandroff_compactification X)
             closure_of (image INL (topspace X)) =
-            topspace(alexandroff_compactification X)"
+            topspace(Alexandroff_compactification X)"
 oops
   REPEAT STRIP_TAC THEN
   REWRITE_TAC[GSYM TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN
@@ -5943,12 +5923,12 @@ oops
   EXISTS_TAC `topspace X DELETE (a::A)` THEN
   ASM_REWRITE_TAC[IN_DELETE]);;
 
-lemma t0_space_alexandroff_compactification:
-   "t0_space(alexandroff_compactification X) \<longleftrightarrow>
+lemma t0_space_Alexandroff_compactification:
+   "t0_space(Alexandroff_compactification X) \<longleftrightarrow>
         t0_space X"
 oops
   GEN_TAC THEN MP_TAC(ISPECL
-   [`alexandroff_compactificationX`; `INR ()::A+1`]
+   [`Alexandroff_compactificationX`; `INR ()::A+1`]
    T0_SPACE_ONE_POINT_COMPACTIFICATION) THEN
   REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN ANTS_TAC THENL
    [REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN
@@ -5980,12 +5960,12 @@ oops
     FIRST_X_ASSUM MATCH_MP_TAC THEN
     ASM_REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; IN_INTER; IN_DELETE]]);;
 
-lemma t1_space_alexandroff_compactification:
-   "t1_space(alexandroff_compactification X) \<longleftrightarrow>
+lemma t1_space_Alexandroff_compactification:
+   "t1_space(Alexandroff_compactification X) \<longleftrightarrow>
         t1_space X"
 oops
   GEN_TAC THEN MP_TAC(ISPECL
-   [`alexandroff_compactificationX`; `INR ()::A+1`]
+   [`Alexandroff_compactificationX`; `INR ()::A+1`]
    T1_SPACE_ONE_POINT_COMPACTIFICATION) THEN
   REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN ANTS_TAC THENL
    [SIMP_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN CONJ_TAC THENL
@@ -6022,12 +6002,12 @@ oops
   REWRITE_TAC[kc_space; COMPACT_IN_SUBTOPOLOGY; SUBSET_DELETE] THEN
   MESON_TAC[COMPACT_IN_SUBSET_TOPSPACE]);;
 
-lemma kc_space_alexandroff_compactification:
-   "kc_space(alexandroff_compactification X) \<longleftrightarrow>
+lemma kc_space_Alexandroff_compactification:
+   "kc_space(Alexandroff_compactification X) \<longleftrightarrow>
         k_space X \<and> kc_space X"
 oops
   GEN_TAC THEN MP_TAC(ISPECL
-   [`alexandroff_compactificationX`; `INR ()::A+1`]
+   [`Alexandroff_compactificationX`; `INR ()::A+1`]
    KC_SPACE_ONE_POINT_COMPACTIFICATION) THEN
   REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN ANTS_TAC THENL
    [SIMP_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN CONJ_TAC THENL
@@ -6097,12 +6077,12 @@ oops
                  OPEN_IN_INTER; IN_INTER; IN_DELETE] THEN
     FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP OPEN_IN_SUBSET) THEN ASM SET_TAC[]]);;
 
-lemma regular_space_alexandroff_compactification:
-   "regular_space(alexandroff_compactification X) \<longleftrightarrow>
+lemma regular_space_Alexandroff_compactification:
+   "regular_space(Alexandroff_compactification X) \<longleftrightarrow>
         regular_space X \<and> locally_compact_space X"
 oops
   GEN_TAC THEN MP_TAC(ISPECL
-   [`alexandroff_compactificationX`; `INR ()::A+1`]
+   [`Alexandroff_compactificationX`; `INR ()::A+1`]
    REGULAR_SPACE_ONE_POINT_COMPACTIFICATION) THEN
   REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN ANTS_TAC THENL
    [SIMP_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN CONJ_TAC THENL
@@ -6146,12 +6126,12 @@ oops
                   REGULAR_T1_IMP_HAUSDORFF_SPACE; HAUSDORFF_IMP_T1_SPACE;
                   T1_SPACE_ONE_POINT_COMPACTIFICATION]]);;
 
-lemma Hausdorff_space_alexandroff_compactification:
-   "Hausdorff_space(alexandroff_compactification X) \<longleftrightarrow>
+lemma Hausdorff_space_Alexandroff_compactification:
+   "Hausdorff_space(Alexandroff_compactification X) \<longleftrightarrow>
         Hausdorff_space X \<and> locally_compact_space X"
 oops
   GEN_TAC THEN MP_TAC(ISPECL
-   [`alexandroff_compactificationX`; `INR ()::A+1`]
+   [`Alexandroff_compactificationX`; `INR ()::A+1`]
    HAUSDORFF_SPACE_ONE_POINT_COMPACTIFICATION) THEN
   REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN ANTS_TAC THENL
    [SIMP_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN CONJ_TAC THENL
@@ -6176,8 +6156,8 @@ oops
     MATCH_MP_TAC EMBEDDING_MAP_IMP_HOMEOMORPHIC_SPACE THEN
     REWRITE_TAC[EMBEDDING_MAP_INL]]);;
 
-lemma completely_regular_space_alexandroff_compactification:
-   "completely_regular_space(alexandroff_compactification X) \<longleftrightarrow>
+lemma completely_regular_space_Alexandroff_compactification:
+   "completely_regular_space(Alexandroff_compactification X) \<longleftrightarrow>
         completely_regular_space X \<and> locally_compact_space X"
 oops
   MESON_TAC[REGULAR_SPACE_ALEXANDROFF_COMPACTIFICATION;
@@ -6334,13 +6314,13 @@ oops
     ASM_MESON_TAC[T1_SPACE_OPEN_IN_DELETE_ALT; OPEN_IN_TOPSPACE;
                   KC_IMP_T1_SPACE]]);;
 
-lemma Hausdorff_space_alexandroff_compactification_asymmetric_prod:
-   "Hausdorff_space(alexandroff_compactification X) \<longleftrightarrow>
-        kc_space(prod_topology (alexandroff_compactification X) X) \<and>
-        k_space(prod_topology (alexandroff_compactification X) X)"
+lemma Hausdorff_space_Alexandroff_compactification_asymmetric_prod:
+   "Hausdorff_space(Alexandroff_compactification X) \<longleftrightarrow>
+        kc_space(prod_topology (Alexandroff_compactification X) X) \<and>
+        k_space(prod_topology (Alexandroff_compactification X) X)"
 oops
   GEN_TAC THEN MP_TAC(ISPECL
-   [`alexandroff_compactificationX`; `INR ()::A+1`]
+   [`Alexandroff_compactificationX`; `INR ()::A+1`]
    HAUSDORFF_SPACE_ONE_POINT_COMPACTIFICATION_ASYMMETRIC_PROD) THEN
   REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN
   DISCH_THEN SUBST1_TAC THEN MATCH_MP_TAC
@@ -6388,9 +6368,9 @@ oops
    `a \<in> u \<Longrightarrow> s - u \<subseteq> s - {a}`] THEN
   REWRITE_TAC[KC_SPACE_AS_COMPACTIFICATION_UNIQUE]);;
 
-lemma alexandroff_compactification_unique:
+lemma Alexandroff_compactification_unique:
    "kc_space X \<and> compact_space X \<and> a \<in> topspace X
-        \<Longrightarrow> alexandroff_compactification
+        \<Longrightarrow> Alexandroff_compactification
              (subtopology X (topspace X - {a}))
             homeomorphic_space X"
 oops
@@ -6441,638 +6421,7 @@ in
   REWRITE_TAC[UNWIND_THM1] THEN ASM SET_TAC[]);;
 
 
-subsection\<open>Homotopy of maps p,q : X=>Y with property P of all intermediate maps\<close>
-subsection\<open>We often just want to require that it fixes some subset, but to take in   \<close>
-text\<open> the case of loop homotopy it's convenient to have a general property P\<close>
-
-
-definition homotopic_with where
-  `homotopic_with P (X,Y) p q \<longleftrightarrow>
-   \<exists>h. continuous_map
-       (prod_topology (subtopology euclideanreal ({0..1})) X,
-        Y) h \<and>
-       (\<forall>x. h(0,x) = p x) \<and> (\<forall>x. h(1,x) = q x) \<and>
-       (\<forall>t. t \<in> {0..1} \<Longrightarrow> P(\<lambda>x. h(t,x)))"
-
-lemma homotopic_with:
-   "\<And>P X Y p q::A=>B.
-        (\<forall>h k. (\<forall>x. x \<in> topspace X \<Longrightarrow> h x = k x) \<Longrightarrow> (P h \<longleftrightarrow> P k))
-        \<Longrightarrow> (homotopic_with P (X,Y) p q \<longleftrightarrow>
-             \<exists>h. continuous_map
-                  (prod_topology
-                   (subtopology euclideanreal (real_interval [0,1])) X,
-                   Y) h \<and>
-                (\<forall>x. x \<in> topspace X \<Longrightarrow> h (0,x) = p x) \<and>
-                (\<forall>x. x \<in> topspace X \<Longrightarrow> h (1,x) = q x) \<and>
-                (\<forall>t. t \<in> {0..1} \<Longrightarrow> P (\<lambda>x. h (t,x))))"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[homotopic_with] THEN EQ_TAC THENL
-   [MATCH_MP_TAC MONO_EXISTS THEN SIMP_TAC[]; ALL_TAC] THEN
-  DISCH_THEN(X_CHOOSE_THEN `h::real#A=>B` STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC `\<lambda>(t,x). if x \<in> topspace X then (h::real#A=>B)(t,x)
-                      else if t = 0 then p x else q x` THEN
-  ASM_SIMP_TAC[] THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN
-  REWRITE_TAC[COND_ID] THEN CONJ_TAC THENL
-   [FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
-        CONTINUOUS_MAP_EQ)) THEN
-    SIMP_TAC[FORALL_PAIR_THM; TOPSPACE_PROD_TOPOLOGY; IN_CROSS];
-    X_GEN_TAC `t::real` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `t::real`) THEN
-    ASM_REWRITE_TAC[] THEN MATCH_MP_TAC EQ_IMP THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN SIMP_TAC[]]);;
-
-lemma homotopic_with_imp_continuous_maps:
-   "\<And>P X Y p q::A=>B.
-        homotopic_with P (X,Y) p q
-        \<Longrightarrow> continuous_map X Y p \<and> continuous_map X Y q"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[homotopic_with; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `h::real#A=>B` THEN REPEAT STRIP_TAC THENL
-   [SUBGOAL_THEN `p = (h::real#A=>B) \<circ> (\<lambda>x. (0,x))` SUBST1_TAC THENL
-     [ASM_REWRITE_TAC[FUN_EQ_THM; o_THM]; ALL_TAC];
-    SUBGOAL_THEN `q = (h::real#A=>B) \<circ> (\<lambda>x. (1,x))` SUBST1_TAC THENL
-     [ASM_REWRITE_TAC[FUN_EQ_THM; o_THM]; ALL_TAC]] THEN
-  FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
-        CONTINUOUS_MAP_COMPOSE)) THEN
-  REWRITE_TAC[CONTINUOUS_MAP_PAIRWISE; o_DEF; ETA_AX] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_ID; CONTINUOUS_MAP_CONST] THEN DISJ2_TAC THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; TOPSPACE_EUCLIDEANREAL; INTER_UNIV] THEN
-  REWRITE_TAC[IN_REAL_INTERVAL] THEN REAL_ARITH_TAC);;
-
-lemma homotopic_with_imp_property:
-   "\<And>P X Y f g::A=>B. homotopic_with P (X,Y) f g \<Longrightarrow> P f \<and> P g"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[homotopic_with] THEN
-  DISCH_THEN(X_CHOOSE_THEN `h::real#A=>B` MP_TAC) THEN
-  REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN DISCH_THEN
-   (fun th -> MP_TAC(SPEC `0::real` th) THEN
-              MP_TAC(SPEC `1::real` th)) THEN
-  ASM_SIMP_TAC[ENDS_IN_UNIT_REAL_INTERVAL; ETA_AX]);;
-
-lemma homotopic_with_equal:
-   "\<And>P X Y f g.
-        P f \<and> P g \<and>
-        continuous_map X Y f \<and>
-        (\<forall>x. x \<in> topspace X \<Longrightarrow> f x = g x)
-        \<Longrightarrow> homotopic_with P (X,Y) f g"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[homotopic_with] THEN
-  EXISTS_TAC `(\<lambda>(t,x). if t = 1 then g x else f x):real#A=>B` THEN
-  ASM_REWRITE_TAC[] THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN CONJ_TAC THENL
-   [MATCH_MP_TAC CONTINUOUS_MAP_EQ THEN EXISTS_TAC `(f \<circ> snd):real#A=>B` THEN
-    REWRITE_TAC[TOPSPACE_PROD_TOPOLOGY; FORALL_PAIR_THM] THEN
-    REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY; o_THM; IN_CROSS] THEN
-    ASM_SIMP_TAC[COND_ID] THEN MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
-    EXISTS_TAC `X::A topology` THEN ASM_REWRITE_TAC[] THEN
-    SIMP_TAC[PROD_TOPOLOGY_SUBTOPOLOGY; CONTINUOUS_MAP_FROM_SUBTOPOLOGY;
-             CONTINUOUS_MAP_SND];
-    X_GEN_TAC `t::real` THEN ASM_CASES_TAC `t::real = 1` THEN
-    ASM_REWRITE_TAC[ETA_AX]]);;
-
-lemma homotopic_with_refl:
-   "\<And>P X Y f::A=>B.
-        homotopic_with P (X,Y) f f \<longleftrightarrow>
-        continuous_map X Y f \<and> P f"
-oops
-  REPEAT GEN_TAC THEN EQ_TAC THENL
-   [MESON_TAC[HOMOTOPIC_WITH_IMP_CONTINUOUS_MAPS; HOMOTOPIC_WITH_IMP_PROPERTY];
-    DISCH_TAC THEN MATCH_MP_TAC HOMOTOPIC_WITH_EQUAL THEN
-    ASM_REWRITE_TAC[]]);;
-
-lemma homotopic_with_sym:
-   "\<And>P X Y f g::A=>B.
-     homotopic_with P (X,Y) f g \<longleftrightarrow> homotopic_with P (X,Y) g f"
-oops
-  REPLICATE_TAC 3 GEN_TAC THEN MATCH_MP_TAC(MESON[]
-   `(\<forall>x y. P x y \<Longrightarrow> P y x) \<Longrightarrow> (\<forall>x y. P x y \<longleftrightarrow> P y x)`) THEN
-  REPEAT GEN_TAC THEN REWRITE_TAC[homotopic_with] THEN
-  DISCH_THEN(X_CHOOSE_THEN `h::real#A=>B` STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC `\<lambda>(t,x). (h::real#A=>B) (1 - t,x)` THEN
-  ASM_REWRITE_TAC[REAL_SUB_REFL; REAL_SUB_RZERO] THEN CONJ_TAC THENL
-   [REWRITE_TAC[LAMBDA_PAIR] THEN
-    GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
-    MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN EXISTS_TAC
-      `prod_topology (subtopology euclideanreal (real_interval [0,1]))
-                     X` THEN
-    ASM_REWRITE_TAC[CONTINUOUS_MAP_PAIRED; CONTINUOUS_MAP_SND] THEN
-    REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; \<subseteq>; FORALL_IN_IMAGE] THEN
-    REWRITE_TAC[TOPSPACE_PROD_TOPOLOGY; TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY;
-                FORALL_PAIR_THM; IN_CROSS; IN_REAL_INTERVAL] THEN
-    CONJ_TAC THENL [ALL_TAC; REAL_ARITH_TAC] THEN
-    MATCH_MP_TAC CONTINUOUS_MAP_REAL_SUB THEN
-    REWRITE_TAC[CONTINUOUS_MAP_CONST; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
-    GEN_REWRITE_TAC RAND_CONV [GSYM ETA_AX] THEN
-    REWRITE_TAC[CONTINUOUS_MAP_OF_FST] THEN
-    SIMP_TAC[CONTINUOUS_MAP_FROM_SUBTOPOLOGY; CONTINUOUS_MAP_ID];
-    REWRITE_TAC[IN_REAL_INTERVAL] THEN REPEAT STRIP_TAC THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN REWRITE_TAC[IN_REAL_INTERVAL] THEN
-    ASM_REAL_ARITH_TAC]);;
-
-lemma homotopic_with_trans:
-   "\<And>P X Y f g h.
-        homotopic_with P (X,Y) f g \<and>
-        homotopic_with P (X,Y) g h
-        \<Longrightarrow> homotopic_with P (X,Y) f h"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[homotopic_with; IN_REAL_INTERVAL] THEN
-  DISCH_THEN(CONJUNCTS_THEN2
-   (X_CHOOSE_THEN `h::real#A=>B` STRIP_ASSUME_TAC)
-   (X_CHOOSE_THEN `k::real#A=>B` STRIP_ASSUME_TAC)) THEN
-  EXISTS_TAC `\<lambda>z. if fst z \<le> 1/2
-                  then (h::real#A=>B)(2 * fst z,snd z)
-                  else (k::real#A=>B)(2 * fst z - 1,snd z)` THEN
-  REWRITE_TAC[] THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN
-  ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
-   [MATCH_MP_TAC CONTINUOUS_MAP_CASES_LE THEN
-    SIMP_TAC[] THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[CONTINUOUS_MAP_CONST; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
-    CONJ_TAC THENL
-     [REWRITE_TAC[PROD_TOPOLOGY_SUBTOPOLOGY] THEN
-      SIMP_TAC[CONTINUOUS_MAP_FST; CONTINUOUS_MAP_FROM_SUBTOPOLOGY];
-      CONJ_TAC THEN
-      GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
-      MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN EXISTS_TAC
-       `prod_topology (subtopology euclideanreal (real_interval [0,1]))
-                      X` THEN
-      ASM_REWRITE_TAC[] THEN
-      REWRITE_TAC[CONTINUOUS_MAP_PAIRWISE; o_DEF; ETA_AX] THEN
-      SIMP_TAC[CONTINUOUS_MAP_FROM_SUBTOPOLOGY; CONTINUOUS_MAP_SND] THEN
-      REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN
-      REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; TOPSPACE_SUBTOPOLOGY;
-                  FORALL_PAIR_THM; TOPSPACE_PROD_TOPOLOGY; IN_INTER;
-                  IN_ELIM_THM; IN_CROSS; IN_REAL_INTERVAL] THEN
-      (CONJ_TAC THENL [ALL_TAC; REAL_ARITH_TAC]) THEN
-      TRY(MATCH_MP_TAC CONTINUOUS_MAP_REAL_SUB) THEN
-      REWRITE_TAC[CONTINUOUS_MAP_CONST; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
-      MATCH_MP_TAC CONTINUOUS_MAP_REAL_LMUL THEN
-      MATCH_MP_TAC CONTINUOUS_MAP_FROM_SUBTOPOLOGY THEN
-      REWRITE_TAC[PROD_TOPOLOGY_SUBTOPOLOGY] THEN
-      MATCH_MP_TAC CONTINUOUS_MAP_FROM_SUBTOPOLOGY THEN
-      REWRITE_TAC[CONTINUOUS_MAP_FST; ETA_AX]];
-    X_GEN_TAC `t::real` THEN STRIP_TAC THEN
-    ASM_CASES_TAC `t \<le> 1/2` THEN ASM_REWRITE_TAC[] THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REAL_ARITH_TAC]);;
-
-lemma homotopic_with_compose_continuous_map_left:
-   "\<And>p q f g (h::B=>C) top1 top2 top3.
-        homotopic_with p (top1,top2) f g \<and>
-        continuous_map top2 top3 h \<and>
-        (\<forall>j. p j \<Longrightarrow> q(h \<circ> j))
-        \<Longrightarrow> homotopic_with q (top1,top3) (h \<circ> f) (h \<circ> g)"
-oops
-  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[IMP_CONJ_ALT] THEN STRIP_TAC THEN
-  REWRITE_TAC[homotopic_with; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `k::real#A=>B` THEN STRIP_TAC THEN
-  EXISTS_TAC `(h::B=>C) \<circ> (k::real#A=>B)` THEN
-  ASM_REWRITE_TAC[o_THM] THEN
-  CONJ_TAC THENL [ASM_MESON_TAC[CONTINUOUS_MAP_COMPOSE]; ALL_TAC] THEN
-  REPEAT STRIP_TAC THEN GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
-  ASM_SIMP_TAC[]);;
-
-lemma homotopic_compose_continuous_map_left:
-   "\<And>f g (h::B=>C) top1 top2 top3.
-        homotopic_with (\<lambda>k. True) (top1,top2) f g \<and>
-        continuous_map top2 top3 h
-        \<Longrightarrow> homotopic_with (\<lambda>k. True) (top1,top3) (h \<circ> f) (h \<circ> g)"
-oops
-  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[IMP_CONJ_ALT] THEN STRIP_TAC THEN
-  MATCH_MP_TAC(ONCE_REWRITE_RULE[IMP_CONJ_ALT]
-   HOMOTOPIC_WITH_COMPOSE_CONTINUOUS_MAP_LEFT) THEN
-  ASM_REWRITE_TAC[]);;
-
-lemma homotopic_with_compose_continuous_map_right:
-   "\<And>p q (f::B=>C) g (h::A=>B) top1 top2 top3.
-        homotopic_with p (top2,top3) f g \<and>
-        continuous_map top1 top2 h \<and>
-        (\<forall>j. p j \<Longrightarrow> q(j \<circ> h))
-        \<Longrightarrow> homotopic_with q (top1,top3) (f \<circ> h) (g \<circ> h)"
-oops
-  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[IMP_CONJ_ALT] THEN STRIP_TAC THEN
-  REWRITE_TAC[homotopic_with; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `k::real#B=>C` THEN STRIP_TAC THEN
-  EXISTS_TAC `\<lambda>(t,x). (k::real#B=>C)(t,(h::A=>B) x)` THEN
-  ASM_REWRITE_TAC[o_THM] THEN CONJ_TAC THENL
-   [REWRITE_TAC[LAMBDA_PAIR] THEN
-    GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
-    FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
-       CONTINUOUS_MAP_COMPOSE)) THEN
-    REWRITE_TAC[CONTINUOUS_MAP_PAIRWISE; o_DEF; ETA_AX] THEN
-    ASM_SIMP_TAC[CONTINUOUS_MAP_FST; CONTINUOUS_MAP_OF_SND];
-    GEN_TAC THEN REPLICATE_TAC 2 (DISCH_THEN(ANTE_RES_THEN MP_TAC)) THEN
-    REWRITE_TAC[o_DEF]]);;
-
-lemma homotopic_compose_continuous_map_right:
-   "\<And>(f::B=>C) g (h::A=>B) top1 top2 top3.
-        homotopic_with (\<lambda>k. True) (top2,top3) f g \<and>
-        continuous_map top1 top2 h
-        \<Longrightarrow> homotopic_with (\<lambda>k. True) (top1,top3) (f \<circ> h) (g \<circ> h)"
-oops
-  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[IMP_CONJ_ALT] THEN STRIP_TAC THEN
-  MATCH_MP_TAC(ONCE_REWRITE_RULE[IMP_CONJ_ALT]
-   HOMOTOPIC_WITH_COMPOSE_CONTINUOUS_MAP_RIGHT) THEN
-  ASM_REWRITE_TAC[]);;
-
-lemma homotopic_from_subtopology:
-   "\<And>P X Y s f (g::A=>B).
-        homotopic_with P (X,Y) f g
-        \<Longrightarrow> homotopic_with P (subtopology X s,Y) f g"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[homotopic_with] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN
-  REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[CONJUNCT2 PROD_TOPOLOGY_SUBTOPOLOGY] THEN
-  ASM_SIMP_TAC[CONTINUOUS_MAP_FROM_SUBTOPOLOGY]);;
-
-lemma homotopic_on_empty:
-   "\<And>X Y f g.
-        topspace X = {}
-        \<Longrightarrow> (homotopic_with P (X,Y) f g \<longleftrightarrow> P f \<and> P g)"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THEN
-  REWRITE_TAC[HOMOTOPIC_WITH_IMP_PROPERTY] THEN STRIP_TAC THEN
-  REWRITE_TAC[homotopic_with] THEN
-  EXISTS_TAC `(\<lambda>(t,x). if t = 0 then f x else g x):real#A=>B` THEN
-  ASM_SIMP_TAC[REAL_OF_NUM_EQ; ARITH_EQ; CROSS_EMPTY;
-               CONTINUOUS_MAP_ON_EMPTY; TOPSPACE_PROD_TOPOLOGY] THEN
-  X_GEN_TAC `t::real` THEN ASM_CASES_TAC `t::real = 0` THEN
-  ASM_REWRITE_TAC[ETA_AX]);;
-
-lemma homotopic_constant_maps:
-   "\<And>X (Y:B topology) a b.
-        homotopic_with (\<lambda>x. True) (X,Y) (\<lambda>x. a) (\<lambda>x. b) \<longleftrightarrow>
-        topspace X = {} \<or> path_component_of Y a b"
-oops
-  REPEAT GEN_TAC THEN ASM_CASES_TAC `topspace X::A=>bool = {}` THEN
-  ASM_SIMP_TAC[HOMOTOPIC_ON_EMPTY] THEN
-  REWRITE_TAC[path_component_of; pathin; homotopic_with] THEN EQ_TAC THENL
-   [DISCH_THEN(X_CHOOSE_THEN `h::real#A=>B` STRIP_ASSUME_TAC) THEN
-    FIRST_X_ASSUM(X_CHOOSE_TAC `a::A` \<circ>
-      GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY]) THEN
-    EXISTS_TAC `(h::real#A=>B) \<circ> (\<lambda>t. t,a)` THEN
-    ASM_REWRITE_TAC[o_THM] THEN MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
-    EXISTS_TAC
-     `prod_topology (subtopology euclideanreal ({0..1}))
-                    X` THEN
-    ASM_REWRITE_TAC[CONTINUOUS_MAP_PAIRED; CONTINUOUS_MAP_ID] THEN
-    ASM_REWRITE_TAC[CONTINUOUS_MAP_CONST];
-    DISCH_THEN(X_CHOOSE_THEN `g::real=>B` STRIP_ASSUME_TAC) THEN
-    EXISTS_TAC `(g::real=>B) \<circ> (fst::real#A=>real)` THEN
-    ASM_REWRITE_TAC[o_DEF; CONTINUOUS_MAP_OF_FST]]);;
-
-lemma homotopic_with_eq:
-   "\<And>P X Y f g f' g':A=>B.
-        homotopic_with P (X,Y) f g \<and>
-        (\<forall>x. x \<in> topspace X \<Longrightarrow> f' x = f x \<and> g' x = g x) \<and>
-        (\<forall>h k. (\<forall>x. x \<in> topspace X \<Longrightarrow> h x = k x) \<Longrightarrow> (P h \<longleftrightarrow> P k))
-        \<Longrightarrow>  homotopic_with P (X,Y) f' g'"
-oops
-  REPEAT GEN_TAC THEN
-  DISCH_THEN(CONJUNCTS_THEN2 MP_TAC STRIP_ASSUME_TAC) THEN
-  REWRITE_TAC[homotopic_with] THEN
-  DISCH_THEN(X_CHOOSE_THEN `h::real#A=>B`
-   (fun th -> EXISTS_TAC
-     `\<lambda>y. if snd y \<in> topspace X then (h::real#A=>B) y
-          else if fst y = 0 then f'(snd y)
-          else g'(snd y)` THEN
-   MP_TAC th)) THEN
-  REWRITE_TAC[REAL_OF_NUM_EQ; ARITH_EQ] THEN
-  REPEAT(MATCH_MP_TAC MONO_AND THEN CONJ_TAC) THENL
-   [MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] CONTINUOUS_MAP_EQ) THEN
-    SIMP_TAC[FORALL_PAIR_THM; TOPSPACE_PROD_TOPOLOGY; IN_CROSS];
-    ASM_MESON_TAC[];
-    ASM_MESON_TAC[];
-    MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `t::real` THEN
-    MATCH_MP_TAC MONO_IMP THEN REWRITE_TAC[] THEN
-    MATCH_MP_TAC EQ_IMP THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-    SIMP_TAC[]]);;
-
-lemma homotopic_with_prod_topology:
-   "\<And>p q r top1 top1' top2 top2' f (g::C=>D) f' g'.
-      homotopic_with p (top1,top1') f f' \<and>
-      homotopic_with q (top2,top2') g g' \<and>
-      (\<forall>i j. p i \<and> q j \<Longrightarrow> r(\<lambda>(x,y). i x,j y))
-      \<Longrightarrow> homotopic_with r (prod_topology top1 top2,prod_topology top1' top2')
-                           (\<lambda>z. f(fst z),g(snd z)) (\<lambda>z. f'(fst z),g'(snd z))"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[IMP_CONJ] THEN
-  REWRITE_TAC[homotopic_with; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `h::real#A=>B` THEN STRIP_TAC THEN
-  X_GEN_TAC `k::real#C=>D` THEN
-  REWRITE_TAC[IMP_IMP] THEN STRIP_TAC THEN
-  EXISTS_TAC `\<lambda>(t,x,y). (h::real#A=>B) (t,x),(k::real#C=>D) (t,y)` THEN
-  ASM_REWRITE_TAC[FORALL_PAIR_THM] THEN ASM_SIMP_TAC[LAMBDA_PAIR_THM] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_PAIRWISE; o_DEF] THEN
-  REWRITE_TAC[LAMBDA_TRIPLE_THM] THEN REWRITE_TAC[LAMBDA_TRIPLE] THEN
-  CONJ_TAC THEN GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THENL
-   [EXISTS_TAC
-     `prod_topology (subtopology euclideanreal (real_interval [0,1]))
-                    (top1::A topology)`;
-    EXISTS_TAC
-     `prod_topology (subtopology euclideanreal (real_interval [0,1]))
-                    (top2::C topology)`] THEN
-  ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_PAIRED] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_FST; CONTINUOUS_MAP_SND] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_OF_FST; CONTINUOUS_MAP_OF_SND] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_FST; CONTINUOUS_MAP_SND]);;
-
-lemma homotopic_with_product_topology:
-   "\<And>k (tops::K=>A topology) (tops':K=>B topology) p q f g.
-     (\<forall>i. i \<in> k
-          \<Longrightarrow> homotopic_with (p i) (tops i,tops' i) (f i) (g i)) \<and>
-     (\<forall>h. (\<forall>i. i \<in> k \<Longrightarrow> p i (h i)) \<Longrightarrow> q(\<lambda>x. (\<lambda>i\<in>k. h i (x i))))
-     \<Longrightarrow> homotopic_with q (product_topology k tops,product_topology k tops')
-                          (\<lambda>z. (\<lambda>i\<in>k. (f i) (z i)))
-                          (\<lambda>z. (\<lambda>i\<in>k. (g i) (z i)))"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[IMP_CONJ_ALT] THEN DISCH_TAC THEN
-  REWRITE_TAC[homotopic_with] THEN
-  GEN_REWRITE_TAC (LAND_CONV \<circ> ONCE_DEPTH_CONV) [RIGHT_IMP_EXISTS_THM] THEN
-  REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `h::K=>real#A=>B` THEN DISCH_TAC THEN
-  EXISTS_TAC `\<lambda>(t,z). (\<lambda>i\<in>k. (h::K=>real#A=>B) i (t,z i))` THEN
-  ASM_SIMP_TAC[RESTRICTION_EXTENSION] THEN
-  ONCE_REWRITE_TAC[CONTINUOUS_MAP_COMPONENTWISE] THEN
-  REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; FORALL_PAIR_THM] THEN
-  REWRITE_TAC[RESTRICTION_IN_EXTENSIONAL] THEN
-  X_GEN_TAC `i::K` THEN DISCH_TAC THEN
-  GEN_REWRITE_TAC RAND_CONV [LAMBDA_PAIR_THM] THEN
-  ASM_REWRITE_TAC[RESTRICTION] THEN REWRITE_TAC[LAMBDA_PAIR] THEN
-  GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN EXISTS_TAC
-   `prod_topology
-     (subtopology euclideanreal (real_interval [0,1]))
-     ((tops::K=>A topology) i)` THEN
-  ASM_SIMP_TAC[CONTINUOUS_MAP_PAIRED] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_FST; CONTINUOUS_MAP_OF_SND] THEN
-  ASM_SIMP_TAC[CONTINUOUS_MAP_PRODUCT_PROJECTION]);;
-
-
-subsection\<open>Homotopy equivalence of topological spaces\<close>
-
-
-parse_as_infix("homotopy_equivalent_space",(12,"right"));;
-
-definition homotopy_equivalent_space where
- `X homotopy_equivalent_space (Y:B topology) \<longleftrightarrow>
-        \<exists>f g. continuous_map X Y f \<and>
-              continuous_map Y X g \<and>
-              homotopic_with (\<lambda>x. True) (X,X) (g \<circ> f) id \<and>
-              homotopic_with (\<lambda>x. True) (Y,Y) (f \<circ> g) id"
-
-lemma homeomorphic_imp_homotopy_equivalent_space:
-   "\<And>X (Y:B topology).
-        X homeomorphic_space Y
-        \<Longrightarrow> X homotopy_equivalent_space Y"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[homeomorphic_space; homotopy_equivalent_space] THEN
-  REPEAT(MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC) THEN
-  REWRITE_TAC[homeomorphic_maps] THEN REPEAT STRIP_TAC THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC HOMOTOPIC_WITH_EQUAL THEN
-  ASM_REWRITE_TAC[o_THM; I_THM] THEN
-  ASM_MESON_TAC[CONTINUOUS_MAP_COMPOSE]);;
-
-lemma homotopy_equivalent_space_refl:
-   "X homotopy_equivalent_space X"
-oops
-  SIMP_TAC[HOMEOMORPHIC_IMP_HOMOTOPY_EQUIVALENT_SPACE;
-           HOMEOMORPHIC_SPACE_REFL]);;
-
-lemma homotopy_equivalent_space_sym:
-   "\<And>X (Y:B topology).
-        X homotopy_equivalent_space Y \<longleftrightarrow>
-        Y homotopy_equivalent_space X"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[homotopy_equivalent_space] THEN
-  GEN_REWRITE_TAC RAND_CONV [SWAP_EXISTS_THM] THEN
-  REPEAT(AP_TERM_TAC THEN ABS_TAC) THEN CONV_TAC TAUT);;
-
-lemma homotopy_equivalent_space_trans:
-   "top1 homotopy_equivalent_space top2 \<and>
-        top2 homotopy_equivalent_space top3
-        \<Longrightarrow> top1 homotopy_equivalent_space top3"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[homotopy_equivalent_space] THEN
-  SIMP_TAC[LEFT_AND_EXISTS_THM; LEFT_IMP_EXISTS_THM] THEN
-  SIMP_TAC[RIGHT_AND_EXISTS_THM; LEFT_IMP_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC
-   [`f1::A=>B`; `g1::B=>A`;
-    `f2::B=>C`; `g2::C=>B`] THEN
-  STRIP_TAC THEN
-  MAP_EVERY EXISTS_TAC
-   [`(f2::B=>C) \<circ> (f1::A=>B)`;
-    `(g1::B=>A) \<circ> (g2::C=>B)`] THEN
-  REWRITE_TAC[IMAGE_o] THEN REPLICATE_TAC 2
-   (CONJ_TAC THENL [ASM_MESON_TAC[CONTINUOUS_MAP_COMPOSE]; ALL_TAC]) THEN
-  CONJ_TAC THEN MATCH_MP_TAC HOMOTOPIC_WITH_TRANS THENL
-   [EXISTS_TAC `(g1::B=>A) \<circ> id \<circ> (f1::A=>B)`;
-    EXISTS_TAC `(f2::B=>C) \<circ> id \<circ> (g2::C=>B)`] THEN
-  (CONJ_TAC THENL [ALL_TAC; ASM_REWRITE_TAC[I_O_ID]]) THEN
-  REWRITE_TAC[GSYM o_ASSOC] THEN
-  MATCH_MP_TAC HOMOTOPIC_COMPOSE_CONTINUOUS_MAP_LEFT THEN
-  EXISTS_TAC `top2::B topology` THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[o_ASSOC] THEN
-  MATCH_MP_TAC HOMOTOPIC_COMPOSE_CONTINUOUS_MAP_RIGHT THEN
-  EXISTS_TAC `top2::B topology` THEN ASM_REWRITE_TAC[]);;
-
-lemma deformation_retraction_imp_homotopy_equivalent_space:
-   "\<And>X Y r s.
-        homotopic_with (\<lambda>x. True) (X,X) (s \<circ> r) id \<and>
-        retraction_maps(X,Y) (r,s)
-        \<Longrightarrow> X homotopy_equivalent_space Y"
-oops
-  REWRITE_TAC[LEFT_FORALL_IMP_THM; I_DEF] THEN
-  REPEAT GEN_TAC THEN REWRITE_TAC[homotopy_equivalent_space] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `r::A=>B` THEN
-  REWRITE_TAC[retraction_maps] THEN STRIP_TAC THEN
-  EXISTS_TAC `s::B=>A` THEN ASM_REWRITE_TAC[I_DEF] THEN
-  MATCH_MP_TAC HOMOTOPIC_WITH_EQUAL THEN
-  ASM_REWRITE_TAC[o_THM] THEN ASM_MESON_TAC[CONTINUOUS_MAP_COMPOSE]);;
-
-lemma deformation_retract_imp_homotopy_equivalent_space:
-   "\<And>X Y (r::A=>A).
-        homotopic_with (\<lambda>x. True) (X,X) r id \<and>
-        retraction_maps(X,Y) (r,id)
-        \<Longrightarrow> X homotopy_equivalent_space Y"
-oops
-  REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC DEFORMATION_RETRACTION_IMP_HOMOTOPY_EQUIVALENT_SPACE THEN
-  MAP_EVERY EXISTS_TAC [`r::A=>A`; `id::A=>A`] THEN
-  ASM_REWRITE_TAC[I_O_ID]);;
-
-lemma deformation_retract_of_space:
-   "s \<subseteq> topspace X \<and>
-        (\<exists>r. homotopic_with (\<lambda>x. True) (X,X) id r \<and>
-             retraction_maps(X,subtopology X s) (r,id)) \<longleftrightarrow>
-        s retract_of_space X \<and>
-        (\<exists>f. homotopic_with (\<lambda>x. True) (X,X) id f \<and>
-             f ` (topspace X) \<subseteq> s)"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[retract_of_space; retraction_maps; I_DEF] THEN
-  SIMP_TAC[CONTINUOUS_MAP_ID; CONTINUOUS_MAP_FROM_SUBTOPOLOGY] THEN
-  ASM_CASES_TAC `(s::A=>bool) \<subseteq> topspace X` THEN
-  ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET; CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN
-  EQ_TAC THENL
-   [REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `r::A=>A` THEN
-    REPEAT STRIP_TAC THEN EXISTS_TAC `r::A=>A` THEN ASM_REWRITE_TAC[];
-    DISCH_THEN(CONJUNCTS_THEN2
-     (X_CHOOSE_THEN `r::A=>A` STRIP_ASSUME_TAC) MP_TAC) THEN
-    REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `f::A=>A` THEN
-    STRIP_TAC THEN EXISTS_TAC `r::A=>A` THEN ASM_REWRITE_TAC[] THEN
-    TRANS_TAC HOMOTOPIC_WITH_TRANS `f::A=>A` THEN
-    ASM_REWRITE_TAC[] THEN MATCH_MP_TAC HOMOTOPIC_WITH_EQ THEN
-    MAP_EVERY EXISTS_TAC [`(r::A=>A) \<circ> (f::A=>A)`; `(r::A=>A) \<circ> (\<lambda>x. x)`] THEN
-    ASM_SIMP_TAC[o_THM] THEN CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-    MATCH_MP_TAC HOMOTOPIC_COMPOSE_CONTINUOUS_MAP_LEFT THEN
-    EXISTS_TAC `X::A topology` THEN ASM_REWRITE_TAC[] THEN
-    ONCE_REWRITE_TAC[HOMOTOPIC_WITH_SYM] THEN ASM_REWRITE_TAC[]]);;
-
-
-(* Contractible spaces. The definition (which agrees with "contractible" on  *)
-(* subsets of Euclidean space) is a little cryptic because we don't in fact  *)
-text\<open> assume that the constant "a" is in the space. This forces the convention  \<close>
-text\<open> that the empty space / set is contractible, avoiding some special cases.  \<close>
-
-
-definition contractible_space where
- `contractible_space X \<longleftrightarrow>
-        \<exists>a. homotopic_with (\<lambda>x. True) (X,X) (\<lambda>x. x) (\<lambda>x. a)"
-
-lemma contractible_space_empty:
-   "topspace X = {} \<Longrightarrow> contractible_space X"
-oops
-  REWRITE_TAC[contractible_space; homotopic_with] THEN
-  SIMP_TAC[CONTINUOUS_MAP_ON_EMPTY; TOPSPACE_PROD_TOPOLOGY; CROSS_EMPTY] THEN
-  REPEAT STRIP_TAC THEN MAP_EVERY EXISTS_TAC
-   [`undefined::A`; `\<lambda>(t,x):real#A. if t = 0 then x else undefined`] THEN
-  REWRITE_TAC[REAL_ARITH `\<not> (1 = 0)`]);;
-
-lemma contractible_space_sing:
-   "topspace X = {a} \<Longrightarrow> contractible_space X"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[contractible_space] THEN
-  EXISTS_TAC `a::A` THEN REWRITE_TAC[homotopic_with] THEN
-  EXISTS_TAC `(\<lambda>(t,x). if t = 0 then x else a):real#A=>A` THEN
-  REWRITE_TAC[REAL_ARITH `\<not> (1 = 0)`] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_EQ THEN EXISTS_TAC `(\<lambda>z. a):real#A=>A` THEN
-  ASM_REWRITE_TAC[CONTINUOUS_MAP_CONST; IN_SING] THEN
-  ASM_REWRITE_TAC[FORALL_PAIR_THM; TOPSPACE_PROD_TOPOLOGY; IN_CROSS] THEN
-  SET_TAC[]);;
-
-lemma contractible_space_subset_sing:
-   "topspace X \<subseteq> {a} \<Longrightarrow> contractible_space X"
-oops
-  REWRITE_TAC[SET_RULE `s \<subseteq> {a} \<longleftrightarrow> s = {} \<or> s = {a}`] THEN
-  MESON_TAC[CONTRACTIBLE_SPACE_EMPTY; CONTRACTIBLE_SPACE_SING]);;
-
-lemma contractible_space_subtopology_sing:
-   "contractible_space(subtopology X {a})"
-oops
-  REPEAT GEN_TAC THEN MATCH_MP_TAC CONTRACTIBLE_SPACE_SUBSET_SING THEN
-  EXISTS_TAC `a::A` THEN REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; INTER_SUBSET]);;
-
-lemma contractible_space:
-   "contractible_space X \<longleftrightarrow>
-        topspace X = {} \<or>
-        \<exists>a. a \<in> topspace X \<and>
-            homotopic_with (\<lambda>x. True) (X,X) (\<lambda>x. x) (\<lambda>x. a)"
-oops
-  GEN_TAC THEN ASM_CASES_TAC `topspace X::A=>bool = {}` THEN
-  ASM_SIMP_TAC[CONTRACTIBLE_SPACE_EMPTY] THEN
-  REWRITE_TAC[contractible_space] THEN EQ_TAC THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `a::A` THEN
-  STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP HOMOTOPIC_WITH_IMP_CONTINUOUS_MAPS) THEN
-  REWRITE_TAC[continuous_map] THEN ASM SET_TAC[]);;
-
-lemma contractible_imp_path_connected_space:
-   "contractible_space X \<Longrightarrow> path_connected_space X"
-oops
-  GEN_TAC THEN
-  ASM_CASES_TAC `topspace X::A=>bool = {}` THEN
-  ASM_SIMP_TAC[PATH_CONNECTED_SPACE_TOPSPACE_EMPTY; CONTRACTIBLE_SPACE] THEN
-  REWRITE_TAC[homotopic_with; LEFT_IMP_EXISTS_THM; RIGHT_AND_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`a::A`; `h::real#A=>A`] THEN STRIP_TAC THEN
-  REWRITE_TAC[PATH_CONNECTED_SPACE_IFF_PATH_COMPONENT] THEN
-  SUBGOAL_THEN
-   `\<forall>x::A. x \<in> topspace X \<Longrightarrow> path_component_of X x a`
-  MP_TAC THENL
-   [ALL_TAC;
-    ASM_MESON_TAC[PATH_COMPONENT_OF_TRANS; PATH_COMPONENT_OF_SYM]] THEN
-  X_GEN_TAC `b::A` THEN DISCH_TAC THEN REWRITE_TAC[path_component_of] THEN
-  EXISTS_TAC `(h::real#A=>A) \<circ> (\<lambda>x. x,b)` THEN
-  ASM_REWRITE_TAC[o_THM] THEN REWRITE_TAC[pathin] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN EXISTS_TAC
-   `prod_topology (subtopology euclideanreal ({0..1}))
-                  X` THEN
-  ASM_REWRITE_TAC[CONTINUOUS_MAP_PAIRWISE; o_DEF] THEN
-  ASM_REWRITE_TAC[CONTINUOUS_MAP_ID; CONTINUOUS_MAP_CONST]);;
-
-lemma contractible_imp_connected_space:
-   "contractible_space X \<Longrightarrow> connected_space X"
-oops
-  MESON_TAC[CONTRACTIBLE_IMP_PATH_CONNECTED_SPACE;
-            PATH_CONNECTED_IMP_CONNECTED_SPACE]);;
-
-lemma contractible_space_alt:
-   "contractible_space X \<longleftrightarrow>
-        \<forall>a. a \<in> topspace X
-            \<Longrightarrow> homotopic_with (\<lambda>x. True) (X,X) (\<lambda>x. x) (\<lambda>x. a)"
-oops
-  GEN_TAC THEN EQ_TAC THENL
-   [REPEAT STRIP_TAC THEN
-    FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [CONTRACTIBLE_SPACE]) THEN
-    DISCH_THEN(DISJ_CASES_THEN MP_TAC) THENL [ASM SET_TAC[]; ALL_TAC] THEN
-    DISCH_THEN(X_CHOOSE_THEN `b::A` (CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] HOMOTOPIC_WITH_TRANS) THEN
-    REWRITE_TAC[HOMOTOPIC_CONSTANT_MAPS] THEN DISJ2_TAC THEN
-    MATCH_MP_TAC PATH_CONNECTED_SPACE_IMP_PATH_COMPONENT_OF THEN
-    ASM_SIMP_TAC[CONTRACTIBLE_IMP_PATH_CONNECTED_SPACE];
-    DISCH_TAC THEN REWRITE_TAC[CONTRACTIBLE_SPACE] THEN ASM SET_TAC[]]);;
-
-lemma nullhomotopic_through_contractible_space:
-   "\<And>f g top1 top2 top3.
-        continuous_map top1 top2 f \<and>
-        continuous_map top2 top3 g \<and>
-        contractible_space top2
-        \<Longrightarrow> \<exists>c. homotopic_with (\<lambda>h. True) (top1,top3) (g \<circ> f) (\<lambda>x. c)"
-oops
-  REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [contractible_space]) THEN
-  DISCH_THEN(X_CHOOSE_THEN `b::B` MP_TAC) THEN
-  DISCH_THEN(MP_TAC \<circ> ISPECL [`g::B=>C`; `top3::C topology`] \<circ> MATCH_MP
-   (ONCE_REWRITE_RULE[IMP_CONJ] HOMOTOPIC_COMPOSE_CONTINUOUS_MAP_LEFT)) THEN
-  ASM_REWRITE_TAC[] THEN
-  DISCH_THEN(MP_TAC \<circ> ISPECL [`f::A=>B`; `top1::A topology`] \<circ> MATCH_MP
-   (ONCE_REWRITE_RULE[IMP_CONJ] HOMOTOPIC_COMPOSE_CONTINUOUS_MAP_RIGHT)) THEN
-  ASM_REWRITE_TAC[o_DEF] THEN DISCH_TAC THEN
-  EXISTS_TAC `g b` THEN ASM_REWRITE_TAC[]);;
-
-lemma nullhomotopic_into_contractible_space:
-   "\<And>f top1 top2.
-        continuous_map top1 top2 f \<and> contractible_space top2
-        \<Longrightarrow> \<exists>c. homotopic_with (\<lambda>h. True) (top1,top2) f (\<lambda>x. c)"
-oops
-  REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `f = (\<lambda>x. x) \<circ> f` SUBST1_TAC THENL
-   [REWRITE_TAC[o_THM; FUN_EQ_THM];
-    MATCH_MP_TAC NULLHOMOTOPIC_THROUGH_CONTRACTIBLE_SPACE THEN
-    EXISTS_TAC `top2::B topology` THEN ASM_REWRITE_TAC[CONTINUOUS_MAP_ID]]);;
-
-lemma nullhomotopic_from_contractible_space:
-   "\<And>f top1 top2.
-        continuous_map top1 top2 f \<and> contractible_space top1
-        \<Longrightarrow> \<exists>c. homotopic_with (\<lambda>h. True) (top1,top2) f (\<lambda>x. c)"
-oops
-  REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `f = f \<circ> (\<lambda>x. x)` SUBST1_TAC THENL
-   [REWRITE_TAC[o_THM; FUN_EQ_THM];
-    MATCH_MP_TAC NULLHOMOTOPIC_THROUGH_CONTRACTIBLE_SPACE THEN
-    EXISTS_TAC `top1::A topology` THEN ASM_REWRITE_TAC[CONTINUOUS_MAP_ID]]);;
+  thm deformation_retraction_imp_homotopy_equivalent_space
 
 lemma homotopic_through_contractible_space:
    "\<And>f g f' g' top1 top2 top3.
