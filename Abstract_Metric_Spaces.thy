@@ -228,45 +228,76 @@ qed auto
 
 thm closed_map_snd
 
+thm tube_lemma_right
+lemma tube_lemma_left:
+  assumes W: "openin (prod_topology X Y) W" and C: "compactin X C" 
+    and y: "y \<in> topspace Y" and subW: "C \<times> {y} \<subseteq> W"
+  shows "\<exists>U V. openin X U \<and> openin Y V \<and> C \<subseteq> U \<and> y \<in> V \<and> U \<times> V \<subseteq> W"
+proof (cases "C = {}")
+  case True
+  with y show ?thesis by auto
+next
+  case False
+  have "\<exists>U V. openin X U \<and> openin Y V \<and> x \<in> U \<and> y \<in> V \<and> U \<times> V \<subseteq> W" 
+    if "x \<in> C" for x
+    using W openin_prod_topology_alt subW subsetD that by fastforce
+  then obtain U V where UV: "\<And>x. x \<in> C \<Longrightarrow> openin X (U x) \<and> openin Y (V x) \<and> x \<in> U x \<and> y \<in> V x \<and> U x \<times> V x \<subseteq> W" 
+    by metis
+  then obtain D where D: "finite D" "D \<subseteq> C" "C \<subseteq> \<Union> (U ` D)"
+    using compactinD [OF C, of "U`C"]
+    by (smt (verit) UN_I finite_subset_image imageE subsetI)
+  show ?thesis
+  proof (intro exI conjI)
+    show "openin X (\<Union> (U ` D))" "openin Y (\<Inter> (V ` D))"
+      using D False UV by blast+
+    show "y \<in> \<Inter> (V ` D)" "C \<subseteq> \<Union> (U ` D)" "\<Union>(U ` D) \<times> \<Inter>(V ` D) \<subseteq> W"
+      using D UV by force+
+  qed
+qed
+
 lemma Wallace_theorem_prod_topology:
-  assumes "compactin X K" "compactin Y L" "openin (prod_topology X Y) W" "K \<times> L \<subseteq> W"
+  assumes "compactin X K" "compactin Y L" 
+    and W: "openin (prod_topology X Y) W" and subW: "K \<times> L \<subseteq> W"
   obtains U V where "openin X U" "openin Y V" "K \<subseteq> U" "L \<subseteq> V" "U \<times> V \<subseteq> W"
-  sorry
-oops 
-  REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN
-   `\<forall>y. y \<in> L
-        \<Longrightarrow> \<exists>U V. openin X U \<and> openin Y V \<and>
-                  K \<subseteq> U \<and> y \<in> V \<and>
-                  U \<times> V \<subseteq> (W::A#B=>bool)`
-  MP_TAC THENL
-   [REPEAT STRIP_TAC THEN MATCH_MP_TAC TUBE_LEMMA_LEFT THEN
-    ASM_REWRITE_TAC[] THEN
-    REPEAT(FIRST_X_ASSUM(MP_TAC o MATCH_MP COMPACT_IN_SUBSET_TOPSPACE)) THEN
-    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id [\<subseteq>]) THEN
-    REWRITE_TAC[\<subseteq>; FORALL_PAIR_THM; IN_CROSS] THEN ASM SET_TAC[];
-    GEN_REWRITE_TAC (LAND_CONV o TOP_DEPTH_CONV) [RIGHT_IMP_EXISTS_THM] THEN
-    REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`U::B=>A->bool`; `V::B=>B->bool`] THEN DISCH_TAC THEN
-    UNDISCH_TAC `compactin Y (L::B=>bool)` THEN REWRITE_TAC[compactin] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC
-     (MP_TAC o SPEC `image (V::B=>B->bool) L`)) THEN
-    ANTS_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-    REWRITE_TAC[EXISTS_FINITE_SUBSET_IMAGE] THEN
-    DISCH_THEN(X_CHOOSE_THEN `m::B=>bool` MP_TAC) THEN
-    ASM_CASES_TAC `m::B=>bool = {}` THEN
-    ASM_REWRITE_TAC[IMAGE_CLAUSES; UNIONS_0; SUBSET_EMPTY] THEN
-    DISCH_THEN(STRIP_ASSUME_TAC o REWRITE_RULE[\<subseteq>]) THENL
-     [MAP_EVERY EXISTS_TAC [`topspace X::A=>bool`; `{}:B=>bool`] THEN
-      ASM_REWRITE_TAC[OPEN_IN_EMPTY; OPEN_IN_TOPSPACE; CROSS_EMPTY] THEN
-      ASM_SIMP_TAC[COMPACT_IN_SUBSET_TOPSPACE; EMPTY_SUBSET];
-      EXISTS_TAC `\<Inter>(image (U::B=>A->bool) m)` THEN
-      EXISTS_TAC `\<Union>(image (V::B=>B->bool) m)` THEN
-      ASM_SIMP_TAC[OPEN_IN_UNIONS; FORALL_IN_IMAGE; OPEN_IN_INTERS;
-                   FINITE_IMAGE; IMAGE_EQ_EMPTY; IN_INTERS] THEN
-      ASM_REWRITE_TAC[\<subseteq>; FORALL_PAIR_THM; IN_CROSS] THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[\<subseteq>; FORALL_PAIR_THM; IN_CROSS]) THEN
-      ASM SET_TAC[]]]);;
+proof -
+  have "\<And>y. y \<in> L \<Longrightarrow> \<exists>U V. openin X U \<and> openin Y V \<and> K \<subseteq> U \<and> y \<in> V \<and> U \<times> V \<subseteq> W"
+  proof (intro tube_lemma_left assms)
+    fix y assume "y \<in> L"
+    show "y \<in> topspace Y"
+      using assms \<open>y \<in> L\<close> compactin_subset_topspace by blast 
+    show "K \<times> {y} \<subseteq> W"
+      using \<open>y \<in> L\<close> subW by force
+  qed
+  then obtain U V where UV: 
+         "\<And>y. y \<in> L \<Longrightarrow> openin X (U y) \<and> openin Y (V y) \<and> K \<subseteq> U y \<and> y \<in> V y \<and> U y \<times> V y \<subseteq> W"
+    by metis
+  then obtain M where "finite M" "M \<subseteq> L" and M: "L \<subseteq> \<Union> (V ` M)"
+    using \<open>compactin Y L\<close> unfolding compactin_def
+    by (smt (verit) UN_iff finite_subset_image imageE subset_iff)
+  show thesis
+  proof (cases "M={}")
+    case True
+    with M have "L={}"
+      by blast
+    then show ?thesis
+      using \<open>compactin X K\<close> compactin_subset_topspace that by fastforce
+  next
+    case False
+    show ?thesis
+    proof
+      show "openin X (\<Inter>(U`M))"
+        using False UV \<open>M \<subseteq> L\<close> \<open>finite M\<close> by blast
+      show "openin Y (\<Union>(V`M))"
+        using UV \<open>M \<subseteq> L\<close> by blast
+      show "K \<subseteq> \<Inter>(U`M)"
+        by (meson INF_greatest UV \<open>M \<subseteq> L\<close> subsetD)
+      show "L \<subseteq> \<Union>(V`M)"
+        by (simp add: M)
+      show "\<Inter>(U`M) \<times> \<Union>(V`M) \<subseteq> W"
+        using UV \<open>M \<subseteq> L\<close> by fastforce
+    qed   
+  qed
+qed
 
 lemma proper_map_prod:
    "proper_map (prod_topology X Y) (prod_topology X' Y') (\<lambda>(x,y). (f x, g y)) \<longleftrightarrow>
@@ -344,7 +375,6 @@ next
         by auto
       have eq: "{u \<in> topspace X \<times> topspace Y. h u = (x',y')} = {x \<in> topspace X. f x = x'} \<times> {y \<in> topspace Y. g y = y'}"
         by (auto simp: h_def)
-
       obtain U V where "openin X U" "openin Y V" "U \<times> V \<subseteq> W"
         and U: "{x \<in> topspace X. f x = x'} \<subseteq> U" 
         and V: "{x \<in> topspace Y. g x = y'} \<subseteq> V" 
