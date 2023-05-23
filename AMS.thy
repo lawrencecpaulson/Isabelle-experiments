@@ -2108,7 +2108,7 @@ lemma openin_Alexandroff_compactification:
   by (auto simp add: Alexandroff_compactification_def istopology_Alexandroff_open Alexandroff_open.simps)
 
 
-lemma topspace_Alexandroff_compactification:
+lemma topspace_Alexandroff_compactification [simp]:
    "topspace(Alexandroff_compactification X) = insert None (Some ` topspace X)"
    (is "?lhs = ?rhs")
 proof
@@ -2123,74 +2123,54 @@ proof
     by (auto simp add: image_subset_iff)
 qed
 
-
-
 lemma closedin_Alexandroff_compactification:
-   "\<And>X c.
-        closedin (Alexandroff_compactification X) c \<longleftrightarrow>
-        (\<exists>k. compactin X k \<and> closedin X k \<and> c = INL ` k) \<or>
-        (\<exists>u. openin X u \<and>
-             c = topspace(Alexandroff_compactification X) - INL ` u)"
-oops
-  REPEAT GEN_TAC THEN GEN_REWRITE_TAC LAND_CONV [closedin] THEN
-  REWRITE_TAC[OPEN_IN_ALEXANDROFF_COMPACTIFICATION] THEN
-  MATCH_MP_TAC(TAUT
-   `(q' \<Longrightarrow> p) \<and> (r' \<Longrightarrow> p) \<and> (p \<Longrightarrow> (q \<longleftrightarrow> q') \<and> (r \<longleftrightarrow> r'))
-    \<Longrightarrow> (p \<and> (q \<or> r) \<longleftrightarrow> r' \<or> q')`) THEN
-  REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION] THEN
-  CONJ_TAC THENL [SET_TAC[]; ALL_TAC] THEN
-  CONJ_TAC THENL [REWRITE_TAC[closedin] THEN SET_TAC[]; ALL_TAC] THEN
-  REPEAT STRIP_TAC THEN AP_TERM_TAC THEN GEN_REWRITE_TAC id [FUN_EQ_THM] THEN
-  X_GEN_TAC `s::A=>bool` THEN REWRITE_TAC[] THEN
-  REPEAT(MATCH_MP_TAC(TAUT `(p \<Longrightarrow> (q \<longleftrightarrow> r)) \<Longrightarrow> (p \<and> q \<longleftrightarrow> p \<and> r)`) THEN
-         DISCH_TAC)
-  THENL
-   [FIRST_X_ASSUM(ASSUME_TAC \<circ> MATCH_MP OPEN_IN_SUBSET);
-    FIRST_X_ASSUM(ASSUME_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET)] THEN
-  REWRITE_TAC[EXTENSION; FORALL_SUM_THM; FORALL_ONE_THM] THEN
-  REWRITE_TAC[IN_INSERT; IN_DIFF; IN_IMAGE] THEN
-  REWRITE_TAC[sum_DISTINCT; sum_INJECTIVE; UNWIND_THM1] THEN
-  MP_TAC(INST_TYPE [`:1`,`:B`] sum_DISTINCT) THEN
-  MP_TAC(INST_TYPE [`:1`,`:B`] sum_INJECTIVE) THEN
-  ASM SET_TAC[]);;
+   "closedin (Alexandroff_compactification X) C \<longleftrightarrow>
+      (\<exists>K. compactin X K \<and> closedin X K \<and> C = Some ` K) \<or>
+      (\<exists>U. openin X U \<and> C = topspace(Alexandroff_compactification X) - Some ` U)"
+   (is "?lhs \<longleftrightarrow> ?rhs")
+proof 
+  show "?lhs \<Longrightarrow> ?rhs"
+    apply (clarsimp simp: closedin_def openin_Alexandroff_compactification)
+    by (smt (verit) Diff_Diff_Int None_notin_image_Some image_set_diff inf.absorb_iff2 inj_Some insert_Diff_if subset_insert)
+  show "?rhs \<Longrightarrow> ?lhs"
+    using openin_subset 
+    by (fastforce simp: closedin_def openin_Alexandroff_compactification)
+qed
 
-lemma closedin_Alexandroff_compactification_image_inl:
-   "\<And>X k.
-        closedin (Alexandroff_compactification X) (INL ` k) \<longleftrightarrow>
-        compactin X k \<and> closedin X k"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[CLOSED_IN_ALEXANDROFF_COMPACTIFICATION] THEN
-  REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION] THEN
-  MATCH_MP_TAC(TAUT `(p' \<longleftrightarrow> p) \<and> \<not> q \<Longrightarrow> (p \<or> q \<longleftrightarrow> p')`) THEN
-  SIMP_TAC[MATCH_MP (SET_RULE
-   `(\<forall>x y. f x = f y \<longleftrightarrow> x = y) \<Longrightarrow> (f ` s = f ` t \<longleftrightarrow> s = t)`)
-   (CONJUNCT1 sum_INJECTIVE)] THEN
-  CONJ_TAC THENL [MESON_TAC[]; ALL_TAC] THEN
-  MP_TAC(INST_TYPE [`:1`,`:B`] sum_DISTINCT) THEN SET_TAC[]);;
+lemma closedin_Alexandroff_compactification_image_Some:
+   "closedin (Alexandroff_compactification X) (Some ` K) \<longleftrightarrow>
+        compactin X K \<and> closedin X K"
+  by (auto simp add: closedin_Alexandroff_compactification inj_image_eq_iff)
 
-lemma open_map_inl:
-   "open_map X (Alexandroff_compactification X) INL"
-oops
-  REWRITE_TAC[open_map; OPEN_IN_ALEXANDROFF_COMPACTIFICATION] THEN
-  MESON_TAC[]);;
+lemma open_map_Some:
+   "open_map X (Alexandroff_compactification X) Some"
+  using open_map_def openin_Alexandroff_compactification by blast
 
-lemma continuous_map_inl:
-   "continuous_map X (Alexandroff_compactification X) INL"
-oops
-  REWRITE_TAC[continuous_map; OPEN_IN_ALEXANDROFF_COMPACTIFICATION] THEN
-  REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION; IN_INSERT] THEN
-  GEN_TAC THEN SIMP_TAC[FUN_IN_IMAGE] THEN X_GEN_TAC `v::A+1=>bool` THEN
-  REPEAT STRIP_TAC THEN ASM_REWRITE_TAC[IN_INSERT; IN_IMAGE] THEN
-  REWRITE_TAC[sum_DISTINCT; sum_INJECTIVE; UNWIND_THM1] THEN
-  REWRITE_TAC[SET_RULE `x \<in> s \<and> x \<in> s - t \<longleftrightarrow> x \<in> s - t`] THEN
-  ASM_SIMP_TAC[SET_RULE `s \<subseteq> t \<Longrightarrow> (x \<in> t \<and> x \<in> s \<longleftrightarrow> x \<in> s)`;
-               OPEN_IN_SUBSET; IN_GSPEC; OPEN_IN_DIFF; OPEN_IN_TOPSPACE]);;
+lemma continuous_map_Some:
+   "continuous_map X (Alexandroff_compactification X) Some"
+  unfolding continuous_map_def 
+proof (intro conjI strip)
+  fix U
+  assume "openin (Alexandroff_compactification X) U"
+  then consider V where "openin X V" "U = Some ` V" 
+    | C where "compactin X C" "closedin X C" "U = insert None (Some ` (topspace X - C))" 
+    by (auto simp: openin_Alexandroff_compactification)
+  then show "openin X {x \<in> topspace X. Some x \<in> U}"
+  proof cases
+    case 1
+    then show ?thesis
+      using openin_subopen openin_subset by fastforce
+  next
+    case 2
+    then show ?thesis
+      by (simp add: closedin_def image_iff set_diff_eq)
+  qed
+qed auto
 
-lemma embedding_map_inl:
-   "embedding_map X (Alexandroff_compactification X) INL"
-oops
-  GEN_TAC THEN MATCH_MP_TAC INJECTIVE_OPEN_IMP_EMBEDDING_MAP THEN
-  REWRITE_TAC[CONTINUOUS_MAP_INL; OPEN_MAP_INL; sum_INJECTIVE]);;
+
+lemma embedding_map_Some:
+   "embedding_map X (Alexandroff_compactification X) Some"
+  by (simp add: continuous_map_Some injective_open_imp_embedding_map open_map_Some)
 
 lemma compact_space_Alexandroff_compactification:
    "compact_space(Alexandroff_compactification X)"
@@ -2208,7 +2188,7 @@ oops
    [SUBGOAL_THEN
      `\<exists>c. compactin X c \<and> closedin X c \<and>
           topspace(Alexandroff_compactification X) - u =
-          image INL (c::A=>bool)`
+          image Some (c::A=>bool)`
     STRIP_ASSUME_TAC THENL
      [ALL_TAC; ASM_MESON_TAC[IMAGE_COMPACT_IN; CONTINUOUS_MAP_INL]] THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC `u::A+1=>bool`) THEN
@@ -2232,18 +2212,13 @@ oops
     ASM_REWRITE_TAC[FINITE_INSERT] THEN ASM SET_TAC[]]);;
 
 lemma topspace_Alexandroff_compactification_delete:
-   "topspace(Alexandroff_compactification X) DELETE (INR ()) =
-        image INL (topspace X)"
-oops
-  GEN_TAC THEN
-  REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION] THEN
-  REWRITE_TAC[SET_RULE `(insert a s) - {a} = s \<longleftrightarrow> (a \<notin> s)`] THEN
-  REWRITE_TAC[IN_IMAGE; sum_DISTINCT]);;
+   "topspace(Alexandroff_compactification X) - {None} = image Some (topspace X)"
+  by simp
 
 lemma Alexandroff_compactification_dense:
    "\<not> compact_space X
         \<Longrightarrow> (Alexandroff_compactification X)
-            closure_of (image INL (topspace X)) =
+            closure_of (image Some (topspace X)) =
             topspace(Alexandroff_compactification X)"
 oops
   REPEAT STRIP_TAC THEN
@@ -2731,9 +2706,9 @@ lemma Alexandroff_compactification_unique:
             homeomorphic_space X"
 oops
   lemma lemma:
-   (`(INL ` s = INL ` t \<longleftrightarrow> s = t) \<and>
-     (INR insert x INL ` s = INR insert x INL ` t \<longleftrightarrow> s = t) \<and>
-     \<not> (INR insert x INL ` s = INL ` t)"
+   (`(Some ` s = Some ` t \<longleftrightarrow> s = t) \<and>
+     (INR insert x Some ` s = INR insert x Some ` t \<longleftrightarrow> s = t) \<and>
+     \<not> (INR insert x Some ` s = Some ` t)"
 oops
     REWRITE_TAC[EXTENSION; IN_IMAGE; IN_INSERT;
                 sum_DISTINCT; sum_INJECTIVE] THEN
@@ -2743,7 +2718,7 @@ in
   REPEAT STRIP_TAC THEN
   ONCE_REWRITE_TAC[HOMEOMORPHIC_SPACE_SYM] THEN
   REWRITE_TAC[HOMEOMORPHIC_SPACE; homeomorphic_map] THEN
-  EXISTS_TAC `\<lambda>x::A. if x = a then INR () else INL x` THEN
+  EXISTS_TAC `\<lambda>x::A. if x = a then INR () else Some x` THEN
   CONJ_TAC THENL [ALL_TAC; MESON_TAC[sum_INJECTIVE; sum_DISTINCT]] THEN
   REWRITE_TAC[quotient_map; TOPSPACE_ALEXANDROFF_COMPACTIFICATION] THEN
   SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET; DELETE_SUBSET] THEN
