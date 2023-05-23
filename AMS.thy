@@ -2174,42 +2174,35 @@ lemma embedding_map_Some:
 
 lemma compact_space_Alexandroff_compactification:
    "compact_space(Alexandroff_compactification X)"
-oops
-  GEN_TAC THEN REWRITE_TAC[COMPACT_SPACE_ALT] THEN
-  REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION] THEN
-  X_GEN_TAC `uu:(A+1=>bool)->bool` THEN
-  REWRITE_TAC[INSERT_SUBSET] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [IN_UNIONS]) THEN
-  DISCH_THEN(X_CHOOSE_THEN `u::A+1=>bool` STRIP_ASSUME_TAC) THEN
-  SUBGOAL_THEN
-   `compactin (Alexandroff_compactificationX)
-               (topspace(Alexandroff_compactification X) - u)`
-  MP_TAC THENL
-   [SUBGOAL_THEN
-     `\<exists>c. compactin X c \<and> closedin X c \<and>
-          topspace(Alexandroff_compactification X) - u =
-          image Some (c::A=>bool)`
-    STRIP_ASSUME_TAC THENL
-     [ALL_TAC; ASM_MESON_TAC[IMAGE_COMPACT_IN; CONTINUOUS_MAP_INL]] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `u::A+1=>bool`) THEN
-    ASM_REWRITE_TAC[OPEN_IN_ALEXANDROFF_COMPACTIFICATION] THEN
-    DISCH_THEN(DISJ_CASES_THEN MP_TAC) THENL
-     [STRIP_TAC THEN UNDISCH_TAC `INR () \<in> (u::A+1=>bool)` THEN
-      ASM_REWRITE_TAC[IN_IMAGE; sum_DISTINCT];
-      MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `c::A=>bool` THEN STRIP_TAC THEN
-      ASM_REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION] THEN
-      MATCH_MP_TAC(SET_RULE
-       `c \<subseteq> s \<and> (\<forall>x. (z \<noteq> f x)) \<and> (\<forall>x y. f x = f y \<longleftrightarrow> x = y)
-        \<Longrightarrow> (insert z f ` s) - (insert z image f (s - c)) =
-            f ` c`) THEN
-      ASM_SIMP_TAC[CLOSED_IN_SUBSET; sum_DISTINCT; sum_INJECTIVE]];
-    REWRITE_TAC[compactin; SUBSET_DIFF] THEN
-    ASM_REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `uu:(A+1=>bool)->bool`) THEN ANTS_TAC THENL
-     [ASM SET_TAC[]; ALL_TAC] THEN
-    DISCH_THEN(X_CHOOSE_THEN `vv:(A+1=>bool)->bool` STRIP_ASSUME_TAC) THEN
-    EXISTS_TAC `(u::A+1=>bool) insert vv` THEN
-    ASM_REWRITE_TAC[FINITE_INSERT] THEN ASM SET_TAC[]]);;
+proof (clarsimp simp: compact_space_alt image_subset_iff)
+  fix \<U> U
+  assume ope [rule_format]: "\<forall>U\<in>\<U>. openin (Alexandroff_compactification X) U"
+      and cover: "\<forall>x\<in>topspace X. \<exists>X\<in>\<U>. Some x \<in> X"
+      and "U \<in> \<U>" "None \<in> U"
+  then have Usub: "U \<subseteq> insert None (Some ` topspace X)"
+    by (metis openin_subset topspace_Alexandroff_compactification)
+  with ope [OF \<open>U \<in> \<U>\<close>] \<open>None \<in> U\<close>
+  obtain C where C: "compactin X C \<and> closedin X C \<and>
+          insert None (Some ` topspace X) - U = Some ` C"
+    by (auto simp: openin_closedin closedin_Alexandroff_compactification)
+  then have D: "compactin (Alexandroff_compactification X) (insert None (Some ` topspace X) - U)"
+    by (metis continuous_map_Some image_compactin)
+  consider V where "openin X V" "U = Some ` V" 
+    | C where "compactin X C" "closedin X C" "U = insert None (Some ` (topspace X - C))" 
+    using ope [OF \<open>U \<in> \<U>\<close>] by (auto simp: openin_Alexandroff_compactification)
+  then show "\<exists>\<F>. finite \<F> \<and> \<F> \<subseteq> \<U> \<and> (\<exists>X\<in>\<F>. None \<in> X) \<and> (\<forall>x\<in>topspace X. \<exists>X\<in>\<F>. Some x \<in> X)"
+  proof cases
+    case 1
+    then show ?thesis
+      using \<open>None \<in> U\<close> by blast      
+  next
+    case 2
+    obtain \<F> where "finite \<F>" "\<F> \<subseteq> \<U>" "insert None (Some ` topspace X) - U \<subseteq> \<Union>\<F>"
+      by (smt (verit, del_insts) C D Union_iff compactinD compactin_subset_topspace cover image_subset_iff ope subsetD)
+    with \<open>U \<in> \<U>\<close> show ?thesis
+      by (rule_tac x="insert U \<F>" in exI) auto
+  qed
+qed
 
 lemma topspace_Alexandroff_compactification_delete:
    "topspace(Alexandroff_compactification X) - {None} = image Some (topspace X)"
