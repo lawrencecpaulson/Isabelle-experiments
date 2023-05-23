@@ -2047,45 +2047,43 @@ next
   show "Alexandroff_open X (\<Union>\<K>)"
   proof (cases "None \<in> \<Union>\<K>")
     case True
-  have "\<forall>K\<in>\<K>. \<exists>U. (openin X U \<and> K = Some ` U) \<or> (K = insert None (Some ` (topspace X - U)) \<and> compactin X U \<and> closedin X U)"
-    by (metis \<section> Alexandroff_open_iff)
-  then obtain U where U: "\<And>K. K \<in> \<K> \<Longrightarrow> openin X (U K) \<and> K = Some ` (U K) 
-                              \<or> (K = insert None (Some ` (topspace X - U K)) \<and> compactin X (U K) \<and> closedin X (U K))"
-    by metis
-  define \<K>1 where "\<K>1 \<equiv> {K \<in> \<K>. None \<in> K}"
-  define A where "A \<equiv> \<Union>K\<in>\<K>-\<K>1. U K"
-  define B where "B \<equiv> \<Inter>K\<in>\<K>1. U K"
-  have B: "\<And>K. K \<in> \<K>-\<K>1 \<Longrightarrow> openin X (U K) \<and> K = Some ` (U K)"
-    using U \<K>1_def by auto
-  have F: "\<And>K. K \<in> \<K>1 \<Longrightarrow> K = insert None (Some ` (topspace X - U K)) \<and> compactin X (U K) \<and> closedin X (U K)"
-    using U \<K>1_def by auto
-  have C: "K \<in> \<K>1 \<longleftrightarrow> None \<in> K" if "K \<in> \<K>" for K
-    using that by (auto simp: \<K>1_def)
-  have D: "\<Union>\<K> = \<Union>\<K>1 \<union> \<Union>(\<K>-\<K>1)"
-    by (auto simp: \<K>1_def)
-  have E: "\<K>1 \<subseteq> \<K>"
-    by (auto simp: \<K>1_def)
-  have G: "\<Union>(\<K>-\<K>1) = Some ` A"
-    using B
-    apply (auto simp: A_def image_iff Bex_def)
-    apply (metis image_iff)
-    done
-  have H: "\<Union>\<K>1 = insert None (Some ` (topspace X - B))"
-    using F True
-    by (auto simp: B_def image_iff \<K>1_def)
-
-  have eq: "\<Union>\<K> = (Some ` A) \<union> (insert None (Some ` (topspace X - B)))"
-    by (simp add: D G H Un_commute)
-  show ?thesis
-    unfolding eq
-  proof (intro Alexandroff_open_Un Alexandroff_open.intros)
-    show "openin X A"
-      using A_def B by blast
-    show "closedin X B"
-      unfolding B_def using C F True by blast
-    show "compactin X B"
-      by (metis B_def F H Inf_lower Union_iff \<open>closedin X B\<close> closed_compactin imageI insertI1)
-  qed
+    have "\<forall>K\<in>\<K>. \<exists>U. (openin X U \<and> K = Some ` U) \<or> (K = insert None (Some ` (topspace X - U)) \<and> compactin X U \<and> closedin X U)"
+      by (metis \<section> Alexandroff_open_iff)
+    then obtain U where U: 
+      "\<And>K. K \<in> \<K> \<Longrightarrow> openin X (U K) \<and> K = Some ` (U K) 
+                    \<or> (K = insert None (Some ` (topspace X - U K)) \<and> compactin X (U K) \<and> closedin X (U K))"
+      by metis
+    define \<K>N where "\<K>N \<equiv> {K \<in> \<K>. None \<in> K}"
+    define A where "A \<equiv> \<Union>K\<in>\<K>-\<K>N. U K"
+    define B where "B \<equiv> \<Inter>K\<in>\<K>N. U K"
+    have U1: "\<And>K. K \<in> \<K>-\<K>N \<Longrightarrow> openin X (U K) \<and> K = Some ` (U K)"
+      using U \<K>N_def by auto
+    have U2: "\<And>K. K \<in> \<K>N \<Longrightarrow> K = insert None (Some ` (topspace X - U K)) \<and> compactin X (U K) \<and> closedin X (U K)"
+      using U \<K>N_def by auto
+    have eqA: "\<Union>(\<K>-\<K>N) = Some ` A"
+    proof
+      show "\<Union> (\<K> - \<K>N) \<subseteq> Some ` A"
+        by (metis A_def Sup_le_iff U1 UN_upper subset_image_iff)
+      show "Some ` A \<subseteq> \<Union> (\<K> - \<K>N)"
+        using A_def U1 by blast
+    qed
+    have eqB: "\<Union>\<K>N = insert None (Some ` (topspace X - B))"
+      using U2 True
+      by (auto simp: B_def image_iff \<K>N_def)
+    have "\<Union>\<K> = \<Union>\<K>N \<union> \<Union>(\<K>-\<K>N)"
+      by (auto simp: \<K>N_def)
+    then have eq: "\<Union>\<K> = (Some ` A) \<union> (insert None (Some ` (topspace X - B)))"
+      by (simp add: eqA eqB Un_commute)
+    show ?thesis
+      unfolding eq
+    proof (intro Alexandroff_open_Un Alexandroff_open.intros)
+      show "openin X A"
+        using A_def U1 by blast
+      show "closedin X B"
+        unfolding B_def using U2 True \<K>N_def by auto
+      show "compactin X B"
+        by (metis B_def U2 eqB Inf_lower Union_iff \<open>closedin X B\<close> closed_compactin imageI insertI1)
+    qed
   next
     case False
     then have "\<forall>K\<in>\<K>. \<exists>U. openin X U \<and> K = Some ` U"
