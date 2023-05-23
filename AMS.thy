@@ -1,6 +1,6 @@
 section \<open>Abstract Metric Spaces\<close>
 
-theory Abstract_Metric_Spaces
+theory AMS
   imports
     "HOL-Analysis.Analysis" "HOL-Library.Equipollence"
     "HOL-ex.Sketch_and_Explore"
@@ -1064,8 +1064,7 @@ lemma eventually_atin_subtopology:
   using assms by (simp add: eventually_atin)
 
 lemma eventually_atin_within:
-  "eventually P (atin_within X a S) \<longleftrightarrow> a \<notin> topspace X \<or>
-   (\<exists>T. openin X T \<and> a \<in> T \<and> (\<forall>x\<in>T. x \<in> S \<and> x \<noteq> a \<longrightarrow> P x))"
+  "eventually P (atin_within X a S) \<longleftrightarrow> a \<notin> topspace X \<or> (\<exists>T. openin X T \<and> a \<in> T \<and> (\<forall>x\<in>T. x \<in> S \<and> x \<noteq> a \<longrightarrow> P x))"
 proof (cases "a \<in> topspace X")
   case True
   hence "eventually P (atin_within X a S) \<longleftrightarrow> 
@@ -1179,7 +1178,7 @@ subsection \<open>Misc other\<close>
     definition mcball where "mcball x r \<equiv> {y. x \<in> M \<and> y \<in> M \<and> d x y \<le> r}"
     
     lemma in_mball [simp]: "y \<in> mball x r \<longleftrightarrow> x \<in> M \<and> y \<in> M \<and> d x y < r"
-      by (simp add: local.Metric_space_axioms Metric_space.mball_def)
+      by (simp add: AMS.Metric_space_axioms Metric_space.mball_def)
     
     lemma centre_in_mball_iff [iff]: "x \<in> mball x r \<longleftrightarrow> x \<in> M \<and> 0 < r"
       using in_mball mdist_zero by force
