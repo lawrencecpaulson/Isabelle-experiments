@@ -5391,7 +5391,7 @@ definition kification
 
 lemma istopology_kification_open: "istopology (kification_open X)"
   unfolding istopology_def
-  proof (intro conjI strip)
+proof (intro conjI strip)
   show "kification_open X (S \<inter> T)"
     if "kification_open X S" and "kification_open X T" for S T
     using that unfolding kification_open_def
@@ -5649,11 +5649,86 @@ next
 qed
 
   
+inductive Alexandroff_open for X where
+  base: "openin X U \<Longrightarrow> Alexandroff_open X (Some ` U)"
+| ext: "\<lbrakk>compactin X C; closedin X C\<rbrakk> \<Longrightarrow> Alexandroff_open X (insert None (Some ` (topspace X - C)))"
+
+(*******
+definition Alexandroff_compactification_open where
+  "Alexandroff_compactification_open X S \<equiv>
+   (\<exists>U. openin X U \<and> S = Some ` U) \<or> 
+   ((\<exists>C. S = insert None (Some ` (topspace X - C)) \<and> compactin X C \<and> closedin X C))"
+*****)
+
+
+lemma istopology_Alexandroff_open: "istopology (Alexandroff_open X)"
+  unfolding istopology_def
+proof (intro conjI strip)
+  fix S T
+  assume "Alexandroff_open X S" and "Alexandroff_open X T"
+  then show "Alexandroff_open X (S \<inter> T)"
+  proof (induction arbitrary: T rule: Alexandroff_open.induct)
+    case BU: (base U)
+    show ?case
+      using \<open>Alexandroff_open X T\<close>
+    proof (induction rule: Alexandroff_open.induct)
+      case (base V)
+      with BU show ?case
+        by (metis Alexandroff_open.simps image_Int inj_Some openin_Int)
+    next
+      case (ext C)
+      then show ?case
+        by (metis BU.hyps Int_insert_right None_notin_image_Some base closedin_def image_Int inj_Some openin_Int)
+    qed
+  next
+    case EC: (ext C T)
+    show ?case
+      using \<open>Alexandroff_open X T\<close>
+    proof (induction rule: Alexandroff_open.induct)
+      case (base V)
+      then show ?case
+        by (metis Alexandroff_open.base EC.hyps(2) Int_insert_left_if0 None_notin_image_Some closedin_def image_Int inj_Some openin_Int)
+    next
+      case (ext D)
+      have eq: "insert None (Some ` (topspace X - C)) \<inter> insert None (Some ` (topspace X - D))
+              = insert None (Some ` (topspace X - (C \<union> D)))"
+        by auto
+      show ?case
+        unfolding eq
+        by (simp add: Alexandroff_open.ext EC.hyps closedin_Un compactin_Un ext.hyps)
+    qed
+  qed
+next
+  fix \<K>
+  assume \<section>: "\<forall>K\<in>\<K>. Alexandroff_open X K"
+  show "Alexandroff_open X (\<Union>\<K>)"
+  proof (cases "None \<in> \<Union>\<K>")
+    case True
+    then have "\<forall>K\<in>\<K>. \<exists>U. openin X U \<and> K-{None} = Some ` U"
+      by (metis "\<section>" Alexandroff_open.simps Diff_empty Diff_insert0 Diff_insert_absorb None_notin_image_Some closedin_def)
+    then obtain U where U: "\<forall>K\<in>\<K>. openin X (U K) \<and> K-{None} = Some ` (U K)"
+      by metis
+    then have eq: "\<Union>\<K> = insert None (Some ` (\<Union> K\<in>\<K>. U K))"
+      using True by blast
+    show ?thesis
+      unfolding eq
+      sorry
+  next
+    case False
+    then have "\<forall>K\<in>\<K>. \<exists>U. openin X U \<and> K = Some ` U"
+      by (metis Alexandroff_open.simps UnionI \<section> insertCI)
+    then obtain U where U: "\<forall>K\<in>\<K>. openin X (U K) \<and> K = Some ` (U K)"
+      by metis
+    then have eq: "\<Union>\<K> = Some ` (\<Union> K\<in>\<K>. U K)"
+      using image_iff by fastforce
+    show ?thesis
+      unfolding eq by (simp add: U base openin_clauses(3))
+  qed
+qed
+
 
 definition Alexandroff_compactification where
-  "Alexandroff_compactification X =
-        topology ({ Inl ` u | openin X u} \<union>
-                  { insert (Inr ()) (Inl ` (topspace X - c)) | c. compactin X c \<and> closedin X c})"
+  "Alexandroff_compactification X \<equiv> topology (Alexandroff_open X)"
 
 lemma openin_Alexandroff_compactification:
    "\<And>X v.
