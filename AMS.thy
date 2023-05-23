@@ -7,6 +7,11 @@ theory AMS
 begin
 
 
+thm closed_compactin
+lemma closed_compactin_Inter: "\<lbrakk>compactin X K; K \<in> \<K>; \<And>K. K \<in> \<K> \<Longrightarrow> closedin X K\<rbrakk> \<Longrightarrow> compactin X (\<Inter>\<K>)"
+      by (metis Inf_lower closed_compactin closedin_Inter empty_iff)
+
+
 
 thm closedin_subtopology
   lemma closedin_subtopology_Int_closed:
@@ -5654,13 +5659,64 @@ inductive Alexandroff_open for X where
   base: "openin X U \<Longrightarrow> Alexandroff_open X (Some ` U)"
 | ext: "\<lbrakk>compactin X C; closedin X C\<rbrakk> \<Longrightarrow> Alexandroff_open X (insert None (Some ` (topspace X - C)))"
 
-(*******
-definition Alexandroff_compactification_open where
-  "Alexandroff_compactification_open X S \<equiv>
-   (\<exists>U. openin X U \<and> S = Some ` U) \<or> 
-   ((\<exists>C. S = insert None (Some ` (topspace X - C)) \<and> compactin X C \<and> closedin X C))"
-*****)
+lemma Alexandroff_open_iff: "Alexandroff_open X S \<longleftrightarrow>
+   (\<exists>U. (S = Some ` U \<and> openin X U) \<or> (S = insert None (Some ` (topspace X - U)) \<and> compactin X U \<and> closedin X U))"
+  by (meson Alexandroff_open.cases Alexandroff_open.ext base)
 
+lemma Alexandroff_open_Un_aux:
+  assumes U: "openin X U" and "Alexandroff_open X T"
+  shows  "Alexandroff_open X (Some ` U \<union> T)"
+  using \<open>Alexandroff_open X T\<close>
+proof (induction rule: Alexandroff_open.induct)
+  case (base V)
+  then show ?case
+    by (metis Alexandroff_open.base U image_Un openin_Un)
+next
+  case (ext C)
+  have "U \<subseteq> topspace X"
+    by (simp add: U openin_subset)
+  then have eq: "Some ` U \<union> insert None (Some ` (topspace X - C)) = insert None (Some ` (topspace X - (C \<inter> (topspace X - U))))"
+    by force
+  have "closedin X (C \<inter> (topspace X - U))"
+    using U ext.hyps(2) by blast
+  moreover
+  have "compactin X (C \<inter> (topspace X - U))"
+    using U compact_Int_closedin ext.hyps(1) by blast
+  ultimately show ?case
+    unfolding eq using Alexandroff_open.ext by blast
+qed
+
+lemma Alexandroff_open_Un:
+  assumes "Alexandroff_open X S" and "Alexandroff_open X T"
+  shows "Alexandroff_open X (S \<union> T)"
+  using assms
+proof (induction rule: Alexandroff_open.induct)
+  case (base U)
+  then show ?case
+    by (simp add: Alexandroff_open_Un_aux)
+next
+  case (ext C)
+  then show ?case
+    by (smt (verit, best) Alexandroff_open_Un_aux Alexandroff_open_iff Un_commute Un_insert_left closedin_def insert_absorb2)
+qed
+
+lemma Alexandroff_open_Int_aux:
+  assumes U: "openin X U" and "Alexandroff_open X T"
+  shows  "Alexandroff_open X (Some ` U \<inter> T)"
+  using \<open>Alexandroff_open X T\<close>
+proof (induction rule: Alexandroff_open.induct)
+  case (base V)
+  then show ?case
+    by (metis Alexandroff_open.base U image_Int inj_Some openin_Int)
+next
+  case (ext C)
+  have eq: "Some ` U \<inter> insert None (Some ` (topspace X - C)) = Some ` (topspace X - (C \<union> (topspace X - U)))"
+    by force
+  have "openin X (topspace X - (C \<union> (topspace X - U)))"
+    using U ext.hyps(2) by blast
+  then show ?case
+    unfolding eq using Alexandroff_open.base by blast
+qed
 
 lemma istopology_Alexandroff_open: "istopology (Alexandroff_open X)"
   unfolding istopology_def
@@ -5668,27 +5724,18 @@ proof (intro conjI strip)
   fix S T
   assume "Alexandroff_open X S" and "Alexandroff_open X T"
   then show "Alexandroff_open X (S \<inter> T)"
-  proof (induction arbitrary: T rule: Alexandroff_open.induct)
-    case BU: (base U)
-    show ?case
-      using \<open>Alexandroff_open X T\<close>
-    proof (induction rule: Alexandroff_open.induct)
-      case (base V)
-      with BU show ?case
-        by (metis Alexandroff_open.simps image_Int inj_Some openin_Int)
-    next
-      case (ext C)
-      then show ?case
-        by (metis BU.hyps Int_insert_right None_notin_image_Some base closedin_def image_Int inj_Some openin_Int)
-    qed
+  proof (induction rule: Alexandroff_open.induct)
+    case (base U)
+    then show ?case
+      using Alexandroff_open_Int_aux by blast
   next
-    case EC: (ext C T)
+    case EC: (ext C)
     show ?case
       using \<open>Alexandroff_open X T\<close>
     proof (induction rule: Alexandroff_open.induct)
       case (base V)
       then show ?case
-        by (metis Alexandroff_open.base EC.hyps(2) Int_insert_left_if0 None_notin_image_Some closedin_def image_Int inj_Some openin_Int)
+        by (metis Alexandroff_open.ext Alexandroff_open_Int_aux EC.hyps inf_commute)
     next
       case (ext D)
       have eq: "insert None (Some ` (topspace X - C)) \<inter> insert None (Some ` (topspace X - D))
@@ -5705,15 +5752,45 @@ next
   show "Alexandroff_open X (\<Union>\<K>)"
   proof (cases "None \<in> \<Union>\<K>")
     case True
-    then have "\<forall>K\<in>\<K>. \<exists>U. openin X U \<and> K-{None} = Some ` U"
-      by (metis "\<section>" Alexandroff_open.simps Diff_empty Diff_insert0 Diff_insert_absorb None_notin_image_Some closedin_def)
-    then obtain U where U: "\<forall>K\<in>\<K>. openin X (U K) \<and> K-{None} = Some ` (U K)"
-      by metis
-    then have eq: "\<Union>\<K> = insert None (Some ` (\<Union> K\<in>\<K>. U K))"
-      using True by blast
-    show ?thesis
-      unfolding eq
-      sorry
+  have "\<forall>K\<in>\<K>. \<exists>U. (openin X U \<and> K = Some ` U) \<or> (K = insert None (Some ` (topspace X - U)) \<and> compactin X U \<and> closedin X U)"
+    by (metis \<section> Alexandroff_open_iff)
+  then obtain U where U: "\<And>K. K \<in> \<K> \<Longrightarrow> openin X (U K) \<and> K = Some ` (U K) 
+                              \<or> (K = insert None (Some ` (topspace X - U K)) \<and> compactin X (U K) \<and> closedin X (U K))"
+    by metis
+  define \<K>1 where "\<K>1 \<equiv> {K \<in> \<K>. None \<in> K}"
+  define A where "A \<equiv> \<Union>K\<in>\<K>-\<K>1. U K"
+  define B where "B \<equiv> \<Inter>K\<in>\<K>1. U K"
+  have B: "\<And>K. K \<in> \<K>-\<K>1 \<Longrightarrow> openin X (U K) \<and> K = Some ` (U K)"
+    using U \<K>1_def by auto
+  have F: "\<And>K. K \<in> \<K>1 \<Longrightarrow> K = insert None (Some ` (topspace X - U K)) \<and> compactin X (U K) \<and> closedin X (U K)"
+    using U \<K>1_def by auto
+  have C: "K \<in> \<K>1 \<longleftrightarrow> None \<in> K" if "K \<in> \<K>" for K
+    using that by (auto simp: \<K>1_def)
+  have D: "\<Union>\<K> = \<Union>\<K>1 \<union> \<Union>(\<K>-\<K>1)"
+    by (auto simp: \<K>1_def)
+  have E: "\<K>1 \<subseteq> \<K>"
+    by (auto simp: \<K>1_def)
+  have G: "\<Union>(\<K>-\<K>1) = Some ` A"
+    using B
+    apply (auto simp: A_def image_iff Bex_def)
+    apply (metis image_iff)
+    done
+  have H: "\<Union>\<K>1 = insert None (Some ` (topspace X - B))"
+    using F True
+    by (auto simp: B_def image_iff \<K>1_def)
+
+  have eq: "\<Union>\<K> = (Some ` A) \<union> (insert None (Some ` (topspace X - B)))"
+    by (simp add: D G H Un_commute)
+  show ?thesis
+    unfolding eq
+  proof (intro Alexandroff_open_Un Alexandroff_open.intros)
+    show "openin X A"
+      using A_def B by blast
+    show "closedin X B"
+      unfolding B_def using C F True by blast
+    show "compactin X B"
+      by (metis B_def F H Inf_lower Union_iff \<open>closedin X B\<close> closed_compactin imageI insertI1)
+  qed
   next
     case False
     then have "\<forall>K\<in>\<K>. \<exists>U. openin X U \<and> K = Some ` U"
@@ -5732,105 +5809,11 @@ definition Alexandroff_compactification where
   "Alexandroff_compactification X \<equiv> topology (Alexandroff_open X)"
 
 lemma openin_Alexandroff_compactification:
-   "\<And>X v.
-        openin(Alexandroff_compactification X) v \<longleftrightarrow>
-        (\<exists>u. openin X u \<and> v = INL ` u) \<or>
-        (\<exists>c. compactin X c \<and> closedin X c \<and>
-             v = INR () insert image INL (topspace X - c))"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[Alexandroff_compactification] THEN
-  W(MP_TAC \<circ> fst \<circ> EQ_IMP_RULE \<circ>
-    PART_MATCH (lhand \<circ> rand) (CONJUNCT2 topology_tybij) \<circ>
-    rator \<circ> lhand \<circ> snd) THEN
-  ANTS_TAC THENL
-   [ALL_TAC;
-    DISCH_THEN SUBST1_TAC THEN GEN_REWRITE_TAC LAND_CONV [GSYM \<in>] THEN
-    REWRITE_TAC[IN_UNION; IN_ELIM_THM] THEN MESON_TAC[]] THEN
-  REWRITE_TAC[istopology] THEN REPEAT CONJ_TAC THENL
-   [REWRITE_TAC[IN_UNION; IN_ELIM_THM] THEN DISJ1_TAC THEN
-    REWRITE_TAC[SET_RULE `P \<and> {} = f ` s \<longleftrightarrow> s = {} \<and> P`] THEN
-    REWRITE_TAC[UNWIND_THM2; OPEN_IN_EMPTY];
-    MATCH_MP_TAC(SET_RULE
-     `(\<forall>x y. R x y \<Longrightarrow> R y x) \<and>
-      (\<forall>x y. x \<in> s \<and> y \<in> s \<Longrightarrow> R x y) \<and>
-      (\<forall>x y. x \<in> s \<and> y \<in> t \<Longrightarrow> R x y) \<and>
-      (\<forall>x y. x \<in> t \<and> y \<in> t \<Longrightarrow> R x y)
-      \<Longrightarrow> \<forall>x y. x \<in> (s \<union> t) \<and> y \<in> (s \<union> t) \<Longrightarrow> R x y`) THEN
-    CONJ_TAC THENL [MESON_TAC[INTER_COMM]; ALL_TAC] THEN
-    REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM; FORALL_IN_GSPEC] THEN
-    REPEAT CONJ_TAC THENL
-     [X_GEN_TAC `u::A=>bool` THEN DISCH_TAC THEN
-      X_GEN_TAC `v::A=>bool` THEN DISCH_TAC THEN
-      REWRITE_TAC[IN_UNION; IN_ELIM_THM] THEN DISJ1_TAC THEN
-      EXISTS_TAC `u \<inter> v::A=>bool` THEN
-      ASM_SIMP_TAC[OPEN_IN_INTER] THEN CONV_TAC SYM_CONV THEN
-      MATCH_MP_TAC IMAGE_INTER_INJ THEN REWRITE_TAC[sum_INJECTIVE];
-      X_GEN_TAC `u::A=>bool` THEN DISCH_TAC THEN
-      X_GEN_TAC `c::A=>bool` THEN REPEAT DISCH_TAC THEN
-      REWRITE_TAC[IN_UNION; IN_ELIM_THM] THEN DISJ1_TAC THEN
-      EXISTS_TAC `u - c::A=>bool` THEN ASM_SIMP_TAC[OPEN_IN_DIFF] THEN
-      REWRITE_TAC[EXTENSION; IN_IMAGE; IN_INTER; IN_INSERT] THEN
-      MATCH_MP_TAC sum_INDUCT THEN
-      REWRITE_TAC[IN_DIFF; sum_DISTINCT; sum_INJECTIVE; UNWIND_THM1] THEN
-      ASM_MESON_TAC[\<subseteq>; OPEN_IN_SUBSET];
-      X_GEN_TAC `c::A=>bool` THEN REPEAT DISCH_TAC THEN
-      X_GEN_TAC `d::A=>bool` THEN REPEAT DISCH_TAC THEN
-      REWRITE_TAC[IN_UNION; IN_ELIM_THM] THEN DISJ2_TAC THEN
-      EXISTS_TAC `c \<union> d::A=>bool` THEN
-      ASM_SIMP_TAC[CLOSED_IN_UNION; COMPACT_IN_UNION] THEN
-      REWRITE_TAC[EXTENSION; IN_IMAGE; IN_INTER; IN_INSERT; IN_UNION] THEN
-      MATCH_MP_TAC sum_INDUCT THEN
-      REWRITE_TAC[IN_DIFF; sum_DISTINCT; sum_INJECTIVE; UNWIND_THM1] THEN
-      SET_TAC[]];
-    REWRITE_TAC[FORALL_SUBSET_UNION] THEN
-    REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
-    ONCE_REWRITE_TAC[SIMPLE_IMAGE_GEN] THEN
-    REWRITE_TAC[FORALL_SUBSET_IMAGE] THEN
-    REWRITE_TAC[SET_RULE `s \<subseteq> {x. P x} \<longleftrightarrow> \<forall>x. x \<in> s \<Longrightarrow> P x`] THEN
-    X_GEN_TAC `uu:(A=>bool)->bool` THEN DISCH_TAC THEN
-    X_GEN_TAC `cc:(A=>bool)->bool` THEN DISCH_TAC THEN
-    ASM_CASES_TAC `cc:(A=>bool)->bool = {}` THENL
-     [ASM_REWRITE_TAC[IMAGE_CLAUSES; UNION_EMPTY] THEN
-      REWRITE_TAC[IN_UNION; IN_IMAGE] THEN DISJ1_TAC THEN
-      EXISTS_TAC `\<Union>uu::A=>bool` THEN
-      ASM_SIMP_TAC[IN_ELIM_THM; OPEN_IN_UNIONS] THEN
-      REWRITE_TAC[UNIONS_IMAGE] THEN SET_TAC[];
-      REWRITE_TAC[IN_UNION; IN_IMAGE] THEN DISJ2_TAC THEN EXISTS_TAC
-       `\<Inter>(cc \<union> image (\<lambda>u. topspace X - u) uu):A=>bool` THEN
-      CONJ_TAC THENL
-       [REWRITE_TAC[EXTENSION] THEN MATCH_MP_TAC sum_INDUCT THEN
-        REWRITE_TAC[IN_IMAGE; IN_DIFF; IN_INTERS; IN_INSERT;
-                    IN_UNIONS; IN_UNION; IN_UNIV] THEN
-        REWRITE_TAC[sum_DISTINCT; sum_INJECTIVE] THEN
-        REWRITE_TAC[RIGHT_OR_DISTRIB; EXISTS_OR_THM; UNWIND_THM1] THEN
-        REWRITE_TAC[LEFT_AND_EXISTS_THM; GSYM CONJ_ASSOC] THEN
-        ONCE_REWRITE_TAC[SWAP_EXISTS_THM] THEN REWRITE_TAC[UNWIND_THM2] THEN
-        REWRITE_TAC[IN_IMAGE; IN_UNIV; IN_DIFF; IN_INSERT] THEN
-        REWRITE_TAC[sum_DISTINCT; sum_INJECTIVE] THEN
-        CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-        REWRITE_TAC[TAUT `p \<or> q \<Longrightarrow> r \<longleftrightarrow> (p \<Longrightarrow> r) \<and> (q \<Longrightarrow> r)`] THEN
-        X_GEN_TAC `a::A` THEN REWRITE_TAC[FORALL_AND_THM; UNWIND_THM1] THEN
-        ASM_CASES_TAC `(a::A) \<in> topspace X` THEN ASM_REWRITE_TAC[] THENL
-         [ALL_TAC; ASM_MESON_TAC[\<subseteq>; OPEN_IN_SUBSET]] THEN
-        ONCE_REWRITE_TAC[TAUT `\<not> (p \<and> q) \<longleftrightarrow> \<not> q \<or> \<not> p`] THEN
-        BINOP_TAC THENL [ALL_TAC; MESON_TAC[]] THEN
-        REWRITE_TAC[NOT_FORALL_THM; NOT_IMP; LEFT_AND_EXISTS_THM] THEN
-        ONCE_REWRITE_TAC[SWAP_EXISTS_THM] THEN
-        REWRITE_TAC[GSYM CONJ_ASSOC; UNWIND_THM2; IN_DIFF] THEN
-        ASM_MESON_TAC[\<subseteq>; OPEN_IN_SUBSET];
-        FIRST_X_ASSUM(X_CHOOSE_TAC `c::A=>bool` \<circ>
-          REWRITE_RULE[GSYM MEMBER_NOT_EMPTY]) THEN
-        SUBGOAL_THEN `cc = (c::A=>bool) insert cc` SUBST1_TAC THENL
-         [ASM SET_TAC[];
-          REWRITE_TAC[INTERS_INSERT; SET_RULE
-           `(insert x s) \<union> t = x insert (s \<union> t)`]] THEN
-        REWRITE_TAC[IN_ELIM_THM] THEN MATCH_MP_TAC
-         (MESON[CLOSED_IN_INTER; COMPACT_INTER_CLOSED_IN]
-           `closedin X c \<and> compactin X c \<and> closedin X d
-            \<Longrightarrow> compactin X (c \<inter> d) \<and> closedin X (c \<inter> d)`) THEN
-        ASM_SIMP_TAC[] THEN MATCH_MP_TAC CLOSED_IN_INTERS THEN
-        CONJ_TAC THENL [ASM SET_TAC[]; REWRITE_TAC[FORALL_IN_UNION]] THEN
-        ASM_SIMP_TAC[FORALL_IN_IMAGE; CLOSED_IN_DIFF; CLOSED_IN_TOPSPACE]]]]);;
+   "openin(Alexandroff_compactification X) V \<longleftrightarrow>
+        (\<exists>U. openin X U \<and> V = Some ` U) \<or>
+        (\<exists>C. compactin X C \<and> closedin X C \<and> V = insert None (Some ` (topspace X - C)))"
+  by (auto simp add: Alexandroff_compactification_def istopology_Alexandroff_open Alexandroff_open.simps)
+
 
 lemma topspace_Alexandroff_compactification:
    "topspace(Alexandroff_compactification X) =
