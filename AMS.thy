@@ -2641,16 +2641,12 @@ proof -
   have "quotient_map X ?Y (\<lambda>x. if x = a then None else Some x)"
     using assms
     apply (simp add: quotient_map_def subset_insert_iff subset_image_iff)
-    apply (simp add: kc_space_subtopology compactin_imp_closedin_gen assms compactin_subtopology cong: conj_cong)
-    apply (simp add: image_iff inj_image_eq_iff flip: ex_simps all_simps cong: conj_cong)
-    apply safe
-         apply (simp_all add: image_iff)
-       apply (simp add: openin_Alexandroff_compactification FF)
-       apply (simp add: kc_space_subtopology compactin_imp_closedin_gen assms compactin_subtopology cong: conj_cong)
-       apply (metis Diff_Diff_Int Diff_insert2 Diff_subset Int_absorb1 assms(2) closedin_compact_space openin_closedin openin_subset)
-      apply (simp add: openin_Alexandroff_compactification FF)
-      apply (metis Int_Diff assms(1) assms(3) closedin_imp_subset compactin_imp_closedin_gen compactin_subtopology_imp_compact inf.idem insert_Diff insert_Diff_if openin_diff openin_topspace subset_Diff_insert)
-     apply (force simp add: openin_subtopology)
+    apply (simp add: kc_space_subtopology compactin_imp_closedin_gen image_iff openin_Alexandroff_compactification FF inj_image_eq_iff flip: ex_simps all_simps cong: conj_cong)
+         apply (auto simp add: image_iff Int_absorb1)
+    apply (metis Diff_Diff_Int Diff_insert2 inf.absorb_iff2 insertCI kc_space_as_compactification_unique_explicit)
+      apply (metis Diff_iff Diff_insert Diff_insert2 Diff_subset compactin_subspace compactin_subtopology_imp_compact inf.absorb_iff2 insert_Diff_single insert_absorb kc_space_def openin_diff openin_topspace subset_Diff_insert topspace_subtopology)
+     apply (clarsimp simp add: openin_subtopology)
+    apply blast
     using **
     apply (clarsimp simp add: openin_subtopology cong: conj_cong)
     by (smt (verit, del_insts) Int_Diff inf.orderE insert_Diff_single insert_iff mem_Collect_eq openin_subopen openin_subset set_diff_eq subset_iff)
