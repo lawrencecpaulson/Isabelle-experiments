@@ -2213,7 +2213,7 @@ lemma Alexandroff_compactification_dense:
   shows "(Alexandroff_compactification X) closure_of (Some ` topspace X) =
          topspace(Alexandroff_compactification X)"
   unfolding topspace_Alexandroff_compactification_delete [symmetric]
-  proof (intro one_point_compactification_dense)
+proof (intro one_point_compactification_dense)
   show "\<not> compactin (Alexandroff_compactification X) (topspace (Alexandroff_compactification X) - {None})"
     using assms compact_space_proper_map_preimage compact_space_subtopology embedding_map_Some embedding_map_def homeomorphic_imp_proper_map by fastforce
 qed auto
@@ -2238,7 +2238,7 @@ lemma t0_space_Alexandroff_compactification [simp]:
 
 lemma t1_space_one_point_compactification:
   assumes Xa: "openin X (topspace X - {a})"
-    and \<section>: "\<And>K. compactin (subtopology X (topspace X - {a})) K \<and> closedin (subtopology X (topspace X - {a})) K \<Longrightarrow> closedin X K"
+    and \<section>: "\<And>K. \<lbrakk>compactin (subtopology X (topspace X - {a})) K; closedin (subtopology X (topspace X - {a})) K\<rbrakk> \<Longrightarrow> closedin X K"
   shows "t1_space X \<longleftrightarrow> t1_space (subtopology X (topspace X - {a}))"  (is "?lhs \<longleftrightarrow> ?rhs")
 proof 
   show "?lhs \<Longrightarrow> ?rhs"
@@ -2293,7 +2293,7 @@ qed
 lemma kc_space_one_point_compactification:
   assumes "compact_space X"
     and ope: "openin X (topspace X - {a})"
-    and \<section>: "\<And>K. compactin (subtopology X (topspace X - {a})) K \<and> closedin (subtopology X (topspace X - {a})) K
+    and \<section>: "\<And>K. \<lbrakk>compactin (subtopology X (topspace X - {a})) K; closedin (subtopology X (topspace X - {a})) K\<rbrakk>
                 \<Longrightarrow> closedin X K"
   shows "kc_space X \<longleftrightarrow>
          k_space (subtopology X (topspace X - {a})) \<and> kc_space (subtopology X (topspace X - {a}))"
@@ -2330,49 +2330,64 @@ qed
 
 
 lemma regular_space_one_point_compactification:
-   "compact_space X \<and>
-        openin X (topspace X - {a}) \<and>
-        (\<forall>k. compactin (subtopology X (topspace X - {a})) k \<and>
-             closedin (subtopology X (topspace X - {a})) k
-             \<Longrightarrow> closedin X k)
-        \<Longrightarrow> (regular_space X \<longleftrightarrow>
-             regular_space (subtopology X (topspace X - {a})) \<and>
-             locally_compact_space (subtopology X (topspace X - {a})))"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THENL
-   [SIMP_TAC[REGULAR_SPACE_SUBTOPOLOGY] THEN
-    ASM_MESON_TAC[LOCALLY_COMPACT_SPACE_OPEN_SUBSET;
-                  COMPACT_IMP_LOCALLY_COMPACT_SPACE];
-    STRIP_TAC] THEN
-  REWRITE_TAC[GSYM NEIGHBOURHOOD_BASE_OF_CLOSED_IN] THEN
-  REWRITE_TAC[NEIGHBOURHOOD_BASE_OF] THEN
-  MAP_EVERY X_GEN_TAC [`u::A=>bool`; `x::A`] THEN
-  ASM_CASES_TAC `x::A = a` THEN ASM_REWRITE_TAC[] THEN STRIP_TAC THENL
-   [MP_TAC(ISPEC `subtopology X (topspace X DELETE (a::A))`
-        LOCALLY_COMPACT_SPACE_COMPACT_CLOSED_COMPACT) THEN
-    ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `topspace X - u::A=>bool`) THEN ANTS_TAC THENL
-     [REWRITE_TAC[COMPACT_IN_SUBTOPOLOGY] THEN
-      CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-      MATCH_MP_TAC CLOSED_IN_COMPACT_SPACE THEN
-      ASM_SIMP_TAC[CLOSED_IN_DIFF; CLOSED_IN_TOPSPACE];
-      ASM_SIMP_TAC[OPEN_IN_OPEN_SUBTOPOLOGY; SUBSET_DIFF; SUBSET_DELETE;
-                   COMPACT_IN_SUBTOPOLOGY; LEFT_IMP_EXISTS_THM]] THEN
-    MAP_EVERY X_GEN_TAC [`v::A=>bool`; `k::A=>bool`] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `k::A=>bool`) THEN
-    ASM_SIMP_TAC[COMPACT_IN_SUBTOPOLOGY; SUBSET_DELETE] THEN DISCH_TAC THEN
-    MAP_EVERY EXISTS_TAC
-     [`topspace X - k::A=>bool`; `topspace X - v::A=>bool`] THEN
-    ASM_SIMP_TAC[OPEN_IN_DIFF; CLOSED_IN_DIFF; OPEN_IN_TOPSPACE;
-                 CLOSED_IN_TOPSPACE] THEN
-    REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET)) THEN ASM SET_TAC[];
-    MP_TAC(ISPEC `subtopology X (topspace X DELETE (a::A))`
-        LOCALLY_COMPACT_REGULAR_SPACE_NEIGHBOURHOOD_BASE) THEN
-    ASM_REWRITE_TAC[NEIGHBOURHOOD_BASE_OF] THEN DISCH_THEN(MP_TAC \<circ> SPECL
-     [`(topspace X DELETE (a::A)) \<inter> u`; `x::A`]) THEN
-    ASM_SIMP_TAC[OPEN_IN_OPEN_SUBTOPOLOGY; SUBSET_DELETE;
-                 OPEN_IN_INTER; IN_INTER; IN_DELETE] THEN
-    FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP OPEN_IN_SUBSET) THEN ASM SET_TAC[]]);;
+  assumes "compact_space X" and ope: "openin X (topspace X - {a})"
+    and \<section>: "\<And>K. \<lbrakk>compactin (subtopology X (topspace X - {a})) K; closedin (subtopology X (topspace X - {a})) K\<rbrakk> \<Longrightarrow> closedin X K"
+  shows "regular_space X \<longleftrightarrow>
+           regular_space (subtopology X (topspace X - {a})) \<and> locally_compact_space (subtopology X (topspace X - {a}))" 
+    (is "?lhs \<longleftrightarrow> ?rhs")
+proof 
+  show "?lhs \<Longrightarrow> ?rhs"
+    using assms(1) compact_imp_locally_compact_space locally_compact_space_open_subset ope regular_space_subtopology by blast
+  assume R: ?rhs
+  let ?Xa = "subtopology X (topspace X - {a})"
+  show ?lhs
+    unfolding neighbourhood_base_of_closedin [symmetric] neighbourhood_base_of imp_conjL
+  proof (intro strip)
+    fix W x
+    assume "openin X W" and "x \<in> W"
+    show "\<exists>U V. openin X U \<and> closedin X V \<and> x \<in> U \<and> U \<subseteq> V \<and> V \<subseteq> W"
+    proof (cases "x=a")
+      case True
+      have "compactin ?Xa (topspace X - W)"
+        using \<open>openin X W\<close> assms(1) closedin_compact_space
+        by (metis Diff_mono True \<open>x \<in> W\<close> compactin_subtopology empty_subsetI insert_subset openin_closedin_eq order_refl)
+      then obtain V K where V: "openin ?Xa V" and K: "compactin ?Xa K" "closedin ?Xa K" and "topspace X - W \<subseteq> V" "V \<subseteq> K"
+        by (metis locally_compact_space_compact_closed_compact R)
+      show ?thesis
+      proof (intro exI conjI)
+        show "openin X (topspace X - K)"
+          using "\<section>" K by blast
+        show "closedin X (topspace X - V)"
+          using V ope openin_trans_full by blast
+        show "x \<in> topspace X - K"
+        proof (rule)
+          show "x \<in> topspace X"
+            using \<open>openin X W\<close> \<open>x \<in> W\<close> openin_subset by blast
+          show "x \<notin> K"
+            using K True closedin_imp_subset by blast
+        qed
+        show "topspace X - K \<subseteq> topspace X - V"
+          by (simp add: Diff_mono \<open>V \<subseteq> K\<close>)
+        show "topspace X - V \<subseteq> W"
+          using \<open>topspace X - W \<subseteq> V\<close> by auto
+      qed
+    next
+      case False
+      have "openin ?Xa ((topspace X - {a}) \<inter> W)"
+        using \<open>openin X W\<close> openin_subtopology_Int2 by blast
+      moreover have "x \<in> (topspace X - {a}) \<inter> W"
+        using \<open>openin X W\<close> \<open>x \<in> W\<close> openin_subset False by blast
+      ultimately obtain U V where "openin ?Xa U" "compactin ?Xa V" "closedin ?Xa V"
+               "x \<in> U" "U \<subseteq> V" "V \<subseteq> (topspace X - {a}) \<inter> W"
+        using R locally_compact_regular_space_neighbourhood_base neighbourhood_base_of
+        by (metis (no_types, lifting))
+      then show ?thesis
+        by (meson "\<section>" le_infE ope openin_trans_full)
+    qed
+  qed
+qed
+
+
 
 lemma regular_space_Alexandroff_compactification:
    "regular_space(Alexandroff_compactification X) \<longleftrightarrow>
@@ -2718,6 +2733,10 @@ in
   REWRITE_TAC[UNWIND_THM1] THEN ASM SET_TAC[]);;
 
 
+
+
+
+
   thm deformation_retraction_imp_homotopy_equivalent_space
 
 lemma homotopic_through_contractible_space:
@@ -2800,7 +2819,7 @@ oops
   SUBGOAL_THEN `(\<lambda>x. (b::B)) = (\<lambda>x. b) \<circ> (g::B=>A)`
   SUBST1_TAC THENL [REWRITE_TAC[o_DEF]; ALL_TAC] THEN
   MATCH_MP_TAC HOMOTOPIC_COMPOSE_CONTINUOUS_MAP_RIGHT THEN
-  EXISTS_TAC `X::A topology` THEN ASM_REWRITE_TAC[]);;
+  EXISTS_TAC `X::A topology` THEN ASM_REWRITE_TAC[]);;`
 
 
 subsection \<open>Completely metrizable spaces\<close>
