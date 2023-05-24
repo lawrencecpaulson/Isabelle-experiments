@@ -2623,7 +2623,8 @@ lemma kc_space_as_compactification_unique_explicit:
 lemma FF:
   "(Some ` s = Some ` t \<longleftrightarrow> s = t) \<and>
      (insert None (Some ` s) = insert None (Some ` t) \<longleftrightarrow> s = t) \<and>
-     (insert None (Some ` s) \<noteq> Some ` t)"
+     (insert None (Some ` s) \<noteq> Some ` t) \<and>
+     (Some ` t \<noteq> insert None (Some ` s))"
   by auto
 
 lemma Alexandroff_compactification_unique:
@@ -2642,13 +2643,12 @@ proof -
     using assms
     apply (simp add: quotient_map_def subset_insert_iff subset_image_iff)
     apply (simp add: kc_space_subtopology compactin_imp_closedin_gen image_iff openin_Alexandroff_compactification FF inj_image_eq_iff flip: ex_simps all_simps cong: conj_cong)
-         apply (auto simp add: image_iff Int_absorb1)
-    apply (metis Diff_Diff_Int Diff_insert2 inf.absorb_iff2 insertCI kc_space_as_compactification_unique_explicit)
-      apply (metis Diff_iff Diff_insert Diff_insert2 Diff_subset compactin_subspace compactin_subtopology_imp_compact inf.absorb_iff2 insert_Diff_single insert_absorb kc_space_def openin_diff openin_topspace subset_Diff_insert topspace_subtopology)
-     apply (clarsimp simp add: openin_subtopology)
-    apply blast
+    apply (intro strip conjI)
+      apply blast
+     apply (smt (verit, best) Diff_Diff_Int Diff_cancel Diff_empty Diff_insert2 Int_insert_right_if1 compactin_subtopology inf.absorb_iff2 insertCI kc_space_as_compactification_unique)
+    apply (clarsimp simp add: openin_subtopology)
     using **
-    apply (clarsimp simp add: openin_subtopology cong: conj_cong)
+    apply (auto simp add: openin_subtopology cong: conj_cong)
     by (smt (verit, del_insts) Int_Diff inf.orderE insert_Diff_single insert_iff mem_Collect_eq openin_subopen openin_subset set_diff_eq subset_iff)
   moreover have "inj_on (\<lambda>x. if x = a then None else Some x) (topspace X)"
     by (auto simp: inj_on_def)
@@ -2668,68 +2668,6 @@ qed
         apply (rule )
 
         using that 
-
-        defer
-apply (force simp: image_iff)
-        apply fastforce
-        apply (smt (verit) \<open>\<And>U. {x \<in> topspace X. if x = a then False else x \<in> U} = U\<close> mem_Collect_eq)
-    sorry
-      using that
-      apply (simp add: openin_Alexandroff_compactification)
-      apply (simp add: assms kc_space_as_compactification_unique_explicit)
-      apply (simp add: kc_space_subtopology compactin_imp_closedin_gen assms compactin_subtopology cong: conj_cong)
-      apply safe
-
-      oops
-apply (simp add: FF)
-apply safe
-        apply (simp add: assms)
-       apply (simp add: assms)
-      using openin_Alexandroff_compactification
-apply (auto simp: )
-      using that kc_space_as_compactification_unique_explicit [of X _ a]
-      
-      sorry
-
-oops
-
-in
-
-  REWRITE_TAC[quotient_map; TOPSPACE_ALEXANDROFF_COMPACTIFICATION] THEN
-  SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET; DELETE_SUBSET] THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-
-  REWRITE_TAC[FORALL_SUBSET_INSERT; FORALL_SUBSET_IMAGE] THEN
-
-  X_GEN_TAC `u::A=>bool` THEN REWRITE_TAC[SUBSET_DELETE] THEN STRIP_TAC THEN
-  ONCE_REWRITE_TAC[COND_RAND] THEN ONCE_REWRITE_TAC[COND_RATOR] THEN
-  REWRITE_TAC[IN_INSERT; IN_IMAGE; sum_DISTINCT; sum_INJECTIVE] THEN
-  REWRITE_TAC[UNWIND_THM1] THEN MP_TAC(ISPECL [`X::A topology`; `a::A`]
-        KC_SPACE_AS_COMPACTIFICATION_UNIQUE_EXPLICIT) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
-  ASM_REWRITE_TAC[IN_ELIM_THM; SUBSET_RESTRICT] THEN
-  REWRITE_TAC[OPEN_IN_ALEXANDROFF_COMPACTIFICATION] THEN
-  REWRITE_TAC[lemma] THEN
-  SUBGOAL_THEN
-   `{x::A | x \<in> topspace X \<and> (if x = a then False else x \<in> u)} = u`
-  SUBST1_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  CONJ_TAC THENL [MESON_TAC[]; ALL_TAC] THEN
-  REWRITE_TAC[TAUT `(if p then True else q) \<longleftrightarrow> p \<or> q`] THEN
-  REWRITE_TAC[SET_RULE
-   `u - {x \<in> u. (x = a \<or> x \<in> s)} = u - {a} - s`] THEN
-  ONCE_REWRITE_TAC[MESON[CLOSED_IN_SUBSET]
-   `closedin X s \<and> P s \<longleftrightarrow>
-    \<not> (s \<subseteq> topspace X \<Longrightarrow> closedin X s \<Longrightarrow> \<not> P s)`] THEN
-  SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET; DELETE_SUBSET] THEN
-  ASM_SIMP_TAC[SET_RULE
-   `a \<in> t \<and> (a \<notin> u) \<and> u \<subseteq> t \<and> s \<subseteq> t - {a}
-    \<Longrightarrow> (u = t - {a} - s \<longleftrightarrow> t - {a} - u = s)`] THEN
-  REWRITE_TAC[NOT_IMP; GSYM CONJ_ASSOC] THEN ONCE_REWRITE_TAC[TAUT
-   `p \<and> q \<and> r \<and> s \<longleftrightarrow> s \<and> p \<and> q \<and> r`] THEN
-  REWRITE_TAC[UNWIND_THM1] THEN ASM SET_TAC[]);;
-
-
-
 
 
 
