@@ -1886,7 +1886,7 @@ lemma one_point_compactification_interior:
 lemma kc_space_one_point_compactification_gen:
   assumes "compact_space X"
   shows "kc_space X \<longleftrightarrow>
-         openin X (topspace X - {a}) \<and> (\<forall>k. compactin X k \<and> (a \<notin> k) \<longrightarrow> closedin X k) \<and>
+         openin X (topspace X - {a}) \<and> (\<forall>K. compactin X K \<and> a\<notin>K \<longrightarrow> closedin X K) \<and>
          k_space (subtopology X (topspace X - {a})) \<and> kc_space (subtopology X (topspace X - {a}))"
  (is "?lhs \<longleftrightarrow> ?rhs")
 proof
@@ -2137,17 +2137,18 @@ proof
     by (fastforce simp: closedin_def openin_Alexandroff_compactification)
 qed
 
-lemma closedin_Alexandroff_compactification_image_Some:
-   "closedin (Alexandroff_compactification X) (Some ` K) \<longleftrightarrow>
-        compactin X K \<and> closedin X K"
+lemma openin_Alexandroff_compactification_image_Some [simp]:
+   "openin(Alexandroff_compactification X) (Some ` U) \<longleftrightarrow> openin X U"
+  by (auto simp: openin_Alexandroff_compactification inj_image_eq_iff)
+
+lemma closedin_Alexandroff_compactification_image_Some [simp]:
+   "closedin (Alexandroff_compactification X) (Some ` K) \<longleftrightarrow> compactin X K \<and> closedin X K"
   by (auto simp add: closedin_Alexandroff_compactification inj_image_eq_iff)
 
-lemma open_map_Some:
-   "open_map X (Alexandroff_compactification X) Some"
+lemma open_map_Some: "open_map X (Alexandroff_compactification X) Some"
   using open_map_def openin_Alexandroff_compactification by blast
 
-lemma continuous_map_Some:
-   "continuous_map X (Alexandroff_compactification X) Some"
+lemma continuous_map_Some: "continuous_map X (Alexandroff_compactification X) Some"
   unfolding continuous_map_def 
 proof (intro conjI strip)
   fix U
@@ -2168,11 +2169,10 @@ proof (intro conjI strip)
 qed auto
 
 
-lemma embedding_map_Some:
-   "embedding_map X (Alexandroff_compactification X) Some"
+lemma embedding_map_Some: "embedding_map X (Alexandroff_compactification X) Some"
   by (simp add: continuous_map_Some injective_open_imp_embedding_map open_map_Some)
 
-lemma compact_space_Alexandroff_compactification:
+lemma compact_space_Alexandroff_compactification [simp]:
    "compact_space(Alexandroff_compactification X)"
 proof (clarsimp simp: compact_space_alt image_subset_iff)
   fix \<U> U
@@ -2205,156 +2205,129 @@ proof (clarsimp simp: compact_space_alt image_subset_iff)
 qed
 
 lemma topspace_Alexandroff_compactification_delete:
-   "topspace(Alexandroff_compactification X) - {None} = image Some (topspace X)"
+   "topspace(Alexandroff_compactification X) - {None} = Some ` topspace X"
   by simp
 
 lemma Alexandroff_compactification_dense:
-   "\<not> compact_space X
-        \<Longrightarrow> (Alexandroff_compactification X)
-            closure_of (image Some (topspace X)) =
-            topspace(Alexandroff_compactification X)"
-oops
-  REPEAT STRIP_TAC THEN
-  REWRITE_TAC[GSYM TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN
-  MATCH_MP_TAC ONE_POINT_COMPACTIFICATION_DENSE THEN
-  REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN
-  POP_ASSUM MP_TAC THEN
-  REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN
-  REWRITE_TAC[CONTRAPOS_THM; COMPACT_IN_SUBSPACE] THEN
-  DISCH_THEN(MP_TAC \<circ> CONJUNCT2) THEN MATCH_MP_TAC EQ_IMP THEN
-  MATCH_MP_TAC HOMEOMORPHIC_COMPACT_SPACE THEN
-  ONCE_REWRITE_TAC[HOMEOMORPHIC_SPACE_SYM] THEN
-  MATCH_MP_TAC EMBEDDING_MAP_IMP_HOMEOMORPHIC_SPACE THEN
-  REWRITE_TAC[EMBEDDING_MAP_INL]);;
+  assumes "\<not> compact_space X"
+  shows "(Alexandroff_compactification X) closure_of (Some ` topspace X) =
+         topspace(Alexandroff_compactification X)"
+  unfolding topspace_Alexandroff_compactification_delete [symmetric]
+  proof (intro one_point_compactification_dense)
+  show "\<not> compactin (Alexandroff_compactification X) (topspace (Alexandroff_compactification X) - {None})"
+    using assms compact_space_proper_map_preimage compact_space_subtopology embedding_map_Some embedding_map_def homeomorphic_imp_proper_map by fastforce
+qed auto
+
 
 lemma t0_space_one_point_compactification:
-   "compact_space X \<and>
-        openin X (topspace X - {a})
-        \<Longrightarrow> (t0_space X \<longleftrightarrow>
-             t0_space (subtopology X (topspace X - {a})))"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THEN REWRITE_TAC[T0_SPACE_SUBTOPOLOGY] THEN
-  REWRITE_TAC[t0_space; TOPSPACE_SUBTOPOLOGY] THEN
-  REWRITE_TAC[SET_RULE `s \<inter> s - {a} = s - {a}`] THEN
-  ASM_SIMP_TAC[OPEN_IN_OPEN_SUBTOPOLOGY; IN_DELETE; SUBSET_DELETE] THEN
-  DISCH_TAC THEN MATCH_MP_TAC(MESON[]
-   `(\<forall>x y. R x y \<Longrightarrow> R y x) \<and>
-    (\<exists>a. (\<forall>x y. (P x \<and> (x \<noteq> a)) \<and> (P y \<and> (y \<noteq> a)) \<and> (x \<noteq> y) \<Longrightarrow> R x y) \<and>
-         (\<forall>x. P x \<and> (x \<noteq> a) \<Longrightarrow> R a x))
-    \<Longrightarrow> \<forall>x y. P x \<and> P y \<and> (x \<noteq> y) \<Longrightarrow> R x y`) THEN
-  CONJ_TAC THENL [MESON_TAC[]; EXISTS_TAC `a::A`] THEN
-  CONJ_TAC THENL [ASM_METIS_TAC[]; REPEAT STRIP_TAC] THEN
-  EXISTS_TAC `topspace X DELETE (a::A)` THEN
-  ASM_REWRITE_TAC[IN_DELETE]);;
+  assumes "compact_space X \<and> openin X (topspace X - {a})"
+  shows "t0_space X \<longleftrightarrow> t0_space (subtopology X (topspace X - {a}))"
+   (is "?lhs \<longleftrightarrow> ?rhs")
+proof 
+  show "?lhs \<Longrightarrow> ?rhs"
+    using t0_space_subtopology by blast
+  show "?rhs \<Longrightarrow> ?lhs"
+    using assms
+    unfolding t0_space_def by (bestsimp simp flip: Int_Diff dest: openin_trans_full)
+qed
 
-lemma t0_space_Alexandroff_compactification:
-   "t0_space(Alexandroff_compactification X) \<longleftrightarrow>
-        t0_space X"
-oops
-  GEN_TAC THEN MP_TAC(ISPECL
-   [`Alexandroff_compactificationX`; `INR ()::A+1`]
-   T0_SPACE_ONE_POINT_COMPACTIFICATION) THEN
-  REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN ANTS_TAC THENL
-   [REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN
-    MESON_TAC[open_map; OPEN_IN_TOPSPACE; OPEN_MAP_INL];
-    DISCH_THEN SUBST1_TAC THEN
-    REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN
-    MATCH_MP_TAC HOMEOMORPHIC_T0_SPACE THEN
-    ONCE_REWRITE_TAC[HOMEOMORPHIC_SPACE_SYM] THEN
-    MATCH_MP_TAC EMBEDDING_MAP_IMP_HOMEOMORPHIC_SPACE THEN
-    REWRITE_TAC[EMBEDDING_MAP_INL]]);;
+lemma t0_space_Alexandroff_compactification [simp]:
+   "t0_space (Alexandroff_compactification X) \<longleftrightarrow> t0_space X"
+  using t0_space_one_point_compactification [of "Alexandroff_compactification X" None]
+  using embedding_map_Some embedding_map_imp_homeomorphic_space homeomorphic_t0_space by fastforce
 
 lemma t1_space_one_point_compactification:
-   "openin X (topspace X - {a}) \<and>
-        (\<forall>k. compactin (subtopology X (topspace X - {a})) k \<and>
-             closedin (subtopology X (topspace X - {a})) k
-             \<Longrightarrow> closedin X k)
-        \<Longrightarrow> (t1_space X \<longleftrightarrow>
-             t1_space (subtopology X (topspace X - {a})))"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THEN REWRITE_TAC[T1_SPACE_SUBTOPOLOGY] THEN
-  REWRITE_TAC[T1_SPACE_CLOSED_IN_SING] THEN
-  DISCH_TAC THEN X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-  ASM_CASES_TAC `x::A = a` THENL
-   [ASM_REWRITE_TAC[closedin; SING_SUBSET] THEN
-    ASM_REWRITE_TAC[SET_RULE `s - {a} = s - {a}`];
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    REWRITE_TAC[COMPACT_IN_SING; TOPSPACE_SUBTOPOLOGY] THEN
-    ASM_REWRITE_TAC[IN_INTER; IN_DELETE] THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    ASM_REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; IN_INTER; IN_DELETE]]);;
+  assumes Xa: "openin X (topspace X - {a})"
+    and \<section>: "\<And>K. compactin (subtopology X (topspace X - {a})) K \<and> closedin (subtopology X (topspace X - {a})) K \<Longrightarrow> closedin X K"
+  shows "t1_space X \<longleftrightarrow> t1_space (subtopology X (topspace X - {a}))"  (is "?lhs \<longleftrightarrow> ?rhs")
+proof 
+  show "?lhs \<Longrightarrow> ?rhs"
+    using t1_space_subtopology by blast
+  assume R: ?rhs
+  show ?lhs
+    unfolding t1_space_closedin_singleton
+  proof (intro strip)
+    fix x
+    assume "x \<in> topspace X"
+    show "closedin X {x}"
+    proof (cases "x=a")
+      case True
+      then show ?thesis
+        using \<open>x \<in> topspace X\<close> Xa closedin_def by blast
+    next
+      case False
+      show ?thesis
+        by (simp add: "\<section>" False R \<open>x \<in> topspace X\<close> closedin_t1_singleton)
+    qed
+  qed
+qed
 
-lemma t1_space_Alexandroff_compactification:
-   "t1_space(Alexandroff_compactification X) \<longleftrightarrow>
-        t1_space X"
-oops
-  GEN_TAC THEN MP_TAC(ISPECL
-   [`Alexandroff_compactificationX`; `INR ()::A+1`]
-   T1_SPACE_ONE_POINT_COMPACTIFICATION) THEN
-  REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN ANTS_TAC THENL
-   [SIMP_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN CONJ_TAC THENL
-     [MESON_TAC[open_map; OPEN_IN_TOPSPACE; OPEN_MAP_INL]; ALL_TAC] THEN
-    ONCE_REWRITE_TAC[MESON[COMPACT_IN_SUBTOPOLOGY]
-     `(compactin (subtopology X u) k \<and> P k \<Longrightarrow> Q k) \<longleftrightarrow>
-      (k \<subseteq> u \<Longrightarrow> compactin (subtopology X u) k \<and> P k \<Longrightarrow> Q k)`] THEN
-    REWRITE_TAC[FORALL_SUBSET_IMAGE] THEN
-    X_GEN_TAC `k::A=>bool` THEN DISCH_TAC THEN
-    GEN_REWRITE_TAC RAND_CONV
-     [CLOSED_IN_ALEXANDROFF_COMPACTIFICATION_IMAGE_INL] THEN
-    MATCH_MP_TAC EQ_IMP THEN BINOP_TAC THENL
-     [MATCH_MP_TAC HOMEOMORPHIC_MAP_COMPACTNESS;
-      MATCH_MP_TAC HOMEOMORPHIC_MAP_CLOSEDNESS] THEN
-    ASM_REWRITE_TAC[GSYM embedding_map; EMBEDDING_MAP_INL];
-    DISCH_THEN SUBST1_TAC THEN
-    REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN
-    MATCH_MP_TAC HOMEOMORPHIC_T1_SPACE THEN
-    ONCE_REWRITE_TAC[HOMEOMORPHIC_SPACE_SYM] THEN
-    MATCH_MP_TAC EMBEDDING_MAP_IMP_HOMEOMORPHIC_SPACE THEN
-    REWRITE_TAC[EMBEDDING_MAP_INL]]);;
+
+lemma t1_space_Alexandroff_compactification [simp]:
+  "t1_space(Alexandroff_compactification X) \<longleftrightarrow> t1_space X"
+proof -
+  have "openin (Alexandroff_compactification X) (topspace (Alexandroff_compactification X) - {None})"
+    by auto
+  moreover
+  have "closedin (Alexandroff_compactification X) K" 
+        if "K \<subseteq> Some ` topspace X" "compactin (Alexandroff_compactification X) K" 
+           "closedin (subtopology (Alexandroff_compactification X) (Some ` topspace X)) K"
+         for K
+  proof -
+    obtain S where S: "S \<subseteq> topspace X" "K = Some ` S"
+      by (meson \<open>K \<subseteq> Some ` topspace X\<close> subset_imageE)
+    with that have "compactin X S"
+      by (metis compactin_subtopology embedding_map_Some embedding_map_def homeomorphic_map_compactness)
+    moreover have "closedin X S"
+      using that S by (metis embedding_map_Some embedding_map_def homeomorphic_map_closedness)
+    ultimately show ?thesis
+      by (simp add: S)
+  qed
+  ultimately show ?thesis
+    using t1_space_one_point_compactification [of "Alexandroff_compactification X" None]
+    using embedding_map_Some embedding_map_imp_homeomorphic_space homeomorphic_t1_space 
+    by (fastforce simp add: compactin_subtopology)
+qed
+
 
 lemma kc_space_one_point_compactification:
-   "compact_space X \<and>
-        openin X (topspace X - {a}) \<and>
-        (\<forall>k. compactin (subtopology X (topspace X - {a})) k \<and>
-             closedin (subtopology X (topspace X - {a})) k
-             \<Longrightarrow> closedin X k)
-        \<Longrightarrow> (kc_space X \<longleftrightarrow>
-             k_space (subtopology X (topspace X - {a})) \<and>
-             kc_space (subtopology X (topspace X - {a})))"
-oops
-  SIMP_TAC[KC_SPACE_ONE_POINT_COMPACTIFICATION_GEN] THEN
-  REWRITE_TAC[kc_space; COMPACT_IN_SUBTOPOLOGY; SUBSET_DELETE] THEN
-  MESON_TAC[COMPACT_IN_SUBSET_TOPSPACE]);;
+  assumes "compact_space X"
+    and ope: "openin X (topspace X - {a})"
+    and \<section>: "\<And>K. compactin (subtopology X (topspace X - {a})) K \<and> closedin (subtopology X (topspace X - {a})) K
+                \<Longrightarrow> closedin X K"
+  shows "kc_space X \<longleftrightarrow>
+         k_space (subtopology X (topspace X - {a})) \<and> kc_space (subtopology X (topspace X - {a}))"
+proof -
+  have "closedin X K"
+    if "kc_space (subtopology X (topspace X - {a}))" and "compactin X K" "a \<notin> K" for K
+    using that unfolding kc_space_def 
+    by (metis "\<section>" Diff_empty compactin_subspace compactin_subtopology subset_Diff_insert)
+  then show ?thesis
+    by (metis \<open>compact_space X\<close> kc_space_one_point_compactification_gen ope)
+qed
 
 lemma kc_space_Alexandroff_compactification:
-   "kc_space(Alexandroff_compactification X) \<longleftrightarrow>
-        k_space X \<and> kc_space X"
-oops
-  GEN_TAC THEN MP_TAC(ISPECL
-   [`Alexandroff_compactificationX`; `INR ()::A+1`]
-   KC_SPACE_ONE_POINT_COMPACTIFICATION) THEN
-  REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN ANTS_TAC THENL
-   [SIMP_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN CONJ_TAC THENL
-     [MESON_TAC[open_map; OPEN_IN_TOPSPACE; OPEN_MAP_INL]; ALL_TAC] THEN
-    ONCE_REWRITE_TAC[MESON[COMPACT_IN_SUBTOPOLOGY]
-     `(compactin (subtopology X u) k \<and> P k \<Longrightarrow> Q k) \<longleftrightarrow>
-      (k \<subseteq> u \<Longrightarrow> compactin (subtopology X u) k \<and> P k \<Longrightarrow> Q k)`] THEN
-    REWRITE_TAC[FORALL_SUBSET_IMAGE] THEN
-    X_GEN_TAC `k::A=>bool` THEN DISCH_TAC THEN
-    GEN_REWRITE_TAC RAND_CONV
-     [CLOSED_IN_ALEXANDROFF_COMPACTIFICATION_IMAGE_INL] THEN
-    MATCH_MP_TAC EQ_IMP THEN BINOP_TAC THENL
-     [MATCH_MP_TAC HOMEOMORPHIC_MAP_COMPACTNESS;
-      MATCH_MP_TAC HOMEOMORPHIC_MAP_CLOSEDNESS] THEN
-    ASM_REWRITE_TAC[GSYM embedding_map; EMBEDDING_MAP_INL];
-    DISCH_THEN SUBST1_TAC THEN
-    REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN
-    BINOP_TAC THENL
-     [MATCH_MP_TAC HOMEOMORPHIC_K_SPACE;
-      MATCH_MP_TAC HOMEOMORPHIC_KC_SPACE] THEN
-    ONCE_REWRITE_TAC[HOMEOMORPHIC_SPACE_SYM] THEN
-    MATCH_MP_TAC EMBEDDING_MAP_IMP_HOMEOMORPHIC_SPACE THEN
-    REWRITE_TAC[EMBEDDING_MAP_INL]]);;
+  "kc_space(Alexandroff_compactification X) \<longleftrightarrow> (k_space X \<and> kc_space X)" (is "kc_space ?Y = _")
+proof -
+  have *: "closedin ?Y (T \<inter> Some ` topspace X)" if "compactin ?Y (T \<inter> Some ` topspace X)" "closedin ?Y T" for T
+  proof -
+    obtain U :: "'a set" where U: "U \<subseteq> topspace X \<and> T \<inter> Some ` topspace X = Some ` U"
+      by (meson inf_le2 subset_imageE)
+    then have hom: "homeomorphic_map X (subtopology (Alexandroff_compactification X) (Some ` topspace X)) Some"
+      using embedding_map_Some embedding_map_def by auto
+    then have "compactin X U"
+      by (metis U compactin_subtopology homeomorphic_map_compactness inf_le2 that(1))
+    with hom show "closedin (Alexandroff_compactification X) (T \<inter> Some ` topspace X)"
+      by (metis U closedin_Alexandroff_compactification_image_Some closedin_subtopology_Int_closed homeomorphic_map_closedness inf_commute that(2))
+  qed
+  have "kc_space (Alexandroff_compactification X) =
+      (k_space (subtopology ?Y (topspace ?Y - {None})) \<and> kc_space (subtopology ?Y (topspace ?Y - {None})))"
+    by (rule kc_space_one_point_compactification) (auto simp: compactin_subtopology closedin_subtopology *)
+  also have "... \<longleftrightarrow> k_space X \<and> kc_space X"
+    using embedding_map_Some embedding_map_imp_homeomorphic_space homeomorphic_k_space homeomorphic_kc_space by simp blast
+  finally show ?thesis .
+qed
+
 
 lemma regular_space_one_point_compactification:
    "compact_space X \<and>
