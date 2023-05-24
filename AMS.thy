@@ -2262,7 +2262,7 @@ proof
   qed
 qed
 
-lemma DD: 
+lemma closedin_Alexandroff_I: 
   assumes "compactin (Alexandroff_compactification X) K" "K \<subseteq> Some ` topspace X"
           "closedin (Alexandroff_compactification X) T" "K = T \<inter> Some ` topspace X"
   shows "closedin (Alexandroff_compactification X) K"
@@ -2287,7 +2287,7 @@ proof -
   then show ?thesis
     using t1_space_one_point_compactification [of "Alexandroff_compactification X" None]
     using embedding_map_Some embedding_map_imp_homeomorphic_space homeomorphic_t1_space 
-    by (fastforce simp add: compactin_subtopology DD closedin_subtopology)
+    by (fastforce simp add: compactin_subtopology closedin_Alexandroff_I closedin_subtopology)
 qed
 
 
@@ -2312,7 +2312,7 @@ lemma kc_space_Alexandroff_compactification:
 proof -
   have "kc_space (Alexandroff_compactification X) \<longleftrightarrow>
       (k_space (subtopology ?Y (topspace ?Y - {None})) \<and> kc_space (subtopology ?Y (topspace ?Y - {None})))"
-    by (rule kc_space_one_point_compactification) (auto simp: compactin_subtopology closedin_subtopology DD)
+    by (rule kc_space_one_point_compactification) (auto simp: compactin_subtopology closedin_subtopology closedin_Alexandroff_I)
   also have "... \<longleftrightarrow> k_space X \<and> kc_space X"
     using embedding_map_Some embedding_map_imp_homeomorphic_space homeomorphic_k_space homeomorphic_kc_space by simp blast
   finally show ?thesis .
@@ -2384,7 +2384,7 @@ lemma regular_space_Alexandroff_compactification:
 proof -
   have "regular_space ?Y \<longleftrightarrow>
         regular_space (subtopology ?Y (topspace ?Y - {None})) \<and> locally_compact_space (subtopology ?Y (topspace ?Y - {None}))"
-    by (rule regular_space_one_point_compactification) (auto simp: compactin_subtopology closedin_subtopology DD)
+    by (rule regular_space_one_point_compactification) (auto simp: compactin_subtopology closedin_subtopology closedin_Alexandroff_I)
   also have "... \<longleftrightarrow> regular_space X \<and> locally_compact_space X"
     using embedding_map_Some embedding_map_imp_homeomorphic_space homeomorphic_locally_compact_space homeomorphic_regular_space 
       by fastforce
@@ -2393,20 +2393,37 @@ qed
 
 
 lemma Hausdorff_space_one_point_compactification:
-  assumes "compact_space X" and ope: "openin X (topspace X - {a})"
-    and \<section>: "\<And>K. \<lbrakk>compactin (subtopology X (topspace X - {a})) K; closedin (subtopology X (topspace X - {a})) K\<rbrakk> \<Longrightarrow> closedin X K"
+  assumes "compact_space X" and  "openin X (topspace X - {a})"
+    and "\<And>K. \<lbrakk>compactin (subtopology X (topspace X - {a})) K; closedin (subtopology X (topspace X - {a})) K\<rbrakk> \<Longrightarrow> closedin X K"
   shows "Hausdorff_space X \<longleftrightarrow>
            Hausdorff_space (subtopology X (topspace X - {a})) \<and> locally_compact_space (subtopology X (topspace X - {a}))" 
-  by (metis Hausdorff_imp_t0_space assms compact_imp_locally_compact_space locally_compact_Hausdorff_or_regular ope regular_space_one_point_compactification regular_t0_imp_Hausdorff_space t0_space_one_point_compactification)
+    (is "?lhs \<longleftrightarrow> ?rhs")
+proof 
+  show ?rhs if ?lhs
+  proof -
+    have "locally_compact_space (subtopology X (topspace X - {a}))"
+      using assms that compact_imp_locally_compact_space locally_compact_space_open_subset 
+      by blast
+    with that show ?rhs
+      by (simp add: Hausdorff_space_subtopology)
+  qed
+next
+  show "?rhs \<Longrightarrow> ?lhs"
+    by (metis assms locally_compact_Hausdorff_or_regular regular_space_one_point_compactification
+        regular_t1_eq_Hausdorff_space t1_space_one_point_compactification)
+qed
 
 lemma Hausdorff_space_Alexandroff_compactification:
    "Hausdorff_space(Alexandroff_compactification X) \<longleftrightarrow> Hausdorff_space X \<and> locally_compact_space X"
-  by (meson compact_Hausdorff_imp_regular_space compact_space_Alexandroff_compactification locally_compact_Hausdorff_or_regular regular_space_Alexandroff_compactification regular_t1_eq_Hausdorff_space t1_space_Alexandroff_compactification)
+  by (meson compact_Hausdorff_imp_regular_space compact_space_Alexandroff_compactification 
+      locally_compact_Hausdorff_or_regular regular_space_Alexandroff_compactification 
+      regular_t1_eq_Hausdorff_space t1_space_Alexandroff_compactification)
 
 lemma completely_regular_space_Alexandroff_compactification:
    "completely_regular_space(Alexandroff_compactification X) \<longleftrightarrow>
         completely_regular_space X \<and> locally_compact_space X"
-  by (metis regular_space_Alexandroff_compactification completely_regular_eq_regular_space compact_imp_locally_compact_space compact_space_Alexandroff_compactification)
+  by (metis regular_space_Alexandroff_compactification completely_regular_eq_regular_space
+      compact_imp_locally_compact_space compact_space_Alexandroff_compactification)
 
 lemma Hausdorff_space_one_point_compactification_asymmetric_prod:
    "compact_space X
@@ -2562,21 +2579,21 @@ lemma Hausdorff_space_Alexandroff_compactification_asymmetric_prod:
    "Hausdorff_space(Alexandroff_compactification X) \<longleftrightarrow>
         kc_space(prod_topology (Alexandroff_compactification X) X) \<and>
         k_space(prod_topology (Alexandroff_compactification X) X)"
-oops
-  GEN_TAC THEN MP_TAC(ISPECL
-   [`Alexandroff_compactificationX`; `INR ()::A+1`]
-   HAUSDORFF_SPACE_ONE_POINT_COMPACTIFICATION_ASYMMETRIC_PROD) THEN
-  REWRITE_TAC[COMPACT_SPACE_ALEXANDROFF_COMPACTIFICATION] THEN
-  DISCH_THEN SUBST1_TAC THEN MATCH_MP_TAC
-   (MESON[HOMEOMORPHIC_K_SPACE; HOMEOMORPHIC_KC_SPACE]
-    `X homeomorphic_space Y
-     \<Longrightarrow> (kc_space X \<and> k_space X \<longleftrightarrow> kc_space Y \<and> k_space Y)`) THEN
-  MATCH_MP_TAC HOMEOMORPHIC_SPACE_PROD_TOPOLOGY THEN
-  REWRITE_TAC[HOMEOMORPHIC_SPACE_REFL] THEN
-  REWRITE_TAC[TOPSPACE_ALEXANDROFF_COMPACTIFICATION_DELETE] THEN
-  ONCE_REWRITE_TAC[HOMEOMORPHIC_SPACE_SYM] THEN
-  MATCH_MP_TAC EMBEDDING_MAP_IMP_HOMEOMORPHIC_SPACE THEN
-  REWRITE_TAC[EMBEDDING_MAP_INL]);;
+    (is "Hausdorff_space ?Y = ?rhs")
+proof -
+  have *: "subtopology (Alexandroff_compactification X)
+     (topspace (Alexandroff_compactification X) -
+      {None}) homeomorphic_space X"
+    using embedding_map_Some embedding_map_imp_homeomorphic_space homeomorphic_space_sym by fastforce
+  have "Hausdorff_space (Alexandroff_compactification X) \<longleftrightarrow>
+      (kc_space (prod_topology ?Y (subtopology ?Y (topspace ?Y - {None}))) \<and>
+       k_space (prod_topology ?Y (subtopology ?Y (topspace ?Y - {None}))))"
+    by (rule Hausdorff_space_one_point_compactification_asymmetric_prod) (auto simp: compactin_subtopology closedin_subtopology closedin_Alexandroff_I)
+  also have "... \<longleftrightarrow> ?rhs"
+    using homeomorphic_k_space homeomorphic_kc_space homeomorphic_space_prod_topology 
+          homeomorphic_space_refl * by blast
+  finally show ?thesis .
+qed
 
 lemma kc_space_as_compactification_unique:
   assumes "kc_space X" "compact_space X"
@@ -2603,33 +2620,91 @@ lemma kc_space_as_compactification_unique_explicit:
   apply (simp add: kc_space_subtopology compactin_imp_closedin_gen assms compactin_subtopology cong: conj_cong)
   by (metis Diff_mono assms bot.extremum insert_subset kc_space_as_compactification_unique subset_refl)
 
-  lemma lemma:
-   (`(Some ` s = Some ` t \<longleftrightarrow> s = t) \<and>
-     (INR insert x Some ` s = INR insert x Some ` t \<longleftrightarrow> s = t) \<and>
-     \<not> (INR insert x Some ` s = Some ` t)"
-oops
-    REWRITE_TAC[EXTENSION; IN_IMAGE; IN_INSERT;
-                sum_DISTINCT; sum_INJECTIVE] THEN
-    MESON_TAC[sum_DISTINCT; sum_INJECTIVE])
+lemma FF:
+  "(Some ` s = Some ` t \<longleftrightarrow> s = t) \<and>
+     (insert None (Some ` s) = insert None (Some ` t) \<longleftrightarrow> s = t) \<and>
+     (insert None (Some ` s) \<noteq> Some ` t)"
+  by auto
 
 lemma Alexandroff_compactification_unique:
-   "kc_space X \<and> compact_space X \<and> a \<in> topspace X
-        \<Longrightarrow> Alexandroff_compactification
-             (subtopology X (topspace X - {a}))
-            homeomorphic_space X"
+  assumes "kc_space X" "compact_space X" "a \<in> topspace X"
+  shows "Alexandroff_compactification (subtopology X (topspace X - {a})) homeomorphic_space X"
+        (is "?Y homeomorphic_space X")
+proof -
+  have [simp]: "{x. x \<noteq> a \<longrightarrow> x \<in> topspace X \<and> x \<in> W} = insert a W"
+    if  "W \<subseteq> topspace X - {a}" for W
+    using that by auto
+  have [simp]: "U - {None} = Some ` V \<longleftrightarrow> U = insert None (Some ` V)" if "None \<in> U" for U V
+    using that by auto
+  have **: "\<And>T. openin X T \<Longrightarrow> openin X (T - {a})"
+    by (simp add: assms(1) assms(3) compactin_imp_closedin_gen openin_diff)
+  have "quotient_map X ?Y (\<lambda>x. if x = a then None else Some x)"
+    using assms
+    apply (simp add: quotient_map_def subset_insert_iff subset_image_iff)
+    apply (simp add: kc_space_subtopology compactin_imp_closedin_gen assms compactin_subtopology cong: conj_cong)
+    apply (simp add: image_iff inj_image_eq_iff flip: ex_simps all_simps cong: conj_cong)
+    apply safe
+         apply (simp_all add: image_iff)
+       apply (simp add: openin_Alexandroff_compactification FF)
+       apply (simp add: kc_space_subtopology compactin_imp_closedin_gen assms compactin_subtopology cong: conj_cong)
+       apply (metis Diff_Diff_Int Diff_insert2 Diff_subset Int_absorb1 assms(2) closedin_compact_space openin_closedin openin_subset)
+      apply (simp add: openin_Alexandroff_compactification FF)
+      apply (metis Int_Diff assms(1) assms(3) closedin_imp_subset compactin_imp_closedin_gen compactin_subtopology_imp_compact inf.idem insert_Diff insert_Diff_if openin_diff openin_topspace subset_Diff_insert)
+     apply (force simp add: openin_subtopology)
+    using **
+    apply (clarsimp simp add: openin_subtopology cong: conj_cong)
+    by (smt (verit, del_insts) Int_Diff inf.orderE insert_Diff_single insert_iff mem_Collect_eq openin_subopen openin_subset set_diff_eq subset_iff)
+  moreover have "inj_on (\<lambda>x. if x = a then None else Some x) (topspace X)"
+    by (auto simp: inj_on_def)
+  ultimately show ?thesis
+    using homeomorphic_space_sym homeomorphic_space homeomorphic_map_def by blast
+qed
+
+    unfolding quotient_map_def
+  proof (intro conjI strip)
+    show "(\<lambda>x. if x = a then None else Some x) ` topspace X = topspace ?Y"
+      using \<open>a \<in> topspace X\<close> by force
+    show "openin X {x \<in> topspace X. (if x = a then None else Some x) \<in> U} = openin ?Y U"
+      if "U \<subseteq> topspace ?Y" for U
+    proof -
+      have [simp]: "{x \<in> topspace X. (if x = a then False else x \<in> U)} = U" 
+        sorry
+        apply (rule )
+
+        using that 
+
+        defer
+apply (force simp: image_iff)
+        apply fastforce
+        apply (smt (verit) \<open>\<And>U. {x \<in> topspace X. if x = a then False else x \<in> U} = U\<close> mem_Collect_eq)
+    sorry
+      using that
+      apply (simp add: openin_Alexandroff_compactification)
+      apply (simp add: assms kc_space_as_compactification_unique_explicit)
+      apply (simp add: kc_space_subtopology compactin_imp_closedin_gen assms compactin_subtopology cong: conj_cong)
+      apply safe
+
+      oops
+apply (simp add: FF)
+apply safe
+        apply (simp add: assms)
+       apply (simp add: assms)
+      using openin_Alexandroff_compactification
+apply (auto simp: )
+      using that kc_space_as_compactification_unique_explicit [of X _ a]
+      
+      sorry
+
 oops
 
 in
 
-  REPEAT STRIP_TAC THEN
-  ONCE_REWRITE_TAC[HOMEOMORPHIC_SPACE_SYM] THEN
-  REWRITE_TAC[HOMEOMORPHIC_SPACE; homeomorphic_map] THEN
-  EXISTS_TAC `\<lambda>x::A. if x = a then INR () else Some x` THEN
-  CONJ_TAC THENL [ALL_TAC; MESON_TAC[sum_INJECTIVE; sum_DISTINCT]] THEN
   REWRITE_TAC[quotient_map; TOPSPACE_ALEXANDROFF_COMPACTIFICATION] THEN
   SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET; DELETE_SUBSET] THEN
   CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
+
   REWRITE_TAC[FORALL_SUBSET_INSERT; FORALL_SUBSET_IMAGE] THEN
+
   X_GEN_TAC `u::A=>bool` THEN REWRITE_TAC[SUBSET_DELETE] THEN STRIP_TAC THEN
   ONCE_REWRITE_TAC[COND_RAND] THEN ONCE_REWRITE_TAC[COND_RATOR] THEN
   REWRITE_TAC[IN_INSERT; IN_IMAGE; sum_DISTINCT; sum_INJECTIVE] THEN
@@ -2662,25 +2737,29 @@ in
 
 
 
-  thm deformation_retraction_imp_homotopy_equivalent_space
+thm deformation_retraction_imp_homotopy_equivalent_space
+thm nullhomotopic_from_contractible_space
 
 lemma homotopic_through_contractible_space:
-   "\<And>f g f' g' top1 top2 top3.
-        continuous_map top1 top2 f \<and>
-        continuous_map top1 top2 f' \<and>
-        continuous_map top2 top3 g \<and>
-        continuous_map top2 top3 g' \<and>
-        contractible_space top2 \<and> path_connected_space top3
-        \<Longrightarrow> homotopic_with (\<lambda>h. True) (top1,top3) (g \<circ> f) (g' \<circ> f')"
+   "continuous_map X Y f \<and>
+        continuous_map X Y f' \<and>
+        continuous_map Y Z g \<and>
+        continuous_map Y Z g' \<and>
+        contractible_space Y \<and> path_connected_space Z
+        \<Longrightarrow> homotopic_with (\<lambda>h. True) X Z (g \<circ> f) (g' \<circ> f')"
+  using nullhomotopic_through_contractible_space [of X Y f Z g]
+  using nullhomotopic_through_contractible_space [of X Y f' Z g']
+  by (metis continuous_map_const homotopic_constant_maps homotopic_with_imp_continuous_maps homotopic_with_sym homotopic_with_trans path_connected_space_iff_path_component)
+  by (smt (verit, ccfv_SIG) continuous_map_const homotopic_constant_maps homotopic_with_imp_continuous_maps homotopic_with_sym homotopic_with_trans nullhomotopic_through_contractible_space path_connected_space_imp_path_component_of)
 oops
   REPEAT STRIP_TAC THEN
   MP_TAC(ISPECL
    [`f::A=>B`; `g::B=>C`;
-    `top1::A topology`; `top2::B topology`; `top3::C topology`]
-   NULLHOMOTOPIC_THROUGH_CONTRACTIBLE_SPACE) THEN
+    `X::A topology`; `Y::B topology`; `Z::C topology`]
+   nullhomotopic_through_contractible_space) THEN
   MP_TAC(ISPECL
    [`f':A=>B`; `g':B=>C`;
-    `top1::A topology`; `top2::B topology`; `top3::C topology`]
+    `X::A topology`; `Y::B topology`; `Z::C topology`]
    NULLHOMOTOPIC_THROUGH_CONTRACTIBLE_SPACE) THEN
   ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `c::C` THEN
   DISCH_TAC THEN
@@ -2697,54 +2776,16 @@ oops
   ASM_MESON_TAC[PATH_CONNECTED_SPACE_IFF_PATH_COMPONENT]);;
 
 lemma homotopic_from_contractible_space:
-   "\<And>f g X Y.
-        continuous_map X Y f \<and> continuous_map X Y g \<and>
+   "continuous_map X Y f \<and> continuous_map X Y g \<and>
         contractible_space X \<and> path_connected_space Y
-        \<Longrightarrow> homotopic_with (\<lambda>x. True) (X,Y) f g"
-oops
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL
-   [`\<lambda>x::A. x`; `f::A=>B`; `\<lambda>x::A. x`;
-    `g::A=>B`; `X::A topology`; `X::A topology`;
-    `Y:B topology`] HOMOTOPIC_THROUGH_CONTRACTIBLE_SPACE) THEN
-  ASM_REWRITE_TAC[CONTINUOUS_MAP_ID; o_DEF; ETA_AX]);;
+        \<Longrightarrow> homotopic_with (\<lambda>x. True) X Y f g"
+  by (metis comp_id continuous_map_id homotopic_through_contractible_space)
 
 lemma homotopic_into_contractible_space:
-   "\<And>f g X Y.
-        continuous_map X Y f \<and> continuous_map X Y g \<and>
+   "continuous_map X Y f \<and> continuous_map X Y g \<and>
         contractible_space Y
-        \<Longrightarrow> homotopic_with (\<lambda>x. True) (X,Y) f g"
-oops
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL
-   [`f::A=>B`; `\<lambda>x::B. x`;
-    `g::A=>B`; `\<lambda>x::B. x`; `X::A topology`; `Y:B topology`;
-    `Y:B topology`] HOMOTOPIC_THROUGH_CONTRACTIBLE_SPACE) THEN
-  ASM_REWRITE_TAC[CONTINUOUS_MAP_ID; o_DEF; ETA_AX] THEN
-  ASM_SIMP_TAC[CONTRACTIBLE_IMP_PATH_CONNECTED_SPACE]);;
-
-lemma homotopy_dominated_contractibility:
-   "\<And>f g X Y.
-        continuous_map X Y f \<and>
-        continuous_map Y X g \<and>
-        homotopic_with (\<lambda>x. True) (Y,Y) (f \<circ> g) id \<and>
-        contractible_space X
-        \<Longrightarrow> contractible_space Y"
-oops
-  REPEAT GEN_TAC THEN SIMP_TAC[contractible_space; I_DEF] THEN STRIP_TAC THEN
-  MP_TAC(ISPECL [`f::A=>B`; `X::A topology`; `Y:B topology`]
-        NULLHOMOTOPIC_FROM_CONTRACTIBLE_SPACE) THEN
-  ASM_REWRITE_TAC[contractible_space; I_DEF] THEN
-  ANTS_TAC THENL [ASM_MESON_TAC[]; ALL_TAC] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `b::B` THEN
-  ONCE_REWRITE_TAC[HOMOTOPIC_WITH_SYM] THEN DISCH_TAC THEN
-  MATCH_MP_TAC HOMOTOPIC_WITH_TRANS THEN
-  EXISTS_TAC `f \<circ> (g::B=>A)` THEN
-  ASM_REWRITE_TAC[] THEN
-  SUBGOAL_THEN `(\<lambda>x. (b::B)) = (\<lambda>x. b) \<circ> (g::B=>A)`
-  SUBST1_TAC THENL [REWRITE_TAC[o_DEF]; ALL_TAC] THEN
-  MATCH_MP_TAC HOMOTOPIC_COMPOSE_CONTINUOUS_MAP_RIGHT THEN
-  EXISTS_TAC `X::A topology` THEN ASM_REWRITE_TAC[]);;`
+        \<Longrightarrow> homotopic_with (\<lambda>x. True) X Y f g"
+  by (metis continuous_map_id contractible_imp_path_connected_space homotopic_through_contractible_space id_comp)
 
 
 subsection \<open>Completely metrizable spaces\<close>
@@ -2863,14 +2904,16 @@ lemma homeomorphic_completely_metrizable_space:
 lemma completely_metrizable_space_retraction_map_image:
   assumes r: "retraction_map X Y r" and X: "completely_metrizable_space X"
   shows "completely_metrizable_space Y"
-  sorry
- 
-oops
-  MATCH_MP_TAC WEAKLY_HEREDITARY_IMP_RETRACTIVE_PROPERTY THEN
-  REWRITE_TAC[HOMEOMORPHIC_COMPLETELY_METRIZABLE_SPACE] THEN
-  REWRITE_TAC[COMPLETELY_METRIZABLE_SPACE_CLOSED_IN] THEN
-  MESON_TAC[COMPLETELY_METRIZABLE_IMP_METRIZABLE_SPACE;
-            METRIZABLE_IMP_HAUSDORFF_SPACE]);;
+proof -
+  obtain s where s: "retraction_maps X Y r s"
+    using r retraction_map_def by blast
+  then have "subtopology X (s ` topspace Y) homeomorphic_space Y"
+    using retraction_maps_section_image2 by blast
+  then show ?thesis
+    by (metis X retract_of_space_imp_closedin retraction_maps_section_image1 
+        homeomorphic_completely_metrizable_space completely_metrizable_space_closedin 
+        completely_metrizable_imp_metrizable_space metrizable_imp_Hausdorff_space s)
+qed
 
 
 subsection \<open>Product metric\<close>
@@ -7779,8 +7822,7 @@ oops
   FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN SET_TAC[]);;
 
 lemma baire_category_alt:
-   "\<And>X g:(A=>bool)->bool.
-        (completely_metrizable_space X \<or>
+   " (completely_metrizable_space X \<or>
          locally_compact_space X \<and>
          (Hausdorff_space X \<or> regular_space X)) \<and>
         countable g \<and>
