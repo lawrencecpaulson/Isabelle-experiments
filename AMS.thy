@@ -2519,15 +2519,55 @@ proof (cases "a \<in> topspace X")
         then show "closedin (prod_topology X (subtopology X (topspace X - {a}))) (fst ` K \<times> snd ` K \<inter> (\<lambda>x. (x, x)) ` (topspace X - {a}))"
           using R compactin_imp_closedin_gen by blast
       qed
-      with R have "closedin (prod_topology X (subtopology X (topspace X - {a})))  ((\<lambda>x. (x,x)) ` (topspace X - {a}))"
+      with R have *: "closedin (prod_topology X (subtopology X (topspace X - {a})))  ((\<lambda>x. (x,x)) ` (topspace X - {a}))"
         apply (clarsimp simp add: k_space)
         apply (drule_tac x="((\<lambda>x. (x, x)) ` (topspace X - {a}))" in spec)
         apply (auto simp: )
         done
-      then show ?thesis
-        unfolding Hausdorff_space_closedin_diagonal
-
-        sorry
+      have **: "x=y"
+        if "x \<in> topspace X" "y \<in> topspace X" 
+            and \<section>: "\<And>T. \<lbrakk>(x,y) \<in> T; openin (prod_topology X X) T\<rbrakk> \<Longrightarrow> (\<exists>x. x \<in> topspace X \<and> (x,x) \<in> T)" for x y
+      proof (cases "x=a \<and> y=a")
+        case False
+        then consider "x\<noteq>a" | "y\<noteq>a"
+          by blast
+        then show ?thesis
+        proof cases
+          case 1
+          have "(\<exists>z \<in> topspace X - {a}. (z,z) \<in> t)" 
+            if "openin (prod_topology X X) t" "(y,x) \<in> t" for t
+            sorry
+          then
+          have "\<exists>x. (x \<in> topspace X - {a}) \<and> (x,x) \<in> t"
+            if "(y,x) \<in> t" "openin (prod_topology X (subtopology X (topspace X - {a}))) t"
+            for t
+            using kc_space_one_point_compactification_gen [OF \<open>compact_space X\<close>] \<open>kc_space X\<close>
+            by (metis openin_prod_Times_iff openin_topspace openin_trans_full prod_topology_subtopology(2) that)
+          then
+          have "(y,x) \<in> prod_topology X (subtopology X (topspace X - {a})) closure_of ((\<lambda>x. (x,x)) ` (topspace X - {a}))"
+            by (smt (verit, ccfv_threshold) "1" Diff_subset True image_eqI in_closure_of insert_Diff_single insert_absorb insert_iff mem_Sigma_iff that(1) that(2) topspace_prod_topology topspace_subtopology_subset)
+        then show ?thesis
+          using that
+          by (simp add: "*" closure_of_closedin image_iff)
+      next
+        case 2
+        have "\<exists>x. (x \<in> topspace X - {a}) \<and> (x,x) \<in> t"
+          if "(x,y) \<in> t" "openin (prod_topology X (subtopology X (topspace X - {a}))) t"
+          for t
+          sorry
+        then have "(x,y) \<in> prod_topology X (subtopology X (topspace X - {a})) closure_of ((\<lambda>x. (x,x)) ` (topspace X - {a}))"
+          by (smt (verit, ccfv_threshold) "2" Diff_iff Diff_subset empty_iff image_eqI in_closure_of insert_iff mem_Sigma_iff that(1) that(2) topspace_prod_topology topspace_subtopology_subset)
+        then show ?thesis
+          using that by (simp add: "*" closure_of_closedin image_iff)
+        qed
+      qed auto
+      show ?thesis
+        unfolding Hausdorff_space_closedin_diagonal closure_of_subset_eq [symmetric] closure_of_def
+        apply (intro conjI)
+        apply (simp add: image_subset_iff)
+        using **
+        apply clarsimp
+        by (metis (mono_tags, lifting) insertI1 insert_image)
     qed
   qed
 next
@@ -2538,64 +2578,6 @@ qed
 oops
 
 
-    MATCH_MP_TAC CLOSED_IN_SUBSET_TOPSPACE THEN
-    REWRITE_TAC[INTER_SUBSET] THEN
-    FIRST_ASSUM(MATCH_MP_TAC \<circ> GEN_REWRITE_RULE id [kc_space]) THEN
-    SUBGOAL_THEN
-     `(fst ` k \<times> snd ` k) \<inter>
-       {x,x | x \<in> topspace X \<and> \<not> (x::A = a)} =
-      image (\<lambda>x::A. x,x) (fst ` k \<inter> snd ` k)`
-    SUBST1_TAC THENL
-     [FIRST_ASSUM(MP_TAC \<circ> MATCH_MP COMPACT_IN_SUBSET_TOPSPACE) THEN
-      REWRITE_TAC[\<subseteq>; EXTENSION; FORALL_PAIR_THM] THEN
-      REWRITE_TAC[TOPSPACE_PROD_TOPOLOGY; IN_INTER; IN_IMAGE; IN_DELETE;
-                  EXISTS_PAIR_THM; PAIR_EQ; IN_ELIM_THM; IN_CROSS;
-                  TOPSPACE_SUBTOPOLOGY; IN_INTER] THEN
-      MESON_TAC[];
-      ALL_TAC] THEN
-    MATCH_MP_TAC IMAGE_COMPACT_IN THEN
-    EXISTS_TAC `subtopology X (topspace X DELETE (a::A))` THEN
-    REWRITE_TAC[CONTINUOUS_MAP_PAIRED; CONTINUOUS_MAP_ID] THEN
-    SIMP_TAC[CONTINUOUS_MAP_FROM_SUBTOPOLOGY; CONTINUOUS_MAP_ID] THEN
-    REWRITE_TAC[COMPACT_IN_SUBTOPOLOGY] THEN CONJ_TAC THENL
-     [ALL_TAC;
-      FIRST_ASSUM(MP_TAC \<circ> MATCH_MP COMPACT_IN_SUBSET_TOPSPACE) THEN
-      REWRITE_TAC[\<subseteq>; EXTENSION; FORALL_PAIR_THM] THEN
-      REWRITE_TAC[TOPSPACE_PROD_TOPOLOGY; IN_INTER; IN_IMAGE; IN_DELETE;
-                  EXISTS_PAIR_THM; PAIR_EQ; IN_ELIM_THM; IN_CROSS;
-                  TOPSPACE_SUBTOPOLOGY; IN_INTER] THEN
-      MESON_TAC[]] THEN
-    MATCH_MP_TAC COMPACT_INTER_CLOSED_IN THEN CONJ_TAC THENL
-     [MATCH_MP_TAC IMAGE_COMPACT_IN THEN
-      EXISTS_TAC
-       `prod_topology X (subtopology X (topspace X DELETE (a::A)))` THEN
-      ASM_REWRITE_TAC[CONTINUOUS_MAP_FST];
-      ALL_TAC] THEN
-    MATCH_MP_TAC COMPACT_IN_IMP_CLOSED_IN_GEN THEN
-    ASM_REWRITE_TAC[] THEN  MATCH_MP_TAC IMAGE_COMPACT_IN THEN
-    EXISTS_TAC
-     `prod_topology X (subtopology X (topspace X DELETE (a::A)))` THEN
-    ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[PROD_TOPOLOGY_SUBTOPOLOGY] THEN
-    MATCH_MP_TAC CONTINUOUS_MAP_FROM_SUBTOPOLOGY THEN
-    REWRITE_TAC[CONTINUOUS_MAP_SND];
-    ALL_TAC]
-
- THEN
-  REWRITE_TAC[GSYM CLOSURE_OF_SUBSET_EQ] THEN
-  REWRITE_TAC[\<subseteq>; FORALL_IN_GSPEC; TOPSPACE_PROD_TOPOLOGY; IN_CROSS] THEN
-  DISCH_THEN(ASSUME_TAC \<circ> CONJUNCT2) THEN
-  REWRITE_TAC[FORALL_PAIR_THM; closure_of; IN_ELIM_THM] THEN
-  MAP_EVERY X_GEN_TAC [`x::A`; `y::A`] THEN
-  REWRITE_TAC[EXISTS_PAIR_THM; PAIR_EQ; TOPSPACE_PROD_TOPOLOGY] THEN
-  REWRITE_TAC[MESON[] `(\<exists>x. P x \<and> a = x \<and> b = x) \<longleftrightarrow> a = b \<and> P b`] THEN
-  REWRITE_TAC[GSYM CONJ_ASSOC; UNWIND_THM1; IN_CROSS] THEN
-  STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-  ASM_CASES_TAC `\<not> (x::A = a) \<or> (y \<noteq> a)` THENL
-   [ALL_TAC; ASM_MESON_TAC[]] THEN
-  FIRST_X_ASSUM DISJ_CASES_TAC THENL
-   [FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(y,x):A#A`);
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(x,y):A#A`)] THEN
   ASM_REWRITE_TAC[closure_of; IN_ELIM_THM; TOPSPACE_PROD_TOPOLOGY; IN_CROSS;
                   IN_DELETE; PAIR_EQ; TOPSPACE_SUBTOPOLOGY; IN_INTER] THEN
   (ANTS_TAC THENL [ALL_TAC; MESON_TAC[]]) THEN
@@ -2635,7 +2617,7 @@ oops
      MATCH_MP_TAC OPEN_IN_INTER THEN
     ASM_REWRITE_TAC[OPEN_IN_CROSS; OPEN_IN_TOPSPACE] THEN
     ASM_MESON_TAC[T1_SPACE_OPEN_IN_DELETE_ALT; OPEN_IN_TOPSPACE;
-                  KC_IMP_T1_SPACE]]);;`
+                  KC_IMP_T1_SPACE]]);;
 
 
 lemma Hausdorff_space_Alexandroff_compactification_asymmetric_prod:
@@ -2786,12 +2768,80 @@ qed
 lemma homeomorphic_completely_metrizable_space_aux:
   assumes homXY: "X homeomorphic_space Y" and X: "completely_metrizable_space X"
   shows "completely_metrizable_space Y"
-  sorry
+proof -
+  obtain f g where hmf: "homeomorphic_map X Y f" and hmg: "homeomorphic_map Y X g"
+    and fg: "(\<forall>x \<in> topspace X. g(f x) = x) \<and> (\<forall>y \<in> topspace Y. f(g y) = y)"
+    and fim: "f ` (topspace X) = topspace Y" and gim: "g ` (topspace Y) = topspace X"
+    by (smt (verit, best) homXY homeomorphic_imp_surjective_map homeomorphic_maps_map homeomorphic_space_def)
+  obtain M d where Md: "Metric_space M d" "Metric_space.mcomplete M d" "X = Metric_space.mtopology M d"
+    using X by (auto simp: completely_metrizable_space_def)
+  then interpret MX: Metric_space M d by metis
+  define D where "D \<equiv> \<lambda>x y. d (g x) (g y)"
+  have "Metric_space (topspace Y) D"
+  proof
+    show "(D x y = 0) \<longleftrightarrow> (x = y)" if "x \<in> topspace Y" "y \<in> topspace Y" for x y
+      unfolding D_def
+      by (metis that MX.topspace_mtopology MX.zero Md(3) fg gim imageI)
+    show "D x z \<le> D x y +D y z"
+      if "x \<in> topspace Y" "y \<in> topspace Y" "z \<in> topspace Y" for x y z
+      using that MX.triangle Md(3) gim by (auto simp: D_def)
+  qed (auto simp: D_def MX.commute)
+  then interpret MY: Metric_space "topspace Y" "\<lambda>x y. D x y" by metis
+  show ?thesis
+    unfolding completely_metrizable_space_def
+  proof (intro exI conjI)
+    show "Metric_space (topspace Y) D"
+      using MY.Metric_space_axioms by blast
+
+    have gball: "g ` MY.mball y r = MX.mball (g y) r" if "y \<in> topspace Y" for y r
+      using that MX.topspace_mtopology Md(3) gim
+      unfolding MX.mball_def MY.mball_def by (auto simp: subset_iff image_iff D_def)
+
+    have fball: "f ` MX.mball x r = MY.mball (f x) r" if "x \<in> topspace X" for x r
+      using that MX.topspace_mtopology Md(3) gim
+      unfolding MX.mball_def MY.mball_def by (force simp: fg subset_iff image_iff D_def)
+
+    show "MY.mcomplete"
+      unfolding MY.mcomplete_def
+    proof (intro strip)
+      fix \<sigma>
+      assume "MY.MCauchy \<sigma>"
+      then have "MX.MCauchy (g o \<sigma>)"
+        sorry
+      then obtain x where x: "limitin MX.mtopology (g o \<sigma>) x sequentially"
+        using MX.mcomplete_def Md(2) by blast
+      then show "\<exists>y. limitin MY.mtopology \<sigma> y sequentially"
+        apply (simp add: limitin_def)
+
+         sorry
+    qed
+    have "\<exists>r>0. MY.mball y r \<subseteq> S" if "openin Y S" and "y \<in> S" for S y
+    proof -
+      have "openin X (g`S)"
+        using hmg homeomorphic_map_openness_eq that by auto
+      then obtain r where "r>0" "MX.mball (g y) r \<subseteq> g`S"
+        using MX.openin_mtopology Md(3) \<open>y \<in> S\<close> by auto
+      then have "MY.mball y r \<subseteq> S"
+        by (smt (verit, ccfv_SIG) MY.in_mball gball fg image_iff in_mono openin_subset subsetI that(1))
+      then show ?thesis
+        using \<open>0 < r\<close> by blast
+    qed
+    moreover have "openin Y S"
+      if "S \<subseteq> topspace Y" and "\<And>y. y \<in> S \<Longrightarrow> \<exists>r>0. MY.mball y r \<subseteq> S" for S
+    proof -
+      have "\<And>x. x \<in> g`S \<Longrightarrow> \<exists>r>0. MX.mball x r \<subseteq> g`S"
+        by (smt (verit) gball imageE image_mono subset_iff that)
+      then have "openin X (g`S)"
+        using MX.openin_mtopology Md(3) gim that(1) by auto
+      then show ?thesis
+        using hmg homeomorphic_map_openness_eq that(1) by blast
+    qed
+    ultimately show "Y = MY.mtopology"
+      unfolding topology_eq MY.openin_mtopology by (metis openin_subset)
+  qed
+qed
+
 oops
-    REPEAT GEN_TAC THEN REWRITE_TAC[completely_metrizable_space] THEN
-    REWRITE_TAC[homeomorphic_space; LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`f::A=>B`; `g::B=>A`] THEN DISCH_TAC THEN
-    X_GEN_TAC `m::A metric` THEN DISCH_THEN(STRIP_ASSUME_TAC \<circ> GSYM) THEN
     ABBREV_TAC
      `m' = metric(topspace Y,\<lambda>(x,y). d m ((g::B=>A) x,g y))` THEN
     MP_TAC(ISPECL [`g::B=>A`; `m::A metric`; `topspace Y:B=>bool`]
