@@ -10,7 +10,48 @@ begin
 thm closed_compactin
 lemma closed_compactin_Inter: "\<lbrakk>compactin X K; K \<in> \<K>; \<And>K. K \<in> \<K> \<Longrightarrow> closedin X K\<rbrakk> \<Longrightarrow> compactin X (\<Inter>\<K>)"
       by (metis Inf_lower closed_compactin closedin_Inter empty_iff)
- 
+
+
+lemma closedin_subtopology_Int_subset:
+   "\<lbrakk>closedin (subtopology X U) (U \<inter> S); V \<subseteq> U\<rbrakk>
+        \<Longrightarrow> closedin (subtopology X V) (V \<inter> S)"
+  by (smt (verit, ccfv_SIG) closedin_subtopology inf.left_commute inf.orderE inf_commute)
+
+lemma closedin_subtopology_Int_closedin:
+   "\<lbrakk>closedin (subtopology X U) S; closedin X T\<rbrakk>
+        \<Longrightarrow> closedin (subtopology X U) (S \<inter> T)"
+  by (smt (verit, best) closedin_Int closedin_subtopology inf_assoc inf_commute)
+
+
+thm deformation_retraction_imp_homotopy_equivalent_space
+thm nullhomotopic_from_contractible_space
+
+lemma homotopic_through_contractible_space:
+   "continuous_map X Y f \<and>
+        continuous_map X Y f' \<and>
+        continuous_map Y Z g \<and>
+        continuous_map Y Z g' \<and>
+        contractible_space Y \<and> path_connected_space Z
+        \<Longrightarrow> homotopic_with (\<lambda>h. True) X Z (g \<circ> f) (g' \<circ> f')"
+  using nullhomotopic_through_contractible_space [of X Y f Z g]
+  using nullhomotopic_through_contractible_space [of X Y f' Z g']
+  by (metis continuous_map_const homotopic_constant_maps homotopic_with_imp_continuous_maps 
+      homotopic_with_trans path_connected_space_iff_path_component homotopic_with_sym)
+
+lemma homotopic_from_contractible_space:
+   "continuous_map X Y f \<and> continuous_map X Y g \<and>
+        contractible_space X \<and> path_connected_space Y
+        \<Longrightarrow> homotopic_with (\<lambda>x. True) X Y f g"
+  by (metis comp_id continuous_map_id homotopic_through_contractible_space)
+
+lemma homotopic_into_contractible_space:
+   "continuous_map X Y f \<and> continuous_map X Y g \<and>
+        contractible_space Y
+        \<Longrightarrow> homotopic_with (\<lambda>x. True) X Y f g"
+  by (metis continuous_map_id contractible_imp_path_connected_space homotopic_through_contractible_space id_comp)
+
+
+
 (*NEEDS LEPOLL*)
 lemma card_lepoll_quasi_components_of_topspace:
   "quasi_components_of X \<lesssim> topspace X"
@@ -2426,58 +2467,77 @@ lemma completely_regular_space_Alexandroff_compactification:
       compact_imp_locally_compact_space compact_space_Alexandroff_compactification)
 
 lemma Hausdorff_space_one_point_compactification_asymmetric_prod:
-   "compact_space X
-        \<Longrightarrow> (Hausdorff_space X \<longleftrightarrow>
-             kc_space
-              (prod_topology X (subtopology X (topspace X - {a}))) \<and>
-             k_space
-              (prod_topology X (subtopology X (topspace X - {a}))))"
-  sorry
-oops
-  REPEAT GEN_TAC THEN ASM_CASES_TAC `(a::A) \<in> topspace X` THENL
-   [ALL_TAC;
-    ASM_SIMP_TAC[SUBTOPOLOGY_TOPSPACE; KC_SPACE_COMPACT_PROD_TOPOLOGY; SET_RULE
-       `(a \<notin> s) \<Longrightarrow> s - {a} = s`] THEN
-    SIMP_TAC[COMPACT_IMP_K_SPACE; COMPACT_SPACE_PROD_TOPOLOGY]] THEN
-  STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL
-   [REWRITE_TAC[PROD_TOPOLOGY_SUBTOPOLOGY] THEN CONJ_TAC THENL
-     [MATCH_MP_TAC HAUSDORFF_IMP_KC_SPACE THEN
-      MATCH_MP_TAC HAUSDORFF_SPACE_SUBTOPOLOGY THEN
-      ASM_REWRITE_TAC[HAUSDORFF_SPACE_PROD_TOPOLOGY];
+  assumes "compact_space X"
+  shows "Hausdorff_space X \<longleftrightarrow>
+         kc_space (prod_topology X (subtopology X (topspace X - {a}))) \<and>
+         k_space (prod_topology X (subtopology X (topspace X - {a})))"  (is "?lhs \<longleftrightarrow> ?rhs")
+proof (cases "a \<in> topspace X")
+  case True
+  show ?thesis
+  proof 
+    show ?rhs if ?lhs
+    proof
+      show "kc_space (prod_topology X (subtopology X (topspace X - {a})))"
+        using Hausdorff_imp_kc_space kc_space_prod_topology_right kc_space_subtopology that by blast
+      show "k_space (prod_topology X (subtopology X (topspace X - {a})))"
+        by (meson Hausdorff_imp_kc_space assms compact_imp_locally_compact_space k_space_prod_topology_left 
+            kc_space_one_point_compactification_gen that)
+    qed
+  next
+    assume R: ?rhs
+    show ?lhs
+    proof (cases "topspace X = {a}")
+      case True
+      then show ?thesis
+        by (simp add: Hausdorff_space_def)
+    next
+      case False
+      then have "kc_space X"
+        using kc_space_retraction_map_image [of "prod_topology X (subtopology X (topspace X - {a}))" X fst]
+        by (metis Diff_subset R True insert_Diff retraction_map_fst topspace_subtopology_subset)
+      have "closedin (subtopology (prod_topology X (subtopology X (topspace X - {a}))) K) (K \<inter> ((\<lambda>x. (x,x)) ` (topspace X - {a})))" 
+        if "compactin (prod_topology X (subtopology X (topspace X - {a}))) K" for K
+      proof (intro closedin_subtopology_Int_subset[where V=K] closedin_subset_topspace)
+        show "fst ` K \<times> snd ` K \<inter> (\<lambda>x. (x, x)) ` (topspace X - {a}) \<subseteq> fst ` K \<times> snd ` K" "K \<subseteq> fst ` K \<times> snd ` K"
+          by force+
+        have eq: "(fst ` K \<times> snd ` K \<inter> ((\<lambda>x. (x,x)) ` (topspace X - {a}))) = ((\<lambda>x. (x,x)) ` (fst ` K \<inter> snd ` K))"
+          using compactin_subset_topspace that by (force simp: image_iff)
+        have "compactin (prod_topology X (subtopology X (topspace X - {a}))) (fst ` K \<times> snd ` K \<inter> (\<lambda>x. (x, x)) ` (topspace X - {a}))"
+          unfolding eq
+        proof (rule image_compactin [of "subtopology X (topspace X - {a})"])
+          have "compactin X (fst ` K)" "compactin X (snd ` K)"
+            by (meson compactin_subtopology continuous_map_fst continuous_map_snd image_compactin that)+
+          moreover have "fst ` K \<inter> snd ` K \<subseteq> topspace X - {a}"
+          using compactin_subset_topspace that by force
+        ultimately
+          show "compactin (subtopology X (topspace X - {a})) (fst ` K \<inter> snd ` K)"
+            unfolding compactin_subtopology
+            by (meson \<open>kc_space X\<close> closed_Int_compactin kc_space_def)
+          show "continuous_map (subtopology X (topspace X - {a})) (prod_topology X (subtopology X (topspace X - {a}))) (\<lambda>x. (x, x))"
+            by (simp add: continuous_map_paired)
+        qed
+        then show "closedin (prod_topology X (subtopology X (topspace X - {a}))) (fst ` K \<times> snd ` K \<inter> (\<lambda>x. (x, x)) ` (topspace X - {a}))"
+          using R compactin_imp_closedin_gen by blast
+      qed
+      with R have "closedin (prod_topology X (subtopology X (topspace X - {a})))  ((\<lambda>x. (x,x)) ` (topspace X - {a}))"
+        apply (clarsimp simp add: k_space)
+        apply (drule_tac x="((\<lambda>x. (x, x)) ` (topspace X - {a}))" in spec)
+        apply (auto simp: )
+        done
+      then show ?thesis
+        unfolding Hausdorff_space_closedin_diagonal
 
-      MATCH_MP_TAC K_SPACE_OPEN_SUBTOPOLOGY THEN
-      ASM_REWRITE_TAC[HAUSDORFF_SPACE_PROD_TOPOLOGY] THEN
-      ASM_REWRITE_TAC[OPEN_IN_CROSS; OPEN_IN_TOPSPACE] THEN
-      ASM_SIMP_TAC[COMPACT_IMP_K_SPACE; COMPACT_SPACE_PROD_TOPOLOGY] THEN
-      REPEAT DISJ2_TAC THEN
-      ONCE_REWRITE_TAC[SET_RULE `s - {a} = s - {a}`] THEN
-      MATCH_MP_TAC OPEN_IN_DIFF THEN
-      ASM_SIMP_TAC[OPEN_IN_TOPSPACE; CLOSED_IN_HAUSDORFF_SING]];
-    ALL_TAC] THEN
-  ASM_CASES_TAC `topspace X = {a::A}` THENL
-   [ASM_REWRITE_TAC[Hausdorff_space] THEN SET_TAC[];
-    ALL_TAC] THEN
-  MP_TAC(ISPECL
-   [`prod_topology X (subtopology X (topspace X DELETE (a::A)))`;
-    `X::A topology`; `fst::A#A=>A`] KC_SPACE_RETRACTION_MAP_IMAGE) THEN
-  ASM_REWRITE_TAC[RETRACTION_MAP_FST; TOPSPACE_SUBTOPOLOGY] THEN
-  ANTS_TAC THENL [ASM SET_TAC[]; DISCH_TAC] THEN
-  REWRITE_TAC[HAUSDORFF_SPACE_CLOSED_IN_DIAGONAL] THEN
-  SUBGOAL_THEN
-   `closedin (prod_topology X (subtopology X (topspace X - {a})))
-              {x::A,x | x \<in> topspace X - {a}}`
-  MP_TAC THENL
-   [FIRST_X_ASSUM(MATCH_MP_TAC \<circ> GEN_REWRITE_RULE id [K_SPACE]) THEN
-    REWRITE_TAC[\<subseteq>; FORALL_IN_GSPEC; TOPSPACE_PROD_TOPOLOGY] THEN
-    SIMP_TAC[IN_DELETE; IN_CROSS; TOPSPACE_SUBTOPOLOGY; IN_INTER] THEN
-    X_GEN_TAC `k::A#A=>bool` THEN DISCH_TAC THEN
-    MATCH_MP_TAC CLOSED_IN_SUBTOPOLOGY_INTER_SUBSET THEN
-    EXISTS_TAC `(image fst (k::A#A=>bool)) \<times> (snd ` k)` THEN
-    CONJ_TAC THENL
-     [ALL_TAC;
-      REWRITE_TAC[\<subseteq>; FORALL_PAIR_THM; IN_CROSS; IN_IMAGE;
-                  EXISTS_PAIR_THM; PAIR_EQ] THEN
-      SET_TAC[]] THEN
+        sorry
+    qed
+  qed
+next
+  case False
+  then show ?thesis
+    by (simp add: assms compact_imp_k_space compact_space_prod_topology kc_space_compact_prod_topology)
+qed
+oops
+
+
     MATCH_MP_TAC CLOSED_IN_SUBSET_TOPSPACE THEN
     REWRITE_TAC[INTER_SUBSET] THEN
     FIRST_ASSUM(MATCH_MP_TAC \<circ> GEN_REWRITE_RULE id [kc_space]) THEN
@@ -2519,7 +2579,9 @@ oops
     REWRITE_TAC[PROD_TOPOLOGY_SUBTOPOLOGY] THEN
     MATCH_MP_TAC CONTINUOUS_MAP_FROM_SUBTOPOLOGY THEN
     REWRITE_TAC[CONTINUOUS_MAP_SND];
-    ALL_TAC] THEN
+    ALL_TAC]
+
+ THEN
   REWRITE_TAC[GSYM CLOSURE_OF_SUBSET_EQ] THEN
   REWRITE_TAC[\<subseteq>; FORALL_IN_GSPEC; TOPSPACE_PROD_TOPOLOGY; IN_CROSS] THEN
   DISCH_THEN(ASSUME_TAC \<circ> CONJUNCT2) THEN
@@ -2574,6 +2636,7 @@ oops
     ASM_REWRITE_TAC[OPEN_IN_CROSS; OPEN_IN_TOPSPACE] THEN
     ASM_MESON_TAC[T1_SPACE_OPEN_IN_DELETE_ALT; OPEN_IN_TOPSPACE;
                   KC_IMP_T1_SPACE]]);;`
+
 
 lemma Hausdorff_space_Alexandroff_compactification_asymmetric_prod:
    "Hausdorff_space(Alexandroff_compactification X) \<longleftrightarrow>
@@ -2671,58 +2734,6 @@ proof -
   ultimately show ?thesis
     using homeomorphic_space_sym homeomorphic_space homeomorphic_map_def by blast
 qed
-
-
-thm deformation_retraction_imp_homotopy_equivalent_space
-thm nullhomotopic_from_contractible_space
-
-lemma homotopic_through_contractible_space:
-   "continuous_map X Y f \<and>
-        continuous_map X Y f' \<and>
-        continuous_map Y Z g \<and>
-        continuous_map Y Z g' \<and>
-        contractible_space Y \<and> path_connected_space Z
-        \<Longrightarrow> homotopic_with (\<lambda>h. True) X Z (g \<circ> f) (g' \<circ> f')"
-  using nullhomotopic_through_contractible_space [of X Y f Z g]
-  using nullhomotopic_through_contractible_space [of X Y f' Z g']
-  by (metis continuous_map_const homotopic_constant_maps homotopic_with_imp_continuous_maps homotopic_with_sym homotopic_with_trans path_connected_space_iff_path_component)
-  by (smt (verit, ccfv_SIG) continuous_map_const homotopic_constant_maps homotopic_with_imp_continuous_maps homotopic_with_sym homotopic_with_trans nullhomotopic_through_contractible_space path_connected_space_imp_path_component_of)
-oops
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL
-   [`f::A=>B`; `g::B=>C`;
-    `X::A topology`; `Y::B topology`; `Z::C topology`]
-   nullhomotopic_through_contractible_space) THEN
-  MP_TAC(ISPECL
-   [`f':A=>B`; `g':B=>C`;
-    `X::A topology`; `Y::B topology`; `Z::C topology`]
-   NULLHOMOTOPIC_THROUGH_CONTRACTIBLE_SPACE) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `c::C` THEN
-  DISCH_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP HOMOTOPIC_WITH_IMP_CONTINUOUS_MAPS) THEN
-  REWRITE_TAC[CONTINUOUS_MAP_CONST] THEN DISCH_TAC THEN
-  X_GEN_TAC `d::C` THEN DISCH_THEN(fun th -> MP_TAC th THEN
-     MP_TAC(MATCH_MP HOMOTOPIC_WITH_IMP_CONTINUOUS_MAPS th)) THEN
-  REWRITE_TAC[CONTINUOUS_MAP_CONST] THEN DISCH_TAC THEN
-  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] HOMOTOPIC_WITH_TRANS) THEN
-  ONCE_REWRITE_TAC[HOMOTOPIC_WITH_SYM] THEN
-  FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ]
-        HOMOTOPIC_WITH_TRANS)) THEN
-  REWRITE_TAC[HOMOTOPIC_CONSTANT_MAPS] THEN
-  ASM_MESON_TAC[PATH_CONNECTED_SPACE_IFF_PATH_COMPONENT]);;
-
-lemma homotopic_from_contractible_space:
-   "continuous_map X Y f \<and> continuous_map X Y g \<and>
-        contractible_space X \<and> path_connected_space Y
-        \<Longrightarrow> homotopic_with (\<lambda>x. True) X Y f g"
-  by (metis comp_id continuous_map_id homotopic_through_contractible_space)
-
-lemma homotopic_into_contractible_space:
-   "continuous_map X Y f \<and> continuous_map X Y g \<and>
-        contractible_space Y
-        \<Longrightarrow> homotopic_with (\<lambda>x. True) X Y f g"
-  by (metis continuous_map_id contractible_imp_path_connected_space homotopic_through_contractible_space id_comp)
-
 
 subsection \<open>Completely metrizable spaces\<close>
 
