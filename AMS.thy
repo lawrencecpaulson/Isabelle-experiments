@@ -2620,55 +2620,57 @@ lemma kc_space_as_compactification_unique_explicit:
   apply (simp add: kc_space_subtopology compactin_imp_closedin_gen assms compactin_subtopology cong: conj_cong)
   by (metis Diff_mono assms bot.extremum insert_subset kc_space_as_compactification_unique subset_refl)
 
-lemma FF:
-  "(Some ` s = Some ` t \<longleftrightarrow> s = t) \<and>
-     (insert None (Some ` s) = insert None (Some ` t) \<longleftrightarrow> s = t) \<and>
-     (insert None (Some ` s) \<noteq> Some ` t) \<and>
-     (Some ` t \<noteq> insert None (Some ` s))"
-  by auto
-
 lemma Alexandroff_compactification_unique:
-  assumes "kc_space X" "compact_space X" "a \<in> topspace X"
+  assumes "kc_space X" "compact_space X" and a: "a \<in> topspace X"
   shows "Alexandroff_compactification (subtopology X (topspace X - {a})) homeomorphic_space X"
         (is "?Y homeomorphic_space X")
 proof -
-  have [simp]: "{x. x \<noteq> a \<longrightarrow> x \<in> topspace X \<and> x \<in> W} = insert a W"
-    if  "W \<subseteq> topspace X - {a}" for W
-    using that by auto
-  have [simp]: "U - {None} = Some ` V \<longleftrightarrow> U = insert None (Some ` V)" if "None \<in> U" for U V
-    using that by auto
-  have **: "\<And>T. openin X T \<Longrightarrow> openin X (T - {a})"
-    by (simp add: assms(1) assms(3) compactin_imp_closedin_gen openin_diff)
+  have [simp]: "topspace X \<inter> (topspace X - {a}) = topspace X - {a}"  
+    by auto
+  have [simp]: "insert None (Some ` A) = insert None (Some ` B) \<longleftrightarrow> A = B" 
+               "insert None (Some ` A) \<noteq> Some ` B" for A B
+    by auto
   have "quotient_map X ?Y (\<lambda>x. if x = a then None else Some x)"
-    using assms
-    apply (simp add: quotient_map_def subset_insert_iff subset_image_iff)
-    apply (simp add: kc_space_subtopology compactin_imp_closedin_gen image_iff openin_Alexandroff_compactification FF inj_image_eq_iff flip: ex_simps all_simps cong: conj_cong)
-    apply (intro strip conjI)
-      apply blast
-     apply (smt (verit, best) Diff_Diff_Int Diff_cancel Diff_empty Diff_insert2 Int_insert_right_if1 compactin_subtopology inf.absorb_iff2 insertCI kc_space_as_compactification_unique)
-    apply (clarsimp simp add: openin_subtopology)
-    using **
-    apply (auto simp add: openin_subtopology cong: conj_cong)
-    by (smt (verit, del_insts) Int_Diff inf.orderE insert_Diff_single insert_iff mem_Collect_eq openin_subopen openin_subset set_diff_eq subset_iff)
+    unfolding quotient_map_def
+  proof (intro conjI strip)
+    show "(\<lambda>x. if x = a then None else Some x) ` topspace X = topspace ?Y"
+      using \<open>a \<in> topspace X\<close>  by force
+    show "openin X {x \<in> topspace X. (if x = a then None else Some x) \<in> U} = openin ?Y U" (is "?L = ?R")
+      if "U \<subseteq> topspace ?Y" for U
+    proof (cases "None \<in> U")
+      case True
+      then obtain T where T[simp]: "U = insert None (Some ` T)"
+        by (metis Int_insert_right UNIV_I UNIV_option_conv inf.orderE inf_le2 subsetI subset_imageE)
+      have Tsub: "T \<subseteq> topspace X - {a}"
+        using in_these_eq that by auto
+      then have "{x \<in> topspace X. (if x = a then None else Some x) \<in> U} = insert a T"
+        by (auto simp add: a image_iff cong: conj_cong)
+      then have "?L \<longleftrightarrow> openin X (insert a T)"
+        by metis
+      also have "\<dots> \<longleftrightarrow> ?R"
+        using Tsub assms
+        apply (simp add: openin_Alexandroff_compactification kc_space_as_compactification_unique_explicit [where a=a])
+        by (smt (verit, best) Diff_insert2 Diff_subset closedin_imp_subset double_diff)
+      finally show ?thesis .
+    next
+      case False
+      then obtain T where [simp]: "U = Some ` T"
+        by (metis Int_insert_right UNIV_I UNIV_option_conv inf.orderE inf_le2 subsetI subset_imageE)
+      have **: "\<And>V. openin X V \<Longrightarrow> openin X (V - {a})"
+        by (simp add: assms compactin_imp_closedin_gen openin_diff)
+      have Tsub: "T \<subseteq> topspace X - {a}"
+        using in_these_eq that by auto
+      then have "{x \<in> topspace X. (if x = a then None else Some x) \<in> U} = T"
+        by (auto simp add: image_iff cong: conj_cong)
+      then show ?thesis
+        by (simp add: "**" Tsub openin_open_subtopology)
+    qed
+  qed
   moreover have "inj_on (\<lambda>x. if x = a then None else Some x) (topspace X)"
     by (auto simp: inj_on_def)
   ultimately show ?thesis
     using homeomorphic_space_sym homeomorphic_space homeomorphic_map_def by blast
 qed
-
-    unfolding quotient_map_def
-  proof (intro conjI strip)
-    show "(\<lambda>x. if x = a then None else Some x) ` topspace X = topspace ?Y"
-      using \<open>a \<in> topspace X\<close> by force
-    show "openin X {x \<in> topspace X. (if x = a then None else Some x) \<in> U} = openin ?Y U"
-      if "U \<subseteq> topspace ?Y" for U
-    proof -
-      have [simp]: "{x \<in> topspace X. (if x = a then False else x \<in> U)} = U" 
-        sorry
-        apply (rule )
-
-        using that 
-
 
 
 thm deformation_retraction_imp_homotopy_equivalent_space
