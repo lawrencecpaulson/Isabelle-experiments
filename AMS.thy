@@ -10,7 +10,6 @@ begin
 lemma real_le_lsqrt: "0 \<le> y \<Longrightarrow> x \<le> y\<^sup>2 \<Longrightarrow> sqrt x \<le> y"
   using real_sqrt_le_iff[of x "y\<^sup>2"] by simp
 
-
 thm closed_compactin
 lemma closed_compactin_Inter: "\<lbrakk>compactin X K; K \<in> \<K>; \<And>K. K \<in> \<K> \<Longrightarrow> closedin X K\<rbrakk> \<Longrightarrow> compactin X (\<Inter>\<K>)"
       by (metis Inf_lower closed_compactin closedin_Inter empty_iff)
@@ -2851,11 +2850,14 @@ though other definitions of the product work.\<close>
 
 context Metric_space12 begin
 
-lemma prod_metric: "Metric_space (M1 \<times> M2) (\<lambda>(x,y) (x',y'). sqrt(d1 x x' ^ 2 + d2 y y' ^ 2))"
+definition "prod_dist \<equiv> \<lambda>(x,y) (x',y'). sqrt(d1 x x' ^ 2 + d2 y y' ^ 2)"
+
+lemma prod_metric: "Metric_space (M1 \<times> M2) prod_dist"
 proof
   fix x y z
   assume xyz: "x \<in> M1 \<times> M2" "y \<in> M1 \<times> M2" "z \<in> M1 \<times> M2"
   have "sqrt ((d1 x1 z1)\<^sup>2 + (d2 x2 z2)\<^sup>2) \<le> sqrt ((d1 x1 y1)\<^sup>2 + (d2 x2 y2)\<^sup>2) + sqrt ((d1 y1 z1)\<^sup>2 + (d2 y2 z2)\<^sup>2)"
+      (is "sqrt ?L \<le> ?R")
     if "x = (x1, x2)" "y = (y1, y2)" "z = (z1, z2)"
     for x1 x2 y1 y2 z1 z2
   proof -
@@ -2863,123 +2865,103 @@ proof
       using that xyz M1.triangle [of x1 y1 z1] M2.triangle [of x2 y2 z2] by auto
     show ?thesis
     proof (rule real_le_lsqrt)
-      have "(d1 x1 z1)\<^sup>2 + (d2 x2 z2)\<^sup>2 = d1 x1 z1 * d1 x1 z1 + d2 x2 z2 * d2 x2 z2"
-        by (simp add: power2_sum eval_nat_numeral)
-      also have "... \<le> (d1 x1 y1 + d1 y1 z1)\<^sup>2 + (d2 x2 y2 + d2 y2 z2)\<^sup>2"
-        using tri by (metis M1.nonneg M2.nonneg add_mono calculation power_mono)
-      also have "... \<le> (sqrt (d1 x1 y1 * d1 x1 y1 + d2 x2 y2 * d2 x2 y2) +
-        sqrt (d1 y1 z1 * d1 y1 z1 + d2 y2 z2 * d2 y2 z2)) *
-       (sqrt (d1 x1 y1 * d1 x1 y1 + d2 x2 y2 * d2 x2 y2) +
-        sqrt (d1 y1 z1 * d1 y1 z1 + d2 y2 z2 * d2 y2 z2))"
-        using tri
-        by (metis power2_eq_square real_sqrt_sum_squares_triangle_ineq sqrt_le_D)
-      finally show "(d1 x1 z1)\<^sup>2 + (d2 x2 z2)\<^sup>2 \<le> (sqrt ((d1 x1 y1)\<^sup>2 + (d2 x2 y2)\<^sup>2) + sqrt ((d1 y1 z1)\<^sup>2 + (d2 y2 z2)\<^sup>2))\<^sup>2"
-        by (simp add: power2_sum eval_nat_numeral)
+      have "?L \<le> (d1 x1 y1 + d1 y1 z1)\<^sup>2 + (d2 x2 y2 + d2 y2 z2)\<^sup>2"
+        using tri by (smt (verit) M1.nonneg M2.nonneg power_mono)
+      also have "... \<le> ?R\<^sup>2"
+        by (metis real_sqrt_sum_squares_triangle_ineq sqrt_le_D)
+      finally show "?L \<le> ?R\<^sup>2" .
     qed auto
   qed
-  then show "(case x of (x, y) \<Rightarrow> \<lambda>(x', y'). sqrt ((d1 x x')\<^sup>2 + (d2 y y')\<^sup>2)) z \<le> (case x of (x, y) \<Rightarrow> \<lambda>(x', y'). sqrt ((d1 x x')\<^sup>2 + (d2 y y')\<^sup>2)) y + (case y of (x, y) \<Rightarrow> \<lambda>(x', y'). sqrt ((d1 x x')\<^sup>2 + (d2 y y')\<^sup>2)) z"
-    by (simp add: case_prod_unfold)
-qed (auto simp: M1.commute M2.commute case_prod_unfold)
+  then show "prod_dist x z \<le> prod_dist x y + prod_dist y z"
+    by (simp add: prod_dist_def case_prod_unfold)
+qed (auto simp: M1.commute M2.commute case_prod_unfold prod_dist_def)
 
+interpretation Prod_metric: Metric_space "M1\<times>M2" prod_dist
+  by (simp add: prod_metric)
 
 lemma component_le_prod_metric:
-   "d x1 x2 \<le> d (prod_metric m1 m2) ((x1,y1),(x2,y2)) \<and>
-        d y1 y2 \<le> d (prod_metric m1 m2) ((x1,y1),(x2,y2))"
-oops
-  REPEAT GEN_TAC THEN CONJ_TAC THEN REWRITE_TAC[PROD_METRIC] THEN
-  MATCH_MP_TAC REAL_LE_RSQRT THEN REWRITE_TAC[REAL_LE_ADDR; REAL_LE_ADDL] THEN
-  REWRITE_TAC[REAL_LE_POW_2]);;
+   "d1 x1 x2 \<le> prod_dist (x1,y1) (x2,y2)" "d2 y1 y2 \<le> prod_dist (x1,y1) (x2,y2)"
+  by (auto simp: prod_dist_def)
 
 lemma prod_metric_le_components:
-   "x1 \<in> mspace m1 \<and> x2 \<in> mspace m1 \<and>
-        y1 \<in> mspace m2 \<and> y2 \<in> mspace m2
-        \<Longrightarrow> d (prod_metric m1 m2) ((x1,y1),(x2,y2))
-            \<le> d x1 x2 + d y1 y2"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[PROD_METRIC] THEN
-  MATCH_MP_TAC REAL_LE_LSQRT THEN ASM_SIMP_TAC[REAL_LE_ADD; MDIST_POS_LE;
-   REAL_ARITH `x ^ 2 + y ^ 2 \<le> (x + y) ^ 2 \<longleftrightarrow> 0 \<le> x * y`] THEN
-  ASM_SIMP_TAC[REAL_LE_MUL; MDIST_POS_LE]);;
+  "\<lbrakk>x1 \<in> M1; y1 \<in> M1; x2 \<in> M2; y2 \<in> M2\<rbrakk>
+    \<Longrightarrow> prod_dist (x1, x2) (y1, y2) \<le> d1 x1 y1 + d2 x2 y2"
+  by (auto simp: prod_dist_def sqrt_sum_squares_le_sum)
 
 lemma mball_prod_metric_subset:
-   "mball (prod_metric m1 m2) ((x,y),r) \<subseteq>
-        mball x r \<times> mball y r"
-oops
-  REWRITE_TAC[\<subseteq>; FORALL_PAIR_THM; IN_MBALL; IN_CROSS;
-              CONJUNCT1 PROD_METRIC] THEN
-  MESON_TAC[COMPONENT_LE_PROD_METRIC; REAL_LET_TRANS]);;
+   "Prod_metric.mball (x,y) r \<subseteq> M1.mball x r \<times> M2.mball y r"
+  by clarsimp (smt (verit, best) component_le_prod_metric)
 
 lemma mcball_prod_metric_subset:
-   "mcball (prod_metric m1 m2) ((x,y),r) \<subseteq>
-        mcball m1 (x,r) \<times> mcball m2 (y,r)"
-oops
-  REWRITE_TAC[\<subseteq>; FORALL_PAIR_THM; IN_MCBALL; IN_CROSS;
-              CONJUNCT1 PROD_METRIC] THEN
-  MESON_TAC[COMPONENT_LE_PROD_METRIC; REAL_LE_TRANS]);;
+   "Prod_metric.mcball (x,y) r \<subseteq> M1.mcball x r \<times> M2.mcball y r"
+  by clarsimp (smt (verit, best) component_le_prod_metric)
 
 lemma mball_subset_prod_metric:
-   "\<And>m1 m2 x::A y::B r r'.
-        mball x r \<times> mball y r'
-        \<subseteq> mball (prod_metric m1 m2) ((x,y),r + r')"
-oops
-  REWRITE_TAC[\<subseteq>; FORALL_PAIR_THM; IN_MBALL; IN_CROSS;
-              CONJUNCT1 PROD_METRIC] THEN
-  MESON_TAC[REAL_ARITH `x \<le> y + z \<and> y < a \<and> z < b \<Longrightarrow> x < a + b`;
-            PROD_METRIC_LE_COMPONENTS]);;
+   "M1.mball x1 r1 \<times> M2.mball x2 r2 \<subseteq> Prod_metric.mball (x1,x2) (r1 + r2)"
+  using prod_metric_le_components by force
 
 lemma mcball_subset_prod_metric:
-   "\<And>m1 m2 x::A y::B r r'.
-        mcball m1 (x,r) \<times> mcball m2 (y,r')
-        \<subseteq> mcball (prod_metric m1 m2) ((x,y),r + r')"
-oops
-  REWRITE_TAC[\<subseteq>; FORALL_PAIR_THM; IN_MCBALL; IN_CROSS;
-              CONJUNCT1 PROD_METRIC] THEN
-  MESON_TAC[REAL_ARITH `x \<le> y + z \<and> y \<le> a \<and> z \<le> b \<Longrightarrow> x \<le> a + b`;
-            PROD_METRIC_LE_COMPONENTS]);;
+   "M1.mcball x1 r1 \<times> M2.mcball x2 r2 \<subseteq> Prod_metric.mcball (x1,x2) (r1 + r2)"
+  using prod_metric_le_components by force
 
 lemma mtopology_prod_metric:
-   "\<And>(m1::A metric) (m2::B metric).
-        mtopology(prod_metric m1 m2) =
-        prod_topology (mtopology m1) (mtopology m2)"
-oops
-  REPEAT GEN_TAC THEN CONV_TAC SYM_CONV THEN REWRITE_TAC[prod_topology] THEN
-  MATCH_MP_TAC TOPOLOGY_BASE_UNIQUE THEN
-  REWRITE_TAC[SET_RULE `GSPEC a x \<longleftrightarrow> x \<in> GSPEC a`] THEN REPEAT CONJ_TAC THENL
-   [REWRITE_TAC[FORALL_IN_GSPEC; OPEN_IN_MTOPOLOGY; PROD_METRIC] THEN
-    MAP_EVERY X_GEN_TAC [`s::A=>bool`; `t::B=>bool`] THEN STRIP_TAC THEN
-    ASM_REWRITE_TAC[SUBSET_CROSS; FORALL_PAIR_THM; IN_CROSS] THEN
-    MAP_EVERY X_GEN_TAC [`x::A`; `y::B`] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `y::B`) THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::A`) THEN
-    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `r1::real` THEN STRIP_TAC THEN
-    X_GEN_TAC `r2::real` THEN STRIP_TAC THEN
-    EXISTS_TAC `min r1 r2::real` THEN ASM_REWRITE_TAC[REAL_LT_MIN] THEN
-    W(MP_TAC \<circ> PART_MATCH lhand MBALL_PROD_METRIC_SUBSET \<circ> lhand \<circ> snd) THEN
-    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] SUBSET_TRANS) THEN
-    REWRITE_TAC[SUBSET_CROSS] THEN REPEAT DISJ2_TAC THEN CONJ_TAC;
-    REWRITE_TAC[FORALL_PAIR_THM; EXISTS_IN_GSPEC] THEN
-    MAP_EVERY X_GEN_TAC [`u::A#B=>bool`; `x::A`; `y::B`] THEN
-    GEN_REWRITE_TAC (LAND_CONV \<circ> ONCE_DEPTH_CONV) [OPEN_IN_MTOPOLOGY] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 (CONJUNCTS_THEN2 ASSUME_TAC
-     (MP_TAC \<circ> SPEC `(x,y):A#B`)) ASSUME_TAC) THEN
-    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `r::real` THEN STRIP_TAC THEN MAP_EVERY EXISTS_TAC
-     [`mball m1 (x::A,r / 2)`; `mball m2 (y::B,r / 2)`] THEN
-    FIRST_ASSUM(MP_TAC \<circ> SPEC `(x,y):A#B` \<circ> REWRITE_RULE[\<subseteq>] \<circ>
-     GEN_REWRITE_RULE RAND_CONV [CONJUNCT1 PROD_METRIC]) THEN
-    ASM_REWRITE_TAC[IN_CROSS] THEN STRIP_TAC THEN
-    ASM_SIMP_TAC[OPEN_IN_MBALL; IN_CROSS; CENTRE_IN_MBALL; REAL_HALF] THEN
-    W(MP_TAC \<circ> PART_MATCH lhand MBALL_SUBSET_PROD_METRIC \<circ> lhand \<circ> snd) THEN
-    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] SUBSET_TRANS)] THEN
-  FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP
-   (REWRITE_RULE[IMP_CONJ_ALT] SUBSET_TRANS)) THEN
-  MATCH_MP_TAC MBALL_SUBSET_CONCENTRIC THEN REAL_ARITH_TAC);;
+  "Prod_metric.mtopology = prod_topology M1.mtopology M2.mtopology"
+  unfolding prod_topology_def
+proof (rule topology_base_unique [symmetric])
+  fix U
+  assume "U \<in> {S \<times> T |S T. openin M1.mtopology S \<and> openin M2.mtopology T}"
+  then obtain S T where Ueq: "U = S \<times> T"
+    and S: "openin M1.mtopology S" and T: "openin M2.mtopology T"
+    by auto
+  have "S \<subseteq> M1"
+    using M1.openin_mtopology S by auto
+  have "T \<subseteq> M2"
+    using M2.openin_mtopology T by auto
+  show "openin Prod_metric.mtopology U"
+    unfolding Prod_metric.openin_mtopology
+  proof (intro conjI strip)
+    show "U \<subseteq> M1 \<times> M2"
+      using Ueq by (simp add: Sigma_mono \<open>S \<subseteq> M1\<close> \<open>T \<subseteq> M2\<close>)
+    fix z
+    assume "z \<in> U"
+    then obtain x1 x2 where "x1 \<in> S" "x2 \<in> T" and zeq: "z = (x1,x2)"
+      using Ueq by blast
+    obtain r1 where "r1>0" and r1: "M1.mball x1 r1 \<subseteq> S"
+      by (meson M1.openin_mtopology \<open>openin M1.mtopology S\<close> \<open>x1 \<in> S\<close>)
+    obtain r2 where "r2>0" and r2: "M2.mball x2 r2 \<subseteq> T"
+      by (meson M2.openin_mtopology \<open>openin M2.mtopology T\<close> \<open>x2 \<in> T\<close>)
+    have "Prod_metric.mball (x1,x2) (min r1 r2) \<subseteq> U"
+    proof (rule order_trans [OF mball_prod_metric_subset])
+      show "M1.mball x1 (min r1 r2) \<times> M2.mball x2 (min r1 r2) \<subseteq> U"
+        using Ueq r1 r2 by force
+    qed
+    then show "\<exists>r>0. Prod_metric.mball z r \<subseteq> U"
+      by (smt (verit, del_insts) zeq \<open>0 < r1\<close> \<open>0 < r2\<close>)
+  qed
+next
+  fix U z
+  assume "openin Prod_metric.mtopology U" and "z \<in> U"
+  then have "U \<subseteq> M1 \<times> M2"
+    by (simp add: Prod_metric.openin_mtopology)
+  then obtain x y where "x \<in> M1" "y \<in> M2" and zeq: "z = (x,y)"
+    using \<open>z \<in> U\<close> by blast
+  obtain r where "r>0" and r: "Prod_metric.mball (x,y) r \<subseteq> U"
+    by (metis Prod_metric.openin_mtopology \<open>openin Prod_metric.mtopology U\<close> \<open>z \<in> U\<close> zeq)
+  define B1 where "B1 \<equiv> M1.mball x (r/2)"
+  define B2 where "B2 \<equiv> M2.mball y (r/2)"
+  have "openin M1.mtopology B1" "openin M2.mtopology B2"
+    by (simp_all add: B1_def B2_def)
+  moreover have "(x,y) \<in> B1 \<times> B2"
+    using \<open>r > 0\<close> by (simp add: \<open>x \<in> M1\<close> \<open>y \<in> M2\<close> B1_def B2_def)
+  moreover have "B1 \<times> B2 \<subseteq> U"
+    using r prod_metric_le_components by (force simp add: B1_def B2_def)
+  ultimately show "\<exists>B. B \<in> {S \<times> T |S T. openin M1.mtopology S \<and> openin M2.mtopology T} \<and> z \<in> B \<and> B \<subseteq> U"
+    by (auto simp add: zeq)
+qed
 
 lemma submetric_prod_metric:
-   "\<And>m1 m2 s::A=>bool t::B=>bool.
-        submetric (prod_metric m1 m2) (s \<times> t) =
-        prod_metric (submetric1 s) (submetric2 t)"
+   "submetric (M1 \<times> M2) prod_dist (S \<times> T) =
+        prod_metric (submetric M1 d1 S) (submetric M2 d2 T)"
 oops
   REPEAT GEN_TAC THEN
   GEN_REWRITE_TAC RAND_CONV [prod_metric] THEN
@@ -2987,12 +2969,65 @@ oops
   REWRITE_TAC[SUBMETRIC; PROD_METRIC; INTER_CROSS]);;
 
 lemma metrizable_space_prod_topology:
-   "metrizable_space (prod_topology top1 top2) \<longleftrightarrow>
-        topspace(prod_topology top1 top2) = {} \<or>
-        metrizable_space top1 \<and> metrizable_space top2"
+   "metrizable_space (prod_topology X Y) \<longleftrightarrow>
+    topspace(prod_topology X Y) = {} \<or> metrizable_space X \<and> metrizable_space Y"
+   (is "?lhs=?rhs")
+proof (cases "topspace(prod_topology X Y) = {}")
+  case False
+  then have X: "completely_regular_space X" and Y: "completely_regular_space Y"
+    using R by blast+
+  show ?thesis
+proof
+  assume ?lhs then show ?rhs
+    by (rule topological_property_of_prod_component) 
+       (auto simp: completely_regular_space_subtopology homeomorphic_completely_regular_space)
+next
+  assume R: ?rhs
+  show ?lhs
+  proof (cases "topspace(prod_topology X Y) = {}")
+    case False
+    then have X: "completely_regular_space X" and Y: "completely_regular_space Y"
+      using R by blast+
+    show ?thesis
+      unfolding completely_regular_space_alt'
+    proof clarify
+      fix W x y
+      assume "openin (prod_topology X Y) W" and "(x, y) \<in> W"
+      then obtain U V where "openin X U" "openin Y V" "x \<in> U" "y \<in> V" "U\<times>V \<subseteq> W"
+        by (force simp: openin_prod_topology_alt)
+      then have "x \<in> topspace X" "y \<in> topspace Y"
+        using openin_subset by fastforce+
+      obtain f where contf: "continuous_map X euclideanreal f" and "f x = 0" 
+        and f1: "\<And>x. x \<in> topspace X \<Longrightarrow> x \<notin> U \<Longrightarrow> f x = 1"
+        using X \<open>openin X U\<close> \<open>x \<in> U\<close> unfolding completely_regular_space_alt'
+        by (smt (verit, best) Diff_iff image_subset_iff singletonD)
+      obtain g where contg: "continuous_map Y euclideanreal g" and "g y = 0" 
+        and g1: "\<And>y. y \<in> topspace Y \<Longrightarrow> y \<notin> V \<Longrightarrow> g y = 1"
+        using Y \<open>openin Y V\<close> \<open>y \<in> V\<close> unfolding completely_regular_space_alt'
+        by (smt (verit, best) Diff_iff image_subset_iff singletonD)
+      define h where "h \<equiv> \<lambda>(x,y). 1 - (1 - f x) * (1 - g y)"
+      show "\<exists>h. continuous_map (prod_topology X Y) euclideanreal h \<and> h (x,y) = 0 \<and> h ` (topspace (prod_topology X Y) - W) \<subseteq> {1}"
+      proof (intro exI conjI)
+        have "continuous_map (prod_topology X Y) euclideanreal (f \<circ> fst)"
+          using contf continuous_map_of_fst by blast
+        moreover
+        have "continuous_map (prod_topology X Y) euclideanreal (g \<circ> snd)"
+          using contg continuous_map_of_snd by blast
+        ultimately
+        show "continuous_map (prod_topology X Y) euclideanreal h"
+          unfolding o_def h_def case_prod_unfold
+          by (intro continuous_intros) auto
+        show "h (x, y) = 0"
+          by (simp add: h_def \<open>f x = 0\<close> \<open>g y = 0\<close>)
+        show "h ` (topspace (prod_topology X Y) - W) \<subseteq> {1}"
+          using \<open>U \<times> V \<subseteq> W\<close> f1 g1 by (force simp: h_def)
+      qed
+    qed
+  qed (force simp: completely_regular_space_def)
+qed
 oops
   REPEAT STRIP_TAC THEN
-  ASM_CASES_TAC `topspace(prod_topology top1 top2):A#B=>bool = {}` THENL
+  ASM_CASES_TAC `topspace(prod_topology X Y):A#B=>bool = {}` THENL
    [ASM_MESON_TAC[SUBTOPOLOGY_EQ_DISCRETE_TOPOLOGY_EMPTY;
                   METRIZABLE_SPACE_DISCRETE_TOPOLOGY];
     ASM_REWRITE_TAC[]] THEN
@@ -3003,8 +3038,8 @@ oops
   REWRITE_TAC[FORALL_PAIR_THM; IN_CROSS] THEN
   MAP_EVERY X_GEN_TAC [`a::A`; `b::B`] THEN REPEAT STRIP_TAC THEN
   FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP METRIZABLE_SPACE_SUBTOPOLOGY) THENL
-   [DISCH_THEN(MP_TAC \<circ> SPEC `(topspace top1 \<times> {b}):A#B=>bool`);
-    DISCH_THEN(MP_TAC \<circ> SPEC `({a} \<times> topspace top2):A#B=>bool`)] THEN
+   [DISCH_THEN(MP_TAC \<circ> SPEC `(topspace X \<times> {b}):A#B=>bool`);
+    DISCH_THEN(MP_TAC \<circ> SPEC `({a} \<times> topspace Y):A#B=>bool`)] THEN
   MATCH_MP_TAC EQ_IMP THEN MATCH_MP_TAC HOMEOMORPHIC_METRIZABLE_SPACE THEN
   REWRITE_TAC[SUBTOPOLOGY_CROSS; SUBTOPOLOGY_TOPSPACE] THENL
    [MATCH_MP_TAC PROD_TOPOLOGY_HOMEOMORPHIC_SPACE_LEFT;
@@ -3019,9 +3054,9 @@ oops
   REWRITE_TAC[FORALL_PAIR_FUN_THM] THEN MAP_EVERY X_GEN_TAC
    [`m1::A metric`; `m2::B metric`; `a::num=>A`; `b::num=>B`] THEN
   REWRITE_TAC[MCauchy; CONJUNCT1 PROD_METRIC; IN_CROSS; o_DEF] THEN
-  ASM_CASES_TAC `\<forall>n. (a::num=>A) n \<in> mspace m1` THEN
+  ASM_CASES_TAC `\<forall>n. (a::num=>A) n \<in> M1` THEN
   ASM_REWRITE_TAC[FORALL_AND_THM] THEN
-  ASM_CASES_TAC `\<forall>n. (b::num=>B) n \<in> mspace m2` THEN ASM_REWRITE_TAC[] THEN
+  ASM_CASES_TAC `\<forall>n. (b::num=>B) n \<in> M2` THEN ASM_REWRITE_TAC[] THEN
   EQ_TAC THENL
    [ASM_MESON_TAC[COMPONENT_LE_PROD_METRIC; REAL_LET_TRANS];
     DISCH_TAC THEN X_GEN_TAC `e::real` THEN DISCH_TAC] THEN
@@ -3039,21 +3074,21 @@ oops
 lemma mcomplete_prod_metric:
    "\<And>(m1::A metric) (m2::B metric).
         mcomplete (prod_metric m1 m2) \<longleftrightarrow>
-        mspace m1 = {} \<or> mspace m2 = {} \<or> mcomplete m1 \<and> mcomplete m2"
+        M1 = {} \<or> M2 = {} \<or> mcomplete m1 \<and> mcomplete m2"
 oops
   REPEAT STRIP_TAC THEN MAP_EVERY ASM_CASES_TAC
-   [`mspace m1::A=>bool = {}`; `mspace m2::B=>bool = {}`] THEN
+   [`M1::A=>bool = {}`; `M2::B=>bool = {}`] THEN
   ASM_SIMP_TAC[MCOMPLETE_EMPTY_MSPACE; CONJUNCT1 PROD_METRIC; CROSS_EMPTY] THEN
   REWRITE_TAC[mcomplete; CAUCHY_IN_PROD_METRIC] THEN
   REWRITE_TAC[MTOPOLOGY_PROD_METRIC; LIMIT_PAIRWISE; EXISTS_PAIR_THM] THEN
   EQ_TAC THENL [ALL_TAC; ASM_MESON_TAC[]] THEN DISCH_TAC THEN CONJ_TAC THENL
    [X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
-    UNDISCH_TAC `\<not> (mspace m2::B=>bool = {})` THEN
+    UNDISCH_TAC `\<not> (M2::B=>bool = {})` THEN
     REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; LEFT_IMP_EXISTS_THM] THEN
     X_GEN_TAC `y::B` THEN DISCH_TAC THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(\<lambda>n. (x n,y)):num=>A#B`);
     X_GEN_TAC `y::num=>B` THEN DISCH_TAC THEN
-    UNDISCH_TAC `\<not> (mspace m1::A=>bool = {})` THEN
+    UNDISCH_TAC `\<not> (M1::A=>bool = {})` THEN
     REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; LEFT_IMP_EXISTS_THM] THEN
     X_GEN_TAC `x::A` THEN DISCH_TAC THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(\<lambda>n. (x,y n)):num=>A#B`)] THEN
@@ -3151,8 +3186,8 @@ oops
   ASM_REWRITE_TAC[CROSS_EMPTY; TOTALLY_BOUNDED_IN_EMPTY] THEN
   REWRITE_TAC[TOTALLY_BOUNDED_IN_SEQUENTIALLY] THEN
   ASM_REWRITE_TAC[CONJUNCT1 PROD_METRIC; SUBSET_CROSS] THEN
-  ASM_CASES_TAC `(s::A=>bool) \<subseteq> mspace m1` THEN ASM_REWRITE_TAC[] THEN
-  ASM_CASES_TAC `(t::B=>bool) \<subseteq> mspace m2` THEN ASM_REWRITE_TAC[] THEN
+  ASM_CASES_TAC `(s::A=>bool) \<subseteq> M1` THEN ASM_REWRITE_TAC[] THEN
+  ASM_CASES_TAC `(t::B=>bool) \<subseteq> M2` THEN ASM_REWRITE_TAC[] THEN
   EQ_TAC THEN STRIP_TAC THEN TRY CONJ_TAC THENL
    [X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
     UNDISCH_TAC `\<not> (t::B=>bool = {})` THEN
@@ -3209,16 +3244,16 @@ text\<open> Three more restrictive notions of continuity for metric spaces.     
 
 definition lipschitz_continuous_map where
  `lipschitz_continuous_map m1 m2 f \<longleftrightarrow>
-        image f (mspace m1) \<subseteq> mspace m2 \<and>
-        \<exists>B. \<forall>x y. x \<in> mspace m1 \<and> y \<in> mspace m1
+        image f (M1) \<subseteq> M2 \<and>
+        \<exists>B. \<forall>x y. x \<in> M1 \<and> y \<in> M1
                   \<Longrightarrow> d m2 (f x,f y) \<le> B * d x y"
 
 lemma lipschitz_continuous_map_pos:
    "\<And>m1 m2 f::A=>B.
         lipschitz_continuous_map m1 m2 f \<longleftrightarrow>
-        image f (mspace m1) \<subseteq> mspace m2 \<and>
+        image f (M1) \<subseteq> M2 \<and>
         \<exists>B. 0 < B \<and>
-            \<forall>x y. x \<in> mspace m1 \<and> y \<in> mspace m1
+            \<forall>x y. x \<in> M1 \<and> y \<in> M1
                   \<Longrightarrow> d m2 (f x,f y) \<le> B * d x y"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[lipschitz_continuous_map] THEN
@@ -3231,7 +3266,7 @@ oops
   ASM_SIMP_TAC[MDIST_POS_LE] THEN REAL_ARITH_TAC);;
 
 lemma lipschitz_continuous_map_eq:
-   "(\<forall>x. x \<in> mspace m1 \<Longrightarrow> f x = g x) \<and> lipschitz_continuous_map m1 m2 f
+   "(\<forall>x. x \<in> M1 \<Longrightarrow> f x = g x) \<and> lipschitz_continuous_map m1 m2 f
       \<Longrightarrow> lipschitz_continuous_map m1 m2 g"
 oops
   REWRITE_TAC[lipschitz_continuous_map] THEN
@@ -3254,19 +3289,19 @@ oops
 lemma lipschitz_continuous_map_into_submetric:
    "\<And>m1 m2 s f::A=>B.
         lipschitz_continuous_map m1 (submetric2 s) f \<longleftrightarrow>
-        image f (mspace m1) \<subseteq> s \<and>
+        image f (M1) \<subseteq> s \<and>
         lipschitz_continuous_map m1 m2 f"
 oops
   REWRITE_TAC[lipschitz_continuous_map; SUBMETRIC] THEN SET_TAC[]);;
 
 lemma lipschitz_continuous_map_const:
    "lipschitz_continuous_map m1 m2 (\<lambda>x. c) \<longleftrightarrow>
-        mspace m1 = {} \<or> c \<in> mspace m2"
+        M1 = {} \<or> c \<in> M2"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[lipschitz_continuous_map] THEN
-  ASM_CASES_TAC `mspace m1::A=>bool = {}` THEN
+  ASM_CASES_TAC `M1::A=>bool = {}` THEN
   ASM_REWRITE_TAC[IMAGE_CLAUSES; EMPTY_SUBSET; NOT_IN_EMPTY] THEN
-  ASM_CASES_TAC `(c::B) \<in> mspace m2` THENL [ALL_TAC; ASM SET_TAC[]] THEN
+  ASM_CASES_TAC `(c::B) \<in> M2` THENL [ALL_TAC; ASM SET_TAC[]] THEN
   ASM_REWRITE_TAC[] THEN CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
   EXISTS_TAC `1` THEN ASM_SIMP_TAC[MDIST_REFL; MDIST_POS_LE; REAL_MUL_LID]);;
 
@@ -3292,10 +3327,10 @@ oops
 
 definition uniformly_continuous_map where
  `uniformly_continuous_map m1 m2 f \<longleftrightarrow>
-        image f (mspace m1) \<subseteq> mspace m2 \<and>
+        image f (M1) \<subseteq> M2 \<and>
         \<forall>e. 0 < e
             \<Longrightarrow> \<exists>d. 0 < d \<and>
-                    !x x'. x \<in> mspace m1 \<and> x' \<in> mspace m1 \<and>
+                    !x x'. x \<in> M1 \<and> x' \<in> M1 \<and>
                            d x' x < d
                            \<Longrightarrow> d m2 (f x',f x) < e"
 
@@ -3303,15 +3338,15 @@ let UNIFORMLY_CONTINUOUS_MAP_SEQUENTIALLY,
     UNIFORMLY_CONTINUOUS_MAP_SEQUENTIALLY_ALT = (CONJ_PAIR \<circ> prove)
  (`(\<forall>m1 m2 f::A=>B.
         uniformly_continuous_map m1 m2 f \<longleftrightarrow>
-        image f (mspace m1) \<subseteq> mspace m2 \<and>
-        \<forall>x y. (\<forall>n. x n \<in> mspace m1) \<and> (\<forall>n. y n \<in> mspace m1) \<and>
+        image f (M1) \<subseteq> M2 \<and>
+        \<forall>x y. (\<forall>n. x n \<in> M1) \<and> (\<forall>n. y n \<in> M1) \<and>
               tendsto (\<lambda>n. d m1 (x n,y n)) 0 sequentially
               \<Longrightarrow> tendsto
                     (\<lambda>n. d m2 (f(x n),f(y n))) 0 sequentially) \<and>
    (\<forall>m1 m2 f::A=>B.
         uniformly_continuous_map m1 m2 f \<longleftrightarrow>
-        image f (mspace m1) \<subseteq> mspace m2 \<and>
-        \<forall>e x y. 0 < e \<and> (\<forall>n. x n \<in> mspace m1) \<and> (\<forall>n. y n \<in> mspace m1) \<and>
+        image f (M1) \<subseteq> M2 \<and>
+        \<forall>e x y. 0 < e \<and> (\<forall>n. x n \<in> M1) \<and> (\<forall>n. y n \<in> M1) \<and>
                 tendsto (\<lambda>n. d m1 (x n,y n)) 0 sequentially
                 \<Longrightarrow> \<exists>n. d m2 (f(x n),f(y n)) < e)"
 oops
@@ -3362,7 +3397,7 @@ oops
     ASM_SIMP_TAC[REAL_LT_IMP_LE]]);;
 
 lemma uniformly_continuous_map_eq:
-   "(\<forall>x. x \<in> mspace m1 \<Longrightarrow> f x = g x) \<and> uniformly_continuous_map m1 m2 f
+   "(\<forall>x. x \<in> M1 \<Longrightarrow> f x = g x) \<and> uniformly_continuous_map m1 m2 f
       \<Longrightarrow> uniformly_continuous_map m1 m2 g"
 oops
   REWRITE_TAC[uniformly_continuous_map] THEN
@@ -3385,20 +3420,20 @@ oops
 lemma uniformly_continuous_map_into_submetric:
    "\<And>m1 m2 s f::A=>B.
         uniformly_continuous_map m1 (submetric2 s) f \<longleftrightarrow>
-        image f (mspace m1) \<subseteq> s \<and>
+        image f (M1) \<subseteq> s \<and>
         uniformly_continuous_map m1 m2 f"
 oops
   REWRITE_TAC[uniformly_continuous_map; SUBMETRIC] THEN SET_TAC[]);;
 
 lemma uniformly_continuous_map_const:
    "uniformly_continuous_map m1 m2 (\<lambda>x. c) \<longleftrightarrow>
-        mspace m1 = {} \<or> c \<in> mspace m2"
+        M1 = {} \<or> c \<in> M2"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[uniformly_continuous_map] THEN
-  ASM_CASES_TAC `mspace m1::A=>bool = {}` THEN
+  ASM_CASES_TAC `M1::A=>bool = {}` THEN
   ASM_REWRITE_TAC[IMAGE_CLAUSES; EMPTY_SUBSET; NOT_IN_EMPTY] THENL
    [MESON_TAC[]; ALL_TAC] THEN
-  ASM_CASES_TAC `(c::B) \<in> mspace m2` THENL [ALL_TAC; ASM SET_TAC[]] THEN
+  ASM_CASES_TAC `(c::B) \<in> M2` THENL [ALL_TAC; ASM SET_TAC[]] THEN
   ASM_REWRITE_TAC[] THEN CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
   ASM_SIMP_TAC[MDIST_REFL] THEN MESON_TAC[]);;
 
@@ -3430,7 +3465,7 @@ definition cauchy_continuous_map where
 lemma cauchy_continuous_map_image:
    "\<And>m1 m2 f::A=>B.
         cauchy_continuous_map m1 m2 f
-        \<Longrightarrow> image f (mspace m1) \<subseteq> mspace m2"
+        \<Longrightarrow> image f (M1) \<subseteq> M2"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE] THEN
   X_GEN_TAC `a::A` THEN DISCH_TAC THEN
@@ -3439,7 +3474,7 @@ oops
   ASM_REWRITE_TAC[o_DEF; CAUCHY_IN_CONST]);;
 
 lemma cauchy_continuous_map_eq:
-   "(\<forall>x. x \<in> mspace m1 \<Longrightarrow> f x = g x) \<and> cauchy_continuous_map m1 m2 f
+   "(\<forall>x. x \<in> M1 \<Longrightarrow> f x = g x) \<and> cauchy_continuous_map m1 m2 f
       \<Longrightarrow> cauchy_continuous_map m1 m2 g"
 oops
   REWRITE_TAC[cauchy_continuous_map; MCauchy; o_DEF; IMP_CONJ] THEN
@@ -3462,7 +3497,7 @@ oops
 lemma cauchy_continuous_map_into_submetric:
    "\<And>m1 m2 s f::A=>B.
         cauchy_continuous_map m1 (submetric2 s) f \<longleftrightarrow>
-        image f (mspace m1) \<subseteq> s \<and>
+        image f (M1) \<subseteq> s \<and>
         cauchy_continuous_map m1 m2 f"
 oops
   REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL
@@ -3477,11 +3512,11 @@ oops
 
 lemma cauchy_continuous_map_const:
    "cauchy_continuous_map m1 m2 (\<lambda>x. c) \<longleftrightarrow>
-        mspace m1 = {} \<or> c \<in> mspace m2"
+        M1 = {} \<or> c \<in> M2"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[cauchy_continuous_map] THEN
   REWRITE_TAC[o_DEF; CAUCHY_IN_CONST] THEN
-  ASM_CASES_TAC `(c::B) \<in> mspace m2` THEN ASM_REWRITE_TAC[] THEN
+  ASM_CASES_TAC `(c::B) \<in> M2` THEN ASM_REWRITE_TAC[] THEN
   EQ_TAC THENL [ALL_TAC; SIMP_TAC[MCauchy; NOT_IN_EMPTY]] THEN
   GEN_REWRITE_TAC id [GSYM CONTRAPOS_THM] THEN
   REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; LEFT_IMP_EXISTS_THM] THEN
@@ -3535,7 +3570,7 @@ oops
 lemma locally_cauchy_continuous_map:
    "\<And>m1 m2 e f::A=>B.
         0 < e \<and>
-        (\<forall>x. x \<in> mspace m1
+        (\<forall>x. x \<in> M1
              \<Longrightarrow> cauchy_continuous_map (submetric1 (mball x e),m2) f)
         \<Longrightarrow> cauchy_continuous_map m1 m2 f"
 oops
@@ -3622,7 +3657,7 @@ oops
 
 lemma cauchy_imp_uniformly_continuous_map:
    "\<And>m1 m2 f::A=>B.
-        mtotally_bounded1 (mspace m1) \<and>
+        mtotally_bounded1 (M1) \<and>
         cauchy_continuous_map m1 m2 f
         \<Longrightarrow> uniformly_continuous_map m1 m2 f"
 oops
@@ -3695,7 +3730,7 @@ oops
 
 lemma cauchy_eq_uniformly_continuous_map:
    "\<And>m1 m2 f::A=>B.
-        mtotally_bounded1 (mspace m1)
+        mtotally_bounded1 (M1)
         \<Longrightarrow> (cauchy_continuous_map m1 m2 f \<longleftrightarrow>
              uniformly_continuous_map m1 m2 f)"
 oops
@@ -4894,7 +4929,7 @@ oops
         \<Longrightarrow> \<forall>s. P s`) THEN
   EXISTS_TAC `m1::A metric` THEN CONJ_TAC THENL
    [DISCH_TAC THEN X_GEN_TAC `s::A=>bool` THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `mspace m1 \<inter> s::A=>bool`) THEN
+    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `M1 \<inter> s::A=>bool`) THEN
     ASM_REWRITE_TAC[GSYM SUBMETRIC_SUBMETRIC; SUBMETRIC_MSPACE] THEN
     REWRITE_TAC[INTER_SUBSET; GSYM TOPSPACE_MTOPOLOGY] THEN
     REWRITE_TAC[GSYM CLOSURE_OF_RESTRICT; IN_INTER] THEN
@@ -4991,18 +5026,18 @@ lemma lipschitz_continuous_map_on_intermediate_closure:
         \<Longrightarrow> lipschitz_continuous_map (submetric1 t,m2) f"
 oops
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
-  SUBGOAL_THEN `submetric1 (s::A=>bool) = submetric1 (mspace m1 \<inter> s)`
+  SUBGOAL_THEN `submetric1 (s::A=>bool) = submetric1 (M1 \<inter> s)`
   SUBST1_TAC THENL
    [REWRITE_TAC[GSYM SUBMETRIC_SUBMETRIC; SUBMETRIC_MSPACE];
     DISCH_THEN(CONJUNCTS_THEN2
-     (MP_TAC \<circ> SPEC `mspace m1::A=>bool` \<circ> MATCH_MP (SET_RULE
+     (MP_TAC \<circ> SPEC `M1::A=>bool` \<circ> MATCH_MP (SET_RULE
        `s \<subseteq> t \<Longrightarrow> \<forall>u. u \<inter> s \<subseteq> u \<and> u \<inter> s \<subseteq> t`))
      MP_TAC) THEN
     REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-    SPEC_TAC(`mspace m1 \<inter> (s::A=>bool)`,`s::A=>bool`)] THEN
+    SPEC_TAC(`M1 \<inter> (s::A=>bool)`,`s::A=>bool`)] THEN
   GEN_TAC THEN DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN
   REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-  SUBGOAL_THEN `(t::A=>bool) \<subseteq> mspace m1` ASSUME_TAC THENL
+  SUBGOAL_THEN `(t::A=>bool) \<subseteq> M1` ASSUME_TAC THENL
    [RULE_ASSUM_TAC(REWRITE_RULE[closure_of; TOPSPACE_MTOPOLOGY]) THEN
     ASM SET_TAC[];
     FIRST_ASSUM(MP_TAC \<circ> CONJUNCT1 \<circ> REWRITE_RULE[CONTINUOUS_MAP])] THEN
@@ -5060,7 +5095,7 @@ oops
   MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `g::A=>B` THEN STRIP_TAC THEN
   ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC LIPSCHITZ_CONTINUOUS_MAP_ON_INTERMEDIATE_CLOSURE THEN
-  EXISTS_TAC `mspace m1 \<inter> s::A=>bool` THEN ASM_REWRITE_TAC[] THEN
+  EXISTS_TAC `M1 \<inter> s::A=>bool` THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[CLOSURE_OF_SUBSET_INTER; GSYM TOPSPACE_MTOPOLOGY] THEN
   REWRITE_TAC[GSYM CLOSURE_OF_RESTRICT; SUBSET_REFL] THEN
   REWRITE_TAC[TOPSPACE_MTOPOLOGY; GSYM SUBMETRIC_RESTRICT] THEN
@@ -5089,18 +5124,18 @@ lemma uniformly_continuous_map_on_intermediate_closure:
         \<Longrightarrow> uniformly_continuous_map (submetric1 t,m2) f"
 oops
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
-  SUBGOAL_THEN `submetric1 (s::A=>bool) = submetric1 (mspace m1 \<inter> s)`
+  SUBGOAL_THEN `submetric1 (s::A=>bool) = submetric1 (M1 \<inter> s)`
   SUBST1_TAC THENL
    [REWRITE_TAC[GSYM SUBMETRIC_SUBMETRIC; SUBMETRIC_MSPACE];
     DISCH_THEN(CONJUNCTS_THEN2
-     (MP_TAC \<circ> SPEC `mspace m1::A=>bool` \<circ> MATCH_MP (SET_RULE
+     (MP_TAC \<circ> SPEC `M1::A=>bool` \<circ> MATCH_MP (SET_RULE
        `s \<subseteq> t \<Longrightarrow> \<forall>u. u \<inter> s \<subseteq> u \<and> u \<inter> s \<subseteq> t`))
      MP_TAC) THEN
     REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-    SPEC_TAC(`mspace m1 \<inter> (s::A=>bool)`,`s::A=>bool`)] THEN
+    SPEC_TAC(`M1 \<inter> (s::A=>bool)`,`s::A=>bool`)] THEN
   GEN_TAC THEN DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN
   REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-  SUBGOAL_THEN `(t::A=>bool) \<subseteq> mspace m1` ASSUME_TAC THENL
+  SUBGOAL_THEN `(t::A=>bool) \<subseteq> M1` ASSUME_TAC THENL
    [RULE_ASSUM_TAC(REWRITE_RULE[closure_of; TOPSPACE_MTOPOLOGY]) THEN
     ASM SET_TAC[];
     FIRST_ASSUM(MP_TAC \<circ> CONJUNCT1 \<circ> REWRITE_RULE[CONTINUOUS_MAP])] THEN
@@ -5158,7 +5193,7 @@ oops
   MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `g::A=>B` THEN STRIP_TAC THEN
   ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC UNIFORMLY_CONTINUOUS_MAP_ON_INTERMEDIATE_CLOSURE THEN
-  EXISTS_TAC `mspace m1 \<inter> s::A=>bool` THEN ASM_REWRITE_TAC[] THEN
+  EXISTS_TAC `M1 \<inter> s::A=>bool` THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[CLOSURE_OF_SUBSET_INTER; GSYM TOPSPACE_MTOPOLOGY] THEN
   REWRITE_TAC[GSYM CLOSURE_OF_RESTRICT; SUBSET_REFL] THEN
   REWRITE_TAC[TOPSPACE_MTOPOLOGY; GSYM SUBMETRIC_RESTRICT] THEN
@@ -5187,18 +5222,18 @@ lemma cauchy_continuous_map_on_intermediate_closure:
         \<Longrightarrow> cauchy_continuous_map (submetric1 t,m2) f"
 oops
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
-  SUBGOAL_THEN `submetric1 (s::A=>bool) = submetric1 (mspace m1 \<inter> s)`
+  SUBGOAL_THEN `submetric1 (s::A=>bool) = submetric1 (M1 \<inter> s)`
   SUBST1_TAC THENL
    [REWRITE_TAC[GSYM SUBMETRIC_SUBMETRIC; SUBMETRIC_MSPACE];
     DISCH_THEN(CONJUNCTS_THEN2
-     (MP_TAC \<circ> SPEC `mspace m1::A=>bool` \<circ> MATCH_MP (SET_RULE
+     (MP_TAC \<circ> SPEC `M1::A=>bool` \<circ> MATCH_MP (SET_RULE
        `s \<subseteq> t \<Longrightarrow> \<forall>u. u \<inter> s \<subseteq> u \<and> u \<inter> s \<subseteq> t`))
      MP_TAC) THEN
     REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-    SPEC_TAC(`mspace m1 \<inter> (s::A=>bool)`,`s::A=>bool`)] THEN
+    SPEC_TAC(`M1 \<inter> (s::A=>bool)`,`s::A=>bool`)] THEN
   GEN_TAC THEN DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN
   REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-  SUBGOAL_THEN `(t::A=>bool) \<subseteq> mspace m1` ASSUME_TAC THENL
+  SUBGOAL_THEN `(t::A=>bool) \<subseteq> M1` ASSUME_TAC THENL
    [RULE_ASSUM_TAC(REWRITE_RULE[closure_of; TOPSPACE_MTOPOLOGY]) THEN
     ASM SET_TAC[];
     DISCH_TAC] THEN
@@ -5269,7 +5304,7 @@ oops
   MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `g::A=>B` THEN STRIP_TAC THEN
   ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC CAUCHY_CONTINUOUS_MAP_ON_INTERMEDIATE_CLOSURE THEN
-  EXISTS_TAC `mspace m1 \<inter> s::A=>bool` THEN ASM_REWRITE_TAC[] THEN
+  EXISTS_TAC `M1 \<inter> s::A=>bool` THEN ASM_REWRITE_TAC[] THEN
   REWRITE_TAC[CLOSURE_OF_SUBSET_INTER; GSYM TOPSPACE_MTOPOLOGY] THEN
   REWRITE_TAC[GSYM CLOSURE_OF_RESTRICT; SUBSET_REFL] THEN
   REWRITE_TAC[TOPSPACE_MTOPOLOGY; GSYM SUBMETRIC_RESTRICT] THEN
