@@ -2744,7 +2744,7 @@ proof -
     and fg: "(\<forall>x \<in> topspace X. g(f x) = x) \<and> (\<forall>y \<in> topspace Y. f(g y) = y)"
     and fim: "f ` (topspace X) = topspace Y" and gim: "g ` (topspace Y) = topspace X"
     by (smt (verit, best) homXY homeomorphic_imp_surjective_map homeomorphic_maps_map homeomorphic_space_def)
-  obtain M d where Md: "Metric_space M d" "Metric_space.mcomplete M d" "X = Metric_space.mtopology M d"
+  obtain M d where Md: "Metric_space M d" "Metric_space.mcomplete M d" and Xeq: "X = Metric_space.mtopology M d"
     using X by (auto simp: completely_metrizable_space_def)
   then interpret MX: Metric_space M d by metis
   define D where "D \<equiv> \<lambda>x y. d (g x) (g y)"
@@ -2752,10 +2752,10 @@ proof -
   proof
     show "(D x y = 0) \<longleftrightarrow> (x = y)" if "x \<in> topspace Y" "y \<in> topspace Y" for x y
       unfolding D_def
-      by (metis that MX.topspace_mtopology MX.zero Md(3) fg gim imageI)
+      by (metis that MX.topspace_mtopology MX.zero Xeq fg gim imageI)
     show "D x z \<le> D x y +D y z"
       if "x \<in> topspace Y" "y \<in> topspace Y" "z \<in> topspace Y" for x y z
-      using that MX.triangle Md(3) gim by (auto simp: D_def)
+      using that MX.triangle Xeq gim by (auto simp: D_def)
   qed (auto simp: D_def MX.commute)
   then interpret MY: Metric_space "topspace Y" "\<lambda>x y. D x y" by metis
   show ?thesis
@@ -2763,39 +2763,17 @@ proof -
   proof (intro exI conjI)
     show "Metric_space (topspace Y) D"
       using MY.Metric_space_axioms by blast
-
     have gball: "g ` MY.mball y r = MX.mball (g y) r" if "y \<in> topspace Y" for y r
-      using that MX.topspace_mtopology Md(3) gim
+      using that MX.topspace_mtopology Xeq gim
       unfolding MX.mball_def MY.mball_def by (auto simp: subset_iff image_iff D_def)
-
-    have fball: "f ` MX.mball x r = MY.mball (f x) r" if "x \<in> topspace X" for x r
-      using that MX.topspace_mtopology Md(3) gim
-      unfolding MX.mball_def MY.mball_def by (force simp: fg subset_iff image_iff D_def)
-
-    show "MY.mcomplete"
-      unfolding MY.mcomplete_def
-    proof (intro strip)
-      fix \<sigma>
-      assume "MY.MCauchy \<sigma>"
-      then have "MX.MCauchy (g o \<sigma>)"
-        sorry
-      then obtain x where x: "limitin MX.mtopology (g o \<sigma>) x sequentially"
-        using MX.mcomplete_def Md(2) by blast
-      then show "\<exists>y. limitin MY.mtopology \<sigma> y sequentially"
-        apply (simp add: limitin_def)
-
-         sorry
-    qed
     have "\<exists>r>0. MY.mball y r \<subseteq> S" if "openin Y S" and "y \<in> S" for S y
     proof -
       have "openin X (g`S)"
         using hmg homeomorphic_map_openness_eq that by auto
       then obtain r where "r>0" "MX.mball (g y) r \<subseteq> g`S"
-        using MX.openin_mtopology Md(3) \<open>y \<in> S\<close> by auto
-      then have "MY.mball y r \<subseteq> S"
-        by (smt (verit, ccfv_SIG) MY.in_mball gball fg image_iff in_mono openin_subset subsetI that(1))
+        using MX.openin_mtopology Xeq \<open>y \<in> S\<close> by auto
       then show ?thesis
-        using \<open>0 < r\<close> by blast
+        by (smt (verit, ccfv_SIG) MY.in_mball gball fg image_iff in_mono openin_subset subsetI that(1))
     qed
     moreover have "openin Y S"
       if "S \<subseteq> topspace Y" and "\<And>y. y \<in> S \<Longrightarrow> \<exists>r>0. MY.mball y r \<subseteq> S" for S
@@ -2803,66 +2781,43 @@ proof -
       have "\<And>x. x \<in> g`S \<Longrightarrow> \<exists>r>0. MX.mball x r \<subseteq> g`S"
         by (smt (verit) gball imageE image_mono subset_iff that)
       then have "openin X (g`S)"
-        using MX.openin_mtopology Md(3) gim that(1) by auto
+        using MX.openin_mtopology Xeq gim that(1) by auto
       then show ?thesis
         using hmg homeomorphic_map_openness_eq that(1) by blast
     qed
-    ultimately show "Y = MY.mtopology"
+    ultimately show Yeq: "Y = MY.mtopology"
       unfolding topology_eq MY.openin_mtopology by (metis openin_subset)
+
+    show "MY.mcomplete"
+      unfolding MY.mcomplete_def
+    proof (intro strip)
+      fix \<sigma>
+      assume \<sigma>: "MY.MCauchy \<sigma>"
+      have "MX.MCauchy (g \<circ> \<sigma>)"
+        unfolding MX.MCauchy_def 
+      proof (intro conjI strip)
+        show "range (g \<circ> \<sigma>) \<subseteq> M"
+          using MY.MCauchy_def Xeq \<sigma> gim by auto
+        fix \<epsilon> :: real
+        assume "\<epsilon> > 0"
+        then obtain N where "\<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> D (\<sigma> n) (\<sigma> n') < \<epsilon>"
+          using MY.MCauchy_def \<sigma> by presburger
+        then show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d ((g \<circ> \<sigma>) n) ((g \<circ> \<sigma>) n') < \<epsilon>"
+          by (auto simp: o_def D_def)
+      qed
+      then obtain x where x: "limitin MX.mtopology (g \<circ> \<sigma>) x sequentially" "x \<in> topspace X"
+        using MX.limitin_mspace MX.topspace_mtopology Md Xeq unfolding MX.mcomplete_def
+        by blast
+      with x have "limitin MY.mtopology (f \<circ> (g \<circ> \<sigma>)) (f x) sequentially"
+        by (metis Xeq Yeq continuous_map_limit hmf homeomorphic_imp_continuous_map)
+      moreover have "f \<circ> (g \<circ> \<sigma>) = \<sigma>"
+        using \<open>MY.MCauchy \<sigma>\<close>  by (force simp add: fg MY.MCauchy_def subset_iff)
+      ultimately have "limitin MY.mtopology \<sigma> (f x) sequentially" by simp
+      then show "\<exists>y. limitin MY.mtopology \<sigma> y sequentially"
+        by blast 
+    qed
   qed
 qed
-
-oops
-    ABBREV_TAC
-     `m' = metric(topspace Y,\<lambda>(x,y). d m ((g::B=>A) x,g y))` THEN
-    MP_TAC(ISPECL [`g::B=>A`; `m::A metric`; `topspace Y:B=>bool`]
-          METRIC_INJECTIVE_IMAGE) THEN
-    ASM_REWRITE_TAC[] THEN ANTS_TAC THENL
-     [FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [homeomorphic_maps]) THEN
-      EXPAND_TAC "X" THEN
-      REWRITE_TAC[continuous_map; TOPSPACE_MTOPOLOGY] THEN SET_TAC[];
-      STRIP_TAC THEN EXISTS_TAC `m':B metric`] THEN
-    MATCH_MP_TAC(TAUT `(q \<Longrightarrow> p) \<and> q \<Longrightarrow> p \<and> q`) THEN CONJ_TAC THENL
-     [DISCH_THEN(ASSUME_TAC \<circ> SYM) THEN
-      UNDISCH_TAC `mcomplete(m::A metric)` THEN
-      ASM_REWRITE_TAC[mcomplete; MCauchy; GSYM TOPSPACE_MTOPOLOGY] THEN
-      DISCH_TAC THEN X_GEN_TAC `x::num=>B` THEN STRIP_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(g::B=>A) \<circ> (x::num=>B)`) THEN
-      ASM_REWRITE_TAC[o_THM] THEN
-      FIRST_X_ASSUM(STRIP_ASSUME_TAC \<circ>
-        GEN_REWRITE_RULE id [homeomorphic_maps]) THEN
-      ANTS_TAC THENL
-       [RULE_ASSUM_TAC(REWRITE_RULE[continuous_map]) THEN ASM SET_TAC[];
-        DISCH_THEN(X_CHOOSE_TAC `y::A`)] THEN
-      EXISTS_TAC `f y` THEN
-      SUBGOAL_THEN `x = f \<circ> (g::B=>A) \<circ> (x::num=>B)` SUBST1_TAC THENL
-       [REWRITE_TAC[FUN_EQ_THM; o_THM] THEN
-        RULE_ASSUM_TAC(REWRITE_RULE[continuous_map]) THEN ASM SET_TAC[];
-        MATCH_MP_TAC CONTINUOUS_MAP_LIMIT THEN ASM_MESON_TAC[]];
-      ALL_TAC] THEN
-    REWRITE_TAC[TOPOLOGY_EQ; OPEN_IN_MTOPOLOGY] THEN
-    FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [HOMEOMORPHIC_MAPS_SYM]) THEN
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP HOMEOMORPHIC_MAPS_IMP_MAP) THEN
-    DISCH_THEN(fun th ->
-      REWRITE_TAC[MATCH_MP HOMEOMORPHIC_MAP_OPENNESS_EQ th]) THEN
-    X_GEN_TAC `v::B=>bool` THEN
-    ASM_CASES_TAC `(v::B=>bool) \<subseteq> topspace Y` THEN
-    ASM_REWRITE_TAC[] THEN
-    EXPAND_TAC "X" THEN REWRITE_TAC[OPEN_IN_MTOPOLOGY] THEN
-    ASM_REWRITE_TAC[GSYM TOPSPACE_MTOPOLOGY; \<subseteq>; FORALL_IN_IMAGE] THEN
-    ASM_REWRITE_TAC[IN_MBALL] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[homeomorphic_maps; continuous_map]) THEN
-    MATCH_MP_TAC(TAUT `p \<and> (q \<longleftrightarrow> r) \<Longrightarrow> (p \<and> q \<longleftrightarrow> r)`) THEN
-    CONJ_TAC THENL [ASM SET_TAC[]; EQ_TAC] THEN
-    MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `b::B` THEN
-    ASM_CASES_TAC `(b::B) \<in> v` THEN
-    ASM_REWRITE_TAC[GSYM TOPSPACE_MTOPOLOGY] THEN
-    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `r::real` THEN STRIP_TAC THEN
-    ASM_REWRITE_TAC[] THENL
-     [X_GEN_TAC `y::B` THEN STRIP_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(g::B=>A) y`) THEN ASM SET_TAC[];
-      ASM SET_TAC[]])
-
 
 lemma homeomorphic_completely_metrizable_space:
    "X homeomorphic_space Y
