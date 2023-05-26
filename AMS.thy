@@ -6,6 +6,10 @@ theory AMS
     "HOL-ex.Sketch_and_Explore"
 begin
 
+(*REPLACE*****)
+lemma real_le_lsqrt: "0 \<le> y \<Longrightarrow> x \<le> y\<^sup>2 \<Longrightarrow> sqrt x \<le> y"
+  using real_sqrt_le_iff[of x "y\<^sup>2"] by simp
+
 
 thm closed_compactin
 lemma closed_compactin_Inter: "\<lbrakk>compactin X K; K \<in> \<K>; \<And>K. K \<in> \<K> \<Longrightarrow> closedin X K\<rbrakk> \<Longrightarrow> compactin X (\<Inter>\<K>)"
@@ -2841,58 +2845,42 @@ qed
 
 subsection \<open>Product metric\<close>
 
-text\<open> Product metric. ? ? ? ? ? For the nicest fit with the main Euclidean theories, we   \<close>
-text\<open> make this the Euclidean product, though others would work topologically.  \<close>
+text\<open>For the nicest fit with the main Euclidean theories, we choose the Euclidean product, 
+though other definitions of the product work.\<close>
 
 
-definition prod_metric where
- `prod_metric m1 m2 =
-  metric((mspace m1 \<times> mspace m2):A#B=>bool,
-         \<lambda>((x,y),(x',y')).
-            sqrt(d x x' ^ 2 + d y y' ^ 2))"
+context Metric_space12 begin
 
-lemma prod_metric:
- (`(!(m1::A metric) (m2::B metric).
-      mspace(prod_metric m1 m2) = mspace m1 \<times> mspace m2) \<and>
-   (!(m1::A metric) (m2::B metric).
-        d(prod_metric m1 m2) =
-        \<lambda>((x,y),(x',y')).
-            sqrt(d x x' ^ 2 + d y y' ^ 2))"
-oops
-  REWRITE_TAC[AND_FORALL_THM] THEN REPEAT GEN_TAC THEN
-  GEN_REWRITE_TAC (LAND_CONV \<circ> LAND_CONV) [mspace] THEN
-  GEN_REWRITE_TAC (RAND_CONV \<circ> LAND_CONV) [d] THEN
-  REWRITE_TAC[PAIR; GSYM PAIR_EQ] THEN REWRITE_TAC[prod_metric] THEN
-  REWRITE_TAC[GSYM(CONJUNCT2 metric_tybij)] THEN
-  REWRITE_TAC[is_metric_space; FORALL_PAIR_THM; IN_CROSS] THEN
-  REPEAT CONJ_TAC THENL
-   [SIMP_TAC[SQRT_POS_LE; REAL_LE_ADD; REAL_LE_POW_2];
-    REWRITE_TAC[PAIR_EQ; SQRT_EQ_0] THEN SIMP_TAC[REAL_LE_POW_2; REAL_ARITH
-     `0 \<le> x \<and> 0 \<le> y \<Longrightarrow> (x + y = 0 \<longleftrightarrow> x = 0 \<and> y = 0)`] THEN
-    SIMP_TAC[REAL_POW_EQ_0; MDIST_0] THEN CONV_TAC NUM_REDUCE_CONV;
-    SIMP_TAC[MDIST_SYM];
-    MAP_EVERY X_GEN_TAC [`x1::A`; `y1::B`; `x2::A`; `y2::B`; `x3::A`; `y3::B`] THEN
-    STRIP_TAC THEN MATCH_MP_TAC REAL_LE_LSQRT THEN
-    ASM_SIMP_TAC[REAL_LE_ADD; SQRT_POS_LE; REAL_LE_POW_2] THEN
-    REWRITE_TAC[REAL_ARITH
-     `(a + b::real) ^ 2 = (a ^ 2 + b ^ 2) + 2 * a * b`] THEN
-    SIMP_TAC[SQRT_POW_2; REAL_LE_ADD; REAL_LE_POW_2] THEN
-    TRANS_TAC REAL_LE_TRANS
-     `(d m1 (x1::A,x2) + d x2 x3) ^ 2 +
-      (d m2 (y1::B,y2) + d y2 y3) ^ 2` THEN
-    CONJ_TAC THENL
-     [MATCH_MP_TAC REAL_LE_ADD2 THEN CONJ_TAC THEN
-      MATCH_MP_TAC REAL_POW_LE2 THEN
-      ASM_MESON_TAC[MDIST_POS_LE; MDIST_TRIANGLE];
-      REWRITE_TAC[REAL_ARITH
-       `(x1 + x2) ^ 2 + (y1 + y2) ^ 2 \<le>
-        ((x1 ^ 2 + y1 ^ 2) + (x2 ^ 2 + y2 ^ 2)) + 2 * b \<longleftrightarrow>
-        x1 * x2 + y1 * y2 \<le> b`] THEN
-      REWRITE_TAC[GSYM SQRT_MUL] THEN MATCH_MP_TAC REAL_LE_RSQRT THEN
-      REWRITE_TAC[REAL_LE_POW_2; REAL_ARITH
-        `(x1 * x2 + y1 * y2) ^ 2 \<le>
-         (x1 ^ 2 + y1 ^ 2) * (x2 ^ 2 + y2 ^ 2) \<longleftrightarrow>
-         0 \<le> (x1 * y2 - x2 * y1) ^ 2`]]]);;
+lemma prod_metric: "Metric_space (M1 \<times> M2) (\<lambda>(x,y) (x',y'). sqrt(d1 x x' ^ 2 + d2 y y' ^ 2))"
+proof
+  fix x y z
+  assume xyz: "x \<in> M1 \<times> M2" "y \<in> M1 \<times> M2" "z \<in> M1 \<times> M2"
+  have "sqrt ((d1 x1 z1)\<^sup>2 + (d2 x2 z2)\<^sup>2) \<le> sqrt ((d1 x1 y1)\<^sup>2 + (d2 x2 y2)\<^sup>2) + sqrt ((d1 y1 z1)\<^sup>2 + (d2 y2 z2)\<^sup>2)"
+    if "x = (x1, x2)" "y = (y1, y2)" "z = (z1, z2)"
+    for x1 x2 y1 y2 z1 z2
+  proof -
+    have tri: "d1 x1 z1 \<le> d1 x1 y1 + d1 y1 z1" "d2 x2 z2 \<le> d2 x2 y2 + d2 y2 z2"
+      using that xyz M1.triangle [of x1 y1 z1] M2.triangle [of x2 y2 z2] by auto
+    show ?thesis
+    proof (rule real_le_lsqrt)
+      have "(d1 x1 z1)\<^sup>2 + (d2 x2 z2)\<^sup>2 = d1 x1 z1 * d1 x1 z1 + d2 x2 z2 * d2 x2 z2"
+        by (simp add: power2_sum eval_nat_numeral)
+      also have "... \<le> (d1 x1 y1 + d1 y1 z1)\<^sup>2 + (d2 x2 y2 + d2 y2 z2)\<^sup>2"
+        using tri by (metis M1.nonneg M2.nonneg add_mono calculation power_mono)
+      also have "... \<le> (sqrt (d1 x1 y1 * d1 x1 y1 + d2 x2 y2 * d2 x2 y2) +
+        sqrt (d1 y1 z1 * d1 y1 z1 + d2 y2 z2 * d2 y2 z2)) *
+       (sqrt (d1 x1 y1 * d1 x1 y1 + d2 x2 y2 * d2 x2 y2) +
+        sqrt (d1 y1 z1 * d1 y1 z1 + d2 y2 z2 * d2 y2 z2))"
+        using tri
+        by (metis power2_eq_square real_sqrt_sum_squares_triangle_ineq sqrt_le_D)
+      finally show "(d1 x1 z1)\<^sup>2 + (d2 x2 z2)\<^sup>2 \<le> (sqrt ((d1 x1 y1)\<^sup>2 + (d2 x2 y2)\<^sup>2) + sqrt ((d1 y1 z1)\<^sup>2 + (d2 y2 z2)\<^sup>2))\<^sup>2"
+        by (simp add: power2_sum eval_nat_numeral)
+    qed auto
+  qed
+  then show "(case x of (x, y) \<Rightarrow> \<lambda>(x', y'). sqrt ((d1 x x')\<^sup>2 + (d2 y y')\<^sup>2)) z \<le> (case x of (x, y) \<Rightarrow> \<lambda>(x', y'). sqrt ((d1 x x')\<^sup>2 + (d2 y y')\<^sup>2)) y + (case y of (x, y) \<Rightarrow> \<lambda>(x', y'). sqrt ((d1 x x')\<^sup>2 + (d2 y y')\<^sup>2)) z"
+    by (simp add: case_prod_unfold)
+qed (auto simp: M1.commute M2.commute case_prod_unfold)
+
 
 lemma component_le_prod_metric:
    "d x1 x2 \<le> d (prod_metric m1 m2) ((x1,y1),(x2,y2)) \<and>
