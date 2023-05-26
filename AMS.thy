@@ -2485,6 +2485,7 @@ proof (cases "a \<in> topspace X")
     qed
   next
     assume R: ?rhs
+    define D where "D \<equiv> (\<lambda>x. (x,x)) ` (topspace X - {a})"
     show ?lhs
     proof (cases "topspace X = {a}")
       case True
@@ -2495,14 +2496,14 @@ proof (cases "a \<in> topspace X")
       then have "kc_space X"
         using kc_space_retraction_map_image [of "prod_topology X (subtopology X (topspace X - {a}))" X fst]
         by (metis Diff_subset R True insert_Diff retraction_map_fst topspace_subtopology_subset)
-      have "closedin (subtopology (prod_topology X (subtopology X (topspace X - {a}))) K) (K \<inter> ((\<lambda>x. (x,x)) ` (topspace X - {a})))" 
+      have "closedin (subtopology (prod_topology X (subtopology X (topspace X - {a}))) K) (K \<inter> D)" 
         if "compactin (prod_topology X (subtopology X (topspace X - {a}))) K" for K
       proof (intro closedin_subtopology_Int_subset[where V=K] closedin_subset_topspace)
-        show "fst ` K \<times> snd ` K \<inter> (\<lambda>x. (x, x)) ` (topspace X - {a}) \<subseteq> fst ` K \<times> snd ` K" "K \<subseteq> fst ` K \<times> snd ` K"
+        show "fst ` K \<times> snd ` K \<inter> D \<subseteq> fst ` K \<times> snd ` K" "K \<subseteq> fst ` K \<times> snd ` K"
           by force+
-        have eq: "(fst ` K \<times> snd ` K \<inter> ((\<lambda>x. (x,x)) ` (topspace X - {a}))) = ((\<lambda>x. (x,x)) ` (fst ` K \<inter> snd ` K))"
-          using compactin_subset_topspace that by (force simp: image_iff)
-        have "compactin (prod_topology X (subtopology X (topspace X - {a}))) (fst ` K \<times> snd ` K \<inter> (\<lambda>x. (x, x)) ` (topspace X - {a}))"
+        have eq: "(fst ` K \<times> snd ` K \<inter> D) = ((\<lambda>x. (x,x)) ` (fst ` K \<inter> snd ` K))"
+          using compactin_subset_topspace that by (force simp: D_def image_iff)
+        have "compactin (prod_topology X (subtopology X (topspace X - {a}))) (fst ` K \<times> snd ` K \<inter> D)"
           unfolding eq
         proof (rule image_compactin [of "subtopology X (topspace X - {a})"])
           have "compactin X (fst ` K)" "compactin X (snd ` K)"
@@ -2513,18 +2514,17 @@ proof (cases "a \<in> topspace X")
           show "compactin (subtopology X (topspace X - {a})) (fst ` K \<inter> snd ` K)"
             unfolding compactin_subtopology
             by (meson \<open>kc_space X\<close> closed_Int_compactin kc_space_def)
-          show "continuous_map (subtopology X (topspace X - {a})) (prod_topology X (subtopology X (topspace X - {a}))) (\<lambda>x. (x, x))"
+          show "continuous_map (subtopology X (topspace X - {a})) (prod_topology X (subtopology X (topspace X - {a}))) (\<lambda>x. (x,x))"
             by (simp add: continuous_map_paired)
         qed
-        then show "closedin (prod_topology X (subtopology X (topspace X - {a}))) (fst ` K \<times> snd ` K \<inter> (\<lambda>x. (x, x)) ` (topspace X - {a}))"
+        then show "closedin (prod_topology X (subtopology X (topspace X - {a}))) (fst ` K \<times> snd ` K \<inter> D)"
           using R compactin_imp_closedin_gen by blast
       qed
-      with R have *: "closedin (prod_topology X (subtopology X (topspace X - {a})))  ((\<lambda>x. (x,x)) ` (topspace X - {a}))"
-        apply (clarsimp simp add: k_space)
-        apply (drule_tac x="((\<lambda>x. (x, x)) ` (topspace X - {a}))" in spec)
-        apply (auto simp: )
-        done
-      have **: "x=y"
+      moreover have "D \<subseteq> topspace X \<times> (topspace X \<inter> (topspace X - {a}))"
+        by (auto simp: D_def)
+      ultimately have *: "closedin (prod_topology X (subtopology X (topspace X - {a}))) D"
+        using R by (auto simp add: k_space)
+      have "x=y"
         if "x \<in> topspace X" "y \<in> topspace X" 
           and \<section>: "\<And>T. \<lbrakk>(x,y) \<in> T; openin (prod_topology X X) T\<rbrakk> \<Longrightarrow> \<exists>z \<in> topspace X. (z,z) \<in> T" for x y
       proof (cases "x=a \<and> y=a")
@@ -2552,41 +2552,36 @@ proof (cases "a \<in> topspace X")
                 by blast
             qed
             ultimately show ?thesis
-              by (smt (verit, ccfv_threshold) "\<section>" Int_iff fst_conv mem_Collect_eq mem_Sigma_iff snd_conv)
+              by (smt (verit) \<section> Int_iff fst_conv mem_Collect_eq mem_Sigma_iff snd_conv)
           qed
-          then have "(y,x) \<in> prod_topology X (subtopology X (topspace X - {a})) closure_of ((\<lambda>x. (x,x)) ` (topspace X - {a}))"
-            by (smt (verit, ccfv_threshold) "1" Diff_subset True image_eqI in_closure_of insert_Diff_single insert_absorb insert_iff mem_Sigma_iff that(1) that(2) topspace_prod_topology topspace_subtopology_subset)
+          then have "(y,x) \<in> prod_topology X (subtopology X (topspace X - {a})) closure_of D"
+            by (simp add: "1" D_def in_closure_of that)
           then show ?thesis
-            using that
-            by (simp add: "*" closure_of_closedin image_iff)
+            using that "*" D_def closure_of_closedin by fastforce
         next
           case 2
           have "\<exists>z \<in> topspace X - {a}. (z,z) \<in> T"
             if "(x,y) \<in> T" "openin (prod_topology X (subtopology X (topspace X - {a}))) T" for T
           proof -
-            have "openin (prod_topology X X) T"
-              using kc_space_one_point_compactification_gen [OF \<open>compact_space X\<close>] \<open>kc_space X\<close> that
-              by (metis openin_prod_Times_iff openin_topspace openin_trans_full prod_topology_subtopology(2))
             have "openin (prod_topology X X) (topspace X \<times> (topspace X - {a}))"
               using \<open>kc_space X\<close> assms kc_space_one_point_compactification_gen openin_prod_Times_iff by fastforce
-            then have "openin (prod_topology X X) (T \<inter> topspace X \<times> (topspace X - {a}))"
-              using \<open>openin (prod_topology X X) T\<close> by blast
+            moreover have XXT: "openin (prod_topology X X) T"
+              using kc_space_one_point_compactification_gen [OF \<open>compact_space X\<close>] \<open>kc_space X\<close> that
+              by (metis openin_prod_Times_iff openin_topspace openin_trans_full prod_topology_subtopology(2))
+            ultimately have "openin (prod_topology X X) (T \<inter> topspace X \<times> (topspace X - {a}))"
+              by blast
             then show ?thesis
-              by (smt (verit) "\<section>" Diff_subset Int_iff mem_Sigma_iff openin_subset subsetD that topspace_prod_topology topspace_subtopology_subset)
+              by (smt (verit) "\<section>" Diff_subset XXT mem_Sigma_iff openin_subset subsetD that topspace_prod_topology topspace_subtopology_subset)
           qed
-          then have "(x,y) \<in> prod_topology X (subtopology X (topspace X - {a})) closure_of ((\<lambda>x. (x,x)) ` (topspace X - {a}))"
-            by (smt (verit, ccfv_threshold) "2" Diff_iff Diff_subset empty_iff image_eqI in_closure_of insert_iff mem_Sigma_iff that(1) that(2) topspace_prod_topology topspace_subtopology_subset)
+          then have "(x,y) \<in> prod_topology X (subtopology X (topspace X - {a})) closure_of D"
+            by (simp add: "2" D_def in_closure_of that)
           then show ?thesis
-            using that by (simp add: "*" closure_of_closedin image_iff)
+            using that "*" D_def closure_of_closedin by fastforce
         qed
       qed auto
-      show ?thesis
-        unfolding Hausdorff_space_closedin_diagonal closure_of_subset_eq [symmetric] closure_of_def
-        apply (intro conjI)
-         apply (simp add: image_subset_iff)
-        using **
-        apply clarsimp
-        by (metis (mono_tags, lifting) insertI1 insert_image)
+      then show ?thesis
+        unfolding Hausdorff_space_closedin_diagonal closure_of_subset_eq [symmetric] 
+          by (force simp add: closure_of_def)
     qed
   qed
 next
