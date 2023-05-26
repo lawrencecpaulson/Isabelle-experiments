@@ -2508,8 +2508,8 @@ proof (cases "a \<in> topspace X")
           have "compactin X (fst ` K)" "compactin X (snd ` K)"
             by (meson compactin_subtopology continuous_map_fst continuous_map_snd image_compactin that)+
           moreover have "fst ` K \<inter> snd ` K \<subseteq> topspace X - {a}"
-          using compactin_subset_topspace that by force
-        ultimately
+            using compactin_subset_topspace that by force
+          ultimately
           show "compactin (subtopology X (topspace X - {a})) (fst ` K \<inter> snd ` K)"
             unfolding compactin_subtopology
             by (meson \<open>kc_space X\<close> closed_Int_compactin kc_space_def)
@@ -2526,7 +2526,7 @@ proof (cases "a \<in> topspace X")
         done
       have **: "x=y"
         if "x \<in> topspace X" "y \<in> topspace X" 
-            and \<section>: "\<And>T. \<lbrakk>(x,y) \<in> T; openin (prod_topology X X) T\<rbrakk> \<Longrightarrow> (\<exists>x. x \<in> topspace X \<and> (x,x) \<in> T)" for x y
+          and \<section>: "\<And>T. \<lbrakk>(x,y) \<in> T; openin (prod_topology X X) T\<rbrakk> \<Longrightarrow> \<exists>z \<in> topspace X. (z,z) \<in> T" for x y
       proof (cases "x=a \<and> y=a")
         case False
         then consider "x\<noteq>a" | "y\<noteq>a"
@@ -2534,37 +2534,56 @@ proof (cases "a \<in> topspace X")
         then show ?thesis
         proof cases
           case 1
-          have "(\<exists>z \<in> topspace X - {a}. (z,z) \<in> t)" 
-            if "openin (prod_topology X X) t" "(y,x) \<in> t" for t
-            sorry
-          then
-          have "\<exists>x. (x \<in> topspace X - {a}) \<and> (x,x) \<in> t"
-            if "(y,x) \<in> t" "openin (prod_topology X (subtopology X (topspace X - {a}))) t"
-            for t
-            using kc_space_one_point_compactification_gen [OF \<open>compact_space X\<close>] \<open>kc_space X\<close>
-            by (metis openin_prod_Times_iff openin_topspace openin_trans_full prod_topology_subtopology(2) that)
-          then
-          have "(y,x) \<in> prod_topology X (subtopology X (topspace X - {a})) closure_of ((\<lambda>x. (x,x)) ` (topspace X - {a}))"
+          have "\<exists>z \<in> topspace X - {a}. (z,z) \<in> T"
+            if "(y,x) \<in> T" "openin (prod_topology X (subtopology X (topspace X - {a}))) T" for T
+          proof -
+            have "(x,y) \<in> {z \<in> topspace (prod_topology X X). (snd z,fst z) \<in> T \<inter> topspace X \<times> (topspace X - {a})}"
+              by (simp add: "1" \<open>x \<in> topspace X\<close> \<open>y \<in> topspace X\<close> that)
+            moreover have "openin (prod_topology X X) {z \<in> topspace (prod_topology X X). (snd z,fst z) \<in> T \<inter> topspace X \<times> (topspace X - {a})}"
+            proof (rule openin_continuous_map_preimage)
+              show "continuous_map (prod_topology X X) (prod_topology X X) (\<lambda>x. (snd x, fst x))"
+                by (simp add: continuous_map_fst continuous_map_pairedI continuous_map_snd)
+              have "openin (prod_topology X X) (topspace X \<times> (topspace X - {a}))"
+                using \<open>kc_space X\<close> assms kc_space_one_point_compactification_gen openin_prod_Times_iff by fastforce
+              moreover have "openin (prod_topology X X) T"
+                using kc_space_one_point_compactification_gen [OF \<open>compact_space X\<close>] \<open>kc_space X\<close> that
+                by (metis openin_prod_Times_iff openin_topspace openin_trans_full prod_topology_subtopology(2))
+              ultimately show "openin (prod_topology X X) (T \<inter> topspace X \<times> (topspace X - {a}))"
+                by blast
+            qed
+            ultimately show ?thesis
+              by (smt (verit, ccfv_threshold) "\<section>" Int_iff fst_conv mem_Collect_eq mem_Sigma_iff snd_conv)
+          qed
+          then have "(y,x) \<in> prod_topology X (subtopology X (topspace X - {a})) closure_of ((\<lambda>x. (x,x)) ` (topspace X - {a}))"
             by (smt (verit, ccfv_threshold) "1" Diff_subset True image_eqI in_closure_of insert_Diff_single insert_absorb insert_iff mem_Sigma_iff that(1) that(2) topspace_prod_topology topspace_subtopology_subset)
-        then show ?thesis
-          using that
-          by (simp add: "*" closure_of_closedin image_iff)
-      next
-        case 2
-        have "\<exists>x. (x \<in> topspace X - {a}) \<and> (x,x) \<in> t"
-          if "(x,y) \<in> t" "openin (prod_topology X (subtopology X (topspace X - {a}))) t"
-          for t
-          sorry
-        then have "(x,y) \<in> prod_topology X (subtopology X (topspace X - {a})) closure_of ((\<lambda>x. (x,x)) ` (topspace X - {a}))"
-          by (smt (verit, ccfv_threshold) "2" Diff_iff Diff_subset empty_iff image_eqI in_closure_of insert_iff mem_Sigma_iff that(1) that(2) topspace_prod_topology topspace_subtopology_subset)
-        then show ?thesis
-          using that by (simp add: "*" closure_of_closedin image_iff)
+          then show ?thesis
+            using that
+            by (simp add: "*" closure_of_closedin image_iff)
+        next
+          case 2
+          have "\<exists>z \<in> topspace X - {a}. (z,z) \<in> T"
+            if "(x,y) \<in> T" "openin (prod_topology X (subtopology X (topspace X - {a}))) T" for T
+          proof -
+            have "openin (prod_topology X X) T"
+              using kc_space_one_point_compactification_gen [OF \<open>compact_space X\<close>] \<open>kc_space X\<close> that
+              by (metis openin_prod_Times_iff openin_topspace openin_trans_full prod_topology_subtopology(2))
+            have "openin (prod_topology X X) (topspace X \<times> (topspace X - {a}))"
+              using \<open>kc_space X\<close> assms kc_space_one_point_compactification_gen openin_prod_Times_iff by fastforce
+            then have "openin (prod_topology X X) (T \<inter> topspace X \<times> (topspace X - {a}))"
+              using \<open>openin (prod_topology X X) T\<close> by blast
+            then show ?thesis
+              by (smt (verit) "\<section>" Diff_subset Int_iff mem_Sigma_iff openin_subset subsetD that topspace_prod_topology topspace_subtopology_subset)
+          qed
+          then have "(x,y) \<in> prod_topology X (subtopology X (topspace X - {a})) closure_of ((\<lambda>x. (x,x)) ` (topspace X - {a}))"
+            by (smt (verit, ccfv_threshold) "2" Diff_iff Diff_subset empty_iff image_eqI in_closure_of insert_iff mem_Sigma_iff that(1) that(2) topspace_prod_topology topspace_subtopology_subset)
+          then show ?thesis
+            using that by (simp add: "*" closure_of_closedin image_iff)
         qed
       qed auto
       show ?thesis
         unfolding Hausdorff_space_closedin_diagonal closure_of_subset_eq [symmetric] closure_of_def
         apply (intro conjI)
-        apply (simp add: image_subset_iff)
+         apply (simp add: image_subset_iff)
         using **
         apply clarsimp
         by (metis (mono_tags, lifting) insertI1 insert_image)
@@ -2575,49 +2594,6 @@ next
   then show ?thesis
     by (simp add: assms compact_imp_k_space compact_space_prod_topology kc_space_compact_prod_topology)
 qed
-oops
-
-
-  ASM_REWRITE_TAC[closure_of; IN_ELIM_THM; TOPSPACE_PROD_TOPOLOGY; IN_CROSS;
-                  IN_DELETE; PAIR_EQ; TOPSPACE_SUBTOPOLOGY; IN_INTER] THEN
-  (ANTS_TAC THENL [ALL_TAC; MESON_TAC[]]) THEN
-  REWRITE_TAC[IMP_CONJ_ALT; PROD_TOPOLOGY_SUBTOPOLOGY] THEN
-  REWRITE_TAC[OPEN_IN_SUBTOPOLOGY_ALT; FORALL_IN_GSPEC] THEN
-  ASM_REWRITE_TAC[IN_INTER; IN_CROSS; IN_DELETE; EXISTS_PAIR_THM] THEN
-  REWRITE_TAC[PAIR_EQ] THEN
-  REWRITE_TAC[MESON[] `(\<exists>x. P x \<and> a = x \<and> b = x) \<longleftrightarrow> a = b \<and> P b`] THEN
-  REWRITE_TAC[GSYM CONJ_ASSOC; UNWIND_THM1] THENL
-   [ALL_TAC;
-    X_GEN_TAC `t::A#A=>bool` THEN REPEAT DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC
-     `t \<inter> (topspace X \<times> (topspace X DELETE (a::A)))`) THEN
-    ASM_SIMP_TAC[IN_INTER; IN_CROSS; IN_DELETE] THEN
-    ANTS_TAC THENL [ALL_TAC; MESON_TAC[]] THEN
-    MATCH_MP_TAC OPEN_IN_INTER THEN
-    ASM_REWRITE_TAC[OPEN_IN_CROSS; OPEN_IN_TOPSPACE] THEN
-    ASM_MESON_TAC[T1_SPACE_OPEN_IN_DELETE_ALT; OPEN_IN_TOPSPACE;
-                  KC_IMP_T1_SPACE]] THEN
-  X_GEN_TAC `t::A#A=>bool` THEN REPEAT DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC
-   `{z. z \<in> topspace(prod_topology X X) \<and>
-         (snd z::A,fst z) \<in>
-         (t \<inter> (topspace X \<times> (topspace X DELETE (a::A))))}`) THEN
-  ANTS_TAC THENL
-   [ALL_TAC;
-    ASM_REWRITE_TAC[IN_ELIM_THM; IN_INTER; IN_CROSS; TOPSPACE_PROD_TOPOLOGY;
-                      IN_DELETE] THEN
-    MESON_TAC[]] THEN
-  CONJ_TAC THENL
-   [ASM_REWRITE_TAC[IN_ELIM_THM; IN_INTER; IN_CROSS; TOPSPACE_PROD_TOPOLOGY;
-                    IN_DELETE];
-    MATCH_MP_TAC OPEN_IN_CONTINUOUS_MAP_PREIMAGE THEN
-    EXISTS_TAC `prod_topology X X` THEN
-    REWRITE_TAC[CONTINUOUS_MAP_PAIRED] THEN
-    REWRITE_TAC[CONTINUOUS_MAP_FST; CONTINUOUS_MAP_SND] THEN
-     MATCH_MP_TAC OPEN_IN_INTER THEN
-    ASM_REWRITE_TAC[OPEN_IN_CROSS; OPEN_IN_TOPSPACE] THEN
-    ASM_MESON_TAC[T1_SPACE_OPEN_IN_DELETE_ALT; OPEN_IN_TOPSPACE;
-                  KC_IMP_T1_SPACE]]);;
 
 
 lemma Hausdorff_space_Alexandroff_compactification_asymmetric_prod:
