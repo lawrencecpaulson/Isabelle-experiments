@@ -2744,6 +2744,11 @@ definition completely_metrizable_space where
  "completely_metrizable_space X \<equiv> 
      \<exists>M d. Metric_space M d \<and> Metric_space.mcomplete M d \<and> X = Metric_space.mtopology M d"
 
+lemma empty_completely_metrizable_space: 
+  "topspace X = {} \<Longrightarrow> completely_metrizable_space X"
+  unfolding completely_metrizable_space_def subtopology_eq_discrete_topology_empty [symmetric]
+  by (metis Metric_space.mcomplete_empty_mspace discrete_metric.mtopology_discrete_metric metric_M_dd)
+
 lemma completely_metrizable_imp_metrizable_space:
    "completely_metrizable_space X \<Longrightarrow> metrizable_space X"
   using completely_metrizable_space_def metrizable_space_def by auto
@@ -2895,9 +2900,7 @@ though other definitions of the product work.\<close>
 
 definition "prod_dist \<equiv> \<lambda>d1 d2 (x,y) (x',y'). sqrt(d1 x x' ^ 2 + d2 y y' ^ 2)"
 
-context Metric_space12 begin
-
-lemma prod_metric: "Metric_space (M1 \<times> M2) (prod_dist d1 d2)"
+lemma (in Metric_space12) prod_metric: "Metric_space (M1 \<times> M2) (prod_dist d1 d2)"
 proof
   fix x y z
   assume xyz: "x \<in> M1 \<times> M2" "y \<in> M1 \<times> M2" "z \<in> M1 \<times> M2"
@@ -2921,10 +2924,11 @@ proof
     by (simp add: prod_dist_def case_prod_unfold)
 qed (auto simp: M1.commute M2.commute case_prod_unfold prod_dist_def)
 
-interpretation Prod_metric: Metric_space "M1\<times>M2" "prod_dist d1 d2"
+sublocale Metric_space12 \<subseteq> Prod_metric: Metric_space "M1\<times>M2" "prod_dist d1 d2" 
   by (simp add: prod_metric)
 
 
+context Metric_space12 begin
 
 lemma component_le_prod_metric:
    "d1 x1 x2 \<le> prod_dist d1 d2 (x1,y1) (x2,y2)" "d2 y1 y2 \<le> prod_dist d1 d2 (x1,y1) (x2,y2)"
@@ -2932,7 +2936,7 @@ lemma component_le_prod_metric:
 
 lemma prod_metric_le_components:
   "\<lbrakk>x1 \<in> M1; y1 \<in> M1; x2 \<in> M2; y2 \<in> M2\<rbrakk>
-    \<Longrightarrow> prod_dist d1 d2 (x1, x2) (y1, y2) \<le> d1 x1 y1 + d2 x2 y2"
+    \<Longrightarrow> prod_dist d1 d2 (x1,x2) (y1,y2) \<le> d1 x1 y1 + d2 x2 y2"
   by (auto simp: prod_dist_def sqrt_sum_squares_le_sum)
 
 lemma mball_prod_metric_subset:
@@ -3007,31 +3011,60 @@ next
 qed
 
 
-lemma MCauchy_prod_metric:
-   "Prod_metric.MCauchy x \<longleftrightarrow> M1.MCauchy (fst \<circ> x) \<and> M2.MCauchy (snd \<circ> x)"
+lemma (in Metric_space12) MCauchy_prod_metric:
+   "Prod_metric.MCauchy \<sigma> \<longleftrightarrow> M1.MCauchy (fst \<circ> \<sigma>) \<and> M2.MCauchy (snd \<circ> \<sigma>)"
+   (is "?lhs \<longleftrightarrow> ?rhs")
+proof safe
+  assume L: ?lhs
+  then have "range \<sigma> \<subseteq> M1 \<times> M2"
+    using Prod_metric.MCauchy_def by blast
+  then have 1: "range (fst \<circ> \<sigma>) \<subseteq> M1" and 2: "range (snd \<circ> \<sigma>) \<subseteq> M2"
+    by auto
+  have N1: "\<exists>N. \<forall>n\<ge>N. \<forall>n'\<ge>N. d1 (fst (\<sigma> n)) (fst (\<sigma> n')) < \<epsilon>" 
+    and N2: "\<exists>N. \<forall>n\<ge>N. \<forall>n'\<ge>N. d2 (snd (\<sigma> n)) (snd (\<sigma> n')) < \<epsilon>" if "\<epsilon>>0" for \<epsilon> :: real
+    using that L unfolding Prod_metric.MCauchy_def
+    by (smt (verit, del_insts) add.commute add_less_imp_less_left add_right_mono 
+        component_le_prod_metric prod.collapse)+
+  show "M1.MCauchy (fst \<circ> \<sigma>)"
+    using 1 N1 M1.MCauchy_def by auto
+  have "\<exists>N. \<forall>n\<ge>N. \<forall>n'\<ge>N. d2 (snd (\<sigma> n)) (snd (\<sigma> n')) < \<epsilon>" if "\<epsilon>>0" for \<epsilon> :: real
+    using that L unfolding Prod_metric.MCauchy_def
+    by (smt (verit, del_insts) add.commute add_less_imp_less_left add_right_mono 
+        component_le_prod_metric prod.collapse)
+  show "M2.MCauchy (snd \<circ> \<sigma>)"
+    using 2 N2 M2.MCauchy_def by auto
+next
+  assume M1: "M1.MCauchy (fst \<circ> \<sigma>)" and M2: "M2.MCauchy (snd \<circ> \<sigma>)"
+  then have subM12: "range (fst \<circ> \<sigma>) \<subseteq> M1" "range (snd \<circ> \<sigma>) \<subseteq> M2"
+    using M1.MCauchy_def M2.MCauchy_def by blast+
+  show ?lhs
+    unfolding Prod_metric.MCauchy_def
+  proof (intro conjI strip)
+    show "range \<sigma> \<subseteq> M1 \<times> M2"
+      using subM12 by (smt (verit, best) SigmaI image_subset_iff o_apply prod.collapse) 
+    fix \<epsilon> :: real
+    assume "\<epsilon> > 0"
+    obtain N1 where N1: "\<And>n n'. N1 \<le> n \<Longrightarrow> N1 \<le> n' \<Longrightarrow> d1 ((fst \<circ> \<sigma>) n) ((fst \<circ> \<sigma>) n') < \<epsilon>/2"
+      by (meson M1.MCauchy_def \<open>0 < \<epsilon>\<close> M1 zero_less_divide_iff zero_less_numeral)
+    obtain N2 where N2: "\<And>n n'. N2 \<le> n \<Longrightarrow> N2 \<le> n' \<Longrightarrow> d2 ((snd \<circ> \<sigma>) n) ((snd \<circ> \<sigma>) n') < \<epsilon>/2"
+      by (meson M2.MCauchy_def \<open>0 < \<epsilon>\<close> M2 zero_less_divide_iff zero_less_numeral)
+    have "prod_dist d1 d2 (\<sigma> n) (\<sigma> n') < \<epsilon>"
+      if "N1 \<le> n" and "N2 \<le> n" and "N1 \<le> n'" and "N2 \<le> n'" for n n'
+    proof -
+      obtain a b a' b' where \<sigma>: "\<sigma> n = (a,b)" "\<sigma> n' = (a',b')"
+        by fastforce+
+      have "prod_dist d1 d2 (a,b) (a',b') \<le> d1 a a' + d2 b b'"
+        by (metis \<open>range \<sigma> \<subseteq> M1 \<times> M2\<close> \<sigma> mem_Sigma_iff prod_metric_le_components range_subsetD)
+      also have "\<dots> < \<epsilon>/2 + \<epsilon>/2"
+        using N1 N2 \<sigma> that by fastforce
+      finally show ?thesis
+        by (simp add: \<sigma>)
+    qed
+    then show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> prod_dist d1 d2 (\<sigma> n) (\<sigma> n') < \<epsilon>"
+      by (metis order.trans linorder_le_cases)
+  qed
+qed
 
-oops
-  REWRITE_TAC[FORALL_PAIR_FUN_THM] THEN MAP_EVERY X_GEN_TAC
-   [`m1::A metric`; `m2::B metric`; `a::num=>A`; `b::num=>B`] THEN
-  REWRITE_TAC[MCauchy; CONJUNCT1 PROD_METRIC; IN_CROSS; o_DEF] THEN
-  ASM_CASES_TAC `\<forall>n. (a::num=>A) n \<in> M1` THEN
-  ASM_REWRITE_TAC[FORALL_AND_THM] THEN
-  ASM_CASES_TAC `\<forall>n. (b::num=>B) n \<in> M2` THEN ASM_REWRITE_TAC[] THEN
-  EQ_TAC THENL
-   [ASM_MESON_TAC[COMPONENT_LE_PROD_METRIC; REAL_LET_TRANS];
-    DISCH_TAC THEN X_GEN_TAC `e::real` THEN DISCH_TAC] THEN
-  FIRST_X_ASSUM(CONJUNCTS_THEN (MP_TAC \<circ> SPEC `e / 2`)) THEN
-  ASM_REWRITE_TAC[REAL_HALF; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `M::num` THEN DISCH_TAC THEN X_GEN_TAC `N::num` THEN DISCH_TAC THEN
-  EXISTS_TAC `MAX M N` THEN
-  REWRITE_TAC[ARITH_RULE `MAX M N \<le> n \<longleftrightarrow> M \<le> n \<and> N \<le> n`] THEN
-  MAP_EVERY X_GEN_TAC [`m::num`; `n::num`] THEN STRIP_TAC THEN
-  REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`m::num`; `n::num`])) THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC(REAL_ARITH
-   `z \<le> x + y \<Longrightarrow> x < e / 2 \<Longrightarrow> y < e / 2 \<Longrightarrow> z < e`) THEN
-  ASM_MESON_TAC[PROD_METRIC_LE_COMPONENTS; REAL_ADD_SYM]);;
-
-end
 
 definition prod_metric where
  "prod_metric \<equiv> \<lambda>m1 m2. metric (mspace m1 \<times> mspace m2, prod_dist (mdist m1) (mdist m2))"
@@ -3042,10 +3075,56 @@ lemma submetric_prod_metric:
   apply (simp add: prod_metric_def)
   by (simp add: submetric_def Metric_space.mspace_metric Metric_space.mdist_metric Metric_space12.prod_metric Metric_space12_def metric_space_mspace_mdist Times_Int_Times)
 
+lemma (in Metric_space12) mcomplete_prod_metric:
+  "Prod_metric.mcomplete \<longleftrightarrow> M1 = {} \<or> M2 = {} \<or> M1.mcomplete \<and> M2.mcomplete"
+  (is "?lhs \<longleftrightarrow> ?rhs")
+proof (cases "M1 = {} \<or> M2 = {}")
+  case False
+  then obtain x y where "x \<in> M1" "y \<in> M2"
+    by blast
+  have "M1.mcomplete \<and> M2.mcomplete \<Longrightarrow> Prod_metric.mcomplete"
+    by (simp add: Prod_metric.mcomplete_def M1.mcomplete_def M2.mcomplete_def 
+        mtopology_prod_metric MCauchy_prod_metric limitin_pairwise)
+  moreover
+  { assume L: "Prod_metric.mcomplete"
+    have "M1.mcomplete"
+      unfolding M1.mcomplete_def
+    proof (intro strip)
+      fix \<sigma>
+      assume "M1.MCauchy \<sigma>"
+      then have "Prod_metric.MCauchy (\<lambda>n. (\<sigma> n, y))"
+        using \<open>y \<in> M2\<close> by (simp add: M1.MCauchy_def M2.MCauchy_def MCauchy_prod_metric)
+      then obtain z where "limitin Prod_metric.mtopology (\<lambda>n. (\<sigma> n, y)) z sequentially"
+        using L Prod_metric.mcomplete_def by blast
+      then show "\<exists>x. limitin M1.mtopology \<sigma> x sequentially"
+        by (auto simp: Prod_metric.mcomplete_def M1.mcomplete_def 
+             mtopology_prod_metric limitin_pairwise o_def)
+    qed
+  }
+  moreover
+  { assume L: "Prod_metric.mcomplete"
+    have "M2.mcomplete"
+      unfolding M2.mcomplete_def
+    proof (intro strip)
+      fix \<sigma>
+      assume "M2.MCauchy \<sigma>"
+      then have "Prod_metric.MCauchy (\<lambda>n. (x, \<sigma> n))"
+        using \<open>x \<in> M1\<close> by (simp add: M2.MCauchy_def M1.MCauchy_def MCauchy_prod_metric)
+      then obtain z where "limitin Prod_metric.mtopology (\<lambda>n. (x, \<sigma> n)) z sequentially"
+        using L Prod_metric.mcomplete_def by blast
+      then show "\<exists>x. limitin M2.mtopology \<sigma> x sequentially"
+        by (auto simp: Prod_metric.mcomplete_def M2.mcomplete_def 
+             mtopology_prod_metric limitin_pairwise o_def)
+    qed
+  }
+  ultimately show ?thesis
+    using False by blast 
+qed auto
+
 lemma metrizable_space_prod_topology:
    "metrizable_space (prod_topology X Y) \<longleftrightarrow>
     topspace(prod_topology X Y) = {} \<or> metrizable_space X \<and> metrizable_space Y"
-   (is "?lhs=?rhs")
+   (is "?lhs \<longleftrightarrow> ?rhs")
 proof (cases "topspace(prod_topology X Y) = {}")
   case False
   then obtain x y where "x \<in> topspace X" "y \<in> topspace Y"
@@ -3073,83 +3152,71 @@ proof (cases "topspace(prod_topology X Y) = {}")
 qed (simp add: empty_metrizable_space)
 
 
-lemma mcomplete_prod_metric:
-   "\<And>(m1::A metric) (m2::B metric).
-        mcomplete (prod_metric m1 m2) \<longleftrightarrow>
-        M1 = {} \<or> M2 = {} \<or> mcomplete m1 \<and> mcomplete m2"
-oops
-  REPEAT STRIP_TAC THEN MAP_EVERY ASM_CASES_TAC
-   [`M1::A=>bool = {}`; `M2::B=>bool = {}`] THEN
-  ASM_SIMP_TAC[MCOMPLETE_EMPTY_MSPACE; CONJUNCT1 PROD_METRIC; CROSS_EMPTY] THEN
-  REWRITE_TAC[mcomplete; CAUCHY_IN_PROD_METRIC] THEN
-  REWRITE_TAC[MTOPOLOGY_PROD_METRIC; LIMIT_PAIRWISE; EXISTS_PAIR_THM] THEN
-  EQ_TAC THENL [ALL_TAC; ASM_MESON_TAC[]] THEN DISCH_TAC THEN CONJ_TAC THENL
-   [X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
-    UNDISCH_TAC `\<not> (M2::B=>bool = {})` THEN
-    REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `y::B` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(\<lambda>n. (x n,y)):num=>A#B`);
-    X_GEN_TAC `y::num=>B` THEN DISCH_TAC THEN
-    UNDISCH_TAC `\<not> (M1::A=>bool = {})` THEN
-    REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(\<lambda>n. (x,y n)):num=>A#B`)] THEN
-  ASM_REWRITE_TAC[o_DEF; ETA_AX; CAUCHY_IN_CONST] THEN MESON_TAC[]);;
 
 lemma completely_metrizable_space_prod_topology:
-   "completely_metrizable_space (prod_topology top1 top2) \<longleftrightarrow>
-        topspace(prod_topology top1 top2) = {} \<or>
-        completely_metrizable_space top1 \<and> completely_metrizable_space top2"
-oops
-  REPEAT STRIP_TAC THEN
-  ASM_CASES_TAC `topspace(prod_topology top1 top2):A#B=>bool = {}` THENL
-   [ASM_MESON_TAC[SUBTOPOLOGY_EQ_DISCRETE_TOPOLOGY_EMPTY;
-                  COMPLETELY_METRIZABLE_SPACE_DISCRETE_TOPOLOGY];
-    ASM_REWRITE_TAC[]] THEN
-  EQ_TAC THENL
-   [ALL_TAC;
-    REWRITE_TAC[completely_metrizable_space] THEN
-    METIS_TAC[MCOMPLETE_PROD_METRIC; MTOPOLOGY_PROD_METRIC]] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY]) THEN
-  REWRITE_TAC[TOPSPACE_PROD_TOPOLOGY; LEFT_IMP_EXISTS_THM] THEN
-  REWRITE_TAC[FORALL_PAIR_THM; IN_CROSS] THEN
-  MAP_EVERY X_GEN_TAC [`a::A`; `b::B`] THEN REPEAT STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP METRIZABLE_IMP_HAUSDORFF_SPACE \<circ>
-     MATCH_MP COMPLETELY_METRIZABLE_IMP_METRIZABLE_SPACE) THEN
-  REWRITE_TAC[HAUSDORFF_SPACE_PROD_TOPOLOGY; TOPSPACE_PROD_TOPOLOGY] THEN
-  REWRITE_TAC[EXTENSION; IN_ELIM_THM; IN_CROSS; FORALL_PAIR_THM] THEN
-  (STRIP_TAC THENL [ASM SET_TAC[]; ALL_TAC]) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP
-   (REWRITE_RULE[IMP_CONJ] COMPLETELY_METRIZABLE_SPACE_CLOSED_IN))
-  THENL
-   [DISCH_THEN(MP_TAC \<circ> SPEC `(topspace top1 \<times> {b}):A#B=>bool`);
-    DISCH_THEN(MP_TAC \<circ> SPEC `({a} \<times> topspace top2):A#B=>bool`)] THEN
-  REWRITE_TAC[CLOSED_IN_CROSS; CLOSED_IN_TOPSPACE] THEN
-  ASM_SIMP_TAC[CLOSED_IN_HAUSDORFF_SING] THEN MATCH_MP_TAC EQ_IMP THEN
-  MATCH_MP_TAC HOMEOMORPHIC_COMPLETELY_METRIZABLE_SPACE THEN
-  REWRITE_TAC[SUBTOPOLOGY_CROSS; SUBTOPOLOGY_TOPSPACE] THENL
-   [MATCH_MP_TAC PROD_TOPOLOGY_HOMEOMORPHIC_SPACE_LEFT;
-    MATCH_MP_TAC PROD_TOPOLOGY_HOMEOMORPHIC_SPACE_RIGHT] THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN ASM SET_TAC[]);;
+   "completely_metrizable_space (prod_topology X Y) \<longleftrightarrow>
+    topspace(prod_topology X Y) = {} \<or>
+    completely_metrizable_space X \<and> completely_metrizable_space Y"
+   (is "?lhs \<longleftrightarrow> ?rhs")
+proof (cases "topspace(prod_topology X Y) = {}")
+  case False
+  then obtain x y where "x \<in> topspace X" "y \<in> topspace Y"
+    by auto
+  show ?thesis
+  proof
+    show "?rhs \<Longrightarrow> ?lhs"
+      unfolding completely_metrizable_space_def
+      by (metis False Metric_space12.mtopology_prod_metric Metric_space12.mcomplete_prod_metric
+          Metric_space12.prod_metric Metric_space12_def)
+  next
+    assume L: ?lhs 
+    then have "Hausdorff_space (prod_topology X Y)"
+      by (simp add: completely_metrizable_imp_metrizable_space metrizable_imp_Hausdorff_space)
+    then have H: "Hausdorff_space X \<and> Hausdorff_space Y"
+      using False Hausdorff_space_prod_topology by blast
+    then have "closedin (prod_topology X Y) (topspace X \<times> {y}) \<and> closedin (prod_topology X Y) ({x} \<times> topspace Y)"
+      using \<open>x \<in> topspace X\<close> \<open>y \<in> topspace Y\<close>
+      by (auto simp add: closedin_Hausdorff_sing_eq closedin_prod_Times_iff)
+    with L have "completely_metrizable_space(subtopology (prod_topology X Y) (topspace X \<times> {y}))
+               \<and> completely_metrizable_space(subtopology (prod_topology X Y) ({x} \<times> topspace Y))"
+      by (simp add: completely_metrizable_space_closedin)
+    moreover
+    have "(subtopology (prod_topology X Y) (topspace X \<times> {y})) homeomorphic_space X"
+      by (metis \<open>y \<in> topspace Y\<close> homeomorphic_space_prod_topology_sing1 homeomorphic_space_sym prod_topology_subtopology(2))
+    moreover
+    have "(subtopology (prod_topology X Y) ({x} \<times> topspace Y)) homeomorphic_space Y"
+      by (metis \<open>x \<in> topspace X\<close> homeomorphic_space_prod_topology_sing2 homeomorphic_space_sym prod_topology_subtopology(1))
+    ultimately show ?rhs
+      by (simp add: homeomorphic_completely_metrizable_space)
+  qed
+qed (simp add: empty_completely_metrizable_space)
 
-lemma mbounded_cross:
-   "\<And>(m1::A metric) (m2::B metric) s t.
-        mbounded (prod_metric m1 m2) (s \<times> t) \<longleftrightarrow>
-        s = {} \<or> t = {} \<or> mbounded m1 s \<and> mbounded m2 t"
+
+
+lemma (in Metric_space12) mbounded_Times:
+   "Prod_metric.mbounded (S \<times> T) \<longleftrightarrow> S = {} \<or> T = {} \<or> M1.mbounded S \<and> M2.mbounded T"
+   (is "?lhs \<longleftrightarrow> ?rhs")
+proof (cases "S = {} \<or> T = {}")
+  case False
+  then show ?thesis sorry
+qed auto
+
+
 oops
   REPEAT GEN_TAC THEN MAP_EVERY ASM_CASES_TAC
-   [`s::A=>bool = {}`; `t::B=>bool = {}`] THEN
+   [`S::A=>bool = {}`; `T::B=>bool = {}`] THEN
   ASM_REWRITE_TAC[MBOUNDED_EMPTY; CROSS_EMPTY] THEN
   REWRITE_TAC[mbounded; EXISTS_PAIR_THM] THEN MATCH_MP_TAC(MESON[]
    `(\<forall>x y. P x y \<longleftrightarrow> Q x \<and> R y)
     \<Longrightarrow> ((\<exists>x y. P x y) \<longleftrightarrow> (\<exists>x. Q x) \<and> (\<exists>y. R y))`) THEN
+
   MAP_EVERY X_GEN_TAC [`x::A`; `y::B`] THEN EQ_TAC THENL
    [DISCH_THEN(X_CHOOSE_TAC `r::real`) THEN
     REWRITE_TAC[LEFT_AND_EXISTS_THM; RIGHT_AND_EXISTS_THM] THEN
     REPEAT(EXISTS_TAC `r::real`) THEN
     MATCH_MP_TAC(MESON[SUBSET_CROSS]
-     `s \<times> t \<subseteq> u \<times> v \<and> (s \<noteq> {}) \<and> (t \<noteq> {})
-      \<Longrightarrow> s \<subseteq> u \<and> t \<subseteq> v`) THEN
+     `S \<times> T \<subseteq> u \<times> v \<and> (S \<noteq> {}) \<and> (T \<noteq> {})
+      \<Longrightarrow> S \<subseteq> u \<and> T \<subseteq> v`) THEN
     ASM_MESON_TAC[SUBSET_TRANS; MCBALL_PROD_METRIC_SUBSET];
     DISCH_THEN(CONJUNCTS_THEN2
      (X_CHOOSE_TAC `r1::real`) (X_CHOOSE_TAC `r2::real`)) THEN
@@ -3158,10 +3225,8 @@ oops
     MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] SUBSET_TRANS) THEN
     ASM_REWRITE_TAC[SUBSET_CROSS]]);;
 
-lemma mbounded_prod_metric:
-   "\<And>(m1::A metric) (m2::B metric) u.
-        mbounded (prod_metric m1 m2) u \<longleftrightarrow>
-        mbounded m1 (fst ` u) \<and> mbounded m2 (snd ` u)"
+lemma (in Metric_space12) mbounded_prod_metric:
+   "Prod_metric.mbounded U \<longleftrightarrow> M1.mbounded  (fst ` U) \<and> M2.mbounded (snd ` U)"
 oops
   REPEAT GEN_TAC THEN  EQ_TAC THENL
    [REWRITE_TAC[mbounded; \<subseteq>; FORALL_IN_IMAGE; FORALL_PAIR_THM] THEN
@@ -3173,33 +3238,33 @@ oops
         MCBALL_PROD_METRIC_SUBSET) THEN
     REWRITE_TAC[\<subseteq>; FORALL_PAIR_THM; IN_CROSS] THEN MESON_TAC[];
     STRIP_TAC THEN MATCH_MP_TAC MBOUNDED_SUBSET THEN
-    EXISTS_TAC `((fst ` u) \<times> (snd ` u)):A#B=>bool` THEN
+    EXISTS_TAC `((fst ` U) \<times> (snd ` U)):A#B=>bool` THEN
     ASM_REWRITE_TAC[MBOUNDED_CROSS; IMAGE_EQ_EMPTY] THEN
     REWRITE_TAC[\<subseteq>; FORALL_PAIR_THM; IN_CROSS] THEN
     REWRITE_TAC[IN_IMAGE; EXISTS_PAIR_THM] THEN MESON_TAC[]]);;
 
-lemma mtotally_bounded_cross:
-   "\<And>(m1::A metric) (m2::B metric) s t.
-       mtotally_bounded (prod_metric m1 m2) (s \<times> t) \<longleftrightarrow>
-       s = {} \<or> t = {} \<or> mtotally_bounded1 s \<and> mtotally_bounded2 t"
+lemma mtotally_bounded_Times:
+   "\<And>(m1::A metric) (m2::B metric) S T.
+       mtotally_bounded (prod_metric m1 m2) (S \<times> T) \<longleftrightarrow>
+       S = {} \<or> T = {} \<or> mtotally_bounded1 S \<and> mtotally_bounded2 T"
 oops
   REPEAT GEN_TAC THEN MAP_EVERY ASM_CASES_TAC
-   [`s::A=>bool = {}`; `t::B=>bool = {}`] THEN
+   [`S::A=>bool = {}`; `T::B=>bool = {}`] THEN
   ASM_REWRITE_TAC[CROSS_EMPTY; TOTALLY_BOUNDED_IN_EMPTY] THEN
   REWRITE_TAC[TOTALLY_BOUNDED_IN_SEQUENTIALLY] THEN
   ASM_REWRITE_TAC[CONJUNCT1 PROD_METRIC; SUBSET_CROSS] THEN
-  ASM_CASES_TAC `(s::A=>bool) \<subseteq> M1` THEN ASM_REWRITE_TAC[] THEN
-  ASM_CASES_TAC `(t::B=>bool) \<subseteq> M2` THEN ASM_REWRITE_TAC[] THEN
+  ASM_CASES_TAC `(S::A=>bool) \<subseteq> M1` THEN ASM_REWRITE_TAC[] THEN
+  ASM_CASES_TAC `(T::B=>bool) \<subseteq> M2` THEN ASM_REWRITE_TAC[] THEN
   EQ_TAC THEN STRIP_TAC THEN TRY CONJ_TAC THENL
    [X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
-    UNDISCH_TAC `\<not> (t::B=>bool = {})` THEN
+    UNDISCH_TAC `\<not> (T::B=>bool = {})` THEN
     REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; LEFT_IMP_EXISTS_THM] THEN
     X_GEN_TAC `y::B` THEN DISCH_TAC THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(\<lambda>n. (x n,y)):num=>A#B`) THEN
     ASM_REWRITE_TAC[IN_CROSS; CAUCHY_IN_PROD_METRIC] THEN
     MATCH_MP_TAC MONO_EXISTS THEN SIMP_TAC[o_DEF];
     X_GEN_TAC `y::num=>B` THEN DISCH_TAC THEN
-    UNDISCH_TAC `\<not> (s::A=>bool = {})` THEN
+    UNDISCH_TAC `\<not> (S::A=>bool = {})` THEN
     REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; LEFT_IMP_EXISTS_THM] THEN
     X_GEN_TAC `x::A` THEN DISCH_TAC THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(\<lambda>n. (x,y n)):num=>A#B`) THEN
