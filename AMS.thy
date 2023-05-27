@@ -6,6 +6,8 @@ theory AMS
     "HOL-ex.Sketch_and_Explore"
 begin
 
+(**must rename submetric in metric_spaces*)
+
 (*REPLACE*****)
 lemma real_le_lsqrt: "0 \<le> y \<Longrightarrow> x \<le> y\<^sup>2 \<Longrightarrow> sqrt x \<le> y"
   using real_sqrt_le_iff[of x "y\<^sup>2"] by simp
@@ -53,6 +55,49 @@ lemma homotopic_into_contractible_space:
         \<Longrightarrow> homotopic_with (\<lambda>x. True) X Y f g"
   by (metis continuous_map_id contractible_imp_path_connected_space homotopic_through_contractible_space id_comp)
 
+
+lemma empty_metrizable_space: "topspace X = {} \<Longrightarrow> metrizable_space X"
+  by (metis metrizable_space_discrete_topology subtopology_eq_discrete_topology_empty)
+
+
+typedef 'a metric = "{(M::'a set,d). Metric_space M d}"
+  morphisms "dest_metric" "metric"
+proof -
+  have "Metric_space {} (\<lambda>x y. 0)"
+    by (auto simp: Metric_space_def)
+  then show ?thesis
+    by blast
+qed
+
+definition mspace where "mspace m \<equiv> fst (dest_metric m)"
+
+definition mdist where "mdist m \<equiv> snd (dest_metric m)"
+
+lemma metric_space_mspace_mdist: "Metric_space (mspace m) (mdist m)"
+  by (metis Product_Type.Collect_case_prodD dest_metric mdist_def mspace_def)
+
+lemma (in Metric_space) mspace_metric[simp]: 
+  "mspace (metric (M,d)) = M"
+  by (simp add: mspace_def Metric_space_axioms metric_inverse)
+
+lemma (in Metric_space) mdist_metric[simp]: 
+  "mdist (metric (M,d)) = d"
+  by (simp add: mdist_def Metric_space_axioms metric_inverse)
+
+
+text\<open> Subspace of a metric space\<close>
+(*NEED TO RENAME THE SUBMETRIC LOCALE*)
+
+definition submetric where
+  "submetric \<equiv> \<lambda>m S. metric (S \<inter> mspace m, mdist m)"
+
+lemma submetric_mspace [simp]: "mspace (submetric m S) = S \<inter> mspace m" 
+  unfolding submetric_def
+  by (meson Metric_space.subspace inf_le2 metric_space_mspace_mdist Metric_space.mspace_metric)
+
+lemma submetric_mdist [simp]: "mdist (submetric m S) = mdist m"
+  unfolding submetric_def
+  by (meson Metric_space.subspace inf_le2 Metric_space.mdist_metric metric_space_mspace_mdist)
 
 
 (*NEEDS LEPOLL*)
@@ -2733,7 +2778,7 @@ proof -
     have sub: "submetric_axioms M S"
       by (metis S Xeq closedin_metric submetric_axioms_def)
     then show "Metric_space.mcomplete S d"
-      using S Xeq comp submetric.closedin_eq_mcomplete submetric_def by blast
+      using Abstract_Metric_Spaces.submetric_def S Xeq comp submetric.closedin_eq_mcomplete by blast
     show "subtopology X S = Metric_space.mtopology S d"
       by (metis Metric_space_axioms Xeq sub submetric.intro submetric.mtopology_submetric)
   qed
@@ -2848,11 +2893,11 @@ text\<open>For the nicest fit with the main Euclidean theories, we choose the Eu
 though other definitions of the product work.\<close>
 
 
+definition "prod_dist \<equiv> \<lambda>d1 d2 (x,y) (x',y'). sqrt(d1 x x' ^ 2 + d2 y y' ^ 2)"
+
 context Metric_space12 begin
 
-definition "prod_dist \<equiv> \<lambda>(x,y) (x',y'). sqrt(d1 x x' ^ 2 + d2 y y' ^ 2)"
-
-lemma prod_metric: "Metric_space (M1 \<times> M2) prod_dist"
+lemma prod_metric: "Metric_space (M1 \<times> M2) (prod_dist d1 d2)"
 proof
   fix x y z
   assume xyz: "x \<in> M1 \<times> M2" "y \<in> M1 \<times> M2" "z \<in> M1 \<times> M2"
@@ -2872,20 +2917,22 @@ proof
       finally show "?L \<le> ?R\<^sup>2" .
     qed auto
   qed
-  then show "prod_dist x z \<le> prod_dist x y + prod_dist y z"
+  then show "prod_dist d1 d2 x z \<le> prod_dist d1 d2 x y + prod_dist d1 d2 y z"
     by (simp add: prod_dist_def case_prod_unfold)
 qed (auto simp: M1.commute M2.commute case_prod_unfold prod_dist_def)
 
-interpretation Prod_metric: Metric_space "M1\<times>M2" prod_dist
+interpretation Prod_metric: Metric_space "M1\<times>M2" "prod_dist d1 d2"
   by (simp add: prod_metric)
 
+
+
 lemma component_le_prod_metric:
-   "d1 x1 x2 \<le> prod_dist (x1,y1) (x2,y2)" "d2 y1 y2 \<le> prod_dist (x1,y1) (x2,y2)"
+   "d1 x1 x2 \<le> prod_dist d1 d2 (x1,y1) (x2,y2)" "d2 y1 y2 \<le> prod_dist d1 d2 (x1,y1) (x2,y2)"
   by (auto simp: prod_dist_def)
 
 lemma prod_metric_le_components:
   "\<lbrakk>x1 \<in> M1; y1 \<in> M1; x2 \<in> M2; y2 \<in> M2\<rbrakk>
-    \<Longrightarrow> prod_dist (x1, x2) (y1, y2) \<le> d1 x1 y1 + d2 x2 y2"
+    \<Longrightarrow> prod_dist d1 d2 (x1, x2) (y1, y2) \<le> d1 x1 y1 + d2 x2 y2"
   by (auto simp: prod_dist_def sqrt_sum_squares_le_sum)
 
 lemma mball_prod_metric_subset:
@@ -2959,97 +3006,10 @@ next
     by (auto simp add: zeq)
 qed
 
-lemma submetric_prod_metric:
-   "submetric (M1 \<times> M2) prod_dist (S \<times> T) =
-        prod_metric (submetric M1 d1 S) (submetric M2 d2 T)"
-oops
-  REPEAT GEN_TAC THEN
-  GEN_REWRITE_TAC RAND_CONV [prod_metric] THEN
-  GEN_REWRITE_TAC LAND_CONV [submetric] THEN
-  REWRITE_TAC[SUBMETRIC; PROD_METRIC; INTER_CROSS]);;
-
-lemma metrizable_space_prod_topology:
-   "metrizable_space (prod_topology X Y) \<longleftrightarrow>
-    topspace(prod_topology X Y) = {} \<or> metrizable_space X \<and> metrizable_space Y"
-   (is "?lhs=?rhs")
-proof (cases "topspace(prod_topology X Y) = {}")
-  case False
-  then have X: "completely_regular_space X" and Y: "completely_regular_space Y"
-    using R by blast+
-  show ?thesis
-proof
-  assume ?lhs then show ?rhs
-    by (rule topological_property_of_prod_component) 
-       (auto simp: completely_regular_space_subtopology homeomorphic_completely_regular_space)
-next
-  assume R: ?rhs
-  show ?lhs
-  proof (cases "topspace(prod_topology X Y) = {}")
-    case False
-    then have X: "completely_regular_space X" and Y: "completely_regular_space Y"
-      using R by blast+
-    show ?thesis
-      unfolding completely_regular_space_alt'
-    proof clarify
-      fix W x y
-      assume "openin (prod_topology X Y) W" and "(x, y) \<in> W"
-      then obtain U V where "openin X U" "openin Y V" "x \<in> U" "y \<in> V" "U\<times>V \<subseteq> W"
-        by (force simp: openin_prod_topology_alt)
-      then have "x \<in> topspace X" "y \<in> topspace Y"
-        using openin_subset by fastforce+
-      obtain f where contf: "continuous_map X euclideanreal f" and "f x = 0" 
-        and f1: "\<And>x. x \<in> topspace X \<Longrightarrow> x \<notin> U \<Longrightarrow> f x = 1"
-        using X \<open>openin X U\<close> \<open>x \<in> U\<close> unfolding completely_regular_space_alt'
-        by (smt (verit, best) Diff_iff image_subset_iff singletonD)
-      obtain g where contg: "continuous_map Y euclideanreal g" and "g y = 0" 
-        and g1: "\<And>y. y \<in> topspace Y \<Longrightarrow> y \<notin> V \<Longrightarrow> g y = 1"
-        using Y \<open>openin Y V\<close> \<open>y \<in> V\<close> unfolding completely_regular_space_alt'
-        by (smt (verit, best) Diff_iff image_subset_iff singletonD)
-      define h where "h \<equiv> \<lambda>(x,y). 1 - (1 - f x) * (1 - g y)"
-      show "\<exists>h. continuous_map (prod_topology X Y) euclideanreal h \<and> h (x,y) = 0 \<and> h ` (topspace (prod_topology X Y) - W) \<subseteq> {1}"
-      proof (intro exI conjI)
-        have "continuous_map (prod_topology X Y) euclideanreal (f \<circ> fst)"
-          using contf continuous_map_of_fst by blast
-        moreover
-        have "continuous_map (prod_topology X Y) euclideanreal (g \<circ> snd)"
-          using contg continuous_map_of_snd by blast
-        ultimately
-        show "continuous_map (prod_topology X Y) euclideanreal h"
-          unfolding o_def h_def case_prod_unfold
-          by (intro continuous_intros) auto
-        show "h (x, y) = 0"
-          by (simp add: h_def \<open>f x = 0\<close> \<open>g y = 0\<close>)
-        show "h ` (topspace (prod_topology X Y) - W) \<subseteq> {1}"
-          using \<open>U \<times> V \<subseteq> W\<close> f1 g1 by (force simp: h_def)
-      qed
-    qed
-  qed (force simp: completely_regular_space_def)
-qed
-oops
-  REPEAT STRIP_TAC THEN
-  ASM_CASES_TAC `topspace(prod_topology X Y):A#B=>bool = {}` THENL
-   [ASM_MESON_TAC[SUBTOPOLOGY_EQ_DISCRETE_TOPOLOGY_EMPTY;
-                  METRIZABLE_SPACE_DISCRETE_TOPOLOGY];
-    ASM_REWRITE_TAC[]] THEN
-  EQ_TAC THENL
-   [ALL_TAC; MESON_TAC[MTOPOLOGY_PROD_METRIC; metrizable_space]] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY]) THEN
-  REWRITE_TAC[TOPSPACE_PROD_TOPOLOGY; LEFT_IMP_EXISTS_THM] THEN
-  REWRITE_TAC[FORALL_PAIR_THM; IN_CROSS] THEN
-  MAP_EVERY X_GEN_TAC [`a::A`; `b::B`] THEN REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP METRIZABLE_SPACE_SUBTOPOLOGY) THENL
-   [DISCH_THEN(MP_TAC \<circ> SPEC `(topspace X \<times> {b}):A#B=>bool`);
-    DISCH_THEN(MP_TAC \<circ> SPEC `({a} \<times> topspace Y):A#B=>bool`)] THEN
-  MATCH_MP_TAC EQ_IMP THEN MATCH_MP_TAC HOMEOMORPHIC_METRIZABLE_SPACE THEN
-  REWRITE_TAC[SUBTOPOLOGY_CROSS; SUBTOPOLOGY_TOPSPACE] THENL
-   [MATCH_MP_TAC PROD_TOPOLOGY_HOMEOMORPHIC_SPACE_LEFT;
-    MATCH_MP_TAC PROD_TOPOLOGY_HOMEOMORPHIC_SPACE_RIGHT] THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN ASM SET_TAC[]);;
 
 lemma MCauchy_prod_metric:
-   "\<And>m1 m2 x::num=>A#B.
-        MCauchy (prod_metric m1 m2) x \<longleftrightarrow>
-        MCauchy m1 (fst \<circ> x) \<and> MCauchy m2 (snd \<circ> x)"
+   "Prod_metric.MCauchy x \<longleftrightarrow> M1.MCauchy (fst \<circ> x) \<and> M2.MCauchy (snd \<circ> x)"
+
 oops
   REWRITE_TAC[FORALL_PAIR_FUN_THM] THEN MAP_EVERY X_GEN_TAC
    [`m1::A metric`; `m2::B metric`; `a::num=>A`; `b::num=>B`] THEN
@@ -3070,6 +3030,48 @@ oops
   ASM_REWRITE_TAC[] THEN MATCH_MP_TAC(REAL_ARITH
    `z \<le> x + y \<Longrightarrow> x < e / 2 \<Longrightarrow> y < e / 2 \<Longrightarrow> z < e`) THEN
   ASM_MESON_TAC[PROD_METRIC_LE_COMPONENTS; REAL_ADD_SYM]);;
+
+end
+
+definition prod_metric where
+ "prod_metric \<equiv> \<lambda>m1 m2. metric (mspace m1 \<times> mspace m2, prod_dist (mdist m1) (mdist m2))"
+
+
+lemma submetric_prod_metric:
+   "submetric (prod_metric m1 m2) (S \<times> T) = prod_metric (submetric m1 S) (submetric m2 T)"
+  apply (simp add: prod_metric_def)
+  by (simp add: submetric_def Metric_space.mspace_metric Metric_space.mdist_metric Metric_space12.prod_metric Metric_space12_def metric_space_mspace_mdist Times_Int_Times)
+
+lemma metrizable_space_prod_topology:
+   "metrizable_space (prod_topology X Y) \<longleftrightarrow>
+    topspace(prod_topology X Y) = {} \<or> metrizable_space X \<and> metrizable_space Y"
+   (is "?lhs=?rhs")
+proof (cases "topspace(prod_topology X Y) = {}")
+  case False
+  then obtain x y where "x \<in> topspace X" "y \<in> topspace Y"
+    by auto
+  show ?thesis
+  proof
+    show "?rhs \<Longrightarrow> ?lhs"
+      unfolding metrizable_space_def
+      using Metric_space12.mtopology_prod_metric
+      by (metis False Metric_space12.prod_metric Metric_space12_def) 
+  next
+    assume L: ?lhs 
+    have "metrizable_space (subtopology (prod_topology X Y) (topspace X \<times> {y}))"
+      "metrizable_space (subtopology (prod_topology X Y) ({x} \<times> topspace Y))"
+      using L metrizable_space_subtopology by auto
+    moreover
+    have "(subtopology (prod_topology X Y) (topspace X \<times> {y})) homeomorphic_space X"
+      by (metis \<open>y \<in> topspace Y\<close> homeomorphic_space_prod_topology_sing1 homeomorphic_space_sym prod_topology_subtopology(2))
+    moreover
+    have "(subtopology (prod_topology X Y) ({x} \<times> topspace Y)) homeomorphic_space Y"
+      by (metis \<open>x \<in> topspace X\<close> homeomorphic_space_prod_topology_sing2 homeomorphic_space_sym prod_topology_subtopology(1))
+    ultimately show ?rhs
+      by (simp add: homeomorphic_metrizable_space)
+  qed
+qed (simp add: empty_metrizable_space)
+
 
 lemma mcomplete_prod_metric:
    "\<And>(m1::A metric) (m2::B metric).
