@@ -3331,12 +3331,12 @@ subsection \<open> Three more restrictive notions of continuity for metric space
 context Metric_space12 begin
 
 definition Lipschitz_continuous_map where
- "Lipschitz_continuous_map f \<equiv>
-    f ` M1 \<subseteq> M2 \<and> (\<exists>B. \<forall>x \<in> M1. \<forall>y \<in> M1. d2 (f x) (f y) \<le> B * d1 x y)"
+ "Lipschitz_continuous_map A f \<equiv>
+    f ` A \<subseteq> M2 \<and> (\<exists>B. \<forall>x \<in> A. \<forall>y \<in> A. d2 (f x) (f y) \<le> B * d1 x y)"
 
 lemma Lipschitz_continuous_map_pos:
-   "Lipschitz_continuous_map f \<longleftrightarrow>
-      f ` M1 \<subseteq> M2 \<and> (\<exists>B>0. \<forall>x \<in> M1. \<forall>y \<in> M1. d2 (f x) (f y) \<le> B * d1 x y)"
+   "Lipschitz_continuous_map A f \<longleftrightarrow>
+      f ` A \<subseteq> M2 \<and> (\<exists>B>0. \<forall>x \<in> A. \<forall>y \<in> A. d2 (f x) (f y) \<le> B * d1 x y)"
 proof -
   have "B * d1 x y \<le> (\<bar>B\<bar> + 1) * d1 x y" "\<bar>B\<bar> + 1 > 0" for x y B
     by (auto simp add: mult_right_mono)
@@ -3345,51 +3345,22 @@ proof -
 qed
 
 lemma Lipschitz_continuous_map_eq:
-  assumes "Lipschitz_continuous_map f" "\<And>x. x \<in> M1 \<Longrightarrow> f x = g x"
-  shows "Lipschitz_continuous_map g"
+  assumes "Lipschitz_continuous_map A f" "\<And>x. x \<in> A \<Longrightarrow> f x = g x"
+  shows "Lipschitz_continuous_map A g"
   using Lipschitz_continuous_map_def assms by force
 
-lemma Lipschitz_continuous_map_from_submetric:
-   "Lipschitz_continuous_map f
-        \<Longrightarrow> Lipschitz_continuous_map (submetric1 s,m2) f"
-oops
-  REWRITE_TAC[Lipschitz_continuous_map; SUBMETRIC] THEN SET_TAC[]);;
-
 lemma Lipschitz_continuous_map_from_submetric_mono:
-   "Lipschitz_continuous_map (submetric1 t,m2) f \<and> s \<subseteq> t
-           \<Longrightarrow> Lipschitz_continuous_map (submetric1 s,m2) f"
-oops
-  MESON_TAC[LIPSCHITZ_CONTINUOUS_MAP_FROM_SUBMETRIC; SUBMETRIC_SUBMETRIC;
-            SET_RULE `s \<subseteq> t \<Longrightarrow> t \<inter> s = s`]);;
-
-lemma Lipschitz_continuous_map_into_submetric:
-   "\<And>m1 m2 s f::A=>B.
-        Lipschitz_continuous_map m1 (submetric2 s) f \<longleftrightarrow>
-        image f (M1) \<subseteq> s \<and>
-        Lipschitz_continuous_map f"
-oops
-  REWRITE_TAC[Lipschitz_continuous_map; SUBMETRIC] THEN SET_TAC[]);;
+   "\<lbrakk>Lipschitz_continuous_map A f; B \<subseteq> A\<rbrakk> \<Longrightarrow> Lipschitz_continuous_map B f"
+  unfolding Lipschitz_continuous_map_def image_subset_iff
+  by blast
 
 lemma Lipschitz_continuous_map_const:
-   "Lipschitz_continuous_map (\<lambda>x. c) \<longleftrightarrow>
-        M1 = {} \<or> c \<in> M2"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[Lipschitz_continuous_map] THEN
-  ASM_CASES_TAC `M1::A=>bool = {}` THEN
-  ASM_REWRITE_TAC[IMAGE_CLAUSES; EMPTY_SUBSET; NOT_IN_EMPTY] THEN
-  ASM_CASES_TAC `(c::B) \<in> M2` THENL [ALL_TAC; ASM SET_TAC[]] THEN
-  ASM_REWRITE_TAC[] THEN CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  EXISTS_TAC `1` THEN ASM_SIMP_TAC[MDIST_REFL; MDIST_POS_LE; REAL_MUL_LID]);;
-
-lemma Lipschitz_continuous_map_id:
-   "Lipschitz_continuous_map m1 m1 (\<lambda>x. x)"
-oops
-  REWRITE_TAC[Lipschitz_continuous_map; IMAGE_ID; SUBSET_REFL] THEN
-  GEN_TAC THEN EXISTS_TAC `1` THEN REWRITE_TAC[REAL_LE_REFL; REAL_MUL_LID]);;
+   "Lipschitz_continuous_map A (\<lambda>x. c) \<longleftrightarrow> A = {} \<or> c \<in> M2"
+  unfolding Lipschitz_continuous_map_def image_subset_iff
+  by (metis M2.mdist_zero all_not_in_conv dual_order.refl mult_zero_left)
 
 lemma Lipschitz_continuous_map_compose:
-   "\<And>m1 m2 m3 f::A=>B g::B=>C.
-      Lipschitz_continuous_map f \<and> Lipschitz_continuous_map m2 m3 g
+   "Lipschitz_continuous_map f \<and> Lipschitz_continuous_map m2 m3 g
       \<Longrightarrow> Lipschitz_continuous_map m1 m3 (g \<circ> f)"
 oops
   REPEAT GEN_TAC THEN REWRITE_TAC[LIPSCHITZ_CONTINUOUS_MAP_POS] THEN
@@ -3400,6 +3371,19 @@ oops
   MAP_EVERY X_GEN_TAC [`x::A`; `y::A`] THEN REPEAT DISCH_TAC THEN
   TRANS_TAC REAL_LE_TRANS `C * d m2 (f x,f y)` THEN
   ASM_SIMP_TAC[GSYM REAL_MUL_ASSOC; REAL_LE_LMUL_EQ]);;
+
+end
+
+lemma (in Metric_space) Lipschitz_continuous_map_id:
+  assumes "A \<subseteq> M" shows "Metric_space12.Lipschitz_continuous_map d M d A (\<lambda>x. x)"
+proof -
+  interpret Metric_space12 M d M d
+    by (simp add: Metric_space12_def Metric_space_axioms)
+  show ?thesis
+    unfolding Lipschitz_continuous_map_def
+    using assms less_eq_real_def by auto
+qed
+
 
 definition uniformly_continuous_map where
  `uniformly_continuous_map m1 m2 f \<longleftrightarrow>
