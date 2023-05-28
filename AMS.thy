@@ -1151,7 +1151,7 @@ next
       have "D \<in> {{}, S, T, S \<union> T}"
         unfolding D_def
         using closedin_subset [OF \<open>closedin X S\<close>] closedin_subset [OF \<open>closedin X T\<close>] \<open>disjnt S T\<close>
-        by (auto simp add: disjnt_iff)
+        by (auto simp: disjnt_iff)
       then have "closedin X D"
         using \<open>closedin X S\<close> \<open>closedin X T\<close> closedin_empty by blast
       with closedin_subset_topspace
@@ -1728,7 +1728,7 @@ next
       then obtain U where finU: "finite {i \<in> I. U i \<noteq> topspace (X i)}" 
              and ope: "\<And>i. i\<in>I \<Longrightarrow> openin (X i) (U i)" 
              and x: "x \<in> Pi\<^sub>E I U" and "Pi\<^sub>E I U \<subseteq> W"
-        by (auto simp add: openin_product_topology_alt)
+        by (auto simp: openin_product_topology_alt)
       have "\<forall>i \<in> I. openin (X i) (U i) \<and> x i \<in> U i
               \<longrightarrow> (\<exists>f. continuous_map (X i) euclideanreal f \<and>
                        f (x i) = 0 \<and> (\<forall>x \<in> topspace(X i). x \<notin> U i \<longrightarrow> f x = 1))"
@@ -2194,7 +2194,7 @@ lemma openin_Alexandroff_compactification:
    "openin(Alexandroff_compactification X) V \<longleftrightarrow>
         (\<exists>U. openin X U \<and> V = Some ` U) \<or>
         (\<exists>C. compactin X C \<and> closedin X C \<and> V = insert None (Some ` (topspace X - C)))"
-  by (auto simp add: Alexandroff_compactification_def istopology_Alexandroff_open Alexandroff_open.simps)
+  by (auto simp: Alexandroff_compactification_def istopology_Alexandroff_open Alexandroff_open.simps)
 
 
 lemma topspace_Alexandroff_compactification [simp]:
@@ -2209,7 +2209,7 @@ proof
     if "x \<in> topspace X" for x 
     by (meson that imageI openin_Alexandroff_compactification openin_subset openin_topspace subsetD)
   ultimately show "?rhs \<subseteq> ?lhs"
-    by (auto simp add: image_subset_iff)
+    by (auto simp: image_subset_iff)
 qed
 
 lemma closedin_Alexandroff_compactification:
@@ -2232,7 +2232,7 @@ lemma openin_Alexandroff_compactification_image_Some [simp]:
 
 lemma closedin_Alexandroff_compactification_image_Some [simp]:
    "closedin (Alexandroff_compactification X) (Some ` K) \<longleftrightarrow> compactin X K \<and> closedin X K"
-  by (auto simp add: closedin_Alexandroff_compactification inj_image_eq_iff)
+  by (auto simp: closedin_Alexandroff_compactification inj_image_eq_iff)
 
 lemma open_map_Some: "open_map X (Alexandroff_compactification X) Some"
   using open_map_def openin_Alexandroff_compactification by blast
@@ -2571,7 +2571,7 @@ proof (cases "a \<in> topspace X")
       moreover have "D \<subseteq> topspace X \<times> (topspace X \<inter> (topspace X - {a}))"
         by (auto simp: D_def)
       ultimately have *: "closedin (prod_topology X (subtopology X (topspace X - {a}))) D"
-        using R by (auto simp add: k_space)
+        using R by (auto simp: k_space)
       have "x=y"
         if "x \<in> topspace X" "y \<in> topspace X" 
           and \<section>: "\<And>T. \<lbrakk>(x,y) \<in> T; openin (prod_topology X X) T\<rbrakk> \<Longrightarrow> \<exists>z \<in> topspace X. (z,z) \<in> T" for x y
@@ -2708,7 +2708,7 @@ proof -
       have Tsub: "T \<subseteq> topspace X - {a}"
         using in_these_eq that by auto
       then have "{x \<in> topspace X. (if x = a then None else Some x) \<in> U} = insert a T"
-        by (auto simp add: a image_iff cong: conj_cong)
+        by (auto simp: a image_iff cong: conj_cong)
       then have "?L \<longleftrightarrow> openin X (insert a T)"
         by metis
       also have "\<dots> \<longleftrightarrow> ?R"
@@ -2725,7 +2725,7 @@ proof -
       have Tsub: "T \<subseteq> topspace X - {a}"
         using in_these_eq that by auto
       then have "{x \<in> topspace X. (if x = a then None else Some x) \<in> U} = T"
-        by (auto simp add: image_iff cong: conj_cong)
+        by (auto simp: image_iff cong: conj_cong)
       then show ?thesis
         by (simp add: "**" Tsub openin_open_subtopology)
     qed
@@ -3007,7 +3007,7 @@ next
   moreover have "B1 \<times> B2 \<subseteq> U"
     using r prod_metric_le_components by (force simp add: B1_def B2_def)
   ultimately show "\<exists>B. B \<in> {S \<times> T |S T. openin M1.mtopology S \<and> openin M2.mtopology T} \<and> z \<in> B \<and> B \<subseteq> U"
-    by (auto simp add: zeq)
+    by (auto simp: zeq)
 qed
 
 
@@ -3176,7 +3176,7 @@ proof (cases "topspace(prod_topology X Y) = {}")
       using False Hausdorff_space_prod_topology by blast
     then have "closedin (prod_topology X Y) (topspace X \<times> {y}) \<and> closedin (prod_topology X Y) ({x} \<times> topspace Y)"
       using \<open>x \<in> topspace X\<close> \<open>y \<in> topspace Y\<close>
-      by (auto simp add: closedin_Hausdorff_sing_eq closedin_prod_Times_iff)
+      by (auto simp: closedin_Hausdorff_sing_eq closedin_prod_Times_iff)
     with L have "completely_metrizable_space(subtopology (prod_topology X Y) (topspace X \<times> {y}))
                \<and> completely_metrizable_space(subtopology (prod_topology X Y) ({x} \<times> topspace Y))"
       by (simp add: completely_metrizable_space_closedin)
@@ -3192,119 +3192,141 @@ proof (cases "topspace(prod_topology X Y) = {}")
 qed (simp add: empty_completely_metrizable_space)
 
 
+lemma (in Metric_space12) mbounded_prod_metric:
+   "Prod_metric.mbounded U \<longleftrightarrow> M1.mbounded  (fst ` U) \<and> M2.mbounded (snd ` U)"
+proof -
+  have "(\<exists>B. U \<subseteq> Prod_metric.mcball (x,y) B) 
+    \<longleftrightarrow> ((\<exists>B. (fst ` U) \<subseteq> M1.mcball x B) \<and> (\<exists>B. (snd ` U) \<subseteq> M2.mcball y B))" (is "?lhs \<longleftrightarrow> ?rhs")
+    for x y
+  proof safe
+    fix B
+    assume "U \<subseteq> Prod_metric.mcball (x, y) B"
+    then have "(fst ` U) \<subseteq> M1.mcball x B" "(snd ` U) \<subseteq> M2.mcball y B"
+      using mcball_prod_metric_subset by fastforce+
+    then show "\<exists>B. (fst ` U) \<subseteq> M1.mcball x B" "\<exists>B. (snd ` U) \<subseteq> M2.mcball y B"
+      by auto
+  next
+    fix B1 B2
+    assume "(fst ` U) \<subseteq> M1.mcball x B1" "(snd ` U) \<subseteq> M2.mcball y B2"
+    then have "fst ` U \<times> snd ` U \<subseteq>  M1.mcball x B1 \<times> M2.mcball y B2"
+      by blast
+    also have "\<dots> \<subseteq> Prod_metric.mcball (x, y) (B1+B2)"
+      by (intro mcball_subset_prod_metric)
+    finally show "\<exists>B. U \<subseteq> Prod_metric.mcball (x, y) B"
+      by (metis subsetD subsetI subset_fst_snd)
+  qed
+  then show ?thesis
+    by (simp add: M1.mbounded_def M2.mbounded_def Prod_metric.mbounded_def)
+qed 
 
 lemma (in Metric_space12) mbounded_Times:
    "Prod_metric.mbounded (S \<times> T) \<longleftrightarrow> S = {} \<or> T = {} \<or> M1.mbounded S \<and> M2.mbounded T"
-   (is "?lhs \<longleftrightarrow> ?rhs")
+  by (auto simp: mbounded_prod_metric)
+
+
+lemma(in Metric_space12) mtotally_bounded_Times:
+   "Prod_metric.mtotally_bounded (S \<times> T) \<longleftrightarrow>
+    S = {} \<or> T = {} \<or> M1.mtotally_bounded S \<and> M2.mtotally_bounded T"
+    (is "?lhs \<longleftrightarrow> _")
 proof (cases "S = {} \<or> T = {}")
   case False
-  then show ?thesis sorry
+  then obtain x y where "x \<in> S" "y \<in> T"
+    by auto
+  have "M1.mtotally_bounded S" if L: ?lhs
+    unfolding M1.mtotally_bounded_sequentially
+  proof (intro conjI strip)
+    show "S \<subseteq> M1"
+      using Prod_metric.mtotally_bounded_imp_subset \<open>y \<in> T\<close> that by blast
+    fix \<sigma> :: "nat \<Rightarrow> 'a"
+    assume "range \<sigma> \<subseteq> S"
+    with L obtain r where "strict_mono r" "Prod_metric.MCauchy ((\<lambda>n. (\<sigma> n,y)) o r)"
+      unfolding Prod_metric.mtotally_bounded_sequentially
+      by (smt (verit) SigmaI \<open>y \<in> T\<close> image_subset_iff)
+    then have "M1.MCauchy (fst o (\<lambda>n. (\<sigma> n,y)) o r)"
+      by (simp add: MCauchy_prod_metric o_def)
+    with \<open>strict_mono r\<close> show "\<exists>r. strict_mono r \<and> M1.MCauchy (\<sigma> \<circ> r)"
+      by (auto simp add: o_def)
+  qed
+  moreover
+  have "M2.mtotally_bounded T" if L: ?lhs
+    unfolding M2.mtotally_bounded_sequentially
+  proof (intro conjI strip)
+    show "T \<subseteq> M2"
+      using Prod_metric.mtotally_bounded_imp_subset \<open>x \<in> S\<close> that by blast
+    fix \<sigma> :: "nat \<Rightarrow> 'b"
+    assume "range \<sigma> \<subseteq> T"
+    with L obtain r where "strict_mono r" "Prod_metric.MCauchy ((\<lambda>n. (x,\<sigma> n)) o r)"
+      unfolding Prod_metric.mtotally_bounded_sequentially
+      by (smt (verit) SigmaI \<open>x \<in> S\<close> image_subset_iff)
+    then have "M2.MCauchy (snd o (\<lambda>n. (x,\<sigma> n)) o r)"
+      by (simp add: MCauchy_prod_metric o_def)
+    with \<open>strict_mono r\<close> show "\<exists>r. strict_mono r \<and> M2.MCauchy (\<sigma> \<circ> r)"
+      by (auto simp add: o_def)
+  qed
+  moreover have ?lhs if 1: "M1.mtotally_bounded S" and 2: "M2.mtotally_bounded T"
+    unfolding Prod_metric.mtotally_bounded_sequentially
+  proof (intro conjI strip)
+    show "S \<times> T \<subseteq> M1 \<times> M2"
+      using that 
+      by (auto simp: M1.mtotally_bounded_sequentially M2.mtotally_bounded_sequentially)
+    fix \<sigma> :: "nat \<Rightarrow> 'a \<times> 'b"
+    assume \<sigma>: "range \<sigma> \<subseteq> S \<times> T"
+    with 1 obtain r1 where r1: "strict_mono r1" "M1.MCauchy (fst o \<sigma> o r1)"
+      apply (clarsimp simp: M1.mtotally_bounded_sequentially image_subset_iff)
+      by (metis SigmaE comp_eq_dest_lhs fst_conv)
+    from \<sigma> 2 obtain r2 where r2: "strict_mono r2" "M2.MCauchy (snd o \<sigma> o r1 o r2)"
+      apply (clarsimp simp: M2.mtotally_bounded_sequentially image_subset_iff)
+      by (smt (verit, best) comp_apply mem_Sigma_iff prod.collapse)
+    then have "M1.MCauchy (fst \<circ> \<sigma> \<circ> r1 o r2)"
+      by (simp add: M1.MCauchy_subsequence r1)
+    with r2 have "Prod_metric.MCauchy (\<sigma> \<circ> (r1 \<circ> r2))"
+      by (simp add: MCauchy_prod_metric o_def)
+    then show "\<exists>r. strict_mono r \<and> Prod_metric.MCauchy (\<sigma> \<circ> r)"
+      using r1 r2 strict_mono_o by blast
+  qed
+  ultimately show ?thesis
+    using False by blast
 qed auto
 
-
-oops
-  REPEAT GEN_TAC THEN MAP_EVERY ASM_CASES_TAC
-   [`S::A=>bool = {}`; `T::B=>bool = {}`] THEN
-  ASM_REWRITE_TAC[MBOUNDED_EMPTY; CROSS_EMPTY] THEN
-  REWRITE_TAC[mbounded; EXISTS_PAIR_THM] THEN MATCH_MP_TAC(MESON[]
-   `(\<forall>x y. P x y \<longleftrightarrow> Q x \<and> R y)
-    \<Longrightarrow> ((\<exists>x y. P x y) \<longleftrightarrow> (\<exists>x. Q x) \<and> (\<exists>y. R y))`) THEN
-
-  MAP_EVERY X_GEN_TAC [`x::A`; `y::B`] THEN EQ_TAC THENL
-   [DISCH_THEN(X_CHOOSE_TAC `r::real`) THEN
-    REWRITE_TAC[LEFT_AND_EXISTS_THM; RIGHT_AND_EXISTS_THM] THEN
-    REPEAT(EXISTS_TAC `r::real`) THEN
-    MATCH_MP_TAC(MESON[SUBSET_CROSS]
-     `S \<times> T \<subseteq> u \<times> v \<and> (S \<noteq> {}) \<and> (T \<noteq> {})
-      \<Longrightarrow> S \<subseteq> u \<and> T \<subseteq> v`) THEN
-    ASM_MESON_TAC[SUBSET_TRANS; MCBALL_PROD_METRIC_SUBSET];
-    DISCH_THEN(CONJUNCTS_THEN2
-     (X_CHOOSE_TAC `r1::real`) (X_CHOOSE_TAC `r2::real`)) THEN
-    EXISTS_TAC `r1 + r2::real` THEN
-    W(MP_TAC \<circ> PART_MATCH rand MCBALL_SUBSET_PROD_METRIC \<circ> rand \<circ> snd) THEN
-    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] SUBSET_TRANS) THEN
-    ASM_REWRITE_TAC[SUBSET_CROSS]]);;
-
-lemma (in Metric_space12) mbounded_prod_metric:
-   "Prod_metric.mbounded U \<longleftrightarrow> M1.mbounded  (fst ` U) \<and> M2.mbounded (snd ` U)"
-oops
-  REPEAT GEN_TAC THEN  EQ_TAC THENL
-   [REWRITE_TAC[mbounded; \<subseteq>; FORALL_IN_IMAGE; FORALL_PAIR_THM] THEN
-    REWRITE_TAC[EXISTS_PAIR_THM] THEN MATCH_MP_TAC(MESON[]
-     `(\<forall>r x y. R x y r \<Longrightarrow> P x r \<and> Q y r)
-      \<Longrightarrow> (\<exists>x y r. R x y r) \<Longrightarrow> (\<exists>x r. P x r) \<and> (\<exists>y r. Q y r)`) THEN
-    MAP_EVERY X_GEN_TAC [`r::real`; `x::A`; `y::B`] THEN
-    MP_TAC(ISPECL [`m1::A metric`; `m2::B metric`; `x::A`; `y::B`; `r::real`]
-        MCBALL_PROD_METRIC_SUBSET) THEN
-    REWRITE_TAC[\<subseteq>; FORALL_PAIR_THM; IN_CROSS] THEN MESON_TAC[];
-    STRIP_TAC THEN MATCH_MP_TAC MBOUNDED_SUBSET THEN
-    EXISTS_TAC `((fst ` U) \<times> (snd ` U)):A#B=>bool` THEN
-    ASM_REWRITE_TAC[MBOUNDED_CROSS; IMAGE_EQ_EMPTY] THEN
-    REWRITE_TAC[\<subseteq>; FORALL_PAIR_THM; IN_CROSS] THEN
-    REWRITE_TAC[IN_IMAGE; EXISTS_PAIR_THM] THEN MESON_TAC[]]);;
-
-lemma mtotally_bounded_Times:
-   "\<And>(m1::A metric) (m2::B metric) S T.
-       mtotally_bounded (prod_metric m1 m2) (S \<times> T) \<longleftrightarrow>
-       S = {} \<or> T = {} \<or> mtotally_bounded1 S \<and> mtotally_bounded2 T"
-oops
-  REPEAT GEN_TAC THEN MAP_EVERY ASM_CASES_TAC
-   [`S::A=>bool = {}`; `T::B=>bool = {}`] THEN
-  ASM_REWRITE_TAC[CROSS_EMPTY; TOTALLY_BOUNDED_IN_EMPTY] THEN
-  REWRITE_TAC[TOTALLY_BOUNDED_IN_SEQUENTIALLY] THEN
-  ASM_REWRITE_TAC[CONJUNCT1 PROD_METRIC; SUBSET_CROSS] THEN
-  ASM_CASES_TAC `(S::A=>bool) \<subseteq> M1` THEN ASM_REWRITE_TAC[] THEN
-  ASM_CASES_TAC `(T::B=>bool) \<subseteq> M2` THEN ASM_REWRITE_TAC[] THEN
-  EQ_TAC THEN STRIP_TAC THEN TRY CONJ_TAC THENL
-   [X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
-    UNDISCH_TAC `\<not> (T::B=>bool = {})` THEN
-    REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `y::B` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(\<lambda>n. (x n,y)):num=>A#B`) THEN
-    ASM_REWRITE_TAC[IN_CROSS; CAUCHY_IN_PROD_METRIC] THEN
-    MATCH_MP_TAC MONO_EXISTS THEN SIMP_TAC[o_DEF];
-    X_GEN_TAC `y::num=>B` THEN DISCH_TAC THEN
-    UNDISCH_TAC `\<not> (S::A=>bool = {})` THEN
-    REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(\<lambda>n. (x,y n)):num=>A#B`) THEN
-    ASM_REWRITE_TAC[IN_CROSS; CAUCHY_IN_PROD_METRIC] THEN
-    MATCH_MP_TAC MONO_EXISTS THEN SIMP_TAC[o_DEF];
-    REWRITE_TAC[FORALL_PAIR_FUN_THM; IN_CROSS; FORALL_AND_THM] THEN
-    MAP_EVERY X_GEN_TAC [`x::num=>A`; `y::num=>B`] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::num=>A`) THEN ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(X_CHOOSE_THEN `r1::num=>num` STRIP_ASSUME_TAC) THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(y::num=>B) \<circ> (r1::num=>num)`) THEN
-    ASM_REWRITE_TAC[o_THM] THEN
-    DISCH_THEN(X_CHOOSE_THEN `r2::num=>num` STRIP_ASSUME_TAC) THEN
-    EXISTS_TAC `(r1::num=>num) \<circ> (r2::num=>num)` THEN
-    ASM_SIMP_TAC[o_THM; CAUCHY_IN_PROD_METRIC; o_ASSOC] THEN
-    ONCE_REWRITE_TAC[o_ASSOC] THEN GEN_REWRITE_TAC
-     (BINOP_CONV \<circ> RAND_CONV \<circ> LAND_CONV \<circ> LAND_CONV) [o_DEF] THEN
-    ASM_REWRITE_TAC[ETA_AX] THEN ASM_SIMP_TAC[CAUCHY_IN_SUBSEQUENCE]]);;
-
-lemma mtotally_bounded_prod_metric:
-   "\<And>(m1::A metric) (m2::B metric) u.
-        mtotally_bounded (prod_metric m1 m2) u \<longleftrightarrow>
-        mtotally_bounded1 (fst ` u) \<and>
-        mtotally_bounded2 (snd ` u)"
-oops
-  REPEAT GEN_TAC THEN  EQ_TAC THENL
-   [REWRITE_TAC[TOTALLY_BOUNDED_IN_SEQUENTIALLY] THEN
-    REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; FORALL_PAIR_THM] THEN
-    REWRITE_TAC[CONJUNCT1 PROD_METRIC; IN_CROSS] THEN STRIP_TAC THEN
-    CONJ_TAC THEN (CONJ_TAC THENL [ASM_MESON_TAC[]; ALL_TAC]) THEN
-    SIMP_TAC[IN_IMAGE; SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
-    GEN_TAC THEN X_GEN_TAC `z::num=>A#B` THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `z::num=>A#B`) THEN
-    ASM_REWRITE_TAC[CAUCHY_IN_PROD_METRIC] THEN
-    MATCH_MP_TAC MONO_EXISTS THEN ASM_SIMP_TAC[o_DEF];
-    STRIP_TAC THEN MATCH_MP_TAC TOTALLY_BOUNDED_IN_SUBSET THEN
-    EXISTS_TAC `((fst ` u) \<times> (snd ` u)):A#B=>bool` THEN
-    ASM_REWRITE_TAC[TOTALLY_BOUNDED_IN_CROSS; IMAGE_EQ_EMPTY] THEN
-    REWRITE_TAC[\<subseteq>; FORALL_PAIR_THM; IN_CROSS] THEN
-    REWRITE_TAC[IN_IMAGE; EXISTS_PAIR_THM] THEN MESON_TAC[]]);;`
-
+lemma (in Metric_space12) mtotally_bounded_prod_metric:
+   "Prod_metric.mtotally_bounded U \<longleftrightarrow>
+    M1.mtotally_bounded (fst ` U) \<and> M2.mtotally_bounded (snd ` U)" (is "?lhs \<longleftrightarrow> ?rhs")
+proof
+  assume L: ?lhs
+  then have "U \<subseteq> M1 \<times> M2" 
+    and *: "\<And>\<sigma>. range \<sigma> \<subseteq> U \<Longrightarrow> \<exists>r::nat\<Rightarrow>nat. strict_mono r \<and> Prod_metric.MCauchy (\<sigma>\<circ>r)"
+    by (simp_all add: Prod_metric.mtotally_bounded_sequentially)
+  show ?rhs
+    unfolding M1.mtotally_bounded_sequentially M2.mtotally_bounded_sequentially
+  proof (intro conjI strip)
+    show "fst ` U \<subseteq> M1" "snd ` U \<subseteq> M2"
+      using \<open>U \<subseteq> M1 \<times> M2\<close> by auto
+  next
+    fix \<sigma> :: "nat \<Rightarrow> 'a"
+    assume "range \<sigma> \<subseteq> fst ` U"
+    then obtain \<zeta> where \<zeta>: "\<And>n. \<sigma> n = fst (\<zeta> n) \<and> \<zeta> n \<in> U"
+      unfolding image_subset_iff image_iff by (meson UNIV_I)
+    then obtain r where "strict_mono r \<and> Prod_metric.MCauchy (\<zeta>\<circ>r)"
+      by (metis "*" image_subset_iff)
+    with \<zeta> show "\<exists>r. strict_mono r \<and> M1.MCauchy (\<sigma> \<circ> r)"
+      by (auto simp: MCauchy_prod_metric o_def)
+  next
+    fix \<sigma>:: "nat \<Rightarrow> 'b"
+    assume "range \<sigma> \<subseteq> snd ` U"
+    then obtain \<zeta> where \<zeta>: "\<And>n. \<sigma> n = snd (\<zeta> n) \<and> \<zeta> n \<in> U"
+      unfolding image_subset_iff image_iff by (meson UNIV_I)
+    then obtain r where "strict_mono r \<and> Prod_metric.MCauchy (\<zeta>\<circ>r)"
+      by (metis "*" image_subset_iff)
+    with \<zeta> show "\<exists>r. strict_mono r \<and> M2.MCauchy (\<sigma> \<circ> r)"
+      by (auto simp: MCauchy_prod_metric o_def)
+  qed
+next
+  assume ?rhs
+  then have "Prod_metric.mtotally_bounded ((fst ` U) \<times> (snd ` U))"
+    by (simp add: mtotally_bounded_Times)
+  then show ?lhs
+    by (metis Prod_metric.mtotally_bounded_subset subset_fst_snd)
+qed
 
 text\<open> Three more restrictive notions of continuity for metric spaces.           \<close>
 
