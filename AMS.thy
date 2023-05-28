@@ -76,6 +76,18 @@ definition mdist where "mdist m \<equiv> snd (dest_metric m)"
 lemma metric_space_mspace_mdist: "Metric_space (mspace m) (mdist m)"
   by (metis Product_Type.Collect_case_prodD dest_metric mdist_def mspace_def)
 
+lemma mdist_nonneg [simp]: "\<And>x y. 0 \<le> mdist m x y"
+  by (metis Metric_space_def metric_space_mspace_mdist)
+
+lemma mdist_commute: "\<And>x y. mdist m x y = mdist m y x"
+  by (metis Metric_space_def metric_space_mspace_mdist)
+
+lemma mdist_zero [simp]: "\<And>x y. \<lbrakk>x \<in> mspace m; y \<in> mspace m\<rbrakk> \<Longrightarrow> mdist m x y = 0 \<longleftrightarrow> x=y"
+  by (meson Metric_space.zero metric_space_mspace_mdist)
+
+lemma mdist_triangle: "\<And>x y z. \<lbrakk>x \<in> mspace m; y \<in> mspace m; z \<in> mspace m\<rbrakk> \<Longrightarrow> mdist m x z \<le> mdist m x y + mdist m y z"
+  by (meson Metric_space.triangle metric_space_mspace_mdist)
+
 lemma (in Metric_space) mspace_metric[simp]: 
   "mspace (metric (M,d)) = M"
   by (simp add: mspace_def Metric_space_axioms metric_inverse)
@@ -90,13 +102,28 @@ text\<open> Subspace of a metric space\<close>
 definition submetric where
   "submetric \<equiv> \<lambda>m S. metric (S \<inter> mspace m, mdist m)"
 
-lemma submetric_mspace [simp]: "mspace (submetric m S) = S \<inter> mspace m" 
+lemma mspace_submetric [simp]: "mspace (submetric m S) = S \<inter> mspace m" 
   unfolding submetric_def
   by (meson Metric_space.subspace inf_le2 metric_space_mspace_mdist Metric_space.mspace_metric)
 
-lemma submetric_mdist [simp]: "mdist (submetric m S) = mdist m"
+lemma mdist_submetric [simp]: "mdist (submetric m S) = mdist m"
   unfolding submetric_def
   by (meson Metric_space.subspace inf_le2 Metric_space.mdist_metric metric_space_mspace_mdist)
+
+lemma submetric_UNIV [simp]: "submetric m UNIV = m"
+  by (simp add: AMS.submetric_def dest_metric_inverse mdist_def mspace_def)
+
+lemma submetric_submetric [simp]:
+   "submetric (submetric m S) T = submetric m (S \<inter> T)"
+  by (metis AMS.submetric_def Int_assoc inf_commute mdist_submetric mspace_submetric)
+
+lemma submetric_mspace [simp]:
+   "submetric m (mspace m) = m"
+  by (simp add: AMS.submetric_def dest_metric_inverse mdist_def mspace_def)
+
+lemma submetric_restrict:
+   "submetric m S = submetric m (mspace m \<inter> S)"
+  by (metis submetric_mspace submetric_submetric)
 
 
 (*NEEDS LEPOLL*)
@@ -3328,71 +3355,91 @@ qed (simp add: empty_completely_metrizable_space)
 
 subsection \<open> Three more restrictive notions of continuity for metric spaces.           \<close>
 
-context Metric_space12 begin
-
-definition Lipschitz_continuous_map where
- "Lipschitz_continuous_map A f \<equiv>
-    f ` A \<subseteq> M2 \<and> (\<exists>B. \<forall>x \<in> A. \<forall>y \<in> A. d2 (f x) (f y) \<le> B * d1 x y)"
+definition Lipschitz_continuous_map 
+  where "Lipschitz_continuous_map \<equiv> 
+      \<lambda>m1 m2 f. f ` mspace m1 \<subseteq> mspace m2 \<and>
+        (\<exists>B. \<forall>x \<in> mspace m1. \<forall>y \<in> mspace m1. mdist m2 (f x) (f y) \<le> B * mdist m1 x y)"
 
 lemma Lipschitz_continuous_map_pos:
-   "Lipschitz_continuous_map A f \<longleftrightarrow>
-      f ` A \<subseteq> M2 \<and> (\<exists>B>0. \<forall>x \<in> A. \<forall>y \<in> A. d2 (f x) (f y) \<le> B * d1 x y)"
+   "Lipschitz_continuous_map m1 m2 f \<longleftrightarrow>
+    f ` mspace m1 \<subseteq> mspace m2 \<and>
+        (\<exists>B>0. \<forall>x \<in> mspace m1. \<forall>y \<in> mspace m1. mdist m2 (f x) (f y) \<le> B * mdist m1 x y)"
 proof -
-  have "B * d1 x y \<le> (\<bar>B\<bar> + 1) * d1 x y" "\<bar>B\<bar> + 1 > 0" for x y B
+  have "B * mdist m1 x y \<le> (\<bar>B\<bar> + 1) * mdist m1 x y" "\<bar>B\<bar> + 1 > 0" for x y B
     by (auto simp add: mult_right_mono)
   then show ?thesis
     unfolding Lipschitz_continuous_map_def by (meson dual_order.trans)
 qed
 
+
 lemma Lipschitz_continuous_map_eq:
-  assumes "Lipschitz_continuous_map A f" "\<And>x. x \<in> A \<Longrightarrow> f x = g x"
-  shows "Lipschitz_continuous_map A g"
-  using Lipschitz_continuous_map_def assms by force
+  assumes "Lipschitz_continuous_map m1 m2 f" "\<And>x. x \<in> mspace m1 \<Longrightarrow> f x = g x"
+  shows "Lipschitz_continuous_map m1 m2 g"
+  using Lipschitz_continuous_map_def assms
+  by (metis (no_types, opaque_lifting) image_subset_iff)
+
+lemma Lipschitz_continuous_map_from_submetric:
+  assumes "Lipschitz_continuous_map m1 m2 f"
+  shows "Lipschitz_continuous_map (submetric m1 S) m2 f"
+  unfolding Lipschitz_continuous_map_def 
+  proof
+    show "f ` mspace (submetric m1 S) \<subseteq> mspace m2"
+      by (metis Lipschitz_continuous_map_def assms dual_order.trans image_mono inf_le2 mspace_submetric)
+    show "\<exists>B. \<forall>x\<in>mspace (submetric m1 S). \<forall>y\<in>mspace (submetric m1 S). mdist m2 (f x) (f y) \<le> B * mdist (submetric m1 S) x y"
+      by (metis IntD2 Lipschitz_continuous_map_def assms mdist_submetric mspace_submetric)
+qed
 
 lemma Lipschitz_continuous_map_from_submetric_mono:
-   "\<lbrakk>Lipschitz_continuous_map A f; B \<subseteq> A\<rbrakk> \<Longrightarrow> Lipschitz_continuous_map B f"
-  unfolding Lipschitz_continuous_map_def image_subset_iff
-  by blast
+   "\<lbrakk>Lipschitz_continuous_map (submetric m1 T) m2 f; S \<subseteq> T\<rbrakk>
+           \<Longrightarrow> Lipschitz_continuous_map (submetric m1 S) m2 f"
+  by (metis Lipschitz_continuous_map_from_submetric inf.absorb_iff2 submetric_submetric)
+
+lemma Lipschitz_continuous_map_into_submetric:
+   "Lipschitz_continuous_map m1 (submetric m2 S) f \<longleftrightarrow>
+        image f (mspace m1) \<subseteq> S \<and> Lipschitz_continuous_map m1 m2 f"
+  by (auto simp: Lipschitz_continuous_map_def)
 
 lemma Lipschitz_continuous_map_const:
-   "Lipschitz_continuous_map A (\<lambda>x. c) \<longleftrightarrow> A = {} \<or> c \<in> M2"
+  "Lipschitz_continuous_map m1 m2 (\<lambda>x. c) \<longleftrightarrow>
+        mspace m1 = {} \<or> c \<in> mspace m2"
   unfolding Lipschitz_continuous_map_def image_subset_iff
-  by (metis M2.mdist_zero all_not_in_conv dual_order.refl mult_zero_left)
+  by (metis all_not_in_conv mdist_nonneg mdist_zero mult_1)
+
+lemma Lipschitz_continuous_map_id:
+   "Lipschitz_continuous_map m1 m1 (\<lambda>x. x)"
+  by (metis Lipschitz_continuous_map_def image_ident mult_1 order_refl)
 
 lemma Lipschitz_continuous_map_compose:
-   "Lipschitz_continuous_map f \<and> Lipschitz_continuous_map m2 m3 g
-      \<Longrightarrow> Lipschitz_continuous_map m1 m3 (g \<circ> f)"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[LIPSCHITZ_CONTINUOUS_MAP_POS] THEN
-  REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; IMP_CONJ; LEFT_IMP_EXISTS_THM] THEN
-  DISCH_TAC THEN X_GEN_TAC `B::real` THEN REPEAT DISCH_TAC THEN
-  X_GEN_TAC `C::real` THEN REPEAT DISCH_TAC THEN ASM_SIMP_TAC[o_THM] THEN
-  EXISTS_TAC `C * B::real` THEN ASM_SIMP_TAC[REAL_LT_MUL] THEN
-  MAP_EVERY X_GEN_TAC [`x::A`; `y::A`] THEN REPEAT DISCH_TAC THEN
-  TRANS_TAC REAL_LE_TRANS `C * d m2 (f x,f y)` THEN
-  ASM_SIMP_TAC[GSYM REAL_MUL_ASSOC; REAL_LE_LMUL_EQ]);;
-
-end
-
-lemma (in Metric_space) Lipschitz_continuous_map_id:
-  assumes "A \<subseteq> M" shows "Metric_space12.Lipschitz_continuous_map d M d A (\<lambda>x. x)"
-proof -
-  interpret Metric_space12 M d M d
-    by (simp add: Metric_space12_def Metric_space_axioms)
-  show ?thesis
-    unfolding Lipschitz_continuous_map_def
-    using assms less_eq_real_def by auto
+  assumes f: "Lipschitz_continuous_map m1 m2 f" and g: "Lipschitz_continuous_map m2 m3 g"
+  shows "Lipschitz_continuous_map m1 m3 (g o f)"
+  unfolding Lipschitz_continuous_map_def image_subset_iff
+proof
+  show "\<forall>x\<in>mspace m1. (g \<circ> f) x \<in> mspace m3"
+    by (metis Lipschitz_continuous_map_def assms comp_apply image_subset_iff)
+  obtain B where B: "\<forall>x\<in>mspace m1. \<forall>y\<in>mspace m1. mdist m2 (f x) (f y) \<le> B * mdist m1 x y"
+    using assms unfolding Lipschitz_continuous_map_def by presburger
+  obtain C where "C>0" and C: "\<forall>x\<in>mspace m2. \<forall>y\<in>mspace m2. mdist m3 (g x) (g y) \<le> C * mdist m2 x y"
+    using assms unfolding Lipschitz_continuous_map_pos by metis
+  show "\<exists>B. \<forall>x\<in>mspace m1. \<forall>y\<in>mspace m1. mdist m3 ((g \<circ> f) x) ((g \<circ> f) y) \<le> B * mdist m1 x y"
+    apply (rule_tac x="C*B" in exI)
+  proof clarify
+    fix x y
+    assume \<section>: "x \<in> mspace m1" "y \<in> mspace m1"
+    then have "mdist m3 ((g \<circ> f) x) ((g \<circ> f) y) \<le> C * mdist m2 (f x) (f y)"
+      by (metis C Lipschitz_continuous_map_def f comp_apply image_subset_iff)
+    also have "\<dots> \<le> C * B * mdist m1 x y"
+      by (simp add: "\<section>" B \<open>0 < C\<close>)
+    finally show "mdist m3 ((g \<circ> f) x) ((g \<circ> f) y) \<le> C * B * mdist m1 x y" .
+  qed
 qed
 
 
-definition uniformly_continuous_map where
- `uniformly_continuous_map m1 m2 f \<longleftrightarrow>
-        f ` M1 \<subseteq> M2 \<and>
-        \<forall>e. 0 < e
-            \<Longrightarrow> \<exists>d. 0 < d \<and>
-                    !x x'. x \<in> M1 \<and> x' \<in> M1 \<and>
-                           d x' x < d
-                           \<Longrightarrow> d m2 (f x',f x) < e"
+
+definition uniformly_continuous_map 
+  where "uniformly_continuous_map \<equiv> 
+      \<lambda>m1 m2 f. f ` mspace m1 \<subseteq> mspace m2 \<and>
+        (\<forall>e>0. \<exists>d>0. \<forall>x \<in> mspace m1. \<forall>y \<in> mspace m1. 
+                           mdist m1 y x < d \<longrightarrow> mdist m2 (f y) (f x) < e)"
 
 let UNIFORMLY_CONTINUOUS_MAP_SEQUENTIALLY,
     UNIFORMLY_CONTINUOUS_MAP_SEQUENTIALLY_ALT = (CONJ_PAIR \<circ> prove)
