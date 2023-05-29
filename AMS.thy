@@ -73,20 +73,20 @@ definition mspace where "mspace m \<equiv> fst (dest_metric m)"
 
 definition mdist where "mdist m \<equiv> snd (dest_metric m)"
 
-lemma metric_space_mspace_mdist: "Metric_space (mspace m) (mdist m)"
+lemma Metric_space_mspace_mdist: "Metric_space (mspace m) (mdist m)"
   by (metis Product_Type.Collect_case_prodD dest_metric mdist_def mspace_def)
 
 lemma mdist_nonneg [simp]: "\<And>x y. 0 \<le> mdist m x y"
-  by (metis Metric_space_def metric_space_mspace_mdist)
+  by (metis Metric_space_def Metric_space_mspace_mdist)
 
 lemma mdist_commute: "\<And>x y. mdist m x y = mdist m y x"
-  by (metis Metric_space_def metric_space_mspace_mdist)
+  by (metis Metric_space_def Metric_space_mspace_mdist)
 
 lemma mdist_zero [simp]: "\<And>x y. \<lbrakk>x \<in> mspace m; y \<in> mspace m\<rbrakk> \<Longrightarrow> mdist m x y = 0 \<longleftrightarrow> x=y"
-  by (meson Metric_space.zero metric_space_mspace_mdist)
+  by (meson Metric_space.zero Metric_space_mspace_mdist)
 
 lemma mdist_triangle: "\<And>x y z. \<lbrakk>x \<in> mspace m; y \<in> mspace m; z \<in> mspace m\<rbrakk> \<Longrightarrow> mdist m x z \<le> mdist m x y + mdist m y z"
-  by (meson Metric_space.triangle metric_space_mspace_mdist)
+  by (meson Metric_space.triangle Metric_space_mspace_mdist)
 
 lemma (in Metric_space) mspace_metric[simp]: 
   "mspace (metric (M,d)) = M"
@@ -96,6 +96,23 @@ lemma (in Metric_space) mdist_metric[simp]:
   "mdist (metric (M,d)) = d"
   by (simp add: mdist_def Metric_space_axioms metric_inverse)
 
+definition mtopology_of :: "'a metric \<Rightarrow> 'a topology"
+  where "mtopology_of \<equiv> \<lambda>m. Metric_space.mtopology (mspace m) (mdist m)"
+
+lemma topspace_mtopology_of [simp]: "topspace (mtopology_of m) = mspace m"
+  by (simp add: Metric_space.topspace_mtopology Metric_space_mspace_mdist mtopology_of_def)
+
+lemma (in Metric_space) mtopology_of [simp]:
+  "mtopology_of (metric (M,d)) = mtopology"
+  by (simp add: mtopology_of_def)
+
+definition "euclidean_metric \<equiv> metric (UNIV,dist)"
+
+lemma mspace_euclidean_metric [simp]: "mspace euclidean_metric = UNIV"
+  by (simp add: euclidean_metric_def)
+
+lemma mdist_euclidean_metric [simp]: "mdist euclidean_metric = dist"
+  by (simp add: euclidean_metric_def)
 
 text\<open> Subspace of a metric space\<close>
 
@@ -104,11 +121,11 @@ definition submetric where
 
 lemma mspace_submetric [simp]: "mspace (submetric m S) = S \<inter> mspace m" 
   unfolding submetric_def
-  by (meson Metric_space.subspace inf_le2 metric_space_mspace_mdist Metric_space.mspace_metric)
+  by (meson Metric_space.subspace inf_le2 Metric_space_mspace_mdist Metric_space.mspace_metric)
 
 lemma mdist_submetric [simp]: "mdist (submetric m S) = mdist m"
   unfolding submetric_def
-  by (meson Metric_space.subspace inf_le2 Metric_space.mdist_metric metric_space_mspace_mdist)
+  by (meson Metric_space.subspace inf_le2 Metric_space.mdist_metric Metric_space_mspace_mdist)
 
 lemma submetric_UNIV [simp]: "submetric m UNIV = m"
   by (simp add: AMS.submetric_def dest_metric_inverse mdist_def mspace_def)
@@ -398,6 +415,21 @@ lemma limit_atin_sequentially_decreasing:
   using limit_atin_sequentially_within_decreasing [where S=UNIV] by simp
 
 end
+
+text \<open>For easy reference to theorems outside of the locale\<close>
+lemma Metric_space12_mspace_mdist:
+  "Metric_space12 (mspace m1) (mdist m1) (mspace m2) (mdist m2)"
+  by (simp add: Metric_space12_def Metric_space_mspace_mdist)
+
+text \<open>An experiment: same result as within the locale, but using metric space variables\<close>
+lemma limit_atin_sequentially_within:
+  "limitin (mtopology_of m2) f l (atin_within (mtopology_of m1) a S) \<longleftrightarrow>
+     l \<in> mspace m2 \<and>
+     (\<forall>\<sigma>. range \<sigma> \<subseteq> S \<inter> mspace m1 - {a} \<and>
+          limitin (mtopology_of m1) \<sigma> a sequentially
+          \<longrightarrow> limitin (mtopology_of m2) (f \<circ> \<sigma>) l sequentially)"
+  using Metric_space12.limit_atin_sequentially_within [OF Metric_space12_mspace_mdist]
+  by (metis mtopology_of_def)
 
 
 context Metric_space
@@ -2959,7 +2991,7 @@ definition prod_metric where
 lemma submetric_prod_metric:
    "submetric (prod_metric m1 m2) (S \<times> T) = prod_metric (submetric m1 S) (submetric m2 T)"
   apply (simp add: prod_metric_def)
-  by (simp add: submetric_def Metric_space.mspace_metric Metric_space.mdist_metric Metric_space12.prod_metric Metric_space12_def metric_space_mspace_mdist Times_Int_Times)
+  by (simp add: submetric_def Metric_space.mspace_metric Metric_space.mdist_metric Metric_space12.prod_metric Metric_space12_def Metric_space_mspace_mdist Times_Int_Times)
 
 context Metric_space12 begin
 
@@ -3355,6 +3387,8 @@ qed (simp add: empty_completely_metrizable_space)
 
 subsection \<open> Three more restrictive notions of continuity for metric spaces.           \<close>
 
+subsubsection \<open>Lipschitz continuity\<close>
+
 definition Lipschitz_continuous_map 
   where "Lipschitz_continuous_map \<equiv> 
       \<lambda>m1 m2 f. f ` mspace m1 \<subseteq> mspace m2 \<and>
@@ -3382,12 +3416,10 @@ lemma Lipschitz_continuous_map_from_submetric:
   assumes "Lipschitz_continuous_map m1 m2 f"
   shows "Lipschitz_continuous_map (submetric m1 S) m2 f"
   unfolding Lipschitz_continuous_map_def 
-  proof
-    show "f ` mspace (submetric m1 S) \<subseteq> mspace m2"
-      by (metis Lipschitz_continuous_map_def assms dual_order.trans image_mono inf_le2 mspace_submetric)
-    show "\<exists>B. \<forall>x\<in>mspace (submetric m1 S). \<forall>y\<in>mspace (submetric m1 S). mdist m2 (f x) (f y) \<le> B * mdist (submetric m1 S) x y"
-      by (metis IntD2 Lipschitz_continuous_map_def assms mdist_submetric mspace_submetric)
-qed
+proof
+  show "f ` mspace (submetric m1 S) \<subseteq> mspace m2"
+    using Lipschitz_continuous_map_pos assms by fastforce
+qed (use assms in \<open>fastforce simp: Lipschitz_continuous_map_def\<close>)
 
 lemma Lipschitz_continuous_map_from_submetric_mono:
    "\<lbrakk>Lipschitz_continuous_map (submetric m1 T) m2 f; S \<subseteq> T\<rbrakk>
@@ -3433,195 +3465,208 @@ proof
   qed
 qed
 
+lemma Lipschitz_map_euclidean [simp]:
+  "Lipschitz_continuous_map euclidean_metric euclidean_metric f
+     = (\<exists>B. lipschitz_on B UNIV f)"
+  apply (auto simp: Lipschitz_continuous_map_pos lipschitz_on_def)
+   apply (meson less_le_not_le)
+  by (metis dist_not_less_zero less_eq_real_def mult_zero_left not_one_le_zero zero_le_mult_iff)
 
+subsubsection \<open>Uniform continuity\<close>
 
 definition uniformly_continuous_map 
   where "uniformly_continuous_map \<equiv> 
       \<lambda>m1 m2 f. f ` mspace m1 \<subseteq> mspace m2 \<and>
-        (\<forall>e>0. \<exists>d>0. \<forall>x \<in> mspace m1. \<forall>y \<in> mspace m1. 
-                           mdist m1 y x < d \<longrightarrow> mdist m2 (f y) (f x) < e)"
+        (\<forall>\<epsilon>>0. \<exists>\<delta>>0. \<forall>x \<in> mspace m1. \<forall>y \<in> mspace m1. 
+                           mdist m1 y x < \<delta> \<longrightarrow> mdist m2 (f y) (f x) < \<epsilon>)"
 
-let UNIFORMLY_CONTINUOUS_MAP_SEQUENTIALLY,
-    UNIFORMLY_CONTINUOUS_MAP_SEQUENTIALLY_ALT = (CONJ_PAIR \<circ> prove)
- (`(\<forall>m1 m2 f::A=>B.
-        uniformly_continuous_map m1 m2 f \<longleftrightarrow>
-        f ` M1 \<subseteq> M2 \<and>
-        \<forall>x y. (\<forall>n. x n \<in> M1) \<and> (\<forall>n. y n \<in> M1) \<and>
-              tendsto (\<lambda>n. d m1 (x n,y n)) 0 sequentially
-              \<Longrightarrow> tendsto
-                    (\<lambda>n. d m2 (f(x n),f(y n))) 0 sequentially) \<and>
-   (\<forall>m1 m2 f::A=>B.
-        uniformly_continuous_map m1 m2 f \<longleftrightarrow>
-        f ` M1 \<subseteq> M2 \<and>
-        \<forall>e x y. 0 < e \<and> (\<forall>n. x n \<in> M1) \<and> (\<forall>n. y n \<in> M1) \<and>
-                tendsto (\<lambda>n. d m1 (x n,y n)) 0 sequentially
-                \<Longrightarrow> \<exists>n. d m2 (f(x n),f(y n)) < e)"
-oops
-  REWRITE_TAC[AND_FORALL_THM] THEN REPEAT GEN_TAC THEN
-  MATCH_MP_TAC(TAUT
-   `(p \<Longrightarrow> q) \<and> (q \<Longrightarrow> r) \<and> (r \<Longrightarrow> p)
-    \<Longrightarrow> (p \<longleftrightarrow> q) \<and> (p \<longleftrightarrow> r)`) THEN
-  REPEAT CONJ_TAC THENL
-   [REWRITE_TAC[uniformly_continuous_map; \<subseteq>; FORALL_IN_IMAGE] THEN
-    STRIP_TAC THEN ASM_REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
-    REWRITE_TAC[LIMIT_METRIC; EVENTUALLY_SEQUENTIALLY] THEN
-    REWRITE_TAC[REAL_EUCLIDEAN_METRIC; IN_UNIV; IMP_CONJ] THEN
-    ASM_SIMP_TAC[MDIST_POS_LE; REAL_ARITH `0 \<le> x \<Longrightarrow> abs(0 - x) = x`] THEN
-    ASM_MESON_TAC[];
-    REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE] THEN
-    STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-    MAP_EVERY X_GEN_TAC [`e::real`; `x::num=>A`; `y::num=>A`] THEN
-    STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`x::num=>A`; `y::num=>A`]) THEN
-    ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
-    REWRITE_TAC[LIMIT_METRIC] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `e::real` \<circ> CONJUNCT2) THEN
-    ASM_REWRITE_TAC[REAL_EUCLIDEAN_METRIC; IN_UNIV] THEN
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP EVENTUALLY_HAPPENS) THEN
-    REWRITE_TAC[TRIVIAL_LIMIT_SEQUENTIALLY] THEN
-    ASM_SIMP_TAC[MDIST_POS_LE; REAL_ARITH `0 \<le> x \<Longrightarrow> abs(0 - x) = x`];
-    REWRITE_TAC[uniformly_continuous_map; \<subseteq>; FORALL_IN_IMAGE] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-    ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `e::real` THEN
-    ONCE_REWRITE_TAC[TAUT `p \<Longrightarrow> q \<Longrightarrow> r \<longleftrightarrow> q \<Longrightarrow> \<not> r \<Longrightarrow> \<not> p`] THEN
-    DISCH_TAC THEN REWRITE_TAC[NOT_EXISTS_THM] THEN
-    DISCH_THEN(MP_TAC \<circ> GEN `n::num` \<circ> SPEC `inverse(Suc n)`) THEN
-    REWRITE_TAC[REAL_LT_INV_EQ; REAL_ARITH `0 < n + 1`] THEN
-    REWRITE_TAC[NOT_FORALL_THM; NOT_IMP; SKOLEM_THM] THEN
-    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `x::num=>A` THEN
-    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `y::num=>A` THEN
-    REWRITE_TAC[AND_FORALL_THM; REAL_NOT_LT] THEN STRIP_TAC THEN
-    ASM_REWRITE_TAC[NOT_EXISTS_THM] THEN CONJ_TAC THENL
-     [ALL_TAC; ASM_MESON_TAC[MDIST_SYM; REAL_NOT_LT]] THEN
-    MATCH_MP_TAC LIMIT_NULL_REAL_COMPARISON THEN
-    EXISTS_TAC `\<lambda>n. inverse(Suc n)` THEN
-    REWRITE_TAC[EVENTUALLY_SEQUENTIALLY; LIMIT_NULL_REAL_HARMONIC_OFFSET] THEN
-    EXISTS_TAC `0` THEN X_GEN_TAC `n::num` THEN DISCH_TAC THEN
-    ASM_SIMP_TAC[REAL_ABS_INV; REAL_ARITH `abs(Suc n) = n + 1`;
-      METRIC_ARITH `x \<in> M \<and> y \<in> M
-                    \<Longrightarrow> abs(d x y) = d y x`] THEN
-    ASM_SIMP_TAC[REAL_LT_IMP_LE]]);;
+lemma uniformly_continuous_map_imp_subset: 
+  "uniformly_continuous_map m1 m2 f \<Longrightarrow> f ` mspace m1 \<subseteq> mspace m2"
+  by (simp add: uniformly_continuous_map_def)
+
+lemma ucmap_A:
+  assumes "uniformly_continuous_map m1 m2 f"
+  and "(\<lambda>n. mdist m1 (\<rho> n) (\<sigma> n)) \<longlonglongrightarrow> 0"
+    and "range \<rho> \<subseteq> mspace m1" "range \<sigma> \<subseteq> mspace m1"
+  shows "(\<lambda>n. mdist m2 (f (\<rho> n)) (f (\<sigma> n))) \<longlonglongrightarrow> 0"
+  using assms
+  unfolding uniformly_continuous_map_def image_subset_iff tendsto_iff
+  apply clarsimp
+  by (metis (mono_tags, lifting) eventually_sequentially)
+
+lemma ucmap_B:
+  assumes \<section>: "\<And>\<rho> \<sigma>. \<lbrakk>range \<rho> \<subseteq> mspace m1; range \<sigma> \<subseteq> mspace m1;
+              (\<lambda>n. mdist m1 (\<rho> n) (\<sigma> n)) \<longlonglongrightarrow> 0\<rbrakk>
+              \<Longrightarrow> (\<lambda>n. mdist m2 (f (\<rho> n)) (f (\<sigma> n))) \<longlonglongrightarrow> 0"
+    and "0 < \<epsilon>"
+    and \<rho>: "range \<rho> \<subseteq> mspace m1"
+    and \<sigma>: "range \<sigma> \<subseteq> mspace m1"
+    and "(\<lambda>n. mdist m1 (\<rho> n) (\<sigma> n)) \<longlonglongrightarrow> 0"
+  shows "\<exists>n. mdist m2 (f (\<rho> (n::nat))) (f (\<sigma> n)) < \<epsilon>"
+  using \<section> [OF \<rho> \<sigma>] assms by (meson LIMSEQ_le_const linorder_not_less)
+
+lemma ucmap_C: 
+  assumes \<section>: "\<And>\<rho> \<sigma> \<epsilon>. \<lbrakk>\<epsilon> > 0; range \<rho> \<subseteq> mspace m1; range \<sigma> \<subseteq> mspace m1;
+                       ((\<lambda>n. mdist m1 (\<rho> n) (\<sigma> n)) \<longlonglongrightarrow> 0)\<rbrakk>
+                      \<Longrightarrow> \<exists>n. mdist m2 (f (\<rho> n)) (f (\<sigma> n)) < \<epsilon>"
+    and fim: "f ` mspace m1 \<subseteq> mspace m2"
+  shows "uniformly_continuous_map m1 m2 f"
+proof -
+  {assume "\<not> (\<forall>\<epsilon>>0. \<exists>\<delta>>0. \<forall>x\<in>mspace m1. \<forall>y\<in>mspace m1. mdist m1 y x < \<delta> \<longrightarrow> mdist m2 (f y) (f x) < \<epsilon>)" 
+    then obtain \<epsilon> where "\<epsilon> > 0" 
+      and "\<And>n. \<exists>x\<in>mspace m1. \<exists>y\<in>mspace m1. mdist m1 y x < inverse(Suc n) \<and> mdist m2 (f y) (f x) \<ge> \<epsilon>"
+      by (meson inverse_Suc linorder_not_le)
+    then obtain \<rho> \<sigma> where space: "range \<rho> \<subseteq> mspace m1" "range \<sigma> \<subseteq> mspace m1"
+         and dist: "\<And>n. mdist m1 (\<sigma> n) (\<rho> n) < inverse(Suc n) \<and> mdist m2 (f(\<sigma> n)) (f(\<rho> n)) \<ge> \<epsilon>"
+      by (metis image_subset_iff)
+    have False 
+      using \<section> [OF \<open>\<epsilon> > 0\<close> space] dist Lim_null_comparison
+      by (smt (verit) LIMSEQ_norm_0 inverse_eq_divide mdist_commute mdist_nonneg real_norm_def)
+  }
+  moreover
+  have "t \<in> mspace m2" if "t \<in> f ` mspace m1" for t
+    using fim that by blast
+  ultimately show ?thesis
+    by (fastforce simp: uniformly_continuous_map_def)
+qed
+
+lemma uniformly_continuous_map_sequentially:
+  "uniformly_continuous_map m1 m2 f \<longleftrightarrow>
+    f ` mspace m1 \<subseteq> mspace m2 \<and>
+    (\<forall>\<rho> \<sigma>. range \<rho> \<subseteq> mspace m1 \<and> range \<sigma> \<subseteq> mspace m1 \<and> (\<lambda>n. mdist m1 (\<rho> n) (\<sigma> n)) \<longlonglongrightarrow> 0
+          \<longrightarrow> (\<lambda>n. mdist m2 (f (\<rho> n)) (f (\<sigma> n))) \<longlonglongrightarrow> 0)"
+   (is "?lhs \<longleftrightarrow> ?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs"
+    by (simp add: ucmap_A uniformly_continuous_map_imp_subset)
+  show "?rhs \<Longrightarrow> ?lhs"
+    by (intro ucmap_B ucmap_C) auto
+qed
+
+
+lemma uniformly_continuous_map_sequentially_alt:
+    "uniformly_continuous_map m1 m2 f \<longleftrightarrow>
+      f ` mspace m1 \<subseteq> mspace m2 \<and>
+      (\<forall>\<epsilon>>0. \<forall>\<rho> \<sigma>. range \<rho> \<subseteq> mspace m1 \<and> range \<sigma> \<subseteq> mspace m1 \<and>
+            ((\<lambda>n. mdist m1 (\<rho> n) (\<sigma> n)) \<longlonglongrightarrow> 0)
+            \<longrightarrow> (\<exists>n. mdist m2 (f (\<rho> n)) (f (\<sigma> n)) < \<epsilon>))"
+   (is "?lhs \<longleftrightarrow> ?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs"
+    using uniformly_continuous_map_imp_subset by (intro conjI strip ucmap_B | force simp: ucmap_A)+
+  show "?rhs \<Longrightarrow> ?lhs"
+    by (intro ucmap_C) auto
+qed
+
 
 lemma uniformly_continuous_map_eq:
-   "(\<forall>x. x \<in> M1 \<Longrightarrow> f x = g x) \<and> uniformly_continuous_map m1 m2 f
+   "\<lbrakk>\<And>x. x \<in> mspace m1 \<Longrightarrow> f x = g x; uniformly_continuous_map m1 m2 f\<rbrakk>
       \<Longrightarrow> uniformly_continuous_map m1 m2 g"
-oops
-  REWRITE_TAC[uniformly_continuous_map] THEN
-  REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; IMP_CONJ] THEN SIMP_TAC[]);;
+  by (simp add: uniformly_continuous_map_def)
 
 lemma uniformly_continuous_map_from_submetric:
-   "\<And>m1 m2 s f::A=>B.
-        uniformly_continuous_map m1 m2 f
-        \<Longrightarrow> uniformly_continuous_map (submetric1 s,m2) f"
-oops
-  REWRITE_TAC[uniformly_continuous_map; SUBMETRIC] THEN SET_TAC[]);;
+  assumes "uniformly_continuous_map m1 m2 f"
+  shows "uniformly_continuous_map (submetric m1 S) m2 f"
+  unfolding uniformly_continuous_map_def 
+proof
+  show "f ` mspace (submetric m1 S) \<subseteq> mspace m2"
+    using assms by (auto simp: uniformly_continuous_map_def)
+qed (use assms in \<open>force simp: uniformly_continuous_map_def\<close>)
 
 lemma uniformly_continuous_map_from_submetric_mono:
-   "uniformly_continuous_map (submetric1 t,m2) f \<and> s \<subseteq> t
-           \<Longrightarrow> uniformly_continuous_map (submetric1 s,m2) f"
-oops
-  MESON_TAC[UNIFORMLY_CONTINUOUS_MAP_FROM_SUBMETRIC; SUBMETRIC_SUBMETRIC;
-            SET_RULE `s \<subseteq> t \<Longrightarrow> t \<inter> s = s`]);;
+   "\<lbrakk>uniformly_continuous_map (submetric m1 T) m2 f; S \<subseteq> T\<rbrakk>
+           \<Longrightarrow> uniformly_continuous_map (submetric m1 S) m2 f"
+  by (metis uniformly_continuous_map_from_submetric inf.absorb_iff2 submetric_submetric)
 
 lemma uniformly_continuous_map_into_submetric:
-   "\<And>m1 m2 s f::A=>B.
-        uniformly_continuous_map m1 (submetric2 s) f \<longleftrightarrow>
-        image f (M1) \<subseteq> s \<and>
-        uniformly_continuous_map m1 m2 f"
-oops
-  REWRITE_TAC[uniformly_continuous_map; SUBMETRIC] THEN SET_TAC[]);;
+   "uniformly_continuous_map m1 (submetric m2 S) f \<longleftrightarrow>
+        image f (mspace m1) \<subseteq> S \<and> uniformly_continuous_map m1 m2 f"
+  by (auto simp: uniformly_continuous_map_def)
 
 lemma uniformly_continuous_map_const:
-   "uniformly_continuous_map m1 m2 (\<lambda>x. c) \<longleftrightarrow>
-        M1 = {} \<or> c \<in> M2"
-oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[uniformly_continuous_map] THEN
-  ASM_CASES_TAC `M1::A=>bool = {}` THEN
-  ASM_REWRITE_TAC[IMAGE_CLAUSES; EMPTY_SUBSET; NOT_IN_EMPTY] THENL
-   [MESON_TAC[]; ALL_TAC] THEN
-  ASM_CASES_TAC `(c::B) \<in> M2` THENL [ALL_TAC; ASM SET_TAC[]] THEN
-  ASM_REWRITE_TAC[] THEN CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  ASM_SIMP_TAC[MDIST_REFL] THEN MESON_TAC[]);;
-
-lemma uniformly_continuous_map_real_const:
-   "uniformly_continuous_map m real_euclidean_metric (\<lambda>x::A. c)"
-oops
-  REWRITE_TAC[UNIFORMLY_CONTINUOUS_MAP_CONST; REAL_EUCLIDEAN_METRIC; IN_UNIV]);;
+  "uniformly_continuous_map m1 m2 (\<lambda>x. c) \<longleftrightarrow>
+        mspace m1 = {} \<or> c \<in> mspace m2"
+  unfolding uniformly_continuous_map_def image_subset_iff
+  by (metis empty_iff equals0I mdist_zero)
 
 lemma uniformly_continuous_map_id:
    "uniformly_continuous_map m1 m1 (\<lambda>x. x)"
-oops
-  REWRITE_TAC[uniformly_continuous_map; IMAGE_ID; SUBSET_REFL] THEN
-  MESON_TAC[]);;
+  by (metis image_ident order_refl uniformly_continuous_map_def)
 
 lemma uniformly_continuous_map_compose:
-   "\<And>m1 m2 f::A=>B g::B=>C.
-    uniformly_continuous_map m1 m2 f \<and> uniformly_continuous_map m2 m3 g
-    \<Longrightarrow> uniformly_continuous_map m1 m3 (g \<circ> f)"
-oops
-  REWRITE_TAC[uniformly_continuous_map; o_DEF; \<subseteq>; FORALL_IN_IMAGE] THEN
-  REPEAT GEN_TAC THEN SIMP_TAC[CONJ_ASSOC] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC) THEN
-  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `e::real` THEN ASM_MESON_TAC[]);;
+  assumes f: "uniformly_continuous_map m1 m2 f" and g: "uniformly_continuous_map m2 m3 g"
+  shows "uniformly_continuous_map m1 m3 (g o f)"
+  by (smt (verit, ccfv_threshold) comp_apply f g image_subset_iff uniformly_continuous_map_def)
 
-definition cauchy_continuous_map where
- `cauchy_continuous_map m1 m2 f \<longleftrightarrow>
-        \<forall>x. MCauchy m1 x \<Longrightarrow> MCauchy m2 (f \<circ> x)"
+lemma uniformly_continuous_map_real_const:
+   "uniformly_continuous_map m euclidean_metric (\<lambda>x. c)"
+  by (simp add: euclidean_metric_def uniformly_continuous_map_const)
 
-lemma cauchy_continuous_map_image:
+lemma uniformly_continuous_map_euclidean:
+  "uniformly_continuous_map euclidean_metric euclidean_metric f
+     = uniformly_continuous_on UNIV f"
+  by (force simp add: uniformly_continuous_map_def isUCont_def)
+
+subsubsection \<open>Cauchy continuity\<close>
+
+definition Cauchy_continuous_map where
+ "Cauchy_continuous_map \<equiv>
+  \<lambda>m1 m2 f. \<forall>x. Metric_space.MCauchy (mspace m1) (mdist m1) x 
+            \<longrightarrow> Metric_space.MCauchy (mspace m2) (mdist m2) (f \<circ> x)"
+
+lemma Cauchy_continuous_map_image:
    "\<And>m1 m2 f::A=>B.
-        cauchy_continuous_map m1 m2 f
+        Cauchy_continuous_map m1 m2 f
         \<Longrightarrow> f ` M1 \<subseteq> M2"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE] THEN
   X_GEN_TAC `a::A` THEN DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC \<circ> SPEC `(\<lambda>n. a):num=>A` \<circ>
-    REWRITE_RULE[cauchy_continuous_map]) THEN
+    REWRITE_RULE[Cauchy_continuous_map]) THEN
   ASM_REWRITE_TAC[o_DEF; CAUCHY_IN_CONST]);;
 
-lemma cauchy_continuous_map_eq:
-   "(\<forall>x. x \<in> M1 \<Longrightarrow> f x = g x) \<and> cauchy_continuous_map m1 m2 f
-      \<Longrightarrow> cauchy_continuous_map m1 m2 g"
+lemma Cauchy_continuous_map_eq:
+   "(\<forall>x. x \<in> M1 \<Longrightarrow> f x = g x) \<and> Cauchy_continuous_map m1 m2 f
+      \<Longrightarrow> Cauchy_continuous_map m1 m2 g"
 oops
-  REWRITE_TAC[cauchy_continuous_map; MCauchy; o_DEF; IMP_CONJ] THEN
+  REWRITE_TAC[Cauchy_continuous_map; MCauchy; o_DEF; IMP_CONJ] THEN
   SIMP_TAC[]);;
 
-lemma cauchy_continuous_map_from_submetric:
+lemma Cauchy_continuous_map_from_submetric:
    "\<And>m1 m2 s f::A=>B.
-        cauchy_continuous_map m1 m2 f
-        \<Longrightarrow> cauchy_continuous_map (submetric1 s,m2) f"
+        Cauchy_continuous_map m1 m2 f
+        \<Longrightarrow> Cauchy_continuous_map (submetric1 s,m2) f"
 oops
-  SIMP_TAC[cauchy_continuous_map; CAUCHY_IN_SUBMETRIC]);;
+  SIMP_TAC[Cauchy_continuous_map; CAUCHY_IN_SUBMETRIC]);;
 
-lemma cauchy_continuous_map_from_submetric_mono:
-   "cauchy_continuous_map (submetric1 t,m2) f \<and> s \<subseteq> t
-           \<Longrightarrow> cauchy_continuous_map (submetric1 s,m2) f"
+lemma Cauchy_continuous_map_from_submetric_mono:
+   "Cauchy_continuous_map (submetric1 t,m2) f \<and> s \<subseteq> t
+           \<Longrightarrow> Cauchy_continuous_map (submetric1 s,m2) f"
 oops
   MESON_TAC[CAUCHY_CONTINUOUS_MAP_FROM_SUBMETRIC; SUBMETRIC_SUBMETRIC;
             SET_RULE `s \<subseteq> t \<Longrightarrow> t \<inter> s = s`]);;
 
-lemma cauchy_continuous_map_into_submetric:
+lemma Cauchy_continuous_map_into_submetric:
    "\<And>m1 m2 s f::A=>B.
-        cauchy_continuous_map m1 (submetric2 s) f \<longleftrightarrow>
+        Cauchy_continuous_map m1 (submetric2 s) f \<longleftrightarrow>
         image f (M1) \<subseteq> s \<and>
-        cauchy_continuous_map m1 m2 f"
+        Cauchy_continuous_map m1 m2 f"
 oops
   REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL
    [CONJ_TAC THENL
      [FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CAUCHY_CONTINUOUS_MAP_IMAGE) THEN
       REWRITE_TAC[SUBMETRIC] THEN SET_TAC[];
       POP_ASSUM MP_TAC THEN
-      SIMP_TAC[cauchy_continuous_map; CAUCHY_IN_SUBMETRIC; o_THM]];
+      SIMP_TAC[Cauchy_continuous_map; CAUCHY_IN_SUBMETRIC; o_THM]];
     REPEAT(POP_ASSUM MP_TAC) THEN
-    SIMP_TAC[cauchy_continuous_map; CAUCHY_IN_SUBMETRIC; o_THM] THEN
+    SIMP_TAC[Cauchy_continuous_map; CAUCHY_IN_SUBMETRIC; o_THM] THEN
     REWRITE_TAC[MCauchy] THEN SET_TAC[]]);;
 
-lemma cauchy_continuous_map_const:
-   "cauchy_continuous_map m1 m2 (\<lambda>x. c) \<longleftrightarrow>
+lemma Cauchy_continuous_map_const:
+   "Cauchy_continuous_map m1 m2 (\<lambda>x. c) \<longleftrightarrow>
         M1 = {} \<or> c \<in> M2"
 oops
-  REPEAT GEN_TAC THEN REWRITE_TAC[cauchy_continuous_map] THEN
+  REPEAT GEN_TAC THEN REWRITE_TAC[Cauchy_continuous_map] THEN
   REWRITE_TAC[o_DEF; CAUCHY_IN_CONST] THEN
   ASM_CASES_TAC `(c::B) \<in> M2` THEN ASM_REWRITE_TAC[] THEN
   EQ_TAC THENL [ALL_TAC; SIMP_TAC[MCauchy; NOT_IN_EMPTY]] THEN
@@ -3631,21 +3676,21 @@ oops
   DISCH_THEN(MP_TAC \<circ> SPEC `(\<lambda>n. a):num=>A`) THEN
   ASM_REWRITE_TAC[CAUCHY_IN_CONST]);;
 
-lemma cauchy_continuous_map_real_const:
-   "cauchy_continuous_map m real_euclidean_metric (\<lambda>x::A. c)"
+lemma Cauchy_continuous_map_real_const:
+   "Cauchy_continuous_map m real_euclidean_metric (\<lambda>x::A. c)"
 oops
   REWRITE_TAC[CAUCHY_CONTINUOUS_MAP_CONST; REAL_EUCLIDEAN_METRIC; IN_UNIV]);;
 
-lemma cauchy_continuous_map_id:
-   "cauchy_continuous_map m1 m1 (\<lambda>x. x)"
+lemma Cauchy_continuous_map_id:
+   "Cauchy_continuous_map m1 m1 (\<lambda>x. x)"
 oops
-  REWRITE_TAC[cauchy_continuous_map; o_DEF; ETA_AX]);;
+  REWRITE_TAC[Cauchy_continuous_map; o_DEF; ETA_AX]);;
 
-lemma cauchy_continuous_map_compose:
-   "cauchy_continuous_map m1 m2 f \<and> cauchy_continuous_map m2 m3 g
-    \<Longrightarrow> cauchy_continuous_map m1 m3 (g \<circ> f)"
+lemma Cauchy_continuous_map_compose:
+   "Cauchy_continuous_map m1 m2 f \<and> Cauchy_continuous_map m2 m3 g
+    \<Longrightarrow> Cauchy_continuous_map m1 m3 (g \<circ> f)"
 oops
-  REWRITE_TAC[cauchy_continuous_map; o_DEF; \<subseteq>; FORALL_IN_IMAGE] THEN
+  REWRITE_TAC[Cauchy_continuous_map; o_DEF; \<subseteq>; FORALL_IN_IMAGE] THEN
   REPEAT GEN_TAC THEN SIMP_TAC[CONJ_ASSOC] THEN
   DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC) THEN
   MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `e::real` THEN ASM_MESON_TAC[]);;
@@ -3664,24 +3709,24 @@ oops
   ASM_SIMP_TAC[REAL_LT_RDIV_EQ; REAL_MUL_LZERO] THEN
   ASM_MESON_TAC[REAL_LET_TRANS; REAL_MUL_SYM]);;
 
-lemma uniformly_imp_cauchy_continuous_map:
+lemma uniformly_imp_Cauchy_continuous_map:
    "\<And>m1 m2 f::A=>B.
         uniformly_continuous_map m1 m2 f
-        \<Longrightarrow> cauchy_continuous_map m1 m2 f"
+        \<Longrightarrow> Cauchy_continuous_map m1 m2 f"
 oops
   REPEAT GEN_TAC THEN
-  REWRITE_TAC[uniformly_continuous_map; cauchy_continuous_map] THEN
+  REWRITE_TAC[uniformly_continuous_map; Cauchy_continuous_map] THEN
   STRIP_TAC THEN X_GEN_TAC `x::num=>A` THEN REWRITE_TAC[MCauchy] THEN
   STRIP_TAC THEN REWRITE_TAC[o_THM] THEN ASM SET_TAC[]);;
 
-lemma locally_cauchy_continuous_map:
+lemma locally_Cauchy_continuous_map:
    "\<And>m1 m2 e f::A=>B.
         0 < e \<and>
         (\<forall>x. x \<in> M1
-             \<Longrightarrow> cauchy_continuous_map (submetric1 (mball x e),m2) f)
-        \<Longrightarrow> cauchy_continuous_map m1 m2 f"
+             \<Longrightarrow> Cauchy_continuous_map (submetric1 (mball x e),m2) f)
+        \<Longrightarrow> Cauchy_continuous_map m1 m2 f"
 oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[cauchy_continuous_map] THEN
+  REPEAT STRIP_TAC THEN REWRITE_TAC[Cauchy_continuous_map] THEN
   X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [MCauchy]) THEN
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC `e::real`)) THEN
@@ -3694,7 +3739,7 @@ oops
     ASM_SIMP_TAC[\<subseteq>; FORALL_IN_IMAGE; SUBMETRIC; SUBMETRIC; o_THM;
                  IN_INTER; CENTRE_IN_MBALL];
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(x::num=>A) M`) THEN
-    ASM_REWRITE_TAC[cauchy_continuous_map; o_DEF] THEN
+    ASM_REWRITE_TAC[Cauchy_continuous_map; o_DEF] THEN
     DISCH_THEN MATCH_MP_TAC THEN
     ASM_REWRITE_TAC[CAUCHY_IN_SUBMETRIC; IN_MBALL] THEN
     ASM_SIMP_TAC[LE_ADD; LE_REFL] THEN
@@ -3702,9 +3747,9 @@ oops
     MATCH_MP_TAC CAUCHY_IN_SUBSEQUENCE THEN
     ASM_REWRITE_TAC[LT_ADD_LCANCEL]]);;
 
-lemma cauchy_continuous_imp_continuous_map:
+lemma Cauchy_continuous_imp_continuous_map:
    "\<And>m1 m2 f::A=>B.
-        cauchy_continuous_map m1 m2 f
+        Cauchy_continuous_map m1 m2 f
         \<Longrightarrow> continuous_map (mtopology m1,mtopology m2) f"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[CONTINUOUS_MAP_ATPOINTOF] THEN
@@ -3715,7 +3760,7 @@ oops
   X_GEN_TAC `x::num=>A` THEN REWRITE_TAC[IN_DELETE; FORALL_AND_THM] THEN
   STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> SPEC
    `\<lambda>n. if even n then x(n div 2) else a::A` \<circ>
-   REWRITE_RULE[cauchy_continuous_map]) THEN
+   REWRITE_RULE[Cauchy_continuous_map]) THEN
   ASM_SIMP_TAC[o_DEF; COND_RAND; CAUCHY_IN_INTERLEAVING]);;
 
 lemma uniformly_continuous_imp_continuous_map:
@@ -3734,21 +3779,21 @@ oops
   SIMP_TAC[UNIFORMLY_CONTINUOUS_IMP_CONTINUOUS_MAP;
            LIPSCHITZ_IMP_UNIFORMLY_CONTINUOUS_MAP]);;
 
-lemma Lipschitz_imp_cauchy_continuous_map:
+lemma Lipschitz_imp_Cauchy_continuous_map:
    "\<And>m1 m2 f::A=>B.
         Lipschitz_continuous_map f
-        \<Longrightarrow> cauchy_continuous_map m1 m2 f"
+        \<Longrightarrow> Cauchy_continuous_map m1 m2 f"
 oops
   SIMP_TAC[LIPSCHITZ_IMP_UNIFORMLY_CONTINUOUS_MAP;
            UNIFORMLY_IMP_CAUCHY_CONTINUOUS_MAP]);;
 
-lemma continuous_imp_cauchy_continuous_map:
+lemma continuous_imp_Cauchy_continuous_map:
    "\<And>m1 m2 f::A=>B.
         mcomplete m1 \<and>
         continuous_map (mtopology m1,mtopology m2) f
-        \<Longrightarrow> cauchy_continuous_map m1 m2 f"
+        \<Longrightarrow> Cauchy_continuous_map m1 m2 f"
 oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[cauchy_continuous_map] THEN
+  REPEAT STRIP_TAC THEN REWRITE_TAC[Cauchy_continuous_map] THEN
   X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC \<circ> SPEC `x::num=>A` \<circ> REWRITE_RULE[mcomplete]) THEN
   ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `y::A` THEN DISCH_TAC THEN
@@ -3762,10 +3807,10 @@ oops
    [continuous_map; TOPSPACE_MTOPOLOGY; MCauchy]) THEN
   REWRITE_TAC[o_DEF] THEN ASM SET_TAC[]);;
 
-lemma cauchy_imp_uniformly_continuous_map:
+lemma Cauchy_imp_uniformly_continuous_map:
    "\<And>m1 m2 f::A=>B.
         mtotally_bounded1 (M1) \<and>
-        cauchy_continuous_map m1 m2 f
+        Cauchy_continuous_map m1 m2 f
         \<Longrightarrow> uniformly_continuous_map m1 m2 f"
 oops
   REPEAT STRIP_TAC THEN
@@ -3788,7 +3833,7 @@ oops
   FIRST_ASSUM(MP_TAC \<circ>
    SPEC `\<lambda>n. if even n then (x \<circ> r) (n div 2):A
              else (y \<circ> (r::num=>num)) (n div 2)` \<circ>
-   REWRITE_RULE[cauchy_continuous_map]) THEN
+   REWRITE_RULE[Cauchy_continuous_map]) THEN
   ASM_REWRITE_TAC[CAUCHY_IN_INTERLEAVING_GEN; ETA_AX] THEN ANTS_TAC THENL
    [EXPAND_TAC "r" THEN REWRITE_TAC[o_ASSOC] THEN
     ASM_SIMP_TAC[CAUCHY_IN_SUBSEQUENCE] THEN
@@ -3817,11 +3862,11 @@ oops
   MATCH_MP_TAC CONTINUOUS_IMP_CAUCHY_CONTINUOUS_MAP THEN
   ASM_REWRITE_TAC[]);;
 
-lemma continuous_eq_cauchy_continuous_map:
+lemma continuous_eq_Cauchy_continuous_map:
    "\<And>m1 m2 f::A=>B.
         mcomplete m1
         \<Longrightarrow> (continuous_map (mtopology m1,mtopology m2) f \<longleftrightarrow>
-             cauchy_continuous_map m1 m2 f)"
+             Cauchy_continuous_map m1 m2 f)"
 oops
   MESON_TAC[CONTINUOUS_IMP_CAUCHY_CONTINUOUS_MAP;
             CAUCHY_CONTINUOUS_IMP_CONTINUOUS_MAP]);;
@@ -3835,10 +3880,10 @@ oops
   MESON_TAC[CONTINUOUS_IMP_UNIFORMLY_CONTINUOUS_MAP;
             UNIFORMLY_CONTINUOUS_IMP_CONTINUOUS_MAP]);;
 
-lemma cauchy_eq_uniformly_continuous_map:
+lemma Cauchy_eq_uniformly_continuous_map:
    "\<And>m1 m2 f::A=>B.
         mtotally_bounded1 (M1)
-        \<Longrightarrow> (cauchy_continuous_map m1 m2 f \<longleftrightarrow>
+        \<Longrightarrow> (Cauchy_continuous_map m1 m2 f \<longleftrightarrow>
              uniformly_continuous_map m1 m2 f)"
 oops
   MESON_TAC[CAUCHY_IMP_UNIFORMLY_CONTINUOUS_MAP;
@@ -3912,13 +3957,13 @@ oops
      `x < e / 2 \<and> y < e / 2 \<Longrightarrow> z \<le> x + y \<Longrightarrow> z < e`) THEN
     ASM_SIMP_TAC[]]);;
 
-lemma cauchy_continuous_map_pairwise:
+lemma Cauchy_continuous_map_pairwise:
    "\<And>m m1 m2 (f::A=>B#C).
-        cauchy_continuous_map m (prod_metric m1 m2) f \<longleftrightarrow>
-        cauchy_continuous_map m m1 (fst \<circ> f) \<and>
-        cauchy_continuous_map m m2 (snd \<circ> f)"
+        Cauchy_continuous_map m (prod_metric m1 m2) f \<longleftrightarrow>
+        Cauchy_continuous_map m m1 (fst \<circ> f) \<and>
+        Cauchy_continuous_map m m2 (snd \<circ> f)"
 oops
-  REWRITE_TAC[cauchy_continuous_map; CAUCHY_IN_PROD_METRIC; o_ASSOC] THEN
+  REWRITE_TAC[Cauchy_continuous_map; CAUCHY_IN_PROD_METRIC; o_ASSOC] THEN
   MESON_TAC[]);;
 
 lemma Lipschitz_continuous_map_paired:
@@ -3935,10 +3980,10 @@ lemma uniformly_continuous_map_paired:
 oops
   REWRITE_TAC[UNIFORMLY_CONTINUOUS_MAP_PAIRWISE; o_DEF; ETA_AX]);;
 
-lemma cauchy_continuous_map_paired:
+lemma Cauchy_continuous_map_paired:
    "\<And>m m1 m2 f (g::A=>C).
-        cauchy_continuous_map m (prod_metric m1 m2) (\<lambda>x. (f x, g x)) \<longleftrightarrow>
-        cauchy_continuous_map m m1 f \<and> cauchy_continuous_map m m2 g"
+        Cauchy_continuous_map m (prod_metric m1 m2) (\<lambda>x. (f x, g x)) \<longleftrightarrow>
+        Cauchy_continuous_map m m1 f \<and> Cauchy_continuous_map m m2 g"
 oops
   REWRITE_TAC[CAUCHY_CONTINUOUS_MAP_PAIRWISE; o_DEF; ETA_AX]);;
 
@@ -3958,9 +4003,9 @@ oops
   TRANS_TAC REAL_LE_TRANS `B * d m1 (x::A,y)` THEN
   ASM_SIMP_TAC[REAL_LE_LMUL_EQ] THEN ASM SET_TAC[]);;
 
-lemma mtotally_bounded_cauchy_continuous_image:
+lemma mtotally_bounded_Cauchy_continuous_image:
    "\<And>m1 m2 f s.
-        cauchy_continuous_map m1 m2 f \<and> mtotally_bounded1 s
+        Cauchy_continuous_map m1 m2 f \<and> mtotally_bounded1 s
         \<Longrightarrow> mtotally_bounded2 (f ` s)"
 oops
   REPEAT GEN_TAC THEN
@@ -3972,7 +4017,7 @@ oops
   FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::num=>A`) THEN
   ASM_REWRITE_TAC[] THEN MATCH_MP_TAC MONO_EXISTS THEN
   X_GEN_TAC `r::num=>num` THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [cauchy_continuous_map]) THEN
+  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [Cauchy_continuous_map]) THEN
   DISCH_THEN(MP_TAC \<circ> SPEC `(x::num=>A) \<circ> (r::num=>num)`) THEN
   ASM_REWRITE_TAC[] THEN ASM_REWRITE_TAC[o_DEF]);;
 
@@ -4033,11 +4078,11 @@ oops
            LIPSCHITZ_CONTINUOUS_MAP_METRIC] THEN
   ASM_REWRITE_TAC[UNIFORMLY_CONTINUOUS_MAP_PAIRED]);;
 
-lemma cauchy_continuous_map_mdist:
+lemma Cauchy_continuous_map_mdist:
    "\<And>m m' f g.
-      cauchy_continuous_map m m' f \<and>
-      cauchy_continuous_map m m' g
-      \<Longrightarrow> cauchy_continuous_map m real_euclidean_metric
+      Cauchy_continuous_map m m' f \<and>
+      Cauchy_continuous_map m m' g
+      \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric
              (\<lambda>x. d m' (f x,g x))"
 oops
   REPEAT STRIP_TAC THEN GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
@@ -4206,8 +4251,8 @@ oops
   MATCH_MP_TAC REAL_LE_RMUL THEN REWRITE_TAC[REAL_ABS_POS] THEN
   ASM_MESON_TAC[]);;
 
-lemma cauchy_continuous_map_real_multiplication:
- (`cauchy_continuous_map
+lemma Cauchy_continuous_map_real_multiplication:
+ (`Cauchy_continuous_map
     (prod_metric real_euclidean_metric real_euclidean_metric,
      real_euclidean_metric)
     (\<lambda>(x,y). x * y)"
@@ -4623,25 +4668,25 @@ oops
   SIMP_TAC[SUM_CLAUSES; UNIFORMLY_CONTINUOUS_MAP_CONST; REAL_EUCLIDEAN_METRIC;
     FORALL_IN_INSERT; UNIFORMLY_CONTINUOUS_MAP_REAL_ADD; ETA_AX; IN_UNIV]);;
 
-lemma cauchy_continuous_map_fst:
+lemma Cauchy_continuous_map_fst:
    "\<And>m m1 m2 f::A=>B#C.
-        cauchy_continuous_map m (prod_metric m1 m2) f
-        \<Longrightarrow> cauchy_continuous_map m m1 (\<lambda>x. fst(f x))"
+        Cauchy_continuous_map m (prod_metric m1 m2) f
+        \<Longrightarrow> Cauchy_continuous_map m m1 (\<lambda>x. fst(f x))"
 oops
   SIMP_TAC[CAUCHY_CONTINUOUS_MAP_PAIRWISE; o_DEF]);;
 
-lemma cauchy_continuous_map_snd:
+lemma Cauchy_continuous_map_snd:
    "\<And>m m1 m2 f::A=>B#C.
-        cauchy_continuous_map m (prod_metric m1 m2) f
-        \<Longrightarrow> cauchy_continuous_map m m2 (\<lambda>x. snd(f x))"
+        Cauchy_continuous_map m (prod_metric m1 m2) f
+        \<Longrightarrow> Cauchy_continuous_map m m2 (\<lambda>x. snd(f x))"
 oops
   SIMP_TAC[CAUCHY_CONTINUOUS_MAP_PAIRWISE; o_DEF]);;
 
-lemma cauchy_continuous_map_real_inv:
+lemma Cauchy_continuous_map_real_inv:
    "\<And>m f::A=>real.
-      cauchy_continuous_map m real_euclidean_metric f \<and>
+      Cauchy_continuous_map m real_euclidean_metric f \<and>
       \<not> (0 \<in> euclideanreal closure_of (image f (M)))
-      \<Longrightarrow> cauchy_continuous_map m real_euclidean_metric (\<lambda>x. inverse(f x))"
+      \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric (\<lambda>x. inverse(f x))"
 oops
   REPEAT STRIP_TAC THEN GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
   MATCH_MP_TAC CAUCHY_CONTINUOUS_MAP_COMPOSE THEN EXISTS_TAC
@@ -4651,11 +4696,11 @@ oops
   MATCH_MP_TAC LOCALLY_LIPSCHITZ_CONTINUOUS_MAP_REAL_INVERSION THEN
   ASM_REWRITE_TAC[]);;
 
-lemma cauchy_continuous_map_real_add:
+lemma Cauchy_continuous_map_real_add:
    "\<And>m f g::A=>real.
-      cauchy_continuous_map m real_euclidean_metric f \<and>
-      cauchy_continuous_map m real_euclidean_metric g
-      \<Longrightarrow> cauchy_continuous_map m real_euclidean_metric (\<lambda>x. f x + g x)"
+      Cauchy_continuous_map m real_euclidean_metric f \<and>
+      Cauchy_continuous_map m real_euclidean_metric g
+      \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric (\<lambda>x. f x + g x)"
 oops
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN `(\<lambda>x. f x + g x) = (\<lambda>(x,y). x + y) \<circ> (\<lambda>z. f z,g z)`
@@ -4667,11 +4712,11 @@ oops
            LIPSCHITZ_IMP_CAUCHY_CONTINUOUS_MAP] THEN
   ASM_REWRITE_TAC[CAUCHY_CONTINUOUS_MAP_PAIRWISE; o_DEF; ETA_AX]);;
 
-lemma cauchy_continuous_map_real_mul:
+lemma Cauchy_continuous_map_real_mul:
    "\<And>m f g::A=>real.
-      cauchy_continuous_map m real_euclidean_metric f \<and>
-      cauchy_continuous_map m real_euclidean_metric g
-      \<Longrightarrow> cauchy_continuous_map m real_euclidean_metric (\<lambda>x. f x * g x)"
+      Cauchy_continuous_map m real_euclidean_metric f \<and>
+      Cauchy_continuous_map m real_euclidean_metric g
+      \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric (\<lambda>x. f x * g x)"
 oops
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN `(\<lambda>x. f x * g x) = (\<lambda>(x,y). x * y) \<circ> (\<lambda>z. f z,g z)`
@@ -4683,43 +4728,43 @@ oops
   REWRITE_TAC[CAUCHY_CONTINUOUS_MAP_REAL_MULTIPLICATION] THEN
   ASM_REWRITE_TAC[CAUCHY_CONTINUOUS_MAP_PAIRWISE; o_DEF; ETA_AX]);;
 
-lemma cauchy_continuous_map_real_lmul:
+lemma Cauchy_continuous_map_real_lmul:
    "\<And>m c f::A=>real.
-      cauchy_continuous_map m real_euclidean_metric f
-      \<Longrightarrow> cauchy_continuous_map m real_euclidean_metric (\<lambda>x. c * f x)"
+      Cauchy_continuous_map m real_euclidean_metric f
+      \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric (\<lambda>x. c * f x)"
 oops
   SIMP_TAC[CAUCHY_CONTINUOUS_MAP_REAL_MUL; CAUCHY_CONTINUOUS_MAP_REAL_CONST]);;
 
-lemma cauchy_continuous_map_real_rmul:
+lemma Cauchy_continuous_map_real_rmul:
    "\<And>m c f::A=>real.
-      cauchy_continuous_map m real_euclidean_metric f
-      \<Longrightarrow> cauchy_continuous_map m real_euclidean_metric (\<lambda>x. f x * c)"
+      Cauchy_continuous_map m real_euclidean_metric f
+      \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric (\<lambda>x. f x * c)"
 oops
   ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
   REWRITE_TAC[CAUCHY_CONTINUOUS_MAP_REAL_LMUL]);;
 
-lemma cauchy_continuous_map_real_pow:
+lemma Cauchy_continuous_map_real_pow:
    "\<And>m f n.
-        cauchy_continuous_map m real_euclidean_metric f
-        \<Longrightarrow> cauchy_continuous_map m real_euclidean_metric (\<lambda>x. f x ^ n)"
+        Cauchy_continuous_map m real_euclidean_metric f
+        \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric (\<lambda>x. f x ^ n)"
 oops
   REWRITE_TAC[RIGHT_FORALL_IMP_THM] THEN REPEAT GEN_TAC THEN DISCH_TAC THEN
   INDUCT_TAC THEN
   ASM_SIMP_TAC[real_pow; CAUCHY_CONTINUOUS_MAP_REAL_CONST;
                CAUCHY_CONTINUOUS_MAP_REAL_MUL]);;
 
-lemma cauchy_continuous_map_real_neg:
+lemma Cauchy_continuous_map_real_neg:
    "\<And>m f::A=>real.
-      cauchy_continuous_map m real_euclidean_metric f
-      \<Longrightarrow> cauchy_continuous_map m real_euclidean_metric (\<lambda>x. --(f x))"
+      Cauchy_continuous_map m real_euclidean_metric f
+      \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric (\<lambda>x. --(f x))"
 oops
   ONCE_REWRITE_TAC[REAL_NEG_MINUS1] THEN
   REWRITE_TAC[CAUCHY_CONTINUOUS_MAP_REAL_LMUL]);;
 
-lemma cauchy_continuous_map_real_abs:
+lemma Cauchy_continuous_map_real_abs:
    "\<And>m f::A=>real.
-      cauchy_continuous_map m real_euclidean_metric f
-      \<Longrightarrow> cauchy_continuous_map m real_euclidean_metric (\<lambda>x. abs(f x))"
+      Cauchy_continuous_map m real_euclidean_metric f
+      \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric (\<lambda>x. abs(f x))"
 oops
   REPEAT STRIP_TAC THEN GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
   MATCH_MP_TAC CAUCHY_CONTINUOUS_MAP_COMPOSE THEN
@@ -4727,21 +4772,21 @@ oops
   ASM_SIMP_TAC[LIPSCHITZ_CONTINUOUS_MAP_REAL_ABSOLUTE_VALUE;
                LIPSCHITZ_IMP_CAUCHY_CONTINUOUS_MAP]);;
 
-lemma cauchy_continuous_map_real_sub:
+lemma Cauchy_continuous_map_real_sub:
    "\<And>m f g::A=>real.
-      cauchy_continuous_map m real_euclidean_metric f \<and>
-      cauchy_continuous_map m real_euclidean_metric g
-      \<Longrightarrow> cauchy_continuous_map m real_euclidean_metric (\<lambda>x. f x - g x)"
+      Cauchy_continuous_map m real_euclidean_metric f \<and>
+      Cauchy_continuous_map m real_euclidean_metric g
+      \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric (\<lambda>x. f x - g x)"
 oops
   REWRITE_TAC[real_sub] THEN
   SIMP_TAC[CAUCHY_CONTINUOUS_MAP_REAL_ADD;
            CAUCHY_CONTINUOUS_MAP_REAL_NEG]);;
 
-lemma cauchy_continuous_map_real_max:
+lemma Cauchy_continuous_map_real_max:
    "\<And>m f g::A=>real.
-      cauchy_continuous_map m real_euclidean_metric f \<and>
-      cauchy_continuous_map m real_euclidean_metric g
-    \<Longrightarrow> cauchy_continuous_map m real_euclidean_metric
+      Cauchy_continuous_map m real_euclidean_metric f \<and>
+      Cauchy_continuous_map m real_euclidean_metric g
+    \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric
             (\<lambda>x. max (f x) (g x))"
 oops
   REPEAT STRIP_TAC THEN SUBGOAL_THEN
@@ -4754,11 +4799,11 @@ oops
            LIPSCHITZ_IMP_CAUCHY_CONTINUOUS_MAP] THEN
   ASM_REWRITE_TAC[CAUCHY_CONTINUOUS_MAP_PAIRWISE; o_DEF; ETA_AX]);;
 
-lemma cauchy_continuous_map_real_min:
+lemma Cauchy_continuous_map_real_min:
    "\<And>m f g::A=>real.
-      cauchy_continuous_map m real_euclidean_metric f \<and>
-      cauchy_continuous_map m real_euclidean_metric g
-    \<Longrightarrow> cauchy_continuous_map m real_euclidean_metric
+      Cauchy_continuous_map m real_euclidean_metric f \<and>
+      Cauchy_continuous_map m real_euclidean_metric g
+    \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric
             (\<lambda>x. min (f x) (g x))"
 oops
   REPEAT STRIP_TAC THEN SUBGOAL_THEN
@@ -4771,12 +4816,12 @@ oops
            LIPSCHITZ_IMP_CAUCHY_CONTINUOUS_MAP] THEN
   ASM_REWRITE_TAC[CAUCHY_CONTINUOUS_MAP_PAIRWISE; o_DEF; ETA_AX]);;
 
-lemma cauchy_continuous_map_real_div:
+lemma Cauchy_continuous_map_real_div:
    "\<And>m f g::A=>real.
-      cauchy_continuous_map m real_euclidean_metric f \<and>
-      cauchy_continuous_map m real_euclidean_metric g \<and>
+      Cauchy_continuous_map m real_euclidean_metric f \<and>
+      Cauchy_continuous_map m real_euclidean_metric g \<and>
       \<not> (0 \<in> euclideanreal closure_of (image g (M)))
-      \<Longrightarrow> cauchy_continuous_map m real_euclidean_metric (\<lambda>x. f x / g x)"
+      \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric (\<lambda>x. f x / g x)"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[real_div] THEN
   MATCH_MP_TAC CAUCHY_CONTINUOUS_MAP_REAL_MUL THEN
@@ -4794,12 +4839,12 @@ oops
   EXISTS_TAC `inverse b::real` THEN X_GEN_TAC `x::A` THEN DISCH_TAC THEN
   MATCH_MP_TAC REAL_LE_INV2 THEN ASM_SIMP_TAC[]);;
 
-lemma cauchy_continuous_map_sum:
+lemma Cauchy_continuous_map_sum:
    "\<And>m f::K=>A->real k.
       finite k \<and>
       (\<forall>i. i \<in> k
-          \<Longrightarrow> cauchy_continuous_map m real_euclidean_metric (\<lambda>x. f x i))
-      \<Longrightarrow> cauchy_continuous_map m real_euclidean_metric
+          \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric (\<lambda>x. f x i))
+      \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric
                 (\<lambda>x. sum k (f x))"
 oops
   GEN_TAC THEN GEN_TAC THEN REWRITE_TAC[IMP_CONJ] THEN
@@ -4836,10 +4881,10 @@ oops
   EXISTS_TAC `real_euclidean_metric` THEN
   ASM_REWRITE_TAC[UNIFORMLY_CONTINUOUS_MAP_SQUARE_ROOT]);;
 
-lemma cauchy_continuous_map_sqrt:
+lemma Cauchy_continuous_map_sqrt:
    "\<And>m f::A=>real.
-      cauchy_continuous_map m real_euclidean_metric f
-      \<Longrightarrow> cauchy_continuous_map m real_euclidean_metric (\<lambda>x. sqrt(f x))"
+      Cauchy_continuous_map m real_euclidean_metric f
+      \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric (\<lambda>x. sqrt(f x))"
 oops
    REPEAT STRIP_TAC THEN GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
   MATCH_MP_TAC CAUCHY_CONTINUOUS_MAP_COMPOSE THEN
@@ -5021,9 +5066,9 @@ oops
 subsection\<open>Extending Cauchy continuous functions to the closure\<close>
 
 
-lemma cauchy_continuous_map_extends_to_continuous_closure_of:
+lemma Cauchy_continuous_map_extends_to_continuous_closure_of:
    "\<And>m1 m2 f s.
-        mcomplete m2 \<and> cauchy_continuous_map (submetric1 s,m2) f
+        mcomplete m2 \<and> Cauchy_continuous_map (submetric1 s,m2) f
         \<Longrightarrow> \<exists>g. continuous_map
                  (subtopology (mtopology m1) (mtopology m1 closure_of s),
                   mtopology m2) g \<and>
@@ -5059,7 +5104,7 @@ oops
   FIRST_ASSUM(MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
       CONVERGENT_IMP_CAUCHY_IN)) THEN
   ASM_REWRITE_TAC[] THEN DISCH_TAC THEN FIRST_ASSUM(MP_TAC \<circ>
-    SPEC `x::num=>A` \<circ> REWRITE_RULE[cauchy_continuous_map]) THEN
+    SPEC `x::num=>A` \<circ> REWRITE_RULE[Cauchy_continuous_map]) THEN
   ASM_REWRITE_TAC[CAUCHY_IN_SUBMETRIC] THEN DISCH_TAC THEN
   FIRST_ASSUM(MP_TAC \<circ> SPEC `f \<circ> (x::num=>A)` \<circ>
     REWRITE_RULE[mcomplete]) THEN
@@ -5072,7 +5117,7 @@ oops
   REWRITE_TAC[IN_INTER; IN_DELETE; FORALL_AND_THM] THEN STRIP_TAC THEN
   FIRST_ASSUM(MP_TAC \<circ>
    SPEC `\<lambda>n. if even n then x(n div 2):A else y(n div 2)` \<circ>
-   REWRITE_RULE[cauchy_continuous_map]) THEN
+   REWRITE_RULE[Cauchy_continuous_map]) THEN
   REWRITE_TAC[CAUCHY_IN_INTERLEAVING_GEN; o_DEF; COND_RAND] THEN
   ASM_REWRITE_TAC[SUBMETRIC; CAUCHY_IN_SUBMETRIC] THEN ANTS_TAC THENL
    [CONJ_TAC THENL [ASM_MESON_TAC[CONVERGENT_IMP_CAUCHY_IN]; ALL_TAC] THEN
@@ -5112,9 +5157,9 @@ oops
       FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CAUCHY_CONTINUOUS_MAP_IMAGE) THEN
       REWRITE_TAC[SUBMETRIC] THEN ASM SET_TAC[]]]);;
 
-lemma cauchy_continuous_map_extends_to_continuous_intermediate_closure_of:
+lemma Cauchy_continuous_map_extends_to_continuous_intermediate_closure_of:
    "\<And>m1 m2 f s t.
-        mcomplete m2 \<and> cauchy_continuous_map (submetric1 s,m2) f \<and>
+        mcomplete m2 \<and> Cauchy_continuous_map (submetric1 s,m2) f \<and>
         t \<subseteq> mtopology m1 closure_of s
         \<Longrightarrow> \<exists>g. continuous_map(subtopology (mtopology m1) t,mtopology m2) g \<and>
                 \<forall>x. x \<in> s \<Longrightarrow> g x = f x"
@@ -5321,12 +5366,12 @@ oops
   ASM_REWRITE_TAC[] THEN
   ASM_MESON_TAC[UNIFORMLY_CONTINUOUS_MAP_FROM_SUBMETRIC_MONO]);;
 
-lemma cauchy_continuous_map_on_intermediate_closure:
+lemma Cauchy_continuous_map_on_intermediate_closure:
    "\<And>m1 m2 f::A=>B s t.
         s \<subseteq> t \<and> t \<subseteq> (mtopology m1) closure_of s \<and>
         continuous_map (subtopology (mtopology m1) t,mtopology m2) f \<and>
-        cauchy_continuous_map (submetric1 s,m2) f
-        \<Longrightarrow> cauchy_continuous_map (submetric1 t,m2) f"
+        Cauchy_continuous_map (submetric1 s,m2) f
+        \<Longrightarrow> Cauchy_continuous_map (submetric1 t,m2) f"
 oops
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
   SUBGOAL_THEN `submetric1 (s::A=>bool) = submetric1 (M1 \<inter> s)`
@@ -5344,7 +5389,7 @@ oops
    [RULE_ASSUM_TAC(REWRITE_RULE[closure_of; TOPSPACE_MTOPOLOGY]) THEN
     ASM SET_TAC[];
     DISCH_TAC] THEN
-  REWRITE_TAC[cauchy_continuous_map; CAUCHY_IN_SUBMETRIC] THEN
+  REWRITE_TAC[Cauchy_continuous_map; CAUCHY_IN_SUBMETRIC] THEN
   X_GEN_TAC `x::num=>A` THEN STRIP_TAC THEN
   SUBGOAL_THEN
    `\<forall>n. \<exists>y. y \<in> s \<and>
@@ -5368,7 +5413,7 @@ oops
     MATCH_MP_TAC MONO_EXISTS THEN ASM SET_TAC[];
     REWRITE_TAC[SKOLEM_THM; FORALL_AND_THM; LEFT_IMP_EXISTS_THM]] THEN
   X_GEN_TAC `y::num=>A` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [cauchy_continuous_map]) THEN
+  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [Cauchy_continuous_map]) THEN
   DISCH_THEN(MP_TAC \<circ> SPEC `y::num=>A`) THEN
   ASM_SIMP_TAC[CAUCHY_IN_SUBMETRIC; SUBMETRIC; SET_RULE
    `s \<subseteq> u \<Longrightarrow> s \<inter> u = s`] THEN
@@ -5399,10 +5444,10 @@ oops
       \<Longrightarrow> d y y' < e / 2 \<Longrightarrow> d x x' < e`)] THEN
   (CONJ_TAC THENL [ASM SET_TAC[]; ASM_MESON_TAC[REAL_LT_TRANS]]));;
 
-lemma cauchy_continuous_map_extends_to_closure_of:
+lemma Cauchy_continuous_map_extends_to_closure_of:
    "\<And>m1 m2 f s.
-        mcomplete m2 \<and> cauchy_continuous_map (submetric1 s,m2) f
-        \<Longrightarrow> \<exists>g. cauchy_continuous_map
+        mcomplete m2 \<and> Cauchy_continuous_map (submetric1 s,m2) f
+        \<Longrightarrow> \<exists>g. Cauchy_continuous_map
                    (submetric1 (mtopology m1 closure_of s),m2) g \<and>
                 \<forall>x. x \<in> s \<Longrightarrow> g x = f x"
 oops
@@ -5418,12 +5463,12 @@ oops
   MATCH_MP_TAC CAUCHY_CONTINUOUS_MAP_EQ THEN EXISTS_TAC `f::A=>B` THEN
   ASM_SIMP_TAC[SUBMETRIC; IN_INTER]);;
 
-lemma cauchy_continuous_map_extends_to_intermediate_closure_of:
+lemma Cauchy_continuous_map_extends_to_intermediate_closure_of:
    "\<And>m1 m2 f s t.
         mcomplete m2 \<and>
-        cauchy_continuous_map (submetric1 s,m2) f \<and>
+        Cauchy_continuous_map (submetric1 s,m2) f \<and>
         t \<subseteq> mtopology m1 closure_of s
-        \<Longrightarrow> \<exists>g. cauchy_continuous_map (submetric1 t,m2) g \<and>
+        \<Longrightarrow> \<exists>g. Cauchy_continuous_map (submetric1 t,m2) g \<and>
                 \<forall>x. x \<in> s \<Longrightarrow> g x = f x"
 oops
   REPEAT STRIP_TAC THEN
