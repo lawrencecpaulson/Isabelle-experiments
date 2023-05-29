@@ -106,6 +106,18 @@ lemma (in Metric_space) mtopology_of [simp]:
   "mtopology_of (metric (M,d)) = mtopology"
   by (simp add: mtopology_of_def)
 
+definition "mball_of \<equiv> \<lambda>m. Metric_space.mball (mspace m) (mdist m)"
+
+lemma (in Metric_space) mball_of [simp]:
+  "mball_of (metric (M,d)) = mball"
+  by (simp add: mball_of_def)
+
+definition "mcball_of \<equiv> \<lambda>m. Metric_space.mcball (mspace m) (mdist m)"
+
+lemma (in Metric_space) mcball_of [simp]:
+  "mcball_of (metric (M,d)) = mcball"
+  by (simp add: mcball_of_def)
+
 definition "euclidean_metric \<equiv> metric (UNIV,dist)"
 
 lemma mspace_euclidean_metric [simp]: "mspace euclidean_metric = UNIV"
@@ -3682,56 +3694,73 @@ lemma Cauchy_continuous_map_compose:
   by (metis (no_types, lifting) Cauchy_continuous_map_def f fun.map_comp g)
 
 lemma Lipschitz_imp_uniformly_continuous_map:
-   "\<And>m1 m2 f::A=>B.
-        Lipschitz_continuous_map f
-        \<Longrightarrow> uniformly_continuous_map m1 m2 f"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[LIPSCHITZ_CONTINUOUS_MAP_POS; uniformly_continuous_map] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC
-   (X_CHOOSE_THEN `B::real` STRIP_ASSUME_TAC)) THEN
-  ASM_REWRITE_TAC[] THEN X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-  EXISTS_TAC `e / B::real` THEN
-  ASM_SIMP_TAC[REAL_LT_RDIV_EQ; REAL_MUL_LZERO] THEN
-  ASM_MESON_TAC[REAL_LET_TRANS; REAL_MUL_SYM]);;
+  assumes "Lipschitz_continuous_map m1 m2 f"
+  shows "uniformly_continuous_map m1 m2 f"
+  proof -
+  have "f ` mspace m1 \<subseteq> mspace m2"
+    by (simp add: Lipschitz_continuous_map_image assms)
+  moreover have "\<exists>\<delta>>0. \<forall>x\<in>mspace m1. \<forall>y\<in>mspace m1. mdist m1 y x < \<delta> \<longrightarrow> mdist m2 (f y) (f x) < \<epsilon>"
+    if "\<epsilon> > 0" for \<epsilon>
+  proof -
+    obtain B where "\<forall>x\<in>mspace m1. \<forall>y\<in>mspace m1. mdist m2 (f x) (f y) \<le> B * mdist m1 x y"
+             and "B>0"
+      using that assms by (force simp add: Lipschitz_continuous_map_pos)
+    then have "\<forall>x\<in>mspace m1. \<forall>y\<in>mspace m1. mdist m1 y x < \<epsilon>/B \<longrightarrow> mdist m2 (f y) (f x) < \<epsilon>"
+      by (smt (verit, ccfv_SIG) less_divide_eq mdist_nonneg mult.commute that zero_less_divide_iff)
+    with \<open>B>0\<close> show ?thesis
+      by (metis divide_pos_pos that)
+  qed
+  ultimately show ?thesis
+    by (auto simp: uniformly_continuous_map_def)
+qed
 
 lemma uniformly_imp_Cauchy_continuous_map:
-   "\<And>m1 m2 f::A=>B.
-        uniformly_continuous_map m1 m2 f
-        \<Longrightarrow> Cauchy_continuous_map m1 m2 f"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[uniformly_continuous_map; Cauchy_continuous_map] THEN
-  STRIP_TAC THEN X_GEN_TAC `x::num=>A` THEN REWRITE_TAC[MCauchy] THEN
-  STRIP_TAC THEN REWRITE_TAC[o_THM] THEN ASM SET_TAC[]);;
+   "uniformly_continuous_map m1 m2 f \<Longrightarrow> Cauchy_continuous_map m1 m2 f"
+  unfolding uniformly_continuous_map_def Cauchy_continuous_map_def
+  apply (simp add: image_subset_iff o_def Metric_space.MCauchy_def [OF Metric_space_mspace_mdist])
+  by meson
 
 lemma locally_Cauchy_continuous_map:
-   "\<And>m1 m2 e f::A=>B.
-        0 < e \<and>
-        (\<forall>x. x \<in> M1
-             \<Longrightarrow> Cauchy_continuous_map (submetric1 (mball x e),m2) f)
-        \<Longrightarrow> Cauchy_continuous_map m1 m2 f"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[Cauchy_continuous_map] THEN
-  X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [MCauchy]) THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC `e::real`)) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `M::num` THEN STRIP_TAC THEN
-  MATCH_MP_TAC CAUCHY_IN_OFFSET THEN EXISTS_TAC `M::num` THEN CONJ_TAC THENL
-   [X_GEN_TAC `n::num` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(x::num=>A) n`) THEN ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP CAUCHY_CONTINUOUS_MAP_IMAGE) THEN
-    ASM_SIMP_TAC[\<subseteq>; FORALL_IN_IMAGE; SUBMETRIC; SUBMETRIC; o_THM;
-                 IN_INTER; CENTRE_IN_MBALL];
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `(x::num=>A) M`) THEN
-    ASM_REWRITE_TAC[Cauchy_continuous_map; o_DEF] THEN
-    DISCH_THEN MATCH_MP_TAC THEN
-    ASM_REWRITE_TAC[CAUCHY_IN_SUBMETRIC; IN_MBALL] THEN
-    ASM_SIMP_TAC[LE_ADD; LE_REFL] THEN
-    GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
-    MATCH_MP_TAC CAUCHY_IN_SUBSEQUENCE THEN
-    ASM_REWRITE_TAC[LT_ADD_LCANCEL]]);;
+  assumes "\<epsilon> > 0"
+    and \<section>: "\<And>x. x \<in> mspace m1 \<Longrightarrow> Cauchy_continuous_map (submetric m1 (mball_of m1 x \<epsilon>)) m2 f"
+  shows "Cauchy_continuous_map m1 m2 f"
+  unfolding Cauchy_continuous_map_def
+proof (intro strip)
+  interpret M1: Metric_space "mspace m1" "mdist m1"
+    by (simp add: Metric_space_mspace_mdist)
+  interpret M2: Metric_space "mspace m2" "mdist m2"
+    by (simp add: Metric_space_mspace_mdist)
+  fix \<sigma>
+  assume \<sigma>: "M1.MCauchy \<sigma>"
+  with \<open>\<epsilon> > 0\<close> obtain N where N: "\<forall>n\<ge>N. \<forall>n'\<ge>N. mdist m1 (\<sigma> n) (\<sigma> n') < \<epsilon>"
+    using M1.MCauchy_def by fastforce
+  then have DD: "M1.mball (\<sigma> N) \<epsilon> \<subseteq> mspace m1"
+    by (auto simp: image_subset_iff M1.mball_def)
+  then interpret MS1: Metric_space "mball_of m1 (\<sigma> N) \<epsilon> \<inter> mspace m1" "mdist m1"
+    by (simp add: M1.subspace)
+  show "M2.MCauchy (f \<circ> \<sigma>)"
+  proof (rule M2.MCauchy_offset)
+    show "M2.MCauchy (f \<circ> \<sigma> \<circ> (+) N)"
+      apply (simp add: comp_assoc)
+      apply (rule  \<section> [of "\<sigma> N",  unfolded Cauchy_continuous_map_def, rule_format])
+       apply (meson Metric_space.MCauchy_def Metric_space_mspace_mdist \<sigma> range_subsetD)
+      apply (simp add: )
+      using \<sigma>
+      apply (simp add: M1.MCauchy_def MS1.MCauchy_def)
+      apply (auto simp: ) (*CAUCHY_IN_SUBSEQUENCE*)
+       apply (simp add: N mball_of_def subsetD)
+      by (meson trans_le_add2)
+  next
+    fix n
+    assume "n < N"
+    then have "\<sigma> n \<in> mspace m1"
+      by (meson Metric_space.MCauchy_def Metric_space_mspace_mdist \<sigma> range_subsetD)
+    then have "\<sigma> n \<in> mball_of m1 (\<sigma> n) \<epsilon>"
+      by (simp add: Metric_space.centre_in_mball_iff Metric_space_mspace_mdist assms(1) mball_of_def)
+    then show "(f \<circ> \<sigma>) n \<in> mspace m2"
+      using Cauchy_continuous_map_image [OF \<section> [of "\<sigma> n"]] \<open>\<sigma> n \<in> mspace m1\<close> by auto
+  qed
+qed
 
 lemma Cauchy_continuous_imp_continuous_map:
    "\<And>m1 m2 f::A=>B.
