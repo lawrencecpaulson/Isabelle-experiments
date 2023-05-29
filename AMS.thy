@@ -3008,6 +3008,14 @@ lemma submetric_prod_metric:
   apply (simp add: prod_metric_def)
   by (simp add: submetric_def Metric_space.mspace_metric Metric_space.mdist_metric Metric_space12.prod_metric Metric_space12_def Metric_space_mspace_mdist Times_Int_Times)
 
+lemma mspace_prod_metric [simp]:"
+  mspace (prod_metric m1 m2) = mspace m1 \<times> mspace m2"
+  by (simp add: prod_metric_def Metric_space.mspace_metric Metric_space12.prod_metric Metric_space12_mspace_mdist)
+
+lemma mdist_prod_metric [simp]: 
+  "mdist (prod_metric m1 m2) = prod_dist (mdist m1) (mdist m2)"
+  by (metis Metric_space.mdist_metric Metric_space12.prod_metric Metric_space12_mspace_mdist prod_metric_def)
+
 context Metric_space12 begin
 
 lemma component_le_prod_metric:
@@ -3238,10 +3246,10 @@ proof (cases "S = {} \<or> T = {}")
       using Prod_metric.mtotally_bounded_imp_subset \<open>y \<in> T\<close> that by blast
     fix \<sigma> :: "nat \<Rightarrow> 'a"
     assume "range \<sigma> \<subseteq> S"
-    with L obtain r where "strict_mono r" "Prod_metric.MCauchy ((\<lambda>n. (\<sigma> n,y)) o r)"
+    with L obtain r where "strict_mono r" "Prod_metric.MCauchy ((\<lambda>n. (\<sigma> n,y)) \<circ> r)"
       unfolding Prod_metric.mtotally_bounded_sequentially
       by (smt (verit) SigmaI \<open>y \<in> T\<close> image_subset_iff)
-    then have "M1.MCauchy (fst o (\<lambda>n. (\<sigma> n,y)) o r)"
+    then have "M1.MCauchy (fst \<circ> (\<lambda>n. (\<sigma> n,y)) \<circ> r)"
       by (simp add: MCauchy_prod_metric o_def)
     with \<open>strict_mono r\<close> show "\<exists>r. strict_mono r \<and> M1.MCauchy (\<sigma> \<circ> r)"
       by (auto simp add: o_def)
@@ -3254,10 +3262,10 @@ proof (cases "S = {} \<or> T = {}")
       using Prod_metric.mtotally_bounded_imp_subset \<open>x \<in> S\<close> that by blast
     fix \<sigma> :: "nat \<Rightarrow> 'b"
     assume "range \<sigma> \<subseteq> T"
-    with L obtain r where "strict_mono r" "Prod_metric.MCauchy ((\<lambda>n. (x,\<sigma> n)) o r)"
+    with L obtain r where "strict_mono r" "Prod_metric.MCauchy ((\<lambda>n. (x,\<sigma> n)) \<circ> r)"
       unfolding Prod_metric.mtotally_bounded_sequentially
       by (smt (verit) SigmaI \<open>x \<in> S\<close> image_subset_iff)
-    then have "M2.MCauchy (snd o (\<lambda>n. (x,\<sigma> n)) o r)"
+    then have "M2.MCauchy (snd \<circ> (\<lambda>n. (x,\<sigma> n)) \<circ> r)"
       by (simp add: MCauchy_prod_metric o_def)
     with \<open>strict_mono r\<close> show "\<exists>r. strict_mono r \<and> M2.MCauchy (\<sigma> \<circ> r)"
       by (auto simp add: o_def)
@@ -3270,13 +3278,13 @@ proof (cases "S = {} \<or> T = {}")
       by (auto simp: M1.mtotally_bounded_sequentially M2.mtotally_bounded_sequentially)
     fix \<sigma> :: "nat \<Rightarrow> 'a \<times> 'b"
     assume \<sigma>: "range \<sigma> \<subseteq> S \<times> T"
-    with 1 obtain r1 where r1: "strict_mono r1" "M1.MCauchy (fst o \<sigma> o r1)"
+    with 1 obtain r1 where r1: "strict_mono r1" "M1.MCauchy (fst \<circ> \<sigma> \<circ> r1)"
       apply (clarsimp simp: M1.mtotally_bounded_sequentially image_subset_iff)
       by (metis SigmaE comp_eq_dest_lhs fst_conv)
-    from \<sigma> 2 obtain r2 where r2: "strict_mono r2" "M2.MCauchy (snd o \<sigma> o r1 o r2)"
+    from \<sigma> 2 obtain r2 where r2: "strict_mono r2" "M2.MCauchy (snd \<circ> \<sigma> \<circ> r1 \<circ> r2)"
       apply (clarsimp simp: M2.mtotally_bounded_sequentially image_subset_iff)
       by (smt (verit, best) comp_apply mem_Sigma_iff prod.collapse)
-    then have "M1.MCauchy (fst \<circ> \<sigma> \<circ> r1 o r2)"
+    then have "M1.MCauchy (fst \<circ> \<sigma> \<circ> r1 \<circ> r2)"
       by (simp add: M1.MCauchy_subsequence r1)
     with r2 have "Prod_metric.MCauchy (\<sigma> \<circ> (r1 \<circ> r2))"
       by (simp add: MCauchy_prod_metric o_def)
@@ -3462,7 +3470,7 @@ lemma Lipschitz_continuous_map_id:
 
 lemma Lipschitz_continuous_map_compose:
   assumes f: "Lipschitz_continuous_map m1 m2 f" and g: "Lipschitz_continuous_map m2 m3 g"
-  shows "Lipschitz_continuous_map m1 m3 (g o f)"
+  shows "Lipschitz_continuous_map m1 m3 (g \<circ> f)"
   unfolding Lipschitz_continuous_map_def image_subset_iff
 proof
   show "\<forall>x\<in>mspace m1. (g \<circ> f) x \<in> mspace m3"
@@ -3614,7 +3622,7 @@ lemma uniformly_continuous_map_id:
 
 lemma uniformly_continuous_map_compose:
   assumes f: "uniformly_continuous_map m1 m2 f" and g: "uniformly_continuous_map m2 m3 g"
-  shows "uniformly_continuous_map m1 m3 (g o f)"
+  shows "uniformly_continuous_map m1 m3 (g \<circ> f)"
   by (smt (verit, ccfv_threshold) comp_apply f g image_subset_iff uniformly_continuous_map_def)
 
 lemma uniformly_continuous_map_real_const:
@@ -3693,7 +3701,7 @@ lemma Cauchy_continuous_map_id [simp]:
 
 lemma Cauchy_continuous_map_compose:
   assumes f: "Cauchy_continuous_map m1 m2 f" and g: "Cauchy_continuous_map m2 m3 g"
-  shows "Cauchy_continuous_map m1 m3 (g o f)"
+  shows "Cauchy_continuous_map m1 m3 (g \<circ> f)"
   by (metis (no_types, lifting) Cauchy_continuous_map_def f fun.map_comp g)
 
 lemma Lipschitz_imp_uniformly_continuous_map:
@@ -3783,7 +3791,7 @@ proof (clarsimp simp: continuous_map_atin)
     assume "range \<sigma> \<subseteq> M1 - {x} \<and> limitin M1.mtopology \<sigma> x sequentially"
     then have "M1.MCauchy (\<lambda>n. if even n then \<sigma> (n div 2) else x)"
       by (force simp add: M1.MCauchy_interleaving)
-    then have "M2.MCauchy (f o (\<lambda>n. if even n then \<sigma> (n div 2) else x))"
+    then have "M2.MCauchy (f \<circ> (\<lambda>n. if even n then \<sigma> (n div 2) else x))"
       using assms by (simp add: Cauchy_continuous_map_def)
     then show "limitin M2.mtopology (f \<circ> \<sigma>) (f x) sequentially"
       using M2.MCauchy_interleaving [of "f \<circ> \<sigma>" "f x"]
@@ -3840,91 +3848,86 @@ lemma Lipschitz_imp_Cauchy_continuous_map:
   by (simp add: Lipschitz_imp_uniformly_continuous_map uniformly_imp_Cauchy_continuous_map)
 
 lemma Cauchy_imp_uniformly_continuous_map:
-   "mtotally_bounded1 (M1) \<and>
-        Cauchy_continuous_map m1 m2 f
-        \<Longrightarrow> uniformly_continuous_map m1 m2 f"
-oops
-  REPEAT STRIP_TAC THEN
-  REWRITE_TAC[UNIFORMLY_CONTINUOUS_MAP_SEQUENTIALLY_ALT] THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CAUCHY_CONTINUOUS_MAP_IMAGE) THEN
-  REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE] THEN
-  DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
-  MAP_EVERY X_GEN_TAC [`e::real`; `x::num=>A`; `y::num=>A`] THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> SPEC `x::num=>A` \<circ> CONJUNCT2 \<circ>
-   REWRITE_RULE[TOTALLY_BOUNDED_IN_SEQUENTIALLY]) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `r1::num=>num` THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> SPEC `(y::num=>A) \<circ> (r1::num=>num)` \<circ> CONJUNCT2 \<circ>
-   REWRITE_RULE[TOTALLY_BOUNDED_IN_SEQUENTIALLY]) THEN
-  ASM_REWRITE_TAC[o_THM; GSYM o_ASSOC; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `r2::num=>num` THEN STRIP_TAC THEN
-  ABBREV_TAC `r = (r1::num=>num) \<circ> (r2::num=>num)` THEN
-  SUBGOAL_THEN `\<forall>m n. m < n \<Longrightarrow> (r::num=>num) m < r n` ASSUME_TAC THENL
-   [EXPAND_TAC "r" THEN REWRITE_TAC[o_DEF] THEN ASM_MESON_TAC[]; ALL_TAC] THEN
-  FIRST_ASSUM(MP_TAC \<circ>
-   SPEC `\<lambda>n. if even n then (x \<circ> r) (n div 2):A
-             else (y \<circ> (r::num=>num)) (n div 2)` \<circ>
-   REWRITE_RULE[Cauchy_continuous_map]) THEN
-  ASM_REWRITE_TAC[CAUCHY_IN_INTERLEAVING_GEN; ETA_AX] THEN ANTS_TAC THENL
-   [EXPAND_TAC "r" THEN REWRITE_TAC[o_ASSOC] THEN
-    ASM_SIMP_TAC[CAUCHY_IN_SUBSEQUENCE] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `r::num=>num` \<circ>
-      MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT] LIMIT_SUBSEQUENCE)) THEN
-    ASM_REWRITE_TAC[GSYM o_ASSOC] THEN REWRITE_TAC[o_DEF];
-    ONCE_REWRITE_TAC[o_DEF] THEN
-    REWRITE_TAC[COND_RAND; CAUCHY_IN_INTERLEAVING_GEN] THEN
-    DISCH_THEN(MP_TAC \<circ> CONJUNCT2 \<circ> CONJUNCT2) THEN
-    REWRITE_TAC[LIMIT_NULL_REAL] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `e::real`) THEN ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP EVENTUALLY_HAPPENS) THEN
-    REWRITE_TAC[o_DEF; TRIVIAL_LIMIT_SEQUENTIALLY] THEN
-    ASM_SIMP_TAC[real_abs; MDIST_POS_LE] THEN MESON_TAC[]]);;
+  assumes f: "Cauchy_continuous_map m1 m2 f"
+    and tbo: "Metric_space.mtotally_bounded (mspace m1) (mdist m1) (mspace m1)"
+  shows "uniformly_continuous_map m1 m2 f"
+  unfolding uniformly_continuous_map_sequentially_alt imp_conjL
+proof (intro conjI strip)
+  show "f ` mspace m1 \<subseteq> mspace m2"
+    by (simp add: Cauchy_continuous_map_image f)
+  interpret M1: Metric_space "mspace m1" "mdist m1"
+    by (simp add: Metric_space_mspace_mdist)
+  interpret M2: Metric_space "mspace m2" "mdist m2"
+    by (simp add: Metric_space_mspace_mdist)
+  fix \<epsilon> :: real and \<rho> \<sigma> 
+  assume "\<epsilon> > 0"
+    and \<rho>: "range \<rho> \<subseteq> mspace m1"
+    and \<sigma>: "range \<sigma> \<subseteq> mspace m1"
+    and 0: "(\<lambda>n. mdist m1 (\<rho> n) (\<sigma> n)) \<longlonglongrightarrow> 0"
+  then obtain r1 where "strict_mono r1" and r1: "M1.MCauchy (\<rho> \<circ> r1)"
+    using M1.mtotally_bounded_sequentially tbo by meson
+  then obtain r2 where "strict_mono r2" and r2: "M1.MCauchy (\<sigma> \<circ> r1 \<circ> r2)"
+    by (metis M1.mtotally_bounded_sequentially tbo \<sigma> image_comp image_subset_iff range_subsetD)
+  define r where "r \<equiv> r1 \<circ> r2"
+  have r: "strict_mono r"
+    by (simp add: r_def \<open>strict_mono r1\<close> \<open>strict_mono r2\<close> strict_mono_o)
+  define \<eta> where "\<eta> \<equiv> \<lambda>n. if even n then (\<rho> \<circ> r) (n div 2) else (\<sigma> \<circ> r) (n div 2)"
+  have "M1.MCauchy \<eta>"
+    unfolding \<eta>_def M1.MCauchy_interleaving_gen
+  proof (intro conjI)
+    show "M1.MCauchy (\<rho> \<circ> r)"
+      by (simp add: M1.MCauchy_subsequence \<open>strict_mono r2\<close> fun.map_comp r1 r_def)
+    show "M1.MCauchy (\<sigma> \<circ> r)"
+      by (simp add: fun.map_comp r2 r_def)
+    show "(\<lambda>n. mdist m1 ((\<rho> \<circ> r) n) ((\<sigma> \<circ> r) n)) \<longlonglongrightarrow> 0"
+      using LIMSEQ_subseq_LIMSEQ [OF 0 r] by (simp add: o_def)
+  qed
+  then have "Metric_space.MCauchy (mspace m2) (mdist m2) (f \<circ> \<eta>)"
+    by (meson Cauchy_continuous_map_def f)
+  then have "(\<lambda>n. mdist m2 (f (\<rho> (r n))) (f (\<sigma> (r n)))) \<longlonglongrightarrow> 0"
+    using M2.MCauchy_interleaving_gen [of "f \<circ> \<rho> \<circ> r" "f \<circ> \<sigma> \<circ> r"]
+    by (simp add: \<eta>_def o_def if_distrib cong: if_cong)
+  then show "\<exists>n. mdist m2 (f (\<rho> n)) (f (\<sigma> n)) < \<epsilon>"
+    by (meson LIMSEQ_le_const \<open>0 < \<epsilon>\<close> linorder_not_le)
+qed
 
 lemma continuous_imp_uniformly_continuous_map:
-   "\<And>m1 m2 f::A=>B.
-        compact_space (mtopology m1) \<and>
-        continuous_map (mtopology m1,mtopology m2) f
+   "compact_space (mtopology_of m1) \<and>
+        continuous_map (mtopology_of m1) (mtopology_of m2) f
         \<Longrightarrow> uniformly_continuous_map m1 m2 f"
-oops
-  REWRITE_TAC[COMPACT_SPACE_EQ_MCOMPLETE_TOTALLY_BOUNDED_IN] THEN
-  REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC CAUCHY_IMP_UNIFORMLY_CONTINUOUS_MAP THEN
-  ASM_REWRITE_TAC[] THEN
-  MATCH_MP_TAC CONTINUOUS_IMP_CAUCHY_CONTINUOUS_MAP THEN
-  ASM_REWRITE_TAC[]);;
+  by (simp add: Cauchy_imp_uniformly_continuous_map continuous_imp_Cauchy_continuous_map
+                Metric_space.compact_space_eq_mcomplete_mtotally_bounded
+                Metric_space_mspace_mdist mtopology_of_def)
 
 lemma continuous_eq_Cauchy_continuous_map:
-   "\<And>m1 m2 f::A=>B.
-        mcomplete m1
-        \<Longrightarrow> (continuous_map (mtopology m1,mtopology m2) f \<longleftrightarrow>
-             Cauchy_continuous_map m1 m2 f)"
-oops
-  MESON_TAC[CONTINUOUS_IMP_CAUCHY_CONTINUOUS_MAP;
-            CAUCHY_CONTINUOUS_IMP_CONTINUOUS_MAP]);;
+   "Metric_space.mcomplete (mspace m1) (mdist m1) \<Longrightarrow> 
+    continuous_map (mtopology_of m1) (mtopology_of m2) f \<longleftrightarrow> Cauchy_continuous_map m1 m2 f"
+  using Cauchy_continuous_imp_continuous_map continuous_imp_Cauchy_continuous_map by blast
 
 lemma continuous_eq_uniformly_continuous_map:
-   "\<And>m1 m2 f::A=>B.
-        compact_space (mtopology m1)
-        \<Longrightarrow> (continuous_map (mtopology m1,mtopology m2) f \<longleftrightarrow>
-             uniformly_continuous_map m1 m2 f)"
-oops
-  MESON_TAC[CONTINUOUS_IMP_UNIFORMLY_CONTINUOUS_MAP;
-            UNIFORMLY_CONTINUOUS_IMP_CONTINUOUS_MAP]);;
+   "compact_space (mtopology_of m1) 
+    \<Longrightarrow> continuous_map (mtopology_of m1) (mtopology_of m2) f \<longleftrightarrow>
+        uniformly_continuous_map m1 m2 f"
+  using continuous_imp_uniformly_continuous_map uniformly_continuous_imp_continuous_map by blast
 
 lemma Cauchy_eq_uniformly_continuous_map:
-   "\<And>m1 m2 f::A=>B.
-        mtotally_bounded1 (M1)
-        \<Longrightarrow> (Cauchy_continuous_map m1 m2 f \<longleftrightarrow>
-             uniformly_continuous_map m1 m2 f)"
-oops
-  MESON_TAC[CAUCHY_IMP_UNIFORMLY_CONTINUOUS_MAP;
-            UNIFORMLY_IMP_CAUCHY_CONTINUOUS_MAP]);;
+   "Metric_space.mtotally_bounded (mspace m1) (mdist m1) (mspace m1)
+    \<Longrightarrow> Cauchy_continuous_map m1 m2 f \<longleftrightarrow> uniformly_continuous_map m1 m2 f"
+  using Cauchy_imp_uniformly_continuous_map uniformly_imp_Cauchy_continuous_map by blast
 
 lemma Lipschitz_continuous_map_projections:
- (`(\<forall>m1::A metric m2::B metric.
-        Lipschitz_continuous_map (prod_metric m1 m2,m1) fst) \<and>
-   (\<forall>m1::A metric m2::B metric.
-        Lipschitz_continuous_map (prod_metric m1 m2,m2) snd)"
+  "Lipschitz_continuous_map (prod_metric m1 m2) m1 fst"
+  "Lipschitz_continuous_map (prod_metric m1 m2) m2 snd"
+  unfolding Lipschitz_continuous_map_def
+   apply (intro conjI)
+    apply (simp add: )
+   apply (rule_tac x="1" in exI)
+   apply (simp add: )
+   apply (auto simp: )
+   apply (simp add: prod_dist_def)
+   apply (simp add: prod_dist_def)
+  by (metis mult_numeral_1 real_sqrt_sum_squares_ge2)
+
 oops
   CONJ_TAC THEN REPEAT GEN_TAC THEN REWRITE_TAC[Lipschitz_continuous_map] THEN
   REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; CONJUNCT1 PROD_METRIC] THEN
