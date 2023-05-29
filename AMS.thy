@@ -3732,28 +3732,28 @@ proof (intro strip)
     by (simp add: Metric_space_mspace_mdist)
   fix \<sigma>
   assume \<sigma>: "M1.MCauchy \<sigma>"
-  with \<open>\<epsilon> > 0\<close> obtain N where N: "\<forall>n\<ge>N. \<forall>n'\<ge>N. mdist m1 (\<sigma> n) (\<sigma> n') < \<epsilon>"
+  with \<open>\<epsilon> > 0\<close> obtain N where N: "\<And>n n'. \<lbrakk>n\<ge>N; n'\<ge>N\<rbrakk> \<Longrightarrow> mdist m1 (\<sigma> n) (\<sigma> n') < \<epsilon>"
     using M1.MCauchy_def by fastforce
-  then have DD: "M1.mball (\<sigma> N) \<epsilon> \<subseteq> mspace m1"
+  then have "M1.mball (\<sigma> N) \<epsilon> \<subseteq> mspace m1"
     by (auto simp: image_subset_iff M1.mball_def)
   then interpret MS1: Metric_space "mball_of m1 (\<sigma> N) \<epsilon> \<inter> mspace m1" "mdist m1"
     by (simp add: M1.subspace)
   show "M2.MCauchy (f \<circ> \<sigma>)"
   proof (rule M2.MCauchy_offset)
-    show "M2.MCauchy (f \<circ> \<sigma> \<circ> (+) N)"
-      apply (simp add: comp_assoc)
-      apply (rule  \<section> [of "\<sigma> N",  unfolded Cauchy_continuous_map_def, rule_format])
-       apply (meson Metric_space.MCauchy_def Metric_space_mspace_mdist \<sigma> range_subsetD)
-      apply (simp add: )
-      using \<sigma>
-      apply (simp add: M1.MCauchy_def MS1.MCauchy_def)
-      apply (auto simp: ) (*CAUCHY_IN_SUBSEQUENCE*)
-       apply (simp add: N mball_of_def subsetD)
-      by (meson trans_le_add2)
+    have "M1.MCauchy (\<sigma> \<circ> (+) N)"
+      by (simp add: M1.MCauchy_imp_MCauchy_suffix \<sigma>)
+    moreover have "range (\<sigma> \<circ> (+) N) \<subseteq> M1.mball (\<sigma> N) \<epsilon>"
+      using N [OF order_refl] M1.MCauchy_def \<sigma> by fastforce
+    ultimately have "MS1.MCauchy (\<sigma> \<circ> (+) N)"
+      unfolding M1.MCauchy_def MS1.MCauchy_def by (simp add: mball_of_def)
+    moreover have "\<sigma> N \<in> mspace m1"
+      using M1.MCauchy_def \<sigma> by auto
+    ultimately show "M2.MCauchy (f \<circ> \<sigma> \<circ> (+) N)"
+      unfolding comp_assoc
+      by (metis "\<section>" Cauchy_continuous_map_def mdist_submetric mspace_submetric)
   next
     fix n
-    assume "n < N"
-    then have "\<sigma> n \<in> mspace m1"
+    have "\<sigma> n \<in> mspace m1"
       by (meson Metric_space.MCauchy_def Metric_space_mspace_mdist \<sigma> range_subsetD)
     then have "\<sigma> n \<in> mball_of m1 (\<sigma> n) \<epsilon>"
       by (simp add: Metric_space.centre_in_mball_iff Metric_space_mspace_mdist assms(1) mball_of_def)
@@ -3763,9 +3763,8 @@ proof (intro strip)
 qed
 
 lemma Cauchy_continuous_imp_continuous_map:
-   "\<And>m1 m2 f::A=>B.
-        Cauchy_continuous_map m1 m2 f
-        \<Longrightarrow> continuous_map (mtopology m1,mtopology m2) f"
+   "Cauchy_continuous_map m1 m2 f
+        \<Longrightarrow> continuous_map (mtopology_of m1) (mtopology_of m2) f"
 oops
   REPEAT STRIP_TAC THEN REWRITE_TAC[CONTINUOUS_MAP_ATPOINTOF] THEN
   X_GEN_TAC `a::A` THEN REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN DISCH_TAC THEN
