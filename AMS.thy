@@ -96,6 +96,9 @@ lemma (in Metric_space) mdist_metric[simp]:
   "mdist (metric (M,d)) = d"
   by (simp add: mdist_def Metric_space_axioms metric_inverse)
 
+lemma metric_collapse [simp]: "metric (mspace m, mdist m) = m"
+  by (simp add: dest_metric_inverse mdist_def mspace_def)
+
 definition mtopology_of :: "'a metric \<Rightarrow> 'a topology"
   where "mtopology_of \<equiv> \<lambda>m. Metric_space.mtopology (mspace m) (mdist m)"
 
@@ -3762,44 +3765,51 @@ proof (intro strip)
   qed
 qed
 
+
+lemma (in Metric_space12) Cauchy_continuous_imp_continuous_map:
+  assumes "Cauchy_continuous_map (metric (M1,d1)) (metric (M2,d2)) f"
+  shows "continuous_map M1.mtopology M2.mtopology f"
+proof (clarsimp simp: continuous_map_atin)
+  fix x
+  assume "x \<in> M1"
+  show "limitin M2.mtopology f (f x) (atin M1.mtopology x)"
+    unfolding limit_atin_sequentially
+  proof (intro conjI strip)
+    show "f x \<in> M2"
+      using Cauchy_continuous_map_image \<open>x \<in> M1\<close> assms by fastforce
+    fix \<sigma>
+    assume "range \<sigma> \<subseteq> M1 - {x} \<and> limitin M1.mtopology \<sigma> x sequentially"
+    then have "M1.MCauchy (\<lambda>n. if even n then \<sigma> (n div 2) else x)"
+      by (force simp add: M1.MCauchy_interleaving)
+    then have "M2.MCauchy (f o (\<lambda>n. if even n then \<sigma> (n div 2) else x))"
+      using assms by (simp add: Cauchy_continuous_map_def)
+    then show "limitin M2.mtopology (f \<circ> \<sigma>) (f x) sequentially"
+      using M2.MCauchy_interleaving [of "f \<circ> \<sigma>" "f x"]
+      by (simp add: o_def if_distrib cong: if_cong)
+  qed
+qed
+
+text \<open>The same outside the locale\<close>
 lemma Cauchy_continuous_imp_continuous_map:
-   "Cauchy_continuous_map m1 m2 f
-        \<Longrightarrow> continuous_map (mtopology_of m1) (mtopology_of m2) f"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[CONTINUOUS_MAP_ATPOINTOF] THEN
-  X_GEN_TAC `a::A` THEN REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN DISCH_TAC THEN
-  REWRITE_TAC[LIMIT_ATPOINTOF_SEQUENTIALLY] THEN
-  FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP CAUCHY_CONTINUOUS_MAP_IMAGE) THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  X_GEN_TAC `x::num=>A` THEN REWRITE_TAC[IN_DELETE; FORALL_AND_THM] THEN
-  STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> SPEC
-   `\<lambda>n. if even n then x(n div 2) else a::A` \<circ>
-   REWRITE_RULE[Cauchy_continuous_map]) THEN
-  ASM_SIMP_TAC[o_DEF; COND_RAND; CAUCHY_IN_INTERLEAVING]);;
+  assumes "Cauchy_continuous_map m1 m2 f"
+  shows "continuous_map (mtopology_of m1) (mtopology_of m2) f"
+  using assms Metric_space12.Cauchy_continuous_imp_continuous_map [OF Metric_space12_mspace_mdist]
+  by (auto simp add: mtopology_of_def)
 
 lemma uniformly_continuous_imp_continuous_map:
-   "\<And>m1 m2 f::A=>B.
-        uniformly_continuous_map m1 m2 f
-        \<Longrightarrow> continuous_map (mtopology m1,mtopology m2) f"
-oops
-  MESON_TAC[UNIFORMLY_IMP_CAUCHY_CONTINUOUS_MAP;
-            CAUCHY_CONTINUOUS_IMP_CONTINUOUS_MAP]);;
+   "uniformly_continuous_map m1 m2 f
+        \<Longrightarrow> continuous_map (mtopology_of m1) (mtopology_of m2) f"
+  by (simp add: Cauchy_continuous_imp_continuous_map uniformly_imp_Cauchy_continuous_map)
 
 lemma Lipschitz_continuous_imp_continuous_map:
-   "\<And>m1 m2 f::A=>B.
-        Lipschitz_continuous_map f
-        \<Longrightarrow> continuous_map (mtopology m1,mtopology m2) f"
-oops
-  SIMP_TAC[UNIFORMLY_CONTINUOUS_IMP_CONTINUOUS_MAP;
-           LIPSCHITZ_IMP_UNIFORMLY_CONTINUOUS_MAP]);;
+   "Lipschitz_continuous_map m1 m2 f
+     \<Longrightarrow> continuous_map (mtopology_of m1) (mtopology_of m2) f"
+  by (simp add: Lipschitz_imp_uniformly_continuous_map uniformly_continuous_imp_continuous_map)
 
 lemma Lipschitz_imp_Cauchy_continuous_map:
-   "\<And>m1 m2 f::A=>B.
-        Lipschitz_continuous_map f
+   "Lipschitz_continuous_map m1 m2 f
         \<Longrightarrow> Cauchy_continuous_map m1 m2 f"
-oops
-  SIMP_TAC[LIPSCHITZ_IMP_UNIFORMLY_CONTINUOUS_MAP;
-           UNIFORMLY_IMP_CAUCHY_CONTINUOUS_MAP]);;
+  by (simp add: Lipschitz_imp_uniformly_continuous_map uniformly_imp_Cauchy_continuous_map)
 
 lemma continuous_imp_Cauchy_continuous_map:
    "\<And>m1 m2 f::A=>B.
