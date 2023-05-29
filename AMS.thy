@@ -3765,8 +3765,10 @@ proof (intro strip)
   qed
 qed
 
+context Metric_space12
+begin
 
-lemma (in Metric_space12) Cauchy_continuous_imp_continuous_map:
+lemma Cauchy_continuous_imp_continuous_map:
   assumes "Cauchy_continuous_map (metric (M1,d1)) (metric (M2,d2)) f"
   shows "continuous_map M1.mtopology M2.mtopology f"
 proof (clarsimp simp: continuous_map_atin)
@@ -3789,11 +3791,37 @@ proof (clarsimp simp: continuous_map_atin)
   qed
 qed
 
+lemma continuous_imp_Cauchy_continuous_map:
+  assumes "M1.mcomplete"
+    and f: "continuous_map M1.mtopology M2.mtopology f"
+  shows "Cauchy_continuous_map (metric (M1,d1)) (metric (M2,d2)) f"
+  unfolding Cauchy_continuous_map_def
+proof clarsimp
+  fix \<sigma>
+  assume \<sigma>: "M1.MCauchy \<sigma>"
+  then obtain y where y: "limitin M1.mtopology \<sigma> y sequentially"
+    using M1.mcomplete_def assms by blast
+  have "range (f \<circ> \<sigma>) \<subseteq> M2"
+    using \<sigma> f by (simp add: M2.subspace M1.MCauchy_def M1.metric_continuous_map image_subset_iff)
+  then show "M2.MCauchy (f \<circ> \<sigma>)"
+    using continuous_map_limit [OF f y] M2.convergent_imp_MCauchy
+    by blast
+qed
+
+end
+
 text \<open>The same outside the locale\<close>
 lemma Cauchy_continuous_imp_continuous_map:
   assumes "Cauchy_continuous_map m1 m2 f"
   shows "continuous_map (mtopology_of m1) (mtopology_of m2) f"
   using assms Metric_space12.Cauchy_continuous_imp_continuous_map [OF Metric_space12_mspace_mdist]
+  by (auto simp add: mtopology_of_def)
+
+lemma continuous_imp_Cauchy_continuous_map:
+  assumes "Metric_space.mcomplete (mspace m1) (mdist m1)"
+    and "continuous_map (mtopology_of m1) (mtopology_of m2) f"
+  shows "Cauchy_continuous_map m1 m2 f"
+  using assms Metric_space12.continuous_imp_Cauchy_continuous_map [OF Metric_space12_mspace_mdist]
   by (auto simp add: mtopology_of_def)
 
 lemma uniformly_continuous_imp_continuous_map:
@@ -3811,29 +3839,8 @@ lemma Lipschitz_imp_Cauchy_continuous_map:
         \<Longrightarrow> Cauchy_continuous_map m1 m2 f"
   by (simp add: Lipschitz_imp_uniformly_continuous_map uniformly_imp_Cauchy_continuous_map)
 
-lemma continuous_imp_Cauchy_continuous_map:
-   "\<And>m1 m2 f::A=>B.
-        mcomplete m1 \<and>
-        continuous_map (mtopology m1,mtopology m2) f
-        \<Longrightarrow> Cauchy_continuous_map m1 m2 f"
-oops
-  REPEAT STRIP_TAC THEN REWRITE_TAC[Cauchy_continuous_map] THEN
-  X_GEN_TAC `x::num=>A` THEN DISCH_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> SPEC `x::num=>A` \<circ> REWRITE_RULE[mcomplete]) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `y::A` THEN DISCH_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP
-   (REWRITE_RULE[IMP_CONJ] (ISPEC `sequentially` CONTINUOUS_MAP_LIMIT))) THEN
-  DISCH_THEN(MP_TAC \<circ> SPECL [`x::num=>A`; `y::A`]) THEN
-  ASM_REWRITE_TAC[] THEN
-  DISCH_THEN(MATCH_MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
-        CONVERGENT_IMP_CAUCHY_IN)) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE
-   [continuous_map; TOPSPACE_MTOPOLOGY; MCauchy]) THEN
-  REWRITE_TAC[o_DEF] THEN ASM SET_TAC[]);;
-
 lemma Cauchy_imp_uniformly_continuous_map:
-   "\<And>m1 m2 f::A=>B.
-        mtotally_bounded1 (M1) \<and>
+   "mtotally_bounded1 (M1) \<and>
         Cauchy_continuous_map m1 m2 f
         \<Longrightarrow> uniformly_continuous_map m1 m2 f"
 oops
