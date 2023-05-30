@@ -4076,7 +4076,7 @@ proof (intro conjI strip)
     by fastforce
   obtain r where "strict_mono r" "Metric_space.MCauchy (mspace m1) (mdist m1) (\<rho> \<circ> r)"
     by (meson \<rho> S Metric_space.mtotally_bounded_sequentially[OF Metric_space_mspace_mdist])
-  then have "Metric_space.MCauchy (mspace m2) (mdist m2) (f \<circ> \<rho> o r)"
+  then have "Metric_space.MCauchy (mspace m2) (mdist m2) (f \<circ> \<rho> \<circ> r)"
     using f unfolding Cauchy_continuous_map_def by (metis fun.map_comp)
   then show "\<exists>r. strict_mono r \<and> Metric_space.MCauchy (mspace m2) (mdist m2) (\<sigma> \<circ> r)"
     using \<open>\<sigma> = f \<circ> \<rho>\<close> \<open>strict_mono r\<close> by blast
@@ -4092,59 +4092,66 @@ lemma Lipschitz_coefficient_pos:
 
 lemma Lipschitz_continuous_map_metric:
    "Lipschitz_continuous_map (prod_metric m m) euclidean_metric (\<lambda>(x,y). mdist m x y)"
-oops
-  SIMP_TAC[Lipschitz_continuous_map; CONJUNCT1 PROD_METRIC;
-           REAL_EUCLIDEAN_METRIC] THEN
-  GEN_TAC THEN REWRITE_TAC[FORALL_PAIR_THM; IN_CROSS; SUBSET_UNIV] THEN
-  EXISTS_TAC `2` THEN
-  MAP_EVERY X_GEN_TAC [`x1::A`; `y1::A`; `x2::A`; `y2::A`] THEN STRIP_TAC THEN
-  W(MP_TAC \<circ> PART_MATCH (rand \<circ> rand) COMPONENT_LE_PROD_METRIC \<circ>
-    rand \<circ> rand \<circ> snd) THEN
-  MATCH_MP_TAC(REAL_ARITH
-   `x \<le> y + z \<Longrightarrow> y \<le> p \<and> z \<le> p \<Longrightarrow> x \<le> 2 * p`) THEN
-  REWRITE_TAC[REAL_ABS_BOUNDS] THEN CONJ_TAC THEN
-  REPEAT(POP_ASSUM MP_TAC) THEN CONV_TAC METRIC_ARITH);;
+proof -
+  have "\<And>x y x' y'. \<lbrakk>x \<in> mspace m; y \<in> mspace m; x' \<in> mspace m; y' \<in> mspace m\<rbrakk>
+       \<Longrightarrow> \<bar>mdist m x y - mdist m x' y'\<bar> \<le> 2 * sqrt ((mdist m x x')\<^sup>2 + (mdist m y y')\<^sup>2)"
+    by (smt (verit, del_insts) mdist_commute mdist_triangle real_sqrt_sum_squares_ge2)
+  then show ?thesis
+    by (fastforce simp add: Lipschitz_continuous_map_def prod_dist_def dist_real_def)
+qed
 
 lemma Lipschitz_continuous_map_mdist:
-   "\<And>m m' f g.
-      Lipschitz_continuous_map m m' f \<and>
-      Lipschitz_continuous_map m m' g
-      \<Longrightarrow> Lipschitz_continuous_map m real_euclidean_metric
-             (\<lambda>x. d m' (f x,g x))"
-oops
-  REPEAT STRIP_TAC THEN GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
-  MATCH_MP_TAC LIPSCHITZ_CONTINUOUS_MAP_COMPOSE THEN
-  EXISTS_TAC `prod_metric (m':B metric) m'` THEN
-  REWRITE_TAC[LIPSCHITZ_CONTINUOUS_MAP_METRIC] THEN
-  ASM_REWRITE_TAC[LIPSCHITZ_CONTINUOUS_MAP_PAIRED]);;
+  assumes f: "Lipschitz_continuous_map m m' f" 
+    and g: "Lipschitz_continuous_map m m' g"
+  shows "Lipschitz_continuous_map m euclidean_metric (\<lambda>x. mdist m' (f x) (g x))"
+    (is  "Lipschitz_continuous_map m _ ?h")
+proof -
+  have eq: "?h = ((\<lambda>(x,y). mdist m' x y) \<circ> (\<lambda>x. (f x,g x)))"
+    by force
+  show ?thesis
+    unfolding eq
+  proof (rule Lipschitz_continuous_map_compose)
+    show "Lipschitz_continuous_map m (prod_metric m' m') (\<lambda>x. (f x, g x))"
+      by (simp add: Lipschitz_continuous_map_paired f g)
+    show "Lipschitz_continuous_map (prod_metric m' m') euclidean_metric (\<lambda>(x,y). mdist m' x y)"
+      by (simp add: Lipschitz_continuous_map_metric)
+  qed
+qed
 
 lemma uniformly_continuous_map_mdist:
-   "\<And>m m' f g.
-      uniformly_continuous_map m m' f \<and>
-      uniformly_continuous_map m m' g
-      \<Longrightarrow> uniformly_continuous_map m real_euclidean_metric
-             (\<lambda>x. d m' (f x,g x))"
-oops
-  REPEAT STRIP_TAC THEN GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
-  MATCH_MP_TAC UNIFORMLY_CONTINUOUS_MAP_COMPOSE THEN
-  EXISTS_TAC `prod_metric (m':B metric) m'` THEN
-  SIMP_TAC[LIPSCHITZ_IMP_UNIFORMLY_CONTINUOUS_MAP;
-           LIPSCHITZ_CONTINUOUS_MAP_METRIC] THEN
-  ASM_REWRITE_TAC[UNIFORMLY_CONTINUOUS_MAP_PAIRED]);;
+  assumes f: "uniformly_continuous_map m m' f" 
+    and g: "uniformly_continuous_map m m' g"
+  shows "uniformly_continuous_map m euclidean_metric (\<lambda>x. mdist m' (f x) (g x))"
+    (is  "uniformly_continuous_map m _ ?h")
+proof -
+  have eq: "?h = ((\<lambda>(x,y). mdist m' x y) \<circ> (\<lambda>x. (f x,g x)))"
+    by force
+  show ?thesis
+    unfolding eq
+  proof (rule uniformly_continuous_map_compose)
+    show "uniformly_continuous_map m (prod_metric m' m') (\<lambda>x. (f x, g x))"
+      by (simp add: uniformly_continuous_map_paired f g)
+    show "uniformly_continuous_map (prod_metric m' m') euclidean_metric (\<lambda>(x,y). mdist m' x y)"
+      by (simp add: Lipschitz_continuous_map_metric Lipschitz_imp_uniformly_continuous_map)
+  qed
+qed
 
 lemma Cauchy_continuous_map_mdist:
-   "\<And>m m' f g.
-      Cauchy_continuous_map m m' f \<and>
-      Cauchy_continuous_map m m' g
-      \<Longrightarrow> Cauchy_continuous_map m real_euclidean_metric
-             (\<lambda>x. d m' (f x,g x))"
-oops
-  REPEAT STRIP_TAC THEN GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
-  MATCH_MP_TAC CAUCHY_CONTINUOUS_MAP_COMPOSE THEN
-  EXISTS_TAC `prod_metric (m':B metric) m'` THEN
-  SIMP_TAC[LIPSCHITZ_IMP_CAUCHY_CONTINUOUS_MAP;
-           LIPSCHITZ_CONTINUOUS_MAP_METRIC] THEN
-  ASM_REWRITE_TAC[CAUCHY_CONTINUOUS_MAP_PAIRED]);;
+  assumes f: "Cauchy_continuous_map m m' f" 
+    and g: "Cauchy_continuous_map m m' g"
+  shows "Cauchy_continuous_map m euclidean_metric (\<lambda>x. mdist m' (f x) (g x))"
+        (is  "Cauchy_continuous_map m _ ?h")
+proof -
+  have eq: "?h = ((\<lambda>(x,y). mdist m' x y) \<circ> (\<lambda>x. (f x,g x)))"
+    by force
+  show ?thesis
+    unfolding eq
+    proof (rule Cauchy_continuous_map_compose)
+  show "Cauchy_continuous_map m (prod_metric m' m') (\<lambda>x. (f x, g x))"
+    by (simp add: Cauchy_continuous_map_paired f g)
+  show "Cauchy_continuous_map (prod_metric m' m') euclidean_metric (\<lambda>(x,y). mdist m' x y)"
+    by (simp add: Lipschitz_continuous_map_metric Lipschitz_imp_Cauchy_continuous_map)
+qed
 
 lemma continuous_map_metric:
    "continuous_map (prod_topology mtopology mtopology,
