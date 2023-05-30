@@ -4061,47 +4061,37 @@ lemma mtotally_bounded_Cauchy_continuous_image:
   assumes f: "Cauchy_continuous_map m1 m2 f" and S: "Metric_space.mtotally_bounded (mspace m1) (mdist m1) S"
   shows "Metric_space.mtotally_bounded (mspace m2) (mdist m2) (f ` S)"
   unfolding Metric_space.mtotally_bounded_sequentially[OF Metric_space_mspace_mdist]
-
-proof -
-
-
-  have "(\<exists>x. (\<forall>n. y n = f (x n)) \<and> (\<forall>n. x n \<in> s))"
-      sorry
-  have "xxx"
-    using S
-apply (simp add: Metric_space.mtotally_bounded_sequentially[OF Metric_space_mspace_mdist] )
-    sorry
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[TOTALLY_BOUNDED_IN_SEQUENTIALLY] THEN STRIP_TAC THEN
-  FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP CAUCHY_CONTINUOUS_MAP_IMAGE) THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; REWRITE_TAC[IN_IMAGE]] THEN
-  X_GEN_TAC `y::num=>B` THEN REWRITE_TAC[SKOLEM_THM; FORALL_AND_THM]THEN
-  DISCH_THEN(X_CHOOSE_THEN `x::num=>A` STRIP_ASSUME_TAC) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::num=>A`) THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC MONO_EXISTS THEN
-  X_GEN_TAC `r::num=>num` THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [Cauchy_continuous_map]) THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `(x::num=>A) \<circ> (r::num=>num)`) THEN
-  ASM_REWRITE_TAC[] THEN ASM_REWRITE_TAC[o_DEF]);;
+proof (intro conjI strip)
+  have "S \<subseteq> mspace m1"
+    using S by (simp add: Metric_space.mtotally_bounded_sequentially[OF Metric_space_mspace_mdist])
+  then show "f ` S \<subseteq> mspace m2"
+    using Cauchy_continuous_map_image f by blast
+  fix \<sigma> :: "nat \<Rightarrow> 'b"
+  assume "range \<sigma> \<subseteq> f ` S"
+  then have "\<forall>n. \<exists>x. \<sigma> n = f x \<and> x \<in> S"
+    by (meson imageE range_subsetD)
+  then obtain \<rho> where \<rho>: "\<And>n. \<sigma> n = f (\<rho> n)" "range \<rho> \<subseteq> S"
+    by (metis image_subset_iff)
+  then have "\<sigma> = f \<circ> \<rho>"
+    by fastforce
+  obtain r where "strict_mono r" "Metric_space.MCauchy (mspace m1) (mdist m1) (\<rho> \<circ> r)"
+    by (meson \<rho> S Metric_space.mtotally_bounded_sequentially[OF Metric_space_mspace_mdist])
+  then have "Metric_space.MCauchy (mspace m2) (mdist m2) (f \<circ> \<rho> o r)"
+    using f unfolding Cauchy_continuous_map_def by (metis fun.map_comp)
+  then show "\<exists>r. strict_mono r \<and> Metric_space.MCauchy (mspace m2) (mdist m2) (\<sigma> \<circ> r)"
+    using \<open>\<sigma> = f \<circ> \<rho>\<close> \<open>strict_mono r\<close> by blast
+qed
 
 lemma Lipschitz_coefficient_pos:
-   "\<And>m m' f::A=>B k.
-     (\<forall>x. x \<in> M \<Longrightarrow> f x \<in> mspace m') \<and>
-     (\<forall>x y. x \<in> M \<and> y \<in> M
-            \<Longrightarrow> d m' (f x,f y) \<le> k * d x y) \<and>
-     (\<exists>x y. x \<in> M \<and> y \<in> M \<and> \<not> (f x = f y))
-     \<Longrightarrow> 0 < k"
-oops
-  REPEAT GEN_TAC THEN INTRO_TAC "f k (@x y. x y fneq)" THEN
-  CLAIM_TAC "neq" `\<not> (x::A = y)` THENL [HYP MESON_TAC "fneq" []; ALL_TAC] THEN
-  TRANS_TAC REAL_LTE_TRANS `d m' (f x::B,f y) / d x::A y` THEN
-  ASM_SIMP_TAC[REAL_LT_DIV; MDIST_POS_LT; REAL_LE_LDIV_EQ]);;
+  assumes "x \<in> mspace m" "y \<in> mspace m" "f x \<noteq> f y" 
+    and "f ` mspace m \<subseteq> mspace m2" 
+    and "\<And>x y. \<lbrakk>x \<in> mspace m; y \<in> mspace m\<rbrakk>
+            \<Longrightarrow> mdist m2 (f x) (f y) \<le> k * mdist m x y"
+  shows  "0 < k"
+  using assms by (smt (verit, best) image_subset_iff mdist_nonneg mdist_zero mult_nonpos_nonneg)
 
 lemma Lipschitz_continuous_map_metric:
-   "Lipschitz_continuous_map
-          (prod_metric m m,real_euclidean_metric)
-          (d m)"
+   "Lipschitz_continuous_map (prod_metric m m) euclidean_metric (\<lambda>(x,y). mdist m x y)"
 oops
   SIMP_TAC[Lipschitz_continuous_map; CONJUNCT1 PROD_METRIC;
            REAL_EUCLIDEAN_METRIC] THEN
