@@ -169,6 +169,16 @@ lemma card_lepoll_quasi_components_of_topspace:
   by (metis bot.extremum image_empty inj_on_empty inj_on_iff_surj quasi_components_of_def)
 
 
+lemma mtopology_of_euclidean [simp]: "mtopology_of euclidean_metric = euclidean"
+  by (simp add: Met_TC.mtopology_def mtopology_of_def)
+
+lemma prod_dist_dist [simp]: "prod_dist dist dist = dist"
+  by (simp add: prod_dist_def dist_prod_def fun_eq_iff)
+
+lemma prod_metric_euclidean [simp]:
+  "prod_metric euclidean_metric euclidean_metric = euclidean_metric"
+  by (simp add: prod_metric_def euclidean_metric_def)
+
 subsection \<open>ATIN-WITHIN\<close>
 
 (*REPLACE ORIGINAL DEFINITION TO USE ABBREVIATION, LIKE AT / AT_WITHIN
@@ -3496,12 +3506,17 @@ proof
   qed
 qed
 
+text \<open>Equivalence between "abstract" and "type class" Lipschitz notions, 
+for all types in the metric space class\<close>
 lemma Lipschitz_map_euclidean [simp]:
   "Lipschitz_continuous_map euclidean_metric euclidean_metric f
-     = (\<exists>B. lipschitz_on B UNIV f)"
-  apply (auto simp: Lipschitz_continuous_map_pos lipschitz_on_def)
-   apply (meson less_le_not_le)
-  by (metis dist_not_less_zero less_eq_real_def mult_zero_left not_one_le_zero zero_le_mult_iff)
+     \<longleftrightarrow> (\<exists>B. lipschitz_on B UNIV f)"  (is "?lhs \<longleftrightarrow> ?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs"
+    by (force simp add: Lipschitz_continuous_map_pos lipschitz_on_def less_le_not_le)
+  show "?rhs \<Longrightarrow> ?lhs"
+  by (metis Lipschitz_continuous_map_def lipschitz_onD mdist_euclidean_metric mspace_euclidean_metric top_greatest)
+qed
 
 subsubsection \<open>Uniform continuity\<close>
 
@@ -3620,7 +3635,7 @@ lemma uniformly_continuous_map_const:
   unfolding uniformly_continuous_map_def image_subset_iff
   by (metis empty_iff equals0I mdist_zero)
 
-lemma uniformly_continuous_map_id:
+lemma uniformly_continuous_map_id [simp]:
    "uniformly_continuous_map m1 m1 (\<lambda>x. x)"
   by (metis image_ident order_refl uniformly_continuous_map_def)
 
@@ -3629,11 +3644,12 @@ lemma uniformly_continuous_map_compose:
   shows "uniformly_continuous_map m1 m3 (g \<circ> f)"
   by (smt (verit, ccfv_threshold) comp_apply f g image_subset_iff uniformly_continuous_map_def)
 
-lemma uniformly_continuous_map_real_const:
+lemma uniformly_continuous_map_real_const [simp]:
    "uniformly_continuous_map m euclidean_metric (\<lambda>x. c)"
   by (simp add: euclidean_metric_def uniformly_continuous_map_const)
 
-lemma uniformly_continuous_map_euclidean:
+text \<open>Equivalence between "abstract" and "type class" notions\<close>
+lemma uniformly_continuous_map_euclidean [simp]:
   "uniformly_continuous_map euclidean_metric euclidean_metric f
      = uniformly_continuous_on UNIV f"
   by (force simp add: uniformly_continuous_map_def isUCont_def)
@@ -4104,7 +4120,7 @@ lemma Lipschitz_continuous_map_mdist:
   assumes f: "Lipschitz_continuous_map m m' f" 
     and g: "Lipschitz_continuous_map m m' g"
   shows "Lipschitz_continuous_map m euclidean_metric (\<lambda>x. mdist m' (f x) (g x))"
-    (is  "Lipschitz_continuous_map m _ ?h")
+    (is "Lipschitz_continuous_map m _ ?h")
 proof -
   have eq: "?h = ((\<lambda>(x,y). mdist m' x y) \<circ> (\<lambda>x. (f x,g x)))"
     by force
@@ -4122,7 +4138,7 @@ lemma uniformly_continuous_map_mdist:
   assumes f: "uniformly_continuous_map m m' f" 
     and g: "uniformly_continuous_map m m' g"
   shows "uniformly_continuous_map m euclidean_metric (\<lambda>x. mdist m' (f x) (g x))"
-    (is  "uniformly_continuous_map m _ ?h")
+    (is "uniformly_continuous_map m _ ?h")
 proof -
   have eq: "?h = ((\<lambda>(x,y). mdist m' x y) \<circ> (\<lambda>x. (f x,g x)))"
     by force
@@ -4140,177 +4156,62 @@ lemma Cauchy_continuous_map_mdist:
   assumes f: "Cauchy_continuous_map m m' f" 
     and g: "Cauchy_continuous_map m m' g"
   shows "Cauchy_continuous_map m euclidean_metric (\<lambda>x. mdist m' (f x) (g x))"
-        (is  "Cauchy_continuous_map m _ ?h")
+    (is "Cauchy_continuous_map m _ ?h")
 proof -
   have eq: "?h = ((\<lambda>(x,y). mdist m' x y) \<circ> (\<lambda>x. (f x,g x)))"
     by force
   show ?thesis
     unfolding eq
-    proof (rule Cauchy_continuous_map_compose)
-  show "Cauchy_continuous_map m (prod_metric m' m') (\<lambda>x. (f x, g x))"
-    by (simp add: Cauchy_continuous_map_paired f g)
-  show "Cauchy_continuous_map (prod_metric m' m') euclidean_metric (\<lambda>(x,y). mdist m' x y)"
-    by (simp add: Lipschitz_continuous_map_metric Lipschitz_imp_Cauchy_continuous_map)
+  proof (rule Cauchy_continuous_map_compose)
+    show "Cauchy_continuous_map m (prod_metric m' m') (\<lambda>x. (f x, g x))"
+      by (simp add: Cauchy_continuous_map_paired f g)
+    show "Cauchy_continuous_map (prod_metric m' m') euclidean_metric (\<lambda>(x,y). mdist m' x y)"
+      by (simp add: Lipschitz_continuous_map_metric Lipschitz_imp_Cauchy_continuous_map)
+  qed
 qed
 
+lemma mtopology_of_prod_metric [simp]:
+    "mtopology_of (prod_metric m1 m2) = prod_topology (mtopology_of m1) (mtopology_of m2)"
+  by (simp add: mtopology_of_def Metric_space12.mtopology_prod_metric[OF Metric_space12_mspace_mdist])
+
 lemma continuous_map_metric:
-   "continuous_map (prod_topology mtopology mtopology,
-                        euclideanreal)
-                       (d m)"
-oops
-  REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC;
-              GSYM MTOPOLOGY_PROD_METRIC] THEN
-  GEN_TAC THEN MATCH_MP_TAC LIPSCHITZ_CONTINUOUS_IMP_CONTINUOUS_MAP THEN
-  REWRITE_TAC[LIPSCHITZ_CONTINUOUS_MAP_METRIC]);;
+   "continuous_map (prod_topology (mtopology_of m) (mtopology_of m)) euclidean
+      (\<lambda>(x,y). mdist m x y)"
+  using Lipschitz_continuous_imp_continuous_map [OF Lipschitz_continuous_map_metric]
+  by auto
 
 lemma continuous_map_mdist_alt:
-   "\<And>m f::A=>B#B.
-        continuous_map X (prod_topology mtopology mtopology) f
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. d m (f x))"
-oops
-  REPEAT STRIP_TAC THEN GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
-  ASM_MESON_TAC[CONTINUOUS_MAP_METRIC; CONTINUOUS_MAP_COMPOSE]);;
+  assumes "continuous_map X (prod_topology (mtopology_of m) (mtopology_of m)) f"
+  shows "continuous_map X euclidean (\<lambda>x. case_prod (mdist m) (f x))"
+    (is "continuous_map _ _ ?h")
+proof -
+  have eq: "?h = case_prod (mdist m) \<circ> f"
+    by force
+  show ?thesis
+    unfolding eq
+    using assms continuous_map_compose continuous_map_metric by blast
+qed
+
 
 lemma continuous_map_mdist:
-   "\<And>X m f g::A=>B.
-        continuous_map X mtopology f \<and>
-        continuous_map X mtopology g
-        \<Longrightarrow> continuous_map X euclideanreal (\<lambda>x. d (f x) g x)"
-oops
-  REPEAT STRIP_TAC THEN GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
-  EXISTS_TAC `prod_topology (mtopology::B topology) mtopology` THEN
-  REWRITE_TAC[CONTINUOUS_MAP_METRIC; CONTINUOUS_MAP_PAIRWISE] THEN
-  ASM_REWRITE_TAC[o_DEF; ETA_AX]);;
+  assumes f: "continuous_map X (mtopology_of m) f" 
+      and g: "continuous_map X (mtopology_of m) g"
+  shows "continuous_map X euclidean (\<lambda>x. mdist m (f x) (g x))"
+    (is "continuous_map X _ ?h")
+proof -
+  have eq: "?h = ((\<lambda>(x,y). mdist m x y) \<circ> (\<lambda>x. (f x,g x)))"
+    by force
+  show ?thesis
+    unfolding eq
+  proof (rule continuous_map_compose)
+    show "continuous_map X (prod_topology (mtopology_of m) (mtopology_of m)) (\<lambda>x. (f x, g x))"
+      by (simp add: continuous_map_paired f g)
+  qed (simp add: continuous_map_metric)
+qed
 
 lemma continuous_on_mdist:
-   "a::A \<in> M
-         \<Longrightarrow> continuous_map mtopology euclideanreal (\<lambda>x. d a x)"
-oops
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC CONTINUOUS_MAP_MDIST THEN
-  ASM_REWRITE_TAC[CONTINUOUS_MAP_ID; CONTINUOUS_MAP_CONST] THEN
-  ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY]);;
-
-lemma Lipschitz_continuous_map_real_left_multiplication:
-   "Lipschitz_continuous_map real_euclidean_metric real_euclidean_metric
-         (\<lambda>x. c * x)"
-oops
-  GEN_TAC THEN REWRITE_TAC[Lipschitz_continuous_map] THEN
-  REWRITE_TAC[REAL_EUCLIDEAN_METRIC; IN_UNIV; SUBSET_UNIV] THEN
-  REWRITE_TAC[GSYM REAL_SUB_LDISTRIB; REAL_ABS_MUL] THEN
-  MESON_TAC[REAL_LE_REFL]);;
-
-lemma Lipschitz_continuous_map_real_right_multiplication:
-   "Lipschitz_continuous_map real_euclidean_metric real_euclidean_metric
-         (\<lambda>x. x * c)"
-oops
-  ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
-  REWRITE_TAC[LIPSCHITZ_CONTINUOUS_MAP_REAL_LEFT_MULTIPLICATION]);;
-
-lemma Lipschitz_continuous_map_real_negation:
- (`Lipschitz_continuous_map real_euclidean_metric real_euclidean_metric (--)"
-oops
-  GEN_REWRITE_TAC RAND_CONV [GSYM ETA_AX] THEN
-  ONCE_REWRITE_TAC[REAL_NEG_MINUS1] THEN
-  REWRITE_TAC[LIPSCHITZ_CONTINUOUS_MAP_REAL_LEFT_MULTIPLICATION]);;
-
-lemma Lipschitz_continuous_map_real_absolute_value:
- (`Lipschitz_continuous_map real_euclidean_metric real_euclidean_metric abs"
-oops
-  SIMP_TAC[Lipschitz_continuous_map; REAL_EUCLIDEAN_METRIC; SUBSET_UNIV] THEN
-  EXISTS_TAC `1` THEN REAL_ARITH_TAC);;
-
-lemma Lipschitz_continuous_map_real_addition:
- (`Lipschitz_continuous_map
-    (prod_metric real_euclidean_metric real_euclidean_metric,
-     real_euclidean_metric)
-    (\<lambda>(x,y). x + y)"
-oops
-  REWRITE_TAC[Lipschitz_continuous_map; CONJUNCT1 PROD_METRIC] THEN
-  REWRITE_TAC[FORALL_PAIR_THM; REAL_EUCLIDEAN_METRIC] THEN
-  REWRITE_TAC[IN_UNIV; SUBSET_UNIV; IN_CROSS] THEN
-  EXISTS_TAC `2` THEN REPEAT GEN_TAC THEN
-  REWRITE_TAC[REAL_ARITH `x \<le> 2 * y \<longleftrightarrow> x / 2 \<le> y`] THEN
-  W(MP_TAC \<circ> PART_MATCH (rand \<circ> rand)
-        COMPONENT_LE_PROD_METRIC \<circ> rand \<circ> snd) THEN
-  REWRITE_TAC[REAL_EUCLIDEAN_METRIC] THEN REAL_ARITH_TAC);;
-
-lemma Lipschitz_continuous_map_real_subtraction:
- (`Lipschitz_continuous_map
-    (prod_metric real_euclidean_metric real_euclidean_metric,
-     real_euclidean_metric)
-    (\<lambda>(x,y). x - y)"
-oops
-  REWRITE_TAC[Lipschitz_continuous_map; CONJUNCT1 PROD_METRIC] THEN
-  REWRITE_TAC[FORALL_PAIR_THM; REAL_EUCLIDEAN_METRIC] THEN
-  REWRITE_TAC[IN_UNIV; SUBSET_UNIV; IN_CROSS] THEN
-  EXISTS_TAC `2` THEN REPEAT GEN_TAC THEN
-  REWRITE_TAC[REAL_ARITH `x \<le> 2 * y \<longleftrightarrow> x / 2 \<le> y`] THEN
-  W(MP_TAC \<circ> PART_MATCH (rand \<circ> rand)
-        COMPONENT_LE_PROD_METRIC \<circ> rand \<circ> snd) THEN
-  REWRITE_TAC[REAL_EUCLIDEAN_METRIC] THEN REAL_ARITH_TAC);;
-
-lemma Lipschitz_continuous_map_real_maximum:
- (`Lipschitz_continuous_map
-    (prod_metric real_euclidean_metric real_euclidean_metric,
-     real_euclidean_metric)
-    (\<lambda>(x,y). max x y)"
-oops
-  REWRITE_TAC[Lipschitz_continuous_map; CONJUNCT1 PROD_METRIC] THEN
-  REWRITE_TAC[FORALL_PAIR_THM; REAL_EUCLIDEAN_METRIC] THEN
-  REWRITE_TAC[IN_UNIV; SUBSET_UNIV; IN_CROSS] THEN
-  EXISTS_TAC `1` THEN REPEAT GEN_TAC THEN REWRITE_TAC[REAL_MUL_LID] THEN
-  W(MP_TAC \<circ> PART_MATCH (rand \<circ> rand)
-        COMPONENT_LE_PROD_METRIC \<circ> rand \<circ> snd) THEN
-  REWRITE_TAC[REAL_EUCLIDEAN_METRIC] THEN REAL_ARITH_TAC);;
-
-lemma Lipschitz_continuous_map_real_minimum:
- (`Lipschitz_continuous_map
-    (prod_metric real_euclidean_metric real_euclidean_metric,
-     real_euclidean_metric)
-    (\<lambda>(x,y). min x y)"
-oops
-  REWRITE_TAC[Lipschitz_continuous_map; CONJUNCT1 PROD_METRIC] THEN
-  REWRITE_TAC[FORALL_PAIR_THM; REAL_EUCLIDEAN_METRIC] THEN
-  REWRITE_TAC[IN_UNIV; SUBSET_UNIV; IN_CROSS] THEN
-  EXISTS_TAC `1` THEN REPEAT GEN_TAC THEN REWRITE_TAC[REAL_MUL_LID] THEN
-  W(MP_TAC \<circ> PART_MATCH (rand \<circ> rand)
-        COMPONENT_LE_PROD_METRIC \<circ> rand \<circ> snd) THEN
-  REWRITE_TAC[REAL_EUCLIDEAN_METRIC] THEN REAL_ARITH_TAC);;
-
-lemma locally_Lipschitz_continuous_map_real_multiplication:
-   "mbounded (prod_metric real_euclidean_metric real_euclidean_metric) s
-       \<Longrightarrow> Lipschitz_continuous_map
-            (submetric
-              (prod_metric real_euclidean_metric real_euclidean_metric) s,
-             real_euclidean_metric)
-            (\<lambda>(x,y). x * y)"
-oops
-  GEN_TAC THEN REWRITE_TAC[MBOUNDED_PROD_METRIC] THEN
-  REWRITE_TAC[MBOUNDED_REAL_EUCLIDEAN_METRIC; REAL_BOUNDED_POS] THEN
-  REWRITE_TAC[IMP_CONJ; FORALL_IN_IMAGE; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `B::real` THEN REWRITE_TAC[FORALL_PAIR_THM] THEN
-  REPEAT DISCH_TAC THEN X_GEN_TAC `C::real` THEN REPEAT DISCH_TAC THEN
-  SIMP_TAC[Lipschitz_continuous_map; REAL_EUCLIDEAN_METRIC; SUBSET_UNIV] THEN
-  EXISTS_TAC `B + C::real` THEN
-  REWRITE_TAC[FORALL_PAIR_THM; SUBMETRIC; IN_INTER; CONJUNCT1 PROD_METRIC] THEN
-  MAP_EVERY X_GEN_TAC [`x1::real`; `y1::real`; `x2::real`; `y2::real`] THEN
-  REWRITE_TAC[IN_CROSS; REAL_EUCLIDEAN_METRIC; IN_UNIV] THEN STRIP_TAC THEN
-  TRANS_TAC REAL_LE_TRANS
-   `B * d y1 y2 +
-    C * d x1 x2` THEN
-  CONJ_TAC THENL
-   [REWRITE_TAC[REAL_EUCLIDEAN_METRIC];
-    MATCH_MP_TAC(REAL_ARITH
-     `x \<le> b * d \<and> y \<le> c * d \<Longrightarrow> x + y \<le> (b + c) * d`) THEN
-    ASM_SIMP_TAC[REAL_LE_LMUL_EQ; COMPONENT_LE_PROD_METRIC]] THEN
-  ONCE_REWRITE_TAC[REAL_ARITH
-   `x2 * y2 - x1 * y1::real = x2 * (y2 - y1) + y1 * (x2 - x1)`] THEN
-  MATCH_MP_TAC(REAL_ARITH
-   `abs x \<le> a \<and> abs y \<le> b \<Longrightarrow> abs(x + y) \<le> a + b`) THEN
-  REWRITE_TAC[REAL_ABS_MUL] THEN CONJ_TAC THEN
-  MATCH_MP_TAC REAL_LE_RMUL THEN REWRITE_TAC[REAL_ABS_POS] THEN
-  ASM_MESON_TAC[]);;
+   "a \<in> mspace m \<Longrightarrow> continuous_map (mtopology_of m) euclidean (mdist m a)"
+  by (simp add: continuous_map_mdist)
 
 lemma Cauchy_continuous_map_real_multiplication:
  (`Cauchy_continuous_map
@@ -4923,10 +4824,10 @@ oops
   MAP_EVERY X_GEN_TAC [`x::real`; `y::real`] THEN DISCH_TAC THEN
   TRANS_TAC REAL_LET_TRANS `sqrt(2 * abs(x - y))` THEN
   REWRITE_TAC[REAL_ABS_LE_SQRT] THEN MATCH_MP_TAC REAL_LT_LSQRT THEN
-  ASM_REAL_ARITH_TAC);;
+  ASM_REAL_ARITH_TAC);;`
 
 lemma continuous_map_square_root:
- (`continuous_map euclideanreal euclideanreal sqrt"
+  "continuous_map euclideanreal euclideanreal sqrt"
 oops
   REWRITE_TAC[GSYM MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
   MATCH_MP_TAC UNIFORMLY_CONTINUOUS_IMP_CONTINUOUS_MAP THEN
