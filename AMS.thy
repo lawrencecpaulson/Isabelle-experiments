@@ -6,7 +6,7 @@ theory AMS
     "HOL-ex.Sketch_and_Explore"
 begin
 
-     (**must rename submetric in metric_spaces*)
+     (**! Renamed submetric in metric_spaces*)
 
 (*REPLACE*****)
 thm real_le_lsqrt
@@ -3922,129 +3922,155 @@ lemma Cauchy_eq_uniformly_continuous_map:
 lemma Lipschitz_continuous_map_projections:
   "Lipschitz_continuous_map (prod_metric m1 m2) m1 fst"
   "Lipschitz_continuous_map (prod_metric m1 m2) m2 snd"
-  unfolding Lipschitz_continuous_map_def
-   apply (intro conjI)
-    apply (simp add: )
-   apply (rule_tac x="1" in exI)
-   apply (simp add: )
-   apply (auto simp: )
-   apply (simp add: prod_dist_def)
-   apply (simp add: prod_dist_def)
-  by (metis mult_numeral_1 real_sqrt_sum_squares_ge2)
-
-oops
-  CONJ_TAC THEN REPEAT GEN_TAC THEN REWRITE_TAC[Lipschitz_continuous_map] THEN
-  REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; CONJUNCT1 PROD_METRIC] THEN
-  SIMP_TAC[FORALL_PAIR_THM; IN_CROSS] THEN EXISTS_TAC `1` THEN
-  REWRITE_TAC[REAL_MUL_LID; COMPONENT_LE_PROD_METRIC]);;
+  by (simp add: Lipschitz_continuous_map_def prod_dist_def; 
+      metis mult_numeral_1 real_sqrt_sum_squares_ge1 real_sqrt_sum_squares_ge2)+
 
 lemma Lipschitz_continuous_map_pairwise:
-   "\<And>m m1 m2 (f::A=>B#C).
-        Lipschitz_continuous_map m (prod_metric m1 m2) f \<longleftrightarrow>
-        Lipschitz_continuous_map m m1 (fst \<circ> f) \<and>
-        Lipschitz_continuous_map m m2 (snd \<circ> f)"
-oops
-  REWRITE_TAC[FORALL_AND_THM; TAUT `(p \<longleftrightarrow> q) \<longleftrightarrow> (p \<Longrightarrow> q) \<and> (q \<Longrightarrow> p)`] THEN
-  CONJ_TAC THENL
-   [MESON_TAC[LIPSCHITZ_CONTINUOUS_MAP_COMPOSE;
-              LIPSCHITZ_CONTINUOUS_MAP_PROJECTIONS];
-    REPLICATE_TAC 3 GEN_TAC THEN
-    REWRITE_TAC[FORALL_PAIR_FUN_THM; o_DEF; ETA_AX] THEN
-    MAP_EVERY X_GEN_TAC [`x::A=>B`; `y::A=>C`] THEN
-    REWRITE_TAC[LIPSCHITZ_CONTINUOUS_MAP_POS] THEN
-    REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; CONJUNCT1 PROD_METRIC] THEN
-    DISCH_THEN(CONJUNCTS_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-    ASM_SIMP_TAC[IN_CROSS; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `B::real` THEN STRIP_TAC THEN
-    X_GEN_TAC `C::real` THEN STRIP_TAC THEN EXISTS_TAC `B + C::real` THEN
-    ASM_SIMP_TAC[REAL_LT_ADD] THEN REPEAT STRIP_TAC THEN
-    W(MP_TAC \<circ> PART_MATCH (lhand \<circ> rand) PROD_METRIC_LE_COMPONENTS \<circ>
-      lhand \<circ> snd) THEN
-    ASM_SIMP_TAC[] THEN MATCH_MP_TAC(REAL_ARITH
-     `y \<le> c * m \<and> z \<le> b * m \<Longrightarrow> x \<le> y + z \<Longrightarrow> x \<le> (b + c) * m`) THEN
-    ASM_SIMP_TAC[]]);;
+   "Lipschitz_continuous_map m (prod_metric m1 m2) f \<longleftrightarrow>
+    Lipschitz_continuous_map m m1 (fst \<circ> f) \<and> Lipschitz_continuous_map m m2 (snd \<circ> f)"
+   (is "?lhs \<longleftrightarrow> ?rhs")
+proof 
+  show "?lhs \<Longrightarrow> ?rhs"
+    by (simp add: Lipschitz_continuous_map_compose Lipschitz_continuous_map_projections)
+  have "Lipschitz_continuous_map m (prod_metric m1 m2) (\<lambda>x. (f1 x, f2 x))"
+    if f1: "Lipschitz_continuous_map m m1 f1" and f2: "Lipschitz_continuous_map m m2 f2" for f1 f2
+  proof -
+    obtain B1 where "B1 > 0" 
+      and B1: "\<And>x y. \<lbrakk>x \<in> mspace m; y \<in> mspace m\<rbrakk> \<Longrightarrow> mdist m1 (f1 x) (f1 y) \<le> B1 * mdist m x y"
+      by (meson Lipschitz_continuous_map_pos f1)
+    obtain B2 where "B2 > 0" 
+      and B2: "\<And>x y. \<lbrakk>x \<in> mspace m; y \<in> mspace m\<rbrakk> \<Longrightarrow> mdist m2 (f2 x) (f2 y) \<le> B2 * mdist m x y"
+      by (meson Lipschitz_continuous_map_pos f2)
+    show ?thesis
+      unfolding Lipschitz_continuous_map_pos
+    proof (intro exI conjI strip)
+      have f1im: "f1 ` mspace m \<subseteq> mspace m1"
+        by (simp add: Lipschitz_continuous_map_image f1)
+      moreover have f2im: "f2 ` mspace m \<subseteq> mspace m2"
+        by (simp add: Lipschitz_continuous_map_image f2)
+      ultimately show "(\<lambda>x. (f1 x, f2 x)) ` mspace m \<subseteq> mspace (prod_metric m1 m2)"
+        by auto
+      show "B1+B2 > 0"
+        using \<open>0 < B1\<close> \<open>0 < B2\<close> by linarith
+      fix x y
+      assume xy: "x \<in> mspace m" "y \<in> mspace m"
+      with f1im f2im have "mdist (prod_metric m1 m2) (f1 x, f2 x) (f1 y, f2 y) \<le> mdist m1 (f1 x) (f1 y) + mdist m2 (f2 x) (f2 y)"
+        unfolding mdist_prod_metric
+        by (intro Metric_space12.prod_metric_le_components [OF Metric_space12_mspace_mdist]) auto
+      also have "... \<le> (B1+B2) * mdist m x y"
+        using B1 [OF xy] B2 [OF xy] by (simp add: vector_space_over_itself.scale_left_distrib) 
+      finally show "mdist (prod_metric m1 m2) (f1 x, f2 x) (f1 y, f2 y) \<le> (B1+B2) * mdist m x y" .
+    qed
+  qed
+  then show "?rhs \<Longrightarrow> ?lhs"
+    by force
+qed
 
 lemma uniformly_continuous_map_pairwise:
-   "\<And>m m1 m2 (f::A=>B#C).
-        uniformly_continuous_map m (prod_metric m1 m2) f \<longleftrightarrow>
-        uniformly_continuous_map m m1 (fst \<circ> f) \<and>
-        uniformly_continuous_map m m2 (snd \<circ> f)"
-oops
-  REWRITE_TAC[FORALL_AND_THM; TAUT `(p \<longleftrightarrow> q) \<longleftrightarrow> (p \<Longrightarrow> q) \<and> (q \<Longrightarrow> p)`] THEN
-  CONJ_TAC THENL
-   [MESON_TAC[UNIFORMLY_CONTINUOUS_MAP_COMPOSE;
-              LIPSCHITZ_IMP_UNIFORMLY_CONTINUOUS_MAP;
-              LIPSCHITZ_CONTINUOUS_MAP_PROJECTIONS];
-    REPLICATE_TAC 3 GEN_TAC THEN
-    REWRITE_TAC[FORALL_PAIR_FUN_THM; o_DEF; ETA_AX] THEN
-    MAP_EVERY X_GEN_TAC [`x::A=>B`; `y::A=>C`] THEN
-    REWRITE_TAC[uniformly_continuous_map] THEN
-    REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; CONJUNCT1 PROD_METRIC] THEN
-    DISCH_THEN(CONJUNCTS_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-    ASM_SIMP_TAC[IN_CROSS; IMP_IMP] THEN DISCH_TAC THEN
-    X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(CONJUNCTS_THEN(MP_TAC \<circ> SPEC `e / 2`)) THEN
-    ASM_REWRITE_TAC[REAL_HALF; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `d1::real` THEN STRIP_TAC THEN
-    X_GEN_TAC `d2::real` THEN STRIP_TAC THEN
-    EXISTS_TAC `min d1 d2::real` THEN ASM_REWRITE_TAC[REAL_LT_MIN] THEN
-    REPEAT STRIP_TAC THEN
-    W(MP_TAC \<circ> PART_MATCH (lhand \<circ> rand) PROD_METRIC_LE_COMPONENTS \<circ>
-      lhand \<circ> snd) THEN
-    ASM_SIMP_TAC[] THEN MATCH_MP_TAC(REAL_ARITH
-     `x < e / 2 \<and> y < e / 2 \<Longrightarrow> z \<le> x + y \<Longrightarrow> z < e`) THEN
-    ASM_SIMP_TAC[]]);;
+   "uniformly_continuous_map m (prod_metric m1 m2) f \<longleftrightarrow> 
+    uniformly_continuous_map m m1 (fst \<circ> f) \<and> uniformly_continuous_map m m2 (snd \<circ> f)"
+   (is "?lhs \<longleftrightarrow> ?rhs")
+proof 
+  show "?lhs \<Longrightarrow> ?rhs"
+    by (simp add: Lipschitz_continuous_map_projections Lipschitz_imp_uniformly_continuous_map uniformly_continuous_map_compose)
+  have "uniformly_continuous_map m (prod_metric m1 m2) (\<lambda>x. (f1 x, f2 x))"
+    if f1: "uniformly_continuous_map m m1 f1" and f2: "uniformly_continuous_map m m2 f2" for f1 f2
+  proof -
+    show ?thesis
+      unfolding uniformly_continuous_map_def
+    proof (intro conjI strip)
+      have f1im: "f1 ` mspace m \<subseteq> mspace m1"
+        by (simp add: uniformly_continuous_map_image f1)
+      moreover have f2im: "f2 ` mspace m \<subseteq> mspace m2"
+        by (simp add: uniformly_continuous_map_image f2)
+      ultimately show "(\<lambda>x. (f1 x, f2 x)) ` mspace m \<subseteq> mspace (prod_metric m1 m2)"
+        by auto
+      fix \<epsilon>:: real
+      assume "\<epsilon> > 0"
+      obtain \<delta>1 where "\<delta>1>0" 
+        and \<delta>1: "\<And>x y. \<lbrakk>x \<in> mspace m; y \<in> mspace m; mdist m y x < \<delta>1\<rbrakk> \<Longrightarrow> mdist m1 (f1 y) (f1 x) < \<epsilon>/2"
+        by (metis \<open>0 < \<epsilon>\<close> f1 half_gt_zero uniformly_continuous_map_def)
+      obtain \<delta>2 where "\<delta>2>0" 
+        and \<delta>2: "\<And>x y. \<lbrakk>x \<in> mspace m; y \<in> mspace m; mdist m y x < \<delta>2\<rbrakk> \<Longrightarrow> mdist m2 (f2 y) (f2 x) < \<epsilon>/2"
+        by (metis \<open>0 < \<epsilon>\<close> f2 half_gt_zero uniformly_continuous_map_def)
+      show "\<exists>\<delta>>0. \<forall>x\<in>mspace m. \<forall>y\<in>mspace m. mdist m y x < \<delta> \<longrightarrow> mdist (prod_metric m1 m2) (f1 y, f2 y) (f1 x, f2 x) < \<epsilon>"
+      proof (intro exI conjI strip)
+        show "min \<delta>1 \<delta>2>0"
+          using \<open>0 < \<delta>1\<close> \<open>0 < \<delta>2\<close> by auto
+        fix x y
+        assume xy: "x \<in> mspace m" "y \<in> mspace m" and d: "mdist m y x < min \<delta>1 \<delta>2"
+        have *: "mdist m1 (f1 y) (f1 x) < \<epsilon>/2" "mdist m2 (f2 y) (f2 x) < \<epsilon>/2"
+          using \<delta>1 \<delta>2 d xy by auto
+        have "mdist (prod_metric m1 m2) (f1 y, f2 y) (f1 x, f2 x) \<le> mdist m1 (f1 y) (f1 x) + mdist m2 (f2 y) (f2 x)"
+          unfolding mdist_prod_metric using f1im f2im xy
+          by (intro Metric_space12.prod_metric_le_components [OF Metric_space12_mspace_mdist]) auto
+        also have "... < \<epsilon>/2 + \<epsilon>/2"
+          using * by simp
+        finally show "mdist (prod_metric m1 m2) (f1 y, f2 y) (f1 x, f2 x) < \<epsilon>"
+          by simp
+      qed
+    qed
+  qed
+  then show "?rhs \<Longrightarrow> ?lhs"
+    by force
+qed
 
 lemma Cauchy_continuous_map_pairwise:
-   "\<And>m m1 m2 (f::A=>B#C).
-        Cauchy_continuous_map m (prod_metric m1 m2) f \<longleftrightarrow>
-        Cauchy_continuous_map m m1 (fst \<circ> f) \<and>
-        Cauchy_continuous_map m m2 (snd \<circ> f)"
-oops
-  REWRITE_TAC[Cauchy_continuous_map; CAUCHY_IN_PROD_METRIC; o_ASSOC] THEN
-  MESON_TAC[]);;
+   "Cauchy_continuous_map m (prod_metric m1 m2) f \<longleftrightarrow> Cauchy_continuous_map m m1 (fst \<circ> f) \<and> Cauchy_continuous_map m m2 (snd \<circ> f)"
+  by (auto simp: Cauchy_continuous_map_def Metric_space12.MCauchy_prod_metric[OF Metric_space12_mspace_mdist] comp_assoc)
 
 lemma Lipschitz_continuous_map_paired:
-   "\<And>m m1 m2 f (g::A=>C).
-        Lipschitz_continuous_map m (prod_metric m1 m2) (\<lambda>x. (f x, g x)) \<longleftrightarrow>
+   "Lipschitz_continuous_map m (prod_metric m1 m2) (\<lambda>x. (f x, g x)) \<longleftrightarrow>
         Lipschitz_continuous_map m m1 f \<and> Lipschitz_continuous_map m m2 g"
-oops
-  REWRITE_TAC[LIPSCHITZ_CONTINUOUS_MAP_PAIRWISE; o_DEF; ETA_AX]);;
+  by (simp add: Lipschitz_continuous_map_pairwise o_def)
 
 lemma uniformly_continuous_map_paired:
-   "\<And>m m1 m2 f (g::A=>C).
-        uniformly_continuous_map m (prod_metric m1 m2) (\<lambda>x. (f x, g x)) \<longleftrightarrow>
+   "uniformly_continuous_map m (prod_metric m1 m2) (\<lambda>x. (f x, g x)) \<longleftrightarrow>
         uniformly_continuous_map m m1 f \<and> uniformly_continuous_map m m2 g"
-oops
-  REWRITE_TAC[UNIFORMLY_CONTINUOUS_MAP_PAIRWISE; o_DEF; ETA_AX]);;
+  by (simp add: uniformly_continuous_map_pairwise o_def)
 
 lemma Cauchy_continuous_map_paired:
-   "\<And>m m1 m2 f (g::A=>C).
-        Cauchy_continuous_map m (prod_metric m1 m2) (\<lambda>x. (f x, g x)) \<longleftrightarrow>
+   "Cauchy_continuous_map m (prod_metric m1 m2) (\<lambda>x. (f x, g x)) \<longleftrightarrow>
         Cauchy_continuous_map m m1 f \<and> Cauchy_continuous_map m m2 g"
-oops
-  REWRITE_TAC[CAUCHY_CONTINUOUS_MAP_PAIRWISE; o_DEF; ETA_AX]);;
+  by (simp add: Cauchy_continuous_map_pairwise o_def)
 
 lemma mbounded_Lipschitz_continuous_image:
-   "\<And>m1 m2 f s.
-        Lipschitz_continuous_map f \<and> mbounded m1 s
-        \<Longrightarrow> mbounded m2 (f ` s)"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[MBOUNDED_ALT_POS; LIPSCHITZ_CONTINUOUS_MAP_POS] THEN
-  REWRITE_TAC[IMP_CONJ; LEFT_IMP_EXISTS_THM] THEN DISCH_TAC THEN
-  X_GEN_TAC `B::real` THEN DISCH_TAC THEN REWRITE_TAC[IMP_IMP] THEN
-  STRIP_TAC THEN X_GEN_TAC `C::real` THEN STRIP_TAC THEN
-  CONJ_TAC THENL [ASM SET_TAC[]; REWRITE_TAC[FORALL_IN_IMAGE_2]] THEN
-  EXISTS_TAC `B * C::real` THEN ASM_SIMP_TAC[REAL_LT_MUL] THEN
-  MAP_EVERY X_GEN_TAC [`x::A`; `y::A`] THEN STRIP_TAC THEN
-  TRANS_TAC REAL_LE_TRANS `B * d m1 (x::A,y)` THEN
-  ASM_SIMP_TAC[REAL_LE_LMUL_EQ] THEN ASM SET_TAC[]);;
+  assumes f: "Lipschitz_continuous_map m1 m2 f" and S: "Metric_space.mbounded (mspace m1) (mdist m1) S"
+  shows "Metric_space.mbounded (mspace m2) (mdist m2) (f`S)"
+proof -
+  obtain B where fim: "f ` mspace m1 \<subseteq> mspace m2"
+    and "B>0" and B: "\<And>x y. \<lbrakk>x \<in> mspace m1; y \<in> mspace m1\<rbrakk> \<Longrightarrow> mdist m2 (f x) (f y) \<le> B * mdist m1 x y"
+    by (meson Lipschitz_continuous_map_pos f)
+  show ?thesis
+    unfolding Metric_space.mbounded_alt_pos [OF Metric_space_mspace_mdist]
+  proof
+    obtain C where "S \<subseteq> mspace m1" and "C>0" and C: "\<And>x y. \<lbrakk>x \<in> S; y \<in> S\<rbrakk> \<Longrightarrow> mdist m1 x y \<le> C"
+      using S by (auto simp: Metric_space.mbounded_alt_pos [OF Metric_space_mspace_mdist])
+    show "f ` S \<subseteq> mspace m2"
+      using fim \<open>S \<subseteq> mspace m1\<close> by blast
+    have "\<And>x y. \<lbrakk>x \<in> S; y \<in> S\<rbrakk> \<Longrightarrow> mdist m2 (f x) (f y) \<le> B * C"
+      by (smt (verit) B C \<open>0 < B\<close> \<open>S \<subseteq> mspace m1\<close> mdist_nonneg mult_mono subsetD)
+    moreover have "B*C > 0"
+      by (simp add: \<open>0 < B\<close> \<open>0 < C\<close>)
+    ultimately show "\<exists>B>0. \<forall>x\<in>f ` S. \<forall>y\<in>f ` S. mdist m2 x y \<le> B"
+      by auto
+  qed
+qed
 
 lemma mtotally_bounded_Cauchy_continuous_image:
-   "\<And>m1 m2 f s.
-        Cauchy_continuous_map m1 m2 f \<and> mtotally_bounded1 s
-        \<Longrightarrow> mtotally_bounded2 (f ` s)"
+  assumes f: "Cauchy_continuous_map m1 m2 f" and S: "Metric_space.mtotally_bounded (mspace m1) (mdist m1) S"
+  shows "Metric_space.mtotally_bounded (mspace m2) (mdist m2) (f ` S)"
+  unfolding Metric_space.mtotally_bounded_sequentially[OF Metric_space_mspace_mdist]
+
+proof -
+
+
+  have "(\<exists>x. (\<forall>n. y n = f (x n)) \<and> (\<forall>n. x n \<in> s))"
+      sorry
+  have "xxx"
+    using S
+apply (simp add: Metric_space.mtotally_bounded_sequentially[OF Metric_space_mspace_mdist] )
+    sorry
 oops
   REPEAT GEN_TAC THEN
   REWRITE_TAC[TOTALLY_BOUNDED_IN_SEQUENTIALLY] THEN STRIP_TAC THEN
