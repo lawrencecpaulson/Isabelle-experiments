@@ -1354,10 +1354,8 @@ subsection\<open>Extending continuous maps "pointwise" in a regular space\<close
 
 
 lemma continuous_map_on_intermediate_closure_of:
-   "regular_space Y \<and>
-       T \<subseteq> X closure_of S \<and>
-       (\<forall>x. x \<in> T \<Longrightarrow> limitin Y f (f x) (atin X x within S))
-       \<Longrightarrow> continuous_map (subtopology X T,Y) f"
+  assumes "regular_space Y" "T \<subseteq> X closure_of S" "\<And>x. x \<in> T \<Longrightarrow> limitin Y f (f x) (atin_within X x  S)"
+  shows "continuous_map (subtopology X T) Y f"
 oops
   REWRITE_TAC[GSYM NEIGHBOURHOOD_BASE_OF_CLOSED_IN] THEN REPEAT STRIP_TAC THEN
   SUBGOAL_THEN `image f T \<subseteq> topspace Y` ASSUME_TAC THENL
@@ -1398,10 +1396,8 @@ oops
   ASM_SIMP_TAC[OPEN_IN_INTER] THEN ASM SET_TAC[]);;
 
 lemma continuous_map_on_intermediate_closure_of_eq:
-   "\<And>X Y f::A=>B S T.
-        regular_space Y \<and> S \<subseteq> T \<and> T \<subseteq> X closure_of S
-        \<Longrightarrow> (continuous_map (subtopology X T,Y) f \<longleftrightarrow>
-             \<forall>x. x \<in> T \<Longrightarrow> limitin Y f (f x) (atin X x within S))"
+  assumes "regular_space Y" "S \<subseteq> T" "T \<subseteq> X closure_of S"
+   shows "continuous_map (subtopology X T) Y f \<longleftrightarrow> (\<forall>x \<in> T. limitin Y f (f x) (atin_within X x S))"
 oops
   REPEAT STRIP_TAC THEN EQ_TAC THENL
    [REWRITE_TAC[CONTINUOUS_MAP_ATPOINTOF; TOPSPACE_SUBTOPOLOGY] THEN
@@ -1414,7 +1410,7 @@ oops
 
 lemma continuous_map_extension_pointwise_alt:
    "\<And>top1 top2 f::A=>B S T.
-        regular_space top2 \<and> S \<subseteq> T \<and> T \<subseteq> top1 closure_of S \<and>
+        regular_space top2" "S \<subseteq> T" "T \<subseteq> top1 closure_of S \<and>
         continuous_map (subtopology top1 S,top2) f \<and>
         (\<forall>x. x \<in> T - S \<Longrightarrow> \<exists>l. limitin top2 f l (atin top1 x within S))
         \<Longrightarrow> \<exists>g. continuous_map (subtopology top1 T,top2) g \<and>
@@ -1438,7 +1434,7 @@ oops
 
 lemma continuous_map_extension_pointwise:
    "\<And>top1 top2 f::A=>B S T.
-        regular_space top2 \<and> S \<subseteq> T \<and> T \<subseteq> top1 closure_of S \<and>
+        regular_space top2" "S \<subseteq> T" "T \<subseteq> top1 closure_of S \<and>
         (\<forall>x. x \<in> T
              \<Longrightarrow> \<exists>g. continuous_map (subtopology top1 (insert x S),top2) g \<and>
                      \<forall>x. x \<in> S \<Longrightarrow> g x = f x)
