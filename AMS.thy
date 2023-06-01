@@ -1455,20 +1455,46 @@ proof (cases "\<delta> > 0")
   qed
 qed (simp add: capped_metric)
 
+text \<open>The following two declarations are experimental. Is it really worth a locale just to save a couple of lines?\<close>
+locale Capped = Metric_space +
+  fixes \<delta>::real
+
+sublocale Capped \<subseteq> capped: Metric_space M "capped_dist \<delta>"
+  by (simp add: capped_dist)
 
 lemma (in Metric_space) MCauchy_capped_metric:
-   "Metric_space.MCauchy (mspace m) (capped_metric d m) x \<longleftrightarrow> MCauchy x"
+  "Metric_space.MCauchy M (capped_dist \<delta>) \<sigma> \<longleftrightarrow> MCauchy \<sigma>"
+proof (cases "\<delta> > 0")
+  case True
+  interpret Cap: Metric_space "M" "capped_dist \<delta>"
+    by (simp add: capped_dist)
+  show ?thesis
+  proof
+    assume \<sigma>: "Cap.MCauchy \<sigma>"
+    show "MCauchy \<sigma>"
+      unfolding MCauchy_def
+    proof (intro conjI strip)
+      show "range \<sigma> \<subseteq> M"
+        using Cap.MCauchy_def \<sigma> by presburger
+      fix \<epsilon> :: real
+      assume "\<epsilon> > 0"
+      with True \<sigma>
+      obtain N where "\<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> capped_dist \<delta> (\<sigma> n) (\<sigma> n') < min \<delta> \<epsilon>"
+        unfolding Cap.MCauchy_def by (metis min_less_iff_conj)
+      with True show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>"
+        by (force simp add: capped_dist_def)
+    qed
+  next
+    assume "MCauchy \<sigma>"
+    then
+    show "Cap.MCauchy \<sigma>"
+      unfolding MCauchy_def Cap.MCauchy_def by (force simp add: capped_dist_def)
+  qed
+qed (simp add: capped_dist_def)
 
-lemma MCauchy_capped_metric:
-   "MCauchy (capped_metric d m) x \<longleftrightarrow> Metric_space.MCauchy (mspace m) (mdist m) x"
-oops
-  REPEAT GEN_TAC THEN ASM_CASES_TAC `d \<le> 0` THENL
-   [ASM_MESON_TAC[capped_metric]; ALL_TAC] THEN
-  ASM_REWRITE_TAC[MCauchy; CAPPED_METRIC; REAL_MIN_LT] THEN
-  ASM_MESON_TAC[REAL_ARITH `\<not> (d < min d e)`; REAL_LT_MIN; REAL_NOT_LE]);;
 
 lemma mcomplete_capped_metric:
-   "\<And>d (m::A metric). mcomplete(capped_metric d m) \<longleftrightarrow> mcomplete"
+   "\<And>d (m::A metric). mcomplete(capped_metric \<delta> m) \<longleftrightarrow> mcomplete"
 oops
   REWRITE_TAC[mcomplete; CAUCHY_IN_CAPPED_METRIC; MTOPOLOGY_CAPPED_METRIC]);;
 
