@@ -200,9 +200,9 @@ proof -
   proof
     fix x y
     show D0: "0 \<le> D x y"
-      using bdd \<open>I \<noteq> {}\<close> 
+      using bdd  
       apply (simp add: D_def)
-      by (meson cSUP_upper dual_order.trans ex_in_conv mdist_nonneg)
+      by (meson \<open>I \<noteq> {}\<close> cSUP_upper dual_order.trans ex_in_conv mdist_nonneg)
     show "D x y = D y x"
       by (simp add: D_def mdist_commute)
     assume "x \<in> S" and "y \<in> S"
@@ -214,16 +214,16 @@ proof -
     finally show "(D x y = 0) \<longleftrightarrow> (x = y)" .
     fix z
     assume "z \<in> S"
-    have DD: "mdist (m i) (x i) (z i) \<le> mdist (m i) (x i) (y i) + mdist (m i) (y i) (z i)"
-      if "i \<in> I" for i
-      by (metis PiE_E S_def \<open>x \<in> S\<close> \<open>y \<in> S\<close> \<open>z \<in> S\<close> comp_apply mdist_triangle that)
-    show "D x z \<le> D x y + D y z"
-      using \<open>x \<in> S\<close> \<open>y \<in> S\<close> \<open>z \<in> S\<close> 
-      apply (clarsimp simp add: D_iff)
-      apply (rule order_trans [OF DD])
-       apply assumption
-      apply (simp add: D_def)
-      by (metis (mono_tags) D_def D_iff add_mono dual_order.refl)
+    have "mdist (m i) (x i) (z i) \<le> D x y + D y z" if "i \<in> I" for i
+    proof -
+      have "mdist (m i) (x i) (z i) \<le> mdist (m i) (x i) (y i) + mdist (m i) (y i) (z i)"
+        by (metis PiE_E S_def \<open>x \<in> S\<close> \<open>y \<in> S\<close> \<open>z \<in> S\<close> comp_apply mdist_triangle that)
+      also have "... \<le> D x y + D y z"
+        using \<open>x \<in> S\<close> \<open>y \<in> S\<close> \<open>z \<in> S\<close> by (meson D_iff add_mono order_refl that)
+      finally show ?thesis .
+    qed
+    then show "D x z \<le> D x y + D y z"
+      by (simp add: D_iff \<open>x \<in> S\<close> \<open>z \<in> S\<close>)
   qed
   show ?thesis
   proof (intro conjI strip)
