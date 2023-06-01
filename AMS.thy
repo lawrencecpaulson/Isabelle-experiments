@@ -158,8 +158,7 @@ proof (cases "\<delta> > 0")
     qed
   next
     assume "MCauchy \<sigma>"
-    then
-    show "Cap.MCauchy \<sigma>"
+    then show "Cap.MCauchy \<sigma>"
       unfolding MCauchy_def Cap.MCauchy_def by (force simp add: capped_dist_def)
   qed
 qed (simp add: capped_dist_def)
@@ -181,82 +180,62 @@ qed (auto simp: mtopology_capped_metric)
 
 
 lemma Sup_metric_cartesian_product:
-  assumes m': "metric(PiE I (mspace \<circ> m), \<lambda>x y. SUP i\<in>I. mdist (m i) (x i) (y i)) = m'"
+  fixes I m
+  defines "S \<equiv> PiE I (mspace \<circ> m)"
+  defines "D \<equiv> \<lambda>x y. if x \<in> S \<and> y \<in> S  then SUP i\<in>I. mdist (m i) (x i) (y i) else 0"
+  assumes m': "m' = metric(S,D)"
     and "I \<noteq> {}"
     and c: "\<And>i x y. \<lbrakk>i \<in> I; x \<in> mspace(m i); y \<in> mspace(m i)\<rbrakk> \<Longrightarrow> mdist (m i) x y \<le> c"
-  shows "mspace m' = PiE I (mspace \<circ> m) \<and>
-         mdist m' = (\<lambda>x y. SUP i\<in>I. mdist (m i) (x i) (y i)) \<and>
-         (\<forall>x \<in> PiE I (mspace \<circ> m). \<forall>y \<in> PiE I (mspace \<circ> m). \<forall>b. 
+  shows "mspace m' = S \<and> mdist m' = D \<and>
+         (\<forall>x \<in> S. \<forall>y \<in> S. \<forall>b. 
                (mdist m' x y \<le> b \<longleftrightarrow> (\<forall>i \<in> I. mdist (m i) (x i) (y i) \<le> b)))"
 proof -
-  define M where "M \<equiv> \<lambda>x y. SUP i\<in>I. mdist (m i) (x i) (y i)"
   have bdd: "bdd_above ((\<lambda>i. mdist (m i) (x i) (y i)) ` I)"
-    if "x \<in> PiE I (mspace \<circ> m)" "y \<in> PiE I (mspace \<circ> m)" for x y 
-    using c that by (force simp add: bdd_above_def)
-  have "M x y \<le> b \<longleftrightarrow> (\<forall>i \<in> I. mdist (m i) (x i) (y i) \<le> b)"
-    if "x \<in> PiE I (mspace \<circ> m)" "y \<in> PiE I (mspace \<circ> m)" for x y b
-    using that \<open>I \<noteq> {}\<close>
-    by (simp add: M_def PiE_iff cSup_le_iff bdd)
-
-oops
-  REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  ABBREV_TAC `M = \<lambda>(x,y). sup {d(m i) (x i::A,y i) | (i::K) \<in> I}` THEN
-  SUBGOAL_THEN
-   `!x (y::K=>A) b.
-        x \<in> PiE I (mspace \<circ> m) \<and>
-        y \<in> PiE I (mspace \<circ> m)
-        \<Longrightarrow> (M(x,y) \<le> b \<longleftrightarrow> \<forall>i. i \<in> I \<Longrightarrow> mdist (m i) (x i) (y i) \<le> b)`
-  ASSUME_TAC THENL
-   [REWRITE_TAC[PiE; o_DEF; IN_ELIM_THM] THEN
-    REPEAT STRIP_TAC THEN EXPAND_TAC "M" THEN REWRITE_TAC[] THEN
-    W(MP_TAC \<circ> PART_MATCH (lhand \<circ> rand) REAL_SUP_LE_EQ \<circ> lhand \<circ> snd) THEN
-    REWRITE_TAC[FORALL_IN_GSPEC] THEN ASM SET_TAC[];
-    ALL_TAC] THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP (MESON[]
-   `m = m' \<Longrightarrow> M = mspace m' \<and> d m = d m'`)) THEN
-  REWRITE_TAC[GSYM PAIR_EQ; mspace; d] THEN
-  W(MP_TAC \<circ> PART_MATCH (lhand \<circ> rand) (CONJUNCT2 metric_tybij) \<circ>
-    lhand \<circ> lhand \<circ> snd) THEN
-  DISCH_THEN(MP_TAC \<circ> fst \<circ> EQ_IMP_RULE) THEN ANTS_TAC THENL
-   [ALL_TAC;
-    DISCH_THEN SUBST1_TAC THEN DISCH_THEN(SUBST1_TAC \<circ> SYM) THEN
-    ASM_REWRITE_TAC[GSYM d]] THEN
-  REWRITE_TAC[is_metric_space] THEN
-  MATCH_MP_TAC(TAUT `p \<and> (p \<Longrightarrow> q) \<Longrightarrow> p \<and> q`) THEN CONJ_TAC THENL
-   [REPEAT STRIP_TAC THEN EXPAND_TAC "M" THEN REWRITE_TAC[] THEN
-    MATCH_MP_TAC REAL_LE_SUP THEN
-    ASM_SIMP_TAC[FORALL_IN_GSPEC; EXISTS_IN_GSPEC] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[PiE; IN_ELIM_THM; o_THM]) THEN
-    FIRST_X_ASSUM(X_CHOOSE_TAC `c::real`) THEN EXISTS_TAC `c::real` THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY]) THEN
-    MATCH_MP_TAC MONO_EXISTS THEN ASM_SIMP_TAC[MDIST_POS_LE];
-    DISCH_TAC] THEN
-  REPEAT CONJ_TAC THENL
-   [ASM_SIMP_TAC[GSYM REAL_LE_ANTISYM] THEN REPEAT GEN_TAC THEN
-    DISCH_THEN(fun th ->
-      SUBST1_TAC(MATCH_MP CARTESIAN_PRODUCT_EQ_MEMBERS_EQ th) THEN
-      MP_TAC th) THEN
-    REWRITE_TAC[PiE; o_THM; IN_ELIM_THM] THEN
-    SIMP_TAC[METRIC_ARITH
-     `x \<in> M \<and> y \<in> M \<Longrightarrow> (d x y \<le> 0 \<longleftrightarrow> x = y)`];
-    REPEAT STRIP_TAC THEN EXPAND_TAC "M" THEN REWRITE_TAC[IN_ELIM_THM] THEN
-    AP_TERM_TAC THEN MATCH_MP_TAC(SET_RULE
-     `(\<forall>i. i \<in> w \<Longrightarrow> f i = g i) \<Longrightarrow> {f i | i \<in> w} = {g i | i \<in> w}`) THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[PiE; IN_ELIM_THM; o_THM]) THEN
-    ASM_MESON_TAC[MDIST_SYM];
-    MAP_EVERY X_GEN_TAC [`x::K=>A`; `y::K=>A`; `z::K=>A`] THEN
-    ASM_SIMP_TAC[] THEN STRIP_TAC THEN X_GEN_TAC `i::K` THEN DISCH_TAC THEN
-    TRANS_TAC REAL_LE_TRANS
-      `d (m i) ((x::K=>A) i,y i) + d (m i) (y i,z i)` THEN
-    CONJ_TAC THENL
-     [MATCH_MP_TAC MDIST_TRIANGLE THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[PiE; IN_ELIM_THM; o_THM]) THEN
-      ASM_SIMP_TAC[];
-      MATCH_MP_TAC REAL_LE_ADD2 THEN EXPAND_TAC "M" THEN
-      REWRITE_TAC[] THEN CONJ_TAC THEN MATCH_MP_TAC ELEMENT_LE_SUP THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[PiE; IN_ELIM_THM; o_THM]) THEN
-      ASM SET_TAC[]]]);;
-
+    if "x \<in> S" "y \<in> S" for x y 
+    using c that by (force simp add: S_def bdd_above_def)
+  have D_iff: "D x y \<le> b \<longleftrightarrow> (\<forall>i \<in> I. mdist (m i) (x i) (y i) \<le> b)"
+    if "x \<in> S" "y \<in> S" for x y b
+    using that \<open>I \<noteq> {}\<close> by (simp add: D_def PiE_iff cSup_le_iff bdd)
+  interpret Metric_space S D
+  proof
+    fix x y
+    show D0: "0 \<le> D x y"
+      using bdd \<open>I \<noteq> {}\<close> 
+      apply (simp add: D_def)
+      by (meson cSUP_upper dual_order.trans ex_in_conv mdist_nonneg)
+    show "D x y = D y x"
+      by (simp add: D_def mdist_commute)
+    assume "x \<in> S" and "y \<in> S"
+    then
+    have "D x y = 0 \<longleftrightarrow> (\<forall>i\<in>I. mdist (m i) (x i) (y i) = 0)"
+      using D0 D_iff [of x y 0] nle_le by fastforce
+    also have "... \<longleftrightarrow> x = y"
+      using \<open>x \<in> S\<close> \<open>y \<in> S\<close> by (fastforce simp add: S_def PiE_iff extensional_def)
+    finally show "(D x y = 0) \<longleftrightarrow> (x = y)" .
+    fix z
+    assume "z \<in> S"
+    have DD: "mdist (m i) (x i) (z i) \<le> mdist (m i) (x i) (y i) + mdist (m i) (y i) (z i)"
+      if "i \<in> I" for i
+      by (metis PiE_E S_def \<open>x \<in> S\<close> \<open>y \<in> S\<close> \<open>z \<in> S\<close> comp_apply mdist_triangle that)
+    show "D x z \<le> D x y + D y z"
+      using \<open>x \<in> S\<close> \<open>y \<in> S\<close> \<open>z \<in> S\<close> 
+      apply (clarsimp simp add: D_iff)
+      apply (rule order_trans [OF DD])
+       apply assumption
+      apply (simp add: D_def)
+      by (metis (mono_tags) D_def D_iff add_mono dual_order.refl)
+  qed
+  show ?thesis
+  proof (intro conjI strip)
+    show "mspace m' = S"
+      by (simp add: m')
+    show "mdist m' = D"
+      using D_def m' mdist_metric by blast
+    show "(mdist m' x y \<le> b) = (\<forall>i\<in>I. mdist (m i) (x i) (y i) \<le> b)"
+      if "x \<in> S" and "y \<in> S" for x y b
+      using that by (simp add: D_iff m')
+  qed
+qed
 
 
 let (METRIZABLE_SPACE_PRODUCT_TOPOLOGY,
