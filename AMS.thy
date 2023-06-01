@@ -1422,6 +1422,13 @@ lemma mdist_capped_le: "mdist (capped_metric \<delta> m) x y \<le> mdist m x y"
 lemma mdist_capped: "\<delta> > 0 \<Longrightarrow> mdist (capped_metric \<delta> m) x y \<le> \<delta>"
   by (simp add: capped_metric_mdist)
 
+text \<open>The following two declarations are experimental. Is it really worth a locale just to save a couple of lines?\<close>
+locale Capped = Metric_space +
+  fixes \<delta>::real
+
+sublocale Capped \<subseteq> capped: Metric_space M "capped_dist \<delta>"
+  by (simp add: capped_dist)
+
 lemma mtopology_capped_metric:
   "mtopology_of(capped_metric \<delta> m) = mtopology_of m"
 proof (cases "\<delta> > 0")
@@ -1455,12 +1462,11 @@ proof (cases "\<delta> > 0")
   qed
 qed (simp add: capped_metric)
 
-text \<open>The following two declarations are experimental. Is it really worth a locale just to save a couple of lines?\<close>
-locale Capped = Metric_space +
-  fixes \<delta>::real
-
-sublocale Capped \<subseteq> capped: Metric_space M "capped_dist \<delta>"
-  by (simp add: capped_dist)
+text \<open>Might have been easier to prove this within the locale to start with\<close>
+lemma (in Metric_space) mtopology_capped_metric:
+  "Metric_space.mtopology M (capped_dist \<delta>) = mtopology"
+  using mtopology_capped_metric [of \<delta> "metric(M,d)"]
+  by (simp add: Metric_space.mtopology_of capped_dist capped_metric_def)
 
 lemma (in Metric_space) MCauchy_capped_metric:
   "Metric_space.MCauchy M (capped_dist \<delta>) \<sigma> \<longleftrightarrow> MCauchy \<sigma>"
@@ -1493,42 +1499,47 @@ proof (cases "\<delta> > 0")
 qed (simp add: capped_dist_def)
 
 
-lemma mcomplete_capped_metric:
-   "\<And>d (m::A metric). mcomplete(capped_metric \<delta> m) \<longleftrightarrow> mcomplete"
-oops
-  REWRITE_TAC[mcomplete; CAUCHY_IN_CAPPED_METRIC; MTOPOLOGY_CAPPED_METRIC]);;
+lemma (in Metric_space) mcomplete_capped_metric:
+   "Metric_space.mcomplete M (capped_dist \<delta>) \<longleftrightarrow> mcomplete"
+  by (simp add: MCauchy_capped_metric Metric_space.mcomplete_def capped_dist local.mtopology_capped_metric mcomplete_def)
 
 lemma bounded_equivalent_metric:
-   "0 < d
-        \<Longrightarrow> ?m'. mspace m' = M \<and>
-                 mtopology m' = mtopology \<and>
-                 \<forall>x y. d m' (x,y) < d"
-oops
-  REPEAT STRIP_TAC THEN EXISTS_TAC `capped_metric (d / 2) m::A metric` THEN
-  ASM_REWRITE_TAC[MTOPOLOGY_CAPPED_METRIC; CAPPED_METRIC] THEN
-  ASM_REAL_ARITH_TAC);;
+  assumes "\<delta> > 0"
+  obtains m' where "mspace m' = mspace m" "mtopology_of m' = mtopology_of m" "\<And>x y. mdist m' x y < \<delta>"
+proof
+  let ?m = "capped_metric (\<delta>/2) m"
+  fix x y
+  show "mdist ?m x y < \<delta>"
+    by (smt (verit, best) assms field_sum_of_halves mdist_capped)    
+qed (auto simp: mtopology_capped_metric)
 
-lemma sup_metric_cartesian_product:
-   "
-        metric(PiE k (mspace \<circ> m),
-               \<lambda>x y. sup {d(m i) (x i,y i) | i \<in> k}) = m' \<and>
-        (k \<noteq> {}) \<and>
-        (\<exists>c. \<forall>i x y. i \<in> k \<and> x \<in> mspace(m i) \<and> y \<in> mspace(m i)
-                      \<Longrightarrow> d(m i) (x,y) \<le> c)
-        \<Longrightarrow> mspace m' = PiE k (mspace \<circ> m) \<and>
-            d m' = (\<lambda>(x,y). sup {d(m i) (x i,y i) | i \<in> k}) \<and>
-            \<forall>x y b. x \<in> PiE k (mspace \<circ> m) \<and>
-                    y \<in> PiE k (mspace \<circ> m)
-                    \<Longrightarrow> (d m' (x,y) \<le> b \<longleftrightarrow>
-                         \<forall>i. i \<in> k \<Longrightarrow> d (m i) (x i,y i) \<le> b)"
+
+lemma Sup_metric_cartesian_product:
+  assumes m': "metric(PiE I (mspace \<circ> m), \<lambda>x y. SUP i\<in>I. mdist (m i) (x i) (y i)) = m'"
+    and "I \<noteq> {}"
+    and c: "\<And>i x y. \<lbrakk>i \<in> I; x \<in> mspace(m i); y \<in> mspace(m i)\<rbrakk> \<Longrightarrow> mdist (m i) x y \<le> c"
+  shows "mspace m' = PiE I (mspace \<circ> m) \<and>
+         mdist m' = (\<lambda>x y. SUP i\<in>I. mdist (m i) (x i) (y i)) \<and>
+         (\<forall>x \<in> PiE I (mspace \<circ> m). \<forall>y \<in> PiE I (mspace \<circ> m). \<forall>b. 
+               (mdist m' x y \<le> b \<longleftrightarrow> (\<forall>i \<in> I. mdist (m i) (x i) (y i) \<le> b)))"
+proof -
+  define M where "M \<equiv> \<lambda>x y. SUP i\<in>I. mdist (m i) (x i) (y i)"
+  have bdd: "bdd_above ((\<lambda>i. mdist (m i) (x i) (y i)) ` I)"
+    if "x \<in> PiE I (mspace \<circ> m)" "y \<in> PiE I (mspace \<circ> m)" for x y 
+    using c that by (force simp add: bdd_above_def)
+  have "M x y \<le> b \<longleftrightarrow> (\<forall>i \<in> I. mdist (m i) (x i) (y i) \<le> b)"
+    if "x \<in> PiE I (mspace \<circ> m)" "y \<in> PiE I (mspace \<circ> m)" for x y b
+    using that \<open>I \<noteq> {}\<close>
+    by (simp add: M_def PiE_iff cSup_le_iff bdd)
+
 oops
   REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  ABBREV_TAC `M = \<lambda>(x,y). sup {d(m i) (x i::A,y i) | (i::K) \<in> k}` THEN
+  ABBREV_TAC `M = \<lambda>(x,y). sup {d(m i) (x i::A,y i) | (i::K) \<in> I}` THEN
   SUBGOAL_THEN
    `!x (y::K=>A) b.
-        x \<in> PiE k (mspace \<circ> m) \<and>
-        y \<in> PiE k (mspace \<circ> m)
-        \<Longrightarrow> (M(x,y) \<le> b \<longleftrightarrow> \<forall>i. i \<in> k \<Longrightarrow> d (m i) (x i,y i) \<le> b)`
+        x \<in> PiE I (mspace \<circ> m) \<and>
+        y \<in> PiE I (mspace \<circ> m)
+        \<Longrightarrow> (M(x,y) \<le> b \<longleftrightarrow> \<forall>i. i \<in> I \<Longrightarrow> mdist (m i) (x i) (y i) \<le> b)`
   ASSUME_TAC THENL
    [REWRITE_TAC[PiE; o_DEF; IN_ELIM_THM] THEN
     REPEAT STRIP_TAC THEN EXPAND_TAC "M" THEN REWRITE_TAC[] THEN
@@ -1580,18 +1591,20 @@ oops
       RULE_ASSUM_TAC(REWRITE_RULE[PiE; IN_ELIM_THM; o_THM]) THEN
       ASM SET_TAC[]]]);;
 
+
+
 let (METRIZABLE_SPACE_PRODUCT_TOPOLOGY,
      COMPLETELY_METRIZABLE_SPACE_PRODUCT_TOPOLOGY) = (CONJ_PAIR \<circ> prove)
- (`(!(tops::K=>A topology) k.
-        metrizable_space (product_topology k tops) \<longleftrightarrow>
-        topspace (product_topology k tops) = {} \<or>
-        countable {i. i \<in> k \<and> \<not> (\<exists>a. topspace(tops i) \<subseteq> {a})} \<and>
-        \<forall>i. i \<in> k \<Longrightarrow> metrizable_space (tops i)) \<and>
-   (!(tops::K=>A topology) k.
-        completely_metrizable_space (product_topology k tops) \<longleftrightarrow>
-        topspace (product_topology k tops) = {} \<or>
-        countable {i. i \<in> k \<and> \<not> (\<exists>a. topspace(tops i) \<subseteq> {a})} \<and>
-        \<forall>i. i \<in> k \<Longrightarrow> completely_metrizable_space (tops i))"
+ (`(!(tops::K=>A topology) I.
+        metrizable_space (product_topology I tops) \<longleftrightarrow>
+        topspace (product_topology I tops) = {} \<or>
+        countable {i. i \<in> I \<and> \<not> (\<exists>a. topspace(tops i) \<subseteq> {a})} \<and>
+        \<forall>i. i \<in> I \<Longrightarrow> metrizable_space (tops i)) \<and>
+   (!(tops::K=>A topology) I.
+        completely_metrizable_space (product_topology I tops) \<longleftrightarrow>
+        topspace (product_topology I tops) = {} \<or>
+        countable {i. i \<in> I \<and> \<not> (\<exists>a. topspace(tops i) \<subseteq> {a})} \<and>
+        \<forall>i. i \<in> I \<Longrightarrow> completely_metrizable_space (tops i))"
 oops
   REWRITE_TAC[AND_FORALL_THM] THEN REPEAT GEN_TAC THEN
   MATCH_MP_TAC(TAUT
@@ -1623,7 +1636,7 @@ oops
     ALL_TAC] THEN
   CONJ_TAC THENL
    [REPEAT STRIP_TAC THEN ABBREV_TAC
-     `l = {i::K | i \<in> k \<and> \<not> (\<exists>a::A. topspace(tops i) \<subseteq> {a})}` THEN
+     `l = {i::K | i \<in> I \<and> \<not> (\<exists>a::A. topspace(tops i) \<subseteq> {a})}` THEN
     SUBGOAL_THEN
      `\<forall>i::K. \<exists>p q::A.
         i \<in> l \<Longrightarrow> p \<in> topspace(tops i) \<and> q \<in> topspace(tops i) \<and> (p \<noteq> q)`
@@ -1636,18 +1649,18 @@ oops
     ABBREV_TAC `p::K=>A = \<lambda>i. if i \<in> l then a i else z i` THEN
     ABBREV_TAC `q::K=>K->A = \<lambda>i j. if j = i then b i else p j` THEN
     SUBGOAL_THEN
-     `p \<in> topspace(product_topology k (tops::K=>A topology)) \<and>
+     `p \<in> topspace(product_topology I (tops::K=>A topology)) \<and>
       (\<forall>i::K. i \<in> l
-             \<Longrightarrow> q i \<in> topspace(product_topology k (tops::K=>A topology)))`
+             \<Longrightarrow> q i \<in> topspace(product_topology I (tops::K=>A topology)))`
     STRIP_ASSUME_TAC THENL
-     [UNDISCH_TAC `(z::K=>A) \<in> PiE k (\<lambda>x. topspace(tops x))` THEN
+     [UNDISCH_TAC `(z::K=>A) \<in> PiE I (\<lambda>x. topspace(tops x))` THEN
       MAP_EVERY EXPAND_TAC ["q"; "p"] THEN
       REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY; PiE; o_THM] THEN
       REWRITE_TAC[EXTENSIONAL; IN_ELIM_THM] THEN ASM SET_TAC[];
       ALL_TAC] THEN
     SUBGOAL_THEN
      `\<forall>u:(K=>A)->bool.
-        openin (product_topology k tops) u \<and> p \<in> u
+        openin (product_topology I tops) u \<and> p \<in> u
         \<Longrightarrow> finite {i::K | i \<in> l \<and> \<not> (q i \<in> u)}`
     ASSUME_TAC THENL
      [X_GEN_TAC `u:(K=>A)->bool` THEN
@@ -1660,10 +1673,10 @@ oops
       MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] FINITE_SUBSET) THEN
       REWRITE_TAC[\<subseteq>; IN_ELIM_THM] THEN X_GEN_TAC `i::K` THEN
       MATCH_MP_TAC(TAUT
-       `(l \<Longrightarrow> k) \<and> (k \<and> l \<Longrightarrow> p \<Longrightarrow> q) \<Longrightarrow> l \<and> \<not> q \<Longrightarrow> k \<and> \<not> p`) THEN
+       `(l \<Longrightarrow> I) \<and> (I \<and> l \<Longrightarrow> p \<Longrightarrow> q) \<Longrightarrow> l \<and> \<not> q \<Longrightarrow> I \<and> \<not> p`) THEN
       CONJ_TAC THENL [ASM SET_TAC[]; REPEAT STRIP_TAC] THEN
       FIRST_X_ASSUM(MATCH_MP_TAC \<circ> GEN_REWRITE_RULE id [\<subseteq>]) THEN
-      EXPAND_TAC "q" THEN UNDISCH_TAC `(p::K=>A) \<in> PiE k v` THEN
+      EXPAND_TAC "q" THEN UNDISCH_TAC `(p::K=>A) \<in> PiE I v` THEN
       REWRITE_TAC[PiE; IN_ELIM_THM; EXTENSIONAL] THEN
       ASM SET_TAC[];
       ALL_TAC] THEN
@@ -1695,7 +1708,7 @@ oops
         ASM_REWRITE_TAC[IN_MBALL] THEN REAL_ARITH_TAC]];
     ALL_TAC] THEN
   DISCH_TAC THEN DISCH_TAC THEN
-  ASM_CASES_TAC `k::K=>bool = {}` THENL
+  ASM_CASES_TAC `I::K=>bool = {}` THENL
    [ASM_REWRITE_TAC[NOT_IN_EMPTY; EMPTY_GSPEC; COUNTABLE_EMPTY] THEN
     REWRITE_TAC[PRODUCT_TOPOLOGY_EMPTY_DISCRETE;
                 METRIZABLE_SPACE_DISCRETE_TOPOLOGY;
@@ -1706,7 +1719,7 @@ oops
       [RIGHT_IMP_EXISTS_THM] THEN
   REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM; AND_FORALL_THM] THEN
   X_GEN_TAC `m::K=>A metric` THEN ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN
-  ASM_CASES_TAC `\<forall>i. i \<in> k \<Longrightarrow> mtopology(m i) = (tops::K=>A topology) i` THEN
+  ASM_CASES_TAC `\<forall>i. i \<in> I \<Longrightarrow> mtopology(m i) = (tops::K=>A topology) i` THEN
   ASM_SIMP_TAC[] THENL [ALL_TAC; ASM_MESON_TAC[]] THEN MATCH_MP_TAC(MESON[]
    `\<forall>m. P m \<and> (Q \<Longrightarrow> C m) \<Longrightarrow> (\<exists>m. P m) \<and> (Q \<Longrightarrow> \<exists>m. C m \<and> P m)`) THEN
   FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id
@@ -1715,7 +1728,7 @@ oops
   MAP_EVERY X_GEN_TAC [`nk::num=>K`; `c::num=>bool`] THEN
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (X_CHOOSE_TAC `kn::K=>num`)) THEN
   MP_TAC(ISPECL
-   [`k::K=>bool`; `\<lambda>i. capped_metric (inverse((kn i) + 1)) ((m::K=>A metric) i)`]
+   [`I::K=>bool`; `\<lambda>i. capped_metric (inverse((kn i) + 1)) ((m::K=>A metric) i)`]
    SUP_METRIC_CARTESIAN_PRODUCT) THEN
   REWRITE_TAC[o_DEF; CONJUNCT1(SPEC_ALL CAPPED_METRIC)] THEN
   MATCH_MP_TAC(MESON[]
@@ -1729,8 +1742,8 @@ oops
     DISJ1_TAC THEN MATCH_MP_TAC REAL_INV_LE_1 THEN REAL_ARITH_TAC;
     X_GEN_TAC `M:(K=>A)metric`] THEN
   SUBGOAL_THEN
-   `PiE k (\<lambda>i. mspace (m i)) =
-    topspace(product_topology k (tops::K=>A topology))`
+   `PiE I (\<lambda>i. mspace (m i)) =
+    topspace(product_topology I (tops::K=>A topology))`
   SUBST1_TAC THENL
    [REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY; CARTESIAN_PRODUCT_EQ] THEN
     ASM_SIMP_TAC[GSYM TOPSPACE_MTOPOLOGY; o_THM];
@@ -1747,8 +1760,8 @@ oops
      [MAP_EVERY X_GEN_TAC [`z::K=>A`; `r::real`] THEN STRIP_TAC THEN
       X_GEN_TAC `x::K=>A` THEN STRIP_TAC THEN
       SUBGOAL_THEN
-       `(\<forall>i. i \<in> k \<Longrightarrow> (z::K=>A) i \<in> topspace(tops i)) \<and>
-        (\<forall>i. i \<in> k \<Longrightarrow> (x::K=>A) i \<in> topspace(tops i))`
+       `(\<forall>i. i \<in> I \<Longrightarrow> (z::K=>A) i \<in> topspace(tops i)) \<and>
+        (\<forall>i. i \<in> I \<Longrightarrow> (x::K=>A) i \<in> topspace(tops i))`
       STRIP_ASSUME_TAC THENL
        [MAP_EVERY UNDISCH_TAC
          [`(z::K=>A) \<in> mspace M`; `(x::K=>A) \<in> mspace M`] THEN
@@ -1772,10 +1785,10 @@ oops
         REWRITE_TAC[\<subseteq>; IN_ELIM_THM; MESON[]
          `\<not> ((if p then x else y) = y) \<longleftrightarrow> p \<and> (x \<noteq> y)`] THEN
         FIRST_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (SET_RULE
-         `{i. i \<in> k \<and> P i} = nk ` c
-          \<Longrightarrow> (\<forall>i. i \<in> k \<and> Q i \<Longrightarrow> P i) \<and>
+         `{i. i \<in> I \<and> P i} = nk ` c
+          \<Longrightarrow> (\<forall>i. i \<in> I \<and> Q i \<Longrightarrow> P i) \<and>
               (\<forall>n. n \<in> c \<Longrightarrow> Q(nk n) \<Longrightarrow> n \<in> s)
-              \<Longrightarrow> \<forall>i. i \<in> k \<and> Q i \<Longrightarrow> i \<in> image nk (c \<inter> s)`)) THEN
+              \<Longrightarrow> \<forall>i. i \<in> I \<and> Q i \<Longrightarrow> i \<in> image nk (c \<inter> s)`)) THEN
         CONJ_TAC THENL
          [X_GEN_TAC `i::K` THEN
           DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
@@ -1797,7 +1810,7 @@ oops
           ASM_SIMP_TAC[REAL_LT_LMUL_EQ; REAL_OF_NUM_ADD; REAL_OF_NUM_LT] THEN
           ASM_ARITH_TAC];
         ASM_MESON_TAC[OPEN_IN_MBALL; OPEN_IN_TOPSPACE];
-        SUBGOAL_THEN `(x::K=>A) \<in> PiE k (topspace \<circ> tops)`
+        SUBGOAL_THEN `(x::K=>A) \<in> PiE I (topspace \<circ> tops)`
         MP_TAC THENL [ASM_MESON_TAC[TOPSPACE_PRODUCT_TOPOLOGY]; ALL_TAC] THEN
         REWRITE_TAC[PiE; o_DEF; IN_ELIM_THM] THEN
         STRIP_TAC THEN ASM_REWRITE_TAC[] THEN X_GEN_TAC `i::K` THEN
@@ -1817,7 +1830,7 @@ oops
           REWRITE_TAC[IN_ELIM_THM; o_THM] THEN
           MATCH_MP_TAC MONO_AND THEN REWRITE_TAC[] THEN
           MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `i::K` THEN
-          ASM_CASES_TAC `(i::K) \<in> k` THEN ASM_REWRITE_TAC[] THEN
+          ASM_CASES_TAC `(i::K) \<in> I` THEN ASM_REWRITE_TAC[] THEN
           COND_CASES_TAC THEN ASM_REWRITE_TAC[IN_MBALL] THEN
           MATCH_MP_TAC(SET_RULE
            `s \<subseteq> t \<Longrightarrow> P \<and> x \<in> s \<and> Q \<Longrightarrow> x \<in> t`) THEN
@@ -1840,28 +1853,28 @@ oops
       X_GEN_TAC `u::K=>A->bool` THEN STRIP_TAC THEN
       X_GEN_TAC `z::K=>A` THEN DISCH_TAC THEN
       SUBGOAL_THEN `(z::K=>A) \<in> mspace M` ASSUME_TAC THENL
-       [UNDISCH_TAC `(z::K=>A) \<in> PiE k u` THEN
+       [UNDISCH_TAC `(z::K=>A) \<in> PiE I u` THEN
         ASM_REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY; PiE] THEN
         REWRITE_TAC[IN_ELIM_THM; o_THM] THEN
         ASM_MESON_TAC[OPEN_IN_SUBSET; \<subseteq>];
         EXISTS_TAC `z::K=>A` THEN ASM_SIMP_TAC[MDIST_REFL; CONJ_ASSOC]] THEN
       SUBGOAL_THEN
-       `\<forall>i. \<exists>r. i \<in> k \<Longrightarrow> 0 < r \<and> mball (m i) ((z::K=>A) i,r) \<subseteq> u i`
+       `\<forall>i. \<exists>r. i \<in> I \<Longrightarrow> 0 < r \<and> mball (m i) ((z::K=>A) i,r) \<subseteq> u i`
       MP_TAC THENL
        [X_GEN_TAC `i::K` THEN REWRITE_TAC[RIGHT_EXISTS_IMP_THM] THEN
         DISCH_TAC THEN
         SUBGOAL_THEN `openin(mtopology(m i)) ((u::K=>A->bool) i)` MP_TAC THENL
          [ASM_MESON_TAC[]; REWRITE_TAC[OPEN_IN_MTOPOLOGY]] THEN
         DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MATCH_MP_TAC) THEN
-        UNDISCH_TAC `(z::K=>A) \<in> PiE k u` THEN
+        UNDISCH_TAC `(z::K=>A) \<in> PiE I u` THEN
         ASM_SIMP_TAC[PiE; IN_ELIM_THM];
         REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM]] THEN
       X_GEN_TAC `r::K=>real` THEN DISCH_TAC THEN
-      SUBGOAL_THEN `\<exists>a::K. a \<in> k` STRIP_ASSUME_TAC THENL
+      SUBGOAL_THEN `\<exists>a::K. a \<in> I` STRIP_ASSUME_TAC THENL
        [ASM SET_TAC[]; ALL_TAC] THEN
       EXISTS_TAC
         `inf (image (\<lambda>i. min (r i) (inverse((kn i) + 1)))
-                 (a insert {i. i \<in> k \<and>
+                 (a insert {i. i \<in> I \<and>
                                 \<not> (u i = topspace ((tops::K=>A topology) i))})) /
          2` THEN
       ASM_SIMP_TAC[REAL_LT_INF_FINITE; FINITE_INSERT; NOT_INSERT_EMPTY;
@@ -1876,13 +1889,13 @@ oops
       REWRITE_TAC[RIGHT_FORALL_IMP_THM] THEN
       ANTS_TAC THENL [ASM_MESON_TAC[]; ALL_TAC] THEN
       DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
-      SUBGOAL_THEN `(x::K=>A) \<in> topspace(product_topology k tops)` MP_TAC THENL
+      SUBGOAL_THEN `(x::K=>A) \<in> topspace(product_topology I tops)` MP_TAC THENL
        [ASM_MESON_TAC[]; REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY]] THEN
       REWRITE_TAC[PiE; o_THM; IN_ELIM_THM] THEN
       DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
       ASM_REWRITE_TAC[IMP_IMP; AND_FORALL_THM] THEN
       MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `i::K` THEN
-      ASM_CASES_TAC `(i::K) \<in> k` THEN ASM_REWRITE_TAC[] THEN
+      ASM_CASES_TAC `(i::K) \<in> I` THEN ASM_REWRITE_TAC[] THEN
       DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
       REWRITE_TAC[REAL_ARITH `x \<le> y / 2 \<longleftrightarrow> 2 * x \<le> y`] THEN
       ASM_SIMP_TAC[REAL_LE_INF_FINITE; FINITE_INSERT; NOT_INSERT_EMPTY;
@@ -1910,9 +1923,9 @@ oops
     X_GEN_TAC `x::num=>K->A` THEN ASM_REWRITE_TAC[MCauchy] THEN STRIP_TAC THEN
     ASM_REWRITE_TAC[LIMIT_COMPONENTWISE] THEN
     SUBGOAL_THEN
-     `\<forall>i. \<exists>y. i \<in> k \<Longrightarrow> limitin (tops i) (\<lambda>n. (x::num=>K->A) n i) y sequentially`
+     `\<forall>i. \<exists>y. i \<in> I \<Longrightarrow> limitin (tops i) (\<lambda>n. (x::num=>K->A) n i) y sequentially`
     MP_TAC THENL
-     [X_GEN_TAC `i::K` THEN ASM_CASES_TAC `(i::K) \<in> k` THEN
+     [X_GEN_TAC `i::K` THEN ASM_CASES_TAC `(i::K) \<in> I` THEN
       ASM_REWRITE_TAC[] THEN REMOVE_THEN "*" (MP_TAC \<circ> SPEC `i::K`) THEN
       ASM_SIMP_TAC[] THEN DISCH_THEN MATCH_MP_TAC THEN
       REWRITE_TAC[MCauchy; GSYM TOPSPACE_MTOPOLOGY] THEN CONJ_TAC THENL
@@ -1934,12 +1947,11 @@ oops
       ASM_REWRITE_TAC[REAL_LT_INV_EQ; REAL_ARITH `0 < n + 1`];
       REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM]] THEN
     X_GEN_TAC `y::K=>A` THEN DISCH_TAC THEN
-    EXISTS_TAC `RESTRICTION k (y::K=>A)` THEN
+    EXISTS_TAC `RESTRICTION I (y::K=>A)` THEN
     ASM_REWRITE_TAC[REWRITE_RULE[\<in>] RESTRICTION_IN_EXTENSIONAL] THEN
     SIMP_TAC[RESTRICTION; EVENTUALLY_TRUE] THEN ASM_REWRITE_TAC[]]);;
 
 
-subsection\<open>Euclidean space and n-spheres, as subtopologies of infinite product R^N\<close>
 
 lemma completely_metrizable_Euclidean_space:
    "completely_metrizable_space(Euclidean_space n)"
