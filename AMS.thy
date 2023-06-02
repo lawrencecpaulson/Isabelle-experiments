@@ -10,6 +10,26 @@ begin
 lemma countable_as_injective_image_subset: "countable S \<longleftrightarrow> (\<exists>f. \<exists>K::nat set. S = f ` K \<and> inj_on f K)"
   by (metis countableI countable_image_eq_inj image_empty inj_on_the_inv_into uncountable_def)
 
+
+lemma locally_compact_space_euclidean:
+  "locally_compact_space (euclidean::'a::heine_borel topology)" 
+  unfolding locally_compact_space_def
+proof (intro strip)
+  fix x::'a
+  assume "x \<in> topspace euclidean"
+  have "ball x 1 \<subseteq> cball x 1"
+    by auto
+  then show "\<exists>U K. openin euclidean U \<and> compactin euclidean K \<and> x \<in> U \<and> U \<subseteq> K"
+    by (metis Elementary_Metric_Spaces.open_ball centre_in_ball compact_cball compactin_euclidean_iff open_openin zero_less_one)
+qed
+
+
+lemma locally_compact_Euclidean_space:
+  "locally_compact_space(Euclidean_space n)"
+  using homeomorphic_locally_compact_space [OF homeomorphic_Euclidean_space_product_topology]
+    locally_compact_space_product_topology
+  using locally_compact_space_euclidean by fastforce
+
 definition mcomplete_of :: "'a metric \<Rightarrow> bool"
   where "mcomplete_of \<equiv> \<lambda>m. Metric_space.mcomplete (mspace m) (mdist m)"
 
@@ -397,26 +417,66 @@ next
     apply (simp add: cm_def)
     by (smt (verit) of_nat_0_le_iff one_less_inverse_iff)
   with \<open>I \<noteq> {}\<close> Sup_metric_cartesian_product' [of I cm]
-  have  "Metric_space M d" and *: "\<forall>x\<in>M. \<forall>y\<in>M. \<forall>b. ((d x y) \<le> b) = (\<forall>i\<in>I. mdist (cm i) (x i) (y i) \<le> b)"
+  have "Metric_space M d" 
+    and *: "\<forall>x\<in>M. \<forall>y\<in>M. \<forall>b. (d x y \<le> b) \<longleftrightarrow> (\<forall>i\<in>I. mdist (cm i) (x i) (y i) \<le> b)"
     unfolding M_def d_def by meson+
   then interpret Metric_space M d 
     by metis
   have "PiE I (\<lambda>i. mspace (m i)) = topspace(product_topology X I)"
     using m by force
   define m' where "m' = metric (M,d)"
+  define J where "J \<equiv> \<lambda>U. {i \<in> I. U i \<noteq> topspace (X i)}"
+  have 1: "\<exists>U. finite (J U) \<and> (\<forall>i\<in>I. openin (X i) (U i)) \<and> x \<in> Pi\<^sub>E I U \<and> Pi\<^sub>E I U \<subseteq> S"
+    if "x \<in> S" "S \<subseteq> M"
+      and "\<And>x. x \<in> S \<Longrightarrow> (\<exists>r>0. mball x r \<subseteq> S)"
+    for S x
+    using that sorry
+  have 2: "\<exists>r>0. mball x r \<subseteq> S"
+    if "finite (J U)" and x: "x \<in> Pi\<^sub>E I U" and "Pi\<^sub>E I U \<subseteq> S"
+      and U: "\<And>i. i\<in>I \<Longrightarrow> openin (X i) (U i)" 
+      and "x \<in> S" for U S x
+  proof -
+    { fix i
+      assume "i \<in> J U"
+      then have "i \<in> I"
+        by (auto simp: J_def)
+      then have "openin (mtopology_of (m i)) (U i)"
+        using U m by force
+      then have "\<exists>r>0. mball_of (m i) (x i) r \<subseteq> U i"
+        using x 
+        by (simp add: Metric_space.openin_mtopology Metric_space_mspace_mdist PiE_mem \<open>i \<in> I\<close> mball_of_def mtopology_of_def)
+    }
+    then obtain rf where rf: "\<And>j. j \<in> J U \<Longrightarrow> rf j >0 \<and> mball_of (m j) (x j) (rf j) \<subseteq> U j"
+      by metis
+    define r where "r \<equiv> Min (rf ` J U)"
+    show ?thesis
+    proof (intro exI conjI)
+      have "J U \<noteq> {}"
+        apply (auto simp: J_def)
+        sorry
+      then  show "r > 0"
+        by (simp add: \<open>finite (J U)\<close> r_def rf)
+      have "\<And>j. j \<in> J U \<Longrightarrow> r \<le> rf j"
+        by (simp add: r_def that(1))
+      then have "\<And>j. j \<in> J U \<Longrightarrow> mball_of (m j) (x j) r \<subseteq> U j"
+        by (smt (verit) Metric_space.in_mball Metric_space_mspace_mdist mball_of_def rf subset_eq)
+      then have "mball x r \<subseteq> Pi\<^sub>E I U"
+        apply (auto simp: )
+         apply (simp add: J_def)
+
+          sorry
+      show "mball x r \<subseteq> S"
+        using \<open>Pi\<^sub>E I U \<subseteq> S\<close>
+        sorry
+    qed
+  qed
+  have 3: "x \<in> M"
+    if \<section>: "\<And>x. x\<in>S \<Longrightarrow> \<exists>U. finite (J U) \<and> (\<forall>i\<in>I. openin (X i) (U i)) \<and> x \<in> Pi\<^sub>E I U \<and> Pi\<^sub>E I U \<subseteq> S"
+      and "x \<in> S" for S x
+    using \<section> [OF \<open>x \<in> S\<close>] m openin_subset by (fastforce simp add: M_def PiE_iff cm_def)
   have "mtopology = product_topology X I"
-    unfolding topology_eq
-    apply (auto simp: openin_mtopology openin_product_topology_alt)
-      defer
-      apply (drule bspec, assumption)
-      apply (clarsimp simp add: M_def PiE_iff cm_def)
-    apply (metis m openin_subset subsetD topspace_mtopology_of)
-      apply (drule bspec, assumption)
-      apply (clarsimp simp add: M_def PiE_iff )
-
-    unfolding mtopology_base product_topology_base_alt
-
-    sorry
+    unfolding topology_eq openin_mtopology openin_product_topology_alt  
+    using J_def 1 2 3 by (smt (verit, ccfv_threshold) subsetI)
   then show ?thesis
     using metrizable_space_mtopology by fastforce
 qed
@@ -511,6 +571,7 @@ oops
            [REWRITE_TAC[\<subseteq>; IN_MBALL];
             MATCH_MP_TAC CENTRE_IN_MBALL] THEN
           ASM_MESON_TAC[TOPSPACE_MTOPOLOGY];
+
           X_GEN_TAC `m::num` THEN ASM_SIMP_TAC[IN_NUMSEG; LE_0] THEN
           DISCH_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
           GEN_REWRITE_TAC id [GSYM CONTRAPOS_THM] THEN
@@ -522,6 +583,7 @@ oops
           ASM_SIMP_TAC[REAL_LT_LMUL_EQ; REAL_OF_NUM_ADD; REAL_OF_NUM_LT] THEN
           ASM_ARITH_TAC];
         ASM_MESON_TAC[OPEN_IN_MBALL; OPEN_IN_TOPSPACE];
+
         SUBGOAL_THEN `(x::K=>A) \<in> PiE I (topspace \<circ> X)`
         MP_TAC THENL [ASM_MESON_TAC[TOPSPACE_PRODUCT_TOPOLOGY]; ALL_TAC] THEN
         REWRITE_TAC[PiE; o_DEF; IN_ELIM_THM] THEN
@@ -548,6 +610,7 @@ oops
            `s \<subseteq> t \<Longrightarrow> P \<and> x \<in> s \<and> Q \<Longrightarrow> x \<in> t`) THEN
           ASM_SIMP_TAC[GSYM TOPSPACE_MTOPOLOGY; SUBSET_REFL];
           ALL_TAC] THEN
+
         ASM_REWRITE_TAC[IN_MBALL] THEN
         TRANS_TAC REAL_LET_TRANS `R::real` THEN ASM_REWRITE_TAC[] THEN
         FIRST_X_ASSUM(MP_TAC \<circ> SPECL
@@ -631,6 +694,10 @@ oops
       ASM_REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY; PiE] THEN
       REWRITE_TAC[IN_ELIM_THM; o_DEF] THEN
       ASM_MESON_TAC[TOPSPACE_MTOPOLOGY]];
+
+
+
+
     DISCH_TAC THEN REWRITE_TAC[mcomplete] THEN DISCH_THEN(LABEL_TAC "*") THEN
     X_GEN_TAC `x::num=>K->A` THEN ASM_REWRITE_TAC[MCauchy] THEN STRIP_TAC THEN
     ASM_REWRITE_TAC[LIMIT_COMPONENTWISE] THEN
@@ -661,48 +728,36 @@ oops
     X_GEN_TAC `y::K=>A` THEN DISCH_TAC THEN
     EXISTS_TAC `RESTRICTION I (y::K=>A)` THEN
     ASM_REWRITE_TAC[REWRITE_RULE[\<in>] RESTRICTION_IN_EXTENSIONAL] THEN
-    SIMP_TAC[RESTRICTION; EVENTUALLY_TRUE] THEN ASM_REWRITE_TAC[]]);;
+    SIMP_TAC[RESTRICTION; EVENTUALLY_TRUE] THEN ASM_REWRITE_TAC[]]);;`
 
 
 
 lemma completely_metrizable_Euclidean_space:
-   "completely_metrizable_space(Euclidean_space n)"
+  "completely_metrizable_space(Euclidean_space n)"
   unfolding Euclidean_space_def
-  apply (rule completely_metrizable_space_closedin)
-   apply (simp add: completely_metrizable_space_product_topology completely_metrizable_space_euclideanreal)
-  using closedin_Euclidean_space topspace_Euclidean_space by auto
+proof (rule completely_metrizable_space_closedin)
+  show "completely_metrizable_space (powertop_real (UNIV::nat set))"
+    by (simp add: completely_metrizable_space_product_topology completely_metrizable_space_euclideanreal)
+  show "closedin (powertop_real UNIV) {x. \<forall>i\<ge>n. x i = 0}"
+    using closedin_Euclidean_space topspace_Euclidean_space by auto
+qed
 
 lemma metrizable_Euclidean_space:
    "metrizable_space(Euclidean_space n)"
-oops
-  SIMP_TAC[COMPLETELY_METRIZABLE_IMP_METRIZABLE_SPACE;
-           COMPLETELY_METRIZABLE_EUCLIDEAN_SPACE]);;
-  oops
-
-lemma locally_compact_Euclidean_space:
-   "locally_compact_space(Euclidean_space n)"
-  using homeomorphic_Euclidean_space_product_topology [of n] homeomorphic_locally_compact_space
-       locally_compact_space_Euclidean
-oops
-  X_GEN_TAC `n::num` THEN
-  MP_TAC(SPEC `n::num` HOMEOMORPHIC_EUCLIDEAN_SPACE_PRODUCT_TOPOLOGY) THEN
-  DISCH_THEN(SUBST1_TAC \<circ> MATCH_MP HOMEOMORPHIC_LOCALLY_COMPACT_SPACE) THEN
-  REWRITE_TAC[LOCALLY_COMPACT_SPACE_PRODUCT_TOPOLOGY] THEN
-  DISJ2_TAC THEN REWRITE_TAC[LOCALLY_COMPACT_SPACE_EUCLIDEANREAL] THEN
-  SIMP_TAC[FINITE_NUMSEG; FINITE_RESTRICT]);;
+  by (simp add: completely_metrizable_Euclidean_space completely_metrizable_imp_metrizable_space)
 
 lemma locally_connected_Euclidean_space:
    "locally_connected_space(Euclidean_space n)"
-oops
-  SIMP_TAC[LOCALLY_PATH_CONNECTED_EUCLIDEAN_SPACE;
-           LOCALLY_PATH_CONNECTED_IMP_LOCALLY_CONNECTED_SPACE]);;
+  by (simp add: locally_path_connected_Euclidean_space locally_path_connected_imp_locally_connected_space)
 
 
 subsection\<open>Extending continuous maps "pointwise" in a regular space\<close>
 
 
 lemma continuous_map_on_intermediate_closure_of:
-  assumes "regular_space Y" "T \<subseteq> X closure_of S" "\<And>x. x \<in> T \<Longrightarrow> limitin Y f (f x) (atin_within X x  S)"
+  assumes Y: "regular_space Y" 
+    and T: "T \<subseteq> X closure_of S" 
+    and f: "\<And>x. x \<in> T \<Longrightarrow> limitin Y f (f x) (atin_within X x S)"
   shows "continuous_map (subtopology X T) Y f"
 oops
   REWRITE_TAC[GSYM NEIGHBOURHOOD_BASE_OF_CLOSED_IN] THEN REPEAT STRIP_TAC THEN
@@ -757,8 +812,7 @@ oops
     ASM_MESON_TAC[CONTINUOUS_MAP_ON_INTERMEDIATE_CLOSURE_OF]]);;
 
 lemma continuous_map_extension_pointwise_alt:
-   "\<And>top1 top2 f::A=>B S T.
-        regular_space top2" "S \<subseteq> T" "T \<subseteq> top1 closure_of S \<and>
+   "regular_space top2" "S \<subseteq> T" "T \<subseteq> top1 closure_of S \<and>
         continuous_map (subtopology top1 S,top2) f \<and>
         (\<forall>x. x \<in> T - S \<Longrightarrow> \<exists>l. limitin top2 f l (atin top1 x within S))
         \<Longrightarrow> \<exists>g. continuous_map (subtopology top1 T,top2) g \<and>
