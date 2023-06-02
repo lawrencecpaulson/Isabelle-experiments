@@ -6,6 +6,17 @@ theory AMS
     "HOL-ex.Sketch_and_Explore"
 begin
 
+
+lemma countable_as_injective_image_subset: "countable S \<longleftrightarrow> (\<exists>f. \<exists>K::nat set. S = f ` K \<and> inj_on f K)"
+  by (metis countableI countable_image_eq_inj image_empty inj_on_the_inv_into uncountable_def)
+
+definition mcomplete_of :: "'a metric \<Rightarrow> bool"
+  where "mcomplete_of \<equiv> \<lambda>m. Metric_space.mcomplete (mspace m) (mdist m)"
+
+lemma (in Metric_space) mcomplete_of [simp]: "mcomplete_of (metric (M,d)) = mcomplete"
+  by (simp add: mcomplete_of_def)
+
+
 (*NEEDS LEPOLL (Used nowhere in Analysis) *)
 lemma card_lepoll_quasi_components_of_topspace:
   "quasi_components_of X \<lesssim> topspace X"
@@ -178,17 +189,16 @@ proof
     by (smt (verit, best) assms field_sum_of_halves mdist_capped)    
 qed (auto simp: mtopology_capped_metric)
 
-
+(*WHY THE REDUNDANCY IN THE CONCLUSION?*)
 lemma Sup_metric_cartesian_product:
   fixes I m
   defines "S \<equiv> PiE I (mspace \<circ> m)"
-  defines "D \<equiv> \<lambda>x y. if x \<in> S \<and> y \<in> S  then SUP i\<in>I. mdist (m i) (x i) (y i) else 0"
-  assumes m': "m' = metric(S,D)"
-    and "I \<noteq> {}"
+  defines "D \<equiv> \<lambda>x y. if x \<in> S \<and> y \<in> S then SUP i\<in>I. mdist (m i) (x i) (y i) else 0"
+  defines "m' \<equiv> metric(S,D)"
+  assumes "I \<noteq> {}"
     and c: "\<And>i x y. \<lbrakk>i \<in> I; x \<in> mspace(m i); y \<in> mspace(m i)\<rbrakk> \<Longrightarrow> mdist (m i) x y \<le> c"
   shows "mspace m' = S \<and> mdist m' = D \<and>
-         (\<forall>x \<in> S. \<forall>y \<in> S. \<forall>b. 
-               (mdist m' x y \<le> b \<longleftrightarrow> (\<forall>i \<in> I. mdist (m i) (x i) (y i) \<le> b)))"
+         (\<forall>x \<in> S. \<forall>y \<in> S. \<forall>b. mdist m' x y \<le> b \<longleftrightarrow> (\<forall>i \<in> I. mdist (m i) (x i) (y i) \<le> b))"
 proof -
   have bdd: "bdd_above ((\<lambda>i. mdist (m i) (x i) (y i)) ` I)"
     if "x \<in> S" "y \<in> S" for x y 
@@ -228,14 +238,71 @@ proof -
   show ?thesis
   proof (intro conjI strip)
     show "mspace m' = S"
-      by (simp add: m')
+      by (simp add: m'_def)
     show "mdist m' = D"
-      using D_def m' mdist_metric by blast
+      using D_def m'_def mdist_metric by blast
     show "(mdist m' x y \<le> b) = (\<forall>i\<in>I. mdist (m i) (x i) (y i) \<le> b)"
       if "x \<in> S" and "y \<in> S" for x y b
-      using that by (simp add: D_iff m')
+      using that by (simp add: D_iff m'_def)
   qed
 qed
+
+(*DUPLICATE WITHOUT REDUNDANCY*)
+lemma Sup_metric_cartesian_product':
+  fixes I m
+  defines "S \<equiv> PiE I (mspace \<circ> m)"
+  defines "D \<equiv> \<lambda>x y. if x \<in> S \<and> y \<in> S then SUP i\<in>I. mdist (m i) (x i) (y i) else 0"
+  defines "m' \<equiv> metric(S,D)"
+  assumes "I \<noteq> {}"
+    and c: "\<And>i x y. \<lbrakk>i \<in> I; x \<in> mspace(m i); y \<in> mspace(m i)\<rbrakk> \<Longrightarrow> mdist (m i) x y \<le> c"
+  shows "Metric_space S D" 
+    and "\<forall>x \<in> S. \<forall>y \<in> S. \<forall>b. D x y \<le> b \<longleftrightarrow> (\<forall>i \<in> I. mdist (m i) (x i) (y i) \<le> b)"  (is "?the2")
+proof -
+  have bdd: "bdd_above ((\<lambda>i. mdist (m i) (x i) (y i)) ` I)"
+    if "x \<in> S" "y \<in> S" for x y 
+    using c that by (force simp add: S_def bdd_above_def)
+  have D_iff: "D x y \<le> b \<longleftrightarrow> (\<forall>i \<in> I. mdist (m i) (x i) (y i) \<le> b)"
+    if "x \<in> S" "y \<in> S" for x y b
+    using that \<open>I \<noteq> {}\<close> by (simp add: D_def PiE_iff cSup_le_iff bdd)
+  show "Metric_space S D"
+  proof
+    fix x y
+    show D0: "0 \<le> D x y"
+      using bdd  
+      apply (simp add: D_def)
+      by (meson \<open>I \<noteq> {}\<close> cSUP_upper dual_order.trans ex_in_conv mdist_nonneg)
+    show "D x y = D y x"
+      by (simp add: D_def mdist_commute)
+    assume "x \<in> S" and "y \<in> S"
+    then
+    have "D x y = 0 \<longleftrightarrow> (\<forall>i\<in>I. mdist (m i) (x i) (y i) = 0)"
+      using D0 D_iff [of x y 0] nle_le by fastforce
+    also have "... \<longleftrightarrow> x = y"
+      using \<open>x \<in> S\<close> \<open>y \<in> S\<close> by (fastforce simp add: S_def PiE_iff extensional_def)
+    finally show "(D x y = 0) \<longleftrightarrow> (x = y)" .
+    fix z
+    assume "z \<in> S"
+    have "mdist (m i) (x i) (z i) \<le> D x y + D y z" if "i \<in> I" for i
+    proof -
+      have "mdist (m i) (x i) (z i) \<le> mdist (m i) (x i) (y i) + mdist (m i) (y i) (z i)"
+        by (metis PiE_E S_def \<open>x \<in> S\<close> \<open>y \<in> S\<close> \<open>z \<in> S\<close> comp_apply mdist_triangle that)
+      also have "... \<le> D x y + D y z"
+        using \<open>x \<in> S\<close> \<open>y \<in> S\<close> \<open>z \<in> S\<close> by (meson D_iff add_mono order_refl that)
+      finally show ?thesis .
+    qed
+    then show "D x z \<le> D x y + D y z"
+      by (simp add: D_iff \<open>x \<in> S\<close> \<open>z \<in> S\<close>)
+  qed
+  then interpret Metric_space S D .
+  show ?the2
+  proof (intro strip)
+    show "(D x y \<le> b) = (\<forall>i\<in>I. mdist (m i) (x i) (y i) \<le> b)"
+      if "x \<in> S" and "y \<in> S" for x y b
+      using that by (simp add: D_iff m'_def)
+  qed
+qed
+
+
 
 lemma metrizable_topology_A:
   assumes "metrizable_space (product_topology X I)"
@@ -248,26 +315,133 @@ lemma metrizable_topology_C:
     by (meson assms completely_metrizable_space_retraction_map_image retraction_map_product_projection)
 
 lemma metrizable_topology_B:
+  fixes a X I
+  defines "L \<equiv> {i \<in> I. \<nexists>a. topspace (X i) \<subseteq> {a}}"
   assumes "topspace (product_topology X I) \<noteq> {}"
-    and "metrizable_space (product_topology X I)"
+    and met: "metrizable_space (product_topology X I)"
     and "\<And>i. i \<in> I \<Longrightarrow> metrizable_space (X i)"
-  shows  "countable {i \<in> I. \<nexists>a. topspace (X i) \<subseteq> {a}}"
-  sorry
+  shows  "countable L"
+proof -
+  have "\<And>i. \<exists>p q. i \<in> L \<longrightarrow> p \<in> topspace(X i) \<and> q \<in> topspace(X i) \<and> p \<noteq> q"
+    unfolding L_def by blast
+  then obtain \<phi> \<psi> where \<phi>: "\<And>i. i \<in> L \<Longrightarrow> \<phi> i \<in> topspace(X i) \<and> \<psi> i \<in> topspace(X i) \<and> \<phi> i \<noteq> \<psi> i"
+    by metis
+  obtain z where z: "z \<in> (\<Pi>\<^sub>E i\<in>I. topspace (X i))"
+    using assms(2) by fastforce
+  define p where "p \<equiv> \<lambda>i. if i \<in> L then \<phi> i else z i"
+  define q where "q \<equiv> \<lambda>i j. if j = i then \<psi> i else p j"
+  have p: "p \<in> topspace(product_topology X I)"
+    using z \<phi> by (auto simp add: p_def L_def)
+  then have q: "\<And>i. i \<in> L \<Longrightarrow> q i \<in> topspace (product_topology X I)" 
+    by (auto simp add: L_def q_def \<phi>)
+  have fin: "finite {i \<in> L. q i \<notin> U}" if U: "openin (product_topology X I) U" "p \<in> U" for U
+  proof -
+    obtain V where V: "finite {i \<in> I. V i \<noteq> topspace (X i)}" "(\<forall>i\<in>I. openin (X i) (V i))" "p \<in> Pi\<^sub>E I V" "Pi\<^sub>E I V \<subseteq> U"
+      using U by (force simp add: openin_product_topology_alt)
+    moreover 
+    have "V x \<noteq> topspace (X x)" if "x \<in> L" and "q x \<notin> U" for x
+      using that V q
+      by (smt (verit, del_insts) PiE_iff q_def subset_eq topspace_product_topology)
+    then have "{i \<in> L. q i \<notin> U} \<subseteq> {i \<in> I. V i \<noteq> topspace (X i)}"
+      by (force simp add: L_def)
+    ultimately show ?thesis
+      by (meson finite_subset)
+  qed
+  obtain M d where "Metric_space M d" and XI: "product_topology X I = Metric_space.mtopology M d"
+    using met metrizable_space_def by blast
+  then interpret Metric_space M d
+    by blast
+  define C where "C \<equiv> \<Union>n::nat. {i \<in> L. q i \<notin> mball p (inverse (Suc n))}"
+  have "finite {i \<in> L. q i \<notin> mball p (inverse (real (Suc n)))}" for n
+    using XI p  by (intro fin; force)
+  then have "countable C"
+    unfolding C_def
+    by (meson countableI_type countable_UN countable_finite)
+  moreover have "L \<subseteq> C"
+  proof (clarsimp simp: C_def)
+    fix i
+    assume "i \<in> L" and "q i \<in> M" and "p \<in> M"
+    then show "\<exists>n. \<not> d p (q i) < inverse (1 + real n)"
+      using reals_Archimedean [of "d p (q i)"]
+      by (metis \<phi> mdist_pos_eq not_less_iff_gr_or_eq of_nat_Suc p_def q_def)
+  qed
+  ultimately show ?thesis
+    using countable_subset by blast
+qed
 
 lemma metrizable_topology_D:
   assumes "topspace (product_topology X I) \<noteq> {}"
-    and "countable {i \<in> I. \<nexists>a. topspace (X i) \<subseteq> {a}}"
-    and "\<And>i. i \<in> I \<Longrightarrow> metrizable_space (X i)"
+    and co: "countable {i \<in> I. \<nexists>a. topspace (X i) \<subseteq> {a}}"
+    and met: "\<And>i. i \<in> I \<Longrightarrow> metrizable_space (X i)"
   shows "metrizable_space (product_topology X I)"
-  sorry
+proof (cases "I = {}")
+  case True
+  then show ?thesis
+    by (simp add: metrizable_space_discrete_topology product_topology_empty_discrete)
+next
+  case False
+  have "\<And>i. i \<in> I \<Longrightarrow> \<exists>m. X i = mtopology_of m"
+    using met Metric_space.mtopology_of unfolding metrizable_space_def
+    by metis 
+  then obtain m where m: "\<And>i. i \<in> I \<Longrightarrow> X i = mtopology_of (m i)"
+    by metis 
+  obtain nk and C:: "nat set" where nk: "{i \<in> I. \<nexists>a. topspace (X i) \<subseteq> {a}} = nk ` C" and "inj_on nk C"
+    using co by (force simp add: countable_as_injective_image_subset)
+  then obtain kn where kn: "\<And>w. w \<in> C \<Longrightarrow> kn (nk w) = w"
+    by (metis inv_into_f_f)
+  define cm where "cm \<equiv> \<lambda>i. capped_metric (inverse(Suc(kn i))) (m i)"
+  define M where "M \<equiv> Pi\<^sub>E I (mspace \<circ> cm)"
+  define d where "d \<equiv> \<lambda>x y. if x \<in> M \<and> y \<in> M then SUP i\<in>I. mdist (cm i) (x i) (y i) else 0"
+  have "mdist (cm i) x y \<le> 1" for i x y
+    using mdist_capped [of "inverse(Suc(kn i))" _ x y]
+    apply (simp add: cm_def)
+    by (smt (verit) of_nat_0_le_iff one_less_inverse_iff)
+  with \<open>I \<noteq> {}\<close> Sup_metric_cartesian_product' [of I cm]
+  have  "Metric_space M d" and *: "\<forall>x\<in>M. \<forall>y\<in>M. \<forall>b. ((d x y) \<le> b) = (\<forall>i\<in>I. mdist (cm i) (x i) (y i) \<le> b)"
+    unfolding M_def d_def by meson+
+  then interpret Metric_space M d 
+    by metis
+  have "PiE I (\<lambda>i. mspace (m i)) = topspace(product_topology X I)"
+    using m by force
+  define m' where "m' = metric (M,d)"
+  have "mtopology = product_topology X I"
+    unfolding topology_eq
+    apply (auto simp: openin_mtopology openin_product_topology_alt)
+      defer
+      apply (drule bspec, assumption)
+      apply (clarsimp simp add: M_def PiE_iff cm_def)
+    apply (metis m openin_subset subsetD topspace_mtopology_of)
+      apply (drule bspec, assumption)
+      apply (clarsimp simp add: M_def PiE_iff )
+
+    unfolding mtopology_base product_topology_base_alt
+
+    sorry
+  then show ?thesis
+    using metrizable_space_mtopology by fastforce
+qed
 
 
+(*POSSIBLY THIS RESULT IS OBTAINED THROUGH A FURTHER LEMMA (about mcomplete)
+((((\<forall>i. i \<in> k \<Longrightarrow> mcomplete (m i)) \<Longrightarrow> mcomplete m))*)
 lemma metrizable_topology_E:
   assumes "topspace (product_topology X I) \<noteq> {}"
     and "countable {i \<in> I. \<nexists>a. topspace (X i) \<subseteq> {a}}"
-    and "\<And>i. i \<in> I \<Longrightarrow> completely_metrizable_space (X i)"
+    and met: "\<And>i. i \<in> I \<Longrightarrow> completely_metrizable_space (X i)"
   shows "completely_metrizable_space (product_topology X I)"
-  sorry
+proof (cases "I = {}")
+  case True
+  then show ?thesis
+    by (simp add: completely_metrizable_space_discrete_topology product_topology_empty_discrete)
+next
+  case False
+  have "\<And>i. i \<in> I \<Longrightarrow> \<exists>m. mcomplete_of m \<and> X i = mtopology_of m"
+    using met Metric_space.mtopology_of Metric_space.mcomplete_of unfolding completely_metrizable_space_def
+    by metis 
+  then obtain m where "\<And>i. i \<in> I \<Longrightarrow> mcomplete_of (m i) \<and> X i = mtopology_of (m i)"
+    by metis 
+  then show ?thesis sorry
+qed
 
 
 lemma metrizable_space_product_topology:
@@ -286,150 +460,8 @@ lemma completely_metrizable_space_product_topology:
 
 
 oops
-  REWRITE_TAC[AND_FORALL_THM] THEN REPEAT GEN_TAC THEN
-  MATCH_MP_TAC(TAUT
-   `(n \<Longrightarrow> m) \<and> (t \<Longrightarrow> n) \<and> (m \<Longrightarrow> t \<or> m') \<and> (n \<Longrightarrow> t \<or> n') \<and>
-    (\<not> t \<Longrightarrow> m \<and> m' \<Longrightarrow> c) \<and> (\<not> t \<Longrightarrow> c \<Longrightarrow> (m' \<Longrightarrow> m) \<and> (n' \<Longrightarrow> n))
-    \<Longrightarrow> (m \<longleftrightarrow> t \<or> c \<and> m') \<and> (n \<longleftrightarrow> t \<or> c \<and> n')`) THEN
-  REWRITE_TAC[COMPLETELY_METRIZABLE_IMP_METRIZABLE_SPACE] THEN CONJ_TAC THENL
-   [SIMP_TAC[GSYM SUBTOPOLOGY_EQ_DISCRETE_TOPOLOGY_EMPTY] THEN
-    REWRITE_TAC[COMPLETELY_METRIZABLE_SPACE_DISCRETE_TOPOLOGY];
-    GEN_REWRITE_TAC id [CONJ_ASSOC]] THEN
-  CONJ_TAC THENL
-   [CONJ_TAC THEN MATCH_MP_TAC TOPOLOGICAL_PROPERTY_OF_PRODUCT_COMPONENT THEN
-    REWRITE_TAC[HOMEOMORPHIC_COMPLETELY_METRIZABLE_SPACE;
-                HOMEOMORPHIC_METRIZABLE_SPACE] THEN
-    ASM_SIMP_TAC[METRIZABLE_SPACE_SUBTOPOLOGY] THEN REPEAT STRIP_TAC THEN
-    MATCH_MP_TAC COMPLETELY_METRIZABLE_SPACE_CLOSED_IN THEN
-    ASM_REWRITE_TAC[CLOSED_IN_CARTESIAN_PRODUCT] THEN
-    DISJ2_TAC THEN REPEAT STRIP_TAC THEN
-    COND_CASES_TAC THEN ASM_REWRITE_TAC[CLOSED_IN_TOPSPACE] THEN
-    FIRST_ASSUM(MP_TAC \<circ>
-      MATCH_MP COMPLETELY_METRIZABLE_IMP_METRIZABLE_SPACE) THEN
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP METRIZABLE_IMP_T1_SPACE) THEN
-    REWRITE_TAC[T1_SPACE_PRODUCT_TOPOLOGY] THEN
-    REWRITE_TAC[T1_SPACE_CLOSED_IN_SING; RIGHT_IMP_FORALL_THM; IMP_IMP] THEN
-    STRIP_TAC THENL [ASM SET_TAC[]; FIRST_X_ASSUM MATCH_MP_TAC] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE
-     [TOPSPACE_PRODUCT_TOPOLOGY; PiE; o_DEF; IN_ELIM_THM]) THEN
-    ASM SET_TAC[];
-    ALL_TAC] THEN
-  CONJ_TAC THENL
-   [REPEAT STRIP_TAC THEN ABBREV_TAC
-     `l = {i::K | i \<in> I \<and> \<not> (\<exists>a::A. topspace(X i) \<subseteq> {a})}` THEN
-    SUBGOAL_THEN
-     `\<forall>i::K. \<exists>p q::A.
-        i \<in> l \<Longrightarrow> p \<in> topspace(X i) \<and> q \<in> topspace(X i) \<and> (p \<noteq> q)`
-    MP_TAC THENL [EXPAND_TAC "l" THEN SET_TAC[]; ALL_TAC] THEN
-    REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`a::K=>A`; `b::K=>A`] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY]) THEN
-    REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY; o_DEF; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `z::K=>A` THEN DISCH_TAC THEN
-    ABBREV_TAC `p::K=>A = \<lambda>i. if i \<in> l then a i else z i` THEN
-    ABBREV_TAC `q::K=>K->A = \<lambda>i j. if j = i then b i else p j` THEN
-    SUBGOAL_THEN
-     `p \<in> topspace(product_topology I (X::K=>A topology)) \<and>
-      (\<forall>i::K. i \<in> l
-             \<Longrightarrow> q i \<in> topspace(product_topology I (X::K=>A topology)))`
-    STRIP_ASSUME_TAC THENL
-     [UNDISCH_TAC `(z::K=>A) \<in> PiE I (\<lambda>x. topspace(X x))` THEN
-      MAP_EVERY EXPAND_TAC ["q"; "p"] THEN
-      REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY; PiE; o_THM] THEN
-      REWRITE_TAC[EXTENSIONAL; IN_ELIM_THM] THEN ASM SET_TAC[];
-      ALL_TAC] THEN
-    SUBGOAL_THEN
-     `\<forall>u:(K=>A)->bool.
-        openin (product_topology X I) u \<and> p \<in> u
-        \<Longrightarrow> finite {i::K | i \<in> l \<and> \<not> (q i \<in> u)}`
-    ASSUME_TAC THENL
-     [X_GEN_TAC `u:(K=>A)->bool` THEN
-      DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
-      REWRITE_TAC[OPEN_IN_PRODUCT_TOPOLOGY_ALT] THEN
-      DISCH_THEN(MP_TAC \<circ> SPEC `p::K=>A`) THEN
-      ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-      X_GEN_TAC `v::K=>A->bool` THEN
-      DISCH_THEN(CONJUNCTS_THEN2 MP_TAC STRIP_ASSUME_TAC) THEN
-      MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] FINITE_SUBSET) THEN
-      REWRITE_TAC[\<subseteq>; IN_ELIM_THM] THEN X_GEN_TAC `i::K` THEN
-      MATCH_MP_TAC(TAUT
-       `(l \<Longrightarrow> I) \<and> (I \<and> l \<Longrightarrow> p \<Longrightarrow> q) \<Longrightarrow> l \<and> \<not> q \<Longrightarrow> I \<and> \<not> p`) THEN
-      CONJ_TAC THENL [ASM SET_TAC[]; REPEAT STRIP_TAC] THEN
-      FIRST_X_ASSUM(MATCH_MP_TAC \<circ> GEN_REWRITE_RULE id [\<subseteq>]) THEN
-      EXPAND_TAC "q" THEN UNDISCH_TAC `(p::K=>A) \<in> PiE I v` THEN
-      REWRITE_TAC[PiE; IN_ELIM_THM; EXTENSIONAL] THEN
-      ASM SET_TAC[];
-      ALL_TAC] THEN
-    FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [metrizable_space]) THEN
-    DISCH_THEN(X_CHOOSE_TAC `m:(K=>A)metric`) THEN
-    MATCH_MP_TAC COUNTABLE_SUBSET THEN
-    EXISTS_TAC `\<Union>{{i. i \<in> l \<and>
-                             \<not> ((q::K=>K->A) i \<in> mball m (p,inverse(Suc n)))} |
-                        n \<in> UNIV}` THEN
-    CONJ_TAC THENL
-     [MATCH_MP_TAC COUNTABLE_UNIONS THEN REWRITE_TAC[SIMPLE_IMAGE] THEN
-      SIMP_TAC[COUNTABLE_IMAGE; NUM_COUNTABLE; FORALL_IN_IMAGE] THEN
-      X_GEN_TAC `n::num` THEN DISCH_THEN(K ALL_TAC) THEN
-      MATCH_MP_TAC FINITE_IMP_COUNTABLE THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-      ASM_REWRITE_TAC[OPEN_IN_MBALL] THEN MATCH_MP_TAC CENTRE_IN_MBALL THEN
-      REWRITE_TAC[REAL_LT_INV_EQ; REAL_ARITH `0 < n + 1`] THEN
-      ASM_MESON_TAC[TOPSPACE_MTOPOLOGY];
-      REWRITE_TAC[\<subseteq>; UNIONS_GSPEC; IN_ELIM_THM; IN_UNIV] THEN
-      X_GEN_TAC `i::K` THEN DISCH_TAC THEN MP_TAC(snd(EQ_IMP_RULE(ISPEC
-       `d (m:(K=>A)metric) (p,q(i::K))` ARCH_EVENTUALLY_INV1))) THEN
-      ANTS_TAC THENL
-       [MATCH_MP_TAC MDIST_POS_LT THEN REPEAT
-         (CONJ_TAC THENL [ASM_MESON_TAC[TOPSPACE_MTOPOLOGY]; ALL_TAC]) THEN
-        DISCH_THEN(MP_TAC \<circ> C AP_THM `i::K`) THEN
-        MAP_EVERY EXPAND_TAC ["q"; "p"] THEN REWRITE_TAC[] THEN
-        ASM_SIMP_TAC[];
-        DISCH_THEN(MP_TAC \<circ> MATCH_MP EVENTUALLY_HAPPENS_SEQUENTIALLY) THEN
-        MATCH_MP_TAC MONO_EXISTS THEN
-        ASM_REWRITE_TAC[IN_MBALL] THEN REAL_ARITH_TAC]];
-    ALL_TAC] THEN
-  DISCH_TAC THEN DISCH_TAC THEN
-  ASM_CASES_TAC `I::K=>bool = {}` THENL
-   [ASM_REWRITE_TAC[NOT_IN_EMPTY; EMPTY_GSPEC; COUNTABLE_EMPTY] THEN
-    REWRITE_TAC[PRODUCT_TOPOLOGY_EMPTY_DISCRETE;
-                METRIZABLE_SPACE_DISCRETE_TOPOLOGY;
-                COMPLETELY_METRIZABLE_SPACE_DISCRETE_TOPOLOGY];
-    ALL_TAC] THEN
-  REWRITE_TAC[metrizable_space; completely_metrizable_space] THEN
-  GEN_REWRITE_TAC (BINOP_CONV \<circ> LAND_CONV \<circ> BINDER_CONV)
-      [RIGHT_IMP_EXISTS_THM] THEN
-  REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM; AND_FORALL_THM] THEN
-  X_GEN_TAC `m::K=>A metric` THEN ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN
-  ASM_CASES_TAC `\<forall>i. i \<in> I \<Longrightarrow> mtopology(m i) = (X::K=>A topology) i` THEN
-  ASM_SIMP_TAC[] THENL [ALL_TAC; ASM_MESON_TAC[]] THEN MATCH_MP_TAC(MESON[]
-   `\<forall>m. P m \<and> (Q \<Longrightarrow> C m) \<Longrightarrow> (\<exists>m. P m) \<and> (Q \<Longrightarrow> \<exists>m. C m \<and> P m)`) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id
-   [COUNTABLE_AS_INJECTIVE_IMAGE_SUBSET]) THEN
-  REWRITE_TAC[LEFT_IMP_EXISTS_THM; INJECTIVE_ON_LEFT_INVERSE] THEN
-  MAP_EVERY X_GEN_TAC [`nk::num=>K`; `c::num=>bool`] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (X_CHOOSE_TAC `kn::K=>num`)) THEN
-  MP_TAC(ISPECL
-   [`I::K=>bool`; `\<lambda>i. capped_metric (inverse((kn i) + 1)) ((m::K=>A metric) i)`]
-   SUP_METRIC_CARTESIAN_PRODUCT) THEN
-  REWRITE_TAC[o_DEF; CONJUNCT1(SPEC_ALL CAPPED_METRIC)] THEN
-  MATCH_MP_TAC(MESON[]
-   `Q \<and> (\<forall>m. P m \<Longrightarrow> R m)
-    \<Longrightarrow> (\<forall>m. a = m \<and> Q \<Longrightarrow> P m) \<Longrightarrow> \<exists>m. R m`) THEN
-  CONJ_TAC THENL
-   [ASM_REWRITE_TAC[] THEN EXISTS_TAC `1::real` THEN
-    REWRITE_TAC[CAPPED_METRIC; GSYM REAL_NOT_LT] THEN
-    REWRITE_TAC[REAL_LT_INV_EQ; REAL_ARITH `0 < n + 1`] THEN
-    REWRITE_TAC[REAL_NOT_LT; REAL_MIN_LE] THEN REPEAT STRIP_TAC THEN
-    DISJ1_TAC THEN MATCH_MP_TAC REAL_INV_LE_1 THEN REAL_ARITH_TAC;
-    X_GEN_TAC `M:(K=>A)metric`] THEN
-  SUBGOAL_THEN
-   `PiE I (\<lambda>i. mspace (m i)) =
-    topspace(product_topology I (X::K=>A topology))`
-  SUBST1_TAC THENL
-   [REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY; CARTESIAN_PRODUCT_EQ] THEN
-    ASM_SIMP_TAC[GSYM TOPSPACE_MTOPOLOGY; o_THM];
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-    DISCH_THEN(CONJUNCTS_THEN2 (ASSUME_TAC \<circ> SYM) ASSUME_TAC)] THEN
-  MATCH_MP_TAC(TAUT `p \<and> (p \<Longrightarrow> q) \<Longrightarrow> p \<and> q`) THEN CONJ_TAC THENL
+
+
    [REWRITE_TAC[MTOPOLOGY_BASE; product_topology] THEN
     REWRITE_TAC[GSYM TOPSPACE_PRODUCT_TOPOLOGY_ALT] THEN
     REWRITE_TAC[PRODUCT_TOPOLOGY_BASE_ALT] THEN
