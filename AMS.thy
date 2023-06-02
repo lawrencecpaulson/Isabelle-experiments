@@ -237,19 +237,54 @@ proof -
   qed
 qed
 
+lemma metrizable_topology_A:
+  assumes "metrizable_space (product_topology X I)"
+  shows "topspace (product_topology X I) = {} \<or> (\<forall>i \<in> I. metrizable_space (X i))"
+    by (meson assms metrizable_space_retraction_map_image retraction_map_product_projection)
 
-let (METRIZABLE_SPACE_PRODUCT_TOPOLOGY,
-     COMPLETELY_METRIZABLE_SPACE_PRODUCT_TOPOLOGY) = (CONJ_PAIR \<circ> prove)
- (`(!(tops::K=>A topology) I.
-        metrizable_space (product_topology I tops) \<longleftrightarrow>
-        topspace (product_topology I tops) = {} \<or>
-        countable {i. i \<in> I \<and> \<not> (\<exists>a. topspace(tops i) \<subseteq> {a})} \<and>
-        \<forall>i. i \<in> I \<Longrightarrow> metrizable_space (tops i)) \<and>
-   (!(tops::K=>A topology) I.
-        completely_metrizable_space (product_topology I tops) \<longleftrightarrow>
-        topspace (product_topology I tops) = {} \<or>
-        countable {i. i \<in> I \<and> \<not> (\<exists>a. topspace(tops i) \<subseteq> {a})} \<and>
-        \<forall>i. i \<in> I \<Longrightarrow> completely_metrizable_space (tops i))"
+lemma metrizable_topology_C:
+  assumes "completely_metrizable_space (product_topology X I)"
+  shows "topspace (product_topology X I) = {} \<or> (\<forall>i \<in> I. completely_metrizable_space (X i))"
+    by (meson assms completely_metrizable_space_retraction_map_image retraction_map_product_projection)
+
+lemma metrizable_topology_B:
+  assumes "topspace (product_topology X I) \<noteq> {}"
+    and "metrizable_space (product_topology X I)"
+    and "\<And>i. i \<in> I \<Longrightarrow> metrizable_space (X i)"
+  shows  "countable {i \<in> I. \<nexists>a. topspace (X i) \<subseteq> {a}}"
+  sorry
+
+lemma metrizable_topology_D:
+  assumes "topspace (product_topology X I) \<noteq> {}"
+    and "countable {i \<in> I. \<nexists>a. topspace (X i) \<subseteq> {a}}"
+    and "\<And>i. i \<in> I \<Longrightarrow> metrizable_space (X i)"
+  shows "metrizable_space (product_topology X I)"
+  sorry
+
+
+lemma metrizable_topology_E:
+  assumes "topspace (product_topology X I) \<noteq> {}"
+    and "countable {i \<in> I. \<nexists>a. topspace (X i) \<subseteq> {a}}"
+    and "\<And>i. i \<in> I \<Longrightarrow> completely_metrizable_space (X i)"
+  shows "completely_metrizable_space (product_topology X I)"
+  sorry
+
+
+lemma metrizable_space_product_topology:
+  "metrizable_space (product_topology X I) \<longleftrightarrow>
+        topspace (product_topology X I) = {} \<or>
+        countable {i \<in> I. \<not> (\<exists>a. topspace(X i) \<subseteq> {a})} \<and>
+        (\<forall>i \<in> I. metrizable_space (X i))"
+  by (metis (mono_tags, lifting) empty_metrizable_space metrizable_topology_A metrizable_topology_B metrizable_topology_D)
+
+lemma completely_metrizable_space_product_topology:
+  "completely_metrizable_space (product_topology X I) \<longleftrightarrow>
+        topspace (product_topology X I) = {} \<or>
+        countable {i \<in> I. \<not> (\<exists>a. topspace(X i) \<subseteq> {a})} \<and>
+        (\<forall>i \<in> I. completely_metrizable_space (X i))"
+  by (metis (mono_tags, lifting) completely_metrizable_imp_metrizable_space empty_completely_metrizable_space metrizable_topology_B metrizable_topology_C metrizable_topology_E)
+
+
 oops
   REWRITE_TAC[AND_FORALL_THM] THEN REPEAT GEN_TAC THEN
   MATCH_MP_TAC(TAUT
@@ -281,10 +316,10 @@ oops
     ALL_TAC] THEN
   CONJ_TAC THENL
    [REPEAT STRIP_TAC THEN ABBREV_TAC
-     `l = {i::K | i \<in> I \<and> \<not> (\<exists>a::A. topspace(tops i) \<subseteq> {a})}` THEN
+     `l = {i::K | i \<in> I \<and> \<not> (\<exists>a::A. topspace(X i) \<subseteq> {a})}` THEN
     SUBGOAL_THEN
      `\<forall>i::K. \<exists>p q::A.
-        i \<in> l \<Longrightarrow> p \<in> topspace(tops i) \<and> q \<in> topspace(tops i) \<and> (p \<noteq> q)`
+        i \<in> l \<Longrightarrow> p \<in> topspace(X i) \<and> q \<in> topspace(X i) \<and> (p \<noteq> q)`
     MP_TAC THENL [EXPAND_TAC "l" THEN SET_TAC[]; ALL_TAC] THEN
     REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
     MAP_EVERY X_GEN_TAC [`a::K=>A`; `b::K=>A`] THEN STRIP_TAC THEN
@@ -294,18 +329,18 @@ oops
     ABBREV_TAC `p::K=>A = \<lambda>i. if i \<in> l then a i else z i` THEN
     ABBREV_TAC `q::K=>K->A = \<lambda>i j. if j = i then b i else p j` THEN
     SUBGOAL_THEN
-     `p \<in> topspace(product_topology I (tops::K=>A topology)) \<and>
+     `p \<in> topspace(product_topology I (X::K=>A topology)) \<and>
       (\<forall>i::K. i \<in> l
-             \<Longrightarrow> q i \<in> topspace(product_topology I (tops::K=>A topology)))`
+             \<Longrightarrow> q i \<in> topspace(product_topology I (X::K=>A topology)))`
     STRIP_ASSUME_TAC THENL
-     [UNDISCH_TAC `(z::K=>A) \<in> PiE I (\<lambda>x. topspace(tops x))` THEN
+     [UNDISCH_TAC `(z::K=>A) \<in> PiE I (\<lambda>x. topspace(X x))` THEN
       MAP_EVERY EXPAND_TAC ["q"; "p"] THEN
       REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY; PiE; o_THM] THEN
       REWRITE_TAC[EXTENSIONAL; IN_ELIM_THM] THEN ASM SET_TAC[];
       ALL_TAC] THEN
     SUBGOAL_THEN
      `\<forall>u:(K=>A)->bool.
-        openin (product_topology I tops) u \<and> p \<in> u
+        openin (product_topology X I) u \<and> p \<in> u
         \<Longrightarrow> finite {i::K | i \<in> l \<and> \<not> (q i \<in> u)}`
     ASSUME_TAC THENL
      [X_GEN_TAC `u:(K=>A)->bool` THEN
@@ -364,7 +399,7 @@ oops
       [RIGHT_IMP_EXISTS_THM] THEN
   REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM; AND_FORALL_THM] THEN
   X_GEN_TAC `m::K=>A metric` THEN ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN
-  ASM_CASES_TAC `\<forall>i. i \<in> I \<Longrightarrow> mtopology(m i) = (tops::K=>A topology) i` THEN
+  ASM_CASES_TAC `\<forall>i. i \<in> I \<Longrightarrow> mtopology(m i) = (X::K=>A topology) i` THEN
   ASM_SIMP_TAC[] THENL [ALL_TAC; ASM_MESON_TAC[]] THEN MATCH_MP_TAC(MESON[]
    `\<forall>m. P m \<and> (Q \<Longrightarrow> C m) \<Longrightarrow> (\<exists>m. P m) \<and> (Q \<Longrightarrow> \<exists>m. C m \<and> P m)`) THEN
   FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id
@@ -388,7 +423,7 @@ oops
     X_GEN_TAC `M:(K=>A)metric`] THEN
   SUBGOAL_THEN
    `PiE I (\<lambda>i. mspace (m i)) =
-    topspace(product_topology I (tops::K=>A topology))`
+    topspace(product_topology I (X::K=>A topology))`
   SUBST1_TAC THENL
    [REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY; CARTESIAN_PRODUCT_EQ] THEN
     ASM_SIMP_TAC[GSYM TOPSPACE_MTOPOLOGY; o_THM];
@@ -405,8 +440,8 @@ oops
      [MAP_EVERY X_GEN_TAC [`z::K=>A`; `r::real`] THEN STRIP_TAC THEN
       X_GEN_TAC `x::K=>A` THEN STRIP_TAC THEN
       SUBGOAL_THEN
-       `(\<forall>i. i \<in> I \<Longrightarrow> (z::K=>A) i \<in> topspace(tops i)) \<and>
-        (\<forall>i. i \<in> I \<Longrightarrow> (x::K=>A) i \<in> topspace(tops i))`
+       `(\<forall>i. i \<in> I \<Longrightarrow> (z::K=>A) i \<in> topspace(X i)) \<and>
+        (\<forall>i. i \<in> I \<Longrightarrow> (x::K=>A) i \<in> topspace(X i))`
       STRIP_ASSUME_TAC THENL
        [MAP_EVERY UNDISCH_TAC
          [`(z::K=>A) \<in> mspace M`; `(x::K=>A) \<in> mspace M`] THEN
@@ -419,7 +454,7 @@ oops
         ALL_TAC] THEN
       EXISTS_TAC
        `\<lambda>i. if R \<le> inverse((kn i) + 1) then mball (m i) (z i,R)
-            else topspace((tops::K=>A topology) i)` THEN
+            else topspace((X::K=>A topology) i)` THEN
       REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
        [MP_TAC(ASSUME `0 < R`) THEN DISCH_THEN(MP_TAC \<circ>
           SPEC `1::real` \<circ> MATCH_MP REAL_ARCH) THEN
@@ -455,7 +490,7 @@ oops
           ASM_SIMP_TAC[REAL_LT_LMUL_EQ; REAL_OF_NUM_ADD; REAL_OF_NUM_LT] THEN
           ASM_ARITH_TAC];
         ASM_MESON_TAC[OPEN_IN_MBALL; OPEN_IN_TOPSPACE];
-        SUBGOAL_THEN `(x::K=>A) \<in> PiE I (topspace \<circ> tops)`
+        SUBGOAL_THEN `(x::K=>A) \<in> PiE I (topspace \<circ> X)`
         MP_TAC THENL [ASM_MESON_TAC[TOPSPACE_PRODUCT_TOPOLOGY]; ALL_TAC] THEN
         REWRITE_TAC[PiE; o_DEF; IN_ELIM_THM] THEN
         STRIP_TAC THEN ASM_REWRITE_TAC[] THEN X_GEN_TAC `i::K` THEN
@@ -520,7 +555,7 @@ oops
       EXISTS_TAC
         `inf (image (\<lambda>i. min (r i) (inverse((kn i) + 1)))
                  (a insert {i. i \<in> I \<and>
-                                \<not> (u i = topspace ((tops::K=>A topology) i))})) /
+                                \<not> (u i = topspace ((X::K=>A topology) i))})) /
          2` THEN
       ASM_SIMP_TAC[REAL_LT_INF_FINITE; FINITE_INSERT; NOT_INSERT_EMPTY;
         REAL_HALF; FINITE_IMAGE; IMAGE_EQ_EMPTY; FORALL_IN_IMAGE] THEN
@@ -534,7 +569,7 @@ oops
       REWRITE_TAC[RIGHT_FORALL_IMP_THM] THEN
       ANTS_TAC THENL [ASM_MESON_TAC[]; ALL_TAC] THEN
       DISCH_THEN(fun th -> REWRITE_TAC[th]) THEN
-      SUBGOAL_THEN `(x::K=>A) \<in> topspace(product_topology I tops)` MP_TAC THENL
+      SUBGOAL_THEN `(x::K=>A) \<in> topspace(product_topology X I)` MP_TAC THENL
        [ASM_MESON_TAC[]; REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY]] THEN
       REWRITE_TAC[PiE; o_THM; IN_ELIM_THM] THEN
       DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
@@ -547,7 +582,7 @@ oops
         REAL_HALF; FINITE_IMAGE; IMAGE_EQ_EMPTY; FORALL_IN_IMAGE] THEN
       REWRITE_TAC[FORALL_IN_INSERT] THEN
       DISCH_THEN(MP_TAC \<circ> SPEC `i::K` \<circ> CONJUNCT2) THEN
-      ASM_CASES_TAC `(u::K=>A->bool) i = topspace(tops i)` THEN
+      ASM_CASES_TAC `(u::K=>A->bool) i = topspace(X i)` THEN
       ASM_REWRITE_TAC[IN_ELIM_THM] THEN
       REWRITE_TAC[CAPPED_METRIC; REAL_ARITH `x \<le> 0 \<longleftrightarrow> \<not> (0 < x)`] THEN
       REWRITE_TAC[REAL_LT_INV_EQ; REAL_ARITH `0 < n + 1`] THEN
@@ -568,7 +603,7 @@ oops
     X_GEN_TAC `x::num=>K->A` THEN ASM_REWRITE_TAC[MCauchy] THEN STRIP_TAC THEN
     ASM_REWRITE_TAC[LIMIT_COMPONENTWISE] THEN
     SUBGOAL_THEN
-     `\<forall>i. \<exists>y. i \<in> I \<Longrightarrow> limitin (tops i) (\<lambda>n. (x::num=>K->A) n i) y sequentially`
+     `\<forall>i. \<exists>y. i \<in> I \<Longrightarrow> limitin (X i) (\<lambda>n. (x::num=>K->A) n i) y sequentially`
     MP_TAC THENL
      [X_GEN_TAC `i::K` THEN ASM_CASES_TAC `(i::K) \<in> I` THEN
       ASM_REWRITE_TAC[] THEN REMOVE_THEN "*" (MP_TAC \<circ> SPEC `i::K`) THEN
@@ -602,18 +637,8 @@ lemma completely_metrizable_Euclidean_space:
    "completely_metrizable_space(Euclidean_space n)"
   unfolding Euclidean_space_def
   apply (rule completely_metrizable_space_closedin)
-apply (rule completely_metrizable_space_product_topology)
-  defer
-apply (simp add: closedin_Euclidean_space flip: topspace_Euclidean_space)
-apply (auto simp: )
-
-oops
-  GEN_TAC THEN REWRITE_TAC[Euclidean_space] THEN
-  MATCH_MP_TAC COMPLETELY_METRIZABLE_SPACE_CLOSED_IN THEN
-  REWRITE_TAC[GSYM TOPSPACE_EUCLIDEAN_SPACE; CLOSED_IN_EUCLIDEAN_SPACE] THEN
-  REWRITE_TAC[COMPLETELY_METRIZABLE_SPACE_PRODUCT_TOPOLOGY] THEN
-  REWRITE_TAC[COMPLETELY_METRIZABLE_SPACE_EUCLIDEANREAL] THEN
-  REWRITE_TAC[COUNTABLE_SUBSET_NUM]);;
+   apply (simp add: completely_metrizable_space_product_topology completely_metrizable_space_euclideanreal)
+  using closedin_Euclidean_space topspace_Euclidean_space by auto
 
 lemma metrizable_Euclidean_space:
    "metrizable_space(Euclidean_space n)"
@@ -624,6 +649,8 @@ oops
 
 lemma locally_compact_Euclidean_space:
    "locally_compact_space(Euclidean_space n)"
+  using homeomorphic_Euclidean_space_product_topology [of n] homeomorphic_locally_compact_space
+       locally_compact_space_Euclidean
 oops
   X_GEN_TAC `n::num` THEN
   MP_TAC(SPEC `n::num` HOMEOMORPHIC_EUCLIDEAN_SPACE_PRODUCT_TOPOLOGY) THEN
