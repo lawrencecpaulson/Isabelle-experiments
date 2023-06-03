@@ -6,6 +6,14 @@ theory AMS
     "HOL-ex.Sketch_and_Explore"
 begin
 
+declare Metric_space_mspace_mdist [simp]
+
+
+lemma in_mball_of [simp]: "y \<in> mball_of m x r \<longleftrightarrow> x \<in> mspace m \<and> y \<in> mspace m \<and> mdist m x y < r"
+  by (simp add: Metric_space.in_mball mball_of_def)
+
+lemma in_mcball_of [simp]: "y \<in> mcball_of m x r \<longleftrightarrow> x \<in> mspace m \<and> y \<in> mspace m \<and> mdist m x y \<le> r"
+  by (simp add: Metric_space.in_mcball mcball_of_def)
 
 lemma countable_as_injective_image_subset: "countable S \<longleftrightarrow> (\<exists>f. \<exists>K::nat set. S = f ` K \<and> inj_on f K)"
   by (metis countableI countable_image_eq_inj image_empty inj_on_the_inv_into uncountable_def)
@@ -119,12 +127,31 @@ lemma mdist_capped_le: "mdist (capped_metric \<delta> m) x y \<le> mdist m x y"
 lemma mdist_capped: "\<delta> > 0 \<Longrightarrow> mdist (capped_metric \<delta> m) x y \<le> \<delta>"
   by (simp add: capped_metric_mdist)
 
+lemma mball_of_capped_metric [simp]: 
+  assumes "x \<in> mspace m" "r > \<delta>" "\<delta> > 0" 
+  shows "mball_of (capped_metric \<delta> m) x r = mspace m"
+proof -
+  interpret Metric_space "mspace m" "mdist m"
+    by (simp add: Metric_space_mspace_mdist)
+  have "Metric_space.mball (mspace m) (mdist (capped_metric \<delta> m)) x r \<subseteq> mspace m"
+    by (metis Metric_space.mball_subset_mspace Metric_space_mspace_mdist capped_metric_mspace)
+  moreover have "mspace m \<subseteq> Metric_space.mball (mspace m) (mdist (capped_metric \<delta> m)) x r"
+    by (smt (verit) Metric_space.in_mball Metric_space_mspace_mdist assms capped_metric_mspace mdist_capped subset_eq)
+  ultimately show ?thesis
+    by (simp add: mball_of_def)
+qed
+
 text \<open>The following two declarations are experimental. Is it really worth a locale just to save a couple of lines?\<close>
 locale Capped = Metric_space +
   fixes \<delta>::real
 
 sublocale Capped \<subseteq> capped: Metric_space M "capped_dist \<delta>"
   by (simp add: capped_dist)
+
+lemma Metric_space_capped_dist[simp]:
+  "Metric_space (mspace m) (Metric_space.capped_dist (mdist m) \<delta>)"
+  using Metric_space.capped_dist Metric_space_mspace_mdist by blast
+
 
 lemma mtopology_capped_metric:
   "mtopology_of(capped_metric \<delta> m) = mtopology_of m"
@@ -410,16 +437,23 @@ next
   then obtain kn where kn: "\<And>w. w \<in> C \<Longrightarrow> kn (nk w) = w"
     by (metis inv_into_f_f)
   define cm where "cm \<equiv> \<lambda>i. capped_metric (inverse(Suc(kn i))) (m i)"
+  have mspace_cm: "mspace (cm i) = mspace (m i)" for i
+    by (simp add: cm_def)
+  have c1: "\<And>i x y. mdist (cm i) x y \<le> 1"
+    by (simp add: cm_def capped_metric_mdist min_le_iff_disj divide_simps)
+  then have bdd: "bdd_above ((\<lambda>i. mdist (cm i) (x i) (y i)) ` I)" for x y
+    by (meson bdd_above.I2)
   define M where "M \<equiv> Pi\<^sub>E I (mspace \<circ> cm)"
   define d where "d \<equiv> \<lambda>x y. if x \<in> M \<and> y \<in> M then SUP i\<in>I. mdist (cm i) (x i) (y i) else 0"
-  have "mdist (cm i) x y \<le> 1" for i x y
-    using mdist_capped [of "inverse(Suc(kn i))" _ x y]
-    apply (simp add: cm_def)
-    by (smt (verit) of_nat_0_le_iff one_less_inverse_iff)
+
+  have le_d: "mdist (cm i) (x i) (y i) \<le> d x y" if "i \<in> I" "x \<in> M" "y \<in> M" for i x y
+    using that \<open>I \<noteq> {}\<close> by (force simp add: d_def bdd le_cSup_iff)
+  have d_le1: "d x y \<le> 1" for x y
+    using \<open>I \<noteq> {}\<close> c1 by (simp add: d_def bdd cSup_le_iff)
   with \<open>I \<noteq> {}\<close> Sup_metric_cartesian_product' [of I cm]
   have "Metric_space M d" 
     and *: "\<forall>x\<in>M. \<forall>y\<in>M. \<forall>b. (d x y \<le> b) \<longleftrightarrow> (\<forall>i\<in>I. mdist (cm i) (x i) (y i) \<le> b)"
-    unfolding M_def d_def by meson+
+    by (auto simp add: False bdd M_def d_def cSUP_le_iff intro: c1) 
   then interpret Metric_space M d 
     by metis
   have "PiE I (\<lambda>i. mspace (m i)) = topspace(product_topology X I)"
@@ -432,7 +466,7 @@ next
     for S x
     using that sorry
   have 2: "\<exists>r>0. mball x r \<subseteq> S"
-    if "finite (J U)" and x: "x \<in> Pi\<^sub>E I U" and "Pi\<^sub>E I U \<subseteq> S"
+    if "finite (J U)" and x: "x \<in> Pi\<^sub>E I U" and S: "Pi\<^sub>E I U \<subseteq> S"
       and U: "\<And>i. i\<in>I \<Longrightarrow> openin (X i) (U i)" 
       and "x \<in> S" for U S x
   proof -
@@ -442,32 +476,33 @@ next
         by (auto simp: J_def)
       then have "openin (mtopology_of (m i)) (U i)"
         using U m by force
-      then have "\<exists>r>0. mball_of (m i) (x i) r \<subseteq> U i"
-        using x 
-        by (simp add: Metric_space.openin_mtopology Metric_space_mspace_mdist PiE_mem \<open>i \<in> I\<close> mball_of_def mtopology_of_def)
+      then have "openin (mtopology_of (cm i)) (U i)"
+        by (simp add: AMS.mtopology_capped_metric cm_def)
+      then have "\<exists>r>0. mball_of (cm i) (x i) r \<subseteq> U i"
+        using x
+        by (simp add: Metric_space.openin_mtopology PiE_mem \<open>i \<in> I\<close> mball_of_def mtopology_of_def) 
     }
-    then obtain rf where rf: "\<And>j. j \<in> J U \<Longrightarrow> rf j >0 \<and> mball_of (m j) (x j) (rf j) \<subseteq> U j"
+    then obtain rf where rf: "\<And>j. j \<in> J U \<Longrightarrow> rf j >0 \<and> mball_of (cm j) (x j) (rf j) \<subseteq> U j"
       by metis
-    define r where "r \<equiv> Min (rf ` J U)"
+    define r where "r \<equiv> Min (insert 1 (rf ` J U))"
     show ?thesis
     proof (intro exI conjI)
-      have "J U \<noteq> {}"
-        apply (auto simp: J_def)
-        sorry
-      then  show "r > 0"
+      show "r > 0"
         by (simp add: \<open>finite (J U)\<close> r_def rf)
-      have "\<And>j. j \<in> J U \<Longrightarrow> r \<le> rf j"
-        by (simp add: r_def that(1))
-      then have "\<And>j. j \<in> J U \<Longrightarrow> mball_of (m j) (x j) r \<subseteq> U j"
-        by (smt (verit) Metric_space.in_mball Metric_space_mspace_mdist mball_of_def rf subset_eq)
-      then have "mball x r \<subseteq> Pi\<^sub>E I U"
-        apply (auto simp: )
-         apply (simp add: J_def)
-
-          sorry
+      have r [simp]: "\<And>j. j \<in> J U \<Longrightarrow> r \<le> rf j" "r \<le> 1"
+        by (auto simp add: r_def that(1))
+      have *: "mball_of (cm i) (x i) r \<subseteq> U i" if "i \<in> I" for i
+      proof (cases "i \<in> J U")
+        case True
+        with r show ?thesis
+          by (smt (verit) Metric_space.in_mball Metric_space_mspace_mdist mball_of_def rf subset_eq)
+      next
+        case False
+        then show ?thesis
+          by (simp add: J_def cm_def m subset_eq that)
+      qed
       show "mball x r \<subseteq> S"
-        using \<open>Pi\<^sub>E I U \<subseteq> S\<close>
-        sorry
+        by (smt (verit) x * in_mball_of M_def Metric_space.in_mball Metric_space_axioms PiE_iff le_d o_apply subset_eq S)
     qed
   qed
   have 3: "x \<in> M"
