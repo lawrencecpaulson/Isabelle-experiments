@@ -108,7 +108,7 @@ proof -
   interpret Metric_space "mspace m" "mdist m"
     by (simp add: Metric_space_mspace_mdist)
   show ?thesis
-    by (auto simp add: capped_metric_def capped_dist_def)
+    by (auto simp: capped_metric_def capped_dist_def)
 qed
 
 lemma capped_metric_mspace [simp]:
@@ -212,12 +212,12 @@ proof (cases "\<delta> > 0")
       obtain N where "\<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> capped_dist \<delta> (\<sigma> n) (\<sigma> n') < min \<delta> \<epsilon>"
         unfolding Cap.MCauchy_def by (metis min_less_iff_conj)
       with True show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>"
-        by (force simp add: capped_dist_def)
+        by (force simp: capped_dist_def)
     qed
   next
     assume "MCauchy \<sigma>"
     then show "Cap.MCauchy \<sigma>"
-      unfolding MCauchy_def Cap.MCauchy_def by (force simp add: capped_dist_def)
+      unfolding MCauchy_def Cap.MCauchy_def by (force simp: capped_dist_def)
   qed
 qed (simp add: capped_dist_def)
 
@@ -249,7 +249,7 @@ lemma Sup_metric_cartesian_product:
 proof -
   have bdd: "bdd_above ((\<lambda>i. mdist (m i) (x i) (y i)) ` I)"
     if "x \<in> S" "y \<in> S" for x y 
-    using c that by (force simp add: S_def bdd_above_def)
+    using c that by (force simp: S_def bdd_above_def)
   have D_iff: "D x y \<le> b \<longleftrightarrow> (\<forall>i \<in> I. mdist (m i) (x i) (y i) \<le> b)"
     if "x \<in> S" "y \<in> S" for x y b
     using that \<open>I \<noteq> {}\<close> by (simp add: D_def PiE_iff cSup_le_iff bdd)
@@ -307,7 +307,7 @@ lemma Sup_metric_cartesian_product':
 proof -
   have bdd: "bdd_above ((\<lambda>i. mdist (m i) (x i) (y i)) ` I)"
     if "x \<in> S" "y \<in> S" for x y 
-    using c that by (force simp add: S_def bdd_above_def)
+    using c that by (force simp: S_def bdd_above_def)
   have D_iff: "D x y \<le> b \<longleftrightarrow> (\<forall>i \<in> I. mdist (m i) (x i) (y i) \<le> b)"
     if "x \<in> S" "y \<in> S" for x y b
     using that \<open>I \<noteq> {}\<close> by (simp add: D_def PiE_iff cSup_le_iff bdd)
@@ -378,19 +378,19 @@ proof -
   define p where "p \<equiv> \<lambda>i. if i \<in> L then \<phi> i else z i"
   define q where "q \<equiv> \<lambda>i j. if j = i then \<psi> i else p j"
   have p: "p \<in> topspace(product_topology X I)"
-    using z \<phi> by (auto simp add: p_def L_def)
+    using z \<phi> by (auto simp: p_def L_def)
   then have q: "\<And>i. i \<in> L \<Longrightarrow> q i \<in> topspace (product_topology X I)" 
-    by (auto simp add: L_def q_def \<phi>)
+    by (auto simp: L_def q_def \<phi>)
   have fin: "finite {i \<in> L. q i \<notin> U}" if U: "openin (product_topology X I) U" "p \<in> U" for U
   proof -
     obtain V where V: "finite {i \<in> I. V i \<noteq> topspace (X i)}" "(\<forall>i\<in>I. openin (X i) (V i))" "p \<in> Pi\<^sub>E I V" "Pi\<^sub>E I V \<subseteq> U"
-      using U by (force simp add: openin_product_topology_alt)
+      using U by (force simp: openin_product_topology_alt)
     moreover 
     have "V x \<noteq> topspace (X x)" if "x \<in> L" and "q x \<notin> U" for x
       using that V q
       by (smt (verit, del_insts) PiE_iff q_def subset_eq topspace_product_topology)
     then have "{i \<in> L. q i \<notin> U} \<subseteq> {i \<in> I. V i \<noteq> topspace (X i)}"
-      by (force simp add: L_def)
+      by (force simp: L_def)
     ultimately show ?thesis
       by (meson finite_subset)
   qed
@@ -433,7 +433,7 @@ next
   then obtain m where m: "\<And>i. i \<in> I \<Longrightarrow> X i = mtopology_of (m i)"
     by metis 
   obtain nk and C:: "nat set" where nk: "{i \<in> I. \<nexists>a. topspace (X i) \<subseteq> {a}} = nk ` C" and "inj_on nk C"
-    using co by (force simp add: countable_as_injective_image_subset)
+    using co by (force simp: countable_as_injective_image_subset)
   then obtain kn where kn: "\<And>w. w \<in> C \<Longrightarrow> kn (nk w) = w"
     by (metis inv_into_f_f)
   define cm where "cm \<equiv> \<lambda>i. capped_metric (inverse(Suc(kn i))) (m i)"
@@ -447,13 +447,13 @@ next
   define d where "d \<equiv> \<lambda>x y. if x \<in> M \<and> y \<in> M then SUP i\<in>I. mdist (cm i) (x i) (y i) else 0"
 
   have le_d: "mdist (cm i) (x i) (y i) \<le> d x y" if "i \<in> I" "x \<in> M" "y \<in> M" for i x y
-    using that \<open>I \<noteq> {}\<close> by (force simp add: d_def bdd le_cSup_iff)
+    using that \<open>I \<noteq> {}\<close> by (force simp: d_def bdd le_cSup_iff)
   have d_le1: "d x y \<le> 1" for x y
     using \<open>I \<noteq> {}\<close> c1 by (simp add: d_def bdd cSup_le_iff)
   with \<open>I \<noteq> {}\<close> Sup_metric_cartesian_product' [of I cm]
   have "Metric_space M d" 
     and *: "\<forall>x\<in>M. \<forall>y\<in>M. \<forall>b. (d x y \<le> b) \<longleftrightarrow> (\<forall>i\<in>I. mdist (cm i) (x i) (y i) \<le> b)"
-    by (auto simp add: False bdd M_def d_def cSUP_le_iff intro: c1) 
+    by (auto simp: False bdd M_def d_def cSUP_le_iff intro: c1) 
   then interpret Metric_space M d 
     by metis
   have "PiE I (\<lambda>i. mspace (m i)) = topspace(product_topology X I)"
@@ -490,7 +490,7 @@ next
       show "r > 0"
         by (simp add: \<open>finite (J U)\<close> r_def rf)
       have r [simp]: "\<And>j. j \<in> J U \<Longrightarrow> r \<le> rf j" "r \<le> 1"
-        by (auto simp add: r_def that(1))
+        by (auto simp: r_def that(1))
       have *: "mball_of (cm i) (x i) r \<subseteq> U i" if "i \<in> I" for i
       proof (cases "i \<in> J U")
         case True
@@ -788,63 +788,77 @@ lemma locally_connected_Euclidean_space:
 
 subsection\<open>Extending continuous maps "pointwise" in a regular space\<close>
 
-
 lemma continuous_map_on_intermediate_closure_of:
   assumes Y: "regular_space Y" 
     and T: "T \<subseteq> X closure_of S" 
-    and f: "\<And>x. x \<in> T \<Longrightarrow> limitin Y f (f x) (atin_within X x S)"
+    and f: "\<And>t. t \<in> T \<Longrightarrow> limitin Y f (f t) (atin_within X t S)"
   shows "continuous_map (subtopology X T) Y f"
-oops
-  REWRITE_TAC[GSYM NEIGHBOURHOOD_BASE_OF_CLOSED_IN] THEN REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `image f T \<subseteq> topspace Y` ASSUME_TAC THENL
-   [RULE_ASSUM_TAC(REWRITE_RULE[limitin]) THEN ASM SET_TAC[]; ALL_TAC] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_ATPOINTOF; TOPSPACE_SUBTOPOLOGY; IN_INTER] THEN
-  X_GEN_TAC `a::A` THEN STRIP_TAC THEN ASM_SIMP_TAC[ATPOINTOF_SUBTOPOLOGY] THEN
-  REWRITE_TAC[limitin] THEN CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  X_GEN_TAC `w::B=>bool` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [NEIGHBOURHOOD_BASE_OF]) THEN
-  DISCH_THEN(MP_TAC \<circ> SPECL [`w::B=>bool`; `f a`]) THEN
-  ASM_REWRITE_TAC[SUBTOPOLOGY_TOPSPACE; LEFT_IMP_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`v::B=>bool`; `c::B=>bool`] THEN STRIP_TAC THEN
-  REWRITE_TAC[EVENTUALLY_ATPOINTOF; EVENTUALLY_WITHIN_IMP] THEN DISJ2_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> SPEC `a::A`) THEN
-  ANTS_TAC THENL [ASM_REWRITE_TAC[]; REWRITE_TAC[limitin]] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC `v::B=>bool`)) THEN
-  ASM_REWRITE_TAC[EVENTUALLY_ATPOINTOF; EVENTUALLY_WITHIN_IMP] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `u::A=>bool` THEN
-  REWRITE_TAC[IMP_IMP] THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-  X_GEN_TAC `z::A` THEN REWRITE_TAC[IN_DELETE] THEN STRIP_TAC THEN
-  SUBGOAL_THEN `z \<in> topspace X \<and> f z \<in> topspace Y`
-  STRIP_ASSUME_TAC THENL
-   [REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET)) THEN
-    ASM SET_TAC[];
-    ALL_TAC] THEN
-  SUBGOAL_THEN `\<not> (f z \<in> topspace Y - c)` MP_TAC THENL
-   [REWRITE_TAC[IN_DIFF] THEN STRIP_TAC; ASM SET_TAC[]] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE RAND_CONV [limitin] \<circ> SPEC `z::A`) THEN
-  ASM_REWRITE_TAC[] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `topspace Y - c::B=>bool`) THEN
-  ASM_SIMP_TAC[OPEN_IN_DIFF; OPEN_IN_TOPSPACE; IN_DIFF] THEN
-  ASM_REWRITE_TAC[EVENTUALLY_ATPOINTOF; EVENTUALLY_WITHIN_IMP] THEN
-  DISCH_THEN(X_CHOOSE_THEN `u':A=>bool` STRIP_ASSUME_TAC) THEN
-  UNDISCH_TAC `(T::A=>bool) \<subseteq> X closure_of S` THEN
-  REWRITE_TAC[closure_of; IN_ELIM_THM; \<subseteq>] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `z::A`) THEN ASM_REWRITE_TAC[] THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `u \<inter> u':A=>bool`) THEN
-  ASM_SIMP_TAC[OPEN_IN_INTER] THEN ASM SET_TAC[]);;
+proof (clarsimp simp add: continuous_map_atin)
+  fix a
+  assume "a \<in> topspace X" and "a \<in> T"
+  have "f ` T \<subseteq> topspace Y"
+    by (metis f image_subsetI limitin_topspace)
+  have "\<forall>\<^sub>F x in atin_within X a T. f x \<in> W"
+    if W: "openin Y W" "f a \<in> W" for W
+  proof -
+    obtain V C where "openin Y V" "closedin Y C" "f a \<in> V" "V \<subseteq> C" "C \<subseteq> W"
+      by (metis Y W neighbourhood_base_of neighbourhood_base_of_closedin)
+    have "\<forall>\<^sub>F x in atin_within X a S. f x \<in> V"
+      by (metis \<open>a \<in> T\<close> \<open>f a \<in> V\<close> \<open>openin Y V\<close> f limitin_def)
+    then obtain U where "openin X U" "a \<in> U" and U: "\<forall>x \<in> U - {a}. x \<in> S \<longrightarrow> f x \<in> V"
+      by (smt (verit) Diff_iff \<open>a \<in> topspace X\<close> eventually_atin_within insert_iff)
+    moreover have "f z \<in> W" if "z \<in> U" "z \<noteq> a" "z \<in> T" for z
+    proof -
+      have "z \<in> topspace X"
+        using \<open>openin X U\<close> openin_subset \<open>z \<in> U\<close> by blast
+      then have "f z \<in> topspace Y"
+        using \<open>f ` T \<subseteq> topspace Y\<close> \<open>z \<in> T\<close> by blast
+      { assume "f z \<in> topspace Y" "f z \<notin> C"
+        then have "\<forall>\<^sub>F x in atin_within X z S. f x \<in> topspace Y - C"
+          by (metis Diff_iff \<open>closedin Y C\<close> closedin_def f limitinD \<open>z \<in> T\<close>)
+        then obtain U' where U': "openin X U'" "z \<in> U'" 
+                 "\<And>x. x \<in> U' - {z} \<Longrightarrow> x \<in> S \<Longrightarrow> f x \<notin> C"
+          by (smt (verit) Diff_iff \<open>z \<in> topspace X\<close> eventually_atin_within insertCI)
+        then have *: "\<And>D. z \<in> D \<and> openin X D \<Longrightarrow> \<exists>y. y \<in> S \<and> y \<in> D"
+          by (meson T in_closure_of subsetD \<open>z \<in> T\<close>)
+        have False
+          using * [of "U \<inter> U'"] U' U \<open>V \<subseteq> C\<close> \<open>f a \<in> V\<close> \<open>f z \<notin> C\<close> \<open>openin X U\<close> that
+          by blast
+      }
+      then show ?thesis
+        using \<open>C \<subseteq> W\<close> \<open>f z \<in> topspace Y\<close> by auto
+    qed
+    ultimately have "\<exists>U. openin X U \<and> a \<in> U \<and> (\<forall>x \<in> U - {a}. x \<in> T \<longrightarrow> f x \<in> W)"
+      by blast
+    then show ?thesis
+      using eventually_atin_within by fastforce
+  qed
+  then show "limitin Y f (f a) (atin (subtopology X T) a)"
+    by (metis \<open>a \<in> T\<close> atin_subtopology_within f limitin_def)
+qed
+
 
 lemma continuous_map_on_intermediate_closure_of_eq:
-  assumes "regular_space Y" "S \<subseteq> T" "T \<subseteq> X closure_of S"
-   shows "continuous_map (subtopology X T) Y f \<longleftrightarrow> (\<forall>x \<in> T. limitin Y f (f x) (atin_within X x S))"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THENL
-   [REWRITE_TAC[CONTINUOUS_MAP_ATPOINTOF; TOPSPACE_SUBTOPOLOGY] THEN
-    MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `x::A` THEN
-    ASM_CASES_TAC `(x::A) \<in> T` THEN ASM_SIMP_TAC[ATPOINTOF_SUBTOPOLOGY] THEN
-    ASSUME_TAC(ISPECL [`X::A topology`; `S::A=>bool`]
-      CLOSURE_OF_SUBSET_TOPSPACE) THEN
-    ANTS_TAC THENL [ASM SET_TAC[]; ASM_MESON_TAC[LIMIT_WITHIN_SUBSET]];
-    ASM_MESON_TAC[CONTINUOUS_MAP_ON_INTERMEDIATE_CLOSURE_OF]]);;
+  assumes "regular_space Y" "S \<subseteq> T" and Tsub: "T \<subseteq> X closure_of S"
+  shows "continuous_map (subtopology X T) Y f \<longleftrightarrow> (\<forall>x \<in> T. limitin Y f (f x) (atin_within X x S))"
+        (is "?lhs \<longleftrightarrow> ?rhs")
+proof
+  assume L: ?lhs
+  show ?rhs
+  proof (clarsimp simp add: continuous_map_atin)
+    fix x
+    assume "x \<in> T"
+    with L Tsub closure_of_subset_topspace 
+    have "limitin Y f (f x) (atin (subtopology X T) x)"
+      by (fastforce simp add: continuous_map_atin)
+    then show "limitin Y f (f x) (atin_within X x S)"
+      using \<open>x \<in> T\<close> \<open>S \<subseteq> T\<close>
+      by (force simp: limitin_def atin_subtopology_within eventually_atin_within)
+  qed
+next
+  show "?rhs \<Longrightarrow> ?lhs" 
+    using assms continuous_map_on_intermediate_closure_of by blast
+qed
 
 lemma continuous_map_extension_pointwise_alt:
    "regular_space top2" "S \<subseteq> T" "T \<subseteq> top1 closure_of S \<and>
