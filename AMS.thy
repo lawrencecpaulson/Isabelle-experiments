@@ -925,31 +925,17 @@ qed (use assms in auto)
 subsection\<open>Extending Cauchy continuous functions to the closure\<close>
 
 
-lemma Cauchy_continuous_map_extends_to_continuous_closure_of:
+lemma Cauchy_continuous_map_extends_to_continuous_closure_of_aux:
   assumes "mcomplete_of m2" 
     and f: "Cauchy_continuous_map (submetric m1 S) m2 f"
+  and "S \<subseteq> mspace m1"
   obtains g 
   where "continuous_map (subtopology (mtopology_of m1) ((mtopology_of m1) closure_of S)) 
                         (mtopology_of m2) g" 
          "(\<forall>x \<in> S. g x = f x)"
   sorry
+
 oops
-  GEN_TAC THEN GEN_TAC THEN GEN_TAC THEN
-  MATCH_MP_TAC(MESON[]
-   `\<forall>m. ((\<forall>S. S \<subseteq> M \<Longrightarrow> P S) \<Longrightarrow> (\<forall>S. P S)) \<and>
-        (\<forall>S. S \<subseteq> M \<Longrightarrow> P S)
-        \<Longrightarrow> \<forall>S. P S`) THEN
-  EXISTS_TAC `m1::A metric` THEN CONJ_TAC THENL
-   [DISCH_TAC THEN X_GEN_TAC `S::A=>bool` THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `M1 \<inter> S::A=>bool`) THEN
-    ASM_REWRITE_TAC[GSYM SUBMETRIC_SUBMETRIC; SUBMETRIC_MSPACE] THEN
-    REWRITE_TAC[INTER_SUBSET; GSYM TOPSPACE_MTOPOLOGY] THEN
-    REWRITE_TAC[GSYM CLOSURE_OF_RESTRICT; IN_INTER] THEN
-    DISCH_THEN(X_CHOOSE_THEN `g::A=>B` STRIP_ASSUME_TAC) THEN EXISTS_TAC
-     `\<lambda>x. if x \<in> topspace(mtopology m1) then (g::A=>B) x else f x` THEN
-    ASM_SIMP_TAC[COND_ID] THEN MATCH_MP_TAC CONTINUOUS_MAP_EQ THEN
-    EXISTS_TAC `g::A=>B` THEN ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY; IN_INTER];
-    ALL_TAC] THEN
   REPEAT STRIP_TAC THEN
   MATCH_MP_TAC CONTINUOUS_MAP_EXTENSION_POINTWISE_ALT THEN
   REWRITE_TAC[REGULAR_SPACE_MTOPOLOGY; SUBSET_REFL] THEN
@@ -1016,6 +1002,37 @@ oops
         \<Longrightarrow> abs(d y a) \<le> abs(d x a + d x y)`) THEN
       FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CAUCHY_CONTINUOUS_MAP_IMAGE) THEN
       REWRITE_TAC[SUBMETRIC] THEN ASM SET_TAC[]]]);;
+
+
+lemma Cauchy_continuous_map_extends_to_continuous_closure_of:
+  assumes "mcomplete_of m2" 
+    and f: "Cauchy_continuous_map (submetric m1 S) m2 f"
+  obtains g 
+  where "continuous_map (subtopology (mtopology_of m1) ((mtopology_of m1) closure_of S)) 
+                        (mtopology_of m2) g" 
+        "(\<forall>x \<in> S. g x = f x)"
+proof -
+  obtain g where cmg: 
+    "continuous_map (subtopology (mtopology_of m1) ((mtopology_of m1) closure_of (mspace m1 \<inter> S))) 
+                        (mtopology_of m2) g" 
+    and gf: "(\<forall>x \<in> mspace m1 \<inter> S. g x = f x)"
+    using Cauchy_continuous_map_extends_to_continuous_closure_of_aux assms
+    by (metis inf_commute inf_le2 submetric_restrict)
+  define h where "h \<equiv> \<lambda>x. if x \<in> topspace(mtopology_of m1) then g x else f x"
+  show thesis
+  proof
+    show "continuous_map (subtopology (mtopology_of m1) ((mtopology_of m1) closure_of S)) 
+                        (mtopology_of m2) h"
+      unfolding h_def
+    proof (rule continuous_map_eq)
+      show "continuous_map (subtopology (mtopology_of m1) (mtopology_of m1 closure_of S)) (mtopology_of m2) g"
+        by (metis closure_of_restrict cmg topspace_mtopology_of)
+    qed auto
+    show "\<forall>x \<in> S. h x = f x"
+      by (simp add: gf h_def)
+  qed
+qed
+
 
 lemma Cauchy_continuous_map_extends_to_continuous_intermediate_closure_of:
   assumes "mcomplete_of m2" 
