@@ -9,6 +9,11 @@ begin
 declare Metric_space_mspace_mdist [simp]
 
 
+lemma limit_within_subset:
+   "\<lbrakk>limitin X f l (atin_within Y a S); T \<subseteq> S\<rbrakk> \<Longrightarrow> limitin X f l (atin_within Y a T)"
+  by (smt (verit) eventually_atin_within limitin_def subset_eq)
+
+
 lemma in_mball_of [simp]: "y \<in> mball_of m x r \<longleftrightarrow> x \<in> mspace m \<and> y \<in> mspace m \<and> mdist m x y < r"
   by (simp add: Metric_space.in_mball mball_of_def)
 
@@ -840,7 +845,7 @@ qed
 
 lemma continuous_map_on_intermediate_closure_of_eq:
   assumes "regular_space Y" "S \<subseteq> T" and Tsub: "T \<subseteq> X closure_of S"
-  shows "continuous_map (subtopology X T) Y f \<longleftrightarrow> (\<forall>x \<in> T. limitin Y f (f x) (atin_within X x S))"
+  shows "continuous_map (subtopology X T) Y f \<longleftrightarrow> (\<forall>t \<in> T. limitin Y f (f t) (atin_within X t S))"
         (is "?lhs \<longleftrightarrow> ?rhs")
 proof
   assume L: ?lhs
@@ -861,64 +866,67 @@ next
 qed
 
 lemma continuous_map_extension_pointwise_alt:
-   "regular_space top2" "S \<subseteq> T" "T \<subseteq> top1 closure_of S \<and>
-        continuous_map (subtopology top1 S,top2) f \<and>
-        (\<forall>x. x \<in> T - S \<Longrightarrow> \<exists>l. limitin top2 f l (atin top1 x within S))
-        \<Longrightarrow> \<exists>g. continuous_map (subtopology top1 T,top2) g \<and>
-                (\<forall>x. x \<in> S \<Longrightarrow> g x = f x)"
-oops
-  REPEAT STRIP_TAC THEN FIRST_X_ASSUM
-   (MP_TAC \<circ> GEN_REWRITE_RULE BINDER_CONV [RIGHT_IMP_EXISTS_THM]) THEN
-  REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM; IN_DIFF] THEN
-  X_GEN_TAC `g::A=>B` THEN DISCH_TAC THEN
-  EXISTS_TAC `\<lambda>x. if x \<in> S then f x else g x` THEN
-  ASM_SIMP_TAC[CONTINUOUS_MAP_ON_INTERMEDIATE_CLOSURE_OF_EQ] THEN
-  X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-  MATCH_MP_TAC LIMIT_TRANSFORM_EVENTUALLY THEN
-  EXISTS_TAC `f::A=>B` THEN SIMP_TAC[ALWAYS_WITHIN_EVENTUALLY] THEN
-  COND_CASES_TAC THEN
-  ASM_SIMP_TAC[GSYM ATPOINTOF_SUBTOPOLOGY] THEN
-  FIRST_ASSUM(MATCH_MP_TAC \<circ>
-   GEN_REWRITE_RULE id [CONTINUOUS_MAP_ATPOINTOF]) THEN
-  ASM_REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; IN_INTER] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[closure_of]) THEN ASM SET_TAC[]);;
+  assumes \<section>: "regular_space Y" "S \<subseteq> T" "T \<subseteq> X closure_of S"
+    and f: "continuous_map (subtopology X S) Y f"
+    and lim: "\<And>t. t \<in> T-S \<Longrightarrow> \<exists>l. limitin Y f l (atin_within X t S)"
+  obtains g where "continuous_map (subtopology X T) Y g" "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
+proof -
+  obtain g where g: "\<And>t. t \<in> T \<and> t \<notin> S \<Longrightarrow> limitin Y f (g t) (atin_within X t S)"
+    by (metis Diff_iff lim)
+  let ?h = "\<lambda>x. if x \<in> S then f x else g x"
+  show thesis
+  proof
+    have T: "T \<subseteq> topspace X"
+      using \<section> closure_of_subset_topspace by fastforce
+    have "limitin Y ?h (f t) (atin_within X t S)" if "t \<in> T" "t \<in> S" for t
+    proof -
+      have "limitin Y f (f t) (atin_within X t S)"
+        by (meson T f limit_continuous_map_within subset_eq that)
+      then show ?thesis
+        by (simp add: eventually_atin_within limitin_def)
+    qed
+    moreover have "limitin Y ?h (g t) (atin_within X t S)" if "t \<in> T" "t \<notin> S" for t
+      by (smt (verit, del_insts) eventually_atin_within g limitin_def that)
+    ultimately show "continuous_map (subtopology X T) Y ?h"
+      unfolding continuous_map_on_intermediate_closure_of_eq [OF \<section>] 
+      by (auto simp: \<section> atin_subtopology_within)
+  qed auto
+qed
+
 
 lemma continuous_map_extension_pointwise:
-   "\<And>top1 top2 f::A=>B S T.
-        regular_space top2" "S \<subseteq> T" "T \<subseteq> top1 closure_of S \<and>
-        (\<forall>x. x \<in> T
-             \<Longrightarrow> \<exists>g. continuous_map (subtopology top1 (insert x S),top2) g \<and>
-                     \<forall>x. x \<in> S \<Longrightarrow> g x = f x)
-        \<Longrightarrow> \<exists>g. continuous_map (subtopology top1 T,top2) g \<and>
-                (\<forall>x. x \<in> S \<Longrightarrow> g x = f x)"
-oops
-  REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_EXTENSION_POINTWISE_ALT THEN
-  ASM_REWRITE_TAC[CONTINUOUS_MAP_ATPOINTOF] THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; IN_DIFF; IN_INTER] THEN
-  CONJ_TAC THEN X_GEN_TAC `x::A` THEN STRIP_TAC THEN
-  (SUBGOAL_THEN `(x::A) \<in> topspace top1` ASSUME_TAC THENL
-    [RULE_ASSUM_TAC(SIMP_RULE[closure_of]) THEN ASM SET_TAC[]; ALL_TAC]) THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::A`) THEN
-  (ANTS_TAC THENL [ASM SET_TAC[]; REWRITE_TAC[LEFT_IMP_EXISTS_THM]]) THEN
-  X_GEN_TAC `g::A=>B` THEN REWRITE_TAC[CONTINUOUS_MAP_ATPOINTOF] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 (MP_TAC \<circ> SPEC `x::A`) ASSUME_TAC) THEN
-  ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY; IN_INTER; IN_INSERT] THEN
-  ASM_SIMP_TAC[ATPOINTOF_SUBTOPOLOGY; IN_INSERT] THEN
-  STRIP_TAC THENL [ALL_TAC; EXISTS_TAC `(g::A=>B) x`] THEN
-  MATCH_MP_TAC LIMIT_TRANSFORM_EVENTUALLY THEN
-  EXISTS_TAC `(g::A=>B)` THEN ASM_SIMP_TAC[ALWAYS_WITHIN_EVENTUALLY] THEN
-  MATCH_MP_TAC LIMIT_WITHIN_SUBSET THEN
-  EXISTS_TAC `(x::A) insert S` THEN
-  ASM_REWRITE_TAC[SET_RULE `S \<subseteq> insert x S`]);;
+  assumes "regular_space Y" "S \<subseteq> T" and Tsub: "T \<subseteq> X closure_of S"
+    and ex: " \<And>x. x \<in> T \<Longrightarrow> \<exists>g. continuous_map (subtopology X (insert x S)) Y g \<and>
+                     (\<forall>x \<in> S. g x = f x)"
+  obtains g where "continuous_map (subtopology X T) Y g" "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
+proof (rule continuous_map_extension_pointwise_alt)
+  show "continuous_map (subtopology X S) Y f"
+  proof (clarsimp simp add: continuous_map_atin)
+    fix t
+    assume "t \<in> topspace X" and "t \<in> S"
+    then obtain g where g: "limitin Y g (g t) (atin (subtopology X (insert t S)) t)" and gf: "\<forall>x \<in> S. g x = f x"
+      by (metis Int_iff \<open>S \<subseteq> T\<close> continuous_map_atin ex inf.orderE insert_absorb topspace_subtopology)
+    with \<open>t \<in> S\<close> show "limitin Y f (f t) (atin (subtopology X S) t)"
+      by (simp add: limitin_def atin_subtopology_within_if eventually_atin_within gf insert_absorb)
+  qed
+  show "\<exists>l. limitin Y f l (atin_within X t S)" if "t \<in> T - S" for t
+  proof -
+    obtain g where g: "continuous_map (subtopology X (insert t S)) Y g" and gf: "\<forall>x \<in> S. g x = f x"
+      using \<open>S \<subseteq> T\<close> ex \<open>t \<in> T - S\<close> by force
+    then have "limitin Y g (g t) (atin_within X t (insert t S))"
+      using Tsub in_closure_of limit_continuous_map_within that  by fastforce
+    then show ?thesis
+      unfolding limitin_def
+      by (smt (verit) eventually_atin_within gf  subsetD subset_insertI)
+  qed
+qed (use assms in auto)
 
 
 subsection\<open>Extending Cauchy continuous functions to the closure\<close>
 
 
 lemma Cauchy_continuous_map_extends_to_continuous_closure_of:
-   "\<And>m1 m2 f S.
-        mcomplete m2 \<and> Cauchy_continuous_map (submetric1 S,m2) f
+   "mcomplete m2 \<and> Cauchy_continuous_map (submetric1 S,m2) f
         \<Longrightarrow> \<exists>g. continuous_map
                  (subtopology (mtopology m1) (mtopology m1 closure_of S),
                   mtopology m2) g \<and>
