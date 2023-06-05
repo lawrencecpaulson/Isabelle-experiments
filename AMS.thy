@@ -496,11 +496,15 @@ next
       show "\<forall>i\<in>I. openin (X i) (U i)"
         by (simp add: Metric_space.openin_mball U_def mball_of_def mtopology_of_def m)
 
-      show "x \<in> Pi\<^sub>E I U"
-        using m x z
+      have "x \<in> Pi\<^sub>E I (topspace o X)"
+        using M_def \<open>x \<in> M\<close> x by auto
+
+      then show "x \<in> Pi\<^sub>E I U"
         apply (auto simp: U_def)
-        using \<open>\<And>i. i \<in> I \<Longrightarrow> z i \<in> topspace (X i)\<close> m apply force
-        sorry
+        using m z apply force
+        using m x apply fastforce
+        apply (smt (verit, ccfv_SIG) \<open>d z x < R\<close> capped_metric_mdist cm_def le_d of_nat_Suc that)
+        using x by presburger
       show "Pi\<^sub>E I U \<subseteq> mball z r"
         using \<open>z \<in> M\<close> \<open>x \<in> M\<close>
         apply (auto simp: U_def PiE_iff)
