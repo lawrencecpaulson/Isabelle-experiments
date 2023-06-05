@@ -43,6 +43,15 @@ lemma locally_compact_Euclidean_space:
     locally_compact_space_product_topology
   using locally_compact_space_euclidean by fastforce
 
+lemma topspace_product_topology_alt:
+   "topspace (product_topology X I) = {x \<in> extensional I. \<forall>i \<in> I. x i \<in> topspace(X i)}"
+    (is "?lhs = ?rhs")
+proof
+  show "?lhs \<subseteq> ?rhs"
+    using PiE_def by auto
+  show "?rhs \<subseteq> ?lhs"
+    by (force simp add: PiE_iff)
+qed
 
 
 lemma limitin_componentwise:
@@ -50,39 +59,49 @@ lemma limitin_componentwise:
         l \<in> extensional I \<and>
         eventually (\<lambda>a. f a \<in> topspace(product_topology X I)) F \<and>
         (\<forall>k \<in> I. limitin (X k) (\<lambda>c. f c k) (l k) F)"
-  sorry
+    (is "?L \<longleftrightarrow> _ \<and> ?R1 \<and> ?R2")
+proof (cases "l \<in> extensional I")
+  case l: True
+  show ?thesis
+  proof (cases "\<forall>k \<in> I. l k \<in> topspace (X k)")
+    case True
+    have ?R1 if ?L
+      by (metis limitin_subtopology subtopology_topspace that)
+    moreover
+    have ?R2 if ?L
+      unfolding limitin_def
+    proof (intro conjI strip)
+      fix i U
+      assume "i \<in> I" and U: "openin (X i) U \<and> l i \<in> U"
+      then have "openin (product_topology X I) 
+                   ({y. y i \<in> U} \<inter> topspace (product_topology X I))"
+        unfolding openin_product_topology arbitrary_union_of_relative_to [symmetric]
+        apply (simp add: relative_to_def topspace_product_topology_alt)
+        by (smt (verit, del_insts) Collect_cong arbitrary_union_of_inc finite_intersection_of_inc inf_commute)
+      moreover have "l \<in> {y. y i \<in> U} \<inter> topspace (product_topology X I)"
+        using U True l by (auto simp: extensional_def)
+      ultimately have "eventually (\<lambda>x. f x \<in> {y. y i \<in> U} \<inter> topspace (product_topology X I)) F"
+        by (metis limitin_def that)
+      then show "\<forall>\<^sub>F x in F. f x i \<in> U"
+        by (simp add: eventually_conj_iff)
+    qed (use True in auto)
+    moreover
+    have ?L if ?R1 ?R2
+      sorry
+    ultimately show ?thesis
+      using l by blast
+  next
+    case False
+    then show ?thesis
+      by (metis PiE_iff limitin_def topspace_product_topology)
+   qed
+next
+  case False
+  then show ?thesis
+    by (simp add: limitin_def PiE_iff)
+qed
+
 oops 
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[limitin; TOPSPACE_PRODUCT_TOPOLOGY_ALT; IN_ELIM_THM] THEN
-  ASM_CASES_TAC `EXTENSIONAL I (l::K=>A)` THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[TAUT `p \<Longrightarrow> q \<and> r \<longleftrightarrow> (p \<Longrightarrow> q) \<and> (p \<Longrightarrow> r)`] THEN
-  REWRITE_TAC[RIGHT_IMP_FORALL_THM; FORALL_AND_THM] THEN
-  ASM_CASES_TAC `\<forall>k. k \<in> I \<Longrightarrow> (l::K=>A) k \<in> topspace (X k)` THEN
-  ASM_REWRITE_TAC[IMP_IMP] THEN EQ_TAC THENL
-   [DISCH_TAC THEN CONJ_TAC THENL
-     [FIRST_X_ASSUM(MP_TAC o SPEC
-       `topspace(product_topology I X):(K=>A)->bool`) THEN
-      REWRITE_TAC[OPEN_IN_TOPSPACE] THEN
-      ASM_REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY_ALT; IN_ELIM_THM];
-      ALL_TAC] THEN
-    MAP_EVERY X_GEN_TAC [`k::K`; `u::A=>bool`] THEN
-    REPEAT DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC o SPEC
-     `{y::K=>A | y k \<in> u} \<inter> topspace(product_topology I X)`) THEN
-    ANTS_TAC THENL
-     [ASM_REWRITE_TAC[IN_INTER; IN_ELIM_THM; TOPSPACE_PRODUCT_TOPOLOGY_ALT] THEN
-      REWRITE_TAC[OPEN_IN_PRODUCT_TOPOLOGY] THEN
-      REWRITE_TAC[GSYM ARBITRARY_UNION_OF_RELATIVE_TO] THEN
-      REWRITE_TAC[relative_to; TOPSPACE_PRODUCT_TOPOLOGY_ALT] THEN
-      EXISTS_TAC `{y::K=>A | y k \<in> u}` THEN
-      CONJ_TAC THENL [ALL_TAC; SET_TAC[]] THEN
-      MATCH_MP_TAC ARBITRARY_UNION_OF_INC THEN
-      MATCH_MP_TAC FINITE_INTERSECTION_OF_INC THEN
-      REWRITE_TAC[IN_ELIM_THM] THEN
-      MAP_EVERY EXISTS_TAC [`k::K`; `u::A=>bool`] THEN
-      ASM_REWRITE_TAC[];
-      MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] EVENTUALLY_MONO) THEN
-      SIMP_TAC[IN_INTER; IN_ELIM_THM]];
     STRIP_TAC THEN
     REWRITE_TAC[OPEN_IN_PRODUCT_TOPOLOGY; FORALL_UNION_OF;
                 arbitrary; IMP_CONJ] THEN
@@ -559,27 +578,34 @@ next
       have "finite (nk ` (C \<inter> {..n}))"
         by force
       moreover 
-      have "J U \<subseteq> nk ` (C \<inter> {..n})"
-        apply (auto simp: U_def J_def m)
-        using m z apply force
-        using nk n
-        apply (simp add: image_iff Ball_def set_eq_iff)
-        by (smt (verit, ccfv_SIG) Abstract_Metric_Spaces.mdist_zero \<open>0 < R\<close> kn left_inverse lift_Suc_mono_less_iff m mult.commute mult_mono of_nat_0_le_iff of_nat_Suc order_le_less singletonD subsetD topspace_mtopology_of z)
+      have "\<exists>m. m \<in> C \<and> m \<le> n \<and> i = nk m"
+        if R: "R \<le> inverse (1 + real (kn i))" and "i \<in> I" 
+          and neq: "mball_of (m i) (z i) R \<noteq> topspace (X i)" for i 
+      proof -
+        interpret MI: Metric_space "mspace (m i)" "mdist (m i)"
+          by auto
+        have "MI.mball (z i) R \<noteq> topspace (X i)"
+          by (metis mball_of_def neq)
+        then have "\<nexists>a. topspace (X i) \<subseteq> {a}"
+          using \<open>0 < R\<close> m subset_antisym \<open>i \<in> I\<close> z by fastforce
+        then have "i \<in> nk ` C"
+          using nk \<open>i \<in> I\<close> by auto
+        then show ?thesis
+          by (smt (verit, ccfv_SIG) R \<open>0 < R\<close> image_iff kn lift_Suc_mono_less_iff mult_mono n not_le_imp_less of_nat_0_le_iff of_nat_Suc right_inverse)
+      qed
+      then have "J U \<subseteq> nk ` (C \<inter> {..n})"
+        by (auto simp add: image_iff Bex_def J_def U_def split: if_split_asm)
       ultimately show "finite (J U)"
         using finite_subset by blast
-
       show "\<forall>i\<in>I. openin (X i) (U i)"
         by (simp add: Metric_space.openin_mball U_def mball_of_def mtopology_of_def m)
-
-      have "x \<in> Pi\<^sub>E I (topspace o X)"
+      have xin: "x \<in> Pi\<^sub>E I (topspace o X)"
         using M_def \<open>x \<in> M\<close> x by auto
-
-      then show "x \<in> Pi\<^sub>E I U"
-        apply (auto simp: U_def)
-        using m z apply force
-        using m x apply fastforce
-         apply (smt (verit, ccfv_SIG) \<open>d z x < R\<close> capped_metric_mdist cm_def le_d of_nat_Suc that)
-        using x by presburger
+      moreover 
+      have "\<And>i. \<lbrakk>i \<in> I; R \<le> inverse (1 + real (kn i))\<rbrakk> \<Longrightarrow> mdist (m i) (z i) (x i) < R"
+        by (smt (verit, ccfv_SIG) \<open>d z x < R\<close> capped_metric_mdist cm_def le_d of_nat_Suc that)
+      ultimately show "x \<in> Pi\<^sub>E I U"
+        using m z by (auto simp add: U_def PiE_iff)
       show "Pi\<^sub>E I U \<subseteq> mball z r"
       proof
         fix y
@@ -666,24 +692,34 @@ next
           show "range (\<lambda>n. \<sigma> n i) \<subseteq> mspace (m i)"
             by (smt (verit, ccfv_threshold) MCauchy_def PiE_iff True \<sigma> eq image_subset_iff m topspace_mtopology topspace_mtopology_of topspace_product_topology)
           fix \<epsilon>::real
+          define r where "r \<equiv> min \<epsilon> (inverse(Suc (kn i)))"
           assume "\<epsilon> > 0"
-          then have "min \<epsilon> ((inverse(Suc (kn i))) / 2) > 0"
-            by simp
-          then obtain N where "\<And>n n'.  N \<le> n \<and> N \<le> n' \<Longrightarrow> d (\<sigma> n) (\<sigma> n') < min \<epsilon> (inverse (Suc(kn i))) / 2"
-            using \<sigma> unfolding MCauchy_def
-            by (metis half_gt_zero inverse_Suc min_less_iff_conj)
-          then show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> mdist (m i) (\<sigma> n i) (\<sigma> n' i) < \<epsilon>"
-             sorry
+          then have "r > 0"
+            by (simp add: r_def)
+          then obtain N where N: "\<And>n n'. N \<le> n \<and> N \<le> n' \<Longrightarrow> d (\<sigma> n) (\<sigma> n') < r"
+            using \<sigma> unfolding MCauchy_def by meson
+          show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> mdist (m i) (\<sigma> n i) (\<sigma> n' i) < \<epsilon>"
+          proof (intro strip exI)
+            fix n n'
+            assume "N \<le> n" and "N \<le> n'"
+            then have "mdist (cm i) (\<sigma> n i) (\<sigma> n' i) < r"
+              using *
+              by (smt (verit) Metric_space.MCauchy_def Metric_space_axioms N True \<sigma> rangeI subsetD)
+            then
+            show "mdist (m i) (\<sigma> n i) (\<sigma> n' i) < \<epsilon>"
+              unfolding cm_def r_def
+              by (smt (verit, ccfv_SIG) capped_metric_mdist)
+          qed
         qed
         ultimately show ?thesis
           by (simp add: m mtopology_of_def)
       qed auto
       then obtain y where "\<And>i. i \<in> I \<Longrightarrow> limitin (X i) (\<lambda>n. \<sigma> n i) (y i) sequentially"
         by metis
-      then show "\<exists>x. limitin mtopology \<sigma> x sequentially"
+      with \<sigma> show "\<exists>x. limitin mtopology \<sigma> x sequentially"
         apply (rule_tac x="\<lambda>i\<in>I. y i" in exI)
-        apply (simp add: limitin_componentwise flip: eq)
-        by (metis MCauchy_def \<sigma> eq eventually_sequentiallyI range_subsetD topspace_mtopology topspace_product_topology)
+        apply (simp add: MCauchy_def limitin_componentwise flip: eq)
+        by (metis eq eventually_at_top_linorder range_subsetD topspace_mtopology topspace_product_topology)
     qed
   qed
 qed
@@ -738,26 +774,6 @@ lemma completely_metrizable_space_product_topology:
         countable {i \<in> I. \<not> (\<exists>a. topspace(X i) \<subseteq> {a})} \<and>
         (\<forall>i \<in> I. completely_metrizable_space (X i))"
   by (metis (mono_tags, lifting) completely_metrizable_imp_metrizable_space empty_completely_metrizable_space metrizable_topology_B metrizable_topology_C metrizable_topology_E)
-
-
-oops
-
-
-      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `min e (inverse(&(kn) + 1)) / 2`) THEN
-      REWRITE_TAC[REAL_HALF; REAL_LT_MIN; REAL_LT_INV_EQ] THEN
-      ANTS_TAC THENL [ASM_REAL_ARITH_TAC; MATCH_MP_TAC MONO_EXISTS] THEN
-      X_GEN_TAC `N::num` THEN DISCH_TAC THEN
-      MAP_EVERY X_GEN_TAC [`m::num`; `n::num`] THEN STRIP_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`m::num`; `n::num`]) THEN
-      ASM_REWRITE_TAC[] THEN DISCH_THEN(MP_TAC \<circ> MATCH_MP REAL_LT_IMP_LE) THEN
-      ASM_SIMP_TAC[] THEN DISCH_THEN(MP_TAC \<circ> SPEC `i::K`) THEN
-      ASM_REWRITE_TAC[CAPPED_METRIC; REAL_ARITH `x \<le> 0 \<longleftrightarrow> \<not> (0 < x)`] THEN
-      REWRITE_TAC[REAL_LT_INV_EQ; REAL_ARITH `0 < n + 1`] THEN
-      MATCH_MP_TAC(REAL_ARITH
-        `0 < d \<and> 0 < e \<Longrightarrow> min d x \<le> min e d / 2 \<Longrightarrow> x < e`) THEN
-      ASM_REWRITE_TAC[REAL_LT_INV_EQ; REAL_ARITH `0 < n + 1`];
-      REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM]] THEN
-
 
 
 
