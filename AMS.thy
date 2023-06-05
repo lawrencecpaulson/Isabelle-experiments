@@ -475,15 +475,25 @@ next
     have z: "\<And>i. i \<in> I \<Longrightarrow> z i \<in> topspace(X i)"
       using M_def m mspace_cm that(2) by auto
     obtain R where "0 < R" "d z x < R" "R < r"
-        using r dense by (smt (verit, ccfv_threshold))
-      define U where "U \<equiv> \<lambda>i. if R \<le> inverse(Suc(kn i)) then mball_of (m i) (z i) R else topspace(X i)"
-      show ?thesis
-      proof (intro exI conjI)
-        have "finite {i. R \<le> inverse (1 + real (kn i))}"
-    sorry
-        then show "finite (J U)"
-          by (auto simp: U_def J_def)
-        show "\<forall>i\<in>I. openin (X i) (U i)"
+      using r dense by (smt (verit, ccfv_threshold))
+    define U where "U \<equiv> \<lambda>i. if R \<le> inverse(Suc(kn i)) then mball_of (m i) (z i) R else topspace(X i)"
+    show ?thesis
+    proof (intro exI conjI)
+      obtain n where n: "real n * R > 1"
+        using \<open>0 < R\<close> ex_less_of_nat_mult by blast
+      have "finite (nk ` (C \<inter> {..n}))"
+        by force
+      moreover 
+      have "J U \<subseteq> nk ` (C \<inter> {..n})"
+        apply (auto simp: U_def J_def m)
+        using m z apply force
+        using nk n
+        apply (simp add: image_iff Ball_def set_eq_iff)
+        by (smt (verit, ccfv_SIG) Abstract_Metric_Spaces.mdist_zero \<open>0 < R\<close> kn left_inverse lift_Suc_mono_less_iff m mult.commute mult_mono of_nat_0_le_iff of_nat_Suc order_le_less singletonD subsetD topspace_mtopology_of z)
+      ultimately show "finite (J U)"
+        using finite_subset by blast
+
+      show "\<forall>i\<in>I. openin (X i) (U i)"
           apply (auto simp: U_def x z)
 
           sorry
