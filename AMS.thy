@@ -504,11 +504,11 @@ lemma metrizable_topology_DD:
     and co: "countable {i \<in> I. \<nexists>a. topspace (X i) \<subseteq> {a}}"
     and m: "\<And>i. i \<in> I \<Longrightarrow> X i = mtopology_of (m i)"
   obtains M d where "Metric_space M d" "product_topology X I = Metric_space.mtopology M d"
-                    "\<And>i. i \<in> I \<Longrightarrow> mcomplete_of (m i) \<Longrightarrow> Metric_space.mcomplete M d"
+                    "(\<And>i. i \<in> I \<Longrightarrow> mcomplete_of (m i)) \<Longrightarrow> Metric_space.mcomplete M d"
 proof (cases "I = {}")
   case True
   then show ?thesis
-    by (metis product_topology_empty_discrete discrete_metric.mtopology_discrete_metric empty_iff metric_M_dd that)
+    by (metis discrete_metric.mcomplete_discrete_metric discrete_metric.mtopology_discrete_metric metric_M_dd product_topology_empty_discrete that)
 next
   case False
   obtain nk and C:: "nat set" where nk: "{i \<in> I. \<nexists>a. topspace (X i) \<subseteq> {a}} = nk ` C" and "inj_on nk C"
@@ -648,24 +648,42 @@ next
     show eq: "product_topology X I = Metric_space.mtopology M d"
       unfolding topology_eq openin_mtopology openin_product_topology_alt  
       using J_def 0 2 3 subset_iff zero by (smt (verit, ccfv_threshold))
-    show "mcomplete" if "i \<in> I" and "mcomplete_of (m i)" for i
+    show "mcomplete" if "\<And>i. i \<in> I \<Longrightarrow> mcomplete_of (m i)" 
       unfolding mcomplete_def
     proof (intro strip)
       fix \<sigma>
       assume \<sigma>: "MCauchy \<sigma>"
       have "\<exists>y. i \<in> I \<longrightarrow> limitin (X i) (\<lambda>n. \<sigma> n i) y sequentially" for i
-        sorry
+      proof (cases "i \<in> I")
+        case True
+        interpret MI: Metric_space "mspace (m i)" "mdist (m i)"
+          by auto
+        have "\<And>\<sigma>. MI.MCauchy \<sigma> \<longrightarrow> (\<exists>x. limitin MI.mtopology \<sigma> x sequentially)"
+          by (meson MI.mcomplete_def True mcomplete_of_def that)
+        moreover have "MI.MCauchy (\<lambda>n. \<sigma> n i)"
+          unfolding MI.MCauchy_def
+        proof (intro conjI strip)
+          show "range (\<lambda>n. \<sigma> n i) \<subseteq> mspace (m i)"
+            by (smt (verit, ccfv_threshold) MCauchy_def PiE_iff True \<sigma> eq image_subset_iff m topspace_mtopology topspace_mtopology_of topspace_product_topology)
+          fix \<epsilon>::real
+          assume "\<epsilon> > 0"
+          then have "min \<epsilon> ((inverse(Suc (kn i))) / 2) > 0"
+            by simp
+          then obtain N where "\<And>n n'.  N \<le> n \<and> N \<le> n' \<Longrightarrow> d (\<sigma> n) (\<sigma> n') < min \<epsilon> (inverse (Suc(kn i))) / 2"
+            using \<sigma> unfolding MCauchy_def
+            by (metis half_gt_zero inverse_Suc min_less_iff_conj)
+          then show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> mdist (m i) (\<sigma> n i) (\<sigma> n' i) < \<epsilon>"
+             sorry
+        qed
+        ultimately show ?thesis
+          by (simp add: m mtopology_of_def)
+      qed auto
       then obtain y where "\<And>i. i \<in> I \<Longrightarrow> limitin (X i) (\<lambda>n. \<sigma> n i) (y i) sequentially"
         by metis
       then show "\<exists>x. limitin mtopology \<sigma> x sequentially"
         apply (rule_tac x="\<lambda>i\<in>I. y i" in exI)
         apply (simp add: limitin_componentwise flip: eq)
-        apply (simp add: PiE_iff)
-        apply (rule eventuallyI)
-        using \<sigma> 
-        apply (auto simp: MCauchy_def PiE_iff M_def)
-        apply (metis MCauchy_def PiE_mem product_m \<sigma> eq m rangeI subsetD topspace_mtopology topspace_mtopology_of)
-        by (metis MCauchy_def M_def PiE_iff range_subsetD)
+        by (metis MCauchy_def \<sigma> eq eventually_sequentiallyI range_subsetD topspace_mtopology topspace_product_topology)
     qed
   qed
 qed
@@ -725,20 +743,7 @@ lemma completely_metrizable_space_product_topology:
 oops
 
 
-    DISCH_TAC THEN REWRITE_TAC[mcomplete] THEN DISCH_THEN(LABEL_TAC "*") THEN
-    X_GEN_TAC `x::num=>K->A` THEN ASM_REWRITE_TAC[MCauchy] THEN STRIP_TAC THEN
-    ASM_REWRITE_TAC[LIMIT_COMPONENTWISE] THEN
-    SUBGOAL_THEN
-     `\<forall>i. \<exists>y. i \<in> I \<Longrightarrow> limitin (X i) (\<lambda>n. (x::num=>K->A) n i) y sequentially`
-    MP_TAC THENL
-     [X_GEN_TAC `i::K` THEN ASM_CASES_TAC `(i::K) \<in> I` THEN
-      ASM_REWRITE_TAC[] THEN REMOVE_THEN "*" (MP_TAC \<circ> SPEC `i::K`) THEN
-      ASM_SIMP_TAC[] THEN DISCH_THEN MATCH_MP_TAC THEN
-      REWRITE_TAC[MCauchy; GSYM TOPSPACE_MTOPOLOGY] THEN CONJ_TAC THENL
-       [RULE_ASSUM_TAC(REWRITE_RULE[TOPSPACE_PRODUCT_TOPOLOGY;
-           PiE; IN_ELIM_THM; o_DEF]) THEN ASM_MESON_TAC[];
-        X_GEN_TAC `e::real` THEN DISCH_TAC] THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `min e (inverse(&(kn(i::K)) + 1)) / 2`) THEN
+      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `min e (inverse(&(kn) + 1)) / 2`) THEN
       REWRITE_TAC[REAL_HALF; REAL_LT_MIN; REAL_LT_INV_EQ] THEN
       ANTS_TAC THENL [ASM_REAL_ARITH_TAC; MATCH_MP_TAC MONO_EXISTS] THEN
       X_GEN_TAC `N::num` THEN DISCH_TAC THEN
@@ -752,10 +757,7 @@ oops
         `0 < d \<and> 0 < e \<Longrightarrow> min d x \<le> min e d / 2 \<Longrightarrow> x < e`) THEN
       ASM_REWRITE_TAC[REAL_LT_INV_EQ; REAL_ARITH `0 < n + 1`];
       REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM]] THEN
-    X_GEN_TAC `y::K=>A` THEN DISCH_TAC THEN
-    EXISTS_TAC `RESTRICTION I (y::K=>A)` THEN
-    ASM_REWRITE_TAC[REWRITE_RULE[\<in>] RESTRICTION_IN_EXTENSIONAL] THEN
-    SIMP_TAC[RESTRICTION; EVENTUALLY_TRUE] THEN ASM_REWRITE_TAC[]]);;`
+
 
 
 
