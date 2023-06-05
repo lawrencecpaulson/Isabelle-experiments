@@ -441,6 +441,7 @@ next
     using co by (force simp: countable_as_injective_image_subset)
   then obtain kn where kn: "\<And>w. w \<in> C \<Longrightarrow> kn (nk w) = w"
     by (metis inv_into_f_f)
+(** HERE CAN PROVE      ((\<And>i. i \<in> I \<Longrightarrow> mcomplete (m i)) \<Longrightarrow> mcomplete m)  **)
   define cm where "cm \<equiv> \<lambda>i. capped_metric (inverse(Suc(kn i))) (m i)"
   have mspace_cm: "mspace (cm i) = mspace (m i)" for i
     by (simp add: cm_def)
@@ -465,11 +466,47 @@ next
     using m by force
   define m' where "m' = metric (M,d)"
   define J where "J \<equiv> \<lambda>U. {i \<in> I. U i \<noteq> topspace (X i)}"
+
+  have 0: "\<exists>U. finite (J U) \<and> (\<forall>i\<in>I. openin (X i) (U i)) \<and> x \<in> Pi\<^sub>E I U \<and> Pi\<^sub>E I U \<subseteq> mball z r"
+    if "x \<in> M" "z \<in> M" and r: "0 < r" "d z x < r" for x z r
+  proof -
+    have x: "\<And>i. i \<in> I \<Longrightarrow> x i \<in> topspace(X i)"
+      using M_def m mspace_cm that(1) by auto
+    have z: "\<And>i. i \<in> I \<Longrightarrow> z i \<in> topspace(X i)"
+      using M_def m mspace_cm that(2) by auto
+    obtain R where "0 < R" "d z x < R" "R < r"
+        using r dense by (smt (verit, ccfv_threshold))
+      define U where "U \<equiv> \<lambda>i. if R \<le> inverse(Suc(kn i)) then mball_of (m i) (z i) R else topspace(X i)"
+      show ?thesis
+      proof (intro exI conjI)
+        have "finite {i. R \<le> inverse (1 + real (kn i))}"
+    sorry
+        then show "finite (J U)"
+          by (auto simp: U_def J_def)
+        show "\<forall>i\<in>I. openin (X i) (U i)"
+          apply (auto simp: U_def x z)
+
+          sorry
+        show "x \<in> Pi\<^sub>E I U"
+          using m x z
+          apply (auto simp: U_def)
+          using \<open>\<And>i. i \<in> I \<Longrightarrow> z i \<in> topspace (X i)\<close> m apply force
+          sorry
+        show "Pi\<^sub>E I U \<subseteq> mball z r"
+          using \<open>z \<in> M\<close> \<open>x \<in> M\<close>
+          apply (auto simp: U_def PiE_iff)
+          apply (smt (verit) M_def PiE_iff in_mball_of m mspace_cm o_apply topspace_mtopology_of)
+
+          sorry
+      qed
+  qed
+
+  then (*SO THIS IS REDUNDANT?*)
   have 1: "\<exists>U. finite (J U) \<and> (\<forall>i\<in>I. openin (X i) (U i)) \<and> x \<in> Pi\<^sub>E I U \<and> Pi\<^sub>E I U \<subseteq> S"
     if "x \<in> S" "S \<subseteq> M"
-      and "\<And>x. x \<in> S \<Longrightarrow> (\<exists>r>0. mball x r \<subseteq> S)"
+      and "\<And>x. x \<in> S \<Longrightarrow> (\<exists>r>0. mball x r \<subseteq> S)"  (**"openin mtopology S"**)
     for S x
-    using that sorry
+    by (smt (verit, del_insts) subset_iff that(1) that(2) that(3) zero)
   have 2: "\<exists>r>0. mball x r \<subseteq> S"
     if "finite (J U)" and x: "x \<in> Pi\<^sub>E I U" and S: "Pi\<^sub>E I U \<subseteq> S"
       and U: "\<And>i. i\<in>I \<Longrightarrow> openin (X i) (U i)" 
@@ -1045,10 +1082,10 @@ lemma Cauchy_continuous_map_extends_to_continuous_intermediate_closure_of:
 
 
 lemma Lipschitz_continuous_map_on_intermediate_closure:
-   "S \<subseteq> T" "T \<subseteq> (mtopology m1) closure_of S \<and>
-        continuous_map (subtopology (mtopology m1) T,mtopology m2) f \<and>
-        Lipschitz_continuous_map (submetric1 S,m2) f
-        \<Longrightarrow> Lipschitz_continuous_map (submetric1 T,m2) f"
+  assumes "Lipschitz_continuous_map (submetric m1 S) m2 f"
+    and "S \<subseteq> T" and Tsub: "T \<subseteq> (mtopology_of m1) closure_of S"
+  and "continuous_map (subtopology (mtopology_of m1) T) (mtopology_of m2) f"
+shows "Lipschitz_continuous_map (submetric m1 T) m2 f"
 oops
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
   SUBGOAL_THEN `submetric1 (S::A=>bool) = submetric1 (M1 \<inter> S)`
@@ -1107,7 +1144,7 @@ oops
   REWRITE_TAC[CONTINUOUS_MAP_FST; CONTINUOUS_MAP_SND]);;
 
 lemma Lipschitz_continuous_map_extends_to_closure_of:
-   "mcomplete m2 \<and> Lipschitz_continuous_map (submetric1 S,m2) f
+   "mcomplete m2 \<and> Lipschitz_continuous_map (submetric m1 S) m2 f
         \<Longrightarrow> \<exists>g. Lipschitz_continuous_map (submetric1 (mtopology m1 closure_of S),m2) g \<and> \<forall>x. x \<in> S \<Longrightarrow> g x = f x"
 oops
   REPEAT STRIP_TAC THEN
@@ -1125,8 +1162,8 @@ oops
   ASM_SIMP_TAC[SUBMETRIC; IN_INTER]);;
 
 lemma Lipschitz_continuous_map_extends_to_intermediate_closure_of:
-   "mcomplete m2 \<and> Lipschitz_continuous_map (submetric1 S,m2) f \<and> T \<subseteq> mtopology m1 closure_of S
-        \<Longrightarrow> \<exists>g. Lipschitz_continuous_map (submetric1 T,m2) g \<and> \<forall>x. x \<in> S \<Longrightarrow> g x = f x"
+   "mcomplete m2 \<and> Lipschitz_continuous_map (submetric m1 S) m2 f \<and> T \<subseteq> mtopology m1 closure_of S
+        \<Longrightarrow> \<exists>g. Lipschitz_continuous_map (submetric m1 T) m2 g \<and> \<forall>x. x \<in> S \<Longrightarrow> g x = f x"
 oops
   REPEAT STRIP_TAC THEN
   MP_TAC(ISPECL [`m1::A metric`; `m2::B metric`; `f::A=>B`; `S::A=>bool`]
@@ -1137,8 +1174,8 @@ oops
 lemma uniformly_continuous_map_on_intermediate_closure:
    "S \<subseteq> T \<and> T \<subseteq> (mtopology m1) closure_of S \<and>
         continuous_map (subtopology (mtopology m1) T,mtopology m2) f \<and>
-        uniformly_continuous_map (submetric1 S,m2) f
-        \<Longrightarrow> uniformly_continuous_map (submetric1 T,m2) f"
+        uniformly_continuous_map (submetric m1 S) m2 f
+        \<Longrightarrow> uniformly_continuous_map (submetric m1 T) m2 f"
 oops
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
   SUBGOAL_THEN `submetric1 (S::A=>bool) = submetric1 (M1 \<inter> S)`
@@ -1198,7 +1235,7 @@ oops
 
 lemma uniformly_continuous_map_extends_to_closure_of:
    "\<And>m1 m2 f S.
-        mcomplete m2 \<and> uniformly_continuous_map (submetric1 S,m2) f
+        mcomplete m2 \<and> uniformly_continuous_map (submetric m1 S) m2 f
         \<Longrightarrow> \<exists>g. uniformly_continuous_map
                    (submetric1 (mtopology m1 closure_of S),m2) g \<and>
                 \<forall>x. x \<in> S \<Longrightarrow> g x = f x"
@@ -1220,9 +1257,9 @@ oops
 lemma uniformly_continuous_map_extends_to_intermediate_closure_of:
    "\<And>m1 m2 f S T.
         mcomplete m2 \<and>
-        uniformly_continuous_map (submetric1 S,m2) f \<and>
+        uniformly_continuous_map (submetric m1 S) m2 f \<and>
         T \<subseteq> mtopology m1 closure_of S
-        \<Longrightarrow> \<exists>g. uniformly_continuous_map (submetric1 T,m2) g \<and>
+        \<Longrightarrow> \<exists>g. uniformly_continuous_map (submetric m1 T) m2 g \<and>
                 \<forall>x. x \<in> S \<Longrightarrow> g x = f x"
 oops
   REPEAT STRIP_TAC THEN
@@ -1235,8 +1272,8 @@ lemma Cauchy_continuous_map_on_intermediate_closure:
    "\<And>m1 m2 f::A=>B S T.
         S \<subseteq> T \<and> T \<subseteq> (mtopology m1) closure_of S \<and>
         continuous_map (subtopology (mtopology m1) T,mtopology m2) f \<and>
-        Cauchy_continuous_map (submetric1 S,m2) f
-        \<Longrightarrow> Cauchy_continuous_map (submetric1 T,m2) f"
+        Cauchy_continuous_map (submetric m1 S) m2 f
+        \<Longrightarrow> Cauchy_continuous_map (submetric m1 T) m2 f"
 oops
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
   SUBGOAL_THEN `submetric1 (S::A=>bool) = submetric1 (M1 \<inter> S)`
@@ -1311,7 +1348,7 @@ oops
 
 lemma Cauchy_continuous_map_extends_to_closure_of:
    "\<And>m1 m2 f S.
-        mcomplete m2 \<and> Cauchy_continuous_map (submetric1 S,m2) f
+        mcomplete m2 \<and> Cauchy_continuous_map (submetric m1 S) m2 f
         \<Longrightarrow> \<exists>g. Cauchy_continuous_map
                    (submetric1 (mtopology m1 closure_of S),m2) g \<and>
                 \<forall>x. x \<in> S \<Longrightarrow> g x = f x"
@@ -1331,9 +1368,9 @@ oops
 lemma Cauchy_continuous_map_extends_to_intermediate_closure_of:
    "\<And>m1 m2 f S T.
         mcomplete m2 \<and>
-        Cauchy_continuous_map (submetric1 S,m2) f \<and>
+        Cauchy_continuous_map (submetric m1 S) m2 f \<and>
         T \<subseteq> mtopology m1 closure_of S
-        \<Longrightarrow> \<exists>g. Cauchy_continuous_map (submetric1 T,m2) g \<and>
+        \<Longrightarrow> \<exists>g. Cauchy_continuous_map (submetric m1 T) m2 g \<and>
                 \<forall>x. x \<in> S \<Longrightarrow> g x = f x"
 oops
   REPEAT STRIP_TAC THEN
