@@ -494,21 +494,20 @@ next
         using finite_subset by blast
 
       show "\<forall>i\<in>I. openin (X i) (U i)"
-          apply (auto simp: U_def x z)
+        by (simp add: Metric_space.openin_mball U_def mball_of_def mtopology_of_def m)
 
-          sorry
-        show "x \<in> Pi\<^sub>E I U"
-          using m x z
-          apply (auto simp: U_def)
-          using \<open>\<And>i. i \<in> I \<Longrightarrow> z i \<in> topspace (X i)\<close> m apply force
-          sorry
-        show "Pi\<^sub>E I U \<subseteq> mball z r"
-          using \<open>z \<in> M\<close> \<open>x \<in> M\<close>
-          apply (auto simp: U_def PiE_iff)
-          apply (smt (verit) M_def PiE_iff in_mball_of m mspace_cm o_apply topspace_mtopology_of)
+      show "x \<in> Pi\<^sub>E I U"
+        using m x z
+        apply (auto simp: U_def)
+        using \<open>\<And>i. i \<in> I \<Longrightarrow> z i \<in> topspace (X i)\<close> m apply force
+        sorry
+      show "Pi\<^sub>E I U \<subseteq> mball z r"
+        using \<open>z \<in> M\<close> \<open>x \<in> M\<close>
+        apply (auto simp: U_def PiE_iff)
+         apply (smt (verit) M_def PiE_iff in_mball_of m mspace_cm o_apply topspace_mtopology_of)
 
-          sorry
-      qed
+        sorry
+    qed
   qed
 
   then (*SO THIS IS REDUNDANT?*)
