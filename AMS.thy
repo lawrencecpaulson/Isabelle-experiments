@@ -915,44 +915,70 @@ subsection\<open>Extending Cauchy continuous functions to the closure\<close>
 
 
 lemma Cauchy_continuous_map_extends_to_continuous_closure_of_aux:
-  assumes "mcomplete_of m2" 
-    and f: "Cauchy_continuous_map (submetric m1 S) m2 f"
-  and "S \<subseteq> mspace m1"
+  assumes m2: "mcomplete_of m2" and f: "Cauchy_continuous_map (submetric m1 S) m2 f"
+    and "S \<subseteq> mspace m1"
   obtains g 
-  where "continuous_map (subtopology (mtopology_of m1) ((mtopology_of m1) closure_of S)) 
+  where "continuous_map (subtopology (mtopology_of m1) (mtopology_of m1 closure_of S)) 
                         (mtopology_of m2) g" 
-         "(\<forall>x \<in> S. g x = f x)"
-  sorry
+    "(\<forall>x \<in> S. g x = f x)"
+proof (rule continuous_map_extension_pointwise_alt)
+  interpret L: Metric_space12 "mspace m1" "mdist m1" "mspace m2" "mdist m2"
+    by (simp add: Metric_space12_mspace_mdist)
+  interpret S: Metric_space "S \<inter> mspace m1" "mdist m1"
+    by (simp add: L.M1.subspace)
+  show "regular_space (mtopology_of m2)"
+    by (simp add: Metric_space.regular_space_mtopology mtopology_of_def)
+  show "S \<subseteq> mtopology_of m1 closure_of S"
+    by (simp add: assms(3) closure_of_subset)    
+  show "continuous_map (subtopology (mtopology_of m1) S) (mtopology_of m2) f"
+    by (metis Cauchy_continuous_imp_continuous_map f mtopology_of_submetric)
+  fix a
+  assume a: "a \<in> mtopology_of m1 closure_of S - S"
+  then obtain \<sigma> where ran\<sigma>: "range \<sigma> \<subseteq> S" "range \<sigma> \<subseteq> mspace m1" 
+    and lim\<sigma>: "limitin L.M1.mtopology \<sigma> a sequentially"
+    by (force simp add: mtopology_of_def L.M1.closure_of_sequentially)
+  then have "L.M1.MCauchy \<sigma>"
+    by (simp add: L.M1.convergent_imp_MCauchy mtopology_of_def)
+  then have "L.M2.MCauchy (f o \<sigma>)"
+    using f ran\<sigma> by (simp add: Cauchy_continuous_map_def L.M1.subspace Metric_space.MCauchy_def)
+  then obtain l where l: "limitin L.M2.mtopology (f o \<sigma>) l sequentially"
+    by (meson L.M2.mcomplete_def m2 mcomplete_of_def)
+  then obtain \<rho> where ran\<rho>: "range \<rho> \<subseteq> S" "range \<rho> \<subseteq> mspace m1" "\<And>n. \<rho> n \<noteq> a"
+    and lim\<rho>: "limitin L.M1.mtopology \<rho> a sequentially"
+    by (metis DiffD2 a lim\<sigma> mtopology_of_def ran\<sigma> range_subsetD)
+  define \<psi> where "\<psi> \<equiv> \<lambda>n. if even n then \<sigma> (n div 2) else \<rho> (n div 2)"
+  have "range \<psi> \<subseteq> S" "range \<psi> \<subseteq> mspace m1"
+    using ran\<sigma> ran\<rho> by (auto simp: \<psi>_def)
+  have "S.MCauchy \<sigma>"
+    by (metis (mono_tags, lifting) L.M1.Metric_space_axioms Metric_space.MCauchy_def S.Metric_space_axioms \<open>L.M1.MCauchy \<sigma>\<close> le_inf_iff ran\<sigma>(1))
+  moreover
+  have "S.MCauchy \<rho>"
+    by (metis L.M1.Metric_space_axioms L.M1.convergent_imp_MCauchy Submetric.MCauchy_submetric Submetric.intro Submetric_axioms.intro assms(3) inf.orderE lim\<rho> ran\<rho>(1,2))
+  moreover have "(\<lambda>n. mdist m1 (\<sigma> n) (\<rho> n)) \<longlonglongrightarrow> 0"
+  proof -
+    have "(\<lambda>n. mdist m1 (\<sigma> n) a) \<longlonglongrightarrow> 0"
+      using L.M1.limitin_metric_dist_null lim\<sigma> by blast
+    moreover have "(\<lambda>n. mdist m1 (\<rho> n) a) \<longlonglongrightarrow> 0"
+      using L.M1.limitin_metric_dist_null lim\<rho> by blast
+    ultimately have "(\<lambda>n. mdist m1 (\<sigma> n) a + mdist m1 (\<rho> n) a) \<longlonglongrightarrow> 0"
+      by (simp add: tendsto_add_zero)
+    then show ?thesis
+      using L.M1.triangle' [of _ a] lim_mono limitin_mono
+      sorry
+  qed
+  ultimately
+  have "S.MCauchy \<psi>"
+    using lim\<sigma> lim\<rho>
+    by (simp add: S.MCauchy_interleaving_gen L.M1.subspace \<psi>_def)
+  then have "limitin L.M2.mtopology f l (atin_within L.M1.mtopology a S)"
+    sorry
+  then show "\<exists>l. limitin (mtopology_of m2) f l (atin_within (mtopology_of m1) a S)" 
+    by (force simp add: mtopology_of_def)
+qed auto
+
+
 
 oops
-  REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_EXTENSION_POINTWISE_ALT THEN
-  REWRITE_TAC[REGULAR_SPACE_MTOPOLOGY; SUBSET_REFL] THEN
-  ASM_SIMP_TAC[CLOSURE_OF_SUBSET; TOPSPACE_MTOPOLOGY] THEN
-  ASM_SIMP_TAC[CAUCHY_CONTINUOUS_IMP_CONTINUOUS_MAP;
-               GSYM MTOPOLOGY_SUBMETRIC; IN_DIFF] THEN
-  X_GEN_TAC `a::A` THEN STRIP_TAC THEN FIRST_ASSUM
-   (MP_TAC \<circ> GEN_REWRITE_RULE RAND_CONV [CLOSURE_OF_SEQUENTIALLY]) THEN
-  REWRITE_TAC[IN_ELIM_THM; IN_INTER; FORALL_AND_THM] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC
-   (X_CHOOSE_THEN `x::num=>A` STRIP_ASSUME_TAC)) THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
-      CONVERGENT_IMP_CAUCHY_IN)) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_TAC THEN FIRST_ASSUM(MP_TAC \<circ>
-    SPEC `x::num=>A` \<circ> REWRITE_RULE[Cauchy_continuous_map]) THEN
-  ASM_REWRITE_TAC[CAUCHY_IN_SUBMETRIC] THEN DISCH_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> SPEC `f \<circ> (x::num=>A)` \<circ>
-    REWRITE_RULE[mcomplete]) THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC MONO_EXISTS THEN
-  X_GEN_TAC `l::B` THEN DISCH_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> CONJUNCT1 \<circ> REWRITE_RULE[limitin]) THEN
-  REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN DISCH_TAC THEN
-  ASM_REWRITE_TAC[LIMIT_ATPOINTOF_SEQUENTIALLY_WITHIN] THEN
-  X_GEN_TAC `y::num=>A` THEN
-  REWRITE_TAC[IN_INTER; IN_DELETE; FORALL_AND_THM] THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ>
-   SPEC `\<lambda>n. if even n then x(n div 2):A else y(n div 2)` \<circ>
-   REWRITE_RULE[Cauchy_continuous_map]) THEN
   REWRITE_TAC[CAUCHY_IN_INTERLEAVING_GEN; o_DEF; COND_RAND] THEN
   ASM_REWRITE_TAC[SUBMETRIC; CAUCHY_IN_SUBMETRIC] THEN ANTS_TAC THENL
    [CONJ_TAC THENL [ASM_MESON_TAC[CONVERGENT_IMP_CAUCHY_IN]; ALL_TAC] THEN
