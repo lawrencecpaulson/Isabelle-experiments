@@ -545,8 +545,7 @@ next
 
   define m' where "m' = metric (M,d)"
   define J where "J \<equiv> \<lambda>U. {i \<in> I. U i \<noteq> topspace (X i)}"
-
-  have 0: "\<exists>U. finite (J U) \<and> (\<forall>i\<in>I. openin (X i) (U i)) \<and> x \<in> Pi\<^sub>E I U \<and> Pi\<^sub>E I U \<subseteq> mball z r"
+  have 1: "\<exists>U. finite (J U) \<and> (\<forall>i\<in>I. openin (X i) (U i)) \<and> x \<in> Pi\<^sub>E I U \<and> Pi\<^sub>E I U \<subseteq> mball z r"
     if "x \<in> M" "z \<in> M" and r: "0 < r" "d z x < r" for x z r
   proof -
     have x: "\<And>i. i \<in> I \<Longrightarrow> x i \<in> topspace(X i)"
@@ -584,7 +583,7 @@ next
         using finite_subset by blast
       show "\<forall>i\<in>I. openin (X i) (U i)"
         by (simp add: Metric_space.openin_mball U_def mball_of_def mtopology_of_def m)
-      have xin: "x \<in> Pi\<^sub>E I (topspace o X)"
+      have xin: "x \<in> Pi\<^sub>E I (topspace \<circ> X)"
         using M_def \<open>x \<in> M\<close> x by auto
       moreover 
       have "\<And>i. \<lbrakk>i \<in> I; R \<le> inverse (1 + real (kn i))\<rbrakk> \<Longrightarrow> mdist (m i) (z i) (x i) < R"
@@ -607,7 +606,6 @@ next
       qed
     qed
   qed
-
   have 2: "\<exists>r>0. mball x r \<subseteq> S"
     if "finite (J U)" and x: "x \<in> Pi\<^sub>E I U" and S: "Pi\<^sub>E I U \<subseteq> S"
       and U: "\<And>i. i\<in>I \<Longrightarrow> openin (X i) (U i)" 
@@ -658,7 +656,7 @@ next
       using Metric_space_axioms by blast
     show eq: "product_topology X I = Metric_space.mtopology M d"
       unfolding topology_eq openin_mtopology openin_product_topology_alt  
-      using J_def 0 2 3 subset_iff zero by (smt (verit, ccfv_threshold))
+      using J_def 1 2 3 subset_iff zero by (smt (verit, ccfv_threshold))
     show "mcomplete" if "\<And>i. i \<in> I \<Longrightarrow> mcomplete_of (m i)" 
       unfolding mcomplete_def
     proof (intro strip)
@@ -913,14 +911,13 @@ qed (use assms in auto)
 
 subsection\<open>Extending Cauchy continuous functions to the closure\<close>
 
-
 lemma Cauchy_continuous_map_extends_to_continuous_closure_of_aux:
   assumes m2: "mcomplete_of m2" and f: "Cauchy_continuous_map (submetric m1 S) m2 f"
     and "S \<subseteq> mspace m1"
   obtains g 
   where "continuous_map (subtopology (mtopology_of m1) (mtopology_of m1 closure_of S)) 
                         (mtopology_of m2) g" 
-    "(\<forall>x \<in> S. g x = f x)"
+        "(\<forall>x \<in> S. g x = f x)"
 proof (rule continuous_map_extension_pointwise_alt)
   interpret L: Metric_space12 "mspace m1" "mdist m1" "mspace m2" "mdist m2"
     by (simp add: Metric_space12_mspace_mdist)
@@ -939,9 +936,9 @@ proof (rule continuous_map_extension_pointwise_alt)
     by (force simp add: mtopology_of_def L.M1.closure_of_sequentially)
   then have "L.M1.MCauchy \<sigma>"
     by (simp add: L.M1.convergent_imp_MCauchy mtopology_of_def)
-  then have "L.M2.MCauchy (f o \<sigma>)"
+  then have "L.M2.MCauchy (f \<circ> \<sigma>)"
     using f ran\<sigma> by (simp add: Cauchy_continuous_map_def L.M1.subspace Metric_space.MCauchy_def)
-  then obtain l where l: "limitin L.M2.mtopology (f o \<sigma>) l sequentially"
+  then obtain l where l: "limitin L.M2.mtopology (f \<circ> \<sigma>) l sequentially"
     by (meson L.M2.mcomplete_def m2 mcomplete_of_def)
   then obtain \<rho> where ran\<rho>: "range \<rho> \<subseteq> S" "range \<rho> \<subseteq> mspace m1" "\<And>n. \<rho> n \<noteq> a"
     and lim\<rho>: "limitin L.M1.mtopology \<rho> a sequentially"
@@ -949,29 +946,40 @@ proof (rule continuous_map_extension_pointwise_alt)
   define \<psi> where "\<psi> \<equiv> \<lambda>n. if even n then \<sigma> (n div 2) else \<rho> (n div 2)"
   have "range \<psi> \<subseteq> S" "range \<psi> \<subseteq> mspace m1"
     using ran\<sigma> ran\<rho> by (auto simp: \<psi>_def)
+  have "a \<in> mspace m1"
+    using L.M1.limitin_mspace lim\<rho> by auto
   have "S.MCauchy \<sigma>"
     by (metis (mono_tags, lifting) L.M1.Metric_space_axioms Metric_space.MCauchy_def S.Metric_space_axioms \<open>L.M1.MCauchy \<sigma>\<close> le_inf_iff ran\<sigma>(1))
   moreover
   have "S.MCauchy \<rho>"
     by (metis L.M1.Metric_space_axioms L.M1.convergent_imp_MCauchy Submetric.MCauchy_submetric Submetric.intro Submetric_axioms.intro assms(3) inf.orderE lim\<rho> ran\<rho>(1,2))
   moreover have "(\<lambda>n. mdist m1 (\<sigma> n) (\<rho> n)) \<longlonglongrightarrow> 0"
-  proof -
+  proof (rule Lim_null_comparison)
+    show "\<forall>\<^sub>F n in sequentially. norm (mdist m1 (\<sigma> n) (\<rho> n)) \<le> mdist m1 (\<sigma> n) a + mdist m1 (\<rho> n) a"
+      using L.M1.triangle' [of _ a] using ran\<sigma> ran\<rho> \<open>a \<in> mspace m1\<close>
+      by (simp add: range_subsetD)
     have "(\<lambda>n. mdist m1 (\<sigma> n) a) \<longlonglongrightarrow> 0"
       using L.M1.limitin_metric_dist_null lim\<sigma> by blast
     moreover have "(\<lambda>n. mdist m1 (\<rho> n) a) \<longlonglongrightarrow> 0"
       using L.M1.limitin_metric_dist_null lim\<rho> by blast
-    ultimately have "(\<lambda>n. mdist m1 (\<sigma> n) a + mdist m1 (\<rho> n) a) \<longlonglongrightarrow> 0"
+    ultimately show "(\<lambda>n. mdist m1 (\<sigma> n) a + mdist m1 (\<rho> n) a) \<longlonglongrightarrow> 0"
       by (simp add: tendsto_add_zero)
-    then show ?thesis
-      using L.M1.triangle' [of _ a] lim_mono limitin_mono
-      sorry
   qed
-  ultimately
-  have "S.MCauchy \<psi>"
-    using lim\<sigma> lim\<rho>
-    by (simp add: S.MCauchy_interleaving_gen L.M1.subspace \<psi>_def)
+  ultimately have "S.MCauchy \<psi>"
+    using lim\<sigma> lim\<rho> by (simp add: S.MCauchy_interleaving_gen L.M1.subspace \<psi>_def)
+  then have J: "L.M2.MCauchy (f \<circ> \<psi>)"
+    by (metis Cauchy_continuous_map_def f mdist_submetric mspace_submetric)
+
+  have "continuous_map S.mtopology L.M2.mtopology f"
+    using Metric_space12.Cauchy_continuous_imp_continuous_map Metric_space12_mspace_mdist f by fastforce
+
+  from m2 J have "limitin L.M2.mtopology (f \<circ> \<sigma>) (f a) sequentially"
+    using lim\<rho> lim\<sigma> L.M2.mcomplete_def mcomplete_of_def sorry
+
   then have "limitin L.M2.mtopology f l (atin_within L.M1.mtopology a S)"
-    sorry
+    using lim\<rho> lim\<sigma>
+    using S.limitin_mspace  a by auto 
+
   then show "\<exists>l. limitin (mtopology_of m2) f l (atin_within (mtopology_of m1) a S)" 
     by (force simp add: mtopology_of_def)
 qed auto
@@ -979,23 +987,7 @@ qed auto
 
 
 oops
-  REWRITE_TAC[CAUCHY_IN_INTERLEAVING_GEN; o_DEF; COND_RAND] THEN
-  ASM_REWRITE_TAC[SUBMETRIC; CAUCHY_IN_SUBMETRIC] THEN ANTS_TAC THENL
-   [CONJ_TAC THENL [ASM_MESON_TAC[CONVERGENT_IMP_CAUCHY_IN]; ALL_TAC] THEN
-    MAP_EVERY UNDISCH_TAC
-     [`limitin (mtopology m1) y (a::A) sequentially`;
-      `limitin (mtopology m1) x (a::A) sequentially`] THEN
-    REWRITE_TAC[IMP_IMP] THEN
-    GEN_REWRITE_TAC (LAND_CONV \<circ> BINOP_CONV) [LIMIT_METRIC_DIST_NULL] THEN
-    ASM_REWRITE_TAC[EVENTUALLY_TRUE] THEN
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP LIMIT_REAL_ADD) THEN
-    REWRITE_TAC[REAL_ADD_LID] THEN MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT]
-      LIMIT_NULL_REAL_COMPARISON) THEN
-    MATCH_MP_TAC ALWAYS_EVENTUALLY THEN REWRITE_TAC[] THEN GEN_TAC THEN
-    MATCH_MP_TAC(METRIC_ARITH
-      `a \<in> M \<and> x \<in> M \<and> y \<in> M
-       \<Longrightarrow> abs(d x y) \<le> abs(d x a + d y a)`) THEN
-    ASM_REWRITE_TAC[];
+
     DISCH_THEN(MP_TAC \<circ> CONJUNCT2 \<circ> CONJUNCT2) THEN
     GEN_REWRITE_TAC RAND_CONV [LIMIT_METRIC_DIST_NULL] THEN
     UNDISCH_TAC `limitin (mtopology m2) (f \<circ> x) l sequentially` THEN
