@@ -1056,6 +1056,7 @@ lemma Lipschitz_continuous_map_on_intermediate_closure:
     and "S \<subseteq> T" and Tsub: "T \<subseteq> (mtopology_of m1) closure_of S"
   and "continuous_map (subtopology (mtopology_of m1) T) (mtopology_of m2) f"
 shows "Lipschitz_continuous_map (submetric m1 T) m2 f"
+  sorry
 oops
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
   SUBGOAL_THEN `submetric1 (S::A=>bool) = submetric1 (M1 \<inter> S)`
@@ -1114,32 +1115,40 @@ oops
   REWRITE_TAC[CONTINUOUS_MAP_FST; CONTINUOUS_MAP_SND]);;
 
 lemma Lipschitz_continuous_map_extends_to_closure_of:
-   "mcomplete m2 \<and> Lipschitz_continuous_map (submetric m1 S) m2 f
-        \<Longrightarrow> \<exists>g. Lipschitz_continuous_map (submetric1 (mtopology m1 closure_of S),m2) g \<and> \<forall>x. x \<in> S \<Longrightarrow> g x = f x"
-oops
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL [`m1::A metric`; `m2::B metric`; `f::A=>B`; `S::A=>bool`]
-         CAUCHY_CONTINUOUS_MAP_EXTENDS_TO_CONTINUOUS_CLOSURE_OF) THEN
-  ASM_SIMP_TAC[LIPSCHITZ_IMP_CAUCHY_CONTINUOUS_MAP] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `g::A=>B` THEN STRIP_TAC THEN
-  ASM_REWRITE_TAC[] THEN
-  MATCH_MP_TAC LIPSCHITZ_CONTINUOUS_MAP_ON_INTERMEDIATE_CLOSURE THEN
-  EXISTS_TAC `M1 \<inter> S::A=>bool` THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[CLOSURE_OF_SUBSET_INTER; GSYM TOPSPACE_MTOPOLOGY] THEN
-  REWRITE_TAC[GSYM CLOSURE_OF_RESTRICT; SUBSET_REFL] THEN
-  REWRITE_TAC[TOPSPACE_MTOPOLOGY; GSYM SUBMETRIC_RESTRICT] THEN
-  MATCH_MP_TAC LIPSCHITZ_CONTINUOUS_MAP_EQ THEN EXISTS_TAC `f::A=>B` THEN
-  ASM_SIMP_TAC[SUBMETRIC; IN_INTER]);;
+  assumes m2: "mcomplete_of m2" 
+    and f: "Lipschitz_continuous_map (submetric m1 S) m2 f"
+  obtains g 
+  where "Lipschitz_continuous_map (submetric m1 (mtopology_of m1 closure_of S)) m2 g" 
+    "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
+proof -
+  obtain g 
+    where g: "continuous_map (subtopology (mtopology_of m1) ((mtopology_of m1) closure_of S)) 
+                        (mtopology_of m2) g" 
+      "(\<forall>x \<in> S. g x = f x)"
+    by (metis Cauchy_continuous_map_extends_to_continuous_closure_of Lipschitz_imp_Cauchy_continuous_map f m2)
+  have "Lipschitz_continuous_map (submetric m1 (mtopology_of m1 closure_of S)) m2 g"
+  proof (rule Lipschitz_continuous_map_on_intermediate_closure)
+    show "Lipschitz_continuous_map (submetric m1 (mspace m1 \<inter> S)) m2 g"
+      by (smt (verit, best) IntD2 Lipschitz_continuous_map_eq f g(2) inf_commute mspace_submetric submetric_restrict)
+    show "mspace m1 \<inter> S \<subseteq> mtopology_of m1 closure_of S"
+      using closure_of_subset_Int by force
+    show "mtopology_of m1 closure_of S \<subseteq> mtopology_of m1 closure_of (mspace m1 \<inter> S)"
+      by (metis closure_of_restrict subset_refl topspace_mtopology_of)
+    show "continuous_map (subtopology (mtopology_of m1) (mtopology_of m1 closure_of S)) (mtopology_of m2) g"
+      by (simp add: g(1))
+  qed
+  with g that show thesis
+    by metis
+qed
+
 
 lemma Lipschitz_continuous_map_extends_to_intermediate_closure_of:
-   "mcomplete m2 \<and> Lipschitz_continuous_map (submetric m1 S) m2 f \<and> T \<subseteq> mtopology m1 closure_of S
-        \<Longrightarrow> \<exists>g. Lipschitz_continuous_map (submetric m1 T) m2 g \<and> \<forall>x. x \<in> S \<Longrightarrow> g x = f x"
-oops
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL [`m1::A metric`; `m2::B metric`; `f::A=>B`; `S::A=>bool`]
-        LIPSCHITZ_CONTINUOUS_MAP_EXTENDS_TO_CLOSURE_OF) THEN
-  ASM_REWRITE_TAC[] THEN
-  ASM_MESON_TAC[LIPSCHITZ_CONTINUOUS_MAP_FROM_SUBMETRIC_MONO]);;
+  assumes "mcomplete_of m2" 
+    and "Lipschitz_continuous_map (submetric m1 S) m2 f"
+    and "T \<subseteq> mtopology_of m1 closure_of S"
+  obtains g 
+  where "Lipschitz_continuous_map (submetric m1 T) m2 g"  "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
+  by (metis Lipschitz_continuous_map_extends_to_closure_of Lipschitz_continuous_map_from_submetric_mono assms)
 
 lemma uniformly_continuous_map_on_intermediate_closure:
    "S \<subseteq> T \<and> T \<subseteq> (mtopology m1) closure_of S \<and>
