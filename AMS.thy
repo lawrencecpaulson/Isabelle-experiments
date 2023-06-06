@@ -58,12 +58,12 @@ lemma limitin_componentwise:
    "limitin (product_topology X I) f l F \<longleftrightarrow>
         l \<in> extensional I \<and>
         eventually (\<lambda>a. f a \<in> topspace(product_topology X I)) F \<and>
-        (\<forall>k \<in> I. limitin (X k) (\<lambda>c. f c k) (l k) F)"
+        (\<forall>i \<in> I. limitin (X i) (\<lambda>c. f c i) (l i) F)"
     (is "?L \<longleftrightarrow> _ \<and> ?R1 \<and> ?R2")
 proof (cases "l \<in> extensional I")
   case l: True
   show ?thesis
-  proof (cases "\<forall>k \<in> I. l k \<in> topspace (X k)")
+  proof (cases "\<forall>i\<in>I. l i \<in> topspace (X i)")
     case True
     have ?R1 if ?L
       by (metis limitin_subtopology subtopology_topspace that)
@@ -87,7 +87,20 @@ proof (cases "l \<in> extensional I")
     qed (use True in auto)
     moreover
     have ?L if ?R1 ?R2
-      sorry
+      unfolding limitin_def openin_product_topology all_union_of imp_conjL arbitrary_def
+    proof (intro conjI strip)
+      show "l \<in> topspace (product_topology X I)"
+        by (simp add: PiE_iff True l)
+      fix \<V>
+      assume "\<V> \<subseteq> Collect (finite intersection_of (\<lambda>F. \<exists>i U. F = {f. f i \<in> U} \<and> i \<in> I \<and> openin (X i) U) relative_to topspace (product_topology X I))"
+          and "l \<in> \<Union> \<V>"
+      then obtain \<W> where "finite \<W>" "\<And>C. C \<in> \<W> \<Longrightarrow> C \<in> {{x. x i \<in> U} |i U. i \<in> I \<and> openin (X i) U}" "topspace (product_topology X I) \<inter> \<Inter> \<W> \<in> \<V>" "\<forall>X\<in>\<W>. l \<in> X"
+        by (fastforce simp: intersection_of_def relative_to_def subset_eq)
+      then have "l \<in> topspace (product_topology X I) \<inter> \<Inter> \<W>"
+        using \<open>l \<in> topspace (product_topology X I)\<close> by fastforce
+      show "\<forall>\<^sub>F x in F. f x \<in> \<Union>\<V>"
+         sorry
+     qed
     ultimately show ?thesis
       using l by blast
   next
