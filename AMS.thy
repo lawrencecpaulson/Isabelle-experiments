@@ -53,7 +53,7 @@ proof
     by (force simp add: PiE_iff)
 qed
 
-
+text \<open>The original HOL Light proof was a mess, sorry\<close>
 lemma limitin_componentwise:
    "limitin (product_topology X I) f l F \<longleftrightarrow>
         l \<in> extensional I \<and>
@@ -73,8 +73,7 @@ proof (cases "l \<in> extensional I")
     proof (intro conjI strip)
       fix i U
       assume "i \<in> I" and U: "openin (X i) U \<and> l i \<in> U"
-      then have "openin (product_topology X I) 
-                   ({y. y i \<in> U} \<inter> topspace (product_topology X I))"
+      then have "openin (product_topology X I) ({y. y i \<in> U} \<inter> topspace (product_topology X I))"
         unfolding openin_product_topology arbitrary_union_of_relative_to [symmetric]
         apply (simp add: relative_to_def topspace_product_topology_alt)
         by (smt (verit, del_insts) Collect_cong arbitrary_union_of_inc finite_intersection_of_inc inf_commute)
@@ -86,21 +85,31 @@ proof (cases "l \<in> extensional I")
         by (simp add: eventually_conj_iff)
     qed (use True in auto)
     moreover
-    have ?L if ?R1 ?R2
+    have ?L if R1: ?R1 and R2: ?R2
       unfolding limitin_def openin_product_topology all_union_of imp_conjL arbitrary_def
     proof (intro conjI strip)
-      show "l \<in> topspace (product_topology X I)"
+      show l: "l \<in> topspace (product_topology X I)"
         by (simp add: PiE_iff True l)
       fix \<V>
-      assume "\<V> \<subseteq> Collect (finite intersection_of (\<lambda>F. \<exists>i U. F = {f. f i \<in> U} \<and> i \<in> I \<and> openin (X i) U) relative_to topspace (product_topology X I))"
-          and "l \<in> \<Union> \<V>"
-      then obtain \<W> where "finite \<W>" "\<And>C. C \<in> \<W> \<Longrightarrow> C \<in> {{x. x i \<in> U} |i U. i \<in> I \<and> openin (X i) U}" "topspace (product_topology X I) \<inter> \<Inter> \<W> \<in> \<V>" "\<forall>X\<in>\<W>. l \<in> X"
+      assume "\<V> \<subseteq> Collect (finite intersection_of (\<lambda>F. \<exists>i U. F = {f. f i \<in> U} \<and> i \<in> I \<and> openin (X i) U)
+                   relative_to topspace (product_topology X I))"
+        and "l \<in> \<Union> \<V>"
+      then obtain \<W> where "finite \<W>" and \<W>X: "\<forall>X\<in>\<W>. l \<in> X"
+               and \<W>: "\<And>C. C \<in> \<W> \<Longrightarrow> C \<in> {{x. x i \<in> U} |i U. i \<in> I \<and> openin (X i) U}" 
+               and \<W>\<V>: "topspace (product_topology X I) \<inter> \<Inter> \<W> \<in> \<V>"
         by (fastforce simp: intersection_of_def relative_to_def subset_eq)
-      then have "l \<in> topspace (product_topology X I) \<inter> \<Inter> \<W>"
-        using \<open>l \<in> topspace (product_topology X I)\<close> by fastforce
-      show "\<forall>\<^sub>F x in F. f x \<in> \<Union>\<V>"
-         sorry
-     qed
+      have "\<forall>\<^sub>F x in F. f x \<in> topspace (product_topology X I) \<inter> \<Inter>\<W>"
+      proof -
+        have "\<And>W. W \<in> {{x. x i \<in> U} | i U. i \<in> I \<and> openin (X i) U} \<Longrightarrow> W \<in> \<W> \<Longrightarrow> \<forall>\<^sub>F x in F. f x \<in> W"
+          using \<W>X R2 by (auto simp: limitin_def)
+        with \<W> have "\<forall>\<^sub>F x in F. \<forall>W\<in>\<W>. f x \<in> W"
+          by (simp add: \<open>finite \<W>\<close> eventually_ball_finite)
+        with R1 show ?thesis
+          by (simp add: eventually_conj_iff)
+      qed
+      then show "\<forall>\<^sub>F x in F. f x \<in> \<Union>\<V>"
+        by (smt (verit, ccfv_threshold) \<W>\<V> UnionI eventually_mono)
+    qed
     ultimately show ?thesis
       using l by blast
   next
@@ -113,43 +122,6 @@ next
   then show ?thesis
     by (simp add: limitin_def PiE_iff)
 qed
-
-oops 
-    STRIP_TAC THEN
-    REWRITE_TAC[OPEN_IN_PRODUCT_TOPOLOGY; FORALL_UNION_OF;
-                arbitrary; IMP_CONJ] THEN
-    X_GEN_TAC `v:((K=>A)->bool)->bool` THEN REWRITE_TAC[IN_UNIONS] THEN
-    MATCH_MP_TAC(MESON[]
-     `(\<forall>x. P x \<Longrightarrow> x \<in> v \<and> Q x \<Longrightarrow> R)
-      \<Longrightarrow> (\<forall>x. x \<in> v \<Longrightarrow> P x) \<Longrightarrow> (\<exists>x. x \<in> v \<and> Q x) \<Longrightarrow> R`) THEN
-    REWRITE_TAC[FORALL_RELATIVE_TO; FORALL_INTERSECTION_OF] THEN
-    X_GEN_TAC `w:((K=>A)->bool)->bool` THEN STRIP_TAC THEN
-    ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
-    MATCH_MP_TAC EVENTUALLY_MONO THEN EXISTS_TAC
-     `\<lambda>x. (f::C=>K->A) x \<in>
-          topspace(product_topology I X) \<inter> \<Inter> w` THEN
-    REWRITE_TAC[] THEN CONJ_TAC THENL
-     [REPEAT STRIP_TAC THEN FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP (MESON[]
-       `a \<in> v \<Longrightarrow> P a \<Longrightarrow> \<exists>x. x \<in> v \<and> P x`)) THEN
-      ASM SET_TAC[];
-      ASM_REWRITE_TAC[EVENTUALLY_AND; IN_INTER]] THEN
-    ASM_REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY_ALT; IN_ELIM_THM] THEN
-    REWRITE_TAC[IN_INTERS] THEN
-    W(MP_TAC o PART_MATCH (lhand o rand) EVENTUALLY_FORALL o snd) THEN
-    ASM_CASES_TAC `w:((K=>A)->bool)->bool = {}` THEN
-    ASM_REWRITE_TAC[NOT_IN_EMPTY; EVENTUALLY_TRUE] THEN
-    DISCH_THEN SUBST1_TAC THEN FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP
-     (SET_RULE `(\<forall>x. P x \<Longrightarrow> Q x)
-                \<Longrightarrow> (\<forall>x. x \<in> Q \<Longrightarrow> P x \<Longrightarrow> R x) \<Longrightarrow> (\<forall>x. P x \<Longrightarrow> R x)`)) THEN
-    REWRITE_TAC[FORALL_IN_GSPEC; ETA_AX] THEN REPEAT STRIP_TAC THEN
-    REWRITE_TAC[IN_ELIM_THM] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-    ASM_REWRITE_TAC[] THEN
-    FIRST_X_ASSUM(MP_TAC o CONJUNCT2 o REWRITE_RULE[IN_INTER]) THEN
-    DISCH_THEN(MP_TAC o GEN_REWRITE_RULE id [IN_INTERS]) THEN
-    FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP (SET_RULE
-     `a \<in> s \<Longrightarrow> (P a \<Longrightarrow> Q) \<Longrightarrow> (\<forall>x. x \<in> s \<Longrightarrow> P x) \<Longrightarrow> Q`)) THEN
-    REWRITE_TAC[IN_ELIM_THM]]);;
-
 
 
 definition mcomplete_of :: "'a metric \<Rightarrow> bool"
@@ -787,7 +759,6 @@ lemma completely_metrizable_space_product_topology:
         countable {i \<in> I. \<not> (\<exists>a. topspace(X i) \<subseteq> {a})} \<and>
         (\<forall>i \<in> I. completely_metrizable_space (X i))"
   by (metis (mono_tags, lifting) completely_metrizable_imp_metrizable_space empty_completely_metrizable_space metrizable_topology_B metrizable_topology_C metrizable_topology_E)
-
 
 
 lemma completely_metrizable_Euclidean_space:
