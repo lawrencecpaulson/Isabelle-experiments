@@ -1030,6 +1030,15 @@ lemma Cauchy_continuous_map_extends_to_continuous_intermediate_closure_of:
          "(\<forall>x \<in> S. g x = f x)"
   by (metis Cauchy_continuous_map_extends_to_continuous_closure_of T assms(1) continuous_map_from_subtopology_mono f)
 
+lemma all_in_closure_of:
+  assumes P: "\<forall>x \<in> S. P x" and clo: "closedin X {x \<in> topspace X. P x}"
+  shows "\<forall>x \<in> X closure_of S. P x"
+proof -
+  have *: "topspace X \<inter> S \<subseteq> {x \<in> topspace X. P x}"
+    using P by auto
+    show ?thesis
+  using closure_of_minimal [OF * clo]  closure_of_restrict by fastforce
+qed
 
 lemma Lipschitz_continuous_map_on_intermediate_closure_aux:
   assumes lcf: "Lipschitz_continuous_map (submetric m1 S) m2 f"
@@ -1049,35 +1058,28 @@ proof -
   proof
     show "f ` mspace (submetric m1 T) \<subseteq> mspace m2"
       by (metis cmf Metric_space.metric_continuous_map Metric_space_mspace_mdist  mtopology_of_def mtopology_of_submetric)
-    obtain B::real where "B > 0" and B: "\<And>x y. \<lbrakk>x \<in> S; y \<in> S\<rbrakk> \<Longrightarrow> mdist m2 (f x) (f y) \<le> B * mdist m1 x y"
+    define X where "X \<equiv> prod_topology (subtopology L.M1.mtopology T) (subtopology L.M1.mtopology T)"
+    obtain B::real where "B > 0" and B: "\<forall>(x,y) \<in> S\<times>S. mdist m2 (f x) (f y) \<le> B * mdist m1 x y"
       using lcf \<open>S \<subseteq> mspace m1\<close>  by (force simp: Lipschitz_continuous_map_pos)
+    have clo: "closedin X {z \<in> topspace X. case z of (x, y) \<Rightarrow> mdist m2 (f x) (f y) \<le> B * mdist m1 x y}"
+      sorry
     have "mdist m2 (f x) (f y) \<le> B * mdist m1 x y" if "x \<in> T" "y \<in> T" for x y
-    proof -
-      have eq: "{x \<in> S. g x \<le> B * f x} = {x \<in> S. B * f x - g x \<in> {0..}}" for S f g
-        by auto
-      have "closedin (prod_topology (subtopology L.M1.mtopology T) (subtopology L.M1.mtopology T))
-                     {(x,y) \<in> (mspace m1 \<inter> T) \<times> (mspace m1 \<inter> T). mdist m2 (f x) (f y) \<le> B * mdist m1 x y}"
-        unfolding eq case_prod_unfold
-        apply (simp only: eq)
-        sorry
-      then have "mdist m2 (f p1) (f p2) \<le> B * mdist m1 p1 p2" 
-        if "p1 \<in> T" "p2 \<in> T" for p1 p2
-          (*SHOULD FOLLOW FROM CLOSURE_OF_CROSS FORALL_IN_CLOSURE_OF*)
-        sorry
-      then show ?thesis
-        using that by blast
-    qed
-    with \<open>B>0\<close> show "\<exists>B>0. \<forall>x\<in>mspace (submetric m1 T). \<forall>y\<in>mspace (submetric m1 T). mdist m2 (f x) (f y) \<le> B * mdist (submetric m1 T) x y"
-      by auto
+      using all_in_closure_of [OF B clo] \<open>S \<subseteq> T\<close> Tsub
+      by (fastforce simp: X_def subset_iff closure_of_Times closure_of_subtopology inf.absorb2  
+          mtopology_of_def that)
+    then show "\<exists>B>0. \<forall>x\<in>mspace (submetric m1 T).
+             \<forall>y\<in>mspace (submetric m1 T).
+                mdist m2 (f x) (f y) \<le> B * mdist (submetric m1 T) x y"
+      using \<open>0 < B\<close> by auto
   qed
 qed
 
 oops
   MP_TAC(ISPECL
-   [`prod_topology (subtopology (mtopology m1) (T::A=>bool))
-                   (subtopology (mtopology m1) (T::A=>bool))`;
-    `\<lambda>z. d m2 (f (fst z),f(snd z)) \<le> B * d m1 (fst z,snd z)`;
-    `S \<times> (S::A=>bool)`] FORALL_IN_CLOSURE_OF) THEN
+   [`prod_topology (subtopology (mtopology m1) T)
+                   (subtopology (mtopology m1) T)`;
+    `\<lambda>z. d m2 (f (fst z)) (f(snd z)) \<le> B * d m1 (fst z) (snd z)`;
+    `S \<times> S`] FORALL_IN_CLOSURE_OF) THEN
   ASM_REWRITE_TAC[CLOSURE_OF_CROSS; FORALL_PAIR_THM; IN_CROSS] THEN
   REWRITE_TAC[CLOSURE_OF_SUBTOPOLOGY] THEN ASM_SIMP_TAC[SET_RULE
    `S \<subseteq> T \<Longrightarrow> T \<inter> S = S \<and> S \<inter> T = S`] THEN
