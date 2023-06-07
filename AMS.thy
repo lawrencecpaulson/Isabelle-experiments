@@ -958,9 +958,10 @@ proof (rule continuous_map_extension_pointwise_alt)
       by (auto simp add: L.M2.MCauchy_def)
     have "(\<lambda>n. mdist m2 (f (\<rho> n)) l) \<longlonglongrightarrow> 0"
     proof (rule Lim_null_comparison)
-      show "\<forall>\<^sub>F n in sequentially. norm (mdist m2 (f (\<rho> n)) l) \<le> mdist m2 (f (\<sigma> n)) l + mdist m2 (f (\<sigma> n)) (f (\<rho> n))"
-        using \<open>l \<in> mspace m2\<close> ran_f L.M2.triangle''
-        by (smt (verit, best) mdist_commute not_eventuallyD range_eqI real_norm_def subsetD)
+      have "mdist m2 (f (\<rho> n)) l \<le> mdist m2 (f (\<sigma> n)) l + mdist m2 (f (\<sigma> n)) (f (\<rho> n))" for n
+        using \<open>l \<in> mspace m2\<close> ran_f L.M2.triangle'' by (smt (verit, best) range_subsetD)
+      then show "\<forall>\<^sub>F n in sequentially. norm (mdist m2 (f (\<rho> n)) l) \<le> mdist m2 (f (\<sigma> n)) l + mdist m2 (f (\<sigma> n)) (f (\<rho> n))"
+        by force
       define \<psi> where "\<psi> \<equiv> \<lambda>n. if even n then \<sigma> (n div 2) else \<rho> (n div 2)"
       have "(\<lambda>n. mdist m1 (\<sigma> n) (\<rho> n)) \<longlonglongrightarrow> 0"
       proof (rule Lim_null_comparison)
@@ -975,10 +976,10 @@ proof (rule continuous_map_extension_pointwise_alt)
       qed
       with \<open>S.MCauchy \<sigma>\<close> \<open>S.MCauchy \<rho>\<close> have "S.MCauchy \<psi>"
         by (simp add: S.MCauchy_interleaving_gen \<psi>_def)
-      then have J: "L.M2.MCauchy (f \<circ> \<psi>)"
+      then have "L.M2.MCauchy (f \<circ> \<psi>)"
         by (metis Cauchy_continuous_map_def f mdist_submetric mspace_submetric)
-      have "(\<lambda>n. mdist m2 (f (\<sigma> n)) (f (\<rho> n))) \<longlonglongrightarrow> 0"
-        using J L.M2.MCauchy_interleaving_gen [of "f o \<sigma>" "f o \<rho>"]  
+      then have "(\<lambda>n. mdist m2 (f (\<sigma> n)) (f (\<rho> n))) \<longlonglongrightarrow> 0"
+        using L.M2.MCauchy_interleaving_gen [of "f o \<sigma>" "f o \<rho>"]  
         by (simp add: if_distrib \<psi>_def o_def cong: if_cong)
       moreover have "\<forall>\<^sub>F n in sequentially. f (\<sigma> n) \<in> mspace m2 \<and> (\<lambda>x. mdist m2 (f (\<sigma> x)) l) \<longlonglongrightarrow> 0"
         using l by (auto simp: L.M2.limitin_metric_dist_null \<open>l \<in> mspace m2\<close>)
@@ -998,8 +999,7 @@ lemma Cauchy_continuous_map_extends_to_continuous_closure_of:
     and f: "Cauchy_continuous_map (submetric m1 S) m2 f"
   obtains g 
   where "continuous_map (subtopology (mtopology_of m1) ((mtopology_of m1) closure_of S)) 
-                        (mtopology_of m2) g" 
-        "(\<forall>x \<in> S. g x = f x)"
+                        (mtopology_of m2) g"  "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
 proof -
   obtain g where cmg: 
     "continuous_map (subtopology (mtopology_of m1) ((mtopology_of m1) closure_of (mspace m1 \<inter> S))) 
@@ -1011,15 +1011,13 @@ proof -
   show thesis
   proof
     show "continuous_map (subtopology (mtopology_of m1) ((mtopology_of m1) closure_of S)) 
-                        (mtopology_of m2) h"
+                         (mtopology_of m2) h"
       unfolding h_def
     proof (rule continuous_map_eq)
       show "continuous_map (subtopology (mtopology_of m1) (mtopology_of m1 closure_of S)) (mtopology_of m2) g"
         by (metis closure_of_restrict cmg topspace_mtopology_of)
     qed auto
-    show "\<forall>x \<in> S. h x = f x"
-      by (simp add: gf h_def)
-  qed
+  qed (auto simp: gf h_def)
 qed
 
 
@@ -1033,36 +1031,48 @@ lemma Cauchy_continuous_map_extends_to_continuous_intermediate_closure_of:
   by (metis Cauchy_continuous_map_extends_to_continuous_closure_of T assms(1) continuous_map_from_subtopology_mono f)
 
 
-lemma Lipschitz_continuous_map_on_intermediate_closure:
-  assumes "Lipschitz_continuous_map (submetric m1 S) m2 f"
+lemma Lipschitz_continuous_map_on_intermediate_closure_aux:
+  assumes lcf: "Lipschitz_continuous_map (submetric m1 S) m2 f"
     and "S \<subseteq> T" and Tsub: "T \<subseteq> (mtopology_of m1) closure_of S"
-  and "continuous_map (subtopology (mtopology_of m1) T) (mtopology_of m2) f"
-shows "Lipschitz_continuous_map (submetric m1 T) m2 f"
-  sorry
+    and cmf: "continuous_map (subtopology (mtopology_of m1) T) (mtopology_of m2) f"
+    and "S \<subseteq> mspace m1"
+  shows "Lipschitz_continuous_map (submetric m1 T) m2 f"
+proof -
+  interpret L: Metric_space12 "mspace m1" "mdist m1" "mspace m2" "mdist m2"
+    by (simp add: Metric_space12_mspace_mdist)
+  interpret S: Metric_space "S \<inter> mspace m1" "mdist m1"
+    by (simp add: L.M1.subspace)
+  have "T \<subseteq> mspace m1"
+    using Tsub by (auto simp: mtopology_of_def closure_of_def)
+  show ?thesis
+    unfolding Lipschitz_continuous_map_pos
+  proof
+    show "f ` mspace (submetric m1 T) \<subseteq> mspace m2"
+      by (metis cmf Metric_space.metric_continuous_map Metric_space_mspace_mdist  mtopology_of_def mtopology_of_submetric)
+    obtain B::real where "B > 0" and B: "\<And>x y. \<lbrakk>x \<in> S; y \<in> S\<rbrakk> \<Longrightarrow> mdist m2 (f x) (f y) \<le> B * mdist m1 x y"
+      using lcf \<open>S \<subseteq> mspace m1\<close>  by (force simp: Lipschitz_continuous_map_pos)
+    have "mdist m2 (f x) (f y) \<le> B * mdist m1 x y" if "x \<in> T" "y \<in> T" for x y
+    proof -
+      have eq: "{x \<in> S. g x \<le> B * f x} = {x \<in> S. B * f x - g x \<in> {0..}}" for S f g
+        by auto
+      have "closedin (prod_topology (subtopology L.M1.mtopology T) (subtopology L.M1.mtopology T))
+                     {(x,y) \<in> (mspace m1 \<inter> T) \<times> (mspace m1 \<inter> T). mdist m2 (f x) (f y) \<le> B * mdist m1 x y}"
+        unfolding eq case_prod_unfold
+        apply (simp only: eq)
+        sorry
+      then have "mdist m2 (f p1) (f p2) \<le> B * mdist m1 p1 p2" 
+        if "p1 \<in> T" "p2 \<in> T" for p1 p2
+          (*SHOULD FOLLOW FROM CLOSURE_OF_CROSS FORALL_IN_CLOSURE_OF*)
+        sorry
+      then show ?thesis
+        using that by blast
+    qed
+    with \<open>B>0\<close> show "\<exists>B>0. \<forall>x\<in>mspace (submetric m1 T). \<forall>y\<in>mspace (submetric m1 T). mdist m2 (f x) (f y) \<le> B * mdist (submetric m1 T) x y"
+      by auto
+  qed
+qed
+
 oops
-  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
-  SUBGOAL_THEN `submetric1 (S::A=>bool) = submetric1 (M1 \<inter> S)`
-  SUBST1_TAC THENL
-  [REWRITE_TAC[GSYM SUBMETRIC_SUBMETRIC; SUBMETRIC_MSPACE];
-    DISCH_THEN(CONJUNCTS_THEN2
-     (MP_TAC \<circ> SPEC `M1::A=>bool` \<circ> MATCH_MP (SET_RULE
-       `S \<subseteq> T \<Longrightarrow> \<forall>u. u \<inter> S \<subseteq> u \<and> u \<inter> S \<subseteq> T`))
-     MP_TAC) THEN
-    REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-    SPEC_TAC(`M1 \<inter> (S::A=>bool)`,`S::A=>bool`)] THEN
-  GEN_TAC THEN DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN
-  REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-  SUBGOAL_THEN `(T::A=>bool) \<subseteq> M1` ASSUME_TAC THENL
-   [RULE_ASSUM_TAC(REWRITE_RULE[closure_of; TOPSPACE_MTOPOLOGY]) THEN
-    ASM SET_TAC[];
-    FIRST_ASSUM(MP_TAC \<circ> CONJUNCT1 \<circ> REWRITE_RULE[CONTINUOUS_MAP])] THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; TOPSPACE_MTOPOLOGY] THEN
-  REWRITE_TAC[LIPSCHITZ_CONTINUOUS_MAP_POS] THEN
-  ASM_SIMP_TAC[SUBMETRIC; SET_RULE `S \<subseteq> u \<Longrightarrow> S \<inter> u = S`;
-               SET_RULE `S \<subseteq> u \<Longrightarrow> u \<inter> S = S`] THEN
-  DISCH_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `B::real` THEN STRIP_TAC THEN
-  ASM_REWRITE_TAC[] THEN
   MP_TAC(ISPECL
    [`prod_topology (subtopology (mtopology m1) (T::A=>bool))
                    (subtopology (mtopology m1) (T::A=>bool))`;
@@ -1072,6 +1082,7 @@ oops
   REWRITE_TAC[CLOSURE_OF_SUBTOPOLOGY] THEN ASM_SIMP_TAC[SET_RULE
    `S \<subseteq> T \<Longrightarrow> T \<inter> S = S \<and> S \<inter> T = S`] THEN
   ANTS_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
+
   ONCE_REWRITE_TAC[GSYM REAL_SUB_LE] THEN REWRITE_TAC[SET_RULE
    `{x \<in> S. 0 \<le> f x} = {x \<in> S. f x \<in> {y. 0 \<le> y}}`] THEN
   MATCH_MP_TAC CLOSED_IN_CONTINUOUS_MAP_PREIMAGE THEN
@@ -1081,6 +1092,7 @@ oops
    [MATCH_MP_TAC CONTINUOUS_MAP_REAL_LMUL THEN
     GEN_REWRITE_TAC (RAND_CONV \<circ> ABS_CONV \<circ> RAND_CONV) [GSYM PAIR];
     ALL_TAC] THEN
+
   MATCH_MP_TAC CONTINUOUS_MAP_MDIST THENL
    [ALL_TAC;
     CONJ_TAC THEN GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
@@ -1095,6 +1107,25 @@ oops
   ASM_REWRITE_TAC[GSYM SUBTOPOLOGY_CROSS] THEN
   MATCH_MP_TAC CONTINUOUS_MAP_FROM_SUBTOPOLOGY THEN
   REWRITE_TAC[CONTINUOUS_MAP_FST; CONTINUOUS_MAP_SND]);;
+
+
+
+lemma Lipschitz_continuous_map_on_intermediate_closure:
+  assumes "Lipschitz_continuous_map (submetric m1 S) m2 f"
+    and "S \<subseteq> T" and Tsub: "T \<subseteq> (mtopology_of m1) closure_of S"
+    and "continuous_map (subtopology (mtopology_of m1) T) (mtopology_of m2) f"
+  shows "Lipschitz_continuous_map (submetric m1 T) m2 f"
+proof -
+  interpret L: Metric_space12 "mspace m1" "mdist m1" "mspace m2" "mdist m2"
+    by (simp add: Metric_space12_mspace_mdist)
+  interpret S: Metric_space "S \<inter> mspace m1" "mdist m1"
+    by (simp add: L.M1.subspace)
+  have "submetric m1 S = submetric m1 ((mspace m1) \<inter> S)"
+    using submetric_restrict by auto
+
+      sorry
+  sorry
+
 
 lemma Lipschitz_continuous_map_extends_to_closure_of:
   assumes m2: "mcomplete_of m2" 
