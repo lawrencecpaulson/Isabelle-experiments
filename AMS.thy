@@ -1230,116 +1230,150 @@ lemma uniformly_continuous_map_extends_to_intermediate_closure_of:
   by (metis uniformly_continuous_map_extends_to_closure_of uniformly_continuous_map_from_submetric_mono assms)
 
 
+lemma Cauchy_continuous_map_on_intermediate_closure_aux:
+  assumes ucf: "Cauchy_continuous_map (submetric m1 S) m2 f"
+    and "S \<subseteq> T" and Tsub: "T \<subseteq> (mtopology_of m1) closure_of S"
+    and cmf: "continuous_map (subtopology (mtopology_of m1) T) (mtopology_of m2) f"
+    and "S \<subseteq> mspace m1"
+  shows "Cauchy_continuous_map (submetric m1 T) m2 f"
+proof -
+  interpret L: Metric_space12 "mspace m1" "mdist m1" "mspace m2" "mdist m2"
+    by (simp add: Metric_space12_mspace_mdist)
+  interpret S: Metric_space "S \<inter> mspace m1" "mdist m1"
+    by (simp add: L.M1.subspace)
+  interpret T: Metric_space T "mdist m1"
+    by (metis L.M1.subspace Tsub closure_of_subset_topspace dual_order.trans topspace_mtopology_of)
+  have "T \<subseteq> mspace m1"
+    using Tsub by (auto simp: mtopology_of_def closure_of_def)
+  then show ?thesis
+  proof (clarsimp simp: Cauchy_continuous_map_def Int_absorb2)
+    fix \<sigma>
+    assume \<sigma>: "T.MCauchy \<sigma>"
+    have "\<exists>y\<in>S. mdist m1 (\<sigma> n) y < inverse (Suc n) \<and> mdist m2 (f (\<sigma> n)) (f y) < inverse (Suc n)" for n
+    proof -
+      have "\<sigma> n \<in> T"
+        using \<sigma> by (force simp add: T.MCauchy_def)
+      moreover have "continuous_map (mtopology_of (submetric m1 T)) L.M2.mtopology f"
+        by (metis cmf mtopology_of_def mtopology_of_submetric)
+      ultimately obtain \<delta> where "\<delta>>0" and \<delta>: "\<forall>x \<in> T. mdist m1 (\<sigma> n) x < \<delta> \<longrightarrow> mdist m2 (f(\<sigma> n)) (f x) < inverse (Suc n)"
+        using \<open>T \<subseteq> mspace m1\<close>
+        apply (simp add: mtopology_of_def Metric_space.metric_continuous_map L.M1.subspace Int_absorb2)
+        by (metis inverse_Suc of_nat_Suc)
+      have "\<exists>y \<in> S. mdist m1 (\<sigma> n) y < min \<delta> (inverse (Suc n))"
+        using \<open>\<sigma> n \<in> T\<close> Tsub \<open>\<delta>>0\<close> 
+        unfolding mtopology_of_def L.M1.metric_closure_of subset_iff mem_Collect_eq L.M1.in_mball
+        by (smt (verit, del_insts) inverse_Suc )
+      with \<delta> \<open>S \<subseteq> T\<close> show ?thesis
+        by auto
+    qed
+    then obtain \<rho> where \<rho>S: "\<And>n. \<rho> n \<in> S" and \<rho>1: "\<And>n. mdist m1 (\<sigma> n) (\<rho> n) < inverse (Suc n)" 
+                    and \<rho>2: "\<And>n. mdist m2 (f (\<sigma> n)) (f (\<rho> n)) < inverse (Suc n)" 
+      by metis
+    have "S.MCauchy \<rho>"
+      unfolding S.MCauchy_def
+    proof (intro conjI strip)
+      show "range \<rho> \<subseteq> S \<inter> mspace m1"
+        using \<open>S \<subseteq> mspace m1\<close> by (auto simp: \<rho>S)
+      fix \<epsilon> :: real
+      assume "\<epsilon>>0"
+      then obtain M where M: "\<And>n n'. M \<le> n \<Longrightarrow> M \<le> n' \<Longrightarrow> mdist m1 (\<sigma> n) (\<sigma> n') < \<epsilon>/2"
+        using \<sigma> unfolding T.MCauchy_def by (meson half_gt_zero)
+      have "\<forall>\<^sub>F n in sequentially. inverse (Suc n) < \<epsilon>/4"
+        using Archimedean_eventually_inverse \<open>0 < \<epsilon>\<close> divide_pos_pos zero_less_numeral by blast
+      then obtain N where N: "\<And>n. N \<le> n \<Longrightarrow> inverse (Suc n) < \<epsilon>/4"
+        by (meson eventually_sequentially)
+      have "mdist m1 (\<rho> n) (\<rho> n') < \<epsilon>" if "n \<ge> max M N" "n' \<ge> max M N" for n n'
+      proof -
+        have "mdist m1 (\<rho> n) (\<rho> n') \<le> mdist m1 (\<rho> n) (\<sigma> n) + mdist m1 (\<sigma> n) (\<rho> n')"
+          by (meson T.MCauchy_def T.triangle \<rho>S \<sigma> \<open>S \<subseteq> T\<close> rangeI subset_iff)
+        also have "\<dots> \<le> mdist m1 (\<rho> n) (\<sigma> n) + mdist m1 (\<sigma> n) (\<sigma> n') + mdist m1 (\<sigma> n') (\<rho> n')"
+          by (smt (verit, best) T.MCauchy_def T.triangle \<rho>S \<sigma> \<open>S \<subseteq> T\<close> in_mono rangeI)
+        also have "\<dots> < \<epsilon>/4 + \<epsilon>/2 + \<epsilon>/4"
+          using \<rho>1[of n] \<rho>1[of n'] N[of n] N[of n'] that M[of n n'] by (simp add: T.commute)
+        also have "... \<le> \<epsilon>"
+          by simp
+        finally show ?thesis .
+      qed
+      then show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> mdist m1 (\<rho> n) (\<rho> n') < \<epsilon>"
+        by blast
+    qed
+    then have f\<rho>: "L.M2.MCauchy (f \<circ> \<rho>)"
+      using ucf by (simp add: Cauchy_continuous_map_def)
+    show "L.M2.MCauchy (f \<circ> \<sigma>)"
+      unfolding L.M2.MCauchy_def
+    proof (intro conjI strip)
+      show "range (f \<circ> \<sigma>) \<subseteq> mspace m2"
+        using \<open>T \<subseteq> mspace m1\<close> \<sigma> cmf
+        apply (auto simp: )
+        by (metis Metric_space.metric_continuous_map Metric_space_mspace_mdist T.MCauchy_def image_eqI inf.absorb1 mspace_submetric mtopology_of_def mtopology_of_submetric range_subsetD subset_iff)
+      fix \<epsilon> :: real
+      assume "\<epsilon>>0"
+      then obtain M where M: "\<And>n n'. M \<le> n \<Longrightarrow> M \<le> n' \<Longrightarrow> mdist m2 ((f \<circ> \<rho>) n) ((f \<circ> \<rho>) n') < \<epsilon>/2"
+        using f\<rho> unfolding L.M2.MCauchy_def by (meson half_gt_zero)
+      have "\<forall>\<^sub>F n in sequentially. inverse (Suc n) < \<epsilon>/4"
+        using Archimedean_eventually_inverse \<open>0 < \<epsilon>\<close> divide_pos_pos zero_less_numeral by blast
+      then obtain N where N: "\<And>n. N \<le> n \<Longrightarrow> inverse (Suc n) < \<epsilon>/4"
+        by (meson eventually_sequentially)
+      have "mdist m2 ((f \<circ> \<sigma>) n) ((f \<circ> \<sigma>) n') < \<epsilon>" if "n \<ge> max M N" "n' \<ge> max M N" for n n'
+      proof -
+        have "mdist m2 ((f \<circ> \<sigma>) n) ((f \<circ> \<sigma>) n') \<le> mdist m2 ((f \<circ> \<sigma>) n) ((f \<circ> \<rho>) n) + mdist m2 ((f \<circ> \<rho>) n) ((f \<circ> \<sigma>) n')"
+          by (meson L.M2.MCauchy_def \<open>range (f \<circ> \<sigma>) \<subseteq> mspace m2\<close> f\<rho> mdist_triangle rangeI subset_eq)
+        also have "\<dots> \<le> mdist m2 ((f \<circ> \<sigma>) n) ((f \<circ> \<rho>) n) + mdist m2 ((f \<circ> \<rho>) n) ((f \<circ> \<rho>) n') + mdist m2 ((f \<circ> \<rho>) n') ((f \<circ> \<sigma>) n')"
+          by (smt (verit) L.M2.MCauchy_def L.M2.triangle \<open>range (f \<circ> \<sigma>) \<subseteq> mspace m2\<close> f\<rho> range_subsetD)
+        also have "\<dots> < \<epsilon>/4 + \<epsilon>/2 + \<epsilon>/4"
+          using \<rho>2[of n] \<rho>2[of n'] N[of n] N[of n'] that M[of n n'] by (simp add: L.M2.commute)
+        also have "... \<le> \<epsilon>"
+          by simp
+        finally show ?thesis .
+      qed
+      then show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> mdist m2 ((f \<circ> \<sigma>) n) ((f \<circ> \<sigma>) n') < \<epsilon>"
+        by blast
+    qed
+  qed
+qed
+
 lemma Cauchy_continuous_map_on_intermediate_closure:
-   "\<And>m1 m2 f::A=>B S T.
-        S \<subseteq> T \<and> T \<subseteq> (mtopology m1) closure_of S \<and>
-        continuous_map (subtopology (mtopology m1) T,mtopology m2) f \<and>
-        Cauchy_continuous_map (submetric m1 S) m2 f
-        \<Longrightarrow> Cauchy_continuous_map (submetric m1 T) m2 f"
-oops
-  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
-  SUBGOAL_THEN `submetric1 (S::A=>bool) = submetric1 (M1 \<inter> S)`
-  SUBST1_TAC THENL
-   [REWRITE_TAC[GSYM SUBMETRIC_SUBMETRIC; SUBMETRIC_MSPACE];
-    DISCH_THEN(CONJUNCTS_THEN2
-     (MP_TAC \<circ> SPEC `M1::A=>bool` \<circ> MATCH_MP (SET_RULE
-       `S \<subseteq> T \<Longrightarrow> \<forall>u. u \<inter> S \<subseteq> u \<and> u \<inter> S \<subseteq> T`))
-     MP_TAC) THEN
-    REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-    SPEC_TAC(`M1 \<inter> (S::A=>bool)`,`S::A=>bool`)] THEN
-  GEN_TAC THEN DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN
-  REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-  SUBGOAL_THEN `(T::A=>bool) \<subseteq> M1` ASSUME_TAC THENL
-   [RULE_ASSUM_TAC(REWRITE_RULE[closure_of; TOPSPACE_MTOPOLOGY]) THEN
-    ASM SET_TAC[];
-    DISCH_TAC] THEN
-  REWRITE_TAC[Cauchy_continuous_map; CAUCHY_IN_SUBMETRIC] THEN
-  X_GEN_TAC `x::num=>A` THEN STRIP_TAC THEN
-  SUBGOAL_THEN
-   `\<forall>n. \<exists>y. y \<in> S \<and>
-            d m1 (x n,y) < inverse(Suc n) \<and>
-            d m2 (f(x n),f y) < inverse(Suc n)`
-  MP_TAC THENL
-   [X_GEN_TAC `n::num` THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[GSYM MTOPOLOGY_SUBMETRIC]) THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [METRIC_CONTINUOUS_MAP]) THEN
-    ASM_SIMP_TAC[SUBMETRIC; SET_RULE `S \<subseteq> u \<Longrightarrow> S \<inter> u = S`] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-    DISCH_THEN(MP_TAC \<circ> SPECL [`(x::num=>A) n`; `inverse(Suc n)`]) THEN
-    ASM_REWRITE_TAC[REAL_LT_INV_EQ; REAL_ARITH `0 < n + 1`] THEN
-    DISCH_THEN(X_CHOOSE_THEN `d::real` STRIP_ASSUME_TAC) THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE RAND_CONV [METRIC_CLOSURE_OF]) THEN
-    REWRITE_TAC[\<subseteq>; IN_ELIM_THM; IN_MBALL] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `(x::num=>A) n`) THEN ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC
-     (MP_TAC \<circ> SPEC `min d (inverse(Suc n))`)) THEN
-    ASM_SIMP_TAC[REAL_LT_MIN; REAL_LT_INV_EQ; REAL_ARITH `0 < n + 1`] THEN
-    MATCH_MP_TAC MONO_EXISTS THEN ASM SET_TAC[];
-    REWRITE_TAC[SKOLEM_THM; FORALL_AND_THM; LEFT_IMP_EXISTS_THM]] THEN
-  X_GEN_TAC `y::num=>A` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [Cauchy_continuous_map]) THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC `y::num=>A`) THEN
-  ASM_SIMP_TAC[CAUCHY_IN_SUBMETRIC; SUBMETRIC; SET_RULE
-   `S \<subseteq> u \<Longrightarrow> S \<inter> u = S`] THEN
-  ANTS_TAC THENL [UNDISCH_TAC `MCauchy m1 (x::num=>A)`; ALL_TAC] THEN
-  ASM_REWRITE_TAC[MCauchy; o_THM] THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> CONJUNCT1 \<circ> GEN_REWRITE_RULE id [continuous_map]) THEN
-  ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY; TOPSPACE_MTOPOLOGY;
-               SET_RULE `S \<subseteq> T \<Longrightarrow> T \<inter> S = S`] THEN
-  DISCH_TAC THEN TRY(CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC]) THEN
-  X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e / 2`) THEN ASM_REWRITE_TAC[REAL_HALF] THEN
-  DISCH_THEN(X_CHOOSE_TAC `M::num`) THEN
-  MP_TAC(SPEC `e / 4` ARCH_EVENTUALLY_INV1) THEN
-  ASM_REWRITE_TAC[REAL_ARITH `0 < e / 4 \<longleftrightarrow> 0 < e`] THEN
-  REWRITE_TAC[EVENTUALLY_SEQUENTIALLY] THEN
-  DISCH_THEN(X_CHOOSE_TAC `N::num`) THEN EXISTS_TAC `MAX M N` THEN
-  ASM_REWRITE_TAC[ARITH_RULE `MAX M N \<le> n \<longleftrightarrow> M \<le> n \<and> N \<le> n`] THEN
-  MAP_EVERY X_GEN_TAC [`m::num`; `n::num`] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`m::num`; `n::num`]) THEN
-  ASM_REWRITE_TAC[] THENL
-   [MATCH_MP_TAC(METRIC_ARITH
-     `(x \<in> M \<and> x' \<in> M \<and> y \<in> M \<and> y' \<in> M) \<and>
-      (d x y < e / 4 \<and> d x' y' < e / 4)
-      \<Longrightarrow> d x x' < e / 2 \<Longrightarrow> d y y' < e`);
-    MATCH_MP_TAC(METRIC_ARITH
-     `(x \<in> M \<and> x' \<in> M \<and> y \<in> M \<and> y' \<in> M) \<and>
-      (d x y < e / 4 \<and> d x' y' < e / 4)
-      \<Longrightarrow> d y y' < e / 2 \<Longrightarrow> d x x' < e`)] THEN
-  (CONJ_TAC THENL [ASM SET_TAC[]; ASM_MESON_TAC[REAL_LT_TRANS]]));;
+  assumes "Cauchy_continuous_map (submetric m1 S) m2 f"
+    and "S \<subseteq> T" and "T \<subseteq> (mtopology_of m1) closure_of S"
+    and "continuous_map (subtopology (mtopology_of m1) T) (mtopology_of m2) f"
+  shows "Cauchy_continuous_map (submetric m1 T) m2 f"
+  by (metis Cauchy_continuous_map_on_intermediate_closure_aux assms closure_of_subset_topspace order.trans topspace_mtopology_of)
+
 
 lemma Cauchy_continuous_map_extends_to_closure_of:
-   "\<And>m1 m2 f S.
-        mcomplete m2 \<and> Cauchy_continuous_map (submetric m1 S) m2 f
-        \<Longrightarrow> \<exists>g. Cauchy_continuous_map
-                   (submetric1 (mtopology m1 closure_of S),m2) g \<and>
-                \<forall>x. x \<in> S \<Longrightarrow> g x = f x"
-oops
-  REPEAT GEN_TAC THEN DISCH_TAC THEN FIRST_ASSUM(MP_TAC \<circ> MATCH_MP
-    CAUCHY_CONTINUOUS_MAP_EXTENDS_TO_CONTINUOUS_CLOSURE_OF) THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `g::A=>B` THEN STRIP_TAC THEN
-  ASM_REWRITE_TAC[] THEN
-  MATCH_MP_TAC CAUCHY_CONTINUOUS_MAP_ON_INTERMEDIATE_CLOSURE THEN
-  EXISTS_TAC `M1 \<inter> S::A=>bool` THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[CLOSURE_OF_SUBSET_INTER; GSYM TOPSPACE_MTOPOLOGY] THEN
-  REWRITE_TAC[GSYM CLOSURE_OF_RESTRICT; SUBSET_REFL] THEN
-  REWRITE_TAC[TOPSPACE_MTOPOLOGY; GSYM SUBMETRIC_RESTRICT] THEN
-  MATCH_MP_TAC CAUCHY_CONTINUOUS_MAP_EQ THEN EXISTS_TAC `f::A=>B` THEN
-  ASM_SIMP_TAC[SUBMETRIC; IN_INTER]);;
+  assumes m2: "mcomplete_of m2" 
+    and f: "Cauchy_continuous_map (submetric m1 S) m2 f"
+  obtains g 
+  where "Cauchy_continuous_map (submetric m1 (mtopology_of m1 closure_of S)) m2 g" 
+    "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
+proof -
+  obtain g 
+    where g: "continuous_map (subtopology (mtopology_of m1) ((mtopology_of m1) closure_of S)) 
+                        (mtopology_of m2) g"  "(\<forall>x \<in> S. g x = f x)"
+    by (metis Cauchy_continuous_map_extends_to_continuous_closure_of f m2)
+  have "Cauchy_continuous_map (submetric m1 (mtopology_of m1 closure_of S)) m2 g"
+  proof (rule Cauchy_continuous_map_on_intermediate_closure)
+    show "Cauchy_continuous_map (submetric m1 (mspace m1 \<inter> S)) m2 g"
+      by (smt (verit, best) IntD2 Cauchy_continuous_map_eq f g(2) inf_commute mspace_submetric submetric_restrict)
+    show "mspace m1 \<inter> S \<subseteq> mtopology_of m1 closure_of S"
+      using closure_of_subset_Int by force
+    show "mtopology_of m1 closure_of S \<subseteq> mtopology_of m1 closure_of (mspace m1 \<inter> S)"
+      by (metis closure_of_restrict subset_refl topspace_mtopology_of)
+    show "continuous_map (subtopology (mtopology_of m1) (mtopology_of m1 closure_of S)) (mtopology_of m2) g"
+      by (simp add: g)
+  qed
+  with g that show thesis
+    by metis
+qed
+
 
 lemma Cauchy_continuous_map_extends_to_intermediate_closure_of:
-   "\<And>m1 m2 f S T.
-        mcomplete m2 \<and>
-        Cauchy_continuous_map (submetric m1 S) m2 f \<and>
-        T \<subseteq> mtopology m1 closure_of S
-        \<Longrightarrow> \<exists>g. Cauchy_continuous_map (submetric m1 T) m2 g \<and>
-                \<forall>x. x \<in> S \<Longrightarrow> g x = f x"
-oops
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL [`m1::A metric`; `m2::B metric`; `f::A=>B`; `S::A=>bool`]
-        CAUCHY_CONTINUOUS_MAP_EXTENDS_TO_CLOSURE_OF) THEN
-  ASM_REWRITE_TAC[] THEN
-  ASM_MESON_TAC[CAUCHY_CONTINUOUS_MAP_FROM_SUBMETRIC_MONO]);;
+  assumes "mcomplete_of m2" 
+    and "Cauchy_continuous_map (submetric m1 S) m2 f"
+    and "T \<subseteq> mtopology_of m1 closure_of S"
+  obtains g 
+  where "Cauchy_continuous_map (submetric m1 T) m2 g"  "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
+  by (metis Cauchy_continuous_map_extends_to_closure_of Cauchy_continuous_map_from_submetric_mono assms)
 
 
 subsection\<open>Lavrentiev extension etc\<close>
