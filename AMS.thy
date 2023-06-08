@@ -1091,19 +1091,10 @@ qed
 
 lemma Lipschitz_continuous_map_on_intermediate_closure:
   assumes "Lipschitz_continuous_map (submetric m1 S) m2 f"
-    and "S \<subseteq> T" and Tsub: "T \<subseteq> (mtopology_of m1) closure_of S"
+    and "S \<subseteq> T" "T \<subseteq> (mtopology_of m1) closure_of S"
     and "continuous_map (subtopology (mtopology_of m1) T) (mtopology_of m2) f"
   shows "Lipschitz_continuous_map (submetric m1 T) m2 f"
-proof -
-  interpret L: Metric_space12 "mspace m1" "mdist m1" "mspace m2" "mdist m2"
-    by (simp add: Metric_space12_mspace_mdist)
-  interpret S: Metric_space "S \<inter> mspace m1" "mdist m1"
-    by (simp add: L.M1.subspace)
-  have "submetric m1 S = submetric m1 ((mspace m1) \<inter> S)"
-    using submetric_restrict by auto
-
-      sorry
-  sorry
+  by (metis Lipschitz_continuous_map_on_intermediate_closure_aux assms closure_of_subset_topspace subset_trans topspace_mtopology_of)
 
 
 lemma Lipschitz_continuous_map_extends_to_closure_of:
@@ -1115,8 +1106,7 @@ lemma Lipschitz_continuous_map_extends_to_closure_of:
 proof -
   obtain g 
     where g: "continuous_map (subtopology (mtopology_of m1) ((mtopology_of m1) closure_of S)) 
-                        (mtopology_of m2) g" 
-      "(\<forall>x \<in> S. g x = f x)"
+                        (mtopology_of m2) g"  "(\<forall>x \<in> S. g x = f x)"
     by (metis Cauchy_continuous_map_extends_to_continuous_closure_of Lipschitz_imp_Cauchy_continuous_map f m2)
   have "Lipschitz_continuous_map (submetric m1 (mtopology_of m1 closure_of S)) m2 g"
   proof (rule Lipschitz_continuous_map_on_intermediate_closure)
@@ -1127,7 +1117,7 @@ proof -
     show "mtopology_of m1 closure_of S \<subseteq> mtopology_of m1 closure_of (mspace m1 \<inter> S)"
       by (metis closure_of_restrict subset_refl topspace_mtopology_of)
     show "continuous_map (subtopology (mtopology_of m1) (mtopology_of m1 closure_of S)) (mtopology_of m2) g"
-      by (simp add: g(1))
+      by (simp add: g)
   qed
   with g that show thesis
     by metis
@@ -1142,102 +1132,103 @@ lemma Lipschitz_continuous_map_extends_to_intermediate_closure_of:
   where "Lipschitz_continuous_map (submetric m1 T) m2 g"  "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
   by (metis Lipschitz_continuous_map_extends_to_closure_of Lipschitz_continuous_map_from_submetric_mono assms)
 
+text \<open>This proof uses the same trick to extend the function's domain to its closure\<close>
+lemma uniformly_continuous_map_on_intermediate_closure_aux:
+  assumes ucf: "uniformly_continuous_map (submetric m1 S) m2 f"
+    and "S \<subseteq> T" and Tsub: "T \<subseteq> (mtopology_of m1) closure_of S"
+    and cmf: "continuous_map (subtopology (mtopology_of m1) T) (mtopology_of m2) f"
+    and "S \<subseteq> mspace m1"
+  shows "uniformly_continuous_map (submetric m1 T) m2 f"
+proof -
+  interpret L: Metric_space12 "mspace m1" "mdist m1" "mspace m2" "mdist m2"
+    by (simp add: Metric_space12_mspace_mdist)
+  interpret S: Metric_space "S \<inter> mspace m1" "mdist m1"
+    by (simp add: L.M1.subspace)
+  have "T \<subseteq> mspace m1"
+    using Tsub by (auto simp: mtopology_of_def closure_of_def)
+  show ?thesis
+    unfolding uniformly_continuous_map_def
+    proof (intro conjI strip)
+    show "f ` mspace (submetric m1 T) \<subseteq> mspace m2"
+      by (metis cmf Metric_space.metric_continuous_map Metric_space_mspace_mdist  mtopology_of_def mtopology_of_submetric)
+    fix \<epsilon>::real
+    assume "\<epsilon> > 0"
+    then obtain \<delta> where "\<delta>>0" and \<delta>: "\<forall>(x,y) \<in> S\<times>S. mdist m1 x y < \<delta> \<longrightarrow> mdist m2 (f x) (f y) \<le> \<epsilon>/2"
+      using ucf \<open>S \<subseteq> mspace m1\<close> unfolding uniformly_continuous_map_def mspace_submetric
+      apply (simp add: Ball_def del: divide_const_simps)
+      by (metis IntD2 half_gt_zero inf.orderE less_eq_real_def)
+    define X where "X \<equiv> prod_topology (subtopology L.M1.mtopology T) (subtopology L.M1.mtopology T)"
+    text \<open>A clever construction involving the union of two closed sets\<close>
+    have eq: "{z \<in> A. case z of (x,y) \<Rightarrow> p x y < d \<longrightarrow> q x y \<le> e} 
+            = {z \<in> A. ((\<lambda>(x,y). p x y - d)z) \<in> {0..}} \<union> {z \<in> A. ((\<lambda>(x,y). e - q x y)z) \<in> {0..}}" 
+      for p q and d e::real and A::"('a*'a)set"
+      by auto
+    have clo: "closedin X {z \<in> topspace X. case z of (x, y) \<Rightarrow> mdist m1 x y < \<delta> \<longrightarrow> mdist m2 (f x) (f y) \<le> \<epsilon>/2}"
+      unfolding eq
+    proof (intro closedin_Un closedin_continuous_map_preimage)
+      have *: "continuous_map X L.M1.mtopology fst" "continuous_map X L.M1.mtopology snd"
+        by (metis X_def continuous_map_subtopology_fst subtopology_Times continuous_map_subtopology_snd)+
+      show "continuous_map X euclidean (\<lambda>x. case x of (x, y) \<Rightarrow> mdist m1 x y - \<delta>)"
+        unfolding case_prod_unfold
+        by (intro continuous_intros; simp add: mtopology_of_def *)
+      have *: "continuous_map X L.M2.mtopology (f o fst)" "continuous_map X L.M2.mtopology (f o snd)"
+        using cmf by (auto simp add: mtopology_of_def X_def intro: continuous_map_compose continuous_map_fst continuous_map_snd)
+      then show "continuous_map X euclidean (\<lambda>x. case x of (x, y) \<Rightarrow> \<epsilon> / 2 - mdist m2 (f x) (f y))"
+        unfolding case_prod_unfold
+        by (intro continuous_intros; simp add: mtopology_of_def o_def)
+    qed auto
+    have "mdist m2 (f x) (f y) \<le> \<epsilon>/2" if "x \<in> T" "y \<in> T" "mdist m1 x y < \<delta>" for x y
+      using all_in_closure_of [OF \<delta> clo] \<open>S \<subseteq> T\<close> Tsub
+      by (fastforce simp: X_def subset_iff closure_of_Times closure_of_subtopology inf.absorb2  
+          mtopology_of_def that)
+    then show "\<exists>\<delta>>0. \<forall>x\<in>mspace (submetric m1 T). \<forall>y\<in>mspace (submetric m1 T). mdist (submetric m1 T) y x < \<delta> \<longrightarrow> mdist m2 (f y) (f x) < \<epsilon>"
+      using \<open>0 < \<delta>\<close> \<open>0 < \<epsilon>\<close> by fastforce
+  qed
+qed
+
 lemma uniformly_continuous_map_on_intermediate_closure:
-   "S \<subseteq> T \<and> T \<subseteq> (mtopology m1) closure_of S \<and>
-        continuous_map (subtopology (mtopology m1) T,mtopology m2) f \<and>
-        uniformly_continuous_map (submetric m1 S) m2 f
-        \<Longrightarrow> uniformly_continuous_map (submetric m1 T) m2 f"
-oops
-  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
-  SUBGOAL_THEN `submetric1 (S::A=>bool) = submetric1 (M1 \<inter> S)`
-  SUBST1_TAC THENL
-   [REWRITE_TAC[GSYM SUBMETRIC_SUBMETRIC; SUBMETRIC_MSPACE];
-    DISCH_THEN(CONJUNCTS_THEN2
-     (MP_TAC \<circ> SPEC `M1::A=>bool` \<circ> MATCH_MP (SET_RULE
-       `S \<subseteq> T \<Longrightarrow> \<forall>u. u \<inter> S \<subseteq> u \<and> u \<inter> S \<subseteq> T`))
-     MP_TAC) THEN
-    REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-    SPEC_TAC(`M1 \<inter> (S::A=>bool)`,`S::A=>bool`)] THEN
-  GEN_TAC THEN DISCH_THEN(fun th -> STRIP_TAC THEN MP_TAC th) THEN
-  REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-  SUBGOAL_THEN `(T::A=>bool) \<subseteq> M1` ASSUME_TAC THENL
-   [RULE_ASSUM_TAC(REWRITE_RULE[closure_of; TOPSPACE_MTOPOLOGY]) THEN
-    ASM SET_TAC[];
-    FIRST_ASSUM(MP_TAC \<circ> CONJUNCT1 \<circ> REWRITE_RULE[CONTINUOUS_MAP])] THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; TOPSPACE_MTOPOLOGY] THEN
-  REWRITE_TAC[uniformly_continuous_map] THEN
-  ASM_SIMP_TAC[SUBMETRIC; SET_RULE `S \<subseteq> u \<Longrightarrow> S \<inter> u = S`;
-               SET_RULE `S \<subseteq> u \<Longrightarrow> u \<inter> S = S`] THEN
-  DISCH_TAC THEN STRIP_TAC THEN X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e / 2`) THEN ASM_REWRITE_TAC[REAL_HALF] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `d::real` THEN STRIP_TAC THEN
-  ASM_REWRITE_TAC[] THEN
-  MP_TAC(ISPECL
-   [`prod_topology (subtopology (mtopology m1) (T::A=>bool))
-                   (subtopology (mtopology m1) (T::A=>bool))`;
-    `\<lambda>z. d m1 (fst z,snd z) < d
-         \<Longrightarrow> d m2 (f (fst z),f(snd z)) \<le> e / 2`;
-    `S \<times> (S::A=>bool)`] FORALL_IN_CLOSURE_OF) THEN
-  ASM_REWRITE_TAC[CLOSURE_OF_CROSS; FORALL_PAIR_THM; IN_CROSS] THEN
-  REWRITE_TAC[CLOSURE_OF_SUBTOPOLOGY] THEN ASM_SIMP_TAC[SET_RULE
-   `S \<subseteq> T \<Longrightarrow> T \<inter> S = S \<and> S \<inter> T = S`] THEN ANTS_TAC THENL
-   [ASM_SIMP_TAC[REAL_LT_IMP_LE];
-    ASM_MESON_TAC[REAL_ARITH `0 < e \<and> x \<le> e / 2 \<Longrightarrow> x < e`]] THEN
-  ONCE_REWRITE_TAC[GSYM REAL_NOT_LE] THEN
-  ONCE_REWRITE_TAC[GSYM REAL_SUB_LE] THEN
-  REWRITE_TAC[SET_RULE
-   `{x \<in> S. (\<not> (0 \<le> f x) \<Longrightarrow> 0 \<le> g x)} =
-    {x \<in> S. g x \<in> {y. 0 \<le> y}} \<union>
-    {x \<in> S. f x \<in> {y. 0 \<le> y}}`] THEN
-  MATCH_MP_TAC CLOSED_IN_UNION THEN CONJ_TAC THEN
-  MATCH_MP_TAC CLOSED_IN_CONTINUOUS_MAP_PREIMAGE THEN
-  EXISTS_TAC `euclideanreal` THEN REWRITE_TAC[GSYM REAL_CLOSED_IN] THEN
-  REWRITE_TAC[REWRITE_RULE[real_ge] REAL_CLOSED_HALFSPACE_GE] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_REAL_SUB THEN
-  REWRITE_TAC[CONTINUOUS_MAP_CONST; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_MDIST_ALT THEN
-  REWRITE_TAC[CONTINUOUS_MAP_PAIRWISE; o_DEF; GSYM SUBTOPOLOGY_CROSS] THEN
-  SIMP_TAC[CONTINUOUS_MAP_FST; CONTINUOUS_MAP_SND; ETA_AX;
-           CONTINUOUS_MAP_FROM_SUBTOPOLOGY] THEN
-  CONJ_TAC THEN GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
-  EXISTS_TAC `subtopology (mtopology m1) (T::A=>bool)` THEN
-  ASM_SIMP_TAC[SUBTOPOLOGY_CROSS; CONTINUOUS_MAP_FST; CONTINUOUS_MAP_SND]);;
+  assumes "uniformly_continuous_map (submetric m1 S) m2 f"
+    and "S \<subseteq> T" and"T \<subseteq> (mtopology_of m1) closure_of S"
+    and "continuous_map (subtopology (mtopology_of m1) T) (mtopology_of m2) f"
+  shows "uniformly_continuous_map (submetric m1 T) m2 f"
+  by (metis assms closure_of_subset_topspace subset_trans topspace_mtopology_of 
+      uniformly_continuous_map_on_intermediate_closure_aux)
 
 lemma uniformly_continuous_map_extends_to_closure_of:
-   "\<And>m1 m2 f S.
-        mcomplete m2 \<and> uniformly_continuous_map (submetric m1 S) m2 f
-        \<Longrightarrow> \<exists>g. uniformly_continuous_map
-                   (submetric1 (mtopology m1 closure_of S),m2) g \<and>
-                \<forall>x. x \<in> S \<Longrightarrow> g x = f x"
-oops
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL [`m1::A metric`; `m2::B metric`; `f::A=>B`; `S::A=>bool`]
-         CAUCHY_CONTINUOUS_MAP_EXTENDS_TO_CONTINUOUS_CLOSURE_OF) THEN
-  ASM_SIMP_TAC[UNIFORMLY_IMP_CAUCHY_CONTINUOUS_MAP] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `g::A=>B` THEN STRIP_TAC THEN
-  ASM_REWRITE_TAC[] THEN
-  MATCH_MP_TAC UNIFORMLY_CONTINUOUS_MAP_ON_INTERMEDIATE_CLOSURE THEN
-  EXISTS_TAC `M1 \<inter> S::A=>bool` THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[CLOSURE_OF_SUBSET_INTER; GSYM TOPSPACE_MTOPOLOGY] THEN
-  REWRITE_TAC[GSYM CLOSURE_OF_RESTRICT; SUBSET_REFL] THEN
-  REWRITE_TAC[TOPSPACE_MTOPOLOGY; GSYM SUBMETRIC_RESTRICT] THEN
-  MATCH_MP_TAC UNIFORMLY_CONTINUOUS_MAP_EQ THEN EXISTS_TAC `f::A=>B` THEN
-  ASM_SIMP_TAC[SUBMETRIC; IN_INTER]);;
+  assumes m2: "mcomplete_of m2" 
+    and f: "uniformly_continuous_map (submetric m1 S) m2 f"
+  obtains g 
+  where "uniformly_continuous_map (submetric m1 (mtopology_of m1 closure_of S)) m2 g" 
+    "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
+proof -
+  obtain g 
+    where g: "continuous_map (subtopology (mtopology_of m1) ((mtopology_of m1) closure_of S)) 
+                        (mtopology_of m2) g"  "(\<forall>x \<in> S. g x = f x)"
+    by (metis Cauchy_continuous_map_extends_to_continuous_closure_of uniformly_imp_Cauchy_continuous_map f m2)
+  have "uniformly_continuous_map (submetric m1 (mtopology_of m1 closure_of S)) m2 g"
+  proof (rule uniformly_continuous_map_on_intermediate_closure)
+    show "uniformly_continuous_map (submetric m1 (mspace m1 \<inter> S)) m2 g"
+      by (smt (verit, best) IntD2 uniformly_continuous_map_eq f g(2) inf_commute mspace_submetric submetric_restrict)
+    show "mspace m1 \<inter> S \<subseteq> mtopology_of m1 closure_of S"
+      using closure_of_subset_Int by force
+    show "mtopology_of m1 closure_of S \<subseteq> mtopology_of m1 closure_of (mspace m1 \<inter> S)"
+      by (metis closure_of_restrict subset_refl topspace_mtopology_of)
+    show "continuous_map (subtopology (mtopology_of m1) (mtopology_of m1 closure_of S)) (mtopology_of m2) g"
+      by (simp add: g)
+  qed
+  with g that show thesis
+    by metis
+qed
+
 
 lemma uniformly_continuous_map_extends_to_intermediate_closure_of:
-   "\<And>m1 m2 f S T.
-        mcomplete m2 \<and>
-        uniformly_continuous_map (submetric m1 S) m2 f \<and>
-        T \<subseteq> mtopology m1 closure_of S
-        \<Longrightarrow> \<exists>g. uniformly_continuous_map (submetric m1 T) m2 g \<and>
-                \<forall>x. x \<in> S \<Longrightarrow> g x = f x"
-oops
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL [`m1::A metric`; `m2::B metric`; `f::A=>B`; `S::A=>bool`]
-        UNIFORMLY_CONTINUOUS_MAP_EXTENDS_TO_CLOSURE_OF) THEN
-  ASM_REWRITE_TAC[] THEN
-  ASM_MESON_TAC[UNIFORMLY_CONTINUOUS_MAP_FROM_SUBMETRIC_MONO]);;
+  assumes "mcomplete_of m2" 
+    and "uniformly_continuous_map (submetric m1 S) m2 f"
+    and "T \<subseteq> mtopology_of m1 closure_of S"
+  obtains g 
+  where "uniformly_continuous_map (submetric m1 T) m2 g"  "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
+  by (metis uniformly_continuous_map_extends_to_closure_of uniformly_continuous_map_from_submetric_mono assms)
+
 
 lemma Cauchy_continuous_map_on_intermediate_closure:
    "\<And>m1 m2 f::A=>B S T.
