@@ -7,7 +7,7 @@ theory AMS
 begin
 
 declare Metric_space_mspace_mdist [simp]
-
+declare continuous_map_mdist [continuous_intros]
 
 lemma limit_within_subset:
    "\<lbrakk>limitin X f l (atin_within Y a S); T \<subseteq> S\<rbrakk> \<Longrightarrow> limitin X f l (atin_within Y a T)"
@@ -1030,6 +1030,7 @@ lemma Cauchy_continuous_map_extends_to_continuous_intermediate_closure_of:
          "(\<forall>x \<in> S. g x = f x)"
   by (metis Cauchy_continuous_map_extends_to_continuous_closure_of T assms(1) continuous_map_from_subtopology_mono f)
 
+text \<open>Technical lemma helpful for porting particularly ugly HOL Light proofs\<close>
 lemma all_in_closure_of:
   assumes P: "\<forall>x \<in> S. P x" and clo: "closedin X {x \<in> topspace X. P x}"
   shows "\<forall>x \<in> X closure_of S. P x"
@@ -1061,8 +1062,21 @@ proof -
     define X where "X \<equiv> prod_topology (subtopology L.M1.mtopology T) (subtopology L.M1.mtopology T)"
     obtain B::real where "B > 0" and B: "\<forall>(x,y) \<in> S\<times>S. mdist m2 (f x) (f y) \<le> B * mdist m1 x y"
       using lcf \<open>S \<subseteq> mspace m1\<close>  by (force simp: Lipschitz_continuous_map_pos)
+    have eq: "{z \<in> A. case z of (x,y) \<Rightarrow> p x y \<le> B * q x y} = {z \<in> A. ((\<lambda>(x,y). B * q x y - p x y)z) \<in> {0..}}" 
+        for p q and A::"('a*'a)set"
+      by auto
     have clo: "closedin X {z \<in> topspace X. case z of (x, y) \<Rightarrow> mdist m2 (f x) (f y) \<le> B * mdist m1 x y}"
-      sorry
+      unfolding eq
+    proof (rule closedin_continuous_map_preimage)
+      have *: "continuous_map X L.M2.mtopology (f o fst)" "continuous_map X L.M2.mtopology (f o snd)"
+        using cmf by (auto simp add: mtopology_of_def X_def intro: continuous_map_compose continuous_map_fst continuous_map_snd)
+      then show "continuous_map X euclidean (\<lambda>x. case x of (x, y) \<Rightarrow> B * mdist m1 x y - mdist m2 (f x) (f y))"
+        unfolding case_prod_unfold
+      proof (intro continuous_intros; simp add: mtopology_of_def o_def)
+        show "continuous_map X L.M1.mtopology fst" "continuous_map X L.M1.mtopology snd"
+          by (simp_all add: X_def continuous_map_subtopology_fst continuous_map_subtopology_snd flip: subtopology_Times)
+      qed
+    qed auto
     have "mdist m2 (f x) (f y) \<le> B * mdist m1 x y" if "x \<in> T" "y \<in> T" for x y
       using all_in_closure_of [OF B clo] \<open>S \<subseteq> T\<close> Tsub
       by (fastforce simp: X_def subset_iff closure_of_Times closure_of_subtopology inf.absorb2  
@@ -1073,43 +1087,6 @@ proof -
       using \<open>0 < B\<close> by auto
   qed
 qed
-
-oops
-  MP_TAC(ISPECL
-   [`prod_topology (subtopology (mtopology m1) T)
-                   (subtopology (mtopology m1) T)`;
-    `\<lambda>z. d m2 (f (fst z)) (f(snd z)) \<le> B * d m1 (fst z) (snd z)`;
-    `S \<times> S`] FORALL_IN_CLOSURE_OF) THEN
-  ASM_REWRITE_TAC[CLOSURE_OF_CROSS; FORALL_PAIR_THM; IN_CROSS] THEN
-  REWRITE_TAC[CLOSURE_OF_SUBTOPOLOGY] THEN ASM_SIMP_TAC[SET_RULE
-   `S \<subseteq> T \<Longrightarrow> T \<inter> S = S \<and> S \<inter> T = S`] THEN
-  ANTS_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-
-  ONCE_REWRITE_TAC[GSYM REAL_SUB_LE] THEN REWRITE_TAC[SET_RULE
-   `{x \<in> S. 0 \<le> f x} = {x \<in> S. f x \<in> {y. 0 \<le> y}}`] THEN
-  MATCH_MP_TAC CLOSED_IN_CONTINUOUS_MAP_PREIMAGE THEN
-  EXISTS_TAC `euclideanreal` THEN REWRITE_TAC[GSYM REAL_CLOSED_IN] THEN
-  REWRITE_TAC[REWRITE_RULE[real_ge] REAL_CLOSED_HALFSPACE_GE] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_REAL_SUB THEN CONJ_TAC THENL
-   [MATCH_MP_TAC CONTINUOUS_MAP_REAL_LMUL THEN
-    GEN_REWRITE_TAC (RAND_CONV \<circ> ABS_CONV \<circ> RAND_CONV) [GSYM PAIR];
-    ALL_TAC] THEN
-
-  MATCH_MP_TAC CONTINUOUS_MAP_MDIST THENL
-   [ALL_TAC;
-    CONJ_TAC THEN GEN_REWRITE_TAC RAND_CONV [GSYM o_DEF] THEN
-    MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
-    EXISTS_TAC `subtopology (mtopology m1) (T::A=>bool)`] THEN
-  REPEAT CONJ_TAC THEN
-  TRY(MATCH_MP_TAC CONTINUOUS_MAP_INTO_SUBTOPOLOGY THEN
-      REWRITE_TAC[TOPSPACE_PROD_TOPOLOGY; IMAGE_FST_CROSS; IMAGE_SND_CROSS;
-                  INTER_CROSS] THEN
-      REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN
-      CONJ_TAC THENL [ALL_TAC; SET_TAC[]]) THEN
-  ASM_REWRITE_TAC[GSYM SUBTOPOLOGY_CROSS] THEN
-  MATCH_MP_TAC CONTINUOUS_MAP_FROM_SUBTOPOLOGY THEN
-  REWRITE_TAC[CONTINUOUS_MAP_FST; CONTINUOUS_MAP_SND]);;
-
 
 
 lemma Lipschitz_continuous_map_on_intermediate_closure:
