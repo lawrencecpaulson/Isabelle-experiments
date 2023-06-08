@@ -1376,6 +1376,562 @@ lemma Cauchy_continuous_map_extends_to_intermediate_closure_of:
   by (metis Cauchy_continuous_map_extends_to_closure_of Cauchy_continuous_map_from_submetric_mono assms)
 
 
+subsection\<open>Metric space of bounded functions\<close>
+
+definition funspace where
+  `funspace s m =
+   metric ({f::A=>B | (\<forall>x. x \<in> s \<Longrightarrow> f x \<in> M) \<and>
+                     f \<in> EXTENSIONAL s \<and>
+                     mbounded (f ` s)},
+           (\<lambda>(f,g). if s = {} then 0 else
+                    sup {d (f x) g x | x | x \<in> s}))"
+
+let FUNSPACE = (REWRITE_RULE[GSYM FORALL_AND_THM] \<circ> prove)
+   "mspace (funspace s m) =
+       {f::A=>B | (\<forall>x. x \<in> s \<Longrightarrow> f x \<in> M) \<and>
+                 f \<in> EXTENSIONAL s \<and>
+                 mbounded (f ` s)} \<and>
+     (\<forall>f g. d (funspace s m) (f,g) =
+              if s = {} then 0 else
+              sup {d (f x) g x | x | x \<in> s})"
+oops
+  REPEAT GEN_TAC THEN MAP_EVERY LABEL_ABBREV_TAC
+    [`fspace = {f::A=>B | (\<forall>x. x \<in> s \<Longrightarrow> f x \<in> M) \<and>
+                         f \<in> EXTENSIONAL s \<and>
+                         mbounded (f ` s)}`;
+     `fdist =
+        \<lambda>(f,g). if s = {} then 0 else
+                sup {d (f x)::B g x | x | x::A \<in> s}`] THEN
+  CUT_TAC `mspace (funspace s m) = fspace:(A=>B)->bool \<and>
+           d (funspace s m:(A=>B)metric) = fdist` THENL
+  [EXPAND_TAC "fdist" THEN DISCH_THEN (fun th -> REWRITE_TAC[th]);
+   ASM_REWRITE_TAC[funspace] THEN MATCH_MP_TAC METRIC] THEN
+  ASM_CASES_TAC `s::A=>bool = {}` THENL
+  [POP_ASSUM SUBST_ALL_TAC THEN MAP_EVERY EXPAND_TAC ["fspace"; "fdist"] THEN
+   SIMP_TAC[is_metric_space; NOT_IN_EMPTY; IN_EXTENSIONAL; IMAGE_CLAUSES;
+     MBOUNDED_EMPTY; IN_ELIM_THM; REAL_LE_REFL; REAL_ADD_LID; FUN_EQ_THM];
+   POP_ASSUM (LABEL_TAC "nempty")] THEN
+  REMOVE_THEN "nempty" (fun th ->
+    RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN LABEL_TAC "nempty" th) THEN
+  CLAIM_TAC "wd ext bound"
+    `(\<forall>f x::A. f \<in> fspace \<and> x \<in> s \<Longrightarrow> f x::B \<in> M) \<and>
+     (\<forall>f. f \<in> fspace \<Longrightarrow> f \<in> EXTENSIONAL s) \<and>
+     (\<forall>f. f \<in> fspace
+          \<Longrightarrow> (\<exists>c b. c \<in> M \<and>
+                     (\<forall>x. x \<in> s \<Longrightarrow> d c f x \<le> b)))` THENL
+  [EXPAND_TAC "fspace" THEN
+   ASM_SIMP_TAC[IN_ELIM_THM; MBOUNDED; IMAGE_EQ_EMPTY] THEN SET_TAC[];
+   ALL_TAC] THEN
+  CLAIM_TAC "bound2"
+    `\<forall>f g::A=>B. f \<in> fspace \<and> g \<in> fspace
+                \<Longrightarrow> (\<exists>b. \<forall>x. x \<in> s \<Longrightarrow> d (f x) g x \<le> b)` THENL
+  [REMOVE_THEN "fspace" (SUBST_ALL_TAC \<circ> GSYM) THEN
+   REWRITE_TAC[IN_ELIM_THM] THEN REPEAT STRIP_TAC THEN
+   CUT_TAC `mbounded (image f s \<union> g ` s)` THENL
+   [REWRITE_TAC[MBOUNDED_ALT; \<subseteq>; IN_UNION] THEN
+    STRIP_TAC THEN EXISTS_TAC `b::real` THEN ASM SET_TAC [];
+    ASM_REWRITE_TAC[MBOUNDED_UNION]];
+   ALL_TAC] THEN
+  HYP_TAC "nempty -> @a. a" (REWRITE_RULE[GSYM MEMBER_NOT_EMPTY]) THEN
+  REWRITE_TAC[is_metric_space] THEN CONJ_TAC THENL
+  [INTRO_TAC "![f] [g]; f  g" THEN EXPAND_TAC "fdist" THEN
+   REWRITE_TAC[] THEN MATCH_MP_TAC REAL_LE_SUP THEN
+   CLAIM_TAC "@b. b" `\<exists>b. \<forall>x::A. x \<in> s \<Longrightarrow> d (f x)::B g x \<le> b` THENL
+   [HYP SIMP_TAC "bound2 f g" [];
+    ALL_TAC] THEN
+    MAP_EVERY EXISTS_TAC [`b::real`; `d m (f(a::A):B,g a)`] THEN
+    REWRITE_TAC[IN_ELIM_THM] THEN HYP SIMP_TAC "wd f g a" [MDIST_POS_LE] THEN
+    HYP MESON_TAC "a b" [];
+    ALL_TAC] THEN
+  CONJ_TAC THENL
+  [INTRO_TAC "![f] [g]; f  g" THEN EXPAND_TAC "fdist" THEN
+   REWRITE_TAC[] THEN EQ_TAC THENL
+   [INTRO_TAC "sup0" THEN MATCH_MP_TAC (SPEC `s::A=>bool` EXTENSIONAL_EQ) THEN
+    HYP SIMP_TAC "f g ext" [] THEN INTRO_TAC "!x; x" THEN
+    REFUTE_THEN (LABEL_TAC "neq") THEN
+    CUT_TAC
+      `0 < d m (f (x::A):B, g x) \<and>
+       d (f x) g x \<le> sup {d (f x) g x | x \<in> s}` THENL
+    [HYP REWRITE_TAC "sup0" [] THEN REAL_ARITH_TAC; ALL_TAC] THEN
+    HYP SIMP_TAC "wd f g x neq" [MDIST_POS_LT] THEN
+    MATCH_MP_TAC REAL_LE_SUP THEN
+    CLAIM_TAC "@B. B" `\<exists>b. \<forall>x::A. x \<in> s \<Longrightarrow> d (f x)::B g x \<le> b` THENL
+    [HYP SIMP_TAC "bound2 f g" []; ALL_TAC] THEN
+    MAP_EVERY EXISTS_TAC [`B::real`; `d m (f (x::A):B,g x)`] THEN
+    REWRITE_TAC[IN_ELIM_THM; IN_UNIV; REAL_LE_REFL] THEN
+    HYP MESON_TAC "B x" [];
+    DISCH_THEN (SUBST1_TAC \<circ> GSYM) THEN
+    SUBGOAL_THEN `{d (f x)::B f x | x::A \<in> s} = {0}`
+      (fun th -> REWRITE_TAC[th; SUP_SING]) THEN
+    REWRITE_TAC[EXTENSION; IN_ELIM_THM; NOT_IN_EMPTY; IN_UNIV; IN_INSERT] THEN
+    HYP MESON_TAC "wd f a" [MDIST_REFL]];
+   ALL_TAC] THEN
+  CONJ_TAC THENL
+  [INTRO_TAC "![f] [g]; f g" THEN EXPAND_TAC "fdist" THEN REWRITE_TAC[] THEN
+   AP_TERM_TAC THEN REWRITE_TAC[EXTENSION; IN_ELIM_THM] THEN
+   HYP MESON_TAC "wd f g" [MDIST_SYM];
+   ALL_TAC] THEN
+  INTRO_TAC "![f] [g] [h]; f g h" THEN EXPAND_TAC "fdist" THEN
+  REWRITE_TAC[] THEN MATCH_MP_TAC REAL_SUP_LE THEN CONJ_TAC THENL
+  [REWRITE_TAC[EXTENSION; IN_ELIM_THM; NOT_IN_EMPTY; IN_UNIV] THEN
+   HYP MESON_TAC "a" [];
+   ALL_TAC] THEN
+  FIX_TAC "[d]" THEN REWRITE_TAC [IN_ELIM_THM; IN_UNIV] THEN
+  INTRO_TAC "@x. x d" THEN POP_ASSUM SUBST1_TAC THEN
+  CUT_TAC
+    `d m (f (x::A):B,h x) \<le> d (f x) g x + d (g x) h x \<and>
+     d (f x) g x \<le> fdist (f,g) \<and>
+     d (g x) h x \<le> fdist (g,h)` THEN
+  EXPAND_TAC "fdist" THEN REWRITE_TAC[] THENL [REAL_ARITH_TAC; ALL_TAC] THEN
+  HYP SIMP_TAC "wd f g h x" [MDIST_TRIANGLE] THEN
+  CONJ_TAC THEN MATCH_MP_TAC REAL_LE_SUP THENL
+  [CLAIM_TAC "@B. B" `\<exists>b. \<forall>x::A. x \<in> s \<Longrightarrow> d (f x)::B g x \<le> b` THENL
+   [HYP SIMP_TAC "bound2 f g" [];
+    MAP_EVERY EXISTS_TAC [`B::real`; `d m (f(x::A):B,g x)`]] THEN
+   REWRITE_TAC[IN_ELIM_THM; IN_UNIV; REAL_LE_REFL] THEN HYP MESON_TAC "B x" [];
+   CLAIM_TAC "@B. B" `\<exists>b. \<forall>x::A. x \<in> s \<Longrightarrow> d (g x)::B h x \<le> b` THENL
+   [HYP SIMP_TAC "bound2 g h" []; ALL_TAC] THEN
+   MAP_EVERY EXISTS_TAC [`B::real`; `d m (g(x::A):B,h x)`] THEN
+   REWRITE_TAC[IN_ELIM_THM; IN_UNIV; REAL_LE_REFL] THEN
+   HYP MESON_TAC "B x" []]);;
+
+lemma funspace_imp_welldefined:
+   "\<And>s m f::A=>B x. f \<in> mspace (funspace s m) \<and> x \<in> s \<Longrightarrow> f x \<in> M"
+oops
+  SIMP_TAC[FUNSPACE; IN_ELIM_THM]);;
+
+lemma funspace_imp_extensional:
+   "\<And>s m f::A=>B. f \<in> mspace (funspace s m) \<Longrightarrow> f \<in> EXTENSIONAL s"
+oops
+  SIMP_TAC[FUNSPACE; IN_ELIM_THM]);;
+
+lemma funspace_imp_bounded_image:
+   "\<And>s m f::A=>B. f \<in> mspace (funspace s m) \<Longrightarrow> mbounded (f ` s)"
+oops
+  SIMP_TAC[FUNSPACE; IN_ELIM_THM]);;
+
+lemma funspace_imp_bounded:
+   "\<And>s m f::A=>B. f \<in> mspace (funspace s m)
+                \<Longrightarrow> s = {} \<or> (\<exists>c b. \<forall>x. x \<in> s \<Longrightarrow> d c f x \<le> b)"
+oops
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[FUNSPACE; MBOUNDED; IMAGE_EQ_EMPTY; IN_ELIM_THM] THEN
+  ASM_CASES_TAC `s::A=>bool = {}` THEN ASM_REWRITE_TAC[] THEN ASM SET_TAC[]);;
+
+lemma funspace_imp_bounded2:
+   "\<And>s m f g::A=>B. f \<in> mspace (funspace s m) \<and> g \<in> mspace (funspace s m)
+                  \<Longrightarrow> (\<exists>b. \<forall>x. x \<in> s \<Longrightarrow> d (f x) g x \<le> b)"
+oops
+  REWRITE_TAC[FUNSPACE; IN_ELIM_THM] THEN REPEAT STRIP_TAC THEN
+  CUT_TAC `mbounded (image f s \<union> g ` s)` THENL
+  [REWRITE_TAC[MBOUNDED_ALT; \<subseteq>; IN_UNION] THEN
+   STRIP_TAC THEN EXISTS_TAC `b::real` THEN ASM SET_TAC [];
+   ASM_REWRITE_TAC[MBOUNDED_UNION]]);;
+
+lemma funspace_mdist_le:
+   "\<And>s m f g::A=>B a.
+     (s \<noteq> {}) \<and>
+     f \<in> mspace (funspace s m) \<and>
+     g \<in> mspace (funspace s m)
+     \<Longrightarrow> (d (funspace s m) (f,g) \<le> a \<longleftrightarrow>
+          \<forall>x. x \<in> s \<Longrightarrow> d (f x) g x \<le> a)"
+oops
+  INTRO_TAC "! *; ne f g" THEN
+  HYP (DESTRUCT_TAC "@b. b" \<circ>
+    MATCH_MP FUNSPACE_IMP_BOUNDED2 \<circ> CONJ_LIST) "f g" [] THEN
+  ASM_REWRITE_TAC[FUNSPACE] THEN
+  MP_TAC (ISPECL [`{d (f x)::B g x | x::A \<in> s}`; `a::real`]
+    REAL_SUP_LE_EQ) THEN
+  ANTS_TAC THENL [ASM SET_TAC[]; REWRITE_TAC[IN_ELIM_THM]] THEN
+  MESON_TAC[]);;
+
+lemma mcomplete_funspace:
+   "\<And>s::A=>bool m::B metric. mcomplete \<Longrightarrow> mcomplete (funspace s m)"
+oops
+  REWRITE_TAC[mcomplete] THEN INTRO_TAC "!s m; cpl; ![f]; cy" THEN
+  ASM_CASES_TAC `s::A=>bool = {}` THENL
+  [POP_ASSUM SUBST_ALL_TAC THEN EXISTS_TAC `\<lambda>x::A. undefined::B` THEN
+   REMOVE_THEN "cy" MP_TAC THEN
+   SIMP_TAC[MCauchy; LIMIT_METRIC_SEQUENTIALLY; FUNSPACE; NOT_IN_EMPTY;
+     IN_ELIM_THM; IN_EXTENSIONAL; IMAGE_CLAUSES; MBOUNDED_EMPTY];
+   POP_ASSUM (LABEL_TAC "nempty")] THEN
+  LABEL_ABBREV_TAC
+    `g (x::A) = if x \<in> s
+               then @y. limitin mtopology (\<lambda>n::num. f n x) y sequentially
+               else undefined::B` THEN
+  EXISTS_TAC `g::A=>B` THEN USE_THEN "cy" MP_TAC THEN
+  HYP REWRITE_TAC "nempty"
+    [MCauchy; FUNSPACE; IN_ELIM_THM; FORALL_AND_THM] THEN
+  INTRO_TAC "(fwd fext fbd) cy'" THEN
+  ASM_REWRITE_TAC[LIMIT_METRIC_SEQUENTIALLY; FUNSPACE; IN_ELIM_THM] THEN
+  CLAIM_TAC "gext" `g::A=>B \<in> EXTENSIONAL s` THENL
+  [REMOVE_THEN "g" (fun th -> SIMP_TAC[IN_EXTENSIONAL; GSYM th]);
+   HYP REWRITE_TAC "gext" []] THEN
+  CLAIM_TAC "bd2"
+     `!n n'. \<exists>b. \<forall>x::A. x \<in> s \<Longrightarrow> d m (f (n::num) x::B, f n' x) \<le> b` THENL
+  [REPEAT GEN_TAC THEN MATCH_MP_TAC FUNSPACE_IMP_BOUNDED2 THEN
+   ASM_REWRITE_TAC[FUNSPACE; IN_ELIM_THM; ETA_AX];
+   ALL_TAC] THEN
+  CLAIM_TAC "sup"
+    `!n n':num x0::A. x0 \<in> s
+                     \<Longrightarrow> d f n x0::B f n' x0 \<le>
+                         sup {d f n x f n' x | x \<in> s}` THENL
+  [INTRO_TAC "!n n' x0; x0" THEN MATCH_MP_TAC REAL_LE_SUP THEN
+   REMOVE_THEN "bd2" (DESTRUCT_TAC "@b. b" \<circ> SPECL[`n::num`;`n':num`]) THEN
+   MAP_EVERY EXISTS_TAC
+     [`b::real`; `d m (f (n::num) (x0::A):B, f n' x0)`] THEN
+   REWRITE_TAC[IN_ELIM_THM] THEN CONJ_TAC THENL
+   [HYP MESON_TAC "x0" []; REWRITE_TAC[REAL_LE_REFL]] THEN
+   INTRO_TAC "![d]; @y. y d" THEN REMOVE_THEN "d" SUBST1_TAC THEN
+   HYP SIMP_TAC "b y" [];
+   ALL_TAC] THEN
+  CLAIM_TAC "pcy" `\<forall>x::A. x \<in> s \<Longrightarrow> MCauchy (\<lambda>n. f n x::B)` THENL
+  [INTRO_TAC "!x; x" THEN REWRITE_TAC[MCauchy] THEN
+   HYP SIMP_TAC "fwd x" [] THEN INTRO_TAC "!e; e" THEN
+   USE_THEN "e" (HYP_TAC "cy': @N.N" \<circ> C MATCH_MP) THEN EXISTS_TAC `N::num` THEN
+   REPEAT GEN_TAC THEN DISCH_THEN (HYP_TAC "N" \<circ> C MATCH_MP) THEN
+   TRANS_TAC REAL_LET_TRANS
+     `sup {d m (f (n::num) x::B,f n' x) | x::A \<in> s}` THEN
+   HYP REWRITE_TAC "N" [] THEN HYP SIMP_TAC "sup x" [];
+   ALL_TAC] THEN
+  CLAIM_TAC "glim"
+    `\<forall>x::A. x \<in> s
+           \<Longrightarrow> limitin mtopology (\<lambda>n. f n x::B) (g x) sequentially` THENL
+  [INTRO_TAC "!x; x" THEN
+   REMOVE_THEN "g" (fun th -> ASM_REWRITE_TAC[GSYM th]) THEN
+   SELECT_ELIM_TAC THEN HYP SIMP_TAC "cpl pcy x" [];
+   ALL_TAC] THEN
+  CLAIM_TAC "gwd" `\<forall>x::A. x \<in> s \<Longrightarrow> g x::B \<in> M` THENL
+  [INTRO_TAC "!x; x" THEN
+   MATCH_MP_TAC (ISPECL[`sequentially`] LIMIT_IN_MSPACE) THEN
+   EXISTS_TAC `\<lambda>n::num. f n (x::A):B` THEN HYP SIMP_TAC "glim x" [];
+   HYP REWRITE_TAC "gwd" []] THEN
+  CLAIM_TAC "unif"
+    `\<forall>e>0.  \<exists>N::num. \<forall>x::A n. x \<in> s \<and> N \<le> n
+                    \<Longrightarrow> d f n x::B g x < e` THENL
+  [INTRO_TAC "!e; e" THEN REMOVE_THEN "cy'" (MP_TAC \<circ> SPEC `e / 2`) THEN
+   HYP REWRITE_TAC "e" [REAL_HALF] THEN INTRO_TAC "@N. N" THEN
+   EXISTS_TAC `N::num` THEN INTRO_TAC "!x n; x n" THEN
+   USE_THEN "x" (HYP_TAC "glim" \<circ> C MATCH_MP) THEN
+   HYP_TAC "glim: gx glim" (REWRITE_RULE[LIMIT_METRIC_SEQUENTIALLY]) THEN
+   REMOVE_THEN "glim" (MP_TAC \<circ> SPEC `e / 2`) THEN
+   HYP REWRITE_TAC "e" [REAL_HALF] THEN
+   HYP SIMP_TAC "fwd x" [] THEN INTRO_TAC "@N'. N'" THEN
+   TRANS_TAC REAL_LET_TRANS
+     `d m (f n (x::A):B, f (MAX N N') x) +
+      d m (f (MAX N N') x, g x)` THEN
+   HYP SIMP_TAC "fwd x gwd" [MDIST_TRIANGLE] THEN
+   TRANS_TAC REAL_LTE_TRANS `e / 2 + e / 2` THEN CONJ_TAC THENL
+   [MATCH_MP_TAC REAL_LT_ADD2; REWRITE_TAC[REAL_HALF; REAL_LE_REFL]] THEN
+   CONJ_TAC THENL [ALL_TAC; REMOVE_THEN "N'" MATCH_MP_TAC THEN ARITH_TAC] THEN
+   TRANS_TAC REAL_LET_TRANS
+     `sup {d m (f n x::B,f (MAX N N') x) | x::A \<in> s}` THEN
+   HYP SIMP_TAC "N n" [ARITH_RULE `N \<le> MAX N N'`] THEN
+   HYP SIMP_TAC "sup x" [];
+   ALL_TAC] THEN
+  CONJ_TAC THENL
+  [HYP_TAC "cy': @N. N" (C MATCH_MP REAL_LT_01) THEN
+   USE_THEN "fbd" (MP_TAC \<circ> REWRITE_RULE[MBOUNDED] \<circ> SPEC `N::num`) THEN
+   HYP REWRITE_TAC "nempty" [mbounded; IMAGE_EQ_EMPTY] THEN
+   INTRO_TAC "Nwd (@c b. c Nbd)" THEN
+   MAP_EVERY EXISTS_TAC [`c::B`; `b + 1`] THEN
+   REWRITE_TAC[\<subseteq>; IN_IMAGE; IN_MCBALL] THEN
+   INTRO_TAC "![y]; (@x. y x)" THEN REMOVE_THEN "y" SUBST1_TAC THEN
+   HYP SIMP_TAC "x gwd c" [] THEN TRANS_TAC REAL_LE_TRANS
+     `d m (c::B, f (N::num) (x::A)) + d f N x g x` THEN
+   HYP SIMP_TAC "c fwd gwd x" [MDIST_TRIANGLE] THEN
+   MATCH_MP_TAC REAL_LE_ADD2 THEN CONJ_TAC THENL
+   [REMOVE_THEN "Nbd" MATCH_MP_TAC THEN REWRITE_TAC[IN_IMAGE] THEN
+    HYP MESON_TAC "x" [];
+    REFUTE_THEN (LABEL_TAC "contra" \<circ> REWRITE_RULE[REAL_NOT_LE])] THEN
+   CLAIM_TAC "@a. a1 a2"
+     `\<exists>a. 1 < a \<and> a < d m (f (N::num) (x::A), g x::B)` THENL
+   [EXISTS_TAC `(1 + d m (f (N::num) (x::A), g x::B)) / 2` THEN
+    REMOVE_THEN "contra" MP_TAC THEN REAL_ARITH_TAC;
+    USE_THEN "x" (HYP_TAC "glim" \<circ> C MATCH_MP)] THEN
+   REMOVE_THEN "glim" (MP_TAC \<circ> REWRITE_RULE[LIMIT_METRIC_SEQUENTIALLY]) THEN
+   HYP SIMP_TAC "gwd x" [] THEN DISCH_THEN (MP_TAC \<circ> SPEC `a - 1`) THEN
+   ANTS_TAC THENL [REMOVE_THEN "a1" MP_TAC THEN REAL_ARITH_TAC; ALL_TAC] THEN
+   HYP SIMP_TAC "fwd x" [] THEN INTRO_TAC "@N'. N'" THEN
+   CUT_TAC `d m (f (N::num) (x::A), g x::B) < a` THENL
+   [REMOVE_THEN "a2" MP_TAC THEN REAL_ARITH_TAC; ALL_TAC] THEN
+   TRANS_TAC REAL_LET_TRANS
+     `d m (f N (x::A),f (MAX N N') x::B) + d m (f (MAX N N') x,g x)` THEN
+   HYP SIMP_TAC "fwd gwd x" [MDIST_TRIANGLE] THEN
+   SUBST1_TAC (REAL_ARITH `a = 1 + (a - 1)`) THEN
+   MATCH_MP_TAC REAL_LT_ADD2 THEN CONJ_TAC THENL
+   [ALL_TAC; REMOVE_THEN "N'" MATCH_MP_TAC THEN ARITH_TAC] THEN
+   TRANS_TAC REAL_LET_TRANS
+     `sup {d m (f N x::B,f (MAX N N') x) | x::A \<in> s}` THEN
+   CONJ_TAC THENL
+   [HYP SIMP_TAC "sup x" []; REMOVE_THEN "N" MATCH_MP_TAC THEN ARITH_TAC];
+   ALL_TAC] THEN
+  INTRO_TAC "!e; e" THEN REMOVE_THEN "unif" (MP_TAC \<circ> SPEC `e / 2`) THEN
+  HYP REWRITE_TAC "e" [REAL_HALF] THEN INTRO_TAC "@N. N" THEN
+  EXISTS_TAC `N::num` THEN INTRO_TAC "!n; n" THEN
+  TRANS_TAC REAL_LET_TRANS `e / 2` THEN CONJ_TAC THENL
+  [ALL_TAC; REMOVE_THEN "e" MP_TAC THEN REAL_ARITH_TAC] THEN
+  MATCH_MP_TAC REAL_SUP_LE THEN REWRITE_TAC[IN_ELIM_THM] THEN CONJ_TAC THENL
+  [HYP SET_TAC "nempty" []; HYP MESON_TAC "N n" [REAL_LT_IMP_LE]]);;
+
+
+subsection\<open>Metric space of continuous bounded functions\<close>
+
+
+definition cfunspace where
+  `cfunspace X m =
+   submetric (funspace (topspace X) m)
+     {f::A=>B | continuous_map X mtopology f}"
+
+let CFUNSPACE = (REWRITE_RULE[GSYM FORALL_AND_THM] \<circ> prove)
+ (`(\<forall>X m.
+      mspace (cfunspace X m) =
+      {f::A=>B | (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> M) \<and>
+                f \<in> EXTENSIONAL (topspace X) \<and>
+                mbounded (f ` (topspace X)) \<and>
+                continuous_map X mtopology f}) \<and>
+     (\<forall>f g::A=>B.
+        d (cfunspace X m) (f,g) =
+        if topspace X = {} then 0 else
+        sup {d (f x) g x | x \<in> topspace X})"
+oops
+  REWRITE_TAC[cfunspace; SUBMETRIC; FUNSPACE] THEN SET_TAC[]);;
+
+lemma cfunspace_subset_funspace:
+   "mspace (cfunspace X m) \<subseteq> mspace (funspace (topspace X) m)"
+oops
+  SIMP_TAC[\<subseteq>; FUNSPACE; CFUNSPACE; IN_ELIM_THM]);;
+
+lemma mdist_cfunspace_eq_mdist_funspace:
+   "\<And>X m f g::A=>B.
+     d (cfunspace X m) (f,g) = d (funspace (topspace X) m) (f,g)"
+oops
+  REWRITE_TAC[FUNSPACE; CFUNSPACE]);;
+
+lemma cfunspace_mdist_le:
+   "\<And>X m f g::A=>B a.
+     \<not> (topspace X = {}) \<and>
+     f \<in> mspace (cfunspace X m) \<and>
+     g \<in> mspace (cfunspace X m)
+     \<Longrightarrow> (d (cfunspace X m) (f,g) \<le> a \<longleftrightarrow>
+          \<forall>x. x \<in> topspace X \<Longrightarrow> d (f x) g x \<le> a)"
+oops
+  INTRO_TAC "! *; ne f g" THEN
+  REWRITE_TAC[MDIST_CFUNSPACE_EQ_MDIST_FUNSPACE] THEN
+  MATCH_MP_TAC FUNSPACE_MDIST_LE THEN
+  ASM_SIMP_TAC[REWRITE_RULE[\<subseteq>] CFUNSPACE_SUBSET_FUNSPACE]);;
+
+lemma cfunspace_imp_bounded2:
+   "\<And>X m f g::A=>B.
+     f \<in> mspace (cfunspace X m) \<and> g \<in> mspace (cfunspace X m)
+     \<Longrightarrow> (\<exists>b. \<forall>x. x \<in> topspace X \<Longrightarrow> d (f x) g x \<le> b)"
+oops
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC FUNSPACE_IMP_BOUNDED2 THEN
+  ASM SET_TAC [CFUNSPACE_SUBSET_FUNSPACE]);;
+
+lemma cfunspace_mdist_lt:
+   "\<And>X m f g::A=>B a x.
+     compactin X (topspace X) \<and>
+     f \<in> mspace (cfunspace X m) \<and> g \<in> mspace (cfunspace X m) \<and>
+     d (cfunspace X m) (f, g) < a \<and>
+     x \<in> topspace X
+     \<Longrightarrow> d (f x) g x < a"
+oops
+  REPEAT GEN_TAC THEN ASM_CASES_TAC `topspace X = {}` THEN
+  ASM_REWRITE_TAC[NOT_IN_EMPTY] THEN INTRO_TAC "cpt f g lt x" THEN
+  REMOVE_THEN "lt" MP_TAC THEN ASM_REWRITE_TAC[CFUNSPACE] THEN
+  INTRO_TAC "lt" THEN
+  TRANS_TAC REAL_LET_TRANS
+    `sup {d (f x)::B g x | x::A \<in> topspace X}` THEN
+  HYP SIMP_TAC "lt" [] THEN  MATCH_MP_TAC REAL_LE_SUP THEN
+  HYP (DESTRUCT_TAC "@b. b" \<circ>
+    MATCH_MP CFUNSPACE_IMP_BOUNDED2 \<circ> CONJ_LIST) "f g" [] THEN
+  MAP_EVERY EXISTS_TAC [`b::real`; `d m (f (x::A):B,g x)`] THEN
+  REWRITE_TAC[IN_ELIM_THM; REAL_LE_REFL] THEN HYP MESON_TAC "x b" []);;
+
+lemma mdist_cfunspace_le:
+   "0 \<le> B \<and>
+     (\<forall>x::A. x \<in> topspace X \<Longrightarrow> d (f x)::B g x \<le> B)
+     \<Longrightarrow> d (cfunspace X m) (f,g) \<le> B"
+oops
+  INTRO_TAC "!X m B f g; Bpos bound" THEN
+  REWRITE_TAC[CFUNSPACE] THEN COND_CASES_TAC THEN
+  HYP REWRITE_TAC "Bpos" [] THEN MATCH_MP_TAC REAL_SUP_LE THEN
+  CONJ_TAC THENL
+  [POP_ASSUM MP_TAC THEN SET_TAC[];
+   REWRITE_TAC[IN_ELIM_THM] THEN HYP MESON_TAC "bound" []]);;
+
+lemma mdist_cfunspace_imp_mdist_le:
+   "\<And>X m f g::A=>B a x.
+     f \<in> mspace (cfunspace X m) \<and>
+     g \<in> mspace (cfunspace X m) \<and>
+     d (cfunspace X m) (f,g) \<le> a \<and>
+     x \<in> topspace X
+     \<Longrightarrow> d (f x) g x \<le> a"
+oops
+  MESON_TAC[MEMBER_NOT_EMPTY; CFUNSPACE_MDIST_LE]);;
+
+lemma compact_in_mspace_cfunspace:
+   "compactin X (topspace X)
+     \<Longrightarrow> mspace (cfunspace X m) =
+          {f. (\<forall>x::A. x \<in> topspace X \<Longrightarrow> f x::B \<in> M) \<and>
+               f \<in> EXTENSIONAL (topspace X) \<and>
+               continuous_map X mtopology f}"
+oops
+  REWRITE_TAC[CFUNSPACE; EXTENSION; IN_ELIM_THM] THEN REPEAT STRIP_TAC THEN
+  EQ_TAC THEN SIMP_TAC[] THEN INTRO_TAC "wd ext cont" THEN
+  MATCH_MP_TAC COMPACT_IN_IMP_MBOUNDED THEN
+  MATCH_MP_TAC (ISPEC `X::A topology` IMAGE_COMPACT_IN) THEN
+  ASM_REWRITE_TAC[]);;
+
+lemma mcomplete_cfunspace:
+   "mcomplete \<Longrightarrow> mcomplete (cfunspace X m)"
+oops
+  INTRO_TAC "!X m; cpl" THEN REWRITE_TAC[cfunspace] THEN
+  MATCH_MP_TAC SEQUENTIALLY_CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE THEN
+  ASM_SIMP_TAC[MCOMPLETE_FUNSPACE] THEN
+  REWRITE_TAC[IN_ELIM_THM; LIMIT_METRIC_SEQUENTIALLY] THEN
+  INTRO_TAC "![f] [g]; fcont g lim" THEN
+  ASM_CASES_TAC `topspace X = {}:A=>bool` THENL
+  [ASM_REWRITE_TAC[continuous_map; NOT_IN_EMPTY; EMPTY_GSPEC; OPEN_IN_EMPTY];
+   POP_ASSUM (LABEL_TAC "nempty")] THEN
+  REWRITE_TAC[CONTINUOUS_MAP_TO_METRIC; IN_MBALL] THEN
+  INTRO_TAC "!x; x; ![e]; e" THEN CLAIM_TAC "e3pos" `0 < e / 3` THENL
+  [REMOVE_THEN "e" MP_TAC THEN REAL_ARITH_TAC;
+   USE_THEN "e3pos" (HYP_TAC "lim: @N. N" \<circ> C MATCH_MP)] THEN
+  HYP_TAC "N: f lt" (C MATCH_MP (SPEC `N::num` LE_REFL)) THEN
+  HYP_TAC "fcont" (REWRITE_RULE[CONTINUOUS_MAP_TO_METRIC]) THEN
+  USE_THEN "x" (HYP_TAC "fcont" \<circ> C MATCH_MP) THEN
+  USE_THEN "e3pos" (HYP_TAC "fcont" \<circ> C MATCH_MP) THEN
+  HYP_TAC "fcont: @u. u x' inc" (SPEC `N::num`) THEN EXISTS_TAC `u::A=>bool` THEN
+  HYP REWRITE_TAC "u x'" [] THEN INTRO_TAC "!y; y'" THEN
+  CLAIM_TAC "uinc" `\<forall>x::A. x \<in> u \<Longrightarrow> x \<in> topspace X` THENL
+  [REMOVE_THEN "u" (MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET) THEN SET_TAC[];
+   ALL_TAC] THEN
+  HYP_TAC "g -> gwd gext gbd" (REWRITE_RULE[FUNSPACE; IN_ELIM_THM]) THEN
+  HYP_TAC "f -> fwd fext fbd" (REWRITE_RULE[FUNSPACE; IN_ELIM_THM]) THEN
+  CLAIM_TAC "y" `y::A \<in> topspace X` THENL
+  [HYP SIMP_TAC "uinc y'" [OPEN_IN_SUBSET]; HYP SIMP_TAC "gwd x y" []] THEN
+  CLAIM_TAC "sup" `\<forall>x0::A. x0 \<in> topspace X
+                          \<Longrightarrow> d m (f (N::num) x0::B,g x0) \<le> e / 3` THENL
+  [INTRO_TAC "!x0; x0" THEN TRANS_TAC REAL_LE_TRANS
+     `sup {d m (f (N::num) x,g x::B) | x::A \<in> topspace X}` THEN
+   CONJ_TAC THENL
+   [MATCH_MP_TAC REAL_LE_SUP THEN HYP (DESTRUCT_TAC "@b. b" \<circ>
+      MATCH_MP FUNSPACE_IMP_BOUNDED2 \<circ> CONJ_LIST) "f g" [] THEN
+    MAP_EVERY EXISTS_TAC [`b::real`; `d m (f (N::num) (x0::A), g x0::B)`] THEN
+    REWRITE_TAC[IN_ELIM_THM; REAL_LE_REFL] THEN
+    CONJ_TAC THENL [HYP SET_TAC "x0" []; HYP MESON_TAC "b" []];
+    REMOVE_THEN "lt" MP_TAC THEN HYP REWRITE_TAC "nempty" [FUNSPACE] THEN
+    MATCH_ACCEPT_TAC REAL_LT_IMP_LE];
+   ALL_TAC] THEN
+  TRANS_TAC REAL_LET_TRANS
+    `d m (g (x::A):B, f (N::num) x) + d f N x g y` THEN
+  HYP SIMP_TAC "gwd fwd x y" [MDIST_TRIANGLE] THEN
+  SUBST1_TAC (ARITH_RULE `e = e / 3 + (e / 3 + e / 3)`) THEN
+  MATCH_MP_TAC REAL_LET_ADD2 THEN HYP SIMP_TAC "gwd fwd x sup" [MDIST_SYM] THEN
+  TRANS_TAC REAL_LET_TRANS
+    `d m (f (N::num) (x::A):B, f N y) + d f N y g y` THEN
+  HYP SIMP_TAC "fwd gwd x y" [MDIST_TRIANGLE] THEN
+  MATCH_MP_TAC REAL_LTE_ADD2 THEN HYP SIMP_TAC "gwd fwd y sup" [] THEN
+  REMOVE_THEN "inc" MP_TAC THEN HYP SIMP_TAC "fwd x y' uinc" [IN_MBALL]);;
+
+
+subsection\<open>Existence of completion for any metric space M as a subspace of M=>R\<close>
+
+
+lemma metric_completion_explicit:
+   "\<exists>s f::A=>A->real.
+      s \<subseteq> mspace(funspace (M) real_euclidean_metric) \<and>
+      mcomplete(submetric (funspace (M) real_euclidean_metric) s) \<and>
+      image f (M) \<subseteq> s \<and>
+      mtopology(funspace (M) real_euclidean_metric) closure_of
+      image f (M) = s \<and>
+      \<forall>x y. x \<in> M \<and> y \<in> M
+            \<Longrightarrow> d (funspace (M) real_euclidean_metric) (f x,f y) =
+                d x y"
+oops
+  GEN_TAC THEN
+  ABBREV_TAC `m' = funspace (M::A=>bool) real_euclidean_metric` THEN
+  ASM_CASES_TAC `M::A=>bool = {}` THENL
+   [EXISTS_TAC `{}:(A=>real)->bool` THEN
+    ASM_REWRITE_TAC[NOT_IN_EMPTY; IMAGE_CLAUSES; CLOSURE_OF_EMPTY;
+                 EMPTY_SUBSET; INTER_EMPTY; mcomplete; CAUCHY_IN_SUBMETRIC];
+    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY])] THEN
+  DISCH_THEN(X_CHOOSE_TAC `a::A`) THEN
+  ABBREV_TAC
+    `f::A=>A->real =
+     \<lambda>x. RESTRICTION (M) (\<lambda>u. d x u - d a u)` THEN
+  EXISTS_TAC `mtopology(funspace (M) real_euclidean_metric) closure_of
+              image (f::A=>A->real) (M)` THEN
+  EXISTS_TAC `f::A=>A->real` THEN
+  EXPAND_TAC "m'" THEN
+ SUBGOAL_THEN `image (f::A=>A->real) (M) \<subseteq> mspace m'`
+  ASSUME_TAC THENL
+   [EXPAND_TAC "m'" THEN REWRITE_TAC[\<subseteq>; FUNSPACE] THEN
+    REWRITE_TAC[FORALL_IN_IMAGE; IN_ELIM_THM; EXTENSIONAL] THEN
+    REWRITE_TAC[REAL_EUCLIDEAN_METRIC; IN_UNIV; mbounded; mcball] THEN
+    X_GEN_TAC `b::A` THEN DISCH_TAC THEN
+    EXPAND_TAC "f" THEN SIMP_TAC[RESTRICTION; \<subseteq>; FORALL_IN_IMAGE] THEN
+    MAP_EVERY EXISTS_TAC [`0::real`; `d a::A b`] THEN
+    REWRITE_TAC[IN_ELIM_THM; REAL_SUB_RZERO] THEN
+    MAP_EVERY UNDISCH_TAC [`(a::A) \<in> M`; `(b::A) \<in> M`] THEN
+    CONV_TAC METRIC_ARITH;
+    ALL_TAC] THEN
+  REWRITE_TAC[SUBMETRIC] THEN ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
+   [REWRITE_TAC[GSYM TOPSPACE_MTOPOLOGY] THEN
+    REWRITE_TAC[CLOSURE_OF_SUBSET_TOPSPACE];
+    MATCH_MP_TAC CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE THEN
+    REWRITE_TAC[CLOSED_IN_CLOSURE_OF] THEN EXPAND_TAC "m'" THEN
+    MATCH_MP_TAC MCOMPLETE_FUNSPACE THEN
+    REWRITE_TAC[MCOMPLETE_REAL_EUCLIDEAN_METRIC];
+    MATCH_MP_TAC CLOSURE_OF_SUBSET THEN
+    ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY];
+    MAP_EVERY X_GEN_TAC [`x::A`; `y::A`] THEN STRIP_TAC THEN
+    EXPAND_TAC "m'" THEN REWRITE_TAC[FUNSPACE] THEN
+    COND_CASES_TAC THENL [ASM_MESON_TAC[NOT_IN_EMPTY]; ALL_TAC] THEN
+    MATCH_MP_TAC SUP_UNIQUE THEN SIMP_TAC[FORALL_IN_GSPEC] THEN
+    X_GEN_TAC `b::real` THEN REWRITE_TAC[REAL_EUCLIDEAN_METRIC] THEN
+    EXPAND_TAC "f" THEN REWRITE_TAC[RESTRICTION] THEN EQ_TAC THENL
+     [DISCH_THEN(fun th -> MP_TAC(SPEC `x::A` th)) THEN EXPAND_TAC "f" THEN
+      ASM_SIMP_TAC[MDIST_REFL; MDIST_SYM] THEN REAL_ARITH_TAC;
+      MAP_EVERY UNDISCH_TAC [`(x::A) \<in> M`; `(y::A) \<in> M`] THEN
+      CONV_TAC METRIC_ARITH]]);;
+
+lemma metric_completion:
+   "?m' f::A=>A->real.
+                mcomplete m' \<and>
+                image f (M) \<subseteq> mspace m' \<and>
+                (mtopology m') closure_of (image f (M)) = mspace m' \<and>
+                \<forall>x y. x \<in> M \<and> y \<in> M
+                      \<Longrightarrow> d m' (f x,f y) = d x y"
+oops
+  GEN_TAC THEN
+  MATCH_MP_TAC(MESON[]
+   `(\<exists>s f. P (submetric (funspace (M) real_euclidean_metric) s) f)
+    \<Longrightarrow> \<exists>n f. P n f`) THEN
+  MP_TAC(SPEC `m::A metric` METRIC_COMPLETION_EXPLICIT) THEN
+  REPEAT(MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC) THEN
+  REWRITE_TAC[SUBMETRIC; SUBSET_INTER] THEN
+  REWRITE_TAC[MTOPOLOGY_SUBMETRIC; CLOSURE_OF_SUBTOPOLOGY] THEN
+  SIMP_TAC[SET_RULE `t \<subseteq> s \<Longrightarrow> s \<inter> t = t`] THEN SET_TAC[]);;
+
+lemma metrizable_space_completion:
+   "metrizable_space X
+        \<Longrightarrow> ?top' (f::A=>A->real).
+                completely_metrizable_space Y \<and>
+                embedding_map X Y f \<and>
+                Y closure_of (f ` (topspace X)) = topspace Y"
+oops
+  REWRITE_TAC[FORALL_METRIZABLE_SPACE; RIGHT_EXISTS_AND_THM] THEN
+  X_GEN_TAC `m::A metric` THEN
+  REWRITE_TAC[EXISTS_COMPLETELY_METRIZABLE_SPACE; RIGHT_AND_EXISTS_THM] THEN
+  MP_TAC(ISPEC `m::A metric` METRIC_COMPLETION) THEN
+  REPEAT(MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC) THEN
+  MESON_TAC[ISOMETRY_IMP_EMBEDDING_MAP]);;
+
+
+
 subsection\<open>Lavrentiev extension etc\<close>
 
 
@@ -2067,562 +2623,6 @@ oops
    ASM_SIMP_TAC[REAL_POW_MONO_INV; REAL_LT_IMP_LE;
      REAL_ARITH `e / d a::A f a * (1 - k) =
                  ((1 - k) * e) / d a f a`]]);;
-
-
-subsection\<open>Metric space of bounded functions\<close>
-
-
-definition funspace where
-  `funspace s m =
-   metric ({f::A=>B | (\<forall>x. x \<in> s \<Longrightarrow> f x \<in> M) \<and>
-                     f \<in> EXTENSIONAL s \<and>
-                     mbounded (f ` s)},
-           (\<lambda>(f,g). if s = {} then 0 else
-                    sup {d (f x) g x | x | x \<in> s}))"
-
-let FUNSPACE = (REWRITE_RULE[GSYM FORALL_AND_THM] \<circ> prove)
-   "mspace (funspace s m) =
-       {f::A=>B | (\<forall>x. x \<in> s \<Longrightarrow> f x \<in> M) \<and>
-                 f \<in> EXTENSIONAL s \<and>
-                 mbounded (f ` s)} \<and>
-     (\<forall>f g. d (funspace s m) (f,g) =
-              if s = {} then 0 else
-              sup {d (f x) g x | x | x \<in> s})"
-oops
-  REPEAT GEN_TAC THEN MAP_EVERY LABEL_ABBREV_TAC
-    [`fspace = {f::A=>B | (\<forall>x. x \<in> s \<Longrightarrow> f x \<in> M) \<and>
-                         f \<in> EXTENSIONAL s \<and>
-                         mbounded (f ` s)}`;
-     `fdist =
-        \<lambda>(f,g). if s = {} then 0 else
-                sup {d (f x)::B g x | x | x::A \<in> s}`] THEN
-  CUT_TAC `mspace (funspace s m) = fspace:(A=>B)->bool \<and>
-           d (funspace s m:(A=>B)metric) = fdist` THENL
-  [EXPAND_TAC "fdist" THEN DISCH_THEN (fun th -> REWRITE_TAC[th]);
-   ASM_REWRITE_TAC[funspace] THEN MATCH_MP_TAC METRIC] THEN
-  ASM_CASES_TAC `s::A=>bool = {}` THENL
-  [POP_ASSUM SUBST_ALL_TAC THEN MAP_EVERY EXPAND_TAC ["fspace"; "fdist"] THEN
-   SIMP_TAC[is_metric_space; NOT_IN_EMPTY; IN_EXTENSIONAL; IMAGE_CLAUSES;
-     MBOUNDED_EMPTY; IN_ELIM_THM; REAL_LE_REFL; REAL_ADD_LID; FUN_EQ_THM];
-   POP_ASSUM (LABEL_TAC "nempty")] THEN
-  REMOVE_THEN "nempty" (fun th ->
-    RULE_ASSUM_TAC(REWRITE_RULE[th]) THEN LABEL_TAC "nempty" th) THEN
-  CLAIM_TAC "wd ext bound"
-    `(\<forall>f x::A. f \<in> fspace \<and> x \<in> s \<Longrightarrow> f x::B \<in> M) \<and>
-     (\<forall>f. f \<in> fspace \<Longrightarrow> f \<in> EXTENSIONAL s) \<and>
-     (\<forall>f. f \<in> fspace
-          \<Longrightarrow> (\<exists>c b. c \<in> M \<and>
-                     (\<forall>x. x \<in> s \<Longrightarrow> d c f x \<le> b)))` THENL
-  [EXPAND_TAC "fspace" THEN
-   ASM_SIMP_TAC[IN_ELIM_THM; MBOUNDED; IMAGE_EQ_EMPTY] THEN SET_TAC[];
-   ALL_TAC] THEN
-  CLAIM_TAC "bound2"
-    `\<forall>f g::A=>B. f \<in> fspace \<and> g \<in> fspace
-                \<Longrightarrow> (\<exists>b. \<forall>x. x \<in> s \<Longrightarrow> d (f x) g x \<le> b)` THENL
-  [REMOVE_THEN "fspace" (SUBST_ALL_TAC \<circ> GSYM) THEN
-   REWRITE_TAC[IN_ELIM_THM] THEN REPEAT STRIP_TAC THEN
-   CUT_TAC `mbounded (image f s \<union> g ` s)` THENL
-   [REWRITE_TAC[MBOUNDED_ALT; \<subseteq>; IN_UNION] THEN
-    STRIP_TAC THEN EXISTS_TAC `b::real` THEN ASM SET_TAC [];
-    ASM_REWRITE_TAC[MBOUNDED_UNION]];
-   ALL_TAC] THEN
-  HYP_TAC "nempty -> @a. a" (REWRITE_RULE[GSYM MEMBER_NOT_EMPTY]) THEN
-  REWRITE_TAC[is_metric_space] THEN CONJ_TAC THENL
-  [INTRO_TAC "![f] [g]; f  g" THEN EXPAND_TAC "fdist" THEN
-   REWRITE_TAC[] THEN MATCH_MP_TAC REAL_LE_SUP THEN
-   CLAIM_TAC "@b. b" `\<exists>b. \<forall>x::A. x \<in> s \<Longrightarrow> d (f x)::B g x \<le> b` THENL
-   [HYP SIMP_TAC "bound2 f g" [];
-    ALL_TAC] THEN
-    MAP_EVERY EXISTS_TAC [`b::real`; `d m (f(a::A):B,g a)`] THEN
-    REWRITE_TAC[IN_ELIM_THM] THEN HYP SIMP_TAC "wd f g a" [MDIST_POS_LE] THEN
-    HYP MESON_TAC "a b" [];
-    ALL_TAC] THEN
-  CONJ_TAC THENL
-  [INTRO_TAC "![f] [g]; f  g" THEN EXPAND_TAC "fdist" THEN
-   REWRITE_TAC[] THEN EQ_TAC THENL
-   [INTRO_TAC "sup0" THEN MATCH_MP_TAC (SPEC `s::A=>bool` EXTENSIONAL_EQ) THEN
-    HYP SIMP_TAC "f g ext" [] THEN INTRO_TAC "!x; x" THEN
-    REFUTE_THEN (LABEL_TAC "neq") THEN
-    CUT_TAC
-      `0 < d m (f (x::A):B, g x) \<and>
-       d (f x) g x \<le> sup {d (f x) g x | x \<in> s}` THENL
-    [HYP REWRITE_TAC "sup0" [] THEN REAL_ARITH_TAC; ALL_TAC] THEN
-    HYP SIMP_TAC "wd f g x neq" [MDIST_POS_LT] THEN
-    MATCH_MP_TAC REAL_LE_SUP THEN
-    CLAIM_TAC "@B. B" `\<exists>b. \<forall>x::A. x \<in> s \<Longrightarrow> d (f x)::B g x \<le> b` THENL
-    [HYP SIMP_TAC "bound2 f g" []; ALL_TAC] THEN
-    MAP_EVERY EXISTS_TAC [`B::real`; `d m (f (x::A):B,g x)`] THEN
-    REWRITE_TAC[IN_ELIM_THM; IN_UNIV; REAL_LE_REFL] THEN
-    HYP MESON_TAC "B x" [];
-    DISCH_THEN (SUBST1_TAC \<circ> GSYM) THEN
-    SUBGOAL_THEN `{d (f x)::B f x | x::A \<in> s} = {0}`
-      (fun th -> REWRITE_TAC[th; SUP_SING]) THEN
-    REWRITE_TAC[EXTENSION; IN_ELIM_THM; NOT_IN_EMPTY; IN_UNIV; IN_INSERT] THEN
-    HYP MESON_TAC "wd f a" [MDIST_REFL]];
-   ALL_TAC] THEN
-  CONJ_TAC THENL
-  [INTRO_TAC "![f] [g]; f g" THEN EXPAND_TAC "fdist" THEN REWRITE_TAC[] THEN
-   AP_TERM_TAC THEN REWRITE_TAC[EXTENSION; IN_ELIM_THM] THEN
-   HYP MESON_TAC "wd f g" [MDIST_SYM];
-   ALL_TAC] THEN
-  INTRO_TAC "![f] [g] [h]; f g h" THEN EXPAND_TAC "fdist" THEN
-  REWRITE_TAC[] THEN MATCH_MP_TAC REAL_SUP_LE THEN CONJ_TAC THENL
-  [REWRITE_TAC[EXTENSION; IN_ELIM_THM; NOT_IN_EMPTY; IN_UNIV] THEN
-   HYP MESON_TAC "a" [];
-   ALL_TAC] THEN
-  FIX_TAC "[d]" THEN REWRITE_TAC [IN_ELIM_THM; IN_UNIV] THEN
-  INTRO_TAC "@x. x d" THEN POP_ASSUM SUBST1_TAC THEN
-  CUT_TAC
-    `d m (f (x::A):B,h x) \<le> d (f x) g x + d (g x) h x \<and>
-     d (f x) g x \<le> fdist (f,g) \<and>
-     d (g x) h x \<le> fdist (g,h)` THEN
-  EXPAND_TAC "fdist" THEN REWRITE_TAC[] THENL [REAL_ARITH_TAC; ALL_TAC] THEN
-  HYP SIMP_TAC "wd f g h x" [MDIST_TRIANGLE] THEN
-  CONJ_TAC THEN MATCH_MP_TAC REAL_LE_SUP THENL
-  [CLAIM_TAC "@B. B" `\<exists>b. \<forall>x::A. x \<in> s \<Longrightarrow> d (f x)::B g x \<le> b` THENL
-   [HYP SIMP_TAC "bound2 f g" [];
-    MAP_EVERY EXISTS_TAC [`B::real`; `d m (f(x::A):B,g x)`]] THEN
-   REWRITE_TAC[IN_ELIM_THM; IN_UNIV; REAL_LE_REFL] THEN HYP MESON_TAC "B x" [];
-   CLAIM_TAC "@B. B" `\<exists>b. \<forall>x::A. x \<in> s \<Longrightarrow> d (g x)::B h x \<le> b` THENL
-   [HYP SIMP_TAC "bound2 g h" []; ALL_TAC] THEN
-   MAP_EVERY EXISTS_TAC [`B::real`; `d m (g(x::A):B,h x)`] THEN
-   REWRITE_TAC[IN_ELIM_THM; IN_UNIV; REAL_LE_REFL] THEN
-   HYP MESON_TAC "B x" []]);;
-
-lemma funspace_imp_welldefined:
-   "\<And>s m f::A=>B x. f \<in> mspace (funspace s m) \<and> x \<in> s \<Longrightarrow> f x \<in> M"
-oops
-  SIMP_TAC[FUNSPACE; IN_ELIM_THM]);;
-
-lemma funspace_imp_extensional:
-   "\<And>s m f::A=>B. f \<in> mspace (funspace s m) \<Longrightarrow> f \<in> EXTENSIONAL s"
-oops
-  SIMP_TAC[FUNSPACE; IN_ELIM_THM]);;
-
-lemma funspace_imp_bounded_image:
-   "\<And>s m f::A=>B. f \<in> mspace (funspace s m) \<Longrightarrow> mbounded (f ` s)"
-oops
-  SIMP_TAC[FUNSPACE; IN_ELIM_THM]);;
-
-lemma funspace_imp_bounded:
-   "\<And>s m f::A=>B. f \<in> mspace (funspace s m)
-                \<Longrightarrow> s = {} \<or> (\<exists>c b. \<forall>x. x \<in> s \<Longrightarrow> d c f x \<le> b)"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[FUNSPACE; MBOUNDED; IMAGE_EQ_EMPTY; IN_ELIM_THM] THEN
-  ASM_CASES_TAC `s::A=>bool = {}` THEN ASM_REWRITE_TAC[] THEN ASM SET_TAC[]);;
-
-lemma funspace_imp_bounded2:
-   "\<And>s m f g::A=>B. f \<in> mspace (funspace s m) \<and> g \<in> mspace (funspace s m)
-                  \<Longrightarrow> (\<exists>b. \<forall>x. x \<in> s \<Longrightarrow> d (f x) g x \<le> b)"
-oops
-  REWRITE_TAC[FUNSPACE; IN_ELIM_THM] THEN REPEAT STRIP_TAC THEN
-  CUT_TAC `mbounded (image f s \<union> g ` s)` THENL
-  [REWRITE_TAC[MBOUNDED_ALT; \<subseteq>; IN_UNION] THEN
-   STRIP_TAC THEN EXISTS_TAC `b::real` THEN ASM SET_TAC [];
-   ASM_REWRITE_TAC[MBOUNDED_UNION]]);;
-
-lemma funspace_mdist_le:
-   "\<And>s m f g::A=>B a.
-     (s \<noteq> {}) \<and>
-     f \<in> mspace (funspace s m) \<and>
-     g \<in> mspace (funspace s m)
-     \<Longrightarrow> (d (funspace s m) (f,g) \<le> a \<longleftrightarrow>
-          \<forall>x. x \<in> s \<Longrightarrow> d (f x) g x \<le> a)"
-oops
-  INTRO_TAC "! *; ne f g" THEN
-  HYP (DESTRUCT_TAC "@b. b" \<circ>
-    MATCH_MP FUNSPACE_IMP_BOUNDED2 \<circ> CONJ_LIST) "f g" [] THEN
-  ASM_REWRITE_TAC[FUNSPACE] THEN
-  MP_TAC (ISPECL [`{d (f x)::B g x | x::A \<in> s}`; `a::real`]
-    REAL_SUP_LE_EQ) THEN
-  ANTS_TAC THENL [ASM SET_TAC[]; REWRITE_TAC[IN_ELIM_THM]] THEN
-  MESON_TAC[]);;
-
-lemma mcomplete_funspace:
-   "\<And>s::A=>bool m::B metric. mcomplete \<Longrightarrow> mcomplete (funspace s m)"
-oops
-  REWRITE_TAC[mcomplete] THEN INTRO_TAC "!s m; cpl; ![f]; cy" THEN
-  ASM_CASES_TAC `s::A=>bool = {}` THENL
-  [POP_ASSUM SUBST_ALL_TAC THEN EXISTS_TAC `\<lambda>x::A. undefined::B` THEN
-   REMOVE_THEN "cy" MP_TAC THEN
-   SIMP_TAC[MCauchy; LIMIT_METRIC_SEQUENTIALLY; FUNSPACE; NOT_IN_EMPTY;
-     IN_ELIM_THM; IN_EXTENSIONAL; IMAGE_CLAUSES; MBOUNDED_EMPTY];
-   POP_ASSUM (LABEL_TAC "nempty")] THEN
-  LABEL_ABBREV_TAC
-    `g (x::A) = if x \<in> s
-               then @y. limitin mtopology (\<lambda>n::num. f n x) y sequentially
-               else undefined::B` THEN
-  EXISTS_TAC `g::A=>B` THEN USE_THEN "cy" MP_TAC THEN
-  HYP REWRITE_TAC "nempty"
-    [MCauchy; FUNSPACE; IN_ELIM_THM; FORALL_AND_THM] THEN
-  INTRO_TAC "(fwd fext fbd) cy'" THEN
-  ASM_REWRITE_TAC[LIMIT_METRIC_SEQUENTIALLY; FUNSPACE; IN_ELIM_THM] THEN
-  CLAIM_TAC "gext" `g::A=>B \<in> EXTENSIONAL s` THENL
-  [REMOVE_THEN "g" (fun th -> SIMP_TAC[IN_EXTENSIONAL; GSYM th]);
-   HYP REWRITE_TAC "gext" []] THEN
-  CLAIM_TAC "bd2"
-     `!n n'. \<exists>b. \<forall>x::A. x \<in> s \<Longrightarrow> d m (f (n::num) x::B, f n' x) \<le> b` THENL
-  [REPEAT GEN_TAC THEN MATCH_MP_TAC FUNSPACE_IMP_BOUNDED2 THEN
-   ASM_REWRITE_TAC[FUNSPACE; IN_ELIM_THM; ETA_AX];
-   ALL_TAC] THEN
-  CLAIM_TAC "sup"
-    `!n n':num x0::A. x0 \<in> s
-                     \<Longrightarrow> d f n x0::B f n' x0 \<le>
-                         sup {d f n x f n' x | x \<in> s}` THENL
-  [INTRO_TAC "!n n' x0; x0" THEN MATCH_MP_TAC REAL_LE_SUP THEN
-   REMOVE_THEN "bd2" (DESTRUCT_TAC "@b. b" \<circ> SPECL[`n::num`;`n':num`]) THEN
-   MAP_EVERY EXISTS_TAC
-     [`b::real`; `d m (f (n::num) (x0::A):B, f n' x0)`] THEN
-   REWRITE_TAC[IN_ELIM_THM] THEN CONJ_TAC THENL
-   [HYP MESON_TAC "x0" []; REWRITE_TAC[REAL_LE_REFL]] THEN
-   INTRO_TAC "![d]; @y. y d" THEN REMOVE_THEN "d" SUBST1_TAC THEN
-   HYP SIMP_TAC "b y" [];
-   ALL_TAC] THEN
-  CLAIM_TAC "pcy" `\<forall>x::A. x \<in> s \<Longrightarrow> MCauchy (\<lambda>n. f n x::B)` THENL
-  [INTRO_TAC "!x; x" THEN REWRITE_TAC[MCauchy] THEN
-   HYP SIMP_TAC "fwd x" [] THEN INTRO_TAC "!e; e" THEN
-   USE_THEN "e" (HYP_TAC "cy': @N.N" \<circ> C MATCH_MP) THEN EXISTS_TAC `N::num` THEN
-   REPEAT GEN_TAC THEN DISCH_THEN (HYP_TAC "N" \<circ> C MATCH_MP) THEN
-   TRANS_TAC REAL_LET_TRANS
-     `sup {d m (f (n::num) x::B,f n' x) | x::A \<in> s}` THEN
-   HYP REWRITE_TAC "N" [] THEN HYP SIMP_TAC "sup x" [];
-   ALL_TAC] THEN
-  CLAIM_TAC "glim"
-    `\<forall>x::A. x \<in> s
-           \<Longrightarrow> limitin mtopology (\<lambda>n. f n x::B) (g x) sequentially` THENL
-  [INTRO_TAC "!x; x" THEN
-   REMOVE_THEN "g" (fun th -> ASM_REWRITE_TAC[GSYM th]) THEN
-   SELECT_ELIM_TAC THEN HYP SIMP_TAC "cpl pcy x" [];
-   ALL_TAC] THEN
-  CLAIM_TAC "gwd" `\<forall>x::A. x \<in> s \<Longrightarrow> g x::B \<in> M` THENL
-  [INTRO_TAC "!x; x" THEN
-   MATCH_MP_TAC (ISPECL[`sequentially`] LIMIT_IN_MSPACE) THEN
-   EXISTS_TAC `\<lambda>n::num. f n (x::A):B` THEN HYP SIMP_TAC "glim x" [];
-   HYP REWRITE_TAC "gwd" []] THEN
-  CLAIM_TAC "unif"
-    `\<forall>e>0.  \<exists>N::num. \<forall>x::A n. x \<in> s \<and> N \<le> n
-                    \<Longrightarrow> d f n x::B g x < e` THENL
-  [INTRO_TAC "!e; e" THEN REMOVE_THEN "cy'" (MP_TAC \<circ> SPEC `e / 2`) THEN
-   HYP REWRITE_TAC "e" [REAL_HALF] THEN INTRO_TAC "@N. N" THEN
-   EXISTS_TAC `N::num` THEN INTRO_TAC "!x n; x n" THEN
-   USE_THEN "x" (HYP_TAC "glim" \<circ> C MATCH_MP) THEN
-   HYP_TAC "glim: gx glim" (REWRITE_RULE[LIMIT_METRIC_SEQUENTIALLY]) THEN
-   REMOVE_THEN "glim" (MP_TAC \<circ> SPEC `e / 2`) THEN
-   HYP REWRITE_TAC "e" [REAL_HALF] THEN
-   HYP SIMP_TAC "fwd x" [] THEN INTRO_TAC "@N'. N'" THEN
-   TRANS_TAC REAL_LET_TRANS
-     `d m (f n (x::A):B, f (MAX N N') x) +
-      d m (f (MAX N N') x, g x)` THEN
-   HYP SIMP_TAC "fwd x gwd" [MDIST_TRIANGLE] THEN
-   TRANS_TAC REAL_LTE_TRANS `e / 2 + e / 2` THEN CONJ_TAC THENL
-   [MATCH_MP_TAC REAL_LT_ADD2; REWRITE_TAC[REAL_HALF; REAL_LE_REFL]] THEN
-   CONJ_TAC THENL [ALL_TAC; REMOVE_THEN "N'" MATCH_MP_TAC THEN ARITH_TAC] THEN
-   TRANS_TAC REAL_LET_TRANS
-     `sup {d m (f n x::B,f (MAX N N') x) | x::A \<in> s}` THEN
-   HYP SIMP_TAC "N n" [ARITH_RULE `N \<le> MAX N N'`] THEN
-   HYP SIMP_TAC "sup x" [];
-   ALL_TAC] THEN
-  CONJ_TAC THENL
-  [HYP_TAC "cy': @N. N" (C MATCH_MP REAL_LT_01) THEN
-   USE_THEN "fbd" (MP_TAC \<circ> REWRITE_RULE[MBOUNDED] \<circ> SPEC `N::num`) THEN
-   HYP REWRITE_TAC "nempty" [mbounded; IMAGE_EQ_EMPTY] THEN
-   INTRO_TAC "Nwd (@c b. c Nbd)" THEN
-   MAP_EVERY EXISTS_TAC [`c::B`; `b + 1`] THEN
-   REWRITE_TAC[\<subseteq>; IN_IMAGE; IN_MCBALL] THEN
-   INTRO_TAC "![y]; (@x. y x)" THEN REMOVE_THEN "y" SUBST1_TAC THEN
-   HYP SIMP_TAC "x gwd c" [] THEN TRANS_TAC REAL_LE_TRANS
-     `d m (c::B, f (N::num) (x::A)) + d f N x g x` THEN
-   HYP SIMP_TAC "c fwd gwd x" [MDIST_TRIANGLE] THEN
-   MATCH_MP_TAC REAL_LE_ADD2 THEN CONJ_TAC THENL
-   [REMOVE_THEN "Nbd" MATCH_MP_TAC THEN REWRITE_TAC[IN_IMAGE] THEN
-    HYP MESON_TAC "x" [];
-    REFUTE_THEN (LABEL_TAC "contra" \<circ> REWRITE_RULE[REAL_NOT_LE])] THEN
-   CLAIM_TAC "@a. a1 a2"
-     `\<exists>a. 1 < a \<and> a < d m (f (N::num) (x::A), g x::B)` THENL
-   [EXISTS_TAC `(1 + d m (f (N::num) (x::A), g x::B)) / 2` THEN
-    REMOVE_THEN "contra" MP_TAC THEN REAL_ARITH_TAC;
-    USE_THEN "x" (HYP_TAC "glim" \<circ> C MATCH_MP)] THEN
-   REMOVE_THEN "glim" (MP_TAC \<circ> REWRITE_RULE[LIMIT_METRIC_SEQUENTIALLY]) THEN
-   HYP SIMP_TAC "gwd x" [] THEN DISCH_THEN (MP_TAC \<circ> SPEC `a - 1`) THEN
-   ANTS_TAC THENL [REMOVE_THEN "a1" MP_TAC THEN REAL_ARITH_TAC; ALL_TAC] THEN
-   HYP SIMP_TAC "fwd x" [] THEN INTRO_TAC "@N'. N'" THEN
-   CUT_TAC `d m (f (N::num) (x::A), g x::B) < a` THENL
-   [REMOVE_THEN "a2" MP_TAC THEN REAL_ARITH_TAC; ALL_TAC] THEN
-   TRANS_TAC REAL_LET_TRANS
-     `d m (f N (x::A),f (MAX N N') x::B) + d m (f (MAX N N') x,g x)` THEN
-   HYP SIMP_TAC "fwd gwd x" [MDIST_TRIANGLE] THEN
-   SUBST1_TAC (REAL_ARITH `a = 1 + (a - 1)`) THEN
-   MATCH_MP_TAC REAL_LT_ADD2 THEN CONJ_TAC THENL
-   [ALL_TAC; REMOVE_THEN "N'" MATCH_MP_TAC THEN ARITH_TAC] THEN
-   TRANS_TAC REAL_LET_TRANS
-     `sup {d m (f N x::B,f (MAX N N') x) | x::A \<in> s}` THEN
-   CONJ_TAC THENL
-   [HYP SIMP_TAC "sup x" []; REMOVE_THEN "N" MATCH_MP_TAC THEN ARITH_TAC];
-   ALL_TAC] THEN
-  INTRO_TAC "!e; e" THEN REMOVE_THEN "unif" (MP_TAC \<circ> SPEC `e / 2`) THEN
-  HYP REWRITE_TAC "e" [REAL_HALF] THEN INTRO_TAC "@N. N" THEN
-  EXISTS_TAC `N::num` THEN INTRO_TAC "!n; n" THEN
-  TRANS_TAC REAL_LET_TRANS `e / 2` THEN CONJ_TAC THENL
-  [ALL_TAC; REMOVE_THEN "e" MP_TAC THEN REAL_ARITH_TAC] THEN
-  MATCH_MP_TAC REAL_SUP_LE THEN REWRITE_TAC[IN_ELIM_THM] THEN CONJ_TAC THENL
-  [HYP SET_TAC "nempty" []; HYP MESON_TAC "N n" [REAL_LT_IMP_LE]]);;
-
-
-subsection\<open>Metric space of continuous bounded functions\<close>
-
-
-definition cfunspace where
-  `cfunspace X m =
-   submetric (funspace (topspace X) m)
-     {f::A=>B | continuous_map X mtopology f}"
-
-let CFUNSPACE = (REWRITE_RULE[GSYM FORALL_AND_THM] \<circ> prove)
- (`(\<forall>X m.
-      mspace (cfunspace X m) =
-      {f::A=>B | (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> M) \<and>
-                f \<in> EXTENSIONAL (topspace X) \<and>
-                mbounded (f ` (topspace X)) \<and>
-                continuous_map X mtopology f}) \<and>
-     (\<forall>f g::A=>B.
-        d (cfunspace X m) (f,g) =
-        if topspace X = {} then 0 else
-        sup {d (f x) g x | x \<in> topspace X})"
-oops
-  REWRITE_TAC[cfunspace; SUBMETRIC; FUNSPACE] THEN SET_TAC[]);;
-
-lemma cfunspace_subset_funspace:
-   "mspace (cfunspace X m) \<subseteq> mspace (funspace (topspace X) m)"
-oops
-  SIMP_TAC[\<subseteq>; FUNSPACE; CFUNSPACE; IN_ELIM_THM]);;
-
-lemma mdist_cfunspace_eq_mdist_funspace:
-   "\<And>X m f g::A=>B.
-     d (cfunspace X m) (f,g) = d (funspace (topspace X) m) (f,g)"
-oops
-  REWRITE_TAC[FUNSPACE; CFUNSPACE]);;
-
-lemma cfunspace_mdist_le:
-   "\<And>X m f g::A=>B a.
-     \<not> (topspace X = {}) \<and>
-     f \<in> mspace (cfunspace X m) \<and>
-     g \<in> mspace (cfunspace X m)
-     \<Longrightarrow> (d (cfunspace X m) (f,g) \<le> a \<longleftrightarrow>
-          \<forall>x. x \<in> topspace X \<Longrightarrow> d (f x) g x \<le> a)"
-oops
-  INTRO_TAC "! *; ne f g" THEN
-  REWRITE_TAC[MDIST_CFUNSPACE_EQ_MDIST_FUNSPACE] THEN
-  MATCH_MP_TAC FUNSPACE_MDIST_LE THEN
-  ASM_SIMP_TAC[REWRITE_RULE[\<subseteq>] CFUNSPACE_SUBSET_FUNSPACE]);;
-
-lemma cfunspace_imp_bounded2:
-   "\<And>X m f g::A=>B.
-     f \<in> mspace (cfunspace X m) \<and> g \<in> mspace (cfunspace X m)
-     \<Longrightarrow> (\<exists>b. \<forall>x. x \<in> topspace X \<Longrightarrow> d (f x) g x \<le> b)"
-oops
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC FUNSPACE_IMP_BOUNDED2 THEN
-  ASM SET_TAC [CFUNSPACE_SUBSET_FUNSPACE]);;
-
-lemma cfunspace_mdist_lt:
-   "\<And>X m f g::A=>B a x.
-     compactin X (topspace X) \<and>
-     f \<in> mspace (cfunspace X m) \<and> g \<in> mspace (cfunspace X m) \<and>
-     d (cfunspace X m) (f, g) < a \<and>
-     x \<in> topspace X
-     \<Longrightarrow> d (f x) g x < a"
-oops
-  REPEAT GEN_TAC THEN ASM_CASES_TAC `topspace X = {}` THEN
-  ASM_REWRITE_TAC[NOT_IN_EMPTY] THEN INTRO_TAC "cpt f g lt x" THEN
-  REMOVE_THEN "lt" MP_TAC THEN ASM_REWRITE_TAC[CFUNSPACE] THEN
-  INTRO_TAC "lt" THEN
-  TRANS_TAC REAL_LET_TRANS
-    `sup {d (f x)::B g x | x::A \<in> topspace X}` THEN
-  HYP SIMP_TAC "lt" [] THEN  MATCH_MP_TAC REAL_LE_SUP THEN
-  HYP (DESTRUCT_TAC "@b. b" \<circ>
-    MATCH_MP CFUNSPACE_IMP_BOUNDED2 \<circ> CONJ_LIST) "f g" [] THEN
-  MAP_EVERY EXISTS_TAC [`b::real`; `d m (f (x::A):B,g x)`] THEN
-  REWRITE_TAC[IN_ELIM_THM; REAL_LE_REFL] THEN HYP MESON_TAC "x b" []);;
-
-lemma mdist_cfunspace_le:
-   "0 \<le> B \<and>
-     (\<forall>x::A. x \<in> topspace X \<Longrightarrow> d (f x)::B g x \<le> B)
-     \<Longrightarrow> d (cfunspace X m) (f,g) \<le> B"
-oops
-  INTRO_TAC "!X m B f g; Bpos bound" THEN
-  REWRITE_TAC[CFUNSPACE] THEN COND_CASES_TAC THEN
-  HYP REWRITE_TAC "Bpos" [] THEN MATCH_MP_TAC REAL_SUP_LE THEN
-  CONJ_TAC THENL
-  [POP_ASSUM MP_TAC THEN SET_TAC[];
-   REWRITE_TAC[IN_ELIM_THM] THEN HYP MESON_TAC "bound" []]);;
-
-lemma mdist_cfunspace_imp_mdist_le:
-   "\<And>X m f g::A=>B a x.
-     f \<in> mspace (cfunspace X m) \<and>
-     g \<in> mspace (cfunspace X m) \<and>
-     d (cfunspace X m) (f,g) \<le> a \<and>
-     x \<in> topspace X
-     \<Longrightarrow> d (f x) g x \<le> a"
-oops
-  MESON_TAC[MEMBER_NOT_EMPTY; CFUNSPACE_MDIST_LE]);;
-
-lemma compact_in_mspace_cfunspace:
-   "compactin X (topspace X)
-     \<Longrightarrow> mspace (cfunspace X m) =
-          {f. (\<forall>x::A. x \<in> topspace X \<Longrightarrow> f x::B \<in> M) \<and>
-               f \<in> EXTENSIONAL (topspace X) \<and>
-               continuous_map X mtopology f}"
-oops
-  REWRITE_TAC[CFUNSPACE; EXTENSION; IN_ELIM_THM] THEN REPEAT STRIP_TAC THEN
-  EQ_TAC THEN SIMP_TAC[] THEN INTRO_TAC "wd ext cont" THEN
-  MATCH_MP_TAC COMPACT_IN_IMP_MBOUNDED THEN
-  MATCH_MP_TAC (ISPEC `X::A topology` IMAGE_COMPACT_IN) THEN
-  ASM_REWRITE_TAC[]);;
-
-lemma mcomplete_cfunspace:
-   "mcomplete \<Longrightarrow> mcomplete (cfunspace X m)"
-oops
-  INTRO_TAC "!X m; cpl" THEN REWRITE_TAC[cfunspace] THEN
-  MATCH_MP_TAC SEQUENTIALLY_CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE THEN
-  ASM_SIMP_TAC[MCOMPLETE_FUNSPACE] THEN
-  REWRITE_TAC[IN_ELIM_THM; LIMIT_METRIC_SEQUENTIALLY] THEN
-  INTRO_TAC "![f] [g]; fcont g lim" THEN
-  ASM_CASES_TAC `topspace X = {}:A=>bool` THENL
-  [ASM_REWRITE_TAC[continuous_map; NOT_IN_EMPTY; EMPTY_GSPEC; OPEN_IN_EMPTY];
-   POP_ASSUM (LABEL_TAC "nempty")] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_TO_METRIC; IN_MBALL] THEN
-  INTRO_TAC "!x; x; ![e]; e" THEN CLAIM_TAC "e3pos" `0 < e / 3` THENL
-  [REMOVE_THEN "e" MP_TAC THEN REAL_ARITH_TAC;
-   USE_THEN "e3pos" (HYP_TAC "lim: @N. N" \<circ> C MATCH_MP)] THEN
-  HYP_TAC "N: f lt" (C MATCH_MP (SPEC `N::num` LE_REFL)) THEN
-  HYP_TAC "fcont" (REWRITE_RULE[CONTINUOUS_MAP_TO_METRIC]) THEN
-  USE_THEN "x" (HYP_TAC "fcont" \<circ> C MATCH_MP) THEN
-  USE_THEN "e3pos" (HYP_TAC "fcont" \<circ> C MATCH_MP) THEN
-  HYP_TAC "fcont: @u. u x' inc" (SPEC `N::num`) THEN EXISTS_TAC `u::A=>bool` THEN
-  HYP REWRITE_TAC "u x'" [] THEN INTRO_TAC "!y; y'" THEN
-  CLAIM_TAC "uinc" `\<forall>x::A. x \<in> u \<Longrightarrow> x \<in> topspace X` THENL
-  [REMOVE_THEN "u" (MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET) THEN SET_TAC[];
-   ALL_TAC] THEN
-  HYP_TAC "g -> gwd gext gbd" (REWRITE_RULE[FUNSPACE; IN_ELIM_THM]) THEN
-  HYP_TAC "f -> fwd fext fbd" (REWRITE_RULE[FUNSPACE; IN_ELIM_THM]) THEN
-  CLAIM_TAC "y" `y::A \<in> topspace X` THENL
-  [HYP SIMP_TAC "uinc y'" [OPEN_IN_SUBSET]; HYP SIMP_TAC "gwd x y" []] THEN
-  CLAIM_TAC "sup" `\<forall>x0::A. x0 \<in> topspace X
-                          \<Longrightarrow> d m (f (N::num) x0::B,g x0) \<le> e / 3` THENL
-  [INTRO_TAC "!x0; x0" THEN TRANS_TAC REAL_LE_TRANS
-     `sup {d m (f (N::num) x,g x::B) | x::A \<in> topspace X}` THEN
-   CONJ_TAC THENL
-   [MATCH_MP_TAC REAL_LE_SUP THEN HYP (DESTRUCT_TAC "@b. b" \<circ>
-      MATCH_MP FUNSPACE_IMP_BOUNDED2 \<circ> CONJ_LIST) "f g" [] THEN
-    MAP_EVERY EXISTS_TAC [`b::real`; `d m (f (N::num) (x0::A), g x0::B)`] THEN
-    REWRITE_TAC[IN_ELIM_THM; REAL_LE_REFL] THEN
-    CONJ_TAC THENL [HYP SET_TAC "x0" []; HYP MESON_TAC "b" []];
-    REMOVE_THEN "lt" MP_TAC THEN HYP REWRITE_TAC "nempty" [FUNSPACE] THEN
-    MATCH_ACCEPT_TAC REAL_LT_IMP_LE];
-   ALL_TAC] THEN
-  TRANS_TAC REAL_LET_TRANS
-    `d m (g (x::A):B, f (N::num) x) + d f N x g y` THEN
-  HYP SIMP_TAC "gwd fwd x y" [MDIST_TRIANGLE] THEN
-  SUBST1_TAC (ARITH_RULE `e = e / 3 + (e / 3 + e / 3)`) THEN
-  MATCH_MP_TAC REAL_LET_ADD2 THEN HYP SIMP_TAC "gwd fwd x sup" [MDIST_SYM] THEN
-  TRANS_TAC REAL_LET_TRANS
-    `d m (f (N::num) (x::A):B, f N y) + d f N y g y` THEN
-  HYP SIMP_TAC "fwd gwd x y" [MDIST_TRIANGLE] THEN
-  MATCH_MP_TAC REAL_LTE_ADD2 THEN HYP SIMP_TAC "gwd fwd y sup" [] THEN
-  REMOVE_THEN "inc" MP_TAC THEN HYP SIMP_TAC "fwd x y' uinc" [IN_MBALL]);;
-
-
-subsection\<open>Existence of completion for any metric space M as a subspace of M=>R\<close>
-
-
-lemma metric_completion_explicit:
-   "\<exists>s f::A=>A->real.
-      s \<subseteq> mspace(funspace (M) real_euclidean_metric) \<and>
-      mcomplete(submetric (funspace (M) real_euclidean_metric) s) \<and>
-      image f (M) \<subseteq> s \<and>
-      mtopology(funspace (M) real_euclidean_metric) closure_of
-      image f (M) = s \<and>
-      \<forall>x y. x \<in> M \<and> y \<in> M
-            \<Longrightarrow> d (funspace (M) real_euclidean_metric) (f x,f y) =
-                d x y"
-oops
-  GEN_TAC THEN
-  ABBREV_TAC `m' = funspace (M::A=>bool) real_euclidean_metric` THEN
-  ASM_CASES_TAC `M::A=>bool = {}` THENL
-   [EXISTS_TAC `{}:(A=>real)->bool` THEN
-    ASM_REWRITE_TAC[NOT_IN_EMPTY; IMAGE_CLAUSES; CLOSURE_OF_EMPTY;
-                 EMPTY_SUBSET; INTER_EMPTY; mcomplete; CAUCHY_IN_SUBMETRIC];
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY])] THEN
-  DISCH_THEN(X_CHOOSE_TAC `a::A`) THEN
-  ABBREV_TAC
-    `f::A=>A->real =
-     \<lambda>x. RESTRICTION (M) (\<lambda>u. d x u - d a u)` THEN
-  EXISTS_TAC `mtopology(funspace (M) real_euclidean_metric) closure_of
-              image (f::A=>A->real) (M)` THEN
-  EXISTS_TAC `f::A=>A->real` THEN
-  EXPAND_TAC "m'" THEN
- SUBGOAL_THEN `image (f::A=>A->real) (M) \<subseteq> mspace m'`
-  ASSUME_TAC THENL
-   [EXPAND_TAC "m'" THEN REWRITE_TAC[\<subseteq>; FUNSPACE] THEN
-    REWRITE_TAC[FORALL_IN_IMAGE; IN_ELIM_THM; EXTENSIONAL] THEN
-    REWRITE_TAC[REAL_EUCLIDEAN_METRIC; IN_UNIV; mbounded; mcball] THEN
-    X_GEN_TAC `b::A` THEN DISCH_TAC THEN
-    EXPAND_TAC "f" THEN SIMP_TAC[RESTRICTION; \<subseteq>; FORALL_IN_IMAGE] THEN
-    MAP_EVERY EXISTS_TAC [`0::real`; `d a::A b`] THEN
-    REWRITE_TAC[IN_ELIM_THM; REAL_SUB_RZERO] THEN
-    MAP_EVERY UNDISCH_TAC [`(a::A) \<in> M`; `(b::A) \<in> M`] THEN
-    CONV_TAC METRIC_ARITH;
-    ALL_TAC] THEN
-  REWRITE_TAC[SUBMETRIC] THEN ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-   [REWRITE_TAC[GSYM TOPSPACE_MTOPOLOGY] THEN
-    REWRITE_TAC[CLOSURE_OF_SUBSET_TOPSPACE];
-    MATCH_MP_TAC CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE THEN
-    REWRITE_TAC[CLOSED_IN_CLOSURE_OF] THEN EXPAND_TAC "m'" THEN
-    MATCH_MP_TAC MCOMPLETE_FUNSPACE THEN
-    REWRITE_TAC[MCOMPLETE_REAL_EUCLIDEAN_METRIC];
-    MATCH_MP_TAC CLOSURE_OF_SUBSET THEN
-    ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY];
-    MAP_EVERY X_GEN_TAC [`x::A`; `y::A`] THEN STRIP_TAC THEN
-    EXPAND_TAC "m'" THEN REWRITE_TAC[FUNSPACE] THEN
-    COND_CASES_TAC THENL [ASM_MESON_TAC[NOT_IN_EMPTY]; ALL_TAC] THEN
-    MATCH_MP_TAC SUP_UNIQUE THEN SIMP_TAC[FORALL_IN_GSPEC] THEN
-    X_GEN_TAC `b::real` THEN REWRITE_TAC[REAL_EUCLIDEAN_METRIC] THEN
-    EXPAND_TAC "f" THEN REWRITE_TAC[RESTRICTION] THEN EQ_TAC THENL
-     [DISCH_THEN(fun th -> MP_TAC(SPEC `x::A` th)) THEN EXPAND_TAC "f" THEN
-      ASM_SIMP_TAC[MDIST_REFL; MDIST_SYM] THEN REAL_ARITH_TAC;
-      MAP_EVERY UNDISCH_TAC [`(x::A) \<in> M`; `(y::A) \<in> M`] THEN
-      CONV_TAC METRIC_ARITH]]);;
-
-lemma metric_completion:
-   "?m' f::A=>A->real.
-                mcomplete m' \<and>
-                image f (M) \<subseteq> mspace m' \<and>
-                (mtopology m') closure_of (image f (M)) = mspace m' \<and>
-                \<forall>x y. x \<in> M \<and> y \<in> M
-                      \<Longrightarrow> d m' (f x,f y) = d x y"
-oops
-  GEN_TAC THEN
-  MATCH_MP_TAC(MESON[]
-   `(\<exists>s f. P (submetric (funspace (M) real_euclidean_metric) s) f)
-    \<Longrightarrow> \<exists>n f. P n f`) THEN
-  MP_TAC(SPEC `m::A metric` METRIC_COMPLETION_EXPLICIT) THEN
-  REPEAT(MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC) THEN
-  REWRITE_TAC[SUBMETRIC; SUBSET_INTER] THEN
-  REWRITE_TAC[MTOPOLOGY_SUBMETRIC; CLOSURE_OF_SUBTOPOLOGY] THEN
-  SIMP_TAC[SET_RULE `t \<subseteq> s \<Longrightarrow> s \<inter> t = t`] THEN SET_TAC[]);;
-
-lemma metrizable_space_completion:
-   "metrizable_space X
-        \<Longrightarrow> ?top' (f::A=>A->real).
-                completely_metrizable_space Y \<and>
-                embedding_map X Y f \<and>
-                Y closure_of (f ` (topspace X)) = topspace Y"
-oops
-  REWRITE_TAC[FORALL_METRIZABLE_SPACE; RIGHT_EXISTS_AND_THM] THEN
-  X_GEN_TAC `m::A metric` THEN
-  REWRITE_TAC[EXISTS_COMPLETELY_METRIZABLE_SPACE; RIGHT_AND_EXISTS_THM] THEN
-  MP_TAC(ISPEC `m::A metric` METRIC_COMPLETION) THEN
-  REPEAT(MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC) THEN
-  MESON_TAC[ISOMETRY_IMP_EMBEDDING_MAP]);;
 
 
 subsection\<open> The Baire Category Theorem                                                \<close>
