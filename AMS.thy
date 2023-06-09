@@ -1486,12 +1486,6 @@ lemma mdist_funspace [simp]:
   "mdist (funspace S m) = Metric_space.fdist (mspace m) (mdist m) S"
   by (simp add: Metric_space.Metric_space_funspace Metric_space.mdist_metric funspace_def)
 
-
-locale Fun_metric_space = Metric_space + 
-  fixes S::'b
-
-
-
 lemma funspace_imp_welldefined:
    "\<lbrakk>f \<in> mspace (funspace S m); x \<in> S\<rbrakk> \<Longrightarrow> f x \<in> mspace m"
   by (simp add: Metric_space.fspace_def subset_iff)
@@ -1505,39 +1499,32 @@ lemma funspace_imp_bounded_image:
   by (simp add: Metric_space.fspace_def)
 
 lemma funspace_imp_bounded:
-   "\<And>S m f::A=>B. f \<in> mspace (funspace S m)
-                \<Longrightarrow> S = {} \<or> (\<exists>c b. \<forall>x. x \<in> S \<Longrightarrow> d c f x \<le> b)"
-oops
-  REPEAT GEN_TAC THEN
-  REWRITE_TAC[FUNSPACE; MBOUNDED; IMAGE_EQ_EMPTY; IN_ELIM_THM] THEN
-  ASM_CASES_TAC `S::A=>bool = {}` THEN ASM_REWRITE_TAC[] THEN ASM SET_TAC[]);;
+   "f \<in> mspace (funspace S m) \<Longrightarrow> S = {} \<or> (\<exists>c B. \<forall>x \<in> S. mdist m c (f x) \<le> B)"
+  by (auto simp: Metric_space.fspace_def Metric_space.mbounded)
 
 lemma funspace_imp_bounded2:
-   "\<And>S m f g::A=>B. f \<in> mspace (funspace S m) \<and> g \<in> mspace (funspace S m)
-                  \<Longrightarrow> (\<exists>b. \<forall>x. x \<in> S \<Longrightarrow> d (f x) g x \<le> b)"
-oops
-  REWRITE_TAC[FUNSPACE; IN_ELIM_THM] THEN REPEAT STRIP_TAC THEN
-  CUT_TAC `mbounded (image f S \<union> g ` S)` THENL
-  [REWRITE_TAC[MBOUNDED_ALT; \<subseteq>; IN_UNION] THEN
-   STRIP_TAC THEN EXISTS_TAC `b::real` THEN ASM SET_TAC [];
-   ASM_REWRITE_TAC[MBOUNDED_UNION]]);;
+  assumes "f \<in> mspace (funspace S m)" "g \<in> mspace (funspace S m)"
+  obtains B where "\<And>x. x \<in> S \<Longrightarrow> mdist m (f x) (g x) \<le> B"
+proof -
+  interpret Metric_space "mspace m" "mdist m"
+    by auto
+  have "mbounded (f ` S \<union> g ` S)"
+    using assms funspace_imp_bounded_image mbounded_Un by blast
+  then show thesis
+    by (metis UnCI imageI mbounded_alt that)
+qed
 
 lemma funspace_mdist_le:
-   "\<And>S m f g::A=>B a.
-     (S \<noteq> {}) \<and>
-     f \<in> mspace (funspace S m) \<and>
-     g \<in> mspace (funspace S m)
-     \<Longrightarrow> (d (funspace S m) (f,g) \<le> a \<longleftrightarrow>
-          \<forall>x. x \<in> S \<Longrightarrow> d (f x) g x \<le> a)"
-oops
-  INTRO_TAC "! *; ne f g" THEN
-  HYP (DESTRUCT_TAC "@b. b" \<circ>
-    MATCH_MP FUNSPACE_IMP_BOUNDED2 \<circ> CONJ_LIST) "f g" [] THEN
-  ASM_REWRITE_TAC[FUNSPACE] THEN
-  MP_TAC (ISPECL [`{d (f x)::B g x | x::A \<in> S}`; `a::real`]
-    REAL_SUP_LE_EQ) THEN
-  ANTS_TAC THENL [ASM SET_TAC[]; REWRITE_TAC[IN_ELIM_THM]] THEN
-  MESON_TAC[]);;
+  assumes "f \<in> mspace (funspace S m)" "g \<in> mspace (funspace S m)" and "S \<noteq> {}"
+  shows "mdist (funspace S m) f g \<le> a \<longleftrightarrow> (\<forall>x \<in> S. mdist m (f x) (g x) \<le> a)" (is "?lhs \<longleftrightarrow> ?rhs")
+proof -
+  interpret Metric_space "mspace m" "mdist m"
+    by auto
+  have fg: "f \<in> fspace S" "g \<in> fspace S"
+    using assms by auto
+  show ?thesis
+    using assms bdd_above_dist [OF fg] by (simp add: fdist_def cSUP_le_iff)
+qed
 
 lemma mcomplete_funspace:
    "\<And>S::A=>bool m::B metric. mcomplete \<Longrightarrow> mcomplete (funspace S m)"
