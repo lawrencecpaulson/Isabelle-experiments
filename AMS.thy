@@ -9,20 +9,12 @@ begin
 declare Metric_space_mspace_mdist [simp]
 declare continuous_map_mdist [continuous_intros]
 
-lemma limit_within_subset:
-   "\<lbrakk>limitin X f l (atin_within Y a S); T \<subseteq> S\<rbrakk> \<Longrightarrow> limitin X f l (atin_within Y a T)"
-  by (smt (verit) eventually_atin_within limitin_def subset_eq)
-
-
-lemma in_mball_of [simp]: "y \<in> mball_of m x r \<longleftrightarrow> x \<in> mspace m \<and> y \<in> mspace m \<and> mdist m x y < r"
-  by (simp add: Metric_space.in_mball mball_of_def)
-
-lemma in_mcball_of [simp]: "y \<in> mcball_of m x r \<longleftrightarrow> x \<in> mspace m \<and> y \<in> mspace m \<and> mdist m x y \<le> r"
-  by (simp add: Metric_space.in_mcball mcball_of_def)
-
 lemma countable_as_injective_image_subset: "countable S \<longleftrightarrow> (\<exists>f. \<exists>K::nat set. S = f ` K \<and> inj_on f K)"
   by (metis countableI countable_image_eq_inj image_empty inj_on_the_inv_into uncountable_def)
 
+lemma limit_within_subset:
+   "\<lbrakk>limitin X f l (atin_within Y a S); T \<subseteq> S\<rbrakk> \<Longrightarrow> limitin X f l (atin_within Y a T)"
+  by (smt (verit) eventually_atin_within limitin_def subset_eq)
 
 lemma locally_compact_space_euclidean:
   "locally_compact_space (euclidean::'a::heine_borel topology)" 
@@ -35,7 +27,6 @@ proof (intro strip)
   then show "\<exists>U K. openin euclidean U \<and> compactin euclidean K \<and> x \<in> U \<and> U \<subseteq> K"
     by (metis Elementary_Metric_Spaces.open_ball centre_in_ball compact_cball compactin_euclidean_iff open_openin zero_less_one)
 qed
-
 
 lemma locally_compact_Euclidean_space:
   "locally_compact_space(Euclidean_space n)"
@@ -52,6 +43,22 @@ proof
   show "?rhs \<subseteq> ?lhs"
     by (force simp add: PiE_iff)
 qed
+
+
+lemma in_mball_of [simp]: "y \<in> mball_of m x r \<longleftrightarrow> x \<in> mspace m \<and> y \<in> mspace m \<and> mdist m x y < r"
+  by (simp add: Metric_space.in_mball mball_of_def)
+
+lemma in_mcball_of [simp]: "y \<in> mcball_of m x r \<longleftrightarrow> x \<in> mspace m \<and> y \<in> mspace m \<and> mdist m x y \<le> r"
+  by (simp add: Metric_space.in_mcball mcball_of_def)
+
+lemma mcomplete_trivial: "Metric_space.mcomplete {\<lambda>x. a} (\<lambda>x y. 0)"
+proof -
+  interpret Metric_space "{\<lambda>x. a}" "\<lambda>x y. 0"
+    by unfold_locales auto
+  show ?thesis
+    unfolding mcomplete_def MCauchy_def image_subset_iff by (metis UNIV_I limit_metric_sequentially)
+qed
+
 
 text \<open>The original HOL Light proof was a mess, sorry\<close>
 lemma limitin_componentwise:
@@ -122,6 +129,15 @@ next
   then show ?thesis
     by (simp add: limitin_def PiE_iff)
 qed
+
+(*AN EXPERIMENT*)
+definition (in Metric_space) "Self \<equiv> metric (M,d)"
+
+lemma (in Metric_space) mspace_Self [simp]: "mspace Self = M"
+  by (simp add: Self_def)
+
+lemma (in Metric_space) mdist_Self [simp]: "mdist Self = d"
+  by (simp add: Self_def)
 
 
 definition mcomplete_of :: "'a metric \<Rightarrow> bool"
@@ -238,7 +254,6 @@ lemma Metric_space_capped_dist[simp]:
   "Metric_space (mspace m) (Metric_space.capped_dist (mdist m) \<delta>)"
   using Metric_space.capped_dist Metric_space_mspace_mdist by blast
 
-
 lemma mtopology_capped_metric:
   "mtopology_of(capped_metric \<delta> m) = mtopology_of m"
 proof (cases "\<delta> > 0")
@@ -272,7 +287,7 @@ proof (cases "\<delta> > 0")
   qed
 qed (simp add: capped_metric)
 
-text \<open>Might have been easier to prove this within the locale to start with\<close>
+text \<open>Might have been easier to prove this within the locale to start with (using Self)\<close>
 lemma (in Metric_space) mtopology_capped_metric:
   "Metric_space.mtopology M (capped_dist \<delta>) = mtopology"
   using mtopology_capped_metric [of \<delta> "metric(M,d)"]
@@ -310,7 +325,7 @@ qed (simp add: capped_dist_def)
 
 lemma (in Metric_space) mcomplete_capped_metric:
    "Metric_space.mcomplete M (capped_dist \<delta>) \<longleftrightarrow> mcomplete"
-  by (simp add: MCauchy_capped_metric Metric_space.mcomplete_def capped_dist local.mtopology_capped_metric mcomplete_def)
+  by (simp add: MCauchy_capped_metric Metric_space.mcomplete_def capped_dist mtopology_capped_metric mcomplete_def)
 
 lemma bounded_equivalent_metric:
   assumes "\<delta> > 0"
@@ -322,66 +337,8 @@ proof
     by (smt (verit, best) assms field_sum_of_halves mdist_capped)    
 qed (auto simp: mtopology_capped_metric)
 
-(*WHY THE REDUNDANCY IN THE CONCLUSION?*)
+text \<open>A technical lemma needed below\<close>
 lemma Sup_metric_cartesian_product:
-  fixes I m
-  defines "S \<equiv> PiE I (mspace \<circ> m)"
-  defines "D \<equiv> \<lambda>x y. if x \<in> S \<and> y \<in> S then SUP i\<in>I. mdist (m i) (x i) (y i) else 0"
-  defines "m' \<equiv> metric(S,D)"
-  assumes "I \<noteq> {}"
-    and c: "\<And>i x y. \<lbrakk>i \<in> I; x \<in> mspace(m i); y \<in> mspace(m i)\<rbrakk> \<Longrightarrow> mdist (m i) x y \<le> c"
-  shows "mspace m' = S \<and> mdist m' = D \<and>
-         (\<forall>x \<in> S. \<forall>y \<in> S. \<forall>b. mdist m' x y \<le> b \<longleftrightarrow> (\<forall>i \<in> I. mdist (m i) (x i) (y i) \<le> b))"
-proof -
-  have bdd: "bdd_above ((\<lambda>i. mdist (m i) (x i) (y i)) ` I)"
-    if "x \<in> S" "y \<in> S" for x y 
-    using c that by (force simp: S_def bdd_above_def)
-  have D_iff: "D x y \<le> b \<longleftrightarrow> (\<forall>i \<in> I. mdist (m i) (x i) (y i) \<le> b)"
-    if "x \<in> S" "y \<in> S" for x y b
-    using that \<open>I \<noteq> {}\<close> by (simp add: D_def PiE_iff cSup_le_iff bdd)
-  interpret Metric_space S D
-  proof
-    fix x y
-    show D0: "0 \<le> D x y"
-      using bdd  
-      apply (simp add: D_def)
-      by (meson \<open>I \<noteq> {}\<close> cSUP_upper dual_order.trans ex_in_conv mdist_nonneg)
-    show "D x y = D y x"
-      by (simp add: D_def mdist_commute)
-    assume "x \<in> S" and "y \<in> S"
-    then
-    have "D x y = 0 \<longleftrightarrow> (\<forall>i\<in>I. mdist (m i) (x i) (y i) = 0)"
-      using D0 D_iff [of x y 0] nle_le by fastforce
-    also have "... \<longleftrightarrow> x = y"
-      using \<open>x \<in> S\<close> \<open>y \<in> S\<close> by (fastforce simp add: S_def PiE_iff extensional_def)
-    finally show "(D x y = 0) \<longleftrightarrow> (x = y)" .
-    fix z
-    assume "z \<in> S"
-    have "mdist (m i) (x i) (z i) \<le> D x y + D y z" if "i \<in> I" for i
-    proof -
-      have "mdist (m i) (x i) (z i) \<le> mdist (m i) (x i) (y i) + mdist (m i) (y i) (z i)"
-        by (metis PiE_E S_def \<open>x \<in> S\<close> \<open>y \<in> S\<close> \<open>z \<in> S\<close> comp_apply mdist_triangle that)
-      also have "... \<le> D x y + D y z"
-        using \<open>x \<in> S\<close> \<open>y \<in> S\<close> \<open>z \<in> S\<close> by (meson D_iff add_mono order_refl that)
-      finally show ?thesis .
-    qed
-    then show "D x z \<le> D x y + D y z"
-      by (simp add: D_iff \<open>x \<in> S\<close> \<open>z \<in> S\<close>)
-  qed
-  show ?thesis
-  proof (intro conjI strip)
-    show "mspace m' = S"
-      by (simp add: m'_def)
-    show "mdist m' = D"
-      using D_def m'_def mdist_metric by blast
-    show "(mdist m' x y \<le> b) = (\<forall>i\<in>I. mdist (m i) (x i) (y i) \<le> b)"
-      if "x \<in> S" and "y \<in> S" for x y b
-      using that by (simp add: D_iff m'_def)
-  qed
-qed
-
-(*DUPLICATE WITHOUT REDUNDANCY*)
-lemma Sup_metric_cartesian_product':
   fixes I m
   defines "S \<equiv> PiE I (mspace \<circ> m)"
   defines "D \<equiv> \<lambda>x y. if x \<in> S \<and> y \<in> S then SUP i\<in>I. mdist (m i) (x i) (y i) else 0"
@@ -531,7 +488,7 @@ next
 
   have d_le1: "d x y \<le> 1" for x y
     using \<open>I \<noteq> {}\<close> c1 by (simp add: d_def bdd cSup_le_iff)
-  with \<open>I \<noteq> {}\<close> Sup_metric_cartesian_product' [of I cm]
+  with \<open>I \<noteq> {}\<close> Sup_metric_cartesian_product [of I cm]
   have "Metric_space M d" 
     and *: "\<forall>x\<in>M. \<forall>y\<in>M. \<forall>b. (d x y \<le> b) \<longleftrightarrow> (\<forall>i\<in>I. mdist (cm i) (x i) (y i) \<le> b)"
     by (auto simp: False bdd M_def d_def cSUP_le_iff intro: c1) 
@@ -1381,12 +1338,18 @@ subsection\<open>Metric space of bounded functions\<close>
 context Metric_space
 begin
 
-definition fspace where 
+definition fspace :: "'b set \<Rightarrow> ('b \<Rightarrow> 'a) set" where 
   "fspace \<equiv> \<lambda>S. {f. f`S \<subseteq> M \<and> f \<in> extensional S \<and> mbounded (f`S)}"
 
-definition fdist where 
+definition fdist :: "['b set, 'b \<Rightarrow> 'a, 'b \<Rightarrow> 'a] \<Rightarrow> real" where 
   "fdist \<equiv> \<lambda>S f g. if f \<in> fspace S \<and> g \<in> fspace S \<and> S \<noteq> {} 
                     then Sup ((\<lambda>x. d (f x) (g x)) ` S) else 0"
+
+lemma fspace_empty [simp]: "fspace {} = {\<lambda>x. undefined}"
+  by (auto simp: fspace_def)
+
+lemma fdist_empty [simp]: "fdist {} = (\<lambda>x y. 0)"
+  by (auto simp: fdist_def)
 
 lemma fspace_in_M: "\<lbrakk>f \<in> fspace S; x \<in> S\<rbrakk> \<Longrightarrow> f x \<in> M"
   by (auto simp: fspace_def)
@@ -1502,114 +1465,127 @@ lemma funspace_imp_bounded:
    "f \<in> mspace (funspace S m) \<Longrightarrow> S = {} \<or> (\<exists>c B. \<forall>x \<in> S. mdist m c (f x) \<le> B)"
   by (auto simp: Metric_space.fspace_def Metric_space.mbounded)
 
-lemma funspace_imp_bounded2:
-  assumes "f \<in> mspace (funspace S m)" "g \<in> mspace (funspace S m)"
-  obtains B where "\<And>x. x \<in> S \<Longrightarrow> mdist m (f x) (g x) \<le> B"
+
+lemma (in Metric_space) funspace_imp_bounded2:
+  assumes "f \<in> fspace S" "g \<in> fspace S"
+  obtains B where "\<And>x. x \<in> S \<Longrightarrow> d (f x) (g x) \<le> B"
 proof -
-  interpret Metric_space "mspace m" "mdist m"
-    by auto
   have "mbounded (f ` S \<union> g ` S)"
-    using assms funspace_imp_bounded_image mbounded_Un by blast
+    using mbounded_Un assms by (force simp add: fspace_def)
   then show thesis
     by (metis UnCI imageI mbounded_alt that)
 qed
 
+lemma (in Metric_space) funspace_mdist_le:
+  assumes fg: "f \<in> fspace S" "g \<in> fspace S" and "S \<noteq> {}"
+  shows "fdist S f g \<le> a \<longleftrightarrow> (\<forall>x \<in> S. d (f x) (g x) \<le> a)" (is "?lhs \<longleftrightarrow> ?rhs")
+    using assms bdd_above_dist [OF fg] by (simp add: fdist_def cSUP_le_iff)
+
+lemma funspace_imp_bounded2:
+  assumes "f \<in> mspace (funspace S m)" "g \<in> mspace (funspace S m)"
+  obtains B where "\<And>x. x \<in> S \<Longrightarrow> mdist m (f x) (g x) \<le> B"
+  by (metis Metric_space_mspace_mdist assms mspace_funspace Metric_space.funspace_imp_bounded2)
+
 lemma funspace_mdist_le:
   assumes "f \<in> mspace (funspace S m)" "g \<in> mspace (funspace S m)" and "S \<noteq> {}"
   shows "mdist (funspace S m) f g \<le> a \<longleftrightarrow> (\<forall>x \<in> S. mdist m (f x) (g x) \<le> a)" (is "?lhs \<longleftrightarrow> ?rhs")
+  by (metis (no_types, opaque_lifting) mdist_funspace Metric_space_mspace_mdist assms mspace_funspace Metric_space.funspace_mdist_le)
+
+
+
+lemma (in Metric_space) mcomplete_funspace:
+  assumes "mcomplete"
+  shows "mcomplete_of (funspace S Self)"
 proof -
-  interpret Metric_space "mspace m" "mdist m"
-    by auto
-  have fg: "f \<in> fspace S" "g \<in> fspace S"
-    using assms by auto
+  interpret F: Metric_space "fspace S" "fdist S"
+    by (simp add: Metric_space_funspace)
   show ?thesis
-    using assms bdd_above_dist [OF fg] by (simp add: fdist_def cSUP_le_iff)
+  proof (cases "S={}")
+    case True
+    then show ?thesis
+      by (simp add: mcomplete_of_def mcomplete_trivial)
+  next
+    case False
+    show ?thesis
+    proof (clarsimp simp: mcomplete_of_def Metric_space.mcomplete_def)
+      fix \<sigma>
+      assume \<sigma>: "F.MCauchy \<sigma>"
+      then have \<sigma>M: "\<And>n x. x \<in> S \<Longrightarrow> \<sigma> n x \<in> M"
+        by (auto simp: F.MCauchy_def intro: fspace_in_M)
+      have \<sigma>ext: "\<And>n. \<sigma> n \<in> extensional S"
+        using \<sigma> unfolding F.MCauchy_def by (auto simp: fspace_def)
+      have \<sigma>bd: "\<And>n. mbounded (\<sigma> n ` S)"
+        using \<sigma> unfolding F.MCauchy_def by (simp add: fspace_def image_subset_iff)
+      have [simp]: "\<sigma> n \<in> fspace S" for n
+        using F.MCauchy_def \<sigma> by blast
+      have bd2: "\<And>n n'. \<exists>B. \<forall>x \<in> S. d (\<sigma> n x) (\<sigma> n' x) \<le> B"
+        using \<sigma> unfolding F.MCauchy_def by (metis range_subsetD funspace_imp_bounded2)
+      have sup: "\<And>n n' x0. x0 \<in> S \<Longrightarrow> d (\<sigma> n x0) (\<sigma> n' x0) \<le> Sup ((\<lambda>x. d (\<sigma> n x) (\<sigma> n' x)) ` S)"
+      proof (rule cSup_upper)
+        show "bdd_above ((\<lambda>x. d (\<sigma> n x) (\<sigma> n' x)) ` S)" if "x0 \<in> S" for n n' x0
+          using that bd2 by (meson bdd_above.I2)
+      qed auto
+      have pcy: "MCauchy (\<lambda>n. \<sigma> n x)" if "x \<in> S" for x
+        unfolding MCauchy_def
+      proof (intro conjI strip)
+        show "range (\<lambda>n. \<sigma> n x) \<subseteq> M"
+          using \<sigma>M that by blast
+        fix \<epsilon> :: real
+        assume "\<epsilon> > 0"
+        then obtain N where N: "\<And>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> fdist S (\<sigma> n) (\<sigma> n') < \<epsilon>"
+          using \<sigma> by (force simp add: F.MCauchy_def)
+        { fix n n'
+          assume "N \<le> n" and "N \<le> n'"
+          have "d (\<sigma> n x) (\<sigma> n' x) \<le> fdist S (\<sigma> n) (\<sigma> n')"
+            apply (simp add: fdist_def \<open>S \<noteq> {}\<close>)
+            apply (rule cSup_upper)
+             apply (simp add: \<open>x \<in> S\<close>)
+            using that bd2 by (meson bdd_above.I2)
+          then have "d (\<sigma> n x) (\<sigma> n' x) < \<epsilon>"
+            using N \<open>N \<le> n'\<close> \<open>N \<le> n\<close> by fastforce
+        } then
+        show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n x) (\<sigma> n' x) < \<epsilon>"
+          by blast
+      qed
+      have "\<exists>l. limitin mtopology (\<lambda>n. \<sigma> n x) l sequentially" if "x \<in> S" for x
+        using assms mcomplete_def pcy \<open>x \<in> S\<close> by presburger
+      then obtain g0 where g0: "\<And>x. x \<in> S \<Longrightarrow> limitin mtopology (\<lambda>n. \<sigma> n x) (g0 x) sequentially"
+        by metis
+      define g where "g \<equiv> restrict g0 S"
+      have gext: "g \<in> extensional S" and g: "\<And>x. x \<in> S \<Longrightarrow> limitin mtopology (\<lambda>n. \<sigma> n x) (g x) sequentially"
+        by (auto simp: g_def g0)
+      have gwd: "g x \<in> M" if "x \<in> S" for x
+        using g limitin_metric that by blast
+      have unif: "\<exists>N. \<forall>x n. x \<in> S \<longrightarrow> N \<le> n \<longrightarrow> d (\<sigma> n x) (g x) < \<epsilon>" if "\<epsilon>>0" for \<epsilon>
+      proof -
+        obtain N where N: "\<And>n n'. N \<le> n \<and> N \<le> n' \<Longrightarrow> Sup ((\<lambda>x. d (\<sigma> n x) (\<sigma> n' x)) ` S) < \<epsilon>/2"
+          using \<sigma> \<open>S\<noteq>{}\<close> \<open>\<epsilon>>0\<close> unfolding F.MCauchy_def apply (simp add: fdist_def  del: divide_const_simps)
+          by (meson half_gt_zero)
+        show ?thesis
+        proof (intro exI strip)
+          fix x n
+          assume "x \<in> S" and "N \<le> n"
+          obtain N' where N': "\<And>n. N' \<le> n \<Longrightarrow> \<sigma> n x \<in> M \<and> d (\<sigma> n x) (g x) < \<epsilon>/2"
+            by (metis \<open>0 < \<epsilon>\<close> \<open>x \<in> S\<close> g half_gt_zero limit_metric_sequentially)
+          have "d (\<sigma> n x) (g x) \<le> d (\<sigma> n x) (\<sigma> (max N N') x) + d (\<sigma> (max N N') x) (g x)"
+            using \<open>x \<in> S\<close> \<sigma>M gwd triangle by presburger
+          also have "\<dots> < \<epsilon>/2 + \<epsilon>/2"
+            by (smt (verit) N N' \<open>N \<le> n\<close> \<open>x \<in> S\<close> max.cobounded1 max.cobounded2 sup)
+          finally show "d (\<sigma> n x) (g x) < \<epsilon>" by simp
+        qed
+      qed
+      have "limitin F.mtopology \<sigma> g0 sequentially"
+        sorry
+      then show "\<exists>x. limitin F.mtopology \<sigma> x sequentially"
+        by blast 
+    qed
+  qed
 qed
 
-lemma mcomplete_funspace:
-   "\<And>S::A=>bool m::B metric. mcomplete \<Longrightarrow> mcomplete (funspace S m)"
+
 oops
-  REWRITE_TAC[mcomplete] THEN INTRO_TAC "!S m; cpl; ![f]; cy" THEN
-  ASM_CASES_TAC `S::A=>bool = {}` THENL
-  [POP_ASSUM SUBST_ALL_TAC THEN EXISTS_TAC `\<lambda>x::A. undefined::B` THEN
-   REMOVE_THEN "cy" MP_TAC THEN
-   SIMP_TAC[MCauchy; LIMIT_METRIC_SEQUENTIALLY; FUNSPACE; NOT_IN_EMPTY;
-     IN_ELIM_THM; IN_EXTENSIONAL; IMAGE_CLAUSES; MBOUNDED_EMPTY];
-   POP_ASSUM (LABEL_TAC "nempty")] THEN
-  LABEL_ABBREV_TAC
-    `g (x::A) = if x \<in> S
-               then @y. limitin mtopology (\<lambda>n::num. f n x) y sequentially
-               else undefined::B` THEN
-  EXISTS_TAC `g::A=>B` THEN USE_THEN "cy" MP_TAC THEN
-  HYP REWRITE_TAC "nempty"
-    [MCauchy; FUNSPACE; IN_ELIM_THM; FORALL_AND_THM] THEN
-  INTRO_TAC "(fwd fext fbd) cy'" THEN
-  ASM_REWRITE_TAC[LIMIT_METRIC_SEQUENTIALLY; FUNSPACE; IN_ELIM_THM] THEN
-  CLAIM_TAC "gext" `g::A=>B \<in> EXTENSIONAL S` THENL
-  [REMOVE_THEN "g" (fun th -> SIMP_TAC[IN_EXTENSIONAL; GSYM th]);
-   HYP REWRITE_TAC "gext" []] THEN
-  CLAIM_TAC "bd2"
-     `!n n'. \<exists>b. \<forall>x::A. x \<in> S \<Longrightarrow> d m (f (n::num) x::B, f n' x) \<le> b` THENL
-  [REPEAT GEN_TAC THEN MATCH_MP_TAC FUNSPACE_IMP_BOUNDED2 THEN
-   ASM_REWRITE_TAC[FUNSPACE; IN_ELIM_THM; ETA_AX];
-   ALL_TAC] THEN
-  CLAIM_TAC "sup"
-    `!n n':num x0::A. x0 \<in> S
-                     \<Longrightarrow> d f n x0::B f n' x0 \<le>
-                         sup {d f n x f n' x | x \<in> S}` THENL
-  [INTRO_TAC "!n n' x0; x0" THEN MATCH_MP_TAC REAL_LE_SUP THEN
-   REMOVE_THEN "bd2" (DESTRUCT_TAC "@b. b" \<circ> SPECL[`n::num`;`n':num`]) THEN
-   MAP_EVERY EXISTS_TAC
-     [`b::real`; `d m (f (n::num) (x0::A):B, f n' x0)`] THEN
-   REWRITE_TAC[IN_ELIM_THM] THEN CONJ_TAC THENL
-   [HYP MESON_TAC "x0" []; REWRITE_TAC[REAL_LE_REFL]] THEN
-   INTRO_TAC "![d]; @y. y d" THEN REMOVE_THEN "d" SUBST1_TAC THEN
-   HYP SIMP_TAC "b y" [];
-   ALL_TAC] THEN
-  CLAIM_TAC "pcy" `\<forall>x::A. x \<in> S \<Longrightarrow> MCauchy (\<lambda>n. f n x::B)` THENL
-  [INTRO_TAC "!x; x" THEN REWRITE_TAC[MCauchy] THEN
-   HYP SIMP_TAC "fwd x" [] THEN INTRO_TAC "!e; e" THEN
-   USE_THEN "e" (HYP_TAC "cy': @N.N" \<circ> C MATCH_MP) THEN EXISTS_TAC `N::num` THEN
-   REPEAT GEN_TAC THEN DISCH_THEN (HYP_TAC "N" \<circ> C MATCH_MP) THEN
-   TRANS_TAC REAL_LET_TRANS
-     `sup {d m (f (n::num) x::B,f n' x) | x::A \<in> S}` THEN
-   HYP REWRITE_TAC "N" [] THEN HYP SIMP_TAC "sup x" [];
-   ALL_TAC] THEN
-  CLAIM_TAC "glim"
-    `\<forall>x::A. x \<in> S
-           \<Longrightarrow> limitin mtopology (\<lambda>n. f n x::B) (g x) sequentially` THENL
-  [INTRO_TAC "!x; x" THEN
-   REMOVE_THEN "g" (fun th -> ASM_REWRITE_TAC[GSYM th]) THEN
-   SELECT_ELIM_TAC THEN HYP SIMP_TAC "cpl pcy x" [];
-   ALL_TAC] THEN
-  CLAIM_TAC "gwd" `\<forall>x::A. x \<in> S \<Longrightarrow> g x::B \<in> M` THENL
-  [INTRO_TAC "!x; x" THEN
-   MATCH_MP_TAC (ISPECL[`sequentially`] LIMIT_IN_MSPACE) THEN
-   EXISTS_TAC `\<lambda>n::num. f n (x::A):B` THEN HYP SIMP_TAC "glim x" [];
-   HYP REWRITE_TAC "gwd" []] THEN
-  CLAIM_TAC "unif"
-    `\<forall>e>0.  \<exists>N::num. \<forall>x::A n. x \<in> S \<and> N \<le> n
-                    \<Longrightarrow> d f n x::B g x < e` THENL
-  [INTRO_TAC "!e; e" THEN REMOVE_THEN "cy'" (MP_TAC \<circ> SPEC `e / 2`) THEN
-   HYP REWRITE_TAC "e" [REAL_HALF] THEN INTRO_TAC "@N. N" THEN
-   EXISTS_TAC `N::num` THEN INTRO_TAC "!x n; x n" THEN
-   USE_THEN "x" (HYP_TAC "glim" \<circ> C MATCH_MP) THEN
-   HYP_TAC "glim: gx glim" (REWRITE_RULE[LIMIT_METRIC_SEQUENTIALLY]) THEN
-   REMOVE_THEN "glim" (MP_TAC \<circ> SPEC `e / 2`) THEN
-   HYP REWRITE_TAC "e" [REAL_HALF] THEN
-   HYP SIMP_TAC "fwd x" [] THEN INTRO_TAC "@N'. N'" THEN
-   TRANS_TAC REAL_LET_TRANS
-     `d m (f n (x::A):B, f (MAX N N') x) +
-      d m (f (MAX N N') x, g x)` THEN
-   HYP SIMP_TAC "fwd x gwd" [MDIST_TRIANGLE] THEN
-   TRANS_TAC REAL_LTE_TRANS `e / 2 + e / 2` THEN CONJ_TAC THENL
-   [MATCH_MP_TAC REAL_LT_ADD2; REWRITE_TAC[REAL_HALF; REAL_LE_REFL]] THEN
-   CONJ_TAC THENL [ALL_TAC; REMOVE_THEN "N'" MATCH_MP_TAC THEN ARITH_TAC] THEN
-   TRANS_TAC REAL_LET_TRANS
-     `sup {d m (f n x::B,f (MAX N N') x) | x::A \<in> S}` THEN
-   HYP SIMP_TAC "N n" [ARITH_RULE `N \<le> MAX N N'`] THEN
-   HYP SIMP_TAC "sup x" [];
-   ALL_TAC] THEN
+
+
   CONJ_TAC THENL
   [HYP_TAC "cy': @N. N" (C MATCH_MP REAL_LT_01) THEN
    USE_THEN "fbd" (MP_TAC \<circ> REWRITE_RULE[MBOUNDED] \<circ> SPEC `N::num`) THEN
@@ -1619,34 +1595,36 @@ oops
    REWRITE_TAC[\<subseteq>; IN_IMAGE; IN_MCBALL] THEN
    INTRO_TAC "![y]; (@x. y x)" THEN REMOVE_THEN "y" SUBST1_TAC THEN
    HYP SIMP_TAC "x gwd c" [] THEN TRANS_TAC REAL_LE_TRANS
-     `d m (c::B, f (N::num) (x::A)) + d f N x g x` THEN
+     `d m (c::B, \<sigma> (N::num) (x::A)) + d \<sigma> N x g x` THEN
    HYP SIMP_TAC "c fwd gwd x" [MDIST_TRIANGLE] THEN
    MATCH_MP_TAC REAL_LE_ADD2 THEN CONJ_TAC THENL
    [REMOVE_THEN "Nbd" MATCH_MP_TAC THEN REWRITE_TAC[IN_IMAGE] THEN
     HYP MESON_TAC "x" [];
     REFUTE_THEN (LABEL_TAC "contra" \<circ> REWRITE_RULE[REAL_NOT_LE])] THEN
    CLAIM_TAC "@a. a1 a2"
-     `\<exists>a. 1 < a \<and> a < d m (f (N::num) (x::A), g x::B)` THENL
-   [EXISTS_TAC `(1 + d m (f (N::num) (x::A), g x::B)) / 2` THEN
+     `\<exists>a. 1 < a \<and> a < d m (\<sigma> (N::num) (x::A), g x::B)` THENL
+   [EXISTS_TAC `(1 + d m (\<sigma> (N::num) (x::A), g x::B)) / 2` THEN
     REMOVE_THEN "contra" MP_TAC THEN REAL_ARITH_TAC;
     USE_THEN "x" (HYP_TAC "glim" \<circ> C MATCH_MP)] THEN
    REMOVE_THEN "glim" (MP_TAC \<circ> REWRITE_RULE[LIMIT_METRIC_SEQUENTIALLY]) THEN
    HYP SIMP_TAC "gwd x" [] THEN DISCH_THEN (MP_TAC \<circ> SPEC `a - 1`) THEN
    ANTS_TAC THENL [REMOVE_THEN "a1" MP_TAC THEN REAL_ARITH_TAC; ALL_TAC] THEN
    HYP SIMP_TAC "fwd x" [] THEN INTRO_TAC "@N'. N'" THEN
-   CUT_TAC `d m (f (N::num) (x::A), g x::B) < a` THENL
+   CUT_TAC `d m (\<sigma> (N::num) (x::A), g x::B) < a` THENL
    [REMOVE_THEN "a2" MP_TAC THEN REAL_ARITH_TAC; ALL_TAC] THEN
    TRANS_TAC REAL_LET_TRANS
-     `d m (f N (x::A),f (MAX N N') x::B) + d m (f (MAX N N') x,g x)` THEN
+     `d m (\<sigma> N (x::A),\<sigma> (MAX N N') x::B) + d m (\<sigma> (MAX N N') x,g x)` THEN
    HYP SIMP_TAC "fwd gwd x" [MDIST_TRIANGLE] THEN
    SUBST1_TAC (REAL_ARITH `a = 1 + (a - 1)`) THEN
    MATCH_MP_TAC REAL_LT_ADD2 THEN CONJ_TAC THENL
    [ALL_TAC; REMOVE_THEN "N'" MATCH_MP_TAC THEN ARITH_TAC] THEN
    TRANS_TAC REAL_LET_TRANS
-     `sup {d m (f N x::B,f (MAX N N') x) | x::A \<in> S}` THEN
+     `sup {d m (\<sigma> N x::B,\<sigma> (MAX N N') x) | x::A \<in> S}` THEN
    CONJ_TAC THENL
    [HYP SIMP_TAC "sup x" []; REMOVE_THEN "N" MATCH_MP_TAC THEN ARITH_TAC];
-   ALL_TAC] THEN
+   ALL_TAC]
+
+ THEN
   INTRO_TAC "!e; e" THEN REMOVE_THEN "unif" (MP_TAC \<circ> SPEC `e / 2`) THEN
   HYP REWRITE_TAC "e" [REAL_HALF] THEN INTRO_TAC "@N. N" THEN
   EXISTS_TAC `N::num` THEN INTRO_TAC "!n; n" THEN
