@@ -1427,14 +1427,28 @@ proof
     by (auto simp add: fdist_def intro: cSUP_upper2 [OF bdd_above_dist])
   show "fdist S f g = fdist S g f" for f g
     by (auto simp: fdist_def commute)
-  have "(fdist S f g \<le> 0) = (f = g)" 
-    if "f \<in> fspace S" and "g \<in> fspace S" for f g
-    using that bdd_above_dist [OF that] cSup_le_iff [OF _ bdd_above_dist [OF that]]
-    apply (auto simp: fspace_def fdist_def image_subset_iff)
-    by (smt (verit, ccfv_SIG) extensionalityI mdist_pos_less)
-  then show "(fdist S f g = 0) = (f = g)"
-    if "f \<in> fspace S" and "g \<in> fspace S" for f g
-    by (metis "*" nle_le that)
+  show "(fdist S f g = 0) = (f = g)"
+    if fg: "f \<in> fspace S" "g \<in> fspace S" for f g
+  proof
+    assume 0: "fdist S f g = 0"
+    show "f = g"
+    proof (cases "S={}")
+      case True
+      with 0 that show ?thesis
+        by (simp add: fdist_def fspace_def)
+    next
+      case False
+      with 0 fg have Sup0: "(SUP x\<in>S. d (f x) (g x)) = 0"
+        by (simp add: fdist_def)
+      have "d (f x) (g x) = 0" if "x\<in>S" for x
+          by (smt (verit) False Sup0 \<open>x\<in>S\<close> bdd_above_dist [OF fg] less_cSUP_iff nonneg)
+      with fg show "f=g"
+        by (simp add: fspace_def extensionalityI image_subset_iff)
+    qed
+  next
+    show "f = g \<Longrightarrow> fdist S f g = 0"
+      using fspace_in_M [OF \<open>g \<in> fspace S\<close>] by (auto simp: fdist_def)
+  qed
   show "fdist S f h \<le> fdist S f g + fdist S g h"
     if fgh: "f \<in> fspace S" "g \<in> fspace S" "h \<in> fspace S" for f g h
   proof (clarsimp simp add: fdist_def that)
