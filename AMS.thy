@@ -1388,6 +1388,9 @@ definition fdist where
   "fdist \<equiv> \<lambda>S f g. if f \<in> fspace S \<and> g \<in> fspace S \<and> S \<noteq> {} 
                     then Sup ((\<lambda>x. d (f x) (g x)) ` S) else 0"
 
+lemma fspace_in_M: "\<lbrakk>f \<in> fspace S; x \<in> S\<rbrakk> \<Longrightarrow> f x \<in> M"
+  by (auto simp: fspace_def)
+
 lemma bdd_above_dist:
   assumes f: "f \<in> fspace S" and g: "g \<in> fspace S" and "S \<noteq> {}"
   shows "bdd_above ((\<lambda>u. d (f u) (g u)) ` S)"
@@ -1433,15 +1436,25 @@ proof
     if "f \<in> fspace S" and "g \<in> fspace S" for f g
     by (metis "*" nle_le that)
   show "fdist S f h \<le> fdist S f g + fdist S g h"
-    if "f \<in> fspace S" "g \<in> fspace S" "h \<in> fspace S" for f g h
-    using that bdd_above_dist [OF \<open>f \<in> fspace S\<close> \<open>h \<in> fspace S\<close>]
-               bdd_above_dist [OF \<open>f \<in> fspace S\<close> \<open>g \<in> fspace S\<close>]
-               bdd_above_dist [OF \<open>g \<in> fspace S\<close> \<open>h \<in> fspace S\<close>]
-                cSup_le_iff cSup_upper
-    unfolding fdist_def
-    apply (simp add: )
-
-    sorry
+    if fgh: "f \<in> fspace S" "g \<in> fspace S" "h \<in> fspace S" for f g h
+  proof (clarsimp simp add: fdist_def that)
+    assume "S \<noteq> {}"
+    have dfh: "d (f x) (h x) \<le> d (f x) (g x) + d (g x) (h x)" if "x\<in>S" for x
+      by (meson fgh fspace_in_M that triangle)
+    have bdd_fgh: "bdd_above ((\<lambda>x. d (f x) (g x)) ` S)" "bdd_above ((\<lambda>x. d (g x) (h x)) ` S)"
+      by (simp_all add: \<open>S \<noteq> {}\<close> bdd_above_dist that)
+    then obtain B C where B: "\<And>x. x\<in>S \<Longrightarrow> d (f x) (g x) \<le> B" and C: "\<And>x. x\<in>S \<Longrightarrow> d (g x) (h x) \<le> C"
+      by (auto simp: bdd_above_def)
+    then have "\<And>x. x\<in>S \<Longrightarrow> d (f x) (g x) + d (g x) (h x) \<le> B+C"
+      by force
+    then have bdd: "bdd_above ((\<lambda>x. d (f x) (g x) + d (g x) (h x)) ` S)"
+      by (auto simp: bdd_above_def)
+    then have "(SUP x\<in>S. d (f x) (h x)) \<le> (SUP x\<in>S. d (f x) (g x) + d (g x) (h x))"
+      by (metis (mono_tags, lifting) cSUP_mono \<open>S \<noteq> {}\<close> dfh)
+    also have "\<dots> \<le> (SUP x\<in>S. d (f x) (g x)) + (SUP x\<in>S. d (g x) (h x))"
+      by (simp add: \<open>S \<noteq> {}\<close> bdd cSUP_le_iff bdd_fgh add_mono cSup_upper)
+    finally show "(SUP x\<in>S. d (f x) (h x)) \<le> (SUP x\<in>S. d (f x) (g x)) + (SUP x\<in>S. d (g x) (h x))" .
+  qed
 qed
 
 end
