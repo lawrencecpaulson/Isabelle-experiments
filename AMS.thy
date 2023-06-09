@@ -1512,11 +1512,13 @@ proof -
       assume \<sigma>: "F.MCauchy \<sigma>"
       then have \<sigma>M: "\<And>n x. x \<in> S \<Longrightarrow> \<sigma> n x \<in> M"
         by (auto simp: F.MCauchy_def intro: fspace_in_M)
+      have fdist_less: "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> fdist S (\<sigma> n) (\<sigma> n') < \<epsilon>" if "\<epsilon>>0" for \<epsilon>
+        using \<sigma> that by (auto simp: F.MCauchy_def)
       have \<sigma>ext: "\<And>n. \<sigma> n \<in> extensional S"
         using \<sigma> unfolding F.MCauchy_def by (auto simp: fspace_def)
       have \<sigma>bd: "\<And>n. mbounded (\<sigma> n ` S)"
         using \<sigma> unfolding F.MCauchy_def by (simp add: fspace_def image_subset_iff)
-      have [simp]: "\<sigma> n \<in> fspace S" for n
+      have \<sigma>in[simp]: "\<sigma> n \<in> fspace S" for n
         using F.MCauchy_def \<sigma> by blast
       have bd2: "\<And>n n'. \<exists>B. \<forall>x \<in> S. d (\<sigma> n x) (\<sigma> n' x) \<le> B"
         using \<sigma> unfolding F.MCauchy_def by (metis range_subsetD funspace_imp_bounded2)
@@ -1552,15 +1554,16 @@ proof -
       then obtain g0 where g0: "\<And>x. x \<in> S \<Longrightarrow> limitin mtopology (\<lambda>n. \<sigma> n x) (g0 x) sequentially"
         by metis
       define g where "g \<equiv> restrict g0 S"
-      have gext: "g \<in> extensional S" and g: "\<And>x. x \<in> S \<Longrightarrow> limitin mtopology (\<lambda>n. \<sigma> n x) (g x) sequentially"
+      have gext: "g \<in> extensional S" 
+       and glim: "\<And>x. x \<in> S \<Longrightarrow> limitin mtopology (\<lambda>n. \<sigma> n x) (g x) sequentially"
         by (auto simp: g_def g0)
       have gwd: "g x \<in> M" if "x \<in> S" for x
         using g limitin_metric that by blast
       have unif: "\<exists>N. \<forall>x n. x \<in> S \<longrightarrow> N \<le> n \<longrightarrow> d (\<sigma> n x) (g x) < \<epsilon>" if "\<epsilon>>0" for \<epsilon>
       proof -
         obtain N where N: "\<And>n n'. N \<le> n \<and> N \<le> n' \<Longrightarrow> Sup ((\<lambda>x. d (\<sigma> n x) (\<sigma> n' x)) ` S) < \<epsilon>/2"
-          using \<sigma> \<open>S\<noteq>{}\<close> \<open>\<epsilon>>0\<close> unfolding F.MCauchy_def apply (simp add: fdist_def  del: divide_const_simps)
-          by (meson half_gt_zero)
+          using \<open>S\<noteq>{}\<close> \<open>\<epsilon>>0\<close> fdist_less [of "\<epsilon>/2"]
+          by (metis (mono_tags) \<sigma>in fdist_def half_gt_zero) 
         show ?thesis
         proof (intro exI strip)
           fix x n
@@ -1574,8 +1577,53 @@ proof -
           finally show "d (\<sigma> n x) (g x) < \<epsilon>" by simp
         qed
       qed
-      have "limitin F.mtopology \<sigma> g0 sequentially"
-        sorry
+      have "limitin F.mtopology \<sigma> g sequentially"
+        unfolding F.limit_metric_sequentially
+      proof (intro conjI strip)
+        obtain N where N: "\<And>n n'. N \<le> n \<and> N \<le> n' \<Longrightarrow> Sup ((\<lambda>x. d (\<sigma> n x) (\<sigma> n' x)) ` S) < 1"
+          using fdist_less [of 1] \<open>S\<noteq>{}\<close> by (auto simp add: fdist_def)
+        have "\<And>x. x \<in> \<sigma> N ` S \<Longrightarrow> x \<in> M"
+          using \<sigma>M by blast
+        obtain a B where "a \<in> M" and B: "\<And>x. x \<in> (\<sigma> N) ` S \<Longrightarrow> d a x \<le> B"
+          by (metis False \<sigma>M \<sigma>bd ex_in_conv imageI mbounded_alt_pos)
+        have "d a (g x) \<le> B+1" if "x\<in>S" for x
+        proof -
+          have "d a (g x) \<le> d a (\<sigma> N x) + d (\<sigma> N x) (g x)"
+            by (simp add: \<open>a \<in> M\<close> \<sigma>M gwd that triangle)
+          also have "\<dots> \<le> B+1"
+          proof -
+            have "d a (\<sigma> N x) \<le> B"
+              by (simp add: B that)
+            moreover 
+            have False if 1: "d (\<sigma> N x) (g x) > 1"
+            proof -
+              obtain r where "1 < r" and r: "r < d (\<sigma> N x) (g x)"
+                using 1 dense by blast
+              then obtain N' where N': "\<And>n. N' \<le> n \<Longrightarrow> \<sigma> n x \<in> M \<and> d (\<sigma> n x) (g x) < r-1"
+                using glim [OF \<open>x\<in>S\<close>] by (fastforce simp: limit_metric_sequentially)
+              have "d (\<sigma> N x) (g x) \<le> d (\<sigma> N x) (\<sigma> (max N N') x) + d (\<sigma> (max N N') x) (g x)"
+                by (metis \<open>x \<in> S\<close> \<sigma>M commute gwd triangle')
+              also have "\<dots> < 1 + (r-1)"
+                by (smt (verit) N N' \<open>x \<in> S\<close> max.cobounded1 max.cobounded2 max.idem sup)
+              finally have "d (\<sigma> N x) (g x) < r"
+                by simp
+              with r show False
+                by linarith
+            qed
+            ultimately show ?thesis
+              by force
+          qed
+          finally show ?thesis .
+        qed
+        with gwd \<open>a \<in> M\<close> have "mbounded (g ` S)"
+          unfolding mbounded by blast
+        with gwd gext show "g \<in> fspace S"
+          by (auto simp: fspace_def)
+        fix \<epsilon>::real
+        assume "\<epsilon>>0"
+        show "\<exists>N. \<forall>n\<ge>N. \<sigma> n \<in> fspace S \<and> fdist S (\<sigma> n) g < \<epsilon>"
+           sorry
+      qed
       then show "\<exists>x. limitin F.mtopology \<sigma> x sequentially"
         by blast 
     qed
@@ -1585,46 +1633,7 @@ qed
 
 oops
 
-
-  CONJ_TAC THENL
-  [HYP_TAC "cy': @N. N" (C MATCH_MP REAL_LT_01) THEN
-   USE_THEN "fbd" (MP_TAC \<circ> REWRITE_RULE[MBOUNDED] \<circ> SPEC `N::num`) THEN
-   HYP REWRITE_TAC "nempty" [mbounded; IMAGE_EQ_EMPTY] THEN
-   INTRO_TAC "Nwd (@c b. c Nbd)" THEN
-   MAP_EVERY EXISTS_TAC [`c::B`; `b + 1`] THEN
-   REWRITE_TAC[\<subseteq>; IN_IMAGE; IN_MCBALL] THEN
-   INTRO_TAC "![y]; (@x. y x)" THEN REMOVE_THEN "y" SUBST1_TAC THEN
-   HYP SIMP_TAC "x gwd c" [] THEN TRANS_TAC REAL_LE_TRANS
-     `d m (c::B, \<sigma> (N::num) (x::A)) + d \<sigma> N x g x` THEN
-   HYP SIMP_TAC "c fwd gwd x" [MDIST_TRIANGLE] THEN
-   MATCH_MP_TAC REAL_LE_ADD2 THEN CONJ_TAC THENL
-   [REMOVE_THEN "Nbd" MATCH_MP_TAC THEN REWRITE_TAC[IN_IMAGE] THEN
-    HYP MESON_TAC "x" [];
-    REFUTE_THEN (LABEL_TAC "contra" \<circ> REWRITE_RULE[REAL_NOT_LE])] THEN
-   CLAIM_TAC "@a. a1 a2"
-     `\<exists>a. 1 < a \<and> a < d m (\<sigma> (N::num) (x::A), g x::B)` THENL
-   [EXISTS_TAC `(1 + d m (\<sigma> (N::num) (x::A), g x::B)) / 2` THEN
-    REMOVE_THEN "contra" MP_TAC THEN REAL_ARITH_TAC;
-    USE_THEN "x" (HYP_TAC "glim" \<circ> C MATCH_MP)] THEN
-   REMOVE_THEN "glim" (MP_TAC \<circ> REWRITE_RULE[LIMIT_METRIC_SEQUENTIALLY]) THEN
-   HYP SIMP_TAC "gwd x" [] THEN DISCH_THEN (MP_TAC \<circ> SPEC `a - 1`) THEN
-   ANTS_TAC THENL [REMOVE_THEN "a1" MP_TAC THEN REAL_ARITH_TAC; ALL_TAC] THEN
-   HYP SIMP_TAC "fwd x" [] THEN INTRO_TAC "@N'. N'" THEN
-   CUT_TAC `d m (\<sigma> (N::num) (x::A), g x::B) < a` THENL
-   [REMOVE_THEN "a2" MP_TAC THEN REAL_ARITH_TAC; ALL_TAC] THEN
-   TRANS_TAC REAL_LET_TRANS
-     `d m (\<sigma> N (x::A),\<sigma> (MAX N N') x::B) + d m (\<sigma> (MAX N N') x,g x)` THEN
-   HYP SIMP_TAC "fwd gwd x" [MDIST_TRIANGLE] THEN
-   SUBST1_TAC (REAL_ARITH `a = 1 + (a - 1)`) THEN
-   MATCH_MP_TAC REAL_LT_ADD2 THEN CONJ_TAC THENL
-   [ALL_TAC; REMOVE_THEN "N'" MATCH_MP_TAC THEN ARITH_TAC] THEN
-   TRANS_TAC REAL_LET_TRANS
-     `sup {d m (\<sigma> N x::B,\<sigma> (MAX N N') x) | x::A \<in> S}` THEN
-   CONJ_TAC THENL
-   [HYP SIMP_TAC "sup x" []; REMOVE_THEN "N" MATCH_MP_TAC THEN ARITH_TAC];
-   ALL_TAC]
-
- THEN
+ 
   INTRO_TAC "!e; e" THEN REMOVE_THEN "unif" (MP_TAC \<circ> SPEC `e / 2`) THEN
   HYP REWRITE_TAC "e" [REAL_HALF] THEN INTRO_TAC "@N. N" THEN
   EXISTS_TAC `N::num` THEN INTRO_TAC "!n; n" THEN
