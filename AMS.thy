@@ -1492,7 +1492,6 @@ lemma funspace_mdist_le:
   by (metis (no_types, opaque_lifting) mdist_funspace Metric_space_mspace_mdist assms mspace_funspace Metric_space.funspace_mdist_le)
 
 
-
 lemma (in Metric_space) mcomplete_funspace:
   assumes "mcomplete"
   shows "mcomplete_of (funspace S Self)"
@@ -1537,16 +1536,14 @@ proof -
         then obtain N where N: "\<And>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> fdist S (\<sigma> n) (\<sigma> n') < \<epsilon>"
           using \<sigma> by (force simp add: F.MCauchy_def)
         { fix n n'
-          assume "N \<le> n" and "N \<le> n'"
-          have "d (\<sigma> n x) (\<sigma> n' x) \<le> fdist S (\<sigma> n) (\<sigma> n')"
-            apply (simp add: fdist_def \<open>S \<noteq> {}\<close>)
-            apply (rule cSup_upper)
-             apply (simp add: \<open>x \<in> S\<close>)
-            using that bd2 by (meson bdd_above.I2)
-          then have "d (\<sigma> n x) (\<sigma> n' x) < \<epsilon>"
-            using N \<open>N \<le> n'\<close> \<open>N \<le> n\<close> by fastforce
-        } then
-        show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n x) (\<sigma> n' x) < \<epsilon>"
+          assume n: "N \<le> n" "N \<le> n'"
+          have "d (\<sigma> n x) (\<sigma> n' x) \<le> (SUP x\<in>S. d (\<sigma> n x) (\<sigma> n' x))"
+            using that sup by presburger
+          then have "d (\<sigma> n x) (\<sigma> n' x) \<le> fdist S (\<sigma> n) (\<sigma> n')"
+            by (simp add: fdist_def \<open>S \<noteq> {}\<close>)
+          with N n have "d (\<sigma> n x) (\<sigma> n' x) < \<epsilon>"
+            by fastforce
+        } then show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n x) (\<sigma> n' x) < \<epsilon>"
           by blast
       qed
       have "\<exists>l. limitin mtopology (\<lambda>n. \<sigma> n x) l sequentially" if "x \<in> S" for x
@@ -1558,7 +1555,7 @@ proof -
        and glim: "\<And>x. x \<in> S \<Longrightarrow> limitin mtopology (\<lambda>n. \<sigma> n x) (g x) sequentially"
         by (auto simp: g_def g0)
       have gwd: "g x \<in> M" if "x \<in> S" for x
-        using g limitin_metric that by blast
+        using glim limitin_metric that by blast
       have unif: "\<exists>N. \<forall>x n. x \<in> S \<longrightarrow> N \<le> n \<longrightarrow> d (\<sigma> n x) (g x) < \<epsilon>" if "\<epsilon>>0" for \<epsilon>
       proof -
         obtain N where N: "\<And>n n'. N \<le> n \<and> N \<le> n' \<Longrightarrow> Sup ((\<lambda>x. d (\<sigma> n x) (\<sigma> n' x)) ` S) < \<epsilon>/2"
@@ -1569,7 +1566,7 @@ proof -
           fix x n
           assume "x \<in> S" and "N \<le> n"
           obtain N' where N': "\<And>n. N' \<le> n \<Longrightarrow> \<sigma> n x \<in> M \<and> d (\<sigma> n x) (g x) < \<epsilon>/2"
-            by (metis \<open>0 < \<epsilon>\<close> \<open>x \<in> S\<close> g half_gt_zero limit_metric_sequentially)
+            by (metis \<open>0 < \<epsilon>\<close> \<open>x \<in> S\<close> glim half_gt_zero limit_metric_sequentially)
           have "d (\<sigma> n x) (g x) \<le> d (\<sigma> n x) (\<sigma> (max N N') x) + d (\<sigma> (max N N') x) (g x)"
             using \<open>x \<in> S\<close> \<sigma>M gwd triangle by presburger
           also have "\<dots> < \<epsilon>/2 + \<epsilon>/2"
@@ -1621,8 +1618,13 @@ proof -
           by (auto simp: fspace_def)
         fix \<epsilon>::real
         assume "\<epsilon>>0"
-        show "\<exists>N. \<forall>n\<ge>N. \<sigma> n \<in> fspace S \<and> fdist S (\<sigma> n) g < \<epsilon>"
-           sorry
+        then obtain N where "\<And>x n. x \<in> S \<Longrightarrow> N \<le> n \<Longrightarrow> d (\<sigma> n x) (g x) < \<epsilon>/2"
+          by (meson unif half_gt_zero)
+        then have "fdist S (\<sigma> n) g \<le> \<epsilon>/2" if "N \<le> n" for n
+          using \<open>g \<in> fspace S\<close> False that
+          by (force simp: funspace_mdist_le simp del: divide_const_simps)
+        then show "\<exists>N. \<forall>n\<ge>N. \<sigma> n \<in> fspace S \<and> fdist S (\<sigma> n) g < \<epsilon>"
+          by (metis \<open>0 < \<epsilon>\<close> \<sigma>in add_strict_increasing field_sum_of_halves half_gt_zero)
       qed
       then show "\<exists>x. limitin F.mtopology \<sigma> x sequentially"
         by blast 
@@ -1630,17 +1632,6 @@ proof -
   qed
 qed
 
-
-oops
-
- 
-  INTRO_TAC "!e; e" THEN REMOVE_THEN "unif" (MP_TAC \<circ> SPEC `e / 2`) THEN
-  HYP REWRITE_TAC "e" [REAL_HALF] THEN INTRO_TAC "@N. N" THEN
-  EXISTS_TAC `N::num` THEN INTRO_TAC "!n; n" THEN
-  TRANS_TAC REAL_LET_TRANS `e / 2` THEN CONJ_TAC THENL
-  [ALL_TAC; REMOVE_THEN "e" MP_TAC THEN REAL_ARITH_TAC] THEN
-  MATCH_MP_TAC REAL_SUP_LE THEN REWRITE_TAC[IN_ELIM_THM] THEN CONJ_TAC THENL
-  [HYP SET_TAC "nempty" []; HYP MESON_TAC "N n" [REAL_LT_IMP_LE]]);;
 
 
 subsection\<open>Metric space of continuous bounded functions\<close>
