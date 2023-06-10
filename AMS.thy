@@ -1476,20 +1476,20 @@ proof -
     by (metis UnCI imageI mbounded_alt that)
 qed
 
-lemma (in Metric_space) funspace_mdist_le:
-  assumes fg: "f \<in> fspace S" "g \<in> fspace S" and "S \<noteq> {}"
-  shows "fdist S f g \<le> a \<longleftrightarrow> (\<forall>x \<in> S. d (f x) (g x) \<le> a)" (is "?lhs \<longleftrightarrow> ?rhs")
-    using assms bdd_above_dist [OF fg] by (simp add: fdist_def cSUP_le_iff)
-
 lemma funspace_imp_bounded2:
   assumes "f \<in> mspace (funspace S m)" "g \<in> mspace (funspace S m)"
   obtains B where "\<And>x. x \<in> S \<Longrightarrow> mdist m (f x) (g x) \<le> B"
   by (metis Metric_space_mspace_mdist assms mspace_funspace Metric_space.funspace_imp_bounded2)
 
+lemma (in Metric_space) funspace_mdist_le:
+  assumes fg: "f \<in> fspace S" "g \<in> fspace S" and "S \<noteq> {}"
+  shows "fdist S f g \<le> a \<longleftrightarrow> (\<forall>x \<in> S. d (f x) (g x) \<le> a)" 
+    using assms bdd_above_dist [OF fg] by (simp add: fdist_def cSUP_le_iff)
+
 lemma funspace_mdist_le:
   assumes "f \<in> mspace (funspace S m)" "g \<in> mspace (funspace S m)" and "S \<noteq> {}"
-  shows "mdist (funspace S m) f g \<le> a \<longleftrightarrow> (\<forall>x \<in> S. mdist m (f x) (g x) \<le> a)" (is "?lhs \<longleftrightarrow> ?rhs")
-  by (metis (no_types, opaque_lifting) mdist_funspace Metric_space_mspace_mdist assms mspace_funspace Metric_space.funspace_mdist_le)
+  shows "mdist (funspace S m) f g \<le> a \<longleftrightarrow> (\<forall>x \<in> S. mdist m (f x) (g x) \<le> a)" 
+  using assms by (simp add: Metric_space.funspace_mdist_le)
 
 
 lemma (in Metric_space) mcomplete_funspace:
@@ -1638,110 +1638,69 @@ subsection\<open>Metric space of continuous bounded functions\<close>
 
 
 definition cfunspace where
-  `cfunspace X m =
-   submetric (funspace (topspace X) m)
-     {f::A=>B | continuous_map X mtopology f}"
+  "cfunspace X m \<equiv> submetric (funspace (topspace X) m) {f. continuous_map X (mtopology_of m) f}"
 
-let CFUNSPACE = (REWRITE_RULE[GSYM FORALL_AND_THM] \<circ> prove)
- (`(\<forall>X m.
-      mspace (cfunspace X m) =
-      {f::A=>B | (\<forall>x. x \<in> topspace X \<Longrightarrow> f x \<in> M) \<and>
-                f \<in> EXTENSIONAL (topspace X) \<and>
-                mbounded (f ` (topspace X)) \<and>
-                continuous_map X mtopology f}) \<and>
-     (\<forall>f g::A=>B.
-        d (cfunspace X m) (f,g) =
-        if topspace X = {} then 0 else
-        sup {d (f x) g x | x \<in> topspace X})"
-oops
-  REWRITE_TAC[cfunspace; SUBMETRIC; FUNSPACE] THEN SET_TAC[]);;
+
+lemma mspace_cfunspace [simp]:
+  "mspace (cfunspace X m) = 
+     {f. f ` topspace X \<subseteq> mspace m \<and> f \<in> extensional (topspace X) \<and>
+         Metric_space.mbounded (mspace m) (mdist m) (f ` (topspace X)) \<and>
+         continuous_map X (mtopology_of m) f}"
+  by (auto simp: cfunspace_def Metric_space.fspace_def)
+
+lemma mdist_cfunspace_eq_mdist_funspace:
+  "mdist (cfunspace X m) = mdist (funspace (topspace X) m)"
+  by (auto simp: cfunspace_def)
 
 lemma cfunspace_subset_funspace:
    "mspace (cfunspace X m) \<subseteq> mspace (funspace (topspace X) m)"
-oops
-  SIMP_TAC[\<subseteq>; FUNSPACE; CFUNSPACE; IN_ELIM_THM]);;
-
-lemma mdist_cfunspace_eq_mdist_funspace:
-   "\<And>X m f g::A=>B.
-     d (cfunspace X m) (f,g) = d (funspace (topspace X) m) (f,g)"
-oops
-  REWRITE_TAC[FUNSPACE; CFUNSPACE]);;
+  by (simp add: cfunspace_def)
 
 lemma cfunspace_mdist_le:
-   "\<And>X m f g::A=>B a.
-     \<not> (topspace X = {}) \<and>
-     f \<in> mspace (cfunspace X m) \<and>
-     g \<in> mspace (cfunspace X m)
-     \<Longrightarrow> (d (cfunspace X m) (f,g) \<le> a \<longleftrightarrow>
-          \<forall>x. x \<in> topspace X \<Longrightarrow> d (f x) g x \<le> a)"
-oops
-  INTRO_TAC "! *; ne f g" THEN
-  REWRITE_TAC[MDIST_CFUNSPACE_EQ_MDIST_FUNSPACE] THEN
-  MATCH_MP_TAC FUNSPACE_MDIST_LE THEN
-  ASM_SIMP_TAC[REWRITE_RULE[\<subseteq>] CFUNSPACE_SUBSET_FUNSPACE]);;
+   "\<lbrakk>f \<in> mspace (cfunspace X m); g \<in> mspace (cfunspace X m); topspace X \<noteq> {}\<rbrakk>
+     \<Longrightarrow> mdist (cfunspace X m) f g \<le> a \<longleftrightarrow> (\<forall>x \<in> topspace X. mdist m (f x) (g x) \<le> a)"
+  by (simp add: cfunspace_def Metric_space.funspace_mdist_le)
 
 lemma cfunspace_imp_bounded2:
-   "\<And>X m f g::A=>B.
-     f \<in> mspace (cfunspace X m) \<and> g \<in> mspace (cfunspace X m)
-     \<Longrightarrow> (\<exists>b. \<forall>x. x \<in> topspace X \<Longrightarrow> d (f x) g x \<le> b)"
-oops
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC FUNSPACE_IMP_BOUNDED2 THEN
-  ASM SET_TAC [CFUNSPACE_SUBSET_FUNSPACE]);;
+  assumes "f \<in> mspace (cfunspace X m)" "g \<in> mspace (cfunspace X m)"
+  obtains B where "\<And>x. x \<in> topspace X \<Longrightarrow> mdist m (f x) (g x) \<le> B"
+  by (metis assms all_not_in_conv cfunspace_mdist_le nle_le)
 
 lemma cfunspace_mdist_lt:
-   "\<And>X m f g::A=>B a x.
-     compactin X (topspace X) \<and>
-     f \<in> mspace (cfunspace X m) \<and> g \<in> mspace (cfunspace X m) \<and>
-     d (cfunspace X m) (f, g) < a \<and>
-     x \<in> topspace X
-     \<Longrightarrow> d (f x) g x < a"
-oops
-  REPEAT GEN_TAC THEN ASM_CASES_TAC `topspace X = {}` THEN
-  ASM_REWRITE_TAC[NOT_IN_EMPTY] THEN INTRO_TAC "cpt f g lt x" THEN
-  REMOVE_THEN "lt" MP_TAC THEN ASM_REWRITE_TAC[CFUNSPACE] THEN
-  INTRO_TAC "lt" THEN
-  TRANS_TAC REAL_LET_TRANS
-    `sup {d (f x)::B g x | x::A \<in> topspace X}` THEN
-  HYP SIMP_TAC "lt" [] THEN  MATCH_MP_TAC REAL_LE_SUP THEN
-  HYP (DESTRUCT_TAC "@b. b" \<circ>
-    MATCH_MP CFUNSPACE_IMP_BOUNDED2 \<circ> CONJ_LIST) "f g" [] THEN
-  MAP_EVERY EXISTS_TAC [`b::real`; `d m (f (x::A):B,g x)`] THEN
-  REWRITE_TAC[IN_ELIM_THM; REAL_LE_REFL] THEN HYP MESON_TAC "x b" []);;
+   "\<lbrakk>compactin X (topspace X); f \<in> mspace (cfunspace X m);
+     g \<in> mspace (cfunspace X m); mdist (cfunspace X m) f g < a;
+     x \<in> topspace X\<rbrakk>
+     \<Longrightarrow> mdist m (f x) (g x) < a"
+  by (metis (full_types) cfunspace_mdist_le empty_iff less_eq_real_def less_le_not_le)
 
 lemma mdist_cfunspace_le:
-   "0 \<le> B \<and>
-     (\<forall>x::A. x \<in> topspace X \<Longrightarrow> d (f x)::B g x \<le> B)
-     \<Longrightarrow> d (cfunspace X m) (f,g) \<le> B"
-oops
-  INTRO_TAC "!X m B f g; Bpos bound" THEN
-  REWRITE_TAC[CFUNSPACE] THEN COND_CASES_TAC THEN
-  HYP REWRITE_TAC "Bpos" [] THEN MATCH_MP_TAC REAL_SUP_LE THEN
-  CONJ_TAC THENL
-  [POP_ASSUM MP_TAC THEN SET_TAC[];
-   REWRITE_TAC[IN_ELIM_THM] THEN HYP MESON_TAC "bound" []]);;
+  assumes "0 \<le> B" and B: "\<And>x. x \<in> topspace X \<Longrightarrow> mdist m (f x) (g x) \<le> B"
+  shows "mdist (cfunspace X m) f g \<le> B"
+proof (cases "topspace X = {}")
+  case True
+  then show ?thesis
+    by (simp add: Metric_space.fdist_empty \<open>B\<ge>0\<close> cfunspace_def)
+next
+  case False
+  have bdd: "bdd_above ((\<lambda>u. mdist m (f u) (g u)) ` topspace X)"
+    by (meson B bdd_above.I2)
+  with assms bdd show ?thesis
+    by (simp add: mdist_cfunspace_eq_mdist_funspace Metric_space.fdist_def cSUP_le_iff)
+qed
+
 
 lemma mdist_cfunspace_imp_mdist_le:
-   "\<And>X m f g::A=>B a x.
-     f \<in> mspace (cfunspace X m) \<and>
-     g \<in> mspace (cfunspace X m) \<and>
-     d (cfunspace X m) (f,g) \<le> a \<and>
-     x \<in> topspace X
-     \<Longrightarrow> d (f x) g x \<le> a"
-oops
-  MESON_TAC[MEMBER_NOT_EMPTY; CFUNSPACE_MDIST_LE]);;
+   "\<lbrakk>f \<in> mspace (cfunspace X m); g \<in> mspace (cfunspace X m);
+     mdist (cfunspace X m) f g \<le> a; x \<in> topspace X\<rbrakk> \<Longrightarrow> mdist m (f x) (g x) \<le> a"
+  using cfunspace_mdist_le by blast
 
-lemma compact_in_mspace_cfunspace:
+lemma compactin_mspace_cfunspace:
    "compactin X (topspace X)
      \<Longrightarrow> mspace (cfunspace X m) =
-          {f. (\<forall>x::A. x \<in> topspace X \<Longrightarrow> f x::B \<in> M) \<and>
-               f \<in> EXTENSIONAL (topspace X) \<and>
-               continuous_map X mtopology f}"
-oops
-  REWRITE_TAC[CFUNSPACE; EXTENSION; IN_ELIM_THM] THEN REPEAT STRIP_TAC THEN
-  EQ_TAC THEN SIMP_TAC[] THEN INTRO_TAC "wd ext cont" THEN
-  MATCH_MP_TAC COMPACT_IN_IMP_MBOUNDED THEN
-  MATCH_MP_TAC (ISPEC `X::A topology` IMAGE_COMPACT_IN) THEN
-  ASM_REWRITE_TAC[]);;
+          {f. (\<forall>x \<in> topspace X. f x \<in> mspace m) \<and>
+               f \<in> extensional (topspace X) \<and>
+               continuous_map X (mtopology_of m) f}"
+  by (auto simp: Metric_space.compactin_imp_mbounded image_compactin mtopology_of_def) 
 
 lemma mcomplete_cfunspace:
    "mcomplete \<Longrightarrow> mcomplete (cfunspace X m)"
