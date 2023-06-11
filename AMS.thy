@@ -1702,57 +1702,92 @@ lemma compactin_mspace_cfunspace:
                continuous_map X (mtopology_of m) f}"
   by (auto simp: Metric_space.compactin_imp_mbounded image_compactin mtopology_of_def) 
 
-lemma mcomplete_cfunspace:
-   "mcomplete \<Longrightarrow> mcomplete (cfunspace X m)"
-oops
-  INTRO_TAC "!X m; cpl" THEN REWRITE_TAC[cfunspace] THEN
-  MATCH_MP_TAC SEQUENTIALLY_CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE THEN
-  ASM_SIMP_TAC[MCOMPLETE_FUNSPACE] THEN
-  REWRITE_TAC[IN_ELIM_THM; LIMIT_METRIC_SEQUENTIALLY] THEN
-  INTRO_TAC "![f] [g]; fcont g lim" THEN
-  ASM_CASES_TAC `topspace X = {}:A=>bool` THENL
-  [ASM_REWRITE_TAC[continuous_map; NOT_IN_EMPTY; EMPTY_GSPEC; OPEN_IN_EMPTY];
-   POP_ASSUM (LABEL_TAC "nempty")] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_TO_METRIC; IN_MBALL] THEN
-  INTRO_TAC "!x; x; ![e]; e" THEN CLAIM_TAC "e3pos" `0 < e / 3` THENL
-  [REMOVE_THEN "e" MP_TAC THEN REAL_ARITH_TAC;
-   USE_THEN "e3pos" (HYP_TAC "lim: @N. N" \<circ> C MATCH_MP)] THEN
-  HYP_TAC "N: f lt" (C MATCH_MP (SPEC `N::num` LE_REFL)) THEN
-  HYP_TAC "fcont" (REWRITE_RULE[CONTINUOUS_MAP_TO_METRIC]) THEN
-  USE_THEN "x" (HYP_TAC "fcont" \<circ> C MATCH_MP) THEN
-  USE_THEN "e3pos" (HYP_TAC "fcont" \<circ> C MATCH_MP) THEN
-  HYP_TAC "fcont: @u. u x' inc" (SPEC `N::num`) THEN EXISTS_TAC `u::A=>bool` THEN
-  HYP REWRITE_TAC "u x'" [] THEN INTRO_TAC "!y; y'" THEN
-  CLAIM_TAC "uinc" `\<forall>x::A. x \<in> u \<Longrightarrow> x \<in> topspace X` THENL
-  [REMOVE_THEN "u" (MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET) THEN SET_TAC[];
-   ALL_TAC] THEN
-  HYP_TAC "g -> gwd gext gbd" (REWRITE_RULE[FUNSPACE; IN_ELIM_THM]) THEN
-  HYP_TAC "f -> fwd fext fbd" (REWRITE_RULE[FUNSPACE; IN_ELIM_THM]) THEN
-  CLAIM_TAC "y" `y::A \<in> topspace X` THENL
-  [HYP SIMP_TAC "uinc y'" [OPEN_IN_SUBSET]; HYP SIMP_TAC "gwd x y" []] THEN
-  CLAIM_TAC "sup" `\<forall>x0::A. x0 \<in> topspace X
-                          \<Longrightarrow> d m (f (N::num) x0::B,g x0) \<le> e / 3` THENL
-  [INTRO_TAC "!x0; x0" THEN TRANS_TAC REAL_LE_TRANS
-     `sup {d m (f (N::num) x,g x::B) | x::A \<in> topspace X}` THEN
-   CONJ_TAC THENL
-   [MATCH_MP_TAC REAL_LE_SUP THEN HYP (DESTRUCT_TAC "@b. b" \<circ>
-      MATCH_MP FUNSPACE_IMP_BOUNDED2 \<circ> CONJ_LIST) "f g" [] THEN
-    MAP_EVERY EXISTS_TAC [`b::real`; `d m (f (N::num) (x0::A), g x0::B)`] THEN
-    REWRITE_TAC[IN_ELIM_THM; REAL_LE_REFL] THEN
-    CONJ_TAC THENL [HYP SET_TAC "x0" []; HYP MESON_TAC "b" []];
-    REMOVE_THEN "lt" MP_TAC THEN HYP REWRITE_TAC "nempty" [FUNSPACE] THEN
-    MATCH_ACCEPT_TAC REAL_LT_IMP_LE];
-   ALL_TAC] THEN
-  TRANS_TAC REAL_LET_TRANS
-    `d m (g (x::A):B, f (N::num) x) + d f N x g y` THEN
-  HYP SIMP_TAC "gwd fwd x y" [MDIST_TRIANGLE] THEN
-  SUBST1_TAC (ARITH_RULE `e = e / 3 + (e / 3 + e / 3)`) THEN
-  MATCH_MP_TAC REAL_LET_ADD2 THEN HYP SIMP_TAC "gwd fwd x sup" [MDIST_SYM] THEN
-  TRANS_TAC REAL_LET_TRANS
-    `d m (f (N::num) (x::A):B, f N y) + d f N y g y` THEN
-  HYP SIMP_TAC "fwd gwd x y" [MDIST_TRIANGLE] THEN
-  MATCH_MP_TAC REAL_LTE_ADD2 THEN HYP SIMP_TAC "gwd fwd y sup" [] THEN
-  REMOVE_THEN "inc" MP_TAC THEN HYP SIMP_TAC "fwd x y' uinc" [IN_MBALL]);;
+lemma (in Metric_space) mcomplete_cfunspace:
+  assumes "mcomplete"
+  shows "mcomplete_of (cfunspace X Self)"
+proof -
+  interpret F: Metric_space "fspace (topspace X)" "fdist (topspace X)"
+    by (simp add: Metric_space_funspace)
+  interpret S: Submetric "fspace (topspace X)" "fdist (topspace X)" "mspace (cfunspace X Self)"
+  proof
+    show "mspace (cfunspace X Self) \<subseteq> fspace (topspace X)"
+      by (metis cfunspace_subset_funspace mdist_Self mspace_Self mspace_funspace)
+  qed
+  show ?thesis
+  proof (cases "topspace X = {}")
+    case True
+    then show ?thesis
+      by (simp add: mcomplete_of_def mcomplete_trivial mdist_cfunspace_eq_mdist_funspace cong: conj_cong)
+  next
+    case False
+    have *: "continuous_map X mtopology g"
+      if \<sigma>: "\<And>n. continuous_map X mtopology (\<sigma> n)"
+        and g: "limitin F.mtopology \<sigma> g sequentially" for \<sigma> g
+      unfolding continuous_map_to_metric
+    proof (intro strip)
+      fix x and \<epsilon>::real
+      assume "x \<in> topspace X" and "0 < \<epsilon>"
+      then obtain N where N: "\<And>n. N \<le> n \<Longrightarrow> \<sigma> n \<in> fspace (topspace X) \<and> fdist (topspace X) (\<sigma> n) g < \<epsilon>/3"
+        unfolding mtopology_of_def F.limitin_metric
+        by (metis F.limit_metric_sequentially divide_pos_pos g zero_less_numeral) 
+      then obtain U where "openin X U" "x \<in> U" 
+        and U: "\<And>y. y \<in> U \<Longrightarrow> \<sigma> N y \<in> mball (\<sigma> N x) (\<epsilon>/3)"
+        by (metis Metric_space.continuous_map_to_metric Metric_space_axioms \<open>0 < \<epsilon>\<close> \<open>x \<in> topspace X\<close> \<sigma> divide_pos_pos zero_less_numeral)
+      moreover
+      have "g y \<in> mball (g x) \<epsilon>" if "y\<in>U" for y
+      proof -
+        have "U \<subseteq> topspace X"
+          using \<open>openin X U\<close> by (simp add: openin_subset)
+        have "g x \<in> M"
+          by (meson F.limitin_mspace \<open>x \<in> topspace X\<close> fspace_in_M g)
+        moreover
+
+        have "y \<in> topspace X"
+          using \<open>U \<subseteq> topspace X\<close> that by auto
+
+        have "g y \<in> M"
+          by (meson F.limitin_mspace[OF g] \<open>U \<subseteq> topspace X\<close> fspace_in_M subsetD that)
+        moreover have "d (g x) (g y) < \<epsilon>"
+        proof -
+          have *: "d (\<sigma> N x0) (g x0) \<le> \<epsilon>/3" if "x0 \<in> topspace X" for x0
+          proof -
+            have "bdd_above ((\<lambda>x. d (\<sigma> N x) (g x)) ` topspace X)"
+              by (metis F.limit_metric_sequentially False N bdd_above_dist g order_refl)
+            then have "d (\<sigma> N x0) (g x0) \<le> Sup ((\<lambda>x. d (\<sigma> N x) (g x)) ` topspace X)"
+              by (simp add: cSup_upper that)
+            also have "\<dots> \<le> \<epsilon>/3"
+              by (smt (verit) F.limit_metric_sequentially False N Sup.SUP_cong fdist_def g order_refl)
+            finally show ?thesis .
+          qed
+          have "d (g x) (g y) \<le> d (g x) (\<sigma> N x) + d (\<sigma> N x) (g y)"
+            using U calculation(1) calculation(2) that triangle by force
+          also have "\<dots> < \<epsilon>/3 + \<epsilon>/3 + \<epsilon>/3"
+            by (smt (verit) "*" U \<open>g y \<in> M\<close> \<open>x \<in> topspace X\<close> \<open>y \<in> topspace X\<close> commute in_mball that triangle)
+          finally show ?thesis by simp
+        qed
+        ultimately show ?thesis by simp
+      qed
+      ultimately show "\<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>y\<in>U. g y \<in> mball (g x) \<epsilon>)"
+        by blast
+    qed
+
+    have DD: "topspace F.mtopology = mspace (funspace (topspace X) Self)"
+      by auto
+    have "S.sub.mcomplete"
+      apply (rule S.sequentially_closedin_mcomplete_imp_mcomplete)
+       apply (metis assms mcomplete_funspace mcomplete_of_def mdist_Self mdist_funspace mspace_Self mspace_funspace)
+      apply (auto simp: )
+         apply (meson F.limitin_mspace fspace_in_M)
+        apply (smt (verit, del_insts) F.limitin_mspace fspace_def mem_Collect_eq)
+       apply (smt (verit, ccfv_SIG) F.limitin_mspace fspace_def mem_Collect_eq)
+      apply (simp add: mtopology_of_def)
+      apply (rule *)
+       apply (blast intro:  elim: )
+      by (simp add: mtopology_of_def)
+    then show ?thesis
+      by (simp add: mcomplete_of_def mdist_cfunspace_eq_mdist_funspace)
+  qed
+qed
 
 
 subsection\<open>Existence of completion for any metric space M as a subspace of M=>R\<close>
