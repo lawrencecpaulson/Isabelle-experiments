@@ -1721,10 +1721,12 @@ proof -
   next
     case False
     have *: "continuous_map X mtopology g"
-      if \<sigma>: "\<And>n. continuous_map X mtopology (\<sigma> n)"
+      if "range \<sigma> \<subseteq> mspace (cfunspace X Self)"
         and g: "limitin F.mtopology \<sigma> g sequentially" for \<sigma> g
       unfolding continuous_map_to_metric
     proof (intro strip)
+      have \<sigma>: "\<And>n. continuous_map X mtopology (\<sigma> n)"
+        using that by (auto simp: mtopology_of_def)
       fix x and \<epsilon>::real
       assume "x \<in> topspace X" and "0 < \<epsilon>"
       then obtain N where N: "\<And>n. N \<le> n \<Longrightarrow> \<sigma> n \<in> fspace (topspace X) \<and> fdist (topspace X) (\<sigma> n) g < \<epsilon>/3"
@@ -1738,16 +1740,13 @@ proof -
       proof -
         have "U \<subseteq> topspace X"
           using \<open>openin X U\<close> by (simp add: openin_subset)
-        have "g x \<in> M"
+        have gx: "g x \<in> M"
           by (meson F.limitin_mspace \<open>x \<in> topspace X\<close> fspace_in_M g)
-        moreover
-
         have "y \<in> topspace X"
           using \<open>U \<subseteq> topspace X\<close> that by auto
-
-        have "g y \<in> M"
+        have gy: "g y \<in> M"
           by (meson F.limitin_mspace[OF g] \<open>U \<subseteq> topspace X\<close> fspace_in_M subsetD that)
-        moreover have "d (g x) (g y) < \<epsilon>"
+        have "d (g x) (g y) < \<epsilon>"
         proof -
           have *: "d (\<sigma> N x0) (g x0) \<le> \<epsilon>/3" if "x0 \<in> topspace X" for x0
           proof -
@@ -1760,30 +1759,31 @@ proof -
             finally show ?thesis .
           qed
           have "d (g x) (g y) \<le> d (g x) (\<sigma> N x) + d (\<sigma> N x) (g y)"
-            using U calculation(1) calculation(2) that triangle by force
+            using U gx gy that triangle by force
           also have "\<dots> < \<epsilon>/3 + \<epsilon>/3 + \<epsilon>/3"
-            by (smt (verit) "*" U \<open>g y \<in> M\<close> \<open>x \<in> topspace X\<close> \<open>y \<in> topspace X\<close> commute in_mball that triangle)
+            by (smt (verit) "*" U gy \<open>x \<in> topspace X\<close> \<open>y \<in> topspace X\<close> commute in_mball that triangle)
           finally show ?thesis by simp
         qed
-        ultimately show ?thesis by simp
+        with gx gy show ?thesis by simp
       qed
       ultimately show "\<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>y\<in>U. g y \<in> mball (g x) \<epsilon>)"
         by blast
     qed
 
-    have DD: "topspace F.mtopology = mspace (funspace (topspace X) Self)"
-      by auto
     have "S.sub.mcomplete"
-      apply (rule S.sequentially_closedin_mcomplete_imp_mcomplete)
-       apply (metis assms mcomplete_funspace mcomplete_of_def mdist_Self mdist_funspace mspace_Self mspace_funspace)
-      apply (auto simp: )
-         apply (meson F.limitin_mspace fspace_in_M)
-        apply (smt (verit, del_insts) F.limitin_mspace fspace_def mem_Collect_eq)
-       apply (smt (verit, ccfv_SIG) F.limitin_mspace fspace_def mem_Collect_eq)
-      apply (simp add: mtopology_of_def)
-      apply (rule *)
-       apply (blast intro:  elim: )
-      by (simp add: mtopology_of_def)
+    proof (rule S.sequentially_closedin_mcomplete_imp_mcomplete)
+      show "F.mcomplete"
+        by (metis assms mcomplete_funspace mcomplete_of_def mdist_Self mdist_funspace mspace_Self mspace_funspace)
+      fix \<sigma> g
+      assume g: "range \<sigma> \<subseteq> mspace (cfunspace X Self) \<and> limitin F.mtopology \<sigma> g sequentially"
+      show "g \<in> mspace (cfunspace X Self)"
+      proof (simp add: mtopology_of_def, intro conjI)
+        show "g ` topspace X \<subseteq> M" "g \<in> extensional (topspace X)" "mbounded (g ` topspace X)"
+          using g F.limitin_mspace by (force simp: fspace_def)+
+        show "continuous_map X mtopology g"
+          using * g by blast
+      qed
+    qed
     then show ?thesis
       by (simp add: mcomplete_of_def mdist_cfunspace_eq_mdist_funspace)
   qed
