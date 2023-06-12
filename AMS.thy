@@ -1797,69 +1797,65 @@ qed
 
 subsection\<open>Existence of completion for any metric space M as a subspace of M=>R\<close>
 
-lemma metric_completion_explicit:
+lemma (in Metric_space) metric_completion_explicit:
   obtains f :: "['a,'a] \<Rightarrow> real" and S where
-      "S \<subseteq> mspace(funspace (mspace m) euclidean_metric)"
-      "mcomplete_of (submetric (funspace (mspace m) euclidean_metric) S)"
-      "f ` (mspace m) \<subseteq> S"
-      "mtopology_of(funspace (mspace m) euclidean_metric) closure_of
-      f ` mspace m = S"
-      "\<And>x y. \<lbrakk>x \<in> mspace m; y \<in> mspace m\<rbrakk>
-            \<Longrightarrow> mdist (funspace (mspace m) euclidean_metric) (f x) (f y) =
-                mdist m x y"
+      "S \<subseteq> mspace(funspace M euclidean_metric)"
+      "mcomplete_of (submetric (funspace M euclidean_metric) S)"
+      "f ` M \<subseteq> S"
+      "mtopology_of(funspace M euclidean_metric) closure_of f ` M = S"
+      "\<And>x y. \<lbrakk>x \<in> M; y \<in> M\<rbrakk>
+            \<Longrightarrow> mdist (funspace M euclidean_metric) (f x) (f y) = d x y"
 proof -
-  interpret Metric_space "mspace m" "mdist m"
-    by simp
-  define m':: "('a\<Rightarrow>real) metric" where "m' \<equiv> funspace (mspace m) euclidean_metric"
+  define m':: "('a\<Rightarrow>real) metric" where "m' \<equiv> funspace M euclidean_metric"
   show thesis
-  proof (cases "mspace m = {}")
+  proof (cases "M = {}")
     case True
     then show ?thesis
       using that by (simp add: mcomplete_of_def mcomplete_trivial)
   next
     case False
-    then obtain a where "a \<in> mspace m"
+    then obtain a where "a \<in> M"
       by auto
-    define f where "f \<equiv> \<lambda>x. (\<lambda>u \<in> mspace m. mdist m x u - mdist m a u)"
-    define S where "S \<equiv> mtopology_of(funspace (mspace m) euclidean_metric) closure_of (f ` mspace m)"
-    interpret S: Submetric "Met_TC.fspace (mspace m)" "Met_TC.fdist (mspace m)" "S \<inter> Met_TC.fspace (mspace m)"
+    define f where "f \<equiv> \<lambda>x. (\<lambda>u \<in> M. d x u - d a u)"
+    define S where "S \<equiv> mtopology_of(funspace M euclidean_metric) closure_of (f ` M)"
+    interpret S: Submetric "Met_TC.fspace M" "Met_TC.fdist M" "S \<inter> Met_TC.fspace M"
       by (simp add: Met_TC.Metric_space_funspace Submetric.intro Submetric_axioms_def)
 
-    have fim: "f ` mspace m \<subseteq> mspace m'"
+    have fim: "f ` M \<subseteq> mspace m'"
     proof (clarsimp simp: m'_def Met_TC.fspace_def Met_TC.mbounded_def)
       fix b
-      assume "b \<in> mspace m"
-      then have "\<And>c. \<lbrakk>c \<in> mspace m\<rbrakk> \<Longrightarrow> \<bar>mdist m b c - mdist m a c\<bar> \<le> mdist m a b"
-        by (smt (verit, best) \<open>a \<in> mspace m\<close> commute triangle'')
-      then have "(\<lambda>x. mdist m b x - mdist m a x) ` mspace m \<subseteq> cball 0 (mdist m a b)"
+      assume "b \<in> M"
+      then have "\<And>c. \<lbrakk>c \<in> M\<rbrakk> \<Longrightarrow> \<bar>d b c - d a c\<bar> \<le> d a b"
+        by (smt (verit, best) \<open>a \<in> M\<close> commute triangle'')
+      then have "(\<lambda>x. d b x - d a x) ` M \<subseteq> cball 0 (d a b)"
         by force
-      then show "f b \<in> extensional (mspace m) \<and> (\<exists>x B. f b ` mspace m \<subseteq> cball x B)"
+      then show "f b \<in> extensional M \<and> (\<exists>x B. f b ` M \<subseteq> cball x B)"
         by (force simp add: f_def)
     qed
     show thesis
     proof
-      show "S \<subseteq> mspace (funspace (mspace m) euclidean_metric)"
+      show "S \<subseteq> mspace (funspace M euclidean_metric)"
         by (simp add: S_def in_closure_of subset_iff)
-      have "closedin S.mtopology (S \<inter> Met_TC.fspace (mspace m))"
+      have "closedin S.mtopology (S \<inter> Met_TC.fspace M)"
         by (simp add: S_def closedin_Int funspace_def)
       moreover have "S.mcomplete"
         using Metric_space.mcomplete_funspace Met_TC.Metric_space_axioms by (fastforce simp add: mcomplete_of_def)
-      ultimately show "mcomplete_of (submetric (funspace (mspace m) euclidean_metric) S)"
+      ultimately show "mcomplete_of (submetric (funspace M euclidean_metric) S)"
         by (simp add: S.closedin_eq_mcomplete mcomplete_of_def)
-      show "f ` mspace m \<subseteq> S"
+      show "f ` M \<subseteq> S"
         using S_def fim in_closure_of m'_def by fastforce
-      show "mtopology_of (funspace (mspace m) euclidean_metric) closure_of f ` mspace m = S"
+      show "mtopology_of (funspace M euclidean_metric) closure_of f ` M = S"
         by (auto simp: f_def S_def mtopology_of_def)
-      show "mdist (funspace (mspace m) euclidean_metric) (f x) (f y) = mdist m x y"
-        if "x \<in> mspace m" "y \<in> mspace m" for x y
+      show "mdist (funspace M euclidean_metric) (f x) (f y) = d x y"
+        if "x \<in> M" "y \<in> M" for x y
       proof -
-        have "\<forall>c\<in>mspace m. dist (f x c) (f y c) \<le> r \<Longrightarrow> mdist m x y \<le> r" for r
+        have "\<forall>c\<in>M. dist (f x c) (f y c) \<le> r \<Longrightarrow> d x y \<le> r" for r
           using that by (auto simp: f_def dist_real_def)
-        moreover have "dist (f x z) (f y z) \<le> r" if "mdist m x y \<le> r" and "z \<in> mspace m" for r z
-          using that \<open>x \<in> mspace m\<close> \<open>y \<in> mspace m\<close>  
+        moreover have "dist (f x z) (f y z) \<le> r" if "d x y \<le> r" and "z \<in> M" for r z
+          using that \<open>x \<in> M\<close> \<open>y \<in> M\<close>  
           apply (simp add: f_def Met_TC.fdist_def dist_real_def)
           by (smt (verit, best) commute triangle')
-        ultimately have "(SUP c \<in> mspace m. dist (f x c) (f y c)) = mdist m x y"
+        ultimately have "(SUP c \<in> M. dist (f x c) (f y c)) = d x y"
           by (intro cSup_unique) auto
         with that fim show ?thesis
           using that fim by (simp add: Met_TC.fdist_def False m'_def image_subset_iff)
@@ -1869,22 +1865,37 @@ proof -
 qed
 
 
-lemma metric_completion:
+lemma (in Metric_space) metric_completion:
   obtains f :: "['a,'a] \<Rightarrow> real" and m' where
-      "mcomplete_of m'"
-      "f ` (mspace m) \<subseteq> S"
-      "mtopology_of(funspace (mspace m) euclidean_metric) closure_of
-      f ` mspace m = S"
-      "\<And>x y. \<lbrakk>x \<in> mspace m; y \<in> mspace m\<rbrakk>
-            \<Longrightarrow> mdist (funspace (mspace m) euclidean_metric) (f x) (f y) =
-                mdist m x y"
-
-   "?m' f::A=>A->real.
-                mcomplete m' \<and>
-                image f (M) \<subseteq> mspace m' \<and>
-                (mtopology m') closure_of (image f (M)) = mspace m' \<and>
-                \<forall>x y. x \<in> M \<and> y \<in> M
-                      \<Longrightarrow> d m' (f x,f y) = d x y"
+    "mcomplete_of m'"
+    "f ` M \<subseteq> mspace m' "
+    "mtopology_of m' closure_of f ` M = mspace m'"
+    "\<And>x y. \<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> mdist m' (f x) (f y) = d x y"
+proof -
+  obtain f :: "['a,'a] \<Rightarrow> real" and S where
+    "S \<subseteq> mspace(funspace M euclidean_metric)"
+    "mcomplete_of (submetric (funspace M euclidean_metric) S)"
+    "f ` M \<subseteq> S"
+    "mtopology_of(funspace M euclidean_metric) closure_of f ` M = S"
+    "\<And>x y. \<lbrakk>x \<in> M; y \<in> M\<rbrakk>
+            \<Longrightarrow> mdist (funspace M euclidean_metric) (f x) (f y) = d x y"
+    using metric_completion_explicit by metis
+  define m' where "m' \<equiv> submetric (funspace M euclidean_metric) S"
+  show thesis
+  proof
+    show "mcomplete_of m'"
+      by (simp add: \<open>mcomplete_of (submetric (funspace M euclidean_metric) S)\<close> m'_def)
+    show "f ` M \<subseteq> mspace m'"
+      using \<open>S \<subseteq> mspace (funspace M euclidean_metric)\<close> \<open>f ` M \<subseteq> S\<close> m'_def by auto
+    show "mtopology_of m' closure_of f ` M = mspace m'"
+      sorry
+    show "mdist m' (f x::'a \<Rightarrow> real) (f y) = d x y"
+      if "x \<in> M"
+        and "y \<in> M"
+      for x :: 'a
+        and y :: 'a
+      using that sorry
+  qed 
 oops
   GEN_TAC THEN
   MATCH_MP_TAC(MESON[]
