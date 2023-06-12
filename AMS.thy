@@ -1873,53 +1873,55 @@ lemma (in Metric_space) metric_completion:
     "\<And>x y. \<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> mdist m' (f x) (f y) = d x y"
 proof -
   obtain f :: "['a,'a] \<Rightarrow> real" and S where
-    "S \<subseteq> mspace(funspace M euclidean_metric)"
-    "mcomplete_of (submetric (funspace M euclidean_metric) S)"
-    "f ` M \<subseteq> S"
-    "mtopology_of(funspace M euclidean_metric) closure_of f ` M = S"
-    "\<And>x y. \<lbrakk>x \<in> M; y \<in> M\<rbrakk>
-            \<Longrightarrow> mdist (funspace M euclidean_metric) (f x) (f y) = d x y"
+    Ssub: "S \<subseteq> mspace(funspace M euclidean_metric)"
+    and mcom: "mcomplete_of (submetric (funspace M euclidean_metric) S)"
+    and fim: "f ` M \<subseteq> S"
+    and eqS: "mtopology_of(funspace M euclidean_metric) closure_of f ` M = S"
+    and eqd: "\<And>x y. \<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> mdist (funspace M euclidean_metric) (f x) (f y) = d x y"
     using metric_completion_explicit by metis
   define m' where "m' \<equiv> submetric (funspace M euclidean_metric) S"
   show thesis
   proof
     show "mcomplete_of m'"
-      by (simp add: \<open>mcomplete_of (submetric (funspace M euclidean_metric) S)\<close> m'_def)
+      by (simp add: mcom m'_def)
     show "f ` M \<subseteq> mspace m'"
-      using \<open>S \<subseteq> mspace (funspace M euclidean_metric)\<close> \<open>f ` M \<subseteq> S\<close> m'_def by auto
+      using Ssub fim m'_def by auto
     show "mtopology_of m' closure_of f ` M = mspace m'"
-      sorry
-    show "mdist m' (f x::'a \<Rightarrow> real) (f y) = d x y"
-      if "x \<in> M"
-        and "y \<in> M"
-      for x :: 'a
-        and y :: 'a
-      using that sorry
+      using eqS fim Ssub
+      by (force simp add: m'_def mtopology_of_submetric closure_of_subtopology Int_absorb1)
+    show "mdist m' (f x) (f y) = d x y" if "x \<in> M" and "y \<in> M" for x y
+      using that eqd m'_def by force 
   qed 
-oops
-  GEN_TAC THEN
-  MATCH_MP_TAC(MESON[]
-   `(\<exists>s f. P (submetric (funspace (M) real_euclidean_metric) s) f)
-    \<Longrightarrow> \<exists>n f. P n f`) THEN
-  MP_TAC(SPEC `m::A metric` METRIC_COMPLETION_EXPLICIT) THEN
-  REPEAT(MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC) THEN
-  REWRITE_TAC[SUBMETRIC; SUBSET_INTER] THEN
-  REWRITE_TAC[MTOPOLOGY_SUBMETRIC; CLOSURE_OF_SUBTOPOLOGY] THEN
-  SIMP_TAC[SET_RULE `t \<subseteq> s \<Longrightarrow> s \<inter> t = t`] THEN SET_TAC[]);;
+qed
 
 lemma metrizable_space_completion:
-   "metrizable_space X
-        \<Longrightarrow> ?top' (f::A=>A->real).
-                completely_metrizable_space Y \<and>
-                embedding_map X Y f \<and>
-                Y closure_of (f ` (topspace X)) = topspace Y"
-oops
-  REWRITE_TAC[FORALL_METRIZABLE_SPACE; RIGHT_EXISTS_AND_THM] THEN
-  X_GEN_TAC `m::A metric` THEN
-  REWRITE_TAC[EXISTS_COMPLETELY_METRIZABLE_SPACE; RIGHT_AND_EXISTS_THM] THEN
-  MP_TAC(ISPEC `m::A metric` METRIC_COMPLETION) THEN
-  REPEAT(MATCH_MP_TAC MONO_EXISTS THEN GEN_TAC) THEN
-  MESON_TAC[ISOMETRY_IMP_EMBEDDING_MAP]);;
+  assumes "metrizable_space X"
+  obtains f :: "['a,'a] \<Rightarrow> real" and Y where
+       "completely_metrizable_space Y" "embedding_map X Y f"
+                "Y closure_of (f ` (topspace X)) = topspace Y"
+proof -
+  obtain M d where "Metric_space M d" and Xeq: "X = Metric_space.mtopology M d"
+    using assms metrizable_space_def by blast
+  then interpret Metric_space M d by simp
+  obtain f :: "['a,'a] \<Rightarrow> real" and m' where
+    "mcomplete_of m'"
+    and fim: "f ` M \<subseteq> mspace m' "
+    and m': "mtopology_of m' closure_of f ` M = mspace m'"
+    and eqd: "\<And>x y. \<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> mdist m' (f x) (f y) = d x y"
+    by (meson metric_completion)
+  show thesis
+  proof
+    show "completely_metrizable_space (mtopology_of m')"
+      using \<open>mcomplete_of m'\<close>
+      unfolding completely_metrizable_space_def mcomplete_of_def mtopology_of_def
+      by (metis Metric_space_mspace_mdist)
+    show "embedding_map X (mtopology_of m') f"
+      using Metric_space12.isometry_imp_embedding_map
+      by (metis Metric_space12_def Metric_space_axioms Metric_space_mspace_mdist Xeq eqd fim mtopology_of_def)
+    show "(mtopology_of m') closure_of f ` topspace X = topspace (mtopology_of m')"
+      by (simp add: Xeq m')
+  qed
+qed
 
 
 
