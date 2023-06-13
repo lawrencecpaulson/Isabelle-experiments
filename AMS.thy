@@ -1927,7 +1927,6 @@ qed
 
 subsection\<open>Contractions\<close>
 
-
 lemma (in Metric_space) contraction_imp_unique_fixpoint:
   assumes "f x = x" "f y = y"
     and "f ` M \<subseteq> M"
@@ -1982,8 +1981,10 @@ proof -
           assume "\<epsilon>>0"
           with \<open>k < 1\<close> \<open>f a \<noteq> a\<close> \<open>a \<in> M\<close> fim have gt0: "((1 - k) * \<epsilon>) / d a (f a) > 0"
             by (fastforce simp: divide_simps)
-          obtain N where N: "k^N < ((1-k) * \<epsilon>) / d a (f a)"
+          obtain N where "k^N < ((1-k) * \<epsilon>) / d a (f a)"
             using real_arch_pow_inv [OF gt0 \<open>k < 1\<close>] by blast
+          then have N: "\<And>n. n \<ge> N \<Longrightarrow> k^n < ((1-k) * \<epsilon>) / d a (f a)"
+            by (smt (verit) \<open>0 < k\<close> assms(4) power_decreasing)
           have "\<forall>n n'. n<n' \<longrightarrow> N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>"
           proof (intro exI strip)
             fix n n'
@@ -2002,20 +2003,48 @@ proof -
                 then show ?case
                 proof cases
                   case 1
-                  also have "\<dots> \<le> d (\<sigma> n) (\<sigma> m) + d (\<sigma> m) (f (\<sigma> m))"
-                    sorry
-                  then show ?thesis sorry
-                next
-                  case 2
-                  then show ?thesis
-                    by simp
-                qed
+                  have "d (\<sigma> n) (\<sigma> (Suc m)) \<le> d (\<sigma> n) (\<sigma> m) + d (\<sigma> m) (\<sigma> (Suc m))"
+                    by (simp add: f_iter triangle)
+                  also have "\<dots> \<le> (\<Sum>i=n..<m. d (\<sigma> i) (\<sigma> (Suc i))) + d (\<sigma> m) (\<sigma> (Suc m))"
+                    using Suc 1 by linarith
+                  also have "\<dots> = (\<Sum>i = n..<Suc m. d (\<sigma> i) (\<sigma> (Suc i)))"
+                    using "1" by force
+                  finally show ?thesis .
+                qed auto
               qed
-              then show ?thesis
-                sorry
+              with \<open>n < n'\<close> show ?thesis by blast
             qed
+            also have "\<dots> \<le> (\<Sum>i=n..<n'. d a (f a) * k^i)"
+            proof (rule sum_mono)
+              fix i
+              assume "i \<in> {n..<n'}"
+              show "d (\<sigma> i) (\<sigma> (Suc i)) \<le> d a (f a) * k ^ i"
+              proof (induction i)
+                case 0
+                then show ?case
+                  by (auto simp: \<sigma>_def)
+              next
+                case (Suc i)
+                have "d (\<sigma> (Suc i)) (\<sigma> (Suc (Suc i))) \<le> k * d (\<sigma> i) (\<sigma> (Suc i))"
+                  using con \<sigma>_def f_iter fim by fastforce
+                also have "\<dots> \<le> d a (f a) * k ^ Suc i"
+                  using Suc \<open>0 < k\<close> by auto
+                finally show ?case .
+              qed
+            qed
+            also have "\<dots> = d a (f a) * (\<Sum>i=n..<n'. k^i)"
+              by (simp add: sum_distrib_left)
+            also have "\<dots> = d a (f a) * (\<Sum>i=0..<n'-n. k^(i+n))"
+              using sum.shift_bounds_nat_ivl [of "power k" 0 n "n'-n"] \<open>n < n'\<close> by simp
+            also have "\<dots> = d a (f a) * k^n * (\<Sum>i<n'-n. k^i)"
+              by (simp add: power_add lessThan_atLeast0 flip: sum_distrib_right)
+            also have "\<dots> = d a (f a) * (k ^ n - k ^ n') / (1 - k)"
+              using \<open>k < 1\<close> \<open>n < n'\<close> apply (simp add: sum_gp_strict)
+              by (simp add: algebra_simps flip: power_add)
             also have "\<dots> < \<epsilon>"
-              sorry
+              using N \<open>k < 1\<close> \<open>0 < \<epsilon>\<close> \<open>0 < k\<close> \<open>N \<le> n\<close>
+              apply (simp add: field_simps)
+              by (smt (verit) nonneg pos_less_divide_eq zero_less_divide_iff zero_less_power)
             finally show "d (\<sigma> n) (\<sigma> n') < \<epsilon>" .
           qed 
           then show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>"
@@ -2047,73 +2076,6 @@ proof -
     qed
   qed
 qed
-
-oops
-
-
-  INTRO_TAC "!n n'; lt; le le'" THEN
-  TRANS_TAC REAL_LET_TRANS
-    `sum (n..n'-1) (\<lambda>i. d m (ITER i f a::A, ITER (Suc i) f a))` THEN
-  CONJ_TAC THENL
-  [REMOVE_THEN "lt" MP_TAC THEN SPEC_TAC (`n':num`,`n':num`) THEN
-   LABEL_INDUCT_TAC THENL [REWRITE_TAC[LT]; REWRITE_TAC[LT_SUC_LE]] THEN
-   INTRO_TAC "nle" THEN HYP_TAC "nle : nlt | neq" (REWRITE_RULE[LE_LT]) THENL
-   [ALL_TAC;
-    POP_ASSUM SUBST_ALL_TAC THEN
-    REWRITE_TAC[ITER;
-      ARITH_RULE `Suc n'' - 1 = n''`; SUM_SING_NUMSEG; REAL_LE_REFL]] THEN
-   USE_THEN "nlt" (HYP_TAC "ind_n'" \<circ> C MATCH_MP) THEN REWRITE_TAC[ITER] THEN
-
-   TRANS_TAC REAL_LE_TRANS
-     `d ITER n f a::A ITER n'' f a + d m (ITER n'' f a,f (ITER n'' f a))` THEN
-   ASM_SIMP_TAC[MDIST_TRIANGLE] THEN
-   SUBGOAL_THEN `Suc n'' - 1 = Suc (n'' - 1)` SUBST1_TAC THENL
-   [ASM_ARITH_TAC; ASM_SIMP_TAC[SUM_CLAUSES_NUMSEG]] THEN
-   SUBGOAL_THEN `Suc (n'' - 1) = n''` SUBST1_TAC THENL
-   [ASM_ARITH_TAC; ASM_SIMP_TAC[LT_IMP_LE; REAL_LE_RADD]] THEN
-   REMOVE_THEN "ind_n'" (ACCEPT_TAC \<circ> REWRITE_RULE[ITER]);
-   ALL_TAC] THEN
-
-  TRANS_TAC REAL_LET_TRANS
-     `sum (n..n'-1) (\<lambda>i. d a (f a) * k^i)` THEN CONJ_TAC THENL
-  [MATCH_MP_TAC SUM_LE_NUMSEG THEN
-   CUT_TAC `\<forall>i. d m (ITER i f a,ITER (Suc i) f a) \<le>
-                d a::A f a * k ^ i` THENL
-   [SIMP_TAC[ITER]; ALL_TAC] THEN
-   LABEL_INDUCT_TAC THENL
-   [REWRITE_TAC[ITER; real_pow; REAL_MUL_RID; REAL_LE_REFL];
-    HYP_TAC "ind_i" (REWRITE_RULE[ITER]) THEN
-
-    TRANS_TAC REAL_LE_TRANS `k * d m (ITER i f a::A, f (ITER i f a))` THEN
-    ASM_SIMP_TAC[real_pow; REAL_LE_LMUL_EQ; ITER;
-      REAL_ARITH `\<forall>x. x * k * k ^ i = k * x * k ^ i`]];
-   ALL_TAC] THEN
-  REWRITE_TAC[SUM_LMUL; SUM_GP] THEN
-  HYP SIMP_TAC "lt" [ARITH_RULE `n < n' \<Longrightarrow> \<not> (n' - 1 < n)`] THEN
-  HYP SIMP_TAC "k1" [REAL_ARITH `k < 1 \<Longrightarrow> (k \<noteq> 1)`] THEN
-  USE_THEN "lt" (SUBST1_TAC \<circ>
-    MATCH_MP (ARITH_RULE `n < n' \<Longrightarrow> Suc (n' - 1) = n'`)) THEN
-  SUBGOAL_THEN `k ^ n - k ^ n' = k ^ n * (1 - k ^ (n' - n))`
-    SUBST1_TAC THENL
-  [REWRITE_TAC[REAL_SUB_LDISTRIB; REAL_MUL_RID; GSYM REAL_POW_ADD] THEN
-   HYP SIMP_TAC "lt" [ARITH_RULE `n < n' \<Longrightarrow> n + n' - n = n':num`];
-   (SUBST1_TAC \<circ> REAL_ARITH)
-     `d a::A f a * (k ^ n * (1 - k ^ (n' - n))) / (1 - k) =
-      ((k ^ n * (1 - k ^ (n' - n))) / (1 - k)) * d a f a`] THEN
-  ASM_SIMP_TAC[GSYM REAL_LT_RDIV_EQ; MDIST_POS_LT; REAL_LT_LDIV_EQ] THEN
-
-  TRANS_TAC REAL_LET_TRANS `k ^ n` THEN CONJ_TAC THENL
-  [ONCE_REWRITE_TAC[GSYM REAL_SUB_LE] THEN
-   REWRITE_TAC[GSYM REAL_POW_ADD;
-     REAL_ARITH `k ^ n - k ^ n * (1 - k ^ (n' - n)) =
-                 k ^ n * k ^ (n' - n)`] THEN
-   HYP SIMP_TAC "lt" [ARITH_RULE `n < n' \<Longrightarrow> n + n' - n = n':num`] THEN
-   HYP SIMP_TAC "kpos" [REAL_POW_LE; REAL_LT_IMP_LE];
-
-   TRANS_TAC REAL_LET_TRANS `k ^ N` THEN
-   ASM_SIMP_TAC[REAL_POW_MONO_INV; REAL_LT_IMP_LE;
-     REAL_ARITH `e / d a::A f a * (1 - k) =
-                 ((1 - k) * e) / d a f a`]]);;
 
 
 subsection\<open> The Baire Category Theorem                                                \<close>
