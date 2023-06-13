@@ -943,7 +943,7 @@ proof (rule continuous_map_extension_pointwise_alt)
       then have "L.M2.MCauchy (f \<circ> \<psi>)"
         by (metis Cauchy_continuous_map_def f mdist_submetric mspace_submetric)
       then have "(\<lambda>n. mdist m2 (f (\<sigma> n)) (f (\<rho> n))) \<longlonglongrightarrow> 0"
-        using L.M2.MCauchy_interleaving_gen [of "f o \<sigma>" "f o \<rho>"]  
+        using L.M2.MCauchy_interleaving_gen [of "f \<circ> \<sigma>" "f \<circ> \<rho>"]  
         by (simp add: if_distrib \<psi>_def o_def cong: if_cong)
       moreover have "\<forall>\<^sub>F n in sequentially. f (\<sigma> n) \<in> mspace m2 \<and> (\<lambda>x. mdist m2 (f (\<sigma> x)) l) \<longlonglongrightarrow> 0"
         using l by (auto simp: L.M2.limitin_metric_dist_null \<open>l \<in> mspace m2\<close>)
@@ -1032,7 +1032,7 @@ proof -
     have clo: "closedin X {z \<in> topspace X. case z of (x, y) \<Rightarrow> mdist m2 (f x) (f y) \<le> B * mdist m1 x y}"
       unfolding eq
     proof (rule closedin_continuous_map_preimage)
-      have *: "continuous_map X L.M2.mtopology (f o fst)" "continuous_map X L.M2.mtopology (f o snd)"
+      have *: "continuous_map X L.M2.mtopology (f \<circ> fst)" "continuous_map X L.M2.mtopology (f \<circ> snd)"
         using cmf by (auto simp: mtopology_of_def X_def intro: continuous_map_compose continuous_map_fst continuous_map_snd)
       then show "continuous_map X euclidean (\<lambda>x. case x of (x, y) \<Rightarrow> B * mdist m1 x y - mdist m2 (f x) (f y))"
         unfolding case_prod_unfold
@@ -1135,7 +1135,7 @@ proof -
       show "continuous_map X euclidean (\<lambda>x. case x of (x, y) \<Rightarrow> mdist m1 x y - \<delta>)"
         unfolding case_prod_unfold
         by (intro continuous_intros; simp add: mtopology_of_def *)
-      have *: "continuous_map X L.M2.mtopology (f o fst)" "continuous_map X L.M2.mtopology (f o snd)"
+      have *: "continuous_map X L.M2.mtopology (f \<circ> fst)" "continuous_map X L.M2.mtopology (f \<circ> snd)"
         using cmf by (auto simp: mtopology_of_def X_def intro: continuous_map_compose continuous_map_fst continuous_map_snd)
       then show "continuous_map X euclidean (\<lambda>x. case x of (x, y) \<Rightarrow> \<epsilon> / 2 - mdist m2 (f x) (f y))"
         unfolding case_prod_unfold
@@ -1941,60 +1941,116 @@ lemma (in Metric_space) contraction_imp_unique_fixpoint:
 (* Banach Fixed-Point Theorem (aka, Contraction Mapping Principle).          *)
 
 
-lemma banach_fixpoint_thm:
-   "\<And>m f::A=>A k.
-     \<not> (M = {}) \<and>
-     mcomplete \<and>
-     (\<forall>x. x \<in> M \<Longrightarrow> f x \<in> M) \<and>
-     k < 1 \<and>
-     (\<forall>x y. x \<in> M \<and> y \<in> M
-            \<Longrightarrow> d (f x) f y \<le> k * d x y)
-     \<Longrightarrow> (?\<forall>x. x \<in> M \<and> f x = x)"
+lemma (in Metric_space) Banach_fixedpoint_thm:
+  assumes mcomplete and "M \<noteq> {}" and fim: "f ` M \<subseteq> M"    
+    and "k < 1"
+    and con: "\<And>x y. \<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> d (f x) (f y) \<le> k * d x y"
+  obtains x where "x \<in> M" "f x = x"
+proof -
+  obtain a where "a \<in> M"
+    using \<open>M \<noteq> {}\<close> by blast
+  show thesis
+  proof (cases "\<forall>x \<in> M. f x = f a")
+    case True
+    then show ?thesis
+      by (metis \<open>a \<in> M\<close> fim image_subset_iff that)
+  next
+    case False
+    then obtain b where "b \<in> M" and b: "f b \<noteq> f a"
+      by blast
+    have "k>0"
+      using Lipschitz_coefficient_pos [where f=f]
+      by (metis False \<open>a \<in> M\<close> con fim mdist_Self mspace_Self)
+    define \<sigma> where "\<sigma> \<equiv> \<lambda>n. (f^^n) a"
+    have f_iter: "\<sigma> n \<in> M" for n
+      unfolding \<sigma>_def by (induction n) (use \<open>a \<in> M\<close> fim in auto)
+    show ?thesis
+    proof (cases "f a = a")
+      case True
+      then show ?thesis
+        using \<open>a \<in> M\<close> that by blast
+    next
+      case False
+      have "MCauchy \<sigma>"
+      proof -
+        show ?thesis
+          unfolding MCauchy_def
+        proof (intro conjI strip)
+          show "range \<sigma> \<subseteq> M"
+            using f_iter by blast
+          fix \<epsilon>::real
+          assume "\<epsilon>>0"
+          with \<open>k < 1\<close> \<open>f a \<noteq> a\<close> \<open>a \<in> M\<close> fim have gt0: "((1 - k) * \<epsilon>) / d a (f a) > 0"
+            by (fastforce simp: divide_simps)
+          obtain N where N: "k^N < ((1-k) * \<epsilon>) / d a (f a)"
+            using real_arch_pow_inv [OF gt0 \<open>k < 1\<close>] by blast
+          have "\<forall>n n'. n<n' \<longrightarrow> N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>"
+          proof (intro exI strip)
+            fix n n'
+            assume "n<n'" "N \<le> n" "N \<le> n'"
+            have "d (\<sigma> n) (\<sigma> n') \<le> (\<Sum>i=n..<n'. d (\<sigma> i) (\<sigma> (Suc i)))"
+            proof -
+              have "n < m \<Longrightarrow> d (\<sigma> n) (\<sigma> m) \<le> (\<Sum>i=n..<m. d (\<sigma> i) (\<sigma> (Suc i)))" for m
+              proof (induction m)
+                case 0
+                then show ?case
+                  by simp
+              next
+                case (Suc m)
+                then consider "n<m" | "m=n"
+                  by linarith
+                then show ?case
+                proof cases
+                  case 1
+                  also have "\<dots> \<le> d (\<sigma> n) (\<sigma> m) + d (\<sigma> m) (f (\<sigma> m))"
+                    sorry
+                  then show ?thesis sorry
+                next
+                  case 2
+                  then show ?thesis
+                    by simp
+                qed
+              qed
+              then show ?thesis
+                sorry
+            qed
+            also have "\<dots> < \<epsilon>"
+              sorry
+            finally show "d (\<sigma> n) (\<sigma> n') < \<epsilon>" .
+          qed 
+          then show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (\<sigma> n) (\<sigma> n') < \<epsilon>"
+            by (metis \<open>0 < \<epsilon>\<close> commute f_iter linorder_not_le local.mdist_zero nat_less_le)
+        qed
+      qed
+      then obtain l where l: "limitin mtopology \<sigma> l sequentially"
+        using \<open>mcomplete\<close> mcomplete_def by blast
+      show ?thesis 
+      proof
+        show "l \<in> M"
+          using l limitin_mspace by blast
+        show "f l = l"
+        proof (rule limitin_metric_unique)
+          have "limitin mtopology (f \<circ> \<sigma>) (f l) sequentially"
+          proof (rule continuous_map_limit)
+            have "Lipschitz_continuous_map Self Self f"
+              using con by (auto simp add: Lipschitz_continuous_map_def fim)
+            then show "continuous_map mtopology mtopology f"
+              using Lipschitz_continuous_imp_continuous_map Self_def by force
+          qed (use l in auto)
+          moreover have "(f \<circ> \<sigma>) = (\<lambda>i. \<sigma>(i+1))"
+            by (auto simp: \<sigma>_def)
+          ultimately show "limitin mtopology (\<lambda>n. (f^^n)a) (f l) sequentially"
+            using limitin_sequentially_offset_rev [of mtopology \<sigma> 1]
+            by (simp add: \<sigma>_def)
+        qed (use l in \<open>auto simp: \<sigma>_def\<close>)
+      qed
+    qed
+  qed
+qed
+
 oops
-  INTRO_TAC "!m f k; ne compl 4 k1 contr" THEN REMOVE_THEN "ne" MP_TAC THEN
-  REWRITE_TAC[GSYM MEMBER_NOT_EMPTY] THEN INTRO_TAC "@a. aINm" THEN
-  REWRITE_TAC[EXISTS_UNIQUE_THM] THEN CONJ_TAC THENL
-  [ALL_TAC;
-   REPEAT STRIP_TAC THEN MATCH_MP_TAC CONTRACTION_IMP_UNIQUE_FIXPOINT THEN
-   ASM_MESON_TAC[]] THEN
-  ASM_CASES_TAC `\<forall>x::A. x \<in> M \<Longrightarrow> f x::A = f a` THENL
-  [ASM_MESON_TAC[]; POP_ASSUM (LABEL_TAC "nonsing")] THEN
-  CLAIM_TAC "kpos" `0 < k` THENL
-  [MATCH_MP_TAC (ISPECL [`m::A metric`; `m::A metric`; `f::A=>A`]
-     LIPSCHITZ_COEFFICIENT_POS) THEN
-   ASM_SIMP_TAC[] THEN ASM_MESON_TAC[];
-   ALL_TAC] THEN
-  CLAIM_TAC "fINm" `\<forall>n::num. (ITER n f (a::A)) \<in> M` THENL
-  [LABEL_INDUCT_TAC THEN ASM_SIMP_TAC[ITER]; ALL_TAC] THEN
-  ASM_CASES_TAC `f a = a::A` THENL
-  [ASM_MESON_TAC[]; POP_ASSUM (LABEL_TAC "aneq")] THEN
-  CUT_TAC `MCauchy (m::A metric) (\<lambda>n. ITER n f (a::A))` THENL
-  [DISCH_THEN (fun cauchy -> HYP_TAC "compl : @l. lim"
-    (C MATCH_MP cauchy \<circ> REWRITE_RULE[mcomplete])) THEN
-   EXISTS_TAC `l::A` THEN CONJ_TAC THENL
-   [ASM_MESON_TAC [LIMIT_IN_MSPACE]; ALL_TAC] THEN
-   MATCH_MP_TAC
-     (ISPECL [`sequentially`; `m::A metric`; `(\<lambda>n. ITER n f a::A)`]
-             LIMIT_METRIC_UNIQUE) THEN
-   ASM_REWRITE_TAC[TRIVIAL_LIMIT_SEQUENTIALLY] THEN
-   MATCH_MP_TAC LIMIT_SEQUENTIALLY_OFFSET_REV THEN
-   EXISTS_TAC `1` THEN REWRITE_TAC[GSYM ADD1] THEN
-   SUBGOAL_THEN `(\<lambda>i. ITER (Suc i) f (a::A)) = f \<circ> (\<lambda>i. ITER i f a)`
-     SUBST1_TAC THENL [REWRITE_TAC[FUN_EQ_THM; o_THM; ITER]; ALL_TAC] THEN
-   MATCH_MP_TAC CONTINUOUS_MAP_LIMIT THEN
-   EXISTS_TAC `mtopology (m::A metric)` THEN ASM_REWRITE_TAC[] THEN
-   MATCH_MP_TAC LIPSCHITZ_CONTINUOUS_IMP_CONTINUOUS_MAP THEN
-   ASM_REWRITE_TAC[Lipschitz_continuous_map; \<subseteq>; FORALL_IN_IMAGE] THEN
-   EXISTS_TAC `k::real` THEN ASM_REWRITE_TAC[];
-   ALL_TAC] THEN
-  CLAIM_TAC "k1'" `0 < 1 - k` THENL [ASM_REAL_ARITH_TAC; ALL_TAC] THEN
-  ASM_SIMP_TAC[MCauchy] THEN INTRO_TAC "!e; e" THEN
-  CLAIM_TAC "@N. N" `\<exists>N. k ^ N < ((1 - k) * e) / d a::A f a` THENL
-  [MATCH_MP_TAC REAL_ARCH_POW_INV THEN
-   ASM_SIMP_TAC[REAL_LT_DIV; MDIST_POS_LT; REAL_LT_MUL];
-   EXISTS_TAC `N::num`] THEN
-  MATCH_MP_TAC WLOG_LT THEN ASM_SIMP_TAC[MDIST_REFL] THEN CONJ_TAC THENL
-  [HYP MESON_TAC "fINm" [MDIST_SYM]; ALL_TAC] THEN
+
+
   INTRO_TAC "!n n'; lt; le le'" THEN
   TRANS_TAC REAL_LET_TRANS
     `sum (n..n'-1) (\<lambda>i. d m (ITER i f a::A, ITER (Suc i) f a))` THEN
@@ -2007,9 +2063,9 @@ oops
     REWRITE_TAC[ITER;
       ARITH_RULE `Suc n'' - 1 = n''`; SUM_SING_NUMSEG; REAL_LE_REFL]] THEN
    USE_THEN "nlt" (HYP_TAC "ind_n'" \<circ> C MATCH_MP) THEN REWRITE_TAC[ITER] THEN
+
    TRANS_TAC REAL_LE_TRANS
-     `d ITER n f a::A ITER n'' f a +
-      d m (ITER n'' f a,f (ITER n'' f a))` THEN
+     `d ITER n f a::A ITER n'' f a + d m (ITER n'' f a,f (ITER n'' f a))` THEN
    ASM_SIMP_TAC[MDIST_TRIANGLE] THEN
    SUBGOAL_THEN `Suc n'' - 1 = Suc (n'' - 1)` SUBST1_TAC THENL
    [ASM_ARITH_TAC; ASM_SIMP_TAC[SUM_CLAUSES_NUMSEG]] THEN
@@ -2017,8 +2073,9 @@ oops
    [ASM_ARITH_TAC; ASM_SIMP_TAC[LT_IMP_LE; REAL_LE_RADD]] THEN
    REMOVE_THEN "ind_n'" (ACCEPT_TAC \<circ> REWRITE_RULE[ITER]);
    ALL_TAC] THEN
+
   TRANS_TAC REAL_LET_TRANS
-     `sum (n..n'-1) (\<lambda>i. d a::A f a * k ^ i)` THEN CONJ_TAC THENL
+     `sum (n..n'-1) (\<lambda>i. d a (f a) * k^i)` THEN CONJ_TAC THENL
   [MATCH_MP_TAC SUM_LE_NUMSEG THEN
    CUT_TAC `\<forall>i. d m (ITER i f a,ITER (Suc i) f a) \<le>
                 d a::A f a * k ^ i` THENL
@@ -2026,6 +2083,7 @@ oops
    LABEL_INDUCT_TAC THENL
    [REWRITE_TAC[ITER; real_pow; REAL_MUL_RID; REAL_LE_REFL];
     HYP_TAC "ind_i" (REWRITE_RULE[ITER]) THEN
+
     TRANS_TAC REAL_LE_TRANS `k * d m (ITER i f a::A, f (ITER i f a))` THEN
     ASM_SIMP_TAC[real_pow; REAL_LE_LMUL_EQ; ITER;
       REAL_ARITH `\<forall>x. x * k * k ^ i = k * x * k ^ i`]];
@@ -2043,6 +2101,7 @@ oops
      `d a::A f a * (k ^ n * (1 - k ^ (n' - n))) / (1 - k) =
       ((k ^ n * (1 - k ^ (n' - n))) / (1 - k)) * d a f a`] THEN
   ASM_SIMP_TAC[GSYM REAL_LT_RDIV_EQ; MDIST_POS_LT; REAL_LT_LDIV_EQ] THEN
+
   TRANS_TAC REAL_LET_TRANS `k ^ n` THEN CONJ_TAC THENL
   [ONCE_REWRITE_TAC[GSYM REAL_SUB_LE] THEN
    REWRITE_TAC[GSYM REAL_POW_ADD;
@@ -2050,6 +2109,7 @@ oops
                  k ^ n * k ^ (n' - n)`] THEN
    HYP SIMP_TAC "lt" [ARITH_RULE `n < n' \<Longrightarrow> n + n' - n = n':num`] THEN
    HYP SIMP_TAC "kpos" [REAL_POW_LE; REAL_LT_IMP_LE];
+
    TRANS_TAC REAL_LET_TRANS `k ^ N` THEN
    ASM_SIMP_TAC[REAL_POW_MONO_INV; REAL_LT_IMP_LE;
      REAL_ARITH `e / d a::A f a * (1 - k) =
