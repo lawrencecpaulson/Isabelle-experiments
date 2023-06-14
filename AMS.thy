@@ -503,7 +503,6 @@ next
     by metis
   have le_d: "mdist (cm i) (x i) (y i) \<le> d x y" if "i \<in> I" "x \<in> M" "y \<in> M" for i x y
     using "*" that by blast
-
   have product_m: "PiE I (\<lambda>i. mspace (m i)) = topspace(product_topology X I)"
     using m by force
 
@@ -2078,7 +2077,7 @@ proof -
 qed
 
 
-subsection\<open> The Baire Category Theorem                                                \<close>
+subsection\<open> The Baire Category Theorem\<close>
 
 lemma (in Metric_space) metric_Baire_category:
   assumes "mcomplete" "countable \<G>"
@@ -2092,6 +2091,8 @@ proof (cases "\<G>={}")
     by auto
   have "\<Inter>(range u) \<inter> W \<noteq> {}" if W: "openin mtopology W" "W \<noteq> {}" for W
   proof -
+    have "W \<subseteq> M"
+      using openin_mtopology W by blast
     have "\<exists>r' x'. 0 < r' \<and> r' < r/2 \<and> x' \<in> M \<and> mcball x' r' \<subseteq> mball x r \<inter> u n" 
       if "r>0" "x \<in> M" for x r n
     proof -
@@ -2119,6 +2120,8 @@ proof (cases "\<G>={}")
       by metis
     obtain x0 where x0: "x0 \<in> u 0 \<inter> W"
       by (metis W dense_intersects_open topspace_mtopology all_not_in_conv u_dense)
+    then have "x0 \<in> M"
+      using \<open>W \<subseteq> M\<close> by fastforce
     obtain r0 where "0 < r0" "r0 < 1" "mcball x0 r0 \<subseteq> u 0 \<inter> W"
     proof -
       have "openin mtopology (u 0 \<inter> W)"
@@ -2134,6 +2137,39 @@ proof (cases "\<G>={}")
           using r \<open>0 < r0\<close> r0_def by auto
       qed
     qed
+    define b where "b \<equiv> rec_nat (x0,r0) (\<lambda>n (x,r). (nextx r x n, nextr r x n))"
+    have [simp]: "b 0 = (x0,r0)"
+      by (simp add: b_def)
+    have bSuc: "b (Suc n) = (let (x,r) = b n in (nextx r x n, nextr r x n))" for n
+      by (simp add: b_def)
+    define xf where "xf \<equiv> fst \<circ> b"
+    define rf where "rf \<equiv> snd \<circ> b"
+    have DD: "0 < rf n \<and> xf n \<in> M" for n
+    proof (induction n)
+      case 0
+      with \<open>0 < r0\<close> \<open>x0 \<in> M\<close> show ?case 
+        by (auto simp: rf_def xf_def)
+    next
+      case (Suc n)
+      then show ?case
+        by (auto simp: rf_def xf_def bSuc case_prod_unfold nextr nextx Let_def)
+    qed
+    have E: "mcball (xf (Suc n)) (rf (Suc n)) \<subseteq> mball (xf n) (rf n) \<inter> u n" for n
+      using DD nextsub by (auto simp: xf_def rf_def bSuc case_prod_unfold Let_def)
+    have F: "rf (Suc n) < rf n / 2" for n
+      using DD nextr by (auto simp: xf_def rf_def bSuc case_prod_unfold Let_def)
+    then have "decseq rf"
+      using DD by (smt (verit, ccfv_threshold) decseq_SucI field_sum_of_halves)
+    have "rf n < inverse (2 ^ n)" for n
+    proof (induction n)
+      case 0
+      then show ?case
+        by (simp add: \<open>r0 < 1\<close> rf_def)
+    next
+      case (Suc n)
+      with F show ?case
+        by simp (smt (verit))
+    qed
     show ?thesis
       sorry
   qed
@@ -2144,114 +2180,6 @@ qed auto
 
   oops
 
- 
-  (DESTRUCT_TAC "@b. b0 b1" \<circ> prove_general_recursive_function_exists)
-    `\<exists>b::num->(A#real).
-       b 0 = (x0,r0) \<and>
-       (\<forall>n. b (Suc n) =
-            @(x,r). 0 < r \<and> r < snd (b n) / 2 \<and> x \<in> M \<and>
-                    mcball x r \<subseteq> mball m (b n) \<inter> u n)` THEN
-
-
-
-  CLAIM_TAC "rmk"
-    `\<forall>n. (\ (x::A,r). 0 < r \<and> r < snd (b n) / 2 \<and> x \<in> M \<and>
-                   mcball x r \<subseteq> mball m (b n) \<inter> u n)
-         (b (Suc n))` THENL
-  [LABEL_INDUCT_TAC THENL
-   [REMOVE_THEN "b1" (fun b1 -> REWRITE_TAC[b1]) THEN
-    MATCH_MP_TAC CHOICE_PAIRED_THM THEN
-    REMOVE_THEN "b0" (fun b0 -> REWRITE_TAC[b0]) THEN
-    MAP_EVERY EXISTS_TAC [`x0::A`; `r0 / 4`] THEN
-    CONJ_TAC THENL [ASM_REAL_ARITH_TAC; ALL_TAC] THEN
-    CONJ_TAC THENL [ASM_REAL_ARITH_TAC; ALL_TAC] THEN
-    CONJ_TAC THENL
-    [CUT_TAC `u 0::A=>bool \<subseteq> M` THENL
-     [HYP SET_TAC "x0" [];
-      HYP SIMP_TAC "u_open" [GSYM TOPSPACE_MTOPOLOGY; OPEN_IN_SUBSET]];
-     ALL_TAC] THEN
-    TRANS_TAC SUBSET_TRANS `mball m (x0::A,r0)` THEN CONJ_TAC THENL
-    [MATCH_MP_TAC MCBALL_SUBSET_MBALL_CONCENTRIC THEN ASM_REAL_ARITH_TAC;
-     REWRITE_TAC[SUBSET_INTER; SUBSET_REFL] THEN
-     TRANS_TAC SUBSET_TRANS `mcball m (x0::A,r0)` THEN
-     REWRITE_TAC [MBALL_SUBSET_MCBALL] THEN HYP SET_TAC "sub" []];
-    ALL_TAC] THEN
-
-   USE_THEN "b1" (fun b1 -> GEN_REWRITE_TAC RAND_CONV [b1]) THEN
-   MATCH_MP_TAC CHOICE_PAIRED_THM THEN REWRITE_TAC[] THEN
-   HYP_TAC "ind_n: rpos rlt x subn" (REWRITE_RULE[LAMBDA_PAIR]) THEN
-   USE_THEN "u_dense" (MP_TAC \<circ> SPEC `Suc n` \<circ>
-     REWRITE_RULE[GSYM TOPSPACE_MTOPOLOGY]) THEN
-   REWRITE_TAC[DENSE_INTERSECTS_OPEN] THEN
-   DISCH_THEN (MP_TAC \<circ> SPEC `mball m (b (Suc n):A#real)`) THEN
-   (DESTRUCT_TAC "@x1 r1. bsuc" \<circ> MESON[PAIR])
-     `\<exists>x1::A r1::real. b (Suc n) = x1,r1` THEN
-   HYP REWRITE_TAC "bsuc" [] THEN
-   REMOVE_THEN "bsuc"
-    (fun th -> RULE_ASSUM_TAC (REWRITE_RULE[th]) THEN LABEL_TAC "bsuc" th) THEN
-   ANTS_TAC THENL
-   [HYP REWRITE_TAC "x" [OPEN_IN_MBALL; MBALL_EQ_EMPTY; DE_MORGAN_THM] THEN
-    ASM_REAL_ARITH_TAC; ALL_TAC] THEN
-   REWRITE_TAC[GSYM MEMBER_NOT_EMPTY] THEN INTRO_TAC "@z. hp" THEN
-   EXISTS_TAC `z::A` THEN
-   SUBGOAL_THEN `openin mtopology (mball m (x1::A,r1) \<inter> u (Suc n))`
-     (DESTRUCT_TAC "hp1 hp2" \<circ> REWRITE_RULE[OPEN_IN_MTOPOLOGY_MCBALL]) THENL
-   [HYP SIMP_TAC "u_open" [OPEN_IN_INTER; OPEN_IN_MBALL]; ALL_TAC] THEN
-   CLAIM_TAC "z" `z::A \<in> M` THENL
-   [CUT_TAC `u (Suc n):A=>bool \<subseteq> M` THENL
-    [HYP SET_TAC "hp" [];
-     HYP SIMP_TAC "u_open" [GSYM TOPSPACE_MTOPOLOGY; OPEN_IN_SUBSET]];
-    HYP REWRITE_TAC "z" []] THEN
-   REMOVE_THEN "hp2" (MP_TAC \<circ> SPEC `z::A`) THEN
-   ANTS_TAC THENL [HYP SET_TAC "hp" []; ALL_TAC] THEN
-   INTRO_TAC "@r. rpos ball" THEN EXISTS_TAC `min r (r1 / 4)` THEN
-   CONJ_TAC THENL [ASM_REAL_ARITH_TAC; ALL_TAC] THEN
-   CONJ_TAC THENL [ASM_REAL_ARITH_TAC; ALL_TAC] THEN
-   TRANS_TAC SUBSET_TRANS `mcball m (z::A,r)` THEN
-   HYP SIMP_TAC "ball" [MCBALL_SUBSET_CONCENTRIC; REAL_MIN_MIN];
-   ALL_TAC] THEN
-
-
-
-  CLAIM_TAC "@x r. b" `\<exists>x r. \<forall>n::num. b n = x n::A, r n::real` THENL
-  [MAP_EVERY EXISTS_TAC
-     [`fst \<circ> (b::num=>A#real)`; `snd \<circ> (b::num=>A#real)`] THEN
-   REWRITE_TAC[o_DEF]; ALL_TAC] THEN
-  REMOVE_THEN "b"
-    (fun b -> RULE_ASSUM_TAC (REWRITE_RULE[b]) THEN LABEL_TAC "b" b) THEN
-  HYP_TAC "b0: x_0 r_0" (REWRITE_RULE[PAIR_EQ]) THEN
-  REMOVE_THEN "x_0" (SUBST_ALL_TAC \<circ> GSYM) THEN
-  REMOVE_THEN "r_0" (SUBST_ALL_TAC \<circ> GSYM) THEN
-  HYP_TAC "rmk: r1pos r1lt x1 ball" (REWRITE_RULE[FORALL_AND_THM]) THEN
-  CLAIM_TAC "x" `\<forall>n::num. x n::A \<in> M` THENL
-  [LABEL_INDUCT_TAC THENL
-   [CUT_TAC `u 0::A=>bool \<subseteq> M` THENL
-    [HYP SET_TAC "x0" [];
-     HYP SIMP_TAC "u_open" [GSYM TOPSPACE_MTOPOLOGY; OPEN_IN_SUBSET]];
-    HYP REWRITE_TAC "x1" []];
-   ALL_TAC] THEN
-
-  CLAIM_TAC "rpos" `\<forall>n::num. 0 < r n` THENL
-  [LABEL_INDUCT_TAC THENL
-   [HYP REWRITE_TAC "r0pos" []; HYP REWRITE_TAC "r1pos" []];
-   ALL_TAC] THEN
-
-  CLAIM_TAC "rmono" `\<forall>p q::num. p \<le> q \<Longrightarrow> r q \<le> r p` THENL
-  [MATCH_MP_TAC LE_INDUCT THEN REWRITE_TAC[REAL_LE_REFL] THEN
-   INTRO_TAC "!p q; pq rpq" THEN
-   REMOVE_THEN "r1lt" (MP_TAC \<circ> SPEC `q::num`) THEN
-   REMOVE_THEN "rpos" (MP_TAC \<circ> SPEC `q::num`) THEN
-   ASM_REAL_ARITH_TAC;
-   ALL_TAC] THEN
-
-
-  CLAIM_TAC "rlt" `\<forall>n::num. r n < inverse (2 ^ n)` THENL
-  [LABEL_INDUCT_TAC THENL
-   [CONV_TAC (RAND_CONV REAL_RAT_REDUCE_CONV) THEN HYP REWRITE_TAC "r0lt1" [];
-    TRANS_TAC REAL_LTE_TRANS `r (n::num) / 2` THEN
-    HYP REWRITE_TAC "r1lt" [real_pow] THEN REMOVE_THEN "ind_n" MP_TAC THEN
-    REMOVE_THEN "rpos" (MP_TAC \<circ> SPEC `n::num`) THEN CONV_TAC REAL_FIELD];
-   ALL_TAC] THEN
 
   CLAIM_TAC "nested"
     `\<forall>p q::num. p \<le> q \<Longrightarrow> mball m (x q::A, r q) \<subseteq> mball m (x p, r p)` THENL
