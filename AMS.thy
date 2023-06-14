@@ -2080,46 +2080,80 @@ qed
 
 subsection\<open> The Baire Category Theorem                                                \<close>
 
+lemma (in Metric_space) metric_Baire_category:
+  assumes "mcomplete" "countable \<G>"
+  and "\<And>T. T \<in> \<G> \<Longrightarrow> openin mtopology T \<and> mtopology closure_of T = M"
+shows "mtopology closure_of \<Inter>\<G> = M"
+proof (cases "\<G>={}")
+  case False
+  then obtain u :: "nat \<Rightarrow> 'a set" where u: "range u = \<G>"
+    by (metis \<open>countable \<G>\<close> uncountable_def)
+  with assms have u_open: "\<And>n. openin mtopology (u n)" and u_dense: "\<And>n. mtopology closure_of (u n) = M"
+    by auto
+  have "\<Inter>(range u) \<inter> W \<noteq> {}" if W: "openin mtopology W" "W \<noteq> {}" for W
+  proof -
+    have "\<exists>r' x'. 0 < r' \<and> r' < r/2 \<and> x' \<in> M \<and> mcball x' r' \<subseteq> mball x r \<inter> u n" 
+      if "r>0" "x \<in> M" for x r n
+    proof -
+      obtain z where z: "z \<in> u n \<inter> mball x r"
+        using u_dense [of n] \<open>r>0\<close> \<open>x \<in> M\<close>
+        by (metis dense_intersects_open centre_in_mball_iff empty_iff openin_mball topspace_mtopology equals0I)
+      then have "z \<in> M" by auto
+      have "openin mtopology (u n \<inter> mball x r)"
+        by (simp add: openin_Int u_open)
+      with \<open>z \<in> M\<close> z obtain e where "e>0" and e: "mcball z e \<subseteq> u n \<inter> mball x r"
+        by (meson openin_mtopology_mcball)
+      define r' where "r' \<equiv> min e (r/4)"
+      show ?thesis
+      proof (intro exI conjI)
+        show "0 < r'" "r' < r / 2" "z \<in> M"
+          using \<open>e>0\<close> \<open>r>0\<close> \<open>z \<in> M\<close> by (auto simp: r'_def)
+        show "mcball z r' \<subseteq> mball x r \<inter> u n"
+          using Metric_space.mcball_subset_concentric e r'_def by auto
+      qed
+    qed
+    then obtain nextr nextx 
+      where nextr: "\<And>r x n. \<lbrakk>r>0; x\<in>M\<rbrakk> \<Longrightarrow> 0 < nextr r x n \<and> nextr r x n < r/2"
+        and nextx: "\<And>r x n. \<lbrakk>r>0; x\<in>M\<rbrakk> \<Longrightarrow> nextx r x n \<in> M"
+        and nextsub: "\<And>r x n. \<lbrakk>r>0; x\<in>M\<rbrakk> \<Longrightarrow> mcball (nextx r x n) (nextr r x n) \<subseteq> mball x r \<inter> u n"
+      by metis
+    obtain x0 where x0: "x0 \<in> u 0 \<inter> W"
+      by (metis W dense_intersects_open topspace_mtopology all_not_in_conv u_dense)
+    obtain r0 where "0 < r0" "r0 < 1" "mcball x0 r0 \<subseteq> u 0 \<inter> W"
+    proof -
+      have "openin mtopology (u 0 \<inter> W)"
+        using W u_open by blast
+      then obtain r where "r>0" and r: "mball x0 r \<subseteq> u 0" "mball x0 r \<subseteq> W"
+        by (meson Int_subset_iff openin_mtopology x0)
+      define r0 where "r0 \<equiv> (min r 1) / 2"
+      show thesis
+      proof
+        show "0 < r0" "r0 < 1"
+          using \<open>r>0\<close> by (auto simp: r0_def)
+        show "mcball x0 r0 \<subseteq> u 0 \<inter> W"
+          using r \<open>0 < r0\<close> r0_def by auto
+      qed
+    qed
+    show ?thesis
+      sorry
+  qed
+  with u show ?thesis
+    by (metis dense_intersects_open topspace_mtopology)
+qed auto
 
-lemma metric_baire_category:
-   "mcomplete \<and>
-     countable g \<and>
-     (\<forall>t. t \<in> g \<Longrightarrow> openin mtopology t \<and>
-                     mtopology closure_of t = M)
-     \<Longrightarrow> mtopology closure_of \<Inter> g = M"
-oops
-  REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN INTRO_TAC "!m; m" THEN
-  REWRITE_TAC[FORALL_COUNTABLE_AS_IMAGE; NOT_IN_EMPTY; CLOSURE_OF_UNIV;
-  INTERS_0; TOPSPACE_MTOPOLOGY; FORALL_IN_IMAGE; IN_UNIV; FORALL_AND_THM] THEN
-  INTRO_TAC "![u]; u_open u_dense" THEN
-  REWRITE_TAC[GSYM TOPSPACE_MTOPOLOGY] THEN
-  REWRITE_TAC[DENSE_INTERSECTS_OPEN] THEN
-  INTRO_TAC "![w]; w_open w_ne" THEN
-  REWRITE_TAC[GSYM MEMBER_NOT_EMPTY] THEN
-  CLAIM_TAC "@x0. x0" `\<exists>x0::A. x0 \<in> u 0 \<inter> w` THENL
-  [REWRITE_TAC[MEMBER_NOT_EMPTY] THEN
-   ASM_MESON_TAC[DENSE_INTERSECTS_OPEN; TOPSPACE_MTOPOLOGY];
-   ALL_TAC] THEN
-  CLAIM_TAC "@r0. r0pos r0lt1 sub"
-    `\<exists>r. 0 < r \<and> r < 1 \<and> mcball m (x0::A,r) \<subseteq> u 0 \<inter> w` THENL
-  [SUBGOAL_THEN `openin mtopology (u 0 \<inter> w::A=>bool)` MP_TAC THENL
-   [HYP SIMP_TAC "u_open w_open" [OPEN_IN_INTER]; ALL_TAC] THEN
-   REWRITE_TAC[OPEN_IN_MTOPOLOGY] THEN INTRO_TAC "u0w hp" THEN
-   REMOVE_THEN "hp" (MP_TAC \<circ> SPEC `x0::A`) THEN
-   ANTS_TAC THENL [HYP REWRITE_TAC "x0" []; ALL_TAC] THEN
-   INTRO_TAC "@r. rpos ball" THEN EXISTS_TAC `min r 1/2` THEN
-   CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-   CONJ_TAC THENL [REAL_ARITH_TAC; ALL_TAC] THEN
-   TRANS_TAC SUBSET_TRANS `mball m (x0::A,r)` THEN
-   HYP REWRITE_TAC "ball" [] THEN
-   MATCH_MP_TAC MCBALL_SUBSET_MBALL_CONCENTRIC THEN
-   ASM_REAL_ARITH_TAC; ALL_TAC] THEN
+
+  oops
+
+ 
   (DESTRUCT_TAC "@b. b0 b1" \<circ> prove_general_recursive_function_exists)
     `\<exists>b::num->(A#real).
-       b 0 = (x0::A,r0) \<and>
+       b 0 = (x0,r0) \<and>
        (\<forall>n. b (Suc n) =
             @(x,r). 0 < r \<and> r < snd (b n) / 2 \<and> x \<in> M \<and>
                     mcball x r \<subseteq> mball m (b n) \<inter> u n)` THEN
+
+
+
   CLAIM_TAC "rmk"
     `\<forall>n. (\ (x::A,r). 0 < r \<and> r < snd (b n) / 2 \<and> x \<in> M \<and>
                    mcball x r \<subseteq> mball m (b n) \<inter> u n)
@@ -2142,6 +2176,7 @@ oops
      TRANS_TAC SUBSET_TRANS `mcball m (x0::A,r0)` THEN
      REWRITE_TAC [MBALL_SUBSET_MCBALL] THEN HYP SET_TAC "sub" []];
     ALL_TAC] THEN
+
    USE_THEN "b1" (fun b1 -> GEN_REWRITE_TAC RAND_CONV [b1]) THEN
    MATCH_MP_TAC CHOICE_PAIRED_THM THEN REWRITE_TAC[] THEN
    HYP_TAC "ind_n: rpos rlt x subn" (REWRITE_RULE[LAMBDA_PAIR]) THEN
@@ -2175,6 +2210,9 @@ oops
    TRANS_TAC SUBSET_TRANS `mcball m (z::A,r)` THEN
    HYP SIMP_TAC "ball" [MCBALL_SUBSET_CONCENTRIC; REAL_MIN_MIN];
    ALL_TAC] THEN
+
+
+
   CLAIM_TAC "@x r. b" `\<exists>x r. \<forall>n::num. b n = x n::A, r n::real` THENL
   [MAP_EVERY EXISTS_TAC
      [`fst \<circ> (b::num=>A#real)`; `snd \<circ> (b::num=>A#real)`] THEN
@@ -2192,10 +2230,12 @@ oops
      HYP SIMP_TAC "u_open" [GSYM TOPSPACE_MTOPOLOGY; OPEN_IN_SUBSET]];
     HYP REWRITE_TAC "x1" []];
    ALL_TAC] THEN
+
   CLAIM_TAC "rpos" `\<forall>n::num. 0 < r n` THENL
   [LABEL_INDUCT_TAC THENL
    [HYP REWRITE_TAC "r0pos" []; HYP REWRITE_TAC "r1pos" []];
    ALL_TAC] THEN
+
   CLAIM_TAC "rmono" `\<forall>p q::num. p \<le> q \<Longrightarrow> r q \<le> r p` THENL
   [MATCH_MP_TAC LE_INDUCT THEN REWRITE_TAC[REAL_LE_REFL] THEN
    INTRO_TAC "!p q; pq rpq" THEN
@@ -2203,6 +2243,8 @@ oops
    REMOVE_THEN "rpos" (MP_TAC \<circ> SPEC `q::num`) THEN
    ASM_REAL_ARITH_TAC;
    ALL_TAC] THEN
+
+
   CLAIM_TAC "rlt" `\<forall>n::num. r n < inverse (2 ^ n)` THENL
   [LABEL_INDUCT_TAC THENL
    [CONV_TAC (RAND_CONV REAL_RAT_REDUCE_CONV) THEN HYP REWRITE_TAC "r0lt1" [];
@@ -2210,6 +2252,7 @@ oops
     HYP REWRITE_TAC "r1lt" [real_pow] THEN REMOVE_THEN "ind_n" MP_TAC THEN
     REMOVE_THEN "rpos" (MP_TAC \<circ> SPEC `n::num`) THEN CONV_TAC REAL_FIELD];
    ALL_TAC] THEN
+
   CLAIM_TAC "nested"
     `\<forall>p q::num. p \<le> q \<Longrightarrow> mball m (x q::A, r q) \<subseteq> mball m (x p, r p)` THENL
   [MATCH_MP_TAC LE_INDUCT THEN REWRITE_TAC[SUBSET_REFL] THEN
@@ -2219,10 +2262,12 @@ oops
    TRANS_TAC SUBSET_TRANS `mcball m (x (Suc q):A,r(Suc q))` THEN
    REWRITE_TAC[MBALL_SUBSET_MCBALL] THEN HYP SET_TAC "ball" [];
    ALL_TAC] THEN
+
   CLAIM_TAC "in_ball" `\<forall>p q::num. p \<le> q \<Longrightarrow> x q::A \<in> mball m (x p, r p)` THENL
   [INTRO_TAC "!p q; le" THEN CUT_TAC `x (q::num):A \<in> mball m (x q, r q)` THENL
    [HYP SET_TAC "nested le" []; HYP SIMP_TAC "x rpos" [CENTRE_IN_MBALL_EQ]];
    ALL_TAC] THEN
+
   CLAIM_TAC "@l. l" `\<exists>l::A. limitin mtopology x l sequentially` THENL
   [HYP_TAC "m" (REWRITE_RULE[mcomplete]) THEN REMOVE_THEN "m" MATCH_MP_TAC THEN
    HYP REWRITE_TAC "x" [MCauchy] THEN INTRO_TAC "!e; epos" THEN
@@ -2241,6 +2286,7 @@ oops
     HYP SIMP_TAC "n rmono hp" [];
     HYP SIMP_TAC "in_ball le" []];
    ALL_TAC] THEN
+
   EXISTS_TAC `l::A` THEN
   CLAIM_TAC "in_mcball" `\<forall>n::num. l::A \<in> mcball m (x n, r n)` THENL
   [GEN_TAC THEN
@@ -2251,11 +2297,14 @@ oops
    INTRO_TAC "![p]; p" THEN CUT_TAC `x (p::num):A \<in> mball m (x n, r n)` THENL
    [SET_TAC[MBALL_SUBSET_MCBALL]; HYP SIMP_TAC "in_ball p" []];
    ALL_TAC] THEN
+
   REWRITE_TAC[IN_INTER] THEN CONJ_TAC THENL
   [REWRITE_TAC[IN_INTERS; FORALL_IN_IMAGE; IN_UNIV] THEN
    LABEL_INDUCT_TAC THENL
    [HYP SET_TAC "in_mcball sub " []; HYP SET_TAC "in_mcball ball " []];
    HYP SET_TAC "sub in_mcball" []]);;
+
+
 
 lemma metric_baire_category_alt:
    "\<And>m g:(A=>bool)->bool.
