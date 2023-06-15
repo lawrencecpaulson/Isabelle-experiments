@@ -2252,66 +2252,63 @@ text \<open>Since all locally compact Hausdorff spaces are regular, the disjunct
 lemma Baire_category_aux:
   assumes "locally_compact_space X" "regular_space X" 
     and "countable \<G>"
-    and empty: "\<And>T. T \<in> \<G> \<Longrightarrow> closedin X T \<and> X interior_of T = {}"
+    and empty: "\<And>G. G \<in> \<G> \<Longrightarrow> closedin X G \<and> X interior_of G = {}"
   shows "X interior_of \<Union>\<G> = {}"
-  sorry
+proof (cases "\<G> = {}")
+  case True
+  then show ?thesis
+    by simp
+next
+  case False
+  then obtain T :: "nat \<Rightarrow> 'a set" where T: "\<G> = range T"
+    by (metis \<open>countable \<G>\<close> uncountable_def)
+  with empty have Tempty: "\<And>n. X interior_of (T n) = {}"
+    by auto
 
+  show ?thesis
+  proof (clarsimp simp: T interior_of_def)
+    fix z U
+    assume "z \<in> U" and opeA: "openin X U" and Asub: "U \<subseteq> \<Union> (range T)"
+    with openin_subset have "z \<in> topspace X"
+      by blast
+    have "neighbourhood_base_of (\<lambda>C. compactin X C \<and> closedin X C) X"
+      using assms locally_compact_regular_space_neighbourhood_base by auto
+    then obtain V K where "openin X V" "compactin X K" "closedin X K" "z \<in> V" "V \<subseteq> K" "K \<subseteq> U"
+      by (metis (no_types, lifting) \<open>z \<in> U\<close> neighbourhood_base_of opeA)
+    obtain a where "a \<subseteq> K" "closedin X a" and a_ne: "X interior_of a \<noteq> {}" 
+              and dis_aT: "disjnt a (T 0)"
+    proof -
+      have nb: "neighbourhood_base_of (closedin X) X"
+        using assms(2) neighbourhood_base_of_closedin by auto
+      have False if "V \<subseteq> T 0"
+        using Tempty \<open>openin X V\<close> \<open>z \<in> V\<close> interior_of_maximal that by fastforce
+      then obtain x where "openin X (V - T 0) \<and> x \<in> V - T 0"
+        using T \<open>openin X V\<close> empty by blast
+      with nb obtain N C where "openin X N" "closedin X C" "x \<in> N" "N \<subseteq> C" "C \<subseteq> V - T 0"
+        unfolding neighbourhood_base_of by metis
+      show thesis
+      proof
+        show "C \<subseteq> K"
+          using \<open>C \<subseteq> V - T 0\<close> \<open>V \<subseteq> K\<close> by auto
+        show "X interior_of C \<noteq> {}"
+          by (metis \<open>N \<subseteq> C\<close> \<open>openin X N\<close> \<open>x \<in> N\<close> empty_iff interior_of_eq_empty)
+        show "disjnt C (T 0)"
+          using \<open>C \<subseteq> V - T 0\<close> disjnt_iff by fastforce
+      qed (use \<open>closedin X C\<close> in auto)
+    qed
+    show False
+      using locally_compact_space_neighbourhood_base_closedin
+      sorry
+  qed
+qed
 
 oops
-  REWRITE_TAC[TAUT `(p \<or> q) \<and> r \<Longrightarrow> s \<longleftrightarrow>
-                    (p \<Longrightarrow> r \<Longrightarrow> s) \<and> (q \<and> r \<Longrightarrow> s)`] THEN
-  REWRITE_TAC[FORALL_AND_THM; RIGHT_FORALL_IMP_THM] THEN
-  REWRITE_TAC[GSYM FORALL_MCOMPLETE_TOPOLOGY] THEN
-  SIMP_TAC[METRIC_BAIRE_CATEGORY_ALT] THEN REPEAT GEN_TAC THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP (TAUT `(p \<or> q) \<Longrightarrow> (p \<Longrightarrow> q) \<Longrightarrow> q`)) THEN
-  ANTS_TAC THENL
-   [ASM_MESON_TAC[LOCALLY_COMPACT_HAUSDORFF_IMP_REGULAR_SPACE]; DISCH_TAC] THEN
-  ASM_CASES_TAC `g:(A=>bool)->bool = {}` THEN
-  ASM_REWRITE_TAC[UNIONS_0; INTERIOR_OF_EMPTY] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ]
-        COUNTABLE_AS_IMAGE)) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `t::num=>A->bool` THEN DISCH_THEN SUBST_ALL_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [FORALL_IN_IMAGE]) THEN
-  REWRITE_TAC[IN_UNIV; FORALL_AND_THM] THEN STRIP_TAC THEN
-  REWRITE_TAC[interior_of; EXTENSION; IN_ELIM_THM; NOT_IN_EMPTY] THEN
-  X_GEN_TAC `z::A` THEN
-  DISCH_THEN(X_CHOOSE_THEN `u::A=>bool` STRIP_ASSUME_TAC) THEN
-  MP_TAC(ISPEC `X::A topology`
-        LOCALLY_COMPACT_SPACE_NEIGHBOURHOOD_BASE_CLOSED_IN) THEN
-  ASM_REWRITE_TAC[NEIGHBOURHOOD_BASE_OF] THEN
-  FIRST_ASSUM(MP_TAC \<circ> SPEC `z::A` \<circ> REWRITE_RULE[\<subseteq>] \<circ> MATCH_MP
-    OPEN_IN_SUBSET) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
-  DISCH_THEN(MP_TAC \<circ> SPECL [`u::A=>bool`; `z::A`]) THEN
-  ASM_REWRITE_TAC[NOT_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`v::A=>bool`; `k::A=>bool`] THEN STRIP_TAC THEN
   SUBGOAL_THEN
    `\<exists>c::num=>A->bool.
         (\<forall>n. c n \<subseteq> k \<and> closedin X (c n) \<and>
-             \<not> (X interior_of c n = {}) \<and> disjnt (c n) (t n)) \<and>
+             X interior_of c n \<noteq> {} \<and> disjnt (c n) (T n)) \<and>
         (\<forall>n. c (Suc n) \<subseteq> c n)`
-  MP_TAC THENL
-   [MATCH_MP_TAC DEPENDENT_CHOICE THEN CONJ_TAC THENL
-     [FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id
-       [GSYM NEIGHBOURHOOD_BASE_OF_CLOSED_IN]) THEN
-      REWRITE_TAC[NEIGHBOURHOOD_BASE_OF] THEN
-      DISCH_THEN(MP_TAC \<circ> SPEC `v - (t::num=>A->bool) 0`) THEN
-      ASM_SIMP_TAC[OPEN_IN_DIFF] THEN
-      DISCH_THEN(MP_TAC \<circ> MATCH_MP MONO_EXISTS) THEN ANTS_TAC THENL
-       [REWRITE_TAC[SET_RULE `(\<exists>x. x \<in> s - t) \<longleftrightarrow> \<not> (s \<subseteq> t)`] THEN
-        DISCH_TAC THEN
-        SUBGOAL_THEN `X interior_of (t::num=>A->bool) 0 = {}` MP_TAC THENL
-         [ASM_REWRITE_TAC[]; REWRITE_TAC[interior_of]] THEN
-        REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; IN_ELIM_THM] THEN ASM_MESON_TAC[];
-        REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-        MAP_EVERY X_GEN_TAC [`x::A`; `n::A=>bool`; `c::A=>bool`] THEN
-        STRIP_TAC THEN EXISTS_TAC `c::A=>bool` THEN
-        ASM_REWRITE_TAC[GSYM MEMBER_NOT_EMPTY] THEN
-        REPEAT CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC; ASM SET_TAC[]] THEN
-        EXISTS_TAC `x::A` THEN REWRITE_TAC[interior_of; IN_ELIM_THM] THEN
-        ASM_MESON_TAC[]];
+
       MAP_EVERY X_GEN_TAC [`n::num`; `c::A=>bool`] THEN STRIP_TAC THEN
       FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id
        [GSYM NEIGHBOURHOOD_BASE_OF_CLOSED_IN]) THEN
@@ -2337,6 +2334,7 @@ oops
           ASM SET_TAC[];
           MP_TAC(ISPECL[`X::A topology`; `c::A=>bool`] INTERIOR_OF_SUBSET) THEN
           ASM SET_TAC[]]]];
+
     REWRITE_TAC[NOT_EXISTS_THM; FORALL_AND_THM]] THEN
   X_GEN_TAC `c::num=>A->bool` THEN STRIP_TAC THEN
   MP_TAC(ISPECL [`subtopology X (k::A=>bool)`; `c::num=>A->bool`]
