@@ -2079,6 +2079,8 @@ qed
 
 subsection\<open> The Baire Category Theorem\<close>
 
+text \<open>Possibly relevant to the theorem "Baire" in Elementary Normed Spaces\<close>
+
 lemma (in Metric_space) metric_Baire_category:
   assumes "mcomplete" "countable \<G>"
   and "\<And>T. T \<in> \<G> \<Longrightarrow> openin mtopology T \<and> mtopology closure_of T = M"
@@ -2245,14 +2247,14 @@ proof -
     by (fastforce simp add: interior_of_closure_of split: if_split_asm)
 qed
 
+lemma Baire_category_aux:
+  assumes comp: "locally_compact_space X \<and> (Hausdorff_space X \<or> regular_space X)" 
+    and "countable \<G>"
+    and empty: "\<And>T. T \<in> \<G> \<Longrightarrow> closedin X T \<and> X interior_of T = {}"
+  shows "X interior_of \<Union>\<G> = {}"
+  sorry
 
-lemma Baire_category_alt:
-   " (completely_metrizable_space X \<or>
-         locally_compact_space X \<and>
-         (Hausdorff_space X \<or> regular_space X)) \<and>
-        countable g \<and>
-        (\<forall>t. t \<in> g \<Longrightarrow> closedin X t \<and> X interior_of t = {})
-        \<Longrightarrow> X interior_of (\<Union>g) = {}"
+
 oops
   REWRITE_TAC[TAUT `(p \<or> q) \<and> r \<Longrightarrow> s \<longleftrightarrow>
                     (p \<Longrightarrow> r \<Longrightarrow> s) \<and> (q \<and> r \<Longrightarrow> s)`] THEN
@@ -2346,40 +2348,38 @@ oops
     REWRITE_TAC[INTERS_GSPEC] THEN ASM SET_TAC[]]);;
 
 
+lemma Baire_category_alt:
+  assumes "completely_metrizable_space X \<or> locally_compact_space X \<and> (Hausdorff_space X \<or> regular_space X)" 
+    and "countable \<G>"
+    and "\<And>T. T \<in> \<G> \<Longrightarrow> closedin X T \<and> X interior_of T = {}"
+  shows "X interior_of \<Union>\<G> = {}"
+  using Baire_category_aux [of X \<G>] Metric_space.metric_Baire_category_alt
+  by (metis assms completely_metrizable_space_def)
+
+
 lemma Baire_category:
-   "\<And>X g:(A=>bool)->bool.
-        (completely_metrizable_space X \<or>
-         locally_compact_space X \<and>
-         (Hausdorff_space X \<or> regular_space X)) \<and>
-        countable g \<and>
-        (\<forall>t. t \<in> g \<Longrightarrow> openin X t \<and> X closure_of t = topspace X)
-        \<Longrightarrow> X closure_of \<Inter> g = topspace X"
-oops
-  REPEAT GEN_TAC THEN DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  ASM_CASES_TAC `g:(A=>bool)->bool = {}` THENL
-   [ONCE_REWRITE_TAC[CLOSURE_OF_RESTRICT] THEN
-    ASM_SIMP_TAC[INTERS_0; INTER_UNIV; CLOSURE_OF_TOPSPACE];
-    ALL_TAC] THEN
-  MP_TAC(ISPECL [`X::A topology`;
-                 `image (\<lambda>u::A=>bool. topspace X - u) g`]
-        BAIRE_CATEGORY_ALT) THEN
-  ASM_SIMP_TAC[COUNTABLE_IMAGE; FORALL_IN_IMAGE] THEN
-  ASM_SIMP_TAC[CLOSED_IN_DIFF; CLOSED_IN_TOPSPACE] THEN
-  ASM_SIMP_TAC[INTERIOR_OF_COMPLEMENT; DIFF_EQ_EMPTY] THEN
-  REWRITE_TAC[INTERIOR_OF_CLOSURE_OF] THEN
-  MATCH_MP_TAC(SET_RULE
-    `s \<subseteq> u \<and> s' = s \<Longrightarrow> u - s' = {} \<Longrightarrow> s = u`) THEN
-  REWRITE_TAC[CLOSURE_OF_SUBSET_TOPSPACE] THEN AP_TERM_TAC THEN
-  REWRITE_TAC[DIFF_UNIONS; SET_RULE
-   `{f y | y \<in> g ` s} = {f(g x) | x \<in> s}`] THEN
-  MATCH_MP_TAC(SET_RULE `t \<subseteq> u \<and> s = t \<Longrightarrow> u \<inter> s = t`) THEN
-  CONJ_TAC THENL [ASM_MESON_TAC[INTERS_SUBSET; OPEN_IN_SUBSET]; ALL_TAC] THEN
-  AP_TERM_TAC THEN MATCH_MP_TAC(SET_RULE
-   `(\<forall>x. x \<in> s \<Longrightarrow> f x = x) \<Longrightarrow> {f x | x \<in> s} = s`) THEN
-  X_GEN_TAC `s::A=>bool` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `s::A=>bool`) THEN
-  ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET) THEN SET_TAC[]);;
+  assumes "completely_metrizable_space X \<or> locally_compact_space X \<and> (Hausdorff_space X \<or> regular_space X)" 
+    and "countable \<G>"
+    and top: "\<And>T. T \<in> \<G> \<Longrightarrow> openin X T \<and> X closure_of T = topspace X"
+  shows "X closure_of \<Inter>\<G> = topspace X"
+proof (cases "\<G>={}")
+  case False
+  have *: "X interior_of \<Union>((-)(topspace X) ` \<G>) = {}"
+    proof (intro Baire_category_alt conjI assms)
+  show "countable ((-) (topspace X) ` \<G>)"
+    using assms by blast
+    fix T
+    assume "T \<in> (-) (topspace X) ` \<G>"
+    then obtain U where U: "U \<in> \<G>" "T = (topspace X) - U" "U \<subseteq> (topspace X)"
+      by (meson top image_iff openin_subset)
+    then show "closedin X T"
+      by (simp add: closedin_diff top)
+    show "X interior_of T = {}"
+      using U top by (simp add: interior_of_closure_of double_diff)
+  qed
+  then show ?thesis
+    by (simp add: closure_of_eq_topspace interior_of_complement)
+qed auto
 
 
 subsection\<open>Sierpinski-Hausdorff type results about countable closed unions\<close>
