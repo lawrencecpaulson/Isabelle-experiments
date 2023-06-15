@@ -2247,8 +2247,10 @@ proof -
     by (fastforce simp add: interior_of_closure_of split: if_split_asm)
 qed
 
+
+text \<open>Since all locally compact Hausdorff spaces are regular, the disjunction in the HOL Light version is redundant.\<close>
 lemma Baire_category_aux:
-  assumes comp: "locally_compact_space X \<and> (Hausdorff_space X \<or> regular_space X)" 
+  assumes "locally_compact_space X" "regular_space X" 
     and "countable \<G>"
     and empty: "\<And>T. T \<in> \<G> \<Longrightarrow> closedin X T \<and> X interior_of T = {}"
   shows "X interior_of \<Union>\<G> = {}"
@@ -2349,7 +2351,7 @@ oops
 
 
 lemma Baire_category_alt:
-  assumes "completely_metrizable_space X \<or> locally_compact_space X \<and> (Hausdorff_space X \<or> regular_space X)" 
+  assumes "completely_metrizable_space X \<or> locally_compact_space X \<and> regular_space X" 
     and "countable \<G>"
     and "\<And>T. T \<in> \<G> \<Longrightarrow> closedin X T \<and> X interior_of T = {}"
   shows "X interior_of \<Union>\<G> = {}"
@@ -2358,7 +2360,7 @@ lemma Baire_category_alt:
 
 
 lemma Baire_category:
-  assumes "completely_metrizable_space X \<or> locally_compact_space X \<and> (Hausdorff_space X \<or> regular_space X)" 
+  assumes "completely_metrizable_space X \<or> locally_compact_space X \<and> regular_space X" 
     and "countable \<G>"
     and top: "\<And>T. T \<in> \<G> \<Longrightarrow> openin X T \<and> X closure_of T = topspace X"
   shows "X closure_of \<Inter>\<G> = topspace X"
