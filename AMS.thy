@@ -2085,55 +2085,55 @@ lemma (in Metric_space) metric_Baire_category:
 shows "mtopology closure_of \<Inter>\<G> = M"
 proof (cases "\<G>={}")
   case False
-  then obtain u :: "nat \<Rightarrow> 'a set" where u: "range u = \<G>"
+  then obtain U :: "nat \<Rightarrow> 'a set" where U: "range U = \<G>"
     by (metis \<open>countable \<G>\<close> uncountable_def)
-  with assms have u_open: "\<And>n. openin mtopology (u n)" and u_dense: "\<And>n. mtopology closure_of (u n) = M"
+  with assms have u_open: "\<And>n. openin mtopology (U n)" and u_dense: "\<And>n. mtopology closure_of (U n) = M"
     by auto
-  have "\<Inter>(range u) \<inter> W \<noteq> {}" if W: "openin mtopology W" "W \<noteq> {}" for W
+  have "\<Inter>(range U) \<inter> W \<noteq> {}" if W: "openin mtopology W" "W \<noteq> {}" for W
   proof -
     have "W \<subseteq> M"
       using openin_mtopology W by blast
-    have "\<exists>r' x'. 0 < r' \<and> r' < r/2 \<and> x' \<in> M \<and> mcball x' r' \<subseteq> mball x r \<inter> u n" 
+    have "\<exists>r' x'. 0 < r' \<and> r' < r/2 \<and> x' \<in> M \<and> mcball x' r' \<subseteq> mball x r \<inter> U n" 
       if "r>0" "x \<in> M" for x r n
     proof -
-      obtain z where z: "z \<in> u n \<inter> mball x r"
+      obtain z where z: "z \<in> U n \<inter> mball x r"
         using u_dense [of n] \<open>r>0\<close> \<open>x \<in> M\<close>
         by (metis dense_intersects_open centre_in_mball_iff empty_iff openin_mball topspace_mtopology equals0I)
       then have "z \<in> M" by auto
-      have "openin mtopology (u n \<inter> mball x r)"
+      have "openin mtopology (U n \<inter> mball x r)"
         by (simp add: openin_Int u_open)
-      with \<open>z \<in> M\<close> z obtain e where "e>0" and e: "mcball z e \<subseteq> u n \<inter> mball x r"
+      with \<open>z \<in> M\<close> z obtain e where "e>0" and e: "mcball z e \<subseteq> U n \<inter> mball x r"
         by (meson openin_mtopology_mcball)
       define r' where "r' \<equiv> min e (r/4)"
       show ?thesis
       proof (intro exI conjI)
         show "0 < r'" "r' < r / 2" "z \<in> M"
           using \<open>e>0\<close> \<open>r>0\<close> \<open>z \<in> M\<close> by (auto simp: r'_def)
-        show "mcball z r' \<subseteq> mball x r \<inter> u n"
+        show "mcball z r' \<subseteq> mball x r \<inter> U n"
           using Metric_space.mcball_subset_concentric e r'_def by auto
       qed
     qed
     then obtain nextr nextx 
       where nextr: "\<And>r x n. \<lbrakk>r>0; x\<in>M\<rbrakk> \<Longrightarrow> 0 < nextr r x n \<and> nextr r x n < r/2"
         and nextx: "\<And>r x n. \<lbrakk>r>0; x\<in>M\<rbrakk> \<Longrightarrow> nextx r x n \<in> M"
-        and nextsub: "\<And>r x n. \<lbrakk>r>0; x\<in>M\<rbrakk> \<Longrightarrow> mcball (nextx r x n) (nextr r x n) \<subseteq> mball x r \<inter> u n"
+        and nextsub: "\<And>r x n. \<lbrakk>r>0; x\<in>M\<rbrakk> \<Longrightarrow> mcball (nextx r x n) (nextr r x n) \<subseteq> mball x r \<inter> U n"
       by metis
-    obtain x0 where x0: "x0 \<in> u 0 \<inter> W"
+    obtain x0 where x0: "x0 \<in> U 0 \<inter> W"
       by (metis W dense_intersects_open topspace_mtopology all_not_in_conv u_dense)
     then have "x0 \<in> M"
       using \<open>W \<subseteq> M\<close> by fastforce
-    obtain r0 where "0 < r0" "r0 < 1" and sub: "mcball x0 r0 \<subseteq> u 0 \<inter> W"
+    obtain r0 where "0 < r0" "r0 < 1" and sub: "mcball x0 r0 \<subseteq> U 0 \<inter> W"
     proof -
-      have "openin mtopology (u 0 \<inter> W)"
+      have "openin mtopology (U 0 \<inter> W)"
         using W u_open by blast
-      then obtain r where "r>0" and r: "mball x0 r \<subseteq> u 0" "mball x0 r \<subseteq> W"
+      then obtain r where "r>0" and r: "mball x0 r \<subseteq> U 0" "mball x0 r \<subseteq> W"
         by (meson Int_subset_iff openin_mtopology x0)
       define r0 where "r0 \<equiv> (min r 1) / 2"
       show thesis
       proof
         show "0 < r0" "r0 < 1"
           using \<open>r>0\<close> by (auto simp: r0_def)
-        show "mcball x0 r0 \<subseteq> u 0 \<inter> W"
+        show "mcball x0 r0 \<subseteq> U 0 \<inter> W"
           using r \<open>0 < r0\<close> r0_def by auto
       qed
     qed
@@ -2154,7 +2154,7 @@ proof (cases "\<G>={}")
       then show ?case
         by (auto simp: rf_def xf_def case_prod_unfold nextr nextx Let_def)
     qed
-    have mcball_sub: "mcball (xf (Suc n)) (rf (Suc n)) \<subseteq> mball (xf n) (rf n) \<inter> u n" for n
+    have mcball_sub: "mcball (xf (Suc n)) (rf (Suc n)) \<subseteq> mball (xf n) (rf n) \<inter> U n" for n
       using rfxf nextsub by (auto simp: xf_def rf_def case_prod_unfold Let_def)
     have half: "rf (Suc n) < rf n / 2" for n
       using rfxf nextr by (auto simp: xf_def rf_def case_prod_unfold Let_def)
@@ -2212,44 +2212,38 @@ proof (cases "\<G>={}")
       with l limitin_closedin show ?thesis
         by (metis closedin_mcball trivial_limit_sequentially)
     qed
-    then have "\<And>n. l \<in> u n"
+    then have "\<And>n. l \<in> U n"
       using mcball_sub by blast
     moreover have "l \<in> W"
       using l_in[of 0] sub  by (auto simp add: xf_def rf_def)
     ultimately show ?thesis by auto
   qed
-  with u show ?thesis
+  with U show ?thesis
     by (metis dense_intersects_open topspace_mtopology)
 qed auto
 
 
 
-lemma metric_Baire_category_alt:
-   "\<And>m g:(A=>bool)->bool.
-         mcomplete \<and>
-         countable g \<and>
-         (\<forall>t. t \<in> g
-              \<Longrightarrow> closedin mtopology t \<and> mtopology interior_of t = {})
-         \<Longrightarrow> mtopology interior_of (\<Union>g) = {}"
-oops
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL [`m::A metric`; `image (\<lambda>u::A=>bool. M - u) g`]
-        METRIC_BAIRE_CATEGORY) THEN
-  ASM_SIMP_TAC[COUNTABLE_IMAGE; FORALL_IN_IMAGE] THEN
-  ASM_SIMP_TAC[OPEN_IN_DIFF; OPEN_IN_MSPACE] THEN
-  REWRITE_TAC[CLOSURE_OF_COMPLEMENT; GSYM TOPSPACE_MTOPOLOGY] THEN
-  ASM_SIMP_TAC[DIFF_EMPTY] THEN REWRITE_TAC[CLOSURE_OF_INTERIOR_OF] THEN
-  MATCH_MP_TAC(SET_RULE
-    `s \<subseteq> u \<and> s' = s \<Longrightarrow> u - s' = u \<Longrightarrow> s = {}`) THEN
-  REWRITE_TAC[INTERIOR_OF_SUBSET_TOPSPACE] THEN AP_TERM_TAC THEN
-  REWRITE_TAC[DIFF_INTERS; SET_RULE
-   `{f y | y \<in> g ` s} = {f(g x) | x \<in> s}`] THEN
-  AP_TERM_TAC THEN MATCH_MP_TAC(SET_RULE
-   `(\<forall>x. x \<in> s \<Longrightarrow> f x = x) \<Longrightarrow> {f x | x \<in> s} = s`) THEN
-  X_GEN_TAC `s::A=>bool` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `s::A=>bool`) THEN
-  ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN SET_TAC[]);;
+lemma (in Metric_space) metric_Baire_category_alt:
+  assumes "mcomplete" "countable \<G>"
+    and empty: "\<And>T. T \<in> \<G> \<Longrightarrow> closedin mtopology T \<and> mtopology interior_of T = {}"
+  shows "mtopology interior_of \<Union>\<G> = {}"
+proof -
+  have *: "mtopology closure_of \<Inter>((-)M ` \<G>) = M"
+  proof (intro metric_Baire_category conjI \<open>mcomplete\<close>)
+    show "countable ((-) M ` \<G>)"
+      using \<open>countable \<G>\<close> by blast
+    fix T
+    assume "T \<in> (-) M ` \<G>"
+    then obtain U where U: "U \<in> \<G>" "T = M-U" "U \<subseteq> M"
+      using empty metric_closedin_iff_sequentially_closed by force
+    with empty show "openin mtopology T" by blast
+    show "mtopology closure_of T = M"
+      using U by (simp add: closure_of_interior_of double_diff empty)
+  qed
+  with closure_of_eq show ?thesis
+    by (fastforce simp add: interior_of_closure_of split: if_split_asm)
+qed
 
 
 lemma Baire_category_alt:
