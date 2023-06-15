@@ -2138,13 +2138,13 @@ proof (cases "\<G>={}")
       qed
     qed
     define b where "b \<equiv> rec_nat (x0,r0) (\<lambda>n (x,r). (nextx r x n, nextr r x n))"
-    have [simp]: "b 0 = (x0,r0)"
+    have b0[simp]: "b 0 = (x0,r0)"
       by (simp add: b_def)
-    have bSuc: "b (Suc n) = (let (x,r) = b n in (nextx r x n, nextr r x n))" for n
+    have bSuc[simp]: "b (Suc n) = (let (x,r) = b n in (nextx r x n, nextr r x n))" for n
       by (simp add: b_def)
     define xf where "xf \<equiv> fst \<circ> b"
     define rf where "rf \<equiv> snd \<circ> b"
-    have DD: "0 < rf n \<and> xf n \<in> M" for n
+    have rfxf: "0 < rf n \<and> xf n \<in> M" for n
     proof (induction n)
       case 0
       with \<open>0 < r0\<close> \<open>x0 \<in> M\<close> show ?case 
@@ -2152,55 +2152,51 @@ proof (cases "\<G>={}")
     next
       case (Suc n)
       then show ?case
-        by (auto simp: rf_def xf_def bSuc case_prod_unfold nextr nextx Let_def)
+        by (auto simp: rf_def xf_def case_prod_unfold nextr nextx Let_def)
     qed
-    have E: "mcball (xf (Suc n)) (rf (Suc n)) \<subseteq> mball (xf n) (rf n) \<inter> u n" for n
-      using DD nextsub by (auto simp: xf_def rf_def bSuc case_prod_unfold Let_def)
-    have F: "rf (Suc n) < rf n / 2" for n
-      using DD nextr by (auto simp: xf_def rf_def bSuc case_prod_unfold Let_def)
+    have mcball_sub: "mcball (xf (Suc n)) (rf (Suc n)) \<subseteq> mball (xf n) (rf n) \<inter> u n" for n
+      using rfxf nextsub by (auto simp: xf_def rf_def case_prod_unfold Let_def)
+    have half: "rf (Suc n) < rf n / 2" for n
+      using rfxf nextr by (auto simp: xf_def rf_def case_prod_unfold Let_def)
     then have "decseq rf"
-      using DD by (smt (verit, ccfv_threshold) decseq_SucI field_sum_of_halves)
-    have G: "rf n < inverse (2 ^ n)" for n
-    proof (induction n)
-      case 0
-      then show ?case
-        by (simp add: \<open>r0 < 1\<close> rf_def)
-    next
-      case (Suc n)
-      with F show ?case
-        by simp (smt (verit))
-    qed
+      using rfxf by (smt (verit, ccfv_threshold) decseq_SucI field_sum_of_halves)
     have nested: "mball (xf n) (rf n) \<subseteq> mball (xf m) (rf m)" if "m \<le> n" for m n
       using that
     proof (induction n)
       case (Suc n)
       then show ?case
-        by (metis E dual_order.trans inf.boundedE le_Suc_eq mball_subset_mcball order.refl)
+        by (metis mcball_sub order.trans inf.boundedE le_Suc_eq mball_subset_mcball order.refl)
     qed auto
-    then have J: "\<And>m n. m \<le> n \<Longrightarrow> xf n \<in> mball (xf m) (rf m)"
-      using DD by blast
     have "MCauchy xf"
       unfolding MCauchy_def
     proof (intro conjI strip)
       show "range xf \<subseteq> M"
-        using DD by blast
+        using rfxf by blast
       fix \<epsilon> :: real
       assume "\<epsilon>>0"
       then obtain N where N: "inverse (2^N) < \<epsilon>"
         using real_arch_pow_inv by (force simp flip: power_inverse)
       have "d (xf n) (xf n') < \<epsilon>" if "n \<le> n'" "N \<le> n" "N \<le> n'" for n n'
       proof -
+        have *: "rf n < inverse (2 ^ n)" for n
+        proof (induction n)
+          case 0
+          then show ?case
+            by (simp add: \<open>r0 < 1\<close> rf_def)
+        next
+          case (Suc n)
+          with half show ?case
+            by simp (smt (verit))
+        qed
         have "rf n \<le> rf N"
           using \<open>decseq rf\<close> \<open>N \<le> n\<close> by (simp add: decseqD)
         moreover
         have "xf n' \<in> mball (xf n) (rf n)"
-          using J \<open>n \<le> n'\<close> by presburger
+          using nested rfxf \<open>n \<le> n'\<close> by blast
         ultimately have "d (xf n) (xf n') < rf N"
           by auto
-        also have "\<dots> < inverse (2^N)"
-          by (simp add: G)
         also have "\<dots> < \<epsilon>"
-          by (simp add: N)
+          using "*" N order.strict_trans by blast
         finally show ?thesis .
       qed
       then show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (xf n) (xf n') < \<epsilon>"
@@ -2208,21 +2204,19 @@ proof (cases "\<G>={}")
     qed
     then obtain l where l: "limitin mtopology xf l sequentially"
       using \<open>mcomplete\<close> mcomplete_alt by blast
-    have K: "l \<in> mcball (xf n) (rf n)" for n
+    have l_in: "l \<in> mcball (xf n) (rf n)" for n
     proof -
       have "\<forall>\<^sub>F m in sequentially. xf m \<in> mcball (xf n) (rf n)"
-        using J by (auto simp add: eventually_sequentially less_eq_real_def)
+        unfolding eventually_sequentially
+        by (meson nested rfxf centre_in_mball_iff mball_subset_mcball subset_iff)
       with l limitin_closedin show ?thesis
         by (metis closedin_mcball trivial_limit_sequentially)
     qed
-    have D: "mcball (xf 0) (rf 0) \<subseteq> u 0 \<inter> W"
-      using sub by (auto simp: xf_def rf_def)
-    have "l \<in> \<Inter> (range u) \<inter> W"
-      apply (auto simp: )
-      using E K apply blast
-      using K D
-      by blast
-    then show ?thesis by auto
+    then have "\<And>n. l \<in> u n"
+      using mcball_sub by blast
+    moreover have "l \<in> W"
+      using l_in[of 0] sub  by (auto simp add: xf_def rf_def)
+    ultimately show ?thesis by auto
   qed
   with u show ?thesis
     by (metis dense_intersects_open topspace_mtopology)
@@ -2230,7 +2224,7 @@ qed auto
 
 
 
-lemma metric_baire_category_alt:
+lemma metric_Baire_category_alt:
    "\<And>m g:(A=>bool)->bool.
          mcomplete \<and>
          countable g \<and>
@@ -2258,7 +2252,7 @@ oops
   FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN SET_TAC[]);;
 
 
-lemma baire_category_alt:
+lemma Baire_category_alt:
    " (completely_metrizable_space X \<or>
          locally_compact_space X \<and>
          (Hausdorff_space X \<or> regular_space X)) \<and>
@@ -2358,7 +2352,7 @@ oops
     REWRITE_TAC[INTERS_GSPEC] THEN ASM SET_TAC[]]);;
 
 
-lemma baire_category:
+lemma Baire_category:
    "\<And>X g:(A=>bool)->bool.
         (completely_metrizable_space X \<or>
          locally_compact_space X \<and>
