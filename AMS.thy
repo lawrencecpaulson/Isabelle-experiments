@@ -67,7 +67,7 @@ proof -
 qed
 
 
-text \<open>The original HOL Light proof was a mess, sorry\<close>
+text \<open>The original HOL Light proof was a mess, yuk\<close>
 lemma limitin_componentwise:
    "limitin (product_topology X I) f l F \<longleftrightarrow>
         l \<in> extensional I \<and>
@@ -2122,7 +2122,7 @@ proof (cases "\<G>={}")
       by (metis W dense_intersects_open topspace_mtopology all_not_in_conv u_dense)
     then have "x0 \<in> M"
       using \<open>W \<subseteq> M\<close> by fastforce
-    obtain r0 where "0 < r0" "r0 < 1" "mcball x0 r0 \<subseteq> u 0 \<inter> W"
+    obtain r0 where "0 < r0" "r0 < 1" and sub: "mcball x0 r0 \<subseteq> u 0 \<inter> W"
     proof -
       have "openin mtopology (u 0 \<inter> W)"
         using W u_open by blast
@@ -2160,7 +2160,7 @@ proof (cases "\<G>={}")
       using DD nextr by (auto simp: xf_def rf_def bSuc case_prod_unfold Let_def)
     then have "decseq rf"
       using DD by (smt (verit, ccfv_threshold) decseq_SucI field_sum_of_halves)
-    have "rf n < inverse (2 ^ n)" for n
+    have G: "rf n < inverse (2 ^ n)" for n
     proof (induction n)
       case 0
       then show ?case
@@ -2170,67 +2170,63 @@ proof (cases "\<G>={}")
       with F show ?case
         by simp (smt (verit))
     qed
-    show ?thesis
-      sorry
+    have nested: "mball (xf n) (rf n) \<subseteq> mball (xf m) (rf m)" if "m \<le> n" for m n
+      using that
+    proof (induction n)
+      case (Suc n)
+      then show ?case
+        by (metis E dual_order.trans inf.boundedE le_Suc_eq mball_subset_mcball order.refl)
+    qed auto
+    then have J: "\<And>m n. m \<le> n \<Longrightarrow> xf n \<in> mball (xf m) (rf m)"
+      using DD by blast
+    have "MCauchy xf"
+      unfolding MCauchy_def
+    proof (intro conjI strip)
+      show "range xf \<subseteq> M"
+        using DD by blast
+      fix \<epsilon> :: real
+      assume "\<epsilon>>0"
+      then obtain N where N: "inverse (2^N) < \<epsilon>"
+        using real_arch_pow_inv by (force simp flip: power_inverse)
+      have "d (xf n) (xf n') < \<epsilon>" if "n \<le> n'" "N \<le> n" "N \<le> n'" for n n'
+      proof -
+        have "rf n \<le> rf N"
+          using \<open>decseq rf\<close> \<open>N \<le> n\<close> by (simp add: decseqD)
+        moreover
+        have "xf n' \<in> mball (xf n) (rf n)"
+          using J \<open>n \<le> n'\<close> by presburger
+        ultimately have "d (xf n) (xf n') < rf N"
+          by auto
+        also have "\<dots> < inverse (2^N)"
+          by (simp add: G)
+        also have "\<dots> < \<epsilon>"
+          by (simp add: N)
+        finally show ?thesis .
+      qed
+      then show "\<exists>N. \<forall>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> d (xf n) (xf n') < \<epsilon>"
+        by (metis commute linorder_le_cases)
+    qed
+    then obtain l where l: "limitin mtopology xf l sequentially"
+      using \<open>mcomplete\<close> mcomplete_alt by blast
+    have K: "l \<in> mcball (xf n) (rf n)" for n
+    proof -
+      have "\<forall>\<^sub>F m in sequentially. xf m \<in> mcball (xf n) (rf n)"
+        using J by (auto simp add: eventually_sequentially less_eq_real_def)
+      with l limitin_closedin show ?thesis
+        by (metis closedin_mcball trivial_limit_sequentially)
+    qed
+    have D: "mcball (xf 0) (rf 0) \<subseteq> u 0 \<inter> W"
+      using sub by (auto simp: xf_def rf_def)
+    have "l \<in> \<Inter> (range u) \<inter> W"
+      apply (auto simp: )
+      using E K apply blast
+      using K D
+      by blast
+    then show ?thesis by auto
   qed
   with u show ?thesis
     by (metis dense_intersects_open topspace_mtopology)
 qed auto
-
-
-  oops
-
-
-  CLAIM_TAC "nested"
-    `\<forall>p q::num. p \<le> q \<Longrightarrow> mball m (x q::A, r q) \<subseteq> mball m (x p, r p)` THENL
-  [MATCH_MP_TAC LE_INDUCT THEN REWRITE_TAC[SUBSET_REFL] THEN
-   INTRO_TAC "!p q; pq sub" THEN
-   TRANS_TAC SUBSET_TRANS `mball m (x (q::num):A,r q)` THEN
-   HYP REWRITE_TAC "sub" [] THEN
-   TRANS_TAC SUBSET_TRANS `mcball m (x (Suc q):A,r(Suc q))` THEN
-   REWRITE_TAC[MBALL_SUBSET_MCBALL] THEN HYP SET_TAC "ball" [];
-   ALL_TAC] THEN
-
-  CLAIM_TAC "in_ball" `\<forall>p q::num. p \<le> q \<Longrightarrow> x q::A \<in> mball m (x p, r p)` THENL
-  [INTRO_TAC "!p q; le" THEN CUT_TAC `x (q::num):A \<in> mball m (x q, r q)` THENL
-   [HYP SET_TAC "nested le" []; HYP SIMP_TAC "x rpos" [CENTRE_IN_MBALL_EQ]];
-   ALL_TAC] THEN
-
-  CLAIM_TAC "@l. l" `\<exists>l::A. limitin mtopology x l sequentially` THENL
-  [HYP_TAC "m" (REWRITE_RULE[mcomplete]) THEN REMOVE_THEN "m" MATCH_MP_TAC THEN
-   HYP REWRITE_TAC "x" [MCauchy] THEN INTRO_TAC "!e; epos" THEN
-   CLAIM_TAC "@N. N" `\<exists>N. inverse(2 ^ N) < e` THENL
-   [REWRITE_TAC[REAL_INV_POW] THEN MATCH_MP_TAC REAL_ARCH_POW_INV THEN
-    HYP REWRITE_TAC "epos" [] THEN REAL_ARITH_TAC;
-    ALL_TAC] THEN
-   EXISTS_TAC `N::num` THEN MATCH_MP_TAC WLOG_LE THEN CONJ_TAC THENL
-   [HYP SIMP_TAC "x" [MDIST_SYM] THEN MESON_TAC[]; ALL_TAC] THEN
-   INTRO_TAC "!n n'; le; n n'" THEN
-   TRANS_TAC REAL_LT_TRANS `inverse (2 ^ N)` THEN HYP REWRITE_TAC "N" [] THEN
-   TRANS_TAC REAL_LT_TRANS `r (N::num):real` THEN HYP REWRITE_TAC "rlt" [] THEN
-   CUT_TAC `x (n':num):A \<in> mball m (x n, r n)` THENL
-   [HYP REWRITE_TAC "x" [IN_MBALL] THEN INTRO_TAC "hp" THEN
-    TRANS_TAC REAL_LTE_TRANS `r (n::num):real` THEN
-    HYP SIMP_TAC "n rmono hp" [];
-    HYP SIMP_TAC "in_ball le" []];
-   ALL_TAC] THEN
-
-  EXISTS_TAC `l::A` THEN
-  CLAIM_TAC "in_mcball" `\<forall>n::num. l::A \<in> mcball m (x n, r n)` THENL
-  [GEN_TAC THEN
-   (MATCH_MP_TAC \<circ> ISPECL [`sequentially`; `mtopology (m::A metric)`])
-   LIMIT_IN_CLOSED_IN THEN EXISTS_TAC `x::num=>A` THEN
-   HYP REWRITE_TAC "l" [TRIVIAL_LIMIT_SEQUENTIALLY; CLOSED_IN_MCBALL] THEN
-   REWRITE_TAC[EVENTUALLY_SEQUENTIALLY] THEN EXISTS_TAC `n::num` THEN
-   INTRO_TAC "![p]; p" THEN CUT_TAC `x (p::num):A \<in> mball m (x n, r n)` THENL
-   [SET_TAC[MBALL_SUBSET_MCBALL]; HYP SIMP_TAC "in_ball p" []];
-   ALL_TAC] THEN
-
-  REWRITE_TAC[IN_INTER] THEN CONJ_TAC THENL
-  [REWRITE_TAC[IN_INTERS; FORALL_IN_IMAGE; IN_UNIV] THEN
-   LABEL_INDUCT_TAC THENL
-   [HYP SET_TAC "in_mcball sub " []; HYP SET_TAC "in_mcball ball " []];
-   HYP SET_TAC "sub in_mcball" []]);;
 
 
 
@@ -2260,6 +2256,7 @@ oops
   FIRST_X_ASSUM(MP_TAC \<circ> SPEC `s::A=>bool`) THEN
   ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
   FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN SET_TAC[]);;
+
 
 lemma baire_category_alt:
    " (completely_metrizable_space X \<or>
@@ -2359,6 +2356,7 @@ oops
     MATCH_MP_TAC TRANSITIVE_STEPWISE_LE THEN ASM SET_TAC[];
     RULE_ASSUM_TAC(REWRITE_RULE[UNIONS_IMAGE; IN_UNIV]) THEN
     REWRITE_TAC[INTERS_GSPEC] THEN ASM SET_TAC[]]);;
+
 
 lemma baire_category:
    "\<And>X g:(A=>bool)->bool.
