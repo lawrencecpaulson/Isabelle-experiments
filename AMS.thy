@@ -2274,69 +2274,67 @@ next
       using assms locally_compact_regular_space_neighbourhood_base by auto
     then obtain V K where "openin X V" "compactin X K" "closedin X K" "z \<in> V" "V \<subseteq> K" "K \<subseteq> U"
       by (metis (no_types, lifting) \<open>z \<in> U\<close> neighbourhood_base_of opeA)
-    have nb: "neighbourhood_base_of (closedin X) X"
-      using assms(2) neighbourhood_base_of_closedin by auto
-    obtain a where "a \<subseteq> K" "closedin X a" and a_ne: "X interior_of a \<noteq> {}" 
-              and dis_aT: "disjnt a (T 0)"
-    proof -
-      have False if "V \<subseteq> T 0"
-        using Tempty \<open>openin X V\<close> \<open>z \<in> V\<close> interior_of_maximal that by fastforce
-      then obtain x where "openin X (V - T 0) \<and> x \<in> V - T 0"
-        using T \<open>openin X V\<close> empty by blast
-      with nb obtain N C where "openin X N" "closedin X C" "x \<in> N" "N \<subseteq> C" "C \<subseteq> V - T 0"
-        unfolding neighbourhood_base_of by metis
-      show thesis
-      proof
-        show "C \<subseteq> K"
-          using \<open>C \<subseteq> V - T 0\<close> \<open>V \<subseteq> K\<close> by auto
-        show "X interior_of C \<noteq> {}"
-          by (metis \<open>N \<subseteq> C\<close> \<open>openin X N\<close> \<open>x \<in> N\<close> empty_iff interior_of_eq_empty)
-        show "disjnt C (T 0)"
-          using \<open>C \<subseteq> V - T 0\<close> disjnt_iff by fastforce
-      qed (use \<open>closedin X C\<close> in auto)
-    qed
-
-    have *: "\<exists>L. L \<subseteq> K \<and> closedin X L \<and> X interior_of L \<noteq> {} \<and> disjnt L (T (Suc n)) \<and> L \<subseteq> C" 
-      if "C \<subseteq> K" "closedin X C" and ne: "X interior_of C \<noteq> {}" and disC: "disjnt C (T n)" for n C
-    proof -
-      have False if "X interior_of C \<subseteq> T (Suc n)"
-        by (metis Tempty interior_of_eq_empty ne openin_interior_of that)
-      then obtain x where "openin X (X interior_of C - T (Suc n)) \<and> x \<in> X interior_of C - T (Suc n)"
-        using T empty by fastforce
-      with nb obtain N D where "openin X N" "closedin X D" "x \<in> N" "N \<subseteq> D" 
-                and D: "D \<subseteq> X interior_of C - T (Suc n)"
-        unfolding neighbourhood_base_of by metis
-      show ?thesis
+    have nb_closedin: "neighbourhood_base_of (closedin X) X"
+      using \<open>regular_space X\<close> neighbourhood_base_of_closedin by auto
+    have "\<exists>\<Phi>. \<forall>n. (\<Phi> n \<subseteq> K \<and> closedin X (\<Phi> n) \<and> X interior_of \<Phi> n \<noteq> {} \<and> disjnt (\<Phi> n) (T n)) \<and>
+        \<Phi> (Suc n) \<subseteq> \<Phi> n"
+    proof (rule dependent_nat_choice)
+      show "\<exists>x\<subseteq>K. closedin X x \<and> X interior_of x \<noteq> {} \<and> disjnt x (T 0)"
+      proof -
+        have False if "V \<subseteq> T 0"
+          using Tempty \<open>openin X V\<close> \<open>z \<in> V\<close> interior_of_maximal that by fastforce
+        then obtain x where "openin X (V - T 0) \<and> x \<in> V - T 0"
+          using T \<open>openin X V\<close> empty by blast
+        with nb_closedin 
+        obtain N C  where "openin X N" "closedin X C" "x \<in> N" "N \<subseteq> C" "C \<subseteq> V - T 0"
+          unfolding neighbourhood_base_of by metis
+        show ?thesis
+        proof (intro exI conjI)
+          show "C \<subseteq> K"
+            using \<open>C \<subseteq> V - T 0\<close> \<open>V \<subseteq> K\<close> by auto
+          show "X interior_of C \<noteq> {}"
+            by (metis \<open>N \<subseteq> C\<close> \<open>openin X N\<close> \<open>x \<in> N\<close> empty_iff interior_of_eq_empty)
+          show "disjnt C (T 0)"
+            using \<open>C \<subseteq> V - T 0\<close> disjnt_iff by fastforce
+        qed (use \<open>closedin X C\<close> in auto)
+      qed
+      show "\<exists>L. (L \<subseteq> K \<and> closedin X L \<and> X interior_of L \<noteq> {} \<and> disjnt L (T (Suc n))) \<and> L \<subseteq> C"
+        if \<section>: "C \<subseteq> K \<and> closedin X C \<and> X interior_of C \<noteq> {} \<and> disjnt C (T n)"
+        for C n
+      proof -
+        have False if "X interior_of C \<subseteq> T (Suc n)"
+          by (metis Tempty interior_of_eq_empty \<section> openin_interior_of that)
+        then obtain x where "openin X (X interior_of C - T (Suc n)) \<and> x \<in> X interior_of C - T (Suc n)"
+          using T empty by fastforce
+        with nb_closedin 
+        obtain N D where "openin X N" "closedin X D" "x \<in> N" "N \<subseteq> D"  and D: "D \<subseteq> X interior_of C - T(Suc n)"
+          unfolding neighbourhood_base_of by metis
+        show ?thesis
         proof (intro conjI exI)
           show "D \<subseteq> K"
-            using D interior_of_subset that(1) by fastforce
+            using D interior_of_subset \<section> by fastforce
           show "X interior_of D \<noteq> {}"
             by (metis \<open>N \<subseteq> D\<close> \<open>openin X N\<close> \<open>x \<in> N\<close> empty_iff interior_of_eq_empty)
           show "disjnt D (T (Suc n))"
             using D disjnt_iff by fastforce
           show "D \<subseteq> C"
             using interior_of_subset [of X C] D by blast
-      qed (use \<open>closedin X D\<close> in auto)
+        qed (use \<open>closedin X D\<close> in auto)
+      qed
     qed
-    have "\<exists>C. \<forall>n. (C n \<subseteq> K \<and> closedin X (C n) \<and> X interior_of C n \<noteq> {} \<and> disjnt (C n) (T n)) \<and>
-        C (Suc n) \<subseteq> C n"
-      apply (rule dependent_nat_choice)
-      using \<open>a \<subseteq> K\<close> \<open>closedin X a\<close> a_ne dis_aT apply blast
-      by (simp add: "*")
-    then obtain C where C: "\<And>n. C n \<subseteq> K \<and> closedin X (C n) \<and> X interior_of C n \<noteq> {} \<and> disjnt (C n) (T n)"
-                  and "\<And>n. C (Suc n) \<subseteq> C n" by metis
-    then have "monotone (\<le>) (\<lambda>x y. y \<subseteq> x) C"
+    then obtain \<Phi> where \<Phi>: "\<And>n. \<Phi> n \<subseteq> K \<and> closedin X (\<Phi> n) \<and> X interior_of \<Phi> n \<noteq> {} \<and> disjnt (\<Phi> n) (T n)"
+      and "\<And>n. \<Phi> (Suc n) \<subseteq> \<Phi> n" by metis
+    then have "monotone (\<le>) (\<lambda>x y. y \<subseteq> x) \<Phi>"
       by (simp add: decseq_SucI)
-    moreover have "\<And>n. C n \<noteq> {}"
-      by (metis C bot.extremum_uniqueI interior_of_subset)
-    ultimately have **: "\<Inter> (range C) \<noteq> {}"
-      by (metis C compact_space_imp_nest \<open>compactin X K\<close> compactin_subspace closedin_subset_topspace)
-    have "U \<subseteq> {y. \<exists>x. y \<in> T x}"
+    moreover have "\<And>n. \<Phi> n \<noteq> {}"
+      by (metis \<Phi> bot.extremum_uniqueI interior_of_subset)
+    ultimately have "\<Inter> (range \<Phi>) \<noteq> {}"
+      by (metis \<Phi> compact_space_imp_nest \<open>compactin X K\<close> compactin_subspace closedin_subset_topspace)
+    moreover have "U \<subseteq> {y. \<exists>x. y \<in> T x}"
       using Asub by auto
-    with ** T 
-    have "{a. \<forall>n.  a \<in> C n} = {}"
-      by (smt (verit) Asub C Collect_empty_eq UN_iff \<open>K \<subseteq> U\<close> disjnt_iff subset_iff)
-    with ** show False
+    with T have "{a. \<forall>n.  a \<in> \<Phi> n} \<subseteq> {}"
+      by (smt (verit) Asub \<Phi> Collect_empty_eq UN_iff \<open>K \<subseteq> U\<close> disjnt_iff subset_iff)
+    ultimately show False
       by blast
   qed
 qed
