@@ -2376,51 +2376,75 @@ qed auto
 
 subsection\<open>Sierpinski-Hausdorff type results about countable closed unions\<close>
 
+lemma lemmax: "\<Union>(f ` s \<union> g ` s) = \<Union>(image (\<lambda>x. f x \<union> g x) s)"
+  by auto
 
 lemma locally_connected_not_countable_closed_union:
-   "\<And>X u:(A=>bool)->bool.
-        \<not> (topspace X = {}) \<and>
-        connected_space X \<and>
-        locally_connected_space X \<and>
-        (completely_metrizable_space X \<or>
-         locally_compact_space X \<and> Hausdorff_space X) \<and>
-        countable u \<and> pairwise disjnt u \<and>
-        (\<forall>c. c \<in> u \<Longrightarrow> closedin X c \<and> (c \<noteq> {})) \<and>
-        \<Union>u = topspace X
-         \<Longrightarrow> u = {topspace X}"
-oops
-  lemma lemma:
-   (`\<Union>(f ` s \<union> g ` s) =
-     \<Union>(image (\<lambda>x. f x \<union> g x) s)"
-oops
-    REWRITE_TAC[UNIONS_UNION; UNIONS_IMAGE] THEN SET_TAC[])
-in
+  assumes "topspace X \<noteq> {}" and csX: "connected_space X"
+    and lcX: "locally_connected_space X"
+    and X: "completely_metrizable_space X \<or> locally_compact_space X \<and> Hausdorff_space X"
+    and "countable \<U>" and pwU: "pairwise disjnt \<U>"
+    and clo: "\<And>C. C \<in> \<U> \<Longrightarrow> closedin X C \<and> C \<noteq> {}"
+    and "\<Union>\<U> = topspace X"
+  shows "\<U> = {topspace X}"
+proof -
+  define \<V> where "\<V> \<equiv> (frontier_of) X ` \<U>"
+  define B where "B \<equiv> \<Union>\<V>"
+  then have Bsub: "B \<subseteq> topspace X"
+    by (simp add: Sup_le_iff \<V>_def closedin_frontier_of closedin_subset)
 
-  REWRITE_TAC[REAL_CLOSED_IN] THEN REPEAT GEN_TAC THEN
-  DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC) THEN
-  ABBREV_TAC `v = image (\<lambda>c::A=>bool. X frontier_of c) u` THEN
-  ABBREV_TAC `b::A=>bool = \<Union>v` THEN
-  MATCH_MP_TAC(TAUT `(\<not> p \<Longrightarrow> False) \<Longrightarrow> p`) THEN DISCH_TAC THEN
-  SUBGOAL_THEN `(b::A=>bool) \<subseteq> topspace X` ASSUME_TAC THENL
-   [EXPAND_TAC "b" THEN REWRITE_TAC[UNIONS_SUBSET] THEN
-    EXPAND_TAC "v" THEN REWRITE_TAC[FORALL_IN_IMAGE] THEN
-    REWRITE_TAC[GSYM TOPSPACE_MTOPOLOGY; FRONTIER_OF_SUBSET_TOPSPACE];
-    ALL_TAC] THEN
-  MP_TAC(ISPECL [`subtopology X (b::A=>bool)`; `v:(A=>bool)->bool`]
+  show ?thesis
+  proof (rule ccontr)
+    assume con: "\<U> \<noteq> {topspace X}"
+    have "subtopology X B interior_of \<Union> \<V> = {}"
+    proof (intro Baire_category_alt conjI)
+      show "completely_metrizable_space (subtopology X B) \<or> locally_compact_space (subtopology X B) \<and> regular_space (subtopology X B)"
+        using X csX lcX
+apply (auto simp: )
+        sorry
+      show "countable \<V>"
+        by (simp add: \<V>_def \<open>countable \<U>\<close>)
+      fix T
+      assume "T \<in> \<V>"
+      show "closedin (subtopology X B) T"
+        by (metis B_def Sup_upper \<V>_def \<open>T \<in> \<V>\<close> closedin_frontier_of closedin_subset_topspace image_iff)
+      have "subtopology X B interior_of B \<noteq> {}"
+        using interior_of_topspace [of "subtopology X B"] Bsub \<open>T \<in> \<V>\<close>
+        apply (simp add: Int_absorb1)
+        apply (simp add: B_def)
+
+    sorry
+      then show "subtopology X B interior_of T = {}"
+        using interior_of_topspace [of "subtopology X B"] Bsub \<open>T \<in> \<V>\<close>
+        apply (simp add: Int_absorb1)
+        apply (simp add: B_def)
+
+        using that sorry
+    qed
+
+
+    sorry
+    show False
+     sorry
+qed
+oops
+
+
+  MP_TAC(ISPECL [`subtopology X B`; `\<V>:(A=>bool)->bool`]
         BAIRE_CATEGORY_ALT) THEN
-  ASM_REWRITE_TAC[] THEN EXPAND_TAC "v" THEN REWRITE_TAC[FORALL_IN_IMAGE] THEN
+  ASM_REWRITE_TAC[] THEN EXPAND_TAC "\<V>" THEN REWRITE_TAC[FORALL_IN_IMAGE] THEN
   ASM_SIMP_TAC[COUNTABLE_IMAGE; NOT_IMP] THEN CONJ_TAC THENL
    [ALL_TAC;
-    MP_TAC(ISPEC `subtopology X (b::A=>bool)`
+    MP_TAC(ISPEC `subtopology X B`
         INTERIOR_OF_TOPSPACE) THEN
     REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN
     ASM_SIMP_TAC[TOPSPACE_MTOPOLOGY; SET_RULE
-     `s \<subseteq> u \<Longrightarrow> u \<inter> s = s`] THEN
+     `s \<subseteq> \<U> \<Longrightarrow> \<U> \<inter> s = s`] THEN
     DISCH_THEN SUBST1_TAC THEN EXPAND_TAC "b" THEN
-    EXPAND_TAC "v" THEN MATCH_MP_TAC(SET_RULE
-     `(\<forall>s. s \<in> u \<and> s \<subseteq> \<Union>u \<and> f s = {} \<Longrightarrow> s = {}) \<and>
-      \<not> (\<Union>u = {})
-      \<Longrightarrow> \<not> (\<Union>(f ` u) = {})`) THEN
+    EXPAND_TAC "\<V>" THEN MATCH_MP_TAC(SET_RULE
+     `(\<forall>s. s \<in> \<U> \<and> s \<subseteq> \<Union>\<U> \<and> f s = {} \<Longrightarrow> s = {}) \<and>
+      \<not> (\<Union>\<U> = {})
+      \<Longrightarrow> \<not> (\<Union>(f ` \<U>) = {})`) THEN
     ASM_SIMP_TAC[IMP_CONJ; FRONTIER_OF_EQ_EMPTY; GSYM TOPSPACE_MTOPOLOGY] THEN
     ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
     X_GEN_TAC `s::A=>bool` THEN REPEAT STRIP_TAC THEN
@@ -2429,19 +2453,19 @@ in
     ASM_CASES_TAC `s::A=>bool = {}` THEN ASM_SIMP_TAC[] THEN
     ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN DISCH_THEN SUBST_ALL_TAC THEN
     FIRST_ASSUM(MP_TAC \<circ> MATCH_MP (SET_RULE
-     `(u \<noteq> {a}) \<Longrightarrow> a \<in> u \<Longrightarrow> \<exists>b. b \<in> u \<and> (b \<noteq> a)`)) THEN
+     `(\<U> \<noteq> {a}) \<Longrightarrow> a \<in> \<U> \<Longrightarrow> \<exists>b. b \<in> \<U> \<and> (b \<noteq> a)`)) THEN
     ASM_REWRITE_TAC[] THEN
     DISCH_THEN(X_CHOOSE_THEN `t::A=>bool` STRIP_ASSUME_TAC) THEN
     FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [pairwise]) THEN
     DISCH_THEN(MP_TAC \<circ> SPECL [`topspace X::A=>bool`; `t::A=>bool`]) THEN
     ASM SET_TAC[]] THEN
-  SUBGOAL_THEN `closedin X (b::A=>bool)` ASSUME_TAC THENL
+  SUBGOAL_THEN `closedin X B` ASSUME_TAC THENL
    [SUBGOAL_THEN
      `b = topspace X -
-          \<Union>(image (\<lambda>c::A=>bool. X interior_of c) u)`
+          \<Union>(image (\<lambda>c::A=>bool. X interior_of c) \<U>)`
     SUBST1_TAC THENL
-     [MAP_EVERY EXPAND_TAC ["b"; "v"] THEN MATCH_MP_TAC(SET_RULE
-       `s \<union> t = u \<and> disjnt s t \<Longrightarrow> s = u - t`) THEN
+     [MAP_EVERY EXPAND_TAC ["b"; "\<V>"] THEN MATCH_MP_TAC(SET_RULE
+       `s \<union> t = \<U> \<and> disjnt s t \<Longrightarrow> s = \<U> - t`) THEN
       CONJ_TAC THENL
        [REWRITE_TAC[GSYM UNIONS_UNION; lemma] THEN
         ONCE_REWRITE_TAC[UNION_COMM] THEN
@@ -2481,7 +2505,7 @@ in
   REWRITE_TAC[EXTENSION; interior_of; IN_ELIM_THM; NOT_IN_EMPTY] THEN
   X_GEN_TAC `a::A` THEN
   REWRITE_TAC[OPEN_IN_SUBTOPOLOGY_ALT; EXISTS_IN_GSPEC; IN_INTER] THEN
-  DISCH_THEN(X_CHOOSE_THEN `u::A=>bool` STRIP_ASSUME_TAC) THEN
+  DISCH_THEN(X_CHOOSE_THEN `\<U>::A=>bool` STRIP_ASSUME_TAC) THEN
   SUBGOAL_THEN `(a::A) \<in> X frontier_of s` ASSUME_TAC THENL
    [ASM SET_TAC[]; ALL_TAC] THEN
   SUBGOAL_THEN `(a::A) \<in> s` ASSUME_TAC THENL
@@ -2490,7 +2514,7 @@ in
     ALL_TAC] THEN
   FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [locally_connected_space]) THEN
   DISCH_THEN(MP_TAC \<circ> GEN_REWRITE_RULE id [NEIGHBOURHOOD_BASE_OF]) THEN
-  DISCH_THEN(MP_TAC \<circ> SPECL [`u::A=>bool`; `a::A`]) THEN
+  DISCH_THEN(MP_TAC \<circ> SPECL [`\<U>::A=>bool`; `a::A`]) THEN
   REWRITE_TAC[GSYM TOPSPACE_MTOPOLOGY; SUBTOPOLOGY_TOPSPACE] THEN
   ASM_REWRITE_TAC[NOT_EXISTS_THM] THEN
   MAP_EVERY X_GEN_TAC [`w::A=>bool`; `c::A=>bool`] THEN STRIP_TAC THEN
@@ -2498,7 +2522,7 @@ in
         FRONTIER_OF_OPEN_IN_STRADDLE_INTER) THEN
   ASM_REWRITE_TAC[NOT_IMP] THEN CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
   STRIP_TAC THEN
-  SUBGOAL_THEN `\<exists>t::A=>bool. t \<in> u \<and> (t \<noteq> s) \<and> \<not> (w \<inter> t = {})`
+  SUBGOAL_THEN `\<exists>t::A=>bool. t \<in> \<U> \<and> (t \<noteq> s) \<and> \<not> (w \<inter> t = {})`
   STRIP_ASSUME_TAC THENL
    [REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET)) THEN
     REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN ASM SET_TAC[];
@@ -2515,12 +2539,13 @@ in
   STRIP_ASSUME_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
   ASM_SIMP_TAC[FRONTIER_OF_SUBSET_CLOSED_IN]);;
 
+
 lemma real_sierpinski_lemma:
    "a \<le> b \<and>
-        countable u \<and> pairwise disjnt u \<and>
-        (\<forall>c. c \<in> u \<Longrightarrow> real_closed c \<and> (c \<noteq> {})) \<and>
-        \<Union>u = {a..b}
-         \<Longrightarrow> u = {{a..b}}"
+        countable \<U> \<and> pairwise disjnt \<U> \<and>
+        (\<forall>c. c \<in> \<U> \<Longrightarrow> real_closed c \<and> (c \<noteq> {})) \<and>
+        \<Union>\<U> = {a..b}
+         \<Longrightarrow> \<U> = {{a..b}}"
 oops
   REPEAT STRIP_TAC THEN
   MP_TAC(ISPEC `subtopology euclideanreal {a..b}`
