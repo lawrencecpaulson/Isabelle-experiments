@@ -9,9 +9,25 @@ begin
 declare Metric_space_mspace_mdist [simp]
 declare continuous_map_mdist [continuous_intros]
 
-thm euclidean_metric (*REPLACE/RENAME*)
-lemma mcomplete_euclidean: "Met_TC.mcomplete (Pure.type ::'a::euclidean_space itself)"
+thm Met_TC.mtopology_is_euclideanreal(*REPLACE*)
+lemma mtopology_is_euclidean [simp]: "Met_TC.mtopology = euclidean"
+  by (simp add: Met_TC.mtopology_def)
+
+(*REPLACE*)
+lemma euclidean_metric: "Met_TC.mcomplete (Pure.type ::'a::complete_space itself)"
   using complete_UNIV mcomplete_iff_complete by blast
+
+(*REPLACE*)
+lemma completely_metrizable_space_euclidean:
+    "completely_metrizable_space (euclidean:: 'a::complete_space topology)"
+  using Met_TC.completely_metrizable_space_mtopology by fastforce
+
+thm euclidean_metric (*REPLACE/RENAME*)
+lemma mcomplete_euclidean: "Met_TC.mcomplete (Pure.type ::'a::complete_space itself)"
+  using complete_UNIV mcomplete_iff_complete by blast
+
+lemma completely_metrizable_space_cbox: "completely_metrizable_space (top_of_set (cbox a b))"
+    using closed_closedin completely_metrizable_space_closedin completely_metrizable_space_euclidean by blast
 
 lemma countable_as_injective_image_subset: "countable S \<longleftrightarrow> (\<exists>f. \<exists>K::nat set. S = f ` K \<and> inj_on f K)"
   by (metis countableI countable_image_eq_inj image_empty inj_on_the_inv_into uncountable_def)
@@ -2426,6 +2442,7 @@ apply (auto simp: )
     sorry
     show False
      sorry
+ qed
 qed
 oops
 
@@ -2539,42 +2556,35 @@ oops
   STRIP_ASSUME_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
   ASM_SIMP_TAC[FRONTIER_OF_SUBSET_CLOSED_IN]);;
 
-
-lemma real_sierpinski_lemma:
-   "a \<le> b \<and>
-        countable \<U> \<and> pairwise disjnt \<U> \<and>
-        (\<forall>c. c \<in> \<U> \<Longrightarrow> real_closed c \<and> (c \<noteq> {})) \<and>
-        \<Union>\<U> = {a..b}
-         \<Longrightarrow> \<U> = {{a..b}}"
-oops
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPEC `subtopology euclideanreal {a..b}`
-    LOCALLY_CONNECTED_NOT_COUNTABLE_CLOSED_UNION) THEN
-  REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY] THEN
-  DISCH_THEN MATCH_MP_TAC THEN
-  ASM_REWRITE_TAC[REAL_INTERVAL_NE_EMPTY; REAL_POS] THEN
-  ASM_SIMP_TAC[CONNECTED_SPACE_SUBTOPOLOGY;
-               CONNECTED_IN_EUCLIDEANREAL_INTERVAL;
-               LOCALLY_CONNECTED_REAL_INTERVAL] THEN
-  CONJ_TAC THENL
-   [DISJ1_TAC THEN MATCH_MP_TAC COMPLETELY_METRIZABLE_SPACE_CLOSED_IN THEN
-    REWRITE_TAC[COMPLETELY_METRIZABLE_SPACE_EUCLIDEANREAL] THEN
-    REWRITE_TAC[GSYM REAL_CLOSED_IN; REAL_CLOSED_REAL_INTERVAL];
-    REPEAT STRIP_TAC THEN MATCH_MP_TAC CLOSED_IN_SUBSET_TOPSPACE THEN
-    ASM_SIMP_TAC[GSYM REAL_CLOSED_IN] THEN ASM SET_TAC[]]);;
-
+lemma real_Sierpinski_lemma:
+  fixes a b::real
+  assumes "a \<le> b"
+    and "countable \<U>" and pwU: "pairwise disjnt \<U>"
+    and clo: "\<And>C. C \<in> \<U> \<Longrightarrow> closed C \<and> C \<noteq> {}"
+    and "\<Union>\<U> = {a..b}"
+  shows "\<U> = {{a..b}}"
+proof -
+  have "locally_connected_space (top_of_set {a..b})"
+    by (simp add: locally_connected_real_interval)
+  moreover
+  have "completely_metrizable_space (top_of_set {a..b})"
+    by (metis box_real(2) completely_metrizable_space_cbox)
+  ultimately
+  show ?thesis
+  using locally_connected_not_countable_closed_union [of "subtopology euclidean {a..b}"] assms
+  apply (simp add: closedin_subtopology)
+  by (metis Union_upper inf.orderE)
+qed
 
 subsection\<open>Size bounds on connected or path-connected spaces\<close>
 
-
 lemma connected_space_imp_card_ge_alt:
-   "connected_space X \<and> completely_regular_space X \<and>
-        closedin X s \<and> (s \<noteq> {}) \<and> (s \<noteq> topspace X)
-        \<Longrightarrow> UNIV \<lesssim> topspace X"
+  assumes "connected_space X" "completely_regular_space X" "closedin X S" "S \<noteq> {}" "S \<noteq> topspace X"
+  shows "UNIV \<lesssim> topspace X"
 oops
   REPEAT STRIP_TAC THEN
   FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN
-  SUBGOAL_THEN `\<exists>a::A. a \<in> topspace X \<and> (a \<notin> s)` STRIP_ASSUME_TAC THENL
+  SUBGOAL_THEN `\<exists>a::A. a \<in> topspace X \<and> (a \<notin> S)` STRIP_ASSUME_TAC THENL
    [ASM SET_TAC[]; ALL_TAC] THEN
   TRANS_TAC CARD_LE_TRANS `{0..1}` THEN CONJ_TAC THENL
    [MATCH_MP_TAC CARD_EQ_IMP_LE THEN ONCE_REWRITE_TAC[CARD_EQ_SYM] THEN
@@ -2583,10 +2593,10 @@ oops
     ASM_SIMP_TAC[IN_REAL_INTERVAL; REAL_LT_01; REAL_LT_IMP_LE];
     ALL_TAC] THEN
   FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [completely_regular_space]) THEN
-  DISCH_THEN(MP_TAC \<circ> SPECL [`s::A=>bool`; `a::A`]) THEN
+  DISCH_THEN(MP_TAC \<circ> SPECL [`S::A=>bool`; `a::A`]) THEN
   ASM_REWRITE_TAC[LE_C; IN_DIFF; CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN
   MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `f::A=>real` THEN STRIP_TAC THEN
-  X_GEN_TAC `t::real` THEN REWRITE_TAC[IN_REAL_INTERVAL] THEN STRIP_TAC THEN
+  X_GEN_TAC `T::real` THEN REWRITE_TAC[IN_REAL_INTERVAL] THEN STRIP_TAC THEN
   ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN ONCE_REWRITE_TAC[CONJ_SYM] THEN
   FIRST_ASSUM
    (MP_TAC \<circ> SPEC `topspace X::A=>bool` \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ]
@@ -2599,11 +2609,8 @@ oops
   ASM SET_TAC[]);;
 
 lemma connected_space_imp_card_ge_gen:
-   "\<And>X s t::A=>bool.
-        connected_space X \<and> normal_space X \<and>
-        closedin X s \<and> closedin X t \<and>
-        (s \<noteq> {}) \<and> (t \<noteq> {}) \<and> disjnt s t
-        \<Longrightarrow> UNIV \<lesssim> topspace X"
+  assumes "connected_space X" "normal_space X" "closedin X S" "closedin X T" "S \<noteq> {}" "T \<noteq> {}" "disjnt S T"
+  shows "UNIV \<lesssim> topspace X"
 oops
   REPEAT STRIP_TAC THEN
   TRANS_TAC CARD_LE_TRANS `{0..1}` THEN CONJ_TAC THENL
@@ -2613,10 +2620,10 @@ oops
     ASM_SIMP_TAC[IN_REAL_INTERVAL; REAL_LT_01; REAL_LT_IMP_LE];
     ALL_TAC] THEN
   FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [NORMAL_SPACE_IFF_URYSOHN]) THEN
-  DISCH_THEN(MP_TAC \<circ> SPECL [`s::A=>bool`; `t::A=>bool`]) THEN
+  DISCH_THEN(MP_TAC \<circ> SPECL [`S::A=>bool`; `T::A=>bool`]) THEN
   ASM_REWRITE_TAC[LE_C; CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN
   MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `f::A=>real` THEN STRIP_TAC THEN
-  X_GEN_TAC `t::real` THEN REWRITE_TAC[IN_REAL_INTERVAL] THEN STRIP_TAC THEN
+  X_GEN_TAC `T::real` THEN REWRITE_TAC[IN_REAL_INTERVAL] THEN STRIP_TAC THEN
   ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN ONCE_REWRITE_TAC[CONJ_SYM] THEN
   FIRST_ASSUM
    (MP_TAC \<circ> SPEC `topspace X::A=>bool` \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ]
@@ -2629,15 +2636,13 @@ oops
   ASM SET_TAC[]);;
 
 lemma connected_space_imp_card_ge:
-   "connected_space X \<and> normal_space X \<and>
-        (t1_space X \<or> Hausdorff_space X) \<and>
-        \<not> (\<exists>a. topspace X \<subseteq> {a})
-        \<Longrightarrow> UNIV \<lesssim> topspace X"
+  assumes "connected_space X" "normal_space X" "t1_space X \<or> Hausdorff_space X" "\<not> (\<exists>a. topspace X \<subseteq> {a})"
+  shows "UNIV \<lesssim> topspace X"
 oops
   GEN_TAC THEN REWRITE_TAC[T1_OR_HAUSDORFF_SPACE] THEN STRIP_TAC THEN
   MATCH_MP_TAC CONNECTED_SPACE_IMP_CARD_GE_ALT THEN
   FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP (SET_RULE
-   `\<not> (\<exists>a. s \<subseteq> {a}) \<Longrightarrow> \<exists>a b. a \<in> s \<and> b \<in> s \<and> (a \<noteq> b)`)) THEN
+   `\<not> (\<exists>a. S \<subseteq> {a}) \<Longrightarrow> \<exists>a b. a \<in> S \<and> b \<in> S \<and> (a \<noteq> b)`)) THEN
   REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
   MAP_EVERY X_GEN_TAC [`a::A`; `b::A`] THEN STRIP_TAC THEN
   EXISTS_TAC `{a::A}` THEN
@@ -2645,38 +2650,27 @@ oops
   CONJ_TAC THENL [ASM_MESON_TAC[T1_SPACE_CLOSED_IN_SING]; ASM SET_TAC[]]);;
 
 lemma connected_space_imp_infinite_gen:
-   "connected_space X \<and> t1_space X \<and>
-        \<not> (\<exists>a. topspace X \<subseteq> {a})
-        \<Longrightarrow> infinite(topspace X)"
-oops
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC INFINITE_PERFECT_SET_GEN THEN
-  EXISTS_TAC `X::A topology` THEN ASM_REWRITE_TAC[] THEN
-  CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-  MATCH_MP_TAC CONNECTED_IN_IMP_PERFECT_GEN THEN
-  ASM_REWRITE_TAC[CONNECTED_IN_TOPSPACE] THEN ASM SET_TAC[]);;
+   "\<lbrakk>connected_space X; t1_space X; \<nexists>a. topspace X \<subseteq> {a}\<rbrakk> \<Longrightarrow> infinite(topspace X)"
+  by (metis connected_space_discrete_topology finite_t1_space_imp_discrete_topology)
 
 lemma connected_space_imp_infinite:
-   "connected_space X \<and> Hausdorff_space X \<and>
-        \<not> (\<exists>a. topspace X \<subseteq> {a})
-        \<Longrightarrow> infinite(topspace X)"
-oops
-    MESON_TAC[CONNECTED_SPACE_IMP_INFINITE_GEN; HAUSDORFF_IMP_T1_SPACE]);;
+   "\<lbrakk>connected_space X; Hausdorff_space X; \<nexists>a. topspace X \<subseteq> {a}\<rbrakk> \<Longrightarrow> infinite(topspace X)"
+  by (simp add: Hausdorff_imp_t1_space connected_space_imp_infinite_gen)
 
 lemma connected_space_imp_infinite_alt:
-   "connected_space X \<and> regular_space X \<and>
-        closedin X s \<and> (s \<noteq> {}) \<and> (s \<noteq> topspace X)
-        \<Longrightarrow> infinite(topspace X)"
+  assumes "connected_space X" "regular_space X" "closedin X S" "S \<noteq> {}" "S \<noteq> topspace X"
+  shows "infinite(topspace X)"
 oops
   REPEAT STRIP_TAC THEN
   FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN
-  SUBGOAL_THEN `\<exists>a::A. a \<in> topspace X \<and> (a \<notin> s)` STRIP_ASSUME_TAC THENL
+  SUBGOAL_THEN `\<exists>a::A. a \<in> topspace X \<and> (a \<notin> S)` STRIP_ASSUME_TAC THENL
    [ASM SET_TAC[]; ALL_TAC] THEN
   SUBGOAL_THEN
-   `\<exists>u. (\<forall>n. disjnt (u n) s \<and> (a::A) \<in> u n \<and> openin X (u n)) \<and>
+   `\<exists>u. (\<forall>n. disjnt (u n) S \<and> (a::A) \<in> u n \<and> openin X (u n)) \<and>
         (\<forall>n. u(Suc n) \<subset> u n)`
   STRIP_ASSUME_TAC THENL
    [MATCH_MP_TAC DEPENDENT_CHOICE THEN CONJ_TAC THENL
-     [EXISTS_TAC `topspace X - s::A=>bool` THEN
+     [EXISTS_TAC `topspace X - S::A=>bool` THEN
       ASM_SIMP_TAC[IN_DIFF; OPEN_IN_DIFF; OPEN_IN_TOPSPACE] THEN
       SET_TAC[];
       ALL_TAC] THEN
@@ -2708,13 +2702,12 @@ oops
     MATCH_MP_TAC TRANSITIVE_STEPWISE_LE THEN ASM SET_TAC[]]);;
 
 lemma path_connected_space_imp_card_ge:
-   "path_connected_space X \<and> Hausdorff_space X \<and>
-        \<not> (\<exists>a. topspace X \<subseteq> {a})
+   "path_connected_space X" "Hausdorff_space X" "\<not> (\<exists>a. topspace X \<subseteq> {a})
         \<Longrightarrow> UNIV \<lesssim> topspace X"
 oops
   REPEAT STRIP_TAC THEN
   FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP (SET_RULE
-   `\<not> (\<exists>a. s \<subseteq> {a}) \<Longrightarrow> \<exists>a b. a \<in> s \<and> b \<in> s \<and> (a \<noteq> b)`)) THEN
+   `\<not> (\<exists>a. S \<subseteq> {a}) \<Longrightarrow> \<exists>a b. a \<in> S \<and> b \<in> S \<and> (a \<noteq> b)`)) THEN
   REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
   MAP_EVERY X_GEN_TAC [`a::A`; `b::A`] THEN STRIP_TAC THEN
   FIRST_ASSUM(MP_TAC \<circ> SPECL [`a::A`; `b::A`] \<circ>
@@ -2730,7 +2723,7 @@ oops
    CONNECTED_SPACE_IMP_CARD_GE) THEN
   FIRST_ASSUM(MP_TAC \<circ> MATCH_MP PATH_IMAGE_SUBSET_TOPSPACE) THEN
   REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; TOPSPACE_EUCLIDEANREAL; INTER_UNIV] THEN
-  SIMP_TAC[SET_RULE `s \<subseteq> u \<Longrightarrow> u \<inter> s = s`] THEN
+  SIMP_TAC[SET_RULE `S \<subseteq> u \<Longrightarrow> u \<inter> S = S`] THEN
   DISCH_TAC THEN DISCH_THEN MATCH_MP_TAC THEN
   ASM_SIMP_TAC[HAUSDORFF_SPACE_SUBTOPOLOGY] THEN
   ASM_SIMP_TAC[CONNECTED_SPACE_SUBTOPOLOGY; CONNECTED_IN_PATH_IMAGE] THEN
@@ -2741,9 +2734,8 @@ oops
     MP_TAC ENDS_IN_UNIT_REAL_INTERVAL THEN ASM SET_TAC[]]);;
 
 lemma connected_space_imp_uncountable:
-   "connected_space X \<and> regular_space X \<and> Hausdorff_space X \<and>
-        \<not> (\<exists>a. topspace X \<subseteq> {a})
-        \<Longrightarrow> \<not> countable(topspace X)"
+  assumes "connected_space X" "regular_space X" "Hausdorff_space X" "\<not> (\<exists>a. topspace X \<subseteq> {a})"
+  shows "\<not> countable(topspace X)"
 oops
   REPEAT STRIP_TAC THEN
   MP_TAC(ISPEC `X::A topology` CONNECTED_SPACE_IMP_CARD_GE) THEN
@@ -2752,12 +2744,11 @@ oops
   ASM_SIMP_TAC[COUNTABLE_IMP_LINDELOF_SPACE]);;
 
 lemma path_connected_space_imp_uncountable:
-   "path_connected_space X \<and> t1_space X \<and>
-        \<not> (\<exists>a. topspace X \<subseteq> {a})
-        \<Longrightarrow> \<not> countable(topspace X)"
+  assumes "path_connected_space X" "t1_space X" "\<not> (\<exists>a. topspace X \<subseteq> {a})"
+  shows "\<not> countable(topspace X)"
 oops
   REPEAT STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP (SET_RULE
-   `\<not> (\<exists>a. s \<subseteq> {a}) \<Longrightarrow> \<exists>a b. a \<in> s \<and> b \<in> s \<and> (a \<noteq> b)`)) THEN
+   `\<not> (\<exists>a. S \<subseteq> {a}) \<Longrightarrow> \<exists>a b. a \<in> S \<and> b \<in> S \<and> (a \<noteq> b)`)) THEN
   REWRITE_TAC[NOT_EXISTS_THM] THEN
   MAP_EVERY X_GEN_TAC [`a::A`; `b::A`] THEN STRIP_TAC THEN
   FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`a::A`; `b::A`] \<circ>
@@ -2773,7 +2764,7 @@ oops
   REWRITE_TAC[IMP_CONJ; FORALL_IN_IMAGE; IN_DELETE] THEN
   REWRITE_TAC[REAL_POS; NOT_IMP] THEN REPEAT CONJ_TAC THENL
    [MATCH_MP_TAC(MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT] PAIRWISE_MONO)
-     (SET_RULE `s - {a} \<subseteq> s`)) THEN
+     (SET_RULE `S - {a} \<subseteq> S`)) THEN
     REWRITE_TAC[PAIRWISE_IMAGE] THEN REWRITE_TAC[pairwise] THEN SET_TAC[];
     X_GEN_TAC `x::A` THEN REWRITE_TAC[IMP_IMP] THEN
     STRIP_TAC THEN ASM_REWRITE_TAC[REAL_CLOSED_IN] THEN
@@ -2787,8 +2778,8 @@ oops
     REWRITE_TAC[UNIONS_IMAGE; TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY] THEN
     REWRITE_TAC[UNIONS_DELETE_EMPTY; UNIONS_IMAGE] THEN ASM SET_TAC[];
     MATCH_MP_TAC(SET_RULE
-     `\<forall>a b. a \<in> s \<and> b \<in> s \<and> \<not> (f a = z) \<and> \<not> (f b = z) \<and> \<not> (f a = f b)
-            \<Longrightarrow> \<not> (f ` s - {z} = {c})`) THEN
+     `\<forall>a b. a \<in> S \<and> b \<in> S \<and> \<not> (f a = z) \<and> \<not> (f b = z) \<and> \<not> (f a = f b)
+            \<Longrightarrow> \<not> (f ` S - {z} = {c})`) THEN
     MAP_EVERY EXISTS_TAC [`a::A`; `b::A`] THEN
     ASM_REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY] THEN
     MATCH_MP_TAC(SET_RULE `(p \<and> q \<Longrightarrow> r) \<and> p \<and> q \<Longrightarrow> p \<and> q \<and> r`) THEN
