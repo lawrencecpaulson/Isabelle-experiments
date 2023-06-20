@@ -2410,7 +2410,7 @@ proof -
     by (meson clo closedin_def that)
   show ?thesis
   proof (rule ccontr)
-    assume con: "\<U> \<noteq> {topspace X}"
+    assume "\<U> \<noteq> {topspace X}"
     with assms have "\<exists>A\<in>\<U>. \<not> (closedin X A \<and> openin X A)"
       by (metis Union_empty connected_space_clopen_in singletonI subsetI subset_singleton_iff)
     then have "B \<noteq> {}"
@@ -2453,35 +2453,34 @@ proof -
           by (meson IntI \<open>S \<in> \<U>\<close> clo frontier_of_subset_closedin subsetD)
         then obtain W C where "openin X W" "connectedin X C" "a \<in> W" "W \<subseteq> C" "C \<subseteq> U"
           by (metis \<open>a \<in> U\<close> lcX locally_connected_space opeU)
-        have F: "W \<inter> X frontier_of S \<noteq> {}"
+        have "W \<inter> X frontier_of S \<noteq> {}"
           using \<open>B \<inter> U \<subseteq> X frontier_of S\<close> \<open>a \<in> B\<close> \<open>a \<in> U\<close> \<open>a \<in> W\<close> by auto
         with frontier_of_openin_straddle_Int
-         have "W \<inter> S \<noteq> {}" "W - S \<noteq> {}"
-           using \<open>openin X W\<close>  by blast+
-         then obtain b where "b \<in> topspace X" "b \<in> W-S"
-           by (metis Diff_iff \<open>openin X W\<close> ex_in_conv ex_openin)
-         with UU_eq obtain T where "T \<in> \<U>" "T \<noteq> S" "W \<inter> T \<noteq> {}"
-           by auto 
-         then have "disjnt S T"
-           by (metis \<open>S \<in> \<U>\<close> pairwise_def pwU)
-         then have "C - T \<noteq> {}"
-           by (meson Diff_eq_empty_iff \<open>W \<subseteq> C\<close> \<open>a \<in> S\<close> \<open>a \<in> W\<close> disjnt_iff subsetD)
-         then have "C \<inter> X frontier_of T \<noteq> {}"
-           using \<open>W \<inter> T \<noteq> {}\<close> \<open>W \<subseteq> C\<close> \<open>connectedin X C\<close> connectedin_Int_frontier_of by blast
-         moreover 
-         have "C \<inter> X frontier_of T = {}"
-         proof -
-           have "X frontier_of S \<subseteq> S \<and> X frontier_of T \<subseteq> T"
-             using frontier_of_subset_closedin \<open>S \<in> \<U>\<close> \<open>T \<in> \<U>\<close> clo by blast
-           moreover have "X frontier_of T \<union> B = B"
-             using B_def \<V>_def \<open>T \<in> \<U>\<close> by blast
-           ultimately show ?thesis
-             using BUsub \<open>C \<subseteq> U\<close> \<open>disjnt S T\<close> unfolding disjnt_def by blast
-         qed
-         ultimately show False
-           by simp
-       qed
-       with S show "subtopology X B interior_of V = {}"
+        obtain "W \<inter> S \<noteq> {}" "W - S \<noteq> {}" "W \<subseteq> topspace X"
+          using \<open>openin X W\<close> by (metis openin_subset) 
+        then obtain b where "b \<in> topspace X" "b \<in> W-S"
+          by blast
+        with UU_eq obtain T where "T \<in> \<U>" "T \<noteq> S" "W \<inter> T \<noteq> {}"
+          by auto 
+        then have "disjnt S T"
+          by (metis \<open>S \<in> \<U>\<close> pairwise_def pwU)
+        then have "C - T \<noteq> {}"
+          by (meson Diff_eq_empty_iff \<open>W \<subseteq> C\<close> \<open>a \<in> S\<close> \<open>a \<in> W\<close> disjnt_iff subsetD)
+        then have "C \<inter> X frontier_of T \<noteq> {}"
+          using \<open>W \<inter> T \<noteq> {}\<close> \<open>W \<subseteq> C\<close> \<open>connectedin X C\<close> connectedin_Int_frontier_of by blast
+        moreover have "C \<inter> X frontier_of T = {}"
+        proof -
+          have "X frontier_of S \<subseteq> S" "X frontier_of T \<subseteq> T"
+            using frontier_of_subset_closedin \<open>S \<in> \<U>\<close> \<open>T \<in> \<U>\<close> clo by blast+
+          moreover have "X frontier_of T \<union> B = B"
+            using B_def \<V>_def \<open>T \<in> \<U>\<close> by blast
+          ultimately show ?thesis
+            using BUsub \<open>C \<subseteq> U\<close> \<open>disjnt S T\<close> unfolding disjnt_def by blast
+        qed
+        ultimately show False
+          by simp
+      qed
+      with S show "subtopology X B interior_of V = {}"
         by meson
     qed
     then show False
@@ -2511,9 +2510,53 @@ qed
 
 subsection\<open>Size bounds on connected or path-connected spaces\<close>
 
+
+lemma real_shrink_eq:
+  fixes x y::real
+  shows "(x / (1 + \<bar>x\<bar>) = y / (1 + \<bar>y\<bar>)) \<longleftrightarrow> x = y"
+  by (metis real_shrink_Galois)
+
+lemma card_eq_real_subset:
+  fixes a b::real
+  assumes "a < b" and S: "\<And>x. \<lbrakk>a < x; x < b\<rbrakk> \<Longrightarrow> x \<in> S"
+  shows "S \<approx> (UNIV::real set)"
+proof (rule lepoll_antisym)
+  show "S \<lesssim> (UNIV::real set)"
+    by (simp add: subset_imp_lepoll)
+  define f where "f \<equiv> \<lambda>x. (a+b) / 2 + (b-a) / 2 * (x / (1 + \<bar>x\<bar>))"
+  show "(UNIV::real set) \<lesssim> S"
+    unfolding lepoll_def
+  proof (intro exI conjI)
+    show "inj f"
+      unfolding inj_on_def f_def
+      by (smt (verit, ccfv_SIG) real_shrink_eq \<open>a<b\<close> divide_eq_0_iff mult_cancel_left times_divide_eq_right)
+    have pos: "(b-a) / 2 > 0"
+      using \<open>a<b\<close> by auto
+    have *: "(a < (a + b) / 2 + (b - a) / 2 * x \<longleftrightarrow> (b - a) *-1 < (b - a) * x)"
+            "((a + b) / 2 + (b - a) / 2 * x < b \<longleftrightarrow> (b - a) * x < (b - a) * 1)" for x
+      by (auto simp add: field_simps)
+    show "range f \<subseteq> S"
+      using shrink_range [of UNIV] \<open>a < b\<close>
+      unfolding subset_iff f_def greaterThanLessThan_iff image_iff
+      by (smt (verit, best) S * mult_less_cancel_left2 mult_minus_right)
+  qed
+qed
+  
+
 lemma connected_space_imp_card_ge_alt:
   assumes "connected_space X" "completely_regular_space X" "closedin X S" "S \<noteq> {}" "S \<noteq> topspace X"
-  shows "UNIV \<lesssim> topspace X"
+  shows "(UNIV::real set) \<lesssim> topspace X"
+proof -
+  have "S \<subseteq> topspace X"
+    using \<open>closedin X S\<close> closedin_subset by blast
+  then obtain a where "a \<in> topspace X" "a \<notin> S"
+    using \<open>S \<noteq> topspace X\<close> by blast
+  have "uncountable{0..1::real}"
+    by (simp add: uncountable_closed_interval)
+  then have "(UNIV::real set) \<lesssim> {0..1::real}"
+
+    sorry
+    sorry
 oops
   REPEAT STRIP_TAC THEN
   FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN
