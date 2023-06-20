@@ -15,7 +15,8 @@ lemma mtopology_is_euclidean [simp]: "Met_TC.mtopology = euclidean"
 
 (*REPLACE*)
 lemma euclidean_metric: "Met_TC.mcomplete (Pure.type ::'a::complete_space itself)"
-  using complete_UNIV mcomplete_iff_complete by blast
+  by auto
+
 
 (*REPLACE*)
 lemma completely_metrizable_space_euclidean:
@@ -24,7 +25,7 @@ lemma completely_metrizable_space_euclidean:
 
 thm euclidean_metric (*REPLACE/RENAME*)
 lemma mcomplete_euclidean: "Met_TC.mcomplete (Pure.type ::'a::complete_space itself)"
-  using complete_UNIV mcomplete_iff_complete by blast
+  by auto
 
 lemma completely_metrizable_space_cbox: "completely_metrizable_space (top_of_set (cbox a b))"
     using closed_closedin completely_metrizable_space_closedin completely_metrizable_space_euclidean by blast
@@ -2392,169 +2393,101 @@ qed auto
 
 subsection\<open>Sierpinski-Hausdorff type results about countable closed unions\<close>
 
-lemma lemmax: "\<Union>(f ` s \<union> g ` s) = \<Union>(image (\<lambda>x. f x \<union> g x) s)"
-  by auto
-
 lemma locally_connected_not_countable_closed_union:
   assumes "topspace X \<noteq> {}" and csX: "connected_space X"
     and lcX: "locally_connected_space X"
     and X: "completely_metrizable_space X \<or> locally_compact_space X \<and> Hausdorff_space X"
     and "countable \<U>" and pwU: "pairwise disjnt \<U>"
     and clo: "\<And>C. C \<in> \<U> \<Longrightarrow> closedin X C \<and> C \<noteq> {}"
-    and "\<Union>\<U> = topspace X"
+    and UU_eq: "\<Union>\<U> = topspace X"
   shows "\<U> = {topspace X}"
 proof -
   define \<V> where "\<V> \<equiv> (frontier_of) X ` \<U>"
   define B where "B \<equiv> \<Union>\<V>"
   then have Bsub: "B \<subseteq> topspace X"
     by (simp add: Sup_le_iff \<V>_def closedin_frontier_of closedin_subset)
-
+  have allsub: "A \<subseteq> topspace X" if "A \<in> \<U>" for A
+    by (meson clo closedin_def that)
   show ?thesis
   proof (rule ccontr)
     assume con: "\<U> \<noteq> {topspace X}"
-    have "subtopology X B interior_of \<Union> \<V> = {}"
+    with assms have "\<exists>A\<in>\<U>. \<not> (closedin X A \<and> openin X A)"
+      by (metis Union_empty connected_space_clopen_in singletonI subsetI subset_singleton_iff)
+    then have "B \<noteq> {}"
+      by (auto simp: B_def \<V>_def frontier_of_eq_empty allsub)
+    moreover
+    have "subtopology X B interior_of B = B"
+      by (simp add: Bsub interior_of_openin openin_subtopology_refl)
+    ultimately have int_B_nonempty: "subtopology X B interior_of B \<noteq> {}"
+      by auto
+    have "subtopology X B interior_of \<Union>\<V> = {}"
     proof (intro Baire_category_alt conjI)
-      show "completely_metrizable_space (subtopology X B) \<or> locally_compact_space (subtopology X B) \<and> regular_space (subtopology X B)"
-        using X csX lcX
-apply (auto simp: )
-        sorry
+      have "\<Union>\<U> \<subseteq> B \<union> \<Union>((interior_of) X ` \<U>)"
+        using clo closure_of_closedin by (fastforce simp: B_def \<V>_def frontier_of_def)
+      moreover have "B \<union> \<Union>((interior_of) X ` \<U>) \<subseteq> \<Union>\<U>"
+        using allsub clo frontier_of_subset_eq interior_of_subset by (fastforce simp: B_def \<V>_def )
+      moreover have "disjnt B (\<Union>((interior_of) X ` \<U>))"
+        using pwU 
+        apply (clarsimp simp: B_def \<V>_def frontier_of_def pairwise_def disjnt_iff)
+        by (metis clo closure_of_eq interior_of_subset subsetD)
+      ultimately have "B = topspace X - \<Union> ((interior_of) X ` \<U>)"
+        by (auto simp: UU_eq disjnt_iff)
+      then have "closedin X B"
+        by fastforce
+      with X show "completely_metrizable_space (subtopology X B) \<or> locally_compact_space (subtopology X B) \<and> regular_space (subtopology X B)"
+        by (metis completely_metrizable_space_closedin locally_compact_Hausdorff_or_regular 
+            locally_compact_space_closed_subset regular_space_subtopology)
       show "countable \<V>"
         by (simp add: \<V>_def \<open>countable \<U>\<close>)
-      fix T
-      assume "T \<in> \<V>"
-      show "closedin (subtopology X B) T"
-        by (metis B_def Sup_upper \<V>_def \<open>T \<in> \<V>\<close> closedin_frontier_of closedin_subset_topspace image_iff)
-      have "subtopology X B interior_of B \<noteq> {}"
-        using interior_of_topspace [of "subtopology X B"] Bsub \<open>T \<in> \<V>\<close>
-        apply (simp add: Int_absorb1)
-        apply (simp add: B_def)
-
-    sorry
-      then show "subtopology X B interior_of T = {}"
-        using interior_of_topspace [of "subtopology X B"] Bsub \<open>T \<in> \<V>\<close>
-        apply (simp add: Int_absorb1)
-        apply (simp add: B_def)
-
-        using that sorry
+      fix V
+      assume "V \<in> \<V>"
+      then obtain S where S: "S \<in> \<U>" "V = X frontier_of S"
+        by (auto simp: \<V>_def)
+      show "closedin (subtopology X B) V"
+        by (metis B_def Sup_upper \<V>_def \<open>V \<in> \<V>\<close> closedin_frontier_of closedin_subset_topspace image_iff)
+      have "subtopology X B interior_of (X frontier_of S) = {}"
+      proof (clarsimp simp: interior_of_def openin_subtopology_alt)
+        fix a U
+        assume "a \<in> B" "a \<in> U" and opeU: "openin X U" and BUsub: "B \<inter> U \<subseteq> X frontier_of S"
+        then have "a \<in> S"
+          by (meson IntI \<open>S \<in> \<U>\<close> clo frontier_of_subset_closedin subsetD)
+        then obtain W C where "openin X W" "connectedin X C" "a \<in> W" "W \<subseteq> C" "C \<subseteq> U"
+          by (metis \<open>a \<in> U\<close> lcX locally_connected_space opeU)
+        have F: "W \<inter> X frontier_of S \<noteq> {}"
+          using \<open>B \<inter> U \<subseteq> X frontier_of S\<close> \<open>a \<in> B\<close> \<open>a \<in> U\<close> \<open>a \<in> W\<close> by auto
+        with frontier_of_openin_straddle_Int
+         have "W \<inter> S \<noteq> {}" "W - S \<noteq> {}"
+           using \<open>openin X W\<close>  by blast+
+         then obtain b where "b \<in> topspace X" "b \<in> W-S"
+           by (metis Diff_iff \<open>openin X W\<close> ex_in_conv ex_openin)
+         with UU_eq obtain T where "T \<in> \<U>" "T \<noteq> S" "W \<inter> T \<noteq> {}"
+           by auto 
+         then have "disjnt S T"
+           by (metis \<open>S \<in> \<U>\<close> pairwise_def pwU)
+         then have "C - T \<noteq> {}"
+           by (meson Diff_eq_empty_iff \<open>W \<subseteq> C\<close> \<open>a \<in> S\<close> \<open>a \<in> W\<close> disjnt_iff subsetD)
+         then have "C \<inter> X frontier_of T \<noteq> {}"
+           using \<open>W \<inter> T \<noteq> {}\<close> \<open>W \<subseteq> C\<close> \<open>connectedin X C\<close> connectedin_Int_frontier_of by blast
+         moreover 
+         have "C \<inter> X frontier_of T = {}"
+         proof -
+           have "X frontier_of S \<subseteq> S \<and> X frontier_of T \<subseteq> T"
+             using frontier_of_subset_closedin \<open>S \<in> \<U>\<close> \<open>T \<in> \<U>\<close> clo by blast
+           moreover have "X frontier_of T \<union> B = B"
+             using B_def \<V>_def \<open>T \<in> \<U>\<close> by blast
+           ultimately show ?thesis
+             using BUsub \<open>C \<subseteq> U\<close> \<open>disjnt S T\<close> unfolding disjnt_def by blast
+         qed
+         ultimately show False
+           by simp
+       qed
+       with S show "subtopology X B interior_of V = {}"
+        by meson
     qed
-
-
-    sorry
-    show False
-     sorry
- qed
+    then show False
+      using B_def int_B_nonempty by blast
+  qed
 qed
-oops
-
-
-  MP_TAC(ISPECL [`subtopology X B`; `\<V>:(A=>bool)->bool`]
-        BAIRE_CATEGORY_ALT) THEN
-  ASM_REWRITE_TAC[] THEN EXPAND_TAC "\<V>" THEN REWRITE_TAC[FORALL_IN_IMAGE] THEN
-  ASM_SIMP_TAC[COUNTABLE_IMAGE; NOT_IMP] THEN CONJ_TAC THENL
-   [ALL_TAC;
-    MP_TAC(ISPEC `subtopology X B`
-        INTERIOR_OF_TOPSPACE) THEN
-    REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN
-    ASM_SIMP_TAC[TOPSPACE_MTOPOLOGY; SET_RULE
-     `s \<subseteq> \<U> \<Longrightarrow> \<U> \<inter> s = s`] THEN
-    DISCH_THEN SUBST1_TAC THEN EXPAND_TAC "b" THEN
-    EXPAND_TAC "\<V>" THEN MATCH_MP_TAC(SET_RULE
-     `(\<forall>s. s \<in> \<U> \<and> s \<subseteq> \<Union>\<U> \<and> f s = {} \<Longrightarrow> s = {}) \<and>
-      \<not> (\<Union>\<U> = {})
-      \<Longrightarrow> \<not> (\<Union>(f ` \<U>) = {})`) THEN
-    ASM_SIMP_TAC[IMP_CONJ; FRONTIER_OF_EQ_EMPTY; GSYM TOPSPACE_MTOPOLOGY] THEN
-    ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-    X_GEN_TAC `s::A=>bool` THEN REPEAT STRIP_TAC THEN
-    FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [CONNECTED_SPACE_CLOPEN_IN]) THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `s::A=>bool`) THEN
-    ASM_CASES_TAC `s::A=>bool = {}` THEN ASM_SIMP_TAC[] THEN
-    ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN DISCH_THEN SUBST_ALL_TAC THEN
-    FIRST_ASSUM(MP_TAC \<circ> MATCH_MP (SET_RULE
-     `(\<U> \<noteq> {a}) \<Longrightarrow> a \<in> \<U> \<Longrightarrow> \<exists>b. b \<in> \<U> \<and> (b \<noteq> a)`)) THEN
-    ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(X_CHOOSE_THEN `t::A=>bool` STRIP_ASSUME_TAC) THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [pairwise]) THEN
-    DISCH_THEN(MP_TAC \<circ> SPECL [`topspace X::A=>bool`; `t::A=>bool`]) THEN
-    ASM SET_TAC[]] THEN
-  SUBGOAL_THEN `closedin X B` ASSUME_TAC THENL
-   [SUBGOAL_THEN
-     `b = topspace X -
-          \<Union>(image (\<lambda>c::A=>bool. X interior_of c) \<U>)`
-    SUBST1_TAC THENL
-     [MAP_EVERY EXPAND_TAC ["b"; "\<V>"] THEN MATCH_MP_TAC(SET_RULE
-       `s \<union> t = \<U> \<and> disjnt s t \<Longrightarrow> s = \<U> - t`) THEN
-      CONJ_TAC THENL
-       [REWRITE_TAC[GSYM UNIONS_UNION; lemma] THEN
-        ONCE_REWRITE_TAC[UNION_COMM] THEN
-        REWRITE_TAC[INTERIOR_OF_UNION_FRONTIER_OF] THEN
-        FIRST_X_ASSUM(fun th -> GEN_REWRITE_TAC RAND_CONV [SYM th]) THEN
-        AP_TERM_TAC THEN MATCH_MP_TAC(SET_RULE
-         `(\<forall>x. x \<in> s \<Longrightarrow> f x = x) \<Longrightarrow> f ` s = s`) THEN
-        ASM_SIMP_TAC[CLOSURE_OF_EQ];
-        REWRITE_TAC[SET_RULE
-         `disjnt (\<Union>s) (\<Union>t) \<longleftrightarrow>
-          \<forall>x. x \<in> s \<Longrightarrow> \<forall>y. y \<in> t \<Longrightarrow> disjnt x y`] THEN
-        REWRITE_TAC[FORALL_IN_IMAGE] THEN
-        X_GEN_TAC `s::A=>bool` THEN DISCH_TAC THEN
-        X_GEN_TAC `t::A=>bool` THEN DISCH_TAC THEN
-        ASM_CASES_TAC `s::A=>bool = t` THENL
-         [ASM_REWRITE_TAC[frontier_of] THEN SET_TAC[];
-          FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [pairwise])] THEN
-        DISCH_THEN(MP_TAC \<circ> SPECL [`s::A=>bool`; `t::A=>bool`]) THEN
-        ASM_SIMP_TAC[frontier_of; CLOSURE_OF_CLOSED_IN] THEN
-        MP_TAC(ISPECL [`X::A topology`; `t::A=>bool`]
-          INTERIOR_OF_SUBSET) THEN
-        SET_TAC[]];
-      MATCH_MP_TAC CLOSED_IN_DIFF THEN REWRITE_TAC[CLOSED_IN_TOPSPACE] THEN
-      MATCH_MP_TAC OPEN_IN_UNIONS THEN
-      REWRITE_TAC[FORALL_IN_IMAGE; OPEN_IN_INTERIOR_OF]];
-      ALL_TAC] THEN
-  CONJ_TAC THENL
-   [ASM_MESON_TAC[COMPLETELY_METRIZABLE_SPACE_CLOSED_IN;
-                  LOCALLY_COMPACT_SPACE_CLOSED_SUBSET;
-                  HAUSDORFF_SPACE_SUBTOPOLOGY];
-    ALL_TAC] THEN
-  X_GEN_TAC `s::A=>bool` THEN DISCH_TAC THEN CONJ_TAC THENL
-   [MATCH_MP_TAC CLOSED_IN_SUBSET_TOPSPACE THEN
-    REWRITE_TAC[CLOSED_IN_FRONTIER_OF; FRONTIER_OF_SUBSET_TOPSPACE] THEN
-    ASM SET_TAC[];
-    ALL_TAC] THEN
-  REWRITE_TAC[EXTENSION; interior_of; IN_ELIM_THM; NOT_IN_EMPTY] THEN
-  X_GEN_TAC `a::A` THEN
-  REWRITE_TAC[OPEN_IN_SUBTOPOLOGY_ALT; EXISTS_IN_GSPEC; IN_INTER] THEN
-  DISCH_THEN(X_CHOOSE_THEN `\<U>::A=>bool` STRIP_ASSUME_TAC) THEN
-  SUBGOAL_THEN `(a::A) \<in> X frontier_of s` ASSUME_TAC THENL
-   [ASM SET_TAC[]; ALL_TAC] THEN
-  SUBGOAL_THEN `(a::A) \<in> s` ASSUME_TAC THENL
-   [UNDISCH_TAC `(a::A) \<in> X frontier_of s` THEN
-    REWRITE_TAC[frontier_of; IN_DIFF] THEN  ASM_SIMP_TAC[CLOSURE_OF_CLOSED_IN];
-    ALL_TAC] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [locally_connected_space]) THEN
-  DISCH_THEN(MP_TAC \<circ> GEN_REWRITE_RULE id [NEIGHBOURHOOD_BASE_OF]) THEN
-  DISCH_THEN(MP_TAC \<circ> SPECL [`\<U>::A=>bool`; `a::A`]) THEN
-  REWRITE_TAC[GSYM TOPSPACE_MTOPOLOGY; SUBTOPOLOGY_TOPSPACE] THEN
-  ASM_REWRITE_TAC[NOT_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`w::A=>bool`; `c::A=>bool`] THEN STRIP_TAC THEN
-  MP_TAC(ISPECL [`X::A topology`; `s::A=>bool`; `w::A=>bool`]
-        FRONTIER_OF_OPEN_IN_STRADDLE_INTER) THEN
-  ASM_REWRITE_TAC[NOT_IMP] THEN CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  STRIP_TAC THEN
-  SUBGOAL_THEN `\<exists>t::A=>bool. t \<in> \<U> \<and> (t \<noteq> s) \<and> \<not> (w \<inter> t = {})`
-  STRIP_ASSUME_TAC THENL
-   [REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET)) THEN
-    REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN ASM SET_TAC[];
-    ALL_TAC] THEN
-  FIRST_ASSUM(MP_TAC \<circ> SPECL [`s::A=>bool`; `t::A=>bool`] \<circ>
-    GEN_REWRITE_RULE id [pairwise]) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
-  MP_TAC(ISPECL [`X::A topology`; `c::A=>bool`; `t::A=>bool`]
-        CONNECTED_IN_INTER_FRONTIER_OF) THEN
-  ASM_REWRITE_TAC[NOT_IMP] THEN CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  SUBGOAL_THEN
-   `X frontier_of (s::A=>bool) \<subseteq> s \<and>
-    X frontier_of (t::A=>bool) \<subseteq> t`
-  STRIP_ASSUME_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-  ASM_SIMP_TAC[FRONTIER_OF_SUBSET_CLOSED_IN]);;
 
 lemma real_Sierpinski_lemma:
   fixes a b::real
