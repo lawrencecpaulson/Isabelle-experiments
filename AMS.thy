@@ -9,6 +9,9 @@ begin
 lemma countable_lepoll: "\<lbrakk>countable A; B \<lesssim> A\<rbrakk> \<Longrightarrow> countable B"
   by (meson countable_image countable_subset lepoll_iff)
 
+lemma countable_lesspoll: "\<lbrakk>countable A; B \<prec> A\<rbrakk> \<Longrightarrow> countable B"
+  using countable_lepoll lesspoll_def by blast
+
 lemma countable_eqpoll: "\<lbrakk>countable A; B \<approx> A\<rbrakk> \<Longrightarrow> countable B"
   using countable_lepoll eqpoll_imp_lepoll by blast
 
@@ -2674,27 +2677,33 @@ proof -
 qed
 
 lemma path_connected_space_imp_card_ge:
-  assumes "path_connected_space X" "Hausdorff_space X" and nosing: "\<not> (\<exists>a. topspace X \<subseteq> {a})"
+  assumes "path_connected_space X" "Hausdorff_space X" and nosing: "\<not> (\<exists>x. topspace X \<subseteq> {x})"
   shows "(UNIV::real set) \<lesssim> topspace X"
 proof -
   obtain a b where "a \<in> topspace X" "b \<in> topspace X" "a \<noteq> b"
     by (metis nosing singletonI subset_iff)
-  then have "{a} \<noteq> topspace X"
-    by force
-  then obtain \<gamma> where "pathin X \<gamma>" "\<gamma> 0 = a" "\<gamma> 1 = b"
+  then obtain \<gamma> where \<gamma>: "pathin X \<gamma>" "\<gamma> 0 = a" "\<gamma> 1 = b"
     by (meson \<open>a \<in> topspace X\<close> \<open>b \<in> topspace X\<close> \<open>path_connected_space X\<close> path_connected_space_def)
-  then have "\<gamma> ` {0..1} \<lesssim> topspace X"
-    by (meson path_image_subset_topspace subset_imp_lepoll)
-  have "(UNIV::real set) \<lesssim>  topspace (subtopology X (\<gamma> ` (topspace (subtopology euclidean {0..1}))))"
-    apply (rule connected_space_imp_card_ge)
-    using \<open>pathin X \<gamma>\<close> connectedin_def connectedin_path_image apply auto[1]
-    apply (simp add: Hausdorff_space_subtopology \<open>pathin X \<gamma>\<close> assms(2) compact_Hausdorff_or_regular_imp_normal_space compact_space_subtopology compactin_path_image)
-    using Hausdorff_imp_t1_space assms(2) t1_space_subtopology apply blast
-    by (metis \<open>\<gamma> 0 = a\<close> \<open>\<gamma> 1 = b\<close> \<open>a \<noteq> b\<close> \<open>pathin X \<gamma>\<close> continuous_map_into_subtopology dual_order.eq_iff in_mono path_finish_in_topspace path_start_in_topspace pathin_def singletonD)
+  let ?Y = "subtopology X (\<gamma> ` (topspace (subtopology euclidean {0..1})))"
+  have "(UNIV::real set) \<lesssim>  topspace ?Y"
+  proof (intro compact_Hausdorff_or_regular_imp_normal_space connected_space_imp_card_ge)
+    show "connected_space ?Y"
+      using \<open>pathin X \<gamma>\<close> connectedin_def connectedin_path_image by auto
+    show "Hausdorff_space ?Y \<or> regular_space ?Y"
+      using Hausdorff_space_subtopology \<open>Hausdorff_space X\<close> by blast
+    show "t1_space ?Y"
+      using Hausdorff_imp_t1_space \<open>Hausdorff_space X\<close> t1_space_subtopology by blast
+    show "compact_space ?Y"
+      by (simp add: \<open>pathin X \<gamma>\<close> compact_space_subtopology compactin_path_image)
+    have "a \<in> topspace ?Y" "b \<in> topspace ?Y"
+      using \<gamma> pathin_subtopology by fastforce+
+    with \<open>a \<noteq> b\<close> show "\<nexists>x. topspace ?Y \<subseteq> {x}"
+      by blast
+  qed
   also have "\<dots> \<lesssim> \<gamma> ` {0..1}"
     by (simp add: subset_imp_lepoll)
   also have "\<dots> \<lesssim> topspace X"
-    using \<open>\<gamma> ` {0..1} \<lesssim> topspace X\<close> by blast
+    by (meson \<gamma> path_image_subset_topspace subset_imp_lepoll)
   finally show ?thesis .
 qed
 
@@ -2712,49 +2721,43 @@ proof
 qed
 
 lemma path_connected_space_imp_uncountable:
-  assumes "path_connected_space X" "t1_space X" "\<not> (\<exists>a. topspace X \<subseteq> {a})"
+  assumes "path_connected_space X" "t1_space X" and nosing: "\<not> (\<exists>a. topspace X \<subseteq> {a})"
   shows "\<not> countable(topspace X)"
-oops
-  REPEAT STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP (SET_RULE
-   `\<not> (\<exists>a. S \<subseteq> {a}) \<Longrightarrow> \<exists>a b. a \<in> S \<and> b \<in> S \<and> (a \<noteq> b)`)) THEN
-  REWRITE_TAC[NOT_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`a::A`; `b::A`] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`a::A`; `b::A`] \<circ>
-    REWRITE_RULE[path_connected_space]) THEN
-  ASM_REWRITE_TAC[NOT_EXISTS_THM; pathin] THEN
-  X_GEN_TAC `g::real=>A` THEN STRIP_TAC THEN
-  MP_TAC(ISPECL
-   [`0::real`; `1::real`;
-   `{{x. x \<in> topspace(subtopology euclideanreal ({0..1})) \<and>
-          (g::real=>A) x \<in> {a}} |
-     a \<in> topspace X} DELETE {}`] REAL_SIERPINSKI_LEMMA) THEN
-  ASM_SIMP_TAC[SIMPLE_IMAGE; COUNTABLE_IMAGE; COUNTABLE_DELETE] THEN
-  REWRITE_TAC[IMP_CONJ; FORALL_IN_IMAGE; IN_DELETE] THEN
-  REWRITE_TAC[REAL_POS; NOT_IMP] THEN REPEAT CONJ_TAC THENL
-   [MATCH_MP_TAC(MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT] PAIRWISE_MONO)
-     (SET_RULE `S - {a} \<subseteq> S`)) THEN
-    REWRITE_TAC[PAIRWISE_IMAGE] THEN REWRITE_TAC[pairwise] THEN SET_TAC[];
-    X_GEN_TAC `x::A` THEN REWRITE_TAC[IMP_IMP] THEN
-    STRIP_TAC THEN ASM_REWRITE_TAC[REAL_CLOSED_IN] THEN
-    MATCH_MP_TAC CLOSED_IN_TRANS_FULL THEN
-    EXISTS_TAC `{0..1}` THEN
-    REWRITE_TAC[GSYM REAL_CLOSED_IN; REAL_CLOSED_REAL_INTERVAL] THEN
-    FIRST_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ]
-        CLOSED_IN_CONTINUOUS_MAP_PREIMAGE)) THEN
-    ASM_MESON_TAC[T1_SPACE_CLOSED_IN_SING];
-    FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CONTINUOUS_MAP_IMAGE_SUBSET_TOPSPACE) THEN
-    REWRITE_TAC[UNIONS_IMAGE; TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY] THEN
-    REWRITE_TAC[UNIONS_DELETE_EMPTY; UNIONS_IMAGE] THEN ASM SET_TAC[];
-    MATCH_MP_TAC(SET_RULE
-     `\<forall>a b. a \<in> S \<and> b \<in> S \<and> \<not> (f a = z) \<and> \<not> (f b = z) \<and> \<not> (f a = f b)
-            \<Longrightarrow> \<not> (f ` S - {z} = {c})`) THEN
-    MAP_EVERY EXISTS_TAC [`a::A`; `b::A`] THEN
-    ASM_REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY] THEN
-    MATCH_MP_TAC(SET_RULE `(p \<and> q \<Longrightarrow> r) \<and> p \<and> q \<Longrightarrow> p \<and> q \<and> r`) THEN
-    CONJ_TAC THENL [ASM SET_TAC[]; REWRITE_TAC[GSYM MEMBER_NOT_EMPTY]] THEN
-    CONJ_TAC THENL [EXISTS_TAC `0::real`; EXISTS_TAC `1::real`] THEN
-    ASM_REWRITE_TAC[IN_ELIM_THM; IN_SING] THEN
-    REWRITE_TAC[ENDS_IN_REAL_INTERVAL; REAL_INTERVAL_NE_EMPTY; REAL_POS]]);;
+proof 
+  assume coX: "countable (topspace X)"
+  obtain a b where "a \<in> topspace X" "b \<in> topspace X" "a \<noteq> b"
+    by (metis nosing singletonI subset_iff)
+  then obtain \<gamma> where "pathin X \<gamma>" "\<gamma> 0 = a" "\<gamma> 1 = b"
+    by (meson \<open>a \<in> topspace X\<close> \<open>b \<in> topspace X\<close> \<open>path_connected_space X\<close> path_connected_space_def)
+  then have "\<gamma> ` {0..1} \<lesssim> topspace X"
+    by (meson path_image_subset_topspace subset_imp_lepoll)
+  define \<A> where "\<A> \<equiv> ((\<lambda>a. {x \<in> {0..1}. \<gamma> x \<in> {a}}) ` topspace X) - {{}}"
+  have \<A>01: "\<A> = {{0..1}}"
+  proof (rule real_Sierpinski_lemma)
+    show "countable \<A>"
+      using \<A>_def coX by blast
+    show "disjoint \<A>"
+      by (auto simp add: \<A>_def disjnt_iff pairwise_def)
+    show "\<Union>\<A> = {0..1}"
+      using \<open>pathin X \<gamma>\<close> path_image_subset_topspace by (fastforce simp add: \<A>_def Bex_def)
+    fix C
+    assume "C \<in> \<A>"
+    then obtain a where "a \<in> topspace X" and C: "C = {x \<in> {0..1}. \<gamma> x \<in> {a}}" "C \<noteq> {}"
+      by (auto simp: \<A>_def)
+    then have "closedin X {a}"
+      by (meson \<open>t1_space X\<close> closedin_t1_singleton)
+    then have "closedin (top_of_set {0..1}) C"
+      using C \<open>pathin X \<gamma>\<close> closedin_continuous_map_preimage pathin_def by fastforce
+    then show "closed C \<and> C \<noteq> {}"
+      using C closedin_closed_trans by blast
+  qed auto
+  then have "{0..1} \<in> \<A>"
+    by blast
+  then have "\<exists>a \<in> topspace X. {0..1} \<subseteq> {x. \<gamma> x = a}"
+    using \<A>_def image_iff by auto
+  then show False
+    using \<open>\<gamma> 0 = a\<close> \<open>\<gamma> 1 = b\<close> \<open>a \<noteq> b\<close> atLeastAtMost_iff zero_less_one_class.zero_le_one by blast
+qed
 
 
 subsection\<open>The Tychonoff embedding\<close>
