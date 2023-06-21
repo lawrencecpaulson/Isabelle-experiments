@@ -71,7 +71,7 @@ proof
   show "?lhs \<subseteq> ?rhs"
     using PiE_def by auto
   show "?rhs \<subseteq> ?lhs"
-    by (force simp add: PiE_iff)
+    by (force simp: PiE_iff)
 qed
 
 
@@ -99,7 +99,7 @@ proof (rule lepoll_antisym)
       using \<open>a<b\<close> by auto
     have *: "(a < (a + b) / 2 + (b - a) / 2 * x \<longleftrightarrow> (b - a) *-1 < (b - a) * x)"
             "((a + b) / 2 + (b - a) / 2 * x < b \<longleftrightarrow> (b - a) * x < (b - a) * 1)" for x
-      by (auto simp add: field_simps)
+      by (auto simp: field_simps)
     show "range f \<subseteq> S"
       using shrink_range [of UNIV] \<open>a < b\<close>
       unfolding subset_iff f_def greaterThanLessThan_iff image_iff
@@ -434,7 +434,7 @@ proof -
     have "D x y = 0 \<longleftrightarrow> (\<forall>i\<in>I. mdist (m i) (x i) (y i) = 0)"
       using D0 D_iff [of x y 0] nle_le by fastforce
     also have "... \<longleftrightarrow> x = y"
-      using \<open>x \<in> S\<close> \<open>y \<in> S\<close> by (fastforce simp add: S_def PiE_iff extensional_def)
+      using \<open>x \<in> S\<close> \<open>y \<in> S\<close> by (fastforce simp: S_def PiE_iff extensional_def)
     finally show "(D x y = 0) \<longleftrightarrow> (x = y)" .
     fix z
     assume "z \<in> S"
@@ -617,7 +617,7 @@ next
         fix y
         assume y: "y \<in> Pi\<^sub>E I U"
         then have "y \<in> M"
-          by (force simp add: PiE_iff M_def U_def m mspace_cm split: if_split_asm)
+          by (force simp: PiE_iff M_def U_def m mspace_cm split: if_split_asm)
         moreover 
         have "\<forall>i\<in>I. mdist (cm i) (z i) (y i) \<le> R"
           by (smt (verit) PiE_mem U_def cm_def in_mball_of inverse_Suc mdist_capped mdist_capped_le y)
@@ -671,7 +671,7 @@ next
   have 3: "x \<in> M"
     if \<section>: "\<And>x. x\<in>S \<Longrightarrow> \<exists>U. finite (J U) \<and> (\<forall>i\<in>I. openin (X i) (U i)) \<and> x \<in> Pi\<^sub>E I U \<and> Pi\<^sub>E I U \<subseteq> S"
       and "x \<in> S" for S x
-    using \<section> [OF \<open>x \<in> S\<close>] m openin_subset by (fastforce simp add: M_def PiE_iff cm_def)
+    using \<section> [OF \<open>x \<in> S\<close>] m openin_subset by (fastforce simp: M_def PiE_iff cm_def)
   show thesis
   proof
     show "Metric_space M d"
@@ -741,7 +741,7 @@ proof -
   then obtain m where m: "\<And>i. i \<in> I \<Longrightarrow> X i = mtopology_of (m i)"
     by metis 
   then show ?thesis
-    using metrizable_topology_DD [of X I m] assms by (force simp add: metrizable_space_def)
+    using metrizable_topology_DD [of X I m] assms by (force simp: metrizable_space_def)
 qed
 
 lemma metrizable_topology_E:
@@ -864,7 +864,7 @@ proof
     assume "x \<in> T"
     with L Tsub closure_of_subset_topspace 
     have "limitin Y f (f x) (atin (subtopology X T) x)"
-      by (fastforce simp add: continuous_map_atin)
+      by (fastforce simp: continuous_map_atin)
     then show "limitin Y f (f x) (atin_within X x S)"
       using \<open>x \<in> T\<close> \<open>S \<subseteq> T\<close>
       by (force simp: limitin_def atin_subtopology_within eventually_atin_within)
@@ -954,7 +954,7 @@ proof (rule continuous_map_extension_pointwise_alt)
   assume a: "a \<in> mtopology_of m1 closure_of S - S"
   then obtain \<sigma> where ran\<sigma>: "range \<sigma> \<subseteq> S" "range \<sigma> \<subseteq> mspace m1" 
     and lim\<sigma>: "limitin L.M1.mtopology \<sigma> a sequentially"
-    by (force simp add: mtopology_of_def L.M1.closure_of_sequentially)
+    by (force simp: mtopology_of_def L.M1.closure_of_sequentially)
   then have "L.M1.MCauchy \<sigma>"
     by (simp add: L.M1.convergent_imp_MCauchy mtopology_of_def)
   then have "L.M2.MCauchy (f \<circ> \<sigma>)"
@@ -1012,7 +1012,7 @@ proof (rule continuous_map_extension_pointwise_alt)
       by (auto simp: L.M2.limitin_metric_dist_null eventually_sequentially \<open>l \<in> mspace m2\<close>)
   qed
   then show "\<exists>l. limitin (mtopology_of m2) f l (atin_within (mtopology_of m1) a S)" 
-    by (force simp add: mtopology_of_def)
+    by (force simp: mtopology_of_def)
 qed auto
 
 
@@ -1274,7 +1274,7 @@ proof -
     have "\<exists>y\<in>S. mdist m1 (\<sigma> n) y < inverse (Suc n) \<and> mdist m2 (f (\<sigma> n)) (f y) < inverse (Suc n)" for n
     proof -
       have "\<sigma> n \<in> T"
-        using \<sigma> by (force simp add: T.MCauchy_def)
+        using \<sigma> by (force simp: T.MCauchy_def)
       moreover have "continuous_map (mtopology_of (submetric m1 T)) L.M2.mtopology f"
         by (metis cmf mtopology_of_def mtopology_of_submetric)
       ultimately obtain \<delta> where "\<delta>>0" and \<delta>: "\<forall>x \<in> T. mdist m1 (\<sigma> n) x < \<delta> \<longrightarrow> mdist m2 (f(\<sigma> n)) (f x) < inverse (Suc n)"
@@ -1452,7 +1452,7 @@ qed
 lemma Metric_space_funspace: "Metric_space (fspace S) (fdist S)"
 proof
   show *: "0 \<le> fdist S f g" for f g
-    by (auto simp add: fdist_def intro: cSUP_upper2 [OF bdd_above_dist])
+    by (auto simp: fdist_def intro: cSUP_upper2 [OF bdd_above_dist])
   show "fdist S f g = fdist S g f" for f g
     by (auto simp: fdist_def commute)
   show "(fdist S f g = 0) = (f = g)"
@@ -1536,7 +1536,7 @@ lemma (in Metric_space) funspace_imp_bounded2:
   obtains B where "\<And>x. x \<in> S \<Longrightarrow> d (f x) (g x) \<le> B"
 proof -
   have "mbounded (f ` S \<union> g ` S)"
-    using mbounded_Un assms by (force simp add: fspace_def)
+    using mbounded_Un assms by (force simp: fspace_def)
   then show thesis
     by (metis UnCI imageI mbounded_alt that)
 qed
@@ -1599,7 +1599,7 @@ proof -
         fix \<epsilon> :: real
         assume "\<epsilon> > 0"
         then obtain N where N: "\<And>n n'. N \<le> n \<longrightarrow> N \<le> n' \<longrightarrow> fdist S (\<sigma> n) (\<sigma> n') < \<epsilon>"
-          using \<sigma> by (force simp add: F.MCauchy_def)
+          using \<sigma> by (force simp: F.MCauchy_def)
         { fix n n'
           assume n: "N \<le> n" "N \<le> n'"
           have "d (\<sigma> n x) (\<sigma> n' x) \<le> (SUP x\<in>S. d (\<sigma> n x) (\<sigma> n' x))"
@@ -1643,7 +1643,7 @@ proof -
         unfolding F.limit_metric_sequentially
       proof (intro conjI strip)
         obtain N where N: "\<And>n n'. N \<le> n \<and> N \<le> n' \<Longrightarrow> Sup ((\<lambda>x. d (\<sigma> n x) (\<sigma> n' x)) ` S) < 1"
-          using fdist_less [of 1] \<open>S\<noteq>{}\<close> by (auto simp add: fdist_def)
+          using fdist_less [of 1] \<open>S\<noteq>{}\<close> by (auto simp: fdist_def)
         have "\<And>x. x \<in> \<sigma> N ` S \<Longrightarrow> x \<in> M"
           using \<sigma>M by blast
         obtain a B where "a \<in> M" and B: "\<And>x. x \<in> (\<sigma> N) ` S \<Longrightarrow> d a x \<le> B"
@@ -1888,7 +1888,7 @@ proof -
       then have "(\<lambda>x. d b x - d a x) ` M \<subseteq> cball 0 (d a b)"
         by force
       then show "f b \<in> extensional M \<and> (\<exists>x B. f b ` M \<subseteq> cball x B)"
-        by (force simp add: f_def)
+        by (force simp: f_def)
     qed
     show thesis
     proof
@@ -1897,7 +1897,7 @@ proof -
       have "closedin S.mtopology (S \<inter> Met_TC.fspace M)"
         by (simp add: S_def closedin_Int funspace_def)
       moreover have "S.mcomplete"
-        using Metric_space.mcomplete_funspace Met_TC.Metric_space_axioms by (fastforce simp add: mcomplete_of_def)
+        using Metric_space.mcomplete_funspace Met_TC.Metric_space_axioms by (fastforce simp: mcomplete_of_def)
       ultimately show "mcomplete_of (submetric (funspace M euclidean_metric) S)"
         by (simp add: S.closedin_eq_mcomplete mcomplete_of_def)
       show "f ` M \<subseteq> S"
@@ -1946,7 +1946,7 @@ proof -
       using Ssub fim m'_def by auto
     show "mtopology_of m' closure_of f ` M = mspace m'"
       using eqS fim Ssub
-      by (force simp add: m'_def mtopology_of_submetric closure_of_subtopology Int_absorb1)
+      by (force simp: m'_def mtopology_of_submetric closure_of_subtopology Int_absorb1)
     show "mdist m' (f x) (f y) = d x y" if "x \<in> M" and "y \<in> M" for x y
       using that eqd m'_def by force 
   qed 
@@ -2120,7 +2120,7 @@ proof -
           have "limitin mtopology (f \<circ> \<sigma>) (f l) sequentially"
           proof (rule continuous_map_limit)
             have "Lipschitz_continuous_map Self Self f"
-              using con by (auto simp add: Lipschitz_continuous_map_def fim)
+              using con by (auto simp: Lipschitz_continuous_map_def fim)
             then show "continuous_map mtopology mtopology f"
               using Lipschitz_continuous_imp_continuous_map Self_def by force
           qed (use l in auto)
@@ -2276,7 +2276,7 @@ proof (cases "\<G>={}")
     then have "\<And>n. l \<in> U n"
       using mcball_sub by blast
     moreover have "l \<in> W"
-      using l_in[of 0] sub  by (auto simp add: xf_def rf_def)
+      using l_in[of 0] sub  by (auto simp: xf_def rf_def)
     ultimately show ?thesis by auto
   qed
   with U show ?thesis
@@ -2303,7 +2303,7 @@ proof -
       using U by (simp add: closure_of_interior_of double_diff empty)
   qed
   with closure_of_eq show ?thesis
-    by (fastforce simp add: interior_of_closure_of split: if_split_asm)
+    by (fastforce simp: interior_of_closure_of split: if_split_asm)
 qed
 
 
@@ -2581,7 +2581,7 @@ proof -
       moreover have "\<exists>y. 1 = f y \<and> y \<in> topspace X"
         using \<open>S \<subseteq> topspace X\<close> \<open>S \<noteq> {}\<close> f1 by fastforce
       ultimately show ?thesis
-        using that by (fastforce simp add: is_interval_1 simp flip: is_interval_connected_1)
+        using that by (fastforce simp: is_interval_1 simp flip: is_interval_connected_1)
     qed
     then show ?thesis
       unfolding lepoll_iff using atLeastAtMost_iff by blast
@@ -2611,7 +2611,7 @@ proof -
       moreover have "\<exists>y. 1 = f y \<and> y \<in> topspace X"
         using \<open>closedin X T\<close> \<open>T \<noteq> {}\<close> closedin_subset f1 by fastforce
       ultimately show ?thesis
-        using that by (fastforce simp add: is_interval_1 simp flip: is_interval_connected_1)
+        using that by (fastforce simp: is_interval_1 simp flip: is_interval_connected_1)
     qed
     then show ?thesis
       unfolding lepoll_iff using atLeastAtMost_iff by blast
@@ -2737,9 +2737,9 @@ proof
     show "countable \<A>"
       using \<A>_def coX by blast
     show "disjoint \<A>"
-      by (auto simp add: \<A>_def disjnt_iff pairwise_def)
+      by (auto simp: \<A>_def disjnt_iff pairwise_def)
     show "\<Union>\<A> = {0..1}"
-      using \<open>pathin X \<gamma>\<close> path_image_subset_topspace by (fastforce simp add: \<A>_def Bex_def)
+      using \<open>pathin X \<gamma>\<close> path_image_subset_topspace by (fastforce simp: \<A>_def Bex_def)
     fix C
     assume "C \<in> \<A>"
     then obtain a where "a \<in> topspace X" and C: "C = {x \<in> {0..1}. \<gamma> x \<in> {a}}" "C \<noteq> {}"
@@ -2764,51 +2764,41 @@ subsection\<open>The Tychonoff embedding\<close>
 
 
 lemma completely_regular_space_cube_embedding_explicit:
-   "completely_regular_space X \<and> Hausdorff_space X
-        \<Longrightarrow> embedding_map
-             (X,
-              product_topology
-                (mspace (submetric (cfunspace X real_euclidean_metric)
-                  {f. f ` (topspace X) \<subseteq> real_interval [0,1]}))
-                (\<lambda>f. subtopology euclideanreal (real_interval [0,1])))
-             (\<lambda>x. RESTRICTION
-                  (mspace (submetric (cfunspace X real_euclidean_metric)
-                    {f. f ` (topspace X) \<subseteq> real_interval [0,1]}))
-                  (\<lambda>f. f x))"
+  assumes "completely_regular_space X" "Hausdorff_space X"
+  shows "embedding_map X
+             (product_topology (\<lambda>f. top_of_set {0..1::real})
+                (mspace (submetric (cfunspace X euclidean_metric)
+                  {f. f ` topspace X \<subseteq> {0..1}})) )
+             (\<lambda>x. \<lambda>f \<in> mspace (submetric (cfunspace X euclidean_metric) {f. f ` topspace X \<subseteq> {0..1}}).
+              f x)"
+proof -
+  define K where "K \<equiv> mspace(submetric (cfunspace X euclidean_metric) {f. f ` topspace X \<subseteq> {0..1::real}})"
+  define e where "e \<equiv> \<lambda>x. \<lambda>f\<in>K. f x"
+  have "e x \<noteq> e y" if xy: "x \<noteq> y" "x \<in> topspace X" "y \<in> topspace X" for x y
+  proof -
+    have "closedin X {x}"
+      by (simp add: \<open>Hausdorff_space X\<close> closedin_Hausdorff_singleton \<open>x \<in> topspace X\<close>)
+    then obtain f where contf: "continuous_map X euclideanreal f" 
+      and f01: "\<And>x. x \<in> topspace X \<Longrightarrow> f x \<in> {0..1}" and fxy: "f y = 0" "f x = 1"
+      using \<open>completely_regular_space X\<close> xy unfolding completely_regular_space_def
+      by (smt (verit, ccfv_threshold) Diff_iff continuous_map_in_subtopology image_subset_iff singleton_iff)
+    then have "Met_TC.mbounded (f ` topspace X)"
+      apply (simp add: Met_TC.mbounded_def image_subset_iff dist_real_def)
+      by (metis abs_minus_cancel abs_of_nonneg diff_0)
+    with contf f01 have "restrict f (topspace X) \<in> K"
+      by (auto simp: K_def)
+    with fxy xy show ?thesis 
+      unfolding e_def by (metis restrict_apply' zero_neq_one)
+  qed
+  then have "inj_on e (topspace X)"
+    by (meson inj_onI)
+  show ?thesis
+    sorry
+qed
+
 oops
-  REPEAT STRIP_TAC THEN
-  MAP_EVERY ABBREV_TAC
-   [`k = mspace(submetric (cfunspace X real_euclidean_metric)
-                          {f. image f (topspace X::A=>bool) \<subseteq>
-                               {0..1}})`;
-    `e = \<lambda>x. RESTRICTION k (\<lambda>f::A=>real. f x)`] THEN
-  SUBGOAL_THEN
-   `\<forall>x y. x \<in> topspace X \<and> y \<in> topspace X
-          \<Longrightarrow> ((e::A->(A=>real)->real) x = e y \<longleftrightarrow> x = y)`
-  ASSUME_TAC THENL
-   [MAP_EVERY X_GEN_TAC [`x::A`; `y::A`] THEN STRIP_TAC THEN
-    EQ_TAC THEN SIMP_TAC[] THEN GEN_REWRITE_TAC id [GSYM CONTRAPOS_THM] THEN
-    DISCH_TAC THEN EXPAND_TAC "e" THEN REWRITE_TAC[] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [completely_regular_space]) THEN
-    DISCH_THEN(MP_TAC \<circ> SPECL [`{x::A}`; `y::A`]) THEN
-    ASM_SIMP_TAC[IN_DIFF; IN_SING; CLOSED_IN_HAUSDORFF_SING] THEN
-    REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; FORALL_UNWIND_THM2] THEN
-    REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `f::A=>real`THEN REWRITE_TAC[IN_REAL_INTERVAL] THEN STRIP_TAC THEN
-    DISCH_THEN(MP_TAC \<circ> C AP_THM `RESTRICTION(topspace X) f`) THEN
-    ASM_REWRITE_TAC[RESTRICTION] THEN COND_CASES_TAC THEN
-    ASM_REWRITE_TAC[] THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> check (is_neg \<circ> concl)) THEN
-    EXPAND_TAC "k" THEN REWRITE_TAC[SUBMETRIC] THEN
-    SIMP_TAC[CFUNSPACE; IN_ELIM_THM; IN_INTER; RESTRICTION_IN_EXTENSIONAL] THEN
-    REWRITE_TAC[REAL_EUCLIDEAN_METRIC; IN_UNIV] THEN
-    SIMP_TAC[IMAGE_RESTRICTION; RESTRICTION_CONTINUOUS_MAP; SUBSET_REFL] THEN
-    ASM_REWRITE_TAC[MTOPOLOGY_REAL_EUCLIDEAN_METRIC] THEN
-    ASM_SIMP_TAC[\<subseteq>; FORALL_IN_IMAGE; IN_REAL_INTERVAL] THEN
-    REWRITE_TAC[MBOUNDED_REAL_EUCLIDEAN_METRIC; real_bounded] THEN
-    EXISTS_TAC `1` THEN REWRITE_TAC[FORALL_IN_IMAGE] THEN
-    ASM_SIMP_TAC[real_abs];
-    FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM INJECTIVE_ON_ALT])] THEN
+
+
   REWRITE_TAC[INJECTIVE_ON_LEFT_INVERSE] THEN
   DISCH_THEN(X_CHOOSE_TAC `e':((A=>real)->real)->A`) THEN
   REWRITE_TAC[embedding_map; HOMEOMORPHIC_MAP_MAPS] THEN
@@ -2818,7 +2808,7 @@ oops
    [REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; SUBSET_REFL] THEN
     REWRITE_TAC[CONTINUOUS_MAP_COMPONENTWISE; \<subseteq>; FORALL_IN_IMAGE] THEN
     EXPAND_TAC "e" THEN REWRITE_TAC[RESTRICTION_IN_EXTENSIONAL] THEN
-    X_GEN_TAC `f::A=>real` THEN SIMP_TAC[RESTRICTION] THEN EXPAND_TAC "k" THEN
+    X_GEN_TAC `f::A=>real` THEN SIMP_TAC[RESTRICTION] THEN EXPAND_TAC "K" THEN
     REWRITE_TAC[SUBMETRIC; CFUNSPACE; IN_ELIM_THM] THEN
     SIMP_TAC[IN_ELIM_THM; CONTINUOUS_MAP_IN_SUBTOPOLOGY; ETA_AX; IN_INTER;
              MTOPOLOGY_REAL_EUCLIDEAN_METRIC];
@@ -2834,7 +2824,7 @@ oops
   DISCH_THEN(X_CHOOSE_THEN `g::A=>real` STRIP_ASSUME_TAC) THEN
   REWRITE_TAC[OPEN_IN_SUBTOPOLOGY_ALT; EXISTS_IN_GSPEC] THEN
   EXISTS_TAC
-   `PiE (k:(A=>real)->bool)
+   `PiE (K:(A=>real)->bool)
       (\<lambda>f. if f = RESTRICTION (topspace X) g
            then {0..1} DELETE 1
            else {0..1})` THEN
@@ -2866,7 +2856,7 @@ oops
      (MP_TAC \<circ> SPEC `RESTRICTION (topspace X) (g::A=>real)`)) THEN
     REWRITE_TAC[] THEN EXPAND_TAC "e" THEN REWRITE_TAC[] THEN
     SIMP_TAC[RESTRICTION] THEN ASM_REWRITE_TAC[IN_DELETE] THEN
-    ANTS_TAC THENL [EXPAND_TAC "k"; ASM_MESON_TAC[]] THEN
+    ANTS_TAC THENL [EXPAND_TAC "K"; ASM_MESON_TAC[]] THEN
     REWRITE_TAC[SUBMETRIC; CFUNSPACE; IN_ELIM_THM; IN_INTER] THEN
     REWRITE_TAC[RESTRICTION_IN_EXTENSIONAL] THEN
     RULE_ASSUM_TAC(REWRITE_RULE[CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
@@ -2880,10 +2870,10 @@ oops
 
 lemma completely_regular_space_cube_embedding:
    "completely_regular_space X \<and> Hausdorff_space X
-        \<Longrightarrow> \<exists>k:((A=>real)->bool) e.
+        \<Longrightarrow> \<exists>K:((A=>real)->bool) e.
                embedding_map
                 (X,
-                 product_topology k
+                 product_topology K
                   (\<lambda>f. subtopology euclideanreal ({0..1})))
                 e"
 oops
@@ -3071,12 +3061,12 @@ oops
     X_GEN_TAC `e':((A=>real)->real)->A` THEN ABBREV_TAC
      `cube:((A=>real)->real)topology =
       product_topology k
-       (\<lambda>f. subtopology euclideanreal (real_interval [0,1]))` THEN
+       (\<lambda>f. subtopology euclideanreal ({0..1}))` THEN
     REWRITE_TAC[homeomorphic_maps] THEN STRIP_TAC THEN
     MP_TAC(ISPECL
      [`cube:((A=>real)->real)topology`;
       `f \<circ> (e':((A=>real)->real)->A)`;
-      `image (e::A->(A=>real)->real) s`;
+      `image e s`;
       `t::real=>bool`] TIETZE_EXTENSION_REALINTERVAL) THEN
     ASM_SIMP_TAC[FORALL_IN_IMAGE; o_THM] THEN ANTS_TAC THENL
      [REPEAT CONJ_TAC THENL
@@ -3110,7 +3100,7 @@ oops
         ASM SET_TAC[]];
       DISCH_THEN(X_CHOOSE_THEN `g:((A=>real)->real)->real`
         STRIP_ASSUME_TAC) THEN
-      EXISTS_TAC `(g:((A=>real)->real)->real) \<circ> (e::A->(A=>real)->real)` THEN
+      EXISTS_TAC `(g:((A=>real)->real)->real) \<circ> e` THEN
       CONJ_TAC THENL
        [ASM_MESON_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; CONTINUOUS_MAP_COMPOSE];
         REWRITE_TAC[o_THM] THEN
