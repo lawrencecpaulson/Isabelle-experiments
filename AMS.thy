@@ -6,6 +6,12 @@ theory AMS
     "HOL-ex.Sketch_and_Explore"
 begin
 
+lemma countable_lepoll: "\<lbrakk>countable A; B \<lesssim> A\<rbrakk> \<Longrightarrow> countable B"
+  by (meson countable_image countable_subset lepoll_iff)
+
+lemma countable_eqpoll: "\<lbrakk>countable A; B \<approx> A\<rbrakk> \<Longrightarrow> countable B"
+  using countable_lepoll eqpoll_imp_lepoll by blast
+
 declare Metric_space_mspace_mdist [simp]
 declare continuous_map_mdist [continuous_intros]
 
@@ -2611,18 +2617,16 @@ proof -
 qed
 
 lemma connected_space_imp_card_ge:
-  assumes "connected_space X" "normal_space X" "t1_space X \<or> Hausdorff_space X" "\<not> (\<exists>a. topspace X \<subseteq> {a})"
-  shows "UNIV \<lesssim> topspace X"
-oops
-  GEN_TAC THEN REWRITE_TAC[T1_OR_HAUSDORFF_SPACE] THEN STRIP_TAC THEN
-  MATCH_MP_TAC CONNECTED_SPACE_IMP_CARD_GE_ALT THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP (SET_RULE
-   `\<not> (\<exists>a. S \<subseteq> {a}) \<Longrightarrow> \<exists>a b. a \<in> S \<and> b \<in> S \<and> (a \<noteq> b)`)) THEN
-  REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`a::A`; `b::A`] THEN STRIP_TAC THEN
-  EXISTS_TAC `{a::A}` THEN
-  ASM_SIMP_TAC[NORMAL_IMP_COMPLETELY_REGULAR_SPACE_GEN] THEN
-  CONJ_TAC THENL [ASM_MESON_TAC[T1_SPACE_CLOSED_IN_SING]; ASM SET_TAC[]]);;
+  assumes "connected_space X" "normal_space X" "t1_space X" and nosing: "\<not> (\<exists>a. topspace X \<subseteq> {a})"
+  shows "(UNIV::real set) \<lesssim> topspace X"
+proof -
+  obtain a b where "a \<in> topspace X" "b \<in> topspace X" "a \<noteq> b"
+    by (metis nosing singletonI subset_iff)
+  then have "{a} \<noteq> topspace X"
+    by force
+  with connected_space_imp_card_ge_alt assms show ?thesis
+    by (metis \<open>a \<in> topspace X\<close> closedin_t1_singleton insert_not_empty normal_imp_completely_regular_space_A)
+qed
 
 lemma connected_space_imp_infinite_gen:
    "\<lbrakk>connected_space X; t1_space X; \<nexists>a. topspace X \<subseteq> {a}\<rbrakk> \<Longrightarrow> infinite(topspace X)"
@@ -2670,46 +2674,42 @@ proof -
 qed
 
 lemma path_connected_space_imp_card_ge:
-   "path_connected_space X" "Hausdorff_space X" "\<not> (\<exists>a. topspace X \<subseteq> {a})
-        \<Longrightarrow> UNIV \<lesssim> topspace X"
-oops
-  REPEAT STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP (SET_RULE
-   `\<not> (\<exists>a. S \<subseteq> {a}) \<Longrightarrow> \<exists>a b. a \<in> S \<and> b \<in> S \<and> (a \<noteq> b)`)) THEN
-  REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`a::A`; `b::A`] THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> SPECL [`a::A`; `b::A`] \<circ>
-    REWRITE_RULE[path_connected_space]) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `g::real=>A` THEN STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CARD_LE_SUBSET \<circ>
-    MATCH_MP PATH_IMAGE_SUBSET_TOPSPACE) THEN
-  MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ] CARD_LE_TRANS) THEN
-  MP_TAC(ISPEC
-   `subtopology X
-     (image g (topspace (subtopology euclideanreal (real_interval [0,1]))))`
-   CONNECTED_SPACE_IMP_CARD_GE) THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP PATH_IMAGE_SUBSET_TOPSPACE) THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; TOPSPACE_EUCLIDEANREAL; INTER_UNIV] THEN
-  SIMP_TAC[SET_RULE `S \<subseteq> u \<Longrightarrow> u \<inter> S = S`] THEN
-  DISCH_TAC THEN DISCH_THEN MATCH_MP_TAC THEN
-  ASM_SIMP_TAC[HAUSDORFF_SPACE_SUBTOPOLOGY] THEN
-  ASM_SIMP_TAC[CONNECTED_SPACE_SUBTOPOLOGY; CONNECTED_IN_PATH_IMAGE] THEN
-  CONJ_TAC THENL
-   [MATCH_MP_TAC COMPACT_HAUSDORFF_OR_REGULAR_IMP_NORMAL_SPACE THEN
-    ASM_SIMP_TAC[HAUSDORFF_SPACE_SUBTOPOLOGY] THEN
-    ASM_SIMP_TAC[COMPACT_IN_PATH_IMAGE; COMPACT_SPACE_SUBTOPOLOGY];
-    MP_TAC ENDS_IN_UNIT_REAL_INTERVAL THEN ASM SET_TAC[]]);;
+  assumes "path_connected_space X" "Hausdorff_space X" and nosing: "\<not> (\<exists>a. topspace X \<subseteq> {a})"
+  shows "(UNIV::real set) \<lesssim> topspace X"
+proof -
+  obtain a b where "a \<in> topspace X" "b \<in> topspace X" "a \<noteq> b"
+    by (metis nosing singletonI subset_iff)
+  then have "{a} \<noteq> topspace X"
+    by force
+  then obtain \<gamma> where "pathin X \<gamma>" "\<gamma> 0 = a" "\<gamma> 1 = b"
+    by (meson \<open>a \<in> topspace X\<close> \<open>b \<in> topspace X\<close> \<open>path_connected_space X\<close> path_connected_space_def)
+  then have "\<gamma> ` {0..1} \<lesssim> topspace X"
+    by (meson path_image_subset_topspace subset_imp_lepoll)
+  have "(UNIV::real set) \<lesssim>  topspace (subtopology X (\<gamma> ` (topspace (subtopology euclidean {0..1}))))"
+    apply (rule connected_space_imp_card_ge)
+    using \<open>pathin X \<gamma>\<close> connectedin_def connectedin_path_image apply auto[1]
+    apply (simp add: Hausdorff_space_subtopology \<open>pathin X \<gamma>\<close> assms(2) compact_Hausdorff_or_regular_imp_normal_space compact_space_subtopology compactin_path_image)
+    using Hausdorff_imp_t1_space assms(2) t1_space_subtopology apply blast
+    by (metis \<open>\<gamma> 0 = a\<close> \<open>\<gamma> 1 = b\<close> \<open>a \<noteq> b\<close> \<open>pathin X \<gamma>\<close> continuous_map_into_subtopology dual_order.eq_iff in_mono path_finish_in_topspace path_start_in_topspace pathin_def singletonD)
+  also have "\<dots> \<lesssim> \<gamma> ` {0..1}"
+    by (simp add: subset_imp_lepoll)
+  also have "\<dots> \<lesssim> topspace X"
+    using \<open>\<gamma> ` {0..1} \<lesssim> topspace X\<close> by blast
+  finally show ?thesis .
+qed
 
 lemma connected_space_imp_uncountable:
   assumes "connected_space X" "regular_space X" "Hausdorff_space X" "\<not> (\<exists>a. topspace X \<subseteq> {a})"
   shows "\<not> countable(topspace X)"
-oops
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPEC `X::A topology` CONNECTED_SPACE_IMP_CARD_GE) THEN
-  ASM_SIMP_TAC[NOT_IMP; CARD_NOT_LE; COUNTABLE_IMP_CARD_LT_REAL] THEN
-  MATCH_MP_TAC REGULAR_LINDELOF_IMP_NORMAL_SPACE THEN
-  ASM_SIMP_TAC[COUNTABLE_IMP_LINDELOF_SPACE]);;
+proof
+  assume coX: "countable (topspace X)"
+  with \<open>regular_space X\<close> have "normal_space X"
+    using countable_imp_Lindelof_space regular_Lindelof_imp_normal_space by blast
+  then have "(UNIV::real set) \<lesssim> topspace X"
+    by (simp add: Hausdorff_imp_t1_space assms connected_space_imp_card_ge)
+  with coX show False
+    using countable_lepoll uncountable_UNIV_real by blast
+qed
 
 lemma path_connected_space_imp_uncountable:
   assumes "path_connected_space X" "t1_space X" "\<not> (\<exists>a. topspace X \<subseteq> {a})"
