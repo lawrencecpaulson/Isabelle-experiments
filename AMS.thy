@@ -66,6 +66,39 @@ proof
 qed
 
 
+
+lemma real_shrink_eq:
+  fixes x y::real
+  shows "(x / (1 + \<bar>x\<bar>) = y / (1 + \<bar>y\<bar>)) \<longleftrightarrow> x = y"
+  by (metis real_shrink_Galois)
+
+lemma card_eq_real_subset:
+  fixes a b::real
+  assumes "a < b" and S: "\<And>x. \<lbrakk>a < x; x < b\<rbrakk> \<Longrightarrow> x \<in> S"
+  shows "S \<approx> (UNIV::real set)"
+proof (rule lepoll_antisym)
+  show "S \<lesssim> (UNIV::real set)"
+    by (simp add: subset_imp_lepoll)
+  define f where "f \<equiv> \<lambda>x. (a+b) / 2 + (b-a) / 2 * (x / (1 + \<bar>x\<bar>))"
+  show "(UNIV::real set) \<lesssim> S"
+    unfolding lepoll_def
+  proof (intro exI conjI)
+    show "inj f"
+      unfolding inj_on_def f_def
+      by (smt (verit, ccfv_SIG) real_shrink_eq \<open>a<b\<close> divide_eq_0_iff mult_cancel_left times_divide_eq_right)
+    have pos: "(b-a) / 2 > 0"
+      using \<open>a<b\<close> by auto
+    have *: "(a < (a + b) / 2 + (b - a) / 2 * x \<longleftrightarrow> (b - a) *-1 < (b - a) * x)"
+            "((a + b) / 2 + (b - a) / 2 * x < b \<longleftrightarrow> (b - a) * x < (b - a) * 1)" for x
+      by (auto simp add: field_simps)
+    show "range f \<subseteq> S"
+      using shrink_range [of UNIV] \<open>a < b\<close>
+      unfolding subset_iff f_def greaterThanLessThan_iff image_iff
+      by (smt (verit, best) S * mult_less_cancel_left2 mult_minus_right)
+  qed
+qed
+
+
 lemma in_mball_of [simp]: "y \<in> mball_of m x r \<longleftrightarrow> x \<in> mspace m \<and> y \<in> mspace m \<and> mdist m x y < r"
   by (simp add: Metric_space.in_mball mball_of_def)
 
@@ -2341,7 +2374,7 @@ next
     qed
     then obtain \<Phi> where \<Phi>: "\<And>n. \<Phi> n \<subseteq> K \<and> closedin X (\<Phi> n) \<and> X interior_of \<Phi> n \<noteq> {} \<and> disjnt (\<Phi> n) (T n)"
       and "\<And>n. \<Phi> (Suc n) \<subseteq> \<Phi> n" by metis
-    then have "monotone (\<le>) (\<lambda>x y. y \<subseteq> x) \<Phi>"
+    then have "decseq \<Phi>"
       by (simp add: decseq_SucI)
     moreover have "\<And>n. \<Phi> n \<noteq> {}"
       by (metis \<Phi> bot.extremum_uniqueI interior_of_subset)
@@ -2503,45 +2536,13 @@ proof -
     by (metis box_real(2) completely_metrizable_space_cbox)
   ultimately
   show ?thesis
-  using locally_connected_not_countable_closed_union [of "subtopology euclidean {a..b}"] assms
-  apply (simp add: closedin_subtopology)
-  by (metis Union_upper inf.orderE)
+    using locally_connected_not_countable_closed_union [of "subtopology euclidean {a..b}"] assms
+    apply (simp add: closedin_subtopology)
+    by (metis Union_upper inf.orderE)
 qed
+
 
 subsection\<open>Size bounds on connected or path-connected spaces\<close>
-
-
-lemma real_shrink_eq:
-  fixes x y::real
-  shows "(x / (1 + \<bar>x\<bar>) = y / (1 + \<bar>y\<bar>)) \<longleftrightarrow> x = y"
-  by (metis real_shrink_Galois)
-
-lemma card_eq_real_subset:
-  fixes a b::real
-  assumes "a < b" and S: "\<And>x. \<lbrakk>a < x; x < b\<rbrakk> \<Longrightarrow> x \<in> S"
-  shows "S \<approx> (UNIV::real set)"
-proof (rule lepoll_antisym)
-  show "S \<lesssim> (UNIV::real set)"
-    by (simp add: subset_imp_lepoll)
-  define f where "f \<equiv> \<lambda>x. (a+b) / 2 + (b-a) / 2 * (x / (1 + \<bar>x\<bar>))"
-  show "(UNIV::real set) \<lesssim> S"
-    unfolding lepoll_def
-  proof (intro exI conjI)
-    show "inj f"
-      unfolding inj_on_def f_def
-      by (smt (verit, ccfv_SIG) real_shrink_eq \<open>a<b\<close> divide_eq_0_iff mult_cancel_left times_divide_eq_right)
-    have pos: "(b-a) / 2 > 0"
-      using \<open>a<b\<close> by auto
-    have *: "(a < (a + b) / 2 + (b - a) / 2 * x \<longleftrightarrow> (b - a) *-1 < (b - a) * x)"
-            "((a + b) / 2 + (b - a) / 2 * x < b \<longleftrightarrow> (b - a) * x < (b - a) * 1)" for x
-      by (auto simp add: field_simps)
-    show "range f \<subseteq> S"
-      using shrink_range [of UNIV] \<open>a < b\<close>
-      unfolding subset_iff f_def greaterThanLessThan_iff image_iff
-      by (smt (verit, best) S * mult_less_cancel_left2 mult_minus_right)
-  qed
-qed
-  
 
 lemma connected_space_imp_card_ge_alt:
   assumes "connected_space X" "completely_regular_space X" "closedin X S" "S \<noteq> {}" "S \<noteq> topspace X"
@@ -2551,65 +2552,63 @@ proof -
     using \<open>closedin X S\<close> closedin_subset by blast
   then obtain a where "a \<in> topspace X" "a \<notin> S"
     using \<open>S \<noteq> topspace X\<close> by blast
-  have "uncountable{0..1::real}"
-    by (simp add: uncountable_closed_interval)
-  then have "(UNIV::real set) \<lesssim> {0..1::real}"
+  have "(UNIV::real set) \<lesssim> {0..1::real}"
+    using card_eq_real_subset 
+    by (meson atLeastAtMost_iff eqpoll_imp_lepoll eqpoll_sym less_eq_real_def zero_less_one)
+  also have "\<dots> \<lesssim> topspace X"
+  proof -
+    obtain f where contf: "continuous_map X euclidean f"
+      and fim: "f ` (topspace X) \<subseteq> {0..1::real}"
+      and f0: "f a = 0" and f1: "f ` S \<subseteq> {1}"
+      using \<open>completely_regular_space X\<close>
+      unfolding completely_regular_space_def
+      by (metis Diff_iff \<open>a \<in> topspace X\<close> \<open>a \<notin> S\<close> \<open>closedin X S\<close> continuous_map_in_subtopology)
+    have "\<exists>y\<in>topspace X. x = f y" if "0 \<le> x" and "x \<le> 1" for x
+    proof -
+      have "connectedin euclidean (f ` topspace X)"
+        using \<open>connected_space X\<close> connectedin_continuous_map_image connectedin_topspace contf by blast
+      moreover have "\<exists>y. 0 = f y \<and> y \<in> topspace X"
+        using \<open>a \<in> topspace X\<close> f0 by auto
+      moreover have "\<exists>y. 1 = f y \<and> y \<in> topspace X"
+        using \<open>S \<subseteq> topspace X\<close> \<open>S \<noteq> {}\<close> f1 by fastforce
+      ultimately show ?thesis
+        using that by (fastforce simp add: is_interval_1 simp flip: is_interval_connected_1)
+    qed
+    then show ?thesis
+      unfolding lepoll_iff using atLeastAtMost_iff by blast
+  qed
+  finally show ?thesis .
+qed
 
-    sorry
-    sorry
-oops
-  REPEAT STRIP_TAC THEN
-  FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN
-  SUBGOAL_THEN `\<exists>a::A. a \<in> topspace X \<and> (a \<notin> S)` STRIP_ASSUME_TAC THENL
-   [ASM SET_TAC[]; ALL_TAC] THEN
-  TRANS_TAC CARD_LE_TRANS `{0..1}` THEN CONJ_TAC THENL
-   [MATCH_MP_TAC CARD_EQ_IMP_LE THEN ONCE_REWRITE_TAC[CARD_EQ_SYM] THEN
-    MATCH_MP_TAC CARD_EQ_REAL_SUBSET THEN
-    MAP_EVERY EXISTS_TAC [`0::real`; `1::real`] THEN
-    ASM_SIMP_TAC[IN_REAL_INTERVAL; REAL_LT_01; REAL_LT_IMP_LE];
-    ALL_TAC] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [completely_regular_space]) THEN
-  DISCH_THEN(MP_TAC \<circ> SPECL [`S::A=>bool`; `a::A`]) THEN
-  ASM_REWRITE_TAC[LE_C; IN_DIFF; CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `f::A=>real` THEN STRIP_TAC THEN
-  X_GEN_TAC `T::real` THEN REWRITE_TAC[IN_REAL_INTERVAL] THEN STRIP_TAC THEN
-  ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN ONCE_REWRITE_TAC[CONJ_SYM] THEN
-  FIRST_ASSUM
-   (MP_TAC \<circ> SPEC `topspace X::A=>bool` \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ]
-        CONNECTED_IN_CONTINUOUS_MAP_IMAGE)) THEN
-  ASM_REWRITE_TAC[CONNECTED_IN_TOPSPACE] THEN
-  REWRITE_TAC[CONNECTED_IN_EUCLIDEANREAL; is_interval] THEN
-  REWRITE_TAC[IN_IMAGE] THEN DISCH_THEN MATCH_MP_TAC THEN
-  MAP_EVERY EXISTS_TAC [`0::real`; `1::real`] THEN
-  REPEAT(FIRST_X_ASSUM(ASSUME_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET)) THEN
-  ASM SET_TAC[]);;
 
 lemma connected_space_imp_card_ge_gen:
   assumes "connected_space X" "normal_space X" "closedin X S" "closedin X T" "S \<noteq> {}" "T \<noteq> {}" "disjnt S T"
-  shows "UNIV \<lesssim> topspace X"
-oops
-  REPEAT STRIP_TAC THEN
-  TRANS_TAC CARD_LE_TRANS `{0..1}` THEN CONJ_TAC THENL
-   [MATCH_MP_TAC CARD_EQ_IMP_LE THEN ONCE_REWRITE_TAC[CARD_EQ_SYM] THEN
-    MATCH_MP_TAC CARD_EQ_REAL_SUBSET THEN
-    MAP_EVERY EXISTS_TAC [`0::real`; `1::real`] THEN
-    ASM_SIMP_TAC[IN_REAL_INTERVAL; REAL_LT_01; REAL_LT_IMP_LE];
-    ALL_TAC] THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [NORMAL_SPACE_IFF_URYSOHN]) THEN
-  DISCH_THEN(MP_TAC \<circ> SPECL [`S::A=>bool`; `T::A=>bool`]) THEN
-  ASM_REWRITE_TAC[LE_C; CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `f::A=>real` THEN STRIP_TAC THEN
-  X_GEN_TAC `T::real` THEN REWRITE_TAC[IN_REAL_INTERVAL] THEN STRIP_TAC THEN
-  ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN ONCE_REWRITE_TAC[CONJ_SYM] THEN
-  FIRST_ASSUM
-   (MP_TAC \<circ> SPEC `topspace X::A=>bool` \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ]
-        CONNECTED_IN_CONTINUOUS_MAP_IMAGE)) THEN
-  ASM_REWRITE_TAC[CONNECTED_IN_TOPSPACE] THEN
-  REWRITE_TAC[CONNECTED_IN_EUCLIDEANREAL; is_interval] THEN
-  REWRITE_TAC[IN_IMAGE] THEN DISCH_THEN MATCH_MP_TAC THEN
-  MAP_EVERY EXISTS_TAC [`0::real`; `1::real`] THEN
-  REPEAT(FIRST_X_ASSUM(ASSUME_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET)) THEN
-  ASM SET_TAC[]);;
+  shows "(UNIV::real set) \<lesssim> topspace X"
+proof -
+  have "(UNIV::real set) \<lesssim> {0..1::real}"
+    by (metis atLeastAtMost_iff card_eq_real_subset eqpoll_imp_lepoll eqpoll_sym less_le_not_le zero_less_one)
+  also have "\<dots>\<lesssim> topspace X"
+  proof -
+    obtain f where contf: "continuous_map X euclidean f"
+       and fim: "f ` (topspace X) \<subseteq> {0..1::real}"
+       and f0: "f ` S \<subseteq> {0}" and f1: "f ` T \<subseteq> {1}"
+      using assms by (metis continuous_map_in_subtopology normal_space_iff_Urysohn)
+    have "\<exists>y\<in>topspace X. x = f y" if "0 \<le> x" and "x \<le> 1" for x
+    proof -
+      have "connectedin euclidean (f ` topspace X)"
+        using \<open>connected_space X\<close> connectedin_continuous_map_image connectedin_topspace contf by blast
+      moreover have "\<exists>y. 0 = f y \<and> y \<in> topspace X"
+        using \<open>closedin X S\<close> \<open>S \<noteq> {}\<close> closedin_subset f0 by fastforce
+      moreover have "\<exists>y. 1 = f y \<and> y \<in> topspace X"
+        using \<open>closedin X T\<close> \<open>T \<noteq> {}\<close> closedin_subset f1 by fastforce
+      ultimately show ?thesis
+        using that by (fastforce simp add: is_interval_1 simp flip: is_interval_connected_1)
+    qed
+    then show ?thesis
+      unfolding lepoll_iff using atLeastAtMost_iff by blast
+  qed
+  finally show ?thesis .
+qed
 
 lemma connected_space_imp_card_ge:
   assumes "connected_space X" "normal_space X" "t1_space X \<or> Hausdorff_space X" "\<not> (\<exists>a. topspace X \<subseteq> {a})"
@@ -2636,46 +2635,39 @@ lemma connected_space_imp_infinite:
 lemma connected_space_imp_infinite_alt:
   assumes "connected_space X" "regular_space X" "closedin X S" "S \<noteq> {}" "S \<noteq> topspace X"
   shows "infinite(topspace X)"
-oops
-  REPEAT STRIP_TAC THEN
-  FIRST_ASSUM(ASSUME_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN
-  SUBGOAL_THEN `\<exists>a::A. a \<in> topspace X \<and> (a \<notin> S)` STRIP_ASSUME_TAC THENL
-   [ASM SET_TAC[]; ALL_TAC] THEN
-  SUBGOAL_THEN
-   `\<exists>u. (\<forall>n. disjnt (u n) S \<and> (a::A) \<in> u n \<and> openin X (u n)) \<and>
-        (\<forall>n. u(Suc n) \<subset> u n)`
-  STRIP_ASSUME_TAC THENL
-   [MATCH_MP_TAC DEPENDENT_CHOICE THEN CONJ_TAC THENL
-     [EXISTS_TAC `topspace X - S::A=>bool` THEN
-      ASM_SIMP_TAC[IN_DIFF; OPEN_IN_DIFF; OPEN_IN_TOPSPACE] THEN
-      SET_TAC[];
-      ALL_TAC] THEN
-    MAP_EVERY X_GEN_TAC [`n::num`; `v::A=>bool`] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ>
-      GEN_REWRITE_RULE id [GSYM NEIGHBOURHOOD_BASE_OF_CLOSED_IN]) THEN
-    REWRITE_TAC[NEIGHBOURHOOD_BASE_OF] THEN
-    DISCH_THEN(MP_TAC \<circ> SPECL [`v::A=>bool`; `a::A`]) THEN
-    ASM_REWRITE_TAC[] THEN MATCH_MP_TAC MONO_EXISTS THEN
-    X_GEN_TAC `u::A=>bool` THEN
-    DISCH_THEN(X_CHOOSE_THEN `c::A=>bool` STRIP_ASSUME_TAC) THEN
-    ASM_REWRITE_TAC[] THEN
-    ASM_CASES_TAC `c::A=>bool = u` THENL
-     [FIRST_X_ASSUM SUBST_ALL_TAC; ASM SET_TAC[]] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `u::A=>bool` \<circ>
-        GEN_REWRITE_RULE id [CONNECTED_SPACE_CLOPEN_IN]) THEN
-    ASM_REWRITE_TAC[] THEN ASM SET_TAC[];
-    SUBGOAL_THEN `\<forall>n. \<exists>x::A. x \<in> u n \<and> (x \<notin> u(Suc n))` MP_TAC THENL
-     [ASM SET_TAC[]; REWRITE_TAC[SKOLEM_THM]] THEN
-    REWRITE_TAC[INFINITE_CARD_LE; le_c; IN_UNIV; FORALL_AND_THM] THEN
-    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `f::num=>A` THEN STRIP_TAC THEN
-    CONJ_TAC THENL [ASM_MESON_TAC[\<subseteq>; OPEN_IN_SUBSET]; ALL_TAC] THEN
-    MATCH_MP_TAC WLOG_LT THEN
-    SUBGOAL_THEN `\<forall>m n. m < n \<Longrightarrow> \<not> (f m \<in> u n)` MP_TAC THENL
-     [X_GEN_TAC `m::num`; ASM SET_TAC[]] THEN
-    REWRITE_TAC[GSYM LE_SUC_LT] THEN
-    SUBGOAL_THEN `\<forall>m n. m \<le> n \<Longrightarrow> U n \<subseteq> u m`
-    MP_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-    MATCH_MP_TAC TRANSITIVE_STEPWISE_LE THEN ASM SET_TAC[]]);;
+proof -
+  have "S \<subseteq> topspace X"
+    using \<open>closedin X S\<close> closedin_subset by blast
+  then obtain a where a: "a \<in> topspace X" "a \<notin> S"
+    using \<open>S \<noteq> topspace X\<close> by blast
+  have "\<exists>\<Phi>. \<forall>n. (disjnt (\<Phi> n) S \<and> a \<in> \<Phi> n \<and> openin X (\<Phi> n)) \<and> \<Phi>(Suc n) \<subset> \<Phi> n"
+  proof (rule dependent_nat_choice)
+    show "\<exists>T. disjnt T S \<and> a \<in> T \<and> openin X T"
+      by (metis Diff_iff a \<open>closedin X S\<close> closedin_def disjnt_iff)
+    fix V n
+    assume \<section>: "disjnt V S \<and> a \<in> V \<and> openin X V"
+    then obtain U C where U: "openin X U" "closedin X C" "a \<in> U" "U \<subseteq> C" "C \<subseteq> V"
+      using \<open>regular_space X\<close> by (metis neighbourhood_base_of neighbourhood_base_of_closedin)
+    with assms have "U \<subset> V"
+      by (metis "\<section>" \<open>S \<subseteq> topspace X\<close> connected_space_clopen_in disjnt_def empty_iff inf.absorb_iff2 inf.orderE psubsetI subset_trans)
+    with U show "\<exists>U. (disjnt U S \<and> a \<in> U \<and> openin X U) \<and> U \<subset> V"
+      using "\<section>" disjnt_subset1 by blast
+  qed
+  then obtain \<Phi> where \<Phi>: "\<And>n. disjnt (\<Phi> n) S \<and> a \<in> \<Phi> n \<and> openin X (\<Phi> n)"
+    and \<Phi>sub: "\<And>n. \<Phi> (Suc n) \<subset> \<Phi> n" by metis
+  then have "decseq \<Phi>"
+    by (simp add: decseq_SucI psubset_eq)
+  have "\<forall>n. \<exists>x. x \<in> \<Phi> n \<and> x \<notin> \<Phi>(Suc n)"
+    by (meson \<Phi>sub psubsetE subsetI)
+  then obtain f where fin: "\<And>n. f n \<in> \<Phi> n" and fout: "\<And>n. f n \<notin> \<Phi>(Suc n)"
+    by metis
+  have "range f \<subseteq> topspace X"
+    by (meson \<Phi> fin image_subset_iff openin_subset subset_iff)
+  moreover have "inj f"
+    by (metis Suc_le_eq \<open>decseq \<Phi>\<close> decseq_def fin fout linorder_injI subsetD)
+  ultimately show ?thesis
+    using infinite_iff_countable_subset by blast
+qed
 
 lemma path_connected_space_imp_card_ge:
    "path_connected_space X" "Hausdorff_space X" "\<not> (\<exists>a. topspace X \<subseteq> {a})
