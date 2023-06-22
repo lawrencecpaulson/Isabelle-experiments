@@ -6,6 +6,9 @@ theory AMS
     "HOL-ex.Sketch_and_Explore"
 begin
 
+
+thm Kolmogorov_quotient_lift_exists  (*needs tidying*)
+
 declare continuous_map_Inf [continuous_intros]
 declare continuous_map_Sup [continuous_intros]
 
@@ -3039,47 +3042,45 @@ qed
 
 lemma Tietze_extension_completely_regular:
   assumes "completely_regular_space X" "compactin X S" "is_interval T" "T \<noteq> {}" 
-    "continuous_map (subtopology X S) euclidean f" "f`S \<subseteq> T"
+    and contf: "continuous_map (subtopology X S) euclidean f" and fim: "f`S \<subseteq> T"
   obtains g where "continuous_map X euclideanreal g" "g ` topspace X \<subseteq> T" 
-                  "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
-oops
-
-  REPEAT STRIP_TAC THEN
-  ABBREV_TAC `q::A=>bool = image (Kolmogorov_quotient X) (topspace X)` THEN
-  MP_TAC(ISPECL
-   [`X::A topology`; `euclideanreal`; `f::A=>real`; `S::A=>bool`]
-   KOLMOGOROV_QUOTIENT_LIFT_EXISTS) THEN
-  SIMP_TAC[HAUSDORFF_IMP_T0_SPACE; HAUSDORFF_SPACE_EUCLIDEANREAL] THEN
-  ASM_SIMP_TAC[COMPACT_IN_SUBSET_TOPSPACE; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `g::A=>real` THEN STRIP_TAC THEN
-  MP_TAC(ISPECL
-   [`subtopology X (q::A=>bool)`; `g::A=>real`;
-    `image (Kolmogorov_quotient X) (S::A=>bool)`;
-    `T::real=>bool`]
-   Tietze_extension_comp_reg_aux) THEN
-  ASM_SIMP_TAC[COMPLETELY_REGULAR_SPACE_SUBTOPOLOGY; FORALL_IN_IMAGE] THEN
-  REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; SUBTOPOLOGY_SUBTOPOLOGY] THEN
-  EXPAND_TAC "q" THEN REWRITE_TAC[IN_INTER; IMP_CONJ_ALT; FORALL_IN_IMAGE] THEN
-  ASM_SIMP_TAC[COMPACT_IN_SUBSET_TOPSPACE; SET_RULE
-   `S \<subseteq> u \<Longrightarrow> f ` u \<inter> f ` S = f ` S`] THEN
-  SIMP_TAC[KOLMOGOROV_QUOTIENT_IN_TOPSPACE] THEN
-  REWRITE_TAC[IMP_IMP] THEN ANTS_TAC THENL
-   [CONJ_TAC THENL
-     [MATCH_MP_TAC IMAGE_COMPACT_IN THEN
-      EXISTS_TAC `X::A topology` THEN
-      ASM_REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; SUBSET_REFL] THEN
-      REWRITE_TAC[CONTINUOUS_MAP_KOLMOGOROV_QUOTIENT];
-      MATCH_MP_TAC REGULAR_T0_IMP_HAUSDORFF_SPACE THEN
-      ASM_SIMP_TAC[REGULAR_SPACE_SUBTOPOLOGY;
-                   COMPLETELY_REGULAR_IMP_REGULAR_SPACE] THEN
-      EXPAND_TAC "q" THEN REWRITE_TAC[T0_SPACE_KOLMOGOROV_QUOTIENT]];
-    DISCH_THEN(X_CHOOSE_THEN `h::A=>real` STRIP_ASSUME_TAC) THEN
-    EXISTS_TAC `(h::A=>real) \<circ> Kolmogorov_quotient X` THEN
-    ASM_REWRITE_TAC[o_THM] THEN MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
-    EXISTS_TAC `subtopology X (q::A=>bool)` THEN
-    ASM_REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; SUBSET_REFL] THEN
-    REWRITE_TAC[CONTINUOUS_MAP_KOLMOGOROV_QUOTIENT]]);;
-
+    "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
+proof -
+  define Q where "Q \<equiv> Kolmogorov_quotient X ` (topspace X)"
+  obtain g where contg: "continuous_map (subtopology X (Kolmogorov_quotient X ` S)) euclidean g"
+    and gf: "\<And>x. x \<in> S \<Longrightarrow> g(Kolmogorov_quotient X x) = f x"
+    using Kolmogorov_quotient_lift_exists 
+    by (metis \<open>compactin X S\<close> contf compactin_subset_topspace open_openin t0_space_def t1_space)
+  have "S \<subseteq> topspace X"
+    by (simp add: \<open>compactin X S\<close> compactin_subset_topspace)
+  then have [simp]: "Q \<inter> Kolmogorov_quotient X ` S = Kolmogorov_quotient X ` S"
+    using Q_def by blast
+  have creg: "completely_regular_space (subtopology X Q)"
+    by (simp add: \<open>completely_regular_space X\<close> completely_regular_space_subtopology)
+  then have "regular_space (subtopology X Q)"
+    by (simp add: completely_regular_imp_regular_space)
+  then have "Hausdorff_space (subtopology X Q)"
+    using Q_def regular_t0_eq_Hausdorff_space t0_space_Kolmogorov_quotient by blast
+  moreover
+  have "compactin (subtopology X Q) (Kolmogorov_quotient X ` S)"
+    by (metis Q_def \<open>compactin X S\<close> image_compactin quotient_imp_continuous_map quotient_map_Kolmogorov_quotient)
+  ultimately obtain h where conth: "continuous_map (subtopology X Q) euclidean h" 
+              and him: "h ` topspace (subtopology X Q) \<subseteq> T" 
+              and hg: "\<And>x. x \<in> Kolmogorov_quotient X ` S \<Longrightarrow> h x = g x"
+    using Tietze_extension_comp_reg_aux [of "subtopology X Q" "Kolmogorov_quotient X ` S" T g] 
+    apply (simp add: subtopology_subtopology creg contg assms)
+    using fim gf by blast
+  show thesis
+  proof
+    show "continuous_map X euclideanreal (h \<circ> Kolmogorov_quotient X)"
+      by (metis Q_def conth continuous_map_compose quotient_imp_continuous_map quotient_map_Kolmogorov_quotient)
+    show "(h \<circ> Kolmogorov_quotient X) ` topspace X \<subseteq> T"
+      using Q_def continuous_map_Kolmogorov_quotient continuous_map_image_subset_topspace him by fastforce
+    fix x
+    assume "x \<in> S" then show "(h \<circ> Kolmogorov_quotient X) x = f x"
+      by (simp add: gf hg)
+  qed
+qed
 
 
 subsection\<open>Embedding in products and hence more about completely metrizable spaces\<close>
