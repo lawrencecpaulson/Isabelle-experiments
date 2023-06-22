@@ -2841,10 +2841,8 @@ qed
 lemma completely_regular_space_cube_embedding:
   fixes X :: "'a topology"
   assumes "completely_regular_space X" "Hausdorff_space X"
-  shows "\<exists>K::('a\<Rightarrow>real)set. \<exists>e.
-               embedding_map X
-                (product_topology (\<lambda>f. subtopology euclideanreal {0..1::real}) K)
-                e"
+  obtains K:: "('a\<Rightarrow>real)set" and e
+    where "embedding_map X (product_topology (\<lambda>f. top_of_set {0..1::real}) K) e"
   using completely_regular_space_cube_embedding_explicit [OF assms] by metis
 
 
@@ -2895,8 +2893,7 @@ proof -
     have [simp]: "max 0 (x - 1/2) = 0 \<longleftrightarrow> x \<le> 1/2" for x::real
       by force
     have [simp]: "2 * max 0 (x - 1/2) = 1 \<longleftrightarrow> x = 1" for x::real
-      using half_bounded_equal [of "x/2"]
-      by (smt (z3) half_bounded_equal)
+      by (simp add: max_def_raw)
     show thesis 
     proof
       have "g t s = 1" if "s \<in> S" "t \<in> K" for s t
@@ -2917,13 +2914,11 @@ proof -
       moreover have "2 * max 0 ((INF t\<in>K. g t x) - 1/2) \<le> 1" if "x \<in> topspace X" for x
       proof -
         obtain k where "k \<in> K" "g k x \<le> 1"
-          using K \<open>x \<in> topspace X\<close> \<open>K \<noteq> {}\<close> g01
-          apply (auto simp: G_def)
-          using atLeastAtMost_iff by blast
+          using K \<open>x \<in> topspace X\<close> \<open>K \<noteq> {}\<close> g01 by (fastforce simp add: G_def)
         then have "(INF t\<in>K. g t x) \<le> 1"
-          by (meson K(1) cInf_le_finite dual_order.trans finite_imageI imageI)
+          by (meson \<open>finite K\<close> cInf_le_finite dual_order.trans finite_imageI imageI)
         then show ?thesis
-          by (smt (z3) half_bounded_equal)
+          by (simp add: max_def_raw)
       qed
       ultimately show "continuous_map X (top_of_set {0..1}) f"
         by (force simp add: f_def continuous_map_in_subtopology intro!: \<open>finite K\<close> continuous_intros)
@@ -2975,66 +2970,72 @@ next
     by (metis Urysohn_completely_regular_closed_compact assms continuous_map_into_fulltopology disjnt_sym that)
 qed
 
-lemma lemmaX:
-  assumes "completely_regular_space X" "Hausdorff_space X" "compactin X S" "is_interval T" "(T \<noteq> {})" 
-   and contf: "continuous_map (subtopology X S) euclidean f" "f`S \<subseteq> T"
- obtains g where "continuous_map X euclidean g" "g ` topspace X \<subseteq> T" "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
-oops
-    REPEAT STRIP_TAC THEN
-    MP_TAC(ISPEC `X::A topology` COMPLETELY_REGULAR_SPACE_CUBE_EMBEDDING) THEN
-    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`k:((A=>real)->bool)`; `e::A->(A=>real)->real`] THEN
-    REWRITE_TAC[embedding_map; HOMEOMORPHIC_MAP_MAPS; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `e':((A=>real)->real)->A` THEN ABBREV_TAC
-     `cube:((A=>real)->real)topology =
-      product_topology k
-       (\<lambda>f. subtopology euclideanreal ({0..1}))` THEN
-    REWRITE_TAC[homeomorphic_maps] THEN STRIP_TAC THEN
-    MP_TAC(ISPECL
-     [`cube:((A=>real)->real)topology`;
-      `f \<circ> (e':((A=>real)->real)->A)`;
-      `image e S`;
-      `T::real=>bool`] TIETZE_EXTENSION_REALINTERVAL) THEN
-    ASM_SIMP_TAC[FORALL_IN_IMAGE; o_THM] THEN ANTS_TAC THENL
-     [REPEAT CONJ_TAC THENL
-       [MATCH_MP_TAC COMPACT_HAUSDORFF_OR_REGULAR_IMP_NORMAL_SPACE THEN
-        EXPAND_TAC "cube" THEN
-        REWRITE_TAC[COMPACT_SPACE_PRODUCT_TOPOLOGY;
-                    HAUSDORFF_SPACE_PRODUCT_TOPOLOGY] THEN
-        SIMP_TAC[HAUSDORFF_SPACE_SUBTOPOLOGY;
-                 HAUSDORFF_SPACE_EUCLIDEANREAL] THEN
-        SIMP_TAC[COMPACT_IN_EUCLIDEANREAL_INTERVAL; COMPACT_SPACE_SUBTOPOLOGY];
-        MATCH_MP_TAC COMPACT_IN_IMP_CLOSED_IN THEN CONJ_TAC THENL
-         [EXPAND_TAC "cube" THEN
-          SIMP_TAC[HAUSDORFF_SPACE_PRODUCT_TOPOLOGY;
-                   HAUSDORFF_SPACE_SUBTOPOLOGY;
-                   HAUSDORFF_SPACE_EUCLIDEANREAL];
-          MATCH_MP_TAC IMAGE_COMPACT_IN THEN EXISTS_TAC `X::A topology` THEN
-          ASM_MESON_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY]];
-        MATCH_MP_TAC CONTINUOUS_MAP_COMPOSE THEN
-        EXISTS_TAC `subtopology X (S::A=>bool)` THEN
-        ASM_REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN CONJ_TAC THENL
-         [FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ]
-            CONTINUOUS_MAP_FROM_SUBTOPOLOGY_MONO)) THEN
-          ASM_SIMP_TAC[COMPACT_IN_SUBSET_TOPSPACE; IMAGE_SUBSET];
-          REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN
-          MATCH_MP_TAC(SET_RULE
-           `(\<forall>x. x \<in> S \<Longrightarrow> f(g x) = x)
-            \<Longrightarrow> image f (u \<inter> g ` S) \<subseteq> S`) THEN
-          FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP COMPACT_IN_SUBSET_TOPSPACE) THEN
-          ASM SET_TAC[]];
-        FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP COMPACT_IN_SUBSET_TOPSPACE) THEN
-        ASM SET_TAC[]];
-      DISCH_THEN(X_CHOOSE_THEN `g:((A=>real)->real)->real`
-        STRIP_ASSUME_TAC) THEN
-      EXISTS_TAC `(g:((A=>real)->real)->real) \<circ> e` THEN
-      CONJ_TAC THENL
-       [ASM_MESON_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; CONTINUOUS_MAP_COMPOSE];
-        REWRITE_TAC[o_THM] THEN
-        FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP COMPACT_IN_SUBSET_TOPSPACE) THEN
-        REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP
-          CONTINUOUS_MAP_IMAGE_SUBSET_TOPSPACE)) THEN
-        REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN ASM SET_TAC[]]])`
+
+lemma Tietze_extension_comp_reg_aux:
+  fixes T :: "real set"
+  assumes "completely_regular_space X" "Hausdorff_space X" "compactin X S" 
+    and T: "is_interval T" "T\<noteq>{}" 
+    and contf: "continuous_map (subtopology X S) euclidean f" and fim: "f`S \<subseteq> T"
+  obtains g where "continuous_map X euclidean g" "g ` topspace X \<subseteq> T" "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
+proof -
+  obtain K:: "('a\<Rightarrow>real)set" and e
+    where e0: "embedding_map X (product_topology (\<lambda>f. top_of_set {0..1::real}) K) e"
+    using assms completely_regular_space_cube_embedding by blast
+  define cube where "cube \<equiv> product_topology (\<lambda>f. top_of_set {0..1::real}) K"
+  have e: "embedding_map X cube e"
+    using e0 by (simp add: cube_def)
+  obtain e' where  e': "homeomorphic_maps X (subtopology cube (e ` topspace X)) e e'"
+    using e by (force simp add: cube_def embedding_map_def homeomorphic_map_maps)
+  then have conte: "continuous_map X (subtopology cube (e ` topspace X)) e"
+     and conte': "continuous_map (subtopology cube (e ` topspace X)) X e'"
+     and e'e: "\<forall>x\<in>topspace X. e' (e x) = x"
+    by (auto simp add: homeomorphic_maps_def)
+  have "Hausdorff_space cube"
+    unfolding cube_def
+    using Hausdorff_space_euclidean Hausdorff_space_product_topology Hausdorff_space_subtopology by blast
+  have "normal_space cube"
+  proof (rule compact_Hausdorff_or_regular_imp_normal_space)
+    show "compact_space cube"
+      unfolding cube_def
+      using compact_space_product_topology compact_space_subtopology compactin_euclidean_iff by blast
+  qed (use \<open>Hausdorff_space cube\<close> in auto)
+  moreover
+  have comp: "compactin cube (e ` S)"
+    by (meson \<open>compactin X S\<close> conte continuous_map_in_subtopology image_compactin)
+  then have "closedin cube (e ` S)"
+    by (intro compactin_imp_closedin \<open>Hausdorff_space cube\<close>)
+  moreover
+  have "continuous_map (subtopology cube (e ` S)) euclideanreal (f \<circ> e')"
+  proof (intro continuous_map_compose)
+    show "continuous_map (subtopology cube (e ` S)) (subtopology X S) e'"
+      unfolding continuous_map_in_subtopology
+    proof
+      show "continuous_map (subtopology cube (e ` S)) X e'"
+        by (meson \<open>compactin X S\<close> compactin_subset_topspace conte' continuous_map_from_subtopology_mono image_mono)
+      show "e' ` topspace (subtopology cube (e ` S)) \<subseteq> S"
+        using \<open>compactin X S\<close> compactin_subset_topspace e'e by fastforce
+    qed
+  qed (simp add: contf)
+  moreover
+  have "(f \<circ> e') ` e ` S \<subseteq> T"
+    using \<open>compactin X S\<close> compactin_subset_topspace e'e fim by fastforce
+  ultimately
+  obtain g where contg: "continuous_map cube euclidean g" and gsub: "g ` topspace cube \<subseteq> T" 
+                and gf: "\<And>x. x \<in> e`S \<Longrightarrow> g x = (f \<circ> e') x"
+    using Tietze_extension_realinterval T by metis
+  show thesis
+  proof
+    show "continuous_map X euclideanreal (g \<circ> e)"
+      by (meson contg conte continuous_map_compose continuous_map_in_subtopology)
+    show "(g \<circ> e) ` topspace X \<subseteq> T"
+      using gsub conte continuous_map_image_subset_topspace by fastforce
+    fix x
+    assume "x \<in> S"
+    then show "(g \<circ> e) x = f x"
+      using gf \<open>compactin X S\<close> compactin_subset_topspace e'e by fastforce
+  qed
+qed
+
 
 lemma Tietze_extension_completely_regular:
   assumes "completely_regular_space X" "compactin X S" "is_interval T" "T \<noteq> {}" 
@@ -3055,7 +3056,7 @@ oops
    [`subtopology X (q::A=>bool)`; `g::A=>real`;
     `image (Kolmogorov_quotient X) (S::A=>bool)`;
     `T::real=>bool`]
-   lemma) THEN
+   Tietze_extension_comp_reg_aux) THEN
   ASM_SIMP_TAC[COMPLETELY_REGULAR_SPACE_SUBTOPOLOGY; FORALL_IN_IMAGE] THEN
   REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; SUBTOPOLOGY_SUBTOPOLOGY] THEN
   EXPAND_TAC "q" THEN REWRITE_TAC[IN_INTER; IMP_CONJ_ALT; FORALL_IN_IMAGE] THEN
