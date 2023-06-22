@@ -18,6 +18,9 @@ lemma countable_eqpoll: "\<lbrakk>countable A; B \<approx> A\<rbrakk> \<Longrigh
 declare Metric_space_mspace_mdist [simp]
 declare continuous_map_mdist [continuous_intros]
 
+lemma mbounded_iff_bounded [iff]: "Met_TC.mbounded A \<longleftrightarrow> bounded A"
+  by (metis Met_TC.mbounded UNIV_I all_not_in_conv bounded_def)
+
 thm Met_TC.mtopology_is_euclideanreal(*REPLACE*)
 lemma mtopology_is_euclidean [simp]: "Met_TC.mtopology = euclidean"
   by (simp add: Met_TC.mtopology_def)
@@ -2762,7 +2765,6 @@ qed
 
 subsection\<open>The Tychonoff embedding\<close>
 
-
 lemma completely_regular_space_cube_embedding_explicit:
   assumes "completely_regular_space X" "Hausdorff_space X"
   shows "embedding_map X
@@ -2782,9 +2784,8 @@ proof -
       and f01: "\<And>x. x \<in> topspace X \<Longrightarrow> f x \<in> {0..1}" and fxy: "f y = 0" "f x = 1"
       using \<open>completely_regular_space X\<close> xy unfolding completely_regular_space_def
       by (smt (verit, ccfv_threshold) Diff_iff continuous_map_in_subtopology image_subset_iff singleton_iff)
-    then have "Met_TC.mbounded (f ` topspace X)"
-      apply (simp add: Met_TC.mbounded_def image_subset_iff dist_real_def)
-      by (metis abs_minus_cancel abs_of_nonneg diff_0)
+    then have "bounded (f ` topspace X)"
+      by (meson bounded_closed_interval bounded_subset image_subset_iff)
     with contf f01 have "restrict f (topspace X) \<in> K"
       by (auto simp: K_def)
     with fxy xy show ?thesis 
@@ -2794,58 +2795,41 @@ proof -
     by (meson inj_onI)
   then obtain e' where e': "\<And>x. x \<in> topspace X \<Longrightarrow> e' (e x) = x"
     by (metis inv_into_f_f)
-
-  (*NOT USED*)
-  have **: "{f. f ` topspace X \<subseteq> {0..1}} \<inter> {f \<in> extensional (topspace X). P f} = 
-        {f \<in> topspace X \<rightarrow>\<^sub>E {0..1}. P f}" for P
-    by (auto simp: PiE_iff)
-
-  have D: "continuous_map (subtopology (product_topology (\<lambda>f. top_of_set {0..1}) K) (e ` topspace X)) X e'"
-  proof (clarsimp simp add: continuous_map_atin limitin_atin e')
+  have "continuous_map (subtopology (product_topology (\<lambda>f. top_of_set {0..1}) K) (e ` topspace X)) X e'"
+  proof (clarsimp simp add: continuous_map_atin limitin_atin openin_subtopology_alt e')
     fix x U
     assume "e x \<in> K \<rightarrow>\<^sub>E {0..1}" and "x \<in> topspace X" and "openin X U" and "x \<in> U"
     then obtain g where contg: "continuous_map X (top_of_set {0..1}) g" and "g x = 0" 
           and gim: "g ` (topspace X - U) \<subseteq> {1::real}"
       using \<open>completely_regular_space X\<close> unfolding completely_regular_space_def
       by (metis Diff_iff openin_closedin_eq)
-    then have H: "Met_TC.mbounded (g ` topspace X)"
-      apply (simp add: Met_TC.mbounded_def image_subset_iff dist_real_def)
-      apply (rule_tac x="0" in exI)
-      apply (simp add: )
-      by (metis abs_of_nonneg atLeastAtMost_iff continuous_map_in_subtopology image_subset_iff)
-    have G: "restrict g (topspace X) \<in> K"
-      apply (simp add: K_def)
-      apply (rule )
-      using contg
-      apply (simp add: continuous_map_in_subtopology)
-      apply (auto simp: H)
-      using contg continuous_map_in_subtopology apply blast
-      done
-    show "\<exists>W. openin (subtopology (product_topology (\<lambda>f. top_of_set {0..1}) K) (e ` topspace X)) W \<and> 
-              e x \<in> W \<and> e' ` (W - {e x}) \<subseteq> U"
-      apply (simp add: openin_subtopology_alt \<open>x \<in> topspace X\<close>)
+    then have "bounded (g ` topspace X)"
+      by (meson bounded_closed_interval bounded_subset continuous_map_in_subtopology)
+    moreover have "g ` topspace X \<subseteq> {0..1}"
+      using contg by (simp add: continuous_map_in_subtopology)
+    ultimately have g_in_K: "restrict g (topspace X) \<in> K"
+      using contg by (simp add: K_def continuous_map_in_subtopology)
+    have "openin (top_of_set {0..1}) {0..<1::real}"
+      using open_real_greaterThanLessThan[of "-1" 1] by (force simp add: openin_open)
+    moreover have "e x \<in> (\<Pi>\<^sub>E f\<in>K. if f = restrict g (topspace X) then {0..<1} else {0..1})"
+      using \<open>e x \<in> K \<rightarrow>\<^sub>E {0..1}\<close> by (simp add: e_def \<open>g x = 0\<close> \<open>x \<in> topspace X\<close> PiE_iff)
+    moreover have "e y = e x"
+      if "y \<notin> U" and ey: "e y \<in> (\<Pi>\<^sub>E f\<in>K. if f = restrict g (topspace X) then {0..<1} else {0..1})"
+           and y: "y \<in> topspace X" for y
+    proof -
+      have "e y (restrict g (topspace X)) \<in> {0..<1}"
+        using ey by (smt (verit, ccfv_SIG) PiE_mem g_in_K)
+    with gim g_in_K y \<open>y \<notin> U\<close> show ?thesis
+      by (fastforce simp add: e_def)
+    qed
+    ultimately
+    show "\<exists>W. openin (product_topology (\<lambda>f. top_of_set {0..1}) K) W \<and> e x \<in> W \<and> e' ` (e ` topspace X \<inter> W - {e x}) \<subseteq> U"
       apply (rule_tac x="PiE K (\<lambda>f. if f = restrict g (topspace X) then {0..<1} else {0..1})" in exI)
-      apply (simp add: openin_PiE_gen)
-      apply (intro conjI impI)
-        apply (rule disjI2)
-        apply (simp add: openin_open)
-        apply (rule_tac x="{-1<..<1}" in exI)
-        apply (force simp add: )
-      using \<open>e x \<in> K \<rightarrow>\<^sub>E {0..1}\<close> apply (simp add: e_def \<open>g x = 0\<close> \<open>x \<in> topspace X\<close> PiE_iff)
-      apply clarify
-      apply (simp add: e' )
-      using \<open>x\<in>U\<close> \<open>x \<in> topspace X\<close>
-      apply (simp add: PiE_iff)
-      apply clarify
-      apply (drule_tac x="restrict g (topspace X)" in bspec)
-       apply (simp add: G)
-       apply (simp add: e_def G)
-      using gim by auto
+      by (auto simp add: openin_PiE_gen e')
   qed
-  with e'
-  have "embedding_map X (product_topology (\<lambda>f. top_of_set {0..1}) K) e"
+  with e' have "embedding_map X (product_topology (\<lambda>f. top_of_set {0..1}) K) e"
     unfolding embedding_map_def homeomorphic_map_maps homeomorphic_maps_def
-    by (force simp add: e_def K_def continuous_map_in_subtopology continuous_map_componentwise)
+    by (fastforce simp: e_def K_def continuous_map_in_subtopology continuous_map_componentwise)
   then show ?thesis
     by (simp add: K_def e_def)
 qed
