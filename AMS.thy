@@ -6,6 +6,9 @@ theory AMS
     "HOL-ex.Sketch_and_Explore"
 begin
 
+declare continuous_map_Inf [continuous_intros]
+declare continuous_map_Sup [continuous_intros]
+
 lemma countable_lepoll: "\<lbrakk>countable A; B \<lesssim> A\<rbrakk> \<Longrightarrow> countable B"
   by (meson countable_image countable_subset lepoll_iff)
 
@@ -1883,15 +1886,15 @@ proof -
       by (simp add: Met_TC.Metric_space_funspace Submetric.intro Submetric_axioms_def)
 
     have fim: "f ` M \<subseteq> mspace m'"
-    proof (clarsimp simp: m'_def Met_TC.fspace_def Met_TC.mbounded_def)
+    proof (clarsimp simp: m'_def Met_TC.fspace_def)
       fix b
       assume "b \<in> M"
       then have "\<And>c. \<lbrakk>c \<in> M\<rbrakk> \<Longrightarrow> \<bar>d b c - d a c\<bar> \<le> d a b"
         by (smt (verit, best) \<open>a \<in> M\<close> commute triangle'')
       then have "(\<lambda>x. d b x - d a x) ` M \<subseteq> cball 0 (d a b)"
         by force
-      then show "f b \<in> extensional M \<and> (\<exists>x B. f b ` M \<subseteq> cball x B)"
-        by (force simp: f_def)
+      then show "f b \<in> extensional M \<and> bounded (f b ` M)"
+        by (metis bounded_cball bounded_subset f_def image_restrict_eq restrict_extensional_sub set_eq_subset)
     qed
     show thesis
     proof
@@ -2810,7 +2813,7 @@ proof -
     ultimately have g_in_K: "restrict g (topspace X) \<in> K"
       using contg by (simp add: K_def continuous_map_in_subtopology)
     have "openin (top_of_set {0..1}) {0..<1::real}"
-      using open_real_greaterThanLessThan[of "-1" 1] by (force simp add: openin_open)
+      using open_real_greaterThanLessThan[of "-1" 1] by (force simp: openin_open)
     moreover have "e x \<in> (\<Pi>\<^sub>E f\<in>K. if f = restrict g (topspace X) then {0..<1} else {0..1})"
       using \<open>e x \<in> K \<rightarrow>\<^sub>E {0..1}\<close> by (simp add: e_def \<open>g x = 0\<close> \<open>x \<in> topspace X\<close> PiE_iff)
     moreover have "e y = e x"
@@ -2820,7 +2823,7 @@ proof -
       have "e y (restrict g (topspace X)) \<in> {0..<1}"
         using ey by (smt (verit, ccfv_SIG) PiE_mem g_in_K)
     with gim g_in_K y \<open>y \<notin> U\<close> show ?thesis
-      by (fastforce simp add: e_def)
+      by (fastforce simp: e_def)
     qed
     ultimately
     show "\<exists>W. openin (product_topology (\<lambda>f. top_of_set {0..1}) K) W \<and> e x \<in> W \<and> e' ` (e ` topspace X \<inter> W - {e x}) \<subseteq> U"
@@ -2847,149 +2850,130 @@ lemma completely_regular_space_cube_embedding:
 
 subsection \<open>Urysohn and Tietze analogs for completely regular spaces\<close>
 
-(* Urysohn and Tietze analogs for completely regular spaces if (()) set is  *)
-(* assumed compact instead of closed. Note that Hausdorffness is *not*       *)
-text\<open> required: inside () proof we factor through the Kolmogorov quotient.     \<close>
-
+text\<open>"Urysohn and Tietze analogs for completely regular spaces if (()) set is 
+assumed compact instead of closed. Note that Hausdorffness is *not* required: inside () proof 
+we factor through the Kolmogorov quotient." -- John Harrison\<close>
 
 lemma Urysohn_completely_regular_closed_compact:
   fixes a b::real
   assumes "a \<le> b" "completely_regular_space X" "closedin X S" "compactin X T" "disjnt S T"
   obtains f where "continuous_map X (subtopology euclidean {a..b}) f" "f ` T \<subseteq> {a}" "f ` S \<subseteq> {b}"
-  sorry
-oops
-  REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN
-   `\<exists>f. continuous_map
-          (X,subtopology euclideanreal ({0..1})) f \<and>
-        (f ` T \<subseteq> {0}) \<and>
-        (\<forall>x::A. x \<in> S \<Longrightarrow> f x = 1)`
-  MP_TAC THENL
-   [ALL_TAC;
-    REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; \<subseteq>] THEN
-    REWRITE_TAC[FORALL_IN_IMAGE; IN_REAL_INTERVAL; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `f::A=>real` THEN STRIP_TAC THEN
-    EXISTS_TAC `\<lambda>x. a + (b - a) * f x` THEN
-    ASM_SIMP_TAC[] THEN CONJ_TAC THENL [ALL_TAC; REAL_ARITH_TAC] THEN
-    ASM_SIMP_TAC[CONTINUOUS_MAP_REAL_ADD; CONTINUOUS_MAP_REAL_LMUL;
-                 CONTINUOUS_MAP_CONST; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
-    REWRITE_TAC[IN_REAL_INTERVAL; REAL_LE_ADDR] THEN
-    REWRITE_TAC[REAL_ARITH
-      `a + (b - a) * y \<le> b \<longleftrightarrow> 0 \<le> (b - a) * (1 - y)`] THEN
-    ASM_SIMP_TAC[REAL_LE_MUL; REAL_SUB_LE]] THEN
-  ASM_CASES_TAC `T::A=>bool = {}` THENL
-   [EXISTS_TAC `(\<lambda>x. 1):A=>real` THEN
-    ASM_REWRITE_TAC[CONTINUOUS_MAP_CONST; NOT_IN_EMPTY] THEN
-    REWRITE_TAC[TOPSPACE_EUCLIDEANREAL_SUBTOPOLOGY; IN_REAL_INTERVAL] THEN
-    CONV_TAC REAL_RAT_REDUCE_CONV;
-    ALL_TAC] THEN
-  SUBGOAL_THEN
-   `\<forall>a. a \<in> T
-        \<Longrightarrow> \<exists>f. continuous_map
-                  (X,subtopology euclideanreal ({0..1})) f \<and>
-                f a = 0 \<and> f ` S \<subseteq> {1}`
-  MP_TAC THENL
-   [REPEAT STRIP_TAC THEN
-    FIRST_X_ASSUM(MATCH_MP_TAC \<circ> REWRITE_RULE[completely_regular_space]) THEN
-    FIRST_ASSUM(MP_TAC \<circ> MATCH_MP COMPACT_IN_SUBSET_TOPSPACE) THEN
-    ASM SET_TAC[];
-    GEN_REWRITE_TAC (LAND_CONV \<circ> BINDER_CONV) [RIGHT_IMP_EXISTS_THM]] THEN
-  REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `g::A=>A->real` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [compactin]) THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC
-    `{{x \<in> topspace X. (g::A=>A->real) a x \<in> {T. T < 1/2}} |
-      a \<in> T}`)) THEN
-  REWRITE_TAC[SIMPLE_IMAGE; EXISTS_FINITE_SUBSET_IMAGE; FORALL_IN_IMAGE] THEN
-  ANTS_TAC THENL
-   [CONJ_TAC THENL
-     [X_GEN_TAC `a::A` THEN DISCH_TAC THEN
-      MATCH_MP_TAC OPEN_IN_CONTINUOUS_MAP_PREIMAGE THEN
-      EXISTS_TAC `euclideanreal` THEN REWRITE_TAC[GSYM REAL_OPEN_IN] THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
-      ASM_SIMP_TAC[REAL_OPEN_HALFSPACE_LT; ETA_AX];
-      MATCH_MP_TAC(SET_RULE
-       `(\<forall>a. a \<in> S \<Longrightarrow> a \<in> f a) \<Longrightarrow> S \<subseteq> \<Union>(f ` S)`) THEN
-      ASM_SIMP_TAC[IN_ELIM_THM] THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN
-      ASM SET_TAC[]];
-    DISCH_THEN(X_CHOOSE_THEN `k::A=>bool` MP_TAC)] THEN
-  ASM_CASES_TAC `k::A=>bool = {}` THEN
-  ASM_REWRITE_TAC[IMAGE_CLAUSES; UNIONS_0; SUBSET_EMPTY] THEN STRIP_TAC THEN
-  EXISTS_TAC
-   `\<lambda>x. 2 * max 0 (inf {(g::A=>A->real) a x | a \<in> k} - 1/2)` THEN
-  REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; \<subseteq>; FORALL_IN_IMAGE] THEN
-  REWRITE_TAC[REAL_ARITH `2 * max 0 (x - 1/2) = 0 \<longleftrightarrow> x \<le> 1/2`;
-              REAL_ARITH `2 * max 0 (x - 1/2) = 1 \<longleftrightarrow> x = 1`] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
-  REWRITE_TAC[IN_REAL_INTERVAL] THEN
-  REWRITE_TAC[REAL_ARITH `0 \<le> 2 * max 0 a`;
-              REAL_ARITH  `2 * max 0 (x - 1/2) \<le> 1 \<longleftrightarrow> x \<le> 1`] THEN
-  REWRITE_TAC[GSYM CONJ_ASSOC] THEN CONJ_TAC THENL
-   [MATCH_MP_TAC CONTINUOUS_MAP_REAL_LMUL THEN
-    MATCH_MP_TAC CONTINUOUS_MAP_REAL_MAX THEN
-    REWRITE_TAC[CONTINUOUS_MAP_CONST; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
-    MATCH_MP_TAC CONTINUOUS_MAP_REAL_SUB THEN
-    REWRITE_TAC[CONTINUOUS_MAP_CONST; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
-    MATCH_MP_TAC CONTINUOUS_MAP_INF THEN REWRITE_TAC[ETA_AX] THEN
-    ASM SET_TAC[];
-    ALL_TAC] THEN
-  MATCH_MP_TAC(TAUT `p \<and> (p \<Longrightarrow> q) \<Longrightarrow> p \<and> q`) THEN CONJ_TAC THENL
-   [X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-    MATCH_MP_TAC REAL_INF_LE THEN REWRITE_TAC[EXISTS_IN_GSPEC] THEN
-    EXISTS_TAC `0` THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY]) THEN
-    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `a::A` THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[CONTINUOUS_MAP_IN_SUBTOPOLOGY;
-     \<subseteq>; FORALL_IN_IMAGE; IN_REAL_INTERVAL]) THEN
-    ASM SET_TAC[];
-    DISCH_TAC] THEN
-  CONJ_TAC THEN X_GEN_TAC `x::A` THEN DISCH_TAC THENL
-   [MATCH_MP_TAC REAL_INF_LE THEN REWRITE_TAC[EXISTS_IN_GSPEC] THEN
-    EXISTS_TAC `0`;
-    REWRITE_TAC[GSYM REAL_LE_ANTISYM] THEN CONJ_TAC THENL
-     [ASM_MESON_TAC[\<subseteq>; CLOSED_IN_SUBSET]; ALL_TAC] THEN
-    MATCH_MP_TAC REAL_LE_INF THEN
-    ASM_REWRITE_TAC[SIMPLE_IMAGE; IMAGE_EQ_EMPTY; FORALL_IN_IMAGE]] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[CONTINUOUS_MAP_IN_SUBTOPOLOGY; \<subseteq>;
-   FORALL_IN_IMAGE; IN_REAL_INTERVAL; UNIONS_IMAGE; IN_ELIM_THM]) THEN
-  REWRITE_TAC[FORALL_IN_GSPEC] THEN
-  ASM_MESON_TAC[REAL_LT_IMP_LE; REAL_LE_REFL]);;`
-
+proof -
+  obtain f where contf: "continuous_map X (subtopology euclideanreal {0..1}) f" 
+    and f0: "f ` T \<subseteq> {0}" and f1: "f ` S \<subseteq> {1}"
+  proof (cases "T={}")
+    case True
+    show thesis
+    proof
+      show "continuous_map X (top_of_set {0..1}) (\<lambda>x. 1::real)" "(\<lambda>x. 1::real) ` T \<subseteq> {0}" "(\<lambda>x. 1::real) ` S \<subseteq> {1}"
+        using True by auto
+    qed   
+  next
+    case False
+    have "\<And>t. t \<in> T \<Longrightarrow> \<exists>f. continuous_map X (subtopology euclideanreal ({0..1})) f \<and> f t = 0 \<and> f ` S \<subseteq> {1}"
+      using assms unfolding completely_regular_space_def
+      by (meson DiffI compactin_subset_topspace disjnt_iff subset_eq)
+    then obtain g where contg: "\<And>t. t \<in> T \<Longrightarrow> continuous_map X (subtopology euclideanreal {0..1}) (g t)"
+                  and g0: "\<And>t. t \<in> T \<Longrightarrow> g t t = 0"
+                  and g1: "\<And>t. t \<in> T \<Longrightarrow> g t ` S \<subseteq> {1}"
+      by metis
+    then have g01: "\<And>t. t \<in> T \<Longrightarrow> g t ` topspace X \<subseteq> {0..1}"
+      by (meson continuous_map_in_subtopology)
+    define G where "G \<equiv> \<lambda>t. {x \<in> topspace X. g t x \<in> {..<1/2}}"
+    have "Ball (G`T) (openin X)"
+      using contg unfolding G_def continuous_map_in_subtopology
+      by (smt (verit, best) Collect_cong openin_continuous_map_preimage image_iff open_lessThan open_openin)
+    moreover have "T \<subseteq> \<Union>(G`T)"
+      using \<open>compactin X T\<close> g0 compactin_subset_topspace by (force simp: G_def)
+    ultimately have "\<exists>\<F>. finite \<F> \<and> \<F> \<subseteq> G`T \<and> T \<subseteq> \<Union> \<F>"
+      using \<open>compactin X T\<close> unfolding compactin_def by blast
+    then obtain K where K: "finite K" "K \<subseteq> T" "T \<subseteq> \<Union>(G`K)"
+      by (metis finite_subset_image)
+    with False have "K \<noteq> {}"
+      by fastforce
+    define f where "f \<equiv> \<lambda>x. 2 * max 0 (Inf ((\<lambda>t. g t x) ` K) - 1/2)"
+    have [simp]: "max 0 (x - 1/2) = 0 \<longleftrightarrow> x \<le> 1/2" for x::real
+      by force
+    have [simp]: "2 * max 0 (x - 1/2) = 1 \<longleftrightarrow> x = 1" for x::real
+      using half_bounded_equal [of "x/2"]
+      by (smt (z3) half_bounded_equal)
+    show thesis 
+    proof
+      have "g t s = 1" if "s \<in> S" "t \<in> K" for s t
+        using \<open>K \<subseteq> T\<close> g1 that by auto
+      then show "f ` S \<subseteq> {1}"
+        using \<open>K \<noteq> {}\<close> by (simp add: f_def image_subset_iff)
+      have "(INF t\<in>K. g t x) \<le> 1/2" if "x \<in> T" for x
+      proof -
+        obtain k where "k \<in> K" "g k x < 1/2"
+          using K \<open>x \<in> T\<close> by (auto simp add: G_def)
+        then show ?thesis
+          by (meson \<open>finite K\<close> cInf_le_finite dual_order.trans finite_imageI imageI less_le_not_le)
+      qed
+      then show "f ` T \<subseteq> {0}"
+        by (force simp: f_def)
+      have "\<And>t. t \<in> K \<Longrightarrow> continuous_map X euclideanreal (g t)"
+        using \<open>K \<subseteq> T\<close> contg continuous_map_in_subtopology by blast
+      moreover have "2 * max 0 ((INF t\<in>K. g t x) - 1/2) \<le> 1" if "x \<in> topspace X" for x
+      proof -
+        obtain k where "k \<in> K" "g k x \<le> 1"
+          using K \<open>x \<in> topspace X\<close> \<open>K \<noteq> {}\<close> g01
+          apply (auto simp: G_def)
+          using atLeastAtMost_iff by blast
+        then have "(INF t\<in>K. g t x) \<le> 1"
+          by (meson K(1) cInf_le_finite dual_order.trans finite_imageI imageI)
+        then show ?thesis
+          by (smt (z3) half_bounded_equal)
+      qed
+      ultimately show "continuous_map X (top_of_set {0..1}) f"
+        by (force simp add: f_def continuous_map_in_subtopology intro!: \<open>finite K\<close> continuous_intros)
+    qed
+  qed
+  define g where "g \<equiv> \<lambda>x. a + (b - a) * f x"
+  show thesis
+  proof
+    have "\<forall>x\<in>topspace X. a + (b - a) * f x \<le> b"
+      using contf \<open>a \<le> b\<close> apply (simp add: continuous_map_in_subtopology image_subset_iff)
+      by (smt (verit, best) mult_right_le_one_le)
+    then show "continuous_map X (top_of_set {a..b}) g"
+      using contf \<open>a \<le> b\<close> unfolding g_def continuous_map_in_subtopology image_subset_iff
+      by (intro conjI continuous_intros; simp)
+    show "g ` T \<subseteq> {a}" "g ` S \<subseteq> {b}"
+      using f0 f1 by (auto simp: g_def)
+  qed 
+qed
 
 
 lemma Urysohn_completely_regular_compact_closed:
   fixes a b::real
   assumes "a \<le> b" "completely_regular_space X" "compactin X S" "closedin X T" "disjnt S T"
   obtains f where "continuous_map X (subtopology euclidean {a..b}) f" "f ` T \<subseteq> {a}" "f ` S \<subseteq> {b}"
-  sorry
-oops
-  REPEAT STRIP_TAC THEN MP_TAC(ISPECL
-     [`X::A topology`; `T::A=>bool`; `S::A=>bool`;`-b::real`; `-a::real`]
-    URYSOHN_COMPLETELY_REGULAR_CLOSED_COMPACT) THEN
-  ASM_REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; \<subseteq>; REAL_LE_NEG2] THEN
-  ONCE_REWRITE_TAC[DISJOINT_SYM] THEN
-  ASM_REWRITE_TAC[FORALL_IN_IMAGE; IN_REAL_INTERVAL] THEN
-  REWRITE_TAC[REAL_ARITH `-b \<le> x \<and> x \<le>-a \<longleftrightarrow> a \<le>-x \<and>-x \<le> b`] THEN
-  REWRITE_TAC[REAL_ARITH `x::real =-a \<longleftrightarrow>-x = a`] THEN
-  DISCH_THEN(X_CHOOSE_THEN `f::A=>real` STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC `\<lambda>x. --(f x)` THEN
-  ASM_REWRITE_TAC[CONTINUOUS_MAP_REAL_NEG_EQ]);;
-
+proof -
+  obtain f where contf: "continuous_map X (subtopology euclidean {-b..-a}) f" and fim: "f ` T \<subseteq> {-a}" "f ` S \<subseteq> {-b}"
+    by (meson Urysohn_completely_regular_closed_compact assms disjnt_sym neg_le_iff_le)
+  show thesis
+  proof
+    show "continuous_map X (top_of_set {a..b}) (uminus \<circ> f)"
+      using contf by (auto simp add: continuous_map_in_subtopology o_def)
+    show "(uminus o f) ` T \<subseteq> {a}" "(uminus o f) ` S \<subseteq> {b}"
+      using fim by fastforce+
+  qed
+qed
 
 lemma Urysohn_completely_regular_compact_closed_alt:
+  fixes a b::real
   assumes "completely_regular_space X" "compactin X S" "closedin X T" "disjnt S T"
   obtains f where "continuous_map X euclideanreal f" "f ` T \<subseteq> {a}" "f ` S \<subseteq> {b}"
-oops
-  REPEAT STRIP_TAC THEN DISJ_CASES_TAC(REAL_ARITH `a \<le> b \<or> b \<le> a`) THENL
-   [MP_TAC(ISPECL
-     [`X::A topology`; `S::A=>bool`; `T::A=>bool`; `a::real`; `b::real`]
-     URYSOHN_COMPLETELY_REGULAR_COMPACT_CLOSED);
-    MP_TAC(ISPECL
-     [`X::A topology`; `T::A=>bool`; `S::A=>bool`; `b::real`; `a::real`]
-     URYSOHN_COMPLETELY_REGULAR_CLOSED_COMPACT)] THEN
-  ASM_REWRITE_TAC[] THEN ONCE_REWRITE_TAC[DISJOINT_SYM] THEN
-  ASM_REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY] THEN MESON_TAC[]);;
-
+proof (cases a b rule: le_cases)
+  case le
+  then show ?thesis
+    by (meson Urysohn_completely_regular_compact_closed assms continuous_map_into_fulltopology that)
+next
+  case ge
+  then show ?thesis 
+    using Urysohn_completely_regular_closed_compact assms
+    by (metis Urysohn_completely_regular_closed_compact assms continuous_map_into_fulltopology disjnt_sym that)
+qed
 
 lemma lemmaX:
   assumes "completely_regular_space X" "Hausdorff_space X" "compactin X S" "is_interval T" "(T \<noteq> {})" 
