@@ -3088,9 +3088,9 @@ subsection\<open>Embedding in products and hence more about completely metrizabl
 
 lemma (in Metric_space) gdelta_homeomorphic_space_closedin_product:
   assumes S: "\<And>i. i \<in> I \<Longrightarrow> openin mtopology (S i)"
-  obtains T where "closedin (prod_topology mtopology (product_topology (\<lambda>i. euclideanreal) I)) T"
+  obtains T where "closedin (prod_topology mtopology (powertop_real I)) T"
                   "subtopology mtopology (\<Inter>i \<in> I. S i) homeomorphic_space
-                   subtopology (prod_topology mtopology (product_topology (\<lambda>i. euclideanreal) I)) T"
+                   subtopology (prod_topology mtopology (powertop_real I)) T"
 proof (cases "I={}")
   case True
   then have top: "topspace (prod_topology mtopology (powertop_real I)) = (M \<times> {(\<lambda>x. undefined)})"
@@ -3116,9 +3116,8 @@ next
   define dd where "dd \<equiv> \<lambda>i. if i\<notin>I \<or> S i = M then \<lambda>u. 1 else (\<lambda>u. INF x \<in> M - S i. d u x)"
   have [simp]: "bdd_below (d u ` A)" for u A
     by (meson bdd_belowI2 nonneg)
-  have cont_dd: "continuous_map (subtopology mtopology (S i)) euclidean (dd i)" for i
-  proof (cases "i \<in> I")     (* case analysis probably unnecessary, as we can assume this*)
-    case True
+  have cont_dd: "continuous_map (subtopology mtopology (S i)) euclidean (dd i)" if "i \<in> I" for i
+  proof -
     have "dist (Inf (d x ` (M - S i))) (Inf (d y ` (M - S i))) \<le> d x y" 
       if "x \<in> S i" "x \<in> M" "y \<in> S i" "y \<in> M" "S i \<noteq> M" for x y
     proof -
@@ -3143,7 +3142,7 @@ next
     then show ?thesis
       using Lipschitz_continuous_imp_continuous_map [OF *]
       by (simp add: dd_def Self_def mtopology_of_submetric )
-  qed (simp add: dd_def)
+  qed 
   have dd_pos: "0 < dd i x" if "x \<in> S i" for i x
   proof (clarsimp simp add: dd_def)
     assume "i \<in> I" and "S i \<noteq> M"
@@ -3192,14 +3191,14 @@ next
                     \<open>x \<in> M\<close> \<open>ds \<in> I \<rightarrow>\<^sub>E UNIV\<close> \<open>i \<in> I\<close>
               by (fastforce simp add: f_def)
             have "\<not> M \<subseteq> S i"
-              using \<open>x \<notin> S i\<close> that(2) by blast
+              using \<open>x \<notin> S i\<close> \<open>x \<in> M\<close> by blast
             have "inverse (\<bar>ds i\<bar> + 1) \<le> dd i y"
-              using intvl apply (simp add: )
-              by (smt (verit) \<open>y \<in> S i\<close> dd_pos inverse_inverse_eq inverse_le_iff_le)
+              using intvl \<open>y \<in> S i\<close> dd_pos [of y i]
+              by (smt (verit, ccfv_threshold) greaterThanLessThan_iff inverse_inverse_eq le_imp_inverse_le)
             also have "\<dots> \<le> d x y"
-              using \<open>i \<in> I\<close> \<open>\<not> M \<subseteq> S i\<close>
+              using \<open>i \<in> I\<close> \<open>\<not> M \<subseteq> S i\<close> \<open>x \<notin> S i\<close> \<open>x \<in> M\<close>
               apply (simp add: dd_def cInf_le_iff_less)
-              using \<open>x \<notin> S i\<close> commute that(2) by force
+              using commute by force
             finally show False
               using dxy by linarith
           qed
@@ -3211,32 +3210,32 @@ next
           define e where "e \<equiv> \<bar>ds i - inverse (dd i x)\<bar>"
           { assume con: "e > 0"
             have "continuous_map (subtopology mtopology (S i)) euclidean (\<lambda>x. inverse (dd i x))" 
-              using dd_pos cont_dd by (fastforce simp:  intro!: continuous_map_real_inverse)
+              using dd_pos cont_dd \<open>i \<in> I\<close> 
+              by (fastforce simp:  intro!: continuous_map_real_inverse)
              then have "openin (subtopology mtopology (S i))
                          {z \<in> topspace (subtopology mtopology (S i)). 
                           inverse (dd i z) \<in> {inverse(dd i x) - e/2<..<inverse(dd i x) + e/2}}"
                using openin_continuous_map_preimage open_greaterThanLessThan open_openin by blast
              then obtain U where "openin mtopology U"
                   and U: "{z \<in> S i. inverse (dd i x) - e/2 < inverse (dd i z) \<and>
-                           inverse (dd i z) < inverse (dd i x) + e/2} =
-                          U \<inter> S i"
+                           inverse (dd i z) < inverse (dd i x) + e/2}
+                         = U \<inter> S i"
                using SM \<open>i \<in> I\<close>  by (auto simp: openin_subtopology)
              have "x \<in> U"
                using U x_in_INT \<open>i \<in> I\<close> con by fastforce
-             have D: "ds \<in> {z \<in> topspace (powertop_real I). z i \<in> {ds i - e / 2<..<ds i + e / 2}}"
+             have "ds \<in> {z \<in> topspace (powertop_real I). z i \<in> {ds i - e / 2<..<ds i + e/2}}"
                by (simp add: con ds)
-             have E: "openin (powertop_real I) {z \<in> topspace (powertop_real I). z i \<in> {ds i - e / 2<..<ds i + e / 2}}"
+             moreover
+             have  "openin (powertop_real I) {z \<in> topspace (powertop_real I). z i \<in> {ds i - e / 2<..<ds i + e/2}}"
              proof (rule openin_continuous_map_preimage)
                show "continuous_map (powertop_real I) euclidean (\<lambda>x. x i)"
                  by (metis \<open>i \<in> I\<close> continuous_map_product_projection)
              qed auto
-             then obtain y where "y \<in> \<Inter> (S ` I) \<and> f y \<in> U \<times> {z \<in> topspace (powertop_real I). z i \<in> {ds i - e / 2<..<ds i + e / 2}}"
-               using ope [of U "{z \<in> topspace(powertop_real I). z i \<in> {ds i - e/2<..<ds i + e/2}}"]
-                     D \<open>x \<in> U\<close> \<open>openin mtopology U\<close> \<open>x \<in> U\<close>
+             ultimately obtain y where "y \<in> \<Inter> (S ` I) \<and> f y \<in> U \<times> {z \<in> topspace (powertop_real I). z i \<in> {ds i - e / 2<..<ds i + e/2}}"
+               using ope \<open>x \<in> U\<close> \<open>openin mtopology U\<close> \<open>x \<in> U\<close>
                by presburger 
-             with \<open>i \<in> I\<close> have False 
-apply (auto simp: f_def)
-               by (smt (verit, del_insts) Int_iff U e_def field_sum_of_halves mem_Collect_eq)
+             with \<open>i \<in> I\<close> U 
+             have False unfolding set_eq_iff f_def e_def by simp (smt (verit) field_sum_of_halves)
           }
           then show "ds i = (\<lambda>i\<in>I. inverse (dd i x)) i"
             using \<open>i \<in> I\<close> by (force simp: e_def)
@@ -3247,7 +3246,6 @@ apply (auto simp: f_def)
       then show "prod_topology mtopology (powertop_real I) closure_of T \<subseteq> T"
         by (auto simp: closure_of_def)
     qed
-
     have eq: "(\<Inter> (S ` I) \<times> (I \<rightarrow>\<^sub>E UNIV) \<inter> f ` (M \<inter> \<Inter> (S ` I))) = (f ` \<Inter> (S ` I))"
       using False SM by (force simp: f_def image_iff)
     have "continuous_map (subtopology mtopology (\<Inter> (S ` I))) euclidean (dd i)" if "i \<in> I" for i
@@ -3256,7 +3254,8 @@ apply (auto simp: f_def)
       using dd_pos by (fastforce simp: continuous_map_componentwise intro!: continuous_map_real_inverse)
     then have "embedding_map (subtopology mtopology (\<Inter> (S ` I))) (prod_topology (subtopology mtopology (\<Inter> (S ` I))) (powertop_real I)) f"
       by (simp add: embedding_map_graph f_def)
-    moreover have "subtopology (prod_topology (subtopology mtopology (\<Inter> (S ` I))) (powertop_real I)) (f ` topspace (subtopology mtopology (\<Inter> (S ` I)))) =
+    moreover have "subtopology (prod_topology (subtopology mtopology (\<Inter> (S ` I))) (powertop_real I))
+                     (f ` topspace (subtopology mtopology (\<Inter> (S ` I)))) =
                    subtopology (prod_topology mtopology (powertop_real I)) T"
       by (simp add: prod_topology_subtopology subtopology_subtopology T_def eq)
     ultimately
@@ -3264,50 +3263,6 @@ apply (auto simp: f_def)
       by (metis embedding_map_imp_homeomorphic_space)
   qed
 qed
-
-
-oops
-
-    ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY; REAL_LT_IMP_NZ; IN_INTER] THEN
-    ABBREV_TAC `e = abs (ds i - inverse(dd i x))` THEN
-    REWRITE_TAC[continuous_map] THEN DISCH_THEN(MP_TAC \<circ> SPEC
-     `real_interval(inverse(dd i x) - e/2,inverse(d i x) + e/2)` \<circ>
-     CONJUNCT2) THEN
-    REWRITE_TAC[GSYM REAL_OPEN_IN; REAL_OPEN_REAL_INTERVAL] THEN
-    ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET; TOPSPACE_MTOPOLOGY] THEN
-    REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN
-    DISCH_THEN(X_CHOOSE_THEN `u::A=>bool` STRIP_ASSUME_TAC) THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL
-     [`u::A=>bool`;
-      `{z. z \<in> topspace(product_topology I (\<lambda>i::K. euclideanreal)) \<and>
-            z i \<in> real_interval(ds i - e/2,ds i + e/2)}`]) THEN
-    ASM_REWRITE_TAC[IN_ELIM_THM; NOT_IMP] THEN REPEAT CONJ_TAC THENL
-     [FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (SET_RULE
-       `S = u \<inter> T \<Longrightarrow> x \<in> S \<Longrightarrow>  x \<in> u`)) THEN
-      REWRITE_TAC[IN_REAL_INTERVAL; IN_ELIM_THM] THEN
-      CONJ_TAC THENL [ASM SET_TAC[]; ASM_REAL_ARITH_TAC];
-      REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY; PiE] THEN
-      ASM_REWRITE_TAC[o_THM; TOPSPACE_EUCLIDEANREAL; IN_UNIV; IN_ELIM_THM];
-      REWRITE_TAC[IN_REAL_INTERVAL] THEN ASM_REAL_ARITH_TAC;
-      MATCH_MP_TAC OPEN_IN_CONTINUOUS_MAP_PREIMAGE THEN
-      EXISTS_TAC `euclideanreal` THEN
-      ASM_SIMP_TAC[CONTINUOUS_MAP_PRODUCT_PROJECTION] THEN
-      REWRITE_TAC[GSYM REAL_OPEN_IN; REAL_OPEN_REAL_INTERVAL];
-      ALL_TAC] THEN
-
-    EXPAND_TAC "f" THEN REWRITE_TAC[IN_CROSS; IN_ELIM_THM] THEN
-    ASM_REWRITE_TAC[RESTRICTION; NOT_EXISTS_THM] THEN X_GEN_TAC `y::A` THEN
-    GEN_REWRITE_TAC RAND_CONV [CONJ_ASSOC] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
-    FIRST_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (SET_RULE
-     `T = u \<inter> S i
-      \<Longrightarrow> i \<in> I \<and> (y \<notin> T)
-          \<Longrightarrow> y \<in> \<Inter> {S i | i  \<in> I} \<and> y \<in> u \<Longrightarrow> False`)) THEN
-    ASM_REWRITE_TAC[IN_ELIM_THM] THEN
-    DISCH_THEN(MP_TAC \<circ> CONJUNCT2) THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> CONJUNCT2) THEN
-    REWRITE_TAC[IN_REAL_INTERVAL] THEN
-    EXPAND_TAC "e" THEN REAL_ARITH_TAC]);;
 
 
 lemma gdelta_homeomorphic_space_closedin_product:
@@ -3349,6 +3304,7 @@ oops
   RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP]) THEN
   FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN ASM SET_TAC[]);;
 
+
 lemma completely_metrizable_space_gdelta_in_alt:
    "completely_metrizable_space X \<and>
         (countable intersection_of openin X) S
@@ -3370,6 +3326,7 @@ oops
               COMPLETELY_METRIZABLE_SPACE_PRODUCT_TOPOLOGY] THEN
   ASM_SIMP_TAC[COUNTABLE_RESTRICT]);;
 
+
 lemma completely_metrizable_space_gdelta_in:
    "completely_metrizable_space X \<and> gdelta_in X S
         \<Longrightarrow> completely_metrizable_space (subtopology X S)"
@@ -3381,6 +3338,7 @@ lemma completely_metrizable_space_openin:
         \<Longrightarrow> completely_metrizable_space (subtopology X S)"
 oops
   SIMP_TAC[COMPLETELY_METRIZABLE_SPACE_GDELTA_IN; OPEN_IMP_GDELTA_IN]);;
+
 
 lemma locally_compact_imp_completely_metrizable_space:
    "metrizable_space X \<and> locally_compact_space X
