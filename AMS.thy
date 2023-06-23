@@ -3162,7 +3162,67 @@ next
   show ?thesis
   proof
     show "closedin (prod_topology mtopology (powertop_real I)) T"
-      sorry
+      unfolding closure_of_subset_eq [symmetric]
+    proof
+      show "T \<subseteq> topspace (prod_topology mtopology (powertop_real I))"
+        using False SM by (auto simp: T_def f_def)
+
+      have "(x,ds) \<in> T"
+        if \<section>: "\<And>U. \<lbrakk>(x, ds) \<in> U; openin (prod_topology mtopology (powertop_real I)) U\<rbrakk> \<Longrightarrow> \<exists>y\<in>T. y \<in> U"
+          and "x \<in> M" and ds: "ds \<in> I \<rightarrow>\<^sub>E UNIV" for x ds
+      proof -
+        have ope: "\<exists>x. x \<in> \<Inter> (S ` I) \<and> f x \<in> U \<times> V"
+          if "x \<in> U" and "ds \<in> V" and "openin mtopology U" and "openin (powertop_real I) V" for U V
+          using \<section> [of "U\<times>V"] that by (force simp add: T_def openin_prod_Times_iff)
+        have "x \<in> \<Inter> (S ` I)"
+        proof clarify
+          fix i
+          assume "i \<in> I"
+          show "x \<in> S i"
+          proof (rule ccontr)
+            assume "x \<notin> S i"
+            have "openin (powertop_real I) {z \<in> topspace (powertop_real I). z i \<in> {ds i - 1 <..< ds i + 1}}"
+            proof (rule openin_continuous_map_preimage)
+              show "continuous_map (powertop_real I) euclidean (\<lambda>x. x i)"
+                by (metis \<open>i \<in> I\<close> continuous_map_product_projection)
+            qed auto
+            then obtain y where "y \<in> S i" "y \<in> M" and dxy: "d x y < inverse (\<bar>ds i\<bar> + 1)"
+                          and intvl: "inverse (dd i y) \<in> {ds i - 1 <..< ds i + 1}"
+              using ope [of "mball x (inverse(abs(ds i) + 1))" "{z \<in> topspace(powertop_real I). z i \<in> {ds i - 1<..<ds i + 1}}"]
+                    \<open>x \<in> M\<close> \<open>ds \<in> I \<rightarrow>\<^sub>E UNIV\<close> \<open>i \<in> I\<close>
+              by (fastforce simp add: f_def)
+            have "\<not> M \<subseteq> S i"
+              using \<open>x \<notin> S i\<close> that(2) by blast
+            have "inverse (\<bar>ds i\<bar> + 1) \<le> dd i y"
+              using intvl apply (simp add: )
+              by (smt (verit) \<open>y \<in> S i\<close> dd_pos inverse_inverse_eq inverse_le_iff_le)
+            also have "\<dots> \<le> d x y"
+              using \<open>i \<in> I\<close> \<open>\<not> M \<subseteq> S i\<close>
+              apply (simp add: dd_def cInf_le_iff_less)
+              using \<open>x \<notin> S i\<close> commute that(2) by force
+            finally show False
+              using dxy by linarith
+          qed
+        qed
+        moreover have "ds = (\<lambda>i\<in>I. inverse (dd i x))"
+        proof (rule PiE_ext [OF ds])
+          fix i
+          assume "i \<in> I"
+          { assume con: "0 < abs (ds i - inverse (dd i x))"
+            have "continuous_map (subtopology mtopology (S i)) euclidean (\<lambda>x. inverse (dd i x))" 
+              sorry
+            have False 
+              sorry
+          }
+          then show "ds i = (\<lambda>i\<in>I. inverse (dd i x)) i"
+            using \<open>i \<in> I\<close> by force
+        qed auto
+        ultimately show ?thesis
+          by (auto simp: T_def f_def)
+      qed
+      then show "prod_topology mtopology (powertop_real I) closure_of T \<subseteq> T"
+        by (auto simp: closure_of_def)
+    qed
 
     have eq: "(\<Inter> (S ` I) \<times> (I \<rightarrow>\<^sub>E UNIV) \<inter> f ` (M \<inter> \<Inter> (S ` I))) = (f ` \<Inter> (S ` I))"
       using False SM by (force simp: f_def image_iff)
@@ -3184,79 +3244,6 @@ qed
 
 oops
 
-  REWRITE_TAC[GSYM CLOSURE_OF_SUBSET_EQ] THEN CONJ_TAC THENL
-   [EXPAND_TAC "f" THEN REWRITE_TAC[\<subseteq>; FORALL_IN_IMAGE] THEN
-    REWRITE_TAC[TOPSPACE_PROD_TOPOLOGY; TOPSPACE_PRODUCT_TOPOLOGY] THEN
-    REWRITE_TAC[o_DEF; TOPSPACE_EUCLIDEANREAL; IN_CROSS] THEN
-    REWRITE_TAC[RESTRICTION_IN_CARTESIAN_PRODUCT; IN_UNIV] THEN
-    ASM_REWRITE_TAC[GSYM \<subseteq>; TOPSPACE_MTOPOLOGY];
-    ALL_TAC] THEN
-
-  GEN_REWRITE_TAC id [\<subseteq>] THEN REWRITE_TAC[closure_of] THEN
-  REWRITE_TAC[FORALL_PAIR_THM; IN_ELIM_THM; TOPSPACE_PROD_TOPOLOGY] THEN
-  MAP_EVERY X_GEN_TAC [`x::A`; `ds::K=>real`] THEN
-  REWRITE_TAC[IN_CROSS; TOPSPACE_MTOPOLOGY; TOPSPACE_PRODUCT_TOPOLOGY] THEN
-  REWRITE_TAC[o_THM; TOPSPACE_EUCLIDEANREAL; IN_UNIV; PiE] THEN
-  REWRITE_TAC[IN_ELIM_THM] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 STRIP_ASSUME_TAC MP_TAC) THEN
-  DISCH_THEN(MP_TAC \<circ> GENL [`u::A=>bool`; `v:(K=>real)->bool`] \<circ>
-    SPEC `(u::A=>bool) \<times> (v:(K=>real)->bool)`) THEN
-  REWRITE_TAC[IN_CROSS; OPEN_IN_CROSS; SET_RULE
-   `(x \<in> S \<and> y \<in> T) \<and> (S = {} \<or> T = {} \<or> R S T) \<longleftrightarrow>
-    x \<in> S \<and> y \<in> T \<and> R S T`] THEN
-  REWRITE_TAC[EXISTS_IN_IMAGE] THEN DISCH_TAC THEN
-  SUBGOAL_THEN `x \<in> \<Inter> {(S::K=>A->bool) i | i \<in> I}` ASSUME_TAC THENL
-   [REWRITE_TAC[INTERS_GSPEC; IN_ELIM_THM] THEN
-    X_GEN_TAC `i::K` THEN DISCH_TAC THEN
-    GEN_REWRITE_TAC id [TAUT `p \<longleftrightarrow> \<not> p \<Longrightarrow> False`] THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL
-     [`mball m (x::A,inverse(abs(ds(i::K)) + 1))`;
-      `{z. z \<in> topspace(product_topology I (\<lambda>i. euclideanreal)) \<and>
-            (z::K=>real) i \<in> real_interval(ds i - 1,ds i + 1)}`]) THEN
-    REWRITE_TAC[IN_ELIM_THM; NOT_IMP] THEN REPEAT CONJ_TAC THENL
-     [MATCH_MP_TAC CENTRE_IN_MBALL THEN
-      ASM_REWRITE_TAC[REAL_LT_INV_EQ] THEN REAL_ARITH_TAC;
-      ASM_REWRITE_TAC[TOPSPACE_PRODUCT_TOPOLOGY; TOPSPACE_EUCLIDEANREAL; o_DEF;
-                      PiE; IN_ELIM_THM; IN_UNIV];
-      REWRITE_TAC[IN_REAL_INTERVAL] THEN REAL_ARITH_TAC;
-      REWRITE_TAC[OPEN_IN_MBALL];
-      MATCH_MP_TAC OPEN_IN_CONTINUOUS_MAP_PREIMAGE THEN
-      EXISTS_TAC `euclideanreal` THEN
-      ASM_SIMP_TAC[CONTINUOUS_MAP_PRODUCT_PROJECTION] THEN
-      REWRITE_TAC[GSYM REAL_OPEN_IN; REAL_OPEN_REAL_INTERVAL];
-      ALL_TAC] THEN
-    EXPAND_TAC "f" THEN REWRITE_TAC[INTERS_GSPEC; IN_ELIM_THM] THEN
-    REWRITE_TAC[NOT_EXISTS_THM; IN_CROSS; IN_ELIM_THM] THEN
-    X_GEN_TAC `y::A` THEN
-    DISCH_THEN(CONJUNCTS_THEN2 (MP_TAC \<circ> SPEC `i::K`) ASSUME_TAC) THEN
-    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(CONJUNCTS_THEN MP_TAC) THEN
-    DISCH_THEN(MP_TAC \<circ> CONJUNCT2) THEN ASM_REWRITE_TAC[RESTRICTION] THEN
-    DISCH_TAC THEN ASM_REWRITE_TAC[IN_MBALL] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-    REWRITE_TAC[REAL_NOT_LT] THEN
-    TRANS_TAC REAL_LE_TRANS `dd i y` THEN CONJ_TAC THENL
-     [MATCH_MP_TAC REAL_LE_LINV THEN ASM_SIMP_TAC[] THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [IN_REAL_INTERVAL]) THEN
-      REAL_ARITH_TAC;
-      EXPAND_TAC "d" THEN REWRITE_TAC[] THEN
-      COND_CASES_TAC THENL [ASM SET_TAC[]; REWRITE_TAC[]] THEN
-      MATCH_MP_TAC INF_LE_ELEMENT THEN CONJ_TAC THENL
-       [EXISTS_TAC `0` THEN
-        ASM_SIMP_TAC[FORALL_IN_GSPEC; IN_DIFF; MDIST_POS_LE];
-        REWRITE_TAC[IN_ELIM_THM] THEN EXISTS_TAC `x::A` THEN
-        ASM_REWRITE_TAC[IN_DIFF] THEN ASM_MESON_TAC[MDIST_SYM]]];
-    REWRITE_TAC[IN_IMAGE] THEN EXISTS_TAC `x::A` THEN
-    ASM_REWRITE_TAC[] THEN EXPAND_TAC "f" THEN REWRITE_TAC[PAIR_EQ] THEN
-    GEN_REWRITE_TAC id [FUN_EQ_THM] THEN X_GEN_TAC `i::K` THEN
-    REWRITE_TAC[RESTRICTION] THEN
-    COND_CASES_TAC THENL
-     [ALL_TAC;
-      RULE_ASSUM_TAC(REWRITE_RULE[EXTENSIONAL]) THEN ASM SET_TAC[]] THEN
-    REWRITE_TAC[REAL_ARITH `x = y \<longleftrightarrow> \<not> (0 < abs(x - y))`] THEN DISCH_TAC THEN
-    FIRST_ASSUM(MP_TAC \<circ>
-      MATCH_MP (REWRITE_RULE[IMP_CONJ] CONTINUOUS_MAP_REAL_INV) \<circ>
-      SPEC `i::K`) THEN
     ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY; REAL_LT_IMP_NZ; IN_INTER] THEN
     ABBREV_TAC `e = abs (ds i - inverse(dd i x))` THEN
     REWRITE_TAC[continuous_map] THEN DISCH_THEN(MP_TAC \<circ> SPEC
