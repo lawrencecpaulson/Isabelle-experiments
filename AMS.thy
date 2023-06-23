@@ -3174,7 +3174,7 @@ next
         have ope: "\<exists>x. x \<in> \<Inter> (S ` I) \<and> f x \<in> U \<times> V"
           if "x \<in> U" and "ds \<in> V" and "openin mtopology U" and "openin (powertop_real I) V" for U V
           using \<section> [of "U\<times>V"] that by (force simp add: T_def openin_prod_Times_iff)
-        have "x \<in> \<Inter> (S ` I)"
+        have x_in_INT: "x \<in> \<Inter> (S ` I)"
         proof clarify
           fix i
           assume "i \<in> I"
@@ -3208,14 +3208,38 @@ next
         proof (rule PiE_ext [OF ds])
           fix i
           assume "i \<in> I"
-          { assume con: "0 < abs (ds i - inverse (dd i x))"
+          define e where "e \<equiv> \<bar>ds i - inverse (dd i x)\<bar>"
+          { assume con: "e > 0"
             have "continuous_map (subtopology mtopology (S i)) euclidean (\<lambda>x. inverse (dd i x))" 
-              sorry
-            have False 
-              sorry
+              using dd_pos cont_dd by (fastforce simp:  intro!: continuous_map_real_inverse)
+             then have "openin (subtopology mtopology (S i))
+                         {z \<in> topspace (subtopology mtopology (S i)). 
+                          inverse (dd i z) \<in> {inverse(dd i x) - e/2<..<inverse(dd i x) + e/2}}"
+               using openin_continuous_map_preimage open_greaterThanLessThan open_openin by blast
+             then obtain U where "openin mtopology U"
+                  and U: "{z \<in> S i. inverse (dd i x) - e/2 < inverse (dd i z) \<and>
+                           inverse (dd i z) < inverse (dd i x) + e/2} =
+                          U \<inter> S i"
+               using SM \<open>i \<in> I\<close>  by (auto simp: openin_subtopology)
+             have "x \<in> U"
+               using U x_in_INT \<open>i \<in> I\<close> con by fastforce
+             have D: "ds \<in> {z \<in> topspace (powertop_real I). z i \<in> {ds i - e / 2<..<ds i + e / 2}}"
+               by (simp add: con ds)
+             have E: "openin (powertop_real I) {z \<in> topspace (powertop_real I). z i \<in> {ds i - e / 2<..<ds i + e / 2}}"
+             proof (rule openin_continuous_map_preimage)
+               show "continuous_map (powertop_real I) euclidean (\<lambda>x. x i)"
+                 by (metis \<open>i \<in> I\<close> continuous_map_product_projection)
+             qed auto
+             then obtain y where "y \<in> \<Inter> (S ` I) \<and> f y \<in> U \<times> {z \<in> topspace (powertop_real I). z i \<in> {ds i - e / 2<..<ds i + e / 2}}"
+               using ope [of U "{z \<in> topspace(powertop_real I). z i \<in> {ds i - e/2<..<ds i + e/2}}"]
+                     D \<open>x \<in> U\<close> \<open>openin mtopology U\<close> \<open>x \<in> U\<close>
+               by presburger 
+             with \<open>i \<in> I\<close> have False 
+apply (auto simp: f_def)
+               by (smt (verit, del_insts) Int_iff U e_def field_sum_of_halves mem_Collect_eq)
           }
           then show "ds i = (\<lambda>i\<in>I. inverse (dd i x)) i"
-            using \<open>i \<in> I\<close> by force
+            using \<open>i \<in> I\<close> by (force simp: e_def)
         qed auto
         ultimately show ?thesis
           by (auto simp: T_def f_def)
@@ -3247,7 +3271,7 @@ oops
     ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY; REAL_LT_IMP_NZ; IN_INTER] THEN
     ABBREV_TAC `e = abs (ds i - inverse(dd i x))` THEN
     REWRITE_TAC[continuous_map] THEN DISCH_THEN(MP_TAC \<circ> SPEC
-     `real_interval(inverse(dd i x) - e / 2,inverse(d i x) + e / 2)` \<circ>
+     `real_interval(inverse(dd i x) - e/2,inverse(d i x) + e/2)` \<circ>
      CONJUNCT2) THEN
     REWRITE_TAC[GSYM REAL_OPEN_IN; REAL_OPEN_REAL_INTERVAL] THEN
     ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET; TOPSPACE_MTOPOLOGY] THEN
@@ -3256,7 +3280,7 @@ oops
     FIRST_X_ASSUM(MP_TAC \<circ> SPECL
      [`u::A=>bool`;
       `{z. z \<in> topspace(product_topology I (\<lambda>i::K. euclideanreal)) \<and>
-            z i \<in> real_interval(ds i - e / 2,ds i + e / 2)}`]) THEN
+            z i \<in> real_interval(ds i - e/2,ds i + e/2)}`]) THEN
     ASM_REWRITE_TAC[IN_ELIM_THM; NOT_IMP] THEN REPEAT CONJ_TAC THENL
      [FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (SET_RULE
        `S = u \<inter> T \<Longrightarrow> x \<in> S \<Longrightarrow>  x \<in> u`)) THEN
@@ -4150,7 +4174,7 @@ oops
     ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM; IMP_IMP] THEN
     X_GEN_TAC `l::B` THEN STRIP_TAC THEN
     X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e / 2`) THEN
+    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e/2`) THEN
     ASM_REWRITE_TAC[REAL_HALF] THEN MATCH_MP_TAC MONO_EXISTS THEN
     X_GEN_TAC `u::A=>bool` THEN REWRITE_TAC[IN_DELETE; IN_INTER] THEN
     STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
@@ -4208,13 +4232,13 @@ oops
         ASM SET_TAC[]]];
     MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `b::B` THEN STRIP_TAC THEN
     ASM_REWRITE_TAC[LIMIT_METRIC] THEN X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e / 2`) THEN ASM_REWRITE_TAC[REAL_HALF] THEN
+    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e/2`) THEN ASM_REWRITE_TAC[REAL_HALF] THEN
     DISCH_THEN(X_CHOOSE_THEN `u::A=>bool` STRIP_ASSUME_TAC) THEN
     FIRST_ASSUM(MP_TAC \<circ> MATCH_MP (SET_RULE `s = {a} \<Longrightarrow> a \<in> s`)) THEN
     REWRITE_TAC[INTERS_GSPEC; closure_of; IN_ELIM_THM] THEN
     DISCH_THEN(MP_TAC \<circ> SPEC `u::A=>bool`) THEN
     ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY; EXISTS_IN_IMAGE] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `mball m (b::B,e / 2)`) THEN
+    DISCH_THEN(MP_TAC \<circ> SPEC `mball m (b::B,e/2)`) THEN
     ASM_SIMP_TAC[CENTRE_IN_MBALL; REAL_HALF; OPEN_IN_MBALL; IN_INTER] THEN
     REWRITE_TAC[IN_MBALL; LEFT_IMP_EXISTS_THM; IN_DELETE; IN_INTER] THEN
     X_GEN_TAC `x::A` THEN STRIP_TAC THEN
@@ -4227,7 +4251,7 @@ oops
       FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`x::A`; `y::A`]) THEN
       ASM_REWRITE_TAC[IN_INTER; IN_DELETE] THEN
       MAP_EVERY UNDISCH_TAC
-       [`d b f x < e / 2`; `(b::B) \<in> M`;
+       [`d b f x < e/2`; `(b::B) \<in> M`;
         `f x \<in> M`] THEN
       CONV_TAC METRIC_ARITH]]);;
 
@@ -4402,7 +4426,7 @@ oops
       ALL_TAC] THEN
     SUBGOAL_THEN
      `\<forall>x e. x \<in> s \<and> 0 < e
-            \<Longrightarrow> \<exists>y z d. y \<in> s \<and> z \<in> s \<and> 0 < d \<and> d < e / 2 \<and>
+            \<Longrightarrow> \<exists>y z d. y \<in> s \<and> z \<in> s \<and> 0 < d \<and> d < e/2 \<and>
                         mcball y d \<subseteq> mcball x e \<and>
                         mcball z d \<subseteq> mcball x e \<and>
                         disjnt (mcball m (y::A,d)) (mcball z d)`
@@ -4436,7 +4460,7 @@ oops
       REWRITE_TAC[CONJ_ASSOC] THEN CONJ_TAC THENL
        [ALL_TAC; REPEAT(POP_ASSUM MP_TAC) THEN CONV_TAC METRIC_ARITH] THEN
       REPEAT STRIP_TAC THEN FIRST_ASSUM(MP_TAC \<circ> SPEC `e::real` \<circ> MATCH_MP
-        (REAL_ARITH `x \<le> y / 3 \<Longrightarrow> \<forall>e. y < e / 2 \<Longrightarrow> x < e / 6`)) THEN
+        (REAL_ARITH `x \<le> y / 3 \<Longrightarrow> \<forall>e. y < e/2 \<Longrightarrow> x < e / 6`)) THEN
       (ANTS_TAC THENL
         [REPEAT(POP_ASSUM MP_TAC) THEN CONV_TAC METRIC_ARITH; ALL_TAC])
       THENL
@@ -4500,7 +4524,7 @@ oops
         MATCH_MP_TAC num_INDUCTION THEN ASM_REWRITE_TAC[real_pow] THEN
         CONV_TAC REAL_RAT_REDUCE_CONV THEN REWRITE_TAC[REAL_INV_MUL] THEN
         GEN_TAC THEN MATCH_MP_TAC(REAL_ARITH
-         `d < e / 2 \<Longrightarrow> e \<le> i \<Longrightarrow> d \<le> inverse 2 * i`) THEN
+         `d < e/2 \<Longrightarrow> e \<le> i \<Longrightarrow> d \<le> inverse 2 * i`) THEN
         ASM_SIMP_TAC[]];
       REWRITE_TAC[SKOLEM_THM; le_c; IN_UNIV] THEN
       MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `z:(num=>bool)->A` THEN
