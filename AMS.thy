@@ -28,16 +28,28 @@ declare continuous_map_mdist [continuous_intros]
 lemma mbounded_iff_bounded [iff]: "Met_TC.mbounded A \<longleftrightarrow> bounded A"
   by (metis Met_TC.mbounded UNIV_I all_not_in_conv bounded_def)
 
-thm Met_TC.mtopology_is_euclideanreal(*REPLACE*)
+
+thm mball_eq_ball mopen_eq_open (*LOOKS LIKE WE HAVE TWO COPIES; SHOULD BE OUTSIDE THE LOCALE*)
+
+(*ALREADY EXISTS BUT SHOULD BE OUTSIDE THE LOCALE*)
+lemma limitin_iff_tendsto [iff]: "limitin Met_TC.mtopology \<sigma> x F = tendsto \<sigma> x F"
+  by (simp add: Met_TC.mtopology_def)
+
+
+thm Met_TC.mtopology_is_euclideanreal(*REPLACE AND MOVE OUTSIDE THE LOCALE*)
 lemma mtopology_is_euclidean [simp]: "Met_TC.mtopology = euclidean"
   by (simp add: Met_TC.mtopology_def)
 
-(*REPLACE*)
-lemma euclidean_metric: "Met_TC.mcomplete (Pure.type ::'a::complete_space itself)"
+thm Met_TC.mtopology_is_euclideanreal(*REPLACE*)mtopology_is_euclidean
+
+(*REPLACE and RENAME*)
+thm euclidean_metric
+lemma euclidean_mcomplete: "Met_TC.mcomplete (Pure.type ::'a::complete_space itself)"
   by auto
 
 
 (*REPLACE*)
+thm completely_metrizable_space_euclideanreal
 lemma completely_metrizable_space_euclidean:
     "completely_metrizable_space (euclidean:: 'a::complete_space topology)"
   using Met_TC.completely_metrizable_space_mtopology by fastforce
@@ -3300,40 +3312,36 @@ proof -
   qed
 qed
 
-
 lemma completely_metrizable_space_gdelta_in_alt:
-   "completely_metrizable_space X \<and>
-        (countable intersection_of openin X) S
-        \<Longrightarrow> completely_metrizable_space (subtopology X S)"
-oops
-  REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM; FORALL_INTERSECTION_OF] THEN
-  X_GEN_TAC `X::A topology` THEN DISCH_TAC THEN
-  X_GEN_TAC `u:(A=>bool)->bool` THEN REPEAT DISCH_TAC THEN
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL [`X::A topology`; `(\<lambda>x::A=>bool. x)`; `u:(A=>bool)->bool`]
-        GDELTA_HOMEOMORPHIC_SPACE_CLOSED_IN_PRODUCT) THEN
-  ASM_SIMP_TAC[COMPLETELY_METRIZABLE_IMP_METRIZABLE_SPACE; IN_GSPEC] THEN
-  DISCH_THEN(X_CHOOSE_THEN `c::A#((A=>bool)->real)->bool` STRIP_ASSUME_TAC) THEN
-  FIRST_X_ASSUM(SUBST1_TAC \<circ>
-    MATCH_MP HOMEOMORPHIC_COMPLETELY_METRIZABLE_SPACE) THEN
-  MATCH_MP_TAC COMPLETELY_METRIZABLE_SPACE_CLOSED_IN THEN
-  ASM_REWRITE_TAC[COMPLETELY_METRIZABLE_SPACE_PROD_TOPOLOGY] THEN
-  REWRITE_TAC[COMPLETELY_METRIZABLE_SPACE_EUCLIDEANREAL;
-              COMPLETELY_METRIZABLE_SPACE_PRODUCT_TOPOLOGY] THEN
-  ASM_SIMP_TAC[COUNTABLE_RESTRICT]);;
-
+  assumes X: "completely_metrizable_space X" 
+    and S: "(countable intersection_of openin X) S"
+  shows "completely_metrizable_space (subtopology X S)"
+proof -
+  obtain \<U> where "countable \<U>" "S = \<Inter>\<U>" and ope: "\<And>U. U \<in> \<U> \<Longrightarrow> openin X U"
+    using S by (force simp add: intersection_of_def)
+  then have \<U>: "completely_metrizable_space (powertop_real \<U>)"
+    by (simp add: completely_metrizable_space_euclidean completely_metrizable_space_product_topology)
+  obtain C where "closedin (prod_topology X (powertop_real \<U>)) C"
+                and sub: "subtopology X (\<Inter>\<U>) homeomorphic_space
+                   subtopology (prod_topology X (powertop_real \<U>)) C"
+    by (metis gdelta_homeomorphic_space_closedin_product  X completely_metrizable_imp_metrizable_space ope INF_identity_eq)
+  moreover have "completely_metrizable_space (prod_topology X (powertop_real \<U>))"
+    by (simp add: completely_metrizable_space_prod_topology X \<U>)
+  ultimately have "completely_metrizable_space (subtopology (prod_topology X (powertop_real \<U>)) C)"
+    using completely_metrizable_space_closedin by blast
+  then show ?thesis
+    using \<open>S = \<Inter> \<U>\<close> sub homeomorphic_completely_metrizable_space by blast
+qed
 
 lemma completely_metrizable_space_gdelta_in:
-   "completely_metrizable_space X \<and> gdelta_in X S
+   "\<lbrakk>completely_metrizable_space X; gdelta_in X S\<rbrakk>
         \<Longrightarrow> completely_metrizable_space (subtopology X S)"
-oops
-  SIMP_TAC[GDELTA_IN_ALT; COMPLETELY_METRIZABLE_SPACE_GDELTA_IN_ALT]);;
+  by (simp add: completely_metrizable_space_gdelta_in_alt gdelta_in_alt)
 
 lemma completely_metrizable_space_openin:
-   "completely_metrizable_space X \<and> openin X S
+   "\<lbrakk>completely_metrizable_space X; openin X S\<rbrakk>
         \<Longrightarrow> completely_metrizable_space (subtopology X S)"
-oops
-  SIMP_TAC[COMPLETELY_METRIZABLE_SPACE_GDELTA_IN; OPEN_IMP_GDELTA_IN]);;
+  by (simp add: completely_metrizable_space_gdelta_in open_imp_gdelta_in)
 
 
 lemma locally_compact_imp_completely_metrizable_space:
