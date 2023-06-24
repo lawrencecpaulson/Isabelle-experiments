@@ -3120,36 +3120,51 @@ qed
 subsection\<open>Lavrentiev extension etc\<close>
 
 
-lemma convergent_eq_zero_oscillation_gen:
-   "\<And>X m f S a.
-        mcomplete \<and> image f (topspace X \<inter> S) \<subseteq> M
-        \<Longrightarrow> ((\<exists>l. limitin mtopology f l (atin X a within S)) \<longleftrightarrow>
-             \<not> (M = {}) \<and>
-             (a \<in> topspace X
-              \<Longrightarrow> \<forall>e. 0 < e
-                      \<Longrightarrow> \<exists>U. openin X U \<and> a \<in> U \<and>
-                              \<forall>x y. x \<in> (S \<inter> U) - {a} \<and>
-                                    y \<in> (S \<inter> U) - {a}
-                                    \<Longrightarrow> d (f x) f y < e))"
+lemma (in Metric_space) convergent_eq_zero_oscillation_gen:
+  assumes "mcomplete" and fim: "f ` (topspace X \<inter> S) \<subseteq> M"
+  shows "(\<exists>l. limitin mtopology f l (atin_within X a  S)) \<longleftrightarrow>
+         M \<noteq> {} \<and>
+         (a \<in> topspace X
+            \<longrightarrow> (\<forall>e>0. \<exists>U. openin X U \<and> a \<in> U \<and>
+                           (\<forall>x \<in> (S \<inter> U) - {a}. \<forall>y \<in> (S \<inter> U) - {a}. d (f x) (f y) < e)))"
+proof (cases "M = {}")
+  case True
+  with limitin_mspace show ?thesis
+    by blast
+next
+  case False
+  show ?thesis
+  proof (cases "a \<in> topspace X")
+    case True
+    let ?R = "\<forall>e>0. \<exists>U. openin X U \<and> a \<in> U \<and> (\<forall>x\<in>S \<inter> U - {a}. \<forall>y\<in>S \<inter> U - {a}. d (f x) (f y) < e)"
+    show ?thesis
+    proof (cases "a \<in> X derived_set_of S")
+      case True
+        have ?R
+          if "limitin mtopology f l (atin_within X a S)" for l
+          sorry
+        moreover have "\<exists>l. limitin mtopology f l (atin_within X a S)" if ?R
+          sorry
+        ultimately
+      show ?thesis
+        by (meson True \<open>M \<noteq> {}\<close> in_derived_set_of)
+    next
+      case False
+      have "(\<exists>l. limitin mtopology f l (atin_within X a S))"
+        by (metis \<open>M \<noteq> {}\<close> False derived_set_of_trivial_limit equals0I limitin_trivial topspace_mtopology)
+      moreover have "\<forall>e>0. \<exists>U. openin X U \<and> a \<in> U \<and> (\<forall>x\<in>S \<inter> U - {a}. \<forall>y\<in>S \<inter> U - {a}. d (f x) (f y) < e)"
+        by (metis Diff_iff False IntE True in_derived_set_of insert_iff)
+      ultimately show ?thesis
+        using limitin_mspace by blast
+    qed
+  next
+    case False
+    then show ?thesis
+      by (metis derived_set_of_trivial_limit ex_in_conv in_derived_set_of limitin_mspace limitin_trivial topspace_mtopology)
+  qed
+qed
 oops
-  REPEAT GEN_TAC THEN
-  ASM_CASES_TAC `M::B=>bool = {}` THENL
-   [ASM_REWRITE_TAC[LIMIT_METRIC; NOT_IN_EMPTY]; STRIP_TAC] THEN
-  ASM_CASES_TAC `(a::A) \<in> topspace X` THENL
-   [ASM_REWRITE_TAC[];
-    ASM_SIMP_TAC[LIMIT_METRIC; EVENTUALLY_WITHIN_IMP;
-                 EVENTUALLY_ATPOINTOF; NOT_IN_EMPTY] THEN
-    ASM SET_TAC[]] THEN
-  ASM_CASES_TAC `(a::A) \<in> X derived_set_of S` THENL
-   [ALL_TAC;
-    MATCH_MP_TAC(TAUT `p \<and> q \<Longrightarrow> (p \<longleftrightarrow> q)`) THEN CONJ_TAC THENL
-     [ASM_MESON_TAC[MEMBER_NOT_EMPTY; TOPSPACE_MTOPOLOGY;
-                    TRIVIAL_LIMIT_ATPOINTOF_WITHIN; LIMIT_TRIVIAL];
-      REPEAT STRIP_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE (RAND_CONV \<circ> RAND_CONV)
-       [derived_set_of]) THEN
-      ASM_REWRITE_TAC[IN_ELIM_THM; NOT_FORALL_THM; NOT_IMP] THEN
-      MATCH_MP_TAC MONO_EXISTS THEN SET_TAC[]]] THEN
+
   EQ_TAC THENL
    [REWRITE_TAC[LIMIT_METRIC; EVENTUALLY_WITHIN_IMP; EVENTUALLY_ATPOINTOF] THEN
     ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM; IMP_IMP] THEN
@@ -3164,7 +3179,9 @@ oops
       MP_TAC(SPEC `y::A` th) THEN MP_TAC(SPEC `x::A` th)) THEN
     ASM_REWRITE_TAC[] THEN UNDISCH_TAC `(l::B) \<in> M` THEN
     CONV_TAC METRIC_ARITH;
-    DISCH_TAC] THEN
+    DISCH_TAC]
+
+ THEN
   FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [MCOMPLETE_FIP_SING]) THEN
   DISCH_THEN(MP_TAC \<circ> SPEC
    `{ mtopology closure_of (image f ((S \<inter> U) - {a})) |U|
@@ -3190,6 +3207,7 @@ oops
         ASM_MESON_TAC[\<subseteq>; OPEN_IN_SUBSET];
         MATCH_MP_TAC REAL_LT_IMP_LE THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
         ASM_REWRITE_TAC[IN_INTER; IN_DELETE]];
+
       X_GEN_TAC `t:(A=>bool)->bool` THEN
       REWRITE_TAC[\<subseteq>; IN_ELIM_THM] THEN STRIP_TAC THEN
       ONCE_REWRITE_TAC[GSYM o_DEF] THEN REWRITE_TAC[IMAGE_o] THEN
@@ -3211,6 +3229,9 @@ oops
         DISCH_THEN(X_CHOOSE_THEN `y::A` STRIP_ASSUME_TAC) THEN
         EXISTS_TAC `f y` THEN REWRITE_TAC[INTERS_IMAGE] THEN
         ASM SET_TAC[]]];
+
+
+
     MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `b::B` THEN STRIP_TAC THEN
     ASM_REWRITE_TAC[LIMIT_METRIC] THEN X_GEN_TAC `e::real` THEN DISCH_TAC THEN
     FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e/2`) THEN ASM_REWRITE_TAC[REAL_HALF] THEN
@@ -3234,16 +3255,15 @@ oops
       MAP_EVERY UNDISCH_TAC
        [`d b f x < e/2`; `(b::B) \<in> M`;
         `f x \<in> M`] THEN
-      CONV_TAC METRIC_ARITH]]);;
+      CONV_TAC METRIC_ARITH]]);;`
+
+
 
 lemma gdelta_in_points_of_convergence_within:
-   "\<And>X Y f S.
-        completely_metrizable_space Y \<and>
-        (continuous_map (subtopology X S,Y) f \<or>
-         t1_space X \<and> f ` S \<subseteq> topspace Y)
-        \<Longrightarrow> gdelta_in X
-             {x \<in> topspace X.
-                  \<exists>l. limitin Y f l (atin X x within S)}"
+  assumes Y: "completely_metrizable_space Y"
+    and f: "continuous_map (subtopology X S) Y f \<or>t1_space X \<and> f ` S \<subseteq> topspace Y"
+  shows "gdelta_in X {x \<in> topspace X. \<exists>l. limitin Y f l (atin_within X x S)}"
+  sorry
 oops
   REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
   REWRITE_TAC[FORALL_COMPLETELY_METRIZABLE_SPACE] THEN
@@ -3323,7 +3343,7 @@ oops
     DISCH_THEN(MP_TAC \<circ> SPECL [`a::A`; `b::A`]) THEN ASM_REWRITE_TAC[] THEN
     DISCH_THEN(X_CHOOSE_THEN `v::A=>bool` STRIP_ASSUME_TAC) THEN
     EXISTS_TAC `U \<inter> v::A=>bool` THEN
-    ASM_SIMP_TAC[OPEN_IN_INTER; IN_INTER] THEN ASM SET_TAC[]]);;"
+    ASM_SIMP_TAC[OPEN_IN_INTER; IN_INTER] THEN ASM SET_TAC[]]);;
 
 lemma Lavrentiev_extension_gen:
   assumes "S \<subseteq> topspace X" and Y: "completely_metrizable_space Y" 
@@ -3331,25 +3351,30 @@ lemma Lavrentiev_extension_gen:
   obtains U g where "gdelta_in X U" "S \<subseteq> U" 
             "continuous_map (subtopology X (X closure_of S \<inter> U)) Y g" 
              "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
-  sorry
-oops
-  REPEAT STRIP_TAC THEN
-  EXISTS_TAC
-   `{x \<in> topspace X.
-         \<exists>l. limitin Y f l (atin X x within S)}` THEN
-  REWRITE_TAC[INTER_SUBSET; RIGHT_EXISTS_AND_THM] THEN
-  ASM_SIMP_TAC[GDELTA_IN_POINTS_OF_CONVERGENCE_WITHIN] THEN
-  MATCH_MP_TAC(TAUT `p \<and> (p \<Longrightarrow> q) \<Longrightarrow> p \<and> q`) THEN CONJ_TAC THENL
-   [REWRITE_TAC[\<subseteq>; IN_ELIM_THM] THEN X_GEN_TAC `x::A` THEN
-    DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [CONTINUOUS_MAP_ATPOINTOF]) THEN
-    REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; IN_INTER] THEN
-    ASM_MESON_TAC[ATPOINTOF_SUBTOPOLOGY; \<subseteq>];
-    DISCH_TAC THEN MATCH_MP_TAC CONTINUOUS_MAP_EXTENSION_POINTWISE_ALT THEN
-    ASM_SIMP_TAC[INTER_SUBSET; METRIZABLE_IMP_REGULAR_SPACE;
-                 COMPLETELY_METRIZABLE_IMP_METRIZABLE_SPACE] THEN
-    SIMP_TAC[IN_INTER; IN_ELIM_THM; IN_DIFF] THEN
-    ASM_SIMP_TAC[SUBSET_INTER; CLOSURE_OF_SUBSET]]);;
+proof -
+  define U where "U \<equiv> {x \<in> topspace X. \<exists>l. limitin Y f l (atin_within X x S)}"
+  have "S \<subseteq> U"
+    using that contf limit_continuous_map_within subsetD [OF \<open>S \<subseteq> topspace X\<close>] 
+    by (fastforce simp: U_def)
+  then have "S \<subseteq> X closure_of S \<inter> U"
+    by (simp add: \<open>S \<subseteq> topspace X\<close> closure_of_subset)
+  moreover
+  have "\<And>t. t \<in> X closure_of S \<inter> U - S \<Longrightarrow> \<exists>l. limitin Y f l (atin_within X t S)"
+    using U_def by blast
+  moreover have "regular_space Y"
+    by (simp add: Y completely_metrizable_imp_metrizable_space metrizable_imp_regular_space)
+  ultimately
+  obtain g where g: "continuous_map (subtopology X (X closure_of S \<inter> U)) Y g" 
+    and gf: "\<And>x. x \<in> S \<Longrightarrow> g x = f x"
+    using continuous_map_extension_pointwise_alt assms by blast 
+  show thesis
+  proof
+    show "gdelta_in X U"
+      by (simp add: U_def Y contf gdelta_in_points_of_convergence_within)
+    show "continuous_map (subtopology X (X closure_of S \<inter> U)) Y g"
+      by (simp add: g)
+  qed (use \<open>S \<subseteq> U\<close> gf in auto)
+qed
 
 lemma Lavrentiev_extension:
   assumes "S \<subseteq> topspace X" 
