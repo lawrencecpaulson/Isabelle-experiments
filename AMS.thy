@@ -3267,42 +3267,38 @@ qed
 
 lemma gdelta_homeomorphic_space_closedin_product:
   assumes "metrizable_space X" and "\<And>i. i \<in> I \<Longrightarrow> openin X (S i)"
-  obtains T where "closedin (prod_topology X (product_topology (\<lambda>i. euclideanreal) I)) T"
+  obtains T where "closedin (prod_topology X (powertop_real I)) T"
                   "subtopology X (\<Inter>i \<in> I. S i) homeomorphic_space
-                   subtopology (prod_topology X (product_topology (\<lambda>i. euclideanreal) I)) T"
+                   subtopology (prod_topology X (powertop_real I)) T"
   using Metric_space.gdelta_homeomorphic_space_closedin_product
   by (metis assms metrizable_space_def)
 
 lemma open_homeomorphic_space_closedin_product:
-   "\<And>X (S::A=>bool).
-        metrizable_space X \<and> openin X S
-        \<Longrightarrow> \<exists>t. closedin (prod_topology X euclideanreal) t \<and>
-                subtopology X S homeomorphic_space
-                subtopology (prod_topology X euclideanreal) t"
-oops
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL [`X::A topology`; `(\<lambda>x. S):1=>A->bool`; `{()}`]
-        GDELTA_HOMEOMORPHIC_SPACE_CLOSED_IN_PRODUCT) THEN
-  ASM_REWRITE_TAC[SET_RULE `\<Inter> {S.i| i \<in> {a}} = S`] THEN
-  DISCH_THEN(X_CHOOSE_THEN `t::A#(1=>real)->bool` STRIP_ASSUME_TAC) THEN
-  SUBGOAL_THEN
-   `prod_topology X (product_topology {()} (\<lambda>i. euclideanreal))
-    homeomorphic_space prod_topology X euclideanreal`
-  MP_TAC THENL
-   [MATCH_MP_TAC HOMEOMORPHIC_SPACE_PROD_TOPOLOGY THEN
-    REWRITE_TAC[HOMEOMORPHIC_SPACE_SINGLETON_PRODUCT; HOMEOMORPHIC_SPACE_REFL];
-    REWRITE_TAC[HOMEOMORPHIC_SPACE; LEFT_IMP_EXISTS_THM]] THEN
-  X_GEN_TAC `f::A#(1=>real)->A#real` THEN DISCH_TAC THEN
-  EXISTS_TAC `image (f::A#(1=>real)->A#real) t` THEN CONJ_TAC THENL
-   [ASM_MESON_TAC[HOMEOMORPHIC_MAP_CLOSEDNESS_EQ]; ALL_TAC] THEN
-  REWRITE_TAC[GSYM HOMEOMORPHIC_SPACE] THEN
-  FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (ONCE_REWRITE_RULE[IMP_CONJ]
-      HOMEOMORPHIC_SPACE_TRANS)) THEN
-  REWRITE_TAC[HOMEOMORPHIC_SPACE] THEN EXISTS_TAC `f::A#(1=>real)->A#real` THEN
-  MATCH_MP_TAC HOMEOMORPHIC_MAP_SUBTOPOLOGIES THEN
-  ASM_REWRITE_TAC[] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP]) THEN
-  FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CLOSED_IN_SUBSET) THEN ASM SET_TAC[]);;
+  assumes "metrizable_space X" and "openin X S"
+  obtains T where "closedin (prod_topology X euclideanreal) T"
+    "subtopology X S homeomorphic_space
+                   subtopology (prod_topology X euclideanreal) T"
+proof -
+  obtain T where cloT: "closedin (prod_topology X (powertop_real {()})) T"
+    and homT: "subtopology X S homeomorphic_space
+                   subtopology (prod_topology X (powertop_real {()})) T"
+    using gdelta_homeomorphic_space_closedin_product [of X "{()}" "\<lambda>i. S"] assms
+    by auto
+  have "prod_topology X (powertop_real {()}) homeomorphic_space prod_topology X euclideanreal"
+    by (meson homeomorphic_space_prod_topology homeomorphic_space_refl homeomorphic_space_singleton_product)
+  then obtain f where f: "homeomorphic_map (prod_topology X (powertop_real {()})) (prod_topology X euclideanreal) f"
+    unfolding homeomorphic_space by metis
+  show thesis
+  proof
+    show "closedin (prod_topology X euclideanreal) (f ` T)"
+      using cloT f homeomorphic_map_closedness_eq by blast
+    moreover have "T = topspace (subtopology (prod_topology X (powertop_real {()})) T)"
+      by (metis cloT closedin_subset topspace_subtopology_subset)
+    ultimately show "subtopology X S homeomorphic_space subtopology (prod_topology X euclideanreal) (f ` T)"
+      by (smt (verit, best) closedin_subset f homT homeomorphic_map_subtopologies homeomorphic_space 
+          homeomorphic_space_trans topspace_subtopology topspace_subtopology_subset)
+  qed
+qed
 
 
 lemma completely_metrizable_space_gdelta_in_alt:
