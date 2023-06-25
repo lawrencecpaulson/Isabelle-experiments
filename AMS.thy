@@ -68,6 +68,10 @@ lemma limit_within_subset:
    "\<lbrakk>limitin X f l (atin_within Y a S); T \<subseteq> S\<rbrakk> \<Longrightarrow> limitin X f l (atin_within Y a T)"
   by (smt (verit) eventually_atin_within limitin_def subset_eq)
 
+lemma eventually_within_imp:
+   "eventually P (atin_within X a S) \<longleftrightarrow> eventually (\<lambda>x. x \<in> S \<longrightarrow> P x) (atin X a)"
+  by (auto simp add: eventually_atin_within eventually_atin)
+
 lemma locally_compact_space_euclidean:
   "locally_compact_space (euclidean::'a::heine_borel topology)" 
   unfolding locally_compact_space_def
@@ -3119,10 +3123,9 @@ qed
 
 subsection\<open>Lavrentiev extension etc\<close>
 
-
 lemma (in Metric_space) convergent_eq_zero_oscillation_gen:
   assumes "mcomplete" and fim: "f ` (topspace X \<inter> S) \<subseteq> M"
-  shows "(\<exists>l. limitin mtopology f l (atin_within X a  S)) \<longleftrightarrow>
+  shows "(\<exists>l. limitin mtopology f l (atin_within X a S)) \<longleftrightarrow>
          M \<noteq> {} \<and>
          (a \<in> topspace X
             \<longrightarrow> (\<forall>e>0. \<exists>U. openin X U \<and> a \<in> U \<and>
@@ -3136,16 +3139,119 @@ next
   show ?thesis
   proof (cases "a \<in> topspace X")
     case True
-    let ?R = "\<forall>e>0. \<exists>U. openin X U \<and> a \<in> U \<and> (\<forall>x\<in>S \<inter> U - {a}. \<forall>y\<in>S \<inter> U - {a}. d (f x) (f y) < e)"
+    let ?R = "\<forall>\<epsilon>>0. \<exists>U. openin X U \<and> a \<in> U \<and> (\<forall>x\<in>S \<inter> U - {a}. \<forall>y\<in>S \<inter> U - {a}. d (f x) (f y) < \<epsilon>)"
     show ?thesis
     proof (cases "a \<in> X derived_set_of S")
       case True
-        have ?R
-          if "limitin mtopology f l (atin_within X a S)" for l
-          sorry
-        moreover have "\<exists>l. limitin mtopology f l (atin_within X a S)" if ?R
-          sorry
-        ultimately
+      have ?R
+        if "limitin mtopology f l (atin_within X a S)" for l
+      proof (intro strip)
+        fix \<epsilon>::real
+        assume "\<epsilon>>0"
+        with that \<open>a \<in> topspace X\<close> 
+        obtain U where U: "openin X U" "a \<in> U" "l \<in> M"
+          and Uless: "\<forall>x\<in>U - {a}. x \<in> S \<longrightarrow> f x \<in> M \<and> d (f x) l < \<epsilon>/2"
+          unfolding limitin_metric eventually_within_imp eventually_atin
+          using half_gt_zero by blast
+        show "\<exists>U. openin X U \<and> a \<in> U \<and> (\<forall>x\<in>S \<inter> U - {a}. \<forall>y\<in>S \<inter> U - {a}. d (f x) (f y) < \<epsilon>)"
+        proof (intro exI strip conjI)
+          fix x y
+          assume x: "x \<in> S \<inter> U - {a}" and y: "y \<in> S \<inter> U - {a}"
+          then have "d (f x) l < \<epsilon>/2" "d (f y) l < \<epsilon>/2" "f x \<in> M" "f y \<in> M"
+            using Uless by auto
+          then show "d (f x) (f y) < \<epsilon>"
+            using triangle' \<open>l \<in> M\<close> by fastforce
+        qed (auto simp add: U)
+      qed
+      moreover have "\<exists>l. limitin mtopology f l (atin_within X a S)" 
+        if R [rule_format]: ?R
+      proof -
+        define F where "F \<equiv> \<lambda>U. mtopology closure_of f ` (S \<inter> U - {a})"
+        define \<C> where "\<C> \<equiv> F ` {U. openin X U \<and> a \<in> U}"
+        have \<C>_clo: "\<forall>C \<in> \<C>. closedin mtopology C"
+          by (force simp add: \<C>_def F_def)
+        moreover have sub_mcball: "\<exists>C a. C \<in> \<C> \<and> C \<subseteq> mcball a \<epsilon>" if "\<epsilon>>0" for \<epsilon>
+        proof -
+          obtain U where U: "openin X U" "a \<in> U" 
+            and Uless: "\<forall>x\<in>S \<inter> U - {a}. \<forall>y\<in>S \<inter> U - {a}. d (f x) (f y) < \<epsilon>"
+            using R [OF \<open>\<epsilon>>0\<close>] by blast
+          then obtain b where b: "b \<noteq> a" "b \<in> S" "b \<in> U"
+            using True by (auto simp add: in_derived_set_of)
+          have "U \<subseteq> topspace X"
+            by (simp add: U(1) openin_subset)
+          have "f b \<in> M"
+            using b \<open>openin X U\<close> by (metis Int_iff fim image_eqI openin_subset subsetD)
+          moreover
+          have "mtopology closure_of f ` ((S \<inter> U) - {a}) \<subseteq> mcball (f b) \<epsilon>"
+          proof (rule closure_of_minimal)
+            have 1: "\<And>y. \<lbrakk>y \<in> S; y \<in> U; y \<noteq> a\<rbrakk> \<Longrightarrow> f y \<in> M \<and> d (f b) (f y) \<le> \<epsilon>"
+              using \<open>U \<subseteq> topspace X\<close> fim Uless b by (force simp add: subset_iff) 
+            then show "f ` (S \<inter> U - {a}) \<subseteq> mcball (f b) \<epsilon>"
+              by (force simp: \<open>f b \<in> M\<close>)
+          qed auto
+          ultimately show ?thesis
+            using U by (auto simp add: \<C>_def F_def)
+        qed
+        moreover have "\<Inter>\<F> \<noteq> {}" if "finite \<F>" "\<F> \<subseteq> \<C>" for \<F>
+        proof -
+          obtain \<G> where sub: "\<G> \<subseteq> {U. openin X U \<and> a \<in> U}" and eq: "\<F> = F ` \<G>" and "finite \<G>"
+            by (metis (no_types, lifting) \<C>_def \<open>\<F> \<subseteq> \<C>\<close> \<open>finite \<F>\<close> finite_subset_image)
+          then have "U \<subseteq> topspace X" if "U \<in> \<G>" for U
+            using openin_subset that by auto
+          then have "T \<subseteq> mtopology closure_of T" 
+            if "T \<in> (\<lambda>U. f ` (S \<inter> U - {a})) ` \<G>" for T
+            using that fim by (fastforce simp add: intro!: closure_of_subset)
+          moreover
+          have ain: "a \<in> \<Inter> (insert (topspace X) \<G>)"
+            using True in_derived_set_of sub by fastforce
+          then obtain y where "y \<noteq> a" "y \<in> S" and y: "y \<in> \<Inter> (insert (topspace X) \<G>)"
+            using \<open>a \<in> X derived_set_of S\<close> openin_Inter [of "insert (topspace X) \<G>"] \<open>finite \<G>\<close> sub in_derived_set_of
+            apply (simp add: in_derived_set_of)
+            by (smt (verit) Int_Collect Int_iff Inter_iff inf.orderE openin_topspace)
+          then have "f y \<in> \<Inter> \<F>"
+            using eq that ain
+            apply (simp add: )
+            apply safe
+            apply (simp add: F_def)
+            by (smt (verit, ccfv_threshold) Int_Diff Int_iff fim image_eqI image_subset_iff in_closure_of insert_Diff insert_iff topspace_mtopology)
+          then show ?thesis by blast
+        qed
+        ultimately have "\<Inter>\<C> \<noteq> {}"
+          using \<open>mcomplete\<close> mcomplete_fip by metis
+        then obtain b where "b \<in> \<Inter>\<C>"
+          by auto
+        then have "b \<in> M"
+          using sub_mcball \<C>_clo mbounded_alt_pos mbounded_empty metric_closedin_iff_sequentially_closed by force
+        have "limitin mtopology f b (atin_within X a S)"
+        proof (clarsimp simp: limitin_metric \<open>b \<in> M\<close>)
+          fix \<epsilon> :: real
+          assume "\<epsilon> > 0"
+          then obtain U where U: "openin X U" "a \<in> U" and subU: "U \<subseteq> topspace X"
+            and Uless: "\<forall>x\<in>S \<inter> U - {a}. \<forall>y\<in>S \<inter> U - {a}. d (f x) (f y) < \<epsilon>/2"
+            by (metis R half_gt_zero openin_subset) 
+          then obtain x where x: "x \<in> S" "x \<in> U" "x \<noteq> a" and fx: "f x \<in> mball b (\<epsilon>/2)"
+            using \<open>b \<in> \<Inter>\<C>\<close> U 
+            apply (simp add: \<C>_def F_def closure_of_def del: divide_const_simps)
+            apply (drule_tac x="U" in spec)
+            by (metis Diff_iff Int_iff centre_in_mball_iff in_mball openin_mball singletonI zero_less_numeral)
+          moreover
+          have "d (f y) b < \<epsilon>" if "y \<in> U" "y \<noteq> a" "y \<in> S" for y
+          proof -
+            have "d (f x) (f y) < \<epsilon>/2"
+              using Uless that x by force
+            moreover have "d b (f x)  < \<epsilon>/2"
+              using fx by simp
+            ultimately show ?thesis
+              using triangle [of b "f x" "f y"] subU that \<open>b \<in> M\<close> commute fim fx by fastforce
+          qed
+          ultimately
+          show "\<forall>\<^sub>F x in atin_within X a S. f x \<in> M \<and> d (f x) b < \<epsilon>"
+            apply (simp add: eventually_atin eventually_within_imp del: divide_const_simps)
+            by (smt (verit, del_insts) Diff_iff Int_iff U fim imageI insertI1 openin_subset subsetD)
+        qed
+        then show ?thesis ..
+      qed
+      ultimately
       show ?thesis
         by (meson True \<open>M \<noteq> {}\<close> in_derived_set_of)
     next
@@ -3163,99 +3269,6 @@ next
       by (metis derived_set_of_trivial_limit ex_in_conv in_derived_set_of limitin_mspace limitin_trivial topspace_mtopology)
   qed
 qed
-oops
-
-  EQ_TAC THENL
-   [REWRITE_TAC[LIMIT_METRIC; EVENTUALLY_WITHIN_IMP; EVENTUALLY_ATPOINTOF] THEN
-    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM; IMP_IMP] THEN
-    X_GEN_TAC `l::B` THEN STRIP_TAC THEN
-    X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e/2`) THEN
-    ASM_REWRITE_TAC[REAL_HALF] THEN MATCH_MP_TAC MONO_EXISTS THEN
-    X_GEN_TAC `U::A=>bool` THEN REWRITE_TAC[IN_DELETE; IN_INTER] THEN
-    STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-    MAP_EVERY X_GEN_TAC [`x::A`; `y::A`] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(fun th ->
-      MP_TAC(SPEC `y::A` th) THEN MP_TAC(SPEC `x::A` th)) THEN
-    ASM_REWRITE_TAC[] THEN UNDISCH_TAC `(l::B) \<in> M` THEN
-    CONV_TAC METRIC_ARITH;
-    DISCH_TAC]
-
- THEN
-  FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [MCOMPLETE_FIP_SING]) THEN
-  DISCH_THEN(MP_TAC \<circ> SPEC
-   `{ mtopology closure_of (image f ((S \<inter> U) - {a})) |U|
-      openin X U \<and> a \<in> U}`) THEN
-  ANTS_TAC THENL
-   [REWRITE_TAC[FORALL_IN_GSPEC; CLOSED_IN_CLOSURE_OF] THEN
-    ONCE_REWRITE_TAC[SIMPLE_IMAGE_GEN] THEN
-    REWRITE_TAC[FORALL_FINITE_SUBSET_IMAGE; RIGHT_EXISTS_AND_THM] THEN
-    REWRITE_TAC[EXISTS_IN_IMAGE; EXISTS_IN_GSPEC] THEN CONJ_TAC THENL
-     [X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e::real`) THEN
-      ASM_REWRITE_TAC[] THEN MATCH_MP_TAC MONO_EXISTS THEN
-      X_GEN_TAC `U::A=>bool` THEN STRIP_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [IN_DERIVED_SET_OF]) THEN
-      ASM_REWRITE_TAC[] THEN DISCH_THEN(MP_TAC \<circ> SPEC `U::A=>bool`) THEN
-      ASM_REWRITE_TAC[] THEN
-      DISCH_THEN(X_CHOOSE_THEN `b::A` STRIP_ASSUME_TAC) THEN
-      EXISTS_TAC `f b` THEN MATCH_MP_TAC CLOSURE_OF_MINIMAL THEN
-      REWRITE_TAC[CLOSED_IN_MCBALL; \<subseteq>; FORALL_IN_IMAGE] THEN
-      REWRITE_TAC[IN_INTER; IN_DELETE; IN_MCBALL; CONJ_ASSOC] THEN
-      GEN_TAC THEN STRIP_TAC THEN CONJ_TAC THENL
-       [RULE_ASSUM_TAC(REWRITE_RULE[\<subseteq>; IN_INTER; FORALL_IN_IMAGE]) THEN
-        ASM_MESON_TAC[\<subseteq>; OPEN_IN_SUBSET];
-        MATCH_MP_TAC REAL_LT_IMP_LE THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-        ASM_REWRITE_TAC[IN_INTER; IN_DELETE]];
-
-      X_GEN_TAC `t:(A=>bool)->bool` THEN
-      REWRITE_TAC[\<subseteq>; IN_ELIM_THM] THEN STRIP_TAC THEN
-      ONCE_REWRITE_TAC[GSYM o_DEF] THEN REWRITE_TAC[IMAGE_o] THEN
-      MATCH_MP_TAC(SET_RULE
-       `\<forall>g. (\<forall>S. S \<in> t \<Longrightarrow> S \<subseteq> g S) \<and> (\<exists>x. x \<in> \<Inter> t)
-             \<Longrightarrow> \<not> (\<Inter> (g ` t) = {})`) THEN
-      CONJ_TAC THENL
-       [REWRITE_TAC[FORALL_IN_IMAGE] THEN REPEAT STRIP_TAC THEN
-        MATCH_MP_TAC CLOSURE_OF_SUBSET THEN
-        REWRITE_TAC[TOPSPACE_MTOPOLOGY] THEN
-        RULE_ASSUM_TAC(REWRITE_RULE[OPEN_IN_CLOSED_IN_EQ]) THEN
-        ASM SET_TAC[];
-        FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [IN_DERIVED_SET_OF]) THEN
-        DISCH_THEN(MP_TAC \<circ> SPEC
-          `\<Inter> (topspace insert X t):A=>bool` \<circ> CONJUNCT2) THEN
-        ASM_SIMP_TAC[OPEN_IN_INTERS; GSYM INTERS_INSERT; NOT_INSERT_EMPTY;
-                     FINITE_INSERT; FORALL_IN_INSERT; OPEN_IN_TOPSPACE] THEN
-        ANTS_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-        DISCH_THEN(X_CHOOSE_THEN `y::A` STRIP_ASSUME_TAC) THEN
-        EXISTS_TAC `f y` THEN REWRITE_TAC[INTERS_IMAGE] THEN
-        ASM SET_TAC[]]];
-
-
-
-    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `b::B` THEN STRIP_TAC THEN
-    ASM_REWRITE_TAC[LIMIT_METRIC] THEN X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e/2`) THEN ASM_REWRITE_TAC[REAL_HALF] THEN
-    DISCH_THEN(X_CHOOSE_THEN `U::A=>bool` STRIP_ASSUME_TAC) THEN
-    FIRST_ASSUM(MP_TAC \<circ> MATCH_MP (SET_RULE `S = {a} \<Longrightarrow> a \<in> S`)) THEN
-    REWRITE_TAC[INTERS_GSPEC; closure_of; IN_ELIM_THM] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `U::A=>bool`) THEN
-    ASM_REWRITE_TAC[TOPSPACE_MTOPOLOGY; EXISTS_IN_IMAGE] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `mball m (b::B,e/2)`) THEN
-    ASM_SIMP_TAC[CENTRE_IN_MBALL; REAL_HALF; OPEN_IN_MBALL; IN_INTER] THEN
-    REWRITE_TAC[IN_MBALL; LEFT_IMP_EXISTS_THM; IN_DELETE; IN_INTER] THEN
-    X_GEN_TAC `x::A` THEN STRIP_TAC THEN
-    ASM_REWRITE_TAC[EVENTUALLY_WITHIN_IMP; EVENTUALLY_ATPOINTOF] THEN
-    EXISTS_TAC `U::A=>bool` THEN ASM_REWRITE_TAC[IN_DELETE] THEN
-    X_GEN_TAC `y::A` THEN STRIP_TAC THEN DISCH_TAC THEN
-    MATCH_MP_TAC(TAUT `p \<and> (p \<Longrightarrow> q) \<Longrightarrow> p \<and> q`) THEN CONJ_TAC THENL
-     [RULE_ASSUM_TAC(REWRITE_RULE[\<subseteq>; IN_INTER; FORALL_IN_IMAGE]) THEN
-      ASM_MESON_TAC[\<subseteq>; OPEN_IN_SUBSET];
-      FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`x::A`; `y::A`]) THEN
-      ASM_REWRITE_TAC[IN_INTER; IN_DELETE] THEN
-      MAP_EVERY UNDISCH_TAC
-       [`d b f x < e/2`; `(b::B) \<in> M`;
-        `f x \<in> M`] THEN
-      CONV_TAC METRIC_ARITH]]);;`
 
 
 
@@ -3344,6 +3357,7 @@ oops
     DISCH_THEN(X_CHOOSE_THEN `v::A=>bool` STRIP_ASSUME_TAC) THEN
     EXISTS_TAC `U \<inter> v::A=>bool` THEN
     ASM_SIMP_TAC[OPEN_IN_INTER; IN_INTER] THEN ASM SET_TAC[]]);;
+
 
 lemma Lavrentiev_extension_gen:
   assumes "S \<subseteq> topspace X" and Y: "completely_metrizable_space Y" 
