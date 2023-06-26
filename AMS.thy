@@ -3128,8 +3128,8 @@ lemma (in Metric_space) convergent_eq_zero_oscillation_gen:
   shows "(\<exists>l. limitin mtopology f l (atin_within X a S)) \<longleftrightarrow>
          M \<noteq> {} \<and>
          (a \<in> topspace X
-            \<longrightarrow> (\<forall>e>0. \<exists>U. openin X U \<and> a \<in> U \<and>
-                           (\<forall>x \<in> (S \<inter> U) - {a}. \<forall>y \<in> (S \<inter> U) - {a}. d (f x) (f y) < e)))"
+            \<longrightarrow> (\<forall>\<epsilon>>0. \<exists>U. openin X U \<and> a \<in> U \<and>
+                           (\<forall>x \<in> (S \<inter> U) - {a}. \<forall>y \<in> (S \<inter> U) - {a}. d (f x) (f y) < \<epsilon>)))"
 proof (cases "M = {}")
   case True
   with limitin_mspace show ?thesis
@@ -3202,18 +3202,12 @@ next
             if "T \<in> (\<lambda>U. f ` (S \<inter> U - {a})) ` \<G>" for T
             using that fim by (fastforce simp add: intro!: closure_of_subset)
           moreover
-          have ain: "a \<in> \<Inter> (insert (topspace X) \<G>)"
-            using True in_derived_set_of sub by fastforce
+          have ain: "a \<in> \<Inter> (insert (topspace X) \<G>)" "openin X (\<Inter> (insert (topspace X) \<G>))"
+            using True in_derived_set_of sub \<open>finite \<G>\<close> by (fastforce intro!: openin_Inter)+
           then obtain y where "y \<noteq> a" "y \<in> S" and y: "y \<in> \<Inter> (insert (topspace X) \<G>)"
-            using \<open>a \<in> X derived_set_of S\<close> openin_Inter [of "insert (topspace X) \<G>"] \<open>finite \<G>\<close> sub in_derived_set_of
-            apply (simp add: in_derived_set_of)
-            by (smt (verit) Int_Collect Int_iff Inter_iff inf.orderE openin_topspace)
+            by (meson \<open>a \<in> X derived_set_of S\<close> sub in_derived_set_of) 
           then have "f y \<in> \<Inter> \<F>"
-            using eq that ain
-            apply (simp add: )
-            apply safe
-            apply (simp add: F_def)
-            by (smt (verit, ccfv_threshold) Int_Diff Int_iff fim image_eqI image_subset_iff in_closure_of insert_Diff insert_iff topspace_mtopology)
+            using eq that ain fim by (auto simp add: F_def image_subset_iff in_closure_of)
           then show ?thesis by blast
         qed
         ultimately have "\<Inter>\<C> \<noteq> {}"
@@ -3230,9 +3224,8 @@ next
             and Uless: "\<forall>x\<in>S \<inter> U - {a}. \<forall>y\<in>S \<inter> U - {a}. d (f x) (f y) < \<epsilon>/2"
             by (metis R half_gt_zero openin_subset) 
           then obtain x where x: "x \<in> S" "x \<in> U" "x \<noteq> a" and fx: "f x \<in> mball b (\<epsilon>/2)"
-            using \<open>b \<in> \<Inter>\<C>\<close> U 
+            using \<open>b \<in> \<Inter>\<C>\<close> 
             apply (simp add: \<C>_def F_def closure_of_def del: divide_const_simps)
-            apply (drule_tac x="U" in spec)
             by (metis Diff_iff Int_iff centre_in_mball_iff in_mball openin_mball singletonI zero_less_numeral)
           moreover
           have "d (f y) b < \<epsilon>" if "y \<in> U" "y \<noteq> a" "y \<in> S" for y
@@ -3244,8 +3237,7 @@ next
             ultimately show ?thesis
               using triangle [of b "f x" "f y"] subU that \<open>b \<in> M\<close> commute fim fx by fastforce
           qed
-          ultimately
-          show "\<forall>\<^sub>F x in atin_within X a S. f x \<in> M \<and> d (f x) b < \<epsilon>"
+          ultimately show "\<forall>\<^sub>F x in atin_within X a S. f x \<in> M \<and> d (f x) b < \<epsilon>"
             apply (simp add: eventually_atin eventually_within_imp del: divide_const_simps)
             by (smt (verit, del_insts) Diff_iff Int_iff U fim imageI insertI1 openin_subset subsetD)
         qed
