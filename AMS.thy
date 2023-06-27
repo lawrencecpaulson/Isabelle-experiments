@@ -447,7 +447,7 @@ next
   qed
 qed
 
-
+(*The HOL Light proof uses some ugly tricks to share common parts of what are two separate proofs for the two cases*)
 lemma (in Metric_space) gdelta_in_points_of_convergence_within:
   assumes "mcomplete"
     and f: "continuous_map (subtopology X S) mtopology f \<or> t1_space X \<and> f ` S \<subseteq> M"
@@ -546,12 +546,18 @@ proof -
         assume x: "x \<in> D"
         then have "x \<in> topspace X"
           using \<open>B \<subseteq> topspace X\<close> \<open>D=B\<close> by blast
-        with x show "x \<in> A"
-          apply (clarsimp simp: D_def C_def A_def)
-          apply (drule_tac x="\<epsilon>" in bspec)
-           apply (force simp add: )
-          apply clarsimp
-          by (metis Diff_iff Int_Diff \<open>t1_space X\<close> empty_iff insert_iff t1_space_openin_delete_alt)
+        show "x \<in> A"
+        proof (clarsimp simp: A_def \<open>x \<in> topspace X\<close>)
+          fix \<epsilon> :: real
+          assume "\<epsilon>>0"
+          then obtain U b where "openin X U" "b \<in> topspace X"
+                  and U: "\<forall>x\<in>S \<inter> U - {b}. \<forall>y\<in>S \<inter> U - {b}. d (f x) (f y) < \<epsilon>" and "x \<in> U"
+            using x by (auto simp: D_def C_def A_def Ball_def)
+          then have "openin X (U-{b})"
+            by (meson \<open>t1_space X\<close> t1_space_openin_delete_alt)
+          then show "\<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>xa\<in>S \<inter> U - {x}. \<forall>y\<in>S \<inter> U - {x}. d (f xa) (f y) < \<epsilon>)"
+            using U \<open>openin X U\<close> \<open>x \<in> U\<close> by auto
+        qed
       next
         show "\<And>x. x \<in> A \<Longrightarrow> x \<in> D"
           unfolding A_def D_def C_def
@@ -953,142 +959,114 @@ lemma gdelta_in_eq_completely_metrizable_space:
 
 text\<open> Basic definition of the small inductive dimension relation ind t \<le> n.    \<close>
 text\<open> We plan to prove most of the theorems in R^n so this is as good a         \<close>
-text\<open> definition as any other, but the present stuff works in any X space.    \<close>
+text\<open> definition as any other, but the present stuff works in any X space.  
+
+ :: "['a topology, int] \<Rightarrow> bool"  \<close>
+
+inductive dimension_le (infix "dim'_le" 50) 
+  where "\<lbrakk>-1 \<le> n;
+        \<And>V a. \<lbrakk>openin X V; a \<in> V\<rbrakk> \<Longrightarrow> \<exists>U. a \<in> U \<and> U \<subseteq> V \<and> openin X U \<and> (subtopology X (X frontier_of U)) dim_le (n - 1)\<rbrakk>
+              \<Longrightarrow> X dim_le (n::int)"
 
 
-parse_as_infix("dimension_le",(12,"right"));;
-
-let DIMENSION_LE_RULES,DIMENSION_LE_INDUCT,DIMENSION_LE_CASES =
-  new_inductive_definition
-  `\<forall>X n.-1 \<le> n \<and>
-           (\<forall>v a. openin X v \<and> a \<in> v
-                  \<Longrightarrow> \<exists>u. a \<in> u \<and> u \<subseteq> v \<and> openin X u \<and>
-                          subtopology X (X frontier_of u)
-                          dimension_le (n - 1))
-            \<Longrightarrow> X dimension_le (n::int)"
 
 lemma dimension_le_neighbourhood_base:
-   "\<And>X n.
-        X dimension_le n \<longleftrightarrow>
- -1 \<le> n \<and>
-        neighbourhood_base_of
-         (\<lambda>u. openin X u \<and>
-              (subtopology X (X frontier_of u))
-              dimension_le (n - 1)) X"
-oops
-  REPEAT GEN_TAC THEN SIMP_TAC[OPEN_NEIGHBOURHOOD_BASE_OF] THEN
-  GEN_REWRITE_TAC LAND_CONV [DIMENSION_LE_CASES] THEN MESON_TAC[]);;
+   "X dim_le n \<longleftrightarrow>
+   -1 \<le> n \<and> neighbourhood_base_of (\<lambda>U. openin X U \<and> (subtopology X (X frontier_of U)) dim_le (n - 1)) X"
+  by (smt (verit, best) dimension_le.simps open_neighbourhood_base_of)
 
 lemma dimension_le_bound:
-   "\<And>X: Atopology n. X dimension_le n \<Longrightarrow>-1 \<le> n"
-oops
-  MATCH_MP_TAC DIMENSION_LE_INDUCT THEN SIMP_TAC[]);;
-
-lemma dimension_le_mono:
-   "\<And>X: Atopology m n. X dimension_le m \<and> m \<le> n \<Longrightarrow> X dimension_le n"
-oops
-  REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
-  MATCH_MP_TAC DIMENSION_LE_INDUCT THEN
-  MAP_EVERY X_GEN_TAC [`X: Atopology`; `m::int`] THEN STRIP_TAC THEN
-  X_GEN_TAC `n::int` THEN DISCH_TAC THEN
-  GEN_REWRITE_TAC id [DIMENSION_LE_CASES] THEN
-  CONJ_TAC THENL [ASM_MESON_TAC[INT_LE_TRANS]; ALL_TAC] THEN
-  MAP_EVERY X_GEN_TAC [`v::A=>bool`; `a::A`] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`v::A=>bool`; `a::A`]) THEN
-  ASM_REWRITE_TAC[] THEN MATCH_MP_TAC MONO_EXISTS THEN
-  GEN_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_INT_ARITH_TAC);;
+   "X dim_le n \<Longrightarrow>-1 \<le> n"
+  using dimension_le.simps by blast
+  
+lemma dimension_le_mono [rule_format]:
+  assumes "X dim_le m"
+  shows "m \<le> n \<longrightarrow> X dim_le n"
+  using assms
+proof (induction arbitrary: n rule: dimension_le.induct)
+  case (1 m X)
+  show ?case
+  proof (intro strip dimension_le.intros)
+    show "-1 \<le> n" if "m \<le> n" for n :: int using that using "1.hyps" by fastforce    
+    show "\<exists>U. a \<in> U \<and> U \<subseteq> V \<and> openin X U \<and> subtopology X (X frontier_of U) dim_le n - 1"
+      if "m \<le> n" and "openin X V" and "a \<in> V" for n V a
+      using that
+      by (meson "1.IH" diff_right_mono)
+  qed
+qed
 
 lemma dimension_le_eq_empty:
-   "\<And>X: Atopology. X dimension_le (-1) \<longleftrightarrow> topspace X = {}"
-oops
-  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[DIMENSION_LE_CASES] THEN
-  CONV_TAC INT_REDUCE_CONV THEN
-  SUBGOAL_THEN `\<forall>X::A topology. \<not> (X dimension_le -- 2)`
-   (fun th -> REWRITE_TAC[th])
-  THENL
-   [GEN_TAC THEN DISCH_THEN(MP_TAC \<circ> MATCH_MP DIMENSION_LE_BOUND) THEN
-    INT_ARITH_TAC;
-    EQ_TAC THENL
-     [DISCH_THEN(MP_TAC \<circ> SPEC `topspace X::A=>bool`) THEN
-      REWRITE_TAC[OPEN_IN_TOPSPACE] THEN SET_TAC[];
-      REPEAT STRIP_TAC THEN
-      FIRST_ASSUM(MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET) THEN
-      ASM SET_TAC[]]]);;
+   "X dim_le -1 \<longleftrightarrow> topspace X = {}"
+proof
+  assume "X dim_le (-1)"
+  then show "topspace X = {}"
+    by (smt (verit, ccfv_threshold) Diff_empty Diff_eq_empty_iff dimension_le.cases openin_topspace subset_eq)
+next
+  assume "topspace X = {}"
+  then show "X dim_le (-1)"
+    using dimension_le.simps openin_subset by fastforce
+qed
 
 lemma dimension_le_0_neighbourhood_base_of_clopen:
-   "X dimension_le 0 \<longleftrightarrow>
-        neighbourhood_base_of (\<lambda>u. closedin X u \<and> openin X u) X"
-oops
-  GEN_TAC THEN GEN_REWRITE_TAC LAND_CONV [DIMENSION_LE_NEIGHBOURHOOD_BASE] THEN
-  CONV_TAC INT_REDUCE_CONV THEN
-  REWRITE_TAC[DIMENSION_LE_EQ_EMPTY; TOPSPACE_SUBTOPOLOGY] THEN
-  AP_THM_TAC THEN AP_TERM_TAC THEN ABS_TAC THEN
-  SIMP_TAC[FRONTIER_OF_SUBSET_TOPSPACE; SET_RULE
-   `s \<subseteq> u \<Longrightarrow> u \<inter> s = s`] THEN
-  MESON_TAC[FRONTIER_OF_EQ_EMPTY; OPEN_IN_SUBSET]);;
+  "X dim_le 0 \<longleftrightarrow> neighbourhood_base_of (\<lambda>U. closedin X U \<and> openin X U) X"
+proof -
+  have "(subtopology X (X frontier_of U) dim_le -1) =
+        closedin X U" if "openin X U" for U
+    by (metis dimension_le_eq_empty frontier_of_eq_empty frontier_of_subset_topspace openin_subset that topspace_subtopology_subset)
+  then show ?thesis
+    by (smt (verit, del_insts) dimension_le.simps open_neighbourhood_base_of)
+qed
 
 lemma dimension_le_subtopology:
-   "\<And>X n s::A=>bool.
-        X dimension_le n \<Longrightarrow> (subtopology X s) dimension_le n"
-oops
-  REWRITE_TAC[RIGHT_FORALL_IMP_THM] THEN MATCH_MP_TAC DIMENSION_LE_INDUCT THEN
-  MAP_EVERY X_GEN_TAC [`X::A topology`; `n::int`] THEN STRIP_TAC THEN
-  X_GEN_TAC `s::A=>bool` THEN GEN_REWRITE_TAC id [DIMENSION_LE_CASES] THEN
-  ASM_REWRITE_TAC[] THEN MAP_EVERY X_GEN_TAC [`u':A=>bool`; `a::A`] THEN
-  GEN_REWRITE_TAC (LAND_CONV \<circ> LAND_CONV) [OPEN_IN_SUBTOPOLOGY] THEN
-  REWRITE_TAC[IMP_CONJ; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `u::A=>bool` THEN DISCH_TAC THEN DISCH_THEN SUBST1_TAC THEN
-  REWRITE_TAC[IN_INTER] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`u::A=>bool`; `a::A`]) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `v::A=>bool` THEN STRIP_TAC THEN
-  EXISTS_TAC `s \<inter> v::A=>bool` THEN
-  ASM_REWRITE_TAC[IN_INTER] THEN REPEAT CONJ_TAC THENL
-   [ASM SET_TAC[];
-    REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN ASM_MESON_TAC[INTER_COMM];
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC
-     `subtopology X s frontier_of (s \<inter> v):A=>bool`) THEN
-    REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY] THEN
-    MATCH_MP_TAC EQ_IMP THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-    AP_TERM_TAC THEN MATCH_MP_TAC(SET_RULE
-     `s \<subseteq> u \<and> s \<subseteq> t \<Longrightarrow> t \<inter> s = u \<inter> s`) THEN
-    REWRITE_TAC[FRONTIER_OF_SUBSET_SUBTOPOLOGY] THEN
-    REWRITE_TAC[FRONTIER_OF_CLOSURES; CLOSURE_OF_SUBTOPOLOGY] THEN
-    REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; INTER_ASSOC] THEN
-    MATCH_MP_TAC(SET_RULE
-     `t \<subseteq> u \<and> v \<subseteq> w
-      \<Longrightarrow> s \<inter> t \<inter> s \<inter> v \<subseteq> u \<inter> w`) THEN
-    CONJ_TAC THEN MATCH_MP_TAC CLOSURE_OF_MONO THEN SET_TAC[]]);;
+  "X dim_le n \<Longrightarrow> subtopology X S dim_le n"
+proof (induction arbitrary: S rule: dimension_le.induct)
+  case (1 n X)
+  show ?case 
+  proof (intro dimension_le.intros)
+    show "- 1 \<le> n"
+      by (simp add: "1.hyps")
+    fix U' a
+    assume U': "openin (subtopology X S) U'" and "a \<in> U'"
+    then obtain U where U: "openin X U" "U' = U \<inter> S"
+      by (meson openin_subtopology)
+    then obtain V where "a \<in> V" "V \<subseteq> U" "openin X V" 
+      and subV: "subtopology X (X frontier_of V) dim_le n - 1" 
+      and dimV: "\<And>T. subtopology X (X frontier_of V \<inter> T) dim_le n - 1"
+      by (metis "1.IH" Int_iff \<open>a \<in> U'\<close> subtopology_subtopology)
+    show "\<exists>W. a \<in> W \<and> W \<subseteq> U' \<and> openin (subtopology X S) W \<and> subtopology (subtopology X S) (subtopology X S frontier_of W) dim_le n - 1"
+    proof (intro exI conjI)
+      show "a \<in> S \<inter> V" "S \<inter> V \<subseteq> U'"
+        using \<open>U' = U \<inter> S\<close> \<open>a \<in> U'\<close> \<open>a \<in> V\<close> \<open>V \<subseteq> U\<close> by blast+
+      show "openin (subtopology X S) (S \<inter> V)"
+        by (simp add: \<open>openin X V\<close> openin_subtopology_Int2)
+      have "S \<inter> subtopology X S frontier_of V \<subseteq> X frontier_of V"
+        by (simp add: frontier_of_subtopology_subset)
+      then show "subtopology (subtopology X S) (subtopology X S frontier_of (S \<inter> V)) dim_le n - 1"
+        by (metis dimV frontier_of_restrict inf.absorb_iff2 inf_left_idem subtopology_subtopology topspace_subtopology)
+    qed
+  qed
+
+qed
 
 lemma dimension_le_subtopologies:
-   "\<And>X n s t::A=>bool.
-        s \<subseteq> t \<and>
-        subtopology X t dimension_le n
-        \<Longrightarrow> (subtopology X s) dimension_le n"
-oops
-  REPEAT STRIP_TAC THEN FIRST_ASSUM(MP_TAC \<circ>
-    ISPEC `s::A=>bool` \<circ> MATCH_MP DIMENSION_LE_SUBTOPOLOGY) THEN
-  REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY] THEN
-  ASM_SIMP_TAC[SET_RULE `s \<subseteq> t \<Longrightarrow> t \<inter> s = s`]);;
+   "\<lbrakk>subtopology X T dim_le n; S \<subseteq> T\<rbrakk>
+        \<Longrightarrow> (subtopology X S) dim_le n"
+  by (metis dimension_le_subtopology inf.absorb_iff2 subtopology_subtopology)
 
 lemma dimension_le_eq_subtopology:
-   "\<And>X s::A=>bool n.
-        (subtopology X s) dimension_le n \<longleftrightarrow>
- -1 \<le> n \<and>
-        \<forall>v a. openin X v \<and> a \<in> v \<and> a \<in> s
-              \<Longrightarrow> \<exists>u. a \<in> u \<and> u \<subseteq> v \<and> openin X u \<and>
-                      subtopology X
-                       ((subtopology X s frontier_of (s \<inter> u)))
-                      dimension_le (n - 1)"
+   "(subtopology X S) dim_le n \<longleftrightarrow>
+    -1 \<le> n \<and>
+    (\<forall>V a. openin X V \<and> a \<in> V \<and> a \<in> S
+           \<longrightarrow> (\<exists>U. a \<in> U \<and> U \<subseteq> V \<and> openin X U \<and>
+                    subtopology X ((subtopology X S frontier_of (S \<inter> U))) dim_le (n - 1)))"
 oops
   REPEAT GEN_TAC THEN
   GEN_REWRITE_TAC LAND_CONV [DIMENSION_LE_CASES] THEN
   REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY; OPEN_IN_SUBTOPOLOGY] THEN
   REWRITE_TAC[LEFT_AND_EXISTS_THM; LEFT_IMP_EXISTS_THM] THEN
   ONCE_REWRITE_TAC[MESON[]
-   `(\<forall>v a t. (P t \<and> Q v t) \<and> R a v t \<Longrightarrow> S a v t) \<longleftrightarrow>
-    (\<forall>t a v. Q v t \<Longrightarrow> P t \<and> R a v t \<Longrightarrow> S a v t)`] THEN
+   `(\<forall>v a T. (P T \<and> Q v T) \<and> R a v T \<Longrightarrow> S a v T) \<longleftrightarrow>
+    (\<forall>T a v. Q v T \<Longrightarrow> P T \<and> R a v T \<Longrightarrow> S a v T)`] THEN
   REWRITE_TAC[FORALL_UNWIND_THM2] THEN AP_TERM_TAC THEN
   AP_TERM_TAC THEN GEN_REWRITE_TAC id [FUN_EQ_THM] THEN
   X_GEN_TAC `v::A=>bool` THEN REWRITE_TAC[] THEN
@@ -1098,15 +1076,15 @@ oops
   STRIP_TAC THEN REWRITE_TAC[RIGHT_AND_EXISTS_THM] THEN
   GEN_REWRITE_TAC LAND_CONV [SWAP_EXISTS_THM] THEN
   ONCE_REWRITE_TAC[TAUT
-    `p \<and> q \<and> (r \<and> s) \<and> t \<longleftrightarrow> s \<and> p \<and> q \<and> r \<and> t`] THEN
+    `p \<and> q \<and> (r \<and> S) \<and> T \<longleftrightarrow> S \<and> p \<and> q \<and> r \<and> T`] THEN
   ASM_REWRITE_TAC[UNWIND_THM2; IN_INTER] THEN
   EQ_TAC THEN DISCH_THEN(X_CHOOSE_THEN `u::A=>bool` STRIP_ASSUME_TAC) THEN
   EXISTS_TAC `u \<inter> v::A=>bool` THEN
   ASM_SIMP_TAC[IN_INTER; OPEN_IN_INTER] THEN
   (CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC]) THEN
   ASM_SIMP_TAC[SET_RULE `u \<subseteq> v \<Longrightarrow> u \<inter> v = u`;
-               SET_RULE `u \<inter> s \<subseteq> v \<inter> s
-                         \<Longrightarrow> s \<inter> u \<inter> v = s \<inter> u`] THEN
+               SET_RULE `u \<inter> S \<subseteq> v \<inter> S
+                         \<Longrightarrow> S \<inter> u \<inter> v = S \<inter> u`] THEN
   POP_ASSUM_LIST(MP_TAC \<circ> end_itlist CONJ \<circ> rev) THEN
   ASM_SIMP_TAC[FRONTIER_OF_SUBSET_SUBTOPOLOGY;
                SET_RULE `v \<subseteq> u \<Longrightarrow> u \<inter> v = v`] THEN
@@ -1115,12 +1093,12 @@ oops
 lemma homeomorphic_space_dimension_le:
    "\<And>X (Y:B topology) n.
         X homeomorphic_space Y
-        \<Longrightarrow> (X dimension_le n \<longleftrightarrow> Y dimension_le n)"
+        \<Longrightarrow> (X dim_le n \<longleftrightarrow> Y dim_le n)"
 oops
   lemma lemma:
    "\<And>n X (Y:B topology).
-        X homeomorphic_space Y \<and> X dimension_le (n - 1)
-        \<Longrightarrow> Y dimension_le (n - 1)"
+        X homeomorphic_space Y \<and> X dim_le (n - 1)
+        \<Longrightarrow> Y dim_le (n - 1)"
 oops
     INDUCT_TAC THENL
      [CONV_TAC INT_REDUCE_CONV THEN REWRITE_TAC[DIMENSION_LE_EQ_EMPTY] THEN
@@ -1170,15 +1148,15 @@ in
 
 lemma dimension_le_retraction_map_image:
    "\<And>X Y n r.
-        retraction_map X Y r \<and> X dimension_le n
-        \<Longrightarrow> Y dimension_le n"
+        retraction_map X Y r \<and> X dim_le n
+        \<Longrightarrow> Y dim_le n"
 oops
   GEN_REWRITE_TAC id [MESON[] `(\<forall>x y z. P x y z) \<longleftrightarrow> (\<forall>z x y. P x y z)`] THEN
   GEN_TAC THEN MATCH_MP_TAC HEREDITARY_IMP_RETRACTIVE_PROPERTY THEN
   REWRITE_TAC[DIMENSION_LE_SUBTOPOLOGY; HOMEOMORPHIC_SPACE_DIMENSION_LE]);;
 
 lemma dimension_le_discrete_topology:
-   "\<And>u::A=>bool. (discrete_topology u) dimension_le 0"
+   "\<And>u::A=>bool. (discrete_topology u) dim_le 0"
 oops
   GEN_TAC THEN ONCE_REWRITE_TAC[DIMENSION_LE_CASES] THEN
   CONV_TAC INT_REDUCE_CONV THEN
@@ -1187,7 +1165,7 @@ oops
   SET_TAC[]);;
 
 lemma zero_dimensional_imp_completely_regular_space:
-   "X dimension_le 0 \<Longrightarrow> completely_regular_space X"
+   "X dim_le 0 \<Longrightarrow> completely_regular_space X"
 oops
   GEN_TAC THEN REWRITE_TAC[DIMENSION_LE_0_NEIGHBOURHOOD_BASE_OF_CLOPEN] THEN
   SIMP_TAC[OPEN_NEIGHBOURHOOD_BASE_OF] THEN DISCH_TAC THEN
@@ -1210,7 +1188,7 @@ oops
   ASM_SIMP_TAC[OPEN_IN_TOPSPACE; OPEN_IN_INTER; OPEN_IN_DIFF]);;
 
 lemma zero_dimensional_imp_regular_space:
-   "X dimension_le 0 \<Longrightarrow> regular_space X"
+   "X dim_le 0 \<Longrightarrow> regular_space X"
 oops
   MESON_TAC[COMPLETELY_REGULAR_IMP_REGULAR_SPACE;
             ZERO_DIMENSIONAL_IMP_COMPLETELY_REGULAR_SPACE]);;
