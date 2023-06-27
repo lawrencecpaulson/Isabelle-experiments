@@ -6,11 +6,20 @@ theory AMS
     "HOL-ex.Sketch_and_Explore"
 begin
 
+(*replace*)
+lemma relative_to_subset:
+   "\<lbrakk>S \<subseteq> T; P S\<rbrakk> \<Longrightarrow> (P relative_to T) S"
+  unfolding relative_to_def by auto
+
+(*REPLACE*)
+lemma relative_to_subset_trans:
+   "\<lbrakk>(P relative_to U) S; S \<subseteq> T; T \<subseteq> U\<rbrakk> \<Longrightarrow> (P relative_to T) S"
+  unfolding relative_to_def by auto
 
 (*HOL Light's FORALL_POS_MONO_1_EQ*)
 lemma Inter_eq_Inter_inverse_Suc:
   assumes "\<And>r' r. r' < r \<Longrightarrow> A r' \<subseteq> A r"
-  shows "(\<Inter>\<epsilon>\<in>{0<..}. A \<epsilon>) = (\<Inter>n. A(inverse(Suc n)))"
+  shows "\<Inter> (A ` {0<..}) = (\<Inter>n. A(inverse(Suc n)))"
 proof 
   have "x \<in> A \<epsilon>"
     if x: "\<forall>n. x \<in> A (inverse (Suc n))" and "\<epsilon>>0" for x and \<epsilon> :: real
@@ -452,16 +461,26 @@ proof -
       by (smt (verit) Collect_cong empty_def empty_iff gdelta_in_empty limitin_mspace)
   next
     case False
-    define A where "A \<equiv> {x \<in> topspace X. \<forall>\<epsilon>>0. \<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>xa\<in>S \<inter> U - {x}. \<forall>y\<in>S \<inter> U - {x}. d (f xa) (f y) < \<epsilon>)}"
+    define A where "A \<equiv> {a \<in> topspace X. \<forall>\<epsilon>>0. \<exists>U. openin X U \<and> a \<in> U \<and> (\<forall>x\<in>S \<inter> U - {a}. \<forall>y\<in>S \<inter> U - {a}. d (f x) (f y) < \<epsilon>)}"
     have "gdelta_in X A"
       using f 
     proof (elim disjE conjE)
       assume cm: "continuous_map (subtopology X S) mtopology f"
-      define B where "B \<equiv> topspace X \<inter> (\<Inter>n. \<Union>{U. openin X U \<and> (\<forall>x \<in> S\<inter>U. \<forall>y \<in> S\<inter>U. d (f x) (f y) < inverse(Suc n))})"
-      have "gdelta_in X B"
-        unfolding B_def gdelta_in_def
+      define C where "C \<equiv> \<lambda>r. \<Union>{U. openin X U \<and> (\<forall>x \<in> S\<inter>U. \<forall>y \<in> S\<inter>U. d (f x) (f y) < r)}"
+      define B where "B \<equiv> (\<Inter>n. C(inverse(Suc n)))"
+      have "B \<subseteq> topspace X"
+        using openin_subset by (force simp add: B_def C_def)
+      have "(countable intersection_of openin X) B"
+        unfolding B_def C_def 
         by (intro relative_to_inc countable_intersection_of_Inter countable_intersection_of_inc) auto
-      moreover have "A=B"
+      then have "gdelta_in X B"
+        unfolding gdelta_in_def by (intro relative_to_subset \<open>B \<subseteq> topspace X\<close>)
+      define D where "D \<equiv> (\<Inter> (C ` {0<..}))"
+      have "D=B"
+        unfolding B_def C_def D_def
+        apply (intro Inter_eq_Inter_inverse_Suc Sup_subset_mono)
+        by (smt (verit, ccfv_threshold) Collect_mono_iff)
+      moreover have "A=D"
       proof -
         have *: "\<exists>T. (openin X T \<and> (\<forall>x y. x \<in> S \<longrightarrow> x \<in> T \<longrightarrow> y \<in> S \<longrightarrow> y \<in> T \<longrightarrow> d (f x) (f y) < \<epsilon>)) \<and> a \<in> T" 
           if "openin X U" "a \<in> U" "a \<in> topspace X" "\<epsilon> > 0"
@@ -487,39 +506,30 @@ proof -
         qed
         show ?thesis
         proof (intro equalityI subsetI)
-          fix x
-          assume x: "x \<in> A"
-          then have "x \<in> topspace X"
+          fix a
+          assume x: "a \<in> A"
+          then have "a \<in> topspace X"
             using A_def by blast
-          show "x \<in> B"
-          proof (clarsimp simp: B_def \<open>x \<in> topspace X\<close>)
-            fix n
-            obtain U where "openin X U \<and> x \<in> U \<and> (\<forall>xa\<in>S \<inter> U - {x}. \<forall>y\<in>S \<inter> U - {x}. d (f xa) (f y) < inverse (1 + real n))"
+          show "a \<in> D"
+          proof (clarsimp simp: D_def C_def \<open>a \<in> topspace X\<close>)
+            fix \<epsilon>::real assume "\<epsilon> > 0"
+            then obtain U where "openin X U \<and> a \<in> U \<and> (\<forall>x\<in>S \<inter> U - {a}. \<forall>y\<in>S \<inter> U - {a}. d (f x) (f y) < \<epsilon>)"
               using x by (force simp: A_def)
-            show "\<exists>U. openin X U \<and> (\<forall>x\<in>S \<inter> U. \<forall>y\<in>S \<inter> U. d (f x) (f y) < inverse (1 + real n)) \<and> x \<in> U"
-
+            show "\<exists>U. openin X U \<and> (\<forall>x\<in>S \<inter> U. \<forall>y\<in>S \<inter> U. d (f x) (f y) < \<epsilon>) \<and> a \<in> U"
               sorry
           qed
         next
           fix x
-          assume x: "x \<in> B"
+          assume x: "x \<in> D"
           then have "x \<in> topspace X"
-            using B_def by blast
-          show "x \<in> A"
-          proof (clarsimp simp: A_def \<open>x \<in> topspace X\<close>)
-            fix \<epsilon> :: real
-            assume "\<epsilon> > 0"
-            then obtain n where "inverse (Suc n) < \<epsilon>"
-              using reals_Archimedean by blast
-            with x 
-            show "\<exists>U. openin X U \<and> x \<in> U \<and> (\<forall>xa\<in>S \<inter> U - {x}. \<forall>y\<in>S \<inter> U - {x}. d (f xa) (f y) < \<epsilon>)"
-              apply (simp add: B_def)
-              by (smt (verit, ccfv_threshold) DiffD1)
-          qed
+            using \<open>B \<subseteq> topspace X\<close> \<open>D=B\<close> by blast
+          with x show "x \<in> A"
+            apply (clarsimp simp: D_def C_def A_def)
+            by (meson DiffD1 greaterThan_iff)
         qed
       qed
       ultimately show ?thesis
-        by metis
+        by (simp add: \<open>gdelta_in X B\<close>)
     next
       assume "t1_space X" "f ` S \<subseteq> M"
       define B where "B \<equiv> topspace X \<inter> (\<Inter>n. \<Union>{U. openin X U \<and> 
