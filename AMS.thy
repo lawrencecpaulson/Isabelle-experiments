@@ -87,10 +87,6 @@ oops
 *)
 
 
-context Metric_space
-begin
-
-
 subsection\<open>Size bounds on connected or path-connected spaces\<close>
 
 lemma connected_space_imp_card_ge_alt:
