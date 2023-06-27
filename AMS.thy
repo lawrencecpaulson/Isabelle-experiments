@@ -447,6 +447,7 @@ next
   qed
 qed
 
+
 lemma (in Metric_space) gdelta_in_points_of_convergence_within:
   assumes "mcomplete"
     and f: "continuous_map (subtopology X S) mtopology f \<or> t1_space X \<and> f ` S \<subseteq> M"
@@ -468,6 +469,11 @@ proof -
       assume cm: "continuous_map (subtopology X S) mtopology f"
       define C where "C \<equiv> \<lambda>r. \<Union>{U. openin X U \<and> (\<forall>x \<in> S\<inter>U. \<forall>y \<in> S\<inter>U. d (f x) (f y) < r)}"
       define B where "B \<equiv> (\<Inter>n. C(inverse(Suc n)))"
+      define D where "D \<equiv> (\<Inter> (C ` {0<..}))"
+      have "D=B"
+        unfolding B_def C_def D_def
+        apply (intro Inter_eq_Inter_inverse_Suc Sup_subset_mono)
+        by (smt (verit, ccfv_threshold) Collect_mono_iff)
       have "B \<subseteq> topspace X"
         using openin_subset by (force simp add: B_def C_def)
       have "(countable intersection_of openin X) B"
@@ -475,120 +481,89 @@ proof -
         by (intro relative_to_inc countable_intersection_of_Inter countable_intersection_of_inc) auto
       then have "gdelta_in X B"
         unfolding gdelta_in_def by (intro relative_to_subset \<open>B \<subseteq> topspace X\<close>)
+      moreover have "A=D"
+      proof (intro equalityI subsetI)
+        fix a
+        assume x: "a \<in> A"
+        then have "a \<in> topspace X"
+          using A_def by blast
+        show "a \<in> D"
+        proof (clarsimp simp: D_def C_def \<open>a \<in> topspace X\<close>)
+          fix \<epsilon>::real assume "\<epsilon> > 0"
+          then obtain U where "openin X U" "a \<in> U" and U: "(\<forall>x\<in>S \<inter> U - {a}. \<forall>y\<in>S \<inter> U - {a}. d (f x) (f y) < \<epsilon>)"
+            using x by (force simp: A_def)
+          show "\<exists>T. openin X T \<and> (\<forall>x\<in>S \<inter> T. \<forall>y\<in>S \<inter> T. d (f x) (f y) < \<epsilon>) \<and> a \<in> T"
+          proof (cases "a \<in> S")
+            case True
+            then obtain V where "openin X V" "a \<in> V" and V: "\<forall>x. x \<in> S \<and> x \<in> V \<longrightarrow> f a \<in> M \<and> f x \<in> M \<and> d (f a) (f x) < \<epsilon>"
+              using \<open>a \<in> topspace X\<close> \<open>\<epsilon> > 0\<close> cm
+              by (force simp add: continuous_map_to_metric openin_subtopology_alt Ball_def)
+            show ?thesis
+            proof (intro exI conjI strip)
+              show "openin X (U \<inter> V)"
+                using \<open>openin X U\<close> \<open>openin X V\<close> by blast 
+              show "a \<in> U \<inter> V"
+                using \<open>a \<in> U\<close> \<open>a \<in> V\<close> by blast
+              show "\<And>x y. \<lbrakk>x \<in> S \<inter> (U \<inter> V); y \<in> S \<inter> (U \<inter> V)\<rbrakk> \<Longrightarrow> d (f x) (f y) < \<epsilon>"
+                by (metis DiffI Int_iff U V commute singletonD)
+            qed
+          next
+            case False then show ?thesis
+              using U \<open>a \<in> U\<close> \<open>openin X U\<close> by auto
+          qed
+        qed
+      next
+        fix x
+        assume x: "x \<in> D"
+        then have "x \<in> topspace X"
+          using \<open>B \<subseteq> topspace X\<close> \<open>D=B\<close> by blast
+        with x show "x \<in> A"
+          apply (clarsimp simp: D_def C_def A_def)
+          by (meson DiffD1 greaterThan_iff)
+      qed
+      ultimately show ?thesis
+        by (simp add: \<open>D=B\<close>)
+    next
+      assume "t1_space X" "f ` S \<subseteq> M"
+      define C where "C \<equiv> \<lambda>r. \<Union>{U. openin X U \<and> 
+                           (\<exists>b \<in> topspace X. \<forall>x \<in> S\<inter>U - {b}. \<forall>y \<in> S\<inter>U - {b}. d (f x) (f y) < r)}"
+      define B where "B \<equiv> (\<Inter>n. C(inverse(Suc n)))"
       define D where "D \<equiv> (\<Inter> (C ` {0<..}))"
       have "D=B"
         unfolding B_def C_def D_def
         apply (intro Inter_eq_Inter_inverse_Suc Sup_subset_mono)
         by (smt (verit, ccfv_threshold) Collect_mono_iff)
+      have "B \<subseteq> topspace X"
+        using openin_subset by (force simp add: B_def C_def)
+      have "(countable intersection_of openin X) B"
+        unfolding B_def C_def 
+        by (intro relative_to_inc countable_intersection_of_Inter countable_intersection_of_inc) auto
+      then have "gdelta_in X B"
+        unfolding gdelta_in_def by (intro relative_to_subset \<open>B \<subseteq> topspace X\<close>)
       moreover have "A=D"
-      proof -
-        have *: "\<exists>T. (openin X T \<and> (\<forall>x y. x \<in> S \<longrightarrow> x \<in> T \<longrightarrow> y \<in> S \<longrightarrow> y \<in> T \<longrightarrow> d (f x) (f y) < \<epsilon>)) \<and> a \<in> T" 
-          if "openin X U" "a \<in> U" "a \<in> topspace X" "\<epsilon> > 0"
-            and U: "\<And>x y. x \<in> S \<and> x \<in> U \<and> x\<noteq>a \<and> y \<in> S \<and> y \<in> U \<and> y \<noteq> a \<Longrightarrow> d (f x) (f y) < \<epsilon>"
-          for U a and \<epsilon>::real
-        proof (cases "a \<in> S")
-          case True
-          then obtain V where "openin X V" "a \<in> V" and V: "\<forall>x. x \<in> S \<and> x \<in> V \<longrightarrow> f a \<in> M \<and> f x \<in> M \<and> d (f a) (f x) < \<epsilon>"
-            using \<open>a \<in> topspace X\<close> \<open>\<epsilon> > 0\<close> cm   
-            by (force simp add: continuous_map_to_metric openin_subtopology_alt Ball_def)
-          show ?thesis
-          proof (intro exI conjI strip)
-            show "openin X (U \<inter> V)"
-              using \<open>openin X V\<close> that by blast
-            show "a \<in> U \<inter> V"
-              by (simp add: \<open>a \<in> V\<close> that)
-            show "\<And>x y. \<lbrakk>x \<in> S; x \<in> U \<inter> V; y \<in> S; y \<in> U \<inter> V\<rbrakk> \<Longrightarrow> d (f x) (f y) < \<epsilon>"
-              by (metis Int_iff U V commute)
-          qed
-        next
-          case False then show ?thesis
-            using U that by blast
-        qed
-        show ?thesis
-        proof (intro equalityI subsetI)
-          fix a
-          assume x: "a \<in> A"
-          then have "a \<in> topspace X"
-            using A_def by blast
-          show "a \<in> D"
-          proof (clarsimp simp: D_def C_def \<open>a \<in> topspace X\<close>)
-            fix \<epsilon>::real assume "\<epsilon> > 0"
-            then obtain U where "openin X U \<and> a \<in> U \<and> (\<forall>x\<in>S \<inter> U - {a}. \<forall>y\<in>S \<inter> U - {a}. d (f x) (f y) < \<epsilon>)"
-              using x by (force simp: A_def)
-            show "\<exists>U. openin X U \<and> (\<forall>x\<in>S \<inter> U. \<forall>y\<in>S \<inter> U. d (f x) (f y) < \<epsilon>) \<and> a \<in> U"
-              sorry
-          qed
-        next
-          fix x
-          assume x: "x \<in> D"
-          then have "x \<in> topspace X"
-            using \<open>B \<subseteq> topspace X\<close> \<open>D=B\<close> by blast
-          with x show "x \<in> A"
-            apply (clarsimp simp: D_def C_def A_def)
-            by (meson DiffD1 greaterThan_iff)
-        qed
+      proof (intro equalityI subsetI)
+        fix x
+        assume x: "x \<in> D"
+        then have "x \<in> topspace X"
+          using \<open>B \<subseteq> topspace X\<close> \<open>D=B\<close> by blast
+        with x show "x \<in> A"
+          apply (clarsimp simp: D_def C_def A_def)
+          apply (drule_tac x="\<epsilon>" in bspec)
+           apply (force simp add: )
+          apply clarsimp
+          by (metis Diff_iff Int_Diff \<open>t1_space X\<close> empty_iff insert_iff t1_space_openin_delete_alt)
+      next
+        show "\<And>x. x \<in> A \<Longrightarrow> x \<in> D"
+          unfolding A_def D_def C_def
+          by clarsimp meson
       qed
       ultimately show ?thesis
-        by (simp add: \<open>gdelta_in X B\<close>)
-    next
-      assume "t1_space X" "f ` S \<subseteq> M"
-      define B where "B \<equiv> topspace X \<inter> (\<Inter>n. \<Union>{U. openin X U \<and> 
-                           (\<exists>b \<in> topspace X. \<forall>x \<in> S\<inter>U - {b}. \<forall>y \<in> S\<inter>U - {b}. d (f x) (f y) < inverse(Suc n))})"
-      have "gdelta_in X B"
-        unfolding B_def gdelta_in_def
-        by (intro relative_to_inc countable_intersection_of_Inter countable_intersection_of_inc) auto
-      moreover have "A=B"
-        sorry
-      ultimately show ?thesis
-        by metis
+        by (simp add: \<open>D=B\<close>)
     qed
     then show ?thesis
       by (simp add: A_def convergent_eq_zero_oscillation_gen False fim \<open>mcomplete\<close> cong: conj_cong)
   qed
 qed
-
-oops
-  GEN_REWRITE_TAC id [EXTENSION] THEN
-  REWRITE_TAC[IN_INTER; INTERS_GSPEC; IN_ELIM_THM] THEN
-  REWRITE_TAC[IN_UNIV; IN_UNIONS; IN_ELIM_THM] THEN
-  X_GEN_TAC `a::A` THEN ASM_CASES_TAC `(a::A) \<in> topspace X` THEN
-  ASM_REWRITE_TAC[] THEN
-  W(MP_TAC \<circ> PART_MATCH (rand \<circ> rand) FORALL_POS_MONO_1_EQ \<circ> rand \<circ> snd) THEN
-  (ANTS_TAC THENL
-    [MESON_TAC[REAL_LT_TRANS]; DISCH_THEN(SUBST1_TAC \<circ> SYM)]) THEN
-  REWRITE_TAC[IN_INTER; IN_DELETE; IN_ELIM_THM] THENL
-   [EQ_TAC THENL [DISCH_TAC; MESON_TAC[]] THEN
-    X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e::real`) THEN ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(X_CHOOSE_THEN `U::A=>bool` STRIP_ASSUME_TAC) THEN
-
-
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [CONTINUOUS_MAP_TO_METRIC]) THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `a::A`) THEN
-    ASM_REWRITE_TAC[TOPSPACE_SUBTOPOLOGY; IN_INTER] THEN
-    DISCH_THEN(MP_TAC \<circ> SPEC `e::real`) THEN
-    ASM_REWRITE_TAC[OPEN_IN_SUBTOPOLOGY_ALT; EXISTS_IN_GSPEC; IN_INTER] THEN
-    REWRITE_TAC[IN_MBALL; LEFT_IMP_EXISTS_THM] THEN
-    X_GEN_TAC `v::A=>bool` THEN STRIP_TAC THEN
-    EXISTS_TAC `U \<inter> v::A=>bool` THEN
-    ASM_SIMP_TAC[OPEN_IN_INTER; IN_INTER] THEN
-    MAP_EVERY X_GEN_TAC [`x::A`; `y::A`] THEN STRIP_TAC THEN
-    ASM_CASES_TAC `x::A = a` THEN ASM_SIMP_TAC[] THEN
-    ASM_CASES_TAC `y::A = a` THEN ASM_SIMP_TAC[] THEN
-    ASM_MESON_TAC[MDIST_SYM];
-    EQ_TAC THENL [ASM_METIS_TAC[]; DISCH_TAC] THEN
-    X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC `e::real`) THEN
-    ASM_REWRITE_TAC[RIGHT_AND_EXISTS_THM; LEFT_AND_EXISTS_THM;
-                    LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`U::A=>bool`; `b::A`] THEN STRIP_TAC THEN
-    ASM_CASES_TAC `b::A = a` THENL [ASM_MESON_TAC[]; ALL_TAC] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [t1_space]) THEN
-    DISCH_THEN(MP_TAC \<circ> SPECL [`a::A`; `b::A`]) THEN ASM_REWRITE_TAC[] THEN
-    DISCH_THEN(X_CHOOSE_THEN `v::A=>bool` STRIP_ASSUME_TAC) THEN
-    EXISTS_TAC `U \<inter> v::A=>bool` THEN
-    ASM_SIMP_TAC[OPEN_IN_INTER; IN_INTER] THEN ASM SET_TAC[]]);;
-
 
 
 lemma gdelta_in_points_of_convergence_within:
