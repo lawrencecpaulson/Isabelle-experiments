@@ -1140,38 +1140,29 @@ lemma dimension_le_retraction_map_image:
    "\<lbrakk>retraction_map X Y r; X dim_le n\<rbrakk> \<Longrightarrow> Y dim_le n"
   by (meson dimension_le_subtopology homeomorphic_space_dimension_le retraction_map_def retraction_maps_section_image2)
 
-lemma dimension_le_discrete_topology:
-   "(discrete_topology U) dim_le 0"
+lemma dimension_le_discrete_topology [simp]: "(discrete_topology U) dim_le 0"
   using dimension_le.simps dimension_le_eq_empty by fastforce
 
 lemma zero_dimensional_imp_completely_regular_space:
-   "X dim_le 0 \<Longrightarrow> completely_regular_space X"
-oops
-  GEN_TAC THEN REWRITE_TAC[DIMENSION_LE_0_NEIGHBOURHOOD_BASE_OF_CLOPEN] THEN
-  SIMP_TAC[OPEN_NEIGHBOURHOOD_BASE_OF] THEN DISCH_TAC THEN
-  REWRITE_TAC[completely_regular_space; IN_DIFF] THEN
-  MAP_EVERY X_GEN_TAC [`c::A=>bool`; `a::A`] THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`topspace X - c::A=>bool`; `a::A`]) THEN
-  ASM_SIMP_TAC[IN_DIFF; OPEN_IN_DIFF; OPEN_IN_TOPSPACE] THEN
-  DISCH_THEN(X_CHOOSE_THEN `u::A=>bool` STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC `(\<lambda>x. if x \<in> u then 0 else 1):A=>real` THEN
-  ASM_REWRITE_TAC[] THEN CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-  REWRITE_TAC[CONTINUOUS_MAP_IN_SUBTOPOLOGY; \<subseteq>; FORALL_IN_IMAGE] THEN
-  CONJ_TAC THENL [ALL_TAC; ASM_MESON_TAC[ENDS_IN_UNIT_REAL_INTERVAL]] THEN
-  REWRITE_TAC[continuous_map; TOPSPACE_EUCLIDEANREAL; IN_UNIV] THEN
-  X_GEN_TAC `r::real=>bool` THEN DISCH_TAC THEN REWRITE_TAC[TAUT
-    `(if p then a else b) \<in> r \<longleftrightarrow> p \<and> a \<in> r \<or> \<not> p \<and> b \<in> r`] THEN
-  MAP_EVERY ASM_CASES_TAC [`(0::real) \<in> r`; `(1::real) \<in> r`] THEN
-  ASM_REWRITE_TAC[EMPTY_GSPEC; OPEN_IN_EMPTY; OPEN_IN_TOPSPACE;
-                  IN_GSPEC; TAUT `p \<or> \<not> p`] THEN
-  ASM_REWRITE_TAC[GSYM -; GSYM \<inter>] THEN
-  ASM_SIMP_TAC[OPEN_IN_TOPSPACE; OPEN_IN_INTER; OPEN_IN_DIFF]);;
+  assumes "X dim_le 0" 
+  shows "completely_regular_space X"
+proof (clarsimp simp: completely_regular_space_def)
+  fix C a
+  assume "closedin X C" and "a \<in> topspace X" and "a \<notin> C"
+  then obtain U where "closedin X U" "openin X U" "a \<in> U" and U: "U \<subseteq> topspace X - C"
+    using assms by (force simp add: closedin_def dimension_le_0_neighbourhood_base_of_clopen open_neighbourhood_base_of)
+  show "\<exists>f. continuous_map X (top_of_set {0::real..1}) f \<and> f a = 0 \<and> f ` C \<subseteq> {1}"
+  proof (intro exI conjI)
+    have "continuous_map X euclideanreal (\<lambda>x. if x \<in> U then 0 else 1)"
+      using \<open>closedin X U\<close> \<open>openin X U\<close> apply (clarsimp simp: continuous_map_def closedin_def)
+      by (smt (verit) Diff_iff mem_Collect_eq openin_subopen subset_eq)
+    then show "continuous_map X (top_of_set {0::real..1}) (\<lambda>x. if x \<in> U then 0 else 1)"
+      by (auto simp: continuous_map_in_subtopology)
+  qed (use U \<open>a \<in> U\<close> in auto)
+qed
 
-lemma zero_dimensional_imp_regular_space:
-   "X dim_le 0 \<Longrightarrow> regular_space X"
-oops
-  MESON_TAC[COMPLETELY_REGULAR_IMP_REGULAR_SPACE;
-            ZERO_DIMENSIONAL_IMP_COMPLETELY_REGULAR_SPACE]);;
+lemma zero_dimensional_imp_regular_space: "X dim_le 0 \<Longrightarrow> regular_space X"
+  by (simp add: completely_regular_imp_regular_space zero_dimensional_imp_completely_regular_space)
 
 
 subsection\<open> Theorems from Kuratowski's "Remark on an Invariance Theorem"\<close>
