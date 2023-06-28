@@ -1189,29 +1189,30 @@ proof -
     and pwF: "pairwise (\<lambda>S T. disjnt (F S) (F T)) \<U>"
     using assms by (smt (verit, best) Diff_subset Sup_le_iff hereditarily_normal_separation_pairwise)
   show thesis
-    proof
-  show "closedin X (topspace X - \<Union> (F ` \<U>))"
-    using F by blast
-  show "topspace X - \<Union> (F ` \<U>) \<subseteq> S"
-    using UU F by auto
-  show "\<exists>\<V>. finite \<V> \<and> card \<V> = card \<U> \<and> pairwise (separatedin X) \<V> \<and> {} \<notin> \<V> \<and> \<Union> \<V> = topspace X - C"
-    if "closedin X C" "C \<subseteq> S" and C: "topspace X - \<Union> (F ` \<U>) \<subseteq> C" for C
-  proof (intro exI conjI strip)
-    show "finite ((\<lambda>S. F S - C) ` \<U>)"
-      by (simp add: assms(2))
-    have "inj_on (\<lambda>S. F S - C) \<U>"
-      using pwF F
-      unfolding inj_on_def pairwise_def disjnt_iff
-      by (metis Diff_iff UU UnionI nonempty subset_empty subset_eq \<open>C \<subseteq> S\<close>)
-    then show "card ((\<lambda>S. F S - C) ` \<U>) = card \<U>"
-      using card_image by blast
-    show "pairwise (separatedin X) ((\<lambda>S. F S - C) ` \<U>)"
-      using \<open>closedin X C\<close> F pwF by (force simp: pairwise_def openin_diff separatedin_open_sets disjnt_iff)
-    show "{} \<notin> (\<lambda>S. F S - C) ` \<U>"
-      using nonempty UU \<open>C \<subseteq> S\<close> F
-      by clarify (metis DiffD2 Diff_eq_empty_iff F UnionI subset_empty subset_eq)
-    show "(\<Union>S\<in>\<U>. F S - C) = topspace X - C"
-      using UU F C openin_subset by fastforce
+  proof
+    show "closedin X (topspace X - \<Union> (F ` \<U>))"
+      using F by blast
+    show "topspace X - \<Union> (F ` \<U>) \<subseteq> S"
+      using UU F by auto
+    show "\<exists>\<V>. finite \<V> \<and> card \<V> = card \<U> \<and> pairwise (separatedin X) \<V> \<and> {} \<notin> \<V> \<and> \<Union> \<V> = topspace X - C"
+      if "closedin X C" "C \<subseteq> S" and C: "topspace X - \<Union> (F ` \<U>) \<subseteq> C" for C
+    proof (intro exI conjI strip)
+      show "finite ((\<lambda>S. F S - C) ` \<U>)"
+        by (simp add: assms(2))
+      have "inj_on (\<lambda>S. F S - C) \<U>"
+        using pwF F
+        unfolding inj_on_def pairwise_def disjnt_iff
+        by (metis Diff_iff UU UnionI nonempty subset_empty subset_eq \<open>C \<subseteq> S\<close>)
+      then show "card ((\<lambda>S. F S - C) ` \<U>) = card \<U>"
+        using card_image by blast
+      show "pairwise (separatedin X) ((\<lambda>S. F S - C) ` \<U>)"
+        using \<open>closedin X C\<close> F pwF by (force simp: pairwise_def openin_diff separatedin_open_sets disjnt_iff)
+      show "{} \<notin> (\<lambda>S. F S - C) ` \<U>"
+        using nonempty UU \<open>C \<subseteq> S\<close> F
+        by clarify (metis DiffD2 Diff_eq_empty_iff F UnionI subset_empty subset_eq)
+      show "(\<Union>S\<in>\<U>. F S - C) = topspace X - C"
+        using UU F C openin_subset by fastforce
+    qed
   qed
 qed
 
@@ -1221,24 +1222,31 @@ lemma separation_by_closed_intermediates_gen:
     and discon: "\<not> connectedin X (topspace X - S)"
   obtains C where "closedin X C" "C \<subseteq> S"
                   "\<And>D. \<lbrakk>closedin X D; C \<subseteq> D; D \<subseteq> S\<rbrakk> \<Longrightarrow> \<not> connectedin X (topspace X - D)"
-oops
-  REPEAT GEN_TAC THEN
-  MP_TAC(ISPECL [`X::A topology`; `S::A=>bool`; `2`]
-    SEPARATION_BY_CLOSED_INTERMEDIATES_COUNT) THEN
-  REWRITE_TAC[MESON[HAS_SIZE_CONV `S HAS_SIZE 2`]
-   `(\<exists>S. S HAS_SIZE 2 \<and> P S) \<longleftrightarrow> (\<exists>a b. (a \<noteq> b) \<and> P{a,b})`] THEN
-  REWRITE_TAC[PAIRWISE_INSERT; UNIONS_2; FORALL_IN_INSERT; NOT_IN_EMPTY;
-              IMP_CONJ; NOT_IN_EMPTY; PAIRWISE_EMPTY] THEN
-  REWRITE_TAC[MESON[SEPARATED_IN_SYM]
-   `(a \<noteq> b) \<and>
-    ((b \<noteq> a) \<Longrightarrow> separatedin X a b \<and> separatedin X b a) \<and> Q \<longleftrightarrow>
-    (a \<noteq> b) \<and> separatedin X a b \<and> Q`] THEN
-  REWRITE_TAC[MESON[SEPARATED_IN_REFL]
-   `(a \<noteq> b) \<and> separatedin X a b \<and>
-    ((a \<noteq> {}) \<and> (b \<noteq> {})) \<and> a \<union> b = S \<longleftrightarrow>
-    a \<union> b = S \<and> (a \<noteq> {}) \<and> (b \<noteq> {}) \<and> separatedin X a b`] THEN
-  REWRITE_TAC[CONNECTED_IN_EQ_NOT_SEPARATED; IMP_IMP; SUBSET_DIFF] THEN
-  SIMP_TAC[]);;
+proof -
+  obtain C1 C2 where Ueq: "C1 \<union> C2 = topspace X - S" and "C1 \<noteq> {}" "C2 \<noteq> {}" 
+    and sep: "separatedin X C1 C2" and "C1 \<noteq> C2"
+    by (metis Diff_subset connectedin_eq_not_separated discon separatedin_refl)
+  then obtain C where "closedin X C" "C \<subseteq> S"
+    and C: "\<And>D. \<lbrakk>closedin X D; C \<subseteq> D; D \<subseteq> S\<rbrakk>
+                     \<Longrightarrow> \<exists>\<V>. finite \<V> \<and> card \<V> = Suc (Suc 0) \<and> pairwise (separatedin X) \<V> \<and> {} \<notin> \<V> \<and> \<Union>\<V> = topspace X - D"
+    using separation_by_closed_intermediates_count [of X "{C1,C2}" S] X
+    apply (simp add: pairwise_insert separatedin_sym)
+    by metis
+  have "\<not> connectedin X (topspace X - D)"
+    if D: "closedin X D" "C \<subseteq> D" "D \<subseteq> S" for D 
+  proof -
+    obtain V1 V2 where *: "pairwise (separatedin X) {V1,V2}" "{} \<notin> {V1,V2}" 
+                          "\<Union> {V1,V2} = topspace X - D" "V1\<noteq>V2"
+      by (smt (verit, ccfv_SIG) C [OF D] pairwise_insert card_Suc_eq_finite card_0_eq insert_iff)
+    then have "disjnt V1 V2"
+      by (metis pairwise_insert separatedin_imp_disjoint singleton_iff)
+      with * show ?thesis
+        by (auto simp add: connectedin_eq_not_separated pairwise_insert)
+    qed
+  then show thesis
+    using \<open>C \<subseteq> S\<close> \<open>closedin X C\<close> that by auto
+qed
+
 
 lemma separation_by_closed_intermediates_eq_count:
    "\<And>X S n.
@@ -1420,6 +1428,7 @@ oops
   RULE_ASSUM_TAC(REWRITE_RULE[pairwise]) THEN
   REWRITE_TAC[IN_DELETE] THEN ASM_MESON_TAC[separatedin]);;
 
+
 lemma separation_by_closed_intermediates_eq_gen:
    "\<And>X S.
         locally_connected_space X \<and> hereditarily normal_space X
@@ -1446,7 +1455,8 @@ oops
   REWRITE_TAC[CONNECTED_IN_EQ_NOT_SEPARATED; IMP_IMP; SUBSET_DIFF] THEN
   SIMP_TAC[]);;
 
-lemma kuratowski_component_number_invariance:
+
+lemma Kuratowski_component_number_invariance:
    "compact_space X \<and>
       Hausdorff_space X \<and>
       locally_connected_space X \<and>
