@@ -1089,45 +1089,39 @@ proof (induction n arbitrary: X Y)
     by (simp add: dimension_le_eq_empty homeomorphic_empty_space)
 next
   case (Suc n)
-  then show ?case sorry
+  then have X_dim_n: "X dim_le n"
+    by simp
+  show ?case 
+  proof (clarsimp simp add: dimension_le.simps [of Y n])
+    fix V b
+    assume "openin Y V" and "b \<in> V"
+    obtain f g where fg: "homeomorphic_maps X Y f g"
+      using \<open>X homeomorphic_space Y\<close> homeomorphic_space_def by blast
+    then have "openin X (g ` V)"
+      using \<open>openin Y V\<close> homeomorphic_map_openness_eq homeomorphic_maps_map by blast
+    then obtain U where "g b \<in> U" "openin X U" and gim: "U \<subseteq> g ` V" and sub: "subtopology X (X frontier_of U) dim_le int n - int 1"
+      using X_dim_n unfolding dimension_le.simps [of X n] by (metis \<open>b \<in> V\<close> imageI of_nat_eq_1_iff)
+    show "\<exists>U. b \<in> U \<and> U \<subseteq> V \<and> openin Y U \<and> subtopology Y (Y frontier_of U) dim_le int n - 1"
+    proof (intro conjI exI)
+      show "b \<in> f ` U"
+        by (metis (no_types, lifting) \<open>b \<in> V\<close> \<open>g b \<in> U\<close> \<open>openin Y V\<close> fg homeomorphic_maps_map image_iff openin_subset subsetD)
+      show "f ` U \<subseteq> V"
+        by (smt (verit, ccfv_threshold) \<open>openin Y V\<close> fg gim homeomorphic_maps_map image_iff openin_subset subset_iff)
+      show "openin Y (f ` U)"
+        using \<open>openin X U\<close> fg homeomorphic_map_openness_eq homeomorphic_maps_map by blast
+      show "subtopology Y (Y frontier_of f ` U) dim_le int n-1"
+      proof (rule Suc.IH)
+        have "homeomorphic_maps (subtopology X (X frontier_of U)) (subtopology Y (Y frontier_of f ` U)) f g"
+          using \<open>openin X U\<close> fg
+          by (metis frontier_of_subset_topspace homeomorphic_map_frontier_of homeomorphic_maps_map homeomorphic_maps_subtopologies openin_subset topspace_subtopology topspace_subtopology_subset)
+        then show "subtopology X (X frontier_of U) homeomorphic_space subtopology Y (Y frontier_of f ` U)"
+          using homeomorphic_space_def by blast
+        show "subtopology X (X frontier_of U) dim_le int n-1"
+          using sub by fastforce
+      qed
+    qed
+  qed
 qed
-
-oops
-  INDUCT_TAC THENL
-     [CONV_TAC INT_REDUCE_CONV THEN REWRITE_TAC[DIMENSION_LE_EQ_EMPTY] THEN
-      MESON_TAC[HOMEOMORPHIC_EMPTY_SPACE];
-      REWRITE_TAC[GSYM INT_OF_NUM_SUC; INT_ARITH `(x + y) - y::int = x`]] THEN
-    MAP_EVERY X_GEN_TAC [`X::A topology`; `Y:B topology`] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-    ONCE_REWRITE_TAC[DIMENSION_LE_CASES] THEN
-    STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-    FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [homeomorphic_space]) THEN
-    REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`f::A=>B`; `g::B=>A`] THEN STRIP_TAC THEN
-    MAP_EVERY X_GEN_TAC [`v::B=>bool`; `b::B`] THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPECL [`image (g::B=>A) v`; `(g::B=>A) b`]) THEN
-    ANTS_TAC THENL
-     [ASM_MESON_TAC[HOMEOMORPHIC_MAPS_MAP; HOMEOMORPHIC_IMP_OPEN_MAP;
-                    open_map; FUN_IN_IMAGE];
-      DISCH_THEN(X_CHOOSE_THEN `u::A=>bool` STRIP_ASSUME_TAC)] THEN
-    EXISTS_TAC `image f u` THEN REPEAT CONJ_TAC THENL
-     [REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET)) THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[homeomorphic_maps; continuous_map]) THEN
-      ASM SET_TAC[];
-      REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET)) THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[homeomorphic_maps; continuous_map]) THEN
-      ASM SET_TAC[];
-      ASM_MESON_TAC[HOMEOMORPHIC_MAPS_MAP; HOMEOMORPHIC_MAP_OPENNESS_EQ];
-      FIRST_X_ASSUM MATCH_MP_TAC THEN
-      EXISTS_TAC `subtopology X (X frontier_of u::A=>bool)` THEN
-      ASM_REWRITE_TAC[homeomorphic_space] THEN
-      MAP_EVERY EXISTS_TAC [`f::A=>B`; `g::B=>A`] THEN
-      MATCH_MP_TAC HOMEOMORPHIC_MAPS_SUBTOPOLOGIES THEN
-      ASM_SIMP_TAC[FRONTIER_OF_SUBSET_TOPSPACE; SET_RULE
-       `s \<subseteq> t \<Longrightarrow> t \<inter> s = s`] THEN
-      CONV_TAC SYM_CONV THEN MATCH_MP_TAC HOMEOMORPHIC_MAP_FRONTIER_OF THEN
-      ASM_MESON_TAC[OPEN_IN_SUBSET; HOMEOMORPHIC_MAPS_MAP]])
-in
 
 lemma homeomorphic_space_dimension_le:
   assumes "X homeomorphic_space Y"
