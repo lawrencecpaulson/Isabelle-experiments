@@ -1400,12 +1400,15 @@ next
           case False
           then have "connectedin X T"
             using \<U>_def connectedin_connected_components_of connectedin_subtopology \<open>T \<in> \<U>\<close> by blast
-          then show ?thesis 
-            apply (simp add: connectedin_eq_not_separated_subset)
-
-            sorry
+          have "T \<subseteq> C1 \<union> \<Union>(\<V> - {C1})"
+            using \<open>\<Union> \<V> = \<Union> \<U>\<close> \<open>T \<in> \<U>\<close> by auto
+          with \<open>connectedin X T\<close>
+          have "\<not> separatedin X C1 (\<Union>(\<V> - {C1}))"
+            unfolding connectedin_eq_not_separated_subset
+            by (smt (verit) that False disjnt_def UnionI disjnt_iff insertE insert_Diff)
+          with that show ?thesis
+            by (metis (no_types, lifting) \<open>finite \<V>\<close> finite_Diff pairwiseD pairwise_alt pw\<V> separatedin_Union(1) separatedin_def)
         qed
-      qed
       qed
       then show False
         using \<open>card \<V> = n\<close> card\<U>
@@ -1413,22 +1416,6 @@ next
     qed
   qed
 qed
-
-  oops
-
-  SUBGOAL_THEN `connectedin X T` MP_TAC THENL
-   [UNDISCH_TAC `(t::A=>bool) \<in> U` THEN EXPAND_TAC "U" THEN
-    REWRITE_TAC[IN_ELIM_THM; IMP_CONJ_ALT] THEN DISCH_THEN(K ALL_TAC) THEN
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP CONNECTED_IN_CONNECTED_COMPONENTS_OF) THEN
-    SIMP_TAC[CONNECTED_IN_SUBTOPOLOGY];
-    REWRITE_TAC[CONNECTED_IN_EQ_NOT_SEPARATED_SUBSET]] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN REWRITE_TAC[] THEN
-  MAP_EVERY EXISTS_TAC [`c1::A=>bool`; `\<Union>(v DELETE (c1::A=>bool))`] THEN
-  REPEAT(CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC]) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[HAS_SIZE]) THEN
-  ASM_SIMP_TAC[SEPARATED_IN_UNIONS; FINITE_DELETE] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[pairwise]) THEN
-  REWRITE_TAC[IN_DELETE] THEN ASM_MESON_TAC[separatedin]);;
 
 
 lemma separation_by_closed_intermediates_eq_gen:
