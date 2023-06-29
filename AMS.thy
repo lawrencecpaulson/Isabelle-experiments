@@ -33,6 +33,16 @@ qed
 lemma lepoll_iff_card_le: "\<lbrakk>finite A; finite B\<rbrakk> \<Longrightarrow> A \<lesssim> B \<longleftrightarrow> card A \<le> card B"
   by (simp add: inj_on_iff_card_le lepoll_def)
 
+lemma lepoll_iff_finite_card: "A \<lesssim> {..<n::nat} \<longleftrightarrow> finite A \<and> card A \<le> n"
+  by (metis card_lessThan finite_lessThan finite_surj lepoll_iff lepoll_iff_card_le)
+
+lemma eqpoll_iff_finite_card: "A \<approx> {..<n::nat} \<longleftrightarrow> finite A \<and> card A = n"
+  by (metis card_lessThan eqpoll_finite_iff eqpoll_iff_card finite_lessThan)
+
+lemma lesspoll_iff_finite_card: "A \<prec> {..<n::nat} \<longleftrightarrow> finite A \<and> card A < n"
+  by (metis eqpoll_iff_finite_card lepoll_iff_finite_card lesspoll_def order_less_le)
+
+
 
 (*HOL Light's FORALL_POS_MONO_1_EQ*)
 lemma Inter_eq_Inter_inverse_Suc:
@@ -87,7 +97,6 @@ lemma card_lepoll_quasi_components_of_topspace: "quasi_components_of X \<lesssim
 (*NEEDS first_countable
 lemma first_countable_mtopology:
    "first_countable mtopology"
-oops
   GEN_TAC THEN REWRITE_TAC[first_countable; TOPSPACE_MTOPOLOGY] THEN
   X_GEN_TAC `x::A` THEN DISCH_TAC THEN
   EXISTS_TAC `{ mball m (x::A,r) | rational r \<and> 0 < r}` THEN
@@ -109,7 +118,6 @@ oops
 
 lemma metrizable_imp_first_countable:
    "metrizable_space X \<Longrightarrow> first_countable X"
-oops
   REWRITE_TAC[FORALL_METRIZABLE_SPACE; FIRST_COUNTABLE_MTOPOLOGY]);;
 *)
 
@@ -1234,7 +1242,6 @@ proof -
   qed
 qed
 
-
 lemma separation_by_closed_intermediates_gen:
   assumes X: "hereditarily normal_space X"
     and discon: "\<not> connectedin X (topspace X - S)"
@@ -1430,51 +1437,185 @@ proof -
 qed
 
 
-lemma Kuratowski_component_number_invariance:
-   "compact_space X \<and>
-      Hausdorff_space X \<and>
-      locally_connected_space X \<and>
-      hereditarily normal_space X
-      \<Longrightarrow> ((\<forall>S t n.
-              closedin X S \<and> closedin X t \<and>
-              (subtopology X S) homeomorphic_space (subtopology X t)
-              \<Longrightarrow> (connected_components_of
-                    (subtopology X (topspace X - S)) HAS_SIZE n \<longleftrightarrow>
-                   connected_components_of
-                    (subtopology X (topspace X - t)) HAS_SIZE n)) \<longleftrightarrow>
-           (\<forall>S t n.
-              (subtopology X S) homeomorphic_space (subtopology X t)
-              \<Longrightarrow> (connected_components_of
-                    (subtopology X (topspace X - S)) HAS_SIZE n \<longleftrightarrow>
-                   connected_components_of
-                    (subtopology X (topspace X - t)) HAS_SIZE n)))"
-oops
-  lemma lemma:
-   "\<And>(R::A=>A->bool) (f::A=>B->bool).
-          (\<forall>S t. R S t \<Longrightarrow> R t S)
-          \<Longrightarrow> ((\<forall>S t n. R S t \<Longrightarrow> (f S HAS_SIZE n \<longleftrightarrow> f t HAS_SIZE n)) \<longleftrightarrow>
-               (\<forall>n S t. R S t \<Longrightarrow> 1..n \<lesssim> f S \<Longrightarrow> 1..n \<lesssim> f t))"
-oops
-    REPEAT STRIP_TAC THEN TRANS_TAC EQ_TRANS
-     `\<forall>S t n. R S t \<Longrightarrow> (1..n \<lesssim> (f::A=>B->bool) S \<longleftrightarrow> 1..n \<lesssim> f t)` THEN
-    CONJ_TAC THENL [POP_ASSUM(K ALL_TAC); ASM_MESON_TAC[]] THEN
-    REWRITE_TAC[HAS_SIZE; NUMSEG_CARD_LE] THEN EQ_TAC THENL
-     [MESON_TAC[];
-      REWRITE_TAC[ARITH_RULE `a = n \<longleftrightarrow> n \<le> a \<and> \<not> (n + 1 \<le> a)`] THEN
-      MESON_TAC[]])
-  and lemur = prove
-   (`pairwise (separatedin (subtopology X (topspace X - S))) U \<and>
-     (\<forall>t. t \<in> U \<Longrightarrow> (t \<noteq> {})) \<and>
-     \<Union>U = topspace(subtopology X (topspace X - S)) \<longleftrightarrow>
-     pairwise (separatedin X) U \<and>
-     (\<forall>t. t \<in> U \<Longrightarrow> (t \<noteq> {})) \<and>
-     \<Union>U = topspace X - S"
-oops
-    REWRITE_TAC[pairwise; SEPARATED_IN_SUBTOPOLOGY; TOPSPACE_SUBTOPOLOGY] THEN
-    SET_TAC[])
-in
 
-  REPEAT STRIP_TAC THEN EQ_TAC THENL [ALL_TAC; MESON_TAC[]] THEN
+lemma card_le_connnected_components_connectedin:
+   "\<And>(X::A topology) u.
+        (\<forall>c. c \<in> u \<Longrightarrow> connected_in X c) \<and>
+        \<Union> u = topspace X
+        \<Longrightarrow> connected_components_of X \<lesssim> u"
+oops 
+  REPEAT STRIP_TAC THEN TRANS_TAC CARD_LE_TRANS `u DELETE ({}:A=>bool)` THEN
+  CONJ_TAC THENL
+   [ALL_TAC; MATCH_MP_TAC CARD_LE_SUBSET THEN SET_TAC[]] THEN
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC CARD_LE_RELATIONAL_FULL THEN
+  EXISTS_TAC `\<lambda>(s::A=>bool) t. s \<subseteq> t` THEN REWRITE_TAC[] THEN
+  CONJ_TAC THENL
+   [REWRITE_TAC[connected_components_of; FORALL_IN_GSPEC] THEN
+    X_GEN_TAC `a::A` THEN DISCH_TAC THEN
+    SUBGOAL_THEN `(a::A) \<in> \<Union> u` MP_TAC THENL
+     [ASM_REWRITE_TAC[]; REWRITE_TAC[IN_UNIONS]] THEN
+    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `c::A=>bool` THEN
+    STRIP_TAC THEN ASM_REWRITE_TAC[IN_DELETE] THEN
+    CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
+    MATCH_MP_TAC CONNECTED_COMPONENT_OF_MAXIMAL THEN
+    ASM_SIMP_TAC[];
+    REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM; IN_DELETE] THEN
+    REWRITE_TAC[connected_components_of; FORALL_IN_GSPEC] THEN
+    SIMP_TAC[CONNECTED_COMPONENT_OF_EQ_OVERLAP] THEN ASM SET_TAC[]]);;
+
+lemma card_le_connected_components_alt:
+   "\<And>(X::A topology) n.
+       ({1..n} \<lesssim> connected_components_of X \<longleftrightarrow>
+       n = 0 \<or>
+       \<exists>u. u HAS_SIZE n \<and>
+           pairwise (separated_in X) u \<and>
+           (\<forall>t. t \<in> u \<Longrightarrow> (t \<noteq> {})) \<and>
+           \<Union> u = topspace X)"
+oops 
+  REPEAT STRIP_TAC THEN
+  ASM_CASES_TAC `n = 0` THEN ASM_REWRITE_TAC[] THENL
+   [CONV_TAC(ONCE_DEPTH_CONV NUMSEG_CONV) THEN
+    REWRITE_TAC[CARD_EMPTY_LE];
+    ALL_TAC] THEN
+  EQ_TAC THENL
+   [POP_ASSUM MP_TAC THEN REWRITE_TAC[IMP_IMP];
+    DISCH_THEN(X_CHOOSE_THEN `u:(A=>bool)->bool` STRIP_ASSUME_TAC) THEN
+    REWRITE_TAC[NUMSEG_CARD_LE] THEN DISCH_TAC THEN
+    SUBGOAL_THEN `n = card(u:(A=>bool)->bool)` SUBST1_TAC THENL
+     [ASM_MESON_TAC[HAS_SIZE]; ALL_TAC] THEN
+    W(MP_TAC o PART_MATCH (rand o rand) CARD_LE_CARD o snd) THEN
+    ANTS_TAC THENL [ASM_MESON_TAC[HAS_SIZE]; DISCH_THEN(SUBST1_TAC o SYM)] THEN
+    MATCH_MP_TAC CARD_LE_RELATIONAL_FULL THEN
+    EXISTS_TAC `\<lambda>(u::A=>bool) v. ~disjnt u v` THEN
+    REWRITE_TAC[] THEN CONJ_TAC THENL
+     [MP_TAC(ISPEC `X::A topology` UNIONS_CONNECTED_COMPONENTS_OF) THEN
+      ASM SET_TAC[];
+      ALL_TAC] THEN
+    MAP_EVERY X_GEN_TAC [`t::A=>bool`; `c1::A=>bool`; `c2::A=>bool`] THEN
+    STRIP_TAC THEN ASM_CASES_TAC `c1::A=>bool = c2` THEN ASM_REWRITE_TAC[] THEN
+    FIRST_ASSUM(MP_TAC o MATCH_MP CONNECTED_IN_CONNECTED_COMPONENTS_OF) THEN
+    REWRITE_TAC[CONNECTED_IN_EQ_NOT_SEPARATED_SUBSET] THEN
+    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN REWRITE_TAC[] THEN
+    MAP_EVERY EXISTS_TAC [`c1::A=>bool`; `\<Union>(u DELETE (c1::A=>bool))`] THEN
+    REPEAT(CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC]) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[HAS_SIZE]) THEN
+    ASM_SIMP_TAC[SEPARATED_IN_UNIONS; FINITE_DELETE] THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[pairwise]) THEN
+    REWRITE_TAC[IN_DELETE] THEN ASM_MESON_TAC[separated_in]] THEN
+  SPEC_TAC(`n::num`,`n::num`) THEN
+  MATCH_MP_TAC num_WF THEN X_GEN_TAC `n::num` THEN REPEAT STRIP_TAC THEN
+  ASM_CASES_TAC `n = 1` THENL
+   [EXISTS_TAC `{topspace X::A=>bool}` THEN
+    ASM_REWRITE_TAC[PAIRWISE_SING; UNIONS_1; FORALL_IN_INSERT] THEN
+    REWRITE_TAC[HAS_SIZE; CARD_SING; FINITE_SING; NOT_IN_EMPTY] THEN
+    DISCH_TAC THEN UNDISCH_TAC
+     `1..n \<lesssim> connected_components_of(X::A topology)` THEN
+    ASM_SIMP_TAC[CONNECTED_COMPONENTS_OF_EMPTY_SPACE] THEN
+    REWRITE_TAC[CARD_LE_EMPTY; NUMSEG_EMPTY; LT_REFL];
+    ALL_TAC] THEN
+  FIRST_X_ASSUM(MP_TAC o SPEC `n - 1`) THEN
+  ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN ANTS_TAC THENL
+   [CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+    TRANS_TAC CARD_LE_TRANS `1..n` THEN ASM_REWRITE_TAC[] THEN
+    ASM_SIMP_TAC[FINITE_NUMSEG; CARD_LE_CARD; CARD_NUMSEG_1] THEN
+    ARITH_TAC;
+    ALL_TAC] THEN
+  DISCH_THEN(X_CHOOSE_THEN `u:(A=>bool)->bool` STRIP_ASSUME_TAC) THEN
+  ASM_CASES_TAC `\<forall>c::A=>bool. c \<in> u \<Longrightarrow> connected_in X c` THENL
+   [MP_TAC(ISPECL [`X::A topology`; `u:(A=>bool)->bool`]
+        CARD_LE_CONNNECTED_COMPONENTS_CONNECTEDIN) THEN
+    MATCH_MP_TAC(TAUT `~p \<Longrightarrow> p \<Longrightarrow> q`) THEN ASM_REWRITE_TAC[CARD_NOT_LE] THEN
+    TRANS_TAC CARD_LTE_TRANS `1..n` THEN ASM_REWRITE_TAC[] THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[HAS_SIZE]) THEN
+    ASM_SIMP_TAC[CARD_LT_CARD; FINITE_NUMSEG; CARD_NUMSEG_1] THEN
+    ASM_ARITH_TAC;
+    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id [NOT_FORALL_THM])] THEN
+  REWRITE_TAC[NOT_IMP; CONNECTED_IN_EQ_NOT_SEPARATED] THEN
+  ASM_SIMP_TAC[SET_RULE
+   `\<Union> u = t \<Longrightarrow> (c \<in> u \<and> ~(c \<subseteq> t \<and> ~P) \<longleftrightarrow> c \<in> u \<and> P)`] THEN
+  REWRITE_TAC[RIGHT_AND_EXISTS_THM; LEFT_IMP_EXISTS_THM] THEN
+  MAP_EVERY X_GEN_TAC [`c::A=>bool`; `a::A=>bool`; `b::A=>bool`] THEN
+  STRIP_TAC THEN
+  EXISTS_TAC `(a::A=>bool) insert b insert (u - {c})` THEN
+  SUBGOAL_THEN `~(a::A=>bool = b)` ASSUME_TAC THENL
+   [ASM_MESON_TAC[SEPARATED_IN_REFL]; ALL_TAC] THEN
+  SUBGOAL_THEN `~(a::A=>bool = c) \<and> (b \<noteq> c)` STRIP_ASSUME_TAC THENL
+   [FIRST_ASSUM(MP_TAC o MATCH_MP SEPARATED_IN_IMP_DISJOINT) THEN
+    ASM SET_TAC[];
+    ALL_TAC] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[HAS_SIZE]) THEN
+  ASM_REWRITE_TAC[FORALL_IN_INSERT] THEN
+  ASM_SIMP_TAC[CARD_CLAUSES; HAS_SIZE; FINITE_INSERT; FINITE_DELETE;
+               IN_INSERT; IN_DELETE; CARD_DELETE] THEN
+  SUBGOAL_THEN
+   `\<forall>d::A=>bool. d \<in> u - {c}
+                \<Longrightarrow> separated_in X a d \<and> separated_in X b d`
+  ASSUME_TAC THENL
+   [RULE_ASSUM_TAC(REWRITE_RULE[pairwise]) THEN REWRITE_TAC[IN_DELETE] THEN
+    REPEAT STRIP_TAC THEN MATCH_MP_TAC SEPARATED_IN_MONO THEN
+    MAP_EVERY EXISTS_TAC [`c::A=>bool`; `d::A=>bool`] THEN ASM SET_TAC[];
+    ALL_TAC] THEN
+  SUBGOAL_THEN `~((a::A=>bool) \<in> u) \<and> (b \<notin> u)` STRIP_ASSUME_TAC THENL
+   [ASM_MESON_TAC[IN_DELETE; SEPARATED_IN_REFL];
+    ALL_TAC] THEN
+  ASM_REWRITE_TAC[] THEN CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
+  CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
+  SIMP_TAC[PAIRWISE_INSERT_SYMMETRIC; SEPARATED_IN_SYM] THEN
+  ASM_SIMP_TAC[IMP_CONJ; FORALL_IN_INSERT] THEN
+  MATCH_MP_TAC PAIRWISE_MONO THEN EXISTS_TAC `u:(A=>bool)->bool` THEN
+  ASM_REWRITE_TAC[] THEN SET_TAC[]);;
+
+
+lemma lemmaX:
+  assumes "\<And>S T. R S T \<Longrightarrow> R T S"
+  shows "(\<forall>S T n. R S T \<longrightarrow> (f S \<approx> {..<n::nat} \<longleftrightarrow> f T \<approx> {..<n::nat})) \<longleftrightarrow>
+         (\<forall>n S T. R S T \<longrightarrow> {..<n::nat} \<lesssim> f S \<longrightarrow> {..<n::nat} \<lesssim> f T)"
+  apply (rule )
+   apply (meson eqpoll_iff_finite_card eqpoll_sym finite_lepoll_infinite finite_lessThan lepoll_trans2)
+  by (smt (verit, best) assms card_lessThan eqpoll_iff_card eqpoll_imp_lepoll finite_lepoll_infinite finite_lessThan lepoll_antisym lepoll_iff_finite_card lessI linorder_not_le nle_le)
+
+
+
+lemma lemur:
+   "pairwise (separatedin (subtopology X (topspace X - S))) \<U> \<and> {} \<notin> \<U> \<and>
+     \<Union>\<U> = topspace(subtopology X (topspace X - S)) \<longleftrightarrow>
+     pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - S"
+  by (auto simp: pairwise_def separatedin_subtopology)
+
+
+lemma Kuratowski_component_number_invariance:
+  assumes "compact_space X" "Hausdorff_space X" "locally_connected_space X" "hereditarily normal_space X"
+  shows "((\<forall>S T n.
+              closedin X S \<and> closedin X T \<and>
+              (subtopology X S) homeomorphic_space (subtopology X T)
+              \<longrightarrow> (connected_components_of
+                    (subtopology X (topspace X - S)) \<approx> {..<n::nat} \<longleftrightarrow>
+                   connected_components_of
+                    (subtopology X (topspace X - T)) \<approx> {..<n::nat})) \<longleftrightarrow>
+           (\<forall>S T n.
+              (subtopology X S) homeomorphic_space (subtopology X T)
+              \<longrightarrow> (connected_components_of
+                    (subtopology X (topspace X - S)) \<approx> {..<n::nat} \<longleftrightarrow>
+                   connected_components_of
+                    (subtopology X (topspace X - T)) \<approx> {..<n::nat})))"
+         (is "?lhs = ?rhs")
+proof
+  assume L: ?lhs 
+  then
+  show ?rhs
+    apply (subst (asm)lemmaX)
+    using homeomorphic_space_sym apply blast
+    apply (subst lemmaX)
+    using homeomorphic_space_sym apply blast
+    apply (erule all_forward)
+
+
+
+    by (metis hnX separation_by_closed_intermediates_count)
+qed blast
+
+oops
+
   W(MP_TAC \<circ> PART_MATCH (lhand \<circ> rand) lemma \<circ> lhand \<circ> snd) THEN ANTS_TAC THENL
    [MESON_TAC[HOMEOMORPHIC_SPACE_SYM]; DISCH_THEN SUBST1_TAC] THEN
   W(MP_TAC \<circ> PART_MATCH (lhand \<circ> rand) lemma \<circ> rand \<circ> snd) THEN ANTS_TAC THENL
