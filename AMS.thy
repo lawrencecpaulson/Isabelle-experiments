@@ -1348,16 +1348,11 @@ next
             have "closedin (subtopology X (topspace X - C)) (\<Union>(\<V> - {T}))"
               using \<U>_def \<open>\<V> \<subseteq> \<U>\<close> closedin_connected_components_of \<open>finite \<V>\<close>
               by (force simp add: intro!: closedin_Union)
-            then have "openin (subtopology X (topspace X - S)) (topspace X - S - \<Union>(\<V> - {T}))"
-              apply (simp add: openin_closedin_eq)
-              apply (rule )
-               apply (force simp add: )
-              apply (simp add: Int_absorb1 closedin_subtopology)
-              by (metis Diff_Diff_Int Diff_Un \<open>C \<subseteq> S\<close> inf.left_commute sup.orderE)
-            moreover have "\<And>V. V \<in> \<V> - {T} \<Longrightarrow> openin (subtopology X (topspace X - S)) (V - S)"
-              using \<open>\<V> \<subseteq> \<U>\<close> ope\<U> 
-              apply clarsimp
-              by (metis IntD2 Int_Diff inf.orderE openin_subset openin_subtopology_Int)
+            with \<open>C \<subseteq> S\<close> have "openin (subtopology X (topspace X - S)) (topspace X - S - \<Union>(\<V> - {T}))"
+              by (fastforce simp add: openin_closedin_eq closedin_subtopology Int_absorb1)
+            moreover have "\<And>V. V \<in> \<V> \<and> V\<noteq>T \<Longrightarrow> openin (subtopology X (topspace X - S)) (V - S)"
+              using \<open>\<V> \<subseteq> \<U>\<close> ope\<U>
+              by (metis IntD2 Int_Diff inf.orderE openin_subset openin_subtopology) 
             ultimately have "openin (subtopology X (topspace X - S)) A" "openin (subtopology X (topspace X - S)) B"
               using \<section> \<W>_def by blast+
             with \<open>disjnt A B\<close> show "separatedin (subtopology X (topspace X - S)) A B"
@@ -1393,10 +1388,6 @@ next
         show "C1 = C2"
           if "T \<in> \<U>" and "C1 \<in> \<V>" and "C2 \<in> \<V>" and "\<not> disjnt T C1" and "\<not> disjnt T C2" for T C1 C2
         proof (cases "C1=C2")
-          case True
-          then show ?thesis
-            by auto
-        next
           case False
           then have "connectedin X T"
             using \<U>_def connectedin_connected_components_of connectedin_subtopology \<open>T \<in> \<U>\<close> by blast
@@ -1408,7 +1399,7 @@ next
             by (smt (verit) that False disjnt_def UnionI disjnt_iff insertE insert_Diff)
           with that show ?thesis
             by (metis (no_types, lifting) \<open>finite \<V>\<close> finite_Diff pairwiseD pairwise_alt pw\<V> separatedin_Union(1) separatedin_def)
-        qed
+        qed auto
       qed
       then show False
         using \<open>card \<V> = n\<close> card\<U>
@@ -1417,32 +1408,26 @@ next
   qed
 qed
 
-
 lemma separation_by_closed_intermediates_eq_gen:
-   "\<And>X S.
-        locally_connected_space X \<and> hereditarily normal_space X
-        \<Longrightarrow> (\<not> connectedin X (topspace X - S) \<longleftrightarrow>
-             \<exists>C. closedin X C \<and> C \<subseteq> S \<and>
-                 \<forall>D. closedin X D \<and> C \<subseteq> D \<and> D \<subseteq> S
-                     \<Longrightarrow> \<not> connectedin X (topspace X - D))"
-oops
-  REPEAT GEN_TAC THEN
-  MP_TAC(ISPECL [`X::A topology`; `S::A=>bool`; `2`]
-    SEPARATION_BY_CLOSED_INTERMEDIATES_EQ_COUNT) THEN
-  REWRITE_TAC[MESON[HAS_SIZE_CONV `S HAS_SIZE 2`]
-   `(\<exists>S. S HAS_SIZE 2 \<and> P S) \<longleftrightarrow> (\<exists>a b. (a \<noteq> b) \<and> P{a,b})`] THEN
-  REWRITE_TAC[PAIRWISE_INSERT; UNIONS_2; FORALL_IN_INSERT; NOT_IN_EMPTY;
-              IMP_CONJ; NOT_IN_EMPTY; PAIRWISE_EMPTY] THEN
-  REWRITE_TAC[MESON[SEPARATED_IN_SYM]
-   `(a \<noteq> b) \<and>
-    ((b \<noteq> a) \<Longrightarrow> separatedin X a b \<and> separatedin X b a) \<and> Q \<longleftrightarrow>
-    (a \<noteq> b) \<and> separatedin X a b \<and> Q`] THEN
-  REWRITE_TAC[MESON[SEPARATED_IN_REFL]
-   `(a \<noteq> b) \<and> separatedin X a b \<and>
-    ((a \<noteq> {}) \<and> (b \<noteq> {})) \<and> a \<union> b = S \<longleftrightarrow>
-    a \<union> b = S \<and> (a \<noteq> {}) \<and> (b \<noteq> {}) \<and> separatedin X a b`] THEN
-  REWRITE_TAC[CONNECTED_IN_EQ_NOT_SEPARATED; IMP_IMP; SUBSET_DIFF] THEN
-  SIMP_TAC[]);;
+  assumes "locally_connected_space X" "hereditarily normal_space X"
+  shows "\<not> connectedin X (topspace X - S) \<longleftrightarrow>
+         (\<exists>C. closedin X C \<and> C \<subseteq> S \<and>
+              (\<forall>D. closedin X D \<and> C \<subseteq> D \<and> D \<subseteq> S \<longrightarrow> \<not> connectedin X (topspace X - D)))"
+    (is "?lhs = ?rhs")
+proof -
+  have *: "(\<exists>C1 C2. separatedin X C1 C2 \<and> C1\<noteq>C2 \<and> C1\<noteq>{} \<and> C2\<noteq>{} \<and> C1 \<union> C2 = topspace X - S) \<longleftrightarrow>
+         (\<exists>C. closedin X C \<and> C \<subseteq> S \<and>
+              (\<forall>D. closedin X D \<and> C \<subseteq> D \<and> D \<subseteq> S
+                   \<longrightarrow> (\<exists>C1 C2. separatedin X C1 C2 \<and> C1\<noteq>C2 \<and> C1\<noteq>{} \<and> C2\<noteq>{} \<and> C1 \<union> C2 = topspace X - D)))"
+    using separation_by_closed_intermediates_eq_count [OF assms, of "Suc(Suc 0)" S]
+    apply (simp add: card_Suc_eq pairwise_insert separatedin_sym flip: ex_simps cong: conj_cong)
+    apply (simp add: eq_sym_conv conj_ac)
+    done
+  with separatedin_refl
+  show ?thesis
+    apply (simp add: connectedin_eq_not_separated)
+    by (smt (verit, best) separatedin_refl)
+qed
 
 
 lemma Kuratowski_component_number_invariance:
