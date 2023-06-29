@@ -16,6 +16,24 @@ lemma relative_to_subset_trans:
    "\<lbrakk>(P relative_to U) S; S \<subseteq> T; T \<subseteq> U\<rbrakk> \<Longrightarrow> (P relative_to T) S"
   unfolding relative_to_def by auto
 
+
+lemma card_le_relational_full:
+  assumes "\<And>y. y \<in> B \<Longrightarrow> \<exists>x. x \<in> A \<and> R x y"
+    and "\<And>x y y'. \<lbrakk>x \<in> A; y \<in> B; y' \<in> B; R x y; R x y'\<rbrakk> \<Longrightarrow> y = y'"
+  shows "B \<lesssim> A"
+proof -
+  obtain f where f: "\<And>y. y \<in> B \<Longrightarrow> f y \<in> A \<and> R (f y) y"
+    using assms by metis
+  with assms have "inj_on f B"
+    by (metis inj_onI)
+  with f show ?thesis
+    unfolding lepoll_def by blast
+qed
+
+lemma lepoll_iff_card_le: "\<lbrakk>finite A; finite B\<rbrakk> \<Longrightarrow> A \<lesssim> B \<longleftrightarrow> card A \<le> card B"
+  by (simp add: inj_on_iff_card_le lepoll_def)
+
+
 (*HOL Light's FORALL_POS_MONO_1_EQ*)
 lemma Inter_eq_Inter_inverse_Suc:
   assumes "\<And>r' r. r' < r \<Longrightarrow> A r' \<subseteq> A r"
@@ -1190,12 +1208,12 @@ proof -
     using assms by (smt (verit, best) Diff_subset Sup_le_iff hereditarily_normal_separation_pairwise)
   show thesis
   proof
-    show "closedin X (topspace X - \<Union> (F ` \<U>))"
+    show "closedin X (topspace X - \<Union>(F ` \<U>))"
       using F by blast
-    show "topspace X - \<Union> (F ` \<U>) \<subseteq> S"
+    show "topspace X - \<Union>(F ` \<U>) \<subseteq> S"
       using UU F by auto
-    show "\<exists>\<V>. finite \<V> \<and> card \<V> = card \<U> \<and> pairwise (separatedin X) \<V> \<and> {} \<notin> \<V> \<and> \<Union> \<V> = topspace X - C"
-      if "closedin X C" "C \<subseteq> S" and C: "topspace X - \<Union> (F ` \<U>) \<subseteq> C" for C
+    show "\<exists>\<V>. finite \<V> \<and> card \<V> = card \<U> \<and> pairwise (separatedin X) \<V> \<and> {} \<notin> \<V> \<and> \<Union>\<V> = topspace X - C"
+      if "closedin X C" "C \<subseteq> S" and C: "topspace X - \<Union>(F ` \<U>) \<subseteq> C" for C
     proof (intro exI conjI strip)
       show "finite ((\<lambda>S. F S - C) ` \<U>)"
         by (simp add: assms(2))
@@ -1236,7 +1254,7 @@ proof -
     if D: "closedin X D" "C \<subseteq> D" "D \<subseteq> S" for D 
   proof -
     obtain V1 V2 where *: "pairwise (separatedin X) {V1,V2}" "{} \<notin> {V1,V2}" 
-                          "\<Union> {V1,V2} = topspace X - D" "V1\<noteq>V2"
+                          "\<Union>{V1,V2} = topspace X - D" "V1\<noteq>V2"
       by (smt (verit, ccfv_SIG) C [OF D] pairwise_insert card_Suc_eq_finite card_0_eq insert_iff)
     then have "disjnt V1 V2"
       by (metis pairwise_insert separatedin_imp_disjoint singleton_iff)
@@ -1249,172 +1267,156 @@ qed
 
 
 lemma separation_by_closed_intermediates_eq_count:
-   "\<And>X S n.
-        locally_connected_space X \<and> hereditarily normal_space X
-        \<Longrightarrow> ((\<exists>U. U HAS_SIZE n \<and>
-                  pairwise (separatedin X) U \<and>
-                  (\<forall>t. t \<in> U \<Longrightarrow> (t \<noteq> {})) \<and>
-                  \<Union>U = topspace X - S) \<longleftrightarrow>
-             (\<exists>C. closedin X C \<and> C \<subseteq> S \<and>
-                  \<forall>D. closedin X D \<and> C \<subseteq> D \<and> D \<subseteq> S
-                      \<Longrightarrow> \<exists>U. U HAS_SIZE n \<and>
-                              pairwise (separatedin X) U \<and>
-                              (\<forall>t. t \<in> U \<Longrightarrow> (t \<noteq> {})) \<and>
-                              \<Union>U = topspace X - D))"
-oops
-  REPEAT STRIP_TAC THEN EQ_TAC THENL
-   [MATCH_MP_TAC(ONCE_REWRITE_RULE [IMP_CONJ]
-        SEPARATION_BY_CLOSED_INTERMEDIATES_COUNT) THEN
-    ASM_REWRITE_TAC[];
-    ALL_TAC] THEN
-  ASM_CASES_TAC `n = 0` THENL
-   [ASM_REWRITE_TAC[HAS_SIZE_0; UNWIND_THM2; NOT_IN_EMPTY; UNIONS_0] THEN
-    REWRITE_TAC[PAIRWISE_EMPTY] THEN SET_TAC[];
-    ALL_TAC] THEN
-  GEN_REWRITE_TAC id [GSYM CONTRAPOS_THM] THEN
-  REWRITE_TAC[NOT_EXISTS_THM] THEN STRIP_TAC THEN
-  X_GEN_TAC `C::A=>bool` THEN
-  REPLICATE_TAC 2 (DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-  DISCH_THEN(LABEL_TAC "*") THEN
-  ABBREV_TAC
-   `U = {D::A=>bool | D \<in> connected_components_of
-                           (subtopology X (topspace X - C)) \<and>
-                     \<not> (D - S = {})}` THEN
-  SUBGOAL_THEN `\<forall>t::A=>bool. t \<in> U \<Longrightarrow> openin X t` ASSUME_TAC THENL
-   [EXPAND_TAC "U" THEN REWRITE_TAC[FORALL_IN_GSPEC] THEN
-    X_GEN_TAC `D::A=>bool` THEN
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP (REWRITE_RULE[IMP_CONJ_ALT]
-      OPEN_IN_CONNECTED_COMPONENTS_OF_LOCALLY_CONNECTED_SPACE) \<circ>
-     CONJUNCT1) THEN
-    ASM_SIMP_TAC[OPEN_IN_OPEN_SUBTOPOLOGY; OPEN_IN_DIFF;
-                 OPEN_IN_TOPSPACE] THEN
-    ANTS_TAC THENL [ALL_TAC; SIMP_TAC[]] THEN
-    MATCH_MP_TAC LOCALLY_CONNECTED_SPACE_OPEN_SUBSET THEN
-    ASM_SIMP_TAC[OPEN_IN_DIFF; OPEN_IN_TOPSPACE];
-    ALL_TAC] THEN
-  SUBGOAL_THEN `\<forall>t::A=>bool. t \<in> U \<Longrightarrow> (t \<noteq> {})` ASSUME_TAC THENL
-   [ASM SET_TAC[]; ALL_TAC] THEN
-  SUBGOAL_THEN `pairwise disjnt (U:(A=>bool)->bool)` ASSUME_TAC THENL
-   [EXPAND_TAC "U" THEN MP_TAC(ISPEC
-     `subtopology X (topspace X - C):A topology`
-        PAIRWISE_DISJOINT_CONNECTED_COMPONENTS_OF) THEN
-    MATCH_MP_TAC(REWRITE_RULE[IMP_CONJ_ALT] PAIRWISE_MONO) THEN
-    REWRITE_TAC[SUBSET_RESTRICT];
-    ALL_TAC] THEN
-  SUBGOAL_THEN `finite(U:(A=>bool)->bool) \<and> card U < n`
-  STRIP_ASSUME_TAC THENL
-   [ONCE_REWRITE_TAC[TAUT `p \<and> q \<longleftrightarrow> (p \<noteq>=> \<not> q)`] THEN
-    REWRITE_TAC[NOT_LT] THEN DISCH_TAC THEN
-    FIRST_ASSUM(MP_TAC \<circ> MATCH_MP CHOOSE_SUBSET_STRONG) THEN
-    DISCH_THEN(X_CHOOSE_THEN `v:(A=>bool)->bool` STRIP_ASSUME_TAC) THEN
-    SUBGOAL_THEN `\<exists>t::A=>bool. t \<in> v` STRIP_ASSUME_TAC THENL
-     [REWRITE_TAC[MEMBER_NOT_EMPTY] THEN ASM_MESON_TAC[HAS_SIZE_0; HAS_SIZE];
-      ALL_TAC] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> SPEC
-     `(topspace X - S - \<Union>(v - {t})) insert
-      image (\<lambda>d::A=>bool. D - S) (v - {t})`) THEN
-    REWRITE_TAC[] THEN
-    MATCH_MP_TAC(TAUT
-     `D \<and> C \<and> b \<and> (b \<and> C \<Longrightarrow> a) \<Longrightarrow> a \<and> b \<and> C \<and> D`) THEN
-    REPEAT CONJ_TAC THENL
-     [RULE_ASSUM_TAC(REWRITE_RULE[UNIONS_IMAGE; OPEN_IN_CLOSED_IN_EQ]) THEN
-      REWRITE_TAC[UNIONS_IMAGE; UNIONS_INSERT] THEN ASM SET_TAC[];
-      REWRITE_TAC[FORALL_IN_INSERT; FORALL_IN_IMAGE] THEN
-      CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-      SUBGOAL_THEN `\<exists>a::A. a \<in> t \<and> (a \<notin> S)` STRIP_ASSUME_TAC THENL
-       [ASM SET_TAC[]; ALL_TAC] THEN
-      REWRITE_TAC[GSYM MEMBER_NOT_EMPTY] THEN EXISTS_TAC `a::A` THEN
-      ASM_REWRITE_TAC[IN_DIFF] THEN CONJ_TAC THENL
-       [MP_TAC(ISPEC `subtopology X (topspace X - C::A=>bool)`
-         CONNECTED_COMPONENTS_OF_SUBSET) THEN
-        REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN ASM SET_TAC[];
-        ALL_TAC] THEN
-      MP_TAC(SPECL [`v:(A=>bool)->bool`; `{t::A=>bool}`]
-        DIFF_UNIONS_PAIRWISE_DISJOINT) THEN
-      ASM_REWRITE_TAC[SING_SUBSET; SET_RULE `S - {a} = S - {a}`] THEN
-      RULE_ASSUM_TAC(REWRITE_RULE[pairwise]) THEN
-      REWRITE_TAC[pairwise] THEN ASM SET_TAC[];
-      MATCH_MP_TAC PAIRWISE_IMP THEN EXISTS_TAC
-       `separatedin (subtopology X (topspace X - S):A topology)` THEN
-      CONJ_TAC THENL [ALL_TAC; SIMP_TAC[SEPARATED_IN_SUBTOPOLOGY]] THEN
-      MATCH_MP_TAC PAIRWISE_IMP THEN
-      EXISTS_TAC `disjnt:(A=>bool)->(A=>bool)->bool` THEN CONJ_TAC THENL
-       [REWRITE_TAC[PAIRWISE_INSERT; PAIRWISE_IMAGE] THEN
-        REWRITE_TAC[IMP_CONJ; FORALL_IN_IMAGE; pairwise] THEN
-        RULE_ASSUM_TAC(REWRITE_RULE[pairwise]) THEN ASM SET_TAC[];
-        MATCH_MP_TAC(MESON[]
-         `\<forall>P. (\<forall>x y. P x \<and> P y \<Longrightarrow> (R x y \<longleftrightarrow> Q x y)) \<and> (\<forall>x. x \<in> S \<Longrightarrow> P x)
-          \<Longrightarrow> \<forall>x y. x \<in> S \<and> y \<in> S \<and> Q x y \<and> (x \<noteq> y) \<Longrightarrow> R x y`) THEN
-        EXISTS_TAC
-         `openin (subtopology X (topspace X - S):A topology)` THEN
-        REWRITE_TAC[SEPARATED_IN_OPEN_SETS; FORALL_IN_INSERT] THEN
-        REWRITE_TAC[FORALL_IN_IMAGE] THEN CONJ_TAC THENL
-         [REWRITE_TAC[OPEN_IN_CLOSED_IN_EQ; TOPSPACE_SUBTOPOLOGY] THEN
-          SIMP_TAC[SET_RULE `S \<inter> (S - t) = S - t`; SUBSET_DIFF] THEN
-          REWRITE_TAC[SET_RULE `S - (S - t) = S \<inter> t`] THEN
-          SUBGOAL_THEN
-           `closedin (subtopology X (topspace X - C))
-                      (\<Union>(v DELETE (t::A=>bool)))`
-          MP_TAC THENL
-           [MATCH_MP_TAC CLOSED_IN_UNIONS THEN CONJ_TAC THENL
-             [ASM_MESON_TAC[FINITE_DELETE; HAS_SIZE]; ALL_TAC] THEN
-            X_GEN_TAC `t':A=>bool` THEN STRIP_TAC THEN
-            MATCH_MP_TAC CLOSED_IN_CONNECTED_COMPONENTS_OF THEN
-            ASM SET_TAC[];
-            REWRITE_TAC[CLOSED_IN_SUBTOPOLOGY] THEN
-            MATCH_MP_TAC MONO_EXISTS THEN ASM SET_TAC[]];
-          X_GEN_TAC `t':A=>bool` THEN DISCH_TAC THEN
-          REWRITE_TAC[OPEN_IN_SUBTOPOLOGY] THEN EXISTS_TAC `t':A=>bool` THEN
-          MATCH_MP_TAC(TAUT `p \<and> (p \<Longrightarrow> q) \<Longrightarrow> p \<and> q`) THEN
-          CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-          DISCH_THEN(MP_TAC \<circ> MATCH_MP OPEN_IN_SUBSET) THEN SET_TAC[]]];
-      STRIP_TAC THEN
-      FIRST_ASSUM(SUBST1_TAC \<circ> MATCH_MP (ARITH_RULE
-       `(n \<noteq> 0) \<Longrightarrow> n = Suc(n-1)`)) THEN
-      REWRITE_TAC[HAS_SIZE_CLAUSES] THEN MATCH_MP_TAC(MESON[]
-       `P S \<and> Q a S \<Longrightarrow> (\<exists>b t. P t \<and> Q b t \<and> insert a S = insert b t)`) THEN
-      CONJ_TAC THENL
-       [MATCH_MP_TAC HAS_SIZE_IMAGE_INJ THEN CONJ_TAC THENL
-         [RULE_ASSUM_TAC(REWRITE_RULE[pairwise]) THEN ASM SET_TAC[];
-          RULE_ASSUM_TAC(REWRITE_RULE[HAS_SIZE]) THEN
-          ASM_SIMP_TAC[CARD_DELETE; HAS_SIZE; FINITE_DELETE]];
-        REWRITE_TAC[SET_RULE
-         `(y \<notin> f ` S) \<longleftrightarrow> \<forall>x. x \<in> S \<Longrightarrow> \<not> (f x = y)`] THEN
-        GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC(SET_RULE
-         `disjnt S t \<and> (S \<noteq> {}) \<Longrightarrow> (S \<noteq> t)`) THEN
-        CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-        MATCH_MP_TAC SEPARATED_IN_IMP_DISJOINT THEN
-        EXISTS_TAC `X::A topology` THEN
-        RULE_ASSUM_TAC(REWRITE_RULE[pairwise]) THEN
-        FIRST_X_ASSUM MATCH_MP_TAC THEN ASM SET_TAC[]]];
-    ALL_TAC] THEN
-  REMOVE_THEN "*" (MP_TAC \<circ> SPEC `topspace X - \<Union>U::A=>bool`) THEN
-  REWRITE_TAC[NOT_IMP] THEN REPEAT CONJ_TAC THENL
-   [MATCH_MP_TAC CLOSED_IN_DIFF THEN
-    ASM_SIMP_TAC[OPEN_IN_UNIONS; CLOSED_IN_TOPSPACE];
-    ASM_SIMP_TAC[CLOSED_IN_SUBSET; SET_RULE
-     `C \<subseteq> U - S \<longleftrightarrow> C \<subseteq> U \<and> S \<inter> C = {}`] THEN
-    REWRITE_TAC[INTER_UNIONS; EMPTY_UNIONS; FORALL_IN_GSPEC] THEN
-    EXPAND_TAC "U" THEN REWRITE_TAC[IN_ELIM_THM; IMP_CONJ] THEN GEN_TAC THEN
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP CONNECTED_COMPONENTS_OF_SUBSET) THEN
-    REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN SET_TAC[];
-    EXPAND_TAC "U" THEN REWRITE_TAC[UNIONS_GSPEC] THEN
-    MP_TAC(ISPEC `subtopology X (topspace X - C):A topology`
-        UNIONS_CONNECTED_COMPONENTS_OF) THEN
-    REWRITE_TAC[TOPSPACE_SUBTOPOLOGY] THEN ASM SET_TAC[];
-    ASM_SIMP_TAC[SET_RULE `S \<subseteq> U \<Longrightarrow> U - (U - S) = S`;
-                 UNIONS_SUBSET; OPEN_IN_SUBSET] THEN
-    DISCH_THEN(X_CHOOSE_THEN `v:(A=>bool)->bool` STRIP_ASSUME_TAC)] THEN
-  SUBGOAL_THEN `(v:(A=>bool)->bool) \<lesssim> (U:(A=>bool)->bool)` MP_TAC THENL
-   [ALL_TAC;
-    RULE_ASSUM_TAC(REWRITE_RULE[HAS_SIZE]) THEN
-    ASM_SIMP_TAC[CARD_LE_CARD; NOT_LE]] THEN
-  MATCH_MP_TAC CARD_LE_RELATIONAL_FULL THEN
-  EXISTS_TAC `\<lambda>(U::A=>bool) v. \<not> disjnt U v` THEN
-  REWRITE_TAC[] THEN CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-  MAP_EVERY X_GEN_TAC [`t::A=>bool`; `c1::A=>bool`; `c2::A=>bool`] THEN
-  STRIP_TAC THEN ASM_CASES_TAC `c1::A=>bool = c2` THEN ASM_REWRITE_TAC[] THEN
-  SUBGOAL_THEN `connectedin X (t::A=>bool)` MP_TAC THENL
+  assumes lcX: "locally_connected_space X" and hnX: "hereditarily normal_space X"
+  shows "(\<exists>\<U>. finite \<U> \<and> card \<U> = n \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - S) \<longleftrightarrow>
+         (\<exists>C. closedin X C \<and> C \<subseteq> S \<and>
+              (\<forall>D. closedin X D \<and> C \<subseteq> D \<and> D \<subseteq> S
+                   \<longrightarrow> (\<exists>\<U>. finite \<U> \<and> card \<U> = n \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - D)))"
+         (is "?lhs = ?rhs")
+proof
+  assume ?lhs then show ?rhs
+    by (metis hnX separation_by_closed_intermediates_count)
+next
+  assume R: ?rhs
+  show ?lhs
+  proof (cases "n=0")
+    case True
+    with R show ?thesis
+      by (metis Diff_mono card_0_eq ccSup_empty empty_iff subsetI subset_antisym)
+  next
+    case False
+    obtain C where "closedin X C" "C \<subseteq> S"
+             and C: "\<And>D. \<lbrakk>closedin X D; C \<subseteq> D; D \<subseteq> S\<rbrakk>
+                      \<Longrightarrow> \<exists>\<U>. finite \<U> \<and> card \<U> = n \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - D"
+      using R by force
+    then have "C \<subseteq> topspace X"
+      by (simp add: closedin_subset)
+    define \<U> where "\<U> \<equiv> {D \<in> connected_components_of (subtopology X (topspace X - C)). D-S \<noteq> {}}"
+    have ope\<U>: "openin X U" if "U \<in> \<U>" for U
+      using that  \<open>closedin X C\<close> lcX locally_connected_space_open_connected_components 
+      by (fastforce simp add: closedin_def \<U>_def)
+    have "{} \<notin> \<U>"
+      by (auto simp: \<U>_def)
+    have "pairwise disjnt \<U>"
+      using connected_components_of_disjoint by (fastforce simp add: pairwise_def \<U>_def)
+    show ?lhs
+    proof (rule ccontr)
+      assume con: "\<nexists>\<U>. finite \<U> \<and> card \<U> = n \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - S"
+      have card\<U>: "finite \<U> \<and> card \<U> < n"
+      proof (rule ccontr)
+        assume "\<not> (finite \<U> \<and> card \<U> < n)"
+        then obtain \<V> where "\<V> \<subseteq> \<U>" "finite \<V>" "card \<V> = n"
+          by (metis infinite_arbitrarily_large linorder_not_less obtain_subset_with_card_n)
+        then obtain T where "T \<in> \<V>"
+          using False by force
+        define \<W> where "\<W> \<equiv> insert (topspace X - S - \<Union>(\<V> - {T})) ((\<lambda>D. D - S) ` (\<V> - {T}))"
+        have "\<Union>\<W> = topspace X - S"
+          using \<open>\<And>U. U \<in> \<U> \<Longrightarrow> openin X U\<close> \<open>\<V> \<subseteq> \<U>\<close> topspace_def by (fastforce simp: \<W>_def)
+        moreover have "{} \<notin> \<W>"
+        proof -
+          obtain a where "a \<in> T" "a \<notin> S"
+            using \<U>_def \<open>T \<in> \<V>\<close> \<open>\<V> \<subseteq> \<U>\<close> by blast
+          then have "a \<in> topspace X"
+            using \<open>T \<in> \<V>\<close> ope\<U> \<open>\<V> \<subseteq> \<U>\<close> openin_subset by blast
+          moreover have "a \<notin> \<Union> (\<V> - {T})"
+            using diff_Union_pairwise_disjoint [of \<V> "{T}"] \<open>disjoint \<U>\<close> pairwise_subset \<open>T \<in> \<V>\<close> \<open>\<V> \<subseteq> \<U>\<close> \<open>a \<in> T\<close> 
+            by auto
+          ultimately have "topspace X - S - \<Union> (\<V> - {T}) \<noteq> {}"
+            using \<open>a \<notin> S\<close> by blast
+          moreover have "\<And>V. V \<in> \<V> - {T} \<Longrightarrow> V - S \<noteq> {}"
+            using \<U>_def \<open>\<V> \<subseteq> \<U>\<close> by blast
+          ultimately show ?thesis
+            by (metis (no_types, lifting) \<W>_def image_iff insert_iff)
+        qed
+        moreover have "disjoint \<V>"
+          using \<open>\<V> \<subseteq> \<U>\<close> \<open>disjoint \<U>\<close> pairwise_subset by blast
+        then have inj: "inj_on (\<lambda>D. D - S) (\<V> - {T})"
+          unfolding inj_on_def using \<open>\<V> \<subseteq> \<U>\<close> disjointD \<U>_def inf_commute by blast
+        have "finite \<W>" "card \<W> = n"
+          using \<open>{} \<notin> \<W>\<close> \<open>n \<noteq> 0\<close> \<open>T \<in> \<V>\<close>
+          by (auto simp add: \<W>_def \<open>finite \<V>\<close> card_insert_if card_image inj \<open>card \<V> = n\<close>)
+        moreover have "pairwise (separatedin X) \<W>"
+        proof -
+          have "disjoint \<W>"
+            using \<open>disjoint \<V>\<close> by (auto simp: \<W>_def pairwise_def disjnt_iff)
+          have "pairwise (separatedin (subtopology X (topspace X - S))) \<W>"
+          proof (intro pairwiseI)
+            fix A B
+            assume \<section>: "A \<in> \<W>" "B \<in> \<W>" "A \<noteq> B"
+            then have "disjnt A B"
+              by (meson \<open>disjoint \<W>\<close> pairwiseD)
+            have "closedin (subtopology X (topspace X - C)) (\<Union>(\<V> - {T}))"
+              using \<U>_def \<open>\<V> \<subseteq> \<U>\<close> closedin_connected_components_of \<open>finite \<V>\<close>
+              by (force simp add: intro!: closedin_Union)
+            then have "openin (subtopology X (topspace X - S)) (topspace X - S - \<Union>(\<V> - {T}))"
+              apply (simp add: openin_closedin_eq)
+              apply (rule )
+               apply (force simp add: )
+              apply (simp add: Int_absorb1 closedin_subtopology)
+              by (metis Diff_Diff_Int Diff_Un \<open>C \<subseteq> S\<close> inf.left_commute sup.orderE)
+            moreover have "\<And>V. V \<in> \<V> - {T} \<Longrightarrow> openin (subtopology X (topspace X - S)) (V - S)"
+              using \<open>\<V> \<subseteq> \<U>\<close> ope\<U> 
+              apply clarsimp
+              by (metis IntD2 Int_Diff inf.orderE openin_subset openin_subtopology_Int)
+            ultimately have "openin (subtopology X (topspace X - S)) A" "openin (subtopology X (topspace X - S)) B"
+              using \<section> \<W>_def by blast+
+            with \<open>disjnt A B\<close> show "separatedin (subtopology X (topspace X - S)) A B"
+              using separatedin_open_sets by blast
+          qed
+          then show ?thesis
+            by (simp add: pairwise_def separatedin_subtopology)
+        qed
+        ultimately show False
+          using con by blast
+      qed
+      obtain \<V> where "finite \<V>" "card \<V> = n" "{} \<notin> \<V>"
+                and pw\<V>: "pairwise (separatedin X) \<V>" and UV: "\<Union>\<V> = topspace X - (topspace X - \<Union>\<U>)"
+      proof -
+        have "closedin X (topspace X - \<Union>\<U>)"
+          using ope\<U> by blast
+        moreover 
+        have "C \<subseteq> topspace X - \<Union>\<U>"
+          using \<open>C \<subseteq> topspace X\<close> connected_components_of_subset by (fastforce simp: \<U>_def)
+        moreover have "topspace X - \<Union>\<U> \<subseteq> S"
+          using Union_connected_components_of [of "subtopology X (topspace X - C)"] \<open>C \<subseteq> S\<close>
+          by (auto simp: \<U>_def)
+        ultimately show thesis
+          by (metis C that)
+      qed
+      have "\<V> \<lesssim> \<U>"
+      proof (rule card_le_relational_full)
+        have "\<Union>\<V> = \<Union>\<U>"
+          by (simp add: Sup_le_iff UV double_diff ope\<U> openin_subset)
+        then show "\<exists>U. U \<in> \<U> \<and> \<not> disjnt U V" if "V \<in> \<V>" for V
+          using that
+          by (metis \<open>{} \<notin> \<V>\<close> disjnt_Union1 disjnt_self_iff_empty)
+        show "C1 = C2"
+          if "T \<in> \<U>" and "C1 \<in> \<V>" and "C2 \<in> \<V>" and "\<not> disjnt T C1" and "\<not> disjnt T C2" for T C1 C2
+        proof (cases "C1=C2")
+          case True
+          then show ?thesis
+            by auto
+        next
+          case False
+          then have "connectedin X T"
+            using \<U>_def connectedin_connected_components_of connectedin_subtopology \<open>T \<in> \<U>\<close> by blast
+          then show ?thesis 
+            apply (simp add: connectedin_eq_not_separated_subset)
+
+            sorry
+        qed
+      qed
+      qed
+      then show False
+        using \<open>card \<V> = n\<close> card\<U>
+        by (simp add: \<open>finite \<V>\<close> lepoll_iff_card_le)
+    qed
+  qed
+qed
+
+  oops
+
+  SUBGOAL_THEN `connectedin X T` MP_TAC THENL
    [UNDISCH_TAC `(t::A=>bool) \<in> U` THEN EXPAND_TAC "U" THEN
     REWRITE_TAC[IN_ELIM_THM; IMP_CONJ_ALT] THEN DISCH_THEN(K ALL_TAC) THEN
     DISCH_THEN(MP_TAC \<circ> MATCH_MP CONNECTED_IN_CONNECTED_COMPONENTS_OF) THEN
