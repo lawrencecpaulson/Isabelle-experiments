@@ -1468,11 +1468,66 @@ next
   case False
   show ?thesis 
   proof
-    assume ?lhs 
+    assume L: ?lhs 
     with False show ?rhs
     proof (induction n rule: less_induct)
       case (less n)
-      then show ?case sorry
+      show ?case
+      proof (cases "n\<le>1")
+        case True
+        with less.prems connected_components_of_empty_space show ?thesis
+          by (force simp add: le_Suc_eq eqpoll_iff_finite_card card_Suc_eq simp flip: ex_simps)
+      next
+        case False
+        then have "n-1 \<noteq> 0"
+          by linarith
+        have n1_lesspoll: "{..<n-1} \<prec> {..<n}"
+          using False lesspoll_iff_finite_card by fastforce
+        also have "\<dots> \<lesssim> connected_components_of X"
+          using less by blast
+        finally have "{..<n-1} \<lesssim> connected_components_of X"
+          using lesspoll_imp_lepoll by blast 
+        then obtain \<U> where Ueq: "\<U> \<approx> {..<n-1}" and "{} \<notin> \<U>" 
+          and pwU: "pairwise (separatedin X) \<U>" and UU: "\<Union>\<U> = topspace X"
+          by (meson \<open>n - 1 \<noteq> 0\<close> diff_less gr0I less zero_less_one)
+        show ?thesis
+        proof (cases "\<forall>C \<in> \<U>. connectedin X C")
+          case True
+          then show ?thesis
+            using lepoll_connnected_components_connectedin [of \<U> X] less.prems
+            by (metis UU Ueq lepoll_antisym lepoll_trans lepoll_trans2 lesspoll_def n1_lesspoll)
+          next
+            case False
+            with UU obtain C A B where ABC: "C \<in> \<U>" "A \<union> B = C" "A \<noteq> {}" "B \<noteq> {}" and sep: "separatedin X A B"
+              by (fastforce simp add: connectedin_eq_not_separated)
+            define \<V> where "\<V> \<equiv> insert A (insert B (\<U> - {C}))"
+            have "\<V> \<approx> {..<n}"
+            proof -
+              have "A \<noteq> B"
+                using \<open>B \<noteq> {}\<close> sep by auto
+              moreover obtain "A \<notin> \<U>" "B \<notin> \<U>"
+                using pwU unfolding pairwise_def
+                by (metis ABC sep separatedin_Un(1) separatedin_refl separatedin_sym)
+              moreover have "card \<U> = n-1" "finite \<U>"
+                using Ueq eqpoll_iff_finite_card by blast+
+              ultimately
+              have "card (insert A (insert B (\<U> - {C}))) = n"
+                using \<open>C \<in> \<U>\<close> by (auto simp add: card_insert_if)
+              then show ?thesis
+                using \<V>_def \<open>finite \<U>\<close> eqpoll_iff_finite_card by blast
+            qed
+            moreover have "{} \<notin> \<V>"
+              using ABC \<V>_def \<open>{} \<notin> \<U>\<close> by blast
+            moreover have "\<Union>\<V> = topspace X"
+              using ABC UU \<V>_def by auto
+            moreover have "pairwise (separatedin X) \<V>"
+              using pwU sep ABC unfolding  \<V>_def
+              apply (simp add: separatedin_sym pairwise_def)
+              by (metis member_remove remove_def separatedin_Un(1))
+            ultimately show ?thesis
+              by blast
+          qed
+      qed
     qed
   next
     assume ?rhs
@@ -1506,76 +1561,6 @@ next
       by (metis card_lessThan finite_lepoll_infinite finite_lessThan lepoll_iff_card_le)
   qed
 qed auto
-
-oops 
-  MATCH_MP_TAC num_WF THEN X_GEN_TAC `n::num` THEN REPEAT STRIP_TAC THEN
-  ASM_CASES_TAC `n = 1` THENL
-   [EXISTS_TAC `{topspace X::A=>bool}` THEN
-    ASM_REWRITE_TAC[PAIRWISE_SING; UNIONS_1; FORALL_IN_INSERT] THEN
-    REWRITE_TAC[HAS_SIZE; CARD_SING; FINITE_SING; NOT_IN_EMPTY] THEN
-    DISCH_TAC THEN UNDISCH_TAC
-     `1..n \<lesssim> connected_components_of(X::A topology)` THEN
-    ASM_SIMP_TAC[CONNECTED_COMPONENTS_OF_EMPTY_SPACE] THEN
-    REWRITE_TAC[CARD_LE_EMPTY; NUMSEG_EMPTY; LT_REFL];
-    ALL_TAC] THEN
-  FIRST_X_ASSUM(MP_TAC o SPEC `n - 1`) THEN
-  ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN ANTS_TAC THENL
-   [CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-    TRANS_TAC CARD_LE_TRANS `1..n` THEN ASM_REWRITE_TAC[] THEN
-    ASM_SIMP_TAC[FINITE_NUMSEG; CARD_LE_CARD; CARD_NUMSEG_1] THEN
-    ARITH_TAC;
-    ALL_TAC] THEN
-
-  DISCH_THEN(X_CHOOSE_THEN `\<U>:(A=>bool)->bool` STRIP_ASSUME_TAC) THEN
-  ASM_CASES_TAC `\<forall>c::A=>bool. c \<in> \<U> \<Longrightarrow> connected_in X c` THENL
-   [MP_TAC(ISPECL [`X::A topology`; `\<U>:(A=>bool)->bool`]
-        CARD_LE_CONNNECTED_COMPONENTS_CONNECTEDIN) THEN
-    MATCH_MP_TAC(TAUT `~p \<Longrightarrow> p \<Longrightarrow> q`) THEN ASM_REWRITE_TAC[CARD_NOT_LE] THEN
-    TRANS_TAC CARD_LTE_TRANS `1..n` THEN ASM_REWRITE_TAC[] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[HAS_SIZE]) THEN
-    ASM_SIMP_TAC[CARD_LT_CARD; FINITE_NUMSEG; CARD_NUMSEG_1] THEN
-    ASM_ARITH_TAC;
-
-    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id [NOT_FORALL_THM])]
-
- THEN
-  REWRITE_TAC[NOT_IMP; CONNECTED_IN_EQ_NOT_SEPARATED] THEN
-  ASM_SIMP_TAC[SET_RULE
-   `\<Union> \<U> = t \<Longrightarrow> (c \<in> \<U> \<and> ~(c \<subseteq> t \<and> ~P) \<longleftrightarrow> c \<in> \<U> \<and> P)`] THEN
-  REWRITE_TAC[RIGHT_AND_EXISTS_THM; LEFT_IMP_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`c::A=>bool`; `a::A=>bool`; `b::A=>bool`] THEN
-  STRIP_TAC THEN
-  EXISTS_TAC `(a::A=>bool) insert b insert (\<U> - {c})` THEN
-  SUBGOAL_THEN `~(a::A=>bool = b)` ASSUME_TAC THENL
-   [ASM_MESON_TAC[SEPARATED_IN_REFL]; ALL_TAC] THEN
-  SUBGOAL_THEN `~(a::A=>bool = c) \<and> (b \<noteq> c)` STRIP_ASSUME_TAC THENL
-   [FIRST_ASSUM(MP_TAC o MATCH_MP SEPARATED_IN_IMP_DISJOINT) THEN
-    ASM SET_TAC[];
-    ALL_TAC] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[HAS_SIZE]) THEN
-  ASM_REWRITE_TAC[FORALL_IN_INSERT] THEN
-  ASM_SIMP_TAC[CARD_CLAUSES; HAS_SIZE; FINITE_INSERT; FINITE_DELETE;
-               IN_INSERT; IN_DELETE; CARD_DELETE] THEN
-
-  SUBGOAL_THEN
-   `\<forall>d::A=>bool. d \<in> \<U> - {c}
-                \<Longrightarrow> separated_in X a d \<and> separated_in X b d`
-  ASSUME_TAC THENL
-   [RULE_ASSUM_TAC(REWRITE_RULE[pairwise]) THEN REWRITE_TAC[IN_DELETE] THEN
-    REPEAT STRIP_TAC THEN MATCH_MP_TAC SEPARATED_IN_MONO THEN
-    MAP_EVERY EXISTS_TAC [`c::A=>bool`; `d::A=>bool`] THEN ASM SET_TAC[];
-    ALL_TAC] THEN
-
-  SUBGOAL_THEN `~((a::A=>bool) \<in> \<U>) \<and> (b \<notin> \<U>)` STRIP_ASSUME_TAC THENL
-   [ASM_MESON_TAC[IN_DELETE; SEPARATED_IN_REFL];
-    ALL_TAC] THEN
-
-  ASM_REWRITE_TAC[] THEN CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-  CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-  SIMP_TAC[PAIRWISE_INSERT_SYMMETRIC; SEPARATED_IN_SYM] THEN
-  ASM_SIMP_TAC[IMP_CONJ; FORALL_IN_INSERT] THEN
-  MATCH_MP_TAC PAIRWISE_MONO THEN EXISTS_TAC `\<U>:(A=>bool)->bool` THEN
-  ASM_REWRITE_TAC[] THEN SET_TAC[]);;
 
 
 lemma lemmaX:
