@@ -16,8 +16,8 @@ lemma relative_to_subset_trans:
    "\<lbrakk>(P relative_to U) S; S \<subseteq> T; T \<subseteq> U\<rbrakk> \<Longrightarrow> (P relative_to T) S"
   unfolding relative_to_def by auto
 
-
-lemma card_le_relational_full:
+(*The HOL Light CARD_LE_RELATIONAL_FULL*)
+lemma lepoll_relational_full:
   assumes "\<And>y. y \<in> B \<Longrightarrow> \<exists>x. x \<in> A \<and> R x y"
     and "\<And>x y y'. \<lbrakk>x \<in> A; y \<in> B; y' \<in> B; R x y; R x y'\<rbrakk> \<Longrightarrow> y = y'"
   shows "B \<lesssim> A"
@@ -1191,14 +1191,15 @@ lemma zero_dimensional_imp_regular_space: "X dim_le 0 \<Longrightarrow> regular_
   by (simp add: completely_regular_imp_regular_space zero_dimensional_imp_completely_regular_space)
 
 
-subsection\<open> Theorems from Kuratowski's "Remark on an Invariance Theorem"\<close>
-(* Fundamenta Mathematicae vol 37 (1950), pp. 251-252. The idea is that in suitable     *)
-(* spaces, to show "number of components of the complement" (without         *)
-(* distinguishing orders of infinity) is a homeomorphic invariant, it        *)
-text\<open> suffices to show it for closed subsets. Kuratowski states the main result \<close>
-text\<open> for a "locally connected continuum", and seems clearly to be implicitly   \<close>
-text\<open> assuming that means metrizable. We call out the general topological       \<close>
-text\<open> hypotheses more explicitly, which do not however include connectedness.   \<close>
+subsection\<open> Theorems from Kuratowski\<close>
+
+text\<open>Kuratowski, Remark on an Invariance Theorem, \emph{Fundamenta Mathematicae} \textbf{37} (1950), pp. 251-252. 
+ The idea is that in suitable spaces, to show "number of components of the complement" (without 
+ distinguishing orders of infinity) is a homeomorphic invariant, it 
+ suffices to show it for closed subsets. Kuratowski states the main result 
+ for a "locally connected continuum", and seems clearly to be implicitly   
+ assuming that means metrizable. We call out the general topological       
+ hypotheses more explicitly, which do not however include connectedness.   \<close>
 
 
 lemma separation_by_closed_intermediates_count:
@@ -1386,7 +1387,7 @@ next
           by (metis C that)
       qed
       have "\<V> \<lesssim> \<U>"
-      proof (rule card_le_relational_full)
+      proof (rule lepoll_relational_full)
         have "\<Union>\<V> = \<Union>\<U>"
           by (simp add: Sup_le_iff UV double_diff ope\<U> openin_subset)
         then show "\<exists>U. U \<in> \<U> \<and> \<not> disjnt U V" if "V \<in> \<V>" for V
@@ -1438,71 +1439,75 @@ qed
 
 
 
-lemma card_le_connnected_components_connectedin:
-   "\<And>(X::A topology) u.
-        (\<forall>c. c \<in> u \<Longrightarrow> connected_in X c) \<and>
-        \<Union> u = topspace X
-        \<Longrightarrow> connected_components_of X \<lesssim> u"
-oops 
-  REPEAT STRIP_TAC THEN TRANS_TAC CARD_LE_TRANS `u DELETE ({}:A=>bool)` THEN
-  CONJ_TAC THENL
-   [ALL_TAC; MATCH_MP_TAC CARD_LE_SUBSET THEN SET_TAC[]] THEN
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC CARD_LE_RELATIONAL_FULL THEN
-  EXISTS_TAC `\<lambda>(s::A=>bool) t. s \<subseteq> t` THEN REWRITE_TAC[] THEN
-  CONJ_TAC THENL
-   [REWRITE_TAC[connected_components_of; FORALL_IN_GSPEC] THEN
-    X_GEN_TAC `a::A` THEN DISCH_TAC THEN
-    SUBGOAL_THEN `(a::A) \<in> \<Union> u` MP_TAC THENL
-     [ASM_REWRITE_TAC[]; REWRITE_TAC[IN_UNIONS]] THEN
-    MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `c::A=>bool` THEN
-    STRIP_TAC THEN ASM_REWRITE_TAC[IN_DELETE] THEN
-    CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-    MATCH_MP_TAC CONNECTED_COMPONENT_OF_MAXIMAL THEN
-    ASM_SIMP_TAC[];
-    REWRITE_TAC[IMP_CONJ; RIGHT_FORALL_IMP_THM; IN_DELETE] THEN
-    REWRITE_TAC[connected_components_of; FORALL_IN_GSPEC] THEN
-    SIMP_TAC[CONNECTED_COMPONENT_OF_EQ_OVERLAP] THEN ASM SET_TAC[]]);;
+lemma lepoll_connnected_components_connectedin:
+  assumes "\<And>C. C \<in> \<U> \<Longrightarrow> connectedin X C"  "\<Union>\<U> = topspace X"
+  shows "connected_components_of X \<lesssim> \<U>"
+proof -
+  have "connected_components_of X \<lesssim> \<U> - {{}}"
+  proof (rule lepoll_relational_full)
+    show "\<exists>U. U \<in> \<U> - {{}} \<and> U \<subseteq> V"
+      if "V \<in> connected_components_of X" for V 
+      using that unfolding connected_components_of_def image_iff
+      by (metis Union_iff assms connected_component_of_maximal empty_iff insert_Diff_single insert_iff)
+    show "V = V'"
+      if "U \<in> \<U> - {{}}" "V \<in> connected_components_of X" "V' \<in> connected_components_of X" "U \<subseteq> V" "U \<subseteq> V'"
+      for U V V'
+      by (metis DiffD2 disjointD insertCI le_inf_iff pairwise_disjoint_connected_components_of subset_empty that)
+  qed
+  also have "\<dots> \<lesssim> \<U>"
+    by (simp add: subset_imp_lepoll)
+  finally show ?thesis .
+qed
 
-lemma card_le_connected_components_alt:
-   "\<And>(X::A topology) n.
-       ({1..n} \<lesssim> connected_components_of X \<longleftrightarrow>
-       n = 0 \<or>
-       \<exists>u. u HAS_SIZE n \<and>
-           pairwise (separated_in X) u \<and>
-           (\<forall>t. t \<in> u \<Longrightarrow> (t \<noteq> {})) \<and>
-           \<Union> u = topspace X)"
+lemma lepoll_connected_components_alt:
+  "{..<n::nat} \<lesssim> connected_components_of X \<longleftrightarrow>
+    n = 0 \<or> (\<exists>\<U>. \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X)"
+  (is "?lhs \<longleftrightarrow> ?rhs")
+proof (cases "n=0")
+next
+  case False
+  show ?thesis 
+  proof
+    assume ?lhs 
+    with False show ?rhs
+    proof (induction n rule: less_induct)
+      case (less n)
+      then show ?case sorry
+    qed
+  next
+    assume ?rhs
+    then obtain \<U> where "\<U> \<approx> {..<n}" "{} \<notin> \<U>" and pwU: "pairwise (separatedin X) \<U>" and UU: "\<Union>\<U> = topspace X"
+      using False by force
+    have "card (connected_components_of X) \<ge> n" if "finite (connected_components_of X)"
+    proof -
+      have "\<U> \<lesssim> connected_components_of X"
+      proof (rule lepoll_relational_full)
+        show "\<exists>T. T \<in> connected_components_of X \<and> \<not> disjnt T C" if "C \<in> \<U>" for C 
+          by (metis that UU Union_connected_components_of Union_iff \<open>{} \<notin> \<U>\<close> disjnt_iff equals0I)
+        show "(C1::'a set) = C2"
+          if "T \<in> connected_components_of X" and "C1 \<in> \<U>" "C2 \<in> \<U>" "\<not> disjnt T C1" "\<not> disjnt T C2" for T C1 C2
+        proof (rule ccontr)
+          assume "C1 \<noteq> C2"
+          then have "connectedin X T"
+            by (simp add: connectedin_connected_components_of that(1))
+          moreover have "\<not> separatedin X C1 (\<Union>(\<U> - {C1}))"
+            using \<open>connectedin X T\<close> pwU unfolding pairwise_def
+            by (smt (verit) Sup_upper UU Union_connected_components_of \<open>C1 \<noteq> C2\<close> complete_lattice_class.Sup_insert connectedin_subset_separated_union disjnt_subset2 disjnt_sym insert_Diff separatedin_imp_disjoint that)
+          ultimately show False
+            using \<open>\<U> \<approx> {..<n}\<close>
+            apply (simp add: connectedin_eq_not_separated_subset eqpoll_iff_finite_card)
+            by (metis Sup_upper UU finite_Diff pairwise_alt pwU separatedin_Union(1) that(2))
+        qed
+      qed
+      then show ?thesis
+        by (metis \<open>\<U> \<approx> {..<n}\<close> eqpoll_iff_finite_card lepoll_iff_card_le that)
+    qed
+    then show ?lhs
+      by (metis card_lessThan finite_lepoll_infinite finite_lessThan lepoll_iff_card_le)
+  qed
+qed auto
+
 oops 
-  REPEAT STRIP_TAC THEN
-  ASM_CASES_TAC `n = 0` THEN ASM_REWRITE_TAC[] THENL
-   [CONV_TAC(ONCE_DEPTH_CONV NUMSEG_CONV) THEN
-    REWRITE_TAC[CARD_EMPTY_LE];
-    ALL_TAC] THEN
-  EQ_TAC THENL
-   [POP_ASSUM MP_TAC THEN REWRITE_TAC[IMP_IMP];
-    DISCH_THEN(X_CHOOSE_THEN `u:(A=>bool)->bool` STRIP_ASSUME_TAC) THEN
-    REWRITE_TAC[NUMSEG_CARD_LE] THEN DISCH_TAC THEN
-    SUBGOAL_THEN `n = card(u:(A=>bool)->bool)` SUBST1_TAC THENL
-     [ASM_MESON_TAC[HAS_SIZE]; ALL_TAC] THEN
-    W(MP_TAC o PART_MATCH (rand o rand) CARD_LE_CARD o snd) THEN
-    ANTS_TAC THENL [ASM_MESON_TAC[HAS_SIZE]; DISCH_THEN(SUBST1_TAC o SYM)] THEN
-    MATCH_MP_TAC CARD_LE_RELATIONAL_FULL THEN
-    EXISTS_TAC `\<lambda>(u::A=>bool) v. ~disjnt u v` THEN
-    REWRITE_TAC[] THEN CONJ_TAC THENL
-     [MP_TAC(ISPEC `X::A topology` UNIONS_CONNECTED_COMPONENTS_OF) THEN
-      ASM SET_TAC[];
-      ALL_TAC] THEN
-    MAP_EVERY X_GEN_TAC [`t::A=>bool`; `c1::A=>bool`; `c2::A=>bool`] THEN
-    STRIP_TAC THEN ASM_CASES_TAC `c1::A=>bool = c2` THEN ASM_REWRITE_TAC[] THEN
-    FIRST_ASSUM(MP_TAC o MATCH_MP CONNECTED_IN_CONNECTED_COMPONENTS_OF) THEN
-    REWRITE_TAC[CONNECTED_IN_EQ_NOT_SEPARATED_SUBSET] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN REWRITE_TAC[] THEN
-    MAP_EVERY EXISTS_TAC [`c1::A=>bool`; `\<Union>(u DELETE (c1::A=>bool))`] THEN
-    REPEAT(CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC]) THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[HAS_SIZE]) THEN
-    ASM_SIMP_TAC[SEPARATED_IN_UNIONS; FINITE_DELETE] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[pairwise]) THEN
-    REWRITE_TAC[IN_DELETE] THEN ASM_MESON_TAC[separated_in]] THEN
-  SPEC_TAC(`n::num`,`n::num`) THEN
   MATCH_MP_TAC num_WF THEN X_GEN_TAC `n::num` THEN REPEAT STRIP_TAC THEN
   ASM_CASES_TAC `n = 1` THENL
    [EXISTS_TAC `{topspace X::A=>bool}` THEN
@@ -1520,23 +1525,27 @@ oops
     ASM_SIMP_TAC[FINITE_NUMSEG; CARD_LE_CARD; CARD_NUMSEG_1] THEN
     ARITH_TAC;
     ALL_TAC] THEN
-  DISCH_THEN(X_CHOOSE_THEN `u:(A=>bool)->bool` STRIP_ASSUME_TAC) THEN
-  ASM_CASES_TAC `\<forall>c::A=>bool. c \<in> u \<Longrightarrow> connected_in X c` THENL
-   [MP_TAC(ISPECL [`X::A topology`; `u:(A=>bool)->bool`]
+
+  DISCH_THEN(X_CHOOSE_THEN `\<U>:(A=>bool)->bool` STRIP_ASSUME_TAC) THEN
+  ASM_CASES_TAC `\<forall>c::A=>bool. c \<in> \<U> \<Longrightarrow> connected_in X c` THENL
+   [MP_TAC(ISPECL [`X::A topology`; `\<U>:(A=>bool)->bool`]
         CARD_LE_CONNNECTED_COMPONENTS_CONNECTEDIN) THEN
     MATCH_MP_TAC(TAUT `~p \<Longrightarrow> p \<Longrightarrow> q`) THEN ASM_REWRITE_TAC[CARD_NOT_LE] THEN
     TRANS_TAC CARD_LTE_TRANS `1..n` THEN ASM_REWRITE_TAC[] THEN
     RULE_ASSUM_TAC(REWRITE_RULE[HAS_SIZE]) THEN
     ASM_SIMP_TAC[CARD_LT_CARD; FINITE_NUMSEG; CARD_NUMSEG_1] THEN
     ASM_ARITH_TAC;
-    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id [NOT_FORALL_THM])] THEN
+
+    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id [NOT_FORALL_THM])]
+
+ THEN
   REWRITE_TAC[NOT_IMP; CONNECTED_IN_EQ_NOT_SEPARATED] THEN
   ASM_SIMP_TAC[SET_RULE
-   `\<Union> u = t \<Longrightarrow> (c \<in> u \<and> ~(c \<subseteq> t \<and> ~P) \<longleftrightarrow> c \<in> u \<and> P)`] THEN
+   `\<Union> \<U> = t \<Longrightarrow> (c \<in> \<U> \<and> ~(c \<subseteq> t \<and> ~P) \<longleftrightarrow> c \<in> \<U> \<and> P)`] THEN
   REWRITE_TAC[RIGHT_AND_EXISTS_THM; LEFT_IMP_EXISTS_THM] THEN
   MAP_EVERY X_GEN_TAC [`c::A=>bool`; `a::A=>bool`; `b::A=>bool`] THEN
   STRIP_TAC THEN
-  EXISTS_TAC `(a::A=>bool) insert b insert (u - {c})` THEN
+  EXISTS_TAC `(a::A=>bool) insert b insert (\<U> - {c})` THEN
   SUBGOAL_THEN `~(a::A=>bool = b)` ASSUME_TAC THENL
    [ASM_MESON_TAC[SEPARATED_IN_REFL]; ALL_TAC] THEN
   SUBGOAL_THEN `~(a::A=>bool = c) \<and> (b \<noteq> c)` STRIP_ASSUME_TAC THENL
@@ -1547,22 +1556,25 @@ oops
   ASM_REWRITE_TAC[FORALL_IN_INSERT] THEN
   ASM_SIMP_TAC[CARD_CLAUSES; HAS_SIZE; FINITE_INSERT; FINITE_DELETE;
                IN_INSERT; IN_DELETE; CARD_DELETE] THEN
+
   SUBGOAL_THEN
-   `\<forall>d::A=>bool. d \<in> u - {c}
+   `\<forall>d::A=>bool. d \<in> \<U> - {c}
                 \<Longrightarrow> separated_in X a d \<and> separated_in X b d`
   ASSUME_TAC THENL
    [RULE_ASSUM_TAC(REWRITE_RULE[pairwise]) THEN REWRITE_TAC[IN_DELETE] THEN
     REPEAT STRIP_TAC THEN MATCH_MP_TAC SEPARATED_IN_MONO THEN
     MAP_EVERY EXISTS_TAC [`c::A=>bool`; `d::A=>bool`] THEN ASM SET_TAC[];
     ALL_TAC] THEN
-  SUBGOAL_THEN `~((a::A=>bool) \<in> u) \<and> (b \<notin> u)` STRIP_ASSUME_TAC THENL
+
+  SUBGOAL_THEN `~((a::A=>bool) \<in> \<U>) \<and> (b \<notin> \<U>)` STRIP_ASSUME_TAC THENL
    [ASM_MESON_TAC[IN_DELETE; SEPARATED_IN_REFL];
     ALL_TAC] THEN
+
   ASM_REWRITE_TAC[] THEN CONJ_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
   CONJ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
   SIMP_TAC[PAIRWISE_INSERT_SYMMETRIC; SEPARATED_IN_SYM] THEN
   ASM_SIMP_TAC[IMP_CONJ; FORALL_IN_INSERT] THEN
-  MATCH_MP_TAC PAIRWISE_MONO THEN EXISTS_TAC `u:(A=>bool)->bool` THEN
+  MATCH_MP_TAC PAIRWISE_MONO THEN EXISTS_TAC `\<U>:(A=>bool)->bool` THEN
   ASM_REWRITE_TAC[] THEN SET_TAC[]);;
 
 
