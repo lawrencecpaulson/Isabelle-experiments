@@ -138,11 +138,11 @@ proof -
   also have "\<dots> \<lesssim> topspace X"
   proof -
     obtain f where contf: "continuous_map X euclidean f"
-      and fim: "f ` (topspace X) \<subseteq> {0..1::real}"
+      and fim: "f \<in> (topspace X) \<rightarrow> {0..1::real}"
       and f0: "f a = 0" and f1: "f ` S \<subseteq> {1}"
       using \<open>completely_regular_space X\<close>
       unfolding completely_regular_space_def
-      by (metis Diff_iff \<open>a \<in> topspace X\<close> \<open>a \<notin> S\<close> \<open>closedin X S\<close> continuous_map_in_subtopology)
+      by (metis Diff_iff \<open>a \<in> topspace X\<close> \<open>a \<notin> S\<close> \<open>closedin X S\<close> continuous_map_in_subtopology image_subset_iff_funcset)
     have "\<exists>y\<in>topspace X. x = f y" if "0 \<le> x" and "x \<le> 1" for x
     proof -
       have "connectedin euclidean (f ` topspace X)"
@@ -170,9 +170,9 @@ proof -
   also have "\<dots>\<lesssim> topspace X"
   proof -
     obtain f where contf: "continuous_map X euclidean f"
-       and fim: "f ` (topspace X) \<subseteq> {0..1::real}"
+       and fim: "f \<in> (topspace X) \<rightarrow> {0..1::real}"
        and f0: "f ` S \<subseteq> {0}" and f1: "f ` T \<subseteq> {1}"
-      using assms by (metis continuous_map_in_subtopology normal_space_iff_Urysohn)
+      using assms by (metis continuous_map_in_subtopology normal_space_iff_Urysohn image_subset_iff_funcset)
     have "\<exists>y\<in>topspace X. x = f y" if "0 \<le> x" and "x \<le> 1" for x
     proof -
       have "connectedin euclidean (f ` topspace X)"
@@ -274,7 +274,7 @@ proof -
   also have "\<dots> \<lesssim> \<gamma> ` {0..1}"
     by (simp add: subset_imp_lepoll)
   also have "\<dots> \<lesssim> topspace X"
-    by (meson \<gamma> path_image_subset_topspace subset_imp_lepoll)
+    by (meson \<gamma> path_image_subset_topspace subset_imp_lepoll image_subset_iff_funcset)
   finally show ?thesis .
 qed
 
@@ -301,7 +301,7 @@ proof
   then obtain \<gamma> where "pathin X \<gamma>" "\<gamma> 0 = a" "\<gamma> 1 = b"
     by (meson \<open>a \<in> topspace X\<close> \<open>b \<in> topspace X\<close> \<open>path_connected_space X\<close> path_connected_space_def)
   then have "\<gamma> ` {0..1} \<lesssim> topspace X"
-    by (meson path_image_subset_topspace subset_imp_lepoll)
+    by (meson path_image_subset_topspace subset_imp_lepoll image_subset_iff_funcset)
   define \<A> where "\<A> \<equiv> ((\<lambda>a. {x \<in> {0..1}. \<gamma> x \<in> {a}}) ` topspace X) - {{}}"
   have \<A>01: "\<A> = {{0..1}}"
   proof (rule real_Sierpinski_lemma)
@@ -335,7 +335,7 @@ qed
 subsection\<open>Lavrentiev extension etc\<close>
 
 lemma (in Metric_space) convergent_eq_zero_oscillation_gen:
-  assumes "mcomplete" and fim: "f ` (topspace X \<inter> S) \<subseteq> M"
+  assumes "mcomplete" and fim: "f \<in> (topspace X \<inter> S) \<rightarrow> M"
   shows "(\<exists>l. limitin mtopology f l (atin_within X a S)) \<longleftrightarrow>
          M \<noteq> {} \<and>
          (a \<in> topspace X
@@ -391,13 +391,16 @@ next
           have "U \<subseteq> topspace X"
             by (simp add: U(1) openin_subset)
           have "f b \<in> M"
-            using b \<open>openin X U\<close> by (metis Int_iff fim image_eqI openin_subset subsetD)
+            using b \<open>openin X U\<close> by (metis image_subset_iff_funcset Int_iff fim image_eqI openin_subset subsetD)
           moreover
           have "mtopology closure_of f ` ((S \<inter> U) - {a}) \<subseteq> mcball (f b) \<epsilon>"
           proof (rule closure_of_minimal)
-            have 1: "\<And>y. \<lbrakk>y \<in> S; y \<in> U; y \<noteq> a\<rbrakk> \<Longrightarrow> f y \<in> M \<and> d (f b) (f y) \<le> \<epsilon>"
-              using \<open>U \<subseteq> topspace X\<close> fim Uless b by (force simp add: subset_iff) 
-            then show "f ` (S \<inter> U - {a}) \<subseteq> mcball (f b) \<epsilon>"
+            have "f y \<in> M" if "y \<in> S" and "y \<in> U" for y
+              using \<open>U \<subseteq> topspace X\<close> fim that by (auto simp: Pi_iff)
+            moreover
+            have "d (f b) (f y) \<le> \<epsilon>" if "y \<in> S" "y \<in> U" "y \<noteq> a" for y
+              using that Uless b by force
+            ultimately show "f ` (S \<inter> U - {a}) \<subseteq> mcball (f b) \<epsilon>"
               by (force simp: \<open>f b \<in> M\<close>)
           qed auto
           ultimately show ?thesis
@@ -449,8 +452,9 @@ next
               using triangle [of b "f x" "f y"] subU that \<open>b \<in> M\<close> commute fim fx by fastforce
           qed
           ultimately show "\<forall>\<^sub>F x in atin_within X a S. f x \<in> M \<and> d (f x) b < \<epsilon>"
-            apply (simp add: eventually_atin eventually_within_imp del: divide_const_simps)
-            by (smt (verit, del_insts) Diff_iff Int_iff U fim imageI insertI1 openin_subset subsetD)
+            using fim U
+            apply (simp add: eventually_atin eventually_within_imp del: divide_const_simps flip: image_subset_iff_funcset)
+            by (smt (verit, del_insts) Diff_iff Int_iff imageI insertI1 openin_subset subsetD)
         qed
         then show ?thesis ..
       qed
@@ -476,11 +480,11 @@ qed
 (*The HOL Light proof uses some ugly tricks to share common parts of what are two separate proofs for the two cases*)
 lemma (in Metric_space) gdelta_in_points_of_convergence_within:
   assumes "mcomplete"
-    and f: "continuous_map (subtopology X S) mtopology f \<or> t1_space X \<and> f ` S \<subseteq> M"
+    and f: "continuous_map (subtopology X S) mtopology f \<or> t1_space X \<and> f \<in> S \<rightarrow> M"
   shows "gdelta_in X {x \<in> topspace X. \<exists>l. limitin mtopology f l (atin_within X x S)}"
 proof -
-  have fim: "f ` (topspace X \<inter> S) \<subseteq> M"
-    using continuous_map_image_subset_topspace f by fastforce
+  have fim: "f \<in> (topspace X \<inter> S) \<rightarrow> M"
+    using continuous_map_image_subset_topspace f by force
   show ?thesis
   proof (cases "M={}")
     case True
@@ -550,7 +554,7 @@ proof -
       ultimately show ?thesis
         by (simp add: \<open>D=B\<close>)
     next
-      assume "t1_space X" "f ` S \<subseteq> M"
+      assume "t1_space X" "f \<in> S \<rightarrow> M"
       define C where "C \<equiv> \<lambda>r. \<Union>{U. openin X U \<and> 
                            (\<exists>b \<in> topspace X. \<forall>x \<in> S\<inter>U - {b}. \<forall>y \<in> S\<inter>U - {b}. d (f x) (f y) < r)}"
       define B where "B \<equiv> (\<Inter>n. C(inverse(Suc n)))"
@@ -600,11 +604,11 @@ qed
 
 lemma gdelta_in_points_of_convergence_within:
   assumes Y: "completely_metrizable_space Y"
-    and f: "continuous_map (subtopology X S) Y f \<or> t1_space X \<and> f ` S \<subseteq> topspace Y"
+    and f: "continuous_map (subtopology X S) Y f \<or> t1_space X \<and> f \<in> S \<rightarrow> topspace Y"
   shows "gdelta_in X {x \<in> topspace X. \<exists>l. limitin Y f l (atin_within X x S)}"
   using assms
   unfolding completely_metrizable_space_def
-  by (smt (verit, del_insts) Collect_cong Metric_space.gdelta_in_points_of_convergence_within Metric_space.topspace_mtopology)
+  using Metric_space.gdelta_in_points_of_convergence_within Metric_space.topspace_mtopology by fastforce
 
 
 
@@ -917,10 +921,10 @@ lemma (in Metric_space) locally_compact_imp_completely_metrizable_space:
   shows "completely_metrizable_space mtopology"
 proof -
   obtain f :: "['a,'a] \<Rightarrow> real" and m' where
-    "mcomplete_of m'" and fim: "f ` M \<subseteq> mspace m' "
+    "mcomplete_of m'" and fim: "f \<in> M \<rightarrow> mspace m'"
     and clo: "mtopology_of m' closure_of f ` M = mspace m'"
     and d: "\<And>x y. \<lbrakk>x \<in> M; y \<in> M\<rbrakk> \<Longrightarrow> mdist m' (f x) (f y) = d x y"
-    by (meson metric_completion)
+    by (metis metric_completion)
   then have "embedding_map mtopology (mtopology_of m') f"
     unfolding mtopology_of_def
     by (metis Metric_space12.isometry_imp_embedding_map Metric_space12_mspace_mdist mdist_metric mspace_metric)
@@ -931,7 +935,7 @@ proof -
   moreover have "Hausdorff_space (mtopology_of m')"
     by (simp add: Metric_space.Hausdorff_space_mtopology mtopology_of_def)
   ultimately have "openin (mtopology_of m') (f ` M)"
-    by (simp add: clo dense_locally_compact_openin_Hausdorff_space fim)
+    by (simp add: clo dense_locally_compact_openin_Hausdorff_space fim image_subset_iff_funcset)
   then
   have "completely_metrizable_space (subtopology (mtopology_of m') (f ` M))"
     using \<open>mcomplete_of m'\<close> unfolding mcomplete_of_def mtopology_of_def
@@ -1573,7 +1577,7 @@ lemma lemmaX:
 
 
 
-lemma lemur:
+lemma lemur: (*NEEDED?*)
    "pairwise (separatedin (subtopology X (topspace X - S))) \<U> \<and> {} \<notin> \<U> \<and>
      \<Union>\<U> = topspace(subtopology X (topspace X - S)) \<longleftrightarrow>
      pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - S"
@@ -1605,6 +1609,10 @@ proof
     apply (subst lemmaX)
     using homeomorphic_space_sym apply blast
     apply (erule all_forward)
+    apply (simp add: lepoll_connected_components_alt)
+    apply (case_tac "n=0")
+     apply (simp add: )
+    apply (simp add: Int_absorb1)
 
 
 
@@ -1613,13 +1621,6 @@ qed blast
 
 oops
 
-  W(MP_TAC \<circ> PART_MATCH (lhand \<circ> rand) lemma \<circ> lhand \<circ> snd) THEN ANTS_TAC THENL
-   [MESON_TAC[HOMEOMORPHIC_SPACE_SYM]; DISCH_THEN SUBST1_TAC] THEN
-  W(MP_TAC \<circ> PART_MATCH (lhand \<circ> rand) lemma \<circ> rand \<circ> snd) THEN ANTS_TAC THENL
-   [MESON_TAC[HOMEOMORPHIC_SPACE_SYM]; DISCH_THEN SUBST1_TAC] THEN
-  MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `n::num` THEN
-  REWRITE_TAC[CARD_LE_CONNECTED_COMPONENTS_ALT] THEN
-  ASM_CASES_TAC `n = 0` THEN ASM_REWRITE_TAC[lemur] THEN DISCH_TAC THEN
   MAP_EVERY X_GEN_TAC [`S::A=>bool`; `t::A=>bool`] THEN
   ONCE_REWRITE_TAC[SUBTOPOLOGY_RESTRICT] THEN
   ONCE_REWRITE_TAC[SET_RULE `S - t = S - S \<inter> t`] THEN
