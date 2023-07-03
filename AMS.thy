@@ -6,6 +6,55 @@ theory AMS
     "HOL-ex.Sketch_and_Explore"
 begin
 
+lemma power_of_nat_log: "b > 1 \<Longrightarrow> b ^ nat \<lceil>log b x\<rceil> \<ge> x"
+  by (smt (verit) less_log_of_power of_nat_ceiling)
+
+lemma reals01_lepoll_nat_set: "{0..<1::real} \<lesssim> (UNIV::nat set)"
+proof -
+  define nxt where "nxt \<equiv> \<lambda>x::real. if x < 1/2 then (True, 2*x) else (False, 2*x - 1)"
+  have nxt_fun: "nxt \<in> {0..<1} \<rightarrow> UNIV \<times> {0..<1}"
+    by (simp add: nxt_def Pi_iff)
+  define \<sigma> where "\<sigma> \<equiv> \<lambda>x. rec_nat (True, x) (\<lambda>n (b,y). nxt y)"
+  have "x \<in> {0..<1} \<Longrightarrow> \<sigma> x n \<in> UNIV \<times> {0..<1}" for x n
+  proof (induction n)
+    case 0
+    then show ?case
+      by (simp add: \<sigma>_def)
+   next
+    case (Suc n)
+    with nxt_fun show ?case
+      by (force simp add: \<sigma>_def Pi_iff split: prod.split)
+  qed
+  then have "\<sigma> \<in> {0..<1} \<rightarrow> UNIV \<rightarrow> UNIV \<times> {0..<1}"
+    by blast
+  define f where "f \<equiv> \<lambda>x. {n. fst (\<sigma> x (Suc n))}"
+  have fst_nxt_ne: "fst (nxt x) \<noteq> fst (nxt y)" 
+    if "y-x \<ge> 1/2" "0 \<le> x" "y < 1" for x y
+    using that by (simp add: nxt_def)
+  have snd_nxt: "snd (nxt y) - snd (nxt x) = 2 * (y-x)" 
+    if "fst (nxt x) = fst (nxt y)" for x y
+    using that by (simp add: nxt_def split: if_split_asm)
+
+
+  have False if "f x = f y" "x < y" "0 \<le> x" "x < 1" "0 \<le> y" "y < 1" for x y :: real
+  proof -
+    have eq: "\<And>k. fst (\<sigma> x (Suc k)) = fst (\<sigma> y (Suc k))"
+      using that by (force simp add: f_def)
+    define n where "n \<equiv> nat (\<lceil>log 2 (1 / (2 * (y - x)))\<rceil>)"
+    have "2^n \<ge> (1 / (2 * (y - x)))"
+      by (simp add: n_def power_of_nat_log)
+    then have "2^n * (y-x) \<ge> 1/2"
+      using \<open>x < y\<close> by (simp add: n_def field_simps)
+    show ?thesis
+      using that sorry
+  qed
+  then  have "inj_on f {0..<1}"
+    by (meson atLeastLessThan_iff linorder_inj_onI')
+  have "\<exists>f. inj_on f {0..<1} \<and> f ` {0..<1} \<subseteq> UNIV"
+    sorry
+  unfolding lepoll_def
+
+
 (*replace*)
 lemma relative_to_subset:
    "\<lbrakk>S \<subseteq> T; P S\<rbrakk> \<Longrightarrow> (P relative_to T) S"
@@ -1696,15 +1745,33 @@ oops
 
 subsection\<open>A perfect set in common cases must have cardinality >= c\<close>
 
+(** WE NEED A PROOF THAT the reals and sets of naturals are equipollent **)
+
+lemma (in Metric_space) card_ge_perfect_set:
+  assumes "mcomplete"
+    and "mtopology derived_set_of S = S" "S \<noteq> {}"
+  shows "(UNIV::real set) \<lesssim> S"
+proof -
+  have "S \<subseteq> M"
+    using assms(2) derived_set_of_infinite_mball by blast
+  have "(UNIV::real set) \<lesssim> (UNIV::num set set)"
+    sorry
+  also have "\<dots> \<lesssim> S"
+    thm uncountable_closed_interval
+    sorry
+
 
 lemma card_ge_perfect_set:
-   "(completely_metrizable_space X \<or>
-         locally_compact_space X \<and> Hausdorff_space X) \<and>
-        X derived_set_of s = s \<and> (s \<noteq> {})
-        \<Longrightarrow> UNIV \<lesssim> s"
+  assumes X: "completely_metrizable_space X \<or> locally_compact_space X \<and> Hausdorff_space X"
+    and "X derived_set_of S = S" "S \<noteq> {}"
+  shows "(UNIV::real set) \<lesssim> S"
+  using assms
+  apply-
+  apply (erule disjE)
+
 oops
-  REWRITE_TAC[TAUT `(p \<or> q) \<and> r \<Longrightarrow> s \<longleftrightarrow>
-                    (p \<Longrightarrow> r \<Longrightarrow> s) \<and> (q \<and> r \<Longrightarrow> s)`] THEN
+  REWRITE_TAC[TAUT `(p \<or> q) \<and> r \<Longrightarrow> S \<longleftrightarrow>
+                    (p \<Longrightarrow> r \<Longrightarrow> S) \<and> (q \<and> r \<Longrightarrow> S)`] THEN
   REWRITE_TAC[FORALL_AND_THM; RIGHT_FORALL_IMP_THM] THEN
   REWRITE_TAC[GSYM FORALL_MCOMPLETE_TOPOLOGY] THEN
   REWRITE_TAC[RIGHT_IMP_FORALL_THM; IMP_IMP; GSYM CONJ_ASSOC] THEN
@@ -1712,18 +1779,19 @@ oops
    [REPEAT STRIP_TAC THEN
     TRANS_TAC CARD_LE_TRANS `(:num=>bool)` THEN
     SIMP_TAC[CARD_EQ_REAL; CARD_EQ_IMP_LE] THEN
-    SUBGOAL_THEN `(s::A=>bool) \<subseteq> M` ASSUME_TAC THENL
+    SUBGOAL_THEN `(S::A=>bool) \<subseteq> M` ASSUME_TAC THENL
      [ASM_MESON_TAC[DERIVED_SET_OF_SUBSET_TOPSPACE; TOPSPACE_MTOPOLOGY];
       ALL_TAC] THEN
+
     SUBGOAL_THEN
-     `\<forall>x e. x \<in> s \<and> 0 < e
-            \<Longrightarrow> \<exists>y z d. y \<in> s \<and> z \<in> s \<and> 0 < d \<and> d < e/2 \<and>
+     `\<forall>x e. x \<in> S \<and> 0 < e
+            \<Longrightarrow> \<exists>y z d. y \<in> S \<and> z \<in> S \<and> 0 < d \<and> d < e/2 \<and>
                         mcball y d \<subseteq> mcball x e \<and>
                         mcball z d \<subseteq> mcball x e \<and>
                         disjnt (mcball m (y::A,d)) (mcball z d)`
     MP_TAC THENL
      [REPEAT STRIP_TAC THEN
-      MP_TAC(ISPECL [`m::A metric`; `s::A=>bool`]
+      MP_TAC(ISPECL [`m::A metric`; `S::A=>bool`]
           DERIVED_SET_OF_INFINITE_MBALL) THEN
       ASM_REWRITE_TAC[EXTENSION; IN_ELIM_THM] THEN
       DISCH_THEN(MP_TAC \<circ> SPEC `x::A`) THEN ASM_REWRITE_TAC[] THEN
@@ -1731,10 +1799,10 @@ oops
       ASM_REWRITE_TAC[infinite; REAL_ARITH `0 < e / 4 \<longleftrightarrow> 0 < e`] THEN
       DISCH_THEN(MP_TAC \<circ> SPEC `x::A` \<circ> MATCH_MP
        (MESON[FINITE_RULES; FINITE_SUBSET]
-         `\<not> finite s \<Longrightarrow> \<forall>a b c. \<not> (s \<subseteq> {a,b,c})`)) THEN
+         `\<not> finite S \<Longrightarrow> \<forall>a b c. \<not> (S \<subseteq> {a,b,c})`)) THEN
       DISCH_THEN(MP_TAC \<circ> MATCH_MP (SET_RULE
-       `(\<forall>b c. \<not> (s \<subseteq> {a,b,c}))
-        \<Longrightarrow> \<exists>b c. b \<in> s \<and> c \<in> s \<and> (c \<noteq> a) \<and> (b \<noteq> a) \<and> (b \<noteq> c)`)) THEN
+       `(\<forall>b c. \<not> (S \<subseteq> {a,b,c}))
+        \<Longrightarrow> \<exists>b c. b \<in> S \<and> c \<in> S \<and> (c \<noteq> a) \<and> (b \<noteq> a) \<and> (b \<noteq> c)`)) THEN
       MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `l::A` THEN
       MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `r::A` THEN
       REWRITE_TAC[IN_INTER] THEN STRIP_TAC THEN
@@ -1779,16 +1847,16 @@ oops
     MAP_EVERY X_GEN_TAC
      [`x:(num=>bool)->num=>A`; `r:(num=>bool)->num=>real`] THEN
     STRIP_TAC THEN
-    SUBGOAL_THEN `mcomplete (submetric s::A metric)` MP_TAC THENL
+    SUBGOAL_THEN `mcomplete (submetric S::A metric)` MP_TAC THENL
      [MATCH_MP_TAC CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE THEN
       ASM_REWRITE_TAC[CLOSED_IN_CONTAINS_DERIVED_SET; TOPSPACE_MTOPOLOGY] THEN
       ASM SET_TAC[];
       REWRITE_TAC[MCOMPLETE_NEST_SING]] THEN
     DISCH_THEN(MP_TAC \<circ> MATCH_MP MONO_FORALL \<circ> GEN `b::num=>bool` \<circ>
-      SPEC `\<lambda>n. mcball (submetric s)
+      SPEC `\<lambda>n. mcball (submetric S)
                        ((x:(num=>bool)->num=>A) b n,r b n)`) THEN
     REWRITE_TAC[SKOLEM_THM] THEN
-    SUBGOAL_THEN `(\<forall>b n. (x:(num=>bool)->num=>A) b n \<in> s) \<and>
+    SUBGOAL_THEN `(\<forall>b n. (x:(num=>bool)->num=>A) b n \<in> S) \<and>
                   (\<forall>b n. 0 < (r:(num=>bool)->num=>real) b n)`
     STRIP_ASSUME_TAC THENL
      [REWRITE_TAC[AND_FORALL_THM] THEN GEN_TAC THEN
@@ -1831,7 +1899,7 @@ oops
        MP_TAC(SPEC `c::num=>bool` th) THEN MP_TAC(SPEC `b::num=>bool` th)) THEN
       ASM_REWRITE_TAC[TAUT `p \<Longrightarrow> \<not> q \<longleftrightarrow> \<not> (p \<and> q)`] THEN
       DISCH_THEN(MP_TAC \<circ> MATCH_MP (SET_RULE
-       `s = {a} \<and> t = {a} \<Longrightarrow> a \<in> s \<inter> t`)) THEN
+       `S = {a} \<and> t = {a} \<Longrightarrow> a \<in> S \<inter> t`)) THEN
       REWRITE_TAC[IN_INTER; IN_ELIM_THM; AND_FORALL_THM] THEN
       DISCH_THEN(MP_TAC \<circ> SPEC `Suc n`) THEN ASM_REWRITE_TAC[COND_SWAP] THEN
       SUBGOAL_THEN
@@ -1851,13 +1919,13 @@ oops
           \<Longrightarrow> UNIV \<lesssim> topspace X`
     ASSUME_TAC THENL
      [REPEAT STRIP_TAC;
-      MAP_EVERY X_GEN_TAC [`X::A topology`; `s::A=>bool`] THEN STRIP_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `subtopology X (s::A=>bool)`) THEN
-      SUBGOAL_THEN `(s::A=>bool) \<subseteq> topspace X` ASSUME_TAC THENL
+      MAP_EVERY X_GEN_TAC [`X::A topology`; `S::A=>bool`] THEN STRIP_TAC THEN
+      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `subtopology X (S::A=>bool)`) THEN
+      SUBGOAL_THEN `(S::A=>bool) \<subseteq> topspace X` ASSUME_TAC THENL
        [ASM_MESON_TAC[DERIVED_SET_OF_SUBSET_TOPSPACE]; ALL_TAC] THEN
       ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY; HAUSDORFF_SPACE_SUBTOPOLOGY;
-                   DERIVED_SET_OF_SUBTOPOLOGY; SET_RULE `s \<inter> s = s`;
-                   SET_RULE `s \<subseteq> u \<Longrightarrow> u \<inter> s = s`] THEN
+                   DERIVED_SET_OF_SUBTOPOLOGY; SET_RULE `S \<inter> S = S`;
+                   SET_RULE `S \<subseteq> u \<Longrightarrow> u \<inter> S = S`] THEN
       DISCH_THEN MATCH_MP_TAC THEN
       MATCH_MP_TAC LOCALLY_COMPACT_SPACE_CLOSED_SUBSET THEN
       ASM_REWRITE_TAC[CLOSED_IN_CONTAINS_DERIVED_SET; SUBSET_REFL]] THEN
@@ -1887,15 +1955,15 @@ oops
        [ASM_MESON_TAC[\<subseteq>; INTERIOR_OF_SUBSET_TOPSPACE]; ALL_TAC] THEN
       MP_TAC(ISPECL [`X::A topology`; `topspace X::A=>bool`]
             DERIVED_SET_OF_INFINITE_OPEN_IN) THEN
-      ASM_REWRITE_TAC[] THEN DISCH_THEN(MP_TAC \<circ> AP_TERM `\<lambda>s. (z::A) \<in> s`) THEN
+      ASM_REWRITE_TAC[] THEN DISCH_THEN(MP_TAC \<circ> AP_TERM `\<lambda>s. (z::A) \<in> S`) THEN
       ASM_REWRITE_TAC[IN_ELIM_THM] THEN
       DISCH_THEN(MP_TAC \<circ> SPEC `X interior_of c::A=>bool`) THEN
       ASM_SIMP_TAC[OPEN_IN_INTERIOR_OF; INTERIOR_OF_SUBSET_TOPSPACE;
-                   SET_RULE `s \<subseteq> u \<Longrightarrow> u \<inter> s = s`] THEN
+                   SET_RULE `S \<subseteq> u \<Longrightarrow> u \<inter> S = S`] THEN
       DISCH_THEN(MP_TAC \<circ> MATCH_MP (MESON[infinite; FINITE_SING; FINITE_SUBSET]
-        `infinite s \<Longrightarrow> \<forall>a. \<not> (s \<subseteq> {a})`)) THEN
+        `infinite S \<Longrightarrow> \<forall>a. \<not> (S \<subseteq> {a})`)) THEN
       DISCH_THEN(MP_TAC \<circ> MATCH_MP (SET_RULE
-       `(\<forall>a. \<not> (s \<subseteq> {a})) \<Longrightarrow> \<exists>a b. a \<in> s \<and> b \<in> s \<and> (a \<noteq> b)`)) THEN
+       `(\<forall>a. \<not> (S \<subseteq> {a})) \<Longrightarrow> \<exists>a b. a \<in> S \<and> b \<in> S \<and> (a \<noteq> b)`)) THEN
       REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
       MAP_EVERY X_GEN_TAC [`x::A`; `y::A`] THEN STRIP_TAC THEN
       SUBGOAL_THEN `(x::A) \<in> topspace X \<and> y \<in> topspace X`
@@ -1917,7 +1985,7 @@ oops
       MAP_EVERY X_GEN_TAC [`n::A=>bool`; `e::A=>bool`] THEN STRIP_TAC THEN
       MAP_EVERY EXISTS_TAC [`d::A=>bool`; `e::A=>bool`] THEN
       ASM_REWRITE_TAC[] THEN ONCE_REWRITE_TAC[TAUT
-       `p \<and> q \<and> r \<and> s \<and> t \<longleftrightarrow> (q \<and> s) \<and> p \<and> r \<and> t`] THEN
+       `p \<and> q \<and> r \<and> S \<and> t \<longleftrightarrow> (q \<and> S) \<and> p \<and> r \<and> t`] THEN
       CONJ_TAC THENL
        [CONJ_TAC THENL [EXISTS_TAC `x::A`; EXISTS_TAC `y::A`] THEN
         REWRITE_TAC[interior_of; IN_ELIM_THM] THEN ASM_MESON_TAC[];
