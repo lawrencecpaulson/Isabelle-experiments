@@ -69,6 +69,79 @@ proof -
 qed
 
 
+thm geometric_sum
+lemma geometric_sum_less:
+  assumes "0 < x" "x < 1" "finite S"
+  shows "(\<Sum>i\<in>S. x ^ i) < 1 / (1 - x::'a::linordered_field)"
+proof -
+  define n where "n \<equiv> Suc (Max S)" 
+  have "(\<Sum>i\<in>S. x ^ i) \<le> (\<Sum>i<n. x ^ i)"
+    unfolding n_def using assms  by (fastforce intro!: sum_mono2 le_imp_less_Suc)
+  also have "\<dots> = (1 - x ^ n) / (1 - x)"
+    using assms by (simp add: geometric_sum field_simps)
+  also have "\<dots> < 1 / (1-x)"
+    using assms by (simp add: field_simps)
+  finally show ?thesis .
+qed
+
+lemma Jayne:
+  "(\<Sum>i\<in>S \<inter> {m..n}. (inverse 3::real) ^ i) < 3 / 2 / 3 ^ m"
+proof -
+  have "(\<Sum>i\<in>S \<inter> {m..n}. (inverse(3::real)) ^ i) \<le> (\<Sum>i = m..n. inverse 3 ^ i)"
+    by (force intro!: sum_mono2)
+  also have "\<dots> < 3 / 2 / 3 ^ m"
+  proof (cases "m \<le> n")
+    case True
+    have eq: "(\<Sum>i = m..n. (inverse 3::real) ^ i) = (3/2) * (inverse 3 ^ m - inverse 3 ^ Suc n)"
+      using sum_gp_multiplied [OF True, of "inverse (3::real)"] by auto
+    show ?thesis
+      unfolding eq by (simp add: field_simps)
+  qed auto
+  finally show ?thesis .
+qed
+
+
+
+lemma nat_sets_lepoll_reals01: "(UNIV::nat set set) \<lesssim> {0..<1::real}"
+proof -
+  define F where "F \<equiv> \<lambda>S i. if i\<in>S then (inverse 3::real) ^ i else 0"
+  have F: "summable (F S)" for S
+    unfolding F_def by (force intro: summable_comparison_test_ev [where g = "power (inverse 3)"])
+  have J: "sum (F S) {..<n} \<le> 3/2" for n S
+  proof (cases n)
+    case (Suc n')
+    have "sum (F S) {..<n} \<le> (\<Sum>i<n. inverse 3 ^ i)"
+      by (simp add: F_def sum_mono)
+    also have "\<dots> = (\<Sum>i=0..n'. inverse 3 ^ i)"
+      using Suc atLeast0AtMost lessThan_Suc_atMost by presburger
+    also have "\<dots> = (3/2) * (1 - inverse 3 ^ n)"
+      using sum_gp_multiplied [of 0 n' "inverse (3::real)"] by (simp add: Suc field_simps)
+    also have "\<dots> \<le> 3/2"
+      by (simp add: field_simps)
+    finally show ?thesis .
+  qed auto
+  define f where "f \<equiv> \<lambda>S. suminf (F S) / 2"
+
+  have "f S \<in> {0..<1::real}" for S
+  proof -
+    have "0 \<le> suminf (F S)"
+      using F by (simp add: F_def suminf_nonneg)
+    moreover have "suminf (F S) \<le> 3/2"
+      by (rule suminf_le_const [OF F J])
+    ultimately show ?thesis
+      by (auto simp: f_def)
+  qed
+  moreover have "inj f"
+    sorry
+  ultimately show ?thesis
+    by (meson image_subsetI lepoll_def)
+qed
+
+lemma "(UNIV::nat set set) \<approx> (UNIV::real set)"
+
+  oops
+
+
     (*delete*)
       thm relative_to_subset relative_to_subset_trans
 
