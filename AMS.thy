@@ -105,6 +105,8 @@ qed
 lemma nat_sets_lepoll_reals01: "(UNIV::nat set set) \<lesssim> {0..<1::real}"
 proof -
   define F where "F \<equiv> \<lambda>S i. if i\<in>S then (inverse 3::real) ^ i else 0"
+  have Fge0: "F S i \<ge> 0" for S i
+    by (simp add: F_def)
   have F: "summable (F S)" for S
     unfolding F_def by (force intro: summable_comparison_test_ev [where g = "power (inverse 3)"])
   have J: "sum (F S) {..<n} \<le> 3/2" for n S
@@ -121,6 +123,10 @@ proof -
     finally show ?thesis .
   qed auto
   define f where "f \<equiv> \<lambda>S. suminf (F S) / 2"
+  have "F S n \<le> F T n" if "S \<subseteq> T" for S T n
+    using F_def that by auto
+  then have monof: "f S \<le> f T" if "S \<subseteq> T" for S T
+    using that F by (simp add: f_def suminf_le)
 
   have "f S \<in> {0..<1::real}" for S
   proof -
@@ -132,7 +138,46 @@ proof -
       by (auto simp: f_def)
   qed
   moreover have "inj f"
-    sorry
+  proof
+    fix S T
+    assume "f S = f T" 
+    show "S = T"
+    proof (rule ccontr)
+      assume "S \<noteq> T"
+      then have ST_ne: "sym_diff S T \<noteq> {}"
+        by blast
+      define n where "n \<equiv> LEAST n. n \<in> sym_diff S T"
+
+      have eq: "S \<inter> {..<n} = T \<inter> {..<n}"
+        using not_less_Least by (fastforce simp add: n_def)
+      have D: "sum (F S) {..<n} = sum (F T) {..<n}"
+        by (metis (no_types, lifting) F_def Int_iff eq sum.cong)
+
+      have yes: "f U \<ge> (sum (F U) {..<n} + (inverse 3::real) ^ n) / 2" 
+        if "n \<in> U" for U
+      proof -
+        have FUn: "F U n = (1/3) ^ n"
+          by (simp add: F_def that)
+        have "0 \<le> (\<Sum>k. F U (k + Suc n))"
+          by (metis F Fge0 suminf_nonneg summable_iff_shift)
+        then have "F U n + (\<Sum>i<n. F U i) \<le> (\<Sum>k. F U (k + Suc n)) + F U n + (\<Sum>i<n. F U i)"
+          by simp
+        also have "\<dots> = (\<Sum>k. F U (k + n)) + (\<Sum>i<n. F U i)"
+          by (metis (no_types) F add.commute add.left_commute sum.lessThan_Suc suminf_split_initial_segment)
+        also have "\<dots> = suminf (F U)"
+          by (metis F suminf_split_initial_segment)
+        finally show ?thesis
+          by (simp add: f_def add.commute FUn)
+      qed
+      have no: "f U < (sum (F U) {..<n} + (inverse 3::real) ^ n) / 2" 
+        if "n \<notin> U" for U
+        sorry
+      consider "n \<in> S-T" | "n \<in> T-S"
+        by (metis LeastI_ex ST_ne UnE ex_in_conv n_def)
+      with yes no D show False
+        by (smt (verit, best) Diff_iff \<open>f S = f T\<close>)
+    qed
+  qed
   ultimately show ?thesis
     by (meson image_subsetI lepoll_def)
 qed
