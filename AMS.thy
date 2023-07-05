@@ -250,28 +250,28 @@ lemma nat_sets_lepoll_reals: "(UNIV::nat set set) \<approx> (UNIV::real set)"
       nat_sets_lepoll_reals01 reals01_lepoll_nat_sets  subset_UNIV subset_imp_lepoll)
 
 
-lemma (in Metric_space) first_countable_mtopology:
-   "first_countable mtopology"
-  sorry
-  oops
-  GEN_TAC THEN REWRITE_TAC[first_countable; TOPSPACE_MTOPOLOGY] THEN
-  X_GEN_TAC `x::A` THEN DISCH_TAC THEN
-  EXISTS_TAC `{ mball m (x::A,r) | rational r \<and> 0 < r}` THEN
-  REWRITE_TAC[FORALL_IN_GSPEC; OPEN_IN_MBALL; EXISTS_IN_GSPEC] THEN
-  ONCE_REWRITE_TAC[SET_RULE
-   `{f x | S x \<and> Q x} = f ` {x \<in> S. Q x}`] THEN
-  SIMP_TAC[COUNTABLE_IMAGE; COUNTABLE_RATIONAL; COUNTABLE_RESTRICT] THEN
-  REWRITE_TAC[OPEN_IN_MTOPOLOGY] THEN
-  X_GEN_TAC `U::A=>bool` THEN STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC \<circ> SPEC `x::A`) THEN
-  ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `r::real` THEN STRIP_TAC THEN FIRST_ASSUM
-   (MP_TAC \<circ> SPEC `r::real` \<circ> MATCH_MP RATIONAL_APPROXIMATION_BELOW) THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `q::real` THEN
-  REWRITE_TAC[REAL_SUB_REFL] THEN STRIP_TAC THEN
-  ASM_SIMP_TAC[CENTRE_IN_MBALL] THEN
-  TRANS_TAC SUBSET_TRANS `mball m (x::A,r)` THEN
-  ASM_SIMP_TAC[MBALL_SUBSET_CONCENTRIC; REAL_LT_IMP_LE]);;`
+lemma (in Metric_space) first_countable_mtopology: "first_countable mtopology"
+proof (clarsimp simp add: first_countable_def)
+  fix x
+  assume "x \<in> M"
+  define \<B> where "\<B> \<equiv> mball x ` {r \<in> \<rat>. 0 < r}"
+  show "\<exists>\<B>. countable \<B> \<and> (\<forall>V\<in>\<B>. openin mtopology V) \<and> (\<forall>U. openin mtopology U \<and> x \<in> U \<longrightarrow> (\<exists>V\<in>\<B>. x \<in> V \<and> V \<subseteq> U))"
+  proof (intro exI conjI ballI)
+    show "countable \<B>"
+      by (simp add: \<B>_def countable_rat)
+    show "\<forall>U. openin mtopology U \<and> x \<in> U \<longrightarrow> (\<exists>V\<in>\<B>. x \<in> V \<and> V \<subseteq> U)"
+    proof clarify
+      fix U
+      assume "openin mtopology U" and "x \<in> U"
+      then obtain r where "r>0" and r: "mball x r \<subseteq> U"
+        by (meson openin_mtopology)
+      then obtain q where "q \<in> Rats" "0 < q" "q < r"
+        using Rats_dense_in_real by blast
+      then show "\<exists>V\<in>\<B>. x \<in> V \<and> V \<subseteq> U"
+        unfolding \<B>_def using \<open>x \<in> M\<close> r by fastforce
+    qed
+  qed (auto simp: \<B>_def)
+qed
 
 lemma metrizable_imp_first_countable:
    "metrizable_space X \<Longrightarrow> first_countable X"
