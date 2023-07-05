@@ -167,9 +167,87 @@ proof -
     by (meson image_subsetI lepoll_def)
 qed
 
-lemma "(UNIV::nat set set) \<approx> (UNIV::real set)"
+lemma reals_nonneg_lepoll_reals01: "{0::real..} \<lesssim> {0..<1::real}"
+  unfolding lepoll_def
+proof (intro exI conjI)
+  define off where "off \<equiv> \<lambda>n. (1 - (1/2)^n) :: real"
+  define f where "f \<equiv> \<lambda>x::real. off (nat\<lfloor>x\<rfloor>) + (1/2) powi (1 + floor x) * frac x"
+  have off_funspace: "off n \<in> {0..<1::real}" for n
+    by (auto simp: off_def power_le_one_iff)
+  have off_mono: "off m < off n \<longleftrightarrow> m<n" for m n
+    by (auto simp: off_def)
+  have f_slice: "f \<in> {real n..< 1 + real n} \<rightarrow> {off n..< off (Suc n)}" for n
+  proof (clarsimp simp add: Pi_iff)
+    fix x
+    assume "real n \<le> x" and "x < 1 + real n"
+    then have [simp]: "\<lfloor>x\<rfloor> = int n"
+      by linarith
+    have "(1 / 2) ^ n * frac x / 2 - (1 / 2) ^ n < - ((1 / 2) ^ n / 2)"
+      by (smt (verit) field_sum_of_halves frac_lt_1 mult_less_cancel_left1 mult_minus_left zero_less_power)
+    then show "off n \<le> f x \<and> f x < off (Suc n)"
+      by (simp add: f_def off_def power_int_add)
+  qed
+  then have "f x \<ge> 0" if "x \<ge> 0" for x
+    by (simp add: f_def off_def power_le_one_iff)
+  moreover have "f x < 1" if "x \<ge> 0" for x
+    using off_funspace \<open>0 \<le> x\<close> Pi_mem [OF f_slice [of "nat \<lfloor>x\<rfloor>"]]
+    by (simp add: Pi_iff) (smt (verit, best) less_floor_iff of_int_floor_le)
+  ultimately show "f ` {0..} \<subseteq> {0..<1}"
+    by force
+  have f_ge: "off (nat \<lfloor>x\<rfloor>) \<le> f x" for x
+    by (simp add: f_def)
+  have f_le: "f x < off (Suc (nat \<lfloor>x\<rfloor>))" if "0 \<le> x" for x
+    using Pi_mem [OF f_slice [of "nat\<lfloor>x\<rfloor>"]] that
+    by simp (metis add.commute of_int_floor_le real_of_int_floor_add_one_gt)
 
-  oops
+  show "inj_on f {0..}"
+  proof (clarsimp simp: inj_on_def)
+    fix x y
+    assume "0 \<le> x" "0 \<le> y" "f x = f y"
+    show "x = y"
+    proof (rule ccontr)
+      assume "x \<noteq> y"
+      then consider "\<lfloor>x\<rfloor> \<noteq> \<lfloor>y\<rfloor>" | "\<lfloor>x\<rfloor> = \<lfloor>y\<rfloor>" "frac x \<noteq> frac y"
+        by (force simp: frac_def)
+      then show False
+      proof cases
+        case 1
+        then show False
+          using f_ge f_le \<open>0 \<le> x\<close> \<open>0 \<le> y\<close> \<open>f x = f y\<close> 
+          apply (simp add: neq_iff)
+          apply (smt (verit) off_mono less_trans_Suc nat_less_eq_zless zero_le_floor)
+          done
+      qed (use \<open>f x = f y\<close> f_def in auto)
+    qed
+  qed
+qed
+
+lemma reals_lepoll_reals01: "(UNIV::real set) \<lesssim> {0..<1::real}"
+proof -
+  obtain f where injf: "inj_on f {0..}" and f: "f ` {0::real..} \<subseteq> {0..<1::real}"
+    using reals_nonneg_lepoll_reals01 by (auto simp: lepoll_def)
+  then have F: "f x \<noteq> f y + 1" if "0 \<le> x" "0 \<le> y" for x y
+    unfolding image_subset_iff
+    by (metis that add_0 add_right_mono atLeastLessThan_iff atLeast_iff linorder_not_le)
+
+  define g where "g \<equiv> \<lambda>x. if x \<ge> 0 then f x / 2 else (f(-x) + 1) / 2"
+  show ?thesis
+    unfolding lepoll_def
+  proof (intro exI conjI)
+    show "range g \<subseteq> {0..<1}"
+      using f
+      apply (clarsimp simp add: g_def image_subset_iff)
+      by (meson atLeast_iff linorder_not_le not_numeral_less_one order_le_less_trans)
+    show "inj g"
+      using f 
+      apply (simp add: inj_on_def inj_on_eq_iff [OF injf] g_def image_subset_iff del: divide_const_simps)
+      by (metis linorder_class.linear neg_0_le_iff_le F)
+  qed
+qed
+
+lemma nat_sets_lepoll_reals: "(UNIV::nat set set) \<approx> (UNIV::real set)"
+  by (metis (mono_tags, opaque_lifting) reals_lepoll_reals01 lepoll_antisym lepoll_trans 
+      nat_sets_lepoll_reals01 reals01_lepoll_nat_sets  subset_UNIV subset_imp_lepoll)
 
 
 lemma (in Metric_space) first_countable_mtopology:
