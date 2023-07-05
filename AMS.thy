@@ -80,24 +80,6 @@ proof -
   finally show ?thesis .
 qed
 
-lemma Jayne:
-  "(\<Sum>i\<in>S \<inter> {m..n}. (inverse 3::real) ^ i) < 3 / 2 / 3 ^ m"
-proof -
-  have "(\<Sum>i\<in>S \<inter> {m..n}. (inverse(3::real)) ^ i) \<le> (\<Sum>i = m..n. inverse 3 ^ i)"
-    by (force intro!: sum_mono2)
-  also have "\<dots> < 3 / 2 / 3 ^ m"
-  proof (cases "m \<le> n")
-    case True
-    have eq: "(\<Sum>i = m..n. (inverse 3::real) ^ i) = (3/2) * (inverse 3 ^ m - inverse 3 ^ Suc n)"
-      using sum_gp_multiplied [OF True, of "inverse (3::real)"] by auto
-    show ?thesis
-      unfolding eq by (simp add: field_simps)
-  qed auto
-  finally show ?thesis .
-qed
-
-
-
 lemma nat_sets_lepoll_reals01: "(UNIV::nat set set) \<lesssim> {0..<1::real}"
 proof -
   define F where "F \<equiv> \<lambda>S i. if i\<in>S then (inverse 3::real) ^ i else 0"
@@ -105,7 +87,7 @@ proof -
     by (simp add: F_def)
   have F: "summable (F S)" for S
     unfolding F_def by (force intro: summable_comparison_test_ev [where g = "power (inverse 3)"])
-  have J: "sum (F S) {..<n} \<le> 3/2" for n S
+  have "sum (F S) {..<n} \<le> 3/2" for n S
   proof (cases n)
     case (Suc n')
     have "sum (F S) {..<n} \<le> (\<Sum>i<n. inverse 3 ^ i)"
@@ -118,6 +100,8 @@ proof -
       by (simp add: field_simps)
     finally show ?thesis .
   qed auto
+  then have F32: "suminf (F S) \<le> 3/2" for S
+    using F suminf_le_const by blast
   define f where "f \<equiv> \<lambda>S. suminf (F S) / 2"
   have monoF: "F S n \<le> F T n" if "S \<subseteq> T" for S T n
     using F_def that by auto
@@ -127,9 +111,7 @@ proof -
   proof -
     have "0 \<le> suminf (F S)"
       using F by (simp add: F_def suminf_nonneg)
-    moreover have "suminf (F S) \<le> 3/2"
-      by (rule suminf_le_const [OF F J])
-    ultimately show ?thesis
+    with F32[of S] show ?thesis
       by (auto simp: f_def)
   qed
   moreover have "inj f"
@@ -142,38 +124,20 @@ proof -
       then have ST_ne: "sym_diff S T \<noteq> {}"
         by blast
       define n where "n \<equiv> LEAST n. n \<in> sym_diff S T"
-
-      have eq: "S \<inter> {..<n} = T \<inter> {..<n}"
-        using not_less_Least by (fastforce simp add: n_def)
-      have D: "sum (F S) {..<n} = sum (F T) {..<n}"
-        by (metis (no_types, lifting) F_def Int_iff eq sum.cong)
-
-      have E: "suminf (F U) = (\<Sum>k. F U (k + Suc n)) + F U n + (\<Sum>i<n. F U i)"  (is "?L=?R")
-        for U
-      proof -
-        have "?L = (\<Sum>k. F U (k + n)) + (\<Sum>i<n. F U i)"
-          by (metis F suminf_split_initial_segment)
-        also have "\<dots> = (\<Sum>k. F U (k + Suc n)) + F U n + (\<Sum>i<n. F U i)"
-          by (metis (no_types) F add.commute add.left_commute sum.lessThan_Suc suminf_split_initial_segment)
-        finally show ?thesis .
-      qed
-
+      have sum_split: "suminf (F U) = sum (F U) {..<Suc n} + (\<Sum>k. F U (k + Suc n))"  for U
+        by (metis F add.commute suminf_split_initial_segment)
       have yes: "f U \<ge> (sum (F U) {..<n} + (inverse 3::real) ^ n) / 2" 
         if "n \<in> U" for U
       proof -
         have "0 \<le> (\<Sum>k. F U (k + Suc n))"
           by (metis F Fge0 suminf_nonneg summable_iff_shift)
-        then have "F U n + (\<Sum>i<n. F U i) \<le> (\<Sum>k. F U (k + Suc n)) + F U n + (\<Sum>i<n. F U i)"
-          by simp
         moreover have "F U n = (1/3) ^ n"
           by (simp add: F_def that)
         ultimately show ?thesis
-          by (simp add: E f_def)
+          by (simp add: sum_split f_def)
       qed
-
-      have G: "(\<Sum>k. F UNIV (k + n)) = (\<Sum>k. F UNIV k) * (inverse 3::real) ^ n" for n
+      have *: "(\<Sum>k. F UNIV (k + n)) = (\<Sum>k. F UNIV k) * (inverse 3::real) ^ n" for n
         by (simp add: F_def power_add suminf_mult2)
-
       have no: "f U < (sum (F U) {..<n} + (inverse 3::real) ^ n) / 2" 
         if "n \<notin> U" for U
       proof -
@@ -182,20 +146,21 @@ proof -
         have "(\<Sum>k. F U (k + Suc n)) \<le> (\<Sum>k. F UNIV (k + Suc n))"
           by (metis F monoF subset_UNIV suminf_le summable_ignore_initial_segment)
         then have "suminf (F U) \<le> (\<Sum>k. F UNIV (k + Suc n)) + (\<Sum>i<n. F U i)"
-          by (simp add: E)
+          by (simp add: sum_split)
         also have "\<dots> < (inverse 3::real) ^ n + (\<Sum>i<n. F U i)"
-          unfolding G
-          apply (simp add: )
-          using J
-          sorry
+          unfolding * using F32[of UNIV] by simp
         finally have "suminf (F U) < inverse 3 ^ n + sum (F U) {..<n}" .
         then show ?thesis
           by (simp add: f_def)
       qed
-      consider "n \<in> S-T" | "n \<in> T-S"
+      have "S \<inter> {..<n} = T \<inter> {..<n}"
+        using not_less_Least by (fastforce simp add: n_def)
+      then have "sum (F S) {..<n} = sum (F T) {..<n}"
+        by (metis (no_types, lifting) F_def Int_iff sum.cong)
+      moreover consider "n \<in> S-T" | "n \<in> T-S"
         by (metis LeastI_ex ST_ne UnE ex_in_conv n_def)
-      with yes no D show False
-        by (smt (verit, best) Diff_iff \<open>f S = f T\<close>)
+      ultimately show False
+        by (smt (verit, best) Diff_iff \<open>f S = f T\<close> yes no)
     qed
   qed
   ultimately show ?thesis
