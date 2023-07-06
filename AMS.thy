@@ -765,10 +765,14 @@ proof -
       qed
     qed
     then obtain l r \<delta> 
-        where "\<And>x \<epsilon>. \<lbrakk>x \<in> S; 0 < \<epsilon>\<rbrakk> \<Longrightarrow> l x \<epsilon> \<in> S \<and> r x \<epsilon> \<in> S \<and> 0 < \<delta> x \<epsilon> \<and> \<delta> x \<epsilon> < \<epsilon>/2 \<and>
-                  mcball (l x \<epsilon>) (\<delta> x \<epsilon>) \<subseteq> mcball x \<epsilon> \<and> mcball (r x \<epsilon>) (\<delta> x \<epsilon>) \<subseteq> mcball x \<epsilon> \<and> 
+        where lrS: "\<And>x \<epsilon>. \<lbrakk>x \<in> S; 0 < \<epsilon>\<rbrakk> \<Longrightarrow> l x \<epsilon> \<in> S \<and> r x \<epsilon> \<in> S"
+          and \<delta>: "\<And>x \<epsilon>. \<lbrakk>x \<in> S; 0 < \<epsilon>\<rbrakk> \<Longrightarrow> 0 < \<delta> x \<epsilon> \<and> \<delta> x \<epsilon> < \<epsilon>/2"
+          and "\<And>x \<epsilon>. \<lbrakk>x \<in> S; 0 < \<epsilon>\<rbrakk> \<Longrightarrow>  mcball (l x \<epsilon>) (\<delta> x \<epsilon>) \<subseteq> mcball x \<epsilon> \<and> mcball (r x \<epsilon>) (\<delta> x \<epsilon>) \<subseteq> mcball x \<epsilon> \<and> 
                   disjnt (mcball (l x \<epsilon>) (\<delta> x \<epsilon>)) (mcball (r x \<epsilon>) (\<delta> x \<epsilon>))"
       by metis
+    then have lr_mcball: "\<And>x \<epsilon>. \<lbrakk>x \<in> S; 0 < \<epsilon>\<rbrakk> \<Longrightarrow> mcball (l x \<epsilon>) (\<delta> x \<epsilon>) \<subseteq> mcball x \<epsilon> \<and> mcball (r x \<epsilon>) (\<delta> x \<epsilon>) \<subseteq> mcball x \<epsilon> "
+          and lr_disjnt: "\<And>x \<epsilon>. \<lbrakk>x \<in> S; 0 < \<epsilon>\<rbrakk> \<Longrightarrow> disjnt (mcball (l x \<epsilon>) (\<delta> x \<epsilon>)) (mcball (r x \<epsilon>) (\<delta> x \<epsilon>))"
+      by metis+
     obtain a where "a \<in> S"
       using \<open>S \<noteq> {}\<close> by blast
     define xe where "xe \<equiv> 
@@ -781,8 +785,8 @@ proof -
     define \<gamma> where "\<gamma> \<equiv> \<lambda>b n. snd (xe b n)"
     have [simp]: "x b 0 = a" "\<gamma> b 0 = 1" for b
       by (simp_all add: x_def \<gamma>_def xe_def)
-    have [simp]: "x b (Suc n) = ((if b n then r else l) (x b n) (\<gamma> b n))" 
-                 "\<gamma> b (Suc n) = \<delta> (x b n) (\<gamma> b n)" for b n
+    have x_Suc[simp]: "x b (Suc n) = ((if b n then r else l) (x b n) (\<gamma> b n))" 
+     and \<gamma>_Suc[simp]: "\<gamma> b (Suc n) = \<delta> (x b n) (\<gamma> b n)" for b n
       by (simp_all add: x_def \<gamma>_def xe_def split: prod.split)
     interpret Submetric M d S
     proof qed (use \<open>S \<subseteq> M\<close> in metis)
@@ -791,7 +795,45 @@ proof -
     with \<open>mcomplete\<close>
     have "sub.mcomplete"
       by (metis closedin_mcomplete_imp_mcomplete)
+    have *: "x b n \<in> S \<and> \<gamma> b n > 0" for b n
+      by (induction n) (auto simp: \<open>a \<in> S\<close> lrS \<delta>)
+    with subset have E: "x b n \<in> M" for b n
+      by blast
+    have \<gamma>_le: "\<gamma> b n \<le> (1/2)^n" for b n
+    proof(induction n)
+      case 0 then show ?case by auto
+    next
+      case (Suc n)
+      then show ?case
+        by simp (smt (verit) "*" \<delta> field_sum_of_halves)
+    qed
+    { fix b
+      have "\<And>n. sub.mcball (x b (Suc n)) (\<gamma> b (Suc n)) \<subseteq> sub.mcball (x b n) (\<gamma> b n)"
+        by (smt (verit, best) "*" Int_iff \<gamma>_Suc x_Suc in_mono lr_mcball mcball_submetric_eq subsetI)
+      then have mon: "monotone (\<le>) (\<lambda>x y. y \<subseteq> x) (\<lambda>n. sub.mcball (x b n) (\<gamma> b n))"
+        by (simp add: decseq_SucI)
+      have "\<exists>n a. sub.mcball (x b n) (\<gamma> b n) \<subseteq> sub.mcball a \<epsilon>" if "\<epsilon>>0" for \<epsilon>
+      proof -
+        obtain n where "(1/2)^n < \<epsilon>"
+          using \<open>0 < \<epsilon>\<close> real_arch_pow_inv by force
+        with \<gamma>_le have \<epsilon>: "\<gamma> b n \<le> \<epsilon>"
+          by (smt (verit))
+        show ?thesis
+        proof (intro exI)
+          show "sub.mcball (x b n) (\<gamma> b n) \<subseteq> sub.mcball (x b n) \<epsilon>"
+            by (simp add: \<epsilon> sub.mcball_subset_concentric)
+        qed
+      qed
+      then have "\<exists>l. l \<in> S \<and> (\<Inter>n. sub.mcball (x b n) (\<gamma> b n)) = {l}"
+        using \<open>sub.mcomplete\<close> mon 
+        unfolding sub.mcomplete_nest_sing
+        apply (drule_tac x="\<lambda>n. sub.mcball (x b n) (\<gamma> b n)" in spec)
+        by (meson * order.asym sub.closedin_mcball sub.mcball_eq_empty)
+    }
 
+    sorry
+ 
+        sorry
   finally show ?thesis .
 qed
 
@@ -806,39 +848,7 @@ lemma card_ge_perfect_set:
   apply (metis Metric_space.card_ge_perfect_set completely_metrizable_space_def)
 
 oops
-      REWRITE_TAC[MCOMPLETE_NEST_SING]] THEN
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP MONO_FORALL \<circ> GEN `b::nat=>bool` \<circ>
-      SPEC `\<lambda>n. mcball (submetric S) (x b n,\<gamma> b n)`) THEN
-    REWRITE_TAC[SKOLEM_THM] THEN
-    SUBGOAL_THEN `(\<forall>b n. (x:(nat=>bool)->num=>A) b n \<in> S) \<and>
-                  (\<forall>b n. 0 < (r:(nat=>bool)->num=>real) b n)`
-    STRIP_ASSUME_TAC THENL
-     [REWRITE_TAC[AND_FORALL_THM] THEN GEN_TAC THEN
-      INDUCT_TAC THEN ASM_REWRITE_TAC[REAL_LT_01] THEN ASM_MESON_TAC[];
-      ALL_TAC] THEN
-    SUBGOAL_THEN `(\<forall>b n. (x:(nat=>bool)->num=>A) b n \<in> M)`
-    ASSUME_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
     ANTS_TAC THENL
-     [X_GEN_TAC `b::nat=>bool` THEN REWRITE_TAC[CLOSED_IN_MCBALL] THEN
-      ASM_REWRITE_TAC[MCBALL_EQ_EMPTY; SUBMETRIC; IN_INTER] THEN
-      ASM_SIMP_TAC[REAL_ARITH `0 < x \<Longrightarrow> \<not> (x < 0)`] THEN CONJ_TAC THENL
-       [MATCH_MP_TAC TRANSITIVE_STEPWISE_LE THEN
-        REPEAT(CONJ_TAC THENL [SET_TAC[]; ALL_TAC]) THEN
-        ASM_REWRITE_TAC[MCBALL_SUBMETRIC_EQ] THEN ASM SET_TAC[];
-        X_GEN_TAC `e::real` THEN DISCH_TAC THEN
-        MP_TAC(ISPECL [`inverse 2`; `e::real`] REAL_ARCH_POW_INV) THEN
-        ASM_REWRITE_TAC[REAL_POW_INV] THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN
-        MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `n::nat` THEN
-        DISCH_TAC THEN EXISTS_TAC `(x:(nat=>bool)->num=>A) b n` THEN
-        MATCH_MP_TAC MCBALL_SUBSET_CONCENTRIC THEN
-        TRANS_TAC REAL_LE_TRANS `inverse(2 ^ n)` THEN
-        ASM_SIMP_TAC[REAL_LT_IMP_LE] THEN
-        SPEC_TAC(`n::nat`,`n::nat`) THEN
-        MATCH_MP_TAC num_INDUCTION THEN ASM_REWRITE_TAC[real_pow] THEN
-        CONV_TAC REAL_RAT_REDUCE_CONV THEN REWRITE_TAC[REAL_INV_MUL] THEN
-        GEN_TAC THEN MATCH_MP_TAC(REAL_ARITH
-         `d < e/2 \<Longrightarrow> e \<le> i \<Longrightarrow> d \<le> inverse 2 * i`) THEN
-        ASM_SIMP_TAC[]];
       REWRITE_TAC[SKOLEM_THM; le_c; IN_UNIV] THEN
       MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `z:(nat=>bool)->A` THEN
       SIMP_TAC[SUBMETRIC; IN_INTER; FORALL_AND_THM] THEN STRIP_TAC THEN
@@ -866,6 +876,8 @@ oops
         INDUCT_TAC THEN ASM_SIMP_TAC[LT_SUC_LE; LE_REFL; LT_IMP_LE];
         COND_CASES_TAC THEN ASM_REWRITE_TAC[MCBALL_SUBMETRIC_EQ; IN_INTER] THEN
         ASM SET_TAC[]]];
+
+
     SUBGOAL_THEN
      `\<forall>X::A topology.
           locally_compact_space X \<and> Hausdorff_space X \<and>
