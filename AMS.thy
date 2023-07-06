@@ -9,247 +9,198 @@ begin
 lemma power_of_nat_log_le: "b > 1 \<Longrightarrow> b ^ nat (floor(log b x)) \<le> x"
   oops
 
-lemma reals01_lepoll_nat_sets: "{0..<1::real} \<lesssim> (UNIV::nat set set)"
-proof -
-  define nxt where "nxt \<equiv> \<lambda>x::real. if x < 1/2 then (True, 2*x) else (False, 2*x - 1)"
-  have nxt_fun: "nxt \<in> {0..<1} \<rightarrow> UNIV \<times> {0..<1}"
-    by (simp add: nxt_def Pi_iff)
-  define \<sigma> where "\<sigma> \<equiv> \<lambda>x. rec_nat (True, x) (\<lambda>n (b,y). nxt y)"
-  have \<sigma>Suc [simp]: "\<sigma> x (Suc k) = nxt (snd (\<sigma> x k))" for k x
-    by (simp add: \<sigma>_def case_prod_beta')
-  have \<sigma>01: "x \<in> {0..<1} \<Longrightarrow> \<sigma> x n \<in> UNIV \<times> {0..<1}" for x n
-  proof (induction n)
-    case 0
-    then show ?case                                           
-      by (simp add: \<sigma>_def)
-   next
-    case (Suc n)
-    with nxt_fun show ?case
-      by (force simp add: Pi_iff split: prod.split)
-  qed
-  define f where "f \<equiv> \<lambda>x. {n. fst (\<sigma> x (Suc n))}"
-  have snd_nxt: "snd (nxt y) - snd (nxt x) = 2 * (y-x)" 
-    if "fst (nxt x) = fst (nxt y)" for x y
-    using that by (simp add: nxt_def split: if_split_asm)
-  have False if "f x = f y" "x < y" "0 \<le> x" "x < 1" "0 \<le> y" "y < 1" for x y :: real
-  proof -
-    have "\<And>k. fst (\<sigma> x (Suc k)) = fst (\<sigma> y (Suc k))"
-      using that by (force simp add: f_def)
-    then have eq: "\<And>k. fst (nxt (snd (\<sigma> x k))) = fst (nxt (snd (\<sigma> y k)))"
-      by (metis \<sigma>_def case_prod_beta' rec_nat_Suc_imp)
-    have *: "snd (\<sigma> y k) - snd (\<sigma> x k) = 2 ^ k * (y-x)" for k
-    proof (induction k)
-      case 0
-      then show ?case
-        by (simp add: \<sigma>_def)
-    next
-      case (Suc k)
-      then show ?case
-        by (simp add: eq snd_nxt)
-    qed
-    define n where "n \<equiv> nat (\<lceil>log 2 (1 / (y - x))\<rceil>)"
-    have "2^n \<ge> 1 / (y - x)"
-      by (simp add: n_def power_of_nat_log_ge)
-    then have "2^n * (y-x) \<ge> 1"
-      using \<open>x < y\<close> by (simp add: n_def field_simps)
-    with * have "snd (\<sigma> y n) - snd (\<sigma> x n) \<ge> 1"
-      by presburger
-    moreover have "snd (\<sigma> x n) \<in> {0..<1}" "snd (\<sigma> y n) \<in> {0..<1}"
-      using that by (meson \<sigma>01 atLeastLessThan_iff mem_Times_iff)+
-    ultimately show False by simp
-  qed
-  then have "inj_on f {0..<1}"
-    by (meson atLeastLessThan_iff linorder_inj_onI')
-  then show ?thesis
-    unfolding lepoll_def by blast
-qed
-
-
 thm geometric_sum
-lemma geometric_sum_less:
-  assumes "0 < x" "x < 1" "finite S"
-  shows "(\<Sum>i\<in>S. x ^ i) < 1 / (1 - x::'a::linordered_field)"
-proof -
-  define n where "n \<equiv> Suc (Max S)" 
-  have "(\<Sum>i\<in>S. x ^ i) \<le> (\<Sum>i<n. x ^ i)"
-    unfolding n_def using assms  by (fastforce intro!: sum_mono2 le_imp_less_Suc)
-  also have "\<dots> = (1 - x ^ n) / (1 - x)"
-    using assms by (simp add: geometric_sum field_simps)
-  also have "\<dots> < 1 / (1-x)"
-    using assms by (simp add: field_simps)
-  finally show ?thesis .
-qed
-
-lemma nat_sets_lepoll_reals01: "(UNIV::nat set set) \<lesssim> {0..<1::real}"
-proof -
-  define F where "F \<equiv> \<lambda>S i. if i\<in>S then (inverse 3::real) ^ i else 0"
-  have Fge0: "F S i \<ge> 0" for S i
-    by (simp add: F_def)
-  have F: "summable (F S)" for S
-    unfolding F_def by (force intro: summable_comparison_test_ev [where g = "power (inverse 3)"])
-  have "sum (F S) {..<n} \<le> 3/2" for n S
-  proof (cases n)
-    case (Suc n')
-    have "sum (F S) {..<n} \<le> (\<Sum>i<n. inverse 3 ^ i)"
-      by (simp add: F_def sum_mono)
-    also have "\<dots> = (\<Sum>i=0..n'. inverse 3 ^ i)"
-      using Suc atLeast0AtMost lessThan_Suc_atMost by presburger
-    also have "\<dots> = (3/2) * (1 - inverse 3 ^ n)"
-      using sum_gp_multiplied [of 0 n' "inverse (3::real)"] by (simp add: Suc field_simps)
-    also have "\<dots> \<le> 3/2"
-      by (simp add: field_simps)
-    finally show ?thesis .
-  qed auto
-  then have F32: "suminf (F S) \<le> 3/2" for S
-    using F suminf_le_const by blast
-  define f where "f \<equiv> \<lambda>S. suminf (F S) / 2"
-  have monoF: "F S n \<le> F T n" if "S \<subseteq> T" for S T n
-    using F_def that by auto
-  then have monof: "f S \<le> f T" if "S \<subseteq> T" for S T
-    using that F by (simp add: f_def suminf_le)
-  have "f S \<in> {0..<1::real}" for S
+  lemma geometric_sum_less:
+    assumes "0 < x" "x < 1" "finite S"
+    shows "(\<Sum>i\<in>S. x ^ i) < 1 / (1 - x::'a::linordered_field)"
   proof -
-    have "0 \<le> suminf (F S)"
-      using F by (simp add: F_def suminf_nonneg)
-    with F32[of S] show ?thesis
-      by (auto simp: f_def)
+    define n where "n \<equiv> Suc (Max S)" 
+    have "(\<Sum>i\<in>S. x ^ i) \<le> (\<Sum>i<n. x ^ i)"
+      unfolding n_def using assms  by (fastforce intro!: sum_mono2 le_imp_less_Suc)
+    also have "\<dots> = (1 - x ^ n) / (1 - x)"
+      using assms by (simp add: geometric_sum field_simps)
+    also have "\<dots> < 1 / (1-x)"
+      using assms by (simp add: field_simps)
+    finally show ?thesis .
   qed
-  moreover have "inj f"
-  proof
-    fix S T
-    assume "f S = f T" 
-    show "S = T"
-    proof (rule ccontr)
-      assume "S \<noteq> T"
-      then have ST_ne: "sym_diff S T \<noteq> {}"
-        by blast
-      define n where "n \<equiv> LEAST n. n \<in> sym_diff S T"
-      have sum_split: "suminf (F U) = sum (F U) {..<Suc n} + (\<Sum>k. F U (k + Suc n))"  for U
-        by (metis F add.commute suminf_split_initial_segment)
-      have yes: "f U \<ge> (sum (F U) {..<n} + (inverse 3::real) ^ n) / 2" 
-        if "n \<in> U" for U
-      proof -
-        have "0 \<le> (\<Sum>k. F U (k + Suc n))"
-          by (metis F Fge0 suminf_nonneg summable_iff_shift)
-        moreover have "F U n = (1/3) ^ n"
-          by (simp add: F_def that)
-        ultimately show ?thesis
-          by (simp add: sum_split f_def)
+  
+
+thm eqpoll_real_subset
+    
+    lemma reals01_lepoll_nat_sets: "{0..<1::real} \<lesssim> (UNIV::nat set set)"
+    proof -
+      define nxt where "nxt \<equiv> \<lambda>x::real. if x < 1/2 then (True, 2*x) else (False, 2*x - 1)"
+      have nxt_fun: "nxt \<in> {0..<1} \<rightarrow> UNIV \<times> {0..<1}"
+        by (simp add: nxt_def Pi_iff)
+      define \<sigma> where "\<sigma> \<equiv> \<lambda>x. rec_nat (True, x) (\<lambda>n (b,y). nxt y)"
+      have \<sigma>Suc [simp]: "\<sigma> x (Suc k) = nxt (snd (\<sigma> x k))" for k x
+        by (simp add: \<sigma>_def case_prod_beta')
+      have \<sigma>01: "x \<in> {0..<1} \<Longrightarrow> \<sigma> x n \<in> UNIV \<times> {0..<1}" for x n
+      proof (induction n)
+        case 0
+        then show ?case                                           
+          by (simp add: \<sigma>_def)
+       next
+        case (Suc n)
+        with nxt_fun show ?case
+          by (force simp add: Pi_iff split: prod.split)
       qed
-      have *: "(\<Sum>k. F UNIV (k + n)) = (\<Sum>k. F UNIV k) * (inverse 3::real) ^ n" for n
-        by (simp add: F_def power_add suminf_mult2)
-      have no: "f U < (sum (F U) {..<n} + (inverse 3::real) ^ n) / 2" 
-        if "n \<notin> U" for U
+      define f where "f \<equiv> \<lambda>x. {n. fst (\<sigma> x (Suc n))}"
+      have snd_nxt: "snd (nxt y) - snd (nxt x) = 2 * (y-x)" 
+        if "fst (nxt x) = fst (nxt y)" for x y
+        using that by (simp add: nxt_def split: if_split_asm)
+      have False if "f x = f y" "x < y" "0 \<le> x" "x < 1" "0 \<le> y" "y < 1" for x y :: real
       proof -
-        have [simp]: "F U n = 0"
-          by (simp add: F_def that)
-        have "(\<Sum>k. F U (k + Suc n)) \<le> (\<Sum>k. F UNIV (k + Suc n))"
-          by (metis F monoF subset_UNIV suminf_le summable_ignore_initial_segment)
-        then have "suminf (F U) \<le> (\<Sum>k. F UNIV (k + Suc n)) + (\<Sum>i<n. F U i)"
-          by (simp add: sum_split)
-        also have "\<dots> < (inverse 3::real) ^ n + (\<Sum>i<n. F U i)"
-          unfolding * using F32[of UNIV] by simp
-        finally have "suminf (F U) < inverse 3 ^ n + sum (F U) {..<n}" .
-        then show ?thesis
-          by (simp add: f_def)
+        have "\<And>k. fst (\<sigma> x (Suc k)) = fst (\<sigma> y (Suc k))"
+          using that by (force simp add: f_def)
+        then have eq: "\<And>k. fst (nxt (snd (\<sigma> x k))) = fst (nxt (snd (\<sigma> y k)))"
+          by (metis \<sigma>_def case_prod_beta' rec_nat_Suc_imp)
+        have *: "snd (\<sigma> y k) - snd (\<sigma> x k) = 2 ^ k * (y-x)" for k
+        proof (induction k)
+          case 0
+          then show ?case
+            by (simp add: \<sigma>_def)
+        next
+          case (Suc k)
+          then show ?case
+            by (simp add: eq snd_nxt)
+        qed
+        define n where "n \<equiv> nat (\<lceil>log 2 (1 / (y - x))\<rceil>)"
+        have "2^n \<ge> 1 / (y - x)"
+          by (simp add: n_def power_of_nat_log_ge)
+        then have "2^n * (y-x) \<ge> 1"
+          using \<open>x < y\<close> by (simp add: n_def field_simps)
+        with * have "snd (\<sigma> y n) - snd (\<sigma> x n) \<ge> 1"
+          by presburger
+        moreover have "snd (\<sigma> x n) \<in> {0..<1}" "snd (\<sigma> y n) \<in> {0..<1}"
+          using that by (meson \<sigma>01 atLeastLessThan_iff mem_Times_iff)+
+        ultimately show False by simp
       qed
-      have "S \<inter> {..<n} = T \<inter> {..<n}"
-        using not_less_Least by (fastforce simp add: n_def)
-      then have "sum (F S) {..<n} = sum (F T) {..<n}"
-        by (metis (no_types, lifting) F_def Int_iff sum.cong)
-      moreover consider "n \<in> S-T" | "n \<in> T-S"
-        by (metis LeastI_ex ST_ne UnE ex_in_conv n_def)
-      ultimately show False
-        by (smt (verit, best) Diff_iff \<open>f S = f T\<close> yes no)
+      then have "inj_on f {0..<1}"
+        by (meson atLeastLessThan_iff linorder_inj_onI')
+      then show ?thesis
+        unfolding lepoll_def by blast
     qed
-  qed
-  ultimately show ?thesis
-    by (meson image_subsetI lepoll_def)
-qed
-
-lemma reals_nonneg_lepoll_reals01: "{0::real..} \<lesssim> {0..<1::real}"
-  unfolding lepoll_def
-proof (intro exI conjI)
-  define off where "off \<equiv> \<lambda>n. (1 - (1/2)^n) :: real"
-  define f where "f \<equiv> \<lambda>x::real. off (nat\<lfloor>x\<rfloor>) + (1/2) powi (1 + floor x) * frac x"
-  have off_funspace: "off n \<in> {0..<1::real}" for n
-    by (auto simp: off_def power_le_one_iff)
-  have off_mono: "off m < off n \<longleftrightarrow> m<n" for m n
-    by (auto simp: off_def)
-  have f_slice: "f \<in> {real n..< 1 + real n} \<rightarrow> {off n..< off (Suc n)}" for n
-  proof (clarsimp simp add: Pi_iff)
-    fix x
-    assume "real n \<le> x" and "x < 1 + real n"
-    then have [simp]: "\<lfloor>x\<rfloor> = int n"
-      by linarith
-    have "(1 / 2) ^ n * frac x / 2 - (1 / 2) ^ n < - ((1 / 2) ^ n / 2)"
-      by (smt (verit) field_sum_of_halves frac_lt_1 mult_less_cancel_left1 mult_minus_left zero_less_power)
-    then show "off n \<le> f x \<and> f x < off (Suc n)"
-      by (simp add: f_def off_def power_int_add)
-  qed
-  then have "f x \<ge> 0" if "x \<ge> 0" for x
-    by (simp add: f_def off_def power_le_one_iff)
-  moreover have "f x < 1" if "x \<ge> 0" for x
-    using off_funspace \<open>0 \<le> x\<close> Pi_mem [OF f_slice [of "nat \<lfloor>x\<rfloor>"]]
-    by (simp add: Pi_iff) (smt (verit, best) less_floor_iff of_int_floor_le)
-  ultimately show "f ` {0..} \<subseteq> {0..<1}"
-    by force
-  have f_ge: "off (nat \<lfloor>x\<rfloor>) \<le> f x" for x
-    by (simp add: f_def)
-  have f_le: "f x < off (Suc (nat \<lfloor>x\<rfloor>))" if "0 \<le> x" for x
-    using Pi_mem [OF f_slice [of "nat\<lfloor>x\<rfloor>"]] that
-    by simp (metis add.commute of_int_floor_le real_of_int_floor_add_one_gt)
-
-  show "inj_on f {0..}"
-  proof (clarsimp simp: inj_on_def)
-    fix x y
-    assume "0 \<le> x" "0 \<le> y" "f x = f y"
-    show "x = y"
-    proof (rule ccontr)
-      assume "x \<noteq> y"
-      then consider "\<lfloor>x\<rfloor> \<noteq> \<lfloor>y\<rfloor>" | "\<lfloor>x\<rfloor> = \<lfloor>y\<rfloor>" "frac x \<noteq> frac y"
-        by (force simp: frac_def)
-      then show False
-      proof cases
-        case 1
-        then show False
-          using f_ge f_le \<open>0 \<le> x\<close> \<open>0 \<le> y\<close> \<open>f x = f y\<close> 
-          apply (simp add: neq_iff)
-          apply (smt (verit) off_mono less_trans_Suc nat_less_eq_zless zero_le_floor)
-          done
-      qed (use \<open>f x = f y\<close> f_def in auto)
+    
+    lemma nat_sets_lepoll_reals01: "(UNIV::nat set set) \<lesssim> {0..<1::real}"
+    proof -
+      define F where "F \<equiv> \<lambda>S i. if i\<in>S then (inverse 3::real) ^ i else 0"
+      have Fge0: "F S i \<ge> 0" for S i
+        by (simp add: F_def)
+      have F: "summable (F S)" for S
+        unfolding F_def by (force intro: summable_comparison_test_ev [where g = "power (inverse 3)"])
+      have "sum (F S) {..<n} \<le> 3/2" for n S
+      proof (cases n)
+        case (Suc n')
+        have "sum (F S) {..<n} \<le> (\<Sum>i<n. inverse 3 ^ i)"
+          by (simp add: F_def sum_mono)
+        also have "\<dots> = (\<Sum>i=0..n'. inverse 3 ^ i)"
+          using Suc atLeast0AtMost lessThan_Suc_atMost by presburger
+        also have "\<dots> = (3/2) * (1 - inverse 3 ^ n)"
+          using sum_gp_multiplied [of 0 n' "inverse (3::real)"] by (simp add: Suc field_simps)
+        also have "\<dots> \<le> 3/2"
+          by (simp add: field_simps)
+        finally show ?thesis .
+      qed auto
+      then have F32: "suminf (F S) \<le> 3/2" for S
+        using F suminf_le_const by blast
+      define f where "f \<equiv> \<lambda>S. suminf (F S) / 2"
+      have monoF: "F S n \<le> F T n" if "S \<subseteq> T" for S T n
+        using F_def that by auto
+      then have monof: "f S \<le> f T" if "S \<subseteq> T" for S T
+        using that F by (simp add: f_def suminf_le)
+      have "f S \<in> {0..<1::real}" for S
+      proof -
+        have "0 \<le> suminf (F S)"
+          using F by (simp add: F_def suminf_nonneg)
+        with F32[of S] show ?thesis
+          by (auto simp: f_def)
+      qed
+      moreover have "inj f"
+      proof
+        fix S T
+        assume "f S = f T" 
+        show "S = T"
+        proof (rule ccontr)
+          assume "S \<noteq> T"
+          then have ST_ne: "sym_diff S T \<noteq> {}"
+            by blast
+          define n where "n \<equiv> LEAST n. n \<in> sym_diff S T"
+          have sum_split: "suminf (F U) = sum (F U) {..<Suc n} + (\<Sum>k. F U (k + Suc n))"  for U
+            by (metis F add.commute suminf_split_initial_segment)
+          have yes: "f U \<ge> (sum (F U) {..<n} + (inverse 3::real) ^ n) / 2" 
+            if "n \<in> U" for U
+          proof -
+            have "0 \<le> (\<Sum>k. F U (k + Suc n))"
+              by (metis F Fge0 suminf_nonneg summable_iff_shift)
+            moreover have "F U n = (1/3) ^ n"
+              by (simp add: F_def that)
+            ultimately show ?thesis
+              by (simp add: sum_split f_def)
+          qed
+          have *: "(\<Sum>k. F UNIV (k + n)) = (\<Sum>k. F UNIV k) * (inverse 3::real) ^ n" for n
+            by (simp add: F_def power_add suminf_mult2)
+          have no: "f U < (sum (F U) {..<n} + (inverse 3::real) ^ n) / 2" 
+            if "n \<notin> U" for U
+          proof -
+            have [simp]: "F U n = 0"
+              by (simp add: F_def that)
+            have "(\<Sum>k. F U (k + Suc n)) \<le> (\<Sum>k. F UNIV (k + Suc n))"
+              by (metis F monoF subset_UNIV suminf_le summable_ignore_initial_segment)
+            then have "suminf (F U) \<le> (\<Sum>k. F UNIV (k + Suc n)) + (\<Sum>i<n. F U i)"
+              by (simp add: sum_split)
+            also have "\<dots> < (inverse 3::real) ^ n + (\<Sum>i<n. F U i)"
+              unfolding * using F32[of UNIV] by simp
+            finally have "suminf (F U) < inverse 3 ^ n + sum (F U) {..<n}" .
+            then show ?thesis
+              by (simp add: f_def)
+          qed
+          have "S \<inter> {..<n} = T \<inter> {..<n}"
+            using not_less_Least by (fastforce simp add: n_def)
+          then have "sum (F S) {..<n} = sum (F T) {..<n}"
+            by (metis (no_types, lifting) F_def Int_iff sum.cong)
+          moreover consider "n \<in> S-T" | "n \<in> T-S"
+            by (metis LeastI_ex ST_ne UnE ex_in_conv n_def)
+          ultimately show False
+            by (smt (verit, best) Diff_iff \<open>f S = f T\<close> yes no)
+        qed
+      qed
+      ultimately show ?thesis
+        by (meson image_subsetI lepoll_def)
     qed
-  qed
-qed
+    
+    lemma open_interval_eqpoll_reals:
+      fixes a b::real
+      shows "{a<..<b} \<approx> (UNIV::real set) \<longleftrightarrow> a<b"
+      using bij_betw_tan bij_betw_open_intervals eqpoll_def
+      by (smt (verit, best) UNIV_I eqpoll_real_subset eqpoll_iff_bijections greaterThanLessThan_iff)
+    
+    lemma closed_interval_eqpoll_reals:
+      fixes a b::real
+      shows "{a..b} \<approx> (UNIV::real set) \<longleftrightarrow> a < b"
+    proof
+      show "{a..b} \<approx> (UNIV::real set) \<Longrightarrow> a < b"
+        using eqpoll_finite_iff infinite_Icc_iff infinite_UNIV_char_0 by blast
+    qed (auto simp: eqpoll_real_subset)
+    
+    
+    lemma reals_lepoll_reals01: "(UNIV::real set) \<lesssim> {0..<1::real}"
+    proof -
+      have "(UNIV::real set) \<approx> {0<..<1::real}"
+        by (simp add: open_interval_eqpoll_reals eqpoll_sym)
+      also have "\<dots> \<lesssim> {0..<1::real}"
+        by (simp add: greaterThanLessThan_subseteq_atLeastLessThan_iff subset_imp_lepoll)
+      finally show ?thesis .
+    qed
+    
+    lemma nat_sets_eqpoll_reals: "(UNIV::nat set set) \<approx> (UNIV::real set)"
+      by (metis (mono_tags, opaque_lifting) reals_lepoll_reals01 lepoll_antisym lepoll_trans 
+          nat_sets_lepoll_reals01 reals01_lepoll_nat_sets subset_UNIV subset_imp_lepoll)
+    
 
-lemma reals_lepoll_reals01: "(UNIV::real set) \<lesssim> {0..<1::real}"
-proof -
-  obtain f where injf: "inj_on f {0..}" and f: "f ` {0::real..} \<subseteq> {0..<1::real}"
-    using reals_nonneg_lepoll_reals01 by (auto simp: lepoll_def)
-  then have F: "f x \<noteq> f y + 1" if "0 \<le> x" "0 \<le> y" for x y
-    unfolding image_subset_iff
-    by (metis that add_0 add_right_mono atLeastLessThan_iff atLeast_iff linorder_not_le)
-
-  define g where "g \<equiv> \<lambda>x. if x \<ge> 0 then f x / 2 else (f(-x) + 1) / 2"
-  show ?thesis
-    unfolding lepoll_def
-  proof (intro exI conjI)
-    show "range g \<subseteq> {0..<1}"
-      using f
-      apply (clarsimp simp add: g_def image_subset_iff)
-      by (meson atLeast_iff linorder_not_le not_numeral_less_one order_le_less_trans)
-    show "inj g"
-      using f 
-      apply (simp add: inj_on_def inj_on_eq_iff [OF injf] g_def image_subset_iff del: divide_const_simps)
-      by (metis linorder_class.linear neg_0_le_iff_le F)
-  qed
-qed
-
-lemma nat_sets_lepoll_reals: "(UNIV::nat set set) \<approx> (UNIV::real set)"
-  by (metis (mono_tags, opaque_lifting) reals_lepoll_reals01 lepoll_antisym lepoll_trans 
-      nat_sets_lepoll_reals01 reals01_lepoll_nat_sets  subset_UNIV subset_imp_lepoll)
 
 
+thm first_countable_def Metric_space.openin_mtopology
 lemma (in Metric_space) first_countable_mtopology: "first_countable mtopology"
 proof (clarsimp simp add: first_countable_def)
   fix x
@@ -276,6 +227,8 @@ qed
 lemma metrizable_imp_first_countable:
    "metrizable_space X \<Longrightarrow> first_countable X"
   by (force simp add: metrizable_space_def Metric_space.first_countable_mtopology)
+
+
 
 subsection\<open> Theorems from Kuratowski\<close>
 
@@ -778,8 +731,6 @@ oops
 
 subsection\<open>A perfect set in common cases must have cardinality >= c\<close>
 
-(** WE NEED A PROOF THAT the reals and sets of naturals are equipollent **)
-
 lemma (in Metric_space) card_ge_perfect_set:
   assumes "mcomplete"
     and "mtopology derived_set_of S = S" "S \<noteq> {}"
@@ -787,11 +738,62 @@ lemma (in Metric_space) card_ge_perfect_set:
 proof -
   have "S \<subseteq> M"
     using assms(2) derived_set_of_infinite_mball by blast
-  have "(UNIV::real set) \<lesssim> (UNIV::num set set)"
-    sorry
+  have "(UNIV::real set) \<lesssim> (UNIV::nat set set)"
+    using eqpoll_imp_lepoll eqpoll_sym nat_sets_eqpoll_reals by blast
   also have "\<dots> \<lesssim> S"
-    thm uncountable_closed_interval
-    sorry
+  proof -
+    have "\<exists>y z \<delta>. y \<in> S \<and> z \<in> S \<and> 0 < \<delta> \<and> \<delta> < \<epsilon>/2 \<and>
+                  mcball y \<delta> \<subseteq> mcball x \<epsilon> \<and> mcball z \<delta> \<subseteq> mcball x \<epsilon> \<and> disjnt (mcball y \<delta>) (mcball z \<delta>)"
+      if "x \<in> S" "0 < \<epsilon>" for x \<epsilon>
+    proof -
+      define S' where "S' \<equiv> S \<inter> mball x (\<epsilon>/4)"
+      have "infinite S'"
+        using derived_set_of_infinite_mball [of S] assms that S'_def
+        by (smt (verit, ccfv_SIG) mem_Collect_eq zero_less_divide_iff)
+      then have "\<And>x y z. \<not> (S' \<subseteq> {x,y,z})"
+        using finite_subset by auto
+      then obtain l r where lr: "l \<in> S'" "r \<in> S'" "l\<noteq>r" "l\<noteq>x" "r\<noteq>x"
+        by (metis insert_iff subsetI)
+      show ?thesis
+      proof (intro exI conjI)
+        show "l \<in> S" "r \<in> S" "d l r / 3 > 0"
+          using lr by (auto simp: S'_def)
+        show "d l r / 3 < \<epsilon>/2" "mcball l (d l r / 3) \<subseteq> mcball x \<epsilon>" "mcball r (d l r / 3) \<subseteq> mcball x \<epsilon>"
+          using lr by (clarsimp simp: S'_def, smt (verit) commute triangle'')+
+        show "disjnt (mcball l (d l r / 3)) (mcball r (d l r / 3))"
+          using lr by (simp add: S'_def disjnt_iff) (smt (verit, best) mdist_pos_less triangle')
+      qed
+    qed
+    then obtain l r \<delta> 
+        where "\<And>x \<epsilon>. \<lbrakk>x \<in> S; 0 < \<epsilon>\<rbrakk> \<Longrightarrow> l x \<epsilon> \<in> S \<and> r x \<epsilon> \<in> S \<and> 0 < \<delta> x \<epsilon> \<and> \<delta> x \<epsilon> < \<epsilon>/2 \<and>
+                  mcball (l x \<epsilon>) (\<delta> x \<epsilon>) \<subseteq> mcball x \<epsilon> \<and> mcball (r x \<epsilon>) (\<delta> x \<epsilon>) \<subseteq> mcball x \<epsilon> \<and> 
+                  disjnt (mcball (l x \<epsilon>) (\<delta> x \<epsilon>)) (mcball (r x \<epsilon>) (\<delta> x \<epsilon>))"
+      by metis
+    obtain a where "a \<in> S"
+      using \<open>S \<noteq> {}\<close> by blast
+    define xe where "xe \<equiv> 
+           \<lambda>b. rec_nat (a,1) (\<lambda>n (x,\<gamma>). ((if b n then r else l) x \<gamma>, \<delta> x \<gamma>))"
+    have [simp]: "xe b 0 = (a,1)" for b
+      by (simp add: xe_def)
+    have "xe b (Suc n) = (let (x,\<gamma>) = xe b n in ((if b n then r else l) x \<gamma>, \<delta> x \<gamma>))" for b n
+      by (simp add: xe_def)
+    define x where "x \<equiv> \<lambda>b n. fst (xe b n)"
+    define \<gamma> where "\<gamma> \<equiv> \<lambda>b n. snd (xe b n)"
+    have [simp]: "x b 0 = a" "\<gamma> b 0 = 1" for b
+      by (simp_all add: x_def \<gamma>_def xe_def)
+    have [simp]: "x b (Suc n) = ((if b n then r else l) (x b n) (\<gamma> b n))" 
+                 "\<gamma> b (Suc n) = \<delta> (x b n) (\<gamma> b n)" for b n
+      by (simp_all add: x_def \<gamma>_def xe_def split: prod.split)
+    interpret Submetric M d S
+    proof qed (use \<open>S \<subseteq> M\<close> in metis)
+    have "closedin mtopology S"
+      by (metis assms(2) closure_of closure_of_eq inf.absorb_iff2 subset subset_Un_eq subset_refl topspace_mtopology)
+    with \<open>mcomplete\<close>
+    have "sub.mcomplete"
+      by (metis closedin_mcomplete_imp_mcomplete)
+
+  finally show ?thesis .
+qed
 
 
 lemma card_ge_perfect_set:
@@ -801,104 +803,23 @@ lemma card_ge_perfect_set:
   using assms
   apply-
   apply (erule disjE)
+  apply (metis Metric_space.card_ge_perfect_set completely_metrizable_space_def)
 
 oops
-  REWRITE_TAC[TAUT `(p \<or> q) \<and> r \<Longrightarrow> S \<longleftrightarrow>
-                    (p \<Longrightarrow> r \<Longrightarrow> S) \<and> (q \<and> r \<Longrightarrow> S)`] THEN
-  REWRITE_TAC[FORALL_AND_THM; RIGHT_FORALL_IMP_THM] THEN
-  REWRITE_TAC[GSYM FORALL_MCOMPLETE_TOPOLOGY] THEN
-  REWRITE_TAC[RIGHT_IMP_FORALL_THM; IMP_IMP; GSYM CONJ_ASSOC] THEN
-  CONJ_TAC THENL
-   [REPEAT STRIP_TAC THEN
-    TRANS_TAC CARD_LE_TRANS `(:num=>bool)` THEN
-    SIMP_TAC[CARD_EQ_REAL; CARD_EQ_IMP_LE] THEN
-    SUBGOAL_THEN `(S::A=>bool) \<subseteq> M` ASSUME_TAC THENL
-     [ASM_MESON_TAC[DERIVED_SET_OF_SUBSET_TOPSPACE; TOPSPACE_MTOPOLOGY];
-      ALL_TAC] THEN
-
-    SUBGOAL_THEN
-     `\<forall>x e. x \<in> S \<and> 0 < e
-            \<Longrightarrow> \<exists>y z d. y \<in> S \<and> z \<in> S \<and> 0 < d \<and> d < e/2 \<and>
-                        mcball y d \<subseteq> mcball x e \<and>
-                        mcball z d \<subseteq> mcball x e \<and>
-                        disjnt (mcball m (y::A,d)) (mcball z d)`
-    MP_TAC THENL
-     [REPEAT STRIP_TAC THEN
-      MP_TAC(ISPECL [`m::A metric`; `S::A=>bool`]
-          DERIVED_SET_OF_INFINITE_MBALL) THEN
-      ASM_REWRITE_TAC[EXTENSION; IN_ELIM_THM] THEN
-      DISCH_THEN(MP_TAC \<circ> SPEC `x::A`) THEN ASM_REWRITE_TAC[] THEN
-      DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC \<circ> SPEC `e / 4`)) THEN
-      ASM_REWRITE_TAC[infinite; REAL_ARITH `0 < e / 4 \<longleftrightarrow> 0 < e`] THEN
-      DISCH_THEN(MP_TAC \<circ> SPEC `x::A` \<circ> MATCH_MP
-       (MESON[FINITE_RULES; FINITE_SUBSET]
-         `\<not> finite S \<Longrightarrow> \<forall>a b c. \<not> (S \<subseteq> {a,b,c})`)) THEN
-      DISCH_THEN(MP_TAC \<circ> MATCH_MP (SET_RULE
-       `(\<forall>b c. \<not> (S \<subseteq> {a,b,c}))
-        \<Longrightarrow> \<exists>b c. b \<in> S \<and> c \<in> S \<and> (c \<noteq> a) \<and> (b \<noteq> a) \<and> (b \<noteq> c)`)) THEN
-      MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `l::A` THEN
-      MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `r::A` THEN
-      REWRITE_TAC[IN_INTER] THEN STRIP_TAC THEN
-      EXISTS_TAC `d l::A r / 3` THEN
-      REPEAT(FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [IN_MBALL])) THEN
-      UNDISCH_TAC `\<not> (l::A = r)` THEN
-      REWRITE_TAC[disjnt; \<subseteq>; EXTENSION; IN_INTER; NOT_IN_EMPTY] THEN
-      ASM_SIMP_TAC[IN_MCBALL] THEN UNDISCH_TAC `(x::A) \<in> M` THEN
-      POP_ASSUM_LIST(K ALL_TAC) THEN
-      REPEAT(DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC)) THEN
-      ONCE_REWRITE_TAC[CONJ_ASSOC] THEN CONJ_TAC THENL
-       [REPEAT(POP_ASSUM MP_TAC) THEN CONV_TAC METRIC_ARITH; ALL_TAC] THEN
-      REWRITE_TAC[AND_FORALL_THM] THEN X_GEN_TAC `y::A` THEN
-      REWRITE_TAC[CONJ_ASSOC] THEN CONJ_TAC THENL
-       [ALL_TAC; REPEAT(POP_ASSUM MP_TAC) THEN CONV_TAC METRIC_ARITH] THEN
-      REPEAT STRIP_TAC THEN FIRST_ASSUM(MP_TAC \<circ> SPEC `e::real` \<circ> MATCH_MP
-        (REAL_ARITH `x \<le> y / 3 \<Longrightarrow> \<forall>e. y < e/2 \<Longrightarrow> x < e / 6`)) THEN
-      (ANTS_TAC THENL
-        [REPEAT(POP_ASSUM MP_TAC) THEN CONV_TAC METRIC_ARITH; ALL_TAC])
-      THENL
-       [UNDISCH_TAC `d x::A l < e / 4`;
-        UNDISCH_TAC `d x::A r < e / 4`] THEN
-      MAP_EVERY UNDISCH_TAC
-       [`(x::A) \<in> M`; `(y::A) \<in> M`;
-        `(l::A) \<in> M`; `(r::A) \<in> M`] THEN
-      CONV_TAC METRIC_ARITH;
-      REWRITE_TAC[RIGHT_IMP_EXISTS_THM; SKOLEM_THM; LEFT_IMP_EXISTS_THM]] THEN
-    MAP_EVERY X_GEN_TAC
-     [`l::A=>real->A`; `r::A=>real->A`; `d::A=>real->real`] THEN
-    DISCH_TAC THEN FIRST_X_ASSUM(X_CHOOSE_TAC `a::A` \<circ>
-     REWRITE_RULE[GSYM MEMBER_NOT_EMPTY]) THEN
-    SUBGOAL_THEN
-      `\<forall>b. \<exists>xe. xe 0 = (a::A,1) \<and>
-                \<forall>n. xe(Suc n) = (if b n then r else l) (fst(xe n)) (snd(xe n)),
-                                d (fst(xe n)) (snd(xe n))`
-    MP_TAC THENL
-     [GEN_TAC THEN
-      W(ACCEPT_TAC \<circ> prove_recursive_functions_exist num_RECURSION \<circ>
-          snd \<circ> dest_exists \<circ> snd);
-      REWRITE_TAC[EXISTS_PAIR_FUN_THM; PAIR_EQ] THEN
-      REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM; FORALL_AND_THM]] THEN
-    MAP_EVERY X_GEN_TAC
-     [`x:(num=>bool)->num=>A`; `r:(num=>bool)->num=>real`] THEN
-    STRIP_TAC THEN
-    SUBGOAL_THEN `mcomplete (submetric S::A metric)` MP_TAC THENL
-     [MATCH_MP_TAC CLOSED_IN_MCOMPLETE_IMP_MCOMPLETE THEN
-      ASM_REWRITE_TAC[CLOSED_IN_CONTAINS_DERIVED_SET; TOPSPACE_MTOPOLOGY] THEN
-      ASM SET_TAC[];
       REWRITE_TAC[MCOMPLETE_NEST_SING]] THEN
-    DISCH_THEN(MP_TAC \<circ> MATCH_MP MONO_FORALL \<circ> GEN `b::num=>bool` \<circ>
-      SPEC `\<lambda>n. mcball (submetric S)
-                       ((x:(num=>bool)->num=>A) b n,r b n)`) THEN
+    DISCH_THEN(MP_TAC \<circ> MATCH_MP MONO_FORALL \<circ> GEN `b::nat=>bool` \<circ>
+      SPEC `\<lambda>n. mcball (submetric S) (x b n,\<gamma> b n)`) THEN
     REWRITE_TAC[SKOLEM_THM] THEN
-    SUBGOAL_THEN `(\<forall>b n. (x:(num=>bool)->num=>A) b n \<in> S) \<and>
-                  (\<forall>b n. 0 < (r:(num=>bool)->num=>real) b n)`
+    SUBGOAL_THEN `(\<forall>b n. (x:(nat=>bool)->num=>A) b n \<in> S) \<and>
+                  (\<forall>b n. 0 < (r:(nat=>bool)->num=>real) b n)`
     STRIP_ASSUME_TAC THENL
      [REWRITE_TAC[AND_FORALL_THM] THEN GEN_TAC THEN
       INDUCT_TAC THEN ASM_REWRITE_TAC[REAL_LT_01] THEN ASM_MESON_TAC[];
       ALL_TAC] THEN
-    SUBGOAL_THEN `(\<forall>b n. (x:(num=>bool)->num=>A) b n \<in> M)`
+    SUBGOAL_THEN `(\<forall>b n. (x:(nat=>bool)->num=>A) b n \<in> M)`
     ASSUME_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
     ANTS_TAC THENL
-     [X_GEN_TAC `b::num=>bool` THEN REWRITE_TAC[CLOSED_IN_MCBALL] THEN
+     [X_GEN_TAC `b::nat=>bool` THEN REWRITE_TAC[CLOSED_IN_MCBALL] THEN
       ASM_REWRITE_TAC[MCBALL_EQ_EMPTY; SUBMETRIC; IN_INTER] THEN
       ASM_SIMP_TAC[REAL_ARITH `0 < x \<Longrightarrow> \<not> (x < 0)`] THEN CONJ_TAC THENL
        [MATCH_MP_TAC TRANSITIVE_STEPWISE_LE THEN
@@ -907,41 +828,41 @@ oops
         X_GEN_TAC `e::real` THEN DISCH_TAC THEN
         MP_TAC(ISPECL [`inverse 2`; `e::real`] REAL_ARCH_POW_INV) THEN
         ASM_REWRITE_TAC[REAL_POW_INV] THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN
-        MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `n::num` THEN
-        DISCH_TAC THEN EXISTS_TAC `(x:(num=>bool)->num=>A) b n` THEN
+        MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `n::nat` THEN
+        DISCH_TAC THEN EXISTS_TAC `(x:(nat=>bool)->num=>A) b n` THEN
         MATCH_MP_TAC MCBALL_SUBSET_CONCENTRIC THEN
         TRANS_TAC REAL_LE_TRANS `inverse(2 ^ n)` THEN
         ASM_SIMP_TAC[REAL_LT_IMP_LE] THEN
-        SPEC_TAC(`n::num`,`n::num`) THEN
+        SPEC_TAC(`n::nat`,`n::nat`) THEN
         MATCH_MP_TAC num_INDUCTION THEN ASM_REWRITE_TAC[real_pow] THEN
         CONV_TAC REAL_RAT_REDUCE_CONV THEN REWRITE_TAC[REAL_INV_MUL] THEN
         GEN_TAC THEN MATCH_MP_TAC(REAL_ARITH
          `d < e/2 \<Longrightarrow> e \<le> i \<Longrightarrow> d \<le> inverse 2 * i`) THEN
         ASM_SIMP_TAC[]];
       REWRITE_TAC[SKOLEM_THM; le_c; IN_UNIV] THEN
-      MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `z:(num=>bool)->A` THEN
+      MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `z:(nat=>bool)->A` THEN
       SIMP_TAC[SUBMETRIC; IN_INTER; FORALL_AND_THM] THEN STRIP_TAC THEN
-      MAP_EVERY X_GEN_TAC [`b::num=>bool`; `c::num=>bool`] THEN
+      MAP_EVERY X_GEN_TAC [`b::nat=>bool`; `c::nat=>bool`] THEN
       GEN_REWRITE_TAC id [GSYM CONTRAPOS_THM] THEN
       REWRITE_TAC[FUN_EQ_THM; NOT_FORALL_THM] THEN
       GEN_REWRITE_TAC LAND_CONV [num_WOP] THEN
       REWRITE_TAC[LEFT_IMP_EXISTS_THM; TAUT `\<not> (p \<longleftrightarrow> q) \<longleftrightarrow> p \<longleftrightarrow> \<not> q`] THEN
-      X_GEN_TAC `n::num` THEN REPEAT STRIP_TAC THEN FIRST_ASSUM(MP_TAC \<circ>
+      X_GEN_TAC `n::nat` THEN REPEAT STRIP_TAC THEN FIRST_ASSUM(MP_TAC \<circ>
         GEN_REWRITE_RULE (BINDER_CONV \<circ> LAND_CONV) [INTERS_GSPEC]) THEN
       DISCH_THEN(fun th ->
-       MP_TAC(SPEC `c::num=>bool` th) THEN MP_TAC(SPEC `b::num=>bool` th)) THEN
+       MP_TAC(SPEC `c::nat=>bool` th) THEN MP_TAC(SPEC `b::nat=>bool` th)) THEN
       ASM_REWRITE_TAC[TAUT `p \<Longrightarrow> \<not> q \<longleftrightarrow> \<not> (p \<and> q)`] THEN
       DISCH_THEN(MP_TAC \<circ> MATCH_MP (SET_RULE
        `S = {a} \<and> t = {a} \<Longrightarrow> a \<in> S \<inter> t`)) THEN
       REWRITE_TAC[IN_INTER; IN_ELIM_THM; AND_FORALL_THM] THEN
       DISCH_THEN(MP_TAC \<circ> SPEC `Suc n`) THEN ASM_REWRITE_TAC[COND_SWAP] THEN
       SUBGOAL_THEN
-       `(x:(num=>bool)->num=>A) b n = x c n \<and>
-        (r:(num=>bool)->num=>real) b n = r c n`
+       `(x:(nat=>bool)->num=>A) b n = x c n \<and>
+        (r:(nat=>bool)->num=>real) b n = r c n`
        (CONJUNCTS_THEN SUBST1_TAC)
       THENL
-       [UNDISCH_TAC `\<forall>m::num. m < n \<Longrightarrow> (b m \<longleftrightarrow> c m)` THEN
-        SPEC_TAC(`n::num`,`p::num`) THEN
+       [UNDISCH_TAC `\<forall>m::nat. m < n \<Longrightarrow> (b m \<longleftrightarrow> c m)` THEN
+        SPEC_TAC(`n::nat`,`p::nat`) THEN
         INDUCT_TAC THEN ASM_SIMP_TAC[LT_SUC_LE; LE_REFL; LT_IMP_LE];
         COND_CASES_TAC THEN ASM_REWRITE_TAC[MCBALL_SUBMETRIC_EQ; IN_INTER] THEN
         ASM SET_TAC[]]];
@@ -962,7 +883,7 @@ oops
       DISCH_THEN MATCH_MP_TAC THEN
       MATCH_MP_TAC LOCALLY_COMPACT_SPACE_CLOSED_SUBSET THEN
       ASM_REWRITE_TAC[CLOSED_IN_CONTAINS_DERIVED_SET; SUBSET_REFL]] THEN
-    TRANS_TAC CARD_LE_TRANS `(:num=>bool)` THEN
+    TRANS_TAC CARD_LE_TRANS `(:nat=>bool)` THEN
     SIMP_TAC[CARD_EQ_REAL; CARD_EQ_IMP_LE] THEN
     FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY]) THEN
     DISCH_THEN(X_CHOOSE_TAC `z::A`) THEN
@@ -1029,7 +950,7 @@ oops
     MAP_EVERY X_GEN_TAC [`l:(A=>bool)->A=>bool`; `r:(A=>bool)->A=>bool`] THEN
     DISCH_TAC THEN
     SUBGOAL_THEN
-     `\<forall>b. \<exists>d::num=>A->bool.
+     `\<forall>b. \<exists>d::nat=>A->bool.
           d 0 = k \<and>
           (\<forall>n. d(Suc n) = (if b n then r else l) (d n))`
     MP_TAC THENL
@@ -1037,10 +958,10 @@ oops
       W(ACCEPT_TAC \<circ> prove_recursive_functions_exist num_RECURSION \<circ>
           snd \<circ> dest_exists \<circ> snd);
       REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM; FORALL_AND_THM]] THEN
-    X_GEN_TAC `d:(num=>bool)->num=>A->bool` THEN STRIP_TAC THEN
+    X_GEN_TAC `d:(nat=>bool)->num=>A->bool` THEN STRIP_TAC THEN
     SUBGOAL_THEN
      `\<forall>b n. closedin X (d b n) \<and> d b n \<subseteq> k \<and>
-            \<not> (X interior_of ((d:(num=>bool)->num=>A->bool) b n) = {})`
+            \<not> (X interior_of ((d:(nat=>bool)->num=>A->bool) b n) = {})`
     MP_TAC THENL
      [GEN_TAC THEN INDUCT_TAC THENL
        [ASM_SIMP_TAC[SUBSET_REFL; COMPACT_IN_IMP_CLOSED_IN] THEN
@@ -1050,9 +971,9 @@ oops
         ASM_REWRITE_TAC[] THEN COND_CASES_TAC THEN ASM_SIMP_TAC[]];
       REWRITE_TAC[FORALL_AND_THM] THEN STRIP_TAC] THEN
     SUBGOAL_THEN
-     `\<forall>b. \<not> (\<Inter>{(d:(num=>bool)->num=>A->bool) b n | n \<in> UNIV} = {})`
+     `\<forall>b. \<not> (\<Inter>{(d:(nat=>bool)->num=>A->bool) b n | n \<in> UNIV} = {})`
     MP_TAC THENL
-     [X_GEN_TAC `b::num=>bool` THEN MATCH_MP_TAC COMPACT_SPACE_IMP_NEST THEN
+     [X_GEN_TAC `b::nat=>bool` THEN MATCH_MP_TAC COMPACT_SPACE_IMP_NEST THEN
       EXISTS_TAC `subtopology X (k::A=>bool)` THEN
       ASM_SIMP_TAC[CLOSED_IN_SUBSET_TOPSPACE; COMPACT_SPACE_SUBTOPOLOGY] THEN
       CONJ_TAC THENL [ASM_MESON_TAC[INTERIOR_OF_EMPTY]; ALL_TAC] THEN
@@ -1061,24 +982,24 @@ oops
       ASM_SIMP_TAC[] THEN GEN_TAC THEN COND_CASES_TAC THEN
       ASM_SIMP_TAC[];
       REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; SKOLEM_THM; LEFT_IMP_EXISTS_THM]] THEN
-    X_GEN_TAC `x:(num=>bool)->A` THEN
+    X_GEN_TAC `x:(nat=>bool)->A` THEN
     REWRITE_TAC[INTERS_GSPEC; IN_ELIM_THM; IN_UNIV] THEN DISCH_TAC THEN
-    REWRITE_TAC[le_c; IN_UNIV] THEN EXISTS_TAC `x:(num=>bool)->A` THEN
+    REWRITE_TAC[le_c; IN_UNIV] THEN EXISTS_TAC `x:(nat=>bool)->A` THEN
     CONJ_TAC THENL [ASM_MESON_TAC[CLOSED_IN_SUBSET; \<subseteq>]; ALL_TAC] THEN
-    MAP_EVERY X_GEN_TAC [`b::num=>bool`; `c::num=>bool`] THEN
+    MAP_EVERY X_GEN_TAC [`b::nat=>bool`; `c::nat=>bool`] THEN
     GEN_REWRITE_TAC id [GSYM CONTRAPOS_THM] THEN
     REWRITE_TAC[FUN_EQ_THM; NOT_FORALL_THM] THEN
     GEN_REWRITE_TAC LAND_CONV [num_WOP] THEN
     REWRITE_TAC[LEFT_IMP_EXISTS_THM; TAUT `\<not> (p \<longleftrightarrow> q) \<longleftrightarrow> p \<longleftrightarrow> \<not> q`] THEN
-    X_GEN_TAC `n::num` THEN REPEAT STRIP_TAC THEN
+    X_GEN_TAC `n::nat` THEN REPEAT STRIP_TAC THEN
     SUBGOAL_THEN
-     `disjnt ((d:(num=>bool)->num=>A->bool) b (Suc n)) (d c (Suc n))`
+     `disjnt ((d:(nat=>bool)->num=>A->bool) b (Suc n)) (d c (Suc n))`
     MP_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
     ASM_SIMP_TAC[COND_SWAP] THEN
-    SUBGOAL_THEN `(d:(num=>bool)->num=>A->bool) b n = d c n` SUBST1_TAC THENL
+    SUBGOAL_THEN `(d:(nat=>bool)->num=>A->bool) b n = d c n` SUBST1_TAC THENL
      [ALL_TAC; ASM_MESON_TAC[DISJOINT_SYM]] THEN
-    UNDISCH_TAC `\<forall>m::num. m < n \<Longrightarrow> (b m \<longleftrightarrow> c m)` THEN
-    SPEC_TAC(`n::num`,`p::num`) THEN
+    UNDISCH_TAC `\<forall>m::nat. m < n \<Longrightarrow> (b m \<longleftrightarrow> c m)` THEN
+    SPEC_TAC(`n::nat`,`p::nat`) THEN
     INDUCT_TAC THEN ASM_SIMP_TAC[LT_SUC_LE; LE_REFL; LT_IMP_LE]]);;
 
 
