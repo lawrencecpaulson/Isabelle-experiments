@@ -5,230 +5,47 @@ theory AMS
     "HOL-Analysis.Analysis" "HOL-Library.Equipollence"
     "HOL-ex.Sketch_and_Explore"
 begin
-    
+
+
+
+(******* delete sym_diff from Analysis/Equivalence_Measurable_On_Borel ******)
+
+
 lemma power_of_nat_log_le: "b > 1 \<Longrightarrow> b ^ nat (floor(log b x)) \<le> x"
   oops
 
-thm geometric_sum
-  lemma geometric_sum_less:
-    assumes "0 < x" "x < 1" "finite S"
-    shows "(\<Sum>i\<in>S. x ^ i) < 1 / (1 - x::'a::linordered_field)"
-  proof -
-    define n where "n \<equiv> Suc (Max S)" 
-    have "(\<Sum>i\<in>S. x ^ i) \<le> (\<Sum>i<n. x ^ i)"
-      unfolding n_def using assms  by (fastforce intro!: sum_mono2 le_imp_less_Suc)
-    also have "\<dots> = (1 - x ^ n) / (1 - x)"
-      using assms by (simp add: geometric_sum field_simps)
-    also have "\<dots> < 1 / (1-x)"
-      using assms by (simp add: field_simps)
-    finally show ?thesis .
-  qed
-  
+    lemma inj_onCI: "(\<And>x y. x \<in> A \<Longrightarrow> y \<in> A \<Longrightarrow> f x = f y \<Longrightarrow> x \<noteq> y \<Longrightarrow> False) \<Longrightarrow> inj_on f A"
+      by (force simp: inj_on_def)
 
-thm eqpoll_real_subset
     
-    lemma reals01_lepoll_nat_sets: "{0..<1::real} \<lesssim> (UNIV::nat set set)"
-    proof -
-      define nxt where "nxt \<equiv> \<lambda>x::real. if x < 1/2 then (True, 2*x) else (False, 2*x - 1)"
-      have nxt_fun: "nxt \<in> {0..<1} \<rightarrow> UNIV \<times> {0..<1}"
-        by (simp add: nxt_def Pi_iff)
-      define \<sigma> where "\<sigma> \<equiv> \<lambda>x. rec_nat (True, x) (\<lambda>n (b,y). nxt y)"
-      have \<sigma>Suc [simp]: "\<sigma> x (Suc k) = nxt (snd (\<sigma> x k))" for k x
-        by (simp add: \<sigma>_def case_prod_beta')
-      have \<sigma>01: "x \<in> {0..<1} \<Longrightarrow> \<sigma> x n \<in> UNIV \<times> {0..<1}" for x n
-      proof (induction n)
-        case 0
-        then show ?case                                           
-          by (simp add: \<sigma>_def)
-       next
-        case (Suc n)
-        with nxt_fun show ?case
-          by (force simp add: Pi_iff split: prod.split)
-      qed
-      define f where "f \<equiv> \<lambda>x. {n. fst (\<sigma> x (Suc n))}"
-      have snd_nxt: "snd (nxt y) - snd (nxt x) = 2 * (y-x)" 
-        if "fst (nxt x) = fst (nxt y)" for x y
-        using that by (simp add: nxt_def split: if_split_asm)
-      have False if "f x = f y" "x < y" "0 \<le> x" "x < 1" "0 \<le> y" "y < 1" for x y :: real
-      proof -
-        have "\<And>k. fst (\<sigma> x (Suc k)) = fst (\<sigma> y (Suc k))"
-          using that by (force simp add: f_def)
-        then have eq: "\<And>k. fst (nxt (snd (\<sigma> x k))) = fst (nxt (snd (\<sigma> y k)))"
-          by (metis \<sigma>_def case_prod_beta' rec_nat_Suc_imp)
-        have *: "snd (\<sigma> y k) - snd (\<sigma> x k) = 2 ^ k * (y-x)" for k
-        proof (induction k)
-          case 0
-          then show ?case
-            by (simp add: \<sigma>_def)
-        next
-          case (Suc k)
-          then show ?case
-            by (simp add: eq snd_nxt)
+    thm first_countable_def Metric_space.openin_mtopology
+    lemma (in Metric_space) first_countable_mtopology: "first_countable mtopology"
+    proof (clarsimp simp add: first_countable_def)
+      fix x
+      assume "x \<in> M"
+      define \<B> where "\<B> \<equiv> mball x ` {r \<in> \<rat>. 0 < r}"
+      show "\<exists>\<B>. countable \<B> \<and> (\<forall>V\<in>\<B>. openin mtopology V) \<and> (\<forall>U. openin mtopology U \<and> x \<in> U \<longrightarrow> (\<exists>V\<in>\<B>. x \<in> V \<and> V \<subseteq> U))"
+      proof (intro exI conjI ballI)
+        show "countable \<B>"
+          by (simp add: \<B>_def countable_rat)
+        show "\<forall>U. openin mtopology U \<and> x \<in> U \<longrightarrow> (\<exists>V\<in>\<B>. x \<in> V \<and> V \<subseteq> U)"
+        proof clarify
+          fix U
+          assume "openin mtopology U" and "x \<in> U"
+          then obtain r where "r>0" and r: "mball x r \<subseteq> U"
+            by (meson openin_mtopology)
+          then obtain q where "q \<in> Rats" "0 < q" "q < r"
+            using Rats_dense_in_real by blast
+          then show "\<exists>V\<in>\<B>. x \<in> V \<and> V \<subseteq> U"
+            unfolding \<B>_def using \<open>x \<in> M\<close> r by fastforce
         qed
-        define n where "n \<equiv> nat (\<lceil>log 2 (1 / (y - x))\<rceil>)"
-        have "2^n \<ge> 1 / (y - x)"
-          by (simp add: n_def power_of_nat_log_ge)
-        then have "2^n * (y-x) \<ge> 1"
-          using \<open>x < y\<close> by (simp add: n_def field_simps)
-        with * have "snd (\<sigma> y n) - snd (\<sigma> x n) \<ge> 1"
-          by presburger
-        moreover have "snd (\<sigma> x n) \<in> {0..<1}" "snd (\<sigma> y n) \<in> {0..<1}"
-          using that by (meson \<sigma>01 atLeastLessThan_iff mem_Times_iff)+
-        ultimately show False by simp
-      qed
-      then have "inj_on f {0..<1}"
-        by (meson atLeastLessThan_iff linorder_inj_onI')
-      then show ?thesis
-        unfolding lepoll_def by blast
+      qed (auto simp: \<B>_def)
     qed
     
-    lemma nat_sets_lepoll_reals01: "(UNIV::nat set set) \<lesssim> {0..<1::real}"
-    proof -
-      define F where "F \<equiv> \<lambda>S i. if i\<in>S then (inverse 3::real) ^ i else 0"
-      have Fge0: "F S i \<ge> 0" for S i
-        by (simp add: F_def)
-      have F: "summable (F S)" for S
-        unfolding F_def by (force intro: summable_comparison_test_ev [where g = "power (inverse 3)"])
-      have "sum (F S) {..<n} \<le> 3/2" for n S
-      proof (cases n)
-        case (Suc n')
-        have "sum (F S) {..<n} \<le> (\<Sum>i<n. inverse 3 ^ i)"
-          by (simp add: F_def sum_mono)
-        also have "\<dots> = (\<Sum>i=0..n'. inverse 3 ^ i)"
-          using Suc atLeast0AtMost lessThan_Suc_atMost by presburger
-        also have "\<dots> = (3/2) * (1 - inverse 3 ^ n)"
-          using sum_gp_multiplied [of 0 n' "inverse (3::real)"] by (simp add: Suc field_simps)
-        also have "\<dots> \<le> 3/2"
-          by (simp add: field_simps)
-        finally show ?thesis .
-      qed auto
-      then have F32: "suminf (F S) \<le> 3/2" for S
-        using F suminf_le_const by blast
-      define f where "f \<equiv> \<lambda>S. suminf (F S) / 2"
-      have monoF: "F S n \<le> F T n" if "S \<subseteq> T" for S T n
-        using F_def that by auto
-      then have monof: "f S \<le> f T" if "S \<subseteq> T" for S T
-        using that F by (simp add: f_def suminf_le)
-      have "f S \<in> {0..<1::real}" for S
-      proof -
-        have "0 \<le> suminf (F S)"
-          using F by (simp add: F_def suminf_nonneg)
-        with F32[of S] show ?thesis
-          by (auto simp: f_def)
-      qed
-      moreover have "inj f"
-      proof
-        fix S T
-        assume "f S = f T" 
-        show "S = T"
-        proof (rule ccontr)
-          assume "S \<noteq> T"
-          then have ST_ne: "sym_diff S T \<noteq> {}"
-            by blast
-          define n where "n \<equiv> LEAST n. n \<in> sym_diff S T"
-          have sum_split: "suminf (F U) = sum (F U) {..<Suc n} + (\<Sum>k. F U (k + Suc n))"  for U
-            by (metis F add.commute suminf_split_initial_segment)
-          have yes: "f U \<ge> (sum (F U) {..<n} + (inverse 3::real) ^ n) / 2" 
-            if "n \<in> U" for U
-          proof -
-            have "0 \<le> (\<Sum>k. F U (k + Suc n))"
-              by (metis F Fge0 suminf_nonneg summable_iff_shift)
-            moreover have "F U n = (1/3) ^ n"
-              by (simp add: F_def that)
-            ultimately show ?thesis
-              by (simp add: sum_split f_def)
-          qed
-          have *: "(\<Sum>k. F UNIV (k + n)) = (\<Sum>k. F UNIV k) * (inverse 3::real) ^ n" for n
-            by (simp add: F_def power_add suminf_mult2)
-          have no: "f U < (sum (F U) {..<n} + (inverse 3::real) ^ n) / 2" 
-            if "n \<notin> U" for U
-          proof -
-            have [simp]: "F U n = 0"
-              by (simp add: F_def that)
-            have "(\<Sum>k. F U (k + Suc n)) \<le> (\<Sum>k. F UNIV (k + Suc n))"
-              by (metis F monoF subset_UNIV suminf_le summable_ignore_initial_segment)
-            then have "suminf (F U) \<le> (\<Sum>k. F UNIV (k + Suc n)) + (\<Sum>i<n. F U i)"
-              by (simp add: sum_split)
-            also have "\<dots> < (inverse 3::real) ^ n + (\<Sum>i<n. F U i)"
-              unfolding * using F32[of UNIV] by simp
-            finally have "suminf (F U) < inverse 3 ^ n + sum (F U) {..<n}" .
-            then show ?thesis
-              by (simp add: f_def)
-          qed
-          have "S \<inter> {..<n} = T \<inter> {..<n}"
-            using not_less_Least by (fastforce simp add: n_def)
-          then have "sum (F S) {..<n} = sum (F T) {..<n}"
-            by (metis (no_types, lifting) F_def Int_iff sum.cong)
-          moreover consider "n \<in> S-T" | "n \<in> T-S"
-            by (metis LeastI_ex ST_ne UnE ex_in_conv n_def)
-          ultimately show False
-            by (smt (verit, best) Diff_iff \<open>f S = f T\<close> yes no)
-        qed
-      qed
-      ultimately show ?thesis
-        by (meson image_subsetI lepoll_def)
-    qed
+    lemma metrizable_imp_first_countable:
+       "metrizable_space X \<Longrightarrow> first_countable X"
+      by (force simp add: metrizable_space_def Metric_space.first_countable_mtopology)
     
-    lemma open_interval_eqpoll_reals:
-      fixes a b::real
-      shows "{a<..<b} \<approx> (UNIV::real set) \<longleftrightarrow> a<b"
-      using bij_betw_tan bij_betw_open_intervals eqpoll_def
-      by (smt (verit, best) UNIV_I eqpoll_real_subset eqpoll_iff_bijections greaterThanLessThan_iff)
-    
-    lemma closed_interval_eqpoll_reals:
-      fixes a b::real
-      shows "{a..b} \<approx> (UNIV::real set) \<longleftrightarrow> a < b"
-    proof
-      show "{a..b} \<approx> (UNIV::real set) \<Longrightarrow> a < b"
-        using eqpoll_finite_iff infinite_Icc_iff infinite_UNIV_char_0 by blast
-    qed (auto simp: eqpoll_real_subset)
-    
-    
-    lemma reals_lepoll_reals01: "(UNIV::real set) \<lesssim> {0..<1::real}"
-    proof -
-      have "(UNIV::real set) \<approx> {0<..<1::real}"
-        by (simp add: open_interval_eqpoll_reals eqpoll_sym)
-      also have "\<dots> \<lesssim> {0..<1::real}"
-        by (simp add: greaterThanLessThan_subseteq_atLeastLessThan_iff subset_imp_lepoll)
-      finally show ?thesis .
-    qed
-    
-    lemma nat_sets_eqpoll_reals: "(UNIV::nat set set) \<approx> (UNIV::real set)"
-      by (metis (mono_tags, opaque_lifting) reals_lepoll_reals01 lepoll_antisym lepoll_trans 
-          nat_sets_lepoll_reals01 reals01_lepoll_nat_sets subset_UNIV subset_imp_lepoll)
-    
-
-
-
-thm first_countable_def Metric_space.openin_mtopology
-lemma (in Metric_space) first_countable_mtopology: "first_countable mtopology"
-proof (clarsimp simp add: first_countable_def)
-  fix x
-  assume "x \<in> M"
-  define \<B> where "\<B> \<equiv> mball x ` {r \<in> \<rat>. 0 < r}"
-  show "\<exists>\<B>. countable \<B> \<and> (\<forall>V\<in>\<B>. openin mtopology V) \<and> (\<forall>U. openin mtopology U \<and> x \<in> U \<longrightarrow> (\<exists>V\<in>\<B>. x \<in> V \<and> V \<subseteq> U))"
-  proof (intro exI conjI ballI)
-    show "countable \<B>"
-      by (simp add: \<B>_def countable_rat)
-    show "\<forall>U. openin mtopology U \<and> x \<in> U \<longrightarrow> (\<exists>V\<in>\<B>. x \<in> V \<and> V \<subseteq> U)"
-    proof clarify
-      fix U
-      assume "openin mtopology U" and "x \<in> U"
-      then obtain r where "r>0" and r: "mball x r \<subseteq> U"
-        by (meson openin_mtopology)
-      then obtain q where "q \<in> Rats" "0 < q" "q < r"
-        using Rats_dense_in_real by blast
-      then show "\<exists>V\<in>\<B>. x \<in> V \<and> V \<subseteq> U"
-        unfolding \<B>_def using \<open>x \<in> M\<close> r by fastforce
-    qed
-  qed (auto simp: \<B>_def)
-qed
-
-lemma metrizable_imp_first_countable:
-   "metrizable_space X \<Longrightarrow> first_countable X"
-  by (force simp add: metrizable_space_def Metric_space.first_countable_mtopology)
-
-
 
 subsection\<open> Theorems from Kuratowski\<close>
 
@@ -776,17 +593,17 @@ proof -
     obtain a where "a \<in> S"
       using \<open>S \<noteq> {}\<close> by blast
     define xe where "xe \<equiv> 
-           \<lambda>b. rec_nat (a,1) (\<lambda>n (x,\<gamma>). ((if b n then r else l) x \<gamma>, \<delta> x \<gamma>))"
+           \<lambda>B. rec_nat (a,1) (\<lambda>n (x,\<gamma>). ((if n\<in>B then r else l) x \<gamma>, \<delta> x \<gamma>))"
     have [simp]: "xe b 0 = (a,1)" for b
       by (simp add: xe_def)
-    have "xe b (Suc n) = (let (x,\<gamma>) = xe b n in ((if b n then r else l) x \<gamma>, \<delta> x \<gamma>))" for b n
+    have "xe B (Suc n) = (let (x,\<gamma>) = xe B n in ((if n\<in>B then r else l) x \<gamma>, \<delta> x \<gamma>))" for B n
       by (simp add: xe_def)
-    define x where "x \<equiv> \<lambda>b n. fst (xe b n)"
-    define \<gamma> where "\<gamma> \<equiv> \<lambda>b n. snd (xe b n)"
-    have [simp]: "x b 0 = a" "\<gamma> b 0 = 1" for b
+    define x where "x \<equiv> \<lambda>B n. fst (xe B n)"
+    define \<gamma> where "\<gamma> \<equiv> \<lambda>B n. snd (xe B n)"
+    have [simp]: "x B 0 = a" "\<gamma> B 0 = 1" for B
       by (simp_all add: x_def \<gamma>_def xe_def)
-    have x_Suc[simp]: "x b (Suc n) = ((if b n then r else l) (x b n) (\<gamma> b n))" 
-     and \<gamma>_Suc[simp]: "\<gamma> b (Suc n) = \<delta> (x b n) (\<gamma> b n)" for b n
+    have x_Suc[simp]: "x B (Suc n) = ((if n\<in>B then r else l) (x B n) (\<gamma> B n))" 
+     and \<gamma>_Suc[simp]: "\<gamma> B (Suc n) = \<delta> (x B n) (\<gamma> B n)" for B n
       by (simp_all add: x_def \<gamma>_def xe_def split: prod.split)
     interpret Submetric M d S
     proof qed (use \<open>S \<subseteq> M\<close> in metis)
@@ -795,11 +612,11 @@ proof -
     with \<open>mcomplete\<close>
     have "sub.mcomplete"
       by (metis closedin_mcomplete_imp_mcomplete)
-    have *: "x b n \<in> S \<and> \<gamma> b n > 0" for b n
+    have *: "x B n \<in> S \<and> \<gamma> B n > 0" for B n
       by (induction n) (auto simp: \<open>a \<in> S\<close> lrS \<delta>)
-    with subset have E: "x b n \<in> M" for b n
+    with subset have E: "x B n \<in> M" for B n
       by blast
-    have \<gamma>_le: "\<gamma> b n \<le> (1/2)^n" for b n
+    have \<gamma>_le: "\<gamma> B n \<le> (1/2)^n" for B n
     proof(induction n)
       case 0 then show ?case by auto
     next
@@ -807,33 +624,70 @@ proof -
       then show ?case
         by simp (smt (verit) "*" \<delta> field_sum_of_halves)
     qed
-    { fix b
-      have "\<And>n. sub.mcball (x b (Suc n)) (\<gamma> b (Suc n)) \<subseteq> sub.mcball (x b n) (\<gamma> b n)"
+    { fix B
+      have "\<And>n. sub.mcball (x B (Suc n)) (\<gamma> B (Suc n)) \<subseteq> sub.mcball (x B n) (\<gamma> B n)"
         by (smt (verit, best) "*" Int_iff \<gamma>_Suc x_Suc in_mono lr_mcball mcball_submetric_eq subsetI)
-      then have mon: "monotone (\<le>) (\<lambda>x y. y \<subseteq> x) (\<lambda>n. sub.mcball (x b n) (\<gamma> b n))"
+      then have mon: "monotone (\<le>) (\<lambda>x y. y \<subseteq> x) (\<lambda>n. sub.mcball (x B n) (\<gamma> B n))"
         by (simp add: decseq_SucI)
-      have "\<exists>n a. sub.mcball (x b n) (\<gamma> b n) \<subseteq> sub.mcball a \<epsilon>" if "\<epsilon>>0" for \<epsilon>
+      have "\<exists>n a. sub.mcball (x B n) (\<gamma> B n) \<subseteq> sub.mcball a \<epsilon>" if "\<epsilon>>0" for \<epsilon>
       proof -
         obtain n where "(1/2)^n < \<epsilon>"
           using \<open>0 < \<epsilon>\<close> real_arch_pow_inv by force
-        with \<gamma>_le have \<epsilon>: "\<gamma> b n \<le> \<epsilon>"
+        with \<gamma>_le have \<epsilon>: "\<gamma> B n \<le> \<epsilon>"
           by (smt (verit))
         show ?thesis
         proof (intro exI)
-          show "sub.mcball (x b n) (\<gamma> b n) \<subseteq> sub.mcball (x b n) \<epsilon>"
+          show "sub.mcball (x B n) (\<gamma> B n) \<subseteq> sub.mcball (x B n) \<epsilon>"
             by (simp add: \<epsilon> sub.mcball_subset_concentric)
         qed
       qed
-      then have "\<exists>l. l \<in> S \<and> (\<Inter>n. sub.mcball (x b n) (\<gamma> b n)) = {l}"
+      then have "\<exists>l. l \<in> S \<and> (\<Inter>n. sub.mcball (x B n) (\<gamma> B n)) = {l}"
         using \<open>sub.mcomplete\<close> mon 
         unfolding sub.mcomplete_nest_sing
-        apply (drule_tac x="\<lambda>n. sub.mcball (x b n) (\<gamma> b n)" in spec)
+        apply (drule_tac x="\<lambda>n. sub.mcball (x B n) (\<gamma> B n)" in spec)
         by (meson * order.asym sub.closedin_mcball sub.mcball_eq_empty)
     }
+    then obtain z where z: "\<And>B. z B \<in> S \<and> (\<Inter>n. sub.mcball (x B n) (\<gamma> B n)) = {z B}"
+      by metis
+    show ?thesis
+      unfolding lepoll_def
+    proof (intro exI conjI)
+      show "inj z"
+      proof (rule inj_onCI)
+        fix B C
+        assume eq: "z B = z C" and "B \<noteq> C"
+        then have ne: "sym_diff B C \<noteq> {}"
+          by blast
+        define n where "n \<equiv> LEAST k. k \<in> (sym_diff B C)"
+        with ne have n: "n \<in> sym_diff B C"
+          by (metis Inf_nat_def1 LeastI)
+        then have non: "n \<in> B \<longleftrightarrow> n \<notin> C"
+          by blast
+        have BC_eq: "k \<in> B \<longleftrightarrow> k \<in> C" if "k<n" for k
+          using that unfolding n_def by (meson DiffI UnCI not_less_Least)
 
-    sorry
- 
-        sorry
+        define J where "J \<equiv> \<lambda>B. {a. \<forall>n. a \<in> sub.mcball (x B n) (\<gamma> B n)}"
+        have Jayne: "J B = {z B}" for B
+          using z [of B] by (simp add: J_def set_eq_iff)
+        then have "z C \<in> J B \<inter> J C"
+          using eq by force
+        then have H: "z C \<in> sub.mcball (x B (Suc n)) (\<gamma> B (Suc n)) \<and> z C \<in> sub.mcball (x C (Suc n)) (\<gamma> C (Suc n))"
+          apply (simp add: J_def non "*" lrS)
+          apply (metis (full_types) \<gamma>_Suc non x_Suc)+
+          done
+
+        have "(\<forall>m. m < p \<longrightarrow> (m \<in> B \<longleftrightarrow> m \<in> C)) \<Longrightarrow> x B p = x C p \<and> \<gamma> B p = \<gamma> C p" for p
+          by (induction p) auto
+        then have **: "x B n = x C n" "\<gamma> B n = \<gamma> C n"
+          using BC_eq by blast+
+        then show False
+          using lr_disjnt * H non
+          by (smt (verit) IntD2 \<gamma>_Suc disjnt_iff mcball_submetric_eq x_Suc)
+      qed
+      show "range z \<subseteq> S"
+        using z by blast
+    qed
+  qed
   finally show ?thesis .
 qed
 
@@ -848,34 +702,6 @@ lemma card_ge_perfect_set:
   apply (metis Metric_space.card_ge_perfect_set completely_metrizable_space_def)
 
 oops
-    ANTS_TAC THENL
-      REWRITE_TAC[SKOLEM_THM; le_c; IN_UNIV] THEN
-      MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `z:(nat=>bool)->A` THEN
-      SIMP_TAC[SUBMETRIC; IN_INTER; FORALL_AND_THM] THEN STRIP_TAC THEN
-      MAP_EVERY X_GEN_TAC [`b::nat=>bool`; `c::nat=>bool`] THEN
-      GEN_REWRITE_TAC id [GSYM CONTRAPOS_THM] THEN
-      REWRITE_TAC[FUN_EQ_THM; NOT_FORALL_THM] THEN
-      GEN_REWRITE_TAC LAND_CONV [num_WOP] THEN
-      REWRITE_TAC[LEFT_IMP_EXISTS_THM; TAUT `\<not> (p \<longleftrightarrow> q) \<longleftrightarrow> p \<longleftrightarrow> \<not> q`] THEN
-      X_GEN_TAC `n::nat` THEN REPEAT STRIP_TAC THEN FIRST_ASSUM(MP_TAC \<circ>
-        GEN_REWRITE_RULE (BINDER_CONV \<circ> LAND_CONV) [INTERS_GSPEC]) THEN
-      DISCH_THEN(fun th ->
-       MP_TAC(SPEC `c::nat=>bool` th) THEN MP_TAC(SPEC `b::nat=>bool` th)) THEN
-      ASM_REWRITE_TAC[TAUT `p \<Longrightarrow> \<not> q \<longleftrightarrow> \<not> (p \<and> q)`] THEN
-      DISCH_THEN(MP_TAC \<circ> MATCH_MP (SET_RULE
-       `S = {a} \<and> t = {a} \<Longrightarrow> a \<in> S \<inter> t`)) THEN
-      REWRITE_TAC[IN_INTER; IN_ELIM_THM; AND_FORALL_THM] THEN
-      DISCH_THEN(MP_TAC \<circ> SPEC `Suc n`) THEN ASM_REWRITE_TAC[COND_SWAP] THEN
-      SUBGOAL_THEN
-       `(x:(nat=>bool)->num=>A) b n = x c n \<and>
-        (r:(nat=>bool)->num=>real) b n = r c n`
-       (CONJUNCTS_THEN SUBST1_TAC)
-      THENL
-       [UNDISCH_TAC `\<forall>m::nat. m < n \<Longrightarrow> (b m \<longleftrightarrow> c m)` THEN
-        SPEC_TAC(`n::nat`,`p::nat`) THEN
-        INDUCT_TAC THEN ASM_SIMP_TAC[LT_SUC_LE; LE_REFL; LT_IMP_LE];
-        COND_CASES_TAC THEN ASM_REWRITE_TAC[MCBALL_SUBMETRIC_EQ; IN_INTER] THEN
-        ASM SET_TAC[]]];
 
 
     SUBGOAL_THEN
