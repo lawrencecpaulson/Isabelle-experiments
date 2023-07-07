@@ -666,7 +666,7 @@ proof -
         have H: "z C \<in> sub.mcball (x B (Suc n)) (\<gamma> B (Suc n)) \<and> z C \<in> sub.mcball (x C (Suc n)) (\<gamma> C (Suc n))"
           using z [of B] z [of C] apply (simp add: lrS set_eq_iff non *)
           by (smt (verit, best) \<gamma>_Suc eq non x_Suc)
-        have BC_eq: "k \<in> B \<longleftrightarrow> k \<in> C" if "k<n" for k
+        have "k \<in> B \<longleftrightarrow> k \<in> C" if "k<n" for k
           using that unfolding n_def by (meson DiffI UnCI not_less_Least)
         moreover have "(\<forall>m. m < p \<longrightarrow> (m \<in> B \<longleftrightarrow> m \<in> C)) \<Longrightarrow> x B p = x C p \<and> \<gamma> B p = \<gamma> C p" for p
           by (induction p) auto
@@ -683,7 +683,6 @@ proof -
   finally show ?thesis .
 qed
 
-
 lemma card_ge_perfect_set_aux:
   assumes lcX: "locally_compact_space X" and hsX: "Hausdorff_space X"
     and eq: "X derived_set_of topspace X = topspace X" and "topspace X \<noteq> {}"
@@ -697,6 +696,10 @@ proof -
       using assms by blast
     then obtain U K where "openin X U" "compactin X K" "U \<noteq> {}" "U \<subseteq> K"
       by (metis emptyE lcX locally_compact_space_def)
+    then have "closedin X K"
+      by (simp add: compactin_imp_closedin hsX)
+    have intK_ne: "X interior_of K \<noteq> {}"
+        using \<open>U \<noteq> {}\<close> \<open>U \<subseteq> K\<close> \<open>openin X U\<close> interior_of_eq_empty by blast
     have "\<exists>D E. closedin X D \<and> D \<subseteq> K \<and> X interior_of D \<noteq> {} \<and>
                 closedin X E \<and> E \<subseteq> K \<and> X interior_of E \<noteq> {} \<and>
                 disjnt D E \<and> D \<subseteq> C \<and> E \<subseteq> C"
@@ -736,66 +739,65 @@ proof -
       \<Longrightarrow> disjnt (L C) (R C) \<and> (L C) \<subseteq> C \<and> (R C) \<subseteq> C"
       by metis
     define d where "d \<equiv> \<lambda>B. rec_nat K (\<lambda>n. if n \<in> B then R else L)"
-    have "d B 0 = K" for B
+    have d0[simp]: "d B 0 = K" for B
       by (simp add: d_def)
-    have "d B (Suc n) = (if n \<in> B then R else L) (d B n)" for B n
+    have [simp]: "d B (Suc n) = (if n \<in> B then R else L) (d B n)" for B n
       by (simp add: d_def)
+    have d_correct: "closedin X (d B n) \<and> d B n \<subseteq> K \<and> X interior_of (d B n) \<noteq> {}" for B n
+    proof (induction n)
+      case 0
+      then show ?case by (auto simp: \<open>closedin X K\<close> intK_ne)
+    next
+      case (Suc n) with LR show ?case by auto
+    qed
+    have "(\<Inter>n. d B n) \<noteq> {}" for B
+    proof (rule compact_space_imp_nest)
+      show "compact_space (subtopology X K)"
+        by (simp add: \<open>compactin X K\<close> compact_space_subtopology)
+      show "closedin (subtopology X K) (d B n)" for n :: nat
+        by (simp add: closedin_subset_topspace d_correct)
+      show "d B n \<noteq> {}" for n :: nat
+        by (metis d_correct interior_of_empty)
+      show "antimono (d B)"
+      proof (rule antimonoI [OF transitive_stepwise_le])
+        fix n
+        show "d B (Suc n) \<subseteq> d B n"
+        by (simp add: d_correct disjLR)
+      qed auto
+    qed
+    then obtain x where x: "\<And>B. x B \<in> (\<Inter>n. d B n)"
+      unfolding set_eq_iff by (metis empty_iff)
     show ?thesis
-      sorry
+      unfolding lepoll_def
+    proof (intro exI conjI)
+      show "inj x"
+      proof (rule inj_onCI)
+        fix B C
+        assume eq: "x B = x C" and "B\<noteq>C"
+        then have ne: "sym_diff B C \<noteq> {}"
+          by blast
+        define n where "n \<equiv> LEAST k. k \<in> (sym_diff B C)"
+        with ne have n: "n \<in> sym_diff B C"
+          by (metis Inf_nat_def1 LeastI)
+        then have non: "n \<in> B \<longleftrightarrow> n \<notin> C"
+          by blast
+        have "k \<in> B \<longleftrightarrow> k \<in> C" if "k<n" for k
+          using that unfolding n_def by (meson DiffI UnCI not_less_Least)
+        moreover have "(\<forall>m. m < p \<longrightarrow> (m \<in> B \<longleftrightarrow> m \<in> C)) \<Longrightarrow> d B p = d C p" for p
+          by (induction p) auto
+        ultimately have "d B n = d C n"
+          by blast
+        then have "disjnt (d B (Suc n)) (d C (Suc n))"
+          by (simp add: d_correct disjLR disjnt_sym non)
+        then show False
+          by (metis InterE disjnt_iff eq rangeI x)
+      qed
+      show "range x \<subseteq> topspace X"
+        using x d0 \<open>compactin X K\<close> compactin_subset_topspace d_correct by fastforce
+    qed
   qed
   finally show ?thesis .
 qed
-
-oops
-
-
-    X_GEN_TAC `d:(nat=>bool)->num=>A->bool` THEN STRIP_TAC THEN
-
-    SUBGOAL_THEN
-     `\<forall>b n. closedin X (d b n) \<and> d b n \<subseteq> k \<and>
-            \<not> (X interior_of (d b n) = {})` MP_TAC THENL
-     [GEN_TAC THEN INDUCT_TAC THENL
-       [ASM_SIMP_TAC[SUBSET_REFL; COMPACT_IN_IMP_CLOSED_IN] THEN
-        FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (SET_RULE
-         `(u \<noteq> {}) \<Longrightarrow> u \<subseteq> i \<Longrightarrow> (i \<noteq> {})`)) THEN
-        ASM_SIMP_TAC[INTERIOR_OF_MAXIMAL_EQ];
-        ASM_REWRITE_TAC[] THEN COND_CASES_TAC THEN ASM_SIMP_TAC[]];
-      REWRITE_TAC[FORALL_AND_THM] THEN STRIP_TAC] THEN
-
-    SUBGOAL_THEN
-     `\<forall>b. \<not> (\<Inter>{(d:(nat=>bool)->num=>A->bool) b n | n \<in> UNIV} = {})`
-    MP_TAC THENL
-     [X_GEN_TAC `b::nat=>bool` THEN MATCH_MP_TAC COMPACT_SPACE_IMP_NEST THEN
-      EXISTS_TAC `subtopology X (k::A=>bool)` THEN
-      ASM_SIMP_TAC[CLOSED_IN_SUBSET_TOPSPACE; COMPACT_SPACE_SUBTOPOLOGY] THEN
-      CONJ_TAC THENL [ASM_MESON_TAC[INTERIOR_OF_EMPTY]; ALL_TAC] THEN
-      MATCH_MP_TAC TRANSITIVE_STEPWISE_LE THEN
-      REPEAT(CONJ_TAC THENL [SET_TAC[]; ALL_TAC]) THEN
-      ASM_SIMP_TAC[] THEN GEN_TAC THEN COND_CASES_TAC THEN
-      ASM_SIMP_TAC[];
-      REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; SKOLEM_THM; LEFT_IMP_EXISTS_THM]] THEN
-    X_GEN_TAC `x:(nat=>bool)->A` THEN
-    REWRITE_TAC[INTERS_GSPEC; IN_ELIM_THM; IN_UNIV] THEN DISCH_TAC THEN
-    REWRITE_TAC[le_c; IN_UNIV] THEN EXISTS_TAC `x:(nat=>bool)->A` THEN
-    CONJ_TAC THENL [ASM_MESON_TAC[CLOSED_IN_SUBSET; \<subseteq>]; ALL_TAC] THEN
-    MAP_EVERY X_GEN_TAC [`b::nat=>bool`; `c::nat=>bool`] THEN
-    GEN_REWRITE_TAC id [GSYM CONTRAPOS_THM] THEN
-    REWRITE_TAC[FUN_EQ_THM; NOT_FORALL_THM] THEN
-    GEN_REWRITE_TAC LAND_CONV [num_WOP] THEN
-    REWRITE_TAC[LEFT_IMP_EXISTS_THM; TAUT `\<not> (p \<longleftrightarrow> q) \<longleftrightarrow> p \<longleftrightarrow> \<not> q`] THEN
-    X_GEN_TAC `n::nat` THEN REPEAT STRIP_TAC THEN
-
-    SUBGOAL_THEN
-     `disjnt ((d:(nat=>bool)->num=>A->bool) b (Suc n)) (d c (Suc n))`
-    MP_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-    ASM_SIMP_TAC[COND_SWAP] THEN
-    SUBGOAL_THEN `(d:(nat=>bool)->num=>A->bool) b n = d c n` SUBST1_TAC THENL
-     [ALL_TAC; ASM_MESON_TAC[DISJOINT_SYM]] THEN
-    UNDISCH_TAC `\<forall>m::nat. m < n \<Longrightarrow> (b m \<longleftrightarrow> c m)` THEN
-    SPEC_TAC(`n::nat`,`p::nat`) THEN
-    INDUCT_TAC THEN ASM_SIMP_TAC[LT_SUC_LE; LE_REFL; LT_IMP_LE]]);;
-
-
 
 lemma card_ge_perfect_set:
   assumes X: "completely_metrizable_space X \<or> locally_compact_space X \<and> Hausdorff_space X"
