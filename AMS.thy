@@ -57,7 +57,6 @@ text\<open>Kuratowski, Remark on an Invariance Theorem, \emph{Fundamenta Mathema
  assuming that means metrizable. We call out the general topological       
  hypotheses more explicitly, which do not however include connectedness.   \<close>
 
-
 lemma separation_by_closed_intermediates_count:
   assumes X: "hereditarily normal_space X"
     and "finite \<U>"
@@ -129,7 +128,7 @@ proof -
     using \<open>C \<subseteq> S\<close> \<open>closedin X C\<close> that by auto
 qed
 
-
+(*BUT SEE THE NEXT VERSION*)
 lemma separation_by_closed_intermediates_eq_count:
   assumes lcX: "locally_connected_space X" and hnX: "hereditarily normal_space X"
   shows "(\<exists>\<U>. finite \<U> \<and> card \<U> = n \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - S) \<longleftrightarrow>
@@ -271,6 +270,17 @@ next
     qed
   qed
 qed
+
+(*PROBABLY THIS SHOULD REPLACE THE PREVIOUS FORMULATION*)
+lemma separation_by_closed_intermediates_eq_count':
+  fixes n::nat
+  assumes lcX: "locally_connected_space X" and hnX: "hereditarily normal_space X"
+  shows "(\<exists>\<U>. \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - S) \<longleftrightarrow>
+         (\<exists>C. closedin X C \<and> C \<subseteq> S \<and>
+              (\<forall>D. closedin X D \<and> C \<subseteq> D \<and> D \<subseteq> S
+                   \<longrightarrow> (\<exists>\<U>.  \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - D)))"
+  using separation_by_closed_intermediates_eq_count [of X n S]
+  by (simp add: eqpoll_iff_finite_card hnX lcX)
 
 lemma separation_by_closed_intermediates_eq_gen:
   assumes "locally_connected_space X" "hereditarily normal_space X"
@@ -419,136 +429,9 @@ next
 qed auto
 
 
-lemma lemmaX:
-  assumes "\<And>S T. R S T \<Longrightarrow> R T S"
-  shows "(\<forall>S T n. R S T \<longrightarrow> (f S \<approx> {..<n::nat} \<longleftrightarrow> f T \<approx> {..<n::nat})) \<longleftrightarrow>
-         (\<forall>n S T. R S T \<longrightarrow> {..<n::nat} \<lesssim> f S \<longrightarrow> {..<n::nat} \<lesssim> f T)"
-  apply (rule )
-   apply (meson eqpoll_iff_finite_card eqpoll_sym finite_lepoll_infinite finite_lessThan lepoll_trans2)
-  by (smt (verit, best) assms card_lessThan eqpoll_iff_card eqpoll_imp_lepoll finite_lepoll_infinite finite_lessThan lepoll_antisym lepoll_iff_finite_card lessI linorder_not_le nle_le)
+subsection\<open>A perfect set in common cases must have at least the cardinality of the continuum\<close>
 
-
-
-lemma lemur: (*NEEDED?*)
-   "pairwise (separatedin (subtopology X (topspace X - S))) \<U> \<and> {} \<notin> \<U> \<and>
-     \<Union>\<U> = topspace(subtopology X (topspace X - S)) \<longleftrightarrow>
-     pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - S"
-  by (auto simp: pairwise_def separatedin_subtopology)
-
-
-lemma Kuratowski_component_number_invariance:
-  assumes "compact_space X" "Hausdorff_space X" "locally_connected_space X" "hereditarily normal_space X"
-  shows "((\<forall>S T n.
-              closedin X S \<and> closedin X T \<and>
-              (subtopology X S) homeomorphic_space (subtopology X T)
-              \<longrightarrow> (connected_components_of
-                    (subtopology X (topspace X - S)) \<approx> {..<n::nat} \<longleftrightarrow>
-                   connected_components_of
-                    (subtopology X (topspace X - T)) \<approx> {..<n::nat})) \<longleftrightarrow>
-           (\<forall>S T n.
-              (subtopology X S) homeomorphic_space (subtopology X T)
-              \<longrightarrow> (connected_components_of
-                    (subtopology X (topspace X - S)) \<approx> {..<n::nat} \<longleftrightarrow>
-                   connected_components_of
-                    (subtopology X (topspace X - T)) \<approx> {..<n::nat})))"
-         (is "?lhs = ?rhs")
-proof
-  assume L: ?lhs 
-  then
-  show ?rhs
-    apply (subst (asm)lemmaX)
-    using homeomorphic_space_sym apply blast
-    apply (subst lemmaX)
-    using homeomorphic_space_sym apply blast
-    apply (erule all_forward)
-    apply (simp add: lepoll_connected_components_alt)
-    apply (case_tac "n=0")
-     apply (simp add: )
-    apply (simp add: Int_absorb1)
-
-
-
-    by (metis hnX separation_by_closed_intermediates_count)
-qed blast
-
-oops
-
-  MAP_EVERY X_GEN_TAC [`S::A=>bool`; `t::A=>bool`] THEN
-  ONCE_REWRITE_TAC[SUBTOPOLOGY_RESTRICT] THEN
-  ONCE_REWRITE_TAC[SET_RULE `S - t = S - S \<inter> t`] THEN
-  MP_TAC(SET_RULE
-   `topspace X \<inter> (S::A=>bool) \<subseteq> topspace X \<and>
-    topspace X \<inter> (t::A=>bool) \<subseteq> topspace X`) THEN
-  SPEC_TAC(`topspace X \<inter> (t::A=>bool)`,`t::A=>bool`) THEN
-  SPEC_TAC(`topspace X \<inter> (S::A=>bool)`,`S::A=>bool`) THEN
-  REPEAT GEN_TAC THEN STRIP_TAC THEN DISCH_TAC THEN
-  W(MP_TAC \<circ> PART_MATCH (lhand \<circ> rand)
-    SEPARATION_BY_CLOSED_INTERMEDIATES_EQ_COUNT \<circ> lhand \<circ> snd) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
-  W(MP_TAC \<circ> PART_MATCH (lhand \<circ> rand)
-    SEPARATION_BY_CLOSED_INTERMEDIATES_EQ_COUNT \<circ> rand \<circ> snd) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [homeomorphic_space]) THEN
-  REWRITE_TAC[LEFT_IMP_EXISTS_THM; HOMEOMORPHIC_MAPS_MAP] THEN
-  ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET] THEN
-  MAP_EVERY X_GEN_TAC [`f::A=>A`; `g::A=>A`] THEN STRIP_TAC THEN
-  X_GEN_TAC `C::A=>bool` THEN
-  REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-  DISCH_THEN(LABEL_TAC "*") THEN EXISTS_TAC `image (f::A=>A) C` THEN
-  REPEAT CONJ_TAC THENL
-   [MATCH_MP_TAC COMPACT_IN_IMP_CLOSED_IN THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC IMAGE_COMPACT_IN THEN
-    EXISTS_TAC `subtopology X (S::A=>bool)` THEN
-    ASM_SIMP_TAC[COMPACT_IN_SUBTOPOLOGY; CLOSED_IN_COMPACT_SPACE] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP;
-                                CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
-    ASM_REWRITE_TAC[];
-    RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP;
-                                CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[TOPSPACE_SUBTOPOLOGY]) THEN
-    ASM SET_TAC[];
-    X_GEN_TAC `d':A=>bool` THEN STRIP_TAC] THEN
-  ABBREV_TAC `D = image (g::A=>A) d'` THEN
-  SUBGOAL_THEN `closedin X (D::A=>bool)` ASSUME_TAC THENL
-   [MATCH_MP_TAC COMPACT_IN_IMP_CLOSED_IN THEN ASM_REWRITE_TAC[] THEN
-    EXPAND_TAC "D" THEN MATCH_MP_TAC IMAGE_COMPACT_IN THEN
-    EXISTS_TAC `subtopology X (t::A=>bool)` THEN
-    ASM_SIMP_TAC[COMPACT_IN_SUBTOPOLOGY; CLOSED_IN_COMPACT_SPACE] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP;
-                                CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
-    ASM_REWRITE_TAC[];
-    ALL_TAC] THEN
-  SUBGOAL_THEN `(C::A=>bool) \<subseteq> D \<and> D \<subseteq> S` STRIP_ASSUME_TAC THENL
-   [EXPAND_TAC "D" THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP;
-                                CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[TOPSPACE_SUBTOPOLOGY]) THEN
-    ASM SET_TAC[];
-    ALL_TAC] THEN
-  REMOVE_THEN "*" (MP_TAC \<circ> SPEC `D::A=>bool`) THEN ASM_REWRITE_TAC[] THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[homeomorphic_space] THEN
-  MAP_EVERY EXISTS_TAC [`f::A=>A`; `g::A=>A`] THEN
-  SUBGOAL_THEN
-   `subtopology X D::A topology = subtopology (subtopology X S) D \<and>
-    subtopology X d':A topology = subtopology (subtopology X t) d'`
-  (CONJUNCTS_THEN SUBST1_TAC) THENL
-   [REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY] THEN
-    CONJ_TAC THEN AP_TERM_TAC THEN ASM SET_TAC[];
-    MATCH_MP_TAC HOMEOMORPHIC_MAPS_SUBTOPOLOGIES] THEN
-  ASM_REWRITE_TAC[HOMEOMORPHIC_MAPS_MAP] THEN
-  ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP;
-                              CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[TOPSPACE_SUBTOPOLOGY]) THEN
-  ASM SET_TAC[]);;
-
-
-
-
-subsection\<open>A perfect set in common cases must have cardinality >= c\<close>
-
-lemma (in Metric_space) card_ge_perfect_set:
+lemma (in Metric_space) lepoll_perfect_set:
   assumes "mcomplete"
     and "mtopology derived_set_of S = S" "S \<noteq> {}"
   shows "(UNIV::real set) \<lesssim> S"
@@ -683,7 +566,7 @@ proof -
   finally show ?thesis .
 qed
 
-lemma card_ge_perfect_set_aux:
+lemma lepoll_perfect_set_aux:
   assumes lcX: "locally_compact_space X" and hsX: "Hausdorff_space X"
     and eq: "X derived_set_of topspace X = topspace X" and "topspace X \<noteq> {}"
   shows "(UNIV::real set) \<lesssim> topspace X"
@@ -799,7 +682,7 @@ proof -
   finally show ?thesis .
 qed
 
-lemma card_ge_perfect_set:
+lemma lepoll_perfect_set:
   assumes X: "completely_metrizable_space X \<or> locally_compact_space X \<and> Hausdorff_space X"
     and S: "X derived_set_of S = S" "S \<noteq> {}"
   shows "(UNIV::real set) \<lesssim> S"
@@ -807,11 +690,162 @@ lemma card_ge_perfect_set:
 proof
   assume "completely_metrizable_space X"
   with assms show "(UNIV::real set) \<lesssim> S"
-    by (metis Metric_space.card_ge_perfect_set completely_metrizable_space_def)
+    by (metis Metric_space.lepoll_perfect_set completely_metrizable_space_def)
 next
   assume "locally_compact_space X \<and> Hausdorff_space X"
   then show "(UNIV::real set) \<lesssim> S"
-    using card_ge_perfect_set_aux [of "subtopology X S"]
+    using lepoll_perfect_set_aux [of "subtopology X S"]
     by (metis Hausdorff_space_subtopology S closedin_derived_set_of closedin_subset derived_set_of_subtopology 
         locally_compact_space_closed_subset subtopology_topspace topspace_subtopology topspace_subtopology_subset)
 qed
+
+
+
+
+lemma lemmaX:
+  assumes "\<And>S T. R S T \<Longrightarrow> R T S"
+  shows "(\<forall>S T n. R S T \<longrightarrow> (f S \<approx> {..<n::nat} \<longleftrightarrow> f T \<approx> {..<n::nat})) \<longleftrightarrow>
+         (\<forall>n S T. R S T \<longrightarrow> {..<n::nat} \<lesssim> f S \<longrightarrow> {..<n::nat} \<lesssim> f T)"
+  apply (rule )
+   apply (meson eqpoll_iff_finite_card eqpoll_sym finite_lepoll_infinite finite_lessThan lepoll_trans2)
+  by (smt (verit, best) assms card_lessThan eqpoll_iff_card eqpoll_imp_lepoll finite_lepoll_infinite finite_lessThan lepoll_antisym lepoll_iff_finite_card lessI linorder_not_le nle_le)
+
+
+
+lemma lemur: (*NEEDED?*)
+   "pairwise (separatedin (subtopology X (topspace X - S))) \<U> \<and> {} \<notin> \<U> \<and>
+     \<Union>\<U> = topspace(subtopology X (topspace X - S)) \<longleftrightarrow>
+     pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - S"
+  by (auto simp: pairwise_def separatedin_subtopology)
+
+
+lemma Jayne:
+  assumes "compact_space X" "Hausdorff_space X" "locally_connected_space X" "hereditarily normal_space X"
+    and hom: "(subtopology X S) homeomorphic_space (subtopology X T)"
+    and leXS: "{..<n::nat} \<lesssim> connected_components_of (subtopology X (topspace X - S))"
+  assumes J: "\<And>S T.
+              \<lbrakk>closedin X S; closedin X T; (subtopology X S) homeomorphic_space (subtopology X T);
+              {..<n::nat} \<lesssim> connected_components_of (subtopology X (topspace X - S))\<rbrakk>
+              \<Longrightarrow> {..<n::nat} \<lesssim> connected_components_of (subtopology X (topspace X - T))"
+  shows "{..<n::nat} \<lesssim> connected_components_of (subtopology X (topspace X - T))"
+proof (cases "n=0")
+  case False
+  have "\<exists>\<U>. \<U> \<approx> {..<n} \<and>
+         pairwise (separatedin (subtopology X (topspace X - T))) \<U> \<and>
+         {} \<notin> \<U> \<and> \<Union> \<U> = topspace X \<inter> (topspace X - T)"
+    apply (subst separation_by_closed_intermediates_eq_count')
+
+    apply (simp add: separation_by_closed_intermediates_eq_count' assms)
+
+    using separation_by_closed_intermediates_eq_count' integral_cong
+    sorry
+  with False show ?thesis
+    by (simp add: lepoll_connected_components_alt)
+qed auto
+
+
+    apply (simp add: lepoll_connected_components_alt)
+    apply (case_tac "n=0")
+     apply (simp add: )
+    apply (simp add: Int_absorb1)
+    by (metis hnX separation_by_closed_intermediates_count)
+
+
+oops
+
+  MAP_EVERY X_GEN_TAC [`S::A=>bool`; `t::A=>bool`] THEN
+  ONCE_REWRITE_TAC[SUBTOPOLOGY_RESTRICT] THEN
+  ONCE_REWRITE_TAC[SET_RULE `S - t = S - S \<inter> t`] THEN
+  MP_TAC(SET_RULE
+   `topspace X \<inter> (S::A=>bool) \<subseteq> topspace X \<and>
+    topspace X \<inter> (t::A=>bool) \<subseteq> topspace X`) THEN
+  SPEC_TAC(`topspace X \<inter> (t::A=>bool)`,`t::A=>bool`) THEN
+  SPEC_TAC(`topspace X \<inter> (S::A=>bool)`,`S::A=>bool`) THEN
+
+  REPEAT GEN_TAC THEN STRIP_TAC THEN DISCH_TAC THEN
+  W(MP_TAC \<circ> PART_MATCH (lhand \<circ> rand)
+    SEPARATION_BY_CLOSED_INTERMEDIATES_EQ_COUNT \<circ> lhand \<circ> snd) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
+  W(MP_TAC \<circ> PART_MATCH (lhand \<circ> rand)
+    SEPARATION_BY_CLOSED_INTERMEDIATES_EQ_COUNT \<circ> rand \<circ> snd) THEN
+  ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
+  FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [homeomorphic_space]) THEN
+  REWRITE_TAC[LEFT_IMP_EXISTS_THM; HOMEOMORPHIC_MAPS_MAP] THEN
+  ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET] THEN
+  MAP_EVERY X_GEN_TAC [`f::A=>A`; `g::A=>A`] THEN STRIP_TAC THEN
+  X_GEN_TAC `C::A=>bool` THEN
+  REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
+  DISCH_THEN(LABEL_TAC "*") THEN EXISTS_TAC `image (f::A=>A) C` THEN
+  REPEAT CONJ_TAC THENL
+   [MATCH_MP_TAC COMPACT_IN_IMP_CLOSED_IN THEN ASM_REWRITE_TAC[] THEN
+    MATCH_MP_TAC IMAGE_COMPACT_IN THEN
+    EXISTS_TAC `subtopology X (S::A=>bool)` THEN
+    ASM_SIMP_TAC[COMPACT_IN_SUBTOPOLOGY; CLOSED_IN_COMPACT_SPACE] THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP;
+                                CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
+    ASM_REWRITE_TAC[];
+    RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP;
+                                CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[TOPSPACE_SUBTOPOLOGY]) THEN
+    ASM SET_TAC[];
+    X_GEN_TAC `d':A=>bool` THEN STRIP_TAC] THEN
+  ABBREV_TAC `D = image (g::A=>A) d'` THEN
+  SUBGOAL_THEN `closedin X (D::A=>bool)` ASSUME_TAC THENL
+   [MATCH_MP_TAC COMPACT_IN_IMP_CLOSED_IN THEN ASM_REWRITE_TAC[] THEN
+    EXPAND_TAC "D" THEN MATCH_MP_TAC IMAGE_COMPACT_IN THEN
+    EXISTS_TAC `subtopology X (t::A=>bool)` THEN
+    ASM_SIMP_TAC[COMPACT_IN_SUBTOPOLOGY; CLOSED_IN_COMPACT_SPACE] THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP;
+                                CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
+    ASM_REWRITE_TAC[];
+    ALL_TAC] THEN
+  SUBGOAL_THEN `(C::A=>bool) \<subseteq> D \<and> D \<subseteq> S` STRIP_ASSUME_TAC THENL
+   [EXPAND_TAC "D" THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP;
+                                CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
+    RULE_ASSUM_TAC(REWRITE_RULE[TOPSPACE_SUBTOPOLOGY]) THEN
+    ASM SET_TAC[];
+    ALL_TAC] THEN
+  REMOVE_THEN "*" (MP_TAC \<circ> SPEC `D::A=>bool`) THEN ASM_REWRITE_TAC[] THEN
+  FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[] THEN
+  REWRITE_TAC[homeomorphic_space] THEN
+  MAP_EVERY EXISTS_TAC [`f::A=>A`; `g::A=>A`] THEN
+  SUBGOAL_THEN
+   `subtopology X D::A topology = subtopology (subtopology X S) D \<and>
+    subtopology X d':A topology = subtopology (subtopology X t) d'`
+  (CONJUNCTS_THEN SUBST1_TAC) THENL
+   [REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY] THEN
+    CONJ_TAC THEN AP_TERM_TAC THEN ASM SET_TAC[];
+    MATCH_MP_TAC HOMEOMORPHIC_MAPS_SUBTOPOLOGIES] THEN
+  ASM_REWRITE_TAC[HOMEOMORPHIC_MAPS_MAP] THEN
+  ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET] THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP;
+                              CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
+  RULE_ASSUM_TAC(REWRITE_RULE[TOPSPACE_SUBTOPOLOGY]) THEN
+  ASM SET_TAC[]);;
+
+
+lemma Kuratowski_component_number_invariance:
+  assumes "compact_space X" "Hausdorff_space X" "locally_connected_space X" "hereditarily normal_space X"
+  shows "((\<forall>S T n.
+              closedin X S \<and> closedin X T \<and>
+              (subtopology X S) homeomorphic_space (subtopology X T)
+              \<longrightarrow> (connected_components_of
+                    (subtopology X (topspace X - S)) \<approx> {..<n::nat} \<longleftrightarrow>
+                   connected_components_of
+                    (subtopology X (topspace X - T)) \<approx> {..<n::nat})) \<longleftrightarrow>
+           (\<forall>S T n.
+              (subtopology X S) homeomorphic_space (subtopology X T)
+              \<longrightarrow> (connected_components_of
+                    (subtopology X (topspace X - S)) \<approx> {..<n::nat} \<longleftrightarrow>
+                   connected_components_of
+                    (subtopology X (topspace X - T)) \<approx> {..<n::nat})))"
+         (is "?lhs = ?rhs")
+proof
+  assume L: ?lhs 
+  then show ?rhs
+    apply (subst (asm) lemmaX, use homeomorphic_space_sym in blast)
+    apply (subst lemmaX, use homeomorphic_space_sym in blast)
+    apply (blast intro: Jayne assms)
+    done
+qed blast
