@@ -663,23 +663,15 @@ proof -
           by (metis Inf_nat_def1 LeastI)
         then have non: "n \<in> B \<longleftrightarrow> n \<notin> C"
           by blast
+        have H: "z C \<in> sub.mcball (x B (Suc n)) (\<gamma> B (Suc n)) \<and> z C \<in> sub.mcball (x C (Suc n)) (\<gamma> C (Suc n))"
+          using z [of B] z [of C] apply (simp add: lrS set_eq_iff non *)
+          by (smt (verit, best) \<gamma>_Suc eq non x_Suc)
         have BC_eq: "k \<in> B \<longleftrightarrow> k \<in> C" if "k<n" for k
           using that unfolding n_def by (meson DiffI UnCI not_less_Least)
-
-        define J where "J \<equiv> \<lambda>B. {a. \<forall>n. a \<in> sub.mcball (x B n) (\<gamma> B n)}"
-        have Jayne: "J B = {z B}" for B
-          using z [of B] by (simp add: J_def set_eq_iff)
-        then have "z C \<in> J B \<inter> J C"
-          using eq by force
-        then have H: "z C \<in> sub.mcball (x B (Suc n)) (\<gamma> B (Suc n)) \<and> z C \<in> sub.mcball (x C (Suc n)) (\<gamma> C (Suc n))"
-          apply (simp add: J_def non "*" lrS)
-          apply (metis (full_types) \<gamma>_Suc non x_Suc)+
-          done
-
-        have "(\<forall>m. m < p \<longrightarrow> (m \<in> B \<longleftrightarrow> m \<in> C)) \<Longrightarrow> x B p = x C p \<and> \<gamma> B p = \<gamma> C p" for p
+        moreover have "(\<forall>m. m < p \<longrightarrow> (m \<in> B \<longleftrightarrow> m \<in> C)) \<Longrightarrow> x B p = x C p \<and> \<gamma> B p = \<gamma> C p" for p
           by (induction p) auto
-        then have **: "x B n = x C n" "\<gamma> B n = \<gamma> C n"
-          using BC_eq by blast+
+        ultimately have "x B n = x C n" "\<gamma> B n = \<gamma> C n"
+           by blast+
         then show False
           using lr_disjnt * H non
           by (smt (verit) IntD2 \<gamma>_Suc disjnt_iff mcball_submetric_eq x_Suc)
@@ -692,115 +684,76 @@ proof -
 qed
 
 
-lemma card_ge_perfect_set:
-  assumes X: "completely_metrizable_space X \<or> locally_compact_space X \<and> Hausdorff_space X"
-    and "X derived_set_of S = S" "S \<noteq> {}"
-  shows "(UNIV::real set) \<lesssim> S"
-  using assms
-  apply-
-  apply (erule disjE)
-  apply (metis Metric_space.card_ge_perfect_set completely_metrizable_space_def)
+lemma card_ge_perfect_set_aux:
+  assumes lcX: "locally_compact_space X" and hsX: "Hausdorff_space X"
+    and eq: "X derived_set_of topspace X = topspace X" and "topspace X \<noteq> {}"
+  shows "(UNIV::real set) \<lesssim> topspace X"
+proof -
+  have "(UNIV::real set) \<lesssim> (UNIV::nat set set)"
+    using eqpoll_imp_lepoll eqpoll_sym nat_sets_eqpoll_reals by blast
+  also have "\<dots> \<lesssim> topspace X"
+  proof -
+    obtain z where z: "z \<in> topspace X"
+      using assms by blast
+    then obtain U K where "openin X U" "compactin X K" "U \<noteq> {}" "U \<subseteq> K"
+      by (metis emptyE lcX locally_compact_space_def)
+    have "\<exists>D E. closedin X D \<and> D \<subseteq> K \<and> X interior_of D \<noteq> {} \<and>
+                closedin X E \<and> E \<subseteq> K \<and> X interior_of E \<noteq> {} \<and>
+                disjnt D E \<and> D \<subseteq> C \<and> E \<subseteq> C"
+      if "closedin X C" "C \<subseteq> K" and C: "X interior_of C \<noteq> {}" for C
+    proof -
+      obtain z where z: "z \<in> X interior_of C" "z \<in> topspace X"
+        using C interior_of_subset_topspace by fastforce 
+      obtain x y where "x \<in> X interior_of C" "y \<in> X interior_of C" "x\<noteq>y"
+        by (metis z eq in_derived_set_of openin_interior_of)
+      then have "x \<in> topspace X" "y \<in> topspace X"
+        using interior_of_subset_topspace by force+
+      with hsX obtain V W where "openin X V" "openin X W" "x \<in> V" "y \<in> W" "disjnt V W"
+        by (metis Hausdorff_space_def \<open>x \<noteq> y\<close>)
+      have *: "\<And>W x. openin X W \<and> x \<in> W
+            \<Longrightarrow> \<exists>U V. openin X U \<and> closedin X V \<and> x \<in> U \<and> U \<subseteq> V \<and> V \<subseteq> W"
+        using lcX hsX locally_compact_Hausdorff_imp_regular_space neighbourhood_base_of_closedin neighbourhood_base_of
+        by metis
+      obtain M D where MD: "openin X M" "closedin X D" "y \<in> M" "M \<subseteq> D" "D \<subseteq> X interior_of C \<inter> W"
+        using * [of "X interior_of C \<inter> W" y]
+        using \<open>openin X W\<close> \<open>y \<in> W\<close> \<open>y \<in> X interior_of C\<close> by fastforce
+      obtain N E where NE: "openin X N" "closedin X E" "x \<in> N" "N \<subseteq> E" "E \<subseteq> X interior_of C \<inter> V"
+        using * [of "X interior_of C \<inter> V" x]
+        using \<open>openin X V\<close> \<open>x \<in> V\<close> \<open>x \<in> X interior_of C\<close> by fastforce
+      show ?thesis
+      proof (intro exI conjI)
+        show "X interior_of D \<noteq> {}" "X interior_of E \<noteq> {}"
+          using MD NE by (fastforce simp: interior_of_def)+
+        show "disjnt D E"
+          by (meson MD(5) NE(5) \<open>disjnt V W\<close> disjnt_subset1 disjnt_sym le_inf_iff)
+      qed (use MD NE \<open>C \<subseteq> K\<close> interior_of_subset in force)+
+    qed
+    then obtain L R where
+     LR: "\<And>C. \<lbrakk>closedin X C; C \<subseteq> K; X interior_of C \<noteq> {}\<rbrakk>
+      \<Longrightarrow> closedin X (L C) \<and> (L C) \<subseteq> K \<and> X interior_of (L C) \<noteq> {} \<and>
+                closedin X (R C) \<and> (R C) \<subseteq> K \<and> X interior_of (R C) \<noteq> {}"
+     and disjLR: "\<And>C. \<lbrakk>closedin X C; C \<subseteq> K; X interior_of C \<noteq> {}\<rbrakk>
+      \<Longrightarrow> disjnt (L C) (R C) \<and> (L C) \<subseteq> C \<and> (R C) \<subseteq> C"
+      by metis
+    define d where "d \<equiv> \<lambda>B. rec_nat K (\<lambda>n. if n \<in> B then R else L)"
+    have "d B 0 = K" for B
+      by (simp add: d_def)
+    have "d B (Suc n) = (if n \<in> B then R else L) (d B n)" for B n
+      by (simp add: d_def)
+    show ?thesis
+      sorry
+  qed
+  finally show ?thesis .
+qed
 
 oops
 
 
-    SUBGOAL_THEN
-     `\<forall>X::A topology.
-          locally_compact_space X \<and> Hausdorff_space X \<and>
-          X derived_set_of topspace X = topspace X \<and> \<not> (topspace X = {})
-          \<Longrightarrow> UNIV \<lesssim> topspace X`
-    ASSUME_TAC THENL
-     [REPEAT STRIP_TAC;
-      MAP_EVERY X_GEN_TAC [`X::A topology`; `S::A=>bool`] THEN STRIP_TAC THEN
-      FIRST_X_ASSUM(MP_TAC \<circ> SPEC `subtopology X (S::A=>bool)`) THEN
-      SUBGOAL_THEN `(S::A=>bool) \<subseteq> topspace X` ASSUME_TAC THENL
-       [ASM_MESON_TAC[DERIVED_SET_OF_SUBSET_TOPSPACE]; ALL_TAC] THEN
-      ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY; HAUSDORFF_SPACE_SUBTOPOLOGY;
-                   DERIVED_SET_OF_SUBTOPOLOGY; SET_RULE `S \<inter> S = S`;
-                   SET_RULE `S \<subseteq> u \<Longrightarrow> u \<inter> S = S`] THEN
-      DISCH_THEN MATCH_MP_TAC THEN
-      MATCH_MP_TAC LOCALLY_COMPACT_SPACE_CLOSED_SUBSET THEN
-      ASM_REWRITE_TAC[CLOSED_IN_CONTAINS_DERIVED_SET; SUBSET_REFL]] THEN
-    TRANS_TAC CARD_LE_TRANS `(:nat=>bool)` THEN
-    SIMP_TAC[CARD_EQ_REAL; CARD_EQ_IMP_LE] THEN
-    FIRST_X_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [GSYM MEMBER_NOT_EMPTY]) THEN
-    DISCH_THEN(X_CHOOSE_TAC `z::A`) THEN
-    FIRST_ASSUM(MP_TAC \<circ> SPEC `z::A` \<circ> REWRITE_RULE[locally_compact_space]) THEN
-    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`u::A=>bool`; `k::A=>bool`] THEN STRIP_TAC THEN
-    SUBGOAL_THEN `\<not> (u::A=>bool = {})` ASSUME_TAC THENL
-     [ASM SET_TAC[];
-      REPEAT(FIRST_X_ASSUM(K ALL_TAC \<circ> check (free_in `z::A`) \<circ> concl))] THEN
-    SUBGOAL_THEN
-     `\<forall>c. closedin X c \<and> c \<subseteq> k \<and> \<not> (X interior_of c = {})
-          \<Longrightarrow> \<exists>d e. closedin X d \<and> d \<subseteq> k \<and>
-                    \<not> (X interior_of d = {}) \<and>
-                    closedin X e \<and> e \<subseteq> k \<and>
-                    \<not> (X interior_of e = {}) \<and>
-                    disjnt d e \<and> d \<subseteq> c \<and> e \<subseteq> (c::A=>bool)`
-    MP_TAC THENL
-     [REPEAT STRIP_TAC THEN
-      UNDISCH_TAC `\<not> (X interior_of c::A=>bool = {})` THEN
-      ASM_REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; LEFT_IMP_EXISTS_THM] THEN
-      X_GEN_TAC `z::A` THEN DISCH_TAC THEN
-      SUBGOAL_THEN `(z::A) \<in> topspace X` ASSUME_TAC THENL
-       [ASM_MESON_TAC[\<subseteq>; INTERIOR_OF_SUBSET_TOPSPACE]; ALL_TAC] THEN
-      MP_TAC(ISPECL [`X::A topology`; `topspace X::A=>bool`]
-            DERIVED_SET_OF_INFINITE_OPEN_IN) THEN
-      ASM_REWRITE_TAC[] THEN DISCH_THEN(MP_TAC \<circ> AP_TERM `\<lambda>s. (z::A) \<in> S`) THEN
-      ASM_REWRITE_TAC[IN_ELIM_THM] THEN
-      DISCH_THEN(MP_TAC \<circ> SPEC `X interior_of c::A=>bool`) THEN
-      ASM_SIMP_TAC[OPEN_IN_INTERIOR_OF; INTERIOR_OF_SUBSET_TOPSPACE;
-                   SET_RULE `S \<subseteq> u \<Longrightarrow> u \<inter> S = S`] THEN
-      DISCH_THEN(MP_TAC \<circ> MATCH_MP (MESON[infinite; FINITE_SING; FINITE_SUBSET]
-        `infinite S \<Longrightarrow> \<forall>a. \<not> (S \<subseteq> {a})`)) THEN
-      DISCH_THEN(MP_TAC \<circ> MATCH_MP (SET_RULE
-       `(\<forall>a. \<not> (S \<subseteq> {a})) \<Longrightarrow> \<exists>a b. a \<in> S \<and> b \<in> S \<and> (a \<noteq> b)`)) THEN
-      REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-      MAP_EVERY X_GEN_TAC [`x::A`; `y::A`] THEN STRIP_TAC THEN
-      SUBGOAL_THEN `(x::A) \<in> topspace X \<and> y \<in> topspace X`
-      STRIP_ASSUME_TAC THENL
-       [ASM_MESON_TAC[\<subseteq>; INTERIOR_OF_SUBSET_TOPSPACE]; ALL_TAC] THEN
-      FIRST_ASSUM(MP_TAC \<circ> SPECL [`x::A`; `y::A`] \<circ>
-        REWRITE_RULE[Hausdorff_space]) THEN
-      ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-      MAP_EVERY X_GEN_TAC [`v::A=>bool`; `w::A=>bool`] THEN STRIP_TAC THEN
-      MP_TAC(ISPEC `X::A topology`
-        LOCALLY_COMPACT_HAUSDORFF_IMP_REGULAR_SPACE) THEN
-      ASM_REWRITE_TAC[GSYM NEIGHBOURHOOD_BASE_OF_CLOSED_IN] THEN
-      REWRITE_TAC[NEIGHBOURHOOD_BASE_OF] THEN DISCH_THEN(fun th ->
-        MP_TAC(SPECL [`X interior_of c \<inter> w::A=>bool`; `y::A`] th) THEN
-        MP_TAC(SPECL [`X interior_of c \<inter> v::A=>bool`; `x::A`] th)) THEN
-      ASM_SIMP_TAC[IN_INTER; OPEN_IN_INTER; OPEN_IN_INTERIOR_OF] THEN
-      REWRITE_TAC[LEFT_IMP_EXISTS_THM; SUBSET_INTER] THEN
-      MAP_EVERY X_GEN_TAC [`m::A=>bool`; `d::A=>bool`] THEN STRIP_TAC THEN
-      MAP_EVERY X_GEN_TAC [`n::A=>bool`; `e::A=>bool`] THEN STRIP_TAC THEN
-      MAP_EVERY EXISTS_TAC [`d::A=>bool`; `e::A=>bool`] THEN
-      ASM_REWRITE_TAC[] THEN ONCE_REWRITE_TAC[TAUT
-       `p \<and> q \<and> r \<and> S \<and> t \<longleftrightarrow> (q \<and> S) \<and> p \<and> r \<and> t`] THEN
-      CONJ_TAC THENL
-       [CONJ_TAC THENL [EXISTS_TAC `x::A`; EXISTS_TAC `y::A`] THEN
-        REWRITE_TAC[interior_of; IN_ELIM_THM] THEN ASM_MESON_TAC[];
-        MP_TAC(ISPECL [`X::A topology`; `c::A=>bool`] INTERIOR_OF_SUBSET) THEN
-        ASM SET_TAC[]];
-      ALL_TAC] THEN
-    REWRITE_TAC[RIGHT_IMP_EXISTS_THM; SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`l:(A=>bool)->A=>bool`; `r:(A=>bool)->A=>bool`] THEN
-    DISCH_TAC THEN
-    SUBGOAL_THEN
-     `\<forall>b. \<exists>d::nat=>A->bool.
-          d 0 = k \<and>
-          (\<forall>n. d(Suc n) = (if b n then r else l) (d n))`
-    MP_TAC THENL
-     [GEN_TAC THEN
-      W(ACCEPT_TAC \<circ> prove_recursive_functions_exist num_RECURSION \<circ>
-          snd \<circ> dest_exists \<circ> snd);
-      REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM; FORALL_AND_THM]] THEN
     X_GEN_TAC `d:(nat=>bool)->num=>A->bool` THEN STRIP_TAC THEN
+
     SUBGOAL_THEN
      `\<forall>b n. closedin X (d b n) \<and> d b n \<subseteq> k \<and>
-            \<not> (X interior_of ((d:(nat=>bool)->num=>A->bool) b n) = {})`
-    MP_TAC THENL
+            \<not> (X interior_of (d b n) = {})` MP_TAC THENL
      [GEN_TAC THEN INDUCT_TAC THENL
        [ASM_SIMP_TAC[SUBSET_REFL; COMPACT_IN_IMP_CLOSED_IN] THEN
         FIRST_X_ASSUM(MATCH_MP_TAC \<circ> MATCH_MP (SET_RULE
@@ -808,6 +761,7 @@ oops
         ASM_SIMP_TAC[INTERIOR_OF_MAXIMAL_EQ];
         ASM_REWRITE_TAC[] THEN COND_CASES_TAC THEN ASM_SIMP_TAC[]];
       REWRITE_TAC[FORALL_AND_THM] THEN STRIP_TAC] THEN
+
     SUBGOAL_THEN
      `\<forall>b. \<not> (\<Inter>{(d:(nat=>bool)->num=>A->bool) b n | n \<in> UNIV} = {})`
     MP_TAC THENL
@@ -830,6 +784,7 @@ oops
     GEN_REWRITE_TAC LAND_CONV [num_WOP] THEN
     REWRITE_TAC[LEFT_IMP_EXISTS_THM; TAUT `\<not> (p \<longleftrightarrow> q) \<longleftrightarrow> p \<longleftrightarrow> \<not> q`] THEN
     X_GEN_TAC `n::nat` THEN REPEAT STRIP_TAC THEN
+
     SUBGOAL_THEN
      `disjnt ((d:(nat=>bool)->num=>A->bool) b (Suc n)) (d c (Suc n))`
     MP_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
@@ -841,3 +796,20 @@ oops
     INDUCT_TAC THEN ASM_SIMP_TAC[LT_SUC_LE; LE_REFL; LT_IMP_LE]]);;
 
 
+
+lemma card_ge_perfect_set:
+  assumes X: "completely_metrizable_space X \<or> locally_compact_space X \<and> Hausdorff_space X"
+    and S: "X derived_set_of S = S" "S \<noteq> {}"
+  shows "(UNIV::real set) \<lesssim> S"
+  using X
+proof
+  assume "completely_metrizable_space X"
+  with assms show "(UNIV::real set) \<lesssim> S"
+    by (metis Metric_space.card_ge_perfect_set completely_metrizable_space_def)
+next
+  assume "locally_compact_space X \<and> Hausdorff_space X"
+  then show "(UNIV::real set) \<lesssim> S"
+    using card_ge_perfect_set_aux [of "subtopology X S"]
+    by (metis Hausdorff_space_subtopology S closedin_derived_set_of closedin_subset derived_set_of_subtopology 
+        locally_compact_space_closed_subset subtopology_topspace topspace_subtopology topspace_subtopology_subset)
+qed
