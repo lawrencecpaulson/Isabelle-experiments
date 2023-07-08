@@ -7,6 +7,15 @@ theory AMS
 begin
 
 
+lemma power_of_nat_log_le:
+  assumes "b > 1" "x\<ge>1"
+  shows "b ^ nat \<lfloor>log b x\<rfloor> \<le> x"
+proof -
+  have "\<lfloor>log b x\<rfloor> \<ge> 0"
+    using assms by auto
+  then show ?thesis
+    by (smt (verit) assms le_log_iff of_int_floor_le powr_int)
+qed
 
 (******* delete sym_diff from Analysis/Equivalence_Measurable_On_Borel ******)
 
@@ -28,47 +37,11 @@ proof (cases "x=y")
 next
   case False
   then show ?thesis
-    by (smt (verit, ccfv_threshold) card_1_singleton_iff card_Suc_eq_finite eqpoll_finite_iff eqpoll_iff_card finite.insertI singleton_iff)
+    by (smt (verit, ccfv_threshold) card_1_singleton_iff card_Suc_eq_finite eqpoll_finite_iff
+        eqpoll_iff_card finite.insertI singleton_iff)
 qed
 
 
-
-lemma power_of_nat_log_le: "b > 1 \<Longrightarrow> b ^ nat (floor(log b x)) \<le> x"
-
-  oops
-
-    lemma inj_onCI: "(\<And>x y. x \<in> A \<Longrightarrow> y \<in> A \<Longrightarrow> f x = f y \<Longrightarrow> x \<noteq> y \<Longrightarrow> False) \<Longrightarrow> inj_on f A"
-      by (force simp: inj_on_def)
-
-    
-    thm first_countable_def Metric_space.openin_mtopology
-    lemma (in Metric_space) first_countable_mtopology: "first_countable mtopology"
-    proof (clarsimp simp add: first_countable_def)
-      fix x
-      assume "x \<in> M"
-      define \<B> where "\<B> \<equiv> mball x ` {r \<in> \<rat>. 0 < r}"
-      show "\<exists>\<B>. countable \<B> \<and> (\<forall>V\<in>\<B>. openin mtopology V) \<and> (\<forall>U. openin mtopology U \<and> x \<in> U \<longrightarrow> (\<exists>V\<in>\<B>. x \<in> V \<and> V \<subseteq> U))"
-      proof (intro exI conjI ballI)
-        show "countable \<B>"
-          by (simp add: \<B>_def countable_rat)
-        show "\<forall>U. openin mtopology U \<and> x \<in> U \<longrightarrow> (\<exists>V\<in>\<B>. x \<in> V \<and> V \<subseteq> U)"
-        proof clarify
-          fix U
-          assume "openin mtopology U" and "x \<in> U"
-          then obtain r where "r>0" and r: "mball x r \<subseteq> U"
-            by (meson openin_mtopology)
-          then obtain q where "q \<in> Rats" "0 < q" "q < r"
-            using Rats_dense_in_real by blast
-          then show "\<exists>V\<in>\<B>. x \<in> V \<and> V \<subseteq> U"
-            unfolding \<B>_def using \<open>x \<in> M\<close> r by fastforce
-        qed
-      qed (auto simp: \<B>_def)
-    qed
-    
-    lemma metrizable_imp_first_countable:
-       "metrizable_space X \<Longrightarrow> first_countable X"
-      by (force simp add: metrizable_space_def Metric_space.first_countable_mtopology)
-    
 
 subsection\<open> Theorems from Kuratowski\<close>
 
@@ -732,7 +705,7 @@ lemma Kuratowski_aux2:
      pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - S"
   by (auto simp: pairwise_def separatedin_subtopology)
 
-lemma Kuratowski_component_number_invariance_aux:
+proposition Kuratowski_component_number_invariance_aux:
   assumes "compact_space X" and HsX: "Hausdorff_space X" 
     and lcX: "locally_connected_space X" and hnX: "hereditarily normal_space X"
     and hom: "(subtopology X S) homeomorphic_space (subtopology X T)"
@@ -788,25 +761,26 @@ proof (cases "n=0")
         by (simp add: \<open>D \<subseteq> S\<close> inf.absorb2 subtopology_subtopology)
       moreover have "subtopology X D' = subtopology (subtopology X T) D'"
         by (simp add: D' inf.absorb2 subtopology_subtopology)
+      moreover have "homeomorphic_maps (subtopology X T) (subtopology X S) g f"
+        by (simp add: fg gf homeomorphic_maps_map homf homg)
       ultimately
-      show "homeomorphic_maps (subtopology X D) (subtopology X D') f g"
-        using D' \<open>compact_space X\<close> HsX 
-        by (smt (verit, best) D_def \<open>closedin X D\<close> closedin_def fg gf homeomorphic_maps_map 
-            homeomorphic_maps_subtopologies homf homg topspace_subtopology topspace_subtopology_subset)
+      have "homeomorphic_maps (subtopology X D') (subtopology X D) g f"
+        by (metis D' D_def \<open>closedin X D\<close> closedin_subset homeomorphic_maps_subtopologies topspace_subtopology Int_absorb1)
+      then show "homeomorphic_maps (subtopology X D) (subtopology X D') f g"
+        using homeomorphic_maps_sym by blast
     qed
     ultimately show "\<exists>\<U>. \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union> \<U> = topspace X - D'"
       by (smt (verit, ccfv_SIG) \<section> D' False \<open>closedin X D\<close> Kuratowski_aux2 lepoll_connected_components_alt)
   qed
   then have "\<exists>\<U>. \<U> \<approx> {..<n} \<and>
          pairwise (separatedin (subtopology X (topspace X - T))) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - T"
-    using separation_by_closed_intermediates_eq_count [of X n T] Kuratowski_aux2
-          assms(3) assms(4) by auto
+    using separation_by_closed_intermediates_eq_count [of X n T] Kuratowski_aux2 lcX hnX by auto
   with False show ?thesis
     using lepoll_connected_components_alt by fastforce
 qed auto
 
 
-lemma Kuratowski_component_number_invariance:
+theorem Kuratowski_component_number_invariance:
   assumes "compact_space X" "Hausdorff_space X" "locally_connected_space X" "hereditarily normal_space X"
   shows "((\<forall>S T n.
               closedin X S \<and> closedin X T \<and>
