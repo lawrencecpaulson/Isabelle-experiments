@@ -702,28 +702,32 @@ qed
 
 
 
-lemma lemmaX:
+lemma Kuratowski_aux1:
   assumes "\<And>S T. R S T \<Longrightarrow> R T S"
   shows "(\<forall>S T n. R S T \<longrightarrow> (f S \<approx> {..<n::nat} \<longleftrightarrow> f T \<approx> {..<n::nat})) \<longleftrightarrow>
          (\<forall>n S T. R S T \<longrightarrow> {..<n::nat} \<lesssim> f S \<longrightarrow> {..<n::nat} \<lesssim> f T)"
-  apply (rule )
-   apply (meson eqpoll_iff_finite_card eqpoll_sym finite_lepoll_infinite finite_lessThan lepoll_trans2)
-  by (smt (verit, best) assms card_lessThan eqpoll_iff_card eqpoll_imp_lepoll finite_lepoll_infinite finite_lessThan lepoll_antisym lepoll_iff_finite_card lessI linorder_not_le nle_le)
+         (is "?lhs = ?rhs")
+proof
+  assume ?lhs then show ?rhs
+    by (meson eqpoll_iff_finite_card eqpoll_sym finite_lepoll_infinite finite_lessThan lepoll_trans2)
+next
+  assume ?rhs then show ?lhs
+    by (smt (verit, best) lepoll_iff_finite_card  assms eqpoll_iff_finite_card finite_lepoll_infinite 
+        finite_lessThan le_Suc_eq lepoll_antisym lepoll_iff_card_le not_less_eq_eq)
+qed
 
-
-
-lemma lemur: (*NEEDED?*)
+lemma Kuratowski_aux2:
    "pairwise (separatedin (subtopology X (topspace X - S))) \<U> \<and> {} \<notin> \<U> \<and>
      \<Union>\<U> = topspace(subtopology X (topspace X - S)) \<longleftrightarrow>
      pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - S"
   by (auto simp: pairwise_def separatedin_subtopology)
 
-
-lemma Jayne:
-  assumes "compact_space X" "Hausdorff_space X" "locally_connected_space X" "hereditarily normal_space X"
+lemma Kuratowski_component_number_invariance_aux:
+  assumes "compact_space X" and HsX: "Hausdorff_space X" 
+    and lcX: "locally_connected_space X" and hnX: "hereditarily normal_space X"
     and hom: "(subtopology X S) homeomorphic_space (subtopology X T)"
     and leXS: "{..<n::nat} \<lesssim> connected_components_of (subtopology X (topspace X - S))"
-  assumes J: "\<And>S T.
+  assumes \<section>: "\<And>S T.
               \<lbrakk>closedin X S; closedin X T; (subtopology X S) homeomorphic_space (subtopology X T);
               {..<n::nat} \<lesssim> connected_components_of (subtopology X (topspace X - S))\<rbrakk>
               \<Longrightarrow> {..<n::nat} \<lesssim> connected_components_of (subtopology X (topspace X - T))"
@@ -737,20 +741,16 @@ proof (cases "n=0")
     and f: "f \<in> topspace (subtopology X S) \<rightarrow> topspace (subtopology X T)" 
     and g: "g \<in> topspace (subtopology X T) \<rightarrow> topspace (subtopology X S)"
     using homeomorphic_space_unfold hom by metis
-
   obtain C where "closedin X C" "C \<subseteq> S"
      and C: "\<And>D. \<lbrakk>closedin X D; C \<subseteq> D; D \<subseteq> S\<rbrakk>
            \<Longrightarrow> \<exists>\<U>. \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - D"
     using separation_by_closed_intermediates_eq_count' [of X n S] assms
-    by (smt (verit, ccfv_threshold) False lemur lepoll_connected_components_alt)
-
-
+    by (smt (verit, ccfv_threshold) False Kuratowski_aux2 lepoll_connected_components_alt)
   have "\<exists>C. closedin X C \<and> C \<subseteq> T \<and>
           (\<forall>D. closedin X D \<and> C \<subseteq> D \<and> D \<subseteq> T
                \<longrightarrow> (\<exists>\<U>. \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and>
                         {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - D))"
-    apply (rule_tac x="f ` C" in exI)
-  proof (intro conjI strip)
+  proof (intro exI, intro conjI strip)
     have "compactin X (f ` C)"
       by (meson \<open>C \<subseteq> S\<close> \<open>closedin X C\<close> assms(1) closedin_compact_space compactin_subtopology homeomorphic_map_compactness_eq homf)
     then show "closedin X (f ` C)"
@@ -762,7 +762,7 @@ proof (cases "n=0")
     define D where "D \<equiv> g ` D'"
     have "compactin X D"
       unfolding D_def
-      by (meson D' assms(1) closedin_compact_space compactin_subtopology homeomorphic_map_compactness_eq homg)
+      by (meson D' \<open>compact_space X\<close> closedin_compact_space compactin_subtopology homeomorphic_map_compactness_eq homg)
     then have "closedin X D"
       by (simp add: assms(2) compactin_imp_closedin)
     moreover have "C \<subseteq> D"
@@ -770,7 +770,7 @@ proof (cases "n=0")
     moreover have "D \<subseteq> S"
       by (metis D' D_def assms(1) closedin_compact_space compactin_subtopology homeomorphic_map_compactness_eq homg)
     ultimately obtain \<U> where "\<U> \<approx> {..<n}" "pairwise (separatedin X) \<U>" "{} \<notin> \<U>" "\<Union>\<U> = topspace X - D"
-      using C by fastforce
+      using C by meson
     moreover have "(subtopology X D) homeomorphic_space (subtopology X D')"
       unfolding homeomorphic_space_def
     proof (intro exI)
@@ -780,17 +780,17 @@ proof (cases "n=0")
         by (simp add: D' inf.absorb2 subtopology_subtopology)
       ultimately
       show "homeomorphic_maps (subtopology X D) (subtopology X D') f g"
-        using D' assms(1) assms(2)
-        by (smt (verit, best) D_def \<open>closedin X D\<close> closedin_def fg gf homeomorphic_maps_map homeomorphic_maps_subtopologies homf homg topspace_subtopology topspace_subtopology_subset)
+        using D' \<open>compact_space X\<close> HsX 
+        by (smt (verit, best) D_def \<open>closedin X D\<close> closedin_def fg gf homeomorphic_maps_map 
+            homeomorphic_maps_subtopologies homf homg topspace_subtopology topspace_subtopology_subset)
     qed
     ultimately show "\<exists>\<U>. \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union> \<U> = topspace X - D'"
-      using J
-      by (smt (verit, ccfv_SIG) D' False \<open>closedin X D\<close> lemur lepoll_connected_components_alt)
+      by (smt (verit, ccfv_SIG) \<section> D' False \<open>closedin X D\<close> Kuratowski_aux2 lepoll_connected_components_alt)
   qed
   then have "\<exists>\<U>. \<U> \<approx> {..<n} \<and>
          pairwise (separatedin (subtopology X (topspace X - T))) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - T"
-    using separation_by_closed_intermediates_eq_count' [of X n T] lemur
-    using assms(3) assms(4) by auto
+    using separation_by_closed_intermediates_eq_count' [of X n T] Kuratowski_aux2
+          assms(3) assms(4) by auto
   with False show ?thesis
     using lepoll_connected_components_alt by fastforce
 qed auto
@@ -815,8 +815,8 @@ lemma Kuratowski_component_number_invariance:
 proof
   assume L: ?lhs 
   then show ?rhs
-    apply (subst (asm) lemmaX, use homeomorphic_space_sym in blast)
-    apply (subst lemmaX, use homeomorphic_space_sym in blast)
-    apply (blast intro: Jayne assms)
+    apply (subst (asm) Kuratowski_aux1, use homeomorphic_space_sym in blast)
+    apply (subst Kuratowski_aux1, use homeomorphic_space_sym in blast)
+    apply (blast intro: Kuratowski_component_number_invariance_aux assms)
     done
 qed blast
