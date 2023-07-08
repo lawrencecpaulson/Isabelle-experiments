@@ -181,10 +181,10 @@ next
             using \<U>_def \<open>T \<in> \<V>\<close> \<open>\<V> \<subseteq> \<U>\<close> by blast
           then have "a \<in> topspace X"
             using \<open>T \<in> \<V>\<close> ope\<U> \<open>\<V> \<subseteq> \<U>\<close> openin_subset by blast
-          moreover have "a \<notin> \<Union> (\<V> - {T})"
+          moreover have "a \<notin> \<Union>(\<V> - {T})"
             using diff_Union_pairwise_disjoint [of \<V> "{T}"] \<open>disjoint \<U>\<close> pairwise_subset \<open>T \<in> \<V>\<close> \<open>\<V> \<subseteq> \<U>\<close> \<open>a \<in> T\<close> 
             by auto
-          ultimately have "topspace X - S - \<Union> (\<V> - {T}) \<noteq> {}"
+          ultimately have "topspace X - S - \<Union>(\<V> - {T}) \<noteq> {}"
             using \<open>a \<notin> S\<close> by blast
           moreover have "\<And>V. V \<in> \<V> - {T} \<Longrightarrow> V - S \<noteq> {}"
             using \<U>_def \<open>\<V> \<subseteq> \<U>\<close> by blast
@@ -255,7 +255,7 @@ next
           then have "connectedin X T"
             using \<U>_def connectedin_connected_components_of connectedin_subtopology \<open>T \<in> \<U>\<close> by blast
           have "T \<subseteq> C1 \<union> \<Union>(\<V> - {C1})"
-            using \<open>\<Union> \<V> = \<Union> \<U>\<close> \<open>T \<in> \<U>\<close> by auto
+            using \<open>\<Union>\<V> = \<Union>\<U>\<close> \<open>T \<in> \<U>\<close> by auto
           with \<open>connectedin X T\<close>
           have "\<not> separatedin X C1 (\<Union>(\<V> - {C1}))"
             unfolding connectedin_eq_not_separated_subset
@@ -730,99 +730,70 @@ lemma Jayne:
   shows "{..<n::nat} \<lesssim> connected_components_of (subtopology X (topspace X - T))"
 proof (cases "n=0")
   case False
-  have "\<exists>\<U>. \<U> \<approx> {..<n} \<and>
-         pairwise (separatedin (subtopology X (topspace X - T))) \<U> \<and>
-         {} \<notin> \<U> \<and> \<Union> \<U> = topspace X \<inter> (topspace X - T)"
-    apply (subst separation_by_closed_intermediates_eq_count')
+  obtain f g where homf: "homeomorphic_map (subtopology X S) (subtopology X T) f" 
+      and homg: "homeomorphic_map (subtopology X T) (subtopology X S) g"
+    and gf: "\<And>x. x \<in> topspace (subtopology X S) \<Longrightarrow> g(f x) = x" 
+    and fg: "\<And>y. y \<in> topspace (subtopology X T) \<Longrightarrow> f(g y) = y"
+    and f: "f \<in> topspace (subtopology X S) \<rightarrow> topspace (subtopology X T)" 
+    and g: "g \<in> topspace (subtopology X T) \<rightarrow> topspace (subtopology X S)"
+    using homeomorphic_space_unfold hom by metis
 
-    apply (simp add: separation_by_closed_intermediates_eq_count' assms)
+  obtain C where "closedin X C" "C \<subseteq> S"
+     and C: "\<And>D. \<lbrakk>closedin X D; C \<subseteq> D; D \<subseteq> S\<rbrakk>
+           \<Longrightarrow> \<exists>\<U>. \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - D"
+    using separation_by_closed_intermediates_eq_count' [of X n S] assms
+    by (smt (verit, ccfv_threshold) False lemur lepoll_connected_components_alt)
 
-    using separation_by_closed_intermediates_eq_count' integral_cong
-    sorry
+
+  have "\<exists>C. closedin X C \<and> C \<subseteq> T \<and>
+          (\<forall>D. closedin X D \<and> C \<subseteq> D \<and> D \<subseteq> T
+               \<longrightarrow> (\<exists>\<U>. \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and>
+                        {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - D))"
+    apply (rule_tac x="f ` C" in exI)
+  proof (intro conjI strip)
+    have "compactin X (f ` C)"
+      by (meson \<open>C \<subseteq> S\<close> \<open>closedin X C\<close> assms(1) closedin_compact_space compactin_subtopology homeomorphic_map_compactness_eq homf)
+    then show "closedin X (f ` C)"
+      using \<open>Hausdorff_space X\<close> compactin_imp_closedin by blast
+    show "f ` C \<subseteq> T"
+      by (meson \<open>C \<subseteq> S\<close> \<open>closedin X C\<close> closedin_imp_subset closedin_subset_topspace homeomorphic_map_closedness_eq homf)
+    fix D'
+    assume D': "closedin X D' \<and> f ` C \<subseteq> D' \<and> D' \<subseteq> T"
+    define D where "D \<equiv> g ` D'"
+    have "compactin X D"
+      unfolding D_def
+      by (meson D' assms(1) closedin_compact_space compactin_subtopology homeomorphic_map_compactness_eq homg)
+    then have "closedin X D"
+      by (simp add: assms(2) compactin_imp_closedin)
+    moreover have "C \<subseteq> D"
+      using D' D_def \<open>C \<subseteq> S\<close> \<open>closedin X C\<close> closedin_subset gf image_iff by fastforce
+    moreover have "D \<subseteq> S"
+      by (metis D' D_def assms(1) closedin_compact_space compactin_subtopology homeomorphic_map_compactness_eq homg)
+    ultimately obtain \<U> where "\<U> \<approx> {..<n}" "pairwise (separatedin X) \<U>" "{} \<notin> \<U>" "\<Union>\<U> = topspace X - D"
+      using C by fastforce
+    moreover have "(subtopology X D) homeomorphic_space (subtopology X D')"
+      unfolding homeomorphic_space_def
+    proof (intro exI)
+      have "subtopology X D = subtopology (subtopology X S) D"
+        by (simp add: \<open>D \<subseteq> S\<close> inf.absorb2 subtopology_subtopology)
+      moreover have "subtopology X D' = subtopology (subtopology X T) D'"
+        by (simp add: D' inf.absorb2 subtopology_subtopology)
+      ultimately
+      show "homeomorphic_maps (subtopology X D) (subtopology X D') f g"
+        using D' assms(1) assms(2)
+        by (smt (verit, best) D_def \<open>closedin X D\<close> closedin_def fg gf homeomorphic_maps_map homeomorphic_maps_subtopologies homf homg topspace_subtopology topspace_subtopology_subset)
+    qed
+    ultimately show "\<exists>\<U>. \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union> \<U> = topspace X - D'"
+      using J
+      by (smt (verit, ccfv_SIG) D' False \<open>closedin X D\<close> lemur lepoll_connected_components_alt)
+  qed
+  then have "\<exists>\<U>. \<U> \<approx> {..<n} \<and>
+         pairwise (separatedin (subtopology X (topspace X - T))) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - T"
+    using separation_by_closed_intermediates_eq_count' [of X n T] lemur
+    using assms(3) assms(4) by auto
   with False show ?thesis
-    by (simp add: lepoll_connected_components_alt)
+    using lepoll_connected_components_alt by fastforce
 qed auto
-
-
-    apply (simp add: lepoll_connected_components_alt)
-    apply (case_tac "n=0")
-     apply (simp add: )
-    apply (simp add: Int_absorb1)
-    by (metis hnX separation_by_closed_intermediates_count)
-
-
-oops
-
-  MAP_EVERY X_GEN_TAC [`S::A=>bool`; `t::A=>bool`] THEN
-  ONCE_REWRITE_TAC[SUBTOPOLOGY_RESTRICT] THEN
-  ONCE_REWRITE_TAC[SET_RULE `S - t = S - S \<inter> t`] THEN
-  MP_TAC(SET_RULE
-   `topspace X \<inter> (S::A=>bool) \<subseteq> topspace X \<and>
-    topspace X \<inter> (t::A=>bool) \<subseteq> topspace X`) THEN
-  SPEC_TAC(`topspace X \<inter> (t::A=>bool)`,`t::A=>bool`) THEN
-  SPEC_TAC(`topspace X \<inter> (S::A=>bool)`,`S::A=>bool`) THEN
-
-  REPEAT GEN_TAC THEN STRIP_TAC THEN DISCH_TAC THEN
-  W(MP_TAC \<circ> PART_MATCH (lhand \<circ> rand)
-    SEPARATION_BY_CLOSED_INTERMEDIATES_EQ_COUNT \<circ> lhand \<circ> snd) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
-  W(MP_TAC \<circ> PART_MATCH (lhand \<circ> rand)
-    SEPARATION_BY_CLOSED_INTERMEDIATES_EQ_COUNT \<circ> rand \<circ> snd) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_THEN SUBST1_TAC THEN
-  FIRST_ASSUM(MP_TAC \<circ> GEN_REWRITE_RULE id [homeomorphic_space]) THEN
-  REWRITE_TAC[LEFT_IMP_EXISTS_THM; HOMEOMORPHIC_MAPS_MAP] THEN
-  ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET] THEN
-  MAP_EVERY X_GEN_TAC [`f::A=>A`; `g::A=>A`] THEN STRIP_TAC THEN
-  X_GEN_TAC `C::A=>bool` THEN
-  REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-  DISCH_THEN(LABEL_TAC "*") THEN EXISTS_TAC `image (f::A=>A) C` THEN
-  REPEAT CONJ_TAC THENL
-   [MATCH_MP_TAC COMPACT_IN_IMP_CLOSED_IN THEN ASM_REWRITE_TAC[] THEN
-    MATCH_MP_TAC IMAGE_COMPACT_IN THEN
-    EXISTS_TAC `subtopology X (S::A=>bool)` THEN
-    ASM_SIMP_TAC[COMPACT_IN_SUBTOPOLOGY; CLOSED_IN_COMPACT_SPACE] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP;
-                                CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
-    ASM_REWRITE_TAC[];
-    RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP;
-                                CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[TOPSPACE_SUBTOPOLOGY]) THEN
-    ASM SET_TAC[];
-    X_GEN_TAC `d':A=>bool` THEN STRIP_TAC] THEN
-  ABBREV_TAC `D = image (g::A=>A) d'` THEN
-  SUBGOAL_THEN `closedin X (D::A=>bool)` ASSUME_TAC THENL
-   [MATCH_MP_TAC COMPACT_IN_IMP_CLOSED_IN THEN ASM_REWRITE_TAC[] THEN
-    EXPAND_TAC "D" THEN MATCH_MP_TAC IMAGE_COMPACT_IN THEN
-    EXISTS_TAC `subtopology X (t::A=>bool)` THEN
-    ASM_SIMP_TAC[COMPACT_IN_SUBTOPOLOGY; CLOSED_IN_COMPACT_SPACE] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP;
-                                CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
-    ASM_REWRITE_TAC[];
-    ALL_TAC] THEN
-  SUBGOAL_THEN `(C::A=>bool) \<subseteq> D \<and> D \<subseteq> S` STRIP_ASSUME_TAC THENL
-   [EXPAND_TAC "D" THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP;
-                                CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[TOPSPACE_SUBTOPOLOGY]) THEN
-    ASM SET_TAC[];
-    ALL_TAC] THEN
-  REMOVE_THEN "*" (MP_TAC \<circ> SPEC `D::A=>bool`) THEN ASM_REWRITE_TAC[] THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_REWRITE_TAC[] THEN
-  REWRITE_TAC[homeomorphic_space] THEN
-  MAP_EVERY EXISTS_TAC [`f::A=>A`; `g::A=>A`] THEN
-  SUBGOAL_THEN
-   `subtopology X D::A topology = subtopology (subtopology X S) D \<and>
-    subtopology X d':A topology = subtopology (subtopology X t) d'`
-  (CONJUNCTS_THEN SUBST1_TAC) THENL
-   [REWRITE_TAC[SUBTOPOLOGY_SUBTOPOLOGY] THEN
-    CONJ_TAC THEN AP_TERM_TAC THEN ASM SET_TAC[];
-    MATCH_MP_TAC HOMEOMORPHIC_MAPS_SUBTOPOLOGIES] THEN
-  ASM_REWRITE_TAC[HOMEOMORPHIC_MAPS_MAP] THEN
-  ASM_SIMP_TAC[TOPSPACE_SUBTOPOLOGY_SUBSET] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[HOMEOMORPHIC_EQ_EVERYTHING_MAP;
-                              CONTINUOUS_MAP_IN_SUBTOPOLOGY]) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[TOPSPACE_SUBTOPOLOGY]) THEN
-  ASM SET_TAC[]);;
 
 
 lemma Kuratowski_component_number_invariance:
