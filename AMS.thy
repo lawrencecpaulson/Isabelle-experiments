@@ -10,8 +10,31 @@ begin
 
 (******* delete sym_diff from Analysis/Equivalence_Measurable_On_Borel ******)
 
+thm lepoll_empty_iff_empty
+lemma eqpoll_empty_iff_empty [simp]: "A \<approx> {} \<longleftrightarrow> A={}"
+  by (metis card_0_eq eqpoll_finite_iff eqpoll_iff_card finite.emptyI)
+
+lemma not_lesspoll_empty: "\<not> A \<prec> {}"
+  by (simp add: lesspoll_def)
+
+lemma eqpoll_singleton_iff: "A \<approx> {x} \<longleftrightarrow> (\<exists>u. A = {u})"
+  by (metis card.infinite card_1_singleton_iff eqpoll_finite_iff eqpoll_iff_card not_less_eq_eq)
+
+lemma eqpoll_doubleton_iff: "A \<approx> {x,y} \<longleftrightarrow> (\<exists>u v. A = {u,v} \<and> (u=v \<longleftrightarrow> x=y))"
+proof (cases "x=y")
+  case True
+  then show ?thesis
+    by (simp add: eqpoll_singleton_iff)
+next
+  case False
+  then show ?thesis
+    by (smt (verit, ccfv_threshold) card_1_singleton_iff card_Suc_eq_finite eqpoll_finite_iff eqpoll_iff_card finite.insertI singleton_iff)
+qed
+
+
 
 lemma power_of_nat_log_le: "b > 1 \<Longrightarrow> b ^ nat (floor(log b x)) \<le> x"
+
   oops
 
     lemma inj_onCI: "(\<And>x y. x \<in> A \<Longrightarrow> y \<in> A \<Longrightarrow> f x = f y \<Longrightarrow> x \<noteq> y \<Longrightarrow> False) \<Longrightarrow> inj_on f A"
@@ -65,7 +88,7 @@ lemma separation_by_closed_intermediates_count:
     and UU: "\<Union>\<U> = topspace X - S"
   obtains C where "closedin X C" "C \<subseteq> S"
                   "\<And>D. \<lbrakk>closedin X D; C \<subseteq> D; D \<subseteq> S\<rbrakk>
-                     \<Longrightarrow> \<exists>\<V>. finite \<V> \<and> card \<V> = card \<U> \<and> pairwise (separatedin X) \<V> \<and> {} \<notin> \<V> \<and> \<Union>\<V> = topspace X - D"
+                     \<Longrightarrow> \<exists>\<V>. \<V> \<approx> \<U> \<and> pairwise (separatedin X) \<V> \<and> {} \<notin> \<V> \<and> \<Union>\<V> = topspace X - D"
 proof -
   obtain F where F: "\<And>S. S \<in> \<U> \<Longrightarrow> openin X (F S) \<and> S \<subseteq> F S"
     and pwF: "pairwise (\<lambda>S T. disjnt (F S) (F T)) \<U>"
@@ -76,17 +99,15 @@ proof -
       using F by blast
     show "topspace X - \<Union>(F ` \<U>) \<subseteq> S"
       using UU F by auto
-    show "\<exists>\<V>. finite \<V> \<and> card \<V> = card \<U> \<and> pairwise (separatedin X) \<V> \<and> {} \<notin> \<V> \<and> \<Union>\<V> = topspace X - C"
+    show "\<exists>\<V>. \<V> \<approx> \<U> \<and> pairwise (separatedin X) \<V> \<and> {} \<notin> \<V> \<and> \<Union>\<V> = topspace X - C"
       if "closedin X C" "C \<subseteq> S" and C: "topspace X - \<Union>(F ` \<U>) \<subseteq> C" for C
     proof (intro exI conjI strip)
-      show "finite ((\<lambda>S. F S - C) ` \<U>)"
-        by (simp add: assms(2))
       have "inj_on (\<lambda>S. F S - C) \<U>"
         using pwF F
         unfolding inj_on_def pairwise_def disjnt_iff
         by (metis Diff_iff UU UnionI nonempty subset_empty subset_eq \<open>C \<subseteq> S\<close>)
-      then show "card ((\<lambda>S. F S - C) ` \<U>) = card \<U>"
-        using card_image by blast
+      then show "(\<lambda>S. F S - C) ` \<U> \<approx> \<U>"
+        by simp
       show "pairwise (separatedin X) ((\<lambda>S. F S - C) ` \<U>)"
         using \<open>closedin X C\<close> F pwF by (force simp: pairwise_def openin_diff separatedin_open_sets disjnt_iff)
       show "{} \<notin> (\<lambda>S. F S - C) ` \<U>"
@@ -109,7 +130,7 @@ proof -
     by (metis Diff_subset connectedin_eq_not_separated discon separatedin_refl)
   then obtain C where "closedin X C" "C \<subseteq> S"
     and C: "\<And>D. \<lbrakk>closedin X D; C \<subseteq> D; D \<subseteq> S\<rbrakk>
-                     \<Longrightarrow> \<exists>\<V>. finite \<V> \<and> card \<V> = Suc (Suc 0) \<and> pairwise (separatedin X) \<V> \<and> {} \<notin> \<V> \<and> \<Union>\<V> = topspace X - D"
+                     \<Longrightarrow> \<exists>\<V>. \<V> \<approx> {C1,C2} \<and> pairwise (separatedin X) \<V> \<and> {} \<notin> \<V> \<and> \<Union>\<V> = topspace X - D"
     using separation_by_closed_intermediates_count [of X "{C1,C2}" S] X
     apply (simp add: pairwise_insert separatedin_sym)
     by metis
@@ -118,7 +139,7 @@ proof -
   proof -
     obtain V1 V2 where *: "pairwise (separatedin X) {V1,V2}" "{} \<notin> {V1,V2}" 
                           "\<Union>{V1,V2} = topspace X - D" "V1\<noteq>V2"
-      by (smt (verit, ccfv_SIG) C [OF D] pairwise_insert card_Suc_eq_finite card_0_eq insert_iff)
+      by (metis C [OF D] \<open>C1 \<noteq> C2\<close> eqpoll_doubleton_iff)
     then have "disjnt V1 V2"
       by (metis pairwise_insert separatedin_imp_disjoint singleton_iff)
       with * show ?thesis
@@ -128,29 +149,29 @@ proof -
     using \<open>C \<subseteq> S\<close> \<open>closedin X C\<close> that by auto
 qed
 
-(*BUT SEE THE NEXT VERSION*)
 lemma separation_by_closed_intermediates_eq_count:
+  fixes n::nat
   assumes lcX: "locally_connected_space X" and hnX: "hereditarily normal_space X"
-  shows "(\<exists>\<U>. finite \<U> \<and> card \<U> = n \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - S) \<longleftrightarrow>
+  shows "(\<exists>\<U>. \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - S) \<longleftrightarrow>
          (\<exists>C. closedin X C \<and> C \<subseteq> S \<and>
               (\<forall>D. closedin X D \<and> C \<subseteq> D \<and> D \<subseteq> S
-                   \<longrightarrow> (\<exists>\<U>. finite \<U> \<and> card \<U> = n \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - D)))"
+                   \<longrightarrow> (\<exists>\<U>.  \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - D)))"
          (is "?lhs = ?rhs")
 proof
   assume ?lhs then show ?rhs
-    by (metis hnX separation_by_closed_intermediates_count)
+    by (smt (verit, best) hnX separation_by_closed_intermediates_count eqpoll_iff_finite_card eqpoll_trans)
 next
   assume R: ?rhs
   show ?lhs
   proof (cases "n=0")
     case True
     with R show ?thesis
-      by (metis Diff_mono card_0_eq ccSup_empty empty_iff subsetI subset_antisym)
+      by fastforce
   next
     case False
     obtain C where "closedin X C" "C \<subseteq> S"
              and C: "\<And>D. \<lbrakk>closedin X D; C \<subseteq> D; D \<subseteq> S\<rbrakk>
-                      \<Longrightarrow> \<exists>\<U>. finite \<U> \<and> card \<U> = n \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - D"
+                      \<Longrightarrow> \<exists>\<U>. \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - D"
       using R by force
     then have "C \<subseteq> topspace X"
       by (simp add: closedin_subset)
@@ -164,7 +185,7 @@ next
       using connected_components_of_disjoint by (fastforce simp add: pairwise_def \<U>_def)
     show ?lhs
     proof (rule ccontr)
-      assume con: "\<nexists>\<U>. finite \<U> \<and> card \<U> = n \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - S"
+      assume con: "\<nexists>\<U>. \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - S"
       have card\<U>: "finite \<U> \<and> card \<U> < n"
       proof (rule ccontr)
         assume "\<not> (finite \<U> \<and> card \<U> < n)"
@@ -225,15 +246,14 @@ next
             by (simp add: pairwise_def separatedin_subtopology)
         qed
         ultimately show False
-          using con by blast
+          by (metis con eqpoll_iff_finite_card)
       qed
-      obtain \<V> where "finite \<V>" "card \<V> = n" "{} \<notin> \<V>"
+      obtain \<V> where "\<V> \<approx> {..<n} " "{} \<notin> \<V>"
                 and pw\<V>: "pairwise (separatedin X) \<V>" and UV: "\<Union>\<V> = topspace X - (topspace X - \<Union>\<U>)"
       proof -
         have "closedin X (topspace X - \<Union>\<U>)"
           using ope\<U> by blast
-        moreover 
-        have "C \<subseteq> topspace X - \<Union>\<U>"
+        moreover have "C \<subseteq> topspace X - \<Union>\<U>"
           using \<open>C \<subseteq> topspace X\<close> connected_components_of_subset by (fastforce simp: \<U>_def)
         moreover have "topspace X - \<Union>\<U> \<subseteq> S"
           using Union_connected_components_of [of "subtopology X (topspace X - C)"] \<open>C \<subseteq> S\<close>
@@ -261,26 +281,14 @@ next
             unfolding connectedin_eq_not_separated_subset
             by (smt (verit) that False disjnt_def UnionI disjnt_iff insertE insert_Diff)
           with that show ?thesis
-            by (metis (no_types, lifting) \<open>finite \<V>\<close> finite_Diff pairwiseD pairwise_alt pw\<V> separatedin_Union(1) separatedin_def)
+            by (metis (no_types, lifting) \<open>\<V> \<approx> {..<n}\<close> eqpoll_iff_finite_card finite_Diff pairwiseD pairwise_alt pw\<V> separatedin_Union(1) separatedin_def)
         qed auto
       qed
       then show False
-        using \<open>card \<V> = n\<close> card\<U>
-        by (simp add: \<open>finite \<V>\<close> lepoll_iff_card_le)
+        by (metis \<open>\<V> \<approx> {..<n}\<close> card\<U> eqpoll_iff_finite_card leD lepoll_iff_card_le)
     qed
   qed
 qed
-
-(*PROBABLY THIS SHOULD REPLACE THE PREVIOUS FORMULATION*)
-lemma separation_by_closed_intermediates_eq_count':
-  fixes n::nat
-  assumes lcX: "locally_connected_space X" and hnX: "hereditarily normal_space X"
-  shows "(\<exists>\<U>. \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - S) \<longleftrightarrow>
-         (\<exists>C. closedin X C \<and> C \<subseteq> S \<and>
-              (\<forall>D. closedin X D \<and> C \<subseteq> D \<and> D \<subseteq> S
-                   \<longrightarrow> (\<exists>\<U>.  \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - D)))"
-  using separation_by_closed_intermediates_eq_count [of X n S]
-  by (simp add: eqpoll_iff_finite_card hnX lcX)
 
 lemma separation_by_closed_intermediates_eq_gen:
   assumes "locally_connected_space X" "hereditarily normal_space X"
@@ -289,12 +297,14 @@ lemma separation_by_closed_intermediates_eq_gen:
               (\<forall>D. closedin X D \<and> C \<subseteq> D \<and> D \<subseteq> S \<longrightarrow> \<not> connectedin X (topspace X - D)))"
     (is "?lhs = ?rhs")
 proof -
+  have *: "(\<exists>\<U>::'a set set. \<U> \<approx> {..<Suc (Suc 0)} \<and> P \<U>) \<longleftrightarrow> (\<exists>A B. A\<noteq>B \<and> P{A,B})" for P
+    by (metis One_nat_def eqpoll_doubleton_iff lessThan_Suc lessThan_empty_iff zero_neq_one)
   have *: "(\<exists>C1 C2. separatedin X C1 C2 \<and> C1\<noteq>C2 \<and> C1\<noteq>{} \<and> C2\<noteq>{} \<and> C1 \<union> C2 = topspace X - S) \<longleftrightarrow>
          (\<exists>C. closedin X C \<and> C \<subseteq> S \<and>
               (\<forall>D. closedin X D \<and> C \<subseteq> D \<and> D \<subseteq> S
                    \<longrightarrow> (\<exists>C1 C2. separatedin X C1 C2 \<and> C1\<noteq>C2 \<and> C1\<noteq>{} \<and> C2\<noteq>{} \<and> C1 \<union> C2 = topspace X - D)))"
     using separation_by_closed_intermediates_eq_count [OF assms, of "Suc(Suc 0)" S]
-    apply (simp add: card_Suc_eq pairwise_insert separatedin_sym flip: ex_simps cong: conj_cong)
+    apply (simp add: * pairwise_insert separatedin_sym cong: conj_cong)
     apply (simp add: eq_sym_conv conj_ac)
     done
   with separatedin_refl
@@ -744,7 +754,7 @@ proof (cases "n=0")
   obtain C where "closedin X C" "C \<subseteq> S"
      and C: "\<And>D. \<lbrakk>closedin X D; C \<subseteq> D; D \<subseteq> S\<rbrakk>
            \<Longrightarrow> \<exists>\<U>. \<U> \<approx> {..<n} \<and> pairwise (separatedin X) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - D"
-    using separation_by_closed_intermediates_eq_count' [of X n S] assms
+    using separation_by_closed_intermediates_eq_count [of X n S] assms
     by (smt (verit, ccfv_threshold) False Kuratowski_aux2 lepoll_connected_components_alt)
   have "\<exists>C. closedin X C \<and> C \<subseteq> T \<and>
           (\<forall>D. closedin X D \<and> C \<subseteq> D \<and> D \<subseteq> T
@@ -789,7 +799,7 @@ proof (cases "n=0")
   qed
   then have "\<exists>\<U>. \<U> \<approx> {..<n} \<and>
          pairwise (separatedin (subtopology X (topspace X - T))) \<U> \<and> {} \<notin> \<U> \<and> \<Union>\<U> = topspace X - T"
-    using separation_by_closed_intermediates_eq_count' [of X n T] Kuratowski_aux2
+    using separation_by_closed_intermediates_eq_count [of X n T] Kuratowski_aux2
           assms(3) assms(4) by auto
   with False show ?thesis
     using lepoll_connected_components_alt by fastforce
