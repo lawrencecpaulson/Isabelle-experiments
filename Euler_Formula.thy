@@ -5,6 +5,12 @@ theory Euler_Formula
   imports "HOL-Analysis.Analysis" "HOL-ex.Sketch_and_Explore"
 begin
 
+lemma Inter_over_Union:
+  "\<Inter> {\<Union> (f x) |x. x \<in> S} = \<Union> {\<Inter> (g ` S) |g. \<forall>x\<in>S. g x \<in> f x}" 
+  apply (rule set_eqI)
+  apply (simp add: flip: all_simps ex_simps)
+  by metis
+
 text\<open> ========================================================================= \<close>
 text\<open> Formalization of Jim Lawrence's proof of Euler's relation.                \<close>
 text\<open> ========================================================================= \<close>
@@ -232,281 +238,209 @@ text\<open> --------------------------------------------------------------------
 text\<open> A cell complex is considered to be a union of such cells.                 \<close>
 text\<open> ------------------------------------------------------------------------- \<close>
 
-let hyperplane_cellcomplex = new_definition
- `hyperplane_cellcomplex A s \<longleftrightarrow>
-        \<exists>t. (\<forall>c. c \<in> t \<Longrightarrow> hyperplane_cell A c) \<and>
-            s = \<Union> t`;;
+definition hyperplane_cellcomplex 
+  where "hyperplane_cellcomplex A S \<equiv>
+        \<exists>\<T>. (\<forall>C \<in> \<T>. hyperplane_cell A C) \<and> S = \<Union>\<T>"
 
-lemma hyperplane_cellcomplex_empty:
-   "\<And>A::real^N#real=>bool. hyperplane_cellcomplex A {}"
-oops 
-  GEN_TAC THEN REWRITE_TAC[hyperplane_cellcomplex] THEN
-  EXISTS_TAC `{}:(real^N=>bool)->bool` THEN
-  REWRITE_TAC[NOT_IN_EMPTY; UNIONS_0]);;
+lemma hyperplane_cellcomplex_empty [simp]: "hyperplane_cellcomplex A {}"
+  using hyperplane_cellcomplex_def by auto
 
 lemma hyperplane_cell_cellcomplex:
-   "\<And>A c::real^N=>bool. hyperplane_cell A c \<Longrightarrow> hyperplane_cellcomplex A c"
-oops 
-  REPEAT STRIP_TAC THEN REWRITE_TAC[hyperplane_cellcomplex] THEN
-  EXISTS_TAC `{c::real^N=>bool}` THEN
-  ASM_SIMP_TAC[IN_SING; UNIONS_1]);;
+   "hyperplane_cell A C \<Longrightarrow> hyperplane_cellcomplex A C"
+  by (auto simp: hyperplane_cellcomplex_def)
 
-lemma hyperplane_cellcomplex_unions:
-   "(\<forall>s::real^N=>bool. s \<in> C \<Longrightarrow> hyperplane_cellcomplex A s)
-         \<Longrightarrow> hyperplane_cellcomplex A (\<Union> C)"
-oops 
-  REPEAT GEN_TAC THEN REWRITE_TAC[hyperplane_cellcomplex] THEN
-  GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [RIGHT_IMP_EXISTS_THM] THEN
-  REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `f:(real^N=>bool)->(real^N=>bool)->bool` THEN DISCH_TAC THEN
-  EXISTS_TAC `\<Union> (image (f:(real^N=>bool)->(real^N=>bool)->bool) C)` THEN
-  REWRITE_TAC[FORALL_IN_UNIONS; IMP_CONJ; RIGHT_FORALL_IMP_THM] THEN
-  REWRITE_TAC[FORALL_IN_IMAGE] THEN
-  CONJ_TAC THENL [ASM_MESON_TAC[]; REWRITE_TAC[UNIONS_IMAGE]] THEN
-  GEN_REWRITE_TAC id [EXTENSION] THEN REWRITE_TAC[IN_UNIONS; IN_ELIM_THM] THEN
-  ASM SET_TAC[]);;
+lemma hyperplane_cellcomplex_Union:
+  assumes "\<And>S. S \<in> \<C> \<Longrightarrow> hyperplane_cellcomplex A S"
+  shows "hyperplane_cellcomplex A (\<Union> \<C>)"
+proof -
+  obtain \<F> where \<F>: "\<And>S. S \<in> \<C> \<Longrightarrow> (\<forall>C \<in> \<F> S. hyperplane_cell A C) \<and> S = \<Union>(\<F> S)"
+    by (metis assms hyperplane_cellcomplex_def)
+  show ?thesis
+    unfolding hyperplane_cellcomplex_def
+    using \<F> by (fastforce intro: exI [where x="\<Union> (\<F> ` \<C>)"])
+qed
 
-lemma hyperplane_cellcomplex_union:
-   "        hyperplane_cellcomplex A s \<and> hyperplane_cellcomplex A t
-        \<Longrightarrow> hyperplane_cellcomplex A (s \<union> t)"
-oops 
-  REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM UNIONS_2] THEN
-  MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_UNIONS THEN
-  ASM_REWRITE_TAC[FORALL_IN_INSERT; NOT_IN_EMPTY]);;
+lemma hyperplane_cellcomplex_Un:
+   "\<lbrakk>hyperplane_cellcomplex A S; hyperplane_cellcomplex A T\<rbrakk>
+        \<Longrightarrow> hyperplane_cellcomplex A (S \<union> T)"
+  by (smt (verit) Un_iff Union_Un_distrib hyperplane_cellcomplex_def)
 
-lemma hyperplane_cellcomplex_univ:
-   "hyperplane_cellcomplex A UNIV"
-oops 
-  REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM UNIONS_HYPERPLANE_CELLS] THEN
-  MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_UNIONS THEN
-  REWRITE_TAC[IN_ELIM_THM; HYPERPLANE_CELL_CELLCOMPLEX]);;
+lemma hyperplane_cellcomplex_UNIV [simp]: "hyperplane_cellcomplex A UNIV"
+  by (metis Union_hyperplane_cells hyperplane_cellcomplex_def mem_Collect_eq)
 
-lemma hyperplane_cellcomplex_inters:
-   "(\<forall>s::real^N=>bool. s \<in> C \<Longrightarrow> hyperplane_cellcomplex A s)
-         \<Longrightarrow> hyperplane_cellcomplex A (\<Inter> C)"
-oops 
-  lemma lemma:
-   (`\<Union> s = \<Union> {t. t \<in> s \<and> (t \<noteq> {})}"
-oops 
-    REWRITE_TAC[UNIONS_GSPEC] THEN GEN_REWRITE_TAC id [EXTENSION] THEN
-    REWRITE_TAC[IN_UNIONS; IN_ELIM_THM] THEN MESON_TAC[NOT_IN_EMPTY]) 
-in
+lemma hyperplane_cellcomplex_Inter:
+  assumes "\<And>S. S \<in> \<C> \<Longrightarrow> hyperplane_cellcomplex A S"
+  shows "hyperplane_cellcomplex A (\<Inter>\<C>)"
+proof (cases "\<C> = {}")
+  case True
+  then show ?thesis
+    by simp
+next
+  case False
+  obtain \<F> where \<F>: "\<And>S. S \<in> \<C> \<Longrightarrow> (\<forall>C \<in> \<F> S. hyperplane_cell A C) \<and> S = \<Union>(\<F> S)"
+    by (metis assms hyperplane_cellcomplex_def)
+  have *: "\<C> = (\<lambda>S. \<Union>(\<F> S)) ` \<C>"
+    using \<F> by force
+  define U where "U \<equiv> \<Union> {T \<in> {\<Inter> (g ` \<C>) |g. \<forall>S\<in>\<C>. g S \<in> \<F> S}. T \<noteq> {}}"
+  have "\<Inter>\<C> = \<Union>{\<Inter> (g ` \<C>) |g. \<forall>S\<in>\<C>. g S \<in> \<F> S}"
+    using False \<F> unfolding Inter_over_Union [symmetric]
+    by blast
+  also have "... = U"
+    unfolding U_def
+    by blast
+  finally have "\<Inter>\<C> = U" .
+  have "hyperplane_cellcomplex A U"
+    using False \<F> unfolding U_def
+    apply (intro hyperplane_cellcomplex_Union hyperplane_cell_cellcomplex)
+    by (auto simp: intro!: hyperplane_cell_Inter)
+  then show ?thesis
+     by (simp add: \<open>\<Inter> \<C> = U\<close>)
+qed
 
-  REPEAT GEN_TAC THEN ASM_CASES_TAC `C:(real^N=>bool)->bool = {}` THEN
-  ASM_REWRITE_TAC[INTERS_0; HYPERPLANE_CELLCOMPLEX_UNIV] THEN
-  GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [hyperplane_cellcomplex] THEN
-  REWRITE_TAC[RIGHT_IMP_EXISTS_THM; SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `f:(real^N=>bool)->(real^N=>bool)->bool` THEN
-  DISCH_TAC THEN SUBGOAL_THEN
-   `C = {\<Union>((f:(real^N=>bool)->(real^N=>bool)->bool) s) | s \<in> C}`
-  SUBST1_TAC THENL
-   [GEN_REWRITE_TAC id [EXTENSION] THEN REWRITE_TAC[IN_ELIM_THM] THEN
-    ASM_MESON_TAC[];
-    ALL_TAC] THEN
-  REWRITE_TAC[INTERS_OVER_UNIONS] THEN ONCE_REWRITE_TAC[lemma] THEN
-  MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_UNIONS THEN
-  REWRITE_TAC[FORALL_IN_GSPEC; IMP_CONJ] THEN REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC HYPERPLANE_CELL_CELLCOMPLEX THEN
-  MATCH_MP_TAC HYPERPLANE_CELL_INTERS THEN ASM_REWRITE_TAC[IN_ELIM_THM] THEN
-  CONJ_TAC THENL [ASM_MESON_TAC[]; ASM SET_TAC[]]);;
+lemma hyperplane_cellcomplex_Int:
+   "\<lbrakk>hyperplane_cellcomplex A S; hyperplane_cellcomplex A T\<rbrakk>
+        \<Longrightarrow> hyperplane_cellcomplex A (S \<inter> T)"
+  using hyperplane_cellcomplex_Inter [of "{S,T}"] by force
 
-lemma hyperplane_cellcomplex_inter:
-   "        hyperplane_cellcomplex A s \<and> hyperplane_cellcomplex A t
-        \<Longrightarrow> hyperplane_cellcomplex A (s \<inter> t)"
-oops 
-  REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM INTERS_2] THEN
-  MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_INTERS THEN
-  ASM_REWRITE_TAC[FORALL_IN_INSERT; NOT_IN_EMPTY]);;
-
-lemma hyperplane_cellcomplex_compl:
-   "hyperplane_cellcomplex A s
-         \<Longrightarrow> hyperplane_cellcomplex A (- s)"
-oops 
-  REPEAT GEN_TAC THEN
-  GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [hyperplane_cellcomplex] THEN
-  REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `C:(real^N=>bool)->bool` THEN STRIP_TAC THEN
-  ASM_REWRITE_TAC[UNIONS_INTERS; COMPL_COMPL] THEN
-  MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_INTERS THEN
-  REWRITE_TAC[FORALL_IN_GSPEC] THEN
-  X_GEN_TAC `c::real^N=>bool` THEN DISCH_TAC THEN
-  SUBGOAL_THEN
-   `- c = \<Union> {c' | hyperplane_cell A c' \<and> ~(c' = c)}`
-  SUBST1_TAC THENL
-   [SUBST1_TAC(SYM(ISPEC `A::real^N#real=>bool` UNIONS_HYPERPLANE_CELLS)) THEN
-    GEN_REWRITE_TAC id [EXTENSION] THEN
-    REWRITE_TAC[IN_DIFF; UNIONS_GSPEC; IN_ELIM_THM] THEN
-    X_GEN_TAC `x::real^N` THEN REWRITE_TAC[LEFT_AND_EXISTS_THM] THEN
-    AP_TERM_TAC THEN GEN_REWRITE_TAC id [FUN_EQ_THM] THEN
-    X_GEN_TAC `c':real^N=>bool` THEN REWRITE_TAC[] THEN
-    MP_TAC(ISPECL [`A::real^N#real=>bool`; `c::real^N=>bool`; `c':real^N=>bool`]
-        DISJOINT_HYPERPLANE_CELLS_EQ) THEN
-    ASM_SIMP_TAC[] THEN SET_TAC[];
-    MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_UNIONS THEN
-    ASM_SIMP_TAC[HYPERPLANE_CELL_CELLCOMPLEX; IN_ELIM_THM]]);;
+lemma hyperplane_cellcomplex_Compl:
+  assumes "hyperplane_cellcomplex A S"
+  shows "hyperplane_cellcomplex A (- S)"
+proof -
+  obtain \<C> where \<C>: "\<And>C. C \<in> \<C> \<Longrightarrow> hyperplane_cell A C" and "S = \<Union>\<C>"
+    by (meson assms hyperplane_cellcomplex_def)
+  have "hyperplane_cellcomplex A (\<Inter>T \<in> \<C>. -T)"
+  proof (intro hyperplane_cellcomplex_Inter)
+    fix C0
+    assume "C0 \<in> uminus ` \<C>"
+    then obtain C where C: "C0 = -C" "C \<in> \<C>"
+      by auto
+    have *: "-C = \<Union> {D. hyperplane_cell A D \<and> D \<noteq> C}" (is "_ = ?rhs")
+    proof
+      show "- C \<subseteq> ?rhs"
+        using hyperplane_cell by blast
+      show "?rhs \<subseteq> - C"
+        by clarify (meson \<open>C \<in> \<C>\<close> \<C> disjnt_iff disjoint_hyperplane_cells)
+    qed
+    then show "hyperplane_cellcomplex A C0"
+      by (metis (no_types, lifting) C(1) hyperplane_cell_cellcomplex hyperplane_cellcomplex_Union mem_Collect_eq)
+  qed
+  then show ?thesis
+    by (simp add: \<open>S = \<Union> \<C>\<close> uminus_Sup)
+qed
 
 lemma hyperplane_cellcomplex_diff:
-   "        hyperplane_cellcomplex A s \<and> hyperplane_cellcomplex A t
-        \<Longrightarrow> hyperplane_cellcomplex A (s - t)"
-oops 
-  ONCE_REWRITE_TAC[SET_RULE `s - t = s \<inter> (- t)`] THEN
-  SIMP_TAC[HYPERPLANE_CELLCOMPLEX_COMPL; HYPERPLANE_CELLCOMPLEX_INTER]);;
+   "\<lbrakk>hyperplane_cellcomplex A S; hyperplane_cellcomplex A T\<rbrakk>
+        \<Longrightarrow> hyperplane_cellcomplex A (S - T)"
+  using hyperplane_cellcomplex_Inter [of "{S,-T}"] 
+  by (force simp add: Diff_eq hyperplane_cellcomplex_Compl)
 
 lemma hyperplane_cellcomplex_mono:
-   "\<And>A B s::real^N=>bool.
-        hyperplane_cellcomplex A s \<and> A \<subseteq> B
-        \<Longrightarrow> hyperplane_cellcomplex B s"
-oops 
-  REPEAT STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC o GEN_REWRITE_RULE id [hyperplane_cellcomplex]) THEN
-  DISCH_THEN(X_CHOOSE_THEN `C:(real^N=>bool)->bool` STRIP_ASSUME_TAC) THEN
-  FIRST_X_ASSUM SUBST_ALL_TAC THEN
-  MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_UNIONS THEN
-  X_GEN_TAC `c::real^N=>bool` THEN DISCH_TAC THEN
-  FIRST_X_ASSUM(MP_TAC o SPEC `c::real^N=>bool`) THEN
-  ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
-  SUBGOAL_THEN `B:(real^N#real)->bool = A \<union> (B - A)` SUBST1_TAC THENL
-   [ASM SET_TAC[]; ALL_TAC] THEN
-  REWRITE_TAC[hyperplane_cellcomplex; HYPERPLANE_CELL_UNION] THEN
-  EXISTS_TAC `{c' \<inter> c::real^N=>bool |c'| hyperplane_cell (B - A) c' \<and>
-                                            ~(c' \<inter> c = {})}` THEN
-  REWRITE_TAC[FORALL_IN_GSPEC] THEN CONJ_TAC THENL
-   [X_GEN_TAC `c':real^N=>bool` THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
-    MAP_EVERY EXISTS_TAC [`c::real^N=>bool`; `c':real^N=>bool`] THEN
-    ASM_REWRITE_TAC[INTER_COMM];
-    GEN_REWRITE_TAC id [EXTENSION] THEN
-    REWRITE_TAC[UNIONS_GSPEC; IN_ELIM_THM; IN_INTER] THEN
-    X_GEN_TAC `x::real^N` THEN EQ_TAC THENL [DISCH_TAC; MESON_TAC[]] THEN
-    MP_TAC(ISPEC `B - A:(real^N#real)->bool` UNIONS_HYPERPLANE_CELLS) THEN
-    GEN_REWRITE_TAC LAND_CONV [EXTENSION] THEN
-    REWRITE_TAC[IN_UNIONS; IN_ELIM_THM; IN_UNIV] THEN ASM SET_TAC[]]);;
+  assumes "hyperplane_cellcomplex A S" "A \<subseteq> B"
+  shows "hyperplane_cellcomplex B S"
+proof -
+  obtain \<C> where \<C>: "\<And>C. C \<in> \<C> \<Longrightarrow> hyperplane_cell A C" and eq: "S = \<Union>\<C>"
+    by (meson assms hyperplane_cellcomplex_def)
+  show ?thesis
+    unfolding eq
+  proof (intro hyperplane_cellcomplex_Union)
+    fix C
+    assume "C \<in> \<C>"
+    have "\<And>x. x \<in> C \<Longrightarrow> \<exists>D'. (\<exists>D. D' = D \<inter> C \<and> hyperplane_cell (B - A) D \<and> D \<inter> C \<noteq> {}) \<and> x \<in> D'"
+      unfolding hyperplane_cell_def by blast
+    then
+    have "hyperplane_cellcomplex (A \<union> (B - A)) C"
+      unfolding hyperplane_cellcomplex_def hyperplane_cell_Un
+      using \<C> \<open>C \<in> \<C>\<close> by (fastforce intro!: exI [where x=" {D \<inter> C |D. hyperplane_cell (B - A) D \<and> D \<inter> C \<noteq> {}}"])
+    moreover have "B = A \<union> (B - A)"
+      using \<open>A \<subseteq> B\<close> by auto
+    ultimately show "hyperplane_cellcomplex B C" by simp
+  qed
+qed
 
 lemma finite_hyperplane_cellcomplexes:
-   "finite A \<Longrightarrow> finite {c::real^N=>bool | hyperplane_cellcomplex A c}"
-oops 
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC FINITE_SUBSET THEN EXISTS_TAC
-   `image \<Union> {t. t \<subseteq> {c::real^N=>bool | hyperplane_cell A c}}` THEN
-  ASM_SIMP_TAC[FINITE_IMAGE; FINITE_POWERSET; FINITE_HYPERPLANE_CELLS] THEN
-  REWRITE_TAC[\<subseteq>; IN_IMAGE; IN_ELIM_THM; hyperplane_cellcomplex] THEN
-  MESON_TAC[]);;
+  assumes "finite A"
+  shows "finite {C. hyperplane_cellcomplex A C}"
+proof -
+  have "{C. hyperplane_cellcomplex A C} \<subseteq> image \<Union> {T. T \<subseteq> {C. hyperplane_cell A C}}"
+    by (force simp add: hyperplane_cellcomplex_def subset_eq)
+  with finite_hyperplane_cells show ?thesis
+    by (metis assms finite_Collect_subsets finite_surj)
+qed
 
 lemma finite_restrict_hyperplane_cellcomplexes:
-   "finite A
-         \<Longrightarrow> finite {c::real^N=>bool | hyperplane_cellcomplex A c \<and> P c}"
-oops 
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC FINITE_SUBSET THEN
-  EXISTS_TAC `{c::real^N=>bool | hyperplane_cellcomplex A c}` THEN
-  ASM_SIMP_TAC[FINITE_HYPERPLANE_CELLCOMPLEXES] THEN SET_TAC[]);;
+   "finite A \<Longrightarrow> finite {C. hyperplane_cellcomplex A C \<and> P C}"
+  by (simp add: finite_hyperplane_cellcomplexes)
 
-lemma finite_set_of_hyperplane_cells:
-   "finite A \<and> (\<forall>c::real^N=>bool. c \<in> C \<Longrightarrow> hyperplane_cellcomplex A c)
-         \<Longrightarrow> finite C"
-oops 
-  REPEAT STRIP_TAC THEN MATCH_MP_TAC FINITE_SUBSET THEN
-  EXISTS_TAC `{c::real^N=>bool | hyperplane_cellcomplex A c}` THEN
-  ASM_SIMP_TAC[FINITE_HYPERPLANE_CELLCOMPLEXES] THEN ASM SET_TAC[]);;
+lemma finite_set_of_hyperplane_cellcomplex:
+  assumes "finite A" "\<And>C. C \<in> \<C> \<Longrightarrow> hyperplane_cellcomplex A C"
+  shows "finite \<C>"
+  by (metis assms finite_hyperplane_cellcomplexes mem_Collect_eq rev_finite_subset subsetI)
 
 lemma cell_subset_cellcomplex:
-   "\<And>A s c::real^N=>bool.
-        hyperplane_cell A c \<and> hyperplane_cellcomplex A s
-        \<Longrightarrow> (c \<subseteq> s \<longleftrightarrow> ~(disjnt c s))"
-oops 
-  REPEAT STRIP_TAC THEN
-  FIRST_ASSUM(MP_TAC o GEN_REWRITE_RULE id [hyperplane_cellcomplex]) THEN
-  DISCH_THEN(X_CHOOSE_THEN `C:(real^N=>bool)->bool` STRIP_ASSUME_TAC) THEN
-  FIRST_X_ASSUM SUBST_ALL_TAC THEN EQ_TAC THENL
-   [ASM_CASES_TAC `c::real^N=>bool = {}` THENL
-     [ASM_MESON_TAC[NONEMPTY_HYPERPLANE_CELL]; ASM SET_TAC[]];
-    REWRITE_TAC[disjnt; INTER_UNIONS; GSYM MEMBER_NOT_EMPTY] THEN
-    REWRITE_TAC[UNIONS_GSPEC; IN_ELIM_THM; LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`x::real^N`; `c':real^N=>bool`] THEN
-    REWRITE_TAC[IN_INTER] THEN STRIP_TAC THEN
-    MP_TAC(ISPECL [`A:(real^N#real)->bool`; `c::real^N=>bool`;
-      `c':real^N=>bool`] DISJOINT_HYPERPLANE_CELLS_EQ) THEN
-    ASM_SIMP_TAC[] THEN
-    ASM_CASES_TAC `c':real^N=>bool = c` THENL
-     [DISCH_THEN(K ALL_TAC); ASM SET_TAC[]] THEN
-    MATCH_MP_TAC(SET_RULE `c \<in> C \<Longrightarrow> c \<subseteq> \<Union> C`) THEN
-    ASM_MESON_TAC[]]);;
+   "\<lbrakk>hyperplane_cell A C; hyperplane_cellcomplex A S\<rbrakk> \<Longrightarrow> C \<subseteq> S \<longleftrightarrow> ~ disjnt C S"
+  by (smt (verit) Union_iff disjnt_iff disjnt_subset1 disjoint_hyperplane_cells_eq hyperplane_cellcomplex_def subsetI)
 
 text\<open> ------------------------------------------------------------------------- \<close>
 text\<open> Euler characteristic.                                                     \<close>
 text\<open> ------------------------------------------------------------------------- \<close>
 
-let euler_characteristic = new_definition
- `euler_characteristic A (s::real^N=>bool) =
-        sum {c. hyperplane_cell A c \<and> c \<subseteq> s}
-            (\<lambda>c. (-1) ^ (nat(aff_dim c)))`;;
+definition Euler_characteristic
+  where "Euler_characteristic A S \<equiv>
+        sum (\<lambda>C. (-1) ^ (nat(aff_dim C))) {C. hyperplane_cell A C \<and> C \<subseteq> S}"
 
-lemma euler_characteristic_empty:
- (`euler_characteristic A {} = 0"
-oops 
-  REWRITE_TAC[euler_characteristic; SUBSET_EMPTY] THEN
-  MATCH_MP_TAC SUM_EQ_0 THEN
-  MATCH_MP_TAC(MESON[] `~(\<exists>x. x \<in> s) \<Longrightarrow> (\<forall>x. x \<in> s \<Longrightarrow> P x)`) THEN
-  REWRITE_TAC[IN_ELIM_THM] THEN MESON_TAC[NONEMPTY_HYPERPLANE_CELL]);;
+lemma Euler_characteristic_empty [simp]: "Euler_characteristic A {} = 0"
+  by (simp add: sum.neutral Euler_characteristic_def)
 
-lemma euler_characteristic_cell_unions:
-   "(\<forall>c::real^N=>bool. c \<in> C \<Longrightarrow> hyperplane_cell A c)
-         \<Longrightarrow> euler_characteristic A (\<Union> C) =
-             sum C (\<lambda>c. (-1) ^ (nat(aff_dim c)))"
-oops 
-  REPEAT STRIP_TAC THEN REWRITE_TAC[euler_characteristic] THEN
-  MATCH_MP_TAC(MESON[] `s = t \<Longrightarrow> sum s f = sum t f`) THEN
-  REWRITE_TAC[EXTENSION; IN_ELIM_THM] THEN X_GEN_TAC `c::real^N=>bool` THEN
-  EQ_TAC THENL [ALL_TAC; ASM SET_TAC[]] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-  SUBGOAL_THEN `~(c::real^N=>bool = {})` MP_TAC THENL
-   [ASM_MESON_TAC[NONEMPTY_HYPERPLANE_CELL]; ALL_TAC] THEN
-  REWRITE_TAC[MEMBER_NOT_EMPTY; \<subseteq>; IN_UNIONS] THEN
-  REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; LEFT_IMP_EXISTS_THM] THEN
-  X_GEN_TAC `x::real^N` THEN DISCH_TAC THEN
-  DISCH_THEN(MP_TAC o SPEC `x::real^N`) THEN ASM_REWRITE_TAC[] THEN
-  DISCH_THEN(X_CHOOSE_THEN `c':real^N=>bool` STRIP_ASSUME_TAC) THEN
-  SUBGOAL_THEN `~(disjnt (c::real^N=>bool) c')` MP_TAC THENL
-   [ASM SET_TAC[]; ASM_MESON_TAC[DISJOINT_HYPERPLANE_CELLS_EQ]]);;
+lemma Euler_characteristic_cell_Union:
+  assumes "\<And>C. C \<in> \<C> \<Longrightarrow> hyperplane_cell A C"
+  shows "Euler_characteristic A (\<Union> \<C>) = sum (\<lambda>C. (-1) ^ (nat(aff_dim C))) \<C>"
+proof -
+  have "\<And>x. \<lbrakk>hyperplane_cell A x; x \<subseteq> \<Union> \<C>\<rbrakk> \<Longrightarrow> x \<in> \<C>"
+    by (metis assms disjnt_Union1 disjnt_subset1 disjoint_hyperplane_cells_eq)
+  then have "{C. hyperplane_cell A C \<and> C \<subseteq> \<Union> \<C>} = \<C>"
+    by (auto simp add: assms)
+  then show ?thesis
+    by (auto simp: Euler_characteristic_def)
+qed
 
-lemma euler_characteristic_cell:
-   "hyperplane_cell A c
-         \<Longrightarrow> euler_characteristic A c =  (-1) ^ (nat(aff_dim c))"
-oops 
-  REPEAT STRIP_TAC THEN
-  GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [GSYM UNIONS_1] THEN
-  ASM_SIMP_TAC[EULER_CHARACTERISTIC_CELL_UNIONS; IN_SING; SUM_SING]);;
+lemma Euler_characteristic_cell:
+   "hyperplane_cell A C
+         \<Longrightarrow> Euler_characteristic A C =  (-1) ^ (nat(aff_dim C))"
+  using Euler_characteristic_cell_Union [of "{C}"] by force
 
-lemma euler_characteristic_cellcomplex_union:
-   "\<And>A s t::real^N=>bool.
+lemma Euler_characteristic_cellcomplex_union:
+   "\<And>A S T::real^N=>bool.
         finite A \<and>
-        hyperplane_cellcomplex A s \<and>
-        hyperplane_cellcomplex A t \<and>
-        disjnt s t
-        \<Longrightarrow> euler_characteristic A (s \<union> t) =
-            euler_characteristic A s + euler_characteristic A t"
+        hyperplane_cellcomplex A S \<and>
+        hyperplane_cellcomplex A T \<and>
+        disjnt S T
+        \<Longrightarrow> Euler_characteristic A (S \<union> T) =
+            Euler_characteristic A S + Euler_characteristic A T"
 oops 
-  REPEAT STRIP_TAC THEN REWRITE_TAC[euler_characteristic] THEN
+  REPEAT STRIP_TAC THEN REWRITE_TAC[Euler_characteristic] THEN
   CONV_TAC SYM_CONV THEN MATCH_MP_TAC SUM_UNION_EQ THEN
   ASM_SIMP_TAC[FINITE_RESTRICT_HYPERPLANE_CELLS] THEN
   REWRITE_TAC[EXTENSION; IN_INTER; IN_ELIM_THM; NOT_IN_EMPTY; IN_UNION] THEN
-  CONJ_TAC THEN X_GEN_TAC `c::real^N=>bool` THENL
-   [ASM_CASES_TAC `c::real^N=>bool = {}` THENL
+  CONJ_TAC THEN X_GEN_TAC `C::real^N=>bool` THENL
+   [ASM_CASES_TAC `C::real^N=>bool = {}` THENL
      [ASM_MESON_TAC[NONEMPTY_HYPERPLANE_CELL]; ASM SET_TAC[]];
-    ASM_CASES_TAC `hyperplane_cell A (c::real^N=>bool)` THEN
+    ASM_CASES_TAC `hyperplane_cell A (C::real^N=>bool)` THEN
     ASM_REWRITE_TAC[] THEN
     MP_TAC(ISPEC `A:(real^N#real)->bool` CELL_SUBSET_CELLCOMPLEX) THEN
     ASM_SIMP_TAC[HYPERPLANE_CELLCOMPLEX_UNION] THEN SET_TAC[]]);;
 
-lemma euler_characteristic_cellcomplex_unions:
+lemma Euler_characteristic_cellcomplex_unions:
    "finite A \<and>
-         (\<forall>c::real^N=>bool. c \<in> C \<Longrightarrow> hyperplane_cellcomplex A c) \<and>
-         pairwise disjnt C
-         \<Longrightarrow> euler_characteristic A (\<Union> C) =
-             sum C (\<lambda>c. euler_characteristic A c)"
+         (\<forall>C::real^N=>bool. C \<in> \<C> \<Longrightarrow> hyperplane_cellcomplex A C) \<and>
+         pairwise disjnt \<C>
+         \<Longrightarrow> Euler_characteristic A (\<Union> \<C>) =
+             sum \<C> (\<lambda>c. Euler_characteristic A C)"
 oops 
   REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-  ASM_CASES_TAC `finite(C:(real^N=>bool)->bool)` THENL
-   [UNDISCH_TAC `finite(C:(real^N=>bool)->bool)`;
+  ASM_CASES_TAC `finite(\<C>:(real^N=>bool)->bool)` THENL
+   [UNDISCH_TAC `finite(\<C>:(real^N=>bool)->bool)`;
     ASM_MESON_TAC[FINITE_SET_OF_HYPERPLANE_CELLS]] THEN
-  SPEC_TAC(`C:(real^N=>bool)->bool`,`C:(real^N=>bool)->bool`) THEN
+  SPEC_TAC(`\<C>:(real^N=>bool)->bool`,`\<C>:(real^N=>bool)->bool`) THEN
   MATCH_MP_TAC FINITE_INDUCT_STRONG THEN
   SIMP_TAC[EULER_CHARACTERISTIC_EMPTY; SUM_CLAUSES; UNIONS_0] THEN
   REPEAT STRIP_TAC THEN REWRITE_TAC[UNIONS_INSERT] THEN
@@ -525,19 +459,19 @@ oops
     FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id [pairwise]) THEN
     ASM_REWRITE_TAC[pairwise] THEN ASM SET_TAC[]]);;
 
-lemma euler_characteristic:
-   "\<And>A s::real^N=>bool.
+lemma Euler_characteristic:
+   "\<And>A S::real^N=>bool.
         finite A
-        \<Longrightarrow> euler_characteristic A s =
+        \<Longrightarrow> Euler_characteristic A S =
             sum (0..DIM('N))
                 (\<lambda>d. (-1) ^ d *
-                     &(card {c. hyperplane_cell A c \<and> c \<subseteq> s \<and>
-                                 aff_dim c = d}))"
+                     &(card {C. hyperplane_cell A C \<and> C \<subseteq> S \<and>
+                                 aff_dim C = d}))"
 oops 
-  REPEAT STRIP_TAC THEN REWRITE_TAC[euler_characteristic] THEN
-  MP_TAC(ISPECL [`\<lambda>c::real^N=>bool. aff_dim c`;
-                 `\<lambda>c::real^N=>bool. (-1) ^ (nat(aff_dim c))`;
-                 `{c::real^N=>bool | hyperplane_cell A c \<and> c \<subseteq> s}`;
+  REPEAT STRIP_TAC THEN REWRITE_TAC[Euler_characteristic] THEN
+  MP_TAC(ISPECL [`\<lambda>c::real^N=>bool. aff_dim C`;
+                 `\<lambda>c::real^N=>bool. (-1) ^ (nat(aff_dim C))`;
+                 `{C::real^N=>bool | hyperplane_cell A C \<and> C \<subseteq> S}`;
                  `image int_of_num (0..DIM('N))`]
                 SUM_GROUP) THEN
   SIMP_TAC[SUM_IMAGE; INT_OF_NUM_EQ; o_DEF; NUM_OF_INT_OF_NUM] THEN
@@ -545,10 +479,10 @@ oops
    [ASM_SIMP_TAC[FINITE_RESTRICT_HYPERPLANE_CELLS] THEN
     GEN_REWRITE_TAC id [\<subseteq>] THEN
     REWRITE_TAC[FORALL_IN_IMAGE; IN_ELIM_THM] THEN
-    X_GEN_TAC `c::real^N=>bool` THEN STRIP_TAC THEN
+    X_GEN_TAC `C::real^N=>bool` THEN STRIP_TAC THEN
     REWRITE_TAC[IN_IMAGE; IN_NUMSEG; LE_0] THEN
     REWRITE_TAC[GSYM INT_OF_NUM_LE; INT_EXISTS_POS] THEN
-    EXISTS_TAC `aff_dim(c::real^N=>bool)` THEN
+    EXISTS_TAC `aff_dim(C::real^N=>bool)` THEN
     REWRITE_TAC[AFF_DIM_LE_UNIV; AFF_DIM_POS_LE] THEN
     ASM_MESON_TAC[NONEMPTY_HYPERPLANE_CELL];
     DISCH_THEN(SUBST1_TAC o SYM) THEN
@@ -574,7 +508,7 @@ oops
 lemma euler_characterstic_lemma:
    "\<And>A h s::real^N=>bool.
         finite A \<and> hyperplane_cellcomplex A s
-        \<Longrightarrow> euler_characteristic (insert h A) s = euler_characteristic A s"
+        \<Longrightarrow> Euler_characteristic (insert h A) s = Euler_characteristic A s"
 oops 
   REWRITE_TAC[FORALL_PAIR_THM] THEN MAP_EVERY X_GEN_TAC
    [`A:(real^N#real)->bool`; `a::real^N`; `b::real`; `s::real^N=>bool`] THEN
@@ -607,7 +541,7 @@ oops
     ONCE_REWRITE_TAC[CONJ_SYM] THEN REWRITE_TAC[INTER_UNIV; UNWIND_THM1] THEN
     ASM_SIMP_TAC[];
     ALL_TAC] THEN
-  REWRITE_TAC[euler_characteristic] THEN
+  REWRITE_TAC[Euler_characteristic] THEN
   ONCE_REWRITE_TAC[SET_RULE `insert x s = {x} \<union> s`] THEN
   REWRITE_TAC[HYPERPLANE_CELL_UNION] THEN MATCH_MP_TAC EQ_TRANS THEN
   EXISTS_TAC
@@ -777,14 +711,14 @@ lemma euler_characterstic_invariant:
    "\<And>A B h s::real^N=>bool.
         finite A \<and> finite B \<and>
         hyperplane_cellcomplex A s \<and> hyperplane_cellcomplex B s
-        \<Longrightarrow> euler_characteristic A s = euler_characteristic B s"
+        \<Longrightarrow> Euler_characteristic A s = Euler_characteristic B s"
 oops 
   SUBGOAL_THEN
    `\<forall>A s::real^N=>bool.
         finite A \<and> hyperplane_cellcomplex A s
         \<Longrightarrow> \<forall>B. finite B
-                \<Longrightarrow> euler_characteristic (A \<union> B) s =
-                    euler_characteristic A s`
+                \<Longrightarrow> Euler_characteristic (A \<union> B) s =
+                    Euler_characteristic A s`
   ASSUME_TAC THENL
    [REPEAT GEN_TAC THEN STRIP_TAC THEN
     MATCH_MP_TAC FINITE_INDUCT_STRONG THEN ASM_REWRITE_TAC[UNION_EMPTY] THEN
@@ -797,21 +731,21 @@ oops
     EXISTS_TAC `A::real^N#real=>bool` THEN ASM_REWRITE_TAC[] THEN SET_TAC[];
     RULE_ASSUM_TAC(REWRITE_RULE[RIGHT_IMP_FORALL_THM; IMP_IMP]) THEN
     REPEAT STRIP_TAC THEN MATCH_MP_TAC EQ_TRANS THEN
-    EXISTS_TAC `euler_characteristic (A \<union> B) (s::real^N=>bool)` THEN
+    EXISTS_TAC `Euler_characteristic (A \<union> B) (s::real^N=>bool)` THEN
     ASM_MESON_TAC[UNION_COMM]]);;
 
-lemma euler_characteristic_inclusion_exclusion:
+lemma Euler_characteristic_inclusion_exclusion:
    "\<And>A s:(real^N=>bool)->bool.
         finite A \<and> finite s \<and> (\<forall>k. k \<in> s \<Longrightarrow> hyperplane_cellcomplex A k)
-        \<Longrightarrow> euler_characteristic A (\<Union> s) =
+        \<Longrightarrow> Euler_characteristic A (\<Union> s) =
             sum {t. t \<subseteq> s \<and> (t \<noteq> {})}
                 (\<lambda>t. (-1) ^ (card t + 1) *
-                     euler_characteristic A (\<Inter> t))"
+                     Euler_characteristic A (\<Inter> t))"
 oops 
   REPEAT STRIP_TAC THEN
   MP_TAC(ISPECL
    [`hyperplane_cellcomplex A :(real^N=>bool)->bool`;
-    `euler_characteristic A :(real^N=>bool)->real`;
+    `Euler_characteristic A :(real^N=>bool)->real`;
     `s:(real^N=>bool)->bool`]
         INCLUSION_EXCLUSION_REAL_RESTRICTED) THEN
   ASM_SIMP_TAC[EULER_CHARACTERISTIC_CELLCOMPLEX_UNION] THEN
@@ -925,7 +859,7 @@ oops
    [EXPAND_TAC "A" THEN MATCH_MP_TAC FINITE_IMAGE THEN ASM_SIMP_TAC[];
     ALL_TAC] THEN
   MATCH_MP_TAC EQ_TRANS THEN
-  EXISTS_TAC `euler_characteristic A (s::real^N=>bool)` THEN CONJ_TAC THENL
+  EXISTS_TAC `Euler_characteristic A (s::real^N=>bool)` THEN CONJ_TAC THENL
    [ASM_SIMP_TAC[EULER_CHARACTERISTIC] THEN MATCH_MP_TAC SUM_EQ_NUMSEG THEN
     X_GEN_TAC `d::num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
     AP_TERM_TAC THEN AP_TERM_TAC THEN MATCH_MP_TAC BIJECTIONS_CARD_EQ THEN
@@ -1424,7 +1358,7 @@ oops
     \<Longrightarrow> x = s + y \<Longrightarrow> s = 0`) THEN
   CONJ_TAC THENL
    [MATCH_MP_TAC EQ_TRANS THEN
-    EXISTS_TAC `euler_characteristic {} UNIV` THEN CONJ_TAC THENL
+    EXISTS_TAC `Euler_characteristic {} UNIV` THEN CONJ_TAC THENL
      [MATCH_MP_TAC EULER_CHARACTERSTIC_INVARIANT THEN
       ASM_REWRITE_TAC[FINITE_EMPTY] THEN CONJ_TAC THENL
        [MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_MONO THEN
@@ -1513,7 +1447,7 @@ oops
       MESON_TAC[REAL_SGN_EQ; real_gt];
       ALL_TAC] THEN
     MATCH_MP_TAC EQ_TRANS THEN EXISTS_TAC
-     `euler_characteristic B (\<Inter> (image (\<lambda>t. - t) J))` THEN
+     `Euler_characteristic B (\<Inter> (image (\<lambda>t. - t) J))` THEN
     CONJ_TAC THENL
      [MATCH_MP_TAC EULER_CHARACTERSTIC_INVARIANT THEN
       ASM_SIMP_TAC[HYPERPLANE_CELL_CELLCOMPLEX] THEN
