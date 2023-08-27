@@ -166,71 +166,66 @@ next
 qed
 
 lemma hyperplane_cell_relatively_open:
-   "finite A \<and> hyperplane_cell A C
-        \<Longrightarrow> openin (subtopology euclidean (affine hull C)) C"
-  sorry
-oops 
-  REPEAT GEN_TAC THEN DISCH_TAC THEN
-  FIRST_ASSUM(MP_TAC o MATCH_MP HYPERPLANE_CELL_INTER_OPEN_AFFINE) THEN
-  REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [`s::real^N=>bool`; `t::real^N=>bool`] THEN
-  STRIP_TAC THEN FIRST_X_ASSUM SUBST_ALL_TAC THEN
-  ASM_CASES_TAC `s \<inter> t::real^N=>bool = {}` THEN
-  ASM_REWRITE_TAC[OPEN_IN_EMPTY] THEN
-  SUBGOAL_THEN `affine hull (s \<inter> t::real^N=>bool) = t`
-  SUBST1_TAC THENL
-   [MATCH_MP_TAC EQ_TRANS THEN EXISTS_TAC `affine hull t::real^N=>bool` THEN
-    ASM_REWRITE_TAC[AFFINE_HULL_EQ] THEN
-    MATCH_MP_TAC(ONCE_REWRITE_RULE[INTER_COMM]
-      AFFINE_HULL_CONVEX_INTER_OPEN) THEN
-    ASM_SIMP_TAC[AFFINE_IMP_CONVEX];
-    ONCE_REWRITE_TAC[INTER_COMM] THEN ASM_SIMP_TAC[OPEN_IN_OPEN_INTER]]);;
+  assumes "finite A" "hyperplane_cell A C"
+  shows "openin (subtopology euclidean (affine hull C)) C"
+proof -
+  obtain S T where "open S" "affine T" "C = S \<inter> T"
+    by (meson assms hyperplane_cell_Int_open_affine)
+  show ?thesis
+  proof (cases "S \<inter> T = {}")
+    case True
+    then show ?thesis
+      by (simp add: \<open>C = S \<inter> T\<close>)
+  next
+    case False
+    then have "affine hull (S \<inter> T) = T"
+      by (metis \<open>affine T\<close> \<open>open S\<close> affine_hull_affine_Int_open hull_same inf_commute)
+    then show ?thesis
+      using \<open>C = S \<inter> T\<close> \<open>open S\<close> openin_subtopology by fastforce
+  qed
+qed
 
 lemma hyperplane_cell_relative_interior:
    "\<lbrakk>finite A; hyperplane_cell A C\<rbrakk> \<Longrightarrow> rel_interior C = C"
   by (simp add: hyperplane_cell_relatively_open rel_interior_openin)
 
 lemma hyperplane_cell_convex:
-   "hyperplane_cell A C \<Longrightarrow> convex C"
-oops 
-  REPEAT GEN_TAC THEN REWRITE_TAC[HYPERPLANE_CELL] THEN
-  DISCH_THEN(X_CHOOSE_THEN `C::real^N` SUBST1_TAC) THEN
-  REWRITE_TAC[hyperplane_equiv] THEN
-  ONCE_REWRITE_TAC[SET_RULE `f x = f y \<longleftrightarrow> y \<in> {y. f x = f y}`] THEN
-  REWRITE_TAC[GSYM INTERS_IMAGE] THEN MATCH_MP_TAC CONVEX_INTERS THEN
-  REWRITE_TAC[FORALL_IN_IMAGE] THEN REWRITE_TAC[FORALL_PAIR_THM] THEN
-  MAP_EVERY X_GEN_TAC [`a::real^N`; `b::real`] THEN DISCH_TAC THEN
-  CONV_TAC(ONCE_DEPTH_CONV SYM_CONV) THEN REWRITE_TAC[hyperplane_side] THEN
-  REPEAT_TCL DISJ_CASES_THEN SUBST1_TAC
-   (SPEC `(a::real^N) \<bullet> C - b` REAL_SGN_CASES) THEN
-  ASM_REWRITE_TAC[REAL_SGN_EQ] THEN
-  SIMP_TAC[REAL_SUB_0; REAL_ARITH `a - b > 0 \<longleftrightarrow> a > b`;
-           REAL_ARITH `a - b < 0 \<longleftrightarrow> a < b`] THEN
-  REWRITE_TAC[CONVEX_HALFSPACE_LT; CONVEX_HALFSPACE_GT;
-              CONVEX_HYPERPLANE]);;
+  assumes "hyperplane_cell A C"
+  shows "convex C"
+proof -
+  obtain c where c: "C = {y. hyperplane_equiv A c y}"
+    by (meson assms hyperplane_cell)
+  have "convex (\<Inter>h\<in>A. {y. hyperplane_side h c = hyperplane_side h y})"
+  proof (rule convex_INT)
+    fix h :: "'a \<times> real"
+    assume "h \<in> A"
+    obtain a b where heq: "h = (a,b)"
+      by fastforce
+    have [simp]: "{y. \<not> a \<bullet> c < a \<bullet> y \<and> a \<bullet> y = a \<bullet> c} = {y. a \<bullet> y = a \<bullet> c}"
+                 "{y. \<not> b < a \<bullet> y \<and> a \<bullet> y \<noteq> b} = {y. b > a \<bullet> y}"
+      by auto
+    then show "convex {y. hyperplane_side h c = hyperplane_side h y}"
+      by (fastforce simp add: heq hyperplane_side_def sgn_if convex_halfspace_gt convex_halfspace_lt convex_hyperplane cong: conj_cong)
+  qed
+  with c show ?thesis
+    by (simp add: hyperplane_equiv_def INTER_eq)
+qed
 
-lemma hyperplane_cell_inters:
-   "(\<forall>c::real^N=>bool. c \<in> C \<Longrightarrow> hyperplane_cell A c) \<and>
-         (C \<noteq> {}) \<and> ~(\<Inter> C = {})
-         \<Longrightarrow> hyperplane_cell A (\<Inter> C)"
-oops 
-  REPEAT GEN_TAC THEN REWRITE_TAC[HYPERPLANE_CELL; GSYM MEMBER_NOT_EMPTY] THEN
-  REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-  MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `z::real^N` THEN
-  REWRITE_TAC[IN_INTERS] THEN DISCH_TAC THEN
-  GEN_REWRITE_TAC id [EXTENSION] THEN
-  REWRITE_TAC[IN_INTERS; IN_ELIM_THM] THEN
-  X_GEN_TAC `x::real^N` THEN EQ_TAC THEN DISCH_TAC THENL
-   [FIRST_X_ASSUM(X_CHOOSE_TAC `c::real^N=>bool`);
-    X_GEN_TAC `c::real^N=>bool` THEN DISCH_TAC] THEN
-  REPEAT(FIRST_X_ASSUM(MP_TAC o SPEC `c::real^N=>bool`)) THEN
-  ASM_REWRITE_TAC[] THEN REPEAT DISCH_TAC THEN
-  FIRST_X_ASSUM(CHOOSE_THEN SUBST_ALL_TAC) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[IN_ELIM_THM]) THEN SIMP_TAC[IN_ELIM_THM] THEN
-  ASM_MESON_TAC[HYPERPLANE_EQUIV_SYM; HYPERPLANE_EQUIV_TRANS]);;
+lemma hyperplane_cell_Inter:
+  assumes "\<And>C. C \<in> \<C> \<Longrightarrow> hyperplane_cell A C"
+    and "\<C> \<noteq> {}" and INT: "\<Inter>\<C> \<noteq> {}"
+  shows "hyperplane_cell A (\<Inter>\<C>)"
+proof -
+  have "\<Inter>\<C> = {y. hyperplane_equiv A z y}" 
+    if "z \<in> \<Inter>\<C>" for z
+      using assms that by (force simp add: hyperplane_cell hyperplane_equiv_def)
+  with INT hyperplane_cell show ?thesis
+    by fastforce
+qed
 
-lemma hyperplane_cell_inter:
-   "\<lbrakk>hyperplane_cell A s; hyperplane_cell A t; s \<inter> t \<noteq> {}\<rbrakk> \<Longrightarrow> hyperplane_cell A (s \<inter> t)"
+
+lemma hyperplane_cell_Int:
+   "\<lbrakk>hyperplane_cell A S; hyperplane_cell A T; S \<inter> T \<noteq> {}\<rbrakk> \<Longrightarrow> hyperplane_cell A (S \<inter> T)"
   by (metis hyperplane_cell_Un sup.idem)
 
 text\<open> ------------------------------------------------------------------------- \<close>
