@@ -1,19 +1,18 @@
 chapter \<open>Euler's Polyhedron Formula\<close>
 
+text \<open>One of the Famous 100 Theorems, ported from HOL Light\<close>
+text\<open> Formalization of Jim Lawrence's proof of Euler's relation.                \<close>
 
 theory Euler_Formula
   imports "HOL-Analysis.Analysis" "HOL-ex.Sketch_and_Explore"
 begin
 
+(*MOVE UP*)
 lemma Inter_over_Union:
   "\<Inter> {\<Union> (f x) |x. x \<in> S} = \<Union> {\<Inter> (g ` S) |g. \<forall>x\<in>S. g x \<in> f x}" 
-  apply (rule set_eqI)
-  apply (simp add: flip: all_simps ex_simps)
+  apply (auto simp flip: all_simps ex_simps)
   by metis
 
-text\<open> ========================================================================= \<close>
-text\<open> Formalization of Jim Lawrence's proof of Euler's relation.                \<close>
-text\<open> ========================================================================= \<close>
 
 text\<open> ------------------------------------------------------------------------- \<close>
 text\<open> Interpret which "side" of a hyperplane a point is on.                     \<close>
@@ -74,7 +73,7 @@ lemma disjoint_hyperplane_cells_eq:
 lemma hyperplane_cell_empty [iff]: "hyperplane_cell {} C \<longleftrightarrow> C = UNIV"
   by (simp add: hyperplane_cell hyperplane_equiv_def)
 
-lemma hyperplane_cell_sing_cases:
+lemma hyperplane_cell_singleton_cases:
   assumes "hyperplane_cell {(a,b)} C"
   shows "C = {x. a \<bullet> x = b} \<or> C = {x. a \<bullet> x < b} \<or> C = {x. a \<bullet> x > b}"
 proof -
@@ -103,7 +102,7 @@ proof (induction rule: finite_induct)
   obtain a b where peq: "p = (a,b)"
     by fastforce
   have "Collect (hyperplane_cell {p}) \<subseteq> {{x. a \<bullet> x = b},{x. a \<bullet> x < b},{x. a \<bullet> x > b}}"
-    using hyperplane_cell_sing_cases
+    using hyperplane_cell_singleton_cases
     by (auto simp: peq)
   then have *: "finite (Collect (hyperplane_cell {p}))"
     by (simp add: finite_subset)
@@ -384,7 +383,7 @@ text\<open> --------------------------------------------------------------------
 text\<open> Euler characteristic.                                                     \<close>
 text\<open> ------------------------------------------------------------------------- \<close>
 
-definition Euler_characteristic
+definition Euler_characteristic :: "('a::euclidean_space \<times> real) set \<Rightarrow> 'a set \<Rightarrow> real"
   where "Euler_characteristic A S \<equiv>
         sum (\<lambda>C. (-1) ^ (nat(aff_dim C))) {C. hyperplane_cell A C \<and> C \<subseteq> S}"
 
@@ -446,16 +445,11 @@ proof -
   qed
 qed
 
-context comm_monoid_set
-begin
-
-
-
 lemma Euler_characteristic:
   fixes A :: "('n::euclidean_space * real) set"
   assumes "finite A"
   shows "Euler_characteristic A S =
-        (\<Sum>d = 0..DIM('n). (- 1) ^ d * real (card {C. hyperplane_cell A C \<and> C \<subseteq> S \<and> aff_dim C = int d}))"
+        (\<Sum>d = 0..DIM('n). (-1) ^ d * real (card {C. hyperplane_cell A C \<and> C \<subseteq> S \<and> aff_dim C = int d}))"
         (is "_ = ?rhs")
 proof -
   have "\<And>T. \<lbrakk>hyperplane_cell A T; T \<subseteq> S\<rbrakk> \<Longrightarrow> aff_dim T \<in> {0..DIM('n)}"
@@ -465,9 +459,8 @@ proof -
     by (auto simp: image_int_atLeastAtMost)
   have "Euler_characteristic A  S = (\<Sum>y\<in>int ` {0..DIM('n)}.
        \<Sum>C\<in>{x. hyperplane_cell A x \<and> x \<subseteq> S \<and> aff_dim x = y}. (- 1) ^ nat y) "
-    unfolding Euler_characteristic_def
-    using sum.group [of "{C. hyperplane_cell A C \<and> C \<subseteq> S}" "int ` {0..DIM('n)}" aff_dim "\<lambda>C. (-1) ^ (nat(aff_dim C))", symmetric]
-    by (simp add: assms finite_restrict_hyperplane_cells *)
+    using sum.group [of "{C. hyperplane_cell A C \<and> C \<subseteq> S}" "int ` {0..DIM('n)}" aff_dim "\<lambda>C. (-1::real) ^ nat(aff_dim C)", symmetric]
+    by (simp add: assms Euler_characteristic_def finite_restrict_hyperplane_cells *)
   also have "... = ?rhs"
     by (simp add: sum.reindex mult_of_nat_commute)
   finally show ?thesis .
@@ -486,240 +479,202 @@ lemma hyperplane_cells_distinct_lemma:
          {x. a \<bullet> x > b} \<inter> {x. a \<bullet> x < b} = {}"
   by auto
 
-lemma Euler_characterstic_lemma:
-   "\<And>A h s::real^N=>bool.
-        finite A \<and> hyperplane_cellcomplex A s
-        \<Longrightarrow> Euler_characteristic (insert h A) s = Euler_characteristic A s"
-oops 
-  REWRITE_TAC[FORALL_PAIR_THM] THEN MAP_EVERY X_GEN_TAC
-   [`A:(real^N#real)->bool`; `a::real^N`; `b::real`; `s::real^N=>bool`] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-  REWRITE_TAC[hyperplane_cellcomplex] THEN
-  DISCH_THEN(X_CHOOSE_THEN `C:(real^N=>bool)->bool` STRIP_ASSUME_TAC) THEN
-  FIRST_X_ASSUM SUBST_ALL_TAC THEN
-  SUBGOAL_THEN
-   `\<forall>c::real^N=>bool. c \<in> C \<Longrightarrow> hyperplane_cellcomplex A c \<and>
-                                hyperplane_cellcomplex ((a,b) insert A) c`
-  ASSUME_TAC THENL
-   [REPEAT STRIP_TAC THEN ASM_SIMP_TAC[HYPERPLANE_CELL_CELLCOMPLEX] THEN
-    MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_MONO THEN
-    EXISTS_TAC `A:(real^N#real)->bool` THEN
-    ASM_SIMP_TAC[HYPERPLANE_CELL_CELLCOMPLEX] THEN SET_TAC[];
-    ALL_TAC] THEN
-  SUBGOAL_THEN `pairwise disjnt (C:(real^N=>bool)->bool)` ASSUME_TAC THENL
-   [ASM_MESON_TAC[PAIRWISE_DISJOINT_HYPERPLANE_CELLS]; ALL_TAC] THEN
-  ASM_SIMP_TAC[EULER_CHARACTERISTIC_CELLCOMPLEX_UNIONS; FINITE_INSERT] THEN
-  MATCH_MP_TAC SUM_EQ THEN X_GEN_TAC `c::real^N=>bool` THEN DISCH_TAC THEN
-  ASM_CASES_TAC `hyperplane_cell ((a,b) insert A) (c::real^N=>bool)` THEN
-  ASM_SIMP_TAC[EULER_CHARACTERISTIC_CELL] THEN
-  SUBGOAL_THEN `~(a::real^N = 0)` ASSUME_TAC THENL
-   [FIRST_X_ASSUM(MP_TAC o check (is_neg o concl)) THEN
-    SIMP_TAC[CONTRAPOS_THM] THEN DISCH_THEN(K ALL_TAC) THEN
-    ONCE_REWRITE_TAC[SET_RULE `insert x s = {x} \<union> s`] THEN
-    REWRITE_TAC[HYPERPLANE_CELL_UNION] THEN
-    REWRITE_TAC[HYPERPLANE_CELL_SING; RIGHT_EXISTS_AND_THM; UNWIND_THM2] THEN
-    CONJ_TAC THENL [ASM_MESON_TAC[NONEMPTY_HYPERPLANE_CELL]; ALL_TAC] THEN
-    ONCE_REWRITE_TAC[CONJ_SYM] THEN REWRITE_TAC[INTER_UNIV; UNWIND_THM1] THEN
-    ASM_SIMP_TAC[];
-    ALL_TAC] THEN
-  REWRITE_TAC[Euler_characteristic] THEN
-  ONCE_REWRITE_TAC[SET_RULE `insert x s = {x} \<union> s`] THEN
-  REWRITE_TAC[HYPERPLANE_CELL_UNION] THEN MATCH_MP_TAC EQ_TRANS THEN
-  EXISTS_TAC
-   `sum {c' \<inter> c |c'| hyperplane_cell {(a,b)} c' \<and> ~(c' \<inter> c = {})}
-        (\<lambda>c::real^N=>bool. (-1) ^ (nat(aff_dim c)))` THEN
-  CONJ_TAC THENL
-   [MATCH_MP_TAC(MESON[] `s = t \<Longrightarrow> sum s f = sum t f`) THEN
-    GEN_REWRITE_TAC id [EXTENSION] THEN REWRITE_TAC[IN_ELIM_THM] THEN
-    X_GEN_TAC `c':real^N=>bool` THEN EQ_TAC THENL
-     [DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
-      DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-      MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `c1::real^N=>bool` THEN
-      DISCH_THEN(X_CHOOSE_THEN `c2::real^N=>bool` STRIP_ASSUME_TAC) THEN
-      SUBGOAL_THEN `~(disjnt c2 (c::real^N=>bool))` ASSUME_TAC THENL
-       [ASM SET_TAC[]; ASM_MESON_TAC[DISJOINT_HYPERPLANE_CELLS_EQ]];
-      DISCH_THEN(X_CHOOSE_THEN `c1::real^N=>bool` STRIP_ASSUME_TAC) THEN
-      ASM_REWRITE_TAC[INTER_SUBSET] THEN
-      MAP_EVERY EXISTS_TAC [`c1::real^N=>bool`; `c::real^N=>bool`] THEN
-      ASM_SIMP_TAC[]];
-    ALL_TAC] THEN
-  ASM_REWRITE_TAC[HYPERPLANE_CELL_SING] THEN
-  SUBGOAL_THEN `~(c::real^N=>bool = {})` ASSUME_TAC THENL
-   [ASM_MESON_TAC[NONEMPTY_HYPERPLANE_CELL]; ALL_TAC] THEN
-  MAP_EVERY (fun t ->
-   ASM_CASES_TAC t THENL
-    [MATCH_MP_TAC EQ_TRANS THEN EXISTS_TAC
-      `sum {c} (\<lambda>c::real^N=>bool. (-1) ^ nat (aff_dim c))` THEN
-     CONJ_TAC THENL [ALL_TAC; SIMP_TAC[SUM_SING]] THEN
-     MATCH_MP_TAC(MESON[] `s = t \<Longrightarrow> sum s f = sum t f`) THEN
-     GEN_REWRITE_TAC id [EXTENSION] THEN X_GEN_TAC `c':real^N=>bool` THEN
-     REWRITE_TAC[IN_SING; IN_ELIM_THM] THEN
-     REWRITE_TAC[TAUT `(a \<or> b) \<and> c \<longleftrightarrow> a \<and> c \<or> b \<and> c`] THEN
-     REWRITE_TAC[EXISTS_OR_THM; UNWIND_THM2; GSYM CONJ_ASSOC] THEN
-     EQ_TAC THEN STRIP_TAC THEN FIRST_X_ASSUM SUBST1_TAC THEN
-     MP_TAC(ISPECL [`a::real^N`; `b::real`] HYPERPLANE_CELLS_DISTINCT_LEMMA) THEN
-     ASM SET_TAC[];
-     ALL_TAC])
-   [`c \<subseteq> {x::real^N | a \<bullet> x < b}`;
-    `c \<subseteq> {x::real^N | a \<bullet> x > b}`;
-    `c \<subseteq> {x::real^N | a \<bullet> x = b}`] THEN
-  SUBGOAL_THEN `~(c \<inter> {x::real^N | a \<bullet> x = b} = {})` ASSUME_TAC THENL
-   [SUBGOAL_THEN
-     `\<exists>u v::real^N. u \<in> c \<and> ~(a \<bullet> u < b) \<and> v \<in> c \<and> ~(a \<bullet> v > b)`
-    MP_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-    REWRITE_TAC[real_gt; REAL_NOT_LT; GSYM MEMBER_NOT_EMPTY] THEN
-    REWRITE_TAC[IN_INTER; IN_ELIM_THM; LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`u::real^N`; `v::real^N`] THEN SIMP_TAC[REAL_LE_LT] THEN
-    ASM_CASES_TAC `(a::real^N) \<bullet> u = b` THENL [ASM_MESON_TAC[]; ALL_TAC] THEN
-    ASM_CASES_TAC `(a::real^N) \<bullet> v = b` THENL [ASM_MESON_TAC[]; ALL_TAC] THEN
-    ASM_REWRITE_TAC[] THEN STRIP_TAC THEN
-    EXISTS_TAC `v + (b - a \<bullet> v) / (a \<bullet> u - a \<bullet> v) *\<^sub>R (u - v):real^N` THEN
-    SUBGOAL_THEN `(a::real^N) \<bullet> v < a \<bullet> u` ASSUME_TAC THENL
-     [ASM_REAL_ARITH_TAC; ALL_TAC] THEN
-    ASM_SIMP_TAC[DOT_RADD; DOT_RMUL; DOT_RSUB; REAL_DIV_RMUL; REAL_SUB_LT;
-                 REAL_LT_IMP_NZ; REAL_SUB_ADD2] THEN
-    REWRITE_TAC[VECTOR_ARITH
-     `v + a *\<^sub>R (u - v):real^N = (1 - a) *\<^sub>R v + a *\<^sub>R u`] THEN
-    MATCH_MP_TAC IN_CONVEX_SET THEN
-    ASM_SIMP_TAC[REAL_LE_RDIV_EQ; REAL_LE_LDIV_EQ; REAL_SUB_LT] THEN
-    CONJ_TAC THENL [ALL_TAC; ASM_REAL_ARITH_TAC] THEN
-    ASM_MESON_TAC[HYPERPLANE_CELL_CONVEX];
-    ALL_TAC] THEN
-  SUBGOAL_THEN `~(c \<inter> {x::real^N | a \<bullet> x < b} = {}) \<and>
-                ~(c \<inter> {x::real^N | a \<bullet> x > b} = {})`
-  STRIP_ASSUME_TAC THENL
-   [SUBGOAL_THEN
-     `\<exists>u v::real^N.
-         u \<in> c \<and> a \<bullet> u = b \<and> v \<in> c \<and> ~(a \<bullet> v = b) \<and> (u \<noteq> v)`
-    STRIP_ASSUME_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-    SUBGOAL_THEN
-     `openin (subtopology euclidean (affine hull c)) (c::real^N=>bool)`
-    MP_TAC THENL [ASM_MESON_TAC[HYPERPLANE_CELL_RELATIVELY_OPEN]; ALL_TAC] THEN
-    REWRITE_TAC[openin] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (MP_TAC o SPEC `u::real^N`)) THEN
-    ASM_REWRITE_TAC[LEFT_IMP_EXISTS_THM] THEN X_GEN_TAC `e::real` THEN
-    DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC
-     (MP_TAC o SPEC `u - e / 2 / norm(v - u) *\<^sub>R (v - u):real^N`)) THEN
-    ANTS_TAC THENL
-     [REWRITE_TAC[NORM_ARITH `dist (u - a::real^N) u = norm a`] THEN
-      REWRITE_TAC[VECTOR_ARITH `x - a *\<^sub>R (y - z):real^N = x + a *\<^sub>R (z - y)`] THEN
-      REWRITE_TAC[NORM_MUL; REAL_ABS_DIV; REAL_ABS_NUM; REAL_ABS_NORM] THEN
-      ASM_SIMP_TAC[REAL_DIV_RMUL; NORM_EQ_0; VECTOR_SUB_EQ] THEN
-      ASM_REWRITE_TAC[REAL_ARITH `abs e / 2 < e \<longleftrightarrow> 0 < e`] THEN
-      MATCH_MP_TAC IN_AFFINE_ADD_MUL_DIFF THEN
-      ASM_SIMP_TAC[AFFINE_AFFINE_HULL; HULL_INC];
-      DISCH_TAC] THEN
-    REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; IN_INTER; IN_ELIM_THM] THEN
-    SUBGOAL_THEN `(a::real^N) \<bullet> v < b \<or> a \<bullet> v > b` STRIP_ASSUME_TAC THENL
-     [ASM_REAL_ARITH_TAC;
-      CONJ_TAC THENL [ASM_MESON_TAC[]; ALL_TAC] THEN
-      EXISTS_TAC `u - e / 2 / norm(v - u) *\<^sub>R (v - u):real^N` THEN
-      ASM_REWRITE_TAC[DOT_RSUB; DOT_RMUL] THEN
-      REWRITE_TAC[REAL_ARITH `b - x * y > b \<longleftrightarrow> 0 < x *-y`] THEN
-      MATCH_MP_TAC REAL_LT_MUL THEN
-      ASM_SIMP_TAC[REAL_LT_DIV; REAL_HALF; NORM_POS_LT; VECTOR_SUB_EQ] THEN
-      ASM_REAL_ARITH_TAC;
-      CONJ_TAC THENL [ALL_TAC; ASM_MESON_TAC[]]] THEN
-    EXISTS_TAC `u - e / 2 / norm(v - u) *\<^sub>R (v - u):real^N` THEN
-    ASM_REWRITE_TAC[DOT_RSUB; DOT_RMUL] THEN
-    REWRITE_TAC[REAL_ARITH `b - x * y > b \<longleftrightarrow> 0 < x *-y`;
-                REAL_ARITH `b - x < b \<longleftrightarrow> 0 < x`] THEN
-    MATCH_MP_TAC REAL_LT_MUL THEN
-    ASM_SIMP_TAC[REAL_LT_DIV; REAL_HALF; NORM_POS_LT; VECTOR_SUB_EQ] THEN
-    ASM_REAL_ARITH_TAC;
-    ALL_TAC] THEN
-  MATCH_MP_TAC EQ_TRANS THEN EXISTS_TAC
-   `sum {{x. a \<bullet> x = b} \<inter> c,
-         {x. a \<bullet> x > b} \<inter> c,
-         {x. a \<bullet> x < b} \<inter> c}
-        (\<lambda>c::real^N=>bool. (-1) ^ (nat(aff_dim c)))` THEN
-  CONJ_TAC THENL
-   [MATCH_MP_TAC(MESON[] `s = t \<Longrightarrow> sum s f = sum t f`) THEN
-    GEN_REWRITE_TAC id [EXTENSION] THEN REWRITE_TAC[IN_ELIM_THM] THEN
-    X_GEN_TAC `c':real^N=>bool` THEN
-    REWRITE_TAC[TAUT `(a \<or> b) \<and> c \<longleftrightarrow> a \<and> c \<or> b \<and> c`] THEN
-    REWRITE_TAC[EXISTS_OR_THM; UNWIND_THM2; GSYM CONJ_ASSOC] THEN
-    ONCE_REWRITE_TAC[INTER_COMM] THEN ASM_REWRITE_TAC[] THEN
-    REWRITE_TAC[IN_INSERT; NOT_IN_EMPTY] THEN CONV_TAC TAUT;
-    ALL_TAC] THEN
-  SIMP_TAC[SUM_CLAUSES; FINITE_INSERT; FINITE_EMPTY;
-           IN_INSERT; NOT_IN_EMPTY] THEN
-  ONCE_REWRITE_TAC[INTER_COMM] THEN
-  ASM_SIMP_TAC[HYPERPLANE_CELLS_DISTINCT_LEMMA; REAL_ADD_RID; SET_RULE
-   `s \<inter> t = {} \<and> ~(c \<inter> s = {}) \<Longrightarrow> ~(c \<inter> s = c \<inter> t)`] THEN
-  SUBGOAL_THEN
-   `aff_dim (c \<inter> {x::real^N | a \<bullet> x < b}) = aff_dim c \<and>
-    aff_dim (c \<inter> {x::real^N | a \<bullet> x > b}) = aff_dim c`
-   (CONJUNCTS_THEN SUBST1_TAC)
-  THENL
-   [ONCE_REWRITE_TAC[GSYM AFF_DIM_AFFINE_HULL] THEN CONJ_TAC THEN
-    AP_TERM_TAC THEN MATCH_MP_TAC AFFINE_HULL_CONVEX_INTER_OPEN THEN
-    ASM_REWRITE_TAC[OPEN_HALFSPACE_LT; OPEN_HALFSPACE_GT] THEN
-    ASM_MESON_TAC[HYPERPLANE_CELL_CONVEX];
-    ALL_TAC] THEN
-  SUBGOAL_THEN
-   `aff_dim c = aff_dim(c \<inter> {x::real^N | a \<bullet> x = b}) + 1`
-  SUBST1_TAC THENL
-   [MP_TAC(ISPECL [`A::real^N#real=>bool`; `c::real^N=>bool`]
-        HYPERPLANE_CELL_INTER_OPEN_AFFINE) THEN
-    ASM_SIMP_TAC[LEFT_IMP_EXISTS_THM] THEN
-    MAP_EVERY X_GEN_TAC [`s::real^N=>bool`; `t::real^N=>bool`] THEN
-    STRIP_TAC THEN FIRST_X_ASSUM SUBST_ALL_TAC THEN
-    ONCE_REWRITE_TAC[GSYM AFF_DIM_AFFINE_HULL] THEN
-    SUBGOAL_THEN
-     `affine hull (s \<inter> t) = affine hull t \<and>
-      affine hull ((s \<inter> t) \<inter> {x::real^N | a \<bullet> x = b}) =
-      affine hull (t \<inter> {x::real^N | a \<bullet> x = b})`
-     (CONJUNCTS_THEN SUBST1_TAC)
-    THENL
-     [REWRITE_TAC[INTER_ASSOC] THEN CONJ_TAC THEN
-      GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [INTER_COMM] THEN
-      MATCH_MP_TAC AFFINE_HULL_CONVEX_INTER_OPEN THEN
-      ASM_SIMP_TAC[CONVEX_INTER; CONVEX_HYPERPLANE; AFFINE_IMP_CONVEX] THEN
-      ASM SET_TAC[];
-      REWRITE_TAC[AFF_DIM_AFFINE_HULL] THEN
-      ASM_SIMP_TAC[AFF_DIM_AFFINE_INTER_HYPERPLANE] THEN
-      REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[INT_SUB_ADD]) THEN
-      ASM SET_TAC[]];
-    SUBGOAL_THEN `0 \<le> aff_dim (c \<inter> {x::real^N | a \<bullet> x = b})` MP_TAC
-    THENL [REWRITE_TAC[AFF_DIM_POS_LE] THEN ASM SET_TAC[]; ALL_TAC] THEN
-    SPEC_TAC(`aff_dim (c \<inter> {x::real^N | a \<bullet> x = b})`,`i::int`) THEN
-    REWRITE_TAC[GSYM INT_FORALL_POS] THEN
-    REWRITE_TAC[NUM_OF_INT_OF_NUM; INT_OF_NUM_ADD] THEN
-    REWRITE_TAC[REAL_POW_ADD] THEN REAL_ARITH_TAC]);;
+proposition Euler_characterstic_lemma:
+  assumes "finite A" and "hyperplane_cellcomplex A S"
+  shows "Euler_characteristic (insert h A) S = Euler_characteristic A S"
+proof -
+  obtain \<C> where \<C>: "\<And>C. C \<in> \<C> \<Longrightarrow> hyperplane_cell A C" and "S = \<Union>\<C>"
+              and "pairwise disjnt \<C>"
+    by (meson assms hyperplane_cellcomplex_def pairwise_disjoint_hyperplane_cells)
+  obtain a b where "h = (a,b)"
+    by fastforce
+  have "\<And>C. C \<in> \<C> \<Longrightarrow> hyperplane_cellcomplex A C \<and> hyperplane_cellcomplex (insert (a,b) A) C"
+    by (meson \<C> hyperplane_cell_cellcomplex hyperplane_cellcomplex_mono subset_insertI)
+  moreover
+  have "sum (Euler_characteristic (insert (a,b) A)) \<C> = sum (Euler_characteristic A) \<C>"
+  proof (rule sum.cong [OF refl])
+    fix C
+    assume "C \<in> \<C>"
+    have "Euler_characteristic (insert (a, b) A) C = (-1) ^ nat(aff_dim C)"
+    proof (cases "hyperplane_cell (insert (a,b) A) C")
+      case True
+      then show ?thesis
+        using Euler_characteristic_cell by blast
+    next
+      case False
+      with \<C>[OF \<open>C \<in> \<C>\<close>] have "a \<noteq> 0"
+        by (smt (verit, ccfv_threshold) hyperplane_cell_Un hyperplane_cell_empty hyperplane_cell_singleton insert_is_Un sup_bot_left)
+      have "convex C"
+        using \<open>hyperplane_cell A C\<close> hyperplane_cell_convex by blast
+      define r where "r \<equiv> (\<Sum>D\<in>{C' \<inter> C |C'. hyperplane_cell {(a, b)} C' \<and> C' \<inter> C \<noteq> {}}. (-1::real) ^ nat (aff_dim D))"
+      have "Euler_characteristic (insert (a, b) A) C 
+           = (\<Sum>D | (D \<noteq> {} \<and>
+                     (\<exists>C1 C2. hyperplane_cell {(a, b)} C1 \<and> hyperplane_cell A C2 \<and> D = C1 \<inter> C2)) \<and> D \<subseteq> C.
+              (- 1) ^ nat (aff_dim D))"
+        unfolding r_def Euler_characteristic_def insert_is_Un [of _ A] hyperplane_cell_Un ..
+      also have "\<dots> = r"
+        unfolding r_def
+        apply (rule sum.cong [OF _ refl])
+        using \<open>hyperplane_cell A C\<close> disjoint_hyperplane_cells disjnt_iff
+        by (smt (verit, ccfv_SIG) Collect_cong Int_iff disjoint_iff subsetD subsetI)
+      also have "... = (-1) ^ nat(aff_dim C)"
+      proof -
+        have "C \<noteq> {}"
+          using \<open>hyperplane_cell A C\<close> by auto
+        show ?thesis
+        proof (cases "C \<subseteq> {x. a \<bullet> x < b} \<or> C \<subseteq> {x. a \<bullet> x > b} \<or> C \<subseteq> {x. a \<bullet> x = b}")
+          case Csub: True
+          with \<open>C \<noteq> {}\<close> have "r = sum (\<lambda>c. (-1) ^ nat (aff_dim c)) {C}"
+            unfolding r_def
+            apply (intro sum.cong [OF _ refl])
+            by (auto simp add: \<open>a \<noteq> 0\<close> hyperplane_cell_singleton)
+          also have "... = (-1) ^ nat(aff_dim C)"
+            by simp
+          finally show ?thesis .
+        next
+          case False
+          then obtain u v where uv: "u \<in> C" "\<not> a \<bullet> u < b" "v \<in> C" "\<not> a \<bullet> v > b"
+            by blast
+          have CInt_ne: "C \<inter> {x. a \<bullet> x = b} \<noteq> {}"
+          proof (cases "a \<bullet> u = b \<or> a \<bullet> v = b")
+            case True
+            with uv show ?thesis
+              by blast
+          next
+            case False
+            have "a \<bullet> v < a \<bullet> u"
+              using False uv by auto
+            define w where "w \<equiv> v + ((b - a \<bullet> v) / (a \<bullet> u - a \<bullet> v)) *\<^sub>R (u - v)"
+            have **: "v + a *\<^sub>R (u - v) = (1 - a) *\<^sub>R v + a *\<^sub>R u" for a
+              by (simp add: algebra_simps)
+            have "w \<in> C"
+              unfolding w_def **
+            proof (intro convexD_alt)
+            qed (use \<open>a \<bullet> v < a \<bullet> u\<close> \<open>convex C\<close> uv in auto)
+            moreover have "w \<in> {x. a \<bullet> x = b}"
+              using \<open>a \<bullet> v < a \<bullet> u\<close> by (simp add: w_def inner_add_right inner_diff_right)
+            ultimately show ?thesis
+              by blast
+          qed
+          have Cab: "C \<inter> {x. a \<bullet> x < b} \<noteq> {} \<and> C \<inter> {x. b < a \<bullet> x} \<noteq> {}"
+          proof -
+            obtain u v where "u \<in> C" "a \<bullet> u = b" "v \<in> C" "a \<bullet> v \<noteq> b" "u\<noteq>v"
+              using False \<open>C \<inter> {x. a \<bullet> x = b} \<noteq> {}\<close> by blast
+            have "openin (subtopology euclidean (affine hull C)) C"
+              using \<open>hyperplane_cell A C\<close> \<open>finite A\<close> hyperplane_cell_relatively_open by blast
+            then obtain \<epsilon> where "0 < \<epsilon>"
+                  and \<epsilon>: "\<And>x'. \<lbrakk>x' \<in> affine hull C; dist x' u < \<epsilon>\<rbrakk> \<Longrightarrow> x' \<in> C"
+              by (meson \<open>u \<in> C\<close> openin_euclidean_subtopology_iff)
+            define \<xi> where "\<xi> \<equiv> u - (\<epsilon> / 2 / norm (v - u)) *\<^sub>R (v - u)"
+            have "\<xi> \<in> C"
+            proof (rule \<epsilon>)
+              show "\<xi> \<in> affine hull C"
+                by (simp add: \<xi>_def \<open>u \<in> C\<close> \<open>v \<in> C\<close> hull_inc mem_affine_3_minus2)
+            qed (use \<xi>_def \<open>0 < \<epsilon>\<close> in force)
+            consider "a \<bullet> v < b" | "a \<bullet> v > b"
+              using \<open>a \<bullet> v \<noteq> b\<close> by linarith
+            then show ?thesis
+            proof cases
+              case 1
+              moreover have "\<xi> \<in> {x. b < a \<bullet> x}"
+                using "1" \<open>0 < \<epsilon>\<close> \<open>a \<bullet> u = b\<close> divide_less_cancel 
+                by (fastforce simp add: \<xi>_def algebra_simps)
+              ultimately show ?thesis
+                using \<open>v \<in> C\<close> \<open>\<xi> \<in> C\<close> by blast
+            next
+              case 2
+              moreover have "\<xi> \<in> {x. b > a \<bullet> x}"
+                using "2" \<open>0 < \<epsilon>\<close> \<open>a \<bullet> u = b\<close> divide_less_cancel 
+                by (fastforce simp add: \<xi>_def algebra_simps)
+              ultimately show ?thesis
+                using \<open>v \<in> C\<close> \<open>\<xi> \<in> C\<close> by blast
+            qed
+          qed
+          have "r = (\<Sum>C\<in>{{x. a \<bullet> x = b} \<inter> C, {x. b < a \<bullet> x} \<inter> C, {x. a \<bullet> x < b} \<inter> C}.
+                     (- 1) ^ nat (aff_dim C))"
+            unfolding r_def 
+            apply (intro sum.cong [OF _ refl] equalityI)
+            subgoal using \<open>a \<noteq> 0\<close> 
+              by (auto simp: hyperplane_cell_singleton)
+            subgoal
+              apply clarsimp
+              using Cab Int_commute \<open>C \<inter> {x. a \<bullet> x = b} \<noteq> {}\<close> hyperplane_cell_singleton \<open>a \<noteq> 0\<close>
+              by metis
+            done
+          also have "... = (-1) ^ nat (aff_dim (C \<inter> {x. a \<bullet> x = b})) 
+                         + (-1) ^ nat (aff_dim (C \<inter> {x. b < a \<bullet> x})) 
+                         + (-1) ^ nat (aff_dim (C \<inter> {x. a \<bullet> x < b}))"
+            using hyperplane_cells_distinct_lemma [of a b] Cab
+            by (auto simp add: sum.insert_if Int_commute Int_left_commute)
+          also have "... = (- 1) ^ nat (aff_dim C)"
+          proof -
+            have *: "aff_dim (C \<inter> {x. a \<bullet> x < b}) = aff_dim C \<and> aff_dim (C \<inter> {x. a \<bullet> x > b}) = aff_dim C"
+              by (metis Cab open_halfspace_lt open_halfspace_gt aff_dim_affine_hull 
+                        affine_hull_convex_Int_open[OF \<open>convex C\<close>])
+            obtain S T where "open S" "affine T" and Ceq: "C = S \<inter> T"
+              by (meson \<open>hyperplane_cell A C\<close> \<open>finite A\<close> hyperplane_cell_Int_open_affine)
+            have "affine hull C = affine hull T"
+              by (metis Ceq \<open>C \<noteq> {}\<close> \<open>affine T\<close> \<open>open S\<close> affine_hull_affine_Int_open inf_commute)
+            moreover
+            have "T \<inter> ({x. a \<bullet> x = b} \<inter> S) \<noteq> {}"
+              using Ceq \<open>C \<inter> {x. a \<bullet> x = b} \<noteq> {}\<close> by blast
+            then have "affine hull (C \<inter> {x. a \<bullet> x = b}) = affine hull (T \<inter> {x. a \<bullet> x = b})"
+              using affine_hull_affine_Int_open[of "T \<inter> {x. a \<bullet> x = b}" S] 
+              by (simp add: Ceq Int_ac \<open>affine T\<close> \<open>open S\<close> affine_Int affine_hyperplane)
+            ultimately have "aff_dim (affine hull C) = aff_dim(affine hull (C \<inter> {x. a \<bullet> x = b})) + 1"
+              using CInt_ne False Ceq
+              by (auto simp add: aff_dim_affine_Int_hyperplane \<open>affine T\<close>)
+            moreover have "0 \<le> aff_dim (C \<inter> {x. a \<bullet> x = b})"
+              by (metis CInt_ne aff_dim_negative_iff linorder_not_le)
+            ultimately show ?thesis
+              by (simp add: * nat_add_distrib)
+          qed
+          finally show ?thesis .
+        qed
+      qed
+      finally show "Euler_characteristic (insert (a, b) A) C = (-1) ^ nat(aff_dim C)" .
+    qed
+    then show "Euler_characteristic (insert (a, b) A) C = (Euler_characteristic A C)"
+      by (simp add: Euler_characteristic_cell \<C> \<open>C \<in> \<C>\<close>)
+  qed
+  ultimately show ?thesis
+    by (simp add: Euler_characteristic_cellcomplex_Union \<open>S = \<Union> \<C>\<close> \<open>disjoint \<C>\<close> \<open>h = (a, b)\<close> assms(1))
+qed
+
+
 
 lemma Euler_characterstic_invariant:
-   "\<And>A B h s::real^N=>bool.
+   "\<And>A B h S::real^N=>bool.
         finite A \<and> finite B \<and>
-        hyperplane_cellcomplex A s \<and> hyperplane_cellcomplex B s
-        \<Longrightarrow> Euler_characteristic A s = Euler_characteristic B s"
+        hyperplane_cellcomplex A S \<and> hyperplane_cellcomplex B S
+        \<Longrightarrow> Euler_characteristic A S = Euler_characteristic B S"
 oops 
   SUBGOAL_THEN
-   `\<forall>A s::real^N=>bool.
-        finite A \<and> hyperplane_cellcomplex A s
+   `\<forall>A S::real^N=>bool.
+        finite A \<and> hyperplane_cellcomplex A S
         \<Longrightarrow> \<forall>B. finite B
-                \<Longrightarrow> Euler_characteristic (A \<union> B) s =
-                    Euler_characteristic A s`
+                \<Longrightarrow> Euler_characteristic (A \<union> B) S =
+                    Euler_characteristic A S`
   ASSUME_TAC THENL
    [REPEAT GEN_TAC THEN STRIP_TAC THEN
     MATCH_MP_TAC FINITE_INDUCT_STRONG THEN ASM_REWRITE_TAC[UNION_EMPTY] THEN
     MAP_EVERY X_GEN_TAC [`h::real^N#real`; `B::real^N#real=>bool`] THEN
     DISCH_THEN(CONJUNCTS_THEN2 (SUBST1_TAC o SYM) STRIP_ASSUME_TAC) THEN
-    REWRITE_TAC[SET_RULE `s \<union> (insert x t) = x insert (s \<union> t)`] THEN
+    REWRITE_TAC[SET_RULE `S \<union> (insert x t) = x insert (S \<union> t)`] THEN
     MATCH_MP_TAC EULER_CHARACTERSTIC_LEMMA THEN
     ASM_REWRITE_TAC[FINITE_UNION] THEN
     MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_MONO THEN
     EXISTS_TAC `A::real^N#real=>bool` THEN ASM_REWRITE_TAC[] THEN SET_TAC[];
     RULE_ASSUM_TAC(REWRITE_RULE[RIGHT_IMP_FORALL_THM; IMP_IMP]) THEN
     REPEAT STRIP_TAC THEN MATCH_MP_TAC EQ_TRANS THEN
-    EXISTS_TAC `Euler_characteristic (A \<union> B) (s::real^N=>bool)` THEN
+    EXISTS_TAC `Euler_characteristic (A \<union> B) (S::real^N=>bool)` THEN
     ASM_MESON_TAC[UNION_COMM]]);;
 
 lemma Euler_characteristic_inclusion_exclusion:
-   "\<And>A s:(real^N=>bool)->bool.
-        finite A \<and> finite s \<and> (\<forall>k. k \<in> s \<Longrightarrow> hyperplane_cellcomplex A k)
-        \<Longrightarrow> Euler_characteristic A (\<Union> s) =
-            sum {t. t \<subseteq> s \<and> (t \<noteq> {})}
+   "\<And>A S:(real^N=>bool)->bool.
+        finite A \<and> finite S \<and> (\<forall>k. k \<in> S \<Longrightarrow> hyperplane_cellcomplex A k)
+        \<Longrightarrow> Euler_characteristic A (\<Union> S) =
+            sum {t. t \<subseteq> S \<and> (t \<noteq> {})}
                 (\<lambda>t. (-1) ^ (card t + 1) *
                      Euler_characteristic A (\<Inter> t))"
 oops 
@@ -727,7 +682,7 @@ oops
   MP_TAC(ISPECL
    [`hyperplane_cellcomplex A :(real^N=>bool)->bool`;
     `Euler_characteristic A :(real^N=>bool)->real`;
-    `s:(real^N=>bool)->bool`]
+    `S:(real^N=>bool)->bool`]
         INCLUSION_EXCLUSION_REAL_RESTRICTED) THEN
   ASM_SIMP_TAC[EULER_CHARACTERISTIC_CELLCOMPLEX_UNION] THEN
   SIMP_TAC[HYPERPLANE_CELLCOMPLEX_EMPTY; HYPERPLANE_CELLCOMPLEX_INTER;
@@ -738,15 +693,15 @@ text\<open> Euler-type relation for full-dimensional proper polyhedral cones.   
 text\<open> ------------------------------------------------------------------------- \<close>
 
 lemma Euler_polyhedral_cone:
-   "polyhedron s \<and> conic s \<and> ~(interior s = {}) \<and> (s \<noteq> UNIV)
+   "polyhedron S \<and> conic S \<and> ~(interior S = {}) \<and> (S \<noteq> UNIV)
        \<Longrightarrow> sum (0..DIM('N))
                (\<lambda>d. (-1) ^ d *
-                    (card {f. f face_of s \<and> aff_dim f = d })) = 0"
+                    (card {f. f face_of S \<and> aff_dim f = d })) = 0"
 oops 
   REPEAT STRIP_TAC THEN
-  SUBGOAL_THEN `affine hull s = UNIV` ASSUME_TAC THENL
-   [MATCH_MP_TAC(SET_RULE `\<forall>s. s = UNIV \<and> s \<subseteq> t \<Longrightarrow> t = UNIV`) THEN
-    EXISTS_TAC `affine hull (interior s::real^N=>bool)` THEN
+  SUBGOAL_THEN `affine hull S = UNIV` ASSUME_TAC THENL
+   [MATCH_MP_TAC(SET_RULE `\<forall>S. S = UNIV \<and> S \<subseteq> t \<Longrightarrow> t = UNIV`) THEN
+    EXISTS_TAC `affine hull (interior S::real^N=>bool)` THEN
     SIMP_TAC[INTERIOR_SUBSET; HULL_MONO] THEN
     MATCH_MP_TAC AFFINE_HULL_OPEN THEN ASM_REWRITE_TAC[OPEN_INTERIOR];
     ALL_TAC] THEN
@@ -756,7 +711,7 @@ oops
   X_GEN_TAC `H:(real^N=>bool)->bool` THEN
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
   DISCH_THEN(CONJUNCTS_THEN2 (ASSUME_TAC o SYM) STRIP_ASSUME_TAC) THEN
-  SUBGOAL_THEN `(0::real^N) \<in> s` ASSUME_TAC THENL
+  SUBGOAL_THEN `(0::real^N) \<in> S` ASSUME_TAC THENL
    [ASM_SIMP_TAC[CONIC_CONTAINS_0] THEN
     ASM_MESON_TAC[SUBSET_EMPTY; INTERIOR_SUBSET];
     ALL_TAC] THEN
@@ -786,7 +741,7 @@ oops
         SUBGOAL_THEN `0 < (a::real^N) \<bullet> x` ASSUME_TAC THENL
          [MATCH_MP_TAC REAL_LT_TRANS THEN EXISTS_TAC `b::real` THEN
           ASM_REWRITE_TAC[] THEN
-          UNDISCH_TAC `~((x::real^N) \<in> s)` THEN EXPAND_TAC "s" THEN
+          UNDISCH_TAC `~((x::real^N) \<in> S)` THEN EXPAND_TAC "S" THEN
           ONCE_REWRITE_TAC[GSYM CONTRAPOS_THM] THEN
           REWRITE_TAC[REAL_NOT_LT] THEN DISCH_TAC THEN
           SUBGOAL_THEN `H:(real^N=>bool)->bool = h insert (H - {h})`
@@ -796,7 +751,7 @@ oops
           ASM_SIMP_TAC[REAL_LT_MIN; REAL_LT_DIV; REAL_MIN_LT] THEN
           CONV_TAC REAL_RAT_REDUCE_CONV THEN
           ASM_SIMP_TAC[GSYM REAL_LE_RDIV_EQ] THEN REAL_ARITH_TAC];
-        UNDISCH_TAC `~((x::real^N) \<in> s)` THEN REWRITE_TAC[] THEN
+        UNDISCH_TAC `~((x::real^N) \<in> S)` THEN REWRITE_TAC[] THEN
         SUBGOAL_THEN `x::real^N = inverse e *\<^sub>R e *\<^sub>R x` SUBST1_TAC THENL
          [ASM_SIMP_TAC[VECTOR_MUL_ASSOC; REAL_MUL_LINV; REAL_LT_IMP_NZ;
                        VECTOR_MUL_LID];
@@ -804,7 +759,7 @@ oops
         RULE_ASSUM_TAC(REWRITE_RULE[conic]) THEN
         FIRST_ASSUM MATCH_MP_TAC THEN
         ASM_SIMP_TAC[REAL_LT_IMP_LE; REAL_LE_INV_EQ] THEN
-        EXPAND_TAC "s" THEN
+        EXPAND_TAC "S" THEN
         SUBGOAL_THEN `H:(real^N=>bool)->bool = h insert (H - {h})`
         SUBST1_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
         REWRITE_TAC[INTERS_INSERT; IN_INTER] THEN
@@ -840,7 +795,7 @@ oops
    [EXPAND_TAC "A" THEN MATCH_MP_TAC FINITE_IMAGE THEN ASM_SIMP_TAC[];
     ALL_TAC] THEN
   MATCH_MP_TAC EQ_TRANS THEN
-  EXISTS_TAC `Euler_characteristic A (s::real^N=>bool)` THEN CONJ_TAC THENL
+  EXISTS_TAC `Euler_characteristic A (S::real^N=>bool)` THEN CONJ_TAC THENL
    [ASM_SIMP_TAC[EULER_CHARACTERISTIC] THEN MATCH_MP_TAC SUM_EQ_NUMSEG THEN
     X_GEN_TAC `d::num` THEN STRIP_TAC THEN REWRITE_TAC[] THEN
     AP_TERM_TAC THEN AP_TERM_TAC THEN MATCH_MP_TAC BIJECTIONS_CARD_EQ THEN
@@ -869,38 +824,38 @@ oops
        [ASM_REWRITE_TAC[GSYM AFF_DIM_POS_LE; INT_POS]; ALL_TAC] THEN
       SUBGOAL_THEN
        `\<exists>J. J \<subseteq> H \<and>
-            f = \<Inter> {{x::real^N | fa h \<bullet> x \<le> 0} | h \<in> H} \<inter>
+            f = \<Inter> {{x. fa h \<bullet> x \<le> 0} | h \<in> H} \<inter>
                 \<Inter> {{x. fa(h::real^N=>bool) \<bullet> x = 0} | h \<in> J}`
       ASSUME_TAC THENL
-       [ASM_CASES_TAC `f::real^N=>bool = s` THENL
+       [ASM_CASES_TAC `f::real^N=>bool = S` THENL
          [EXISTS_TAC `{}:(real^N=>bool)->bool` THEN
           REWRITE_TAC[EMPTY_SUBSET; NOT_IN_EMPTY; INTERS_0; INTER_UNIV;
                       SET_RULE `{f x | x | False} = {}`] THEN
           ASM_REWRITE_TAC[] THEN
-          REWRITE_TAC[SYM(ASSUME `\<Inter> H = (s::real^N=>bool)`)] THEN
+          REWRITE_TAC[SYM(ASSUME `\<Inter> H = (S::real^N=>bool)`)] THEN
           AP_TERM_TAC THEN MATCH_MP_TAC(SET_RULE
-           `(\<forall>x. x \<in> s \<Longrightarrow> f x = x) \<Longrightarrow> s = {f x | x \<in> s}`) THEN
+           `(\<forall>x. x \<in> S \<Longrightarrow> f x = x) \<Longrightarrow> S = {f x | x \<in> S}`) THEN
           ASM_SIMP_TAC[];
           ALL_TAC] THEN
         EXISTS_TAC
         `{h::real^N=>bool | h \<in> H \<and>
-                     f \<subseteq> s \<inter> {x::real^N | fa h \<bullet> x = 0}}` THEN
+                     f \<subseteq> S \<inter> {x. fa h \<bullet> x = 0}}` THEN
         CONJ_TAC THENL [SET_TAC[]; ALL_TAC] THEN
-        MP_TAC(ISPECL [`s::real^N=>bool`; `H:(real^N=>bool)->bool`;
+        MP_TAC(ISPECL [`S::real^N=>bool`; `H:(real^N=>bool)->bool`;
                        `fa:(real^N=>bool)->real^N`;
                        `\<lambda>h::real^N=>bool. 0`]
           FACE_OF_POLYHEDRON_EXPLICIT) THEN
         ASM_SIMP_TAC[INTER_UNIV] THEN
         DISCH_THEN(MP_TAC o SPEC `f::real^N=>bool`) THEN ASM_REWRITE_TAC[] THEN
         SUBGOAL_THEN
-         `\<Inter> {{x::real^N | fa(h::real^N=>bool) \<bullet> x \<le> 0} | h \<in> H} = s`
+         `\<Inter> {{x. fa(h::real^N=>bool) \<bullet> x \<le> 0} | h \<in> H} = S`
         ASSUME_TAC THENL
-         [EXPAND_TAC "s" THEN AP_TERM_TAC THEN MATCH_MP_TAC(SET_RULE
-           `(\<forall>x. x \<in> s \<Longrightarrow> f x = x) \<Longrightarrow> {f x | x \<in> s} = s`) THEN
+         [EXPAND_TAC "S" THEN AP_TERM_TAC THEN MATCH_MP_TAC(SET_RULE
+           `(\<forall>x. x \<in> S \<Longrightarrow> f x = x) \<Longrightarrow> {f x | x \<in> S} = S`) THEN
           ASM_SIMP_TAC[];
          ALL_TAC] THEN
         ASM_CASES_TAC `{h::real^N=>bool | h \<in> H \<and>
-                           f \<subseteq> s \<inter> {x::real^N | fa h \<bullet> x = 0}} =
+                           f \<subseteq> S \<inter> {x. fa h \<bullet> x = 0}} =
                        {}`
         THENL
          [ONCE_REWRITE_TAC[SIMPLE_IMAGE_GEN] THEN
@@ -912,11 +867,11 @@ oops
         ASM_REWRITE_TAC[] THEN GEN_REWRITE_TAC id [EXTENSION] THEN
         X_GEN_TAC `y::real^N` THEN REWRITE_TAC[IN_INTER; IN_INTERS] THEN
         REWRITE_TAC[FORALL_IN_GSPEC; IN_INTER] THEN
-        ASM_CASES_TAC `(y::real^N) \<in> s` THEN ASM_REWRITE_TAC[] THEN
+        ASM_CASES_TAC `(y::real^N) \<in> S` THEN ASM_REWRITE_TAC[] THEN
         ASM SET_TAC[];
         ALL_TAC] THEN
       ABBREV_TAC
-       `H' = image (\<lambda>h::real^N=>bool. {x::real^N | --(fa h) \<bullet> x \<le> 0}) H` THEN
+       `H' = image (\<lambda>h::real^N=>bool. {x. --(fa h) \<bullet> x \<le> 0}) H` THEN
       SUBGOAL_THEN
        `\<exists>J. finite J \<and>
             J \<subseteq> (H \<union> H') \<and>
@@ -926,21 +881,21 @@ oops
           STRIP_ASSUME_TAC) THEN
         EXISTS_TAC
          `H \<union> image (\<lambda>h::real^N=>bool.
-             {x::real^N | --(fa h) \<bullet> x \<le> 0}) J` THEN
+             {x. --(fa h) \<bullet> x \<le> 0}) J` THEN
         REPEAT CONJ_TAC THENL
          [ASM_REWRITE_TAC[FINITE_UNION] THEN MATCH_MP_TAC FINITE_IMAGE THEN
           ASM_MESON_TAC[FINITE_SUBSET];
           EXPAND_TAC "H'" THEN ASM SET_TAC[];
-          MATCH_MP_TAC(SET_RULE `s \<subseteq> f \<and> s = t \<Longrightarrow> s = f \<inter> t`) THEN
+          MATCH_MP_TAC(SET_RULE `S \<subseteq> f \<and> S = t \<Longrightarrow> S = f \<inter> t`) THEN
           REWRITE_TAC[HULL_SUBSET] THEN
           FIRST_X_ASSUM(fun th -> GEN_REWRITE_TAC LAND_CONV [th]) THEN
           REWRITE_TAC[GSYM REAL_LE_ANTISYM] THEN
           REWRITE_TAC[INTERS_UNION] THEN MATCH_MP_TAC(SET_RULE
-           `s = s' \<and> (\<forall>x. x \<in> s \<Longrightarrow> (x \<in> t \<longleftrightarrow> x \<in> t'))
-            \<Longrightarrow> s \<inter> t = s' \<inter> t'`) THEN
+           `S = s' \<and> (\<forall>x. x \<in> S \<Longrightarrow> (x \<in> t \<longleftrightarrow> x \<in> t'))
+            \<Longrightarrow> S \<inter> t = s' \<inter> t'`) THEN
           CONJ_TAC THENL
            [AP_TERM_TAC THEN MATCH_MP_TAC(SET_RULE
-             `(\<forall>x. x \<in> s \<Longrightarrow> f x = x) \<Longrightarrow> {f x | x \<in> s} = s`) THEN
+             `(\<forall>x. x \<in> S \<Longrightarrow> f x = x) \<Longrightarrow> {f x | x \<in> S} = S`) THEN
             ASM_SIMP_TAC[];
             ALL_TAC] THEN
           X_GEN_TAC `y::real^N` THEN REWRITE_TAC[IN_INTERS] THEN
@@ -970,7 +925,7 @@ oops
          [ASM_MESON_TAC[\<subset>; FINITE_SUBSET; HAS_SIZE]; ALL_TAC] THEN
         CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
         MATCH_MP_TAC(SET_RULE
-         `s \<subseteq> t \<Longrightarrow> (s \<noteq> t) \<Longrightarrow> s \<subset> t`) THEN
+         `S \<subseteq> t \<Longrightarrow> (S \<noteq> t) \<Longrightarrow> S \<subset> t`) THEN
         FIRST_X_ASSUM(fun th -> GEN_REWRITE_TAC LAND_CONV [th]) THEN
         ASM SET_TAC[];
         ALL_TAC] THEN
@@ -1012,7 +967,7 @@ oops
          [ASM_MESON_TAC[RELATIVE_INTERIOR_EQ_EMPTY; FACE_OF_IMP_CONVEX];
           REWRITE_TAC[GSYM MEMBER_NOT_EMPTY]] THEN
         DISCH_THEN(X_CHOOSE_TAC `z::real^N`) THEN
-        SUBGOAL_THEN `(z::real^N) \<in> f \<and> z \<in> s` STRIP_ASSUME_TAC THENL
+        SUBGOAL_THEN `(z::real^N) \<in> f \<and> z \<in> S` STRIP_ASSUME_TAC THENL
          [ASM_MESON_TAC[\<subseteq>; FACE_OF_IMP_SUBSET; RELATIVE_INTERIOR_SUBSET];
           ALL_TAC] THEN
         X_GEN_TAC `h::real^N=>bool` THEN DISCH_TAC THEN
@@ -1025,7 +980,7 @@ oops
         ASM_REWRITE_TAC[IN_ELIM_THM] THEN
         DISCH_THEN(MP_TAC o SPEC `h::real^N=>bool`) THEN
         ASM_REWRITE_TAC[DOT_LNEG] THEN
-        UNDISCH_TAC `(z::real^N) \<in> s` THEN EXPAND_TAC "s" THEN
+        UNDISCH_TAC `(z::real^N) \<in> S` THEN EXPAND_TAC "S" THEN
         REWRITE_TAC[IN_INTERS] THEN
         DISCH_THEN(MP_TAC o SPEC `h':real^N=>bool`) THEN ASM_REWRITE_TAC[] THEN
         FIRST_X_ASSUM(MP_TAC o SPEC `h':real^N=>bool`) THEN
@@ -1054,7 +1009,7 @@ oops
       SUBGOAL_THEN
        `rel_interior f =
           \<Inter> {(if (h::real^N=>bool) \<in> J then {x. fa h \<bullet> x < 0}
-                   else if h \<in> K then {x::real^N | fa h \<bullet> x = 0}
+                   else if h \<in> K then {x. fa h \<bullet> x = 0}
                    else if rel_interior f \<subseteq> {x. fa h \<bullet> x = 0}
                    then {x. fa h \<bullet> x = 0}
                    else {x. fa h \<bullet> x < 0}) | h \<in> H}`
@@ -1083,7 +1038,7 @@ oops
         REWRITE_TAC[IN_ELIM_THM; REAL_LT_LE] THEN
         CONJ_TAC THENL [ASM SET_TAC[]; DISCH_TAC] THEN
         FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id
-         [SET_RULE `~(s \<subseteq> t) \<longleftrightarrow> \<exists>y. y \<in> s \<and> (y \<notin> t)`]) THEN
+         [SET_RULE `~(S \<subseteq> t) \<longleftrightarrow> \<exists>y. y \<in> S \<and> (y \<notin> t)`]) THEN
         REWRITE_TAC[IN_ELIM_THM; NOT_EXISTS_THM] THEN
         X_GEN_TAC `y::real^N` THEN STRIP_TAC THEN
         FIRST_X_ASSUM(DISJ_CASES_TAC o MATCH_MP (REAL_ARITH
@@ -1109,9 +1064,9 @@ oops
                        REAL_DIV_RMUL; NORM_EQ_0; VECTOR_SUB_EQ] THEN
           ASM_REAL_ARITH_TAC;
           DISCH_TAC] THEN
-        SUBGOAL_THEN `(x + e / norm(y - x) *\<^sub>R (x - y):real^N) \<in> s` MP_TAC THENL
+        SUBGOAL_THEN `(x + e / norm(y - x) *\<^sub>R (x - y):real^N) \<in> S` MP_TAC THENL
          [ASM_MESON_TAC[\<subseteq>; FACE_OF_IMP_SUBSET]; ALL_TAC] THEN
-        EXPAND_TAC "s" THEN REWRITE_TAC[IN_INTERS] THEN
+        EXPAND_TAC "S" THEN REWRITE_TAC[IN_INTERS] THEN
         DISCH_THEN(MP_TAC o SPEC `h::real^N=>bool`) THEN
         ASM_REWRITE_TAC[] THEN
         FIRST_ASSUM(fun th -> GEN_REWRITE_TAC (RAND_CONV o RAND_CONV)
@@ -1153,7 +1108,7 @@ oops
       SUBGOAL_THEN
        `\<exists>J. J \<subseteq> H \<and>
             c = \<Inter> {{x. (fa(h::real^N=>bool)) \<bullet> x < 0} | h \<in> J} \<inter>
-                \<Inter> {{x::real^N | (fa h) \<bullet> x = 0} | h \<in> (H - J)}`
+                \<Inter> {{x. (fa h) \<bullet> x = 0} | h \<in> (H - J)}`
       MP_TAC THENL
        [FIRST_ASSUM(MP_TAC o GEN_REWRITE_RULE id [HYPERPLANE_CELL]) THEN
         EXPAND_TAC "A" THEN REWRITE_TAC[hyperplane_equiv; FORALL_IN_IMAGE] THEN
@@ -1164,7 +1119,7 @@ oops
         DISCH_THEN(ASSUME_TAC o SYM) THEN EXISTS_TAC
          `{h::real^N=>bool | h \<in> H \<and>
                             sgn(fa h \<bullet> (z::real^N)) =-1}` THEN
-        REWRITE_TAC[SET_RULE `{x. x \<in> s \<and> P x} \<subseteq> s`] THEN
+        REWRITE_TAC[SET_RULE `{x. x \<in> S \<and> P x} \<subseteq> S`] THEN
         REWRITE_TAC[GSYM INTERS_UNION] THEN EXPAND_TAC "c" THEN
         GEN_REWRITE_TAC id [EXTENSION] THEN X_GEN_TAC `y::real^N` THEN
         REWRITE_TAC[IN_ELIM_THM; IN_INTERS] THEN REWRITE_TAC[IN_UNION] THEN
@@ -1180,10 +1135,10 @@ oops
          (SPEC `(fa:(real^N=>bool)->real^N) h \<bullet> z` REAL_SGN_CASES) THEN
         ASM_REWRITE_TAC[] THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN
         REWRITE_TAC[REAL_SGN_EQ] THEN
-        SUBGOAL_THEN `\<exists>x::real^N. x \<in> c \<and> x \<in> s` MP_TAC THENL
+        SUBGOAL_THEN `\<exists>x::real^N. x \<in> C \<and> x \<in> S` MP_TAC THENL
          [ASM_MESON_TAC[MEMBER_NOT_EMPTY; \<subseteq>; NONEMPTY_HYPERPLANE_CELL];
           MATCH_MP_TAC(TAUT `~p \<Longrightarrow> p \<Longrightarrow> q`)] THEN
-        MAP_EVERY EXPAND_TAC ["s"; "c"] THEN
+        MAP_EVERY EXPAND_TAC ["S"; "c"] THEN
         REWRITE_TAC[IN_INTERS; IN_ELIM_THM; NOT_EXISTS_THM] THEN
         X_GEN_TAC `x::real^N` THEN REWRITE_TAC[AND_FORALL_THM] THEN
         DISCH_THEN(MP_TAC o SPEC `h::real^N=>bool`) THEN
@@ -1212,8 +1167,8 @@ oops
           rand o lhand o rand o snd) THEN
         ANTS_TAC THENL
          [MATCH_MP_TAC(MESON[OPEN_IN_SUBTOPOLOGY_REFL]
-           `s \<subseteq> topspace tp \<and> t = s
-            \<Longrightarrow> openin (subtopology tp t) s`) THEN
+           `S \<subseteq> topspace tp \<and> t = S
+            \<Longrightarrow> openin (subtopology tp t) S`) THEN
           REWRITE_TAC[SUBSET_UNIV; TOPSPACE_EUCLIDEAN] THEN
           REWRITE_TAC[AFFINE_HULL_EQ] THEN
           SIMP_TAC[AFFINE_INTERS; AFFINE_HYPERPLANE; FORALL_IN_GSPEC];
@@ -1231,7 +1186,7 @@ oops
        [ONCE_REWRITE_TAC[SIMPLE_IMAGE] THEN
         REWRITE_TAC[GSYM IMAGE_o; o_DEF] THEN
         MATCH_MP_TAC(SET_RULE
-         `(\<forall>x. x \<in> s \<Longrightarrow> f x = g x) \<Longrightarrow> f ` s = g ` s`) THEN
+         `(\<forall>x. x \<in> S \<Longrightarrow> f x = g x) \<Longrightarrow> f ` S = g ` S`) THEN
         GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[] THEN
         MATCH_MP_TAC CLOSURE_HALFSPACE_LT THEN ASM SET_TAC[];
         ALL_TAC] THEN
@@ -1248,32 +1203,32 @@ oops
         FIRST_ASSUM(MP_TAC o MATCH_MP FACE_OF_REFL o
          MATCH_MP POLYHEDRON_IMP_CONVEX) THEN
         MATCH_MP_TAC EQ_IMP THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-        EXPAND_TAC "s" THEN AP_TERM_TAC THEN
+        EXPAND_TAC "S" THEN AP_TERM_TAC THEN
         MATCH_MP_TAC(SET_RULE
-         `(\<forall>x. x \<in> s \<Longrightarrow> f x = x) \<Longrightarrow> s = {f x | x \<in> s}`) THEN
+         `(\<forall>x. x \<in> S \<Longrightarrow> f x = x) \<Longrightarrow> S = {f x | x \<in> S}`) THEN
         ASM_SIMP_TAC[];
         ALL_TAC] THEN
       SUBGOAL_THEN
        `\<Inter> {{x. fa(h::real^N=>bool) \<bullet> x \<le> 0} | h \<in> J} \<inter>
-        \<Inter> {{x::real^N | fa h \<bullet> x = 0} | h \<in> H - J} =
-        \<Inter> {s \<inter> {x. fa h \<bullet> x = 0} | h \<in> H - J}`
+        \<Inter> {{x. fa h \<bullet> x = 0} | h \<in> H - J} =
+        \<Inter> {S \<inter> {x. fa h \<bullet> x = 0} | h \<in> H - J}`
       SUBST1_TAC THENL
        [ONCE_REWRITE_TAC[SIMPLE_IMAGE] THEN REWRITE_TAC[INTERS_IMAGE] THEN
         GEN_REWRITE_TAC id [EXTENSION] THEN X_GEN_TAC `y::real^N` THEN
         REWRITE_TAC[IN_INTER; IN_ELIM_THM] THEN
-        ASM_CASES_TAC `(y::real^N) \<in> s` THEN ASM_REWRITE_TAC[] THENL
+        ASM_CASES_TAC `(y::real^N) \<in> S` THEN ASM_REWRITE_TAC[] THENL
          [MATCH_MP_TAC(TAUT `a \<Longrightarrow> (a \<and> b \<longleftrightarrow> b)`) THEN
-          UNDISCH_TAC `(y::real^N) \<in> s` THEN EXPAND_TAC "s" THEN
+          UNDISCH_TAC `(y::real^N) \<in> S` THEN EXPAND_TAC "S" THEN
           REWRITE_TAC[IN_INTERS] THEN MATCH_MP_TAC MONO_FORALL THEN
           X_GEN_TAC `h::real^N=>bool` THEN
           DISCH_THEN(fun th -> DISCH_TAC THEN MP_TAC th) THEN
           ANTS_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
           FIRST_X_ASSUM(MP_TAC o SPEC `h::real^N=>bool`) THEN
           ANTS_TAC THENL [ASM SET_TAC[]; SET_TAC[]];
-          UNDISCH_TAC `~((y::real^N) \<in> s)` THEN MATCH_MP_TAC
+          UNDISCH_TAC `~((y::real^N) \<in> S)` THEN MATCH_MP_TAC
            (TAUT `~q \<and> (p \<Longrightarrow> r) \<Longrightarrow> ~r \<Longrightarrow> (p \<longleftrightarrow> q)`) THEN
           CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-          EXPAND_TAC "s" THEN REWRITE_TAC[IN_INTERS; AND_FORALL_THM] THEN
+          EXPAND_TAC "S" THEN REWRITE_TAC[IN_INTERS; AND_FORALL_THM] THEN
           MATCH_MP_TAC MONO_FORALL THEN
           X_GEN_TAC `h::real^N=>bool` THEN
           DISCH_THEN(fun th -> DISCH_TAC THEN MP_TAC th) THEN
@@ -1291,7 +1246,7 @@ oops
       X_GEN_TAC `h::real^N=>bool` THEN REWRITE_TAC[IN_DIFF] THEN STRIP_TAC THEN
       MATCH_MP_TAC FACE_OF_INTER_SUPPORTING_HYPERPLANE_LE THEN
       ASM_SIMP_TAC[POLYHEDRON_IMP_CONVEX] THEN X_GEN_TAC `y::real^N` THEN
-      EXPAND_TAC "s" THEN REWRITE_TAC[IN_INTERS] THEN
+      EXPAND_TAC "S" THEN REWRITE_TAC[IN_INTERS] THEN
       DISCH_THEN(MP_TAC o SPEC `h::real^N=>bool`) THEN ASM_REWRITE_TAC[] THEN
       FIRST_X_ASSUM(MP_TAC o SPEC `h::real^N=>bool`) THEN
       ANTS_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
@@ -1321,22 +1276,22 @@ oops
    [ASM_MESON_TAC[HYPERPLANE_CELLCOMPLEX_COMPL;
                   COMPL_COMPL];
     ALL_TAC] THEN
-  SUBGOAL_THEN `hyperplane_cellcomplex A (s::real^N=>bool)` ASSUME_TAC THENL
-   [EXPAND_TAC "s" THEN MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_INTERS THEN
+  SUBGOAL_THEN `hyperplane_cellcomplex A (S::real^N=>bool)` ASSUME_TAC THENL
+   [EXPAND_TAC "S" THEN MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_INTERS THEN
     ASM_REWRITE_TAC[];
     ALL_TAC] THEN
   MP_TAC(ISPECL [`A::real^N#real=>bool`;
                  `\<Inter> H::real^N=>bool`;
                  `- \<Inter> H`]
         EULER_CHARACTERISTIC_CELLCOMPLEX_UNION) THEN
-  REWRITE_TAC[SET_RULE `disjnt s (- s)`] THEN ANTS_TAC THENL
+  REWRITE_TAC[SET_RULE `disjnt S (- S)`] THEN ANTS_TAC THENL
    [ASM_SIMP_TAC[HYPERPLANE_CELLCOMPLEX_DIFF; HYPERPLANE_CELLCOMPLEX_UNIV];
-    REWRITE_TAC[SET_RULE `s \<union> (- s) = UNIV`]] THEN
+    REWRITE_TAC[SET_RULE `S \<union> (- S) = UNIV`]] THEN
   REWRITE_TAC[DIFF_INTERS] THEN ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC(REAL_ARITH
    `x = (-- 1) ^ (DIM('N)) \<and>
     y = (-- 1) ^ (DIM('N))
-    \<Longrightarrow> x = s + y \<Longrightarrow> s = 0`) THEN
+    \<Longrightarrow> x = S + y \<Longrightarrow> S = 0`) THEN
   CONJ_TAC THENL
    [MATCH_MP_TAC EQ_TRANS THEN
     EXISTS_TAC `Euler_characteristic {} UNIV` THEN CONJ_TAC THENL
@@ -1369,9 +1324,9 @@ oops
      [ASM SET_TAC[]; ALL_TAC] THEN
     SUBGOAL_THEN
      `\<Inter> (image (\<lambda>t. - t) H) =
-      image (--) (interior s)`
+      image (--) (interior S)`
     ASSUME_TAC THENL
-     [MP_TAC(ISPECL [`s::real^N=>bool`; `H:(real^N=>bool)->bool`;
+     [MP_TAC(ISPECL [`S::real^N=>bool`; `H:(real^N=>bool)->bool`;
                      `fa:(real^N=>bool)->real^N`;
                      `\<lambda>h::real^N=>bool. 0`]
                 RELATIVE_INTERIOR_POLYHEDRON_EXPLICIT) THEN
@@ -1384,7 +1339,7 @@ oops
       REWRITE_TAC[FORALL_IN_IMAGE; IN_DIFF; IN_UNIV] THEN
       MATCH_MP_TAC(TAUT `(c \<Longrightarrow> b) \<and> (a \<longleftrightarrow> c) \<Longrightarrow> (a \<longleftrightarrow> b \<and> c)`) THEN
       CONJ_TAC THENL
-       [EXPAND_TAC "s" THEN REWRITE_TAC[IN_INTERS] THEN
+       [EXPAND_TAC "S" THEN REWRITE_TAC[IN_INTERS] THEN
         MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `h::real^N=>bool` THEN
         ASM_CASES_TAC `(h::real^N=>bool) \<in> H` THEN ASM_REWRITE_TAC[] THEN
         ASM SET_TAC[REAL_LT_IMP_LE];
@@ -1440,14 +1395,14 @@ oops
     ASM_SIMP_TAC[EULER_CHARACTERISTIC_CELL] THEN AP_TERM_TAC THEN
     MATCH_MP_TAC(MESON[NUM_OF_INT_OF_NUM] `i = n \<Longrightarrow> nat i = n`) THEN
     REWRITE_TAC[AFF_DIM_EQ_FULL] THEN
-    MATCH_MP_TAC(SET_RULE `\<forall>t. t \<subseteq> s \<and> t = UNIV \<Longrightarrow> s = UNIV`) THEN
+    MATCH_MP_TAC(SET_RULE `\<forall>t. t \<subseteq> S \<and> t = UNIV \<Longrightarrow> S = UNIV`) THEN
     EXISTS_TAC `affine hull (\<Inter> (image (\<lambda>t. - t) H))` THEN
     CONJ_TAC THENL [MATCH_MP_TAC HULL_MONO THEN ASM SET_TAC[]; ALL_TAC] THEN
     MATCH_MP_TAC AFFINE_HULL_OPEN THEN ASM_REWRITE_TAC[] THEN
     ASM_SIMP_TAC[IMAGE_EQ_EMPTY; OPEN_NEGATIONS; OPEN_INTERIOR];
     ALL_TAC] THEN
   REWRITE_TAC[SUM_RMUL] THEN
-  MATCH_MP_TAC(REAL_RING `s = 1 \<Longrightarrow> s * t = t`) THEN
+  MATCH_MP_TAC(REAL_RING `S = 1 \<Longrightarrow> S * t = t`) THEN
   MP_TAC(ISPECL [`\<lambda>t:(real^N=>bool)->bool. card t`;
                  `\<lambda>t:(real^N=>bool)->bool. (-1) ^ (card t + 1)`;
                  `{t.  t \<subseteq>
@@ -1524,6 +1479,7 @@ oops
   UNDISCH_TAC `card(H:(real^N=>bool)->bool) = 0` THEN
   ASM_SIMP_TAC[CARD_EQ_0] THEN DISCH_THEN SUBST_ALL_TAC THEN ASM SET_TAC[]);;
 
+
 text\<open> ------------------------------------------------------------------------- \<close>
 (* Euler-Poincare relation for special (n-1)-dimensional polytope.           *)
 text\<open> ------------------------------------------------------------------------- \<close>
@@ -1547,8 +1503,8 @@ oops
   ABBREV_TAC `s::real^N=>bool = conic hull p` THEN
   MP_TAC(ISPEC `s::real^N=>bool` EULER_POLYHEDRAL_CONE) THEN
   SUBGOAL_THEN
-   `\<forall>f. f \<subseteq> {x::real^N | x$1 = 1}
-        \<Longrightarrow> (conic hull f) \<inter> {x::real^N | x$1 = 1} = f`
+   `\<forall>f. f \<subseteq> {x. x$1 = 1}
+        \<Longrightarrow> (conic hull f) \<inter> {x. x$1 = 1} = f`
   ASSUME_TAC THENL
    [GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC SUBSET_ANTISYM THEN
     ASM_SIMP_TAC[HULL_SUBSET; SUBSET_INTER] THEN
@@ -1600,7 +1556,7 @@ oops
      EMPTY_INTERIOR_SUBSET_HYPERPLANE) THEN
     ASM_REWRITE_TAC[NOT_EXISTS_THM] THEN
     MAP_EVERY X_GEN_TAC [`a::real^N`; `b::real`] THEN STRIP_TAC THEN
-    SUBGOAL_THEN `s \<subseteq> {x::real^N | x$1 = 1}` MP_TAC THENL
+    SUBGOAL_THEN `s \<subseteq> {x. x$1 = 1}` MP_TAC THENL
      [FIRST_ASSUM(MATCH_MP_TAC o MATCH_MP (SET_RULE
        `s \<subseteq> h' \<Longrightarrow> h \<subseteq> h' \<and> ~(h \<subset> h') \<Longrightarrow> s \<subseteq> h`)) THEN
       CONJ_TAC THENL
@@ -1696,14 +1652,14 @@ oops
    `\<forall>f::real^N=>bool. f face_of s \<Longrightarrow> f \<inter> {x. x$1 = 1} face_of p`
   ASSUME_TAC THENL
    [REPEAT STRIP_TAC THEN
-    SUBGOAL_THEN `p = conic hull p \<inter> {x::real^N | x$1 = 1}` SUBST1_TAC
+    SUBGOAL_THEN `p = conic hull p \<inter> {x. x$1 = 1}` SUBST1_TAC
     THENL [ASM_MESON_TAC[FACE_OF_REFL; POLYTOPE_IMP_CONVEX]; ALL_TAC] THEN
     MATCH_MP_TAC FACE_OF_SLICE THEN
     ASM_REWRITE_TAC[CONVEX_STANDARD_HYPERPLANE];
     ASM_SIMP_TAC[]] THEN
   SUBGOAL_THEN
    `\<forall>f. f face_of s  \<and> 0 < aff_dim f
-        \<Longrightarrow> conic hull (f \<inter> {x::real^N | x$1 = 1}) = f`
+        \<Longrightarrow> conic hull (f \<inter> {x. x$1 = 1}) = f`
   ASSUME_TAC THENL
    [REPEAT STRIP_TAC THEN MATCH_MP_TAC SUBSET_ANTISYM THEN CONJ_TAC THENL
      [REWRITE_TAC[\<subseteq>; CONIC_HULL_EXPLICIT; FORALL_IN_GSPEC] THEN
@@ -1869,7 +1825,7 @@ oops
   (LABEL_TAC "*") THENL
    [ALL_TAC;
     CONJ_TAC THEN X_GEN_TAC `f::real^N=>bool` THEN STRIP_TAC THENL
-     [REMOVE_THEN "*" (MP_TAC o SPEC `f \<inter> {x::real^N | x$1 = 1}`) THEN
+     [REMOVE_THEN "*" (MP_TAC o SPEC `f \<inter> {x. x$1 = 1}`) THEN
       ASM_SIMP_TAC[INT_ARITH `0::int < d + 1`; INT_EQ_ADD_RCANCEL] THEN
       ANTS_TAC THENL [ALL_TAC; SIMP_TAC[]] THEN
       SUBGOAL_THEN `\<exists>y::real^N. y \<in> f \<and> (y \<noteq> 0)` STRIP_ASSUME_TAC THENL
