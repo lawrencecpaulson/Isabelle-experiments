@@ -314,7 +314,7 @@ proof -
     assume "C0 \<in> uminus ` \<C>"
     then obtain C where C: "C0 = -C" "C \<in> \<C>"
       by auto
-    have *: "-C = \<Union> {D. hyperplane_cell A D \<and> D \<noteq> C}" (is "_ = ?rhs")
+    have *: "-C = \<Union> {D. hyperplane_cell A D \<and> D \<noteq> C}"  (is "_ = ?rhs")
     proof
       show "- C \<subseteq> ?rhs"
         using hyperplane_cell by blast
@@ -408,87 +408,70 @@ lemma Euler_characteristic_cell:
          \<Longrightarrow> Euler_characteristic A C =  (-1) ^ (nat(aff_dim C))"
   using Euler_characteristic_cell_Union [of "{C}"] by force
 
-lemma Euler_characteristic_cellcomplex_union:
-   "\<And>A S T::real^N=>bool.
-        finite A \<and>
-        hyperplane_cellcomplex A S \<and>
-        hyperplane_cellcomplex A T \<and>
-        disjnt S T
-        \<Longrightarrow> Euler_characteristic A (S \<union> T) =
-            Euler_characteristic A S + Euler_characteristic A T"
-oops 
-  REPEAT STRIP_TAC THEN REWRITE_TAC[Euler_characteristic] THEN
-  CONV_TAC SYM_CONV THEN MATCH_MP_TAC SUM_UNION_EQ THEN
-  ASM_SIMP_TAC[FINITE_RESTRICT_HYPERPLANE_CELLS] THEN
-  REWRITE_TAC[EXTENSION; IN_INTER; IN_ELIM_THM; NOT_IN_EMPTY; IN_UNION] THEN
-  CONJ_TAC THEN X_GEN_TAC `C::real^N=>bool` THENL
-   [ASM_CASES_TAC `C::real^N=>bool = {}` THENL
-     [ASM_MESON_TAC[NONEMPTY_HYPERPLANE_CELL]; ASM SET_TAC[]];
-    ASM_CASES_TAC `hyperplane_cell A (C::real^N=>bool)` THEN
-    ASM_REWRITE_TAC[] THEN
-    MP_TAC(ISPEC `A:(real^N#real)->bool` CELL_SUBSET_CELLCOMPLEX) THEN
-    ASM_SIMP_TAC[HYPERPLANE_CELLCOMPLEX_UNION] THEN SET_TAC[]]);;
+lemma Euler_characteristic_cellcomplex_Un:
+  assumes "finite A" "hyperplane_cellcomplex A S" 
+    and AT: "hyperplane_cellcomplex A T" and "disjnt S T"
+  shows "Euler_characteristic A (S \<union> T) =
+         Euler_characteristic A S + Euler_characteristic A T"
+proof -
+  have *: "{C. hyperplane_cell A C \<and> C \<subseteq> S \<union> T} =
+        {C. hyperplane_cell A C \<and> C \<subseteq> S} \<union> {C. hyperplane_cell A C \<and> C \<subseteq> T}"
+    using cell_subset_cellcomplex [OF _ AT] by (auto simp: disjnt_iff)
+  have **: "{C. hyperplane_cell A C \<and> C \<subseteq> S} \<inter> {C. hyperplane_cell A C \<and> C \<subseteq> T} = {}"
+    using assms cell_subset_cellcomplex disjnt_subset1 by fastforce
+  show ?thesis
+  unfolding Euler_characteristic_def
+    by (simp add: finite_restrict_hyperplane_cells assms * ** flip: sum.union_disjoint)
+qed
 
-lemma Euler_characteristic_cellcomplex_unions:
-   "finite A \<and>
-         (\<forall>C::real^N=>bool. C \<in> \<C> \<Longrightarrow> hyperplane_cellcomplex A C) \<and>
-         pairwise disjnt \<C>
-         \<Longrightarrow> Euler_characteristic A (\<Union> \<C>) =
-             sum \<C> (\<lambda>c. Euler_characteristic A C)"
-oops 
-  REPEAT GEN_TAC THEN DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-  ASM_CASES_TAC `finite(\<C>:(real^N=>bool)->bool)` THENL
-   [UNDISCH_TAC `finite(\<C>:(real^N=>bool)->bool)`;
-    ASM_MESON_TAC[FINITE_SET_OF_HYPERPLANE_CELLS]] THEN
-  SPEC_TAC(`\<C>:(real^N=>bool)->bool`,`\<C>:(real^N=>bool)->bool`) THEN
-  MATCH_MP_TAC FINITE_INDUCT_STRONG THEN
-  SIMP_TAC[EULER_CHARACTERISTIC_EMPTY; SUM_CLAUSES; UNIONS_0] THEN
-  REPEAT STRIP_TAC THEN REWRITE_TAC[UNIONS_INSERT] THEN
-  W(MP_TAC o PART_MATCH (lhs o rand) EULER_CHARACTERISTIC_CELLCOMPLEX_UNION o
-        lhs o snd) THEN
-  ANTS_TAC THENL
-   [ASM_REWRITE_TAC[] THEN REPEAT CONJ_TAC THENL
-     [ASM SET_TAC[];
-      MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_UNIONS THEN ASM SET_TAC[];
-      FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id [pairwise]) THEN
-      REWRITE_TAC[disjnt; INTER_UNIONS; IMP_CONJ; RIGHT_FORALL_IMP_THM;
-                  FORALL_IN_INSERT; EMPTY_UNIONS; FORALL_IN_GSPEC] THEN
-      ASM_MESON_TAC[INTER_COMM]];
-    DISCH_THEN SUBST1_TAC THEN AP_TERM_TAC THEN
-    FIRST_X_ASSUM MATCH_MP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id [pairwise]) THEN
-    ASM_REWRITE_TAC[pairwise] THEN ASM SET_TAC[]]);;
+lemma Euler_characteristic_cellcomplex_Union:
+  assumes "finite A" 
+    and \<C>: "\<And>C. C \<in> \<C> \<Longrightarrow> hyperplane_cellcomplex A C" "pairwise disjnt \<C>"
+  shows "Euler_characteristic A (\<Union> \<C>) = sum (Euler_characteristic A) \<C>"
+proof -
+  have "finite \<C>"
+    using assms finite_set_of_hyperplane_cellcomplex by blast
+  then show ?thesis
+    using \<C>
+  proof (induction rule: finite_induct)
+    case empty
+    then show ?case
+      by auto
+  next
+    case (insert C \<C>)
+    then obtain "disjoint \<C>" "disjnt C (\<Union> \<C>)"
+      by (metis disjnt_Union2 pairwise_insert)
+    with insert show ?case
+      by (simp add: Euler_characteristic_cellcomplex_Un hyperplane_cellcomplex_Union \<open>finite A\<close>)
+  qed
+qed
+
+context comm_monoid_set
+begin
+
+
 
 lemma Euler_characteristic:
-   "\<And>A S::real^N=>bool.
-        finite A
-        \<Longrightarrow> Euler_characteristic A S =
-            sum (0..DIM('N))
-                (\<lambda>d. (-1) ^ d *
-                     &(card {C. hyperplane_cell A C \<and> C \<subseteq> S \<and>
-                                 aff_dim C = d}))"
-oops 
-  REPEAT STRIP_TAC THEN REWRITE_TAC[Euler_characteristic] THEN
-  MP_TAC(ISPECL [`\<lambda>c::real^N=>bool. aff_dim C`;
-                 `\<lambda>c::real^N=>bool. (-1) ^ (nat(aff_dim C))`;
-                 `{C::real^N=>bool | hyperplane_cell A C \<and> C \<subseteq> S}`;
-                 `image int_of_num (0..DIM('N))`]
-                SUM_GROUP) THEN
-  SIMP_TAC[SUM_IMAGE; INT_OF_NUM_EQ; o_DEF; NUM_OF_INT_OF_NUM] THEN
-  ANTS_TAC THENL
-   [ASM_SIMP_TAC[FINITE_RESTRICT_HYPERPLANE_CELLS] THEN
-    GEN_REWRITE_TAC id [\<subseteq>] THEN
-    REWRITE_TAC[FORALL_IN_IMAGE; IN_ELIM_THM] THEN
-    X_GEN_TAC `C::real^N=>bool` THEN STRIP_TAC THEN
-    REWRITE_TAC[IN_IMAGE; IN_NUMSEG; LE_0] THEN
-    REWRITE_TAC[GSYM INT_OF_NUM_LE; INT_EXISTS_POS] THEN
-    EXISTS_TAC `aff_dim(C::real^N=>bool)` THEN
-    REWRITE_TAC[AFF_DIM_LE_UNIV; AFF_DIM_POS_LE] THEN
-    ASM_MESON_TAC[NONEMPTY_HYPERPLANE_CELL];
-    DISCH_THEN(SUBST1_TAC o SYM) THEN
-    REWRITE_TAC[IN_ELIM_THM; GSYM CONJ_ASSOC] THEN
-    ASM_SIMP_TAC[SUM_CONST; FINITE_RESTRICT_HYPERPLANE_CELLS] THEN
-    REWRITE_TAC[REAL_MUL_AC]]);;
+  fixes A :: "('n::euclidean_space * real) set"
+  assumes "finite A"
+  shows "Euler_characteristic A S =
+        (\<Sum>d = 0..DIM('n). (- 1) ^ d * real (card {C. hyperplane_cell A C \<and> C \<subseteq> S \<and> aff_dim C = int d}))"
+        (is "_ = ?rhs")
+proof -
+  have "\<And>T. \<lbrakk>hyperplane_cell A T; T \<subseteq> S\<rbrakk> \<Longrightarrow> aff_dim T \<in> {0..DIM('n)}"
+    by (metis atLeastAtMost_iff nle_le order.strict_iff_not aff_dim_negative_iff 
+        nonempty_hyperplane_cell aff_dim_le_DIM)
+  then have *: "aff_dim ` {C. hyperplane_cell A C \<and> C \<subseteq> S} \<subseteq> int ` {0..DIM('n)}"
+    by (auto simp: image_int_atLeastAtMost)
+  have "Euler_characteristic A  S = (\<Sum>y\<in>int ` {0..DIM('n)}.
+       \<Sum>C\<in>{x. hyperplane_cell A x \<and> x \<subseteq> S \<and> aff_dim x = y}. (- 1) ^ nat y) "
+    unfolding Euler_characteristic_def
+    using sum.group [of "{C. hyperplane_cell A C \<and> C \<subseteq> S}" "int ` {0..DIM('n)}" aff_dim "\<lambda>C. (-1) ^ (nat(aff_dim C))", symmetric]
+    by (simp add: assms finite_restrict_hyperplane_cells *)
+  also have "... = ?rhs"
+    by (simp add: sum.reindex mult_of_nat_commute)
+  finally show ?thesis .
+qed
 
 text\<open> ------------------------------------------------------------------------- \<close>
 text\<open> Show that the characteristic is invariant w.r.t. hyperplane arrangement.  \<close>
@@ -501,11 +484,9 @@ lemma hyperplane_cells_distinct_lemma:
          {x. a \<bullet> x < b} \<inter> {x. a \<bullet> x > b} = {} \<and>
          {x. a \<bullet> x > b} \<inter> {x. a \<bullet> x = b} = {} \<and>
          {x. a \<bullet> x > b} \<inter> {x. a \<bullet> x < b} = {}"
-oops 
-  REWRITE_TAC[EXTENSION; IN_INTER; IN_ELIM_THM; NOT_IN_EMPTY] THEN
-  REAL_ARITH_TAC);;
+  by auto
 
-lemma euler_characterstic_lemma:
+lemma Euler_characterstic_lemma:
    "\<And>A h s::real^N=>bool.
         finite A \<and> hyperplane_cellcomplex A s
         \<Longrightarrow> Euler_characteristic (insert h A) s = Euler_characteristic A s"
@@ -707,7 +688,7 @@ oops
     REWRITE_TAC[NUM_OF_INT_OF_NUM; INT_OF_NUM_ADD] THEN
     REWRITE_TAC[REAL_POW_ADD] THEN REAL_ARITH_TAC]);;
 
-lemma euler_characterstic_invariant:
+lemma Euler_characterstic_invariant:
    "\<And>A B h s::real^N=>bool.
         finite A \<and> finite B \<and>
         hyperplane_cellcomplex A s \<and> hyperplane_cellcomplex B s
@@ -756,7 +737,7 @@ text\<open> --------------------------------------------------------------------
 text\<open> Euler-type relation for full-dimensional proper polyhedral cones.         \<close>
 text\<open> ------------------------------------------------------------------------- \<close>
 
-lemma euler_polyhedral_cone:
+lemma Euler_polyhedral_cone:
    "polyhedron s \<and> conic s \<and> ~(interior s = {}) \<and> (s \<noteq> UNIV)
        \<Longrightarrow> sum (0..DIM('N))
                (\<lambda>d. (-1) ^ d *
@@ -1547,7 +1528,7 @@ text\<open> --------------------------------------------------------------------
 (* Euler-Poincare relation for special (n-1)-dimensional polytope.           *)
 text\<open> ------------------------------------------------------------------------- \<close>
 
-lemma euler_poincare_lemma:
+lemma Euler_poincare_lemma:
    "\<And>p::real^N=>bool.
         2 \<le> DIM('N) \<and> polytope p \<and> affine hull p = {x. x$1 = 1}
         \<Longrightarrow> sum (0..DIM('N)-1)
@@ -1946,7 +1927,7 @@ oops
     MATCH_MP_TAC IN_AFFINE_ADD_MUL_DIFF THEN
     ASM_SIMP_TAC[AFFINE_AFFINE_HULL; HULL_INC; IN_INSERT]]);;
 
-lemma euler_poincare_special:
+lemma Euler_poincare_special:
    "\<And>p::real^N=>bool.
         2 \<le> DIM('N) \<and> polytope p \<and> affine hull p = {x. x$1 = 0}
         \<Longrightarrow> sum (0..DIM('N)-1)
@@ -1985,7 +1966,7 @@ text\<open> --------------------------------------------------------------------
 text\<open> Now Euler-Poincare for a general full-dimensional polytope.               \<close>
 text\<open> ------------------------------------------------------------------------- \<close>
 
-lemma euler_poincare_full:
+lemma Euler_poincare_full:
    "\<And>p::real^N=>bool.
         polytope p \<and> aff_dim p = &(DIM('N))
         \<Longrightarrow> sum (0..DIM('N))
@@ -2064,7 +2045,7 @@ text\<open> --------------------------------------------------------------------
 text\<open> In particular the Euler relation in 3D.                                   \<close>
 text\<open> ------------------------------------------------------------------------- \<close>
 
-lemma euler_relation:
+lemma Euler_relation:
    "\<And>p::real^3=>bool.
         polytope p \<and> aff_dim p = 3
         \<Longrightarrow> (card {v. v face_of p \<and> aff_dim v = 0} +
