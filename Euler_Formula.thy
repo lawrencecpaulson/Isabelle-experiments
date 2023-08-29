@@ -106,6 +106,216 @@ proof -
     using \<open>n\<noteq>0\<close> by force
 qed
 
+text\<open> ------------------------------------------------------------------------- \<close>
+text\<open> Conic sets and conic hull.                                                \<close>
+text\<open> ------------------------------------------------------------------------- \<close>
+
+definition conic :: "'a::real_vector set \<Rightarrow> bool"
+  where "conic S \<equiv> \<forall>x c. x \<in> S \<longrightarrow> 0 \<le> c \<longrightarrow> (c *\<^sub>R x) \<in> S"
+
+lemma subspace_imp_conic: "subspace S \<Longrightarrow> conic S"
+  by (simp add: conic_def subspace_def)
+
+lemma conic_empty [simp]: "conic {}"
+  using conic_def by blast
+
+lemma conic_UNIV: "conic UNIV"
+  by (simp add: conic_def)
+
+lemma conic_Inter: "(\<And>S. S \<in> \<F> \<Longrightarrow> conic S) \<Longrightarrow> conic(\<Inter>\<F>)"
+  by (simp add: conic_def)
+
+lemma conic_linear_image:
+   "\<lbrakk>conic S; linear f\<rbrakk> \<Longrightarrow> conic(f ` S)"
+  by (smt (verit) conic_def image_iff linear.scaleR)
+
+lemma conic_linear_image_eq:
+   "\<lbrakk>linear f; inj f\<rbrakk> \<Longrightarrow> conic (f ` S) \<longleftrightarrow> conic S"
+  by (smt (verit) conic_def conic_linear_image inj_image_mem_iff linear_cmul)
+
+
+lemma conic_mul: "\<lbrakk>conic S; x \<in> S; 0 \<le> c\<rbrakk> \<Longrightarrow> (c *\<^sub>R x) \<in> S"
+  using conic_def by blast
+
+lemma conic_conic_hull: "conic(conic hull S)"
+  by (metis (no_types, lifting) conic_Inter hull_def mem_Collect_eq)
+
+lemma conic_hull_eq: "(conic hull S = S) \<longleftrightarrow> conic S"
+  by (metis conic_conic_hull hull_same)
+
+lemma conic_hull_UNIV [simp]: "conic hull UNIV = UNIV"
+  by simp
+
+lemma conic_negations: "conic S \<Longrightarrow> conic (image uminus S)"
+  by (auto simp: conic_def image_iff)
+
+lemma conic_span [iff]: "conic(span S)"
+  by (simp add: subspace_imp_conic)
+
+lemma conic_hull_explicit:
+   "conic hull S = {c *\<^sub>R x| c x. 0 \<le> c \<and> x \<in> S}"
+  proof (rule hull_unique)
+    show "S \<subseteq> {c *\<^sub>R x |c x. 0 \<le> c \<and> x \<in> S}"
+      by (metis (no_types) cone_hull_expl hull_subset)
+  show "conic {c *\<^sub>R x |c x. 0 \<le> c \<and> x \<in> S}"
+    using mult_nonneg_nonneg by (force simp: conic_def)
+qed (auto simp: conic_def)
+
+lemma conic_hull_as_image:
+   "conic hull S = (\<lambda>z. fst z *\<^sub>R snd z) ` ({t. 0 \<le> t} \<times> S)"
+  by (force simp add: conic_hull_explicit)
+
+lemma conic_hull_linear_image:
+   "linear f \<Longrightarrow> conic hull f ` S = f ` (conic hull S)"
+  by (force simp add: conic_hull_explicit image_iff set_eq_iff linear_scale) 
+
+lemma conic_hull_image_scale:
+  assumes "\<And>x. x \<in> S \<Longrightarrow> 0 < c x"
+  shows   "conic hull (\<lambda>x. c x *\<^sub>R x) ` S = conic hull S"
+proof
+  show "conic hull (\<lambda>x. c x *\<^sub>R x) ` S \<subseteq> conic hull S"
+  proof (rule hull_minimal)
+    show "(\<lambda>x. c x *\<^sub>R x) ` S \<subseteq> conic hull S"
+      using assms conic_hull_explicit by fastforce
+  qed (simp add: conic_conic_hull)
+  show "conic hull S \<subseteq> conic hull (\<lambda>x. c x *\<^sub>R x) ` S"
+  proof (rule hull_minimal)
+    show "S \<subseteq> conic hull (\<lambda>x. c x *\<^sub>R x) ` S"
+    proof clarsimp
+      fix x
+      assume "x \<in> S"
+      then have "x = inverse(c x) *\<^sub>R c x *\<^sub>R x"
+        using assms by fastforce
+      then show "x \<in> conic hull (\<lambda>x. c x *\<^sub>R x) ` S"
+        by (smt (verit, best) \<open>x \<in> S\<close> assms conic_conic_hull conic_mul hull_inc image_eqI inverse_nonpositive_iff_nonpositive)
+    qed
+  qed (simp add: conic_conic_hull)
+qed
+
+lemma convex_conic_hull:
+  assumes "convex S"
+  shows "convex (conic hull S)"
+proof (clarsimp simp add: conic_hull_explicit convex_alt)
+  fix c x d y and u :: real
+  assume \<section>: "(0::real) \<le> c" "x \<in> S" "(0::real) \<le> d" "y \<in> S" "0 \<le> u" "u \<le> 1"
+  show "\<exists>c'' x''. ((1 - u) * c) *\<^sub>R x + (u * d) *\<^sub>R y = c'' *\<^sub>R x'' \<and> 0 \<le> c'' \<and> x'' \<in> S"
+  proof (cases "(1 - u) * c = 0")
+    case True
+    with \<open>0 \<le> d\<close> \<open>y \<in> S\<close>\<open>0 \<le> u\<close>  
+    show ?thesis by force
+  next
+    case False
+    define \<xi> where "\<xi> \<equiv> (1 - u) * c + u * d"
+    have *: "c * u \<le> c"
+      by (simp add: "\<section>" mult_left_le)
+    have "\<xi> > 0"
+      using False \<section> by (smt (verit, best) \<xi>_def split_mult_pos_le)
+    then have **: "c + d * u = \<xi> + c * u"
+      by (simp add: \<xi>_def mult.commute right_diff_distrib')
+    show ?thesis
+    proof (intro exI conjI)
+      show "0 \<le> \<xi>"
+        using \<open>0 < \<xi>\<close> by auto
+      show "((1 - u) * c) *\<^sub>R x + (u * d) *\<^sub>R y = \<xi> *\<^sub>R (((1 - u) * c / \<xi>) *\<^sub>R x + (u * d / \<xi>) *\<^sub>R y)"
+        using \<open>\<xi> > 0\<close> by (simp add: algebra_simps diff_divide_distrib)
+      show "((1 - u) * c / \<xi>) *\<^sub>R x + (u * d / \<xi>) *\<^sub>R y \<in> S"
+        using \<open>0 < \<xi>\<close> 
+        by (intro convexD [OF assms]) (auto simp: \<section> field_split_simps * **)
+    qed
+  qed
+qed
+
+lemma conic_halfspace_le: "conic {x. a \<bullet> x \<le> 0}"
+  by (auto simp: conic_def mult_le_0_iff)
+
+lemma conic_halfspace_ge: "conic {x. a \<bullet> x \<ge> 0}"
+  by (auto simp: conic_def mult_le_0_iff)
+
+lemma conic_hull_empty [simp]: "conic hull {} = {}"
+  by (simp add: conic_hull_eq)
+
+lemma conic_contains_0: "conic S \<Longrightarrow> (0 \<in> S \<longleftrightarrow> S \<noteq> {})"
+  by (simp add: Convex.cone_def cone_contains_0 conic_def)
+
+lemma conic_hull_eq_empty: "conic hull S = {} \<longleftrightarrow> (S = {})"
+  using conic_hull_explicit by fastforce
+
+lemma conic_sums: "\<lbrakk>conic S; conic T\<rbrakk> \<Longrightarrow> conic {x + y |x y. x \<in> S \<and> y \<in> T}"
+  by (simp add: conic_def) (meson scaleR_right_distrib)
+
+lemma conic_Times: "\<lbrakk>conic S; conic T\<rbrakk> \<Longrightarrow> conic(S \<times> T)"
+  by (auto simp: conic_def)
+
+lemma conic_Times_eq:
+   "conic(S \<times> T) \<longleftrightarrow> S = {} \<or> T = {} \<or> conic S \<and> conic T"
+  apply (rule )
+   apply (force simp: conic_def)
+  apply (force simp: conic_Times)
+  done
+
+lemma conic_hull_0 [simp]: "conic hull {0} = {0}"
+  by (simp add: conic_hull_eq subspace_imp_conic)
+
+lemma conic_hull_contains_0 [simp]: "0 \<in> conic hull S \<longleftrightarrow> (S \<noteq> {})"
+  by (simp add: conic_conic_hull conic_contains_0 conic_hull_eq_empty)
+
+lemma conic_hull_eq_sing:
+  "conic hull S = {x} \<longleftrightarrow> S = {0} \<and> x = 0"
+  apply (rule )
+   apply (metis conic_conic_hull conic_contains_0 conic_def conic_hull_eq hull_inc insert_not_empty singleton_iff)
+  by simp
+
+lemma conic_hull_Int_affine_hull:
+  assumes "T \<subseteq> S" "0 \<notin> affine hull S"
+  shows "(conic hull T) \<inter> (affine hull S) = T"
+proof -
+  have "T \<subseteq> affine hull S"
+    using \<open>T \<subseteq> S\<close> hull_subset by fastforce
+  moreover
+  have "conic hull T \<inter> affine hull S \<subseteq> T"
+  proof (clarsimp simp: conic_hull_explicit)
+    fix c x
+    assume "c *\<^sub>R x \<in> affine hull S"
+      and "0 \<le> c"
+      and "x \<in> T"
+    show "c *\<^sub>R x \<in> T"
+    proof (cases "c=1")
+      case True
+      then show ?thesis
+        by (simp add: \<open>x \<in> T\<close>)
+    next
+      case False
+      then have 0: "0 = inverse(1 - c) *\<^sub>R c *\<^sub>R x + (1 - inverse(1 - c)) *\<^sub>R x"
+        apply (simp add: algebra_simps)
+        by (smt (verit, ccfv_SIG) diff_add_cancel mult.commute real_vector_affinity_eq scaleR_collapse scaleR_scaleR)
+      have "0 \<in> affine hull S"
+        unfolding 0 affine_def
+        apply (simp add: )
+          sorry
+      then show ?thesis
+        using assms by auto        
+    qed
+  qed
+  ultimately show ?thesis
+    by (auto simp: hull_inc)
+qed
+
+
+oops 
+  UNDISCH_TAC `~((0::real^N) \<in> affine hull S)` THEN
+  ONCE_REWRITE_TAC[GSYM CONTRAPOS_THM] THEN DISCH_THEN(K ALL_TAC) THEN
+  SUBGOAL_THEN `0 = inverse(1 - c) *\<^sub>R c *\<^sub>R x + (1 - inverse(1 - c)) *\<^sub>R x`
+  SUBST1_TAC THENL
+   [CONV_TAC SYM_CONV THEN
+    REWRITE_TAC[VECTOR_MUL_ASSOC; GSYM VECTOR_ADD_RDISTRIB] THEN
+    REWRITE_TAC[VECTOR_MUL_EQ_0] THEN DISJ1_TAC THEN
+    UNDISCH_TAC `(c \<noteq> 1)` THEN CONV_TAC REAL_FIELD;
+    MP_TAC(ISPEC `affine hull S::real^N=>bool` affine) THEN
+    REWRITE_TAC[AFFINE_AFFINE_HULL] THEN DISCH_THEN MATCH_MP_TAC THEN
+    ASM_REWRITE_TAC[] THEN CONJ_TAC THENL
+     [ASM_MESON_TAC[HULL_INC; \<subseteq>];
+      UNDISCH_TAC `(c \<noteq> 1)` THEN CONV_TAC REAL_FIELD]]);;
+
 
 text\<open> ------------------------------------------------------------------------- \<close>
 text\<open> Interpret which "side" of a hyperplane a point is on.                     \<close>
@@ -767,10 +977,9 @@ text\<open> Euler-type relation for full-dimensional proper polyhedral cones.   
 text\<open> ------------------------------------------------------------------------- \<close>
 
 lemma Euler_polyhedral_cone:
-   "polyhedron S \<and> conic S \<and> ~(interior S = {}) \<and> (S \<noteq> UNIV)
-       \<Longrightarrow> sum (0..DIM('N))
-               (\<lambda>d. (-1) ^ d *
-                    (card {f. f face_of S \<and> aff_dim f = d })) = 0"
+  fixes S :: "'n::euclidean_space set"
+  assumes "polyhedron S" "conic S" "interior S \<noteq> {}" "S \<noteq> UNIV"
+  shows "(\<Sum>d = 0..DIM('n). (- 1) ^ d * real (card {f. f face_of S \<and> aff_dim f = int d})) = 0"
 oops 
   REPEAT STRIP_TAC THEN
   SUBGOAL_THEN `affine hull S = UNIV` ASSUME_TAC THENL
