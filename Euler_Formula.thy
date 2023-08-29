@@ -4,18 +4,8 @@ text \<open>One of the Famous 100 Theorems, ported from HOL Light\<close>
 text\<open> Formalization of Jim Lawrence's proof of Euler's relation.                \<close>
 
 theory Euler_Formula
-  imports "HOL-Analysis.Analysis" "HOL-ex.Sketch_and_Explore"
+  imports "HOL-Analysis.Analysis" "Inclusion_Exclusion" "HOL-ex.Sketch_and_Explore"
 begin
-
-(*MOVE UP*)
-lemma Inter_over_Union:
-  "\<Inter> {\<Union> (\<F> x) |x. x \<in> S} = \<Union> {\<Inter> (G ` S) |G. \<forall>x\<in>S. G x \<in> \<F> x}" 
-proof -
-  have "\<And>x. \<forall>s\<in>S. \<exists>X \<in> \<F> s. x \<in> X \<Longrightarrow> \<exists>G. (\<forall>x\<in>S. G x \<in> \<F> x) \<and> (\<forall>s\<in>S. x \<in> G s)"
-    by metis
-  then show ?thesis
-    by (auto simp flip: all_simps ex_simps)
-qed
 
 
 text\<open> ------------------------------------------------------------------------- \<close>
@@ -659,22 +649,19 @@ lemma Euler_characterstic_invariant:
   by (metis Euler_characterstic_invariant_aux assms sup_commute)
 
 lemma Euler_characteristic_inclusion_exclusion:
-   "\<And>A S:(real^N=>bool)->bool.
-        finite A \<and> finite S \<and> (\<forall>k. k \<in> S \<Longrightarrow> hyperplane_cellcomplex A k)
-        \<Longrightarrow> Euler_characteristic A (\<Union> S) =
-            sum {t. t \<subseteq> S \<and> (t \<noteq> {})}
-                (\<lambda>t. (-1) ^ (card t + 1) *
-                     Euler_characteristic A (\<Inter> t))"
-oops 
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL
-   [`hyperplane_cellcomplex A :(real^N=>bool)->bool`;
-    `Euler_characteristic A :(real^N=>bool)->real`;
-    `S:(real^N=>bool)->bool`]
-        INCLUSION_EXCLUSION_REAL_RESTRICTED) THEN
-  ASM_SIMP_TAC[EULER_CHARACTERISTIC_CELLCOMPLEX_UNION] THEN
-  SIMP_TAC[HYPERPLANE_CELLCOMPLEX_EMPTY; HYPERPLANE_CELLCOMPLEX_INTER;
-           HYPERPLANE_CELLCOMPLEX_UNION; HYPERPLANE_CELLCOMPLEX_DIFF]);;
+  assumes "finite A" "finite \<S>" "\<And>K. K \<in> \<S> \<Longrightarrow> hyperplane_cellcomplex A K"
+  shows "Euler_characteristic A (\<Union> \<S>) = (\<Sum>\<T> | \<T> \<subseteq> \<S> \<and> \<T> \<noteq> {}. (- 1) ^ (card \<T> + 1) * Euler_characteristic A (\<Inter>\<T>))"
+proof -
+  interpret Incl_Excl "hyperplane_cellcomplex A" "Euler_characteristic A"
+    proof
+  show "Euler_characteristic A (S \<union> T) = Euler_characteristic A S + Euler_characteristic A T"
+    if "hyperplane_cellcomplex A S" and "hyperplane_cellcomplex A T" and "disjnt S T" for S T
+    using that Euler_characteristic_cellcomplex_Un assms(1) by blast 
+  qed (use hyperplane_cellcomplex_Int hyperplane_cellcomplex_Un hyperplane_cellcomplex_diff in auto)
+  show ?thesis
+    using restricted assms by blast
+qed
+
 
 text\<open> ------------------------------------------------------------------------- \<close>
 text\<open> Euler-type relation for full-dimensional proper polyhedral cones.         \<close>
