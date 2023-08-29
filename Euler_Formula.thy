@@ -9,9 +9,13 @@ begin
 
 (*MOVE UP*)
 lemma Inter_over_Union:
-  "\<Inter> {\<Union> (f x) |x. x \<in> S} = \<Union> {\<Inter> (g ` S) |g. \<forall>x\<in>S. g x \<in> f x}" 
-  apply (auto simp flip: all_simps ex_simps)
-  by metis
+  "\<Inter> {\<Union> (\<F> x) |x. x \<in> S} = \<Union> {\<Inter> (G ` S) |G. \<forall>x\<in>S. G x \<in> \<F> x}" 
+proof -
+  have "\<And>x. \<forall>s\<in>S. \<exists>X \<in> \<F> s. x \<in> X \<Longrightarrow> \<exists>G. (\<forall>x\<in>S. G x \<in> \<F> x) \<and> (\<forall>s\<in>S. x \<in> G s)"
+    by metis
+  then show ?thesis
+    by (auto simp flip: all_simps ex_simps)
+qed
 
 
 text\<open> ------------------------------------------------------------------------- \<close>
@@ -643,32 +647,16 @@ qed
 
 
 
+lemma Euler_characterstic_invariant_aux:
+  assumes "finite B" "finite A" "hyperplane_cellcomplex A S" 
+  shows "Euler_characteristic (A \<union> B) S = Euler_characteristic A S"
+  using assms
+  by (induction rule: finite_induct) (auto simp add: Euler_characterstic_lemma hyperplane_cellcomplex_mono)
+
 lemma Euler_characterstic_invariant:
-   "\<And>A B h S::real^N=>bool.
-        finite A \<and> finite B \<and>
-        hyperplane_cellcomplex A S \<and> hyperplane_cellcomplex B S
-        \<Longrightarrow> Euler_characteristic A S = Euler_characteristic B S"
-oops 
-  SUBGOAL_THEN
-   `\<forall>A S::real^N=>bool.
-        finite A \<and> hyperplane_cellcomplex A S
-        \<Longrightarrow> \<forall>B. finite B
-                \<Longrightarrow> Euler_characteristic (A \<union> B) S =
-                    Euler_characteristic A S`
-  ASSUME_TAC THENL
-   [REPEAT GEN_TAC THEN STRIP_TAC THEN
-    MATCH_MP_TAC FINITE_INDUCT_STRONG THEN ASM_REWRITE_TAC[UNION_EMPTY] THEN
-    MAP_EVERY X_GEN_TAC [`h::real^N#real`; `B::real^N#real=>bool`] THEN
-    DISCH_THEN(CONJUNCTS_THEN2 (SUBST1_TAC o SYM) STRIP_ASSUME_TAC) THEN
-    REWRITE_TAC[SET_RULE `S \<union> (insert x t) = x insert (S \<union> t)`] THEN
-    MATCH_MP_TAC EULER_CHARACTERSTIC_LEMMA THEN
-    ASM_REWRITE_TAC[FINITE_UNION] THEN
-    MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_MONO THEN
-    EXISTS_TAC `A::real^N#real=>bool` THEN ASM_REWRITE_TAC[] THEN SET_TAC[];
-    RULE_ASSUM_TAC(REWRITE_RULE[RIGHT_IMP_FORALL_THM; IMP_IMP]) THEN
-    REPEAT STRIP_TAC THEN MATCH_MP_TAC EQ_TRANS THEN
-    EXISTS_TAC `Euler_characteristic (A \<union> B) (S::real^N=>bool)` THEN
-    ASM_MESON_TAC[UNION_COMM]]);;
+  assumes "finite A" "finite B" "hyperplane_cellcomplex A S" "hyperplane_cellcomplex B S"
+  shows "Euler_characteristic A S = Euler_characteristic B S"
+  by (metis Euler_characterstic_invariant_aux assms sup_commute)
 
 lemma Euler_characteristic_inclusion_exclusion:
    "\<And>A S:(real^N=>bool)->bool.
