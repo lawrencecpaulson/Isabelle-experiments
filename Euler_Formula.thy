@@ -972,7 +972,7 @@ proof -
           by (metis closure_aff_dim that(2))
         have "f \<noteq> {}"
           using aff_dim_negative_iff [of f] by (simp add: that(2))
-        obtain J where "J \<subseteq> H" and J: "f = (\<Inter>h \<in> H. {x. fa h \<bullet> x \<le> 0}) \<inter> (\<Inter>h \<in> J. {x. fa h \<bullet> x = 0})"
+        obtain J0 where "J0 \<subseteq> H" and J0: "f = (\<Inter>h \<in> H. {x. fa h \<bullet> x \<le> 0}) \<inter> (\<Inter>h \<in> J0. {x. fa h \<bullet> x = 0})"
         proof (cases "f = S")
           case True
           have "S = (\<Inter>h\<in>H. {x. fa h \<bullet> x \<le> 0})"
@@ -1003,32 +1003,135 @@ proof -
         qed blast
       qed 
       define H' where "H' = (\<lambda>h. {x. -(fa h) \<bullet> x \<le> 0}) ` H"
-      let ?J = "H \<union> image (\<lambda>h. {x. -(fa h) \<bullet> x \<le> 0}) J"
       have "\<exists>J. finite J \<and> J \<subseteq> H \<union> H' \<and> f = affine hull f \<inter> \<Inter> J"
       proof (intro exI conjI)
+        let ?J = "H \<union> image (\<lambda>h. {x. -(fa h) \<bullet> x \<le> 0}) J0"
         show "finite (?J::'n set set)"
-          using \<open>J \<subseteq> H\<close> \<open>finite H\<close> finite_subset by fastforce
+          using \<open>J0 \<subseteq> H\<close> \<open>finite H\<close> finite_subset by fastforce
         show "?J \<subseteq> H \<union> H'"
-          using \<open>J \<subseteq> H\<close> by (auto simp: H'_def)
+          using \<open>J0 \<subseteq> H\<close> by (auto simp: H'_def)
         have "f = \<Inter>?J"
-          unfolding J
+          unfolding J0
           apply (auto simp: ball_Un)
           using fa apply blast
           using fa apply blast
-          by (metis \<open>J \<subseteq> H\<close> fa in_mono inf.absorb2 inf.orderE mem_Collect_eq)
+          by (metis \<open>J0 \<subseteq> H\<close> fa in_mono inf.absorb2 inf.orderE mem_Collect_eq)
         then show "f = affine hull f \<inter> \<Inter> ?J"
           by (simp add: Int_absorb1 hull_subset)
       qed 
       then have **: "\<exists>n J. finite J \<and> card J = n \<and> J \<subseteq> H \<union> H' \<and> f = affine hull f \<inter> \<Inter> J"
         by blast
-      obtain J nJ where "finite J" "card J = nJ" "J \<subseteq> H \<union> H'" "f = affine hull f \<inter> \<Inter> J"
-                     and min:  "\<And>m J'. m < nJ \<Longrightarrow> finite J' \<and> card J' = m \<and> J' \<subseteq> H \<union> H' \<Longrightarrow> f \<noteq> affine hull f \<inter> \<Inter> J'"
+      obtain J nJ where J: "finite J" "card J = nJ" "J \<subseteq> H \<union> H'" and feq: "f = affine hull f \<inter> \<Inter> J"
+                     and minJ:  "\<And>m J'. \<lbrakk>finite J'; m < nJ; card J' = m; J' \<subseteq> H \<union> H'\<rbrakk> \<Longrightarrow> f \<noteq> affine hull f \<inter> \<Inter> J'"
         using exists_least_iff [THEN iffD1, OF **] by metis
-
-      then have "\<And>J'. J' \<subset> J \<Longrightarrow> f \<subset> (affine hull f \<inter> \<Inter> J')"
+      have FF: "f \<subset> (affine hull f \<inter> \<Inter> J')" if "J' \<subset> J" for J'
+      proof -
+        have "f \<noteq> affine hull f \<inter> \<Inter> J'"
+          using minJ
+          by (metis J finite_subset psubset_card_mono psubset_imp_subset psubset_subset_trans that)
+        then
+        show ?thesis
+          by (metis Int_subset_iff Inter_Un_distrib feq hull_subset inf_sup_ord(2) psubsetI sup.absorb4 that)
+      qed
+      have "\<exists>a. {x. a \<bullet> x \<le> 0} = h \<and> (h \<in> H \<and> a = fa h \<or> (\<exists>h'. h' \<in> H \<and> a = -(fa h')))" 
+        if "h \<in> J" for h
+      proof -
+        have "h \<in> H \<union> H'"
+          using J(3) that by blast
+        then show ?thesis
+        proof
+          show ?thesis if "h \<in> H"
+            using that fa by blast
+        next
+          assume "h \<in> H'"
+          then obtain h' where "h' \<in> H" "h = {x. 0 \<le> fa h' \<bullet> x}"
+            by (auto simp: H'_def)
+          then show ?thesis
+            by (force simp add: intro!: exI[where x="- (fa h')"])
+        qed
+      qed
+      then obtain ga 
+          where ga_h: "\<And>h. h \<in> J \<Longrightarrow> h = {x. ga h \<bullet> x \<le> 0}" 
+          and ga_fa: "\<And>h. h \<in> J \<Longrightarrow> h \<in> H \<and> ga h = fa h \<or> (\<exists>h'. h' \<in> H \<and> ga h = -(fa h'))" 
+        by metis
+      have 3: "hyperplane_cell A (rel_interior f)"
+      proof -
+        have D: "rel_interior f = {x \<in> f. \<forall>h\<in>J. ga h \<bullet> x < 0}"
+        proof (rule rel_interior_polyhedron_explicit [OF \<open>finite J\<close> feq])
+          show "ga h \<noteq> 0 \<and> h = {x. ga h \<bullet> x \<le> 0}" if "h \<in> J" for h
+            using that fa ga_fa ga_h by force
+        qed (auto simp: FF)
+        have H: "h \<in> H \<and> ga h = fa h" if "h \<in> J" for h
+        proof -
+          obtain z where z: "z \<in> rel_interior f"
+            using "1" \<open>f \<noteq> {}\<close> by force
+          then have "z \<in> f \<and> z \<in> S"
+            using D \<open>f face_of S\<close> face_of_imp_subset by blast
+          then
+          show ?thesis
+            using ga_fa [OF that]
+            by (smt (verit, del_insts) D InterE Seq fa inner_minus_left mem_Collect_eq that z)
+        qed
+        then obtain K where "K \<subseteq> H" 
+              and K: "f = (\<Inter>h \<in> H. {x. fa h \<bullet> x \<le> 0}) \<inter> (\<Inter> h \<in> K. {x. fa h \<bullet> x = 0})"
+          using J0 \<open>J0 \<subseteq> H\<close> by blast
+        have E: "rel_interior f = {x. (\<forall>h \<in> H. fa h \<bullet> x \<le> 0) \<and> (\<forall>h \<in> K. fa h \<bullet> x = 0) \<and> (\<forall>h \<in> J. ga h \<bullet> x < 0)}"
+          unfolding D by (simp add: K)
+        have relif: "rel_interior f \<noteq> {}"
+          using "1" \<open>f \<noteq> {}\<close> by force
+        with E have "disjnt J K"
+          using H disjnt_iff by fastforce
+        have "rel_interior f =
+                (\<Inter>h \<in> H. if h \<in> J then {x. fa h \<bullet> x < 0}
+                         else if h \<in> K then {x. fa h \<bullet> x = 0}
+                         else if rel_interior f \<subseteq> {x. fa h \<bullet> x = 0}
+                         then {x. fa h \<bullet> x = 0}
+                         else {x. fa h \<bullet> x < 0})" (is "_ = ?R")
+        proof
+          have A: False 
+            if x: "x \<in> rel_interior f" and y: "y \<in> rel_interior f" and less0: "fa h \<bullet> y < 0"
+              and fa0:  "fa h \<bullet> x = 0" and "h \<in> H" "h \<notin> J" "h \<notin> K"  for x h y
+          proof -
+            obtain \<epsilon> where "x \<in> f" "\<epsilon>>0" 
+                    and \<epsilon>: "\<And>t. \<lbrakk>dist x t \<le> \<epsilon>; t \<in> affine hull f\<rbrakk> \<Longrightarrow> t \<in> f"
+              using x by (force simp add: mem_rel_interior_cball)
+            then have "y \<noteq> x"
+              using fa0 less0 by force
+            define x' where "x' \<equiv> x + (\<epsilon> / norm(y - x)) *\<^sub>R (x - y)"
+            have "x \<in> affine hull f \<and> y \<in> affine hull f"
+              by (metis \<open>x \<in> f\<close> hull_inc mem_rel_interior_cball y)
+            moreover have "dist x x' \<le> \<epsilon>"
+              using \<open>0 < \<epsilon>\<close> \<open>y \<noteq> x\<close> by (simp add: x'_def divide_simps dist_norm norm_minus_commute)
+            ultimately have "x' \<in> f"
+              by (simp add: \<epsilon> mem_affine_3_minus x'_def)
+            have "x' \<in> S"
+              using \<open>f face_of S\<close> \<open>x' \<in> f\<close> face_of_imp_subset by auto
+            then have "x' \<in> h"
+              using Seq that(5) by blast
+            then have "x' \<in> {x. fa h \<bullet> x \<le> 0}"
+              using fa that(5) by blast
+            moreover have "\<epsilon> / norm (y - x) * -(fa h \<bullet> y) > 0"
+              using  \<open>0 < \<epsilon>\<close> \<open>y \<noteq> x\<close> less0 by (simp add: field_split_simps)
+            ultimately show ?thesis
+              by (simp add: x'_def fa0 inner_diff_right inner_right_distrib)
+          qed
+          show "rel_interior f \<subseteq> ?R"
+            apply clarify
+            apply (simp add: )
+            by (smt (verit) A E H Int_Collect inf.orderE mem_Collect_eq subsetI)
+          show "?R \<subseteq> rel_interior f"
+            using \<open>K \<subseteq> H\<close> \<open>disjnt J K\<close>
+            apply (clarsimp simp add: ball_Un E H disjnt_iff)
+            apply (smt (verit, del_insts) IntI Int_Collect subsetD)
+            done
+        qed
+        obtain z where "z \<in> rel_interior f"
+          using relif by blast
+        moreover
+        have "rel_interior f = Collect (hyperplane_equiv A z)"
           sorry
-      then have 3: "hyperplane_cell A (rel_interior f)"
-        sorry
+        ultimately show ?thesis
+      qed
       have 4: "rel_interior f \<subseteq> S"
         by (meson face_of_imp_subset order_trans rel_interior_subset that(1))
       show ?thesis
@@ -1051,191 +1154,14 @@ qed
 
   oops 
 
-
 MATCH_MP_TAC EQ_TRANS THEN
 EXISTS_TAC `Euler_characteristic A S` THEN CONJ_TAC THENL
-
 
     EXISTS_TAC `rel_interior:(real^N=>bool)->(real^N=>bool)` THEN
     EXISTS_TAC `closure:(real^N=>bool)->(real^N=>bool)` THEN
 
-
-      GEN_REWRITE_TAC LAND_CONV
-         [MESON[HAS_SIZE]
-           `(\<exists>f. finite f \<and> P f) \<longleftrightarrow> (\<exists>n f. f HAS_SIZE n \<and> P f)`] THEN
-      GEN_REWRITE_TAC LAND_CONV [num_WOP] THEN
-      DISCH_THEN(X_CHOOSE_THEN `nn::num`
-        (CONJUNCTS_THEN2 MP_TAC ASSUME_TAC)) THEN
-      DISCH_THEN(X_CHOOSE_THEN `J:(real^N=>bool)->bool` STRIP_ASSUME_TAC) THEN
-
-      SUBGOAL_THEN
-       `!J'. J' \<subset> J \<Longrightarrow> f \<subset> (affine hull f \<inter> \<Inter> J')`
-      ASSUME_TAC THENL
-       [REPEAT STRIP_TAC THEN
-        FIRST_X_ASSUM(MP_TAC o SPEC `card(J':(real^N=>bool)->bool)`) THEN
-        ANTS_TAC THENL [ASM_MESON_TAC[CARD_PSUBSET; HAS_SIZE]; ALL_TAC] THEN
-        REWRITE_TAC[NOT_EXISTS_THM; HAS_SIZE] THEN
-        DISCH_THEN(MP_TAC o SPEC `J':(real^N=>bool)->bool`) THEN
-        MATCH_MP_TAC(TAUT `a \<and> b \<and> (~c \<Longrightarrow> d) \<Longrightarrow> ~(a \<and> b \<and> c) \<Longrightarrow> d`) THEN
-        CONJ_TAC THENL
-         [ASM_MESON_TAC[\<subset>; FINITE_SUBSET; HAS_SIZE]; ALL_TAC] THEN
-        CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-        MATCH_MP_TAC(SET_RULE
-         `S \<subseteq> t \<Longrightarrow> (S \<noteq> t) \<Longrightarrow> S \<subset> t`) THEN
-        FIRST_X_ASSUM(fun th -> GEN_REWRITE_TAC LAND_CONV [th]) THEN
-        ASM SET_TAC[];
-        ALL_TAC] THEN
-
-      SUBGOAL_THEN
-       `\<forall>h::real^N=>bool. h \<in> J
-          \<Longrightarrow> \<exists>a. {x. a \<bullet> x \<le> 0} = h \<and>
-                  (h \<in> H \<and> a = fa h \<or> ?h'. h' \<in> H \<and> a = --(fa h'))`
-      MP_TAC THENL
-       [X_GEN_TAC `h::real^N=>bool` THEN DISCH_TAC THEN
-        SUBGOAL_THEN `(h::real^N=>bool) \<in> (H \<union> H')` MP_TAC THENL
-         [ASM SET_TAC[]; EXPAND_TAC "H'"] THEN
-        UNDISCH_THEN `(h::real^N=>bool) \<in> J` (K ALL_TAC) THEN
-        SPEC_TAC(`h::real^N=>bool`,`h::real^N=>bool`) THEN
-        REWRITE_TAC[IN_UNION; TAUT `(a \<or> b \<Longrightarrow> c) \<longleftrightarrow> (a \<Longrightarrow> c) \<and> (b \<Longrightarrow> c)`;
-                    FORALL_AND_THM; FORALL_IN_IMAGE] THEN
-        CONJ_TAC THEN X_GEN_TAC `h::real^N=>bool` THEN DISCH_TAC THENL
-         [EXISTS_TAC `(fa:(real^N=>bool)->real^N) h` THEN
-          ASM_SIMP_TAC[];
-          EXISTS_TAC `--((fa:(real^N=>bool)->real^N) h)` THEN
-          REWRITE_TAC[] THEN DISJ2_TAC THEN ASM_MESON_TAC[]];
-        ALL_TAC] THEN
-      GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [RIGHT_IMP_EXISTS_THM] THEN
-      REWRITE_TAC[SKOLEM_THM; LEFT_IMP_EXISTS_THM] THEN
-      X_GEN_TAC `ga:(real^N=>bool)->real^N` THEN DISCH_TAC THEN
-      MP_TAC(ISPECL
-       [`f::real^N=>bool`; `J:(real^N=>bool)->bool`;
-        `ga:(real^N=>bool)->real^N`; `\<lambda>h::real^N=>bool. 0`]
-       RELATIVE_INTERIOR_POLYHEDRON_EXPLICIT) THEN
-      ASM_REWRITE_TAC[] THEN ANTS_TAC THENL
-       [REPEAT CONJ_TAC THENL
-         [ASM_MESON_TAC[HAS_SIZE];
-          ASM_MESON_TAC[];
-          ASM_SIMP_TAC[] THEN ASM_MESON_TAC[VECTOR_NEG_EQ_0; \<subseteq>]];
-        DISCH_TAC THEN ASM_REWRITE_TAC[]] THEN
-      SUBGOAL_THEN
-       `\<forall>h::real^N=>bool. h \<in> J \<Longrightarrow> h \<in> H \<and> ga h::real^N = fa h`
-      ASSUME_TAC THENL
-       [SUBGOAL_THEN `~(rel_interior f::real^N=>bool = {})` MP_TAC THENL
-         [ASM_MESON_TAC[RELATIVE_INTERIOR_EQ_EMPTY; FACE_OF_IMP_CONVEX];
-          REWRITE_TAC[GSYM MEMBER_NOT_EMPTY]] THEN
-        DISCH_THEN(X_CHOOSE_TAC `z::real^N`) THEN
-        SUBGOAL_THEN `(z::real^N) \<in> f \<and> z \<in> S` STRIP_ASSUME_TAC THENL
-         [ASM_MESON_TAC[\<subseteq>; FACE_OF_IMP_SUBSET; RELATIVE_INTERIOR_SUBSET];
-          ALL_TAC] THEN
-        X_GEN_TAC `h::real^N=>bool` THEN DISCH_TAC THEN
-        FIRST_X_ASSUM(MP_TAC o SPEC `h::real^N=>bool`) THEN
-        ASM_REWRITE_TAC[] THEN
-        DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-        DISCH_THEN(DISJ_CASES_THEN MP_TAC) THEN REWRITE_TAC[] THEN
-        DISCH_THEN(X_CHOOSE_THEN `h':real^N=>bool` STRIP_ASSUME_TAC) THEN
-        UNDISCH_TAC `(z::real^N) \<in> rel_interior f` THEN
-        ASM_REWRITE_TAC[IN_ELIM_THM] THEN
-        DISCH_THEN(MP_TAC o SPEC `h::real^N=>bool`) THEN
-        ASM_REWRITE_TAC[DOT_LNEG] THEN
-        UNDISCH_TAC `(z::real^N) \<in> S` THEN EXPAND_TAC "S" THEN
-        REWRITE_TAC[IN_INTERS] THEN
-        DISCH_THEN(MP_TAC o SPEC `h':real^N=>bool`) THEN ASM_REWRITE_TAC[] THEN
-        FIRST_X_ASSUM(MP_TAC o SPEC `h':real^N=>bool`) THEN
-        ASM_REWRITE_TAC[] THEN DISCH_THEN(fun th ->
-          GEN_REWRITE_TAC (LAND_CONV o RAND_CONV) [SYM(CONJUNCT2 th)]) THEN
-        REWRITE_TAC[IN_ELIM_THM] THEN REAL_ARITH_TAC;
-        ALL_TAC] THEN
-      FIRST_X_ASSUM(fun th -> GEN_REWRITE_TAC RAND_CONV [SYM th] THEN
-        MP_TAC(SYM th)) THEN
-      FIRST_X_ASSUM(X_CHOOSE_THEN `K:(real^N=>bool)->bool` MP_TAC) THEN
-      DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-      DISCH_THEN(fun th -> ASSUME_TAC(SYM th) THEN
-        GEN_REWRITE_TAC (LAND_CONV o LAND_CONV o ONCE_DEPTH_CONV) [th]) THEN
-      REWRITE_TAC[IN_INTER; IN_INTERS; FORALL_IN_GSPEC; GSYM CONJ_ASSOC] THEN
-      REWRITE_TAC[IN_ELIM_THM] THEN DISCH_TAC THEN
-      SUBGOAL_THEN `~(rel_interior f::real^N=>bool = {})` ASSUME_TAC THENL
-       [ASM_MESON_TAC[RELATIVE_INTERIOR_EQ_EMPTY; FACE_OF_IMP_CONVEX];
-        ALL_TAC] THEN
-      SUBGOAL_THEN `disjnt (J:(real^N=>bool)->bool) K` ASSUME_TAC THENL
-       [UNDISCH_TAC `~(rel_interior f::real^N=>bool = {})` THEN
-        FIRST_X_ASSUM(fun th -> GEN_REWRITE_TAC
-         (LAND_CONV o RAND_CONV o LAND_CONV) [SYM th]) THEN
-        REWRITE_TAC[IN_DISJOINT; GSYM MEMBER_NOT_EMPTY; IN_ELIM_THM] THEN
-        ASM_MESON_TAC[REAL_LT_REFL];
-        ALL_TAC] THEN
-      SUBGOAL_THEN
-       `rel_interior f =
-          \<Inter> {(if (h::real^N=>bool) \<in> J then {x. fa h \<bullet> x < 0}
-                   else if h \<in> K then {x. fa h \<bullet> x = 0}
-                   else if rel_interior f \<subseteq> {x. fa h \<bullet> x = 0}
-                   then {x. fa h \<bullet> x = 0}
-                   else {x. fa h \<bullet> x < 0}) | h \<in> H}`
-      ASSUME_TAC THENL
-       [MATCH_MP_TAC SUBSET_ANTISYM THEN CONJ_TAC THENL
-         [ALL_TAC;
-          FIRST_ASSUM(fun th -> GEN_REWRITE_TAC RAND_CONV [SYM th]) THEN
-          GEN_REWRITE_TAC id [\<subseteq>] THEN
-          REWRITE_TAC[IN_INTERS; FORALL_IN_GSPEC; AND_FORALL_THM] THEN
-          X_GEN_TAC `x::real^N` THEN REWRITE_TAC[IN_ELIM_THM] THEN
-          MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `h::real^N=>bool` THEN
-          ASM_CASES_TAC `(h::real^N=>bool) \<in> H` THENL
-           [ALL_TAC; DISCH_THEN(K ALL_TAC) THEN ASM SET_TAC[]] THEN
-          ASM_REWRITE_TAC[] THEN
-          ASM_CASES_TAC `(h::real^N=>bool) \<in> J` THEN
-          ASM_SIMP_TAC[IN_ELIM_THM; REAL_LT_IMP_LE] THENL
-           [ASM SET_TAC[]; ALL_TAC] THEN
-          ASM_CASES_TAC `(h::real^N=>bool) \<in> K` THEN
-          ASM_SIMP_TAC[IN_ELIM_THM; REAL_LE_REFL] THEN
-          COND_CASES_TAC THEN REWRITE_TAC[IN_ELIM_THM] THEN
-          REAL_ARITH_TAC] THEN
-        GEN_REWRITE_TAC id [\<subseteq>] THEN X_GEN_TAC `x::real^N` THEN
-        DISCH_TAC THEN REWRITE_TAC[IN_INTERS; FORALL_IN_GSPEC] THEN
-        X_GEN_TAC `h::real^N=>bool` THEN DISCH_TAC THEN
-        REPEAT(COND_CASES_TAC THENL [ASM SET_TAC[]; ALL_TAC]) THEN
-        REWRITE_TAC[IN_ELIM_THM; REAL_LT_LE] THEN
-        CONJ_TAC THENL [ASM SET_TAC[]; DISCH_TAC] THEN
-        FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id
-         [SET_RULE `~(S \<subseteq> t) \<longleftrightarrow> \<exists>y. y \<in> S \<and> (y \<notin> t)`]) THEN
-        REWRITE_TAC[IN_ELIM_THM; NOT_EXISTS_THM] THEN
-        X_GEN_TAC `y::real^N` THEN STRIP_TAC THEN
-        FIRST_X_ASSUM(DISJ_CASES_TAC o MATCH_MP (REAL_ARITH
-         `~(x::real = 0) \<Longrightarrow> ~(x \<le> 0) \<or> x < 0`))
-        THENL [ASM SET_TAC[]; ALL_TAC] THEN
-        MP_TAC(ASSUME `(x::real^N) \<in> rel_interior f`) THEN
-        REWRITE_TAC[IN_RELATIVE_INTERIOR_CBALL] THEN
-        DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-        REWRITE_TAC[NOT_EXISTS_THM] THEN X_GEN_TAC `e::real` THEN
-        DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-        REWRITE_TAC[\<subseteq>; IN_INTER; IN_CBALL] THEN
-        SUBGOAL_THEN `~(y::real^N = x)` ASSUME_TAC THENL
-         [ASM_MESON_TAC[REAL_LT_REFL]; ALL_TAC] THEN
-        DISCH_THEN(MP_TAC o SPEC `x + e / norm(y - x) *\<^sub>R (x - y):real^N`) THEN
-        SUBGOAL_THEN
-         `(x::real^N) \<in> affine hull f \<and> y \<in> affine hull f`
-        STRIP_ASSUME_TAC THENL
-         [ASM_MESON_TAC[RELATIVE_INTERIOR_SUBSET; \<subseteq>; HULL_SUBSET];
-          ASM_SIMP_TAC[IN_AFFINE_ADD_MUL_DIFF; AFFINE_AFFINE_HULL]] THEN
-        REWRITE_TAC[NORM_ARITH `dist (x::real^N) (x + r) = norm r`] THEN
-        REWRITE_TAC[NOT_IMP] THEN CONJ_TAC THENL
-         [ASM_SIMP_TAC[NORM_MUL; REAL_ABS_DIV; REAL_ABS_NORM; NORM_SUB;
-                       REAL_DIV_RMUL; NORM_EQ_0; VECTOR_SUB_EQ] THEN
-          ASM_REAL_ARITH_TAC;
-          DISCH_TAC] THEN
-        SUBGOAL_THEN `(x + e / norm(y - x) *\<^sub>R (x - y):real^N) \<in> S` MP_TAC THENL
-         [ASM_MESON_TAC[\<subseteq>; FACE_OF_IMP_SUBSET]; ALL_TAC] THEN
-        EXPAND_TAC "S" THEN REWRITE_TAC[IN_INTERS] THEN
-        DISCH_THEN(MP_TAC o SPEC `h::real^N=>bool`) THEN
-        ASM_REWRITE_TAC[] THEN
-        FIRST_ASSUM(fun th -> GEN_REWRITE_TAC (RAND_CONV o RAND_CONV)
-         [SYM(CONJUNCT2(MATCH_MP th (ASSUME `(h::real^N=>bool) \<in> H`)))]) THEN
-        ASM_REWRITE_TAC[IN_ELIM_THM; DOT_RADD; REAL_ADD_LID; DOT_RMUL] THEN
-        ASM_REWRITE_TAC[DOT_RSUB; REAL_SUB_LZERO; REAL_NOT_LE] THEN
-        MATCH_MP_TAC REAL_LT_MUL THEN
-        ASM_SIMP_TAC[REAL_LT_DIV; NORM_POS_LT; VECTOR_SUB_EQ] THEN
-        ASM_REAL_ARITH_TAC;
-        ALL_TAC] THEN
+     
       UNDISCH_TAC `~(rel_interior f::real^N=>bool = {})` THEN
-
 
       REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; hyperplane_cell] THEN
       MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `z::real^N` THEN
@@ -1254,6 +1180,7 @@ EXISTS_TAC `Euler_characteristic A S` THEN CONJ_TAC THENL
       REPEAT(COND_CASES_TAC THEN
         SIMP_TAC[IN_ELIM_THM] THENL [MESON_TAC[REAL_SGN_EQ]; ALL_TAC]) THEN
       MESON_TAC[REAL_SGN_EQ];
+
       X_GEN_TAC `c::real^N=>bool` THEN STRIP_TAC THEN
       ONCE_REWRITE_TAC[GSYM AFF_DIM_AFFINE_HULL] THEN
       REWRITE_TAC[AFFINE_HULL_CLOSURE] THEN
@@ -1651,7 +1578,7 @@ text\<open> --------------------------------------------------------------------
 (* Euler-Poincare relation for special (n-1)-dimensional polytope.           *)
 text\<open> ------------------------------------------------------------------------- \<close>
 
-lemma Euler_poincare_lemma:
+lemma Euler_Poincare_lemma:
    "\<And>p::real^N=>bool.
         2 \<le> DIM('N) \<and> polytope p \<and> affine hull p = {x. x$1 = 1}
         \<Longrightarrow> sum (0..DIM('N)-1)
@@ -2051,14 +1978,13 @@ oops
     ASM_SIMP_TAC[AFFINE_AFFINE_HULL; HULL_INC; IN_INSERT]]);;
 
 lemma Euler_poincare_special:
-   "\<And>p::real^N=>bool.
-        2 \<le> DIM('N) \<and> polytope p \<and> affine hull p = {x. x$1 = 0}
+   "2 \<le> DIM('N) \<and> polytope p \<and> affine hull p = {x. x$1 = 0}
         \<Longrightarrow> sum (0..DIM('N)-1)
                (\<lambda>d. (-1) ^ d *
                     (card {f. f face_of p \<and> aff_dim f = d })) = 1"
 oops 
   REPEAT STRIP_TAC THEN
-  MP_TAC(ISPEC `image (\<lambda>x::real^N. axis 1 1 + x) p` EULER_POINCARE_LEMMA) THEN
+  MP_TAC(ISPEC `image (\<lambda>x::real^N. axis 1 1 + x) p` Euler_Poincare_lemma) THEN
   ASM_REWRITE_TAC[POLYTOPE_TRANSLATION_EQ; AFFINE_HULL_TRANSLATION] THEN
   ANTS_TAC THENL
    [MATCH_MP_TAC SURJECTIVE_IMAGE_EQ THEN
@@ -2089,7 +2015,7 @@ text\<open> --------------------------------------------------------------------
 text\<open> Now Euler-Poincare for a general full-dimensional polytope.               \<close>
 text\<open> ------------------------------------------------------------------------- \<close>
 
-lemma Euler_poincare_full:
+lemma Euler_Poincare_full:
    "\<And>p::real^N=>bool.
         polytope p \<and> aff_dim p = &(DIM('N))
         \<Longrightarrow> sum (0..DIM('N))
@@ -2169,8 +2095,7 @@ text\<open> In particular the Euler relation in 3D.                             
 text\<open> ------------------------------------------------------------------------- \<close>
 
 lemma Euler_relation:
-   "\<And>p::real^3=>bool.
-        polytope p \<and> aff_dim p = 3
+   "polytope p \<and> aff_dim p = 3
         \<Longrightarrow> (card {v. v face_of p \<and> aff_dim v = 0} +
              card {f. f face_of p \<and> aff_dim f = 2}) -
             card {e. e face_of p \<and> aff_dim e = 1} = 2"
