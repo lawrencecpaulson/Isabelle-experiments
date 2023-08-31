@@ -1140,28 +1140,43 @@ proof -
       show ?thesis
         using "1" "2" "3" "4" by blast
     qed
-    moreover have "(closure y face_of S \<and> aff_dim (closure y) = d) \<and> rel_interior (closure y) = y"
-      if y: "hyperplane_cell A y" and "y \<subseteq> S" "aff_dim y = d" for y
-
-
+    moreover have "(closure c face_of S \<and> aff_dim (closure c) = d) \<and> rel_interior (closure c) = c"
+      if c: "hyperplane_cell A c" and "c \<subseteq> S" "aff_dim c = d" for c
     proof (intro conjI)
-      show "closure y face_of S"
+      have "\<exists>J. J \<subseteq> H \<and> c = (\<Inter>h \<in> J. {x. (fa h) \<bullet> x < 0}) \<inter> (\<Inter>h \<in> (H - J). {x. (fa h) \<bullet> x = 0})"
       proof -
-        obtain x where xS: "Collect (hyperplane_equiv A x) \<subseteq> S" and eqd: "aff_dim (Collect (hyperplane_equiv A x)) = int d"
-                       and yeq: "y = Collect (hyperplane_equiv A x)"
-          by (metis \<open>aff_dim y = int d\<close> \<open>y \<subseteq> S\<close> hyperplane_cell_def y)
-        then show ?thesis
-          unfolding A_def hyperplane_equiv_def subset_iff
-          apply (simp add: )
-
-          apply (auto simp: A_def hyperplane_equiv_def subset_iff)
-
+        obtain z where z: "c = {y. \<forall>x \<in> H.  sgn (fa x \<bullet> y) = sgn (fa x \<bullet> z)}"
+          using c by (force simp: hyperplane_cell A_def hyperplane_equiv_def hyperplane_side_def)
+        show ?thesis
+          unfolding z
+        proof (intro exI[where x="{h \<in> H. sgn(fa h \<bullet> z) = -1}"] conjI set_eqI iffI IntI; clarsimp)
+          show "fa h \<bullet> x < 0"
+            if "\<forall>h\<in>H. sgn (fa h \<bullet> x) = sgn (fa h \<bullet> z)" and "h \<in> H" and "sgn (fa h \<bullet> z) = - 1" for x h
+            using that by (metis sgn_1_neg)
+          show "sgn (fa h \<bullet> z) = - 1"
+            if "\<forall>h\<in>H. sgn (fa h \<bullet> x) = sgn (fa h \<bullet> z)" and "h \<in> H" and "fa h \<bullet> x \<noteq> 0" for x h
+          proof -
+            have "\<lbrakk>0 < fa h \<bullet> x; 0 < fa h \<bullet> z\<rbrakk> \<Longrightarrow> False"
+              using that fa by (smt (verit, del_insts) Inter_iff Seq \<open>c \<subseteq> S\<close> mem_Collect_eq subset_iff z)
+            then show ?thesis
+              by (metis that sgn_if sgn_zero_iff)
+          qed
+          then show "sgn (fa h \<bullet> x) = sgn (fa h \<bullet> z)"
+            if "h \<in> H" and "\<forall>h. h \<in> H \<and> sgn (fa h \<bullet> z) = - 1 \<longrightarrow> fa h \<bullet> x < 0"
+                       and "\<forall>h\<in>H - {h \<in> H. sgn (fa h \<bullet> z) = - 1}. fa h \<bullet> x = 0"
+            for x h
+            using that by (metis (mono_tags, lifting) Diff_iff mem_Collect_eq sgn_neg)            
+        qed
+      qed
+      show "closure c face_of S"
+      proof -
+        show ?thesis
           sorry
       qed
-      show "aff_dim (closure y) = int d"
+      show "aff_dim (closure c) = int d"
         by (simp add: that)
-      show "rel_interior (closure y) = y"
-        by (metis \<open>finite A\<close> convex_rel_interior_closure hyperplane_cell_convex hyperplane_cell_relative_interior that(1))
+      show "rel_interior (closure c) = c"
+        by (metis \<open>finite A\<close> c convex_rel_interior_closure hyperplane_cell_convex hyperplane_cell_relative_interior)
     qed
     ultimately
     show "bij_betw (rel_interior) {f. f face_of S \<and> aff_dim f = int d} {C. hyperplane_cell A C \<and> C \<subseteq> S \<and> aff_dim C = int d}"
@@ -1183,31 +1198,13 @@ EXISTS_TAC `Euler_characteristic A S` THEN CONJ_TAC THENL
     EXISTS_TAC `rel_interior:(real^N=>bool)->(real^N=>bool)` THEN
     EXISTS_TAC `closure:(real^N=>bool)->(real^N=>bool)` THEN
 
-      X_GEN_TAC `c::real^N=>bool` THEN STRIP_TAC THEN
-      ONCE_REWRITE_TAC[GSYM AFF_DIM_AFFINE_HULL] THEN
-      REWRITE_TAC[AFFINE_HULL_CLOSURE] THEN
-      ASM_REWRITE_TAC[AFF_DIM_AFFINE_HULL] THEN CONJ_TAC THENL
-       [ALL_TAC;
-        MATCH_MP_TAC EQ_TRANS THEN
-        EXISTS_TAC `rel_interior c::real^N=>bool` THEN CONJ_TAC THENL
-         [MATCH_MP_TAC CONVEX_RELATIVE_INTERIOR_CLOSURE THEN
-          ASM_MESON_TAC[HYPERPLANE_CELL_CONVEX];
-          ASM_MESON_TAC[HYPERPLANE_CELL_RELATIVE_INTERIOR]]] THEN
-
       SUBGOAL_THEN
        `\<exists>J. J \<subseteq> H \<and>
             c = \<Inter> {{x. (fa h) \<bullet> x < 0} | h \<in> J} \<inter>
                 \<Inter> {{x. (fa h) \<bullet> x = 0} | h \<in> (H - J)}`
       MP_TAC THENL
-       [FIRST_ASSUM(MP_TAC o GEN_REWRITE_RULE id [HYPERPLANE_CELL]) THEN
-        EXPAND_TAC "A" THEN REWRITE_TAC[hyperplane_equiv; FORALL_IN_IMAGE] THEN
-        DISCH_THEN(X_CHOOSE_THEN `z::real^N` MP_TAC) THEN
-        REWRITE_TAC[hyperplane_side; REAL_SUB_RZERO] THEN
-        GEN_REWRITE_TAC (LAND_CONV o RAND_CONV o ONCE_DEPTH_CONV)
-         [EQ_SYM_EQ] THEN
         DISCH_THEN(ASSUME_TAC o SYM) THEN EXISTS_TAC
-         `{h::real^N=>bool | h \<in> H \<and>
-                            sgn(fa h \<bullet> (z::real^N)) =-1}` THEN
+         `{h \<in> H. sgn(fa h \<bullet> z) = -1}` THEN
         REWRITE_TAC[SET_RULE `{x. x \<in> S \<and> P x} \<subseteq> S`] THEN
         REWRITE_TAC[GSYM INTERS_UNION] THEN EXPAND_TAC "c" THEN
         GEN_REWRITE_TAC id [EXTENSION] THEN X_GEN_TAC `y::real^N` THEN
@@ -1238,6 +1235,7 @@ EXISTS_TAC `Euler_characteristic A S` THEN CONJ_TAC THENL
         DISCH_THEN(SUBST1_TAC o SYM o CONJUNCT2) THEN
         REWRITE_TAC[IN_ELIM_THM] THEN ASM_REAL_ARITH_TAC;
         DISCH_THEN(STRIP_ASSUME_TAC o GSYM)] THEN
+
       EXPAND_TAC "c" THEN
       W(MP_TAC o PART_MATCH (lhand o rand) CLOSURE_INTER_CONVEX o
         lhand o snd) THEN
