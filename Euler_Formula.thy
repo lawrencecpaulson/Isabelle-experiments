@@ -1086,13 +1086,7 @@ proof -
                          else if rel_interior f \<subseteq> {x. fa h \<bullet> x = 0}
                          then {x. fa h \<bullet> x = 0}
                          else {x. fa h \<bullet> x < 0}"
-        have relint_f: 
-              "rel_interior f =
-                (\<Inter>h \<in> H. if h \<in> J then {x. fa h \<bullet> x < 0}
-                         else if h \<in> K then {x. fa h \<bullet> x = 0}
-                         else if rel_interior f \<subseteq> {x. fa h \<bullet> x = 0}
-                         then {x. fa h \<bullet> x = 0}
-                         else {x. fa h \<bullet> x < 0})" (is "_ = ?R")
+        have relint_f: "rel_interior f = \<Inter> (IFJK ` H)" 
         proof
           have A: False 
             if x: "x \<in> rel_interior f" and y: "y \<in> rel_interior f" and less0: "fa h \<bullet> y < 0"
@@ -1121,38 +1115,25 @@ proof -
             ultimately show ?thesis
               by (simp add: x'_def fa0 inner_diff_right inner_right_distrib)
           qed
-          show "rel_interior f \<subseteq> ?R"
-            by (smt (verit, ccfv_SIG) A E H INT_I in_mono mem_Collect_eq subsetI)
-          show "?R \<subseteq> rel_interior f"
+          show "rel_interior f \<subseteq> \<Inter> (IFJK ` H)"
+            unfolding IFJK_def by (smt (verit, ccfv_SIG) A E H INT_I in_mono mem_Collect_eq subsetI)
+          show "\<Inter> (IFJK ` H) \<subseteq> rel_interior f"
             using \<open>K \<subseteq> H\<close> \<open>disjnt J K\<close>
-            apply (clarsimp simp add: ball_Un E H disjnt_iff)
+            apply (clarsimp simp add: ball_Un E H disjnt_iff IFJK_def)
             apply (smt (verit, del_insts) IntI Int_Collect subsetD)
             done
         qed
         obtain z where zrelf: "z \<in> rel_interior f"
           using relif by blast
         moreover
-
-        have H: "z \<in> (if h \<in> J then {x. fa h \<bullet> x < 0}
-                else if h \<in> K then {x. fa h \<bullet> x = 0}
-                     else if rel_interior f \<subseteq> {xa. fa h \<bullet> xa = 0}
-                          then {x. fa h \<bullet> x = 0} else {xa. fa h \<bullet> xa < 0}) \<Longrightarrow>
-              (x \<in> (if h \<in> J then {x. fa h \<bullet> x < 0}
-                        else if h \<in> K then {x. fa h \<bullet> x = 0}
-                             else if rel_interior f \<subseteq> {x. fa h \<bullet> x = 0}
-                                  then {x. fa h \<bullet> x = 0} else {x. fa h \<bullet> x < 0})) =
-              (hyperplane_side (fa h, 0) z = hyperplane_side (fa h, 0) x)"
-          for h x
-          using zrelf by (auto simp: hyperplane_side_def sgn_if split: if_split_asm)
-
-        have "x \<in> rel_interior f \<longleftrightarrow> hyperplane_equiv A z x" for x
-          using zrelf 
-          apply (subst relint_f)
-          apply (subst (asm) relint_f)
-          apply (simp only: A_def Inter_iff hyperplane_equiv_def ball_simps)
-          using H by blast
+        have H: "z \<in> IFJK h \<Longrightarrow> (x \<in> IFJK h) = (hyperplane_side (fa h, 0) z = hyperplane_side (fa h, 0) x)" for h x
+          using zrelf by (auto simp: IFJK_def hyperplane_side_def sgn_if split: if_split_asm)
+        then have "z \<in> \<Inter> (IFJK ` H) \<Longrightarrow> (x \<in> \<Inter> (IFJK ` H)) = hyperplane_equiv A z x" for x
+          unfolding A_def Inter_iff hyperplane_equiv_def ball_simps using H by blast
+        then have "x \<in> rel_interior f \<longleftrightarrow> hyperplane_equiv A z x" for x
+          using relint_f zrelf by presburger
         ultimately show ?thesis
-          sorry
+          by (metis equalityI hyperplane_cell mem_Collect_eq subset_iff)
       qed
       have 4: "rel_interior f \<subseteq> S"
         by (meson face_of_imp_subset order_trans rel_interior_subset that(1))
@@ -1161,6 +1142,8 @@ proof -
     qed
     moreover have "(closure y face_of S \<and> aff_dim (closure y) = d) \<and> rel_interior (closure y) = y"
       if y: "hyperplane_cell A y" and "y \<subseteq> S" "aff_dim y = d" for y
+
+
     proof (intro conjI)
       show "closure y face_of S"
       proof -
@@ -1200,26 +1183,6 @@ EXISTS_TAC `Euler_characteristic A S` THEN CONJ_TAC THENL
     EXISTS_TAC `rel_interior:(real^N=>bool)->(real^N=>bool)` THEN
     EXISTS_TAC `closure:(real^N=>bool)->(real^N=>bool)` THEN
 
-      UNDISCH_TAC `~(rel_interior f::real^N=>bool = {})` THEN
-
-      REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; hyperplane_cell] THEN
-      MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `z::real^N` THEN
-      GEN_REWRITE_TAC RAND_CONV [EXTENSION] THEN
-      ONCE_ASM_REWRITE_TAC[] THEN EXPAND_TAC "A" THEN
-      REWRITE_TAC[IN_INTERS; FORALL_IN_GSPEC] THEN
-      DISCH_THEN(fun th -> X_GEN_TAC `x::real^N` THEN MP_TAC th) THEN
-      GEN_REWRITE_TAC (RAND_CONV o RAND_CONV) [\<in>] THEN
-      REWRITE_TAC[hyperplane_equiv; FORALL_IN_IMAGE] THEN
-      MATCH_MP_TAC(MESON[]
-       `(\<forall>h. P h \<Longrightarrow> (Q h \<longleftrightarrow> R h))
-        \<Longrightarrow> (\<forall>h. P h) \<Longrightarrow> ((\<forall>h. Q h) \<longleftrightarrow> (\<forall>h. R h))`) THEN
-      X_GEN_TAC `h::real^N=>bool` THEN
-      ASM_CASES_TAC `(h::real^N=>bool) \<in> H` THEN ASM_REWRITE_TAC[] THEN
-      REWRITE_TAC[hyperplane_side; REAL_SUB_RZERO] THEN
-      REPEAT(COND_CASES_TAC THEN
-        SIMP_TAC[IN_ELIM_THM] THENL [MESON_TAC[REAL_SGN_EQ]; ALL_TAC]) THEN
-      MESON_TAC[REAL_SGN_EQ];
-
       X_GEN_TAC `c::real^N=>bool` THEN STRIP_TAC THEN
       ONCE_REWRITE_TAC[GSYM AFF_DIM_AFFINE_HULL] THEN
       REWRITE_TAC[AFFINE_HULL_CLOSURE] THEN
@@ -1233,7 +1196,7 @@ EXISTS_TAC `Euler_characteristic A S` THEN CONJ_TAC THENL
 
       SUBGOAL_THEN
        `\<exists>J. J \<subseteq> H \<and>
-            c = \<Inter> {{x. (fa(h::real^N=>bool)) \<bullet> x < 0} | h \<in> J} \<inter>
+            c = \<Inter> {{x. (fa h) \<bullet> x < 0} | h \<in> J} \<inter>
                 \<Inter> {{x. (fa h) \<bullet> x = 0} | h \<in> (H - J)}`
       MP_TAC THENL
        [FIRST_ASSUM(MP_TAC o GEN_REWRITE_RULE id [HYPERPLANE_CELL]) THEN
