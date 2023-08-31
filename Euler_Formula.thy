@@ -1081,7 +1081,13 @@ proof -
           using "1" \<open>f \<noteq> {}\<close> by force
         with E have "disjnt J K"
           using H disjnt_iff by fastforce
-        have "rel_interior f =
+        define IFJK where "IFJK \<equiv> \<lambda>h. if h \<in> J then {x. fa h \<bullet> x < 0}
+                         else if h \<in> K then {x. fa h \<bullet> x = 0}
+                         else if rel_interior f \<subseteq> {x. fa h \<bullet> x = 0}
+                         then {x. fa h \<bullet> x = 0}
+                         else {x. fa h \<bullet> x < 0}"
+        have relint_f: 
+              "rel_interior f =
                 (\<Inter>h \<in> H. if h \<in> J then {x. fa h \<bullet> x < 0}
                          else if h \<in> K then {x. fa h \<bullet> x = 0}
                          else if rel_interior f \<subseteq> {x. fa h \<bullet> x = 0}
@@ -1116,21 +1122,37 @@ proof -
               by (simp add: x'_def fa0 inner_diff_right inner_right_distrib)
           qed
           show "rel_interior f \<subseteq> ?R"
-            apply clarify
-            apply (simp add: )
-            by (smt (verit) A E H Int_Collect inf.orderE mem_Collect_eq subsetI)
+            by (smt (verit, ccfv_SIG) A E H INT_I in_mono mem_Collect_eq subsetI)
           show "?R \<subseteq> rel_interior f"
             using \<open>K \<subseteq> H\<close> \<open>disjnt J K\<close>
             apply (clarsimp simp add: ball_Un E H disjnt_iff)
             apply (smt (verit, del_insts) IntI Int_Collect subsetD)
             done
         qed
-        obtain z where "z \<in> rel_interior f"
+        obtain z where zrelf: "z \<in> rel_interior f"
           using relif by blast
         moreover
-        have "rel_interior f = Collect (hyperplane_equiv A z)"
-          sorry
+
+        have H: "z \<in> (if h \<in> J then {x. fa h \<bullet> x < 0}
+                else if h \<in> K then {x. fa h \<bullet> x = 0}
+                     else if rel_interior f \<subseteq> {xa. fa h \<bullet> xa = 0}
+                          then {x. fa h \<bullet> x = 0} else {xa. fa h \<bullet> xa < 0}) \<Longrightarrow>
+              (x \<in> (if h \<in> J then {x. fa h \<bullet> x < 0}
+                        else if h \<in> K then {x. fa h \<bullet> x = 0}
+                             else if rel_interior f \<subseteq> {x. fa h \<bullet> x = 0}
+                                  then {x. fa h \<bullet> x = 0} else {x. fa h \<bullet> x < 0})) =
+              (hyperplane_side (fa h, 0) z = hyperplane_side (fa h, 0) x)"
+          for h x
+          using zrelf by (auto simp: hyperplane_side_def sgn_if split: if_split_asm)
+
+        have "x \<in> rel_interior f \<longleftrightarrow> hyperplane_equiv A z x" for x
+          using zrelf 
+          apply (subst relint_f)
+          apply (subst (asm) relint_f)
+          apply (simp only: A_def Inter_iff hyperplane_equiv_def ball_simps)
+          using H by blast
         ultimately show ?thesis
+          sorry
       qed
       have 4: "rel_interior f \<subseteq> S"
         by (meson face_of_imp_subset order_trans rel_interior_subset that(1))
@@ -1138,8 +1160,26 @@ proof -
         using "1" "2" "3" "4" by blast
     qed
     moreover have "(closure y face_of S \<and> aff_dim (closure y) = d) \<and> rel_interior (closure y) = y"
-      if "hyperplane_cell A y \<and> y \<subseteq> S \<and> aff_dim y = d" for y
-      sorry
+      if y: "hyperplane_cell A y" and "y \<subseteq> S" "aff_dim y = d" for y
+    proof (intro conjI)
+      show "closure y face_of S"
+      proof -
+        obtain x where xS: "Collect (hyperplane_equiv A x) \<subseteq> S" and eqd: "aff_dim (Collect (hyperplane_equiv A x)) = int d"
+                       and yeq: "y = Collect (hyperplane_equiv A x)"
+          by (metis \<open>aff_dim y = int d\<close> \<open>y \<subseteq> S\<close> hyperplane_cell_def y)
+        then show ?thesis
+          unfolding A_def hyperplane_equiv_def subset_iff
+          apply (simp add: )
+
+          apply (auto simp: A_def hyperplane_equiv_def subset_iff)
+
+          sorry
+      qed
+      show "aff_dim (closure y) = int d"
+        by (simp add: that)
+      show "rel_interior (closure y) = y"
+        by (metis \<open>finite A\<close> convex_rel_interior_closure hyperplane_cell_convex hyperplane_cell_relative_interior that(1))
+    qed
     ultimately
     show "bij_betw (rel_interior) {f. f face_of S \<and> aff_dim f = int d} {C. hyperplane_cell A C \<and> C \<subseteq> S \<and> aff_dim C = int d}"
 
@@ -1160,7 +1200,6 @@ EXISTS_TAC `Euler_characteristic A S` THEN CONJ_TAC THENL
     EXISTS_TAC `rel_interior:(real^N=>bool)->(real^N=>bool)` THEN
     EXISTS_TAC `closure:(real^N=>bool)->(real^N=>bool)` THEN
 
-     
       UNDISCH_TAC `~(rel_interior f::real^N=>bool = {})` THEN
 
       REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; hyperplane_cell] THEN
@@ -1191,6 +1230,7 @@ EXISTS_TAC `Euler_characteristic A S` THEN CONJ_TAC THENL
          [MATCH_MP_TAC CONVEX_RELATIVE_INTERIOR_CLOSURE THEN
           ASM_MESON_TAC[HYPERPLANE_CELL_CONVEX];
           ASM_MESON_TAC[HYPERPLANE_CELL_RELATIVE_INTERIOR]]] THEN
+
       SUBGOAL_THEN
        `\<exists>J. J \<subseteq> H \<and>
             c = \<Inter> {{x. (fa(h::real^N=>bool)) \<bullet> x < 0} | h \<in> J} \<inter>
