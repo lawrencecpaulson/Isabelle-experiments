@@ -7,6 +7,29 @@ theory Euler_Formula
   imports "HOL-Analysis.Analysis" "Inclusion_Exclusion" "HOL-ex.Sketch_and_Explore"
 begin
 
+
+
+(*FIX NAMING CONVENTIONS inter, etc.*)
+thm convex_closure_inter
+lemmas closure_Int_convex = convex_closure_inter_two
+
+(*THIS IS A BETTER FORMULATION THAN THE ORIGINAL convex_closure_inter*)
+lemma closure_Inter_convex:
+  fixes \<F> :: "'n::euclidean_space set set"
+  assumes  "\<And>S. S \<in> \<F> \<Longrightarrow> convex S"
+    and "\<Inter>(rel_interior ` \<F>) \<noteq> {}"
+  shows "closure(\<Inter>\<F>) = \<Inter>(closure ` \<F>)"
+  apply (subst convex_closure_inter)
+    apply (simp add: assms(1))
+   apply (simp add: Setcompr_eq_image assms(2))
+  by blast
+
+lemma closure_Inter_convex_open:
+    "(\<And>S::'n::euclidean_space set. S \<in> \<F> \<Longrightarrow> convex S \<and> open S)
+        \<Longrightarrow> closure(\<Inter>\<F>) = (if \<Inter>\<F> = {} then {} else \<Inter>(closure ` \<F>))"
+  by (simp add: closure_Inter_convex rel_interior_open)
+
+
 text\<open> ------------------------------------------------------------------------- \<close>
 text\<open> Conic sets and conic hull.                                                \<close>
 text\<open> ------------------------------------------------------------------------- \<close>
@@ -466,8 +489,8 @@ next
     by (metis assms hyperplane_cellcomplex_def)
   have *: "\<C> = (\<lambda>S. \<Union>(\<F> S)) ` \<C>"
     using \<F> by force
-  define U where "U \<equiv> \<Union> {T \<in> {\<Inter> (g ` \<C>) |g. \<forall>S\<in>\<C>. g S \<in> \<F> S}. T \<noteq> {}}"
-  have "\<Inter>\<C> = \<Union>{\<Inter> (g ` \<C>) |g. \<forall>S\<in>\<C>. g S \<in> \<F> S}"
+  define U where "U \<equiv> \<Union> {T \<in> {\<Inter>(g ` \<C>) |g. \<forall>S\<in>\<C>. g S \<in> \<F> S}. T \<noteq> {}}"
+  have "\<Inter>\<C> = \<Union>{\<Inter>(g ` \<C>) |g. \<forall>S\<in>\<C>. g S \<in> \<F> S}"
     using False \<F> unfolding Inter_over_Union [symmetric]
     by blast
   also have "... = U"
@@ -479,7 +502,7 @@ next
     apply (intro hyperplane_cellcomplex_Union hyperplane_cell_cellcomplex)
     by (auto simp: intro!: hyperplane_cell_Inter)
   then show ?thesis
-     by (simp add: \<open>\<Inter> \<C> = U\<close>)
+     by (simp add: \<open>\<Inter>\<C> = U\<close>)
 qed
 
 lemma hyperplane_cellcomplex_Int:
@@ -578,7 +601,7 @@ lemma Euler_characteristic_empty [simp]: "Euler_characteristic A {} = 0"
 
 lemma Euler_characteristic_cell_Union:
   assumes "\<And>C. C \<in> \<C> \<Longrightarrow> hyperplane_cell A C"
-  shows "Euler_characteristic A (\<Union> \<C>) = sum (\<lambda>C. (-1) ^ (nat(aff_dim C))) \<C>"
+  shows "Euler_characteristic A (\<Union> \<C>) = (\<Sum>C\<in>\<C>. (- 1) ^ nat (aff_dim C))"
 proof -
   have "\<And>x. \<lbrakk>hyperplane_cell A x; x \<subseteq> \<Union> \<C>\<rbrakk> \<Longrightarrow> x \<in> \<C>"
     by (metis assms disjnt_Union1 disjnt_subset1 disjoint_hyperplane_cells_eq)
@@ -589,8 +612,7 @@ proof -
 qed
 
 lemma Euler_characteristic_cell:
-   "hyperplane_cell A C
-         \<Longrightarrow> Euler_characteristic A C =  (-1) ^ (nat(aff_dim C))"
+   "hyperplane_cell A C \<Longrightarrow> Euler_characteristic A C = (-1) ^ (nat(aff_dim C))"
   using Euler_characteristic_cell_Union [of "{C}"] by force
 
 lemma Euler_characteristic_cellcomplex_Un:
@@ -868,9 +890,9 @@ proof -
     by (simp add: affine_hull_nonempty_interior intS)
   with \<open>polyhedron S\<close>
   obtain H where "finite H"
-      and Seq: "S = \<Inter>H"
-      and Hex: "\<And>h. h\<in>H \<Longrightarrow> \<exists>a b. a\<noteq>0 \<and> h = {x. a \<bullet> x \<le> b}"
-      and Hsub: "\<And>\<G>. \<G> \<subset> H \<Longrightarrow> S \<subset> \<Inter> \<G>"
+    and Seq: "S = \<Inter>H"
+    and Hex: "\<And>h. h\<in>H \<Longrightarrow> \<exists>a b. a\<noteq>0 \<and> h = {x. a \<bullet> x \<le> b}"
+    and Hsub: "\<And>\<G>. \<G> \<subset> H \<Longrightarrow> S \<subset> \<Inter>\<G>"
     by (fastforce simp add: polyhedron_Int_affine_minimal)
   have "0 \<in> S"
     using assms(2) conic_contains_0 intS interior_empty by blast
@@ -896,9 +918,9 @@ proof -
         using \<open>0 \<in> h\<close> ab by auto
     next
       case 3
-      have "S \<subset> \<Inter> (H - {h})"
+      have "S \<subset> \<Inter>(H - {h})"
         using Hsub [of "H - {h}"] that by auto
-      then obtain x where x: "x \<in> \<Inter> (H - {h})" and "x \<notin> S"
+      then obtain x where x: "x \<in> \<Inter>(H - {h})" and "x \<notin> S"
         by auto
       define \<epsilon> where "\<epsilon> \<equiv> min (1/2) (b / (a \<bullet> x))"
       have "b < a \<bullet> x"
@@ -911,14 +933,14 @@ proof -
         using \<epsilon>_def by linarith
       have "\<epsilon> * (a \<bullet> x) \<le> b"
         unfolding \<epsilon>_def using \<open>0 < a \<bullet> x\<close> pos_le_divide_eq by fastforce
-       have "x = inverse \<epsilon> *\<^sub>R \<epsilon> *\<^sub>R x"
+      have "x = inverse \<epsilon> *\<^sub>R \<epsilon> *\<^sub>R x"
         using \<open>0 < \<epsilon>\<close> by force
       moreover 
       have "\<epsilon> *\<^sub>R x \<in> S"
       proof -
         have  "\<epsilon> *\<^sub>R x \<in> h"
           by (simp add: \<open>\<epsilon> * (a \<bullet> x) \<le> b\<close> ab)
-        moreover have "\<epsilon> *\<^sub>R x \<in> \<Inter> (H - {h})"
+        moreover have "\<epsilon> *\<^sub>R x \<in> \<Inter>(H - {h})"
         proof -
           have "\<epsilon> *\<^sub>R x \<in> k" if "x \<in> k" "k \<in> H" "k \<noteq> h" for k
           proof -
@@ -930,10 +952,10 @@ proof -
               using \<open>0 < \<epsilon>\<close> mult_le_0_iff order_less_imp_le by auto
             ultimately
             have "a' \<bullet> x \<le> b' \<Longrightarrow> a' \<bullet> \<epsilon> *\<^sub>R x \<le> b'"
-              by (smt (verit) InterD \<open>0 \<in> \<Inter> H\<close> \<open>k = {x. a' \<bullet> x \<le> b'}\<close> inner_zero_right mem_Collect_eq that(2))
+              by (smt (verit) InterD \<open>0 \<in> \<Inter>H\<close> \<open>k = {x. a' \<bullet> x \<le> b'}\<close> inner_zero_right mem_Collect_eq that(2))
             then show ?thesis
               using \<open>k = {x. a' \<bullet> x \<le> b'}\<close> \<open>x \<in> k\<close> by fastforce
-        qed
+          qed
           with x show ?thesis
             by blast
         qed
@@ -981,7 +1003,7 @@ proof -
             using True that by blast
         next
           case False
-          have fexp: "f = \<Inter> {S \<inter> {x. fa h \<bullet> x = 0} | h. h \<in> H \<and> f \<subseteq> S \<inter> {x. fa h \<bullet> x = 0}}"
+          have fexp: "f = \<Inter>{S \<inter> {x. fa h \<bullet> x = 0} | h. h \<in> H \<and> f \<subseteq> S \<inter> {x. fa h \<bullet> x = 0}}"
             apply (rule face_of_polyhedron_explicit)
                   apply (simp add: \<open>finite H\<close>)
                  apply (simp add: Seq hull_subset inf.absorb2)
@@ -994,417 +1016,308 @@ proof -
           show ?thesis
           proof
             show "f = (\<Inter>h\<in>H. {x. fa h \<bullet> x \<le> 0}) \<inter> (\<Inter>h \<in> {h \<in> H.  f \<subseteq> S \<inter> {x. fa h \<bullet> x = 0}}. {x. fa h \<bullet> x = 0})"
-             apply (auto simp: )
-            using Seq fa face_of_imp_subset \<open>f face_of S\<close> apply fastforce
-            apply (subst fexp)
-            apply (simp add: )
-            apply (auto simp: )
-            by (metis Inter_iff Seq fa mem_Collect_eq)
-        qed blast
-      qed 
-      define H' where "H' = (\<lambda>h. {x. -(fa h) \<bullet> x \<le> 0}) ` H"
-      have "\<exists>J. finite J \<and> J \<subseteq> H \<union> H' \<and> f = affine hull f \<inter> \<Inter> J"
-      proof (intro exI conjI)
-        let ?J = "H \<union> image (\<lambda>h. {x. -(fa h) \<bullet> x \<le> 0}) J0"
-        show "finite (?J::'n set set)"
-          using \<open>J0 \<subseteq> H\<close> \<open>finite H\<close> finite_subset by fastforce
-        show "?J \<subseteq> H \<union> H'"
-          using \<open>J0 \<subseteq> H\<close> by (auto simp: H'_def)
-        have "f = \<Inter>?J"
-          unfolding J0
-          apply (auto simp: ball_Un)
-          using fa apply blast
-          using fa apply blast
-          by (metis \<open>J0 \<subseteq> H\<close> fa in_mono inf.absorb2 inf.orderE mem_Collect_eq)
-        then show "f = affine hull f \<inter> \<Inter> ?J"
-          by (simp add: Int_absorb1 hull_subset)
-      qed 
-      then have **: "\<exists>n J. finite J \<and> card J = n \<and> J \<subseteq> H \<union> H' \<and> f = affine hull f \<inter> \<Inter> J"
-        by blast
-      obtain J nJ where J: "finite J" "card J = nJ" "J \<subseteq> H \<union> H'" and feq: "f = affine hull f \<inter> \<Inter> J"
-                     and minJ:  "\<And>m J'. \<lbrakk>finite J'; m < nJ; card J' = m; J' \<subseteq> H \<union> H'\<rbrakk> \<Longrightarrow> f \<noteq> affine hull f \<inter> \<Inter> J'"
-        using exists_least_iff [THEN iffD1, OF **] by metis
-      have FF: "f \<subset> (affine hull f \<inter> \<Inter> J')" if "J' \<subset> J" for J'
-      proof -
-        have "f \<noteq> affine hull f \<inter> \<Inter> J'"
-          using minJ
-          by (metis J finite_subset psubset_card_mono psubset_imp_subset psubset_subset_trans that)
-        then
-        show ?thesis
-          by (metis Int_subset_iff Inter_Un_distrib feq hull_subset inf_sup_ord(2) psubsetI sup.absorb4 that)
-      qed
-      have "\<exists>a. {x. a \<bullet> x \<le> 0} = h \<and> (h \<in> H \<and> a = fa h \<or> (\<exists>h'. h' \<in> H \<and> a = -(fa h')))" 
-        if "h \<in> J" for h
-      proof -
-        have "h \<in> H \<union> H'"
-          using J(3) that by blast
-        then show ?thesis
-        proof
-          show ?thesis if "h \<in> H"
-            using that fa by blast
-        next
-          assume "h \<in> H'"
-          then obtain h' where "h' \<in> H" "h = {x. 0 \<le> fa h' \<bullet> x}"
-            by (auto simp: H'_def)
-          then show ?thesis
-            by (force simp add: intro!: exI[where x="- (fa h')"])
-        qed
-      qed
-      then obtain ga 
-          where ga_h: "\<And>h. h \<in> J \<Longrightarrow> h = {x. ga h \<bullet> x \<le> 0}" 
-          and ga_fa: "\<And>h. h \<in> J \<Longrightarrow> h \<in> H \<and> ga h = fa h \<or> (\<exists>h'. h' \<in> H \<and> ga h = -(fa h'))" 
-        by metis
-      have 3: "hyperplane_cell A (rel_interior f)"
-      proof -
-        have D: "rel_interior f = {x \<in> f. \<forall>h\<in>J. ga h \<bullet> x < 0}"
-        proof (rule rel_interior_polyhedron_explicit [OF \<open>finite J\<close> feq])
-          show "ga h \<noteq> 0 \<and> h = {x. ga h \<bullet> x \<le> 0}" if "h \<in> J" for h
-            using that fa ga_fa ga_h by force
-        qed (auto simp: FF)
-        have H: "h \<in> H \<and> ga h = fa h" if "h \<in> J" for h
+              apply (auto simp: )
+              using Seq fa face_of_imp_subset \<open>f face_of S\<close> apply fastforce
+              apply (subst fexp)
+              apply (simp add: )
+              apply (auto simp: )
+              by (metis Inter_iff Seq fa mem_Collect_eq)
+          qed blast
+        qed 
+        define H' where "H' = (\<lambda>h. {x. -(fa h) \<bullet> x \<le> 0}) ` H"
+        have "\<exists>J. finite J \<and> J \<subseteq> H \<union> H' \<and> f = affine hull f \<inter> \<Inter>J"
+        proof (intro exI conjI)
+          let ?J = "H \<union> image (\<lambda>h. {x. -(fa h) \<bullet> x \<le> 0}) J0"
+          show "finite (?J::'n set set)"
+            using \<open>J0 \<subseteq> H\<close> \<open>finite H\<close> finite_subset by fastforce
+          show "?J \<subseteq> H \<union> H'"
+            using \<open>J0 \<subseteq> H\<close> by (auto simp: H'_def)
+          have "f = \<Inter>?J"
+            unfolding J0
+            apply (auto simp: ball_Un)
+            using fa apply blast
+            using fa apply blast
+            by (metis \<open>J0 \<subseteq> H\<close> fa in_mono inf.absorb2 inf.orderE mem_Collect_eq)
+          then show "f = affine hull f \<inter> \<Inter>?J"
+            by (simp add: Int_absorb1 hull_subset)
+        qed 
+        then have **: "\<exists>n J. finite J \<and> card J = n \<and> J \<subseteq> H \<union> H' \<and> f = affine hull f \<inter> \<Inter>J"
+          by blast
+        obtain J nJ where J: "finite J" "card J = nJ" "J \<subseteq> H \<union> H'" and feq: "f = affine hull f \<inter> \<Inter>J"
+          and minJ:  "\<And>m J'. \<lbrakk>finite J'; m < nJ; card J' = m; J' \<subseteq> H \<union> H'\<rbrakk> \<Longrightarrow> f \<noteq> affine hull f \<inter> \<Inter>J'"
+          using exists_least_iff [THEN iffD1, OF **] by metis
+        have FF: "f \<subset> (affine hull f \<inter> \<Inter>J')" if "J' \<subset> J" for J'
         proof -
-          obtain z where z: "z \<in> rel_interior f"
-            using "1" \<open>f \<noteq> {}\<close> by force
-          then have "z \<in> f \<and> z \<in> S"
-            using D \<open>f face_of S\<close> face_of_imp_subset by blast
+          have "f \<noteq> affine hull f \<inter> \<Inter>J'"
+            using minJ
+            by (metis J finite_subset psubset_card_mono psubset_imp_subset psubset_subset_trans that)
           then
           show ?thesis
-            using ga_fa [OF that]
-            by (smt (verit, del_insts) D InterE Seq fa inner_minus_left mem_Collect_eq that z)
+            by (metis Int_subset_iff Inter_Un_distrib feq hull_subset inf_sup_ord(2) psubsetI sup.absorb4 that)
         qed
-        then obtain K where "K \<subseteq> H" 
-              and K: "f = (\<Inter>h \<in> H. {x. fa h \<bullet> x \<le> 0}) \<inter> (\<Inter> h \<in> K. {x. fa h \<bullet> x = 0})"
-          using J0 \<open>J0 \<subseteq> H\<close> by blast
-        have E: "rel_interior f = {x. (\<forall>h \<in> H. fa h \<bullet> x \<le> 0) \<and> (\<forall>h \<in> K. fa h \<bullet> x = 0) \<and> (\<forall>h \<in> J. ga h \<bullet> x < 0)}"
-          unfolding D by (simp add: K)
-        have relif: "rel_interior f \<noteq> {}"
-          using "1" \<open>f \<noteq> {}\<close> by force
-        with E have "disjnt J K"
-          using H disjnt_iff by fastforce
-        define IFJK where "IFJK \<equiv> \<lambda>h. if h \<in> J then {x. fa h \<bullet> x < 0}
+        have "\<exists>a. {x. a \<bullet> x \<le> 0} = h \<and> (h \<in> H \<and> a = fa h \<or> (\<exists>h'. h' \<in> H \<and> a = -(fa h')))" 
+          if "h \<in> J" for h
+        proof -
+          have "h \<in> H \<union> H'"
+            using J(3) that by blast
+          then show ?thesis
+          proof
+            show ?thesis if "h \<in> H"
+              using that fa by blast
+          next
+            assume "h \<in> H'"
+            then obtain h' where "h' \<in> H" "h = {x. 0 \<le> fa h' \<bullet> x}"
+              by (auto simp: H'_def)
+            then show ?thesis
+              by (force simp add: intro!: exI[where x="- (fa h')"])
+          qed
+        qed
+        then obtain ga 
+          where ga_h: "\<And>h. h \<in> J \<Longrightarrow> h = {x. ga h \<bullet> x \<le> 0}" 
+            and ga_fa: "\<And>h. h \<in> J \<Longrightarrow> h \<in> H \<and> ga h = fa h \<or> (\<exists>h'. h' \<in> H \<and> ga h = -(fa h'))" 
+          by metis
+        have 3: "hyperplane_cell A (rel_interior f)"
+        proof -
+          have D: "rel_interior f = {x \<in> f. \<forall>h\<in>J. ga h \<bullet> x < 0}"
+          proof (rule rel_interior_polyhedron_explicit [OF \<open>finite J\<close> feq])
+            show "ga h \<noteq> 0 \<and> h = {x. ga h \<bullet> x \<le> 0}" if "h \<in> J" for h
+              using that fa ga_fa ga_h by force
+          qed (auto simp: FF)
+          have H: "h \<in> H \<and> ga h = fa h" if "h \<in> J" for h
+          proof -
+            obtain z where z: "z \<in> rel_interior f"
+              using "1" \<open>f \<noteq> {}\<close> by force
+            then have "z \<in> f \<and> z \<in> S"
+              using D \<open>f face_of S\<close> face_of_imp_subset by blast
+            then
+            show ?thesis
+              using ga_fa [OF that]
+              by (smt (verit, del_insts) D InterE Seq fa inner_minus_left mem_Collect_eq that z)
+          qed
+          then obtain K where "K \<subseteq> H" 
+            and K: "f = (\<Inter>h \<in> H. {x. fa h \<bullet> x \<le> 0}) \<inter> (\<Inter>h \<in> K. {x. fa h \<bullet> x = 0})"
+            using J0 \<open>J0 \<subseteq> H\<close> by blast
+          have E: "rel_interior f = {x. (\<forall>h \<in> H. fa h \<bullet> x \<le> 0) \<and> (\<forall>h \<in> K. fa h \<bullet> x = 0) \<and> (\<forall>h \<in> J. ga h \<bullet> x < 0)}"
+            unfolding D by (simp add: K)
+          have relif: "rel_interior f \<noteq> {}"
+            using "1" \<open>f \<noteq> {}\<close> by force
+          with E have "disjnt J K"
+            using H disjnt_iff by fastforce
+          define IFJK where "IFJK \<equiv> \<lambda>h. if h \<in> J then {x. fa h \<bullet> x < 0}
                          else if h \<in> K then {x. fa h \<bullet> x = 0}
                          else if rel_interior f \<subseteq> {x. fa h \<bullet> x = 0}
                          then {x. fa h \<bullet> x = 0}
                          else {x. fa h \<bullet> x < 0}"
-        have relint_f: "rel_interior f = \<Inter> (IFJK ` H)" 
-        proof
-          have A: False 
-            if x: "x \<in> rel_interior f" and y: "y \<in> rel_interior f" and less0: "fa h \<bullet> y < 0"
-              and fa0:  "fa h \<bullet> x = 0" and "h \<in> H" "h \<notin> J" "h \<notin> K"  for x h y
-          proof -
-            obtain \<epsilon> where "x \<in> f" "\<epsilon>>0" 
-                    and \<epsilon>: "\<And>t. \<lbrakk>dist x t \<le> \<epsilon>; t \<in> affine hull f\<rbrakk> \<Longrightarrow> t \<in> f"
-              using x by (force simp add: mem_rel_interior_cball)
-            then have "y \<noteq> x"
-              using fa0 less0 by force
-            define x' where "x' \<equiv> x + (\<epsilon> / norm(y - x)) *\<^sub>R (x - y)"
-            have "x \<in> affine hull f \<and> y \<in> affine hull f"
-              by (metis \<open>x \<in> f\<close> hull_inc mem_rel_interior_cball y)
-            moreover have "dist x x' \<le> \<epsilon>"
-              using \<open>0 < \<epsilon>\<close> \<open>y \<noteq> x\<close> by (simp add: x'_def divide_simps dist_norm norm_minus_commute)
-            ultimately have "x' \<in> f"
-              by (simp add: \<epsilon> mem_affine_3_minus x'_def)
-            have "x' \<in> S"
-              using \<open>f face_of S\<close> \<open>x' \<in> f\<close> face_of_imp_subset by auto
-            then have "x' \<in> h"
-              using Seq that(5) by blast
-            then have "x' \<in> {x. fa h \<bullet> x \<le> 0}"
-              using fa that(5) by blast
-            moreover have "\<epsilon> / norm (y - x) * -(fa h \<bullet> y) > 0"
-              using  \<open>0 < \<epsilon>\<close> \<open>y \<noteq> x\<close> less0 by (simp add: field_split_simps)
-            ultimately show ?thesis
-              by (simp add: x'_def fa0 inner_diff_right inner_right_distrib)
+          have relint_f: "rel_interior f = \<Inter>(IFJK ` H)" 
+          proof
+            have A: False 
+              if x: "x \<in> rel_interior f" and y: "y \<in> rel_interior f" and less0: "fa h \<bullet> y < 0"
+                and fa0:  "fa h \<bullet> x = 0" and "h \<in> H" "h \<notin> J" "h \<notin> K"  for x h y
+            proof -
+              obtain \<epsilon> where "x \<in> f" "\<epsilon>>0" 
+                and \<epsilon>: "\<And>t. \<lbrakk>dist x t \<le> \<epsilon>; t \<in> affine hull f\<rbrakk> \<Longrightarrow> t \<in> f"
+                using x by (force simp add: mem_rel_interior_cball)
+              then have "y \<noteq> x"
+                using fa0 less0 by force
+              define x' where "x' \<equiv> x + (\<epsilon> / norm(y - x)) *\<^sub>R (x - y)"
+              have "x \<in> affine hull f \<and> y \<in> affine hull f"
+                by (metis \<open>x \<in> f\<close> hull_inc mem_rel_interior_cball y)
+              moreover have "dist x x' \<le> \<epsilon>"
+                using \<open>0 < \<epsilon>\<close> \<open>y \<noteq> x\<close> by (simp add: x'_def divide_simps dist_norm norm_minus_commute)
+              ultimately have "x' \<in> f"
+                by (simp add: \<epsilon> mem_affine_3_minus x'_def)
+              have "x' \<in> S"
+                using \<open>f face_of S\<close> \<open>x' \<in> f\<close> face_of_imp_subset by auto
+              then have "x' \<in> h"
+                using Seq that(5) by blast
+              then have "x' \<in> {x. fa h \<bullet> x \<le> 0}"
+                using fa that(5) by blast
+              moreover have "\<epsilon> / norm (y - x) * -(fa h \<bullet> y) > 0"
+                using  \<open>0 < \<epsilon>\<close> \<open>y \<noteq> x\<close> less0 by (simp add: field_split_simps)
+              ultimately show ?thesis
+                by (simp add: x'_def fa0 inner_diff_right inner_right_distrib)
+            qed
+            show "rel_interior f \<subseteq> \<Inter>(IFJK ` H)"
+              unfolding IFJK_def by (smt (verit, ccfv_SIG) A E H INT_I in_mono mem_Collect_eq subsetI)
+            show "\<Inter>(IFJK ` H) \<subseteq> rel_interior f"
+              using \<open>K \<subseteq> H\<close> \<open>disjnt J K\<close>
+              apply (clarsimp simp add: ball_Un E H disjnt_iff IFJK_def)
+              apply (smt (verit, del_insts) IntI Int_Collect subsetD)
+              done
           qed
-          show "rel_interior f \<subseteq> \<Inter> (IFJK ` H)"
-            unfolding IFJK_def by (smt (verit, ccfv_SIG) A E H INT_I in_mono mem_Collect_eq subsetI)
-          show "\<Inter> (IFJK ` H) \<subseteq> rel_interior f"
-            using \<open>K \<subseteq> H\<close> \<open>disjnt J K\<close>
-            apply (clarsimp simp add: ball_Un E H disjnt_iff IFJK_def)
-            apply (smt (verit, del_insts) IntI Int_Collect subsetD)
+          obtain z where zrelf: "z \<in> rel_interior f"
+            using relif by blast
+          moreover
+          have H: "z \<in> IFJK h \<Longrightarrow> (x \<in> IFJK h) = (hyperplane_side (fa h, 0) z = hyperplane_side (fa h, 0) x)" for h x
+            using zrelf by (auto simp: IFJK_def hyperplane_side_def sgn_if split: if_split_asm)
+          then have "z \<in> \<Inter>(IFJK ` H) \<Longrightarrow> (x \<in> \<Inter>(IFJK ` H)) = hyperplane_equiv A z x" for x
+            unfolding A_def Inter_iff hyperplane_equiv_def ball_simps using H by blast
+          then have "x \<in> rel_interior f \<longleftrightarrow> hyperplane_equiv A z x" for x
+            using relint_f zrelf by presburger
+          ultimately show ?thesis
+            by (metis equalityI hyperplane_cell mem_Collect_eq subset_iff)
+        qed
+        have 4: "rel_interior f \<subseteq> S"
+          by (meson face_of_imp_subset order_trans rel_interior_subset that(1))
+        show ?thesis
+          using "1" "2" "3" "4" by blast
+      qed
+      moreover have "(closure c face_of S \<and> aff_dim (closure c) = d) \<and> rel_interior (closure c) = c"
+        if c: "hyperplane_cell A c" and "c \<subseteq> S" "aff_dim c = d" for c
+      proof (intro conjI)
+        obtain J where "J \<subseteq> H" and J: "c = (\<Inter>h \<in> J. {x. (fa h) \<bullet> x < 0}) \<inter> (\<Inter>h \<in> (H - J). {x. (fa h) \<bullet> x = 0})"
+        proof -
+          obtain z where z: "c = {y. \<forall>x \<in> H.  sgn (fa x \<bullet> y) = sgn (fa x \<bullet> z)}"
+            using c by (force simp: hyperplane_cell A_def hyperplane_equiv_def hyperplane_side_def)
+          show thesis
+          proof
+            let ?J = "{h \<in> H. sgn(fa h \<bullet> z) = -1}"
+            show "c = (\<Inter>h \<in>?J. {x. fa h \<bullet> x < 0}) \<inter> (\<Inter>h\<in>H - ?J. {x. fa h \<bullet> x = 0})"
+              unfolding z
+            proof (intro  conjI set_eqI iffI IntI; clarsimp)
+              show "fa h \<bullet> x < 0"
+                if "\<forall>h\<in>H. sgn (fa h \<bullet> x) = sgn (fa h \<bullet> z)" and "h \<in> H" and "sgn (fa h \<bullet> z) = - 1" for x h
+                using that by (metis sgn_1_neg)
+              show "sgn (fa h \<bullet> z) = - 1"
+                if "\<forall>h\<in>H. sgn (fa h \<bullet> x) = sgn (fa h \<bullet> z)" and "h \<in> H" and "fa h \<bullet> x \<noteq> 0" for x h
+              proof -
+                have "\<lbrakk>0 < fa h \<bullet> x; 0 < fa h \<bullet> z\<rbrakk> \<Longrightarrow> False"
+                  using that fa by (smt (verit, del_insts) Inter_iff Seq \<open>c \<subseteq> S\<close> mem_Collect_eq subset_iff z)
+                then show ?thesis
+                  by (metis that sgn_if sgn_zero_iff)
+              qed
+              then show "sgn (fa h \<bullet> x) = sgn (fa h \<bullet> z)"
+                if "h \<in> H" and "\<forall>h. h \<in> H \<and> sgn (fa h \<bullet> z) = - 1 \<longrightarrow> fa h \<bullet> x < 0"
+                  and "\<forall>h\<in>H - {h \<in> H. sgn (fa h \<bullet> z) = - 1}. fa h \<bullet> x = 0"
+                for x h
+                using that by (metis (mono_tags, lifting) Diff_iff mem_Collect_eq sgn_neg)            
+            qed
+          qed auto
+        qed
+        show "closure c face_of S"
+        proof -
+          have cc: "closure c = closure (\<Inter>h\<in>J. {x. fa h \<bullet> x < 0}) \<inter> closure (\<Inter>h\<in>H - J. {x. fa h \<bullet> x = 0})"
+            unfolding J
+          proof (rule closure_Int_convex)
+            show "convex (\<Inter>h\<in>J. {x. fa h \<bullet> x < 0})"
+              by (simp add: convex_INT convex_halfspace_lt)
+            show "convex (\<Inter>h\<in>H - J. {x. fa h \<bullet> x = 0})"
+              by (simp add: convex_INT convex_hyperplane)
+            have o1: "open (\<Inter>h\<in>J. {x. fa h \<bullet> x < 0})"
+            proof -
+              have "finite J"
+                using \<open>J \<subseteq> H\<close> \<open>finite H\<close> rev_finite_subset by blast
+              then show "open (\<Inter>h\<in>J. {n. fa h \<bullet> n < 0})"
+                by (simp add: open_INT open_halfspace_lt)
+            qed
+            have o2: "openin (top_of_set (affine hull (\<Inter>h\<in>H - J. {x. fa h \<bullet> x = 0}))) (\<Inter>h\<in>H - J. {x. fa h \<bullet> x = 0})"
+            proof -
+              have "affine (\<Inter>h\<in>H - J. {n. fa h \<bullet> n = 0})"
+                using affine_hyperplane by auto
+              then show ?thesis
+                by (metis (no_types) affine_hull_eq openin_subtopology_self)
+            qed
+            show "rel_interior (\<Inter>h\<in>J. {x. fa h \<bullet> x < 0}) \<inter> rel_interior (\<Inter>h\<in>H - J. {x. fa h \<bullet> x = 0}) \<noteq> {}"
+              by (metis nonempty_hyperplane_cell c rel_interior_open o1 rel_interior_openin o2 J)
+          qed
+          have clo_im_J: "closure ` ((\<lambda>h. {x. fa h \<bullet> x < 0}) ` J) = (\<lambda>h. {x. fa h \<bullet> x \<le> 0}) ` J"
+            using \<open>J \<subseteq> H\<close> by (force simp add: image_comp fa)
+          have cleq: "closure (\<Inter>h\<in>H - J. {x. fa h \<bullet> x = 0}) = (\<Inter>h\<in>H - J. {x. fa h \<bullet> x = 0})"
+            by (intro closure_closed) (blast intro: closed_hyperplane)
+          have **: "(\<Inter>h\<in>J. {x. fa h \<bullet> x \<le> 0}) \<inter> (\<Inter>h\<in>H - J. {x. fa h \<bullet> x = 0}) face_of S"
+            if "(\<Inter>h\<in>J. {x. fa h \<bullet> x < 0}) \<noteq> {}"
+          proof (cases "J=H")
+            case True
+            have [simp]: "(\<Inter>x\<in>H. {xa. fa x \<bullet> xa \<le> 0}) = \<Inter>H"
+              using fa by auto
+            show ?thesis
+              using \<open>polyhedron S\<close> by (simp add: Seq True polyhedron_imp_convex face_of_refl)
+          next
+            case False
+            have **: "(\<Inter>h\<in>J. {n. fa h \<bullet> n \<le> 0}) \<inter> (\<Inter>h\<in>H - J. {x. fa h \<bullet> x = 0}) =
+                    (\<Inter>h\<in>H - J. S \<inter> {x. fa h \<bullet> x = 0})"
+              apply (rule set_eqI)
+              apply (simp add: )
+              apply (auto simp: )
+              using False \<open>J \<subseteq> H\<close> apply blast
+               apply (metis DiffI InterI Seq dual_order.refl fa mem_Collect_eq)
+              by (metis InterE Seq \<open>J \<subseteq> H\<close> fa mem_Collect_eq subsetD)
+            show ?thesis
+              unfolding **
+              apply (rule face_of_Inter)
+               apply (auto simp: )
+              using False \<open>J \<subseteq> H\<close> apply blast
+              apply (rule face_of_Int_supporting_hyperplane_le)
+               apply (simp add: assms(1) polyhedron_imp_convex)
+              using Seq fa by auto
+          qed
+          show ?thesis
+            unfolding cc
+            apply (subst closure_Inter_convex_open)
+             apply (clarsimp simp add: image_iff)
+             apply (simp add: convex_halfspace_lt open_halfspace_lt)
+            apply (simp add: clo_im_J cleq **)
             done
         qed
-        obtain z where zrelf: "z \<in> rel_interior f"
-          using relif by blast
-        moreover
-        have H: "z \<in> IFJK h \<Longrightarrow> (x \<in> IFJK h) = (hyperplane_side (fa h, 0) z = hyperplane_side (fa h, 0) x)" for h x
-          using zrelf by (auto simp: IFJK_def hyperplane_side_def sgn_if split: if_split_asm)
-        then have "z \<in> \<Inter> (IFJK ` H) \<Longrightarrow> (x \<in> \<Inter> (IFJK ` H)) = hyperplane_equiv A z x" for x
-          unfolding A_def Inter_iff hyperplane_equiv_def ball_simps using H by blast
-        then have "x \<in> rel_interior f \<longleftrightarrow> hyperplane_equiv A z x" for x
-          using relint_f zrelf by presburger
-        ultimately show ?thesis
-          by (metis equalityI hyperplane_cell mem_Collect_eq subset_iff)
+        show "aff_dim (closure c) = int d"
+          by (simp add: that)
+        show "rel_interior (closure c) = c"
+          by (metis \<open>finite A\<close> c convex_rel_interior_closure hyperplane_cell_convex hyperplane_cell_relative_interior)
       qed
-      have 4: "rel_interior f \<subseteq> S"
-        by (meson face_of_imp_subset order_trans rel_interior_subset that(1))
-      show ?thesis
-        using "1" "2" "3" "4" by blast
+      ultimately
+      show "bij_betw (rel_interior) {f. f face_of S \<and> aff_dim f = int d} {C. hyperplane_cell A C \<and> C \<subseteq> S \<and> aff_dim C = int d}"
+        unfolding bij_betw_def
+        apply (intro conjI)
+         apply (smt (verit) inj_on_def mem_Collect_eq)
+        using image_eqI by blast
     qed
-    moreover have "(closure c face_of S \<and> aff_dim (closure c) = d) \<and> rel_interior (closure c) = c"
-      if c: "hyperplane_cell A c" and "c \<subseteq> S" "aff_dim c = d" for c
-    proof (intro conjI)
-      have "\<exists>J. J \<subseteq> H \<and> c = (\<Inter>h \<in> J. {x. (fa h) \<bullet> x < 0}) \<inter> (\<Inter>h \<in> (H - J). {x. (fa h) \<bullet> x = 0})"
-      proof -
-        obtain z where z: "c = {y. \<forall>x \<in> H.  sgn (fa x \<bullet> y) = sgn (fa x \<bullet> z)}"
-          using c by (force simp: hyperplane_cell A_def hyperplane_equiv_def hyperplane_side_def)
-        show ?thesis
-          unfolding z
-        proof (intro exI[where x="{h \<in> H. sgn(fa h \<bullet> z) = -1}"] conjI set_eqI iffI IntI; clarsimp)
-          show "fa h \<bullet> x < 0"
-            if "\<forall>h\<in>H. sgn (fa h \<bullet> x) = sgn (fa h \<bullet> z)" and "h \<in> H" and "sgn (fa h \<bullet> z) = - 1" for x h
-            using that by (metis sgn_1_neg)
-          show "sgn (fa h \<bullet> z) = - 1"
-            if "\<forall>h\<in>H. sgn (fa h \<bullet> x) = sgn (fa h \<bullet> z)" and "h \<in> H" and "fa h \<bullet> x \<noteq> 0" for x h
-          proof -
-            have "\<lbrakk>0 < fa h \<bullet> x; 0 < fa h \<bullet> z\<rbrakk> \<Longrightarrow> False"
-              using that fa by (smt (verit, del_insts) Inter_iff Seq \<open>c \<subseteq> S\<close> mem_Collect_eq subset_iff z)
-            then show ?thesis
-              by (metis that sgn_if sgn_zero_iff)
-          qed
-          then show "sgn (fa h \<bullet> x) = sgn (fa h \<bullet> z)"
-            if "h \<in> H" and "\<forall>h. h \<in> H \<and> sgn (fa h \<bullet> z) = - 1 \<longrightarrow> fa h \<bullet> x < 0"
-                       and "\<forall>h\<in>H - {h \<in> H. sgn (fa h \<bullet> z) = - 1}. fa h \<bullet> x = 0"
-            for x h
-            using that by (metis (mono_tags, lifting) Diff_iff mem_Collect_eq sgn_neg)            
-        qed
-      qed
-      show "closure c face_of S"
-      proof -
-        show ?thesis
-          sorry
-      qed
-      show "aff_dim (closure c) = int d"
-        by (simp add: that)
-      show "rel_interior (closure c) = c"
-        by (metis \<open>finite A\<close> c convex_rel_interior_closure hyperplane_cell_convex hyperplane_cell_relative_interior)
-    qed
-    ultimately
-    show "bij_betw (rel_interior) {f. f face_of S \<and> aff_dim f = int d} {C. hyperplane_cell A C \<and> C \<subseteq> S \<and> aff_dim C = int d}"
-
-      using that sorry
+    show ?thesis
+      by (simp add: Euler_characteristic \<open>finite A\<close>)
   qed
-  show ?thesis
-    by (simp add: Euler_characteristic \<open>finite A\<close>)
-qed
-  show ?thesis
-    sorry
+  also have "... = 0"
+  proof -
+    have A: "hyperplane_cellcomplex A (- h)" if "h \<in> H" for h
+    proof (rule hyperplane_cellcomplex_mono [OF hyperplane_cell_cellcomplex])
+      have "- h = {x. fa h \<bullet> x = 0} \<or> - h = {x. fa h \<bullet> x < 0} \<or> - h = {x. 0 < fa h \<bullet> x}"
+        by (smt (verit, ccfv_SIG) Collect_cong Collect_neg_eq fa that)
+      then show "hyperplane_cell {(fa h,0)} (- h)"
+        by (simp add: hyperplane_cell_singleton fa that)
+      show "{(fa h,0)} \<subseteq> A"
+        by (simp add: A_def that)
+    qed
+    then have B: "\<And>h. h \<in> H \<Longrightarrow> hyperplane_cellcomplex A h"
+      using hyperplane_cellcomplex_Compl by fastforce
+    then have C: "hyperplane_cellcomplex A S"
+      by (simp add: Seq hyperplane_cellcomplex_Inter)
+    have D: "Euler_characteristic A (UNIV::'n set) =
+             Euler_characteristic A (\<Inter>H) + Euler_characteristic A (- \<Inter>H)"
+      using Euler_characteristic_cellcomplex_Un C
+      by (metis Compl_partition Diff_cancel Diff_eq Seq \<open>finite A\<close> disjnt_def hyperplane_cellcomplex_Compl)
+    have "Euler_characteristic A UNIV = Euler_characteristic {} (UNIV::'n set)"
+      by (simp add: Euler_characterstic_invariant \<open>finite A\<close>)
+    then have E: "Euler_characteristic A UNIV = (-1) ^ (DIM('n))"
+      by (simp add: Euler_characteristic_cell)
+    have EE: "(\<Sum>\<T> | \<T> \<subseteq> uminus ` H \<and> \<T>\<noteq>{}. (-1) ^ (card \<T> + 1) * Euler_characteristic A (\<Inter>\<T>))
+             = (\<Sum>\<T> | \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {}. (- 1) ^ (card \<T> + 1) * (- 1) ^ DIM('n))"
+      apply (rule sum.cong [OF refl])
+apply (simp add: )
+      sorry
+    also have "... = (-1) ^ DIM('n)"
+      sorry
+    finally have EE: "(\<Sum>\<T> | \<T> \<subseteq> uminus ` H \<and> \<T>\<noteq>{}. (-1) ^ (card \<T> + 1) * Euler_characteristic A (\<Inter>\<T>))
+             = (-1) ^ DIM('n)" .
+    have F: "Euler_characteristic A (\<Union> (uminus ` H)) = (-1) ^ (DIM('n))"
+      using Euler_characteristic_inclusion_exclusion [OF \<open>finite A\<close>]
+      by (smt (verit) A Collect_cong EE \<open>finite H\<close> finite_imageI image_iff sum.cong)
+    show ?thesis
+      using D E F by (simp add: uminus_Inf Seq)
+  qed
+  finally show ?thesis .
 qed
 
   oops 
 
-MATCH_MP_TAC EQ_TRANS THEN
-EXISTS_TAC `Euler_characteristic A S` THEN CONJ_TAC THENL
 
-    EXISTS_TAC `rel_interior:(real^N=>bool)->(real^N=>bool)` THEN
-    EXISTS_TAC `closure:(real^N=>bool)->(real^N=>bool)` THEN
-
-      SUBGOAL_THEN
-       `\<exists>J. J \<subseteq> H \<and>
-            c = \<Inter> {{x. (fa h) \<bullet> x < 0} | h \<in> J} \<inter>
-                \<Inter> {{x. (fa h) \<bullet> x = 0} | h \<in> (H - J)}`
-      MP_TAC THENL
-        DISCH_THEN(ASSUME_TAC o SYM) THEN EXISTS_TAC
-         `{h \<in> H. sgn(fa h \<bullet> z) = -1}` THEN
-        REWRITE_TAC[SET_RULE `{x. x \<in> S \<and> P x} \<subseteq> S`] THEN
-        REWRITE_TAC[GSYM INTERS_UNION] THEN EXPAND_TAC "c" THEN
-        GEN_REWRITE_TAC id [EXTENSION] THEN X_GEN_TAC `y::real^N` THEN
-        REWRITE_TAC[IN_ELIM_THM; IN_INTERS] THEN REWRITE_TAC[IN_UNION] THEN
-        REWRITE_TAC[TAUT `(a \<or> b \<Longrightarrow> c) \<longleftrightarrow> (a \<Longrightarrow> c) \<and> (b \<Longrightarrow> c)`;
-                    FORALL_AND_THM] THEN
-        REWRITE_TAC[FORALL_IN_GSPEC] THEN
-        REWRITE_TAC[IN_DIFF; IN_ELIM_THM] THEN
-        REWRITE_TAC[TAUT `a \<and> ~(a \<and> b) \<longleftrightarrow> a \<and> ~b`] THEN
-        REWRITE_TAC[AND_FORALL_THM] THEN AP_TERM_TAC THEN
-        REWRITE_TAC[FUN_EQ_THM] THEN X_GEN_TAC `h::real^N=>bool` THEN
-        ASM_CASES_TAC `(h::real^N=>bool) \<in> H` THEN ASM_REWRITE_TAC[] THEN
-        REPEAT_TCL DISJ_CASES_THEN ASSUME_TAC
-         (SPEC `(fa:(real^N=>bool)->real^N) h \<bullet> z` REAL_SGN_CASES) THEN
-        ASM_REWRITE_TAC[] THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN
-        REWRITE_TAC[REAL_SGN_EQ] THEN
-        SUBGOAL_THEN `\<exists>x::real^N. x \<in> C \<and> x \<in> S` MP_TAC THENL
-         [ASM_MESON_TAC[MEMBER_NOT_EMPTY; \<subseteq>; NONEMPTY_HYPERPLANE_CELL];
-          MATCH_MP_TAC(TAUT `~p \<Longrightarrow> p \<Longrightarrow> q`)] THEN
-        MAP_EVERY EXPAND_TAC ["S"; "c"] THEN
-        REWRITE_TAC[IN_INTERS; IN_ELIM_THM; NOT_EXISTS_THM] THEN
-        X_GEN_TAC `x::real^N` THEN REWRITE_TAC[AND_FORALL_THM] THEN
-        DISCH_THEN(MP_TAC o SPEC `h::real^N=>bool`) THEN
-        ASM_REWRITE_TAC[REAL_SGN_EQ] THEN
-        DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-        FIRST_X_ASSUM(MP_TAC o SPEC `h::real^N=>bool`) THEN
-        ASM_REWRITE_TAC[] THEN
-        DISCH_THEN(SUBST1_TAC o SYM o CONJUNCT2) THEN
-        REWRITE_TAC[IN_ELIM_THM] THEN ASM_REAL_ARITH_TAC;
-        DISCH_THEN(STRIP_ASSUME_TAC o GSYM)] THEN
-
-      EXPAND_TAC "c" THEN
-      W(MP_TAC o PART_MATCH (lhand o rand) CLOSURE_INTER_CONVEX o
-        lhand o snd) THEN
-      ANTS_TAC THENL
-       [SIMP_TAC[CONVEX_INTERS; FORALL_IN_GSPEC; CONVEX_HALFSPACE_LT;
-                 CONVEX_HYPERPLANE] THEN
-        W(MP_TAC o PART_MATCH (lhand o rand) RELATIVE_INTERIOR_OPEN o
-          lhand o lhand o rand o snd) THEN
-        ANTS_TAC THENL
-         [MATCH_MP_TAC OPEN_INTERS THEN
-          ONCE_REWRITE_TAC[SIMPLE_IMAGE] THEN
-          REWRITE_TAC[FORALL_IN_IMAGE; OPEN_HALFSPACE_LT] THEN
-          MATCH_MP_TAC FINITE_IMAGE THEN ASM_MESON_TAC[FINITE_SUBSET];
-          DISCH_THEN SUBST1_TAC] THEN
-        W(MP_TAC o PART_MATCH (lhand o rand) RELATIVE_INTERIOR_OPEN_IN o
-          rand o lhand o rand o snd) THEN
-        ANTS_TAC THENL
-         [MATCH_MP_TAC(MESON[OPEN_IN_SUBTOPOLOGY_REFL]
-           `S \<subseteq> topspace tp \<and> t = S
-            \<Longrightarrow> openin (subtopology tp t) S`) THEN
-          REWRITE_TAC[SUBSET_UNIV; TOPSPACE_EUCLIDEAN] THEN
-          REWRITE_TAC[AFFINE_HULL_EQ] THEN
-          SIMP_TAC[AFFINE_INTERS; AFFINE_HYPERPLANE; FORALL_IN_GSPEC];
-          DISCH_THEN SUBST1_TAC THEN ASM_REWRITE_TAC[] THEN
-          ASM_MESON_TAC[NONEMPTY_HYPERPLANE_CELL]];
-        ALL_TAC] THEN
-      DISCH_THEN SUBST1_TAC THEN
-      SIMP_TAC[CLOSURE_INTERS_CONVEX_OPEN; FORALL_IN_GSPEC;
-               CONVEX_HALFSPACE_LT; OPEN_HALFSPACE_LT] THEN
-      COND_CASES_TAC THEN ASM_REWRITE_TAC[EMPTY_FACE_OF; INTER_EMPTY] THEN
-      SUBGOAL_THEN
-       `image closure {{x. fa h \<bullet> x < 0} | h \<in> J} =
-        {{x. (fa:(real^N=>bool)->real^N) h \<bullet> x \<le> 0} | h \<in> J}`
-      SUBST1_TAC THENL
-       [ONCE_REWRITE_TAC[SIMPLE_IMAGE] THEN
-        REWRITE_TAC[GSYM IMAGE_o; o_DEF] THEN
-        MATCH_MP_TAC(SET_RULE
-         `(\<forall>x. x \<in> S \<Longrightarrow> f x = g x) \<Longrightarrow> f ` S = g ` S`) THEN
-        GEN_TAC THEN DISCH_TAC THEN REWRITE_TAC[] THEN
-        MATCH_MP_TAC CLOSURE_HALFSPACE_LT THEN ASM SET_TAC[];
-        ALL_TAC] THEN
-      SUBGOAL_THEN
-      `closure (\<Inter> {{x. fa h \<bullet> x = 0} | h \<in> H - J}) =
-       \<Inter> {{x. (fa:(real^N=>bool)->real^N) h \<bullet> x = 0} | h \<in> H - J}`
-      SUBST1_TAC THENL
-       [REWRITE_TAC[CLOSURE_EQ] THEN
-        SIMP_TAC[CLOSED_INTERS; FORALL_IN_GSPEC; CLOSED_HYPERPLANE];
-        ALL_TAC] THEN
-      ASM_CASES_TAC `J:(real^N=>bool)->bool = H` THENL
-       [ASM_REWRITE_TAC[DIFF_EQ_EMPTY; INTER_UNIV; NOT_IN_EMPTY;
-                        SET_RULE `{f x | x | False} = {}`; INTERS_0] THEN
-        FIRST_ASSUM(MP_TAC o MATCH_MP FACE_OF_REFL o
-         MATCH_MP POLYHEDRON_IMP_CONVEX) THEN
-        MATCH_MP_TAC EQ_IMP THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-        EXPAND_TAC "S" THEN AP_TERM_TAC THEN
-        MATCH_MP_TAC(SET_RULE
-         `(\<forall>x. x \<in> S \<Longrightarrow> f x = x) \<Longrightarrow> S = {f x | x \<in> S}`) THEN
-        ASM_SIMP_TAC[];
-        ALL_TAC] THEN
-      SUBGOAL_THEN
-       `\<Inter> {{x. fa(h::real^N=>bool) \<bullet> x \<le> 0} | h \<in> J} \<inter>
-        \<Inter> {{x. fa h \<bullet> x = 0} | h \<in> H - J} =
-        \<Inter> {S \<inter> {x. fa h \<bullet> x = 0} | h \<in> H - J}`
-      SUBST1_TAC THENL
-       [ONCE_REWRITE_TAC[SIMPLE_IMAGE] THEN REWRITE_TAC[INTERS_IMAGE] THEN
-        GEN_REWRITE_TAC id [EXTENSION] THEN X_GEN_TAC `y::real^N` THEN
-        REWRITE_TAC[IN_INTER; IN_ELIM_THM] THEN
-        ASM_CASES_TAC `(y::real^N) \<in> S` THEN ASM_REWRITE_TAC[] THENL
-         [MATCH_MP_TAC(TAUT `a \<Longrightarrow> (a \<and> b \<longleftrightarrow> b)`) THEN
-          UNDISCH_TAC `(y::real^N) \<in> S` THEN EXPAND_TAC "S" THEN
-          REWRITE_TAC[IN_INTERS] THEN MATCH_MP_TAC MONO_FORALL THEN
-          X_GEN_TAC `h::real^N=>bool` THEN
-          DISCH_THEN(fun th -> DISCH_TAC THEN MP_TAC th) THEN
-          ANTS_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-          FIRST_X_ASSUM(MP_TAC o SPEC `h::real^N=>bool`) THEN
-          ANTS_TAC THENL [ASM SET_TAC[]; SET_TAC[]];
-          UNDISCH_TAC `~((y::real^N) \<in> S)` THEN MATCH_MP_TAC
-           (TAUT `~q \<and> (p \<Longrightarrow> r) \<Longrightarrow> ~r \<Longrightarrow> (p \<longleftrightarrow> q)`) THEN
-          CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-          EXPAND_TAC "S" THEN REWRITE_TAC[IN_INTERS; AND_FORALL_THM] THEN
-          MATCH_MP_TAC MONO_FORALL THEN
-          X_GEN_TAC `h::real^N=>bool` THEN
-          DISCH_THEN(fun th -> DISCH_TAC THEN MP_TAC th) THEN
-          FIRST_X_ASSUM(MP_TAC o SPEC `h::real^N=>bool`) THEN
-          ANTS_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-          DISCH_THEN(fun th -> GEN_REWRITE_TAC (RAND_CONV o RAND_CONV)
-           [GSYM(CONJUNCT2 th)]) THEN
-          ASM_REWRITE_TAC[IN_DIFF; IN_ELIM_THM] THEN
-          ASM_CASES_TAC `(h::real^N=>bool) \<in> J` THEN
-          ASM_SIMP_TAC[REAL_LE_REFL]];
-        ALL_TAC] THEN
-      MATCH_MP_TAC FACE_OF_INTERS THEN
-      CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-      REWRITE_TAC[FORALL_IN_GSPEC] THEN
-      X_GEN_TAC `h::real^N=>bool` THEN REWRITE_TAC[IN_DIFF] THEN STRIP_TAC THEN
-      MATCH_MP_TAC FACE_OF_INTER_SUPPORTING_HYPERPLANE_LE THEN
-      ASM_SIMP_TAC[POLYHEDRON_IMP_CONVEX] THEN X_GEN_TAC `y::real^N` THEN
-      EXPAND_TAC "S" THEN REWRITE_TAC[IN_INTERS] THEN
-      DISCH_THEN(MP_TAC o SPEC `h::real^N=>bool`) THEN ASM_REWRITE_TAC[] THEN
-      FIRST_X_ASSUM(MP_TAC o SPEC `h::real^N=>bool`) THEN
-      ANTS_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-      DISCH_THEN(fun th -> GEN_REWRITE_TAC (LAND_CONV o RAND_CONV)
-        [GSYM(CONJUNCT2 th)]) THEN
-      REWRITE_TAC[IN_ELIM_THM]];
-    ALL_TAC] THEN
-
-
-  SUBGOAL_THEN
-   `\<forall>h. h \<in> H \<Longrightarrow> hyperplane_cellcomplex A (- h)`
-  ASSUME_TAC THENL
-   [GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_MONO THEN
-    EXISTS_TAC `{((fa:(real^N=>bool)->real^N) h,0)}` THEN CONJ_TAC THENL
-     [MATCH_MP_TAC HYPERPLANE_CELL_CELLCOMPLEX THEN
-      ASM_SIMP_TAC[HYPERPLANE_CELL_SING] THEN REPEAT DISJ2_TAC THEN
-      FIRST_X_ASSUM(MP_TAC o SPEC `h::real^N=>bool`) THEN
-      ASM_REWRITE_TAC[] THEN DISCH_THEN(fun th ->
-        GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [SYM(CONJUNCT2 th)]) THEN
-      REWRITE_TAC[EXTENSION; IN_DIFF; IN_ELIM_THM; IN_UNIV] THEN
-      REAL_ARITH_TAC;
-      EXPAND_TAC "A" THEN
-      REWRITE_TAC[IN_IMAGE; \<subseteq>; FORALL_UNWIND_THM2; IN_SING] THEN
-      ASM_MESON_TAC[]];
-    ALL_TAC] THEN
-
-
-  SUBGOAL_THEN
-   `\<forall>h::real^N=>bool. h \<in> H \<Longrightarrow> hyperplane_cellcomplex A h`
-  ASSUME_TAC THENL
-   [ASM_MESON_TAC[HYPERPLANE_CELLCOMPLEX_COMPL;
-                  COMPL_COMPL];
-    ALL_TAC] THEN
-
-  SUBGOAL_THEN `hyperplane_cellcomplex A (S::real^N=>bool)` ASSUME_TAC THENL
-   [EXPAND_TAC "S" THEN MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_INTERS THEN
-    ASM_REWRITE_TAC[];
-    ALL_TAC] THEN
-  MP_TAC(ISPECL [`A::real^N#real=>bool`;
-                 `\<Inter> H::real^N=>bool`;
-                 `- \<Inter> H`]
-        EULER_CHARACTERISTIC_CELLCOMPLEX_UNION) THEN
-  REWRITE_TAC[SET_RULE `disjnt S (- S)`] THEN ANTS_TAC THENL
-   [ASM_SIMP_TAC[HYPERPLANE_CELLCOMPLEX_DIFF; HYPERPLANE_CELLCOMPLEX_UNIV];
-    REWRITE_TAC[SET_RULE `S \<union> (- S) = UNIV`]] THEN
-  REWRITE_TAC[DIFF_INTERS] THEN ASM_REWRITE_TAC[] THEN
-  MATCH_MP_TAC(REAL_ARITH
-   `x = (-- 1) ^ (DIM('N)) \<and>
-    y = (-- 1) ^ (DIM('N))
-    \<Longrightarrow> x = S + y \<Longrightarrow> S = 0`) THEN
-  CONJ_TAC THENL
-   [MATCH_MP_TAC EQ_TRANS THEN
-    EXISTS_TAC `Euler_characteristic {} UNIV` THEN CONJ_TAC THENL
-     [MATCH_MP_TAC EULER_CHARACTERSTIC_INVARIANT THEN
-      ASM_REWRITE_TAC[FINITE_EMPTY] THEN CONJ_TAC THENL
-       [MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_MONO THEN
-        EXISTS_TAC `{}:real^N#real=>bool` THEN REWRITE_TAC[EMPTY_SUBSET];
-        ALL_TAC] THEN
-      MATCH_MP_TAC HYPERPLANE_CELL_CELLCOMPLEX THEN
-      REWRITE_TAC[HYPERPLANE_CELL_EMPTY];
-      SIMP_TAC[EULER_CHARACTERISTIC_CELL; HYPERPLANE_CELL_EMPTY] THEN
-      REWRITE_TAC[AFF_DIM_UNIV; NUM_OF_INT_OF_NUM]];
-    ALL_TAC] THEN
-
-
-  W(MP_TAC o PART_MATCH (lhs o rand) EULER_CHARACTERISTIC_INCLUSION_EXCLUSION o
-    lhand o snd) THEN
-  ANTS_TAC THENL
-   [ASM_REWRITE_TAC[FORALL_IN_GSPEC] THEN ONCE_REWRITE_TAC[SIMPLE_IMAGE] THEN
-    ASM_SIMP_TAC[FINITE_IMAGE];
-    DISCH_THEN SUBST1_TAC] THEN
   MATCH_MP_TAC EQ_TRANS THEN
   EXISTS_TAC `sum {t. t \<subseteq> {- t | t \<in> H} \<and> (t \<noteq> {})}
              (\<lambda>t.-1 ^ (card t + 1) * (-- 1) ^ (DIM('N)))` THEN
@@ -1417,7 +1330,7 @@ EXISTS_TAC `Euler_characteristic A S` THEN CONJ_TAC THENL
     SUBGOAL_THEN `(B::real^N#real=>bool) \<subseteq> A` ASSUME_TAC THENL
      [ASM SET_TAC[]; ALL_TAC] THEN
     SUBGOAL_THEN
-     `\<Inter> (image (\<lambda>t. - t) H) =
+     `\<Inter>(image (\<lambda>t. - t) H) =
       image (--) (interior S)`
     ASSUME_TAC THENL
      [MP_TAC(ISPECL [`S::real^N=>bool`; `H:(real^N=>bool)->bool`;
@@ -1446,10 +1359,10 @@ EXISTS_TAC `Euler_characteristic A S` THEN CONJ_TAC THENL
         REWRITE_TAC[IN_ELIM_THM; DOT_RNEG] THEN REAL_ARITH_TAC];
       ALL_TAC] THEN
     SUBGOAL_THEN
-     `hyperplane_cell B (\<Inter> (image (\<lambda>t. - t) J))`
+     `hyperplane_cell B (\<Inter>(image (\<lambda>t. - t) J))`
     ASSUME_TAC THENL
      [SUBGOAL_THEN
-       `~(\<Inter> (image (\<lambda>t. - t) J) = {})`
+       `~(\<Inter>(image (\<lambda>t. - t) J) = {})`
       MP_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
       REWRITE_TAC[hyperplane_cell; GSYM MEMBER_NOT_EMPTY; IN_INTERS] THEN
       REWRITE_TAC[FORALL_IN_IMAGE] THEN
@@ -1477,7 +1390,7 @@ EXISTS_TAC `Euler_characteristic A S` THEN CONJ_TAC THENL
       MESON_TAC[REAL_SGN_EQ; real_gt];
       ALL_TAC] THEN
     MATCH_MP_TAC EQ_TRANS THEN EXISTS_TAC
-     `Euler_characteristic B (\<Inter> (image (\<lambda>t. - t) J))` THEN
+     `Euler_characteristic B (\<Inter>(image (\<lambda>t. - t) J))` THEN
     CONJ_TAC THENL
      [MATCH_MP_TAC EULER_CHARACTERSTIC_INVARIANT THEN
       ASM_SIMP_TAC[HYPERPLANE_CELL_CELLCOMPLEX] THEN
@@ -1490,11 +1403,13 @@ EXISTS_TAC `Euler_characteristic A S` THEN CONJ_TAC THENL
     MATCH_MP_TAC(MESON[NUM_OF_INT_OF_NUM] `i = n \<Longrightarrow> nat i = n`) THEN
     REWRITE_TAC[AFF_DIM_EQ_FULL] THEN
     MATCH_MP_TAC(SET_RULE `\<forall>t. t \<subseteq> S \<and> t = UNIV \<Longrightarrow> S = UNIV`) THEN
-    EXISTS_TAC `affine hull (\<Inter> (image (\<lambda>t. - t) H))` THEN
+    EXISTS_TAC `affine hull (\<Inter>(image (\<lambda>t. - t) H))` THEN
     CONJ_TAC THENL [MATCH_MP_TAC HULL_MONO THEN ASM SET_TAC[]; ALL_TAC] THEN
     MATCH_MP_TAC AFFINE_HULL_OPEN THEN ASM_REWRITE_TAC[] THEN
     ASM_SIMP_TAC[IMAGE_EQ_EMPTY; OPEN_NEGATIONS; OPEN_INTERIOR];
     ALL_TAC] THEN
+
+
   REWRITE_TAC[SUM_RMUL] THEN
   MATCH_MP_TAC(REAL_RING `S = 1 \<Longrightarrow> S * t = t`) THEN
   MP_TAC(ISPECL [`\<lambda>t:(real^N=>bool)->bool. card t`;
@@ -1573,6 +1488,9 @@ EXISTS_TAC `Euler_characteristic A S` THEN CONJ_TAC THENL
   REWRITE_TAC[REAL_POW_ZERO] THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
   UNDISCH_TAC `card(H:(real^N=>bool)->bool) = 0` THEN
   ASM_SIMP_TAC[CARD_EQ_0] THEN DISCH_THEN SUBST_ALL_TAC THEN ASM SET_TAC[]);;
+
+
+
 
 
 text\<open> ------------------------------------------------------------------------- \<close>
@@ -1977,6 +1895,9 @@ oops
      `c *\<^sub>R x::real^N = 0 + c *\<^sub>R (x - 0)`] THEN
     MATCH_MP_TAC IN_AFFINE_ADD_MUL_DIFF THEN
     ASM_SIMP_TAC[AFFINE_AFFINE_HULL; HULL_INC; IN_INSERT]]);;
+
+
+
 
 lemma Euler_poincare_special:
    "2 \<le> DIM('N) \<and> polytope p \<and> affine hull p = {x. x$1 = 0}
