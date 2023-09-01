@@ -627,7 +627,7 @@ text\<open> --------------------------------------------------------------------
 text\<open> Euler characteristic.                                                     \<close>
 text\<open> ------------------------------------------------------------------------- \<close>
 
-definition Euler_characteristic :: "('a::euclidean_space \<times> real) set \<Rightarrow> 'a set \<Rightarrow> real"
+definition Euler_characteristic :: "('a::euclidean_space \<times> real) set \<Rightarrow> 'a set \<Rightarrow> int"
   where "Euler_characteristic A S \<equiv>
         (\<Sum>C | hyperplane_cell A C \<and> C \<subseteq> S. (-1) ^ nat (aff_dim C))"
 
@@ -692,7 +692,7 @@ lemma Euler_characteristic:
   fixes A :: "('n::euclidean_space * real) set"
   assumes "finite A"
   shows "Euler_characteristic A S =
-        (\<Sum>d = 0..DIM('n). (-1) ^ d * real (card {C. hyperplane_cell A C \<and> C \<subseteq> S \<and> aff_dim C = int d}))"
+        (\<Sum>d = 0..DIM('n). (-1) ^ d * int (card {C. hyperplane_cell A C \<and> C \<subseteq> S \<and> aff_dim C = int d}))"
         (is "_ = ?rhs")
 proof -
   have "\<And>T. \<lbrakk>hyperplane_cell A T; T \<subseteq> S\<rbrakk> \<Longrightarrow> aff_dim T \<in> {0..DIM('n)}"
@@ -702,7 +702,7 @@ proof -
     by (auto simp: image_int_atLeastAtMost)
   have "Euler_characteristic A  S = (\<Sum>y\<in>int ` {0..DIM('n)}.
        \<Sum>C\<in>{x. hyperplane_cell A x \<and> x \<subseteq> S \<and> aff_dim x = y}. (- 1) ^ nat y) "
-    using sum.group [of "{C. hyperplane_cell A C \<and> C \<subseteq> S}" "int ` {0..DIM('n)}" aff_dim "\<lambda>C. (-1::real) ^ nat(aff_dim C)", symmetric]
+    using sum.group [of "{C. hyperplane_cell A C \<and> C \<subseteq> S}" "int ` {0..DIM('n)}" aff_dim "\<lambda>C. (-1::int) ^ nat(aff_dim C)", symmetric]
     by (simp add: assms Euler_characteristic_def finite_restrict_hyperplane_cells *)
   also have "... = ?rhs"
     by (simp add: sum.reindex mult_of_nat_commute)
@@ -749,7 +749,7 @@ proof -
         by (smt (verit, ccfv_threshold) hyperplane_cell_Un hyperplane_cell_empty hyperplane_cell_singleton insert_is_Un sup_bot_left)
       have "convex C"
         using \<open>hyperplane_cell A C\<close> hyperplane_cell_convex by blast
-      define r where "r \<equiv> (\<Sum>D\<in>{C' \<inter> C |C'. hyperplane_cell {(a, b)} C' \<and> C' \<inter> C \<noteq> {}}. (-1::real) ^ nat (aff_dim D))"
+      define r where "r \<equiv> (\<Sum>D\<in>{C' \<inter> C |C'. hyperplane_cell {(a, b)} C' \<and> C' \<inter> C \<noteq> {}}. (-1::int) ^ nat (aff_dim D))"
       have "Euler_characteristic (insert (a, b) A) C 
            = (\<Sum>D | (D \<noteq> {} \<and>
                      (\<exists>C1 C2. hyperplane_cell {(a, b)} C1 \<and> hyperplane_cell A C2 \<and> D = C1 \<inter> C2)) \<and> D \<subseteq> C.
@@ -919,7 +919,7 @@ text\<open> --------------------------------------------------------------------
 lemma Euler_polyhedral_cone:
   fixes S :: "'n::euclidean_space set"
   assumes "polyhedron S" "conic S" and intS: "interior S \<noteq> {}" and "S \<noteq> UNIV"
-  shows "(\<Sum>d = 0..DIM('n). (- 1) ^ d * real (card {f. f face_of S \<and> aff_dim f = int d})) = 0"  (is "?lhs = 0")
+  shows "(\<Sum>d = 0..DIM('n). (- 1) ^ d * int (card {f. f face_of S \<and> aff_dim f = int d})) = 0"  (is "?lhs = 0")
 proof -
   have [simp]: "affine hull S = UNIV"
     by (simp add: affine_hull_nonempty_interior intS)
@@ -1411,14 +1411,16 @@ proof -
         also have "... = card H choose n"
           by (metis card_image double_complement inj_on_inverseI)
         finally
-        show "- (int (card {x. x \<subseteq> uminus ` H \<and> x \<noteq> {} \<and> card x = n}) * (- 1) ^ n) = (- 1) ^ Suc n * int (card H choose n)"
+        show "- (int (card {\<T>. \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {} \<and> card \<T> = n}) * (- 1) ^ n) = (- 1) ^ Suc n * int (card H choose n)"
           by simp
       qed
-      also have "... = 1 + (\<Sum>k\<le>card H. int (card H choose k) * (- 1) ^ k)"
-        apply (simp add: sum.atLeast_Suc_atMost)
-        sorry
-      also have "... = 1 + 0 ^ card H"
-        using binomial_ring [of "-1" "1::int" "card H"] by simp
+      also have "... = - (\<Sum>k = Suc 0..card H. (-1) ^ k * (card H choose k))"
+        by (simp add: sum_negf)
+      also have "... = 1 - (\<Sum>k=0..card H. (-1) ^ k * (card H choose k))"
+        apply (simp add: sum.head [of 0])
+        using atLeastSucAtMost_greaterThanAtMost by presburger
+      also have "... = 1 - 0 ^ card H"
+        using binomial_ring [of "-1" "1::int" "card H"] by (simp add: mult.commute atLeast0AtMost)
       also have "... = 1"
         using Seq \<open>finite H\<close> \<open>S \<noteq> UNIV\<close> card_0_eq by auto
       finally have C: "(\<Sum>n = Suc 0..card H. - (int (card {x. x \<subseteq> uminus ` H \<and> x \<noteq> {} \<and> card x = n}) * (- 1) ^ n)) = (1::int)" .
@@ -1427,7 +1429,7 @@ proof -
         unfolding A [symmetric] by (simp add: C)
 
       then show ?thesis
-        by (metis (no_types) E sum_distrib_right mult_1)
+        by (simp flip: sum_distrib_right power_Suc)
     qed
     finally have EE: "(\<Sum>\<T> | \<T> \<subseteq> uminus ` H \<and> \<T>\<noteq>{}. (-1) ^ (card \<T> + 1) * Euler_characteristic A (\<Inter>\<T>))
              = (-1) ^ DIM('n)" .
@@ -1439,23 +1441,6 @@ proof -
   qed
   finally show ?thesis .
 qed
-
-  oops 
-
-
-  MP_TAC(ISPECL [`card(H:(real^N=>bool)->bool)`; `-- 1`; `1`]
-        REAL_BINOMIAL_THEOREM) THEN
-  REWRITE_TAC[REAL_POW_ONE; REAL_MUL_RID; REAL_ADD_LINV] THEN
-  SIMP_TAC[SUM_CLAUSES_LEFT; REAL_POW_ADD; REAL_POW_ONE; LE_0] THEN
-  REWRITE_TAC[REAL_ARITH `(x * -- 1 ^ 1) * y = --(y * x)`] THEN
-  REWRITE_TAC[real_pow; SUM_NEG; ADD_CLAUSES; REAL_MUL_RID] THEN
-  REWRITE_TAC[binom] THEN MATCH_MP_TAC(REAL_ARITH
-   `x = 0 \<Longrightarrow> x = 1 + y \<Longrightarrow>-y = 1`) THEN
-  REWRITE_TAC[REAL_POW_ZERO] THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
-  UNDISCH_TAC `card(H:(real^N=>bool)->bool) = 0` THEN
-  ASM_SIMP_TAC[CARD_EQ_0] THEN DISCH_THEN SUBST_ALL_TAC THEN ASM SET_TAC[]);;
-
-
 
 
 
