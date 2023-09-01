@@ -30,6 +30,41 @@ lemma closure_Inter_convex_open:
   by (simp add: closure_Inter_convex rel_interior_open)
 
 
+lemma aff_dim_psubset:
+   "(affine hull s) \<subset> (affine hull t) \<Longrightarrow> aff_dim s < aff_dim t"
+  by (metis aff_dim_affine_hull aff_dim_empty aff_dim_subset affine_affine_hull affine_dim_equal order_less_le)
+
+lemma aff_dim_eq_full_gen:
+   "s \<subseteq> t
+        \<Longrightarrow> (aff_dim s = aff_dim t \<longleftrightarrow> affine hull s = affine hull t)"
+  by (smt (verit, del_insts) aff_dim_affine_hull2 aff_dim_psubset hull_mono psubsetI)
+
+lemma aff_dim_eq_full:
+  fixes s :: "'n::euclidean_space set"
+  shows "aff_dim s = (DIM('n)) \<longleftrightarrow> affine hull s = UNIV"
+  by (metis aff_dim_UNIV aff_dim_affine_hull affine_hull_UNIV)
+
+
+lemma affine_independent_iff_card:
+   "  ~affine_dependent s \<longleftrightarrow> finite s \<and> aff_dim s = (card s) - 1"
+  apply safe
+  apply (simp add: aff_independent_finite)
+  defer
+  using aff_dim_le_card affine_independent_iff_card apply fastforce
+  
+  oops
+  GEN_TAC THEN EQ_TAC THEN
+  SIMP_TAC[AFF_DIM_AFFINE_INDEPENDENT; AFFINE_INDEPENDENT_IMP_FINITE] THEN
+  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
+  ONCE_REWRITE_TAC[GSYM CONTRAPOS_THM] THEN REWRITE_TAC[] THEN DISCH_TAC THEN
+  X_CHOOSE_THEN `b::real^N=>bool` STRIP_ASSUME_TAC
+   (ISPEC `s::real^N=>bool` AFFINE_BASIS_EXISTS) THEN
+  MATCH_MP_TAC(ARITH_RULE `\<forall>b::int. a \<le> b - 1 \<and> b < s \<Longrightarrow> (a \<noteq> s - 1)`) THEN
+  EXISTS_TAC `&(card(b::real^N=>bool)):int` THEN CONJ_TAC THENL
+   [ASM_MESON_TAC[AFF_DIM_LE_CARD; FINITE_SUBSET; AFF_DIM_AFFINE_HULL];
+    REWRITE_TAC[INT_OF_NUM_LT] THEN MATCH_MP_TAC CARD_PSUBSET THEN
+    ASM_REWRITE_TAC[\<subset>] THEN ASM_MESON_TAC[]]);;
+
 text\<open> ------------------------------------------------------------------------- \<close>
 text\<open> Conic sets and conic hull.                                                \<close>
 text\<open> ------------------------------------------------------------------------- \<close>
@@ -896,7 +931,7 @@ proof -
     by (fastforce simp add: polyhedron_Int_affine_minimal)
   have "0 \<in> S"
     using assms(2) conic_contains_0 intS interior_empty by blast
-  have "\<exists>a. a\<noteq>0 \<and> h = {x. a \<bullet> x \<le> 0}" if "h \<in> H" for h
+  have *: "\<exists>a. a\<noteq>0 \<and> h = {x. a \<bullet> x \<le> 0}" if "h \<in> H" for h
   proof -
     obtain a b where "a\<noteq>0" and ab: "h = {x. a \<bullet> x \<le> b}"
       using Hex [OF \<open>h \<in> H\<close>] by blast
@@ -1285,24 +1320,79 @@ proof -
       show "{(fa h,0)} \<subseteq> A"
         by (simp add: A_def that)
     qed
-    then have B: "\<And>h. h \<in> H \<Longrightarrow> hyperplane_cellcomplex A h"
+    then have "\<And>h. h \<in> H \<Longrightarrow> hyperplane_cellcomplex A h"
       using hyperplane_cellcomplex_Compl by fastforce
-    then have C: "hyperplane_cellcomplex A S"
+    then have "hyperplane_cellcomplex A S"
       by (simp add: Seq hyperplane_cellcomplex_Inter)
-    have D: "Euler_characteristic A (UNIV::'n set) =
+    then have D: "Euler_characteristic A (UNIV::'n set) =
              Euler_characteristic A (\<Inter>H) + Euler_characteristic A (- \<Inter>H)"
-      using Euler_characteristic_cellcomplex_Un C
+      using Euler_characteristic_cellcomplex_Un 
       by (metis Compl_partition Diff_cancel Diff_eq Seq \<open>finite A\<close> disjnt_def hyperplane_cellcomplex_Compl)
     have "Euler_characteristic A UNIV = Euler_characteristic {} (UNIV::'n set)"
       by (simp add: Euler_characterstic_invariant \<open>finite A\<close>)
     then have E: "Euler_characteristic A UNIV = (-1) ^ (DIM('n))"
       by (simp add: Euler_characteristic_cell)
+    have DD: "Euler_characteristic A (\<Inter> (uminus ` J)) = (- 1) ^ DIM('n)"
+      if "J \<noteq> {}" "J \<subseteq> H" for J
+    proof -
+      define B where "B \<equiv> (\<lambda>h. (fa h,0::real)) ` J"
+      then have "B \<subseteq> A"
+        by (simp add: A_def image_mono that)
+
+      have "\<exists>x. y = -x" if "y \<in> \<Inter> (uminus ` H)" for y::'n  \<comment> \<open>Weirdly, the assumption is not used\<close>
+        by (metis add.inverse_inverse)
+      moreover have "-x \<in> \<Inter> (uminus ` H) \<longleftrightarrow> x \<in> interior S" for x
+      proof -
+        have 1: "interior S = {x \<in> S. \<forall>h\<in>H. fa h \<bullet> x < 0}"
+          using rel_interior_polyhedron_explicit [OF \<open>finite H\<close> _ fa]
+          by (metis (no_types, lifting) inf_top_left  Hsub Seq \<open>affine hull S = UNIV\<close> rel_interior_interior)
+        have 2: "\<And>x y. \<lbrakk>y \<in> H; \<forall>h\<in>H. fa h \<bullet> x < 0; - x \<in> y\<rbrakk> \<Longrightarrow> False" 
+          by (smt (verit, best) fa inner_minus_right mem_Collect_eq)
+        show ?thesis
+          apply (simp add: 1)
+          by (smt (verit) 2 * fa Inter_iff Seq inner_minus_right mem_Collect_eq)
+      qed
+      ultimately have INT_Compl_H: "\<Inter> (uminus ` H) = uminus ` interior S"
+        by blast
+      obtain z where z: "z \<in> \<Inter> (uminus ` J)"  (*MOVE THIS INTO THE PROOF OF hyper_B*)
+        using \<open>J \<subseteq> H\<close> \<open>\<Inter> (uminus ` H) = uminus ` interior S\<close> intS by fastforce
+      have "\<Inter> (uminus ` J) = Collect (hyperplane_equiv B z)" (is "?L = ?R")
+      proof
+        show "?L \<subseteq> ?R"
+          using fa \<open>J \<subseteq> H\<close> z 
+          by (fastforce simp add: hyperplane_equiv_def hyperplane_side_def B_def set_eq_iff )
+        show "?R \<subseteq> ?L"
+          using z apply (clarsimp simp add: hyperplane_equiv_def hyperplane_side_def B_def sgn_if)
+          by (metis fa in_mono linorder_not_le mem_Collect_eq that(2))
+      qed
+      then have hyper_B: "hyperplane_cell B (\<Inter> (uminus ` J))"
+        by (metis hyperplane_cell)
+      have "Euler_characteristic A (\<Inter> (uminus ` J)) = Euler_characteristic B (\<Inter> (uminus ` J))"
+        apply (rule Euler_characterstic_invariant)
+           apply (simp add: \<open>finite A\<close>)
+        using \<open>B \<subseteq> A\<close> \<open>finite A\<close> finite_subset apply blast
+        using \<open>B \<subseteq> A\<close> hyper_B hyperplane_cell_cellcomplex hyperplane_cellcomplex_mono apply blast
+        by (simp add: hyper_B hyperplane_cell_cellcomplex)
+      also have "... = (- 1) ^ nat (aff_dim (\<Inter> (uminus ` J)))"
+        using Euler_characteristic_cell hyper_B by blast
+      also have "... = (- 1) ^ DIM('n)"
+      proof -
+        have "affine hull \<Inter> (uminus ` H) = UNIV"
+          by (simp add: INT_Compl_H affine_hull_nonempty_interior intS interior_negations)
+        then have "affine hull \<Inter> (uminus ` J) = UNIV"
+          by (metis Inf_superset_mono hull_mono subset_UNIV subset_antisym subset_image_iff that(2))
+        with aff_dim_eq_full show ?thesis
+          by (metis nat_int)
+      qed
+      finally show ?thesis .
+    qed
     have EE: "(\<Sum>\<T> | \<T> \<subseteq> uminus ` H \<and> \<T>\<noteq>{}. (-1) ^ (card \<T> + 1) * Euler_characteristic A (\<Inter>\<T>))
-             = (\<Sum>\<T> | \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {}. (- 1) ^ (card \<T> + 1) * (- 1) ^ DIM('n))"
-      apply (rule sum.cong [OF refl])
-apply (simp add: )
-      sorry
+             = (\<Sum>\<T> | \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {}. (-1) ^ (card \<T> + 1) * (- 1) ^ DIM('n))"
+      by (intro sum.cong [OF refl]) (fastforce simp add: subset_image_iff intro!: DD)
+    also have "... = (\<Sum>\<T> | \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {}. (- 1) ^ (card \<T> + 1)) * (- 1) ^ DIM('n)"
+      by (simp add: sum_distrib_right)
     also have "... = (-1) ^ DIM('n)"
+
       sorry
     finally have EE: "(\<Sum>\<T> | \<T> \<subseteq> uminus ` H \<and> \<T>\<noteq>{}. (-1) ^ (card \<T> + 1) * Euler_characteristic A (\<Inter>\<T>))
              = (-1) ^ DIM('n)" .
@@ -1316,99 +1406,6 @@ apply (simp add: )
 qed
 
   oops 
-
-
-  MATCH_MP_TAC EQ_TRANS THEN
-  EXISTS_TAC `sum {t. t \<subseteq> {- t | t \<in> H} \<and> (t \<noteq> {})}
-             (\<lambda>t.-1 ^ (card t + 1) * (-- 1) ^ (DIM('N)))` THEN
-  CONJ_TAC THENL
-   [MATCH_MP_TAC SUM_EQ THEN REWRITE_TAC[FORALL_IN_GSPEC] THEN
-    REWRITE_TAC[SIMPLE_IMAGE; IMP_CONJ; FORALL_SUBSET_IMAGE] THEN
-    X_GEN_TAC `J:(real^N=>bool)->bool` THEN DISCH_TAC THEN
-    REWRITE_TAC[IMAGE_EQ_EMPTY] THEN DISCH_TAC THEN AP_TERM_TAC THEN
-    ABBREV_TAC `B = image (\<lambda>h::real^N=>bool. fa h::real^N,0) J` THEN
-    SUBGOAL_THEN `(B::real^N#real=>bool) \<subseteq> A` ASSUME_TAC THENL
-     [ASM SET_TAC[]; ALL_TAC] THEN
-    SUBGOAL_THEN
-     `\<Inter>(image (\<lambda>t. - t) H) =
-      image (--) (interior S)`
-    ASSUME_TAC THENL
-     [MP_TAC(ISPECL [`S::real^N=>bool`; `H:(real^N=>bool)->bool`;
-                     `fa:(real^N=>bool)->real^N`;
-                     `\<lambda>h::real^N=>bool. 0`]
-                RELATIVE_INTERIOR_POLYHEDRON_EXPLICIT) THEN
-      ASM_SIMP_TAC[INTER_UNIV] THEN
-      ASM_SIMP_TAC[RELATIVE_INTERIOR_INTERIOR] THEN
-      DISCH_THEN(K ALL_TAC) THEN
-      CONV_TAC SYM_CONV THEN MATCH_MP_TAC SURJECTIVE_IMAGE_EQ THEN
-      REWRITE_TAC[VECTOR_ARITH `-x::real^N = y \<longleftrightarrow> x =-y`; EXISTS_REFL] THEN
-      X_GEN_TAC `x::real^N` THEN REWRITE_TAC[IN_INTERS; IN_ELIM_THM] THEN
-      REWRITE_TAC[FORALL_IN_IMAGE; IN_DIFF; IN_UNIV] THEN
-      MATCH_MP_TAC(TAUT `(c \<Longrightarrow> b) \<and> (a \<longleftrightarrow> c) \<Longrightarrow> (a \<longleftrightarrow> b \<and> c)`) THEN
-      CONJ_TAC THENL
-       [EXPAND_TAC "S" THEN REWRITE_TAC[IN_INTERS] THEN
-        MATCH_MP_TAC MONO_FORALL THEN X_GEN_TAC `h::real^N=>bool` THEN
-        ASM_CASES_TAC `(h::real^N=>bool) \<in> H` THEN ASM_REWRITE_TAC[] THEN
-        ASM SET_TAC[REAL_LT_IMP_LE];
-        MATCH_MP_TAC(MESON[]
-         `(\<forall>h. P h \<Longrightarrow> (Q h \<longleftrightarrow> R h))
-          \<Longrightarrow> ((\<forall>h. P h \<Longrightarrow> Q h) \<longleftrightarrow> (\<forall>h. P h \<Longrightarrow> R h))`) THEN
-        X_GEN_TAC `h::real^N=>bool` THEN DISCH_TAC THEN
-        FIRST_X_ASSUM(fun th -> GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV)
-         [SYM(CONJUNCT2(MATCH_MP th (ASSUME `(h::real^N=>bool) \<in> H`)))]) THEN
-        REWRITE_TAC[IN_ELIM_THM; DOT_RNEG] THEN REAL_ARITH_TAC];
-      ALL_TAC] THEN
-    SUBGOAL_THEN
-     `hyperplane_cell B (\<Inter>(image (\<lambda>t. - t) J))`
-    ASSUME_TAC THENL
-     [SUBGOAL_THEN
-       `~(\<Inter>(image (\<lambda>t. - t) J) = {})`
-      MP_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
-      REWRITE_TAC[hyperplane_cell; GSYM MEMBER_NOT_EMPTY; IN_INTERS] THEN
-      REWRITE_TAC[FORALL_IN_IMAGE] THEN
-      MATCH_MP_TAC MONO_EXISTS THEN X_GEN_TAC `z::real^N` THEN
-      REWRITE_TAC[IN_UNIV; IN_DIFF] THEN
-      GEN_REWRITE_TAC RAND_CONV [EXTENSION] THEN
-      DISCH_THEN(fun th -> X_GEN_TAC `x::real^N` THEN MP_TAC th) THEN
-      REWRITE_TAC[IN_INTERS; FORALL_IN_IMAGE; IN_DIFF; IN_UNIV] THEN
-      GEN_REWRITE_TAC (RAND_CONV o RAND_CONV) [\<in>] THEN
-      REWRITE_TAC[hyperplane_equiv] THEN EXPAND_TAC "B" THEN
-      REWRITE_TAC[FORALL_IN_IMAGE; hyperplane_side] THEN
-      MATCH_MP_TAC(MESON[]
-       `(\<forall>h. P h \<Longrightarrow> (Q h \<longleftrightarrow> R h))
-        \<Longrightarrow> (\<forall>h. P h) \<Longrightarrow> ((\<forall>h. Q h) \<longleftrightarrow> (\<forall>h. R h))`) THEN
-      X_GEN_TAC `h::real^N=>bool` THEN
-      ASM_CASES_TAC `(h::real^N=>bool) \<in> J` THEN ASM_REWRITE_TAC[] THEN
-      SUBGOAL_THEN `(h::real^N=>bool) \<in> H` ASSUME_TAC THENL
-       [ASM SET_TAC[]; ALL_TAC] THEN
-      FIRST_X_ASSUM(MP_TAC o CONJUNCT2 o C MATCH_MP (ASSUME
-       `(h::real^N=>bool) \<in> H`)) THEN
-      DISCH_THEN(fun th ->
-        GEN_REWRITE_TAC (RAND_CONV o LAND_CONV o ONCE_DEPTH_CONV) [SYM th] THEN
-        GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [SYM th]) THEN
-      REWRITE_TAC[IN_ELIM_THM; REAL_SUB_RZERO; REAL_NOT_LE] THEN
-      MESON_TAC[REAL_SGN_EQ; real_gt];
-      ALL_TAC] THEN
-    MATCH_MP_TAC EQ_TRANS THEN EXISTS_TAC
-     `Euler_characteristic B (\<Inter>(image (\<lambda>t. - t) J))` THEN
-    CONJ_TAC THENL
-     [MATCH_MP_TAC EULER_CHARACTERSTIC_INVARIANT THEN
-      ASM_SIMP_TAC[HYPERPLANE_CELL_CELLCOMPLEX] THEN
-      CONJ_TAC THENL [ASM_MESON_TAC[FINITE_SUBSET]; ALL_TAC] THEN
-      MATCH_MP_TAC HYPERPLANE_CELLCOMPLEX_MONO THEN
-      EXISTS_TAC `B::real^N#real=>bool` THEN
-      ASM_SIMP_TAC[HYPERPLANE_CELL_CELLCOMPLEX];
-      ALL_TAC] THEN
-    ASM_SIMP_TAC[EULER_CHARACTERISTIC_CELL] THEN AP_TERM_TAC THEN
-    MATCH_MP_TAC(MESON[NUM_OF_INT_OF_NUM] `i = n \<Longrightarrow> nat i = n`) THEN
-    REWRITE_TAC[AFF_DIM_EQ_FULL] THEN
-    MATCH_MP_TAC(SET_RULE `\<forall>t. t \<subseteq> S \<and> t = UNIV \<Longrightarrow> S = UNIV`) THEN
-    EXISTS_TAC `affine hull (\<Inter>(image (\<lambda>t. - t) H))` THEN
-    CONJ_TAC THENL [MATCH_MP_TAC HULL_MONO THEN ASM SET_TAC[]; ALL_TAC] THEN
-    MATCH_MP_TAC AFFINE_HULL_OPEN THEN ASM_REWRITE_TAC[] THEN
-    ASM_SIMP_TAC[IMAGE_EQ_EMPTY; OPEN_NEGATIONS; OPEN_INTERIOR];
-    ALL_TAC] THEN
-
 
   REWRITE_TAC[SUM_RMUL] THEN
   MATCH_MP_TAC(REAL_RING `S = 1 \<Longrightarrow> S * t = t`) THEN
