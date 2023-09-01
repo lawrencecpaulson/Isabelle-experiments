@@ -629,7 +629,7 @@ text\<open> --------------------------------------------------------------------
 
 definition Euler_characteristic :: "('a::euclidean_space \<times> real) set \<Rightarrow> 'a set \<Rightarrow> real"
   where "Euler_characteristic A S \<equiv>
-        sum (\<lambda>C. (-1) ^ (nat(aff_dim C))) {C. hyperplane_cell A C \<and> C \<subseteq> S}"
+        (\<Sum>C | hyperplane_cell A C \<and> C \<subseteq> S. (-1) ^ nat (aff_dim C))"
 
 lemma Euler_characteristic_empty [simp]: "Euler_characteristic A {} = 0"
   by (simp add: sum.neutral Euler_characteristic_def)
@@ -1389,11 +1389,46 @@ proof -
     have EE: "(\<Sum>\<T> | \<T> \<subseteq> uminus ` H \<and> \<T>\<noteq>{}. (-1) ^ (card \<T> + 1) * Euler_characteristic A (\<Inter>\<T>))
              = (\<Sum>\<T> | \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {}. (-1) ^ (card \<T> + 1) * (- 1) ^ DIM('n))"
       by (intro sum.cong [OF refl]) (fastforce simp add: subset_image_iff intro!: DD)
-    also have "... = (\<Sum>\<T> | \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {}. (- 1) ^ (card \<T> + 1)) * (- 1) ^ DIM('n)"
-      by (simp add: sum_distrib_right)
     also have "... = (-1) ^ DIM('n)"
+    proof -
+      have A: "(\<Sum>y = 1..card H. \<Sum>t\<in>{x \<in> {\<T>. \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {}}. card x = y}. (- 1) ^ (card t + 1)) 
+          = (\<Sum>\<T>\<in>{\<T>. \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {}}. (- 1) ^ (card \<T> + 1))"
+        apply (rule sum.group)
+        apply (simp add: \<open>finite H\<close>)
+         apply blast
+        apply clarsimp
+        by (meson \<open>finite H\<close> card_eq_0_iff finite_surj le_zero_eq not_less_eq_eq surj_card_le)
 
-      sorry
+      have "(\<Sum>n = Suc 0..card H. - (int (card {x. x \<subseteq> uminus ` H \<and> x \<noteq> {} \<and> card x = n}) * (- 1) ^ n))
+          = (\<Sum>n = Suc 0..card H. (-1) ^ (Suc n) * (card H choose n))"
+      proof (rule sum.cong [OF refl])
+        fix n
+        assume "n \<in> {Suc 0..card H}"
+        then have "{\<T>. \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {} \<and> card \<T> = n} = {\<T>. \<T> \<subseteq> uminus ` H \<and> card \<T> = n}"
+          by auto
+        then have "card{\<T>. \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {} \<and> card \<T> = n} = card (uminus ` H) choose n"
+          by (simp add: \<open>finite H\<close> n_subsets)
+        also have "... = card H choose n"
+          by (metis card_image double_complement inj_on_inverseI)
+        finally
+        show "- (int (card {x. x \<subseteq> uminus ` H \<and> x \<noteq> {} \<and> card x = n}) * (- 1) ^ n) = (- 1) ^ Suc n * int (card H choose n)"
+          by simp
+      qed
+      also have "... = 1 + (\<Sum>k\<le>card H. int (card H choose k) * (- 1) ^ k)"
+        apply (simp add: sum.atLeast_Suc_atMost)
+        sorry
+      also have "... = 1 + 0 ^ card H"
+        using binomial_ring [of "-1" "1::int" "card H"] by simp
+      also have "... = 1"
+        using Seq \<open>finite H\<close> \<open>S \<noteq> UNIV\<close> card_0_eq by auto
+      finally have C: "(\<Sum>n = Suc 0..card H. - (int (card {x. x \<subseteq> uminus ` H \<and> x \<noteq> {} \<and> card x = n}) * (- 1) ^ n)) = (1::int)" .
+
+      have "(\<Sum>\<T> | \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {}. (- 1) ^ (card \<T> + 1)) = (1::int)"
+        unfolding A [symmetric] by (simp add: C)
+
+      then show ?thesis
+        by (metis (no_types) E sum_distrib_right mult_1)
+    qed
     finally have EE: "(\<Sum>\<T> | \<T> \<subseteq> uminus ` H \<and> \<T>\<noteq>{}. (-1) ^ (card \<T> + 1) * Euler_characteristic A (\<Inter>\<T>))
              = (-1) ^ DIM('n)" .
     have F: "Euler_characteristic A (\<Union> (uminus ` H)) = (-1) ^ (DIM('n))"
@@ -1407,72 +1442,6 @@ qed
 
   oops 
 
-  REWRITE_TAC[SUM_RMUL] THEN
-  MATCH_MP_TAC(REAL_RING `S = 1 \<Longrightarrow> S * t = t`) THEN
-  MP_TAC(ISPECL [`\<lambda>t:(real^N=>bool)->bool. card t`;
-                 `\<lambda>t:(real^N=>bool)->bool. (-1) ^ (card t + 1)`;
-                 `{t.  t \<subseteq>
-                     {- t | t \<in> H} \<and> (t \<noteq> {})}`;
-                 `1..card(H:(real^N=>bool)->bool)`]
-        SUM_GROUP) THEN
-  ANTS_TAC THENL
-   [CONJ_TAC THENL
-     [MATCH_MP_TAC FINITE_SUBSET THEN
-      EXISTS_TAC `{t.  t \<subseteq> {- t | t \<in> H}}` THEN
-      CONJ_TAC THENL [ALL_TAC; SET_TAC[]] THEN
-      MATCH_MP_TAC FINITE_POWERSET THEN REWRITE_TAC[SIMPLE_IMAGE] THEN
-      ASM_SIMP_TAC[FINITE_IMAGE];
-      GEN_REWRITE_TAC id [\<subseteq>] THEN REWRITE_TAC[FORALL_IN_IMAGE] THEN
-      REWRITE_TAC[FORALL_IN_GSPEC; IN_NUMSEG] THEN
-      REWRITE_TAC[SIMPLE_IMAGE; FORALL_SUBSET_IMAGE; IMP_CONJ] THEN
-      X_GEN_TAC `J:(real^N=>bool)->bool` THEN DISCH_TAC THEN
-      REWRITE_TAC[IMAGE_EQ_EMPTY] THEN DISCH_TAC THEN
-      SUBGOAL_THEN `finite(J:(real^N=>bool)->bool)` ASSUME_TAC THENL
-       [ASM_MESON_TAC[FINITE_SUBSET]; ALL_TAC] THEN
-      ASM_SIMP_TAC[CARD_EQ_0; FINITE_IMAGE; ARITH_RULE `1 \<le> n \<longleftrightarrow> (n \<noteq> 0)`;
-                   IMAGE_EQ_EMPTY] THEN
-      MATCH_MP_TAC LE_TRANS THEN EXISTS_TAC `card(J:(real^N=>bool)->bool)` THEN
-      ASM_SIMP_TAC[CARD_SUBSET; CARD_IMAGE_LE]];
-    REWRITE_TAC[] THEN DISCH_THEN(SUBST1_TAC o SYM)] THEN
-  MATCH_MP_TAC EQ_TRANS THEN
-  EXISTS_TAC
-   `sum (1..card(H:(real^N=>bool)->bool))
-        (\<lambda>n.-1 ^ (Suc n) * &((card H) choose n))` THEN
-  CONJ_TAC THENL
-   [MATCH_MP_TAC SUM_EQ THEN X_GEN_TAC `n::num` THEN
-    REWRITE_TAC[IN_NUMSEG] THEN DISCH_TAC THEN
-    SIMP_TAC[IN_ELIM_THM] THEN
-    W(MP_TAC o PART_MATCH (lhs o rand) SUM_CONST o lhand o snd) THEN
-    ANTS_TAC THENL
-     [MATCH_MP_TAC FINITE_SUBSET THEN
-      EXISTS_TAC `{t.  t \<subseteq> {- t | t \<in> H}}` THEN
-      CONJ_TAC THENL [ALL_TAC; SET_TAC[]] THEN
-      MATCH_MP_TAC FINITE_POWERSET THEN REWRITE_TAC[SIMPLE_IMAGE] THEN
-      ASM_SIMP_TAC[FINITE_IMAGE];
-      DISCH_THEN SUBST1_TAC] THEN
-    GEN_REWRITE_TAC LAND_CONV [REAL_MUL_SYM] THEN AP_TERM_TAC THEN
-    AP_TERM_TAC THEN MATCH_MP_TAC EQ_TRANS THEN
-    EXISTS_TAC `card {t. t \<subseteq> {- t | t \<in> H} \<and>
-                          t HAS_SIZE n}` THEN
-    CONJ_TAC THENL
-     [AP_TERM_TAC THEN GEN_REWRITE_TAC id [EXTENSION] THEN
-      X_GEN_TAC `t:(real^N=>bool)->bool` THEN
-      REWRITE_TAC[IN_ELIM_THM] THEN
-      ASM_CASES_TAC `t:(real^N=>bool)->bool = {}` THEN
-      ASM_REWRITE_TAC[HAS_SIZE; CARD_CLAUSES; FINITE_EMPTY] THENL
-       [ASM_ARITH_TAC; ALL_TAC] THEN
-      MATCH_MP_TAC(TAUT `(p \<Longrightarrow> r) \<Longrightarrow> (p \<and> q \<longleftrightarrow> p \<and> r \<and> q)`) THEN
-      SPEC_TAC(`t:(real^N=>bool)->bool`,`u:(real^N=>bool)->bool`) THEN
-      REWRITE_TAC[SIMPLE_IMAGE; FORALL_SUBSET_IMAGE] THEN
-      ASM_MESON_TAC[FINITE_IMAGE; FINITE_SUBSET];
-      ALL_TAC] THEN
-    MP_TAC(ISPECL [`card(H:(real^N=>bool)->bool)`;
-                   `n::num`; `{- t | t \<in> H}`]
-        NUMBER_OF_COMBINATIONS) THEN
-    ANTS_TAC THENL [ALL_TAC; SIMP_TAC[HAS_SIZE]] THEN
-    REWRITE_TAC[SIMPLE_IMAGE] THEN MATCH_MP_TAC HAS_SIZE_IMAGE_INJ THEN
-    ASM_REWRITE_TAC[GSYM FINITE_HAS_SIZE] THEN SET_TAC[];
-    ALL_TAC] THEN
 
   MP_TAC(ISPECL [`card(H:(real^N=>bool)->bool)`; `-- 1`; `1`]
         REAL_BINOMIAL_THEOREM) THEN
