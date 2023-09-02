@@ -31,17 +31,17 @@ lemma closure_Inter_convex_open:
 
 
 lemma aff_dim_psubset:
-   "(affine hull s) \<subset> (affine hull t) \<Longrightarrow> aff_dim s < aff_dim t"
+   "(affine hull S) \<subset> (affine hull T) \<Longrightarrow> aff_dim S < aff_dim T"
   by (metis aff_dim_affine_hull aff_dim_empty aff_dim_subset affine_affine_hull affine_dim_equal order_less_le)
 
 lemma aff_dim_eq_full_gen:
-   "s \<subseteq> t
-        \<Longrightarrow> (aff_dim s = aff_dim t \<longleftrightarrow> affine hull s = affine hull t)"
+   "S \<subseteq> T
+        \<Longrightarrow> (aff_dim S = aff_dim T \<longleftrightarrow> affine hull S = affine hull T)"
   by (smt (verit, del_insts) aff_dim_affine_hull2 aff_dim_psubset hull_mono psubsetI)
 
 lemma aff_dim_eq_full:
-  fixes s :: "'n::euclidean_space set"
-  shows "aff_dim s = (DIM('n)) \<longleftrightarrow> affine hull s = UNIV"
+  fixes S :: "'n::euclidean_space set"
+  shows "aff_dim S = (DIM('n)) \<longleftrightarrow> affine hull S = UNIV"
   by (metis aff_dim_UNIV aff_dim_affine_hull affine_hull_UNIV)
 
 text\<open> ------------------------------------------------------------------------- \<close>
@@ -236,6 +236,8 @@ proof -
   ultimately show ?thesis
     by (auto simp: hull_inc)
 qed
+
+(*** END OF EXTRAS ***)
 
 text\<open> ------------------------------------------------------------------------- \<close>
 text\<open> Interpret which "side" of a hyperplane a point is on.                     \<close>
@@ -1441,11 +1443,12 @@ text\<open> --------------------------------------------------------------------
 text\<open> ------------------------------------------------------------------------- \<close>
 
 lemma Euler_Poincare_lemma:
-   "\<And>p::real^N=>bool.
-        2 \<le> DIM('N) \<and> polytope p \<and> affine hull p = {x. x$1 = 1}
-        \<Longrightarrow> sum (0..DIM('N)-1)
-               (\<lambda>d. (-1) ^ d *
-                    (card {f. f face_of p \<and> aff_dim f = d })) = 1"
+  fixes p :: "'n::euclidean_space set"
+  assumes "2 \<le> DIM('n)" "polytope p" "i \<in> Basis" "affine hull p = {x. x \<bullet> i = 1}"
+  shows "(\<Sum>d = 0..DIM('n) - 1. (-1) ^ d * int (card {f. f face_of p \<and> aff_dim f = int d})) =
+    1"
+  sorry
+  thm dot_basis
 oops 
   REPEAT STRIP_TAC THEN
   MP_TAC(ISPECL [`axis 1 1::real^N`; `1`] AFF_DIM_HYPERPLANE) THEN
@@ -1843,10 +1846,11 @@ oops
 
 
 lemma Euler_poincare_special:
-   "2 \<le> DIM('N) \<and> polytope p \<and> affine hull p = {x. x$1 = 0}
-        \<Longrightarrow> sum (0..DIM('N)-1)
-               (\<lambda>d. (-1) ^ d *
-                    (card {f. f face_of p \<and> aff_dim f = d })) = 1"
+  fixes p :: "'n::euclidean_space set"
+  assumes "2 \<le> DIM('n)" "polytope p" "i \<in> Basis" "affine hull p = {x. x \<bullet> i = 0}"
+  shows "(\<Sum>d = 0..DIM('n) - 1. (-1) ^ d * (card {f. f face_of p \<and> aff_dim f = d})) =
+    1"
+  sorry
 oops 
   REPEAT STRIP_TAC THEN
   MP_TAC(ISPEC `image (\<lambda>x::real^N. axis 1 1 + x) p` Euler_Poincare_lemma) THEN
@@ -1874,86 +1878,57 @@ oops
       REWRITE_TAC[INJECTIVE_IMAGE] THEN VECTOR_ARITH_TAC;
       MATCH_MP_TAC FINITE_SUBSET THEN
       EXISTS_TAC `{f::real^N=>bool | f face_of p}` THEN
-      ASM_SIMP_TAC[FINITE_POLYTOPE_FACES] THEN SET_TAC[]]]);;
+      ASM_SIMP_TAC[FINITE_POLYTOPE_FACES] THEN SET_TAC[]]]);;`
 
 text\<open> ------------------------------------------------------------------------- \<close>
 text\<open> Now Euler-Poincare for a general full-dimensional polytope.               \<close>
 text\<open> ------------------------------------------------------------------------- \<close>
 
 lemma Euler_Poincare_full:
-   "\<And>p::real^N=>bool.
-        polytope p \<and> aff_dim p = &(DIM('N))
-        \<Longrightarrow> sum (0..DIM('N))
-                (\<lambda>d. (-1) ^ d *
-                     (card {f. f face_of p \<and> aff_dim f = d })) = 1"
-oops 
-  REPEAT STRIP_TAC THEN ABBREV_TAC
-   `f::real^N=>real^(N,1)finite_sum =
-          \<lambda>x. \<chi> i. if i = 1 then 0 else x$(i-1)` THEN
-  ABBREV_TAC `s = image (f::real^N=>real^(N,1)finite_sum) p` THEN
-  MP_TAC(ISPEC `s::real^(N,1)finite_sum=>bool` EULER_POINCARE_SPECIAL) THEN
-  REWRITE_TAC[DIMINDEX_FINITE_SUM; DIMINDEX_1; ADD_SUB] THEN
-  REWRITE_TAC[DIMINDEX_GE_1; ARITH_RULE `2 \<le> n + 1 \<longleftrightarrow> 1 \<le> n`] THEN
-  SUBGOAL_THEN `linear(f::real^N=>real^(N,1)finite_sum)` ASSUME_TAC THENL
-   [EXPAND_TAC "f" THEN REWRITE_TAC[linear] THEN
-    SIMP_TAC[CART_EQ; VECTOR_ADD_COMPONENT; VECTOR_MUL_COMPONENT;
-             LAMBDA_BETA] THEN
-    REAL_ARITH_TAC;
-    ALL_TAC] THEN
-  EXPAND_TAC "s" THEN
-  ASM_SIMP_TAC[POLYTOPE_LINEAR_IMAGE; AFFINE_HULL_LINEAR_IMAGE] THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[AFF_DIM_EQ_FULL]) THEN
-  ASM_REWRITE_TAC[] THEN ANTS_TAC THENL
-   [REWRITE_TAC[EXTENSION; IN_IMAGE; IN_ELIM_THM; IN_UNIV] THEN
-    X_GEN_TAC `y::real^(N,1)finite_sum` THEN EQ_TAC THENL
-     [DISCH_THEN(X_CHOOSE_THEN `x::real^N` SUBST1_TAC) THEN
-      EXPAND_TAC "f" THEN SIMP_TAC[LAMBDA_BETA; LE_REFL; DIMINDEX_GE_1];
-      DISCH_TAC THEN
-      EXISTS_TAC `(\<chi> i. (y::real^(N,1)finite_sum)$(Suc i)):real^N` THEN
-      EXPAND_TAC "f" THEN
-      REWRITE_TAC[CART_EQ; DIMINDEX_FINITE_SUM; DIMINDEX_1] THEN
-      X_GEN_TAC `i::num` THEN STRIP_TAC THEN
-      ASM_SIMP_TAC[CART_EQ; LAMBDA_BETA; DIMINDEX_FINITE_SUM; DIMINDEX_1;
-       DIMINDEX_GE_1; ARITH_RULE `1 \<le> i \<and> (i \<noteq> 1) \<Longrightarrow> 1 \<le> i - 1`;
-       ARITH_RULE `1 \<le> n \<and> i \<le> n + 1 \<Longrightarrow> i - 1 \<le> n`] THEN
-      COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN AP_TERM_TAC THEN
-      ASM_ARITH_TAC];
-    DISCH_THEN(fun th -> GEN_REWRITE_TAC RAND_CONV [SYM th]) THEN
-    MATCH_MP_TAC SUM_EQ_NUMSEG THEN X_GEN_TAC `d::num` THEN STRIP_TAC THEN
-    REWRITE_TAC[] THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
-    SUBGOAL_THEN `\<forall>x y. (f::real^N=>real^(N,1)finite_sum) x = f y \<longleftrightarrow> x = y`
-    ASSUME_TAC THENL
-     [EXPAND_TAC "f" THEN
-      ASM_SIMP_TAC[CART_EQ; LAMBDA_BETA; DIMINDEX_FINITE_SUM; DIMINDEX_1;
-        DIMINDEX_GE_1; ARITH_RULE `1 \<le> i \<and> (i \<noteq> 1) \<Longrightarrow> 1 \<le> i - 1`;
-        ARITH_RULE `1 \<le> n \<and> i \<le> n + 1 \<Longrightarrow> i - 1 \<le> n`] THEN
-      REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN X_GEN_TAC `i::num` THENL
-       [REPEAT STRIP_TAC THEN FIRST_X_ASSUM(MP_TAC o SPEC `i + 1`) THEN
-        ANTS_TAC THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-        REWRITE_TAC[ADD_SUB] THEN
-        COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN ASM_ARITH_TAC;
-        STRIP_TAC THEN COND_CASES_TAC THEN ASM_REWRITE_TAC[] THEN
-        FIRST_X_ASSUM MATCH_MP_TAC THEN ASM_ARITH_TAC];
-      ALL_TAC] THEN
-    EXPAND_TAC "s" THEN
-    MP_TAC(ISPECL [`f::real^N=>real^(N,1)finite_sum`; `p::real^N=>bool`]
-        FACES_OF_LINEAR_IMAGE) THEN
-    ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
-    REWRITE_TAC[SET_RULE `{f. f face_of s \<and> P f} =
-                          {f. f \<in> {f. f face_of s} \<and> P f}`] THEN
-    ASM_REWRITE_TAC[SET_RULE `{y. y \<in> f ` s \<and> P y} =
-                              {f x |x| x \<in> s \<and> P(f x)}`] THEN
-    ASM_SIMP_TAC[AFF_DIM_INJECTIVE_LINEAR_IMAGE] THEN
-    REWRITE_TAC[IN_ELIM_THM] THEN
-    GEN_REWRITE_TAC (RAND_CONV o RAND_CONV) [SIMPLE_IMAGE_GEN] THEN
-    CONV_TAC SYM_CONV THEN MATCH_MP_TAC CARD_IMAGE_INJ THEN CONJ_TAC THENL
-     [REWRITE_TAC[] THEN MATCH_MP_TAC(MESON[]
-       `(\<forall>x y. Q x y \<Longrightarrow> x = y)
-        \<Longrightarrow> (\<forall>x y. P x \<and> P y \<and> Q x y \<Longrightarrow> x = y)`) THEN
-      ASM_REWRITE_TAC[INJECTIVE_IMAGE];
-      MATCH_MP_TAC FINITE_SUBSET THEN
-      EXISTS_TAC `{f::real^N=>bool | f face_of p}` THEN
-      ASM_SIMP_TAC[FINITE_POLYTOPE_FACES] THEN SET_TAC[]]]);;
+  fixes p :: "'n::euclidean_space set"
+  assumes "polytope p" "aff_dim p = DIM('n)"
+  shows "(\<Sum>d = 0..DIM('n). (-1) ^ d * (card {f. f face_of p \<and> aff_dim f = d})) = 1"
+proof -
+  define augm:: "'n \<Rightarrow> 'n \<times> real" where "augm \<equiv> \<lambda>x. (x,0)"
+  define S where "S \<equiv> augm ` p"
+  obtain i::'n where i: "i \<in> Basis"
+    by (meson SOME_Basis)
+  have "bounded_linear augm"
+    by (auto simp: augm_def bounded_linearI')
+  then have "polytope S"
+    unfolding S_def using polytope_linear_image \<open>polytope p\<close> bounded_linear.linear by blast
+  have face_pS: "\<And>F. F face_of p \<longleftrightarrow> augm ` F face_of S"
+    using S_def \<open>bounded_linear augm\<close> augm_def bounded_linear.linear face_of_linear_image inj_on_def by blast
+  have aff_dim_eq[simp]: "aff_dim (augm ` F) = aff_dim F" for F
+    using \<open>bounded_linear augm\<close> aff_dim_injective_linear_image bounded_linear.linear 
+    unfolding augm_def inj_on_def by blast
+  have *: "{F. F face_of S \<and> aff_dim F = int d} = (image augm) ` {F. F face_of p \<and> aff_dim F = int d}"
+            (is "?lhs = ?rhs") for d
+  proof
+    have "\<And>G. \<lbrakk>G face_of S; aff_dim G = int d\<rbrakk>
+         \<Longrightarrow> \<exists>F. F face_of p \<and> aff_dim F = int d \<and> G = augm ` F"
+      by (metis face_pS S_def aff_dim_eq face_of_imp_subset subset_imageE)
+    then show "?lhs \<subseteq> ?rhs"
+      by (auto simp: image_iff)
+  qed (auto simp: image_iff face_pS)
+  have ceqc: "card {f. f face_of S \<and> aff_dim f = int d} = card {f. f face_of p \<and> aff_dim f = int d}" for d
+    unfolding *
+    by (rule card_image) (auto simp add: inj_on_def augm_def)
+  have "(\<Sum>d = 0..DIM('n \<times> real) - 1. (- 1) ^ d * int (card {f. f face_of S \<and> aff_dim f = int d})) = 1"
+  proof (rule Euler_poincare_special)
+    show "2 \<le> DIM('n \<times> real)"
+      by auto
+    have snd0: "(a, b) \<in> affine hull S \<Longrightarrow> b = 0" for a b
+      using S_def \<open>bounded_linear augm\<close> affine_hull_linear_image augm_def by blast
+    moreover have "\<And>a. (a, 0) \<in> affine hull S"
+      using S_def \<open>bounded_linear augm\<close> aff_dim_eq_full affine_hull_linear_image assms(2) augm_def by blast
+    ultimately show "affine hull S = {x. x \<bullet> (0::'n, 1::real) = 0}"
+      by auto
+  qed (auto simp: \<open>polytope S\<close> Basis_prod_def)
+  then show ?thesis
+    by (simp add: ceqc)
+qed
+
 
 text\<open> ------------------------------------------------------------------------- \<close>
 text\<open> In particular the Euler relation in 3D.                                   \<close>
