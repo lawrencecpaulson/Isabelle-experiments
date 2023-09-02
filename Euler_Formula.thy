@@ -44,6 +44,9 @@ lemma aff_dim_eq_full:
   shows "aff_dim S = (DIM('n)) \<longleftrightarrow> affine hull S = UNIV"
   by (metis aff_dim_UNIV aff_dim_affine_hull affine_hull_UNIV)
 
+
+(*** FOR CONVEX.THY ***)
+thm cone_convex_hull
 text\<open> ------------------------------------------------------------------------- \<close>
 text\<open> Conic sets and conic hull.                                                \<close>
 text\<open> ------------------------------------------------------------------------- \<close>
@@ -100,7 +103,7 @@ lemma conic_hull_explicit:
 qed (auto simp: conic_def)
 
 lemma conic_hull_as_image:
-   "conic hull S = (\<lambda>z. fst z *\<^sub>R snd z) ` ({t. 0 \<le> t} \<times> S)"
+   "conic hull S = (\<lambda>z. fst z *\<^sub>R snd z) ` ({0..} \<times> S)"
   by (force simp add: conic_hull_explicit)
 
 lemma conic_hull_linear_image:
@@ -178,18 +181,20 @@ lemma conic_contains_0: "conic S \<Longrightarrow> (0 \<in> S \<longleftrightarr
 lemma conic_hull_eq_empty: "conic hull S = {} \<longleftrightarrow> (S = {})"
   using conic_hull_explicit by fastforce
 
-lemma conic_sums: "\<lbrakk>conic S; conic T\<rbrakk> \<Longrightarrow> conic {x + y |x y. x \<in> S \<and> y \<in> T}"
-  by (simp add: conic_def) (meson scaleR_right_distrib)
+lemma conic_sums: "\<lbrakk>conic S; conic T\<rbrakk> \<Longrightarrow> conic (\<Union>x\<in> S. \<Union>y \<in> T. {x + y})"
+  by (simp add: conic_def) (metis scaleR_right_distrib)
 
 lemma conic_Times: "\<lbrakk>conic S; conic T\<rbrakk> \<Longrightarrow> conic(S \<times> T)"
   by (auto simp: conic_def)
 
 lemma conic_Times_eq:
-   "conic(S \<times> T) \<longleftrightarrow> S = {} \<or> T = {} \<or> conic S \<and> conic T"
-  apply (rule )
-   apply (force simp: conic_def)
-  apply (force simp: conic_Times)
-  done
+   "conic(S \<times> T) \<longleftrightarrow> S = {} \<or> T = {} \<or> conic S \<and> conic T" (is "?lhs = ?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs"
+    by (force simp: conic_def)
+  show "?rhs \<Longrightarrow> ?lhs"
+    by (force simp: conic_Times)
+qed
 
 lemma conic_hull_0 [simp]: "conic hull {0} = {0}"
   by (simp add: conic_hull_eq subspace_imp_conic)
@@ -236,6 +241,172 @@ proof -
   ultimately show ?thesis
     by (auto simp: hull_inc)
 qed
+
+text\<open> Convex cones and corresponding hulls.                                     \<close>
+text\<open> ------------------------------------------------------------------------- \<close>
+
+definition convex_cone
+  where "convex_cone \<equiv> \<lambda>S. S \<noteq> {} \<and> convex S \<and> conic S"
+
+lemma convex_cone_iff:
+   "convex_cone S \<longleftrightarrow>
+        0 \<in> S \<and> (\<forall>x \<in> S. \<forall>y \<in> S. x + y \<in> S) \<and> (\<forall>x \<in> S. \<forall>c\<ge>0. c *\<^sub>R x \<in> S)"
+    by (metis Convex.cone_def conic_contains_0 conic_def convex_cone convex_cone_def)
+
+lemma convex_cone_add: "\<lbrakk>convex_cone S; x \<in> S; y \<in> S\<rbrakk> \<Longrightarrow> x+y \<in> S"
+  by (simp add: convex_cone_iff)
+
+lemma convex_cone_scaleR: "\<lbrakk>convex_cone S; 0 \<le> c; x \<in> S\<rbrakk> \<Longrightarrow> c *\<^sub>R x \<in> S"
+  by (simp add: convex_cone_iff)
+
+lemma convex_cone_nonempty: "convex_cone S \<Longrightarrow> S \<noteq> {}"
+  by (simp add: convex_cone_def)
+
+lemma convex_cone_linear_image:
+   "convex_cone S \<and> linear f \<Longrightarrow> convex_cone(f ` S)"
+  by (simp add: conic_linear_image convex_cone_def convex_linear_image)
+
+lemma convex_cone_linear_image_eq:
+   "\<lbrakk>linear f; inj f\<rbrakk> \<Longrightarrow> (convex_cone(f ` S) \<longleftrightarrow> convex_cone S)"
+  by (simp add: conic_linear_image_eq convex_cone_def)
+
+lemma convex_cone_halfspace_ge: "convex_cone {x. a \<bullet> x \<ge> 0}"
+  by (simp add: convex_cone_iff inner_simps(2))
+
+lemma convex_cone_halfspace_le: "convex_cone {x. a \<bullet> x \<le> 0}"
+  by (simp add: convex_cone_iff inner_right_distrib mult_nonneg_nonpos)
+
+lemma convex_cone_contains_0: "convex_cone S \<Longrightarrow> 0 \<in> S"
+  using convex_cone_iff by blast
+
+lemma convex_cone_Inter:
+   "(\<And>S. S \<in> f \<Longrightarrow> convex_cone S) \<Longrightarrow> convex_cone(\<Inter> f)"
+  by (simp add: convex_cone_iff)
+
+lemma convex_cone_convex_cone_hull: "convex_cone(convex_cone hull S)"
+  by (metis (no_types, lifting) convex_cone_Inter hull_def mem_Collect_eq)
+
+lemma convex_convex_cone_hull: "convex(convex_cone hull S)"
+  by (meson convex_cone_convex_cone_hull convex_cone_def)
+
+lemma conic_convex_cone_hull: "conic(convex_cone hull S)"
+  by (metis convex_cone_convex_cone_hull convex_cone_def)
+
+lemma convex_cone_hull_nonempty: "convex_cone hull S \<noteq> {}"
+  by (simp add: convex_cone_convex_cone_hull convex_cone_nonempty)
+
+lemma convex_cone_hull_contains_0: "0 \<in> convex_cone hull S"
+  by (simp add: convex_cone_contains_0 convex_cone_convex_cone_hull)
+
+lemma convex_cone_hull_add:
+   "\<lbrakk>x \<in> convex_cone hull S; y \<in> convex_cone hull S\<rbrakk> \<Longrightarrow> x + y \<in> convex_cone hull S"
+  by (simp add: convex_cone_add convex_cone_convex_cone_hull)
+
+lemma convex_cone_hull_mul:
+   "\<lbrakk>x \<in> convex_cone hull S; 0 \<le> c\<rbrakk> \<Longrightarrow> (c *\<^sub>R x) \<in> convex_cone hull S"
+  by (simp add: conic_convex_cone_hull conic_mul)
+
+thm convex_sums
+lemma convex_cone_sums:
+   "\<lbrakk>convex_cone S; convex_cone T\<rbrakk> \<Longrightarrow> convex_cone (\<Union>x\<in> S. \<Union>y \<in> T. {x + y})"
+  by (simp add: convex_cone_def conic_sums convex_sums)
+
+lemma convex_cone_Times:
+   "\<lbrakk>convex_cone S; convex_cone T\<rbrakk> \<Longrightarrow> convex_cone(S \<times> T)"
+  by (simp add: conic_Times convex_Times convex_cone_def)
+
+lemma convex_cone_Times_D1: "convex_cone (S \<times> T) \<Longrightarrow> convex_cone S"
+  by (metis Times_empty conic_Times_eq convex_cone_def convex_convex_hull convex_hull_Times hull_same times_eq_iff)
+
+lemma convex_cone_Times_eq:
+   "convex_cone(S \<times> T) \<longleftrightarrow> convex_cone S \<and> convex_cone T" 
+proof (cases "S={} \<or> T={}")
+  case True
+  then show ?thesis 
+    by (auto dest: convex_cone_nonempty)
+next
+  case False
+  then have "convex_cone (S \<times> T) \<Longrightarrow> convex_cone T"
+    by (metis conic_Times_eq convex_cone_def convex_convex_hull convex_hull_Times hull_same times_eq_iff)
+  then show ?thesis
+    using convex_cone_Times convex_cone_Times_D1 by blast 
+qed
+
+
+lemma convex_cone_hull_Un:
+  "convex_cone hull(S \<union> T) = (\<Union>x \<in> convex_cone hull S. \<Union>y \<in> convex_cone hull T. {x + y})"
+  (is "?lhs = ?rhs")
+proof
+  show "?lhs \<subseteq> ?rhs"
+  proof (rule hull_minimal)
+    show "S \<union> T \<subseteq> (\<Union>x\<in>convex_cone hull S. \<Union>y\<in>convex_cone hull T. {x + y})"
+      apply (clarsimp simp: subset_iff)
+      by (metis add_0 convex_cone_hull_contains_0 group_cancel.rule0 hull_inc)
+    show "convex_cone (\<Union>x\<in>convex_cone hull S. \<Union>y\<in>convex_cone hull T. {x + y})"
+      by (simp add: convex_cone_convex_cone_hull convex_cone_sums)
+  qed
+next
+  show "?rhs \<subseteq> ?lhs"
+    by clarify (metis convex_cone_hull_add hull_mono le_sup_iff subsetD subsetI)
+qed
+
+lemma convex_cone_singleton [iff]: "convex_cone {0}"
+  by (simp add: convex_cone_iff)
+
+lemma convex_hull_subset_convex_cone_hull:
+   "convex hull S \<subseteq> convex_cone hull S"
+  by (simp add: convex_convex_cone_hull hull_minimal hull_subset)
+
+
+lemma conic_hull_subset_convex_cone_hull:
+   "conic hull S \<subseteq> convex_cone hull S"
+  by (simp add: conic_convex_cone_hull hull_minimal hull_subset)
+
+
+lemma convex_cone_hull_separate_nonempty:
+  assumes "S \<noteq> {}"
+  shows "convex_cone hull S = conic hull (convex hull S)"   (is "?lhs = ?rhs")
+proof
+  show "?lhs \<subseteq> ?rhs"
+    by (simp add: assms conic_conic_hull conic_hull_eq_empty convex_cone_def convex_conic_hull hull_inc hull_minimal subsetI)
+  show "?rhs \<subseteq> ?lhs"
+    by (simp add: conic_convex_cone_hull convex_hull_subset_convex_cone_hull subset_hull)
+qed
+
+lemma convex_cone_hull_empty [simp]: "convex_cone hull {} = {0}"
+  by (metis convex_cone_hull_contains_0 convex_cone_singleton hull_redundant hull_same)
+
+lemma convex_cone_hull_separate:
+   "convex_cone hull S = insert 0 (conic hull (convex hull S))"
+  by (cases "S={}") (simp_all add: convex_cone_hull_separate_nonempty insert_absorb)
+
+lemma convex_cone_hull_convex_hull_nonempty:
+   "S \<noteq> {} \<Longrightarrow> convex_cone hull S = (\<Union>x \<in> convex hull S. \<Union>c\<in>{0..}. {c *\<^sub>R x})"
+  by (force simp: convex_cone_hull_separate_nonempty conic_hull_as_image)
+
+
+lemma convex_cone_hull_convex_hull:
+   "convex_cone hull S = insert 0 (\<Union>x \<in> convex hull S. \<Union>c\<in>{0..}. {c *\<^sub>R x})"
+  by (force simp add: convex_cone_hull_separate conic_hull_as_image)
+
+lemma convex_cone_hull_linear_image:
+   "linear f \<Longrightarrow> convex_cone hull (f ` S) = image f (convex_cone hull S)"
+  by (metis (no_types, lifting) conic_hull_linear_image convex_cone_hull_separate convex_hull_linear_image image_insert linear_0)
+
+lemma subspace_imp_convex_cone: "subspace S \<Longrightarrow> convex_cone S"
+  by (simp add: convex_cone_iff subspace_def)
+
+lemma convex_cone_span: "convex_cone(span S)"
+  by (simp add: subspace_imp_convex_cone)
+
+lemma convex_cone_negations:
+   "convex_cone S \<Longrightarrow> convex_cone (image uminus S)"
+  by (simp add: convex_cone_linear_image module_hom_uminus)
+
+lemma subspace_convex_cone_symmetric:
+   "subspace S \<longleftrightarrow> convex_cone S \<and> (\<forall>x \<in> S. -x \<in> S)"
+  by (smt (verit) convex_cone_iff scaleR_left.minus subspace_def subspace_neg)
+
 
 (*** END OF EXTRAS ***)
 
@@ -1444,38 +1615,40 @@ text\<open> --------------------------------------------------------------------
 
 lemma Euler_Poincare_lemma:
   fixes p :: "'n::euclidean_space set"
-  assumes "2 \<le> DIM('n)" "polytope p" "i \<in> Basis" "affine hull p = {x. x \<bullet> i = 1}"
-  shows "(\<Sum>d = 0..DIM('n) - 1. (-1) ^ d * int (card {f. f face_of p \<and> aff_dim f = int d})) =
-    1"
-  sorry
-  thm dot_basis
+  assumes "2 \<le> DIM('n)" "polytope p" "i \<in> Basis" and affp: "affine hull p = {x. x \<bullet> i = 1}"
+  shows "(\<Sum>d = 0..DIM('n) - 1. (-1) ^ d * int (card {f. f face_of p \<and> aff_dim f = int d})) = 1"
+proof -
+  have "aff_dim p = aff_dim {x. i \<bullet> x = 1}"
+    by (metis (no_types, lifting) Collect_cong aff_dim_affine_hull affp inner_commute)
+  also have "... = int (DIM('n) - 1)"
+    using aff_dim_hyperplane [of i 1] \<open>i \<in> Basis\<close> by fastforce
+  finally have AP: "aff_dim p = int (DIM('n) - 1)" .
+  show ?thesis
+  proof (cases "p = {}")
+    case True
+    with AP show ?thesis by simp
+  next
+    case False
+    define S where "S \<equiv> conic hull p"
+    have 1: "(conic hull f) \<inter> {x. x \<bullet> i = 1} = f" if "f \<subseteq> {x. x \<bullet> i = 1}" for f
+      using that
+      by (smt (verit, ccfv_threshold) affp conic_hull_Int_affine_hull hull_hull inner_zero_left mem_Collect_eq)
+
+    obtain K where "finite K" and K: "p = convex hull K"
+      by (meson assms(2) polytope_def)
+    have "polyhedron S"
+      unfolding S_def
+
+    sorry
+    sorry
+    then show ?thesis sorry
+  qed
+qed
+
 oops 
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPECL [`axis 1 1::real^N`; `1`] AFF_DIM_HYPERPLANE) THEN
-  SIMP_TAC[BASIS_NONZERO; DOT_BASIS; DIMINDEX_GE_1; LE_REFL] THEN
-  FIRST_ASSUM(SUBST1_TAC o SYM) THEN REWRITE_TAC[AFF_DIM_AFFINE_HULL] THEN
-  ASM_CASES_TAC `p::real^N=>bool = {}` THENL
-   [ASM_REWRITE_TAC[AFF_DIM_EMPTY] THEN
-    REWRITE_TAC[INT_ARITH `-- 1:int = x - 1 \<longleftrightarrow> x = 0`] THEN
-    SIMP_TAC[INT_OF_NUM_EQ; LE_1; DIMINDEX_GE_1];
-    DISCH_TAC] THEN
-  ABBREV_TAC `s::real^N=>bool = conic hull p` THEN
-  MP_TAC(ISPEC `s::real^N=>bool` EULER_POLYHEDRAL_CONE) THEN
-  SUBGOAL_THEN
-   `\<forall>f. f \<subseteq> {x. x$1 = 1}
-        \<Longrightarrow> (conic hull f) \<inter> {x. x$1 = 1} = f`
-  ASSUME_TAC THENL
-   [GEN_TAC THEN DISCH_TAC THEN MATCH_MP_TAC SUBSET_ANTISYM THEN
-    ASM_SIMP_TAC[HULL_SUBSET; SUBSET_INTER] THEN
-    REWRITE_TAC[\<subseteq>; CONIC_HULL_EXPLICIT; IN_INTER; IMP_CONJ] THEN
-    REWRITE_TAC[FORALL_IN_GSPEC] THEN
-    MAP_EVERY X_GEN_TAC [`c::real`; `x::real^N`] THEN DISCH_TAC THEN
-    FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id [\<subseteq>]) THEN
-    DISCH_THEN(MP_TAC o SPEC `x::real^N`) THEN ASM_REWRITE_TAC[IN_ELIM_THM] THEN
-    ASM_SIMP_TAC[VECTOR_MUL_COMPONENT; REAL_MUL_RID; VECTOR_MUL_LID];
-    ALL_TAC] THEN
-  SUBGOAL_THEN `polyhedron(s::real^N=>bool)` ASSUME_TAC THENL
-   [EXPAND_TAC "s" THEN
+  
+  SUBGOAL_THEN `polyhedron S` ASSUME_TAC THENL
+   [EXPAND_TAC "S" THEN
     FIRST_X_ASSUM(X_CHOOSE_THEN `k::real^N=>bool` MP_TAC o
       GEN_REWRITE_RULE id [polytope]) THEN
     DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
@@ -1485,10 +1658,11 @@ oops
     DISCH_THEN(SUBST1_TAC o SYM) THEN
     MATCH_MP_TAC POLYHEDRON_CONVEX_CONE_HULL THEN ASM_REWRITE_TAC[];
     ALL_TAC] THEN
+
   FIRST_ASSUM(ASSUME_TAC o MATCH_MP POLYHEDRON_IMP_CONVEX) THEN
-  SUBGOAL_THEN `conic(s::real^N=>bool)` ASSUME_TAC THENL
+  SUBGOAL_THEN `conic(S::real^N=>bool)` ASSUME_TAC THENL
    [ASM_MESON_TAC[CONIC_CONIC_HULL]; ALL_TAC] THEN
-  SUBGOAL_THEN `(s \<noteq> UNIV)` ASSUME_TAC THENL
+  SUBGOAL_THEN `(S \<noteq> UNIV)` ASSUME_TAC THENL
    [DISCH_TAC THEN FIRST_X_ASSUM(MP_TAC o SPEC `p::real^N=>bool`) THEN
     ANTS_TAC THENL [ASM_MESON_TAC[HULL_SUBSET]; ALL_TAC] THEN
     ASM_REWRITE_TAC[INTER_UNIV] THEN DISCH_THEN(ASSUME_TAC o SYM) THEN
@@ -1506,22 +1680,22 @@ oops
     ASM_SIMP_TAC[ARITH; LAMBDA_BETA; DIMINDEX_GE_1; LE_REFL] THEN
     REAL_ARITH_TAC;
     ALL_TAC] THEN
-  SUBGOAL_THEN `~(s::real^N=>bool = {})` ASSUME_TAC THENL
+  SUBGOAL_THEN `~(S::real^N=>bool = {})` ASSUME_TAC THENL
    [ASM_MESON_TAC[CONIC_HULL_EQ_EMPTY]; ALL_TAC] THEN
-  MP_TAC(ISPEC `s::real^N=>bool` CONIC_CONTAINS_0) THEN
+  MP_TAC(ISPEC `S::real^N=>bool` CONIC_CONTAINS_0) THEN
   ASM_REWRITE_TAC[] THEN DISCH_TAC THEN
-  SUBGOAL_THEN `~(interior(s::real^N=>bool) = {})` ASSUME_TAC THENL
-   [DISCH_TAC THEN MP_TAC(ISPEC `s::real^N=>bool`
+  SUBGOAL_THEN `~(interior(S::real^N=>bool) = {})` ASSUME_TAC THENL
+   [DISCH_TAC THEN MP_TAC(ISPEC `S::real^N=>bool`
      EMPTY_INTERIOR_SUBSET_HYPERPLANE) THEN
     ASM_REWRITE_TAC[NOT_EXISTS_THM] THEN
     MAP_EVERY X_GEN_TAC [`a::real^N`; `b::real`] THEN STRIP_TAC THEN
-    SUBGOAL_THEN `s \<subseteq> {x. x$1 = 1}` MP_TAC THENL
+    SUBGOAL_THEN `S \<subseteq> {x. x$1 = 1}` MP_TAC THENL
      [FIRST_ASSUM(MATCH_MP_TAC o MATCH_MP (SET_RULE
-       `s \<subseteq> h' \<Longrightarrow> h \<subseteq> h' \<and> ~(h \<subset> h') \<Longrightarrow> s \<subseteq> h`)) THEN
+       `S \<subseteq> h' \<Longrightarrow> h \<subseteq> h' \<and> ~(h \<subset> h') \<Longrightarrow> S \<subseteq> h`)) THEN
       CONJ_TAC THENL
        [FIRST_X_ASSUM(fun th -> GEN_REWRITE_TAC LAND_CONV [SYM th]) THEN
         MATCH_MP_TAC HULL_MINIMAL THEN REWRITE_TAC[AFFINE_HYPERPLANE] THEN
-        MATCH_MP_TAC SUBSET_TRANS THEN EXISTS_TAC `s::real^N=>bool` THEN
+        MATCH_MP_TAC SUBSET_TRANS THEN EXISTS_TAC `S::real^N=>bool` THEN
         ASM_REWRITE_TAC[] THEN ASM_MESON_TAC[HULL_SUBSET];
         DISCH_TAC THEN
         MP_TAC(ISPECL [`a::real^N`; `b::real`] AFF_DIM_HYPERPLANE) THEN
@@ -1529,7 +1703,7 @@ oops
         ASM_SIMP_TAC[BASIS_NONZERO; DOT_BASIS; DIMINDEX_GE_1; LE_REFL] THEN
         MATCH_MP_TAC(INT_ARITH `a::int < b \<Longrightarrow> a = n \<Longrightarrow> (b \<noteq> n)`) THEN
         MATCH_MP_TAC AFF_DIM_PSUBSET THEN FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP
-         (SET_RULE `s \<subset> t \<Longrightarrow> s' = s \<and> t' = t \<Longrightarrow> s' \<subset> t'`)) THEN
+         (SET_RULE `S \<subset> t \<Longrightarrow> s' = S \<and> t' = t \<Longrightarrow> s' \<subset> t'`)) THEN
         REWRITE_TAC[AFFINE_HULL_EQ; AFFINE_HYPERPLANE] THEN
         MP_TAC(ISPECL [`axis 1 1::real^N`; `1`] AFFINE_HYPERPLANE) THEN
         SIMP_TAC[BASIS_NONZERO; DOT_BASIS; DIMINDEX_GE_1; LE_REFL]];
@@ -1538,9 +1712,9 @@ oops
       ASM_REWRITE_TAC[IN_ELIM_THM; VEC_COMPONENT] THEN REAL_ARITH_TAC];
     ALL_TAC] THEN
   ASM_REWRITE_TAC[] THEN
-  SUBGOAL_THEN `\<forall>x::real^N. x \<in> s \<and> (x \<noteq> 0) \<Longrightarrow> 0 < x$1`
+  SUBGOAL_THEN `\<forall>x::real^N. x \<in> S \<and> (x \<noteq> 0) \<Longrightarrow> 0 < x$1`
   ASSUME_TAC THENL
-   [EXPAND_TAC "s" THEN REWRITE_TAC[CONIC_HULL_EXPLICIT; IMP_CONJ] THEN
+   [EXPAND_TAC "S" THEN REWRITE_TAC[CONIC_HULL_EXPLICIT; IMP_CONJ] THEN
     REWRITE_TAC[FORALL_IN_GSPEC; VECTOR_MUL_EQ_0; DE_MORGAN_THM] THEN
     MAP_EVERY X_GEN_TAC [`c::real`; `x::real^N`] THEN REPEAT STRIP_TAC THEN
     REWRITE_TAC[VECTOR_MUL_COMPONENT] THEN MATCH_MP_TAC REAL_LT_MUL THEN
@@ -1549,7 +1723,7 @@ oops
      [ASM_MESON_TAC[HULL_SUBSET; \<subseteq>]; ASM_REWRITE_TAC[]] THEN
     SIMP_TAC[IN_ELIM_THM; REAL_LT_01];
     ALL_TAC] THEN
-  SUBGOAL_THEN `\<forall>x::real^N. x \<in> s \<Longrightarrow> 0 \<le> x$1` ASSUME_TAC THENL
+  SUBGOAL_THEN `\<forall>x::real^N. x \<in> S \<Longrightarrow> 0 \<le> x$1` ASSUME_TAC THENL
    [X_GEN_TAC `x::real^N` THEN DISCH_TAC THEN
     ASM_CASES_TAC `x::real^N = 0` THEN
     ASM_SIMP_TAC[VEC_COMPONENT; REAL_POS; REAL_LT_IMP_LE];
@@ -1558,7 +1732,7 @@ oops
     lhand o lhand o snd) THEN
   REWRITE_TAC[LE_0] THEN DISCH_THEN SUBST1_TAC THEN
   REWRITE_TAC[AFF_DIM_EQ_0; real_pow; REAL_MUL_LID] THEN
-  SUBGOAL_THEN `{f. f face_of s \<and> (\<exists>a::real^N. f = {a})} = {{0}}`
+  SUBGOAL_THEN `{f. f face_of S \<and> (\<exists>a::real^N. f = {a})} = {{0}}`
    (fun th -> REWRITE_TAC[th])
   THENL
    [GEN_REWRITE_TAC id [EXTENSION] THEN REWRITE_TAC[IN_ELIM_THM; IN_SING] THEN
@@ -1582,7 +1756,7 @@ oops
       ASM_SIMP_TAC[REAL_LE_MUL; REAL_LT_IMP_LE; REAL_LT_MUL; REAL_SUB_LT]];
     ALL_TAC] THEN
   SIMP_TAC[CARD_CLAUSES; FINITE_EMPTY; NOT_IN_EMPTY; GSYM REAL_OF_NUM_SUC] THEN
-  MATCH_MP_TAC(REAL_ARITH `s =-t \<Longrightarrow> (Suc 0) + s = 0 \<Longrightarrow> t = 1`) THEN
+  MATCH_MP_TAC(REAL_ARITH `S =-t \<Longrightarrow> (Suc 0) + S = 0 \<Longrightarrow> t = 1`) THEN
   SUBGOAL_THEN `DIM('N) = (DIM('N)-1)+1`
    (fun th -> GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [th])
   THENL [ASM_ARITH_TAC; ALL_TAC] THEN
@@ -1595,7 +1769,7 @@ oops
   EXISTS_TAC `\<lambda>f::real^N=>bool. conic hull f` THEN
   REWRITE_TAC[FORALL_IN_GSPEC] THEN CONJ_TAC THENL
    [DISJ1_TAC THEN MATCH_MP_TAC FINITE_SUBSET THEN
-    EXISTS_TAC `{f::real^N=>bool | f face_of s}` THEN
+    EXISTS_TAC `{f::real^N=>bool | f face_of S}` THEN
     ASM_SIMP_TAC[FINITE_POLYHEDRON_FACES] THEN SET_TAC[];
     REWRITE_TAC[IN_ELIM_THM; GSYM INT_OF_NUM_ADD]] THEN
   SUBGOAL_THEN
@@ -1608,7 +1782,7 @@ oops
       ASM_REWRITE_TAC[SUBSET_REFL]];
     ASM_SIMP_TAC[]] THEN
   SUBGOAL_THEN
-   `\<forall>f::real^N=>bool. f face_of s \<Longrightarrow> f \<inter> {x. x$1 = 1} face_of p`
+   `\<forall>f::real^N=>bool. f face_of S \<Longrightarrow> f \<inter> {x. x$1 = 1} face_of p`
   ASSUME_TAC THENL
    [REPEAT STRIP_TAC THEN
     SUBGOAL_THEN `p = conic hull p \<inter> {x. x$1 = 1}` SUBST1_TAC
@@ -1617,7 +1791,7 @@ oops
     ASM_REWRITE_TAC[CONVEX_STANDARD_HYPERPLANE];
     ASM_SIMP_TAC[]] THEN
   SUBGOAL_THEN
-   `\<forall>f. f face_of s  \<and> 0 < aff_dim f
+   `\<forall>f. f face_of S  \<and> 0 < aff_dim f
         \<Longrightarrow> conic hull (f \<inter> {x. x$1 = 1}) = f`
   ASSUME_TAC THENL
    [REPEAT STRIP_TAC THEN MATCH_MP_TAC SUBSET_ANTISYM THEN CONJ_TAC THENL
@@ -1629,7 +1803,7 @@ oops
       ASM_CASES_TAC `x::real^N = 0` THENL
        [SUBGOAL_THEN `\<exists>y::real^N. y \<in> f \<and> (y \<noteq> 0)` STRIP_ASSUME_TAC THENL
          [MATCH_MP_TAC(SET_RULE
-           `a \<in> s \<and> (s \<noteq> {a}) \<Longrightarrow> \<exists>y. y \<in> s \<and> (y \<noteq> a)`) THEN
+           `a \<in> S \<and> (S \<noteq> {a}) \<Longrightarrow> \<exists>y. y \<in> S \<and> (y \<noteq> a)`) THEN
           ASM_MESON_TAC[AFF_DIM_EQ_0; INT_LT_REFL];
           SUBGOAL_THEN `0 < (y::real^N)$1` ASSUME_TAC THENL
            [ASM_MESON_TAC[FACE_OF_IMP_SUBSET; \<subseteq>]; ALL_TAC] THEN
@@ -1646,16 +1820,16 @@ oops
         ASM_MESON_TAC[FACE_OF_CONIC; conic; REAL_LE_INV_EQ; REAL_LT_IMP_LE]]];
     ASM_SIMP_TAC[INT_ARITH `0::int < d + 1`]] THEN
   SUBGOAL_THEN
-   `\<forall>f::real^N=>bool. f face_of p \<Longrightarrow> (conic hull f) face_of s`
+   `\<forall>f::real^N=>bool. f face_of p \<Longrightarrow> (conic hull f) face_of S`
   ASSUME_TAC THENL
    [REPEAT STRIP_TAC THEN ASM_CASES_TAC `f::real^N=>bool = {}` THEN
     ASM_REWRITE_TAC[CONIC_HULL_EMPTY; EMPTY_FACE_OF] THEN
     REWRITE_TAC[face_of] THEN REPEAT CONJ_TAC THENL
-     [EXPAND_TAC "s" THEN MATCH_MP_TAC HULL_MONO THEN
+     [EXPAND_TAC "S" THEN MATCH_MP_TAC HULL_MONO THEN
       ASM_MESON_TAC[FACE_OF_IMP_SUBSET];
       ASM_MESON_TAC[CONVEX_CONIC_HULL; FACE_OF_IMP_CONVEX];
       ALL_TAC] THEN
-    EXPAND_TAC "s" THEN REWRITE_TAC[CONIC_HULL_EXPLICIT; IMP_CONJ] THEN
+    EXPAND_TAC "S" THEN REWRITE_TAC[CONIC_HULL_EXPLICIT; IMP_CONJ] THEN
     REWRITE_TAC[RIGHT_FORALL_IMP_THM; FORALL_IN_GSPEC] THEN
     MAP_EVERY X_GEN_TAC [`ca::real`; `a::real^N`] THEN STRIP_TAC THEN
     MAP_EVERY X_GEN_TAC [`cb::real`; `b::real^N`] THEN STRIP_TAC THEN
@@ -1671,7 +1845,7 @@ oops
       ONCE_REWRITE_TAC[VECTOR_MUL_COMPONENT] THEN
       SUBGOAL_THEN `0 < (ca *\<^sub>R a::real^N)$1 \<or> 0 < (cb *\<^sub>R b::real^N)$1`
       DISJ_CASES_TAC THENL
-       [SUBGOAL_THEN `(ca *\<^sub>R a::real^N) \<in> s \<and> (cb *\<^sub>R b::real^N) \<in> s`
+       [SUBGOAL_THEN `(ca *\<^sub>R a::real^N) \<in> S \<and> (cb *\<^sub>R b::real^N) \<in> S`
           (fun th -> ASM_MESON_TAC[th]) THEN
         ASM_MESON_TAC[conic; HULL_SUBSET; \<subseteq>];
         MATCH_MP_TAC(REAL_ARITH `0 < a \<and> 0 \<le> b \<Longrightarrow> ~(0 = a + b)`);
@@ -1789,9 +1963,9 @@ oops
       ANTS_TAC THENL [ALL_TAC; SIMP_TAC[]] THEN
       SUBGOAL_THEN `\<exists>y::real^N. y \<in> f \<and> (y \<noteq> 0)` STRIP_ASSUME_TAC THENL
        [MATCH_MP_TAC(SET_RULE
-         `a \<in> s \<and> (s \<noteq> {a}) \<Longrightarrow> \<exists>y. y \<in> s \<and> (y \<noteq> a)`) THEN
+         `a \<in> S \<and> (S \<noteq> {a}) \<Longrightarrow> \<exists>y. y \<in> S \<and> (y \<noteq> a)`) THEN
         CONJ_TAC THENL
-         [MP_TAC(ISPECL [`s::real^N=>bool`; `f::real^N=>bool`]
+         [MP_TAC(ISPECL [`S::real^N=>bool`; `f::real^N=>bool`]
             FACE_OF_CONIC) THEN
           ASM_SIMP_TAC[CONIC_CONTAINS_0] THEN REPEAT DISCH_TAC;
           DISCH_TAC] THEN
@@ -1803,7 +1977,7 @@ oops
         EXISTS_TAC `inverse(y$1) *\<^sub>R y::real^N` THEN
         ASM_SIMP_TAC[VECTOR_MUL_COMPONENT; REAL_MUL_LINV;
                      REAL_LT_IMP_NZ] THEN
-        MP_TAC(ISPECL [`s::real^N=>bool`; `f::real^N=>bool`]
+        MP_TAC(ISPECL [`S::real^N=>bool`; `f::real^N=>bool`]
           FACE_OF_CONIC) THEN
         ASM_SIMP_TAC[CONIC_CONTAINS_0] THEN
         REWRITE_TAC[conic] THEN DISCH_THEN MATCH_MP_TAC THEN
@@ -1819,12 +1993,12 @@ oops
     SIMP_TAC[\<subset>; HULL_MONO; HULL_SUBSET] THEN
     REWRITE_TAC[EXTENSION; NOT_FORALL_THM] THEN EXISTS_TAC `0::real^N` THEN
     MATCH_MP_TAC(TAUT `~p \<and> q \<Longrightarrow> ~(p \<longleftrightarrow> q)`) THEN CONJ_TAC THENL
-     [MATCH_MP_TAC(SET_RULE `\<forall>t. (x \<notin> t) \<and> s \<subseteq> t \<Longrightarrow> (x \<notin> s)`) THEN
+     [MATCH_MP_TAC(SET_RULE `\<forall>t. (x \<notin> t) \<and> S \<subseteq> t \<Longrightarrow> (x \<notin> S)`) THEN
       EXISTS_TAC `affine hull p::real^N=>bool` THEN CONJ_TAC THENL
        [ASM_REWRITE_TAC[IN_ELIM_THM; VEC_COMPONENT] THEN REAL_ARITH_TAC;
         MATCH_MP_TAC HULL_MONO THEN ASM_MESON_TAC[FACE_OF_IMP_SUBSET]];
       MATCH_MP_TAC(SET_RULE
-       `x \<in> s \<and> s \<subseteq> P hull s \<Longrightarrow> x \<in> P hull s`) THEN
+       `x \<in> S \<and> S \<subseteq> P hull S \<Longrightarrow> x \<in> P hull S`) THEN
       ASM_SIMP_TAC[CONIC_CONTAINS_0; HULL_SUBSET; CONIC_CONIC_HULL] THEN
       ASM_REWRITE_TAC[CONIC_HULL_EQ_EMPTY]];
     MATCH_MP_TAC INT_LE_TRANS THEN
