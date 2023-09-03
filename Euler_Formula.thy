@@ -243,13 +243,77 @@ proof -
     by (auto simp: hull_inc)
 qed
 
+lemma conic_hull_eq_span_affine_hull:
+  fixes S :: "'a::euclidean_space set"
+  assumes "0 \<in> rel_interior S"
+  shows "conic hull S = span S \<and> conic hull S = affine hull S"
+proof -
+  obtain \<epsilon> where "\<epsilon>>0" and \<epsilon>: "cball 0 \<epsilon> \<inter> affine hull S \<subseteq> S"
+    using assms mem_rel_interior_cball by blast
+  have *: "affine hull S = span S"
+    by (meson affine_hull_span_0 assms hull_inc mem_rel_interior_cball)
+  moreover
+  have "conic hull S \<subseteq> span S"
+    by (simp add: hull_minimal span_superset)
+  moreover
+  have "affine hull S \<subseteq> conic hull S"
+  proof clarsimp
+    fix x
+    assume "x \<in> affine hull S"
+    show "x \<in> conic hull S"
+    proof (cases "x=0")
+      case True
+      then show ?thesis
+        using \<open>x \<in> affine hull S\<close> by auto
+    next
+      case False
+      then have "(\<epsilon> / norm x) *\<^sub>R x \<in> cball 0 \<epsilon> \<inter> affine hull S"
+        using \<open>0 < \<epsilon>\<close> \<open>x \<in> affine hull S\<close> * span_mul by fastforce
+      then have "(\<epsilon> / norm x) *\<^sub>R x \<in> S"
+        by (meson \<epsilon> subsetD)
+      then show ?thesis
+        apply (simp add: conic_hull_explicit)
+        by (smt (verit, del_insts) \<open>0 < \<epsilon>\<close> divide_nonneg_nonneg eq_vector_fraction_iff norm_eq_zero norm_ge_zero)
+    qed
+  qed
+  ultimately show ?thesis
+    by blast
+qed
+
+lemma conic_hull_eq_span:
+  fixes S :: "'a::euclidean_space set"
+  assumes "0 \<in> rel_interior S"
+  shows "conic hull S = span S"
+  by (simp add: assms conic_hull_eq_span_affine_hull)
+
+lemma conic_hull_eq_affine_hull:
+  fixes S :: "'a::euclidean_space set"
+  assumes "0 \<in> rel_interior S"
+  shows "conic hull S = affine hull S"
+  using assms conic_hull_eq_span_affine_hull by blast
+
+lemma conic_hull_eq_span_eq:
+  fixes S :: "'a::euclidean_space set"
+  shows "0 \<in> rel_interior(conic hull S) \<longleftrightarrow> conic hull S = span S" (is "?lhs = ?rhs")
+proof
+  show "?lhs \<Longrightarrow> ?rhs"
+    by (metis conic_hull_eq_span conic_span hull_hull hull_minimal hull_subset span_eq)
+  show "?rhs \<Longrightarrow> ?lhs"
+  by (metis rel_interior_affine subspace_affine subspace_span)
+qed
+
+lemma open_in_subset_relative_interior:
+  fixes S :: "'a::euclidean_space set"
+  shows "openin (top_of_set (affine hull T)) S \<Longrightarrow> (S \<subseteq> rel_interior T) = (S \<subseteq> T)"
+  by (meson order.trans rel_interior_maximal rel_interior_subset)
+
 
 text\<open>Closure of conic hulls\<close>
 
 proposition closedin_conic_hull:
-  fixes S :: "'a::euclidean_space set" (*?*)
+  fixes S :: "'a::euclidean_space set"
   assumes "compact T" "0 \<notin> T" "T \<subseteq> S"
-  shows   "closedin (subtopology euclidean (conic hull S)) (conic hull T)"
+  shows   "closedin (top_of_set (conic hull S)) (conic hull T)"
 proof -
   have **: "compact ({0..} \<times> T \<inter> (\<lambda>z. fst z *\<^sub>R snd z) -` K)" (is "compact ?L")
     if "K \<subseteq> (\<lambda>z. (fst z) *\<^sub>R snd z) ` ({0..} \<times> S)" "compact K" for K
@@ -332,44 +396,46 @@ proof -
 qed
 
 lemma closed_conic_hull:
-   "\<And>S::real^N=>bool.
-     0 \<in> rel_interior S \<or> compact S \<and> ~(0 \<in> S)
-     \<Longrightarrow> closed(conic hull S)"
-oops 
-  REPEAT STRIP_TAC THEN
-  ASM_SIMP_TAC[CONIC_HULL_EQ_AFFINE_HULL; CLOSED_AFFINE_HULL] THEN
-  MP_TAC(ISPECL [`UNIV`; `S::real^N=>bool`] CLOSED_IN_CONIC_HULL) THEN
-  ASM_REWRITE_TAC[SUBSET_UNIV; HULL_UNIV; SUBTOPOLOGY_UNIV] THEN
-  ASM_SIMP_TAC[GSYM CLOSED_IN; COMPACT_IMP_CLOSED]);;
+  fixes S :: "'a::euclidean_space set"
+  assumes "0 \<in> rel_interior S \<or> compact S \<and> 0 \<notin> S"
+  shows   "closed(conic hull S)"
+  using assms
+proof
+  assume "0 \<in> rel_interior S"
+  then show "closed (conic hull S)"
+    by (simp add: conic_hull_eq_span)
+next
+  assume "compact S \<and> 0 \<notin> S"
+  then have "closedin (top_of_set UNIV) (conic hull S)"
+    using closedin_conic_hull by force
+  then show "closed (conic hull S)"
+    by simp
+qed 
 
 lemma conic_closure:
-   "\<And>S::real^N=>bool. conic S \<Longrightarrow> conic(closure S)"
-oops 
-  REWRITE_TAC[conic; CLOSURE_SEQUENTIAL] THEN
-  GEN_TAC THEN DISCH_TAC THEN MAP_EVERY X_GEN_TAC [`x::real^N`; `c::real`] THEN
-  DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_TAC `a::num=>real^N`) ASSUME_TAC) THEN
-  EXISTS_TAC `\<lambda>n. c *\<^sub>R (a::num=>real^N) n` THEN
-  ASM_SIMP_TAC[LIM_ADD; LIM_CMUL]);;
+  fixes S :: "'a::euclidean_space set"
+  shows "conic S \<Longrightarrow> conic(closure S)"
+  by (meson Convex.cone_def cone_closure conic_def)
 
 lemma closure_conic_hull:
-   "\<And>S::real^N=>bool.
-        0 \<in> rel_interior S \<or> bounded S \<and> ~(0 \<in> closure S)
-        \<Longrightarrow> closure(conic hull S) = conic hull (closure S)"
-oops 
-  REPEAT STRIP_TAC THENL
-   [ASM_SIMP_TAC[CONIC_HULL_EQ_AFFINE_HULL; CLOSED_AFFINE_HULL;
-                 CLOSURE_CLOSED] THEN
-    CONV_TAC SYM_CONV THEN
-    GEN_REWRITE_TAC RAND_CONV [GSYM AFFINE_HULL_CLOSURE] THEN
-    MATCH_MP_TAC CONIC_HULL_EQ_AFFINE_HULL THEN
-    MP_TAC(ISPEC `S::real^N=>bool` RELATIVE_INTERIOR_CLOSURE_SUBSET) THEN
-    ASM SET_TAC[];
-    REWRITE_TAC[GSYM SUBSET_ANTISYM_EQ] THEN CONJ_TAC THENL
-     [MATCH_MP_TAC CLOSURE_MINIMAL THEN
-      SIMP_TAC[HULL_MONO; CLOSURE_SUBSET] THEN
-      MATCH_MP_TAC CLOSED_CONIC_HULL THEN ASM_REWRITE_TAC[COMPACT_CLOSURE];
-      MATCH_MP_TAC HULL_MINIMAL THEN SIMP_TAC[SUBSET_CLOSURE; HULL_SUBSET] THEN
-      MATCH_MP_TAC CONIC_CLOSURE THEN REWRITE_TAC[CONIC_CONIC_HULL]]]);;
+  fixes S :: "'a::euclidean_space set"
+  assumes "0 \<in> rel_interior S \<or> bounded S \<and> ~(0 \<in> closure S)"
+  shows   "closure(conic hull S) = conic hull (closure S)"
+  using assms
+proof
+  assume "0 \<in> rel_interior S"
+  then show "closure (conic hull S) = conic hull closure S"
+    by (metis closed_affine_hull closure_closed closure_same_affine_hull closure_subset conic_hull_eq_affine_hull subsetD subset_rel_interior)
+next
+  have "\<And>x. x \<in> conic hull closure S \<Longrightarrow> x \<in> closure (conic hull S)"
+    by (metis (no_types, opaque_lifting) closure_mono conic_closure conic_conic_hull subset_eq subset_hull)
+  moreover 
+  assume "bounded S \<and> 0 \<notin> closure S"
+  then have "\<And>x. x \<in> closure (conic hull S) \<Longrightarrow> x \<in> conic hull closure S"
+    by (metis closed_conic_hull closure_Un_frontier closure_closed closure_mono compact_closure hull_Un_subset le_sup_iff subsetD)
+  ultimately show "closure (conic hull S) = conic hull closure S"
+    by blast
+qed
 
 subsection \<open>Convex cones and corresponding hulls\<close>
 
