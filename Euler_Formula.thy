@@ -7,7 +7,7 @@ theory Euler_Formula
   imports "HOL-Analysis.Analysis" "Inclusion_Exclusion" "HOL-ex.Sketch_and_Explore"
 begin
 
-
+subsection \<open>Preliminaries\<close>
 
 (*FIX NAMING CONVENTIONS inter, etc.*)
 thm convex_closure_inter
@@ -47,12 +47,13 @@ lemma aff_dim_eq_full:
 
 (*** FOR CONVEX.THY ***)
 thm cone_convex_hull
-text\<open> ------------------------------------------------------------------------- \<close>
-text\<open> Conic sets and conic hull.                                                \<close>
-text\<open> ------------------------------------------------------------------------- \<close>
+subsection \<open>Conic sets and conic hull\<close>
 
 definition conic :: "'a::real_vector set \<Rightarrow> bool"
   where "conic S \<equiv> \<forall>x c. x \<in> S \<longrightarrow> 0 \<le> c \<longrightarrow> (c *\<^sub>R x) \<in> S"
+
+lemma conicD: "\<lbrakk>conic S; x \<in> S; 0 \<le> c\<rbrakk> \<Longrightarrow> (c *\<^sub>R x) \<in> S"
+  by (meson conic_def)
 
 lemma subspace_imp_conic: "subspace S \<Longrightarrow> conic S"
   by (simp add: conic_def subspace_def)
@@ -242,10 +243,137 @@ proof -
     by (auto simp: hull_inc)
 qed
 
-text\<open> Convex cones and corresponding hulls.                                     \<close>
-text\<open> ------------------------------------------------------------------------- \<close>
 
-definition convex_cone
+text\<open>Closure of conic hulls\<close>
+
+proposition closedin_conic_hull:
+  fixes S :: "'a::euclidean_space set" (*?*)
+  assumes "compact T" "0 \<notin> T" "T \<subseteq> S"
+  shows   "closedin (subtopology euclidean (conic hull S)) (conic hull T)"
+proof -
+  have **: "compact ({0..} \<times> T \<inter> (\<lambda>z. fst z *\<^sub>R snd z) -` K)" (is "compact ?L")
+    if "K \<subseteq> (\<lambda>z. (fst z) *\<^sub>R snd z) ` ({0..} \<times> S)" "compact K" for K
+  proof -
+    obtain r where "r > 0" and r: "\<And>x. x \<in> K \<Longrightarrow> norm x \<le> r"
+      by (metis \<open>compact K\<close> bounded_normE compact_imp_bounded)
+    show ?thesis
+      unfolding compact_eq_bounded_closed
+    proof
+      have "bounded ({0..r / setdist{0}T} \<times> T)"
+        by (simp add: assms(1) bounded_Times compact_imp_bounded)
+      moreover have "?L \<subseteq> ({0..r / setdist{0}T} \<times> T)"
+      proof clarsimp
+        fix a b
+        assume "a *\<^sub>R b \<in> K" and "b \<in> T" and "0 \<le> a"
+        have "setdist {0} T \<noteq> 0"
+          using \<open>b \<in> T\<close> assms compact_imp_closed setdist_eq_0_closed by auto
+        then have T0: "setdist {0} T > 0"
+          using less_eq_real_def by fastforce
+        then have "a * setdist {0} T \<le> r"
+          by (smt (verit, ccfv_SIG) \<open>0 \<le> a\<close> \<open>a *\<^sub>R b \<in> K\<close> \<open>b \<in> T\<close> dist_0_norm mult_mono' norm_scaleR r setdist_le_dist singletonI)
+        with T0 \<open>r>0\<close> show "a \<le> r / setdist {0} T"
+          by (simp add: divide_simps)
+      qed
+      ultimately show "bounded ?L"
+        by (meson bounded_subset)
+      show "closed ?L"
+      proof (rule continuous_closed_preimage)
+        show "continuous_on ({0..} \<times> T) (\<lambda>z. fst z *\<^sub>R snd z)"
+          by (intro continuous_intros)
+        show "closed ({0::real..} \<times> T)"
+          by (simp add: assms(1) closed_Times compact_imp_closed)
+        show "closed K"
+          by (simp add: compact_imp_closed that(2))
+      qed
+    qed
+  qed
+  show ?thesis
+    unfolding conic_hull_as_image
+  proof (rule proper_map)
+    show  "compact ({0..} \<times> T \<inter> (\<lambda>z. fst z *\<^sub>R snd z) -` K)" (is "compact ?L")
+      if "K \<subseteq> (\<lambda>z. (fst z) *\<^sub>R snd z) ` ({0..} \<times> S)" "compact K" for K
+    proof -
+      obtain r where "r > 0" and r: "\<And>x. x \<in> K \<Longrightarrow> norm x \<le> r"
+        by (metis \<open>compact K\<close> bounded_normE compact_imp_bounded)
+      show ?thesis
+        unfolding compact_eq_bounded_closed
+      proof
+        have "bounded ({0..r / setdist{0}T} \<times> T)"
+          by (simp add: assms(1) bounded_Times compact_imp_bounded)
+        moreover have "?L \<subseteq> ({0..r / setdist{0}T} \<times> T)"
+        proof clarsimp
+          fix a b
+          assume "a *\<^sub>R b \<in> K" and "b \<in> T" and "0 \<le> a"
+          have "setdist {0} T \<noteq> 0"
+            using \<open>b \<in> T\<close> assms compact_imp_closed setdist_eq_0_closed by auto
+          then have T0: "setdist {0} T > 0"
+            using less_eq_real_def by fastforce
+          then have "a * setdist {0} T \<le> r"
+            by (smt (verit, ccfv_SIG) \<open>0 \<le> a\<close> \<open>a *\<^sub>R b \<in> K\<close> \<open>b \<in> T\<close> dist_0_norm mult_mono' norm_scaleR r setdist_le_dist singletonI)
+          with T0 \<open>r>0\<close> show "a \<le> r / setdist {0} T"
+            by (simp add: divide_simps)
+        qed
+        ultimately show "bounded ?L"
+          by (meson bounded_subset)
+        show "closed ?L"
+        proof (rule continuous_closed_preimage)
+          show "continuous_on ({0..} \<times> T) (\<lambda>z. fst z *\<^sub>R snd z)"
+            by (intro continuous_intros)
+          show "closed ({0::real..} \<times> T)"
+            by (simp add: assms(1) closed_Times compact_imp_closed)
+          show "closed K"
+            by (simp add: compact_imp_closed that(2))
+        qed
+      qed
+    qed
+    show "(\<lambda>z. fst z *\<^sub>R snd z) ` ({0::real..} \<times> T) \<subseteq> (\<lambda>z. fst z *\<^sub>R snd z) ` ({0..} \<times> S)"
+      using \<open>T \<subseteq> S\<close> by force
+  qed auto
+qed
+
+lemma closed_conic_hull:
+   "\<And>S::real^N=>bool.
+     0 \<in> rel_interior S \<or> compact S \<and> ~(0 \<in> S)
+     \<Longrightarrow> closed(conic hull S)"
+oops 
+  REPEAT STRIP_TAC THEN
+  ASM_SIMP_TAC[CONIC_HULL_EQ_AFFINE_HULL; CLOSED_AFFINE_HULL] THEN
+  MP_TAC(ISPECL [`UNIV`; `S::real^N=>bool`] CLOSED_IN_CONIC_HULL) THEN
+  ASM_REWRITE_TAC[SUBSET_UNIV; HULL_UNIV; SUBTOPOLOGY_UNIV] THEN
+  ASM_SIMP_TAC[GSYM CLOSED_IN; COMPACT_IMP_CLOSED]);;
+
+lemma conic_closure:
+   "\<And>S::real^N=>bool. conic S \<Longrightarrow> conic(closure S)"
+oops 
+  REWRITE_TAC[conic; CLOSURE_SEQUENTIAL] THEN
+  GEN_TAC THEN DISCH_TAC THEN MAP_EVERY X_GEN_TAC [`x::real^N`; `c::real`] THEN
+  DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_TAC `a::num=>real^N`) ASSUME_TAC) THEN
+  EXISTS_TAC `\<lambda>n. c *\<^sub>R (a::num=>real^N) n` THEN
+  ASM_SIMP_TAC[LIM_ADD; LIM_CMUL]);;
+
+lemma closure_conic_hull:
+   "\<And>S::real^N=>bool.
+        0 \<in> rel_interior S \<or> bounded S \<and> ~(0 \<in> closure S)
+        \<Longrightarrow> closure(conic hull S) = conic hull (closure S)"
+oops 
+  REPEAT STRIP_TAC THENL
+   [ASM_SIMP_TAC[CONIC_HULL_EQ_AFFINE_HULL; CLOSED_AFFINE_HULL;
+                 CLOSURE_CLOSED] THEN
+    CONV_TAC SYM_CONV THEN
+    GEN_REWRITE_TAC RAND_CONV [GSYM AFFINE_HULL_CLOSURE] THEN
+    MATCH_MP_TAC CONIC_HULL_EQ_AFFINE_HULL THEN
+    MP_TAC(ISPEC `S::real^N=>bool` RELATIVE_INTERIOR_CLOSURE_SUBSET) THEN
+    ASM SET_TAC[];
+    REWRITE_TAC[GSYM SUBSET_ANTISYM_EQ] THEN CONJ_TAC THENL
+     [MATCH_MP_TAC CLOSURE_MINIMAL THEN
+      SIMP_TAC[HULL_MONO; CLOSURE_SUBSET] THEN
+      MATCH_MP_TAC CLOSED_CONIC_HULL THEN ASM_REWRITE_TAC[COMPACT_CLOSURE];
+      MATCH_MP_TAC HULL_MINIMAL THEN SIMP_TAC[SUBSET_CLOSURE; HULL_SUBSET] THEN
+      MATCH_MP_TAC CONIC_CLOSURE THEN REWRITE_TAC[CONIC_CONIC_HULL]]]);;
+
+subsection \<open>Convex cones and corresponding hulls\<close>
+
+definition convex_cone :: "'a::real_vector set \<Rightarrow> bool"
   where "convex_cone \<equiv> \<lambda>S. S \<noteq> {} \<and> convex S \<and> conic S"
 
 lemma convex_cone_iff:
@@ -408,7 +536,146 @@ lemma subspace_convex_cone_symmetric:
   by (smt (verit) convex_cone_iff scaleR_left.minus subspace_def subspace_neg)
 
 
+subsection \<open> Finitely generated cone is polyhedral, and hence closed\<close>
+
+lemma polyhedron_convex_cone_hull:
+  fixes S :: "'a::euclidean_space set"
+  assumes "finite S"
+  shows "polyhedron(convex_cone hull S)"
+proof (cases "S = {}")
+  case True
+  then show ?thesis
+    by (simp add: affine_imp_polyhedron)
+next
+  case False
+  then have "polyhedron(convex hull (insert 0 S))"
+    by (simp add: assms polyhedron_convex_hull)
+  then obtain F a b where "finite F" 
+         and F: "convex hull (insert 0 S) = \<Inter> F" 
+         and ab: "\<And>h. h \<in> F \<Longrightarrow> a h \<noteq> 0 \<and> h = {x. a h \<bullet> x \<le> b h}"
+    unfolding polyhedron_def by metis
+  then have "F \<noteq> {}"
+    by (metis bounded_convex_hull finite_imp_bounded Inf_empty assms finite_insert not_bounded_UNIV)
+  show ?thesis
+    unfolding polyhedron_def
+  proof (intro exI conjI)
+    show "convex_cone hull S = \<Inter> {h \<in> F. b h = 0}" (is "?lhs = ?rhs")
+    proof
+      show "?lhs \<subseteq> ?rhs"
+      proof (rule hull_minimal)
+        show "S \<subseteq> \<Inter> {h \<in> F. b h = 0}"
+          by (smt (verit, best) F InterE InterI hull_subset insert_subset mem_Collect_eq subset_eq)
+        have "\<And>S. \<lbrakk>S \<in> F; b S = 0\<rbrakk> \<Longrightarrow> convex_cone S"
+          by (metis ab convex_cone_halfspace_le)
+        then show "convex_cone (\<Inter> {h \<in> F. b h = 0})"
+          by (force intro: convex_cone_Inter)
+      qed
+      have "x \<in> convex_cone hull S"
+        if x: "\<And>h. \<lbrakk>h \<in> F; b h = 0\<rbrakk> \<Longrightarrow> x \<in> h" for x
+      proof -
+        have "\<exists>t. 0 < t \<and> (t *\<^sub>R x) \<in> h" if "h \<in> F" for h
+        proof (cases "b h = 0")
+          case True
+          then show ?thesis
+            by (metis x linordered_field_no_ub mult_1 scaleR_one that zero_less_mult_iff)
+        next
+          case False
+          then have "b h > 0"
+            by (smt (verit, del_insts) F InterE ab hull_subset inner_zero_right insert_subset mem_Collect_eq that)
+          then have "0 \<in> interior {x. a h \<bullet> x \<le> b h}"
+            by (simp add: ab that)
+          then have "0 \<in> interior h"
+            using ab that by auto
+          then obtain \<epsilon> where "0 < \<epsilon>" and \<epsilon>: "ball 0 \<epsilon> \<subseteq> h"
+            using mem_interior by blast
+          show ?thesis
+          proof (cases "x=0")
+            case True
+            then show ?thesis
+              using \<epsilon> \<open>0 < \<epsilon>\<close> by auto
+          next
+            case False
+            with \<epsilon> \<open>0 < \<epsilon>\<close> show ?thesis
+              by (rule_tac x="\<epsilon> / (2 * norm x)" in exI) (auto simp add: divide_simps)
+          qed
+        qed
+        then obtain t where t: "\<And>h. h \<in> F \<Longrightarrow> 0 < t h \<and> (t h *\<^sub>R x) \<in> h" 
+          by metis
+        then have "Inf (t ` F) *\<^sub>R x /\<^sub>R Inf (t ` F) = x"
+          by (smt (verit) \<open>F \<noteq> {}\<close> \<open>finite F\<close> divideR_right finite_imageI finite_less_Inf_iff image_iff image_is_empty)
+        moreover have "Inf (t ` F) *\<^sub>R x /\<^sub>R Inf (t ` F) \<in> convex_cone hull S"
+        proof (rule conicD [OF conic_convex_cone_hull])
+          have "Inf (t ` F) *\<^sub>R x \<in> \<Inter> F"
+          proof clarify
+            fix h
+            assume  "h \<in> F"
+            have eq: "Inf (t ` F) *\<^sub>R x = (1 - Inf(t ` F) / t h) *\<^sub>R 0 + (Inf(t ` F) / t h) *\<^sub>R t h *\<^sub>R x"
+              using \<open>h \<in> F\<close> t by force
+            show "Inf (t ` F) *\<^sub>R x \<in> h"
+              unfolding eq
+            proof (rule convexD_alt)
+              have "h = {x. a h \<bullet> x \<le> b h}"
+                by (simp add: \<open>h \<in> F\<close> ab)
+              then show "convex h"
+                by (metis convex_halfspace_le)
+              show "0 \<in> h"
+                by (metis F InterE \<open>h \<in> F\<close> hull_subset insertCI subsetD)
+              show "t h *\<^sub>R x \<in> h"
+                by (simp add: \<open>h \<in> F\<close> t)
+              show "0 \<le> Inf (t ` F) / t h"
+                by (metis \<open>F \<noteq> {}\<close> \<open>h \<in> F\<close> cINF_greatest divide_nonneg_pos less_eq_real_def t)
+              show "Inf (t ` F) / t h \<le> 1"
+                by (simp add: \<open>finite F\<close> \<open>h \<in> F\<close> cInf_le_finite t)
+            qed
+          qed
+          moreover have "convex hull (insert 0 S) \<subseteq> convex_cone hull S"
+            by (simp add: convex_cone_hull_contains_0 convex_convex_cone_hull hull_minimal hull_subset)
+          ultimately show "Inf (t ` F) *\<^sub>R x \<in> convex_cone hull S"
+            using F by blast
+          show "0 \<le> inverse (Inf (t ` F))"
+            using t by (simp add: \<open>F \<noteq> {}\<close> \<open>finite F\<close> finite_less_Inf_iff less_eq_real_def)
+        qed
+        ultimately show ?thesis
+          by auto
+      qed
+      then show "?rhs \<subseteq> ?lhs"
+        by auto
+    qed
+    show "\<forall>h\<in>{h \<in> F. b h = 0}. \<exists>a b. a \<noteq> 0 \<and> h = {x. a \<bullet> x \<le> b}"
+      using ab by blast
+  qed (auto simp: \<open>finite F\<close>)
+qed
+
+
+lemma closed_convex_cone_hull:
+  fixes S :: "'a::euclidean_space set"
+  shows "finite S \<Longrightarrow> closed(convex_cone hull S)"
+  by (simp add: polyhedron_convex_cone_hull polyhedron_imp_closed)
+
+lemma polyhedron_convex_cone_hull_polytope:
+  fixes S :: "'a::euclidean_space set"
+  shows "polytope S \<Longrightarrow> polyhedron(convex_cone hull S)"
+  by (metis convex_cone_hull_separate hull_hull polyhedron_convex_cone_hull polytope_def)
+
+lemma polyhedron_conic_hull_polytope:
+  fixes S :: "'a::euclidean_space set"
+  shows "polytope S \<Longrightarrow> polyhedron(conic hull S)"
+  by (metis conic_hull_eq_empty convex_cone_hull_separate_nonempty hull_hull polyhedron_convex_cone_hull_polytope polyhedron_empty polytope_def)
+
+lemma closed_conic_hull_strong:
+  fixes S :: "'a::euclidean_space set"
+  shows 
+   "0 \<in> rel_interior S \<or> polytope S \<or> compact S \<and> ~(0 \<in> S)
+    \<Longrightarrow> closed(conic hull S)"
+apply (simp add: closed_conic_hull)
+oops 
+  REPEAT STRIP_TAC THEN ASM_SIMP_TAC[CLOSED_CONIC_HULL] THEN
+  MATCH_MP_TAC POLYHEDRON_IMP_CLOSED THEN
+  ASM_SIMP_TAC[POLYHEDRON_CONIC_HULL_POLYTOPE]);;
+
+
 (*** END OF EXTRAS ***)
+
 
 text\<open> ------------------------------------------------------------------------- \<close>
 text\<open> Interpret which "side" of a hyperplane a point is on.                     \<close>
@@ -1636,8 +1903,11 @@ proof -
 
     obtain K where "finite K" and K: "p = convex hull K"
       by (meson assms(2) polytope_def)
-    have "polyhedron S"
+    then have "convex_cone hull K = conic hull (convex hull K)"
+      using False convex_cone_hull_separate_nonempty by auto
+    then have "polyhedron S"
       unfolding S_def
+      using polyhedron_convex_cone_hull
 
     sorry
     sorry
