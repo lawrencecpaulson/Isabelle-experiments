@@ -522,50 +522,20 @@ proof (intro strip)
       by (metis gt_ex less_eq_real_def order_less_le_trans zero_less_one)
     then obtain [simp]: "c *\<^sub>R x \<in> S" "e *\<^sub>R x \<in> S" \<open>x \<in> S\<close>
       using \<open>x \<in> f\<close> assms conic_mul face_of_imp_subset by blast
-
-    show ?thesis
-      using \<open>conic S\<close> f [of "d *\<^sub>R x" "e *\<^sub>R x" x] de \<open>x \<in> f\<close>
-      apply (simp add: conic_def in_segment)
-      apply atomize
-      apply safe
-         apply (auto simp add: in_segment)
-       apply (rule_tac x="(1 - d) / (e - d)" in exI)
-       apply (auto simp: )
-       apply (metis (no_types, opaque_lifting) add_diff_cancel_left' add_diff_eq cancel_comm_monoid_add_class.diff_cancel mult.commute mult.right_neutral nonzero_mult_div_cancel_left not_less_iff_gr_or_eq right_diff_distrib' scaleR_left_distrib scaleR_one times_divide_eq_right)
+    have "x \<in> open_segment (d *\<^sub>R x) (e *\<^sub>R x)" if "c *\<^sub>R x \<notin> f"
+      using de False that
+      apply (simp add: in_segment)
       apply (rule_tac x="(1 - d) / (e - d)" in exI)
-      apply (auto simp: )
-      apply (metis (no_types, opaque_lifting) add_diff_cancel_left' add_diff_eq cancel_comm_monoid_add_class.diff_cancel mult.commute mult.right_neutral nonzero_mult_div_cancel_left not_less_iff_gr_or_eq right_diff_distrib' scaleR_left_distrib scaleR_one times_divide_eq_right)
-      done
+      apply (simp add: field_simps)
+      by (smt (verit, del_insts) add_divide_distrib divide_self scaleR_collapse)
+    then show ?thesis
+      using \<open>conic S\<close> f [of "d *\<^sub>R x" "e *\<^sub>R x" x] de \<open>x \<in> f\<close>
+      by (force simp add: conic_def in_segment)
   qed
 qed
 
-oops
-  SUBGOAL_THEN `\<exists>d e. 0 \<le> d \<and> 0 \<le> e \<and> d < 1 \<and> 1 < e \<and> d < e \<and>
-                      (d = c \<or> e = c)`
-  MP_TAC THENL
-   [
-    DISCH_THEN(REPEAT_TCL CHOOSE_THEN
-      (REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC)) THEN
-    FIRST_X_ASSUM(MP_TAC o SPECL
-     [`d *\<^sub>R x :real^N`; `e *\<^sub>R x::real^N`; `x::real^N`]) THEN
-    ANTS_TAC THENL [ALL_TAC; ASM_MESON_TAC[]] THEN
-    SUBGOAL_THEN `(x::real^N) \<in> S` ASSUME_TAC THENL
-     [ASM SET_TAC[]; ASM_SIMP_TAC[IN_SEGMENT]] THEN
-    ASM_SIMP_TAC[VECTOR_MUL_RCANCEL; REAL_LT_IMP_NE] THEN
-    EXISTS_TAC `(1 - d) / (e - d)`  THEN
-    ASM_SIMP_TAC[REAL_LT_LDIV_EQ; REAL_LT_RDIV_EQ; REAL_SUB_LT] THEN
-    REPEAT(CONJ_TAC THENL [ASM_REAL_ARITH_TAC; ALL_TAC]) THEN
-    REWRITE_TAC[VECTOR_MUL_ASSOC; GSYM VECTOR_ADD_RDISTRIB] THEN
-    REWRITE_TAC[VECTOR_ARITH `x::real^N = a *\<^sub>R x \<longleftrightarrow> (a - 1) *\<^sub>R x = 0`] THEN
-    ASM_REWRITE_TAC[VECTOR_MUL_EQ_0] THEN
-    UNDISCH_TAC `d::real < e` THEN CONV_TAC REAL_FIELD]);;
-
 thm extreme_point_of_convex_hull_insert
-
 lemma extreme_point_of_conic:
-
-  fixes S :: "'a::euclidean_space set"
-
   assumes "conic S" and x: "x extreme_point_of S"
   shows "x = 0"
 proof -
@@ -2111,6 +2081,8 @@ proof -
       by (simp add: polyhedron_imp_convex)
     then have "conic S"
       by (simp add: S_def conic_conic_hull)
+    then have "0 \<in> S"
+      by (simp add: False S_def)
     have "S \<noteq> UNIV"
     proof
       assume "S = UNIV"
@@ -2139,10 +2111,23 @@ proof -
       by (metis False S_def empty_subsetI equalityI hull_subset)
     have "\<And>c x. \<lbrakk>0 < c; x \<in> p; x \<noteq> 0\<rbrakk> \<Longrightarrow> 0 < (c *\<^sub>R x) \<bullet> i"
       by (metis (mono_tags, lifting) affp hull_subset inner_commute inner_simps(6) insert_absorb insert_subset mem_Collect_eq mult.right_neutral)
-    then have "0 < x \<bullet> i" if S: "x \<in> S" and "x \<noteq> 0" for x
+    then have doti_gt0: "0 < x \<bullet> i" if S: "x \<in> S" and "x \<noteq> 0" for x
       using that by (auto simp add: S_def conic_hull_explicit)
-    then have doti_ge0: "0 \<le> x \<bullet> i" if "x \<in> S" for x
+
+    then have doti_ge0: "0 \<le> x \<bullet> i" if "x \<in> S" for x (*USED?*)
       using that by force
+    have "\<And>a. {a} face_of S \<Longrightarrow> a = 0"
+      using \<open>conic S\<close> conic_contains_0 face_of_conic by blast
+    moreover have "{0} face_of S"
+    proof -
+      have "\<And>a b u. \<lbrakk>a \<in> S; b \<in> S; a \<noteq> b; u < 1; 0 < u; (1 - u) *\<^sub>R a + u *\<^sub>R b = 0\<rbrakk> \<Longrightarrow> False"
+        using conic_def euclidean_all_zero_iff inner_left_distrib scaleR_eq_0_iff
+        by (smt (verit, del_insts) doti_gt0 \<open>conic S\<close> \<open>i \<in> Basis\<close>)
+      then show ?thesis
+        by (auto simp add: in_segment face_of_singleton extreme_point_of_def \<open>0 \<in> S\<close>)
+    qed
+    ultimately have face_0: "{f. f face_of S \<and> (\<exists>a. f = {a})} = {{0}}"
+      by auto
     have "interior S \<noteq> {}"
     proof
       assume "interior S = {}"
@@ -2158,189 +2143,175 @@ proof -
       with \<open>S \<noteq> {}\<close> show False
         using \<open>conic S\<close> conic_contains_0 by fastforce
     qed
-    then have *: "(\<Sum>d = 0..DIM('n). (-1) ^ d * int (card {f. f face_of S \<and> aff_dim f = int d})) = 0"
+    then have "(\<Sum>d = 0..DIM('n). (-1) ^ d * int (card {f. f face_of S \<and> aff_dim f = int d})) = 0"
       using Euler_polyhedral_cone \<open>S \<noteq> UNIV\<close> \<open>conic S\<close> \<open>polyhedron S\<close> by blast
-    then have "int(card {f. f face_of S \<and> (\<exists>a. f = {a})}) +
-              (\<Sum>d = 1..DIM('n). (-1) ^ d * (card {f. f face_of S \<and> aff_dim f = d})) = 0"
-      by (simp add: sum.atLeast_Suc_atMost aff_dim_eq_0)
-    have "\<And>a. {a} face_of S \<Longrightarrow> a = 0"
-apply (auto simp: face_of_singleton)
-      sorry
-    moreover have "{0} face_of S"
-      sorry
-    ultimately have "{f. f face_of S \<and> (\<exists>a. f = {a})} = {{0}}"
-      by auto
-      defer
+    then have "1 + (\<Sum>d = 1..DIM('n). (-1) ^ d * (card {f. f face_of S \<and> aff_dim f = d})) = 0"
+      by (simp add: sum.atLeast_Suc_atMost aff_dim_eq_0 face_0)
+    moreover have "(\<Sum>d = 1..DIM('n). (-1) ^ d * (card {f. f face_of S \<and> aff_dim f = d}))
+                 = - (\<Sum>d = 0..DIM('n) - 1. (-1) ^ d * int (card {f. f face_of p \<and> aff_dim f = int d}))"
+    proof -
+      have "(\<Sum>d = 1..DIM('n). (-1) ^ d * (card {f. f face_of S \<and> aff_dim f = d}))
+          = (\<Sum>d = Suc 0..Suc (DIM('n)-1). (-1) ^ d * (card {f. f face_of S \<and> aff_dim f = d}))"
+        by auto
+      also have "... = - (\<Sum>d = 0..DIM('n) - 1.
+                          (-1) ^ d * int (card {f. f face_of S \<and> aff_dim f = 1 + int d}))"
+        unfolding sum.atLeast_Suc_atMost_Suc_shift by (simp add: sum_negf)
+      also have "... = - (\<Sum>d = 0..DIM('n) - 1. (-1) ^ d * int (card {f. f face_of p \<and> aff_dim f = int d}))"
+      proof -
+        { fix d
+          assume "d \<le> DIM('n) - Suc 0"
 
-    sorry
-    then show ?thesis
-      using *
-      sorry
+          have F: "\<And>f. f face_of p \<Longrightarrow> conic hull f \<inter> {x. x \<bullet> i = 1} = f"
+            by (metis "1" affp face_of_imp_subset hull_subset le_inf_iff)
+
+          have G: "\<And>f. f face_of S \<Longrightarrow>  f \<inter> {x. x \<bullet> i = 1} face_of p"
+            by (metis "1" S_def affp convex_affine_hull face_of_slice hull_subset)
+
+          have "finite {f. f face_of S \<and> aff_dim f = 1 + int d}"
+            by (simp add: \<open>polyhedron S\<close> finite_polyhedron_faces)
+          moreover
+          have "finite {f. f face_of p \<and> aff_dim f = int d}"
+            by (simp add: assms(2) finite_polytope_faces)
+          moreover have "f \<inter> {x. x \<bullet> i = 1} face_of p"
+            if "f face_of S" for f
+            by (metis "1" S_def affp convex_affine_hull face_of_slice hull_subset that)
+          moreover have "aff_dim (f \<inter> {x. x \<bullet> i = 1}) = int d"
+            if "f face_of S \<and> aff_dim f = 1 + int d" for f
+            sorry
+          moreover
+
+          have "(conic hull f) face_of S" if "f face_of p" for f
+          proof (cases "f={}")
+            case False
+            have "{c *\<^sub>R x |c x. 0 \<le> c \<and> x \<in> f} \<subseteq> {c *\<^sub>R x |c x. 0 \<le> c \<and> x \<in> p}"
+              using face_of_imp_subset that by blast
+            moreover
+            have "convex {c *\<^sub>R x |c x. 0 \<le> c \<and> x \<in> f}"
+              by (metis (no_types) cone_hull_expl convex_cone_hull face_of_imp_convex that)
+            moreover
+            have "(\<exists>c x. ca *\<^sub>R a = c *\<^sub>R x \<and> 0 \<le> c \<and> x \<in> f) \<and> (\<exists>c x. cb *\<^sub>R b = c *\<^sub>R x \<and> 0 \<le> c \<and> x \<in> f)"
+              if "\<forall>a\<in>p. \<forall>b\<in>p. (\<exists>x\<in>f. x \<in> open_segment a b) \<longrightarrow> a \<in> f \<and> b \<in> f"
+                and "0 \<le> ca" "a \<in> p" "0 \<le> cb" "b \<in> p"
+                and "0 \<le> cx" "x \<in> f" and oseg: "cx *\<^sub>R x \<in> open_segment (ca *\<^sub>R a) (cb *\<^sub>R b)"
+              for ca a cb b cx x
+            proof -
+              have ai: "a \<bullet> i = 1" and bi: "b \<bullet> i = 1"
+                using affp hull_inc that(3,5) by fastforce+
+              show ?thesis
+              proof (cases "cx *\<^sub>R x = 0")
+                case True
+                then show ?thesis
+                  using \<open>{0} face_of S\<close> face_ofD \<open>conic S\<close> that
+                  by (smt (verit, best) S_def conic_def hull_subset insertCI singletonD subsetD)
+              next
+                case False
+                then have "cx \<noteq> 0" "x \<noteq> 0"
+                  by auto
+                then show ?thesis
+                proof (cases "x = a")
+                  case True
+                  obtain u where "0 < u" "u < 1" and "cx *\<^sub>R x = (1 - u) *\<^sub>R (ca *\<^sub>R a) + u *\<^sub>R (cb *\<^sub>R b)"
+                    using oseg in_segment(2) by metis
+                  then have u: "(cx - (1 - u) * ca) *\<^sub>R a = (u * cb) *\<^sub>R b"
+                    by (simp add: algebra_simps True)
+                  then have "(cx - (1 - u) * ca) * 1 = u * cb * 1"
+                    by (metis ai bi inner_scaleR_left)
+                  then have "a=b \<or> cb = 0"
+                    using u \<open>0 < u\<close> by force
+                  then show ?thesis
+                  proof
+                    show ?thesis
+                      if "a = b"
+                      using that True \<open>0 \<le> ca\<close> \<open>0 \<le> cb\<close> \<open>x \<in> f\<close> by blast
+                    show ?thesis
+                      if "cb = 0"
+                      using that True \<open>0 \<le> ca\<close> \<open>x \<in> f\<close> by auto
+                  qed 
+                next
+                  case False
+                  then show ?thesis sorry
+                qed
+              qed
+            qed
+            ultimately show ?thesis
+              using that by (auto simp add: S_def conic_hull_explicit face_of_def)
+          qed auto
+          
+          have "conic hull (f \<inter> {x. x \<bullet> i = 1}) = f"
+            if "f face_of S" "0 < aff_dim f" for f
+          proof
+            show "conic hull (f \<inter> {x. x \<bullet> i = 1}) \<subseteq> f"
+              by (metis \<open>conic S\<close> face_of_conic inf_le1 subset_hull that(1))
+            have "\<exists>c x'. x = c *\<^sub>R x' \<and> 0 \<le> c \<and> x' \<in> f \<and> x' \<bullet> i = 1" if "x \<in> f" for x
+            proof (cases "x=0")
+              case True
+              obtain y where "y \<in> f" "y \<noteq> 0"
+                by (metis \<open>0 < aff_dim f\<close> aff_dim_eq_0 aff_dim_subset insert_subset linorder_not_less subset_eq)
+              then have "y \<bullet> i > 0"
+                using \<open>f face_of S\<close> doti_gt0 face_of_imp_subset by blast
+              then have "y /\<^sub>R (y \<bullet> i) \<in> f \<and> (y /\<^sub>R (y \<bullet> i)) \<bullet> i = 1"
+                using \<open>conic S\<close> \<open>f face_of S\<close> \<open>y \<in> f\<close> conic_def face_of_conic by fastforce
+              then show ?thesis
+                using True by fastforce
+            next
+              case False
+              then have "x \<bullet> i > 0"
+                using \<open>f face_of S\<close> doti_gt0 face_of_imp_subset that by blast
+              then have "x /\<^sub>R (x \<bullet> i) \<in> f \<and> (x /\<^sub>R (x \<bullet> i)) \<bullet> i = 1"
+                using \<open>conic S\<close> \<open>f face_of S\<close> \<open>x \<in> f\<close> conic_def face_of_conic by fastforce
+              then show ?thesis
+                by (metis \<open>0 < x \<bullet> i\<close> divideR_right eucl_less_le_not_le)
+            qed
+            then show "f \<subseteq> conic hull (f \<inter> {x. x \<bullet> i = 1})"
+              by (auto simp: conic_hull_explicit)
+          qed
+          
+          moreover have "conic hull f face_of S" (********??*)
+            if "f face_of S" for f
+            by (metis \<open>conic S\<close> face_of_conic hull_same that)
+
+          
+          have "\<And>f. f face_of p \<Longrightarrow> (conic hull f) face_of S"
+            sorry
+
+          have "conic hull f face_of S"
+            if "f face_of p" for f
+            sorry
+          moreover have aff_1d: "aff_dim (conic hull f) = 1 + int d"
+            if "f face_of p \<and> aff_dim f = int d" for f
+              sorry
+          moreover have "(\<lambda>f. f \<inter> {x. x \<bullet> i = 1}) ((\<lambda>f. conic hull f) f) = f"
+            if "f face_of p" for f
+            by (metis "1" affp face_of_imp_subset hull_subset le_inf_iff that)
+
+          ultimately
+          have "card {f. f face_of S \<and> aff_dim f = 1 + int d} =
+               card {f. f face_of p \<and> aff_dim f = int d}"
+            apply (intro bij_betw_same_card [of "(\<lambda>f. f \<inter> {x. x \<bullet> i = 1})"])
+            unfolding bij_betw_def
+            apply (intro conjI)
+            apply (smt (verit) inj_on_def mem_Collect_eq of_nat_less_0_iff)
+            apply (auto simp: image_iff)
+            apply (rule_tac x="conic hull x" in exI)
+            apply (auto simp: )
+            done
+        }
+        then show ?thesis
+          by force
+      qed
+      finally show ?thesis .
+    qed
+    ultimately show ?thesis
+      by auto
   qed
 qed
 
 oops 
-  
-
-
-  SUBGOAL_THEN `{f. f face_of S \<and> (\<exists>a::real^N. f = {a})} = {{0}}`
-   (fun th -> REWRITE_TAC[th])
-  THENL
-   [GEN_REWRITE_TAC id [EXTENSION] THEN REWRITE_TAC[IN_ELIM_THM; IN_SING] THEN
-    X_GEN_TAC `f::real^N=>bool` THEN EQ_TAC THENL
-     [DISCH_THEN(CONJUNCTS_THEN2 MP_TAC (X_CHOOSE_TAC `a::real^N`)) THEN
-      ASM_REWRITE_TAC[FACE_OF_SING] THEN
-      ASM_MESON_TAC[EXTREME_POINT_OF_CONIC];
-      DISCH_THEN SUBST1_TAC THEN CONJ_TAC THENL [ALL_TAC; MESON_TAC[]] THEN
-      ASM_REWRITE_TAC[FACE_OF_SING; extreme_point_of; IN_SEGMENT] THEN
-      MAP_EVERY X_GEN_TAC [`a::real^N`; `b::real^N`] THEN STRIP_TAC THEN
-      DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
-      REWRITE_TAC[NOT_EXISTS_THM] THEN X_GEN_TAC `u::real` THEN
-      REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-      REWRITE_TAC[CART_EQ] THEN DISCH_THEN(MP_TAC o SPEC `1`) THEN
-      REWRITE_TAC[LE_REFL; DIMINDEX_GE_1; VEC_COMPONENT] THEN
-      REWRITE_TAC[VECTOR_ADD_COMPONENT; VECTOR_MUL_COMPONENT] THEN
-      SUBGOAL_THEN `0 < (a::real^N)$1 \<or> 0 < (b::real^N)$1` DISJ_CASES_TAC THENL
-       [ASM_MESON_TAC[];
-        MATCH_MP_TAC(REAL_ARITH `0 < a \<and> 0 \<le> b \<Longrightarrow> ~(0 = a + b)`);
-        MATCH_MP_TAC(REAL_ARITH `0 < b \<and> 0 \<le> a \<Longrightarrow> ~(0 = a + b)`)] THEN
-      ASM_SIMP_TAC[REAL_LE_MUL; REAL_LT_IMP_LE; REAL_LT_MUL; REAL_SUB_LT]];
-    ALL_TAC] THEN
-
-  SIMP_TAC[CARD_CLAUSES; FINITE_EMPTY; NOT_IN_EMPTY; GSYM REAL_OF_NUM_SUC] THEN
-  MATCH_MP_TAC(REAL_ARITH `S =-t \<Longrightarrow> (Suc 0) + S = 0 \<Longrightarrow> t = 1`) THEN
-  SUBGOAL_THEN `DIM('N) = (DIM('N)-1)+1`
-   (fun th -> GEN_REWRITE_TAC (LAND_CONV o ONCE_DEPTH_CONV) [th])
-  THENL [ASM_ARITH_TAC; ALL_TAC] THEN
-  REWRITE_TAC[SUM_OFFSET; GSYM SUM_NEG] THEN
-  MATCH_MP_TAC SUM_EQ_NUMSEG THEN X_GEN_TAC `d::num` THEN STRIP_TAC THEN
-  REWRITE_TAC[REAL_POW_ADD; REAL_POW_1; REAL_MUL_RNEG; REAL_MUL_LNEG] THEN
-  AP_TERM_TAC THEN REWRITE_TAC[REAL_MUL_RID] THEN AP_TERM_TAC THEN
-  AP_TERM_TAC THEN MATCH_MP_TAC BIJECTIONS_CARD_EQ THEN
-  EXISTS_TAC `\<lambda>f::real^N=>bool. f \<inter> {x. x$1 = 1}` THEN
-  EXISTS_TAC `\<lambda>f::real^N=>bool. conic hull f` THEN
-  REWRITE_TAC[FORALL_IN_GSPEC] THEN CONJ_TAC THENL
-   [DISJ1_TAC THEN MATCH_MP_TAC FINITE_SUBSET THEN
-    EXISTS_TAC `{f::real^N=>bool | f face_of S}` THEN
-    ASM_SIMP_TAC[FINITE_POLYHEDRON_FACES] THEN SET_TAC[];
-
-    REWRITE_TAC[IN_ELIM_THM; GSYM INT_OF_NUM_ADD]] THEN
 
 
   SUBGOAL_THEN
-   `\<forall>f::real^N=>bool. f face_of p \<Longrightarrow> conic hull f \<inter> {x. x$1 = 1} = f`
-  ASSUME_TAC THENL
-   [GEN_TAC THEN DISCH_TAC THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-    MATCH_MP_TAC SUBSET_TRANS THEN
-    EXISTS_TAC `affine hull p::real^N=>bool` THEN CONJ_TAC THENL
-     [ASM_MESON_TAC[FACE_OF_IMP_SUBSET; HULL_SUBSET; SUBSET_TRANS];
-      ASM_REWRITE_TAC[SUBSET_REFL]];
-    ASM_SIMP_TAC[]] THEN
-  SUBGOAL_THEN
-   `\<forall>f::real^N=>bool. f face_of S \<Longrightarrow> f \<inter> {x. x$1 = 1} face_of p`
-  ASSUME_TAC THENL
-   [REPEAT STRIP_TAC THEN
-    SUBGOAL_THEN `p = conic hull p \<inter> {x. x$1 = 1}` SUBST1_TAC
-    THENL [ASM_MESON_TAC[FACE_OF_REFL; POLYTOPE_IMP_CONVEX]; ALL_TAC] THEN
-    MATCH_MP_TAC FACE_OF_SLICE THEN
-    ASM_REWRITE_TAC[CONVEX_STANDARD_HYPERPLANE];
-    ASM_SIMP_TAC[]] THEN
+   `\<And>f. f face_of p \<Longrightarrow> (conic hull f) face_of S`
 
-  SUBGOAL_THEN
-   `\<forall>f. f face_of S  \<and> 0 < aff_dim f
-        \<Longrightarrow> conic hull (f \<inter> {x. x$1 = 1}) = f`
-  ASSUME_TAC THENL
-   [REPEAT STRIP_TAC THEN MATCH_MP_TAC SUBSET_ANTISYM THEN CONJ_TAC THENL
-     [REWRITE_TAC[\<subseteq>; CONIC_HULL_EXPLICIT; FORALL_IN_GSPEC] THEN
-      REWRITE_TAC[IN_INTER; IN_ELIM_THM] THEN
-      ASM_MESON_TAC[FACE_OF_CONIC; conic];
-      REWRITE_TAC[\<subseteq>; CONIC_HULL_EXPLICIT] THEN X_GEN_TAC `x::real^N` THEN
-      DISCH_TAC THEN REWRITE_TAC[IN_ELIM_THM; IN_INTER] THEN
-      ASM_CASES_TAC `x::real^N = 0` THENL
-       [SUBGOAL_THEN `\<exists>y::real^N. y \<in> f \<and> (y \<noteq> 0)` STRIP_ASSUME_TAC THENL
-         [MATCH_MP_TAC(SET_RULE
-           `a \<in> S \<and> (S \<noteq> {a}) \<Longrightarrow> \<exists>y. y \<in> S \<and> (y \<noteq> a)`) THEN
-          ASM_MESON_TAC[AFF_DIM_EQ_0; INT_LT_REFL];
-          SUBGOAL_THEN `0 < (y::real^N)$1` ASSUME_TAC THENL
-           [ASM_MESON_TAC[FACE_OF_IMP_SUBSET; \<subseteq>]; ALL_TAC] THEN
-          EXISTS_TAC `0` THEN ASM_REWRITE_TAC[REAL_POS; VECTOR_MUL_LZERO] THEN
-          EXISTS_TAC `inverse(y$1) *\<^sub>R y::real^N` THEN
-          ASM_SIMP_TAC[VECTOR_MUL_COMPONENT; REAL_MUL_LINV;
-                       REAL_LT_IMP_NZ] THEN
-          ASM_MESON_TAC[FACE_OF_CONIC; conic; REAL_LE_INV_EQ; REAL_LT_IMP_LE]];
-        SUBGOAL_THEN `0 < (x::real^N)$1` ASSUME_TAC THENL
-         [ASM_MESON_TAC[FACE_OF_IMP_SUBSET; \<subseteq>]; ALL_TAC] THEN
-        EXISTS_TAC `(x::real^N)$1` THEN EXISTS_TAC `inverse(x$1) *\<^sub>R x::real^N` THEN
-        ASM_SIMP_TAC[VECTOR_MUL_COMPONENT; REAL_MUL_LINV; REAL_LT_IMP_LE;
-          REAL_LT_IMP_NZ; VECTOR_MUL_ASSOC; REAL_MUL_RINV; VECTOR_MUL_LID] THEN
-        ASM_MESON_TAC[FACE_OF_CONIC; conic; REAL_LE_INV_EQ; REAL_LT_IMP_LE]]];
-    ASM_SIMP_TAC[INT_ARITH `0::int < d + 1`]] THEN
-
-  SUBGOAL_THEN
-   `\<forall>f::real^N=>bool. f face_of p \<Longrightarrow> (conic hull f) face_of S`
-  ASSUME_TAC THENL
-   [REPEAT STRIP_TAC THEN ASM_CASES_TAC `f::real^N=>bool = {}` THEN
-    ASM_REWRITE_TAC[CONIC_HULL_EMPTY; EMPTY_FACE_OF] THEN
-    REWRITE_TAC[face_of] THEN REPEAT CONJ_TAC THENL
-     [EXPAND_TAC "S" THEN MATCH_MP_TAC HULL_MONO THEN
-      ASM_MESON_TAC[FACE_OF_IMP_SUBSET];
-      ASM_MESON_TAC[CONVEX_CONIC_HULL; FACE_OF_IMP_CONVEX];
-      ALL_TAC] THEN
-    EXPAND_TAC "S" THEN REWRITE_TAC[CONIC_HULL_EXPLICIT; IMP_CONJ] THEN
-    REWRITE_TAC[RIGHT_FORALL_IMP_THM; FORALL_IN_GSPEC] THEN
-    MAP_EVERY X_GEN_TAC [`ca::real`; `a::real^N`] THEN STRIP_TAC THEN
-    MAP_EVERY X_GEN_TAC [`cb::real`; `b::real^N`] THEN STRIP_TAC THEN
-    MAP_EVERY X_GEN_TAC [`cx::real`; `x::real^N`] THEN STRIP_TAC THEN
-    ASM_CASES_TAC `cx *\<^sub>R x::real^N = 0` THENL
-     [ASM_REWRITE_TAC[IN_SEGMENT] THEN
-      MATCH_MP_TAC(TAUT `(a \<Longrightarrow> ~b) \<Longrightarrow> a \<and> b \<Longrightarrow> c`) THEN
-      DISCH_TAC THEN DISCH_THEN(X_CHOOSE_THEN `u::real` MP_TAC) THEN
-      REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-      REWRITE_TAC[CART_EQ] THEN DISCH_THEN(MP_TAC o SPEC `1`) THEN
-      REWRITE_TAC[LE_REFL; DIMINDEX_GE_1; VEC_COMPONENT] THEN
-      REWRITE_TAC[VECTOR_ADD_COMPONENT] THEN
-      ONCE_REWRITE_TAC[VECTOR_MUL_COMPONENT] THEN
-      SUBGOAL_THEN `0 < (ca *\<^sub>R a::real^N)$1 \<or> 0 < (cb *\<^sub>R b::real^N)$1`
-      DISJ_CASES_TAC THENL
-       [SUBGOAL_THEN `(ca *\<^sub>R a::real^N) \<in> S \<and> (cb *\<^sub>R b::real^N) \<in> S`
-          (fun th -> ASM_MESON_TAC[th]) THEN
-        ASM_MESON_TAC[conic; HULL_SUBSET; \<subseteq>];
-        MATCH_MP_TAC(REAL_ARITH `0 < a \<and> 0 \<le> b \<Longrightarrow> ~(0 = a + b)`);
-        MATCH_MP_TAC(REAL_ARITH `0 < b \<and> 0 \<le> a \<Longrightarrow> ~(0 = a + b)`)] THEN
-      ASM_SIMP_TAC[REAL_LE_MUL; REAL_LT_IMP_LE; REAL_LT_MUL; REAL_SUB_LT] THEN
-      MATCH_MP_TAC REAL_LE_MUL THEN
-      ASM_SIMP_TAC[REAL_LT_IMP_LE; REAL_SUB_LT] THEN
-      FIRST_X_ASSUM MATCH_MP_TAC THEN
-      ASM_MESON_TAC[conic; HULL_SUBSET; \<subseteq>];
-      ALL_TAC] THEN
-    UNDISCH_TAC `~(cx *\<^sub>R x::real^N = 0)` THEN
-    REWRITE_TAC[VECTOR_MUL_EQ_0; DE_MORGAN_THM] THEN STRIP_TAC THEN
-    ASM_CASES_TAC `x::real^N = a` THENL
-     [REWRITE_TAC[IN_SEGMENT] THEN DISCH_THEN
-       (CONJUNCTS_THEN2 ASSUME_TAC (X_CHOOSE_THEN `u::real` MP_TAC)) THEN
-      REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-      ASM_REWRITE_TAC[VECTOR_MUL_ASSOC; VECTOR_ARITH
-       `x *\<^sub>R a::real^N = y *\<^sub>R a + z *\<^sub>R b \<longleftrightarrow> (x - y) *\<^sub>R a = z *\<^sub>R b`] THEN
-      DISCH_THEN(fun th -> MP_TAC th THEN MP_TAC th) THEN
-      GEN_REWRITE_TAC LAND_CONV [CART_EQ] THEN
-      DISCH_THEN(MP_TAC o SPEC `1`) THEN
-      REWRITE_TAC[LE_REFL; DIMINDEX_GE_1; VECTOR_MUL_COMPONENT] THEN
-      SUBGOAL_THEN `(a::real^N) \<in> affine hull p \<and> b \<in> affine hull p`
-      MP_TAC THENL
-       [ASM_MESON_TAC[FACE_OF_IMP_SUBSET; HULL_SUBSET; \<subseteq>]; ALL_TAC] THEN
-      ASM_REWRITE_TAC[IN_ELIM_THM] THEN
-      DISCH_THEN(CONJUNCTS_THEN SUBST1_TAC) THEN
-      REWRITE_TAC[REAL_MUL_RID] THEN DISCH_THEN SUBST1_TAC THEN
-      ASM_SIMP_TAC[VECTOR_MUL_LCANCEL; REAL_ENTIRE; REAL_LT_IMP_NZ] THEN
-      STRIP_TAC THEN ASM_REWRITE_TAC[] THENL
-       [CONJ_TAC THENL
-         [MAP_EVERY EXISTS_TAC [`ca::real`; `a::real^N`] THEN
-          ASM_REWRITE_TAC[] THEN ASM_MESON_TAC[];
-          MAP_EVERY EXISTS_TAC [`0`; `x::real^N`] THEN
-          ASM_REWRITE_TAC[VECTOR_MUL_LZERO; REAL_LE_REFL]];
-        CONJ_TAC THENL [EXISTS_TAC `ca::real`; EXISTS_TAC `cb::real`] THEN
-        EXISTS_TAC `x::real^N` THEN ASM_REWRITE_TAC[]];
-      ALL_TAC] THEN
     ASM_CASES_TAC `x::real^N = b` THENL
      [REWRITE_TAC[IN_SEGMENT] THEN DISCH_THEN
        (CONJUNCTS_THEN2 ASSUME_TAC (X_CHOOSE_THEN `u::real` MP_TAC)) THEN
@@ -2368,6 +2339,7 @@ oops
         CONJ_TAC THENL [EXISTS_TAC `ca::real`; EXISTS_TAC `cb::real`] THEN
         EXISTS_TAC `x::real^N` THEN ASM_REWRITE_TAC[]];
       ALL_TAC] THEN
+
     DISCH_TAC THEN
     SUBGOAL_THEN `(x::real^N) \<in> open_segment a b` ASSUME_TAC THENL
      [FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id [IN_OPEN_SEGMENT]) THEN
@@ -2381,6 +2353,7 @@ oops
       DISCH_THEN(MP_TAC o SPEC `1`) THEN
       REWRITE_TAC[LE_REFL; DIMINDEX_GE_1; VECTOR_ADD_COMPONENT;
                   VECTOR_MUL_COMPONENT] THEN
+
       SUBGOAL_THEN `(x::real^N) \<in> affine hull p \<and>
                     a \<in> affine hull p \<and> b \<in> affine hull p`
       MP_TAC THENL
@@ -2475,6 +2448,7 @@ oops
      `c *\<^sub>R x::real^N = 0 + c *\<^sub>R (x - 0)`] THEN
     MATCH_MP_TAC IN_AFFINE_ADD_MUL_DIFF THEN
     ASM_SIMP_TAC[AFFINE_AFFINE_HULL; HULL_INC; IN_INSERT]]);;
+
 
 
 
