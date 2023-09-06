@@ -2221,14 +2221,7 @@ proof -
                   then have "a=b \<or> cb = 0"
                     using ua \<open>0 < u\<close> by force
                   then show ?thesis
-                  proof
-                    show ?thesis
-                      if "a = b"
-                      using that True \<open>0 \<le> ca\<close> \<open>0 \<le> cb\<close> \<open>x \<in> f\<close> by blast
-                    show ?thesis
-                      if "cb = 0"
-                      using that True \<open>0 \<le> ca\<close> \<open>x \<in> f\<close> by auto
-                  qed 
+                    by (metis True scaleR_zero_left that(2) that(4) that(7))
                 next
                   case False
                   show ?thesis
@@ -2241,14 +2234,7 @@ proof -
                     then have "a=b \<or> ca = 0"
                       using \<open>u < 1\<close> ub by auto
                     then show ?thesis
-                    proof
-                      show ?thesis
-                        if "a = b"
-                        using that \<open>x \<noteq> a\<close> \<open>x = b\<close> by blast
-                      show ?thesis
-                        if "ca = 0"
-                        using that True \<open>0 \<le> cb\<close> \<open>x \<in> f\<close> by auto
-                    qed
+                      using False True that(4) that(7) by auto
                   next
                     case False
                     have "cx > 0"
@@ -2258,24 +2244,18 @@ proof -
                     have aff: "x \<in> affine hull p \<and> a \<in> affine hull p \<and> b \<in> affine hull p"
                       using affp xi ai bi by blast
                     show ?thesis
-                    proof (cases "cb=0")
+                    proof (cases "cb=0") 
                       case True
                       have u': "cx *\<^sub>R x = ((1 - u) * ca) *\<^sub>R a"
                         using u by (simp add: True)
                       then have "cx * 1 = ((1 - u) * ca) * 1"
                         by (metis ai inner_scaleR_left xi)
-                      then have "\<exists>c x. ca *\<^sub>R a = c *\<^sub>R x \<and> 0 \<le> c \<and> x \<in> f"
-                        using u' \<open>cx \<noteq> 0\<close> \<open>ca \<ge> 0\<close> \<open>x \<in> f\<close> by auto
                       then show ?thesis
-                        using True by auto
+                        using True u' \<open>cx \<noteq> 0\<close> \<open>ca \<ge> 0\<close> \<open>x \<in> f\<close> by auto
                     next
                       case False
                       with \<open>cb \<ge> 0\<close> have "cb > 0"
                         by linarith
-
-                      have "cb \<le> cx"
-
-                        sorry
                       { have False if "a=b"
                         proof -
                           have *: "cx *\<^sub>R x = ((1 - u) * ca + u * cb) *\<^sub>R b"
@@ -2286,14 +2266,24 @@ proof -
                             by force
                         qed
                       }
-                      moreover have "\<exists>u>0. u < 1 \<and> x = (1 - u) *\<^sub>R a + u *\<^sub>R b"
+                      moreover 
+                      have "cx *\<^sub>R x /\<^sub>R cx = (((1 - u) * ca) *\<^sub>R a + (cb * u) *\<^sub>R b) /\<^sub>R cx"
+                        using u by simp
+                      then have E: "x = ((1-u) * ca / cx) *\<^sub>R a + (cb * u / cx) *\<^sub>R b"
+                        by (simp add: \<open>cx \<noteq> 0\<close> divide_inverse_commute scaleR_right_distrib)
+                      then have "1 = ((1-u) * ca / cx) * 1 + (cb * u / cx) * 1"
+                        using ai bi xi by (simp add: inner_left_distrib)
+                      then have F: "cx + ca * u = ca + cb * u"
+                        using \<open>cx > 0\<close> \<open>ca > 0\<close> \<open>cb > 0\<close> \<open>0 < u\<close> \<open>u < 1\<close> 
+                        by (simp add: field_simps)
+                      have "\<exists>u>0. u < 1 \<and> x = (1 - u) *\<^sub>R a + u *\<^sub>R b"
                         apply (rule_tac x="inverse(cx) * u * cb" in exI)
-                        using \<open>cx > 0\<close> \<open>ca > 0\<close> \<open>cb > 0\<close> \<open>0 < u\<close> \<open>u < 1\<close> u \<open>cb \<le> cx\<close>
+                        using \<open>cx > 0\<close> \<open>ca > 0\<close> \<open>cb > 0\<close> \<open>0 < u\<close> \<open>u < 1\<close> F 
                         apply (auto simp: zero_less_mult_iff mult_less_0_iff)
-                         apply (simp add: field_simps)
+                         apply (simp add: field_simps )
                          apply (smt (verit) mult_less_cancel_left2)
-                        apply (simp add: field_split_simps)
-                        sorry
+                        apply (simp add: E field_simps)
+                        done
                       ultimately show ?thesis
                         using that by (metis in_segment(2))
                     qed
@@ -2395,10 +2385,7 @@ oops
       REWRITE_TAC[LE_REFL; DIMINDEX_GE_1; VECTOR_ADD_COMPONENT;
                   VECTOR_MUL_COMPONENT] THEN
 
-      SUBGOAL_THEN `x \<in> affine hull p \<and>
-                    a \<in> affine hull p \<and> b \<in> affine hull p`
-      MP_TAC THENL
-       [ASM_MESON_TAC[FACE_OF_IMP_SUBSET; HULL_SUBSET; \<subseteq>]; ALL_TAC] THEN
+
       ASM_REWRITE_TAC[IN_ELIM_THM] THEN
       DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN SUBST1_TAC) THEN
       REWRITE_TAC[REAL_MUL_RID] THEN DISCH_THEN(ASSUME_TAC o SYM) THEN
