@@ -2197,6 +2197,8 @@ proof -
             proof -
               have ai: "a \<bullet> i = 1" and bi: "b \<bullet> i = 1"
                 using affp hull_inc that(3,5) by fastforce+
+              have xi: "x \<bullet> i = 1"
+                using affp that \<open>f face_of p\<close> face_of_imp_subset hull_subset by fastforce
               show ?thesis
               proof (cases "cx *\<^sub>R x = 0")
                 case True
@@ -2207,17 +2209,17 @@ proof -
                 case False
                 then have "cx \<noteq> 0" "x \<noteq> 0"
                   by auto
-                then show ?thesis
+                obtain u where "0 < u" "u < 1" and u: "cx *\<^sub>R x = (1 - u) *\<^sub>R (ca *\<^sub>R a) + u *\<^sub>R (cb *\<^sub>R b)"
+                  using oseg in_segment(2) by metis
+                show ?thesis
                 proof (cases "x = a")
                   case True
-                  obtain u where "0 < u" "u < 1" and "cx *\<^sub>R x = (1 - u) *\<^sub>R (ca *\<^sub>R a) + u *\<^sub>R (cb *\<^sub>R b)"
-                    using oseg in_segment(2) by metis
-                  then have u: "(cx - (1 - u) * ca) *\<^sub>R a = (u * cb) *\<^sub>R b"
-                    by (simp add: algebra_simps True)
+                  then have ua: "(cx - (1 - u) * ca) *\<^sub>R a = (u * cb) *\<^sub>R b"
+                    using u by (simp add: algebra_simps)
                   then have "(cx - (1 - u) * ca) * 1 = u * cb * 1"
                     by (metis ai bi inner_scaleR_left)
                   then have "a=b \<or> cb = 0"
-                    using u \<open>0 < u\<close> by force
+                    using ua \<open>0 < u\<close> by force
                   then show ?thesis
                   proof
                     show ?thesis
@@ -2229,7 +2231,42 @@ proof -
                   qed 
                 next
                   case False
-                  then show ?thesis sorry
+                  show ?thesis
+                  proof (cases "x = b")
+                    case True
+                    then have ub: "(cx - (u * cb)) *\<^sub>R b = ((1 - u) * ca) *\<^sub>R a"
+                      using u by (simp add: algebra_simps)
+                    then have "(cx - (u * cb)) * 1 = ((1 - u) * ca) * 1"
+                      by (metis ai bi inner_scaleR_left)
+                    then have "a=b \<or> ca = 0"
+                      using \<open>u < 1\<close> ub by auto
+                    then show ?thesis
+                    proof
+                      show ?thesis
+                        if "a = b"
+                        using that \<open>x \<noteq> a\<close> \<open>x = b\<close> by blast
+                      show ?thesis
+                        if "ca = 0"
+                        using that True \<open>0 \<le> cb\<close> \<open>x \<in> f\<close> by auto
+                    qed
+                  next
+                    case False
+
+                    { have False if "a=b"
+                      proof -
+                        have *: "cx *\<^sub>R x = ((1 - u) * ca + u * cb) *\<^sub>R b"
+                          using u that by (simp add: algebra_simps)
+                        then have "cx * 1 = ((1 - u) * ca + u * cb) * 1"
+                          using xi bi by (metis inner_scaleR_left)
+                        with \<open>x \<noteq> b\<close> \<open>cx \<noteq> 0\<close> * show False
+                          by force
+                      qed
+                    }
+                    moreover have "\<exists>u>0. u < 1 \<and> x = (1 - u) *\<^sub>R a + u *\<^sub>R b"
+                      sorry
+                    ultimately show ?thesis
+                      using that by (metis in_segment(2))
+                  qed
                 qed
               qed
             qed
@@ -2312,36 +2349,9 @@ oops
   SUBGOAL_THEN
    `\<And>f. f face_of p \<Longrightarrow> (conic hull f) face_of S`
 
-    ASM_CASES_TAC `x::real^N = b` THENL
-     [REWRITE_TAC[IN_SEGMENT] THEN DISCH_THEN
-       (CONJUNCTS_THEN2 ASSUME_TAC (X_CHOOSE_THEN `u::real` MP_TAC)) THEN
-      REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-      ASM_REWRITE_TAC[VECTOR_MUL_ASSOC; VECTOR_ARITH
-       `x *\<^sub>R b::real^N = y *\<^sub>R a + z *\<^sub>R b \<longleftrightarrow> (x - z) *\<^sub>R b = y *\<^sub>R a`] THEN
-      DISCH_THEN(fun th -> MP_TAC th THEN MP_TAC th) THEN
-      GEN_REWRITE_TAC LAND_CONV [CART_EQ] THEN
-      DISCH_THEN(MP_TAC o SPEC `1`) THEN
-      REWRITE_TAC[LE_REFL; DIMINDEX_GE_1; VECTOR_MUL_COMPONENT] THEN
-      SUBGOAL_THEN `(a::real^N) \<in> affine hull p \<and> b \<in> affine hull p`
-      MP_TAC THENL
-       [ASM_MESON_TAC[FACE_OF_IMP_SUBSET; HULL_SUBSET; \<subseteq>]; ALL_TAC] THEN
-      ASM_REWRITE_TAC[IN_ELIM_THM] THEN
-      DISCH_THEN(CONJUNCTS_THEN SUBST1_TAC) THEN
-      REWRITE_TAC[REAL_MUL_RID] THEN DISCH_THEN SUBST1_TAC THEN
-      ASM_SIMP_TAC[VECTOR_MUL_LCANCEL; REAL_ENTIRE;
-                   REAL_LT_IMP_NE; REAL_SUB_0] THEN
-      STRIP_TAC THEN ASM_REWRITE_TAC[] THENL
-       [CONJ_TAC THENL
-         [MAP_EVERY EXISTS_TAC [`0`; `x::real^N`] THEN
-          ASM_REWRITE_TAC[VECTOR_MUL_LZERO; REAL_LE_REFL];
-          MAP_EVERY EXISTS_TAC [`cb::real`; `b::real^N`] THEN
-          ASM_REWRITE_TAC[] THEN ASM_MESON_TAC[]];
-        CONJ_TAC THENL [EXISTS_TAC `ca::real`; EXISTS_TAC `cb::real`] THEN
-        EXISTS_TAC `x::real^N` THEN ASM_REWRITE_TAC[]];
-      ALL_TAC] THEN
 
     DISCH_TAC THEN
-    SUBGOAL_THEN `(x::real^N) \<in> open_segment a b` ASSUME_TAC THENL
+    SUBGOAL_THEN `x \<in> open_segment a b` ASSUME_TAC THENL
      [FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id [IN_OPEN_SEGMENT]) THEN
       ASM_REWRITE_TAC[IN_OPEN_SEGMENT] THEN
       DISCH_THEN(CONJUNCTS_THEN2 MP_TAC STRIP_ASSUME_TAC) THEN
@@ -2382,6 +2392,8 @@ oops
       DISCH_THEN(MP_TAC o SPECL [`a::real^N`; `b::real^N`; `x::real^N`]) THEN
       ASM_REWRITE_TAC[IN_ELIM_THM] THEN ASM_MESON_TAC[]];
     ASM_SIMP_TAC[]] THEN
+
+
 
   SUBGOAL_THEN
    `\<forall>f::real^N=>bool. f face_of p \<and> (f \<noteq> {})
