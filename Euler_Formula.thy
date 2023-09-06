@@ -2251,21 +2251,52 @@ proof -
                     qed
                   next
                     case False
+                    have "cx > 0"
+                      using \<open>cx \<noteq> 0\<close> that(6) by linarith
+                    have "ca > 0"
+                      by (smt (verit, ccfv_SIG) False \<open>cx \<noteq> 0\<close> add_0 bi inner_commute inner_real_def inner_simps(6) real_inner_1_right scaleR_cancel_left scaleR_eq_0_iff that(2) u vector_space_assms(3) xi)
+                    have aff: "x \<in> affine hull p \<and> a \<in> affine hull p \<and> b \<in> affine hull p"
+                      using affp xi ai bi by blast
+                    show ?thesis
+                    proof (cases "cb=0")
+                      case True
+                      have u': "cx *\<^sub>R x = ((1 - u) * ca) *\<^sub>R a"
+                        using u by (simp add: True)
+                      then have "cx * 1 = ((1 - u) * ca) * 1"
+                        by (metis ai inner_scaleR_left xi)
+                      then have "\<exists>c x. ca *\<^sub>R a = c *\<^sub>R x \<and> 0 \<le> c \<and> x \<in> f"
+                        using u' \<open>cx \<noteq> 0\<close> \<open>ca \<ge> 0\<close> \<open>x \<in> f\<close> by auto
+                      then show ?thesis
+                        using True by auto
+                    next
+                      case False
+                      with \<open>cb \<ge> 0\<close> have "cb > 0"
+                        by linarith
 
-                    { have False if "a=b"
-                      proof -
-                        have *: "cx *\<^sub>R x = ((1 - u) * ca + u * cb) *\<^sub>R b"
-                          using u that by (simp add: algebra_simps)
-                        then have "cx * 1 = ((1 - u) * ca + u * cb) * 1"
-                          using xi bi by (metis inner_scaleR_left)
-                        with \<open>x \<noteq> b\<close> \<open>cx \<noteq> 0\<close> * show False
-                          by force
-                      qed
-                    }
-                    moreover have "\<exists>u>0. u < 1 \<and> x = (1 - u) *\<^sub>R a + u *\<^sub>R b"
-                      sorry
-                    ultimately show ?thesis
-                      using that by (metis in_segment(2))
+                      have "cb \<le> cx"
+
+                        sorry
+                      { have False if "a=b"
+                        proof -
+                          have *: "cx *\<^sub>R x = ((1 - u) * ca + u * cb) *\<^sub>R b"
+                            using u that by (simp add: algebra_simps)
+                          then have "cx * 1 = ((1 - u) * ca + u * cb) * 1"
+                            using xi bi by (metis inner_scaleR_left)
+                          with \<open>x \<noteq> b\<close> \<open>cx \<noteq> 0\<close> * show False
+                            by force
+                        qed
+                      }
+                      moreover have "\<exists>u>0. u < 1 \<and> x = (1 - u) *\<^sub>R a + u *\<^sub>R b"
+                        apply (rule_tac x="inverse(cx) * u * cb" in exI)
+                        using \<open>cx > 0\<close> \<open>ca > 0\<close> \<open>cb > 0\<close> \<open>0 < u\<close> \<open>u < 1\<close> u \<open>cb \<le> cx\<close>
+                        apply (auto simp: zero_less_mult_iff mult_less_0_iff)
+                         apply (simp add: field_simps)
+                         apply (smt (verit) mult_less_cancel_left2)
+                        apply (simp add: field_split_simps)
+                        sorry
+                      ultimately show ?thesis
+                        using that by (metis in_segment(2))
+                    qed
                   qed
                 qed
               qed
@@ -2273,7 +2304,7 @@ proof -
             ultimately show ?thesis
               using that by (auto simp add: S_def conic_hull_explicit face_of_def)
           qed auto
-          
+
           have "conic hull (f \<inter> {x. x \<bullet> i = 1}) = f"
             if "f face_of S" "0 < aff_dim f" for f
           proof
@@ -2302,12 +2333,12 @@ proof -
             then show "f \<subseteq> conic hull (f \<inter> {x. x \<bullet> i = 1})"
               by (auto simp: conic_hull_explicit)
           qed
-          
+
           moreover have "conic hull f face_of S" (********??*)
             if "f face_of S" for f
             by (metis \<open>conic S\<close> face_of_conic hull_same that)
 
-          
+
           have "\<And>f. f face_of p \<Longrightarrow> (conic hull f) face_of S"
             sorry
 
@@ -2316,7 +2347,7 @@ proof -
             sorry
           moreover have aff_1d: "aff_dim (conic hull f) = 1 + int d"
             if "f face_of p \<and> aff_dim f = int d" for f
-              sorry
+            sorry
           moreover have "(\<lambda>f. f \<inter> {x. x \<bullet> i = 1}) ((\<lambda>f. conic hull f) f) = f"
             if "f face_of p" for f
             by (metis "1" affp face_of_imp_subset hull_subset le_inf_iff that)
@@ -2327,7 +2358,7 @@ proof -
             apply (intro bij_betw_same_card [of "(\<lambda>f. f \<inter> {x. x \<bullet> i = 1})"])
             unfolding bij_betw_def
             apply (intro conjI)
-            apply (smt (verit) inj_on_def mem_Collect_eq of_nat_less_0_iff)
+             apply (smt (verit) inj_on_def mem_Collect_eq of_nat_less_0_iff)
             apply (auto simp: image_iff)
             apply (rule_tac x="conic hull x" in exI)
             apply (auto simp: )
@@ -2364,7 +2395,7 @@ oops
       REWRITE_TAC[LE_REFL; DIMINDEX_GE_1; VECTOR_ADD_COMPONENT;
                   VECTOR_MUL_COMPONENT] THEN
 
-      SUBGOAL_THEN `(x::real^N) \<in> affine hull p \<and>
+      SUBGOAL_THEN `x \<in> affine hull p \<and>
                     a \<in> affine hull p \<and> b \<in> affine hull p`
       MP_TAC THENL
        [ASM_MESON_TAC[FACE_OF_IMP_SUBSET; HULL_SUBSET; \<subseteq>]; ALL_TAC] THEN
