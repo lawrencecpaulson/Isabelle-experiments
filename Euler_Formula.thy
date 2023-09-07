@@ -2248,8 +2248,8 @@ proof -
                       case True
                       have u': "cx *\<^sub>R x = ((1 - u) * ca) *\<^sub>R a"
                         using u by (simp add: True)
-                      then have "cx * 1 = ((1 - u) * ca) * 1"
-                        by (metis ai inner_scaleR_left xi)
+                      then have "cx = ((1 - u) * ca)"
+                        by (metis ai inner_scaleR_left mult.right_neutral xi)
                       then show ?thesis
                         using True u' \<open>cx \<noteq> 0\<close> \<open>ca \<ge> 0\<close> \<open>x \<in> f\<close> by auto
                     next
@@ -2260,8 +2260,8 @@ proof -
                         proof -
                           have *: "cx *\<^sub>R x = ((1 - u) * ca + u * cb) *\<^sub>R b"
                             using u that by (simp add: algebra_simps)
-                          then have "cx * 1 = ((1 - u) * ca + u * cb) * 1"
-                            using xi bi by (metis inner_scaleR_left)
+                          then have "cx = ((1 - u) * ca + u * cb)"
+                            by (metis xi bi inner_scaleR_left mult.right_neutral)
                           with \<open>x \<noteq> b\<close> \<open>cx \<noteq> 0\<close> * show False
                             by force
                         qed
@@ -2269,21 +2269,21 @@ proof -
                       moreover 
                       have "cx *\<^sub>R x /\<^sub>R cx = (((1 - u) * ca) *\<^sub>R a + (cb * u) *\<^sub>R b) /\<^sub>R cx"
                         using u by simp
-                      then have E: "x = ((1-u) * ca / cx) *\<^sub>R a + (cb * u / cx) *\<^sub>R b"
+                      then have xeq: "x = ((1-u) * ca / cx) *\<^sub>R a + (cb * u / cx) *\<^sub>R b"
                         by (simp add: \<open>cx \<noteq> 0\<close> divide_inverse_commute scaleR_right_distrib)
-                      then have "1 = ((1-u) * ca / cx) * 1 + (cb * u / cx) * 1"
+                      then have proj: "1 = ((1-u) * ca / cx) + (cb * u / cx)"
                         using ai bi xi by (simp add: inner_left_distrib)
-                      then have F: "cx + ca * u = ca + cb * u"
-                        using \<open>cx > 0\<close> \<open>ca > 0\<close> \<open>cb > 0\<close> \<open>0 < u\<close> \<open>u < 1\<close> 
-                        by (simp add: field_simps)
+                      then have eq: "cx + ca * u = ca + cb * u"
+                        using \<open>cx > 0\<close> by (simp add: field_simps)
                       have "\<exists>u>0. u < 1 \<and> x = (1 - u) *\<^sub>R a + u *\<^sub>R b"
-                        apply (rule_tac x="inverse(cx) * u * cb" in exI)
-                        using \<open>cx > 0\<close> \<open>ca > 0\<close> \<open>cb > 0\<close> \<open>0 < u\<close> \<open>u < 1\<close> F 
-                        apply (auto simp: zero_less_mult_iff mult_less_0_iff)
-                         apply (simp add: field_simps )
-                         apply (smt (verit) mult_less_cancel_left2)
-                        apply (simp add: E field_simps)
-                        done
+                      proof (intro exI conjI)
+                        show "0 < inverse cx * u * cb"
+                          by (simp add: \<open>0 < cb\<close> \<open>0 < cx\<close> \<open>0 < u\<close>)
+                        show "inverse cx * u * cb < 1"
+                          using proj \<open>0 < ca\<close> \<open>0 < cx\<close> \<open>u < 1\<close> by (simp add: divide_simps)
+                        show "x = (1 - inverse cx * u * cb) *\<^sub>R a + (inverse cx * u * cb) *\<^sub>R b"
+                          using eq \<open>cx \<noteq> 0\<close> by (simp add: xeq field_simps)
+                      qed
                       ultimately show ?thesis
                         using that by (metis in_segment(2))
                     qed
@@ -2294,7 +2294,7 @@ proof -
             ultimately show ?thesis
               using that by (auto simp add: S_def conic_hull_explicit face_of_def)
           qed auto
-
+          moreover
           have "conic hull (f \<inter> {x. x \<bullet> i = 1}) = f"
             if "f face_of S" "0 < aff_dim f" for f
           proof
@@ -2328,16 +2328,15 @@ proof -
             if "f face_of S" for f
             by (metis \<open>conic S\<close> face_of_conic hull_same that)
 
-
-          have "\<And>f. f face_of p \<Longrightarrow> (conic hull f) face_of S"
-            sorry
-
-          have "conic hull f face_of S"
-            if "f face_of p" for f
-            sorry
-          moreover have aff_1d: "aff_dim (conic hull f) = 1 + int d"
-            if "f face_of p \<and> aff_dim f = int d" for f
-            sorry
+          moreover 
+          then have aff_1d: "aff_dim (conic hull f) = int d + 1"
+            if "f face_of p" and d: "aff_dim f = int d" for f
+          proof -
+            have "f \<noteq> {}"
+              using d by force
+            show ?thesis
+              sorry
+          qed
           moreover have "(\<lambda>f. f \<inter> {x. x \<bullet> i = 1}) ((\<lambda>f. conic hull f) f) = f"
             if "f face_of p" for f
             by (metis "1" affp face_of_imp_subset hull_subset le_inf_iff that)
@@ -2365,51 +2364,6 @@ proof -
 qed
 
 oops 
-
-
-  SUBGOAL_THEN
-   `\<And>f. f face_of p \<Longrightarrow> (conic hull f) face_of S`
-
-
-    DISCH_TAC THEN
-    SUBGOAL_THEN `x \<in> open_segment a b` ASSUME_TAC THENL
-     [FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id [IN_OPEN_SEGMENT]) THEN
-      ASM_REWRITE_TAC[IN_OPEN_SEGMENT] THEN
-      DISCH_THEN(CONJUNCTS_THEN2 MP_TAC STRIP_ASSUME_TAC) THEN
-      REWRITE_TAC[IN_SEGMENT] THEN
-      DISCH_THEN(X_CHOOSE_THEN `u::real` MP_TAC) THEN
-      REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-      DISCH_THEN(fun th -> MP_TAC th THEN MP_TAC th) THEN
-      GEN_REWRITE_TAC LAND_CONV [CART_EQ] THEN
-      DISCH_THEN(MP_TAC o SPEC `1`) THEN
-      REWRITE_TAC[LE_REFL; DIMINDEX_GE_1; VECTOR_ADD_COMPONENT;
-                  VECTOR_MUL_COMPONENT] THEN
-
-
-      ASM_REWRITE_TAC[IN_ELIM_THM] THEN
-      DISCH_THEN(REPEAT_TCL CONJUNCTS_THEN SUBST1_TAC) THEN
-      REWRITE_TAC[REAL_MUL_RID] THEN DISCH_THEN(ASSUME_TAC o SYM) THEN
-      DISCH_THEN(MP_TAC o AP_TERM `(%) (inverse cx) :real^N=>real^N`) THEN
-      ASM_SIMP_TAC[VECTOR_MUL_ASSOC; REAL_MUL_LINV; VECTOR_MUL_LID] THEN
-      DISCH_THEN(K ALL_TAC) THEN EXISTS_TAC `inverse(cx) * u * cb` THEN
-      REWRITE_TAC[REAL_ARITH `inverse(cx) * x::real = x / cx`] THEN
-      ASM_SIMP_TAC[REAL_LE_RDIV_EQ; REAL_LE_LDIV_EQ; REAL_LT_LE] THEN
-      REPEAT CONJ_TAC THENL
-       [REWRITE_TAC[REAL_MUL_LZERO] THEN MATCH_MP_TAC REAL_LE_MUL THEN
-        ASM_REAL_ARITH_TAC;
-        FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP (REAL_ARITH
-         `a + b = cx \<Longrightarrow> 0 \<le> a \<Longrightarrow> b \<le> 1 * cx`)) THEN
-        MATCH_MP_TAC REAL_LE_MUL THEN ASM_REAL_ARITH_TAC;
-        REWRITE_TAC[VECTOR_MUL_ASSOC; VECTOR_ADD_LDISTRIB] THEN
-        BINOP_TAC THEN AP_THM_TAC THEN AP_TERM_TAC THEN
-        MAP_EVERY UNDISCH_TAC
-         [`(1 - u) * ca + u * cb = cx`; `(cx \<noteq> 0)`] THEN
-        CONV_TAC REAL_FIELD];
-      FIRST_X_ASSUM(MP_TAC o GEN_REWRITE_RULE id [face_of]) THEN
-      REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
-      DISCH_THEN(MP_TAC o SPECL [`a::real^N`; `b::real^N`; `x::real^N`]) THEN
-      ASM_REWRITE_TAC[IN_ELIM_THM] THEN ASM_MESON_TAC[]];
-    ASM_SIMP_TAC[]] THEN
 
 
 
@@ -2447,6 +2401,8 @@ oops
       ASM_REWRITE_TAC[] THEN DISCH_THEN MATCH_MP_TAC THEN
       DISCH_TAC THEN UNDISCH_TAC `aff_dim(f::real^N=>bool) = d` THEN
       ASM_REWRITE_TAC[AFF_DIM_EMPTY] THEN INT_ARITH_TAC]] THEN
+
+
 
   X_GEN_TAC `f::real^N=>bool` THEN STRIP_TAC THEN
 
