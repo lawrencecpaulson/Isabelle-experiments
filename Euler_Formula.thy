@@ -2175,11 +2175,7 @@ proof -
           moreover have "f \<inter> {x. x \<bullet> i = 1} face_of p"
             if "f face_of S" for f
             by (metis "1" S_def affp convex_affine_hull face_of_slice hull_subset that)
-          moreover have "aff_dim (f \<inter> {x. x \<bullet> i = 1}) = int d"
-            if "f face_of S \<and> aff_dim f = 1 + int d" for f
-            sorry
-          moreover
-
+          moreover 
           have "(conic hull f) face_of S" if "f face_of p" for f
           proof (cases "f={}")
             case False
@@ -2329,17 +2325,44 @@ proof -
             by (metis \<open>conic S\<close> face_of_conic hull_same that)
 
           moreover 
-          then have aff_1d: "aff_dim (conic hull f) = int d + 1"
+          have aff_1d: "aff_dim (conic hull f) = aff_dim f + 1" (is "?lhs = ?rhs")
             if "f face_of p" and d: "aff_dim f = int d" for f
-          proof -
+          proof (rule order_antisym)
             have "f \<noteq> {}"
               using d by force
-            show ?thesis
-              sorry
+            have "?lhs \<le> aff_dim(affine hull (insert 0 (affine hull f)))"
+            proof (intro aff_dim_subset hull_minimal)
+              show "f \<subseteq> affine hull insert 0 (affine hull f)"
+                by (metis hull_insert hull_subset insert_subset)
+              show "conic (affine hull insert 0 (affine hull f))"
+                by (metis affine_hull_span_0 conic_span hull_inc insertI1)
+            qed
+            also have "\<dots> \<le> ?rhs"
+              by (simp add: aff_dim_insert)
+            finally show "?lhs \<le> ?rhs" .
+            have "aff_dim f < aff_dim (conic hull f)"
+            proof (intro aff_dim_psubset psubsetI)
+              show "affine hull f \<subseteq> affine hull (conic hull f)"
+                by (simp add: hull_mono hull_subset)
+            have "0 \<notin> affine hull f"
+              using affp face_of_imp_subset hull_mono that(1) by fastforce
+            moreover have "0 \<in> affine hull (conic hull f)"
+              by (simp add: \<open>f \<noteq> {}\<close> hull_inc)
+            ultimately show "affine hull f \<noteq> affine hull (conic hull f)"
+              by auto
           qed
-          moreover have "(\<lambda>f. f \<inter> {x. x \<bullet> i = 1}) ((\<lambda>f. conic hull f) f) = f"
-            if "f face_of p" for f
-            by (metis "1" affp face_of_imp_subset hull_subset le_inf_iff that)
+          then show "?rhs \<le> ?lhs"
+            by simp
+        qed
+        moreover
+        have "aff_dim (f \<inter> {x. x \<bullet> i = 1}) = int d"
+          if "f face_of S \<and> aff_dim f = 1 + int d" for f
+          sorry
+        moreover
+
+        have "(\<lambda>f. f \<inter> {x. x \<bullet> i = 1}) ((\<lambda>f. conic hull f) f) = f"
+          if "f face_of p" for f
+          by (metis "1" affp face_of_imp_subset hull_subset le_inf_iff that)
 
           ultimately
           have "card {f. f face_of S \<and> aff_dim f = 1 + int d} =
@@ -2403,37 +2426,6 @@ oops
       ASM_REWRITE_TAC[AFF_DIM_EMPTY] THEN INT_ARITH_TAC]] THEN
 
 
-
-  X_GEN_TAC `f::real^N=>bool` THEN STRIP_TAC THEN
-
-  MATCH_MP_TAC(INT_ARITH `f < a \<and> a \<le> f + 1 \<Longrightarrow> a::int = f + 1`) THEN
-  CONJ_TAC THENL
-   [MATCH_MP_TAC AFF_DIM_PSUBSET THEN
-    SIMP_TAC[\<subset>; HULL_MONO; HULL_SUBSET] THEN
-    REWRITE_TAC[EXTENSION; NOT_FORALL_THM] THEN EXISTS_TAC `0::real^N` THEN
-    MATCH_MP_TAC(TAUT `~p \<and> q \<Longrightarrow> ~(p \<longleftrightarrow> q)`) THEN CONJ_TAC THENL
-     [MATCH_MP_TAC(SET_RULE `\<forall>t. (x \<notin> t) \<and> S \<subseteq> t \<Longrightarrow> (x \<notin> S)`) THEN
-      EXISTS_TAC `affine hull p::real^N=>bool` THEN CONJ_TAC THENL
-       [ASM_REWRITE_TAC[IN_ELIM_THM; VEC_COMPONENT] THEN REAL_ARITH_TAC;
-        MATCH_MP_TAC HULL_MONO THEN ASM_MESON_TAC[FACE_OF_IMP_SUBSET]];
-      MATCH_MP_TAC(SET_RULE
-       `x \<in> S \<and> S \<subseteq> P hull S \<Longrightarrow> x \<in> P hull S`) THEN
-      ASM_SIMP_TAC[CONIC_CONTAINS_0; HULL_SUBSET; CONIC_CONIC_HULL] THEN
-      ASM_REWRITE_TAC[CONIC_HULL_EQ_EMPTY]];
-    MATCH_MP_TAC INT_LE_TRANS THEN
-    EXISTS_TAC `aff_dim((0::real^N) insert (affine hull f))` THEN
-    CONJ_TAC THENL
-     [ALL_TAC;
-      REWRITE_TAC[AFF_DIM_INSERT; AFF_DIM_AFFINE_HULL] THEN INT_ARITH_TAC] THEN
-    ONCE_REWRITE_TAC[GSYM AFF_DIM_AFFINE_HULL] THEN
-    MATCH_MP_TAC AFF_DIM_SUBSET THEN MATCH_MP_TAC HULL_MINIMAL THEN
-    REWRITE_TAC[AFFINE_AFFINE_HULL; \<subseteq>; CONIC_HULL_EXPLICIT] THEN
-    REWRITE_TAC[FORALL_IN_GSPEC] THEN
-    MAP_EVERY X_GEN_TAC [`c::real`; `x::real^N`] THEN STRIP_TAC THEN
-    ONCE_REWRITE_TAC[VECTOR_ARITH
-     `c *\<^sub>R x::real^N = 0 + c *\<^sub>R (x - 0)`] THEN
-    MATCH_MP_TAC IN_AFFINE_ADD_MUL_DIFF THEN
-    ASM_SIMP_TAC[AFFINE_AFFINE_HULL; HULL_INC; IN_INSERT]]);;
 
 
 
