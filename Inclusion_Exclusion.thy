@@ -17,13 +17,9 @@ proof -
     by (auto simp flip: all_simps ex_simps)
 qed
 
-text\<open> ========================================================================= \<close>
-text\<open> .           \<close>
-text\<open> ========================================================================= \<close>
 
-text\<open> ------------------------------------------------------------------------- \<close>
 text\<open> Simple set theory lemmas.                                                 \<close>
-text\<open> ------------------------------------------------------------------------- \<close>
+
 
 lemma subset_insert_exists:
    "s \<subseteq> (insert x t) \<longleftrightarrow> s \<subseteq> t \<or> (\<exists>u. u \<subseteq> t \<and> s = insert x u)"
@@ -33,18 +29,18 @@ lemma finite_subsets_restrict:
    "finite s \<Longrightarrow> finite {t. t \<subseteq> s \<and> p t}"
   by auto
 
-text\<open> ------------------------------------------------------------------------- \<close>
+
 text\<open> Versions for additive real functions, where the additivity applies only   \<close>
 (* to some specific subsets (e.g. cardinality of finite sets, measurable     *)
 (* sets with bounded measure).                                               *)
-text\<open> ------------------------------------------------------------------------- \<close>
 
-lemma aux:
-  "{t. t \<subseteq> (insert a s) \<and> P t} = {t. t \<subseteq> s \<and> P t} \<union> {insert a t |t. t \<subseteq> s \<and> P(insert a t)}"
-  apply safe
-    apply (metis in_mono subset_insert_exists)
-   apply blast
-  by blast
+
+lemma subset_insert_lemma:
+  "{T. T \<subseteq> (insert a s) \<and> P T} = {T. T \<subseteq> s \<and> P T} \<union> {insert a T |T. T \<subseteq> s \<and> P(insert a T)}" (is "?L=?R")
+proof
+  show "?L \<subseteq> ?R"
+    by (smt (verit, best) UnCI mem_Collect_eq subsetI subset_insert_exists)
+qed blast
 
 thm int_card_UNION
 
@@ -104,37 +100,29 @@ proof -
         have 3: "f (\<Union> (X ` A)) = (\<Sum>B | B \<subseteq> A \<and> B \<noteq> {}. (- 1) ^ (card B + 1) * f (\<Inter> (X ` B)))"
           using less.IH [of n A X] APX Int \<open>P (X a)\<close>  by (simp add: *)
         show ?thesis
-          apply (simp add: )
           unfolding 3 2 1
           by (simp add: sum_negf)
       qed
       also have "... = (\<Sum>B | B \<subseteq> A0 \<and> B \<noteq> {}. (- 1) ^ (card B + 1) * f (\<Inter> (X ` B)))"
       proof -
-        have F: "{insert a B |B. B \<subseteq> A} = insert a ` Pow A \<and> {B. B \<subseteq> A \<and> B \<noteq> {}} = Pow A - {{}}"
+         have F: "{insert a B |B. B \<subseteq> A} = insert a ` Pow A \<and> {B. B \<subseteq> A \<and> B \<noteq> {}} = Pow A - {{}}"
           by auto
         have G: "(\<Sum>B\<in>Pow A. (- 1) ^ card (insert a B) * f (X a \<inter> \<Inter> (X ` B))) = (\<Sum>B\<in>Pow A. - ((- 1) ^ card B * f (X a \<inter> \<Inter> (X ` B))))"
-          apply (rule sum.cong [OF refl])
-          apply (simp add: )
-          apply (subst card_insert_if)
-          apply (simp add: "*"(5) finite_subset)
-          using "*"(3) by auto
+        proof (rule sum.cong [OF refl])
+          fix B
+          assume B: "B \<in> Pow A"
+          then have "finite B"
+            using \<open>finite A\<close> finite_subset by auto
+          show "(- 1) ^ card (insert a B) * f (X a \<inter> \<Inter> (X ` B)) = - ((- 1) ^ card B * f (X a \<inter> \<Inter> (X ` B)))"
+            using B * by (auto simp add: card_insert_if \<open>finite B\<close>)
+        qed
+        have disj: "{B. B \<subseteq> A \<and> B \<noteq> {}} \<inter> {insert a B |B. B \<subseteq> A} = {}"
+          using * by blast
+        have inj: "inj_on (insert a) (Pow A)"
+          using "*" inj_on_def by fastforce
         show ?thesis
-          apply (simp add: *)
-          apply (simp add: aux)
-          apply (subst sum.union_disjoint)
-             apply (simp add: "*"(5))
-            apply (simp add: "*"(5))
-          using * apply blast
-          apply (simp add: sum_negf)
-          apply (simp add: F)
-          apply (subst sum.reindex)
-          using "*"(3) inj_on_def apply fastforce
-          apply (simp add: o_def)
-          apply (subst sum_diff)
-          apply (simp add: "*"(5))
-          apply simp
-          apply (simp add: )
-          apply (simp add: G sum_negf)
+          apply (simp add: * subset_insert_lemma sum.union_disjoint disj sum_negf)
+          apply (simp add: F G sum_negf sum.reindex [OF inj] o_def sum_diff *)
           done
       qed
       finally show ?thesis .
