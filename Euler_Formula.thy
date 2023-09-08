@@ -1349,6 +1349,7 @@ proof -
   finally show ?thesis .
 qed
 
+section\<open> Show that the characteristic is invariant w.r.t. hyperplane arrangement.  \<close>
 
 lemma hyperplane_cells_distinct_lemma:
    "{x. a \<bullet> x = b} \<inter> {x. a \<bullet> x < b} = {} \<and>
@@ -1549,9 +1550,8 @@ proof -
 qed
 
 
-text\<open> ------------------------------------------------------------------------- \<close>
-text\<open> Euler-type relation for full-dimensional proper polyhedral cones.         \<close>
-text\<open> ------------------------------------------------------------------------- \<close>
+
+section\<open> Euler-type relation for full-dimensional proper polyhedral cones\<close>
 
 lemma Euler_polyhedral_cone:
   fixes S :: "'n::euclidean_space set"
@@ -2369,10 +2369,8 @@ proof -
 
           moreover 
           have aff_1d: "aff_dim (conic hull f) = aff_dim f + 1" (is "?lhs = ?rhs")
-            if "f face_of p" and d: "aff_dim f = int d" for f
+            if "f face_of p" and "f \<noteq> {}" for f
           proof (rule order_antisym)
-            have "f \<noteq> {}"
-              using d by force
             have "?lhs \<le> aff_dim(affine hull (insert 0 (affine hull f)))"
             proof (intro aff_dim_subset hull_minimal)
               show "f \<subseteq> affine hull insert 0 (affine hull f)"
@@ -2427,15 +2425,8 @@ proof -
             proof (rule aff_1d)
               show "f \<inter> {x. x \<bullet> i = 1} face_of p"
                 by (simp add: G that(1))
-              have "aff_dim (f \<inter> {x. x \<bullet> i = 1}) < aff_dim f"
-                apply (intro aff_dim_psubset psubsetI)
-                 apply (simp add: hull_mono)
-                using \<open>0 \<in> f\<close> \<open>convex S\<close> \<open>f \<inter> {x. x \<bullet> i = 1} face_of p\<close> affp assms(3) face_of_imp_eq_affine_Int face_of_imp_subset hull_mono that(1) by fastforce
-              moreover have "\<not> aff_dim (f \<inter> {x. x \<bullet> i = 1}) < aff_dim f - 1"
-                  using aff_1d[of f] f_Int_face_P [OF that(1)] conic_eq_f
-                    sorry
-              ultimately show "aff_dim (f \<inter> {x. x \<bullet> i = 1}) = int d"
-                using that(2) by linarith
+              show "f \<inter> {x. x \<bullet> i = 1} \<noteq> {}"
+                using YYY by blast
             qed
             then show ?thesis
               by (simp add: conic_hyperplane_eq that)
@@ -2447,8 +2438,8 @@ proof -
             unfolding bij_betw_def
             apply (intro conjI)
              apply (smt (verit) conic_hyperplane_eq inj_on_def mem_Collect_eq of_nat_less_0_iff)     
-            apply (auto simp: image_iff G MF) 
-            by (metis F add.commute aff_1d conic_face_p)
+            apply (auto simp: image_iff G MF)
+            using aff_1d conic_eq_f conic_face_p by fastforce
         }
         then show ?thesis
           by force
@@ -2459,44 +2450,6 @@ proof -
       by auto
   qed
 qed
-
-oops 
-
-
-(*
-    CONJ_TAC THEN X_GEN_TAC `f::real^N=>bool` THEN STRIP_TAC THENL
-     [REMOVE_THEN "*" (MP_TAC o SPEC `f \<inter> {x. x$1 = 1}`) THEN
-      ASM_SIMP_TAC[INT_ARITH `0::int < d + 1`; INT_EQ_ADD_RCANCEL] THEN
-      ANTS_TAC THENL [ALL_TAC; SIMP_TAC[]] THEN
-      SUBGOAL_THEN `\<exists>y. y \<in> f \<and> (y \<noteq> 0)` STRIP_ASSUME_TAC THENL
-       [MATCH_MP_TAC(SET_RULE
-         `a \<in> S \<and> (S \<noteq> {a}) \<Longrightarrow> \<exists>y. y \<in> S \<and> (y \<noteq> a)`) THEN
-        CONJ_TAC THENL
-         [MP_TAC(ISPECL [`S::real^N=>bool`; `f::real^N=>bool`]
-            FACE_OF_CONIC) THEN
-          ASM_SIMP_TAC[CONIC_CONTAINS_0] THEN REPEAT DISCH_TAC;
-          DISCH_TAC] THEN
-        UNDISCH_TAC `aff_dim f = d + 1` THEN
-        ASM_REWRITE_TAC[AFF_DIM_SING; AFF_DIM_EMPTY] THEN INT_ARITH_TAC;
-
-        REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; IN_INTER; IN_ELIM_THM] THEN
-        SUBGOAL_THEN `0 < (y::real^N)$1` ASSUME_TAC THENL
-         [ASM_MESON_TAC[FACE_OF_IMP_SUBSET; \<subseteq>]; ALL_TAC] THEN
-
-        EXISTS_TAC `inverse(y \<bullet> i) *\<^sub>R y` THEN
-        ASM_SIMP_TAC[VECTOR_MUL_COMPONENT; REAL_MUL_LINV;
-                     REAL_LT_IMP_NZ] THEN
-        MP_TAC(ISPECL [`S::real^N=>bool`; `f::real^N=>bool`]
-          FACE_OF_CONIC) THEN
-        ASM_SIMP_TAC[CONIC_CONTAINS_0] THEN
-        REWRITE_TAC[conic] THEN DISCH_THEN MATCH_MP_TAC THEN
-        ASM_SIMP_TAC[REAL_LE_INV_EQ; REAL_LT_IMP_LE]];
-
-      REMOVE_THEN "*" (MP_TAC o SPEC `f::real^N=>bool`) THEN
-      ASM_REWRITE_TAC[] THEN DISCH_THEN MATCH_MP_TAC THEN
-      DISCH_TAC THEN UNDISCH_TAC `aff_dim(f::real^N=>bool) = d` THEN
-      ASM_REWRITE_TAC[AFF_DIM_EMPTY] THEN INT_ARITH_TAC]] THEN
-*)
 
 
 lemma Euler_poincare_special:
