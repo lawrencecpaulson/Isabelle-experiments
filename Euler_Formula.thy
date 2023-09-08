@@ -7,7 +7,7 @@ theory Euler_Formula
   imports "HOL-Analysis.Analysis" "Inclusion_Exclusion" "HOL-ex.Sketch_and_Explore"
 begin
 
-subsection \<open>Preliminaries\<close>
+section \<open>Preliminaries\<close>
 
 (*FIX NAMING CONVENTIONS inter, etc.*)
 thm convex_closure_inter
@@ -16,15 +16,72 @@ lemmas closure_Int_convex = convex_closure_inter_two
 lemmas span_not_UNIV_orthogonal = span_not_univ_orthogonal
 
 (*THIS IS A BETTER FORMULATION THAN THE ORIGINAL convex_closure_inter*)
+
+thm convex_closure_rel_interior_inter (*REPLACE*)
+lemma convex_closure_rel_interior_Int:
+  assumes "\<forall>S\<in>\<F>. convex (S :: 'n::euclidean_space set)"
+    and "\<Inter>(rel_interior ` \<F>) \<noteq> {}"
+  shows "\<Inter>(closure ` \<F>) \<subseteq> closure (\<Inter>(rel_interior ` \<F>))"
+proof -
+  obtain x where x: "\<forall>S\<in>\<F>. x \<in> rel_interior S"
+    using assms by auto
+  {
+    fix y
+    assume "y \<in> \<Inter>{closure S |S. S \<in> \<F>}"
+    then have y: "\<forall>S \<in> \<F>. y \<in> closure S"
+      by auto
+    {
+      assume "y = x"
+      then have "y \<in> closure (\<Inter>(rel_interior ` \<F>))"
+        using closure_subset x by fastforce
+    }
+    moreover
+    {
+      assume "y \<noteq> x"
+      { fix e :: real
+        assume e: "e > 0"
+        define e1 where "e1 = min 1 (e/norm (y - x))"
+        then have e1: "e1 > 0" "e1 \<le> 1" "e1 * norm (y - x) \<le> e"
+          using \<open>y \<noteq> x\<close> \<open>e > 0\<close> le_divide_eq[of e1 e "norm (y - x)"]
+          by simp_all
+        define z where "z = y - e1 *\<^sub>R (y - x)"
+        {
+          fix S
+          assume "S \<in> \<F>"
+          then have "z \<in> rel_interior S"
+            using rel_interior_closure_convex_shrink[of S x y e1] assms x y e1 z_def
+            by auto
+        }
+        then have *: "z \<in> \<Inter>(rel_interior ` \<F>)"
+          by auto
+        have "\<exists>z. z \<in> \<Inter>(rel_interior ` \<F>) \<and> z \<noteq> y \<and> dist z y \<le> e"
+          using \<open>y \<noteq> x\<close> z_def * e1 e dist_norm[of z y]
+          by (rule_tac x="z" in exI) auto
+      }
+      then have "y \<in> closure (\<Inter>(rel_interior ` \<F>))"
+        by (meson closure_approachable_le)
+    }
+    ultimately have "y \<in> closure (\<Inter>(rel_interior ` \<F>))"
+      by auto
+  }
+  then show ?thesis by auto
+qed
+
+
 lemma closure_Inter_convex:
   fixes \<F> :: "'n::euclidean_space set set"
-  assumes  "\<And>S. S \<in> \<F> \<Longrightarrow> convex S"
-    and "\<Inter>(rel_interior ` \<F>) \<noteq> {}"
+  assumes  "\<And>S. S \<in> \<F> \<Longrightarrow> convex S" and "\<Inter>(rel_interior ` \<F>) \<noteq> {}"
   shows "closure(\<Inter>\<F>) = \<Inter>(closure ` \<F>)"
-  apply (subst convex_closure_inter)
-    apply (simp add: assms(1))
-   apply (simp add: Setcompr_eq_image assms(2))
-  by blast
+proof -
+  have "\<Inter>(closure ` \<F>) \<le> closure (\<Inter>(rel_interior ` \<F>))"
+    by (meson assms convex_closure_rel_interior_Int)
+  moreover
+  have "closure (\<Inter>(rel_interior ` \<F>)) \<subseteq> closure (\<Inter>\<F>)"
+    using rel_interior_inter_aux closure_mono[of "\<Inter>(rel_interior ` \<F>)" "\<Inter>\<F>"]
+    by auto
+  ultimately show ?thesis
+    using closure_Int[of \<F>] by blast
+qed
 
 lemma closure_Inter_convex_open:
     "(\<And>S::'n::euclidean_space set. S \<in> \<F> \<Longrightarrow> convex S \<and> open S)
@@ -105,7 +162,7 @@ lemma aff_dim_eq_full:
 
 (*** FOR CONVEX.THY ***)
 thm cone_convex_hull
-subsection \<open>Conic sets and conic hull\<close>
+section \<open>Conic sets and conic hull\<close>
 
 definition conic :: "'a::real_vector set \<Rightarrow> bool"
   where "conic S \<equiv> \<forall>x c. x \<in> S \<longrightarrow> 0 \<le> c \<longrightarrow> (c *\<^sub>R x) \<in> S"
@@ -366,7 +423,7 @@ lemma open_in_subset_relative_interior:
   by (meson order.trans rel_interior_maximal rel_interior_subset)
 
 
-text\<open>Closure of conic hulls\<close>
+section\<open>Closure of conic hulls\<close>
 
 proposition closedin_conic_hull:
   fixes S :: "'a::euclidean_space set"
@@ -547,7 +604,7 @@ proof -
     by (force simp add: conic_def)
 qed
 
-subsection \<open>Convex cones and corresponding hulls\<close>
+section \<open>Convex cones and corresponding hulls\<close>
 
 definition convex_cone :: "'a::real_vector set \<Rightarrow> bool"
   where "convex_cone \<equiv> \<lambda>S. S \<noteq> {} \<and> convex S \<and> conic S"
@@ -712,7 +769,7 @@ lemma subspace_convex_cone_symmetric:
   by (smt (verit) convex_cone_iff scaleR_left.minus subspace_def subspace_neg)
 
 
-subsection \<open> Finitely generated cone is polyhedral, and hence closed\<close>
+section \<open> Finitely generated cone is polyhedral, and hence closed\<close>
 
 proposition polyhedron_convex_cone_hull:
   fixes S :: "'a::euclidean_space set"
@@ -849,16 +906,12 @@ lemma closed_conic_hull_strong:
 (*** END OF EXTRAS ***)
 
 
-text\<open> ------------------------------------------------------------------------- \<close>
 text\<open> Interpret which "side" of a hyperplane a point is on.                     \<close>
-text\<open> ------------------------------------------------------------------------- \<close>
 
 definition hyperplane_side
   where "hyperplane_side \<equiv> \<lambda>(a,b). \<lambda>x. sgn (a \<bullet> x - b)"
 
-text\<open> ------------------------------------------------------------------------- \<close>
 text\<open> Equivalence relation imposed by a hyperplane arrangement.                 \<close>
-text\<open> ------------------------------------------------------------------------- \<close>
 
 definition hyperplane_equiv
  where "hyperplane_equiv \<equiv> \<lambda>A x y. \<forall>h \<in> A. hyperplane_side h x = hyperplane_side h y"
@@ -878,9 +931,7 @@ lemma hyperplane_equiv_Un:
    "hyperplane_equiv (A \<union> B) x y \<longleftrightarrow> hyperplane_equiv A x y \<and> hyperplane_equiv B x y"
   by (meson Un_iff hyperplane_equiv_def)
 
-text\<open> ------------------------------------------------------------------------- \<close>
-text\<open> Cells of a hyperplane arrangement.                                        \<close>
-text\<open> ------------------------------------------------------------------------- \<close>
+section\<open> Cells of a hyperplane arrangement\<close>
 
 definition hyperplane_cell :: "('a::real_inner \<times> real) set \<Rightarrow> 'a set \<Rightarrow> bool"
   where "hyperplane_cell \<equiv> \<lambda>A C. \<exists>x. C = Collect (hyperplane_equiv A x)"
@@ -1068,9 +1119,7 @@ lemma hyperplane_cell_Int:
    "\<lbrakk>hyperplane_cell A S; hyperplane_cell A T; S \<inter> T \<noteq> {}\<rbrakk> \<Longrightarrow> hyperplane_cell A (S \<inter> T)"
   by (metis hyperplane_cell_Un sup.idem)
 
-text\<open> ------------------------------------------------------------------------- \<close>
-text\<open> A cell complex is considered to be a union of such cells.                 \<close>
-text\<open> ------------------------------------------------------------------------- \<close>
+section\<open> A cell complex is considered to be a union of such cells\<close>
 
 definition hyperplane_cellcomplex 
   where "hyperplane_cellcomplex A S \<equiv>
@@ -1214,9 +1263,9 @@ lemma cell_subset_cellcomplex:
    "\<lbrakk>hyperplane_cell A C; hyperplane_cellcomplex A S\<rbrakk> \<Longrightarrow> C \<subseteq> S \<longleftrightarrow> ~ disjnt C S"
   by (smt (verit) Union_iff disjnt_iff disjnt_subset1 disjoint_hyperplane_cells_eq hyperplane_cellcomplex_def subsetI)
 
-text\<open> ------------------------------------------------------------------------- \<close>
-text\<open> Euler characteristic.                                                     \<close>
-text\<open> ------------------------------------------------------------------------- \<close>
+
+section\<open> Euler characteristic\<close>
+
 
 definition Euler_characteristic :: "('a::euclidean_space \<times> real) set \<Rightarrow> 'a set \<Rightarrow> int"
   where "Euler_characteristic A S \<equiv>
@@ -1300,9 +1349,6 @@ proof -
   finally show ?thesis .
 qed
 
-text\<open> ------------------------------------------------------------------------- \<close>
-text\<open> Show that the characteristic is invariant w.r.t. hyperplane arrangement.  \<close>
-text\<open> ------------------------------------------------------------------------- \<close>
 
 lemma hyperplane_cells_distinct_lemma:
    "{x. a \<bullet> x = b} \<inter> {x. a \<bullet> x < b} = {} \<and>
@@ -1596,11 +1642,9 @@ proof -
   qed
   then obtain fa where fa: "\<And>h. h \<in> H \<Longrightarrow> fa h \<noteq> 0 \<and> h = {x. fa h \<bullet> x \<le> 0}"
     by metis
-
   define fa_le_0 where "fa_le_0 \<equiv> \<lambda>h. {x. fa h \<bullet> x \<le> 0}"
   have fa': "\<And>h. h \<in> H \<Longrightarrow> fa_le_0 h = h"
     using fa fa_le_0_def by blast
-
   define A where "A \<equiv> (\<lambda>h. (fa h,0::real)) ` H"
   have "finite A"
     using \<open>finite H\<close> by (simp add: A_def)
@@ -2048,7 +2092,7 @@ qed
 
 
 
-subsection\<open>Euler-Poincare relation for special $(n-1)$-dimensional polytope \<close>
+section\<open>Euler-Poincare relation for special $(n-1)$-dimensional polytope \<close>
 
 lemma Euler_Poincare_lemma:
   fixes p :: "'n::euclidean_space set"
@@ -2153,10 +2197,9 @@ proof -
       have "(\<Sum>d = 1..DIM('n). (-1) ^ d * (card {f. f face_of S \<and> aff_dim f = d}))
           = (\<Sum>d = Suc 0..Suc (DIM('n)-1). (-1) ^ d * (card {f. f face_of S \<and> aff_dim f = d}))"
         by auto
-      also have "... = - (\<Sum>d = 0..DIM('n) - 1.
-                          (-1) ^ d * int (card {f. f face_of S \<and> aff_dim f = 1 + int d}))"
+      also have "... = - (\<Sum>d = 0..DIM('n) - 1. (-1) ^ d * card {f. f face_of S \<and> aff_dim f = 1 + int d})"
         unfolding sum.atLeast_Suc_atMost_Suc_shift by (simp add: sum_negf)
-      also have "... = - (\<Sum>d = 0..DIM('n) - 1. (-1) ^ d * int (card {f. f face_of p \<and> aff_dim f = int d}))"
+      also have "... = - (\<Sum>d = 0..DIM('n) - 1. (-1) ^ d * card {f. f face_of p \<and> aff_dim f = int d})"
       proof -
         { fix d
           assume "d \<le> DIM('n) - Suc 0"
@@ -2172,11 +2215,11 @@ proof -
           moreover
           have "finite {f. f face_of p \<and> aff_dim f = int d}"
             by (simp add: assms(2) finite_polytope_faces)
-          moreover have "f \<inter> {x. x \<bullet> i = 1} face_of p"
+          moreover have f_Int_face_P: "f \<inter> {x. x \<bullet> i = 1} face_of p"
             if "f face_of S" for f
             by (metis "1" S_def affp convex_affine_hull face_of_slice hull_subset that)
           moreover 
-          have "(conic hull f) face_of S" if "f face_of p" for f
+          have conic_face_p: "(conic hull f) face_of S" if "f face_of p" for f
           proof (cases "f={}")
             case False
             have "{c *\<^sub>R x |c x. 0 \<le> c \<and> x \<in> f} \<subseteq> {c *\<^sub>R x |c x. 0 \<le> c \<and> x \<in> p}"
@@ -2291,7 +2334,7 @@ proof -
               using that by (auto simp add: S_def conic_hull_explicit face_of_def)
           qed auto
           moreover
-          have "conic hull (f \<inter> {x. x \<bullet> i = 1}) = f"
+          have conic_hyperplane_eq: "conic hull (f \<inter> {x. x \<bullet> i = 1}) = f"
             if "f face_of S" "0 < aff_dim f" for f
           proof
             show "conic hull (f \<inter> {x. x \<bullet> i = 1}) \<subseteq> f"
@@ -2320,7 +2363,7 @@ proof -
               by (auto simp: conic_hull_explicit)
           qed
 
-          moreover have "conic hull f face_of S" (********??*)
+          have conic_face_S: "conic hull f face_of S" 
             if "f face_of S" for f
             by (metis \<open>conic S\<close> face_of_conic hull_same that)
 
@@ -2344,37 +2387,68 @@ proof -
             proof (intro aff_dim_psubset psubsetI)
               show "affine hull f \<subseteq> affine hull (conic hull f)"
                 by (simp add: hull_mono hull_subset)
-            have "0 \<notin> affine hull f"
-              using affp face_of_imp_subset hull_mono that(1) by fastforce
-            moreover have "0 \<in> affine hull (conic hull f)"
-              by (simp add: \<open>f \<noteq> {}\<close> hull_inc)
-            ultimately show "affine hull f \<noteq> affine hull (conic hull f)"
-              by auto
+              have "0 \<notin> affine hull f"
+                using affp face_of_imp_subset hull_mono that(1) by fastforce
+              moreover have "0 \<in> affine hull (conic hull f)"
+                by (simp add: \<open>f \<noteq> {}\<close> hull_inc)
+              ultimately show "affine hull f \<noteq> affine hull (conic hull f)"
+                by auto
+            qed
+            then show "?rhs \<le> ?lhs"
+              by simp
+          qed 
+
+          have conic_eq_f: "conic hull f \<inter> {x. x \<bullet> i = 1} = f"
+            if "f face_of p" for f
+            by (metis "1" affp face_of_imp_subset hull_subset le_inf_iff that)
+
+          have MF: "aff_dim (f \<inter> {x. x \<bullet> i = 1}) = int d"
+            if "f face_of S" "aff_dim f = 1 + int d" for f
+          proof -
+            have "conic f"
+              using \<open>conic S\<close> face_of_conic that(1) by blast
+            then have "0 \<in> f"
+              using conic_contains_0 that by force
+            moreover have "\<not> f \<subseteq> {0}"
+              using subset_singletonD that(2) by fastforce
+            ultimately obtain y where y: "y \<in> f" "y \<noteq> 0"
+              by blast
+            then have "y \<bullet> i > 0"
+              using doti_gt0 face_of_imp_subset that(1) by blast
+
+            have "inverse(y \<bullet> i) *\<^sub>R y \<in> f"
+              using \<open>0 < y \<bullet> i\<close> \<open>conic S\<close> conic_mul face_of_conic that(1) y(1) by fastforce
+            moreover have "inverse(y \<bullet> i) *\<^sub>R y \<in> {x. x \<bullet> i = 1}"
+              using \<open>y \<bullet> i > 0\<close> by (simp add: field_simps)
+            ultimately have YYY: "inverse(y \<bullet> i) *\<^sub>R y \<in> (f \<inter> {x. x \<bullet> i = 1})"
+              by blast
+
+            have "aff_dim (conic hull (f \<inter> {x. x \<bullet> i = 1})) = aff_dim (f \<inter> {x. x \<bullet> i = 1}) + 1"
+            proof (rule aff_1d)
+              show "f \<inter> {x. x \<bullet> i = 1} face_of p"
+                by (simp add: G that(1))
+              have "aff_dim (f \<inter> {x. x \<bullet> i = 1}) < aff_dim f"
+                apply (intro aff_dim_psubset psubsetI)
+                 apply (simp add: hull_mono)
+                using \<open>0 \<in> f\<close> \<open>convex S\<close> \<open>f \<inter> {x. x \<bullet> i = 1} face_of p\<close> affp assms(3) face_of_imp_eq_affine_Int face_of_imp_subset hull_mono that(1) by fastforce
+              moreover have "\<not> aff_dim (f \<inter> {x. x \<bullet> i = 1}) < aff_dim f - 1"
+                  using aff_1d[of f] f_Int_face_P [OF that(1)] conic_eq_f
+                    sorry
+              ultimately show "aff_dim (f \<inter> {x. x \<bullet> i = 1}) = int d"
+                using that(2) by linarith
+            qed
+            then show ?thesis
+              by (simp add: conic_hyperplane_eq that)
           qed
-          then show "?rhs \<le> ?lhs"
-            by simp
-        qed
-        moreover
-        have "aff_dim (f \<inter> {x. x \<bullet> i = 1}) = int d"
-          if "f face_of S \<and> aff_dim f = 1 + int d" for f
-          sorry
-        moreover
 
-        have "(\<lambda>f. f \<inter> {x. x \<bullet> i = 1}) ((\<lambda>f. conic hull f) f) = f"
-          if "f face_of p" for f
-          by (metis "1" affp face_of_imp_subset hull_subset le_inf_iff that)
-
-          ultimately
           have "card {f. f face_of S \<and> aff_dim f = 1 + int d} =
                card {f. f face_of p \<and> aff_dim f = int d}"
             apply (intro bij_betw_same_card [of "(\<lambda>f. f \<inter> {x. x \<bullet> i = 1})"])
             unfolding bij_betw_def
             apply (intro conjI)
-             apply (smt (verit) inj_on_def mem_Collect_eq of_nat_less_0_iff)
-            apply (auto simp: image_iff)
-            apply (rule_tac x="conic hull x" in exI)
-            apply (auto simp: )
-            done
+             apply (smt (verit) conic_hyperplane_eq inj_on_def mem_Collect_eq of_nat_less_0_iff)     
+            apply (auto simp: image_iff G MF) 
+            by (metis F add.commute aff_1d conic_face_p)
         }
         then show ?thesis
           by force
@@ -2389,17 +2463,12 @@ qed
 oops 
 
 
-
-  SUBGOAL_THEN
-   `\<forall>f::real^N=>bool. f face_of p \<and> (f \<noteq> {})
-                     \<Longrightarrow> aff_dim(conic hull f) = aff_dim f + 1`
-  (LABEL_TAC "*") THENL
-   [ALL_TAC;
+(*
     CONJ_TAC THEN X_GEN_TAC `f::real^N=>bool` THEN STRIP_TAC THENL
      [REMOVE_THEN "*" (MP_TAC o SPEC `f \<inter> {x. x$1 = 1}`) THEN
       ASM_SIMP_TAC[INT_ARITH `0::int < d + 1`; INT_EQ_ADD_RCANCEL] THEN
       ANTS_TAC THENL [ALL_TAC; SIMP_TAC[]] THEN
-      SUBGOAL_THEN `\<exists>y::real^N. y \<in> f \<and> (y \<noteq> 0)` STRIP_ASSUME_TAC THENL
+      SUBGOAL_THEN `\<exists>y. y \<in> f \<and> (y \<noteq> 0)` STRIP_ASSUME_TAC THENL
        [MATCH_MP_TAC(SET_RULE
          `a \<in> S \<and> (S \<noteq> {a}) \<Longrightarrow> \<exists>y. y \<in> S \<and> (y \<noteq> a)`) THEN
         CONJ_TAC THENL
@@ -2407,12 +2476,14 @@ oops
             FACE_OF_CONIC) THEN
           ASM_SIMP_TAC[CONIC_CONTAINS_0] THEN REPEAT DISCH_TAC;
           DISCH_TAC] THEN
-        UNDISCH_TAC `aff_dim(f::real^N=>bool) = d + 1` THEN
+        UNDISCH_TAC `aff_dim f = d + 1` THEN
         ASM_REWRITE_TAC[AFF_DIM_SING; AFF_DIM_EMPTY] THEN INT_ARITH_TAC;
+
         REWRITE_TAC[GSYM MEMBER_NOT_EMPTY; IN_INTER; IN_ELIM_THM] THEN
         SUBGOAL_THEN `0 < (y::real^N)$1` ASSUME_TAC THENL
          [ASM_MESON_TAC[FACE_OF_IMP_SUBSET; \<subseteq>]; ALL_TAC] THEN
-        EXISTS_TAC `inverse(y$1) *\<^sub>R y::real^N` THEN
+
+        EXISTS_TAC `inverse(y \<bullet> i) *\<^sub>R y` THEN
         ASM_SIMP_TAC[VECTOR_MUL_COMPONENT; REAL_MUL_LINV;
                      REAL_LT_IMP_NZ] THEN
         MP_TAC(ISPECL [`S::real^N=>bool`; `f::real^N=>bool`]
@@ -2420,55 +2491,47 @@ oops
         ASM_SIMP_TAC[CONIC_CONTAINS_0] THEN
         REWRITE_TAC[conic] THEN DISCH_THEN MATCH_MP_TAC THEN
         ASM_SIMP_TAC[REAL_LE_INV_EQ; REAL_LT_IMP_LE]];
+
       REMOVE_THEN "*" (MP_TAC o SPEC `f::real^N=>bool`) THEN
       ASM_REWRITE_TAC[] THEN DISCH_THEN MATCH_MP_TAC THEN
       DISCH_TAC THEN UNDISCH_TAC `aff_dim(f::real^N=>bool) = d` THEN
       ASM_REWRITE_TAC[AFF_DIM_EMPTY] THEN INT_ARITH_TAC]] THEN
-
-
-
-
-
+*)
 
 
 lemma Euler_poincare_special:
   fixes p :: "'n::euclidean_space set"
-  assumes "2 \<le> DIM('n)" "polytope p" "i \<in> Basis" "affine hull p = {x. x \<bullet> i = 0}"
-  shows "(\<Sum>d = 0..DIM('n) - 1. (-1) ^ d * (card {f. f face_of p \<and> aff_dim f = d})) =
-    1"
-  sorry
-oops 
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPEC `image (\<lambda>x::real^N. axis 1 1 + x) p` Euler_Poincare_lemma) THEN
-  ASM_REWRITE_TAC[POLYTOPE_TRANSLATION_EQ; AFFINE_HULL_TRANSLATION] THEN
-  ANTS_TAC THENL
-   [MATCH_MP_TAC SURJECTIVE_IMAGE_EQ THEN
-    REWRITE_TAC[EXISTS_REFL; VECTOR_ARITH
-     `a + x::real^N = y \<longleftrightarrow> x = y - a`] THEN
-    SIMP_TAC[IN_ELIM_THM; VECTOR_ADD_COMPONENT; BASIS_COMPONENT;
-             DIMINDEX_GE_1; LE_REFL] THEN REAL_ARITH_TAC;
-    REWRITE_TAC[SET_RULE `{f. f face_of s \<and> P f} =
-                          {f. f \<in> {f. f face_of s} \<and> P f}`] THEN
-    REWRITE_TAC[FACES_OF_TRANSLATION] THEN
-    REWRITE_TAC[SET_RULE `{y. y \<in> f ` s \<and> P y} =
-                          {f x |x| x \<in> s \<and> P(f x)}`] THEN
-    REWRITE_TAC[AFF_DIM_TRANSLATION_EQ; IN_ELIM_THM] THEN
-    DISCH_THEN(fun th -> GEN_REWRITE_TAC RAND_CONV [SYM th]) THEN
-    MATCH_MP_TAC SUM_EQ_NUMSEG THEN X_GEN_TAC `d::num` THEN STRIP_TAC THEN
-    REWRITE_TAC[] THEN AP_TERM_TAC THEN AP_TERM_TAC THEN
-    GEN_REWRITE_TAC (RAND_CONV o RAND_CONV) [SIMPLE_IMAGE_GEN] THEN
-    CONV_TAC SYM_CONV THEN MATCH_MP_TAC CARD_IMAGE_INJ THEN CONJ_TAC THENL
-     [REWRITE_TAC[] THEN MATCH_MP_TAC(MESON[]
-       `(\<forall>x y. Q x y \<Longrightarrow> x = y)
-        \<Longrightarrow> (\<forall>x y. P x \<and> P y \<and> Q x y \<Longrightarrow> x = y)`) THEN
-      REWRITE_TAC[INJECTIVE_IMAGE] THEN VECTOR_ARITH_TAC;
-      MATCH_MP_TAC FINITE_SUBSET THEN
-      EXISTS_TAC `{f::real^N=>bool | f face_of p}` THEN
-      ASM_SIMP_TAC[FINITE_POLYTOPE_FACES] THEN SET_TAC[]]]);;`
+  assumes "2 \<le> DIM('n)" "polytope p" "i \<in> Basis" and affp: "affine hull p = {x. x \<bullet> i = 0}"
+  shows "(\<Sum>d = 0..DIM('n) - 1. (-1) ^ d * card {f. f face_of p \<and> aff_dim f = d}) = 1"
+proof -
+  { fix d
+    have eq: "image((+) i) ` {f. f face_of p} \<inter> image((+) i) ` {f. aff_dim f = int d}
+             = image((+) i) ` {f. f face_of p} \<inter> {f. aff_dim f = int d}"
+      by (auto simp: aff_dim_translation_eq)
+    have "card {f. f face_of p \<and> aff_dim f = int d} = card (image((+) i) ` {f. f face_of p \<and> aff_dim f = int d})"
+      by (simp add: inj_on_image card_image)
+    also have "\<dots>  = card (image((+) i) ` {f. f face_of p} \<inter> {f. aff_dim f = int d})"
+      by (simp add: Collect_conj_eq image_Int inj_on_image eq)
+    also have "\<dots> = card {f. f face_of (+) i ` p \<and> aff_dim f = int d}"
+      by (simp add: Collect_conj_eq faces_of_translation)
+    finally have "card {f. f face_of p \<and> aff_dim f = int d} = card {f. f face_of (+) i ` p \<and> aff_dim f = int d}" .
+  } 
+  then
+  have "(\<Sum>d = 0..DIM('n) - 1. (-1) ^ d * card {f. f face_of p \<and> aff_dim f = d})
+      = (\<Sum>d = 0..DIM('n) - 1. (-1) ^ d * card {f. f face_of (+) i ` p \<and> aff_dim f = int d})"
+    by simp
+  also have "\<dots> = 1"
+  proof (rule Euler_Poincare_lemma)
+    have "\<And>x. \<lbrakk>i \<in> Basis; x \<bullet> i = 1\<rbrakk> \<Longrightarrow> \<exists>y. y \<bullet> i = 0 \<and> x = y + i"
+      by (metis add_cancel_left_left eq_diff_eq inner_diff_left inner_same_Basis)
+    then show "affine hull (+) i ` p = {x. x \<bullet> i = 1}"
+      using \<open>i \<in> Basis\<close> unfolding affine_hull_translation affp by (auto simp: algebra_simps)
+  qed (use assms polytope_translation_eq in auto)
+  finally show ?thesis .
+qed
 
-text\<open> ------------------------------------------------------------------------- \<close>
-text\<open> Now Euler-Poincare for a general full-dimensional polytope.               \<close>
-text\<open> ------------------------------------------------------------------------- \<close>
+
+section\<open>Now Euler-Poincare for a general full-dimensional polytope\<close>
 
 lemma Euler_Poincare_full:
   fixes p :: "'n::euclidean_space set"
@@ -2516,34 +2579,23 @@ proof -
 qed
 
 
-text\<open> ------------------------------------------------------------------------- \<close>
-text\<open> In particular the Euler relation in 3D.                                   \<close>
-text\<open> ------------------------------------------------------------------------- \<close>
+text\<open> In particular the Euler relation in 3D\<close>
 
 lemma Euler_relation:
-   "polytope p \<and> aff_dim p = 3
-        \<Longrightarrow> (card {v. v face_of p \<and> aff_dim v = 0} +
-             card {f. f face_of p \<and> aff_dim f = 2}) -
-            card {e. e face_of p \<and> aff_dim e = 1} = 2"
-oops 
-  REPEAT STRIP_TAC THEN
-  MP_TAC(ISPEC `p::real^3=>bool` EULER_POINCARE_FULL) THEN
-  ASM_REWRITE_TAC[DIMINDEX_3] THEN
-  REWRITE_TAC[TOP_DEPTH_CONV num_CONV `3`; SUM_CLAUSES_NUMSEG] THEN
-  CONV_TAC NUM_REDUCE_CONV THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN
-  REWRITE_TAC[REAL_MUL_LID; REAL_MUL_LNEG] THEN
-  SUBGOAL_THEN `{f::real^3=>bool | f face_of p \<and> aff_dim f = 3} = {p}`
-   (fun th -> SIMP_TAC[th; NOT_IN_EMPTY; FINITE_EMPTY; CARD_CLAUSES])
-  THENL
-   [MATCH_MP_TAC(SET_RULE
-     `P a \<and> (\<forall>x. P x \<Longrightarrow> x = a) \<Longrightarrow> {x. P x} = {a}`) THEN
-    ASM_SIMP_TAC[FACE_OF_REFL; POLYTOPE_IMP_CONVEX] THEN
-    X_GEN_TAC `f::real^3=>bool` THEN STRIP_TAC THEN
-    MP_TAC(ISPECL [`f::real^3=>bool`; `p::real^3=>bool`]
-        FACE_OF_AFF_DIM_LT) THEN
-    ASM_SIMP_TAC[POLYTOPE_IMP_CONVEX; INT_LT_REFL];
-    REWRITE_TAC[GSYM REAL_OF_NUM_SUC; REAL_ADD_LID] THEN
-    REWRITE_TAC[REAL_ARITH `((x +-y) + z) +-1::real = 1 \<longleftrightarrow>
-                            x + z = y + 2`] THEN
-    REWRITE_TAC[REAL_OF_NUM_ADD; REAL_OF_NUM_EQ] THEN
-    DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[ADD_SUB2]]);;
+  fixes p :: "'n::euclidean_space set"
+  assumes "polytope p" "aff_dim p = 3" "DIM('n) = 3"
+  shows "(card {v. v face_of p \<and> aff_dim v = 0} + card {f. f face_of p \<and> aff_dim f = 2}) - card {e. e face_of p \<and> aff_dim e = 1} = 2"
+proof -
+  have 3: "{f. f face_of p \<and> aff_dim f = 3} = {p}"
+    using assms
+    apply (auto simp: face_of_refl polytope_imp_convex)
+    using face_of_imp_subset apply blast
+    apply (metis assms(1) assms(2) face_of_aff_dim_lt less_irrefl polytope_imp_convex)
+    done
+  have "(\<Sum>d = 0..3. (-1) ^ d * int (card {f. f face_of p \<and> aff_dim f = int d})) = 1"
+    using Euler_Poincare_full [of p] assms by simp
+  then show ?thesis
+    by (simp add: sum.atLeast0_atMost_Suc_shift numeral_3_eq_3 3)
+qed
+
+end
