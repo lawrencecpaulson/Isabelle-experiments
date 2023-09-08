@@ -19,30 +19,30 @@ lemmas span_not_UNIV_orthogonal = span_not_univ_orthogonal
 
 thm convex_closure_rel_interior_inter (*REPLACE*)
 lemma convex_closure_rel_interior_Int:
-  assumes "\<forall>S\<in>\<F>. convex (S :: 'n::euclidean_space set)"
+  assumes "\<And>S. S\<in>\<F> \<Longrightarrow> convex (S :: 'n::euclidean_space set)"
     and "\<Inter>(rel_interior ` \<F>) \<noteq> {}"
   shows "\<Inter>(closure ` \<F>) \<subseteq> closure (\<Inter>(rel_interior ` \<F>))"
 proof -
   obtain x where x: "\<forall>S\<in>\<F>. x \<in> rel_interior S"
     using assms by auto
-  {
+  show ?thesis
+  proof
     fix y
-    assume "y \<in> \<Inter>{closure S |S. S \<in> \<F>}"
-    then have y: "\<forall>S \<in> \<F>. y \<in> closure S"
-      by auto
-    {
-      assume "y = x"
-      then have "y \<in> closure (\<Inter>(rel_interior ` \<F>))"
-        using closure_subset x by fastforce
-    }
-    moreover
-    {
-      assume "y \<noteq> x"
-      { fix e :: real
-        assume e: "e > 0"
-        define e1 where "e1 = min 1 (e/norm (y - x))"
-        then have e1: "e1 > 0" "e1 \<le> 1" "e1 * norm (y - x) \<le> e"
-          using \<open>y \<noteq> x\<close> \<open>e > 0\<close> le_divide_eq[of e1 e "norm (y - x)"]
+    assume y: "y \<in> \<Inter> (closure ` \<F>)"
+    show "y \<in> closure (\<Inter>(rel_interior ` \<F>))"
+    proof (cases "y=x")
+      case True
+      with closure_subset x show ?thesis 
+        by fastforce
+    next
+      case False
+      show ?thesis
+      proof (clarsimp simp: closure_approachable_le)
+        fix \<epsilon> :: real
+        assume e: "\<epsilon> > 0"
+        define e1 where "e1 = min 1 (\<epsilon>/norm (y - x))"
+        then have e1: "e1 > 0" "e1 \<le> 1" "e1 * norm (y - x) \<le> \<epsilon>"
+          using \<open>y \<noteq> x\<close> \<open>\<epsilon> > 0\<close> le_divide_eq[of e1 \<epsilon> "norm (y - x)"]
           by simp_all
         define z where "z = y - e1 *\<^sub>R (y - x)"
         {
@@ -54,17 +54,12 @@ proof -
         }
         then have *: "z \<in> \<Inter>(rel_interior ` \<F>)"
           by auto
-        have "\<exists>z. z \<in> \<Inter>(rel_interior ` \<F>) \<and> z \<noteq> y \<and> dist z y \<le> e"
+        show "\<exists>x\<in>\<Inter> (rel_interior ` \<F>). dist x y \<le> \<epsilon>"
           using \<open>y \<noteq> x\<close> z_def * e1 e dist_norm[of z y]
-          by (rule_tac x="z" in exI) auto
-      }
-      then have "y \<in> closure (\<Inter>(rel_interior ` \<F>))"
-        by (meson closure_approachable_le)
-    }
-    ultimately have "y \<in> closure (\<Inter>(rel_interior ` \<F>))"
-      by auto
-  }
-  then show ?thesis by auto
+          by force
+      qed
+    qed
+  qed
 qed
 
 
@@ -88,7 +83,8 @@ lemma closure_Inter_convex_open:
         \<Longrightarrow> closure(\<Inter>\<F>) = (if \<Inter>\<F> = {} then {} else \<Inter>(closure ` \<F>))"
   by (simp add: closure_Inter_convex rel_interior_open)
 
-thm convex_closure_interior
+
+thm convex_closure_interior (**)
 
 lemma empty_interior_subset_hyperplane_aux:
   fixes S :: "'a::euclidean_space set"
@@ -100,10 +96,11 @@ proof -
     have rel_int: "rel_interior S \<noteq> {}"
       using assms rel_interior_eq_empty by auto
     moreover 
-    have "dim S < dim (UNIV::'a set)"
-      by (metis affine_hull_span_0 \<open>0 \<in> S\<close> rel_int dim_UNIV dim_eq_full dim_subset_UNIV empty_int hull_inc order_less_le rel_interior_interior)
+    have "dim S \<noteq> dim (UNIV::'a set)"
+      by (metis aff_dim_zero affine_hull_UNIV \<open>0 \<in> S\<close> dim_UNIV empty_int hull_inc rel_int rel_interior_interior)
     then obtain a where "a \<noteq> 0" and a: "span S \<subseteq> {x. a \<bullet> x = 0}"
-      using lowdim_subset_hyperplane by auto
+      using lowdim_subset_hyperplane
+      by (metis dim_UNIV dim_subset_UNIV order_less_le)
     have "span UNIV = span S"
       by (metis span_base span_not_UNIV_orthogonal that)
     then have "UNIV \<subseteq> affine hull S"
@@ -190,7 +187,6 @@ lemma conic_linear_image_eq:
    "\<lbrakk>linear f; inj f\<rbrakk> \<Longrightarrow> conic (f ` S) \<longleftrightarrow> conic S"
   by (smt (verit) conic_def conic_linear_image inj_image_mem_iff linear_cmul)
 
-
 lemma conic_mul: "\<lbrakk>conic S; x \<in> S; 0 \<le> c\<rbrakk> \<Longrightarrow> (c *\<^sub>R x) \<in> S"
   using conic_def by blast
 
@@ -220,11 +216,11 @@ qed (auto simp: conic_def)
 
 lemma conic_hull_as_image:
    "conic hull S = (\<lambda>z. fst z *\<^sub>R snd z) ` ({0..} \<times> S)"
-  by (force simp add: conic_hull_explicit)
+  by (force simp: conic_hull_explicit)
 
 lemma conic_hull_linear_image:
    "linear f \<Longrightarrow> conic hull f ` S = f ` (conic hull S)"
-  by (force simp add: conic_hull_explicit image_iff set_eq_iff linear_scale) 
+  by (force simp: conic_hull_explicit image_iff set_eq_iff linear_scale) 
 
 lemma conic_hull_image_scale:
   assumes "\<And>x. x \<in> S \<Longrightarrow> 0 < c x"
@@ -345,9 +341,10 @@ proof -
         by (simp add: \<open>x \<in> T\<close>)
     next
       case False
-      then have "0 = inverse(1 - c) *\<^sub>R c *\<^sub>R x + (1 - inverse(1 - c)) *\<^sub>R x"
-        apply (simp add: algebra_simps)
+      then have "x /\<^sub>R (1 - c) = x + (c * inverse (1 - c)) *\<^sub>R x"
         by (smt (verit, ccfv_SIG) diff_add_cancel mult.commute real_vector_affinity_eq scaleR_collapse scaleR_scaleR)
+      then have "0 = inverse(1 - c) *\<^sub>R c *\<^sub>R x + (1 - inverse(1 - c)) *\<^sub>R x"
+        by (simp add: algebra_simps)
       then have "0 \<in> affine hull S"
         by (smt (verit) \<open>c *\<^sub>R x \<in> affine hull S\<close> \<open>x \<in> T\<close> affine_affine_hull TaffS in_mono mem_affine)
       then show ?thesis
@@ -386,9 +383,10 @@ proof -
         using \<open>0 < \<epsilon>\<close> \<open>x \<in> affine hull S\<close> * span_mul by fastforce
       then have "(\<epsilon> / norm x) *\<^sub>R x \<in> S"
         by (meson \<epsilon> subsetD)
-      then show ?thesis
-        apply (simp add: conic_hull_explicit)
+      then have "\<exists>c xa. x = c *\<^sub>R xa \<and> 0 \<le> c \<and> xa \<in> S"
         by (smt (verit, del_insts) \<open>0 < \<epsilon>\<close> divide_nonneg_nonneg eq_vector_fraction_iff norm_eq_zero norm_ge_zero)
+      then show ?thesis
+        by (simp add: conic_hull_explicit)
     qed
   qed
   ultimately show ?thesis
@@ -587,7 +585,7 @@ proof (intro strip)
       by (smt (verit, del_insts) add_divide_distrib divide_self scaleR_collapse)
     then show ?thesis
       using \<open>conic S\<close> f [of "d *\<^sub>R x" "e *\<^sub>R x" x] de \<open>x \<in> f\<close>
-      by (force simp add: conic_def in_segment)
+      by (force simp: conic_def in_segment)
   qed
 qed
 
@@ -601,7 +599,7 @@ proof -
   then have "conic{x}"
     using assms(1) face_of_conic by blast
   then show ?thesis
-    by (force simp add: conic_def)
+    by (force simp: conic_def)
 qed
 
 section \<open>Convex cones and corresponding hulls\<close>
@@ -748,7 +746,7 @@ lemma convex_cone_hull_convex_hull_nonempty:
 
 lemma convex_cone_hull_convex_hull:
    "convex_cone hull S = insert 0 (\<Union>x \<in> convex hull S. \<Union>c\<in>{0..}. {c *\<^sub>R x})"
-  by (force simp add: convex_cone_hull_separate conic_hull_as_image)
+  by (force simp: convex_cone_hull_separate conic_hull_as_image)
 
 lemma convex_cone_hull_linear_image:
    "linear f \<Longrightarrow> convex_cone hull (f ` S) = image f (convex_cone hull S)"
@@ -829,7 +827,7 @@ next
           next
             case False
             with \<epsilon> \<open>0 < \<epsilon>\<close> show ?thesis
-              by (rule_tac x="\<epsilon> / (2 * norm x)" in exI) (auto simp add: divide_simps)
+              by (rule_tac x="\<epsilon> / (2 * norm x)" in exI) (auto simp: divide_simps)
           qed
         qed
         then obtain t where t: "\<And>h. h \<in> F \<Longrightarrow> 0 < t h \<and> (t h *\<^sub>R x) \<in> h" 
@@ -897,9 +895,7 @@ lemma polyhedron_conic_hull_polytope:
 
 lemma closed_conic_hull_strong:
   fixes S :: "'a::euclidean_space set"
-  shows 
-   "0 \<in> rel_interior S \<or> polytope S \<or> compact S \<and> ~(0 \<in> S)
-    \<Longrightarrow> closed(conic hull S)"
+  shows "0 \<in> rel_interior S \<or> polytope S \<or> compact S \<and> ~(0 \<in> S) \<Longrightarrow> closed(conic hull S)"
   using closed_conic_hull polyhedron_conic_hull_polytope polyhedron_imp_closed by blast
 
 
@@ -950,7 +946,7 @@ lemma Union_hyperplane_cells: "\<Union> {C. hyperplane_cell A C} = UNIV"
 
 lemma disjoint_hyperplane_cells:
    "\<lbrakk>hyperplane_cell A C1; hyperplane_cell A C2; C1 \<noteq> C2\<rbrakk> \<Longrightarrow> disjnt C1 C2"
-  by (force simp add: hyperplane_cell_def disjnt_iff hyperplane_equiv_def)
+  by (force simp: hyperplane_cell_def disjnt_iff hyperplane_equiv_def)
 
 lemma disjoint_hyperplane_cells_eq:
    "\<lbrakk>hyperplane_cell A C1; hyperplane_cell A C2\<rbrakk> \<Longrightarrow> (disjnt C1 C2 \<longleftrightarrow> (C1 \<noteq> C2))"
@@ -964,7 +960,7 @@ lemma hyperplane_cell_singleton_cases:
   shows "C = {x. a \<bullet> x = b} \<or> C = {x. a \<bullet> x < b} \<or> C = {x. a \<bullet> x > b}"
 proof -
   obtain x where x: "C = {y. hyperplane_side (a, b) x = hyperplane_side (a, b) y}"
-    using assms by (auto simp add: hyperplane_equiv_def hyperplane_cell)
+    using assms by (auto simp: hyperplane_equiv_def hyperplane_cell)
   then show ?thesis
     by (auto simp: hyperplane_side_def sgn_if split: if_split_asm)
 qed
@@ -979,7 +975,7 @@ lemma hyperplane_cell_Un:
    "hyperplane_cell (A \<union> B) C \<longleftrightarrow>
         C \<noteq> {} \<and>
         (\<exists>C1 C2. hyperplane_cell A C1 \<and> hyperplane_cell B C2 \<and> C = C1 \<inter> C2)"
-  by (auto simp add: hyperplane_cell hyperplane_equiv_def)
+  by (auto simp: hyperplane_cell hyperplane_equiv_def)
 
 lemma finite_hyperplane_cells:
    "finite A \<Longrightarrow> finite {C. hyperplane_cell A C}"
@@ -1096,7 +1092,7 @@ proof -
                  "{y. \<not> b < a \<bullet> y \<and> a \<bullet> y \<noteq> b} = {y. b > a \<bullet> y}"
       by auto
     then show "convex {y. hyperplane_side h c = hyperplane_side h y}"
-      by (fastforce simp add: heq hyperplane_side_def sgn_if convex_halfspace_gt convex_halfspace_lt convex_hyperplane cong: conj_cong)
+      by (fastforce simp: heq hyperplane_side_def sgn_if convex_halfspace_gt convex_halfspace_lt convex_hyperplane cong: conj_cong)
   qed
   with c show ?thesis
     by (simp add: hyperplane_equiv_def INTER_eq)
@@ -1109,7 +1105,7 @@ lemma hyperplane_cell_Inter:
 proof -
   have "\<Inter>\<C> = {y. hyperplane_equiv A z y}" 
     if "z \<in> \<Inter>\<C>" for z
-      using assms that by (force simp add: hyperplane_cell hyperplane_equiv_def)
+      using assms that by (force simp: hyperplane_cell hyperplane_equiv_def)
   with INT hyperplane_cell show ?thesis
     by fastforce
 qed
@@ -1175,7 +1171,7 @@ next
   have "hyperplane_cellcomplex A U"
     using False \<F> unfolding U_def
     apply (intro hyperplane_cellcomplex_Union hyperplane_cell_cellcomplex)
-    by (auto simp: intro!: hyperplane_cell_Inter)
+    by (auto intro!: hyperplane_cell_Inter)
   then show ?thesis
      by (simp add: \<open>\<Inter>\<C> = U\<close>)
 qed
@@ -1215,7 +1211,7 @@ lemma hyperplane_cellcomplex_diff:
    "\<lbrakk>hyperplane_cellcomplex A S; hyperplane_cellcomplex A T\<rbrakk>
         \<Longrightarrow> hyperplane_cellcomplex A (S - T)"
   using hyperplane_cellcomplex_Inter [of "{S,-T}"] 
-  by (force simp add: Diff_eq hyperplane_cellcomplex_Compl)
+  by (force simp: Diff_eq hyperplane_cellcomplex_Compl)
 
 lemma hyperplane_cellcomplex_mono:
   assumes "hyperplane_cellcomplex A S" "A \<subseteq> B"
@@ -1245,7 +1241,7 @@ lemma finite_hyperplane_cellcomplexes:
   shows "finite {C. hyperplane_cellcomplex A C}"
 proof -
   have "{C. hyperplane_cellcomplex A C} \<subseteq> image \<Union> {T. T \<subseteq> {C. hyperplane_cell A C}}"
-    by (force simp add: hyperplane_cellcomplex_def subset_eq)
+    by (force simp: hyperplane_cellcomplex_def subset_eq)
   with finite_hyperplane_cells show ?thesis
     by (metis assms finite_Collect_subsets finite_surj)
 qed
@@ -1281,7 +1277,7 @@ proof -
   have "\<And>x. \<lbrakk>hyperplane_cell A x; x \<subseteq> \<Union> \<C>\<rbrakk> \<Longrightarrow> x \<in> \<C>"
     by (metis assms disjnt_Union1 disjnt_subset1 disjoint_hyperplane_cells_eq)
   then have "{C. hyperplane_cell A C \<and> C \<subseteq> \<Union> \<C>} = \<C>"
-    by (auto simp add: assms)
+    by (auto simp: assms)
   then show ?thesis
     by (auto simp: Euler_characteristic_def)
 qed
@@ -1408,7 +1404,7 @@ proof -
           with \<open>C \<noteq> {}\<close> have "r = sum (\<lambda>c. (-1) ^ nat (aff_dim c)) {C}"
             unfolding r_def
             apply (intro sum.cong [OF _ refl])
-            by (auto simp add: \<open>a \<noteq> 0\<close> hyperplane_cell_singleton)
+            by (auto simp: \<open>a \<noteq> 0\<close> hyperplane_cell_singleton)
           also have "\<dots> = (-1) ^ nat(aff_dim C)"
             by simp
           finally show ?thesis .
@@ -1459,14 +1455,14 @@ proof -
               case 1
               moreover have "\<xi> \<in> {x. b < a \<bullet> x}"
                 using "1" \<open>0 < \<epsilon>\<close> \<open>a \<bullet> u = b\<close> divide_less_cancel 
-                by (fastforce simp add: \<xi>_def algebra_simps)
+                by (fastforce simp: \<xi>_def algebra_simps)
               ultimately show ?thesis
                 using \<open>v \<in> C\<close> \<open>\<xi> \<in> C\<close> by blast
             next
               case 2
               moreover have "\<xi> \<in> {x. b > a \<bullet> x}"
                 using "2" \<open>0 < \<epsilon>\<close> \<open>a \<bullet> u = b\<close> divide_less_cancel 
-                by (fastforce simp add: \<xi>_def algebra_simps)
+                by (fastforce simp: \<xi>_def algebra_simps)
               ultimately show ?thesis
                 using \<open>v \<in> C\<close> \<open>\<xi> \<in> C\<close> by blast
             qed
@@ -1474,19 +1470,18 @@ proof -
           have "r = (\<Sum>C\<in>{{x. a \<bullet> x = b} \<inter> C, {x. b < a \<bullet> x} \<inter> C, {x. a \<bullet> x < b} \<inter> C}.
                      (- 1) ^ nat (aff_dim C))"
             unfolding r_def 
-            apply (intro sum.cong [OF _ refl] equalityI)
-            subgoal using \<open>a \<noteq> 0\<close> 
-              by (auto simp: hyperplane_cell_singleton)
-            subgoal
+          proof (intro sum.cong [OF _ refl] equalityI)
+            show "{{x. a \<bullet> x = b} \<inter> C, {x. b < a \<bullet> x} \<inter> C, {x. a \<bullet> x < b} \<inter> C}
+               \<subseteq> {C' \<inter> C |C'. hyperplane_cell {(a, b)} C' \<and> C' \<inter> C \<noteq> {}}"
               apply clarsimp
               using Cab Int_commute \<open>C \<inter> {x. a \<bullet> x = b} \<noteq> {}\<close> hyperplane_cell_singleton \<open>a \<noteq> 0\<close>
               by metis
-            done
+          qed (auto simp: \<open>a \<noteq> 0\<close> hyperplane_cell_singleton)
           also have "\<dots> = (-1) ^ nat (aff_dim (C \<inter> {x. a \<bullet> x = b})) 
-                         + (-1) ^ nat (aff_dim (C \<inter> {x. b < a \<bullet> x})) 
-                         + (-1) ^ nat (aff_dim (C \<inter> {x. a \<bullet> x < b}))"
+                        + (-1) ^ nat (aff_dim (C \<inter> {x. b < a \<bullet> x})) 
+                        + (-1) ^ nat (aff_dim (C \<inter> {x. a \<bullet> x < b}))"
             using hyperplane_cells_distinct_lemma [of a b] Cab
-            by (auto simp add: sum.insert_if Int_commute Int_left_commute)
+            by (auto simp: sum.insert_if Int_commute Int_left_commute)
           also have "\<dots> = (- 1) ^ nat (aff_dim C)"
           proof -
             have *: "aff_dim (C \<inter> {x. a \<bullet> x < b}) = aff_dim C \<and> aff_dim (C \<inter> {x. a \<bullet> x > b}) = aff_dim C"
@@ -1504,7 +1499,7 @@ proof -
               by (simp add: Ceq Int_ac \<open>affine T\<close> \<open>open S\<close> affine_Int affine_hyperplane)
             ultimately have "aff_dim (affine hull C) = aff_dim(affine hull (C \<inter> {x. a \<bullet> x = b})) + 1"
               using CInt_ne False Ceq
-              by (auto simp add: aff_dim_affine_Int_hyperplane \<open>affine T\<close>)
+              by (auto simp: aff_dim_affine_Int_hyperplane \<open>affine T\<close>)
             moreover have "0 \<le> aff_dim (C \<inter> {x. a \<bullet> x = b})"
               by (metis CInt_ne aff_dim_negative_iff linorder_not_le)
             ultimately show ?thesis
@@ -1523,12 +1518,11 @@ proof -
 qed
 
 
-
 lemma Euler_characterstic_invariant_aux:
   assumes "finite B" "finite A" "hyperplane_cellcomplex A S" 
   shows "Euler_characteristic (A \<union> B) S = Euler_characteristic A S"
   using assms
-  by (induction rule: finite_induct) (auto simp add: Euler_characterstic_lemma hyperplane_cellcomplex_mono)
+  by (induction rule: finite_induct) (auto simp: Euler_characterstic_lemma hyperplane_cellcomplex_mono)
 
 lemma Euler_characterstic_invariant:
   assumes "finite A" "finite B" "hyperplane_cellcomplex A S" "hyperplane_cellcomplex B S"
@@ -1565,7 +1559,7 @@ proof -
     and Seq: "S = \<Inter>H"
     and Hex: "\<And>h. h\<in>H \<Longrightarrow> \<exists>a b. a\<noteq>0 \<and> h = {x. a \<bullet> x \<le> b}"
     and Hsub: "\<And>\<G>. \<G> \<subset> H \<Longrightarrow> S \<subset> \<Inter>\<G>"
-    by (fastforce simp add: polyhedron_Int_affine_minimal)
+    by (fastforce simp: polyhedron_Int_affine_minimal)
   have "0 \<in> S"
     using assms(2) conic_contains_0 intS interior_empty by blast
   have *: "\<exists>a. a\<noteq>0 \<and> h = {x. a \<bullet> x \<le> 0}" if "h \<in> H" for h
@@ -1596,7 +1590,7 @@ proof -
         by auto
       define \<epsilon> where "\<epsilon> \<equiv> min (1/2) (b / (a \<bullet> x))"
       have "b < a \<bullet> x"
-        using \<open>x \<notin> S\<close> ab x by (fastforce simp add: \<open>S = \<Inter>H\<close>)
+        using \<open>x \<notin> S\<close> ab x by (fastforce simp: \<open>S = \<Inter>H\<close>)
       with 3 have "0 < a \<bullet> x"
         by auto
       with 3 have "0 < \<epsilon>"
@@ -1654,7 +1648,7 @@ proof -
       if "finite A" and "d \<le> card (Basis::'n set)"
       for d :: nat
     proof (rule bij_betw_same_card)
-      have "hyperplane_cell A (rel_interior f) \<and> rel_interior f \<subseteq> S
+      have hyper1: "hyperplane_cell A (rel_interior f) \<and> rel_interior f \<subseteq> S
           \<and> aff_dim (rel_interior f) = d \<and> closure (rel_interior f) = f" 
         if "f face_of S" "aff_dim f = d" for f
       proof -
@@ -1689,10 +1683,15 @@ proof -
             have *: "\<And>x h. \<lbrakk>x \<in> f; h \<in> H\<rbrakk> \<Longrightarrow> fa h \<bullet> x \<le> 0"
               using Seq fa face_of_imp_subset \<open>f face_of S\<close> by fastforce
             show "f = \<Inter> (fa_le_0 ` H) \<inter> (\<Inter>h \<in> {h \<in> H.  f \<subseteq> S \<inter> {x. fa h \<bullet> x = 0}}. {x. fa h \<bullet> x = 0})"
-              apply (auto simp: * fa_le_0_def)
-              apply (subst fexp)
-              apply clarsimp
-              by (metis Inter_iff Seq fa mem_Collect_eq)
+                 (is "f = ?I")
+            proof
+              show "f \<subseteq> ?I"
+                using \<open>f face_of S\<close> fa face_of_imp_subset by (force simp: * fa_le_0_def)
+              show "?I \<subseteq> f"
+              apply (subst (2) fexp)
+              apply (clarsimp simp: * fa_le_0_def)
+                by (metis Inter_iff Seq fa mem_Collect_eq)
+            qed
           qed blast
         qed 
         define H' where "H' = (\<lambda>h. {x. -(fa h) \<bullet> x \<le> 0}) ` H"
@@ -1742,7 +1741,7 @@ proof -
             then obtain h' where "h' \<in> H" "h = {x. 0 \<le> fa h' \<bullet> x}"
               by (auto simp: H'_def)
             then show ?thesis
-              by (force simp add: intro!: exI[where x="- (fa h')"])
+              by (force simp: intro!: exI[where x="- (fa h')"])
           qed
         qed
         then obtain ga 
@@ -1788,7 +1787,7 @@ proof -
             proof -
               obtain \<epsilon> where "x \<in> f" "\<epsilon>>0" 
                 and \<epsilon>: "\<And>t. \<lbrakk>dist x t \<le> \<epsilon>; t \<in> affine hull f\<rbrakk> \<Longrightarrow> t \<in> f"
-                using x by (force simp add: mem_rel_interior_cball)
+                using x by (force simp: mem_rel_interior_cball)
               then have "y \<noteq> x"
                 using fa0 less0 by force
               define x' where "x' \<equiv> x + (\<epsilon> / norm(y - x)) *\<^sub>R (x - y)"
@@ -1834,7 +1833,7 @@ proof -
         show ?thesis
           using "1" "2" "3" "4" by blast
       qed
-      moreover have "(closure c face_of S \<and> aff_dim (closure c) = d) \<and> rel_interior (closure c) = c"
+      have hyper2: "(closure c face_of S \<and> aff_dim (closure c) = d) \<and> rel_interior (closure c) = c"
         if c: "hyperplane_cell A c" and "c \<subseteq> S" "aff_dim c = d" for c
       proof (intro conjI)
         obtain J where "J \<subseteq> H" and J: "c = (\<Inter>h \<in> J. {x. (fa h) \<bullet> x < 0}) \<inter> (\<Inter>h \<in> (H - J). {x. (fa h) \<bullet> x = 0})"
@@ -1890,7 +1889,7 @@ proof -
               by (metis nonempty_hyperplane_cell c rel_interior_open o1 rel_interior_openin o2 J)
           qed
           have clo_im_J: "closure ` ((\<lambda>h. {x. fa h \<bullet> x < 0}) ` J) = (\<lambda>h. {x. fa h \<bullet> x \<le> 0}) ` J"
-            using \<open>J \<subseteq> H\<close> by (force simp add: image_comp fa)
+            using \<open>J \<subseteq> H\<close> by (force simp: image_comp fa)
           have cleq: "closure (\<Inter>h\<in>H - J. {x. fa h \<bullet> x = 0}) = (\<Inter>h\<in>H - J. {x. fa h \<bullet> x = 0})"
             by (intro closure_closed) (blast intro: closed_hyperplane)
           have **: "(\<Inter>h\<in>J. {x. fa h \<bullet> x \<le> 0}) \<inter> (\<Inter>h\<in>H - J. {x. fa h \<bullet> x = 0}) face_of S"
@@ -1909,7 +1908,6 @@ proof -
               show "?L \<subseteq> ?R"
                 by clarsimp (smt (verit) DiffI InterI Seq fa mem_Collect_eq)
               show "?R \<subseteq> ?L"
-               apply clarsimp
                 using False Seq \<open>J \<subseteq> H\<close> fa by blast
             qed
             show ?thesis
@@ -1946,12 +1944,13 @@ proof -
         show "rel_interior (closure c) = c"
           by (metis \<open>finite A\<close> c convex_rel_interior_closure hyperplane_cell_convex hyperplane_cell_relative_interior)
       qed
-      ultimately
       show "bij_betw (rel_interior) {f. f face_of S \<and> aff_dim f = int d} {C. hyperplane_cell A C \<and> C \<subseteq> S \<and> aff_dim C = int d}"
         unfolding bij_betw_def inj_on_def
-        apply (intro conjI)
-         apply (smt (verit) mem_Collect_eq)
-        using image_eqI by blast
+      proof (intro conjI ; simp)
+        show "rel_interior ` {f. f face_of S \<and> aff_dim f = int d} 
+            = {C. hyperplane_cell A C \<and> C \<subseteq> S \<and> aff_dim C = int d}"
+          using hyper1 hyper2 by fastforce
+      qed (metis hyper1)
     qed
     show ?thesis
       by (simp add: Euler_characteristic \<open>finite A\<close>)
@@ -2006,7 +2005,7 @@ proof -
       proof
         show "?L \<subseteq> ?R"
           using fa \<open>J \<subseteq> H\<close> z 
-          by (fastforce simp add: hyperplane_equiv_def hyperplane_side_def B_def set_eq_iff )
+          by (fastforce simp: hyperplane_equiv_def hyperplane_side_def B_def set_eq_iff )
         show "?R \<subseteq> ?L"
           using z \<open>J \<subseteq> H\<close> apply (clarsimp simp add: hyperplane_equiv_def hyperplane_side_def B_def)
           by (metis fa in_mono mem_Collect_eq sgn_le_0_iff)
@@ -2037,16 +2036,17 @@ proof -
     qed
     have EE: "(\<Sum>\<T> | \<T> \<subseteq> uminus ` H \<and> \<T>\<noteq>{}. (-1) ^ (card \<T> + 1) * Euler_characteristic A (\<Inter>\<T>))
              = (\<Sum>\<T> | \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {}. (-1) ^ (card \<T> + 1) * (- 1) ^ DIM('n))"
-      by (intro sum.cong [OF refl]) (fastforce simp add: subset_image_iff intro!: DD)
+      by (intro sum.cong [OF refl]) (fastforce simp: subset_image_iff intro!: DD)
     also have "\<dots> = (-1) ^ DIM('n)"
     proof -
       have A: "(\<Sum>y = 1..card H. \<Sum>t\<in>{x \<in> {\<T>. \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {}}. card x = y}. (- 1) ^ (card t + 1)) 
           = (\<Sum>\<T>\<in>{\<T>. \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {}}. (- 1) ^ (card \<T> + 1))"
       proof (rule sum.group)
-        show "card ` {\<T>. \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {}} \<subseteq> {1..card H}"
-        apply clarsimp
-        by (meson \<open>finite H\<close> card_eq_0_iff finite_surj le_zero_eq not_less_eq_eq surj_card_le)
-      qed (auto simp add: \<open>finite H\<close>)
+        have "\<And>C. \<lbrakk>C \<subseteq> uminus ` H; C \<noteq> {}\<rbrakk> \<Longrightarrow> Suc 0 \<le> card C \<and> card C \<le> card H"
+          by (meson \<open>finite H\<close> card_eq_0_iff finite_surj le_zero_eq not_less_eq_eq surj_card_le)
+        then show "card ` {\<T>. \<T> \<subseteq> uminus ` H \<and> \<T> \<noteq> {}} \<subseteq> {1..card H}"
+          by force
+      qed (auto simp: \<open>finite H\<close>)
 
       have "(\<Sum>n = Suc 0..card H. - (int (card {x. x \<subseteq> uminus ` H \<and> x \<noteq> {} \<and> card x = n}) * (- 1) ^ n))
           = (\<Sum>n = Suc 0..card H. (-1) ^ (Suc n) * (card H choose n))"
@@ -2066,8 +2066,7 @@ proof -
       also have "\<dots> = - (\<Sum>k = Suc 0..card H. (-1) ^ k * (card H choose k))"
         by (simp add: sum_negf)
       also have "\<dots> = 1 - (\<Sum>k=0..card H. (-1) ^ k * (card H choose k))"
-        apply (simp add: sum.head [of 0])
-        using atLeastSucAtMost_greaterThanAtMost by presburger
+        using atLeastSucAtMost_greaterThanAtMost by (simp add: sum.head [of 0])
       also have "\<dots> = 1 - 0 ^ card H"
         using binomial_ring [of "-1" "1::int" "card H"] by (simp add: mult.commute atLeast0AtMost)
       also have "\<dots> = 1"
@@ -2154,12 +2153,9 @@ proof -
     have "S \<noteq> {}"
       by (metis False S_def empty_subsetI equalityI hull_subset)
     have "\<And>c x. \<lbrakk>0 < c; x \<in> p; x \<noteq> 0\<rbrakk> \<Longrightarrow> 0 < (c *\<^sub>R x) \<bullet> i"
-      by (metis (mono_tags, lifting) affp hull_subset inner_commute inner_simps(6) insert_absorb insert_subset mem_Collect_eq mult.right_neutral)
+      by (metis (mono_tags) Int_Collect Int_iff affp hull_inc inner_commute inner_scaleR_right mult.right_neutral)
     then have doti_gt0: "0 < x \<bullet> i" if S: "x \<in> S" and "x \<noteq> 0" for x
-      using that by (auto simp add: S_def conic_hull_explicit)
-
-    then have doti_ge0: "0 \<le> x \<bullet> i" if "x \<in> S" for x (*USED?*)
-      using that by force
+      using that by (auto simp: S_def conic_hull_explicit)
     have "\<And>a. {a} face_of S \<Longrightarrow> a = 0"
       using \<open>conic S\<close> conic_contains_0 face_of_conic by blast
     moreover have "{0} face_of S"
@@ -2168,7 +2164,7 @@ proof -
         using conic_def euclidean_all_zero_iff inner_left_distrib scaleR_eq_0_iff
         by (smt (verit, del_insts) doti_gt0 \<open>conic S\<close> \<open>i \<in> Basis\<close>)
       then show ?thesis
-        by (auto simp add: in_segment face_of_singleton extreme_point_of_def \<open>0 \<in> S\<close>)
+        by (auto simp: in_segment face_of_singleton extreme_point_of_def \<open>0 \<in> S\<close>)
     qed
     ultimately have face_0: "{f. f face_of S \<and> (\<exists>a. f = {a})} = {{0}}"
       by auto
@@ -2203,22 +2199,6 @@ proof -
       proof -
         { fix d
           assume "d \<le> DIM('n) - Suc 0"
-
-          have F: "\<And>f. f face_of p \<Longrightarrow> conic hull f \<inter> {x. x \<bullet> i = 1} = f"
-            by (metis "1" affp face_of_imp_subset hull_subset le_inf_iff)
-
-          have G: "\<And>f. f face_of S \<Longrightarrow>  f \<inter> {x. x \<bullet> i = 1} face_of p"
-            by (metis "1" S_def affp convex_affine_hull face_of_slice hull_subset)
-
-          have "finite {f. f face_of S \<and> aff_dim f = 1 + int d}"
-            by (simp add: \<open>polyhedron S\<close> finite_polyhedron_faces)
-          moreover
-          have "finite {f. f face_of p \<and> aff_dim f = int d}"
-            by (simp add: assms(2) finite_polytope_faces)
-          moreover have f_Int_face_P: "f \<inter> {x. x \<bullet> i = 1} face_of p"
-            if "f face_of S" for f
-            by (metis "1" S_def affp convex_affine_hull face_of_slice hull_subset that)
-          moreover 
           have conic_face_p: "(conic hull f) face_of S" if "f face_of p" for f
           proof (cases "f={}")
             case False
@@ -2277,9 +2257,16 @@ proof -
                   next
                     case False
                     have "cx > 0"
-                      using \<open>cx \<noteq> 0\<close> that(6) by linarith
-                    have "ca > 0"
-                      by (smt (verit, ccfv_SIG) False \<open>cx \<noteq> 0\<close> add_0 bi inner_commute inner_real_def inner_simps(6) real_inner_1_right scaleR_cancel_left scaleR_eq_0_iff that(2) u vector_space_assms(3) xi)
+                      using \<open>cx \<noteq> 0\<close> \<open>0 \<le> cx\<close> by linarith
+                    have False if "ca = 0"
+                    proof -
+                      have "cx = u * cb"
+                        by (metis add_0 bi inner_real_def inner_scaleR_left real_inner_1_right scale_eq_0_iff that u xi)
+                      then show False
+                        using \<open>x \<noteq> b\<close> \<open>cx \<noteq> 0\<close> that u by force
+                    qed
+                    with \<open>0 \<le> ca\<close> have "ca > 0"
+                      by force
                     have aff: "x \<in> affine hull p \<and> a \<in> affine hull p \<and> b \<in> affine hull p"
                       using affp xi ai bi by blast
                     show ?thesis
@@ -2331,7 +2318,7 @@ proof -
               qed
             qed
             ultimately show ?thesis
-              using that by (auto simp add: S_def conic_hull_explicit face_of_def)
+              using that by (auto simp: S_def conic_hull_explicit face_of_def)
           qed auto
           moreover
           have conic_hyperplane_eq: "conic hull (f \<inter> {x. x \<bullet> i = 1}) = f"
@@ -2343,7 +2330,7 @@ proof -
             proof (cases "x=0")
               case True
               obtain y where "y \<in> f" "y \<noteq> 0"
-                by (metis \<open>0 < aff_dim f\<close> aff_dim_eq_0 aff_dim_subset insert_subset linorder_not_less subset_eq)
+                by (metis \<open>0 < aff_dim f\<close> aff_dim_sing aff_dim_subset insertCI linorder_not_le subset_iff)
               then have "y \<bullet> i > 0"
                 using \<open>f face_of S\<close> doti_gt0 face_of_imp_subset by blast
               then have "y /\<^sub>R (y \<bullet> i) \<in> f \<and> (y /\<^sub>R (y \<bullet> i)) \<bullet> i = 1"
@@ -2367,7 +2354,6 @@ proof -
             if "f face_of S" for f
             by (metis \<open>conic S\<close> face_of_conic hull_same that)
 
-          moreover 
           have aff_1d: "aff_dim (conic hull f) = aff_dim f + 1" (is "?lhs = ?rhs")
             if "f face_of p" and "f \<noteq> {}" for f
           proof (rule order_antisym)
@@ -2396,11 +2382,14 @@ proof -
               by simp
           qed 
 
+          have face_S_imp_face_p: "\<And>f. f face_of S \<Longrightarrow>  f \<inter> {x. x \<bullet> i = 1} face_of p"
+            by (metis "1" S_def affp convex_affine_hull face_of_slice hull_subset)
+
           have conic_eq_f: "conic hull f \<inter> {x. x \<bullet> i = 1} = f"
             if "f face_of p" for f
             by (metis "1" affp face_of_imp_subset hull_subset le_inf_iff that)
 
-          have MF: "aff_dim (f \<inter> {x. x \<bullet> i = 1}) = int d"
+          have dim_f_hyperplane: "aff_dim (f \<inter> {x. x \<bullet> i = 1}) = int d"
             if "f face_of S" "aff_dim f = 1 + int d" for f
           proof -
             have "conic f"
@@ -2413,33 +2402,29 @@ proof -
               by blast
             then have "y \<bullet> i > 0"
               using doti_gt0 face_of_imp_subset that(1) by blast
-
-            have "inverse(y \<bullet> i) *\<^sub>R y \<in> f"
-              using \<open>0 < y \<bullet> i\<close> \<open>conic S\<close> conic_mul face_of_conic that(1) y(1) by fastforce
-            moreover have "inverse(y \<bullet> i) *\<^sub>R y \<in> {x. x \<bullet> i = 1}"
-              using \<open>y \<bullet> i > 0\<close> by (simp add: field_simps)
-            ultimately have YYY: "inverse(y \<bullet> i) *\<^sub>R y \<in> (f \<inter> {x. x \<bullet> i = 1})"
-              by blast
-
             have "aff_dim (conic hull (f \<inter> {x. x \<bullet> i = 1})) = aff_dim (f \<inter> {x. x \<bullet> i = 1}) + 1"
             proof (rule aff_1d)
               show "f \<inter> {x. x \<bullet> i = 1} face_of p"
-                by (simp add: G that(1))
-              show "f \<inter> {x. x \<bullet> i = 1} \<noteq> {}"
-                using YYY by blast
+                by (simp add: face_S_imp_face_p that(1))
+              have "inverse(y \<bullet> i) *\<^sub>R y \<in> f"
+                using \<open>0 < y \<bullet> i\<close> \<open>conic S\<close> conic_mul face_of_conic that(1) y(1) by fastforce
+              moreover have "inverse(y \<bullet> i) *\<^sub>R y \<in> {x. x \<bullet> i = 1}"
+                using \<open>y \<bullet> i > 0\<close> by (simp add: field_simps)
+              ultimately show "f \<inter> {x. x \<bullet> i = 1} \<noteq> {}"
+                by blast
             qed
             then show ?thesis
               by (simp add: conic_hyperplane_eq that)
           qed
-
-          have "card {f. f face_of S \<and> aff_dim f = 1 + int d} =
-               card {f. f face_of p \<and> aff_dim f = int d}"
-            apply (intro bij_betw_same_card [of "(\<lambda>f. f \<inter> {x. x \<bullet> i = 1})"])
-            unfolding bij_betw_def
-            apply (intro conjI)
-             apply (smt (verit) conic_hyperplane_eq inj_on_def mem_Collect_eq of_nat_less_0_iff)     
-            apply (auto simp: image_iff G MF)
-            using aff_1d conic_eq_f conic_face_p by fastforce
+          have "card {f. f face_of S \<and> aff_dim f = 1 + int d}
+             =  card {f. f face_of p \<and> aff_dim f = int d}"
+          proof (intro bij_betw_same_card bij_betw_imageI)
+            show "inj_on (\<lambda>f. f \<inter> {x. x \<bullet> i = 1}) {f. f face_of S \<and> aff_dim f = 1 + int d}"
+              by (smt (verit) conic_hyperplane_eq inj_on_def mem_Collect_eq of_nat_less_0_iff)     
+            show "(\<lambda>f. f \<inter> {x. x \<bullet> i = 1}) ` {f. f face_of S \<and> aff_dim f = 1 + int d} = {f. f face_of p \<and> aff_dim f = int d}"
+              using aff_1d conic_eq_f conic_face_p
+              by (fastforce simp: image_iff face_S_imp_face_p dim_f_hyperplane)
+          qed
         }
         then show ?thesis
           by force
@@ -2452,7 +2437,7 @@ proof -
 qed
 
 
-lemma Euler_poincare_special:
+corollary Euler_poincare_special:
   fixes p :: "'n::euclidean_space set"
   assumes "2 \<le> DIM('n)" "polytope p" "i \<in> Basis" and affp: "affine hull p = {x. x \<bullet> i = 0}"
   shows "(\<Sum>d = 0..DIM('n) - 1. (-1) ^ d * card {f. f face_of p \<and> aff_dim f = d}) = 1"
@@ -2486,7 +2471,7 @@ qed
 
 section\<open>Now Euler-Poincare for a general full-dimensional polytope\<close>
 
-lemma Euler_Poincare_full:
+theorem Euler_Poincare_full:
   fixes p :: "'n::euclidean_space set"
   assumes "polytope p" "aff_dim p = DIM('n)"
   shows "(\<Sum>d = 0..DIM('n). (-1) ^ d * (card {f. f face_of p \<and> aff_dim f = d})) = 1"
@@ -2515,7 +2500,7 @@ proof -
   qed (auto simp: image_iff face_pS)
   have ceqc: "card {f. f face_of S \<and> aff_dim f = int d} = card {f. f face_of p \<and> aff_dim f = int d}" for d
     unfolding *
-    by (rule card_image) (auto simp add: inj_on_def augm_def)
+    by (rule card_image) (auto simp: inj_on_def augm_def)
   have "(\<Sum>d = 0..DIM('n \<times> real) - 1. (- 1) ^ d * int (card {f. f face_of S \<and> aff_dim f = int d})) = 1"
   proof (rule Euler_poincare_special)
     show "2 \<le> DIM('n \<times> real)"
@@ -2534,17 +2519,15 @@ qed
 
 text\<open> In particular the Euler relation in 3D\<close>
 
-lemma Euler_relation:
+corollary Euler_relation:
   fixes p :: "'n::euclidean_space set"
   assumes "polytope p" "aff_dim p = 3" "DIM('n) = 3"
   shows "(card {v. v face_of p \<and> aff_dim v = 0} + card {f. f face_of p \<and> aff_dim f = 2}) - card {e. e face_of p \<and> aff_dim e = 1} = 2"
 proof -
-  have 3: "{f. f face_of p \<and> aff_dim f = 3} = {p}"
-    using assms
-    apply (auto simp: face_of_refl polytope_imp_convex)
-    using face_of_imp_subset apply blast
-    apply (metis assms(1) assms(2) face_of_aff_dim_lt less_irrefl polytope_imp_convex)
-    done
+  have "\<And>x. \<lbrakk>x face_of p; aff_dim x = 3\<rbrakk> \<Longrightarrow> x = p"
+    using assms by (metis face_of_aff_dim_lt less_irrefl polytope_imp_convex)
+  then have 3: "{f. f face_of p \<and> aff_dim f = 3} = {p}"
+    using assms by (auto simp: face_of_refl polytope_imp_convex)
   have "(\<Sum>d = 0..3. (-1) ^ d * int (card {f. f face_of p \<and> aff_dim f = int d})) = 1"
     using Euler_Poincare_full [of p] assms by simp
   then show ?thesis
