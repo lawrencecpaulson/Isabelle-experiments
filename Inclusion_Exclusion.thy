@@ -138,7 +138,236 @@ lemma restricted:
   shows  "f(\<Union> A) = (\<Sum>B | B \<subseteq> A \<and> B \<noteq> {}. (- 1) ^ (card B + 1) * f (\<Inter> B))"
   using restricted_indexed [of A "\<lambda>x. x"] assms by auto
 
+
 end
+
+
+lemma Incl_Excl_UN:
+  fixes f :: "'a set \<Rightarrow> 'b::ring_1"
+  assumes "\<And>S T. disjnt S T \<Longrightarrow> f(S \<union> T) = f S + f T" "finite A"
+  shows "f(\<Union>(G ` A)) = (\<Sum>B | B \<subseteq> A \<and> B \<noteq> {}. (-1) ^ (card B + 1) * f (\<Inter> (G ` B)))"
+proof -
+  interpret Incl_Excl "\<lambda>x. True" f
+    by (simp add: Incl_Excl.intro assms(1))
+  show ?thesis
+    using restricted_indexed assms by blast
+qed
+
+lemma Incl_Excl_Union:
+  fixes f :: "'a set \<Rightarrow> 'b::ring_1"
+  assumes "\<And>S T. disjnt S T \<Longrightarrow> f(S \<union> T) = f S + f T" "finite A"
+  shows "f(\<Union> A) = (\<Sum>B | B \<subseteq> A \<and> B \<noteq> {}. (- 1) ^ (card B + 1) * f (\<Inter> B))"
+  using Incl_Excl_UN[of f A "\<lambda>X. X"] assms by simp
+
+
+subsection\<open> Versions for unrestrictedly additive functions.                           \<close>
+
+text\<open> ------------------------------------------------------------------------- \<close>
+text\<open> Special case of cardinality, the most common case.                        \<close>
+text\<open> ------------------------------------------------------------------------- \<close>
+
+lemma inclusion_exclusion:
+   "finite S \<and> (\<forall>k. k \<in> S \<Longrightarrow> finite k)
+        \<Longrightarrow> &(card(\<Union> S)) =
+                sum {T. T \<subseteq> S \<and> (T \<noteq> {})}
+                    (\<lambda>t. (-1) ^ (card T + 1) * &(card(\<Inter> T)))"
+oops 
+  REPEAT STRIP_TAC THEN MP_TAC(ISPECL
+   [`\<lambda>s::A=>bool. finite S`; `\<lambda>s::A=>bool. (card S)`;
+    `S:(A=>bool)->bool`] INCLUSION_EXCLUSION_REAL_RESTRICTED) THEN
+  ASM_SIMP_TAC[FINITE_INTER; FINITE_UNION; FINITE_DIFF; FINITE_EMPTY] THEN
+  DISCH_THEN MATCH_MP_TAC THEN
+  SIMP_TAC[CARD_UNION; disjnt; REAL_OF_NUM_ADD]);;
+
+text\<open> ------------------------------------------------------------------------- \<close>
+text\<open> A more conventional form.                                                 \<close>
+text\<open> ------------------------------------------------------------------------- \<close>
+
+lemma inclusion_exclusion_usual:
+   "\<And>S:(A=>bool)->bool.
+        finite S \<and> (\<forall>k. k \<in> S \<Longrightarrow> finite k)
+        \<Longrightarrow> &(card(\<Union> S)) =
+                sum (1..card S) (\<lambda>n. (-1) ^ (Suc n) *
+                                     sum {T. T \<subseteq> S \<and> T HAS_SIZE n}
+                                         (\<lambda>t. &(card(\<Inter> T))))"
+oops 
+  REPEAT STRIP_TAC THEN ASM_SIMP_TAC[INCLUSION_EXCLUSION] THEN
+  W(MP_TAC o PART_MATCH (lhs o rand) (ISPEC `card` SUM_IMAGE_GEN) o
+     lhand o snd) THEN
+  ASM_SIMP_TAC[FINITE_SUBSETS_RESTRICT] THEN DISCH_THEN SUBST1_TAC THEN
+  MATCH_MP_TAC(MESON[] `S = T \<and> sum T f = sum T g \<Longrightarrow> sum S f = sum T g`) THEN
+  CONJ_TAC THENL
+   [GEN_REWRITE_TAC id [EXTENSION] THEN
+    REWRITE_TAC[IN_IMAGE; IN_NUMSEG; IN_ELIM_THM] THEN
+    REWRITE_TAC[ARITH_RULE `1 \<le> a \<longleftrightarrow> (a \<noteq> 0)`] THEN
+    ASM_MESON_TAC[CHOOSE_SUBSET; CARD_SUBSET; FINITE_SUBSET; CARD_EQ_0;
+                  HAS_SIZE];
+    ALL_TAC] THEN
+  MATCH_MP_TAC SUM_EQ THEN X_GEN_TAC `n::num` THEN REWRITE_TAC[IN_NUMSEG] THEN
+  STRIP_TAC THEN REWRITE_TAC[SUM_LMUL] THEN AP_TERM_TAC THEN
+  AP_THM_TAC THEN AP_TERM_TAC THEN REWRITE_TAC[IN_ELIM_THM; HAS_SIZE] THEN
+  GEN_REWRITE_TAC id [EXTENSION] THEN REWRITE_TAC[IN_ELIM_THM] THEN
+  ASM_MESON_TAC[CARD_EQ_0; ARITH_RULE `~(1 \<le> 0)`; FINITE_SUBSET]);;
+
+text\<open> ------------------------------------------------------------------------- \<close>
+text\<open> A combinatorial lemma about subsets of a finite set.                      \<close>
+text\<open> ------------------------------------------------------------------------- \<close>
+
+lemma finite_subsets_restrict:
+   "\<And>S::A=>bool p. finite S \<Longrightarrow> finite {T. T \<subseteq> S \<and> p T}"
+oops 
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC FINITE_SUBSET THEN
+  EXISTS_TAC `{T::A=>bool | T \<subseteq> S}` THEN
+  ASM_SIMP_TAC[FINITE_POWERSET] THEN SET_TAC[]);;
+
+lemma card_adjust_lemma:
+   "\<And>f::A=>B S x y.
+        finite S \<and>
+        (\<forall>x y. x \<in> S \<and> y \<in> S \<and> f x = f y \<Longrightarrow> x = y) \<and>
+        x = y + card (f ` S)
+        \<Longrightarrow> x = y + card S"
+oops 
+  MESON_TAC[CARD_IMAGE_INJ]);;
+
+lemma card_subsets_step:
+   "finite S \<and> (x \<notin> S) \<and> u \<subseteq> S
+           \<Longrightarrow> card {T. T \<subseteq> (insert x S) \<and> u \<subseteq> T \<and> ODD(card T)} =
+                 card {T. T \<subseteq> S \<and> u \<subseteq> T \<and> ODD(card T)} +
+                 card {T. T \<subseteq> S \<and> u \<subseteq> T \<and> EVEN(card T)} \<and>
+               card {T. T \<subseteq> (insert x S) \<and> u \<subseteq> T \<and> EVEN(card T)} =
+                 card {T. T \<subseteq> S \<and> u \<subseteq> T \<and> EVEN(card T)} +
+                 card {T. T \<subseteq> S \<and> u \<subseteq> T \<and> ODD(card T)}"
+oops 
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC(INST_TYPE[`:A`,`:B`] CARD_ADJUST_LEMMA) THEN
+  EXISTS_TAC `\<lambda>u. (x::A) insert u` THEN
+  ASM_SIMP_TAC[FINITE_SUBSETS_RESTRICT] THEN
+  (CONJ_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
+   CONV_TAC SYM_CONV THEN MATCH_MP_TAC CARD_UNION_EQ THEN
+   ASM_SIMP_TAC[FINITE_SUBSETS_RESTRICT; FINITE_INSERT] THEN CONJ_TAC THENL
+    [REWRITE_TAC[EXTENSION; NOT_IN_EMPTY; IN_INTER] THEN
+     REWRITE_TAC[TAUT `~(a \<and> b) \<longleftrightarrow> b \<Longrightarrow> ~a`; FORALL_IN_IMAGE] THEN
+     ASM SET_TAC[];
+     ALL_TAC] THEN
+   GEN_REWRITE_TAC id [EXTENSION] THEN X_GEN_TAC `T::A=>bool` THEN
+   REWRITE_TAC[IN_ELIM_THM; IN_UNION; SUBSET_INSERT_EXISTS] THEN
+   REWRITE_TAC[IN_IMAGE; IN_ELIM_THM] THEN
+   REWRITE_TAC[RIGHT_OR_DISTRIB; LEFT_AND_EXISTS_THM] THEN AP_TERM_TAC THEN
+   AP_TERM_TAC THEN GEN_REWRITE_TAC id [FUN_EQ_THM] THEN
+   X_GEN_TAC `v::A=>bool` THEN
+   ASM_CASES_TAC `T = (x::A) insert v` THEN ASM_REWRITE_TAC[] THEN
+   ASM_CASES_TAC `(v::A=>bool) \<subseteq> S` THEN ASM_REWRITE_TAC[] THEN
+   BINOP_TAC THENL [ASM SET_TAC[]; ALL_TAC] THEN
+   ASM_MESON_TAC[CARD_CLAUSES; EVEN; NOT_ODD; FINITE_SUBSET; \<subseteq>] THEN
+   ASM_MESON_TAC[CARD_CLAUSES; EVEN; NOT_ODD; FINITE_SUBSET; \<subseteq>]));;
+
+lemma card_subsupersets_even_odd:
+   "\<And>S u::A=>bool.
+        finite u \<and> S \<subset> u
+        \<Longrightarrow> card {T. S \<subseteq> T \<and> T \<subseteq> u \<and> EVEN(card T)} =
+            card {T. S \<subseteq> T \<and> T \<subseteq> u \<and> ODD(card T)}"
+oops 
+  ONCE_REWRITE_TAC[TAUT `a \<and> b \<and> c \<longleftrightarrow> b \<and> a \<and> c`] THEN
+  REPEAT GEN_TAC THEN WF_INDUCT_TAC `card(u::A=>bool)` THEN
+  REWRITE_TAC[PSUBSET_ALT] THEN
+  REPEAT(DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)) THEN
+  DISCH_THEN(X_CHOOSE_THEN `x::A` STRIP_ASSUME_TAC) THEN
+  FIRST_X_ASSUM(SUBST_ALL_TAC o MATCH_MP (SET_RULE
+   `x \<in> S \<Longrightarrow> S = x insert (S - {x})`)) THEN
+  MP_TAC(SET_RULE `~((x::A) \<in> (u - {x}))`) THEN
+  ABBREV_TAC `v::A=>bool = u - {x}` THEN STRIP_TAC THEN
+  SUBGOAL_THEN `finite v \<and> (S::A=>bool) \<subseteq> v` STRIP_ASSUME_TAC THENL
+   [ASM SET_TAC[FINITE_INSERT]; ALL_TAC] THEN
+  ASM_SIMP_TAC[CARD_SUBSETS_STEP] THEN ASM_CASES_TAC `S::A=>bool = v` THENL
+   [REWRITE_TAC[CONJ_ASSOC; SUBSET_ANTISYM_EQ] THEN MATCH_ACCEPT_TAC ADD_SYM;
+    ASM_SIMP_TAC[CARD_CLAUSES; LT; \<subset>]]);;
+
+lemma sum_alternating_cancels:
+   "\<And>S::A=>bool f.
+        finite S \<and>
+        card {x. x \<in> S \<and> EVEN(f x)} = card {x. x \<in> S \<and> ODD(f x)}
+        \<Longrightarrow> sum S (\<lambda>x. (-1) ^ (f x)) = 0"
+oops 
+  REPEAT STRIP_TAC THEN MATCH_MP_TAC EQ_TRANS THEN
+  EXISTS_TAC `sum {x. x \<in> S \<and> EVEN(f x)} (\<lambda>x. (-1) ^ (f x)) +
+              sum {x::A | x \<in> S \<and> ODD(f x)} (\<lambda>x. (-1) ^ (f x))` THEN
+  CONJ_TAC THENL
+   [CONV_TAC SYM_CONV THEN MATCH_MP_TAC SUM_UNION_EQ THEN
+    ASM_SIMP_TAC[EXTENSION; IN_ELIM_THM; IN_INTER; IN_UNION; NOT_IN_EMPTY] THEN
+    REWRITE_TAC[GSYM NOT_EVEN] THEN MESON_TAC[];
+    ALL_TAC] THEN
+  ASM_SIMP_TAC[REAL_POW_NEG; REAL_POW_ONE; GSYM NOT_EVEN; SUM_CONST;
+               FINITE_RESTRICT; REAL_ARITH `x * 1 + x *-1 = 0`]);;
+
+text\<open> ------------------------------------------------------------------------- \<close>
+text\<open> Hence a general "Moebius inversion" inclusion-exclusion principle.        \<close>
+text\<open> This "symmetric" form is from Ira Gessel: "Symmetric Inclusion-Exclusion" \<close>
+text\<open> ------------------------------------------------------------------------- \<close>
+
+lemma inclusion_exclusion_symmetric:
+   "\<And>f g:(A=>bool)->real.
+    (\<forall>S. finite S
+         \<Longrightarrow> g S = sum {T. T \<subseteq> S} (\<lambda>t. (-1) ^ (card T) * f T))
+    \<Longrightarrow> \<forall>S. finite S
+            \<Longrightarrow> f S = sum {T. T \<subseteq> S} (\<lambda>t. (-1) ^ (card T) * g T)"
+oops 
+  REPEAT STRIP_TAC THEN CONV_TAC SYM_CONV THEN MATCH_MP_TAC EQ_TRANS THEN
+  EXISTS_TAC `sum {T::A=>bool | T \<subseteq> S}
+                  (\<lambda>t. (-1) ^ (card T) *
+                       sum {u. u \<in> {u. u \<subseteq> S} \<and> u \<subseteq> T}
+                           (\<lambda>u. (-1) ^ (card u) * f u))` THEN
+  CONJ_TAC THENL
+   [MATCH_MP_TAC SUM_EQ THEN ASM_SIMP_TAC[IN_ELIM_THM; SET_RULE
+     `S \<subseteq> T \<Longrightarrow> (u \<subseteq> T \<and> u \<subseteq> S \<longleftrightarrow> u \<subseteq> S)`] THEN
+    ASM_MESON_TAC[FINITE_SUBSET];
+    ALL_TAC] THEN
+  REWRITE_TAC[GSYM SUM_LMUL] THEN
+  W(MP_TAC o PART_MATCH (lhand o rand) SUM_SUM_RESTRICT o lhs o snd) THEN
+  ASM_SIMP_TAC[FINITE_POWERSET] THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[SUM_RMUL; IN_ELIM_THM] THEN MATCH_MP_TAC EQ_TRANS THEN EXISTS_TAC
+   `sum {u. u \<subseteq> S} (\<lambda>u::A=>bool. if u = S then f S else 0)` THEN
+  CONJ_TAC THENL [ALL_TAC; SIMP_TAC[SUM_DELTA; IN_ELIM_THM; SUBSET_REFL]] THEN
+  MATCH_MP_TAC SUM_EQ THEN X_GEN_TAC `u::A=>bool` THEN
+  REWRITE_TAC[IN_ELIM_THM] THEN STRIP_TAC THEN
+  COND_CASES_TAC THEN ASM_REWRITE_TAC[] THENL
+   [REWRITE_TAC[SUBSET_ANTISYM_EQ; SET_RULE `{x. x = a} = {a}`] THEN
+    REWRITE_TAC[SUM_SING; REAL_MUL_ASSOC; GSYM REAL_POW_ADD] THEN
+    REWRITE_TAC[REAL_POW_NEG; EVEN_ADD; REAL_POW_ONE; REAL_MUL_LID];
+    ALL_TAC] THEN
+  REWRITE_TAC[REAL_ENTIRE] THEN REPEAT DISJ1_TAC THEN
+  MATCH_MP_TAC SUM_ALTERNATING_CANCELS THEN
+  ASM_SIMP_TAC[FINITE_SUBSETS_RESTRICT; IN_ELIM_THM] THEN
+  ONCE_REWRITE_TAC[TAUT `(a \<and> b) \<and> c \<longleftrightarrow> b \<and> a \<and> c`] THEN
+  MATCH_MP_TAC CARD_SUBSUPERSETS_EVEN_ODD THEN ASM SET_TAC[]);;
+
+text\<open> ------------------------------------------------------------------------- \<close>
+text\<open> The more typical non-symmetric version.                                   \<close>
+text\<open> ------------------------------------------------------------------------- \<close>
+
+lemma inclusion_exclusion_mobius:
+   "\<And>f g:(A=>bool)->real.
+        (\<forall>S. finite S \<Longrightarrow> g S = sum {T. T \<subseteq> S} f)
+        \<Longrightarrow> \<forall>S. finite S
+                \<Longrightarrow> f S = sum {T. T \<subseteq> S}
+                               (\<lambda>t. (-1) ^ (card S - card T) * g T)"
+oops 
+  REPEAT STRIP_TAC THEN
+  MP_TAC(ISPECL [`\<lambda>t.-1 ^ card(T::A=>bool) * f T`; `g:(A=>bool)->real`]
+                INCLUSION_EXCLUSION_SYMMETRIC) THEN
+  REWRITE_TAC[REAL_MUL_ASSOC; GSYM REAL_POW_ADD] THEN ANTS_TAC THENL
+   [ASM_SIMP_TAC[EVEN_ADD; REAL_POW_ONE; REAL_POW_NEG; REAL_MUL_LID; ETA_AX];
+    ALL_TAC] THEN
+  DISCH_THEN(MP_TAC o SPEC `S::A=>bool`) THEN ASM_REWRITE_TAC[] THEN
+  DISCH_THEN(MP_TAC o AP_TERM `(*) ((-1) ^ (card(S::A=>bool)))`) THEN
+  REWRITE_TAC[REAL_MUL_ASSOC; GSYM REAL_POW_ADD; GSYM MULT_2] THEN
+  REWRITE_TAC[GSYM REAL_POW_POW] THEN CONV_TAC REAL_RAT_REDUCE_CONV THEN
+  REWRITE_TAC[REAL_POW_ONE; REAL_MUL_LID] THEN DISCH_THEN SUBST1_TAC THEN
+  REWRITE_TAC[GSYM SUM_LMUL] THEN MATCH_MP_TAC SUM_EQ THEN
+  X_GEN_TAC `u::A=>bool` THEN REWRITE_TAC[IN_ELIM_THM; REAL_MUL_ASSOC] THEN
+  ASM_SIMP_TAC[REAL_POW_SUB; REAL_ARITH `~(-1 = 0)`; CARD_SUBSET] THEN
+  REWRITE_TAC[REAL_POW_NEG; REAL_POW_ONE] THEN
+  REPEAT(COND_CASES_TAC THEN ASM_REWRITE_TAC[]) THEN REAL_ARITH_TAC);;
+
 
 end
 
