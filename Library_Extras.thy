@@ -2,21 +2,17 @@ section \<open>Library Extras\<close>
 text \<open>For adding to the repository\<close>
 
 theory Library_Extras imports
-  "HOL-Analysis.Analysis" 
-   
-begin
+  "HOL-Analysis.Polytope" 
 
+begin
 section \<open>Preliminaries\<close>
 
-(*FIX NAMING CONVENTIONS inter, etc.*)
-thm convex_closure_inter
 lemmas closure_Int_convex = convex_closure_inter_two
 
 lemmas span_not_UNIV_orthogonal = span_not_univ_orthogonal
 
 (*THIS IS A BETTER FORMULATION THAN THE ORIGINAL convex_closure_inter*)
 
-thm convex_closure_rel_interior_inter (*REPLACE*)
 lemma convex_closure_rel_interior_Int:
   assumes "\<And>S. S\<in>\<F> \<Longrightarrow> convex (S :: 'n::euclidean_space set)"
     and "\<Inter>(rel_interior ` \<F>) \<noteq> {}"
@@ -78,12 +74,9 @@ proof -
 qed
 
 lemma closure_Inter_convex_open:
-    "(\<And>S::'n::euclidean_space set. S \<in> \<F> \<Longrightarrow> convex S \<and> open S)
-        \<Longrightarrow> closure(\<Inter>\<F>) = (if \<Inter>\<F> = {} then {} else \<Inter>(closure ` \<F>))"
+  "(\<And>S::'n::euclidean_space set. S \<in> \<F> \<Longrightarrow> convex S \<and> open S)
+            \<Longrightarrow> closure(\<Inter>\<F>) = (if \<Inter>\<F> = {} then {} else \<Inter>(closure ` \<F>))"
   by (simp add: closure_Inter_convex rel_interior_open)
-
-
-thm convex_closure_interior (**)
 
 lemma empty_interior_subset_hyperplane_aux:
   fixes S :: "'a::euclidean_space set"
@@ -140,14 +133,12 @@ next
     using \<open>a \<noteq> 0\<close> that by auto
 qed
 
-
-
 lemma aff_dim_psubset:
-   "(affine hull S) \<subset> (affine hull T) \<Longrightarrow> aff_dim S < aff_dim T"
+  "(affine hull S) \<subset> (affine hull T) \<Longrightarrow> aff_dim S < aff_dim T"
   by (metis aff_dim_affine_hull aff_dim_empty aff_dim_subset affine_affine_hull affine_dim_equal order_less_le)
 
 lemma aff_dim_eq_full_gen:
-   "S \<subseteq> T \<Longrightarrow> (aff_dim S = aff_dim T \<longleftrightarrow> affine hull S = affine hull T)"
+  "S \<subseteq> T \<Longrightarrow> (aff_dim S = aff_dim T \<longleftrightarrow> affine hull S = affine hull T)"
   by (smt (verit, del_insts) aff_dim_affine_hull2 aff_dim_psubset hull_mono psubsetI)
 
 lemma aff_dim_eq_full:
@@ -156,8 +147,6 @@ lemma aff_dim_eq_full:
   by (metis aff_dim_UNIV aff_dim_affine_hull affine_hull_UNIV)
 
 
-(*** FOR CONVEX.THY ***)
-thm cone_convex_hull
 section \<open>Conic sets and conic hull\<close>
 
 definition conic :: "'a::real_vector set \<Rightarrow> bool"
@@ -179,11 +168,11 @@ lemma conic_Inter: "(\<And>S. S \<in> \<F> \<Longrightarrow> conic S) \<Longrigh
   by (simp add: conic_def)
 
 lemma conic_linear_image:
-   "\<lbrakk>conic S; linear f\<rbrakk> \<Longrightarrow> conic(f ` S)"
+  "\<lbrakk>conic S; linear f\<rbrakk> \<Longrightarrow> conic(f ` S)"
   by (smt (verit) conic_def image_iff linear.scaleR)
 
 lemma conic_linear_image_eq:
-   "\<lbrakk>linear f; inj f\<rbrakk> \<Longrightarrow> conic (f ` S) \<longleftrightarrow> conic S"
+  "\<lbrakk>linear f; inj f\<rbrakk> \<Longrightarrow> conic (f ` S) \<longleftrightarrow> conic S"
   by (smt (verit) conic_def conic_linear_image inj_image_mem_iff linear_cmul)
 
 lemma conic_mul: "\<lbrakk>conic S; x \<in> S; 0 \<le> c\<rbrakk> \<Longrightarrow> (c *\<^sub>R x) \<in> S"
@@ -205,20 +194,20 @@ lemma conic_span [iff]: "conic(span S)"
   by (simp add: subspace_imp_conic)
 
 lemma conic_hull_explicit:
-   "conic hull S = {c *\<^sub>R x| c x. 0 \<le> c \<and> x \<in> S}"
-  proof (rule hull_unique)
-    show "S \<subseteq> {c *\<^sub>R x |c x. 0 \<le> c \<and> x \<in> S}"
-      by (metis (no_types) cone_hull_expl hull_subset)
+  "conic hull S = {c *\<^sub>R x| c x. 0 \<le> c \<and> x \<in> S}"
+proof (rule hull_unique)
+  show "S \<subseteq> {c *\<^sub>R x |c x. 0 \<le> c \<and> x \<in> S}"
+    by (metis (no_types) cone_hull_expl hull_subset)
   show "conic {c *\<^sub>R x |c x. 0 \<le> c \<and> x \<in> S}"
     using mult_nonneg_nonneg by (force simp: conic_def)
 qed (auto simp: conic_def)
 
 lemma conic_hull_as_image:
-   "conic hull S = (\<lambda>z. fst z *\<^sub>R snd z) ` ({0..} \<times> S)"
+  "conic hull S = (\<lambda>z. fst z *\<^sub>R snd z) ` ({0..} \<times> S)"
   by (force simp: conic_hull_explicit)
 
 lemma conic_hull_linear_image:
-   "linear f \<Longrightarrow> conic hull f ` S = f ` (conic hull S)"
+  "linear f \<Longrightarrow> conic hull f ` S = f ` (conic hull S)"
   by (force simp: conic_hull_explicit image_iff set_eq_iff linear_scale) 
 
 lemma conic_hull_image_scale:
@@ -299,7 +288,7 @@ lemma conic_Times: "\<lbrakk>conic S; conic T\<rbrakk> \<Longrightarrow> conic(S
   by (auto simp: conic_def)
 
 lemma conic_Times_eq:
-   "conic(S \<times> T) \<longleftrightarrow> S = {} \<or> T = {} \<or> conic S \<and> conic T" (is "?lhs = ?rhs")
+  "conic(S \<times> T) \<longleftrightarrow> S = {} \<or> T = {} \<or> conic S \<and> conic T" (is "?lhs = ?rhs")
 proof
   show "?lhs \<Longrightarrow> ?rhs"
     by (force simp: conic_def)
@@ -353,6 +342,13 @@ proof -
   ultimately show ?thesis
     by (auto simp: hull_inc)
 qed
+
+
+lemma open_in_subset_relative_interior:
+  fixes S :: "'a::euclidean_space set"
+  shows "openin (top_of_set (affine hull T)) S \<Longrightarrow> (S \<subseteq> rel_interior T) = (S \<subseteq> T)"
+  by (meson order.trans rel_interior_maximal rel_interior_subset)
+
 
 lemma conic_hull_eq_span_affine_hull:
   fixes S :: "'a::euclidean_space set"
@@ -411,14 +407,8 @@ proof
   show "?lhs \<Longrightarrow> ?rhs"
     by (metis conic_hull_eq_span conic_span hull_hull hull_minimal hull_subset span_eq)
   show "?rhs \<Longrightarrow> ?lhs"
-  by (metis rel_interior_affine subspace_affine subspace_span)
+    by (metis rel_interior_affine subspace_affine subspace_span)
 qed
-
-lemma open_in_subset_relative_interior:
-  fixes S :: "'a::euclidean_space set"
-  shows "openin (top_of_set (affine hull T)) S \<Longrightarrow> (S \<subseteq> rel_interior T) = (S \<subseteq> T)"
-  by (meson order.trans rel_interior_maximal rel_interior_subset)
-
 
 section\<open>Closure of conic hulls\<close>
 
@@ -551,8 +541,7 @@ qed
 
 
 lemma faces_of_linear_image:
-   "\<lbrakk>linear f; inj f\<rbrakk>
-        \<Longrightarrow> {T. T face_of (f ` S)} = (image f) ` {T. T face_of S}"
+  "\<lbrakk>linear f; inj f\<rbrakk> \<Longrightarrow> {T. T face_of (f ` S)} = (image f) ` {T. T face_of S}"
   by (smt (verit) Collect_cong face_of_def face_of_linear_image setcompr_eq_image subset_imageE)
 
 lemma face_of_conic:
@@ -588,7 +577,6 @@ proof (intro strip)
   qed
 qed
 
-thm extreme_point_of_convex_hull_insert
 lemma extreme_point_of_conic:
   assumes "conic S" and x: "x extreme_point_of S"
   shows "x = 0"
@@ -607,9 +595,9 @@ definition convex_cone :: "'a::real_vector set \<Rightarrow> bool"
   where "convex_cone \<equiv> \<lambda>S. S \<noteq> {} \<and> convex S \<and> conic S"
 
 lemma convex_cone_iff:
-   "convex_cone S \<longleftrightarrow>
-        0 \<in> S \<and> (\<forall>x \<in> S. \<forall>y \<in> S. x + y \<in> S) \<and> (\<forall>x \<in> S. \<forall>c\<ge>0. c *\<^sub>R x \<in> S)"
-    by (metis Convex.cone_def conic_contains_0 conic_def convex_cone convex_cone_def)
+  "convex_cone S \<longleftrightarrow>
+              0 \<in> S \<and> (\<forall>x \<in> S. \<forall>y \<in> S. x + y \<in> S) \<and> (\<forall>x \<in> S. \<forall>c\<ge>0. c *\<^sub>R x \<in> S)"
+  by (metis cone_def conic_contains_0 conic_def convex_cone convex_cone_def)
 
 lemma convex_cone_add: "\<lbrakk>convex_cone S; x \<in> S; y \<in> S\<rbrakk> \<Longrightarrow> x+y \<in> S"
   by (simp add: convex_cone_iff)
@@ -621,11 +609,11 @@ lemma convex_cone_nonempty: "convex_cone S \<Longrightarrow> S \<noteq> {}"
   by (simp add: convex_cone_def)
 
 lemma convex_cone_linear_image:
-   "convex_cone S \<and> linear f \<Longrightarrow> convex_cone(f ` S)"
+  "convex_cone S \<and> linear f \<Longrightarrow> convex_cone(f ` S)"
   by (simp add: conic_linear_image convex_cone_def convex_linear_image)
 
 lemma convex_cone_linear_image_eq:
-   "\<lbrakk>linear f; inj f\<rbrakk> \<Longrightarrow> (convex_cone(f ` S) \<longleftrightarrow> convex_cone S)"
+  "\<lbrakk>linear f; inj f\<rbrakk> \<Longrightarrow> (convex_cone(f ` S) \<longleftrightarrow> convex_cone S)"
   by (simp add: conic_linear_image_eq convex_cone_def)
 
 lemma convex_cone_halfspace_ge: "convex_cone {x. a \<bullet> x \<ge> 0}"
@@ -638,7 +626,7 @@ lemma convex_cone_contains_0: "convex_cone S \<Longrightarrow> 0 \<in> S"
   using convex_cone_iff by blast
 
 lemma convex_cone_Inter:
-   "(\<And>S. S \<in> f \<Longrightarrow> convex_cone S) \<Longrightarrow> convex_cone(\<Inter> f)"
+  "(\<And>S. S \<in> f \<Longrightarrow> convex_cone S) \<Longrightarrow> convex_cone(\<Inter> f)"
   by (simp add: convex_cone_iff)
 
 lemma convex_cone_convex_cone_hull: "convex_cone(convex_cone hull S)"
@@ -657,27 +645,26 @@ lemma convex_cone_hull_contains_0: "0 \<in> convex_cone hull S"
   by (simp add: convex_cone_contains_0 convex_cone_convex_cone_hull)
 
 lemma convex_cone_hull_add:
-   "\<lbrakk>x \<in> convex_cone hull S; y \<in> convex_cone hull S\<rbrakk> \<Longrightarrow> x + y \<in> convex_cone hull S"
+  "\<lbrakk>x \<in> convex_cone hull S; y \<in> convex_cone hull S\<rbrakk> \<Longrightarrow> x + y \<in> convex_cone hull S"
   by (simp add: convex_cone_add convex_cone_convex_cone_hull)
 
 lemma convex_cone_hull_mul:
-   "\<lbrakk>x \<in> convex_cone hull S; 0 \<le> c\<rbrakk> \<Longrightarrow> (c *\<^sub>R x) \<in> convex_cone hull S"
+  "\<lbrakk>x \<in> convex_cone hull S; 0 \<le> c\<rbrakk> \<Longrightarrow> (c *\<^sub>R x) \<in> convex_cone hull S"
   by (simp add: conic_convex_cone_hull conic_mul)
 
-thm convex_sums
 lemma convex_cone_sums:
-   "\<lbrakk>convex_cone S; convex_cone T\<rbrakk> \<Longrightarrow> convex_cone (\<Union>x\<in> S. \<Union>y \<in> T. {x + y})"
+  "\<lbrakk>convex_cone S; convex_cone T\<rbrakk> \<Longrightarrow> convex_cone (\<Union>x\<in> S. \<Union>y \<in> T. {x + y})"
   by (simp add: convex_cone_def conic_sums convex_sums)
 
 lemma convex_cone_Times:
-   "\<lbrakk>convex_cone S; convex_cone T\<rbrakk> \<Longrightarrow> convex_cone(S \<times> T)"
+  "\<lbrakk>convex_cone S; convex_cone T\<rbrakk> \<Longrightarrow> convex_cone(S \<times> T)"
   by (simp add: conic_Times convex_Times convex_cone_def)
 
 lemma convex_cone_Times_D1: "convex_cone (S \<times> T) \<Longrightarrow> convex_cone S"
   by (metis Times_empty conic_Times_eq convex_cone_def convex_convex_hull convex_hull_Times hull_same times_eq_iff)
 
 lemma convex_cone_Times_eq:
-   "convex_cone(S \<times> T) \<longleftrightarrow> convex_cone S \<and> convex_cone T" 
+  "convex_cone(S \<times> T) \<longleftrightarrow> convex_cone S \<and> convex_cone T" 
 proof (cases "S={} \<or> T={}")
   case True
   then show ?thesis 
@@ -712,13 +699,28 @@ lemma convex_cone_singleton [iff]: "convex_cone {0}"
   by (simp add: convex_cone_iff)
 
 lemma convex_hull_subset_convex_cone_hull:
-   "convex hull S \<subseteq> convex_cone hull S"
+  "convex hull S \<subseteq> convex_cone hull S"
   by (simp add: convex_convex_cone_hull hull_minimal hull_subset)
 
 
 lemma conic_hull_subset_convex_cone_hull:
-   "conic hull S \<subseteq> convex_cone hull S"
+  "conic hull S \<subseteq> convex_cone hull S"
   by (simp add: conic_convex_cone_hull hull_minimal hull_subset)
+
+lemma subspace_imp_convex_cone: "subspace S \<Longrightarrow> convex_cone S"
+  by (simp add: convex_cone_iff subspace_def)
+
+lemma convex_cone_span: "convex_cone(span S)"
+  by (simp add: subspace_imp_convex_cone)
+
+lemma convex_cone_negations:
+  "convex_cone S \<Longrightarrow> convex_cone (image uminus S)"
+  by (simp add: convex_cone_linear_image module_hom_uminus)
+
+lemma subspace_convex_cone_symmetric:
+  "subspace S \<longleftrightarrow> convex_cone S \<and> (\<forall>x \<in> S. -x \<in> S)"
+  by (smt (verit) convex_cone_iff scaleR_left.minus subspace_def subspace_neg)
+
 
 
 lemma convex_cone_hull_separate_nonempty:
@@ -735,38 +737,23 @@ lemma convex_cone_hull_empty [simp]: "convex_cone hull {} = {0}"
   by (metis convex_cone_hull_contains_0 convex_cone_singleton hull_redundant hull_same)
 
 lemma convex_cone_hull_separate:
-   "convex_cone hull S = insert 0 (conic hull (convex hull S))"
+  "convex_cone hull S = insert 0 (conic hull (convex hull S))"
   by (cases "S={}") (simp_all add: convex_cone_hull_separate_nonempty insert_absorb)
 
 lemma convex_cone_hull_convex_hull_nonempty:
-   "S \<noteq> {} \<Longrightarrow> convex_cone hull S = (\<Union>x \<in> convex hull S. \<Union>c\<in>{0..}. {c *\<^sub>R x})"
+  "S \<noteq> {} \<Longrightarrow> convex_cone hull S = (\<Union>x \<in> convex hull S. \<Union>c\<in>{0..}. {c *\<^sub>R x})"
   by (force simp: convex_cone_hull_separate_nonempty conic_hull_as_image)
 
 
 lemma convex_cone_hull_convex_hull:
-   "convex_cone hull S = insert 0 (\<Union>x \<in> convex hull S. \<Union>c\<in>{0..}. {c *\<^sub>R x})"
+  "convex_cone hull S = insert 0 (\<Union>x \<in> convex hull S. \<Union>c\<in>{0..}. {c *\<^sub>R x})"
   by (force simp: convex_cone_hull_separate conic_hull_as_image)
 
 lemma convex_cone_hull_linear_image:
-   "linear f \<Longrightarrow> convex_cone hull (f ` S) = image f (convex_cone hull S)"
+  "linear f \<Longrightarrow> convex_cone hull (f ` S) = image f (convex_cone hull S)"
   by (metis (no_types, lifting) conic_hull_linear_image convex_cone_hull_separate convex_hull_linear_image image_insert linear_0)
 
-lemma subspace_imp_convex_cone: "subspace S \<Longrightarrow> convex_cone S"
-  by (simp add: convex_cone_iff subspace_def)
-
-lemma convex_cone_span: "convex_cone(span S)"
-  by (simp add: subspace_imp_convex_cone)
-
-lemma convex_cone_negations:
-   "convex_cone S \<Longrightarrow> convex_cone (image uminus S)"
-  by (simp add: convex_cone_linear_image module_hom_uminus)
-
-lemma subspace_convex_cone_symmetric:
-   "subspace S \<longleftrightarrow> convex_cone S \<and> (\<forall>x \<in> S. -x \<in> S)"
-  by (smt (verit) convex_cone_iff scaleR_left.minus subspace_def subspace_neg)
-
-
-section \<open>Finitely generated cone is polyhedral, and hence closed\<close>
+subsection \<open>Finitely generated cone is polyhedral, and hence closed\<close>
 
 proposition polyhedron_convex_cone_hull:
   fixes S :: "'a::euclidean_space set"
@@ -781,8 +768,8 @@ next
   then have "polyhedron(convex hull (insert 0 S))"
     by (simp add: assms polyhedron_convex_hull)
   then obtain F a b where "finite F" 
-         and F: "convex hull (insert 0 S) = \<Inter> F" 
-         and ab: "\<And>h. h \<in> F \<Longrightarrow> a h \<noteq> 0 \<and> h = {x. a h \<bullet> x \<le> b h}"
+    and F: "convex hull (insert 0 S) = \<Inter> F" 
+    and ab: "\<And>h. h \<in> F \<Longrightarrow> a h \<noteq> 0 \<and> h = {x. a h \<bullet> x \<le> b h}"
     unfolding polyhedron_def by metis
   then have "F \<noteq> {}"
     by (metis bounded_convex_hull finite_imp_bounded Inf_empty assms finite_insert not_bounded_UNIV)
