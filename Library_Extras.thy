@@ -5,13 +5,21 @@ theory Library_Extras imports
   "HOL-Analysis.Polytope" 
 
 begin
+
 section \<open>Preliminaries\<close>
+
+lemma Inter_over_Union:
+  "\<Inter> {\<Union> (\<F> x) |x. x \<in> S} = \<Union> {\<Inter> (G ` S) |G. \<forall>x\<in>S. G x \<in> \<F> x}" 
+proof -
+  have "\<And>x. \<forall>s\<in>S. \<exists>X \<in> \<F> s. x \<in> X \<Longrightarrow> \<exists>G. (\<forall>x\<in>S. G x \<in> \<F> x) \<and> (\<forall>s\<in>S. x \<in> G s)"
+    by metis
+  then show ?thesis
+    by (auto simp flip: all_simps ex_simps)
+qed
 
 lemmas closure_Int_convex = convex_closure_inter_two
 
 lemmas span_not_UNIV_orthogonal = span_not_univ_orthogonal
-
-(*THIS IS A BETTER FORMULATION THAN THE ORIGINAL convex_closure_inter*)
 
 lemma convex_closure_rel_interior_Int:
   assumes "\<And>S. S\<in>\<F> \<Longrightarrow> convex (S :: 'n::euclidean_space set)"
@@ -819,7 +827,7 @@ next
         then obtain t where t: "\<And>h. h \<in> F \<Longrightarrow> 0 < t h \<and> (t h *\<^sub>R x) \<in> h" 
           by metis
         then have "Inf (t ` F) *\<^sub>R x /\<^sub>R Inf (t ` F) = x"
-          by (smt (verit) \<open>F \<noteq> {}\<close> \<open>finite F\<close> divideR_right finite_imageI finite_less_Inf_iff image_iff image_is_empty)
+          by (smt (verit) \<open>F \<noteq> {}\<close> \<open>finite F\<close> field_simps(58) finite_imageI finite_less_Inf_iff image_iff image_is_empty)
         moreover have "Inf (t ` F) *\<^sub>R x /\<^sub>R Inf (t ` F) \<in> convex_cone hull S"
         proof (rule conicD [OF conic_convex_cone_hull])
           have "Inf (t ` F) *\<^sub>R x \<in> \<Inter> F"

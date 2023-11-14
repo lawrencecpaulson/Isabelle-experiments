@@ -2,7 +2,6 @@
 \usepackage[T1]{fontenc}
 \usepackage{isabelle,isabellesym}
 \usepackage{amssymb}
-\usepackage{stmaryrd}
 
 % this should be the last package used
 \usepackage{pdfsetup}
@@ -14,23 +13,19 @@
 
 \begin{document}
 
-\title{Wetzel's Problem from THE BOOK}
+\title{Euler's Polynedron Formula}
 \author{Lawrence C. Paulson}
 \maketitle
 
 \begin{abstract}
-Let $F$ be a set of analytic functions on the complex plane such that, 
-for each $z\in\mathbb{C}$, the set $\{f(z) \mid f\in F\}$ is countable;
-must then $F$ itself be countable?
-The answer is yes if the Continuum Hypothesis is false, i.e.,
-if the cardinality of $\mathbb{R}$ exceeds $\aleph_1$.
-But if CH is true then such an $F$, of cardinality $\aleph_1$,
-can be constructed by transfinite recursion.
-
-The formal proof illustrates reasoning about complex 
-analysis (analytic and homomorphic functions) and set theory
-(transfinite cardinalities) in a single setting.
-The mathematical text comes from \emph{Proofs from THE BOOK}~\cite[pp.\thinspace137--8]{aigner-proofs}, by Aigner and Ziegler. 
+Euler stated in 1752 that every convex polyhedron satisfied the formula $V - E + F = 2$ 
+where $V$, $E$ and $F$ are the numbers of its vertices, edges, and faces. For three dimensions,
+the well-known proof involves removing one face and then flattening the remainder to form a planar graph,
+which then is iteratively transformed to leave a single triangle. The history of that proof is extensively
+discussed and elaborated by Imre Lakatos~\cite{lakatos}, leaving one finally wondering whether
+the theorem even holds. The formal proof provided here has been ported from HOL Light, 
+where it is credited to Lawrence~\cite{lawrence-short}. The proof generalises Euler's observation
+from solid polyhedra to convex polytopes of arbitrary dimension.
 \end{abstract}
 
 \newpage
@@ -38,7 +33,6 @@ The mathematical text comes from \emph{Proofs from THE BOOK}~\cite[pp.\thinspace
 
 \paragraph*{Acknowledgements}
 The author was supported by the ERC Advanced Grant ALEXANDRIA (Project 742178) funded by the European Research Council. 
-Thanks also to Manuel Eberl for advice on proving a function to be holomorphic.
 
 \newpage
 

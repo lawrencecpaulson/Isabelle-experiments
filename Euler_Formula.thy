@@ -1,7 +1,9 @@
-chapter \<open>Euler's Polyhedron Formula\<close>
+section \<open>Euler's Polyhedron Formula\<close>
 
 text \<open>One of the Famous 100 Theorems, ported from HOL Light\<close>
-text\<open> Formalization of Jim Lawrence's proof of Euler's relation.                \<close>
+text\<open>Cited source:  
+Lawrence, J. (1997). A Short Proof of Euler's Relation for Convex Polytopes. 
+\emph{Canadian Mathematical Bulletin}, \textbf{40}(4), 471--474.\<close>
 
 theory Euler_Formula
   imports "HOL-Analysis.Analysis" "Library_Extras" "Inclusion_Exclusion"
@@ -33,7 +35,7 @@ lemma hyperplane_equiv_Un:
    "hyperplane_equiv (A \<union> B) x y \<longleftrightarrow> hyperplane_equiv A x y \<and> hyperplane_equiv B x y"
   by (meson Un_iff hyperplane_equiv_def)
 
-section\<open> Cells of a hyperplane arrangement\<close>
+subsection\<open> Cells of a hyperplane arrangement\<close>
 
 definition hyperplane_cell :: "('a::real_inner \<times> real) set \<Rightarrow> 'a set \<Rightarrow> bool"
   where "hyperplane_cell \<equiv> \<lambda>A C. \<exists>x. C = Collect (hyperplane_equiv A x)"
@@ -221,7 +223,7 @@ lemma hyperplane_cell_Int:
    "\<lbrakk>hyperplane_cell A S; hyperplane_cell A T; S \<inter> T \<noteq> {}\<rbrakk> \<Longrightarrow> hyperplane_cell A (S \<inter> T)"
   by (metis hyperplane_cell_Un sup.idem)
 
-section\<open> A cell complex is considered to be a union of such cells\<close>
+subsection\<open> A cell complex is considered to be a union of such cells\<close>
 
 definition hyperplane_cellcomplex 
   where "hyperplane_cellcomplex A S \<equiv>
@@ -366,7 +368,7 @@ lemma cell_subset_cellcomplex:
   by (smt (verit) Union_iff disjnt_iff disjnt_subset1 disjoint_hyperplane_cells_eq hyperplane_cellcomplex_def subsetI)
 
 
-section\<open> Euler characteristic\<close>
+subsection\<open> Euler characteristic\<close>
 
 
 definition Euler_characteristic :: "('a::euclidean_space \<times> real) set \<Rightarrow> 'a set \<Rightarrow> int"
@@ -451,7 +453,7 @@ proof -
   finally show ?thesis .
 qed
 
-section\<open> Show that the characteristic is invariant w.r.t. hyperplane arrangement.  \<close>
+subsection\<open> Show that the characteristic is invariant w.r.t. hyperplane arrangement.  \<close>
 
 lemma hyperplane_cells_distinct_lemma:
    "{x. a \<bullet> x = b} \<inter> {x. a \<bullet> x < b} = {} \<and>
@@ -651,7 +653,7 @@ qed
 
 
 
-section\<open> Euler-type relation for full-dimensional proper polyhedral cones\<close>
+subsection\<open> Euler-type relation for full-dimensional proper polyhedral cones\<close>
 
 lemma Euler_polyhedral_cone:
   fixes S :: "'n::euclidean_space set"
@@ -1197,7 +1199,7 @@ qed
 
 
 
-section\<open>Euler-Poincare relation for special $(n-1)$-dimensional polytope \<close>
+subsection\<open>Euler-Poincare relation for special $(n-1)$-dimensional polytope \<close>
 
 lemma Euler_Poincare_lemma:
   fixes p :: "'n::euclidean_space set"
@@ -1575,7 +1577,7 @@ proof -
 qed
 
 
-section\<open>Now Euler-Poincare for a general full-dimensional polytope\<close>
+subsection\<open>Now Euler-Poincare for a general full-dimensional polytope\<close>
 
 theorem Euler_Poincare_full:
   fixes p :: "'n::euclidean_space set"
@@ -1623,8 +1625,7 @@ proof -
 qed
 
 
-text\<open> In particular the Euler relation in 3D\<close>
-
+text\<open>In particular, the Euler relation in 3 dimensions\<close>
 corollary Euler_relation:
   fixes p :: "'n::euclidean_space set"
   assumes "polytope p" "aff_dim p = 3" "DIM('n) = 3"
