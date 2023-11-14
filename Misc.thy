@@ -1,14 +1,63 @@
 section \<open>Misc experiments\<close>
 
 theory Misc imports
-  "HOL-Analysis.Analysis"
+  "HOL-Analysis.Analysis" "HOL-Decision_Procs.Approximation"
+ "HOL-ex.Sketch_and_Explore"
    
 begin
 
+lemma DD: "x>(0::real) \<Longrightarrow> y>0 \<Longrightarrow> x powr (ln y) = y powr (ln x)"
+  by (simp add: powr_def)
+
+lemma
+  fixes \<epsilon>::real
+  assumes "\<epsilon>>0" "k > 1"
+  shows "((1 + \<epsilon>) powr ((2/\<epsilon>) * ln k)) \<le> k^2"
+proof -
+  have "((1 + \<epsilon>) powr ((2/\<epsilon>) * ln k)) = (k powr ln(1 + \<epsilon>)) powr (2/\<epsilon>)"
+    by (smt (verit, del_insts) DD assms mult.commute powr_powr)
+  also have "\<dots> \<le> (k powr \<epsilon>) powr (2/\<epsilon>)"
+    using ln_add_one_self_le_self2 [of \<epsilon>] assms
+    by (auto intro!: powr_mono2) 
+  also have "\<dots> = (k^2)"
+    using assms powr_powr by auto
+  finally show ?thesis .
+qed
 
 
+lemma
+  fixes \<epsilon>::real
+  assumes "\<epsilon>>0" "k > 2"
+  shows "1 + 2 * ln k \<le> ((1 + \<epsilon>) powr ((2/\<epsilon>) * ln k))"
+proof -
+  have "1 + \<epsilon> powr k \<le> ((1 + \<epsilon>) powr k)"
+    apply (simp add: powr_def)
+    apply (auto simp: )
+    using assms(1) apply linarith
+
+    sorry
+  have "1 + \<epsilon> powr ((2/\<epsilon>) * ln k) \<le> ((1 + \<epsilon>) powr ((2/\<epsilon>) * ln k))"
+    sorry
+  have "((1 + \<epsilon>) powr ((2/\<epsilon>) * ln k)) = (k powr ln(1 + \<epsilon>)) powr (2/\<epsilon>)"
+    by (smt (verit, del_insts) DD assms mult.commute powr_powr)
+  also have "\<dots> \<le> (k powr \<epsilon>) powr (2/\<epsilon>)"
+    using ln_add_one_self_le_self2 [of \<epsilon>] assms
+    by (auto intro!: powr_mono2) 
+  also have "\<dots> = (k^2)"
+    using assms powr_powr by auto
+  finally show ?thesis .
+qed
 
 
+lemma 
+  defines "e::real \<equiv> exp 1" shows "2*e - 2 \<le> 8*(e-2)"
+  unfolding assms by (approximation 5)
+
+
+lemma 
+  fixes c::real
+  shows "c\<noteq>0 \<Longrightarrow> d\<noteq>0 \<Longrightarrow> a / (c^2+d^2) = b / (c^2+d^2) \<Longrightarrow> a=b"
+apply (simp add: )
 
 lemma cuberoot_irrational:
   defines "x \<equiv> root 3 2 + root 3 3"

@@ -1,11 +1,10 @@
 chapter AFP
 
-session Wetzels_Problem (AFP) = "HOL-Complex_Analysis" +
+session Diagonal (AFP) = Undirected_Graph_Theory +
   options [timeout = 300]
-  sessions 
-  	ZFC_in_HOL
+  sessions "HOL-Library"
   theories
-    Wetzels_Problem
+    Diagonal
   document_files
     "root.tex"
     "root.bib"
