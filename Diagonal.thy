@@ -14,6 +14,10 @@ lemma size_clique_all_edges: "size_clique p K E \<Longrightarrow> all_edges K \<
 definition Neighbours :: "'a set set \<Rightarrow> 'a \<Rightarrow> 'a set" where
   "Neighbours \<equiv> \<lambda>E x. {y. {x,y} \<in> E}"
 
+text \<open>this notion, mentioned on Page 3, is a little vague: "a graph on vertex set @{term"S \<union> T"} 
+that contains all edges incident to @{term"S"}"\<close>
+definition (in ulgraph) "book \<equiv> \<lambda>S T F. disjnt S T \<and> all_edges_between S S \<subseteq> F \<and> F \<subseteq> all_edges_between (S\<union>T) (S\<union>T)"
+
 locale Diagonal = fin_sgraph +   \<comment> \<open>finite simple graphs (no loops)\<close>
   fixes k::nat       \<comment> \<open>red limit\<close>
   fixes l::nat       \<comment> \<open>blue limit\<close>
@@ -44,8 +48,14 @@ lemma nontriv: "E \<noteq> {}"
 lemma kn0: "k > 0"
   using lk ln0 by auto
 
+definition all_uedges_between :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a set set" where
+  "all_uedges_between X Y \<equiv> {{x, y}| x y. x \<in> X \<and> y \<in> Y \<and> {x, y} \<in> E}"
+
+lemma all_uedges_between_iff: "all_uedges_between X Y = mk_edge ` all_edges_between X Y"
+  using all_edges_between_set all_uedges_between_def by presburger
+
 text \<open>for calculating the perimeter p\<close>
-definition "red_density X Y \<equiv> card (Red \<inter> mk_edge ` all_edges_between X Y) / (card X * card Y)"
+definition "red_density X Y \<equiv> card (Red \<inter> all_uedges_between X Y) / (card X * card Y)"
 
 lemma red_density_ge0: "red_density X Y \<ge> 0"
   by (auto simp: red_density_def)
@@ -53,10 +63,10 @@ lemma red_density_ge0: "red_density X Y \<ge> 0"
 lemma red_le_edge_density: "red_density X Y \<le> edge_density X Y"
 proof (cases "finite X \<and> finite Y")
   case True
-  then have "card (Red \<inter> mk_edge ` all_edges_between X Y) \<le> card (mk_edge ` all_edges_between X Y)"
-    by (simp add: card_mono finite_all_edges_between)
+  then have "card (Red \<inter> all_uedges_between X Y) \<le> card (all_uedges_between X Y)"
+    by (simp add: all_uedges_between_iff card_mono finite_all_edges_between')
   also have "... \<le> card (all_edges_between X Y)"
-    by (meson card_image_le finite_all_edges_between')
+    by (simp add: all_uedges_between_iff card_image_le finite_all_edges_between')
   finally show ?thesis
     by (simp add: red_density_def edge_density_def divide_right_mono)
 qed (auto simp: red_density_def edge_density_def)
@@ -108,3 +118,16 @@ lemma q_Suc_diff: "q(Suc h) - q h = epsk * (1 + epsk)^h / k"
 
 definition "alpha \<equiv> \<lambda>h. q h - q (h-1)"
 
+definition all_incident_edges :: "'a set \<Rightarrow> 'a set set" where
+    "all_incident_edges \<equiv> \<lambda>A. \<Union>v\<in>A. incident_edges v"
+
+definition "valid_state \<equiv> \<lambda>(X,Y,A,B). disjnt X Y \<and> disjnt X A \<and> disjnt X B \<and> disjnt Y A \<and> disjnt Y B \<and> disjnt A B
+             \<and> all_incident_edges A \<subseteq> Red \<and> all_uedges_between A X \<subseteq> Red \<and> all_uedges_between A Y \<subseteq> Red
+             \<and> all_incident_edges B \<subseteq> Blue \<and> all_uedges_between B X \<subseteq> Blue"
+
+definition "X_degree_reg \<equiv> \<lambda>X Y. {x \<in> X. card (Neighbours Red x \<inter> Y) \<ge> 
+                                   (let p = red_density X Y in p - epsk powr (-1/2) * alpha (height p)) * card Y}"
+
+definition "degree_reg \<equiv> \<lambda>(X,Y,A,B). (X_degree_reg X Y, Y, A, B)"
+
+datatype book = Degree_reg
