@@ -3,19 +3,55 @@ theory Diagonal imports
    
 begin
 
+class infinite =
+  assumes infinite_UNIV: "infinite (UNIV::'a set)"
+
+instance nat :: infinite
+  by (intro_classes) simp
+instance prod :: (infinite, type) infinite
+  by intro_classes (simp add: finite_prod infinite_UNIV)
+instance list :: (type) infinite
+  by intro_classes (simp add: infinite_UNIV_listI)
+
 lemma smaller_clique: "\<lbrakk>clique R E; R' \<subseteq> R\<rbrakk> \<Longrightarrow> clique R' E"
   by (auto simp: clique_def)
 
 lemma smaller_indep: "\<lbrakk>indep R E; R' \<subseteq> R\<rbrakk> \<Longrightarrow> indep R' E"
   by (auto simp: indep_def)
 
-text \<open>All complete graphs of a given cardinality are the same, but to avoid technical complications
-  it seems simpler to make the following definitions pointlessly polymorphic.\<close>
-
-text \<open>identifying Ramsey numbers (not the minimum) for a given time and pair of integers\<close>
+text \<open>identifying Ramsey numbers (not the minimum) for a given type and pair of integers\<close>
 definition is_Ramsey_number where
   "is_Ramsey_number \<equiv> \<lambda>U::'a itself. \<lambda>m n r. r \<ge> 1 \<and> (\<forall>V::'a set. \<forall>Red. finite V \<and> card V \<ge> r \<longrightarrow>
     (\<exists>R \<subseteq> V. card R = m \<and> clique R Red \<or> card R = n \<and> indep R Red))"
+
+text \<open>All complete graphs of a given cardinality are the same\<close>
+lemma 
+  assumes "is_Ramsey_number (U::'a::infinite itself) m n r"
+  shows "is_Ramsey_number (V::'b itself) m n r"
+  unfolding is_Ramsey_number_def
+  proof (intro conjI strip)
+  show "1 \<le> r"
+    by (meson assms is_Ramsey_number_def)
+next
+  fix V :: "'b set" and E :: "'b set set"
+  assume V: "finite V \<and> r \<le> card V"
+  obtain W::"'a set" where "finite W" and W: "card W = card V"
+    by (metis infinite_UNIV infinite_arbitrarily_large)
+  with V obtain f where f: "bij_betw f V W"
+    by (metis finite_same_card_bij)
+  define F where "F \<equiv> (\<lambda>e. f ` e) ` E"
+  obtain R where "R\<subseteq>W" and R: "card R = m \<and> clique R F \<or> card R = n \<and> indep R F"
+    using assms V W \<open>finite W\<close> unfolding is_Ramsey_number_def by metis
+  define S where "S \<equiv> inv_into V f ` R"
+  have "card S = card R"
+    by (metis S_def \<open>R \<subseteq> W\<close> f bij_betw_inv_into bij_betw_same_card bij_betw_subset)
+  moreover have "clique S E" if "clique R F"
+    sorry
+  moreover have "indep S E" if "indep R F"
+    sorry
+  ultimately show "\<exists>R. (R::'b set) \<subseteq> V \<and> (card R = m \<and> clique R E \<or> card R = n \<and> indep R E)"
+    by (metis R S_def \<open>R \<subseteq> W\<close> bij_betw_def bij_betw_inv_into f image_mono)
+qed
 
 lemma is_Ramsey_number_le:
   assumes "is_Ramsey_number U m n r" "m' \<le> m" "n' \<le> n"
@@ -139,14 +175,11 @@ lemma all_uedges_between_mono2:
 
 text \<open>this notion, mentioned on Page 3, is a little vague: "a graph on vertex set @{term"S \<union> T"} 
 that contains all edges incident to @{term"S"}"\<close>
-definition "book \<equiv> \<lambda>S T F. disjnt S T \<and> all_edges_between S S \<subseteq> F \<and> F \<subseteq> all_edges_between (S\<union>T) (S\<union>T)"
+definition "book \<equiv> \<lambda>S T F. disjnt S T \<and> all_edges_between S (S\<union>T) \<subseteq> F \<and> F \<subseteq> all_edges_between (S\<union>T) (S\<union>T)"
 
 end
 
-context fin_sgraph
-begin
-
-end
+section \<open>Locale for the parameters of the construction\<close>
 
 locale Diagonal = fin_sgraph +   \<comment> \<open>finite simple graphs (no loops)\<close>
   fixes k::nat       \<comment> \<open>red limit\<close>
@@ -256,6 +289,8 @@ definition "RB_state \<equiv> \<lambda>(X,Y,A,B). all_incident_edges A \<subsete
 
 definition "valid_state \<equiv> \<lambda>U. disjoint_state U \<and> RB_state U"
 
+subsection \<open>Degree regularisation\<close>
+
 definition "X_degree_reg \<equiv> \<lambda>X Y. {x \<in> X. card (Neighbours Red x \<inter> Y) \<ge> 
                                    (let p = red_density X Y in p - epsk powr (-1/2) * alpha (height p)) * card Y}"
 
@@ -274,5 +309,6 @@ lemma degree_reg_RB_state: "RB_state U \<Longrightarrow> RB_state (degree_reg U)
 lemma degree_reg_valid_state: "valid_state U \<Longrightarrow> valid_state (degree_reg U)"
   by (meson degree_reg_RB_state degree_reg_disjoint_state valid_state_def)
 
+subsection \<open>Big blue steps\<close>
 
 datatype book = Degree_reg
