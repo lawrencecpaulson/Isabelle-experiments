@@ -130,6 +130,12 @@ lemma indep_iff_clique: "indep V E \<longleftrightarrow> clique V (all_edges V -
 definition Neighbours :: "'a set set \<Rightarrow> 'a \<Rightarrow> 'a set" where
   "Neighbours \<equiv> \<lambda>E x. {y. {x,y} \<in> E}"
 
+lemma in_Neighbours_iff: "y \<in> Neighbours E x \<longleftrightarrow> {x,y} \<in> E"
+  by (simp add: Neighbours_def)
+
+lemma (in fin_sgraph) not_own_Neighbour: "E' \<subseteq> E \<Longrightarrow> x \<notin> Neighbours E' x"
+  by (force simp add: Neighbours_def singleton_not_edge)
+
 context ulgraph
 begin
 
@@ -172,6 +178,14 @@ lemma max_all_uedges_between:
   shows "card (all_uedges_between X Y) \<le> card X * card Y"
   by (meson assms card_all_uedges_betw_le max_all_edges_between order_trans)
 
+lemma all_uedges_between_insert1:
+  "all_uedges_between (insert v X) Y = {{v, y}| y. y \<in> Y \<and> {v, y} \<in> E} \<union> all_uedges_between X Y"
+  by (auto simp: all_uedges_between_def)
+
+lemma all_uedges_between_insert2:
+  "all_uedges_between X (insert v Y) = {{x, v}| x. x \<in> X \<and> {x, v} \<in> E} \<union> all_uedges_between X Y"
+  by (auto simp: all_uedges_between_def)
+
 lemma all_uedges_between_Un1:
   "all_uedges_between (X \<union> Y) Z = all_uedges_between X Z \<union> all_uedges_between Y Z"
   by (auto simp: all_uedges_between_def)
@@ -212,12 +226,11 @@ lemma book_empty [simp]: "book {} T F"
 lemma book_imp_disjnt: "book S T F \<Longrightarrow> disjnt S T"
   by (auto simp: book_def)
 
-lemma (in fin_sgraph) book_insert: "book (insert v S) T F \<longleftrightarrow> book S T F \<and> v \<notin> T \<and> all_uedges_between {v} (S \<union> T) \<subseteq> F"
-  apply (auto simp: book_def)
-  using all_uedges_between_def apply auto[1]
-  using all_uedges_between_def apply auto[1]
-  apply (simp add: all_uedges_between_def)
-  by (smt (verit, best) insert_is_Un mem_Collect_eq singleton_insert_inj_eq singleton_not_edge subset_iff sup_commute)
+declare (in sgraph) singleton_not_edge [simp]
+
+lemma (in fin_sgraph) book_insert: 
+  "book (insert v S) T F \<longleftrightarrow> book S T F \<and> v \<notin> T \<and> all_uedges_between {v} (S \<union> T) \<subseteq> F"
+  by (auto simp: book_def all_uedges_between_insert1 all_uedges_between_insert2 all_uedges_between_Un2 insert_commute subset_iff)
 
 end
 
@@ -258,6 +271,9 @@ lemma nontriv: "E \<noteq> {}"
 
 lemma kn0: "k > 0"
   using lk ln0 by auto
+
+lemma not_Red_Neighbour [simp]: "x \<notin> Neighbours Red x" and not_Blue_Neighbour [simp]: "x \<notin> Neighbours Blue x"
+  using Red_E Blue_E not_own_Neighbour by auto
 
 lemma Neighbours_Red_Blue: "x \<in> V \<Longrightarrow> Neighbours Red x = V - insert x (Neighbours Blue x)"
   apply (auto simp: Neighbours_def)
@@ -363,8 +379,9 @@ lemma
 
 subsection \<open>Degree regularisation\<close>
 
-definition "X_degree_reg \<equiv> \<lambda>X Y. {x \<in> X. card (Neighbours Red x \<inter> Y) \<ge> 
-                                   (let p = red_density X Y in p - epsk powr (-1/2) * alpha (height p)) * card Y}"
+definition "red_dense \<equiv> \<lambda>Y p x. card (Neighbours Red x \<inter> Y) \<ge> p - epsk powr (-1/2) * alpha (height p) * card Y"
+
+definition "X_degree_reg \<equiv>  \<lambda>X Y. {x \<in> X. red_dense Y (red_density X Y) x}"
 
 definition "degree_reg \<equiv> \<lambda>(X,Y,A,B). (X_degree_reg X Y, Y, A, B)"
 
@@ -429,6 +446,9 @@ lemma big_blue_RB_state: "\<lbrakk>big_blue U U'; RB_state U\<rbrakk> \<Longrigh
   apply (clarsimp simp add: good_blue_book_def book_def RB_state_def all_uedges_between_Un1 all_uedges_between_Un2 elim!: big_blue.cases)
   by (metis all_uedges_between_commute all_uedges_between_mono1 le_supI2 sup.orderE)
 
+lemma big_blue_RB_state: "\<lbrakk>big_blue U U'; valid_state U\<rbrakk> \<Longrightarrow> valid_state U'"
+  by (meson big_blue_RB_state big_blue_V_state big_blue_disjoint_state valid_state_def)
+
 subsection \<open>The central vertex\<close>
 
 definition central_vertex :: "'a set \<Rightarrow> 'a \<Rightarrow> bool" where
@@ -459,7 +479,110 @@ definition max_central_vx :: "'a set \<Rightarrow> 'a set \<Rightarrow> real" wh
 lemma central_vx_is_best: "\<lbrakk>central_vertex X x; V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> weight X Y x \<le> max_central_vx X Y"
   unfolding max_central_vx_def by (simp add: finite_central_vertex_set)
 
-lemma ex_best_central_vx: "\<lbrakk>\<not> termination_condition X Y; \<not> many_bluish X; V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> \<exists>x. central_vertex X x \<and> weight X Y x = max_central_vx X Y"
+lemma ex_best_central_vx: 
+  "\<lbrakk>\<not> termination_condition X Y; \<not> many_bluish X; V_state(X,Y,A,B)\<rbrakk> 
+  \<Longrightarrow> \<exists>x. central_vertex X x \<and> weight X Y x = max_central_vx X Y"
   unfolding max_central_vx_def
   by (metis empty_iff ex_central_vertex finite_central_vertex_set mem_Collect_eq obtains_MAX)
 
+text \<open>it's necessary to make a specific choice; a relational treatment might allow different vertices 
+  to be chosen, making a nonsense of the choice between steps 4 and 5\<close>
+definition "choose_central_vx \<equiv> \<lambda>(X,Y,A,B). @x. central_vertex X x \<and> weight X Y x = max_central_vx X Y"
+
+lemma choose_central_vx_works: 
+  "\<lbrakk>\<not> termination_condition X Y; \<not> many_bluish X; V_state(X,Y,A,B)\<rbrakk> 
+  \<Longrightarrow> central_vertex X (choose_central_vx (X,Y,A,B)) \<and> weight X Y (choose_central_vx (X,Y,A,B)) = max_central_vx X Y"
+  unfolding choose_central_vx_def
+  using someI_ex [OF ex_best_central_vx] by force
+
+lemma choose_central_vx_X: 
+  "\<lbrakk>\<not> termination_condition X Y; \<not> many_bluish X; V_state(X,Y,A,B)\<rbrakk>  \<Longrightarrow> choose_central_vx (X,Y,A,B) \<in> X"
+  using central_vertex_def choose_central_vx_works by presburger
+
+subsection \<open>Red step\<close>
+
+definition "reddish \<equiv> \<lambda>X Y p x. red_density (Neighbours Red x \<inter> X) (Neighbours Red x \<inter> Y) \<ge> p - alpha (height p)"
+
+inductive red_step
+  where "\<lbrakk>reddish X Y (red_density X Y) x; x = choose_central_vx (X,Y,A,B)\<rbrakk> 
+         \<Longrightarrow> red_step (X,Y,A,B) (Neighbours Red x \<inter> X, Neighbours Red x \<inter> Y, insert x A, B)"
+
+lemma red_step_V_state: 
+  assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "V_state (X,Y,A,B)"
+  shows "V_state U'"
+proof -
+  have "choose_central_vx (X, Y, A, B) \<in> V"
+    using assms choose_central_vx_X  by (simp add: V_state_def subset_eq)
+  with assms show ?thesis
+    by (auto simp add: V_state_def elim!: red_step.cases)
+qed
+
+lemma red_step_disjoint_state:
+  assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
+  shows "disjoint_state U'"
+proof -
+  have "choose_central_vx (X, Y, A, B) \<in> X"
+    using assms choose_central_vx_X by (simp add: V_state_def)
+  with assms show ?thesis
+    by (auto simp add: disjoint_state_def disjnt_iff not_own_Neighbour elim!: red_step.cases)
+qed
+
+lemma red_step_RB_state: 
+  assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "V_state (X,Y,A,B)" "RB_state (X,Y,A,B)"
+  shows "RB_state U'"
+proof -
+  have "choose_central_vx (X, Y, A, B) \<in> X"
+    using assms choose_central_vx_X by (simp add: V_state_def)
+  with assms show ?thesis
+    apply (auto simp: RB_state_def all_uedges_between_insert1 all_uedges_between_insert2 all_uedges_between_Un2 in_Neighbours_iff elim!: red_step.cases)
+    apply (simp add: all_uedges_betw_I subsetD)
+    apply (simp add: all_uedges_betw_I insert_commute subsetD)
+    apply blast
+    apply (meson Int_lower2 all_uedges_between_mono2 subsetD)
+    apply (meson Int_lower2 subset_eq ulgraph.all_uedges_between_mono2 ulgraph_axioms)
+    by (metis Int_lower2 Un_iff all_uedges_between_Un2 sup.order_iff)
+qed
+
+subsection \<open>Density-boost step\<close>
+
+inductive density_boost
+  where "\<lbrakk>\<not> reddish X Y (red_density X Y) x; x = choose_central_vx (X,Y,A,B)\<rbrakk> 
+         \<Longrightarrow> density_boost (X,Y,A,B) (Neighbours Blue x \<inter> X, Neighbours Red x \<inter> Y, A, insert x B)"
+
+
+lemma density_boost_V_state: 
+  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "V_state (X,Y,A,B)"
+  shows "V_state U'"
+proof -
+  have "choose_central_vx (X, Y, A, B) \<in> V"
+    using assms choose_central_vx_X  by (simp add: V_state_def subset_eq)
+  with assms show ?thesis
+    by (auto simp add: V_state_def elim!: density_boost.cases)
+qed
+
+lemma density_boost_disjoint_state:
+  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
+  shows "disjoint_state U'"
+proof -
+  have "choose_central_vx (X, Y, A, B) \<in> X"
+    using assms choose_central_vx_X by (simp add: V_state_def)
+  with assms show ?thesis
+    by (auto simp add: disjoint_state_def disjnt_iff not_own_Neighbour elim!: density_boost.cases)
+qed
+
+lemma density_boost_RB_state: 
+  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "V_state (X,Y,A,B)" "RB_state (X,Y,A,B)"
+  shows "RB_state U'"
+proof -
+  have "choose_central_vx (X, Y, A, B) \<in> X"
+    using assms choose_central_vx_X by (simp add: V_state_def)
+  with assms show ?thesis
+    apply (auto simp: RB_state_def all_uedges_between_insert1 all_uedges_between_insert2 all_uedges_between_Un2 in_Neighbours_iff elim!: density_boost.cases)
+    apply (meson Int_lower2 all_uedges_between_mono2 subsetD)
+    apply (metis Int_lower1 all_uedges_between_mono2 in_mono inf_commute)
+    using all_uedges_betw_I apply blast
+    apply (simp add: all_uedges_betw_I insert_commute subset_eq)
+    apply blast
+    using all_uedges_between_mono2 inf.cobounded2 by blast
+  
+qed
