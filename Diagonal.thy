@@ -60,12 +60,15 @@ next
       and E: "{inv_into V f x, inv_into V f y} \<in> E"
     then have "x \<noteq> y"
       by blast
-    then have **: "\<not> (\<exists>e\<in>E \<inter> Pow V. {x,y} = f ` e)"
+    then have *: "\<not> (\<exists>e\<in>E \<inter> Pow V. {x,y} = f ` e)"
       by (metis F_def image_eqI indep_def that xy)
-    with E f have "{x,y} \<in> F"
-      apply (clarsimp simp: Bex_def bij_betw_def)
-      by (smt (verit, best) \<open>R \<subseteq> W\<close> empty_subsetI f_inv_into_f image_empty image_insert in_mono insert_subset inv_into_into xy)
-    with ** show False
+    have "inv_into V f x \<in> V \<and> inv_into V f y \<in> V"
+      by (metis \<open>R \<subseteq> W\<close> bij_betw_imp_surj_on f inv_into_into subsetD xy)
+    then have "{x, y} \<noteq> f ` {inv_into V f x, inv_into V f y}"
+      using * E by blast
+    with f \<open>R \<subseteq> W\<close> xy have "{x,y} \<in> F"
+      by (auto simp: bij_betw_def doubleton_eq_iff)
+    with * show False
       by (simp add: F_def image_iff)
   qed
   ultimately show "\<exists>R. (R::'b set) \<subseteq> V \<and> (card R = m \<and> clique R E \<or> card R = n \<and> indep R E)"
@@ -247,11 +250,23 @@ lemma Red_E: "Red \<subset> E" and Blue_E: "Blue \<subset> E"
 lemma disjnt_Red_Blue: "disjnt Red Blue"
   by (metis Red_not_Blue pairwise_insert part_RB partition_on_def singletonI)
 
+lemma Red_Blue_all: "Red \<union> Blue = all_edges V"
+  by (metis (no_types, lifting) Sup_empty Sup_insert complete part_RB partition_on_def sup_bot.right_neutral)
+
 lemma nontriv: "E \<noteq> {}"
   using Red_E bot.extremum_strict by blast
 
 lemma kn0: "k > 0"
   using lk ln0 by auto
+
+lemma Neighbours_Red_Blue: "x \<in> V \<Longrightarrow> Neighbours Red x = V - insert x (Neighbours Blue x)"
+  apply (auto simp: Neighbours_def)
+  apply (metis Red_E dual_order.order_iff_strict insert_subset subset_iff wellformed)
+  using Red_E singleton_not_edge apply auto[1]
+   apply (meson disjnt_Red_Blue disjnt_iff)
+  using Red_Blue_all
+  apply (auto simp: all_edges_def)
+  done
 
 text \<open>for calculating the perimeter p\<close>
 definition "red_density X Y \<equiv> card (Red \<inter> all_uedges_between X Y) / (card X * card Y)"
@@ -327,13 +342,24 @@ definition all_incident_edges :: "'a set \<Rightarrow> 'a set set" where
 lemma all_incident_edges_Un [simp]: "all_incident_edges (A\<union>B) = all_incident_edges A \<union> all_incident_edges B"
   by (auto simp: all_incident_edges_def)
 
+subsection \<open>State invariants\<close>
+
+definition "V_state \<equiv> \<lambda>(X,Y,A,B). X\<subseteq>V \<and> Y\<subseteq>V \<and> A\<subseteq>V \<and> B\<subseteq>V"
+
 definition "disjoint_state \<equiv> \<lambda>(X,Y,A,B). disjnt X Y \<and> disjnt X A \<and> disjnt X B \<and> disjnt Y A \<and> disjnt Y B \<and> disjnt A B"
 
 text \<open>previously had all edges incident to A, B\<close>
 definition "RB_state \<equiv> \<lambda>(X,Y,A,B). all_uedges_between A A \<subseteq> Red \<and> all_uedges_between A (X \<union> Y) \<subseteq> Red
              \<and> all_uedges_between B B \<subseteq> Blue \<and> all_uedges_between B X \<subseteq> Blue"
 
-definition "valid_state \<equiv> \<lambda>U. disjoint_state U \<and> RB_state U"
+definition "valid_state \<equiv> \<lambda>U. V_state U \<and> disjoint_state U \<and> RB_state U"
+
+definition "termination_condition \<equiv> \<lambda>X Y. card X \<le> RN (TYPE('a)) k (nat \<lceil>l powr (3/4)\<rceil>) \<or> red_density X Y \<le> 1/k"
+
+lemma 
+  assumes "V_state(X,Y,A,B)" 
+  shows finX: "finite X" and finY: "finite Y" and finA: "finite A" and finB: "finite B"
+  using V_state_def assms finV finite_subset by auto
 
 subsection \<open>Degree regularisation\<close>
 
@@ -345,6 +371,9 @@ definition "degree_reg \<equiv> \<lambda>(X,Y,A,B). (X_degree_reg X Y, Y, A, B)"
 lemma X_degree_reg_subset: "X_degree_reg X Y \<subseteq> X"
   by (auto simp: X_degree_reg_def)
 
+lemma degree_reg_V_state: "V_state U \<Longrightarrow> V_state (degree_reg U)"
+  by (auto simp add: degree_reg_def X_degree_reg_def V_state_def)
+
 lemma degree_reg_disjoint_state: "disjoint_state U \<Longrightarrow> disjoint_state (degree_reg U)"
   by (auto simp add: degree_reg_def X_degree_reg_def disjoint_state_def disjnt_iff)
 
@@ -353,15 +382,15 @@ lemma degree_reg_RB_state: "RB_state U \<Longrightarrow> RB_state (degree_reg U)
   by (meson X_degree_reg_subset all_uedges_between_mono2 dual_order.trans)
 
 lemma degree_reg_valid_state: "valid_state U \<Longrightarrow> valid_state (degree_reg U)"
-  by (meson degree_reg_RB_state degree_reg_disjoint_state valid_state_def)
+  by (simp add: degree_reg_RB_state degree_reg_V_state degree_reg_disjoint_state valid_state_def)
 
 subsection \<open>Big blue steps\<close>
 
-definition bluish :: "'a \<Rightarrow> 'a set \<Rightarrow> bool" where
-  "bluish \<equiv> \<lambda>x X. card (Neighbours Blue x \<inter> X) \<ge> \<mu> * card X"
+definition bluish :: "'a set \<Rightarrow> 'a \<Rightarrow> bool" where
+  "bluish \<equiv> \<lambda>X x. card (Neighbours Blue x \<inter> X) \<ge> \<mu> * card X"
 
 definition many_bluish :: "'a set \<Rightarrow> bool" where
-  "many_bluish \<equiv> \<lambda>X. card {x\<in>X. bluish x X} \<ge> RN (TYPE('a)) k (nat \<lceil>l powr (2/3)\<rceil>)"
+  "many_bluish \<equiv> \<lambda>X. card {x\<in>X. bluish X x} \<ge> RN (TYPE('a)) k (nat \<lceil>l powr (2/3)\<rceil>)"
 
 definition "good_blue_book \<equiv> \<lambda>X::'a set. \<lambda>(S,T). book S T Blue \<and> S\<subseteq>X \<and> T\<subseteq>X \<and> card T \<ge> (\<mu> ^ card S) * card X / 2"
 
@@ -371,22 +400,26 @@ lemma ex_good_blue_book: "\<exists>S T. good_blue_book X (S,T)"
   apply (simp add: good_blue_book_def)
   done
 
-lemma bounded_good_blue_book: "\<lbrakk>good_blue_book X (S,T); finite X\<rbrakk> \<Longrightarrow> card S \<le> card X"
-  by (simp add: card_mono good_blue_book_def)
+lemma bounded_good_blue_book: "\<lbrakk>good_blue_book X (S,T); V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> card S \<le> card X"
+  by (simp add: card_mono finX good_blue_book_def)
 
-definition "best_blue_book \<equiv> \<lambda>X. GREATEST s. \<exists>S T. good_blue_book X (S,T) \<and> s = card S"
+definition best_blue_book_card :: "'a set \<Rightarrow> nat" where
+  "best_blue_book_card \<equiv> \<lambda>X. GREATEST s. \<exists>S T. good_blue_book X (S,T) \<and> s = card S"
 
-lemma best_blue_book_is_best: "\<lbrakk>good_blue_book X (S,T); finite X\<rbrakk> \<Longrightarrow> card S \<le> best_blue_book X"
-  unfolding best_blue_book_def
+lemma best_blue_book_is_best: "\<lbrakk>good_blue_book X (S,T); V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> card S \<le> best_blue_book_card X"
+  unfolding best_blue_book_card_def
   by (smt (verit) Greatest_le_nat bounded_good_blue_book)
 
-lemma ex_best_blue_book: "finite X \<Longrightarrow> \<exists>S T. good_blue_book X (S,T) \<and> card S = best_blue_book X"
-  unfolding best_blue_book_def
-  by (smt (verit, ccfv_threshold) GreatestI_nat bounded_good_blue_book ex_good_blue_book)
+lemma ex_best_blue_book: "V_state(X,Y,A,B) \<Longrightarrow> \<exists>S T. good_blue_book X (S,T) \<and> card S = best_blue_book_card X"
+  unfolding best_blue_book_card_def
+  by (smt (verit, del_insts) GreatestI_ex_nat bounded_good_blue_book ex_good_blue_book)
 
 text \<open>expressing the complicated preconditions inductively\<close>
 inductive big_blue
-  where "\<lbrakk>many_bluish X; good_blue_book X (S,T); card S = best_blue_book X\<rbrakk> \<Longrightarrow> big_blue (X,Y,A,B) (T, Y, A, B\<union>S)"
+  where "\<lbrakk>many_bluish X; good_blue_book X (S,T); card S = best_blue_book_card X\<rbrakk> \<Longrightarrow> big_blue (X,Y,A,B) (T, Y, A, B\<union>S)"
+
+lemma big_blue_V_state: "\<lbrakk>big_blue U U'; V_state U\<rbrakk> \<Longrightarrow> V_state U'"
+  by (force simp add: good_blue_book_def V_state_def elim!: big_blue.cases)
 
 lemma big_blue_disjoint_state: "\<lbrakk>big_blue U U'; disjoint_state U\<rbrakk> \<Longrightarrow> disjoint_state U'"
   apply (clarsimp simp add: good_blue_book_def disjoint_state_def elim!: big_blue.cases)
@@ -396,6 +429,37 @@ lemma big_blue_RB_state: "\<lbrakk>big_blue U U'; RB_state U\<rbrakk> \<Longrigh
   apply (clarsimp simp add: good_blue_book_def book_def RB_state_def all_uedges_between_Un1 all_uedges_between_Un2 elim!: big_blue.cases)
   by (metis all_uedges_between_commute all_uedges_between_mono1 le_supI2 sup.orderE)
 
+subsection \<open>The central vertex\<close>
 
+definition central_vertex :: "'a set \<Rightarrow> 'a \<Rightarrow> bool" where
+  "central_vertex \<equiv> \<lambda>X x. x \<in> X \<and> card (Neighbours Blue x \<inter> X) \<le> \<mu> * card X"
 
-datatype book = Degree_reg
+lemma ex_central_vertex:
+  assumes "\<not> termination_condition X Y" "\<not> many_bluish X"
+  shows "\<exists>x. central_vertex X x"
+proof -
+  have *: "real l powr (2/3) \<le> real l powr (3/4)"
+    using ln0 powr_mono by force
+  then have "card {x \<in> X. bluish X x} < card X"
+    using assms RN_mono
+    unfolding termination_condition_def many_bluish_def not_le
+    by (smt (verit, ccfv_SIG) linorder_not_le nat_ceiling_le_eq of_nat_le_iff)
+  then obtain x where "x \<in> X" "\<not> bluish X x"
+    by (metis (mono_tags, lifting) mem_Collect_eq nat_neq_iff subsetI subset_antisym)
+  then show ?thesis
+    by (meson bluish_def central_vertex_def linorder_linear)
+qed
+
+lemma finite_central_vertex_set: "V_state(X,Y,A,B) \<Longrightarrow> finite {x. central_vertex X x}"
+  by (simp add: central_vertex_def finX)
+
+definition max_central_vx :: "'a set \<Rightarrow> 'a set \<Rightarrow> real" where
+  "max_central_vx \<equiv> \<lambda>X Y. Max (weight X Y ` {x. central_vertex X x})"
+
+lemma central_vx_is_best: "\<lbrakk>central_vertex X x; V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> weight X Y x \<le> max_central_vx X Y"
+  unfolding max_central_vx_def by (simp add: finite_central_vertex_set)
+
+lemma ex_best_central_vx: "\<lbrakk>\<not> termination_condition X Y; \<not> many_bluish X; V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> \<exists>x. central_vertex X x \<and> weight X Y x = max_central_vx X Y"
+  unfolding max_central_vx_def
+  by (metis empty_iff ex_central_vertex finite_central_vertex_set mem_Collect_eq obtains_MAX)
+
