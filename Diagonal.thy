@@ -39,16 +39,35 @@ next
     by (metis infinite_UNIV infinite_arbitrarily_large)
   with V obtain f where f: "bij_betw f V W"
     by (metis finite_same_card_bij)
-  define F where "F \<equiv> (\<lambda>e. f ` e) ` E"
+  define F where "F \<equiv> (\<lambda>e. f ` e) ` (E \<inter> Pow V)"
   obtain R where "R\<subseteq>W" and R: "card R = m \<and> clique R F \<or> card R = n \<and> indep R F"
     using assms V W \<open>finite W\<close> unfolding is_Ramsey_number_def by metis
   define S where "S \<equiv> inv_into V f ` R"
+  have eq_iff: "\<forall>v\<in>R. \<forall>w\<in>R. inv_into V f v = inv_into V f w \<longleftrightarrow> v=w"
+    by (metis \<open>R \<subseteq> W\<close> bij_betw_inv_into_right f subset_iff)
+  have *: "\<And>v w x. \<lbrakk>{v, w} = f ` x; x \<subseteq> V\<rbrakk> \<Longrightarrow> {inv_into V f v, inv_into V f w} = x"
+    by (metis bij_betw_def f image_empty image_insert inv_into_image_cancel)
   have "card S = card R"
     by (metis S_def \<open>R \<subseteq> W\<close> f bij_betw_inv_into bij_betw_same_card bij_betw_subset)
   moreover have "clique S E" if "clique R F"
-    sorry
+    using that * by (force simp: S_def clique_def image_iff eq_iff F_def)
   moreover have "indep S E" if "indep R F"
-    sorry
+    unfolding S_def indep_def
+  proof clarify
+    fix x y
+    assume xy: "x \<in> R" "y \<in> R"
+      and "inv_into V f x \<noteq> inv_into V f y"
+      and E: "{inv_into V f x, inv_into V f y} \<in> E"
+    then have "x \<noteq> y"
+      by blast
+    then have **: "\<not> (\<exists>e\<in>E \<inter> Pow V. {x,y} = f ` e)"
+      by (metis F_def image_eqI indep_def that xy)
+    with E f have "{x,y} \<in> F"
+      apply (clarsimp simp: Bex_def bij_betw_def)
+      by (smt (verit, best) \<open>R \<subseteq> W\<close> empty_subsetI f_inv_into_f image_empty image_insert in_mono insert_subset inv_into_into xy)
+    with ** show False
+      by (simp add: F_def image_iff)
+  qed
   ultimately show "\<exists>R. (R::'b set) \<subseteq> V \<and> (card R = m \<and> clique R E \<or> card R = n \<and> indep R E)"
     by (metis R S_def \<open>R \<subseteq> W\<close> bij_betw_def bij_betw_inv_into f image_mono)
 qed
@@ -115,6 +134,12 @@ text \<open>The set of \emph{undirected} edges between two sets\<close>
 definition all_uedges_between :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a set set" where
   "all_uedges_between X Y \<equiv> {{x, y}| x y. x \<in> X \<and> y \<in> Y \<and> {x, y} \<in> E}"
 
+lemma all_uedges_between_commute1: "all_uedges_between X Y \<subseteq> all_uedges_between Y X"
+  by (smt (verit, del_insts) Collect_mono all_uedges_between_def insert_commute)
+
+lemma all_uedges_between_commute: "all_uedges_between X Y = all_uedges_between Y X"
+  by (simp add: all_uedges_between_commute1 subset_antisym)
+
 lemma all_uedges_between_iff_mk_edge: "all_uedges_between X Y = mk_edge ` all_edges_between X Y"
   using all_edges_between_set all_uedges_between_def by presburger
 
@@ -175,7 +200,21 @@ lemma all_uedges_between_mono2:
 
 text \<open>this notion, mentioned on Page 3, is a little vague: "a graph on vertex set @{term"S \<union> T"} 
 that contains all edges incident to @{term"S"}"\<close>
-definition "book \<equiv> \<lambda>S T F. disjnt S T \<and> all_edges_between S (S\<union>T) \<subseteq> F \<and> F \<subseteq> all_edges_between (S\<union>T) (S\<union>T)"
+definition book :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a set set \<Rightarrow> bool" where
+  "book \<equiv> \<lambda>S T F. disjnt S T \<and> all_uedges_between S (S\<union>T) \<subseteq> F"
+
+lemma book_empty [simp]: "book {} T F"
+  by (auto simp: book_def)
+
+lemma book_imp_disjnt: "book S T F \<Longrightarrow> disjnt S T"
+  by (auto simp: book_def)
+
+lemma (in fin_sgraph) book_insert: "book (insert v S) T F \<longleftrightarrow> book S T F \<and> v \<notin> T \<and> all_uedges_between {v} (S \<union> T) \<subseteq> F"
+  apply (auto simp: book_def)
+  using all_uedges_between_def apply auto[1]
+  using all_uedges_between_def apply auto[1]
+  apply (simp add: all_uedges_between_def)
+  by (smt (verit, best) insert_is_Un mem_Collect_eq singleton_insert_inj_eq singleton_not_edge subset_iff sup_commute)
 
 end
 
@@ -191,7 +230,10 @@ locale Diagonal = fin_sgraph +   \<comment> \<open>finite simple graphs (no loop
   assumes part_RB: "partition_on E {Red,Blue}"
   assumes no_Red_clique: "\<not> (\<exists>K. size_clique k K Red)"
   assumes no_Blue_clique: "\<not> (\<exists>K. size_clique l K Blue)"
+  \<comment> \<open>the following are local to the program and possibly require their own locale\<close>
   fixes X0 :: "'a set" and Y0 :: "'a set"    \<comment> \<open>initial values\<close>
+  fixes \<mu>::real
+  assumes "0 < \<mu>" "\<mu> < 1"
 begin
 
 abbreviation "nV \<equiv> card V"
@@ -282,10 +324,14 @@ definition "alpha \<equiv> \<lambda>h. q h - q (h-1)"
 definition all_incident_edges :: "'a set \<Rightarrow> 'a set set" where
     "all_incident_edges \<equiv> \<lambda>A. \<Union>v\<in>A. incident_edges v"
 
+lemma all_incident_edges_Un [simp]: "all_incident_edges (A\<union>B) = all_incident_edges A \<union> all_incident_edges B"
+  by (auto simp: all_incident_edges_def)
+
 definition "disjoint_state \<equiv> \<lambda>(X,Y,A,B). disjnt X Y \<and> disjnt X A \<and> disjnt X B \<and> disjnt Y A \<and> disjnt Y B \<and> disjnt A B"
 
-definition "RB_state \<equiv> \<lambda>(X,Y,A,B). all_incident_edges A \<subseteq> Red \<and> all_uedges_between A (X \<union> Y) \<subseteq> Red
-             \<and> all_incident_edges B \<subseteq> Blue \<and> all_uedges_between B X \<subseteq> Blue"
+text \<open>previously had all edges incident to A, B\<close>
+definition "RB_state \<equiv> \<lambda>(X,Y,A,B). all_uedges_between A A \<subseteq> Red \<and> all_uedges_between A (X \<union> Y) \<subseteq> Red
+             \<and> all_uedges_between B B \<subseteq> Blue \<and> all_uedges_between B X \<subseteq> Blue"
 
 definition "valid_state \<equiv> \<lambda>U. disjoint_state U \<and> RB_state U"
 
@@ -310,5 +356,46 @@ lemma degree_reg_valid_state: "valid_state U \<Longrightarrow> valid_state (degr
   by (meson degree_reg_RB_state degree_reg_disjoint_state valid_state_def)
 
 subsection \<open>Big blue steps\<close>
+
+definition bluish :: "'a \<Rightarrow> 'a set \<Rightarrow> bool" where
+  "bluish \<equiv> \<lambda>x X. card (Neighbours Blue x \<inter> X) \<ge> \<mu> * card X"
+
+definition many_bluish :: "'a set \<Rightarrow> bool" where
+  "many_bluish \<equiv> \<lambda>X. card {x\<in>X. bluish x X} \<ge> RN (TYPE('a)) k (nat \<lceil>l powr (2/3)\<rceil>)"
+
+definition "good_blue_book \<equiv> \<lambda>X::'a set. \<lambda>(S,T). book S T Blue \<and> S\<subseteq>X \<and> T\<subseteq>X \<and> card T \<ge> (\<mu> ^ card S) * card X / 2"
+
+lemma ex_good_blue_book: "\<exists>S T. good_blue_book X (S,T)"
+  apply (rule_tac x="{}" in exI)
+  apply (rule_tac x="X" in exI)
+  apply (simp add: good_blue_book_def)
+  done
+
+lemma bounded_good_blue_book: "\<lbrakk>good_blue_book X (S,T); finite X\<rbrakk> \<Longrightarrow> card S \<le> card X"
+  by (simp add: card_mono good_blue_book_def)
+
+definition "best_blue_book \<equiv> \<lambda>X. GREATEST s. \<exists>S T. good_blue_book X (S,T) \<and> s = card S"
+
+lemma best_blue_book_is_best: "\<lbrakk>good_blue_book X (S,T); finite X\<rbrakk> \<Longrightarrow> card S \<le> best_blue_book X"
+  unfolding best_blue_book_def
+  by (smt (verit) Greatest_le_nat bounded_good_blue_book)
+
+lemma ex_best_blue_book: "finite X \<Longrightarrow> \<exists>S T. good_blue_book X (S,T) \<and> card S = best_blue_book X"
+  unfolding best_blue_book_def
+  by (smt (verit, ccfv_threshold) GreatestI_nat bounded_good_blue_book ex_good_blue_book)
+
+text \<open>expressing the complicated preconditions inductively\<close>
+inductive big_blue
+  where "\<lbrakk>many_bluish X; good_blue_book X (S,T); card S = best_blue_book X\<rbrakk> \<Longrightarrow> big_blue (X,Y,A,B) (T, Y, A, B\<union>S)"
+
+lemma big_blue_disjoint_state: "\<lbrakk>big_blue U U'; disjoint_state U\<rbrakk> \<Longrightarrow> disjoint_state U'"
+  apply (clarsimp simp add: good_blue_book_def disjoint_state_def elim!: big_blue.cases)
+  by (metis book_imp_disjnt disjnt_subset1 disjnt_sym)
+
+lemma big_blue_RB_state: "\<lbrakk>big_blue U U'; RB_state U\<rbrakk> \<Longrightarrow> RB_state U'"
+  apply (clarsimp simp add: good_blue_book_def book_def RB_state_def all_uedges_between_Un1 all_uedges_between_Un2 elim!: big_blue.cases)
+  by (metis all_uedges_between_commute all_uedges_between_mono1 le_supI2 sup.orderE)
+
+
 
 datatype book = Degree_reg
