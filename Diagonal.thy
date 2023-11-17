@@ -431,6 +431,15 @@ lemma ex_best_blue_book: "V_state(X,Y,A,B) \<Longrightarrow> \<exists>S T. good_
   unfolding best_blue_book_card_def
   by (smt (verit, del_insts) GreatestI_ex_nat bounded_good_blue_book ex_good_blue_book)
 
+definition "choose_blue_book \<equiv> \<lambda>(X,Y,A,B). @(S,T). good_blue_book X (S,T) \<and> card S = best_blue_book_card X"
+
+lemma choose_blue_book_works: 
+  "\<lbrakk>V_state(X,Y,A,B); (S,T) = choose_blue_book(X,Y,A,B)\<rbrakk> 
+  \<Longrightarrow> good_blue_book X (S,T) \<and> card S = best_blue_book_card X"
+  unfolding choose_blue_book_def
+  using someI_ex [OF ex_best_blue_book]
+  by (metis (mono_tags, lifting) case_prod_conv someI_ex)
+
 text \<open>expressing the complicated preconditions inductively\<close>
 inductive big_blue
   where "\<lbrakk>many_bluish X; good_blue_book X (S,T); card S = best_blue_book_card X\<rbrakk> \<Longrightarrow> big_blue (X,Y,A,B) (T, Y, A, B\<union>S)"
@@ -446,7 +455,7 @@ lemma big_blue_RB_state: "\<lbrakk>big_blue U U'; RB_state U\<rbrakk> \<Longrigh
   apply (clarsimp simp add: good_blue_book_def book_def RB_state_def all_uedges_between_Un1 all_uedges_between_Un2 elim!: big_blue.cases)
   by (metis all_uedges_between_commute all_uedges_between_mono1 le_supI2 sup.orderE)
 
-lemma big_blue_RB_state: "\<lbrakk>big_blue U U'; valid_state U\<rbrakk> \<Longrightarrow> valid_state U'"
+lemma big_blue_valid_state: "\<lbrakk>big_blue U U'; valid_state U\<rbrakk> \<Longrightarrow> valid_state U'"
   by (meson big_blue_RB_state big_blue_V_state big_blue_disjoint_state valid_state_def)
 
 subsection \<open>The central vertex\<close>
@@ -543,6 +552,11 @@ proof -
     by (metis Int_lower2 Un_iff all_uedges_between_Un2 sup.order_iff)
 qed
 
+lemma red_step_valid_state: 
+  assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "valid_state (X,Y,A,B)"
+  shows "valid_state U'"
+  by (meson assms red_step_RB_state red_step_V_state red_step_disjoint_state valid_state_def)
+
 subsection \<open>Density-boost step\<close>
 
 inductive density_boost
@@ -584,5 +598,33 @@ proof -
     apply (simp add: all_uedges_betw_I insert_commute subset_eq)
     apply blast
     using all_uedges_between_mono2 inf.cobounded2 by blast
-  
+qed
+
+lemma density_boost_valid_state: 
+  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "valid_state (X,Y,A,B)"
+  shows "valid_state U'"
+  by (meson assms density_boost_RB_state density_boost_V_state density_boost_disjoint_state valid_state_def)
+
+subsection \<open>Steps 2–5 as a function\<close>
+
+definition 
+  "next_state \<equiv> \<lambda>(X,Y,A,B). 
+       if many_bluish X then let (S,T) = choose_blue_book(X,Y,A,B) in (T, Y, A, B\<union>S) 
+       else let x = choose_central_vx (X,Y,A,B) in
+            if reddish X Y (red_density X Y) x then (Neighbours Red x \<inter> X, Neighbours Red x \<inter> Y, insert x A, B)
+            else (Neighbours Blue x \<inter> X, Neighbours Red x \<inter> Y, A, insert x B)"
+
+lemma 
+  assumes "valid_state (X,Y,A,B)" "\<not> termination_condition X Y"
+  shows "valid_state (next_state (X,Y,A,B))"
+proof (cases "many_bluish X")
+  case True
+  then have "big_blue (X,Y,A,B) (next_state (X,Y,A,B))"
+    apply (simp add: next_state_def split: prod.split)
+    by (metis assms(1) big_blue.intros choose_blue_book_works valid_state_def)
+  then show ?thesis
+    using assms(1) big_blue_valid_state by blast
+next
+  case False
+  then show ?thesis sorry
 qed
