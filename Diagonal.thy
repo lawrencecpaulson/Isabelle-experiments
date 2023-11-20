@@ -3,6 +3,56 @@ theory Diagonal imports
    
 begin
 
+
+lemma
+  fixes \<sigma>::real and m b::nat  
+  assumes \<sigma>: "0<\<sigma>" "\<sigma><1" and b: "real b \<le> \<sigma> * m / 2"
+  shows  "(\<sigma>*m) gchoose b \<in> {\<sigma>^b * (real m gchoose b) * exp (- (real b ^ 2) / (\<sigma>*m)) .. \<sigma>^b * (m gchoose b)}"
+proof (cases "m=0 \<or> b=0")
+  case True
+  then show ?thesis
+    using True assms by auto
+next
+  case False
+  then have "m>0" and "b>0"
+    by auto
+  have "\<sigma> * m / 2 \<le> real m"
+    using \<open>0 < m\<close> \<sigma> by auto
+  with b \<sigma> have bm: "real b < real m"
+    by (smt (verit, best) False divide_eq_1_iff mult_cancel_right2 of_nat_eq_0_iff times_divide_eq_left)
+
+  have "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = (\<Prod>i<b. (\<sigma>*m - i) / (real m - real i))"
+    using b by (simp add: gbinomial_prod_rev prod_dividef atLeast0LessThan)
+  also have "... = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
+    using bm
+  proof (induction b)
+    case 0
+    then show ?case
+      by simp
+  next
+    case (Suc b)
+    then have "b<m"
+      by linarith
+    with \<sigma> show ?case 
+      by (simp add: Suc field_simps)
+  qed
+  also have "... = \<sigma>^b * (\<Prod>i<b. (\<sigma> * real m - real i) / (\<sigma> * (real m - real i)))"
+    using \<sigma> bm by (simp add: field_split_simps)
+  also have "... \<le> \<sigma>^b * (m gchoose b)"
+
+    apply (intro mult_left_mono)
+      unfolding gbinomial_prod_rev
+       apply (simp add: atLeast0LessThan)
+
+       apply (simp add: algebra_simps)
+      using Suc
+
+      unfolding gbinomial_prod_rev
+     apply (rule mult_left_mono)
+
+      apply (simp add: gbinomial_prod_rev)
+
+
 class infinite =
   assumes infinite_UNIV: "infinite (UNIV::'a set)"
 
@@ -179,11 +229,11 @@ lemma max_all_uedges_between:
   by (meson assms card_all_uedges_betw_le max_all_edges_between order_trans)
 
 lemma all_uedges_between_insert1:
-  "all_uedges_between (insert v X) Y = {{v, y}| y. y \<in> Y \<and> {v, y} \<in> E} \<union> all_uedges_between X Y"
+  "all_uedges_between (insert v X) Y = ({{v, y}| y. y \<in> Y} \<inter> E) \<union> all_uedges_between X Y"
   by (auto simp: all_uedges_between_def)
 
 lemma all_uedges_between_insert2:
-  "all_uedges_between X (insert v Y) = {{x, v}| x. x \<in> X \<and> {x, v} \<in> E} \<union> all_uedges_between X Y"
+  "all_uedges_between X (insert v Y) = ({{x, v}| x. x \<in> X} \<inter> E) \<union> all_uedges_between X Y"
   by (auto simp: all_uedges_between_def)
 
 lemma all_uedges_between_Un1:
@@ -236,6 +286,8 @@ end
 
 section \<open>Locale for the parameters of the construction\<close>
 
+type_synonym 'a config = "'a set \<times> 'a set \<times> 'a set \<times> 'a set"
+
 locale Diagonal = fin_sgraph +   \<comment> \<open>finite simple graphs (no loops)\<close>
   fixes k::nat       \<comment> \<open>red limit\<close>
   fixes l::nat       \<comment> \<open>blue limit\<close>
@@ -248,6 +300,7 @@ locale Diagonal = fin_sgraph +   \<comment> \<open>finite simple graphs (no loop
   assumes no_Blue_clique: "\<not> (\<exists>K. size_clique l K Blue)"
   \<comment> \<open>the following are local to the program and possibly require their own locale\<close>
   fixes X0 :: "'a set" and Y0 :: "'a set"    \<comment> \<open>initial values\<close>
+  assumes XY0: "disjnt X0 Y0" "X0 \<subseteq> V" "Y0 \<subseteq> V"
   fixes \<mu>::real
   assumes "0 < \<mu>" "\<mu> < 1"
 begin
@@ -366,7 +419,7 @@ definition "disjoint_state \<equiv> \<lambda>(X,Y,A,B). disjnt X Y \<and> disjnt
 
 text \<open>previously had all edges incident to A, B\<close>
 definition "RB_state \<equiv> \<lambda>(X,Y,A,B). all_uedges_between A A \<subseteq> Red \<and> all_uedges_between A (X \<union> Y) \<subseteq> Red
-             \<and> all_uedges_between B B \<subseteq> Blue \<and> all_uedges_between B X \<subseteq> Blue"
+             \<and> all_uedges_between B (B \<union> X) \<subseteq> Blue"
 
 definition "valid_state \<equiv> \<lambda>U. V_state U \<and> disjoint_state U \<and> RB_state U"
 
@@ -417,6 +470,12 @@ lemma ex_good_blue_book: "\<exists>S T. good_blue_book X (S,T)"
   apply (simp add: good_blue_book_def)
   done
 
+(*THIS IS NOT THE WAY TO PROVE TERMINATION*)
+lemma  "\<lbrakk>valid_state(X,Y,A,B); \<not> termination_condition X Y; many_bluish X\<rbrakk> \<Longrightarrow> \<exists>S T. good_blue_book X (S,T) \<and> S \<noteq> {}"
+  apply (auto simp: good_blue_book_def book_def valid_state_def V_state_def RB_state_def)
+  apply (auto simp: many_bluish_def termination_condition_def not_le)
+  sorry
+
 lemma bounded_good_blue_book: "\<lbrakk>good_blue_book X (S,T); V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> card S \<le> card X"
   by (simp add: card_mono finX good_blue_book_def)
 
@@ -439,6 +498,12 @@ lemma choose_blue_book_works:
   unfolding choose_blue_book_def
   using someI_ex [OF ex_best_blue_book]
   by (metis (mono_tags, lifting) case_prod_conv someI_ex)
+
+
+lemma choose_blue_book_subset: 
+  "\<lbrakk>V_state(X,Y,A,B); (S,T) = choose_blue_book(X,Y,A,B)\<rbrakk> \<Longrightarrow> T \<subseteq> X"
+  using choose_blue_book_works good_blue_book_def by fastforce
+
 
 text \<open>expressing the complicated preconditions inductively\<close>
 inductive big_blue
@@ -540,16 +605,22 @@ lemma red_step_RB_state:
   assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "V_state (X,Y,A,B)" "RB_state (X,Y,A,B)"
   shows "RB_state U'"
 proof -
-  have "choose_central_vx (X, Y, A, B) \<in> X"
-    using assms choose_central_vx_X by (simp add: V_state_def)
-  with assms show ?thesis
-    apply (auto simp: RB_state_def all_uedges_between_insert1 all_uedges_between_insert2 all_uedges_between_Un2 in_Neighbours_iff elim!: red_step.cases)
-    apply (simp add: all_uedges_betw_I subsetD)
-    apply (simp add: all_uedges_betw_I insert_commute subsetD)
-    apply blast
-    apply (meson Int_lower2 all_uedges_between_mono2 subsetD)
-    apply (meson Int_lower2 subset_eq ulgraph.all_uedges_between_mono2 ulgraph_axioms)
-    by (metis Int_lower2 Un_iff all_uedges_between_Un2 sup.order_iff)
+  define x where "x \<equiv> choose_central_vx (X, Y, A, B)"
+  have "x \<in> X"
+    using assms choose_central_vx_X by (simp add: x_def V_state_def)
+  have A: "all_uedges_between (insert x A) (insert x A) \<subseteq> Red"
+    if "all_uedges_between A A \<subseteq> Red" "all_uedges_between A (X \<union> Y) \<subseteq> Red"
+    using that \<open>x \<in> X\<close> all_uedges_between_commute 
+    by (auto simp: all_uedges_between_insert2 all_uedges_between_Un2 intro!: all_uedges_betw_I)
+  have B1: "all_uedges_between (insert x A) (Neighbours Red x \<inter> X) \<subseteq> Red"
+    if "all_uedges_between A X \<subseteq> Red"
+    using that \<open>x \<in> X\<close> by (force simp add:  all_uedges_between_def in_Neighbours_iff)
+  have B2: "all_uedges_between (insert x A) (Neighbours Red x \<inter> Y) \<subseteq> Red"
+    if "all_uedges_between A Y \<subseteq> Red"
+    using that \<open>x \<in> X\<close> by (force simp add:  all_uedges_between_def in_Neighbours_iff)
+  from assms A B1 B2 show ?thesis
+    apply (clarsimp simp: RB_state_def simp flip: x_def   elim!: red_step.cases)
+    by (metis Int_Un_eq(2) Un_subset_iff all_uedges_between_Un2)
 qed
 
 lemma red_step_valid_state: 
@@ -585,36 +656,44 @@ proof -
 qed
 
 lemma density_boost_RB_state: 
-  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "V_state (X,Y,A,B)" "RB_state (X,Y,A,B)"
+  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "V_state (X,Y,A,B)" 
+    and rb: "RB_state (X,Y,A,B)"
   shows "RB_state U'"
 proof -
-  have "choose_central_vx (X, Y, A, B) \<in> X"
-    using assms choose_central_vx_X by (simp add: V_state_def)
-  with assms show ?thesis
-    apply (auto simp: RB_state_def all_uedges_between_insert1 all_uedges_between_insert2 all_uedges_between_Un2 in_Neighbours_iff elim!: density_boost.cases)
-    apply (meson Int_lower2 all_uedges_between_mono2 subsetD)
-    apply (metis Int_lower1 all_uedges_between_mono2 in_mono inf_commute)
-    using all_uedges_betw_I apply blast
-    apply (simp add: all_uedges_betw_I insert_commute subset_eq)
-    apply blast
-    using all_uedges_between_mono2 inf.cobounded2 by blast
+  define x where "x \<equiv> choose_central_vx (X, Y, A, B)"
+  have "x \<in> X"
+    using assms choose_central_vx_X by (simp add: x_def V_state_def)
+  have A: "all_uedges_between A (Neighbours Blue x \<inter> X \<union> Neighbours Red x \<inter> Y) \<subseteq> Red"
+    if "all_uedges_between A (X \<union> Y) \<subseteq> Red"
+    using that by (metis Int_Un_eq(4) Un_subset_iff all_uedges_between_Un2)
+  have B: "all_uedges_between (insert x B) (insert x B) \<subseteq> Blue"
+    if "all_uedges_between B (B \<union> X) \<subseteq> Blue"
+    using that \<open>x \<in> X\<close> all_uedges_between_commute 
+    by (auto simp: all_uedges_between_insert1 all_uedges_between_insert2 all_uedges_between_Un2 intro!: all_uedges_betw_I)
+  have C: "all_uedges_between (insert x B) (Neighbours Blue x \<inter> X) \<subseteq> Blue"
+    if "all_uedges_between B (B \<union> X) \<subseteq> Blue"
+    using \<open>x \<in> X\<close> that  
+    apply (auto simp: in_Neighbours_iff all_uedges_between_insert1 all_uedges_between_insert2 all_uedges_between_Un2 intro!: all_uedges_betw_I)
+    by (metis Int_lower2 all_uedges_between_mono2 subset_iff)
+  from assms A B C show ?thesis
+    by (auto simp add: RB_state_def all_uedges_between_Un2 x_def [symmetric]  elim!: density_boost.cases)
 qed
 
-lemma density_boost_valid_state: 
+lemma density_boost_valid_state:
   assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "valid_state (X,Y,A,B)"
   shows "valid_state U'"
   by (meson assms density_boost_RB_state density_boost_V_state density_boost_disjoint_state valid_state_def)
 
 subsection \<open>Steps 2–5 as a function\<close>
 
-definition 
+definition next_state :: "'a config \<Rightarrow> 'a config" where
   "next_state \<equiv> \<lambda>(X,Y,A,B). 
        if many_bluish X then let (S,T) = choose_blue_book(X,Y,A,B) in (T, Y, A, B\<union>S) 
        else let x = choose_central_vx (X,Y,A,B) in
             if reddish X Y (red_density X Y) x then (Neighbours Red x \<inter> X, Neighbours Red x \<inter> Y, insert x A, B)
             else (Neighbours Blue x \<inter> X, Neighbours Red x \<inter> Y, A, insert x B)"
 
-lemma 
+lemma next_state_valid:
   assumes "valid_state (X,Y,A,B)" "\<not> termination_condition X Y"
   shows "valid_state (next_state (X,Y,A,B))"
 proof (cases "many_bluish X")
@@ -625,6 +704,90 @@ proof (cases "many_bluish X")
   then show ?thesis
     using assms(1) big_blue_valid_state by blast
 next
-  case False
-  then show ?thesis sorry
+  case non_bluish: False
+  define x where "x = choose_central_vx (X,Y,A,B)"
+  show ?thesis
+  proof (cases "reddish X Y (red_density X Y) x")
+    case True
+    with non_bluish have "red_step (X,Y,A,B) (next_state (X,Y,A,B))"
+      by (simp add: next_state_def Let_def x_def red_step.intros split: prod.split)
+    then show ?thesis
+      using assms non_bluish red_step_valid_state by blast      
+  next
+    case False
+    with non_bluish have "density_boost (X,Y,A,B) (next_state (X,Y,A,B))"
+      by (simp add: next_state_def Let_def x_def density_boost.intros split: prod.split)
+    then show ?thesis
+      using assms density_boost_valid_state non_bluish by blast
+  qed
 qed
+
+primrec stepper :: "nat \<Rightarrow> 'a config" where
+  "stepper 0 = (X0,Y0,{},{})"
+| "stepper (Suc n) = 
+     (let (X,Y,A,B) = stepper n in 
+      if termination_condition X Y then (X,Y,A,B) 
+      else if even n then next_state (X,Y,A,B) else (degree_reg (X,Y,A,B)))"
+
+lemma degree_reg_subset:
+  assumes "degree_reg (X,Y,A,B) = (X',Y',A',B')" 
+  shows "X' \<subseteq> X \<and> Y' \<subseteq> Y"
+  using assms by (auto simp: degree_reg_def X_degree_reg_def)
+
+lemma next_state_subset:
+  assumes "next_state (X,Y,A,B) = (X',Y',A',B')" "valid_state (X,Y,A,B)"
+  shows "X' \<subseteq> X \<and> Y' \<subseteq> Y"
+  using assms choose_blue_book_subset
+  by (force simp add: next_state_def valid_state_def Let_def split: if_split_asm prod.split_asm)
+
+lemma valid_state0: "valid_state (X0, Y0, {}, {})"
+  using XY0 by (simp add: valid_state_def V_state_def disjoint_state_def RB_state_def)
+
+lemma valid_state_stepper [simp]: "valid_state (stepper n)"
+proof (induction n)
+  case 0
+  then show ?case
+    by (simp add: stepper_def valid_state0)
+next
+  case (Suc n)
+  then show ?case
+    by (force simp add: next_state_valid degree_reg_valid_state split: prod.split)
+qed
+
+definition "Xseq \<equiv> (\<lambda>(X,Y,A,B). X) o stepper"
+definition "Yseq \<equiv> (\<lambda>(X,Y,A,B). Y) o stepper"
+definition "pseq \<equiv> \<lambda>n. red_density (Xseq n) (Yseq n)"
+
+lemma Xseq_Suc_subset: "Xseq (Suc n) \<subseteq> Xseq n"
+  apply (simp add: Xseq_def split: if_split_asm prod.split)
+  by (metis degree_reg_subset next_state_subset valid_state_stepper)
+
+lemma Xseq_antimono: "m \<le> n \<Longrightarrow>Xseq n \<subseteq> Xseq m"
+  by (simp add: Xseq_Suc_subset lift_Suc_antimono_le)
+
+lemma Yseq_Suc_subset: "Yseq (Suc n) \<subseteq> Yseq n"
+  apply (simp add: Yseq_def split: if_split_asm prod.split)
+  by (metis degree_reg_subset next_state_subset valid_state_stepper)
+
+lemma Yseq_antimono: "m \<le> n \<Longrightarrow>Yseq n \<subseteq> Yseq m"
+  by (simp add: Yseq_Suc_subset lift_Suc_antimono_le)
+
+lemma pseq_0: "p0 = pseq 0"
+  by (simp add: p0_def pseq_def Xseq_def Yseq_def)
+
+datatype stepkind = red_step | bblue_step | dboost_step | dreg_step
+
+definition next_state_kind :: "'a config \<Rightarrow> stepkind" where
+  "next_state_kind \<equiv> \<lambda>(X,Y,A,B). 
+       if many_bluish X then bblue_step 
+       else let x = choose_central_vx (X,Y,A,B) in
+            if reddish X Y (red_density X Y) x then red_step
+            else dboost_step"
+
+definition stepper_kind :: "nat \<Rightarrow> stepkind" where
+  "stepper_kind n = 
+     (let (X,Y,A,B) = stepper n in 
+      if termination_condition X Y then dreg_step 
+      else if even n then next_state_kind (X,Y,A,B) else dboost_step)"
+
+
