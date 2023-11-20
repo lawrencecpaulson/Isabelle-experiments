@@ -4,7 +4,19 @@ theory Diagonal imports
 begin
 
 
-lemma
+lemma gbinomial_is_prod: "(a gchoose k) = (\<Prod>i<k. (a - of_nat i) / (1 + of_nat i))"
+  unfolding gbinomial_prod_rev
+proof (induction k)
+  case 0
+  then show ?case by simp
+next
+  case (Suc k)
+  show ?case
+    by (simp add: divide_simps flip: Suc)
+qed
+
+text \<open>from appendix D, page 55\<close>
+lemma Fact_D1_73:
   fixes \<sigma>::real and m b::nat  
   assumes \<sigma>: "0<\<sigma>" "\<sigma><1" and b: "real b \<le> \<sigma> * m / 2"
   shows  "(\<sigma>*m) gchoose b \<in> {\<sigma>^b * (real m gchoose b) * exp (- (real b ^ 2) / (\<sigma>*m)) .. \<sigma>^b * (m gchoose b)}"
@@ -18,9 +30,8 @@ next
     by auto
   have "\<sigma> * m / 2 \<le> real m"
     using \<open>0 < m\<close> \<sigma> by auto
-  with b \<sigma> have bm: "real b < real m"
-    by (smt (verit, best) False divide_eq_1_iff mult_cancel_right2 of_nat_eq_0_iff times_divide_eq_left)
-
+  with b \<sigma> False have bm: "real b < real m"
+    by (smt (verit, best) divide_eq_1_iff mult_cancel_right2 of_nat_eq_0_iff times_divide_eq_left)
   have "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = (\<Prod>i<b. (\<sigma>*m - i) / (real m - real i))"
     using b by (simp add: gbinomial_prod_rev prod_dividef atLeast0LessThan)
   also have "... = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
@@ -36,21 +47,70 @@ next
     with \<sigma> show ?case 
       by (simp add: Suc field_simps)
   qed
-  also have "... = \<sigma>^b * (\<Prod>i<b. (\<sigma> * real m - real i) / (\<sigma> * (real m - real i)))"
-    using \<sigma> bm by (simp add: field_split_simps)
-  also have "... \<le> \<sigma>^b * (m gchoose b)"
+  finally have EQ: "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))" .
+  also have "... \<le> \<sigma> ^ b * 1"
+    using \<sigma> b bm
+    apply (intro mult_left_mono prod_le_1 conjI)
+      apply (simp add: field_split_simps)
+     apply auto
+    done
+  finally have upper: "(\<sigma>*m) gchoose b \<le> \<sigma>^b * (m gchoose b)"
+    using \<sigma> bm binomial_eq_0_iff
+    by (metis binomial_gbinomial divide_inverse less_le_not_le mult.commute mult_cancel_right1 of_nat_0_less_iff of_nat_less_iff pos_divide_le_eq zero_less_binomial)
 
-    apply (intro mult_left_mono)
-      unfolding gbinomial_prod_rev
-       apply (simp add: atLeast0LessThan)
+  have 4: "exp (-2 * real i / (\<sigma>*m)) \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))" if "i<b" for i
+  proof -
+    have *: "1-x \<ge> exp (-2 * x)" if "0 \<le>x" "x \<le> 1/2" for x::real
+    proof -
+      have "exp (-2 * x) = inverse (exp (2*x))"
+        by (simp add: exp_minus)
+      also have "... \<le> inverse (1 + 2*x)"
+        using exp_ge_add_one_self[of "2*x"] that by auto
+      also have "... \<le> 1-x"
+        using that by (simp add: mult_left_le field_simps)
+      finally show ?thesis .
+    qed
+    have "exp (-2 * real i / (\<sigma>*m)) = exp (-2 * (i / (\<sigma>*m)))"
+      by simp
+    also have "\<dots> \<le> 1 - i/(\<sigma> * m)"
+    proof (intro *)
+      show "0 \<le> real i / (\<sigma> * real m)"
+        using \<sigma> by auto
+      show "real i / (\<sigma> * real m) \<le> 1/2"
+        using b that by auto
+    qed
+    also have "... \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))"
+      using \<sigma> b that 
+      apply (simp add: field_split_simps)
+      using bm by linarith
+    finally show ?thesis .
+  qed
+  have 1: "sum real {..<b} \<le> real b ^ 2 / 2"
+    by (induction b) (auto simp: power2_eq_square algebra_simps)
+  with \<sigma> have "exp (- (real b ^ 2) / (\<sigma>*m)) \<le> exp (- (2 * (\<Sum>i<b. i) / (\<sigma>*m)))"
+    by (simp add: mult_less_0_iff divide_simps)
+  also have "... = exp (\<Sum>i<b. -2 * real i / (\<sigma>*m))"
+    by (simp add: sum_negf sum_distrib_left sum_divide_distrib)
+  also have "... = (\<Prod>i<b. exp (-2 * real i / (\<sigma>*m)))"
+    using exp_sum by blast
+  also have "... \<le> (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
+    using 4 by (force simp add: intro: prod_mono)
+  finally have "exp (- (real b)\<^sup>2 / (\<sigma> * real m)) \<le> (\<Prod>i<b. 1 - (1 - \<sigma>) * real i / (\<sigma> * (real m - real i)))" .
+  with EQ have "\<sigma>^b * exp (- (real b ^ 2) / (\<sigma>*m)) \<le> ((\<sigma>*m) gchoose b) * inverse (real m gchoose b)"
+    by (simp add: assms(1))
+  with \<sigma> bm have lower: "\<sigma>^b * (real m gchoose b) * exp (- (real b ^ 2) / (\<sigma>*m)) \<le> (\<sigma>*m) gchoose b"
+    by (simp add: field_split_simps flip: binomial_gbinomial)
+  with upper show ?thesis 
+    by simp
+qed
 
-       apply (simp add: algebra_simps)
-      using Suc
+text \<open>additional part\<close>
+lemma Fact_D1_75:
+  fixes \<sigma>::real and m b::nat  
+  assumes \<sigma>: "0<\<sigma>" "\<sigma><1" and b: "real b \<le> \<sigma> * m / 2" and b': "b \<le> m/7" and \<sigma>': "\<sigma> \<ge> 7/15"
+  shows  "(\<sigma>*m) gchoose b \<ge> exp (- (3 * real b ^ 2) / (4*m)) * \<sigma>^b * (m gchoose b)"
+proof -
 
-      unfolding gbinomial_prod_rev
-     apply (rule mult_left_mono)
-
-      apply (simp add: gbinomial_prod_rev)
 
 
 class infinite =
