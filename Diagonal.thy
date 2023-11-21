@@ -1,9 +1,11 @@
 theory Diagonal imports
-  "HOL-Library.Disjoint_Sets" "HOL-Library.Ramsey" "Undirected_Graph_Theory.Undirected_Graph_Basics" "HOL-ex.Sketch_and_Explore"
+  "HOL-Library.Disjoint_Sets" "HOL-Library.Ramsey" "Undirected_Graph_Theory.Undirected_Graph_Basics" 
+  "Special_Function_Bounds.Exp_Bounds"
+  "HOL-ex.Sketch_and_Explore"
    
 begin
 
-
+text \<open>not actually used but possibly interesting\<close>
 lemma gbinomial_is_prod: "(a gchoose k) = (\<Prod>i<k. (a - of_nat i) / (1 + of_nat i))"
   unfolding gbinomial_prod_rev
 proof (induction k)
@@ -15,25 +17,18 @@ next
     by (simp add: divide_simps flip: Suc)
 qed
 
+section \<open>Appendix D\<close>
+
+subsection \<open>Fact D1\<close>
+
 text \<open>from appendix D, page 55\<close>
-lemma Fact_D1_73:
+lemma Fact_D1_73_aux:
   fixes \<sigma>::real and m b::nat  
-  assumes \<sigma>: "0<\<sigma>" "\<sigma><1" and b: "real b \<le> \<sigma> * m / 2"
-  shows  "(\<sigma>*m) gchoose b \<in> {\<sigma>^b * (real m gchoose b) * exp (- (real b ^ 2) / (\<sigma>*m)) .. \<sigma>^b * (m gchoose b)}"
-proof (cases "m=0 \<or> b=0")
-  case True
-  then show ?thesis
-    using True assms by auto
-next
-  case False
-  then have "m>0" and "b>0"
-    by auto
-  have "\<sigma> * m / 2 \<le> real m"
-    using \<open>0 < m\<close> \<sigma> by auto
-  with b \<sigma> False have bm: "real b < real m"
-    by (smt (verit, best) divide_eq_1_iff mult_cancel_right2 of_nat_eq_0_iff times_divide_eq_left)
+  assumes \<sigma>: "0<\<sigma>" and bm: "real b < real m"
+  shows  "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
+proof -
   have "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = (\<Prod>i<b. (\<sigma>*m - i) / (real m - real i))"
-    using b by (simp add: gbinomial_prod_rev prod_dividef atLeast0LessThan)
+    using bm by (simp add: gbinomial_prod_rev prod_dividef atLeast0LessThan)
   also have "... = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
     using bm
   proof (induction b)
@@ -47,25 +42,43 @@ next
     with \<sigma> show ?case 
       by (simp add: Suc field_simps)
   qed
-  finally have EQ: "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))" .
-  also have "... \<le> \<sigma> ^ b * 1"
-    using \<sigma> b bm
-    apply (intro mult_left_mono prod_le_1 conjI)
-      apply (simp add: field_split_simps)
-     apply auto
-    done
-  finally have upper: "(\<sigma>*m) gchoose b \<le> \<sigma>^b * (m gchoose b)"
-    using \<sigma> bm binomial_eq_0_iff
-    by (metis binomial_gbinomial divide_inverse less_le_not_le mult.commute mult_cancel_right1 of_nat_0_less_iff of_nat_less_iff pos_divide_le_eq zero_less_binomial)
+  finally show ?thesis .
+qed
 
-  have 4: "exp (-2 * real i / (\<sigma>*m)) \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))" if "i<b" for i
+lemma Fact_D1_73:
+  fixes \<sigma>::real and m b::nat  
+  assumes \<sigma>: "0<\<sigma>" "\<sigma><1" and b: "real b \<le> \<sigma> * m / 2"
+  shows  "(\<sigma>*m) gchoose b \<in> {\<sigma>^b * (real m gchoose b) * exp (- (real b ^ 2) / (\<sigma>*m)) .. \<sigma>^b * (m gchoose b)}"
+proof (cases "m=0 \<or> b=0")
+  case True
+  then show ?thesis
+    using True assms by auto
+next
+  case False
+  then have "\<sigma> * m / 2 \<le> real m"
+    using \<sigma> by auto
+  with b \<sigma> False have bm: "real b < real m"
+    by (smt (verit, best) divide_eq_1_iff mult_cancel_right2 of_nat_eq_0_iff times_divide_eq_left)
+  have nonz: "m gchoose b \<noteq> 0"
+    by (metis binomial_gbinomial bm less_le_not_le of_nat_eq_0_iff of_nat_le_iff zero_less_binomial_iff)
+  have EQ: "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))" 
+    using Fact_D1_73_aux \<open>0<\<sigma>\<close> bm by blast
+  also have "... \<le> \<sigma> ^ b * 1"
+  proof (intro mult_left_mono prod_le_1 conjI)
+    fix i assume "i \<in> {..<b}"
+    with b \<sigma> bm show "0 \<le> 1 - (1 - \<sigma>) * i / (\<sigma> * (real m - i))"
+      by (simp add: field_split_simps)
+  qed (use \<sigma> bm in auto)
+  finally have upper: "(\<sigma>*m) gchoose b \<le> \<sigma>^b * (m gchoose b)"
+    using nonz by (simp add: divide_simps flip: binomial_gbinomial)
+  have *: "exp (-2 * real i / (\<sigma>*m)) \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))" if "i<b" for i
   proof -
-    have *: "1-x \<ge> exp (-2 * x)" if "0 \<le>x" "x \<le> 1/2" for x::real
+    have exp_le: "1-x \<ge> exp (-2 * x)" if "0 \<le>x" "x \<le> 1/2" for x::real
     proof -
       have "exp (-2 * x) = inverse (exp (2*x))"
         by (simp add: exp_minus)
       also have "... \<le> inverse (1 + 2*x)"
-        using exp_ge_add_one_self[of "2*x"] that by auto
+        using exp_ge_add_one_self that by auto
       also have "... \<le> 1-x"
         using that by (simp add: mult_left_le field_simps)
       finally show ?thesis .
@@ -73,7 +86,7 @@ next
     have "exp (-2 * real i / (\<sigma>*m)) = exp (-2 * (i / (\<sigma>*m)))"
       by simp
     also have "\<dots> \<le> 1 - i/(\<sigma> * m)"
-    proof (intro *)
+    proof (intro exp_le)
       show "0 \<le> real i / (\<sigma> * real m)"
         using \<sigma> by auto
       show "real i / (\<sigma> * real m) \<le> 1/2"
@@ -85,7 +98,7 @@ next
       using bm by linarith
     finally show ?thesis .
   qed
-  have 1: "sum real {..<b} \<le> real b ^ 2 / 2"
+  have "sum real {..<b} \<le> real b ^ 2 / 2"
     by (induction b) (auto simp: power2_eq_square algebra_simps)
   with \<sigma> have "exp (- (real b ^ 2) / (\<sigma>*m)) \<le> exp (- (2 * (\<Sum>i<b. i) / (\<sigma>*m)))"
     by (simp add: mult_less_0_iff divide_simps)
@@ -94,7 +107,7 @@ next
   also have "... = (\<Prod>i<b. exp (-2 * real i / (\<sigma>*m)))"
     using exp_sum by blast
   also have "... \<le> (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
-    using 4 by (force simp add: intro: prod_mono)
+    using * by (force intro: prod_mono)
   finally have "exp (- (real b)\<^sup>2 / (\<sigma> * real m)) \<le> (\<Prod>i<b. 1 - (1 - \<sigma>) * real i / (\<sigma> * (real m - real i)))" .
   with EQ have "\<sigma>^b * exp (- (real b ^ 2) / (\<sigma>*m)) \<le> ((\<sigma>*m) gchoose b) * inverse (real m gchoose b)"
     by (simp add: assms(1))
@@ -104,13 +117,91 @@ next
     by simp
 qed
 
+lemma exp_inequality_17:
+  fixes x::real
+  assumes "0 \<le> x" "x \<le> 1/7"
+  shows "1 - 4*x/3 \<ge> exp (-3*x/2)"
+proof -
+  have "x * 7 \<le> 1"
+    using assms by auto
+  with \<open>0 \<le> x\<close> have "45 * (x * (x * x)) + (42 * (x * x)) + 36/49 * x * x \<le> x * 8"
+    using assms by sos
+  moreover have "x * x * (36 * x * x) \<le> (1/7)*(1/7) * (36 * x * x)"
+    using assms by (intro mult_mono) auto
+  ultimately have *: "45 * (x * (x * x)) + (42 * (x * x) + x * (x * (x * x) * 36)) \<le> x * 8"
+    by simp
+  have "exp (-3*x/2) = inverse (exp (3*x/2))"
+    by (simp add: exp_minus)
+  also have "... \<le> inverse (1 + 3*x/2 + (1/2)*(3*x/2)^2 + (1/6)*(3*x/2)^3)"
+    apply (intro le_imp_inverse_le exp_lower_taylor_2)
+    by (smt (verit) divide_nonneg_nonneg mult_nonneg_nonneg \<open>0 \<le> x\<close> zero_le_power)
+  also have "... \<le> 1 - 4*x/3"
+    using assms *
+    apply (simp add: field_split_simps eval_nat_numeral not_less)
+    by (smt (verit, best) mult_nonneg_nonneg)
+  finally show ?thesis .
+qed
+
 text \<open>additional part\<close>
 lemma Fact_D1_75:
   fixes \<sigma>::real and m b::nat  
   assumes \<sigma>: "0<\<sigma>" "\<sigma><1" and b: "real b \<le> \<sigma> * m / 2" and b': "b \<le> m/7" and \<sigma>': "\<sigma> \<ge> 7/15"
   shows  "(\<sigma>*m) gchoose b \<ge> exp (- (3 * real b ^ 2) / (4*m)) * \<sigma>^b * (m gchoose b)"
-proof -
+proof (cases "m=0 \<or> b=0")
+  case True
+  then show ?thesis
+    using True assms by auto
+next
+  case False
+  with b \<sigma> have bm: "real b < real m"
+    by (smt (verit, ccfv_SIG) le_divide_eq_1_pos of_nat_le_0_iff pos_less_divide_eq times_divide_eq_left)
+  have *: "exp (- 3 * real i / (2*m)) \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))" if "i<b" for i
+  proof -
+    have im: "0 \<le> i/m" "i/m \<le> 1/7"
+      using b' that by auto
+    have "exp (- 3* real i / (2*m)) \<le> 1 - 4*i / (3*m)"
+      using exp_inequality_17 [OF im] by (simp add: mult.commute)
+    also have "... \<le> 1 - 8*i / (7 * (real m - real b))"
+    proof -
+      have "real i * (real b * 7) \<le> real i * real m"
+        using b' by (simp add: mult_left_mono)
+      then show ?thesis
+        using b' by (simp add: field_split_simps)
+    qed
+    also have "... \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))"
+    proof -
+      have 1: "(1 - \<sigma>) / \<sigma> \<le> 8/7"
+        using \<sigma> \<sigma>' that
+        by (simp add: field_split_simps)
+      have 2: "1 / (real m - real i) \<le> 1 / (real m - real b)"
+        using \<sigma> \<sigma>' b'  that by (simp add: field_split_simps)
+      have "(1 - \<sigma>) / (\<sigma> * (real m - real i)) \<le> 8 / (7 * (real m - real b))"
+        using mult_mono [OF 1 2] b' that by auto 
+      then show ?thesis
+        apply simp
+        by (metis mult.commute mult_left_mono of_nat_0_le_iff times_divide_eq_right)
+    qed
+    finally show ?thesis .
+  qed
 
+  have EQ: "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))" 
+    using Fact_D1_73_aux \<open>0<\<sigma>\<close> bm by blast
+  have "sum real {..<b} \<le> real b ^ 2 / 2"
+    by (induction b) (auto simp: power2_eq_square algebra_simps)
+  with \<sigma> have "exp (- (3 * real b ^ 2) / (4*m)) \<le> exp (- (3 * (\<Sum>i<b. i) / (2*m)))"
+    by (simp add: mult_less_0_iff divide_simps)
+  also have "... = exp (\<Sum>i<b. -3 * real i / (2*m))"
+    by (simp add: sum_negf sum_distrib_left sum_divide_distrib)
+  also have "... = (\<Prod>i<b. exp (-3 * real i / (2*m)))"
+    using exp_sum by blast
+  also have "... \<le> (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
+    using * by (force intro: prod_mono)
+  finally have "exp (- (3 * real b ^ 2) / (4*m)) \<le> (\<Prod>i<b. 1 - (1 - \<sigma>) * real i / (\<sigma> * (real m - real i)))" .
+  with EQ have "\<sigma>^b * exp (- (3 * real b ^ 2) / (4*m)) \<le> ((\<sigma>*m) gchoose b) * inverse (real m gchoose b)"
+    by (simp add: assms(1))
+  with \<sigma> bm show ?thesis
+    by (simp add: field_split_simps flip: binomial_gbinomial)
+qed
 
 
 class infinite =
@@ -244,7 +335,7 @@ lemma in_Neighbours_iff: "y \<in> Neighbours E x \<longleftrightarrow> {x,y} \<i
   by (simp add: Neighbours_def)
 
 lemma (in fin_sgraph) not_own_Neighbour: "E' \<subseteq> E \<Longrightarrow> x \<notin> Neighbours E' x"
-  by (force simp add: Neighbours_def singleton_not_edge)
+  by (force simp: Neighbours_def singleton_not_edge)
 
 context ulgraph
 begin
@@ -570,7 +661,7 @@ inductive big_blue
   where "\<lbrakk>many_bluish X; good_blue_book X (S,T); card S = best_blue_book_card X\<rbrakk> \<Longrightarrow> big_blue (X,Y,A,B) (T, Y, A, B\<union>S)"
 
 lemma big_blue_V_state: "\<lbrakk>big_blue U U'; V_state U\<rbrakk> \<Longrightarrow> V_state U'"
-  by (force simp add: good_blue_book_def V_state_def elim!: big_blue.cases)
+  by (force simp: good_blue_book_def V_state_def elim!: big_blue.cases)
 
 lemma big_blue_disjoint_state: "\<lbrakk>big_blue U U'; disjoint_state U\<rbrakk> \<Longrightarrow> disjoint_state U'"
   apply (clarsimp simp add: good_blue_book_def disjoint_state_def elim!: big_blue.cases)
@@ -674,10 +765,10 @@ proof -
     by (auto simp: all_uedges_between_insert2 all_uedges_between_Un2 intro!: all_uedges_betw_I)
   have B1: "all_uedges_between (insert x A) (Neighbours Red x \<inter> X) \<subseteq> Red"
     if "all_uedges_between A X \<subseteq> Red"
-    using that \<open>x \<in> X\<close> by (force simp add:  all_uedges_between_def in_Neighbours_iff)
+    using that \<open>x \<in> X\<close> by (force simp:  all_uedges_between_def in_Neighbours_iff)
   have B2: "all_uedges_between (insert x A) (Neighbours Red x \<inter> Y) \<subseteq> Red"
     if "all_uedges_between A Y \<subseteq> Red"
-    using that \<open>x \<in> X\<close> by (force simp add:  all_uedges_between_def in_Neighbours_iff)
+    using that \<open>x \<in> X\<close> by (force simp:  all_uedges_between_def in_Neighbours_iff)
   from assms A B1 B2 show ?thesis
     apply (clarsimp simp: RB_state_def simp flip: x_def   elim!: red_step.cases)
     by (metis Int_Un_eq(2) Un_subset_iff all_uedges_between_Un2)
@@ -798,7 +889,7 @@ lemma next_state_subset:
   assumes "next_state (X,Y,A,B) = (X',Y',A',B')" "valid_state (X,Y,A,B)"
   shows "X' \<subseteq> X \<and> Y' \<subseteq> Y"
   using assms choose_blue_book_subset
-  by (force simp add: next_state_def valid_state_def Let_def split: if_split_asm prod.split_asm)
+  by (force simp: next_state_def valid_state_def Let_def split: if_split_asm prod.split_asm)
 
 lemma valid_state0: "valid_state (X0, Y0, {}, {})"
   using XY0 by (simp add: valid_state_def V_state_def disjoint_state_def RB_state_def)
@@ -811,7 +902,7 @@ proof (induction n)
 next
   case (Suc n)
   then show ?case
-    by (force simp add: next_state_valid degree_reg_valid_state split: prod.split)
+    by (force simp: next_state_valid degree_reg_valid_state split: prod.split)
 qed
 
 definition "Xseq \<equiv> (\<lambda>(X,Y,A,B). X) o stepper"
