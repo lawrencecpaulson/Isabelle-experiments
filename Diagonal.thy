@@ -203,6 +203,7 @@ next
     by (simp add: field_split_simps flip: binomial_gbinomial)
 qed
 
+section \<open>Lemmas relating to Ramsey's theorem\<close>
 
 class infinite =
   assumes infinite_UNIV: "infinite (UNIV::'a set)"
@@ -222,8 +223,8 @@ lemma smaller_indep: "\<lbrakk>indep R E; R' \<subseteq> R\<rbrakk> \<Longrighta
 
 text \<open>identifying Ramsey numbers (not the minimum) for a given type and pair of integers\<close>
 definition is_Ramsey_number where
-  "is_Ramsey_number \<equiv> \<lambda>U::'a itself. \<lambda>m n r. r \<ge> 1 \<and> (\<forall>V::'a set. \<forall>Red. finite V \<and> card V \<ge> r \<longrightarrow>
-    (\<exists>R \<subseteq> V. card R = m \<and> clique R Red \<or> card R = n \<and> indep R Red))"
+  "is_Ramsey_number \<equiv> \<lambda>U::'a itself. \<lambda>m n r. r \<ge> 1 \<and> (\<forall>V::'a set. \<forall>E. finite V \<and> card V \<ge> r \<longrightarrow>
+    (\<exists>K \<subseteq> V. card K = m \<and> clique K E \<or> card K = n \<and> indep K E))"
 
 text \<open>All complete graphs of a given cardinality are the same\<close>
 lemma 
@@ -283,7 +284,7 @@ lemma is_Ramsey_number_le:
   apply (clarsimp simp: is_Ramsey_number_def)
   apply (drule_tac x="V" in spec)
   apply (simp add: )
-  apply (drule_tac x="Red" in spec)
+  apply (drule_tac x="E" in spec)
   using smaller_clique smaller_indep
   by (metis (no_types, opaque_lifting) dual_order.trans obtain_subset_with_card_n)
 
@@ -307,7 +308,7 @@ lemma RN_le: "is_Ramsey_number U m n r \<Longrightarrow> RN U m n \<le> r"
 lemma Ramsey_RN:
   fixes U :: "'a itself" and V :: "'a set"
   assumes "card V \<ge> RN U m n" "finite V"
-  shows "\<exists>R \<subseteq> V. card R = m \<and> clique R Red \<or> card R = n \<and> indep R Red"
+  shows "\<exists>K \<subseteq> V. card K = m \<and> clique K E \<or> card K = n \<and> indep K E"
   using is_Ramsey_number_RN [of U m n] assms
   unfolding is_Ramsey_number_def by blast
 
@@ -317,17 +318,6 @@ lemma RN_mono:
   by (meson RN_le assms is_Ramsey_number_RN is_Ramsey_number_le)
 
 
-text \<open>cliques of a given size; the definition of clique from Ramsay is used\<close>
-
-definition size_clique :: "nat \<Rightarrow> 'a set \<Rightarrow> 'a set set \<Rightarrow> bool" where
-  "size_clique p K E \<equiv> card K = p \<and> clique K E"
-
-lemma size_clique_all_edges: "size_clique p K E \<Longrightarrow> all_edges K \<subseteq> E"
-  by (auto simp: size_clique_def all_edges_def clique_def card_2_iff)
-
-lemma indep_iff_clique: "indep V E \<longleftrightarrow> clique V (all_edges V - E)"
-  by (auto simp: indep_def clique_def all_edges_def)
-
 definition Neighbours :: "'a set set \<Rightarrow> 'a \<Rightarrow> 'a set" where
   "Neighbours \<equiv> \<lambda>E x. {y. {x,y} \<in> E}"
 
@@ -336,6 +326,8 @@ lemma in_Neighbours_iff: "y \<in> Neighbours E x \<longleftrightarrow> {x,y} \<i
 
 lemma (in fin_sgraph) not_own_Neighbour: "E' \<subseteq> E \<Longrightarrow> x \<notin> Neighbours E' x"
   by (force simp: Neighbours_def singleton_not_edge)
+
+section \<open>Preliminaries on graphs\<close>
 
 context ulgraph
 begin
@@ -427,13 +419,30 @@ lemma book_empty [simp]: "book {} T F"
 lemma book_imp_disjnt: "book S T F \<Longrightarrow> disjnt S T"
   by (auto simp: book_def)
 
-declare (in sgraph) singleton_not_edge [simp]
+end
 
-lemma (in fin_sgraph) book_insert: 
+context sgraph
+begin
+
+declare singleton_not_edge [simp]
+
+lemma book_insert: 
   "book (insert v S) T F \<longleftrightarrow> book S T F \<and> v \<notin> T \<and> all_uedges_between {v} (S \<union> T) \<subseteq> F"
   by (auto simp: book_def all_uedges_between_insert1 all_uedges_between_insert2 all_uedges_between_Un2 insert_commute subset_iff)
 
+text \<open>Cliques of a given number of vertices; the definition of clique from Ramsey is used\<close>
+
+definition size_clique :: "nat \<Rightarrow> 'a set \<Rightarrow> 'a set set \<Rightarrow> bool" where
+  "size_clique p K F \<equiv> card K = p \<and> clique K F \<and> K \<subseteq> V"
+
+lemma size_clique_all_edges: "size_clique p K F \<Longrightarrow> all_edges K \<subseteq> F"
+  by (auto simp: size_clique_def all_edges_def clique_def card_2_iff)
+
+lemma indep_iff_clique: "indep V F \<longleftrightarrow> clique V (all_edges V - F)"
+  by (auto simp: indep_def clique_def all_edges_def)
+
 end
+
 
 section \<open>Locale for the parameters of the construction\<close>
 
@@ -479,6 +488,7 @@ lemma kn0: "k > 0"
 lemma not_Red_Neighbour [simp]: "x \<notin> Neighbours Red x" and not_Blue_Neighbour [simp]: "x \<notin> Neighbours Blue x"
   using Red_E Blue_E not_own_Neighbour by auto
 
+(*UGLY UGLY UGLY*)
 lemma Neighbours_Red_Blue: "x \<in> V \<Longrightarrow> Neighbours Red x = V - insert x (Neighbours Blue x)"
   apply (auto simp: Neighbours_def)
   apply (metis Red_E dual_order.order_iff_strict insert_subset subset_iff wellformed)
@@ -488,11 +498,43 @@ lemma Neighbours_Red_Blue: "x \<in> V \<Longrightarrow> Neighbours Red x = V - i
   apply (auto simp: all_edges_def)
   done
 
+lemma clique_imp_all_uedges_between: "clique K F \<Longrightarrow> all_uedges_between K K \<subseteq> F"
+  by (force simp: clique_def all_uedges_between_def)
+
+lemma all_uedges_between_iff_clique:
+  "K \<subseteq> V \<Longrightarrow> all_uedges_between K K \<subseteq> F \<longleftrightarrow> clique K F"
+  unfolding clique_def all_uedges_between_def
+  apply (intro iffI)
+   apply (clarsimp simp add: subset_iff )
+   apply (drule_tac x="{v, w}" in spec)
+   apply (clarsimp simp add: doubleton_eq_iff all_edges_def complete)
+   apply (metis card_2_iff)
+  by force
+
+lemma indep_Red_iff_clique_Bllue: "K \<subseteq> V \<Longrightarrow> indep K Red \<longleftrightarrow> clique K Blue"
+  using disjnt_Red_Blue
+  unfolding clique_def disjnt_iff indep_def
+  apply safe
+  apply (metis Red_Blue_all Un_iff all_uedges_betw_subset all_uedges_between_iff_clique clique_def complete)
+  by blast
+
+lemma Red_Blue_RN:
+  fixes X :: "'a set"
+  assumes "card X \<ge> RN (TYPE('a)) m n" "X\<subseteq>V"
+  shows "\<exists>K \<subseteq> X. size_clique m K Red \<or> size_clique n K Blue"
+  using is_Ramsey_number_RN [of "TYPE('a)" m n] assms indep_Red_iff_clique_Bllue
+  unfolding is_Ramsey_number_def size_clique_def
+  by (metis finV finite_subset subset_eq)
+
+
 text \<open>for calculating the perimeter p\<close>
-definition "red_density X Y \<equiv> card (Red \<inter> all_uedges_between X Y) / (card X * card Y)"
+definition "density C X Y \<equiv> card (C \<inter> all_uedges_between X Y) / (card X * card Y)"
+
+abbreviation "red_density X Y \<equiv> density Red X Y"
+abbreviation "blue_density X Y \<equiv> density Blue X Y"
 
 lemma red_density_ge0: "red_density X Y \<ge> 0"
-  by (auto simp: red_density_def)
+  by (auto simp: density_def)
 
 lemma red_le_edge_density: "red_density X Y \<le> edge_density X Y"
 proof (cases "finite X \<and> finite Y")
@@ -502,8 +544,8 @@ proof (cases "finite X \<and> finite Y")
   also have "... \<le> card (all_edges_between X Y)"
     by (simp add: all_uedges_between_iff_mk_edge card_image_le finite_all_edges_between')
   finally show ?thesis
-    by (simp add: red_density_def edge_density_def divide_right_mono)
-qed (auto simp: red_density_def edge_density_def)
+    by (simp add: density_def edge_density_def divide_right_mono)
+qed (auto simp: density_def edge_density_def)
 
 lemma red_density_le1: "red_density X Y \<le> 1"
   by (meson edge_density_le1 order_trans red_le_edge_density)
@@ -605,7 +647,7 @@ lemma degree_reg_RB_state: "RB_state U \<Longrightarrow> RB_state (degree_reg U)
 lemma degree_reg_valid_state: "valid_state U \<Longrightarrow> valid_state (degree_reg U)"
   by (simp add: degree_reg_RB_state degree_reg_V_state degree_reg_disjoint_state valid_state_def)
 
-subsection \<open>Big blue steps\<close>
+subsection \<open>Big blue steps: code\<close>
 
 definition bluish :: "'a set \<Rightarrow> 'a \<Rightarrow> bool" where
   "bluish \<equiv> \<lambda>X x. card (Neighbours Blue x \<inter> X) \<ge> \<mu> * card X"
@@ -620,12 +662,6 @@ lemma ex_good_blue_book: "\<exists>S T. good_blue_book X (S,T)"
   apply (rule_tac x="X" in exI)
   apply (simp add: good_blue_book_def)
   done
-
-(*THIS IS NOT THE WAY TO PROVE TERMINATION*)
-lemma  "\<lbrakk>valid_state(X,Y,A,B); \<not> termination_condition X Y; many_bluish X\<rbrakk> \<Longrightarrow> \<exists>S T. good_blue_book X (S,T) \<and> S \<noteq> {}"
-  apply (auto simp: good_blue_book_def book_def valid_state_def V_state_def RB_state_def)
-  apply (auto simp: many_bluish_def termination_condition_def not_le)
-  sorry
 
 lemma bounded_good_blue_book: "\<lbrakk>good_blue_book X (S,T); V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> card S \<le> card X"
   by (simp add: card_mono finX good_blue_book_def)
@@ -941,4 +977,31 @@ definition stepper_kind :: "nat \<Rightarrow> stepkind" where
       if termination_condition X Y then dreg_step 
       else if even n then next_state_kind (X,Y,A,B) else dboost_step)"
 
+section \<open>Big blue steps: theorems\<close>
 
+lemma Blue_4_1:
+  defines "b \<equiv> l powr (1/4)"
+  assumes "many_bluish X" "X\<subseteq>V"
+  shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>S T. good_blue_book S T \<and> real (card S) \<ge> b)"
+proof -
+  define W where "W \<equiv> {x\<in>X. bluish X x}"
+  define m where "m \<equiv> nat\<lceil>l powr (2/3)\<rceil>"
+  have Wbig: "card W \<ge> RN (TYPE('a)) k m"
+    using assms by (simp add: W_def m_def many_bluish_def)
+  with Red_Blue_RN obtain U where "U \<subseteq> X" and U: "size_clique k U Red \<or> size_clique m U Blue"
+    by (metis (no_types, lifting) W_def \<open>X\<subseteq>V\<close> mem_Collect_eq subset_eq)
+  show ?thesis
+    using U
+  proof
+    assume "size_clique m U Blue"
+    define \<sigma> where "\<sigma> \<equiv> blue_density U (X-U)"
+    have "\<mu> - 1/k \<le> (\<mu> * card X - card U) / (card X - card U)"
+      sorry
+    also have "... \<le> \<sigma>"
+      sorry
+    finally have "\<mu> - 1/k \<le> \<sigma>" .
+
+    show ?thesis
+      sorry
+  qed auto
+qed
