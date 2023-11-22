@@ -223,20 +223,18 @@ lemma smaller_indep: "\<lbrakk>indep R E; R' \<subseteq> R\<rbrakk> \<Longrighta
 
 text \<open>identifying Ramsey numbers (not the minimum) for a given type and pair of integers\<close>
 definition is_Ramsey_number where
-  "is_Ramsey_number \<equiv> \<lambda>U::'a itself. \<lambda>m n r. r \<ge> 1 \<and> (\<forall>V::'a set. \<forall>E. finite V \<and> card V \<ge> r \<longrightarrow>
-    (\<exists>K \<subseteq> V. card K = m \<and> clique K E \<or> card K = n \<and> indep K E))"
+  "is_Ramsey_number \<equiv> \<lambda>U::'a itself. \<lambda>m n r. 
+         (\<forall>V::'a set. \<forall>E. finite V \<longrightarrow> card V \<ge> r \<longrightarrow>
+           (\<exists>K \<subseteq> V. card K = m \<and> clique K E \<or> card K = n \<and> indep K E))"
 
 text \<open>All complete graphs of a given cardinality are the same\<close>
 lemma 
   assumes "is_Ramsey_number (U::'a::infinite itself) m n r"
   shows "is_Ramsey_number (V::'b itself) m n r"
   unfolding is_Ramsey_number_def
-  proof (intro conjI strip)
-  show "1 \<le> r"
-    by (meson assms is_Ramsey_number_def)
-next
+  proof (intro strip)
   fix V :: "'b set" and E :: "'b set set"
-  assume V: "finite V \<and> r \<le> card V"
+  assume V: "finite V" "r \<le> card V"
   obtain W::"'a set" where "finite W" and W: "card W = card V"
     by (metis infinite_UNIV infinite_arbitrarily_large)
   with V obtain f where f: "bij_betw f V W"
@@ -294,7 +292,7 @@ lemma is_Ramsey_number_ge:
   using assms by (auto simp: is_Ramsey_number_def)
 
 lemma ex_Ramsey_number: "\<exists>r. is_Ramsey_number U m n r"
-  using ramsey2 [of m n] by (simp add: is_Ramsey_number_def)
+  using ramsey2 [of m n] by (auto simp: is_Ramsey_number_def)
 
 definition RN where
   "RN \<equiv> \<lambda>U::'a itself. \<lambda>m n. LEAST r. is_Ramsey_number U m n r"
@@ -316,6 +314,87 @@ lemma RN_mono:
   assumes "m' \<le> m" "n' \<le> n"
   shows "RN U m' n' \<le> RN U m n"
   by (meson RN_le assms is_Ramsey_number_RN is_Ramsey_number_le)
+
+lemma indep_iff_clique [simp]: "K \<subseteq> V \<Longrightarrow> indep K (all_edges V - E) \<longleftrightarrow> clique K E"
+  by (auto simp: clique_def indep_def all_edges_def)
+
+lemma clique_iff_indep [simp]: "K \<subseteq> V \<Longrightarrow> clique K (all_edges V - E) \<longleftrightarrow> indep K E"
+  by (auto simp: clique_def indep_def all_edges_def)
+
+lemma is_Ramsey_number_commute: "is_Ramsey_number U m n r \<Longrightarrow> is_Ramsey_number U n m r"
+  unfolding is_Ramsey_number_def
+  by (metis indep_iff_clique clique_iff_indep)
+
+lemma RN_commute_aux: "RN U n m \<le> RN U m n"
+  by (simp add: RN_le is_Ramsey_number_RN is_Ramsey_number_commute)
+
+lemma RN_commute: "RN U m n = RN U n m"
+  by (simp add: RN_commute_aux le_antisym)
+
+lemma RN_0 [simp]: "RN U 0 m = 0"
+  unfolding RN_def
+proof (intro Least_equality)
+  show "is_Ramsey_number U 0 m 0"
+    by (force simp: is_Ramsey_number_def clique_def)
+qed auto
+
+lemma RN_1 [simp]: 
+  assumes "m>0" shows "RN U 1 m = 1"
+  unfolding RN_def
+proof (intro Least_equality)
+  show "is_Ramsey_number U 1 m 1"
+    apply (clarsimp simp add: is_Ramsey_number_def clique_def)
+    by (metis card_le_Suc0_iff_eq dual_order.refl obtain_subset_with_card_n)
+  fix i
+  assume i: "is_Ramsey_number U 1 m i"
+  show "i \<ge> 1"
+  proof (cases "i=0")
+    case True
+    with i assms show ?thesis
+      by (force simp add: is_Ramsey_number_def)
+  qed auto
+qed
+
+lemma RN_2 [simp]: 
+  fixes U :: "'a::infinite itself"
+  assumes "m>1" shows "RN U 2 m = m"
+  unfolding RN_def
+proof (intro Least_equality)
+  show "is_Ramsey_number U 2 m m"
+    unfolding is_Ramsey_number_def
+  proof (intro strip)
+    fix V :: "'a set" and E
+    assume "finite V"
+      and "m \<le> card V"
+    show "\<exists>K. K \<subseteq> V \<and> (card K = 2 \<and> clique K E \<or> card K = m \<and> indep K E)"
+    proof (cases "\<exists>K. K \<subseteq> V \<and> card K = 2 \<and> clique K E")
+    next
+      case False
+      then have "indep V E"
+        apply (clarsimp simp: clique_def indep_def card_2_iff)
+        by (smt (verit, best) doubleton_eq_iff insert_absorb insert_iff subset_iff)
+      then show ?thesis
+        by (meson \<open>m \<le> card V\<close> card_Ex_subset smaller_indep)
+    qed auto
+  qed
+  fix i
+  assume i: "is_Ramsey_number U 2 m i"
+  show "i \<ge> m"
+  proof (cases "i<m")
+    case True
+    obtain V :: "'a set" where [simp]: "card V = i" "finite V"
+      using infinite_UNIV infinite_arbitrarily_large by blast
+    with i assms show ?thesis
+      unfolding is_Ramsey_number_def
+      apply (drule_tac x="V" in spec)
+      apply (drule_tac x="{}" in spec)
+      apply (auto simp: )
+       apply (simp add: clique_def)
+      apply (metis Suc_n_not_le_n \<open>finite V\<close> card_le_Suc0_iff_eq numeral_2_eq_2 rev_finite_subset)
+      using \<open>card V = i\<close> \<open>finite V\<close> card_mono apply blast
+      done
+  qed auto
+qed
 
 
 definition Neighbours :: "'a set set \<Rightarrow> 'a \<Rightarrow> 'a set" where
@@ -1006,7 +1085,7 @@ proof -
       apply (simp add: many_bluish_def)
       by (metis (full_types) Collect_subset card_mono finV order_trans finite_subset)
     then have "card U < card X"
-      apply (simp add: \<open>card U = m\<close> m_def)
+      apply (simp add: \<open>card U = m\<close> flip: m_def)
 
         sorry
     define \<sigma> where "\<sigma> \<equiv> blue_density U (X-U)"
@@ -1015,6 +1094,7 @@ proof -
       apply (simp add: field_split_simps of_nat_diff)
       apply (auto simp: \<open>card U = m\<close> simp flip: m_def)
       defer
+      using \<open>card U < card X\<close> \<open>card U = m\<close> apply linarith
       sorry
     also have "... \<le> \<sigma>"
       using \<open>m\<noteq>0\<close>
