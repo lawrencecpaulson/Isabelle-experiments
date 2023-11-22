@@ -333,85 +333,85 @@ context ulgraph
 begin
 
 text \<open>The set of \emph{undirected} edges between two sets\<close>
-definition all_uedges_between :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a set set" where
-  "all_uedges_between X Y \<equiv> {{x, y}| x y. x \<in> X \<and> y \<in> Y \<and> {x, y} \<in> E}"
+definition all_edges_betw_un :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a set set" where
+  "all_edges_betw_un X Y \<equiv> {{x, y}| x y. x \<in> X \<and> y \<in> Y \<and> {x, y} \<in> E}"
 
-lemma all_uedges_between_commute1: "all_uedges_between X Y \<subseteq> all_uedges_between Y X"
-  by (smt (verit, del_insts) Collect_mono all_uedges_between_def insert_commute)
+lemma all_edges_betw_un_commute1: "all_edges_betw_un X Y \<subseteq> all_edges_betw_un Y X"
+  by (smt (verit, del_insts) Collect_mono all_edges_betw_un_def insert_commute)
 
-lemma all_uedges_between_commute: "all_uedges_between X Y = all_uedges_between Y X"
-  by (simp add: all_uedges_between_commute1 subset_antisym)
+lemma all_edges_betw_un_commute: "all_edges_betw_un X Y = all_edges_betw_un Y X"
+  by (simp add: all_edges_betw_un_commute1 subset_antisym)
 
-lemma all_uedges_between_iff_mk_edge: "all_uedges_between X Y = mk_edge ` all_edges_between X Y"
-  using all_edges_between_set all_uedges_between_def by presburger
+lemma all_edges_betw_un_iff_mk_edge: "all_edges_betw_un X Y = mk_edge ` all_edges_between X Y"
+  using all_edges_between_set all_edges_betw_un_def by presburger
 
-lemma all_uedges_betw_subset: "all_uedges_between X Y \<subseteq> E"
-  by (auto simp add: all_uedges_between_def)
+lemma all_uedges_betw_subset: "all_edges_betw_un X Y \<subseteq> E"
+  by (auto simp add: all_edges_betw_un_def)
 
-lemma all_uedges_betw_I: "x \<in> X \<Longrightarrow> y \<in> Y \<Longrightarrow> {x, y} \<in> E \<Longrightarrow> {x, y} \<in> all_uedges_between X Y"
-  by (auto simp add: all_uedges_between_def)
+lemma all_uedges_betw_I: "x \<in> X \<Longrightarrow> y \<in> Y \<Longrightarrow> {x, y} \<in> E \<Longrightarrow> {x, y} \<in> all_edges_betw_un X Y"
+  by (auto simp add: all_edges_betw_un_def)
 
-lemma all_uedges_between_subset: "all_uedges_between X Y \<subseteq> Pow (X\<union>Y)"
-  by (auto simp: all_uedges_between_def)
+lemma all_edges_betw_un_subset: "all_edges_betw_un X Y \<subseteq> Pow (X\<union>Y)"
+  by (auto simp: all_edges_betw_un_def)
 
-lemma all_uedges_between_rem_wf: "all_uedges_between X Y = all_uedges_between (X \<inter> V) (Y \<inter> V)"
-  using wellformed by (simp add: all_uedges_between_def) blast 
+lemma all_edges_betw_un_rem_wf: "all_edges_betw_un X Y = all_edges_betw_un (X \<inter> V) (Y \<inter> V)"
+  using wellformed by (simp add: all_edges_betw_un_def) blast 
 
-lemma all_uedges_between_empty [simp]:
-  "all_uedges_between {} Z = {}" "all_uedges_between Z {} = {}"
-  by (auto simp: all_uedges_between_def)
+lemma all_edges_betw_un_empty [simp]:
+  "all_edges_betw_un {} Z = {}" "all_edges_betw_un Z {} = {}"
+  by (auto simp: all_edges_betw_un_def)
 
 lemma card_all_uedges_betw_le: 
   assumes "finite X" "finite Y"
-  shows "card (all_uedges_between X Y) \<le> card (all_edges_between X Y)"
-  by (simp add: all_uedges_between_iff_mk_edge assms card_image_le finite_all_edges_between)
+  shows "card (all_edges_betw_un X Y) \<le> card (all_edges_between X Y)"
+  by (simp add: all_edges_betw_un_iff_mk_edge assms card_image_le finite_all_edges_between)
 
-lemma max_all_uedges_between: 
+lemma max_all_edges_betw_un: 
   assumes "finite X" "finite Y"
-  shows "card (all_uedges_between X Y) \<le> card X * card Y"
+  shows "card (all_edges_betw_un X Y) \<le> card X * card Y"
   by (meson assms card_all_uedges_betw_le max_all_edges_between order_trans)
 
-lemma all_uedges_between_insert1:
-  "all_uedges_between (insert v X) Y = ({{v, y}| y. y \<in> Y} \<inter> E) \<union> all_uedges_between X Y"
-  by (auto simp: all_uedges_between_def)
+lemma all_edges_betw_un_insert1:
+  "all_edges_betw_un (insert v X) Y = ({{v, y}| y. y \<in> Y} \<inter> E) \<union> all_edges_betw_un X Y"
+  by (auto simp: all_edges_betw_un_def)
 
-lemma all_uedges_between_insert2:
-  "all_uedges_between X (insert v Y) = ({{x, v}| x. x \<in> X} \<inter> E) \<union> all_uedges_between X Y"
-  by (auto simp: all_uedges_between_def)
+lemma all_edges_betw_un_insert2:
+  "all_edges_betw_un X (insert v Y) = ({{x, v}| x. x \<in> X} \<inter> E) \<union> all_edges_betw_un X Y"
+  by (auto simp: all_edges_betw_un_def)
 
-lemma all_uedges_between_Un1:
-  "all_uedges_between (X \<union> Y) Z = all_uedges_between X Z \<union> all_uedges_between Y Z"
-  by (auto simp: all_uedges_between_def)
+lemma all_edges_betw_un_Un1:
+  "all_edges_betw_un (X \<union> Y) Z = all_edges_betw_un X Z \<union> all_edges_betw_un Y Z"
+  by (auto simp: all_edges_betw_un_def)
 
-lemma all_uedges_between_Un2:
-  "all_uedges_between X (Y \<union> Z) = all_uedges_between X Y \<union> all_uedges_between X Z"
-  by (auto simp: all_uedges_between_def)
+lemma all_edges_betw_un_Un2:
+  "all_edges_betw_un X (Y \<union> Z) = all_edges_betw_un X Y \<union> all_edges_betw_un X Z"
+  by (auto simp: all_edges_betw_un_def)
 
-lemma finite_all_uedges_between:
+lemma finite_all_edges_betw_un:
   assumes "finite X" "finite Y"
-  shows "finite (all_uedges_between X Y)"
-  by (simp add: all_uedges_between_iff_mk_edge assms finite_all_edges_between)
+  shows "finite (all_edges_betw_un X Y)"
+  by (simp add: all_edges_betw_un_iff_mk_edge assms finite_all_edges_between)
 
-lemma all_uedges_between_Union1:
-  "all_uedges_between (Union \<X>) Y = (\<Union>X\<in>\<X>. all_uedges_between X Y)"
-  by (auto simp: all_uedges_between_def)
+lemma all_edges_betw_un_Union1:
+  "all_edges_betw_un (Union \<X>) Y = (\<Union>X\<in>\<X>. all_edges_betw_un X Y)"
+  by (auto simp: all_edges_betw_un_def)
 
-lemma all_uedges_between_Union2:
-  "all_uedges_between X (Union \<Y>) = (\<Union>Y\<in>\<Y>. all_uedges_between X Y)"
-  by (auto simp: all_uedges_between_def)
+lemma all_edges_betw_un_Union2:
+  "all_edges_betw_un X (Union \<Y>) = (\<Union>Y\<in>\<Y>. all_edges_betw_un X Y)"
+  by (auto simp: all_edges_betw_un_def)
 
-lemma all_uedges_between_mono1:
-  "Y \<subseteq> Z \<Longrightarrow> all_uedges_between Y X \<subseteq> all_uedges_between Z X"
-  by (auto simp: all_uedges_between_def)
+lemma all_edges_betw_un_mono1:
+  "Y \<subseteq> Z \<Longrightarrow> all_edges_betw_un Y X \<subseteq> all_edges_betw_un Z X"
+  by (auto simp: all_edges_betw_un_def)
 
-lemma all_uedges_between_mono2:
-  "Y \<subseteq> Z \<Longrightarrow> all_uedges_between X Y \<subseteq> all_uedges_between X Z"
-  by (auto simp: all_uedges_between_def)
+lemma all_edges_betw_un_mono2:
+  "Y \<subseteq> Z \<Longrightarrow> all_edges_betw_un X Y \<subseteq> all_edges_betw_un X Z"
+  by (auto simp: all_edges_betw_un_def)
 
 text \<open>this notion, mentioned on Page 3, is a little vague: "a graph on vertex set @{term"S \<union> T"} 
 that contains all edges incident to @{term"S"}"\<close>
 definition book :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a set set \<Rightarrow> bool" where
-  "book \<equiv> \<lambda>S T F. disjnt S T \<and> all_uedges_between S (S\<union>T) \<subseteq> F"
+  "book \<equiv> \<lambda>S T F. disjnt S T \<and> all_edges_betw_un S (S\<union>T) \<subseteq> F"
 
 lemma book_empty [simp]: "book {} T F"
   by (auto simp: book_def)
@@ -427,8 +427,8 @@ begin
 declare singleton_not_edge [simp]
 
 lemma book_insert: 
-  "book (insert v S) T F \<longleftrightarrow> book S T F \<and> v \<notin> T \<and> all_uedges_between {v} (S \<union> T) \<subseteq> F"
-  by (auto simp: book_def all_uedges_between_insert1 all_uedges_between_insert2 all_uedges_between_Un2 insert_commute subset_iff)
+  "book (insert v S) T F \<longleftrightarrow> book S T F \<and> v \<notin> T \<and> all_edges_betw_un {v} (S \<union> T) \<subseteq> F"
+  by (auto simp: book_def all_edges_betw_un_insert1 all_edges_betw_un_insert2 all_edges_betw_un_Un2 insert_commute subset_iff)
 
 text \<open>Cliques of a given number of vertices; the definition of clique from Ramsey is used\<close>
 
@@ -438,7 +438,7 @@ definition size_clique :: "nat \<Rightarrow> 'a set \<Rightarrow> 'a set set \<R
 lemma size_clique_all_edges: "size_clique p K F \<Longrightarrow> all_edges K \<subseteq> F"
   by (auto simp: size_clique_def all_edges_def clique_def card_2_iff)
 
-lemma indep_iff_clique: "indep V F \<longleftrightarrow> clique V (all_edges V - F)"
+lemma indep_iff_clique: "K \<subseteq> V \<Longrightarrow> indep K F \<longleftrightarrow> clique K (all_edges V - F)"
   by (auto simp: indep_def clique_def all_edges_def)
 
 end
@@ -477,7 +477,11 @@ lemma disjnt_Red_Blue: "disjnt Red Blue"
   by (metis Red_not_Blue pairwise_insert part_RB partition_on_def singletonI)
 
 lemma Red_Blue_all: "Red \<union> Blue = all_edges V"
-  by (metis (no_types, lifting) Sup_empty Sup_insert complete part_RB partition_on_def sup_bot.right_neutral)
+  using part_RB complete by (auto simp: partition_on_def)
+
+lemma Blue_eq: "Blue = all_edges V - Red"
+  using disjnt_Red_Blue Red_Blue_all complete wellformed
+  by (auto simp: disjnt_iff)
 
 lemma nontriv: "E \<noteq> {}"
   using Red_E bot.extremum_strict by blast
@@ -488,35 +492,33 @@ lemma kn0: "k > 0"
 lemma not_Red_Neighbour [simp]: "x \<notin> Neighbours Red x" and not_Blue_Neighbour [simp]: "x \<notin> Neighbours Blue x"
   using Red_E Blue_E not_own_Neighbour by auto
 
-(*UGLY UGLY UGLY*)
-lemma Neighbours_Red_Blue: "x \<in> V \<Longrightarrow> Neighbours Red x = V - insert x (Neighbours Blue x)"
-  apply (auto simp: Neighbours_def)
-  apply (metis Red_E dual_order.order_iff_strict insert_subset subset_iff wellformed)
-  using Red_E singleton_not_edge apply auto[1]
-   apply (meson disjnt_Red_Blue disjnt_iff)
-  using Red_Blue_all
-  apply (auto simp: all_edges_def)
-  done
+lemma Neighbours_Red_Blue: 
+  assumes "x \<in> V" 
+  shows "Neighbours Red x = V - insert x (Neighbours Blue x)"
+  using Red_E assms by (auto simp: Blue_eq Neighbours_def complete all_edges_def)
 
-lemma clique_imp_all_uedges_between: "clique K F \<Longrightarrow> all_uedges_between K K \<subseteq> F"
-  by (force simp: clique_def all_uedges_between_def)
+lemma clique_imp_all_edges_betw_un: "clique K F \<Longrightarrow> all_edges_betw_un K K \<subseteq> F"
+  by (force simp: clique_def all_edges_betw_un_def)
 
-lemma all_uedges_between_iff_clique:
-  "K \<subseteq> V \<Longrightarrow> all_uedges_between K K \<subseteq> F \<longleftrightarrow> clique K F"
-  unfolding clique_def all_uedges_between_def
-  apply (intro iffI)
-   apply (clarsimp simp add: subset_iff )
-   apply (drule_tac x="{v, w}" in spec)
-   apply (clarsimp simp add: doubleton_eq_iff all_edges_def complete)
-   apply (metis card_2_iff)
-  by force
+lemma all_edges_betw_un_iff_clique:
+  assumes "K \<subseteq> V"
+  shows "all_edges_betw_un K K \<subseteq> F \<longleftrightarrow> clique K F"
+proof
+  assume \<section>: "all_edges_betw_un K K \<subseteq> F"
+  show "clique K F"
+    unfolding clique_def 
+  proof (intro strip)
+    fix v w
+    assume "v \<in> K" "w \<in> K" "v \<noteq> w"
+    with assms have "{v, w} \<in> E"
+      by (force simp add: complete all_edges_def)
+    then show "{v, w} \<in> F"
+      using "\<section>" \<open>v \<in> K\<close> \<open>w \<in> K\<close> all_uedges_betw_I by blast
+  qed
+qed (force simp: clique_def all_edges_betw_un_def)
 
 lemma indep_Red_iff_clique_Bllue: "K \<subseteq> V \<Longrightarrow> indep K Red \<longleftrightarrow> clique K Blue"
-  using disjnt_Red_Blue
-  unfolding clique_def disjnt_iff indep_def
-  apply safe
-  apply (metis Red_Blue_all Un_iff all_uedges_betw_subset all_uedges_between_iff_clique clique_def complete)
-  by blast
+  by (simp add: Blue_eq indep_iff_clique)
 
 lemma Red_Blue_RN:
   fixes X :: "'a set"
@@ -528,7 +530,7 @@ lemma Red_Blue_RN:
 
 
 text \<open>for calculating the perimeter p\<close>
-definition "density C X Y \<equiv> card (C \<inter> all_uedges_between X Y) / (card X * card Y)"
+definition "density C X Y \<equiv> card (C \<inter> all_edges_betw_un X Y) / (card X * card Y)"
 
 abbreviation "red_density X Y \<equiv> density Red X Y"
 abbreviation "blue_density X Y \<equiv> density Blue X Y"
@@ -539,10 +541,10 @@ lemma red_density_ge0: "red_density X Y \<ge> 0"
 lemma red_le_edge_density: "red_density X Y \<le> edge_density X Y"
 proof (cases "finite X \<and> finite Y")
   case True
-  then have "card (Red \<inter> all_uedges_between X Y) \<le> card (all_uedges_between X Y)"
-    by (simp add: all_uedges_between_iff_mk_edge card_mono finite_all_edges_between')
+  then have "card (Red \<inter> all_edges_betw_un X Y) \<le> card (all_edges_betw_un X Y)"
+    by (simp add: all_edges_betw_un_iff_mk_edge card_mono finite_all_edges_between')
   also have "... \<le> card (all_edges_between X Y)"
-    by (simp add: all_uedges_between_iff_mk_edge card_image_le finite_all_edges_between')
+    by (simp add: all_edges_betw_un_iff_mk_edge card_image_le finite_all_edges_between')
   finally show ?thesis
     by (simp add: density_def edge_density_def divide_right_mono)
 qed (auto simp: density_def edge_density_def)
@@ -611,8 +613,8 @@ definition "V_state \<equiv> \<lambda>(X,Y,A,B). X\<subseteq>V \<and> Y\<subsete
 definition "disjoint_state \<equiv> \<lambda>(X,Y,A,B). disjnt X Y \<and> disjnt X A \<and> disjnt X B \<and> disjnt Y A \<and> disjnt Y B \<and> disjnt A B"
 
 text \<open>previously had all edges incident to A, B\<close>
-definition "RB_state \<equiv> \<lambda>(X,Y,A,B). all_uedges_between A A \<subseteq> Red \<and> all_uedges_between A (X \<union> Y) \<subseteq> Red
-             \<and> all_uedges_between B (B \<union> X) \<subseteq> Blue"
+definition "RB_state \<equiv> \<lambda>(X,Y,A,B). all_edges_betw_un A A \<subseteq> Red \<and> all_edges_betw_un A (X \<union> Y) \<subseteq> Red
+             \<and> all_edges_betw_un B (B \<union> X) \<subseteq> Blue"
 
 definition "valid_state \<equiv> \<lambda>U. V_state U \<and> disjoint_state U \<and> RB_state U"
 
@@ -641,8 +643,8 @@ lemma degree_reg_disjoint_state: "disjoint_state U \<Longrightarrow> disjoint_st
   by (auto simp add: degree_reg_def X_degree_reg_def disjoint_state_def disjnt_iff)
 
 lemma degree_reg_RB_state: "RB_state U \<Longrightarrow> RB_state (degree_reg U)"
-  apply (simp add: degree_reg_def RB_state_def all_uedges_between_Un2 split: prod.split prod.split_asm)
-  by (meson X_degree_reg_subset all_uedges_between_mono2 dual_order.trans)
+  apply (simp add: degree_reg_def RB_state_def all_edges_betw_un_Un2 split: prod.split prod.split_asm)
+  by (meson X_degree_reg_subset all_edges_betw_un_mono2 dual_order.trans)
 
 lemma degree_reg_valid_state: "valid_state U \<Longrightarrow> valid_state (degree_reg U)"
   by (simp add: degree_reg_RB_state degree_reg_V_state degree_reg_disjoint_state valid_state_def)
@@ -657,11 +659,8 @@ definition many_bluish :: "'a set \<Rightarrow> bool" where
 
 definition "good_blue_book \<equiv> \<lambda>X::'a set. \<lambda>(S,T). book S T Blue \<and> S\<subseteq>X \<and> T\<subseteq>X \<and> card T \<ge> (\<mu> ^ card S) * card X / 2"
 
-lemma ex_good_blue_book: "\<exists>S T. good_blue_book X (S,T)"
-  apply (rule_tac x="{}" in exI)
-  apply (rule_tac x="X" in exI)
-  apply (simp add: good_blue_book_def)
-  done
+lemma ex_good_blue_book: "good_blue_book X ({}, X)"
+  by (simp add: good_blue_book_def)
 
 lemma bounded_good_blue_book: "\<lbrakk>good_blue_book X (S,T); V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> card S \<le> card X"
   by (simp add: card_mono finX good_blue_book_def)
@@ -704,8 +703,8 @@ lemma big_blue_disjoint_state: "\<lbrakk>big_blue U U'; disjoint_state U\<rbrakk
   by (metis book_imp_disjnt disjnt_subset1 disjnt_sym)
 
 lemma big_blue_RB_state: "\<lbrakk>big_blue U U'; RB_state U\<rbrakk> \<Longrightarrow> RB_state U'"
-  apply (clarsimp simp add: good_blue_book_def book_def RB_state_def all_uedges_between_Un1 all_uedges_between_Un2 elim!: big_blue.cases)
-  by (metis all_uedges_between_commute all_uedges_between_mono1 le_supI2 sup.orderE)
+  apply (clarsimp simp add: good_blue_book_def book_def RB_state_def all_edges_betw_un_Un1 all_edges_betw_un_Un2 elim!: big_blue.cases)
+  by (metis all_edges_betw_un_commute all_edges_betw_un_mono1 le_supI2 sup.orderE)
 
 lemma big_blue_valid_state: "\<lbrakk>big_blue U U'; valid_state U\<rbrakk> \<Longrightarrow> valid_state U'"
   by (meson big_blue_RB_state big_blue_V_state big_blue_disjoint_state valid_state_def)
@@ -795,19 +794,19 @@ proof -
   define x where "x \<equiv> choose_central_vx (X, Y, A, B)"
   have "x \<in> X"
     using assms choose_central_vx_X by (simp add: x_def V_state_def)
-  have A: "all_uedges_between (insert x A) (insert x A) \<subseteq> Red"
-    if "all_uedges_between A A \<subseteq> Red" "all_uedges_between A (X \<union> Y) \<subseteq> Red"
-    using that \<open>x \<in> X\<close> all_uedges_between_commute 
-    by (auto simp: all_uedges_between_insert2 all_uedges_between_Un2 intro!: all_uedges_betw_I)
-  have B1: "all_uedges_between (insert x A) (Neighbours Red x \<inter> X) \<subseteq> Red"
-    if "all_uedges_between A X \<subseteq> Red"
-    using that \<open>x \<in> X\<close> by (force simp:  all_uedges_between_def in_Neighbours_iff)
-  have B2: "all_uedges_between (insert x A) (Neighbours Red x \<inter> Y) \<subseteq> Red"
-    if "all_uedges_between A Y \<subseteq> Red"
-    using that \<open>x \<in> X\<close> by (force simp:  all_uedges_between_def in_Neighbours_iff)
+  have A: "all_edges_betw_un (insert x A) (insert x A) \<subseteq> Red"
+    if "all_edges_betw_un A A \<subseteq> Red" "all_edges_betw_un A (X \<union> Y) \<subseteq> Red"
+    using that \<open>x \<in> X\<close> all_edges_betw_un_commute 
+    by (auto simp: all_edges_betw_un_insert2 all_edges_betw_un_Un2 intro!: all_uedges_betw_I)
+  have B1: "all_edges_betw_un (insert x A) (Neighbours Red x \<inter> X) \<subseteq> Red"
+    if "all_edges_betw_un A X \<subseteq> Red"
+    using that \<open>x \<in> X\<close> by (force simp:  all_edges_betw_un_def in_Neighbours_iff)
+  have B2: "all_edges_betw_un (insert x A) (Neighbours Red x \<inter> Y) \<subseteq> Red"
+    if "all_edges_betw_un A Y \<subseteq> Red"
+    using that \<open>x \<in> X\<close> by (force simp:  all_edges_betw_un_def in_Neighbours_iff)
   from assms A B1 B2 show ?thesis
     apply (clarsimp simp: RB_state_def simp flip: x_def   elim!: red_step.cases)
-    by (metis Int_Un_eq(2) Un_subset_iff all_uedges_between_Un2)
+    by (metis Int_Un_eq(2) Un_subset_iff all_edges_betw_un_Un2)
 qed
 
 lemma red_step_valid_state: 
@@ -850,20 +849,20 @@ proof -
   define x where "x \<equiv> choose_central_vx (X, Y, A, B)"
   have "x \<in> X"
     using assms choose_central_vx_X by (simp add: x_def V_state_def)
-  have A: "all_uedges_between A (Neighbours Blue x \<inter> X \<union> Neighbours Red x \<inter> Y) \<subseteq> Red"
-    if "all_uedges_between A (X \<union> Y) \<subseteq> Red"
-    using that by (metis Int_Un_eq(4) Un_subset_iff all_uedges_between_Un2)
-  have B: "all_uedges_between (insert x B) (insert x B) \<subseteq> Blue"
-    if "all_uedges_between B (B \<union> X) \<subseteq> Blue"
-    using that \<open>x \<in> X\<close> all_uedges_between_commute 
-    by (auto simp: all_uedges_between_insert1 all_uedges_between_insert2 all_uedges_between_Un2 intro!: all_uedges_betw_I)
-  have C: "all_uedges_between (insert x B) (Neighbours Blue x \<inter> X) \<subseteq> Blue"
-    if "all_uedges_between B (B \<union> X) \<subseteq> Blue"
+  have A: "all_edges_betw_un A (Neighbours Blue x \<inter> X \<union> Neighbours Red x \<inter> Y) \<subseteq> Red"
+    if "all_edges_betw_un A (X \<union> Y) \<subseteq> Red"
+    using that by (metis Int_Un_eq(4) Un_subset_iff all_edges_betw_un_Un2)
+  have B: "all_edges_betw_un (insert x B) (insert x B) \<subseteq> Blue"
+    if "all_edges_betw_un B (B \<union> X) \<subseteq> Blue"
+    using that \<open>x \<in> X\<close> all_edges_betw_un_commute 
+    by (auto simp: all_edges_betw_un_insert1 all_edges_betw_un_insert2 all_edges_betw_un_Un2 intro!: all_uedges_betw_I)
+  have C: "all_edges_betw_un (insert x B) (Neighbours Blue x \<inter> X) \<subseteq> Blue"
+    if "all_edges_betw_un B (B \<union> X) \<subseteq> Blue"
     using \<open>x \<in> X\<close> that  
-    apply (auto simp: in_Neighbours_iff all_uedges_between_insert1 all_uedges_between_insert2 all_uedges_between_Un2 intro!: all_uedges_betw_I)
-    by (metis Int_lower2 all_uedges_between_mono2 subset_iff)
+    apply (auto simp: in_Neighbours_iff all_edges_betw_un_insert1 all_edges_betw_un_insert2 all_edges_betw_un_Un2 intro!: all_uedges_betw_I)
+    by (metis Int_lower2 all_edges_betw_un_mono2 subset_iff)
   from assms A B C show ?thesis
-    by (auto simp add: RB_state_def all_uedges_between_Un2 x_def [symmetric]  elim!: density_boost.cases)
+    by (auto simp add: RB_state_def all_edges_betw_un_Un2 x_def [symmetric]  elim!: density_boost.cases)
 qed
 
 lemma density_boost_valid_state:
@@ -988,19 +987,49 @@ proof -
   define m where "m \<equiv> nat\<lceil>l powr (2/3)\<rceil>"
   have Wbig: "card W \<ge> RN (TYPE('a)) k m"
     using assms by (simp add: W_def m_def many_bluish_def)
-  with Red_Blue_RN obtain U where "U \<subseteq> X" and U: "size_clique k U Red \<or> size_clique m U Blue"
+  with Red_Blue_RN obtain U where "U \<subseteq> W" and U: "size_clique k U Red \<or> size_clique m U Blue"
     by (metis (no_types, lifting) W_def \<open>X\<subseteq>V\<close> mem_Collect_eq subset_eq)
   show ?thesis
     using U
   proof
     assume "size_clique m U Blue"
+    have "card U = m"
+      using \<open>size_clique m U Blue\<close> size_clique_def by auto
+    have "m\<noteq>0"
+      by (simp add: ln0 m_def)
+    have "U \<subseteq> X"
+      using W_def \<open>U \<subseteq> W\<close> by blast
+    with \<open>X\<subseteq>V\<close> have cardXU: "card (X - U) = card X - card U" "card U \<le> card X"
+      by (meson card_Diff_subset finV finite_subset card_mono)+
+    have cX: "card X \<ge> RN (TYPE('a)) k (nat \<lceil>l powr (2/3)\<rceil>)"
+      using assms
+      apply (simp add: many_bluish_def)
+      by (metis (full_types) Collect_subset card_mono finV order_trans finite_subset)
+    then have "card U < card X"
+      apply (simp add: \<open>card U = m\<close> m_def)
+
+        sorry
     define \<sigma> where "\<sigma> \<equiv> blue_density U (X-U)"
     have "\<mu> - 1/k \<le> (\<mu> * card X - card U) / (card X - card U)"
+      using kn0 \<open>U \<subseteq> X\<close> cardXU cX
+      apply (simp add: field_split_simps of_nat_diff)
+      apply (auto simp: \<open>card U = m\<close> simp flip: m_def)
+      defer
       sorry
     also have "... \<le> \<sigma>"
+      using \<open>m\<noteq>0\<close>
+      apply (simp add: \<sigma>_def density_def divide_simps)
+      apply (auto simp: )
+      apply (metis of_nat_less_0_iff of_nat_mult)
+         defer
+      using \<open>card U = m\<close> \<open>m \<noteq> 0\<close> apply blast
+      apply (metis \<open>card U = m\<close> card.infinite card_less_sym_Diff less_nat_zero_code)
+      apply (metis of_nat_less_0_iff of_nat_mult)
+      apply (simp add: cardXU)
+
+
       sorry
     finally have "\<mu> - 1/k \<le> \<sigma>" .
-
     show ?thesis
       sorry
   qed auto
