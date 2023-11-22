@@ -205,6 +205,7 @@ qed
 
 section \<open>Lemmas relating to Ramsey's theorem\<close>
 
+(* not sure that the type class is the best approach when using Chelsea's locale*)
 class infinite =
   assumes infinite_UNIV: "infinite (UNIV::'a set)"
 
@@ -228,7 +229,7 @@ definition is_Ramsey_number where
            (\<exists>K \<subseteq> V. card K = m \<and> clique K E \<or> card K = n \<and> indep K E))"
 
 text \<open>All complete graphs of a given cardinality are the same\<close>
-lemma 
+lemma is_Ramsey_number_any_type:
   assumes "is_Ramsey_number (U::'a::infinite itself) m n r"
   shows "is_Ramsey_number (V::'b itself) m n r"
   unfolding is_Ramsey_number_def
@@ -295,24 +296,27 @@ lemma ex_Ramsey_number: "\<exists>r. is_Ramsey_number U m n r"
   using ramsey2 [of m n] by (auto simp: is_Ramsey_number_def)
 
 definition RN where
-  "RN \<equiv> \<lambda>U::'a itself. \<lambda>m n. LEAST r. is_Ramsey_number U m n r"
+  "RN \<equiv> \<lambda>m n. LEAST r. is_Ramsey_number (TYPE (nat)) m n r"
 
-lemma is_Ramsey_number_RN: "is_Ramsey_number U m n (RN U m n)"
-  by (simp add: LeastI_ex RN_def ex_Ramsey_number)
 
-lemma RN_le: "is_Ramsey_number U m n r \<Longrightarrow> RN U m n \<le> r"
-  by (simp add: Least_le RN_def)
+lemma is_Ramsey_number_RN: "is_Ramsey_number (TYPE('a)) m n (RN m n)"
+  by (metis LeastI_ex RN_def ex_Ramsey_number is_Ramsey_number_any_type)
+
+lemma RN_le:
+  fixes U :: "'a::infinite itself"
+  shows "\<lbrakk>is_Ramsey_number U m n r\<rbrakk> \<Longrightarrow> RN m n \<le> r"
+  by (metis Least_le RN_def is_Ramsey_number_any_type)
 
 lemma Ramsey_RN:
-  fixes U :: "'a itself" and V :: "'a set"
-  assumes "card V \<ge> RN U m n" "finite V"
+  fixes V :: "'a set"
+  assumes "card V \<ge> RN m n" "finite V"
   shows "\<exists>K \<subseteq> V. card K = m \<and> clique K E \<or> card K = n \<and> indep K E"
-  using is_Ramsey_number_RN [of U m n] assms
+  using is_Ramsey_number_RN [of m n] assms
   unfolding is_Ramsey_number_def by blast
 
 lemma RN_mono:
   assumes "m' \<le> m" "n' \<le> n"
-  shows "RN U m' n' \<le> RN U m n"
+  shows "RN m' n' \<le> RN m n"
   by (meson RN_le assms is_Ramsey_number_RN is_Ramsey_number_le)
 
 lemma indep_iff_clique [simp]: "K \<subseteq> V \<Longrightarrow> indep K (all_edges V - E) \<longleftrightarrow> clique K E"
@@ -325,28 +329,28 @@ lemma is_Ramsey_number_commute: "is_Ramsey_number U m n r \<Longrightarrow> is_R
   unfolding is_Ramsey_number_def
   by (metis indep_iff_clique clique_iff_indep)
 
-lemma RN_commute_aux: "RN U n m \<le> RN U m n"
-  by (simp add: RN_le is_Ramsey_number_RN is_Ramsey_number_commute)
+lemma RN_commute_aux: "RN n m \<le> RN m n"
+  using RN_le is_Ramsey_number_RN is_Ramsey_number_commute by blast
 
-lemma RN_commute: "RN U m n = RN U n m"
+lemma RN_commute: "RN m n = RN n m"
   by (simp add: RN_commute_aux le_antisym)
 
-lemma RN_0 [simp]: "RN U 0 m = 0"
+lemma RN_0 [simp]: "RN 0 m = 0"
   unfolding RN_def
 proof (intro Least_equality)
-  show "is_Ramsey_number U 0 m 0"
+  show "is_Ramsey_number TYPE(nat) 0 m 0"
     by (force simp: is_Ramsey_number_def clique_def)
 qed auto
 
 lemma RN_1 [simp]: 
-  assumes "m>0" shows "RN U 1 m = 1"
+  assumes "m>0" shows "RN 1 m = 1"
   unfolding RN_def
 proof (intro Least_equality)
-  show "is_Ramsey_number U 1 m 1"
+  show "is_Ramsey_number TYPE(nat) 1 m 1"
     apply (clarsimp simp add: is_Ramsey_number_def clique_def)
     by (metis card_le_Suc0_iff_eq dual_order.refl obtain_subset_with_card_n)
   fix i
-  assume i: "is_Ramsey_number U 1 m i"
+  assume i: "is_Ramsey_number TYPE(nat) 1 m i"
   show "i \<ge> 1"
   proof (cases "i=0")
     case True
@@ -356,11 +360,11 @@ proof (intro Least_equality)
 qed
 
 lemma RN_2 [simp]: 
-  fixes U :: "'a::infinite itself"
-  assumes "m>1" shows "RN U 2 m = m"
+  assumes "m>1"
+  shows "RN 2 m = m"
   unfolding RN_def
 proof (intro Least_equality)
-  show "is_Ramsey_number U 2 m m"
+  show "is_Ramsey_number TYPE(nat) 2 m m"
     unfolding is_Ramsey_number_def
   proof (intro strip)
     fix V :: "'a set" and E
@@ -378,22 +382,27 @@ proof (intro Least_equality)
     qed auto
   qed
   fix i
-  assume i: "is_Ramsey_number U 2 m i"
+  assume i: "is_Ramsey_number TYPE(nat) 2 m i"
+  obtain V :: "nat set" where V: "card V = i" "finite V"
+    by force
   show "i \<ge> m"
   proof (cases "i<m")
     case True
-    obtain V :: "'a set" where [simp]: "card V = i" "finite V"
-      using infinite_UNIV infinite_arbitrarily_large by blast
-    with i assms show ?thesis
-      unfolding is_Ramsey_number_def
-      apply (drule_tac x="V" in spec)
-      apply (drule_tac x="{}" in spec)
-      apply (auto simp: )
-       apply (simp add: clique_def)
-      apply (metis Suc_n_not_le_n \<open>finite V\<close> card_le_Suc0_iff_eq numeral_2_eq_2 rev_finite_subset)
-      using \<open>card V = i\<close> \<open>finite V\<close> card_mono apply blast
-      done
+    then have "\<not> (\<exists>K\<subseteq>V. card K = 2 \<and> clique K {})"
+      by (auto simp: clique_def card_2_iff')
+    with i V assms show ?thesis
+      unfolding is_Ramsey_number_def by (metis card_mono dual_order.refl)
   qed auto
+qed
+
+lemma RN_3plus [simp]: 
+  assumes "k \<ge> 3" "m>1"
+  shows "RN k m \<ge> m"
+proof -
+  have "RN 2 m = m"
+    using assms by auto
+  with RN_mono[of 2 k m m ] assms show ?thesis
+    by force
 qed
 
 
@@ -530,9 +539,9 @@ type_synonym 'a config = "'a set \<times> 'a set \<times> 'a set \<times> 'a set
 locale Diagonal = fin_sgraph +   \<comment> \<open>finite simple graphs (no loops)\<close>
   fixes k::nat       \<comment> \<open>red limit\<close>
   fixes l::nat       \<comment> \<open>blue limit\<close>
-  assumes ln0: "0 < l" and lk: "l \<le> k" 
+  assumes ln0: "3 \<le> l" and lk: "l \<le> k" \<comment> \<open>they should be "sufficiently large"\<close>
   assumes complete: "E \<equiv> all_edges V"
-  fixes Red Blue
+  fixes Red Blue :: "'a set set"
   assumes Red_not_Blue: "Red \<noteq> Blue"
   assumes part_RB: "partition_on E {Red,Blue}"
   assumes no_Red_clique: "\<not> (\<exists>K. size_clique k K Red)"
@@ -542,6 +551,7 @@ locale Diagonal = fin_sgraph +   \<comment> \<open>finite simple graphs (no loop
   assumes XY0: "disjnt X0 Y0" "X0 \<subseteq> V" "Y0 \<subseteq> V"
   fixes \<mu>::real
   assumes "0 < \<mu>" "\<mu> < 1"
+  assumes infinite_UNIV: "infinite (UNIV::'a set)"
 begin
 
 abbreviation "nV \<equiv> card V"
@@ -596,14 +606,14 @@ proof
   qed
 qed (force simp: clique_def all_edges_betw_un_def)
 
-lemma indep_Red_iff_clique_Bllue: "K \<subseteq> V \<Longrightarrow> indep K Red \<longleftrightarrow> clique K Blue"
-  by (simp add: Blue_eq indep_iff_clique)
+lemma indep_Red_iff_clique_Blue: "K \<subseteq> V \<Longrightarrow> indep K Red \<longleftrightarrow> clique K Blue"
+  using Blue_eq by auto
 
 lemma Red_Blue_RN:
   fixes X :: "'a set"
   assumes "card X \<ge> RN (TYPE('a)) m n" "X\<subseteq>V"
   shows "\<exists>K \<subseteq> X. size_clique m K Red \<or> size_clique n K Blue"
-  using is_Ramsey_number_RN [of "TYPE('a)" m n] assms indep_Red_iff_clique_Bllue
+  using is_Ramsey_number_RN [of "TYPE('a)" m n] assms indep_Red_iff_clique_Blue
   unfolding is_Ramsey_number_def size_clique_def
   by (metis finV finite_subset subset_eq)
 
@@ -1075,24 +1085,24 @@ proof -
     have "card U = m"
       using \<open>size_clique m U Blue\<close> size_clique_def by auto
     have "m\<noteq>0"
-      by (simp add: ln0 m_def)
+      using ln0 m_def by auto
     have "U \<subseteq> X"
       using W_def \<open>U \<subseteq> W\<close> by blast
     with \<open>X\<subseteq>V\<close> have cardXU: "card (X - U) = card X - card U" "card U \<le> card X"
       by (meson card_Diff_subset finV finite_subset card_mono)+
-    have cX: "card X \<ge> RN (TYPE('a)) k (nat \<lceil>l powr (2/3)\<rceil>)"
+    have "m < RN (TYPE('a)) k m"
+      sorry
+    also have cX: "RN (TYPE('a)) k m \<le> card X"
       using assms
-      apply (simp add: many_bluish_def)
+      apply (simp add: many_bluish_def m_def)
       by (metis (full_types) Collect_subset card_mono finV order_trans finite_subset)
-    then have "card U < card X"
-      apply (simp add: \<open>card U = m\<close> flip: m_def)
-
-        sorry
+    finally have "card U < card X"
+      using \<open>card U = m\<close> by blast
     define \<sigma> where "\<sigma> \<equiv> blue_density U (X-U)"
     have "\<mu> - 1/k \<le> (\<mu> * card X - card U) / (card X - card U)"
       using kn0 \<open>U \<subseteq> X\<close> cardXU cX
       apply (simp add: field_split_simps of_nat_diff)
-      apply (auto simp: \<open>card U = m\<close> simp flip: m_def)
+      apply (intro conjI strip)
       defer
       using \<open>card U < card X\<close> \<open>card U = m\<close> apply linarith
       sorry
