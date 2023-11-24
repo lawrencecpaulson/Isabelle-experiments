@@ -279,6 +279,15 @@ lemma smaller_indep: "\<lbrakk>indep R E; R' \<subseteq> R\<rbrakk> \<Longrighta
 
 definition "clique_indep \<equiv> \<lambda>m n K E. card K = m \<and> clique K E \<or> card K = n \<and> indep K E"
 
+lemma clique_all_edges_iff: "clique K (E \<inter> all_edges K) \<longleftrightarrow> clique K E"
+  by (simp add: clique_def all_edges_def)
+
+lemma indep_all_edges_iff: "indep K (E \<inter> all_edges K) \<longleftrightarrow> indep K E"
+  by (simp add: indep_def all_edges_def)
+
+lemma clique_indep_all_edges_iff: "clique_indep s s K (E \<inter> all_edges K) = clique_indep s s K E"
+  by (simp add: clique_all_edges_iff clique_indep_def indep_all_edges_iff)
+
 text \<open>identifying Ramsey numbers (not the minimum) for a given type and pair of integers\<close>
 definition is_Ramsey_number where
   "is_Ramsey_number \<equiv> \<lambda>U::'a itself. \<lambda>m n r. 
@@ -560,8 +569,90 @@ proof
   finally have "real (n choose s) * (2 / 2 ^ (s choose 2)) < 1" .
   (*END: CALCULATION OF THE PROBABILITY*)
 
+
+  define \<Omega> where "\<Omega> \<equiv> Pow (all_edges W)"
+  have "finite W"
+    by (simp add: W_def)
+  moreover
   have "card (all_edges W) = n choose 2"
     by (simp add: W_def card_all_edges)
+  ultimately have card\<Omega>: "card \<Omega> = 2 ^ (n choose 2)"
+    by (simp add: \<Omega>_def card_Pow finite_all_edges)
+  then have fin_\<Omega>: "finite \<Omega>"
+    by (simp add: \<Omega>_def \<open>finite W\<close> finite_all_edges)
+  have ne_\<Omega>: "\<Omega> \<noteq> {}"
+    using card\<Omega> by force
+  define M where "M \<equiv> uniform_count_measure \<Omega>"
+  have space_eq: "space M = \<Omega>"
+    by (simp add: M_def space_uniform_count_measure)
+  have sets_eq: "sets M = Pow \<Omega>"
+    by (simp add: M_def sets_uniform_count_measure)
+  interpret P: prob_space M
+    using M_def fin_\<Omega> ne_\<Omega> prob_space_uniform_count_measure by blast
+
+  have emeasure_eq: "emeasure M A = (if (A \<subseteq> \<Omega>) then card A / card \<Omega> else 0)" for A
+    using M_def emeasure_neq_0_sets emeasure_uniform_count_measure fin_\<Omega> sets_eq by force
+
+\<comment> \<open>define the event to avoid: monochromatic cliques, given K \<subseteq> W\<close>
+  define A where "A \<equiv> \<lambda>K. {F \<in> Pow (all_edges W). F \<inter> all_edges K \<in> monoset K}"
+  have A_ev: "A K \<in> P.events" for K
+    by (auto simp add: sets_eq A_def \<Omega>_def)
+  have A_sub_\<Omega>: "A K \<subseteq> \<Omega>" for K
+    by (auto simp: \<Omega>_def A_def)
+  have UA_sub_\<Omega>: "(\<Union>K \<in> Pow W. A K) \<subseteq> \<Omega>"
+    by (auto simp: \<Omega>_def A_def)
+
+  have "card (A K) = 2" for K
+    apply (simp add: A_def)
+
+    sorry
+
+  have "emeasure M (A K) = 2 / 2 ^ (s choose 2)" for K
+    apply (simp add: emeasure_eq A_sub_\<Omega> card\<Omega>)
+
+
+    sorry
+  have "P.prob (\<Union> K \<in> Pow W. A K) \<le> (\<Sum>K \<in> Pow W. P.prob (A K))"
+    by (simp add: A_ev P.finite_measure_subadditive_finite \<open>finite W\<close> image_subset_iff)
+  also have "(\<Sum>K \<in> Pow W. P.prob (A K)) < 1"
+    sorry
+  finally have "P.prob (\<Union> K \<in> Pow W. A K) < 1" .
+  with A_ev UA_sub_\<Omega> obtain F where "F \<in> \<Omega> - (\<Union> K \<in> Pow W. A K)"
+    by (smt (verit, best) P.prob_space Diff_iff space_eq subsetI subset_antisym)
+  then have "\<forall>K\<subseteq>W. \<not> clique_indep s s K F"
+    by (simp add: A_def monoset_def \<Omega>_def clique_indep_def clique_all_edges_iff indep_all_edges_iff)
+  then show False
+    by (meson monoc)
+
+
+
+  define A where "A \<equiv> {F. \<exists>K\<subseteq>W. F \<inter> all_edges K \<in> monoset K}"
+  have "A \<in> P.events"
+
+    sorry
+  have "emeasure M A = 2 / card \<Omega>"
+    sorry
+  have "(P.prob A) < 1"
+    sorry
+  then obtain xx where "xx \<in> \<Omega>-A"
+    by (smt (verit, del_insts) P.finite_measure_compl P.prob_space \<open>A \<in> P.events\<close> ex_min_if_finite fin_\<Omega> finite_Diff measure_empty space_eq)
+  then obtain F where "\<forall>K\<subseteq>W. \<not> clique_indep s s K F"
+    sorry
+  then show False
+    by (meson monoc)
+
+  have "P.events = xxx"
+
+    sorry
+  have "(\<Sum>F \<in> \<Omega>. P.prob (uu F)) < 1"
+
+  have "(\<Sum>F \<in> \<Omega>. P.prob (A F)) < 1"
+
+
+  obtain F where "\<forall>K\<subseteq>W. \<not> clique_indep s s K F"
+    sorry
+  then show False
+    by (meson monoc)
 
   define \<Omega> where "\<Omega> \<equiv> nsets W s"
   then have card\<Omega>: "card \<Omega> = n choose s"
