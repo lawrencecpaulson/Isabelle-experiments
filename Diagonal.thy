@@ -5,6 +5,18 @@ theory Diagonal imports
    
 begin
 
+lemma binomial_mono:
+  assumes "m \<le> n" shows "m choose k \<le> n choose k"
+proof -
+  have "{K. K \<subseteq> {0..<m} \<and> card K = k} \<subseteq> {K. K \<subseteq> {0..<n} \<and> card K = k}"
+    using assms by auto
+  then show ?thesis
+    by (simp add: binomial_def card_mono)
+qed
+
+
+lemma card_nsets [simp]: "card (nsets {..<n} k) = n choose k"
+  using atLeast0LessThan binomial_eq_nsets by presburger
 
 lemma pow_is_const_prod: "a ^ n = (\<Prod>i<n. a)" for a :: "'a::comm_monoid_mult"
   by simp
@@ -486,345 +498,164 @@ lemma all_edges_empty_iff: "all_edges K = {} \<longleftrightarrow> (\<exists>v. 
 
 proposition Ramsey_number_lower:  
   fixes n s::nat
-  assumes "s \<ge> 3" and n: "0<n" "real n \<le> 2 powr (s/2)"
+  assumes "s \<ge> 3" and n: "real n \<le> 2 powr (s/2)"
   shows "\<not> is_Ramsey_number (TYPE (nat)) s s n"
-proof
-  define W where "W \<equiv> {..<n}"
-  assume con: "is_Ramsey_number (TYPE (nat)) s s n"
-  then have monoc: "\<And>F. \<exists>K\<subseteq>W. clique_indep s s K F"
-    by (simp add: is_Ramsey_number_def W_def)
-  then have "s \<le> n"
-    by (metis W_def card_lessThan card_mono clique_indep_def finite_lessThan)
-  define monoset where "monoset \<equiv> \<lambda>K::nat set. {F. F \<subseteq> all_edges K \<and> clique_indep s s K F}"
-  have monoset_2: "card (monoset K) = 2" if "card K = s" for K 
-  proof -
-    have "monoset K = {all_edges K, {}}"
-      using that by (auto simp: monoset_def clique_indep_def clique_iff indep_iff)
-    moreover have "all_edges K \<noteq> {}"
-      using that \<open>s \<ge> 3\<close> subset_singletonD by (fastforce simp add: all_edges_empty_iff)
-    ultimately show ?thesis
-      by simp
-  qed
-
-  (*CALCULATION OF THE PROBABILITY*)
-  have "s > 1" using assms by arith
-  have "(n choose s) < n^s / fact s" 
-  proof (cases "s \<le> n")
-    case True
-    then show ?thesis
-      using fact_less_fact_power \<open>s>1\<close>
-      by (simp add: fact_binomial mult.commute pos_divide_less_eq pos_less_divide_eq)
-  next
-    case False
-    with \<open>n>0\<close> show ?thesis 
-      by (simp add: binomial_eq_0)
-  qed
-  then have "(n choose s) * (2 / 2^(s choose 2)) < 2 * n^s / (fact s * 2 ^ (s * (s-1) div 2))"
-    by (simp add: choose_two divide_simps)
-  also have "... \<le> 2 powr (1 + s/2) / fact s" 
-  proof -
-    have [simp]: "real (s * (s - Suc 0) div 2) = real s * (real s - 1) / 2"
-      by (subst real_of_nat_div) auto
-    have "n^s \<le> 2 powr (s^2 / 2)"
-      using n
-      apply (simp add: eval_nat_numeral flip: powr_realpow)
-      by (metis powr_powr of_nat_0_le_iff powr_mono2 times_divide_eq_left)
-    then have "real n powr real s \<le> 2 powr (real s * real s / 2)"
-      by (simp add: assms power2_eq_square powr_realpow)
-    then have "2 * real n powr real s \<le> 2 powr ((2 + real s * real s) / 2)"
-      by (simp add: add_divide_distrib powr_add)
-    then show ?thesis
-      using n by (simp add: field_simps flip: powr_realpow powr_add)
-  qed
-  also have "... < 1"
-  proof -
-    have "2 powr (1 + (k+3)/2) < fact (k+3)" for k
-    proof (induction k)
-      case 0
-      have "2 powr (5/2) = sqrt (2^5)"
-        by (metis divide_inverse mult.left_neutral numeral_powr_numeral_real powr_ge_pzero powr_half_sqrt powr_powr)
-      also have "... < sqrt 36"
-        by (intro real_sqrt_less_mono) auto
-      also have "... = fact 3"
-        by (simp add: eval_nat_numeral)
-      finally show ?case
+proof (cases "n=0")
+  case True
+  then show ?thesis sorry
+next
+  case False
+  show ?thesis 
+  proof
+    define W where "W \<equiv> {..<n}"
+    assume con: "is_Ramsey_number (TYPE (nat)) s s n"
+    then have monoc: "\<And>F. \<exists>K\<subseteq>W. clique_indep s s K F"
+      by (simp add: is_Ramsey_number_def W_def)
+    then have "s \<le> n"
+      by (metis W_def card_lessThan card_mono clique_indep_def finite_lessThan)
+    define monoset where "monoset \<equiv> \<lambda>K::nat set. {F. F \<subseteq> all_edges K \<and> clique_indep s s K F}"
+    have monoset_2: "card (monoset K) = 2" if "card K = s" for K 
+    proof -
+      have "monoset K = {all_edges K, {}}"
+        using that by (auto simp: monoset_def clique_indep_def clique_iff indep_iff)
+      moreover have "all_edges K \<noteq> {}"
+        using that \<open>s \<ge> 3\<close> subset_singletonD by (fastforce simp add: all_edges_empty_iff)
+      ultimately show ?thesis
         by simp
-    next
-      case (Suc k)
-      have "2 powr (1 + real (Suc k + 3) / 2) = 2 powr (1/2) * 2 powr (1 + (k+3)/2)"
-        by (metis (mono_tags, opaque_lifting) Num.of_nat_simps(3) add_divide_distrib nat_arith.add2 plus_nat.simps(2) powr_add)
-      also have "... \<le> sqrt 2 * fact (k+3)"
-        using Suc.IH by (simp add: powr_half_sqrt)
-      also have "... < real(k + 4) * fact (k + 3)"
-        using sqrt2_less_2 by simp
-      also have "... = fact (Suc (k + 3))"
-        unfolding fact_Suc by simp
-      finally show ?case by simp
     qed
-    then have "2 powr (1 + s/2) < fact s"
-      by (metis add.commute \<open>s\<ge>3\<close> le_Suc_ex)
-    then show ?thesis
-      by (simp add: divide_simps)
-  qed
-  finally have "real (n choose s) * (2 / 2 ^ (s choose 2)) < 1" .
-  (*END: CALCULATION OF THE PROBABILITY*)
+
+(*CALCULATION OF THE PROBABILITY*)
+    have "s > 1" using assms by arith
+    have "(n choose s) < n^s / fact s" 
+    proof (cases "s \<le> n")
+      case True
+      then show ?thesis
+        using fact_less_fact_power \<open>s>1\<close>
+        by (simp add: fact_binomial mult.commute pos_divide_less_eq pos_less_divide_eq)
+    next
+      case False
+      with \<open>n\<noteq>0\<close> show ?thesis 
+        by (simp add: binomial_eq_0)
+    qed
+    then have "(n choose s) * (2 / 2^(s choose 2)) < 2 * n^s / (fact s * 2 ^ (s * (s-1) div 2))"
+      by (simp add: choose_two divide_simps)
+    also have "... \<le> 2 powr (1 + s/2) / fact s" 
+    proof -
+      have [simp]: "real (s * (s - Suc 0) div 2) = real s * (real s - 1) / 2"
+        by (subst real_of_nat_div) auto
+      have "n^s \<le> 2 powr (s^2 / 2)"
+        using n \<open>n\<noteq>0\<close>
+        apply (simp add: eval_nat_numeral flip: powr_realpow)
+        by (metis powr_powr of_nat_0_le_iff powr_mono2 times_divide_eq_left)
+      then have "real n powr real s \<le> 2 powr (real s * real s / 2)"
+        using False assms by (simp add: power2_eq_square powr_realpow)
+      then have "2 * real n powr real s \<le> 2 powr ((2 + real s * real s) / 2)"
+        by (simp add: add_divide_distrib powr_add)
+      then show ?thesis
+        using n \<open>n\<noteq>0\<close> by (simp add: field_simps flip: powr_realpow powr_add)
+    qed
+    also have "... < 1"
+    proof -
+      have "2 powr (1 + (k+3)/2) < fact (k+3)" for k
+      proof (induction k)
+        case 0
+        have "2 powr (5/2) = sqrt (2^5)"
+          by (metis divide_inverse mult.left_neutral numeral_powr_numeral_real powr_ge_pzero powr_half_sqrt powr_powr)
+        also have "... < sqrt 36"
+          by (intro real_sqrt_less_mono) auto
+        also have "... = fact 3"
+          by (simp add: eval_nat_numeral)
+        finally show ?case
+          by simp
+      next
+        case (Suc k)
+        have "2 powr (1 + real (Suc k + 3) / 2) = 2 powr (1/2) * 2 powr (1 + (k+3)/2)"
+          by (metis (mono_tags, opaque_lifting) Num.of_nat_simps(3) add_divide_distrib nat_arith.add2 plus_nat.simps(2) powr_add)
+        also have "... \<le> sqrt 2 * fact (k+3)"
+          using Suc.IH by (simp add: powr_half_sqrt)
+        also have "... < real(k + 4) * fact (k + 3)"
+          using sqrt2_less_2 by simp
+        also have "... = fact (Suc (k + 3))"
+          unfolding fact_Suc by simp
+        finally show ?case by simp
+      qed
+      then have "2 powr (1 + s/2) < fact s"
+        by (metis add.commute \<open>s\<ge>3\<close> le_Suc_ex)
+      then show ?thesis
+        by (simp add: divide_simps)
+    qed
+    finally have DD: "real (n choose s) * (2 / 2 ^ (s choose 2)) < 1" .
+        (*END: CALCULATION OF THE PROBABILITY*)
 
 
-  define \<Omega> where "\<Omega> \<equiv> Pow (all_edges W)"
-  have "finite W"
-    by (simp add: W_def)
-  moreover
-  have "card (all_edges W) = n choose 2"
-    by (simp add: W_def card_all_edges)
-  ultimately have card\<Omega>: "card \<Omega> = 2 ^ (n choose 2)"
-    by (simp add: \<Omega>_def card_Pow finite_all_edges)
-  then have fin_\<Omega>: "finite \<Omega>"
-    by (simp add: \<Omega>_def \<open>finite W\<close> finite_all_edges)
-  have ne_\<Omega>: "\<Omega> \<noteq> {}"
-    using card\<Omega> by force
-  define M where "M \<equiv> uniform_count_measure \<Omega>"
-  have space_eq: "space M = \<Omega>"
-    by (simp add: M_def space_uniform_count_measure)
-  have sets_eq: "sets M = Pow \<Omega>"
-    by (simp add: M_def sets_uniform_count_measure)
-  interpret P: prob_space M
-    using M_def fin_\<Omega> ne_\<Omega> prob_space_uniform_count_measure by blast
-
-  have emeasure_eq: "emeasure M A = (if (A \<subseteq> \<Omega>) then card A / card \<Omega> else 0)" for A
-    using M_def emeasure_neq_0_sets emeasure_uniform_count_measure fin_\<Omega> sets_eq by force
+    define \<Omega> where "\<Omega> \<equiv> Pow (all_edges W)"
+    have "finite W"
+      by (simp add: W_def)
+    moreover
+    have "card (all_edges W) = n choose 2"
+      by (simp add: W_def card_all_edges)
+    ultimately have card\<Omega>: "card \<Omega> = 2 ^ (n choose 2)"
+      by (simp add: \<Omega>_def card_Pow finite_all_edges)
+    then have fin_\<Omega>: "finite \<Omega>"
+      by (simp add: \<Omega>_def \<open>finite W\<close> finite_all_edges)
+    have ne_\<Omega>: "\<Omega> \<noteq> {}"
+      using card\<Omega> by force
+    define M where "M \<equiv> uniform_count_measure \<Omega>"
+    have space_eq: "space M = \<Omega>"
+      by (simp add: M_def space_uniform_count_measure)
+    have sets_eq: "sets M = Pow \<Omega>"
+      by (simp add: M_def sets_uniform_count_measure)
+    interpret P: prob_space M
+      using M_def fin_\<Omega> ne_\<Omega> prob_space_uniform_count_measure by blast
 
 \<comment> \<open>define the event to avoid: monochromatic cliques, given K \<subseteq> W\<close>
-  define A where "A \<equiv> \<lambda>K. {F \<in> Pow (all_edges W). F \<inter> all_edges K \<in> monoset K}"
-  have A_ev: "A K \<in> P.events" for K
-    by (auto simp add: sets_eq A_def \<Omega>_def)
-  have A_sub_\<Omega>: "A K \<subseteq> \<Omega>" for K
-    by (auto simp: \<Omega>_def A_def)
-  have UA_sub_\<Omega>: "(\<Union>K \<in> Pow W. A K) \<subseteq> \<Omega>"
-    by (auto simp: \<Omega>_def A_def)
+    define A where "A \<equiv> \<lambda>K. {F \<in> Pow (all_edges W). F \<inter> all_edges K \<in> monoset K}"
+    have A_ev: "A K \<in> P.events" for K
+      by (auto simp add: sets_eq A_def \<Omega>_def)
+    have A_sub_\<Omega>: "A K \<subseteq> \<Omega>" for K
+      by (auto simp add: sets_eq A_def \<Omega>_def)
+    have UA_sub_\<Omega>: "(\<Union>K \<in> nsets W s. A K) \<subseteq> \<Omega>"
+      by (auto simp: \<Omega>_def A_def nsets_def all_edges_def)
 
-  have "card (A K) = 2" for K
-    apply (simp add: A_def)
+    have s_choose_le: "s choose 2 \<le> n choose 2"
+      using \<open>s \<le> n\<close> by (simp add: Diagonal.binomial_mono)
+    have cardA: "card (A K) = 2 * 2 ^ ((n choose 2) - (s choose 2))" if "K \<in> nsets W s" for K
+      apply (simp add: A_def monoset_def)
 
-    sorry
-
-  have "emeasure M (A K) = 2 / 2 ^ (s choose 2)" for K
-    apply (simp add: emeasure_eq A_sub_\<Omega> card\<Omega>)
-
-
-    sorry
-  have "P.prob (\<Union> K \<in> Pow W. A K) \<le> (\<Sum>K \<in> Pow W. P.prob (A K))"
-    by (simp add: A_ev P.finite_measure_subadditive_finite \<open>finite W\<close> image_subset_iff)
-  also have "(\<Sum>K \<in> Pow W. P.prob (A K)) < 1"
-    sorry
-  finally have "P.prob (\<Union> K \<in> Pow W. A K) < 1" .
-  with A_ev UA_sub_\<Omega> obtain F where "F \<in> \<Omega> - (\<Union> K \<in> Pow W. A K)"
-    by (smt (verit, best) P.prob_space Diff_iff space_eq subsetI subset_antisym)
-  then have "\<forall>K\<subseteq>W. \<not> clique_indep s s K F"
-    by (simp add: A_def monoset_def \<Omega>_def clique_indep_def clique_all_edges_iff indep_all_edges_iff)
-  then show False
-    by (meson monoc)
-
-
-
-  define A where "A \<equiv> {F. \<exists>K\<subseteq>W. F \<inter> all_edges K \<in> monoset K}"
-  have "A \<in> P.events"
-
-    sorry
-  have "emeasure M A = 2 / card \<Omega>"
-    sorry
-  have "(P.prob A) < 1"
-    sorry
-  then obtain xx where "xx \<in> \<Omega>-A"
-    by (smt (verit, del_insts) P.finite_measure_compl P.prob_space \<open>A \<in> P.events\<close> ex_min_if_finite fin_\<Omega> finite_Diff measure_empty space_eq)
-  then obtain F where "\<forall>K\<subseteq>W. \<not> clique_indep s s K F"
-    sorry
-  then show False
-    by (meson monoc)
-
-  have "P.events = xxx"
-
-    sorry
-  have "(\<Sum>F \<in> \<Omega>. P.prob (uu F)) < 1"
-
-  have "(\<Sum>F \<in> \<Omega>. P.prob (A F)) < 1"
-
-
-  obtain F where "\<forall>K\<subseteq>W. \<not> clique_indep s s K F"
-    sorry
-  then show False
-    by (meson monoc)
-
-  define \<Omega> where "\<Omega> \<equiv> nsets W s"
-  then have card\<Omega>: "card \<Omega> = n choose s"
-    using W_def atLeast0LessThan binomial_eq_nsets by presburger
-  have "finite W"
-    by (simp add: W_def)
-  then have fin_\<Omega>: "finite \<Omega>"
-    by (simp add: \<Omega>_def finite_nsets)
-  have ne_\<Omega>: "\<Omega> \<noteq> {}"
-    using \<open>s \<le> n\<close> by (simp add: \<Omega>_def W_def nsets_eq_empty_iff)
-  define M where "M \<equiv> uniform_count_measure \<Omega>"
-  have space_eq: "space M = \<Omega>"
-    by (simp add: M_def space_uniform_count_measure)
-  have sets_eq: "sets M =  Pow \<Omega>"
-    by (simp add: M_def sets_uniform_count_measure)
-
-  interpret P: prob_space M
-  proof
-    show "emeasure M (space M) = 1"
-      apply (simp add: M_def space_uniform_count_measure)
-      using W_def \<open>card \<Omega> = n choose s\<close> \<open>finite W\<close> \<open>finite \<Omega>\<close> binomial_eq_0_iff card.empty card_lessThan card_mono monoc not_less prob_space.emeasure_space_1 prob_space_uniform_count_measure space_uniform_count_measure
-      by (metis clique_indep_def)
+      sorry
+    have emeasure_eq: "emeasure M A = (if (A \<subseteq> \<Omega>) then card A / card \<Omega> else 0)" for A
+      using M_def emeasure_neq_0_sets emeasure_uniform_count_measure fin_\<Omega> sets_eq by force
+    have MA: "emeasure M (A K) = ennreal (2 / 2 ^ (s choose 2))" if "K \<in> nsets W s" for K
+      using that
+      apply (simp add: emeasure_eq A_sub_\<Omega> card\<Omega> cardA)
+      apply (simp add: s_choose_le power_diff flip: divide_ennreal ennreal_power)
+      done
+    then
+    have FF: "P.prob (A K) = 2 / 2 ^ (s choose 2)" if "K \<in> nsets W s" for K
+      using that by (simp add: P.emeasure_eq_measure)
+    have "P.prob (\<Union> K \<in> nsets W s. A K) \<le> (\<Sum>K \<in> nsets W s. P.prob (A K))"
+      by (simp add: A_ev P.finite_measure_subadditive_finite \<open>finite W\<close> nsets_def image_subset_iff)
+    also have "... = real (n choose s) * (2 / 2 ^ (s choose 2))"
+      by (simp add: FF W_def)
+    also have "\<dots> < 1"  (*INSERT CALCULATION HERE*)
+      using DD by presburger
+    finally have "P.prob (\<Union> K \<in> nsets W s. A K) < 1" .
+    with A_ev UA_sub_\<Omega> obtain F where "F \<in> \<Omega> - (\<Union> K \<in> nsets W s. A K)"
+      by (smt (verit, best) P.prob_space Diff_iff space_eq subset_antisym subset_iff)
+    then have "\<forall>K \<in> nsets W s. \<not> clique_indep s s K F"
+      by (simp add: A_def monoset_def \<Omega>_def clique_indep_all_edges_iff)
+    then show False
+      using monoc
+      by (metis (mono_tags, lifting) \<open>finite W\<close> clique_indep_def finite_subset mem_Collect_eq nsets_def)
   qed
-
-  have emeasure_eq: "emeasure M A = (if (A \<subseteq> \<Omega>) then card A / card \<Omega> else 0)" for A
-  proof (cases "A \<subseteq> \<Omega>")
-    case True
-    then have "finite A"
-      by (simp add: fin_\<Omega> finite_subset)
-    with True show ?thesis
-      using M_def True emeasure_uniform_count_measure fin_\<Omega> by force
-  qed (use emeasure_notin_sets sets_eq in auto)
-
-  have "emeasure M (monoset K) = 2 / card \<Omega>"
-    sorry
-
-  have "P.events = xxx"
-
-    sorry
-  have "(\<Sum>K \<in> \<Omega>. P.prob (A K)) < 1"
-
-    oops
-  define \<Omega> where "\<Omega> \<equiv> Pow (nsets W s)"
-  then have card\<Omega>: "card \<Omega> = 2 ^ (n choose s)"
-    using W_def atLeast0LessThan binomial_eq_nsets
-    by (simp add: card_Pow finite_nsets)
-  have "finite W"
-    by (simp add: W_def)
-  then have fin_\<Omega>: "finite \<Omega>"
-    by (simp add: \<Omega>_def finite_nsets)
-  have ne_\<Omega>: "\<Omega> \<noteq> {}"
-    using \<Omega>_def by blast
-    using \<open>s \<le> n\<close> by (simp add: \<Omega>_def W_def nsets_eq_empty_iff)
-  define M where "M \<equiv> uniform_count_measure \<Omega>"
-  have space_eq: "space M = \<Omega>"
-    by (simp add: M_def space_uniform_count_measure)
-  have sets_eq: "sets M =  Pow \<Omega>"
-    by (simp add: M_def sets_uniform_count_measure)
-
-  interpret P: prob_space M
-  proof
-    show "emeasure M (space M) = 1"
-      apply (simp add: M_def space_uniform_count_measure)
-      using W_def card\<Omega> \<open>finite W\<close> \<open>finite \<Omega>\<close> binomial_eq_0_iff card.empty card_lessThan card_mono monoc not_less prob_space.emeasure_space_1 prob_space_uniform_count_measure space_uniform_count_measure
-      by (metis ne_\<Omega>)
-  qed
- 
-  have finite_event: "A \<subseteq> \<Omega> \<Longrightarrow> finite A" for A
-    by (simp add: finite_subset fin_\<Omega>)
-
-  have emeasure_eq: "emeasure M A = (if (A \<subseteq> \<Omega>) then (\<Sum>a\<in>A. p a) else 0)" for A
-  proof (cases "A \<subseteq> \<Omega>")
-    case True
-    then have "finite A" using finite_event by auto
-    moreover have "ennreal (sum p A) = (\<Sum>a\<in>A. ennreal (p a))" 
-      using sum_ennreal pgte0 True by (simp add: subset_iff \<Omega>_def) 
-    ultimately have "emeasure M A = (\<Sum>a\<in>A. p a)" 
-      using emeasure_point_measure_finite2[of A \<Omega> p] M_def
-      using True by presburger 
-    then show ?thesis using True by auto
-  next
-    case False
-    then show ?thesis using emeasure_notin_sets sets_eq by auto
-  qed
-
-  have integrable_M[intro, simp]: "integrable M (f::_ \<Rightarrow> real)"
-    using fin_\<Omega> by (simp add: integrable_point_measure_finite M_def)
-
-  have borel_measurable_M[measurable]: "f \<in> borel_measurable M"
-    unfolding M_def by simp
-
-  have prob_space_M: "prob_space M"
-    unfolding M_def using fin_\<Omega> ne_\<Omega> pgte0 sump \<Omega>_def
-    by (intro prob_space_point_measure) (simp_all)
-
-
-
-  define \<Omega> where "\<Omega> \<equiv> nsets W s"
-  then have "card \<Omega> = n choose s"
-    using W_def atLeast0LessThan binomial_eq_nsets by presburger
-  define M where "M \<equiv> uniform_count_measure \<Omega>"
-  have "finite W"
-    by (simp add: W_def)
-  then have "finite \<Omega>"
-    by (simp add: \<Omega>_def finite_nsets)
-  interpret prob_space M
-  proof
-    show "emeasure M (space M) = 1"
-      apply (simp add: M_def space_uniform_count_measure)
-      using W_def \<open>card \<Omega> = n choose s\<close> \<open>finite W\<close> \<open>finite \<Omega>\<close> binomial_eq_0_iff card.empty card_lessThan card_mono monoc not_less prob_space.emeasure_space_1 prob_space_uniform_count_measure space_uniform_count_measure
-      by (metis clique_indep_def)
-  qed
-
-  define \<Omega> where "\<Omega> \<equiv> all_edges W"
-  have "card \<Omega> = n choose 2"
-    by (simp add: V_def \<Omega>_def card_all_edges)
-  \<comment> \<open>(1) Set up the probability space: "Colour E randomly with two colours" \<close>
-  define M where "M \<equiv> point_measure \<Omega> (\<lambda>u. 1/2)"
-
-  interpret P: vertex_colour_space \<V> E 2 
-    by unfold_locales (auto simp add: order_ge_two)
-  \<comment> \<open>(2) define the event to avoid - monochromatic edges \<close>
-  define A where "A \<equiv>(\<lambda> e. {f \<in> \<C>\<^sup>2 . mono_edge f e})"
-  \<comment> \<open>(3) Calculation 2: Have Pr (of Ae for any e) \le Sum over e (Pr (A e)) < 1 \<close>
-  have "(\<Sum>e \<in> set_mset E. P.prob (A e)) < 1"
-  proof -
-    have "int k - 1 = int (k - 1)" using assms by linarith 
-    then have "card (set_mset E) < 2 powi (int k - 1)" using card_size_set_mset[of E] assms by simp
-    then have "(\<Sum>e \<in> (set_mset E). P.prob (A e)) < 2 powi (int k - 1) * 2 powi (1 - int k)"
-      unfolding A_def using P.prob_monochromatic_edge uniform assms(1) by simp
-    moreover have "((2 :: real) powi ((int k) - 1)) * (2 powi (1 - (int k))) = 1" 
-      using power_int_add[of 2 "int k - 1" "1- int k"] by force 
-    ultimately show ?thesis using power_int_add[of 2 "int k - 1" "1- int k"] by simp
-  qed
-  moreover have "A ` (set_mset E) \<subseteq> P.events" unfolding A_def P.sets_eq by blast
-  \<comment> \<open>(4) obtain a colouring avoiding bad events \<close>
-  ultimately obtain f where "f \<in> \<C>\<^sup>2" and "f \<notin> \<Union>(A `(set_mset E))" 
-    using P.Union_bound_obtain_fun[of "set_mset E" A] finite_set_mset P.space_eq by auto 
-  thus ?thesis using event_is_proper_colouring A_def is_n_colourable_def by auto 
 qed
-
 
 lemma RN_lower:
   assumes "k \<ge> 3"
   shows "RN k k > 2 powr (real k / 2)"
   using assms Ramsey_number_lower is_Ramsey_number_RN by force
 
-
-
-corollary erdos_propertyB_min: 
-  fixes z :: "'a itself"
-  assumes "n > 0"
-  shows "(min_edges_colouring n z) \<ge> 2^(n - 1)"      
-    oops
-proof (rule ccontr)
-  assume "\<not> 2 ^ (n - 1) \<le> min_edges_colouring n z"
-  then have "min_edges_colouring n z < 2^(n - 1)" by simp
-  then obtain h :: "'a hyp_graph" where hin: " h \<in> not_col_n_uni_hyps n" and 
-    "enat (size (hyp_edges h)) < 2^(n-1)"
-    using obtains_min_edge_colouring by blast 
-  then have lt: " size (hyp_edges h) < 2^(n -1)"
-    by (metis of_nat_eq_enat of_nat_less_imp_less of_nat_numeral of_nat_power)  
-  then interpret kuf: fin_kuniform_hypergraph_nt "(hyp_verts h)" "hyp_edges h" n 
-    using not_col_n_uni_hyps_def hin by auto 
-  have "kuf.has_property_B" using kuf.erdos_propertyB lt assms by simp
-  then show False using hin not_col_n_uni_hyps_def by auto 
-qed
-
-lemma RN_lower:
-  assumes "k \<ge> 3"
-  shows "RN k k > 2 powr (real k / 2)"
-  sorry
+end
 
 lemma D:
   fixes x::real
