@@ -1,9 +1,55 @@
 theory Diagonal imports
   "HOL-Library.Disjoint_Sets" "HOL-Library.Ramsey" "Undirected_Graph_Theory.Undirected_Graph_Basics" 
-  "Special_Function_Bounds.Exp_Bounds"
+  "Special_Function_Bounds.Exp_Bounds" "HOL-Decision_Procs.Approximation" "HOL-Probability.Probability" 
   "HOL-ex.Sketch_and_Explore"
    
 begin
+
+
+lemma pow_is_const_prod: "a ^ n = (\<Prod>i<n. a)" for a :: "'a::comm_monoid_mult"
+  by simp
+
+(*TAKEN FROM Weighted_Arithmetic_Geometric_Mean-- ADD TO LIBRARY*)
+lemma (in linordered_semidom) prod_mono_strict':
+  assumes "i \<in> A"
+  assumes "finite A"
+  assumes "\<And>i. i \<in> A \<Longrightarrow> 0 \<le> f i \<and> f i \<le> g i"
+  assumes "\<And>i. i \<in> A \<Longrightarrow> 0 < g i"
+  assumes "f i < g i"
+  shows   "prod f A < prod g A"
+proof -
+  have "prod f A = f i * prod f (A - {i})"
+    using assms by (intro prod.remove)
+  also have "\<dots> \<le> f i * prod g (A - {i})"
+    using assms by (intro mult_left_mono prod_mono) auto
+  also have "\<dots> < g i * prod g (A - {i})"
+    using assms by (intro mult_strict_right_mono prod_pos) auto
+  also have "\<dots> = prod g A"
+    using assms by (intro prod.remove [symmetric])
+  finally show ?thesis .
+qed
+
+
+lemma fact_less_fact_power:
+  assumes "1 < s" "s \<le> n" shows "fact n < fact (n - s) * real n ^ s"
+proof -
+  have eq: "{Suc 0..n} \<inter> {x. x \<le> n - s} = {Suc 0..n-s}" "{Suc 0..n} \<inter> -{x. x \<le> n-s} = {Suc (n-s)..n}" 
+    using assms by auto
+  have inj: "inj_on ((+)s) A" for A
+    by simp
+  have "fact n = (\<Prod>i=1..n. real i)"
+    by (simp add: fact_prod)
+  also have "... < (\<Prod>i=1..n. if i\<le>n-s then real i else n)"
+    using assms
+    by (intro prod_mono_strict' [where i="n-1"]) auto
+  also have "... = (\<Prod>i = 1..n-s. real i) * real n ^ s"
+    using \<open>s \<le> n\<close>
+    by (force simp add: prod.If_cases eq)
+  also have "... = fact (n - s) * real n ^ s"
+    by (simp add: fact_prod)
+  finally show ?thesis .
+qed
+
 
 text \<open>not actually used but possibly interesting\<close>
 lemma gbinomial_is_prod: "(a gchoose k) = (\<Prod>i<k. (a - of_nat i) / (1 + of_nat i))"
@@ -15,6 +61,15 @@ next
   case (Suc k)
   show ?case
     by (simp add: divide_simps flip: Suc)
+qed
+
+lemma finite_nsets: 
+  assumes "finite A" shows "finite (nsets A n)"
+proof -
+  have "nsets A n \<subseteq> Pow A"
+    by (auto simp: nsets_def)
+  then show ?thesis
+    by (simp add: assms finite_subset)
 qed
 
 section \<open>Appendix D\<close>
@@ -94,7 +149,7 @@ next
     qed
     also have "... \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))"
       using \<sigma> b that 
-      apply (simp add: field_split_simps)
+      apply (simp add: field_split_simps not_less)
       using bm by linarith
     finally show ?thesis .
   qed
@@ -222,11 +277,12 @@ lemma smaller_clique: "\<lbrakk>clique R E; R' \<subseteq> R\<rbrakk> \<Longrigh
 lemma smaller_indep: "\<lbrakk>indep R E; R' \<subseteq> R\<rbrakk> \<Longrightarrow> indep R' E"
   by (auto simp: indep_def)
 
+definition "clique_indep \<equiv> \<lambda>m n K E. card K = m \<and> clique K E \<or> card K = n \<and> indep K E"
+
 text \<open>identifying Ramsey numbers (not the minimum) for a given type and pair of integers\<close>
 definition is_Ramsey_number where
   "is_Ramsey_number \<equiv> \<lambda>U::'a itself. \<lambda>m n r. 
-         (\<forall>V::'a set. \<forall>E. finite V \<longrightarrow> card V \<ge> r \<longrightarrow>
-           (\<exists>K \<subseteq> V. card K = m \<and> clique K E \<or> card K = n \<and> indep K E))"
+       (\<forall>V::'a set. \<forall>E. finite V \<longrightarrow> card V \<ge> r \<longrightarrow> (\<exists>K\<subseteq>V. clique_indep m n K E))"
 
 text \<open>All complete graphs of a given cardinality are the same\<close>
 lemma is_Ramsey_number_any_type:
@@ -241,7 +297,7 @@ lemma is_Ramsey_number_any_type:
   with V obtain f where f: "bij_betw f V W"
     by (metis finite_same_card_bij)
   define F where "F \<equiv> (\<lambda>e. f ` e) ` (E \<inter> Pow V)"
-  obtain R where "R\<subseteq>W" and R: "card R = m \<and> clique R F \<or> card R = n \<and> indep R F"
+  obtain R where "R\<subseteq>W" and R: "clique_indep m n R F"
     using assms V W \<open>finite W\<close> unfolding is_Ramsey_number_def by metis
   define S where "S \<equiv> inv_into V f ` R"
   have eq_iff: "\<forall>v\<in>R. \<forall>w\<in>R. inv_into V f v = inv_into V f w \<longleftrightarrow> v=w"
@@ -272,8 +328,8 @@ lemma is_Ramsey_number_any_type:
     with * show False
       by (simp add: F_def image_iff)
   qed
-  ultimately show "\<exists>R. (R::'b set) \<subseteq> V \<and> (card R = m \<and> clique R E \<or> card R = n \<and> indep R E)"
-    by (metis R S_def \<open>R \<subseteq> W\<close> bij_betw_def bij_betw_inv_into f image_mono)
+  ultimately show "\<exists>R. (R::'b set) \<subseteq> V \<and> (clique_indep m n R E)"
+    by (metis R S_def \<open>R \<subseteq> W\<close> bij_betw_def clique_indep_def bij_betw_inv_into f image_mono)
 qed
 
 lemma is_Ramsey_number_le:
@@ -285,6 +341,7 @@ lemma is_Ramsey_number_le:
   apply (simp add: )
   apply (drule_tac x="E" in spec)
   using smaller_clique smaller_indep
+  unfolding clique_indep_def
   by (metis (no_types, opaque_lifting) dual_order.trans obtain_subset_with_card_n)
 
 lemma is_Ramsey_number_ge:
@@ -293,11 +350,10 @@ lemma is_Ramsey_number_ge:
   using assms by (auto simp: is_Ramsey_number_def)
 
 lemma ex_Ramsey_number: "\<exists>r. is_Ramsey_number U m n r"
-  using ramsey2 [of m n] by (auto simp: is_Ramsey_number_def)
+  using ramsey2 [of m n] by (auto simp: is_Ramsey_number_def clique_indep_def)
 
 definition RN where
   "RN \<equiv> \<lambda>m n. LEAST r. is_Ramsey_number (TYPE (nat)) m n r"
-
 
 lemma is_Ramsey_number_RN: "is_Ramsey_number (TYPE('a)) m n (RN m n)"
   by (metis LeastI_ex RN_def ex_Ramsey_number is_Ramsey_number_any_type)
@@ -310,7 +366,7 @@ lemma RN_le:
 lemma Ramsey_RN:
   fixes V :: "'a set"
   assumes "card V \<ge> RN m n" "finite V"
-  shows "\<exists>K \<subseteq> V. card K = m \<and> clique K E \<or> card K = n \<and> indep K E"
+  shows "\<exists>K \<subseteq> V. clique_indep m n K E"
   using is_Ramsey_number_RN [of m n] assms
   unfolding is_Ramsey_number_def by blast
 
@@ -326,7 +382,7 @@ lemma clique_iff_indep [simp]: "K \<subseteq> V \<Longrightarrow> clique K (all_
   by (auto simp: clique_def indep_def all_edges_def)
 
 lemma is_Ramsey_number_commute: "is_Ramsey_number U m n r \<Longrightarrow> is_Ramsey_number U n m r"
-  unfolding is_Ramsey_number_def
+  unfolding is_Ramsey_number_def clique_indep_def
   by (metis indep_iff_clique clique_iff_indep)
 
 lemma RN_commute_aux: "RN n m \<le> RN m n"
@@ -339,7 +395,7 @@ lemma RN_0 [simp]: "RN 0 m = 0"
   unfolding RN_def
 proof (intro Least_equality)
   show "is_Ramsey_number TYPE(nat) 0 m 0"
-    by (force simp: is_Ramsey_number_def clique_def)
+    by (force simp: is_Ramsey_number_def clique_indep_def clique_def)
 qed auto
 
 lemma RN_1 [simp]: 
@@ -347,7 +403,7 @@ lemma RN_1 [simp]:
   unfolding RN_def
 proof (intro Least_equality)
   show "is_Ramsey_number TYPE(nat) 1 m 1"
-    apply (clarsimp simp add: is_Ramsey_number_def clique_def)
+    apply (clarsimp simp add: is_Ramsey_number_def clique_indep_def clique_def)
     by (metis card_le_Suc0_iff_eq dual_order.refl obtain_subset_with_card_n)
   fix i
   assume i: "is_Ramsey_number TYPE(nat) 1 m i"
@@ -355,7 +411,7 @@ proof (intro Least_equality)
   proof (cases "i=0")
     case True
     with i assms show ?thesis
-      by (force simp add: is_Ramsey_number_def)
+      by (force simp add: is_Ramsey_number_def clique_indep_def)
   qed auto
 qed
 
@@ -370,16 +426,16 @@ proof (intro Least_equality)
     fix V :: "'a set" and E
     assume "finite V"
       and "m \<le> card V"
-    show "\<exists>K. K \<subseteq> V \<and> (card K = 2 \<and> clique K E \<or> card K = m \<and> indep K E)"
+    show "\<exists>K. K \<subseteq> V \<and> clique_indep 2 m K E"
     proof (cases "\<exists>K. K \<subseteq> V \<and> card K = 2 \<and> clique K E")
-    next
       case False
       then have "indep V E"
         apply (clarsimp simp: clique_def indep_def card_2_iff)
         by (smt (verit, best) doubleton_eq_iff insert_absorb insert_iff subset_iff)
       then show ?thesis
+        unfolding clique_indep_def
         by (meson \<open>m \<le> card V\<close> card_Ex_subset smaller_indep)
-    qed auto
+    qed (metis clique_indep_def)
   qed
   fix i
   assume i: "is_Ramsey_number TYPE(nat) 2 m i"
@@ -391,7 +447,7 @@ proof (intro Least_equality)
     then have "\<not> (\<exists>K\<subseteq>V. card K = 2 \<and> clique K {})"
       by (auto simp: clique_def card_2_iff')
     with i V assms show ?thesis
-      unfolding is_Ramsey_number_def by (metis card_mono dual_order.refl)
+      unfolding is_Ramsey_number_def clique_indep_def by (metis card_mono dual_order.refl)
   qed auto
 qed
 
@@ -405,6 +461,288 @@ proof -
     by force
 qed
 
+context sgraph
+begin
+
+lemma clique_iff: "F \<subseteq> all_edges K \<Longrightarrow> clique K F \<longleftrightarrow> F = all_edges K"
+  by (auto simp: clique_def all_edges_def card_2_iff)
+
+lemma indep_iff: "F \<subseteq> all_edges K \<Longrightarrow> indep K F \<longleftrightarrow> F = {}"
+  by (auto simp: indep_def all_edges_def card_2_iff)
+
+lemma all_edges_empty_iff: "all_edges K = {} \<longleftrightarrow> (\<exists>v. K \<subseteq> {v})"
+  apply (simp add: all_edges_def card_2_iff subset_iff)
+  by (metis insert_iff singleton_iff)
+
+
+proposition Ramsey_number_lower:  
+  fixes n s::nat
+  assumes "s \<ge> 3" and n: "0<n" "real n \<le> 2 powr (s/2)"
+  shows "\<not> is_Ramsey_number (TYPE (nat)) s s n"
+proof
+  define W where "W \<equiv> {..<n}"
+  assume con: "is_Ramsey_number (TYPE (nat)) s s n"
+  then have monoc: "\<And>F. \<exists>K\<subseteq>W. clique_indep s s K F"
+    by (simp add: is_Ramsey_number_def W_def)
+  then have "s \<le> n"
+    by (metis W_def card_lessThan card_mono clique_indep_def finite_lessThan)
+  define monoset where "monoset \<equiv> \<lambda>K::nat set. {F. F \<subseteq> all_edges K \<and> clique_indep s s K F}"
+  have monoset_2: "card (monoset K) = 2" if "card K = s" for K 
+  proof -
+    have "monoset K = {all_edges K, {}}"
+      using that by (auto simp: monoset_def clique_indep_def clique_iff indep_iff)
+    moreover have "all_edges K \<noteq> {}"
+      using that \<open>s \<ge> 3\<close> subset_singletonD by (fastforce simp add: all_edges_empty_iff)
+    ultimately show ?thesis
+      by simp
+  qed
+
+  (*CALCULATION OF THE PROBABILITY*)
+  have "s > 1" using assms by arith
+  have "(n choose s) < n^s / fact s" 
+  proof (cases "s \<le> n")
+    case True
+    then show ?thesis
+      using fact_less_fact_power \<open>s>1\<close>
+      by (simp add: fact_binomial mult.commute pos_divide_less_eq pos_less_divide_eq)
+  next
+    case False
+    with \<open>n>0\<close> show ?thesis 
+      by (simp add: binomial_eq_0)
+  qed
+  then have "(n choose s) * (2 / 2^(s choose 2)) < 2 * n^s / (fact s * 2 ^ (s * (s-1) div 2))"
+    by (simp add: choose_two divide_simps)
+  also have "... \<le> 2 powr (1 + s/2) / fact s" 
+  proof -
+    have [simp]: "real (s * (s - Suc 0) div 2) = real s * (real s - 1) / 2"
+      by (subst real_of_nat_div) auto
+    have "n^s \<le> 2 powr (s^2 / 2)"
+      using n
+      apply (simp add: eval_nat_numeral flip: powr_realpow)
+      by (metis powr_powr of_nat_0_le_iff powr_mono2 times_divide_eq_left)
+    then have "real n powr real s \<le> 2 powr (real s * real s / 2)"
+      by (simp add: assms power2_eq_square powr_realpow)
+    then have "2 * real n powr real s \<le> 2 powr ((2 + real s * real s) / 2)"
+      by (simp add: add_divide_distrib powr_add)
+    then show ?thesis
+      using n by (simp add: field_simps flip: powr_realpow powr_add)
+  qed
+  also have "... < 1"
+  proof -
+    have "2 powr (1 + (k+3)/2) < fact (k+3)" for k
+    proof (induction k)
+      case 0
+      have "2 powr (5/2) = sqrt (2^5)"
+        by (metis divide_inverse mult.left_neutral numeral_powr_numeral_real powr_ge_pzero powr_half_sqrt powr_powr)
+      also have "... < sqrt 36"
+        by (intro real_sqrt_less_mono) auto
+      also have "... = fact 3"
+        by (simp add: eval_nat_numeral)
+      finally show ?case
+        by simp
+    next
+      case (Suc k)
+      have "2 powr (1 + real (Suc k + 3) / 2) = 2 powr (1/2) * 2 powr (1 + (k+3)/2)"
+        by (metis (mono_tags, opaque_lifting) Num.of_nat_simps(3) add_divide_distrib nat_arith.add2 plus_nat.simps(2) powr_add)
+      also have "... \<le> sqrt 2 * fact (k+3)"
+        using Suc.IH by (simp add: powr_half_sqrt)
+      also have "... < real(k + 4) * fact (k + 3)"
+        using sqrt2_less_2 by simp
+      also have "... = fact (Suc (k + 3))"
+        unfolding fact_Suc by simp
+      finally show ?case by simp
+    qed
+    then have "2 powr (1 + s/2) < fact s"
+      by (metis add.commute \<open>s\<ge>3\<close> le_Suc_ex)
+    then show ?thesis
+      by (simp add: divide_simps)
+  qed
+  finally have "real (n choose s) * (2 / 2 ^ (s choose 2)) < 1" .
+  (*END: CALCULATION OF THE PROBABILITY*)
+
+  have "card (all_edges W) = n choose 2"
+    by (simp add: W_def card_all_edges)
+
+  define \<Omega> where "\<Omega> \<equiv> nsets W s"
+  then have card\<Omega>: "card \<Omega> = n choose s"
+    using W_def atLeast0LessThan binomial_eq_nsets by presburger
+  have "finite W"
+    by (simp add: W_def)
+  then have fin_\<Omega>: "finite \<Omega>"
+    by (simp add: \<Omega>_def finite_nsets)
+  have ne_\<Omega>: "\<Omega> \<noteq> {}"
+    using \<open>s \<le> n\<close> by (simp add: \<Omega>_def W_def nsets_eq_empty_iff)
+  define M where "M \<equiv> uniform_count_measure \<Omega>"
+  have space_eq: "space M = \<Omega>"
+    by (simp add: M_def space_uniform_count_measure)
+  have sets_eq: "sets M =  Pow \<Omega>"
+    by (simp add: M_def sets_uniform_count_measure)
+
+  interpret P: prob_space M
+  proof
+    show "emeasure M (space M) = 1"
+      apply (simp add: M_def space_uniform_count_measure)
+      using W_def \<open>card \<Omega> = n choose s\<close> \<open>finite W\<close> \<open>finite \<Omega>\<close> binomial_eq_0_iff card.empty card_lessThan card_mono monoc not_less prob_space.emeasure_space_1 prob_space_uniform_count_measure space_uniform_count_measure
+      by (metis clique_indep_def)
+  qed
+
+  have emeasure_eq: "emeasure M A = (if (A \<subseteq> \<Omega>) then card A / card \<Omega> else 0)" for A
+  proof (cases "A \<subseteq> \<Omega>")
+    case True
+    then have "finite A"
+      by (simp add: fin_\<Omega> finite_subset)
+    with True show ?thesis
+      using M_def True emeasure_uniform_count_measure fin_\<Omega> by force
+  qed (use emeasure_notin_sets sets_eq in auto)
+
+  have "emeasure M (monoset K) = 2 / card \<Omega>"
+    sorry
+
+  have "P.events = xxx"
+
+    sorry
+  have "(\<Sum>K \<in> \<Omega>. P.prob (A K)) < 1"
+
+    oops
+  define \<Omega> where "\<Omega> \<equiv> Pow (nsets W s)"
+  then have card\<Omega>: "card \<Omega> = 2 ^ (n choose s)"
+    using W_def atLeast0LessThan binomial_eq_nsets
+    by (simp add: card_Pow finite_nsets)
+  have "finite W"
+    by (simp add: W_def)
+  then have fin_\<Omega>: "finite \<Omega>"
+    by (simp add: \<Omega>_def finite_nsets)
+  have ne_\<Omega>: "\<Omega> \<noteq> {}"
+    using \<Omega>_def by blast
+    using \<open>s \<le> n\<close> by (simp add: \<Omega>_def W_def nsets_eq_empty_iff)
+  define M where "M \<equiv> uniform_count_measure \<Omega>"
+  have space_eq: "space M = \<Omega>"
+    by (simp add: M_def space_uniform_count_measure)
+  have sets_eq: "sets M =  Pow \<Omega>"
+    by (simp add: M_def sets_uniform_count_measure)
+
+  interpret P: prob_space M
+  proof
+    show "emeasure M (space M) = 1"
+      apply (simp add: M_def space_uniform_count_measure)
+      using W_def card\<Omega> \<open>finite W\<close> \<open>finite \<Omega>\<close> binomial_eq_0_iff card.empty card_lessThan card_mono monoc not_less prob_space.emeasure_space_1 prob_space_uniform_count_measure space_uniform_count_measure
+      by (metis ne_\<Omega>)
+  qed
+ 
+  have finite_event: "A \<subseteq> \<Omega> \<Longrightarrow> finite A" for A
+    by (simp add: finite_subset fin_\<Omega>)
+
+  have emeasure_eq: "emeasure M A = (if (A \<subseteq> \<Omega>) then (\<Sum>a\<in>A. p a) else 0)" for A
+  proof (cases "A \<subseteq> \<Omega>")
+    case True
+    then have "finite A" using finite_event by auto
+    moreover have "ennreal (sum p A) = (\<Sum>a\<in>A. ennreal (p a))" 
+      using sum_ennreal pgte0 True by (simp add: subset_iff \<Omega>_def) 
+    ultimately have "emeasure M A = (\<Sum>a\<in>A. p a)" 
+      using emeasure_point_measure_finite2[of A \<Omega> p] M_def
+      using True by presburger 
+    then show ?thesis using True by auto
+  next
+    case False
+    then show ?thesis using emeasure_notin_sets sets_eq by auto
+  qed
+
+  have integrable_M[intro, simp]: "integrable M (f::_ \<Rightarrow> real)"
+    using fin_\<Omega> by (simp add: integrable_point_measure_finite M_def)
+
+  have borel_measurable_M[measurable]: "f \<in> borel_measurable M"
+    unfolding M_def by simp
+
+  have prob_space_M: "prob_space M"
+    unfolding M_def using fin_\<Omega> ne_\<Omega> pgte0 sump \<Omega>_def
+    by (intro prob_space_point_measure) (simp_all)
+
+
+
+  define \<Omega> where "\<Omega> \<equiv> nsets W s"
+  then have "card \<Omega> = n choose s"
+    using W_def atLeast0LessThan binomial_eq_nsets by presburger
+  define M where "M \<equiv> uniform_count_measure \<Omega>"
+  have "finite W"
+    by (simp add: W_def)
+  then have "finite \<Omega>"
+    by (simp add: \<Omega>_def finite_nsets)
+  interpret prob_space M
+  proof
+    show "emeasure M (space M) = 1"
+      apply (simp add: M_def space_uniform_count_measure)
+      using W_def \<open>card \<Omega> = n choose s\<close> \<open>finite W\<close> \<open>finite \<Omega>\<close> binomial_eq_0_iff card.empty card_lessThan card_mono monoc not_less prob_space.emeasure_space_1 prob_space_uniform_count_measure space_uniform_count_measure
+      by (metis clique_indep_def)
+  qed
+
+  define \<Omega> where "\<Omega> \<equiv> all_edges W"
+  have "card \<Omega> = n choose 2"
+    by (simp add: V_def \<Omega>_def card_all_edges)
+  \<comment> \<open>(1) Set up the probability space: "Colour E randomly with two colours" \<close>
+  define M where "M \<equiv> point_measure \<Omega> (\<lambda>u. 1/2)"
+
+  interpret P: vertex_colour_space \<V> E 2 
+    by unfold_locales (auto simp add: order_ge_two)
+  \<comment> \<open>(2) define the event to avoid - monochromatic edges \<close>
+  define A where "A \<equiv>(\<lambda> e. {f \<in> \<C>\<^sup>2 . mono_edge f e})"
+  \<comment> \<open>(3) Calculation 2: Have Pr (of Ae for any e) \le Sum over e (Pr (A e)) < 1 \<close>
+  have "(\<Sum>e \<in> set_mset E. P.prob (A e)) < 1"
+  proof -
+    have "int k - 1 = int (k - 1)" using assms by linarith 
+    then have "card (set_mset E) < 2 powi (int k - 1)" using card_size_set_mset[of E] assms by simp
+    then have "(\<Sum>e \<in> (set_mset E). P.prob (A e)) < 2 powi (int k - 1) * 2 powi (1 - int k)"
+      unfolding A_def using P.prob_monochromatic_edge uniform assms(1) by simp
+    moreover have "((2 :: real) powi ((int k) - 1)) * (2 powi (1 - (int k))) = 1" 
+      using power_int_add[of 2 "int k - 1" "1- int k"] by force 
+    ultimately show ?thesis using power_int_add[of 2 "int k - 1" "1- int k"] by simp
+  qed
+  moreover have "A ` (set_mset E) \<subseteq> P.events" unfolding A_def P.sets_eq by blast
+  \<comment> \<open>(4) obtain a colouring avoiding bad events \<close>
+  ultimately obtain f where "f \<in> \<C>\<^sup>2" and "f \<notin> \<Union>(A `(set_mset E))" 
+    using P.Union_bound_obtain_fun[of "set_mset E" A] finite_set_mset P.space_eq by auto 
+  thus ?thesis using event_is_proper_colouring A_def is_n_colourable_def by auto 
+qed
+
+
+lemma RN_lower:
+  assumes "k \<ge> 3"
+  shows "RN k k > 2 powr (real k / 2)"
+  using assms Ramsey_number_lower is_Ramsey_number_RN by force
+
+
+
+corollary erdos_propertyB_min: 
+  fixes z :: "'a itself"
+  assumes "n > 0"
+  shows "(min_edges_colouring n z) \<ge> 2^(n - 1)"      
+    oops
+proof (rule ccontr)
+  assume "\<not> 2 ^ (n - 1) \<le> min_edges_colouring n z"
+  then have "min_edges_colouring n z < 2^(n - 1)" by simp
+  then obtain h :: "'a hyp_graph" where hin: " h \<in> not_col_n_uni_hyps n" and 
+    "enat (size (hyp_edges h)) < 2^(n-1)"
+    using obtains_min_edge_colouring by blast 
+  then have lt: " size (hyp_edges h) < 2^(n -1)"
+    by (metis of_nat_eq_enat of_nat_less_imp_less of_nat_numeral of_nat_power)  
+  then interpret kuf: fin_kuniform_hypergraph_nt "(hyp_verts h)" "hyp_edges h" n 
+    using not_col_n_uni_hyps_def hin by auto 
+  have "kuf.has_property_B" using kuf.erdos_propertyB lt assms by simp
+  then show False using hin not_col_n_uni_hyps_def by auto 
+qed
+
+lemma RN_lower:
+  assumes "k \<ge> 3"
+  shows "RN k k > 2 powr (real k / 2)"
+  sorry
+
+lemma D:
+  fixes x::real
+  assumes "x\<ge>4"
+  shows "x \<le> 2 powr (x/2)"
+  sorry
+
+lemma DD: "k \<ge> 4 \<Longrightarrow> k \<le> 2 powr (real k / 2)"
+  using D numeral_le_real_of_nat_iff by blast
 
 definition Neighbours :: "'a set set \<Rightarrow> 'a \<Rightarrow> 'a set" where
   "Neighbours \<equiv> \<lambda>E x. {y. {x,y} \<in> E}"
@@ -539,7 +877,8 @@ type_synonym 'a config = "'a set \<times> 'a set \<times> 'a set \<times> 'a set
 locale Diagonal = fin_sgraph +   \<comment> \<open>finite simple graphs (no loops)\<close>
   fixes k::nat       \<comment> \<open>red limit\<close>
   fixes l::nat       \<comment> \<open>blue limit\<close>
-  assumes ln0: "3 \<le> l" and lk: "l \<le> k" \<comment> \<open>they should be "sufficiently large"\<close>
+  assumes l_large: "6 \<le> l" and lk: "l \<le> k" \<comment> \<open>they should be "sufficiently large"\<close>
+      (* in particular, need l ^ (2/3) \<ge> 3*)
   assumes complete: "E \<equiv> all_edges V"
   fixes Red Blue :: "'a set set"
   assumes Red_not_Blue: "Red \<noteq> Blue"
@@ -576,7 +915,7 @@ lemma nontriv: "E \<noteq> {}"
   using Red_E bot.extremum_strict by blast
 
 lemma kn0: "k > 0"
-  using lk ln0 by auto
+  using lk l_large by auto
 
 lemma not_Red_Neighbour [simp]: "x \<notin> Neighbours Red x" and not_Blue_Neighbour [simp]: "x \<notin> Neighbours Blue x"
   using Red_E Blue_E not_own_Neighbour by auto
@@ -611,21 +950,21 @@ lemma indep_Red_iff_clique_Blue: "K \<subseteq> V \<Longrightarrow> indep K Red 
 
 lemma Red_Blue_RN:
   fixes X :: "'a set"
-  assumes "card X \<ge> RN (TYPE('a)) m n" "X\<subseteq>V"
+  assumes "card X \<ge> RN m n" "X\<subseteq>V"
   shows "\<exists>K \<subseteq> X. size_clique m K Red \<or> size_clique n K Blue"
-  using is_Ramsey_number_RN [of "TYPE('a)" m n] assms indep_Red_iff_clique_Blue
-  unfolding is_Ramsey_number_def size_clique_def
+  using is_Ramsey_number_RN [of m n] assms indep_Red_iff_clique_Blue
+  unfolding is_Ramsey_number_def size_clique_def clique_indep_def
   by (metis finV finite_subset subset_eq)
 
 
 text \<open>for calculating the perimeter p\<close>
-definition "density C X Y \<equiv> card (C \<inter> all_edges_betw_un X Y) / (card X * card Y)"
+definition "gen_density \<equiv> \<lambda>C X Y. card (C \<inter> all_edges_betw_un X Y) / (card X * card Y)"
 
-abbreviation "red_density X Y \<equiv> density Red X Y"
-abbreviation "blue_density X Y \<equiv> density Blue X Y"
+abbreviation "red_density X Y \<equiv> gen_density Red X Y"
+abbreviation "blue_density X Y \<equiv> gen_density Blue X Y"
 
 lemma red_density_ge0: "red_density X Y \<ge> 0"
-  by (auto simp: density_def)
+  by (auto simp: gen_density_def)
 
 lemma red_le_edge_density: "red_density X Y \<le> edge_density X Y"
 proof (cases "finite X \<and> finite Y")
@@ -635,8 +974,8 @@ proof (cases "finite X \<and> finite Y")
   also have "... \<le> card (all_edges_between X Y)"
     by (simp add: all_edges_betw_un_iff_mk_edge card_image_le finite_all_edges_between')
   finally show ?thesis
-    by (simp add: density_def edge_density_def divide_right_mono)
-qed (auto simp: density_def edge_density_def)
+    by (simp add: gen_density_def edge_density_def divide_right_mono)
+qed (auto simp: gen_density_def edge_density_def)
 
 lemma red_density_le1: "red_density X Y \<le> 1"
   by (meson edge_density_le1 order_trans red_le_edge_density)
@@ -658,7 +997,7 @@ definition "epsk \<equiv> k powr (-1/4)"
 
 definition "q \<equiv> \<lambda>h. p0 + ((1 + epsk)^h - 1) / k"
 
-definition "height \<equiv> \<lambda>p. LEAST h. p \<le> q h \<and> h>0"
+definition "hgt \<equiv> \<lambda>p. LEAST h. p \<le> q h \<and> h>0"
 
 lemma q0 [simp]: "q 0 = p0"
   by (simp add: q_def)
@@ -707,7 +1046,7 @@ definition "RB_state \<equiv> \<lambda>(X,Y,A,B). all_edges_betw_un A A \<subset
 
 definition "valid_state \<equiv> \<lambda>U. V_state U \<and> disjoint_state U \<and> RB_state U"
 
-definition "termination_condition \<equiv> \<lambda>X Y. card X \<le> RN (TYPE('a)) k (nat \<lceil>l powr (3/4)\<rceil>) \<or> red_density X Y \<le> 1/k"
+definition "termination_condition \<equiv> \<lambda>X Y. card X \<le> RN k (nat \<lceil>l powr (3/4)\<rceil>) \<or> red_density X Y \<le> 1/k"
 
 lemma 
   assumes "V_state(X,Y,A,B)" 
@@ -716,7 +1055,7 @@ lemma
 
 subsection \<open>Degree regularisation\<close>
 
-definition "red_dense \<equiv> \<lambda>Y p x. card (Neighbours Red x \<inter> Y) \<ge> p - epsk powr (-1/2) * alpha (height p) * card Y"
+definition "red_dense \<equiv> \<lambda>Y p x. card (Neighbours Red x \<inter> Y) \<ge> p - epsk powr (-1/2) * alpha (hgt p) * card Y"
 
 definition "X_degree_reg \<equiv>  \<lambda>X Y. {x \<in> X. red_dense Y (red_density X Y) x}"
 
@@ -744,9 +1083,19 @@ definition bluish :: "'a set \<Rightarrow> 'a \<Rightarrow> bool" where
   "bluish \<equiv> \<lambda>X x. card (Neighbours Blue x \<inter> X) \<ge> \<mu> * card X"
 
 definition many_bluish :: "'a set \<Rightarrow> bool" where
-  "many_bluish \<equiv> \<lambda>X. card {x\<in>X. bluish X x} \<ge> RN (TYPE('a)) k (nat \<lceil>l powr (2/3)\<rceil>)"
+  "many_bluish \<equiv> \<lambda>X. card {x\<in>X. bluish X x} \<ge> RN k (nat \<lceil>l powr (2/3)\<rceil>)"
 
 definition "good_blue_book \<equiv> \<lambda>X::'a set. \<lambda>(S,T). book S T Blue \<and> S\<subseteq>X \<and> T\<subseteq>X \<and> card T \<ge> (\<mu> ^ card S) * card X / 2"
+
+lemma lpowr23_ge3: "nat \<lceil>l powr (2/3)\<rceil> \<ge> 3"
+proof -
+  have "(3::real) \<le> 6 powr (2/3)"
+    by (approximation 10)
+  also have "... \<le> l powr (2/3)"
+    by (simp add: l_large powr_mono2)
+  finally show ?thesis
+    by (simp add: le_natceiling_iff)
+qed
 
 lemma ex_good_blue_book: "good_blue_book X ({}, X)"
   by (simp add: good_blue_book_def)
@@ -808,7 +1157,7 @@ lemma ex_central_vertex:
   shows "\<exists>x. central_vertex X x"
 proof -
   have *: "real l powr (2/3) \<le> real l powr (3/4)"
-    using ln0 powr_mono by force
+    using l_large powr_mono by force
   then have "card {x \<in> X. bluish X x} < card X"
     using assms RN_mono
     unfolding termination_condition_def many_bluish_def not_le
@@ -850,7 +1199,7 @@ lemma choose_central_vx_X:
 
 subsection \<open>Red step\<close>
 
-definition "reddish \<equiv> \<lambda>X Y p x. red_density (Neighbours Red x \<inter> X) (Neighbours Red x \<inter> Y) \<ge> p - alpha (height p)"
+definition "reddish \<equiv> \<lambda>X Y p x. red_density (Neighbours Red x \<inter> X) (Neighbours Red x \<inter> Y) \<ge> p - alpha (hgt p)"
 
 inductive red_step
   where "\<lbrakk>reddish X Y (red_density X Y) x; x = choose_central_vx (X,Y,A,B)\<rbrakk> 
@@ -1074,7 +1423,7 @@ lemma Blue_4_1:
 proof -
   define W where "W \<equiv> {x\<in>X. bluish X x}"
   define m where "m \<equiv> nat\<lceil>l powr (2/3)\<rceil>"
-  have Wbig: "card W \<ge> RN (TYPE('a)) k m"
+  have Wbig: "card W \<ge> RN k m"
     using assms by (simp add: W_def m_def many_bluish_def)
   with Red_Blue_RN obtain U where "U \<subseteq> W" and U: "size_clique k U Red \<or> size_clique m U Blue"
     by (metis (no_types, lifting) W_def \<open>X\<subseteq>V\<close> mem_Collect_eq subset_eq)
@@ -1084,15 +1433,21 @@ proof -
     assume "size_clique m U Blue"
     have "card U = m"
       using \<open>size_clique m U Blue\<close> size_clique_def by auto
-    have "m\<noteq>0"
-      using ln0 m_def by auto
+    have "m \<ge> 3"
+      using lpowr23_ge3 m_def by blast
+    then have "m\<noteq>0"
+      by auto
     have "U \<subseteq> X"
       using W_def \<open>U \<subseteq> W\<close> by blast
     with \<open>X\<subseteq>V\<close> have cardXU: "card (X - U) = card X - card U" "card U \<le> card X"
       by (meson card_Diff_subset finV finite_subset card_mono)+
-    have "m < RN (TYPE('a)) k m"
+    have "m \<le> k"
+      using lk unfolding m_def
       sorry
-    also have cX: "RN (TYPE('a)) k m \<le> card X"
+    then have "m < RN k m"
+      using \<open>m \<ge> 3\<close> RN_lower RN_mono
+      sorry
+    also have cX: "RN k m \<le> card X"
       using assms
       apply (simp add: many_bluish_def m_def)
       by (metis (full_types) Collect_subset card_mono finV order_trans finite_subset)
@@ -1108,7 +1463,7 @@ proof -
       sorry
     also have "... \<le> \<sigma>"
       using \<open>m\<noteq>0\<close>
-      apply (simp add: \<sigma>_def density_def divide_simps)
+      apply (simp add: \<sigma>_def gen_density_def divide_simps)
       apply (auto simp: )
       apply (metis of_nat_less_0_iff of_nat_mult)
          defer
