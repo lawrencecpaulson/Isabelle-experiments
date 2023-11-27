@@ -11,6 +11,39 @@ thm powr_half_sqrt
 lemma powr_half_sqrt_powr: "0 \<le> x \<Longrightarrow> x powr (a/2) = sqrt(x powr a)"
   by (metis divide_inverse mult.left_neutral powr_ge_pzero powr_half_sqrt powr_powr)
 
+text \<open>derivatives of real powers\<close>
+lemma has_derivative_powr [derivative_intros]:
+  assumes "\<And>x. (f has_derivative f') (at x)" "\<And>x. (g has_derivative g') (at x)"
+    "\<And>x. f x > (0::real)"
+  shows "((\<lambda>x. f x powr g x) has_derivative (\<lambda>y. (g x * (f' y / f x) + g' y * ln (f x)) * (f x) powr (g x))) (at x)"
+proof -
+  have [simp]: "\<And>x. f x \<noteq> 0"
+    by (smt (verit, best) assms(3))
+  show ?thesis
+  using assms
+  apply (simp add: powr_def)
+  apply (rule exI assms derivative_eq_intros refl)+
+  apply (simp add: powr_def divide_inverse assms mult_ac)
+  done
+qed
+
+lemma has_derivative_const_powr [derivative_intros]:
+  assumes "\<And>x. (f has_derivative f') (at x)"
+    "a \<noteq> (0::real)"
+  shows "((\<lambda>x. a powr (f x)) has_derivative (\<lambda>y. f' y * ln a * a powr (f x))) (at x)"
+  using assms
+  apply (simp add: powr_def)
+  apply (rule assms derivative_eq_intros refl)+
+  done
+
+lemma has_real_derivative_const_powr [derivative_intros]:
+  assumes "\<And>x. (f has_real_derivative f' x) (at x)"
+    "a \<noteq> (0::real)"
+  shows "((\<lambda>x. a powr (f x)) has_real_derivative (f' x * ln a * a powr (f x))) (at x)"
+  using assms
+  apply (simp add: powr_def)
+  apply (rule assms derivative_eq_intros refl | simp)+
+  done
 
 (*for Equipollence*)
 text \<open>Dedekind's definition of infinite set\<close>
@@ -767,16 +800,7 @@ next
   qed
 qed
 
-lemma C [derivative_intros]:
-  assumes "\<And>x. (f has_real_derivative g x) (at x)"
-    "a \<noteq> (0::real)"
-  shows "((\<lambda>x. a powr (f x)) has_field_derivative a powr (f x) * (g x * ln a)) (at x)"
-  using assms
-  apply (simp add: powr_def)
-  by(simp | rule assms derivative_eq_intros)+
-
-
-lemma D:
+lemma powr_half_ge:
   fixes x::real
   assumes "x\<ge>4"
   shows "x \<le> 2 powr (x/2)"
@@ -784,7 +808,7 @@ proof -
   have 1: "x \<le> 2 powr (x/2)" if "x=4"
     using that by simp
   have 2: "((\<lambda>x. 2 powr (x/2) - x) has_real_derivative ln 2 * (2 powr (y/2 - 1)) - 1) (at y)" for y
-    by (rule derivative_eq_intros | rule refl | simp add: powr_def algebra_simps exp_diff)+
+    by (rule derivative_eq_intros refl | simp add: powr_diff)+
   have 3: "ln 2 * (2 powr (y/2 - 1)) - 1 \<ge> 0" if "4 \<le> y" for y::real
   proof -
     have "1 \<le> ln 2 * 2 powr ((4 - 2) / (2::real))"
@@ -794,32 +818,40 @@ proof -
     finally show ?thesis by simp
   qed
   show ?thesis
-    apply (rule  gen_upper_bound_increasing [of 4 x "\<lambda>x. 2 powr (x/2)" "\<lambda>x. x"])
-       apply (rule assms)
-      apply (rule 2)
-     apply (rule 3)
-     apply (auto simp: )
-    done
+    by (rule gen_upper_bound_increasing [OF assms 2 3]) auto
 qed
-
-
-lemma DD: "k \<ge> 4 \<Longrightarrow> k \<le> 2 powr (real k / 2)"
-  using D numeral_le_real_of_nat_iff by blast
 
 theorem RN_lower:
   assumes "k \<ge> 3"
-  shows "RN k k > 2 powr (real k / 2)"
+  shows "RN k k > 2 powr (k/2)"                              
   using assms Ramsey_number_lower is_Ramsey_number_RN by force
+
+text \<open>and trivially, off the diagonal too\<close>
+corollary RN_lower_nodiag:
+  assumes "k \<ge> 3" "l \<ge> k"
+  shows "RN k l > 2 powr (k/2)"
+  by (meson RN_lower RN_mono assms less_le_trans le_refl of_nat_mono)                       
 
 theorem RN_lower_self:
   assumes "k \<ge> 4"
   shows "RN k k > k"
 proof -
-  have "RN k k > 2 powr (real k / 2)"
+  have "k \<le> 2 powr (k/2)"
+    using powr_half_ge numeral_le_real_of_nat_iff assms by blast
+  also have "\<dots> < RN k k"
     using assms by (intro RN_lower) auto
-  then show ?thesis
-    using DD assms by fastforce
+  finally show ?thesis
+    by fastforce
 qed
+
+
+lemma RN_gt1:
+  assumes "2 \<le> k" "3 \<le> l" shows "k < RN k l"
+  sorry
+
+lemma RN_gt2:
+  assumes "2 \<le> k" "3 \<le> l" shows "k < RN l k"
+  by (simp add: RN_commute assms RN_gt1)
 
 end
 
@@ -968,7 +1000,7 @@ locale Diagonal = fin_sgraph +   \<comment> \<open>finite simple graphs (no loop
   fixes X0 :: "'a set" and Y0 :: "'a set"    \<comment> \<open>initial values\<close>
   assumes XY0: "disjnt X0 Y0" "X0 \<subseteq> V" "Y0 \<subseteq> V"
   fixes \<mu>::real
-  assumes "0 < \<mu>" "\<mu> < 1"
+  assumes \<mu>01: "0 < \<mu>" "\<mu> < 1"
   assumes infinite_UNIV: "infinite (UNIV::'a set)"
 begin
 
@@ -1509,9 +1541,9 @@ proof -
   show ?thesis
     using U
   proof
-    assume "size_clique m U Blue"
-    have "card U = m"
-      using \<open>size_clique m U Blue\<close> size_clique_def by auto
+    assume U_m_Blue: "size_clique m U Blue"
+    then have "card U = m" and "clique U Blue" and "U \<subseteq> V"
+      by (auto simp: size_clique_def)
     have "m \<ge> 3"
       using lpowr23_ge3 m_def by blast
     then have "k \<le> RN m k" and "m \<noteq> 0"
@@ -1532,13 +1564,45 @@ proof -
       using assms by (metis Collect_subset W_def Wbig card_mono order_trans finV finite_subset)
     finally have "card U < card X"
       using \<open>card U = m\<close> by blast
+    have cXm2: "2 powr (m/2) < card X"
+      using cX RN_commute RN_lower_nodiag \<open>3 \<le> m\<close> \<open>m \<le> k\<close> by fastforce
+    
+    have card_Blue_\<mu>: "card (Neighbours Blue u \<inter> X) \<ge> \<mu> * card X" if "u \<in> U" for u
+      using W_def \<open>U \<subseteq> W\<close> bluish_def that by auto
+
+    
+
     define \<sigma> where "\<sigma> \<equiv> blue_density U (X-U)"
-    have "\<mu> - 1/k \<le> (\<mu> * card X - card U) / (card X - card U)"
-      using kn0 \<open>U \<subseteq> X\<close> cardXU cX
-      apply (simp add: field_split_simps of_nat_diff)
-      apply (intro conjI strip)
-      defer
-      using \<open>card U < card X\<close> \<open>card U = m\<close> apply linarith
+
+    have "m\<ge>4"
+      sorry
+    then 
+    have M: "m * (k / 2 * (1 - \<mu>) + 1) \<le> card X"
+      using cXm2 RN_gt1[of k m] cX \<open>m\<ge>3\<close> \<open>k \<ge>4\<close> \<mu>01 powr_half_ge [of m]
+      apply (simp add: field_simps)
+
+      sorry
+    have "\<mu> - 2/k \<le> (\<mu> * card X - card U) / (card X - card U)"
+      using kn0 \<mu>01 M \<open>card U < card X\<close>
+      by (auto simp add: \<open>card U = m\<close> field_split_simps mult_less_cancel_right1 of_nat_diff split: if_split_asm)
+
+    have "m * (k / 2 * (1 - \<mu>) + 1) \<le> m * (k / 2 + 1)"
+      using \<open>m\<ge>3\<close> \<open>k \<ge>4\<close> \<mu>01 by (simp add: divide_simps)
+
+    then
+    have "(m * (1 - \<mu>)) * k/2 \<le> (card X - card U)"
+    have "(card U * (1 - \<mu>)) * k/2 \<le> (card X - card U)"
+      using cardXU
+      apply (simp add: algebra_simps \<open>card U = m\<close>)
+
+      sorry
+    
+    have "\<mu> - 2/k \<le> (\<mu> * card X - card U) / (card X - card U)"
+      using kn0 \<mu>01 M
+
+
+
+
       sorry
     also have "\<dots> \<le> \<sigma>"
       using \<open>m\<noteq>0\<close>
@@ -1553,7 +1617,7 @@ proof -
 
 
       sorry
-    finally have "\<mu> - 1/k \<le> \<sigma>" .
+    finally have "\<mu> - 2/k \<le> \<sigma>" .
     show ?thesis
       sorry
   qed auto
