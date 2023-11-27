@@ -2,9 +2,50 @@ theory Diagonal imports
   "HOL-Library.Disjoint_Sets" "HOL-Library.Ramsey" "Undirected_Graph_Theory.Undirected_Graph_Basics" 
   "Special_Function_Bounds.Exp_Bounds" "HOL-Decision_Procs.Approximation" "HOL-Probability.Probability" 
   "HOL-ex.Sketch_and_Explore"
+ "HOL-Library.Infinite_Set"  "HOL-Library.Countable_Set"  "HOL-Library.Equipollence"
+
    
 begin
 
+thm powr_half_sqrt
+lemma powr_half_sqrt_powr: "0 \<le> x \<Longrightarrow> x powr (a/2) = sqrt(x powr a)"
+  by (metis divide_inverse mult.left_neutral powr_ge_pzero powr_half_sqrt powr_powr)
+
+
+(*for Equipollence*)
+text \<open>Dedekind's definition of infinite set\<close>
+lemma infinite_iff_psubset: "infinite A \<longleftrightarrow> (\<exists>B. B \<subset> A \<and> A\<approx>B)"
+proof
+  assume "infinite A"
+  then obtain f :: "nat \<Rightarrow> 'a" where "inj f" and f: "range f \<subseteq> A"
+    by (meson infinite_countable_subset)
+  define C where "C \<equiv> A - range f"
+  have C: "A = range f \<union> C" "range f \<inter> C = {}"
+    using f by (auto simp: C_def)
+  have *: "range (f \<circ> Suc) \<subset> range f"
+    using inj_eq [OF \<open>inj f\<close>] by (fastforce simp: set_eq_iff)
+  have "range f \<union> C \<approx> range (f \<circ> Suc) \<union> C"
+  proof (intro Un_eqpoll_cong)
+    show "range f \<approx> range (f \<circ> Suc)"
+      by (meson \<open>inj f\<close> eqpoll_refl inj_Suc inj_compose inj_on_image_eqpoll_2)
+    show "disjnt (range f) C"
+      by (simp add: C disjnt_def)
+    then show "disjnt (range (f \<circ> Suc)) C"
+      using "*" disjnt_subset1 by blast
+  qed auto
+  moreover have "range (f \<circ> Suc) \<union> C \<subset> A"
+    using "*" f C_def by blast
+  ultimately show "\<exists>B\<subset>A. A \<approx> B"
+    by (metis C(1))
+next
+  assume "\<exists>B\<subset>A. A \<approx> B" then show "infinite A"
+    by (metis card_subset_eq eqpoll_finite_iff eqpoll_iff_card psubsetE)
+qed
+
+lemma infinite_iff_psubset_le: "infinite A \<longleftrightarrow> (\<exists>B. B \<subset> A \<and> A \<lesssim> B)"
+  by (meson eqpoll_imp_lepoll infinite_iff_psubset lepoll_antisym psubsetE subset_imp_lepoll)
+
+(*Binomial*)
 lemma binomial_mono:
   assumes "m \<le> n" shows "m choose k \<le> n choose k"
 proof -
@@ -14,9 +55,72 @@ proof -
     by (simp add: binomial_def card_mono)
 qed
 
+lemma gbinomial_is_prod: "(a gchoose k) = (\<Prod>i<k. (a - of_nat i) / (1 + of_nat i))"
+  unfolding gbinomial_prod_rev
+  by (induction k; simp add: divide_simps)
 
-lemma card_nsets [simp]: "card (nsets {..<n} k) = n choose k"
-  using atLeast0LessThan binomial_eq_nsets by presburger
+(*Ramsey*)
+lemma finite_imp_finite_nsets: "finite A \<Longrightarrow> finite ([A]\<^bsup>k\<^esup>)"
+  by (simp add: nsets_def)
+
+lemma nsets_lepoll_cong:
+  assumes "A \<lesssim> B"
+  shows "[A]\<^bsup>k\<^esup> \<lesssim> [B]\<^bsup>k\<^esup>"
+proof -
+  obtain f where f: "inj_on f A" "f ` A \<subseteq> B"
+    by (meson assms lepoll_def)
+  define F where "F \<equiv> \<lambda>N. f ` N"
+  have "inj_on F ([A]\<^bsup>k\<^esup>)"
+    using F_def f inj_on_nsets by blast
+  moreover
+  have "F ` ([A]\<^bsup>k\<^esup>) \<subseteq> [B]\<^bsup>k\<^esup>"
+    by (metis F_def bij_betw_def bij_betw_nsets f nsets_mono)
+  ultimately show ?thesis
+    by (meson lepoll_def)
+qed
+
+(*Ramsey?*)
+lemma nsets_eqpoll_cong:
+  assumes "A\<approx>B"
+  shows "[A]\<^bsup>k\<^esup> \<approx> [B]\<^bsup>k\<^esup>"
+  by (meson assms eqpoll_imp_lepoll eqpoll_sym lepoll_antisym nsets_lepoll_cong)
+
+lemma infinite_imp_infinite_nsets:
+  assumes inf: "infinite A" and "k>0"
+  shows "infinite ([A]\<^bsup>k\<^esup>)"
+proof -
+  obtain B where "B \<subset> A" "A\<approx>B"
+    by (meson inf infinite_iff_psubset)
+  then obtain a where a: "a \<in> A" "a \<notin> B"
+    by blast
+  then obtain N where "N \<subseteq> B" "finite N" "card N = k-1" "a \<notin> N"
+    by (metis \<open>A \<approx> B\<close> inf eqpoll_finite_iff infinite_arbitrarily_large subset_eq)
+  with a \<open>k>0\<close> \<open>B \<subset> A\<close> have "insert a N \<in> [A]\<^bsup>k\<^esup>"
+    by (simp add: nsets_def)
+  with a have "nsets B k \<noteq> nsets A k"
+    by (metis (no_types, lifting) in_mono insertI1 mem_Collect_eq nsets_def)
+  moreover have "nsets B k \<subseteq> nsets A k"
+    using \<open>B \<subset> A\<close> nsets_mono by auto
+  ultimately show ?thesis
+    unfolding infinite_iff_psubset_le
+    by (meson \<open>A \<approx> B\<close> eqpoll_imp_lepoll nsets_eqpoll_cong psubsetI)
+qed
+
+lemma finite_nsets_iff:
+  assumes "k>0"
+  shows "finite ([A]\<^bsup>k\<^esup>) \<longleftrightarrow> finite A"
+  using assms finite_imp_finite_nsets infinite_imp_infinite_nsets by blast
+
+lemma card_nsets [simp]: "card (nsets A k) = card A choose k"
+proof (cases "finite A")
+  case True
+  then show ?thesis
+    by (metis bij_betw_nsets bij_betw_same_card binomial_eq_nsets ex_bij_betw_nat_finite)
+next
+  case False
+  then show ?thesis
+    by (cases "k=0"; simp add: finite_nsets_iff)
+qed
 
 lemma pow_is_const_prod: "a ^ n = (\<Prod>i<n. a)" for a :: "'a::comm_monoid_mult"
   by simp
@@ -51,40 +155,15 @@ proof -
     by simp
   have "fact n = (\<Prod>i=1..n. real i)"
     by (simp add: fact_prod)
-  also have "... < (\<Prod>i=1..n. if i\<le>n-s then real i else n)"
-    using assms
-    by (intro prod_mono_strict' [where i="n-1"]) auto
-  also have "... = (\<Prod>i = 1..n-s. real i) * real n ^ s"
-    using \<open>s \<le> n\<close>
-    by (force simp add: prod.If_cases eq)
-  also have "... = fact (n - s) * real n ^ s"
+  also have "\<dots> < (\<Prod>i=1..n. if i\<le>n-s then real i else n)"
+    using assms by (intro prod_mono_strict' [where i="n-1"]) auto
+  also have "\<dots> = (\<Prod>i = 1..n-s. real i) * real n ^ s"
+    using \<open>s \<le> n\<close> by (force simp add: prod.If_cases eq)
+  also have "\<dots> = fact (n - s) * real n ^ s"
     by (simp add: fact_prod)
   finally show ?thesis .
 qed
 
-
-text \<open>not actually used but possibly interesting\<close>
-lemma gbinomial_is_prod: "(a gchoose k) = (\<Prod>i<k. (a - of_nat i) / (1 + of_nat i))"
-  unfolding gbinomial_prod_rev
-proof (induction k)
-  case 0
-  then show ?case by simp
-next
-  case (Suc k)
-  show ?case
-    by (simp add: divide_simps flip: Suc)
-qed
-
-lemma finite_nsets: 
-  assumes "finite A" shows "finite (nsets A n)"
-proof -
-  have "nsets A n \<subseteq> Pow A"
-    by (auto simp: nsets_def)
-  then show ?thesis
-    by (simp add: assms finite_subset)
-qed
-
-section \<open>Appendix D\<close>
 
 subsection \<open>Fact D1\<close>
 
@@ -96,7 +175,7 @@ lemma Fact_D1_73_aux:
 proof -
   have "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = (\<Prod>i<b. (\<sigma>*m - i) / (real m - real i))"
     using bm by (simp add: gbinomial_prod_rev prod_dividef atLeast0LessThan)
-  also have "... = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
+  also have "\<dots> = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
     using bm
   proof (induction b)
     case 0
@@ -122,15 +201,15 @@ proof (cases "m=0 \<or> b=0")
     using True assms by auto
 next
   case False
-  then have "\<sigma> * m / 2 \<le> real m"
+  then have "\<sigma> * m / 2 < real m"
     using \<sigma> by auto
   with b \<sigma> False have bm: "real b < real m"
-    by (smt (verit, best) divide_eq_1_iff mult_cancel_right2 of_nat_eq_0_iff times_divide_eq_left)
-  have nonz: "m gchoose b \<noteq> 0"
-    by (metis binomial_gbinomial bm less_le_not_le of_nat_eq_0_iff of_nat_le_iff zero_less_binomial_iff)
+    by linarith
+  then have nonz: "m gchoose b \<noteq> 0"
+    by (simp add: flip: binomial_gbinomial)
   have EQ: "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))" 
     using Fact_D1_73_aux \<open>0<\<sigma>\<close> bm by blast
-  also have "... \<le> \<sigma> ^ b * 1"
+  also have "\<dots> \<le> \<sigma> ^ b * 1"
   proof (intro mult_left_mono prod_le_1 conjI)
     fix i assume "i \<in> {..<b}"
     with b \<sigma> bm show "0 \<le> 1 - (1 - \<sigma>) * i / (\<sigma> * (real m - i))"
@@ -144,24 +223,19 @@ next
     proof -
       have "exp (-2 * x) = inverse (exp (2*x))"
         by (simp add: exp_minus)
-      also have "... \<le> inverse (1 + 2*x)"
+      also have "\<dots> \<le> inverse (1 + 2*x)"
         using exp_ge_add_one_self that by auto
-      also have "... \<le> 1-x"
+      also have "\<dots> \<le> 1-x"
         using that by (simp add: mult_left_le field_simps)
       finally show ?thesis .
     qed
     have "exp (-2 * real i / (\<sigma>*m)) = exp (-2 * (i / (\<sigma>*m)))"
       by simp
     also have "\<dots> \<le> 1 - i/(\<sigma> * m)"
-    proof (intro exp_le)
-      show "0 \<le> real i / (\<sigma> * real m)"
-        using \<sigma> by auto
-      show "real i / (\<sigma> * real m) \<le> 1/2"
-        using b that by auto
-    qed
-    also have "... \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))"
+    using b that by (intro exp_le) auto
+    also have "\<dots> \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))"
       using \<sigma> b that 
-      apply (simp add: field_split_simps not_less)
+      apply (simp add: field_split_simps)
       using bm by linarith
     finally show ?thesis .
   qed
@@ -169,15 +243,15 @@ next
     by (induction b) (auto simp: power2_eq_square algebra_simps)
   with \<sigma> have "exp (- (real b ^ 2) / (\<sigma>*m)) \<le> exp (- (2 * (\<Sum>i<b. i) / (\<sigma>*m)))"
     by (simp add: mult_less_0_iff divide_simps)
-  also have "... = exp (\<Sum>i<b. -2 * real i / (\<sigma>*m))"
+  also have "\<dots> = exp (\<Sum>i<b. -2 * real i / (\<sigma>*m))"
     by (simp add: sum_negf sum_distrib_left sum_divide_distrib)
-  also have "... = (\<Prod>i<b. exp (-2 * real i / (\<sigma>*m)))"
+  also have "\<dots> = (\<Prod>i<b. exp (-2 * real i / (\<sigma>*m)))"
     using exp_sum by blast
-  also have "... \<le> (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
+  also have "\<dots> \<le> (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
     using * by (force intro: prod_mono)
   finally have "exp (- (real b)\<^sup>2 / (\<sigma> * real m)) \<le> (\<Prod>i<b. 1 - (1 - \<sigma>) * real i / (\<sigma> * (real m - real i)))" .
   with EQ have "\<sigma>^b * exp (- (real b ^ 2) / (\<sigma>*m)) \<le> ((\<sigma>*m) gchoose b) * inverse (real m gchoose b)"
-    by (simp add: assms(1))
+    by (simp add: \<sigma>)
   with \<sigma> bm have lower: "\<sigma>^b * (real m gchoose b) * exp (- (real b ^ 2) / (\<sigma>*m)) \<le> (\<sigma>*m) gchoose b"
     by (simp add: field_split_simps flip: binomial_gbinomial)
   with upper show ?thesis 
@@ -199,10 +273,10 @@ proof -
     by simp
   have "exp (-3*x/2) = inverse (exp (3*x/2))"
     by (simp add: exp_minus)
-  also have "... \<le> inverse (1 + 3*x/2 + (1/2)*(3*x/2)^2 + (1/6)*(3*x/2)^3)"
+  also have "\<dots> \<le> inverse (1 + 3*x/2 + (1/2)*(3*x/2)^2 + (1/6)*(3*x/2)^3)"
     apply (intro le_imp_inverse_le exp_lower_taylor_2)
     by (smt (verit) divide_nonneg_nonneg mult_nonneg_nonneg \<open>0 \<le> x\<close> zero_le_power)
-  also have "... \<le> 1 - 4*x/3"
+  also have "\<dots> \<le> 1 - 4*x/3"
     using assms *
     apply (simp add: field_split_simps eval_nat_numeral not_less)
     by (smt (verit, best) mult_nonneg_nonneg)
@@ -228,14 +302,14 @@ next
       using b' that by auto
     have "exp (- 3* real i / (2*m)) \<le> 1 - 4*i / (3*m)"
       using exp_inequality_17 [OF im] by (simp add: mult.commute)
-    also have "... \<le> 1 - 8*i / (7 * (real m - real b))"
+    also have "\<dots> \<le> 1 - 8*i / (7 * (real m - real b))"
     proof -
       have "real i * (real b * 7) \<le> real i * real m"
         using b' by (simp add: mult_left_mono)
       then show ?thesis
         using b' by (simp add: field_split_simps)
     qed
-    also have "... \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))"
+    also have "\<dots> \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))"
     proof -
       have 1: "(1 - \<sigma>) / \<sigma> \<le> 8/7"
         using \<sigma> \<sigma>' that
@@ -257,11 +331,11 @@ next
     by (induction b) (auto simp: power2_eq_square algebra_simps)
   with \<sigma> have "exp (- (3 * real b ^ 2) / (4*m)) \<le> exp (- (3 * (\<Sum>i<b. i) / (2*m)))"
     by (simp add: mult_less_0_iff divide_simps)
-  also have "... = exp (\<Sum>i<b. -3 * real i / (2*m))"
+  also have "\<dots> = exp (\<Sum>i<b. -3 * real i / (2*m))"
     by (simp add: sum_negf sum_distrib_left sum_divide_distrib)
-  also have "... = (\<Prod>i<b. exp (-3 * real i / (2*m)))"
+  also have "\<dots> = (\<Prod>i<b. exp (-3 * real i / (2*m)))"
     using exp_sum by blast
-  also have "... \<le> (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
+  also have "\<dots> \<le> (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
     using * by (force intro: prod_mono)
   finally have "exp (- (3 * real b ^ 2) / (4*m)) \<le> (\<Prod>i<b. 1 - (1 - \<sigma>) * real i / (\<sigma> * (real m - real i)))" .
   with EQ have "\<sigma>^b * exp (- (3 * real b ^ 2) / (4*m)) \<le> ((\<sigma>*m) gchoose b) * inverse (real m gchoose b)"
@@ -271,6 +345,10 @@ next
 qed
 
 section \<open>Lemmas relating to Ramsey's theorem\<close>
+
+lemma nsets2_eq_all_edges: "[A]\<^bsup>2\<^esup> = all_edges A"
+  using card_2_iff' unfolding nsets_def all_edges_def
+  by fastforce
 
 (* not sure that the type class is the best approach when using Chelsea's locale*)
 class infinite =
@@ -354,16 +432,19 @@ lemma is_Ramsey_number_any_type:
 qed
 
 lemma is_Ramsey_number_le:
-  assumes "is_Ramsey_number U m n r" "m' \<le> m" "n' \<le> n"
+  fixes U :: "'a itself"
+  assumes "is_Ramsey_number U m n r" and le: "m' \<le> m" "n' \<le> n"
   shows "is_Ramsey_number U m' n' r"
-  using assms
-  apply (clarsimp simp: is_Ramsey_number_def)
-  apply (drule_tac x="V" in spec)
-  apply (simp add: )
-  apply (drule_tac x="E" in spec)
-  using smaller_clique smaller_indep
-  unfolding clique_indep_def
-  by (metis (no_types, opaque_lifting) dual_order.trans obtain_subset_with_card_n)
+  unfolding is_Ramsey_number_def
+proof (intro strip)
+  fix V:: "'a set" and E
+  assume "finite V" and "r \<le> card V"
+  then obtain K where "K\<subseteq>V" and K: "clique_indep m n K E"
+    by (meson assms(1) is_Ramsey_number_def)
+  then show "\<exists>K. K \<subseteq> V \<and> clique_indep m' n' K E"
+    unfolding clique_indep_def
+    by (metis le obtain_subset_with_card_n smaller_clique smaller_indep subset_iff)
+qed
 
 lemma is_Ramsey_number_ge:
   assumes "is_Ramsey_number U m n r'" "r' \<le> r"
@@ -427,13 +508,9 @@ proof (intro Least_equality)
     apply (clarsimp simp add: is_Ramsey_number_def clique_indep_def clique_def)
     by (metis card_le_Suc0_iff_eq dual_order.refl obtain_subset_with_card_n)
   fix i
-  assume i: "is_Ramsey_number TYPE(nat) 1 m i"
-  show "i \<ge> 1"
-  proof (cases "i=0")
-    case True
-    with i assms show ?thesis
-      by (force simp add: is_Ramsey_number_def clique_indep_def)
-  qed auto
+  assume "is_Ramsey_number TYPE(nat) 1 m i"
+  with assms show "i \<ge> 1"
+    by (force simp add: is_Ramsey_number_def clique_indep_def)
 qed
 
 lemma RN_2 [simp]: 
@@ -478,7 +555,7 @@ lemma RN_3plus [simp]:
 proof -
   have "RN 2 m = m"
     using assms by auto
-  with RN_mono[of 2 k m m ] assms show ?thesis
+  with RN_mono[of 2 k m m] assms show ?thesis
     by force
 qed
 
@@ -495,38 +572,29 @@ lemma all_edges_empty_iff: "all_edges K = {} \<longleftrightarrow> (\<exists>v. 
   apply (simp add: all_edges_def card_2_iff subset_iff)
   by (metis insert_iff singleton_iff)
 
-
+text \<open>The original Ramsey number lower bound, by Erdős\<close>
 proposition Ramsey_number_lower:  
   fixes n s::nat
   assumes "s \<ge> 3" and n: "real n \<le> 2 powr (s/2)"
   shows "\<not> is_Ramsey_number (TYPE (nat)) s s n"
 proof (cases "n=0")
   case True
-  then show ?thesis sorry
+  with assms show ?thesis
+    by (auto simp: is_Ramsey_number_def clique_indep_def)
 next
   case False
   show ?thesis 
   proof
     define W where "W \<equiv> {..<n}"
-    assume con: "is_Ramsey_number (TYPE (nat)) s s n"
+    assume "is_Ramsey_number (TYPE (nat)) s s n"
     then have monoc: "\<And>F. \<exists>K\<subseteq>W. clique_indep s s K F"
       by (simp add: is_Ramsey_number_def W_def)
     then have "s \<le> n"
       by (metis W_def card_lessThan card_mono clique_indep_def finite_lessThan)
-    define monoset where "monoset \<equiv> \<lambda>K::nat set. {F. F \<subseteq> all_edges K \<and> clique_indep s s K F}"
-    have monoset_2: "card (monoset K) = 2" if "card K = s" for K 
-    proof -
-      have "monoset K = {all_edges K, {}}"
-        using that by (auto simp: monoset_def clique_indep_def clique_iff indep_iff)
-      moreover have "all_edges K \<noteq> {}"
-        using that \<open>s \<ge> 3\<close> subset_singletonD by (fastforce simp add: all_edges_empty_iff)
-      ultimately show ?thesis
-        by simp
-    qed
-
-(*CALCULATION OF THE PROBABILITY*)
     have "s > 1" using assms by arith
-    have "(n choose s) < n^s / fact s" 
+    define monoset where "monoset \<equiv> \<lambda>K::nat set. {F. F \<subseteq> all_edges K \<and> clique_indep s s K F}"
+
+    have "(n choose s) < n^s / fact s"  \<comment> \<open>probability calculation\<close>
     proof (cases "s \<le> n")
       case True
       then show ?thesis
@@ -539,43 +607,41 @@ next
     qed
     then have "(n choose s) * (2 / 2^(s choose 2)) < 2 * n^s / (fact s * 2 ^ (s * (s-1) div 2))"
       by (simp add: choose_two divide_simps)
-    also have "... \<le> 2 powr (1 + s/2) / fact s" 
+    also have "\<dots> \<le> 2 powr (1 + s/2) / fact s" 
     proof -
       have [simp]: "real (s * (s - Suc 0) div 2) = real s * (real s - 1) / 2"
         by (subst real_of_nat_div) auto
-      have "n^s \<le> 2 powr (s^2 / 2)"
-        using n \<open>n\<noteq>0\<close>
-        apply (simp add: eval_nat_numeral flip: powr_realpow)
-        by (metis powr_powr of_nat_0_le_iff powr_mono2 times_divide_eq_left)
-      then have "real n powr real s \<le> 2 powr (real s * real s / 2)"
-        using False assms by (simp add: power2_eq_square powr_realpow)
-      then have "2 * real n powr real s \<le> 2 powr ((2 + real s * real s) / 2)"
+      have "n powr s \<le> (2 powr (s/2)) powr s"
+        using n by (simp add: powr_mono2)
+      then have "n powr s \<le> 2 powr (s * s / 2)"
+        using False assms by (simp add: power2_eq_square powr_powr)
+      then have "2 * n powr s \<le> 2 powr ((2 + s * s) / 2)"
         by (simp add: add_divide_distrib powr_add)
       then show ?thesis
         using n \<open>n\<noteq>0\<close> by (simp add: field_simps flip: powr_realpow powr_add)
     qed
-    also have "... < 1"
+    also have "\<dots> < 1"
     proof -
       have "2 powr (1 + (k+3)/2) < fact (k+3)" for k
       proof (induction k)
         case 0
         have "2 powr (5/2) = sqrt (2^5)"
           by (metis divide_inverse mult.left_neutral numeral_powr_numeral_real powr_ge_pzero powr_half_sqrt powr_powr)
-        also have "... < sqrt 36"
+        also have "\<dots> < sqrt 36"
           by (intro real_sqrt_less_mono) auto
-        also have "... = fact 3"
-          by (simp add: eval_nat_numeral)
         finally show ?case
-          by simp
+          by (simp add: eval_nat_numeral)
       next
         case (Suc k)
         have "2 powr (1 + real (Suc k + 3) / 2) = 2 powr (1/2) * 2 powr (1 + (k+3)/2)"
-          by (metis (mono_tags, opaque_lifting) Num.of_nat_simps(3) add_divide_distrib nat_arith.add2 plus_nat.simps(2) powr_add)
-        also have "... \<le> sqrt 2 * fact (k+3)"
+          apply (simp add: powr_add powr_half_sqrt_powr real_sqrt_mult)
+          apply (simp flip: real_sqrt_mult)
+          done
+        also have "\<dots> \<le> sqrt 2 * fact (k+3)"
           using Suc.IH by (simp add: powr_half_sqrt)
-        also have "... < real(k + 4) * fact (k + 3)"
+        also have "\<dots> < real(k + 4) * fact (k + 3)"
           using sqrt2_less_2 by simp
-        also have "... = fact (Suc (k + 3))"
+        also have "\<dots> = fact (Suc (k + 3))"
           unfolding fact_Suc by simp
         finally show ?case by simp
       qed
@@ -584,13 +650,11 @@ next
       then show ?thesis
         by (simp add: divide_simps)
     qed
-    finally have DD: "real (n choose s) * (2 / 2 ^ (s choose 2)) < 1" .
-        (*END: CALCULATION OF THE PROBABILITY*)
+    finally have less_1: "real (n choose s) * (2 / 2 ^ (s choose 2)) < 1" .
 
-
-    define \<Omega> where "\<Omega> \<equiv> Pow (all_edges W)"
-    have "finite W"
-      by (simp add: W_def)
+    define \<Omega> where "\<Omega> \<equiv> Pow (all_edges W)"  \<comment>\<open>colour the edges randomly\<close>
+    have "finite W" and cardW: "card W = n"
+      by (auto simp: W_def)
     moreover
     have "card (all_edges W) = n choose 2"
       by (simp add: W_def card_all_edges)
@@ -598,17 +662,16 @@ next
       by (simp add: \<Omega>_def card_Pow finite_all_edges)
     then have fin_\<Omega>: "finite \<Omega>"
       by (simp add: \<Omega>_def \<open>finite W\<close> finite_all_edges)
-    have ne_\<Omega>: "\<Omega> \<noteq> {}"
-      using card\<Omega> by force
     define M where "M \<equiv> uniform_count_measure \<Omega>"
     have space_eq: "space M = \<Omega>"
       by (simp add: M_def space_uniform_count_measure)
     have sets_eq: "sets M = Pow \<Omega>"
       by (simp add: M_def sets_uniform_count_measure)
     interpret P: prob_space M
-      using M_def fin_\<Omega> ne_\<Omega> prob_space_uniform_count_measure by blast
+      using M_def fin_\<Omega> card\<Omega> prob_space_uniform_count_measure by force
 
-\<comment> \<open>define the event to avoid: monochromatic cliques, given K \<subseteq> W\<close>
+    \<comment>\<open>the event to avoid: monochromatic cliques, given @{term "K \<subseteq> W"};
+      we are considering edges over the entire graph @{term W}, to agree with @{text monoc}\<close>
     define A where "A \<equiv> \<lambda>K. {F \<in> Pow (all_edges W). F \<inter> all_edges K \<in> monoset K}"
     have A_ev: "A K \<in> P.events" for K
       by (auto simp add: sets_eq A_def \<Omega>_def)
@@ -616,55 +679,149 @@ next
       by (auto simp add: sets_eq A_def \<Omega>_def)
     have UA_sub_\<Omega>: "(\<Union>K \<in> nsets W s. A K) \<subseteq> \<Omega>"
       by (auto simp: \<Omega>_def A_def nsets_def all_edges_def)
-
     have s_choose_le: "s choose 2 \<le> n choose 2"
       using \<open>s \<le> n\<close> by (simp add: Diagonal.binomial_mono)
-    have cardA: "card (A K) = 2 * 2 ^ ((n choose 2) - (s choose 2))" if "K \<in> nsets W s" for K
-      apply (simp add: A_def monoset_def)
+    have cardA: "card (A K) = 2 * 2 ^ ((n choose 2) - (s choose 2))" 
+      if "K \<in> nsets W s" for K     \<comment>\<open>the cardinality involves the edges outside the clique\<close>
+    proof -
+      have K: "K \<subseteq> W" "finite K" "card K = s"
+        using that by (auto simp: nsets_def)
+      with \<open>finite W\<close> have [simp]: "finite ([K]\<^bsup>2\<^esup>)" "finite ([W]\<^bsup>2\<^esup>)"
+        by (auto simp add: finite_imp_finite_nsets)
+      have "card ([K]\<^bsup>2\<^esup>) = s choose 2"
+        by (simp add: K)
+      have *: "all_edges K \<noteq> {}"
+        using that \<open>s \<ge> 3\<close> subset_singletonD by (fastforce simp: nsets_def all_edges_empty_iff)
 
-      sorry
-    have emeasure_eq: "emeasure M A = (if (A \<subseteq> \<Omega>) then card A / card \<Omega> else 0)" for A
+      define f :: "nat set set * nat set set \<Rightarrow> nat set set * nat set set" 
+        where "f \<equiv> \<lambda>(EW,EA). ((EW \<inter> all_edges K) \<union> (EA - all_edges K), EA \<inter> all_edges K)"
+      have "bij_betw f (Pow (nsets K 2) \<times> A K) 
+                       (Pow (nsets W 2) \<times> {all_edges K, {}})"
+        unfolding bij_betw_def
+      proof (intro conjI)
+        show "inj_on f (Pow ([K]\<^bsup>2\<^esup>) \<times> A K)"
+          by (auto simp add: inj_on_def f_def A_def nsets2_eq_all_edges)
+        have *: "\<exists>EA\<subseteq>all_edges W. EA \<inter> all_edges K \<in> monoset K
+                        \<and> EW = EW \<inter> all_edges K \<union> (EA - all_edges K) \<and> F = EA \<inter> all_edges K"
+          if F: "F = all_edges K \<or> F = {}" and EW: "EW \<subseteq> all_edges W" for EW F
+          using F
+        proof
+          assume \<section>: "F = all_edges K"
+          show ?thesis
+          proof (intro exI conjI)
+            show "EW \<union> all_edges K \<subseteq> all_edges W"
+              by (simp add: \<open>K \<subseteq> W\<close> all_edges_mono EW)
+            show "(EW \<union> all_edges K) \<inter> all_edges K \<in> monoset K"
+              by (simp add: K clique_iff clique_indep_def monoset_def)
+          qed (use \<section> in auto)
+        next
+          assume \<section>: "F = {}"
+          show ?thesis
+          proof (intro exI conjI)
+            show "(EW - all_edges K) \<inter> all_edges K \<in> monoset K"
+              by (simp add: Int_commute K clique_indep_def indep_iff monoset_def)
+          qed (use \<section> that in auto)
+        qed
+        have "f ` (Pow ([K]\<^bsup>2\<^esup>) \<times> A K) \<subseteq> Pow ([W]\<^bsup>2\<^esup>) \<times> {all_edges K, {}}"
+          using K all_edges_mono
+          by (auto simp: f_def A_def nsets2_eq_all_edges monoset_def clique_indep_def clique_iff indep_iff)
+        moreover have "Pow ([W]\<^bsup>2\<^esup>) \<times> {all_edges K, {}} \<subseteq> f ` (Pow ([K]\<^bsup>2\<^esup>) \<times> A K)"
+          apply (clarsimp simp: f_def A_def image_iff nsets2_eq_all_edges)
+          apply (rule_tac x="a \<inter> all_edges K" in bexI; force simp add: *)
+          done
+        ultimately show "f ` (Pow ([K]\<^bsup>2\<^esup>) \<times> A K) = Pow ([W]\<^bsup>2\<^esup>) \<times> {all_edges K, {}}" 
+          by blast
+      qed
+      then
+      have "card (Pow (nsets K 2) \<times> A K)  = card (Pow (nsets W 2) \<times> {all_edges K, {}})"
+        using bij_betw_same_card by blast
+      then have "2 ^ (s choose 2) * card (A K) = 2 * 2 ^ (n choose 2)"
+        using K  * by (simp add: card_Pow card_cartesian_product cardW)
+      then have "2 ^ (s choose 2) * card (A K) = 2 * 2 ^ ((s choose 2) + (n choose 2 - (s choose 2)))"
+        by (simp add: s_choose_le)
+      then show ?thesis
+        by (simp add: power_add)
+    qed
+    have emeasure_eq: "emeasure M A = (if A \<subseteq> \<Omega> then card A / card \<Omega> else 0)" for A
       using M_def emeasure_neq_0_sets emeasure_uniform_count_measure fin_\<Omega> sets_eq by force
     have MA: "emeasure M (A K) = ennreal (2 / 2 ^ (s choose 2))" if "K \<in> nsets W s" for K
       using that
       apply (simp add: emeasure_eq A_sub_\<Omega> card\<Omega> cardA)
       apply (simp add: s_choose_le power_diff flip: divide_ennreal ennreal_power)
       done
-    then
-    have FF: "P.prob (A K) = 2 / 2 ^ (s choose 2)" if "K \<in> nsets W s" for K
+    then have prob_AK: "P.prob (A K) = 2 / 2 ^ (s choose 2)" if "K \<in> nsets W s" for K
       using that by (simp add: P.emeasure_eq_measure)
     have "P.prob (\<Union> K \<in> nsets W s. A K) \<le> (\<Sum>K \<in> nsets W s. P.prob (A K))"
       by (simp add: A_ev P.finite_measure_subadditive_finite \<open>finite W\<close> nsets_def image_subset_iff)
-    also have "... = real (n choose s) * (2 / 2 ^ (s choose 2))"
-      by (simp add: FF W_def)
-    also have "\<dots> < 1"  (*INSERT CALCULATION HERE*)
-      using DD by presburger
+    also have "\<dots> = real (n choose s) * (2 / 2 ^ (s choose 2))"
+      by (simp add: prob_AK W_def)
+    also have "\<dots> < 1" 
+      using less_1 by presburger
     finally have "P.prob (\<Union> K \<in> nsets W s. A K) < 1" .
     with A_ev UA_sub_\<Omega> obtain F where "F \<in> \<Omega> - (\<Union> K \<in> nsets W s. A K)"
       by (smt (verit, best) P.prob_space Diff_iff space_eq subset_antisym subset_iff)
     then have "\<forall>K \<in> nsets W s. \<not> clique_indep s s K F"
       by (simp add: A_def monoset_def \<Omega>_def clique_indep_all_edges_iff)
     then show False
-      using monoc
-      by (metis (mono_tags, lifting) \<open>finite W\<close> clique_indep_def finite_subset mem_Collect_eq nsets_def)
+      using monoc \<open>finite W\<close> finite_subset nsets_def by (fastforce simp add: clique_indep_def)
   qed
 qed
 
-lemma RN_lower:
-  assumes "k \<ge> 3"
-  shows "RN k k > 2 powr (real k / 2)"
-  using assms Ramsey_number_lower is_Ramsey_number_RN by force
+lemma C [derivative_intros]:
+  assumes "\<And>x. (f has_real_derivative g x) (at x)"
+    "a \<noteq> (0::real)"
+  shows "((\<lambda>x. a powr (f x)) has_field_derivative a powr (f x) * (g x * ln a)) (at x)"
+  using assms
+  apply (simp add: powr_def)
+  by(simp | rule assms derivative_eq_intros)+
 
-end
 
 lemma D:
   fixes x::real
   assumes "x\<ge>4"
   shows "x \<le> 2 powr (x/2)"
-  sorry
+proof -
+  have 1: "x \<le> 2 powr (x/2)" if "x=4"
+    using that by simp
+  have 2: "((\<lambda>x. 2 powr (x/2) - x) has_real_derivative ln 2 * (2 powr (y/2 - 1)) - 1) (at y)" for y
+    by (rule derivative_eq_intros | rule refl | simp add: powr_def algebra_simps exp_diff)+
+  have 3: "ln 2 * (2 powr (y/2 - 1)) - 1 \<ge> 0" if "4 \<le> y" for y::real
+  proof -
+    have "1 \<le> ln 2 * 2 powr ((4 - 2) / (2::real))"
+      using ln2_ge_two_thirds by simp
+    also have "... \<le> ln 2 * (2 powr (y/2 - 1))"
+      using that by (intro mult_left_mono powr_mono) auto
+    finally show ?thesis by simp
+  qed
+  show ?thesis
+    apply (rule  gen_upper_bound_increasing [of 4 x "\<lambda>x. 2 powr (x/2)" "\<lambda>x. x"])
+       apply (rule assms)
+      apply (rule 2)
+     apply (rule 3)
+     apply (auto simp: )
+    done
+qed
+
 
 lemma DD: "k \<ge> 4 \<Longrightarrow> k \<le> 2 powr (real k / 2)"
   using D numeral_le_real_of_nat_iff by blast
+
+theorem RN_lower:
+  assumes "k \<ge> 3"
+  shows "RN k k > 2 powr (real k / 2)"
+  using assms Ramsey_number_lower is_Ramsey_number_RN by force
+
+theorem RN_lower_self:
+  assumes "k \<ge> 4"
+  shows "RN k k > k"
+proof -
+  have "RN k k > 2 powr (real k / 2)"
+    using assms by (intro RN_lower) auto
+  then show ?thesis
+    using DD assms by fastforce
+qed
+
+end
 
 definition Neighbours :: "'a set set \<Rightarrow> 'a \<Rightarrow> 'a set" where
   "Neighbours \<equiv> \<lambda>E x. {y. {x,y} \<in> E}"
@@ -893,7 +1050,7 @@ proof (cases "finite X \<and> finite Y")
   case True
   then have "card (Red \<inter> all_edges_betw_un X Y) \<le> card (all_edges_betw_un X Y)"
     by (simp add: all_edges_betw_un_iff_mk_edge card_mono finite_all_edges_between')
-  also have "... \<le> card (all_edges_between X Y)"
+  also have "\<dots> \<le> card (all_edges_between X Y)"
     by (simp add: all_edges_betw_un_iff_mk_edge card_image_le finite_all_edges_between')
   finally show ?thesis
     by (simp add: gen_density_def edge_density_def divide_right_mono)
@@ -1013,7 +1170,7 @@ lemma lpowr23_ge3: "nat \<lceil>l powr (2/3)\<rceil> \<ge> 3"
 proof -
   have "(3::real) \<le> 6 powr (2/3)"
     by (approximation 10)
-  also have "... \<le> l powr (2/3)"
+  also have "\<dots> \<le> l powr (2/3)"
     by (simp add: l_large powr_mono2)
   finally show ?thesis
     by (simp add: le_natceiling_iff)
@@ -1300,8 +1457,8 @@ next
     by (force simp: next_state_valid degree_reg_valid_state split: prod.split)
 qed
 
-definition "Xseq \<equiv> (\<lambda>(X,Y,A,B). X) o stepper"
-definition "Yseq \<equiv> (\<lambda>(X,Y,A,B). Y) o stepper"
+definition "Xseq \<equiv> (\<lambda>(X,Y,A,B). X) \<circ> stepper"
+definition "Yseq \<equiv> (\<lambda>(X,Y,A,B). Y) \<circ> stepper"
 definition "pseq \<equiv> \<lambda>n. red_density (Xseq n) (Yseq n)"
 
 lemma Xseq_Suc_subset: "Xseq (Suc n) \<subseteq> Xseq n"
@@ -1357,22 +1514,22 @@ proof -
       using \<open>size_clique m U Blue\<close> size_clique_def by auto
     have "m \<ge> 3"
       using lpowr23_ge3 m_def by blast
-    then have "m\<noteq>0"
-      by auto
+    then have "k \<le> RN m k" and "m \<noteq> 0"
+      using l_large lk by auto
     have "U \<subseteq> X"
       using W_def \<open>U \<subseteq> W\<close> by blast
     with \<open>X\<subseteq>V\<close> have cardXU: "card (X - U) = card X - card U" "card U \<le> card X"
       by (meson card_Diff_subset finV finite_subset card_mono)+
-    have "m \<le> k"
-      using lk unfolding m_def
-      sorry
+    have "k \<ge> 4"
+      using l_large lk by linarith
+    have "real l powr (2/3) \<le> real l powr 1"
+      using l_large by (intro powr_mono) auto
+    then have "m \<le> k"
+      using lk by (simp add: m_def)
     then have "m < RN k m"
-      using \<open>m \<ge> 3\<close> RN_lower RN_mono
-      sorry
+      using RN_commute RN_lower_self \<open>4 \<le> k\<close> \<open>k \<le> RN m k\<close> nat_less_le by force
     also have cX: "RN k m \<le> card X"
-      using assms
-      apply (simp add: many_bluish_def m_def)
-      by (metis (full_types) Collect_subset card_mono finV order_trans finite_subset)
+      using assms by (metis Collect_subset W_def Wbig card_mono order_trans finV finite_subset)
     finally have "card U < card X"
       using \<open>card U = m\<close> by blast
     define \<sigma> where "\<sigma> \<equiv> blue_density U (X-U)"
@@ -1383,7 +1540,7 @@ proof -
       defer
       using \<open>card U < card X\<close> \<open>card U = m\<close> apply linarith
       sorry
-    also have "... \<le> \<sigma>"
+    also have "\<dots> \<le> \<sigma>"
       using \<open>m\<noteq>0\<close>
       apply (simp add: \<sigma>_def gen_density_def divide_simps)
       apply (auto simp: )
