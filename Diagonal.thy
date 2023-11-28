@@ -7,6 +7,9 @@ theory Diagonal imports
    
 begin
 
+lemma "finite A \<Longrightarrow> inj_on (inv_into A (to_nat_on A)) A"
+  oops
+
 thm powr_half_sqrt
 lemma powr_half_sqrt_powr: "0 \<le> x \<Longrightarrow> x powr (a/2) = sqrt(x powr a)"
   by (metis divide_inverse mult.left_neutral powr_ge_pzero powr_half_sqrt powr_powr)
@@ -110,6 +113,39 @@ proof -
     by (metis F_def bij_betw_def bij_betw_nsets f nsets_mono)
   ultimately show ?thesis
     by (meson lepoll_def)
+qed
+
+lemma partn_lst_less:
+  assumes M: "partn_lst \<beta> \<alpha> n" and eq: "length \<alpha>' = length \<alpha>" 
+    and le: "\<And>i. i < length \<alpha> \<Longrightarrow> \<alpha>'!i \<le> \<alpha>!i "
+  shows "partn_lst \<beta> \<alpha>' n"
+proof (clarsimp simp: partn_lst_def)
+  fix f
+  assume "f \<in> [\<beta>]\<^bsup>n\<^esup> \<rightarrow> {..<length \<alpha>'}"
+  then obtain i H where i: "i < length \<alpha>"
+                   and "H \<subseteq> \<beta>"  and H: "card H = (\<alpha>!i)" and "finite H"
+                   and fi: "f ` nsets H n \<subseteq> {i}"
+    using assms by (auto simp: partn_lst_def nsets_def)
+  then have bij: "bij_betw (to_nat_on H) H {0..<\<alpha>!i}"
+    by (metis atLeast0LessThan to_nat_on_finite)
+  define H' where "H' = inv_into H (to_nat_on H) ` {0..<\<alpha>'!i}"
+  have "H' \<subseteq> H"
+    using bij \<open>i < length \<alpha>\<close> bij_betw_imp_surj_on le
+    by (force simp: H'_def image_subset_iff intro: inv_into_into)
+  then have "finite H'"
+    by (simp add: \<open>finite H\<close> finite_subset)
+  with \<open>H' \<subseteq> H\<close> have "card H' = (\<alpha>'!i)"
+    unfolding H'_def
+    apply (subst card_image)
+    apply (metis bij bij_betw_def dual_order.refl i inj_on_inv_into ivl_subset le)
+    by force
+  then show "\<exists>i<length \<alpha>'. \<exists>H\<in>[\<beta>]\<^bsup>(\<alpha>' ! i)\<^esup>. f ` [H]\<^bsup>n\<^esup> \<subseteq> {i}"
+    using i \<open>H' \<subseteq> H\<close> fi
+    apply (rule_tac x="i" in exI)
+    apply (simp add: eq)
+    apply (rule_tac x="H'" in bexI)
+     apply (clarsimp simp: nsets_def image_subset_iff)
+    using \<open>H \<subseteq> \<beta>\<close> \<open>finite H'\<close> nsets_def by fastforce
 qed
 
 (*Ramsey?*)
@@ -412,98 +448,147 @@ lemma clique_indep_all_edges_iff: "clique_indep s s K (E \<inter> all_edges K) =
   by (simp add: clique_all_edges_iff clique_indep_def indep_all_edges_iff)
 
 text \<open>identifying Ramsey numbers (not the minimum) for a given type and pair of integers\<close>
-definition is_Ramsey_number where
-  "is_Ramsey_number \<equiv> \<lambda>U::'a itself. \<lambda>m n r. 
+definition IS_RN where
+  "IS_RN \<equiv> \<lambda>U::'a itself. \<lambda>m n r. 
        (\<forall>V::'a set. \<forall>E. finite V \<longrightarrow> card V \<ge> r \<longrightarrow> (\<exists>K\<subseteq>V. clique_indep m n K E))"
 
-text \<open>All complete graphs of a given cardinality are the same\<close>
-lemma is_Ramsey_number_any_type:
-  assumes "is_Ramsey_number (U::'a::infinite itself) m n r"
-  shows "is_Ramsey_number (V::'b itself) m n r"
-  unfolding is_Ramsey_number_def
-  proof (intro strip)
-  fix V :: "'b set" and E :: "'b set set"
-  assume V: "finite V" "r \<le> card V"
-  obtain W::"'a set" where "finite W" and W: "card W = card V"
-    by (metis infinite_UNIV infinite_arbitrarily_large)
-  with V obtain f where f: "bij_betw f V W"
-    by (metis finite_same_card_bij)
-  define F where "F \<equiv> (\<lambda>e. f ` e) ` (E \<inter> Pow V)"
-  obtain R where "R\<subseteq>W" and R: "clique_indep m n R F"
-    using assms V W \<open>finite W\<close> unfolding is_Ramsey_number_def by metis
-  define S where "S \<equiv> inv_into V f ` R"
-  have eq_iff: "\<forall>v\<in>R. \<forall>w\<in>R. inv_into V f v = inv_into V f w \<longleftrightarrow> v=w"
-    by (metis \<open>R \<subseteq> W\<close> bij_betw_inv_into_right f subset_iff)
-  have *: "\<And>v w x. \<lbrakk>{v, w} = f ` x; x \<subseteq> V\<rbrakk> \<Longrightarrow> {inv_into V f v, inv_into V f w} = x"
-    by (metis bij_betw_def f image_empty image_insert inv_into_image_cancel)
-  have "card S = card R"
-    by (metis S_def \<open>R \<subseteq> W\<close> f bij_betw_inv_into bij_betw_same_card bij_betw_subset)
-  moreover have "clique S E" if "clique R F"
-    using that * by (force simp: S_def clique_def image_iff eq_iff F_def)
-  moreover have "indep S E" if "indep R F"
-    unfolding S_def indep_def
-  proof clarify
-    fix x y
-    assume xy: "x \<in> R" "y \<in> R"
-      and "inv_into V f x \<noteq> inv_into V f y"
-      and E: "{inv_into V f x, inv_into V f y} \<in> E"
-    then have "x \<noteq> y"
-      by blast
-    then have *: "\<not> (\<exists>e\<in>E \<inter> Pow V. {x,y} = f ` e)"
-      by (metis F_def image_eqI indep_def that xy)
-    have "inv_into V f x \<in> V \<and> inv_into V f y \<in> V"
-      by (metis \<open>R \<subseteq> W\<close> bij_betw_imp_surj_on f inv_into_into subsetD xy)
-    then have "{x, y} \<noteq> f ` {inv_into V f x, inv_into V f y}"
-      using * E by blast
-    with f \<open>R \<subseteq> W\<close> xy have "{x,y} \<in> F"
-      by (auto simp: bij_betw_def doubleton_eq_iff)
-    with * show False
-      by (simp add: F_def image_iff)
+abbreviation is_Ramsey_number :: "[nat,nat,nat] \<Rightarrow> bool" where 
+  "is_Ramsey_number m n r \<equiv> partn_lst {..<r} [m,n] 2"
+
+lemma IS_RN_imp_partn_lst:  (*EVENTUALLY, RENAME*)
+  fixes U :: "'a itself"
+  assumes r: "IS_RN U m n r" and inf: "infinite (UNIV::'a set)"
+  shows "partn_lst {..<r} [m,n] 2"
+  unfolding partn_lst_def
+proof (intro strip)
+  fix f
+  assume f: "f \<in> [{..<r}]\<^bsup>2\<^esup> \<rightarrow> {..<length [m,n]}"
+  obtain V::"'a set" where "finite V" and V: "card V = r"
+    by (metis assms infinite_arbitrarily_large)
+  then obtain \<phi> where \<phi>: "bij_betw \<phi> V {..<r}"
+    using to_nat_on_finite by blast
+  define E where "E \<equiv> {e. \<exists>x\<in>V. \<exists>y\<in>V. e = {x,y} \<and> x \<noteq> y \<and> f {\<phi> x, \<phi> y} = 0}"
+  obtain K where "K\<subseteq>V" and K: "clique_indep m n K E"
+    by (metis r V \<open>finite V\<close> IS_RN_def nle_le)
+  then consider "card K = m" "clique K E" | "card K = n" "indep K E"
+    by (meson clique_indep_def)
+  then show "\<exists>i<length [m, n]. \<exists>H\<in>[{..<r}]\<^bsup>([m,n] ! i)\<^esup>. f ` [H]\<^bsup>2\<^esup> \<subseteq> {i}"
+  proof cases
+    case 1
+    have "f e = 0"
+      if e: "e \<subseteq> \<phi> ` K" "finite e" "card e = 2" for e :: "nat set"
+    proof -
+      obtain x y where "x\<in>V" "y\<in>V" "e = {\<phi> x, \<phi> y} \<and> x \<noteq> y"
+        using e \<open>K\<subseteq>V\<close> \<phi>
+        apply (auto simp: subset_image_iff)
+        by (metis basic_trans_rules(23) bij_betw_def bij_betw_same_card bij_betw_singletonI bij_betw_subset card_2_iff image_insert insert_subset)
+      then show ?thesis
+        using e 1
+        apply (simp add: clique_def E_def)
+        by (smt (verit, ccfv_threshold) \<phi> bij_betw_iff_bijections imageE image_insert image_is_empty)
+    qed
+    moreover have "\<phi> ` K \<in> [{..<r}]\<^bsup>m\<^esup>"
+      apply (auto simp: nsets_def)
+      using \<open>K \<subseteq> V\<close> \<phi> bij_betw_imp_surj_on apply fastforce
+      using \<open>K \<subseteq> V\<close> \<open>finite V\<close> finite_subset apply blast
+      by (metis "1"(1) \<open>K \<subseteq> V\<close> \<phi> bij_betw_same_card bij_betw_subset)
+    ultimately show ?thesis
+      apply (rule_tac x="0" in exI)
+      apply (simp add: )
+      by (smt (verit, best) image_subset_iff insert_iff mem_Collect_eq nsets_def)
+  next
+    case 2
+    then show ?thesis sorry
   qed
-  ultimately show "\<exists>R. (R::'b set) \<subseteq> V \<and> (clique_indep m n R E)"
-    by (metis R S_def \<open>R \<subseteq> W\<close> bij_betw_def clique_indep_def bij_betw_inv_into f image_mono)
+
 qed
+
+lemma partn_lst_imp_IS_RN: (*EVENTUALLY, RENAME*)
+  fixes U :: "'a itself"
+  assumes "partn_lst {..<r} [m,n] 2"
+  shows "IS_RN U m n r"
+  unfolding IS_RN_def
+proof (intro strip)
+  fix V::"'a set" and E ::"'a set set"
+  assume V: "finite V" "r \<le> card V"
+  obtain \<phi> where \<phi>: "bij_betw \<phi> {..<card V} V"
+    using \<open>finite V\<close> bij_betw_from_nat_into_finite by blast
+  define f :: "nat set \<Rightarrow> nat" where "f \<equiv> \<lambda>e. if \<phi>`e \<in> E then 0 else 1"
+  obtain i H where "i<2" and H: "H \<subseteq> {..<r}" "finite H" "card H = [m,n] ! i" 
+    and mono: "f ` (nsets H 2) \<subseteq> {i}"
+    using assms unfolding partn_lst_def nsets_def
+    using f_def numeral_2_eq_2
+    apply-
+    apply (drule_tac x="f" in bspec)
+    apply (simp add: f_def)
+    using numeral_2_eq_2 by auto
+  have [simp]: "\<And>v w. \<lbrakk>v \<in> H; w \<in> H\<rbrakk> \<Longrightarrow> \<phi> v = \<phi> w \<longleftrightarrow> v=w"
+    using bij_betw_imp_inj_on [OF \<phi>] H
+    by (meson V(2) inj_on_def inj_on_subset lessThan_subset_iff)
+  define K where "K \<equiv> \<phi> ` H"
+  have [simp]: "\<And>v w. \<lbrakk>v \<in> K; w \<in> K\<rbrakk> \<Longrightarrow> inv_into {..<card V} \<phi> v = inv_into {..<card V} \<phi> w \<longleftrightarrow> v=w"
+    using bij_betw_inv_into_right [OF \<phi>] H
+    by (metis (no_types, opaque_lifting) K_def Set.basic_monos(7) V(2) \<phi> bij_betw_imp_surj_on image_mono lessThan_subset_iff)
+  have "K \<subseteq> V"
+    using H \<phi> V bij_betw_imp_surj_on by (fastforce simp: K_def nsets_def)
+  have [simp]: "card (\<phi> ` H) = card H"
+    using H by (metis V(2) \<phi> bij_betw_same_card bij_betw_subset lessThan_subset_iff)
+  consider (0) "i=0" | (1) "i=1"
+    using \<open>i<2\<close> by linarith
+  then have "clique_indep m n K E"
+  proof cases
+    case 0 
+    have "{v, w} \<in> E" if "v \<in> K" and "w \<in> K" and "v \<noteq> w"  for v w
+    proof -
+      have "{inv_into {..<card V} \<phi> v, inv_into {..<card V} \<phi> w} \<in> [H]\<^bsup>2\<^esup>"
+        using that bij_betw_inv_into_left [OF \<phi>] H(1) V(2)
+        by (auto simp add: nsets_def card_insert_if K_def)
+      then show ?thesis
+        by (smt (verit, del_insts) "0" Set.basic_monos(7) \<open>K \<subseteq> V\<close> \<phi> bij_betw_inv_into_right f_def image_empty image_insert image_subset_iff mono nat.simps(3) numeral_nat(7) singletonD that(1) that(2))
+    qed
+    then show ?thesis 
+      unfolding clique_indep_def clique_def
+      by (simp add: "0" H(3) K_def)
+  next
+    case 1
+    have "{v, w} \<notin> E" if "v \<in> K" and "w \<in> K" and "v \<noteq> w"  for v w
+    proof -
+      have "{inv_into {..<card V} \<phi> v, inv_into {..<card V} \<phi> w} \<in> [H]\<^bsup>2\<^esup>"
+        using that bij_betw_inv_into_left [OF \<phi>] H(1) V(2)
+        by (auto simp add: nsets_def card_insert_if K_def)
+      then show ?thesis
+        by (smt (verit, del_insts) "1" Set.basic_monos(7) \<open>K \<subseteq> V\<close> \<phi> bij_betw_inv_into_right f_def image_empty image_insert image_subset_iff mono nat.simps(3) numeral_nat(7) singletonD that(1) that(2))
+    qed
+    then show ?thesis 
+      unfolding clique_indep_def indep_def
+      by (simp add: "1" H(3) K_def)
+  qed
+  with \<open>K \<subseteq> V\<close> show "\<exists>K. K \<subseteq> V \<and> clique_indep m n K E" by blast
+qed
+
+
+
+text \<open>All complete graphs of a given cardinality are the same\<close>
+lemma IS_RN_any_type:
+  assumes "IS_RN (U::'a itself) m n r" "infinite (UNIV::'a set)" 
+  shows "IS_RN (V::'b::infinite itself) m n r"
+  by (metis  partn_lst_imp_IS_RN IS_RN_imp_partn_lst assms)
 
 lemma is_Ramsey_number_le:
-  fixes U :: "'a itself"
-  assumes "is_Ramsey_number U m n r" and le: "m' \<le> m" "n' \<le> n"
-  shows "is_Ramsey_number U m' n' r"
-  unfolding is_Ramsey_number_def
-proof (intro strip)
-  fix V:: "'a set" and E
-  assume "finite V" and "r \<le> card V"
-  then obtain K where "K\<subseteq>V" and K: "clique_indep m n K E"
-    by (meson assms(1) is_Ramsey_number_def)
-  then show "\<exists>K. K \<subseteq> V \<and> clique_indep m' n' K E"
-    unfolding clique_indep_def
-    by (metis le obtain_subset_with_card_n smaller_clique smaller_indep subset_iff)
-qed
-
-lemma is_Ramsey_number_ge:
-  assumes "is_Ramsey_number U m n r'" "r' \<le> r"
-  shows "is_Ramsey_number U m n r"
-  using assms by (auto simp: is_Ramsey_number_def)
-
-lemma ex_Ramsey_number: "\<exists>r. is_Ramsey_number U m n r"
-  using ramsey2 [of m n] by (auto simp: is_Ramsey_number_def clique_indep_def)
+  assumes "is_Ramsey_number m n r" and le: "m' \<le> m" "n' \<le> n"
+  shows "is_Ramsey_number m' n' r"
+  using partn_lst_less [where \<alpha> = "[m,n]" and \<alpha>' = "[m',n']"] assms
+  by (force simp add: less_Suc_eq)
 
 definition RN where
-  "RN \<equiv> \<lambda>m n. LEAST r. is_Ramsey_number (TYPE (nat)) m n r"
+  "RN \<equiv> \<lambda>m n. LEAST r. is_Ramsey_number m n r"
 
-lemma is_Ramsey_number_RN: "is_Ramsey_number (TYPE('a)) m n (RN m n)"
-  by (metis LeastI_ex RN_def ex_Ramsey_number is_Ramsey_number_any_type)
+lemma is_Ramsey_number_RN: "partn_lst {..< (RN m n)} [m,n] 2"
+  by (metis LeastI_ex RN_def ramsey2_full)
 
-lemma RN_le:
-  fixes U :: "'a::infinite itself"
-  shows "\<lbrakk>is_Ramsey_number U m n r\<rbrakk> \<Longrightarrow> RN m n \<le> r"
-  by (metis Least_le RN_def is_Ramsey_number_any_type)
 
-lemma Ramsey_RN:
-  fixes V :: "'a set"
-  assumes "card V \<ge> RN m n" "finite V"
-  shows "\<exists>K \<subseteq> V. clique_indep m n K E"
-  using is_Ramsey_number_RN [of m n] assms
-  unfolding is_Ramsey_number_def by blast
+lemma RN_le: "\<lbrakk>is_Ramsey_number m n r\<rbrakk> \<Longrightarrow> RN m n \<le> r"
+  by (simp add: Least_le RN_def)
 
 lemma RN_mono:
   assumes "m' \<le> m" "n' \<le> n"
@@ -516,9 +601,30 @@ lemma indep_iff_clique [simp]: "K \<subseteq> V \<Longrightarrow> indep K (all_e
 lemma clique_iff_indep [simp]: "K \<subseteq> V \<Longrightarrow> clique K (all_edges V - E) \<longleftrightarrow> indep K E"
   by (auto simp: clique_def indep_def all_edges_def)
 
-lemma is_Ramsey_number_commute: "is_Ramsey_number U m n r \<Longrightarrow> is_Ramsey_number U n m r"
-  unfolding is_Ramsey_number_def clique_indep_def
-  by (metis indep_iff_clique clique_iff_indep)
+lemma is_Ramsey_number_commute:
+  assumes "is_Ramsey_number m n r"
+  shows "is_Ramsey_number n m r"
+  unfolding partn_lst_def
+proof (intro strip)
+  fix f 
+  assume f: "f \<in> [{..<r}]\<^bsup>2\<^esup> \<rightarrow> {..<length [n, m]}"
+  define f' where "f' \<equiv> \<lambda>A. 1 - f A"
+  then have "f' \<in> [{..<r}]\<^bsup>2\<^esup> \<rightarrow> {..<2}"
+    by (auto simp: f'_def)
+  then obtain i H where "i<2" and H: "H \<in> [{..<r}]\<^bsup>([m,n] ! i)\<^esup>" "f' ` [H]\<^bsup>2\<^esup> \<subseteq> {i}"
+    using assms by (auto simp: partn_lst_def numeral_2_eq_2)
+  then have "H \<subseteq> {..<r}"
+    by (auto simp: nsets_def)
+  then have fless2: "\<forall>x\<in>[H]\<^bsup>2\<^esup>. f x < Suc (Suc 0)"
+    using funcset_mem [OF f] nsets_mono by force
+  with \<open>i<2\<close> H have "H \<in> [{..<r}]\<^bsup>([n,m] ! (1-i))\<^esup>" 
+    by (fastforce simp add: less_2_cases_iff f'_def image_subset_iff)
+  moreover have "f ` [H]\<^bsup>2\<^esup> \<subseteq> {1-i}"
+    using H fless2 by (fastforce simp: f'_def)
+    ultimately
+  show "\<exists>i<length [n, m]. \<exists>H\<in>[{..<r}]\<^bsup>([n,m] ! i)\<^esup>. f ` [H]\<^bsup>2\<^esup> \<subseteq> {i}"
+    by (metis One_nat_def Suc_1 \<open>i < 2\<close> length_Cons less_2_cases_iff list.size(3) verit_minus_simplify(1) verit_minus_simplify(2))
+qed
 
 lemma RN_commute_aux: "RN n m \<le> RN m n"
   using RN_le is_Ramsey_number_RN is_Ramsey_number_commute by blast
@@ -526,24 +632,48 @@ lemma RN_commute_aux: "RN n m \<le> RN m n"
 lemma RN_commute: "RN m n = RN n m"
   by (simp add: RN_commute_aux le_antisym)
 
+
 lemma RN_0 [simp]: "RN 0 m = 0"
   unfolding RN_def
 proof (intro Least_equality)
-  show "is_Ramsey_number TYPE(nat) 0 m 0"
-    by (force simp: is_Ramsey_number_def clique_indep_def clique_def)
+  show "is_Ramsey_number 0 m 0"
+    by (auto simp: partn_lst_def nsets_def)
 qed auto
 
 lemma RN_1 [simp]: 
   assumes "m>0" shows "RN 1 m = 1"
   unfolding RN_def
 proof (intro Least_equality)
-  show "is_Ramsey_number TYPE(nat) 1 m 1"
-    apply (clarsimp simp add: is_Ramsey_number_def clique_indep_def clique_def)
-    by (metis card_le_Suc0_iff_eq dual_order.refl obtain_subset_with_card_n)
+  have [simp]: "[{..<Suc 0}]\<^bsup>2\<^esup> = {}" "[{}]\<^bsup>2\<^esup> = {}"
+    by (auto simp: nsets_def card_2_iff)
+  show "is_Ramsey_number 1 m 1"
+    by (auto simp: partn_lst_def)
   fix i
-  assume "is_Ramsey_number TYPE(nat) 1 m i"
-  with assms show "i \<ge> 1"
-    by (force simp add: is_Ramsey_number_def clique_indep_def)
+  assume i: "is_Ramsey_number 1 m i"
+  show "i \<ge> 1"
+  proof (cases "i=0")
+    case True
+    with i assms show ?thesis
+      by (auto simp: partn_lst_def nsets_empty_iff less_Suc_eq)
+  qed auto
+qed
+
+lemma IS_RN_2: "IS_RN TYPE(nat) 2 m m"
+  unfolding IS_RN_def
+proof (intro strip)
+  fix V :: "'a set" and E
+  assume "finite V"
+    and "m \<le> card V"
+  show "\<exists>K. K \<subseteq> V \<and> clique_indep 2 m K E"
+  proof (cases "\<exists>K. K \<subseteq> V \<and> card K = 2 \<and> clique K E")
+    case False
+    then have "indep V E"
+      apply (clarsimp simp: clique_def indep_def card_2_iff)
+      by (smt (verit, best) doubleton_eq_iff insert_absorb insert_iff subset_iff)
+    then show ?thesis
+      unfolding clique_indep_def
+      by (meson \<open>m \<le> card V\<close> card_Ex_subset smaller_indep)
+  qed (metis clique_indep_def)
 qed
 
 lemma RN_2 [simp]: 
@@ -551,25 +681,15 @@ lemma RN_2 [simp]:
   shows "RN 2 m = m"
   unfolding RN_def
 proof (intro Least_equality)
-  show "is_Ramsey_number TYPE(nat) 2 m m"
-    unfolding is_Ramsey_number_def
-  proof (intro strip)
-    fix V :: "'a set" and E
-    assume "finite V"
-      and "m \<le> card V"
-    show "\<exists>K. K \<subseteq> V \<and> clique_indep 2 m K E"
-    proof (cases "\<exists>K. K \<subseteq> V \<and> card K = 2 \<and> clique K E")
-      case False
-      then have "indep V E"
-        apply (clarsimp simp: clique_def indep_def card_2_iff)
-        by (smt (verit, best) doubleton_eq_iff insert_absorb insert_iff subset_iff)
-      then show ?thesis
-        unfolding clique_indep_def
-        by (meson \<open>m \<le> card V\<close> card_Ex_subset smaller_indep)
-    qed (metis clique_indep_def)
-  qed
+  show "is_Ramsey_number 2 m m"
+    apply (rule IS_RN_imp_partn_lst)
+     apply (rule IS_RN_2)
+    apply (auto simp: )
+    done
   fix i
-  assume i: "is_Ramsey_number TYPE(nat) 2 m i"
+  assume "is_Ramsey_number 2 m i"
+  then have i: "IS_RN TYPE(nat) 2 m i"
+    using partn_lst_imp_IS_RN by blast
   obtain V :: "nat set" where V: "card V = i" "finite V"
     by force
   show "i \<ge> m"
@@ -578,7 +698,7 @@ proof (intro Least_equality)
     then have "\<not> (\<exists>K\<subseteq>V. card K = 2 \<and> clique K {})"
       by (auto simp: clique_def card_2_iff')
     with i V assms show ?thesis
-      unfolding is_Ramsey_number_def clique_indep_def by (metis card_mono dual_order.refl)
+      unfolding IS_RN_def clique_indep_def by (metis card_mono dual_order.refl)
   qed auto
 qed
 
@@ -609,19 +729,19 @@ text \<open>The original Ramsey number lower bound, by Erdős\<close>
 proposition Ramsey_number_lower:  
   fixes n s::nat
   assumes "s \<ge> 3" and n: "real n \<le> 2 powr (s/2)"
-  shows "\<not> is_Ramsey_number (TYPE (nat)) s s n"
+  shows "\<not> IS_RN (TYPE (nat)) s s n"
 proof (cases "n=0")
   case True
   with assms show ?thesis
-    by (auto simp: is_Ramsey_number_def clique_indep_def)
+    by (auto simp: IS_RN_def clique_indep_def)
 next
   case False
   show ?thesis 
   proof
     define W where "W \<equiv> {..<n}"
-    assume "is_Ramsey_number (TYPE (nat)) s s n"
+    assume "IS_RN (TYPE (nat)) s s n"
     then have monoc: "\<And>F. \<exists>K\<subseteq>W. clique_indep s s K F"
-      by (simp add: is_Ramsey_number_def W_def)
+      by (simp add: IS_RN_def W_def)
     then have "s \<le> n"
       by (metis W_def card_lessThan card_mono clique_indep_def finite_lessThan)
     have "s > 1" using assms by arith
@@ -824,7 +944,8 @@ qed
 theorem RN_lower:
   assumes "k \<ge> 3"
   shows "RN k k > 2 powr (k/2)"                              
-  using assms Ramsey_number_lower is_Ramsey_number_RN by force
+  using assms Ramsey_number_lower is_Ramsey_number_RN
+  by (smt (verit) partn_lst_imp_IS_RN)
 
 text \<open>and trivially, off the diagonal too\<close>
 corollary RN_lower_nodiag:
@@ -1063,8 +1184,8 @@ lemma Red_Blue_RN:
   fixes X :: "'a set"
   assumes "card X \<ge> RN m n" "X\<subseteq>V"
   shows "\<exists>K \<subseteq> X. size_clique m K Red \<or> size_clique n K Blue"
-  using is_Ramsey_number_RN [of m n] assms indep_Red_iff_clique_Blue
-  unfolding is_Ramsey_number_def size_clique_def clique_indep_def
+  using partn_lst_imp_IS_RN [OF is_Ramsey_number_RN [of m n]]  assms indep_Red_iff_clique_Blue 
+  unfolding IS_RN_def size_clique_def clique_indep_def
   by (metis finV finite_subset subset_eq)
 
 
