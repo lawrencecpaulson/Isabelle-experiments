@@ -856,9 +856,9 @@ proof
   interpret P: prob_space M
     using M_def fin_\<Omega> card\<Omega> prob_space_uniform_count_measure by force
 
-\<comment>\<open>the event to avoid: monochromatic cliques, given @{term "K \<subseteq> W"};
+  \<comment>\<open>the event to avoid: monochromatic cliques, given @{term "K \<subseteq> W"};
       we are considering edges over the entire graph @{term W}, to agree with @{text monoc}\<close>
-  define A where "A \<equiv> \<lambda>K. {F \<in> Pow (all_edges W). F \<inter> all_edges K \<in> monoset K}"
+  define A where "A \<equiv> \<lambda>K. {F \<in> \<Omega>. F \<inter> all_edges K \<in> monoset K}"
   have A_ev: "A K \<in> P.events" for K
     by (auto simp add: sets_eq A_def \<Omega>_def)
   have A_sub_\<Omega>: "A K \<subseteq> \<Omega>" for K
@@ -910,9 +910,9 @@ proof
       qed
       have "f ` (Pow ([K]\<^bsup>2\<^esup>) \<times> A K) \<subseteq> Pow ([W]\<^bsup>2\<^esup>) \<times> {all_edges K, {}}"
         using K all_edges_mono
-        by (auto simp: f_def A_def nsets2_eq_all_edges monoset_def clique_indep_def clique_iff indep_iff)
+        by (auto simp: f_def A_def \<Omega>_def nsets2_eq_all_edges monoset_def clique_indep_def clique_iff indep_iff)
       moreover have "Pow ([W]\<^bsup>2\<^esup>) \<times> {all_edges K, {}} \<subseteq> f ` (Pow ([K]\<^bsup>2\<^esup>) \<times> A K)"
-        apply (clarsimp simp: f_def A_def image_iff nsets2_eq_all_edges)
+        apply (clarsimp simp: f_def A_def \<Omega>_def image_iff nsets2_eq_all_edges)
         apply (rule_tac x="a \<inter> all_edges K" in bexI; force simp add: *)
         done
       ultimately show "f ` (Pow ([K]\<^bsup>2\<^esup>) \<times> A K) = Pow ([W]\<^bsup>2\<^esup>) \<times> {all_edges K, {}}" 
@@ -1131,15 +1131,53 @@ proof
     using RN_times_lower' [of s t] assms
     by (metis RN_le numeral_3_eq_3 order_less_le_trans zero_less_Suc)
   (* and therefore s\<ge>8, do we need that?*)
-  define M where "M \<equiv> nat\<lfloor>s / real (s + t) * real (n choose 2)\<rfloor>"
-  define M' where "M' \<equiv> (n choose 2) - M"
-  have "M' < t / real (s + t) * (n choose 2) + 1"
-    using assms
-    apply (simp add: M_def M'_def divide_simps)
-    apply (auto simp: )
 
-
+  define m where "m \<equiv> nat\<lfloor>s / real (s + t) * real (n choose 2)\<rfloor>"
+  define m' where "m' \<equiv> (n choose 2) - m"
+  have m_less: "m < n choose 2"
     sorry
+  have "m' < t / real (s + t) * (n choose 2) + 1"
+    using assms
+    apply (simp add: m_def m'_def divide_simps)
+    apply (auto simp: )
+    sorry
+
+  (* I need to define a probability space for a colouring with M red edges*)
+  define W where "W \<equiv> {..<n}"
+  define \<Omega> where "\<Omega> \<equiv> nsets (all_edges W) m"  \<comment>\<open>colour $m$ random edges red\<close>
+  have "finite W" and cardW: "card W = n"
+    by (auto simp: W_def)
+  moreover
+  have "card (all_edges W) = n choose 2"
+    by (simp add: W_def card_all_edges)
+  ultimately have card\<Omega>: "card \<Omega> = (n choose 2) choose m" 
+         and "card (all_edges W) \<ge> m"
+    using m_less by (auto simp add: \<Omega>_def card_Pow finite_all_edges)
+  then have "\<Omega> \<noteq> {}"
+    by (auto simp: \<Omega>_def nsets_eq_empty_iff)
+  have fin_\<Omega>: "finite \<Omega>"
+    using \<Omega>_def \<open>finite W\<close> finite_all_edges finite_imp_finite_nsets by blast
+  define M where "M \<equiv> uniform_count_measure \<Omega>"
+  have space_eq: "space M = \<Omega>"
+    by (simp add: M_def space_uniform_count_measure)
+  have sets_eq: "sets M = Pow \<Omega>"
+    by (simp add: M_def sets_uniform_count_measure)
+  interpret P: prob_space M
+    unfolding M_def
+    by (intro prob_space_uniform_count_measure fin_\<Omega> \<open>\<Omega> \<noteq> {}\<close>)
+
+
+  \<comment>\<open>the event to avoid: monochromatic cliques, given @{term "K \<subseteq> W"};
+      we are considering edges over the entire graph @{term W}\<close>
+  define A where "A \<equiv> \<lambda>K. {F \<in> \<Omega>. F \<inter> all_edges K \<subseteq> F}"
+  have A_ev: "A K \<in> P.events" for K
+    by (auto simp add: sets_eq A_def \<Omega>_def)
+  have A_sub_\<Omega>: "A K \<subseteq> \<Omega>" for K
+    by (auto simp add: sets_eq A_def \<Omega>_def)
+  have UA_sub_\<Omega>: "(\<Union>K \<in> nsets W s. A K) \<subseteq> \<Omega>"
+    by (auto simp: \<Omega>_def A_def nsets_def all_edges_def)
+
+
   show False
     sorry
 qed
