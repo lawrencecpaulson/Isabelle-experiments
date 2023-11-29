@@ -1,14 +1,27 @@
 theory Diagonal imports
   "HOL-Library.Disjoint_Sets" "HOL-Library.Ramsey" "Undirected_Graph_Theory.Undirected_Graph_Basics" 
   "Special_Function_Bounds.Exp_Bounds" "HOL-Decision_Procs.Approximation" "HOL-Probability.Probability" 
+  "HOL-Library.Infinite_Set"  "HOL-Library.Countable_Set"  "HOL-Library.Equipollence"  "HOL-Library.Nat_Bijection"
   "HOL-ex.Sketch_and_Explore"
- "HOL-Library.Infinite_Set"  "HOL-Library.Countable_Set"  "HOL-Library.Equipollence"
 
    
 begin
 
-lemma "finite A \<Longrightarrow> inj_on (inv_into A (to_nat_on A)) A"
-  oops
+definition "upair_define \<equiv> \<lambda>f e. THE u. \<exists>x y. e = {x,y} \<and> u = f x y"
+
+lemma upair_define_apply:
+  assumes "\<And>x y. f x y = f y x"
+  shows "upair_define f {x,y} = f x y"
+  using assms
+  by (force simp add: upair_define_def doubleton_eq_iff)
+
+lemma upair_define_apply_dom:
+  assumes "\<And>x y. \<lbrakk>x\<in>A; y\<in>A\<rbrakk> \<Longrightarrow> f x y = f y x" "x\<in>A" "y\<in>A"
+  shows "upair_define f {x,y} = f x y"
+  using assms
+  by (force simp add: upair_define_def doubleton_eq_iff)
+
+
 
 thm powr_half_sqrt
 lemma powr_half_sqrt_powr: "0 \<le> x \<Longrightarrow> x powr (a/2) = sqrt(x powr a)"
@@ -430,6 +443,8 @@ instance prod :: (infinite, type) infinite
 instance list :: (type) infinite
   by intro_classes (simp add: infinite_UNIV_listI)
 
+
+(*** we need to get rid of the cliques! ***)
 lemma smaller_clique: "\<lbrakk>clique R E; R' \<subseteq> R\<rbrakk> \<Longrightarrow> clique R' E"
   by (auto simp: clique_def)
 
@@ -454,6 +469,13 @@ definition IS_RN where
 
 abbreviation is_Ramsey_number :: "[nat,nat,nat] \<Rightarrow> bool" where 
   "is_Ramsey_number m n r \<equiv> partn_lst {..<r} [m,n] 2"
+
+
+definition "monochromatic \<equiv> \<lambda>\<beta> \<alpha> \<gamma> f i. \<exists>H \<in> nsets \<beta> \<alpha>. f ` (nsets H \<gamma>) \<subseteq> {i}"
+
+lemma partn_lst_iff:
+  "partn_lst \<beta> \<alpha> \<gamma> \<equiv> \<forall>f \<in> nsets \<beta> \<gamma>  \<rightarrow>  {..<length \<alpha>}. \<exists>i < length \<alpha>. monochromatic \<beta> (\<alpha>!i) \<gamma> f i"
+  by (simp add: partn_lst_def monochromatic_def)
 
 lemma IS_RN_imp_partn_lst:  (*EVENTUALLY, RENAME*)
   fixes U :: "'a itself"
@@ -965,6 +987,109 @@ proof -
     by fastforce
 qed
 
+lemma nsets2_E:
+  assumes "e \<in> [A]\<^bsup>2\<^esup>"
+  obtains x y where "e = {x,y}" "x \<in> A" "y \<in> A" "x\<noteq>y"
+  using assms by (auto simp: nsets_def card_2_iff)
+
+lemma Ramsey_number_zero: "\<not> is_Ramsey_number (Suc m) (Suc n) 0"
+  by (metis RN_1 RN_le is_Ramsey_number_le not_one_le_zero Suc_le_eq One_nat_def zero_less_Suc)
+
+
+lemma Ramsey_number_times_lower: "\<not> is_Ramsey_number (Suc m) (Suc n) (m*n)"
+(****
+proof (cases "m=0 \<or> n=0")
+  case True
+  then show ?thesis
+    using Ramsey_number_zero by fastforce 
+next
+  case False
+  then have "m>0" "n>0"
+    by auto
+  show ?thesis***)
+proof
+  assume \<section>: "is_Ramsey_number (Suc m) (Suc n) (m*n)"
+  obtain \<phi> where \<phi>: "bij_betw \<phi> {..<m*n} ({..<m} \<times> {..<n})"
+    using bij_betw_iff_card
+    by (metis card_cartesian_product card_lessThan finite_cartesian_product finite_lessThan)
+  define edge :: "[nat \<times> nat, nat \<times> nat] \<Rightarrow> nat" where "edge \<equiv> \<lambda>(x,y) (x',y'). if y=y' then 0 else 1"
+  have edge2: "\<And>u v. edge u v < 2"
+    by (simp add: edge_def split: prod.split)
+  define f where "f \<equiv> upair_define (\<lambda>p q. edge (\<phi> p) (\<phi> q))"
+  have edge_commute: "\<And>p q. edge (\<phi> p) (\<phi> q) = edge (\<phi> q) (\<phi> p)"
+    by (simp add: edge_def split: prod.split)
+  then have f_apply: "\<And>p q. f{p,q} = edge (\<phi> p) (\<phi> q)"
+    by (simp add: f_def upair_define_apply)
+  then have "f \<in> [{..<m * n}]\<^bsup>2\<^esup> \<rightarrow> {..<2}"
+    by (auto simp add: Pi_iff nsets_def card_2_iff edge2)
+  then obtain i where "i<2" and i: "monochromatic {..<m * n} ([Suc m, Suc n] ! i) 2 f i"
+    using \<section> by (force simp add: partn_lst_iff eval_nat_numeral)
+  have edge_apply: "\<And>u v. \<lbrakk>u \<in> {..<m}\<times>{..<n}; v \<in> {..<m}\<times>{..<n}\<rbrakk> 
+               \<Longrightarrow> edge u v = f{inv_into {..<m*n} \<phi> u, inv_into {..<m*n} \<phi> v}"
+    using \<phi> by (simp add: f_apply bij_betw_inv_into_right)
+
+  have apply\<phi>: "\<And>e x H. \<lbrakk>H \<subseteq> {..<m * n}; e \<in> [H]\<^bsup>2\<^esup>; x \<in> e\<rbrakk> \<Longrightarrow> \<phi> x \<in> {..<m} \<times> {..<n}"
+    using \<phi> by (auto simp: bij_betw_def ordered_nsets_2_eq)    
+  consider (0) "i=0" | (1) "i=1"
+    using \<open>i<2 \<close>by linarith
+  then show False
+  proof cases
+    case 0
+    then obtain H where H: "H \<subseteq> {..<m * n}" "finite H" "card H = Suc m" 
+              and monoc: "\<And>u. u \<in> [H]\<^bsup>2\<^esup> \<Longrightarrow> f u = 0"
+      using i by (auto simp add: monochromatic_def nsets_def image_subset_iff)
+    then have inj\<phi>: "inj_on \<phi> H"
+      by (meson \<phi> bij_betw_def inj_on_subset)
+    define A where "A \<equiv>  \<phi> ` \<Union> ([H]\<^bsup>2\<^esup>)"
+    have "edge u v = 0" if "u \<in> A" "v \<in> A" "u \<noteq> v" for u v
+      using that \<open>H \<subseteq> {..<m * n}\<close> \<phi> unfolding A_def
+      apply clarify
+      apply (simp add: edge_apply apply\<phi> all_edges_def nsets2_eq_all_edges subset_iff bij_betw_inv_into_left [OF \<phi>])
+      apply (rule monoc)
+      apply (auto simp: )
+      done
+    then have snd_eq: "snd u = snd v" if "u \<in> A" "v \<in> A" "u \<noteq> v" for u v
+      by (smt (verit) edge_def prod.collapse prod.simps(2) zero_neq_one that)
+    then have "inj_on fst A"
+      by (meson inj_onI prod.expand)
+    moreover have "fst ` A \<subseteq> {..<m}"
+      using H apply\<phi>
+      apply (auto simp: A_def image_iff nsets_def all_edges_def)
+      by (metis fst_conv lessThan_iff mem_Sigma_iff)
+    ultimately have less_m: "card A \<le> m"
+      by (metis card_image card_lessThan card_mono finite_lessThan)
+    have "card H \<ge> 2"
+      by (metis H card_0_eq diff_Suc_1 lessThan_0 less_2_cases less_irrefl linorder_not_le mult_eq_0_iff subset_empty zero_less_Suc)
+    then
+    have Hsub: "H \<subseteq> \<Union> ([H]\<^bsup>2\<^esup>)"
+      unfolding ordered_nsets_2_eq all_edges_def
+      apply (auto simp: )
+      by (metis (mono_tags, opaque_lifting) empty_subsetI insert_subset le_eq_less_or_eq linorder_not_le nsets_doubleton_2_eq nsets_eq_empty_iff subsetI subset_antisym)
+    then have "Suc m \<le> card (\<Union> ([H]\<^bsup>2\<^esup>))"
+      using H
+      by (smt (verit) equalityI less_irrefl linorder_not_le mem_Collect_eq mem_simps(9) nsets_def subset_iff)
+    moreover
+    have "inj_on \<phi> (\<Union> ([H]\<^bsup>2\<^esup>))"
+      using inj\<phi> unfolding inj_on_def ordered_nsets_2_eq by blast
+    then have "card A = card (\<Union> ([H]\<^bsup>2\<^esup>))"
+      using A_def card_image by blast
+    ultimately show False
+      using less_m by linarith
+  next
+    case 1
+    then obtain H where "H \<subseteq> {..<m * n}" "finite H" "card H = Suc n" 
+              and H: "\<And>u. u \<in> [H]\<^bsup>2\<^esup> \<Longrightarrow> f u = 1"
+      using i by (auto simp add: monochromatic_def nsets_def image_subset_iff)
+    then show False
+      sorry
+  qed
+qed
+
+theorem RN_times_lower:
+  shows "RN (Suc m) (Suc n) > m*n"                              
+  using  Ramsey_number_times_lower is_Ramsey_number_RN partn_lst_greater_resource
+  using linorder_le_less_linear by blast
+
 
 lemma RN_gt1:
   assumes "2 \<le> k" "3 \<le> l" shows "k < RN k l"
@@ -1218,10 +1343,6 @@ definition Weight :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow>
 
 definition weight :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow> real" where
   "weight \<equiv> \<lambda>X Y x. \<Sum>y \<in> X-{x}. Weight X Y x y"
-
-text \<open>"See observation 5.5 below"\<close>
-lemma sum_Weight_ge0: "(\<Sum>x\<in>X. \<Sum>y\<in>X. Weight X Y x y) \<ge> 0"
-  sorry
 
 definition "p0 \<equiv> red_density X0 Y0"
 
@@ -1743,3 +1864,9 @@ proof -
       sorry
   qed auto
 qed
+
+section \<open>Density-boost steps\<close>
+
+text \<open>"See observation 5.5 below"\<close>
+lemma sum_Weight_ge0: "(\<Sum>x\<in>X. \<Sum>y\<in>X. Weight X Y x y) \<ge> 0"
+  sorry
