@@ -482,6 +482,7 @@ definition IS_RN where
   "IS_RN \<equiv> \<lambda>U::'a itself. \<lambda>m n r. 
        (\<forall>V::'a set. \<forall>E. finite V \<longrightarrow> card V \<ge> r \<longrightarrow> (\<exists>K\<subseteq>V. clique_indep m n K E))"
 
+text \<open>could be generalised to allow e.g. any hereditarily finite set\<close>
 abbreviation is_Ramsey_number :: "[nat,nat,nat] \<Rightarrow> bool" where 
   "is_Ramsey_number m n r \<equiv> partn_lst {..<r} [m,n] 2"
 
@@ -1111,10 +1112,14 @@ theorem RN_times_lower:
   using  Ramsey_number_times_lower is_Ramsey_number_RN partn_lst_greater_resource
   using linorder_le_less_linear by blast
 
+corollary RN_times_lower':
+  shows "\<lbrakk>m>0; n>0\<rbrakk> \<Longrightarrow> RN m n > (m-1)*(n-1)"
+  using RN_times_lower gr0_conv_Suc by force                              
 
 lemma RN_gt1:
   assumes "2 \<le> k" "3 \<le> l" shows "k < RN k l"
-  sorry
+  using RN_times_lower' [of k l] assms
+  by (smt (verit, ccfv_threshold) One_nat_def Suc_1 add_diff_inverse_nat add_leE less_eq_Suc_le n_less_n_mult_m not_less_eq numeral_3_eq_3 plus_1_eq_Suc)
 
 lemma RN_gt2:
   assumes "2 \<le> k" "3 \<le> l" shows "k < RN l k"
