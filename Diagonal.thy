@@ -112,20 +112,19 @@ lemma gbinomial_is_prod: "(a gchoose k) = (\<Prod>i<k. (a - of_nat i) / (1 + of_
 lemma finite_imp_finite_nsets: "finite A \<Longrightarrow> finite ([A]\<^bsup>k\<^esup>)"
   by (simp add: nsets_def)
 
-lemma nsets_lepoll_cong:
-  assumes "A \<lesssim> B"
-  shows "[A]\<^bsup>k\<^esup> \<lesssim> [B]\<^bsup>k\<^esup>"
+lemma nsets2_E:
+  assumes "e \<in> [A]\<^bsup>2\<^esup>"
+  obtains x y where "e = {x,y}" "x \<in> A" "y \<in> A" "x\<noteq>y"
+  using assms by (auto simp: nsets_def card_2_iff)
+
+lemma subset_nsets_2:
+  assumes "card A \<ge> 2" shows "A \<subseteq> \<Union>([A]\<^bsup>2\<^esup>)"
 proof -
-  obtain f where f: "inj_on f A" "f ` A \<subseteq> B"
-    by (meson assms lepoll_def)
-  define F where "F \<equiv> \<lambda>N. f ` N"
-  have "inj_on F ([A]\<^bsup>k\<^esup>)"
-    using F_def f inj_on_nsets by blast
-  moreover
-  have "F ` ([A]\<^bsup>k\<^esup>) \<subseteq> [B]\<^bsup>k\<^esup>"
-    by (metis F_def bij_betw_def bij_betw_nsets f nsets_mono)
-  ultimately show ?thesis
-    by (meson lepoll_def)
+  obtain x y where "x \<in> A" "y \<in> A" "x\<noteq>y"
+    using assms
+    by (metis One_nat_def Suc_1 card.infinite card_le_Suc0_iff_eq nat_le_linear not_less_eq_eq)
+  then show ?thesis
+    by (auto simp: nsets_2_eq all_edges_def)
 qed
 
 lemma partn_lst_less:
@@ -162,6 +161,22 @@ proof (clarsimp simp: partn_lst_def)
 qed
 
 (*Ramsey?*)
+lemma nsets_lepoll_cong:
+  assumes "A \<lesssim> B"
+  shows "[A]\<^bsup>k\<^esup> \<lesssim> [B]\<^bsup>k\<^esup>"
+proof -
+  obtain f where f: "inj_on f A" "f ` A \<subseteq> B"
+    by (meson assms lepoll_def)
+  define F where "F \<equiv> \<lambda>N. f ` N"
+  have "inj_on F ([A]\<^bsup>k\<^esup>)"
+    using F_def f inj_on_nsets by blast
+  moreover
+  have "F ` ([A]\<^bsup>k\<^esup>) \<subseteq> [B]\<^bsup>k\<^esup>"
+    by (metis F_def bij_betw_def bij_betw_nsets f nsets_mono)
+  ultimately show ?thesis
+    by (meson lepoll_def)
+qed
+
 lemma nsets_eqpoll_cong:
   assumes "A\<approx>B"
   shows "[A]\<^bsup>k\<^esup> \<approx> [B]\<^bsup>k\<^esup>"
@@ -987,26 +1002,10 @@ proof -
     by fastforce
 qed
 
-lemma nsets2_E:
-  assumes "e \<in> [A]\<^bsup>2\<^esup>"
-  obtains x y where "e = {x,y}" "x \<in> A" "y \<in> A" "x\<noteq>y"
-  using assms by (auto simp: nsets_def card_2_iff)
-
 lemma Ramsey_number_zero: "\<not> is_Ramsey_number (Suc m) (Suc n) 0"
   by (metis RN_1 RN_le is_Ramsey_number_le not_one_le_zero Suc_le_eq One_nat_def zero_less_Suc)
 
-
 lemma Ramsey_number_times_lower: "\<not> is_Ramsey_number (Suc m) (Suc n) (m*n)"
-(****
-proof (cases "m=0 \<or> n=0")
-  case True
-  then show ?thesis
-    using Ramsey_number_zero by fastforce 
-next
-  case False
-  then have "m>0" "n>0"
-    by auto
-  show ?thesis***)
 proof
   assume \<section>: "is_Ramsey_number (Suc m) (Suc n) (m*n)"
   obtain \<phi> where \<phi>: "bij_betw \<phi> {..<m*n} ({..<m} \<times> {..<n})"
@@ -1053,35 +1052,57 @@ proof
     then have "inj_on fst A"
       by (meson inj_onI prod.expand)
     moreover have "fst ` A \<subseteq> {..<m}"
-      using H apply\<phi>
-      apply (auto simp: A_def image_iff nsets_def all_edges_def)
-      by (metis fst_conv lessThan_iff mem_Sigma_iff)
-    ultimately have less_m: "card A \<le> m"
+      by (force simp: A_def image_iff dest!: apply\<phi> [OF \<open>H \<subseteq> {..<m * n}\<close>])
+    ultimately have "card A \<le> m"
       by (metis card_image card_lessThan card_mono finite_lessThan)
     have "card H \<ge> 2"
       by (metis H card_0_eq diff_Suc_1 lessThan_0 less_2_cases less_irrefl linorder_not_le mult_eq_0_iff subset_empty zero_less_Suc)
-    then
-    have Hsub: "H \<subseteq> \<Union> ([H]\<^bsup>2\<^esup>)"
-      unfolding ordered_nsets_2_eq all_edges_def
-      apply (auto simp: )
-      by (metis (mono_tags, opaque_lifting) empty_subsetI insert_subset le_eq_less_or_eq linorder_not_le nsets_doubleton_2_eq nsets_eq_empty_iff subsetI subset_antisym)
-    then have "Suc m \<le> card (\<Union> ([H]\<^bsup>2\<^esup>))"
-      using H
-      by (smt (verit) equalityI less_irrefl linorder_not_le mem_Collect_eq mem_simps(9) nsets_def subset_iff)
+    have "Suc m \<le> card (\<Union> ([H]\<^bsup>2\<^esup>))"
+      using H subset_nsets_2 [OF \<open>card H \<ge> 2\<close>]
+      by (smt (verit) equalityI less_irrefl linorder_not_le mem_Collect_eq Union_iff nsets_def subset_iff)
     moreover
     have "inj_on \<phi> (\<Union> ([H]\<^bsup>2\<^esup>))"
       using inj\<phi> unfolding inj_on_def ordered_nsets_2_eq by blast
     then have "card A = card (\<Union> ([H]\<^bsup>2\<^esup>))"
       using A_def card_image by blast
     ultimately show False
-      using less_m by linarith
+      using \<open>card A \<le> m\<close> by linarith
   next
     case 1
-    then obtain H where "H \<subseteq> {..<m * n}" "finite H" "card H = Suc n" 
-              and H: "\<And>u. u \<in> [H]\<^bsup>2\<^esup> \<Longrightarrow> f u = 1"
+    then obtain H where H: "H \<subseteq> {..<m * n}" "finite H" "card H = Suc n" 
+              and monoc: "\<And>u. u \<in> [H]\<^bsup>2\<^esup> \<Longrightarrow> f u = Suc 0"
       using i by (auto simp add: monochromatic_def nsets_def image_subset_iff)
-    then show False
-      sorry
+    then have inj\<phi>: "inj_on \<phi> H"
+      by (meson \<phi> bij_betw_def inj_on_subset)
+    define A where "A \<equiv>  \<phi> ` \<Union> ([H]\<^bsup>2\<^esup>)"
+    have "edge u v = 1" if "u \<in> A" "v \<in> A" "u \<noteq> v" for u v
+      using that \<open>H \<subseteq> {..<m * n}\<close> \<phi> unfolding A_def
+      apply clarify
+      apply (simp add: edge_apply apply\<phi> all_edges_def nsets2_eq_all_edges subset_iff bij_betw_inv_into_left [OF \<phi>])
+      apply (rule monoc)
+      apply (auto simp: )
+      done
+    then have snd_eq: "snd u \<noteq> snd v" if "u \<in> A" "v \<in> A" "u \<noteq> v" for u v
+      by (smt (verit) edge_def prod.collapse prod.simps(2) zero_neq_one that)
+    then have "inj_on snd A"
+      by (meson inj_onI prod.expand)
+    moreover have "snd ` A \<subseteq> {..<n}"
+      by (force simp: A_def image_iff dest!: apply\<phi> [OF \<open>H \<subseteq> {..<m * n}\<close>])
+    ultimately have "card A \<le> n"
+      by (metis card_image card_lessThan card_mono finite_lessThan)
+    have "card H \<ge> 2"
+      by (metis H card_0_eq diff_Suc_1 lessThan_0 less_2_cases less_irrefl linorder_not_le mult_eq_0_iff subset_empty zero_less_Suc)
+    then
+     have "Suc n \<le> card (\<Union> ([H]\<^bsup>2\<^esup>))"
+       using H subset_nsets_2 [OF \<open>card H \<ge> 2\<close>]
+      by (smt (verit) equalityI less_irrefl linorder_not_le mem_Collect_eq Union_iff nsets_def subset_iff)
+    moreover
+    have "inj_on \<phi> (\<Union> ([H]\<^bsup>2\<^esup>))"
+      using inj\<phi> unfolding inj_on_def ordered_nsets_2_eq by blast
+    then have "card A = card (\<Union> ([H]\<^bsup>2\<^esup>))"
+      using A_def card_image by blast
+    ultimately show False
+      using \<open>card A \<le> n\<close> by linarith
   qed
 qed
 
