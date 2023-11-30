@@ -140,24 +140,25 @@ proof (clarsimp simp: partn_lst_def)
     using assms by (auto simp: partn_lst_def nsets_def)
   then have bij: "bij_betw (to_nat_on H) H {0..<\<alpha>!i}"
     by (metis atLeast0LessThan to_nat_on_finite)
+  then have inj: "inj_on (inv_into H (to_nat_on H)) {0..<\<alpha>' ! i}"
+    by (metis bij_betw_def dual_order.refl i inj_on_inv_into ivl_subset le)
   define H' where "H' = inv_into H (to_nat_on H) ` {0..<\<alpha>'!i}"
-  have "H' \<subseteq> H"
-    using bij \<open>i < length \<alpha>\<close> bij_betw_imp_surj_on le
-    by (force simp: H'_def image_subset_iff intro: inv_into_into)
-  then have "finite H'"
-    by (simp add: \<open>finite H\<close> finite_subset)
-  with \<open>H' \<subseteq> H\<close> have "card H' = (\<alpha>'!i)"
-    unfolding H'_def
-    apply (subst card_image)
-    apply (metis bij bij_betw_def dual_order.refl i inj_on_inv_into ivl_subset le)
-    by force
-  then show "\<exists>i<length \<alpha>'. \<exists>H\<in>[\<beta>]\<^bsup>(\<alpha>' ! i)\<^esup>. f ` [H]\<^bsup>n\<^esup> \<subseteq> {i}"
-    using i \<open>H' \<subseteq> H\<close> fi
-    apply (rule_tac x="i" in exI)
-    apply (simp add: eq)
-    apply (rule_tac x="H'" in bexI)
-     apply (clarsimp simp: nsets_def image_subset_iff)
-    using \<open>H \<subseteq> \<beta>\<close> \<open>finite H'\<close> nsets_def by fastforce
+  show "\<exists>i<length \<alpha>'. \<exists>H\<in>[\<beta>]\<^bsup>(\<alpha>' ! i)\<^esup>. f ` [H]\<^bsup>n\<^esup> \<subseteq> {i}"
+  proof (intro exI bexI conjI)
+    show "i < length \<alpha>'"
+      by (simp add: assms(2) i)
+    have "H' \<subseteq> H"
+      using bij \<open>i < length \<alpha>\<close> bij_betw_imp_surj_on le
+      by (force simp: H'_def image_subset_iff intro: inv_into_into)
+    then have "finite H'"
+      by (simp add: \<open>finite H\<close> finite_subset)
+    with \<open>H' \<subseteq> H\<close> have cardH': "card H' = (\<alpha>'!i)"
+      unfolding H'_def by (simp add: inj card_image)
+    show "f ` [H']\<^bsup>n\<^esup> \<subseteq> {i}"
+      by (meson \<open>H' \<subseteq> H\<close> dual_order.trans fi image_mono nsets_mono)
+    show "H' \<in> [\<beta>]\<^bsup>(\<alpha>'! i)\<^esup>"
+      using \<open>H \<subseteq> \<beta>\<close> \<open>H' \<subseteq> H\<close> \<open>finite H'\<close> cardH' nsets_def by fastforce
+  qed
 qed
 
 (*Ramsey?*)
@@ -434,7 +435,7 @@ next
     using exp_sum by blast
   also have "\<dots> \<le> (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
     using * by (force intro: prod_mono)
-  finally have "exp (- (3 * real b ^ 2) / (4*m)) \<le> (\<Prod>i<b. 1 - (1 - \<sigma>) * real i / (\<sigma> * (real m - real i)))" .
+  finally have "exp (- (3 * real b ^ 2) / (4*m)) \<le> (\<Prod>i<b. 1 - (1-\<sigma>) * i / (\<sigma> * (real m - real i)))" .
   with EQ have "\<sigma>^b * exp (- (3 * real b ^ 2) / (4*m)) \<le> ((\<sigma>*m) gchoose b) * inverse (real m gchoose b)"
     by (simp add: assms(1))
   with \<sigma> bm show ?thesis
@@ -655,13 +656,13 @@ proof (intro strip)
     by (auto simp: nsets_def)
   then have fless2: "\<forall>x\<in>[H]\<^bsup>2\<^esup>. f x < Suc (Suc 0)"
     using funcset_mem [OF f] nsets_mono by force
-  with \<open>i<2\<close> H have "H \<in> [{..<r}]\<^bsup>([n,m] ! (1-i))\<^esup>" 
-    by (fastforce simp add: less_2_cases_iff f'_def image_subset_iff)
-  moreover have "f ` [H]\<^bsup>2\<^esup> \<subseteq> {1-i}"
-    using H fless2 by (fastforce simp: f'_def)
-    ultimately
   show "\<exists>i<length [n, m]. \<exists>H\<in>[{..<r}]\<^bsup>([n,m] ! i)\<^esup>. f ` [H]\<^bsup>2\<^esup> \<subseteq> {i}"
-    by (metis One_nat_def Suc_1 \<open>i < 2\<close> length_Cons less_2_cases_iff list.size(3) verit_minus_simplify(1) verit_minus_simplify(2))
+  proof (intro exI bexI conjI)
+    show "f ` [H]\<^bsup>2\<^esup> \<subseteq> {1-i}"
+      using H fless2 by (fastforce simp: f'_def)
+    show "H \<in> [{..<r}]\<^bsup>([n, m] ! (1-i))\<^esup>"
+      using \<open>i<2\<close> H by (fastforce simp add: less_2_cases_iff f'_def image_subset_iff)
+  qed auto
 qed
 
 lemma RN_commute_aux: "RN n m \<le> RN m n"
@@ -1036,12 +1037,9 @@ proof
       by (meson \<phi> bij_betw_def inj_on_subset)
     define A where "A \<equiv>  \<phi> ` \<Union> ([H]\<^bsup>2\<^esup>)"
     have "edge u v = 0" if "u \<in> A" "v \<in> A" "u \<noteq> v" for u v
-      using that \<open>H \<subseteq> {..<m * n}\<close> \<phi> unfolding A_def
-      apply clarify
-      apply (simp add: edge_apply apply\<phi> all_edges_def nsets2_eq_all_edges subset_iff bij_betw_inv_into_left [OF \<phi>])
-      apply (rule monoc)
-      apply (auto simp: )
-      done
+      using that \<open>H \<subseteq> {..<m * n}\<close>  
+      apply (clarsimp simp add: A_def edge_apply apply\<phi> all_edges_def nsets2_eq_all_edges subset_iff bij_betw_inv_into_left [OF \<phi>])
+      by (rule monoc) auto
     then have snd_eq: "snd u = snd v" if "u \<in> A" "v \<in> A" "u \<noteq> v" for u v
       by (smt (verit) edge_def prod.collapse prod.simps(2) zero_neq_one that)
     then have "inj_on fst A"
@@ -1051,7 +1049,7 @@ proof
     ultimately have "card A \<le> m"
       by (metis card_image card_lessThan card_mono finite_lessThan)
     have "card H \<ge> 2"
-      by (metis H card_0_eq diff_Suc_1 lessThan_0 less_2_cases less_irrefl linorder_not_le mult_eq_0_iff subset_empty zero_less_Suc)
+      using Suc_le_eq H monoc by fastforce
     have "Suc m \<le> card (\<Union> ([H]\<^bsup>2\<^esup>))"
       using H subset_nsets_2 [OF \<open>card H \<ge> 2\<close>]
       by (smt (verit) equalityI less_irrefl linorder_not_le mem_Collect_eq Union_iff nsets_def subset_iff)
@@ -1071,12 +1069,9 @@ proof
       by (meson \<phi> bij_betw_def inj_on_subset)
     define A where "A \<equiv>  \<phi> ` \<Union> ([H]\<^bsup>2\<^esup>)"
     have "edge u v = 1" if "u \<in> A" "v \<in> A" "u \<noteq> v" for u v
-      using that \<open>H \<subseteq> {..<m * n}\<close> \<phi> unfolding A_def
-      apply clarify
-      apply (simp add: edge_apply apply\<phi> all_edges_def nsets2_eq_all_edges subset_iff bij_betw_inv_into_left [OF \<phi>])
-      apply (rule monoc)
-      apply (auto simp: )
-      done
+      using that \<open>H \<subseteq> {..<m * n}\<close>  
+      apply (clarsimp simp add: A_def edge_apply apply\<phi> all_edges_def nsets2_eq_all_edges subset_iff bij_betw_inv_into_left [OF \<phi>])
+      by (rule monoc) auto
     then have snd_eq: "snd u \<noteq> snd v" if "u \<in> A" "v \<in> A" "u \<noteq> v" for u v
       by (smt (verit) edge_def prod.collapse prod.simps(2) zero_neq_one that)
     then have "inj_on snd A"
@@ -1086,10 +1081,9 @@ proof
     ultimately have "card A \<le> n"
       by (metis card_image card_lessThan card_mono finite_lessThan)
     have "card H \<ge> 2"
-      by (metis H card_0_eq diff_Suc_1 lessThan_0 less_2_cases less_irrefl linorder_not_le mult_eq_0_iff subset_empty zero_less_Suc)
-    then
-     have "Suc n \<le> card (\<Union> ([H]\<^bsup>2\<^esup>))"
-       using H subset_nsets_2 [OF \<open>card H \<ge> 2\<close>]
+      using Suc_le_eq H monoc by fastforce
+    have "Suc n \<le> card (\<Union> ([H]\<^bsup>2\<^esup>))"
+      using H subset_nsets_2 [OF \<open>card H \<ge> 2\<close>]
       by (smt (verit) equalityI less_irrefl linorder_not_le mem_Collect_eq Union_iff nsets_def subset_iff)
     moreover
     have "inj_on \<phi> (\<Union> ([H]\<^bsup>2\<^esup>))"
@@ -1119,28 +1113,33 @@ lemma RN_gt2:
   assumes "2 \<le> k" "3 \<le> l" shows "k < RN l k"
   by (simp add: RN_commute assms RN_gt1)
 
-
 text \<open>From Bollabás, Graph Theory, page 125\<close>
 proposition Ramsey_number_lower_off_diag:  
   fixes n s::nat  (* do we need s \<le> t ?*)
   assumes "s \<ge> 3" "t \<ge> 3" "s \<le> t" and n: "real n \<le> exp ((real s - 1)*(real t - 1) / 2*(s+t))"
   shows "\<not> is_Ramsey_number s t n"
 proof
-  assume "is_Ramsey_number s t n"
-  then have "n > (s - 1) * (t - 1)"
+  assume n: "is_Ramsey_number s t n"
+  then have "(s - 1) * (t - 1) < n"
     using RN_times_lower' [of s t] assms
     by (metis RN_le numeral_3_eq_3 order_less_le_trans zero_less_Suc)
+  moreover have "2*2 \<le> (s - 1) * (t - 1)"
+    using assms by (intro mult_mono) auto
+  ultimately have "n > 4"
+    by simp
   (* and therefore s\<ge>8, do we need that?*)
 
   define m where "m \<equiv> nat\<lfloor>s / real (s + t) * real (n choose 2)\<rfloor>"
   define m' where "m' \<equiv> (n choose 2) - m"
   have m_less: "m < n choose 2"
-    sorry
-  have "m' < t / real (s + t) * (n choose 2) + 1"
-    using assms
-    apply (simp add: m_def m'_def divide_simps)
-    apply (auto simp: )
-    sorry
+    using \<open>4 < n\<close> assms by (simp add: m_def nat_less_iff divide_simps floor_less_iff)
+  have "m' < (1 - s / real (s + t)) * (n choose 2) + 1"
+    using m_less
+    apply (simp add: m_def m'_def of_nat_diff algebra_simps)
+    by linarith
+  also have "... = (t / real (s + t)) * (n choose 2) + 1"
+    using assms by (simp add: divide_simps)
+  finally have "m' < (t / real (s + t)) * (n choose 2) + 1" .
 
   (* I need to define a probability space for a colouring with M red edges*)
   define W where "W \<equiv> {..<n}"
