@@ -127,6 +127,32 @@ proof -
     by (auto simp: nsets_2_eq all_edges_def)
 qed
 
+lemma Pow_equals_UN_nsets:
+  assumes "finite A" shows "Pow A = \<Union> (nsets A ` {..card A})"
+  proof
+    show "Pow A \<subseteq> \<Union> (nsets A ` {..card A})"
+      using assms finite_subset by (force simp: nsets_def card_mono)
+qed (auto simp: nsets_def)
+
+lemma nsets_eq_iff:
+  assumes "m \<le> card A" "n \<le> card A"
+  shows "[A]\<^bsup>m\<^esup> = [A]\<^bsup>n\<^esup> \<longleftrightarrow> m=n \<or> A={}"
+proof
+  assume "[A]\<^bsup>m\<^esup> = [A]\<^bsup>n\<^esup>"
+  then
+  show "m = n \<or> A = {}"
+    unfolding nsets_def by (smt (verit, del_insts) assms(1) mem_Collect_eq obtain_subset_with_card_n)
+qed (use assms in auto)
+
+lemma nsets_disjoint_iff:
+  assumes "m \<le> card A" "n \<le> card A" "A \<noteq> {}"
+  shows "nsets A m \<inter> nsets A n \<noteq> {} \<longleftrightarrow> m=n"
+proof
+  assume "[A]\<^bsup>m\<^esup> \<inter> [A]\<^bsup>n\<^esup> \<noteq> {}"
+  then show "m = n"
+    unfolding nsets_def by fastforce
+qed (use assms in \<open>auto simp: nsets_eq_empty_iff\<close>)
+
 lemma partn_lst_less:
   assumes M: "partn_lst \<beta> \<alpha> n" and eq: "length \<alpha>' = length \<alpha>" 
     and le: "\<And>i. i < length \<alpha> \<Longrightarrow> \<alpha>'!i \<le> \<alpha>!i "
@@ -764,6 +790,16 @@ lemma all_edges_empty_iff: "all_edges K = {} \<longleftrightarrow> (\<exists>v. 
   apply (simp add: all_edges_def card_2_iff subset_iff)
   by (metis insert_iff singleton_iff)
 
+(*the corresponding strict inequality can be proved under the assumptions  "1 < s" "s \<le> n"
+  using fact_less_fact_power*)
+lemma A: "(n choose s) * fact s \<le> n^s"
+proof (cases "s \<le> n")
+  case True
+  then show ?thesis
+    using fact_less_fact_power 
+    by (smt (verit) binomial_fact_lemma mult.assoc mult.commute fact_div_fact_le_pow fact_nonzero nonzero_mult_div_cancel_right) 
+qed (simp add: binomial_eq_0)
+
 text \<open>The original Ramsey number lower bound, by Erdős\<close>
 proposition Ramsey_number_lower:  
   fixes n s::nat
@@ -1113,10 +1149,102 @@ lemma RN_gt2:
   assumes "2 \<le> k" "3 \<le> l" shows "k < RN l k"
   by (simp add: RN_commute assms RN_gt1)
 
+text \<open>trying Andrew's sketch\<close>
+proposition Ramsey_number_lower_off_diag:  
+  fixes n s::nat  (* do we need s \<le> t ?  And the final bound can be sharpened per Andrew's suggestion*)
+  assumes "s \<ge> 3" "t \<ge> 3" "s \<le> t" and n: "real n \<le> exp ((real s - 1) * (real t - 1) / 2*(s+t))"
+  shows "\<not> is_Ramsey_number s t n"
+proof
+  assume n: "is_Ramsey_number s t n"
+  then have "(s - 1) * (t - 1) < n"
+    using RN_times_lower' [of s t] assms
+    by (metis RN_le numeral_3_eq_3 order_less_le_trans zero_less_Suc)
+  moreover have "2*2 \<le> (s - 1) * (t - 1)"
+    using assms by (intro mult_mono) auto
+  ultimately have "n > 4"
+    by simp
+  (* and therefore s\<ge>8, do we need that?*)
+
+
+  (* I need to define a probability space for a colouring with M red edges*)
+  define W where "W \<equiv> {..<n}"
+  define \<Omega> where "\<Omega> \<equiv> Pow (all_edges W)"  \<comment>\<open>colour the edges randomly\<close>
+  have "finite W" and cardW: "card W = n"
+    by (auto simp: W_def)
+  moreover
+  have cardEW: "card (all_edges W) = n choose 2"
+    by (simp add: W_def card_all_edges)
+  ultimately have card\<Omega>: "card \<Omega> = 2 ^ (n choose 2)"
+    by (simp add: \<Omega>_def card_Pow finite_all_edges)
+  then have fin_\<Omega>: "finite \<Omega>"
+    by (simp add: \<Omega>_def \<open>finite W\<close> finite_all_edges)
+  define p where "p \<equiv> s / (s+t)"
+  have p01: "0<p" "p<1"
+    using assms by (auto simp: p_def)
+  define pr where "pr \<equiv> \<lambda>Red::nat set set. p ^ card Red * (1-p) ^ (n choose 2 - card Red)"
+  have pr01: "0 < pr Red" "pr Red \<le> 1" for Red \<comment> \<open>the inequality could be strict\<close>
+    using \<open>0<p\<close> \<open>p<1\<close>
+     apply (auto simp: pr_def card\<Omega> divide_simps)
+    by (smt (verit, best) mult_left_le_one_le power_le_one two_realpow_ge_one zero_less_power)
+  define M where "M \<equiv> point_measure \<Omega> pr"
+  have space_eq: "space M = \<Omega>"
+    by (simp add: M_def space_point_measure)
+  have sets_eq: "sets M = Pow \<Omega>"
+    by (simp add: M_def sets_point_measure)
+  interpret P: prob_space M
+  proof
+    define m where "m = n choose 2"
+    have \<Omega>_Union: "\<Omega> = (\<Union>r\<le>m. nsets (all_edges W) r)"
+      unfolding \<Omega>_def m_def
+      by (simp add: Pow_equals_UN_nsets cardEW \<open>finite W\<close> finite_all_edges)
+    have "(\<Sum>R\<in>\<Omega>. p ^ card R * (1 - p) ^ (m - card R)) 
+        = (\<Sum>i\<le>m. \<Sum>R\<in>[all_edges W]\<^bsup>i\<^esup>. p ^ card R * (1 - p) ^ (m - card R))"
+      unfolding \<Omega>_Union
+    proof (rule sum.UNION_disjoint_family)
+      show "\<forall>i\<in>{..m}. finite ([all_edges W]\<^bsup>i\<^esup>)"
+        by (simp add: \<open>finite W\<close> finite_all_edges finite_imp_finite_nsets)
+      show "disjoint_family_on (nsets (all_edges W)) {..m}"
+        unfolding disjoint_family_on_def m_def
+        by (metis atMost_iff zero_le card.empty cardEW nle_le nsets_disjoint_iff)
+    qed auto
+    also have "... = (\<Sum>i\<le>m. \<Sum>R\<in>[all_edges W]\<^bsup>i\<^esup>. p^i * (1-p) ^ (m-i))"
+      by (simp add: nsets_def)
+    also have "\<dots> = (\<Sum>r \<le> m. (m choose r) * p ^ r * (1 - p) ^ (m - r))"
+      by (simp add: cardEW m_def mult.assoc)
+    also have "... = (p + (1-p))^m"
+      by (metis (full_types) binomial_ring)
+    also have "... = 1"
+      by simp
+    finally have "(\<Sum>R\<in>\<Omega>. p ^ card R * (1 - p) ^ (m - card R)) =1" .
+    then
+    have "sum pr \<Omega> = 1"
+      by (simp add: pr_def m_def card\<Omega> flip: sum_divide_distrib)
+    then have "(\<Sum>Red\<in>\<Omega>. ennreal (pr Red)) = 1"
+      using pr01 sum_ennreal by (simp add: dual_order.order_iff_strict)
+    then show "emeasure M (space M) = 1"
+      using M_def fin_\<Omega> prob_space.emeasure_space_1 prob_space_point_measure zero_le by blast
+  qed
+
+
+  \<comment>\<open>the event to avoid: monochromatic cliques, given @{term "K \<subseteq> W"};
+      we are considering edges over the entire graph @{term W}\<close>
+  define A where "A \<equiv> \<lambda>K. {F \<in> \<Omega>. F \<inter> all_edges K \<subseteq> F}"
+  have A_ev: "A K \<in> P.events" for K
+    by (auto simp add: sets_eq A_def \<Omega>_def)
+  have A_sub_\<Omega>: "A K \<subseteq> \<Omega>" for K
+    by (auto simp add: sets_eq A_def \<Omega>_def)
+  have UA_sub_\<Omega>: "(\<Union>K \<in> nsets W s. A K) \<subseteq> \<Omega>"
+    by (auto simp: \<Omega>_def A_def nsets_def all_edges_def)
+
+
+  show False
+    sorry
+qed
+
 text \<open>From Bollabás, Graph Theory, page 125\<close>
 proposition Ramsey_number_lower_off_diag:  
   fixes n s::nat  (* do we need s \<le> t ?*)
-  assumes "s \<ge> 3" "t \<ge> 3" "s \<le> t" and n: "real n \<le> exp ((real s - 1)*(real t - 1) / 2*(s+t))"
+  assumes "s \<ge> 3" "t \<ge> 3" "s \<le> t" and n: "real n \<le> exp ((real s - 1) * (real t - 1) / 2*(s+t))"
   shows "\<not> is_Ramsey_number s t n"
 proof
   assume n: "is_Ramsey_number s t n"
