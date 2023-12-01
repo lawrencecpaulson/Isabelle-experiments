@@ -7,6 +7,22 @@ theory Diagonal imports
    
 begin
 
+
+text \<open>useful for counting the number of edges containing a clique\<close>
+lemma card_Pow_diff:
+  assumes "A \<subseteq> B" "finite B"
+  shows "card {X \<in> Pow B. A \<subseteq> X} = 2 ^ (card B - card A)"
+proof -
+  have inj: "inj_on ((\<union>) A) (Pow (B-A))"
+    using assms by (auto simp: inj_on_def)
+  have "{X \<in> Pow B. A \<subseteq> X} = (\<union>)A ` Pow (B-A)"
+    using assms by auto
+  moreover have "card \<dots> = 2 ^ (card B - card A)"
+    using inj assms by (simp add: card_Diff_subset card_Pow card_image finite_subset)
+  ultimately show ?thesis
+    by presburger
+qed
+
 context linordered_semidom
 begin
 
@@ -853,6 +869,8 @@ proof (cases "s \<le> n")
 qed (simp add: binomial_eq_0)
 
 text \<open>The original Ramsey number lower bound, by Erdős\<close>
+(* requires re-factoring to take advantage of card_Pow_diff and with a symmetric treatment of 
+independent sets, and also utilising Andrew's simpler estimation *)
 proposition Ramsey_number_lower:  
   fixes n s::nat
   assumes "s \<ge> 3" and n: "real n \<le> 2 powr (s/2)"
@@ -1009,7 +1027,7 @@ proof
     then show ?thesis
       by (simp add: power_add)
   qed
-  have emeasure_eq: "emeasure M A = (if A \<subseteq> \<Omega> then card A / card \<Omega> else 0)" for A
+  have emeasure_eq: "emeasure M C = (if C \<subseteq> \<Omega> then card C / card \<Omega> else 0)" for C
     using M_def emeasure_neq_0_sets emeasure_uniform_count_measure fin_\<Omega> sets_eq by force
   have MA: "emeasure M (A K) = ennreal (2 / 2 ^ (s choose 2))" if "K \<in> nsets W s" for K
     using that
@@ -1225,7 +1243,7 @@ proof
     by (simp add: W_def card_all_edges)
   ultimately have card\<Omega>: "card \<Omega> = 2 ^ (n choose 2)"
     by (simp add: \<Omega>_def card_Pow finite_all_edges)
-  then have fin_\<Omega>: "finite \<Omega>"
+  then have fin_\<Omega> [simp]: "finite \<Omega>"
     by (simp add: \<Omega>_def \<open>finite W\<close> finite_all_edges)
   define p where "p \<equiv> s / (s+t)"
   have p01: "0<p" "p<1"
@@ -1317,6 +1335,14 @@ proof
     by (auto simp add: sets_eq A_def \<Omega>_def)
   have UA_sub_\<Omega>: "(\<Union>K \<in> nsets W s. A K) \<subseteq> \<Omega>"
     by (auto simp: \<Omega>_def A_def nsets_def all_edges_def)
+
+  have inj: "inj_on ((\<union>) (all_edges K)) (Pow (all_edges W - all_edges K))" for K
+    using assms by (auto simp: inj_on_def)
+  have A_eq: "A K = (\<union>) (all_edges K) ` (Pow (all_edges W - all_edges K))" if "K \<subseteq> W" for K
+    using that 
+    apply (auto simp: A_def \<Omega>_def simp flip: all_edges_subset_iff_clique)
+    using all_edges_mono by blast
+
   define B where "B \<equiv> \<lambda>K. {F \<in> \<Omega>. indep K F}"
   have B_ev: "B K \<in> P.events" for K
     by (auto simp add: sets_eq B_def \<Omega>_def)
@@ -1325,6 +1351,30 @@ proof
   have UB_sub_\<Omega>: "(\<Union>K \<in> nsets W t. B K) \<subseteq> \<Omega>"
     by (auto simp: \<Omega>_def B_def nsets_def all_edges_def)
 
+  have cardA: "card (A K) = 2 ^ ((n choose 2) - (s choose 2))" 
+    if "K \<in> nsets W s" for K     \<comment>\<open>the cardinality involves the edges outside the clique\<close>
+    using \<open>finite W\<close> card_Pow_diff [of "all_edges K" "all_edges W"] fin_\<Omega> all_edges_mono that
+    unfolding A_def \<Omega>_def cardEW nsets_def
+    by (fastforce simp: card_all_edges simp flip: all_edges_subset_iff_clique)
+
+  have pr_A: "pr F = p ^ (s choose 2)" if "F \<in> A K" for K F
+
+    sorry
+  have emeasure_eq: "emeasure M C = (if C \<subseteq> \<Omega> then (\<Sum>a\<in>C. ennreal (pr a)) else 0)" for C
+    by (simp add: M_def emeasure_notin_sets emeasure_point_measure_finite sets_point_measure)
+
+  have MA: "emeasure M (A K) = ennreal (p ^ (s choose 2))" if "K \<in> nsets W s" for K
+    using that
+    apply (simp add: emeasure_eq A_sub_\<Omega> card\<Omega> nsets_def A_eq)
+    apply safe
+
+    apply (simp add:  power_diff flip: divide_ennreal ennreal_power)
+    done
+  then have prob_AK: "P.prob (A K) = 2 / 2 ^ (s choose 2)" if "K \<in> nsets W s" for K
+    using that by (simp add: P.emeasure_eq_measure)
+
+
+    oops
   have "P.prob (\<Union>K \<in> nsets W s. A K) < 1/2"
     sorry
   moreover have "P.prob (\<Union>K \<in> nsets W t. B K) < 1/2"
