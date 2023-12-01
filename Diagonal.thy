@@ -38,6 +38,7 @@ lemma exp_powr_complex [simp]:
   shows "exp x powr y = exp (x*y)"
   using assms by (simp add: powr_def mult.commute)
 
+thm choose_two
 lemma choose_two_real: "n choose 2 = n * (n - 1) / 2"
 proof (cases "even n")
   case True
@@ -1185,6 +1186,10 @@ lemma RN_gt2:
   assumes "2 \<le> k" "3 \<le> l" shows "k < RN l k"
   by (simp add: RN_commute assms RN_gt1)
 
+lemma B: "(Suc n choose 2) = (n choose 2) + n"
+  by (simp add: numeral_2_eq_2)
+
+
 text \<open>trying Andrew's sketch\<close>
 proposition Ramsey_number_lower_off_diag:  
   fixes n s::nat  (* do we need s \<le> t ?  And the final bound can be sharpened per Andrew's suggestion*)
@@ -1269,91 +1274,38 @@ proof
 
   have "exp ((real s - 1) * (real t - 1) / (2*(s+t)))  \<le> exp (t / (s+t)) powr ((s-1)/2)"
     using \<open>s \<ge> 3\<close> by (simp add: mult_ac divide_simps of_nat_diff)
-  with n have A: "n \<le> exp (t / (s+t)) powr ((s-1)/2)"
+  with n have "n \<le> exp (t / (s+t)) powr ((s-1)/2)"
     by linarith
   then have "n * p powr ((s-1)/2) \<le> (exp (t / (s+t)) * p) powr ((s-1)/2)"
     using \<open>0<p\<close> by (simp add: powr_mult)
-  moreover
-  have B: "exp (real t / real (s+t)) * p < 1"
+  also have "... < 1"
   proof -
-    have "p = 1 - t / (s+t)"
-      using assms by (simp add: p_def divide_simps)
-    also have "... < exp (- real t / real (s+t))"
-      using assms by (simp add: exp_minus_greater)
-    finally show ?thesis
-      by (simp add: exp_minus divide_simps mult.commute)
-  qed
-  ultimately have "n * p powr ((s-1)/2) < 1"
-    using assms(1) p01 powr_less_one
-    by (smt (verit, best) \<open>2 * 2 \<le> (s - 1) * (t - 1)\<close> exp_gt_zero half_gt_zero mult_2 mult_eq_0_iff mult_sign_intros(5) not_numeral_le_zero numeral_Bit0 of_nat_le_0_iff)
-apply (simp add: powr_less_one)
-    apply-
-    apply (rule le_less_trans)
-     apply assumption
-    apply (rule powr_less_one)
-    using p01(1) apply auto[1]
-    apply blast
-    using assms(1) by auto
-apply (simp add: )
-    oops
-    by (smt (verit, best) Num.of_nat_simps(3) add_leD1 assms(1) divide_less_eq_1_pos exp_gt_zero mult_pos_pos numeral_3_eq_3 numeral_nat(7) of_nat_diff of_nat_mono p01(1) plus_1_eq_Suc powr_le_one_le)
-  then have "(n * p powr ((s-1)/2)) ^ s < 1"
-     using \<open>s \<ge> 3\<close> by (simp add: power_less_one_iff)
-  then have "n^s * p ^ (s choose 2) < 1"
-    using \<open>0 < p\<close> \<open>s \<ge> 3\<close>
-    by (simp add: mult_ac power_mult_distrib of_nat_diff choose_two_real powr_powr flip: powr_realpow)
-
-
-  have "(n choose s) \<le> n^s / fact s"  \<comment> \<open>probability calculation\<close>
-    using binomial_fact_pow[of n s]
-    by (smt (verit) fact_gt_zero of_nat_fact of_nat_mono of_nat_mult pos_divide_less_eq)  
-  then have "(n choose s) / 2^(s choose 2) \<le> n^s / (fact s * 2 ^ (s * (s-1) div 2))"
-    by (simp add: choose_two divide_simps)
-  also have "\<dots> \<le> 2 powr (s/2) / fact s" 
-  proof -
-    have [simp]: "real (s * (s - Suc 0) div 2) = real s * (real s - 1) / 2"
-      by (subst real_of_nat_div) auto
-    have "n powr s \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t))) powr s"
-      using n by (meson of_nat_0_le_iff powr_mono2)
-    then have "n powr s \<le> exp ((real s - 1) * (real t - 1) * s / (2*(s+t)))"
-      by simp
-    then have "2 * n powr s \<le> 2 powr ((s * s) / 2)"
-      by (simp add: add_divide_distrib powr_add)
-    then show ?thesis
-      using n \<open>n>0\<close> by (simp add: field_simps flip: powr_realpow powr_add)
-  qed
-  also have "\<dots> < 1"
-  proof -
-    have "2 powr (1 + (k+3)/2) < fact (k+3)" for k
-    proof (induction k)
-      case 0
-      have "2 powr (5/2) = sqrt (2^5)"
-        by (metis divide_inverse mult.left_neutral numeral_powr_numeral_real powr_ge_pzero powr_half_sqrt powr_powr)
-      also have "\<dots> < sqrt 36"
-        by (intro real_sqrt_less_mono) auto
-      finally show ?case
-        by (simp add: eval_nat_numeral)
-    next
-      case (Suc k)
-      have "2 powr (1 + real (Suc k + 3) / 2) = 2 powr (1/2) * 2 powr (1 + (k+3)/2)"
-        apply (simp add: powr_add powr_half_sqrt_powr real_sqrt_mult)
-        apply (simp flip: real_sqrt_mult)
-        done
-      also have "\<dots> \<le> sqrt 2 * fact (k+3)"
-        using Suc.IH by (simp add: powr_half_sqrt)
-      also have "\<dots> < real(k + 4) * fact (k + 3)"
-        using sqrt2_less_2 by simp
-      also have "\<dots> = fact (Suc (k + 3))"
-        unfolding fact_Suc by simp
-      finally show ?case by simp
+    have "exp (real t / real (s+t)) * p < 1"
+    proof -
+      have "p = 1 - t / (s+t)"
+        using assms by (simp add: p_def divide_simps)
+      also have "... < exp (- real t / real (s+t))"
+        using assms by (simp add: exp_minus_greater)
+      finally show ?thesis
+        by (simp add: exp_minus divide_simps mult.commute)
     qed
-    then have "2 powr (1 + s/2) < fact s"
-      by (metis add.commute \<open>s\<ge>3\<close> le_Suc_ex)
     then show ?thesis
-      by (simp add: divide_simps)
+      using Diagonal.powr_less_one assms(1) p01(1) by fastforce
   qed
-  finally have less_1: "real (n choose s) * (2 / 2 ^ (s choose 2)) < 1" .
-
+  finally have "n * p powr ((s-1)/2) < 1" .
+  then have "(n * p powr ((s-1)/2)) ^ s < 1"
+    using \<open>s \<ge> 3\<close> by (simp add: power_less_one_iff)
+  then have B: "n^s * p ^ (s choose 2) < 1"
+    using \<open>0<p\<close> \<open>4 < n\<close> \<open>s \<ge> 3\<close>
+    by (simp add: choose_two_real powr_powr powr_mult of_nat_diff mult.commute flip: powr_realpow)
+  have "(n choose s) * p ^ (s choose 2) \<le> n^s / fact s * p ^ (s choose 2)"
+    apply (intro mult_right_mono)
+    using binomial_fact_pow[of n s]  
+     apply (simp add: divide_simps mult.commute approximation_preproc_nat(13))
+    using p01(1) by auto
+  also have "... < 1 / fact s"
+    using B by (simp add: divide_simps)
+  finally have "(n choose s) * p ^ (s choose 2) < 1 / fact s" .
 
 
   show False
