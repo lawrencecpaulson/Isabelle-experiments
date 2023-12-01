@@ -1262,8 +1262,8 @@ proof
     have \<Omega>_Union: "\<Omega> = (\<Union>r\<le>m. nsets (all_edges W) r)"
       unfolding \<Omega>_def m_def
       by (simp add: Pow_equals_UN_nsets cardEW \<open>finite W\<close> finite_all_edges)
-    have "(\<Sum>R\<in>\<Omega>. p ^ card R * (1 - p) ^ (m - card R)) 
-        = (\<Sum>i\<le>m. \<Sum>R\<in>[all_edges W]\<^bsup>i\<^esup>. p ^ card R * (1 - p) ^ (m - card R))"
+    have "(\<Sum>R\<in>\<Omega>. p ^ card R * (1-p) ^ (m - card R)) 
+        = (\<Sum>i\<le>m. \<Sum>R\<in>[all_edges W]\<^bsup>i\<^esup>. p ^ card R * (1-p) ^ (m - card R))"
       unfolding \<Omega>_Union
     proof (rule sum.UNION_disjoint_family)
       show "\<forall>i\<in>{..m}. finite ([all_edges W]\<^bsup>i\<^esup>)"
@@ -1274,13 +1274,13 @@ proof
     qed auto
     also have "... = (\<Sum>i\<le>m. \<Sum>R\<in>[all_edges W]\<^bsup>i\<^esup>. p^i * (1-p) ^ (m-i))"
       by (simp add: nsets_def)
-    also have "\<dots> = (\<Sum>r \<le> m. (m choose r) * p ^ r * (1 - p) ^ (m - r))"
+    also have "\<dots> = (\<Sum>r \<le> m. (m choose r) * p ^ r * (1-p) ^ (m - r))"
       by (simp add: cardEW m_def mult.assoc)
     also have "... = (p + (1-p))^m"
       by (metis (full_types) binomial_ring)
     also have "... = 1"
       by simp
-    finally have "(\<Sum>R\<in>\<Omega>. p ^ card R * (1 - p) ^ (m - card R)) =1" .
+    finally have "(\<Sum>R\<in>\<Omega>. p ^ card R * (1-p) ^ (m - card R)) =1" .
     then
     have "sum pr \<Omega> = 1"
       by (simp add: pr_def m_def card\<Omega> flip: sum_divide_distrib)
@@ -1356,6 +1356,73 @@ proof
     using \<open>finite W\<close> card_Pow_diff [of "all_edges K" "all_edges W"] fin_\<Omega> all_edges_mono that
     unfolding A_def \<Omega>_def cardEW nsets_def
     by (fastforce simp: card_all_edges simp flip: all_edges_subset_iff_clique)
+
+
+  { fix K
+    assume "K \<subseteq> W"
+    then have "finite K"
+      by (simp add: \<open>finite W\<close> finite_subset)
+    define \<Omega>' where "\<Omega>' \<equiv> Pow (all_edges W - all_edges K)"
+    define m where "m = (n choose 2)"
+    define m' where "m' = m - ((card K) choose 2)"
+    have meq: "m = m' + ((card K) choose 2)"
+      by (metis Diagonal.binomial_mono Nat.le_imp_diff_is_add \<open>K \<subseteq> W\<close> \<open>finite W\<close> cardW card_mono m'_def m_def)
+
+    have D: "(\<Sum>i=Suc m'..m. real(m' choose i) * u i) = (\<Sum>i=Suc m'..m. 0)" for u
+      by (rule sum.cong ) auto
+
+    have "card \<Omega>' = 2^m'"
+      using \<open>finite W\<close> \<open>finite K\<close> card_Pow_diff [of "all_edges K" "all_edges W"] 
+      apply (simp add: \<Omega>'_def m'_def m_def cardEW card_all_edges)
+      by (simp add: \<open>K \<subseteq> W\<close> all_edges_mono cardEW card_Diff_subset card_Pow card_all_edges finite_all_edges)
+
+    have m'_eq: "m' = card (all_edges W - all_edges K)"
+      unfolding m'_def
+      by (simp add: \<open>K \<subseteq> W\<close> \<open>finite K\<close> all_edges_mono cardEW card_Diff_subset card_all_edges finite_all_edges m_def)
+
+    have \<Omega>'_Union: "\<Omega>' = (\<Union>r\<le>m. nsets (all_edges W - all_edges K) r)"
+      unfolding \<Omega>'_def m_def
+      apply (simp add: Pow_equals_UN_nsets cardEW \<open>finite W\<close> finite_all_edges)
+      apply (auto simp: )
+       apply (metis Diff_subset \<open>finite W\<close> atMost_iff cardEW card_mono dual_order.trans finite_all_edges)
+      by (metis atMost_iff card.infinite cardEW empty_iff finite_Diff less_le_not_le nle_le nsets_eq_empty_iff)
+    have "(\<Sum>R\<in>\<Omega>'. p ^ card R * (1-p) ^ (m - card R)) 
+        = (\<Sum>i\<le>m. \<Sum>R\<in>[all_edges W - all_edges K]\<^bsup>i\<^esup>. p ^ card R * (1-p) ^ (m - card R))"
+      unfolding \<Omega>'_Union
+    proof (rule sum.UNION_disjoint_family)
+      show "\<forall>i\<in>{..m}. finite ([all_edges W - all_edges K]\<^bsup>i\<^esup>)"
+        by (simp add: \<open>finite W\<close> finite_all_edges finite_imp_finite_nsets)
+      show "disjoint_family_on (nsets (all_edges W - all_edges K)) {..m}"
+        unfolding disjoint_family_on_def m_def
+        by (metis Int_lower1 Int_lower2 \<open>finite W\<close> bot_nat_0.extremum_uniqueI card.empty finite_Diff finite_all_edges linorder_not_less nsets_disjoint_iff nsets_eq_empty subset_empty)
+    qed auto
+    also have "... = (\<Sum>i\<le>m. \<Sum>R\<in>[all_edges W - all_edges K]\<^bsup>i\<^esup>. p^i * (1-p) ^ (m-i))"
+      by (simp add: nsets_def)
+    also have "\<dots> = (\<Sum>i\<le>m. (m' choose i) * p ^ i * (1-p) ^ (m - i))"
+      by (simp add: cardEW m'_eq mult.assoc)
+    also have "\<dots> = (\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m - i))
+                  + (\<Sum>i=m'+1..m. (m' choose i) * p ^ i * (1-p) ^ (m - i))"
+      by (simp add: meq sum_up_index_split)
+    also have "\<dots> = (\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m - i))"
+      by (simp add: D mult.assoc)
+    also have "... = (\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m' - i + (card K choose 2)))"
+      by (simp add: meq)
+    also have "... = (\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m' - i) * (1-p) ^ (card K choose 2))"
+      by (metis (mono_tags, opaque_lifting) mult.assoc power_add)
+    also have "... = ((\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m' - i)) * (1-p) ^ (card K choose 2))"
+      by (simp add: sum_distrib_right)
+    also have "... = (p + (1-p))^m' * (1-p) ^ (card K choose 2)"
+      by (metis (no_types) binomial_ring)
+    also have "... = (1-p) ^ (card K choose 2)"
+      by simp
+    finally have "(\<Sum>R\<in>\<Omega>'. p ^ card R * (1-p) ^ (m - card R)) = (1-p) ^ (card K choose 2)" .
+    then
+    have "sum pr \<Omega>' = (1-p) ^ (card K choose 2)"
+      by (simp add: pr_def m_def card\<Omega> flip: sum_divide_distrib)
+    then have "(\<Sum>Red\<in>\<Omega>'. ennreal (pr Red)) = (1-p) ^ (card K choose 2)"
+      using pr01 sum_ennreal by (simp add: order_less_le)
+  }
+
 
   have pr_A: "pr F = p ^ (s choose 2)" if "F \<in> A K" for K F
 
