@@ -1287,8 +1287,8 @@ proof
     using B by (simp add: divide_simps)
   finally have "(n choose s) * p ^ (s choose 2) < 1 / fact s" .
 
-
-  have "(\<Sum>Red\<in>Pow (all_edges W - EK). ennreal (pr Red)) = ennreal ((1 - p) ^ card EK)" 
+  have partial_sum_pr: 
+    "(\<Sum>Red\<in>Pow (all_edges W - EK). pr Red) = (1-p) ^ card EK" 
     if "EK \<subseteq> all_edges W" for EK
   proof -
     have "finite EK"
@@ -1352,7 +1352,7 @@ proof
     have "sum pr \<Omega>' = (1-p) ^ card EK"
       by (simp add: pr_def m_def card\<Omega> flip: sum_divide_distrib)
     then show ?thesis
-      using pr01 sum_ennreal by (simp add: \<Omega>'_def order_less_le)
+      using pr01 by (simp add: \<Omega>'_def order_less_le)
   qed
 
   define M where "M \<equiv> point_measure \<Omega> pr"
@@ -1362,34 +1362,8 @@ proof
     by (simp add: M_def sets_point_measure)
   interpret P: prob_space M
   proof
-    define m where "m = n choose 2"
-    have \<Omega>_Union: "\<Omega> = (\<Union>r\<le>m. nsets (all_edges W) r)"
-      unfolding \<Omega>_def m_def
-      by (simp add: Pow_equals_UN_nsets cardEW \<open>finite W\<close> finite_all_edges)
-    have "(\<Sum>R\<in>\<Omega>. p ^ card R * (1-p) ^ (m - card R)) 
-        = (\<Sum>i\<le>m. \<Sum>R\<in>[all_edges W]\<^bsup>i\<^esup>. p ^ card R * (1-p) ^ (m - card R))"
-      unfolding \<Omega>_Union
-    proof (rule sum.UNION_disjoint_family)
-      show "\<forall>i\<in>{..m}. finite ([all_edges W]\<^bsup>i\<^esup>)"
-        by (simp add: \<open>finite W\<close> finite_all_edges finite_imp_finite_nsets)
-      show "disjoint_family_on (nsets (all_edges W)) {..m}"
-        unfolding disjoint_family_on_def m_def
-        by (metis atMost_iff zero_le card.empty cardEW nle_le nsets_disjoint_iff)
-    qed auto
-    also have "... = (\<Sum>i\<le>m. \<Sum>R\<in>[all_edges W]\<^bsup>i\<^esup>. p^i * (1-p) ^ (m-i))"
-      by (simp add: nsets_def)
-    also have "\<dots> = (\<Sum>r \<le> m. (m choose r) * p ^ r * (1-p) ^ (m - r))"
-      by (simp add: cardEW m_def mult.assoc)
-    also have "... = (p + (1-p))^m"
-      by (metis (full_types) binomial_ring)
-    also have "... = 1"
-      by simp
-    finally have "(\<Sum>R\<in>\<Omega>. p ^ card R * (1-p) ^ (m - card R)) =1" .
-    then
     have "sum pr \<Omega> = 1"
-      by (simp add: pr_def m_def card\<Omega> flip: sum_divide_distrib)
-    then have "(\<Sum>Red\<in>\<Omega>. ennreal (pr Red)) = 1"
-      using pr01 sum_ennreal by (simp add: dual_order.order_iff_strict)
+      using partial_sum_pr [of "{}"] by (simp add: \<Omega>_def)
     then show "emeasure M (space M) = 1"
       using M_def fin_\<Omega> prob_space.emeasure_space_1 prob_space_point_measure zero_le by blast
   qed
