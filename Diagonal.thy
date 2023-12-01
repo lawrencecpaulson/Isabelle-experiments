@@ -531,7 +531,6 @@ instance list :: (type) infinite
   by intro_classes (simp add: infinite_UNIV_listI)
 
 
-(*** get rid of the cliques? ***)
 lemma indep_eq_clique_compl: "indep R E = clique R (all_edges R - E)"
   by (auto simp: indep_def clique_def all_edges_def)
 
@@ -1273,24 +1272,6 @@ proof
       using M_def fin_\<Omega> prob_space.emeasure_space_1 prob_space_point_measure zero_le by blast
   qed
 
-  \<comment>\<open>the event to avoid: monochromatic cliques, given @{term "K \<subseteq> W"};
-      we are considering edges over the entire graph @{term W}\<close>
-  (* look only at cliques, the second time at the compliment *)
-  define A where "A \<equiv> \<lambda>K. {F \<in> \<Omega>. clique K F}"
-  have A_ev: "A K \<in> P.events" for K
-    by (auto simp add: sets_eq A_def \<Omega>_def)
-  have A_sub_\<Omega>: "A K \<subseteq> \<Omega>" for K
-    by (auto simp add: sets_eq A_def \<Omega>_def)
-  have UA_sub_\<Omega>: "(\<Union>K \<in> nsets W s. A K) \<subseteq> \<Omega>"
-    by (auto simp: \<Omega>_def A_def nsets_def all_edges_def)
-  define B where "B \<equiv> \<lambda>K. {F \<in> \<Omega>. indep K F}"
-  have B_ev: "B K \<in> P.events" for K
-    by (auto simp add: sets_eq B_def \<Omega>_def)
-  have B_sub_\<Omega>: "B K \<subseteq> \<Omega>" for K
-    by (auto simp add: sets_eq B_def \<Omega>_def)
-  have UB_sub_\<Omega>: "(\<Union>K \<in> nsets W t. B K) \<subseteq> \<Omega>"
-    by (auto simp: \<Omega>_def B_def nsets_def all_edges_def)
-
   have "exp ((real s - 1) * (real t - 1) / (2*(s+t)))  \<le> exp (t / (s+t)) powr ((s-1)/2)"
     using \<open>s \<ge> 3\<close> by (simp add: mult_ac divide_simps of_nat_diff)
   with n have "n \<le> exp (t / (s+t)) powr ((s-1)/2)"
@@ -1326,6 +1307,24 @@ proof
     using B by (simp add: divide_simps)
   finally have "(n choose s) * p ^ (s choose 2) < 1 / fact s" .
 
+  \<comment>\<open>the event to avoid: monochromatic cliques, given @{term "K \<subseteq> W"};
+      we are considering edges over the entire graph @{term W}\<close>
+  (* look only at cliques, the second time at the compliment *)
+  define A where "A \<equiv> \<lambda>K. {F \<in> \<Omega>. clique K F}"
+  have A_ev: "A K \<in> P.events" for K
+    by (auto simp add: sets_eq A_def \<Omega>_def)
+  have A_sub_\<Omega>: "A K \<subseteq> \<Omega>" for K
+    by (auto simp add: sets_eq A_def \<Omega>_def)
+  have UA_sub_\<Omega>: "(\<Union>K \<in> nsets W s. A K) \<subseteq> \<Omega>"
+    by (auto simp: \<Omega>_def A_def nsets_def all_edges_def)
+  define B where "B \<equiv> \<lambda>K. {F \<in> \<Omega>. indep K F}"
+  have B_ev: "B K \<in> P.events" for K
+    by (auto simp add: sets_eq B_def \<Omega>_def)
+  have B_sub_\<Omega>: "B K \<subseteq> \<Omega>" for K
+    by (auto simp add: sets_eq B_def \<Omega>_def)
+  have UB_sub_\<Omega>: "(\<Union>K \<in> nsets W t. B K) \<subseteq> \<Omega>"
+    by (auto simp: \<Omega>_def B_def nsets_def all_edges_def)
+
   have "P.prob (\<Union>K \<in> nsets W s. A K) < 1/2"
     sorry
   moreover have "P.prob (\<Union>K \<in> nsets W t. B K) < 1/2"
@@ -1342,6 +1341,8 @@ proof
     using monoc[of F] \<open>finite W\<close>
     by (smt (verit, del_insts) clique_indep_def finite_subset mem_Collect_eq nsets_def) 
 qed
+
+
 
 text \<open>From Bollabás, Graph Theory, page 125\<close>
 proposition Ramsey_number_lower_off_diag:  
