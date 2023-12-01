@@ -531,7 +531,13 @@ instance list :: (type) infinite
   by intro_classes (simp add: infinite_UNIV_listI)
 
 
-(*** we need to get rid of the cliques! ***)
+(*** get rid of the cliques? ***)
+lemma indep_eq_clique_compl: "indep R E = clique R (all_edges R - E)"
+  by (auto simp: indep_def clique_def all_edges_def)
+
+lemma all_edges_subset_iff_clique: "all_edges K \<subseteq> E \<longleftrightarrow> clique K E"
+  by (fastforce simp add: card_2_iff clique_def all_edges_def)
+
 lemma smaller_clique: "\<lbrakk>clique R E; R' \<subseteq> R\<rbrakk> \<Longrightarrow> clique R' E"
   by (auto simp: clique_def)
 
@@ -546,8 +552,10 @@ lemma clique_all_edges_iff: "clique K (E \<inter> all_edges K) \<longleftrightar
 lemma indep_all_edges_iff: "indep K (E \<inter> all_edges K) \<longleftrightarrow> indep K E"
   by (simp add: indep_def all_edges_def)
 
-lemma clique_indep_all_edges_iff: "clique_indep s s K (E \<inter> all_edges K) = clique_indep s s K E"
+lemma clique_indep_all_edges_iff: "clique_indep s t K (E \<inter> all_edges K) = clique_indep s t K E"
   by (simp add: clique_all_edges_iff clique_indep_def indep_all_edges_iff)
+
+(** at issue here is whether we benefit from the clique definition, which is found in the literature **)
 
 text \<open>identifying Ramsey numbers (not the minimum) for a given type and pair of integers\<close>
 definition IS_RN where
@@ -1074,6 +1082,7 @@ qed
 lemma Ramsey_number_zero: "\<not> is_Ramsey_number (Suc m) (Suc n) 0"
   by (metis RN_1 RN_le is_Ramsey_number_le not_one_le_zero Suc_le_eq One_nat_def zero_less_Suc)
 
+(* this might work better with the other treatment of Ramsey numbers, avoiding the need to encode pairs*)
 lemma Ramsey_number_times_lower: "\<not> is_Ramsey_number (Suc m) (Suc n) (m*n)"
 proof
   assume \<section>: "is_Ramsey_number (Suc m) (Suc n) (m*n)"
@@ -1195,12 +1204,13 @@ proposition Ramsey_number_lower_off_diag:
   fixes n s::nat  (* do we need s \<le> t ?  And the final bound can be sharpened per Andrew's suggestion*)
   assumes "s \<ge> 3" "t \<ge> 3" "s \<le> t" 
     and n: "real n \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t)))"
-  shows "\<not> is_Ramsey_number s t n"
+  shows "\<not> IS_RN (TYPE (nat)) s t n"
 proof
-  assume non: "is_Ramsey_number s t n"
+  assume con: "IS_RN (TYPE (nat)) s t n"
+  then have is_RN: "is_Ramsey_number s t n"
+    by (simp add: IS_RN_imp_partn_lst)
   then have "(s - 1) * (t - 1) < n"
-    using RN_times_lower' [of s t] assms
-    by (metis RN_le numeral_3_eq_3 order_less_le_trans zero_less_Suc)
+    using RN_times_lower' [of s t] assms by (metis RN_le numeral_3_eq_3 order_less_le_trans zero_less_Suc)
   moreover have "2*2 \<le> (s - 1) * (t - 1)"
     using assms by (intro mult_mono) auto
   ultimately have "n > 4"
@@ -1208,6 +1218,8 @@ proof
   (* and therefore s\<ge>8, do we need that?*)
   define W where "W \<equiv> {..<n}"              \<comment>\<open>defining a probability space\<close>
   define \<Omega> where "\<Omega> \<equiv> Pow (all_edges W)"  \<comment>\<open>colour the edges randomly\<close>
+  have monoc: "\<And>F. \<exists>K\<subseteq>W. clique_indep s t K F"
+    using con by (simp add: IS_RN_def W_def)
   have "finite W" and cardW: "card W = n"
     by (auto simp: W_def)
   moreover have cardEW: "card (all_edges W) = n choose 2"
@@ -1264,13 +1276,20 @@ proof
   \<comment>\<open>the event to avoid: monochromatic cliques, given @{term "K \<subseteq> W"};
       we are considering edges over the entire graph @{term W}\<close>
   (* look only at cliques, the second time at the compliment *)
-  define A where "A \<equiv> \<lambda>K. {F \<in> \<Omega>. all_edges K \<subseteq> F}"
+  define A where "A \<equiv> \<lambda>K. {F \<in> \<Omega>. clique K F}"
   have A_ev: "A K \<in> P.events" for K
     by (auto simp add: sets_eq A_def \<Omega>_def)
   have A_sub_\<Omega>: "A K \<subseteq> \<Omega>" for K
     by (auto simp add: sets_eq A_def \<Omega>_def)
   have UA_sub_\<Omega>: "(\<Union>K \<in> nsets W s. A K) \<subseteq> \<Omega>"
     by (auto simp: \<Omega>_def A_def nsets_def all_edges_def)
+  define B where "B \<equiv> \<lambda>K. {F \<in> \<Omega>. indep K F}"
+  have B_ev: "B K \<in> P.events" for K
+    by (auto simp add: sets_eq B_def \<Omega>_def)
+  have B_sub_\<Omega>: "B K \<subseteq> \<Omega>" for K
+    by (auto simp add: sets_eq B_def \<Omega>_def)
+  have UB_sub_\<Omega>: "(\<Union>K \<in> nsets W t. B K) \<subseteq> \<Omega>"
+    by (auto simp: \<Omega>_def B_def nsets_def all_edges_def)
 
   have "exp ((real s - 1) * (real t - 1) / (2*(s+t)))  \<le> exp (t / (s+t)) powr ((s-1)/2)"
     using \<open>s \<ge> 3\<close> by (simp add: mult_ac divide_simps of_nat_diff)
@@ -1307,9 +1326,21 @@ proof
     using B by (simp add: divide_simps)
   finally have "(n choose s) * p ^ (s choose 2) < 1 / fact s" .
 
-
-  show False
+  have "P.prob (\<Union>K \<in> nsets W s. A K) < 1/2"
     sorry
+  moreover have "P.prob (\<Union>K \<in> nsets W t. B K) < 1/2"
+    sorry
+  ultimately have "P.prob ((\<Union>K \<in> nsets W s. A K) \<union> (\<Union>K \<in> nsets W t. B K)) < 1/2 + 1/2"
+    by (smt (verit) P.finite_measure_subadditive Pow_iff UA_sub_\<Omega> UB_sub_\<Omega> sets_eq)
+  moreover have "(\<Union>K \<in> nsets W s. A K \<union> B K) \<in> P.events"
+    using A_ev B_ev sets_eq by auto
+  ultimately obtain F where "F \<in> \<Omega> - ((\<Union>K \<in> nsets W s. A K) \<union> (\<Union>K \<in> nsets W t. B K))"
+    by (metis (no_types, opaque_lifting) P.prob_space Pow_iff UA_sub_\<Omega> UB_sub_\<Omega> diff_shunt_var ex_min_if_finite field_sum_of_halves fin_\<Omega> finite_Diff less_irrefl sets.Un sets_eq space_eq subset_antisym)
+  then have "\<forall>K \<in> nsets W s. \<not> clique K F"  "\<forall>K \<in> nsets W t. \<not> indep K F"
+    by (simp_all add: A_def B_def \<Omega>_def)
+  then show False
+    using monoc[of F] \<open>finite W\<close>
+    by (smt (verit, del_insts) clique_indep_def finite_subset mem_Collect_eq nsets_def) 
 qed
 
 text \<open>From Bollabás, Graph Theory, page 125\<close>
@@ -1340,7 +1371,7 @@ proof
     using assms by (simp add: divide_simps)
   finally have "m' < (t / real (s + t)) * (n choose 2) + 1" .
 
-  (* I need to define a probability space for a colouring with M red edges*)
+  (*define a probability space for a colouring with M red edges*)
   define W where "W \<equiv> {..<n}"
   define \<Omega> where "\<Omega> \<equiv> nsets (all_edges W) m"  \<comment>\<open>colour $m$ random edges red\<close>
   have "finite W" and cardW: "card W = n"
