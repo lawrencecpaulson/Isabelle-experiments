@@ -7,6 +7,50 @@ theory Diagonal imports
    
 begin
 
+context linordered_semidom
+begin
+
+thm power_le_one_iff (*MOVE TO A BETTER PLACE AND GENERALISE THUS*)
+lemma power_le_one_iff: "0 \<le> a \<Longrightarrow> a ^ n \<le> 1 \<longleftrightarrow> (n = 0 \<or> a \<le> 1)"
+  by (metis (mono_tags) gr0I nle_le one_le_power power_le_one self_le_power power.power.power_0)
+
+lemma power_less_one_iff: "0 \<le> a \<Longrightarrow> a ^ n < 1 \<longleftrightarrow> (n > 0 \<and> a < 1)" 
+  by (smt (verit, best) neq0_conv neq_iff not_le one_le_power power.simps power_eq_0_iff power_strict_decreasing)
+
+end
+
+lemma powr_less_one: "0 \<le> (a::real) \<Longrightarrow> a < 1 \<Longrightarrow> e>0 \<Longrightarrow> a powr e < 1 "
+  by (metis powr_less_mono2 powr_one_eq_one)
+
+
+lemma exp_powr_real [simp]:
+  fixes x::real shows "exp x powr y = exp (x*y)"
+  by (simp add: powr_def)
+
+lemma exp_minus_greater: 
+  fixes x::real shows "1 - x < exp (-x) \<longleftrightarrow> x \<noteq> 0"
+  by (smt (verit, best) exp_ge_add_one_self exp_gt_zero exp_zero ln_eq_minus_one ln_exp)
+
+
+lemma exp_powr_complex [simp]:
+  fixes x::complex 
+  assumes "-pi < Im(x)" "Im(x) \<le> pi"
+  shows "exp x powr y = exp (x*y)"
+  using assms by (simp add: powr_def mult.commute)
+
+lemma choose_two_real: "n choose 2 = n * (n - 1) / 2"
+proof (cases "even n")
+  case True
+  then show ?thesis
+    by (auto simp add: choose_two dvd_def)
+next
+  case False
+  then have "even (n-1)"
+    by simp
+  then show ?thesis
+    by (auto simp add: choose_two dvd_def)
+qed
+
 definition "upair_define \<equiv> \<lambda>f e. THE u. \<exists>x y. e = {x,y} \<and> u = f x y"
 
 lemma upair_define_apply:
@@ -767,7 +811,7 @@ proof (intro Least_equality)
   qed auto
 qed
 
-lemma RN_3plus [simp]: 
+lemma RN_3plus: 
   assumes "k \<ge> 3" "m>1"
   shows "RN k m \<ge> m"
 proof -
@@ -792,7 +836,7 @@ lemma all_edges_empty_iff: "all_edges K = {} \<longleftrightarrow> (\<exists>v. 
 
 (*the corresponding strict inequality can be proved under the assumptions  "1 < s" "s \<le> n"
   using fact_less_fact_power*)
-lemma A: "(n choose s) * fact s \<le> n^s"
+lemma binomial_fact_pow: "(n choose s) * fact s \<le> n^s"
 proof (cases "s \<le> n")
   case True
   then show ?thesis
@@ -817,18 +861,10 @@ proof
     using \<open>1 < s\<close> \<open>s \<le> n\<close> by linarith
   define monoset where "monoset \<equiv> \<lambda>K::nat set. {F. F \<subseteq> all_edges K \<and> clique_indep s s K F}"
 
-  have "(n choose s) < n^s / fact s"  \<comment> \<open>probability calculation\<close>
-  proof (cases "s \<le> n")
-    case True
-    then show ?thesis
-      using fact_less_fact_power \<open>s>1\<close>
-      by (simp add: fact_binomial mult.commute pos_divide_less_eq pos_less_divide_eq)
-  next
-    case False
-    with \<open>n>0\<close> show ?thesis 
-      by (simp add: binomial_eq_0)
-  qed
-  then have "(n choose s) * (2 / 2^(s choose 2)) < 2 * n^s / (fact s * 2 ^ (s * (s-1) div 2))"
+  have "(n choose s) \<le> n^s / fact s"  \<comment> \<open>probability calculation\<close>
+    using binomial_fact_pow[of n s]
+    by (smt (verit) fact_gt_zero of_nat_fact of_nat_mono of_nat_mult pos_divide_less_eq)  
+  then have "(n choose s) * (2 / 2^(s choose 2)) \<le> 2 * n^s / (fact s * 2 ^ (s * (s-1) div 2))"
     by (simp add: choose_two divide_simps)
   also have "\<dots> \<le> 2 powr (1 + s/2) / fact s" 
   proof -
@@ -1142,8 +1178,8 @@ corollary RN_times_lower':
 
 lemma RN_gt1:
   assumes "2 \<le> k" "3 \<le> l" shows "k < RN k l"
-  using RN_times_lower' [of k l] assms
-  by (smt (verit, ccfv_threshold) One_nat_def Suc_1 add_diff_inverse_nat add_leE less_eq_Suc_le n_less_n_mult_m not_less_eq numeral_3_eq_3 plus_1_eq_Suc)
+    using RN_times_lower' [of k l] RN_3plus[of l] assms  
+  by (smt (verit, best) Suc_1 Suc_pred less_le_trans Suc_le_eq n_less_n_mult_m nat_less_le numeral_3_eq_3 One_nat_def zero_less_diff)
 
 lemma RN_gt2:
   assumes "2 \<le> k" "3 \<le> l" shows "k < RN l k"
@@ -1152,10 +1188,11 @@ lemma RN_gt2:
 text \<open>trying Andrew's sketch\<close>
 proposition Ramsey_number_lower_off_diag:  
   fixes n s::nat  (* do we need s \<le> t ?  And the final bound can be sharpened per Andrew's suggestion*)
-  assumes "s \<ge> 3" "t \<ge> 3" "s \<le> t" and n: "real n \<le> exp ((real s - 1) * (real t - 1) / 2*(s+t))"
+  assumes "s \<ge> 3" "t \<ge> 3" "s \<le> t" 
+    and n: "real n \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t)))"
   shows "\<not> is_Ramsey_number s t n"
 proof
-  assume n: "is_Ramsey_number s t n"
+  assume non: "is_Ramsey_number s t n"
   then have "(s - 1) * (t - 1) < n"
     using RN_times_lower' [of s t] assms
     by (metis RN_le numeral_3_eq_3 order_less_le_trans zero_less_Suc)
@@ -1164,15 +1201,11 @@ proof
   ultimately have "n > 4"
     by simp
   (* and therefore s\<ge>8, do we need that?*)
-
-
-  (* I need to define a probability space for a colouring with M red edges*)
-  define W where "W \<equiv> {..<n}"
+  define W where "W \<equiv> {..<n}"              \<comment>\<open>defining a probability space\<close>
   define \<Omega> where "\<Omega> \<equiv> Pow (all_edges W)"  \<comment>\<open>colour the edges randomly\<close>
   have "finite W" and cardW: "card W = n"
     by (auto simp: W_def)
-  moreover
-  have cardEW: "card (all_edges W) = n choose 2"
+  moreover have cardEW: "card (all_edges W) = n choose 2"
     by (simp add: W_def card_all_edges)
   ultimately have card\<Omega>: "card \<Omega> = 2 ^ (n choose 2)"
     by (simp add: \<Omega>_def card_Pow finite_all_edges)
@@ -1183,9 +1216,7 @@ proof
     using assms by (auto simp: p_def)
   define pr where "pr \<equiv> \<lambda>Red::nat set set. p ^ card Red * (1-p) ^ (n choose 2 - card Red)"
   have pr01: "0 < pr Red" "pr Red \<le> 1" for Red \<comment> \<open>the inequality could be strict\<close>
-    using \<open>0<p\<close> \<open>p<1\<close>
-     apply (auto simp: pr_def card\<Omega> divide_simps)
-    by (smt (verit, best) mult_left_le_one_le power_le_one two_realpow_ge_one zero_less_power)
+    using \<open>0<p\<close> \<open>p<1\<close> by (auto simp: mult_le_one power_le_one pr_def card\<Omega>)
   define M where "M \<equiv> point_measure \<Omega> pr"
   have space_eq: "space M = \<Omega>"
     by (simp add: M_def space_point_measure)
@@ -1225,16 +1256,104 @@ proof
       using M_def fin_\<Omega> prob_space.emeasure_space_1 prob_space_point_measure zero_le by blast
   qed
 
-
   \<comment>\<open>the event to avoid: monochromatic cliques, given @{term "K \<subseteq> W"};
       we are considering edges over the entire graph @{term W}\<close>
-  define A where "A \<equiv> \<lambda>K. {F \<in> \<Omega>. F \<inter> all_edges K \<subseteq> F}"
+  (* look only at cliques, the second time at the compliment *)
+  define A where "A \<equiv> \<lambda>K. {F \<in> \<Omega>. all_edges K \<subseteq> F}"
   have A_ev: "A K \<in> P.events" for K
     by (auto simp add: sets_eq A_def \<Omega>_def)
   have A_sub_\<Omega>: "A K \<subseteq> \<Omega>" for K
     by (auto simp add: sets_eq A_def \<Omega>_def)
   have UA_sub_\<Omega>: "(\<Union>K \<in> nsets W s. A K) \<subseteq> \<Omega>"
     by (auto simp: \<Omega>_def A_def nsets_def all_edges_def)
+
+  have "exp ((real s - 1) * (real t - 1) / (2*(s+t)))  \<le> exp (t / (s+t)) powr ((s-1)/2)"
+    using \<open>s \<ge> 3\<close> by (simp add: mult_ac divide_simps of_nat_diff)
+  with n have A: "n \<le> exp (t / (s+t)) powr ((s-1)/2)"
+    by linarith
+  then have "n * p powr ((s-1)/2) \<le> (exp (t / (s+t)) * p) powr ((s-1)/2)"
+    using \<open>0<p\<close> by (simp add: powr_mult)
+  moreover
+  have B: "exp (real t / real (s+t)) * p < 1"
+  proof -
+    have "p = 1 - t / (s+t)"
+      using assms by (simp add: p_def divide_simps)
+    also have "... < exp (- real t / real (s+t))"
+      using assms by (simp add: exp_minus_greater)
+    finally show ?thesis
+      by (simp add: exp_minus divide_simps mult.commute)
+  qed
+  ultimately have "n * p powr ((s-1)/2) < 1"
+    using assms(1) p01 powr_less_one
+    by (smt (verit, best) \<open>2 * 2 \<le> (s - 1) * (t - 1)\<close> exp_gt_zero half_gt_zero mult_2 mult_eq_0_iff mult_sign_intros(5) not_numeral_le_zero numeral_Bit0 of_nat_le_0_iff)
+apply (simp add: powr_less_one)
+    apply-
+    apply (rule le_less_trans)
+     apply assumption
+    apply (rule powr_less_one)
+    using p01(1) apply auto[1]
+    apply blast
+    using assms(1) by auto
+apply (simp add: )
+    oops
+    by (smt (verit, best) Num.of_nat_simps(3) add_leD1 assms(1) divide_less_eq_1_pos exp_gt_zero mult_pos_pos numeral_3_eq_3 numeral_nat(7) of_nat_diff of_nat_mono p01(1) plus_1_eq_Suc powr_le_one_le)
+  then have "(n * p powr ((s-1)/2)) ^ s < 1"
+     using \<open>s \<ge> 3\<close> by (simp add: power_less_one_iff)
+  then have "n^s * p ^ (s choose 2) < 1"
+    using \<open>0 < p\<close> \<open>s \<ge> 3\<close>
+    by (simp add: mult_ac power_mult_distrib of_nat_diff choose_two_real powr_powr flip: powr_realpow)
+
+
+  have "(n choose s) \<le> n^s / fact s"  \<comment> \<open>probability calculation\<close>
+    using binomial_fact_pow[of n s]
+    by (smt (verit) fact_gt_zero of_nat_fact of_nat_mono of_nat_mult pos_divide_less_eq)  
+  then have "(n choose s) / 2^(s choose 2) \<le> n^s / (fact s * 2 ^ (s * (s-1) div 2))"
+    by (simp add: choose_two divide_simps)
+  also have "\<dots> \<le> 2 powr (s/2) / fact s" 
+  proof -
+    have [simp]: "real (s * (s - Suc 0) div 2) = real s * (real s - 1) / 2"
+      by (subst real_of_nat_div) auto
+    have "n powr s \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t))) powr s"
+      using n by (meson of_nat_0_le_iff powr_mono2)
+    then have "n powr s \<le> exp ((real s - 1) * (real t - 1) * s / (2*(s+t)))"
+      by simp
+    then have "2 * n powr s \<le> 2 powr ((s * s) / 2)"
+      by (simp add: add_divide_distrib powr_add)
+    then show ?thesis
+      using n \<open>n>0\<close> by (simp add: field_simps flip: powr_realpow powr_add)
+  qed
+  also have "\<dots> < 1"
+  proof -
+    have "2 powr (1 + (k+3)/2) < fact (k+3)" for k
+    proof (induction k)
+      case 0
+      have "2 powr (5/2) = sqrt (2^5)"
+        by (metis divide_inverse mult.left_neutral numeral_powr_numeral_real powr_ge_pzero powr_half_sqrt powr_powr)
+      also have "\<dots> < sqrt 36"
+        by (intro real_sqrt_less_mono) auto
+      finally show ?case
+        by (simp add: eval_nat_numeral)
+    next
+      case (Suc k)
+      have "2 powr (1 + real (Suc k + 3) / 2) = 2 powr (1/2) * 2 powr (1 + (k+3)/2)"
+        apply (simp add: powr_add powr_half_sqrt_powr real_sqrt_mult)
+        apply (simp flip: real_sqrt_mult)
+        done
+      also have "\<dots> \<le> sqrt 2 * fact (k+3)"
+        using Suc.IH by (simp add: powr_half_sqrt)
+      also have "\<dots> < real(k + 4) * fact (k + 3)"
+        using sqrt2_less_2 by simp
+      also have "\<dots> = fact (Suc (k + 3))"
+        unfolding fact_Suc by simp
+      finally show ?case by simp
+    qed
+    then have "2 powr (1 + s/2) < fact s"
+      by (metis add.commute \<open>s\<ge>3\<close> le_Suc_ex)
+    then show ?thesis
+      by (simp add: divide_simps)
+  qed
+  finally have less_1: "real (n choose s) * (2 / 2 ^ (s choose 2)) < 1" .
+
 
 
   show False
@@ -1244,7 +1363,7 @@ qed
 text \<open>From Bollabás, Graph Theory, page 125\<close>
 proposition Ramsey_number_lower_off_diag:  
   fixes n s::nat  (* do we need s \<le> t ?*)
-  assumes "s \<ge> 3" "t \<ge> 3" "s \<le> t" and n: "real n \<le> exp ((real s - 1) * (real t - 1) / 2*(s+t))"
+  assumes "s \<ge> 3" "t \<ge> 3" "s \<le> t" and n: "real n \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t)))"
   shows "\<not> is_Ramsey_number s t n"
 proof
   assume n: "is_Ramsey_number s t n"
