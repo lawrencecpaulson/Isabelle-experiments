@@ -1391,89 +1391,64 @@ proof
   have UB_sub_\<Omega>: "(\<Union>K \<in> nsets W t. B K) \<subseteq> \<Omega>"
     by (auto simp: \<Omega>_def B_def nsets_def all_edges_def)
 
-  have cardA: "card (A K) = 2 ^ ((n choose 2) - (s choose 2))" 
-    if "K \<in> nsets W s" for K     \<comment>\<open>the cardinality involves the edges outside the clique\<close>
-    using \<open>finite W\<close> card_Pow_diff [of "all_edges K" "all_edges W"] fin_\<Omega> all_edges_mono that
-    unfolding A_def \<Omega>_def cardEW nsets_def
-    by (fastforce simp: card_all_edges simp flip: all_edges_subset_iff_clique)
-
-  have E: "{F \<in> \<Omega>. clique K F} = ((\<union>)(all_edges K)) `  Pow (all_edges W - all_edges K)" if "K \<in> [W]\<^bsup>s\<^esup>" for K
-    using that 
-    apply (auto simp: \<Omega>_def nsets_def simp flip: all_edges_subset_iff_clique)
-    using all_edges_mono by blast
-
   have pr_Un_disjoint: "pr (X \<union> Y) = pr X * pr Y / (1-p) ^ (n choose 2)" 
     if "X \<inter> Y = {}" "X \<subseteq> all_edges W" "Y \<subseteq> all_edges W" for X Y
   proof -
-    from that
-    obtain fin: "finite X" "finite Y" 
-      using \<open>finite W\<close> finite_all_edges finite_subset by blast
-    moreover
-    have "X \<union> Y \<subseteq> all_edges W"
-      using that by blast
-    ultimately have "(card X + card Y) \<le> (card W choose 2)"
-      using that \<open>finite W\<close> add_le_mono cardEW cardW card_mono finite_all_edges
-      by (metis card_Un_disjoint) 
+    have "(card X + card Y) \<le> (card W choose 2)"
+      by (metis \<open>finite W\<close> Un_subset_iff cardEW cardW card_Un_disjoint card_mono finite_all_edges finite_subset that)
     then show ?thesis
-      using that fin p01
+      using that p01 finite_subset [OF _ finite_all_edges [OF \<open>finite W\<close>]]
       by (simp add: pr_def card_Un_disjoint power_add power_diff flip: cardW)
   qed
 
-  have F: "pr (all_edges K \<union> F) 
-       = (p ^ (s choose 2) * (1-p) ^ (n choose 2 - (s choose 2))) * (p / (1-p)) ^ (card F)"
-    if "F \<subseteq> all_edges W - all_edges K"  and K: "K \<in> [W]\<^bsup>s\<^esup>" for F K
+
+  have pr_all_edges_Un: "pr (all_edges K \<union> F)  = (p ^ (s choose 2) / (1-p) ^ ((s choose 2))) * pr F"
+    if "F \<subseteq> all_edges W - all_edges K" and K: "K \<in> [W]\<^bsup>s\<^esup>" for F K
   proof -
-    have [simp]: "card (all_edges K) = s choose 2"
-      by (smt (verit) K card_nsets mem_Collect_eq nsets2_eq_all_edges nsets_def)
-    have [simp]: "all_edges K \<inter> F = {}" "F \<subseteq> all_edges W"
-      using that by auto 
+    have [simp]: "pr (all_edges K) = p ^ (s choose 2) * (1 - p) ^ (n choose 2 - (s choose 2))" 
+      using that by (simp add: nsets_def pr_def card_all_edges)
+    have [simp]: "card (all_edges K) = s choose 2" "all_edges K \<inter> F = {}" "F \<subseteq> all_edges W"
+      using that by (auto simp add: nsets_def card_all_edges)
     have [simp]: "all_edges K \<subseteq> all_edges W"
-      using E K \<Omega>_def basic_trans_rules(23) by blast
+      by (metis (no_types, lifting) all_edges_mono mem_Collect_eq nsets_def that(2))
     have "card F + card (all_edges K) \<le> n choose 2"
       by (metis Nat.add_0_right Nat.le_diff_conv2 \<open>F \<subseteq> all_edges W\<close> \<open>all_edges K \<subseteq> all_edges W\<close> \<open>finite W\<close> card.infinite cardEW card_Diff_subset card_mono finite_Diff finite_all_edges that(1))
     then show ?thesis
-      using that p01
-      apply (clarsimp simp add: nsets_def)
-      apply (simp add: pr_Un_disjoint)
-      apply (simp add: pr_def power_add power_diff divide_simps mult_ac)
-      done
+      using p01 by (simp add: nsets_def pr_Un_disjoint divide_simps flip: power_add)
   qed
-
-  have F: "pr (all_edges K \<union> F) 
-       = (p ^ (s choose 2) / (1-p) ^ ((s choose 2))) * pr F"
-    if "F \<subseteq> all_edges W - all_edges K"  and K: "K \<in> [W]\<^bsup>s\<^esup>" for F K
-    using that p01
-    apply (simp add: F)
-    apply (simp add: pr_def power_add power_diff divide_simps mult_ac)
-    by (smt (verit, del_insts) Diagonal.binomial_mono Diff_subset \<open>finite W\<close> cardEW cardW card_mono finite_all_edges le_add_diff_inverse mem_Collect_eq nsets_def power_add subset_iff)
 
   have emeasure_eq: "emeasure M C = (if C \<subseteq> \<Omega> then (\<Sum>a\<in>C. ennreal (pr a)) else 0)" for C
     by (simp add: M_def emeasure_notin_sets emeasure_point_measure_finite sets_point_measure)
 
-
   have MA: "emeasure M (A K) = ennreal (p ^ (s choose 2))" if "K \<in> nsets W s" for K
   proof -
-    have \<section>: "K \<subseteq> W \<and> finite K \<and> card K = s"
-      using nsets_def that by auto
-    have "s\<le>n"
+    have \<section>: "K \<subseteq> W" "finite K" "card K = s"
+      using that by (auto simp: nsets_def)
+    have "s \<le> n"
       using "\<section>" \<open>finite W\<close> cardW card_mono by blast
-    with \<section> have "card (all_edges W - all_edges K) = (n choose 2) - (s choose 2)"
+    then have sn2: "(s choose 2) \<le> (n choose 2)"
+      using binomial_mono by auto
+    with \<section> have **: "card (all_edges W - all_edges K) = (n choose 2) - (s choose 2)"
       by (simp add: all_edges_mono cardEW card_Diff_subset card_all_edges finite_all_edges)
-    show ?thesis
-      using that cardW
-      apply (simp add: emeasure_eq A_def)
-      apply (simp add: E)
-      apply (subst sum.reindex)
-       apply (force simp add: inj_on_def)
-      apply (simp add: )
-      apply (subst sum_ennreal)
-       apply (meson less_le_not_le pr01(1))
-      apply (simp add: F partial_sum_pr divide_simps flip: sum_distrib_left sum_divide_distrib)
-      using Diagonal.binomial_mono \<open>card (all_edges W - all_edges K) = n choose 2 - (s choose 2)\<close> \<open>s \<le> n\<close> p01(2) by auto
+    have E: "{F \<in> \<Omega>. clique K F} = ((\<union>)(all_edges K)) `  Pow (all_edges W - all_edges K)"
+      using \<section> 
+      apply (auto simp: \<Omega>_def  simp flip: all_edges_subset_iff_clique)
+      using all_edges_mono [OF \<open>K\<subseteq>W\<close>] by blast
+    have "emeasure M (A K) = (\<Sum>a\<in>{F \<in> \<Omega>. clique K F}. ennreal (pr a))"
+      using that cardW by (simp add: emeasure_eq A_def)
+    also have "... = (\<Sum>a\<in>(\<union>) (all_edges K) ` Pow (all_edges W - all_edges K). ennreal (pr a))"
+      by (simp add: E)
+    also have "... = (\<Sum>x\<in>Pow (all_edges W - all_edges K). ennreal (pr (all_edges K \<union> x)))"
+      by (subst sum.reindex) (auto simp add: inj_on_def)
+    also have "... = ennreal (\<Sum>x\<in>Pow (all_edges W - all_edges K). pr (all_edges K \<union> x))"
+      by (smt (verit) pr01(1) sum.cong sum_ennreal)
+    also have "... = ennreal (p ^ (s choose 2))"
+      using that sn2 p01
+      by (simp add: ** pr_all_edges_Un partial_sum_pr divide_simps flip: sum_distrib_left sum_divide_distrib)
+    finally show ?thesis .
   qed
   then have prob_AK: "P.prob (A K) = p ^ (s choose 2)" if "K \<in> nsets W s" for K
-    using MA p01
-    by (simp add: measure_eq_emeasure_eq_ennreal that)
+    using MA p01 by (simp add: measure_eq_emeasure_eq_ennreal that)
 
 
     oops
