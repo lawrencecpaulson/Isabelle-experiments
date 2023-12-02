@@ -1287,18 +1287,19 @@ proof
     using B by (simp add: divide_simps)
   finally have "(n choose s) * p ^ (s choose 2) < 1 / fact s" .
 
-  have partial_sum_pr: 
-    "(\<Sum>Red\<in>Pow (all_edges W - EK). pr Red) = (1-p) ^ card EK" 
+  have partial_sum_pr: "(\<Sum>Red\<in>Pow EK. pr Red) = (1-p) ^ (n choose 2 - card EK)" 
     if "EK \<subseteq> all_edges W" for EK
   proof -
     have "finite EK"
       using that by (simp add: \<open>finite W\<close> finite_all_edges finite_subset)
-    define \<Omega>' where "\<Omega>' \<equiv> Pow (all_edges W - EK)"
+    define \<Omega>' where "\<Omega>' \<equiv> Pow EK"
     define m where "m = (n choose 2)"
-    define m' where "m' = m - card EK"
-    have meq: "m = m' + card EK"
-      by (metis that \<open>finite W\<close> cardEW card_mono finite_all_edges le_add_diff_inverse2 m'_def m_def)
-
+    define m' where "m' = card EK"
+    have "card EK \<le> m"
+      using \<Omega>_def cardEW card_mono fin_\<Omega> m_def that by fastforce
+    then have meq: "m = m' + ((n choose 2) - m')"
+      by (simp add: m'_def m_def)
+ 
     have D: "(\<Sum>i=Suc m'..m. real(m' choose i) * u i) = (\<Sum>i=Suc m'..m. 0)" for u
       by (rule sum.cong ) auto
 
@@ -1307,28 +1308,29 @@ proof
       apply (simp add: \<Omega>'_def m'_def m_def cardEW card_all_edges)
       by (simp add: cardEW card_Diff_subset card_Pow finite_all_edges)
 
-    have m'_eq: "m' = card (all_edges W - EK)"
+    have m'_eq: "m' = card EK"
       unfolding m'_def
       by (simp add: that \<open>finite EK\<close> cardEW card_Diff_subset m_def)
 
-    have \<Omega>'_Union: "\<Omega>' = (\<Union>r\<le>m. nsets (all_edges W - EK) r)"
+    have \<Omega>'_Union: "\<Omega>' = (\<Union>r\<le>m. nsets EK r)"
+      using \<open>finite EK\<close>
       unfolding \<Omega>'_def m_def
       apply (simp add: Pow_equals_UN_nsets cardEW \<open>finite W\<close> finite_all_edges)
-      apply (auto simp: )
-       apply (metis Diff_subset \<open>finite W\<close> atMost_iff cardEW card_mono dual_order.trans finite_all_edges)
-      by (metis atMost_iff card.infinite cardEW empty_iff finite_Diff less_le_not_le nle_le nsets_eq_empty_iff)
+      apply (rule )
+      apply (metis SUP_subset_mono Set.basic_monos(1) \<open>card EK \<le> m\<close> atMost_subset_iff m_def)
+      by (metis SUP_mono atMost_iff empty_subsetI less_le_not_le nle_le nsets_eq_empty order.refl)
 
     have "(\<Sum>R\<in>\<Omega>'. p ^ card R * (1-p) ^ (m - card R))
-        = (\<Sum>i\<le>m. \<Sum>R\<in>[all_edges W - EK]\<^bsup>i\<^esup>. p ^ card R * (1-p) ^ (m - card R))"
+        = (\<Sum>i\<le>m. \<Sum>R\<in>[EK]\<^bsup>i\<^esup>. p ^ card R * (1-p) ^ (m - card R))"
       unfolding \<Omega>'_Union
     proof (rule sum.UNION_disjoint_family)
-      show "\<forall>i\<in>{..m}. finite ([all_edges W - EK]\<^bsup>i\<^esup>)"
-        by (simp add: \<open>finite W\<close> finite_all_edges finite_imp_finite_nsets)
-      show "disjoint_family_on (nsets (all_edges W - EK)) {..m}"
+      show "\<forall>i\<in>{..m}. finite ([EK]\<^bsup>i\<^esup>)"
+        using \<open>finite EK\<close> finite_imp_finite_nsets by blast
+      show "disjoint_family_on (nsets EK) {..m}"
         unfolding disjoint_family_on_def m_def
-        by (metis Int_lower1 Int_lower2 \<open>finite W\<close> bot_nat_0.extremum_uniqueI card.empty finite_Diff finite_all_edges linorder_not_less nsets_disjoint_iff nsets_eq_empty subset_empty)
+        by (metis Int_empty_left Int_empty_right \<open>finite EK\<close> bot_nat_0.not_eq_extremum card.empty nsets_disjoint_iff nsets_eq_empty verit_comp_simplify1(3))
     qed auto
-    also have "... = (\<Sum>i\<le>m. \<Sum>R\<in>[all_edges W - EK]\<^bsup>i\<^esup>. p^i * (1-p) ^ (m-i))"
+    also have "... = (\<Sum>i\<le>m. \<Sum>R\<in>[EK]\<^bsup>i\<^esup>. p^i * (1-p) ^ (m-i))"
       by (simp add: nsets_def)
     also have "\<dots> = (\<Sum>i\<le>m. (m' choose i) * p ^ i * (1-p) ^ (m - i))"
       by (simp add: cardEW m'_eq mult.assoc)
@@ -1337,22 +1339,21 @@ proof
       by (simp add: meq sum_up_index_split)
     also have "\<dots> = (\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m - i))"
       by (simp add: D mult.assoc)
-    also have "... = (\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m' - i + card EK))"
+    also have "... = (\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m' - i + ((n choose 2) - m')))"
       by (simp add: meq)
-    also have "... = (\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m' - i) * (1-p) ^ card EK)"
+    also have "... = (\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m' - i) * (1-p) ^ ((n choose 2) - m'))"
       by (metis (mono_tags, opaque_lifting) mult.assoc power_add)
-    also have "... = ((\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m' - i)) * (1-p) ^ card EK)"
+    also have "... = ((\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m' - i)) * (1-p) ^ ((n choose 2) - m'))"
       by (simp add: sum_distrib_right)
-    also have "... = (p + (1-p))^m' * (1-p) ^ card EK"
+    also have "... = (p + (1-p))^m' * (1-p) ^ ((n choose 2) - m')"
       by (metis (no_types) binomial_ring)
-    also have "... = (1-p) ^ card EK"
+    also have "... = (1-p) ^ ((n choose 2) - m')"
       by simp
-    finally have "(\<Sum>R\<in>\<Omega>'. p ^ card R * (1-p) ^ (m - card R)) = (1-p) ^ card EK" .
-    then
-    have "sum pr \<Omega>' = (1-p) ^ card EK"
+    finally have "(\<Sum>R\<in>\<Omega>'. p ^ card R * (1-p) ^ (m - card R)) = (1-p) ^ ((n choose 2) - m')" .
+    then have "sum pr \<Omega>' = (1-p) ^ ((n choose 2) - m')"
       by (simp add: pr_def m_def card\<Omega> flip: sum_divide_distrib)
     then show ?thesis
-      using pr01 by (simp add: \<Omega>'_def order_less_le)
+      using \<Omega>'_def m'_eq by blast
   qed
 
   define M where "M \<equiv> point_measure \<Omega> pr"
@@ -1364,8 +1365,9 @@ proof
   proof
     have "sum pr \<Omega> = 1"
       using partial_sum_pr [of "{}"] by (simp add: \<Omega>_def)
-    then show "emeasure M (space M) = 1"
-      using M_def fin_\<Omega> prob_space.emeasure_space_1 prob_space_point_measure zero_le by blast
+    then show "emeasure M (space M) = 1" 
+      using M_def fin_\<Omega> prob_space.emeasure_space_1 prob_space_point_measure zero_le
+      by (metis ennreal_1 linorder_not_less nle_le pr01(1) sum_ennreal)
   qed
 
   \<comment>\<open>the event to avoid: monochromatic cliques, given @{term "K \<subseteq> W"};
@@ -1414,7 +1416,7 @@ proof
 
     apply (simp add:  power_diff flip: divide_ennreal ennreal_power)
     done
-  then have prob_AK: "P.prob (A K) = 2 / 2 ^ (s choose 2)" if "K \<in> nsets W s" for K
+  then have prob_AK: "P.prob (A K) = p ^ (s choose 2)" if "K \<in> nsets W s" for K
     using that by (simp add: P.emeasure_eq_measure)
 
 
