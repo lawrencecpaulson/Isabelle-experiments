@@ -59,13 +59,13 @@ lemma choose_two_real: "n choose 2 = n * (n - 1) / 2"
 proof (cases "even n")
   case True
   then show ?thesis
-    by (auto simp add: choose_two dvd_def)
+    by (auto simp: choose_two dvd_def)
 next
   case False
   then have "even (n-1)"
     by simp
   then show ?thesis
-    by (auto simp add: choose_two dvd_def)
+    by (auto simp: choose_two dvd_def)
 qed
 
 definition "upair_define \<equiv> \<lambda>f e. THE u. \<exists>x y. e = {x,y} \<and> u = f x y"
@@ -570,8 +570,9 @@ lemma indep_all_edges_iff: "indep K (E \<inter> all_edges K) \<longleftrightarro
 lemma clique_indep_all_edges_iff: "clique_indep s t K (E \<inter> all_edges K) = clique_indep s t K E"
   by (simp add: clique_all_edges_iff clique_indep_def indep_all_edges_iff)
 
-(** at issue here is whether we benefit from the clique definition, which is found in the literature **)
+text \<open>When talking about Ramsey numbers, sometimes cliques are best, sometimes colour maps\<close>
 
+(*RENAME THIS*)
 text \<open>identifying Ramsey numbers (not the minimum) for a given type and pair of integers\<close>
 definition IS_RN where
   "IS_RN \<equiv> \<lambda>U::'a itself. \<lambda>m n r. 
@@ -588,7 +589,7 @@ lemma partn_lst_iff:
   "partn_lst \<beta> \<alpha> \<gamma> \<equiv> \<forall>f \<in> nsets \<beta> \<gamma>  \<rightarrow>  {..<length \<alpha>}. \<exists>i < length \<alpha>. monochromatic \<beta> (\<alpha>!i) \<gamma> f i"
   by (simp add: partn_lst_def monochromatic_def)
 
-lemma IS_RN_imp_partn_lst:  (*EVENTUALLY, RENAME*)
+lemma IS_RN_imp_partn_lst:  
   fixes U :: "'a itself"
   assumes r: "IS_RN U m n r" and inf: "infinite (UNIV::'a set)"
   shows "partn_lst {..<r} [m,n] 2"
@@ -631,12 +632,12 @@ proof (intro strip)
       by (smt (verit, best) image_subset_iff insert_iff mem_Collect_eq nsets_def)
   next
     case 2
-    then show ?thesis sorry
+    then show ?thesis sorry (*DO THIS ONE*)
   qed
 
 qed
 
-lemma partn_lst_imp_IS_RN: (*EVENTUALLY, RENAME*)
+lemma partn_lst_imp_IS_RN: 
   fixes U :: "'a itself"
   assumes "partn_lst {..<r} [m,n] 2"
   shows "IS_RN U m n r"
@@ -675,7 +676,7 @@ proof (intro strip)
     proof -
       have "{inv_into {..<card V} \<phi> v, inv_into {..<card V} \<phi> w} \<in> [H]\<^bsup>2\<^esup>"
         using that bij_betw_inv_into_left [OF \<phi>] H(1) V(2)
-        by (auto simp add: nsets_def card_insert_if K_def)
+        by (auto simp: nsets_def card_insert_if K_def)
       then show ?thesis
         by (smt (verit, del_insts) "0" Set.basic_monos(7) \<open>K \<subseteq> V\<close> \<phi> bij_betw_inv_into_right f_def image_empty image_insert image_subset_iff mono nat.simps(3) numeral_nat(7) singletonD that(1) that(2))
     qed
@@ -688,7 +689,7 @@ proof (intro strip)
     proof -
       have "{inv_into {..<card V} \<phi> v, inv_into {..<card V} \<phi> w} \<in> [H]\<^bsup>2\<^esup>"
         using that bij_betw_inv_into_left [OF \<phi>] H(1) V(2)
-        by (auto simp add: nsets_def card_insert_if K_def)
+        by (auto simp: nsets_def card_insert_if K_def)
       then show ?thesis
         by (smt (verit, del_insts) "1" Set.basic_monos(7) \<open>K \<subseteq> V\<close> \<phi> bij_betw_inv_into_right f_def image_empty image_insert image_subset_iff mono nat.simps(3) numeral_nat(7) singletonD that(1) that(2))
     qed
@@ -815,10 +816,7 @@ lemma RN_2 [simp]:
   unfolding RN_def
 proof (intro Least_equality)
   show "is_Ramsey_number 2 m m"
-    apply (rule IS_RN_imp_partn_lst)
-     apply (rule IS_RN_2)
-    apply (auto simp: )
-    done
+    using IS_RN_imp_partn_lst IS_RN_2 by blast
   fix i
   assume "is_Ramsey_number 2 m i"
   then have i: "IS_RN TYPE(nat) 2 m i"
@@ -959,9 +957,9 @@ proof
       we are considering edges over the entire graph @{term W}, to agree with @{text monoc}\<close>
   define A where "A \<equiv> \<lambda>K. {F \<in> \<Omega>. F \<inter> all_edges K \<in> monoset K}"
   have A_ev: "A K \<in> P.events" for K
-    by (auto simp add: sets_eq A_def \<Omega>_def)
+    by (auto simp: sets_eq A_def \<Omega>_def)
   have A_sub_\<Omega>: "A K \<subseteq> \<Omega>" for K
-    by (auto simp add: sets_eq A_def \<Omega>_def)
+    by (auto simp: sets_eq A_def \<Omega>_def)
   have UA_sub_\<Omega>: "(\<Union>K \<in> nsets W s. A K) \<subseteq> \<Omega>"
     by (auto simp: \<Omega>_def A_def nsets_def all_edges_def)
   have s_choose_le: "s choose 2 \<le> n choose 2"
@@ -972,7 +970,7 @@ proof
     have K: "K \<subseteq> W" "finite K" "card K = s"
       using that by (auto simp: nsets_def)
     with \<open>finite W\<close> have [simp]: "finite ([K]\<^bsup>2\<^esup>)" "finite ([W]\<^bsup>2\<^esup>)"
-      by (auto simp add: finite_imp_finite_nsets)
+      by (auto simp: finite_imp_finite_nsets)
     have "card ([K]\<^bsup>2\<^esup>) = s choose 2"
       by (simp add: K)
     have *: "all_edges K \<noteq> {}"
@@ -985,7 +983,7 @@ proof
       unfolding bij_betw_def
     proof (intro conjI)
       show "inj_on f (Pow ([K]\<^bsup>2\<^esup>) \<times> A K)"
-        by (auto simp add: inj_on_def f_def A_def nsets2_eq_all_edges)
+        by (auto simp: inj_on_def f_def A_def nsets2_eq_all_edges)
       have *: "\<exists>EA\<subseteq>all_edges W. EA \<inter> all_edges K \<in> monoset K
                         \<and> EW = EW \<inter> all_edges K \<union> (EA - all_edges K) \<and> F = EA \<inter> all_edges K"
         if F: "F = all_edges K \<or> F = {}" and EW: "EW \<subseteq> all_edges W" for EW F
@@ -1099,7 +1097,7 @@ qed
 lemma Ramsey_number_zero: "\<not> is_Ramsey_number (Suc m) (Suc n) 0"
   by (metis RN_1 RN_le is_Ramsey_number_le not_one_le_zero Suc_le_eq One_nat_def zero_less_Suc)
 
-(* this might work better with the other treatment of Ramsey numbers, avoiding the need to encode pairs*)
+(* this might work better with the clique other treatment of Ramsey numbers, avoiding the need to encode pairs*)
 lemma Ramsey_number_times_lower: "\<not> is_Ramsey_number (Suc m) (Suc n) (m*n)"
 proof
   assume \<section>: "is_Ramsey_number (Suc m) (Suc n) (m*n)"
@@ -1115,7 +1113,7 @@ proof
   then have f_apply: "\<And>p q. f{p,q} = edge (\<phi> p) (\<phi> q)"
     by (simp add: f_def upair_define_apply)
   then have "f \<in> [{..<m * n}]\<^bsup>2\<^esup> \<rightarrow> {..<2}"
-    by (auto simp add: Pi_iff nsets_def card_2_iff edge2)
+    by (auto simp: Pi_iff nsets_def card_2_iff edge2)
   then obtain i where "i<2" and i: "monochromatic {..<m * n} ([Suc m, Suc n] ! i) 2 f i"
     using \<section> by (force simp add: partn_lst_iff eval_nat_numeral)
   have edge_apply: "\<And>u v. \<lbrakk>u \<in> {..<m}\<times>{..<n}; v \<in> {..<m}\<times>{..<n}\<rbrakk> 
@@ -1131,7 +1129,7 @@ proof
     case 0
     then obtain H where H: "H \<subseteq> {..<m * n}" "finite H" "card H = Suc m" 
               and monoc: "\<And>u. u \<in> [H]\<^bsup>2\<^esup> \<Longrightarrow> f u = 0"
-      using i by (auto simp add: monochromatic_def nsets_def image_subset_iff)
+      using i by (auto simp: monochromatic_def nsets_def image_subset_iff)
     then have inj\<phi>: "inj_on \<phi> H"
       by (meson \<phi> bij_betw_def inj_on_subset)
     define A where "A \<equiv>  \<phi> ` \<Union> ([H]\<^bsup>2\<^esup>)"
@@ -1163,7 +1161,7 @@ proof
     case 1
     then obtain H where H: "H \<subseteq> {..<m * n}" "finite H" "card H = Suc n" 
               and monoc: "\<And>u. u \<in> [H]\<^bsup>2\<^esup> \<Longrightarrow> f u = Suc 0"
-      using i by (auto simp add: monochromatic_def nsets_def image_subset_iff)
+      using i by (auto simp: monochromatic_def nsets_def image_subset_iff)
     then have inj\<phi>: "inj_on \<phi> H"
       by (meson \<phi> bij_betw_def inj_on_subset)
     define A where "A \<equiv>  \<phi> ` \<Union> ([H]\<^bsup>2\<^esup>)"
@@ -1288,121 +1286,107 @@ proof
 
   \<comment> \<open>Easier to represent the state as maps from edges to colours, not sets of coloured edges\<close>
    \<comment>\<open>colour the edges randomly\<close>
-  define OMEGA :: "(nat set \<Rightarrow> nat) set" where "OMEGA \<equiv> (all_edges W) \<rightarrow>\<^sub>E {..<2}"
-  have cardOMEGA: "card OMEGA = 2 ^ (n choose 2)"
-    by (simp add: OMEGA_def \<open>finite W\<close> cardEW card_funcsetE finite_all_edges)
-  define COLORD where "COLORD \<equiv> \<lambda>F. \<lambda>f::nat set \<Rightarrow> nat. \<lambda>c. (f -` {c}) \<inter> F"
-  have COLORD: "COLORD F f c = {e \<in> F. f e = c}" for f c F
-    by (auto simp: COLORD_def)
-  have finite_COLORD[simp]: "finite (COLORD F f c)" if "finite F" for f c F
-    using COLORD_def that by blast
-  define PR where "PR \<equiv> \<lambda>F f. p ^ card (COLORD F f 0) * (1-p) ^ card (COLORD F f 1)"
-  have PR01: "0 < PR U f" "PR U f \<le> 1" for U f \<comment> \<open>the inequality could be strict\<close>
-    using \<open>0<p\<close> \<open>p<1\<close> by (auto simp: mult_le_one power_le_one PR_def cardOMEGA)
-  define M where "M \<equiv> point_measure OMEGA (PR (all_edges W))"
-  have space_eq: "space M = OMEGA"
+  define \<Omega> :: "(nat set \<Rightarrow> nat) set" where "\<Omega> \<equiv> (all_edges W) \<rightarrow>\<^sub>E {..<2}"
+  have card\<Omega>: "card \<Omega> = 2 ^ (n choose 2)"
+    by (simp add: \<Omega>_def \<open>finite W\<close> cardEW card_funcsetE finite_all_edges)
+  define coloured where "coloured \<equiv> \<lambda>F. \<lambda>f::nat set \<Rightarrow> nat. \<lambda>c. (f -` {c}) \<inter> F"
+  have coloured: "coloured F f c = {e \<in> F. f e = c}" for f c F
+    by (auto simp: coloured_def)
+  have finite_coloured[simp]: "finite (coloured F f c)" if "finite F" for f c F
+    using coloured_def that by blast
+  define pr where "pr \<equiv> \<lambda>F f. p ^ card (coloured F f 0) * (1-p) ^ card (coloured F f 1)"
+  have pr01: "0 < pr U f" "pr U f \<le> 1" for U f \<comment> \<open>the inequality could be strict\<close>
+    using \<open>0<p\<close> \<open>p<1\<close> by (auto simp: mult_le_one power_le_one pr_def card\<Omega>)
+  define M where "M \<equiv> point_measure \<Omega> (pr (all_edges W))"
+  have space_eq: "space M = \<Omega>"
     by (simp add: M_def space_point_measure)
-  have sets_eq: "sets M = Pow OMEGA"
+  have sets_eq: "sets M = Pow \<Omega>"
     by (simp add: M_def sets_point_measure)
-  have fin_OMEGA[simp]: "finite OMEGA"
-    by (simp add: OMEGA_def finite_PiE \<open>finite W\<close> finite_all_edges)
-
-  have COLORD_insert: "COLORD (insert e F) f c = (if f e = c then insert e (COLORD F f c) else COLORD F f c)" 
-    for f e c F
-    by (auto simp add: COLORD)
-
+  have fin_\<Omega>[simp]: "finite \<Omega>"
+    by (simp add: \<Omega>_def finite_PiE \<open>finite W\<close> finite_all_edges)
+  have coloured_insert: 
+    "coloured (insert e F) f c = (if f e = c then insert e (coloured F f c) else coloured F f c)"  for f e c F
+    by (auto simp: coloured)
   have eq2: "{..<2} = {0, Suc 0}"
     by (simp add: insert_commute lessThan_Suc numeral_2_eq_2)
 
-  have sum_PR_1 [simp]: "sum (PR U) (U \<rightarrow>\<^sub>E {..<2}) = 1" if "finite U" for U
+  have sum_pr_1 [simp]: "sum (pr U) (U \<rightarrow>\<^sub>E {..<2}) = 1" if "finite U" for U
     using that
   proof (induction U)
     case empty
     then show ?case
-      by (simp add: PR_def COLORD)
+      by (simp add: pr_def coloured)
   next
     case (insert e F)
-    then have [simp]: "e \<notin> COLORD F f c" "COLORD F (f(e := c)) c' = COLORD F f c'" for f c c'
-      by (auto simp: COLORD)
+    then have [simp]: "e \<notin> coloured F f c" "coloured F (f(e := c)) c' = coloured F f c'" for f c c'
+      by (auto simp: coloured)
+    have inj: "inj_on (\<lambda>(y, g). g(e := y)) ({..<2} \<times> (F \<rightarrow>\<^sub>E {..<2}))"
+      using \<open>e \<notin> F\<close> by (fastforce simp add: inj_on_def fun_eq_iff)
     show ?case
       using insert
-      apply (simp add: PR_def COLORD_insert)
-      apply (simp add: PiE_insert_eq split: prod.split)
-      apply (subst sum.reindex)
-       apply (fastforce simp add: inj_on_def fun_eq_iff)
-      apply (simp add: Information.sum_cartesian_product' card_insert_if eq2 mult_ac flip: sum_distrib_left)
+      apply (simp add: pr_def coloured_insert PiE_insert_eq sum.reindex [OF inj] Information.sum_cartesian_product')
+      apply (simp add: eq2 mult_ac flip: sum_distrib_left)
       done
   qed
 
   interpret P: prob_space M
   proof
-    have "sum (PR (all_edges W)) OMEGA = 1"
-      using OMEGA_def sum_PR_1 \<open>finite W\<close> finite_all_edges by blast
-    with PR01 show "emeasure M (space M) = 1" 
+    have "sum (pr (all_edges W)) \<Omega> = 1"
+      using \<Omega>_def sum_pr_1 \<open>finite W\<close> finite_all_edges by blast
+    with pr01 show "emeasure M (space M) = 1" 
       unfolding M_def
-      by (metis fin_OMEGA prob_space.emeasure_space_1 prob_space_point_measure zero_le
+      by (metis fin_\<Omega> prob_space.emeasure_space_1 prob_space_point_measure zero_le
        ennreal_1 linorder_not_less nle_le sum_ennreal)
   qed
-
   \<comment>\<open>the event to avoid: monochromatic cliques, given @{term "K \<subseteq> W"};
       we are considering edges over the entire graph @{term W}\<close>
-  define mono where "mono \<equiv> \<lambda>c K. {f \<in> OMEGA. all_edges K \<subseteq> COLORD (all_edges W) f c}"
+  define mono where "mono \<equiv> \<lambda>c K. {f \<in> \<Omega>. all_edges K \<subseteq> coloured (all_edges W) f c}"
   have mono_ev: "mono c K \<in> P.events" if "c<2" for K c
-    by (auto simp add: sets_eq mono_def OMEGA_def)
-  have mono_sub_\<Omega>: "mono c K \<subseteq> OMEGA" if "c<2" for K c
+    by (auto simp: sets_eq mono_def \<Omega>_def)
+  have mono_sub_\<Omega>: "mono c K \<subseteq> \<Omega>" if "c<2" for K c
     using mono_ev sets_eq that by auto
 
-  have emeasure_eq: "emeasure M C = (if C \<subseteq> OMEGA then (\<Sum>a\<in>C. ennreal (PR (all_edges W) a)) else 0)" for C
+  have emeasure_eq: "emeasure M C = (if C \<subseteq> \<Omega> then (\<Sum>a\<in>C. ennreal (pr (all_edges W) a)) else 0)" for C
     by (simp add: M_def emeasure_notin_sets emeasure_point_measure_finite sets_point_measure)
-
   define pc where "pc \<equiv> \<lambda>c::nat. if c=0 then p else 1-p"
-  have COLORD_upd: "COLORD F (\<lambda>t\<in>F. if t \<in> G then c else f t) c' 
-        = (if c=c' then G \<union> COLORD (F-G) f c' else COLORD (F-G) f c')" if "G \<subseteq> F" for F G f c c'
-    using that by (auto simp add: COLORD)
+  have coloured_upd: "coloured F (\<lambda>t\<in>F. if t \<in> G then c else f t) c' 
+        = (if c=c' then G \<union> coloured (F-G) f c' else coloured (F-G) f c')" if "G \<subseteq> F" for F G f c c'
+    using that by (auto simp: coloured)
 
-  have prob_mono: "P.prob (mono c K) = (pc c ^ (r choose 2))"  
+  have prob_mono: "P.prob (mono c K) = pc c ^ (r choose 2)"  
     if "K \<in> nsets W r" "c<2" for r K c
   proof -
     have \<section>: "K \<subseteq> W" "finite K" "card K = r"
       using that by (auto simp: nsets_def)
-    have "r \<le> n"
-      using "\<section>" \<open>finite W\<close> cardW card_mono by blast
-    then have sn2: "(r choose 2) \<le> (n choose 2)"
-      using binomial_mono by auto
-
-    have *: "{f \<in> OMEGA. all_edges K \<subseteq> COLORD (all_edges W) f c} = 
+    have *: "{f \<in> \<Omega>. all_edges K \<subseteq> coloured (all_edges W) f c} = 
           (\<Union>g \<in> (all_edges W - all_edges K) \<rightarrow>\<^sub>E {..<2}. {\<lambda>t \<in> all_edges W. if t \<in> all_edges K then c else g t})"
       (is "?L = ?R")
     proof
       show "?L \<subseteq> ?R"
       proof clarsimp
         fix f
-        assume f: "f \<in> OMEGA" and c: "all_edges K \<subseteq> COLORD (all_edges W) f c"
-        show "\<exists>g\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. f = (\<lambda>t\<in>all_edges W. if t \<in> all_edges K then c else g t)"
+        assume f: "f \<in> \<Omega>" and c: "all_edges K \<subseteq> coloured (all_edges W) f c"
+        then show "\<exists>g\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. f = (\<lambda>t\<in>all_edges W. if t \<in> all_edges K then c else g t)"
           apply (rule_tac x="restrict f (all_edges W - all_edges K)" in bexI)
-           apply (rule ext)
-          using c f
-           apply (simp add: OMEGA_def COLORD subset_iff)
-           apply blast
-          using OMEGA_def f by auto
+          apply (force simp add: \<Omega>_def coloured subset_iff)+
+          done
       qed
       show "?R \<subseteq> ?L"
-        using that all_edges_mono[OF \<open>K \<subseteq> W\<close>]
-        by (auto simp add: COLORD OMEGA_def nsets_def PiE_iff)
+        using that all_edges_mono[OF \<open>K \<subseteq> W\<close>] by (auto simp: coloured \<Omega>_def nsets_def PiE_iff)
     qed
 
-    have [simp]: "card (all_edges K \<union> COLORD (all_edges W - all_edges K) f c)
-                = (r choose 2) + card (COLORD (all_edges W - all_edges K) f c)" for f c
+    have [simp]: "card (all_edges K \<union> coloured (all_edges W - all_edges K) f c)
+                = (r choose 2) + card (coloured (all_edges W - all_edges K) f c)" for f c
       using \<section> \<open>finite W\<close>
-      by (subst card_Un_disjoint) (auto simp: finite_all_edges COLORD card_all_edges)
+      by (subst card_Un_disjoint) (auto simp: finite_all_edges coloured card_all_edges)
 
-    have **: "PR (all_edges W) (\<lambda>t \<in> all_edges W. if t \<in> all_edges K then c else f t) 
-        = pc c ^ (r choose 2) * PR (all_edges W - all_edges K) f" 
+    have **: "pr (all_edges W) (\<lambda>t \<in> all_edges W. if t \<in> all_edges K then c else f t) 
+        = pc c ^ (r choose 2) * pr (all_edges W - all_edges K) f" 
       if "f \<in> all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}" for f
       using that all_edges_mono[OF \<open>K \<subseteq> W\<close>] p01 \<open>c<2\<close> \<section>
-      by (simp add: PR_def COLORD_upd pc_def power_add)
+      by (simp add: pr_def coloured_upd pc_def power_add)
 
-    have A: "(\<Sum>F\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. (pc c ^ (r choose 2) * PR (all_edges W - all_edges K) F)) 
+    have A: "(\<Sum>F\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. (pc c ^ (r choose 2) * pr (all_edges W - all_edges K) F)) 
               = (pc c ^ (r choose 2))"
       by (simp add: ** \<open>finite W\<close> finite_all_edges flip: sum_distrib_left)
     have "emeasure M (mono c K) = ennreal (pc c ^ (r choose 2))"
@@ -1417,7 +1401,7 @@ proof
        apply (metis DiffE PiE_E)
       apply (simp add: **  )
       apply (subst sum_ennreal)
-       apply (simp add: PR_def pc_def)
+       apply (simp add: pr_def pc_def)
       using A by presburger
     then show ?thesis 
       using p01 that by (simp add: measure_eq_emeasure_eq_ennreal pc_def)
@@ -1464,20 +1448,20 @@ proof
   qed
   ultimately have "P.prob (Reds \<union> Blues) < 1/2 + 1/2"
     using P.finite_measure_subadditive \<open>Blues \<in> P.events\<close> \<open>Reds \<in> P.events\<close> by fastforce
-  then obtain F where F: "F \<in> OMEGA - (Reds \<union> Blues)"
+  then obtain F where F: "F \<in> \<Omega> - (Reds \<union> Blues)"
     by (metis Blues_def Diff_iff P.prob_space Pow_iff Reds_def Un_subset_iff Uev equalityI field_sum_of_halves less_irrefl sets_eq space_eq subsetI)
   have False if "i < 2" "H \<in> [W]\<^bsup>([s, t] ! i)\<^esup>" "F ` [H]\<^bsup>2\<^esup> \<subseteq> {i}" for i H
   proof -
     have "\<not> all_edges H \<subseteq> {e \<in> all_edges W. F e = 0}" "\<not> all_edges H \<subseteq> {e \<in> all_edges W. F e = 1}"
       using F that
-      by (auto simp: less_2_cases_iff nsets2_eq_all_edges OMEGA_def Reds_def Blues_def mono_def COLORD image_subset_iff)
+      by (auto simp: less_2_cases_iff nsets2_eq_all_edges \<Omega>_def Reds_def Blues_def mono_def coloured image_subset_iff)
     moreover have "H \<subseteq> W"
       using that by (auto simp: nsets_def)
     ultimately show False
       using that all_edges_mono [OF \<open>H \<subseteq> W\<close>] by (auto simp: less_2_cases_iff nsets2_eq_all_edges)
   qed
   moreover have "F \<in> [{..<n}]\<^bsup>2\<^esup> \<rightarrow> {..<2}"
-    using F apply (auto simp: OMEGA_def)
+    using F apply (auto simp: \<Omega>_def)
     by (metis PiE_E W_def lessThan_iff nsets2_eq_all_edges)
   ultimately show False
     using is_RN \<open>finite W\<close>
@@ -1517,10 +1501,10 @@ lemma all_edges_betw_un_iff_mk_edge: "all_edges_betw_un X Y = mk_edge ` all_edge
   using all_edges_between_set all_edges_betw_un_def by presburger
 
 lemma all_uedges_betw_subset: "all_edges_betw_un X Y \<subseteq> E"
-  by (auto simp add: all_edges_betw_un_def)
+  by (auto simp: all_edges_betw_un_def)
 
 lemma all_uedges_betw_I: "x \<in> X \<Longrightarrow> y \<in> Y \<Longrightarrow> {x, y} \<in> E \<Longrightarrow> {x, y} \<in> all_edges_betw_un X Y"
-  by (auto simp add: all_edges_betw_un_def)
+  by (auto simp: all_edges_betw_un_def)
 
 lemma all_edges_betw_un_subset: "all_edges_betw_un X Y \<subseteq> Pow (X\<union>Y)"
   by (auto simp: all_edges_betw_un_def)
@@ -1806,10 +1790,10 @@ lemma X_degree_reg_subset: "X_degree_reg X Y \<subseteq> X"
   by (auto simp: X_degree_reg_def)
 
 lemma degree_reg_V_state: "V_state U \<Longrightarrow> V_state (degree_reg U)"
-  by (auto simp add: degree_reg_def X_degree_reg_def V_state_def)
+  by (auto simp: degree_reg_def X_degree_reg_def V_state_def)
 
 lemma degree_reg_disjoint_state: "disjoint_state U \<Longrightarrow> disjoint_state (degree_reg U)"
-  by (auto simp add: degree_reg_def X_degree_reg_def disjoint_state_def disjnt_iff)
+  by (auto simp: degree_reg_def X_degree_reg_def disjoint_state_def disjnt_iff)
 
 lemma degree_reg_RB_state: "RB_state U \<Longrightarrow> RB_state (degree_reg U)"
   apply (simp add: degree_reg_def RB_state_def all_edges_betw_un_Un2 split: prod.split prod.split_asm)
@@ -1953,7 +1937,7 @@ proof -
   have "choose_central_vx (X, Y, A, B) \<in> V"
     using assms choose_central_vx_X  by (simp add: V_state_def subset_eq)
   with assms show ?thesis
-    by (auto simp add: V_state_def elim!: red_step.cases)
+    by (auto simp: V_state_def elim!: red_step.cases)
 qed
 
 lemma red_step_disjoint_state:
@@ -1963,7 +1947,7 @@ proof -
   have "choose_central_vx (X, Y, A, B) \<in> X"
     using assms choose_central_vx_X by (simp add: V_state_def)
   with assms show ?thesis
-    by (auto simp add: disjoint_state_def disjnt_iff not_own_Neighbour elim!: red_step.cases)
+    by (auto simp: disjoint_state_def disjnt_iff not_own_Neighbour elim!: red_step.cases)
 qed
 
 lemma red_step_RB_state: 
@@ -2007,7 +1991,7 @@ proof -
   have "choose_central_vx (X, Y, A, B) \<in> V"
     using assms choose_central_vx_X  by (simp add: V_state_def subset_eq)
   with assms show ?thesis
-    by (auto simp add: V_state_def elim!: density_boost.cases)
+    by (auto simp: V_state_def elim!: density_boost.cases)
 qed
 
 lemma density_boost_disjoint_state:
@@ -2017,7 +2001,7 @@ proof -
   have "choose_central_vx (X, Y, A, B) \<in> X"
     using assms choose_central_vx_X by (simp add: V_state_def)
   with assms show ?thesis
-    by (auto simp add: disjoint_state_def disjnt_iff not_own_Neighbour elim!: density_boost.cases)
+    by (auto simp: disjoint_state_def disjnt_iff not_own_Neighbour elim!: density_boost.cases)
 qed
 
 lemma density_boost_RB_state: 
@@ -2041,7 +2025,7 @@ proof -
     apply (auto simp: in_Neighbours_iff all_edges_betw_un_insert1 all_edges_betw_un_insert2 all_edges_betw_un_Un2 intro!: all_uedges_betw_I)
     by (metis Int_lower2 all_edges_betw_un_mono2 subset_iff)
   from assms A B C show ?thesis
-    by (auto simp add: RB_state_def all_edges_betw_un_Un2 x_def [symmetric]  elim!: density_boost.cases)
+    by (auto simp: RB_state_def all_edges_betw_un_Un2 x_def [symmetric]  elim!: density_boost.cases)
 qed
 
 lemma density_boost_valid_state:
@@ -2214,7 +2198,7 @@ proof -
       sorry
     have "\<mu> - 2/k \<le> (\<mu> * card X - card U) / (card X - card U)"
       using kn0 \<mu>01 M \<open>card U < card X\<close>
-      by (auto simp add: \<open>card U = m\<close> field_split_simps mult_less_cancel_right1 of_nat_diff split: if_split_asm)
+      by (auto simp: \<open>card U = m\<close> field_split_simps mult_less_cancel_right1 of_nat_diff split: if_split_asm)
 
     have "m * (k / 2 * (1 - \<mu>) + 1) \<le> m * (k / 2 + 1)"
       using \<open>m\<ge>3\<close> \<open>k \<ge>4\<close> \<mu>01 by (simp add: divide_simps)
