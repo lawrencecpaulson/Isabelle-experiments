@@ -1062,7 +1062,7 @@ proof -
   proof -
     have "1 \<le> ln 2 * 2 powr ((4 - 2) / (2::real))"
       using ln2_ge_two_thirds by simp
-    also have "... \<le> ln 2 * (2 powr (y/2 - 1))"
+    also have "\<dots> \<le> ln 2 * (2 powr (y/2 - 1))"
       using that by (intro mult_left_mono powr_mono) auto
     finally show ?thesis by simp
   qed
@@ -1213,10 +1213,10 @@ lemma RN_gt2:
 text \<open>Andrew's calculation for the Ramsey lower bound. Symmetric, so works for both colours\<close>
 lemma Ramsey_lower_calc:
   fixes s::nat and t::nat and p::real
-  assumes  "s \<ge> 3" "t \<ge> 3" "n > 4"
+  assumes "s \<ge> 3" "t \<ge> 3" "n > 4"
     and n: "real n \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t)))"
   defines "p \<equiv> real s / (real s + real t)"
-  shows "(n choose s) * p ^ (s choose 2) < 1 / fact s"
+  shows "(n choose s) * p ^ (s choose 2) < 1/2"
 proof -
   have p01: "0<p" "p<1"
     using assms by (auto simp: p_def)
@@ -1226,13 +1226,13 @@ proof -
     by linarith
   then have "n * p powr ((s-1)/2) \<le> (exp (t / (s+t)) * p) powr ((s-1)/2)"
     using \<open>0<p\<close> by (simp add: powr_mult)
-  also have "... < 1"
+  also have "\<dots> < 1"
   proof -
     have "exp (real t / real (s+t)) * p < 1"
     proof -
       have "p = 1 - t / (s+t)"
         using assms by (simp add: p_def divide_simps)
-      also have "... < exp (- real t / real (s+t))"
+      also have "\<dots> < exp (- real t / real (s+t))"
         using assms by (simp add: exp_minus_greater)
       finally show ?thesis
         by (simp add: exp_minus divide_simps mult.commute)
@@ -1252,8 +1252,10 @@ proof -
       using binomial_fact_pow[of n s]  
       by (simp add: divide_simps mult.commute approximation_preproc_nat(13))
   qed (use p01 in auto)
-  also have "... < 1 / fact s"
+  also have "\<dots> < 1 / fact s"
     using B by (simp add: divide_simps)
+  also have "\<dots> \<le> 1/2"
+    by (smt (verit, best) One_nat_def Suc_1 Suc_leD assms fact_2 fact_mono frac_less2 numeral_3_eq_3)
   finally show ?thesis .
 qed
 
@@ -1273,13 +1275,9 @@ proof
     using assms by (intro mult_mono) auto
   ultimately have "n > 4"
     by simp
-  define W where "W \<equiv> {..<n}"              \<comment>\<open>defining a probability space\<close>
-  have monoc: "\<And>F. \<exists>K\<subseteq>W. clique_indep s t K F"
-    using con by (simp add: IS_RN_def W_def)
+  define W where "W \<equiv> {..<n}"      
   have "finite W" and cardW: "card W = n"
     by (auto simp: W_def)
-  have cardEW: "card (all_edges W) = n choose 2"
-    by (simp add: W_def card_all_edges)
   define p where "p \<equiv> s / (s+t)"
   have p01: "0<p" "p<1"
     using assms by (auto simp: p_def)
@@ -1288,12 +1286,10 @@ proof
    \<comment>\<open>colour the edges randomly\<close>
   define \<Omega> :: "(nat set \<Rightarrow> nat) set" where "\<Omega> \<equiv> (all_edges W) \<rightarrow>\<^sub>E {..<2}"
   have card\<Omega>: "card \<Omega> = 2 ^ (n choose 2)"
-    by (simp add: \<Omega>_def \<open>finite W\<close> cardEW card_funcsetE finite_all_edges)
-  define coloured where "coloured \<equiv> \<lambda>F. \<lambda>f::nat set \<Rightarrow> nat. \<lambda>c. (f -` {c}) \<inter> F"
-  have coloured: "coloured F f c = {e \<in> F. f e = c}" for f c F
-    by (auto simp: coloured_def)
+    by (simp add: \<Omega>_def \<open>finite W\<close> W_def card_all_edges card_funcsetE finite_all_edges)
+  define coloured where "coloured \<equiv> \<lambda>F. \<lambda>f::nat set \<Rightarrow> nat. \<lambda>c. {e \<in> F. f e = c}"
   have finite_coloured[simp]: "finite (coloured F f c)" if "finite F" for f c F
-    using coloured_def that by blast
+    using coloured_def that by auto
   define pr where "pr \<equiv> \<lambda>F f. p ^ card (coloured F f 0) * (1-p) ^ card (coloured F f 1)"
   have pr01: "0 < pr U f" "pr U f \<le> 1" for U f \<comment> \<open>the inequality could be strict\<close>
     using \<open>0<p\<close> \<open>p<1\<close> by (auto simp: mult_le_one power_le_one pr_def card\<Omega>)
@@ -1306,7 +1302,7 @@ proof
     by (simp add: \<Omega>_def finite_PiE \<open>finite W\<close> finite_all_edges)
   have coloured_insert: 
     "coloured (insert e F) f c = (if f e = c then insert e (coloured F f c) else coloured F f c)"  for f e c F
-    by (auto simp: coloured)
+    by (auto simp: coloured_def)
   have eq2: "{..<2} = {0, Suc 0}"
     by (simp add: insert_commute lessThan_Suc numeral_2_eq_2)
 
@@ -1315,11 +1311,11 @@ proof
   proof (induction U)
     case empty
     then show ?case
-      by (simp add: pr_def coloured)
+      by (simp add: pr_def coloured_def)
   next
     case (insert e F)
     then have [simp]: "e \<notin> coloured F f c" "coloured F (f(e := c)) c' = coloured F f c'" for f c c'
-      by (auto simp: coloured)
+      by (auto simp: coloured_def)
     have inj: "inj_on (\<lambda>(y, g). g(e := y)) ({..<2} \<times> (F \<rightarrow>\<^sub>E {..<2}))"
       using \<open>e \<notin> F\<close> by (fastforce simp add: inj_on_def fun_eq_iff)
     show ?case
@@ -1351,7 +1347,7 @@ proof
   define pc where "pc \<equiv> \<lambda>c::nat. if c=0 then p else 1-p"
   have coloured_upd: "coloured F (\<lambda>t\<in>F. if t \<in> G then c else f t) c' 
         = (if c=c' then G \<union> coloured (F-G) f c' else coloured (F-G) f c')" if "G \<subseteq> F" for F G f c c'
-    using that by (auto simp: coloured)
+    using that by (auto simp: coloured_def)
 
   have prob_mono: "P.prob (mono c K) = pc c ^ (r choose 2)"  
     if "K \<in> nsets W r" "c<2" for r K c
@@ -1368,17 +1364,17 @@ proof
         assume f: "f \<in> \<Omega>" and c: "all_edges K \<subseteq> coloured (all_edges W) f c"
         then show "\<exists>g\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. f = (\<lambda>t\<in>all_edges W. if t \<in> all_edges K then c else g t)"
           apply (rule_tac x="restrict f (all_edges W - all_edges K)" in bexI)
-          apply (force simp add: \<Omega>_def coloured subset_iff)+
+          apply (force simp add: \<Omega>_def coloured_def subset_iff)+
           done
       qed
       show "?R \<subseteq> ?L"
-        using that all_edges_mono[OF \<open>K \<subseteq> W\<close>] by (auto simp: coloured \<Omega>_def nsets_def PiE_iff)
+        using that all_edges_mono[OF \<open>K \<subseteq> W\<close>] by (auto simp: coloured_def \<Omega>_def nsets_def PiE_iff)
     qed
 
     have [simp]: "card (all_edges K \<union> coloured (all_edges W - all_edges K) f c)
                 = (r choose 2) + card (coloured (all_edges W - all_edges K) f c)" for f c
       using \<section> \<open>finite W\<close>
-      by (subst card_Un_disjoint) (auto simp: finite_all_edges coloured card_all_edges)
+      by (subst card_Un_disjoint) (auto simp: finite_all_edges coloured_def card_all_edges)
 
     have **: "pr (all_edges W) (\<lambda>t \<in> all_edges W. if t \<in> all_edges K then c else f t) 
         = pc c ^ (r choose 2) * pr (all_edges W - all_edges K) f" 
@@ -1417,14 +1413,10 @@ proof
   proof -
     have "P.prob Reds \<le> (\<Sum>K \<in> nsets W s. P.prob (mono 0 K))"
       by (simp add: Reds_def \<open>finite W\<close> finite_imp_finite_nsets measure_UNION_le mono_ev)
-    also have "... \<le> (n choose s) * (p ^ (s choose 2))"
+    also have "\<dots> \<le> (n choose s) * (p ^ (s choose 2))"
       by (simp add: prob_mono pc_def cardW)
-    also have "... < 1 / fact s"
+    also have "\<dots> < 1/2"
       using Ramsey_lower_calc \<open>4 < n\<close> assms(1) assms(2) n p_def by auto
-    also have "... < 1/2"
-      using \<open>s \<ge> 3\<close>
-      apply (simp add: divide_simps eval_nat_numeral)
-      by (metis Suc_le_lessD fact_2 fact_less_mono numerals(2) pos2)
     finally show ?thesis .
   qed
   moreover
@@ -1432,18 +1424,14 @@ proof
   proof -
     have "1-p = real t / (real t + real s)"
       using \<open>s \<ge> 3\<close> by (simp add: p_def divide_simps)
-    with assms have *: "(n choose t) * (1-p) ^ (t choose 2) < 1 / fact t"
+    with assms have *: "(n choose t) * (1-p) ^ (t choose 2) < 1/2"
       by (metis Ramsey_lower_calc add.commute mult.commute \<open>4 < n\<close>) 
     have "P.prob Blues \<le> (\<Sum>K \<in> nsets W t. P.prob (mono 1 K))"
       by (simp add: Blues_def \<open>finite W\<close> finite_imp_finite_nsets measure_UNION_le mono_ev)
-    also have "... \<le> (n choose t) * ((1-p) ^ (t choose 2))"
+    also have "\<dots> \<le> (n choose t) * ((1-p) ^ (t choose 2))"
       by (simp add: prob_mono pc_def cardW)
-    also have "... < 1 / fact t"
-      by (simp add: "*")
-    also have "... < 1/2"
-      using \<open>t \<ge> 3\<close>
-      apply (simp add: divide_simps eval_nat_numeral)
-      by (metis Suc_le_lessD fact_2 fact_less_mono numerals(2) pos2)
+    also have "\<dots> < 1/2"
+      using "*" by blast
     finally show ?thesis .
   qed
   ultimately have "P.prob (Reds \<union> Blues) < 1/2 + 1/2"
@@ -1454,19 +1442,16 @@ proof
   proof -
     have "\<not> all_edges H \<subseteq> {e \<in> all_edges W. F e = 0}" "\<not> all_edges H \<subseteq> {e \<in> all_edges W. F e = 1}"
       using F that
-      by (auto simp: less_2_cases_iff nsets2_eq_all_edges \<Omega>_def Reds_def Blues_def mono_def coloured image_subset_iff)
+      by (auto simp: less_2_cases_iff nsets2_eq_all_edges \<Omega>_def Reds_def Blues_def mono_def coloured_def image_subset_iff)
     moreover have "H \<subseteq> W"
       using that by (auto simp: nsets_def)
     ultimately show False
       using that all_edges_mono [OF \<open>H \<subseteq> W\<close>] by (auto simp: less_2_cases_iff nsets2_eq_all_edges)
   qed
   moreover have "F \<in> [{..<n}]\<^bsup>2\<^esup> \<rightarrow> {..<2}"
-    using F apply (auto simp: \<Omega>_def)
-    by (metis PiE_E W_def lessThan_iff nsets2_eq_all_edges)
+    using F by (auto simp: W_def \<Omega>_def nsets2_eq_all_edges)
   ultimately show False
-    using is_RN \<open>finite W\<close>
-    apply (simp add: W_def partn_lst_def)
-    by (metis numerals(2)) 
+    using is_RN by (force simp add: W_def partn_lst_def numeral_2_eq_2)
 qed
 
 end
