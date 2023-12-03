@@ -1,7 +1,8 @@
 theory Diagonal imports
   "HOL-Library.Disjoint_Sets" "HOL-Library.Ramsey" "Undirected_Graph_Theory.Undirected_Graph_Basics" 
   "Special_Function_Bounds.Exp_Bounds" "HOL-Decision_Procs.Approximation" "HOL-Probability.Probability" 
-  "HOL-Library.Infinite_Set"  "HOL-Library.Countable_Set"  "HOL-Library.Equipollence"  "HOL-Library.Nat_Bijection"
+  "HOL-Library.Infinite_Set"  "HOL-Library.Countable_Set"  "HOL-Library.Equipollence" 
+  "HOL-Library.Nat_Bijection"
   "HOL-ex.Sketch_and_Explore"
 
    
@@ -1211,10 +1212,8 @@ lemma RN_gt2:
   assumes "2 \<le> k" "3 \<le> l" shows "k < RN l k"
   by (simp add: RN_commute assms RN_gt1)
 
-lemma B: "(Suc n choose 2) = (n choose 2) + n"
-  by (simp add: numeral_2_eq_2)
-
-lemma G:
+text \<open>Andrew's calculation for the Ramsey lower bound. Symmetric, so works for both colours\<close>
+lemma Ramsey_lower_calc:
   fixes s::nat and t::nat and p::real
   assumes  "s \<ge> 3" "t \<ge> 3" "n > 4"
     and n: "real n \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t)))"
@@ -1250,21 +1249,21 @@ proof -
     using \<open>0<p\<close> \<open>4 < n\<close> \<open>s \<ge> 3\<close>
     by (simp add: choose_two_real powr_powr powr_mult of_nat_diff mult.commute flip: powr_realpow)
   have "(n choose s) * p ^ (s choose 2) \<le> n^s / fact s * p ^ (s choose 2)"
-    apply (intro mult_right_mono)
-    using binomial_fact_pow[of n s]  
-     apply (simp add: divide_simps mult.commute approximation_preproc_nat(13))
-    using p01(1) by auto
+  proof (intro mult_right_mono)
+    show "real (n choose s) \<le> real (n ^ s) / fact s"
+      using binomial_fact_pow[of n s]  
+      by (simp add: divide_simps mult.commute approximation_preproc_nat(13))
+  qed (use p01 in auto)
   also have "... < 1 / fact s"
     using B by (simp add: divide_simps)
   finally show ?thesis .
 qed
 
 
-text \<open>trying Andrew's sketch\<close>
+text \<open>trying Andrew's sketch\<close> (* And the final bound can be sharpened per Andrew's suggestion*)
 proposition Ramsey_number_lower_off_diag:  
-  fixes n s::nat  (* do we need s \<le> t ?  And the final bound can be sharpened per Andrew's suggestion*)
-  assumes "s \<ge> 3" "t \<ge> 3" "s \<le> t" 
-    and n: "real n \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t)))"
+  fixes n s::nat  
+  assumes "s \<ge> 3" "t \<ge> 3" and n: "real n \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t)))"
   shows "\<not> IS_RN (TYPE (nat)) s t n"
 proof
   assume con: "IS_RN (TYPE (nat)) s t n"
@@ -1276,7 +1275,6 @@ proof
     using assms by (intro mult_mono) auto
   ultimately have "n > 4"
     by simp
-  (* and therefore s\<ge>8, do we need that?*)
   define W where "W \<equiv> {..<n}"              \<comment>\<open>defining a probability space\<close>
   have monoc: "\<And>F. \<exists>K\<subseteq>W. clique_indep s t K F"
     using con by (simp add: IS_RN_def W_def)
@@ -1288,7 +1286,7 @@ proof
   have p01: "0<p" "p<1"
     using assms by (auto simp: p_def)
 
-  \<comment> \<open>Much easier to represent the state as maps from edges to colours, not sets of coloured edges\<close>
+  \<comment> \<open>Easier to represent the state as maps from edges to colours, not sets of coloured edges\<close>
    \<comment>\<open>colour the edges randomly\<close>
   define OMEGA :: "(nat set \<Rightarrow> nat) set" where "OMEGA \<equiv> (all_edges W) \<rightarrow>\<^sub>E {..<2}"
   have cardOMEGA: "card OMEGA = 2 ^ (n choose 2)"
@@ -1326,7 +1324,6 @@ proof
     case (insert e F)
     then have [simp]: "e \<notin> COLORD F f c" "COLORD F (f(e := c)) c' = COLORD F f c'" for f c c'
       by (auto simp: COLORD)
-
     show ?case
       using insert
       apply (simp add: PR_def COLORD_insert)
@@ -1351,11 +1348,9 @@ proof
       we are considering edges over the entire graph @{term W}\<close>
   define mono where "mono \<equiv> \<lambda>c K. {f \<in> OMEGA. all_edges K \<subseteq> COLORD (all_edges W) f c}"
   have mono_ev: "mono c K \<in> P.events" if "c<2" for K c
-    by (auto simp add: sets_eq mono_def \<Omega>_def)
+    by (auto simp add: sets_eq mono_def OMEGA_def)
   have mono_sub_\<Omega>: "mono c K \<subseteq> OMEGA" if "c<2" for K c
     using mono_ev sets_eq that by auto
-  have Umono_sub_\<Omega>: "(\<Union>K \<in> nsets W s. mono c K) \<subseteq> OMEGA" if "c<2" for c
-    using local.mono_def by blast
 
   have emeasure_eq: "emeasure M C = (if C \<subseteq> OMEGA then (\<Sum>a\<in>C. ennreal (PR (all_edges W) a)) else 0)" for C
     by (simp add: M_def emeasure_notin_sets emeasure_point_measure_finite sets_point_measure)
@@ -1428,15 +1423,20 @@ proof
       using p01 that by (simp add: measure_eq_emeasure_eq_ennreal pc_def)
   qed
 
-
-  have prob_0: "P.prob (\<Union>K \<in> nsets W s. mono 0 K) < 1/2" 
+  define Reds where "Reds \<equiv> (\<Union>K \<in> nsets W s. mono 0 K)"
+  define Blues where "Blues \<equiv> (\<Union>K \<in> nsets W t. mono 1 K)"
+  have Uev: "\<Union> (mono c ` [W]\<^bsup>r\<^esup>) \<in> P.events" for c r
+    by (simp add: local.mono_def sets_eq subset_iff)
+  then have "Reds \<in> P.events" "Blues \<in> P.events"
+    by (auto simp: Reds_def Blues_def)
+  have prob_0: "P.prob Reds < 1/2" 
   proof -
-    have "P.prob (\<Union>K \<in> nsets W s. mono 0 K) \<le> (\<Sum>K \<in> nsets W s. P.prob (mono 0 K))"
-      by (simp add: \<open>finite W\<close> finite_imp_finite_nsets measure_UNION_le mono_ev)
+    have "P.prob Reds \<le> (\<Sum>K \<in> nsets W s. P.prob (mono 0 K))"
+      by (simp add: Reds_def \<open>finite W\<close> finite_imp_finite_nsets measure_UNION_le mono_ev)
     also have "... \<le> (n choose s) * (p ^ (s choose 2))"
       by (simp add: prob_mono pc_def cardW)
     also have "... < 1 / fact s"
-      using G \<open>4 < n\<close> assms(1) assms(2) n p_def by auto
+      using Ramsey_lower_calc \<open>4 < n\<close> assms(1) assms(2) n p_def by auto
     also have "... < 1/2"
       using \<open>s \<ge> 3\<close>
       apply (simp add: divide_simps eval_nat_numeral)
@@ -1444,14 +1444,14 @@ proof
     finally show ?thesis .
   qed
   moreover
-  have prob_1: "P.prob (\<Union>K \<in> nsets W t. mono 1 K) < 1/2" 
+  have prob_1: "P.prob Blues < 1/2" 
   proof -
     have "1-p = real t / (real t + real s)"
       using \<open>s \<ge> 3\<close> by (simp add: p_def divide_simps)
     with assms have *: "(n choose t) * (1-p) ^ (t choose 2) < 1 / fact t"
-      by (metis G add.commute mult.commute \<open>4 < n\<close>) 
-    have "P.prob (\<Union>K \<in> nsets W t. mono 1 K) \<le> (\<Sum>K \<in> nsets W t. P.prob (mono 1 K))"
-      by (simp add: \<open>finite W\<close> finite_imp_finite_nsets measure_UNION_le mono_ev)
+      by (metis Ramsey_lower_calc add.commute mult.commute \<open>4 < n\<close>) 
+    have "P.prob Blues \<le> (\<Sum>K \<in> nsets W t. P.prob (mono 1 K))"
+      by (simp add: Blues_def \<open>finite W\<close> finite_imp_finite_nsets measure_UNION_le mono_ev)
     also have "... \<le> (n choose t) * ((1-p) ^ (t choose 2))"
       by (simp add: prob_mono pc_def cardW)
     also have "... < 1 / fact t"
@@ -1462,87 +1462,27 @@ proof
       by (metis Suc_le_lessD fact_2 fact_less_mono numerals(2) pos2)
     finally show ?thesis .
   qed
-  ultimately have "P.prob ((\<Union>K \<in> nsets W s. mono 0 K) \<union> (\<Union>K \<in> nsets W t. mono 1 K)) < 1/2 + 1/2"
-    by (smt (verit) P.finite_measure_subadditive Pow_iff UA_sub_\<Omega> UB_sub_\<Omega> sets_eq)
-  moreover have "(\<Union>K \<in> nsets W s. A K \<union> B K) \<in> P.events"
-    using A_ev B_ev sets_eq by auto
-  ultimately obtain F where "F \<in> \<Omega> - ((\<Union>K \<in> nsets W s. A K) \<union> (\<Union>K \<in> nsets W t. B K))"
-    by (metis (no_types, opaque_lifting) P.prob_space Pow_iff UA_sub_\<Omega> UB_sub_\<Omega> diff_shunt_var ex_min_if_finite field_sum_of_halves fin_\<Omega> finite_Diff less_irrefl sets.Un sets_eq space_eq subset_antisym)
-  then have "\<forall>K \<in> nsets W s. \<not> clique K F"  "\<forall>K \<in> nsets W t. \<not> indep K F"
-    by (simp_all add: A_def B_def \<Omega>_def)
-  then show False
-    using monoc[of F] \<open>finite W\<close>
-    by (smt (verit, del_insts) clique_indep_def finite_subset mem_Collect_eq nsets_def) 
-qed
-
-
-
-text \<open>From Bollabás, Graph Theory, page 125\<close>
-proposition Ramsey_number_lower_off_diag:  
-  fixes n s::nat  (* do we need s \<le> t ?*)
-  assumes "s \<ge> 3" "t \<ge> 3" "s \<le> t" and n: "real n \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t)))"
-  shows "\<not> is_Ramsey_number s t n"
-proof
-  assume n: "is_Ramsey_number s t n"
-  then have "(s - 1) * (t - 1) < n"
-    using RN_times_lower' [of s t] assms
-    by (metis RN_le numeral_3_eq_3 order_less_le_trans zero_less_Suc)
-  moreover have "2*2 \<le> (s - 1) * (t - 1)"
-    using assms by (intro mult_mono) auto
-  ultimately have "n > 4"
-    by simp
-  (* and therefore s\<ge>8, do we need that?*)
-
-  define m where "m \<equiv> nat\<lfloor>s / real (s + t) * real (n choose 2)\<rfloor>"
-  define m' where "m' \<equiv> (n choose 2) - m"
-  have m_less: "m < n choose 2"
-    using \<open>4 < n\<close> assms by (simp add: m_def nat_less_iff divide_simps floor_less_iff)
-  have "m' < (1 - s / real (s + t)) * (n choose 2) + 1"
-    using m_less
-    apply (simp add: m_def m'_def of_nat_diff algebra_simps)
-    by linarith
-  also have "... = (t / real (s + t)) * (n choose 2) + 1"
-    using assms by (simp add: divide_simps)
-  finally have "m' < (t / real (s + t)) * (n choose 2) + 1" .
-
-  (*define a probability space for a colouring with M red edges*)
-  define W where "W \<equiv> {..<n}"
-  define \<Omega> where "\<Omega> \<equiv> nsets (all_edges W) m"  \<comment>\<open>colour $m$ random edges red\<close>
-  have "finite W" and cardW: "card W = n"
-    by (auto simp: W_def)
-  moreover
-  have "card (all_edges W) = n choose 2"
-    by (simp add: W_def card_all_edges)
-  ultimately have card\<Omega>: "card \<Omega> = (n choose 2) choose m" 
-         and "card (all_edges W) \<ge> m"
-    using m_less by (auto simp add: \<Omega>_def card_Pow finite_all_edges)
-  then have "\<Omega> \<noteq> {}"
-    by (auto simp: \<Omega>_def nsets_eq_empty_iff)
-  have fin_\<Omega>: "finite \<Omega>"
-    using \<Omega>_def \<open>finite W\<close> finite_all_edges finite_imp_finite_nsets by blast
-  define M where "M \<equiv> uniform_count_measure \<Omega>"
-  have space_eq: "space M = \<Omega>"
-    by (simp add: M_def space_uniform_count_measure)
-  have sets_eq: "sets M = Pow \<Omega>"
-    by (simp add: M_def sets_uniform_count_measure)
-  interpret P: prob_space M
-    unfolding M_def
-    by (intro prob_space_uniform_count_measure fin_\<Omega> \<open>\<Omega> \<noteq> {}\<close>)
-
-
-  \<comment>\<open>the event to avoid: monochromatic cliques, given @{term "K \<subseteq> W"};
-      we are considering edges over the entire graph @{term W}\<close>
-  define A where "A \<equiv> \<lambda>K. {F \<in> \<Omega>. F \<inter> all_edges K \<subseteq> F}"
-  have A_ev: "A K \<in> P.events" for K
-    by (auto simp add: sets_eq A_def \<Omega>_def)
-  have A_sub_\<Omega>: "A K \<subseteq> \<Omega>" for K
-    by (auto simp add: sets_eq A_def \<Omega>_def)
-  have UA_sub_\<Omega>: "(\<Union>K \<in> nsets W s. A K) \<subseteq> \<Omega>"
-    by (auto simp: \<Omega>_def A_def nsets_def all_edges_def)
-
-
-  show False
-    sorry
+  ultimately have "P.prob (Reds \<union> Blues) < 1/2 + 1/2"
+    using P.finite_measure_subadditive \<open>Blues \<in> P.events\<close> \<open>Reds \<in> P.events\<close> by fastforce
+  then obtain F where F: "F \<in> OMEGA - (Reds \<union> Blues)"
+    by (metis Blues_def Diff_iff P.prob_space Pow_iff Reds_def Un_subset_iff Uev equalityI field_sum_of_halves less_irrefl sets_eq space_eq subsetI)
+  have False if "i < 2" "H \<in> [W]\<^bsup>([s, t] ! i)\<^esup>" "F ` [H]\<^bsup>2\<^esup> \<subseteq> {i}" for i H
+  proof -
+    have "\<not> all_edges H \<subseteq> {e \<in> all_edges W. F e = 0}" "\<not> all_edges H \<subseteq> {e \<in> all_edges W. F e = 1}"
+      using F that
+      by (auto simp: less_2_cases_iff nsets2_eq_all_edges OMEGA_def Reds_def Blues_def mono_def COLORD image_subset_iff)
+    moreover have "H \<subseteq> W"
+      using that by (auto simp: nsets_def)
+    ultimately show False
+      using that all_edges_mono [OF \<open>H \<subseteq> W\<close>] by (auto simp: less_2_cases_iff nsets2_eq_all_edges)
+  qed
+  moreover have "F \<in> [{..<n}]\<^bsup>2\<^esup> \<rightarrow> {..<2}"
+    using F apply (auto simp: OMEGA_def)
+    by (metis PiE_E W_def lessThan_iff nsets2_eq_all_edges)
+  ultimately show False
+    using is_RN \<open>finite W\<close>
+    apply (simp add: W_def partn_lst_def)
+    by (metis numerals(2)) 
 qed
 
 end
