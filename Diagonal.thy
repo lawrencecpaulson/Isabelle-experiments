@@ -1264,11 +1264,9 @@ text \<open>trying Andrew's sketch\<close> (* And the final bound can be sharpen
 proposition Ramsey_number_lower_off_diag:  
   fixes n s::nat  
   assumes "s \<ge> 3" "t \<ge> 3" and n: "real n \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t)))"
-  shows "\<not> IS_RN (TYPE (nat)) s t n"
+  shows "\<not> is_Ramsey_number s t n"
 proof
-  assume con: "IS_RN (TYPE (nat)) s t n"
-  then have is_RN: "is_Ramsey_number s t n"
-    by (simp add: IS_RN_imp_partn_lst)
+  assume con: "is_Ramsey_number s t n"
   then have "(s - 1) * (t - 1) < n"
     using RN_times_lower' [of s t] assms by (metis RN_le numeral_3_eq_3 order_less_le_trans zero_less_Suc)
   moreover have "2*2 \<le> (s - 1) * (t - 1)"
@@ -1305,7 +1303,6 @@ proof
     by (auto simp: coloured_def)
   have eq2: "{..<2} = {0, Suc 0}"
     by (simp add: insert_commute lessThan_Suc numeral_2_eq_2)
-
   have sum_pr_1 [simp]: "sum (pr U) (U \<rightarrow>\<^sub>E {..<2}) = 1" if "finite U" for U
     using that
   proof (induction U)
@@ -1345,6 +1342,8 @@ proof
   have emeasure_eq: "emeasure M C = (if C \<subseteq> \<Omega> then (\<Sum>a\<in>C. ennreal (pr (all_edges W) a)) else 0)" for C
     by (simp add: M_def emeasure_notin_sets emeasure_point_measure_finite sets_point_measure)
   define pc where "pc \<equiv> \<lambda>c::nat. if c=0 then p else 1-p"
+  have pc0: "0 \<le> pc c" for c
+    using p01 pc_def by auto
   have coloured_upd: "coloured F (\<lambda>t\<in>F. if t \<in> G then c else f t) c' 
         = (if c=c' then G \<union> coloured (F-G) f c' else coloured (F-G) f c')" if "G \<subseteq> F" for F G f c c'
     using that by (auto simp: coloured_def)
@@ -1376,16 +1375,13 @@ proof
       using \<section> \<open>finite W\<close>
       by (subst card_Un_disjoint) (auto simp: finite_all_edges coloured_def card_all_edges)
 
-    have **: "pr (all_edges W) (\<lambda>t \<in> all_edges W. if t \<in> all_edges K then c else f t) 
+    have pr_upd: "pr (all_edges W) (\<lambda>t \<in> all_edges W. if t \<in> all_edges K then c else f t) 
         = pc c ^ (r choose 2) * pr (all_edges W - all_edges K) f" 
       if "f \<in> all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}" for f
       using that all_edges_mono[OF \<open>K \<subseteq> W\<close>] p01 \<open>c<2\<close> \<section>
       by (simp add: pr_def coloured_upd pc_def power_add)
-
-    have A: "(\<Sum>F\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. (pc c ^ (r choose 2) * pr (all_edges W - all_edges K) F)) 
-              = (pc c ^ (r choose 2))"
-      by (simp add: ** \<open>finite W\<close> finite_all_edges flip: sum_distrib_left)
-    have "emeasure M (mono c K) = ennreal (pc c ^ (r choose 2))"
+    have "emeasure M (mono c K) 
+         = (\<Sum>x\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. ennreal (pc c ^ (r choose 2) * pr (all_edges W - all_edges K) x))"
       using that p01
       apply (simp add: emeasure_eq mono_sub_\<Omega>)
       apply (simp add: mono_def *)
@@ -1395,10 +1391,14 @@ proof
        apply (simp add: disjoint_family_on_def)
        apply (auto simp: fun_eq_iff)[1]
        apply (metis DiffE PiE_E)
-      apply (simp add: **  )
-      apply (subst sum_ennreal)
-       apply (simp add: pr_def pc_def)
-      using A by presburger
+      apply (simp add: pr_upd)
+      done
+    also have "... = ennreal (\<Sum>f\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. 
+                                pc c ^ (r choose 2) * pr (all_edges W - all_edges K) f)"
+      using pr01 pc0 sum.cong sum_ennreal by (smt (verit) mult_nonneg_nonneg zero_le_power)
+    also have "... = ennreal (pc c ^ (r choose 2))"
+      by (simp add: \<open>finite W\<close> finite_all_edges flip: sum_distrib_left)
+    finally have "emeasure M (mono c K) = ennreal (pc c ^ (r choose 2))" .
     then show ?thesis 
       using p01 that by (simp add: measure_eq_emeasure_eq_ennreal pc_def)
   qed
@@ -1451,8 +1451,14 @@ proof
   moreover have "F \<in> [{..<n}]\<^bsup>2\<^esup> \<rightarrow> {..<2}"
     using F by (auto simp: W_def \<Omega>_def nsets2_eq_all_edges)
   ultimately show False
-    using is_RN by (force simp add: W_def partn_lst_def numeral_2_eq_2)
+    using con by (force simp add: W_def partn_lst_def numeral_2_eq_2)
 qed
+
+theorem RN_lower_off_diag:
+  assumes "s \<ge> 3" "t \<ge> 3"
+  shows "RN s t > exp ((real s - 1) * (real t - 1) / (2*(s+t)))"            
+  using Ramsey_number_lower_off_diag [OF assms]
+  using is_Ramsey_number_RN by force
 
 end
 
