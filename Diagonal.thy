@@ -1214,42 +1214,18 @@ lemma RN_gt2:
 lemma B: "(Suc n choose 2) = (n choose 2) + n"
   by (simp add: numeral_2_eq_2)
 
-
-text \<open>trying Andrew's sketch\<close>
-proposition Ramsey_number_lower_off_diag:  
-  fixes n s::nat  (* do we need s \<le> t ?  And the final bound can be sharpened per Andrew's suggestion*)
-  assumes "s \<ge> 3" "t \<ge> 3" "s \<le> t" 
+lemma G:
+  fixes s::nat and t::nat and p::real
+  assumes  "s \<ge> 3" "t \<ge> 3" "n > 4"
     and n: "real n \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t)))"
-  shows "\<not> IS_RN (TYPE (nat)) s t n"
-proof
-  assume con: "IS_RN (TYPE (nat)) s t n"
-  then have is_RN: "is_Ramsey_number s t n"
-    by (simp add: IS_RN_imp_partn_lst)
-  then have "(s - 1) * (t - 1) < n"
-    using RN_times_lower' [of s t] assms by (metis RN_le numeral_3_eq_3 order_less_le_trans zero_less_Suc)
-  moreover have "2*2 \<le> (s - 1) * (t - 1)"
-    using assms by (intro mult_mono) auto
-  ultimately have "n > 4"
-    by simp
-  (* and therefore s\<ge>8, do we need that?*)
-  define W where "W \<equiv> {..<n}"              \<comment>\<open>defining a probability space\<close>
-  define \<Omega> where "\<Omega> \<equiv> Pow (all_edges W)"  \<comment>\<open>colour the edges randomly\<close>
-  have monoc: "\<And>F. \<exists>K\<subseteq>W. clique_indep s t K F"
-    using con by (simp add: IS_RN_def W_def)
-  have "finite W" and cardW: "card W = n"
-    by (auto simp: W_def)
-  moreover have cardEW: "card (all_edges W) = n choose 2"
-    by (simp add: W_def card_all_edges)
-  ultimately have card\<Omega>: "card \<Omega> = 2 ^ (n choose 2)"
-    by (simp add: \<Omega>_def card_Pow finite_all_edges)
-  then have fin_\<Omega> [simp]: "finite \<Omega>"
-    by (simp add: \<Omega>_def \<open>finite W\<close> finite_all_edges)
-  define p where "p \<equiv> s / (s+t)"
+  defines "p \<equiv> real s / (real s + real t)"
+  shows "(n choose s) * p ^ (s choose 2) < 1 / fact s"
+proof -
   have p01: "0<p" "p<1"
     using assms by (auto simp: p_def)
   have "exp ((real s - 1) * (real t - 1) / (2*(s+t)))  \<le> exp (t / (s+t)) powr ((s-1)/2)"
     using \<open>s \<ge> 3\<close> by (simp add: mult_ac divide_simps of_nat_diff)
-  with n have "n \<le> exp (t / (s+t)) powr ((s-1)/2)"
+  with assms p01 have "n \<le> exp (t / (s+t)) powr ((s-1)/2)"
     by linarith
   then have "n * p powr ((s-1)/2) \<le> (exp (t / (s+t)) * p) powr ((s-1)/2)"
     using \<open>0<p\<close> by (simp add: powr_mult)
@@ -1280,83 +1256,43 @@ proof
     using p01(1) by auto
   also have "... < 1 / fact s"
     using B by (simp add: divide_simps)
-  finally have "(n choose s) * p ^ (s choose 2) < 1 / fact s" .
+  finally show ?thesis .
+qed
 
-  define pr where "pr \<equiv> \<lambda>Red::nat set set. p ^ card Red * (1-p) ^ (n choose 2 - card Red)"
-  have pr01: "0 < pr Red" "pr Red \<le> 1" for Red \<comment> \<open>the inequality could be strict\<close>
-    using \<open>0<p\<close> \<open>p<1\<close> by (auto simp: mult_le_one power_le_one pr_def card\<Omega>)
 
-  have partial_sum_pr: "(\<Sum>Red\<in>Pow EK. pr Red) = (1-p) ^ (n choose 2 - card EK)" 
-    if "EK \<subseteq> all_edges W" for EK
-  proof -
-    have "finite EK"
-      using that by (simp add: \<open>finite W\<close> finite_all_edges finite_subset)
-    define \<Omega>' where "\<Omega>' \<equiv> Pow EK"
-    define m where "m = (n choose 2)"
-    define m' where "m' = card EK"
-    have "card EK \<le> m"
-      using \<Omega>_def cardEW card_mono fin_\<Omega> m_def that by fastforce
-    then have meq: "m = m' + ((n choose 2) - m')"
-      by (simp add: m'_def m_def)
- 
-    have D: "(\<Sum>i=Suc m'..m. real(m' choose i) * u i) = (\<Sum>i=Suc m'..m. 0)" for u
-      by (rule sum.cong ) auto
+text \<open>trying Andrew's sketch\<close>
+proposition Ramsey_number_lower_off_diag:  
+  fixes n s::nat  (* do we need s \<le> t ?  And the final bound can be sharpened per Andrew's suggestion*)
+  assumes "s \<ge> 3" "t \<ge> 3" "s \<le> t" 
+    and n: "real n \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t)))"
+  shows "\<not> IS_RN (TYPE (nat)) s t n"
+proof
+  assume con: "IS_RN (TYPE (nat)) s t n"
+  then have is_RN: "is_Ramsey_number s t n"
+    by (simp add: IS_RN_imp_partn_lst)
+  then have "(s - 1) * (t - 1) < n"
+    using RN_times_lower' [of s t] assms by (metis RN_le numeral_3_eq_3 order_less_le_trans zero_less_Suc)
+  moreover have "2*2 \<le> (s - 1) * (t - 1)"
+    using assms by (intro mult_mono) auto
+  ultimately have "n > 4"
+    by simp
+  (* and therefore s\<ge>8, do we need that?*)
+  define W where "W \<equiv> {..<n}"              \<comment>\<open>defining a probability space\<close>
+  have monoc: "\<And>F. \<exists>K\<subseteq>W. clique_indep s t K F"
+    using con by (simp add: IS_RN_def W_def)
+  have "finite W" and cardW: "card W = n"
+    by (auto simp: W_def)
+  have cardEW: "card (all_edges W) = n choose 2"
+    by (simp add: W_def card_all_edges)
+  define p where "p \<equiv> s / (s+t)"
+  have p01: "0<p" "p<1"
+    using assms by (auto simp: p_def)
 
-    have "card \<Omega>' = 2^m'"
-      using \<open>finite W\<close> \<open>finite EK\<close> card_Pow_diff [of "EK" "all_edges W"] that
-      apply (simp add: \<Omega>'_def m'_def m_def cardEW card_all_edges)
-      by (simp add: cardEW card_Diff_subset card_Pow finite_all_edges)
-
-    have m'_eq: "m' = card EK"
-      unfolding m'_def
-      by (simp add: that \<open>finite EK\<close> cardEW card_Diff_subset m_def)
-
-    have \<Omega>'_Union: "\<Omega>' = (\<Union>r\<le>m. nsets EK r)"
-      using \<open>finite EK\<close>
-      unfolding \<Omega>'_def m_def
-      apply (simp add: Pow_equals_UN_nsets cardEW \<open>finite W\<close> finite_all_edges)
-      apply (rule )
-      apply (metis SUP_subset_mono Set.basic_monos(1) \<open>card EK \<le> m\<close> atMost_subset_iff m_def)
-      by (metis SUP_mono atMost_iff empty_subsetI less_le_not_le nle_le nsets_eq_empty order.refl)
-
-    have "(\<Sum>R\<in>\<Omega>'. p ^ card R * (1-p) ^ (m - card R))
-        = (\<Sum>i\<le>m. \<Sum>R\<in>[EK]\<^bsup>i\<^esup>. p ^ card R * (1-p) ^ (m - card R))"
-      unfolding \<Omega>'_Union
-    proof (rule sum.UNION_disjoint_family)
-      show "\<forall>i\<in>{..m}. finite ([EK]\<^bsup>i\<^esup>)"
-        using \<open>finite EK\<close> finite_imp_finite_nsets by blast
-      show "disjoint_family_on (nsets EK) {..m}"
-        unfolding disjoint_family_on_def m_def
-        by (metis Int_empty_left Int_empty_right \<open>finite EK\<close> bot_nat_0.not_eq_extremum card.empty nsets_disjoint_iff nsets_eq_empty verit_comp_simplify1(3))
-    qed auto
-    also have "... = (\<Sum>i\<le>m. \<Sum>R\<in>[EK]\<^bsup>i\<^esup>. p^i * (1-p) ^ (m-i))"
-      by (simp add: nsets_def)
-    also have "\<dots> = (\<Sum>i\<le>m. (m' choose i) * p ^ i * (1-p) ^ (m - i))"
-      by (simp add: cardEW m'_eq mult.assoc)
-    also have "\<dots> = (\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m - i))
-                  + (\<Sum>i=m'+1..m. (m' choose i) * p ^ i * (1-p) ^ (m - i))"
-      by (simp add: meq sum_up_index_split)
-    also have "\<dots> = (\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m - i))"
-      by (simp add: D mult.assoc)
-    also have "... = (\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m' - i + ((n choose 2) - m')))"
-      by (simp add: meq)
-    also have "... = (\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m' - i) * (1-p) ^ ((n choose 2) - m'))"
-      by (metis (mono_tags, opaque_lifting) mult.assoc power_add)
-    also have "... = ((\<Sum>i\<le>m'. (m' choose i) * p ^ i * (1-p) ^ (m' - i)) * (1-p) ^ ((n choose 2) - m'))"
-      by (simp add: sum_distrib_right)
-    also have "... = (p + (1-p))^m' * (1-p) ^ ((n choose 2) - m')"
-      by (metis (no_types) binomial_ring)
-    also have "... = (1-p) ^ ((n choose 2) - m')"
-      by simp
-    finally have "(\<Sum>R\<in>\<Omega>'. p ^ card R * (1-p) ^ (m - card R)) = (1-p) ^ ((n choose 2) - m')" .
-    then have "sum pr \<Omega>' = (1-p) ^ ((n choose 2) - m')"
-      by (simp add: pr_def m_def card\<Omega> flip: sum_divide_distrib)
-    then show ?thesis
-      using \<Omega>'_def m'_eq by blast
-  qed
-
-  (*TRY EDGE COLOURING MAPS*)
+  \<comment> \<open>Much easier to represent the state as maps from edges to colours, not sets of coloured edges\<close>
+   \<comment>\<open>colour the edges randomly\<close>
   define OMEGA :: "(nat set \<Rightarrow> nat) set" where "OMEGA \<equiv> (all_edges W) \<rightarrow>\<^sub>E {..<2}"
+  have cardOMEGA: "card OMEGA = 2 ^ (n choose 2)"
+    by (simp add: OMEGA_def \<open>finite W\<close> cardEW card_funcsetE finite_all_edges)
   define COLORD where "COLORD \<equiv> \<lambda>F. \<lambda>f::nat set \<Rightarrow> nat. \<lambda>c. (f -` {c}) \<inter> F"
   have COLORD: "COLORD F f c = {e \<in> F. f e = c}" for f c F
     by (auto simp: COLORD_def)
@@ -1364,7 +1300,7 @@ proof
     using COLORD_def that by blast
   define PR where "PR \<equiv> \<lambda>F f. p ^ card (COLORD F f 0) * (1-p) ^ card (COLORD F f 1)"
   have PR01: "0 < PR U f" "PR U f \<le> 1" for U f \<comment> \<open>the inequality could be strict\<close>
-    using \<open>0<p\<close> \<open>p<1\<close> by (auto simp: mult_le_one power_le_one PR_def card\<Omega>)
+    using \<open>0<p\<close> \<open>p<1\<close> by (auto simp: mult_le_one power_le_one PR_def cardOMEGA)
   define M where "M \<equiv> point_measure OMEGA (PR (all_edges W))"
   have space_eq: "space M = OMEGA"
     by (simp add: M_def space_point_measure)
@@ -1429,13 +1365,14 @@ proof
         = (if c=c' then G \<union> COLORD (F-G) f c' else COLORD (F-G) f c')" if "G \<subseteq> F" for F G f c c'
     using that by (auto simp add: COLORD)
 
-  have MA: "emeasure M (mono c K) = ennreal (pc c ^ (s choose 2))" if "K \<in> nsets W s" "c<2" for K c
+  have prob_mono: "P.prob (mono c K) = (pc c ^ (r choose 2))"  
+    if "K \<in> nsets W r" "c<2" for r K c
   proof -
-    have \<section>: "K \<subseteq> W" "finite K" "card K = s"
+    have \<section>: "K \<subseteq> W" "finite K" "card K = r"
       using that by (auto simp: nsets_def)
-    have "s \<le> n"
+    have "r \<le> n"
       using "\<section>" \<open>finite W\<close> cardW card_mono by blast
-    then have sn2: "(s choose 2) \<le> (n choose 2)"
+    then have sn2: "(r choose 2) \<le> (n choose 2)"
       using binomial_mono by auto
 
     have *: "{f \<in> OMEGA. all_edges K \<subseteq> COLORD (all_edges W) f c} = 
@@ -1451,7 +1388,7 @@ proof
            apply (rule ext)
           using c f
            apply (simp add: OMEGA_def COLORD subset_iff)
-          apply blast
+           apply blast
           using OMEGA_def f by auto
       qed
       show "?R \<subseteq> ?L"
@@ -1460,143 +1397,72 @@ proof
     qed
 
     have [simp]: "card (all_edges K \<union> COLORD (all_edges W - all_edges K) f c)
-                = (s choose 2) + card (COLORD (all_edges W - all_edges K) f c)" for f c
+                = (r choose 2) + card (COLORD (all_edges W - all_edges K) f c)" for f c
       using \<section> \<open>finite W\<close>
       by (subst card_Un_disjoint) (auto simp: finite_all_edges COLORD card_all_edges)
 
     have **: "PR (all_edges W) (\<lambda>t \<in> all_edges W. if t \<in> all_edges K then c else f t) 
-        = pc c ^ (s choose 2) * PR (all_edges W - all_edges K) f" 
+        = pc c ^ (r choose 2) * PR (all_edges W - all_edges K) f" 
       if "f \<in> all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}" for f
       using that all_edges_mono[OF \<open>K \<subseteq> W\<close>] p01 \<open>c<2\<close> \<section>
       by (simp add: PR_def COLORD_upd pc_def power_add)
 
-    have A: "(\<Sum>F\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. (pc c ^ (s choose 2) * PR (all_edges W - all_edges K) F)) 
-              = (pc c ^ (s choose 2))"
+    have A: "(\<Sum>F\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. (pc c ^ (r choose 2) * PR (all_edges W - all_edges K) F)) 
+              = (pc c ^ (r choose 2))"
       by (simp add: ** \<open>finite W\<close> finite_all_edges flip: sum_distrib_left)
-    show ?thesis
+    have "emeasure M (mono c K) = ennreal (pc c ^ (r choose 2))"
       using that p01
       apply (simp add: emeasure_eq mono_sub_\<Omega>)
       apply (simp add: mono_def *)
       apply (subst sum.UNION_disjoint_family)
-      apply (simp add: \<open>finite W\<close> finite_PiE finite_all_edges)
-      apply blast
+         apply (simp add: \<open>finite W\<close> finite_PiE finite_all_edges)
+        apply blast
        apply (simp add: disjoint_family_on_def)
        apply (auto simp: fun_eq_iff)[1]
        apply (metis DiffE PiE_E)
       apply (simp add: **  )
       apply (subst sum_ennreal)
-      apply (simp add: PR_def pc_def)
+       apply (simp add: PR_def pc_def)
       using A by presburger
-  qed
-  then have prob_AK: "P.prob (mono c K) = (pc c ^ (s choose 2))" 
-    if "K \<in> nsets W s" "c<2" for K c
-    using MA p01 that by (simp add: measure_eq_emeasure_eq_ennreal pc_def)
-
-
-
-  oops
-  define M where "M \<equiv> point_measure \<Omega> pr"
-  have space_eq: "space M = \<Omega>"
-    by (simp add: M_def space_point_measure)
-  have sets_eq: "sets M = Pow \<Omega>"
-    by (simp add: M_def sets_point_measure)
-  interpret P: prob_space M
-  proof
-    have "sum pr \<Omega> = 1"
-      using partial_sum_pr by (simp add: \<Omega>_def cardEW) 
-    then show "emeasure M (space M) = 1" 
-      using M_def fin_\<Omega> prob_space.emeasure_space_1 prob_space_point_measure zero_le
-      by (metis ennreal_1 linorder_not_less nle_le pr01(1) sum_ennreal)
+    then show ?thesis 
+      using p01 that by (simp add: measure_eq_emeasure_eq_ennreal pc_def)
   qed
 
-  \<comment>\<open>the event to avoid: monochromatic cliques, given @{term "K \<subseteq> W"};
-      we are considering edges over the entire graph @{term W}\<close>
-  (* look only at cliques, the second time at the compliment *)
-  define A where "A \<equiv> \<lambda>K. {F \<in> \<Omega>. clique K F}"
-  have A_ev: "A K \<in> P.events" for K
-    by (auto simp add: sets_eq A_def \<Omega>_def)
-  have A_sub_\<Omega>: "A K \<subseteq> \<Omega>" for K
-    by (auto simp add: sets_eq A_def \<Omega>_def)
-  have UA_sub_\<Omega>: "(\<Union>K \<in> nsets W s. A K) \<subseteq> \<Omega>"
-    by (auto simp: \<Omega>_def A_def nsets_def all_edges_def)
 
-  have inj: "inj_on ((\<union>) (all_edges K)) (Pow (all_edges W - all_edges K))" for K
-    using assms by (auto simp: inj_on_def)
-
-  define B where "B \<equiv> \<lambda>K. {F \<in> \<Omega>. indep K F}"
-  have B_ev: "B K \<in> P.events" for K
-    by (auto simp add: sets_eq B_def \<Omega>_def)
-  have B_sub_\<Omega>: "B K \<subseteq> \<Omega>" for K
-    by (auto simp add: sets_eq B_def \<Omega>_def)
-  have UB_sub_\<Omega>: "(\<Union>K \<in> nsets W t. B K) \<subseteq> \<Omega>"
-    by (auto simp: \<Omega>_def B_def nsets_def all_edges_def)
-
-  have pr_Un_disjoint: "pr (X \<union> Y) = pr X * pr Y / (1-p) ^ (n choose 2)" 
-    if "X \<inter> Y = {}" "X \<subseteq> all_edges W" "Y \<subseteq> all_edges W" for X Y
+  have prob_0: "P.prob (\<Union>K \<in> nsets W s. mono 0 K) < 1/2" 
   proof -
-    have "(card X + card Y) \<le> (card W choose 2)"
-      by (metis \<open>finite W\<close> Un_subset_iff cardEW cardW card_Un_disjoint card_mono finite_all_edges finite_subset that)
-    then show ?thesis
-      using that p01 finite_subset [OF _ finite_all_edges [OF \<open>finite W\<close>]]
-      by (simp add: pr_def card_Un_disjoint power_add power_diff flip: cardW)
-  qed
-
-
-  have pr_all_edges_Un: "pr (all_edges K \<union> F)  = (p ^ (s choose 2) / (1-p) ^ ((s choose 2))) * pr F"
-    if "F \<subseteq> all_edges W - all_edges K" and K: "K \<in> [W]\<^bsup>s\<^esup>" for F K
-  proof -
-    have [simp]: "pr (all_edges K) = p ^ (s choose 2) * (1 - p) ^ (n choose 2 - (s choose 2))" 
-      using that by (simp add: nsets_def pr_def card_all_edges)
-    have [simp]: "card (all_edges K) = s choose 2" "all_edges K \<inter> F = {}" "F \<subseteq> all_edges W"
-      using that by (auto simp add: nsets_def card_all_edges)
-    have [simp]: "all_edges K \<subseteq> all_edges W"
-      by (metis (no_types, lifting) all_edges_mono mem_Collect_eq nsets_def that(2))
-    have "card F + card (all_edges K) \<le> n choose 2"
-      by (metis Nat.add_0_right Nat.le_diff_conv2 \<open>F \<subseteq> all_edges W\<close> \<open>all_edges K \<subseteq> all_edges W\<close> \<open>finite W\<close> card.infinite cardEW card_Diff_subset card_mono finite_Diff finite_all_edges that(1))
-    then show ?thesis
-      using p01 by (simp add: nsets_def pr_Un_disjoint divide_simps flip: power_add)
-  qed
-
-  have emeasure_eq: "emeasure M C = (if C \<subseteq> \<Omega> then (\<Sum>a\<in>C. ennreal (pr a)) else 0)" for C
-    by (simp add: M_def emeasure_notin_sets emeasure_point_measure_finite sets_point_measure)
-
-  have MA: "emeasure M (A K) = ennreal (p ^ (s choose 2))" if "K \<in> nsets W s" for K
-  proof -
-    have \<section>: "K \<subseteq> W" "finite K" "card K = s"
-      using that by (auto simp: nsets_def)
-    have "s \<le> n"
-      using "\<section>" \<open>finite W\<close> cardW card_mono by blast
-    then have sn2: "(s choose 2) \<le> (n choose 2)"
-      using binomial_mono by auto
-    with \<section> have **: "card (all_edges W - all_edges K) = (n choose 2) - (s choose 2)"
-      by (simp add: all_edges_mono cardEW card_Diff_subset card_all_edges finite_all_edges)
-    have E: "{F \<in> \<Omega>. clique K F} = ((\<union>)(all_edges K)) `  Pow (all_edges W - all_edges K)"
-      using \<section> 
-      apply (auto simp: \<Omega>_def  simp flip: all_edges_subset_iff_clique)
-      using all_edges_mono [OF \<open>K\<subseteq>W\<close>] by blast
-    have "emeasure M (A K) = (\<Sum>a\<in>{F \<in> \<Omega>. clique K F}. ennreal (pr a))"
-      using that cardW by (simp add: emeasure_eq A_def)
-    also have "... = (\<Sum>a\<in>(\<union>) (all_edges K) ` Pow (all_edges W - all_edges K). ennreal (pr a))"
-      by (simp add: E)
-    also have "... = (\<Sum>x\<in>Pow (all_edges W - all_edges K). ennreal (pr (all_edges K \<union> x)))"
-      by (subst sum.reindex) (auto simp add: inj_on_def)
-    also have "... = ennreal (\<Sum>x\<in>Pow (all_edges W - all_edges K). pr (all_edges K \<union> x))"
-      by (smt (verit) pr01(1) sum.cong sum_ennreal)
-    also have "... = ennreal (p ^ (s choose 2))"
-      using that sn2 p01
-      by (simp add: ** pr_all_edges_Un partial_sum_pr divide_simps flip: sum_distrib_left sum_divide_distrib)
+    have "P.prob (\<Union>K \<in> nsets W s. mono 0 K) \<le> (\<Sum>K \<in> nsets W s. P.prob (mono 0 K))"
+      by (simp add: \<open>finite W\<close> finite_imp_finite_nsets measure_UNION_le mono_ev)
+    also have "... \<le> (n choose s) * (p ^ (s choose 2))"
+      by (simp add: prob_mono pc_def cardW)
+    also have "... < 1 / fact s"
+      using G \<open>4 < n\<close> assms(1) assms(2) n p_def by auto
+    also have "... < 1/2"
+      using \<open>s \<ge> 3\<close>
+      apply (simp add: divide_simps eval_nat_numeral)
+      by (metis Suc_le_lessD fact_2 fact_less_mono numerals(2) pos2)
     finally show ?thesis .
   qed
-  then have prob_AK: "P.prob (A K) = p ^ (s choose 2)" if "K \<in> nsets W s" for K
-    using MA p01 by (simp add: measure_eq_emeasure_eq_ennreal that)
-
-
-    oops
-  have "P.prob (\<Union>K \<in> nsets W s. A K) < 1/2"
-    sorry
-  moreover have "P.prob (\<Union>K \<in> nsets W t. B K) < 1/2"
-    sorry
-  ultimately have "P.prob ((\<Union>K \<in> nsets W s. A K) \<union> (\<Union>K \<in> nsets W t. B K)) < 1/2 + 1/2"
+  moreover
+  have prob_1: "P.prob (\<Union>K \<in> nsets W t. mono 1 K) < 1/2" 
+  proof -
+    have "1-p = real t / (real t + real s)"
+      using \<open>s \<ge> 3\<close> by (simp add: p_def divide_simps)
+    with assms have *: "(n choose t) * (1-p) ^ (t choose 2) < 1 / fact t"
+      by (metis G add.commute mult.commute \<open>4 < n\<close>) 
+    have "P.prob (\<Union>K \<in> nsets W t. mono 1 K) \<le> (\<Sum>K \<in> nsets W t. P.prob (mono 1 K))"
+      by (simp add: \<open>finite W\<close> finite_imp_finite_nsets measure_UNION_le mono_ev)
+    also have "... \<le> (n choose t) * ((1-p) ^ (t choose 2))"
+      by (simp add: prob_mono pc_def cardW)
+    also have "... < 1 / fact t"
+      by (simp add: "*")
+    also have "... < 1/2"
+      using \<open>t \<ge> 3\<close>
+      apply (simp add: divide_simps eval_nat_numeral)
+      by (metis Suc_le_lessD fact_2 fact_less_mono numerals(2) pos2)
+    finally show ?thesis .
+  qed
+  ultimately have "P.prob ((\<Union>K \<in> nsets W s. mono 0 K) \<union> (\<Union>K \<in> nsets W t. mono 1 K)) < 1/2 + 1/2"
     by (smt (verit) P.finite_measure_subadditive Pow_iff UA_sub_\<Omega> UB_sub_\<Omega> sets_eq)
   moreover have "(\<Union>K \<in> nsets W s. A K \<union> B K) \<in> P.events"
     using A_ev B_ev sets_eq by auto
