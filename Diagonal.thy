@@ -1247,10 +1247,6 @@ proof
   define p where "p \<equiv> s / (s+t)"
   have p01: "0<p" "p<1"
     using assms by (auto simp: p_def)
-  define pr where "pr \<equiv> \<lambda>Red::nat set set. p ^ card Red * (1-p) ^ (n choose 2 - card Red)"
-  have pr01: "0 < pr Red" "pr Red \<le> 1" for Red \<comment> \<open>the inequality could be strict\<close>
-    using \<open>0<p\<close> \<open>p<1\<close> by (auto simp: mult_le_one power_le_one pr_def card\<Omega>)
-
   have "exp ((real s - 1) * (real t - 1) / (2*(s+t)))  \<le> exp (t / (s+t)) powr ((s-1)/2)"
     using \<open>s \<ge> 3\<close> by (simp add: mult_ac divide_simps of_nat_diff)
   with n have "n \<le> exp (t / (s+t)) powr ((s-1)/2)"
@@ -1285,6 +1281,10 @@ proof
   also have "... < 1 / fact s"
     using B by (simp add: divide_simps)
   finally have "(n choose s) * p ^ (s choose 2) < 1 / fact s" .
+
+  define pr where "pr \<equiv> \<lambda>Red::nat set set. p ^ card Red * (1-p) ^ (n choose 2 - card Red)"
+  have pr01: "0 < pr Red" "pr Red \<le> 1" for Red \<comment> \<open>the inequality could be strict\<close>
+    using \<open>0<p\<close> \<open>p<1\<close> by (auto simp: mult_le_one power_le_one pr_def card\<Omega>)
 
   have partial_sum_pr: "(\<Sum>Red\<in>Pow EK. pr Red) = (1-p) ^ (n choose 2 - card EK)" 
     if "EK \<subseteq> all_edges W" for EK
@@ -1355,6 +1355,146 @@ proof
       using \<Omega>'_def m'_eq by blast
   qed
 
+  (*TRY EDGE COLOURING MAPS*)
+  define OMEGA :: "(nat set \<Rightarrow> nat) set" where "OMEGA \<equiv> (all_edges W) \<rightarrow>\<^sub>E {..<2}"
+  define COLORD where "COLORD \<equiv> \<lambda>F. \<lambda>f::nat set \<Rightarrow> nat. \<lambda>c. (f -` {c}) \<inter> F"
+  have COLORD: "COLORD F f c = {e \<in> F. f e = c}" for f c F
+    by (auto simp: COLORD_def)
+  have finite_COLORD[simp]: "finite (COLORD F f c)" if "finite F" for f c F
+    using COLORD_def that by blast
+  define PR where "PR \<equiv> \<lambda>F f. p ^ card (COLORD F f 0) * (1-p) ^ card (COLORD F f 1)"
+  have PR01: "0 < PR U f" "PR U f \<le> 1" for U f \<comment> \<open>the inequality could be strict\<close>
+    using \<open>0<p\<close> \<open>p<1\<close> by (auto simp: mult_le_one power_le_one PR_def card\<Omega>)
+  define M where "M \<equiv> point_measure OMEGA (PR (all_edges W))"
+  have space_eq: "space M = OMEGA"
+    by (simp add: M_def space_point_measure)
+  have sets_eq: "sets M = Pow OMEGA"
+    by (simp add: M_def sets_point_measure)
+  have fin_OMEGA[simp]: "finite OMEGA"
+    by (simp add: OMEGA_def finite_PiE \<open>finite W\<close> finite_all_edges)
+
+  have COLORD_insert: "COLORD (insert e F) f c = (if f e = c then insert e (COLORD F f c) else COLORD F f c)" 
+    for f e c F
+    by (auto simp add: COLORD)
+
+  have eq2: "{..<2} = {0, Suc 0}"
+    by (simp add: insert_commute lessThan_Suc numeral_2_eq_2)
+
+  have sum_PR_1 [simp]: "sum (PR U) (U \<rightarrow>\<^sub>E {..<2}) = 1" if "finite U" for U
+    using that
+  proof (induction U)
+    case empty
+    then show ?case
+      by (simp add: PR_def COLORD)
+  next
+    case (insert e F)
+    then have [simp]: "e \<notin> COLORD F f c" "COLORD F (f(e := c)) c' = COLORD F f c'" for f c c'
+      by (auto simp: COLORD)
+
+    show ?case
+      using insert
+      apply (simp add: PR_def COLORD_insert)
+      apply (simp add: PiE_insert_eq split: prod.split)
+      apply (subst sum.reindex)
+       apply (fastforce simp add: inj_on_def fun_eq_iff)
+      apply (simp add: Information.sum_cartesian_product' card_insert_if eq2 mult_ac flip: sum_distrib_left)
+      done
+  qed
+
+  interpret P: prob_space M
+  proof
+    have "sum (PR (all_edges W)) OMEGA = 1"
+      using OMEGA_def sum_PR_1 \<open>finite W\<close> finite_all_edges by blast
+    with PR01 show "emeasure M (space M) = 1" 
+      unfolding M_def
+      by (metis fin_OMEGA prob_space.emeasure_space_1 prob_space_point_measure zero_le
+       ennreal_1 linorder_not_less nle_le sum_ennreal)
+  qed
+
+  \<comment>\<open>the event to avoid: monochromatic cliques, given @{term "K \<subseteq> W"};
+      we are considering edges over the entire graph @{term W}\<close>
+  define mono where "mono \<equiv> \<lambda>c K. {f \<in> OMEGA. all_edges K \<subseteq> COLORD (all_edges W) f c}"
+  have mono_ev: "mono c K \<in> P.events" if "c<2" for K c
+    by (auto simp add: sets_eq mono_def \<Omega>_def)
+  have mono_sub_\<Omega>: "mono c K \<subseteq> OMEGA" if "c<2" for K c
+    using mono_ev sets_eq that by auto
+  have Umono_sub_\<Omega>: "(\<Union>K \<in> nsets W s. mono c K) \<subseteq> OMEGA" if "c<2" for c
+    using local.mono_def by blast
+
+  have emeasure_eq: "emeasure M C = (if C \<subseteq> OMEGA then (\<Sum>a\<in>C. ennreal (PR (all_edges W) a)) else 0)" for C
+    by (simp add: M_def emeasure_notin_sets emeasure_point_measure_finite sets_point_measure)
+
+  define pc where "pc \<equiv> \<lambda>c::nat. if c=0 then p else 1-p"
+  have COLORD_upd: "COLORD F (\<lambda>t\<in>F. if t \<in> G then c else f t) c' 
+        = (if c=c' then G \<union> COLORD (F-G) f c' else COLORD (F-G) f c')" if "G \<subseteq> F" for F G f c c'
+    using that by (auto simp add: COLORD)
+
+  have MA: "emeasure M (mono c K) = ennreal (pc c ^ (s choose 2))" if "K \<in> nsets W s" "c<2" for K c
+  proof -
+    have \<section>: "K \<subseteq> W" "finite K" "card K = s"
+      using that by (auto simp: nsets_def)
+    have "s \<le> n"
+      using "\<section>" \<open>finite W\<close> cardW card_mono by blast
+    then have sn2: "(s choose 2) \<le> (n choose 2)"
+      using binomial_mono by auto
+
+    have *: "{f \<in> OMEGA. all_edges K \<subseteq> COLORD (all_edges W) f c} = 
+          (\<Union>g \<in> (all_edges W - all_edges K) \<rightarrow>\<^sub>E {..<2}. {\<lambda>t \<in> all_edges W. if t \<in> all_edges K then c else g t})"
+      (is "?L = ?R")
+    proof
+      show "?L \<subseteq> ?R"
+      proof clarsimp
+        fix f
+        assume f: "f \<in> OMEGA" and c: "all_edges K \<subseteq> COLORD (all_edges W) f c"
+        show "\<exists>g\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. f = (\<lambda>t\<in>all_edges W. if t \<in> all_edges K then c else g t)"
+          apply (rule_tac x="restrict f (all_edges W - all_edges K)" in bexI)
+           apply (rule ext)
+          using c f
+           apply (simp add: OMEGA_def COLORD subset_iff)
+          apply blast
+          using OMEGA_def f by auto
+      qed
+      show "?R \<subseteq> ?L"
+        using that all_edges_mono[OF \<open>K \<subseteq> W\<close>]
+        by (auto simp add: COLORD OMEGA_def nsets_def PiE_iff)
+    qed
+
+    have [simp]: "card (all_edges K \<union> COLORD (all_edges W - all_edges K) f c)
+                = (s choose 2) + card (COLORD (all_edges W - all_edges K) f c)" for f c
+      using \<section> \<open>finite W\<close>
+      by (subst card_Un_disjoint) (auto simp: finite_all_edges COLORD card_all_edges)
+
+    have **: "PR (all_edges W) (\<lambda>t \<in> all_edges W. if t \<in> all_edges K then c else f t) 
+        = pc c ^ (s choose 2) * PR (all_edges W - all_edges K) f" 
+      if "f \<in> all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}" for f
+      using that all_edges_mono[OF \<open>K \<subseteq> W\<close>] p01 \<open>c<2\<close> \<section>
+      by (simp add: PR_def COLORD_upd pc_def power_add)
+
+    have A: "(\<Sum>F\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. (pc c ^ (s choose 2) * PR (all_edges W - all_edges K) F)) 
+              = (pc c ^ (s choose 2))"
+      by (simp add: ** \<open>finite W\<close> finite_all_edges flip: sum_distrib_left)
+    show ?thesis
+      using that p01
+      apply (simp add: emeasure_eq mono_sub_\<Omega>)
+      apply (simp add: mono_def *)
+      apply (subst sum.UNION_disjoint_family)
+      apply (simp add: \<open>finite W\<close> finite_PiE finite_all_edges)
+      apply blast
+       apply (simp add: disjoint_family_on_def)
+       apply (auto simp: fun_eq_iff)[1]
+       apply (metis DiffE PiE_E)
+      apply (simp add: **  )
+      apply (subst sum_ennreal)
+      apply (simp add: PR_def pc_def)
+      using A by presburger
+  qed
+  then have prob_AK: "P.prob (mono c K) = (pc c ^ (s choose 2))" 
+    if "K \<in> nsets W s" "c<2" for K c
+    using MA p01 that by (simp add: measure_eq_emeasure_eq_ennreal pc_def)
+
+
+
+  oops
   define M where "M \<equiv> point_measure \<Omega> pr"
   have space_eq: "space M = \<Omega>"
     by (simp add: M_def space_point_measure)
