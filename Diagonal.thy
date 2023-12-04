@@ -1410,19 +1410,24 @@ proof
       if "f \<in> all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}" for f
       using that all_edges_mono[OF \<open>K \<subseteq> W\<close>] p01 \<open>c<2\<close> \<section>
       by (simp add: pr_def coloured_upd pc_def power_add)
-    have "emeasure M (mono c K) 
-         = (\<Sum>x\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. ennreal (pc c ^ (r choose 2) * pr (all_edges W - all_edges K) x))"
-      using that p01
-      apply (simp add: emeasure_eq mono_sub_\<Omega>)
-      apply (simp add: mono_def *)
-      apply (subst sum.UNION_disjoint_family)
-         apply (simp add: \<open>finite W\<close> finite_PiE finite_all_edges)
-        apply blast
-       apply (simp add: disjoint_family_on_def)
-       apply (auto simp: fun_eq_iff)[1]
-       apply (metis DiffE PiE_E)
-      apply (simp add: pr_upd)
-      done
+    have "emeasure M (mono c K) = (\<Sum>f \<in> mono c K. ennreal (pr (all_edges W) f))"
+      using that by (simp add: emeasure_eq mono_sub_\<Omega>)
+    also have "... = (\<Sum>f\<in>(\<Union>g\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}.
+                            {\<lambda>t\<in>all_edges W. if t \<in> all_edges K then c else g t}). 
+                      ennreal (pr (all_edges W) f))" 
+      by (simp add: mono_def *)
+    also have "... = (\<Sum>g\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. 
+                        \<Sum>f\<in>{\<lambda>t\<in>all_edges W. if t \<in> all_edges K then c else g t}. 
+                           ennreal (pr (all_edges W) f))"
+    proof (rule sum.UNION_disjoint_family)
+      show "finite (all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2::nat})"
+        by (simp add: \<open>finite W\<close> finite_PiE finite_all_edges)
+      show "disjoint_family_on (\<lambda>g. {\<lambda>t\<in>all_edges W. if t \<in> all_edges K then c else g t}) (all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2})"
+        apply (simp add: disjoint_family_on_def fun_eq_iff)
+        by (metis DiffE PiE_E)
+    qed auto
+    also have "\<dots> = (\<Sum>x\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. ennreal (pc c ^ (r choose 2) * pr (all_edges W - all_edges K) x))"
+      by (simp add: pr_upd)
     also have "... = ennreal (\<Sum>f\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. 
                                 pc c ^ (r choose 2) * pr (all_edges W - all_edges K) f)"
       using pr01 pc0 sum.cong sum_ennreal by (smt (verit) mult_nonneg_nonneg zero_le_power)
@@ -2199,13 +2204,15 @@ proof -
       using assms by (metis Collect_subset W_def Wbig card_mono order_trans finV finite_subset)
     finally have "card U < card X"
       using \<open>card U = m\<close> by blast
+
+    have "RN k m > exp ((real k - 1) * (real m - 1) / (2*(k+m)))"           
+      using RN_lower_off_diag \<open>3 \<le> m\<close> \<open>m \<le> k\<close> by auto
+
     have cXm2: "2 powr (m/2) < card X"
       using cX RN_commute RN_lower_nodiag \<open>3 \<le> m\<close> \<open>m \<le> k\<close> by fastforce
     
     have card_Blue_\<mu>: "card (Neighbours Blue u \<inter> X) \<ge> \<mu> * card X" if "u \<in> U" for u
       using W_def \<open>U \<subseteq> W\<close> bluish_def that by auto
-
-    
 
     define \<sigma> where "\<sigma> \<equiv> blue_density U (X-U)"
 
