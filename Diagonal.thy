@@ -30,8 +30,11 @@ thm power_le_one_iff (*MOVE TO A BETTER PLACE AND GENERALISE THUS*)
 lemma power_le_one_iff: "0 \<le> a \<Longrightarrow> a ^ n \<le> 1 \<longleftrightarrow> (n = 0 \<or> a \<le> 1)"
   by (metis (mono_tags) gr0I nle_le one_le_power power_le_one self_le_power power.power.power_0)
 
-lemma power_less_one_iff: "0 \<le> a \<Longrightarrow> a ^ n < 1 \<longleftrightarrow> (n > 0 \<and> a < 1)" 
-  by (smt (verit, best) neq0_conv neq_iff not_le one_le_power power.simps power_eq_0_iff power_strict_decreasing)
+lemma power_less1_D: "a^n < 1 \<Longrightarrow> a < 1"
+  using not_le one_le_power by blast
+
+lemma power_less_one_iff: "0 \<le> a \<Longrightarrow> a ^ n < 1 \<longleftrightarrow> (n > 0 \<and> a < 1)"
+  by (metis (mono_tags) power_one power_strict_mono power_less1_D less_le_not_le neq0_conv power.power.power_0)
 
 end
 
@@ -202,7 +205,7 @@ proof
   assume "[A]\<^bsup>m\<^esup> = [A]\<^bsup>n\<^esup>"
   then
   show "m = n \<or> A = {}"
-    unfolding nsets_def by (smt (verit, del_insts) assms(1) mem_Collect_eq obtain_subset_with_card_n)
+    unfolding nsets_def using  obtain_subset_with_card_n [OF \<open>m \<le> card A\<close>] by blast
 qed (use assms in auto)
 
 lemma nsets_disjoint_iff:
@@ -528,8 +531,8 @@ next
   also have "\<dots> \<le> (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
     using * by (force intro: prod_mono)
   finally have "exp (- (3 * real b ^ 2) / (4*m)) \<le> (\<Prod>i<b. 1 - (1-\<sigma>) * i / (\<sigma> * (real m - real i)))" .
-  with EQ have "\<sigma>^b * exp (- (3 * real b ^ 2) / (4*m)) \<le> ((\<sigma>*m) gchoose b) * inverse (real m gchoose b)"
-    by (simp add: assms(1))
+  with EQ have "\<sigma>^b * exp (- (3 * real b ^ 2) / (4*m)) \<le> ((\<sigma>*m) gchoose b) * inverse (m gchoose b)"
+    by (simp add: assms)
   with \<sigma> bm show ?thesis
     by (simp add: field_split_simps flip: binomial_gbinomial)
 qed
@@ -892,7 +895,6 @@ lemma binomial_fact_pow: "(n choose s) * fact s \<le> n^s"
 proof (cases "s \<le> n")
   case True
   then show ?thesis
-    using fact_less_fact_power 
     by (smt (verit) binomial_fact_lemma mult.assoc mult.commute fact_div_fact_le_pow fact_nonzero nonzero_mult_div_cancel_right) 
 qed (simp add: binomial_eq_0)
 
