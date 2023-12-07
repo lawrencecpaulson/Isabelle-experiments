@@ -785,105 +785,57 @@ qed
 lemma Ramsey_number_zero: "\<not> is_Ramsey_number (Suc m) (Suc n) 0"
   by (metis RN_1 RN_le is_Ramsey_number_le not_one_le_zero Suc_le_eq One_nat_def zero_less_Suc)
 
-(* this might work better with the clique other treatment of Ramsey numbers, avoiding the need to encode pairs*)
-lemma Ramsey_number_times_lower: "\<not> is_Ramsey_number (Suc m) (Suc n) (m*n)"
+lemma Ramsey_number_times_lower: "\<not> is_clique_RN (TYPE(nat*nat)) (Suc m) (Suc n) (m*n)"
 proof
-  assume \<section>: "is_Ramsey_number (Suc m) (Suc n) (m*n)"
-  obtain \<phi> where \<phi>: "bij_betw \<phi> {..<m*n} ({..<m} \<times> {..<n})"
-    using bij_betw_iff_card
-    by (metis card_cartesian_product card_lessThan finite_cartesian_product finite_lessThan)
-  define edge :: "[nat \<times> nat, nat \<times> nat] \<Rightarrow> nat" where "edge \<equiv> \<lambda>(x,y) (x',y'). if y=y' then 0 else 1"
-  have edge2: "\<And>u v. edge u v < 2"
-    by (simp add: edge_def split: prod.split)
-  define f where "f \<equiv> upair_define (\<lambda>p q. edge (\<phi> p) (\<phi> q))"
-  have edge_commute: "\<And>p q. edge (\<phi> p) (\<phi> q) = edge (\<phi> q) (\<phi> p)"
-    by (simp add: edge_def split: prod.split)
-  then have f_apply: "\<And>p q. f{p,q} = edge (\<phi> p) (\<phi> q)"
-    by (simp add: f_def upair_define_apply)
-  then have "f \<in> [{..<m * n}]\<^bsup>2\<^esup> \<rightarrow> {..<2}"
-    by (auto simp: Pi_iff nsets_def card_2_iff edge2)
-  then obtain i where "i<2" and i: "monochromatic {..<m * n} ([Suc m, Suc n] ! i) 2 f i"
-    using \<section> by (force simp add: partn_lst_iff eval_nat_numeral)
-  have edge_apply: "\<And>u v. \<lbrakk>u \<in> {..<m}\<times>{..<n}; v \<in> {..<m}\<times>{..<n}\<rbrakk> 
-               \<Longrightarrow> edge u v = f{inv_into {..<m*n} \<phi> u, inv_into {..<m*n} \<phi> v}"
-    using \<phi> by (simp add: f_apply bij_betw_inv_into_right)
-
-  have apply\<phi>: "\<And>e x H. \<lbrakk>H \<subseteq> {..<m * n}; e \<in> [H]\<^bsup>2\<^esup>; x \<in> e\<rbrakk> \<Longrightarrow> \<phi> x \<in> {..<m} \<times> {..<n}"
-    using \<phi> by (auto simp: bij_betw_def ordered_nsets_2_eq)    
-  consider (0) "i=0" | (1) "i=1"
-    using \<open>i<2 \<close>by linarith
+  assume \<section>: "is_clique_RN (TYPE(nat*nat)) (Suc m) (Suc n) (m*n)"
+  define F where "F \<equiv> {{(x,y),(x',y)}| x x' y. x<m \<and> x'<m \<and> y<n}"
+  obtain K where Ksub: "K \<subseteq> {..<m} \<times> {..<n}" and Kcli: "clique_indep (Suc m) (Suc n) K F"
+    using \<section> unfolding is_clique_RN_def
+    by (metis card_cartesian_product card_lessThan finite_cartesian_product finite_lessThan le_refl)
+  define A where "A \<equiv> \<Union> ([K]\<^bsup>2\<^esup>)"
+  have cardA: "card A = card (\<Union> ([K]\<^bsup>2\<^esup>))"
+    using A_def card_image by blast
+  consider "card K = Suc m \<and> clique K F" | "card K = Suc n \<and> indep K F"
+    by (meson Kcli clique_indep_def)
   then show False
   proof cases
-    case 0
-    then obtain H where H: "H \<subseteq> {..<m * n}" "finite H" "card H = Suc m" 
-              and monoc: "\<And>u. u \<in> [H]\<^bsup>2\<^esup> \<Longrightarrow> f u = 0"
-      using i by (auto simp: monochromatic_def nsets_def image_subset_iff)
-    then have inj\<phi>: "inj_on \<phi> H"
-      by (meson \<phi> bij_betw_def inj_on_subset)
-    define A where "A \<equiv>  \<phi> ` \<Union> ([H]\<^bsup>2\<^esup>)"
-    have "edge u v = 0" if "u \<in> A" "v \<in> A" "u \<noteq> v" for u v
-      using that \<open>H \<subseteq> {..<m * n}\<close>  
-      apply (clarsimp simp add: A_def edge_apply apply\<phi> all_edges_def nsets2_eq_all_edges subset_iff bij_betw_inv_into_left [OF \<phi>])
-      by (rule monoc) auto
-    then have snd_eq: "snd u = snd v" if "u \<in> A" "v \<in> A" "u \<noteq> v" for u v
-      by (smt (verit) edge_def prod.collapse prod.simps(2) zero_neq_one that)
-    then have "inj_on fst A"
-      by (meson inj_onI prod.expand)
-    moreover have "fst ` A \<subseteq> {..<m}"
-      by (force simp: A_def image_iff dest!: apply\<phi> [OF \<open>H \<subseteq> {..<m * n}\<close>])
-    ultimately have "card A \<le> m"
-      by (metis card_image card_lessThan card_mono finite_lessThan)
-    have "card H \<ge> 2"
-      using Suc_le_eq H monoc by fastforce
-    have "Suc m \<le> card (\<Union> ([H]\<^bsup>2\<^esup>))"
-      using H subset_nsets_2 [OF \<open>card H \<ge> 2\<close>]
-      by (smt (verit) equalityI less_irrefl linorder_not_le mem_Collect_eq Union_iff nsets_def subset_iff)
-    moreover
-    have "inj_on \<phi> (\<Union> ([H]\<^bsup>2\<^esup>))"
-      using inj\<phi> unfolding inj_on_def ordered_nsets_2_eq by blast
-    then have "card A = card (\<Union> ([H]\<^bsup>2\<^esup>))"
-      using A_def card_image by blast
-    ultimately show False
-      using \<open>card A \<le> m\<close> by linarith
-  next
     case 1
-    then obtain H where H: "H \<subseteq> {..<m * n}" "finite H" "card H = Suc n" 
-              and monoc: "\<And>u. u \<in> [H]\<^bsup>2\<^esup> \<Longrightarrow> f u = Suc 0"
-      using i by (auto simp: monochromatic_def nsets_def image_subset_iff)
-    then have inj\<phi>: "inj_on \<phi> H"
-      by (meson \<phi> bij_betw_def inj_on_subset)
-    define A where "A \<equiv>  \<phi> ` \<Union> ([H]\<^bsup>2\<^esup>)"
-    have "edge u v = 1" if "u \<in> A" "v \<in> A" "u \<noteq> v" for u v
-      using that \<open>H \<subseteq> {..<m * n}\<close>  
-      apply (clarsimp simp add: A_def edge_apply apply\<phi> all_edges_def nsets2_eq_all_edges subset_iff bij_betw_inv_into_left [OF \<phi>])
-      by (rule monoc) auto
-    then have snd_eq: "snd u \<noteq> snd v" if "u \<in> A" "v \<in> A" "u \<noteq> v" for u v
-      by (smt (verit) edge_def prod.collapse prod.simps(2) zero_neq_one that)
+    then have "inj_on fst A" "fst ` A \<subseteq> {..<m}"
+      by (fastforce simp add: inj_on_def A_def clique_def nsets_2_eq F_def doubleton_eq_iff)+
+    then have "card A \<le> m"
+      by (metis card_image card_lessThan card_mono finite_lessThan)
+    have "card K \<ge> 2"
+        using "1" Ksub Suc_le_eq by fastforce
+    have "Suc m \<le> card (\<Union> ([K]\<^bsup>2\<^esup>))"
+      using 1 subset_nsets_2 [OF \<open>card K \<ge> 2\<close>]
+      by (metis Sup_le_iff comp_sgraph.wellformed nsets2_eq_all_edges order_class.order_eq_iff)
+    then show False
+      using \<open>card A \<le> m\<close> cardA by linarith
+  next
+    case 2
+    with Ksub have snd_eq: "snd u \<noteq> snd v" if "u \<in> A" "v \<in> A" "u \<noteq> v" for u v
+      using that unfolding A_def F_def indep_def nsets2_eq_all_edges
+      by (smt (verit, ccfv_threshold) Sup_le_iff comp_sgraph.wellformed lessThan_iff mem_Collect_eq mem_Sigma_iff  prod.collapse subsetD)
     then have "inj_on snd A"
-      by (meson inj_onI prod.expand)
+      by (meson inj_onI)
     moreover have "snd ` A \<subseteq> {..<n}"
-      by (force simp: A_def image_iff dest!: apply\<phi> [OF \<open>H \<subseteq> {..<m * n}\<close>])
+      using comp_sgraph.wellformed Ksub by (force simp: A_def nsets2_eq_all_edges)
     ultimately have "card A \<le> n"
       by (metis card_image card_lessThan card_mono finite_lessThan)
-    have "card H \<ge> 2"
-      using Suc_le_eq H monoc by fastforce
-    have "Suc n \<le> card (\<Union> ([H]\<^bsup>2\<^esup>))"
-      using H subset_nsets_2 [OF \<open>card H \<ge> 2\<close>]
-      by (smt (verit) equalityI less_irrefl linorder_not_le mem_Collect_eq Union_iff nsets_def subset_iff)
-    moreover
-    have "inj_on \<phi> (\<Union> ([H]\<^bsup>2\<^esup>))"
-      using inj\<phi> unfolding inj_on_def ordered_nsets_2_eq by blast
-    then have "card A = card (\<Union> ([H]\<^bsup>2\<^esup>))"
-      using A_def card_image by blast
-    ultimately show False
-      using \<open>card A \<le> n\<close> by linarith
+    have "card K \<ge> 2"
+      using "2" Ksub Suc_le_eq by fastforce
+    have "Suc n \<le> card (\<Union> ([K]\<^bsup>2\<^esup>))"
+      using 2 subset_nsets_2 [OF \<open>card K \<ge> 2\<close>]
+      by (metis Sup_le_iff comp_sgraph.wellformed nsets2_eq_all_edges order_class.order_eq_iff)
+    then show False
+      using A_def \<open>card A \<le> n\<close> not_less_eq_eq by blast
   qed
 qed
 
 theorem RN_times_lower:
   shows "RN (Suc m) (Suc n) > m*n"                              
-  using  Ramsey_number_times_lower is_Ramsey_number_RN partn_lst_greater_resource
-  using linorder_le_less_linear by blast
+  by (metis partn_lst_imp_is_clique_RN Ramsey_number_times_lower is_Ramsey_number_RN 
+            partn_lst_greater_resource linorder_le_less_linear)
 
 corollary RN_times_lower':
   shows "\<lbrakk>m>0; n>0\<rbrakk> \<Longrightarrow> RN m n > (m-1)*(n-1)"
