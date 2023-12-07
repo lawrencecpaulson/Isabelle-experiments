@@ -1,9 +1,18 @@
 theory General_Extras imports
-  "HOL-Library.Extended_Nonnegative_Real"  
   "HOL-Analysis.Analysis" 
 
 begin
 
+
+(*the corresponding strict inequality can be proved under the assumptions  "1 < s" "s \<le> n"
+  using fact_less_fact_power*)
+thm binomial_fact_lemma
+lemma binomial_fact_pow: "(n choose s) * fact s \<le> n^s"
+proof (cases "s \<le> n")
+  case True
+  then show ?thesis
+    by (smt (verit) binomial_fact_lemma mult.assoc mult.commute fact_div_fact_le_pow fact_nonzero nonzero_mult_div_cancel_right) 
+qed (simp add: binomial_eq_0)
 
 text \<open>useful for counting the number of edges containing a clique\<close>
 lemma card_Pow_diff:
@@ -37,7 +46,7 @@ lemma power_less_one_iff: "0 \<le> a \<Longrightarrow> a ^ n < 1 \<longleftright
 
 end
 
-lemma powr_less_one: "0 \<le> (a::real) \<Longrightarrow> a < 1 \<Longrightarrow> e>0 \<Longrightarrow> a powr e < 1 "
+lemma powr01_less_one: "0 \<le> (a::real) \<Longrightarrow> a < 1 \<Longrightarrow> e>0 \<Longrightarrow> a powr e < 1 "
   by (metis powr_less_mono2 powr_one_eq_one)
 
 
