@@ -2234,22 +2234,16 @@ proof -
       sorry
     then have 666: "real (6*k) \<le> real (2 + k*m)"
       by (metis mult.commute mult_le_mono of_nat_mono order.refl trans_le_add2)
+    then have km: "k + m \<le> Suc (k * m)"
+       using l_large lk \<open>m \<le> l\<close> by linarith
     have "real m / 2 * (2 + real k * (1 - \<mu>)) \<le> real m / 2 * (2 + real k)"
       using \<mu>01 by (simp add: algebra_simps)
     also have "\<dots> \<le> (k - 1) * (m - 1)"
-      using l_large lk 666
-      apply (simp add: algebra_simps)
-      apply (subst of_nat_diff)
-       apply (smt (verit, ccfv_threshold) Groups.add_ac(1) Groups.add_ac(2) Groups.mult_ac(2) Suc_1 Suc_eq_plus1 \<open>m \<le> k\<close> add_0 add_leD2 arith_special(3) diff_is_0_eq le_add_diff_inverse2 le_simps(3) lpowr23_ge3 m_def mult_2 mult_less_cancel2 nat_le_linear numeral_3_eq_3 rel_simps(70) trans_le_add1 zero_less_diff)
-      apply (simp add: algebra_simps)
-      apply (simp add: field_simps)
-      using \<open>m \<le> k\<close> by linarith
+      using l_large lk 666 \<open>m \<le> k\<close> by (simp add: algebra_simps of_nat_diff km)
     finally  have "(m/2) * (2 + k * (1-\<mu>)) \<le> RN k m"
       using RN_times_lower' [of k m] by linarith
     then have "\<mu> - 2/k \<le> (\<mu> * card X - card U) / (card X - card U)"
-      using kn0 \<mu>01 cardU_less_X
-      apply (simp add: field_simps)
-      by (smt (verit, ccfv_SIG) \<open>card U = m\<close> approximation_preproc_nat(13) cX nless_le of_nat_diff right_diff_distrib)
+      using kn0 \<mu>01 cardU_less_X \<open>card U = m\<close> cX by (simp add: of_nat_diff field_simps)
     also have "\<dots> \<le> \<sigma>"
       using \<open>m\<noteq>0\<close>
       apply (simp add: \<sigma>_def gen_density_def divide_simps)
