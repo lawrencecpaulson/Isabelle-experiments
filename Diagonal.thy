@@ -8,6 +8,7 @@ theory Diagonal imports
    
 begin
 
+
 text \<open>useful for counting the number of edges containing a clique\<close>
 lemma card_Pow_diff:
   assumes "A \<subseteq> B" "finite B"
@@ -28,13 +29,13 @@ begin
 
 thm power_le_one_iff (*MOVE TO A BETTER PLACE AND GENERALISE THUS*)
 lemma power_le_one_iff: "0 \<le> a \<Longrightarrow> a ^ n \<le> 1 \<longleftrightarrow> (n = 0 \<or> a \<le> 1)"
-  by (metis (mono_tags) gr0I nle_le one_le_power power_le_one self_le_power power.power.power_0)
+  by (metis (mono_tags) gr0I nle_le one_le_power power_le_one self_le_power power_0)
 
 lemma power_less1_D: "a^n < 1 \<Longrightarrow> a < 1"
   using not_le one_le_power by blast
 
 lemma power_less_one_iff: "0 \<le> a \<Longrightarrow> a ^ n < 1 \<longleftrightarrow> (n > 0 \<and> a < 1)"
-  by (metis (mono_tags) power_one power_strict_mono power_less1_D less_le_not_le neq0_conv power.power.power_0)
+  by (metis (mono_tags) power_one power_strict_mono power_less1_D less_le_not_le neq0_conv power_0)
 
 end
 
@@ -600,12 +601,12 @@ lemma is_clique_RN_imp_partn_lst:
   fixes U :: "'a itself"
   assumes r: "is_clique_RN U m n r" and inf: "infinite (UNIV::'a set)"
   shows "partn_lst {..<r} [m,n] 2"
-  unfolding partn_lst_def
+  unfolding partn_lst_iff 
 proof (intro strip)
   fix f
   assume f: "f \<in> [{..<r}]\<^bsup>2\<^esup> \<rightarrow> {..<length [m,n]}"
   obtain V::"'a set" where "finite V" and V: "card V = r"
-    by (metis assms infinite_arbitrarily_large)
+    by (metis inf infinite_arbitrarily_large)
   then obtain \<phi> where \<phi>: "bij_betw \<phi> V {..<r}"
     using to_nat_on_finite by blast
   have \<phi>_iff: "\<phi> v = \<phi> w \<longleftrightarrow> v=w" if "v\<in>V" "w\<in>V" for v w
@@ -615,7 +616,7 @@ proof (intro strip)
     by (metis r V \<open>finite V\<close> is_clique_RN_def nle_le)
   then consider (0) "card K = m" "clique K E" | (1) "card K = n" "indep K E"
     by (meson clique_indep_def)
-  then show "\<exists>i<length [m, n]. \<exists>H\<in>[{..<r}]\<^bsup>([m,n] ! i)\<^esup>. f ` [H]\<^bsup>2\<^esup> \<subseteq> {i}"
+  then have "\<exists>i<2. monochromatic {..<r} ([m, n] ! i) 2 f i"
   proof cases
     case 0
     have "f e = 0"
@@ -624,7 +625,7 @@ proof (intro strip)
       obtain x y where "x\<in>V" "y\<in>V" "e = {\<phi> x, \<phi> y} \<and> x \<noteq> y"
         using e \<open>K\<subseteq>V\<close> \<phi> by (fastforce simp: card_2_iff)
       then show ?thesis
-        using e 0
+        using e 0 
         apply (simp add: \<phi>_iff clique_def E_def doubleton_eq_iff image_iff)
         by (metis \<phi>_iff insert_commute)
     qed
@@ -639,8 +640,8 @@ proof (intro strip)
         by (metis "0"(1) \<open>K \<subseteq> V\<close> \<phi> bij_betw_same_card bij_betw_subset)
     qed
     ultimately show ?thesis
-      apply (simp add: image_subset_iff)
-      by (metis (mono_tags, lifting) mem_Collect_eq nsets_def nth_Cons_0 numeral_2_eq_2 pos2)
+      apply (simp add: image_subset_iff monochromatic_def)
+      by (metis (mono_tags, lifting) mem_Collect_eq nsets_def nth_Cons_0 pos2)
   next
     case 1
    have "f e = Suc 0"
@@ -666,8 +667,10 @@ proof (intro strip)
         by (metis "1"(1) \<open>K \<subseteq> V\<close> \<phi> bij_betw_same_card bij_betw_subset)
     qed 
     ultimately show ?thesis
-      by (metis length_Cons lessI list.size(3) nth_Cons_0 nth_Cons_Suc)
+      by (metis less_2_cases_iff monochromatic_def nth_Cons_0 nth_Cons_Suc)
   qed
+  then show "\<exists>i<length [m,n]. monochromatic {..<r} ([m, n] ! i) 2 f i"
+    by (simp add: numeral_2_eq_2)
 qed
 
 lemma partn_lst_imp_is_clique_RN: 
@@ -771,7 +774,7 @@ lemma clique_iff_indep [simp]: "K \<subseteq> V \<Longrightarrow> clique K (all_
 lemma is_Ramsey_number_commute:
   assumes "is_Ramsey_number m n r"
   shows "is_Ramsey_number n m r"
-  unfolding partn_lst_def
+  unfolding partn_lst_iff
 proof (intro strip)
   fix f 
   assume f: "f \<in> [{..<r}]\<^bsup>2\<^esup> \<rightarrow> {..<length [n, m]}"
@@ -784,7 +787,8 @@ proof (intro strip)
     by (auto simp: nsets_def)
   then have fless2: "\<forall>x\<in>[H]\<^bsup>2\<^esup>. f x < Suc (Suc 0)"
     using funcset_mem [OF f] nsets_mono by force
-  show "\<exists>i<length [n, m]. \<exists>H\<in>[{..<r}]\<^bsup>([n,m] ! i)\<^esup>. f ` [H]\<^bsup>2\<^esup> \<subseteq> {i}"
+  show "\<exists>i<length [n, m]. monochromatic {..<r} ([n,m] ! i) 2 f i"
+    unfolding monochromatic_def
   proof (intro exI bexI conjI)
     show "f ` [H]\<^bsup>2\<^esup> \<subseteq> {1-i}"
       using H fless2 by (fastforce simp: f'_def)
@@ -886,8 +890,7 @@ lemma indep_iff: "F \<subseteq> all_edges K \<Longrightarrow> indep K F \<longle
   by (auto simp: indep_def all_edges_def card_2_iff)
 
 lemma all_edges_empty_iff: "all_edges K = {} \<longleftrightarrow> (\<exists>v. K \<subseteq> {v})"
-  apply (simp add: all_edges_def card_2_iff subset_iff)
-  by (metis insert_iff singleton_iff)
+  using clique_iff [OF empty_subsetI] by (metis clique_def empty_iff singleton_iff subset_iff)
 
 (*the corresponding strict inequality can be proved under the assumptions  "1 < s" "s \<le> n"
   using fact_less_fact_power*)
@@ -1618,6 +1621,10 @@ text \<open>Cliques of a given number of vertices; the definition of clique from
 definition size_clique :: "nat \<Rightarrow> 'a set \<Rightarrow> 'a set set \<Rightarrow> bool" where
   "size_clique p K F \<equiv> card K = p \<and> clique K F \<and> K \<subseteq> V"
 
+lemma size_clique_smaller: "\<lbrakk>size_clique p K F; p' < p\<rbrakk> \<Longrightarrow> \<exists>K'. size_clique p' K' F"
+  unfolding size_clique_def
+  by (meson card_Ex_subset order.trans less_imp_le_nat smaller_clique)
+
 lemma size_clique_all_edges: "size_clique p K F \<Longrightarrow> all_edges K \<subseteq> F"
   by (auto simp: size_clique_def all_edges_def clique_def card_2_iff)
 
@@ -2190,26 +2197,31 @@ proof -
       using lpowr23_ge3 m_def by blast
     then have "k \<le> RN m k" and "m \<noteq> 0"
       using l_large lk RN_3plus \<open>3 \<le> m\<close> by force+
-    have "U \<subseteq> X"
+    then have "card X \<ge> l"
+      by (metis Collect_subset RN_commute W_def Wbig \<open>X\<subseteq>V\<close> card_mono order.trans finV finite_subset lk)
+    have "U \<noteq> X"
+      by (metis U_m_Blue \<open>card U = m\<close> \<open>l \<le> card X\<close> order.order_iff_strict no_Blue_clique size_clique_smaller)
+    then have "U \<subset> X"
       using W_def \<open>U \<subseteq> W\<close> by blast
-    with \<open>X\<subseteq>V\<close> have cardXU: "card (X - U) = card X - card U" "card U \<le> card X"
-      by (meson card_Diff_subset finV finite_subset card_mono)+
+    then have cardU_less_X: "card U < card X"
+      by (meson \<open>X\<subseteq>V\<close> finV finite_subset psubset_card_mono)
+    with \<open>X\<subseteq>V\<close> have cardXU: "card (X - U) = card X - card U"
+      by (meson \<open>U \<subset> X\<close> card_Diff_subset finV finite_subset psubset_imp_subset)
     have "k \<ge> 4"
       using l_large lk by linarith
     have "real l powr (2/3) \<le> real l powr 1"
       using l_large by (intro powr_mono) auto
+    then have "m \<le> l"
+      by (simp add: m_def)
     then have "m \<le> k"
-      using lk by (simp add: m_def)
+      using lk by auto
     then have "m < RN k m"
       using RN_commute RN_lower_self \<open>4 \<le> k\<close> \<open>k \<le> RN m k\<close> nat_less_le by force
     also have cX: "RN k m \<le> card X"
       using assms by (metis Collect_subset W_def Wbig card_mono order_trans finV finite_subset)
     finally have "card U < card X"
       using \<open>card U = m\<close> by blast
-
-    have "RN k m > exp ((real k - 1) * (real m - 1) / (2*(k+m)))"           
-      using RN_lower_off_diag \<open>3 \<le> m\<close> \<open>m \<le> k\<close> by auto
-
+ 
     have cXm2: "2 powr (m/2) < card X"
       using cX RN_commute RN_lower_nodiag \<open>3 \<le> m\<close> \<open>m \<le> k\<close> by fastforce
     
@@ -2218,36 +2230,26 @@ proof -
 
     define \<sigma> where "\<sigma> \<equiv> blue_density U (X-U)"
 
-    have "m\<ge>4"
+    have "m\<ge>6"
       sorry
-    then 
-    have M: "m * (k / 2 * (1 - \<mu>) + 1) \<le> card X"
-      using cXm2 RN_gt1[of k m] cX \<open>m\<ge>3\<close> \<open>k \<ge>4\<close> \<mu>01 powr_half_ge [of m]
+    then have 666: "real (6*k) \<le> real (2 + k*m)"
+      by (metis mult.commute mult_le_mono of_nat_mono order.refl trans_le_add2)
+    have "real m / 2 * (2 + real k * (1 - \<mu>)) \<le> real m / 2 * (2 + real k)"
+      using \<mu>01 by (simp add: algebra_simps)
+    also have "\<dots> \<le> (k - 1) * (m - 1)"
+      using l_large lk 666
+      apply (simp add: algebra_simps)
+      apply (subst of_nat_diff)
+       apply (smt (verit, ccfv_threshold) Groups.add_ac(1) Groups.add_ac(2) Groups.mult_ac(2) Suc_1 Suc_eq_plus1 \<open>m \<le> k\<close> add_0 add_leD2 arith_special(3) diff_is_0_eq le_add_diff_inverse2 le_simps(3) lpowr23_ge3 m_def mult_2 mult_less_cancel2 nat_le_linear numeral_3_eq_3 rel_simps(70) trans_le_add1 zero_less_diff)
+      apply (simp add: algebra_simps)
       apply (simp add: field_simps)
-
-      sorry
-    have "\<mu> - 2/k \<le> (\<mu> * card X - card U) / (card X - card U)"
-      using kn0 \<mu>01 M \<open>card U < card X\<close>
-      by (auto simp: \<open>card U = m\<close> field_split_simps mult_less_cancel_right1 of_nat_diff split: if_split_asm)
-
-    have "m * (k / 2 * (1 - \<mu>) + 1) \<le> m * (k / 2 + 1)"
-      using \<open>m\<ge>3\<close> \<open>k \<ge>4\<close> \<mu>01 by (simp add: divide_simps)
-
-    then
-    have "(m * (1 - \<mu>)) * k/2 \<le> (card X - card U)"
-    have "(card U * (1 - \<mu>)) * k/2 \<le> (card X - card U)"
-      using cardXU
-      apply (simp add: algebra_simps \<open>card U = m\<close>)
-
-      sorry
-    
-    have "\<mu> - 2/k \<le> (\<mu> * card X - card U) / (card X - card U)"
-      using kn0 \<mu>01 M
-
-
-
-
-      sorry
+      using \<open>m \<le> k\<close> by linarith
+    finally  have "(m/2) * (2 + k * (1-\<mu>)) \<le> RN k m"
+      using RN_times_lower' [of k m] by linarith
+    then have "\<mu> - 2/k \<le> (\<mu> * card X - card U) / (card X - card U)"
+      using kn0 \<mu>01 cardU_less_X
+      apply (simp add: field_simps)
+      by (smt (verit, ccfv_SIG) \<open>card U = m\<close> approximation_preproc_nat(13) cX nless_le of_nat_diff right_diff_distrib)
     also have "\<dots> \<le> \<sigma>"
       using \<open>m\<noteq>0\<close>
       apply (simp add: \<sigma>_def gen_density_def divide_simps)
@@ -2258,7 +2260,6 @@ proof -
       apply (metis \<open>card U = m\<close> card.infinite card_less_sym_Diff less_nat_zero_code)
       apply (metis of_nat_less_0_iff of_nat_mult)
       apply (simp add: cardXU)
-
 
       sorry
     finally have "\<mu> - 2/k \<le> \<sigma>" .
