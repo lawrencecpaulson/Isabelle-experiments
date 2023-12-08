@@ -259,6 +259,14 @@ lemma all_edges_betw_un_Un2:
   "all_edges_betw_un X (Y \<union> Z) = all_edges_betw_un X Y \<union> all_edges_betw_un X Z"
   by (auto simp: all_edges_betw_un_def)
 
+lemma all_edges_betw_un_diff1:
+  "Z \<subseteq> Y \<Longrightarrow> all_edges_betw_un (X - Y) Z = all_edges_betw_un X Z - all_edges_betw_un Y Z"
+  by (fastforce simp: all_edges_betw_un_def doubleton_eq_iff)
+
+lemma all_edges_betw_un_diff2:
+  "X \<subseteq> Z \<Longrightarrow> all_edges_betw_un X (Y - Z) = all_edges_betw_un X Y - all_edges_betw_un X Z"
+  by (fastforce simp: all_edges_betw_un_def doubleton_eq_iff)
+
 lemma finite_all_edges_betw_un:
   assumes "finite X" "finite Y"
   shows "finite (all_edges_betw_un X Y)"
@@ -272,6 +280,14 @@ lemma all_edges_betw_un_Union2:
   "all_edges_betw_un X (Union \<Y>) = (\<Union>Y\<in>\<Y>. all_edges_betw_un X Y)"
   by (auto simp: all_edges_betw_un_def)
 
+lemma all_edges_betw_un_UN1:
+  "all_edges_betw_un (\<Union>i\<in>I. X i) Y = (\<Union>i\<in>I. all_edges_betw_un (X i) Y)"
+  by (auto simp: all_edges_betw_un_def)
+
+lemma all_edges_betw_un_UN2:
+  "all_edges_betw_un X (\<Union>i\<in>I. Y i) = (\<Union>i\<in>I. all_edges_betw_un X (Y i))"
+  by (auto simp: all_edges_betw_un_def)
+
 lemma all_edges_betw_un_mono1:
   "Y \<subseteq> Z \<Longrightarrow> all_edges_betw_un Y X \<subseteq> all_edges_betw_un Z X"
   by (auto simp: all_edges_betw_un_def)
@@ -279,6 +295,7 @@ lemma all_edges_betw_un_mono1:
 lemma all_edges_betw_un_mono2:
   "Y \<subseteq> Z \<Longrightarrow> all_edges_betw_un X Y \<subseteq> all_edges_betw_un X Z"
   by (auto simp: all_edges_betw_un_def)
+
 
 text \<open>this notion, mentioned on Page 3, is a little vague: "a graph on vertex set @{term"S \<union> T"} 
 that contains all edges incident to @{term"S"}"\<close>
@@ -297,6 +314,10 @@ context sgraph
 begin
 
 declare singleton_not_edge [simp]
+
+lemma Neighbours_eq_all_edges_betw_un:
+  "Neighbours E x = \<Union> (all_edges_betw_un V {x}) - {x}"
+  using wellformed by (auto simp: Neighbours_def all_edges_betw_un_def insert_commute )
 
 lemma book_insert: 
   "book (insert v S) T F \<longleftrightarrow> book S T F \<and> v \<notin> T \<and> all_edges_betw_un {v} (S \<union> T) \<subseteq> F"
@@ -408,7 +429,9 @@ lemma Red_Blue_RN:
 
 
 text \<open>for calculating the perimeter p\<close>
-definition "gen_density \<equiv> \<lambda>C X Y. card (C \<inter> all_edges_betw_un X Y) / (card X * card Y)"
+definition "edge_card \<equiv> \<lambda>C X Y. card (C \<inter> all_edges_betw_un X Y)"
+
+definition "gen_density \<equiv> \<lambda>C X Y. edge_card C X Y / (card X * card Y)"
 
 abbreviation "red_density X Y \<equiv> gen_density Red X Y"
 abbreviation "blue_density X Y \<equiv> gen_density Blue X Y"
@@ -424,7 +447,7 @@ proof (cases "finite X \<and> finite Y")
   also have "\<dots> \<le> card (all_edges_between X Y)"
     by (simp add: all_edges_betw_un_iff_mk_edge card_image_le finite_all_edges_between')
   finally show ?thesis
-    by (simp add: gen_density_def edge_density_def divide_right_mono)
+    by (simp add: gen_density_def edge_card_def edge_density_def divide_right_mono)
 qed (auto simp: gen_density_def edge_density_def)
 
 lemma red_density_le1: "red_density X Y \<le> 1"
@@ -910,15 +933,73 @@ proof -
  
     have cXm2: "2 powr (m/2) < card X"
       by (smt (verit, best) RN_commute RN_lower_nodiag \<open>6 \<le> m\<close> \<open>m \<le> k\<close> add_leE cX numeral_Bit0 of_nat_mono)
-    
+
+
     have card_Blue_\<mu>: "card (Neighbours Blue u \<inter> X) \<ge> \<mu> * card X" if "u \<in> U" for u
       using W_def \<open>U \<subseteq> W\<close> bluish_def that by auto
+
+    have "card U * (\<mu> * card X - card U) \<le> m * \<mu> * card X - m^2"
+      by (simp add: \<open>card U = m\<close> power2_eq_square right_diff_distrib)
+    also have "... \<le> m * \<mu> * card X - card (Blue \<inter> all_edges_betw_un U U)"
+    proof -
+      have "card (Blue \<inter> all_edges_betw_un U U) \<le> card (all_edges_betw_un U U)"
+        by (meson Int_lower2 all_uedges_betw_subset card_mono fin_edges finite_subset)
+      also have "\<dots> \<le> m^2"
+        by (metis \<open>U \<subseteq> V\<close> \<open>card U = m\<close> finV finite_subset max_all_edges_betw_un power2_eq_square)
+      finally show ?thesis
+        by linarith
+    qed
+    also have "... \<le> real (card (Blue \<inter> all_edges_betw_un U X)) - real (card (Blue \<inter> all_edges_betw_un U U))"
+    proof -
+      have "\<mu> * real (card X) \<le> card (Blue \<inter> all_edges_betw_un {u} X)" if "u \<in> U" for u
+      proof -
+        have "inj_on (\<lambda>x. {u,x}) (Neighbours Blue u \<inter> X)"
+          by (simp add: doubleton_eq_iff inj_on_def)
+        moreover have "(\<lambda>x. {u,x}) ` (Neighbours Blue u \<inter> X) \<subseteq> Blue \<inter> all_edges_betw_un {u} X"
+          using Blue_E by (auto simp: Neighbours_def all_edges_betw_un_def)
+        ultimately have "card (Neighbours Blue u \<inter> X) \<le> card (Blue \<inter> all_edges_betw_un {u} X)"
+          by (metis Blue_E card_image card_mono fin_edges finite_Int infinite_super less_le_not_le)
+        moreover have "bluish X u" 
+          using W_def \<open>U \<subseteq> W\<close> that by blast
+        ultimately show ?thesis
+          using bluish_def by auto
+      qed
+      then have "\<mu> * real (card X) * card U \<le> card (\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} X)"
+        apply (subst card_UN_disjoint')
+          apply (auto simp: )
+          apply (simp add: all_edges_betw_un_def)
+        defer
+        apply (metis Red_Blue_all complete fin_edges finite_Int finite_Un)
+        using \<open>U \<subseteq> V\<close> finV finite_subset apply blast
+        apply (simp add: Groups.mult_ac(2) sum_bounded_below)
+
+          sorry
+      moreover have "card (\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} X) = card (Blue \<inter> all_edges_betw_un U X)"
+        apply (simp add: flip: Int_UN_distrib)
+        using all_edges_betw_un_UN1
+        by (metis UN_singleton)
+      ultimately have "real m * \<mu> * real (card X) \<le> real (card (Blue \<inter> all_edges_betw_un U X))"
+        by (simp add: Groups.mult_ac(2) Groups.mult_ac(3) \<open>card U = m\<close>)
+      then show ?thesis
+        by simp
+    qed
+    also have "... \<le> card (Blue \<inter> all_edges_betw_un U X - Blue \<inter> all_edges_betw_un U U)"
+    proof -
+      have "Blue \<inter> all_edges_betw_un U U \<le> Blue \<inter> all_edges_betw_un U X"
+        by (meson Int_mono \<open>U \<subset> X\<close> all_edges_betw_un_mono2 order.refl psubset_imp_subset)
+      then show ?thesis
+        by (metis Int_commute Int_lower1 all_uedges_betw_subset card_Diff_subset card_mono fin_edges finite_subset of_nat_diff order.refl)
+    qed
+    also have "... \<le> edge_card Blue U (X-U)"
+      by (simp add: edge_card_def bluish_def all_edges_betw_un_diff2 Diff_Int_distrib)
+    finally have DD: "edge_card Blue U (X-U) \<ge> card U * (\<mu> * card X - card U)" .
 
     define \<sigma> where "\<sigma> \<equiv> blue_density U (X-U)"
     have 666: "real (6*k) \<le> real (2 + k*m)"
       by (metis \<open>m\<ge>6\<close> mult.commute mult_le_mono of_nat_mono order.refl trans_le_add2)
     then have km: "k + m \<le> Suc (k * m)"
-       using l_large lk \<open>m \<le> l\<close> by linarith
+      using l_large lk \<open>m \<le> l\<close> by linarith
+
     have "real m / 2 * (2 + real k * (1 - \<mu>)) \<le> real m / 2 * (2 + real k)"
       using \<mu>01 by (simp add: algebra_simps)
     also have "\<dots> \<le> (k - 1) * (m - 1)"
@@ -928,17 +1009,8 @@ proof -
     then have "\<mu> - 2/k \<le> (\<mu> * card X - card U) / (card X - card U)"
       using kn0 \<mu>01 cardU_less_X \<open>card U = m\<close> cX by (simp add: of_nat_diff field_simps)
     also have "\<dots> \<le> \<sigma>"
-      using \<open>m\<noteq>0\<close>
-      apply (simp add: \<sigma>_def gen_density_def divide_simps)
-      apply (auto simp: )
-      apply (metis of_nat_less_0_iff of_nat_mult)
-         defer
-      using \<open>card U = m\<close> \<open>m \<noteq> 0\<close> apply blast
-      apply (metis \<open>card U = m\<close> card.infinite card_less_sym_Diff less_nat_zero_code)
-      apply (metis of_nat_less_0_iff of_nat_mult)
-      apply (simp add: cardXU)
-
-      sorry
+      using \<open>m\<noteq>0\<close> \<open>card U = m\<close> cardU_less_X cardXU DD
+      by (simp add: \<sigma>_def gen_density_def field_simps mult_less_0_iff zero_less_mult_iff)
     finally have "\<mu> - 2/k \<le> \<sigma>" .
     show ?thesis
       sorry
