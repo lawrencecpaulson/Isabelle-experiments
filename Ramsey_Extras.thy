@@ -6,6 +6,7 @@ theory Ramsey_Extras imports
 
 begin
 
+(*NOT USED ATM*)
 definition "upair_define \<equiv> \<lambda>f e. THE u. \<exists>x y. e = {x,y} \<and> u = f x y"
 
 lemma upair_define_apply:
@@ -787,48 +788,33 @@ lemma Ramsey_number_zero: "\<not> is_Ramsey_number (Suc m) (Suc n) 0"
 
 lemma Ramsey_number_times_lower: "\<not> is_clique_RN (TYPE(nat*nat)) (Suc m) (Suc n) (m*n)"
 proof
-  assume \<section>: "is_clique_RN (TYPE(nat*nat)) (Suc m) (Suc n) (m*n)"
-  define F where "F \<equiv> {{(x,y),(x',y)}| x x' y. x<m \<and> x'<m \<and> y<n}"
-  obtain K where Ksub: "K \<subseteq> {..<m} \<times> {..<n}" and Kcli: "clique_indep (Suc m) (Suc n) K F"
-    using \<section> unfolding is_clique_RN_def
+  define edges where "edges \<equiv> {{(x,y),(x',y)}| x x' y. x<m \<and> x'<m \<and> y<n}"
+  assume "is_clique_RN (TYPE(nat*nat)) (Suc m) (Suc n) (m*n)"
+  then obtain K where K: "K \<subseteq> {..<m} \<times> {..<n}" and "clique_indep (Suc m) (Suc n) K edges"
+    unfolding is_clique_RN_def
     by (metis card_cartesian_product card_lessThan finite_cartesian_product finite_lessThan le_refl)
-  define A where "A \<equiv> \<Union> ([K]\<^bsup>2\<^esup>)"
-  have cardA: "card A = card (\<Union> ([K]\<^bsup>2\<^esup>))"
-    using A_def card_image by blast
-  consider "card K = Suc m \<and> clique K F" | "card K = Suc n \<and> indep K F"
-    by (meson Kcli clique_indep_def)
+  then consider "card K = Suc m \<and> clique K edges" | "card K = Suc n \<and> indep K edges"
+    by (meson clique_indep_def)
   then show False
   proof cases
     case 1
-    then have "inj_on fst A" "fst ` A \<subseteq> {..<m}"
-      by (fastforce simp add: inj_on_def A_def clique_def nsets_2_eq F_def doubleton_eq_iff)+
-    then have "card A \<le> m"
+    then have "inj_on fst K" "fst ` K \<subseteq> {..<m}"
+      using K by (auto simp: inj_on_def clique_def edges_def doubleton_eq_iff)
+    then have "card K \<le> m"
       by (metis card_image card_lessThan card_mono finite_lessThan)
-    have "card K \<ge> 2"
-        using "1" Ksub Suc_le_eq by fastforce
-    have "Suc m \<le> card (\<Union> ([K]\<^bsup>2\<^esup>))"
-      using 1 subset_nsets_2 [OF \<open>card K \<ge> 2\<close>]
-      by (metis Sup_le_iff comp_sgraph.wellformed nsets2_eq_all_edges order_class.order_eq_iff)
     then show False
-      using \<open>card A \<le> m\<close> cardA by linarith
+      by (simp add: "1")
   next
     case 2
-    with Ksub have snd_eq: "snd u \<noteq> snd v" if "u \<in> A" "v \<in> A" "u \<noteq> v" for u v
-      using that unfolding A_def F_def indep_def nsets2_eq_all_edges
-      by (smt (verit, ccfv_threshold) Sup_le_iff comp_sgraph.wellformed lessThan_iff mem_Collect_eq mem_Sigma_iff  prod.collapse subsetD)
-    then have "inj_on snd A"
+    then have snd_eq: "snd u \<noteq> snd v" if "u \<in> K" "v \<in> K" "u \<noteq> v" for u v
+      using that K unfolding edges_def indep_def
+      by (smt (verit, best) lessThan_iff mem_Collect_eq mem_Sigma_iff prod.exhaust_sel subsetD)
+    then have "inj_on snd K"
       by (meson inj_onI)
-    moreover have "snd ` A \<subseteq> {..<n}"
-      using comp_sgraph.wellformed Ksub by (force simp: A_def nsets2_eq_all_edges)
-    ultimately have "card A \<le> n"
-      by (metis card_image card_lessThan card_mono finite_lessThan)
-    have "card K \<ge> 2"
-      using "2" Ksub Suc_le_eq by fastforce
-    have "Suc n \<le> card (\<Union> ([K]\<^bsup>2\<^esup>))"
-      using 2 subset_nsets_2 [OF \<open>card K \<ge> 2\<close>]
-      by (metis Sup_le_iff comp_sgraph.wellformed nsets2_eq_all_edges order_class.order_eq_iff)
-    then show False
-      using A_def \<open>card A \<le> n\<close> not_less_eq_eq by blast
+    moreover have "snd ` K \<subseteq> {..<n}"
+      using comp_sgraph.wellformed K by auto
+    ultimately show False
+      by (metis "2" Suc_n_not_le_n card_inj_on_le card_lessThan finite_lessThan)
   qed
 qed
 
@@ -900,7 +886,7 @@ proof -
 qed
 
 
-text \<open>trying Andrew's sketch\<close> (* And the final bound can be sharpened per Andrew's suggestion*)
+text \<open>Andrew Thomason's proof\<close> (* And the final bound can be sharpened per Andrew's suggestion*)
 proposition Ramsey_number_lower_off_diag:  
   fixes n s::nat  
   assumes "s \<ge> 3" "t \<ge> 3" and n: "real n \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t)))"
