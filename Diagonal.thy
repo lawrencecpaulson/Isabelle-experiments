@@ -319,6 +319,14 @@ lemma Neighbours_eq_all_edges_betw_un:
   "Neighbours E x = \<Union> (all_edges_betw_un V {x}) - {x}"
   using wellformed by (auto simp: Neighbours_def all_edges_betw_un_def insert_commute )
 
+lemma Neighbours_eq_all_edges_betw_un':
+  "F \<subseteq> E \<Longrightarrow> Neighbours F x = \<Union> (all_edges_betw_un V {x} \<inter> F) - {x}"
+  using wellformed 
+  apply (auto simp: Neighbours_def all_edges_betw_un_def insert_commute )
+  apply (rule_tac x="{xa,x}" in bexI)
+   apply (force simp add: insert_commute all_edges_betw_un_def)+
+  done
+
 lemma book_insert: 
   "book (insert v S) T F \<longleftrightarrow> book S T F \<and> v \<notin> T \<and> all_edges_betw_un {v} (S \<union> T) \<subseteq> F"
   by (auto simp: book_def all_edges_betw_un_insert1 all_edges_betw_un_insert2 all_edges_betw_un_Un2 insert_commute subset_iff)
@@ -885,6 +893,46 @@ definition stepper_kind :: "nat \<Rightarrow> stepkind" where
 
 section \<open>Big blue steps: theorems\<close>
 
+lemma
+  assumes "finite A" "finite B" "C \<subseteq> E"
+  shows "gen_density C A B * card A * card B = (\<Sum>x\<in>B. card (Neighbours C x \<inter> A))"
+  using \<open>finite B\<close>
+proof (induction)
+  case empty
+  then show ?case
+    apply (simp add: )
+    sorry
+next
+  case (insert b B)
+  then show ?case
+    apply (simp add: gen_density_def edge_card_def all_edges_betw_un_insert2 split: if_split_asm)
+    apply (simp add: assms(1))
+     defer
+     apply (simp add: Int_Un_distrib)
+     apply (subst card_Un_disjnt)
+    using fin_edges apply blast
+       apply (simp add: assms(1) finite_all_edges_betw_un)
+      apply (simp add: disjnt_def all_edges_betw_un_def)
+      apply (auto simp: doubleton_eq_iff)[1]
+
+
+
+    sorry
+qed
+
+proof -
+have "C \<inter> all_edges_betw_un A B =
+        (\<Union>x\<in>B.
+              ((\<Union> (all_edges_betw_un V {x} \<inter> C) - {x}) \<inter>
+               A))"
+  sorry
+  show ?thesis
+  using assms
+  apply (simp add: gen_density_def edge_card_def Neighbours_eq_all_edges_betw_un')
+  apply clarify
+
+apply (subst Neighbours_eq_all_edges_betw_un')
+
 lemma Blue_4_1:
   defines "b \<equiv> l powr (1/4)"
   assumes "many_bluish X" "X\<subseteq>V"
@@ -938,60 +986,62 @@ proof -
     have card_Blue_\<mu>: "card (Neighbours Blue u \<inter> X) \<ge> \<mu> * card X" if "u \<in> U" for u
       using W_def \<open>U \<subseteq> W\<close> bluish_def that by auto
 
-    have "card U * (\<mu> * card X - card U) \<le> m * \<mu> * card X - m^2"
-      by (simp add: \<open>card U = m\<close> power2_eq_square right_diff_distrib)
-    also have "... \<le> m * \<mu> * card X - card (Blue \<inter> all_edges_betw_un U U)"
+    have "card U * (\<mu> * card X - card U) = m * (\<mu> * (card X - card U)) - (1-\<mu>) * m^2"
+      using cardU_less_X by (simp add: \<open>card U = m\<close> algebra_simps of_nat_diff numeral_2_eq_2)
+    also have "... \<le> real (card (Blue \<inter> all_edges_betw_un U (X-U)))"
     proof -
-      have "card (Blue \<inter> all_edges_betw_un U U) \<le> card (all_edges_betw_un U U)"
-        by (meson Int_lower2 all_uedges_betw_subset card_mono fin_edges finite_subset)
-      also have "\<dots> \<le> m^2"
-        by (metis \<open>U \<subseteq> V\<close> \<open>card U = m\<close> finV finite_subset max_all_edges_betw_un power2_eq_square)
-      finally show ?thesis
-        by linarith
-    qed
-    also have "... \<le> real (card (Blue \<inter> all_edges_betw_un U X)) - real (card (Blue \<inter> all_edges_betw_un U U))"
-    proof -
-      have "\<mu> * real (card X) \<le> card (Blue \<inter> all_edges_betw_un {u} X)" if "u \<in> U" for u
+      have "\<mu> * (card X - card U) \<le> card (Blue \<inter> all_edges_betw_un {u} (X-U)) + (1-\<mu>) * card U" 
+        if "u \<in> U" for u
       proof -
+        have NBU[simp]: "Neighbours Blue u \<inter> U = U - {u}"
+          using \<open>clique U Blue\<close> Red_Blue_all singleton_not_edge that 
+          by (force simp: Neighbours_def clique_def)
+
+        then have **: "(Neighbours Blue u \<inter> X) = (Neighbours Blue u \<inter> (X-U)) \<union> (U - {u})"
+          using \<open>U \<subset> X\<close> by blast
+        then have "card(Neighbours Blue u \<inter> X) = card(Neighbours Blue u \<inter> (X-U)) + (m - Suc 0)"
+          using \<open>card U = m\<close> NBU
+          by (metis Diff_Int_distrib Diff_disjoint Int_ac(3) One_nat_def \<open>U \<subseteq> V\<close> assms(3) card_Diff_singleton card_Un_disjoint finV finite_Diff finite_Int finite_subset that)
+        then have "\<mu> * (card X) \<le> real (card (Neighbours Blue u \<inter> (X-U))) + real (m - Suc 0)"
+          using card_Blue_\<mu> that by force
+
+        then have "\<mu> * (card X - card U) \<le> real (card (Neighbours Blue u \<inter> (X-U))) + real (m - Suc 0) - \<mu> *card U"
+          by (smt (verit) cardU_less_X nless_le of_nat_diff right_diff_distrib')
+        then have E: "\<mu> * (card X - card U) \<le> real (card (Neighbours Blue u \<inter> (X-U))) + (1-\<mu>) * card U"
+          using \<mu>01 by (simp add: \<open>card U = m\<close> left_diff_distrib)
+
+
         have "inj_on (\<lambda>x. {u,x}) (Neighbours Blue u \<inter> X)"
           by (simp add: doubleton_eq_iff inj_on_def)
-        moreover have "(\<lambda>x. {u,x}) ` (Neighbours Blue u \<inter> X) \<subseteq> Blue \<inter> all_edges_betw_un {u} X"
-          using Blue_E by (auto simp: Neighbours_def all_edges_betw_un_def)
-        ultimately have "card (Neighbours Blue u \<inter> X) \<le> card (Blue \<inter> all_edges_betw_un {u} X)"
-          by (metis Blue_E card_image card_mono fin_edges finite_Int infinite_super less_le_not_le)
-        moreover have "bluish X u" 
-          using W_def \<open>U \<subseteq> W\<close> that by blast
-        ultimately show ?thesis
-          using bluish_def by auto
+        moreover have "(\<lambda>x. {u,x}) ` (Neighbours Blue u \<inter> (X-U)) \<subseteq> Blue \<inter> all_edges_betw_un {u} (X-U)"
+          using Blue_E  by (auto simp: Neighbours_def all_edges_betw_un_def)
+        ultimately have "card (Neighbours Blue u \<inter> (X-U)) \<le> card (Blue \<inter> all_edges_betw_un {u} (X-U))"
+          by (metis "**" Blue_eq card_image card_mono complete fin_edges finite_Diff finite_Int inj_on_Un)
+        with E  show ?thesis
+          by auto
       qed
-      then have "\<mu> * real (card X) * card U \<le> card (\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} X)"
+      then have "(card U) * (\<mu> * real (card X - card U))
+             \<le> (\<Sum>x\<in>U. card (Blue \<inter> all_edges_betw_un {x} (X - U)) + (1-\<mu>) * card U)"
+        by (meson sum_bounded_below)
+      then have "m * (\<mu> * (card X - card U))
+             \<le> (\<Sum>x\<in>U. card (Blue \<inter> all_edges_betw_un {x} (X - U))) + (1-\<mu>) * m\<^sup>2"
+        apply (simp add: sum.distrib power2_eq_square \<open>card U = m\<close>)
+        by (smt (verit) more_arith_simps(11) mult_of_nat_commute)
+      also have "... \<le> card (\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X-U)) + (1-\<mu>) * m\<^sup>2"
         apply (subst card_UN_disjoint')
-          apply (auto simp: )
-          apply (simp add: all_edges_betw_un_def)
-        defer
-        apply (metis Red_Blue_all complete fin_edges finite_Int finite_Un)
-        using \<open>U \<subseteq> V\<close> finV finite_subset apply blast
-        apply (simp add: Groups.mult_ac(2) sum_bounded_below)
-
-          sorry
-      moreover have "card (\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} X) = card (Blue \<inter> all_edges_betw_un U X)"
-        apply (simp add: flip: Int_UN_distrib)
-        using all_edges_betw_un_UN1
-        by (metis UN_singleton)
-      ultimately have "real m * \<mu> * real (card X) \<le> real (card (Blue \<inter> all_edges_betw_un U X))"
-        by (simp add: Groups.mult_ac(2) Groups.mult_ac(3) \<open>card U = m\<close>)
-      then show ?thesis
+           apply (simp add: disjoint_family_on_def all_edges_betw_un_def)
+           apply (auto simp: )
+        using Blue_eq complete fin_edges apply blast
+        using \<open>U \<subseteq> V\<close> finV finite_subset by blast
+      finally have "m * (\<mu> * (card X - card U)) 
+                \<le> card (\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X - U)) + (1 - \<mu>) * m\<^sup>2" .
+      moreover have "(\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X - U)) = (Blue \<inter> all_edges_betw_un U (X-U))"
+        by (auto simp: all_edges_betw_un_def)
+      ultimately show ?thesis
         by simp
     qed
-    also have "... \<le> card (Blue \<inter> all_edges_betw_un U X - Blue \<inter> all_edges_betw_un U U)"
-    proof -
-      have "Blue \<inter> all_edges_betw_un U U \<le> Blue \<inter> all_edges_betw_un U X"
-        by (meson Int_mono \<open>U \<subset> X\<close> all_edges_betw_un_mono2 order.refl psubset_imp_subset)
-      then show ?thesis
-        by (metis Int_commute Int_lower1 all_uedges_betw_subset card_Diff_subset card_mono fin_edges finite_subset of_nat_diff order.refl)
-    qed
     also have "... \<le> edge_card Blue U (X-U)"
-      by (simp add: edge_card_def bluish_def all_edges_betw_un_diff2 Diff_Int_distrib)
+      by (simp add: edge_card_def)
     finally have DD: "edge_card Blue U (X-U) \<ge> card U * (\<mu> * card X - card U)" .
 
     define \<sigma> where "\<sigma> \<equiv> blue_density U (X-U)"
