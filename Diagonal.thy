@@ -196,6 +196,18 @@ definition Neighbours :: "'a set set \<Rightarrow> 'a \<Rightarrow> 'a set" wher
 lemma in_Neighbours_iff: "y \<in> Neighbours E x \<longleftrightarrow> {x,y} \<in> E"
   by (simp add: Neighbours_def)
 
+lemma finite_Neighbours:
+  assumes "finite E"
+  shows "finite (Neighbours E x)"
+proof -
+  have "Neighbours E x \<subseteq> Neighbours {X\<in>E. finite X} x"
+    by (auto simp: Neighbours_def)
+  also have "... \<subseteq> (\<Union>{X\<in>E. finite X})"
+    by (meson Union_iff in_Neighbours_iff insert_iff subset_iff)
+  finally show ?thesis
+    using assms finite_subset by fastforce
+qed
+
 lemma (in fin_sgraph) not_own_Neighbour: "E' \<subseteq> E \<Longrightarrow> x \<notin> Neighbours E' x"
   by (force simp: Neighbours_def singleton_not_edge)
 
@@ -238,7 +250,7 @@ lemma card_all_uedges_betw_le:
   shows "card (all_edges_betw_un X Y) \<le> card (all_edges_between X Y)"
   by (simp add: all_edges_betw_un_iff_mk_edge assms card_image_le finite_all_edges_between)
 
-lemma max_all_edges_betw_un: 
+lemma all_edges_betw_un_le: 
   assumes "finite X" "finite Y"
   shows "card (all_edges_betw_un X Y) \<le> card X * card Y"
   by (meson assms card_all_uedges_betw_le max_all_edges_between order_trans)
@@ -444,8 +456,33 @@ definition "gen_density \<equiv> \<lambda>C X Y. edge_card C X Y / (card X * car
 abbreviation "red_density X Y \<equiv> gen_density Red X Y"
 abbreviation "blue_density X Y \<equiv> gen_density Blue X Y"
 
-lemma red_density_ge0: "red_density X Y \<ge> 0"
+lemma edge_card_le: 
+  assumes "finite X" "finite Y"
+  shows "edge_card C X Y \<le> card X * card Y"
+unfolding edge_card_def
+  by (metis Int_lower2 all_edges_betw_un_le assms card_mono finite_all_edges_betw_un order_trans)
+
+lemma gen_density_ge0: "gen_density C X Y \<ge> 0"
   by (auto simp: gen_density_def)
+
+lemma gen_density_gt0: 
+  assumes "finite X" "finite Y" "{x,y} \<in> C" "x \<in> X" "y \<in> Y" "C \<subseteq> E"
+  shows "gen_density C X Y > 0"
+proof -
+  have xy: "{x,y} \<in> all_edges_betw_un X Y"
+    using assms by (auto simp: all_edges_betw_un_def)
+  moreover have "finite (all_edges_betw_un X Y)"
+    by (simp add: assms finite_all_edges_betw_un)
+  ultimately have "edge_card C X Y > 0"
+    by (metis IntI assms(3) card_0_eq edge_card_def emptyE finite_Int gr0I)
+  with xy show ?thesis
+    using assms gen_density_def less_eq_real_def by fastforce
+qed
+
+lemma gen_density_le1: "gen_density C X Y \<le> 1"
+  unfolding gen_density_def
+  by (smt (verit) card.infinite divide_le_eq_1 edge_card_le mult_eq_0_iff of_nat_le_0_iff of_nat_mono)
+
 
 lemma red_le_edge_density: "red_density X Y \<le> edge_density X Y"
 proof (cases "finite X \<and> finite Y")
@@ -457,9 +494,6 @@ proof (cases "finite X \<and> finite Y")
   finally show ?thesis
     by (simp add: gen_density_def edge_card_def edge_density_def divide_right_mono)
 qed (auto simp: gen_density_def edge_density_def)
-
-lemma red_density_le1: "red_density X Y \<le> 1"
-  by (meson edge_density_le1 order_trans red_le_edge_density)
 
 definition Weight :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> real" where
   "Weight \<equiv> \<lambda>X Y x y. inverse (card Y) * (card (Neighbours Red x \<inter> Neighbours Red y \<inter> Y)
@@ -480,7 +514,7 @@ lemma q0 [simp]: "q 0 = p0"
   by (simp add: q_def)
 
 lemma p0_01: "0 \<le> p0" "p0 \<le> 1"
-  by (simp_all add: p0_def red_density_ge0 red_density_le1)
+  by (simp_all add: p0_def gen_density_ge0 gen_density_le1)
 
 lemma epsk_n0: "epsk > 0"
   by (auto simp: epsk_def kn0)
@@ -502,6 +536,13 @@ qed
 
 lemma q_Suc_diff: "q(Suc h) - q h = epsk * (1 + epsk)^h / k"
   by (simp add: q_def field_split_simps)
+
+lemma finite_Red [simp]: "finite Red"
+  by (metis Red_Blue_all complete fin_edges finite_Un)
+
+lemma finite_Blue [simp]: "finite Blue"
+  using Blue_E fin_edges finite_subset by blast
+
 
 definition "alpha \<equiv> \<lambda>h. q h - q (h-1)"
 
@@ -893,46 +934,6 @@ definition stepper_kind :: "nat \<Rightarrow> stepkind" where
 
 section \<open>Big blue steps: theorems\<close>
 
-lemma
-  assumes "finite A" "finite B" "C \<subseteq> E"
-  shows "gen_density C A B * card A * card B = (\<Sum>x\<in>B. card (Neighbours C x \<inter> A))"
-  using \<open>finite B\<close>
-proof (induction)
-  case empty
-  then show ?case
-    apply (simp add: )
-    sorry
-next
-  case (insert b B)
-  then show ?case
-    apply (simp add: gen_density_def edge_card_def all_edges_betw_un_insert2 split: if_split_asm)
-    apply (simp add: assms(1))
-     defer
-     apply (simp add: Int_Un_distrib)
-     apply (subst card_Un_disjnt)
-    using fin_edges apply blast
-       apply (simp add: assms(1) finite_all_edges_betw_un)
-      apply (simp add: disjnt_def all_edges_betw_un_def)
-      apply (auto simp: doubleton_eq_iff)[1]
-
-
-
-    sorry
-qed
-
-proof -
-have "C \<inter> all_edges_betw_un A B =
-        (\<Union>x\<in>B.
-              ((\<Union> (all_edges_betw_un V {x} \<inter> C) - {x}) \<inter>
-               A))"
-  sorry
-  show ?thesis
-  using assms
-  apply (simp add: gen_density_def edge_card_def Neighbours_eq_all_edges_betw_un')
-  apply clarify
-
-apply (subst Neighbours_eq_all_edges_betw_un')
-
 lemma Blue_4_1:
   defines "b \<equiv> l powr (1/4)"
   assumes "many_bluish X" "X\<subseteq>V"
@@ -950,6 +951,8 @@ proof -
     assume U_m_Blue: "size_clique m U Blue"
     then have "card U = m" and "clique U Blue" and "U \<subseteq> V"
       by (auto simp: size_clique_def)
+    then have "finite U"
+      using finV infinite_super by blast
     have "m \<ge> 6"
       using l_powr_23_ge6 m_def by blast
     then have "k \<le> RN m k" and "m \<noteq> 0"
@@ -978,61 +981,50 @@ proof -
       using assms by (metis Collect_subset W_def Wbig card_mono order_trans finV finite_subset)
     finally have "card U < card X"
       using \<open>card U = m\<close> by blast
- 
-    have cXm2: "2 powr (m/2) < card X"
-      by (smt (verit, best) RN_commute RN_lower_nodiag \<open>6 \<le> m\<close> \<open>m \<le> k\<close> add_leE cX numeral_Bit0 of_nat_mono)
-
-
-    have card_Blue_\<mu>: "card (Neighbours Blue u \<inter> X) \<ge> \<mu> * card X" if "u \<in> U" for u
-      using W_def \<open>U \<subseteq> W\<close> bluish_def that by auto
-
-    have "card U * (\<mu> * card X - card U) = m * (\<mu> * (card X - card U)) - (1-\<mu>) * m^2"
+    text \<open>First part of (10)\<close>
+    have "card U * (\<mu> * card X - card U) = m * (\<mu> * (card X - card U)) - (1-\<mu>) * m\<^sup>2"
       using cardU_less_X by (simp add: \<open>card U = m\<close> algebra_simps of_nat_diff numeral_2_eq_2)
     also have "... \<le> real (card (Blue \<inter> all_edges_betw_un U (X-U)))"
     proof -
-      have "\<mu> * (card X - card U) \<le> card (Blue \<inter> all_edges_betw_un {u} (X-U)) + (1-\<mu>) * card U" 
+      have dfam: "disjoint_family_on (\<lambda>u. Blue \<inter> all_edges_betw_un {u} (X-U)) U"
+        by (auto simp add: disjoint_family_on_def all_edges_betw_un_def)
+      have "\<mu> * (card X - card U) \<le> card (Blue \<inter> all_edges_betw_un {u} (X-U)) + (1-\<mu>) * m" 
         if "u \<in> U" for u
       proof -
-        have NBU[simp]: "Neighbours Blue u \<inter> U = U - {u}"
+        have NBU: "Neighbours Blue u \<inter> U = U - {u}"
           using \<open>clique U Blue\<close> Red_Blue_all singleton_not_edge that 
           by (force simp: Neighbours_def clique_def)
-
-        then have **: "(Neighbours Blue u \<inter> X) = (Neighbours Blue u \<inter> (X-U)) \<union> (U - {u})"
+        then have NBX_split: "(Neighbours Blue u \<inter> X) = (Neighbours Blue u \<inter> (X-U)) \<union> (U - {u})"
           using \<open>U \<subset> X\<close> by blast
-        then have "card(Neighbours Blue u \<inter> X) = card(Neighbours Blue u \<inter> (X-U)) + (m - Suc 0)"
-          using \<open>card U = m\<close> NBU
-          by (metis Diff_Int_distrib Diff_disjoint Int_ac(3) One_nat_def \<open>U \<subseteq> V\<close> assms(3) card_Diff_singleton card_Un_disjoint finV finite_Diff finite_Int finite_subset that)
+        moreover have "Neighbours Blue u \<inter> (X - U) \<inter> (U - {u}) = {}"
+          by blast
+        ultimately have "card(Neighbours Blue u \<inter> X) = card(Neighbours Blue u \<inter> (X-U)) + (m - Suc 0)"
+          by (simp add: card_Un_disjoint finite_Neighbours \<open>finite U\<close> \<open>card U = m\<close> that)
         then have "\<mu> * (card X) \<le> real (card (Neighbours Blue u \<inter> (X-U))) + real (m - Suc 0)"
-          using card_Blue_\<mu> that by force
-
-        then have "\<mu> * (card X - card U) \<le> real (card (Neighbours Blue u \<inter> (X-U))) + real (m - Suc 0) - \<mu> *card U"
+          using W_def \<open>U \<subseteq> W\<close> bluish_def that by force
+        then have "\<mu> * (card X - card U) 
+                \<le> real (card (Neighbours Blue u \<inter> (X-U))) + real (m - Suc 0) - \<mu> *card U"
           by (smt (verit) cardU_less_X nless_le of_nat_diff right_diff_distrib')
-        then have E: "\<mu> * (card X - card U) \<le> real (card (Neighbours Blue u \<inter> (X-U))) + (1-\<mu>) * card U"
+        then have *: "\<mu> * (card X - card U) \<le> real (card (Neighbours Blue u \<inter> (X-U))) + (1-\<mu>)*m"
           using \<mu>01 by (simp add: \<open>card U = m\<close> left_diff_distrib)
-
-
         have "inj_on (\<lambda>x. {u,x}) (Neighbours Blue u \<inter> X)"
           by (simp add: doubleton_eq_iff inj_on_def)
         moreover have "(\<lambda>x. {u,x}) ` (Neighbours Blue u \<inter> (X-U)) \<subseteq> Blue \<inter> all_edges_betw_un {u} (X-U)"
-          using Blue_E  by (auto simp: Neighbours_def all_edges_betw_un_def)
+          using Blue_E by (auto simp: Neighbours_def all_edges_betw_un_def)
         ultimately have "card (Neighbours Blue u \<inter> (X-U)) \<le> card (Blue \<inter> all_edges_betw_un {u} (X-U))"
-          by (metis "**" Blue_eq card_image card_mono complete fin_edges finite_Diff finite_Int inj_on_Un)
-        with E  show ?thesis
+          by (metis NBX_split Blue_eq card_image card_mono complete fin_edges finite_Diff finite_Int inj_on_Un)
+        with * show ?thesis
           by auto
       qed
       then have "(card U) * (\<mu> * real (card X - card U))
-             \<le> (\<Sum>x\<in>U. card (Blue \<inter> all_edges_betw_un {x} (X - U)) + (1-\<mu>) * card U)"
+             \<le> (\<Sum>x\<in>U. card (Blue \<inter> all_edges_betw_un {x} (X - U)) + (1-\<mu>) * m)"
         by (meson sum_bounded_below)
       then have "m * (\<mu> * (card X - card U))
              \<le> (\<Sum>x\<in>U. card (Blue \<inter> all_edges_betw_un {x} (X - U))) + (1-\<mu>) * m\<^sup>2"
         apply (simp add: sum.distrib power2_eq_square \<open>card U = m\<close>)
-        by (smt (verit) more_arith_simps(11) mult_of_nat_commute)
+        by (smt (verit) mult.assoc mult_of_nat_commute)
       also have "... \<le> card (\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X-U)) + (1-\<mu>) * m\<^sup>2"
-        apply (subst card_UN_disjoint')
-           apply (simp add: disjoint_family_on_def all_edges_betw_un_def)
-           apply (auto simp: )
-        using Blue_eq complete fin_edges apply blast
-        using \<open>U \<subseteq> V\<close> finV finite_subset by blast
+        by (simp add: dfam card_UN_disjoint' \<open>finite U\<close> flip: UN_simps)
       finally have "m * (\<mu> * (card X - card U)) 
                 \<le> card (\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X - U)) + (1 - \<mu>) * m\<^sup>2" .
       moreover have "(\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X - U)) = (Blue \<inter> all_edges_betw_un U (X-U))"
@@ -1043,8 +1035,8 @@ proof -
     also have "... \<le> edge_card Blue U (X-U)"
       by (simp add: edge_card_def)
     finally have DD: "edge_card Blue U (X-U) \<ge> card U * (\<mu> * card X - card U)" .
-
     define \<sigma> where "\<sigma> \<equiv> blue_density U (X-U)"
+    then have "\<sigma> \<ge> 0" by (simp add: gen_density_ge0)
     have 666: "real (6*k) \<le> real (2 + k*m)"
       by (metis \<open>m\<ge>6\<close> mult.commute mult_le_mono of_nat_mono order.refl trans_le_add2)
     then have km: "k + m \<le> Suc (k * m)"
@@ -1061,7 +1053,24 @@ proof -
     also have "\<dots> \<le> \<sigma>"
       using \<open>m\<noteq>0\<close> \<open>card U = m\<close> cardU_less_X cardXU DD
       by (simp add: \<sigma>_def gen_density_def field_simps mult_less_0_iff zero_less_mult_iff)
-    finally have "\<mu> - 2/k \<le> \<sigma>" .
+    finally have A: "\<mu> - 2/k \<le> \<sigma>" .
+
+    have "2 / (l powr (2/3 - 1/4)) \<le> \<sigma>"
+      apply (rule order_trans [OF _ A])
+      using kn0 l_large
+      apply (simp add: divide_simps)
+      apply (auto simp: algebra_simps)
+
+      using kn0 lk \<open>\<sigma> \<ge> 0\<close> A
+      sorry
+    moreover have "l powr (2/3) \<le> nat \<lceil>real l powr (2/3)\<rceil>"
+      using of_nat_ceiling by blast
+    ultimately have "b \<le> \<sigma> * m / 2"
+      using mult_left_mono \<open>\<sigma> \<ge> 0\<close> l_large kn0 lk unfolding b_def m_def powr_diff
+      apply (simp add: divide_simps)
+      by (smt (verit, best) mult_left_mono)
+    have "\<sigma> > 0"
+        sorry
     show ?thesis
       sorry
   qed auto
