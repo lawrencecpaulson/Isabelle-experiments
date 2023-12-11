@@ -405,7 +405,7 @@ lemma Blue_eq: "Blue = all_edges V - Red"
 lemma nontriv: "E \<noteq> {}"
   using Red_E bot.extremum_strict by blast
 
-lemma kn0: "k > 0"
+lemma kn0: "k > 0" and ln0: "l > 0"
   using lk l_large by auto
 
 lemma not_Red_Neighbour [simp]: "x \<notin> Neighbours Red x" and not_Blue_Neighbour [simp]: "x \<notin> Neighbours Blue x"
@@ -600,8 +600,8 @@ subsection \<open>Big blue steps: code\<close>
 definition bluish :: "'a set \<Rightarrow> 'a \<Rightarrow> bool" where
   "bluish \<equiv> \<lambda>X x. card (Neighbours Blue x \<inter> X) \<ge> \<mu> * card X"
 
-definition many_bluish :: "'a set \<Rightarrow> bool" where
-  "many_bluish \<equiv> \<lambda>X. card {x\<in>X. bluish X x} \<ge> RN k (nat \<lceil>l powr (2/3)\<rceil>)"
+definition many_bluish :: "[nat,'a set] \<Rightarrow> bool" where
+  "many_bluish \<equiv> \<lambda>l X. card {x\<in>X. bluish X x} \<ge> RN k (nat \<lceil>l powr (2/3)\<rceil>)"
 
 definition "good_blue_book \<equiv> \<lambda>X::'a set. \<lambda>(S,T). book S T Blue \<and> S\<subseteq>X \<and> T\<subseteq>X \<and> card T \<ge> (\<mu> ^ card S) * card X / 2"
 
@@ -649,7 +649,7 @@ lemma choose_blue_book_subset:
 
 text \<open>expressing the complicated preconditions inductively\<close>
 inductive big_blue
-  where "\<lbrakk>many_bluish X; good_blue_book X (S,T); card S = best_blue_book_card X\<rbrakk> \<Longrightarrow> big_blue (X,Y,A,B) (T, Y, A, B\<union>S)"
+  where "\<lbrakk>many_bluish l X; good_blue_book X (S,T); card S = best_blue_book_card X\<rbrakk> \<Longrightarrow> big_blue (X,Y,A,B) (T, Y, A, B\<union>S)"
 
 lemma big_blue_V_state: "\<lbrakk>big_blue U U'; V_state U\<rbrakk> \<Longrightarrow> V_state U'"
   by (force simp: good_blue_book_def V_state_def elim!: big_blue.cases)
@@ -671,7 +671,7 @@ definition central_vertex :: "'a set \<Rightarrow> 'a \<Rightarrow> bool" where
   "central_vertex \<equiv> \<lambda>X x. x \<in> X \<and> card (Neighbours Blue x \<inter> X) \<le> \<mu> * card X"
 
 lemma ex_central_vertex:
-  assumes "\<not> termination_condition X Y" "\<not> many_bluish X"
+  assumes "\<not> termination_condition X Y" "\<not> many_bluish l X"
   shows "\<exists>x. central_vertex X x"
 proof -
   have *: "real l powr (2/3) \<le> real l powr (3/4)"
@@ -696,7 +696,7 @@ lemma central_vx_is_best: "\<lbrakk>central_vertex X x; V_state(X,Y,A,B)\<rbrakk
   unfolding max_central_vx_def by (simp add: finite_central_vertex_set)
 
 lemma ex_best_central_vx: 
-  "\<lbrakk>\<not> termination_condition X Y; \<not> many_bluish X; V_state(X,Y,A,B)\<rbrakk> 
+  "\<lbrakk>\<not> termination_condition X Y; \<not> many_bluish l X; V_state(X,Y,A,B)\<rbrakk> 
   \<Longrightarrow> \<exists>x. central_vertex X x \<and> weight X Y x = max_central_vx X Y"
   unfolding max_central_vx_def
   by (metis empty_iff ex_central_vertex finite_central_vertex_set mem_Collect_eq obtains_MAX)
@@ -706,13 +706,13 @@ text \<open>it's necessary to make a specific choice; a relational treatment mig
 definition "choose_central_vx \<equiv> \<lambda>(X,Y,A,B). @x. central_vertex X x \<and> weight X Y x = max_central_vx X Y"
 
 lemma choose_central_vx_works: 
-  "\<lbrakk>\<not> termination_condition X Y; \<not> many_bluish X; V_state(X,Y,A,B)\<rbrakk> 
+  "\<lbrakk>\<not> termination_condition X Y; \<not> many_bluish l X; V_state(X,Y,A,B)\<rbrakk> 
   \<Longrightarrow> central_vertex X (choose_central_vx (X,Y,A,B)) \<and> weight X Y (choose_central_vx (X,Y,A,B)) = max_central_vx X Y"
   unfolding choose_central_vx_def
   using someI_ex [OF ex_best_central_vx] by force
 
 lemma choose_central_vx_X: 
-  "\<lbrakk>\<not> termination_condition X Y; \<not> many_bluish X; V_state(X,Y,A,B)\<rbrakk>  \<Longrightarrow> choose_central_vx (X,Y,A,B) \<in> X"
+  "\<lbrakk>\<not> termination_condition X Y; \<not> many_bluish l X; V_state(X,Y,A,B)\<rbrakk>  \<Longrightarrow> choose_central_vx (X,Y,A,B) \<in> X"
   using central_vertex_def choose_central_vx_works by presburger
 
 subsection \<open>Red step\<close>
@@ -724,7 +724,7 @@ inductive red_step
          \<Longrightarrow> red_step (X,Y,A,B) (Neighbours Red x \<inter> X, Neighbours Red x \<inter> Y, insert x A, B)"
 
 lemma red_step_V_state: 
-  assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "V_state (X,Y,A,B)"
+  assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish l X" "V_state (X,Y,A,B)"
   shows "V_state U'"
 proof -
   have "choose_central_vx (X, Y, A, B) \<in> V"
@@ -734,7 +734,7 @@ proof -
 qed
 
 lemma red_step_disjoint_state:
-  assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
+  assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish l X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
   shows "disjoint_state U'"
 proof -
   have "choose_central_vx (X, Y, A, B) \<in> X"
@@ -744,7 +744,7 @@ proof -
 qed
 
 lemma red_step_RB_state: 
-  assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "V_state (X,Y,A,B)" "RB_state (X,Y,A,B)"
+  assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish l X" "V_state (X,Y,A,B)" "RB_state (X,Y,A,B)"
   shows "RB_state U'"
 proof -
   define x where "x \<equiv> choose_central_vx (X, Y, A, B)"
@@ -766,7 +766,7 @@ proof -
 qed
 
 lemma red_step_valid_state: 
-  assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "valid_state (X,Y,A,B)"
+  assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish l X" "valid_state (X,Y,A,B)"
   shows "valid_state U'"
   by (meson assms red_step_RB_state red_step_V_state red_step_disjoint_state valid_state_def)
 
@@ -778,7 +778,7 @@ inductive density_boost
 
 
 lemma density_boost_V_state: 
-  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "V_state (X,Y,A,B)"
+  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish l X" "V_state (X,Y,A,B)"
   shows "V_state U'"
 proof -
   have "choose_central_vx (X, Y, A, B) \<in> V"
@@ -788,7 +788,7 @@ proof -
 qed
 
 lemma density_boost_disjoint_state:
-  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
+  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish l X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
   shows "disjoint_state U'"
 proof -
   have "choose_central_vx (X, Y, A, B) \<in> X"
@@ -798,7 +798,7 @@ proof -
 qed
 
 lemma density_boost_RB_state: 
-  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "V_state (X,Y,A,B)" 
+  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish l X" "V_state (X,Y,A,B)" 
     and rb: "RB_state (X,Y,A,B)"
   shows "RB_state U'"
 proof -
@@ -822,7 +822,7 @@ proof -
 qed
 
 lemma density_boost_valid_state:
-  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish X" "valid_state (X,Y,A,B)"
+  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish l X" "valid_state (X,Y,A,B)"
   shows "valid_state U'"
   by (meson assms density_boost_RB_state density_boost_V_state density_boost_disjoint_state valid_state_def)
 
@@ -830,7 +830,7 @@ subsection \<open>Steps 2–5 as a function\<close>
 
 definition next_state :: "'a config \<Rightarrow> 'a config" where
   "next_state \<equiv> \<lambda>(X,Y,A,B). 
-       if many_bluish X then let (S,T) = choose_blue_book(X,Y,A,B) in (T, Y, A, B\<union>S) 
+       if many_bluish l X then let (S,T) = choose_blue_book(X,Y,A,B) in (T, Y, A, B\<union>S) 
        else let x = choose_central_vx (X,Y,A,B) in
             if reddish X Y (red_density X Y) x then (Neighbours Red x \<inter> X, Neighbours Red x \<inter> Y, insert x A, B)
             else (Neighbours Blue x \<inter> X, Neighbours Red x \<inter> Y, A, insert x B)"
@@ -838,7 +838,7 @@ definition next_state :: "'a config \<Rightarrow> 'a config" where
 lemma next_state_valid:
   assumes "valid_state (X,Y,A,B)" "\<not> termination_condition X Y"
   shows "valid_state (next_state (X,Y,A,B))"
-proof (cases "many_bluish X")
+proof (cases "many_bluish l X")
   case True
   then have "big_blue (X,Y,A,B) (next_state (X,Y,A,B))"
     apply (simp add: next_state_def split: prod.split)
@@ -921,7 +921,7 @@ datatype stepkind = red_step | bblue_step | dboost_step | dreg_step
 
 definition next_state_kind :: "'a config \<Rightarrow> stepkind" where
   "next_state_kind \<equiv> \<lambda>(X,Y,A,B). 
-       if many_bluish X then bblue_step 
+       if many_bluish l X then bblue_step 
        else let x = choose_central_vx (X,Y,A,B) in
             if reddish X Y (red_density X Y) x then red_step
             else dboost_step"
@@ -934,11 +934,25 @@ definition stepper_kind :: "nat \<Rightarrow> stepkind" where
 
 section \<open>Big blue steps: theorems\<close>
 
+lemma 
+  fixes e::real
+  assumes "e > 0"
+  shows "\<forall>\<^sup>\<infinity>n. 1 / real n < e"
+proof
+  show "1 / real n < e"
+    if "nat (ceiling (1 + inverse e)) \<le> n" for n :: nat
+    using that assms
+    by (simp add: divide_simps mult_of_nat_commute)
+qed
+
+
 lemma Blue_4_1:
   defines "b \<equiv> l powr (1/4)"
-  assumes "many_bluish X" "X\<subseteq>V"
+  assumes "many_bluish l X" "X\<subseteq>V"
   shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>S T. good_blue_book S T \<and> real (card S) \<ge> b)"
 proof -
+  have l_super: "l \<ge> (4/\<mu>) powr (12/5)"
+    sorry
   define W where "W \<equiv> {x\<in>X. bluish X x}"
   define m where "m \<equiv> nat\<lceil>l powr (2/3)\<rceil>"
   have Wbig: "card W \<ge> RN k m"
@@ -1037,7 +1051,7 @@ proof -
     finally have DD: "edge_card Blue U (X-U) \<ge> card U * (\<mu> * card X - card U)" .
     define \<sigma> where "\<sigma> \<equiv> blue_density U (X-U)"
     then have "\<sigma> \<ge> 0" by (simp add: gen_density_ge0)
-    have 666: "real (6*k) \<le> real (2 + k*m)"
+    have 6: "real (6*k) \<le> real (2 + k*m)"
       by (metis \<open>m\<ge>6\<close> mult.commute mult_le_mono of_nat_mono order.refl trans_le_add2)
     then have km: "k + m \<le> Suc (k * m)"
       using l_large lk \<open>m \<le> l\<close> by linarith
@@ -1045,7 +1059,7 @@ proof -
     have "real m / 2 * (2 + real k * (1 - \<mu>)) \<le> real m / 2 * (2 + real k)"
       using \<mu>01 by (simp add: algebra_simps)
     also have "\<dots> \<le> (k - 1) * (m - 1)"
-      using l_large lk 666 \<open>m \<le> k\<close> by (simp add: algebra_simps of_nat_diff km)
+      using l_large lk 6 \<open>m \<le> k\<close> by (simp add: algebra_simps of_nat_diff km)
     finally  have "(m/2) * (2 + k * (1-\<mu>)) \<le> RN k m"
       using RN_times_lower' [of k m] by linarith
     then have "\<mu> - 2/k \<le> (\<mu> * card X - card U) / (card X - card U)"
@@ -1054,23 +1068,33 @@ proof -
       using \<open>m\<noteq>0\<close> \<open>card U = m\<close> cardU_less_X cardXU DD
       by (simp add: \<sigma>_def gen_density_def field_simps mult_less_0_iff zero_less_mult_iff)
     finally have A: "\<mu> - 2/k \<le> \<sigma>" .
-
-    have "2 / (l powr (2/3 - 1/4)) \<le> \<sigma>"
-      apply (rule order_trans [OF _ A])
-      using kn0 l_large
-      apply (simp add: divide_simps)
-      apply (auto simp: algebra_simps)
-
-      using kn0 lk \<open>\<sigma> \<ge> 0\<close> A
-      sorry
+    have "2 / l powr (2/3 - 1/4) \<le> \<mu> - 2/k"
+    proof -
+      have 512: "5/12 \<le> (1::real)"
+        by simp
+      with l_super have "l powr (5/12) \<ge> ((4 / \<mu>) powr (12/5)) powr (5/12)"
+        by (simp add: powr_mono2)
+      then have "2 / l powr (5/12) + 2 / l powr (5/12) \<le> \<mu>"
+        using  ln0 \<mu>01
+        by (simp add: powr_powr powr_divide field_simps)
+      then have "2 / l powr (5/12) + 2/l \<le> \<mu>"
+        using powr_mono [OF 512] ln0
+        by (smt (verit, best) of_nat_0 frac_le nat_less_real_le powr_gt_zero powr_one_gt_zero_iff)
+      then show ?thesis
+        using lk kn0 ln0
+        apply (simp add: algebra_simps)
+        by (smt (verit, ccfv_SIG) frac_le of_nat_0_less_iff of_nat_mono)
+    qed
+    with A have "2 / (l powr (2/3 - 1/4)) \<le> \<sigma>"
+      by simp
     moreover have "l powr (2/3) \<le> nat \<lceil>real l powr (2/3)\<rceil>"
       using of_nat_ceiling by blast
     ultimately have "b \<le> \<sigma> * m / 2"
       using mult_left_mono \<open>\<sigma> \<ge> 0\<close> l_large kn0 lk unfolding b_def m_def powr_diff
       apply (simp add: divide_simps)
       by (smt (verit, best) mult_left_mono)
-    have "\<sigma> > 0"
-        sorry
+    then have "\<sigma> > 0"
+      using \<open>0 \<le> \<sigma>\<close> \<open>6 \<le> m\<close> \<open>m \<le> l\<close> powr_gt_zero by (fastforce simp add: b_def)
     show ?thesis
       sorry
   qed auto
