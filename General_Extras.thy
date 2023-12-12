@@ -46,6 +46,48 @@ lemma power_less_one_iff: "0 \<le> a \<Longrightarrow> a ^ n < 1 \<longleftright
 
 end
 
+subsection \<open>So-called convexity laws\<close>
+
+lemma add_prod_le:
+  fixes f g :: "'a \<Rightarrow> 'b::linordered_idom"
+  assumes "finite I" "\<And>i. i \<in> I \<Longrightarrow> f i \<ge> 0 \<and> g i \<ge> 0" "I \<noteq> {}"
+  shows "(\<Prod>i\<in>I. f i) + (\<Prod>i\<in>I. g i) \<le> (\<Prod>i\<in>I. f i + g i)"
+  using assms
+proof (induction I)
+  case empty
+  then show ?case
+    by simp
+next
+  case (insert i I)
+  show ?case
+  proof (cases "I={}")
+    case False
+    then have "prod f I + prod g I \<le> (\<Prod>i\<in>I. f i + g i)"
+      using insert by force
+    then show ?thesis
+      apply (simp add: algebra_simps insert)
+      by (smt (verit) add.commute add_increasing add_mono insert.prems(1) insert_iff mult_left_mono nle_le prod_nonneg)
+  qed auto
+qed
+
+lemma sum_prod_le:
+  fixes f :: "nat \<Rightarrow> nat \<Rightarrow> 'b::linordered_idom"
+  assumes "\<And>i j. f i j \<ge> 0"
+  shows "(\<Sum>i<m. \<Prod>j\<le>n. f i j) \<le> (\<Prod>j\<le>n. \<Sum>i<m. f i j)"
+proof (induction m)
+  case 0
+  then show ?case by simp
+next
+  case (Suc m)
+  have "(\<Sum>i<Suc m. prod (f i) {..n}) = (\<Sum>i<m. prod (f i) {..n}) + prod (f m) {..n}"
+    by simp
+  also have "... \<le> (\<Prod>j\<le>n. \<Sum>i<m. f i j) + prod (f m) {..n}"
+    using Suc by linarith
+  also have "... \<le> (\<Prod>j\<le>n. (\<Sum>i<m. f i j) + f m j)"
+    by (intro add_prod_le) (auto simp: assms sum_nonneg)
+  finally show ?case by simp
+qed
+
 lemma powr01_less_one: "0 \<le> (a::real) \<Longrightarrow> a < 1 \<Longrightarrow> e>0 \<Longrightarrow> a powr e < 1 "
   by (metis powr_less_mono2 powr_one_eq_one)
 
@@ -127,6 +169,12 @@ proof -
   then show ?thesis
     by (simp add: binomial_def card_mono)
 qed
+
+lemma gbinomial_mono:
+  fixes k::nat and a::real
+  assumes "k \<le> a" "a \<le> b" shows "a gchoose k \<le> b gchoose k"
+  using assms
+  by (force simp add: gbinomial_prod_rev intro!: divide_right_mono prod_mono)
 
 lemma gbinomial_is_prod: "(a gchoose k) = (\<Prod>i<k. (a - of_nat i) / (1 + of_nat i))"
   unfolding gbinomial_prod_rev

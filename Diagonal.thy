@@ -934,6 +934,7 @@ definition stepper_kind :: "nat \<Rightarrow> stepkind" where
 
 section \<open>Big blue steps: theorems\<close>
 
+
 lemma 
   fixes e::real
   assumes "e > 0"
@@ -1108,9 +1109,34 @@ proof -
       using \<open>0 \<le> \<sigma>\<close> \<open>6 \<le> m\<close> \<open>m \<le> l\<close> powr_gt_zero by (fastforce simp add: b_def)
 
     text \<open>now for the material between (10) and (11)\<close>
-    have "inverse (m choose b) * (((\<sigma>*m) gchoose b)) * card (X-U) 
-        \<le> inverse (m choose b) * (\<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) choose b)"
-    sorry
+    have "inverse (m choose b) * (((\<sigma>*m) gchoose b) * card (X-U)) 
+        \<le> inverse (m choose b) * (\<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) gchoose b)"
+    proof (intro mult_left_mono)
+      have "(\<Prod>i<b. \<sigma>*m - i) * card (X-U) \<le> (\<Sum>v\<in>X-U. (\<Prod>i<b. real (card (Neighbours Blue v \<inter> U)) - i))"
+        sorry
+      then show "(\<sigma>*m gchoose b) * card (X-U) \<le> (\<Sum>v \<in> X-U. (card (Neighbours Blue v \<inter> U)) gchoose b)"
+        by (simp add: gbinomial_prod_rev lessThan_atLeast0 divide_right_mono flip: sum_divide_distrib)
+    qed auto
+
+    
+        have "(\<sigma> * real m gchoose b) \<le> (card (Neighbours Blue v \<inter> U) gchoose b)" 
+      if "v \<in> X-U" for v
+      using that
+      apply (intro gbinomial_mono)
+      using ble apply (force simp add: )
+      apply (simp add: \<sigma>_def \<open>card U = m\<close>)
+
+
+      apply (simp add: \<sigma>_def gen_density_def \<open>card U = m\<close>)
+
+      sorry
+    then
+
+      apply (metis (no_types, lifting) mult.commute sum_bounded_below)
+      by simp
+
+    
+    
     show ?thesis
       sorry
   qed auto
