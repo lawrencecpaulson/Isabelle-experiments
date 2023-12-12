@@ -947,12 +947,15 @@ qed
 
 
 lemma Blue_4_1:
-  defines "b \<equiv> l powr (1/4)"
+  defines "b \<equiv> nat (ceiling (l powr (1/4)))"
   assumes "many_bluish l X" "X\<subseteq>V"
   shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>S T. good_blue_book S T \<and> real (card S) \<ge> b)"
 proof -
-  have l_super: "l \<ge> (4/\<mu>) powr (12/5)"
+  have l_super: "l \<ge> (6/\<mu>) powr (12/5)" (* ultimately the Lemma must be restated to use a limiting argument:
+      we can choose a sufficiently large l*)
     sorry
+  have lpowr0[simp]: "0 \<le> \<lceil>l powr r\<rceil>" for r
+    by (metis ceiling_mono ceiling_zero powr_ge_pzero)
   define W where "W \<equiv> {x\<in>X. bluish X x}"
   define m where "m \<equiv> nat\<lceil>l powr (2/3)\<rceil>"
   have Wbig: "card W \<ge> RN k m"
@@ -983,7 +986,7 @@ proof -
       by (meson \<open>U \<subset> X\<close> card_Diff_subset finV finite_subset psubset_imp_subset)
     have "k \<ge> 4"
       using l_large lk by linarith
-    have "real l powr (2/3) \<le> real l powr 1"
+    have lpowr23: "real l powr (2/3) \<le> real l powr 1"
       using l_large by (intro powr_mono) auto
     then have "m \<le> l"
       by (simp add: m_def)
@@ -1068,33 +1071,46 @@ proof -
       using \<open>m\<noteq>0\<close> \<open>card U = m\<close> cardU_less_X cardXU DD
       by (simp add: \<sigma>_def gen_density_def field_simps mult_less_0_iff zero_less_mult_iff)
     finally have A: "\<mu> - 2/k \<le> \<sigma>" .
-    have "2 / l powr (2/3 - 1/4) \<le> \<mu> - 2/k"
+    have "2 * b / m \<le> \<mu> - 2/k"
     proof -
       have 512: "5/12 \<le> (1::real)"
         by simp
-      with l_super have "l powr (5/12) \<ge> ((4 / \<mu>) powr (12/5)) powr (5/12)"
+      with l_super have "l powr (5/12) \<ge> ((6/\<mu>) powr (12/5)) powr (5/12)"
         by (simp add: powr_mono2)
-      then have "2 / l powr (5/12) + 2 / l powr (5/12) \<le> \<mu>"
-        using  ln0 \<mu>01
-        by (simp add: powr_powr powr_divide field_simps)
-      then have "2 / l powr (5/12) + 2/l \<le> \<mu>"
-        using powr_mono [OF 512] ln0
-        by (smt (verit, best) of_nat_0 frac_le nat_less_real_le powr_gt_zero powr_one_gt_zero_iff)
+      then have lge: "l powr (5/12) \<ge> 6/\<mu>"
+        using \<mu>01(1) powr_powr by force
+      have "2 * b \<le> 2 * (l powr (1 / 4) + 1)"
+        by (simp add: b_def del: zero_le_ceiling distrib_left_numeral)
+      then have "2*b / m + 2/l \<le> 2 * (l powr (1/4) + 1) / l powr (2/3) + 2/l"
+        by (simp add: b_def m_def frac_le ln0 del: zero_le_ceiling distrib_left_numeral)
+      also have "... \<le> (2 * l powr (1/4) + 4) / l powr (2/3)"
+        using ln0 lpowr23 by (simp add: pos_le_divide_eq pos_divide_le_eq algebra_simps)
+      also have "... \<le> (2 * l powr (1/4) + 4 * l powr (1/4)) / l powr (2/3)"
+        by (smt (verit, ccfv_SIG) Num.of_nat_simps(2) diff_divide_distrib divide_pos_pos gr_one_powr l_large numeral_Bit1 numeral_One numeral_le_real_of_nat_iff of_nat_numeral)
+      also have "... = 6 / l powr (5/12)"
+        by (simp add: divide_simps flip: powr_add)
+      also have "... \<le> \<mu>"
+        using lge \<mu>01 by (simp add: divide_le_eq mult.commute)
+      finally have "2*b / m + 2/l \<le> \<mu>" .
       then show ?thesis
-        using lk kn0 ln0
+        using lk \<open>m\<noteq>0\<close> ln0
         apply (simp add: algebra_simps)
         by (smt (verit, ccfv_SIG) frac_le of_nat_0_less_iff of_nat_mono)
     qed
-    with A have "2 / (l powr (2/3 - 1/4)) \<le> \<sigma>"
+    with A have "2 / (m/b) \<le> \<sigma>"
       by simp
     moreover have "l powr (2/3) \<le> nat \<lceil>real l powr (2/3)\<rceil>"
       using of_nat_ceiling by blast
-    ultimately have "b \<le> \<sigma> * m / 2"
+    ultimately have ble: "b \<le> \<sigma> * m / 2"
       using mult_left_mono \<open>\<sigma> \<ge> 0\<close> l_large kn0 lk unfolding b_def m_def powr_diff
-      apply (simp add: divide_simps)
-      by (smt (verit, best) mult_left_mono)
+      by (simp add: divide_simps)
     then have "\<sigma> > 0"
       using \<open>0 \<le> \<sigma>\<close> \<open>6 \<le> m\<close> \<open>m \<le> l\<close> powr_gt_zero by (fastforce simp add: b_def)
+
+    text \<open>now for the material between (10) and (11)\<close>
+    have "inverse (m choose b) * (((\<sigma>*m) gchoose b)) * card (X-U) 
+        \<le> inverse (m choose b) * (\<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) choose b)"
+    sorry
     show ?thesis
       sorry
   qed auto
