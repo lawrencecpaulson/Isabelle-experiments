@@ -1160,6 +1160,16 @@ proof -
     have "inverse (m choose b) * (((\<sigma>*m) gchoose b) * card (X-U)) 
         \<le> inverse (m choose b) * (\<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) gchoose b)"
     proof (intro mult_left_mono)
+      have eeq: "edge_card Blue U (X-U) = (\<Sum>i\<in>X-U. card (Neighbours Blue i \<inter> U))"
+      proof (intro edge_card_eq_sum_Neighbours)
+        show "finite (X - U)"
+          by (meson \<open>X\<subseteq>V\<close> finV finite_Diff finite_subset)
+      qed (use disjnt_def Blue_E in auto)
+      have *: "(\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U)) /\<^sub>R real (card (X - U))) = \<sigma> * m"
+        using \<open>m>0\<close>
+        apply (simp add: \<sigma>_def flip: sum_distrib_left)
+        apply (simp add: gen_density_def \<open>card U = m\<close> eeq divide_simps)
+        done
       have "(\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U)) /\<^sub>R real (card (X - U))) gchoose b \<le> (\<Sum>i\<in>X - U.
             inverse (real (card (X - U))) * (real (card (Neighbours Blue i \<inter> U)) gchoose b))"
       proof (rule convex_on_sum)
@@ -1175,19 +1185,10 @@ proof -
           apply (auto simp: )
           sorry
       qed (use \<open>U \<subset> X\<close> in auto)
-      moreover have "(\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U)) /\<^sub>R real (card (X - U))) = \<sigma> * m"
-        using \<open>m>0\<close>
-        apply (simp add: \<sigma>_def flip: sum_distrib_left)
-        apply (simp add: gen_density_def \<open>card U = m\<close>)
-        apply (subst edge_card_eq_sum_Neighbours)
-        using Blue_E apply blast
-        using assms(3) finV finite_subset apply blast
-        apply (simp add: disjnt_def)
-        apply (simp add: divide_simps)
-        done
-      ultimately 
+      then 
       show "(\<sigma>*m gchoose b) * card (X-U) \<le> (\<Sum>v \<in> X-U. (card (Neighbours Blue v \<inter> U)) gchoose b)"
-        by (metis cardU_less_X cardXU mult_of_nat_commute of_nat_0_less_iff pos_le_divideR_eq real_scaleR_def vector_space_over_itself.scale_sum_right zero_less_diff)
+        unfolding *
+        by (simp add: cardU_less_X cardXU divide_simps flip: sum_distrib_left sum_divide_distrib)
     qed auto
     
         have "(\<sigma> * real m gchoose b) \<le> (card (Neighbours Blue v \<inter> U) gchoose b)" 
