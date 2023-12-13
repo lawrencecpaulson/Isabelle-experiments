@@ -456,6 +456,9 @@ definition "gen_density \<equiv> \<lambda>C X Y. edge_card C X Y / (card X * car
 abbreviation "red_density X Y \<equiv> gen_density Red X Y"
 abbreviation "blue_density X Y \<equiv> gen_density Blue X Y"
 
+lemma edge_card_empty [simp]: "edge_card C X {} = 0"
+  by (auto simp: edge_card_def)
+
 lemma edge_card_le: 
   assumes "finite X" "finite Y"
   shows "edge_card C X Y \<le> card X * card Y"
@@ -483,7 +486,6 @@ lemma gen_density_le1: "gen_density C X Y \<le> 1"
   unfolding gen_density_def
   by (smt (verit) card.infinite divide_le_eq_1 edge_card_le mult_eq_0_iff of_nat_le_0_iff of_nat_mono)
 
-
 lemma red_le_edge_density: "red_density X Y \<le> edge_density X Y"
 proof (cases "finite X \<and> finite Y")
   case True
@@ -494,6 +496,48 @@ proof (cases "finite X \<and> finite Y")
   finally show ?thesis
     by (simp add: gen_density_def edge_card_def edge_density_def divide_right_mono)
 qed (auto simp: gen_density_def edge_density_def)
+
+
+lemma edge_card_eq_sum_Neighbours:
+  assumes "C \<subseteq> E" and B: "finite B" "disjnt A B"
+  shows "edge_card C A B = (\<Sum>i\<in>B. card (Neighbours C i \<inter> A))"
+  using B
+proof (induction B)
+  case empty
+  then show ?case
+    by (auto simp: edge_card_def)
+next
+  case (insert b B)
+  have "finite C"
+    using assms(1) fin_edges finite_subset by blast
+  have "edge_card C A (insert b B) = card (C \<inter> ({{x,b} |x. x \<in> A} \<union> all_edges_betw_un A B))"
+    using \<open>C \<subseteq> E\<close> all_uedges_betw_subset
+    apply (simp add: edge_card_def all_edges_betw_un_insert2 Int_Un_distrib Int_ac)
+    by (metis (no_types, lifting) Int_absorb2 Int_assoc Un_commute)
+  also have "... = card ((C \<inter> ({{x,b} |x. x \<in> A}) \<union> (C \<inter> all_edges_betw_un A B)))"
+    by (simp add: Int_Un_distrib)
+  also have "... = card (C \<inter> {{x,b} |x. x \<in> A}) + card (C \<inter> all_edges_betw_un A B)"
+    apply (rule card_Un_disjnt)
+    using \<open>finite C\<close>
+      apply blast
+    using \<open>finite C\<close> apply auto[1]
+    using insert
+    apply (auto simp add: disjnt_iff all_edges_betw_un_def doubleton_eq_iff)
+    done
+  also have "... = card (Neighbours C b \<inter> A) + card (C \<inter> all_edges_betw_un A B)"
+    using \<open>C \<subseteq> E\<close>
+    apply (simp add: all_edges_betw_un_def Neighbours_def)
+
+  then show ?case
+    apply (simp add: )
+    sorry
+qed
+
+  apply (auto simp: edge_card_def)
+
+
+apply (auto simp: edge_card_def Neighbours_eq_all_edges_betw_un')
+
 
 definition Weight :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> real" where
   "Weight \<equiv> \<lambda>X Y x y. inverse (card Y) * (card (Neighbours Red x \<inter> Neighbours Red y \<inter> Y)
@@ -959,6 +1003,8 @@ proof -
     by (metis ceiling_mono ceiling_zero powr_ge_pzero)
   define W where "W \<equiv> {x\<in>X. bluish X x}"
   define m where "m \<equiv> nat\<lceil>l powr (2/3)\<rceil>"
+  have "m>0"
+    using l_powr_23_ge6 m_def by linarith
   have Wbig: "card W \<ge> RN k m"
     using assms by (simp add: W_def m_def many_bluish_def)
   with Red_Blue_RN obtain U where "U \<subseteq> W" and U: "size_clique k U Red \<or> size_clique m U Blue"
@@ -1055,6 +1101,8 @@ proof -
     finally have DD: "edge_card Blue U (X-U) \<ge> card U * (\<mu> * card X - card U)" .
     define \<sigma> where "\<sigma> \<equiv> blue_density U (X-U)"
     then have "\<sigma> \<ge> 0" by (simp add: gen_density_ge0)
+    have "\<sigma> \<le> 1"
+      by (simp add: \<sigma>_def gen_density_le1)
     have 6: "real (6*k) \<le> real (2 + k*m)"
       by (metis \<open>m\<ge>6\<close> mult.commute mult_le_mono of_nat_mono order.refl trans_le_add2)
     then have km: "k + m \<le> Suc (k * m)"
@@ -1112,9 +1160,43 @@ proof -
     have "inverse (m choose b) * (((\<sigma>*m) gchoose b) * card (X-U)) 
         \<le> inverse (m choose b) * (\<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) gchoose b)"
     proof (intro mult_left_mono)
-      have "(\<Prod>i<b. \<sigma>*m - i) * card (X-U) \<le> (\<Sum>v\<in>X-U. (\<Prod>i<b. real (card (Neighbours Blue v \<inter> U)) - i))"
-        sorry
-      then show "(\<sigma>*m gchoose b) * card (X-U) \<le> (\<Sum>v \<in> X-U. (card (Neighbours Blue v \<inter> U)) gchoose b)"
+      have "(\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U)) /\<^sub>R real (card (X - U))) gchoose b \<le> (\<Sum>i\<in>X - U.
+            inverse (real (card (X - U))) * (real (card (Neighbours Blue i \<inter> U)) gchoose b))"
+      proof (rule convex_on_sum)
+        show "finite (X - U)"
+          using cardU_less_X zero_less_diff by fastforce
+        show "convex_on {real b-1..} (\<lambda>a. a gchoose b)"
+          by (rule convex_gchoose)
+        show "(\<Sum>i\<in>X - U. inverse (real (card (X - U)))) = 1"
+          using cardU_less_X cardXU by force
+        show "real (card (Neighbours Blue i \<inter> U)) \<in> {real b - 1..}"
+          if "i \<in> X - U" for i 
+          using that ble \<open>\<sigma> \<le> 1\<close>
+          apply (auto simp: )
+          sorry
+      qed (use \<open>U \<subset> X\<close> in auto)
+      moreover have "(\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U)) /\<^sub>R real (card (X - U))) = \<sigma> * m"
+        using \<open>m>0\<close>
+        apply (simp add: \<sigma>_def flip: sum_distrib_left)
+        apply (simp add: gen_density_def \<open>card U = m\<close>)
+
+          sorry
+      then have "(\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U))) gchoose b 
+              \<le> (\<Sum>i\<in>X - U. (real (card (Neighbours Blue i \<inter> U)) gchoose b))"
+        using cardU_less_X cardXU
+        apply (simp add: mult_le_cancel_left flip: sum_distrib_left)
+        apply (erule rev_mp)
+
+        apply (subst (asm)mult_le_cancel_left_pos)
+        apply (subst (asm)mult_le_cancel_left)
+        using mult_le_cancel_left_pos
+mult_le_cancel_left
+        apply (simp add: algebra_simps)
+
+      show "(\<sigma>*m gchoose b) * card (X-U) \<le> (\<Sum>v \<in> X-U. (card (Neighbours Blue v \<inter> U)) gchoose b)"
+        apply (rule order_trans [OF _ ])
+         
+
         by (simp add: gbinomial_prod_rev lessThan_atLeast0 divide_right_mono flip: sum_divide_distrib)
     qed auto
 

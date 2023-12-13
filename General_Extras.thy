@@ -116,6 +116,7 @@ lemma mono_on_prod:
   by (induction I rule: infinite_finite_induct)
      (auto simp: mono_on_const Pi_iff prod_nonneg mono_on_mul)
 
+(* could this be generalised beyond set of real numbers?*)
 lemma convex_on_mul:
   fixes S::"real set"
   assumes "convex_on S f" "convex_on S g" "convex S"
@@ -129,7 +130,8 @@ proof (intro convex_on_linorderI)
   assume t: "0 < t" "t < 1"
     and xy: "x \<in> S" "y \<in> S"
   have "f x * g y + f y * g x \<le> f x * g x + f y * g y"
-    by (smt (verit, ccfv_SIG) assms(4) assms(5) mono_onD mult_right_mono right_diff_distrib' xy)
+    using \<open>mono_on S f\<close> \<open>mono_on S g\<close>
+    by (smt (verit, ccfv_SIG) mono_onD mult_right_mono right_diff_distrib' xy)
   then have "(1-t) * f x * g y + (1-t) * f y * g x \<le> (1-t) * f x * g x + (1-t) * f y * g y"
     using t
     by (metis (mono_tags, opaque_lifting) mult.assoc diff_gt_0_iff_gt distrib_left mult_le_cancel_left_pos)
@@ -156,7 +158,7 @@ proof (intro convex_on_linorderI)
     by simp
 qed
 
-lemma A: "convex_on {k-1..} (\<lambda>a. prod (\<lambda>i. a - of_nat i) {0..<k})"
+lemma convex_gchoose_aux: "convex_on {k-1..} (\<lambda>a. prod (\<lambda>i. a - of_nat i) {0..<k})"
 proof (induction k)
   case 0
   then show ?case 
@@ -172,8 +174,8 @@ next
     done
 qed
 
-lemma "convex_on {k-1..} (\<lambda>x. x gchoose k)"
-  by (simp add: gbinomial_prod_rev convex_on_cdiv A)
+lemma convex_gchoose: "convex_on {k-1..} (\<lambda>x. x gchoose k)"
+  by (simp add: gbinomial_prod_rev convex_on_cdiv convex_gchoose_aux)
 
 
 text \<open>Elementary inequalities about sums vs products\<close>
