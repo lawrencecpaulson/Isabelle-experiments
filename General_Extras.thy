@@ -1,5 +1,6 @@
 theory General_Extras imports
   "HOL-Analysis.Analysis" 
+  "HOL-ex.Sketch_and_Explore"
 
 begin
 
@@ -46,7 +47,136 @@ lemma power_less_one_iff: "0 \<le> a \<Longrightarrow> a ^ n < 1 \<longleftright
 
 end
 
-subsection \<open>So-called convexity laws\<close>
+subsection \<open>Convexity?\<close>
+
+(* the definition of convex in the library is incorrect: 
+  we speak of a convex function ONLY on a convex set*)
+
+lemma mono_on_ident: "mono_on S (\<lambda>x. x)"
+  by (simp add: mono_on_def)
+
+lemma mono_on_const:
+  fixes a :: "'a::order" shows "mono_on S (\<lambda>x. a)"
+  by (simp add: mono_on_def)
+
+lemma convex_on_iff: "convex_on S f = concave_on S (\<lambda>x. - f x)"
+  by (simp add: concave_on_def)
+
+lemma convex_on_ident: "convex_on S (\<lambda>x. x)"
+  by (simp add: convex_on_def)
+
+lemma concave_on_ident: "concave_on S (\<lambda>x. x)"
+  by (simp add: concave_on_iff)
+
+lemma convex_on_const: "convex_on S (\<lambda>x. a)"
+  by (simp add: convex_on_def flip: distrib_right)
+
+lemma concave_on_const: "concave_on S (\<lambda>x. a)"
+  by (simp add: concave_on_iff flip: distrib_right)
+
+lemma convex_on_diff:
+  assumes "convex_on S f"
+    and "concave_on S g"
+  shows "convex_on S (\<lambda>x. f x - g x)"
+  using assms concave_on_def convex_on_add by fastforce
+
+lemma concave_on_diff:
+  assumes "concave_on S f"
+    and "convex_on S g"
+  shows "concave_on S (\<lambda>x. f x - g x)"
+  using convex_on_diff assms concave_on_def by fastforce
+
+lemma concave_on_add:
+  assumes "concave_on S f"
+    and "concave_on S g"
+  shows "concave_on S (\<lambda>x. f x + g x)"
+  using assms convex_on_iff concave_on_diff concave_on_def by fastforce
+
+lemma convex_on_cdiv [intro]:
+  fixes c :: real
+  assumes "0 \<le> c" and "convex_on S f"
+  shows "convex_on S (\<lambda>x. f x / c)"
+  unfolding divide_inverse
+  using convex_on_cmul [of "inverse c" S f]
+  by (simp add: mult.commute assms)
+
+lemma mono_on_mul:
+  fixes f::"'a::ord \<Rightarrow> 'b::ordered_semiring"
+  assumes "mono_on S f" "mono_on S g"
+  assumes fty: "f \<in> S \<rightarrow> {0..}" and gty: "g \<in> S \<rightarrow> {0..}"
+  shows "mono_on S (\<lambda>x. f x * g x)"
+  using assms by (auto simp: Pi_iff monotone_on_def intro!: mult_mono)
+
+lemma mono_on_prod:
+  fixes f::"'i \<Rightarrow> 'a::ord \<Rightarrow> 'b::linordered_idom"
+  assumes "\<And>i. i \<in> I \<Longrightarrow> mono_on S (f i)" 
+  assumes "\<And>i. i \<in> I \<Longrightarrow> f i \<in> S \<rightarrow> {0..}" 
+  shows "mono_on S (\<lambda>x. prod (\<lambda>i. f i x) I)"
+  using assms
+  by (induction I rule: infinite_finite_induct)
+     (auto simp: mono_on_const Pi_iff prod_nonneg mono_on_mul)
+
+lemma convex_on_mul:
+  fixes S::"real set"
+  assumes "convex_on S f" "convex_on S g" "convex S"
+  assumes "mono_on S f" "mono_on S g"
+  assumes fty: "f \<in> S \<rightarrow> {0..}" and gty: "g \<in> S \<rightarrow> {0..}"
+  shows "convex_on S (\<lambda>x. f x * g x)"
+proof (intro convex_on_linorderI)
+  fix t :: real
+    and x :: real
+    and y :: real
+  assume t: "0 < t" "t < 1"
+    and xy: "x \<in> S" "y \<in> S"
+  have "f x * g y + f y * g x \<le> f x * g x + f y * g y"
+    by (smt (verit, ccfv_SIG) assms(4) assms(5) mono_onD mult_right_mono right_diff_distrib' xy)
+  then have "(1-t) * f x * g y + (1-t) * f y * g x \<le> (1-t) * f x * g x + (1-t) * f y * g y"
+    using t
+    by (metis (mono_tags, opaque_lifting) mult.assoc diff_gt_0_iff_gt distrib_left mult_le_cancel_left_pos)
+  then have *: "t * (1-t) * f x * g y + t * (1-t) * f y * g x \<le> t * (1-t) * f x * g x + t * (1-t) * f y * g y"
+    using t
+    by (metis (mono_tags, opaque_lifting) mult.assoc distrib_left mult_le_cancel_left_pos)  
+  have inS: "(1-t) * x + t * y \<in> S"
+    using t xy \<open>convex S\<close> by (simp add: convex_alt)
+  then have "f ((1-t) * x + t * y) * g ((1-t) * x + t * y) \<le> ((1-t) * f x + t * f y) * g ((1-t) * x + t * y)"
+    using convex_onD [OF \<open>convex_on S f\<close>, of t x y] t xy fty gty
+    apply (simp add: Pi_iff)
+    apply (intro mult_mono add_nonneg_nonneg)
+     apply (auto simp: zero_le_mult_iff)
+    done
+  also have "... \<le> ((1-t) * f x + t * f y) * ((1-t) * g x + t * g y)"
+    using convex_onD [OF \<open>convex_on S g\<close>, of t x y] t xy fty gty inS
+    apply (simp add: Pi_iff)
+    apply (intro mult_mono add_nonneg_nonneg)
+     apply (auto simp: zero_le_mult_iff)
+    done
+  also have "... \<le> (1-t) * (f x * g x) + t * (f y * g y)"
+    using * by (simp add: algebra_simps)
+  finally show "f ((1-t) *\<^sub>R x + t *\<^sub>R y) * g ((1-t) *\<^sub>R x + t *\<^sub>R y) \<le> (1-t) * (f x * g x) + t * (f y * g y)" 
+    by simp
+qed
+
+lemma A: "convex_on {k-1..} (\<lambda>a. prod (\<lambda>i. a - of_nat i) {0..<k})"
+proof (induction k)
+  case 0
+  then show ?case 
+    by (simp add: convex_on_def)
+next
+  case (Suc k)
+  then show ?case
+    apply (simp add: )
+    apply (intro convex_on_mul convex_on_diff convex_on_ident convex_on_const
+        concave_on_const mono_on_mul mono_on_prod)
+    using convex_on_subset apply fastforce
+        apply (auto simp add: Pi_iff prod_nonneg mono_onI)
+    done
+qed
+
+lemma "convex_on {k-1..} (\<lambda>x. x gchoose k)"
+  by (simp add: gbinomial_prod_rev convex_on_cdiv A)
+
+
+text \<open>Elementary inequalities about sums vs products\<close>
 
 lemma add_prod_le:
   fixes f g :: "'a \<Rightarrow> 'b::linordered_idom"
@@ -64,29 +194,38 @@ next
     case False
     then have "prod f I + prod g I \<le> (\<Prod>i\<in>I. f i + g i)"
       using insert by force
-    then show ?thesis
-      apply (simp add: algebra_simps insert)
-      by (smt (verit) add.commute add_increasing add_mono insert.prems(1) insert_iff mult_left_mono nle_le prod_nonneg)
+    moreover have "(\<Prod>i\<in>I. f i) \<le> (\<Prod>i\<in>I. f i + g i)"
+      by (simp add: insert.prems prod_mono)
+    moreover have "(\<Prod>i\<in>I. g i) \<le> (\<Prod>i\<in>I. f i + g i)"
+      by (simp add: insert.prems prod_mono)
+    ultimately show ?thesis
+      by (simp add: algebra_simps insert add_mono mult_left_mono)
   qed auto
 qed
 
 lemma sum_prod_le:
-  fixes f :: "nat \<Rightarrow> nat \<Rightarrow> 'b::linordered_idom"
-  assumes "\<And>i j. f i j \<ge> 0"
-  shows "(\<Sum>i<m. \<Prod>j\<le>n. f i j) \<le> (\<Prod>j\<le>n. \<Sum>i<m. f i j)"
-proof (induction m)
-  case 0
+  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c::linordered_idom"
+  assumes "finite I" "finite J" "J \<noteq> {}"
+  and fge0: "\<And>i j. \<lbrakk>i\<in>I; j\<in>J\<rbrakk> \<Longrightarrow> f i j \<ge> 0"
+  shows "(\<Sum>i\<in>I. \<Prod>j\<in>J. f i j) \<le> (\<Prod>j\<in>J. \<Sum>i\<in>I. f i j)"
+  using \<open>finite I\<close> fge0
+proof (induction I)
+  case empty
   then show ?case by simp
 next
-  case (Suc m)
-  have "(\<Sum>i<Suc m. prod (f i) {..n}) = (\<Sum>i<m. prod (f i) {..n}) + prod (f m) {..n}"
-    by simp
-  also have "... \<le> (\<Prod>j\<le>n. \<Sum>i<m. f i j) + prod (f m) {..n}"
-    using Suc by linarith
-  also have "... \<le> (\<Prod>j\<le>n. (\<Sum>i<m. f i j) + f m j)"
-    by (intro add_prod_le) (auto simp: assms sum_nonneg)
-  finally show ?case by simp
+  case (insert a I)
+  have "(\<Sum>i \<in> insert a I. prod (f i) J) = (\<Sum>i\<in>I. prod (f i) J) + prod (f a) J"
+    using insert.hyps by force
+  also have "... \<le> (\<Prod>j\<in>J. \<Sum>i\<in>I. f i j) + prod (f a) J"
+    by (simp add: insert)
+  also have "... \<le> (\<Prod>j\<in>J. (\<Sum>i\<in>I. f i j) + f a j)"
+    by (intro add_prod_le) (auto simp: assms insert sum_nonneg)
+  also have "... = (\<Prod>j\<in>J. \<Sum>i\<in>insert a I. f i j)"
+    by (simp add: add.commute insert.hyps)
+  finally show ?case .
 qed
+
+
 
 lemma powr01_less_one: "0 \<le> (a::real) \<Longrightarrow> a < 1 \<Longrightarrow> e>0 \<Longrightarrow> a powr e < 1 "
   by (metis powr_less_mono2 powr_one_eq_one)
