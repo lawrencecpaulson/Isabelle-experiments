@@ -510,33 +510,33 @@ next
   case (insert b B)
   have "finite C"
     using assms(1) fin_edges finite_subset by blast
+  have bij: "bij_betw (\<lambda>e. the_elem(e-{b})) (C \<inter> {{x, b} |x. x \<in> A}) (Neighbours C b \<inter> A)"
+    unfolding bij_betw_def
+  proof
+    have [simp]: "the_elem ({x, b} - {b}) = x" if "x \<in> A" for x
+      using insert.prems by (simp add: disjnt_iff insert_Diff_if that)
+    show "inj_on (\<lambda>e. the_elem (e - {b})) (C \<inter> {{x, b} |x. x \<in> A})"
+      by (auto simp: inj_on_def)
+    show "(\<lambda>e. the_elem (e - {b})) ` (C \<inter> {{x, b} |x. x \<in> A}) = Neighbours C b \<inter> A"
+      by (fastforce simp: Neighbours_def insert_commute image_iff Bex_def)
+  qed
   have "edge_card C A (insert b B) = card (C \<inter> ({{x,b} |x. x \<in> A} \<union> all_edges_betw_un A B))"
-    using \<open>C \<subseteq> E\<close> all_uedges_betw_subset
+    using \<open>C \<subseteq> E\<close> 
     apply (simp add: edge_card_def all_edges_betw_un_insert2 Int_Un_distrib Int_ac)
     by (metis (no_types, lifting) Int_absorb2 Int_assoc Un_commute)
   also have "... = card ((C \<inter> ({{x,b} |x. x \<in> A}) \<union> (C \<inter> all_edges_betw_un A B)))"
     by (simp add: Int_Un_distrib)
   also have "... = card (C \<inter> {{x,b} |x. x \<in> A}) + card (C \<inter> all_edges_betw_un A B)"
-    apply (rule card_Un_disjnt)
-    using \<open>finite C\<close>
-      apply blast
-    using \<open>finite C\<close> apply auto[1]
-    using insert
-    apply (auto simp add: disjnt_iff all_edges_betw_un_def doubleton_eq_iff)
-    done
+  proof (rule card_Un_disjnt)
+    show "disjnt (C \<inter> {{x, b} |x. x \<in> A}) (C \<inter> all_edges_betw_un A B)"
+      using insert by (auto simp add: disjnt_iff all_edges_betw_un_def doubleton_eq_iff)
+  qed (use \<open>finite C\<close> in auto)
   also have "... = card (Neighbours C b \<inter> A) + card (C \<inter> all_edges_betw_un A B)"
-    using \<open>C \<subseteq> E\<close>
-    apply (simp add: all_edges_betw_un_def Neighbours_def)
-
-  then show ?case
-    apply (simp add: )
-    sorry
+    using bij_betw_same_card [OF bij] by simp
+  also have "... = (\<Sum>i\<in>insert b B. card (Neighbours C i \<inter> A))"
+    using insert by (simp add: edge_card_def)
+  finally show ?case .
 qed
-
-  apply (auto simp: edge_card_def)
-
-
-apply (auto simp: edge_card_def Neighbours_eq_all_edges_betw_un')
 
 
 definition Weight :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> real" where
@@ -1179,27 +1179,16 @@ proof -
         using \<open>m>0\<close>
         apply (simp add: \<sigma>_def flip: sum_distrib_left)
         apply (simp add: gen_density_def \<open>card U = m\<close>)
-
-          sorry
-      then have "(\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U))) gchoose b 
-              \<le> (\<Sum>i\<in>X - U. (real (card (Neighbours Blue i \<inter> U)) gchoose b))"
-        using cardU_less_X cardXU
-        apply (simp add: mult_le_cancel_left flip: sum_distrib_left)
-        apply (erule rev_mp)
-
-        apply (subst (asm)mult_le_cancel_left_pos)
-        apply (subst (asm)mult_le_cancel_left)
-        using mult_le_cancel_left_pos
-mult_le_cancel_left
-        apply (simp add: algebra_simps)
-
+        apply (subst edge_card_eq_sum_Neighbours)
+        using Blue_E apply blast
+        using assms(3) finV finite_subset apply blast
+        apply (simp add: disjnt_def)
+        apply (simp add: divide_simps)
+        done
+      ultimately 
       show "(\<sigma>*m gchoose b) * card (X-U) \<le> (\<Sum>v \<in> X-U. (card (Neighbours Blue v \<inter> U)) gchoose b)"
-        apply (rule order_trans [OF _ ])
-         
-
-        by (simp add: gbinomial_prod_rev lessThan_atLeast0 divide_right_mono flip: sum_divide_distrib)
+        by (metis cardU_less_X cardXU mult_of_nat_commute of_nat_0_less_iff pos_le_divideR_eq real_scaleR_def vector_space_over_itself.scale_sum_right zero_less_diff)
     qed auto
-
     
         have "(\<sigma> * real m gchoose b) \<le> (card (Neighbours Blue v \<inter> U) gchoose b)" 
       if "v \<in> X-U" for v
@@ -1208,17 +1197,7 @@ mult_le_cancel_left
       using ble apply (force simp add: )
       apply (simp add: \<sigma>_def \<open>card U = m\<close>)
 
-
-      apply (simp add: \<sigma>_def gen_density_def \<open>card U = m\<close>)
-
       sorry
-    then
-
-      apply (metis (no_types, lifting) mult.commute sum_bounded_below)
-      by simp
-
-    
-    
     show ?thesis
       sorry
   qed auto
