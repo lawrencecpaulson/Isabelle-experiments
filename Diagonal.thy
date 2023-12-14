@@ -1157,7 +1157,7 @@ proof -
       using \<open>0 \<le> \<sigma>\<close> \<open>6 \<le> m\<close> \<open>m \<le> l\<close> powr_gt_zero by (fastforce simp add: b_def)
 
     text \<open>now for the material between (10) and (11)\<close>
-    have "inverse (m choose b) * (((\<sigma>*m) gchoose b) * card (X-U)) 
+    have E: "inverse (m choose b) * (((\<sigma>*m) gchoose b) * card (X-U)) 
         \<le> inverse (m choose b) * (\<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) gchoose b)"
     proof (intro mult_left_mono)
       have eeq: "edge_card Blue U (X-U) = (\<Sum>i\<in>X-U. card (Neighbours Blue i \<inter> U))"
@@ -1170,35 +1170,22 @@ proof -
         apply (simp add: \<sigma>_def flip: sum_distrib_left)
         apply (simp add: gen_density_def \<open>card U = m\<close> eeq divide_simps)
         done
-      have "(\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U)) /\<^sub>R real (card (X - U))) gchoose b \<le> (\<Sum>i\<in>X - U.
-            inverse (real (card (X - U))) * (real (card (Neighbours Blue i \<inter> U)) gchoose b))"
+      have "mbinomial (\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U)) /\<^sub>R (card (X - U))) b 
+         \<le> (\<Sum>i\<in>X - U. inverse (real (card (X - U))) * mbinomial (card (Neighbours Blue i \<inter> U)) b)"
       proof (rule convex_on_sum)
         show "finite (X - U)"
           using cardU_less_X zero_less_diff by fastforce
-        show "convex_on {real b-1..} (\<lambda>a. a gchoose b)"
-          by (rule convex_gchoose)
+        show "convex_on UNIV (\<lambda>a. mbinomial a b)"
+          using assms(1) convex_mbinomial ln0 by auto
         show "(\<Sum>i\<in>X - U. inverse (real (card (X - U)))) = 1"
           using cardU_less_X cardXU by force
-        show "real (card (Neighbours Blue i \<inter> U)) \<in> {real b - 1..}"
-          if "i \<in> X - U" for i 
-          using that ble \<open>\<sigma> \<le> 1\<close>
-          apply (auto simp: )
-          sorry
       qed (use \<open>U \<subset> X\<close> in auto)
       then 
       show "(\<sigma>*m gchoose b) * card (X-U) \<le> (\<Sum>v \<in> X-U. (card (Neighbours Blue v \<inter> U)) gchoose b)"
         unfolding *
-        by (simp add: cardU_less_X cardXU divide_simps flip: sum_distrib_left sum_divide_distrib)
+        using ble
+        by (simp add: cardU_less_X cardXU binomial_gbinomial divide_simps  flip: sum_distrib_left sum_divide_distrib)
     qed auto
-    
-        have "(\<sigma> * real m gchoose b) \<le> (card (Neighbours Blue v \<inter> U) gchoose b)" 
-      if "v \<in> X-U" for v
-      using that
-      apply (intro gbinomial_mono)
-      using ble apply (force simp add: )
-      apply (simp add: \<sigma>_def \<open>card U = m\<close>)
-
-      sorry
     show ?thesis
       sorry
   qed auto

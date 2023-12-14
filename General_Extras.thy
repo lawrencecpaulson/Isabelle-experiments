@@ -167,7 +167,7 @@ lemma convex_gchoose: "convex_on {k-1..} (\<lambda>x. x gchoose k)"
   by (simp add: gbinomial_prod_rev convex_on_cdiv convex_gchoose_aux)
 
 text \<open>Mehta's binomial, convex on the entire real line and coinciding with 
-binomial coeffs on the integers\<close>
+gchoose under weak conditions\<close>
 
 definition "mfact \<equiv> \<lambda>a k. if a < real k - 1 then 0 else prod (\<lambda>i. a - of_nat i) {0..<k}"
 
@@ -246,9 +246,11 @@ definition mbinomial :: "real \<Rightarrow> nat \<Rightarrow> real"
 lemma convex_mbinomial: "k>0 \<Longrightarrow> convex_on UNIV (\<lambda>x. mbinomial x k)"
   by (simp add: mbinomial_def convex_mfact convex_on_cdiv)
 
-lemma mbinomial_iff_choose [simp]: "mbinomial (real n) k = n choose k"
+lemma mbinomial_eq_choose [simp]: "mbinomial (real n) k = n choose k"
   by (simp add: binomial_gbinomial gbinomial_prod_rev mbinomial_def mfact_def)
 
+lemma mbinomial_eq_gchoose [simp]: "k \<le> a \<Longrightarrow> mbinomial a k = a gchoose k"
+  by (simp add: gbinomial_prod_rev mbinomial_def mfact_def)
 
 text \<open>Elementary inequalities about sums vs products\<close>
 
