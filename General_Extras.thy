@@ -116,45 +116,35 @@ lemma mono_on_prod:
   by (induction I rule: infinite_finite_induct)
      (auto simp: mono_on_const Pi_iff prod_nonneg mono_on_mul)
 
-(* could this be generalised beyond set of real numbers?*)
 lemma convex_on_mul:
   fixes S::"real set"
   assumes "convex_on S f" "convex_on S g" "convex S"
   assumes "mono_on S f" "mono_on S g"
   assumes fty: "f \<in> S \<rightarrow> {0..}" and gty: "g \<in> S \<rightarrow> {0..}"
-  shows "convex_on S (\<lambda>x. f x * g x)"
+  shows "convex_on S (\<lambda>x. f x*g x)"
 proof (intro convex_on_linorderI)
-  fix t :: real
-    and x :: real
-    and y :: real
-  assume t: "0 < t" "t < 1"
-    and xy: "x \<in> S" "y \<in> S"
-  have "f x * g y + f y * g x \<le> f x * g x + f y * g y"
+  fix t::real and x y
+  assume t: "0 < t" "t < 1" and xy: "x \<in> S" "y \<in> S"
+  have "f x*g y + f y*g x \<le> f x*g x + f y*g y"
     using \<open>mono_on S f\<close> \<open>mono_on S g\<close>
     by (smt (verit, ccfv_SIG) mono_onD mult_right_mono right_diff_distrib' xy)
   then have "(1-t) * f x * g y + (1-t) * f y * g x \<le> (1-t) * f x * g x + (1-t) * f y * g y"
     using t
     by (metis (mono_tags, opaque_lifting) mult.assoc diff_gt_0_iff_gt distrib_left mult_le_cancel_left_pos)
-  then have *: "t * (1-t) * f x * g y + t * (1-t) * f y * g x \<le> t * (1-t) * f x * g x + t * (1-t) * f y * g y"
+  then have *: "t*(1-t) * f x * g y + t*(1-t) * f y * g x \<le> t*(1-t) * f x * g x + t*(1-t) * f y * g y"
     using t
     by (metis (mono_tags, opaque_lifting) mult.assoc distrib_left mult_le_cancel_left_pos)  
-  have inS: "(1-t) * x + t * y \<in> S"
+  have inS: "(1-t)*x + t*y \<in> S"
     using t xy \<open>convex S\<close> by (simp add: convex_alt)
-  then have "f ((1-t) * x + t * y) * g ((1-t) * x + t * y) \<le> ((1-t) * f x + t * f y) * g ((1-t) * x + t * y)"
+  then have "f ((1-t)*x + t*y) * g ((1-t)*x + t*y) \<le> ((1-t)*f x + t*f y)*g ((1-t)*x + t*y)"
     using convex_onD [OF \<open>convex_on S f\<close>, of t x y] t xy fty gty
-    apply (simp add: Pi_iff)
-    apply (intro mult_mono add_nonneg_nonneg)
-     apply (auto simp: zero_le_mult_iff)
-    done
-  also have "... \<le> ((1-t) * f x + t * f y) * ((1-t) * g x + t * g y)"
+    by (intro mult_mono add_nonneg_nonneg) (auto simp: Pi_iff zero_le_mult_iff)
+  also have "... \<le> ((1-t)*f x + t*f y) * ((1-t)*g x + t*g y)"
     using convex_onD [OF \<open>convex_on S g\<close>, of t x y] t xy fty gty inS
-    apply (simp add: Pi_iff)
-    apply (intro mult_mono add_nonneg_nonneg)
-     apply (auto simp: zero_le_mult_iff)
-    done
-  also have "... \<le> (1-t) * (f x * g x) + t * (f y * g y)"
+    by (intro mult_mono add_nonneg_nonneg) (auto simp: Pi_iff zero_le_mult_iff)
+  also have "... \<le> (1-t) * (f x*g x) + t * (f y*g y)"
     using * by (simp add: algebra_simps)
-  finally show "f ((1-t) *\<^sub>R x + t *\<^sub>R y) * g ((1-t) *\<^sub>R x + t *\<^sub>R y) \<le> (1-t) * (f x * g x) + t * (f y * g y)" 
+  finally show "f ((1-t) *\<^sub>R x + t *\<^sub>R y) * g ((1-t) *\<^sub>R x + t *\<^sub>R y) \<le> (1-t)*(f x*g x) + t*(f y*g y)" 
     by simp
 qed
 
@@ -165,17 +155,99 @@ proof (induction k)
     by (simp add: convex_on_def)
 next
   case (Suc k)
+  with convex_on_subset have "convex_on {real k..} (\<lambda>a. (\<Prod>i = 0..<k. a - real i) * (a - real k))"
+    by (intro convex_on_mul convex_on_diff convex_on_ident convex_on_const
+              concave_on_const mono_on_mul mono_on_prod;
+        fastforce simp add: Pi_iff prod_nonneg mono_onI)+
   then show ?case
-    apply (simp add: )
-    apply (intro convex_on_mul convex_on_diff convex_on_ident convex_on_const
-        concave_on_const mono_on_mul mono_on_prod)
-    using convex_on_subset apply fastforce
-        apply (auto simp add: Pi_iff prod_nonneg mono_onI)
-    done
+    by simp
 qed
 
 lemma convex_gchoose: "convex_on {k-1..} (\<lambda>x. x gchoose k)"
   by (simp add: gbinomial_prod_rev convex_on_cdiv convex_gchoose_aux)
+
+text \<open>Mehta's binomial, convex on the entire real line and coinciding with 
+binomial coeffs on the integers\<close>
+
+definition "mfact \<equiv> \<lambda>a k. if a < real k - 1 then 0 else prod (\<lambda>i. a - of_nat i) {0..<k}"
+
+text \<open>Mehta's special rule for convexity, my proof\<close>
+lemma E:
+  fixes f :: "real \<Rightarrow> real"
+  assumes cf: "convex_on {k..} f" and mon: "mono_on {k..} f" 
+    and **: "\<And>x. x < k \<Longrightarrow> f x = f k"
+  shows "convex_on UNIV f"
+proof (intro convex_on_linorderI)
+  fix  t x y :: real
+  assume t: "0 < t" "t < 1" and "x < y"
+  show "f ((1 - t) *\<^sub>R x + t *\<^sub>R y) \<le> (1 - t) * f x + t * f y"
+  proof (cases "k \<le> x")
+    case True
+    with \<open>x < y\<close> t show ?thesis
+      by (intro convex_onD [OF cf]) auto
+  next
+    case False
+    then have [simp]: "x < k" "f x = f k" by (auto simp add: "**")
+    show ?thesis
+    proof (cases "k \<le> y")
+      case True
+      then have "f y \<ge> f k"
+        using mon mono_onD by auto
+      have fle: "f ((1 - t) *\<^sub>R k + t *\<^sub>R y) \<le> (1 - t) * f k + t * f y"
+        using t True by (intro convex_onD [OF cf]) auto
+      with False
+      show ?thesis
+      proof (cases "(1 - t) * x + t * y < k")
+        case True
+        then have "f ((1 - t) * x + t * y) = f k"
+          by (simp add: "**")
+        then show ?thesis
+          using \<open>f k \<le> f y\<close> segment_bound_lemma t by auto
+      next
+        case False
+        have "f ((1 - t) *\<^sub>R x + t *\<^sub>R y) \<le> (1 - t) * f k + t * f y"
+          apply (rule order_trans [OF _ convex_onD [OF cf]])
+          using t \<open>x < k\<close> apply (auto simp: )
+           apply (rule mono_onD [OF mon])
+          using False t \<open>x < k\<close> apply (auto simp: )
+          using True segment_bound_lemma apply force
+          using \<open>x < k\<close> apply linarith
+          using True by auto
+        then show ?thesis
+          using fle by auto
+      qed
+    next
+      case False
+      with \<open>x < k\<close> show ?thesis
+        by (simp add: "**" convex_bound_lt order_less_imp_le segment_bound_lemma t)
+    qed
+  qed
+qed
+
+lemma convex_mfact: 
+  assumes "k>0"
+  shows "convex_on UNIV (\<lambda>a. mfact a k)"
+  using assms
+  apply (simp add: mfact_def)
+  apply (rule E [where k="k-1"])
+  using convex_gchoose_aux apply (auto simp add: convex_on_def)[1]
+    apply (metis add_diff_cancel_right' le_add_same_cancel2 linorder_not_le segment_bound_lemma)
+   defer
+   apply (auto simp: )
+  apply (auto simp: mono_on_def)
+  using \<open>k > 0\<close>
+  apply (intro prod_mono)
+  apply (auto simp: )
+  done
+
+definition mbinomial :: "real \<Rightarrow> nat \<Rightarrow> real"
+  where "mbinomial \<equiv> \<lambda>a k. mfact a k / fact k"
+
+lemma convex_mbinomial: "k>0 \<Longrightarrow> convex_on UNIV (\<lambda>x. mbinomial x k)"
+  by (simp add: mbinomial_def convex_mfact convex_on_cdiv)
+
+lemma mbinomial_iff_choose [simp]: "mbinomial (real n) k = n choose k"
+  by (simp add: binomial_gbinomial gbinomial_prod_rev mbinomial_def mfact_def)
 
 
 text \<open>Elementary inequalities about sums vs products\<close>
@@ -344,7 +416,6 @@ proof -
   finally show ?thesis .
 qed
 
-
 lemma fact_less_fact_power:
   assumes "1 < s" "s \<le> n" shows "fact n < fact (n - s) * real n ^ s"
 proof -
@@ -362,7 +433,6 @@ proof -
     by (simp add: fact_prod)
   finally show ?thesis .
 qed
-
 
 end
 
