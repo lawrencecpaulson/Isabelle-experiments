@@ -34,9 +34,10 @@ proof -
   finally show ?thesis .
 qed
 
+text \<open>This is fact 4.2 (page 11) as well as equation (73), page 55.\<close>
 lemma Fact_D1_73:
   fixes \<sigma>::real and m b::nat  
-  assumes \<sigma>: "0<\<sigma>" "\<sigma><1" and b: "real b \<le> \<sigma> * m / 2"
+  assumes \<sigma>: "0<\<sigma>" "\<sigma>\<le>1" and b: "real b \<le> \<sigma> * m / 2"
   shows  "(\<sigma>*m) gchoose b \<in> {\<sigma>^b * (real m gchoose b) * exp (- (real b ^ 2) / (\<sigma>*m)) .. \<sigma>^b * (m gchoose b)}"
 proof (cases "m=0 \<or> b=0")
   case True
@@ -481,6 +482,33 @@ proof -
   with xy show ?thesis
     using assms gen_density_def less_eq_real_def by fastforce
 qed
+
+lemma gen_density_le_1_minus: 
+  shows "gen_density C X Y \<le> 1 - gen_density (E-C) X Y"
+proof (cases "finite X \<and> finite Y")
+  case True
+  have "C \<inter> all_edges_betw_un X Y \<union> (E - C) \<inter> all_edges_betw_un X Y = all_edges_betw_un X Y"
+    by (auto simp: all_edges_betw_un_def)
+  with True have "(edge_card C X Y) + (edge_card (E - C) X Y) \<le> card (all_edges_betw_un X Y)"
+    unfolding edge_card_def
+    by (metis Diff_Int_distrib2 Diff_disjoint card_Un_disjoint card_Un_le finite_Int finite_all_edges_betw_un)
+  with True show ?thesis
+    apply (simp add: gen_density_def field_split_simps)
+    by (smt (verit) all_edges_betw_un_le of_nat_add of_nat_mono of_nat_mult)
+qed (auto simp: gen_density_def)
+
+lemma gen_density_lt1: 
+  assumes "{x,y} \<in> E-C" "x \<in> X" "y \<in> Y" "C \<subseteq> E"
+  shows "gen_density C X Y < 1"
+proof (cases "finite X \<and> finite Y")
+  case True
+  then have "0 < gen_density (E - C) X Y"
+    using assms gen_density_gt0 by auto
+  have "gen_density C X Y \<le> 1 - gen_density (E - C) X Y"
+    by (intro gen_density_le_1_minus)
+  then show ?thesis
+    using \<open>0 < gen_density (E - C) X Y\<close> by linarith
+qed (auto simp: gen_density_def)
 
 lemma gen_density_le1: "gen_density C X Y \<le> 1"
   unfolding gen_density_def
@@ -1142,9 +1170,7 @@ proof -
         using lge \<mu>01 by (simp add: divide_le_eq mult.commute)
       finally have "2*b / m + 2/l \<le> \<mu>" .
       then show ?thesis
-        using lk \<open>m\<noteq>0\<close> ln0
-        apply (simp add: algebra_simps)
-        by (smt (verit, ccfv_SIG) frac_le of_nat_0_less_iff of_nat_mono)
+        using lk \<open>m\<noteq>0\<close> ln0 by (smt (verit, best) frac_le of_nat_0_less_iff of_nat_mono)
     qed
     with A have "2 / (m/b) \<le> \<sigma>"
       by simp
@@ -1157,8 +1183,24 @@ proof -
       using \<open>0 \<le> \<sigma>\<close> \<open>6 \<le> m\<close> \<open>m \<le> l\<close> powr_gt_zero by (fastforce simp add: b_def)
 
     text \<open>now for the material between (10) and (11)\<close>
-    have E: "inverse (m choose b) * (((\<sigma>*m) gchoose b) * card (X-U)) 
-        \<le> inverse (m choose b) * (\<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) gchoose b)"
+    have "\<sigma> * real m / 2 \<le> m"
+      using \<open>\<sigma> \<le> 1\<close> \<open>m \<noteq> 0\<close> by auto
+    with ble have "b \<le> m"
+      by linarith
+    have "\<sigma>^b * exp (- of_nat (b\<^sup>2) / (\<sigma>*m)) * card (X-U) \<le> inverse (m choose b) * ((\<sigma>*m) gchoose b) * card (X-U)"
+    proof (intro mult_right_mono)
+      have "0 < real m gchoose b"
+        by (metis \<open>b \<le> m\<close> binomial_gbinomial of_nat_0_less_iff zero_less_binomial_iff)
+      then have "\<sigma> ^ b * ((real m gchoose b) * exp (- ((real b)\<^sup>2 / (\<sigma> * real m)))) \<le> \<sigma> * real m gchoose b"
+        using Fact_D1_73 [OF \<open>\<sigma>>0\<close> \<open>\<sigma>\<le>1\<close> ble] \<open>b\<le>m\<close> cardU_less_X \<open>0 < \<sigma>\<close>
+        by (simp add: field_split_simps binomial_gbinomial)
+      then show "\<sigma>^b * exp (- real (b\<^sup>2) / (\<sigma> * m)) \<le> inverse (m choose b) * (\<sigma> * m gchoose b)"
+        using \<open>b\<le>m\<close> cardU_less_X \<open>0 < \<sigma>\<close> \<open>0 < m gchoose b\<close>
+        by (simp add: field_split_simps binomial_gbinomial)
+    qed auto
+    also have "... = inverse (m choose b) * (((\<sigma>*m) gchoose b) * card (X-U))"
+      by (simp add: mult.assoc)
+    also have "\<dots> \<le> inverse (m choose b) * (\<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) gchoose b)"
     proof (intro mult_left_mono)
       have eeq: "edge_card Blue U (X-U) = (\<Sum>i\<in>X-U. card (Neighbours Blue i \<inter> U))"
       proof (intro edge_card_eq_sum_Neighbours)
@@ -1180,12 +1222,16 @@ proof -
         show "(\<Sum>i\<in>X - U. inverse (real (card (X - U)))) = 1"
           using cardU_less_X cardXU by force
       qed (use \<open>U \<subset> X\<close> in auto)
-      then 
+      with ble 
       show "(\<sigma>*m gchoose b) * card (X-U) \<le> (\<Sum>v \<in> X-U. (card (Neighbours Blue v \<inter> U)) gchoose b)"
-        unfolding *
-        using ble
-        by (simp add: cardU_less_X cardXU binomial_gbinomial divide_simps  flip: sum_distrib_left sum_divide_distrib)
+        unfolding * by (simp add: cardU_less_X cardXU binomial_gbinomial divide_simps 
+                          flip: sum_distrib_left sum_divide_distrib)
     qed auto
+    finally
+    have "\<mu>^b / 2 * card X \<le> \<sigma>^b * exp (- of_nat (b\<^sup>2) / (\<sigma>*m))"
+      using Fact_D1_73
+    sorry
+
     show ?thesis
       sorry
   qed auto

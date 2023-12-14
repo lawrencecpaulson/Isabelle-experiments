@@ -4,7 +4,6 @@ theory General_Extras imports
 
 begin
 
-
 (*the corresponding strict inequality can be proved under the assumptions  "1 < s" "s \<le> n"
   using fact_less_fact_power*)
 thm binomial_fact_lemma
@@ -172,54 +171,49 @@ gchoose under weak conditions\<close>
 definition "mfact \<equiv> \<lambda>a k. if a < real k - 1 then 0 else prod (\<lambda>i. a - of_nat i) {0..<k}"
 
 text \<open>Mehta's special rule for convexity, my proof\<close>
-lemma E:
+lemma convex_on_extend:
   fixes f :: "real \<Rightarrow> real"
   assumes cf: "convex_on {k..} f" and mon: "mono_on {k..} f" 
-    and **: "\<And>x. x < k \<Longrightarrow> f x = f k"
+    and fk: "\<And>x. x<k \<Longrightarrow> f x = f k"
   shows "convex_on UNIV f"
 proof (intro convex_on_linorderI)
-  fix  t x y :: real
+  fix t x y :: real
   assume t: "0 < t" "t < 1" and "x < y"
-  show "f ((1 - t) *\<^sub>R x + t *\<^sub>R y) \<le> (1 - t) * f x + t * f y"
+  let ?u = "((1 - t) *\<^sub>R x + t *\<^sub>R y)"
+  show "f ?u \<le> (1 - t) * f x + t * f y"
   proof (cases "k \<le> x")
     case True
     with \<open>x < y\<close> t show ?thesis
       by (intro convex_onD [OF cf]) auto
   next
     case False
-    then have [simp]: "x < k" "f x = f k" by (auto simp add: "**")
+    then have "x < k" and fxk: "f x = f k" by (auto simp add: fk)
     show ?thesis
     proof (cases "k \<le> y")
       case True
       then have "f y \<ge> f k"
         using mon mono_onD by auto
+      have kle: "k \<le> (1 - t) * k + t * y"
+        using True segment_bound_lemma t by auto
       have fle: "f ((1 - t) *\<^sub>R k + t *\<^sub>R y) \<le> (1 - t) * f k + t * f y"
         using t True by (intro convex_onD [OF cf]) auto
       with False
       show ?thesis
-      proof (cases "(1 - t) * x + t * y < k")
+      proof (cases "?u < k")
         case True
-        then have "f ((1 - t) * x + t * y) = f k"
-          by (simp add: "**")
         then show ?thesis
-          using \<open>f k \<le> f y\<close> segment_bound_lemma t by auto
+          using \<open>f k \<le> f y\<close> fxk fk segment_bound_lemma t by auto
       next
         case False
-        have "f ((1 - t) *\<^sub>R x + t *\<^sub>R y) \<le> (1 - t) * f k + t * f y"
-          apply (rule order_trans [OF _ convex_onD [OF cf]])
-          using t \<open>x < k\<close> apply (auto simp: )
-           apply (rule mono_onD [OF mon])
-          using False t \<open>x < k\<close> apply (auto simp: )
-          using True segment_bound_lemma apply force
-          using \<open>x < k\<close> apply linarith
-          using True by auto
+        have "f ?u \<le> f ((1 - t) *\<^sub>R k + t *\<^sub>R y)"
+          using kle \<open>x < k\<close> False t by (intro mono_onD [OF mon]) auto
         then show ?thesis
-          using fle by auto
+          using fle fxk by auto
       qed
     next
       case False
       with \<open>x < k\<close> show ?thesis
-        by (simp add: "**" convex_bound_lt order_less_imp_le segment_bound_lemma t)
+        by (simp add: fk convex_bound_lt order_less_imp_le segment_bound_lemma t)
     qed
   qed
 qed
@@ -227,18 +221,13 @@ qed
 lemma convex_mfact: 
   assumes "k>0"
   shows "convex_on UNIV (\<lambda>a. mfact a k)"
-  using assms
-  apply (simp add: mfact_def)
-  apply (rule E [where k="k-1"])
-  using convex_gchoose_aux apply (auto simp add: convex_on_def)[1]
-    apply (metis add_diff_cancel_right' le_add_same_cancel2 linorder_not_le segment_bound_lemma)
-   defer
-   apply (auto simp: )
-  apply (auto simp: mono_on_def)
-  using \<open>k > 0\<close>
-  apply (intro prod_mono)
-  apply (auto simp: )
-  done
+  unfolding mfact_def
+proof (rule convex_on_extend)
+  show "convex_on {real (k - 1)..} (\<lambda>a. if a < real k - 1 then 0 else \<Prod>i = 0..<k. a - real i)"
+    using convex_gchoose_aux by (auto simp add: convex_on_def prod_nonneg)
+  show "mono_on {real (k - 1)..} (\<lambda>a. if a < real k - 1 then 0 else \<Prod>i = 0..<k. a - real i)"
+    using \<open>k > 0\<close> by (auto simp: mono_on_def intro!: prod_mono)
+qed (use assms in auto)
 
 definition mbinomial :: "real \<Rightarrow> nat \<Rightarrow> real"
   where "mbinomial \<equiv> \<lambda>a k. mfact a k / fact k"
