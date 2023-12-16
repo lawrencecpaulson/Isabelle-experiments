@@ -1210,7 +1210,7 @@ proof -
     with ble have "b \<le> m"
       by linarith
 
-    have "\<mu>^b * card X / 2 \<le> (1 - b\<^sup>2 / (\<sigma>*m)) * \<sigma>^b * card (X-U)"
+    have "\<mu>^b/2 * card X \<le> (1 - b\<^sup>2 / (\<sigma>*m)) * \<sigma>^b * card (X-U)"
       using \<open>\<sigma> > 0\<close> \<open>m \<noteq> 0\<close>
       apply (simp add: divide_simps)
       apply (auto simp: algebra_simps)
@@ -1220,9 +1220,6 @@ proof -
       using real_cardXU
       unfolding b_def m_def
       apply (simp add: cardXU cardU_less_X )
-apply (subst of_nat_diff)
-      apply (simp add: cardXU cardU_less_X flip: of_nat_diff)
-    sorry
       sorry
     also have "... \<le> exp (- (of_nat (b\<^sup>2) / (\<sigma>*m))) * \<sigma>^b * card (X-U)"
       unfolding divide_inverse
@@ -1230,20 +1227,20 @@ apply (subst of_nat_diff)
       by (intro mult_right_mono exp_minus_ge order_refl) auto
     also have "\<dots> = \<sigma>^b * exp (- of_nat (b\<^sup>2) / (\<sigma>*m)) * card (X-U)"
       by (simp add: mult.commute) 
-    also have "\<dots> \<le> inverse (m choose b) * ((\<sigma>*m) gchoose b) * card (X-U)"
+    also have "\<dots> \<le> 1/(m choose b) * ((\<sigma>*m) gchoose b) * card (X-U)"
     proof (intro mult_right_mono)
       have "0 < real m gchoose b"
         by (metis \<open>b \<le> m\<close> binomial_gbinomial of_nat_0_less_iff zero_less_binomial_iff)
       then have "\<sigma> ^ b * ((real m gchoose b) * exp (- ((real b)\<^sup>2 / (\<sigma> * real m)))) \<le> \<sigma> * real m gchoose b"
         using Fact_D1_73 [OF \<open>\<sigma>>0\<close> \<open>\<sigma>\<le>1\<close> ble] \<open>b\<le>m\<close> cardU_less_X \<open>0 < \<sigma>\<close>
         by (simp add: field_split_simps binomial_gbinomial)
-      then show "\<sigma>^b * exp (- real (b\<^sup>2) / (\<sigma> * m)) \<le> inverse (m choose b) * (\<sigma> * m gchoose b)"
+      then show "\<sigma>^b * exp (- real (b\<^sup>2) / (\<sigma> * m)) \<le> 1/(m choose b) * (\<sigma> * m gchoose b)"
         using \<open>b\<le>m\<close> cardU_less_X \<open>0 < \<sigma>\<close> \<open>0 < m gchoose b\<close>
         by (simp add: field_split_simps binomial_gbinomial)
     qed auto
-    also have "... = inverse (m choose b) * (((\<sigma>*m) gchoose b) * card (X-U))"
+    also have "... = 1/(m choose b) * (((\<sigma>*m) gchoose b) * card (X-U))"
       by (simp add: mult.assoc)
-    also have "\<dots> \<le> inverse (m choose b) * (\<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) gchoose b)"
+    also have "\<dots> \<le> 1/(m choose b) * (\<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) gchoose b)"
     proof (intro mult_left_mono)
       have eeq: "edge_card Blue U (X-U) = (\<Sum>i\<in>X-U. card (Neighbours Blue i \<inter> U))"
       proof (intro edge_card_eq_sum_Neighbours)
@@ -1270,8 +1267,7 @@ apply (subst of_nat_diff)
         unfolding * by (simp add: cardU_less_X cardXU binomial_gbinomial divide_simps 
             flip: sum_distrib_left sum_divide_distrib)
     qed auto
-    finally have "\<mu>^b / 2 * card X \<le> \<sigma>^b * exp (- of_nat (b\<^sup>2) / (\<sigma>*m))" 
-      sorry
+    finally have "\<mu>^b/2 * card X \<le> 1/(m choose b) * (\<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) gchoose b)" .
     obtain S where "S\<subseteq>U" and "size_clique b S Blue" 
       and S: "card (\<Inter>v\<in>S. Neighbours Blue v \<inter> (X-U)) \<ge> \<mu>^b * card X / 2"
       sorry
