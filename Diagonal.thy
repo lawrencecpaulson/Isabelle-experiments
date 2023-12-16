@@ -272,6 +272,14 @@ lemma all_edges_betw_un_Un2:
   "all_edges_betw_un X (Y \<union> Z) = all_edges_betw_un X Y \<union> all_edges_betw_un X Z"
   by (auto simp: all_edges_betw_un_def)
 
+lemma all_edges_betw_un_Int1:
+  "disjnt Y Z \<Longrightarrow> all_edges_betw_un (X \<inter> Y) Z = all_edges_betw_un X Z \<inter> all_edges_betw_un Y Z"
+  by (fastforce simp: all_edges_betw_un_def doubleton_eq_iff disjnt_def)
+
+lemma all_edges_betw_un_Int2:
+  "disjnt Z X \<Longrightarrow> all_edges_betw_un X (Y \<inter> Z) = all_edges_betw_un X Y \<inter> all_edges_betw_un X Z"
+  by (fastforce simp: all_edges_betw_un_def doubleton_eq_iff disjnt_def)
+
 lemma all_edges_betw_un_diff1:
   "Z \<subseteq> Y \<Longrightarrow> all_edges_betw_un (X - Y) Z = all_edges_betw_un X Z - all_edges_betw_un Y Z"
   by (fastforce simp: all_edges_betw_un_def doubleton_eq_iff)
@@ -300,6 +308,14 @@ lemma all_edges_betw_un_UN1:
 lemma all_edges_betw_un_UN2:
   "all_edges_betw_un X (\<Union>i\<in>I. Y i) = (\<Union>i\<in>I. all_edges_betw_un X (Y i))"
   by (auto simp: all_edges_betw_un_def)
+
+lemma all_edges_betw_un_INT1:
+  "\<lbrakk>i\<in>I; disjnt (X i) Y\<rbrakk> \<Longrightarrow> all_edges_betw_un (\<Inter>i\<in>I. X i) Y = (\<Inter>i\<in>I. all_edges_betw_un (X i) Y)"
+  by (simp add: all_edges_betw_un_def disjnt_iff set_eq_iff) (smt (verit) doubleton_eq_iff)
+
+lemma all_edges_betw_un_INT2:
+  "\<lbrakk>i\<in>I; disjnt X (Y i)\<rbrakk> \<Longrightarrow> all_edges_betw_un X (\<Inter>i\<in>I. Y i) = (\<Inter>i\<in>I. all_edges_betw_un X (Y i))"
+  by (simp add: all_edges_betw_un_def disjnt_iff set_eq_iff) (smt (verit) doubleton_eq_iff)
 
 lemma all_edges_betw_un_mono1:
   "Y \<subseteq> Z \<Longrightarrow> all_edges_betw_un Y X \<subseteq> all_edges_betw_un Z X"
@@ -1022,7 +1038,7 @@ qed
 lemma Blue_4_1:
   defines "b \<equiv> nat (ceiling (l powr (1/4)))"
   assumes "many_bluish l X" "X\<subseteq>V"
-  shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>S T. good_blue_book S T \<and> real (card S) \<ge> b)"
+  shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>S T. good_blue_book X (S,T) \<and> real (card S) \<ge> b)"
 proof -
   have l_super: "l \<ge> (6/\<mu>) powr (12/5)" (* ultimately the Lemma must be restated to use a limiting argument:
       we can choose a sufficiently large l*)
@@ -1033,6 +1049,8 @@ proof -
   define m where "m \<equiv> nat\<lceil>l powr (2/3)\<rceil>"
   have "m>0"
     using l_powr_23_ge6 m_def by linarith
+  have "b>0"
+    by (simp add: assms(1) ln0)
   have Wbig: "card W \<ge> RN k m"
     using assms by (simp add: W_def m_def many_bluish_def)
   with Red_Blue_RN obtain U where "U \<subseteq> W" and U: "size_clique k U Red \<or> size_clique m U Blue"
@@ -1059,6 +1077,10 @@ proof -
       by (meson \<open>X\<subseteq>V\<close> finV finite_subset psubset_card_mono)
     with \<open>X\<subseteq>V\<close> have cardXU: "card (X - U) = card X - card U"
       by (meson \<open>U \<subset> X\<close> card_Diff_subset finV finite_subset psubset_imp_subset)
+    then have real_cardXU[simp]: "real (card (X-U)) = real (card X) - m"
+      using \<open>card U = m\<close> cardU_less_X by linarith
+    have [simp]: "m \<le> card X"
+      using \<open>card U = m\<close> cardU_less_X nless_le by blast
     have "k \<ge> 4"
       using l_large lk by linarith
     have lpowr23: "real l powr (2/3) \<le> real l powr 1"
@@ -1147,7 +1169,7 @@ proof -
     also have "\<dots> \<le> \<sigma>"
       using \<open>m\<noteq>0\<close> \<open>card U = m\<close> cardU_less_X cardXU DD
       by (simp add: \<sigma>_def gen_density_def field_simps mult_less_0_iff zero_less_mult_iff)
-    finally have A: "\<mu> - 2/k \<le> \<sigma>" .
+    finally have eq10: "\<mu> - 2/k \<le> \<sigma>" .
     have "2 * b / m \<le> \<mu> - 2/k"
     proof -
       have 512: "5/12 \<le> (1::real)"
@@ -1172,7 +1194,7 @@ proof -
       then show ?thesis
         using lk \<open>m\<noteq>0\<close> ln0 by (smt (verit, best) frac_le of_nat_0_less_iff of_nat_mono)
     qed
-    with A have "2 / (m/b) \<le> \<sigma>"
+    with eq10 have "2 / (m/b) \<le> \<sigma>"
       by simp
     moreover have "l powr (2/3) \<le> nat \<lceil>real l powr (2/3)\<rceil>"
       using of_nat_ceiling by blast
@@ -1187,7 +1209,28 @@ proof -
       using \<open>\<sigma> \<le> 1\<close> \<open>m \<noteq> 0\<close> by auto
     with ble have "b \<le> m"
       by linarith
-    have "\<sigma>^b * exp (- of_nat (b\<^sup>2) / (\<sigma>*m)) * card (X-U) \<le> inverse (m choose b) * ((\<sigma>*m) gchoose b) * card (X-U)"
+
+    have "\<mu>^b * card X / 2 \<le> (1 - b\<^sup>2 / (\<sigma>*m)) * \<sigma>^b * card (X-U)"
+      using \<open>\<sigma> > 0\<close> \<open>m \<noteq> 0\<close>
+      apply (simp add: divide_simps)
+      apply (auto simp: algebra_simps)
+
+      using eq10
+      apply (simp add: )
+      using real_cardXU
+      unfolding b_def m_def
+      apply (simp add: cardXU cardU_less_X )
+apply (subst of_nat_diff)
+      apply (simp add: cardXU cardU_less_X flip: of_nat_diff)
+    sorry
+      sorry
+    also have "... \<le> exp (- (of_nat (b\<^sup>2) / (\<sigma>*m))) * \<sigma>^b * card (X-U)"
+      unfolding divide_inverse
+      using \<open>0 \<le> \<sigma>\<close> \<open>card U = m\<close> cardU_less_X
+      by (intro mult_right_mono exp_minus_ge order_refl) auto
+    also have "\<dots> = \<sigma>^b * exp (- of_nat (b\<^sup>2) / (\<sigma>*m)) * card (X-U)"
+      by (simp add: mult.commute) 
+    also have "\<dots> \<le> inverse (m choose b) * ((\<sigma>*m) gchoose b) * card (X-U)"
     proof (intro mult_right_mono)
       have "0 < real m gchoose b"
         by (metis \<open>b \<le> m\<close> binomial_gbinomial of_nat_0_less_iff zero_less_binomial_iff)
@@ -1219,21 +1262,34 @@ proof -
           using cardU_less_X zero_less_diff by fastforce
         show "convex_on UNIV (\<lambda>a. mbinomial a b)"
           using assms(1) convex_mbinomial ln0 by auto
-        show "(\<Sum>i\<in>X - U. inverse (real (card (X - U)))) = 1"
+        show "(\<Sum>i\<in>X - U. inverse (card (X - U))) = 1"
           using cardU_less_X cardXU by force
       qed (use \<open>U \<subset> X\<close> in auto)
       with ble 
       show "(\<sigma>*m gchoose b) * card (X-U) \<le> (\<Sum>v \<in> X-U. (card (Neighbours Blue v \<inter> U)) gchoose b)"
         unfolding * by (simp add: cardU_less_X cardXU binomial_gbinomial divide_simps 
-                          flip: sum_distrib_left sum_divide_distrib)
+            flip: sum_distrib_left sum_divide_distrib)
     qed auto
-    finally
-    have "\<mu>^b / 2 * card X \<le> \<sigma>^b * exp (- of_nat (b\<^sup>2) / (\<sigma>*m))"
-      using Fact_D1_73
-    sorry
-
-    show ?thesis
+    finally have "\<mu>^b / 2 * card X \<le> \<sigma>^b * exp (- of_nat (b\<^sup>2) / (\<sigma>*m))" 
       sorry
+    obtain S where "S\<subseteq>U" and "size_clique b S Blue" 
+      and S: "card (\<Inter>v\<in>S. Neighbours Blue v \<inter> (X-U)) \<ge> \<mu>^b * card X / 2"
+      sorry
+    then have "card S = b" "clique S Blue"
+      using size_clique_def by auto
+    with \<open>b>0\<close> obtain v where "v \<in> S"
+      by fastforce
+    have "all_edges_betw_un S (S \<union> (\<Inter>v\<in>S. Neighbours Blue v \<inter> (X - U))) \<subseteq> Blue"
+      using \<open>clique S Blue\<close> unfolding all_edges_betw_un_def Neighbours_def clique_def
+      by fastforce
+    then
+    have "good_blue_book X (S, \<Inter>v\<in>S. Neighbours Blue v \<inter> (X-U))"
+      using \<open>S\<subseteq>U\<close> \<open>v \<in> S\<close> \<open>U \<subset> X\<close> S \<open>card S = b\<close>
+      unfolding good_blue_book_def book_def size_clique_def disjnt_iff
+      by blast
+    then
+    show ?thesis
+      using \<open>size_clique b S Blue\<close> size_clique_def by auto
   qed auto
 qed
 

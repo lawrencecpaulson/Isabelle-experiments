@@ -4,6 +4,26 @@ theory General_Extras imports
 
 begin
 
+(*replace existing one in development version, Set_Interval: cleaner proof*)
+lemma sum_diff_split:
+  fixes f:: "nat \<Rightarrow> 'a::ab_group_add"
+  assumes "m \<le> n"
+  shows "(\<Sum>i\<le>n - m. f(n - i)) = (\<Sum>i\<le>n. f i) - (\<Sum>i<m. f i)"
+proof -
+  have "\<And>x. x \<le> n-m \<Longrightarrow> \<exists>k\<ge>m. k \<le> n \<and> x = n-k"
+    using \<open>m\<le>n\<close> by presburger
+  then have eq: "{..n-m} = (-)n ` {m..n}"
+    by force
+  have inj: "inj_on ((-)n) {m..n}"
+    by (auto simp: inj_on_def)
+  have "(\<Sum>i\<le>n - m. f(n - i)) = (\<Sum>i=m..n. f i)"
+    by (simp add: eq sum.reindex_cong [OF inj])
+  also have "\<dots> = (\<Sum>i\<le>n. f i) - (\<Sum>i<m. f i)"
+    using sum_diff_nat_ivl[of 0 "m" "Suc n" f] assms
+    by (simp only: atLeast0AtMost atLeast0LessThan atLeastLessThanSuc_atLeastAtMost)
+  finally show ?thesis .
+qed
+
 (*the corresponding strict inequality can be proved under the assumptions  "1 < s" "s \<le> n"
   using fact_less_fact_power*)
 thm binomial_fact_lemma
@@ -299,6 +319,10 @@ lemma powr01_less_one: "0 \<le> (a::real) \<Longrightarrow> a < 1 \<Longrightarr
 lemma exp_powr_real [simp]:
   fixes x::real shows "exp x powr y = exp (x*y)"
   by (simp add: powr_def)
+
+lemma exp_minus_ge: 
+  fixes x::real shows "1 - x \<le> exp (-x)"
+  by (smt (verit) exp_ge_add_one_self)
 
 lemma exp_minus_greater: 
   fixes x::real shows "1 - x < exp (-x) \<longleftrightarrow> x \<noteq> 0"
