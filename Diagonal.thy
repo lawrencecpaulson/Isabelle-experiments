@@ -21,6 +21,15 @@ proof -
     using assms by (simp add: exp_minus divide_simps mult.commute)
 qed
 
+lemma integral_uniform_count_measure:
+  assumes "finite \<Omega>" 
+  shows "integral\<^sup>L (uniform_count_measure \<Omega>) f = sum f \<Omega> / (card \<Omega>)"
+proof -
+  have "(integral\<^sup>L (uniform_count_measure \<Omega>) f) = (\<Sum>a\<in>\<Omega>. (f a) / real (card \<Omega>))" 
+    using assms by (simp add: uniform_count_measure_def lebesgue_integral_point_measure_finite)
+  with assms show ?thesis
+    by (simp add: sum_divide_distrib nn_integral_count_space_finite)
+qed
 
 subsection \<open>Fact D1\<close>
 
@@ -1289,11 +1298,11 @@ proof -
         show "finite (X-U)"
           by (meson \<open>X\<subseteq>V\<close> finV finite_Diff finite_subset)
       qed (use disjnt_def Blue_E in auto)
-      have *: "(\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U)) /\<^sub>R real (card (X-U))) = \<sigma> * m"
-        using \<open>m>0\<close>
-        apply (simp add: \<sigma>_def flip: sum_distrib_left)
-        apply (simp add: gen_density_def \<open>card U = m\<close> eeq divide_simps)
-        done
+      have "(\<Sum>i\<in>X - U. card (Neighbours Blue i \<inter> U)) / (real (card X) - m) 
+          = blue_density U (X-U) * m"
+        using \<open>m>0\<close> by (simp add: gen_density_def \<open>card U = m\<close> eeq divide_simps)
+      then have *: "(\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U)) /\<^sub>R real (card (X-U))) = \<sigma> * m"
+        by (simp add: \<sigma>_def divide_inverse_commute flip: sum_distrib_left)
       have "mbinomial (\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U)) /\<^sub>R (card (X-U))) b 
          \<le> (\<Sum>i\<in>X - U. inverse (real (card (X-U))) * mbinomial (card (Neighbours Blue i \<inter> U)) b)"
       proof (rule convex_on_sum)
@@ -1334,10 +1343,6 @@ proof -
       if "finite Y" "Y \<subseteq> X-U" for Y
       using that
     proof (induction Y)
-      case empty
-      then show ?case
-        by force
-    next
       case (insert y Y)
       have *: "\<Omega> \<inter> {A. \<forall>x\<in>A. y \<in> Neighbours Blue x} = nsets (Neighbours Blue y \<inter> U) b"
               "\<Omega> \<inter> - {A. \<forall>x\<in>A. y \<in> Neighbours Blue x} = \<Omega> - nsets (Neighbours Blue y \<inter> U) b"
@@ -1346,28 +1351,19 @@ proof -
         using insert fin\<Omega>
         apply (simp add: Int_insert_right sum_Suc sum.If_cases if_distrib [of card] flip: insert.IH)
         by (smt (verit, best) Int_lower1 add.commute sum.subset_diff)
-    qed
+    qed auto
     have "(\<Sum>x\<in>\<Omega>. card (if x = {} then UNIV else \<Inter> (Neighbours Blue ` x) \<inter> (X-U))) 
         = (\<Sum>x\<in>\<Omega>. card (\<Inter> (Neighbours Blue ` x) \<inter> (X-U)))"
       unfolding \<Omega>_def nsets_def using \<open>0 < b\<close>
       by (force simp add: intro: sum.cong)
     also have "\<dots> = (\<Sum>v\<in>X - U. card (Neighbours Blue v \<inter> U) choose b)"
       by (metis sum_card_NB \<open>X\<subseteq>V\<close> dual_order.refl finV finite_Diff rev_finite_subset)
-    finally have E: "sum (card o Int_NB) \<Omega> = \<Phi>"
+    finally have "sum (card o Int_NB) \<Omega> = \<Phi>"
       by (simp add: \<Omega>_def \<Phi>_def Int_NB_def)
-
-    have "(integral\<^sup>L (uniform_count_measure \<Omega>) f) = (\<Sum>a\<in>\<Omega>. (f a) / (real (card \<Omega>)))" for f
-      using fin\<Omega>
-      by (simp add: uniform_count_measure_def lebesgue_integral_point_measure_finite)
-    then have "ennreal (P.expectation f) = (\<integral>\<^sup>+ x. ennreal (f x) / ennreal (real (card \<Omega>)) \<partial>count_space \<Omega>)"
-        if "\<forall>i\<in>\<Omega>. f i \<ge> 0" for f
-      using fin\<Omega> \<open>card \<Omega> > 0\<close> that
-      by (simp add: M_def nn_integral_count_space_finite divide_ennreal flip: sum_ennreal)
-    then have "ennreal (P.expectation (\<lambda>S. card (Int_NB S))) = sum (card o Int_NB) \<Omega> / (card \<Omega>)"
-      by (simp add: sum_divide_distrib fin\<Omega> nn_integral_count_space_finite divide_ennreal \<open>card \<Omega> > 0\<close>)
-    then
-    have P: "P.expectation (\<lambda>S. card (Int_NB S)) = \<Phi> / (m choose b)"
-      using E
+    moreover
+    have "ennreal (P.expectation (\<lambda>S. card (Int_NB S))) = sum (card o Int_NB) \<Omega> / (card \<Omega>)"
+      using integral_uniform_count_measure M_def fin\<Omega> by fastforce
+    ultimately have P: "P.expectation (\<lambda>S. card (Int_NB S)) = \<Phi> / (m choose b)"
       by (metis Bochner_Integration.integral_nonneg card\<Omega> divide_nonneg_nonneg ennreal_inj of_nat_0_le_iff)
     have False if "\<And>S. S \<in> \<Omega> \<Longrightarrow> card (Int_NB S) < \<Phi> / (m choose b)"
     proof -
