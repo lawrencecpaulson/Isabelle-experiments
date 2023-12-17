@@ -1316,6 +1316,8 @@ proof -
       by (simp add: \<Omega>_def \<open>card U = m\<close>)
     then have fin\<Omega>: "finite \<Omega>" and "\<Omega> \<noteq> {}"
       using \<open>b \<le> m\<close> not_less by fastforce+
+    then have "card \<Omega> > 0"
+      by (simp add: card_gt_0_iff)
     define M where "M \<equiv> uniform_count_measure \<Omega>"
     have space_eq: "space M = \<Omega>"
       by (simp add: M_def space_uniform_count_measure)
@@ -1353,12 +1355,20 @@ proof -
       by (metis sum_card_NB \<open>X\<subseteq>V\<close> dual_order.refl finV finite_Diff rev_finite_subset)
     finally have E: "sum (card o Int_NB) \<Omega> = \<Phi>"
       by (simp add: \<Omega>_def \<Phi>_def Int_NB_def)
-    have "P.expectation (\<lambda>S. card (Int_NB S)) = sum (card o Int_NB) \<Omega> / (m choose b)"
-      using lebesgue_integral_count_space_finite [OF fin\<Omega>] 
-      sorry
+
+    have "(integral\<^sup>L (uniform_count_measure \<Omega>) f) = (\<Sum>a\<in>\<Omega>. (f a) / (real (card \<Omega>)))" for f
+      using fin\<Omega>
+      by (simp add: uniform_count_measure_def lebesgue_integral_point_measure_finite)
+    then have "ennreal (P.expectation f) = (\<integral>\<^sup>+ x. ennreal (f x) / ennreal (real (card \<Omega>)) \<partial>count_space \<Omega>)"
+        if "\<forall>i\<in>\<Omega>. f i \<ge> 0" for f
+      using fin\<Omega> \<open>card \<Omega> > 0\<close> that
+      by (simp add: M_def nn_integral_count_space_finite divide_ennreal flip: sum_ennreal)
+    then have "ennreal (P.expectation (\<lambda>S. card (Int_NB S))) = sum (card o Int_NB) \<Omega> / (card \<Omega>)"
+      by (simp add: sum_divide_distrib fin\<Omega> nn_integral_count_space_finite divide_ennreal \<open>card \<Omega> > 0\<close>)
     then
     have P: "P.expectation (\<lambda>S. card (Int_NB S)) = \<Phi> / (m choose b)"
-      using E by blast
+      using E
+      by (metis Bochner_Integration.integral_nonneg card\<Omega> divide_nonneg_nonneg ennreal_inj of_nat_0_le_iff)
     have False if "\<And>S. S \<in> \<Omega> \<Longrightarrow> card (Int_NB S) < \<Phi> / (m choose b)"
     proof -
       define L where "L \<equiv> (\<lambda>S. \<Phi> / real (m choose b) - card (Int_NB S)) ` \<Omega>"
