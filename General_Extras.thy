@@ -10,7 +10,7 @@ lemma sum_diff_split:
   assumes "m \<le> n"
   shows "(\<Sum>i\<le>n - m. f(n - i)) = (\<Sum>i\<le>n. f i) - (\<Sum>i<m. f i)"
 proof -
-  have "\<And>x. x \<le> n-m \<Longrightarrow> \<exists>k\<ge>m. k \<le> n \<and> x = n-k"
+  have "\<And>i. i \<le> n-m \<Longrightarrow> \<exists>k\<ge>m. k \<le> n \<and> i = n-k"
     using \<open>m\<le>n\<close> by presburger
   then have eq: "{..n-m} = (-)n ` {m..n}"
     by force
@@ -448,6 +448,19 @@ proof -
     by (simp add: fact_prod)
   finally show ?thesis .
 qed
+
+thm measure_space_eq
+lemma measure_space_Pow_eq:
+  assumes "\<And>X. X \<in> Pow \<Omega> \<Longrightarrow> \<mu> X = \<mu>' X"
+  shows "measure_space \<Omega> (Pow \<Omega>) \<mu> = measure_space \<Omega> (Pow \<Omega>) \<mu>'"
+  by (metis assms measure_space_def ring_of_sets.positive_cong_eq ring_of_sets_Pow sigma_algebra.countably_additive_eq)
+
+lemma finite_count_space: "finite \<Omega> \<Longrightarrow> count_space \<Omega> = measure_of \<Omega> (Pow \<Omega>) card"
+  unfolding count_space_def
+  by (smt (verit, best) PowD Pow_top count_space_def finite_subset measure_of_eq sets_count_space sets_measure_of)
+
+lemma sigma_sets_finite: "\<lbrakk>x \<in> sigma_sets \<Omega> (Pow \<Omega>); finite \<Omega>\<rbrakk> \<Longrightarrow> finite x"
+  by (meson finite_subset order.refl sigma_sets_into_sp)
 
 end
 

@@ -6,6 +6,33 @@ theory Ramsey_Extras imports
 
 begin
 
+thm emeasure_uniform_count_measure
+lemma emeasure_uniform_count_measure_if:
+  "finite A \<Longrightarrow> emeasure (uniform_count_measure A) X = (if X \<subseteq> A then card X / card A else 0)"
+  by (simp add: emeasure_notin_sets emeasure_uniform_count_measure sets_uniform_count_measure)
+
+thm measure_uniform_count_measure
+lemma measure_uniform_count_measure_if:
+  "finite A \<Longrightarrow> measure (uniform_count_measure A) X = (if X \<subseteq> A then card X / card A else 0)"
+  by (simp add: measure_uniform_count_measure measure_notin_sets sets_uniform_count_measure)
+
+lemma emeasure_point_measure_finite_if:
+  "finite A \<Longrightarrow> emeasure (point_measure A f) X = (if X \<subseteq> A then \<Sum>a\<in>X. f a else 0)"
+  by (simp add: emeasure_point_measure_finite emeasure_notin_sets sets_point_measure)
+
+(*
+lemma measure_point_measure_finite_if:
+  shows
+  "finite A \<Longrightarrow> measure (point_measure A f) X = (if X \<subseteq> A then \<Sum>a\<in>X. f a else 0)"
+  apply (simp add: measure_notin_sets sets_point_measure)
+
+  apply (rule )
+  defer
+  apply (simp add: measure_notin_sets sets_point_measure)
+apply (auto simp: )
+  by (simp add: emeasure_point_measure_finite emeasure_notin_sets sets_point_measure)
+*)
+
 (*NOT USED ATM*)
 definition "upair_define \<equiv> \<lambda>f e. THE u. \<exists>x y. e = {x,y} \<and> u = f x y"
 
@@ -714,13 +741,10 @@ proof
     then show ?thesis
       by (simp add: power_add)
   qed
-  have emeasure_eq: "emeasure M C = (if C \<subseteq> \<Omega> then card C / card \<Omega> else 0)" for C
-    using M_def emeasure_neq_0_sets emeasure_uniform_count_measure fin_\<Omega> sets_eq by force
-  have MA: "emeasure M (A K) = ennreal (2 / 2 ^ (s choose 2))" if "K \<in> nsets W s" for K
+  have MA: "measure M (A K) = (2 / 2 ^ (s choose 2))" if "K \<in> nsets W s" for K
     using that
-    apply (simp add: emeasure_eq A_sub_\<Omega> card\<Omega> cardA)
-    apply (simp add: s_choose_le power_diff flip: divide_ennreal ennreal_power)
-    done
+    apply (simp add: M_def measure_uniform_count_measure_if A_sub_\<Omega> card\<Omega> fin_\<Omega> cardA)
+    by (simp add: power_diff s_choose_le)
   then have prob_AK: "P.prob (A K) = 2 / 2 ^ (s choose 2)" if "K \<in> nsets W s" for K
     using that by (simp add: P.emeasure_eq_measure)
   have "P.prob (\<Union> K \<in> nsets W s. A K) \<le> (\<Sum>K \<in> nsets W s. P.prob (A K))"
@@ -765,7 +789,7 @@ theorem RN_lower:
   using assms Ramsey_number_lower is_Ramsey_number_RN
   by (smt (verit) partn_lst_imp_is_clique_RN)
 
-text \<open>and trivially, off the diagonal too (OBSOLETE?)\<close>
+text \<open>and trivially, off the diagonal too\<close>
 corollary RN_lower_nodiag:
   assumes "k \<ge> 3" "l \<ge> k"
   shows "RN k l > 2 powr (k/2)"

@@ -8,6 +8,20 @@ theory Diagonal imports
    
 begin
 
+text \<open>Mehta\<close>
+lemma exp_thing:(*four_two_aux''' PROBABLY NOT NEEDED *)
+  fixes x::real
+  assumes "0 \<le> x" "x \<le> 1/2" shows "exp (- 2 * x) \<le> 1 - x"
+proof -
+  have "1 / (1-x) \<le> 1 + 2 * x"
+    using assms by (simp add: mult_right_le_one_le field_simps)
+  also have "... \<le> exp (2*x)"
+    using exp_ge_add_one_self by blast
+  finally show ?thesis
+    using assms by (simp add: exp_minus divide_simps mult.commute)
+qed
+
+
 subsection \<open>Fact D1\<close>
 
 text \<open>from appendix D, page 55\<close>
@@ -1035,6 +1049,8 @@ proof
 qed
 
 
+
+
 lemma Blue_4_1:
   defines "b \<equiv> nat (ceiling (l powr (1/4)))"
   assumes "many_bluish l X" "X\<subseteq>V"
@@ -1075,7 +1091,7 @@ proof -
       using W_def \<open>U \<subseteq> W\<close> by blast
     then have cardU_less_X: "card U < card X"
       by (meson \<open>X\<subseteq>V\<close> finV finite_subset psubset_card_mono)
-    with \<open>X\<subseteq>V\<close> have cardXU: "card (X - U) = card X - card U"
+    with \<open>X\<subseteq>V\<close> have cardXU: "card (X-U) = card X - card U"
       by (meson \<open>U \<subset> X\<close> card_Diff_subset finV finite_subset psubset_imp_subset)
     then have real_cardXU[simp]: "real (card (X-U)) = real (card X) - m"
       using \<open>card U = m\<close> cardU_less_X by linarith
@@ -1110,7 +1126,7 @@ proof -
           by (force simp: Neighbours_def clique_def)
         then have NBX_split: "(Neighbours Blue u \<inter> X) = (Neighbours Blue u \<inter> (X-U)) \<union> (U - {u})"
           using \<open>U \<subset> X\<close> by blast
-        moreover have "Neighbours Blue u \<inter> (X - U) \<inter> (U - {u}) = {}"
+        moreover have "Neighbours Blue u \<inter> (X-U) \<inter> (U - {u}) = {}"
           by blast
         ultimately have "card(Neighbours Blue u \<inter> X) = card(Neighbours Blue u \<inter> (X-U)) + (m - Suc 0)"
           by (simp add: card_Un_disjoint finite_Neighbours \<open>finite U\<close> \<open>card U = m\<close> that)
@@ -1131,17 +1147,17 @@ proof -
           by auto
       qed
       then have "(card U) * (\<mu> * real (card X - card U))
-             \<le> (\<Sum>x\<in>U. card (Blue \<inter> all_edges_betw_un {x} (X - U)) + (1-\<mu>) * m)"
+             \<le> (\<Sum>x\<in>U. card (Blue \<inter> all_edges_betw_un {x} (X-U)) + (1-\<mu>) * m)"
         by (meson sum_bounded_below)
       then have "m * (\<mu> * (card X - card U))
-             \<le> (\<Sum>x\<in>U. card (Blue \<inter> all_edges_betw_un {x} (X - U))) + (1-\<mu>) * m\<^sup>2"
+             \<le> (\<Sum>x\<in>U. card (Blue \<inter> all_edges_betw_un {x} (X-U))) + (1-\<mu>) * m\<^sup>2"
         apply (simp add: sum.distrib power2_eq_square \<open>card U = m\<close>)
         by (smt (verit) mult.assoc mult_of_nat_commute)
       also have "... \<le> card (\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X-U)) + (1-\<mu>) * m\<^sup>2"
         by (simp add: dfam card_UN_disjoint' \<open>finite U\<close> flip: UN_simps)
       finally have "m * (\<mu> * (card X - card U)) 
-                \<le> card (\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X - U)) + (1 - \<mu>) * m\<^sup>2" .
-      moreover have "(\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X - U)) = (Blue \<inter> all_edges_betw_un U (X-U))"
+                \<le> card (\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X-U)) + (1 - \<mu>) * m\<^sup>2" .
+      moreover have "(\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X-U)) = (Blue \<inter> all_edges_betw_un U (X-U))"
         by (auto simp: all_edges_betw_un_def)
       ultimately show ?thesis
         by simp
@@ -1170,7 +1186,7 @@ proof -
       using \<open>m\<noteq>0\<close> \<open>card U = m\<close> cardU_less_X cardXU DD
       by (simp add: \<sigma>_def gen_density_def field_simps mult_less_0_iff zero_less_mult_iff)
     finally have eq10: "\<mu> - 2/k \<le> \<sigma>" .
-    have "2 * b / m \<le> \<mu> - 2/k"
+    have B: "2 * b / m \<le> \<mu> - 2/k"
     proof -
       have 512: "5/12 \<le> (1::real)"
         by simp
@@ -1210,8 +1226,34 @@ proof -
     with ble have "b \<le> m"
       by linarith
 
+    have "card X > 2 powr (m/2)"
+      by (metis RN_commute RN_lower_nodiag \<open>6 \<le> m\<close> \<open>m \<le> k\<close> add_leE less_le_trans cX numeral_Bit0 of_nat_mono)
+
+    text \<open>Mehta\<close> (*four_two_aux''' PROBABLY NOT NEEDED *)
+    have "exp (- 2 * (i / (\<sigma> * m))) \<le> 1 - i / (\<sigma> * m)" if "i<b" for i
+      using ble \<open>0 \<le> \<sigma>\<close> that
+      by (intro order_trans [OF exp_thing]) auto
+
+    have "card X > 2*m"
+      using cX 
+      sorry
+    have "b\<^sup>2 / (\<sigma>*m) \<le> b/2"
+      using ble \<open>b>0\<close>
+      by (simp add: power2_eq_square divide_simps)
+
+    have "m/b \<ge> l powr (5/12)"
+      apply (simp add: m_def b_def divide_simps)
+
+    sorry
+
+    have "\<mu>/2 \<le> \<sigma>"
+      using eq10 B \<open>0 < b\<close> \<open>m \<le> k\<close> \<open>0 < m\<close>
+      by (smt (verit, ccfv_SIG) of_nat_add field_sum_of_halves frac_le mult_2 nat_less_real_le of_nat_0 of_nat_mono)
+
+    define \<Phi> where "\<Phi> \<equiv> \<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) choose b"
+
     have "\<mu>^b/2 * card X \<le> (1 - b\<^sup>2 / (\<sigma>*m)) * \<sigma>^b * card (X-U)"
-      using \<open>\<sigma> > 0\<close> \<open>m \<noteq> 0\<close>
+      using \<open>\<sigma> > 0\<close> \<open>m \<noteq> 0\<close> cX
       apply (simp add: divide_simps)
       apply (auto simp: algebra_simps)
 
@@ -1240,52 +1282,122 @@ proof -
     qed auto
     also have "... = 1/(m choose b) * (((\<sigma>*m) gchoose b) * card (X-U))"
       by (simp add: mult.assoc)
-    also have "\<dots> \<le> 1/(m choose b) * (\<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) gchoose b)"
+    also have "\<dots> \<le> 1/(m choose b) * \<Phi>"
     proof (intro mult_left_mono)
       have eeq: "edge_card Blue U (X-U) = (\<Sum>i\<in>X-U. card (Neighbours Blue i \<inter> U))"
       proof (intro edge_card_eq_sum_Neighbours)
-        show "finite (X - U)"
+        show "finite (X-U)"
           by (meson \<open>X\<subseteq>V\<close> finV finite_Diff finite_subset)
       qed (use disjnt_def Blue_E in auto)
-      have *: "(\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U)) /\<^sub>R real (card (X - U))) = \<sigma> * m"
+      have *: "(\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U)) /\<^sub>R real (card (X-U))) = \<sigma> * m"
         using \<open>m>0\<close>
         apply (simp add: \<sigma>_def flip: sum_distrib_left)
         apply (simp add: gen_density_def \<open>card U = m\<close> eeq divide_simps)
         done
-      have "mbinomial (\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U)) /\<^sub>R (card (X - U))) b 
-         \<le> (\<Sum>i\<in>X - U. inverse (real (card (X - U))) * mbinomial (card (Neighbours Blue i \<inter> U)) b)"
+      have "mbinomial (\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U)) /\<^sub>R (card (X-U))) b 
+         \<le> (\<Sum>i\<in>X - U. inverse (real (card (X-U))) * mbinomial (card (Neighbours Blue i \<inter> U)) b)"
       proof (rule convex_on_sum)
-        show "finite (X - U)"
+        show "finite (X-U)"
           using cardU_less_X zero_less_diff by fastforce
         show "convex_on UNIV (\<lambda>a. mbinomial a b)"
           using assms(1) convex_mbinomial ln0 by auto
-        show "(\<Sum>i\<in>X - U. inverse (card (X - U))) = 1"
+        show "(\<Sum>i\<in>X - U. inverse (card (X-U))) = 1"
           using cardU_less_X cardXU by force
       qed (use \<open>U \<subset> X\<close> in auto)
       with ble 
-      show "(\<sigma>*m gchoose b) * card (X-U) \<le> (\<Sum>v \<in> X-U. (card (Neighbours Blue v \<inter> U)) gchoose b)"
-        unfolding * by (simp add: cardU_less_X cardXU binomial_gbinomial divide_simps 
-            flip: sum_distrib_left sum_divide_distrib)
+      show "(\<sigma>*m gchoose b) * card (X-U) \<le> \<Phi>"
+        unfolding * \<Phi>_def 
+        by (simp add: cardU_less_X cardXU binomial_gbinomial divide_simps  flip: sum_distrib_left sum_divide_distrib)
     qed auto
-    finally have "\<mu>^b/2 * card X \<le> 1/(m choose b) * (\<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) gchoose b)" .
-    obtain S where "S\<subseteq>U" and "size_clique b S Blue" 
-      and S: "card (\<Inter>v\<in>S. Neighbours Blue v \<inter> (X-U)) \<ge> \<mu>^b * card X / 2"
+    finally have F: "\<mu>^b/2 * card X \<le> 1/(m choose b) * \<Phi>" .
+
+    define \<Omega> where "\<Omega> \<equiv> nsets U b"  \<comment>\<open>Choose a random subset of size @{term b}\<close>
+    have card\<Omega>: "card \<Omega> = m choose b"
+      by (simp add: \<Omega>_def \<open>card U = m\<close>)
+    then have fin\<Omega>: "finite \<Omega>" and "\<Omega> \<noteq> {}"
+      using \<open>b \<le> m\<close> not_less by fastforce+
+    define M where "M \<equiv> uniform_count_measure \<Omega>"
+    have space_eq: "space M = \<Omega>"
+      by (simp add: M_def space_uniform_count_measure)
+    have sets_eq: "sets M = Pow \<Omega>"
+      by (simp add: M_def sets_uniform_count_measure)
+    interpret P: prob_space M
+      using M_def \<open>b \<le> m\<close> card\<Omega> fin\<Omega> prob_space_uniform_count_measure by force
+    have measure_eq: "measure M C = (if C \<subseteq> \<Omega> then card C / card \<Omega> else 0)" for C
+      by (simp add: M_def fin\<Omega> measure_uniform_count_measure_if) 
+
+    define Int_NB where "Int_NB \<equiv> \<lambda>S. \<Inter>v\<in>S. Neighbours Blue v \<inter> (X-U)"
+    have sum_card_NB: 
+      "(\<Sum>A\<in>\<Omega>. card (\<Inter>(Neighbours Blue ` A) \<inter> Y)) = (\<Sum>v\<in>Y. card (Neighbours Blue v \<inter> U) choose b)"
+      if "finite Y" "Y \<subseteq> X-U" for Y
+      using that
+    proof (induction Y)
+      case empty
+      then show ?case
+        by force
+    next
+      case (insert y Y)
+      have *: "\<Omega> \<inter> {A. \<forall>x\<in>A. y \<in> Neighbours Blue x} = nsets (Neighbours Blue y \<inter> U) b"
+              "\<Omega> \<inter> - {A. \<forall>x\<in>A. y \<in> Neighbours Blue x} = \<Omega> - nsets (Neighbours Blue y \<inter> U) b"
+        using insert.prems by (auto simp: \<Omega>_def nsets_def in_Neighbours_iff insert_commute)
+      then show ?case
+        using insert fin\<Omega>
+        apply (simp add: Int_insert_right sum_Suc sum.If_cases if_distrib [of card] flip: insert.IH)
+        by (smt (verit, best) Int_lower1 add.commute sum.subset_diff)
+    qed
+    have "(\<Sum>x\<in>\<Omega>. card (if x = {} then UNIV else \<Inter> (Neighbours Blue ` x) \<inter> (X-U))) 
+        = (\<Sum>x\<in>\<Omega>. card (\<Inter> (Neighbours Blue ` x) \<inter> (X-U)))"
+      unfolding \<Omega>_def nsets_def using \<open>0 < b\<close>
+      by (force simp add: intro: sum.cong)
+    also have "\<dots> = (\<Sum>v\<in>X - U. card (Neighbours Blue v \<inter> U) choose b)"
+      by (metis sum_card_NB \<open>X\<subseteq>V\<close> dual_order.refl finV finite_Diff rev_finite_subset)
+    finally have E: "sum (card o Int_NB) \<Omega> = \<Phi>"
+      by (simp add: \<Omega>_def \<Phi>_def Int_NB_def)
+    have "P.expectation (\<lambda>S. card (Int_NB S)) = sum (card o Int_NB) \<Omega> / (m choose b)"
+      using lebesgue_integral_count_space_finite [OF fin\<Omega>] 
       sorry
-    then have "card S = b" "clique S Blue"
-      using size_clique_def by auto
-    with \<open>b>0\<close> obtain v where "v \<in> S"
-      by fastforce
-    have "all_edges_betw_un S (S \<union> (\<Inter>v\<in>S. Neighbours Blue v \<inter> (X - U))) \<subseteq> Blue"
-      using \<open>clique S Blue\<close> unfolding all_edges_betw_un_def Neighbours_def clique_def
-      by fastforce
     then
-    have "good_blue_book X (S, \<Inter>v\<in>S. Neighbours Blue v \<inter> (X-U))"
+    have P: "P.expectation (\<lambda>S. card (Int_NB S)) = \<Phi> / (m choose b)"
+      using E by blast
+    have False if "\<And>S. S \<in> \<Omega> \<Longrightarrow> card (Int_NB S) < \<Phi> / (m choose b)"
+    proof -
+      define L where "L \<equiv> (\<lambda>S. \<Phi> / real (m choose b) - card (Int_NB S)) ` \<Omega>"
+      have "finite L" "L \<noteq> {}"
+        using L_def fin\<Omega>  \<open>\<Omega>\<noteq>{}\<close> by blast+
+      define \<epsilon> where "\<epsilon> \<equiv> Min L"
+      have "\<epsilon> > 0"
+        using that fin\<Omega> \<open>\<Omega> \<noteq> {}\<close> by (simp add: L_def \<epsilon>_def)
+      then have "\<And>S. S \<in> \<Omega> \<Longrightarrow> card (Int_NB S) \<le> \<Phi> / (m choose b) - \<epsilon>"
+        using linorder_class.Min_le [OF \<open>finite L\<close>]
+        by (fastforce simp add: algebra_simps \<epsilon>_def L_def)
+      then have "P.expectation (\<lambda>S. card (Int_NB S)) \<le> \<Phi> / (m choose b) - \<epsilon>"
+        using M_def P P.not_empty not_integrable_integral_eq space_eq \<open>\<epsilon> > 0\<close>
+        by (intro P.integral_le_const) fastforce+
+      then show False
+        using P \<open>0 < \<epsilon>\<close> by auto
+    qed
+    then obtain S where "S \<in> \<Omega>" and Sge: "card (Int_NB S) \<ge> \<Phi> / (m choose b)"
+      using linorder_not_le by blast
+    then have "S \<subseteq> U"
+      by (simp add: \<Omega>_def nsets_def subset_iff)
+    have "card S = b" "clique S Blue"
+      using \<open>S \<in> \<Omega>\<close> \<open>U \<subseteq> V\<close> \<open>clique U Blue\<close> smaller_clique 
+      unfolding \<Omega>_def nsets_def size_clique_def by auto
+    have "\<Phi> / (m choose b) \<ge> \<mu>^b * card X / 2"
+      using F by simp
+    then have S: "card (Int_NB S) \<ge> \<mu>^b * card X / 2"
+      using Sge by linarith
+    obtain v where "v \<in> S"
+      using \<open>0 < b\<close> \<open>card S = b\<close> by fastforce
+    have "all_edges_betw_un S (S \<union> Int_NB S) \<subseteq> Blue"
+      using \<open>clique S Blue\<close> unfolding all_edges_betw_un_def Neighbours_def clique_def Int_NB_def
+      by fastforce
+    then have "good_blue_book X (S, Int_NB S)"
       using \<open>S\<subseteq>U\<close> \<open>v \<in> S\<close> \<open>U \<subset> X\<close> S \<open>card S = b\<close>
-      unfolding good_blue_book_def book_def size_clique_def disjnt_iff
+      unfolding good_blue_book_def book_def size_clique_def Int_NB_def disjnt_iff
       by blast
-    then
-    show ?thesis
-      using \<open>size_clique b S Blue\<close> size_clique_def by auto
+    then show ?thesis
+      using \<open>card S = b\<close> by blast
   qed auto
 qed
 
