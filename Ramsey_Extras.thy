@@ -500,22 +500,25 @@ proof (intro Least_equality)
 qed auto
 
 lemma RN_1 [simp]: 
-  assumes "m>0" shows "RN 1 m = 1"
+  assumes "m>0" shows "RN (Suc 0) m = Suc 0"
   unfolding RN_def
 proof (intro Least_equality)
   have [simp]: "[{..<Suc 0}]\<^bsup>2\<^esup> = {}" "[{}]\<^bsup>2\<^esup> = {}"
     by (auto simp: nsets_def card_2_iff)
-  show "is_Ramsey_number 1 m 1"
+  show "is_Ramsey_number (Suc 0) m (Suc 0)"
     by (auto simp: partn_lst_def)
   fix i
-  assume i: "is_Ramsey_number 1 m i"
-  show "i \<ge> 1"
+  assume i: "is_Ramsey_number (Suc 0) m i"
+  show "i \<ge> Suc 0"
   proof (cases "i=0")
     case True
     with i assms show ?thesis
       by (auto simp: partn_lst_def nsets_empty_iff less_Suc_eq)
   qed auto
 qed
+
+lemma RN_0' [simp]: "RN m 0 = 0" and RN_1' [simp]: "m>0 \<Longrightarrow> RN m (Suc 0) = Suc 0"
+  using RN_1 RN_commute by auto
 
 lemma is_clique_RN_2: "is_clique_RN TYPE(nat) 2 m m"
   unfolding is_clique_RN_def
@@ -557,6 +560,11 @@ proof (intro Least_equality)
       unfolding is_clique_RN_def clique_indep_def by (metis card_mono dual_order.refl)
   qed auto
 qed
+
+lemma RN_2' [simp]: 
+  assumes "m>1"
+  shows "RN m 2 = m"
+  using RN_2 RN_commute assms by force
 
 lemma RN_3plus: 
   assumes "k \<ge> 3" "m>1"

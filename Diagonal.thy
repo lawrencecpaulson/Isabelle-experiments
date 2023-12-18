@@ -401,6 +401,23 @@ begin
 locales for different parts of the development gets confusing here.*)
   \<comment> \<open>l: blue limit, and k: red limit\<close>
 definition "Colours \<equiv> \<lambda>l k. l \<le> k \<and> \<not> (\<exists>K. size_clique k K Red) \<and> \<not> (\<exists>K. size_clique l K Blue)"
+(*
+locale Colours = Diagonal + 
+  fixes l::nat       \<comment> \<open>blue limit\<close>
+  fixes k::nat       \<comment> \<open>red limit\<close>
+  assumes lk: "l \<le> k" \<comment> \<open>they should be "sufficiently large"\<close>
+  assumes no_Red_clique: "\<not> (\<exists>K. size_clique k K Red)"
+  assumes no_Blue_clique: "\<not> (\<exists>K. size_clique l K Blue)"
+begin
+
+lemma ln0: "l>0"
+  using no_Blue_clique by (force simp: size_clique_def clique_def)
+
+lemma kn0: "k > 0"
+  using  lk ln0 by auto
+
+end
+*)
 
 abbreviation "nV \<equiv> card V"
 
@@ -751,8 +768,10 @@ lemma ex_central_vertex:
   assumes "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X"
   shows "\<exists>x. central_vertex \<mu> X x"
 proof -
-  have *: "real l powr (2/3) \<le> real l powr (3/4)"
-    using l_large powr_mono by force
+  have "l \<noteq> 0"
+    using linorder_not_less assms unfolding many_bluish_def by force
+  then have *: "real l powr (2/3) \<le> real l powr (3/4)"
+    using powr_mono by force
   then have "card {x \<in> X. bluish \<mu> X x} < card X"
     using assms RN_mono
     unfolding termination_condition_def many_bluish_def not_le
