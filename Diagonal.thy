@@ -8,29 +8,6 @@ theory Diagonal imports
    
 begin
 
-text \<open>Mehta\<close>
-lemma exp_thing:(*four_two_aux''' PROBABLY NOT NEEDED *)
-  fixes x::real
-  assumes "0 \<le> x" "x \<le> 1/2" shows "exp (- 2 * x) \<le> 1 - x"
-proof -
-  have "1 / (1-x) \<le> 1 + 2 * x"
-    using assms by (simp add: mult_right_le_one_le field_simps)
-  also have "... \<le> exp (2*x)"
-    using exp_ge_add_one_self by blast
-  finally show ?thesis
-    using assms by (simp add: exp_minus divide_simps mult.commute)
-qed
-
-lemma integral_uniform_count_measure:
-  assumes "finite \<Omega>" 
-  shows "integral\<^sup>L (uniform_count_measure \<Omega>) f = sum f \<Omega> / (card \<Omega>)"
-proof -
-  have "(integral\<^sup>L (uniform_count_measure \<Omega>) f) = (\<Sum>a\<in>\<Omega>. (f a) / real (card \<Omega>))" 
-    using assms by (simp add: uniform_count_measure_def lebesgue_integral_point_measure_finite)
-  with assms show ?thesis
-    by (simp add: sum_divide_distrib nn_integral_count_space_finite)
-qed
-
 subsection \<open>Fact D1\<close>
 
 text \<open>from appendix D, page 55\<close>
@@ -191,7 +168,6 @@ next
     qed
     finally show ?thesis .
   qed
-
   have EQ: "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))" 
     using Fact_D1_73_aux \<open>0<\<sigma>\<close> bm by blast
   have "sum real {..<b} \<le> real b ^ 2 / 2"
@@ -405,24 +381,26 @@ section \<open>Locale for the parameters of the construction\<close>
 
 type_synonym 'a config = "'a set \<times> 'a set \<times> 'a set \<times> 'a set"
 
+
+(*NOT CLEAR WHETHER \<mu> CAN BE FIXED HERE OR NOT*)
+
 locale Diagonal = fin_sgraph +   \<comment> \<open>finite simple graphs (no loops)\<close>
-  fixes k::nat       \<comment> \<open>red limit\<close>
-  fixes l::nat       \<comment> \<open>blue limit\<close>
-  assumes l_large: "15 \<le> l" and lk: "l \<le> k" \<comment> \<open>they should be "sufficiently large"\<close>
-      (* in particular, need l ^ (2/3) \<ge> 6*)
   assumes complete: "E \<equiv> all_edges V"
   fixes Red Blue :: "'a set set"
   assumes Red_not_Blue: "Red \<noteq> Blue"
   assumes part_RB: "partition_on E {Red,Blue}"
-  assumes no_Red_clique: "\<not> (\<exists>K. size_clique k K Red)"
-  assumes no_Blue_clique: "\<not> (\<exists>K. size_clique l K Blue)"
   \<comment> \<open>the following are local to the program and possibly require their own locale\<close>
   fixes X0 :: "'a set" and Y0 :: "'a set"    \<comment> \<open>initial values\<close>
   assumes XY0: "disjnt X0 Y0" "X0 \<subseteq> V" "Y0 \<subseteq> V"
-  fixes \<mu>::real
-  assumes \<mu>01: "0 < \<mu>" "\<mu> < 1"
   assumes infinite_UNIV: "infinite (UNIV::'a set)"
+
+context Diagonal
 begin
+
+(*This wants to be a locale. But nested locales don't seem to work, and having separate
+locales for different parts of the development gets confusing here.*)
+  \<comment> \<open>l: blue limit, and k: red limit\<close>
+definition "Colours \<equiv> \<lambda>l k. l \<le> k \<and> \<not> (\<exists>K. size_clique k K Red) \<and> \<not> (\<exists>K. size_clique l K Blue)"
 
 abbreviation "nV \<equiv> card V"
 
@@ -444,9 +422,6 @@ lemma Blue_eq: "Blue = all_edges V - Red"
 
 lemma nontriv: "E \<noteq> {}"
   using Red_E bot.extremum_strict by blast
-
-lemma kn0: "k > 0" and ln0: "l > 0"
-  using lk l_large by auto
 
 lemma not_Red_Neighbour [simp]: "x \<notin> Neighbours Red x" and not_Blue_Neighbour [simp]: "x \<notin> Neighbours Blue x"
   using Red_E Blue_E not_own_Neighbour by auto
@@ -564,7 +539,6 @@ proof (cases "finite X \<and> finite Y")
     by (simp add: gen_density_def edge_card_def edge_density_def divide_right_mono)
 qed (auto simp: gen_density_def edge_density_def)
 
-
 lemma edge_card_eq_sum_Neighbours:
   assumes "C \<subseteq> E" and B: "finite B" "disjnt A B"
   shows "edge_card C A B = (\<Sum>i\<in>B. card (Neighbours C i \<inter> A))"
@@ -615,37 +589,37 @@ definition weight :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow>
 
 definition "p0 \<equiv> red_density X0 Y0"
 
-definition "epsk \<equiv> k powr (-1/4)"
+definition "eps \<equiv> \<lambda>k. real k powr (-1/4)"
 
-definition "q \<equiv> \<lambda>h. p0 + ((1 + epsk)^h - 1) / k"
+definition "q \<equiv> \<lambda>k h. p0 + ((1 + eps k)^h - 1) / k"
 
-definition "hgt \<equiv> \<lambda>p. LEAST h. p \<le> q h \<and> h>0"
+definition "hgt \<equiv> \<lambda>k p. LEAST h. p \<le> q k h \<and> h>0"
 
-lemma q0 [simp]: "q 0 = p0"
+lemma q0 [simp]: "q k 0 = p0"
   by (simp add: q_def)
 
 lemma p0_01: "0 \<le> p0" "p0 \<le> 1"
   by (simp_all add: p0_def gen_density_ge0 gen_density_le1)
 
-lemma epsk_n0: "epsk > 0"
-  by (auto simp: epsk_def kn0)
+lemma epsk_n0: "k>0 \<Longrightarrow> eps k > 0"
+  by (simp add: eps_def)
 
 lemma height_exists:
-  assumes "0 < p" and "p < 1"
-  obtains h where "p \<le> q h"
+  assumes "0 < p" and "p < 1" and "k>0"
+  obtains h where "p \<le> q k h"
 proof -
-  let ?h = "nat \<lceil>k / epsk\<rceil>"  \<comment>\<open>larger than the bound suggested in the paper\<close>
-  have "k+1 \<le> (1 + epsk) ^ ?h"
-    using linear_plus_1_le_power [of epsk ?h] epsk_n0
+  let ?h = "nat \<lceil>k / eps k\<rceil>"  \<comment>\<open>larger than the bound suggested in the paper\<close>
+  have "k+1 \<le> (1 + eps k) ^ ?h"
+    using linear_plus_1_le_power [of "eps k" ?h] epsk_n0 \<open>k>0\<close>
     by (smt (verit, best) mult_imp_less_div_pos of_nat_1 of_nat_add of_nat_ceiling)
-  then have "p \<le> q ?h"
+  then have "p \<le> q k ?h"
     unfolding q_def
-    using kn0 assms p0_01
+    using assms p0_01
     by (smt (verit, best) le_divide_eq_1_pos of_nat_0_less_iff of_nat_1 of_nat_add)
   then show thesis ..
 qed
 
-lemma q_Suc_diff: "q(Suc h) - q h = epsk * (1 + epsk)^h / k"
+lemma q_Suc_diff: "q k (Suc h) - q k h = eps k * (1 + eps k)^h / k"
   by (simp add: q_def field_split_simps)
 
 lemma finite_Red [simp]: "finite Red"
@@ -655,7 +629,7 @@ lemma finite_Blue [simp]: "finite Blue"
   using Blue_E fin_edges finite_subset by blast
 
 
-definition "alpha \<equiv> \<lambda>h. q h - q (h-1)"
+definition "alpha \<equiv> \<lambda>k h. q k h - q k (h-1)"
 
 definition all_incident_edges :: "'a set \<Rightarrow> 'a set set" where
     "all_incident_edges \<equiv> \<lambda>A. \<Union>v\<in>A. incident_edges v"
@@ -675,7 +649,7 @@ definition "RB_state \<equiv> \<lambda>(X,Y,A,B). all_edges_betw_un A A \<subset
 
 definition "valid_state \<equiv> \<lambda>U. V_state U \<and> disjoint_state U \<and> RB_state U"
 
-definition "termination_condition \<equiv> \<lambda>X Y. card X \<le> RN k (nat \<lceil>l powr (3/4)\<rceil>) \<or> red_density X Y \<le> 1/k"
+definition "termination_condition \<equiv> \<lambda>l k X Y. card X \<le> RN k (nat \<lceil>l powr (3/4)\<rceil>) \<or> red_density X Y \<le> 1/k"
 
 lemma 
   assumes "V_state(X,Y,A,B)" 
@@ -684,181 +658,174 @@ lemma
 
 subsection \<open>Degree regularisation\<close>
 
-definition "red_dense \<equiv> \<lambda>Y p x. card (Neighbours Red x \<inter> Y) \<ge> p - epsk powr (-1/2) * alpha (hgt p) * card Y"
+definition "red_dense \<equiv> \<lambda>k Y p x. card (Neighbours Red x \<inter> Y) \<ge> p - eps k powr (-1/2) * alpha k (hgt k p) * card Y"
 
-definition "X_degree_reg \<equiv>  \<lambda>X Y. {x \<in> X. red_dense Y (red_density X Y) x}"
+definition "X_degree_reg \<equiv>  \<lambda>k X Y. {x \<in> X. red_dense k Y (red_density X Y) x}"
 
-definition "degree_reg \<equiv> \<lambda>(X,Y,A,B). (X_degree_reg X Y, Y, A, B)"
+definition "degree_reg \<equiv> \<lambda>k (X,Y,A,B). (X_degree_reg k X Y, Y, A, B)"
 
-lemma X_degree_reg_subset: "X_degree_reg X Y \<subseteq> X"
+lemma X_degree_reg_subset: "X_degree_reg k X Y \<subseteq> X"
   by (auto simp: X_degree_reg_def)
 
-lemma degree_reg_V_state: "V_state U \<Longrightarrow> V_state (degree_reg U)"
+lemma degree_reg_V_state: "V_state U \<Longrightarrow> V_state (degree_reg k U)"
   by (auto simp: degree_reg_def X_degree_reg_def V_state_def)
 
-lemma degree_reg_disjoint_state: "disjoint_state U \<Longrightarrow> disjoint_state (degree_reg U)"
+lemma degree_reg_disjoint_state: "disjoint_state U \<Longrightarrow> disjoint_state (degree_reg k U)"
   by (auto simp: degree_reg_def X_degree_reg_def disjoint_state_def disjnt_iff)
 
-lemma degree_reg_RB_state: "RB_state U \<Longrightarrow> RB_state (degree_reg U)"
+lemma degree_reg_RB_state: "RB_state U \<Longrightarrow> RB_state (degree_reg k U)"
   apply (simp add: degree_reg_def RB_state_def all_edges_betw_un_Un2 split: prod.split prod.split_asm)
   by (meson X_degree_reg_subset all_edges_betw_un_mono2 dual_order.trans)
 
-lemma degree_reg_valid_state: "valid_state U \<Longrightarrow> valid_state (degree_reg U)"
+lemma degree_reg_valid_state: "valid_state U \<Longrightarrow> valid_state (degree_reg k U)"
   by (simp add: degree_reg_RB_state degree_reg_V_state degree_reg_disjoint_state valid_state_def)
 
 subsection \<open>Big blue steps: code\<close>
 
-definition bluish :: "'a set \<Rightarrow> 'a \<Rightarrow> bool" where
-  "bluish \<equiv> \<lambda>X x. card (Neighbours Blue x \<inter> X) \<ge> \<mu> * card X"
+definition bluish :: "[real,'a set,'a] \<Rightarrow> bool" where
+  "bluish \<equiv> \<lambda>\<mu> X x. card (Neighbours Blue x \<inter> X) \<ge> \<mu> * real (card X)"
 
-definition many_bluish :: "[nat,'a set] \<Rightarrow> bool" where
-  "many_bluish \<equiv> \<lambda>l X. card {x\<in>X. bluish X x} \<ge> RN k (nat \<lceil>l powr (2/3)\<rceil>)"
+definition many_bluish :: "[real, nat,nat,'a set] \<Rightarrow> bool" where
+  "many_bluish \<equiv> \<lambda>\<mu> l k X. card {x\<in>X. bluish \<mu> X x} \<ge> RN k (nat \<lceil>l powr (2/3)\<rceil>)"
 
-definition "good_blue_book \<equiv> \<lambda>X::'a set. \<lambda>(S,T). book S T Blue \<and> S\<subseteq>X \<and> T\<subseteq>X \<and> card T \<ge> (\<mu> ^ card S) * card X / 2"
+definition good_blue_book :: "[real, 'a set, 'a set \<times> 'a set] \<Rightarrow> bool" where
+ "good_blue_book \<equiv> \<lambda>\<mu> X. \<lambda>(S,T). book S T Blue \<and> S\<subseteq>X \<and> T\<subseteq>X 
+                               \<and> card T \<ge> (\<mu> ^ card S) * real (card X) / 2"
 
-lemma l_powr_23_ge6: "nat \<lceil>l powr (2/3)\<rceil> \<ge> 6"
-proof -
-  have "(6::real) \<le> 15 powr (2/3)"
-    by (approximation 12)
-  also have "\<dots> \<le> l powr (2/3)"
-    by (simp add: l_large powr_mono2)
-  finally show ?thesis
-    by (simp add: le_natceiling_iff)
-qed
-
-lemma ex_good_blue_book: "good_blue_book X ({}, X)"
+lemma ex_good_blue_book: "good_blue_book \<mu> X ({}, X)"
   by (simp add: good_blue_book_def)
 
-lemma bounded_good_blue_book: "\<lbrakk>good_blue_book X (S,T); V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> card S \<le> card X"
+lemma bounded_good_blue_book: "\<lbrakk>good_blue_book \<mu> X (S,T); V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> card S \<le> card X"
   by (simp add: card_mono finX good_blue_book_def)
 
-definition best_blue_book_card :: "'a set \<Rightarrow> nat" where
-  "best_blue_book_card \<equiv> \<lambda>X. GREATEST s. \<exists>S T. good_blue_book X (S,T) \<and> s = card S"
+definition best_blue_book_card :: "[real,'a set] \<Rightarrow> nat" where
+  "best_blue_book_card \<equiv> \<lambda>\<mu> X. GREATEST s. \<exists>S T. good_blue_book \<mu> X (S,T) \<and> s = card S"
 
-lemma best_blue_book_is_best: "\<lbrakk>good_blue_book X (S,T); V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> card S \<le> best_blue_book_card X"
+lemma best_blue_book_is_best: "\<lbrakk>good_blue_book \<mu> X (S,T); V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> card S \<le> best_blue_book_card \<mu> X"
   unfolding best_blue_book_card_def
   by (smt (verit) Greatest_le_nat bounded_good_blue_book)
 
-lemma ex_best_blue_book: "V_state(X,Y,A,B) \<Longrightarrow> \<exists>S T. good_blue_book X (S,T) \<and> card S = best_blue_book_card X"
+lemma ex_best_blue_book: "V_state(X,Y,A,B) \<Longrightarrow> \<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S = best_blue_book_card \<mu> X"
   unfolding best_blue_book_card_def
   by (smt (verit, del_insts) GreatestI_ex_nat bounded_good_blue_book ex_good_blue_book)
 
-definition "choose_blue_book \<equiv> \<lambda>(X,Y,A,B). @(S,T). good_blue_book X (S,T) \<and> card S = best_blue_book_card X"
+definition "choose_blue_book \<equiv> \<lambda>\<mu> (X,Y,A,B). @(S,T). good_blue_book \<mu> X (S,T) \<and> card S = best_blue_book_card \<mu> X"
 
 lemma choose_blue_book_works: 
-  "\<lbrakk>V_state(X,Y,A,B); (S,T) = choose_blue_book(X,Y,A,B)\<rbrakk> 
-  \<Longrightarrow> good_blue_book X (S,T) \<and> card S = best_blue_book_card X"
+  "\<lbrakk>V_state(X,Y,A,B); (S,T) = choose_blue_book \<mu> (X,Y,A,B)\<rbrakk> 
+  \<Longrightarrow> good_blue_book \<mu> X (S,T) \<and> card S = best_blue_book_card \<mu> X"
   unfolding choose_blue_book_def
   using someI_ex [OF ex_best_blue_book]
   by (metis (mono_tags, lifting) case_prod_conv someI_ex)
 
 
 lemma choose_blue_book_subset: 
-  "\<lbrakk>V_state(X,Y,A,B); (S,T) = choose_blue_book(X,Y,A,B)\<rbrakk> \<Longrightarrow> T \<subseteq> X"
+  "\<lbrakk>V_state(X,Y,A,B); (S,T) = choose_blue_book \<mu> (X,Y,A,B)\<rbrakk> \<Longrightarrow> T \<subseteq> X"
   using choose_blue_book_works good_blue_book_def by fastforce
 
 
 text \<open>expressing the complicated preconditions inductively\<close>
 inductive big_blue
-  where "\<lbrakk>many_bluish l X; good_blue_book X (S,T); card S = best_blue_book_card X\<rbrakk> \<Longrightarrow> big_blue (X,Y,A,B) (T, Y, A, B\<union>S)"
+  where "\<lbrakk>many_bluish \<mu> l k X; good_blue_book \<mu> X (S,T); card S = best_blue_book_card \<mu> X\<rbrakk> \<Longrightarrow> big_blue \<mu> (X,Y,A,B) (T, Y, A, B\<union>S)"
 
-lemma big_blue_V_state: "\<lbrakk>big_blue U U'; V_state U\<rbrakk> \<Longrightarrow> V_state U'"
+lemma big_blue_V_state: "\<lbrakk>big_blue \<mu> U U'; V_state U\<rbrakk> \<Longrightarrow> V_state U'"
   by (force simp: good_blue_book_def V_state_def elim!: big_blue.cases)
 
-lemma big_blue_disjoint_state: "\<lbrakk>big_blue U U'; disjoint_state U\<rbrakk> \<Longrightarrow> disjoint_state U'"
+lemma big_blue_disjoint_state: "\<lbrakk>big_blue \<mu> U U'; disjoint_state U\<rbrakk> \<Longrightarrow> disjoint_state U'"
   apply (clarsimp simp add: good_blue_book_def disjoint_state_def elim!: big_blue.cases)
   by (metis book_imp_disjnt disjnt_subset1 disjnt_sym)
 
-lemma big_blue_RB_state: "\<lbrakk>big_blue U U'; RB_state U\<rbrakk> \<Longrightarrow> RB_state U'"
+lemma big_blue_RB_state: "\<lbrakk>big_blue \<mu> U U'; RB_state U\<rbrakk> \<Longrightarrow> RB_state U'"
   apply (clarsimp simp add: good_blue_book_def book_def RB_state_def all_edges_betw_un_Un1 all_edges_betw_un_Un2 elim!: big_blue.cases)
   by (metis all_edges_betw_un_commute all_edges_betw_un_mono1 le_supI2 sup.orderE)
 
-lemma big_blue_valid_state: "\<lbrakk>big_blue U U'; valid_state U\<rbrakk> \<Longrightarrow> valid_state U'"
+lemma big_blue_valid_state: "\<lbrakk>big_blue \<mu> U U'; valid_state U\<rbrakk> \<Longrightarrow> valid_state U'"
   by (meson big_blue_RB_state big_blue_V_state big_blue_disjoint_state valid_state_def)
 
 subsection \<open>The central vertex\<close>
 
-definition central_vertex :: "'a set \<Rightarrow> 'a \<Rightarrow> bool" where
-  "central_vertex \<equiv> \<lambda>X x. x \<in> X \<and> card (Neighbours Blue x \<inter> X) \<le> \<mu> * card X"
+definition central_vertex :: "[real,'a set,'a] \<Rightarrow> bool" where
+  "central_vertex \<equiv> \<lambda>\<mu> X x. x \<in> X \<and> card (Neighbours Blue x \<inter> X) \<le> \<mu> * real (card X)"
 
 lemma ex_central_vertex:
-  assumes "\<not> termination_condition X Y" "\<not> many_bluish l X"
-  shows "\<exists>x. central_vertex X x"
+  assumes "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X"
+  shows "\<exists>x. central_vertex \<mu> X x"
 proof -
   have *: "real l powr (2/3) \<le> real l powr (3/4)"
     using l_large powr_mono by force
-  then have "card {x \<in> X. bluish X x} < card X"
+  then have "card {x \<in> X. bluish \<mu> X x} < card X"
     using assms RN_mono
     unfolding termination_condition_def many_bluish_def not_le
     by (smt (verit, ccfv_SIG) linorder_not_le nat_ceiling_le_eq of_nat_le_iff)
-  then obtain x where "x \<in> X" "\<not> bluish X x"
+  then obtain x where "x \<in> X" "\<not> bluish \<mu> X x"
     by (metis (mono_tags, lifting) mem_Collect_eq nat_neq_iff subsetI subset_antisym)
   then show ?thesis
     by (meson bluish_def central_vertex_def linorder_linear)
 qed
 
-lemma finite_central_vertex_set: "V_state(X,Y,A,B) \<Longrightarrow> finite {x. central_vertex X x}"
+lemma finite_central_vertex_set: "V_state(X,Y,A,B) \<Longrightarrow> finite {x. central_vertex \<mu> X x}"
   by (simp add: central_vertex_def finX)
 
-definition max_central_vx :: "'a set \<Rightarrow> 'a set \<Rightarrow> real" where
-  "max_central_vx \<equiv> \<lambda>X Y. Max (weight X Y ` {x. central_vertex X x})"
+definition max_central_vx :: "[real,'a set,'a set] \<Rightarrow> real" where
+  "max_central_vx \<equiv> \<lambda>\<mu> X Y. Max (weight X Y ` {x. central_vertex \<mu> X x})"
 
-lemma central_vx_is_best: "\<lbrakk>central_vertex X x; V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> weight X Y x \<le> max_central_vx X Y"
+lemma central_vx_is_best: 
+  "\<lbrakk>central_vertex \<mu> X x; V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> weight X Y x \<le> max_central_vx \<mu> X Y"
   unfolding max_central_vx_def by (simp add: finite_central_vertex_set)
 
 lemma ex_best_central_vx: 
-  "\<lbrakk>\<not> termination_condition X Y; \<not> many_bluish l X; V_state(X,Y,A,B)\<rbrakk> 
-  \<Longrightarrow> \<exists>x. central_vertex X x \<and> weight X Y x = max_central_vx X Y"
+  "\<lbrakk>\<not> termination_condition l k X Y; \<not> many_bluish \<mu> l k X; V_state(X,Y,A,B)\<rbrakk> 
+  \<Longrightarrow> \<exists>x. central_vertex \<mu> X x \<and> weight X Y x = max_central_vx \<mu> X Y"
   unfolding max_central_vx_def
   by (metis empty_iff ex_central_vertex finite_central_vertex_set mem_Collect_eq obtains_MAX)
 
 text \<open>it's necessary to make a specific choice; a relational treatment might allow different vertices 
   to be chosen, making a nonsense of the choice between steps 4 and 5\<close>
-definition "choose_central_vx \<equiv> \<lambda>(X,Y,A,B). @x. central_vertex X x \<and> weight X Y x = max_central_vx X Y"
+definition "choose_central_vx \<equiv> \<lambda>\<mu> (X,Y,A,B). @x. central_vertex \<mu> X x \<and> weight X Y x = max_central_vx \<mu> X Y"
 
 lemma choose_central_vx_works: 
-  "\<lbrakk>\<not> termination_condition X Y; \<not> many_bluish l X; V_state(X,Y,A,B)\<rbrakk> 
-  \<Longrightarrow> central_vertex X (choose_central_vx (X,Y,A,B)) \<and> weight X Y (choose_central_vx (X,Y,A,B)) = max_central_vx X Y"
+  "\<lbrakk>\<not> termination_condition l k X Y; \<not> many_bluish \<mu> l k X; V_state(X,Y,A,B)\<rbrakk> 
+  \<Longrightarrow> central_vertex \<mu> X (choose_central_vx \<mu> (X,Y,A,B)) \<and> weight X Y (choose_central_vx \<mu> (X,Y,A,B)) = max_central_vx \<mu> X Y"
   unfolding choose_central_vx_def
   using someI_ex [OF ex_best_central_vx] by force
 
 lemma choose_central_vx_X: 
-  "\<lbrakk>\<not> termination_condition X Y; \<not> many_bluish l X; V_state(X,Y,A,B)\<rbrakk>  \<Longrightarrow> choose_central_vx (X,Y,A,B) \<in> X"
+  "\<lbrakk>\<not> termination_condition l k X Y; \<not> many_bluish \<mu> l k X; V_state(X,Y,A,B)\<rbrakk>  \<Longrightarrow> choose_central_vx \<mu> (X,Y,A,B) \<in> X"
   using central_vertex_def choose_central_vx_works by presburger
 
 subsection \<open>Red step\<close>
 
-definition "reddish \<equiv> \<lambda>X Y p x. red_density (Neighbours Red x \<inter> X) (Neighbours Red x \<inter> Y) \<ge> p - alpha (hgt p)"
+definition "reddish \<equiv> \<lambda>k X Y p x. red_density (Neighbours Red x \<inter> X) (Neighbours Red x \<inter> Y) \<ge> p - alpha k (hgt k p)"
 
-inductive red_step
-  where "\<lbrakk>reddish X Y (red_density X Y) x; x = choose_central_vx (X,Y,A,B)\<rbrakk> 
-         \<Longrightarrow> red_step (X,Y,A,B) (Neighbours Red x \<inter> X, Neighbours Red x \<inter> Y, insert x A, B)"
+inductive red_step 
+  where "\<lbrakk>reddish k X Y (red_density X Y) x; x = choose_central_vx \<mu> (X,Y,A,B)\<rbrakk> 
+         \<Longrightarrow> red_step \<mu> (X,Y,A,B) (Neighbours Red x \<inter> X, Neighbours Red x \<inter> Y, insert x A, B)"
 
 lemma red_step_V_state: 
-  assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish l X" "V_state (X,Y,A,B)"
+  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)"
   shows "V_state U'"
 proof -
-  have "choose_central_vx (X, Y, A, B) \<in> V"
+  have "choose_central_vx \<mu> (X, Y, A, B) \<in> V"
     using assms choose_central_vx_X  by (simp add: V_state_def subset_eq)
   with assms show ?thesis
     by (auto simp: V_state_def elim!: red_step.cases)
 qed
 
 lemma red_step_disjoint_state:
-  assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish l X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
+  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
   shows "disjoint_state U'"
 proof -
-  have "choose_central_vx (X, Y, A, B) \<in> X"
+  have "choose_central_vx \<mu> (X, Y, A, B) \<in> X"
     using assms choose_central_vx_X by (simp add: V_state_def)
   with assms show ?thesis
     by (auto simp: disjoint_state_def disjnt_iff not_own_Neighbour elim!: red_step.cases)
 qed
 
 lemma red_step_RB_state: 
-  assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish l X" "V_state (X,Y,A,B)" "RB_state (X,Y,A,B)"
+  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)" "RB_state (X,Y,A,B)"
   shows "RB_state U'"
 proof -
-  define x where "x \<equiv> choose_central_vx (X, Y, A, B)"
+  define x where "x \<equiv> choose_central_vx \<mu> (X, Y, A, B)"
   have "x \<in> X"
     using assms choose_central_vx_X by (simp add: x_def V_state_def)
   have A: "all_edges_betw_un (insert x A) (insert x A) \<subseteq> Red"
@@ -877,43 +844,43 @@ proof -
 qed
 
 lemma red_step_valid_state: 
-  assumes "red_step (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish l X" "valid_state (X,Y,A,B)"
+  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "valid_state (X,Y,A,B)"
   shows "valid_state U'"
   by (meson assms red_step_RB_state red_step_V_state red_step_disjoint_state valid_state_def)
 
 subsection \<open>Density-boost step\<close>
 
 inductive density_boost
-  where "\<lbrakk>\<not> reddish X Y (red_density X Y) x; x = choose_central_vx (X,Y,A,B)\<rbrakk> 
-         \<Longrightarrow> density_boost (X,Y,A,B) (Neighbours Blue x \<inter> X, Neighbours Red x \<inter> Y, A, insert x B)"
+  where "\<lbrakk>\<not> reddish k X Y (red_density X Y) x; x = choose_central_vx \<mu> (X,Y,A,B)\<rbrakk> 
+         \<Longrightarrow> density_boost \<mu> (X,Y,A,B) (Neighbours Blue x \<inter> X, Neighbours Red x \<inter> Y, A, insert x B)"
 
 
 lemma density_boost_V_state: 
-  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish l X" "V_state (X,Y,A,B)"
+  assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)"
   shows "V_state U'"
 proof -
-  have "choose_central_vx (X, Y, A, B) \<in> V"
+  have "choose_central_vx \<mu> (X, Y, A, B) \<in> V"
     using assms choose_central_vx_X  by (simp add: V_state_def subset_eq)
   with assms show ?thesis
     by (auto simp: V_state_def elim!: density_boost.cases)
 qed
 
 lemma density_boost_disjoint_state:
-  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish l X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
+  assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
   shows "disjoint_state U'"
 proof -
-  have "choose_central_vx (X, Y, A, B) \<in> X"
+  have "choose_central_vx \<mu> (X, Y, A, B) \<in> X"
     using assms choose_central_vx_X by (simp add: V_state_def)
   with assms show ?thesis
     by (auto simp: disjoint_state_def disjnt_iff not_own_Neighbour elim!: density_boost.cases)
 qed
 
 lemma density_boost_RB_state: 
-  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish l X" "V_state (X,Y,A,B)" 
+  assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)" 
     and rb: "RB_state (X,Y,A,B)"
   shows "RB_state U'"
 proof -
-  define x where "x \<equiv> choose_central_vx (X, Y, A, B)"
+  define x where "x \<equiv> choose_central_vx \<mu> (X, Y, A, B)"
   have "x \<in> X"
     using assms choose_central_vx_X by (simp add: x_def V_state_def)
   have A: "all_edges_betw_un A (Neighbours Blue x \<inter> X \<union> Neighbours Red x \<inter> Y) \<subseteq> Red"
@@ -933,70 +900,71 @@ proof -
 qed
 
 lemma density_boost_valid_state:
-  assumes "density_boost (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish l X" "valid_state (X,Y,A,B)"
+  assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "valid_state (X,Y,A,B)"
   shows "valid_state U'"
   by (meson assms density_boost_RB_state density_boost_V_state density_boost_disjoint_state valid_state_def)
 
 subsection \<open>Steps 2–5 as a function\<close>
 
-definition next_state :: "'a config \<Rightarrow> 'a config" where
-  "next_state \<equiv> \<lambda>(X,Y,A,B). 
-       if many_bluish l X then let (S,T) = choose_blue_book(X,Y,A,B) in (T, Y, A, B\<union>S) 
-       else let x = choose_central_vx (X,Y,A,B) in
-            if reddish X Y (red_density X Y) x then (Neighbours Red x \<inter> X, Neighbours Red x \<inter> Y, insert x A, B)
+definition next_state :: "[real,nat,nat,'a config] \<Rightarrow> 'a config" where
+  "next_state \<equiv> \<lambda>\<mu> l k (X,Y,A,B). 
+       if many_bluish \<mu> l k X then let (S,T) = choose_blue_book \<mu> (X,Y,A,B) in (T, Y, A, B\<union>S) 
+       else let x = choose_central_vx \<mu> (X,Y,A,B) in
+            if reddish k X Y (red_density X Y) x then (Neighbours Red x \<inter> X, Neighbours Red x \<inter> Y, insert x A, B)
             else (Neighbours Blue x \<inter> X, Neighbours Red x \<inter> Y, A, insert x B)"
 
 lemma next_state_valid:
-  assumes "valid_state (X,Y,A,B)" "\<not> termination_condition X Y"
-  shows "valid_state (next_state (X,Y,A,B))"
-proof (cases "many_bluish l X")
+  assumes "valid_state (X,Y,A,B)" "\<not> termination_condition l k X Y"
+  shows "valid_state (next_state \<mu> l k (X,Y,A,B))"
+proof (cases "many_bluish \<mu> l k X")
   case True
-  then have "big_blue (X,Y,A,B) (next_state (X,Y,A,B))"
+  then have "big_blue \<mu> (X,Y,A,B) (next_state \<mu> l k (X,Y,A,B))"
     apply (simp add: next_state_def split: prod.split)
     by (metis assms(1) big_blue.intros choose_blue_book_works valid_state_def)
   then show ?thesis
     using assms(1) big_blue_valid_state by blast
 next
   case non_bluish: False
-  define x where "x = choose_central_vx (X,Y,A,B)"
+  define x where "x = choose_central_vx \<mu> (X,Y,A,B)"
   show ?thesis
-  proof (cases "reddish X Y (red_density X Y) x")
+  proof (cases "reddish k X Y (red_density X Y) x")
     case True
-    with non_bluish have "red_step (X,Y,A,B) (next_state (X,Y,A,B))"
+    with non_bluish have "red_step \<mu> (X,Y,A,B) (next_state \<mu> l k (X,Y,A,B))"
       by (simp add: next_state_def Let_def x_def red_step.intros split: prod.split)
     then show ?thesis
       using assms non_bluish red_step_valid_state by blast      
   next
     case False
-    with non_bluish have "density_boost (X,Y,A,B) (next_state (X,Y,A,B))"
+    with non_bluish have "density_boost \<mu> (X,Y,A,B) (next_state \<mu> l k (X,Y,A,B))"
       by (simp add: next_state_def Let_def x_def density_boost.intros split: prod.split)
     then show ?thesis
       using assms density_boost_valid_state non_bluish by blast
   qed
 qed
 
-primrec stepper :: "nat \<Rightarrow> 'a config" where
-  "stepper 0 = (X0,Y0,{},{})"
-| "stepper (Suc n) = 
-     (let (X,Y,A,B) = stepper n in 
-      if termination_condition X Y then (X,Y,A,B) 
-      else if even n then next_state (X,Y,A,B) else (degree_reg (X,Y,A,B)))"
+primrec stepper :: "[real,nat,nat,nat] \<Rightarrow> 'a config" where
+  "stepper \<mu> l k 0 = (X0,Y0,{},{})"
+| "stepper \<mu> l k (Suc n) = 
+     (let (X,Y,A,B) = stepper \<mu> l k n in 
+      if termination_condition l k X Y then (X,Y,A,B) 
+      else if even n then next_state \<mu> l k (X,Y,A,B) else (degree_reg k (X,Y,A,B)))"
 
 lemma degree_reg_subset:
-  assumes "degree_reg (X,Y,A,B) = (X',Y',A',B')" 
+  assumes "degree_reg k (X,Y,A,B) = (X',Y',A',B')" 
   shows "X' \<subseteq> X \<and> Y' \<subseteq> Y"
   using assms by (auto simp: degree_reg_def X_degree_reg_def)
 
 lemma next_state_subset:
-  assumes "next_state (X,Y,A,B) = (X',Y',A',B')" "valid_state (X,Y,A,B)"
+  assumes "next_state \<mu> l k (X,Y,A,B) = (X',Y',A',B')" "valid_state (X,Y,A,B)"
   shows "X' \<subseteq> X \<and> Y' \<subseteq> Y"
   using assms choose_blue_book_subset
-  by (force simp: next_state_def valid_state_def Let_def split: if_split_asm prod.split_asm)
+  apply (auto simp: next_state_def valid_state_def Let_def split: if_split_asm prod.split_asm)
+  by (metis insert_absorb insert_subset)
 
 lemma valid_state0: "valid_state (X0, Y0, {}, {})"
   using XY0 by (simp add: valid_state_def V_state_def disjoint_state_def RB_state_def)
 
-lemma valid_state_stepper [simp]: "valid_state (stepper n)"
+lemma valid_state_stepper [simp]: "valid_state (stepper \<mu> l k n)"
 proof (induction n)
   case 0
   then show ?case
@@ -1007,41 +975,41 @@ next
     by (force simp: next_state_valid degree_reg_valid_state split: prod.split)
 qed
 
-definition "Xseq \<equiv> (\<lambda>(X,Y,A,B). X) \<circ> stepper"
-definition "Yseq \<equiv> (\<lambda>(X,Y,A,B). Y) \<circ> stepper"
-definition "pseq \<equiv> \<lambda>n. red_density (Xseq n) (Yseq n)"
+definition "Xseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). X) \<circ> stepper \<mu> l k"
+definition "Yseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). Y) \<circ> stepper \<mu> l k"
+definition "pseq \<mu> l k \<equiv> \<lambda>n. red_density (Xseq \<mu> l k n) (Yseq \<mu> l k n)"
 
-lemma Xseq_Suc_subset: "Xseq (Suc n) \<subseteq> Xseq n"
+lemma Xseq_Suc_subset: "Xseq \<mu> l k (Suc n) \<subseteq> Xseq \<mu> l k n"
   apply (simp add: Xseq_def split: if_split_asm prod.split)
   by (metis degree_reg_subset next_state_subset valid_state_stepper)
 
-lemma Xseq_antimono: "m \<le> n \<Longrightarrow>Xseq n \<subseteq> Xseq m"
+lemma Xseq_antimono: "m \<le> n \<Longrightarrow>Xseq \<mu> l k n \<subseteq> Xseq \<mu> l k m"
   by (simp add: Xseq_Suc_subset lift_Suc_antimono_le)
 
-lemma Yseq_Suc_subset: "Yseq (Suc n) \<subseteq> Yseq n"
+lemma Yseq_Suc_subset: "Yseq \<mu> l k (Suc n) \<subseteq> Yseq \<mu> l k n"
   apply (simp add: Yseq_def split: if_split_asm prod.split)
   by (metis degree_reg_subset next_state_subset valid_state_stepper)
 
-lemma Yseq_antimono: "m \<le> n \<Longrightarrow>Yseq n \<subseteq> Yseq m"
+lemma Yseq_antimono: "m \<le> n \<Longrightarrow>Yseq \<mu> l k n \<subseteq> Yseq \<mu> l k m"
   by (simp add: Yseq_Suc_subset lift_Suc_antimono_le)
 
-lemma pseq_0: "p0 = pseq 0"
+lemma pseq_0: "p0 = pseq \<mu> l k 0"
   by (simp add: p0_def pseq_def Xseq_def Yseq_def)
 
 datatype stepkind = red_step | bblue_step | dboost_step | dreg_step
 
-definition next_state_kind :: "'a config \<Rightarrow> stepkind" where
-  "next_state_kind \<equiv> \<lambda>(X,Y,A,B). 
-       if many_bluish l X then bblue_step 
-       else let x = choose_central_vx (X,Y,A,B) in
-            if reddish X Y (red_density X Y) x then red_step
+definition next_state_kind :: "[real,nat,nat,'a config] \<Rightarrow> stepkind" where
+  "next_state_kind \<equiv> \<lambda>\<mu> l k (X,Y,A,B). 
+       if many_bluish \<mu> l k X then bblue_step 
+       else let x = choose_central_vx \<mu> (X,Y,A,B) in
+            if reddish k X Y (red_density X Y) x then red_step
             else dboost_step"
 
-definition stepper_kind :: "nat \<Rightarrow> stepkind" where
-  "stepper_kind n = 
-     (let (X,Y,A,B) = stepper n in 
-      if termination_condition X Y then dreg_step 
-      else if even n then next_state_kind (X,Y,A,B) else dboost_step)"
+definition stepper_kind :: "[real,nat,nat,nat] \<Rightarrow> stepkind" where
+  "stepper_kind \<mu> l k n = 
+     (let (X,Y,A,B) = stepper \<mu> l k n in 
+      if termination_condition l k X Y then dreg_step 
+      else if even n then next_state_kind \<mu> l k (X,Y,A,B) else dboost_step)"
 
 section \<open>Big blue steps: theorems\<close>
 
@@ -1058,29 +1026,54 @@ proof
 qed
 
 
+lemma ln0: "Colours l k \<Longrightarrow> l>0"
+  by (force simp: Colours_def size_clique_def clique_def)
 
+lemma kn0: "Colours l k \<Longrightarrow> k>0"
+  using Colours_def ln0 not_le by auto
 
 lemma Blue_4_1:
-  defines "b \<equiv> nat (ceiling (l powr (1/4)))"
-  assumes "many_bluish l X" "X\<subseteq>V"
-  shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>S T. good_blue_book X (S,T) \<and> real (card S) \<ge> b)"
-proof -
-  have l_super: "l \<ge> (6/\<mu>) powr (12/5)" (* ultimately the Lemma must be restated to use a limiting argument:
+  assumes "0 < \<mu>"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. many_bluish \<mu> l k X \<longrightarrow> X\<subseteq>V \<longrightarrow> Colours l k \<longrightarrow>
+    (\<exists>K. size_clique k K Red) \<or> (\<exists>S T. good_blue_book \<mu> X (S,T) \<and> real (card S) \<ge> l powr (1/4))"
+proof (intro eventually_sequentiallyI strip)
+  fix l k
+  assume "100 \<le> l"
+    and manyb: "many_bluish \<mu> l k X"
+    and "X \<subseteq> V"
+    and "Colours l k"
+  then obtain ln0: "l>0" and kn0: "k>0"
+    by (simp add: kn0)
+  obtain "l\<le>k" and no_Red_clique: "\<not> (\<exists>K. size_clique k K Red)" and no_Blue_clique: "\<not> (\<exists>K. size_clique l K Blue)"
+    using \<open>Colours l k\<close> by (auto simp: Colours_def)
+  have l_super: "real l \<ge> (6/\<mu>) powr (12/5)" (* ultimately the Lemma must be restated to use a limiting argument:
       we can choose a sufficiently large l*)
     sorry
+  have l_large: "15 \<le> l"
+    sorry
+  then have l_powr_23_ge6: "nat \<lceil>l powr (2/3)\<rceil> \<ge> 6"
+  proof -
+    have "(6::real) \<le> 15 powr (2/3)"
+      by (approximation 12)
+    also have "\<dots> \<le> l powr (2/3)"
+      by (simp add: \<open>15 \<le> l\<close> powr_mono2)
+    finally show ?thesis
+      by (simp add: le_natceiling_iff)
+  qed
   have lpowr0[simp]: "0 \<le> \<lceil>l powr r\<rceil>" for r
     by (metis ceiling_mono ceiling_zero powr_ge_pzero)
-  define W where "W \<equiv> {x\<in>X. bluish X x}"
+  define b where "b \<equiv> nat (ceiling (l powr (1/4)))"
+  define W where "W \<equiv> {x\<in>X. bluish \<mu> X x}"
   define m where "m \<equiv> nat\<lceil>l powr (2/3)\<rceil>"
   have "m>0"
     using l_powr_23_ge6 m_def by linarith
   have "b>0"
-    by (simp add: assms(1) ln0)
+    by (simp add: b_def ln0)
   have Wbig: "card W \<ge> RN k m"
-    using assms by (simp add: W_def m_def many_bluish_def)
+    using manyb by (simp add: W_def m_def many_bluish_def)
   with Red_Blue_RN obtain U where "U \<subseteq> W" and U: "size_clique k U Red \<or> size_clique m U Blue"
     by (metis (no_types, lifting) W_def \<open>X\<subseteq>V\<close> mem_Collect_eq subset_eq)
-  show ?thesis
+  show "(\<exists>K. size_clique k K Red) \<or> (\<exists>S T. good_blue_book \<mu> X (S, T) \<and> real l powr (1 / 4) \<le> real (card S))"
     using U
   proof
     assume U_m_Blue: "size_clique m U Blue"
@@ -1090,10 +1083,10 @@ proof -
       using finV infinite_super by blast
     have "m \<ge> 6"
       using l_powr_23_ge6 m_def by blast
-    then have "k \<le> RN m k" and "m \<noteq> 0"
-      using l_large lk RN_3plus \<open>6 \<le> m\<close> by force+
+    then have "k \<le> RN m k"
+      by (metis One_nat_def RN_1 RN_3plus RN_commute \<open>0 < m\<close> add_leE kn0 le_eq_less_or_eq linorder_neqE_nat not_less_eq numeral_Bit0)
     then have "card X \<ge> l"
-      by (metis Collect_subset RN_commute W_def Wbig \<open>X\<subseteq>V\<close> card_mono order.trans finV finite_subset lk)
+      by (metis Collect_subset RN_commute W_def Wbig \<open>X\<subseteq>V\<close> card_mono order.trans finV finite_subset \<open>l\<le>k\<close>)
     have "U \<noteq> X"
       by (metis U_m_Blue \<open>card U = m\<close> \<open>l \<le> card X\<close> order.order_iff_strict no_Blue_clique size_clique_smaller)
     then have "U \<subset> X"
@@ -1102,22 +1095,22 @@ proof -
       by (meson \<open>X\<subseteq>V\<close> finV finite_subset psubset_card_mono)
     with \<open>X\<subseteq>V\<close> have cardXU: "card (X-U) = card X - card U"
       by (meson \<open>U \<subset> X\<close> card_Diff_subset finV finite_subset psubset_imp_subset)
-    then have real_cardXU[simp]: "real (card (X-U)) = real (card X) - m"
+    then have real_cardXU: "real (card (X-U)) = real (card X) - m"
       using \<open>card U = m\<close> cardU_less_X by linarith
     have [simp]: "m \<le> card X"
       using \<open>card U = m\<close> cardU_less_X nless_le by blast
     have "k \<ge> 4"
-      using l_large lk by linarith
+      using \<open>15 \<le> l\<close> \<open>l \<le> k\<close> by linarith
     have lpowr23: "real l powr (2/3) \<le> real l powr 1"
       using l_large by (intro powr_mono) auto
     then have "m \<le> l"
       by (simp add: m_def)
     then have "m \<le> k"
-      using lk by auto
+      using \<open>l \<le> k\<close> by auto
     then have "m < RN k m"
       using RN_commute RN_lower_self \<open>4 \<le> k\<close> \<open>k \<le> RN m k\<close> nat_less_le by force
     also have cX: "RN k m \<le> card X"
-      using assms by (metis Collect_subset W_def Wbig card_mono order_trans finV finite_subset)
+      using manyb \<open>X\<subseteq>V\<close> by (metis Collect_subset W_def Wbig card_mono order_trans finV finite_subset)
     finally have "card U < card X"
       using \<open>card U = m\<close> by blast
     text \<open>First part of (10)\<close>
@@ -1145,7 +1138,7 @@ proof -
                 \<le> real (card (Neighbours Blue u \<inter> (X-U))) + real (m - Suc 0) - \<mu> *card U"
           by (smt (verit) cardU_less_X nless_le of_nat_diff right_diff_distrib')
         then have *: "\<mu> * (card X - card U) \<le> real (card (Neighbours Blue u \<inter> (X-U))) + (1-\<mu>)*m"
-          using \<mu>01 by (simp add: \<open>card U = m\<close> left_diff_distrib)
+          using assms by (simp add: \<open>card U = m\<close> left_diff_distrib)
         have "inj_on (\<lambda>x. {u,x}) (Neighbours Blue u \<inter> X)"
           by (simp add: doubleton_eq_iff inj_on_def)
         moreover have "(\<lambda>x. {u,x}) ` (Neighbours Blue u \<inter> (X-U)) \<subseteq> Blue \<inter> all_edges_betw_un {u} (X-U)"
@@ -1181,18 +1174,18 @@ proof -
     have 6: "real (6*k) \<le> real (2 + k*m)"
       by (metis \<open>m\<ge>6\<close> mult.commute mult_le_mono of_nat_mono order.refl trans_le_add2)
     then have km: "k + m \<le> Suc (k * m)"
-      using l_large lk \<open>m \<le> l\<close> by linarith
+      using l_large \<open>l \<le> k\<close> \<open>m \<le> l\<close> by linarith
 
     have "real m / 2 * (2 + real k * (1 - \<mu>)) \<le> real m / 2 * (2 + real k)"
-      using \<mu>01 by (simp add: algebra_simps)
+      using assms by (simp add: algebra_simps)
     also have "\<dots> \<le> (k - 1) * (m - 1)"
-      using l_large lk 6 \<open>m \<le> k\<close> by (simp add: algebra_simps of_nat_diff km)
+      using l_large \<open>l \<le> k\<close> 6 \<open>m \<le> k\<close> by (simp add: algebra_simps of_nat_diff km)
     finally  have "(m/2) * (2 + k * (1-\<mu>)) \<le> RN k m"
       using RN_times_lower' [of k m] by linarith
     then have "\<mu> - 2/k \<le> (\<mu> * card X - card U) / (card X - card U)"
-      using kn0 \<mu>01 cardU_less_X \<open>card U = m\<close> cX by (simp add: of_nat_diff field_simps)
+      using kn0 assms cardU_less_X \<open>card U = m\<close> cX by (simp add: of_nat_diff field_simps)
     also have "\<dots> \<le> \<sigma>"
-      using \<open>m\<noteq>0\<close> \<open>card U = m\<close> cardU_less_X cardXU DD
+      using \<open>m>0\<close> \<open>card U = m\<close> cardU_less_X cardXU DD
       by (simp add: \<sigma>_def gen_density_def field_simps mult_less_0_iff zero_less_mult_iff)
     finally have eq10: "\<mu> - 2/k \<le> \<sigma>" .
     have B: "2 * b / m \<le> \<mu> - 2/k"
@@ -1202,7 +1195,7 @@ proof -
       with l_super have "l powr (5/12) \<ge> ((6/\<mu>) powr (12/5)) powr (5/12)"
         by (simp add: powr_mono2)
       then have lge: "l powr (5/12) \<ge> 6/\<mu>"
-        using \<mu>01(1) powr_powr by force
+        using assms powr_powr by force
       have "2 * b \<le> 2 * (l powr (1 / 4) + 1)"
         by (simp add: b_def del: zero_le_ceiling distrib_left_numeral)
       then have "2*b / m + 2/l \<le> 2 * (l powr (1/4) + 1) / l powr (2/3) + 2/l"
@@ -1214,70 +1207,46 @@ proof -
       also have "... = 6 / l powr (5/12)"
         by (simp add: divide_simps flip: powr_add)
       also have "... \<le> \<mu>"
-        using lge \<mu>01 by (simp add: divide_le_eq mult.commute)
+        using lge assms by (simp add: divide_le_eq mult.commute)
       finally have "2*b / m + 2/l \<le> \<mu>" .
       then show ?thesis
-        using lk \<open>m\<noteq>0\<close> ln0 by (smt (verit, best) frac_le of_nat_0_less_iff of_nat_mono)
+        using \<open>l \<le> k\<close> \<open>m>0\<close> ln0 by (smt (verit, best) frac_le of_nat_0_less_iff of_nat_mono)
     qed
     with eq10 have "2 / (m/b) \<le> \<sigma>"
       by simp
     moreover have "l powr (2/3) \<le> nat \<lceil>real l powr (2/3)\<rceil>"
       using of_nat_ceiling by blast
     ultimately have ble: "b \<le> \<sigma> * m / 2"
-      using mult_left_mono \<open>\<sigma> \<ge> 0\<close> l_large kn0 lk unfolding b_def m_def powr_diff
+      using mult_left_mono \<open>\<sigma> \<ge> 0\<close> l_large kn0 \<open>l \<le> k\<close> unfolding b_def m_def powr_diff
       by (simp add: divide_simps)
     then have "\<sigma> > 0"
       using \<open>0 \<le> \<sigma>\<close> \<open>6 \<le> m\<close> \<open>m \<le> l\<close> powr_gt_zero by (fastforce simp add: b_def)
 
+    define \<Phi> where "\<Phi> \<equiv> \<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) choose b"
+
     text \<open>now for the material between (10) and (11)\<close>
     have "\<sigma> * real m / 2 \<le> m"
-      using \<open>\<sigma> \<le> 1\<close> \<open>m \<noteq> 0\<close> by auto
+      using \<open>\<sigma> \<le> 1\<close> \<open>m>0\<close> by auto
     with ble have "b \<le> m"
       by linarith
 
     have "card X > 2 powr (m/2)"
       by (metis RN_commute RN_lower_nodiag \<open>6 \<le> m\<close> \<open>m \<le> k\<close> add_leE less_le_trans cX numeral_Bit0 of_nat_mono)
 
-    text \<open>Mehta\<close> (*four_two_aux''' PROBABLY NOT NEEDED *)
-    have "exp (- 2 * (i / (\<sigma> * m))) \<le> 1 - i / (\<sigma> * m)" if "i<b" for i
-      using ble \<open>0 \<le> \<sigma>\<close> that
-      by (intro order_trans [OF exp_thing]) auto
-
-    have "card X > 2*m"
-      using cX 
-      sorry
-    have "b\<^sup>2 / (\<sigma>*m) \<le> b/2"
-      using ble \<open>b>0\<close>
-      by (simp add: power2_eq_square divide_simps)
-
-    have "m/b \<ge> l powr (5/12)"
-      apply (simp add: m_def b_def divide_simps)
-
-    sorry
-
-    have "\<mu>/2 \<le> \<sigma>"
-      using eq10 B \<open>0 < b\<close> \<open>m \<le> k\<close> \<open>0 < m\<close>
-      by (smt (verit, ccfv_SIG) of_nat_add field_sum_of_halves frac_le mult_2 nat_less_real_le of_nat_0 of_nat_mono)
-
-    define \<Phi> where "\<Phi> \<equiv> \<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) choose b"
-
-    have "\<mu>^b/2 * card X \<le> (1 - b\<^sup>2 / (\<sigma>*m)) * \<sigma>^b * card (X-U)"
-      using \<open>\<sigma> > 0\<close> \<open>m \<noteq> 0\<close> cX
-      apply (simp add: divide_simps)
-      apply (auto simp: algebra_simps)
-
-      using eq10
-      apply (simp add: )
-      using real_cardXU
-      unfolding b_def m_def
-      apply (simp add: cardXU cardU_less_X )
-      sorry
-    also have "... \<le> exp (- (of_nat (b\<^sup>2) / (\<sigma>*m))) * \<sigma>^b * card (X-U)"
-      unfolding divide_inverse
-      using \<open>0 \<le> \<sigma>\<close> \<open>card U = m\<close> cardU_less_X
-      by (intro mult_right_mono exp_minus_ge order_refl) auto
-    also have "\<dots> = \<sigma>^b * exp (- of_nat (b\<^sup>2) / (\<sigma>*m)) * card (X-U)"
-      by (simp add: mult.commute) 
+    text \<open>working toward (11)\<close>
+    have "\<mu>^b * 1 * card X \<le> (5/4 * \<sigma>^b) * (5/4 * exp(- of_nat (b\<^sup>2) / (\<sigma>*m))) * (5/4 * (card X - m))"
+    proof (intro mult_mono)
+      show "\<mu> ^ b \<le> 5/4 * \<sigma> ^ b"
+        sorry
+      show "1 \<le> 5/4 * exp (- of_nat (b\<^sup>2) / (\<sigma> * real m))"
+        sorry
+      show "real (card X) \<le> 5/4 * real (card X - m)"
+        sorry
+    qed (use \<open>0 \<le> \<sigma>\<close> in auto)
+    also have "... \<le> 2 * (\<sigma>^b) * exp(- b\<^sup>2 / (\<sigma>*m)) * ((card X - m))"
+      by (simp add: \<open>0 \<le> \<sigma>\<close>)
+    finally have "\<mu>^b/2 * card X \<le> \<sigma>^b * exp(- of_nat (b\<^sup>2) / (\<sigma>*m)) * card (X-U)"
+      by (simp add: \<open>card U = m\<close> cardXU real_cardXU)
     also have "\<dots> \<le> 1/(m choose b) * ((\<sigma>*m) gchoose b) * card (X-U)"
     proof (intro mult_right_mono)
       have "0 < real m gchoose b"
@@ -1300,16 +1269,16 @@ proof -
       qed (use disjnt_def Blue_E in auto)
       have "(\<Sum>i\<in>X - U. card (Neighbours Blue i \<inter> U)) / (real (card X) - m) 
           = blue_density U (X-U) * m"
-        using \<open>m>0\<close> by (simp add: gen_density_def \<open>card U = m\<close> eeq divide_simps)
+        using \<open>m>0\<close> by (simp add: gen_density_def real_cardXU \<open>card U = m\<close> eeq divide_simps)
       then have *: "(\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U)) /\<^sub>R real (card (X-U))) = \<sigma> * m"
-        by (simp add: \<sigma>_def divide_inverse_commute flip: sum_distrib_left)
+        by (simp add: \<sigma>_def divide_inverse_commute real_cardXU flip: sum_distrib_left)
       have "mbinomial (\<Sum>i\<in>X - U. real (card (Neighbours Blue i \<inter> U)) /\<^sub>R (card (X-U))) b 
          \<le> (\<Sum>i\<in>X - U. inverse (real (card (X-U))) * mbinomial (card (Neighbours Blue i \<inter> U)) b)"
       proof (rule convex_on_sum)
         show "finite (X-U)"
           using cardU_less_X zero_less_diff by fastforce
         show "convex_on UNIV (\<lambda>a. mbinomial a b)"
-          using assms(1) convex_mbinomial ln0 by auto
+          using b_def convex_mbinomial ln0 by auto
         show "(\<Sum>i\<in>X - U. inverse (card (X-U))) = 1"
           using cardU_less_X cardXU by force
       qed (use \<open>U \<subset> X\<close> in auto)
@@ -1318,8 +1287,8 @@ proof -
         unfolding * \<Phi>_def 
         by (simp add: cardU_less_X cardXU binomial_gbinomial divide_simps  flip: sum_distrib_left sum_divide_distrib)
     qed auto
-    finally have F: "\<mu>^b/2 * card X \<le> 1/(m choose b) * \<Phi>" .
-
+    finally have 11: "\<mu>^b / 2 * card X \<le> \<Phi> / (m choose b)"
+      by simp 
     define \<Omega> where "\<Omega> \<equiv> nsets U b"  \<comment>\<open>Choose a random subset of size @{term b}\<close>
     have card\<Omega>: "card \<Omega> = m choose b"
       by (simp add: \<Omega>_def \<open>card U = m\<close>)
@@ -1390,7 +1359,7 @@ proof -
       using \<open>S \<in> \<Omega>\<close> \<open>U \<subseteq> V\<close> \<open>clique U Blue\<close> smaller_clique 
       unfolding \<Omega>_def nsets_def size_clique_def by auto
     have "\<Phi> / (m choose b) \<ge> \<mu>^b * card X / 2"
-      using F by simp
+      using 11 by simp
     then have S: "card (Int_NB S) \<ge> \<mu>^b * card X / 2"
       using Sge by linarith
     obtain v where "v \<in> S"
@@ -1398,12 +1367,12 @@ proof -
     have "all_edges_betw_un S (S \<union> Int_NB S) \<subseteq> Blue"
       using \<open>clique S Blue\<close> unfolding all_edges_betw_un_def Neighbours_def clique_def Int_NB_def
       by fastforce
-    then have "good_blue_book X (S, Int_NB S)"
+    then have "good_blue_book \<mu> X (S, Int_NB S)"
       using \<open>S\<subseteq>U\<close> \<open>v \<in> S\<close> \<open>U \<subset> X\<close> S \<open>card S = b\<close>
       unfolding good_blue_book_def book_def size_clique_def Int_NB_def disjnt_iff
       by blast
     then show ?thesis
-      using \<open>card S = b\<close> by blast
+      by (metis \<open>card S = b\<close> b_def of_nat_ceiling)
   qed auto
 qed
 
@@ -1412,3 +1381,5 @@ section \<open>Density-boost steps\<close>
 text \<open>"See observation 5.5 below"\<close>
 lemma sum_Weight_ge0: "(\<Sum>x\<in>X. \<Sum>y\<in>X. Weight X Y x y) \<ge> 0"
   sorry
+
+end
