@@ -202,7 +202,7 @@ lemma finite_Neighbours:
 proof -
   have "Neighbours E x \<subseteq> Neighbours {X\<in>E. finite X} x"
     by (auto simp: Neighbours_def)
-  also have "... \<subseteq> (\<Union>{X\<in>E. finite X})"
+  also have "\<dots> \<subseteq> (\<Union>{X\<in>E. finite X})"
     by (meson Union_iff in_Neighbours_iff insert_iff subset_iff)
   finally show ?thesis
     using assms finite_subset by fastforce
@@ -582,16 +582,16 @@ next
     using \<open>C \<subseteq> E\<close> 
     apply (simp add: edge_card_def all_edges_betw_un_insert2 Int_Un_distrib Int_ac)
     by (metis (no_types, lifting) Int_absorb2 Int_assoc Un_commute)
-  also have "... = card ((C \<inter> ({{x,b} |x. x \<in> A}) \<union> (C \<inter> all_edges_betw_un A B)))"
+  also have "\<dots> = card ((C \<inter> ({{x,b} |x. x \<in> A}) \<union> (C \<inter> all_edges_betw_un A B)))"
     by (simp add: Int_Un_distrib)
-  also have "... = card (C \<inter> {{x,b} |x. x \<in> A}) + card (C \<inter> all_edges_betw_un A B)"
+  also have "\<dots> = card (C \<inter> {{x,b} |x. x \<in> A}) + card (C \<inter> all_edges_betw_un A B)"
   proof (rule card_Un_disjnt)
     show "disjnt (C \<inter> {{x, b} |x. x \<in> A}) (C \<inter> all_edges_betw_un A B)"
       using insert by (auto simp add: disjnt_iff all_edges_betw_un_def doubleton_eq_iff)
   qed (use \<open>finite C\<close> in auto)
-  also have "... = card (Neighbours C b \<inter> A) + card (C \<inter> all_edges_betw_un A B)"
+  also have "\<dots> = card (Neighbours C b \<inter> A) + card (C \<inter> all_edges_betw_un A B)"
     using bij_betw_same_card [OF bij] by simp
-  also have "... = (\<Sum>i\<in>insert b B. card (Neighbours C i \<inter> A))"
+  also have "\<dots> = (\<Sum>i\<in>insert b B. card (Neighbours C i \<inter> A))"
     using insert by (simp add: edge_card_def)
   finally show ?case .
 qed
@@ -1030,8 +1030,9 @@ definition stepper_kind :: "[real,nat,nat,nat] \<Rightarrow> stepkind" where
       if termination_condition l k X Y then dreg_step 
       else if even n then next_state_kind \<mu> l k (X,Y,A,B) else dboost_step)"
 
-section \<open>Big blue steps: theorems\<close>
+definition "Step_class \<equiv> \<lambda>\<mu> l k knd. {n. stepper_kind \<mu> l k n = knd}"
 
+section \<open>Big blue steps: theorems\<close>
 
 lemma power2_12: "m \<ge> 12 \<Longrightarrow> 25 * m^2 \<le> 2^m"
 proof (induction m)
@@ -1068,7 +1069,7 @@ lemma Colours_kn0: "Colours l k \<Longrightarrow> k>0"
 proposition Blue_4_1:
   assumes "0 < \<mu>"
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. many_bluish \<mu> l k X \<longrightarrow> X\<subseteq>V \<longrightarrow> Colours l k \<longrightarrow>
-    (\<exists>K. size_clique k K Red) \<or> (\<exists>S T. good_blue_book \<mu> X (S,T) \<and> real (card S) \<ge> l powr (1/4))"
+    (\<exists>K. size_clique k K Red) \<or> (\<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S \<ge> l powr (1/4))"
 proof -
   define b_of where "b_of \<equiv> \<lambda>l::nat. nat\<lceil>l powr (1/4)\<rceil>"
   define m_of where "m_of \<equiv> \<lambda>l::nat. nat\<lceil>l powr (2/3)\<rceil>"
@@ -1076,20 +1077,22 @@ proof -
     unfolding m_of_def by real_asymp
   have real_l_ge: "\<forall>\<^sup>\<infinity>l. real l \<ge> r" for r
     by real_asymp
-  have exp1: "\<forall>\<^sup>\<infinity>l. 1 \<le> 5/4 * exp (- ((b_of l)^2) / ((\<mu> - 2/l) * m_of l))"
+  have A: "\<forall>\<^sup>\<infinity>l. 1 \<le> 5/4 * exp (- ((b_of l)^2) / ((\<mu> - 2/l) * m_of l))"
     using assms unfolding b_of_def m_of_def by real_asymp
-  have exp2: "\<forall>\<^sup>\<infinity>l. \<mu> - 2/l > 0"
+  have B: "\<forall>\<^sup>\<infinity>l. \<mu> - 2/l > 0"
     using assms by real_asymp
-  have big_enough_l: "\<forall>\<^sup>\<infinity>l. m_of l \<ge> 12 \<and> real l \<ge> (6/\<mu>) powr (12/5) \<and> real l \<ge> 15
-                    \<and> 1 \<le> 5/4 * exp (- ((b_of l)^2) / ((\<mu> - 2/l) * m_of l)) \<and> \<mu> - 2/l > 0"
-    by (intro eventually_conj m_ge real_l_ge exp1 exp2)
+  have C: "\<forall>\<^sup>\<infinity>l. 2/l \<le> (\<mu> - 2/l) * ((5/4) powr (1/b_of l) - 1)"
+    using assms unfolding b_of_def by real_asymp
+  let ?Big = "\<lambda>l. m_of l \<ge> 12 \<and> real l \<ge> (6/\<mu>) powr (12/5) \<and> real l \<ge> 15
+                    \<and> 1 \<le> 5/4 * exp (- ((b_of l)^2) / ((\<mu> - 2/l) * m_of l)) \<and> \<mu> - 2/l > 0
+                    \<and> 2/l \<le> (\<mu> - 2/l) * ((5/4) powr (1/b_of l) - 1)"
+  have big_enough_l: "\<forall>\<^sup>\<infinity>l. ?Big l"
+    by (intro eventually_conj m_ge real_l_ge A B C)
 
-  have "(\<exists>K. size_clique k K Red) \<or> (\<exists>S T. good_blue_book \<mu> X (S, T) \<and> real l powr (1 / 4) \<le> real (card S))"
-    if l: "m_of l \<ge> 12 \<and> real l \<ge> (6/\<mu>) powr (12/5) \<and> real l \<ge> 15
-         \<and> 1 \<le> 5/4 * exp (- ((b_of l)^2) / ((\<mu> - 2/l) * m_of l)) \<and> \<mu> - 2/l > 0"
+  have "(\<exists>K. size_clique k K Red) \<or> (\<exists>S T. good_blue_book \<mu> X (S, T) \<and> l powr (1/4) \<le> card S)"
+    if l: "?Big l"
       and manyb: "many_bluish \<mu> l k X"
-      and "X \<subseteq> V"
-      and "Colours l k"
+      and "X \<subseteq> V" and "Colours l k"
     for l k
   proof -
     obtain ln0: "l>0" and kn0: "k>0"
@@ -1101,8 +1104,8 @@ proof -
     define b where "b \<equiv> b_of l"
     define W where "W \<equiv> {x\<in>X. bluish \<mu> X x}"
     define m where "m \<equiv> m_of l"
-    have "m \<ge> 12"
-      using l by (simp add: m_def)
+    have "m \<ge> 6" "m \<ge> 12"
+      using l by (auto simp: m_def)
     then have "m>0"
       by simp
     have "b>0"
@@ -1111,7 +1114,7 @@ proof -
       using manyb by (simp add: W_def m_def m_of_def many_bluish_def)
     with Red_Blue_RN obtain U where "U \<subseteq> W" and U: "size_clique k U Red \<or> size_clique m U Blue"
       by (metis (no_types, lifting) W_def \<open>X\<subseteq>V\<close> mem_Collect_eq subset_eq)
-    show "(\<exists>K. size_clique k K Red) \<or> (\<exists>S T. good_blue_book \<mu> X (S, T) \<and> real l powr (1 / 4) \<le> real (card S))"
+    show "(\<exists>K. size_clique k K Red) \<or> (\<exists>S T. good_blue_book \<mu> X (S, T) \<and> real l powr (1/4) \<le> real (card S))"
       using U
     proof
       assume U_m_Blue: "size_clique m U Blue"
@@ -1119,10 +1122,9 @@ proof -
         by (auto simp: size_clique_def)
       then have "finite U"
         using finV infinite_super by blast
-      have "m \<ge> 6"
-        using \<open>m\<ge>12\<close> by auto
-      then have "k \<le> RN m k"
-        by (metis One_nat_def RN_1 RN_3plus RN_commute \<open>0 < m\<close> add_leE kn0 le_eq_less_or_eq linorder_neqE_nat not_less_eq numeral_Bit0)
+      have "k \<le> RN m k"
+        using \<open>m\<ge>12\<close>
+        by (metis (no_types) One_nat_def RN_1 RN_3plus RN_commute \<open>0 < m\<close> add_leE kn0 less_one nat_less_le numeral_Bit0 not_le) 
       then have "card X \<ge> l"
         by (metis Collect_subset RN_commute W_def Wbig \<open>X\<subseteq>V\<close> card_mono order.trans finV finite_subset \<open>l\<le>k\<close>)
       have "U \<noteq> X"
@@ -1137,8 +1139,6 @@ proof -
         using \<open>card U = m\<close> cardU_less_X by linarith
       have [simp]: "m \<le> card X"
         using \<open>card U = m\<close> cardU_less_X nless_le by blast
-      have "k \<ge> 4"
-        using \<open>l \<le> k\<close> l by auto
       have lpowr23: "real l powr (2/3) \<le> real l powr 1"
         using l by (intro powr_mono) auto
       then have "m \<le> l"
@@ -1146,7 +1146,7 @@ proof -
       then have "m \<le> k"
         using \<open>l \<le> k\<close> by auto
       then have "m < RN k m"
-        using RN_commute RN_lower_self \<open>4 \<le> k\<close> \<open>k \<le> RN m k\<close> nat_less_le by force
+        using \<open>12 \<le> m\<close> comp_sgraph.RN_gt2 by auto
       also have cX: "RN k m \<le> card X"
         using manyb \<open>X\<subseteq>V\<close> by (metis Collect_subset W_def Wbig card_mono order_trans finV finite_subset)
       finally have "card U < card X"
@@ -1154,7 +1154,7 @@ proof -
       text \<open>First part of (10)\<close>
       have "card U * (\<mu> * card X - card U) = m * (\<mu> * (card X - card U)) - (1-\<mu>) * m\<^sup>2"
         using cardU_less_X by (simp add: \<open>card U = m\<close> algebra_simps of_nat_diff numeral_2_eq_2)
-      also have "... \<le> real (card (Blue \<inter> all_edges_betw_un U (X-U)))"
+      also have "\<dots> \<le> real (card (Blue \<inter> all_edges_betw_un U (X-U)))"
       proof -
         have dfam: "disjoint_family_on (\<lambda>u. Blue \<inter> all_edges_betw_un {u} (X-U)) U"
           by (auto simp add: disjoint_family_on_def all_edges_betw_un_def)
@@ -1193,16 +1193,16 @@ proof -
              \<le> (\<Sum>x\<in>U. card (Blue \<inter> all_edges_betw_un {x} (X-U))) + (1-\<mu>) * m\<^sup>2"
           apply (simp add: sum.distrib power2_eq_square \<open>card U = m\<close>)
           by (smt (verit) mult.assoc mult_of_nat_commute)
-        also have "... \<le> card (\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X-U)) + (1-\<mu>) * m\<^sup>2"
+        also have "\<dots> \<le> card (\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X-U)) + (1-\<mu>) * m\<^sup>2"
           by (simp add: dfam card_UN_disjoint' \<open>finite U\<close> flip: UN_simps)
         finally have "m * (\<mu> * (card X - card U)) 
-                \<le> card (\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X-U)) + (1 - \<mu>) * m\<^sup>2" .
+                \<le> card (\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X-U)) + (1-\<mu>) * m\<^sup>2" .
         moreover have "(\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X-U)) = (Blue \<inter> all_edges_betw_un U (X-U))"
           by (auto simp: all_edges_betw_un_def)
         ultimately show ?thesis
           by simp
       qed
-      also have "... \<le> edge_card Blue U (X-U)"
+      also have "\<dots> \<le> edge_card Blue U (X-U)"
         by (simp add: edge_card_def)
       finally have edge_card_XU: "edge_card Blue U (X-U) \<ge> card U * (\<mu> * card X - card U)" .
       define \<sigma> where "\<sigma> \<equiv> blue_density U (X-U)"
@@ -1210,11 +1210,10 @@ proof -
       have "\<sigma> \<le> 1"
         by (simp add: \<sigma>_def gen_density_le1)
       have 6: "real (6*k) \<le> real (2 + k*m)"
-        by (metis \<open>m\<ge>6\<close> mult.commute mult_le_mono of_nat_mono order.refl trans_le_add2)
+        by (metis mult.commute \<open>12\<le>m\<close> mult_le_mono nle_le numeral_Bit0 of_nat_mono trans_le_add2)
       then have km: "k + m \<le> Suc (k * m)"
         using l \<open>l \<le> k\<close> \<open>m \<le> l\<close> by linarith
-
-      have "real m / 2 * (2 + real k * (1 - \<mu>)) \<le> real m / 2 * (2 + real k)"
+      have "m/2 * (2 + real k * (1-\<mu>)) \<le> m/2 * (2 + real k)"
         using assms by (simp add: algebra_simps)
       also have "\<dots> \<le> (k - 1) * (m - 1)"
         using l \<open>l \<le> k\<close> 6 \<open>m \<le> k\<close> by (simp add: algebra_simps of_nat_diff km)
@@ -1226,7 +1225,7 @@ proof -
         using \<open>m>0\<close> \<open>card U = m\<close> cardU_less_X cardXU edge_card_XU
         by (simp add: \<sigma>_def gen_density_def field_simps mult_less_0_iff zero_less_mult_iff)
       finally have eq10: "\<mu> - 2/k \<le> \<sigma>" .
-      have B: "2 * b / m \<le> \<mu> - 2/k"
+      have "2 * b / m \<le> \<mu> - 2/k"
       proof -
         have 512: "5/12 \<le> (1::real)"
           by simp
@@ -1234,17 +1233,17 @@ proof -
           by (simp add: powr_mono2)
         then have lge: "l powr (5/12) \<ge> 6/\<mu>"
           using assms powr_powr by force
-        have "2 * b \<le> 2 * (l powr (1 / 4) + 1)"
+        have "2 * b \<le> 2 * (l powr (1/4) + 1)"
           by (simp add: b_def b_of_def del: zero_le_ceiling distrib_left_numeral)
         then have "2*b / m + 2/l \<le> 2 * (l powr (1/4) + 1) / l powr (2/3) + 2/l"
           by (simp add: m_def m_of_def frac_le ln0 del: zero_le_ceiling distrib_left_numeral)
-        also have "... \<le> (2 * l powr (1/4) + 4) / l powr (2/3)"
+        also have "\<dots> \<le> (2 * l powr (1/4) + 4) / l powr (2/3)"
           using ln0 lpowr23 by (simp add: pos_le_divide_eq pos_divide_le_eq algebra_simps)
-        also have "... \<le> (2 * l powr (1/4) + 4 * l powr (1/4)) / l powr (2/3)"
+        also have "\<dots> \<le> (2 * l powr (1/4) + 4 * l powr (1/4)) / l powr (2/3)"
           using l by (simp add: divide_right_mono ge_one_powr_ge_zero)
-        also have "... = 6 / l powr (5/12)"
+        also have "\<dots> = 6 / l powr (5/12)"
           by (simp add: divide_simps flip: powr_add)
-        also have "... \<le> \<mu>"
+        also have "\<dots> \<le> \<mu>"
           using lge assms by (simp add: divide_le_eq mult.commute)
         finally have "2*b / m + 2/l \<le> \<mu>" .
         then show ?thesis
@@ -1258,44 +1257,33 @@ proof -
         using mult_left_mono \<open>\<sigma> \<ge> 0\<close> l kn0 \<open>l \<le> k\<close> unfolding b_def m_def powr_diff
         by (simp add: divide_simps)
       then have "\<sigma> > 0"
-        using \<open>0 \<le> \<sigma>\<close> \<open>6 \<le> m\<close> \<open>m \<le> l\<close> powr_gt_zero by (fastforce simp add: b_def b_of_def)
+        using \<open>0 < b\<close> \<open>0 \<le> \<sigma>\<close> less_eq_real_def by force
 
       define \<Phi> where "\<Phi> \<equiv> \<Sum>v \<in> X-U. card (Neighbours Blue v \<inter> U) choose b"
-
       text \<open>now for the material between (10) and (11)\<close>
       have "\<sigma> * real m / 2 \<le> m"
         using \<open>\<sigma> \<le> 1\<close> \<open>m>0\<close> by auto
       with ble have "b \<le> m"
         by linarith
-
-      text \<open>working toward (11)\<close>
       have "\<mu>^b * 1 * card X \<le> (5/4 * \<sigma>^b) * (5/4 * exp(- of_nat (b\<^sup>2) / (\<sigma>*m))) * (5/4 * (card X - m))"
       proof (intro mult_mono)
-
-        have "\<lceil>real l powr (1 / 4)\<rceil> \<le> \<lceil>(1 + real l) powr (1 / 4)\<rceil> - 1"
-          sorry
-        then have "of_int \<lceil>real l powr (1 / 4)\<rceil> \<le> (1 + real l) powr (1 / 4)"
-          by linarith
-        then have "2 / real k \<le> \<sigma> * ((5/4) powr (l powr (-1/4)) - 1)"
-          apply (simp add: powr_mult powr_powr powr_diff)
-          sorry
-        also have "... \<le> \<sigma> * ((5/4) powr (1/b) - 1)"
-          unfolding b_def
-          using ln0 \<open>\<sigma>>0\<close>
-          apply (intro mult_left_mono )
-           apply (simp add: powr_minus divide_simps flip: )
-          using powr_mono2 [of "1/4"] apply (simp add: )
-           apply (intro powr_mono2)
-          sorry
-        finally 
-
-        have "2 / real k \<le> \<sigma> * ((5/4) powr (1/b) - 1)" .
+        have 2: "2/k \<le> 2/l"
+          by (simp add: \<open>l \<le> k\<close> frac_le ln0)
+        also have "\<dots> \<le> (\<mu> - 2/l) * ((5/4) powr (1/b) - 1)"
+          using l by (simp add: b_def)
+        also have "\<dots> \<le> \<sigma> * ((5/4) powr (1/b) - 1)"
+        proof (intro mult_right_mono)
+          show "\<mu> - 2 / real l \<le> \<sigma>"
+            using "2" eq10 by auto
+          show "0 \<le> (5 / 4) powr (1/b) - 1"
+            by (simp add: ge_one_powr_ge_zero)
+        qed
+        finally have "2 / real k \<le> \<sigma> * ((5/4) powr (1/b) - 1)" .
         then have 1: "\<mu> \<le> (5/4)powr(1/b) * \<sigma>"
           using eq10 \<open>b>0\<close> by (simp add: algebra_simps)
         show "\<mu> ^ b \<le> 5/4 * \<sigma> ^ b"
           using power_mono[OF 1, of b] assms \<open>\<sigma>>0\<close> \<open>b>0\<close>
           by (simp add: powr_mult powr_powr flip: powr_realpow)
-
         have "\<mu> - 2/l \<le> \<sigma>"
           by (smt (verit, ccfv_SIG) \<open>l \<le> k\<close> eq10 frac_le ln0 of_nat_0_less_iff of_nat_mono)
         moreover
@@ -1318,7 +1306,7 @@ proof -
         then show "real (card X) \<le> 5/4 * real (card X - m)"
           using \<open>card U = m\<close> cardU_less_X by simp
       qed (use \<open>0 \<le> \<sigma>\<close> in auto)
-      also have "... \<le> 2 * (\<sigma>^b) * exp(- b\<^sup>2 / (\<sigma>*m)) * ((card X - m))"
+      also have "\<dots> \<le> 2 * (\<sigma>^b) * exp(- b\<^sup>2 / (\<sigma>*m)) * ((card X - m))"
         by (simp add: \<open>0 \<le> \<sigma>\<close>)
       finally have "\<mu>^b/2 * card X \<le> \<sigma>^b * exp(- of_nat (b\<^sup>2) / (\<sigma>*m)) * card (X-U)"
         by (simp add: \<open>card U = m\<close> cardXU real_cardXU)
@@ -1333,7 +1321,7 @@ proof -
           using \<open>b\<le>m\<close> cardU_less_X \<open>0 < \<sigma>\<close> \<open>0 < m gchoose b\<close>
           by (simp add: field_split_simps binomial_gbinomial)
       qed auto
-      also have "... = 1/(m choose b) * (((\<sigma>*m) gchoose b) * card (X-U))"
+      also have "\<dots> = 1/(m choose b) * (((\<sigma>*m) gchoose b) * card (X-U))"
         by (simp add: mult.assoc)
       also have "\<dots> \<le> 1/(m choose b) * \<Phi>"
       proof (intro mult_left_mono)
@@ -1453,6 +1441,8 @@ proof -
   with eventually_mono [OF big_enough_l] show ?thesis
     by presburger 
 qed
+
+corollary "card (Step_class \<mu> l k bblue_step) \<le> real l powr (3/4)"
 
 section \<open>Density-boost steps\<close>
 

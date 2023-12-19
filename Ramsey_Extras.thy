@@ -576,6 +576,10 @@ proof -
     by force
 qed
 
+lemma RN_3plus': 
+  assumes "k \<ge> 3" "m>1"
+  shows "RN m k \<ge> m"
+  using RN_3plus RN_commute assms by presburger
 
 context sgraph
 begin
