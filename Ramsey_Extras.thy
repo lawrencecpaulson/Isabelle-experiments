@@ -244,6 +244,9 @@ instance list :: (type) infinite
   by intro_classes (simp add: infinite_UNIV_listI)
 
 
+lemma null_clique[simp]: "clique {} E" and null_indep[simp]: "indep {} E"
+  by (auto simp: clique_def indep_def)
+
 lemma indep_eq_clique_compl: "indep R E = clique R (all_edges R - E)"
   by (auto simp: indep_def clique_def all_edges_def)
 

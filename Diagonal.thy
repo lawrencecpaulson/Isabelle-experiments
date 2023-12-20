@@ -69,6 +69,9 @@ lemma Blue_eq: "Blue = all_edges V - Red"
 lemma nontriv: "E \<noteq> {}"
   using Red_E bot.extremum_strict by blast
 
+lemma in_E_iff [iff]: "{v,w} \<in> E \<longleftrightarrow> v\<in>V \<and> w\<in>V \<and> v\<noteq>w"
+  by (auto simp: complete all_edges_alt doubleton_eq_iff)
+
 lemma not_Red_Neighbour [simp]: "x \<notin> Neighbours Red x" and not_Blue_Neighbour [simp]: "x \<notin> Neighbours Blue x"
   using Red_E Blue_E not_own_Neighbour by auto
 
@@ -80,22 +83,9 @@ lemma Neighbours_Red_Blue:
 lemma clique_imp_all_edges_betw_un: "clique K F \<Longrightarrow> all_edges_betw_un K K \<subseteq> F"
   by (force simp: clique_def all_edges_betw_un_def)
 
-lemma all_edges_betw_un_iff_clique:
-  assumes "K \<subseteq> V"
-  shows "all_edges_betw_un K K \<subseteq> F \<longleftrightarrow> clique K F"
-proof
-  assume \<section>: "all_edges_betw_un K K \<subseteq> F"
-  show "clique K F"
-    unfolding clique_def 
-  proof (intro strip)
-    fix v w
-    assume "v \<in> K" "w \<in> K" "v \<noteq> w"
-    with assms have "{v, w} \<in> E"
-      by (force simp add: complete all_edges_def)
-    then show "{v, w} \<in> F"
-      using "\<section>" \<open>v \<in> K\<close> \<open>w \<in> K\<close> all_uedges_betw_I by blast
-  qed
-qed (force simp: clique_def all_edges_betw_un_def)
+lemma all_edges_betw_un_iff_clique: "K \<subseteq> V \<Longrightarrow> all_edges_betw_un K K \<subseteq> F \<longleftrightarrow> clique K F"
+  unfolding clique_def all_edges_betw_un_def doubleton_eq_iff subset_iff
+  by blast
 
 lemma indep_Red_iff_clique_Blue: "K \<subseteq> V \<Longrightarrow> indep K Red \<longleftrightarrow> clique K Blue"
   using Blue_eq by auto
@@ -623,6 +613,17 @@ next
     by (force simp: next_state_valid degree_reg_valid_state split: prod.split)
 qed
 
+lemma V_state [simp]: "V_state (stepper \<mu> l k n)"
+  using valid_state_def valid_state_stepper by force
+
+lemma disjoint_state_stepper [simp]: "disjoint_state (stepper \<mu> l k n)"
+  using valid_state_def valid_state_stepper by force
+
+lemma RB_state_stepper [simp]: "RB_state (stepper \<mu> l k n)"
+  using valid_state_def valid_state_stepper by force
+
+
+
 definition "Xseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). X) \<circ> stepper \<mu> l k"
 definition "Yseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). Y) \<circ> stepper \<mu> l k"
 definition "pseq \<mu> l k \<equiv> \<lambda>n. red_density (Xseq \<mu> l k n) (Yseq \<mu> l k n)"
@@ -695,13 +696,15 @@ lemma Colours_ln0: "Colours l k \<Longrightarrow> l>0"
 lemma Colours_kn0: "Colours l k \<Longrightarrow> k>0"
   using Colours_def Colours_ln0 not_le by auto
 
+text \<open>How @{term b} and @{term m} are obtained from @{term l}\<close>
+definition b_of where "b_of \<equiv> \<lambda>l::nat. nat\<lceil>l powr (1/4)\<rceil>"
+definition m_of where "m_of \<equiv> \<lambda>l::nat. nat\<lceil>l powr (2/3)\<rceil>"
+
 proposition Blue_4_1:
   assumes "0 < \<mu>"
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. many_bluish \<mu> l k X \<longrightarrow> X\<subseteq>V \<longrightarrow> Colours l k \<longrightarrow>
                   (\<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S \<ge> l powr (1/4))"
 proof -
-  define b_of where "b_of \<equiv> \<lambda>l::nat. nat\<lceil>l powr (1/4)\<rceil>"
-  define m_of where "m_of \<equiv> \<lambda>l::nat. nat\<lceil>l powr (2/3)\<rceil>"
   have m_ge: "\<forall>\<^sup>\<infinity>l. m_of l \<ge> i" for i
     unfolding m_of_def by real_asymp
   have real_l_ge: "\<forall>\<^sup>\<infinity>l. real l \<ge> r" for r
@@ -964,7 +967,7 @@ proof -
         show "finite (X-U)"
           using cardU_less_X zero_less_diff by fastforce
         show "convex_on UNIV (\<lambda>a. mbinomial a b)"
-          using b_def b_of_def convex_mbinomial ln0 by auto
+          by (simp add: \<open>0 < b\<close> convex_mbinomial)
         show "(\<Sum>i\<in>X - U. inverse (card (X-U))) = 1"
           using cardU_less_X cardXU by force
       qed (use \<open>U \<subset> X\<close> in auto)
@@ -1064,12 +1067,83 @@ proof -
     by presburger 
 qed
 
-lemma
-  "stepper \<mu> l k n = (X,Y,A,B)"
+
+definition "invariant \<equiv> \<lambda>(X,Y,A,B). X\<subseteq>V \<and> Y\<subseteq>V \<and> A\<subseteq>V \<and> B\<subseteq>V
+         \<and> clique A Red \<and> all_edges_betw_un A (X\<union>Y) \<subseteq> Red
+         \<and> clique B Blue \<and> all_edges_betw_un B X \<subseteq> Blue
+         \<and> disjnt X Y"
 
 
-corollary "card (Step_class \<mu> l k bblue_step) \<le> real l powr (3/4)"
+lemma clique_Un: "\<lbrakk>clique K F; clique L F; \<forall>v\<in>K. \<forall>w\<in>L. v \<noteq> w \<longrightarrow> {v, w} \<in> F\<rbrakk> \<Longrightarrow> clique (K \<union> L) F"
+  by (metis UnE clique_def doubleton_eq_iff)
+
+
+lemma stepper_A:
+  assumes \<section>: "stepper \<mu> l k n = (X,Y,A,B)"
+  shows "clique A Red \<and> A\<subseteq>V"
+proof -
+  have "A\<subseteq>V"
+    using V_state[of \<mu> l k n] assms by (auto simp: V_state_def)
+  moreover
+  have "all_edges_betw_un A A \<subseteq> Red"
+    using RB_state_stepper[of \<mu> l k n] assms by (auto simp: RB_state_def)
+  ultimately show ?thesis
+    using all_edges_betw_un_iff_clique by simp
+qed
+
+lemma stepper_B:
+  assumes \<section>: "stepper \<mu> l k n = (X,Y,A,B)"
+  shows "clique B Blue \<and> B\<subseteq>V"
+proof -
+  have "B\<subseteq>V"
+    using V_state[of \<mu> l k n] assms by (auto simp: V_state_def)
+  moreover
+  have "all_edges_betw_un B B \<subseteq> Blue"
+    using RB_state_stepper[of \<mu> l k n] assms by (auto simp: RB_state_def all_edges_betw_un_Un2)
+  ultimately show ?thesis
+    using all_edges_betw_un_iff_clique by simp
+qed
+
+lemma C:
+  assumes \<section>: "stepper \<mu> l k n = (X,Y,A,B)" and "Colours l k"
+  shows "card B \<ge> b_of l * card{m. m<n \<and> stepper_kind \<mu> l k m = bblue_step}"
   sorry
+
+text \<open>Lemma 4.3\<close>
+corollary bblue_step_limit:
+  assumes "Colours l k"
+  shows "card (Step_class \<mu> l k bblue_step) \<le> l powr (3/4)"
+proof -
+  { assume \<section>: "card (Step_class \<mu> l k bblue_step) > l powr (3/4)"
+    then have fin: "finite (Step_class \<mu> l k bblue_step)"
+      using card.infinite by fastforce
+    have eq: "(Step_class \<mu> l k bblue_step) = (\<Union>i. {m. m<i \<and> stepper_kind \<mu> l k m = bblue_step})"
+      by (auto simp: Step_class_def)
+    then obtain n where n: "(Step_class \<mu> l k bblue_step) = (\<Union>i<n. {m. m<i \<and> stepper_kind \<mu> l k m = bblue_step})"
+      using finite_countable_equals[OF fin]
+      by presburger
+    with Step_class_def have "{m. m<n \<and> stepper_kind \<mu> l k m = bblue_step} = (\<Union>i<n. {m. m<i \<and> stepper_kind \<mu> l k m = bblue_step})"
+      by auto
+    with \<section> have card_gt: "card{m. m<n \<and> stepper_kind \<mu> l k m = bblue_step} > l powr (3/4)"
+      by (simp add: \<open>Step_class \<mu> l k bblue_step = (\<Union>i<n. {m. m < i \<and> stepper_kind \<mu> l k m = bblue_step})\<close>)
+    obtain X Y A B where step: "stepper \<mu> l k n = (X,Y,A,B)"
+      using prod_cases4 by blast
+    have "l = l powr (1 / 4) * l powr (3 / 4)"
+      by (simp flip: powr_add)
+    also have "\<dots> \<le> b_of l * l powr (3/4)"
+      by (simp add: b_of_def mult_mono real_nat_ceiling_ge)
+    also have "\<dots> \<le> b_of l * card{m. m<n \<and> stepper_kind \<mu> l k m = bblue_step}"
+      using card_gt less_eq_real_def by fastforce
+    also have "... \<le> card B"
+      using C assms local.step of_nat_mono by blast
+    also have "... < l"
+      using B[OF step] assms
+      by (metis Colours_def linorder_neqE_nat of_nat_less_iff size_clique_def size_clique_smaller)
+    finally have False
+      by simp
+  } then show ?thesis by force
+qed
+
 
 section \<open>Density-boost steps\<close>
 
