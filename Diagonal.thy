@@ -1104,10 +1104,60 @@ proof -
     using all_edges_betw_un_iff_clique by simp
 qed
 
-lemma C:
-  assumes \<section>: "stepper \<mu> l k n = (X,Y,A,B)" and "Colours l k"
-  shows "card B \<ge> b_of l * card{m. m<n \<and> stepper_kind \<mu> l k m = bblue_step}"
+lemma Blue_4_1':
+  assumes "0 < \<mu>"
+  shows "\<forall>l. \<forall>k. many_bluish \<mu> l k X \<longrightarrow> X\<subseteq>V \<longrightarrow> Colours l k \<longrightarrow>
+                  (\<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S \<ge> l powr (1/4))"
   sorry
+
+lemma C:
+  assumes \<section>: "stepper \<mu> l k n = (X,Y,A,B)" and "Colours l k" and "\<mu>>0"
+  shows "card B \<ge> b_of l * card{m. m<n \<and> stepper_kind \<mu> l k m = bblue_step}"
+  using \<section>
+proof (induction n arbitrary: X Y A B)
+  case 0
+  then show ?case
+    by auto
+next
+  case (Suc n)
+  obtain X' Y' A' B' where step_n: "stepper \<mu> l k n = (X',Y',A',B')"
+    by (metis surj_pair)
+  then have "valid_state (X',Y',A',B')"
+    by (metis valid_state_stepper)
+  define Blues where "Blues \<equiv> \<lambda>r. {m. m < r \<and> stepper_kind \<mu> l k m = bblue_step}"
+  show ?case
+  proof (cases "stepper_kind \<mu> l k n = bblue_step")
+    case True
+    then have eq: "Blues(Suc n) = insert n (Blues n)"
+      using less_Suc_eq unfolding Blues_def by blast
+    have [simp]: "card (insert n (Blues n)) = Suc (card (Blues n))"
+      by (simp add: Blues_def)
+    have "card B' \<ge> b_of l * card (Blues n)"
+      using step_n Blues_def Suc by blast
+    then have "b_of l * card (Blues (Suc n)) \<le> card B"
+      using Suc(2) \<open>valid_state (X', Y', A', B')\<close> True
+      apply (simp add: stepper_kind_def next_state_kind_def valid_state_def eq next_state_def Let_def degree_reg_def step_n split: prod.split_asm if_split_asm)
+      apply (frule  Blue_4_1' [OF \<open>\<mu>>0\<close>, rule_format])
+        apply (force simp add: V_state_def)
+       apply (rule assms)
+      apply clarify
+      apply (frule choose_blue_book_works)
+       apply (erule sym)
+
+      sorry
+    then show ?thesis
+      by (simp add: Blues_def)
+  next
+    case False
+    then have eq: "{m. m < Suc n \<and> stepper_kind \<mu> l k m = bblue_step} = {m. m < n \<and> stepper_kind \<mu> l k m = bblue_step}"
+      using less_Suc_eq by blast
+    show ?thesis
+      using Suc \<open>valid_state (X', Y', A', B')\<close>
+      apply (simp add: valid_state_def eq next_state_def Let_def degree_reg_def step_n split: prod.split_asm if_split_asm)
+      apply (smt (verit, best) Suc.prems Un_upper1 V_state card_mono order.trans finB)
+      by (meson card_mono order.trans finB finite_insert insert_subset order.refl)
+  qed
+qed
 
 text \<open>Lemma 4.3\<close>
 corollary bblue_step_limit:
@@ -1137,7 +1187,7 @@ proof -
     also have "... \<le> card B"
       using C assms local.step of_nat_mono by blast
     also have "... < l"
-      using B[OF step] assms
+      using stepper_B[OF step] assms
       by (metis Colours_def linorder_neqE_nat of_nat_less_iff size_clique_def size_clique_smaller)
     finally have False
       by simp
