@@ -1123,4 +1123,10 @@ qed
 
 theorem RN_lower_off_diag:
   assumes "s \<ge> 3" "t \<ge> 3"
-  shows "RN s t > exp ((real s - 1) * (real t - 1) / 
+  shows "RN s t > exp ((real s - 1) * (real t - 1) / (2*(s+t)))"            
+  using Ramsey_number_lower_off_diag [OF assms]
+  using is_Ramsey_number_RN by force
+
+end
+
+end
