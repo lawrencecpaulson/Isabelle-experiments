@@ -356,8 +356,8 @@ lemma choose_blue_book_works:
 
 
 lemma choose_blue_book_subset: 
-  "\<lbrakk>V_state(X,Y,A,B); (S,T) = choose_blue_book \<mu> (X,Y,A,B)\<rbrakk> \<Longrightarrow> T \<subseteq> X"
-  using choose_blue_book_works good_blue_book_def by fastforce
+  "\<lbrakk>V_state(X,Y,A,B); (S,T) = choose_blue_book \<mu> (X,Y,A,B)\<rbrakk> \<Longrightarrow> S \<subseteq> X \<and> T \<subseteq> X \<and> disjnt S T"
+  using choose_blue_book_works good_blue_book_def book_def by fastforce
 
 
 text \<open>expressing the complicated preconditions inductively\<close>
@@ -1110,6 +1110,19 @@ lemma Blue_4_1':
                   (\<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S \<ge> l powr (1/4))"
   sorry
 
+lemma " \<lbrakk> V_state (X', Y, A, B'); disjoint_state (X', Y, A, B');
+        RB_state (X', Y, A, B'); 
+        choose_blue_book \<mu> (X', Y, A, B') = (x1, X); 
+        good_blue_book \<mu> X' (S, T)\<rbrakk>
+       \<Longrightarrow> card x1 \<ge> card S"
+      apply (frule choose_blue_book_works)
+       apply (erule sym)
+  apply clarify
+  by (simp add: best_blue_book_is_best)
+  using best_blue_book_is_best by force
+
+  
+
 lemma C:
   assumes \<section>: "stepper \<mu> l k n = (X,Y,A,B)" and "Colours l k" and "\<mu>>0"
   shows "card B \<ge> b_of l * card{m. m<n \<and> stepper_kind \<mu> l k m = bblue_step}"
@@ -1132,19 +1145,42 @@ next
       using less_Suc_eq unfolding Blues_def by blast
     have [simp]: "card (insert n (Blues n)) = Suc (card (Blues n))"
       by (simp add: Blues_def)
-    have "card B' \<ge> b_of l * card (Blues n)"
+    have card_B': "card B' \<ge> b_of l * card (Blues n)"
       using step_n Blues_def Suc by blast
+    obtain S where "A' = A" "Y' = Y" and manyb: "many_bluish \<mu> l k X'" 
+       and cbb: "choose_blue_book \<mu> (X',Y,A,B') = (S,X)"
+      using True
+      using Suc(2) \<open>valid_state (X',Y',A',B')\<close> True
+      apply (auto simp add: stepper_kind_def next_state_kind_def valid_state_def eq next_state_def Let_def degree_reg_def step_n split: prod.split_asm if_split_asm)     
+      done
+    then 
+    have VS: "V_state (X',Y,A,B')" and ds: "disjoint_state (X',Y,A,B')"
+      using \<open>valid_state (X',Y',A',B')\<close> \<open>A' = A\<close> \<open>Y' = Y\<close>
+      by (auto simp: valid_state_def)
+    have "X' \<subseteq> V"
+      by (metis V_state V_state_def prod.simps(2) step_n)
+    then have S: "good_blue_book \<mu> X' (S,X)" and DD: "real l powr (1/4) \<le> real (card S)"
+      using assms(2)
+       apply (metis VS cbb choose_blue_book_works)
+      by (smt (verit, ccfv_SIG) VS \<open>X' \<subseteq> V\<close> Blue_4_1' [OF \<open>\<mu>>0\<close>] manyb assms(2) best_blue_book_is_best choose_blue_book_works of_nat_mono cbb)
+    then have ble: "b_of l \<le> card S"
+      using b_of_def nat_ceiling_le_eq by presburger
+    have "card S \<le> best_blue_book_card \<mu> X'"
+      using choose_blue_book_works best_blue_book_is_best S VS by blast
+    have "disjnt B' S"
+      using ds  apply (simp add: disjoint_state_def)
+      by (smt (verit) S disjnt_iff good_blue_book_def in_mono prod.simps(2))
+    then have "b_of l + b_of l * card (Blues n) \<le> card B' + card S"
+      using ble card_B' by linarith
+    also have "... \<le> card (B' \<union> S)"
+      using ble
+      by (metis Colours_ln0 VS \<open>disjnt B' S\<close> DD assms(2) card.infinite card_Un_disjnt finB less_irrefl nle_le of_nat_eq_0_iff powr_nonneg_iff)
+    finally have **: "b_of l + b_of l * card (Blues n) \<le> card (B' \<union> S)" .
     then have "b_of l * card (Blues (Suc n)) \<le> card B"
       using Suc(2) \<open>valid_state (X', Y', A', B')\<close> True
       apply (simp add: stepper_kind_def next_state_kind_def valid_state_def eq next_state_def Let_def degree_reg_def step_n split: prod.split_asm if_split_asm)
-      apply (frule  Blue_4_1' [OF \<open>\<mu>>0\<close>, rule_format])
-        apply (force simp add: V_state_def)
-       apply (rule assms)
-      apply clarify
-      apply (frule choose_blue_book_works)
-       apply (erule sym)
-
-      sorry
+      using ** card_B'
+      by (simp add: cbb)
     then show ?thesis
       by (simp add: Blues_def)
   next
@@ -1161,7 +1197,7 @@ qed
 
 text \<open>Lemma 4.3\<close>
 corollary bblue_step_limit:
-  assumes "Colours l k"
+  assumes "Colours l k" and "\<mu>>0"
   shows "card (Step_class \<mu> l k bblue_step) \<le> l powr (3/4)"
 proof -
   { assume \<section>: "card (Step_class \<mu> l k bblue_step) > l powr (3/4)"
