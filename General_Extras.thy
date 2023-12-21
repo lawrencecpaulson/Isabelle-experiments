@@ -84,7 +84,7 @@ qed
 
 lemma finite_countable_equals:
   assumes "finite A" "A = (\<Union>i::nat. B i)"
-  shows "\<exists>n. A = (\<Union>i<n. B i)"
+  obtains n where "A = (\<Union>i<n. B i)"
   by (smt (verit, best) UNIV_I UN_iff finite_countable_subset assms equalityI subset_iff)
 
 
