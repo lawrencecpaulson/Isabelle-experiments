@@ -228,6 +228,9 @@ qed
 
 section \<open>Lemmas relating to Ramsey's theorem\<close>
 
+lemma clique_Un: "\<lbrakk>clique K F; clique L F; \<forall>v\<in>K. \<forall>w\<in>L. v \<noteq> w \<longrightarrow> {v, w} \<in> F\<rbrakk> \<Longrightarrow> clique (K \<union> L) F"
+  by (metis UnE clique_def doubleton_eq_iff)
+
 lemma nsets2_eq_all_edges: "[A]\<^bsup>2\<^esup> = all_edges A"
   using card_2_iff' unfolding nsets_def all_edges_def
   by fastforce
