@@ -646,7 +646,7 @@ proof -
 qed
 
 lemma stepper_B:
-  assumes \<section>: "stepper \<mu> l k n = (X,Y,A,B)"
+  assumes "stepper \<mu> l k n = (X,Y,A,B)"
   shows "clique B Blue \<and> B\<subseteq>V"
 proof -
   have "B\<subseteq>V"
@@ -659,7 +659,7 @@ proof -
 qed
 
 lemma card_B_limit:
-  assumes "stepper \<mu> l l n = (X,Y,B,B)" "Colours l k" shows  "card B < l"
+  assumes "stepper \<mu> l l n = (X,Y,B,B)" "Colours l k" shows "card B < l"
 proof -
   have "clique B Blue"
     using stepper_B assms by auto
@@ -1410,9 +1410,11 @@ proof -
         by (simp add: n)
       obtain X Y A B where step: "stepper \<mu> l k n = (X,Y,A,B)"
         using prod_cases4 by blast
-      have False
-        using * [OF step]
-        sorry
+      moreover have "card B < l"
+        using step card_B_limit
+        by (metis Colours_def not_less_iff_gr_or_eq size_clique_def size_clique_smaller stepper_B that(2))
+      ultimately have False
+        using *[OF step] card_gt by linarith
     } then show ?thesis by force
   qed
   with eventually_mono [OF Blue_4_1] \<open>\<mu>>0\<close> show ?thesis
