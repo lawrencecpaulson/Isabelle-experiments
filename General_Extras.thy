@@ -4,6 +4,37 @@ theory General_Extras imports
 
 begin
 
+
+text \<open>A bounded increasing sequence of finite sets eventually terminates\<close>
+lemma Union_incseq_finite:
+  assumes fin: "\<And>n. finite (A n)" and N: "\<And>n. card (A n) < N" and "incseq A"
+  shows "\<forall>\<^sub>F k in sequentially. \<Union> (range A) = A k"
+proof (rule ccontr)
+  assume "\<not> ?thesis"
+  then have "\<forall>k. \<exists>l\<ge>k. \<Union> (range A) \<noteq> A l"
+    using eventually_sequentially by force
+  then have "\<forall>k. \<exists>l\<ge>k. \<exists>m\<ge>l. A m \<noteq> A l"
+    by (smt (verit, ccfv_threshold) \<open>incseq A\<close> cSup_eq_maximum image_iff monotoneD nat_le_linear rangeI)
+  then have "\<forall>k. \<exists>l\<ge>k. A l - A k \<noteq> {}"
+    by (metis assms(3) diff_shunt_var monotoneD nat_le_linear subset_antisym)
+  then obtain f where f: "\<And>k. f k \<ge> k \<and> A (f k) - A k \<noteq> {}"
+    by metis
+  have "card (A ((f^^i)0)) \<ge> i" for i
+  proof (induction i)
+    case 0
+    then show ?case
+      by auto
+  next
+    case (Suc i)
+    have "card (A ((f ^^ i) 0)) < card (A (f ((f ^^ i) 0)))"
+      by (metis Diff_cancel \<open>incseq A\<close> card_seteq f fin leI monotoneD)
+    then show ?case
+      using Suc by simp
+  qed
+  with N show False
+    using linorder_not_less by auto
+qed
+
 (*replace existing one in development version, Set_Interval: cleaner proof*)
 lemma sum_diff_split:
   fixes f:: "nat \<Rightarrow> 'a::ab_group_add"
