@@ -1154,7 +1154,7 @@ proof -
       and "Colours l k" for l k
   proof -
     define BBLUES where "BBLUES \<equiv> \<lambda>r. {m. m < r \<and> stepper_kind \<mu> l k m = bblue_step}"
-    have cardB_ge: "finite (BBLUES n) \<and> card B \<ge> b_of l * card(BBLUES n)"
+    have cardB_ge: "card B \<ge> b_of l * card(BBLUES n)"
       if "stepper \<mu> l k n = (X,Y,A,B)" for n X Y A B
       using that
     proof (induction n arbitrary: X Y A B)
@@ -1265,7 +1265,7 @@ corollary red_step_limit:
   shows "finite (Step_class \<mu> l k red_step)" "card (Step_class \<mu> l k red_step) < k"
 proof -
   define REDS where "REDS \<equiv> \<lambda>r. {m. m < r \<and> stepper_kind \<mu> l k m = red_step}"
-  have *: "finite (REDS n) \<and> card(REDS n) \<le> card A"
+  have *: "card(REDS n) \<le> card A"
     if "stepper \<mu> l k n = (X,Y,A,B)" for n X Y A B
     using that
   proof (induction n arbitrary: X Y A B)
@@ -1317,43 +1317,39 @@ proof -
         by (smt (verit, best) Suc V_state card_seteq order.trans finA nat_le_linear step_n)
     qed
   qed
-  show "finite (Step_class \<mu> l k red_step)"
-  proof (intro finite_Step_class)
-    show "finite {m. m < n \<and> stepper_kind \<mu> l k m = red_step}" for n
-      by fastforce
-    have *: "card{m. m<n \<and> stepper_kind \<mu> l k m = red_step} < k"
-      if "stepper \<mu> l k n = (X,Y,A,B)" for n X Y A B
-      using * [OF that] card_A_limit [OF that \<open>Colours l k\<close>] 
-      by (simp add: REDS_def mult.commute less_eq_div_iff_mult_less_eq)
-    then show "card {m. m < n \<and> stepper_kind \<mu> l k m = red_step} < k" for n
-      by (meson le_imp_less_Suc prod_cases4)
-  qed
-  { assume \<section>: "card (Step_class \<mu> l k red_step) \<ge> k"
-    then have fin: "finite (Step_class \<mu> l k red_step)"
-      using card.infinite by (metis Colours_kn0 assms(2) linorder_not_less)
-    then obtain n where n: "(Step_class \<mu> l k red_step) = {m. m<n \<and> stepper_kind \<mu> l k m = red_step}"
-      using Step_class_iterates by meson
-    with \<section> have card_gt: "card{m. m<n \<and> stepper_kind \<mu> l k m = red_step} \<ge> k"
-      by auto
+  have less_k: "card (REDS n) < k" for n
+  proof -
     obtain X Y A B where step: "stepper \<mu> l k n = (X,Y,A,B)"
       using prod_cases4 by blast
-    with *[OF step] \<open>Colours l k\<close> card_A_limit card_gt \<section> 
-    have False
-      by (fastforce simp: REDS_def)
-  }
-  then show "card (Step_class \<mu> l k red_step) < k" by force
+    with * show ?thesis
+      using \<open>Colours l k\<close> card_A_limit by fastforce
+  qed
+  moreover have "\<And>n. finite (REDS n)" "incseq REDS"
+    by (auto simp: REDS_def incseq_def)
+  ultimately have "\<forall>\<^sup>\<infinity>n. \<Union> (range REDS) = REDS n"
+    using Union_incseq_finite by blast
+  then have "finite (\<Union> (range REDS))"
+    using REDS_def eventually_sequentially by force
+  moreover have "(Step_class \<mu> l k red_step) \<subseteq> \<Union> (range REDS)"
+    by (auto simp: Step_class_def REDS_def)
+  ultimately show "finite (Step_class \<mu> l k red_step)"
+    using infinite_super by blast
+  with less_k show "card (Step_class \<mu> l k red_step) < k"
+    by (metis (full_types) REDS_def Step_class_iterates)
 qed
 
 corollary bblue_dboost_step_limit:
   assumes "\<mu>>0"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> card (Step_class \<mu> l k bblue_step) + card (Step_class \<mu> l k dboost_step) < l"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> 
+            finite (Step_class \<mu> l k dboost_step) 
+          \<and> card (Step_class \<mu> l k bblue_step) + card (Step_class \<mu> l k dboost_step) < l"
 proof -
   have "card (Step_class \<mu> l k bblue_step) + card (Step_class \<mu> l k dboost_step) < l"
     if 41: "\<And>X. many_bluish \<mu> l k X \<Longrightarrow> X\<subseteq>V \<Longrightarrow> \<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S \<ge> l powr (1/4)"
       and "Colours l k" for l k
   proof -
     define BDB where "BDB \<equiv> \<lambda>r. {m. m < r \<and> stepper_kind \<mu> l k m \<in> {bblue_step,dboost_step}}"
-    have *: "finite (BDB n) \<and> card(BDB n) \<le> card B"
+    have *: "card(BDB n) \<le> card B"
       if "stepper \<mu> l k n = (X,Y,A,B)" for n X Y A B
       using that
     proof (induction n arbitrary: X Y A B)
@@ -1431,21 +1427,30 @@ proof -
           by (smt (verit, best) Suc V_state card_seteq order.trans finB nat_le_linear step_n)
       qed
     qed
+    have E: "\<forall>\<^sup>\<infinity>n. \<Union> (range BDB) = BDB n"
+    proof (intro Union_incseq_finite [where N = "Suc l"])
+      fix n
+      obtain X Y A B where step: "stepper \<mu> l k n = (X,Y,A,B)"
+        using prod_cases4 by blast
+      with * have "card (BDB n) \<le> card B"
+        by blast
+      then show "card (BDB n) < Suc l"
+        by (meson card_B_limit less_SucI local.step le_less_trans \<open>Colours l k\<close>)
+    qed (auto simp: BDB_def incseq_def)
+    then have F: "finite (\<Union> (range BDB))"
+      using BDB_def eventually_sequentially by force
+    moreover have "(Step_class \<mu> l k dboost_step) \<subseteq> \<Union> (range BDB)"
+      by (auto simp: BDB_def Step_class_def)
+    ultimately have find: "finite (Step_class \<mu> l k dboost_step)"
+      by (meson finite_subset)
     { assume \<section>: "card (Step_class \<mu> l k bblue_step) + card (Step_class \<mu> l k dboost_step) \<ge> l"
-      have "finite (\<Union>n. BDB n)" 
-        using Union_incseq_finite *
-        sorry
-      have fin: "finite (Step_class \<mu> l k bblue_step)" "finite (Step_class \<mu> l k dboost_step)"
-        using finite_Step_class
-        sorry
-      have "(Step_class \<mu> l k bblue_step) \<union> (Step_class \<mu> l k dboost_step)
-              = (\<Union>n. {m. m<n \<and> stepper_kind \<mu> l k m \<in> {bblue_step,dboost_step}})"
-        by (auto simp: Step_class_def)
-      then obtain n where n: "(Step_class \<mu> l k bblue_step) \<union> (Step_class \<mu> l k dboost_step) 
-              = (\<Union>i<n. {m. m<i \<and> stepper_kind \<mu> l k m \<in> {bblue_step,dboost_step}})"
-        using finite_countable_equals fin by (smt (verit) finite_Un)
-      with \<section> have card_gt: "card{m. m<n \<and> stepper_kind \<mu> l k m \<in> {bblue_step,dboost_step}} \<ge> l"
-        using disjnt_Step_class [of bblue_step dboost_step]
+      obtain n where n: "\<Union> (range BDB) = BDB n"
+        using E by fastforce
+      with \<section> have card_gt: "card(BDB n) \<ge> l"
+
+        apply (subst E [symmetric])
+
+        using disjnt_Step_class [of bblue_step dboost_step] E
         by (simp add: n)
       obtain X Y A B where step: "stepper \<mu> l k n = (X,Y,A,B)"
         using prod_cases4 by blast
