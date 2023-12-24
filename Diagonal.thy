@@ -1344,10 +1344,11 @@ corollary bblue_dboost_step_limit:
             finite (Step_class \<mu> l k dboost_step) 
           \<and> card (Step_class \<mu> l k bblue_step) + card (Step_class \<mu> l k dboost_step) < l"
 proof -
-  have "card (Step_class \<mu> l k bblue_step) + card (Step_class \<mu> l k dboost_step) < l"
+  have "finite (Step_class \<mu> l k dboost_step) 
+      \<and> card (Step_class \<mu> l k bblue_step) + card (Step_class \<mu> l k dboost_step) < l"
     if 41: "\<And>X. many_bluish \<mu> l k X \<Longrightarrow> X\<subseteq>V \<Longrightarrow> \<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S \<ge> l powr (1/4)"
       and "Colours l k" for l k
-  proof -
+  proof 
     define BDB where "BDB \<equiv> \<lambda>r. {m. m < r \<and> stepper_kind \<mu> l k m \<in> {bblue_step,dboost_step}}"
     have *: "card(BDB n) \<le> card B"
       if "stepper \<mu> l k n = (X,Y,A,B)" for n X Y A B
@@ -1427,43 +1428,35 @@ proof -
           by (smt (verit, best) Suc V_state card_seteq order.trans finB nat_le_linear step_n)
       qed
     qed
-    have E: "\<forall>\<^sup>\<infinity>n. \<Union> (range BDB) = BDB n"
-    proof (intro Union_incseq_finite [where N = "Suc l"])
-      fix n
-      obtain X Y A B where step: "stepper \<mu> l k n = (X,Y,A,B)"
+    have less_l: "card (BDB n) < l" for n
+    proof -
+      obtain X Y A B where "stepper \<mu> l k n = (X,Y,A,B)"
         using prod_cases4 by blast
-      with * have "card (BDB n) \<le> card B"
-        by blast
-      then show "card (BDB n) < Suc l"
-        by (meson card_B_limit less_SucI local.step le_less_trans \<open>Colours l k\<close>)
-    qed (auto simp: BDB_def incseq_def)
-    then have F: "finite (\<Union> (range BDB))"
+      with * show ?thesis
+        using \<open>Colours l k\<close> card_B_limit by fastforce
+    qed
+    moreover have fin: "\<And>n. finite (BDB n)" "incseq BDB"
+      by (auto simp: BDB_def incseq_def)
+    ultimately have **: "\<forall>\<^sup>\<infinity>n. \<Union> (range BDB) = BDB n"
+      using Union_incseq_finite by blast
+    then have "finite (\<Union> (range BDB))"
       using BDB_def eventually_sequentially by force
-    moreover have "(Step_class \<mu> l k dboost_step) \<subseteq> \<Union> (range BDB)"
-      by (auto simp: BDB_def Step_class_def)
-    ultimately have find: "finite (Step_class \<mu> l k dboost_step)"
-      by (meson finite_subset)
-    { assume \<section>: "card (Step_class \<mu> l k bblue_step) + card (Step_class \<mu> l k dboost_step) \<ge> l"
-      obtain n where n: "\<Union> (range BDB) = BDB n"
-        using E by fastforce
-      with \<section> have card_gt: "card(BDB n) \<ge> l"
-
-        apply (subst E [symmetric])
-
-        using disjnt_Step_class [of bblue_step dboost_step] E
-        by (simp add: n)
-      obtain X Y A B where step: "stepper \<mu> l k n = (X,Y,A,B)"
-        using prod_cases4 by blast
-      moreover have "card B < l"
-        using step card_B_limit
-        by (metis Colours_def not_less_iff_gr_or_eq size_clique_def size_clique_smaller stepper_B that(2))
-      ultimately have False
-        using *[OF step] card_gt by linarith
-    } then show ?thesis by force
+    moreover have Uneq: "(Step_class \<mu> l k bblue_step \<union> Step_class \<mu> l k dboost_step) = \<Union> (range BDB)"
+      by (auto simp: Step_class_def BDB_def)
+    ultimately have "finite (Step_class \<mu> l k bblue_step \<union> Step_class \<mu> l k dboost_step)"
+      by presburger
+    then show "finite (Step_class \<mu> l k dboost_step)"
+      by blast
+    obtain n where "\<Union> (range BDB) = BDB n"
+      using ** by fastforce
+    then show "card (Step_class \<mu> l k bblue_step) + card (Step_class \<mu> l k dboost_step) < l"
+      using less_l fin Uneq
+      by (metis card_Un_disjnt disjnt_Step_class finite_Un stepkind.distinct(8)) 
   qed
   with eventually_mono [OF Blue_4_1] \<open>\<mu>>0\<close> show ?thesis
     by presburger 
 qed
+
 
 section \<open>Density-boost steps\<close>
 
