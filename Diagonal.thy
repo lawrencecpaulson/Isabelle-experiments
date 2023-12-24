@@ -25,6 +25,9 @@ locale Diagonal = fin_sgraph +   \<comment> \<open>finite simple graphs (no loop
 context Diagonal
 begin
 
+lemma finite_X0: "finite X0" and finite_Y0: "finite Y0"
+  using XY0 finV finite_subset by blast+
+
 (*This wants to be a locale. But nested locales don't seem to work, and having separate
 locales for different parts of the development gets confusing here.*)
   \<comment> \<open>l: blue limit, and k: red limit\<close>
