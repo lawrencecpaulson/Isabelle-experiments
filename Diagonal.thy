@@ -680,6 +680,8 @@ definition "Xseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). X) \<circ> stepper \<mu
 definition "Yseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). Y) \<circ> stepper \<mu> l k"
 definition "pseq \<mu> l k \<equiv> \<lambda>n. red_density (Xseq \<mu> l k n) (Yseq \<mu> l k n)"
 
+definition "pee \<equiv> \<lambda>\<mu> l k i. red_density (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+
 lemma Xseq_0 [simp]: "Xseq \<mu> l k 0 = X0"
   by (simp add: Xseq_def)
 
