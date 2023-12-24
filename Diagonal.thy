@@ -715,6 +715,7 @@ definition
 
 subsection \<open>The classes of execution steps\<close>
 
+text \<open>For R, B, S, D\<close>
 datatype stepkind = red_step | bblue_step | dboost_step | dreg_step
 
 definition next_state_kind :: "[real,nat,nat,'a config] \<Rightarrow> stepkind" where

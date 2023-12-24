@@ -1,4 +1,4 @@
-section \<open>Big blue steps: theorems\<close>
+section \<open>Big Blue Steps: theorems\<close>
 
 theory Big_Blue_Steps imports Diagonal
 
