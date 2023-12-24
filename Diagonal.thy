@@ -291,7 +291,7 @@ definition "RB_state \<equiv> \<lambda>(X,Y,A,B). all_edges_betw_un A A \<subset
 
 definition "valid_state \<equiv> \<lambda>U. V_state U \<and> disjoint_state U \<and> RB_state U"
 
-definition "termination_condition \<equiv> \<lambda>l k X Y. card X \<le> RN k (nat \<lceil>l powr (3/4)\<rceil>) \<or> red_density X Y \<le> 1/k"
+definition "termination_condition \<equiv> \<lambda>l k X Y. card X \<le> RN k (nat \<lceil>real l powr (3/4)\<rceil>) \<or> red_density X Y \<le> 1/k"
 
 lemma 
   assumes "V_state(X,Y,A,B)" 
@@ -680,12 +680,18 @@ definition "Xseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). X) \<circ> stepper \<mu
 definition "Yseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). Y) \<circ> stepper \<mu> l k"
 definition "pseq \<mu> l k \<equiv> \<lambda>n. red_density (Xseq \<mu> l k n) (Yseq \<mu> l k n)"
 
+lemma Xseq_0 [simp]: "Xseq \<mu> l k 0 = X0"
+  by (simp add: Xseq_def)
+
 lemma Xseq_Suc_subset: "Xseq \<mu> l k (Suc n) \<subseteq> Xseq \<mu> l k n"
   apply (simp add: Xseq_def split: if_split_asm prod.split)
   by (metis degree_reg_subset next_state_subset valid_state_stepper)
 
 lemma Xseq_antimono: "m \<le> n \<Longrightarrow>Xseq \<mu> l k n \<subseteq> Xseq \<mu> l k m"
   by (simp add: Xseq_Suc_subset lift_Suc_antimono_le)
+
+lemma Yseq_0 [simp]: "Yseq \<mu> l k 0 = Y0"
+  by (simp add: Yseq_def)
 
 lemma Yseq_Suc_subset: "Yseq \<mu> l k (Suc n) \<subseteq> Yseq \<mu> l k n"
   apply (simp add: Yseq_def split: if_split_asm prod.split)
@@ -697,6 +703,18 @@ lemma Yseq_antimono: "m \<le> n \<Longrightarrow>Yseq \<mu> l k n \<subseteq> Ys
 lemma pseq_0: "p0 = pseq \<mu> l k 0"
   by (simp add: p0_def pseq_def Xseq_def Yseq_def)
 
+text \<open>The central vertex at each step (though only defined in some cases), 
+  @{term "x_i"} in the paper\<close>
+definition cvx :: "[real,nat,nat,nat] \<Rightarrow> 'a" where
+  "cvx \<equiv> \<lambda>\<mu> l k i. choose_central_vx \<mu> (stepper \<mu> l k i)"
+
+definition 
+  "beta \<equiv> \<lambda>\<mu> l k i. 
+    (let (X,Y,A,B) = stepper \<mu> l k i in card(Neighbours Blue (cvx \<mu> l k i) \<inter> X) / card X)"
+
+
+subsection \<open>The classes of execution steps\<close>
+
 datatype stepkind = red_step | bblue_step | dboost_step | dreg_step
 
 definition next_state_kind :: "[real,nat,nat,'a config] \<Rightarrow> stepkind" where
@@ -707,17 +725,16 @@ definition next_state_kind :: "[real,nat,nat,'a config] \<Rightarrow> stepkind" 
             else dboost_step"
 
 definition stepper_kind :: "[real,nat,nat,nat] \<Rightarrow> stepkind" where
-  "stepper_kind \<mu> l k n = 
-     (let (X,Y,A,B) = stepper \<mu> l k n in 
+  "stepper_kind \<mu> l k i = 
+     (let (X,Y,A,B) = stepper \<mu> l k i in 
       if termination_condition l k X Y then dreg_step 
-      else if even n then next_state_kind \<mu> l k (X,Y,A,B) else dreg_step)"
+      else if even i then next_state_kind \<mu> l k (X,Y,A,B) else dreg_step)"
 
 definition "Step_class \<equiv> \<lambda>\<mu> l k knd. {n. stepper_kind \<mu> l k n = knd}"
 
 lemma disjnt_Step_class: 
   "knd \<noteq> knd' \<Longrightarrow> disjnt (Step_class \<mu> l k knd) (Step_class \<mu> l k knd')"
   by (auto simp: Step_class_def disjnt_iff)
-
 
 lemma finite_Step_class:
   assumes "\<And>n. finite {m. m<n \<and> stepper_kind \<mu> l k m = knd}"
@@ -746,6 +763,44 @@ proof -
   then show ?thesis
     by (metis n that)
 qed
+
+lemma "0 \<le> beta \<mu> l k i"
+  by (simp add: beta_def split: prod.split)
+
+lemma red_dboost_non_terminating:
+  assumes "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
+  shows "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+  using assms
+  by (simp add: Step_class_def stepper_kind_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)
+
+lemma red_dboost_not_many_bluish:
+  assumes "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
+  shows "\<not> many_bluish \<mu> l k (Xseq \<mu> l k i)"
+  using assms
+  by (simp add: Step_class_def stepper_kind_def next_state_kind_def Xseq_def split: if_split_asm prod.split_asm)
+
+lemma stepper_XYseq: "stepper \<mu> l k i = (X,Y,A,B) \<Longrightarrow> X = Xseq \<mu> l k i \<and> Y = Yseq \<mu> l k i"
+  using Xseq_def Yseq_def by fastforce
+
+lemma cvx_works:
+  assumes "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
+  shows "central_vertex \<mu> (Xseq \<mu> l k i) (cvx \<mu> l k i)
+       \<and> weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) = max_central_vx \<mu> (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+  apply (simp add: Xseq_def cvx_def Yseq_def split: prod.split)
+  by (metis choose_central_vx_works V_state assms red_dboost_non_terminating red_dboost_not_many_bluish stepper_XYseq)
+
+lemma cvx_in_Xseq:
+  assumes "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
+  shows "cvx \<mu> l k i \<in> Xseq \<mu> l k i"
+  apply (simp add: Xseq_def cvx_def Yseq_def split: prod.split)
+  by (metis V_state assms choose_central_vx_X red_dboost_non_terminating red_dboost_not_many_bluish stepper_XYseq)
+
+lemma beta_le:
+  assumes "\<mu> > 0" and i: "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
+  shows "beta \<mu> l k i \<le> \<mu>"
+  using \<open>\<mu> > 0\<close>
+  apply (simp add: beta_def divide_simps split: prod.split)
+  by (metis i central_vertex_def cvx_works stepper_XYseq)
 
 end
 
