@@ -63,4 +63,32 @@ proof -
     by linarith
 qed
 
+corollary Red_5_3a:
+  fixes h::nat
+  assumes i: "i \<in> Step_class \<mu> l k dboost_step" and "0<\<mu>" "\<mu><1" "k>0"
+  shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i"
+proof -
+  let ?h = "hgt k (pee \<mu> l k i)"
+  have "?h > 0"
+    sorry
+  then obtain \<alpha>: "alpha k ?h \<ge> 0" "alpha k ?h \<ge> eps k / k"
+    using alpha_ge0 \<open>k>0\<close> using alpha_ge by blast
+  have \<beta>: "beta \<mu> l k i \<le> \<mu>"
+    by (simp add: assms beta_le)
+  have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<ge> 0"
+    using beta_ge0[of \<mu> l k i] epsk_le1[OF \<open>k>0\<close>] \<alpha> \<beta> \<open>\<mu><1\<close>
+    by (simp add: zero_le_mult_iff zero_le_divide_iff)
+  then show ?thesis
+    using Red_5_2 [OF i \<open>\<mu>>0\<close>] by simp
+  have "pee \<mu> l k (Suc i) - pee \<mu> l k i \<le> 1"
+    by (smt (verit) pee_ge0 pee_le1)
+  have "beta \<mu> l k i \<ge> 1 / k^2"
+
+    sorry
+    sorry
+
+qed
+
+
+
 end

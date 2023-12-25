@@ -246,8 +246,19 @@ lemma q0 [simp]: "q k 0 = p0"
 lemma p0_01: "0 \<le> p0" "p0 \<le> 1"
   by (simp_all add: p0_def gen_density_ge0 gen_density_le1)
 
-lemma epsk_n0: "k>0 \<Longrightarrow> eps k > 0"
+lemma epsk_gt0: "k>0 \<Longrightarrow> eps k > 0"
   by (simp add: eps_def)
+
+lemma epsk_le1:
+  assumes "k>0" shows "eps k \<le> 1"
+proof -
+  have "eps 1 = 1"
+    by (simp add: eps_def)
+  moreover have "eps n \<le> eps m" if "0<m" "m \<le> n" for m n
+    using that by (simp add: eps_def powr_minus powr_mono2 divide_simps)
+  ultimately show ?thesis
+    using assms by (metis less_one nat_neq_iff not_le)
+qed
 
 lemma height_exists:
   assumes "0 < p" and "p < 1" and "k>0"
@@ -255,7 +266,7 @@ lemma height_exists:
 proof -
   let ?h = "nat \<lceil>k / eps k\<rceil>"  \<comment>\<open>larger than the bound suggested in the paper\<close>
   have "k+1 \<le> (1 + eps k) ^ ?h"
-    using linear_plus_1_le_power [of "eps k" ?h] epsk_n0 \<open>k>0\<close>
+    using linear_plus_1_le_power [of "eps k" ?h] epsk_gt0 \<open>k>0\<close>
     by (smt (verit, best) mult_imp_less_div_pos of_nat_1 of_nat_add of_nat_ceiling)
   then have "p \<le> q k ?h"
     unfolding q_def
@@ -275,6 +286,20 @@ lemma finite_Blue [simp]: "finite Blue"
 
 
 definition "alpha \<equiv> \<lambda>k h. q k h - q k (h-1)"
+
+lemma alpha_ge0: "k>0 \<Longrightarrow> alpha k h \<ge> 0"
+  by (simp add: alpha_def q_def divide_le_cancel epsk_gt0)
+
+lemma alpha_Suc_ge: "alpha k (Suc h) \<ge> eps k / k"
+proof -
+  have "(1 + eps k) ^ h \<ge> 1"
+    by (simp add: eps_def)
+  then show ?thesis
+    by (simp add: alpha_def q_def epsk_gt0 field_split_simps)
+qed
+
+lemma alpha_ge: "h>0 \<Longrightarrow>alpha k h \<ge> eps k / k"
+  by (metis Suc_pred alpha_Suc_ge)
 
 definition all_incident_edges :: "'a set \<Rightarrow> 'a set set" where
     "all_incident_edges \<equiv> \<lambda>A. \<Union>v\<in>A. incident_edges v"
@@ -705,6 +730,12 @@ lemma Yseq_Suc_subset: "Yseq \<mu> l k (Suc n) \<subseteq> Yseq \<mu> l k n"
 lemma Yseq_antimono: "m \<le> n \<Longrightarrow>Yseq \<mu> l k n \<subseteq> Yseq \<mu> l k m"
   by (simp add: Yseq_Suc_subset lift_Suc_antimono_le)
 
+lemma pee_ge0: "pee \<mu> l k i \<ge> 0"
+  by (simp add: gen_density_ge0 pee_def)
+
+lemma pee_le1: "pee \<mu> l k i \<le> 1"
+  using gen_density_le1 pee_def by presburger
+
 lemma pseq_0: "p0 = pseq \<mu> l k 0"
   by (simp add: p0_def pseq_def Xseq_def Yseq_def)
 
@@ -716,6 +747,9 @@ definition cvx :: "[real,nat,nat,nat] \<Rightarrow> 'a" where
 definition 
   "beta \<equiv> \<lambda>\<mu> l k i. 
     (let (X,Y,A,B) = stepper \<mu> l k i in card(Neighbours Blue (cvx \<mu> l k i) \<inter> X) / card X)"
+
+lemma beta_ge0: "beta \<mu> l k i \<ge> 0"
+  by (simp add: beta_def split: prod.split)
 
 
 subsection \<open>The classes of execution steps\<close>
@@ -770,9 +804,6 @@ proof -
     by (metis n that)
 qed
 
-lemma "0 \<le> beta \<mu> l k i"
-  by (simp add: beta_def split: prod.split)
-
 lemma red_dboost_non_terminating:
   assumes "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
   shows "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
@@ -800,9 +831,6 @@ lemma cvx_in_Xseq:
   shows "cvx \<mu> l k i \<in> Xseq \<mu> l k i"
   apply (simp add: Xseq_def cvx_def Yseq_def split: prod.split)
   by (metis V_state assms choose_central_vx_X red_dboost_non_terminating red_dboost_not_many_bluish stepper_XYseq)
-
-lemma beta_ge0: "beta \<mu> l k i \<ge> 0"
-  by (simp add: beta_def split: prod.split)
 
 lemma beta_le:
   assumes "\<mu> > 0" and i: "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
