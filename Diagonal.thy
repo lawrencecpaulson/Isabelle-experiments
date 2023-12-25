@@ -801,6 +801,9 @@ lemma cvx_in_Xseq:
   apply (simp add: Xseq_def cvx_def Yseq_def split: prod.split)
   by (metis V_state assms choose_central_vx_X red_dboost_non_terminating red_dboost_not_many_bluish stepper_XYseq)
 
+lemma beta_ge0: "beta \<mu> l k i \<ge> 0"
+  by (simp add: beta_def split: prod.split)
+
 lemma beta_le:
   assumes "\<mu> > 0" and i: "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
   shows "beta \<mu> l k i \<le> \<mu>"
