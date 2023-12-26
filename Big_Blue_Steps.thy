@@ -715,13 +715,6 @@ proof -
     by presburger 
 qed
 
-
-section \<open>Density-boost steps\<close>
-
-text \<open>"See observation 5.5 below"\<close>
-lemma sum_Weight_ge0: "(\<Sum>x\<in>X. \<Sum>y\<in>X. Weight X Y x y) \<ge> 0"
-  sorry
-
 end
 
 end

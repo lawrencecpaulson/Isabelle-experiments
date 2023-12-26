@@ -119,6 +119,9 @@ abbreviation "blue_density X Y \<equiv> gen_density Blue X Y"
 lemma edge_card_empty [simp]: "edge_card C X {} = 0"
   by (auto simp: edge_card_def)
 
+lemma edge_card_commute: "edge_card C X Y = edge_card C Y X"
+  using all_edges_betw_un_commute edge_card_def by presburger
+
 lemma edge_card_le: 
   assumes "finite X" "finite Y"
   shows "edge_card C X Y \<le> card X * card Y"

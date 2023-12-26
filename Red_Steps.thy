@@ -7,9 +7,41 @@ begin
 context Diagonal
 begin
 
+
+subsection \<open>Density-boost steps\<close>
+
+abbreviation "Step_class_reddboost \<equiv> \<lambda>\<mu> l k. Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
+
+text \<open>Observation 5.5\<close>
+lemma sum_Weight_ge0:
+  assumes "X \<subseteq> V" "disjnt X Y"
+  shows "(\<Sum>x\<in>X. \<Sum>y\<in>X. Weight X Y x y) \<ge> 0"
+proof -
+  have EXY: "edge_card Red X Y = (\<Sum>x\<in>X. card (Neighbours Red x \<inter> Y))"
+    by (metis Red_E assms disjnt_sym edge_card_commute edge_card_eq_sum_Neighbours finV finite_subset subset_iff_psubset_eq)
+  have "(\<Sum>x\<in>X. \<Sum>y\<in>X. red_density X Y * card (Neighbours Red x \<inter> Y))
+       = red_density X Y * card X * edge_card Red X Y"
+    using assms Red_E
+    by (simp add: EXY power2_eq_square edge_card_eq_sum_Neighbours flip: sum_distrib_left)
+  also have "... = red_density X Y ^ 2 * card X ^ 2 * card Y"
+    by (simp add: power2_eq_square gen_density_def)
+  have "(\<Sum>x\<in>X. \<Sum>y\<in>X. red_density X Y * card (Neighbours Red x \<inter> Y))
+      \<le> (\<Sum>x\<in>X. \<Sum>y\<in>X. real (card (Neighbours Red x \<inter> Neighbours Red y \<inter> Y)))"
+    sorry
+  then show ?thesis
+    by (simp add: Weight_def sum_subtractf inverse_eq_divide flip: sum_divide_distrib)
+qed
+
+
+lemma Red_5_4:
+  assumes "i \<in> Step_class_reddboost \<mu> l k"
+  shows "weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> - card (Xseq \<mu> l k i) / (real k) ^ 5"
+  sorry
+
+
 proposition Red_5_1:
   assumes "real (card (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i)) = \<beta> * real (card (Xseq \<mu> l k i))"
-    and i: "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
+    and i: "i \<in> Step_class_reddboost \<mu> l k"
     and "0 \<le> \<beta>" "\<beta> \<le> \<mu>"    (*STRICT INEQUALITY? NOT MENTIONED by Mehta*)
   defines "p \<equiv> pee \<mu> l k i"
   shows "red_density (Neighbours Red (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i) (Neighbours Red (cvx \<mu> l k i) \<inter> Yseq \<mu> l k i)
