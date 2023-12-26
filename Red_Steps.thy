@@ -89,8 +89,8 @@ proof -
       using \<open>l \<le> k\<close> l by (auto simp: Big_def)
     let ?h = "hgt k (pee \<mu> l k i)"
     have "?h > 0"
-      sorry
-    then obtain \<alpha>: "alpha k ?h \<ge> 0" and XXX: "alpha k ?h \<ge> eps k / k"
+      by (simp add: hgt_gt_0 kn0 pee_le1)
+    then obtain \<alpha>: "alpha k ?h \<ge> 0" and *: "alpha k ?h \<ge> eps k / k"
       using alpha_ge0 \<open>k>1\<close> alpha_ge by auto
     moreover have "-5/4 = -1/4 - (1::real)"
       by simp
@@ -108,7 +108,7 @@ proof -
     with Red_5_2 [OF i \<open>\<mu>>0\<close>]
     have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<le> 1"
       by linarith
-    with XXX have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * eps k / k \<le> 1"
+    with * have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * eps k / k \<le> 1"
       by (smt (verit, ccfv_SIG) divide_le_eq_1 epsk_gt0 kn0 mult_le_cancel_left2 mult_le_cancel_left_pos mult_neg_pos of_nat_0_less_iff times_divide_eq_right)
     then have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) \<le> k / eps k"
       using beta_ge0 [of \<mu> l k i] epsk_gt0 [OF kn0] kn0

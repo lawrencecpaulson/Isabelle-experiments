@@ -265,19 +265,27 @@ lemma epsk_less1:
   by (smt (verit) assms eps_def less_imp_of_nat_less of_nat_1 powr_less_one zero_le_divide_iff)
 
 lemma height_exists:
-  assumes "0 < p" and "p < 1" and "k>0"
-  obtains h where "p \<le> q k h"
+  assumes "p \<le> 1" "k>0"
+  obtains h where "p \<le> q k h \<and> h>0"
 proof -
   let ?h = "nat \<lceil>k / eps k\<rceil>"  \<comment>\<open>larger than the bound suggested in the paper\<close>
+  have "?h > 0"
+    using \<open>k>0\<close> epsk_gt0 by force
+  moreover
   have "k+1 \<le> (1 + eps k) ^ ?h"
     using linear_plus_1_le_power [of "eps k" ?h] epsk_gt0 \<open>k>0\<close>
     by (smt (verit, best) mult_imp_less_div_pos of_nat_1 of_nat_add of_nat_ceiling)
   then have "p \<le> q k ?h"
-    unfolding q_def
-    using assms p0_01
+    unfolding q_def using assms p0_01
     by (smt (verit, best) le_divide_eq_1_pos of_nat_0_less_iff of_nat_1 of_nat_add)
-  then show thesis ..
+  ultimately show thesis
+    using that by blast 
 qed
+
+lemma hgt_gt_0:
+  assumes "p \<le> 1" "k>0"
+  shows "hgt k p > 0"
+  unfolding hgt_def using height_exists [OF assms] by (smt (verit, ccfv_SIG) LeastI)
 
 lemma q_Suc_diff: "q k (Suc h) - q k h = eps k * (1 + eps k)^h / k"
   by (simp add: q_def field_split_simps)
