@@ -7,6 +7,11 @@ begin
 context Diagonal
 begin
 
+
+lemma beta_gt0: "beta \<mu> l k i > 0"
+  sorry
+
+
 proposition Red_5_1:
   assumes "real (card (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i)) = \<beta> * real (card (Xseq \<mu> l k i))"
     and i: "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
@@ -63,32 +68,66 @@ proof -
     by linarith
 qed
 
-corollary Red_5_3a:
-  fixes h::nat
-  assumes i: "i \<in> Step_class \<mu> l k dboost_step" and "0<\<mu>" "\<mu><1" "k>0"
-  shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i"
+corollary Red_5_3:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. \<forall>i. i \<in> Step_class \<mu> l k dboost_step \<longrightarrow> Colours l k \<longrightarrow>
+                  (pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / real k ^ 2)"
 proof -
-  let ?h = "hgt k (pee \<mu> l k i)"
-  have "?h > 0"
-    sorry
-  then obtain \<alpha>: "alpha k ?h \<ge> 0" "alpha k ?h \<ge> eps k / k"
-    using alpha_ge0 \<open>k>0\<close> using alpha_ge by blast
-  have \<beta>: "beta \<mu> l k i \<le> \<mu>"
-    by (simp add: assms beta_le)
-  have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<ge> 0"
-    using beta_ge0[of \<mu> l k i] epsk_le1[OF \<open>k>0\<close>] \<alpha> \<beta> \<open>\<mu><1\<close>
-    by (simp add: zero_le_mult_iff zero_le_divide_iff)
-  then show ?thesis
-    using Red_5_2 [OF i \<open>\<mu>>0\<close>] by simp
-  have "pee \<mu> l k (Suc i) - pee \<mu> l k i \<le> 1"
-    by (smt (verit) pee_ge0 pee_le1)
-  have "beta \<mu> l k i \<ge> 1 / k^2"
-
-    sorry
-    sorry
-
+  define Big where "Big \<equiv> \<lambda>l. 1 / real l ^ 2 \<le> 1 / (l / eps l / (1 - eps l) + 1) \<and> l>1"
+  have "\<forall>\<^sup>\<infinity>l. 1 / real l ^ 2 \<le> 1 / (l / eps l / (1 - eps l) + 1)"
+    unfolding eps_def by real_asymp
+  moreover have "\<forall>\<^sup>\<infinity>l. l>1"
+    by auto
+  ultimately have Big: "\<forall>\<^sup>\<infinity>l. Big l"
+    using eventually_mono eventually_conj by (force simp add: Big_def)  
+  have "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / real k ^ 2"
+    if l: "\<forall>k\<ge>l. Big k" and i: "i \<in> Step_class \<mu> l k dboost_step" and "Colours l k" for l k i
+  proof 
+    obtain ln0: "l>0" and kn0: "k>0" and "l\<le>k"
+      using \<open>Colours l k\<close> Colours_kn0 Colours_ln0  by (auto simp: Colours_def)
+    have "k>1"
+      using \<open>l \<le> k\<close> l by (auto simp: Big_def)
+    let ?h = "hgt k (pee \<mu> l k i)"
+    have "?h > 0"
+      sorry
+    then obtain \<alpha>: "alpha k ?h \<ge> 0" and XXX: "alpha k ?h \<ge> eps k / k"
+      using alpha_ge0 \<open>k>1\<close> alpha_ge by auto
+    moreover have "-5/4 = -1/4 - (1::real)"
+      by simp
+    ultimately have \<alpha>54: "alpha k ?h \<ge> k powr (-5/4)"
+      unfolding eps_def by (metis powr_diff of_nat_0_le_iff powr_one)
+    have \<beta>: "beta \<mu> l k i \<le> \<mu>"
+      by (simp add: \<open>0<\<mu>\<close> beta_le i)
+    have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<ge> 0"
+      using beta_ge0[of \<mu> l k i] epsk_le1 \<alpha> \<beta> \<open>\<mu><1\<close> \<open>k>1\<close>
+      by (simp add: zero_le_mult_iff zero_le_divide_iff)
+    then show "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i"
+      using Red_5_2 [OF i \<open>\<mu>>0\<close>] by simp
+    have "pee \<mu> l k (Suc i) - pee \<mu> l k i \<le> 1"
+      by (smt (verit) pee_ge0 pee_le1)
+    with Red_5_2 [OF i \<open>\<mu>>0\<close>]
+    have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<le> 1"
+      by linarith
+    with XXX have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * eps k / k \<le> 1"
+      by (smt (verit, ccfv_SIG) divide_le_eq_1 epsk_gt0 kn0 mult_le_cancel_left2 mult_le_cancel_left_pos mult_neg_pos of_nat_0_less_iff times_divide_eq_right)
+    then have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) \<le> k / eps k"
+      using beta_ge0 [of \<mu> l k i] epsk_gt0 [OF kn0] kn0
+      by (auto simp add: divide_simps mult_less_0_iff mult_of_nat_commute split: if_split_asm)
+    then have "((1 - beta \<mu> l k i) / beta \<mu> l k i) \<le> k / eps k / (1 - eps k)"
+      by (smt (verit) epsk_less1 mult.commute pos_le_divide_eq \<open>1 < k\<close>)
+    then have "1 / beta \<mu> l k i \<le> k / eps k / (1 - eps k) + 1"
+      by (smt (verit, best) div_add_self2)
+    then have "1 / (k / eps k / (1 - eps k) + 1) \<le> beta \<mu> l k i"
+      using beta_gt0 [of \<mu> l k i] epsk_gt0 epsk_less1 [OF \<open>k>1\<close>] kn0
+      apply (simp add: divide_simps split: if_split_asm)
+      by (smt (verit, ccfv_SIG) mult.commute mult_less_0_iff)
+    moreover have "1 / k^2 \<le> 1 / (k / eps k / (1 - eps k) + 1)"
+      using Big_def \<open>l \<le> k\<close> l by fastforce
+    ultimately show "beta \<mu> l k i \<ge> 1 / real k ^ 2"
+      by auto
+  qed
+  with Big show ?thesis
+    unfolding eventually_sequentially by (meson order.trans)
 qed
-
-
 
 end

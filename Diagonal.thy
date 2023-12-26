@@ -260,6 +260,10 @@ proof -
     using assms by (metis less_one nat_neq_iff not_le)
 qed
 
+lemma epsk_less1:
+  assumes "k>1" shows "eps k < 1"
+  by (smt (verit) assms eps_def less_imp_of_nat_less of_nat_1 powr_less_one zero_le_divide_iff)
+
 lemma height_exists:
   assumes "0 < p" and "p < 1" and "k>0"
   obtains h where "p \<le> q k h"
