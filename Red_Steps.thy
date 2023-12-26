@@ -7,11 +7,6 @@ begin
 context Diagonal
 begin
 
-
-lemma beta_gt0: "beta \<mu> l k i > 0"
-  sorry
-
-
 proposition Red_5_1:
   assumes "real (card (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i)) = \<beta> * real (card (Xseq \<mu> l k i))"
     and i: "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
@@ -20,13 +15,14 @@ proposition Red_5_1:
   shows "red_density (Neighbours Red (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i) (Neighbours Red (cvx \<mu> l k i) \<inter> Yseq \<mu> l k i)
          \<ge> p - alpha k (hgt k p)
        \<or> red_density (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i) (Neighbours Red (cvx \<mu> l k i) \<inter> Yseq \<mu> l k i)
-         \<ge> p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha k (hgt k p)"
+         \<ge> p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha k (hgt k p) \<and> \<beta> > 0"
   sorry
 
 corollary Red_5_2:
   assumes i: "i \<in> Step_class \<mu> l k dboost_step" and "\<mu>>0"
   shows "pee \<mu> l k (Suc i) - pee \<mu> l k i
-         \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i))"
+         \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i)) \<and>
+           beta \<mu> l k i > 0"
 proof -
   let ?x = "cvx \<mu> l k i"
   obtain X Y A B
@@ -59,14 +55,16 @@ proof -
     using nonredd by (simp add: reddish_def pee)
   then have "pee \<mu> l k i + (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i))
       \<le> red_density (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i)
-          (Neighbours Red (cvx \<mu> l k i) \<inter> Yseq \<mu> l k i)"
+          (Neighbours Red (cvx \<mu> l k i) \<inter> Yseq \<mu> l k i) \<and> beta \<mu> l k i > 0"
     using Red_5_1 [OF \<beta>eq _ beta_ge0 beta_le]
     by (smt (verit, del_insts) Un_iff Xeq Yeq assms gen_density_ge0 pee)
-  also have "... \<le> pee \<mu> l k (Suc i)"
+  moreover have "red_density (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i)
+      (Neighbours Red (cvx \<mu> l k i) \<inter> Yseq \<mu> l k i) \<le> pee \<mu> l k (Suc i)"
     using SUC Xeq Yeq stepper_XYseq by (simp add: pee_def)
-  finally show ?thesis
+  ultimately show ?thesis
     by linarith
 qed
+
 
 corollary Red_5_3:
   assumes "0<\<mu>" "\<mu><1"
@@ -106,8 +104,8 @@ proof -
     have "pee \<mu> l k (Suc i) - pee \<mu> l k i \<le> 1"
       by (smt (verit) pee_ge0 pee_le1)
     with Red_5_2 [OF i \<open>\<mu>>0\<close>]
-    have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<le> 1"
-      by linarith
+    have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<le> 1" and beta_gt0: "beta \<mu> l k i > 0"
+      by linarith+
     with * have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * eps k / k \<le> 1"
       by (smt (verit, ccfv_SIG) divide_le_eq_1 epsk_gt0 kn0 mult_le_cancel_left2 mult_le_cancel_left_pos mult_neg_pos of_nat_0_less_iff times_divide_eq_right)
     then have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) \<le> k / eps k"
@@ -118,7 +116,7 @@ proof -
     then have "1 / beta \<mu> l k i \<le> k / eps k / (1 - eps k) + 1"
       by (smt (verit, best) div_add_self2)
     then have "1 / (k / eps k / (1 - eps k) + 1) \<le> beta \<mu> l k i"
-      using beta_gt0 [of \<mu> l k i] epsk_gt0 epsk_less1 [OF \<open>k>1\<close>] kn0
+      using beta_gt0 epsk_gt0 epsk_less1 [OF \<open>k>1\<close>] kn0
       apply (simp add: divide_simps split: if_split_asm)
       by (smt (verit, ccfv_SIG) mult.commute mult_less_0_iff)
     moreover have "1 / k^2 \<le> 1 / (k / eps k / (1 - eps k) + 1)"
