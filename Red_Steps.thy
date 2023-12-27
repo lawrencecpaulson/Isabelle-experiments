@@ -14,20 +14,41 @@ abbreviation "Step_class_reddboost \<equiv> \<lambda>\<mu> l k. Step_class \<mu>
 
 text \<open>Observation 5.5\<close>
 lemma sum_Weight_ge0:
-  assumes "X \<subseteq> V" "disjnt X Y"
-  shows "(\<Sum>x\<in>X. \<Sum>y\<in>X. Weight X Y x y) \<ge> 0"
+  assumes "X \<subseteq> V" "Y \<subseteq> V" "disjnt X Y"
+  shows "(\<Sum>x\<in>X. \<Sum>x'\<in>X. Weight X Y x x') \<ge> 0"
 proof -
-  have EXY: "edge_card Red X Y = (\<Sum>x\<in>X. card (Neighbours Red x \<inter> Y))"
-    by (metis Red_E assms disjnt_sym edge_card_commute edge_card_eq_sum_Neighbours finV finite_subset subset_iff_psubset_eq)
-  have "(\<Sum>x\<in>X. \<Sum>y\<in>X. red_density X Y * card (Neighbours Red x \<inter> Y))
+  have "finite X" "finite Y"
+    using assms finV finite_subset by blast+
+  then have EXY: "edge_card Red X Y = (\<Sum>x\<in>X. card (Neighbours Red x \<inter> Y))"
+    by (metis Red_E assms(3) disjnt_sym edge_card_commute edge_card_eq_sum_Neighbours subset_iff_psubset_eq)
+  have "(\<Sum>x\<in>X. \<Sum>x'\<in>X. red_density X Y * card (Neighbours Red x \<inter> Y))
        = red_density X Y * card X * edge_card Red X Y"
     using assms Red_E
     by (simp add: EXY power2_eq_square edge_card_eq_sum_Neighbours flip: sum_distrib_left)
   also have "... = red_density X Y ^ 2 * card X ^ 2 * card Y"
     by (simp add: power2_eq_square gen_density_def)
-  have "(\<Sum>x\<in>X. \<Sum>y\<in>X. red_density X Y * card (Neighbours Red x \<inter> Y))
-      \<le> (\<Sum>x\<in>X. \<Sum>y\<in>X. real (card (Neighbours Red x \<inter> Neighbours Red y \<inter> Y)))"
+  also have "... \<le> (\<Sum>y\<in>Y. real ((card (Neighbours Red y \<inter> X))\<^sup>2))"
     sorry
+  also have "... = (\<Sum>x\<in>X. \<Sum>x'\<in>X. real (card (Neighbours Red x \<inter> Neighbours Red x' \<inter> Y)))"
+  proof -
+    define f::"'a \<times> 'a \<times> 'a \<Rightarrow> 'a \<times> 'a \<times> 'a" where "f \<equiv> \<lambda>(y,(x,x')). (x, (x', y))"
+    have f: "bij_betw f (SIGMA y:Y. (Neighbours Red y \<inter> X) \<times> (Neighbours Red y \<inter> X))
+                        (SIGMA x:X. SIGMA x':X. Neighbours Red x \<inter> Neighbours Red x' \<inter> Y)"
+      by (auto simp add: f_def bij_betw_def inj_on_def image_iff in_Neighbours_iff doubleton_eq_iff insert_commute)
+    have "(\<Sum>y\<in>Y. (card (Neighbours Red y \<inter> X))\<^sup>2) = card(SIGMA y:Y. (Neighbours Red y \<inter> X) \<times> (Neighbours Red y \<inter> X))"
+      by (simp add: \<open>finite Y\<close> finite_Neighbours power2_eq_square)
+    also have "... = card(Sigma X (\<lambda>x. Sigma X (\<lambda>x'. Neighbours Red x \<inter> Neighbours Red x' \<inter> Y)))"
+      using bij_betw_same_card f by blast
+    also have "... = (\<Sum>x\<in>X. \<Sum>x'\<in>X. card (Neighbours Red x \<inter> Neighbours Red x' \<inter> Y))"
+      by (simp add: \<open>finite X\<close> finite_Neighbours power2_eq_square)
+    finally
+    have "(\<Sum>y\<in>Y. (card (Neighbours Red y \<inter> X))\<^sup>2) =
+          (\<Sum>x\<in>X. \<Sum>x'\<in>X. card (Neighbours Red x \<inter> Neighbours Red x' \<inter> Y))" .
+    then show ?thesis
+      by (simp flip: of_nat_sum of_nat_power)
+  qed
+  finally have "(\<Sum>x\<in>X. \<Sum>y\<in>X. red_density X Y * card (Neighbours Red x \<inter> Y))
+      \<le> (\<Sum>x\<in>X. \<Sum>y\<in>X. real (card (Neighbours Red x \<inter> Neighbours Red y \<inter> Y)))" .
   then show ?thesis
     by (simp add: Weight_def sum_subtractf inverse_eq_divide flip: sum_divide_distrib)
 qed
