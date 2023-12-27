@@ -13,7 +13,7 @@ abbreviation "Step_class_reddboost \<equiv> \<lambda>\<mu> l k. Step_class \<mu>
 
 text \<open>Observation 5.5\<close>
 lemma sum_Weight_ge0:
-  assumes "X \<subseteq> V" "Y \<subseteq> V" "disjnt X Y"
+  assumes "X \<subseteq> V" "Y \<subseteq> V" "disjnt X Y" "card X > 0" "card Y > 0"
   shows "(\<Sum>x\<in>X. \<Sum>x'\<in>X. Weight X Y x x') \<ge> 0"
 proof -
   have "finite X" "finite Y"
@@ -26,18 +26,17 @@ proof -
     by (simp add: EXY power2_eq_square edge_card_eq_sum_Neighbours flip: sum_distrib_left)
   also have "... = red_density X Y ^ 2 * card X ^ 2 * card Y"
     by (simp add: power2_eq_square gen_density_def)
+  also have "... = ((\<Sum>i\<in>Y. card (Neighbours Red i \<inter> X)) / (real (card X) * real (card Y)))\<^sup>2 * (card X)\<^sup>2 * card Y"
+    using Red_E \<open>finite Y\<close> assms
+    by (simp add: psubset_eq gen_density_def edge_card_eq_sum_Neighbours)
   also have "... \<le> (\<Sum>y\<in>Y. real ((card (Neighbours Red y \<inter> X))\<^sup>2))"
-    apply (simp add: gen_density_def)
-    apply (subst edge_card_eq_sum_Neighbours)
-    using Red_E apply (blast intro:  elim: )
-      apply (simp add: \<open>finite Y\<close>)
-     apply (simp add: assms)
-    apply (simp add: divide_simps)
-    apply (auto simp: sum_nonneg)
-    apply (simp add: power2_eq_square [where a = "real (card Y)"])
-    apply (intro sum_squared_le_sum_of_squares)
-      apply (auto simp: )
-    using \<open>finite Y\<close> by blast
+  proof -
+    have "(\<Sum>x\<in>Y. real (card (Neighbours Red x \<inter> X)))\<^sup>2
+        \<le> (\<Sum>y\<in>Y. (real (card (Neighbours Red y \<inter> X)))\<^sup>2) * card Y"
+      using \<open>finite Y\<close> assms by (intro sum_squared_le_sum_of_squares) auto
+    then show ?thesis
+      using assms by (simp add: divide_simps power2_eq_square)
+  qed
   also have "... = (\<Sum>x\<in>X. \<Sum>x'\<in>X. real (card (Neighbours Red x \<inter> Neighbours Red x' \<inter> Y)))"
   proof -
     define f::"'a \<times> 'a \<times> 'a \<Rightarrow> 'a \<times> 'a \<times> 'a" where "f \<equiv> \<lambda>(y,(x,x')). (x, (x', y))"
