@@ -7,7 +7,6 @@ begin
 context Diagonal
 begin
 
-
 subsection \<open>Density-boost steps\<close>
 
 abbreviation "Step_class_reddboost \<equiv> \<lambda>\<mu> l k. Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
@@ -28,7 +27,17 @@ proof -
   also have "... = red_density X Y ^ 2 * card X ^ 2 * card Y"
     by (simp add: power2_eq_square gen_density_def)
   also have "... \<le> (\<Sum>y\<in>Y. real ((card (Neighbours Red y \<inter> X))\<^sup>2))"
-    sorry
+    apply (simp add: gen_density_def)
+    apply (subst edge_card_eq_sum_Neighbours)
+    using Red_E apply (blast intro:  elim: )
+      apply (simp add: \<open>finite Y\<close>)
+     apply (simp add: assms)
+    apply (simp add: divide_simps)
+    apply (auto simp: sum_nonneg)
+    apply (simp add: power2_eq_square [where a = "real (card Y)"])
+    apply (intro sum_squared_le_sum_of_squares)
+      apply (auto simp: )
+    using \<open>finite Y\<close> by blast
   also have "... = (\<Sum>x\<in>X. \<Sum>x'\<in>X. real (card (Neighbours Red x \<inter> Neighbours Red x' \<inter> Y)))"
   proof -
     define f::"'a \<times> 'a \<times> 'a \<Rightarrow> 'a \<times> 'a \<times> 'a" where "f \<equiv> \<lambda>(y,(x,x')). (x, (x', y))"

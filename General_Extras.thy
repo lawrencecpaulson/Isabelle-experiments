@@ -182,6 +182,49 @@ lemma convex_on_cdiv [intro]:
   using convex_on_cmul [of "inverse c" S f]
   by (simp add: mult.commute assms)
 
+
+
+lemma convex_power_even:
+  assumes "even n"
+  shows "convex_on (UNIV::real set) (\<lambda>x. x^n)"
+proof (intro f''_ge0_imp_convex)
+  show "((\<lambda>x. x ^ n) has_real_derivative of_nat n * x^(n-1)) (at x)" for x
+    by (rule derivative_eq_intros | simp)+
+  show "((\<lambda>x. of_nat n * x^(n-1)) has_real_derivative of_nat n * of_nat (n-1) * x^(n-2)) (at x)" for x
+    by (rule derivative_eq_intros | simp add: eval_nat_numeral)+
+  show "\<And>x. 0 \<le> real n * real (n - 1) * x ^ (n - 2)"
+    using assms by (auto simp: zero_le_mult_iff zero_le_even_power)
+qed auto
+
+lemma convex_power_odd:
+  assumes "odd n"
+  shows "convex_on {0::real..} (\<lambda>x. x^n)"
+proof (intro f''_ge0_imp_convex)
+  show "((\<lambda>x. x ^ n) has_real_derivative of_nat n * x^(n-1)) (at x)" for x
+    by (rule derivative_eq_intros | simp)+
+  show "((\<lambda>x. of_nat n * x^(n-1)) has_real_derivative of_nat n * of_nat (n-1) * x^(n-2)) (at x)" for x
+    by (rule derivative_eq_intros | simp add: eval_nat_numeral)+
+  show "\<And>x. x \<in> {0::real..} \<Longrightarrow> 0 \<le> real n * real (n - 1) * x ^ (n - 2)"
+    using assms by (auto simp: zero_le_mult_iff zero_le_even_power)
+qed auto
+
+lemma convex_power2: "convex_on (UNIV::real set) power2"
+  by (simp add: convex_power_even)
+
+lemma sum_squared_le_sum_of_squares:
+  fixes f :: "'a \<Rightarrow> real"
+  assumes "\<And>y. y\<in>Y \<Longrightarrow> f y \<ge> 0" "finite Y" "Y \<noteq> {}"
+  shows "(\<Sum>y\<in>Y. f y)\<^sup>2 \<le> (\<Sum>y\<in>Y. (f y)\<^sup>2) * card Y"
+proof (cases "finite Y \<and> Y \<noteq> {}")
+  case True
+  have "(\<Sum>i\<in>Y. f i / real (card Y))\<^sup>2 \<le> (\<Sum>i\<in>Y. (f i)\<^sup>2 / real (card Y))"
+    using assms convex_on_sum [OF _ _ convex_power2, where a = "\<lambda>x. 1 / real(card Y)" and S=Y]
+    by simp
+  then show ?thesis
+    using assms  
+    by (simp add: divide_simps power2_eq_square split: if_split_asm flip: sum_divide_distrib)
+qed auto
+
 lemma mono_on_mul:
   fixes f::"'a::ord \<Rightarrow> 'b::ordered_semiring"
   assumes "mono_on S f" "mono_on S g"
@@ -229,6 +272,7 @@ proof (intro convex_on_linorderI)
   finally show "f ((1-t) *\<^sub>R x + t *\<^sub>R y) * g ((1-t) *\<^sub>R x + t *\<^sub>R y) \<le> (1-t)*(f x*g x) + t*(f y*g y)" 
     by simp
 qed
+
 
 lemma convex_gchoose_aux: "convex_on {k-1..} (\<lambda>a. prod (\<lambda>i. a - of_nat i) {0..<k})"
 proof (induction k)

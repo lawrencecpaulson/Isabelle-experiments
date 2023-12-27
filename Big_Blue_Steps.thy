@@ -640,7 +640,7 @@ proof -
         then have Bigger: "B' \<subset> B"
         proof cases
           case 1
-          then have "\<not> termination_condition (real l) k X' Y'"
+          then have "\<not> termination_condition l k X' Y'"
             by (auto simp: stepper_kind_def step_n)
           with 1 obtain S where "A' = A" "Y' = Y" and manyb: "many_bluish \<mu> l k X'" 
             and cbb: "choose_blue_book \<mu> (X',Y,A,B') = (S,X)" and le_cardB: "B = B' \<union> S"
