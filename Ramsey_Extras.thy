@@ -236,12 +236,30 @@ lemma partn_lst_0: "\<gamma> > 0 \<Longrightarrow> partn_lst \<beta> (0#\<alpha>
 lemma partn_lst_0': "\<gamma> > 0 \<Longrightarrow> partn_lst \<beta> (a#0#\<alpha>) \<gamma>"
   by (force simp add: partn_lst_def nsets_empty_iff)
 
-
+text \<open>The Erdős--Snekeres bound, written explicitly\<close>
 fun ES :: "[nat,nat,nat] \<Rightarrow> nat"
   where "ES 0 k l = max k l"
   |     "ES (Suc r) k l = 
             (if r=0 then k+l-1
-             else if k=0 \<or> l=0 then 1 else (ES r (ES (Suc r) (k-1) l) (ES (Suc r) k (l-1))))"
+             else if k=0 \<or> l=0 then 1 else Suc (ES r (ES (Suc r) (k-1) l) (ES (Suc r) k (l-1))))"
+
+lemma ES2: "ES 2 k l = (if k=0 \<or> l=0 then 1 else ES 2 (k-1) l + ES 2 k (l-1))"
+  unfolding numeral_2_eq_2
+  by (smt (verit) ES.elims One_nat_def Suc_pred add_gr_0 neq0_conv nat.inject zero_less_Suc)
+
+text \<open>The Erdős--Snekeres upper bound\<close>
+lemma ES2_choose: "ES 2 k l = (k+l) choose k"
+proof (induct n \<equiv> "k+l" arbitrary: k l)
+  case 0
+  then show ?case
+    by (auto simp: ES2)
+next
+  case (Suc n)
+  then have "k>0 \<Longrightarrow> l>0 \<Longrightarrow> ES 2 (k - 1) l + ES 2 k (l - 1) = k + l choose k"
+    using choose_reduce_nat by force
+  then show ?case
+    by (metis ES2 Nat.add_0_right binomial_n_0 binomial_n_n gr0I)
+qed
 
 text \<open>Just the pigeon hole principle, since we are dealing with 1-sets\<close>
 lemma ramsey1_explicit: "partn_lst {..<q0 + q1 - Suc 0} [q0,q1] 1"
@@ -515,9 +533,10 @@ next
               qed
             qed
           qed
-          then show "?thesis"
+          moreover have "ES (Suc r) q1 q2 = Suc p"
+            by (simp add: "2" False p1_def p2_def p_def)
+          ultimately show "?thesis"
             using lessThan_Suc lessThan_Suc_atMost
-            oops
             by (auto simp: partn_lst_def insert_commute)
         qed
       qed
@@ -525,15 +544,6 @@ next
   qed
 qed
 
-
-subsection \<open>Lemmas relating to Ramsey's theorem\<close>
-
-lemma clique_Un: "\<lbrakk>clique K F; clique L F; \<forall>v\<in>K. \<forall>w\<in>L. v \<noteq> w \<longrightarrow> {v, w} \<in> F\<rbrakk> \<Longrightarrow> clique (K \<union> L) F"
-  by (metis UnE clique_def doubleton_eq_iff)
-
-lemma nsets2_eq_all_edges: "[A]\<^bsup>2\<^esup> = all_edges A"
-  using card_2_iff' unfolding nsets_def all_edges_def
-  by fastforce
 
 (* not sure that the type class is the best approach when using Chelsea's locale*)
 class infinite =
@@ -545,6 +555,15 @@ instance prod :: (infinite, type) infinite
   by intro_classes (simp add: finite_prod infinite_UNIV)
 instance list :: (type) infinite
   by intro_classes (simp add: infinite_UNIV_listI)
+
+subsection \<open>Lemmas relating to Ramsey's theorem\<close>
+
+lemma clique_Un: "\<lbrakk>clique K F; clique L F; \<forall>v\<in>K. \<forall>w\<in>L. v \<noteq> w \<longrightarrow> {v, w} \<in> F\<rbrakk> \<Longrightarrow> clique (K \<union> L) F"
+  by (metis UnE clique_def doubleton_eq_iff)
+
+lemma nsets2_eq_all_edges: "[A]\<^bsup>2\<^esup> = all_edges A"
+  using card_2_iff' unfolding nsets_def all_edges_def
+  by fastforce
 
 
 lemma null_clique[simp]: "clique {} E" and null_indep[simp]: "indep {} E"
@@ -750,9 +769,11 @@ definition RN where
 lemma is_Ramsey_number_RN: "partn_lst {..< (RN m n)} [m,n] 2"
   by (metis LeastI_ex RN_def ramsey2_full)
 
-
 lemma RN_le: "\<lbrakk>is_Ramsey_number m n r\<rbrakk> \<Longrightarrow> RN m n \<le> r"
   by (simp add: Least_le RN_def)
+
+lemma RN_le_choose: "RN k l \<le> (k+l) choose k"
+  by (metis ES2_choose ramsey2_full RN_le)
 
 lemma RN_mono:
   assumes "m' \<le> m" "n' \<le> n"
