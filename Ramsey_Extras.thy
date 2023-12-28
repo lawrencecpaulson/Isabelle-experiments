@@ -229,17 +229,22 @@ qed
 
 subsection \<open>Erdos--Sekeres theorem\<close>
 
+text \<open>There's always a 0-clique\<close>
+lemma partn_lst_0: "\<gamma> > 0 \<Longrightarrow> partn_lst \<beta> (0#\<alpha>) \<gamma>"
+  by (force simp add: partn_lst_def nsets_empty_iff)
+
+lemma partn_lst_0': "\<gamma> > 0 \<Longrightarrow> partn_lst \<beta> (a#0#\<alpha>) \<gamma>"
+  by (force simp add: partn_lst_def nsets_empty_iff)
+
 
 fun ES :: "[nat,nat,nat] \<Rightarrow> nat"
-  where "ES 0 k l = 0"
+  where "ES 0 k l = max k l"
   |     "ES (Suc r) k l = 
-            (if r=0 then Suc (k+l)
+            (if r=0 then k+l-1
              else if k=0 \<or> l=0 then 1 else (ES r (ES (Suc r) (k-1) l) (ES (Suc r) k (l-1))))"
 
 text \<open>Just the pigeon hole principle, since we are dealing with 1-sets\<close>
-lemma ramsey1_explicit: 
-  assumes "q0>0" "q1>0"
-  shows "partn_lst {..<q0 + q1 - 1} [q0,q1] 1"
+lemma ramsey1_explicit: "partn_lst {..<q0 + q1 - Suc 0} [q0,q1] 1"
 proof -
   have "\<exists>i<Suc (Suc 0). \<exists>H\<in>nsets {..<q0 + q1 - 1} ([q0, q1] ! i). f ` nsets H (Suc 0) \<subseteq> {i}"
     if "f \<in> nsets {..<q0 + q1 - 1} (Suc 0) \<rightarrow> {..<Suc (Suc 0)}" for f
@@ -266,11 +271,14 @@ proof -
     by (simp add: partn_lst_def)
 qed
 
-proposition ramsey2_full: "\<exists>N::nat. partn_lst {..<N} [q1,q2] r"
+lemma ramsey1: "\<exists>N::nat. partn_lst {..<N} [q0,q1] 1"
+  using ramsey1_explicit by blast
+
+proposition ramsey2_full: "partn_lst {..<ES r q1 q2} [q1,q2] r"
 proof (induction r arbitrary: q1 q2)
   case 0
   then show ?case
-    by (simp add: ramsey0)
+    by (auto simp add: partn_lst_def less_Suc_eq ex_in_conv nsets_eq_empty_iff)
 next
   case (Suc r)
   note outer = this
@@ -278,7 +286,7 @@ next
   proof (cases "r = 0")
     case True
     then show ?thesis
-      using ramsey1 by auto
+      using ramsey1_explicit by force
   next
     case False
     then have "r > 0"
@@ -287,37 +295,35 @@ next
       using Suc.prems
     proof (induct k \<equiv> "q1 + q2" arbitrary: q1 q2)
       case 0
-      show ?case
-      proof
-        show "partn_lst {..<1::nat} [q1, q2] (Suc r)"
-          using nsets_empty_iff subset_insert 0
-          by (fastforce simp: partn_lst_def funcset_to_empty_iff nsets_eq_empty image_subset_iff)
-      qed
+      with partn_lst_0 show ?case by auto 
     next
       case (Suc k)
       consider "q1 = 0 \<or> q2 = 0" | "q1 \<noteq> 0" "q2 \<noteq> 0" by auto
       then show ?case
       proof cases
         case 1
-        then have "partn_lst {..< Suc 0} [q1, q2] (Suc r)"
-          unfolding partn_lst_def using \<open>r > 0\<close>
-          by (fastforce simp add: nsets_empty_iff nsets_singleton_iff lessThan_Suc)
-        then show ?thesis by blast
+        with False partn_lst_0 partn_lst_0' show ?thesis
+          by blast
       next
+        define p1 where "p1 \<equiv> ES (Suc r) (q1-1) q2"
+        define p2 where "p2 \<equiv> ES (Suc r) q1 (q2-1)"
+        define p where "p \<equiv> ES r p1 p2"
         case 2
-        with Suc have "k = (q1 - 1) + q2" "k = q1 + (q2 - 1)" by auto
-        then obtain p1 p2::nat where p1: "partn_lst {..<p1} [q1-1,q2] (Suc r)" and p2: "partn_lst {..<p2} [q1,q2-1] (Suc r)"
-          using Suc.hyps by blast
-        then obtain p::nat where p: "partn_lst {..<p} [p1,p2] r"
-          using outer Suc.prems by auto
+        with Suc have "k = (q1-1) + q2" "k = q1 + (q2 - 1)" by auto
+        then have p1: "partn_lst {..<p1} [q1-1,q2] (Suc r)"
+              and p2: "partn_lst {..<p2} [q1,q2-1] (Suc r)"
+          using Suc.hyps unfolding p1_def p2_def by blast+
+        then have p: "partn_lst {..<p} [p1,p2] r"
+          using outer Suc.prems unfolding p_def by auto
         show ?thesis
-        proof (intro exI conjI)
+        proof -
           have "\<exists>i<Suc (Suc 0). \<exists>H\<in>nsets {..p} ([q1,q2] ! i). f ` nsets H (Suc r) \<subseteq> {i}"
             if f: "f \<in> nsets {..p} (Suc r) \<rightarrow> {..<Suc (Suc 0)}" for f
           proof -
             define g where "g \<equiv> \<lambda>R. f (insert p R)"
             have "f (insert p i) \<in> {..<Suc (Suc 0)}" if "i \<in> nsets {..<p} r" for i
-              using that card_insert_if by (fastforce simp: nsets_def intro!: Pi_mem [OF f])
+              using that card_insert_if
+              by (fastforce simp: nsets_def intro!: Pi_mem [OF f])
             then have g: "g \<in> nsets {..<p} r \<rightarrow> {..<Suc (Suc 0)}"
               by (force simp: g_def PiE_iff)
             then obtain i U where i: "i < Suc (Suc 0)" and gi: "g ` nsets U r \<subseteq> {i}"
@@ -509,8 +515,10 @@ next
               qed
             qed
           qed
-          then show "partn_lst {..<Suc p} [q1,q2] (Suc r)"
-            using lessThan_Suc lessThan_Suc_atMost by (auto simp: partn_lst_def insert_commute)
+          then show "?thesis"
+            using lessThan_Suc lessThan_Suc_atMost
+            oops
+            by (auto simp: partn_lst_def insert_commute)
         qed
       qed
     qed
