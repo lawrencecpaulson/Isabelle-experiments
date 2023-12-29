@@ -88,13 +88,23 @@ qed
 
 lemma Red_5_4:
   assumes "i \<in> Step_class_reddboost \<mu> l k"
-  assumes "0<\<mu>" "\<mu><1"
+  assumes "0<\<mu>" "\<mu><1" "l>0"
   shows "weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> - card (Xseq \<mu> l k i) / (real k) ^ 5"
 proof -
   define X where "X \<equiv> Xseq \<mu> l k i"
   define Y where "Y \<equiv> Yseq \<mu> l k i"
-  have "\<not> many_bluish \<mu> l k X"
+  have "finite X"
+    unfolding X_def by (meson finV infinite_super Xseq_subset_V)
+  have not_many_bluish: "\<not> many_bluish \<mu> l k X"
     using assms(1) red_dboost_not_many_bluish unfolding X_def by blast
+  have nonterm: "\<not> termination_condition l k X Y"
+    using X_def Y_def assms(1) red_dboost_non_terminating by blast
+  moreover have "l powr (2/3) \<le> l powr (3/4)"
+    using \<open>l>0\<close> by (simp add: powr_mono)
+  ultimately have RNX: "RN k (m_of l) \<le> card X"
+    apply (simp add: termination_condition_def m_of_def not_le)
+    by (smt (verit, ccfv_SIG) RN_mono less_or_eq_imp_le nat_ceiling_le_eq of_nat_le_iff)
+
   have "0 \<le> (\<Sum>x \<in> X. \<Sum>x' \<in> X. Weight X Y x x')"
     by (simp add: X_def Y_def sum_Weight_ge0 Xseq_subset_V Yseq_subset_V Xseq_Yseq_disjnt)
   also have "... = (\<Sum>y \<in> X. weight X Y y + Weight X Y y y)"
@@ -124,8 +134,10 @@ proof -
   then have "weight X Y x \<le> card X - 1" if "x \<in> X" for x
     using that card_Diff_singleton One_nat_def by (smt (verit, best)) 
   define XB where "XB \<equiv> {x\<in>X. bluish \<mu> X x}"
-  have "XB \<subseteq> X"
-    by (auto simp: XB_def)
+  have card_XB: "card XB < RN k (m_of l)"
+    using not_many_bluish by (auto simp: m_of_def many_bluish_def XB_def)
+  have "XB \<subseteq> X" "finite XB"
+    using \<open>finite X\<close> by (auto simp: XB_def)
   then have cv_non_XB: "\<And>y. y \<in> X - XB \<Longrightarrow> central_vertex \<mu> X y"
     by (auto simp: central_vertex_def XB_def bluish_def)
   have "0 \<le> (\<Sum>y\<in>X. weight X Y y + Weight X Y y y)"
@@ -134,20 +146,20 @@ proof -
     using sum.subset_diff [OF \<open>XB\<subseteq>X\<close>] by (smt (verit) X_def Xseq_subset_V finV finite_subset)
   also have "... \<le> (\<Sum>y\<in>XB. weight X Y y + Weight X Y y y) + (\<Sum>y\<in>X-XB. weight X Y (cvx \<mu> l k i) + 1)"
     by (intro add_mono sum_mono w_maximal W1 order_refl cv_non_XB)
-  also have "... = (\<Sum>y\<in>XB. weight X Y y + Weight X Y y y) + card (X - XB) * (weight X Y (cvx \<mu> l k i) + 1)"
-    by simp
-  also have "... \<le> card XB * card X + card (X-XB) * (weight X Y (cvx \<mu> l k i) + 1)"
+  also have "... = (\<Sum>y\<in>XB. weight X Y y + Weight X Y y y) + (card X - card XB) * (weight X Y (cvx \<mu> l k i) + 1)"
+    using \<open>XB\<subseteq>X\<close> \<open>finite XB\<close> by (simp add: card_Diff_subset)
+  also have "... \<le> card XB * card X + (card X - card XB) * (weight X Y (cvx \<mu> l k i) + 1)"
     using sum_bounded_above A
     by (smt (verit, ccfv_threshold) XB_def mem_Collect_eq of_nat_mult)
-  also have "...  \<le> RN k (m_of l) * card X + (card X - RN k (m_of l)) * weight X Y (cvx \<mu> l k i)"
+  also have "... = real (RN k (m_of l) * card X) - (RN k (m_of l) - card XB) * card X + (card X - card XB) * (weight X Y (cvx \<mu> l k i) + 1)"
+    using card_XB
+    by (simp add: algebra_simps flip: of_nat_mult of_nat_diff)
+  also have "...  \<le> real (RN k (m_of l) * card X) + (card X - RN k (m_of l)) * (weight X Y (cvx \<mu> l k i) + 1)"
+    using card_XB \<open>XB\<subseteq>X\<close> \<open>finite X\<close> RNX
+    apply (simp add: algebra_simps card_mono card_Diff_subset of_nat_diff)
 
-
-  have "(\<Sum>y\<in>X. weight X Y y + Weight X Y y y)
-        \<le> RN k (m_of l) * card X +  (card X - RN k (m_of l)) * (weight X Y (cvx \<mu> l k i))"
-    using A ge0 w_maximal
     sorry
-  with ge0 have "0 \<le> RN k (m_of l) * card X +  (card X - RN k (m_of l)) * (weight X Y (cvx \<mu> l k i))"
-    by simp
+  finally have "0 \<le> RN k (m_of l) * card X + (card X - RN k (m_of l)) * (weight X Y (cvx \<mu> l k i) + 1)" .
 
 
 proposition Red_5_1:
