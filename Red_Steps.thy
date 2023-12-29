@@ -13,7 +13,7 @@ abbreviation "Step_class_reddboost \<equiv> \<lambda>\<mu> l k. Step_class \<mu>
 
 text \<open>Observation 5.5\<close>
 lemma sum_Weight_ge0:
-  assumes "X \<subseteq> V" "Y \<subseteq> V" "disjnt X Y" "card X > 0" "card Y > 0"
+  assumes "X \<subseteq> V" "Y \<subseteq> V" "disjnt X Y"
   shows "(\<Sum>x\<in>X. \<Sum>x'\<in>X. Weight X Y x x') \<ge> 0"
 proof -
   have "finite X" "finite Y"
@@ -30,12 +30,17 @@ proof -
     using Red_E \<open>finite Y\<close> assms
     by (simp add: psubset_eq gen_density_def edge_card_eq_sum_Neighbours)
   also have "... \<le> (\<Sum>y\<in>Y. real ((card (Neighbours Red y \<inter> X))\<^sup>2))"
-  proof -
-    have "(\<Sum>x\<in>Y. real (card (Neighbours Red x \<inter> X)))\<^sup>2
+  proof (cases "card Y = 0")
+    case True
+    then show ?thesis
+      by (auto simp: sum_nonneg)
+  next
+    case False
+    then have "(\<Sum>x\<in>Y. real (card (Neighbours Red x \<inter> X)))\<^sup>2
         \<le> (\<Sum>y\<in>Y. (real (card (Neighbours Red y \<inter> X)))\<^sup>2) * card Y"
       using \<open>finite Y\<close> assms by (intro sum_squared_le_sum_of_squares) auto
-    then show ?thesis
-      using assms by (simp add: divide_simps power2_eq_square)
+    then show ?thesis 
+      using assms False by (simp add: divide_simps power2_eq_square sum_nonneg)
   qed
   also have "... = (\<Sum>x\<in>X. \<Sum>x'\<in>X. real (card (Neighbours Red x \<inter> Neighbours Red x' \<inter> Y)))"
   proof -
@@ -61,11 +66,88 @@ proof -
     by (simp add: Weight_def sum_subtractf inverse_eq_divide flip: sum_divide_distrib)
 qed
 
+lemma Red_5_6:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. k\<ge> l \<longrightarrow> RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k^6 * RN k (m_of l)"
+proof -
+  have "RN k (nat\<lceil>l powr (2/3)\<rceil>) \<ge> k^6 * RN k (m_of l)" if "l\<le>k" for l k
+  proof -
+    have "RN k (m_of l) \<le> (k + m_of l) choose m_of l"
+      by (metis add.commute RN_commute RN_le_choose)
+    also have "... \<le> k ^ (m_of l)"
+      sorry
+    also have "... \<le> exp (m_of l * ln k)"
+      by (simp add: powr_def)
+    show "RN k (nat\<lceil>l powr (2/3)\<rceil>) \<ge> k^6 * RN k (m_of l)"
+      sorry
+  qed
+  then show ?thesis
+    sorry
+qed
+
 
 lemma Red_5_4:
   assumes "i \<in> Step_class_reddboost \<mu> l k"
+  assumes "0<\<mu>" "\<mu><1"
   shows "weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> - card (Xseq \<mu> l k i) / (real k) ^ 5"
-  sorry
+proof -
+  define X where "X \<equiv> Xseq \<mu> l k i"
+  define Y where "Y \<equiv> Yseq \<mu> l k i"
+  have "\<not> many_bluish \<mu> l k X"
+    using assms(1) red_dboost_not_many_bluish unfolding X_def by blast
+  have "0 \<le> (\<Sum>x \<in> X. \<Sum>x' \<in> X. Weight X Y x x')"
+    by (simp add: X_def Y_def sum_Weight_ge0 Xseq_subset_V Yseq_subset_V Xseq_Yseq_disjnt)
+  also have "... = (\<Sum>y \<in> X. weight X Y y + Weight X Y y y)"
+      unfolding weight_def X_def
+    by (smt (verit) sum.cong sum.infinite sum.remove)
+  finally have ge0: "0 \<le> (\<Sum>y\<in>X. weight X Y y + Weight X Y y y)" .
+  have w_maximal: "weight X Y (cvx \<mu> l k i) \<ge> weight X Y x"
+    if "central_vertex \<mu> X x" for x
+    by (metis X_def Y_def V_state assms(1) central_vx_is_best cvx_works prod_cases3 stepper_XYseq that)
+  have W1abs: "\<bar>Weight X Y x y\<bar> \<le> 1"
+    for x y
+    apply (simp add: Weight_def divide_simps gen_density_def)
+    by (smt (verit, ccfv_SIG) Int_lower2 of_nat_le_iff of_nat_mult card_ge_0_finite card_mono edge_card_le mult_of_nat_commute mult_right_mono of_nat_0_le_iff)
+  then have W1: "Weight X Y x y \<le> 1" for x y
+    by (smt (verit))
+  have A: "weight X Y y + Weight X Y y y \<le> card X"
+    if "y \<in> X" for y
+  proof -
+    have "weight X Y y + Weight X Y y y = sum (Weight X Y y) X"
+      by (smt (verit) X_def Xseq_subset_V finV finite_subset sum_diff1 that weight_def)
+    also have "... \<le> card X"
+      using W1 by (smt (verit) real_of_card sum_mono)
+    finally show ?thesis .
+  qed
+  have "weight X Y x \<le> real (card(X - {x})) * 1" for x
+    unfolding weight_def by (meson DiffE abs_le_D1 sum_bounded_above W1)
+  then have "weight X Y x \<le> card X - 1" if "x \<in> X" for x
+    using that card_Diff_singleton One_nat_def by (smt (verit, best)) 
+  define XB where "XB \<equiv> {x\<in>X. bluish \<mu> X x}"
+  have "XB \<subseteq> X"
+    by (auto simp: XB_def)
+  then have cv_non_XB: "\<And>y. y \<in> X - XB \<Longrightarrow> central_vertex \<mu> X y"
+    by (auto simp: central_vertex_def XB_def bluish_def)
+  have "0 \<le> (\<Sum>y\<in>X. weight X Y y + Weight X Y y y)"
+    by (fact ge0)
+  also have "... = (\<Sum>y\<in>XB. weight X Y y + Weight X Y y y) + (\<Sum>y\<in>X-XB. weight X Y y + Weight X Y y y)"
+    using sum.subset_diff [OF \<open>XB\<subseteq>X\<close>] by (smt (verit) X_def Xseq_subset_V finV finite_subset)
+  also have "... \<le> (\<Sum>y\<in>XB. weight X Y y + Weight X Y y y) + (\<Sum>y\<in>X-XB. weight X Y (cvx \<mu> l k i) + 1)"
+    by (intro add_mono sum_mono w_maximal W1 order_refl cv_non_XB)
+  also have "... = (\<Sum>y\<in>XB. weight X Y y + Weight X Y y y) + card (X - XB) * (weight X Y (cvx \<mu> l k i) + 1)"
+    by simp
+  also have "... \<le> card XB * card X + card (X-XB) * (weight X Y (cvx \<mu> l k i) + 1)"
+    using sum_bounded_above A
+    by (smt (verit, ccfv_threshold) XB_def mem_Collect_eq of_nat_mult)
+  also have "...  \<le> RN k (m_of l) * card X + (card X - RN k (m_of l)) * weight X Y (cvx \<mu> l k i)"
+
+
+  have "(\<Sum>y\<in>X. weight X Y y + Weight X Y y y)
+        \<le> RN k (m_of l) * card X +  (card X - RN k (m_of l)) * (weight X Y (cvx \<mu> l k i))"
+    using A ge0 w_maximal
+    sorry
+  with ge0 have "0 \<le> RN k (m_of l) * card X +  (card X - RN k (m_of l)) * (weight X Y (cvx \<mu> l k i))"
+    by simp
 
 
 proposition Red_5_1:

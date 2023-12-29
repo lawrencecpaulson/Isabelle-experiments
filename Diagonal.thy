@@ -735,6 +735,9 @@ lemma Xseq_Suc_subset: "Xseq \<mu> l k (Suc n) \<subseteq> Xseq \<mu> l k n"
 lemma Xseq_antimono: "m \<le> n \<Longrightarrow>Xseq \<mu> l k n \<subseteq> Xseq \<mu> l k m"
   by (simp add: Xseq_Suc_subset lift_Suc_antimono_le)
 
+lemma Xseq_subset_V: "Xseq \<mu> l k i \<subseteq> V"
+  using XY0 Xseq_0 Xseq_antimono by blast
+
 lemma Yseq_0 [simp]: "Yseq \<mu> l k 0 = Y0"
   by (simp add: Yseq_def)
 
@@ -744,6 +747,12 @@ lemma Yseq_Suc_subset: "Yseq \<mu> l k (Suc n) \<subseteq> Yseq \<mu> l k n"
 
 lemma Yseq_antimono: "m \<le> n \<Longrightarrow>Yseq \<mu> l k n \<subseteq> Yseq \<mu> l k m"
   by (simp add: Yseq_Suc_subset lift_Suc_antimono_le)
+
+lemma Yseq_subset_V: "Yseq \<mu> l k i \<subseteq> V"
+  using XY0 Yseq_0 Yseq_antimono by blast
+
+lemma Xseq_Yseq_disjnt: "disjnt (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+  by (metis (no_types, opaque_lifting) XY0(1) Xseq_0 Xseq_antimono Yseq_0 Yseq_antimono disjnt_iff le0 subset_eq)
 
 lemma pee_ge0: "pee \<mu> l k i \<ge> 0"
   by (simp add: gen_density_ge0 pee_def)

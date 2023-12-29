@@ -108,7 +108,7 @@ proof -
     then have "m \<le> k"
       using \<open>l \<le> k\<close> by auto
     then have "m < RN k m"
-      using \<open>12 \<le> m\<close> comp_sgraph.RN_gt2 by auto
+      using \<open>12 \<le> m\<close> RN_gt2 by auto
     also have cX: "RN k m \<le> card X"
       using manyb \<open>X\<subseteq>V\<close> by (metis Collect_subset W_def Wbig card_mono order_trans finV finite_subset)
     finally have "card U < card X"

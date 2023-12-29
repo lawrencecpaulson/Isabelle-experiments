@@ -908,9 +908,6 @@ lemma RN_3plus':
   shows "RN m k \<ge> m"
   using RN_3plus RN_commute assms by presburger
 
-context sgraph
-begin
-
 lemma clique_iff: "F \<subseteq> all_edges K \<Longrightarrow> clique K F \<longleftrightarrow> F = all_edges K"
   by (auto simp: clique_def all_edges_def card_2_iff)
 
@@ -1209,7 +1206,7 @@ lemma Ramsey_lower_calc:
 proof -
   have p01: "0<p" "p<1"
     using assms by (auto simp: p_def)
-  have "exp ((real s - 1) * (real t - 1) / (2*(s+t)))  \<le> exp (t / (s+t)) powr ((s-1)/2)"
+  have "exp ((real s - 1) * (real t - 1) / (2*(s+t))) \<le> exp (t / (s+t)) powr ((s-1)/2)"
     using \<open>s \<ge> 3\<close> by (simp add: mult_ac divide_simps of_nat_diff)
   with assms p01 have "n \<le> exp (t / (s+t)) powr ((s-1)/2)"
     by linarith
@@ -1453,7 +1450,5 @@ theorem RN_lower_off_diag:
   shows "RN s t > exp ((real s - 1) * (real t - 1) / (2*(s+t)))"            
   using Ramsey_number_lower_off_diag [OF assms]
   using is_Ramsey_number_RN by force
-
-end
 
 end
