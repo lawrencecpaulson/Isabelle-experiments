@@ -88,22 +88,25 @@ qed
 
 lemma Red_5_4:
   assumes "i \<in> Step_class_reddboost \<mu> l k"
-  assumes "0<\<mu>" "\<mu><1" "l>0"
+  assumes "0<\<mu>" "\<mu><1" "l>0" "k\<ge>l"
   shows "weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> - card (Xseq \<mu> l k i) / (real k) ^ 5"
 proof -
   define X where "X \<equiv> Xseq \<mu> l k i"
   define Y where "Y \<equiv> Yseq \<mu> l k i"
+  let ?R = "RN k (m_of l)"
   have "finite X"
     unfolding X_def by (meson finV infinite_super Xseq_subset_V)
+  have "k>0"
+    using assms by auto
   have not_many_bluish: "\<not> many_bluish \<mu> l k X"
     using assms(1) red_dboost_not_many_bluish unfolding X_def by blast
   have nonterm: "\<not> termination_condition l k X Y"
     using X_def Y_def assms(1) red_dboost_non_terminating by blast
   moreover have "l powr (2/3) \<le> l powr (3/4)"
     using \<open>l>0\<close> by (simp add: powr_mono)
-  ultimately have RNX: "RN k (m_of l) \<le> card X"
+  ultimately have RNX: "?R < card X"
     apply (simp add: termination_condition_def m_of_def not_le)
-    by (smt (verit, ccfv_SIG) RN_mono less_or_eq_imp_le nat_ceiling_le_eq of_nat_le_iff)
+    by (meson RN_mono basic_trans_rules(21) ceiling_mono nat_mono order.refl)
 
   have "0 \<le> (\<Sum>x \<in> X. \<Sum>x' \<in> X. Weight X Y x x')"
     by (simp add: X_def Y_def sum_Weight_ge0 Xseq_subset_V Yseq_subset_V Xseq_Yseq_disjnt)
@@ -131,10 +134,10 @@ proof -
   qed
   have "weight X Y x \<le> real (card(X - {x})) * 1" for x
     unfolding weight_def by (meson DiffE abs_le_D1 sum_bounded_above W1)
-  then have "weight X Y x \<le> card X - 1" if "x \<in> X" for x
+  then have wgt_le_X1: "weight X Y x \<le> card X - 1" if "x \<in> X" for x
     using that card_Diff_singleton One_nat_def by (smt (verit, best)) 
   define XB where "XB \<equiv> {x\<in>X. bluish \<mu> X x}"
-  have card_XB: "card XB < RN k (m_of l)"
+  have card_XB: "card XB < ?R"
     using not_many_bluish by (auto simp: m_of_def many_bluish_def XB_def)
   have "XB \<subseteq> X" "finite XB"
     using \<open>finite X\<close> by (auto simp: XB_def)
@@ -151,16 +154,41 @@ proof -
   also have "... \<le> card XB * card X + (card X - card XB) * (weight X Y (cvx \<mu> l k i) + 1)"
     using sum_bounded_above A
     by (smt (verit, ccfv_threshold) XB_def mem_Collect_eq of_nat_mult)
-  also have "... = real (RN k (m_of l) * card X) - (RN k (m_of l) - card XB) * card X + (card X - card XB) * (weight X Y (cvx \<mu> l k i) + 1)"
+  also have "... = real (?R * card X) + (real (card XB) - ?R) * card X + (card X - card XB) * (weight X Y (cvx \<mu> l k i) + 1)"
     using card_XB
     by (simp add: algebra_simps flip: of_nat_mult of_nat_diff)
-  also have "...  \<le> real (RN k (m_of l) * card X) + (card X - RN k (m_of l)) * (weight X Y (cvx \<mu> l k i) + 1)"
-    using card_XB \<open>XB\<subseteq>X\<close> \<open>finite X\<close> RNX
-    apply (simp add: algebra_simps card_mono card_Diff_subset of_nat_diff)
-
+  also have "... \<le> real (?R * card X) + (card X - ?R) * (weight X Y (cvx \<mu> l k i) + 1)"
+  proof -
+    have "(real (card X) - card XB) * (weight X Y (cvx \<mu> l k i) + 1) 
+       \<le> (real (card X) - ?R) * (weight X Y (cvx \<mu> l k i) + 1) + (real (?R) - card XB) * (weight X Y (cvx \<mu> l k i) + 1)"
+      by (simp add: algebra_simps)
+    also have "... \<le>(real (card X) - ?R) * (weight X Y (cvx \<mu> l k i) + 1) + (real (?R) - card XB) * card X"
+      using RNX X_def assms(1) card_XB cvx_in_Xseq wgt_le_X1 by fastforce
+    finally
+    have "(real (card XB) - ?R) * (card X) + (real (card X) - card XB) * (weight X Y (cvx \<mu> l k i) + 1)
+        \<le> (real (card X) - ?R) * (weight X Y (cvx \<mu> l k i) + 1)"
+      by (simp add: algebra_simps)
+    with card_XB \<open>XB\<subseteq>X\<close> \<open>finite X\<close> RNX show ?thesis
+      by (simp add: card_mono card_Diff_subset of_nat_diff)
+  qed
+  finally have B: "0 \<le> ?R * card X + (card X - ?R) * (weight X Y (cvx \<mu> l k i) + 1)" .
+  have "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k^6 * ?R"
+    sorry  (*Lemma 5.6*)
+  then have C: "card X \<ge> k^6 * ?R"
+    using X_def assms(1) red_dboost_non_terminating termination_condition_def by fastforce
+  then have "-1 / (real k)^5 \<le> - ?R / (real (card X) - ?R) - 1 / card X"
+    using card_XB \<open>k>0\<close> RNX
+    apply (simp add: divide_simps)
+    apply (simp add: algebra_simps)
     sorry
-  finally have "0 \<le> RN k (m_of l) * card X + (card X - RN k (m_of l)) * (weight X Y (cvx \<mu> l k i) + 1)" .
-
+  also have "... \<le> weight X Y (cvx \<mu> l k i) / card X"
+    using  RNX B
+    apply (simp add: divide_simps)
+    apply (simp add: algebra_simps)
+    by (smt (verit, ccfv_SIG) less_or_eq_imp_le mult_diff_mult of_nat_diff)
+  finally show ?thesis
+    using RNX B by (simp add: X_def Y_def divide_simps)
+qed
 
 proposition Red_5_1:
   assumes "real (card (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i)) = \<beta> * real (card (Xseq \<mu> l k i))"
