@@ -90,26 +90,30 @@ lemma Red_5_4:
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> i \<in> Step_class_reddboost \<mu> l k \<longrightarrow>
      weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> -card (Xseq \<mu> l k i) / (real k) ^ 5"
 proof -
-  define Big where "Big \<equiv> \<lambda>l. \<forall>k\<ge>l. real k + 2 * real k ^ 6 \<le> real k ^ 7"
-  have "\<forall>\<^sup>\<infinity>l. real l + 2 * real l ^ 6 \<le> real l ^ 7"
+  let ?Big = "\<lambda>l. (\<forall>k\<ge>l. real k + 2 * real k ^ 6 \<le> real k ^ 7) \<and> (\<forall>k\<ge>l. RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k^6 * RN k (m_of l))"
+  have 1: "\<forall>\<^sup>\<infinity>l. real l + 2 * real l ^ 6 \<le> real l ^ 7"
     by real_asymp
-  then have big_enough_l: "\<forall>\<^sup>\<infinity>l. Big l"
-    using eventually_all_ge_at_top unfolding Big_def by blast
+  have 2: "\<forall>\<^sup>\<infinity>l. \<forall>k. k\<ge> l \<longrightarrow> RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k^6 * RN k (m_of l)"
+    using Red_5_6 assms by metis
+  have big_enough_l: "\<forall>\<^sup>\<infinity>l. ?Big l"
+    using eventually_conj[OF eventually_all_ge_at_top 2] 1 by blast
 
   have "weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> -card (Xseq \<mu> l k i) / (real k) ^ 5"
-    if l: "Big l" and "Colours l k"  and i: "i \<in> Step_class_reddboost \<mu> l k" for l k 
+    if l: "?Big l" and "Colours l k"  and i: "i \<in> Step_class_reddboost \<mu> l k" for l k 
   proof -
     define X where "X \<equiv> Xseq \<mu> l k i"
     define Y where "Y \<equiv> Yseq \<mu> l k i"
     let ?R = "RN k (m_of l)"
     have "finite X"
       unfolding X_def by (meson finV infinite_super Xseq_subset_V)
+    have "finite Y"
+      unfolding Y_def by (meson finV infinite_super Yseq_subset_V)
     have "k\<ge>l"
       using Colours_def that(2) by auto
     have "l>0"
       using Colours_ln0 that(2) by blast
     moreover have "l\<noteq>1"
-      using l by (auto simp: Big_def)
+      using l by auto
     ultimately have "l>1" by linarith
     with \<open>k\<ge>l\<close> have "k>0" "k>1" by auto
     have not_many_bluish: "\<not> many_bluish \<mu> l k X"
@@ -132,9 +136,10 @@ proof -
       if "central_vertex \<mu> X x" for x
       by (metis X_def Y_def V_state i central_vx_is_best cvx_works prod_cases3 stepper_XYseq that)
     have W1abs: "\<bar>Weight X Y x y\<bar> \<le> 1"
-      for x y
+      for x y 
+      using RNX edge_card_le [of X Y Red]
       apply (simp add: Weight_def divide_simps gen_density_def)
-      by (smt (verit, ccfv_SIG) Int_lower2 of_nat_le_iff of_nat_mult card_ge_0_finite card_mono edge_card_le mult_of_nat_commute mult_right_mono of_nat_0_le_iff)
+      by (smt (verit, del_insts) mult.commute Int_lower2 of_nat_mult \<open>finite X\<close> card_gt_0_iff card_mono mult_mono of_nat_0_le_iff of_nat_le_iff) 
     then have W1: "Weight X Y x y \<le> 1" for x y
       by (smt (verit))
     have WW_le_cardX: "weight X Y y + Weight X Y y y \<le> card X"
@@ -189,20 +194,20 @@ proof -
     have rk61: "real k ^ 6 > 1"
       using \<open>k>1\<close> by simp
     have k267: "real k + 2 * real k ^ 6 \<le> (real k ^ 7)"
-      using \<open>l \<le> k\<close> l by (auto simp: Big_def)
+      using \<open>l \<le> k\<close> l by auto
     have D: "real k ^ 6 + (?R * real k + ?R * (real k ^ 6)) \<le> 1 + ?R * (real k ^ 7)" 
       using mult_left_mono [OF k267, of ?R] that
       by (smt (verit, ccfv_SIG) distrib_left card_XB mult_le_cancel_right1 nat_less_real_le of_nat_0_le_iff zero_le_power)
 
     have "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k^6 * ?R"
-      sorry  (*Lemma 5.6*)
+      using \<open>l \<le> k\<close> l by blast
     then have C: "card X \<ge> k^6 * ?R"
       using X_def i red_dboost_non_terminating termination_condition_def by fastforce
     then have "-1 / (real k)^5 \<le> - 1 / (real k^6 - 1) + -1 / (real k^6 * ?R)"
       using RNX rk61 card_XB mult_left_mono [OF D, of "real k ^ 5"]
       apply (simp add: divide_simps)
       apply (simp add: algebra_simps)
-      by (smt (verit) Groups.mult_ac(2) add_num_simps(3) add_num_simps(4) numeral_One power_add_numeral2 power_one_right)
+      by (smt (verit) mult.commute add_num_simps(3) add_num_simps(4) numeral_One power_add_numeral2 power_one_right)
     also have "... \<le> - ?R / (real k^6 * ?R - ?R) + -1 / (real k^6 * ?R)"
       using card_XB rk61 
       apply (simp add: frac_le_eq) apply (simp add: field_simps)
