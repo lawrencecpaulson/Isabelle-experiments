@@ -88,7 +88,7 @@ qed
 
 lemma Red_5_4:
   assumes "i \<in> Step_class_reddboost \<mu> l k"
-  assumes "0<\<mu>" "\<mu><1" "l>0" "k\<ge>l"
+  assumes "0<\<mu>" "\<mu><1" "l>1" "k\<ge>l"
   shows "weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> - card (Xseq \<mu> l k i) / (real k) ^ 5"
 proof -
   define X where "X \<equiv> Xseq \<mu> l k i"
@@ -103,7 +103,7 @@ proof -
   have nonterm: "\<not> termination_condition l k X Y"
     using X_def Y_def assms(1) red_dboost_non_terminating by blast
   moreover have "l powr (2/3) \<le> l powr (3/4)"
-    using \<open>l>0\<close> by (simp add: powr_mono)
+    using \<open>l>1\<close> by (simp add: powr_mono)
   ultimately have RNX: "?R < card X"
     apply (simp add: termination_condition_def m_of_def not_le)
     by (meson RN_mono basic_trans_rules(21) ceiling_mono nat_mono order.refl)
@@ -172,17 +172,48 @@ proof -
       by (simp add: card_mono card_Diff_subset of_nat_diff)
   qed
   finally have B: "0 \<le> ?R * card X + (card X - ?R) * (weight X Y (cvx \<mu> l k i) + 1)" .
+
+  have "k>1"
+    using assms by auto
+  then have rk61: "real k ^ 6 > 1"
+    by simp
+
+  have "eventually (\<lambda>k. real k + 2 * real k ^ 6 \<le> (real k ^ 7)) sequentially"
+    by real_asymp
+  then
+  have D: "eventually (\<lambda>k. \<forall>R. R\<ge>1 \<longrightarrow> real k ^ 6 + (R * real k + R * (real k ^ 6)) \<le> 1 + R * (real k ^ 7)) sequentially"
+    apply (rule eventually_mono)
+    apply clarify
+    apply (drule_tac c="R" in mult_left_mono)
+     apply (force simp add: )
+    by (smt (verit, ccfv_SIG) mult_cancel_right2 mult_less_cancel_right1 nat_distrib(2) of_nat_0_le_iff zero_le_power)
+
+  have D: "real k ^ 6 + (real ?R * k + real ?R * (real k ^ 6)) \<le> 1 + real ?R * (real k ^ 7)"
+    sorry
+
   have "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k^6 * ?R"
     sorry  (*Lemma 5.6*)
   then have C: "card X \<ge> k^6 * ?R"
     using X_def assms(1) red_dboost_non_terminating termination_condition_def by fastforce
-  then have "-1 / (real k)^5 \<le> - ?R / (real (card X) - ?R) - 1 / card X"
-    using card_XB \<open>k>0\<close> RNX
+  then have "-1 / (real k)^5 \<le> - 1 / (real k^6 - 1) + -1 / (real k^6 * ?R)"
+    using RNX rk61 card_XB mult_left_mono [OF D, of "real k ^ 5"]
     apply (simp add: divide_simps)
     apply (simp add: algebra_simps)
-    sorry
+    by (smt (verit) Groups.mult_ac(2) add_num_simps(3) add_num_simps(4) numeral_One power_add_numeral2 power_one_right)
+  also have "... \<le> - ?R / (real k^6 * ?R - ?R) + -1 / (real k^6 * ?R)"
+    using card_XB rk61 
+    apply (simp add: frac_le_eq) apply (simp add: field_simps)
+    done
+  finally have "-1 / (real k)^5 \<le> - ?R / (real k^6 * ?R - ?R) + -1 / (real k^6 * ?R)" .
+  also have "... \<le> - ?R / (real (card X) - ?R) + -1 / card X"
+  proof (intro add_mono divide_left_mono_neg)
+    show "real k ^ 6 * real ?R - real ?R \<le> real (card X) - real ?R"
+      using C of_nat_mono by fastforce
+    show "real k ^ 6 * real ?R \<le> real (card X)"
+      using C of_nat_mono by fastforce
+  qed (use RNX rk61 \<open>0 < k\<close> card_XB in auto)
   also have "... \<le> weight X Y (cvx \<mu> l k i) / card X"
-    using  RNX B
+    using RNX B
     apply (simp add: divide_simps)
     apply (simp add: algebra_simps)
     by (smt (verit, ccfv_SIG) less_or_eq_imp_le mult_diff_mult of_nat_diff)
