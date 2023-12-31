@@ -264,10 +264,10 @@ proof (intro convex_on_linorderI)
   then have "f ((1-t)*x + t*y) * g ((1-t)*x + t*y) \<le> ((1-t)*f x + t*f y)*g ((1-t)*x + t*y)"
     using convex_onD [OF \<open>convex_on S f\<close>, of t x y] t xy fty gty
     by (intro mult_mono add_nonneg_nonneg) (auto simp: Pi_iff zero_le_mult_iff)
-  also have "... \<le> ((1-t)*f x + t*f y) * ((1-t)*g x + t*g y)"
+  also have "\<dots> \<le> ((1-t)*f x + t*f y) * ((1-t)*g x + t*g y)"
     using convex_onD [OF \<open>convex_on S g\<close>, of t x y] t xy fty gty inS
     by (intro mult_mono add_nonneg_nonneg) (auto simp: Pi_iff zero_le_mult_iff)
-  also have "... \<le> (1-t) * (f x*g x) + t * (f y*g y)"
+  also have "\<dots> \<le> (1-t) * (f x*g x) + t * (f y*g y)"
     using * by (simp add: algebra_simps)
   finally show "f ((1-t) *\<^sub>R x + t *\<^sub>R y) * g ((1-t) *\<^sub>R x + t *\<^sub>R y) \<le> (1-t)*(f x*g x) + t*(f y*g y)" 
     by simp
@@ -408,11 +408,11 @@ next
   case (insert a I)
   have "(\<Sum>i \<in> insert a I. prod (f i) J) = (\<Sum>i\<in>I. prod (f i) J) + prod (f a) J"
     using insert.hyps by force
-  also have "... \<le> (\<Prod>j\<in>J. \<Sum>i\<in>I. f i j) + prod (f a) J"
+  also have "\<dots> \<le> (\<Prod>j\<in>J. \<Sum>i\<in>I. f i j) + prod (f a) J"
     by (simp add: insert)
-  also have "... \<le> (\<Prod>j\<in>J. (\<Sum>i\<in>I. f i j) + f a j)"
+  also have "\<dots> \<le> (\<Prod>j\<in>J. (\<Sum>i\<in>I. f i j) + f a j)"
     by (intro add_prod_le) (auto simp: assms insert sum_nonneg)
-  also have "... = (\<Prod>j\<in>J. \<Sum>i\<in>insert a I. f i j)"
+  also have "\<dots> = (\<Prod>j\<in>J. \<Sum>i\<in>insert a I. f i j)"
     by (simp add: add.commute insert.hyps)
   finally show ?case .
 qed
@@ -503,6 +503,26 @@ proof -
     using assms by auto
   then show ?thesis
     by (simp add: binomial_def card_mono)
+qed
+
+
+lemma add_choose_le_power: "(n + k) choose n \<le> Suc k ^ n"
+proof -
+  have *: "(\<Prod>i<n. of_nat (n+k - i) / of_nat (n - i)) \<le> (\<Prod>i<n. real (Suc k))"
+  proof (intro prod_mono conjI)
+    fix i
+    assume i: "i \<in> {..<n}"
+    then have "real (n + k - i) / real (n - i) = 1 + k/real(n-i)"
+      by (auto simp: divide_simps)
+    also have "\<dots> \<le> 1 + real k"
+      using i by (simp add: divide_inverse inverse_le_1_iff mult_left_le)
+    finally show "real (n + k - i) / real (n - i) \<le> real (Suc k)" 
+      by simp
+  qed auto
+  then have "real((n + k) choose n) \<le> real (Suc k ^ n)"
+    by (simp add: binomial_altdef_of_nat lessThan_atLeast0)
+  then show ?thesis
+    by linarith
 qed
 
 lemma gbinomial_mono:
