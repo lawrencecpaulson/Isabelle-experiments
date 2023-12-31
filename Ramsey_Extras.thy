@@ -941,187 +941,6 @@ lemma indep_iff: "F \<subseteq> all_edges K \<Longrightarrow> indep K F \<longle
 lemma all_edges_empty_iff: "all_edges K = {} \<longleftrightarrow> (\<exists>v. K \<subseteq> {v})"
   using clique_iff [OF empty_subsetI] by (metis clique_def empty_iff singleton_iff subset_iff)
 
-
-text \<open>The original Ramsey number lower bound, by Erdős\<close>
-(* requires re-factoring to take advantage of card_Pow_diff and with a symmetric treatment of 
-independent sets, and also utilising Andrew's simpler estimation *)
-proposition Ramsey_number_lower:  
-  fixes n s::nat
-  assumes "s \<ge> 3" and n: "real n \<le> 2 powr (s/2)"
-  shows "\<not> is_clique_RN (TYPE (nat)) s s n"
-proof
-  define W where "W \<equiv> {..<n}"
-  assume "is_clique_RN (TYPE (nat)) s s n"
-  then have monoc: "\<And>F. \<exists>K\<subseteq>W. clique_indep s s K F"
-    by (simp add: is_clique_RN_def W_def)
-  then have "s \<le> n"
-    by (metis W_def card_lessThan card_mono clique_indep_def finite_lessThan)
-  have "s > 1" using assms by arith
-  have "n>0"
-    using \<open>1 < s\<close> \<open>s \<le> n\<close> by linarith
-  define monoset where "monoset \<equiv> \<lambda>K::nat set. {F. F \<subseteq> all_edges K \<and> clique_indep s s K F}"
-
-  have "(n choose s) \<le> n^s / fact s"  \<comment> \<open>probability calculation\<close>
-    using binomial_fact_pow[of n s]
-    by (smt (verit) fact_gt_zero of_nat_fact of_nat_mono of_nat_mult pos_divide_less_eq)  
-  then have "(n choose s) * (2 / 2^(s choose 2)) \<le> 2 * n^s / (fact s * 2 ^ (s * (s-1) div 2))"
-    by (simp add: choose_two divide_simps)
-  also have "\<dots> \<le> 2 powr (1 + s/2) / fact s" 
-  proof -
-    have [simp]: "real (s * (s - Suc 0) div 2) = real s * (real s - 1) / 2"
-      by (subst real_of_nat_div) auto
-    have "n powr s \<le> (2 powr (s/2)) powr s"
-      using n by (simp add: powr_mono2)
-    then have "n powr s \<le> 2 powr (s * s / 2)"
-      using \<open>n>0\<close> assms by (simp add: power2_eq_square powr_powr)
-    then have "2 * n powr s \<le> 2 powr ((2 + s * s) / 2)"
-      by (simp add: add_divide_distrib powr_add)
-    then show ?thesis
-      using n \<open>n>0\<close> by (simp add: field_simps flip: powr_realpow powr_add)
-  qed
-  also have "\<dots> < 1"
-  proof -
-    have "2 powr (1 + (k+3)/2) < fact (k+3)" for k
-    proof (induction k)
-      case 0
-      have "2 powr (5/2) = sqrt (2^5)"
-        by (metis divide_inverse mult.left_neutral numeral_powr_numeral_real powr_ge_pzero powr_half_sqrt powr_powr)
-      also have "\<dots> < sqrt 36"
-        by (intro real_sqrt_less_mono) auto
-      finally show ?case
-        by (simp add: eval_nat_numeral)
-    next
-      case (Suc k)
-      have "2 powr (1 + real (Suc k + 3) / 2) = 2 powr (1/2) * 2 powr (1 + (k+3)/2)"
-        apply (simp add: powr_add powr_half_sqrt_powr real_sqrt_mult)
-        apply (simp flip: real_sqrt_mult)
-        done
-      also have "\<dots> \<le> sqrt 2 * fact (k+3)"
-        using Suc.IH by (simp add: powr_half_sqrt)
-      also have "\<dots> < real(k + 4) * fact (k + 3)"
-        using sqrt2_less_2 by simp
-      also have "\<dots> = fact (Suc (k + 3))"
-        unfolding fact_Suc by simp
-      finally show ?case by simp
-    qed
-    then have "2 powr (1 + s/2) < fact s"
-      by (metis add.commute \<open>s\<ge>3\<close> le_Suc_ex)
-    then show ?thesis
-      by (simp add: divide_simps)
-  qed
-  finally have less_1: "real (n choose s) * (2 / 2 ^ (s choose 2)) < 1" .
-
-  define \<Omega> where "\<Omega> \<equiv> Pow (all_edges W)"  \<comment>\<open>colour the edges randomly\<close>
-  have "finite W" and cardW: "card W = n"
-    by (auto simp: W_def)
-  moreover
-  have "card (all_edges W) = n choose 2"
-    by (simp add: W_def card_all_edges)
-  ultimately have card\<Omega>: "card \<Omega> = 2 ^ (n choose 2)"
-    by (simp add: \<Omega>_def card_Pow finite_all_edges)
-  then have fin_\<Omega>: "finite \<Omega>"
-    by (simp add: \<Omega>_def \<open>finite W\<close> finite_all_edges)
-  define M where "M \<equiv> uniform_count_measure \<Omega>"
-  have space_eq: "space M = \<Omega>"
-    by (simp add: M_def space_uniform_count_measure)
-  have sets_eq: "sets M = Pow \<Omega>"
-    by (simp add: M_def sets_uniform_count_measure)
-  interpret P: prob_space M
-    using M_def fin_\<Omega> card\<Omega> prob_space_uniform_count_measure by force
-
-  \<comment>\<open>the event to avoid: monochromatic cliques, given @{term "K \<subseteq> W"};
-      we are considering edges over the entire graph @{term W}, to agree with @{text monoc}\<close>
-  define A where "A \<equiv> \<lambda>K. {F \<in> \<Omega>. F \<inter> all_edges K \<in> monoset K}"
-  have A_ev: "A K \<in> P.events" for K
-    by (auto simp: sets_eq A_def \<Omega>_def)
-  have A_sub_\<Omega>: "A K \<subseteq> \<Omega>" for K
-    by (auto simp: sets_eq A_def \<Omega>_def)
-  have UA_sub_\<Omega>: "(\<Union>K \<in> nsets W s. A K) \<subseteq> \<Omega>"
-    by (auto simp: \<Omega>_def A_def nsets_def all_edges_def)
-  have s_choose_le: "s choose 2 \<le> n choose 2"
-    using \<open>s \<le> n\<close> by (simp add: binomial_mono)
-  have cardA: "card (A K) = 2 * 2 ^ ((n choose 2) - (s choose 2))" 
-    if "K \<in> nsets W s" for K     \<comment>\<open>the cardinality involves the edges outside the clique\<close>
-  proof -
-    have K: "K \<subseteq> W" "finite K" "card K = s"
-      using that by (auto simp: nsets_def)
-    with \<open>finite W\<close> have [simp]: "finite ([K]\<^bsup>2\<^esup>)" "finite ([W]\<^bsup>2\<^esup>)"
-      by (auto simp: finite_imp_finite_nsets)
-    have "card ([K]\<^bsup>2\<^esup>) = s choose 2"
-      by (simp add: K)
-    have *: "all_edges K \<noteq> {}"
-      using that \<open>s \<ge> 3\<close> subset_singletonD by (fastforce simp: nsets_def all_edges_empty_iff)
-
-    define f :: "nat set set * nat set set \<Rightarrow> nat set set * nat set set" 
-      where "f \<equiv> \<lambda>(EW,EA). ((EW \<inter> all_edges K) \<union> (EA - all_edges K), EA \<inter> all_edges K)"
-    have "bij_betw f (Pow (nsets K 2) \<times> A K) 
-                       (Pow (nsets W 2) \<times> {all_edges K, {}})"
-      unfolding bij_betw_def
-    proof (intro conjI)
-      show "inj_on f (Pow ([K]\<^bsup>2\<^esup>) \<times> A K)"
-        by (auto simp: inj_on_def f_def A_def nsets2_eq_all_edges)
-      have *: "\<exists>EA\<subseteq>all_edges W. EA \<inter> all_edges K \<in> monoset K
-                        \<and> EW = EW \<inter> all_edges K \<union> (EA - all_edges K) \<and> F = EA \<inter> all_edges K"
-        if F: "F = all_edges K \<or> F = {}" and EW: "EW \<subseteq> all_edges W" for EW F
-        using F
-      proof
-        assume \<section>: "F = all_edges K"
-        show ?thesis
-        proof (intro exI conjI)
-          show "EW \<union> all_edges K \<subseteq> all_edges W"
-            by (simp add: \<open>K \<subseteq> W\<close> all_edges_mono EW)
-          show "(EW \<union> all_edges K) \<inter> all_edges K \<in> monoset K"
-            by (simp add: K clique_iff clique_indep_def monoset_def)
-        qed (use \<section> in auto)
-      next
-        assume \<section>: "F = {}"
-        show ?thesis
-        proof (intro exI conjI)
-          show "(EW - all_edges K) \<inter> all_edges K \<in> monoset K"
-            by (simp add: Int_commute K clique_indep_def indep_iff monoset_def)
-        qed (use \<section> that in auto)
-      qed
-      have "f ` (Pow ([K]\<^bsup>2\<^esup>) \<times> A K) \<subseteq> Pow ([W]\<^bsup>2\<^esup>) \<times> {all_edges K, {}}"
-        using K all_edges_mono
-        by (auto simp: f_def A_def \<Omega>_def nsets2_eq_all_edges monoset_def clique_indep_def clique_iff indep_iff)
-      moreover have "Pow ([W]\<^bsup>2\<^esup>) \<times> {all_edges K, {}} \<subseteq> f ` (Pow ([K]\<^bsup>2\<^esup>) \<times> A K)"
-        apply (clarsimp simp: f_def A_def \<Omega>_def image_iff nsets2_eq_all_edges)
-        apply (rule_tac x="a \<inter> all_edges K" in bexI; force simp add: *)
-        done
-      ultimately show "f ` (Pow ([K]\<^bsup>2\<^esup>) \<times> A K) = Pow ([W]\<^bsup>2\<^esup>) \<times> {all_edges K, {}}" 
-        by blast
-    qed
-    then
-    have "card (Pow (nsets K 2) \<times> A K)  = card (Pow (nsets W 2) \<times> {all_edges K, {}})"
-      using bij_betw_same_card by blast
-    then have "2 ^ (s choose 2) * card (A K) = 2 * 2 ^ (n choose 2)"
-      using K  * by (simp add: card_Pow card_cartesian_product cardW)
-    then have "2 ^ (s choose 2) * card (A K) = 2 * 2 ^ ((s choose 2) + (n choose 2 - (s choose 2)))"
-      by (simp add: s_choose_le)
-    then show ?thesis
-      by (simp add: power_add)
-  qed
-  have MA: "measure M (A K) = (2 / 2 ^ (s choose 2))" if "K \<in> nsets W s" for K
-    using that
-    apply (simp add: M_def measure_uniform_count_measure_if A_sub_\<Omega> card\<Omega> fin_\<Omega> cardA)
-    by (simp add: power_diff s_choose_le)
-  then have prob_AK: "P.prob (A K) = 2 / 2 ^ (s choose 2)" if "K \<in> nsets W s" for K
-    using that by (simp add: P.emeasure_eq_measure)
-  have "P.prob (\<Union> K \<in> nsets W s. A K) \<le> (\<Sum>K \<in> nsets W s. P.prob (A K))"
-    by (simp add: A_ev P.finite_measure_subadditive_finite \<open>finite W\<close> nsets_def image_subset_iff)
-  also have "\<dots> = real (n choose s) * (2 / 2 ^ (s choose 2))"
-    by (simp add: prob_AK W_def)
-  also have "\<dots> < 1" 
-    using less_1 by presburger
-  finally have "P.prob (\<Union> K \<in> nsets W s. A K) < 1" .
-  with A_ev UA_sub_\<Omega> obtain F where "F \<in> \<Omega> - (\<Union> K \<in> nsets W s. A K)"
-    by (smt (verit, best) P.prob_space Diff_iff space_eq subset_antisym subset_iff)
-  then have "\<forall>K \<in> nsets W s. \<not> clique_indep s s K F"
-    by (simp add: A_def monoset_def \<Omega>_def clique_indep_all_edges_iff)
-  then show False
-    using monoc \<open>finite W\<close> finite_subset nsets_def by (fastforce simp add: clique_indep_def)
-qed
-
 lemma powr_half_ge:
   fixes x::real
   assumes "x\<ge>4"
@@ -1141,30 +960,6 @@ proof -
   qed
   show ?thesis
     by (rule gen_upper_bound_increasing [OF assms 2 3]) auto
-qed
-
-theorem RN_lower:
-  assumes "k \<ge> 3"
-  shows "RN k k > 2 powr (k/2)"                              
-  using assms Ramsey_number_lower is_Ramsey_number_RN
-  by (smt (verit) partn_lst_imp_is_clique_RN)
-
-text \<open>and trivially, off the diagonal too\<close>
-corollary RN_lower_nodiag:
-  assumes "k \<ge> 3" "l \<ge> k"
-  shows "RN k l > 2 powr (k/2)"
-  by (meson RN_lower RN_mono assms less_le_trans le_refl of_nat_mono)                       
-
-theorem RN_lower_self:
-  assumes "k \<ge> 4"
-  shows "RN k k > k"
-proof -
-  have "k \<le> 2 powr (k/2)"
-    using powr_half_ge numeral_le_real_of_nat_iff assms by blast
-  also have "\<dots> < RN k k"
-    using assms by (intro RN_lower) auto
-  finally show ?thesis
-    by fastforce
 qed
 
 lemma Ramsey_number_zero: "\<not> is_Ramsey_number (Suc m) (Suc n) 0"
@@ -1303,77 +1098,18 @@ qed
 lemma RN_le_argpower': "RN j i \<le> j ^ (i-1)"
   using RN_commute RN_le_argpower by presburger
 
-
-text \<open>Andrew's calculation for the Ramsey lower bound. Symmetric, so works for both colours\<close>
-lemma Ramsey_lower_calc:
-  fixes s::nat and t::nat and p::real
-  assumes "s \<ge> 3" "t \<ge> 3" "n > 4"
-    and n: "real n \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t)))"
-  defines "p \<equiv> real s / (real s + real t)"
-  shows "(n choose s) * p ^ (s choose 2) < 1/2"
-proof -
-  have p01: "0<p" "p<1"
-    using assms by (auto simp: p_def)
-  have "exp ((real s - 1) * (real t - 1) / (2*(s+t))) \<le> exp (t / (s+t)) powr ((s-1)/2)"
-    using \<open>s \<ge> 3\<close> by (simp add: mult_ac divide_simps of_nat_diff)
-  with assms p01 have "n \<le> exp (t / (s+t)) powr ((s-1)/2)"
-    by linarith
-  then have "n * p powr ((s-1)/2) \<le> (exp (t / (s+t)) * p) powr ((s-1)/2)"
-    using \<open>0<p\<close> by (simp add: powr_mult)
-  also have "\<dots> < 1"
-  proof -
-    have "exp (real t / real (s+t)) * p < 1"
-    proof -
-      have "p = 1 - t / (s+t)"
-        using assms by (simp add: p_def divide_simps)
-      also have "\<dots> < exp (- real t / real (s+t))"
-        using assms by (simp add: exp_minus_greater)
-      finally show ?thesis
-        by (simp add: exp_minus divide_simps mult.commute)
-    qed
-    then show ?thesis
-      using powr01_less_one assms(1) p01(1) by auto
-  qed
-  finally have "n * p powr ((s-1)/2) < 1" .
-  then have "(n * p powr ((s-1)/2)) ^ s < 1"
-    using \<open>s \<ge> 3\<close> by (simp add: power_less_one_iff)
-  then have B: "n^s * p ^ (s choose 2) < 1"
-    using \<open>0<p\<close> \<open>4 < n\<close> \<open>s \<ge> 3\<close>
-    by (simp add: choose_two_real powr_powr powr_mult of_nat_diff mult.commute flip: powr_realpow)
-  have "(n choose s) * p ^ (s choose 2) \<le> n^s / fact s * p ^ (s choose 2)"
-  proof (intro mult_right_mono)
-    show "real (n choose s) \<le> real (n ^ s) / fact s"
-      using binomial_fact_pow[of n s] of_nat_mono
-      by (fastforce simp add: divide_simps mult.commute)
-  qed (use p01 in auto)
-  also have "\<dots> < 1 / fact s"
-    using B by (simp add: divide_simps)
-  also have "\<dots> \<le> 1/2"
-    by (smt (verit, best) One_nat_def Suc_1 Suc_leD assms fact_2 fact_mono frac_less2 numeral_3_eq_3)
-  finally show ?thesis .
-qed
-
-
-text \<open>Andrew Thomason's proof\<close> (* And the final bound can be sharpened per Andrew's suggestion*)
-proposition Ramsey_number_lower_off_diag:  
-  fixes n s::nat  
-  assumes "s \<ge> 3" "t \<ge> 3" and n: "real n \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t)))"
-  shows "\<not> is_Ramsey_number s t n"
+text \<open>General probabilistic setup, omitting the actual probability calculation.
+  Andrew Thomason's proof\<close> 
+proposition Ramsey_number_lower_gen:  
+  fixes n k::nat and p::real
+  assumes p01: "0<p" "p<1"
+  assumes n: "(n choose k) * p ^ (k choose 2) + (n choose l) * (1 - p) ^ (l choose 2) < 1"
+  shows "\<not> is_Ramsey_number k l n"
 proof
-  assume con: "is_Ramsey_number s t n"
-  then have "(s - 1) * (t - 1) < n"
-    using RN_times_lower' [of s t] assms by (metis RN_le numeral_3_eq_3 order_less_le_trans zero_less_Suc)
-  moreover have "2*2 \<le> (s - 1) * (t - 1)"
-    using assms by (intro mult_mono) auto
-  ultimately have "n > 4"
-    by simp
+  assume con: "is_Ramsey_number k l n"
   define W where "W \<equiv> {..<n}"      
   have "finite W" and cardW: "card W = n"
     by (auto simp: W_def)
-  define p where "p \<equiv> s / (s+t)"
-  have p01: "0<p" "p<1"
-    using assms by (auto simp: p_def)
-
   \<comment> \<open>Easier to represent the state as maps from edges to colours, not sets of coloured edges\<close>
    \<comment>\<open>colour the edges randomly\<close>
   define \<Omega> :: "(nat set \<Rightarrow> nat) set" where "\<Omega> \<equiv> (all_edges W) \<rightarrow>\<^sub>E {..<2}"
@@ -1438,7 +1174,7 @@ proof
   define pc where "pc \<equiv> \<lambda>c::nat. if c=0 then p else 1-p"
   have pc0: "0 \<le> pc c" for c
     using p01 pc_def by auto
-  have coloured_upd: "coloured F (\<lambda>t\<in>F. if t \<in> G then c else f t) c' 
+  have coloured_upd: "coloured F (\<lambda>l\<in>F. if l \<in> G then c else f l) c' 
         = (if c=c' then G \<union> coloured (F-G) f c' else coloured (F-G) f c')" if "G \<subseteq> F" for F G f c c'
     using that by (auto simp: coloured_def)
 
@@ -1448,14 +1184,14 @@ proof
     have \<section>: "K \<subseteq> W" "finite K" "card K = r"
       using that by (auto simp: nsets_def)
     have *: "{f \<in> \<Omega>. all_edges K \<subseteq> coloured (all_edges W) f c} = 
-          (\<Union>g \<in> (all_edges W - all_edges K) \<rightarrow>\<^sub>E {..<2}. {\<lambda>t \<in> all_edges W. if t \<in> all_edges K then c else g t})"
+          (\<Union>g \<in> (all_edges W - all_edges K) \<rightarrow>\<^sub>E {..<2}. {\<lambda>l \<in> all_edges W. if l \<in> all_edges K then c else g l})"
       (is "?L = ?R")
     proof
       show "?L \<subseteq> ?R"
       proof clarsimp
         fix f
         assume f: "f \<in> \<Omega>" and c: "all_edges K \<subseteq> coloured (all_edges W) f c"
-        then show "\<exists>g\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. f = (\<lambda>t\<in>all_edges W. if t \<in> all_edges K then c else g t)"
+        then show "\<exists>g\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. f = (\<lambda>l\<in>all_edges W. if l \<in> all_edges K then c else g l)"
           apply (rule_tac x="restrict f (all_edges W - all_edges K)" in bexI)
           apply (force simp add: \<Omega>_def coloured_def subset_iff)+
           done
@@ -1468,8 +1204,7 @@ proof
                 = (r choose 2) + card (coloured (all_edges W - all_edges K) f c)" for f c
       using \<section> \<open>finite W\<close>
       by (subst card_Un_disjoint) (auto simp: finite_all_edges coloured_def card_all_edges)
-
-    have pr_upd: "pr (all_edges W) (\<lambda>t \<in> all_edges W. if t \<in> all_edges K then c else f t) 
+    have pr_upd: "pr (all_edges W) (\<lambda>l \<in> all_edges W. if l \<in> all_edges K then c else f l) 
         = pc c ^ (r choose 2) * pr (all_edges W - all_edges K) f" 
       if "f \<in> all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}" for f
       using that all_edges_mono[OF \<open>K \<subseteq> W\<close>] p01 \<open>c<2\<close> \<section>
@@ -1477,16 +1212,16 @@ proof
     have "emeasure M (mono c K) = (\<Sum>f \<in> mono c K. ennreal (pr (all_edges W) f))"
       using that by (simp add: emeasure_eq mono_sub_\<Omega>)
     also have "\<dots> = (\<Sum>f\<in>(\<Union>g\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}.
-                            {\<lambda>t\<in>all_edges W. if t \<in> all_edges K then c else g t}). 
+                            {\<lambda>e\<in>all_edges W. if e \<in> all_edges K then c else g e}). 
                       ennreal (pr (all_edges W) f))" 
       by (simp add: mono_def *)
     also have "\<dots> = (\<Sum>g\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. 
-                        \<Sum>f\<in>{\<lambda>t\<in>all_edges W. if t \<in> all_edges K then c else g t}. 
+                        \<Sum>f\<in>{\<lambda>e\<in>all_edges W. if e \<in> all_edges K then c else g e}. 
                            ennreal (pr (all_edges W) f))"
     proof (rule sum.UNION_disjoint_family)
       show "finite (all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2::nat})"
         by (simp add: \<open>finite W\<close> finite_PiE finite_all_edges)
-      show "disjoint_family_on (\<lambda>g. {\<lambda>t\<in>all_edges W. if t \<in> all_edges K then c else g t}) (all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2})"
+      show "disjoint_family_on (\<lambda>g. {\<lambda>e\<in>all_edges W. if e \<in> all_edges K then c else g e}) (all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2})"
         apply (simp add: disjoint_family_on_def fun_eq_iff)
         by (metis DiffE PiE_E)
     qed auto
@@ -1501,43 +1236,36 @@ proof
     then show ?thesis 
       using p01 that by (simp add: measure_eq_emeasure_eq_ennreal pc_def)
   qed
-
-  define Reds where "Reds \<equiv> (\<Union>K \<in> nsets W s. mono 0 K)"
-  define Blues where "Blues \<equiv> (\<Union>K \<in> nsets W t. mono 1 K)"
+  define Reds where "Reds \<equiv> (\<Union>K \<in> nsets W k. mono 0 K)"
+  define Blues where "Blues \<equiv> (\<Union>K \<in> nsets W l. mono 1 K)"
   have Uev: "\<Union> (mono c ` [W]\<^bsup>r\<^esup>) \<in> P.events" for c r
     by (simp add: local.mono_def sets_eq subset_iff)
   then have "Reds \<in> P.events" "Blues \<in> P.events"
     by (auto simp: Reds_def Blues_def)
-  have prob_0: "P.prob Reds < 1/2" 
+  have prob_0: "P.prob Reds \<le> (n choose k) * (p ^ (k choose 2))" 
   proof -
-    have "P.prob Reds \<le> (\<Sum>K \<in> nsets W s. P.prob (mono 0 K))"
+    have "P.prob Reds \<le> (\<Sum>K \<in> nsets W k. P.prob (mono 0 K))"
       by (simp add: Reds_def \<open>finite W\<close> finite_imp_finite_nsets measure_UNION_le mono_ev)
-    also have "\<dots> \<le> (n choose s) * (p ^ (s choose 2))"
+    also have "\<dots> \<le> (n choose k) * (p ^ (k choose 2))"
       by (simp add: prob_mono pc_def cardW)
-    also have "\<dots> < 1/2"
-      using Ramsey_lower_calc \<open>4 < n\<close> assms(1) assms(2) n p_def by auto
     finally show ?thesis .
   qed
   moreover
-  have prob_1: "P.prob Blues < 1/2" 
+  have prob_1: "P.prob Blues \<le> (n choose l) * ((1-p) ^ (l choose 2))" 
   proof -
-    have "1-p = real t / (real t + real s)"
-      using \<open>s \<ge> 3\<close> by (simp add: p_def divide_simps)
-    with assms have *: "(n choose t) * (1-p) ^ (t choose 2) < 1/2"
-      by (metis Ramsey_lower_calc add.commute mult.commute \<open>4 < n\<close>) 
-    have "P.prob Blues \<le> (\<Sum>K \<in> nsets W t. P.prob (mono 1 K))"
+    have "P.prob Blues \<le> (\<Sum>K \<in> nsets W l. P.prob (mono 1 K))"
       by (simp add: Blues_def \<open>finite W\<close> finite_imp_finite_nsets measure_UNION_le mono_ev)
-    also have "\<dots> \<le> (n choose t) * ((1-p) ^ (t choose 2))"
+    also have "\<dots> \<le> (n choose l) * ((1-p) ^ (l choose 2))"
       by (simp add: prob_mono pc_def cardW)
-    also have "\<dots> < 1/2"
-      using "*" by blast
     finally show ?thesis .
   qed
-  ultimately have "P.prob (Reds \<union> Blues) < 1/2 + 1/2"
-    using P.finite_measure_subadditive \<open>Blues \<in> P.events\<close> \<open>Reds \<in> P.events\<close> by fastforce
-  then obtain F where F: "F \<in> \<Omega> - (Reds \<union> Blues)"
-    by (metis Blues_def Diff_iff P.prob_space Pow_iff Reds_def Un_subset_iff Uev equalityI field_sum_of_halves less_irrefl sets_eq space_eq subsetI)
-  have False if "i < 2" "H \<in> [W]\<^bsup>([s, t] ! i)\<^esup>" "F ` [H]\<^bsup>2\<^esup> \<subseteq> {i}" for i H
+  ultimately have "P.prob (Reds \<union> Blues) < 1"
+    using P.finite_measure_subadditive \<open>Blues \<in> P.events\<close> \<open>Reds \<in> P.events\<close> n
+    by fastforce
+  with P.prob_space Uev sets_eq obtain F where F: "F \<in> \<Omega> - (Reds \<union> Blues)"
+    unfolding Reds_def Blues_def space_eq
+    by (smt (verit, del_insts) Pow_iff Un_subset_iff equalityI Diff_iff subset_iff)
+  have False if "i < 2" "H \<in> [W]\<^bsup>([k, l] ! i)\<^esup>" "F ` [H]\<^bsup>2\<^esup> \<subseteq> {i}" for i H
   proof -
     have "\<not> all_edges H \<subseteq> {e \<in> all_edges W. F e = 0}" "\<not> all_edges H \<subseteq> {e \<in> all_edges W. F e = 1}"
       using F that
@@ -1553,10 +1281,178 @@ proof
     using con by (force simp add: W_def partn_lst_def numeral_2_eq_2)
 qed
 
+text \<open>Andrew's calculation for the Ramsey lower bound. Symmetric, so works for both colours\<close>
+lemma Ramsey_lower_calc:
+  fixes s::nat and t::nat and p::real
+  assumes "s \<ge> 3" "t \<ge> 3" "n > 4"
+    and n: "real n \<le> exp ((real s - 1) * (real t - 1) / (2*(s+t)))"
+  defines "p \<equiv> real s / (real s + real t)"
+  shows "(n choose s) * p ^ (s choose 2) < 1/2"
+proof -
+  have p01: "0<p" "p<1"
+    using assms by (auto simp: p_def)
+  have "exp ((real s - 1) * (real t - 1) / (2*(s+t))) \<le> exp (t / (s+t)) powr ((s-1)/2)"
+    using \<open>s \<ge> 3\<close> by (simp add: mult_ac divide_simps of_nat_diff)
+  with assms p01 have "n \<le> exp (t / (s+t)) powr ((s-1)/2)"
+    by linarith
+  then have "n * p powr ((s-1)/2) \<le> (exp (t / (s+t)) * p) powr ((s-1)/2)"
+    using \<open>0<p\<close> by (simp add: powr_mult)
+  also have "\<dots> < 1"
+  proof -
+    have "exp (real t / real (s+t)) * p < 1"
+    proof -
+      have "p = 1 - t / (s+t)"
+        using assms by (simp add: p_def divide_simps)
+      also have "\<dots> < exp (- real t / real (s+t))"
+        using assms by (simp add: exp_minus_greater)
+      finally show ?thesis
+        by (simp add: exp_minus divide_simps mult.commute)
+    qed
+    then show ?thesis
+      using powr01_less_one assms(1) p01(1) by auto
+  qed
+  finally have "n * p powr ((s-1)/2) < 1" .
+  then have "(n * p powr ((s-1)/2)) ^ s < 1"
+    using \<open>s \<ge> 3\<close> by (simp add: power_less_one_iff)
+  then have B: "n^s * p ^ (s choose 2) < 1"
+    using \<open>0<p\<close> \<open>4 < n\<close> \<open>s \<ge> 3\<close>
+    by (simp add: choose_two_real powr_powr powr_mult of_nat_diff mult.commute flip: powr_realpow)
+  have "(n choose s) * p ^ (s choose 2) \<le> n^s / fact s * p ^ (s choose 2)"
+  proof (intro mult_right_mono)
+    show "real (n choose s) \<le> real (n ^ s) / fact s"
+      using binomial_fact_pow[of n s] of_nat_mono
+      by (fastforce simp add: divide_simps mult.commute)
+  qed (use p01 in auto)
+  also have "\<dots> < 1 / fact s"
+    using B by (simp add: divide_simps)
+  also have "\<dots> \<le> 1/2"
+    by (smt (verit, best) One_nat_def Suc_1 Suc_leD assms fact_2 fact_mono frac_less2 numeral_3_eq_3)
+  finally show ?thesis .
+qed
+
+text \<open>Andrew Thomason's specific example\<close> 
+corollary Ramsey_number_lower_off_diag:  
+  fixes n k::nat  
+  assumes "k \<ge> 3" "l \<ge> 3" and n: "real n \<le> exp ((real k - 1) * (real l - 1) / (2*(k+l)))"
+  shows "\<not> is_Ramsey_number k l n"
+proof
+  assume con: "is_Ramsey_number k l n"
+  then have "(k - 1) * (l - 1) < n"
+    using RN_times_lower' [of k l] assms by (metis RN_le numeral_3_eq_3 order_less_le_trans zero_less_Suc)
+  moreover have "2*2 \<le> (k - 1) * (l - 1)"
+    using assms by (intro mult_mono) auto
+  ultimately have "n > 4"
+    by simp
+  define p where "p \<equiv> k / (k+l)"
+  have p01: "0<p" "p<1"
+    using assms by (auto simp: p_def)
+  have "real (n choose k) * p ^ (k choose 2) < 1/2"
+    using Ramsey_lower_calc \<open>4 < n\<close> assms n p_def by auto
+  moreover
+  have "1-p = real l / (real l + real k)"
+    using \<open>k \<ge> 3\<close> by (simp add: p_def divide_simps)
+  with assms have "(n choose l) * (1-p) ^ (l choose 2) < 1/2"
+    by (metis Ramsey_lower_calc add.commute mult.commute \<open>4 < n\<close>) 
+  ultimately show False
+    using con Ramsey_number_lower_gen [OF p01] by auto
+qed
+
 theorem RN_lower_off_diag:
   assumes "s \<ge> 3" "t \<ge> 3"
   shows "RN s t > exp ((real s - 1) * (real t - 1) / (2*(s+t)))"            
   using Ramsey_number_lower_off_diag [OF assms]
   using is_Ramsey_number_RN by force
+
+text \<open>The original Ramsey number lower bound, by Erdős\<close>
+(* requires re-factoring to take advantage of card_Pow_diff and with a symmetric treatment of 
+independent sets, and also utilising Andrew's simpler estimation *)
+proposition Ramsey_number_lower:  
+  fixes n s::nat
+  assumes "s \<ge> 3" and n: "real n \<le> 2 powr (s/2)"
+  shows "\<not> is_Ramsey_number s s n"
+proof 
+  assume con: "is_Ramsey_number s s n"
+  then have "s \<le> n"
+    using RN_3plus' RN_le assms(1) le_trans by blast
+  have "s > 1" using assms by arith
+  have "n>0"
+    using \<open>1 < s\<close> \<open>s \<le> n\<close> by linarith
+  have "(n choose s) \<le> n^s / fact s"  \<comment> \<open>probability calculation\<close>
+    using binomial_fact_pow[of n s]
+    by (smt (verit) fact_gt_zero of_nat_fact of_nat_mono of_nat_mult pos_divide_less_eq)  
+  then have "(n choose s) * (2 / 2^(s choose 2)) \<le> 2 * n^s / (fact s * 2 ^ (s * (s-1) div 2))"
+    by (simp add: choose_two divide_simps)
+  also have "\<dots> \<le> 2 powr (1 + s/2) / fact s" 
+  proof -
+    have [simp]: "real (s * (s - Suc 0) div 2) = real s * (real s - 1) / 2"
+      by (subst real_of_nat_div) auto
+    have "n powr s \<le> (2 powr (s/2)) powr s"
+      using n by (simp add: powr_mono2)
+    then have "n powr s \<le> 2 powr (s * s / 2)"
+      using \<open>n>0\<close> assms by (simp add: power2_eq_square powr_powr)
+    then have "2 * n powr s \<le> 2 powr ((2 + s * s) / 2)"
+      by (simp add: add_divide_distrib powr_add)
+    then show ?thesis
+      using n \<open>n>0\<close> by (simp add: field_simps flip: powr_realpow powr_add)
+  qed
+  also have "\<dots> < 1"
+  proof -
+    have "2 powr (1 + (k+3)/2) < fact (k+3)" for k
+    proof (induction k)
+      case 0
+      have "2 powr (5/2) = sqrt (2^5)"
+        by (metis divide_inverse mult.left_neutral numeral_powr_numeral_real powr_ge_pzero powr_half_sqrt powr_powr)
+      also have "\<dots> < sqrt 36"
+        by (intro real_sqrt_less_mono) auto
+      finally show ?case
+        by (simp add: eval_nat_numeral)
+    next
+      case (Suc k)
+      have "2 powr (1 + real (Suc k + 3) / 2) = 2 powr (1/2) * 2 powr (1 + (k+3)/2)"
+        apply (simp add: powr_add powr_half_sqrt_powr real_sqrt_mult)
+        apply (simp flip: real_sqrt_mult)
+        done
+      also have "\<dots> \<le> sqrt 2 * fact (k+3)"
+        using Suc.IH by (simp add: powr_half_sqrt)
+      also have "\<dots> < real(k + 4) * fact (k + 3)"
+        using sqrt2_less_2 by simp
+      also have "\<dots> = fact (Suc (k + 3))"
+        unfolding fact_Suc by simp
+      finally show ?case by simp
+    qed
+    then have "2 powr (1 + s/2) < fact s"
+      by (metis add.commute \<open>s\<ge>3\<close> le_Suc_ex)
+    then show ?thesis
+      by (simp add: divide_simps)
+  qed
+  finally have less_1: "real (n choose s) * (2 / 2 ^ (s choose 2)) < 1" .
+  then have "\<not> is_Ramsey_number s s n"
+    by (intro Ramsey_number_lower_gen [where p="1/2"]) (auto simp: power_one_over)
+  with con show False by blast
+qed
+
+theorem RN_lower:
+  assumes "k \<ge> 3"
+  shows "RN k k > 2 powr (k/2)"                              
+  using assms Ramsey_number_lower is_Ramsey_number_RN
+  by (smt (verit) partn_lst_imp_is_clique_RN)
+
+text \<open>and trivially, off the diagonal too\<close>
+corollary RN_lower_nodiag:
+  assumes "k \<ge> 3" "l \<ge> k"
+  shows "RN k l > 2 powr (k/2)"
+  by (meson RN_lower RN_mono assms less_le_trans le_refl of_nat_mono)                       
+
+theorem RN_lower_self:
+  assumes "k \<ge> 4"
+  shows "RN k k > k"
+proof -
+  have "k \<le> 2 powr (k/2)"
+    using powr_half_ge numeral_le_real_of_nat_iff assms by blast
+  also have "\<dots> < RN k k"
+    using assms by (intro RN_lower) auto
+  finally show ?thesis
+    by fastforce
+qed
 
 end
