@@ -1008,8 +1008,9 @@ corollary RN_times_lower':
 
 lemma RN_gt1:
   assumes "2 \<le> k" "3 \<le> l" shows "k < RN k l"
-    using RN_times_lower' [of k l] RN_3plus[of l] assms  
-  by (smt (verit, best) Suc_1 Suc_pred less_le_trans Suc_le_eq n_less_n_mult_m nat_less_le numeral_3_eq_3 One_nat_def zero_less_diff)
+  using RN_times_lower' [of k l] RN_3plus'[of l k] assms  
+  apply (simp add: eval_nat_numeral)
+  by (metis Suc_le_eq Suc_pred leD n_less_n_mult_m nat_less_le zero_less_diff)
 
 lemma RN_gt2:
   assumes "2 \<le> k" "3 \<le> l" shows "k < RN l k"
@@ -1066,8 +1067,7 @@ next
       by (metis False Nat.diff_add_assoc2 Suc diff_Suc_1 nat_le_linear One_nat_def diff_add_assoc)
     ultimately 
     show ?thesis
-      using RN_le_add_RN_RN [OF 2] 2
-      by (smt (verit) False Nat.diff_add_assoc2 Suc_1 Suc_pred add_mono neq0_conv choose_reduce_nat diff_Suc_1 diff_Suc_eq_diff_pred le_add2 le_trans less_or_eq_imp_le)
+      using RN_le_add_RN_RN [OF 2] 2 by (simp add: choose_reduce_nat eval_nat_numeral)
   qed
 qed
 
@@ -1360,8 +1360,7 @@ qed
 theorem RN_lower_off_diag:
   assumes "s \<ge> 3" "t \<ge> 3"
   shows "RN s t > exp ((real s - 1) * (real t - 1) / (2*(s+t)))"            
-  using Ramsey_number_lower_off_diag [OF assms]
-  using is_Ramsey_number_RN by force
+  using Ramsey_number_lower_off_diag [OF assms] is_Ramsey_number_RN by force
 
 text \<open>The original Ramsey number lower bound, by Erdős\<close>
 (* requires re-factoring to take advantage of card_Pow_diff and with a symmetric treatment of 
@@ -1433,9 +1432,8 @@ qed
 
 theorem RN_lower:
   assumes "k \<ge> 3"
-  shows "RN k k > 2 powr (k/2)"                              
-  using assms Ramsey_number_lower is_Ramsey_number_RN
-  by (smt (verit) partn_lst_imp_is_clique_RN)
+  shows "RN k k > 2 powr (k/2)"
+  using Ramsey_number_lower assms is_Ramsey_number_RN by force                              
 
 text \<open>and trivially, off the diagonal too\<close>
 corollary RN_lower_nodiag:
