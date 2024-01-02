@@ -1102,8 +1102,8 @@ text \<open>General probabilistic setup, omitting the actual probability calcula
   Andrew Thomason's proof\<close> 
 proposition Ramsey_number_lower_gen:  
   fixes n k::nat and p::real
-  assumes p01: "0<p" "p<1"
   assumes n: "(n choose k) * p ^ (k choose 2) + (n choose l) * (1 - p) ^ (l choose 2) < 1"
+  assumes p01: "0<p" "p<1"
   shows "\<not> is_Ramsey_number k l n"
 proof
   assume con: "is_Ramsey_number k l n"
@@ -1354,7 +1354,7 @@ proof
   with assms have "(n choose l) * (1-p) ^ (l choose 2) < 1/2"
     by (metis Ramsey_lower_calc add.commute mult.commute \<open>4 < n\<close>) 
   ultimately show False
-    using con Ramsey_number_lower_gen [OF p01] by auto
+    using con Ramsey_number_lower_gen p01 by force
 qed
 
 theorem RN_lower_off_diag:
@@ -1452,5 +1452,55 @@ proof -
   finally show ?thesis
     by fastforce
 qed
+
+thm powr_mono
+lemma powr_antimono:
+  fixes x :: real
+  assumes "a \<le> b" "0<x" "x \<le> 1" shows "x powr b \<le> x powr a"
+proof -
+  have "inverse x powr a \<le> inverse x powr b"
+    by (simp add: assms one_le_inverse powr_mono)
+  then show ?thesis
+    using assms(2) inverse_powr by auto
+qed
+
+text \<open>Bhavik Mehta: choose-free version for very small @{term p}\<close>
+lemma Ramsey_number_lower_simple: 
+  assumes n: "of_real n ^ k * p powr (real k^2 / 4) + of_real n ^ l * exp (-p * real l ^ 2 / 4) < 1"
+  assumes p01: "0<p" "p<1" and "2\<le>k" "2\<le>l"
+  shows "\<not> is_Ramsey_number k l n"
+proof (rule Ramsey_number_lower_gen)
+  have "real (n choose k) * p ^ (k choose 2) \<le> of_real n ^ k * p powr (real k^2 / 4)"
+  proof -
+    have "real (n choose k) * p ^ (k choose 2) \<le> real (Suc n - k)^k * p ^ (k choose 2)"
+      using choose_le_power p01 by simp
+    also have "... = real (Suc n - k)^k * p powr (real k * (real k - 1) / 2)"
+      by (metis choose_two_real p01(1) powr_realpow)
+    also have "... \<le> of_real n ^ k * p powr (real k^2 / 4)"
+      using p01 \<open>2\<le>k\<close> by (intro mult_mono powr_antimono) (auto simp: power2_eq_square)
+    finally show ?thesis .
+  qed
+  moreover
+  have "real (n choose l) * (1 - p) ^ (l choose 2) \<le> of_real n ^ l * exp (-p * real l ^ 2 / 4)"
+  proof -
+    show ?thesis
+    proof (intro mult_mono)
+      show "real (n choose l) \<le> of_real (real n) ^ l"
+        by (metis binomial_eq_0_iff binomial_le_pow linorder_not_le of_nat_0 of_nat_0_le_iff of_nat_mono of_nat_power of_real_of_nat_eq)
+      have "l * p \<le> 2 * (1 - real l) * -p"
+        using assms by (auto simp: algebra_simps)
+      also have "... \<le> 2 * (1 - real l) * ln (1-p)"
+        using p01 \<open>2\<le>l\<close> ln_add_one_self_le_self2 [of "-p"]
+        by (intro mult_left_mono_neg) auto
+      finally have "real l * (real l * p) \<le> real l * (2 * (1 - real l) * ln (1-p))"
+        using mult_left_mono \<open>2\<le>l\<close> by fastforce
+      with p01 show "(1 - p) ^ (l choose 2) \<le> exp (- p * (real l)\<^sup>2 / 4)"
+        by (simp add: field_simps power2_eq_square powr_def choose_two_real flip: powr_realpow)
+    qed (use p01 in auto)
+  qed
+  ultimately
+  show "real (n choose k) * p ^ (k choose 2) + real (n choose l) * (1 - p) ^ (l choose 2) < 1"
+    using n by linarith
+qed (use p01 in auto)
 
 end

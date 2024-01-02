@@ -443,7 +443,7 @@ lemma exp_powr_complex [simp]:
   using assms by (simp add: powr_def mult.commute)
 
 thm choose_two
-lemma choose_two_real: "n choose 2 = n * (n - 1) / 2"
+lemma choose_two_real: "of_nat (n choose 2) = real n * (real n - 1) / 2"
 proof (cases "even n")
   case True
   then show ?thesis
@@ -524,6 +524,9 @@ proof -
   then show ?thesis
     by linarith
 qed
+
+lemma choose_le_power: "m choose k \<le> (Suc m - k) ^ k"
+  by (metis Suc_diff_le add_choose_le_power add_diff_inverse_nat binomial_eq_0_iff less_le_not_le nle_le zero_le)
 
 lemma gbinomial_mono:
   fixes k::nat and a::real
