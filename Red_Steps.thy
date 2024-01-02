@@ -66,12 +66,86 @@ proof -
     by (simp add: Weight_def sum_subtractf inverse_eq_divide flip: sum_divide_distrib)
 qed
 
+lemma Red_5_6_Ramsey:
+  assumes "c>0"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. l \<le> k \<longrightarrow> exp (c * real l powr (3/4) * ln k) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
+proof -
+
+  have A: "\<forall>\<^sup>\<infinity>l. real l powr (real l * C) < 1/2" (*NEEDED? ? ?*)
+    if "C<0" for C::real
+    using that by real_asymp
+
+  have "\<not> is_Ramsey_number k (nat\<lceil>l powr (3/4)\<rceil>) (nat \<lfloor>exp (c * real l powr (3/4) * ln (real k))\<rfloor>)"
+    if "1<l" "l\<le>k" for l k
+  proof -
+    have "k>1" using that by auto
+    define p where "p \<equiv> (real k) powr (-1/8)"
+    have p01: "0 < p" "p < 1"
+      using \<open>k>1\<close> powr_less_one by (auto simp: p_def)
+
+    define r where "r \<equiv> nat \<lfloor>exp (c * real l powr (3/4) * ln k)\<rfloor>"
+    define s where "s \<equiv> nat \<lceil>real l powr (3/4)\<rceil>"
+
+    have r_le: "r \<le> k powr (c * l powr (3/4))"
+      using p01 \<open>1 < k\<close> unfolding r_def powr_def by force
+
+    have 1: "of_real r ^ k * p powr ((real k)\<^sup>2 / 4) < 1/2" 
+    proof -
+      have A: "r powr k \<le> k powr (k * c * l powr (3/4))"
+        using r_le by (smt (verit) mult.commute of_nat_0_le_iff powr_mono2 powr_powr)
+      have B: "p powr ((real k)\<^sup>2 / 4) \<le> k powr (-(real k)\<^sup>2 / 32)"
+        by (simp add: powr_powr p_def power2_eq_square)
+      have C: "(c * l powr (3/4) - k/32) \<le> -1"
+        sorry
+      have "k\<ge>3"
+        sorry
+      have "of_real r ^ k * p powr ((real k)\<^sup>2 / 4) \<le> k powr (k * (c * l powr (3/4) - k / 32))"
+        using mult_mono [OF A B] \<open>1 < k\<close>
+        apply (simp add: power2_eq_square algebra_simps)
+        by (smt (verit, del_insts) \<open>1 < k\<close> less_numeral_extra(2) of_nat_0_le_iff powr_add powr_realpow')
+      also have "... \<le> k powr - real k"
+        using C \<open>1 < k\<close> mult_left_mono by fastforce
+      also have "... \<le> k powr -3"
+        using \<open>k\<ge>3\<close> by (simp add: powr_minus powr_realpow)
+      also have "... \<le> 3 powr -3"
+        using \<open>3 \<le> k\<close> by (intro powr_mono2') auto
+      also have "... < 1/2"
+        by auto
+      finally show ?thesis .
+    qed
+    have 2: "of_real r ^ s * exp (- p * (real s)\<^sup>2 / 4) < 1/2" 
+      sorry
+    show ?thesis
+      using Ramsey_number_lower_simple [OF _ p01] 1 2 \<open>k>1\<close> \<open>l>1\<close>
+      unfolding r_def s_def by force
+  qed
+  show ?thesis
+    sorry
+qed
+
+(*
+lemma five_six_aux_left_term : \<forall>ᶠ l : \<nat> in at_top, \<forall> k : \<nat>, l \<le> k \<rightarrow>
+  (\<lfloor>exp (1 / 128 * l ^ (3/4) * log k)\<rfloor> : \<real>) ^ \<lceil>l ^ (3/4)\<rceil>₊ *
+    ((k : \<real>) ^ (-1/8)) ^ ((\<lceil>l ^ (3/4)\<rceil> : \<real>) ^ 2 / 4) < 1 / 2 
+
+lemma five_six_aux_right_term : \<forall>ᶠ l : \<nat> in at_top, \<forall> k : \<nat>, l \<le> k \<rightarrow>
+  (\<lfloor>exp (1 / 128 * l ^ (3/4) * log k)\<rfloor> : \<real>) ^ k * exp (- k ^ (-1/8) * k ^ 2 / 4)
+    < 1 / 2 
+
+lemma five_six_aux_part_one : \<exists> c : \<real>, 0 < c \<and> \<forall>ᶠ l : \<nat> in at_top, \<forall> k : \<nat>, l \<le> k \<rightarrow>
+  exp (c * l ^ (3/4) * log k) \<le> ramsey_number ![k, \<lceil>l ^ (3/4)\<rceil>₊] 
+
+lemma five_six : \<forall>ᶠ l : \<nat> in at_top, \<forall> k : \<nat>, l \<le> k \<rightarrow>
+  k ^ 6 * ramsey_number ![k, \<lceil>l ^ (2/3)\<rceil>₊] \<le> ramsey_number ![k, \<lceil>l ^ (3/4)\<rceil>₊] 
+*)
+
+
 lemma Red_5_6:
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. k \<ge> l \<longrightarrow> RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> real k ^ 6 * RN k (m_of l)"
 proof -
-  define c_spec where "c_spec \<equiv> \<lambda>c l. \<forall>k. l \<le> k \<longrightarrow> exp (c * l powr (3/4) * ln k) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
+  define c_spec where "c_spec \<equiv> \<lambda>c l. \<forall>k. l \<le> k \<longrightarrow> exp (c * real l powr (3/4) * ln k) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
   obtain c::real where "c>0" and c: "\<forall>\<^sup>\<infinity>l. c_spec c l"
-    sorry
+    unfolding c_spec_def using Red_5_6_Ramsey exp_gt_zero by blast
   let ?Big = "\<lambda>l. 6 + m_of l \<le> c * l powr (3/4) \<and> c_spec c l"
   have "\<forall>\<^sup>\<infinity>l. 6 + m_of l \<le> c * l powr (3/4)"
     using \<open>c>0\<close> unfolding m_of_def by real_asymp

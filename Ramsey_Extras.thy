@@ -1467,7 +1467,7 @@ qed
 text \<open>Bhavik Mehta: choose-free version for very small @{term p}\<close>
 lemma Ramsey_number_lower_simple: 
   assumes n: "of_real n ^ k * p powr (real k^2 / 4) + of_real n ^ l * exp (-p * real l ^ 2 / 4) < 1"
-  assumes p01: "0<p" "p<1" and "2\<le>k" "2\<le>l"
+  assumes p01: "0<p" "p<1" and "k>1" "l>1"
   shows "\<not> is_Ramsey_number k l n"
 proof (rule Ramsey_number_lower_gen)
   have "real (n choose k) * p ^ (k choose 2) \<le> of_real n ^ k * p powr (real k^2 / 4)"
@@ -1477,7 +1477,7 @@ proof (rule Ramsey_number_lower_gen)
     also have "... = real (Suc n - k)^k * p powr (real k * (real k - 1) / 2)"
       by (metis choose_two_real p01(1) powr_realpow)
     also have "... \<le> of_real n ^ k * p powr (real k^2 / 4)"
-      using p01 \<open>2\<le>k\<close> by (intro mult_mono powr_antimono) (auto simp: power2_eq_square)
+      using p01 \<open>k>1\<close> by (intro mult_mono powr_antimono) (auto simp: power2_eq_square)
     finally show ?thesis .
   qed
   moreover
@@ -1490,10 +1490,10 @@ proof (rule Ramsey_number_lower_gen)
       have "l * p \<le> 2 * (1 - real l) * -p"
         using assms by (auto simp: algebra_simps)
       also have "... \<le> 2 * (1 - real l) * ln (1-p)"
-        using p01 \<open>2\<le>l\<close> ln_add_one_self_le_self2 [of "-p"]
+        using p01 \<open>l>1\<close> ln_add_one_self_le_self2 [of "-p"]
         by (intro mult_left_mono_neg) auto
       finally have "real l * (real l * p) \<le> real l * (2 * (1 - real l) * ln (1-p))"
-        using mult_left_mono \<open>2\<le>l\<close> by fastforce
+        using mult_left_mono \<open>l>1\<close> by fastforce
       with p01 show "(1 - p) ^ (l choose 2) \<le> exp (- p * (real l)\<^sup>2 / 4)"
         by (simp add: field_simps power2_eq_square powr_def choose_two_real flip: powr_realpow)
     qed (use p01 in auto)
