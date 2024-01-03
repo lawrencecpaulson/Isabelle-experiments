@@ -67,30 +67,47 @@ proof -
 qed
 
 lemma Red_5_6_Ramsey:
-  assumes "c>0"
+  assumes "0<c" "c<1/32"
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. l \<le> k \<longrightarrow> exp (c * real l powr (3/4) * ln k) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
 proof -
-  have C: "\<forall>\<^sup>\<infinity>l. (c * real l powr (3/4) - real l/32) \<le> -1"
-    using \<open>c>0\<close> by real_asymp
-  have D: "\<forall>\<^sup>\<infinity>l. l * (c * real l powr (3/4) * ln l - real l powr (7/8) / 4) \<le> -1"
-    using \<open>c>0\<close> by real_asymp
+  have B: "\<forall>\<^sup>\<infinity>l. nat \<lceil>real l powr (3 / 4)\<rceil> \<ge> 3"
+    by real_asymp
+  have C: "\<forall>\<^sup>\<infinity>l. l powr (3/4) * (c - 1/32) \<le> -1"
+    using assms by real_asymp
 
-  have "\<not> is_Ramsey_number (nat\<lceil>l powr (3/4)\<rceil>) k (nat \<lfloor>exp (c * real l powr (3/4) * ln (real k))\<rfloor>)"
-    if "1<l" "l\<le>k" for l k
+  have D34: "\<And>l k. l \<le> k \<Longrightarrow> c * real l powr (3/4)  \<le> c * real k powr (3/4)"
+    by (simp add: assms(1) powr_mono2)
+  have "\<forall>\<^sup>\<infinity>l. l * (c * real l powr (3/4) * ln l - real l powr (7/8) / 4) \<le> -1"
+    using \<open>c>0\<close> by real_asymp
+  then have "\<forall>\<^sup>\<infinity>l.  \<forall>k\<ge>l. k * (c * real k powr (3/4) * ln k - real k powr (7/8) / 4) \<le> -1"
+    using eventually_all_ge_at_top by blast
+  then have D: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. k * (c * real l powr (3/4) * ln k - real k powr (7/8) / 4) \<le> -1"
+    apply (rule eventually_mono)
+    apply (elim all_forward imp_forward2 asm_rl)
+    by (smt (verit, best) D34 mult_left_mono ln_less_zero_iff mult_le_cancel_right nat_le_real_less of_nat_0_le_iff)
+
+  let ?Big = "\<lambda>l. nat \<lceil>real l powr (3 / 4)\<rceil> \<ge> 3
+                \<and> (l powr (3/4) * (c - 1/32) \<le> -1) 
+                \<and> (\<forall>k\<ge>l. k * (c * real l powr (3/4) * ln k - real k powr (7/8) / 4) \<le> -1)"
+  have big_enough_l: "\<forall>\<^sup>\<infinity>l. ?Big l"
+    by (intro eventually_conj B C D)
+
+  have **: "\<not> is_Ramsey_number (nat\<lceil>l powr (3/4)\<rceil>) k (nat \<lfloor>exp (c * real l powr (3/4) * ln (real k))\<rfloor>)"
+    if l: "?Big l" "l\<le>k" for l k
   proof -
-    have "k>1" using that by auto
-    define p where "p \<equiv> (real k) powr (-1/8)"
-    have p01: "0 < p" "p < 1"
-      using \<open>k>1\<close> powr_less_one by (auto simp: p_def)
-
     define r where "r \<equiv> nat \<lfloor>exp (c * real l powr (3/4) * ln k)\<rfloor>"
     define s where "s \<equiv> nat \<lceil>real l powr (3/4)\<rceil>"
-    have "k\<ge>3" "s\<ge>3" \<open>k>0\<close> \<open>l>0\<close>
+    have "s \<ge> 3"
+      using that by (auto simp: s_def)
+    then have "l \<ge> 3"
       sorry
-
-
+    then have "k\<ge>3" \<open>k>0\<close> \<open>l>0\<close>
+      using that by auto
+    define p where "p \<equiv> (real k) powr (-1/8)"
+    have p01: "0 < p" "p < 1"
+      using \<open>k\<ge>3\<close> powr_less_one by (auto simp: p_def)
     have r_le: "r \<le> k powr (c * l powr (3/4))"
-      using p01 \<open>1 < k\<close> unfolding r_def powr_def by force
+      using p01 \<open>k\<ge>3\<close> unfolding r_def powr_def by force
 
     have 1: "of_real r ^ s * p powr ((real s)\<^sup>2 / 4) < 1/2" 
     proof -
@@ -99,12 +116,12 @@ proof -
       have B: "p powr ((real s)\<^sup>2 / 4) \<le> k powr (-(real s)\<^sup>2 / 32)"
         by (simp add: powr_powr p_def power2_eq_square)
       have C: "(c * l powr (3/4) - s/32) \<le> -1"
-        sorry
+        using l by (simp add: s_def algebra_simps) linarith
       have "of_real r ^ s * p powr ((real s)\<^sup>2 / 4) \<le> k powr (s * (c * l powr (3/4) - s / 32))"
         using mult_mono [OF A B] \<open>s\<ge>3\<close>
         by (simp add: power2_eq_square algebra_simps powr_realpow' flip: powr_add)
       also have "... \<le> k powr - real s"
-        using C \<open>s\<ge>3\<close> mult_left_mono \<open>1 < k\<close> by fastforce
+        using C \<open>s\<ge>3\<close> mult_left_mono \<open>k\<ge>3\<close> by fastforce
       also have "... \<le> k powr -3"
         using \<open>k\<ge>3\<close> \<open>s\<ge>3\<close> by (simp add: powr_minus powr_realpow)
       also have "... \<le> 3 powr -3"
@@ -120,7 +137,7 @@ proof -
       have B: "exp (- p * (real k)\<^sup>2 / 4) \<le> exp (- k * k powr (7/8) / 4)"
         using \<open>k>0\<close> by (simp add: p_def mult_ac power2_eq_square powr_mult_base)
       have D: "k * (c * real l powr (3/4) * ln k - real k powr (7/8) / 4) \<le> -1"
-        sorry
+        using that by blast
       have "of_real r ^ k * exp (- p * (real k)\<^sup>2 / 4) \<le> exp (k * (c * l powr (3/4) * ln k - k powr (7/8) / 4))"
         using mult_mono [OF A B] by (simp add: algebra_simps s_def flip: exp_add)
       also have "... \<le> exp (-1)"
@@ -130,12 +147,27 @@ proof -
       finally show ?thesis .
     qed
     show ?thesis
-      using Ramsey_number_lower_simple [OF _ p01] 1 2 \<open>k>1\<close> \<open>l>1\<close>
+      using Ramsey_number_lower_simple [OF _ p01] 1 2 \<open>k\<ge>3\<close> \<open>l\<ge>3\<close>
       unfolding r_def s_def by force
   qed
   show ?thesis
-    sorry
-qed
+  proof (rule eventually_mono [OF big_enough_l] , clarify)
+    show "exp (c * real l powr (3 / 4) * ln (real k)) \<le> real (RN k (nat \<lceil>real l powr (3 / 4)\<rceil>))"
+      if "3 \<le> nat \<lceil>real l powr (3 / 4)\<rceil>"
+        and "real l powr (3 / 4) * (c - 1 / 32) \<le> - 1"
+        and "\<forall>k\<ge>l. real k * (c * real l powr (3 / 4) * ln (real k) - real k powr (7 / 8) / 4) \<le> - 1"
+        and "(l::nat) \<le> k"
+      for l :: nat
+        and k :: nat
+    proof -
+      have "\<not> is_Ramsey_number (nat \<lceil>real l powr (3 / 4)\<rceil>) k
+            (nat \<lfloor>exp (c * real l powr (3 / 4) * ln (real k))\<rfloor>)"
+        using that ** [of l k]
+        by blast
+      then show ?thesis
+        by (metis RN_commute is_Ramsey_number_RN le_nat_floor nle_le partn_lst_greater_resource)
+    qed
+  qed
 
 (*
 lemma five_six_aux_left_term : \<forall>ᶠ l : \<nat> in at_top, \<forall> k : \<nat>, l \<le> k \<rightarrow>

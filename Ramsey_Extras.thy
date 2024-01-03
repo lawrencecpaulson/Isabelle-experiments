@@ -804,7 +804,7 @@ lemma indep_iff_clique [simp]: "K \<subseteq> V \<Longrightarrow> indep K (all_e
 lemma clique_iff_indep [simp]: "K \<subseteq> V \<Longrightarrow> clique K (all_edges V - E) \<longleftrightarrow> indep K E"
   by (auto simp: clique_def indep_def all_edges_def)
 
-lemma is_Ramsey_number_commute:
+lemma is_Ramsey_number_commute_aux:
   assumes "is_Ramsey_number m n r"
   shows "is_Ramsey_number n m r"
   unfolding partn_lst_iff
@@ -829,6 +829,9 @@ proof (intro strip)
       using \<open>i<2\<close> H by (fastforce simp add: less_2_cases_iff f'_def image_subset_iff)
   qed auto
 qed
+
+lemma is_Ramsey_number_commute: "is_Ramsey_number m n r \<longleftrightarrow> is_Ramsey_number n m r"
+  by (meson is_Ramsey_number_commute_aux)
 
 lemma RN_commute_aux: "RN n m \<le> RN m n"
   using RN_le is_Ramsey_number_RN is_Ramsey_number_commute by blast
