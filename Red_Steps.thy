@@ -70,12 +70,12 @@ lemma Red_5_6_Ramsey:
   assumes "c>0"
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. l \<le> k \<longrightarrow> exp (c * real l powr (3/4) * ln k) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
 proof -
+  have C: "\<forall>\<^sup>\<infinity>l. (c * real l powr (3/4) - real l/32) \<le> -1"
+    using \<open>c>0\<close> by real_asymp
+  have D: "\<forall>\<^sup>\<infinity>l. l * (c * real l powr (3/4) * ln l - real l powr (7/8) / 4) \<le> -1"
+    using \<open>c>0\<close> by real_asymp
 
-  have A: "\<forall>\<^sup>\<infinity>l. real l powr (real l * C) < 1/2" (*NEEDED? ? ?*)
-    if "C<0" for C::real
-    using that by real_asymp
-
-  have "\<not> is_Ramsey_number k (nat\<lceil>l powr (3/4)\<rceil>) (nat \<lfloor>exp (c * real l powr (3/4) * ln (real k))\<rfloor>)"
+  have "\<not> is_Ramsey_number (nat\<lceil>l powr (3/4)\<rceil>) k (nat \<lfloor>exp (c * real l powr (3/4) * ln (real k))\<rfloor>)"
     if "1<l" "l\<le>k" for l k
   proof -
     have "k>1" using that by auto
@@ -85,36 +85,50 @@ proof -
 
     define r where "r \<equiv> nat \<lfloor>exp (c * real l powr (3/4) * ln k)\<rfloor>"
     define s where "s \<equiv> nat \<lceil>real l powr (3/4)\<rceil>"
+    have "k\<ge>3" "s\<ge>3" \<open>k>0\<close> \<open>l>0\<close>
+      sorry
+
 
     have r_le: "r \<le> k powr (c * l powr (3/4))"
       using p01 \<open>1 < k\<close> unfolding r_def powr_def by force
 
-    have 1: "of_real r ^ k * p powr ((real k)\<^sup>2 / 4) < 1/2" 
+    have 1: "of_real r ^ s * p powr ((real s)\<^sup>2 / 4) < 1/2" 
     proof -
-      have A: "r powr k \<le> k powr (k * c * l powr (3/4))"
+      have A: "r powr s \<le> k powr (s * c * l powr (3/4))"
         using r_le by (smt (verit) mult.commute of_nat_0_le_iff powr_mono2 powr_powr)
-      have B: "p powr ((real k)\<^sup>2 / 4) \<le> k powr (-(real k)\<^sup>2 / 32)"
+      have B: "p powr ((real s)\<^sup>2 / 4) \<le> k powr (-(real s)\<^sup>2 / 32)"
         by (simp add: powr_powr p_def power2_eq_square)
-      have C: "(c * l powr (3/4) - k/32) \<le> -1"
+      have C: "(c * l powr (3/4) - s/32) \<le> -1"
         sorry
-      have "k\<ge>3"
-        sorry
-      have "of_real r ^ k * p powr ((real k)\<^sup>2 / 4) \<le> k powr (k * (c * l powr (3/4) - k / 32))"
-        using mult_mono [OF A B] \<open>1 < k\<close>
-        apply (simp add: power2_eq_square algebra_simps)
-        by (smt (verit, del_insts) \<open>1 < k\<close> less_numeral_extra(2) of_nat_0_le_iff powr_add powr_realpow')
-      also have "... \<le> k powr - real k"
-        using C \<open>1 < k\<close> mult_left_mono by fastforce
+      have "of_real r ^ s * p powr ((real s)\<^sup>2 / 4) \<le> k powr (s * (c * l powr (3/4) - s / 32))"
+        using mult_mono [OF A B] \<open>s\<ge>3\<close>
+        by (simp add: power2_eq_square algebra_simps powr_realpow' flip: powr_add)
+      also have "... \<le> k powr - real s"
+        using C \<open>s\<ge>3\<close> mult_left_mono \<open>1 < k\<close> by fastforce
       also have "... \<le> k powr -3"
-        using \<open>k\<ge>3\<close> by (simp add: powr_minus powr_realpow)
+        using \<open>k\<ge>3\<close> \<open>s\<ge>3\<close> by (simp add: powr_minus powr_realpow)
       also have "... \<le> 3 powr -3"
-        using \<open>3 \<le> k\<close> by (intro powr_mono2') auto
+        using \<open>k\<ge>3\<close> by (intro powr_mono2') auto
       also have "... < 1/2"
         by auto
       finally show ?thesis .
     qed
-    have 2: "of_real r ^ s * exp (- p * (real s)\<^sup>2 / 4) < 1/2" 
-      sorry
+    have 2: "of_real r ^ k * exp (- p * (real k)\<^sup>2 / 4) < 1/2" 
+    proof -
+      have A: "of_real r ^ k \<le> exp (c * l powr (3/4) * ln k * k)"
+        using r_le \<open>0 < k\<close> \<open>0 < l\<close> by (simp add: powr_def exp_of_nat2_mult)
+      have B: "exp (- p * (real k)\<^sup>2 / 4) \<le> exp (- k * k powr (7/8) / 4)"
+        using \<open>k>0\<close> by (simp add: p_def mult_ac power2_eq_square powr_mult_base)
+      have D: "k * (c * real l powr (3/4) * ln k - real k powr (7/8) / 4) \<le> -1"
+        sorry
+      have "of_real r ^ k * exp (- p * (real k)\<^sup>2 / 4) \<le> exp (k * (c * l powr (3/4) * ln k - k powr (7/8) / 4))"
+        using mult_mono [OF A B] by (simp add: algebra_simps s_def flip: exp_add)
+      also have "... \<le> exp (-1)"
+        using D by blast
+      also have "... < 1/2"
+        by (approximation 5)
+      finally show ?thesis .
+    qed
     show ?thesis
       using Ramsey_number_lower_simple [OF _ p01] 1 2 \<open>k>1\<close> \<open>l>1\<close>
       unfolding r_def s_def by force
