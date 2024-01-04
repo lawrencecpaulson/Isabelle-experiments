@@ -369,6 +369,18 @@ proof -
   finally show ?thesis .
 qed
 
+lemma Red_5_7c: 
+  assumes "p \<le> q k 1" shows "alpha k (hgt k p) = eps k / k"
+proof -
+  have "hgt k p > 0"
+    by (simp add: Suc_leI hgt_gt_0)
+  then have "alpha k (hgt k p) = alpha k 1"
+    using Suc_le_D hgt_Least Suc_le_eq assms by fastforce
+  also have "\<dots> = eps k / k"
+    by (simp add: alpha_Suc_eq)
+  finally show ?thesis .
+qed
+
 proposition Red_5_1:
   assumes "real (card (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i)) = \<beta> * real (card (Xseq \<mu> l k i))"
     and i: "i \<in> Step_class_reddboost \<mu> l k"
