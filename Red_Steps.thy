@@ -350,6 +350,25 @@ proof -
     by presburger 
 qed
 
+lemma Red_5_7a: "eps k / k \<le> alpha k (hgt k p)"
+  by (simp add: alpha_ge hgt_gt_0)
+
+lemma Red_5_7b: 
+  assumes "p \<ge> q k 0" shows "alpha k (hgt k p) \<le> eps k * (p - q k 0 + 1/k)"
+proof -
+  have qh_le_p: "q k (hgt k p - Suc 0) \<le> p"
+    by (smt (verit) assms diff_Suc_less diff_le_self hgt_Least le_antisym nat_less_le zero_less_iff_neq_zero)
+  have "hgt k p > 0"
+    by (simp add: Suc_leI hgt_gt_0)
+  then have "alpha k (hgt k p) = eps k * (1 + eps k) ^ (hgt k p - 1) / k"
+    using alpha_eq by blast
+  also have "... = eps k * (q k (hgt k p - 1) - q k 0 + 1/k)"
+    by (simp add: diff_divide_distrib q_def)
+  also have "... \<le> eps k * (p - q k 0 + 1/k)"
+    by (smt (verit) qh_le_p mult.commute mult_right_mono One_nat_def eps_def powr_ge_pzero)
+  finally show ?thesis .
+qed
+
 proposition Red_5_1:
   assumes "real (card (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i)) = \<beta> * real (card (Xseq \<mu> l k i))"
     and i: "i \<in> Step_class_reddboost \<mu> l k"

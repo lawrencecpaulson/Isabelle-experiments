@@ -241,7 +241,7 @@ definition "eps \<equiv> \<lambda>k. real k powr (-1/4)"
 
 definition "q \<equiv> \<lambda>k h. p0 + ((1 + eps k)^h - 1) / k"
 
-definition "hgt \<equiv> \<lambda>k p. LEAST h. p \<le> q k h \<and> h>0"
+definition "hgt \<equiv> \<lambda>k p. if k=0 then 1 else (LEAST h. p \<le> q k h \<and> h>0)"
 
 lemma q0 [simp]: "q k 0 = p0"
   by (simp add: q_def)
@@ -268,28 +268,47 @@ lemma epsk_less1:
   by (smt (verit) assms eps_def less_imp_of_nat_less of_nat_1 powr_less_one zero_le_divide_iff)
 
 lemma height_exists:
-  assumes "p \<le> 1" "k>0"
+  assumes "k>0"
   obtains h where "p \<le> q k h \<and> h>0"
 proof -
-  let ?h = "nat \<lceil>k / eps k\<rceil>"  \<comment>\<open>larger than the bound suggested in the paper\<close>
-  have "?h > 0"
-    using \<open>k>0\<close> epsk_gt0 by force
-  moreover
-  have "k+1 \<le> (1 + eps k) ^ ?h"
-    using linear_plus_1_le_power [of "eps k" ?h] epsk_gt0 \<open>k>0\<close>
-    by (smt (verit, best) mult_imp_less_div_pos of_nat_1 of_nat_add of_nat_ceiling)
-  then have "p \<le> q k ?h"
+  have 1: "1 + eps k \<ge> 1"
+    by (auto simp: eps_def)
+  have "\<forall>\<^sup>\<infinity>h. p \<le> p0 + real h * eps k / real k"
+    using assms p0_01 unfolding eps_def by real_asymp
+  then obtain h where "p \<le> p0 + real h * eps k / real k"
+    by (meson eventually_sequentially order.refl)
+  also have "... \<le> p0 + ((1 + eps k) ^ h - 1) / real k"
+    using linear_plus_1_le_power [of "eps k" h]
+    by (intro divide_right_mono add_mono) (auto simp: eps_def add_ac)
+  also have "... \<le> p0 + ((1 + eps k) ^ Suc h - 1) / real k"
+    using power_increasing [OF le_SucI [OF order_refl] 1]
+    by (simp add: divide_right_mono)
+  finally have "p \<le> q k (Suc h)"
     unfolding q_def using assms p0_01
-    by (smt (verit, best) le_divide_eq_1_pos of_nat_0_less_iff of_nat_1 of_nat_add)
-  ultimately show thesis
+    by blast
+  then show thesis
     using that by blast 
 qed
 
-lemma hgt_gt_0:
-  assumes "p \<le> 1" "k>0"
-  shows "hgt k p > 0"
-  unfolding hgt_def using height_exists [OF assms] by (smt (verit, ccfv_SIG) LeastI)
+lemma hgt_gt_0: "hgt k p > 0"
+  by (smt (verit, best) LeastI_ex gr0I height_exists hgt_def zero_less_one)
 
+lemma hgt_works:
+  assumes "k>0" 
+  shows "p \<le> q k (hgt k p)"
+  using assms by (metis (no_types, lifting) LeastI_ex height_exists hgt_def not_gr0)
+
+(*PROBABLY WORTHLESS*)
+lemma hgt_works':
+  assumes "p \<le> p0"  
+  shows "p \<le> q k (hgt k p)"
+  using assms by (smt (verit, best) divide_eq_eq hgt_works not_gr0 of_nat_eq_0_iff p0_01(2) q_def)
+
+lemma hgt_Least:
+  assumes "0<h" "p \<le> q k h"
+  shows "hgt k p \<le> h"
+  by (simp add: Suc_leI assms hgt_def Least_le)
+ 
 lemma q_Suc_diff: "q k (Suc h) - q k h = eps k * (1 + eps k)^h / k"
   by (simp add: q_def field_split_simps)
 
@@ -302,7 +321,10 @@ lemma finite_Blue [simp]: "finite Blue"
 
 definition "alpha \<equiv> \<lambda>k h. q k h - q k (h-1)"
 
-lemma alpha_ge0: "k>0 \<Longrightarrow> alpha k h \<ge> 0"
+lemma alpha_0 [simp]: "alpha 0 h = 0" and alpha_0' [simp]: "alpha k 0 = 0"
+  by (auto simp add: alpha_def q_def)
+
+lemma alpha_ge0: "alpha k h \<ge> 0"
   by (simp add: alpha_def q_def divide_le_cancel epsk_gt0)
 
 lemma alpha_Suc_ge: "alpha k (Suc h) \<ge> eps k / k"
@@ -313,8 +335,15 @@ proof -
     by (simp add: alpha_def q_def epsk_gt0 field_split_simps)
 qed
 
-lemma alpha_ge: "h>0 \<Longrightarrow>alpha k h \<ge> eps k / k"
+lemma alpha_ge: "h>0 \<Longrightarrow> alpha k h \<ge> eps k / k"
   by (metis Suc_pred alpha_Suc_ge)
+
+lemma alpha_Suc_eq: "alpha k (Suc h) = eps k * (1 + eps k) ^ h / k"
+  by (simp add: alpha_def q_Suc_diff)
+
+lemma alpha_eq: 
+  assumes "h>0" shows "alpha k h = eps k * (1 + eps k) ^ (h-1) / k"
+  by (metis Suc_pred' alpha_Suc_eq assms)
 
 definition all_incident_edges :: "'a set \<Rightarrow> 'a set set" where
     "all_incident_edges \<equiv> \<lambda>A. \<Union>v\<in>A. incident_edges v"
