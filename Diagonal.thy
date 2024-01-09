@@ -239,12 +239,12 @@ definition "p0 \<equiv> red_density X0 Y0"
 
 definition "eps \<equiv> \<lambda>k. real k powr (-1/4)"
 
-definition "q \<equiv> \<lambda>k h. p0 + ((1 + eps k)^h - 1) / k"
+definition "qfun \<equiv> \<lambda>k h. p0 + ((1 + eps k)^h - 1) / k"
 
-definition "hgt \<equiv> \<lambda>k p. if k=0 then 1 else (LEAST h. p \<le> q k h \<and> h>0)"
+definition "hgt \<equiv> \<lambda>k p. if k=0 then 1 else (LEAST h. p \<le> qfun k h \<and> h>0)"
 
-lemma q0 [simp]: "q k 0 = p0"
-  by (simp add: q_def)
+lemma q0 [simp]: "qfun k 0 = p0"
+  by (simp add: qfun_def)
 
 lemma p0_01: "0 \<le> p0" "p0 \<le> 1"
   by (simp_all add: p0_def gen_density_ge0 gen_density_le1)
@@ -269,7 +269,7 @@ lemma epsk_less1:
 
 lemma height_exists:
   assumes "k>0"
-  obtains h where "p \<le> q k h \<and> h>0"
+  obtains h where "p \<le> qfun k h \<and> h>0"
 proof -
   have 1: "1 + eps k \<ge> 1"
     by (auto simp: eps_def)
@@ -283,8 +283,8 @@ proof -
   also have "... \<le> p0 + ((1 + eps k) ^ Suc h - 1) / real k"
     using power_increasing [OF le_SucI [OF order_refl] 1]
     by (simp add: divide_right_mono)
-  finally have "p \<le> q k (Suc h)"
-    unfolding q_def using assms p0_01
+  finally have "p \<le> qfun k (Suc h)"
+    unfolding qfun_def using assms p0_01
     by blast
   then show thesis
     using that by blast 
@@ -295,22 +295,22 @@ lemma hgt_gt_0: "hgt k p > 0"
 
 lemma hgt_works:
   assumes "k>0" 
-  shows "p \<le> q k (hgt k p)"
+  shows "p \<le> qfun k (hgt k p)"
   using assms by (metis (no_types, lifting) LeastI_ex height_exists hgt_def not_gr0)
 
 (*PROBABLY WORTHLESS*)
 lemma hgt_works':
   assumes "p \<le> p0"  
-  shows "p \<le> q k (hgt k p)"
-  using assms by (smt (verit, best) divide_eq_eq hgt_works not_gr0 of_nat_eq_0_iff p0_01(2) q_def)
+  shows "p \<le> qfun k (hgt k p)"
+  using assms by (smt (verit, best) divide_eq_eq hgt_works not_gr0 of_nat_eq_0_iff p0_01(2) qfun_def)
 
 lemma hgt_Least:
-  assumes "0<h" "p \<le> q k h"
+  assumes "0<h" "p \<le> qfun k h"
   shows "hgt k p \<le> h"
   by (simp add: Suc_leI assms hgt_def Least_le)
  
-lemma q_Suc_diff: "q k (Suc h) - q k h = eps k * (1 + eps k)^h / k"
-  by (simp add: q_def field_split_simps)
+lemma q_Suc_diff: "qfun k (Suc h) - qfun k h = eps k * (1 + eps k)^h / k"
+  by (simp add: qfun_def field_split_simps)
 
 lemma finite_Red [simp]: "finite Red"
   by (metis Red_Blue_all complete fin_edges finite_Un)
@@ -319,20 +319,20 @@ lemma finite_Blue [simp]: "finite Blue"
   using Blue_E fin_edges finite_subset by blast
 
 
-definition "alpha \<equiv> \<lambda>k h. q k h - q k (h-1)"
+definition "alpha \<equiv> \<lambda>k h. qfun k h - qfun k (h-1)"
 
 lemma alpha_0 [simp]: "alpha 0 h = 0" and alpha_0' [simp]: "alpha k 0 = 0"
-  by (auto simp add: alpha_def q_def)
+  by (auto simp add: alpha_def qfun_def)
 
 lemma alpha_ge0: "alpha k h \<ge> 0"
-  by (simp add: alpha_def q_def divide_le_cancel epsk_gt0)
+  by (simp add: alpha_def qfun_def divide_le_cancel epsk_gt0)
 
 lemma alpha_Suc_ge: "alpha k (Suc h) \<ge> eps k / k"
 proof -
   have "(1 + eps k) ^ h \<ge> 1"
     by (simp add: eps_def)
   then show ?thesis
-    by (simp add: alpha_def q_def epsk_gt0 field_split_simps)
+    by (simp add: alpha_def qfun_def epsk_gt0 field_split_simps)
 qed
 
 lemma alpha_ge: "h>0 \<Longrightarrow> alpha k h \<ge> eps k / k"
