@@ -442,6 +442,11 @@ proof -
   qed
 qed
 
+lemma Neighbours_RB:
+  assumes "a \<in> V" "X\<subseteq>V"
+  shows "Neighbours Red a \<inter> X \<union> Neighbours Blue a \<inter> X = X - {a}"
+  using assms Red_Blue_all complete singleton_not_edge
+  by (fastforce simp: Neighbours_def)
 
 proposition Red_5_1:
   assumes "real (card (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i)) = \<beta> * real (card (Xseq \<mu> l k i))"
@@ -473,9 +478,18 @@ proof -
     then show ?thesis sorry
   next
     case False
-    then have "(\<Sum>y \<in> Neighbours Blue ?x \<inter> X. Weight X Y ?x y) 
-             \<ge> weight X Y ?x + alpha k (hgt k ?p) * card NRX * card NRY / card Y"
-        sorry
+    have "?x \<in> X"
+      using cvx_in_Xseq i XY by blast
+    with Neighbours_RB[of ?x X] have Xx: "X - {?x} = Neighbours Blue ?x \<inter> X \<union> NRX"
+      using Diagonal.Xseq_subset_V Diagonal_axioms NRX_def XY by blast
+    have disjnt: "Neighbours Blue (cvx \<mu> l k i) \<inter> X \<inter> NRX = {}"
+      by (auto simp: Blue_eq NRX_def disjoint_iff in_Neighbours_iff)
+    then have "weight X Y ?x = (\<Sum>y \<in> NRX. Weight X Y ?x y) + (\<Sum>y \<in> Neighbours Blue ?x \<inter> X. Weight X Y ?x y)"
+      by (simp add: weight_def Xx sum.union_disjoint finite_Neighbours NRX_def)
+    with False 
+    have "(\<Sum>y \<in> Neighbours Blue ?x \<inter> X. Weight X Y ?x y) 
+        \<ge> weight X Y ?x + alpha k (hgt k ?p) * card NRX * card NRY / card Y"
+      by linarith
     then show ?thesis sorry
   qed
 qed

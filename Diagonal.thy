@@ -81,6 +81,12 @@ lemma nontriv: "E \<noteq> {}"
 lemma in_E_iff [iff]: "{v,w} \<in> E \<longleftrightarrow> v\<in>V \<and> w\<in>V \<and> v\<noteq>w"
   by (auto simp: complete all_edges_alt doubleton_eq_iff)
 
+lemma no_singleton_Blue [simp]: "{a} \<notin> Blue"
+  using Blue_E by auto
+
+lemma no_singleton_Red [simp]: "{a} \<notin> Red"
+  using Red_E by auto
+
 lemma not_Red_Neighbour [simp]: "x \<notin> Neighbours Red x" and not_Blue_Neighbour [simp]: "x \<notin> Neighbours Blue x"
   using Red_E Blue_E not_own_Neighbour by auto
 
