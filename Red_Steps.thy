@@ -452,7 +452,34 @@ proposition Red_5_1:
          \<ge> p - alpha k (hgt k p)
        \<or> red_density (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i) (Neighbours Red (cvx \<mu> l k i) \<inter> Yseq \<mu> l k i)
          \<ge> p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha k (hgt k p) \<and> \<beta> > 0"
-  sorry
+proof -
+  let ?x = "cvx \<mu> l k i"
+  let ?p = "pee \<mu> l k i"
+  obtain X Y A B
+    where step: "stepper \<mu> l k i = (X,Y,A,B)"
+      and nonterm: "\<not> termination_condition l k X Y"
+      and "even i"
+      and non_mb: "\<not> many_bluish \<mu> l k X"
+    using i
+    by (auto simp: Step_class_def stepper_kind_def next_state_kind_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)
+  have XY: "X = Xseq \<mu> l k i" "Y = Yseq \<mu> l k i"
+    using step stepper_XYseq by auto
+  define NRX where "NRX \<equiv> Neighbours Red ?x \<inter> X"
+  define NRY where "NRY \<equiv> Neighbours Red ?x \<inter> Y"
+  show ?thesis
+  proof (cases "(\<Sum>y \<in> NRX. Weight X Y ?x y) 
+             \<ge> - alpha k (hgt k ?p) * card NRX * card NRY / card Y")
+    case True
+    then show ?thesis sorry
+  next
+    case False
+    then have "(\<Sum>y \<in> Neighbours Blue ?x \<inter> X. Weight X Y ?x y) 
+             \<ge> weight X Y ?x + alpha k (hgt k ?p) * card NRX * card NRY / card Y"
+        sorry
+    then show ?thesis sorry
+  qed
+qed
+
 
 corollary Red_5_2:
   assumes i: "i \<in> Step_class \<mu> l k dboost_step" and "\<mu>>0"
