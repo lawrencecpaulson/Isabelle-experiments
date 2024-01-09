@@ -383,18 +383,11 @@ qed
 
 lemma Red_5_8:
   assumes i: "i \<in> Step_class \<mu> l k dreg_step" 
-    and x: "x \<in> Xseq \<mu> l k i" and "0 < \<mu>"
-  shows "card (Neighbours Red x \<inter> Yseq \<mu> l k i)
-         \<ge> (1 - sqrt (eps k)) * pee \<mu> l k i * (card (Yseq \<mu> l k i))"
+    and x: "x \<in> Xseq \<mu> l k (Suc i)" 
+  shows "card (Neighbours Red x \<inter> Yseq \<mu> l k (Suc i))
+         \<ge> (1 - (eps k) powr (1/2)) * pee \<mu> l k i * (card (Yseq \<mu> l k (Suc i)))"
 proof -
-  have "pee \<mu> l k i > 1/k"
-    using assms(1) dreg_step_non_terminating pee_def termination_condition_def by force
-  moreover have "1/k \<ge> q k 0"
-    apply (simp add: q_def)
-
-    sorry
-  ultimately have "pee \<mu> l k i \<ge> q k 0"
-    by linarith
+  let ?p = "pee \<mu> l k i"
   obtain X Y A B
     where step: "stepper \<mu> l k i = (X,Y,A,B)"
       and nonterm: "\<not> termination_condition l k X Y"
@@ -403,7 +396,7 @@ proof -
     by (auto simp: Step_class_def stepper_kind_def next_state_kind_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)
   then have Suc_i: "stepper \<mu> l k (Suc i) = degree_reg k (X,Y,A,B)"
     by simp
-  have *: "X = Xseq \<mu> l k i" "Y = Yseq \<mu> l k i"
+  have XY: "X = Xseq \<mu> l k i" "Y = Yseq \<mu> l k i"
     using step stepper_XYseq by auto
   have "Xseq \<mu> l k (Suc i) = ((\<lambda>(X, Y, A, B). X) \<circ> stepper \<mu> l k) (Suc i)"
     by (simp add: Xseq_def)
@@ -412,6 +405,42 @@ proof -
   finally have XSuc: "Xseq \<mu> l k (Suc i) = X_degree_reg k X Y" .
   have YSuc: "Yseq \<mu> l k (Suc i) = Yseq \<mu> l k i"
     using Suc_i step by (auto simp: degree_reg_def stepper_XYseq)
+  have p_gt_invk: "?p > 1/k"
+    using "XY" nonterm pee_def termination_condition_def by auto
+  have RedN: "(?p - eps k powr -(1/2) * alpha k (hgt k ?p)) * card Y \<le> card (Neighbours Red x \<inter> Y)"
+    using x XY by (simp add: XSuc YSuc X_degree_reg_def pee_def red_dense_def)
+  show ?thesis
+  proof (cases "?p \<ge> q k 0")
+    case True
+    have "i \<notin> Step_class \<mu> l k halted"
+      using i by (simp add: Step_class_def)
+    then have p0: "1/k < p0"
+      by (metis Step_class_halted_forever le_eq_less_or_eq not_halted_pee_gt not_gr0 pee_eq_p0)
+    have 0: "eps k powr -(1/2) \<ge> 0"
+      by simp
+    have "eps k powr -(1/2) * alpha k (hgt k ?p) \<le> eps k powr (1/2) * (?p - q k 0 + 1/k)"
+      using mult_left_mono [OF Red_5_7b [OF True] 0]
+      by (simp add: eps_def powr_mult_base flip: mult_ac)
+    also have "... \<le> eps k powr (1/2) * ?p"
+      using p0 by (intro mult_left_mono) (auto simp flip: pee_eq_p0)
+    finally have "eps k powr -(1/2) * alpha k (hgt k ?p) \<le> eps k powr (1/2) * ?p" .
+    then have "(1 - (eps k) powr (1/2)) * ?p * (card Y) \<le> (?p - eps k powr -(1/2) * alpha k (hgt k ?p)) * card Y"
+      by (intro mult_right_mono) (auto simp: algebra_simps)
+    with XY RedN YSuc show ?thesis by fastforce
+  next
+    case False
+    then have "pee \<mu> l k i \<le> q k 1"
+      by (smt (verit, best) alpha_eq alpha_ge0 One_nat_def add_diff_cancel_left' plus_1_eq_Suc q_Suc_diff zero_less_one)
+    then have "eps k powr -(1/2) * alpha k (hgt k ?p) = eps k powr (1/2) / k"
+      using powr_mult_base [of "eps k"] epsk_gt0 by (force simp add: Red_5_7c mult.commute)
+    also have "... \<le> eps k powr (1/2) * ?p"
+      using p_gt_invk by (smt (verit) divide_inverse inverse_eq_divide mult_left_mono powr_ge_pzero)
+    finally have "eps k powr -(1/2) * alpha k (hgt k ?p) \<le> eps k powr (1/2) * ?p" .
+    then have "(1 - (eps k) powr (1/2)) * ?p * (card Y) \<le> (?p - eps k powr -(1/2) * alpha k (hgt k ?p)) * card Y"
+      by (intro mult_right_mono) (auto simp: algebra_simps)
+    with XY RedN YSuc show ?thesis by fastforce
+  qed
+qed
 
 
 proposition Red_5_1:

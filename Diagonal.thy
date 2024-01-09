@@ -372,7 +372,7 @@ lemma
 
 subsection \<open>Degree regularisation\<close>
 
-definition "red_dense \<equiv> \<lambda>k Y p x. card (Neighbours Red x \<inter> Y) \<ge> p - eps k powr (-1/2) * alpha k (hgt k p) * card Y"
+definition "red_dense \<equiv> \<lambda>k Y p x. card (Neighbours Red x \<inter> Y) \<ge> (p - eps k powr (-1/2) * alpha k (hgt k p)) * card Y"
 
 definition "X_degree_reg \<equiv>  \<lambda>k X Y. {x \<in> X. red_dense k Y (red_density X Y) x}"
 
@@ -570,7 +570,6 @@ inductive density_boost
   where "\<lbrakk>\<not> reddish k X Y (red_density X Y) x; x = choose_central_vx \<mu> (X,Y,A,B)\<rbrakk> 
          \<Longrightarrow> density_boost \<mu> (X,Y,A,B) (Neighbours Blue x \<inter> X, Neighbours Red x \<inter> Y, A, insert x B)"
 
-
 lemma density_boost_V_state: 
   assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)"
   shows "V_state U'"
@@ -715,7 +714,7 @@ proof -
 qed
 
 lemma card_A_limit:
-  assumes "stepper \<mu> l k n = (X,Y,A,B)" "Colours l k" shows  "card A < k"
+  assumes "stepper \<mu> l k n = (X,Y,A,B)" "Colours l k" shows "card A < k"
 proof -
   have "clique A Red"
     using stepper_A assms by auto
@@ -746,7 +745,6 @@ proof -
     using assms unfolding Colours_def
     by (metis linorder_neqE_nat size_clique_def size_clique_smaller stepper_B) 
 qed
-
 
 
 definition "Xseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). X) \<circ> stepper \<mu> l k"
@@ -783,6 +781,9 @@ lemma Yseq_subset_V: "Yseq \<mu> l k i \<subseteq> V"
 
 lemma Xseq_Yseq_disjnt: "disjnt (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
   by (metis (no_types, opaque_lifting) XY0(1) Xseq_0 Xseq_antimono Yseq_0 Yseq_antimono disjnt_iff le0 subset_eq)
+
+lemma pee_eq_p0: "pee \<mu> l k 0 = p0"
+  by (simp add: pee_def p0_def)
 
 lemma pee_ge0: "pee \<mu> l k i \<ge> 0"
   by (simp add: gen_density_ge0 pee_def)
@@ -829,6 +830,25 @@ definition "Step_class \<equiv> \<lambda>\<mu> l k knd. {n. stepper_kind \<mu> l
 lemma disjnt_Step_class: 
   "knd \<noteq> knd' \<Longrightarrow> disjnt (Step_class \<mu> l k knd) (Step_class \<mu> l k knd')"
   by (auto simp: Step_class_def disjnt_iff)
+
+lemma halted_imp_next_halted: "stepper_kind \<mu> l k i = halted \<Longrightarrow> stepper_kind \<mu> l k (Suc i) = halted"
+  by (auto simp add: stepper_kind_def next_state_kind_def split: prod.split if_split_asm)
+
+lemma halted_imp_ge_halted: "stepper_kind \<mu> l k i = halted \<Longrightarrow> stepper_kind \<mu> l k (i+n) = halted"
+  by (induction n) (auto simp: halted_imp_next_halted)
+
+lemma Step_class_halted_forever: "\<lbrakk>i \<in> Step_class \<mu> l k halted; i\<le>j\<rbrakk> \<Longrightarrow> j \<in> Step_class \<mu> l k halted"
+  unfolding Step_class_def
+  by (metis (mono_tags, lifting) halted_imp_ge_halted le_iff_add mem_Collect_eq)
+
+lemma Step_class_not_halted: "\<lbrakk>i \<notin> Step_class \<mu> l k halted; i\<ge>j\<rbrakk> \<Longrightarrow> j \<notin> Step_class \<mu> l k halted"
+  using Step_class_halted_forever by blast
+
+lemma not_halted_pee_gt:
+  assumes "i \<notin> Step_class \<mu> l k halted" 
+  shows "pee \<mu> l k i > 1/k"
+  using assms
+  by (auto simp: Step_class_def stepper_kind_def Xseq_def Yseq_def termination_condition_def pee_def split: if_split_asm prod.split_asm)
 
 lemma finite_Step_class:
   assumes "\<And>n. finite {m. m<n \<and> stepper_kind \<mu> l k m = knd}"
