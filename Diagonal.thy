@@ -626,7 +626,8 @@ definition next_state :: "[real,nat,nat,'a config] \<Rightarrow> 'a config" wher
   "next_state \<equiv> \<lambda>\<mu> l k (X,Y,A,B). 
        if many_bluish \<mu> l k X then let (S,T) = choose_blue_book \<mu> (X,Y,A,B) in (T, Y, A, B\<union>S) 
        else let x = choose_central_vx \<mu> (X,Y,A,B) in
-            if reddish k X Y (red_density X Y) x then (Neighbours Red x \<inter> X, Neighbours Red x \<inter> Y, insert x A, B)
+            if reddish k X Y (red_density X Y) x 
+            then (Neighbours Red x \<inter> X, Neighbours Red x \<inter> Y, insert x A, B)
             else (Neighbours Blue x \<inter> X, Neighbours Red x \<inter> Y, A, insert x B)"
 
 lemma next_state_valid:
@@ -663,7 +664,7 @@ primrec stepper :: "[real,nat,nat,nat] \<Rightarrow> 'a config" where
 | "stepper \<mu> l k (Suc n) = 
      (let (X,Y,A,B) = stepper \<mu> l k n in 
       if termination_condition l k X Y then (X,Y,A,B) 
-      else if even n then next_state \<mu> l k (X,Y,A,B) else (degree_reg k (X,Y,A,B)))"
+      else if even n then next_state \<mu> l k (X,Y,A,B) else degree_reg k (X,Y,A,B))"
 
 lemma degree_reg_subset:
   assumes "degree_reg k (X,Y,A,B) = (X',Y',A',B')" 
@@ -808,7 +809,7 @@ lemma beta_ge0: "beta \<mu> l k i \<ge> 0"
 subsection \<open>The classes of execution steps\<close>
 
 text \<open>For R, B, S, D\<close>
-datatype stepkind = red_step | bblue_step | dboost_step | dreg_step
+datatype stepkind = red_step | bblue_step | dboost_step | dreg_step | halted
 
 definition next_state_kind :: "[real,nat,nat,'a config] \<Rightarrow> stepkind" where
   "next_state_kind \<equiv> \<lambda>\<mu> l k (X,Y,A,B). 
@@ -820,7 +821,7 @@ definition next_state_kind :: "[real,nat,nat,'a config] \<Rightarrow> stepkind" 
 definition stepper_kind :: "[real,nat,nat,nat] \<Rightarrow> stepkind" where
   "stepper_kind \<mu> l k i = 
      (let (X,Y,A,B) = stepper \<mu> l k i in 
-      if termination_condition l k X Y then dreg_step 
+      if termination_condition l k X Y then halted 
       else if even i then next_state_kind \<mu> l k (X,Y,A,B) else dreg_step)"
 
 definition "Step_class \<equiv> \<lambda>\<mu> l k knd. {n. stepper_kind \<mu> l k n = knd}"
@@ -859,6 +860,12 @@ qed
 
 lemma red_dboost_non_terminating:
   assumes "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
+  shows "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+  using assms
+  by (simp add: Step_class_def stepper_kind_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)
+
+lemma dreg_step_non_terminating:
+  assumes "i \<in> Step_class \<mu> l k dreg_step"
   shows "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
   using assms
   by (simp add: Step_class_def stepper_kind_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)

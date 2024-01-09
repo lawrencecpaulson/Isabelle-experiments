@@ -708,8 +708,8 @@ proof -
     obtain n where "\<Union> (range BDB) = BDB n"
       using ** by fastforce
     then show "card (Step_class \<mu> l k bblue_step) + card (Step_class \<mu> l k dboost_step) < l"
-      using less_l fin Uneq
-      by (metis card_Un_disjnt disjnt_Step_class finite_Un stepkind.distinct(8)) 
+      using less_l fin Uneq stepkind.distinct 
+      by (metis card_Un_disjnt disjnt_Step_class finite_Un)
   qed
   with eventually_mono [OF Blue_4_1] \<open>\<mu>>0\<close> show ?thesis
     by presburger 

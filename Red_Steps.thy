@@ -381,6 +381,39 @@ proof -
   finally show ?thesis .
 qed
 
+lemma Red_5_8:
+  assumes i: "i \<in> Step_class \<mu> l k dreg_step" 
+    and x: "x \<in> Xseq \<mu> l k i" and "0 < \<mu>"
+  shows "card (Neighbours Red x \<inter> Yseq \<mu> l k i)
+         \<ge> (1 - sqrt (eps k)) * pee \<mu> l k i * (card (Yseq \<mu> l k i))"
+proof -
+  have "pee \<mu> l k i > 1/k"
+    using assms(1) dreg_step_non_terminating pee_def termination_condition_def by force
+  moreover have "1/k \<ge> q k 0"
+    apply (simp add: q_def)
+
+    sorry
+  ultimately have "pee \<mu> l k i \<ge> q k 0"
+    by linarith
+  obtain X Y A B
+    where step: "stepper \<mu> l k i = (X,Y,A,B)"
+      and nonterm: "\<not> termination_condition l k X Y"
+      and "odd i"
+    using i
+    by (auto simp: Step_class_def stepper_kind_def next_state_kind_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)
+  then have Suc_i: "stepper \<mu> l k (Suc i) = degree_reg k (X,Y,A,B)"
+    by simp
+  have *: "X = Xseq \<mu> l k i" "Y = Yseq \<mu> l k i"
+    using step stepper_XYseq by auto
+  have "Xseq \<mu> l k (Suc i) = ((\<lambda>(X, Y, A, B). X) \<circ> stepper \<mu> l k) (Suc i)"
+    by (simp add: Xseq_def)
+  also have "... = X_degree_reg k X Y"
+    using \<open>odd i\<close> step nonterm by (auto simp: degree_reg_def)
+  finally have XSuc: "Xseq \<mu> l k (Suc i) = X_degree_reg k X Y" .
+  have YSuc: "Yseq \<mu> l k (Suc i) = Yseq \<mu> l k i"
+    using Suc_i step by (auto simp: degree_reg_def stepper_XYseq)
+
+
 proposition Red_5_1:
   assumes "real (card (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i)) = \<beta> * real (card (Xseq \<mu> l k i))"
     and i: "i \<in> Step_class_reddboost \<mu> l k"
