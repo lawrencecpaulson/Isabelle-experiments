@@ -529,19 +529,20 @@ proof -
     using cvx_in_Xseq i XY x_def by blast
   have "X \<subseteq> V"
     by (simp add: Xseq_subset_V XY)
+  define NBX where "NBX \<equiv> Neighbours Blue x \<inter> X"
   define NRX where "NRX \<equiv> Neighbours Red x \<inter> X"
   define NRY where "NRY \<equiv> Neighbours Red x \<inter> Y"
-  have "finite NRX" "finite NRY"
-    by (auto simp add: NRX_def NRY_def finite_Neighbours)
+  have "finite NRX" "finite NBX" "finite NRY"
+    by (auto simp add: NRX_def NBX_def NRY_def finite_Neighbours)
   have "disjnt X Y"
     using Xseq_Yseq_disjnt step stepper_XYseq by blast  
-  then have "disjnt NRX NRY"
-    by (simp add: NRX_def NRY_def disjnt_iff)
-  have "card (Neighbours Blue x \<inter> X) \<le> \<mu> * card X"
-    using central_vertex_def cvx_works i XY x_def by presburger
-  moreover have "card NRX + card (Neighbours Blue x \<inter> X) = card X - 1"
+  then have "disjnt NRX NRY" "disjnt NBX NRY"
+    by (auto simp add: NRX_def NBX_def NRY_def disjnt_iff)
+  have "card NBX \<le> \<mu> * card X"
+    using central_vertex_def cvx_works i XY x_def NBX_def by presburger
+  moreover have "card NRX + card NBX = card X - 1"
     using Neighbours_RB [of x X] \<open>finite NRX\<close> \<open>x\<in>X\<close> \<open>X\<subseteq>V\<close> disjnt_Red_Blue_Neighbours
-    by (simp add: NRX_def finite_Neighbours subsetD flip: card_Un_disjnt)
+    by (simp add: NRX_def NBX_def finite_Neighbours subsetD flip: card_Un_disjnt)
   ultimately have "card NRX \<ge> (1-\<mu>) * card X - 1"
     by (simp add: algebra_simps)
   with lA \<open>l\<le>k\<close> X_gt_k have "card NRX > 0"
@@ -553,7 +554,7 @@ proof -
              \<ge> - alpha k (hgt k p) * card NRX * card NRY / card Y")
     case True
     then have "(p - alpha k (hgt k p)) * (card NRX * card NRY) \<le> (\<Sum>y \<in> NRX. p * card NRY + Weight X Y x y * card Y)"
-      using \<open>card Y \<noteq> 0\<close>  by (simp add: field_simps sum_distrib_left sum.distrib)
+      using \<open>card Y \<noteq> 0\<close> by (simp add: field_simps sum_distrib_left sum.distrib)
     also have "\<dots> = (\<Sum>y \<in> NRX. card (Neighbours Red x \<inter> Neighbours Red y \<inter> Y))"
       using \<open>card Y \<noteq> 0\<close> by (simp add: Weight_def pee_def XY NRY_def field_simps p_def)
     also have "\<dots> = edge_card Red NRY NRX"
@@ -569,16 +570,30 @@ proof -
     case False
     have "x \<in> X"
       unfolding x_def using cvx_in_Xseq i XY by blast
-    with Neighbours_RB[of x X] have Xx: "X - {x} = Neighbours Blue x \<inter> X \<union> NRX"
-      using Diagonal.Xseq_subset_V Diagonal_axioms NRX_def XY by blast
-    have disjnt: "Neighbours Blue x \<inter> X \<inter> NRX = {}"
-      by (auto simp: Blue_eq NRX_def disjoint_iff in_Neighbours_iff)
-    then have "weight X Y x = (\<Sum>y \<in> NRX. Weight X Y x y) + (\<Sum>y \<in> Neighbours Blue x \<inter> X. Weight X Y x y)"
-      by (simp add: weight_def Xx sum.union_disjoint finite_Neighbours NRX_def)
+    with Neighbours_RB[of x X] have Xx: "X - {x} = NBX \<union> NRX"
+      using Diagonal.Xseq_subset_V Diagonal_axioms NRX_def NBX_def XY by blast
+    have disjnt: "NBX \<inter> NRX = {}"
+      by (auto simp: Blue_eq NRX_def NBX_def disjoint_iff in_Neighbours_iff)
+    then have "weight X Y x = (\<Sum>y \<in> NRX. Weight X Y x y) + (\<Sum>y \<in> NBX. Weight X Y x y)"
+      by (simp add: weight_def Xx sum.union_disjoint finite_Neighbours NRX_def NBX_def)
     with False 
-    have "(\<Sum>y \<in> Neighbours Blue x \<inter> X. Weight X Y x y) 
+    have 15: "(\<Sum>y \<in> NBX. Weight X Y x y) 
         \<ge> weight X Y x + alpha k (hgt k p) * card NRX * card NRY / card Y"
       by linarith
+    then have "p * card NBX * card NRY + alpha k (hgt k p) * card NRX * card NRY + weight X Y x * card Y
+         \<le> (\<Sum>y \<in> NBX. p * card NRY + Weight X Y x y * card Y)"
+      using \<open>card Y \<noteq> 0\<close> apply (simp add: sum_distrib_left sum.distrib)
+      by (simp only: sum_distrib_right divide_simps split: if_split_asm)
+    also have "... \<le> (\<Sum>y \<in> NBX. card (Neighbours Red x \<inter> Neighbours Red y \<inter> Y))"
+      using \<open>card Y \<noteq> 0\<close> by (simp add: Weight_def pee_def XY NRY_def field_simps p_def)
+    also have "\<dots> = edge_card Red NRY NBX"
+      using \<open>disjnt NBX NRY\<close> \<open>finite NBX\<close>
+      by (simp add: disjnt_sym edge_card_eq_sum_Neighbours Red_E psubset_imp_subset NRY_def Int_ac)
+    also have "\<dots> = edge_card Red NBX NRY"
+      by (simp add: edge_card_commute)
+    finally have *: "p * card NBX * card NRY + alpha k (hgt k p) * card NRX * card NRY + weight X Y x * card Y
+                  \<le> edge_card Red NBX NRY" .
+
     then show ?thesis sorry
   qed
 qed
