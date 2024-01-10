@@ -4,6 +4,8 @@ theory General_Extras imports
 
 begin
 
+lemma disjnt_commute: "disjnt A B = disjnt B A"
+  using disjnt_sym by blast
 
 text \<open>A bounded increasing sequence of finite sets eventually terminates\<close>
 lemma Union_incseq_finite:

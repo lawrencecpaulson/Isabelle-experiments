@@ -90,10 +90,19 @@ lemma no_singleton_Red [simp]: "{a} \<notin> Red"
 lemma not_Red_Neighbour [simp]: "x \<notin> Neighbours Red x" and not_Blue_Neighbour [simp]: "x \<notin> Neighbours Blue x"
   using Red_E Blue_E not_own_Neighbour by auto
 
+lemma Neighbours_RB:
+  assumes "a \<in> V" "X\<subseteq>V"
+  shows "Neighbours Red a \<inter> X \<union> Neighbours Blue a \<inter> X = X - {a}"
+  using assms Red_Blue_all complete singleton_not_edge
+  by (fastforce simp: Neighbours_def)
+
 lemma Neighbours_Red_Blue: 
   assumes "x \<in> V" 
   shows "Neighbours Red x = V - insert x (Neighbours Blue x)"
   using Red_E assms by (auto simp: Blue_eq Neighbours_def complete all_edges_def)
+
+lemma disjnt_Red_Blue_Neighbours: "disjnt (Neighbours Red x \<inter> X) (Neighbours Blue x \<inter> X')"
+  using disjnt_Red_Blue by (auto simp: disjnt_def Neighbours_def)
 
 lemma clique_imp_all_edges_betw_un: "clique K F \<Longrightarrow> all_edges_betw_un K K \<subseteq> F"
   by (force simp: clique_def all_edges_betw_un_def)
@@ -438,7 +447,6 @@ lemma choose_blue_book_works:
   using someI_ex [OF ex_best_blue_book]
   by (metis (mono_tags, lifting) case_prod_conv someI_ex)
 
-
 lemma choose_blue_book_subset: 
   "\<lbrakk>V_state(X,Y,A,B); (S,T) = choose_blue_book \<mu> (X,Y,A,B)\<rbrakk> \<Longrightarrow> S \<subseteq> X \<and> T \<subseteq> X \<and> disjnt S T"
   using choose_blue_book_works good_blue_book_def book_def by fastforce
@@ -669,7 +677,7 @@ primrec stepper :: "[real,nat,nat,nat] \<Rightarrow> 'a config" where
 | "stepper \<mu> l k (Suc n) = 
      (let (X,Y,A,B) = stepper \<mu> l k n in 
       if termination_condition l k X Y then (X,Y,A,B) 
-      else if even n then next_state \<mu> l k (X,Y,A,B) else degree_reg k (X,Y,A,B))"
+      else if even n then degree_reg k (X,Y,A,B) else next_state \<mu> l k (X,Y,A,B))"
 
 lemma degree_reg_subset:
   assumes "degree_reg k (X,Y,A,B) = (X',Y',A',B')" 
@@ -829,7 +837,7 @@ definition stepper_kind :: "[real,nat,nat,nat] \<Rightarrow> stepkind" where
   "stepper_kind \<mu> l k i = 
      (let (X,Y,A,B) = stepper \<mu> l k i in 
       if termination_condition l k X Y then halted 
-      else if even i then next_state_kind \<mu> l k (X,Y,A,B) else dreg_step)"
+      else if even i then dreg_step else next_state_kind \<mu> l k (X,Y,A,B))"
 
 definition "Step_class \<equiv> \<lambda>\<mu> l k knd. {n. stepper_kind \<mu> l k n = knd}"
 
@@ -850,11 +858,38 @@ lemma Step_class_halted_forever: "\<lbrakk>i \<in> Step_class \<mu> l k halted; 
 lemma Step_class_not_halted: "\<lbrakk>i \<notin> Step_class \<mu> l k halted; i\<ge>j\<rbrakk> \<Longrightarrow> j \<notin> Step_class \<mu> l k halted"
   using Step_class_halted_forever by blast
 
-lemma not_halted_pee_gt:
+lemma
   assumes "i \<notin> Step_class \<mu> l k halted" 
-  shows "pee \<mu> l k i > 1/k"
+  shows not_halted_pee_gt: "pee \<mu> l k i > 1/k" 
+    and Xseq_gt_RN: "card (Xseq \<mu> l k i) > RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
   using assms
   by (auto simp: Step_class_def stepper_kind_def Xseq_def Yseq_def termination_condition_def pee_def split: if_split_asm prod.split_asm)
+
+lemma not_halted_pee_gt0:
+  assumes "i \<notin> Step_class \<mu> l k halted" 
+  shows "pee \<mu> l k i > 0" 
+  using not_halted_pee_gt [OF assms] linorder_not_le order_less_le_trans by fastforce
+
+lemma Yseq_gt_0:
+  assumes "i \<notin> Step_class \<mu> l k halted"
+  shows "card (Yseq \<mu> l k i) > 0"
+  using not_halted_pee_gt [OF assms] 
+  by (auto simp: pee_def gen_density_def divide_simps mult_less_0_iff zero_less_mult_iff split: if_split_asm)
+
+lemma dreg_before_red_step:
+  assumes "Suc i \<in> Step_class \<mu> l k red_step" 
+  shows "i \<in> Step_class \<mu> l k dreg_step"
+  using assms by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
+
+lemma dreg_before_bblue_step:
+  assumes "Suc i \<in> Step_class \<mu> l k bblue_step" 
+  shows "i \<in> Step_class \<mu> l k dreg_step"
+  using assms by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
+
+lemma dreg_before_dboost_step:
+  assumes "Suc i \<in> Step_class \<mu> l k dboost_step" 
+  shows "i \<in> Step_class \<mu> l k dreg_step"
+  using assms by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
 
 lemma finite_Step_class:
   assumes "\<And>n. finite {m. m<n \<and> stepper_kind \<mu> l k m = knd}"
