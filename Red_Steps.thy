@@ -590,19 +590,6 @@ proof -
     have 15: "(\<Sum>y \<in> NBX. Weight X Y x y) 
         \<ge> weight X Y x + alpha k (hgt k p) * card NRX * card NRY / card Y"
       by linarith
-    then have "p * card NBX * card NRY + alpha k (hgt k p) * card NRX * card NRY + weight X Y x * card Y
-            \<le> (\<Sum>y \<in> NBX. p * card NRY + Weight X Y x y * card Y)"
-      using \<open>card Y \<noteq> 0\<close> apply (simp add: sum_distrib_left sum.distrib)
-      by (simp only: sum_distrib_right divide_simps split: if_split_asm)
-    also have "... \<le> (\<Sum>y \<in> NBX. card (Neighbours Red x \<inter> Neighbours Red y \<inter> Y))"
-      using \<open>card Y \<noteq> 0\<close> by (simp add: Weight_def pee_def XY NRY_def field_simps p_def)
-    also have "\<dots> = edge_card Red NRY NBX"
-      using \<open>disjnt NBX NRY\<close> \<open>finite NBX\<close>
-      by (simp add: disjnt_sym edge_card_eq_sum_Neighbours Red_E psubset_imp_subset NRY_def Int_ac)
-    also have "\<dots> = edge_card Red NBX NRY"
-      by (simp add: edge_card_commute)
-    finally have *: "p * card NBX * card NRY + alpha k (hgt k p) * card NRX * card NRY + weight X Y x * card Y
-                  \<le> edge_card Red NBX NRY" .
     define \<beta> where "\<beta> \<equiv> card NBX / card X"
     have pm1: "pee \<mu> l k (i-1) > 1/k"
       by (meson Step_class_not_halted diff_le_self not_halted not_halted_pee_gt)
@@ -614,10 +601,10 @@ proof -
       by (simp add: eps_def powr_mono2)
     then have A: "1/2 \<le> 1 - eps k powr (1/2)"
       by (simp add: powr_divide)
-    have *: "1 / (2 * real k) \<le> (1 - eps k powr (1/2)) * pee \<mu> l k (i-1)"
+    have le: "1 / (2 * real k) \<le> (1 - eps k powr (1/2)) * pee \<mu> l k (i-1)"
       using pm1 \<open>k>0\<close> mult_mono [OF A less_imp_le [OF pm1]] A by simp
     have "card Y / (2 * real k) \<le> (1 - eps k powr (1/2)) * pee \<mu> l k (i-1) * card Y"
-      using mult_left_mono [OF *] by (metis mult.commute divide_inverse inverse_eq_divide of_nat_0_le_iff)
+      using mult_left_mono [OF le] by (metis mult.commute divide_inverse inverse_eq_divide of_nat_0_le_iff)
     also have "... \<le> card NRY"
       using pm1 Red_5_8 im1 by (metis NRY_def One_nat_def \<open>odd i\<close> \<open>x \<in> X\<close> XY odd_Suc_minus_one)
     finally have Y_NRY: "card Y / (2 * real k) \<le> card NRY" .
@@ -656,7 +643,7 @@ proof -
       finally show False by simp
     qed
     have "p * \<beta> * card X * card NRY + alpha k (hgt k p) * (1-\<beta>) * (1 - eps k) * card X * card NRY
-         \<le> (\<Sum>y \<in> NBX. card (Neighbours Red y \<inter> NRY))"  (* mentioned by Bhavik but probably not needed*)
+         \<le> (\<Sum>y \<in> NBX. card (Neighbours Red y \<inter> NRY))"  (* proved by Bhavik but probably not needed*)
       sorry
     have "card NBX > 0"
       by (simp add: \<open>NBX \<noteq> {}\<close> \<open>finite NBX\<close> card_gt_0_iff)
@@ -666,8 +653,22 @@ proof -
       using X_gt_k card_NBX_le by (simp add: \<beta>_def NBX_def divide_simps)
     have "card NRX = (1-\<beta>) * card X - 1"
       using X_gt_k card_NRBX by (simp add: \<beta>_def field_simps)
+    have "p * card NBX * card NRY + alpha k (hgt k p) * card NRX * card NRY + weight X Y x * card Y
+            \<le> (\<Sum>y \<in> NBX. p * card NRY + Weight X Y x y * card Y)"
+      using 15 \<open>card Y \<noteq> 0\<close> apply (simp add: sum_distrib_left sum.distrib)
+      by (simp only: sum_distrib_right divide_simps split: if_split_asm)
+    also have "... \<le> (\<Sum>y \<in> NBX. card (Neighbours Red x \<inter> Neighbours Red y \<inter> Y))"
+      using \<open>card Y \<noteq> 0\<close> by (simp add: Weight_def pee_def XY NRY_def field_simps p_def)
+    also have "\<dots> = edge_card Red NRY NBX"
+      using \<open>disjnt NBX NRY\<close> \<open>finite NBX\<close>
+      by (simp add: disjnt_sym edge_card_eq_sum_Neighbours Red_E psubset_imp_subset NRY_def Int_ac)
+    also have "\<dots> = edge_card Red NBX NRY"
+      by (simp add: edge_card_commute)
+    finally have Red_bound: 
+      "p * card NBX * card NRY + alpha k (hgt k p) * card NRX * card NRY + weight X Y x * card Y \<le> edge_card Red NBX NRY" .
     have "p + ((1-\<beta>) / \<beta>) * alpha k (hgt k p) - alpha k (hgt k p) / (\<beta> * card X) + weight X Y x * card Y
         \<le> red_density NBX NRY"
+      using Red_bound
     sorry
     then show ?thesis sorry
   qed
