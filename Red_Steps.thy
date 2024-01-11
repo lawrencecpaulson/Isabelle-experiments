@@ -494,20 +494,26 @@ proposition Red_5_1:
   assumes i: "i \<in> Step_class_reddboost \<mu> l k"
   defines "p \<equiv> pee \<mu> l k i"
   defines "x \<equiv> cvx \<mu> l k i"
+  defines "\<beta> \<equiv> card (Neighbours Blue x \<inter> Xseq \<mu> l k i) / card (Xseq \<mu> l k i)"
   shows "red_density (Neighbours Red x \<inter> Xseq \<mu> l k i) (Neighbours Red x \<inter> Yseq \<mu> l k i)
          \<ge> p - alpha k (hgt k p)
        \<or> red_density (Neighbours Blue x \<inter> Xseq \<mu> l k i) (Neighbours Red x \<inter> Yseq \<mu> l k i)
          \<ge> p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha k (hgt k p) \<and> \<beta> > 0"
 proof -
-  have l34_ge3: "real l powr (3/4) \<ge> 3"
-    sorry
   have lA: "(1-\<mu>) * l > 1"
     sorry
   have "l\<le>k"
     sorry
-  have "k\<ge>2"
-    by (smt (verit) of_nat_1 Suc_1 \<open>l \<le> k\<close> of_nat_mono divide_nonneg_pos l34_ge3 not_less_eq_eq of_nat_0_le_iff powr_le1)
-
+  have "k\<ge>3"
+    sorry
+  have l144: "real l powr (1/4) \<ge> 4"
+    sorry
+  with \<open>l\<le>k\<close> have k_powr_14: "k powr (1/4) \<ge> 4"
+    by (smt (verit) divide_nonneg_nonneg of_nat_0_le_iff of_nat_mono powr_mono2)
+  have l34_ge3: "real l powr (3/4) \<ge> 3"
+    by (smt (verit, ccfv_SIG) l144 divide_nonneg_nonneg frac_le of_nat_0_le_iff powr_le1 powr_less_cancel)
+  have "k>0"
+    using \<open>3 \<le> k\<close> by linarith
   obtain X Y A B
     where step: "stepper \<mu> l k i = (X,Y,A,B)"
       and nonterm: "\<not> termination_condition l k X Y"
@@ -515,16 +521,20 @@ proof -
       and non_mb: "\<not> many_bluish \<mu> l k X"
     using i
     by (auto simp: Step_class_def stepper_kind_def next_state_kind_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)
-  have XY: "X = Xseq \<mu> l k i" "Y = Yseq \<mu> l k i"
-    using step stepper_XYseq by auto
+  then have XY: "X = Xseq \<mu> l k i" "Y = Yseq \<mu> l k i" and "card X > 0"
+    using stepper_XYseq by (auto simp: termination_condition_def)
+  have Red_5_4: "weight X Y x \<ge> - real (card X) / (real k) ^ 5"
+    sorry
   have not_halted: "i \<notin> Step_class \<mu> l k halted"
     using i by (auto simp: Step_class_def)
   with Yseq_gt_0 XY have "card Y \<noteq> 0"
     by blast
-  have "card X > RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
+  have cX_RN: "card X > RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
     by (meson linorder_not_le nonterm termination_condition_def)
-  with l34_ge3 RN_3plus' have X_gt_k: "card X > k"
-    by (metis of_nat_numeral order.trans le_natceiling_iff not_less)
+  then have X_gt_k: "card X > k"
+    by (metis l34_ge3 RN_3plus' of_nat_numeral order.trans le_natceiling_iff not_less)
+  have RN_k5: "RN k (nat \<lceil>real l powr (3/4)\<rceil>) \<ge> k^5"
+    sorry
   have "x \<in> X"
     using cvx_in_Xseq i XY x_def by blast
   have "X \<subseteq> V"
@@ -538,9 +548,9 @@ proof -
     using Xseq_Yseq_disjnt step stepper_XYseq by blast  
   then have "disjnt NRX NRY" "disjnt NBX NRY"
     by (auto simp add: NRX_def NBX_def NRY_def disjnt_iff)
-  have "card NBX \<le> \<mu> * card X"
+  have card_NBX_le: "card NBX \<le> \<mu> * card X"
     using central_vertex_def cvx_works i XY x_def NBX_def by presburger
-  moreover have "card NRX + card NBX = card X - 1"
+  moreover have card_NRBX: "card NRX + card NBX = card X - 1"
     using Neighbours_RB [of x X] \<open>finite NRX\<close> \<open>x\<in>X\<close> \<open>X\<subseteq>V\<close> disjnt_Red_Blue_Neighbours
     by (simp add: NRX_def NBX_def finite_Neighbours subsetD flip: card_Un_disjnt)
   ultimately have "card NRX \<ge> (1-\<mu>) * card X - 1"
@@ -548,7 +558,7 @@ proof -
   with lA \<open>l\<le>k\<close> X_gt_k have "card NRX > 0"
     by (smt (verit, ccfv_SIG) of_nat_0 gr0I mult_le_cancel_left2 mult_le_one mult_less_cancel_left_pos nat_less_real_le of_nat_mono)
   have "card NRY > 0"
-    using Y_Neighbours_nonempty [OF i _ \<open>k\<ge>2\<close>] NRY_def \<open>finite NRY\<close> \<open>x \<in> X\<close> card_0_eq XY by blast
+    using Y_Neighbours_nonempty [OF i] \<open>k\<ge>3\<close> NRY_def \<open>finite NRY\<close> \<open>x \<in> X\<close> card_0_eq XY by force
   show ?thesis
   proof (cases "(\<Sum>y \<in> NRX. Weight X Y x y) 
              \<ge> - alpha k (hgt k p) * card NRX * card NRY / card Y")
@@ -581,7 +591,7 @@ proof -
         \<ge> weight X Y x + alpha k (hgt k p) * card NRX * card NRY / card Y"
       by linarith
     then have "p * card NBX * card NRY + alpha k (hgt k p) * card NRX * card NRY + weight X Y x * card Y
-         \<le> (\<Sum>y \<in> NBX. p * card NRY + Weight X Y x y * card Y)"
+            \<le> (\<Sum>y \<in> NBX. p * card NRY + Weight X Y x y * card Y)"
       using \<open>card Y \<noteq> 0\<close> apply (simp add: sum_distrib_left sum.distrib)
       by (simp only: sum_distrib_right divide_simps split: if_split_asm)
     also have "... \<le> (\<Sum>y \<in> NBX. card (Neighbours Red x \<inter> Neighbours Red y \<inter> Y))"
@@ -593,7 +603,72 @@ proof -
       by (simp add: edge_card_commute)
     finally have *: "p * card NBX * card NRY + alpha k (hgt k p) * card NRX * card NRY + weight X Y x * card Y
                   \<le> edge_card Red NBX NRY" .
-
+    define \<beta> where "\<beta> \<equiv> card NBX / card X"
+    have pm1: "pee \<mu> l k (i-1) > 1/k"
+      by (meson Step_class_not_halted diff_le_self not_halted not_halted_pee_gt)
+    have im1: "i-1 \<in> Step_class \<mu> l k dreg_step"
+      using i \<open>odd i\<close> dreg_before_dboost_step dreg_before_red_step by fastforce
+    have "eps k \<le> 1/4"
+      using \<open>k>0\<close> k_powr_14 by (simp add: eps_def powr_minus_divide)
+    then have "eps k powr (1/2) \<le> (1/4) powr (1/2)"
+      by (simp add: eps_def powr_mono2)
+    then have A: "1/2 \<le> 1 - eps k powr (1/2)"
+      by (simp add: powr_divide)
+    have *: "1 / (2 * real k) \<le> (1 - eps k powr (1/2)) * pee \<mu> l k (i-1)"
+      using pm1 \<open>k>0\<close> mult_mono [OF A less_imp_le [OF pm1]] A by simp
+    have "card Y / (2 * real k) \<le> (1 - eps k powr (1/2)) * pee \<mu> l k (i-1) * card Y"
+      using mult_left_mono [OF *] by (metis mult.commute divide_inverse inverse_eq_divide of_nat_0_le_iff)
+    also have "... \<le> card NRY"
+      using pm1 Red_5_8 im1 by (metis NRY_def One_nat_def \<open>odd i\<close> \<open>x \<in> X\<close> XY odd_Suc_minus_one)
+    finally have Y_NRY: "card Y / (2 * real k) \<le> card NRY" .
+    have "NBX \<noteq> {}"
+    proof 
+      assume empty: "NBX = {}"
+      then have cNRX: "card NRX = card X - 1"
+        using card_NRBX by auto
+      have "card X > 3"
+        using \<open>k\<ge>3\<close> X_gt_k by linarith
+      then have "2 * card X / real (card X - 1) < 3"
+        by (simp add: divide_simps)
+      also have "... \<le> k ^ 2"
+        using mult_mono [OF \<open>k\<ge>3\<close> \<open>k\<ge>3\<close>] by (simp add: power2_eq_square flip: of_nat_mult)
+      also have "... \<le> eps k * k^3"
+        using \<open>k\<ge>3\<close> by (simp add: eps_def flip: powr_numeral powr_add)
+      finally have "(real (2 * card X) / real (card X - 1)) * k^2 < eps k * real (k ^ 3) * k^2"
+        using \<open>k>0\<close> by (intro mult_strict_right_mono) auto
+      then have "real (2 * card X) / real (card X - 1) * k^2 < eps k * real (k ^ 5)"
+        by (simp add: mult.assoc flip: of_nat_mult)
+      then have "0 < - real (card X) / (real k) ^ 5 + (eps k / real k) * real (card X - 1) * (1 / (2 * real k))"
+        using \<open>k>0\<close> X_gt_k by (simp add: field_simps power2_eq_square)
+      also have "- real (card X) / (real k) ^ 5 + (eps k / real k) * real (card X - 1) * (1 / (2 * real k)) 
+          \<le> - real (card X) / (real k) ^ 5 + (eps k / real k) * real (card NRX) * (real (card NRY) / real (card Y))"
+        using Y_NRY \<open>k>0\<close> \<open>card Y \<noteq> 0\<close>
+        by (intro add_mono mult_mono) (auto simp: cNRX eps_def divide_simps)
+      also have "... = - real (card X) / (real k) ^ 5 + (eps k / real k) * real (card NRX) * real (card NRY) / real (card Y)"
+        by simp
+      also have "\<dots> \<le> - real (card X) / (real k) ^ 5 + alpha k (hgt k p) * real (card NRX) * real (card NRY) / real (card Y)"
+        using alpha_ge [OF hgt_gt_0]
+        by (intro add_mono mult_right_mono divide_right_mono) auto
+      also have "\<dots> \<le> weight X Y x + alpha k (hgt k p) * real (card NRX) * real (card NRY) / real (card Y)"
+        using Red_5_4 by simp
+      also have "... \<le> 0"
+        using empty 15 by auto
+      finally show False by simp
+    qed
+    have "p * \<beta> * card X * card NRY + alpha k (hgt k p) * (1-\<beta>) * (1 - eps k) * card X * card NRY
+         \<le> (\<Sum>y \<in> NBX. card (Neighbours Red y \<inter> NRY))"  (* mentioned by Bhavik but probably not needed*)
+      sorry
+    have "card NBX > 0"
+      by (simp add: \<open>NBX \<noteq> {}\<close> \<open>finite NBX\<close> card_gt_0_iff)
+    then have "0 < \<beta>"
+      using X_gt_k by (simp add: \<beta>_def divide_simps)
+    have "\<beta> \<le> \<mu>"
+      using X_gt_k card_NBX_le by (simp add: \<beta>_def NBX_def divide_simps)
+    have "card NRX = (1-\<beta>) * card X - 1"
+      using X_gt_k card_NRBX by (simp add: \<beta>_def field_simps)
+    have "p + ((1-\<beta>) / \<beta>) * alpha k (hgt k p) - alpha k (hgt k p) / (\<beta> * card X) + weight X Y x * card Y
+        \<le> red_density NBX NRY"
+    sorry
     then show ?thesis sorry
   qed
 qed
