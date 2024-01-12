@@ -203,10 +203,12 @@ proof -
     by presburger 
 qed
 
+definition "Lemma_5_4 \<equiv> \<lambda>\<mu> l i. \<forall>k. Colours l k \<longrightarrow> i \<in> Step_class_reddboost \<mu> l k \<longrightarrow>
+     weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> - real (card (Xseq \<mu> l k i)) / (real k) ^ 5"
+
 lemma Red_5_4:
   assumes "0<\<mu>" "\<mu><1" 
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> i \<in> Step_class_reddboost \<mu> l k \<longrightarrow>
-     weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> - real (card (Xseq \<mu> l k i)) / (real k) ^ 5"
+  shows "\<forall>\<^sup>\<infinity>l. Lemma_5_4 \<mu> l i"
 proof -
   let ?Big = "\<lambda>l. (\<forall>k\<ge>l. real k + 2 * real k ^ 6 \<le> real k ^ 7) \<and> (\<forall>k\<ge>l. RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> real k ^ 6 * RN k (m_of l))"
   have 1: "\<forall>\<^sup>\<infinity>l. real l + 2 * real l ^ 6 \<le> real l ^ 7"
@@ -347,7 +349,7 @@ proof -
       using RNX B by (simp add: X_def Y_def divide_simps)
   qed
   with eventually_mono [OF big_enough_l] show ?thesis
-    by presburger 
+    unfolding Lemma_5_4_def by presburger 
 qed
 
 lemma Red_5_7a: "eps k / k \<le> alpha k (hgt k p)"
@@ -491,15 +493,26 @@ next
 qed
 
 proposition Red_5_1:
-  assumes i: "i \<in> Step_class_reddboost \<mu> l k" and "\<mu><1"
+  assumes i: "i \<in> Step_class_reddboost \<mu> l k" and \<mu>: "0<\<mu>" "\<mu><1"
   defines "p \<equiv> pee \<mu> l k i"
   defines "x \<equiv> cvx \<mu> l k i"
-  defines "\<beta> \<equiv> card (Neighbours Blue x \<inter> Xseq \<mu> l k i) / card (Xseq \<mu> l k i)"
+  defines "X \<equiv> Xseq \<mu> l k i" and "Y \<equiv> Yseq \<mu> l k i"
+  defines "\<beta> \<equiv> card (Neighbours Blue x \<inter> Xseq \<mu> l k i) / card X"
   shows "red_density (Neighbours Red x \<inter> Xseq \<mu> l k i) (Neighbours Red x \<inter> Yseq \<mu> l k i)
          \<ge> p - alpha k (hgt k p)
        \<or> red_density (Neighbours Blue x \<inter> Xseq \<mu> l k i) (Neighbours Red x \<inter> Yseq \<mu> l k i)
          \<ge> p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha k (hgt k p) \<and> \<beta> > 0"
 proof -
+  define Big where "Big \<equiv> \<lambda>l. (1-\<mu>) * l > 1 \<and> l powr (5/2) \<ge> 3 / (1-\<mu>) \<and> l powr (1/4) \<ge> 4 \<and> Lemma_5_4 \<mu> l i" 
+  have "\<forall>\<^sup>\<infinity>l. (1-\<mu>) * l > 1"
+    using \<open>\<mu><1\<close> by real_asymp
+  moreover have "\<forall>\<^sup>\<infinity>l. l powr (5/2) \<ge> 3 / (1-\<mu>)"
+    using \<open>\<mu><1\<close> by real_asymp
+  moreover have "\<forall>\<^sup>\<infinity>l. l powr (1/4) \<ge> 4"
+    using \<open>\<mu><1\<close> by real_asymp
+  ultimately have Big: "\<forall>\<^sup>\<infinity>l. Big l"
+    by (simp add: Big_def eventually_conj Red_5_4 [OF \<mu>])
+
   have lA: "(1-\<mu>) * l > 1"
     sorry
   have k52: "3 / (1-\<mu>) \<le> k powr (5/2)"
@@ -516,14 +529,15 @@ proof -
     by (smt (verit, ccfv_SIG) l144 divide_nonneg_nonneg frac_le of_nat_0_le_iff powr_le1 powr_less_cancel)
   have "k>0"
     using \<open>3 \<le> k\<close> by linarith
-  obtain X Y A B
+  note XY = X_def Y_def
+  obtain A B
     where step: "stepper \<mu> l k i = (X,Y,A,B)"
       and nonterm: "\<not> termination_condition l k X Y"
       and "odd i"
       and non_mb: "\<not> many_bluish \<mu> l k X"
     using i
-    by (auto simp: Step_class_def stepper_kind_def next_state_kind_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)
-  then have XY: "X = Xseq \<mu> l k i" "Y = Yseq \<mu> l k i" and "card X > 0"
+    by (auto simp: XY Step_class_def stepper_kind_def next_state_kind_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)
+  then have "card X > 0"
     using stepper_XYseq by (auto simp: termination_condition_def)
   have Red_5_4: "weight X Y x \<ge> - real (card X) / (real k) ^ 5"
     sorry
