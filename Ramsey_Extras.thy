@@ -1009,6 +1009,9 @@ corollary RN_times_lower':
   shows "\<lbrakk>m>0; n>0\<rbrakk> \<Longrightarrow> RN m n > (m-1)*(n-1)"
   using RN_times_lower gr0_conv_Suc by force                              
 
+lemma RN_eq_0_iff: "RN m n = 0 \<longleftrightarrow> m=0 \<or> n=0"
+  by (metis RN_0 RN_0' RN_times_lower' gr0I not_less_zero)
+
 lemma RN_gt1:
   assumes "2 \<le> k" "3 \<le> l" shows "k < RN k l"
   using RN_times_lower' [of k l] RN_3plus'[of l k] assms  

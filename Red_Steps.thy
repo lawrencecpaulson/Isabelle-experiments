@@ -70,7 +70,7 @@ lemma Red_5_6_Ramsey:
   assumes "0<c" "c<1/32"
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. l \<le> k \<longrightarrow> exp (c * real l powr (3/4) * ln k) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
 proof -
-  have B: "\<forall>\<^sup>\<infinity>l. nat \<lceil>real l powr (3 / 4)\<rceil> \<ge> 3"
+  have B: "\<forall>\<^sup>\<infinity>l. nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3"
     by real_asymp
   have C: "\<forall>\<^sup>\<infinity>l. l powr (3/4) * (c - 1/32) \<le> -1"
     using assms by real_asymp
@@ -85,7 +85,7 @@ proof -
     apply (elim all_forward imp_forward2 asm_rl)
     by (smt (verit, best) D34 mult_left_mono ln_less_zero_iff mult_le_cancel_right nat_le_real_less of_nat_0_le_iff)
 
-  define BIG where "BIG \<equiv> \<lambda>l. nat \<lceil>real l powr (3 / 4)\<rceil> \<ge> 3
+  define BIG where "BIG \<equiv> \<lambda>l. nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3
                 \<and> (l powr (3/4) * (c - 1/32) \<le> -1) 
                 \<and> (\<forall>k\<ge>l. k * (c * real l powr (3/4) * ln k - real k powr (7/8) / 4) \<le> -1)"
   have big_enough_l: "\<forall>\<^sup>\<infinity>l. BIG l"
@@ -159,8 +159,10 @@ proof -
     by presburger 
 qed
 
+definition "Lemma_5_6 \<equiv> \<lambda>l. \<forall>k. k \<ge> l \<longrightarrow> RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k ^ 6 * RN k (m_of l)"
+
 lemma Red_5_6:
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. k \<ge> l \<longrightarrow> RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> real k ^ 6 * RN k (m_of l)"
+  shows "\<forall>\<^sup>\<infinity>l. Lemma_5_6 l"
 proof -
   define c_spec where "c_spec \<equiv> \<lambda>c l. \<forall>k. l \<le> k \<longrightarrow> exp (c * real l powr (3/4) * ln k) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
   define c::real where "c \<equiv> 1/128"
@@ -173,7 +175,7 @@ proof -
     using \<open>c>0\<close> unfolding m_of_def by real_asymp
   with eventually_conj [OF _ c] have big_enough_l: "\<forall>\<^sup>\<infinity>l. ?Big l"
     by blast
-  have "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> real k ^ 6 * RN k (m_of l)" 
+  have "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k ^ 6 * RN k (m_of l)" 
     if l: "?Big l" and "k \<ge> l" for l k
   proof (cases "k=0")
     case False
@@ -190,17 +192,18 @@ proof -
     proof -
       have "(6 + real (m_of l)) * ln (real k) \<le> (c * real l powr (3/4)) * ln (real k)"
         using l \<open>0 < k\<close> mult_le_cancel_right by fastforce
-      then have "ln (real k ^ 6 * exp (m_of l * ln k)) \<le> ln (exp (c * real l powr (3 / 4) * ln k))"
+      then have "ln (real k ^ 6 * exp (m_of l * ln k)) \<le> ln (exp (c * real l powr (3/4) * ln k))"
         using \<open>k>0\<close> by (simp add: ln_mult ln_powr algebra_simps flip: powr_numeral)
       then show ?thesis
         by (smt (verit) exp_gt_zero ln_le_cancel_iff)
     qed
     also have "\<dots> \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
       using c_spec_def of_nat_mono that by blast
-    finally show "real k ^ 6 * RN k (m_of l) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)" .
+    finally show "k ^ 6 * RN k (m_of l) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
+      by (metis of_nat_mult of_nat_le_iff of_nat_power)
   qed auto
   with eventually_mono [OF big_enough_l] show ?thesis
-    by presburger 
+    unfolding Lemma_5_6_def by presburger 
 qed
 
 definition "Lemma_5_4 \<equiv> \<lambda>\<mu> l i. \<forall>k. Colours l k \<longrightarrow> i \<in> Step_class_reddboost \<mu> l k \<longrightarrow>
@@ -210,14 +213,11 @@ lemma Red_5_4:
   assumes "0<\<mu>" "\<mu><1" 
   shows "\<forall>\<^sup>\<infinity>l. Lemma_5_4 \<mu> l i"
 proof -
-  let ?Big = "\<lambda>l. (\<forall>k\<ge>l. real k + 2 * real k ^ 6 \<le> real k ^ 7) \<and> (\<forall>k\<ge>l. RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> real k ^ 6 * RN k (m_of l))"
+  let ?Big = "\<lambda>l. (\<forall>k\<ge>l. real k + 2 * real k ^ 6 \<le> real k ^ 7) \<and> Lemma_5_6 l"
   have 1: "\<forall>\<^sup>\<infinity>l. real l + 2 * real l ^ 6 \<le> real l ^ 7"
     by real_asymp
-  have 2: "\<forall>\<^sup>\<infinity>l. \<forall>k. k\<ge> l \<longrightarrow> RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> real k ^ 6 * RN k (m_of l)"
-    using Red_5_6 assms by metis
-  have big_enough_l: "\<forall>\<^sup>\<infinity>l. ?Big l"
-    using eventually_conj[OF eventually_all_ge_at_top 2] 1 by blast
-
+  then have big_enough_l: "\<forall>\<^sup>\<infinity>l. ?Big l"
+    using Red_5_6 eventually_conj eventually_all_ge_at_top by fastforce
   have "weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> - real (card (Xseq \<mu> l k i)) / (real k) ^ 5"
     if l: "?Big l" and "Colours l k" and i: "i \<in> Step_class_reddboost \<mu> l k" for l k 
   proof -
@@ -319,13 +319,13 @@ proof -
       using mult_left_mono [OF k267, of ?R] that
       by (smt (verit, ccfv_SIG) distrib_left card_XB mult_le_cancel_right1 nat_less_real_le of_nat_0_le_iff zero_le_power)
 
-    have "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> real k ^ 6 * ?R"
-      using \<open>l \<le> k\<close> l by blast
-    then have C: "card X \<ge> real k ^ 6 * ?R"
+    have "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k ^ 6 * ?R"
+      using \<open>l \<le> k\<close> l unfolding Lemma_5_6_def by blast
+    then have C: "card X \<ge> k ^ 6 * ?R"
       using X_def i red_dboost_non_terminating termination_condition_def by fastforce
     then have "-1 / (real k)^5 \<le> - 1 / (real k^6 - 1) + -1 / (real k^6 * ?R)"
       using RNX rk61 card_XB mult_left_mono [OF D, of "real k ^ 5"]
-      apply (simp add: divide_simps)
+      apply (simp add: divide_simps)   (*FIXME*)
       apply (simp add: algebra_simps)
       by (smt (verit) mult.commute add_num_simps(3) add_num_simps(4) numeral_One power_add_numeral2 power_one_right)
     also have "\<dots> \<le> - ?R / (real k^6 * ?R - ?R) + -1 / (real k^6 * ?R)"
@@ -492,8 +492,11 @@ next
     by (simp add: Suc card_gt_0_iff finite_Neighbours)
 qed
 
+definition "Big_Red_5_1 \<equiv> \<lambda>\<mu> l i. (1-\<mu>) * l > 1 \<and> l powr (5/2) \<ge> 3 / (1-\<mu>) \<and> l powr (1/4) \<ge> 4 
+                    \<and> Lemma_5_4 \<mu> l i \<and> Lemma_5_6 l" 
+
 proposition Red_5_1:
-  assumes i: "i \<in> Step_class_reddboost \<mu> l k" and \<mu>: "0<\<mu>" "\<mu><1"
+  assumes i: "i \<in> Step_class_reddboost \<mu> l k" and \<mu>: "0<\<mu>" "\<mu><1" and Big: "Big_Red_5_1 \<mu> l i" "Colours l k"
   defines "p \<equiv> pee \<mu> l k i"
   defines "x \<equiv> cvx \<mu> l k i"
   defines "X \<equiv> Xseq \<mu> l k i" and "Y \<equiv> Yseq \<mu> l k i"
@@ -503,32 +506,22 @@ proposition Red_5_1:
        \<or> red_density (Neighbours Blue x \<inter> Xseq \<mu> l k i) (Neighbours Red x \<inter> Yseq \<mu> l k i)
          \<ge> p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha k (hgt k p) \<and> \<beta> > 0"
 proof -
-  define Big where "Big \<equiv> \<lambda>l. (1-\<mu>) * l > 1 \<and> l powr (5/2) \<ge> 3 / (1-\<mu>) \<and> l powr (1/4) \<ge> 4 \<and> Lemma_5_4 \<mu> l i" 
-  have "\<forall>\<^sup>\<infinity>l. (1-\<mu>) * l > 1"
-    using \<open>\<mu><1\<close> by real_asymp
-  moreover have "\<forall>\<^sup>\<infinity>l. l powr (5/2) \<ge> 3 / (1-\<mu>)"
-    using \<open>\<mu><1\<close> by real_asymp
-  moreover have "\<forall>\<^sup>\<infinity>l. l powr (1/4) \<ge> 4"
-    using \<open>\<mu><1\<close> by real_asymp
-  ultimately have Big: "\<forall>\<^sup>\<infinity>l. Big l"
-    by (simp add: Big_def eventually_conj Red_5_4 [OF \<mu>])
-
-  have lA: "(1-\<mu>) * l > 1"
-    sorry
-  have k52: "3 / (1-\<mu>) \<le> k powr (5/2)"
-    sorry
-  have "l\<le>k"
-    sorry
-  have "k\<ge>3"
-    sorry
-  have l144: "real l powr (1/4) \<ge> 4"
-    sorry
-  with \<open>l\<le>k\<close> have k_powr_14: "k powr (1/4) \<ge> 4"
+  have Red_5_4: "weight X Y x \<ge> - real (card X) / (real k) ^ 5"
+    using Big i by (auto simp: Big_Red_5_1_def Lemma_5_4_def x_def X_def Y_def)
+  have lA: "(1-\<mu>) * l > 1" and "l\<le>k" and l144: "real l powr (1/4) \<ge> 4"
+    using Big by (auto simp: Big_Red_5_1_def Colours_def)
+  then have k_powr_14: "k powr (1/4) \<ge> 4"
     by (smt (verit) divide_nonneg_nonneg of_nat_0_le_iff of_nat_mono powr_mono2)
+  have "k \<ge> 256"
+    using powr_mono2 [of 4, OF _ _ k_powr_14] by (simp add: powr_powr flip: powr_numeral)
+  then have "k>0" by linarith
+  have k52: "3 / (1-\<mu>) \<le> k powr (5/2)"
+    using Big \<open>l\<le>k\<close> unfolding Big_Red_5_1_def
+    by (smt (verit) of_nat_0_le_iff of_nat_mono powr_mono2 zero_le_divide_iff)
+  have RN_le_RN: "k ^ 6 * RN k (m_of l) \<le> RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
+    using Big \<open>l \<le> k\<close> by (auto simp: Big_Red_5_1_def Lemma_5_6_def)
   have l34_ge3: "real l powr (3/4) \<ge> 3"
     by (smt (verit, ccfv_SIG) l144 divide_nonneg_nonneg frac_le of_nat_0_le_iff powr_le1 powr_less_cancel)
-  have "k>0"
-    using \<open>3 \<le> k\<close> by linarith
   note XY = X_def Y_def
   obtain A B
     where step: "stepper \<mu> l k i = (X,Y,A,B)"
@@ -539,8 +532,6 @@ proof -
     by (auto simp: XY Step_class_def stepper_kind_def next_state_kind_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)
   then have "card X > 0"
     using stepper_XYseq by (auto simp: termination_condition_def)
-  have Red_5_4: "weight X Y x \<ge> - real (card X) / (real k) ^ 5"
-    sorry
   have not_halted: "i \<notin> Step_class \<mu> l k halted"
     using i by (auto simp: Step_class_def)
   with Yseq_gt_0 XY have "card Y \<noteq> 0"
@@ -549,8 +540,13 @@ proof -
     by (meson linorder_not_le nonterm termination_condition_def)
   then have X_gt_k: "card X > k"
     by (metis l34_ge3 RN_3plus' of_nat_numeral order.trans le_natceiling_iff not_less)
-  have RN_k4: "RN k (nat \<lceil>real l powr (3/4)\<rceil>) \<ge> k^4"
-    sorry
+  have "0 < RN k (m_of l)"
+    using RN_eq_0_iff m_of_def many_bluish_def non_mb by presburger
+  then have "k^4 \<le> k^6 * RN k (m_of l)"
+    by (simp add: eval_nat_numeral)
+  also have "... < card X"
+    using cX_RN RN_le_RN by linarith
+  finally have "card X > k^4" .
   have "x \<in> X"
     using cvx_in_Xseq i XY x_def by blast
   have "X \<subseteq> V"
@@ -574,7 +570,7 @@ proof -
   with lA \<open>l\<le>k\<close> X_gt_k have "card NRX > 0"
     by (smt (verit, ccfv_SIG) of_nat_0 gr0I mult_le_cancel_left2 mult_le_one mult_less_cancel_left_pos nat_less_real_le of_nat_mono)
   have "card NRY > 0"
-    using Y_Neighbours_nonempty [OF i] \<open>k\<ge>3\<close> NRY_def \<open>finite NRY\<close> \<open>x \<in> X\<close> card_0_eq XY by force
+    using Y_Neighbours_nonempty [OF i] \<open>k\<ge>256\<close> NRY_def \<open>finite NRY\<close> \<open>x \<in> X\<close> card_0_eq XY by force
   show ?thesis
   proof (cases "(\<Sum>y \<in> NRX. Weight X Y x y) 
              \<ge> - alpha k (hgt k p) * card NRX * card NRY / card Y")
@@ -633,13 +629,13 @@ proof -
       then have cNRX: "card NRX = card X - 1"
         using card_NRBX by auto
       have "card X > 3"
-        using \<open>k\<ge>3\<close> X_gt_k by linarith
+        using \<open>k\<ge>256\<close> X_gt_k by linarith
       then have "2 * card X / real (card X - 1) < 3"
         by (simp add: divide_simps)
       also have "... \<le> k ^ 2"
-        using mult_mono [OF \<open>k\<ge>3\<close> \<open>k\<ge>3\<close>] by (simp add: power2_eq_square flip: of_nat_mult)
+        using mult_mono [OF \<open>k\<ge>256\<close> \<open>k\<ge>256\<close>] by (simp add: power2_eq_square flip: of_nat_mult)
       also have "... \<le> eps k * k^3"
-        using \<open>k\<ge>3\<close> by (simp add: eps_def flip: powr_numeral powr_add)
+        using \<open>k\<ge>256\<close> by (simp add: eps_def flip: powr_numeral powr_add)
       finally have "(real (2 * card X) / real (card X - 1)) * k^2 < eps k * real (k ^ 3) * k^2"
         using \<open>k>0\<close> by (intro mult_strict_right_mono) auto
       then have "real (2 * card X) / real (card X - 1) * k^2 < eps k * real (k ^ 5)"
@@ -714,12 +710,10 @@ proof -
     next
       case 2
       show ?thesis
-        using Red_5_7c [OF 2] \<open>k\<ge>3\<close> epsk_less1 [of k] by simp
+        using Red_5_7c [OF 2] \<open>k\<ge>256\<close> epsk_less1 [of k] by simp
     qed
-    have "card X \<ge> k^4"
-      using RN_k4 cX_RN by linarith
-    then have B: "- (3 / (real k ^ 4)) \<le> (-2 / real k ^ 4) - alpha k (hgt k p) / card X"
-      using \<open>card Y \<noteq> 0\<close> \<open>0 < k\<close> alpha_le_1 by (simp add: algebra_simps frac_le)
+    have B: "- (3 / (real k ^ 4)) \<le> (-2 / real k ^ 4) - alpha k (hgt k p) / card X"
+      using \<open>card X > k^4\<close> \<open>card Y \<noteq> 0\<close> \<open>0 < k\<close> alpha_le_1 by (simp add: algebra_simps frac_le)
     have "- (3 / (\<beta> * real k ^ 4)) \<le> (-2 / real k ^ 4) / \<beta> - alpha k (hgt k p) / (\<beta> * card X)"
       using \<open>\<beta>>0\<close> divide_right_mono [OF B, of \<beta>] \<open>k>0\<close> by (simp add: field_simps)
     also have "... = (- real (card X) / real k ^ 5) / (\<beta> * real (card X)) * (2 * real k) - alpha k (hgt k p) / (\<beta> * card X)"
@@ -755,9 +749,9 @@ proof -
   qed
 qed
 
-
 corollary Red_5_2:
   assumes i: "i \<in> Step_class \<mu> l k dboost_step" and "0<\<mu>" "\<mu><1"
+    and Big: "Big_Red_5_1 \<mu> l i" "Colours l k"
   shows "pee \<mu> l k (Suc i) - pee \<mu> l k i
          \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i)) \<and>
            beta \<mu> l k i > 0"
@@ -803,6 +797,16 @@ proof -
     by linarith
 qed
 
+(* we need to establish the requirements for 5.1 
+  have "\<forall>\<^sup>\<infinity>l. (1-\<mu>) * l > 1"
+    using \<open>\<mu><1\<close> by real_asymp
+  moreover have "\<forall>\<^sup>\<infinity>l. l powr (5/2) \<ge> 3 / (1-\<mu>)"
+    using \<open>\<mu><1\<close> by real_asymp
+  moreover have "\<forall>\<^sup>\<infinity>l. l powr (1/4) \<ge> 4"
+    using \<open>\<mu><1\<close> by real_asymp
+  ultimately have Big: "\<forall>\<^sup>\<infinity>l. Big l"
+    by (simp add: Big_def eventually_conj Red_5_4 [OF \<mu>])
+*)
 
 corollary Red_5_3:
   assumes "0<\<mu>" "\<mu><1"
