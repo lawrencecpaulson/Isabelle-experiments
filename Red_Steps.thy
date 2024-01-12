@@ -491,7 +491,7 @@ next
 qed
 
 proposition Red_5_1:
-  assumes i: "i \<in> Step_class_reddboost \<mu> l k"
+  assumes i: "i \<in> Step_class_reddboost \<mu> l k" and "\<mu><1"
   defines "p \<equiv> pee \<mu> l k i"
   defines "x \<equiv> cvx \<mu> l k i"
   defines "\<beta> \<equiv> card (Neighbours Blue x \<inter> Xseq \<mu> l k i) / card (Xseq \<mu> l k i)"
@@ -501,6 +501,8 @@ proposition Red_5_1:
          \<ge> p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha k (hgt k p) \<and> \<beta> > 0"
 proof -
   have lA: "(1-\<mu>) * l > 1"
+    sorry
+  have k52: "3 / (1-\<mu>) \<le> k powr (5/2)"
     sorry
   have "l\<le>k"
     sorry
@@ -589,10 +591,13 @@ proof -
     with False 
     have 15: "(\<Sum>y \<in> NBX. Weight X Y x y) 
         \<ge> weight X Y x + alpha k (hgt k p) * card NRX * card NRY / card Y"
-      by linarith
-    define \<beta> where "\<beta> \<equiv> card NBX / card X"
+      by linarith    
     have pm1: "pee \<mu> l k (i-1) > 1/k"
       by (meson Step_class_not_halted diff_le_self not_halted not_halted_pee_gt)
+    have \<beta>_eq: "\<beta> = card NBX / card X"
+      using NBX_def \<beta>_def XY by blast
+    have "\<beta>\<le>\<mu>"
+      by (simp add: \<beta>_eq \<open>0 < card X\<close> card_NBX_le pos_divide_le_eq)
     have im1: "i-1 \<in> Step_class \<mu> l k dreg_step"
       using i \<open>odd i\<close> dreg_before_dboost_step dreg_before_red_step by fastforce
     have "eps k \<le> 1/4"
@@ -642,20 +647,16 @@ proof -
         using empty 15 by auto
       finally show False by simp
     qed
-    have "p * \<beta> * card X * card NRY + alpha k (hgt k p) * (1-\<beta>) * (1 - eps k) * card X * card NRY
-         \<le> (\<Sum>y \<in> NBX. card (Neighbours Red y \<inter> NRY))" 
-         (* proved by Bhavik but probably not needed*)
-      sorry
     have "card NBX > 0"
       by (simp add: \<open>NBX \<noteq> {}\<close> \<open>finite NBX\<close> card_gt_0_iff)
     then have "0 < \<beta>"
-      using X_gt_k by (simp add: \<beta>_def divide_simps)
+      by (simp add: \<beta>_eq \<open>0 < card X\<close>)
     have "\<beta> \<le> \<mu>"
-      using X_gt_k card_NBX_le by (simp add: \<beta>_def NBX_def divide_simps)
+      using X_gt_k card_NBX_le by (simp add: \<beta>_eq NBX_def divide_simps)
     have cNRX: "card NRX = (1-\<beta>) * card X - 1"
-      using X_gt_k card_NRBX by (simp add: \<beta>_def field_simps)
+      using X_gt_k card_NRBX by (simp add: \<beta>_eq field_simps)
     have cNBX: "card NBX = \<beta> * card X"
-      using \<open>0 < card X\<close> by (simp add: \<beta>_def)
+      using \<open>0 < card X\<close> by (simp add: \<beta>_eq)
     let ?E16 = "p + ((1-\<beta>)/\<beta>) * alpha k (hgt k p) - alpha k (hgt k p) / (\<beta> * card X) + weight X Y x * card Y / (\<beta> * card X * card NRY)"
     have "p * card NBX * card NRY + alpha k (hgt k p) * card NRX * card NRY + weight X Y x * card Y
             \<le> (\<Sum>y \<in> NBX. p * card NRY + Weight X Y x y * card Y)"
@@ -720,16 +721,29 @@ proof -
     finally have "- (3 / (\<beta> * real k ^ 4)) \<le> weight X Y x * card Y / (\<beta> * real (card X) * card NRY) - alpha k (hgt k p) / (\<beta> * card X)" .
     then have 17: "p + ((1-\<beta>)/\<beta>) * alpha k (hgt k p) - 3 / (\<beta> * real k ^ 4) \<le> ?E16"
       by simp
- 
-  then show ?thesis
-    using Red_5_7a
-    sorry
+    have "3 / real k ^ 4 \<le> (1-\<mu>) * eps k ^ 2 / k"
+      using \<open>k>0\<close> \<open>\<mu><1\<close> mult_left_mono [OF k52, of k] 
+      by (simp add: field_simps eps_def powr_powr powr_mult_base flip: powr_numeral powr_add)
+    also have "... \<le> (1-\<beta>) * eps k ^ 2 / k"
+      using \<open>\<beta>\<le>\<mu>\<close>
+      by (intro divide_right_mono mult_right_mono) auto
+    also have "... \<le> (1-\<beta>) * eps k * alpha k (hgt k p)"
+      using Red_5_7a [of k p] epsk_ge0 \<open>\<beta>\<le>\<mu>\<close> \<open>\<mu><1\<close>
+      unfolding power2_eq_square divide_inverse mult.assoc
+      by (intro mult_mono) auto
+    finally have "3 / real k ^ 4 \<le> (1-\<beta>) * eps k * alpha k (hgt k p)" .
+    then have "p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha k (hgt k p) \<le> p + ((1-\<beta>)/\<beta>) * alpha k (hgt k p) - 3 / (\<beta> * real k ^ 4)"
+      using \<open>0<\<beta>\<close> by (simp add: field_simps)
+    with 16 17 have "p + (1 - eps k) * ((1 - \<beta>) / \<beta>) * alpha k (hgt k p) \<le> red_density NBX NRY"
+      by linarith
+    then show ?thesis
+      using \<open>0 < \<beta>\<close> NBX_def NRY_def XY by fastforce
   qed
 qed
 
 
 corollary Red_5_2:
-  assumes i: "i \<in> Step_class \<mu> l k dboost_step" and "\<mu>>0"
+  assumes i: "i \<in> Step_class \<mu> l k dboost_step" and "0<\<mu>" "\<mu><1"
   shows "pee \<mu> l k (Suc i) - pee \<mu> l k i
          \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i)) \<and>
            beta \<mu> l k i > 0"
@@ -810,10 +824,10 @@ proof -
       using beta_ge0[of \<mu> l k i] epsk_le1 \<alpha> \<beta> \<open>\<mu><1\<close> \<open>k>1\<close>
       by (simp add: zero_le_mult_iff zero_le_divide_iff)
     then show "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i"
-      using Red_5_2 [OF i \<open>\<mu>>0\<close>] by simp
+      using Red_5_2 [OF i assms] by simp
     have "pee \<mu> l k (Suc i) - pee \<mu> l k i \<le> 1"
       by (smt (verit) pee_ge0 pee_le1)
-    with Red_5_2 [OF i \<open>\<mu>>0\<close>]
+    with Red_5_2 [OF i assms]
     have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<le> 1" and beta_gt0: "beta \<mu> l k i > 0"
       by linarith+
     with * have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * eps k / k \<le> 1"

@@ -264,6 +264,9 @@ lemma q0 [simp]: "qfun k 0 = p0"
 lemma p0_01: "0 \<le> p0" "p0 \<le> 1"
   by (simp_all add: p0_def gen_density_ge0 gen_density_le1)
 
+lemma epsk_ge0: "eps k \<ge> 0"
+  by (simp add: eps_def)
+
 lemma epsk_gt0: "k>0 \<Longrightarrow> eps k > 0"
   by (simp add: eps_def)
 
