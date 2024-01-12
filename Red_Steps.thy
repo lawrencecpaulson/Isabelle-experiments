@@ -206,12 +206,12 @@ proof -
     unfolding Lemma_5_6_def by presburger 
 qed
 
-definition "Lemma_5_4 \<equiv> \<lambda>\<mu> l i. \<forall>k. Colours l k \<longrightarrow> i \<in> Step_class_reddboost \<mu> l k \<longrightarrow>
+definition "Lemma_5_4 \<equiv> \<lambda>\<mu> l. \<forall>k i. Colours l k \<longrightarrow> i \<in> Step_class_reddboost \<mu> l k \<longrightarrow>
      weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> - real (card (Xseq \<mu> l k i)) / (real k) ^ 5"
 
-lemma Red_5_4:
+lemma Red_5_4: (*FIXME*)
   assumes "0<\<mu>" "\<mu><1" 
-  shows "\<forall>\<^sup>\<infinity>l. Lemma_5_4 \<mu> l i"
+  shows "\<forall>\<^sup>\<infinity>l. Lemma_5_4 \<mu> l"
 proof -
   let ?Big = "\<lambda>l. (\<forall>k\<ge>l. real k + 2 * real k ^ 6 \<le> real k ^ 7) \<and> Lemma_5_6 l"
   have 1: "\<forall>\<^sup>\<infinity>l. real l + 2 * real l ^ 6 \<le> real l ^ 7"
@@ -219,7 +219,7 @@ proof -
   then have big_enough_l: "\<forall>\<^sup>\<infinity>l. ?Big l"
     using Red_5_6 eventually_conj eventually_all_ge_at_top by fastforce
   have "weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> - real (card (Xseq \<mu> l k i)) / (real k) ^ 5"
-    if l: "?Big l" and "Colours l k" and i: "i \<in> Step_class_reddboost \<mu> l k" for l k 
+    if l: "?Big l" and "Colours l k" and i: "i \<in> Step_class_reddboost \<mu> l k" for l k i
   proof -
     define X where "X \<equiv> Xseq \<mu> l k i"
     define Y where "Y \<equiv> Yseq \<mu> l k i"
@@ -492,11 +492,11 @@ next
     by (simp add: Suc card_gt_0_iff finite_Neighbours)
 qed
 
-definition "Big_Red_5_1 \<equiv> \<lambda>\<mu> l i. (1-\<mu>) * l > 1 \<and> l powr (5/2) \<ge> 3 / (1-\<mu>) \<and> l powr (1/4) \<ge> 4 
-                    \<and> Lemma_5_4 \<mu> l i \<and> Lemma_5_6 l" 
+definition "Big_Red_5_1 \<equiv> \<lambda>\<mu> l. (1-\<mu>) * l > 1 \<and> l powr (5/2) \<ge> 3 / (1-\<mu>) \<and> l powr (1/4) \<ge> 4 
+                    \<and> Lemma_5_4 \<mu> l \<and> Lemma_5_6 l" 
 
 proposition Red_5_1:
-  assumes i: "i \<in> Step_class_reddboost \<mu> l k" and \<mu>: "0<\<mu>" "\<mu><1" and Big: "Big_Red_5_1 \<mu> l i" "Colours l k"
+  assumes i: "i \<in> Step_class_reddboost \<mu> l k" and \<mu>: "0<\<mu>" "\<mu><1" and Big: "Big_Red_5_1 \<mu> l" "Colours l k"
   defines "p \<equiv> pee \<mu> l k i"
   defines "x \<equiv> cvx \<mu> l k i"
   defines "X \<equiv> Xseq \<mu> l k i" and "Y \<equiv> Yseq \<mu> l k i"
@@ -749,9 +749,10 @@ proof -
   qed
 qed
 
-corollary Red_5_2:
+text \<open>This and the previous result are proved under the assumption of a sufficiently large @{term l}\<close>
+corollary Red_5_2_Main:
   assumes i: "i \<in> Step_class \<mu> l k dboost_step" and "0<\<mu>" "\<mu><1"
-    and Big: "Big_Red_5_1 \<mu> l i" "Colours l k"
+    and Big: "Big_Red_5_1 \<mu> l" "Colours l k"
   shows "pee \<mu> l k (Suc i) - pee \<mu> l k i
          \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i)) \<and>
            beta \<mu> l k i > 0"
@@ -797,17 +798,28 @@ proof -
     by linarith
 qed
 
-(* we need to establish the requirements for 5.1 
+
+corollary Red_5_2:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. \<forall>i. i \<in> Step_class \<mu> l k dboost_step \<longrightarrow> Colours l k \<longrightarrow>
+         pee \<mu> l k (Suc i) - pee \<mu> l k i
+         \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i))
+      \<and> beta \<mu> l k i > 0"
+proof -
+  \<comment> \<open>establish the requirements for 5.1\<close>
   have "\<forall>\<^sup>\<infinity>l. (1-\<mu>) * l > 1"
     using \<open>\<mu><1\<close> by real_asymp
   moreover have "\<forall>\<^sup>\<infinity>l. l powr (5/2) \<ge> 3 / (1-\<mu>)"
     using \<open>\<mu><1\<close> by real_asymp
   moreover have "\<forall>\<^sup>\<infinity>l. l powr (1/4) \<ge> 4"
     using \<open>\<mu><1\<close> by real_asymp
-  ultimately have Big: "\<forall>\<^sup>\<infinity>l. Big l"
-    by (simp add: Big_def eventually_conj Red_5_4 [OF \<mu>])
-*)
+  ultimately have Big: "\<forall>\<^sup>\<infinity>l. Big_Red_5_1 \<mu> l"
+    by (simp add: Big_Red_5_1_def eventually_conj Red_5_4 [OF \<mu>])
+  with Big Red_5_2_Main assms show ?thesis
+    unfolding eventually_sequentially by (meson order.trans)
+qed
 
+text \<open>This is a weaker consequence of the previous results\<close>
 corollary Red_5_3:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. \<forall>i. i \<in> Step_class \<mu> l k dboost_step \<longrightarrow> Colours l k \<longrightarrow>
