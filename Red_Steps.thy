@@ -799,25 +799,30 @@ proof -
 qed
 
 
-corollary Red_5_2:
+text \<open>establishing the size requirements for 5.1\<close>
+lemma Big_Red_5_1:
   assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. \<forall>i. i \<in> Step_class \<mu> l k dboost_step \<longrightarrow> Colours l k \<longrightarrow>
-         pee \<mu> l k (Suc i) - pee \<mu> l k i
-         \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i))
-      \<and> beta \<mu> l k i > 0"
+  shows "\<forall>\<^sup>\<infinity>l. Big_Red_5_1 \<mu> l"
 proof -
-  \<comment> \<open>establish the requirements for 5.1\<close>
   have "\<forall>\<^sup>\<infinity>l. (1-\<mu>) * l > 1"
     using \<open>\<mu><1\<close> by real_asymp
   moreover have "\<forall>\<^sup>\<infinity>l. l powr (5/2) \<ge> 3 / (1-\<mu>)"
     using \<open>\<mu><1\<close> by real_asymp
   moreover have "\<forall>\<^sup>\<infinity>l. l powr (1/4) \<ge> 4"
     using \<open>\<mu><1\<close> by real_asymp
-  ultimately have Big: "\<forall>\<^sup>\<infinity>l. Big_Red_5_1 \<mu> l"
-    by (simp add: Big_Red_5_1_def eventually_conj Red_5_4 [OF \<mu>])
-  with Big Red_5_2_Main assms show ?thesis
-    unfolding eventually_sequentially by (meson order.trans)
+  ultimately show ?thesis
+    by (simp add: Big_Red_5_1_def eventually_conj Red_5_4 [OF assms] Red_5_6)
 qed
+
+
+corollary Red_5_2:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. \<forall>i. i \<in> Step_class \<mu> l k dboost_step \<longrightarrow> Colours l k \<longrightarrow>
+         pee \<mu> l k (Suc i) - pee \<mu> l k i
+         \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i))
+      \<and> beta \<mu> l k i > 0"
+  using Big_Red_5_1 Red_5_2_Main assms 
+  unfolding eventually_sequentially by (meson order.trans)
 
 text \<open>This is a weaker consequence of the previous results\<close>
 corollary Red_5_3:
@@ -825,16 +830,19 @@ corollary Red_5_3:
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. \<forall>i. i \<in> Step_class \<mu> l k dboost_step \<longrightarrow> Colours l k \<longrightarrow>
                   (pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / real k ^ 2)"
 proof -
-  define Big where "Big \<equiv> \<lambda>l. 1 / real l ^ 2 \<le> 1 / (l / eps l / (1 - eps l) + 1) \<and> l>1"
+  define Big where 
+    "Big \<equiv> \<lambda>l. 1 / real l ^ 2 \<le> 1 / (l / eps l / (1 - eps l) + 1) \<and> l>1 \<and> Big_Red_5_1 \<mu> l"
   have "\<forall>\<^sup>\<infinity>l. 1 / real l ^ 2 \<le> 1 / (l / eps l / (1 - eps l) + 1)"
     unfolding eps_def by real_asymp
   moreover have "\<forall>\<^sup>\<infinity>l. l>1"
     by auto
   ultimately have Big: "\<forall>\<^sup>\<infinity>l. Big l"
-    using eventually_mono eventually_conj by (force simp add: Big_def)  
+    using Big_Red_5_1 assms by (simp add: Big_def eventually_conj)
   have "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / real k ^ 2"
     if l: "\<forall>k\<ge>l. Big k" and i: "i \<in> Step_class \<mu> l k dboost_step" and "Colours l k" for l k i
   proof 
+    have Big: "Big_Red_5_1 \<mu> l"
+      using l by (auto simp: Big_def)
     obtain ln0: "l>0" and kn0: "k>0" and "l\<le>k"
       using \<open>Colours l k\<close> Colours_kn0 Colours_ln0  by (auto simp: Colours_def)
     have "k>1"
@@ -854,10 +862,10 @@ proof -
       using beta_ge0[of \<mu> l k i] epsk_le1 \<alpha> \<beta> \<open>\<mu><1\<close> \<open>k>1\<close>
       by (simp add: zero_le_mult_iff zero_le_divide_iff)
     then show "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i"
-      using Red_5_2 [OF i assms] by simp
+      using Red_5_2_Main [OF i assms Big] \<open>Colours l k\<close> by linarith 
     have "pee \<mu> l k (Suc i) - pee \<mu> l k i \<le> 1"
       by (smt (verit) pee_ge0 pee_le1)
-    with Red_5_2 [OF i assms]
+    with Red_5_2_Main [OF i assms Big] \<open>Colours l k\<close>
     have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<le> 1" and beta_gt0: "beta \<mu> l k i > 0"
       by linarith+
     with * have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * eps k / k \<le> 1"
