@@ -884,4 +884,6 @@ proof -
     unfolding eventually_sequentially by (meson order.trans)
 qed
 
+end (*context Diagonal*)
+
 end
