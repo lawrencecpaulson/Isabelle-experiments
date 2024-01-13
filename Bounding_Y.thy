@@ -20,7 +20,7 @@ proof -
       and non_mb: "\<not> many_bluish \<mu> l k X"
       and red: "reddish k X Y (red_density X Y) (cvx \<mu> l k i)"
     using i
-    by (auto simp: X_def Y_def Step_class_def stepper_kind_def next_state_kind_def cvx_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)
+    by (auto simp: X_def Y_def step_kind_defs cvx_def split: if_split_asm prod.split_asm)
   have "Xseq \<mu> l k (Suc i) = Neighbours Red (cvx \<mu> l k i) \<inter> X"
        "Yseq \<mu> l k (Suc i) = Neighbours Red (cvx \<mu> l k i) \<inter> Y"
     using step nonterm \<open>odd i\<close> non_mb red
@@ -41,18 +41,16 @@ proof -
       and "odd i"
       and mb: "many_bluish \<mu> l k X"
     using i
-    by (auto simp: X_def Y_def Step_class_def stepper_kind_def next_state_kind_def cvx_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)
+    by (auto simp: X_def Y_def step_kind_defs cvx_def split: if_split_asm prod.split_asm)
   have step_Suc_m1: "stepper \<mu> l k i = stepper \<mu> l k (Suc (i-1))"
     using One_nat_def \<open>odd i\<close> odd_Suc_minus_one by presburger
   define i' where "i' = i-1"
-  have "i' \<in> Step_class \<mu> l k dreg_step"
+  have i': "i' \<in> Step_class \<mu> l k dreg_step"
     using \<open>odd i\<close> by (simp add: i'_def assms dreg_before_bblue_step)
   then have "Yseq \<mu> l k (Suc i') = Yseq \<mu> l k i'"
-    by (simp add: degree_reg_def X_degree_reg_def Step_class_def stepper_kind_def next_state_kind_def
-            Yseq_def split: if_split_asm prod.split_asm)
+    by (simp add: degree_reg_def X_degree_reg_def step_kind_defs split: if_split_asm prod.split_asm)
   have "Yseq \<mu> l k (Suc i) = Yseq \<mu> l k i"
-    using i by (simp add: Step_class_def stepper_kind_def next_state_kind_def next_state_def Yseq_def 
-        split: if_split_asm prod.split_asm prod.split)
+    using i by (simp add: step_kind_defs next_state_def split: if_split_asm prod.split_asm prod.split)
 
 
       sorry
@@ -65,10 +63,22 @@ proof -
   then show ?thesis
     using red by (simp add: X_def Y_def reddish_def pee_def)
 qed
+  oops
 
 lemma Y_6_4_D: 
-  assumes i: "i \<in> Step_class \<mu> l k red_step" and "0<\<mu>" "\<mu><1"
+  assumes i: "i \<in> Step_class \<mu> l k dreg_step" and "0<\<mu>" "\<mu><1"
   shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i"
+proof -
+  define X where "X \<equiv> Xseq \<mu> l k i" 
+  define Y where "Y \<equiv> Yseq \<mu> l k i"
+  obtain A B
+    where step: "stepper \<mu> l k i = (X,Y,A,B)"
+      and nonterm: "\<not> termination_condition l k X Y"
+      and "even i"
+    using i
+    by (auto simp: X_def Y_def step_kind_defs split: if_split_asm prod.split_asm)
+  then have "Yseq \<mu> l k (Suc i) = Y"
+    by (simp add: step_kind_defs next_state_def degree_reg_def)
 
 
 

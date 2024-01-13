@@ -844,12 +844,14 @@ definition stepper_kind :: "[real,nat,nat,nat] \<Rightarrow> stepkind" where
 
 definition "Step_class \<equiv> \<lambda>\<mu> l k knd. {n. stepper_kind \<mu> l k n = knd}"
 
+lemmas step_kind_defs = Step_class_def stepper_kind_def next_state_kind_def Xseq_def Yseq_def
+
 lemma disjnt_Step_class: 
   "knd \<noteq> knd' \<Longrightarrow> disjnt (Step_class \<mu> l k knd) (Step_class \<mu> l k knd')"
   by (auto simp: Step_class_def disjnt_iff)
 
 lemma halted_imp_next_halted: "stepper_kind \<mu> l k i = halted \<Longrightarrow> stepper_kind \<mu> l k (Suc i) = halted"
-  by (auto simp add: stepper_kind_def next_state_kind_def split: prod.split if_split_asm)
+  by (auto simp add: step_kind_defs split: prod.split if_split_asm)
 
 lemma halted_imp_ge_halted: "stepper_kind \<mu> l k i = halted \<Longrightarrow> stepper_kind \<mu> l k (i+n) = halted"
   by (induction n) (auto simp: halted_imp_next_halted)
@@ -866,7 +868,7 @@ lemma
   shows not_halted_pee_gt: "pee \<mu> l k i > 1/k" 
     and Xseq_gt_RN: "card (Xseq \<mu> l k i) > RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
   using assms
-  by (auto simp: Step_class_def stepper_kind_def Xseq_def Yseq_def termination_condition_def pee_def split: if_split_asm prod.split_asm)
+  by (auto simp: step_kind_defs termination_condition_def pee_def split: if_split_asm prod.split_asm)
 
 lemma not_halted_pee_gt0:
   assumes "i \<notin> Step_class \<mu> l k halted" 
@@ -926,19 +928,19 @@ lemma red_dboost_non_terminating:
   assumes "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
   shows "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
   using assms
-  by (simp add: Step_class_def stepper_kind_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)
+  by (simp add: step_kind_defs split: if_split_asm prod.split_asm)
 
 lemma dreg_step_non_terminating:
   assumes "i \<in> Step_class \<mu> l k dreg_step"
   shows "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
   using assms
-  by (simp add: Step_class_def stepper_kind_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)
+  by (simp add: step_kind_defs split: if_split_asm prod.split_asm)
 
 lemma red_dboost_not_many_bluish:
   assumes "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
   shows "\<not> many_bluish \<mu> l k (Xseq \<mu> l k i)"
   using assms
-  by (simp add: Step_class_def stepper_kind_def next_state_kind_def Xseq_def split: if_split_asm prod.split_asm)
+  by (simp add: step_kind_defs split: if_split_asm prod.split_asm)
 
 lemma stepper_XYseq: "stepper \<mu> l k i = (X,Y,A,B) \<Longrightarrow> X = Xseq \<mu> l k i \<and> Y = Yseq \<mu> l k i"
   using Xseq_def Yseq_def by fastforce

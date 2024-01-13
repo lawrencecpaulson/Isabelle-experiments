@@ -389,7 +389,7 @@ proof -
       and nonterm: "\<not> termination_condition l k X Y"
       and "even i"
     using i
-    by (auto simp: Step_class_def stepper_kind_def next_state_kind_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)
+    by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
   then have Suc_i: "stepper \<mu> l k (Suc i) = degree_reg k (X,Y,A,B)"
     by simp
   have XY: "X = Xseq \<mu> l k i" "Y = Yseq \<mu> l k i"
@@ -453,7 +453,7 @@ proof
   proof -
     obtain X Y A B
       where step: "stepper \<mu> l k i = (X,Y,A,B)" and "even i"
-      using i by (auto simp: Step_class_def stepper_kind_def next_state_kind_def split: if_split_asm prod.split_asm)
+      using i by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
     then show ?thesis
       apply (simp add: Yseq_def degree_reg_def)
       using Yseq_gt_0 not_halted stepper_XYseq by blast
@@ -523,7 +523,7 @@ proof -
       and "odd i"
       and non_mb: "\<not> many_bluish \<mu> l k X"
     using i
-    by (auto simp: XY Step_class_def stepper_kind_def next_state_kind_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)
+    by (auto simp: XY step_kind_defs split: if_split_asm prod.split_asm)
   then have "card X > 0"
     using stepper_XYseq by (auto simp: termination_condition_def)
   have not_halted: "i \<notin> Step_class \<mu> l k halted"
@@ -759,7 +759,7 @@ proof -
       and non_mb: "\<not> many_bluish \<mu> l k X"
       and nonredd: "\<not> reddish k X Y (red_density X Y) (choose_central_vx \<mu> (X,Y,A,B))"
     using i
-    by (auto simp: Step_class_def stepper_kind_def next_state_kind_def Xseq_def Yseq_def split: if_split_asm prod.split_asm)
+    by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
   then have "?x \<in> Xseq \<mu> l k i"
     by (simp add: assms cvx_in_Xseq)
   then have "central_vertex \<mu> (Xseq \<mu> l k i) (cvx \<mu> l k i)"
