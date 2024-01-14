@@ -321,6 +321,11 @@ lemma all_edges_betw_un_mono2:
   "Y \<subseteq> Z \<Longrightarrow> all_edges_betw_un X Y \<subseteq> all_edges_betw_un X Z"
   by (auto simp: all_edges_betw_un_def)
 
+lemma disjnt_all_edges_betw_un:
+  assumes "disjnt X Y" "disjnt X Z"
+  shows "disjnt (all_edges_betw_un X Z) (all_edges_betw_un Y Z)"
+  using assms
+  by (auto simp: all_edges_betw_un_def disjnt_iff doubleton_eq_iff)
 
 text \<open>this notion, mentioned on Page 3, is a little vague: "a graph on vertex set @{term"S \<union> T"} 
 that contains all edges incident to @{term"S"}"\<close>

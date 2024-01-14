@@ -143,6 +143,18 @@ lemma edge_card_le:
 unfolding edge_card_def
   by (metis Int_lower2 all_edges_betw_un_le assms card_mono finite_all_edges_betw_un order_trans)
 
+lemma edge_card_Un:
+  assumes "disjnt X Y" "disjnt X Z" "finite X" "finite Y"
+  shows "edge_card C (X \<union> Y) Z = edge_card C X Z + edge_card C Y Z"
+proof -
+  have "disjnt (C \<inter> all_edges_betw_un X Z) (C \<inter> all_edges_betw_un Y Z)"
+    using assms by (meson Int_iff disjnt_all_edges_betw_un disjnt_iff)
+  then show ?thesis
+    unfolding edge_card_def
+    by (metis Int_Un_distrib all_uedges_betw_subset card_Un_disjnt fin_edges finite_Int 
+            finite_subset all_edges_betw_un_Un1)
+qed
+
 lemma gen_density_ge0: "gen_density C X Y \<ge> 0"
   by (auto simp: gen_density_def)
 
@@ -191,10 +203,25 @@ lemma gen_density_le1: "gen_density C X Y \<le> 1"
   unfolding gen_density_def
   by (smt (verit) card.infinite divide_le_eq_1 edge_card_le mult_eq_0_iff of_nat_le_0_iff of_nat_mono)
 
-lemma red_le_edge_density: "red_density X Y \<le> edge_density X Y"
+lemma gen_density_Un_le:
+  assumes "disjnt X Y" "disjnt X Z" "finite X" "finite Y"
+  shows "gen_density C (X\<union>Y) Z \<le> gen_density C X Z + gen_density C Y Z"
+proof (cases "X={} \<or> Y={} \<or> Z={}")
+  case True
+  then show ?thesis
+    using gen_density_def by force
+next
+  case False
+  with assms show ?thesis
+    apply (simp add: gen_density_def edge_card_Un card_Un_disjnt add_divide_distrib field_simps)
+    by (smt (verit, best) card_0_eq frac_le mult_eq_0_iff mult_pos_pos of_nat_0_eq_iff of_nat_le_0_iff)
+qed
+
+(*USED??*)
+lemma gen_le_edge_density: "gen_density C X Y \<le> edge_density X Y"
 proof (cases "finite X \<and> finite Y")
   case True
-  then have "card (Red \<inter> all_edges_betw_un X Y) \<le> card (all_edges_betw_un X Y)"
+  then have "card (C \<inter> all_edges_betw_un X Y) \<le> card (all_edges_betw_un X Y)"
     by (simp add: all_edges_betw_un_iff_mk_edge card_mono finite_all_edges_between')
   also have "\<dots> \<le> card (all_edges_between X Y)"
     by (simp add: all_edges_betw_un_iff_mk_edge card_image_le finite_all_edges_between')
