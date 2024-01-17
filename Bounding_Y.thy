@@ -51,19 +51,15 @@ proof -
     by (simp add: degree_reg_def X_degree_reg_def step_kind_defs split: if_split_asm prod.split_asm)
   have "Yseq \<mu> l k (Suc i) = Yseq \<mu> l k i"
     using i by (simp add: step_kind_defs next_state_def split: if_split_asm prod.split_asm prod.split)
-
-
-      sorry
   have "Xseq \<mu> l k (Suc i) = Neighbours Red (cvx \<mu> l k i) \<inter> X"
        "Yseq \<mu> l k (Suc i) = Y"
     using step nonterm \<open>odd i\<close> mb 
      apply (simp_all add: Xseq_def Yseq_def next_state_def degree_reg_def X_degree_reg_def Let_def split: prod.split)
     apply (intro strip conjI)
-
+    sorry
   then show ?thesis
     using red by (simp add: X_def Y_def reddish_def pee_def)
 qed
-  oops
 
 lemma Y_6_4_D: 
   assumes i: "i \<in> Step_class \<mu> l k dreg_step" and "0<\<mu>" "\<mu><1"
@@ -75,10 +71,12 @@ proof -
     where step: "stepper \<mu> l k i = (X,Y,A,B)"
       and nonterm: "\<not> termination_condition l k X Y"
       and "even i"
-    using i
-    by (auto simp: X_def Y_def step_kind_defs split: if_split_asm prod.split_asm)
-  then have "Yseq \<mu> l k (Suc i) = Y"
-    by (simp add: step_kind_defs next_state_def degree_reg_def)
+    using i by (auto simp: X_def Y_def step_kind_defs split: if_split_asm prod.split_asm)
+  then have "Yseq \<mu> l k (Suc i) = Y" "Xseq \<mu> l k (Suc i) = X_degree_reg k X Y"
+    by (simp_all add: step_kind_defs next_state_def degree_reg_def)
+  then show ?thesis
+    by (simp add: X_def Xseq_Yseq_disjnt Y_def pee_def red_density_X_degree_reg_ge)
+qed
 
 
 

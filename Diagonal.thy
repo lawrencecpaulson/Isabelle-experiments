@@ -507,45 +507,63 @@ proof -
 qed
 
 lemma red_density_X_degree_reg_ge:
-  assumes "disjnt X Y" "finite X" "finite Y" "\<not> termination_condition l k X Y"
+  assumes "disjnt X Y"
   shows "red_density (X_degree_reg k X Y) Y \<ge> red_density X Y"
-proof (cases "X={}")
+proof (cases "X={} \<or> infinite X \<or> infinite Y")
   case True
   then show ?thesis
-    by (simp add: X_degree_reg_def)
+    by (force simp add: gen_density_def X_degree_reg_def)
 next
   case False
+  then have "finite X" "finite Y"
+    by auto
   { assume "\<And>x. x \<in> X \<Longrightarrow> \<not> red_dense k Y (red_density X Y) x"
     with False have "(\<Sum>x\<in>X. card (Neighbours Red x \<inter> Y)) < red_density X Y * real (card Y) * card X"
       using \<open>finite X\<close> not_red_dense_sum_less by blast
     then have "real (edge_card Red Y X) < (red_density X Y * real (card Y)) * card X"
-      by (simp add: mult.commute Red_E assms disjnt_sym edge_card_eq_sum_Neighbours psubset_imp_subset)
+      by (metis False Red_E(2) assms disjnt_sym edge_card_eq_sum_Neighbours)
     then have False
       by (simp add: gen_density_def edge_card_commute split: if_split_asm)
   }
   then obtain x where x: "x \<in> X" "red_dense k Y (red_density X Y) x"
     by blast
-  have eq: "X_degree_reg k X Y = X - {x \<in> X. \<not> red_dense k Y (red_density X Y) x}"
-    by (auto simp: X_degree_reg_def)
+  define X' where "X' \<equiv> {x \<in> X. \<not> red_dense k Y (red_density X Y) x}"
+  have X': "finite X'" "disjnt Y X'"
+    using assms \<open>finite X\<close> by (auto simp: X'_def disjnt_iff)
+  have eq: "X_degree_reg k X Y = X - X'"
+    by (auto simp: X_degree_reg_def X'_def)
   show ?thesis
-    unfolding eq
-  proof (rule gen_density_below_avg_ge)
-    define X' where "X' \<equiv> {x \<in> X. \<not> red_dense k Y (red_density X Y) x}"
-    have X': "finite X'" "disjnt Y X'"
-      using assms by (auto simp: X'_def disjnt_iff)
-    have "(\<Sum>x\<in>X'. card (Neighbours Red x \<inter> Y)) < red_density X Y * real (card Y) * card X'"
-      apply (intro not_red_dense_sum_less)
-      sorry
-    then have "card X * (\<Sum>x\<in>X'. card (Neighbours Red x \<inter> Y)) \<le> card X' * (\<Sum>x\<in>X. card (Neighbours Red x \<inter> Y))"
-      sorry
-    then have "red_density Y X' \<le> red_density Y X"
-      using assms X' False
-      apply (simp add: gen_density_def edge_card_eq_sum_Neighbours disjnt_commute Red_E)
-      apply (simp add: field_split_simps flip: of_nat_sum of_nat_mult)
-      done
-    then show "red_density {x \<in> X. \<not> red_dense k Y (red_density X Y) x} Y \<le> red_density X Y"
-      by (simp add: X'_def gen_density_commute)
-  qed (use assms x in auto)
+  proof (cases "X'={}")
+    case True
+    then show ?thesis
+      by (simp add: eq)
+  next
+    case False
+    show ?thesis 
+      unfolding eq
+    proof (rule gen_density_below_avg_ge)
+      have "(\<Sum>x\<in>X'. card (Neighbours Red x \<inter> Y)) < red_density X Y * real (card Y) * card X'"
+      proof (intro not_red_dense_sum_less)
+        fix x
+        assume "x \<in> X'"
+        show "\<not> red_dense k Y (red_density X Y) x"
+          using \<open>x \<in> X'\<close> by (simp add: X'_def)
+      qed (use False X' in auto)
+      then have "card X * (\<Sum>x\<in>X'. card (Neighbours Red x \<inter> Y)) < card X' * edge_card Red Y X"
+        by (simp add: gen_density_def mult.commute divide_simps edge_card_commute
+            flip: of_nat_sum of_nat_mult split: if_split_asm)
+      then have "card X * (\<Sum>x\<in>X'. card (Neighbours Red x \<inter> Y)) \<le> card X' * (\<Sum>x\<in>X. card (Neighbours Red x \<inter> Y))"
+        using assms Red_E
+        by (metis \<open>finite X\<close> disjnt_sym edge_card_eq_sum_Neighbours nless_le)
+      then have "red_density Y X' \<le> red_density Y X"
+        using assms X' False \<open>finite X\<close>
+        apply (simp add: gen_density_def edge_card_eq_sum_Neighbours disjnt_commute Red_E)
+        apply (simp add: X'_def field_split_simps flip: of_nat_sum of_nat_mult)
+        done
+      then show "red_density X' Y \<le> red_density X Y"
+        by (simp add: X'_def gen_density_commute)
+    qed (use assms x \<open>finite X\<close> \<open>finite Y\<close> X'_def in auto)
+  qed
 qed
 
 subsection \<open>Big blue steps: code\<close>
