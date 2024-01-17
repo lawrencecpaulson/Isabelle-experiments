@@ -41,7 +41,7 @@ qed
 lemma sum_diff_split:
   fixes f:: "nat \<Rightarrow> 'a::ab_group_add"
   assumes "m \<le> n"
-  shows "(\<Sum>i\<le>n - m. f(n - i)) = (\<Sum>i\<le>n. f i) - (\<Sum>i<m. f i)"
+  shows "(\<Sum>i\<le>n. f i) - (\<Sum>i<m. f i) = (\<Sum>i\<le>n - m. f(n - i))"
 proof -
   have "\<And>i. i \<le> n-m \<Longrightarrow> \<exists>k\<ge>m. k \<le> n \<and> i = n-k"
     using \<open>m\<le>n\<close> by presburger
@@ -54,7 +54,7 @@ proof -
   also have "\<dots> = (\<Sum>i\<le>n. f i) - (\<Sum>i<m. f i)"
     using sum_diff_nat_ivl[of 0 "m" "Suc n" f] assms
     by (simp only: atLeast0AtMost atLeast0LessThan atLeastLessThanSuc_atLeastAtMost)
-  finally show ?thesis .
+  finally show ?thesis by metis
 qed
 
 (*the corresponding strict inequality can be proved under the assumptions  "1 < s" "s \<le> n"
@@ -130,6 +130,25 @@ proof -
   with assms show ?thesis
     by (simp add: sum_divide_distrib nn_integral_count_space_finite)
 qed
+
+thm emeasure_uniform_count_measure
+lemma emeasure_uniform_count_measure_if:
+  "finite A \<Longrightarrow> emeasure (uniform_count_measure A) X = (if X \<subseteq> A then card X / card A else 0)"
+  by (simp add: emeasure_notin_sets emeasure_uniform_count_measure sets_uniform_count_measure)
+
+thm measure_uniform_count_measure
+lemma measure_uniform_count_measure_if:
+  "finite A \<Longrightarrow> measure (uniform_count_measure A) X = (if X \<subseteq> A then card X / card A else 0)"
+  by (simp add: measure_uniform_count_measure measure_notin_sets sets_uniform_count_measure)
+
+lemma emeasure_point_measure_finite_if:
+  "finite A \<Longrightarrow> emeasure (point_measure A f) X = (if X \<subseteq> A then \<Sum>a\<in>X. f a else 0)"
+  by (simp add: emeasure_point_measure_finite emeasure_notin_sets sets_point_measure)
+
+lemma measure_point_measure_finite_if:
+  assumes "finite A" "\<And>x. x \<in> A \<Longrightarrow> f x \<ge> 0"
+  shows "measure (point_measure A f) X = (if X \<subseteq> A then \<Sum>a\<in>X. f a else 0)"
+  by (simp add: Sigma_Algebra.measure_def assms emeasure_point_measure_finite_if subset_eq sum_nonneg)
 
 subsection \<open>Convexity?\<close>
 

@@ -8,33 +8,6 @@ begin
 
 section \<open>Material for the Ramsey's theorem development\<close>
 
-thm emeasure_uniform_count_measure
-lemma emeasure_uniform_count_measure_if:
-  "finite A \<Longrightarrow> emeasure (uniform_count_measure A) X = (if X \<subseteq> A then card X / card A else 0)"
-  by (simp add: emeasure_notin_sets emeasure_uniform_count_measure sets_uniform_count_measure)
-
-thm measure_uniform_count_measure
-lemma measure_uniform_count_measure_if:
-  "finite A \<Longrightarrow> measure (uniform_count_measure A) X = (if X \<subseteq> A then card X / card A else 0)"
-  by (simp add: measure_uniform_count_measure measure_notin_sets sets_uniform_count_measure)
-
-lemma emeasure_point_measure_finite_if:
-  "finite A \<Longrightarrow> emeasure (point_measure A f) X = (if X \<subseteq> A then \<Sum>a\<in>X. f a else 0)"
-  by (simp add: emeasure_point_measure_finite emeasure_notin_sets sets_point_measure)
-
-(*
-lemma measure_point_measure_finite_if:
-  shows
-  "finite A \<Longrightarrow> measure (point_measure A f) X = (if X \<subseteq> A then \<Sum>a\<in>X. f a else 0)"
-  apply (simp add: measure_notin_sets sets_point_measure)
-
-  apply (rule )
-  defer
-  apply (simp add: measure_notin_sets sets_point_measure)
-apply (auto simp: )
-  by (simp add: emeasure_point_measure_finite emeasure_notin_sets sets_point_measure)
-*)
-
 (*NOT USED ATM*)
 definition "upair_define \<equiv> \<lambda>f e. THE u. \<exists>x y. e = {x,y} \<and> u = f x y"
 
