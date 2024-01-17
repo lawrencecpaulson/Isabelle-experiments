@@ -62,7 +62,7 @@ abbreviation "nV \<equiv> card V"
 lemma RB_nonempty: "Red \<noteq> {}" "Blue \<noteq> {}"
   using part_RB partition_onD3 by auto
 
-lemma Red_E: "Red \<subset> E" and Blue_E: "Blue \<subset> E" 
+lemma Red_E: "Red \<subset> E" "Red \<subseteq> E" and Blue_E: "Blue \<subset> E" "Blue \<subseteq> E" 
   using part_RB Red_not_Blue by (auto simp: partition_on_def disjnt_iff pairwise_def)
 
 lemma disjnt_Red_Blue: "disjnt Red Blue"
@@ -131,7 +131,7 @@ definition "gen_density \<equiv> \<lambda>C X Y. edge_card C X Y / (card X * car
 abbreviation "red_density X Y \<equiv> gen_density Red X Y"
 abbreviation "blue_density X Y \<equiv> gen_density Blue X Y"
 
-lemma edge_card_empty [simp]: "edge_card C X {} = 0"
+lemma edge_card_empty [simp]: "edge_card C {} X = 0" "edge_card C X {} = 0"
   by (auto simp: edge_card_def)
 
 lemma edge_card_commute: "edge_card C X Y = edge_card C Y X"
@@ -143,6 +143,7 @@ lemma edge_card_le:
 unfolding edge_card_def
   by (metis Int_lower2 all_edges_betw_un_le assms card_mono finite_all_edges_betw_un order_trans)
 
+text \<open>the assumption that @{term Z} is disjoint from @{term X} (or else @{term Y}) is necessary\<close>
 lemma edge_card_Un:
   assumes "disjnt X Y" "disjnt X Z" "finite X" "finite Y"
   shows "edge_card C (X \<union> Y) Z = edge_card C X Z + edge_card C Y Z"
@@ -154,6 +155,64 @@ proof -
     by (metis Int_Un_distrib all_uedges_betw_subset card_Un_disjnt fin_edges finite_Int 
             finite_subset all_edges_betw_un_Un1)
 qed
+
+lemma edge_card_diff:
+  assumes "Y\<subseteq>X" "disjnt X Z" "finite X" 
+  shows "edge_card C (X-Y) Z = edge_card C X Z - edge_card C Y Z"
+  by (metis Diff_disjoint Diff_partition Diff_subset assms diff_add_inverse disjnt_def disjnt_subset1 edge_card_Un finite_subset)
+
+lemma edge_card_mono:
+  assumes "Y\<subseteq>X" shows "edge_card C Y Z \<le> edge_card C X Z"
+  unfolding edge_card_def
+proof (intro card_mono)
+  show "finite (C \<inter> all_edges_betw_un X Z)"
+    by (meson all_uedges_betw_subset fin_edges finite_Int finite_subset)
+  show "C \<inter> all_edges_betw_un Y Z \<subseteq> C \<inter> all_edges_betw_un X Z"
+    by (meson Int_mono all_edges_betw_un_mono1 assms subset_refl)
+qed
+
+lemma edge_card_eq_sum_Neighbours:
+  assumes "C\<subseteq>E" and B: "finite B" "disjnt A B"
+  shows "edge_card C A B = (\<Sum>i\<in>B. card (Neighbours C i \<inter> A))"
+  using B
+proof (induction B)
+  case empty
+  then show ?case
+    by (auto simp: edge_card_def)
+next
+  case (insert b B)
+  have "finite C"
+    using assms(1) fin_edges finite_subset by blast
+  have bij: "bij_betw (\<lambda>e. the_elem(e-{b})) (C \<inter> {{x, b} |x. x \<in> A}) (Neighbours C b \<inter> A)"
+    unfolding bij_betw_def
+  proof
+    have [simp]: "the_elem ({x, b} - {b}) = x" if "x \<in> A" for x
+      using insert.prems by (simp add: disjnt_iff insert_Diff_if that)
+    show "inj_on (\<lambda>e. the_elem (e - {b})) (C \<inter> {{x, b} |x. x \<in> A})"
+      by (auto simp: inj_on_def)
+    show "(\<lambda>e. the_elem (e - {b})) ` (C \<inter> {{x, b} |x. x \<in> A}) = Neighbours C b \<inter> A"
+      by (fastforce simp: Neighbours_def insert_commute image_iff Bex_def)
+  qed
+  have "edge_card C A (insert b B) = card (C \<inter> ({{x,b} |x. x \<in> A} \<union> all_edges_betw_un A B))"
+    using \<open>C \<subseteq> E\<close> 
+    apply (simp add: edge_card_def all_edges_betw_un_insert2 Int_Un_distrib Int_ac)
+    by (metis (no_types, lifting) Int_absorb2 Int_assoc Un_commute)
+  also have "\<dots> = card ((C \<inter> ({{x,b} |x. x \<in> A}) \<union> (C \<inter> all_edges_betw_un A B)))"
+    by (simp add: Int_Un_distrib)
+  also have "\<dots> = card (C \<inter> {{x,b} |x. x \<in> A}) + card (C \<inter> all_edges_betw_un A B)"
+  proof (rule card_Un_disjnt)
+    show "disjnt (C \<inter> {{x, b} |x. x \<in> A}) (C \<inter> all_edges_betw_un A B)"
+      using insert by (auto simp: disjnt_iff all_edges_betw_un_def doubleton_eq_iff)
+  qed (use \<open>finite C\<close> in auto)
+  also have "\<dots> = card (Neighbours C b \<inter> A) + card (C \<inter> all_edges_betw_un A B)"
+    using bij_betw_same_card [OF bij] by simp
+  also have "\<dots> = (\<Sum>i\<in>insert b B. card (Neighbours C i \<inter> A))"
+    using insert by (simp add: edge_card_def)
+  finally show ?case .
+qed
+
+lemma gen_density_commute: "gen_density C X Y = gen_density C Y X"
+  by (simp add: edge_card_commute gen_density_def)
 
 lemma gen_density_ge0: "gen_density C X Y \<ge> 0"
   by (auto simp: gen_density_def)
@@ -209,12 +268,48 @@ lemma gen_density_Un_le:
 proof (cases "X={} \<or> Y={} \<or> Z={}")
   case True
   then show ?thesis
-    using gen_density_def by force
+    by (auto simp: gen_density_def)
 next
   case False
   with assms show ?thesis
     apply (simp add: gen_density_def edge_card_Un card_Un_disjnt add_divide_distrib field_simps)
     by (smt (verit, best) card_0_eq frac_le mult_eq_0_iff mult_pos_pos of_nat_0_eq_iff of_nat_le_0_iff)
+qed
+
+lemma gen_density_diff_ge:
+  assumes "disjnt X Z" "finite X" "Y\<subseteq>X"
+  shows "gen_density C (X-Y) Z \<ge> gen_density C X Z - gen_density C Y Z"
+  using assms
+  by (smt (verit, del_insts) Diff_disjoint Diff_partition Diff_subset disjnt_def disjnt_subset1
+          gen_density_Un_le finite_subset)
+
+lemma gen_density_le_iff:
+  assumes "disjnt X Z" "finite X" "Y\<subseteq>X" "Y \<noteq> {}" "finite Z"
+  shows "gen_density C X Z \<le> gen_density C Y Z \<longleftrightarrow> 
+        edge_card C X Z / card X \<le> edge_card C Y Z / card Y"
+  using assms by (simp add: gen_density_def divide_simps mult_less_0_iff zero_less_mult_iff)
+
+text \<open>"Removing vertices whose degree is less than the average can only increase the density 
+from the remaining set" (page 17) \<close>
+lemma gen_density_below_avg_ge:
+  assumes "disjnt X Z" "finite X" "Y\<subset>X" "finite Z" 
+    and genY: "gen_density C Y Z \<le> gen_density C X Z"
+  shows "gen_density C (X-Y) Z \<ge> gen_density C X Z"
+proof -
+  have "real (edge_card C Y Z) / card Y \<le> real (edge_card C X Z) / card X"
+    using assms
+    by (force simp add: gen_density_def divide_simps zero_less_mult_iff split: if_split_asm)
+  have "card Y < card X"
+    by (simp add: assms psubset_card_mono)
+  have *: "finite Y" "Y \<subseteq> X" "X\<noteq>{}"
+    using assms finite_subset by blast+
+  then
+  have "card X * edge_card C Y Z \<le> card Y * edge_card C X Z"
+    using genY assms
+    by (simp add: gen_density_def field_split_simps card_eq_0_iff flip: of_nat_mult split: if_split_asm)
+  with assms * \<open>card Y < card X\<close> show ?thesis
+    by (simp add: gen_density_le_iff field_split_simps edge_card_diff card_Diff_subset of_nat_diff 
+        edge_card_mono flip: of_nat_mult)
 qed
 
 (*USED??*)
@@ -228,46 +323,6 @@ proof (cases "finite X \<and> finite Y")
   finally show ?thesis
     by (simp add: gen_density_def edge_card_def edge_density_def divide_right_mono)
 qed (auto simp: gen_density_def edge_density_def)
-
-lemma edge_card_eq_sum_Neighbours:
-  assumes "C \<subseteq> E" and B: "finite B" "disjnt A B"
-  shows "edge_card C A B = (\<Sum>i\<in>B. card (Neighbours C i \<inter> A))"
-  using B
-proof (induction B)
-  case empty
-  then show ?case
-    by (auto simp: edge_card_def)
-next
-  case (insert b B)
-  have "finite C"
-    using assms(1) fin_edges finite_subset by blast
-  have bij: "bij_betw (\<lambda>e. the_elem(e-{b})) (C \<inter> {{x, b} |x. x \<in> A}) (Neighbours C b \<inter> A)"
-    unfolding bij_betw_def
-  proof
-    have [simp]: "the_elem ({x, b} - {b}) = x" if "x \<in> A" for x
-      using insert.prems by (simp add: disjnt_iff insert_Diff_if that)
-    show "inj_on (\<lambda>e. the_elem (e - {b})) (C \<inter> {{x, b} |x. x \<in> A})"
-      by (auto simp: inj_on_def)
-    show "(\<lambda>e. the_elem (e - {b})) ` (C \<inter> {{x, b} |x. x \<in> A}) = Neighbours C b \<inter> A"
-      by (fastforce simp: Neighbours_def insert_commute image_iff Bex_def)
-  qed
-  have "edge_card C A (insert b B) = card (C \<inter> ({{x,b} |x. x \<in> A} \<union> all_edges_betw_un A B))"
-    using \<open>C \<subseteq> E\<close> 
-    apply (simp add: edge_card_def all_edges_betw_un_insert2 Int_Un_distrib Int_ac)
-    by (metis (no_types, lifting) Int_absorb2 Int_assoc Un_commute)
-  also have "\<dots> = card ((C \<inter> ({{x,b} |x. x \<in> A}) \<union> (C \<inter> all_edges_betw_un A B)))"
-    by (simp add: Int_Un_distrib)
-  also have "\<dots> = card (C \<inter> {{x,b} |x. x \<in> A}) + card (C \<inter> all_edges_betw_un A B)"
-  proof (rule card_Un_disjnt)
-    show "disjnt (C \<inter> {{x, b} |x. x \<in> A}) (C \<inter> all_edges_betw_un A B)"
-      using insert by (auto simp: disjnt_iff all_edges_betw_un_def doubleton_eq_iff)
-  qed (use \<open>finite C\<close> in auto)
-  also have "\<dots> = card (Neighbours C b \<inter> A) + card (C \<inter> all_edges_betw_un A B)"
-    using bij_betw_same_card [OF bij] by simp
-  also have "\<dots> = (\<Sum>i\<in>insert b B. card (Neighbours C i \<inter> A))"
-    using insert by (simp add: edge_card_def)
-  finally show ?case .
-qed
 
 
 definition Weight :: "['a set, 'a set, 'a, 'a] \<Rightarrow> real" where
@@ -438,6 +493,60 @@ lemma degree_reg_RB_state: "RB_state U \<Longrightarrow> RB_state (degree_reg k 
 
 lemma degree_reg_valid_state: "valid_state U \<Longrightarrow> valid_state (degree_reg k U)"
   by (simp add: degree_reg_RB_state degree_reg_V_state degree_reg_disjoint_state valid_state_def)
+
+lemma not_red_dense_sum_less:
+  assumes "\<And>x. x \<in> X \<Longrightarrow> \<not> red_dense k Y p x" and "X\<noteq>{}" "finite X"
+  shows "(\<Sum>x\<in>X. card (Neighbours Red x \<inter> Y)) < p * real (card Y) * card X"
+proof -
+  have "\<And>x. x \<in> X \<Longrightarrow> card (Neighbours Red x \<inter> Y) < p * real (card Y)"
+    using assms
+    unfolding red_dense_def
+    by (smt (verit, ccfv_SIG) alpha_ge0 distrib_right mult_minus_left of_nat_0_le_iff powr_ge_pzero zero_less_mult_iff)
+  with \<open>X\<noteq>{}\<close> show ?thesis
+    by (smt (verit) \<open>finite X\<close> of_nat_sum sum_strict_mono mult_of_nat_commute sum_constant)
+qed
+
+lemma red_density_X_degree_reg_ge:
+  assumes "disjnt X Y" "finite X" "finite Y" "\<not> termination_condition l k X Y"
+  shows "red_density (X_degree_reg k X Y) Y \<ge> red_density X Y"
+proof (cases "X={}")
+  case True
+  then show ?thesis
+    by (simp add: X_degree_reg_def)
+next
+  case False
+  { assume "\<And>x. x \<in> X \<Longrightarrow> \<not> red_dense k Y (red_density X Y) x"
+    with False have "(\<Sum>x\<in>X. card (Neighbours Red x \<inter> Y)) < red_density X Y * real (card Y) * card X"
+      using \<open>finite X\<close> not_red_dense_sum_less by blast
+    then have "real (edge_card Red Y X) < (red_density X Y * real (card Y)) * card X"
+      by (simp add: mult.commute Red_E assms disjnt_sym edge_card_eq_sum_Neighbours psubset_imp_subset)
+    then have False
+      by (simp add: gen_density_def edge_card_commute split: if_split_asm)
+  }
+  then obtain x where x: "x \<in> X" "red_dense k Y (red_density X Y) x"
+    by blast
+  have eq: "X_degree_reg k X Y = X - {x \<in> X. \<not> red_dense k Y (red_density X Y) x}"
+    by (auto simp: X_degree_reg_def)
+  show ?thesis
+    unfolding eq
+  proof (rule gen_density_below_avg_ge)
+    define X' where "X' \<equiv> {x \<in> X. \<not> red_dense k Y (red_density X Y) x}"
+    have X': "finite X'" "disjnt Y X'"
+      using assms by (auto simp: X'_def disjnt_iff)
+    have "(\<Sum>x\<in>X'. card (Neighbours Red x \<inter> Y)) < red_density X Y * real (card Y) * card X'"
+      apply (intro not_red_dense_sum_less)
+      sorry
+    then have "card X * (\<Sum>x\<in>X'. card (Neighbours Red x \<inter> Y)) \<le> card X' * (\<Sum>x\<in>X. card (Neighbours Red x \<inter> Y))"
+      sorry
+    then have "red_density Y X' \<le> red_density Y X"
+      using assms X' False
+      apply (simp add: gen_density_def edge_card_eq_sum_Neighbours disjnt_commute Red_E)
+      apply (simp add: field_split_simps flip: of_nat_sum of_nat_mult)
+      done
+    then show "red_density {x \<in> X. \<not> red_dense k Y (red_density X Y) x} Y \<le> red_density X Y"
+      by (simp add: X'_def gen_density_commute)
+  qed (use assms x in auto)
+qed
 
 subsection \<open>Big blue steps: code\<close>
 
