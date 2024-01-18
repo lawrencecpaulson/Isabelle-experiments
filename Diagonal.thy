@@ -211,6 +211,9 @@ next
   finally show ?case .
 qed
 
+lemma gen_density_empty [simp]: "gen_density C {} X = 0" "gen_density C X {} = 0"
+  by (auto simp: gen_density_def)
+
 lemma gen_density_commute: "gen_density C X Y = gen_density C Y X"
   by (simp add: edge_card_commute gen_density_def)
 
@@ -520,8 +523,8 @@ next
   { assume "\<And>x. x \<in> X \<Longrightarrow> \<not> red_dense k Y (red_density X Y) x"
     with False have "(\<Sum>x\<in>X. card (Neighbours Red x \<inter> Y)) < red_density X Y * real (card Y) * card X"
       using \<open>finite X\<close> not_red_dense_sum_less by blast
-    then have "real (edge_card Red Y X) < (red_density X Y * real (card Y)) * card X"
-      by (metis False Red_E(2) assms disjnt_sym edge_card_eq_sum_Neighbours)
+    with Red_E have "edge_card Red Y X < (red_density X Y * real (card Y)) * card X"
+      by (metis False assms disjnt_sym edge_card_eq_sum_Neighbours)
     then have False
       by (simp add: gen_density_def edge_card_commute split: if_split_asm)
   }

@@ -4,6 +4,8 @@ theory General_Extras imports
 
 begin
 
+thm mult_le_cancel_iff1 (*MOVE TO A BETTER PLACE*)
+
 lemma disjnt_commute: "disjnt A B = disjnt B A"
   using disjnt_sym by blast
 

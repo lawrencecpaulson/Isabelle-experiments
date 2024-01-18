@@ -7,6 +7,9 @@ begin
 context Diagonal
 begin
 
+subsection \<open>The following results together are Lemma 6.4\<close>
+text \<open>Compared with the paper, all the indices are greater by one\<close>
+
 lemma Y_6_4_R: 
   assumes i: "i \<in> Step_class \<mu> l k red_step"
   shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i - alpha k (hgt k (pee \<mu> l k i))"
@@ -47,7 +50,7 @@ proof -
 qed
 
 lemma Y_6_4_B: 
-  assumes i: "i \<in> Step_class \<mu> l k bblue_step"
+  assumes i: "i \<in> Step_class \<mu> l k bblue_step" and "0 < \<mu>"
   shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k (i-1) - (eps k powr (-1/2)) * alpha k (hgt k (pee \<mu> l k (i-1)))"
 proof -
   define X where "X \<equiv> Xseq \<mu> l k i" 
@@ -60,8 +63,16 @@ proof -
       and bluebook: "(S,T) = choose_blue_book \<mu> (X,Y,A,B)"
     using i  
     by (simp add: X_def Y_def step_kind_defs split: if_split_asm prod.split_asm) (metis mk_edge.cases)
-  then have "Xseq \<mu> l k (Suc i) = T"
+  then have X1_eq: "Xseq \<mu> l k (Suc i) = T"
     by (force simp: Xseq_def next_state_def split: prod.split)
+  have Y1_eq: "Yseq \<mu> l k (Suc i) = Y"
+    using i by (simp add: Y_def step_kind_defs next_state_def split: if_split_asm prod.split_asm prod.split)
+  have "disjnt X Y"
+    using Xseq_Yseq_disjnt X_def Y_def by blast
+  obtain fin: "finite X" "finite Y"
+    by (metis V_state finX finY local.step)
+  have "X \<noteq> {}" "Y \<noteq> {}"
+    using gen_density_def nonterm termination_condition_def by fastforce+
   define i' where "i' = i-1"
   then have Suci': "Suc i' = i"
     by (simp add: \<open>odd i\<close>)
@@ -69,27 +80,39 @@ proof -
     using \<open>odd i\<close> by (simp add: i'_def assms dreg_before_bblue_step)
   then have  "Xseq \<mu> l k (Suc i') = X_degree_reg k (Xseq \<mu> l k i') (Yseq \<mu> l k i')"
              "Yseq \<mu> l k (Suc i') = Yseq \<mu> l k i'"
+      and nonterm': "\<not> termination_condition l k (Xseq \<mu> l k i') (Yseq \<mu> l k i')"
     by (auto simp add: degree_reg_def X_degree_reg_def step_kind_defs split: if_split_asm prod.split_asm)
   then have Xeq: "X = X_degree_reg k (Xseq \<mu> l k i') (Yseq \<mu> l k i')"
        and  Yeq: "Y = Yseq \<mu> l k i'"
     using Suci' by (auto simp: X_def Y_def)
-  then have X_reds: "red_dense k (Yseq \<mu> l k i') (pee \<mu> l k i') x" 
-    if "x \<in> X" for x
-    using that by (simp add: X_degree_reg_def pee_def)
 
-  have "Yseq \<mu> l k (Suc i) = Y"
-    using i by (simp add: Y_def step_kind_defs next_state_def split: if_split_asm prod.split_asm prod.split)
-  have "Xseq \<mu> l k (Suc i) = T"
-    using step nonterm \<open>odd i\<close> mb bluebook by (force simp: Xseq_def next_state_def split: prod.split)
-
-  have "pee \<mu> l k i' \<le> pee \<mu> l k i"
-    using Y_6_4_D i' Suci' by blast
-  also have "... \<le> pee \<mu> l k (Suc i) + (eps k powr (-1/2)) * alpha k (hgt k (pee \<mu> l k (i-1)))"
-    using X_reds
-    sorry
-  finally show ?thesis
-    by (simp add: i'_def)
+  define pm where "pm \<equiv> (pee \<mu> l k i' - eps k powr -(1/2) * alpha k (hgt k (pee \<mu> l k i')))"
+  have "T \<subseteq> X"
+    using bluebook by (metis V_state choose_blue_book_subset local.step)
+  then have T_reds: "\<And>x. x \<in> T \<Longrightarrow> pm * card Y \<le> card (Neighbours Red x \<inter> Y)"
+    by (auto simp add: Xeq Yeq pm_def X_degree_reg_def pee_def red_dense_def)
+  have "good_blue_book \<mu> X (S,T)"
+    by (metis choose_blue_book_works V_state bluebook local.step)
+  then have False if "real (card T) = 0"
+    using \<open>0 < \<mu>\<close> \<open>X \<noteq> {}\<close> fin by (simp add: good_blue_book_def pos_prod_le that)
+  then have "T\<noteq>{}"
+    by force
+  have "pm * card T * card Y = (\<Sum>x\<in>T. pm * card Y)"
+    by simp
+  also have "... \<le> (\<Sum>x\<in>T. card (Neighbours Red x \<inter> Y))"
+    using T_reds by (simp add: sum_bounded_below)
+  also have "... = edge_card Red T Y"
+    using \<open>disjnt X Y\<close> \<open>finite X\<close> \<open>T\<subseteq>X\<close> Red_E
+    by (metis disjnt_subset1 disjnt_sym edge_card_commute edge_card_eq_sum_Neighbours finite_subset)
+  also have "... = red_density T Y * card T * card Y"
+    using fin \<open>T\<subseteq>X\<close> by (simp add: finite_subset gen_density_def)
+  finally have ***: "pm \<le> red_density T Y" 
+    using fin \<open>T\<noteq>{}\<close> \<open>Y\<noteq>{}\<close>
+    by (metis \<open>T \<subseteq> X\<close> card_gt_0_iff finite_subset mult_right_le_imp_le of_nat_0_less_iff)
+  then show ?thesis
+    by (simp add: X1_eq Y1_eq i'_def pee_def pm_def)
 qed
+
 
 lemmas Y_6_4_S = Red_5_3
 
