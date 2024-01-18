@@ -122,19 +122,69 @@ definition "Z_class \<equiv> \<lambda>\<mu> l k. {i \<in> Step_class \<mu> l k r
 
 lemma Y_6_3:
   assumes "0<\<mu>" "\<mu><1" "Colours l k"
-  assumes Red53: "\<And>i. i \<in> Step_class \<mu> l k dboost_step \<longrightarrow> Colours l k \<longrightarrow>
+  assumes Red53: "\<And>i. i \<in> Step_class \<mu> l k dboost_step \<longrightarrow> 
                   (pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2)"
+  assumes bblue_step_limit: 
+      "finite (Step_class \<mu> l k bblue_step) \<and> card (Step_class \<mu> l k bblue_step) \<le> l powr (3/4)"
   shows "(\<Sum>i \<in> Z_class \<mu> l k. pee \<mu> l k (i-1) - pee \<mu> l k (Suc i)) \<le> 2 * eps k"
 proof -
+  obtain "k > 0" \<open>l\<le>k\<close>
+    by (meson Colours_def Colours_kn0 assms(3))
   { fix i
     assume i: "i \<in> Step_class \<mu> l k dboost_step"
     then have "i-1 \<in> Step_class \<mu> l k dreg_step"
       using dboost_step_odd odd_pos dreg_before_dboost_step i by force
     then have "pee \<mu> l k (i-1) \<le> pee \<mu> l k i \<and> pee \<mu> l k i \<le> pee \<mu> l k (Suc i)"
-      by (metis dboost_step_odd Y_6_4_D Red53 \<open>Colours l k\<close> i One_nat_def odd_Suc_minus_one)
+      by (metis dboost_step_odd Y_6_4_D Red53 i One_nat_def odd_Suc_minus_one)
   }        
   then have "Step_class \<mu> l k dboost_step \<inter> Z_class \<mu> l k = {}"
     by (fastforce simp: Z_class_def)
+  { fix i
+    assume i: "i \<in> Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k" 
+    have pee: "pee \<mu> l k (Suc i) < pee \<mu> l k (i-1)" "pee \<mu> l k (i-1) \<le> p0"
+      and iB: "i \<in> Step_class \<mu> l k bblue_step"
+      using i by (auto simp: Z_class_def)
+    have "hgt k (pee \<mu> l k (i-1)) = 1"
+    proof -
+      have "hgt k (pee \<mu> l k (i-1)) \<le> 1"
+      proof (intro hgt_Least)
+        show "pee \<mu> l k (i - 1) \<le> qfun k 1"
+          unfolding qfun_def
+          by (smt (verit) one_le_power pee divide_nonneg_nonneg epsk_ge0 of_nat_less_0_iff)
+      qed auto
+      then show ?thesis
+        by (metis One_nat_def Suc_pred' diff_is_0_eq hgt_gt_0)
+    qed
+    then have "pee \<mu> l k (Suc i) - pee \<mu> l k (i-1) \<le> eps k powr -(1/2) * alpha k 1"
+      using pee iB Y_6_4_B \<open>0<\<mu>\<close> by fastforce
+    also have "... \<le> 1/k"
+    proof -
+      have "real k powr - (1 / 8) \<le> 1"
+        using \<open>k>0\<close> by (force simp add: less_eq_real_def nat_less_real_le powr_less_one)
+      then show ?thesis
+        by (simp add: alpha_eq eps_def powr_powr divide_le_cancel flip: powr_add)
+    qed
+    finally have "pee \<mu> l k (Suc i) - pee \<mu> l k (i - 1) \<le> 1/k" .
+  }
+  then have "(\<Sum>i \<in> Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k. pee \<mu> l k (Suc i) - pee \<mu> l k (i - 1)) 
+             \<le> card (Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k) * (1/k)"
+    using sum_bounded_above by (metis (mono_tags, lifting))
+  also have "... \<le> card (Step_class \<mu> l k bblue_step) * (1/k)"
+    by (simp add: divide_le_cancel bblue_step_limit card_mono)
+  also have "... \<le> l powr (3/4) / k"
+    using bblue_step_limit by (simp add: \<open>0 < k\<close> frac_le)
+  also have "... \<le> eps k"
+  proof -
+    have "l powr (3/4) \<le> k powr (3 / 4)"
+      by (simp add: \<open>l \<le> k\<close> powr_mono2)
+    then show ?thesis
+      using powr_add [of k "3/4" "1/4"] 
+    apply (simp add: eps_def powr_minus divide_simps)
+      by (metis mult_le_cancel_right powr_non_neg)
+  qed
+  finally have "(\<Sum>i\<in>Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k. pee \<mu> l k (Suc i) - pee \<mu> l k (i - 1))
+                \<le> eps k" .
+
   show ?thesis
     sorry
 qed
