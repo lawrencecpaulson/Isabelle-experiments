@@ -1043,15 +1043,24 @@ lemma dreg_before_red_step:
   shows "i \<in> Step_class \<mu> l k dreg_step"
   using assms by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
 
+lemma red_step_odd: "i \<in> Step_class \<mu> l k red_step \<Longrightarrow> odd i" 
+  by (force simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
+
 lemma dreg_before_bblue_step:
   assumes "Suc i \<in> Step_class \<mu> l k bblue_step" 
   shows "i \<in> Step_class \<mu> l k dreg_step"
   using assms by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
 
+lemma bblue_step_odd: "i \<in> Step_class \<mu> l k bblue_step \<Longrightarrow> odd i" 
+  by (force simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
+
 lemma dreg_before_dboost_step:
   assumes "Suc i \<in> Step_class \<mu> l k dboost_step" 
   shows "i \<in> Step_class \<mu> l k dreg_step"
   using assms by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
+
+lemma dboost_step_odd: "i \<in> Step_class \<mu> l k dboost_step \<Longrightarrow> odd i" 
+  by (force simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
 
 lemma finite_Step_class:
   assumes "\<And>n. finite {m. m<n \<and> stepper_kind \<mu> l k m = knd}"

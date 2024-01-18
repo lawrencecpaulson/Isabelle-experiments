@@ -822,7 +822,7 @@ text \<open>This is a weaker consequence of the previous results\<close>
 corollary Red_5_3:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. \<forall>i. i \<in> Step_class \<mu> l k dboost_step \<longrightarrow> Colours l k \<longrightarrow>
-                  (pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / real k ^ 2)"
+                  (pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2)"
 proof -
   define Big where 
     "Big \<equiv> \<lambda>l. 1 / (real l)\<^sup>2 \<le> 1 / (l / eps l / (1 - eps l) + 1) \<and> l>1 \<and> Big_Red_5_1 \<mu> l"
@@ -832,7 +832,7 @@ proof -
     by auto
   ultimately have Big: "\<forall>\<^sup>\<infinity>l. Big l"
     using Big_Red_5_1 assms by (simp add: Big_def eventually_conj)
-  have "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / real k ^ 2"
+  have "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
     if l: "\<forall>k\<ge>l. Big k" and i: "i \<in> Step_class \<mu> l k dboost_step" and "Colours l k" for l k i
   proof 
     have Big: "Big_Red_5_1 \<mu> l"
@@ -877,7 +877,7 @@ proof -
       by (smt (verit, ccfv_SIG) mult.commute mult_less_0_iff)
     moreover have "1 / k^2 \<le> 1 / (k / eps k / (1 - eps k) + 1)"
       using Big_def \<open>l \<le> k\<close> l by fastforce
-    ultimately show "beta \<mu> l k i \<ge> 1 / real k ^ 2"
+    ultimately show "beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
       by auto
   qed
   with Big show ?thesis

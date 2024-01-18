@@ -85,7 +85,6 @@ proof -
   then have Xeq: "X = X_degree_reg k (Xseq \<mu> l k i') (Yseq \<mu> l k i')"
        and  Yeq: "Y = Yseq \<mu> l k i'"
     using Suci' by (auto simp: X_def Y_def)
-
   define pm where "pm \<equiv> (pee \<mu> l k i' - eps k powr -(1/2) * alpha k (hgt k (pee \<mu> l k i')))"
   have "T \<subseteq> X"
     using bluebook by (metis V_state choose_blue_book_subset local.step)
@@ -116,7 +115,29 @@ qed
 
 lemmas Y_6_4_S = Red_5_3
 
+subsection \<open>Towards Lemmas 6.3 and 6.2\<close>
 
+definition "Z_class \<equiv> \<lambda>\<mu> l k. {i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k bblue_step \<union> Step_class \<mu> l k dboost_step.
+                        pee \<mu> l k (Suc i) < pee \<mu> l k (i-1) \<and> pee \<mu> l k (i-1) \<le> p0}"
+
+lemma Y_6_3:
+  assumes "0<\<mu>" "\<mu><1" "Colours l k"
+  assumes Red53: "\<And>i. i \<in> Step_class \<mu> l k dboost_step \<longrightarrow> Colours l k \<longrightarrow>
+                  (pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2)"
+  shows "(\<Sum>i \<in> Z_class \<mu> l k. pee \<mu> l k (i-1) - pee \<mu> l k (Suc i)) \<le> 2 * eps k"
+proof -
+  { fix i
+    assume i: "i \<in> Step_class \<mu> l k dboost_step"
+    then have "i-1 \<in> Step_class \<mu> l k dreg_step"
+      using dboost_step_odd odd_pos dreg_before_dboost_step i by force
+    then have "pee \<mu> l k (i-1) \<le> pee \<mu> l k i \<and> pee \<mu> l k i \<le> pee \<mu> l k (Suc i)"
+      by (metis dboost_step_odd Y_6_4_D Red53 \<open>Colours l k\<close> i One_nat_def odd_Suc_minus_one)
+  }        
+  then have "Step_class \<mu> l k dboost_step \<inter> Z_class \<mu> l k = {}"
+    by (fastforce simp: Z_class_def)
+  show ?thesis
+    sorry
+qed
 
 end (*context Diagonal*)
 
