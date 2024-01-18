@@ -474,7 +474,7 @@ subsection \<open>Degree regularisation\<close>
 
 definition "red_dense \<equiv> \<lambda>k Y p x. card (Neighbours Red x \<inter> Y) \<ge> (p - eps k powr (-1/2) * alpha k (hgt k p)) * card Y"
 
-definition "X_degree_reg \<equiv>  \<lambda>k X Y. {x \<in> X. red_dense k Y (red_density X Y) x}"
+definition "X_degree_reg \<equiv> \<lambda>k X Y. {x \<in> X. red_dense k Y (red_density X Y) x}"
 
 definition "degree_reg \<equiv> \<lambda>k (X,Y,A,B). (X_degree_reg k X Y, Y, A, B)"
 

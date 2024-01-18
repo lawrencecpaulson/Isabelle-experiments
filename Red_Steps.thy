@@ -825,8 +825,8 @@ corollary Red_5_3:
                   (pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / real k ^ 2)"
 proof -
   define Big where 
-    "Big \<equiv> \<lambda>l. 1 / real l ^ 2 \<le> 1 / (l / eps l / (1 - eps l) + 1) \<and> l>1 \<and> Big_Red_5_1 \<mu> l"
-  have "\<forall>\<^sup>\<infinity>l. 1 / real l ^ 2 \<le> 1 / (l / eps l / (1 - eps l) + 1)"
+    "Big \<equiv> \<lambda>l. 1 / (real l)\<^sup>2 \<le> 1 / (l / eps l / (1 - eps l) + 1) \<and> l>1 \<and> Big_Red_5_1 \<mu> l"
+  have "\<forall>\<^sup>\<infinity>l. 1 / (real l)\<^sup>2 \<le> 1 / (l / eps l / (1 - eps l) + 1)"
     unfolding eps_def by real_asymp
   moreover have "\<forall>\<^sup>\<infinity>l. l>1"
     by auto
