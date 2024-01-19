@@ -120,7 +120,8 @@ subsection \<open>Towards Lemmas 6.3 and 6.2\<close>
 definition "Z_class \<equiv> \<lambda>\<mu> l k. {i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k bblue_step \<union> Step_class \<mu> l k dboost_step.
                         pee \<mu> l k (Suc i) < pee \<mu> l k (i-1) \<and> pee \<mu> l k (i-1) \<le> p0}"
 
-lemma Y_6_3:
+text \<open>Lemma 6.3 except for the limit\<close>
+lemma Y_6_3_Main:
   assumes "0<\<mu>" "\<mu><1" "Colours l k"
   assumes Red53: "\<And>i. i \<in> Step_class \<mu> l k dboost_step \<longrightarrow> 
                   (pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2)"
@@ -129,7 +130,7 @@ lemma Y_6_3:
   shows "(\<Sum>i \<in> Z_class \<mu> l k. pee \<mu> l k (i-1) - pee \<mu> l k (Suc i)) \<le> 2 * eps k"
 proof -
   obtain "k > 0" \<open>l\<le>k\<close>
-    by (meson Colours_def Colours_kn0 assms(3))
+    by (meson Colours_def Colours_kn0 \<open>Colours l k\<close>)
   { fix i
     assume i: "i \<in> Step_class \<mu> l k dboost_step"
     then have "i-1 \<in> Step_class \<mu> l k dreg_step"
@@ -137,10 +138,12 @@ proof -
     then have "pee \<mu> l k (i-1) \<le> pee \<mu> l k i \<and> pee \<mu> l k i \<le> pee \<mu> l k (Suc i)"
       by (metis dboost_step_odd Y_6_4_D Red53 i One_nat_def odd_Suc_minus_one)
   }        
-  then have "Step_class \<mu> l k dboost_step \<inter> Z_class \<mu> l k = {}"
+  then have dboost: "Step_class \<mu> l k dboost_step \<inter> Z_class \<mu> l k = {}"
     by (fastforce simp: Z_class_def)
   { fix i
     assume i: "i \<in> Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k" 
+    then have "i-1 \<in> Step_class \<mu> l k dreg_step"
+      using dreg_before_bblue_step bblue_step_odd i by force
     have pee: "pee \<mu> l k (Suc i) < pee \<mu> l k (i-1)" "pee \<mu> l k (i-1) \<le> p0"
       and iB: "i \<in> Step_class \<mu> l k bblue_step"
       using i by (auto simp: Z_class_def)
@@ -155,7 +158,7 @@ proof -
       then show ?thesis
         by (metis One_nat_def Suc_pred' diff_is_0_eq hgt_gt_0)
     qed
-    then have "pee \<mu> l k (Suc i) - pee \<mu> l k (i-1) \<le> eps k powr -(1/2) * alpha k 1"
+    then have "pee \<mu> l k (i-1) - pee \<mu> l k (Suc i) \<le> eps k powr -(1/2) * alpha k 1"
       using pee iB Y_6_4_B \<open>0<\<mu>\<close> by fastforce
     also have "... \<le> 1/k"
     proof -
@@ -164,9 +167,9 @@ proof -
       then show ?thesis
         by (simp add: alpha_eq eps_def powr_powr divide_le_cancel flip: powr_add)
     qed
-    finally have "pee \<mu> l k (Suc i) - pee \<mu> l k (i - 1) \<le> 1/k" .
+    finally have "pee \<mu> l k (i-1) - pee \<mu> l k (Suc i) \<le> 1/k" .
   }
-  then have "(\<Sum>i \<in> Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k. pee \<mu> l k (Suc i) - pee \<mu> l k (i - 1)) 
+  then have "(\<Sum>i \<in> Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k. pee \<mu> l k (i-1) - pee \<mu> l k (Suc i)) 
              \<le> card (Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k) * (1/k)"
     using sum_bounded_above by (metis (mono_tags, lifting))
   also have "... \<le> card (Step_class \<mu> l k bblue_step) * (1/k)"
@@ -182,13 +185,77 @@ proof -
     apply (simp add: eps_def powr_minus divide_simps)
       by (metis mult_le_cancel_right powr_non_neg)
   qed
-  finally have "(\<Sum>i\<in>Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k. pee \<mu> l k (Suc i) - pee \<mu> l k (i - 1))
-                \<le> eps k" .
-
+  finally have bblue: "(\<Sum>i\<in>Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k. pee \<mu> l k(i-1) - pee \<mu> l k (Suc i))
+                     \<le> eps k" .
+  { fix i
+    assume i: "i \<in> Step_class \<mu> l k red_step \<inter> Z_class \<mu> l k" 
+    then have pee_alpha: "pee \<mu> l k (i-1) - pee \<mu> l k (Suc i) 
+                       \<le> pee \<mu> l k (i-1) - pee \<mu> l k i + alpha k (hgt k (pee \<mu> l k i))"
+      using Y_6_4_R by force
+    have pee_le: "pee \<mu> l k (i-1) \<le> pee \<mu> l k i"
+      by (metis dreg_before_red_step Int_iff One_nat_def Y_6_4_D i odd_Suc_minus_one red_step_odd)
+    consider (1) "hgt k (pee \<mu> l k i) = 1" | (2) "hgt k (pee \<mu> l k i) > 1"
+      by (metis hgt_gt_0 less_one nat_neq_iff)
+    then have "pee \<mu> l k (i-1) - pee \<mu> l k i + alpha k (hgt k (pee \<mu> l k i)) \<le> eps k / k"
+    proof cases
+      case 1
+      then show ?thesis
+        by (smt (verit) Red_5_7c \<open>0 < k\<close> pee_le hgt_works) 
+    next
+      case 2
+      then have p_gt_q: "pee \<mu> l k i > qfun k 1"
+        by (meson hgt_Least not_le zero_less_one)
+      have pee_le_q0: "pee \<mu> l k (i-1) \<le> qfun k 0"
+        using 2 Z_class_def i by auto
+      also have pee2: "... \<le> pee \<mu> l k i"
+        using alpha_eq p_gt_q 
+        by (smt (verit, ccfv_SIG) One_nat_def alpha_ge0 diff_self_eq_0 q_Suc_diff zero_less_one)
+      finally have "pee \<mu> l k (i - 1) \<le> pee \<mu> l k i" .
+      then have "pee \<mu> l k (i-1) - pee \<mu> l k i + alpha k (hgt k (pee \<mu> l k i)) 
+              \<le> qfun k 0 - pee \<mu> l k i + eps k * (pee \<mu> l k i - qfun k 0 + 1/k)"
+        using Red_5_7b pee_le_q0 pee2 by fastforce
+      also have "... \<le> eps k / k"
+        using \<open>k>0\<close> pee2 by (simp add: algebra_simps) (smt (verit) affine_ineq epsk_le1)
+      finally show ?thesis .
+    qed
+    with pee_alpha have "pee \<mu> l k (i-1) - pee \<mu> l k (Suc i) \<le> eps k / k"
+      by linarith
+  }
+  then have "(\<Sum>i \<in> Step_class \<mu> l k red_step \<inter> Z_class \<mu> l k. pee \<mu> l k (i-1) - pee \<mu> l k (Suc i))
+           \<le> card (Step_class \<mu> l k red_step \<inter> Z_class \<mu> l k) * (eps k / k)"
+    using sum_bounded_above by (metis (mono_tags, lifting))
+  also have "... \<le> card (Step_class \<mu> l k red_step) * (eps k / k)"
+    using epsk_ge0[of k] assms
+    by (simp add: divide_le_cancel mult_le_cancel_right card_mono red_step_limit)
+  also have "... \<le> k * (eps k / k)"
+    using red_step_limit [OF \<open>0<\<mu>\<close> \<open>Colours l k\<close>]
+    by (smt (verit, best) divide_nonneg_nonneg epsk_ge0 mult_mono nat_less_real_le of_nat_0_le_iff)
+  also have "... \<le> eps k"
+    by (simp add: epsk_ge0)
+  finally have red: "(\<Sum>i\<in>Step_class \<mu> l k stepkind.red_step \<inter> Z_class \<mu> l k. pee \<mu> l k (i - 1) - pee \<mu> l k (Suc i)) \<le> eps k" .
+  have eq: "Z_class \<mu> l k = Step_class \<mu> l k dboost_step \<inter> Z_class \<mu> l k 
+                      \<union> Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k
+                      \<union> Step_class \<mu> l k red_step \<inter> Z_class \<mu> l k"
+    by (auto simp: Z_class_def)
   show ?thesis
-    sorry
+    apply (subst eq)
+    apply (subst sum.union_disjoint)
+    apply (simp add: bblue_step_limit dboost)
+    apply (simp add: assms(1) assms(3) red_step_limit(1))
+    apply (smt (verit, ccfv_SIG) Int_Un_eq(2) dboost disjnt_Step_class disjnt_def inf.commute inf.left_commute inf_right_idem stepkind.distinct(1))
+    apply (simp add: dboost bblue_step_limit sum.union_disjoint)
+    using bblue red
+    by simp
 qed
 
+lemma Y_6_3:
+  assumes "0<\<mu>" "\<mu><1" "Colours l k"
+  assumes Red53: "\<And>i. i \<in> Step_class \<mu> l k dboost_step \<longrightarrow> 
+                  (pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2)"
+  assumes bblue_step_limit: 
+      "finite (Step_class \<mu> l k bblue_step) \<and> card (Step_class \<mu> l k bblue_step) \<le> l powr (3/4)"
+  shows "(\<Sum>i \<in> Z_class \<mu> l k. pee \<mu> l k (i-1) - pee \<mu> l k (Suc i)) \<le> 2 * eps k"
+  sorry
 end (*context Diagonal*)
 
 end

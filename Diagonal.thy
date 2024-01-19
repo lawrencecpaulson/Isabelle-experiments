@@ -335,13 +335,17 @@ definition Weight :: "['a set, 'a set, 'a, 'a] \<Rightarrow> real" where
 definition weight :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow> real" where
   "weight \<equiv> \<lambda>X Y x. \<Sum>y \<in> X-{x}. Weight X Y x y"
 
-definition "p0 \<equiv> red_density X0 Y0"
+definition p0 :: "real"
+  where "p0 \<equiv> red_density X0 Y0"
 
-definition "eps \<equiv> \<lambda>k. real k powr (-1/4)"
+definition eps :: "nat \<Rightarrow> real"
+  where "eps \<equiv> \<lambda>k. real k powr (-1/4)"
 
-definition "qfun \<equiv> \<lambda>k h. p0 + ((1 + eps k)^h - 1) / k"
+definition  qfun :: "[nat, nat] \<Rightarrow> real"
+  where "qfun \<equiv> \<lambda>k h. p0 + ((1 + eps k)^h - 1) / k"
 
-definition "hgt \<equiv> \<lambda>k p. if k=0 then 1 else (LEAST h. p \<le> qfun k h \<and> h>0)"
+definition hgt :: "[nat, real] \<Rightarrow> nat"
+  where "hgt \<equiv> \<lambda>k p. if k=0 then 1 else (LEAST h. p \<le> qfun k h \<and> h>0)"
 
 lemma q0 [simp]: "qfun k 0 = p0"
   by (simp add: qfun_def)
