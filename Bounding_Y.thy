@@ -123,10 +123,7 @@ definition "Z_class \<equiv> \<lambda>\<mu> l k. {i \<in> Step_class \<mu> l k r
 text \<open>Lemma 6.3 except for the limit\<close>
 lemma Y_6_3_Main:
   assumes "0<\<mu>" "\<mu><1" "Colours l k"
-  assumes Red53: "\<And>i. i \<in> Step_class \<mu> l k dboost_step \<longrightarrow> 
-                  (pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2)"
-  assumes bblue_step_limit: 
-      "finite (Step_class \<mu> l k bblue_step) \<and> card (Step_class \<mu> l k bblue_step) \<le> l powr (3/4)"
+  assumes Red53: "Lemma_5_3 \<mu> l" and bblue_step_limit: "Lemma_bblue_step_limit \<mu> l"
   shows "(\<Sum>i \<in> Z_class \<mu> l k. pee \<mu> l k (i-1) - pee \<mu> l k (Suc i)) \<le> 2 * eps k"
 proof -
   obtain "k > 0" \<open>l\<le>k\<close>
@@ -136,7 +133,9 @@ proof -
     then have "i-1 \<in> Step_class \<mu> l k dreg_step"
       using dboost_step_odd odd_pos dreg_before_dboost_step i by force
     then have "pee \<mu> l k (i-1) \<le> pee \<mu> l k i \<and> pee \<mu> l k i \<le> pee \<mu> l k (Suc i)"
-      by (metis dboost_step_odd Y_6_4_D Red53 i One_nat_def odd_Suc_minus_one)
+      using Red53 \<open>Colours l k\<close> minus_nat.simps
+      unfolding Lemma_5_3_def
+      by (metis Suc_diff_Suc Y_6_4_D dboost_step_odd i One_nat_def odd_pos) 
   }        
   then have dboost: "Step_class \<mu> l k dboost_step \<inter> Z_class \<mu> l k = {}"
     by (fastforce simp: Z_class_def)
@@ -173,9 +172,10 @@ proof -
              \<le> card (Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k) * (1/k)"
     using sum_bounded_above by (metis (mono_tags, lifting))
   also have "... \<le> card (Step_class \<mu> l k bblue_step) * (1/k)"
-    by (simp add: divide_le_cancel bblue_step_limit card_mono)
+    using bblue_step_limit \<open>Colours l k\<close>
+    by (simp add: divide_le_cancel card_mono Lemma_bblue_step_limit_def)
   also have "... \<le> l powr (3/4) / k"
-    using bblue_step_limit by (simp add: \<open>0 < k\<close> frac_le)
+    using bblue_step_limit \<open>Colours l k\<close> by (simp add: \<open>0 < k\<close> frac_le Lemma_bblue_step_limit_def)
   also have "... \<le> eps k"
   proof -
     have "l powr (3/4) \<le> k powr (3 / 4)"
@@ -233,29 +233,32 @@ proof -
   also have "... \<le> eps k"
     by (simp add: epsk_ge0)
   finally have red: "(\<Sum>i\<in>Step_class \<mu> l k stepkind.red_step \<inter> Z_class \<mu> l k. pee \<mu> l k (i - 1) - pee \<mu> l k (Suc i)) \<le> eps k" .
+  have fin_bblue: "finite (Step_class \<mu> l k bblue_step)"
+    using Lemma_bblue_step_limit_def \<open>Colours l k\<close> bblue_step_limit by presburger
+  have fin_red: "finite (Step_class \<mu> l k red_step)"
+    using \<open>0<\<mu>\<close> \<open>Colours l k\<close> red_step_limit(1) by blast
+  have bblue_not_red: "\<And>x. x \<in> Step_class \<mu> l k bblue_step \<Longrightarrow> x \<notin> Step_class \<mu> l k red_step"
+    by (meson disjnt_Step_class disjnt_iff stepkind.distinct(1))
   have eq: "Z_class \<mu> l k = Step_class \<mu> l k dboost_step \<inter> Z_class \<mu> l k 
                       \<union> Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k
                       \<union> Step_class \<mu> l k red_step \<inter> Z_class \<mu> l k"
     by (auto simp: Z_class_def)
   show ?thesis
-    apply (subst eq)
-    apply (subst sum.union_disjoint)
-    apply (simp add: bblue_step_limit dboost)
-    apply (simp add: assms(1) assms(3) red_step_limit(1))
-    apply (smt (verit, ccfv_SIG) Int_Un_eq(2) dboost disjnt_Step_class disjnt_def inf.commute inf.left_commute inf_right_idem stepkind.distinct(1))
-    apply (simp add: dboost bblue_step_limit sum.union_disjoint)
     using bblue red
-    by simp
+    by (subst eq) (simp add: sum.union_disjoint dboost fin_bblue fin_red disjoint_iff bblue_not_red)
 qed
 
-lemma Y_6_3:
-  assumes "0<\<mu>" "\<mu><1" "Colours l k"
-  assumes Red53: "\<And>i. i \<in> Step_class \<mu> l k dboost_step \<longrightarrow> 
-                  (pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2)"
-  assumes bblue_step_limit: 
-      "finite (Step_class \<mu> l k bblue_step) \<and> card (Step_class \<mu> l k bblue_step) \<le> l powr (3/4)"
-  shows "(\<Sum>i \<in> Z_class \<mu> l k. pee \<mu> l k (i-1) - pee \<mu> l k (Suc i)) \<le> 2 * eps k"
-  sorry
+corollary Y_6_3:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> (\<Sum>i \<in> Z_class \<mu> l k. pee \<mu> l k (i-1) - pee \<mu> l k (Suc i)) \<le> 2 * eps k"
+proof -
+  have "\<forall>\<^sup>\<infinity>l. Lemma_5_3 \<mu> l \<and> Lemma_bblue_step_limit \<mu> l"
+    using eventually_conj Red_5_3 [OF assms] bblue_step_limit [OF \<open>0<\<mu>\<close>]
+    by blast
+  with Y_6_3_Main[OF assms] show ?thesis
+    by (simp add: eventually_mono)
+qed
+
 end (*context Diagonal*)
 
 end

@@ -401,11 +401,12 @@ proof -
     by presburger 
 qed
 
+definition "Lemma_bblue_step_limit \<equiv> \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k bblue_step) \<and> card (Step_class \<mu> l k bblue_step) \<le> l powr (3/4)"
 
 text \<open>Lemma 4.3\<close>
 corollary bblue_step_limit:
   assumes "\<mu>>0"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k bblue_step) \<and> card (Step_class \<mu> l k bblue_step) \<le> l powr (3/4)"
+  shows "\<forall>\<^sup>\<infinity>l. Lemma_bblue_step_limit \<mu> l"
 proof -
   have "finite (Step_class \<mu> l k bblue_step) \<and> card (Step_class \<mu> l k bblue_step) \<le> l powr (3/4)"
     if 41: "\<And>X. many_bluish \<mu> l k X \<Longrightarrow> X\<subseteq>V \<Longrightarrow> \<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S \<ge> l powr (1/4)"
@@ -515,7 +516,7 @@ proof -
     ultimately show ?thesis by force
   qed
   with eventually_mono [OF Blue_4_1] \<open>\<mu>>0\<close> show ?thesis
-    by presburger 
+    unfolding Lemma_bblue_step_limit_def by presburger 
 qed
 
 corollary red_step_limit:
