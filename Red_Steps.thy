@@ -494,11 +494,12 @@ proposition Red_5_1:
   defines "p \<equiv> pee \<mu> l k i"
   defines "x \<equiv> cvx \<mu> l k i"
   defines "X \<equiv> Xseq \<mu> l k i" and "Y \<equiv> Yseq \<mu> l k i"
-  defines "\<beta> \<equiv> card (Neighbours Blue x \<inter> Xseq \<mu> l k i) / card X"
-  shows "red_density (Neighbours Red x \<inter> Xseq \<mu> l k i) (Neighbours Red x \<inter> Yseq \<mu> l k i)
-         \<ge> p - alpha k (hgt k p)
-       \<or> red_density (Neighbours Blue x \<inter> Xseq \<mu> l k i) (Neighbours Red x \<inter> Yseq \<mu> l k i)
-         \<ge> p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha k (hgt k p) \<and> \<beta> > 0"
+  defines "NBX \<equiv> Neighbours Blue x \<inter> X"
+  defines "NRX \<equiv> Neighbours Red x \<inter> X"
+  defines "NRY \<equiv> Neighbours Red x \<inter> Y"
+  defines "\<beta> \<equiv> card NBX / card X"
+  shows "red_density NRX NRY \<ge> p - alpha k (hgt k p)
+       \<or> red_density NBX NRY \<ge> p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha k (hgt k p) \<and> \<beta> > 0"
 proof -
   have Red_5_4: "weight X Y x \<ge> - real (card X) / (real k) ^ 5"
     using Big i by (auto simp: Big_Red_5_1_def Lemma_5_4_def x_def X_def Y_def)
@@ -545,9 +546,6 @@ proof -
     using cvx_in_Xseq i XY x_def by blast
   have "X \<subseteq> V"
     by (simp add: Xseq_subset_V XY)
-  define NBX where "NBX \<equiv> Neighbours Blue x \<inter> X"
-  define NRX where "NRX \<equiv> Neighbours Red x \<inter> X"
-  define NRY where "NRY \<equiv> Neighbours Red x \<inter> Y"
   have "finite NRX" "finite NBX" "finite NRY"
     by (auto simp add: NRX_def NBX_def NRY_def finite_Neighbours)
   have "disjnt X Y"
@@ -562,7 +560,7 @@ proof -
   ultimately have "card NRX \<ge> (1-\<mu>) * card X - 1"
     by (simp add: algebra_simps)
   with lA \<open>l\<le>k\<close> X_gt_k have "card NRX > 0"
-    by (smt (verit, ccfv_SIG) of_nat_0 gr0I mult_le_cancel_left2 mult_le_one mult_less_cancel_left_pos nat_less_real_le of_nat_mono)
+    by (smt (verit, best) of_nat_0 \<open>\<mu><1\<close> gr0I mult_less_cancel_left_pos nat_less_real_le of_nat_mono)
   have "card NRY > 0"
     using Y_Neighbours_nonempty [OF i] \<open>k\<ge>256\<close> NRY_def \<open>finite NRY\<close> \<open>x \<in> X\<close> card_0_eq XY by force
   show ?thesis
@@ -634,22 +632,23 @@ proof -
         using \<open>k>0\<close> by (intro mult_strict_right_mono) auto
       then have "real (2 * card X) / real (card X - 1) * k^2 < eps k * real (k ^ 5)"
         by (simp add: mult.assoc flip: of_nat_mult)
-      then have "0 < - real (card X) / (real k) ^ 5 + (eps k / real k) * real (card X - 1) * (1 / (2 * real k))"
+      then have "0 < - real (card X) / (real k) ^ 5 + (eps k / k) * real (card X - 1) * (1 / (2 * real k))"
         using \<open>k>0\<close> X_gt_k by (simp add: field_simps power2_eq_square)
-      also have "- real (card X) / (real k) ^ 5 + (eps k / real k) * real (card X - 1) * (1 / (2 * real k)) 
-          \<le> - real (card X) / (real k) ^ 5 + (eps k / real k) * real (card NRX) * (real (card NRY) / real (card Y))"
+      also have "- real (card X) / (real k) ^ 5 + (eps k / k) * real (card X - 1) * (1 / (2 * real k)) 
+               \<le> - real (card X) / (real k) ^ 5 + (eps k / k) * real (card NRX) * (card NRY / card Y)"
         using Y_NRY \<open>k>0\<close> \<open>card Y \<noteq> 0\<close>
         by (intro add_mono mult_mono) (auto simp: cNRX eps_def divide_simps)
-      also have "... = - real (card X) / (real k) ^ 5 + (eps k / real k) * real (card NRX) * real (card NRY) / real (card Y)"
+      also have "... = - real (card X) / (real k) ^ 5 + (eps k / k) * real (card NRX) * card NRY / card Y"
         by simp
-      also have "\<dots> \<le> - real (card X) / (real k) ^ 5 + alpha k (hgt k p) * real (card NRX) * real (card NRY) / real (card Y)"
+      also have "\<dots> \<le> - real (card X) / (real k) ^ 5 + alpha k (hgt k p) * real (card NRX) * card NRY / card Y"
         using alpha_ge [OF hgt_gt_0]
         by (intro add_mono mult_right_mono divide_right_mono) auto
-      also have "\<dots> \<le> weight X Y x + alpha k (hgt k p) * real (card NRX) * real (card NRY) / real (card Y)"
+      also have "\<dots> \<le> weight X Y x + alpha k (hgt k p) * real (card NRX) * card NRY / real (card Y)"
         using Red_5_4 by simp
       also have "... \<le> 0"
         using empty 15 by auto
-      finally show False by simp
+      finally show False
+        by simp
     qed
     have "card NBX > 0"
       by (simp add: \<open>NBX \<noteq> {}\<close> \<open>finite NBX\<close> card_gt_0_iff)
@@ -811,16 +810,18 @@ qed
 
 corollary Red_5_2:
   assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. \<forall>i. i \<in> Step_class \<mu> l k dboost_step \<longrightarrow> Colours l k \<longrightarrow>
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. \<forall>i \<in> Step_class \<mu> l k dboost_step.
+         Colours l k \<longrightarrow>
          pee \<mu> l k (Suc i) - pee \<mu> l k i
          \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i))
       \<and> beta \<mu> l k i > 0"
   using Big_Red_5_1 Red_5_2_Main assms 
   unfolding eventually_sequentially by (meson order.trans)
 
-definition "Lemma_5_3 \<equiv> 
-              \<lambda>\<mu> l. \<forall>k. \<forall>i. i \<in> Step_class \<mu> l k dboost_step \<longrightarrow> Colours l k \<longrightarrow>
-                  (pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2)"
+definition 
+  "Lemma_5_3 \<equiv> 
+      \<lambda>\<mu> l. \<forall>k. \<forall>i \<in> Step_class \<mu> l k dboost_step.
+            Colours l k \<longrightarrow> pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
 
 text \<open>This is a weaker consequence of the previous results\<close>
 corollary Red_5_3:

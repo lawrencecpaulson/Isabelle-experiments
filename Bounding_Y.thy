@@ -10,7 +10,7 @@ begin
 subsection \<open>The following results together are Lemma 6.4\<close>
 text \<open>Compared with the paper, all the indices are greater by one\<close>
 
-lemma Y_6_4_R: 
+lemma Y_6_4_Red: 
   assumes i: "i \<in> Step_class \<mu> l k red_step"
   shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i - alpha k (hgt k (pee \<mu> l k i))"
 proof -
@@ -32,7 +32,7 @@ proof -
     using red by (simp add: X_def Y_def reddish_def pee_def)
 qed
 
-lemma Y_6_4_D: 
+lemma Y_6_4_DegreeReg: 
   assumes "i \<in> Step_class \<mu> l k dreg_step" 
   shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i"
 proof -
@@ -49,7 +49,7 @@ proof -
     by (simp add: X_def Xseq_Yseq_disjnt Y_def pee_def red_density_X_degree_reg_ge)
 qed
 
-lemma Y_6_4_B: 
+lemma Y_6_4_Bblue: 
   assumes i: "i \<in> Step_class \<mu> l k bblue_step" and "0 < \<mu>"
   shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k (i-1) - (eps k powr (-1/2)) * alpha k (hgt k (pee \<mu> l k (i-1)))"
 proof -
@@ -113,7 +113,7 @@ proof -
 qed
 
 
-lemmas Y_6_4_S = Red_5_3
+lemmas Y_6_4_dbooSt = Red_5_3
 
 subsection \<open>Towards Lemmas 6.3 and 6.2\<close>
 
@@ -136,7 +136,7 @@ proof -
     then have "p (i-1) \<le> p i \<and> p i \<le> p (Suc i)"
       using Red53 \<open>Colours l k\<close> minus_nat.simps
       unfolding Lemma_5_3_def p_def
-      by (metis Suc_diff_Suc Y_6_4_D dboost_step_odd i One_nat_def odd_pos) 
+      by (metis Suc_diff_Suc Y_6_4_DegreeReg dboost_step_odd i One_nat_def odd_pos) 
   }        
   then have dboost: "Step_class \<mu> l k dboost_step \<inter> Z_class \<mu> l k = {}"
     by (fastforce simp: Z_class_def p_def)
@@ -159,7 +159,7 @@ proof -
         by (metis One_nat_def Suc_pred' diff_is_0_eq hgt_gt_0)
     qed
     then have "p (i-1) - p (Suc i) \<le> eps k powr -(1/2) * alpha k 1"
-      using pee iB Y_6_4_B \<open>0<\<mu>\<close> by (fastforce simp: p_def)
+      using pee iB Y_6_4_Bblue \<open>0<\<mu>\<close> by (fastforce simp: p_def)
     also have "... \<le> 1/k"
     proof -
       have "real k powr - (1 / 8) \<le> 1"
@@ -192,10 +192,10 @@ proof -
     assume i: "i \<in> Step_class \<mu> l k red_step \<inter> Z_class \<mu> l k" 
     then have pee_alpha: "p (i-1) - p (Suc i) 
                        \<le> p (i-1) - p i + alpha k (hgt k (p i))"
-      using Y_6_4_R by (force simp: p_def)
+      using Y_6_4_Red by (force simp: p_def)
     have pee_le: "p (i-1) \<le> p i"
       unfolding p_def
-      by (metis dreg_before_red_step Int_iff One_nat_def Y_6_4_D i odd_Suc_minus_one red_step_odd)
+      by (metis dreg_before_red_step Int_iff One_nat_def Y_6_4_DegreeReg i odd_Suc_minus_one red_step_odd)
     consider (1) "hgt k (p i) = 1" | (2) "hgt k (p i) > 1"
       by (metis hgt_gt_0 less_one nat_neq_iff)
     then have "p (i-1) - p i + alpha k (hgt k (p i)) \<le> eps k / k"
@@ -261,7 +261,7 @@ proof -
     by (simp add: eventually_mono)
 qed
 
-lemma Y_6_5_R:
+lemma Y_6_5_Red:
   assumes i: "i \<in> Step_class \<mu> l k red_step" and "k\<ge>16"
   defines "p \<equiv> pee \<mu> l k"
   shows "hgt k (p (Suc i)) \<ge> hgt k (p i) - 2"
@@ -300,11 +300,23 @@ next
   also have "... < p i - alpha k (hgt k (p i))"
     using lesspi by (simp add: alpha_def)
   also have "... \<le> p (Suc i)"
-    using Y_6_4_R assms(1) by (force simp add: p_def)
+    using Y_6_4_Red assms(1) by (force simp add: p_def)
   finally have Y: "qfun k (hgt k (p i) - 3) < p (Suc i)" .
   with hgt_greater[OF\<open>k>0\<close> Y] show ?thesis
     by simp
 qed
+
+lemma Y_6_5_DegreeReg: 
+  assumes "i \<in> Step_class \<mu> l k dreg_step" and "k>0"
+  shows "hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k i)"
+  using hgt_mono Y_6_4_DegreeReg assms by presburger
+
+lemma Y_6_5_dbooSt:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>i \<in> Step_class \<mu> l k dboost_step.
+                     Colours l k \<longrightarrow> hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k i)"
+  using Y_6_4_dbooSt[OF assms] unfolding Lemma_5_3_def
+  by (smt (verit, ccfv_threshold) eventually_at_top_linorder Colours_kn0 hgt_mono)
 
 end (*context Diagonal*)
 
