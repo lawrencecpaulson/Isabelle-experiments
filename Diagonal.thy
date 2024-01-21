@@ -341,7 +341,7 @@ definition p0 :: "real"
 definition eps :: "nat \<Rightarrow> real"
   where "eps \<equiv> \<lambda>k. real k powr (-1/4)"
 
-definition  qfun :: "[nat, nat] \<Rightarrow> real"
+definition qfun :: "[nat, nat] \<Rightarrow> real"
   where "qfun \<equiv> \<lambda>k h. p0 + ((1 + eps k)^h - 1) / k"
 
 definition hgt :: "[nat, real] \<Rightarrow> nat"
@@ -352,6 +352,9 @@ lemma q0 [simp]: "qfun k 0 = p0"
 
 lemma p0_01: "0 \<le> p0" "p0 \<le> 1"
   by (simp_all add: p0_def gen_density_ge0 gen_density_le1)
+
+lemma epsk_eq_sqrt: "eps k = 1 / sqrt (sqrt (real k))"
+  by (simp add: eps_def powr_minus_divide powr_powr flip: powr_half_sqrt)
 
 lemma epsk_ge0: "eps k \<ge> 0"
   by (simp add: eps_def)
@@ -373,6 +376,12 @@ qed
 lemma epsk_less1:
   assumes "k>1" shows "eps k < 1"
   by (smt (verit) assms eps_def less_imp_of_nat_less of_nat_1 powr_less_one zero_le_divide_iff)
+
+lemma qfun_mono: "\<lbrakk>k>0; h'\<le>h\<rbrakk> \<Longrightarrow> qfun k h' \<le> qfun k h"
+  by (simp add: qfun_def epsk_ge0 frac_le power_increasing)
+
+lemma q_Suc_diff: "qfun k (Suc h) - qfun k h = eps k * (1 + eps k)^h / k"
+  by (simp add: qfun_def field_split_simps)
 
 lemma height_exists:
   assumes "k>0"
@@ -415,9 +424,11 @@ lemma hgt_Least:
   assumes "0<h" "p \<le> qfun k h"
   shows "hgt k p \<le> h"
   by (simp add: Suc_leI assms hgt_def Least_le)
- 
-lemma q_Suc_diff: "qfun k (Suc h) - qfun k h = eps k * (1 + eps k)^h / k"
-  by (simp add: qfun_def field_split_simps)
+
+lemma hgt_greater:
+  assumes "0<k" "p > qfun k h"
+  shows "hgt k p > h"
+  by (smt (verit) assms linorder_le_less_linear qfun_mono height_exists hgt_works)
 
 lemma finite_Red [simp]: "finite Red"
   by (metis Red_Blue_all complete fin_edges finite_Un)

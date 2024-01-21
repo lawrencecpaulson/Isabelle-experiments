@@ -124,7 +124,8 @@ text \<open>Lemma 6.3 except for the limit\<close>
 lemma Y_6_3_Main:
   assumes "0<\<mu>" "\<mu><1" "Colours l k"
   assumes Red53: "Lemma_5_3 \<mu> l" and bblue_step_limit: "Lemma_bblue_step_limit \<mu> l"
-  shows "(\<Sum>i \<in> Z_class \<mu> l k. pee \<mu> l k (i-1) - pee \<mu> l k (Suc i)) \<le> 2 * eps k"
+  defines "p \<equiv> pee \<mu> l k"
+  shows "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k"
 proof -
   obtain "k > 0" \<open>l\<le>k\<close>
     by (meson Colours_def Colours_kn0 \<open>Colours l k\<close>)
@@ -132,33 +133,33 @@ proof -
     assume i: "i \<in> Step_class \<mu> l k dboost_step"
     then have "i-1 \<in> Step_class \<mu> l k dreg_step"
       using dboost_step_odd odd_pos dreg_before_dboost_step i by force
-    then have "pee \<mu> l k (i-1) \<le> pee \<mu> l k i \<and> pee \<mu> l k i \<le> pee \<mu> l k (Suc i)"
+    then have "p (i-1) \<le> p i \<and> p i \<le> p (Suc i)"
       using Red53 \<open>Colours l k\<close> minus_nat.simps
-      unfolding Lemma_5_3_def
+      unfolding Lemma_5_3_def p_def
       by (metis Suc_diff_Suc Y_6_4_D dboost_step_odd i One_nat_def odd_pos) 
   }        
   then have dboost: "Step_class \<mu> l k dboost_step \<inter> Z_class \<mu> l k = {}"
-    by (fastforce simp: Z_class_def)
+    by (fastforce simp: Z_class_def p_def)
   { fix i
     assume i: "i \<in> Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k" 
     then have "i-1 \<in> Step_class \<mu> l k dreg_step"
       using dreg_before_bblue_step bblue_step_odd i by force
-    have pee: "pee \<mu> l k (Suc i) < pee \<mu> l k (i-1)" "pee \<mu> l k (i-1) \<le> p0"
+    have pee: "p (Suc i) < p (i-1)" "p (i-1) \<le> p0"
       and iB: "i \<in> Step_class \<mu> l k bblue_step"
-      using i by (auto simp: Z_class_def)
-    have "hgt k (pee \<mu> l k (i-1)) = 1"
+      using i by (auto simp: Z_class_def p_def)
+    have "hgt k (p (i-1)) = 1"
     proof -
-      have "hgt k (pee \<mu> l k (i-1)) \<le> 1"
+      have "hgt k (p (i-1)) \<le> 1"
       proof (intro hgt_Least)
-        show "pee \<mu> l k (i - 1) \<le> qfun k 1"
+        show "p (i - 1) \<le> qfun k 1"
           unfolding qfun_def
           by (smt (verit) one_le_power pee divide_nonneg_nonneg epsk_ge0 of_nat_less_0_iff)
       qed auto
       then show ?thesis
         by (metis One_nat_def Suc_pred' diff_is_0_eq hgt_gt_0)
     qed
-    then have "pee \<mu> l k (i-1) - pee \<mu> l k (Suc i) \<le> eps k powr -(1/2) * alpha k 1"
-      using pee iB Y_6_4_B \<open>0<\<mu>\<close> by fastforce
+    then have "p (i-1) - p (Suc i) \<le> eps k powr -(1/2) * alpha k 1"
+      using pee iB Y_6_4_B \<open>0<\<mu>\<close> by (fastforce simp: p_def)
     also have "... \<le> 1/k"
     proof -
       have "real k powr - (1 / 8) \<le> 1"
@@ -166,9 +167,9 @@ proof -
       then show ?thesis
         by (simp add: alpha_eq eps_def powr_powr divide_le_cancel flip: powr_add)
     qed
-    finally have "pee \<mu> l k (i-1) - pee \<mu> l k (Suc i) \<le> 1/k" .
+    finally have "p (i-1) - p (Suc i) \<le> 1/k" .
   }
-  then have "(\<Sum>i \<in> Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k. pee \<mu> l k (i-1) - pee \<mu> l k (Suc i)) 
+  then have "(\<Sum>i \<in> Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i)) 
              \<le> card (Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k) * (1/k)"
     using sum_bounded_above by (metis (mono_tags, lifting))
   also have "... \<le> card (Step_class \<mu> l k bblue_step) * (1/k)"
@@ -185,43 +186,44 @@ proof -
     apply (simp add: eps_def powr_minus divide_simps)
       by (metis mult_le_cancel_right powr_non_neg)
   qed
-  finally have bblue: "(\<Sum>i\<in>Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k. pee \<mu> l k(i-1) - pee \<mu> l k (Suc i))
+  finally have bblue: "(\<Sum>i\<in>Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k. p(i-1) - p (Suc i))
                      \<le> eps k" .
   { fix i
     assume i: "i \<in> Step_class \<mu> l k red_step \<inter> Z_class \<mu> l k" 
-    then have pee_alpha: "pee \<mu> l k (i-1) - pee \<mu> l k (Suc i) 
-                       \<le> pee \<mu> l k (i-1) - pee \<mu> l k i + alpha k (hgt k (pee \<mu> l k i))"
-      using Y_6_4_R by force
-    have pee_le: "pee \<mu> l k (i-1) \<le> pee \<mu> l k i"
+    then have pee_alpha: "p (i-1) - p (Suc i) 
+                       \<le> p (i-1) - p i + alpha k (hgt k (p i))"
+      using Y_6_4_R by (force simp: p_def)
+    have pee_le: "p (i-1) \<le> p i"
+      unfolding p_def
       by (metis dreg_before_red_step Int_iff One_nat_def Y_6_4_D i odd_Suc_minus_one red_step_odd)
-    consider (1) "hgt k (pee \<mu> l k i) = 1" | (2) "hgt k (pee \<mu> l k i) > 1"
+    consider (1) "hgt k (p i) = 1" | (2) "hgt k (p i) > 1"
       by (metis hgt_gt_0 less_one nat_neq_iff)
-    then have "pee \<mu> l k (i-1) - pee \<mu> l k i + alpha k (hgt k (pee \<mu> l k i)) \<le> eps k / k"
+    then have "p (i-1) - p i + alpha k (hgt k (p i)) \<le> eps k / k"
     proof cases
       case 1
       then show ?thesis
         by (smt (verit) Red_5_7c \<open>0 < k\<close> pee_le hgt_works) 
     next
       case 2
-      then have p_gt_q: "pee \<mu> l k i > qfun k 1"
+      then have p_gt_q: "p i > qfun k 1"
         by (meson hgt_Least not_le zero_less_one)
-      have pee_le_q0: "pee \<mu> l k (i-1) \<le> qfun k 0"
-        using 2 Z_class_def i by auto
-      also have pee2: "... \<le> pee \<mu> l k i"
+      have pee_le_q0: "p (i-1) \<le> qfun k 0"
+        using 2 Z_class_def p_def i by auto
+      also have pee2: "... \<le> p i"
         using alpha_eq p_gt_q 
         by (smt (verit, ccfv_SIG) One_nat_def alpha_ge0 diff_self_eq_0 q_Suc_diff zero_less_one)
-      finally have "pee \<mu> l k (i - 1) \<le> pee \<mu> l k i" .
-      then have "pee \<mu> l k (i-1) - pee \<mu> l k i + alpha k (hgt k (pee \<mu> l k i)) 
-              \<le> qfun k 0 - pee \<mu> l k i + eps k * (pee \<mu> l k i - qfun k 0 + 1/k)"
+      finally have "p (i - 1) \<le> p i" .
+      then have "p (i-1) - p i + alpha k (hgt k (p i)) 
+              \<le> qfun k 0 - p i + eps k * (p i - qfun k 0 + 1/k)"
         using Red_5_7b pee_le_q0 pee2 by fastforce
       also have "... \<le> eps k / k"
         using \<open>k>0\<close> pee2 by (simp add: algebra_simps) (smt (verit) affine_ineq epsk_le1)
       finally show ?thesis .
     qed
-    with pee_alpha have "pee \<mu> l k (i-1) - pee \<mu> l k (Suc i) \<le> eps k / k"
+    with pee_alpha have "p (i-1) - p (Suc i) \<le> eps k / k"
       by linarith
   }
-  then have "(\<Sum>i \<in> Step_class \<mu> l k red_step \<inter> Z_class \<mu> l k. pee \<mu> l k (i-1) - pee \<mu> l k (Suc i))
+  then have "(\<Sum>i \<in> Step_class \<mu> l k red_step \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i))
            \<le> card (Step_class \<mu> l k red_step \<inter> Z_class \<mu> l k) * (eps k / k)"
     using sum_bounded_above by (metis (mono_tags, lifting))
   also have "... \<le> card (Step_class \<mu> l k red_step) * (eps k / k)"
@@ -232,7 +234,7 @@ proof -
     by (smt (verit, best) divide_nonneg_nonneg epsk_ge0 mult_mono nat_less_real_le of_nat_0_le_iff)
   also have "... \<le> eps k"
     by (simp add: epsk_ge0)
-  finally have red: "(\<Sum>i\<in>Step_class \<mu> l k stepkind.red_step \<inter> Z_class \<mu> l k. pee \<mu> l k (i - 1) - pee \<mu> l k (Suc i)) \<le> eps k" .
+  finally have red: "(\<Sum>i\<in>Step_class \<mu> l k stepkind.red_step \<inter> Z_class \<mu> l k. p (i - 1) - p (Suc i)) \<le> eps k" .
   have fin_bblue: "finite (Step_class \<mu> l k bblue_step)"
     using Lemma_bblue_step_limit_def \<open>Colours l k\<close> bblue_step_limit by presburger
   have fin_red: "finite (Step_class \<mu> l k red_step)"
@@ -257,6 +259,51 @@ proof -
     by blast
   with Y_6_3_Main[OF assms] show ?thesis
     by (simp add: eventually_mono)
+qed
+
+lemma Y_6_5_R:
+  assumes i: "i \<in> Step_class \<mu> l k red_step" and "k\<ge>16"
+  defines "p \<equiv> pee \<mu> l k"
+  shows "hgt k (p (Suc i)) \<ge> hgt k (p i) - 2"
+proof (cases "hgt k (p i) \<le> 3")
+  case True
+  have "hgt k (p (Suc i)) \<ge> 1"
+    by (simp add: Suc_leI hgt_gt_0)
+  with True show ?thesis
+    by linarith
+next
+  case False
+  have "k>0" using assms by auto
+  have "eps k \<le> 1/2"
+    using \<open>k\<ge>16\<close> by (simp add: epsk_eq_sqrt divide_simps real_le_rsqrt)
+  moreover have "\<And>x::real. 0 \<le> x \<and> x \<le> 1/2 \<Longrightarrow> x * (1 + x)\<^sup>2 + 1 \<le> (1 + x)\<^sup>2"
+    by sos
+  ultimately have C: "eps k * (1 + eps k)\<^sup>2 + 1 \<le> (1 + eps k)\<^sup>2"
+    using epsk_ge0 by presburger
+  have le1: "eps k + 1 / (1 + eps k)\<^sup>2 \<le> 1"
+    using mult_left_mono [OF C, of "inverse ((1 + eps k)\<^sup>2)"]
+    by (simp add: ring_distribs inverse_eq_divide) (smt (verit))
+  have 0: "0 \<le> (1 + eps k) ^ (hgt k (p i) - Suc 0)"
+    using epsk_ge0 by auto
+  have lesspi: "qfun k (hgt k (p i) - 1) < p i"
+    using False hgt_Least [of "hgt k (p i)-1" "p i" k] by linarith
+  have A: "(1 + eps k) ^ hgt k (p i) = (1 + eps k) * (1 + eps k) ^ (hgt k (p i) - Suc 0)"
+    using False power.simps by (metis Suc_pred hgt_gt_0)
+  have B: "(1 + eps k) ^ (hgt k (p i) - 3) = 1 / (1 + eps k)^2 * (1 + eps k) ^ (hgt k (p i) - Suc 0)"
+    using epsk_gt0 [OF \<open>k>0\<close>] False
+    by (simp add: divide_simps Suc_diff_Suc numeral_3_eq_3 flip: power_add)
+  have "qfun k (hgt k (p i) - 3)
+     \<le> qfun k (hgt k (p i) - 1) - (qfun k (hgt k (p i)) - qfun k (hgt k (p i) - 1))"
+    using \<open>k>0\<close> mult_left_mono [OF le1 0]
+    apply (simp add: qfun_def field_simps A)
+    by (simp add: B)
+  also have "... < p i - alpha k (hgt k (p i))"
+    using lesspi by (simp add: alpha_def)
+  also have "... \<le> p (Suc i)"
+    using Y_6_4_R assms(1) by (force simp add: p_def)
+  finally have Y: "qfun k (hgt k (p i) - 3) < p (Suc i)" .
+  with hgt_greater[OF\<open>k>0\<close> Y] show ?thesis
+    by simp
 qed
 
 end (*context Diagonal*)
