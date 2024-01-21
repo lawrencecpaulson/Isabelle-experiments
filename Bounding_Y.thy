@@ -98,12 +98,12 @@ proof -
     by force
   have "pm * card T * card Y = (\<Sum>x\<in>T. pm * card Y)"
     by simp
-  also have "... \<le> (\<Sum>x\<in>T. card (Neighbours Red x \<inter> Y))"
+  also have "\<dots> \<le> (\<Sum>x\<in>T. card (Neighbours Red x \<inter> Y))"
     using T_reds by (simp add: sum_bounded_below)
-  also have "... = edge_card Red T Y"
+  also have "\<dots> = edge_card Red T Y"
     using \<open>disjnt X Y\<close> \<open>finite X\<close> \<open>T\<subseteq>X\<close> Red_E
     by (metis disjnt_subset1 disjnt_sym edge_card_commute edge_card_eq_sum_Neighbours finite_subset)
-  also have "... = red_density T Y * card T * card Y"
+  also have "\<dots> = red_density T Y * card T * card Y"
     using fin \<open>T\<subseteq>X\<close> by (simp add: finite_subset gen_density_def)
   finally have ***: "pm \<le> red_density T Y" 
     using fin \<open>T\<noteq>{}\<close> \<open>Y\<noteq>{}\<close>
@@ -160,7 +160,7 @@ proof -
     qed
     then have "p (i-1) - p (Suc i) \<le> eps k powr -(1/2) * alpha k 1"
       using pee iB Y_6_4_Bblue \<open>0<\<mu>\<close> by (fastforce simp: p_def)
-    also have "... \<le> 1/k"
+    also have "\<dots> \<le> 1/k"
     proof -
       have "real k powr - (1 / 8) \<le> 1"
         using \<open>k>0\<close> by (force simp add: less_eq_real_def nat_less_real_le powr_less_one)
@@ -172,12 +172,12 @@ proof -
   then have "(\<Sum>i \<in> Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i)) 
              \<le> card (Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k) * (1/k)"
     using sum_bounded_above by (metis (mono_tags, lifting))
-  also have "... \<le> card (Step_class \<mu> l k bblue_step) * (1/k)"
+  also have "\<dots> \<le> card (Step_class \<mu> l k bblue_step) * (1/k)"
     using bblue_step_limit \<open>Colours l k\<close>
     by (simp add: divide_le_cancel card_mono Lemma_bblue_step_limit_def)
-  also have "... \<le> l powr (3/4) / k"
+  also have "\<dots> \<le> l powr (3/4) / k"
     using bblue_step_limit \<open>Colours l k\<close> by (simp add: \<open>0 < k\<close> frac_le Lemma_bblue_step_limit_def)
-  also have "... \<le> eps k"
+  also have "\<dots> \<le> eps k"
   proof -
     have "l powr (3/4) \<le> k powr (3 / 4)"
       by (simp add: \<open>l \<le> k\<close> powr_mono2)
@@ -209,14 +209,14 @@ proof -
         by (meson hgt_Least not_le zero_less_one)
       have pee_le_q0: "p (i-1) \<le> qfun k 0"
         using 2 Z_class_def p_def i by auto
-      also have pee2: "... \<le> p i"
+      also have pee2: "\<dots> \<le> p i"
         using alpha_eq p_gt_q 
         by (smt (verit, ccfv_SIG) One_nat_def alpha_ge0 diff_self_eq_0 q_Suc_diff zero_less_one)
       finally have "p (i - 1) \<le> p i" .
       then have "p (i-1) - p i + alpha k (hgt k (p i)) 
               \<le> qfun k 0 - p i + eps k * (p i - qfun k 0 + 1/k)"
         using Red_5_7b pee_le_q0 pee2 by fastforce
-      also have "... \<le> eps k / k"
+      also have "\<dots> \<le> eps k / k"
         using \<open>k>0\<close> pee2 by (simp add: algebra_simps) (smt (verit) affine_ineq epsk_le1)
       finally show ?thesis .
     qed
@@ -226,13 +226,13 @@ proof -
   then have "(\<Sum>i \<in> Step_class \<mu> l k red_step \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i))
            \<le> card (Step_class \<mu> l k red_step \<inter> Z_class \<mu> l k) * (eps k / k)"
     using sum_bounded_above by (metis (mono_tags, lifting))
-  also have "... \<le> card (Step_class \<mu> l k red_step) * (eps k / k)"
+  also have "\<dots> \<le> card (Step_class \<mu> l k red_step) * (eps k / k)"
     using epsk_ge0[of k] assms
     by (simp add: divide_le_cancel mult_le_cancel_right card_mono red_step_limit)
-  also have "... \<le> k * (eps k / k)"
+  also have "\<dots> \<le> k * (eps k / k)"
     using red_step_limit [OF \<open>0<\<mu>\<close> \<open>Colours l k\<close>]
     by (smt (verit, best) divide_nonneg_nonneg epsk_ge0 mult_mono nat_less_real_le of_nat_0_le_iff)
-  also have "... \<le> eps k"
+  also have "\<dots> \<le> eps k"
     by (simp add: epsk_ge0)
   finally have red: "(\<Sum>i\<in>Step_class \<mu> l k stepkind.red_step \<inter> Z_class \<mu> l k. p (i - 1) - p (Suc i)) \<le> eps k" .
   have fin_bblue: "finite (Step_class \<mu> l k bblue_step)"
@@ -264,8 +264,9 @@ qed
 lemma Y_6_5_Red:
   assumes i: "i \<in> Step_class \<mu> l k red_step" and "k\<ge>16"
   defines "p \<equiv> pee \<mu> l k"
-  shows "hgt k (p (Suc i)) \<ge> hgt k (p i) - 2"
-proof (cases "hgt k (p i) \<le> 3")
+  defines "h \<equiv> hgt k (p i)"
+  shows "hgt k (p (Suc i)) \<ge> h - 2"
+proof (cases "h \<le> 3")
   case True
   have "hgt k (p (Suc i)) \<ge> 1"
     by (simp add: Suc_leI hgt_gt_0)
@@ -283,25 +284,24 @@ next
   have le1: "eps k + 1 / (1 + eps k)\<^sup>2 \<le> 1"
     using mult_left_mono [OF C, of "inverse ((1 + eps k)\<^sup>2)"]
     by (simp add: ring_distribs inverse_eq_divide) (smt (verit))
-  have 0: "0 \<le> (1 + eps k) ^ (hgt k (p i) - Suc 0)"
+  have 0: "0 \<le> (1 + eps k) ^ (h - Suc 0)"
     using epsk_ge0 by auto
-  have lesspi: "qfun k (hgt k (p i) - 1) < p i"
-    using False hgt_Least [of "hgt k (p i)-1" "p i" k] by linarith
-  have A: "(1 + eps k) ^ hgt k (p i) = (1 + eps k) * (1 + eps k) ^ (hgt k (p i) - Suc 0)"
-    using False power.simps by (metis Suc_pred hgt_gt_0)
-  have B: "(1 + eps k) ^ (hgt k (p i) - 3) = 1 / (1 + eps k)^2 * (1 + eps k) ^ (hgt k (p i) - Suc 0)"
+  have lesspi: "qfun k (h - 1) < p i"
+    using False hgt_Least [of "h-1" "p i" k] unfolding h_def by linarith
+  have A: "(1 + eps k) ^ h = (1 + eps k) * (1 + eps k) ^ (h - Suc 0)"
+    using False power.simps by (metis h_def Suc_pred hgt_gt_0)
+  have B: "(1 + eps k) ^ (h - 3) = 1 / (1 + eps k)^2 * (1 + eps k) ^ (h - Suc 0)"
     using epsk_gt0 [OF \<open>k>0\<close>] False
     by (simp add: divide_simps Suc_diff_Suc numeral_3_eq_3 flip: power_add)
-  have "qfun k (hgt k (p i) - 3)
-     \<le> qfun k (hgt k (p i) - 1) - (qfun k (hgt k (p i)) - qfun k (hgt k (p i) - 1))"
+  have "qfun k (h-3) \<le> qfun k (h-1) - (qfun k h - qfun k (h-1))"
     using \<open>k>0\<close> mult_left_mono [OF le1 0]
     apply (simp add: qfun_def field_simps A)
     by (simp add: B)
-  also have "... < p i - alpha k (hgt k (p i))"
+  also have "\<dots> < p i - alpha k (h)"
     using lesspi by (simp add: alpha_def)
-  also have "... \<le> p (Suc i)"
-    using Y_6_4_Red assms(1) by (force simp add: p_def)
-  finally have Y: "qfun k (hgt k (p i) - 3) < p (Suc i)" .
+  also have "\<dots> \<le> p (Suc i)"
+    using Y_6_4_Red i by (force simp add: h_def p_def)
+  finally have Y: "qfun k (h-3) < p (Suc i)" .
   with hgt_greater[OF\<open>k>0\<close> Y] show ?thesis
     by simp
 qed
@@ -311,12 +311,45 @@ lemma Y_6_5_DegreeReg:
   shows "hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k i)"
   using hgt_mono Y_6_4_DegreeReg assms by presburger
 
+
 lemma Y_6_5_dbooSt:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. \<forall>i \<in> Step_class \<mu> l k dboost_step.
                      Colours l k \<longrightarrow> hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k i)"
   using Y_6_4_dbooSt[OF assms] unfolding Lemma_5_3_def
   by (smt (verit, ccfv_threshold) eventually_at_top_linorder Colours_kn0 hgt_mono)
+
+
+lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (-2 * eps k powr (-1/2)) \<le> 1 - eps k powr (1/2)"
+  unfolding eps_def
+  by real_asymp
+
+lemma Y_6_5_Bblue:
+  assumes i: "i \<in> Step_class \<mu> l k bblue_step" and "k>0" "0<\<mu>"
+    and big: "(1 + eps k) powr (-2 * eps k powr (-1/2)) \<le> 1 - eps k powr (1/2)"
+  defines "p \<equiv> pee \<mu> l k"
+  defines "h \<equiv> hgt k (p (i-1))"
+  shows "hgt k (p (Suc i)) \<ge> h - 2 * eps k powr (-1/2)"
+proof (cases "h > 2 * eps k powr (-1/2) + 1")
+  case True
+  then have "0 < h - 1"
+    by (smt (verit, best) one_less_of_natD powr_non_neg zero_less_diff)
+  with True have "p (i-1) > qfun k (h-1)"
+    by (smt (verit, best) h_def diff_le_self diff_less hgt_Least le_antisym zero_less_one nat_less_le)
+  then have "qfun k (h-1) - sqrt(eps k) * (1 + eps k) ^ (h-1) / k < p (i-1) - eps k powr (-1/2) * alpha k h"
+    using \<open>0 < h-1\<close> Y_6_4_Bblue [OF i] \<open>0<\<mu>\<close> 
+    apply (simp add: alpha_eq p_def)
+    by (smt (verit, best) epsk_ge0 field_sum_of_halves mult.assoc mult.commute powr_half_sqrt powr_mult_base)
+  also have "... \<le> p (Suc i)"
+    using Y_6_4_Bblue i \<open>0<\<mu>\<close> h_def p_def by blast
+  finally have "qfun k (h-1) - sqrt (eps k) * (1 + eps k) ^ (h-1) / k < p (Suc i)" .
+  (*now by "big" and definition of hgt*)
+  then show ?thesis sorry
+next
+  case False
+  then show ?thesis
+    by (smt (verit, del_insts) of_nat_0 hgt_gt_0 nat_less_real_le)
+qed
 
 end (*context Diagonal*)
 
