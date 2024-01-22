@@ -11,7 +11,7 @@ subsection \<open>The following results together are Lemma 6.4\<close>
 text \<open>Compared with the paper, all the indices are greater by one\<close>
 
 lemma Y_6_4_Red: 
-  assumes i: "i \<in> Step_class \<mu> l k red_step"
+  assumes i: "i \<in> Step_class \<mu> l k {red_step}"
   shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i - alpha k (hgt k (pee \<mu> l k i))"
 proof -
   define X where "X \<equiv> Xseq \<mu> l k i" 
@@ -33,7 +33,7 @@ proof -
 qed
 
 lemma Y_6_4_DegreeReg: 
-  assumes "i \<in> Step_class \<mu> l k dreg_step" 
+  assumes "i \<in> Step_class \<mu> l k {dreg_step}" 
   shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i"
 proof -
   define X where "X \<equiv> Xseq \<mu> l k i" 
@@ -50,7 +50,7 @@ proof -
 qed
 
 lemma Y_6_4_Bblue: 
-  assumes i: "i \<in> Step_class \<mu> l k bblue_step" and "0 < \<mu>"
+  assumes i: "i \<in> Step_class \<mu> l k {bblue_step}" and "0 < \<mu>"
   shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k (i-1) - (eps k powr (-1/2)) * alpha k (hgt k (pee \<mu> l k (i-1)))"
 proof -
   define X where "X \<equiv> Xseq \<mu> l k i" 
@@ -76,8 +76,8 @@ proof -
   define i' where "i' = i-1"
   then have Suci': "Suc i' = i"
     by (simp add: \<open>odd i\<close>)
-  have i': "i' \<in> Step_class \<mu> l k dreg_step"
-    using \<open>odd i\<close> by (simp add: i'_def assms dreg_before_bblue_step)
+  have i': "i' \<in> Step_class \<mu> l k {dreg_step}"
+    by (metis dreg_before_step Step_class_insert Suci' UnCI i)
   then have  "Xseq \<mu> l k (Suc i') = X_degree_reg k (Xseq \<mu> l k i') (Yseq \<mu> l k i')"
              "Yseq \<mu> l k (Suc i') = Yseq \<mu> l k i'"
       and nonterm': "\<not> termination_condition l k (Xseq \<mu> l k i') (Yseq \<mu> l k i')"
@@ -117,7 +117,7 @@ lemmas Y_6_4_dbooSt = Red_5_3
 
 subsection \<open>Towards Lemmas 6.3 and 6.2\<close>
 
-definition "Z_class \<equiv> \<lambda>\<mu> l k. {i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k bblue_step \<union> Step_class \<mu> l k dboost_step.
+definition "Z_class \<equiv> \<lambda>\<mu> l k. {i \<in> Step_class \<mu> l k {red_step} \<union> Step_class \<mu> l k {bblue_step} \<union> Step_class \<mu> l k {dboost_step}.
                         pee \<mu> l k (Suc i) < pee \<mu> l k (i-1) \<and> pee \<mu> l k (i-1) \<le> p0}"
 
 text \<open>Lemma 6.3 except for the limit\<close>
@@ -130,22 +130,23 @@ proof -
   obtain "k > 0" \<open>l\<le>k\<close>
     by (meson Colours_def Colours_kn0 \<open>Colours l k\<close>)
   { fix i
-    assume i: "i \<in> Step_class \<mu> l k dboost_step"
-    then have "i-1 \<in> Step_class \<mu> l k dreg_step"
-      using dboost_step_odd odd_pos dreg_before_dboost_step i by force
+    assume i: "i \<in> Step_class \<mu> l k {dboost_step}"
+    moreover have "odd i"
+      using step_odd [of i] i  by (force simp add: Step_class_insert_NO_MATCH)
+    ultimately have "i-1 \<in> Step_class \<mu> l k {dreg_step}"
+      by (simp add: dreg_before_step Step_class_insert_NO_MATCH)
     then have "p (i-1) \<le> p i \<and> p i \<le> p (Suc i)"
-      using Red53 \<open>Colours l k\<close> minus_nat.simps
-      unfolding Lemma_5_3_def p_def
-      by (metis Suc_diff_Suc Y_6_4_DegreeReg dboost_step_odd i One_nat_def odd_pos) 
+      using \<open>Colours l k\<close> Red53 p_def
+      by (metis Lemma_5_3_def One_nat_def Y_6_4_DegreeReg \<open>odd i\<close> i odd_Suc_minus_one)
   }        
-  then have dboost: "Step_class \<mu> l k dboost_step \<inter> Z_class \<mu> l k = {}"
+  then have dboost: "Step_class \<mu> l k {dboost_step} \<inter> Z_class \<mu> l k = {}"
     by (fastforce simp: Z_class_def p_def)
   { fix i
-    assume i: "i \<in> Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k" 
-    then have "i-1 \<in> Step_class \<mu> l k dreg_step"
-      using dreg_before_bblue_step bblue_step_odd i by force
+    assume i: "i \<in> Step_class \<mu> l k {bblue_step} \<inter> Z_class \<mu> l k" 
+    then have "i-1 \<in> Step_class \<mu> l k {dreg_step}"
+      using dreg_before_step step_odd i by (force simp add: Step_class_insert_NO_MATCH)
     have pee: "p (Suc i) < p (i-1)" "p (i-1) \<le> p0"
-      and iB: "i \<in> Step_class \<mu> l k bblue_step"
+      and iB: "i \<in> Step_class \<mu> l k {bblue_step}"
       using i by (auto simp: Z_class_def p_def)
     have "hgt k (p (i-1)) = 1"
     proof -
@@ -169,10 +170,10 @@ proof -
     qed
     finally have "p (i-1) - p (Suc i) \<le> 1/k" .
   }
-  then have "(\<Sum>i \<in> Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i)) 
-             \<le> card (Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k) * (1/k)"
+  then have "(\<Sum>i \<in> Step_class \<mu> l k {bblue_step} \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i)) 
+             \<le> card (Step_class \<mu> l k {bblue_step} \<inter> Z_class \<mu> l k) * (1/k)"
     using sum_bounded_above by (metis (mono_tags, lifting))
-  also have "\<dots> \<le> card (Step_class \<mu> l k bblue_step) * (1/k)"
+  also have "\<dots> \<le> card (Step_class \<mu> l k {bblue_step}) * (1/k)"
     using bblue_step_limit \<open>Colours l k\<close>
     by (simp add: divide_le_cancel card_mono Lemma_bblue_step_limit_def)
   also have "\<dots> \<le> l powr (3/4) / k"
@@ -186,16 +187,17 @@ proof -
     apply (simp add: eps_def powr_minus divide_simps)
       by (metis mult_le_cancel_right powr_non_neg)
   qed
-  finally have bblue: "(\<Sum>i\<in>Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k. p(i-1) - p (Suc i))
+  finally have bblue: "(\<Sum>i\<in>Step_class \<mu> l k {bblue_step} \<inter> Z_class \<mu> l k. p(i-1) - p (Suc i))
                      \<le> eps k" .
   { fix i
-    assume i: "i \<in> Step_class \<mu> l k red_step \<inter> Z_class \<mu> l k" 
+    assume i: "i \<in> Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k" 
     then have pee_alpha: "p (i-1) - p (Suc i) 
                        \<le> p (i-1) - p i + alpha k (hgt k (p i))"
       using Y_6_4_Red by (force simp: p_def)
     have pee_le: "p (i-1) \<le> p i"
-      unfolding p_def
-      by (metis dreg_before_red_step Int_iff One_nat_def Y_6_4_DegreeReg i odd_Suc_minus_one red_step_odd)
+      using dreg_before_step Y_6_4_DegreeReg i step_odd
+      apply (simp add: p_def Step_class_insert_NO_MATCH )
+      by (metis odd_Suc_minus_one)
     consider (1) "hgt k (p i) = 1" | (2) "hgt k (p i) > 1"
       by (metis hgt_gt_0 less_one nat_neq_iff)
     then have "p (i-1) - p i + alpha k (hgt k (p i)) \<le> eps k / k"
@@ -223,10 +225,10 @@ proof -
     with pee_alpha have "p (i-1) - p (Suc i) \<le> eps k / k"
       by linarith
   }
-  then have "(\<Sum>i \<in> Step_class \<mu> l k red_step \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i))
-           \<le> card (Step_class \<mu> l k red_step \<inter> Z_class \<mu> l k) * (eps k / k)"
+  then have "(\<Sum>i \<in> Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i))
+           \<le> card (Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k) * (eps k / k)"
     using sum_bounded_above by (metis (mono_tags, lifting))
-  also have "\<dots> \<le> card (Step_class \<mu> l k red_step) * (eps k / k)"
+  also have "\<dots> \<le> card (Step_class \<mu> l k {red_step}) * (eps k / k)"
     using epsk_ge0[of k] assms
     by (simp add: divide_le_cancel mult_le_cancel_right card_mono red_step_limit)
   also have "\<dots> \<le> k * (eps k / k)"
@@ -234,16 +236,16 @@ proof -
     by (smt (verit, best) divide_nonneg_nonneg epsk_ge0 mult_mono nat_less_real_le of_nat_0_le_iff)
   also have "\<dots> \<le> eps k"
     by (simp add: epsk_ge0)
-  finally have red: "(\<Sum>i\<in>Step_class \<mu> l k stepkind.red_step \<inter> Z_class \<mu> l k. p (i - 1) - p (Suc i)) \<le> eps k" .
-  have fin_bblue: "finite (Step_class \<mu> l k bblue_step)"
+  finally have red: "(\<Sum>i\<in>Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k. p (i - 1) - p (Suc i)) \<le> eps k" .
+  have fin_bblue: "finite (Step_class \<mu> l k {bblue_step})"
     using Lemma_bblue_step_limit_def \<open>Colours l k\<close> bblue_step_limit by presburger
-  have fin_red: "finite (Step_class \<mu> l k red_step)"
+  have fin_red: "finite (Step_class \<mu> l k {red_step})"
     using \<open>0<\<mu>\<close> \<open>Colours l k\<close> red_step_limit(1) by blast
-  have bblue_not_red: "\<And>x. x \<in> Step_class \<mu> l k bblue_step \<Longrightarrow> x \<notin> Step_class \<mu> l k red_step"
-    by (meson disjnt_Step_class disjnt_iff stepkind.distinct(1))
-  have eq: "Z_class \<mu> l k = Step_class \<mu> l k dboost_step \<inter> Z_class \<mu> l k 
-                      \<union> Step_class \<mu> l k bblue_step \<inter> Z_class \<mu> l k
-                      \<union> Step_class \<mu> l k red_step \<inter> Z_class \<mu> l k"
+  have bblue_not_red: "\<And>x. x \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> x \<notin> Step_class \<mu> l k {red_step}"
+    by (simp add: Step_class_def)
+  have eq: "Z_class \<mu> l k = Step_class \<mu> l k {dboost_step} \<inter> Z_class \<mu> l k 
+                      \<union> Step_class \<mu> l k {bblue_step} \<inter> Z_class \<mu> l k
+                      \<union> Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k"
     by (auto simp: Z_class_def)
   show ?thesis
     using bblue red
@@ -262,7 +264,7 @@ proof -
 qed
 
 lemma Y_6_5_Red:
-  assumes i: "i \<in> Step_class \<mu> l k red_step" and "k\<ge>16"
+  assumes i: "i \<in> Step_class \<mu> l k {red_step}" and "k\<ge>16"
   defines "p \<equiv> pee \<mu> l k"
   defines "h \<equiv> hgt k (p i)"
   shows "hgt k (p (Suc i)) \<ge> h - 2"
@@ -307,14 +309,14 @@ next
 qed
 
 lemma Y_6_5_DegreeReg: 
-  assumes "i \<in> Step_class \<mu> l k dreg_step" and "k>0"
+  assumes "i \<in> Step_class \<mu> l k {dreg_step}" and "k>0"
   shows "hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k i)"
   using hgt_mono Y_6_4_DegreeReg assms by presburger
 
 
 lemma Y_6_5_dbooSt:
   assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>i \<in> Step_class \<mu> l k dboost_step.
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>i \<in> Step_class \<mu> l k {dboost_step}.
                      Colours l k \<longrightarrow> hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k i)"
   using Y_6_4_dbooSt[OF assms] unfolding Lemma_5_3_def
   by (smt (verit, ccfv_threshold) eventually_at_top_linorder Colours_kn0 hgt_mono)
@@ -327,7 +329,7 @@ lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (- real (nat \<lfloor>2 * 
 lemma Y_6_5_Bblue:
   fixes k::nat and \<kappa>::real
   defines "\<kappa> \<equiv> eps k powr (-1/2)"
-  assumes i: "i \<in> Step_class \<mu> l k bblue_step" and "k>0" "0<\<mu>"
+  assumes i: "i \<in> Step_class \<mu> l k {bblue_step}" and "k>0" "0<\<mu>"
     and big: "(1 + eps k) powr (- real (nat \<lfloor>2*\<kappa>\<rfloor>)) \<le> 1 - eps k powr (1/2)"
   defines "p \<equiv> pee \<mu> l k"
   defines "h \<equiv> hgt k (p (i-1))"
@@ -378,6 +380,11 @@ next
   then show ?thesis
     by (smt (verit, del_insts) of_nat_0 hgt_gt_0 nat_less_real_le)
 qed
+
+lemma Y_6_2:
+  assumes "0<\<mu>" "\<mu><1"
+  assumes j: "j \<in> Step_class \<mu> l k {bblue_step}" and "k>0" "0<\<mu>"
+  shows
 
 end (*context Diagonal*)
 

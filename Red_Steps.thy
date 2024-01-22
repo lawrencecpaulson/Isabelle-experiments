@@ -9,8 +9,6 @@ begin
 
 subsection \<open>Density-boost steps\<close>
 
-abbreviation "Step_class_reddboost \<equiv> \<lambda>\<mu> l k. Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
-
 text \<open>Observation 5.5\<close>
 lemma sum_Weight_ge0:
   assumes "X \<subseteq> V" "Y \<subseteq> V" "disjnt X Y"
@@ -206,7 +204,7 @@ proof -
     unfolding Lemma_5_6_def by presburger 
 qed
 
-definition "Lemma_5_4 \<equiv> \<lambda>\<mu> l. \<forall>k i. Colours l k \<longrightarrow> i \<in> Step_class_reddboost \<mu> l k \<longrightarrow>
+definition "Lemma_5_4 \<equiv> \<lambda>\<mu> l. \<forall>k i. Colours l k \<longrightarrow> i \<in> Step_class \<mu> l k {red_step,dboost_step} \<longrightarrow>
      weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> - real (card (Xseq \<mu> l k i)) / (real k) ^ 5"
 
 lemma Red_5_4: 
@@ -219,7 +217,7 @@ proof -
   then have big_enough_l: "\<forall>\<^sup>\<infinity>l. ?Big l"
     using Red_5_6 eventually_conj eventually_all_ge_at_top by fastforce
   have "weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> - real (card (Xseq \<mu> l k i)) / (real k) ^ 5"
-    if l: "?Big l" and "Colours l k" and i: "i \<in> Step_class_reddboost \<mu> l k" for l k i
+    if l: "?Big l" and "Colours l k" and i: "i \<in> Step_class \<mu> l k {red_step,dboost_step}" for l k i
   proof -
     define X where "X \<equiv> Xseq \<mu> l k i"
     define Y where "Y \<equiv> Yseq \<mu> l k i"
@@ -235,9 +233,9 @@ proof -
     ultimately have "l>1" by linarith
     with \<open>k\<ge>l\<close> have "k>0" "k>1" by auto
     have not_many_bluish: "\<not> many_bluish \<mu> l k X"
-      using i red_dboost_not_many_bluish unfolding X_def by blast
+      using i not_many_bluish unfolding X_def by blast
     have nonterm: "\<not> termination_condition l k X Y"
-      using X_def Y_def i red_dboost_non_terminating by blast
+      using X_def Y_def i step_non_terminating by (force simp add: Step_class_def)
     moreover have "l powr (2/3) \<le> l powr (3/4)"
       using \<open>l>1\<close> by (simp add: powr_mono)
     ultimately have RNX: "?R < card X"
@@ -318,7 +316,7 @@ proof -
     have "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k ^ 6 * ?R"
       using \<open>l \<le> k\<close> l unfolding Lemma_5_6_def by blast
     then have cardX_ge: "card X \<ge> k ^ 6 * ?R"
-      using X_def i red_dboost_non_terminating termination_condition_def by fastforce
+      using X_def i step_non_terminating by (force simp add: Step_class_def termination_condition_def)
     have "-1 / (real k)^5 \<le> - 1 / (real k^6 - 1) + -1 / (real k^6 * ?R)"
     proof -
       have [simp]: "real k * (r * real k ^ 5) = r * k^6" for r
@@ -378,7 +376,7 @@ proof -
 qed
 
 lemma Red_5_8:
-  assumes i: "i \<in> Step_class \<mu> l k dreg_step" 
+  assumes i: "i \<in> Step_class \<mu> l k {dreg_step}" 
     and x: "x \<in> Xseq \<mu> l k (Suc i)" 
   shows "card (Neighbours Red x \<inter> Yseq \<mu> l k (Suc i))
          \<ge> (1 - (eps k) powr (1/2)) * pee \<mu> l k i * (card (Yseq \<mu> l k (Suc i)))"
@@ -408,7 +406,7 @@ proof -
   show ?thesis
   proof (cases "?p \<ge> qfun k 0")
     case True
-    have "i \<notin> Step_class \<mu> l k halted"
+    have "i \<notin> Step_class \<mu> l k {halted}"
       using i by (simp add: Step_class_def)
     then have p0: "1/k < p0"
       by (metis Step_class_halted_forever le_eq_less_or_eq not_halted_pee_gt not_gr0 pee_eq_p0)
@@ -439,13 +437,13 @@ proof -
 qed
 
 corollary Y_Neighbours_nonempty_Suc:
-  assumes i: "i \<in> Step_class \<mu> l k dreg_step" 
+  assumes i: "i \<in> Step_class \<mu> l k {dreg_step}" 
     and x: "x \<in> Xseq \<mu> l k (Suc i)" 
     and "k\<ge>2"
   shows "Neighbours Red x \<inter> Yseq \<mu> l k (Suc i) \<noteq> {}"
 proof
   assume con: "Neighbours Red x \<inter> Yseq \<mu> l k (Suc i) = {}"
-  have not_halted: "i \<notin> Step_class \<mu> l k halted"
+  have not_halted: "i \<notin> Step_class \<mu> l k {halted}"
     using i by (auto simp: Step_class_def)
   then have 0: "pee \<mu> l k i > 0"
     using not_halted_pee_gt0 by blast
@@ -468,7 +466,7 @@ proof
 qed
 
 corollary Y_Neighbours_nonempty:
-  assumes i: "i \<in> Step_class_reddboost \<mu> l k" 
+  assumes i: "i \<in> Step_class \<mu> l k {red_step,dboost_step}" 
     and x: "x \<in> Xseq \<mu> l k i" 
     and "k\<ge>2"
   shows "card (Neighbours Red x \<inter> Yseq \<mu> l k i) > 0"
@@ -478,8 +476,8 @@ proof (cases i)
     by (auto simp: Step_class_def stepper_kind_def split: if_split_asm)
 next
   case (Suc i')
-  then have "i' \<in> Step_class \<mu> l k dreg_step"
-    using dreg_before_dboost_step dreg_before_red_step i by fastforce
+  then have "i' \<in> Step_class \<mu> l k {dreg_step}"
+    by (metis dreg_before_step dreg_before_step i Step_class_insert Un_iff) 
   then have "Neighbours Red x \<inter> Yseq \<mu> l k (Suc i') \<noteq> {}"
     using Suc Y_Neighbours_nonempty_Suc assms by blast
   then show ?thesis
@@ -490,7 +488,7 @@ definition "Big_Red_5_1 \<equiv> \<lambda>\<mu> l. (1-\<mu>) * l > 1 \<and> l po
                     \<and> Lemma_5_4 \<mu> l \<and> Lemma_5_6 l" 
 
 proposition Red_5_1:
-  assumes i: "i \<in> Step_class_reddboost \<mu> l k" and \<mu>: "0<\<mu>" "\<mu><1" and Big: "Big_Red_5_1 \<mu> l" "Colours l k"
+  assumes i: "i \<in> Step_class \<mu> l k {red_step,dboost_step}" and \<mu>: "0<\<mu>" "\<mu><1" and Big: "Big_Red_5_1 \<mu> l" "Colours l k"
   defines "p \<equiv> pee \<mu> l k i"
   defines "x \<equiv> cvx \<mu> l k i"
   defines "X \<equiv> Xseq \<mu> l k i" and "Y \<equiv> Yseq \<mu> l k i"
@@ -527,7 +525,7 @@ proof -
     by (auto simp: XY step_kind_defs split: if_split_asm prod.split_asm)
   then have "card X > 0"
     using stepper_XYseq by (auto simp: termination_condition_def)
-  have not_halted: "i \<notin> Step_class \<mu> l k halted"
+  have not_halted: "i \<notin> Step_class \<mu> l k {halted}"
     using i by (auto simp: Step_class_def)
   with Yseq_gt_0 XY have "card Y \<noteq> 0"
     by blast
@@ -600,8 +598,9 @@ proof -
       using NBX_def \<beta>_def XY by blast
     have "\<beta>\<le>\<mu>"
       by (simp add: \<beta>_eq \<open>0 < card X\<close> card_NBX_le pos_divide_le_eq)
-    have im1: "i-1 \<in> Step_class \<mu> l k dreg_step"
-      using i \<open>odd i\<close> dreg_before_dboost_step dreg_before_red_step by fastforce
+    have im1: "i-1 \<in> Step_class \<mu> l k {dreg_step}"
+      using i \<open>odd i\<close> dreg_before_step
+      by (metis Step_class_insert Un_iff One_nat_def odd_Suc_minus_one)
     have "eps k \<le> 1/4"
       using \<open>k>0\<close> k_powr_14 by (simp add: eps_def powr_minus_divide)
     then have "eps k powr (1/2) \<le> (1/4) powr (1/2)"
@@ -744,7 +743,7 @@ qed
 
 text \<open>This and the previous result are proved under the assumption of a sufficiently large @{term l}\<close>
 corollary Red_5_2_Main:
-  assumes i: "i \<in> Step_class \<mu> l k dboost_step" and "0<\<mu>" "\<mu><1"
+  assumes i: "i \<in> Step_class \<mu> l k {dboost_step}" and "0<\<mu>" "\<mu><1"
     and Big: "Big_Red_5_1 \<mu> l" "Colours l k"
   shows "pee \<mu> l k (Suc i) - pee \<mu> l k i
          \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i)) \<and>
@@ -760,9 +759,9 @@ proof -
     using i
     by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
   then have "?x \<in> Xseq \<mu> l k i"
-    by (simp add: assms cvx_in_Xseq)
+    by (metis V_state choose_central_vx_X cvx_def stepper_XYseq)
   then have "central_vertex \<mu> (Xseq \<mu> l k i) (cvx \<mu> l k i)"
-    by (simp add: assms cvx_works)
+    by (metis V_state choose_central_vx_works cvx_def local.step non_mb nonterm stepper_XYseq)
   moreover have Xeq: "X = Xseq \<mu> l k i" and Yeq: "Y = Yseq \<mu> l k i"
     by (metis step stepper_XYseq surj_pair)+
   ultimately have "card (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i) \<le> \<mu> * card (Xseq \<mu> l k i)"
@@ -782,7 +781,7 @@ proof -
   then have "pee \<mu> l k i + (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i))
       \<le> red_density (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i)
           (Neighbours Red (cvx \<mu> l k i) \<inter> Yseq \<mu> l k i) \<and> beta \<mu> l k i > 0"
-    using Red_5_1 Un_iff Xeq Yeq assms gen_density_ge0 pee
+    using Red_5_1 Un_iff Xeq Yeq assms gen_density_ge0 pee Step_class_insert
     by (smt (verit, ccfv_threshold) \<beta>eq divide_eq_eq)
   moreover have "red_density (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i)
       (Neighbours Red (cvx \<mu> l k i) \<inter> Yseq \<mu> l k i) \<le> pee \<mu> l k (Suc i)"
@@ -810,7 +809,7 @@ qed
 
 corollary Red_5_2:
   assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. \<forall>i \<in> Step_class \<mu> l k dboost_step.
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. \<forall>i \<in> Step_class \<mu> l k {dboost_step}.
          Colours l k \<longrightarrow>
          pee \<mu> l k (Suc i) - pee \<mu> l k i
          \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i))
@@ -820,7 +819,7 @@ corollary Red_5_2:
 
 definition 
   "Lemma_5_3 \<equiv> 
-      \<lambda>\<mu> l. \<forall>k. \<forall>i \<in> Step_class \<mu> l k dboost_step.
+      \<lambda>\<mu> l. \<forall>k. \<forall>i \<in> Step_class \<mu> l k {dboost_step}.
             Colours l k \<longrightarrow> pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
 
 text \<open>This is a weaker consequence of the previous results\<close>
@@ -836,7 +835,7 @@ proof -
   ultimately have Big: "\<forall>\<^sup>\<infinity>l. Big l"
     using Big_Red_5_1 assms by (simp add: Big_def eventually_conj)
   have "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
-    if l: "\<forall>k\<ge>l. Big k" and i: "i \<in> Step_class \<mu> l k dboost_step" and "Colours l k" for l k i
+    if l: "\<forall>k\<ge>l. Big k" and i: "i \<in> Step_class \<mu> l k {dboost_step}" and "Colours l k" for l k i
   proof 
     have Big: "Big_Red_5_1 \<mu> l"
       using l by (auto simp: Big_def)
@@ -854,7 +853,7 @@ proof -
     ultimately have \<alpha>54: "alpha k ?h \<ge> k powr (-5/4)"
       unfolding eps_def by (metis powr_diff of_nat_0_le_iff powr_one)
     have \<beta>: "beta \<mu> l k i \<le> \<mu>"
-      by (simp add: \<open>0<\<mu>\<close> beta_le i)
+      by (metis Step_class_insert Un_iff \<open>0<\<mu>\<close> beta_le i)
     have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<ge> 0"
       using beta_ge0[of \<mu> l k i] epsk_le1 \<alpha> \<beta> \<open>\<mu><1\<close> \<open>k>1\<close>
       by (simp add: zero_le_mult_iff zero_le_divide_iff)

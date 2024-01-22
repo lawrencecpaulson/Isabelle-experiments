@@ -1019,12 +1019,25 @@ definition stepper_kind :: "[real,nat,nat,nat] \<Rightarrow> stepkind" where
       if termination_condition l k X Y then halted 
       else if even i then dreg_step else next_state_kind \<mu> l k (X,Y,A,B))"
 
-definition "Step_class \<equiv> \<lambda>\<mu> l k knd. {n. stepper_kind \<mu> l k n = knd}"
+definition "Step_class \<equiv> \<lambda>\<mu> l k knd. {n. stepper_kind \<mu> l k n \<in> knd}"
+
+lemma subset_Step_class: "\<lbrakk>i \<in> Step_class \<mu> l k K'; K' \<subseteq> K\<rbrakk> \<Longrightarrow> i \<in> Step_class \<mu> l k K"
+  by (auto simp: Step_class_def)
+
+lemma Step_class_Un: "Step_class \<mu> l k (K' \<union> K) = Step_class \<mu> l k K' \<union> Step_class \<mu> l k K"
+  by (auto simp: Step_class_def)
+
+lemma Step_class_insert: "Step_class \<mu> l k (insert knd K) = (Step_class \<mu> l k {knd}) \<union> (Step_class \<mu> l k K)"
+  by (auto simp: Step_class_def)
+
+lemma Step_class_insert_NO_MATCH:
+  "NO_MATCH {} K \<Longrightarrow> Step_class \<mu> l k (insert knd K) = (Step_class \<mu> l k {knd}) \<union> (Step_class \<mu> l k K)"
+  by (auto simp: Step_class_def)
 
 lemmas step_kind_defs = Step_class_def stepper_kind_def next_state_kind_def Xseq_def Yseq_def
 
 lemma disjnt_Step_class: 
-  "knd \<noteq> knd' \<Longrightarrow> disjnt (Step_class \<mu> l k knd) (Step_class \<mu> l k knd')"
+  "disjnt knd knd' \<Longrightarrow> disjnt (Step_class \<mu> l k knd) (Step_class \<mu> l k knd')"
   by (auto simp: Step_class_def disjnt_iff)
 
 lemma halted_imp_next_halted: "stepper_kind \<mu> l k i = halted \<Longrightarrow> stepper_kind \<mu> l k (Suc i) = halted"
@@ -1033,75 +1046,58 @@ lemma halted_imp_next_halted: "stepper_kind \<mu> l k i = halted \<Longrightarro
 lemma halted_imp_ge_halted: "stepper_kind \<mu> l k i = halted \<Longrightarrow> stepper_kind \<mu> l k (i+n) = halted"
   by (induction n) (auto simp: halted_imp_next_halted)
 
-lemma Step_class_halted_forever: "\<lbrakk>i \<in> Step_class \<mu> l k halted; i\<le>j\<rbrakk> \<Longrightarrow> j \<in> Step_class \<mu> l k halted"
-  unfolding Step_class_def
-  by (metis (mono_tags, lifting) halted_imp_ge_halted le_iff_add mem_Collect_eq)
+lemma Step_class_halted_forever: "\<lbrakk>i \<in> Step_class \<mu> l k {halted}; i\<le>j\<rbrakk> \<Longrightarrow> j \<in> Step_class \<mu> l k {halted}"
+  by (simp add: Step_class_def) (metis halted_imp_ge_halted le_iff_add)
 
-lemma Step_class_not_halted: "\<lbrakk>i \<notin> Step_class \<mu> l k halted; i\<ge>j\<rbrakk> \<Longrightarrow> j \<notin> Step_class \<mu> l k halted"
+lemma Step_class_not_halted: "\<lbrakk>i \<notin> Step_class \<mu> l k {halted}; i\<ge>j\<rbrakk> \<Longrightarrow> j \<notin> Step_class \<mu> l k {halted}"
   using Step_class_halted_forever by blast
 
 lemma
-  assumes "i \<notin> Step_class \<mu> l k halted" 
+  assumes "i \<notin> Step_class \<mu> l k {halted}" 
   shows not_halted_pee_gt: "pee \<mu> l k i > 1/k" 
     and Xseq_gt_RN: "card (Xseq \<mu> l k i) > RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
   using assms
   by (auto simp: step_kind_defs termination_condition_def pee_def split: if_split_asm prod.split_asm)
 
 lemma not_halted_pee_gt0:
-  assumes "i \<notin> Step_class \<mu> l k halted" 
+  assumes "i \<notin> Step_class \<mu> l k {halted}" 
   shows "pee \<mu> l k i > 0" 
   using not_halted_pee_gt [OF assms] linorder_not_le order_less_le_trans by fastforce
 
 lemma Yseq_gt_0:
-  assumes "i \<notin> Step_class \<mu> l k halted"
+  assumes "i \<notin> Step_class \<mu> l k {halted}"
   shows "card (Yseq \<mu> l k i) > 0"
   using not_halted_pee_gt [OF assms] 
   by (auto simp: pee_def gen_density_def divide_simps mult_less_0_iff zero_less_mult_iff split: if_split_asm)
 
-lemma dreg_before_red_step:
-  assumes "Suc i \<in> Step_class \<mu> l k red_step" 
-  shows "i \<in> Step_class \<mu> l k dreg_step"
+lemma dreg_before_step:
+  assumes "Suc i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
+  shows "i \<in> Step_class \<mu> l k {dreg_step}"
   using assms by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
 
-lemma red_step_odd: "i \<in> Step_class \<mu> l k red_step \<Longrightarrow> odd i" 
-  by (force simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
-
-lemma dreg_before_bblue_step:
-  assumes "Suc i \<in> Step_class \<mu> l k bblue_step" 
-  shows "i \<in> Step_class \<mu> l k dreg_step"
-  using assms by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
-
-lemma bblue_step_odd: "i \<in> Step_class \<mu> l k bblue_step \<Longrightarrow> odd i" 
-  by (force simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
-
-lemma dreg_before_dboost_step:
-  assumes "Suc i \<in> Step_class \<mu> l k dboost_step" 
-  shows "i \<in> Step_class \<mu> l k dreg_step"
-  using assms by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
-
-lemma dboost_step_odd: "i \<in> Step_class \<mu> l k dboost_step \<Longrightarrow> odd i" 
+lemma step_odd: "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step} \<Longrightarrow> odd i" 
   by (force simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
 
 lemma finite_Step_class:
   assumes "\<And>n. finite {m. m<n \<and> stepper_kind \<mu> l k m = knd}"
   assumes "\<And>n. card {m. m<n \<and> stepper_kind \<mu> l k m = knd} < N"
-  shows "finite (Step_class \<mu> l k knd)"
+  shows "finite (Step_class \<mu> l k {knd})"
 proof -
   have "incseq (\<lambda>n. {m. m<n \<and> stepper_kind \<mu> l k m = knd})"
     by (auto simp: incseq_def)
-  moreover have "(\<Union>n. {m. m<n \<and> stepper_kind \<mu> l k m = knd}) = (Step_class \<mu> l k knd)"
+  moreover have "(\<Union>n. {m. m<n \<and> stepper_kind \<mu> l k m = knd}) = (Step_class \<mu> l k {knd})"
     by (auto simp: Step_class_def)
   ultimately show ?thesis
     by (smt (verit) eventually_sequentially order.refl Union_incseq_finite assms)
 qed
 
 lemma Step_class_iterates:
-  assumes "finite (Step_class \<mu> l k knd)"
-  obtains n where "Step_class \<mu> l k knd = {m. m<n \<and> stepper_kind \<mu> l k m = knd}"
+  assumes "finite (Step_class \<mu> l k {knd})"
+  obtains n where "Step_class \<mu> l k {knd} = {m. m<n \<and> stepper_kind \<mu> l k m = knd}"
 proof -
-  have eq: "(Step_class \<mu> l k knd) = (\<Union>i. {m. m<i \<and> stepper_kind \<mu> l k m = knd})"
+  have eq: "(Step_class \<mu> l k {knd}) = (\<Union>i. {m. m<i \<and> stepper_kind \<mu> l k m = knd})"
     by (auto simp: Step_class_def)
-  then obtain n where n: "(Step_class \<mu> l k knd) = (\<Union>i<n. {m. m<i \<and> stepper_kind \<mu> l k m = knd})"
+  then obtain n where n: "(Step_class \<mu> l k {knd}) = (\<Union>i<n. {m. m<i \<and> stepper_kind \<mu> l k m = knd})"
     using finite_countable_equals[OF assms] by blast
   with Step_class_def 
   have "{m. m<n \<and> stepper_kind \<mu> l k m = knd} = (\<Union>i<n. {m. m<i \<and> stepper_kind \<mu> l k m = knd})"
@@ -1110,20 +1106,14 @@ proof -
     by (metis n that)
 qed
 
-lemma red_dboost_non_terminating:
-  assumes "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
+lemma step_non_terminating:
+  assumes "i \<in> Step_class \<mu> l k {red_step,dboost_step,dreg_step}"
   shows "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
   using assms
   by (simp add: step_kind_defs split: if_split_asm prod.split_asm)
 
-lemma dreg_step_non_terminating:
-  assumes "i \<in> Step_class \<mu> l k dreg_step"
-  shows "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
-  using assms
-  by (simp add: step_kind_defs split: if_split_asm prod.split_asm)
-
-lemma red_dboost_not_many_bluish:
-  assumes "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
+lemma not_many_bluish:
+  assumes "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
   shows "\<not> many_bluish \<mu> l k (Xseq \<mu> l k i)"
   using assms
   by (simp add: step_kind_defs split: if_split_asm prod.split_asm)
@@ -1132,20 +1122,21 @@ lemma stepper_XYseq: "stepper \<mu> l k i = (X,Y,A,B) \<Longrightarrow> X = Xseq
   using Xseq_def Yseq_def by fastforce
 
 lemma cvx_works:
-  assumes "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
+  assumes "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
   shows "central_vertex \<mu> (Xseq \<mu> l k i) (cvx \<mu> l k i)
        \<and> weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) = max_central_vx \<mu> (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
-  apply (simp add: Xseq_def cvx_def Yseq_def split: prod.split)
-  by (metis choose_central_vx_works V_state assms red_dboost_non_terminating red_dboost_not_many_bluish stepper_XYseq)
+  using assms not_many_bluish step_non_terminating
+  apply (simp add: Step_class_def Xseq_def cvx_def Yseq_def split: prod.split)
+  by (metis (mono_tags, lifting) choose_central_vx_works V_state case_prod_conv)
 
 lemma cvx_in_Xseq:
-  assumes "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
+  assumes "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
   shows "cvx \<mu> l k i \<in> Xseq \<mu> l k i"
   apply (simp add: Xseq_def cvx_def Yseq_def split: prod.split)
-  by (metis V_state assms choose_central_vx_X red_dboost_non_terminating red_dboost_not_many_bluish stepper_XYseq)
+  by (metis central_vertex_def cvx_def assms cvx_works stepper_XYseq)
 
 lemma beta_le:
-  assumes "\<mu> > 0" and i: "i \<in> Step_class \<mu> l k red_step \<union> Step_class \<mu> l k dboost_step"
+  assumes "\<mu> > 0" and i: "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
   shows "beta \<mu> l k i \<le> \<mu>"
   using \<open>\<mu> > 0\<close>
   apply (simp add: beta_def divide_simps split: prod.split)

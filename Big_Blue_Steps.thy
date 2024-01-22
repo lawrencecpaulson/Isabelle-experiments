@@ -401,14 +401,14 @@ proof -
     by presburger 
 qed
 
-definition "Lemma_bblue_step_limit \<equiv> \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k bblue_step) \<and> card (Step_class \<mu> l k bblue_step) \<le> l powr (3/4)"
+definition "Lemma_bblue_step_limit \<equiv> \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {bblue_step}) \<and> card (Step_class \<mu> l k {bblue_step}) \<le> l powr (3/4)"
 
 text \<open>Lemma 4.3\<close>
 corollary bblue_step_limit:
   assumes "\<mu>>0"
   shows "\<forall>\<^sup>\<infinity>l. Lemma_bblue_step_limit \<mu> l"
 proof -
-  have "finite (Step_class \<mu> l k bblue_step) \<and> card (Step_class \<mu> l k bblue_step) \<le> l powr (3/4)"
+  have "finite (Step_class \<mu> l k {bblue_step}) \<and> card (Step_class \<mu> l k {bblue_step}) \<le> l powr (3/4)"
     if 41: "\<And>X. many_bluish \<mu> l k X \<Longrightarrow> X\<subseteq>V \<Longrightarrow> \<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S \<ge> l powr (1/4)"
       and "Colours l k" for l k
   proof -
@@ -474,10 +474,10 @@ proof -
           by (metis Suc V_state card_mono dual_order.trans finB step_n)
       qed
     qed
-    { assume \<section>: "card (Step_class \<mu> l k bblue_step) > l powr (3/4)"
-      then have fin: "finite (Step_class \<mu> l k bblue_step)"
+    { assume \<section>: "card (Step_class \<mu> l k {bblue_step}) > l powr (3/4)"
+      then have fin: "finite (Step_class \<mu> l k {bblue_step})"
         using card.infinite by fastforce
-      then obtain n where n: "(Step_class \<mu> l k bblue_step) = {m. m<n \<and> stepper_kind \<mu> l k m = bblue_step}"
+      then obtain n where n: "(Step_class \<mu> l k {bblue_step}) = {m. m<n \<and> stepper_kind \<mu> l k m = bblue_step}"
         using Step_class_iterates by blast
       with \<section> have card_gt: "card{m. m<n \<and> stepper_kind \<mu> l k m = bblue_step} > l powr (3/4)"
         by (simp add: n)
@@ -497,7 +497,7 @@ proof -
       finally have False
         by simp
     } 
-    moreover have "finite (Step_class \<mu> l k bblue_step)"
+    moreover have "finite (Step_class \<mu> l k {bblue_step})"
     proof (intro finite_Step_class)
       show "finite {m. m < n \<and> stepper_kind \<mu> l k m = bblue_step}" for n
         by fastforce
@@ -521,7 +521,7 @@ qed
 
 corollary red_step_limit:
   assumes "\<mu>>0" "Colours l k"
-  shows "finite (Step_class \<mu> l k red_step)" "card (Step_class \<mu> l k red_step) < k"
+  shows "finite (Step_class \<mu> l k {red_step})" "card (Step_class \<mu> l k {red_step}) < k"
 proof -
   define REDS where "REDS \<equiv> \<lambda>r. {m. m < r \<and> stepper_kind \<mu> l k m = red_step}"
   have *: "card(REDS n) \<le> card A"
@@ -589,22 +589,22 @@ proof -
     using Union_incseq_finite by blast
   then have "finite (\<Union> (range REDS))"
     using REDS_def eventually_sequentially by force
-  moreover have "(Step_class \<mu> l k red_step) \<subseteq> \<Union> (range REDS)"
+  moreover have "(Step_class \<mu> l k {red_step}) \<subseteq> \<Union> (range REDS)"
     by (auto simp: Step_class_def REDS_def)
-  ultimately show "finite (Step_class \<mu> l k red_step)"
+  ultimately show "finite (Step_class \<mu> l k {red_step})"
     using infinite_super by blast
-  with less_k show "card (Step_class \<mu> l k red_step) < k"
+  with less_k show "card (Step_class \<mu> l k {red_step}) < k"
     by (metis (full_types) REDS_def Step_class_iterates)
 qed
 
 corollary bblue_dboost_step_limit:
   assumes "\<mu>>0"
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> 
-            finite (Step_class \<mu> l k dboost_step) 
-          \<and> card (Step_class \<mu> l k bblue_step) + card (Step_class \<mu> l k dboost_step) < l"
+            finite (Step_class \<mu> l k {dboost_step}) 
+          \<and> card (Step_class \<mu> l k {bblue_step}) + card (Step_class \<mu> l k {dboost_step}) < l"
 proof -
-  have "finite (Step_class \<mu> l k dboost_step) 
-      \<and> card (Step_class \<mu> l k bblue_step) + card (Step_class \<mu> l k dboost_step) < l"
+  have "finite (Step_class \<mu> l k {dboost_step}) 
+      \<and> card (Step_class \<mu> l k {bblue_step}) + card (Step_class \<mu> l k {dboost_step}) < l"
     if 41: "\<And>X. many_bluish \<mu> l k X \<Longrightarrow> X\<subseteq>V \<Longrightarrow> \<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S \<ge> l powr (1/4)"
       and "Colours l k" for l k
   proof 
@@ -700,17 +700,26 @@ proof -
       using Union_incseq_finite by blast
     then have "finite (\<Union> (range BDB))"
       using BDB_def eventually_sequentially by force
-    moreover have Uneq: "(Step_class \<mu> l k bblue_step \<union> Step_class \<mu> l k dboost_step) = \<Union> (range BDB)"
+    moreover have Uneq: "\<Union> (range BDB) = Step_class \<mu> l k {bblue_step,dboost_step}"
       by (auto simp: Step_class_def BDB_def)
-    ultimately have "finite (Step_class \<mu> l k bblue_step \<union> Step_class \<mu> l k dboost_step)"
-      by presburger
-    then show "finite (Step_class \<mu> l k dboost_step)"
-      by blast
-    obtain n where "\<Union> (range BDB) = BDB n"
-      using ** by fastforce
-    then show "card (Step_class \<mu> l k bblue_step) + card (Step_class \<mu> l k dboost_step) < l"
-      using less_l fin Uneq stepkind.distinct 
-      by (metis card_Un_disjnt disjnt_Step_class finite_Un)
+    ultimately have fin: "finite (Step_class \<mu> l k {bblue_step,dboost_step})"
+      by fastforce
+    then show "finite (Step_class \<mu> l k {dboost_step})"
+      by (metis Step_class_Un finite_Un insert_is_Un)
+    obtain n where "BDB n = \<Union> (range BDB)"
+      using ** eventually_sequentially by auto
+    then have "card (BDB n) = card (Step_class \<mu> l k {bblue_step} \<union> Step_class \<mu> l k {dboost_step})"
+      by (metis Step_class_insert Uneq)
+    also have "... = card (Step_class \<mu> l k {bblue_step}) + card (Step_class \<mu> l k {dboost_step})"
+    proof -
+      have "disjnt (Step_class \<mu> l k {bblue_step}) (Step_class \<mu> l k {dboost_step})"
+        using disjnt_Step_class by auto
+      then show ?thesis
+        using fin \<open>finite (Step_class \<mu> l k {dboost_step})\<close>
+        by (metis Step_class_insert card_Un_disjnt finite_Un)
+    qed
+    finally show "card (Step_class \<mu> l k {bblue_step}) + card (Step_class \<mu> l k {dboost_step}) < l"
+      by (metis less_l)
   qed
   with eventually_mono [OF Blue_4_1] \<open>\<mu>>0\<close> show ?thesis
     by presburger 
