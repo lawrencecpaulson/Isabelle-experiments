@@ -286,7 +286,7 @@ next
     by (simp add: ring_distribs inverse_eq_divide) (smt (verit))
   have 0: "0 \<le> (1 + eps k) ^ (h - Suc 0)"
     using epsk_ge0 by auto
-  have lesspi: "qfun k (h - 1) < p i"
+  have lesspi: "qfun k (h-1) < p i"
     using False hgt_Least [of "h-1" "p i" k] unfolding h_def by linarith
   have A: "(1 + eps k) ^ h = (1 + eps k) * (1 + eps k) ^ (h - Suc 0)"
     using False power.simps by (metis h_def Suc_pred hgt_gt_0)
@@ -301,9 +301,9 @@ next
     using lesspi by (simp add: alpha_def)
   also have "\<dots> \<le> p (Suc i)"
     using Y_6_4_Red i by (force simp add: h_def p_def)
-  finally have Y: "qfun k (h-3) < p (Suc i)" .
-  with hgt_greater[OF\<open>k>0\<close> Y] show ?thesis
-    by simp
+  finally have "qfun k (h-3) < p (Suc i)" .
+  with hgt_greater[OF\<open>k>0\<close>] show ?thesis
+    by force
 qed
 
 lemma Y_6_5_DegreeReg: 
@@ -319,32 +319,60 @@ lemma Y_6_5_dbooSt:
   using Y_6_4_dbooSt[OF assms] unfolding Lemma_5_3_def
   by (smt (verit, ccfv_threshold) eventually_at_top_linorder Colours_kn0 hgt_mono)
 
-
-lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (-2 * eps k powr (-1/2)) \<le> 1 - eps k powr (1/2)"
+text \<open>this remark near the top of page 19 only holds in the limit\<close>
+lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (- real (nat \<lfloor>2 * eps k powr (-1/2)\<rfloor>)) \<le> 1 - eps k powr (1/2)"
   unfolding eps_def
   by real_asymp
 
 lemma Y_6_5_Bblue:
+  fixes k::nat and \<kappa>::real
+  defines "\<kappa> \<equiv> eps k powr (-1/2)"
   assumes i: "i \<in> Step_class \<mu> l k bblue_step" and "k>0" "0<\<mu>"
-    and big: "(1 + eps k) powr (-2 * eps k powr (-1/2)) \<le> 1 - eps k powr (1/2)"
+    and big: "(1 + eps k) powr (- real (nat \<lfloor>2*\<kappa>\<rfloor>)) \<le> 1 - eps k powr (1/2)"
   defines "p \<equiv> pee \<mu> l k"
   defines "h \<equiv> hgt k (p (i-1))"
-  shows "hgt k (p (Suc i)) \<ge> h - 2 * eps k powr (-1/2)"
-proof (cases "h > 2 * eps k powr (-1/2) + 1")
+  shows "hgt k (p (Suc i)) \<ge> h - 2*\<kappa>"
+proof (cases "h > 2*\<kappa> + 1")
   case True
   then have "0 < h - 1"
-    by (smt (verit, best) one_less_of_natD powr_non_neg zero_less_diff)
+    by (smt (verit, best) \<kappa>_def one_less_of_natD powr_non_neg zero_less_diff)
   with True have "p (i-1) > qfun k (h-1)"
     by (smt (verit, best) h_def diff_le_self diff_less hgt_Least le_antisym zero_less_one nat_less_le)
-  then have "qfun k (h-1) - sqrt(eps k) * (1 + eps k) ^ (h-1) / k < p (i-1) - eps k powr (-1/2) * alpha k h"
-    using \<open>0 < h-1\<close> Y_6_4_Bblue [OF i] \<open>0<\<mu>\<close> 
-    apply (simp add: alpha_eq p_def)
-    by (smt (verit, best) epsk_ge0 field_sum_of_halves mult.assoc mult.commute powr_half_sqrt powr_mult_base)
-  also have "... \<le> p (Suc i)"
-    using Y_6_4_Bblue i \<open>0<\<mu>\<close> h_def p_def by blast
-  finally have "qfun k (h-1) - sqrt (eps k) * (1 + eps k) ^ (h-1) / k < p (Suc i)" .
-  (*now by "big" and definition of hgt*)
-  then show ?thesis sorry
+  then have "qfun k (h-1) - eps k powr (1/2) * (1 + eps k) ^ (h-1) / k < p (i-1) - \<kappa> * alpha k h"
+    using \<open>0 < h-1\<close> Y_6_4_Bblue [OF i] \<open>0<\<mu>\<close> epsk_ge0
+    apply (simp add: alpha_eq p_def \<kappa>_def)
+    by (smt (verit, best) field_sum_of_halves mult.assoc mult.commute powr_mult_base)
+  also have "\<dots> \<le> p (Suc i)"
+    using Y_6_4_Bblue i \<open>0<\<mu>\<close> h_def p_def \<kappa>_def by blast
+  finally have A: "qfun k (h-1) - eps k powr (1/2) * (1 + eps k) ^ (h-1) / k < p (Suc i)" .
+  have ek0: "0 < 1 + eps k"
+    by (smt (verit, best) epsk_ge0)
+  have less_h: "nat \<lfloor>2 * \<kappa>\<rfloor> < h"
+    using True \<open>0 < h - 1\<close> by linarith
+  have "qfun k (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) = p0 + ((1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) - 1) / k"
+    by (simp add: qfun_def)
+  also have "\<dots> \<le> p0 + ((1 - eps k powr (1/2)) * (1 + eps k) ^ (h-1) - 1) / k"
+  proof -
+    have ge0: "(1 + eps k) ^ (h-1) \<ge> 0"
+      using epsk_ge0 by auto
+    have "(1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) = (1 + eps k) ^ (h-1) * (1 + eps k) powr - real(nat \<lfloor>2*\<kappa>\<rfloor>)"
+      using less_h ek0 by (simp add: of_nat_diff algebra_simps flip: powr_realpow powr_add)
+    also have "\<dots> \<le> (1 - eps k powr (1 / 2)) * (1 + eps k) ^ (h-1)"
+      by (metis mult.commute big ge0 mult_left_mono)
+    finally have "(1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1)
+        \<le> (1 - eps k powr (1 / 2)) * (1 + eps k) ^ (h-1)" .
+    then show ?thesis
+      by (intro add_left_mono divide_right_mono diff_right_mono) auto
+  qed
+  also have "\<dots> \<le> qfun k (h-1) - eps k powr (1/2) * (1 + eps k) ^ (h-1) / real k"
+    using \<open>k>0\<close> epsk_ge0 by (simp add: qfun_def powr_half_sqrt field_simps)
+  also have "\<dots> < p (Suc i)"
+    using A by blast
+  finally have "qfun k (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) < p (Suc i)" .
+  then have "h - nat \<lfloor>2 * \<kappa>\<rfloor> \<le> hgt k (p (Suc i))"
+    using hgt_greater [OF \<open>k>0\<close>] by force
+  with less_h show ?thesis
+    by (smt (verit) assms(1) less_imp_le_nat of_nat_diff of_nat_floor of_nat_mono powr_ge_pzero)
 next
   case False
   then show ?thesis
