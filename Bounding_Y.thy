@@ -117,7 +117,7 @@ lemmas Y_6_4_dbooSt = Red_5_3
 
 subsection \<open>Towards Lemmas 6.3 and 6.2\<close>
 
-definition "Z_class \<equiv> \<lambda>\<mu> l k. {i \<in> Step_class \<mu> l k {red_step} \<union> Step_class \<mu> l k {bblue_step} \<union> Step_class \<mu> l k {dboost_step}.
+definition "Z_class \<equiv> \<lambda>\<mu> l k. {i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}.
                         pee \<mu> l k (Suc i) < pee \<mu> l k (i-1) \<and> pee \<mu> l k (i-1) \<le> p0}"
 
 text \<open>Lemma 6.3 except for the limit\<close>
@@ -246,7 +246,7 @@ proof -
   have eq: "Z_class \<mu> l k = Step_class \<mu> l k {dboost_step} \<inter> Z_class \<mu> l k 
                       \<union> Step_class \<mu> l k {bblue_step} \<inter> Z_class \<mu> l k
                       \<union> Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k"
-    by (auto simp: Z_class_def)
+    by (auto simp: Z_class_def Step_class_insert_NO_MATCH)
   show ?thesis
     using bblue red
     by (subst eq) (simp add: sum.union_disjoint dboost fin_bblue fin_red disjoint_iff bblue_not_red)
@@ -384,7 +384,9 @@ qed
 lemma Y_6_2:
   assumes "0<\<mu>" "\<mu><1"
   assumes j: "j \<in> Step_class \<mu> l k {bblue_step}" and "k>0" "0<\<mu>"
-  shows
+  defines "p \<equiv> pee \<mu> l k"
+  shows "p (Suc j) \<ge> p0 - 3 * eps k"
+  sorry
 
 end (*context Diagonal*)
 

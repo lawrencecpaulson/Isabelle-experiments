@@ -706,11 +706,11 @@ proof -
       by fastforce
     then show "finite (Step_class \<mu> l k {dboost_step})"
       by (metis Step_class_Un finite_Un insert_is_Un)
-    obtain n where "BDB n = \<Union> (range BDB)"
-      using ** eventually_sequentially by auto
+    obtain n where "\<Union> (range BDB) = BDB n"
+      using ** by force
     then have "card (BDB n) = card (Step_class \<mu> l k {bblue_step} \<union> Step_class \<mu> l k {dboost_step})"
       by (metis Step_class_insert Uneq)
-    also have "... = card (Step_class \<mu> l k {bblue_step}) + card (Step_class \<mu> l k {dboost_step})"
+    also have "\<dots> = card (Step_class \<mu> l k {bblue_step}) + card (Step_class \<mu> l k {dboost_step})"
     proof -
       have "disjnt (Step_class \<mu> l k {bblue_step}) (Step_class \<mu> l k {dboost_step})"
         using disjnt_Step_class by auto
