@@ -1070,13 +1070,19 @@ lemma Yseq_gt_0:
   using not_halted_pee_gt [OF assms] 
   by (auto simp: pee_def gen_density_def divide_simps mult_less_0_iff zero_less_mult_iff split: if_split_asm)
 
+lemma dreg_step_0: "\<not> termination_condition l k X0 Y0 \<Longrightarrow> 0 \<in> Step_class \<mu> l k {dreg_step}"
+  by (auto simp: Step_class_def stepper_kind_def)
+
 lemma dreg_before_step:
   assumes "Suc i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
   shows "i \<in> Step_class \<mu> l k {dreg_step}"
   using assms by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
 
 lemma step_odd: "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step} \<Longrightarrow> odd i" 
-  by (force simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
+  by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
+
+lemma step_even: "i \<in> Step_class \<mu> l k {dreg_step} \<Longrightarrow> even i" 
+  by (auto simp: Step_class_def stepper_kind_def next_state_kind_def split: if_split_asm prod.split_asm)
 
 lemma finite_Step_class:
   assumes "\<And>n. finite {m. m<n \<and> stepper_kind \<mu> l k m = knd}"

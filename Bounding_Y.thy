@@ -383,10 +383,53 @@ qed
 
 lemma Y_6_2:
   assumes "0<\<mu>" "\<mu><1"
-  assumes j: "j \<in> Step_class \<mu> l k {bblue_step}" and "k>0" "0<\<mu>"
+  assumes j: "j \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step}" and "k>0" "0<\<mu>"
   defines "p \<equiv> pee \<mu> l k"
-  shows "p (Suc j) \<ge> p0 - 3 * eps k"
-  sorry
+  shows "p j \<ge> p0 - 3 * eps k"
+proof (cases "p j \<ge> p0")
+  case True
+  then show ?thesis
+    by (smt (verit) epsk_ge0)
+next
+  case False
+  define J where "J \<equiv> {j'. j'<j \<and> p j' \<ge> p0 \<and> j' \<notin> Step_class \<mu> l k {dreg_step}}"
+  have "finite J"
+    by (auto simp: J_def)
+  have "p 0 = p0"
+    by (simp add: p_def pee_eq_p0)
+  with False have "j>0"
+    by (smt (verit, best) gr0I)
+  have "j \<notin> Step_class \<mu> l k {halted}"
+    using j Step_class_def by force
+  then have "0 \<notin> Step_class \<mu> l k {halted}"
+    using Step_class_not_halted by blast
+  with \<open>j>0\<close> have "\<not> termination_condition l k X0 Y0"
+    by (auto simp add: Step_class_def stepper_kind_def)
+  then have "0 \<in> Step_class \<mu> l k {dreg_step}"
+    using dreg_step_0 by force
+  then have "p 1 \<ge> p 0"
+    using Y_6_4_DegreeReg [of 0] by (simp add: p_def) 
+  with False have "1 < j"
+    by (metis One_nat_def Suc_lessI \<open>0 < j\<close> \<open>p 0 = p0\<close>)
+  have "1 \<notin> Step_class \<mu> l k {dreg_step}"
+    by (metis One_nat_def dvd_0_right even_Suc step_even)
+  then
+  have exists: "J \<noteq> {}"
+    using \<open>1 < j\<close> \<open>p 0 = p0\<close> \<open>p 0 \<le> p 1\<close> by (auto simp: J_def)
+  define j' where "j' \<equiv> Max J"
+  have "j' \<in> J"
+    using \<open>finite J\<close> exists by (force simp add: j'_def)
+  have "j'' \<le> j'" if "j'' \<in> J" for j''
+    using \<open>finite J\<close> exists by (simp add: j'_def that)
+  have Y_6_3_Main: "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k" 
+    sorry
+  have "p (j'+2) - 2 * eps k \<le> p (j'+2) - (\<Sum>i \<in> Z_class \<mu> l k. p (j'-1) - p (Suc j'))"
+
+    sorry
+    sorry
+    sorry
+  then show ?thesis sorry
+qed
 
 end (*context Diagonal*)
 
