@@ -381,54 +381,76 @@ next
     by (smt (verit, del_insts) of_nat_0 hgt_gt_0 nat_less_real_le)
 qed
 
-lemma Y_6_2:
+text \<open>Following Bravik in excluding the even steps (degree regularisation)\<close>
+lemma Y_6_2_aux:
+  fixes l k
   assumes "0<\<mu>" "\<mu><1"
-  assumes j: "j \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step}" and "k>0" "0<\<mu>"
   defines "p \<equiv> pee \<mu> l k"
-  shows "p j \<ge> p0 - 3 * eps k"
-proof (cases "p j \<ge> p0")
+  assumes j: "j \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" and "k>0" "0<\<mu>"
+  assumes Y_6_3_Main: "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k" 
+  shows "p (Suc j) \<ge> p0 - 3 * eps k"
+proof (cases "p (Suc j) \<ge> p0")
   case True
   then show ?thesis
     by (smt (verit) epsk_ge0)
 next
   case False
-  define J where "J \<equiv> {j'. j'<j \<and> p j' \<ge> p0 \<and> j' \<notin> Step_class \<mu> l k {dreg_step}}"
+  define J where "J \<equiv> {j'. j'<j \<and> p (Suc j') \<ge> p0 \<and> Suc j' \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}}"
   have "finite J"
     by (auto simp: J_def)
   have "p 0 = p0"
     by (simp add: p_def pee_eq_p0)
-  with False have "j>0"
-    by (smt (verit, best) gr0I)
-  have "j \<notin> Step_class \<mu> l k {halted}"
+  have "odd j"
+    using step_odd j by blast
+  with odd_pos have "0 < j" by force
+  have non_halted: "j \<notin> Step_class \<mu> l k {halted}"
     using j Step_class_def by force
   then have "0 \<notin> Step_class \<mu> l k {halted}"
     using Step_class_not_halted by blast
-  with \<open>j>0\<close> have "\<not> termination_condition l k X0 Y0"
+  then have "\<not> termination_condition l k X0 Y0"
     by (auto simp add: Step_class_def stepper_kind_def)
   then have "0 \<in> Step_class \<mu> l k {dreg_step}"
     using dreg_step_0 by force
   then have "p 1 \<ge> p 0"
     using Y_6_4_DegreeReg [of 0] by (simp add: p_def) 
-  with False have "1 < j"
-    by (metis One_nat_def Suc_lessI \<open>0 < j\<close> \<open>p 0 = p0\<close>)
   have "1 \<notin> Step_class \<mu> l k {dreg_step}"
     by (metis One_nat_def dvd_0_right even_Suc step_even)
-  then
-  have exists: "J \<noteq> {}"
-    using \<open>1 < j\<close> \<open>p 0 = p0\<close> \<open>p 0 \<le> p 1\<close> by (auto simp: J_def)
+  moreover have "1 \<notin> Step_class \<mu> l k {halted}"
+    by (metis One_nat_def Step_class_not_halted \<open>0 < j\<close> non_halted less_eq_Suc_le)
+  ultimately have "1 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
+    using stepkind.exhaust by (auto simp: Step_class_def)
+  then have exists: "J \<noteq> {}"
+    using \<open>0<j\<close> \<open>p 0 = p0\<close> \<open>p 0 \<le> p 1\<close> by (auto simp: J_def)
   define j' where "j' \<equiv> Max J"
   have "j' \<in> J"
     using \<open>finite J\<close> exists by (force simp add: j'_def)
-  have "j'' \<le> j'" if "j'' \<in> J" for j''
+  have maximal: "j'' \<le> j'" if "j'' \<in> J" for j''
     using \<open>finite J\<close> exists by (simp add: j'_def that)
-  have Y_6_3_Main: "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k" 
-    sorry
-  have "p (j'+2) - 2 * eps k \<le> p (j'+2) - (\<Sum>i \<in> Z_class \<mu> l k. p (j'-1) - p (Suc j'))"
-
-    sorry
-    sorry
-    sorry
-  then show ?thesis sorry
+  have "p (j'+3) - 2 * eps k \<le> p (j'+3) - (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))"
+    using Y_6_3_Main by simp
+  also have "... \<le> p (Suc j)"
+  proof -
+    have "i \<in> Z_class \<mu> l k" 
+      if "p (Suc i) < p (i-1)" "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
+        "j'+2 < i" "i\<le>j" for i
+    proof -
+      have "j' < i-1"
+        using that by linarith
+      with maximal have "i-1 \<notin> J"
+        using linorder_not_less by blast
+      then have "p i < p0"
+        using that by (auto simp add: J_def)
+      moreover have "p (i-1) \<le> p i"
+        by (metis Y_6_4_DegreeReg dreg_before_step numeral_nat(7) odd_Suc_minus_one p_def step_odd that(2))
+      ultimately have "p (i-1) < p0"
+        by linarith
+      then show ?thesis
+        using that by (simp add: Z_class_def p_def)
+    qed
+    then show ?thesis
+      sorry
+  qed
+ then show ?thesis sorry
 qed
 
 end (*context Diagonal*)
