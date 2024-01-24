@@ -404,7 +404,7 @@ qed
 definition "Lemma_bblue_step_limit \<equiv> \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {bblue_step}) \<and> card (Step_class \<mu> l k {bblue_step}) \<le> l powr (3/4)"
 
 text \<open>Lemma 4.3\<close>
-corollary bblue_step_limit:
+proposition bblue_step_limit:
   assumes "\<mu>>0"
   shows "\<forall>\<^sup>\<infinity>l. Lemma_bblue_step_limit \<mu> l"
 proof -
@@ -519,7 +519,7 @@ proof -
     unfolding Lemma_bblue_step_limit_def by presburger 
 qed
 
-corollary red_step_limit:
+proposition red_step_limit:
   assumes "\<mu>>0" "Colours l k"
   shows "finite (Step_class \<mu> l k {red_step})" "card (Step_class \<mu> l k {red_step}) < k"
 proof -
@@ -597,7 +597,7 @@ proof -
     by (metis (full_types) REDS_def Step_class_iterates)
 qed
 
-corollary bblue_dboost_step_limit:
+proposition bblue_dboost_step_limit:
   assumes "\<mu>>0"
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> 
             finite (Step_class \<mu> l k {dboost_step}) 

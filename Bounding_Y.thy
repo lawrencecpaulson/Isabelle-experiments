@@ -118,7 +118,25 @@ lemmas Y_6_4_dbooSt = Red_5_3
 subsection \<open>Towards Lemmas 6.3 and 6.2\<close>
 
 definition "Z_class \<equiv> \<lambda>\<mu> l k. {i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}.
-                        pee \<mu> l k (Suc i) < pee \<mu> l k (i-1) \<and> pee \<mu> l k (i-1) \<le> p0}"
+                                pee \<mu> l k (Suc i) < pee \<mu> l k (i-1) \<and> pee \<mu> l k (i-1) \<le> p0}"
+
+lemma finite_Z_class:
+  assumes "\<mu>>0"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Z_class \<mu> l k)"
+proof -
+  have R: "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {red_step})"
+    using assms red_step_limit(1) by auto
+  have B: "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {bblue_step})"
+    using bblue_step_limit unfolding Lemma_bblue_step_limit_def
+    by (smt (verit, ccfv_threshold) assms eventually_at_top_linorder)
+  have S: "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {dboost_step})"
+    using bblue_dboost_step_limit [OF assms] eventually_sequentially by force
+  have "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step})"
+    using eventually_mono [OF eventually_conj [OF R eventually_conj [OF B S]]]
+    by (simp add: Step_class_insert_NO_MATCH)
+  then show ?thesis
+    unfolding Z_class_def by (force elim!: eventually_mono)
+qed
 
 text \<open>Lemma 6.3 except for the limit\<close>
 lemma Y_6_3_Main:
@@ -196,7 +214,7 @@ proof -
       using Y_6_4_Red by (force simp: p_def)
     have pee_le: "p (i-1) \<le> p i"
       using dreg_before_step Y_6_4_DegreeReg i step_odd
-      apply (simp add: p_def Step_class_insert_NO_MATCH )
+      apply (simp add: p_def Step_class_insert_NO_MATCH)
       by (metis odd_Suc_minus_one)
     consider (1) "hgt k (p i) = 1" | (2) "hgt k (p i) > 1"
       by (metis hgt_gt_0 less_one nat_neq_iff)
@@ -388,6 +406,7 @@ lemma Y_6_2_aux:
   defines "p \<equiv> pee \<mu> l k"
   assumes j: "j \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" and "k>0" "0<\<mu>"
   assumes Y_6_3_Main: "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k" 
+    and finite_Z_class: "finite (Z_class \<mu> l k)"
   shows "p (Suc j) \<ge> p0 - 3 * eps k"
 proof (cases "p (Suc j) \<ge> p0")
   case True
@@ -430,25 +449,48 @@ next
     using Y_6_3_Main by simp
   also have "... \<le> p (Suc j)"
   proof -
-    have "i \<in> Z_class \<mu> l k" 
-      if "p (Suc i) < p (i-1)" "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
-        "j'+2 < i" "i\<le>j" for i
-    proof -
-      have "j' < i-1"
-        using that by linarith
-      with maximal have "i-1 \<notin> J"
-        using linorder_not_less by blast
-      then have "p i < p0"
-        using that by (auto simp add: J_def)
-      moreover have "p (i-1) \<le> p i"
-        by (metis Y_6_4_DegreeReg dreg_before_step numeral_nat(7) odd_Suc_minus_one p_def step_odd that(2))
-      ultimately have "p (i-1) < p0"
-        by linarith
-      then show ?thesis
-        using that by (simp add: Z_class_def p_def)
+    define DD where "DD \<equiv> {i. p (Suc i) < p (i-1) \<and> i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step} \<and> 
+         j'+2 < i \<and> i\<le>j}"
+    have *: "(\<Sum>i \<in> DD. p (i-1) - p (Suc i)) \<le> (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))"
+    proof (intro sum_mono2)
+      show "finite (Z_class \<mu> l k)"
+        using finite_Z_class by force
+      show "DD \<subseteq> Z_class \<mu> l k" 
+      proof 
+        fix i
+        assume i: "i \<in> DD"
+        then have dreg: "i-1 \<in> Step_class \<mu> l k {dreg_step}" and "i\<noteq>0"
+          by (auto simp add: DD_def dreg_before_step)
+        have "j' < i-1"
+          using i by (auto simp: DD_def)
+        with maximal have "i-1 \<notin> J"
+          using linorder_not_less by blast
+        then have "p i < p0"
+          using i by (auto simp add: DD_def J_def)
+        moreover have "p (i-1) \<le> p i"
+          using Y_6_4_DegreeReg [OF dreg] \<open>i\<noteq>0\<close> by (simp add: p_def)
+        ultimately have "p (i-1) < p0"
+          by linarith
+        then show "i \<in> Z_class \<mu> l k"
+          using i by (simp add: DD_def Z_class_def p_def)
+      qed
+      show "0 \<le> p (j - 1) - p (Suc j)" if "j \<in> Z_class \<mu> l k - DD" for j
+        using that by (auto simp: DD_def Z_class_def p_def)
     qed
-    then show ?thesis
+    then have "p (j' + 3) - (\<Sum>i\<in>Z_class \<mu> l k. p (i - 1) - p (Suc i))
+        \<le> p (j' + 3) - (\<Sum>i \<in> DD. p (i-1) - p (Suc i))"
+      by auto
+    also have "... \<le> p (Suc j)"
+unfolding DD_def
+    proof -
+      have "Suc j' < j"
+      have "p (j'+3) \<le> p (Suc j)"
+
+    sorry
+      apply (simp add: DD_def)
+
       sorry
+    finally show ?thesis .
   qed
  then show ?thesis sorry
 qed
