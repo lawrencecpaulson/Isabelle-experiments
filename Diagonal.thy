@@ -1084,6 +1084,22 @@ lemma step_odd: "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step} 
 lemma step_even: "i \<in> Step_class \<mu> l k {dreg_step} \<Longrightarrow> even i" 
   by (auto simp: Step_class_def stepper_kind_def next_state_kind_def split: if_split_asm prod.split_asm)
 
+lemma step_odd_minus2: 
+  assumes "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" "i>1"
+  shows "i-2 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
+proof -
+  have "odd (i-2)"
+    using assms step_odd by auto
+  then have "i-2 \<notin> Step_class \<mu> l k {dreg_step}"
+    using step_even by blast
+  moreover have "i \<notin> Step_class \<mu> l k {halted}"
+    using assms by (auto simp: Step_class_def)
+  then have "i-2 \<notin> Step_class \<mu> l k {halted}"
+    using Step_class_not_halted diff_le_self by blast
+  ultimately show ?thesis
+    using stepkind.exhaust by (auto simp: Step_class_def)
+qed
+
 lemma finite_Step_class:
   assumes "\<And>n. finite {m. m<n \<and> stepper_kind \<mu> l k m = knd}"
   assumes "\<And>n. card {m. m<n \<and> stepper_kind \<mu> l k m = knd} < N"

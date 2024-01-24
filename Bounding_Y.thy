@@ -404,7 +404,8 @@ lemma Y_6_2_aux:
   fixes l k
   assumes "0<\<mu>" "\<mu><1"
   defines "p \<equiv> pee \<mu> l k"
-  assumes j: "j \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" and "k>0" "0<\<mu>"
+  defines "RBS \<equiv> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
+  assumes j: "j \<in> RBS" and "k>0" "0<\<mu>"
   assumes Y_6_3_Main: "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k" 
     and finite_Z_class: "finite (Z_class \<mu> l k)"
   shows "p (Suc j) \<ge> p0 - 3 * eps k"
@@ -414,16 +415,16 @@ proof (cases "p (Suc j) \<ge> p0")
     by (smt (verit) epsk_ge0)
 next
   case False
-  define J where "J \<equiv> {j'. j'<j \<and> p (Suc j') \<ge> p0 \<and> Suc j' \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}}"
+  define J where "J \<equiv> {j'. j'<j \<and> p (Suc j') \<ge> p0 \<and> Suc j' \<in> RBS}"
   have "finite J"
     by (auto simp: J_def)
   have "p 0 = p0"
     by (simp add: p_def pee_eq_p0)
-  have "odd j"
-    using step_odd j by blast
-  with odd_pos have "0 < j" by force
+  have odd_RBS: "odd i" if "i \<in> RBS" for i
+    using step_odd that unfolding RBS_def by blast
+  with odd_pos j have "0 < j" by force
   have non_halted: "j \<notin> Step_class \<mu> l k {halted}"
-    using j Step_class_def by force
+    using j by (auto simp: Step_class_def RBS_def)
   then have "0 \<notin> Step_class \<mu> l k {halted}"
     using Step_class_not_halted by blast
   then have "\<not> termination_condition l k X0 Y0"
@@ -436,8 +437,8 @@ next
     by (metis One_nat_def dvd_0_right even_Suc step_even)
   moreover have "1 \<notin> Step_class \<mu> l k {halted}"
     by (metis One_nat_def Step_class_not_halted \<open>0 < j\<close> non_halted less_eq_Suc_le)
-  ultimately have "1 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
-    using stepkind.exhaust by (auto simp: Step_class_def)
+  ultimately have "1 \<in> RBS"
+    using stepkind.exhaust by (auto simp: Step_class_def RBS_def)
   then have exists: "J \<noteq> {}"
     using \<open>0<j\<close> \<open>p 0 = p0\<close> \<open>p 0 \<le> p 1\<close> by (auto simp: J_def)
   define j' where "j' \<equiv> Max J"
@@ -449,18 +450,22 @@ next
     using Y_6_3_Main by simp
   also have "... \<le> p (Suc j)"
   proof -
-    define DD where "DD \<equiv> {i. p (Suc i) < p (i-1) \<and> i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step} \<and> 
+    define DD where "DD \<equiv> \<lambda>j. {i. p (Suc i) < p (i-1) \<and> i \<in> RBS \<and> 
          j'+2 < i \<and> i\<le>j}"
-    have *: "(\<Sum>i \<in> DD. p (i-1) - p (Suc i)) \<le> (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))"
+    have "DD i \<subseteq> {j'+2<..i}" for i
+      by (auto simp: DD_def)
+    then have finDD: "finite (DD i)" for i
+      by (meson finite_greaterThanAtMost finite_subset)
+    have *: "(\<Sum>i \<in> DD j. p (i-1) - p (Suc i)) \<le> (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))"
     proof (intro sum_mono2)
       show "finite (Z_class \<mu> l k)"
         using finite_Z_class by force
-      show "DD \<subseteq> Z_class \<mu> l k" 
+      show "DD j \<subseteq> Z_class \<mu> l k" 
       proof 
         fix i
-        assume i: "i \<in> DD"
+        assume i: "i \<in> DD j"
         then have dreg: "i-1 \<in> Step_class \<mu> l k {dreg_step}" and "i\<noteq>0"
-          by (auto simp add: DD_def dreg_before_step)
+          by (auto simp add: DD_def RBS_def dreg_before_step)
         have "j' < i-1"
           using i by (auto simp: DD_def)
         with maximal have "i-1 \<notin> J"
@@ -472,27 +477,65 @@ next
         ultimately have "p (i-1) < p0"
           by linarith
         then show "i \<in> Z_class \<mu> l k"
-          using i by (simp add: DD_def Z_class_def p_def)
+          using i by (simp add: DD_def RBS_def Z_class_def p_def)
       qed
-      show "0 \<le> p (j - 1) - p (Suc j)" if "j \<in> Z_class \<mu> l k - DD" for j
+      show "0 \<le> p (i-1) - p (Suc i)" if "i \<in> Z_class \<mu> l k - DD j" for i
         using that by (auto simp: DD_def Z_class_def p_def)
     qed
-    then have "p (j' + 3) - (\<Sum>i\<in>Z_class \<mu> l k. p (i - 1) - p (Suc i))
-        \<le> p (j' + 3) - (\<Sum>i \<in> DD. p (i-1) - p (Suc i))"
+    then have "p (j'+3) - (\<Sum>i\<in>Z_class \<mu> l k. p (i - 1) - p (Suc i))
+            \<le> p (j'+3) - (\<Sum>i \<in> DD j. p (i-1) - p (Suc i))"
       by auto
     also have "... \<le> p (Suc j)"
-unfolding DD_def
     proof -
-      have "Suc j' < j"
-      have "p (j'+3) \<le> p (Suc j)"
-
-    sorry
-      apply (simp add: DD_def)
-
-      sorry
+      have "p (j'+3) - p (Suc j) \<le> (\<Sum>i \<in> DD j. p (i-1) - p (Suc i))" if "j \<in> RBS" for j
+        using that
+      proof (induction j rule: less_induct)
+        case (less j)
+        show ?case
+        proof (cases "j'+2 < j-2")
+          case True
+          with less.prems 
+          have DD_if: "DD j = (if p (Suc j) < p (j-1) then insert j (DD (j-2)) else DD (j-2))"
+            apply (auto simp: DD_def)
+            apply (metis Nat.le_diff_conv2 Suc_leI add_2_eq_Suc' add_leE even_Suc less(2) nat_less_le odd_RBS)
+            by (metis Nat.le_diff_conv2 Suc_leI add_2_eq_Suc' add_leE even_Suc nat_less_le odd_RBS)
+          have "j-2 \<in> RBS"
+            using True assms(4) less(2) step_odd_minus2 by auto
+          then have *: "p (j' + 3) - p (j - Suc 0) \<le> (\<Sum>i\<in>DD (j - 2). p (i - 1) - p (Suc i))"
+            using less.IH [of "j-2"] True
+            by (metis (no_types, lifting) One_nat_def Suc_1 Suc_diff_Suc diff_is_0_eq' diff_less less_Suc_eq_0_disj less_eq_Suc_le nat_le_linear)
+          moreover have "j \<notin> DD (j - 2)"
+            by (auto simp: DD_def)
+          ultimately show ?thesis
+            by (simp add: DD_if finDD)
+        next
+          case False
+          then have "DD j \<subseteq> {j}"
+            using less.prems
+            apply (auto simp: DD_def)
+            by (metis (full_types) add_2_eq_Suc' even_Suc le_neq_implies_less less_diff_conv less_trans_Suc not_less_iff_gr_or_eq odd_RBS)
+          then consider "(\<Sum>i\<in>DD j. p (i - 1) - p (Suc i)) = 0" | "(\<Sum>i\<in>DD j. p (i - 1) - p (Suc i)) = p (j - 1) - p (Suc j)"
+            sorry
+          then show ?thesis
+          proof cases
+            case 1
+            then show ?thesis
+              apply (auto simp: )
+              sorry
+          next
+            case 2
+            then show ?thesis
+              apply (auto simp: )
+              sorry
+          qed
+        qed
+      qed
+      then show ?thesis
+        using j by force
+    qed
     finally show ?thesis .
   qed
- then show ?thesis sorry
+  then show ?thesis sorry
 qed
 
 end (*context Diagonal*)
