@@ -472,10 +472,9 @@ next
         with maximal have "i \<notin> J"
           using linorder_not_less by blast
         then have "p i < p0"
-          using i apply (auto simp add: DD_def J_def)
-          apply (smt (verit, best) J_def Suc_le_eq Suc_less_eq2 le_eq_less_or_eq linorder_not_less maximal mem_Collect_eq)
-          apply (smt (verit) J_def Suc_lessD Suc_less_eq2 linorder_not_less maximal mem_Collect_eq not_less_eq)
-          by (smt (verit, best) J_def Suc_lessD Suc_less_eq2 le_simps(3) linorder_not_le maximal mem_Collect_eq)
+          using i maximal
+          apply (simp add: DD_def J_def)
+          by (smt (verit, best) Suc_le_eq Suc_less_eq2 le_eq_less_or_eq linorder_not_less mem_Collect_eq)
         moreover have "p (i-1) \<le> p i"
           using Y_6_4_DegreeReg [OF dreg] \<open>i\<noteq>0\<close> by (simp add: p_def)
         ultimately have "p (i-1) < p0"
@@ -541,58 +540,3 @@ qed
 end (*context Diagonal*)
 
 end
-
-      define Z where "Z \<equiv> \<lambda>j. Z_class \<mu> l k \<inter> {..j}"
-      have [simp]: "i \<in> Z j \<longleftrightarrow> i \<in> RBS \<and> p (Suc i) < p (i-1) \<and> p (i-1) \<le> p0 \<and> i\<le>j" for i j
-        by (auto simp: Z_def Z_class_def RBS_def p_def)
-
-      have "p (j'+3) - p (Suc m) \<le> (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))" 
-          if "m \<in> RBS" "j' < m" "m\<le>j" for m
-        using that
-      proof (induction m rule: less_induct)
-        case (less m)
-        show ?case
-        proof (cases "j'+2 < m") 
-          case True
-          have "m-2 \<in> RBS"
-            using True assms(4) less(2) step_odd_minus2 by auto
-          with less.prems 
-          have Z_if: "Z m = (if p (Suc m) < p (m-1) \<and> p (m-1) \<le> p0 then insert m (Z (m-2)) else Z (m-2))"
-            using \<open>m \<in> RBS\<close> True
-            apply (auto simp: )
-            apply (metis Suc_1 Suc_diff_Suc add_lessD1 even_Suc le_simps(2) less_SucE numeral_nat(7) odd_RBS odd_Suc_minus_one plus_1_eq_Suc)
-            apply (metis Suc_1 Suc_diff_Suc add_lessD1 even_Suc le_eq_less_or_eq le_simps(2) numeral_nat(7) odd_RBS odd_Suc_minus_one plus_1_eq_Suc)
-            by (metis Nat.le_diff_conv2 Suc_leI add_2_eq_Suc' add_leD2 even_Suc le_eq_less_or_eq odd_RBS)
-          have *: "p (j' + 3) - p (m - Suc 0) \<le> (\<Sum>i\<in>Z (m - 2). p (i - 1) - p (Suc i))"
-            using less.IH [of "m-2"] True less \<open>j' \<in> J\<close>
-            apply (simp add: J_def Z_if)
-
-            sorry
-            by (smt (verit, best) Diagonal.dreg_before_step Diagonal_axioms J_def Nat.le_diff_conv2 One_nat_def Suc_1 Suc_diff_le \<open>j' \<in> J\<close> add_leE assms(4) basic_trans_rules(22) diff_Suc_Suc diff_less less_Suc_eq less_Suc_eq_le mem_Collect_eq odd_RBS step_even)
-          moreover have "m \<notin> DD (m - 2)"
-            by (auto simp: DD_def)
-          ultimately show ?thesis
-            by (simp add: Z_if finDD)
-        next
-          case False
-          then
-          have "m = Suc j'"
-            using less(3) by auto
-          have **: "Z m = {}"
-            apply (simp add: Z_def Z_class_def)
-          have "even j'" "odd m"
-            using \<open>j' \<in> J\<close> \<open>m \<in> RBS\<close> unfolding J_def
-            using odd_RBS by force+
-          then show ?thesis
-            using less.prems False
-            apply (simp add: ** not_le)
-             apply (case_tac "m = j'+1")
-             apply (simp add: )
-            defer
-             apply (force simp add: )
-
-            apply (simp add: not_le)
-
-            oops
-
-        
