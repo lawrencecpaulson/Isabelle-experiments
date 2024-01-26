@@ -1084,6 +1084,9 @@ lemma step_odd: "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step} 
 lemma step_even: "i \<in> Step_class \<mu> l k {dreg_step} \<Longrightarrow> even i" 
   by (auto simp: Step_class_def stepper_kind_def next_state_kind_def split: if_split_asm prod.split_asm)
 
+lemma not_halted_odd_RBS: "\<lbrakk>i \<notin> Step_class \<mu> l k {halted}; odd i\<rbrakk> \<Longrightarrow> i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
+  by (auto simp: Step_class_def stepper_kind_def next_state_kind_def split: prod.split_asm)
+
 lemma step_odd_minus2: 
   assumes "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" "i>1"
   shows "i-2 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
