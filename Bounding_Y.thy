@@ -419,13 +419,16 @@ next
   then have pj_less: "p(Suc j) < p0" by linarith
   define J where "J \<equiv> {j'. j'<j \<and> p (Suc j') \<ge> p0 \<and> j' \<in> RBS}"
     \<comment> \<open>@{term"J"} consists of odd numbers below  @{term"j"} for the density is above the baseline.}\<close>
+  (*Not clear how to treat in the degenerate case, where J is empty. 
+    Meaning the density is consistently below the baseline from the very beginning. 
+    Seemingly a similar proof needs to be done. For the paper proof, it could contain zero.*)
   have "finite J"
     by (auto simp: J_def)
   have "p 0 = p0"
     by (simp add: p_def pee_eq_p0)
   have odd_RBS: "odd i" if "i \<in> RBS" for i
     using step_odd that unfolding RBS_def by blast
-  with odd_pos j have "0 < j" by force
+  with odd_pos j False have "j>0" by auto
   have non_halted: "j \<notin> Step_class \<mu> l k {halted}"
     using j by (auto simp: Step_class_def RBS_def)
   then have "0 \<notin> Step_class \<mu> l k {halted}"
@@ -436,6 +439,45 @@ next
     using dreg_step_0 by force
   then have "p 1 \<ge> p 0"
     using Y_6_4_DegreeReg [of 0] by (simp add: p_def) 
+
+  show ?thesis
+  proof (cases "J={}")
+    case True
+    then have A: "\<And>j'. \<lbrakk>j'<j; j' \<in> RBS\<rbrakk> \<Longrightarrow> p (Suc j') < p0"
+      by (force simp add: J_def)
+    define Z where "Z \<equiv> {i \<in> RBS. p (Suc i) < p (i-1) \<and> i<j}"
+    have B: "p (j'-1) \<le> p0" if "j'<j" "j' \<in> RBS" for j'
+    proof (cases "j'=1")
+      case True
+      then show ?thesis
+        by (simp add: assms(3) pee_eq_p0)
+    next
+      case False
+      then have "j'\<ge>2"
+        by (metis Suc_1 less_one nat_less_le not_less_eq_eq odd_RBS odd_pos that(2))
+      then show ?thesis
+        using A [of "j'-2"] that
+        by (smt (verit) Suc_1 Suc_diff_Suc Suc_le_lessD assms(4) less_imp_diff_less step_odd_minus2)
+    qed
+    moreover have "(\<Sum>i \<in> Z. p (i-1) - p (Suc i)) \<le> (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))"
+    proof (intro sum_mono2)
+      show "finite (Z_class \<mu> l k)"
+        using finite_Z_class by force
+      show "Z \<subseteq> Z_class \<mu> l k"
+        using B by (auto simp add: Z_class_def p_def RBS_def Z_def)
+      show "0 \<le> p (i - 1) - p (Suc i)" if "i \<in> Z_class \<mu> l k - Z" for i
+        using that by (auto simp: Z_class_def p_def)
+    qed
+    then show ?thesis
+          using Y_6_3_Main
+
+      sorry
+  next
+    case False
+    then show ?thesis sorry
+  qed
+
+  
   have "1 \<notin> Step_class \<mu> l k {dreg_step}"
     by (metis One_nat_def dvd_0_right even_Suc step_even)
   moreover have "1 \<notin> Step_class \<mu> l k {halted}"
@@ -443,7 +485,10 @@ next
   ultimately have "1 \<in> RBS"
     using stepkind.exhaust by (auto simp: Step_class_def RBS_def)
   then have exists: "J \<noteq> {}"
-    using \<open>0<j\<close> \<open>p 0 = p0\<close> \<open>p 0 \<le> p 1\<close> apply (auto simp: J_def)sorry
+    using \<open>0<j\<close> \<open>p 0 = p0\<close> \<open>p 0 \<le> p 1\<close> apply (auto simp: J_def)
+    apply (rule_tac x="1" in exI)
+    apply (auto simp: )
+    sorry
   define j' where "j' \<equiv> Max J"
   have "j' \<in> J"
     using \<open>finite J\<close> exists by (force simp add: j'_def)
