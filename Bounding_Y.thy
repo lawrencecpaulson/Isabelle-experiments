@@ -417,11 +417,7 @@ proof (cases "p (Suc j) \<ge> p0")
 next
   case False
   then have pj_less: "p(Suc j) < p0" by linarith
-  define J where "J \<equiv> {j'. j'<j \<and> p (Suc j') \<ge> p0 \<and> j' \<in> RBS}"
-    \<comment> \<open>@{term"J"} consists of odd numbers below  @{term"j"} for the density is above the baseline.}\<close>
-  (*Not clear how to treat in the degenerate case, where J is empty. 
-    Meaning the density is consistently below the baseline from the very beginning. 
-    Seemingly a similar proof needs to be done. For the paper proof, it could contain zero.*)
+  define J where "J \<equiv> {j'. j'<j \<and> p (Suc j') \<ge> p0}"
   have "finite J"
     by (auto simp: J_def)
   have "p 0 = p0"
@@ -439,6 +435,172 @@ next
     using dreg_step_0 by force
   then have "p 1 \<ge> p 0"
     using Y_6_4_DegreeReg [of 0] by (simp add: p_def) 
+  have exists: "J \<noteq> {}"
+    using \<open>0 < j\<close> \<open>p 0 = p0\<close> \<open>p 0 \<le> p 1\<close> by (auto simp: J_def)
+  define j' where "j' \<equiv> Max J"
+  have "j' \<in> J"
+    using \<open>finite J\<close> exists by (force simp add: j'_def)
+  then have "j' < j"
+    by (auto simp add: J_def odd_RBS)
+  have maximal: "j'' \<le> j'" if "j'' \<in> J" for j''
+    using \<open>finite J\<close> exists by (simp add: j'_def that)
+  { assume "odd j'"
+    then have "j' \<in> RBS"
+      by (metis Diagonal.Step_class_not_halted Diagonal_axioms \<open>j' < j\<close> assms(4) less_or_eq_imp_le non_halted not_halted_odd_RBS)
+    then have "p (Suc (Suc j')) \<ge> p (Suc j')"
+      unfolding p_def
+      apply (intro Y_6_4_DegreeReg)
+      by (metis Diagonal.Step_class_not_halted Diagonal_axioms Suc_leI \<open>j' < j\<close> dreg_before_step even_Suc j nat_less_le non_halted not_halted_odd_RBS odd_RBS)
+    then have 0: "p (Suc (Suc j')) \<ge> p0"
+      using J_def \<open>j' \<in> J\<close> by auto
+    then have "Suc j' < j"
+      using False Suc_lessI \<open>j' < j\<close> by blast
+    then have "False"
+      using J_def Suc_n_not_le_n maximal 0 by blast
+  }
+  then have "even j'" by metis
+  have "p (j'+2) - 2 * eps k \<le> p (j'+2) - (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))"
+    using Y_6_3_Main by simp
+  also have "... \<le> p (Suc j)"
+  proof -
+    define Z where "Z \<equiv> \<lambda>j. {i. p (Suc i) < p (i-1) \<and> j'+2 < i \<and> i\<le>j \<and> i \<in> RBS}"
+    have "Z i \<subseteq> {Suc j'<..i}" for i
+      by (auto simp: Z_def)
+    then have finZ: "finite (Z i)" for i
+      by (meson finite_greaterThanAtMost finite_subset)
+    have *: "(\<Sum>i \<in> Z j. p (i-1) - p (Suc i)) \<le> (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))"
+    proof (intro sum_mono2)
+      show "finite (Z_class \<mu> l k)"
+        using finite_Z_class by force
+      show "Z j \<subseteq> Z_class \<mu> l k" 
+      proof 
+        fix i
+        assume i: "i \<in> Z j"
+        then have dreg: "i-1 \<in> Step_class \<mu> l k {dreg_step}" and "i\<noteq>0"
+          by (auto simp add: Z_def RBS_def dreg_before_step)
+        have "j' < i"
+          using i by (auto simp: Z_def)
+        with maximal have "i-2 \<notin> J"
+          using Z_def i by force
+        with i have "p (i-1) < p0"
+          using step_odd_minus2 [of i \<mu> l k]
+          apply (simp add: Z_def J_def RBS_def)
+          by (smt (verit) Suc_1 Suc_diff_Suc add_lessD1 diff_le_self le_eq_less_or_eq less_imp_diff_less numeral_nat(7) plus_1_eq_Suc)
+        then show "i \<in> Z_class \<mu> l k"
+          using i by (simp add: Z_def RBS_def Z_class_def p_def)
+      qed
+      show "0 \<le> p (i-1) - p (Suc i)" if "i \<in> Z_class \<mu> l k - Z j" for i
+        using that by (auto simp: Z_def Z_class_def p_def)
+    qed
+    then have "p (j'+2) - (\<Sum>i\<in>Z_class \<mu> l k. p (i - 1) - p (Suc i))
+            \<le> p (j'+2) - (\<Sum>i \<in> Z j. p (i-1) - p (Suc i))"
+      by auto
+    also have "... \<le> p (Suc j)"
+    proof -
+      have "p (j'+2) - p (Suc m) \<le> (\<Sum>i \<in> Z m. p (i-1) - p (Suc i))"
+        if "m \<in> RBS" "j' < m" "m\<le>j" for m
+        using that
+      proof (induction m rule: less_induct)
+        case (less m)
+        then have "odd m"
+          using odd_RBS by blast
+        show ?case
+        proof (cases "j'+2 < m") 
+          case True
+          with less.prems \<open>odd m\<close> \<open>even j'\<close>
+          have Z_if: "Z m = (if p (Suc m) < p (m-1) then insert m (Z (m-2)) else Z (m-2))"
+            apply (auto simp add: Z_def)
+            apply (metis Nat.le_diff_conv2 Suc_leI add_2_eq_Suc' add_leE even_Suc nat_less_le odd_RBS)
+            apply (metis Nat.le_diff_conv2 Suc_leI add_2_eq_Suc' add_leE even_Suc nat_less_le odd_RBS)
+            done
+          have "m-2 \<in> RBS"
+            using True assms(4) less(2) step_odd_minus2 by auto
+          then have *: "p (j'+2) - p (m - Suc 0) \<le> (\<Sum>i\<in>Z (m - 2). p (i - 1) - p (Suc i))"
+            using less.IH [of "m-2"] True less Suc_less_eq2
+            using \<open>j' \<in> J\<close> by (force simp add: J_def)
+          moreover have "m \<notin> Z (m - 2)"
+            by (auto simp: Z_def)
+          ultimately show ?thesis
+            by (simp add: Z_if finZ)
+        next
+          case False
+          have "odd m"
+            using \<open>j' \<in> J\<close> \<open>m \<in> RBS\<close> unfolding J_def
+            using odd_RBS by force+
+          then have [simp]: "m = Suc j'"
+            using False less(3) \<open>even j'\<close> by presburger
+          then have **: "Z m = {}"
+            by (simp add: Z_def)
+          then show ?thesis
+            using less.prems False
+            by (simp add: **  eval_nat_numeral)
+        qed
+      qed
+      then show ?thesis
+        using j J_def \<open>j' \<in> J\<close> by fastforce 
+    qed
+    finally show ?thesis .
+  qed
+  finally have D: "p (j'+2) - 2 * eps k \<le> p (Suc j)" .
+  have "Suc j' \<in> RBS"
+    unfolding RBS_def
+  proof (intro not_halted_odd_RBS)
+    show "Suc j' \<notin> Step_class \<mu> l k {halted}"
+      using Step_class_halted_forever Suc_leI \<open>j' < j\<close> non_halted by blast
+  qed (use \<open>even j'\<close> in auto)
+  then have "p (j'+2) < p0"
+    using maximal[of "j'+1"] False \<open>j' < j\<close> less_le by (fastforce simp add: J_def)
+  then have "hgt k (p (j'+2)) \<le> 1"
+    by (smt (verit, ccfv_SIG) assms(6) hgt_Least q0 qfun_mono rel_simps(44) rel_simps(68))
+  moreover have "hgt k (p j') \<le> hgt k (p (j'+2)) + 2 * eps k powr (-1/2)"
+    unfolding p_def
+    sorry
+  ultimately have "hgt k (p j') \<le> 1 + 2 * eps k powr (-1/2)"
+    by linarith
+
+  have "p (j-1) - eps k powr -(1/2) * alpha k (hgt k (p (j-1))) \<le> p (Suc j)"
+      sorry
+
+  then consider (R) "Suc j' \<in> Step_class \<mu> l k {red_step}"
+              | (B) "Suc j' \<in> Step_class \<mu> l k {bblue_step}"
+              | (S) "Suc j' \<in> Step_class \<mu> l k {dboost_step}"
+    by (metis Step_class_insert UnE RBS_def)
+  then have "p (j'-1) - eps k powr -(1/2) * alpha k (hgt k (p (j'-1))) \<le> p (Suc j')"
+  proof cases
+    case R
+    show ?thesis
+      using Y_6_4_Red [OF R]
+      apply (simp add: p_def algebra_simps)
+
+      sorry
+  next
+    case B
+    show ?thesis
+      using Y_6_4_Bblue [OF B]
+
+      sorry
+  next
+    case S
+    show ?thesis
+      using Y_6_4_dbooSt 
+      sorry
+  qed
+      sorry
+  note XX=this
+
+
+  have "p (j-1) - eps k powr -(1/2) * alpha k (hgt k (p (j-1))) \<le> p (Suc j)"
+      sorry
+(*prove six_four_weak, then six_two_part_three*)
+   have "hgt k (p (Suc j')) \<le> 1 + 2 * eps k powr (-1/2)"
+    by (smt (verit) h1 of_nat_power_le_of_nat_cancel_iff power.simps(1) powr_ge_pzero)
+  then show ?thesis
+    sorry
+qed
+
+end (*context Diagonal*)
+
+end
 
   show ?thesis
   proof (cases "J={}")
@@ -478,162 +640,3 @@ next
   qed
 
   
-  have "1 \<notin> Step_class \<mu> l k {dreg_step}"
-    by (metis One_nat_def dvd_0_right even_Suc step_even)
-  moreover have "1 \<notin> Step_class \<mu> l k {halted}"
-    by (metis One_nat_def Step_class_not_halted \<open>0 < j\<close> non_halted less_eq_Suc_le)
-  ultimately have "1 \<in> RBS"
-    using stepkind.exhaust by (auto simp: Step_class_def RBS_def)
-  then have exists: "J \<noteq> {}"
-    using \<open>0<j\<close> \<open>p 0 = p0\<close> \<open>p 0 \<le> p 1\<close> apply (auto simp: J_def)
-    apply (rule_tac x="1" in exI)
-    apply (auto simp: )
-    sorry
-  define j' where "j' \<equiv> Max J"
-  have "j' \<in> J"
-    using \<open>finite J\<close> exists by (force simp add: j'_def)
-  then have "odd j'" "j' < j"
-    by (auto simp add: J_def odd_RBS)
-  then have "j'+2\<le>j"
-    using \<open>j\<in>RBS\<close> Suc_le_eq not_less_iff_gr_or_eq odd_RBS by fastforce
-  have maximal: "j'' \<le> j'" if "j'' \<in> J" for j''
-    using \<open>finite J\<close> exists by (simp add: j'_def that)
-  have "p (j'+3) - 2 * eps k \<le> p (j'+3) - (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))"
-    using Y_6_3_Main by simp
-  also have "... \<le> p (Suc j)"
-  proof -
-    define Z where "Z \<equiv> \<lambda>j. {i. p (Suc i) < p (i-1) \<and> j'+2 < i \<and> i\<le>j \<and> i \<in> RBS}"
-    have "Z i \<subseteq> {Suc j'<..i}" for i
-      by (auto simp: Z_def)
-    then have finZ: "finite (Z i)" for i
-      by (meson finite_greaterThanAtMost finite_subset)
-    have *: "(\<Sum>i \<in> Z j. p (i-1) - p (Suc i)) \<le> (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))"
-    proof (intro sum_mono2)
-      show "finite (Z_class \<mu> l k)"
-        using finite_Z_class by force
-      show "Z j \<subseteq> Z_class \<mu> l k" 
-      proof 
-        fix i
-        assume i: "i \<in> Z j"
-        then have dreg: "i-1 \<in> Step_class \<mu> l k {dreg_step}" and "i\<noteq>0"
-          by (auto simp add: Z_def RBS_def dreg_before_step)
-        have "j' < i"
-          using i by (auto simp: Z_def)
-        with maximal have "i-2 \<notin> J"
-          using Z_def i by force
-        with i have "p (i-1) < p0"
-          using step_odd_minus2 [of i \<mu> l k]
-          apply (simp add: Z_def J_def RBS_def)
-          by (smt (verit) Suc_1 Suc_diff_Suc add_lessD1 diff_le_self le_eq_less_or_eq less_imp_diff_less numeral_nat(7) plus_1_eq_Suc)
-        then show "i \<in> Z_class \<mu> l k"
-          using i by (simp add: Z_def RBS_def Z_class_def p_def)
-      qed
-      show "0 \<le> p (i-1) - p (Suc i)" if "i \<in> Z_class \<mu> l k - Z j" for i
-        using that by (auto simp: Z_def Z_class_def p_def)
-    qed
-    then have "p (j'+3) - (\<Sum>i\<in>Z_class \<mu> l k. p (i - 1) - p (Suc i))
-            \<le> p (j'+3) - (\<Sum>i \<in> Z j. p (i-1) - p (Suc i))"
-      by auto
-    also have "... \<le> p (Suc j)"
-    proof -
-      have "p (j'+3) - p (Suc m) \<le> (\<Sum>i \<in> Z m. p (i-1) - p (Suc i))"
-        if "m \<in> RBS" "j' < m" "m\<le>j" for m
-        using that
-      proof (induction m rule: less_induct)
-        case (less m)
-        then have "odd m"
-          using odd_RBS by blast
-        show ?case
-        proof (cases "j'+2 < m") 
-          case True
-          with less.prems \<open>odd m\<close> \<open>odd j'\<close>
-          have Z_if: "Z m = (if p (Suc m) < p (m-1) then insert m (Z (m-2)) else Z (m-2))"
-            apply (auto simp add: Z_def)
-            apply (metis Nat.le_diff_conv2 Suc_leI add_2_eq_Suc' add_leE even_Suc nat_less_le odd_RBS)
-            apply (metis Nat.le_diff_conv2 Suc_leI add_2_eq_Suc' add_leE even_Suc nat_less_le odd_RBS)
-            done
-          have "m-2 \<in> RBS"
-            using True assms(4) less(2) step_odd_minus2 by auto
-          then have *: "p (j'+3) - p (m - Suc 0) \<le> (\<Sum>i\<in>Z (m - 2). p (i - 1) - p (Suc i))"
-            using less.IH [of "m-2"] True less 
-            using \<open>j' \<in> J\<close> apply (simp add: J_def)
-            using Suc_less_eq2 by force
-          moreover have "m \<notin> Z (m - 2)"
-            by (auto simp: Z_def)
-          ultimately show ?thesis
-            by (simp add: Z_if finZ)
-        next
-          case False
-          have "odd j'" "odd m"
-            using \<open>j' \<in> J\<close> \<open>m \<in> RBS\<close> unfolding J_def
-            using odd_RBS by force+
-          then have [simp]: "m = j'+2"
-            using False less(3) by presburger
-          then have **: "Z m = {}"
-            by (simp add: Z_def)
-          then show ?thesis
-            using less.prems False
-            by (simp add: **  eval_nat_numeral)
-        qed
-      qed
-      then show ?thesis
-        using j J_def \<open>j' \<in> J\<close> by fastforce 
-    qed
-    finally show ?thesis .
-  qed
-  finally have D: "p (j'+3) - 2 * eps k \<le> p (Suc j)" .
-  have "j'+2 \<in> RBS"
-    using RBS_def Step_class_not_halted \<open>j' + 2 \<le> j\<close> \<open>odd j'\<close> non_halted not_halted_odd_RBS by auto
-  then have "p (Suc (j'+2)) < p0"
-    using maximal[of "j'+2"] False \<open>j' + 2 \<le> j\<close> less_le by (fastforce simp: J_def)
-  then have "p (j'+3) \<le> p0"
-    by (simp add: numeral_3_eq_3)
-  then have "hgt k (p (j'+3)) \<le> 1"
-    by (smt (verit, ccfv_SIG) assms(6) hgt_Least q0 qfun_mono rel_simps(44) rel_simps(68))
-
-  then consider (R) "Suc j' \<in> Step_class \<mu> l k {red_step}"
-              | (B) "Suc j' \<in> Step_class \<mu> l k {bblue_step}"
-              | (S) "Suc j' \<in> Step_class \<mu> l k {dboost_step}"
-    by (metis Step_class_insert UnE RBS_def)
-  then have "p (j'-1) - eps k powr -(1/2) * alpha k (hgt k (p (j'-1))) \<le> p (Suc j')"
-  proof cases
-    case R
-    show ?thesis
-      using Y_6_4_Red [OF R]
-      apply (simp add: p_def algebra_simps)
-
-      sorry
-  next
-    case B
-    show ?thesis
-      using Y_6_4_Bblue [OF B]
-
-      sorry
-  next
-    case S
-    show ?thesis
-      using Y_6_4_dbooSt 
-      sorry
-  qed
-      sorry
-  note XX=this
-    have h1: "hgt k (p (Suc j')) \<le> 1"
-    apply (rule hgt_Least)
-     apply (simp add: )
-      apply (simp add: qfun_def p_def)
-      using XX
-      apply cases
-      by (smt (verit) assms(6) h1 hgt_works power_one_right qfun_def qfun_mono)
-
-  have "p (j-1) - eps k powr -(1/2) * alpha k (hgt k (p (j-1))) \<le> p (Suc j)"
-      sorry
-(*prove six_four_weak, then six_two_part_three*)
-   have "hgt k (p (Suc j')) \<le> 1 + 2 * eps k powr (-1/2)"
-    by (smt (verit) h1 of_nat_power_le_of_nat_cancel_iff power.simps(1) powr_ge_pzero)
-  then show ?thesis
-    sorry
-qed
-
-end (*context Diagonal*)
-
-end
