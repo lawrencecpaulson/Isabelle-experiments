@@ -380,11 +380,11 @@ proof (cases "h > 2*\<kappa> + 1")
       using epsk_ge0 by auto
     have "(1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) = (1 + eps k) ^ (h-1) * (1 + eps k) powr - real(nat \<lfloor>2*\<kappa>\<rfloor>)"
       using less_h ek0 by (simp add: of_nat_diff algebra_simps flip: powr_realpow powr_add)
-    also have "\<dots> \<le> (1 - eps k powr (1 / 2)) * (1 + eps k) ^ (h-1)"
+    also have "\<dots> \<le> (1 - eps k powr (1/2)) * (1 + eps k) ^ (h-1)"
       using big unfolding \<kappa>_def Big_Y_6_5_Bblue_def
       by (metis mult.commute  ge0 mult_left_mono)
     finally have "(1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1)
-        \<le> (1 - eps k powr (1 / 2)) * (1 + eps k) ^ (h-1)" .
+        \<le> (1 - eps k powr (1/2)) * (1 + eps k) ^ (h-1)" .
     then show ?thesis
       by (intro add_left_mono divide_right_mono diff_right_mono) auto
   qed
@@ -415,6 +415,7 @@ lemma Y_6_2_aux:
       "\<And>i. i \<in> Step_class \<mu> l k {dboost_step} \<Longrightarrow> hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k i)"
     and Y_6_5_Bblue: 
       "\<And>i. i \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2*(eps k powr (-1/2))"
+      and Y_6_4_dbooSt: " \<And>i. i\<in>Step_class \<mu> l k {dboost_step} \<Longrightarrow> p i \<le> p (Suc i)"
     and finite_Z_class: "finite (Z_class \<mu> l k)"
     and "k\<ge>16"  \<comment> \<open>bigness assumptions\<close>
   shows "p (Suc j) \<ge> p0 - 3 * eps k"
@@ -561,12 +562,13 @@ next
   moreover 
   have j'_dreg: "j' \<in> Step_class \<mu> l k {dreg_step}"
     using RBS_def \<open>Suc j' \<in> RBS\<close> dreg_before_step by blast
-  have 1: "eps k powr - (1 / 2) \<ge> 1"
+  have 1: "eps k powr - (1/2) \<ge> 1"
     using \<open>k>0\<close> by (simp add: eps_def powr_powr ge_one_powr_ge_zero)
   consider (R) "Suc j' \<in> Step_class \<mu> l k {red_step}"
          | (B) "Suc j' \<in> Step_class \<mu> l k {bblue_step}"
          | (S) "Suc j' \<in> Step_class \<mu> l k {dboost_step}"
     by (metis Step_class_insert UnE \<open>Suc j' \<in> RBS\<close> RBS_def)
+  note j'_cases = this
   then have "hgt k (p j') \<le> hgt k (p (j'+2)) + 2 * eps k powr (-1/2)"
   proof cases
     case R
@@ -582,23 +584,61 @@ next
   next
     case S
     then show ?thesis
-      using Y_6_5_dbooSt Y_6_5_DegreeReg \<open>Suc j' \<in> RBS\<close> \<open>k>0\<close> j'_dreg 
+      using Y_6_5_dbooSt Y_6_5_DegreeReg[OF j'_dreg] \<open>Suc j' \<in> RBS\<close> \<open>k>0\<close>  
       unfolding RBS_def p_def
       by (smt (verit) Suc_1 Suc_eq_plus1 add_Suc_right of_nat_le_iff powr_non_neg)
   qed
   ultimately have B: "hgt k (p j') \<le> 1 + 2 * eps k powr (-1/2)"
     by linarith
-
-  have "p (j-1) - eps k powr -(1/2) * alpha k (hgt k (p (j-1))) \<le> p (Suc j)"
+  have "2 \<le> real k powr (1 / 2)"
+    using \<open>k\<ge>16\<close> by (simp add: powr_half_sqrt real_le_rsqrt)
+  then have 8: "2 \<le> real k powr 1 * real k powr - (1 / 8)"
+    unfolding powr_add [symmetric]
+    using \<open>k\<ge>16\<close> order.trans nle_le by fastforce
+  have "p0 - eps k \<le> qfun k 0 - 2 * eps k powr (1/2) / k"
+    using mult_left_mono [OF 8, of "k powr (-1/8)"] \<open>k>0\<close> 
+    by (simp add: qfun_def eps_def powr_powr field_simps flip: powr_add)
+  also have "... \<le> p j'  - eps k powr (-1/2) * alpha k (hgt k (p j'))"
+    using hgt_works [OF \<open>k>0\<close>] B
+    apply (simp add: p_def)
     sorry
+  also have "... \<le> p (j'+2)"
+    using j'_cases
+  proof cases
+    case R
+    show ?thesis
+      using Y_6_4_DegreeReg[OF j'_dreg] Y_6_4_Red[OF R]
+      apply (simp add: p_def eval_nat_numeral)
+      apply (rule order_trans)
+       prefer 2
+       apply assumption
+      apply (simp add: diff_le_eq)
+      apply (rule order_trans)
+       apply assumption
+      apply (simp add: )
+      using hgt_mono [OF Y_6_4_DegreeReg[OF j'_dreg] \<open>k>0\<close>]
+      apply (simp add: alpha_def)
 
- 
+      apply (simp add: algebra_simps)
 
-(*prove six_four_weak, then six_two_part_three*)
-   have "hgt k (p (Suc j')) \<le> 1 + 2 * eps k powr (-1/2)"
-    by (smt (verit) h1 of_nat_power_le_of_nat_cancel_iff power.simps(1) powr_ge_pzero)
-  then show ?thesis
-    sorry
+      apply (simp add: p_def qfun_def)
+
+      sorry
+  next
+    case B
+    then show ?thesis
+      using Y_6_4_Bblue \<open>0<\<mu>\<close> by (force simp: p_def)
+  next
+    case S
+    show ?thesis
+      using Y_6_4_dbooSt [OF S] J_def \<open>j' \<in> J\<close> \<open>p (j'+2) < p0\<close> by fastforce
+  qed
+  finally have "p0 - eps k \<le> p (j'+2)" .
+  then have "p0 - 3 * eps k \<le> p (j'+2) - 2 * eps k"
+    by simp
+  also have "... \<le> p (Suc j)"
+    using D by blast
+  finally show ?thesis .
 qed
 
 end (*context Diagonal*)
