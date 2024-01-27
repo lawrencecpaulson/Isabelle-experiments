@@ -344,11 +344,14 @@ lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (- real (nat \<lfloor>2 * 
   unfolding eps_def
   by real_asymp
 
+
+definition "Big_Y_6_5_Bblue \<equiv> \<lambda>k. (1 + eps k) powr (- real (nat \<lfloor>2*(eps k powr (-1/2))\<rfloor>)) \<le> 1 - eps k powr (1/2)" 
+
 lemma Y_6_5_Bblue:
   fixes k::nat and \<kappa>::real
   defines "\<kappa> \<equiv> eps k powr (-1/2)"
   assumes i: "i \<in> Step_class \<mu> l k {bblue_step}" and "k>0" "0<\<mu>"
-    and big: "(1 + eps k) powr (- real (nat \<lfloor>2*\<kappa>\<rfloor>)) \<le> 1 - eps k powr (1/2)"
+    and big: "Big_Y_6_5_Bblue k"
   defines "p \<equiv> pee \<mu> l k"
   defines "h \<equiv> hgt k (p (i-1))"
   shows "hgt k (p (Suc i)) \<ge> h - 2*\<kappa>"
@@ -378,7 +381,8 @@ proof (cases "h > 2*\<kappa> + 1")
     have "(1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) = (1 + eps k) ^ (h-1) * (1 + eps k) powr - real(nat \<lfloor>2*\<kappa>\<rfloor>)"
       using less_h ek0 by (simp add: of_nat_diff algebra_simps flip: powr_realpow powr_add)
     also have "\<dots> \<le> (1 - eps k powr (1 / 2)) * (1 + eps k) ^ (h-1)"
-      by (metis mult.commute big ge0 mult_left_mono)
+      using big unfolding \<kappa>_def Big_Y_6_5_Bblue_def
+      by (metis mult.commute  ge0 mult_left_mono)
     finally have "(1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1)
         \<le> (1 - eps k powr (1 / 2)) * (1 + eps k) ^ (h-1)" .
     then show ?thesis
@@ -407,6 +411,10 @@ lemma Y_6_2_aux:
   defines "RBS \<equiv> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
   assumes j: "j \<in> RBS" and "k>0" "0<\<mu>"
   assumes Y_6_3_Main: "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k" 
+    and Y_6_5_dbooSt: 
+      "\<And>i. i \<in> Step_class \<mu> l k {dboost_step} \<Longrightarrow> hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k i)"
+    and Y_6_5_Bblue: 
+      "\<And>i. i \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2*(eps k powr (-1/2))"
     and finite_Z_class: "finite (Z_class \<mu> l k)"
     and "k\<ge>16"  \<comment> \<open>bigness assumptions\<close>
   shows "p (Suc j) \<ge> p0 - 3 * eps k"
@@ -483,9 +491,8 @@ next
         with maximal have "i-2 \<notin> J"
           using Z_def i by force
         with i have "p (i-1) < p0"
-          using step_odd_minus2 [of i \<mu> l k]
-          apply (simp add: Z_def J_def RBS_def)
-          by (smt (verit) Suc_1 Suc_diff_Suc add_lessD1 diff_le_self le_eq_less_or_eq less_imp_diff_less numeral_nat(7) plus_1_eq_Suc)
+          using step_odd_minus2 [of i \<mu> l k] Suc_less_eq2 
+          by (force simp add: Z_def J_def RBS_def)
         then show "i \<in> Z_class \<mu> l k"
           using i by (simp add: Z_def RBS_def Z_class_def p_def)
       qed
@@ -509,10 +516,8 @@ next
           case True
           with less.prems \<open>odd m\<close> \<open>even j'\<close>
           have Z_if: "Z m = (if p (Suc m) < p (m-1) then insert m (Z (m-2)) else Z (m-2))"
-            apply (auto simp add: Z_def)
-            apply (metis Nat.le_diff_conv2 Suc_leI add_2_eq_Suc' add_leE even_Suc nat_less_le odd_RBS)
-            apply (metis Nat.le_diff_conv2 Suc_leI add_2_eq_Suc' add_leE even_Suc nat_less_le odd_RBS)
-            done
+            by (auto simp add: Z_def; 
+                metis le_diff_conv2 Suc_leI add_2_eq_Suc' add_leE even_Suc nat_less_le odd_RBS)
           have "m-2 \<in> RBS"
             using True assms(4) less(2) step_odd_minus2 by auto
           then have *: "p (j'+2) - p (m - Suc 0) \<le> (\<Sum>i\<in>Z (m - 2). p (i - 1) - p (Suc i))"
@@ -550,47 +555,45 @@ next
   qed (use \<open>even j'\<close> in auto)
   then have "p (j'+2) < p0"
     using maximal[of "j'+1"] False \<open>j' < j\<close> less_le by (fastforce simp add: J_def)
-  then have "hgt k (p (j'+2)) \<le> 1"
-    by (smt (verit, ccfv_SIG) assms(6) hgt_Least q0 qfun_mono rel_simps(44) rel_simps(68))
-  moreover have "hgt k (p j') \<le> hgt k (p (j'+2)) + 2 * eps k powr (-1/2)"
-    unfolding p_def
-    sorry
-  ultimately have "hgt k (p j') \<le> 1 + 2 * eps k powr (-1/2)"
-    by linarith
-
-  have "p (j-1) - eps k powr -(1/2) * alpha k (hgt k (p (j-1))) \<le> p (Suc j)"
-      sorry
-
-  then consider (R) "Suc j' \<in> Step_class \<mu> l k {red_step}"
-              | (B) "Suc j' \<in> Step_class \<mu> l k {bblue_step}"
-              | (S) "Suc j' \<in> Step_class \<mu> l k {dboost_step}"
-    by (metis Step_class_insert UnE RBS_def)
-  then have "p (j'-1) - eps k powr -(1/2) * alpha k (hgt k (p (j'-1))) \<le> p (Suc j')"
+  then have le1: "hgt k (p (j'+2)) \<le> 1"
+    using \<open>k>0\<close> zero_less_one
+    by (smt (verit, best) hgt_Least q0 qfun_mono less_imp_le)
+  moreover 
+  have j'_dreg: "j' \<in> Step_class \<mu> l k {dreg_step}"
+    using RBS_def \<open>Suc j' \<in> RBS\<close> dreg_before_step by blast
+  have 1: "eps k powr - (1 / 2) \<ge> 1"
+    using \<open>k>0\<close> by (simp add: eps_def powr_powr ge_one_powr_ge_zero)
+  consider (R) "Suc j' \<in> Step_class \<mu> l k {red_step}"
+         | (B) "Suc j' \<in> Step_class \<mu> l k {bblue_step}"
+         | (S) "Suc j' \<in> Step_class \<mu> l k {dboost_step}"
+    by (metis Step_class_insert UnE \<open>Suc j' \<in> RBS\<close> RBS_def)
+  then have "hgt k (p j') \<le> hgt k (p (j'+2)) + 2 * eps k powr (-1/2)"
   proof cases
     case R
-    show ?thesis
-      using Y_6_4_Red [OF R]
-      apply (simp add: p_def algebra_simps)
-
-      sorry
+    have "real (hgt k (p j')) \<le> real (hgt k (pee \<mu> l k (Suc j')))"
+      using Y_6_5_DegreeReg[OF j'_dreg] \<open>k>0\<close> by (simp add: eval_nat_numeral p_def)
+    also have "... \<le> hgt k (p (j'+2)) + 2 * eps k powr (-1/2)"
+      using Y_6_5_Red[OF R \<open>k\<ge>16\<close>] 1 by (simp add: eval_nat_numeral p_def)
+    finally show ?thesis .
   next
     case B
     show ?thesis
-      using Y_6_4_Bblue [OF B]
-
-      sorry
+      using Y_6_5_Bblue [OF B] by (simp add: p_def)
   next
     case S
-    show ?thesis
-      using Y_6_4_dbooSt 
-      sorry
+    then show ?thesis
+      using Y_6_5_dbooSt Y_6_5_DegreeReg \<open>Suc j' \<in> RBS\<close> \<open>k>0\<close> j'_dreg 
+      unfolding RBS_def p_def
+      by (smt (verit) Suc_1 Suc_eq_plus1 add_Suc_right of_nat_le_iff powr_non_neg)
   qed
-      sorry
-  note XX=this
-
+  ultimately have B: "hgt k (p j') \<le> 1 + 2 * eps k powr (-1/2)"
+    by linarith
 
   have "p (j-1) - eps k powr -(1/2) * alpha k (hgt k (p (j-1))) \<le> p (Suc j)"
-      sorry
+    sorry
+
+ 
+
 (*prove six_four_weak, then six_two_part_three*)
    have "hgt k (p (Suc j')) \<le> 1 + 2 * eps k powr (-1/2)"
     by (smt (verit) h1 of_nat_power_le_of_nat_cancel_iff power.simps(1) powr_ge_pzero)
@@ -602,41 +605,3 @@ end (*context Diagonal*)
 
 end
 
-  show ?thesis
-  proof (cases "J={}")
-    case True
-    then have A: "\<And>j'. \<lbrakk>j'<j; j' \<in> RBS\<rbrakk> \<Longrightarrow> p (Suc j') < p0"
-      by (force simp add: J_def)
-    define Z where "Z \<equiv> {i \<in> RBS. p (Suc i) < p (i-1) \<and> i<j}"
-    have B: "p (j'-1) \<le> p0" if "j'<j" "j' \<in> RBS" for j'
-    proof (cases "j'=1")
-      case True
-      then show ?thesis
-        by (simp add: assms(3) pee_eq_p0)
-    next
-      case False
-      then have "j'\<ge>2"
-        by (metis Suc_1 less_one nat_less_le not_less_eq_eq odd_RBS odd_pos that(2))
-      then show ?thesis
-        using A [of "j'-2"] that
-        by (smt (verit) Suc_1 Suc_diff_Suc Suc_le_lessD assms(4) less_imp_diff_less step_odd_minus2)
-    qed
-    moreover have "(\<Sum>i \<in> Z. p (i-1) - p (Suc i)) \<le> (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))"
-    proof (intro sum_mono2)
-      show "finite (Z_class \<mu> l k)"
-        using finite_Z_class by force
-      show "Z \<subseteq> Z_class \<mu> l k"
-        using B by (auto simp add: Z_class_def p_def RBS_def Z_def)
-      show "0 \<le> p (i - 1) - p (Suc i)" if "i \<in> Z_class \<mu> l k - Z" for i
-        using that by (auto simp: Z_class_def p_def)
-    qed
-    then show ?thesis
-          using Y_6_3_Main
-
-      sorry
-  next
-    case False
-    then show ?thesis sorry
-  qed
-
-  
