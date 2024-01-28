@@ -468,6 +468,9 @@ lemma alpha_eq:
   assumes "h>0" shows "alpha k h = eps k * (1 + eps k) ^ (h-1) / k"
   by (metis Suc_pred' alpha_Suc_eq assms)
 
+lemma alpha_mono: "\<lbrakk>h' \<le> h; 0 < h'\<rbrakk> \<Longrightarrow> alpha k h' \<le> alpha k h"
+  by (simp add: alpha_eq epsk_ge0 divide_right_mono mult_left_mono power_increasing)
+
 definition all_incident_edges :: "'a set \<Rightarrow> 'a set set" where
     "all_incident_edges \<equiv> \<lambda>A. \<Union>v\<in>A. incident_edges v"
 
@@ -1085,6 +1088,9 @@ lemma step_even: "i \<in> Step_class \<mu> l k {dreg_step} \<Longrightarrow> eve
   by (auto simp: Step_class_def stepper_kind_def next_state_kind_def split: if_split_asm prod.split_asm)
 
 lemma not_halted_odd_RBS: "\<lbrakk>i \<notin> Step_class \<mu> l k {halted}; odd i\<rbrakk> \<Longrightarrow> i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
+  by (auto simp: Step_class_def stepper_kind_def next_state_kind_def split: prod.split_asm)
+
+lemma not_halted_even_dreg: "\<lbrakk>i \<notin> Step_class \<mu> l k {halted}; even i\<rbrakk> \<Longrightarrow> i \<in> Step_class \<mu> l k {dreg_step}" 
   by (auto simp: Step_class_def stepper_kind_def next_state_kind_def split: prod.split_asm)
 
 lemma step_odd_minus2: 

@@ -7,6 +7,9 @@ begin
 context Diagonal
 begin
 
+lemma "\<lbrakk>h' \<le> h; 0 < h'\<rbrakk> \<Longrightarrow> alpha k h' \<le> alpha k h"
+  by (simp add: alpha_eq epsk_ge0 divide_right_mono mult_left_mono power_increasing)
+
 subsection \<open>The following results together are Lemma 6.4\<close>
 text \<open>Compared with the paper, all the indices are greater by one\<close>
 
@@ -230,8 +233,7 @@ proof -
       have pee_le_q0: "p (i-1) \<le> qfun k 0"
         using 2 Z_class_def p_def i by auto
       also have pee2: "\<dots> \<le> p i"
-        using alpha_eq p_gt_q 
-        by (smt (verit, ccfv_SIG) One_nat_def alpha_ge0 diff_self_eq_0 q_Suc_diff zero_less_one)
+        using alpha_eq p_gt_q by (smt (verit, best) \<open>0 < k\<close> qfun_mono zero_le_one) 
       finally have "p (i - 1) \<le> p i" .
       then have "p (i-1) - p i + alpha k (hgt k (p i)) 
               \<le> qfun k 0 - p i + eps k * (p i - qfun k 0 + 1/k)"
@@ -403,8 +405,17 @@ next
     by (smt (verit, del_insts) of_nat_0 hgt_gt_0 nat_less_real_le)
 qed
 
+
+lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (2 * eps k powr (- 1 / 2)) \<le> 2"
+  apply (simp add: eps_def)
+  by real_asymp
+
+lemma "\<forall>\<^sup>\<infinity>k. ((1 + eps k) * (1 + eps k)) * eps k powr (1 / 2) \<le> 1"
+  apply (simp add: eps_def)
+  by real_asymp
+
 text \<open>Following Bravik in excluding the even steps (degree regularisation)\<close>
-lemma Y_6_2_aux:
+proposition Y_6_2_aux:
   fixes l k
   assumes "0<\<mu>" "\<mu><1"
   defines "p \<equiv> pee \<mu> l k"
@@ -417,6 +428,8 @@ lemma Y_6_2_aux:
       "\<And>i. i \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2*(eps k powr (-1/2))"
       and Y_6_4_dbooSt: " \<And>i. i\<in>Step_class \<mu> l k {dboost_step} \<Longrightarrow> p i \<le> p (Suc i)"
     and finite_Z_class: "finite (Z_class \<mu> l k)"
+    and big2: "(1 + eps k) powr (2 * eps k powr (- 1 / 2)) \<le> 2"
+    and big1: "((1 + eps k) * (1 + eps k)) * eps k powr (1 / 2) \<le> 1"
     and "k\<ge>16"  \<comment> \<open>bigness assumptions\<close>
   shows "p (Suc j) \<ge> p0 - 3 * eps k"
 proof (cases "p (Suc j) \<ge> p0")
@@ -451,15 +464,17 @@ next
     using \<open>finite J\<close> exists by (force simp add: j'_def)
   then have "j' < j"
     by (auto simp add: J_def odd_RBS)
+  then have Suc_j'_not_halted: "Suc j' \<notin> Step_class \<mu> l k {halted}"
+    using j Step_class_not_halted non_halted Suc_leI by blast
+  then have j'_not_halted: "j' \<notin> Step_class \<mu> l k {halted}"
+    using Step_class_halted_forever le_eq_less_or_eq by blast
   have maximal: "j'' \<le> j'" if "j'' \<in> J" for j''
     using \<open>finite J\<close> exists by (simp add: j'_def that)
   { assume "odd j'"
-    then have "j' \<in> RBS"
-      by (metis Diagonal.Step_class_not_halted Diagonal_axioms \<open>j' < j\<close> assms(4) less_or_eq_imp_le non_halted not_halted_odd_RBS)
+    then have "Suc j' \<in> Step_class \<mu> l k {dreg_step}"
+      by (simp add: Suc_j'_not_halted not_halted_even_dreg)
     then have "p (Suc (Suc j')) \<ge> p (Suc j')"
-      unfolding p_def
-      apply (intro Y_6_4_DegreeReg)
-      by (metis Diagonal.Step_class_not_halted Diagonal_axioms Suc_leI \<open>j' < j\<close> dreg_before_step even_Suc j nat_less_le non_halted not_halted_odd_RBS odd_RBS)
+      using Y_6_4_DegreeReg unfolding p_def by blast
     then have 0: "p (Suc (Suc j')) \<ge> p0"
       using J_def \<open>j' \<in> J\<close> by auto
     then have "Suc j' < j"
@@ -470,7 +485,7 @@ next
   then have "even j'" by metis
   have "p (j'+2) - 2 * eps k \<le> p (j'+2) - (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))"
     using Y_6_3_Main by simp
-  also have "... \<le> p (Suc j)"
+  also have "\<dots> \<le> p (Suc j)"
   proof -
     define Z where "Z \<equiv> \<lambda>j. {i. p (Suc i) < p (i-1) \<and> j'+2 < i \<and> i\<le>j \<and> i \<in> RBS}"
     have "Z i \<subseteq> {Suc j'<..i}" for i
@@ -503,7 +518,7 @@ next
     then have "p (j'+2) - (\<Sum>i\<in>Z_class \<mu> l k. p (i - 1) - p (Suc i))
             \<le> p (j'+2) - (\<Sum>i \<in> Z j. p (i-1) - p (Suc i))"
       by auto
-    also have "... \<le> p (Suc j)"
+    also have "\<dots> \<le> p (Suc j)"
     proof -
       have "p (j'+2) - p (Suc m) \<le> (\<Sum>i \<in> Z m. p (i-1) - p (Suc i))"
         if "m \<in> RBS" "j' < m" "m\<le>j" for m
@@ -535,11 +550,10 @@ next
             using odd_RBS by force+
           then have [simp]: "m = Suc j'"
             using False less(3) \<open>even j'\<close> by presburger
-          then have **: "Z m = {}"
+          then have "Z m = {}"
             by (simp add: Z_def)
           then show ?thesis
-            using less.prems False
-            by (simp add: **  eval_nat_numeral)
+            using less.prems False by (simp add: eval_nat_numeral)
         qed
       qed
       then show ?thesis
@@ -569,12 +583,12 @@ next
          | (S) "Suc j' \<in> Step_class \<mu> l k {dboost_step}"
     by (metis Step_class_insert UnE \<open>Suc j' \<in> RBS\<close> RBS_def)
   note j'_cases = this
-  then have "hgt k (p j') \<le> hgt k (p (j'+2)) + 2 * eps k powr (-1/2)"
+  then have hgt_le_hgt: "hgt k (p j') \<le> hgt k (p (j'+2)) + 2 * eps k powr (-1/2)"
   proof cases
     case R
     have "real (hgt k (p j')) \<le> real (hgt k (pee \<mu> l k (Suc j')))"
       using Y_6_5_DegreeReg[OF j'_dreg] \<open>k>0\<close> by (simp add: eval_nat_numeral p_def)
-    also have "... \<le> hgt k (p (j'+2)) + 2 * eps k powr (-1/2)"
+    also have "\<dots> \<le> hgt k (p (j'+2)) + 2 * eps k powr (-1/2)"
       using Y_6_5_Red[OF R \<open>k\<ge>16\<close>] 1 by (simp add: eval_nat_numeral p_def)
     finally show ?thesis .
   next
@@ -598,16 +612,47 @@ next
   have "p0 - eps k \<le> qfun k 0 - 2 * eps k powr (1/2) / k"
     using mult_left_mono [OF 8, of "k powr (-1/8)"] \<open>k>0\<close> 
     by (simp add: qfun_def eps_def powr_powr field_simps flip: powr_add)
-  also have "... \<le> p j'  - eps k powr (-1/2) * alpha k (hgt k (p j'))"
-    using hgt_works [OF \<open>k>0\<close>] B
-    apply (simp add: p_def)
-    sorry
-  also have "... \<le> p (j'+2)"
+  also have "\<dots> \<le> p j'  - eps k powr (-1/2) * alpha k (hgt k (p j'))"
+  proof -
+    have *: "hgt k (pee \<mu> l k j') = Suc (hgt k (pee \<mu> l k j') - 1)"
+      using Suc_pred' hgt_gt_0 by blast
+    show ?thesis
+      using \<open>k>0\<close> epsk_gt0[OF\<open>k>0\<close>]
+      apply (simp add: p_def alpha_def powr_minus)
+      apply (simp add: field_simps)
+      apply (simp add: qfun_def algebra_simps flip: powr_add)
+      apply (subst *)
+      apply (simp add: algebra_simps)
+      apply (subst add.commute)
+      apply (rule add_mono)
+       apply (intro mult_left_mono)
+      using big2 B hgt_le_hgt * of_nat_add of_nat_1
+      unfolding p_def
+      apply (smt (verit) One_nat_def plus_1_eq_Suc powr_mono powr_realpow)
+        apply simp
+       apply (intro mult_left_mono)
+        apply (subst mult.commute)
+        apply (intro mult_left_mono)
+         apply (auto simp: )
+      using hgt_works [OF \<open>k>0\<close>] B
+       apply (simp add: p_def)
+      sorry
+  qed
+  also have "\<dots> \<le> p (j'+2)"
     using j'_cases
   proof cases
     case R
+    have hs_le3: "hgt k (pee \<mu> l k (Suc j')) \<le> 3"
+      using le1  Y_6_5_Red[OF R \<open>k\<ge>16\<close>] by (simp add: p_def)
+    then have h_le3: "hgt k (p j') \<le> 3"
+      using Y_6_5_DegreeReg [OF j'_dreg \<open>k>0\<close>] by (simp add: p_def)
+    have alpha1: "alpha k (hgt k (p (Suc j'))) \<le> eps k * (1 + eps k) ^ 2 / k"
+      by (metis alpha_Suc_eq alpha_mono p_def hgt_gt_0 hs_le3 numeral_nat(3))
+    have alpha2: "alpha k (hgt k (p j')) \<ge> eps k / k"
+      by (simp add: Red_5_7a)
     show ?thesis
-      using Y_6_4_DegreeReg[OF j'_dreg] Y_6_4_Red[OF R]
+      using Y_6_4_DegreeReg[OF j'_dreg] Y_6_4_Red[OF R] alpha1 \<open>k>0\<close> epsk_gt0[OF \<open>k>0\<close>]
+      using alpha1 alpha2
       apply (simp add: p_def eval_nat_numeral)
       apply (rule order_trans)
        prefer 2
@@ -616,14 +661,16 @@ next
       apply (rule order_trans)
        apply assumption
       apply (simp add: )
-      using hgt_mono [OF Y_6_4_DegreeReg[OF j'_dreg] \<open>k>0\<close>]
-      apply (simp add: alpha_def)
-
-      apply (simp add: algebra_simps)
-
-      apply (simp add: p_def qfun_def)
-
-      sorry
+      apply (simp add: powr_minus)
+      apply (rule order_trans)
+       apply assumption
+      apply (simp add: divide_simps p_def)
+      apply (rule order_trans)
+      defer 
+       apply assumption
+      using mult_left_mono [OF big1 epsk_ge0, of k]
+      apply (simp add: )
+      done
   next
     case B
     then show ?thesis
@@ -636,7 +683,7 @@ next
   finally have "p0 - eps k \<le> p (j'+2)" .
   then have "p0 - 3 * eps k \<le> p (j'+2) - 2 * eps k"
     by simp
-  also have "... \<le> p (Suc j)"
+  also have "\<dots> \<le> p (Suc j)"
     using D by blast
   finally show ?thesis .
 qed
