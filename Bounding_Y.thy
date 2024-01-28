@@ -410,7 +410,7 @@ lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (2 * eps k powr (- 1 / 2))
   apply (simp add: eps_def)
   by real_asymp
 
-lemma "\<forall>\<^sup>\<infinity>k. ((1 + eps k) * (1 + eps k)) * eps k powr (1 / 2) \<le> 1"
+lemma "\<forall>\<^sup>\<infinity>k. ((1 + eps k)^2) * eps k powr (1 / 2) \<le> 1"
   apply (simp add: eps_def)
   by real_asymp
 
@@ -429,7 +429,7 @@ proposition Y_6_2_aux:
       and Y_6_4_dbooSt: " \<And>i. i\<in>Step_class \<mu> l k {dboost_step} \<Longrightarrow> p i \<le> p (Suc i)"
     and finite_Z_class: "finite (Z_class \<mu> l k)"
     and big2: "(1 + eps k) powr (2 * eps k powr (- 1 / 2)) \<le> 2"
-    and big1: "((1 + eps k) * (1 + eps k)) * eps k powr (1 / 2) \<le> 1"
+    and big1: "((1 + eps k)^2) * eps k powr (1 / 2) \<le> 1"
     and "k\<ge>16"  \<comment> \<open>bigness assumptions\<close>
   shows "p (Suc j) \<ge> p0 - 3 * eps k"
 proof (cases "p (Suc j) \<ge> p0")
@@ -652,18 +652,18 @@ next
       by (simp add: Red_5_7a)
     have "p j' - eps k powr (- 1 / 2) * alpha k (hgt k (p j')) 
        \<le> p (Suc j') - alpha k (hgt k (p (Suc j')))"
-      using Y_6_4_DegreeReg[OF j'_dreg] \<open>k>0\<close> epsk_gt0[OF \<open>k>0\<close>]
-      using mult_left_mono [OF big1 epsk_ge0, of k]
-      using alpha1 alpha2
-      apply (simp add: p_def eval_nat_numeral)
-      apply (simp add: diff_le_eq powr_minus)
-      apply (rule order_trans)
-       apply assumption
-      apply (simp add: )
-      apply (rule order_trans)
-       apply assumption
-      apply (simp add: divide_simps )
-      using \<open>eps k * ((1 + eps k) * (1 + eps k) * eps k powr (1 / 2)) \<le> eps k * 1\<close> by linarith
+    proof -
+      have "alpha k (hgt k (p (Suc j'))) \<le> (1 + eps k)\<^sup>2 * alpha k (hgt k (p j'))"
+        using alpha1 mult_left_mono [OF alpha2, of "(1 + eps k)\<^sup>2"]
+        by (simp add: mult.commute)
+      also have "... \<le> inverse (eps k powr (1 / 2)) * alpha k (hgt k (p j'))"
+        using mult_left_mono [OF big1, of "alpha k (hgt k (p j'))"] epsk_gt0[OF \<open>k>0\<close>] alpha_ge0 [of k]
+        by (simp add: divide_simps mult_ac)
+      finally have "alpha k (hgt k (p (Suc j')))
+        \<le> inverse (eps k powr (1 / 2)) * alpha k (hgt k (p j'))" .
+      then show ?thesis
+        using Y_6_4_DegreeReg[OF j'_dreg] by (simp add: p_def powr_minus)
+    qed
     also have "... \<le> p (j' + 2)"
       by (simp add: R Y_6_4_Red p_def)
     finally show ?thesis .
