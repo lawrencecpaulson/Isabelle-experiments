@@ -406,11 +406,11 @@ next
 qed
 
 
-lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (2 * eps k powr (- 1 / 2)) \<le> 2"
+lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (2 * eps k powr (- 1/2)) \<le> 2"
   apply (simp add: eps_def)
   by real_asymp
 
-lemma "\<forall>\<^sup>\<infinity>k. ((1 + eps k)^2) * eps k powr (1 / 2) \<le> 1"
+lemma "\<forall>\<^sup>\<infinity>k. ((1 + eps k)^2) * eps k powr (1/2) \<le> 1"
   apply (simp add: eps_def)
   by real_asymp
 
@@ -428,8 +428,8 @@ proposition Y_6_2_aux:
       "\<And>i. i \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2*(eps k powr (-1/2))"
       and Y_6_4_dbooSt: " \<And>i. i\<in>Step_class \<mu> l k {dboost_step} \<Longrightarrow> p i \<le> p (Suc i)"
     and finite_Z_class: "finite (Z_class \<mu> l k)"
-    and big2: "(1 + eps k) powr (2 * eps k powr (- 1 / 2)) \<le> 2"
-    and big1: "((1 + eps k)^2) * eps k powr (1 / 2) \<le> 1"
+    and big2: "(1 + eps k) powr (2 * eps k powr (- 1/2)) \<le> 2"
+    and big1: "((1 + eps k)^2) * eps k powr (1/2) \<le> 1"
     and "k\<ge>16"  \<comment> \<open>bigness assumptions\<close>
   shows "p (Suc j) \<ge> p0 - 3 * eps k"
 proof (cases "p (Suc j) \<ge> p0")
@@ -604,7 +604,7 @@ next
   qed
   ultimately have B: "hgt k (p j') \<le> 1 + 2 * eps k powr (-1/2)"
     by linarith
-  have "2 \<le> real k powr (1 / 2)"
+  have "2 \<le> real k powr (1/2)"
     using \<open>k\<ge>16\<close> by (simp add: powr_half_sqrt real_le_rsqrt)
   then have 8: "2 \<le> real k powr 1 * real k powr - (1 / 8)"
     unfolding powr_add [symmetric]
@@ -650,21 +650,21 @@ next
       by (metis alpha_Suc_eq alpha_mono p_def hgt_gt_0 hs_le3 numeral_nat(3))
     have alpha2: "alpha k (hgt k (p j')) \<ge> eps k / k"
       by (simp add: Red_5_7a)
-    have "p j' - eps k powr (- 1 / 2) * alpha k (hgt k (p j')) 
+    have "p j' - eps k powr (- 1/2) * alpha k (hgt k (p j')) 
        \<le> p (Suc j') - alpha k (hgt k (p (Suc j')))"
     proof -
       have "alpha k (hgt k (p (Suc j'))) \<le> (1 + eps k)\<^sup>2 * alpha k (hgt k (p j'))"
         using alpha1 mult_left_mono [OF alpha2, of "(1 + eps k)\<^sup>2"]
         by (simp add: mult.commute)
-      also have "... \<le> inverse (eps k powr (1 / 2)) * alpha k (hgt k (p j'))"
+      also have "\<dots> \<le> inverse (eps k powr (1/2)) * alpha k (hgt k (p j'))"
         using mult_left_mono [OF big1, of "alpha k (hgt k (p j'))"] epsk_gt0[OF \<open>k>0\<close>] alpha_ge0 [of k]
         by (simp add: divide_simps mult_ac)
       finally have "alpha k (hgt k (p (Suc j')))
-        \<le> inverse (eps k powr (1 / 2)) * alpha k (hgt k (p j'))" .
+        \<le> inverse (eps k powr (1/2)) * alpha k (hgt k (p j'))" .
       then show ?thesis
         using Y_6_4_DegreeReg[OF j'_dreg] by (simp add: p_def powr_minus)
     qed
-    also have "... \<le> p (j' + 2)"
+    also have "\<dots> \<le> p (j' + 2)"
       by (simp add: R Y_6_4_Red p_def)
     finally show ?thesis .
   next
