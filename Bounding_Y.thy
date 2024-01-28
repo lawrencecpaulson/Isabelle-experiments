@@ -650,27 +650,23 @@ next
       by (metis alpha_Suc_eq alpha_mono p_def hgt_gt_0 hs_le3 numeral_nat(3))
     have alpha2: "alpha k (hgt k (p j')) \<ge> eps k / k"
       by (simp add: Red_5_7a)
-    show ?thesis
-      using Y_6_4_DegreeReg[OF j'_dreg] Y_6_4_Red[OF R] alpha1 \<open>k>0\<close> epsk_gt0[OF \<open>k>0\<close>]
+    have "p j' - eps k powr (- 1 / 2) * alpha k (hgt k (p j')) 
+       \<le> p (Suc j') - alpha k (hgt k (p (Suc j')))"
+      using Y_6_4_DegreeReg[OF j'_dreg] \<open>k>0\<close> epsk_gt0[OF \<open>k>0\<close>]
+      using mult_left_mono [OF big1 epsk_ge0, of k]
       using alpha1 alpha2
       apply (simp add: p_def eval_nat_numeral)
-      apply (rule order_trans)
-       prefer 2
-       apply assumption
-      apply (simp add: diff_le_eq)
+      apply (simp add: diff_le_eq powr_minus)
       apply (rule order_trans)
        apply assumption
       apply (simp add: )
-      apply (simp add: powr_minus)
       apply (rule order_trans)
        apply assumption
-      apply (simp add: divide_simps p_def)
-      apply (rule order_trans)
-      defer 
-       apply assumption
-      using mult_left_mono [OF big1 epsk_ge0, of k]
-      apply (simp add: )
-      done
+      apply (simp add: divide_simps )
+      using \<open>eps k * ((1 + eps k) * (1 + eps k) * eps k powr (1 / 2)) \<le> eps k * 1\<close> by linarith
+    also have "... \<le> p (j' + 2)"
+      by (simp add: R Y_6_4_Red p_def)
+    finally show ?thesis .
   next
     case B
     then show ?thesis
