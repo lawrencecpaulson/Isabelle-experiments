@@ -8,7 +8,7 @@ context Diagonal
 begin
 
 lemma "\<lbrakk>h' \<le> h; 0 < h'\<rbrakk> \<Longrightarrow> alpha k h' \<le> alpha k h"
-  by (simp add: alpha_eq epsk_ge0 divide_right_mono mult_left_mono power_increasing)
+  by (simp add: alpha_eq eps_ge0 divide_right_mono mult_left_mono power_increasing)
 
 subsection \<open>The following results together are Lemma 6.4\<close>
 text \<open>Compared with the paper, all the indices are greater by one\<close>
@@ -175,7 +175,7 @@ proof -
       proof (intro hgt_Least)
         show "p (i-1) \<le> qfun k 1"
           unfolding qfun_def
-          by (smt (verit) one_le_power pee divide_nonneg_nonneg epsk_ge0 of_nat_less_0_iff)
+          by (smt (verit) one_le_power pee divide_nonneg_nonneg eps_ge0 of_nat_less_0_iff)
       qed auto
       then show ?thesis
         by (metis One_nat_def Suc_pred' diff_is_0_eq hgt_gt_0)
@@ -239,7 +239,7 @@ proof -
               \<le> qfun k 0 - p i + eps k * (p i - qfun k 0 + 1/k)"
         using Red_5_7b pee_le_q0 pee2 by fastforce
       also have "\<dots> \<le> eps k / k"
-        using \<open>k>0\<close> pee2 by (simp add: algebra_simps) (smt (verit) affine_ineq epsk_le1)
+        using \<open>k>0\<close> pee2 by (simp add: algebra_simps) (smt (verit) affine_ineq eps_le1)
       finally show ?thesis .
     qed
     with pee_alpha have "p (i-1) - p (Suc i) \<le> eps k / k"
@@ -249,13 +249,13 @@ proof -
            \<le> card (Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k) * (eps k / k)"
     using sum_bounded_above by (metis (mono_tags, lifting))
   also have "\<dots> \<le> card (Step_class \<mu> l k {red_step}) * (eps k / k)"
-    using epsk_ge0[of k] assms
+    using eps_ge0[of k] assms
     by (simp add: divide_le_cancel mult_le_cancel_right card_mono red_step_limit)
   also have "\<dots> \<le> k * (eps k / k)"
     using red_step_limit [OF \<open>0<\<mu>\<close> \<open>Colours l k\<close>]
-    by (smt (verit, best) divide_nonneg_nonneg epsk_ge0 mult_mono nat_less_real_le of_nat_0_le_iff)
+    by (smt (verit, best) divide_nonneg_nonneg eps_ge0 mult_mono nat_less_real_le of_nat_0_le_iff)
   also have "\<dots> \<le> eps k"
-    by (simp add: epsk_ge0)
+    by (simp add: eps_ge0)
   finally have red: "(\<Sum>i\<in>Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> eps k" .
   have fin_bblue: "finite (Step_class \<mu> l k {bblue_step})"
     using Lemma_bblue_step_limit_def \<open>Colours l k\<close> bblue_step_limit by presburger
@@ -298,22 +298,22 @@ next
   case False
   have "k>0" using assms by auto
   have "eps k \<le> 1/2"
-    using \<open>k\<ge>16\<close> by (simp add: epsk_eq_sqrt divide_simps real_le_rsqrt)
+    using \<open>k\<ge>16\<close> by (simp add: eps_eq_sqrt divide_simps real_le_rsqrt)
   moreover have "\<And>x::real. 0 \<le> x \<and> x \<le> 1/2 \<Longrightarrow> x * (1 + x)\<^sup>2 + 1 \<le> (1 + x)\<^sup>2"
     by sos
   ultimately have C: "eps k * (1 + eps k)\<^sup>2 + 1 \<le> (1 + eps k)\<^sup>2"
-    using epsk_ge0 by presburger
+    using eps_ge0 by presburger
   have le1: "eps k + 1 / (1 + eps k)\<^sup>2 \<le> 1"
     using mult_left_mono [OF C, of "inverse ((1 + eps k)\<^sup>2)"]
     by (simp add: ring_distribs inverse_eq_divide) (smt (verit))
   have 0: "0 \<le> (1 + eps k) ^ (h - Suc 0)"
-    using epsk_ge0 by auto
+    using eps_ge0 by auto
   have lesspi: "qfun k (h-1) < p i"
     using False hgt_Least [of "h-1" "p i" k] unfolding h_def by linarith
   have A: "(1 + eps k) ^ h = (1 + eps k) * (1 + eps k) ^ (h - Suc 0)"
     using False power.simps by (metis h_def Suc_pred hgt_gt_0)
   have B: "(1 + eps k) ^ (h - 3) = 1 / (1 + eps k)^2 * (1 + eps k) ^ (h - Suc 0)"
-    using epsk_gt0 [OF \<open>k>0\<close>] False
+    using eps_gt0 [OF \<open>k>0\<close>] False
     by (simp add: divide_simps Suc_diff_Suc numeral_3_eq_3 flip: power_add)
   have "qfun k (h-3) \<le> qfun k (h-1) - (qfun k h - qfun k (h-1))"
     using \<open>k>0\<close> mult_left_mono [OF le1 0]
@@ -364,14 +364,14 @@ proof (cases "h > 2*\<kappa> + 1")
   with True have "p (i-1) > qfun k (h-1)"
     by (smt (verit, best) h_def diff_le_self diff_less hgt_Least le_antisym zero_less_one nat_less_le)
   then have "qfun k (h-1) - eps k powr (1/2) * (1 + eps k) ^ (h-1) / k < p (i-1) - \<kappa> * alpha k h"
-    using \<open>0 < h-1\<close> Y_6_4_Bblue [OF i] \<open>0<\<mu>\<close> epsk_ge0
+    using \<open>0 < h-1\<close> Y_6_4_Bblue [OF i] \<open>0<\<mu>\<close> eps_ge0
     apply (simp add: alpha_eq p_def \<kappa>_def)
     by (smt (verit, best) field_sum_of_halves mult.assoc mult.commute powr_mult_base)
   also have "\<dots> \<le> p (Suc i)"
     using Y_6_4_Bblue i \<open>0<\<mu>\<close> h_def p_def \<kappa>_def by blast
   finally have A: "qfun k (h-1) - eps k powr (1/2) * (1 + eps k) ^ (h-1) / k < p (Suc i)" .
   have ek0: "0 < 1 + eps k"
-    by (smt (verit, best) epsk_ge0)
+    by (smt (verit, best) eps_ge0)
   have less_h: "nat \<lfloor>2 * \<kappa>\<rfloor> < h"
     using True \<open>0 < h - 1\<close> by linarith
   have "qfun k (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) = p0 + ((1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) - 1) / k"
@@ -379,7 +379,7 @@ proof (cases "h > 2*\<kappa> + 1")
   also have "\<dots> \<le> p0 + ((1 - eps k powr (1/2)) * (1 + eps k) ^ (h-1) - 1) / k"
   proof -
     have ge0: "(1 + eps k) ^ (h-1) \<ge> 0"
-      using epsk_ge0 by auto
+      using eps_ge0 by auto
     have "(1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) = (1 + eps k) ^ (h-1) * (1 + eps k) powr - real(nat \<lfloor>2*\<kappa>\<rfloor>)"
       using less_h ek0 by (simp add: of_nat_diff algebra_simps flip: powr_realpow powr_add)
     also have "\<dots> \<le> (1 - eps k powr (1/2)) * (1 + eps k) ^ (h-1)"
@@ -391,7 +391,7 @@ proof (cases "h > 2*\<kappa> + 1")
       by (intro add_left_mono divide_right_mono diff_right_mono) auto
   qed
   also have "\<dots> \<le> qfun k (h-1) - eps k powr (1/2) * (1 + eps k) ^ (h-1) / real k"
-    using \<open>k>0\<close> epsk_ge0 by (simp add: qfun_def powr_half_sqrt field_simps)
+    using \<open>k>0\<close> eps_ge0 by (simp add: qfun_def powr_half_sqrt field_simps)
   also have "\<dots> < p (Suc i)"
     using A by blast
   finally have "qfun k (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) < p (Suc i)" .
@@ -417,7 +417,8 @@ lemma "\<forall>\<^sup>\<infinity>k. ((1 + eps k)^2) * eps k powr (1/2) \<le> 1"
 lemma XXX: "x \<ge> (0::real) \<Longrightarrow> inverse (x powr (1/2)) * x = x powr (1/2)"
   by (simp add: inverse_eq_divide powr_half_sqrt real_div_sqrt)
 
-text \<open>Following Bravik in excluding the even steps (degree regularisation)\<close>
+text \<open>Following Bravik in excluding the even steps (degree regularisation).
+      Assuming it hasn't halted, the conclusion also holds for the even cases anyway.\<close>
 proposition Y_6_2_aux:
   fixes l k
   assumes "0<\<mu>" "\<mu><1"
@@ -438,7 +439,7 @@ proposition Y_6_2_aux:
 proof (cases "p (Suc j) \<ge> p0")
   case True
   then show ?thesis
-    by (smt (verit) epsk_ge0)
+    by (smt (verit) eps_ge0)
 next
   case False
   then have pj_less: "p(Suc j) < p0" by linarith
@@ -458,29 +459,15 @@ next
     by (auto simp add: Step_class_def stepper_kind_def)
   then have "0 \<in> Step_class \<mu> l k {dreg_step}"
     using dreg_step_0 by force
-  then have "p 1 \<ge> p 0"
-    using Y_6_4_DegreeReg [of 0] by (simp add: p_def) 
   then have exists: "J \<noteq> {}"
-    using \<open>0 < j\<close> \<open>p 0 = p0\<close> apply (auto simp: J_def)
-    using dual_order.strict_iff_not by fastforce
+    using \<open>0 < j\<close> \<open>p 0 = p0\<close> by (force simp add: J_def less_eq_real_def)
   define j' where "j' \<equiv> Max J"
   have "j' \<in> J"
     using \<open>finite J\<close> exists by (force simp add: j'_def)
   then have "j' < j" "even j'" and pSj': "p j' \<ge> p0"
     by (auto simp add: J_def odd_RBS)
-  then have Suc_j'_not_halted: "j' \<notin> Step_class \<mu> l k {halted}"
-    using j Step_class_not_halted non_halted Suc_leI
-    by (meson nat_less_le)
-  then have j'_not_halted: "j'-1 \<notin> Step_class \<mu> l k {halted}"
-    using Step_class_not_halted diff_le_self by blast
   have maximal: "j'' \<le> j'" if "j'' \<in> J" for j''
     using \<open>finite J\<close> exists by (simp add: j'_def that)
-(*
-  have pj'_le: "p (j'-1) \<le> p j'"
-    unfolding p_def
-    using Step_class_halted_forever Y_6_4_DegreeReg  nat_less_le non_halted not_halted_even_dreg
-    by (metis (no_types, lifting) J_def \<open>j' \<in> J\<close> \<open>p 0 = p0\<close> add_diff_inverse_nat assms(3) diff_is_0_eq' even_Suc j'_not_halted mem_Collect_eq plus_1_eq_Suc)
-*)
   have "p (j'+2) - 2 * eps k \<le> p (j'+2) - (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))"
     using Y_6_3_Main by simp
   also have "\<dots> \<le> p (Suc j)"
@@ -619,9 +606,9 @@ next
   proof -
     have 2: "(1 + eps k) ^ (hgt k (p j') - Suc 0) \<le> 2"
       apply (subst powr_realpow [symmetric])
-       apply (smt (verit, ccfv_SIG) epsk_ge0)
+       apply (smt (verit, ccfv_SIG) eps_ge0)
       using B
-      by (smt (verit, best) Multiseries_Expansion.intyness_simps(1) Multiseries_Expansion.intyness_simps(4) Suc_pred assms(13) assms(6) epsk_gt0 hgt_gt_0 of_nat_0_le_iff plus_1_eq_Suc powr_mono_both)
+      by (smt (verit, best) Multiseries_Expansion.intyness_simps(1) Multiseries_Expansion.intyness_simps(4) Suc_pred assms(13) assms(6) eps_gt0 hgt_gt_0 of_nat_0_le_iff plus_1_eq_Suc powr_mono_both)
     have "p0 - p j' \<le> 0"
       by (simp add: pSj')
     also have "... \<le> 2 * eps k powr (1/2) / k - (eps k powr (1/2)) * (1 + eps k) ^ (hgt k (p j') - Suc 0) / k"
@@ -632,7 +619,7 @@ next
       by simp
     then show ?thesis
       apply (simp add: )
-      by (smt (verit, ccfv_SIG) Diagonal.alpha_hgt_eq Diagonal_axioms XXX epsk_ge0 more_arith_simps(11) numeral_nat(7) powr_minus times_divide_eq_right)
+      by (smt (verit, ccfv_SIG) Diagonal.alpha_hgt_eq Diagonal_axioms XXX eps_ge0 more_arith_simps(11) numeral_nat(7) powr_minus times_divide_eq_right)
   qed
   also have "\<dots> \<le> p (j'+2)"
     using j'_cases
@@ -653,7 +640,7 @@ next
         using alpha1 mult_left_mono [OF alpha2, of "(1 + eps k)\<^sup>2"]
         by (simp add: mult.commute)
       also have "\<dots> \<le> inverse (eps k powr (1/2)) * alpha k (hgt k (p j'))"
-        using mult_left_mono [OF big1, of "alpha k (hgt k (p j'))"] epsk_gt0[OF \<open>k>0\<close>] alpha_ge0 [of k]
+        using mult_left_mono [OF big1, of "alpha k (hgt k (p j'))"] eps_gt0[OF \<open>k>0\<close>] alpha_ge0 [of k]
         by (simp add: divide_simps mult_ac)
       finally have "alpha k (hgt k (p (Suc j')))
         \<le> inverse (eps k powr (1/2)) * alpha k (hgt k (p j'))" .

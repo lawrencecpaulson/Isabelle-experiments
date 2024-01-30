@@ -353,16 +353,16 @@ lemma q0 [simp]: "qfun k 0 = p0"
 lemma p0_01: "0 \<le> p0" "p0 \<le> 1"
   by (simp_all add: p0_def gen_density_ge0 gen_density_le1)
 
-lemma epsk_eq_sqrt: "eps k = 1 / sqrt (sqrt (real k))"
+lemma eps_eq_sqrt: "eps k = 1 / sqrt (sqrt (real k))"
   by (simp add: eps_def powr_minus_divide powr_powr flip: powr_half_sqrt)
 
-lemma epsk_ge0: "eps k \<ge> 0"
+lemma eps_ge0: "eps k \<ge> 0"
   by (simp add: eps_def)
 
-lemma epsk_gt0: "k>0 \<Longrightarrow> eps k > 0"
+lemma eps_gt0: "k>0 \<Longrightarrow> eps k > 0"
   by (simp add: eps_def)
 
-lemma epsk_le1:
+lemma eps_le1:
   assumes "k>0" shows "eps k \<le> 1"
 proof -
   have "eps 1 = 1"
@@ -373,12 +373,12 @@ proof -
     using assms by (metis less_one nat_neq_iff not_le)
 qed
 
-lemma epsk_less1:
+lemma eps_less1:
   assumes "k>1" shows "eps k < 1"
   by (smt (verit) assms eps_def less_imp_of_nat_less of_nat_1 powr_less_one zero_le_divide_iff)
 
 lemma qfun_mono: "\<lbrakk>k>0; h'\<le>h\<rbrakk> \<Longrightarrow> qfun k h' \<le> qfun k h"
-  by (simp add: qfun_def epsk_ge0 frac_le power_increasing)
+  by (simp add: qfun_def eps_ge0 frac_le power_increasing)
 
 lemma q_Suc_diff: "qfun k (Suc h) - qfun k h = eps k * (1 + eps k)^h / k"
   by (simp add: qfun_def field_split_simps)
@@ -448,14 +448,14 @@ lemma alpha_0 [simp]: "alpha 0 h = 0" and alpha_0' [simp]: "alpha k 0 = 0"
   by (auto simp add: alpha_def qfun_def)
 
 lemma alpha_ge0: "alpha k h \<ge> 0"
-  by (simp add: alpha_def qfun_def divide_le_cancel epsk_gt0)
+  by (simp add: alpha_def qfun_def divide_le_cancel eps_gt0)
 
 lemma alpha_Suc_ge: "alpha k (Suc h) \<ge> eps k / k"
 proof -
   have "(1 + eps k) ^ h \<ge> 1"
     by (simp add: eps_def)
   then show ?thesis
-    by (simp add: alpha_def qfun_def epsk_gt0 field_split_simps)
+    by (simp add: alpha_def qfun_def eps_gt0 field_split_simps)
 qed
 
 lemma alpha_ge: "h>0 \<Longrightarrow> alpha k h \<ge> eps k / k"
@@ -475,7 +475,7 @@ lemma alpha_hgt_eq: "alpha k (hgt k p) = eps k * (1 + eps k) ^ (hgt k p -1) / k"
   using alpha_eq hgt_gt_0 by presburger
 
 lemma alpha_mono: "\<lbrakk>h' \<le> h; 0 < h'\<rbrakk> \<Longrightarrow> alpha k h' \<le> alpha k h"
-  by (simp add: alpha_eq epsk_ge0 divide_right_mono mult_left_mono power_increasing)
+  by (simp add: alpha_eq eps_ge0 divide_right_mono mult_left_mono power_increasing)
 
 definition all_incident_edges :: "'a set \<Rightarrow> 'a set set" where
     "all_incident_edges \<equiv> \<lambda>A. \<Union>v\<in>A. incident_edges v"

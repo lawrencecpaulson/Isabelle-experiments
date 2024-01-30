@@ -426,7 +426,7 @@ proof -
     then have "pee \<mu> l k i \<le> qfun k 1"
       by (smt (verit, best) alpha_eq alpha_ge0 One_nat_def add_diff_cancel_left' plus_1_eq_Suc q_Suc_diff zero_less_one)
     then have "eps k powr -(1/2) * alpha k (hgt k ?p) = eps k powr (1/2) / k"
-      using powr_mult_base [of "eps k"] epsk_gt0 by (force simp add: Red_5_7c mult.commute)
+      using powr_mult_base [of "eps k"] eps_gt0 by (force simp add: Red_5_7c mult.commute)
     also have "\<dots> \<le> eps k powr (1/2) * ?p"
       using p_gt_invk by (smt (verit) divide_inverse inverse_eq_divide mult_left_mono powr_ge_pzero)
     finally have "eps k powr -(1/2) * alpha k (hgt k ?p) \<le> eps k powr (1/2) * ?p" .
@@ -688,7 +688,7 @@ proof -
       have "p * eps k + eps k / real k \<le> 1 + eps k * p0"
       proof (intro add_mono)
         show "p * eps k \<le> 1"
-          by (smt (verit) epsk_le1 \<open>0 < k\<close> mult_left_le p_def pee_ge0 pee_le1)
+          by (smt (verit) eps_le1 \<open>0 < k\<close> mult_left_le p_def pee_ge0 pee_le1)
         have "p0 > 1/k"
           by (metis Step_class_not_halted diff_le_self not_halted not_halted_pee_gt diff_is_0_eq' pee_eq_p0)
         then show "eps k / real k \<le> eps k * p0"
@@ -702,7 +702,7 @@ proof -
     next
       case 2
       show ?thesis
-        using Red_5_7c [OF 2] \<open>k\<ge>256\<close> epsk_less1 [of k] by simp
+        using Red_5_7c [OF 2] \<open>k\<ge>256\<close> eps_less1 [of k] by simp
     qed
     have B: "- (3 / (real k ^ 4)) \<le> (-2 / real k ^ 4) - alpha k (hgt k p) / card X"
       using \<open>card X > k^4\<close> \<open>card Y \<noteq> 0\<close> \<open>0 < k\<close> alpha_le_1 by (simp add: algebra_simps frac_le)
@@ -728,7 +728,7 @@ proof -
       using \<open>\<beta>\<le>\<mu>\<close>
       by (intro divide_right_mono mult_right_mono) auto
     also have "... \<le> (1-\<beta>) * eps k * alpha k (hgt k p)"
-      using Red_5_7a [of k p] epsk_ge0 \<open>\<beta>\<le>\<mu>\<close> \<open>\<mu><1\<close>
+      using Red_5_7a [of k p] eps_ge0 \<open>\<beta>\<le>\<mu>\<close> \<open>\<mu><1\<close>
       unfolding power2_eq_square divide_inverse mult.assoc
       by (intro mult_mono) auto
     finally have "3 / real k ^ 4 \<le> (1-\<beta>) * eps k * alpha k (hgt k p)" .
@@ -855,7 +855,7 @@ proof -
     have \<beta>: "beta \<mu> l k i \<le> \<mu>"
       by (metis Step_class_insert Un_iff \<open>0<\<mu>\<close> beta_le i)
     have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<ge> 0"
-      using beta_ge0[of \<mu> l k i] epsk_le1 \<alpha> \<beta> \<open>\<mu><1\<close> \<open>k>1\<close>
+      using beta_ge0[of \<mu> l k i] eps_le1 \<alpha> \<beta> \<open>\<mu><1\<close> \<open>k>1\<close>
       by (simp add: zero_le_mult_iff zero_le_divide_iff)
     then show "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i"
       using Red_5_2_Main [OF i assms Big] \<open>Colours l k\<close> by linarith 
@@ -865,16 +865,16 @@ proof -
     have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<le> 1" and beta_gt0: "beta \<mu> l k i > 0"
       by linarith+
     with * have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * eps k / k \<le> 1"
-      by (smt (verit, ccfv_SIG) divide_le_eq_1 epsk_gt0 kn0 mult_le_cancel_left2 mult_le_cancel_left_pos mult_neg_pos of_nat_0_less_iff times_divide_eq_right)
+      by (smt (verit, ccfv_SIG) divide_le_eq_1 eps_gt0 kn0 mult_le_cancel_left2 mult_le_cancel_left_pos mult_neg_pos of_nat_0_less_iff times_divide_eq_right)
     then have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) \<le> k / eps k"
-      using beta_ge0 [of \<mu> l k i] epsk_gt0 [OF kn0] kn0
+      using beta_ge0 [of \<mu> l k i] eps_gt0 [OF kn0] kn0
       by (auto simp add: divide_simps mult_less_0_iff mult_of_nat_commute split: if_split_asm)
     then have "((1 - beta \<mu> l k i) / beta \<mu> l k i) \<le> k / eps k / (1 - eps k)"
-      by (smt (verit) epsk_less1 mult.commute pos_le_divide_eq \<open>1 < k\<close>)
+      by (smt (verit) eps_less1 mult.commute pos_le_divide_eq \<open>1 < k\<close>)
     then have "1 / beta \<mu> l k i \<le> k / eps k / (1 - eps k) + 1"
       by (smt (verit, best) div_add_self2)
     then have "1 / (k / eps k / (1 - eps k) + 1) \<le> beta \<mu> l k i"
-      using beta_gt0 epsk_gt0 epsk_less1 [OF \<open>k>1\<close>] kn0
+      using beta_gt0 eps_gt0 eps_less1 [OF \<open>k>1\<close>] kn0
       apply (simp add: divide_simps split: if_split_asm)
       by (smt (verit, ccfv_SIG) mult.commute mult_less_0_iff)
     moreover have "1 / k^2 \<le> 1 / (k / eps k / (1 - eps k) + 1)"
