@@ -468,6 +468,12 @@ lemma alpha_eq:
   assumes "h>0" shows "alpha k h = eps k * (1 + eps k) ^ (h-1) / k"
   by (metis Suc_pred' alpha_Suc_eq assms)
 
+lemma alpha_hgt_ge: "alpha k (hgt k p) \<ge> eps k / k"
+  by (simp add: alpha_ge hgt_gt_0)
+
+lemma alpha_hgt_eq: "alpha k (hgt k p) = eps k * (1 + eps k) ^ (hgt k p -1) / k"
+  using alpha_eq hgt_gt_0 by presburger
+
 lemma alpha_mono: "\<lbrakk>h' \<le> h; 0 < h'\<rbrakk> \<Longrightarrow> alpha k h' \<le> alpha k h"
   by (simp add: alpha_eq epsk_ge0 divide_right_mono mult_left_mono power_increasing)
 
