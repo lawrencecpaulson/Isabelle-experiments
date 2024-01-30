@@ -88,7 +88,7 @@ proof -
   then have Xeq: "X = X_degree_reg k (Xseq \<mu> l k i') (Yseq \<mu> l k i')"
        and  Yeq: "Y = Yseq \<mu> l k i'"
     using Suci' by (auto simp: X_def Y_def)
-  define pm where "pm \<equiv> (pee \<mu> l k i' - eps k powr -(1/2) * alpha k (hgt k (pee \<mu> l k i')))"
+  define pm where "pm \<equiv> (pee \<mu> l k i' - eps k powr (-1/2) * alpha k (hgt k (pee \<mu> l k i')))"
   have "T \<subseteq> X"
     using bluebook by (metis V_state choose_blue_book_subset local.step)
   then have T_reds: "\<And>x. x \<in> T \<Longrightarrow> pm * card Y \<le> card (Neighbours Red x \<inter> Y)"
@@ -173,14 +173,14 @@ proof -
     proof -
       have "hgt k (p (i-1)) \<le> 1"
       proof (intro hgt_Least)
-        show "p (i - 1) \<le> qfun k 1"
+        show "p (i-1) \<le> qfun k 1"
           unfolding qfun_def
           by (smt (verit) one_le_power pee divide_nonneg_nonneg epsk_ge0 of_nat_less_0_iff)
       qed auto
       then show ?thesis
         by (metis One_nat_def Suc_pred' diff_is_0_eq hgt_gt_0)
     qed
-    then have "p (i-1) - p (Suc i) \<le> eps k powr -(1/2) * alpha k 1"
+    then have "p (i-1) - p (Suc i) \<le> eps k powr (-1/2) * alpha k 1"
       using pee iB Y_6_4_Bblue \<open>0<\<mu>\<close> by (fastforce simp: p_def)
     also have "\<dots> \<le> 1/k"
     proof -
@@ -234,7 +234,7 @@ proof -
         using 2 Z_class_def p_def i by auto
       also have pee2: "\<dots> \<le> p i"
         using alpha_eq p_gt_q by (smt (verit, best) \<open>0 < k\<close> qfun_mono zero_le_one) 
-      finally have "p (i - 1) \<le> p i" .
+      finally have "p (i-1) \<le> p i" .
       then have "p (i-1) - p i + alpha k (hgt k (p i)) 
               \<le> qfun k 0 - p i + eps k * (p i - qfun k 0 + 1/k)"
         using Red_5_7b pee_le_q0 pee2 by fastforce
@@ -256,7 +256,7 @@ proof -
     by (smt (verit, best) divide_nonneg_nonneg epsk_ge0 mult_mono nat_less_real_le of_nat_0_le_iff)
   also have "\<dots> \<le> eps k"
     by (simp add: epsk_ge0)
-  finally have red: "(\<Sum>i\<in>Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k. p (i - 1) - p (Suc i)) \<le> eps k" .
+  finally have red: "(\<Sum>i\<in>Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> eps k" .
   have fin_bblue: "finite (Step_class \<mu> l k {bblue_step})"
     using Lemma_bblue_step_limit_def \<open>Colours l k\<close> bblue_step_limit by presburger
   have fin_red: "finite (Step_class \<mu> l k {red_step})"
@@ -414,6 +414,9 @@ lemma "\<forall>\<^sup>\<infinity>k. ((1 + eps k)^2) * eps k powr (1/2) \<le> 1"
   apply (simp add: eps_def)
   by real_asymp
 
+lemma XXX: "x \<ge> (0::real) \<Longrightarrow> inverse (x powr (1/2)) * x = x powr (1/2)"
+  by (simp add: inverse_eq_divide powr_half_sqrt real_div_sqrt)
+
 text \<open>Following Bravik in excluding the even steps (degree regularisation)\<close>
 proposition Y_6_2_aux:
   fixes l k
@@ -439,7 +442,7 @@ proof (cases "p (Suc j) \<ge> p0")
 next
   case False
   then have pj_less: "p(Suc j) < p0" by linarith
-  define J where "J \<equiv> {j'. j'<j \<and> p (Suc j') \<ge> p0}"
+  define J where "J \<equiv> {j'. j'<j \<and> p j' \<ge> p0 \<and> even j'}"
   have "finite J"
     by (auto simp: J_def)
   have "p 0 = p0"
@@ -457,32 +460,27 @@ next
     using dreg_step_0 by force
   then have "p 1 \<ge> p 0"
     using Y_6_4_DegreeReg [of 0] by (simp add: p_def) 
-  have exists: "J \<noteq> {}"
-    using \<open>0 < j\<close> \<open>p 0 = p0\<close> \<open>p 0 \<le> p 1\<close> by (auto simp: J_def)
+  then have exists: "J \<noteq> {}"
+    using \<open>0 < j\<close> \<open>p 0 = p0\<close> apply (auto simp: J_def)
+    using dual_order.strict_iff_not by fastforce
   define j' where "j' \<equiv> Max J"
   have "j' \<in> J"
     using \<open>finite J\<close> exists by (force simp add: j'_def)
-  then have "j' < j"
+  then have "j' < j" "even j'" and pSj': "p j' \<ge> p0"
     by (auto simp add: J_def odd_RBS)
-  then have Suc_j'_not_halted: "Suc j' \<notin> Step_class \<mu> l k {halted}"
-    using j Step_class_not_halted non_halted Suc_leI by blast
-  then have j'_not_halted: "j' \<notin> Step_class \<mu> l k {halted}"
-    using Step_class_halted_forever le_eq_less_or_eq by blast
+  then have Suc_j'_not_halted: "j' \<notin> Step_class \<mu> l k {halted}"
+    using j Step_class_not_halted non_halted Suc_leI
+    by (meson nat_less_le)
+  then have j'_not_halted: "j'-1 \<notin> Step_class \<mu> l k {halted}"
+    using Step_class_not_halted diff_le_self by blast
   have maximal: "j'' \<le> j'" if "j'' \<in> J" for j''
     using \<open>finite J\<close> exists by (simp add: j'_def that)
-  { assume "odd j'"
-    then have "Suc j' \<in> Step_class \<mu> l k {dreg_step}"
-      by (simp add: Suc_j'_not_halted not_halted_even_dreg)
-    then have "p (Suc (Suc j')) \<ge> p (Suc j')"
-      using Y_6_4_DegreeReg unfolding p_def by blast
-    then have 0: "p (Suc (Suc j')) \<ge> p0"
-      using J_def \<open>j' \<in> J\<close> by auto
-    then have "Suc j' < j"
-      using False Suc_lessI \<open>j' < j\<close> by blast
-    then have "False"
-      using J_def Suc_n_not_le_n maximal 0 by blast
-  }
-  then have "even j'" by metis
+(*
+  have pj'_le: "p (j'-1) \<le> p j'"
+    unfolding p_def
+    using Step_class_halted_forever Y_6_4_DegreeReg  nat_less_le non_halted not_halted_even_dreg
+    by (metis (no_types, lifting) J_def \<open>j' \<in> J\<close> \<open>p 0 = p0\<close> add_diff_inverse_nat assms(3) diff_is_0_eq' even_Suc j'_not_halted mem_Collect_eq plus_1_eq_Suc)
+*)
   have "p (j'+2) - 2 * eps k \<le> p (j'+2) - (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))"
     using Y_6_3_Main by simp
   also have "\<dots> \<le> p (Suc j)"
@@ -504,18 +502,19 @@ next
           by (auto simp add: Z_def RBS_def dreg_before_step)
         have "j' < i"
           using i by (auto simp: Z_def)
-        with maximal have "i-2 \<notin> J"
-          using Z_def i by force
         with i have "p (i-1) < p0"
-          using step_odd_minus2 [of i \<mu> l k] Suc_less_eq2 
-          by (force simp add: Z_def J_def RBS_def)
+          using step_odd_minus2 [of i \<mu> l k]  maximal step_even[of "i-1"]
+          apply (simp add: Z_def J_def RBS_def Suc_less_eq2)
+          apply clarify
+          apply (simp add: )
+          by (smt (verit, best) J_def diff_Suc_1 dreg le_eq_less_or_eq le_simps(3)  mem_Collect_eq not_less_eq_eq step_even)
         then show "i \<in> Z_class \<mu> l k"
           using i by (simp add: Z_def RBS_def Z_class_def p_def)
       qed
       show "0 \<le> p (i-1) - p (Suc i)" if "i \<in> Z_class \<mu> l k - Z j" for i
         using that by (auto simp: Z_def Z_class_def p_def)
     qed
-    then have "p (j'+2) - (\<Sum>i\<in>Z_class \<mu> l k. p (i - 1) - p (Suc i))
+    then have "p (j'+2) - (\<Sum>i\<in>Z_class \<mu> l k. p (i-1) - p (Suc i))
             \<le> p (j'+2) - (\<Sum>i \<in> Z j. p (i-1) - p (Suc i))"
       by auto
     also have "\<dots> \<le> p (Suc j)"
@@ -536,7 +535,7 @@ next
                 metis le_diff_conv2 Suc_leI add_2_eq_Suc' add_leE even_Suc nat_less_le odd_RBS)
           have "m-2 \<in> RBS"
             using True assms(4) less(2) step_odd_minus2 by auto
-          then have *: "p (j'+2) - p (m - Suc 0) \<le> (\<Sum>i\<in>Z (m - 2). p (i - 1) - p (Suc i))"
+          then have *: "p (j'+2) - p (m - Suc 0) \<le> (\<Sum>i\<in>Z (m - 2). p (i-1) - p (Suc i))"
             using less.IH [of "m-2"] True less Suc_less_eq2
             using \<open>j' \<in> J\<close> by (force simp add: J_def)
           moreover have "m \<notin> Z (m - 2)"
@@ -551,13 +550,14 @@ next
           then have [simp]: "m = Suc j'"
             using False less(3) \<open>even j'\<close> by presburger
           then have "Z m = {}"
-            by (simp add: Z_def)
+            by (auto simp: Z_def)
           then show ?thesis
-            using less.prems False by (simp add: eval_nat_numeral)
+            using less.prems False 
+            by (auto simp add: eval_nat_numeral)
         qed
       qed
       then show ?thesis
-        using j J_def \<open>j' \<in> J\<close> by fastforce 
+        using j J_def \<open>j' \<in> J\<close> \<open>j' < j\<close> by force 
     qed
     finally show ?thesis .
   qed
@@ -569,7 +569,10 @@ next
       using Step_class_halted_forever Suc_leI \<open>j' < j\<close> non_halted by blast
   qed (use \<open>even j'\<close> in auto)
   then have "p (j'+2) < p0"
-    using maximal[of "j'+1"] False \<open>j' < j\<close> less_le by (fastforce simp add: J_def)
+    using maximal[of "j'+2"] False \<open>j' < j\<close>  \<open>even j'\<close>
+    unfolding  J_def
+    apply (simp add: )
+    by (smt (verit, del_insts) Suc_lessI assms(5) even_Suc odd_RBS)
   then have le1: "hgt k (p (j'+2)) \<le> 1"
     using \<open>k>0\<close> zero_less_one
     by (smt (verit, best) hgt_Least q0 qfun_mono less_imp_le)
@@ -614,36 +617,29 @@ next
     by (simp add: qfun_def eps_def powr_powr field_simps flip: powr_add)
   also have "\<dots> \<le> p j'  - eps k powr (-1/2) * alpha k (hgt k (p j'))"
   proof -
-    have *: "hgt k (pee \<mu> l k j') = Suc (hgt k (pee \<mu> l k j') - 1)"
-      using Suc_pred' hgt_gt_0 by blast
-    show ?thesis
-      using \<open>k>0\<close> epsk_gt0[OF\<open>k>0\<close>]
-      apply (simp add: p_def alpha_def powr_minus)
-      apply (simp add: field_simps)
-      apply (simp add: qfun_def algebra_simps flip: powr_add)
-      apply (subst *)
-      apply (simp add: algebra_simps)
-      apply (subst add.commute)
-      apply (rule add_mono)
-       apply (intro mult_left_mono)
-      using big2 B hgt_le_hgt * of_nat_add of_nat_1
-      unfolding p_def
-      apply (smt (verit) One_nat_def plus_1_eq_Suc powr_mono powr_realpow)
-        apply simp
-       apply (intro mult_left_mono)
-        apply (subst mult.commute)
-        apply (intro mult_left_mono)
-         apply (auto simp: )
-      using hgt_works [OF \<open>k>0\<close>] B
-       apply (simp add: p_def)
-      sorry
+    have 2: "(1 + eps k) ^ (hgt k (p j') - Suc 0) \<le> 2"
+      apply (subst powr_realpow [symmetric])
+       apply (smt (verit, ccfv_SIG) epsk_ge0)
+      using B
+      by (smt (verit, best) Multiseries_Expansion.intyness_simps(1) Multiseries_Expansion.intyness_simps(4) Suc_pred assms(13) assms(6) epsk_gt0 hgt_gt_0 of_nat_0_le_iff plus_1_eq_Suc powr_mono_both)
+    have "p0 - p j' \<le> 0"
+      by (simp add: pSj')
+    also have "... \<le> 2 * eps k powr (1/2) / k - (eps k powr (1/2)) * (1 + eps k) ^ (hgt k (p j') - Suc 0) / k"
+      using mult_left_mono [OF 2, of "eps k powr (1/2) / k"]
+      by (simp add: field_simps diff_divide_distrib)
+    finally have "p0 - 2 * eps k powr (1/2) / k 
+       \<le> p j' - (eps k powr (1/2)) * (1 + eps k) ^ (hgt k (p j') - Suc 0) / k"
+      by simp
+    then show ?thesis
+      apply (simp add: )
+      by (smt (verit, ccfv_SIG) Diagonal.alpha_hgt_eq Diagonal_axioms XXX epsk_ge0 more_arith_simps(11) numeral_nat(7) powr_minus times_divide_eq_right)
   qed
   also have "\<dots> \<le> p (j'+2)"
     using j'_cases
   proof cases
     case R
-    have hs_le3: "hgt k (pee \<mu> l k (Suc j')) \<le> 3"
-      using le1  Y_6_5_Red[OF R \<open>k\<ge>16\<close>] by (simp add: p_def)
+    have hs_le3: "hgt k (p (Suc j')) \<le> 3"
+      using le1 Y_6_5_Red[OF R \<open>k\<ge>16\<close>] by (simp add: p_def)
     then have h_le3: "hgt k (p j') \<le> 3"
       using Y_6_5_DegreeReg [OF j'_dreg \<open>k>0\<close>] by (simp add: p_def)
     have alpha1: "alpha k (hgt k (p (Suc j'))) \<le> eps k * (1 + eps k) ^ 2 / k"
@@ -664,7 +660,7 @@ next
       then show ?thesis
         using Y_6_4_DegreeReg[OF j'_dreg] by (simp add: p_def powr_minus)
     qed
-    also have "\<dots> \<le> p (j' + 2)"
+    also have "\<dots> \<le> p (j'+2)"
       by (simp add: R Y_6_4_Red p_def)
     finally show ?thesis .
   next
@@ -674,7 +670,8 @@ next
   next
     case S
     show ?thesis
-      using Y_6_4_dbooSt [OF S] J_def \<open>j' \<in> J\<close> \<open>p (j'+2) < p0\<close> by fastforce
+      using Y_6_4_dbooSt [OF S] J_def \<open>j' \<in> J\<close> \<open>p (j'+2) < p0\<close>
+      using Diagonal.dreg_before_step Diagonal_axioms Y_6_4_DegreeReg \<open>Suc j' \<in> RBS\<close> assms(3) assms(4) by fastforce 
   qed
   finally have "p0 - eps k \<le> p (j'+2)" .
   then have "p0 - 3 * eps k \<le> p (j'+2) - 2 * eps k"
