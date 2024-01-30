@@ -424,10 +424,10 @@ proposition Y_6_2_aux:
   assumes "0<\<mu>" "\<mu><1"
   defines "p \<equiv> pee \<mu> l k"
   defines "RBS \<equiv> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
-  assumes j: "j \<in> RBS" and "k>0" "0<\<mu>"
+  assumes j: "j \<in> RBS" and "k>0"
   assumes Y_6_3_Main: "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k" 
     and Y_6_5_dbooSt: 
-      "\<And>i. i \<in> Step_class \<mu> l k {dboost_step} \<Longrightarrow> hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k i)"
+      "\<And>i. i \<in> Step_class \<mu> l k {dboost_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p i)"
     and Y_6_5_Bblue: 
       "\<And>i. i \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2*(eps k powr (-1/2))"
       and Y_6_4_dbooSt: " \<And>i. i\<in>Step_class \<mu> l k {dboost_step} \<Longrightarrow> p i \<le> p (Suc i)"
@@ -607,8 +607,8 @@ next
     have 2: "(1 + eps k) ^ (hgt k (p j') - Suc 0) \<le> 2"
       apply (subst powr_realpow [symmetric])
        apply (smt (verit, ccfv_SIG) eps_ge0)
-      using B
-      by (smt (verit, best) Multiseries_Expansion.intyness_simps(1) Multiseries_Expansion.intyness_simps(4) Suc_pred assms(13) assms(6) eps_gt0 hgt_gt_0 of_nat_0_le_iff plus_1_eq_Suc powr_mono_both)
+      using B big2 \<open>k>0\<close>
+      by (smt (verit, best) Multiseries_Expansion.intyness_simps(1) Multiseries_Expansion.intyness_simps(4) Suc_pred  eps_gt0 hgt_gt_0 of_nat_0_le_iff plus_1_eq_Suc powr_mono_both)
     have "p0 - p j' \<le> 0"
       by (simp add: pSj')
     also have "... \<le> 2 * eps k powr (1/2) / k - (eps k powr (1/2)) * (1 + eps k) ^ (hgt k (p j') - Suc 0) / k"
@@ -667,6 +667,55 @@ next
     using D by blast
   finally show ?thesis .
 qed
+
+proposition Y_6_1_aux:
+  fixes l k
+  assumes "0<\<mu>" "\<mu><1" and "k>0"
+  defines "p \<equiv> pee \<mu> l k"
+  defines "Y \<equiv> Yseq \<mu> l k"
+  shows "(p0 - 2 * eps k) ^ (s+t) \<le> card (Y i) / card (Y0)"
+proof -
+  have "(p0 - 2 * eps k) * card (Y i) \<le> card (Y (Suc i))" for i
+  proof -
+    consider (R) "i \<in> Step_class \<mu> l k {red_step}"
+      | (B) "i \<in> Step_class \<mu> l k {bblue_step}"
+      | (S) "i \<in> Step_class \<mu> l k {dboost_step}"
+      | (D) "i \<in> Step_class \<mu> l k {dreg_step}"
+      | (H) "i \<in> Step_class \<mu> l k {halted}"
+      sorry
+    then show ?thesis
+    proof cases
+      case R
+      then show ?thesis sorry
+    next
+      case B
+      then have "Yseq \<mu> l k (Suc i) = Yseq \<mu> l k i"
+        apply (simp add: Step_class_def stepper_kind_def next_state_kind_def Yseq_def split: prod.split prod.split_asm if_split_asm)
+        apply clarify
+
+apply (simp add: )
+          sorry
+        then show ?thesis
+apply (simp add: Y_def)
+          by (smt (verit) assms(3) eps_gt0 mult_left_le_one_le neg_prod_le of_nat_0_le_iff p0_01(2))
+          by auto
+        sorry
+    next
+      case S
+      then show ?thesis sorry
+    next
+      case D
+      then show ?thesis sorry
+    next
+      case H
+      then show ?thesis
+        
+        sorry
+    qed
+    by (metis Step_class_insert UnE  )
+
+    sorry
+
 
 end (*context Diagonal*)
 
