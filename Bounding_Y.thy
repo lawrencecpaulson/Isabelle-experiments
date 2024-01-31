@@ -652,7 +652,7 @@ proof -
   have "(p0 - 2 * eps k powr (1/2)) * card (Y i) \<le> card (Y (Suc i))" for i
   proof -
     consider (RS) "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
-           | (BDH) "i \<in> Step_class \<mu> l k {bblue_step,dreg_step,halted}"
+      | (BDH) "i \<in> Step_class \<mu> l k {bblue_step,dreg_step,halted}"
       using stepkind.exhaust by (auto simp: Step_class_def)
     then show ?thesis
     proof cases
@@ -663,38 +663,46 @@ proof -
         using RS step_odd by (auto simp: Step_class_def)
       moreover have i_not_halted: "i \<notin> Step_class \<mu> l k {halted}"
         using RS by (auto simp: Step_class_def)
-      ultimately have im1_dreg: "i - 1 \<in> Step_class \<mu> l k {dreg_step}"
+      ultimately have iminus1_dreg: "i - 1 \<in> Step_class \<mu> l k {dreg_step}"
         by (simp add: dreg_before_step not_halted_odd_RBS)
-      have "i>2"
-        sorry
-      have "i-2 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
-      proof (intro not_halted_odd_RBS)
-        show "i - 2 \<notin> Step_class \<mu> l k {halted}"
-          using i_not_halted Step_class_not_halted diff_le_self by blast
-        show "odd (i - 2)"
-          using \<open>2 < i\<close> \<open>odd i\<close> by auto
-      qed
-      have Y_6_2: "p (i-1) \<ge> p0 - 3 * eps k"
-        sorry
       have "(p0 - 2 * eps k powr (1/2)) * card (Y i) \<le> (1 - eps k powr (1/2)) * p (i-1) * card (Y i)"
-      proof (intro mult_right_mono)
-        have "eps k powr (1/2) * p (i-1) \<le> eps k powr (1/2) * 1"
-          unfolding p_def by (metis mult.commute mult_right_mono powr_ge_pzero pee_le1)
-        moreover have "3 * eps k \<le> eps k powr (1/2)"
-        proof -
-          have "3 * eps k = 3 * (eps k powr (1 / 2))\<^sup>2"
-            using eps_ge0 powr_half_sqrt real_sqrt_pow2 by presburger
-          also have "... \<le> 3 * ((1/3) * eps k powr (1 / 2))"
-            by (smt (verit) big13 mult_right_mono power2_eq_square powr_ge_pzero)
-          also have "... \<le> eps k powr (1/2)"
-            by simp
-          finally show ?thesis .
+      proof (cases "i=1")
+        case True
+        with p0_01 show ?thesis 
+          by (simp add: p_def pee_eq_p0 algebra_simps mult_right_mono)
+      next
+        case False
+        with \<open>odd i\<close> have "i>2"
+          by (metis Suc_lessI dvd_refl One_nat_def odd_pos one_add_one plus_1_eq_Suc)
+        have "i-2 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
+        proof (intro not_halted_odd_RBS)
+          show "i - 2 \<notin> Step_class \<mu> l k {halted}"
+            using i_not_halted Step_class_not_halted diff_le_self by blast
+          show "odd (i - 2)"
+            using \<open>2 < i\<close> \<open>odd i\<close> by auto
         qed
-        ultimately show "p0 - 2 * eps k powr (1 / 2) \<le> (1 - eps k powr (1 / 2)) * p (i - 1)"
-          using Y_6_2 by (simp add: algebra_simps)
-      qed auto
+        have Y_6_2: "p (i-1) \<ge> p0 - 3 * eps k"
+          sorry
+        show ?thesis
+        proof (intro mult_right_mono)
+          have "eps k powr (1/2) * p (i-1) \<le> eps k powr (1/2) * 1"
+            unfolding p_def by (metis mult.commute mult_right_mono powr_ge_pzero pee_le1)
+          moreover have "3 * eps k \<le> eps k powr (1/2)"
+          proof -
+            have "3 * eps k = 3 * (eps k powr (1 / 2))\<^sup>2"
+              using eps_ge0 powr_half_sqrt real_sqrt_pow2 by presburger
+            also have "... \<le> 3 * ((1/3) * eps k powr (1 / 2))"
+              by (smt (verit) big13 mult_right_mono power2_eq_square powr_ge_pzero)
+            also have "... \<le> eps k powr (1/2)"
+              by simp
+            finally show ?thesis .
+          qed
+          ultimately show "p0 - 2 * eps k powr (1 / 2) \<le> (1 - eps k powr (1 / 2)) * p (i - 1)"
+            using Y_6_2 by (simp add: algebra_simps)
+        qed auto
+      qed
       also have "... \<le> card (Neighbours Red (cvx \<mu> l k i) \<inter> Y i)"
-        using Red_5_8 [OF im1_dreg] cvx_in_Xseq RS \<open>odd i\<close> by (fastforce simp: p_def Y_def)
+        using Red_5_8 [OF iminus1_dreg] cvx_in_Xseq RS \<open>odd i\<close> by (fastforce simp: p_def Y_def)
       finally show ?thesis
         by (simp add: Yeq)
     next
