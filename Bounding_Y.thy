@@ -7,9 +7,6 @@ begin
 context Diagonal
 begin
 
-lemma "\<lbrakk>h' \<le> h; 0 < h'\<rbrakk> \<Longrightarrow> alpha k h' \<le> alpha k h"
-  by (simp add: alpha_eq eps_ge0 divide_right_mono mult_left_mono power_increasing)
-
 subsection \<open>The following results together are Lemma 6.4\<close>
 text \<open>Compared with the paper, all the indices are greater by one\<close>
 
@@ -645,29 +642,37 @@ lemma "\<forall>\<^sup>\<infinity>k. eps k powr (1/2) \<le> 1/3"
 proposition Y_6_1_aux:
   fixes l k
   assumes "0<\<mu>" "\<mu><1" and "k>0" and big13: "eps k powr (1/2) \<le> 1/3"
+  assumes not_halted: "m \<notin> Step_class \<mu> l k {halted}"
+  assumes big: "p0 \<ge> 2 * eps k powr (1/2)"
   defines "p \<equiv> pee \<mu> l k"
   defines "Y \<equiv> Yseq \<mu> l k"
   shows "(p0 - 2 * eps k) ^ (s+t) \<le> card (Y m) / card (Y0)"
 proof -
   define p0m where "p0m \<equiv> p0 - 2 * eps k powr (1/2)"
-  have BDH: "card (Y i) = card (Y (Suc i))"
-    if "i \<in> Step_class \<mu> l k {bblue_step,dreg_step,halted}" for i
+  have "p0m \<ge> 0"
+    using big by (simp add: p0m_def)
+  define Step_RS where "Step_RS \<equiv> Step_class \<mu> l k {red_step,dboost_step}"
+  define Step_BD where "Step_BD \<equiv> Step_class \<mu> l k {bblue_step,dreg_step}"
+  have not_halted_below_m: "i \<notin> Step_class \<mu> l k {halted}" if "i\<le>m" for i
+    using Step_class_not_halted not_halted that by blast
+  have BD_card: "card (Y i) = card (Y (Suc i))"
+    if "i \<in> Step_BD" for i
   proof -
     have "Y (Suc i) = Y i"
       using that
-      by (auto simp add: step_kind_defs next_state_def degree_reg_def Y_def split: prod.split if_split_asm)
+      by (auto simp add: step_kind_defs Step_BD_def next_state_def degree_reg_def Y_def split: prod.split if_split_asm)
     with p0_01 \<open>k>0\<close> show ?thesis
       by (smt (verit) p0m_def mult_left_le_one_le neg_prod_le of_nat_0_le_iff powr_ge_pzero)
   qed
-  have RS: "p0m * card (Y i) \<le> card (Y (Suc i))"
-    if "i \<in> Step_class \<mu> l k {red_step,dboost_step}" for i
+  have RS_card: "p0m * card (Y i) \<le> card (Y (Suc i))"
+    if "i \<in> Step_RS" for i
   proof -
     have Yeq: "Y (Suc i) = Neighbours Red (cvx \<mu> l k i) \<inter> Y i"
-      using that by (auto simp add: step_kind_defs next_state_def degree_reg_def Y_def cvx_def Let_def split: prod.split if_split_asm)
+      using that by (auto simp add: step_kind_defs Step_RS_def next_state_def degree_reg_def Y_def cvx_def Let_def split: prod.split if_split_asm)
     have "odd i"
-      using that step_odd by (auto simp: Step_class_def)
+      using that step_odd by (auto simp: Step_class_def Step_RS_def)
     moreover have i_not_halted: "i \<notin> Step_class \<mu> l k {halted}"
-      using that by (auto simp: Step_class_def)
+      using that by (auto simp: Step_class_def Step_RS_def)
     ultimately have iminus1_dreg: "i - 1 \<in> Step_class \<mu> l k {dreg_step}"
       by (simp add: dreg_before_step not_halted_odd_RBS)
     have "p0m * card (Y i) \<le> (1 - eps k powr (1/2)) * p (i-1) * card (Y i)"
@@ -707,38 +712,62 @@ proof -
       qed auto
     qed
     also have "... \<le> card (Neighbours Red (cvx \<mu> l k i) \<inter> Y i)"
-      using Red_5_8 [OF iminus1_dreg] cvx_in_Xseq that \<open>odd i\<close> by (fastforce simp: p_def Y_def)
+      using Red_5_8 [OF iminus1_dreg] cvx_in_Xseq that \<open>odd i\<close> 
+        by (fastforce simp: p_def Y_def Step_RS_def)
     finally show ?thesis
       by (simp add: Yeq)
   qed
 
-  define st where "st \<equiv> \<lambda>i. Step_class \<mu> l k {red_step,dboost_step} \<inter> {..<i}"
-  have "st (Suc i) = (if i \<in> Step_class \<mu> l k {red_step,dboost_step} then insert i (st i) else st i)" for i
+  define st where "st \<equiv> \<lambda>i. Step_RS \<inter> {..<i}"
+  have "st (Suc i) = (if i \<in> Step_RS then insert i (st i) else st i)" for i
     by (auto simp: st_def less_Suc_eq)
-  then have "card (st (Suc i)) = (if i \<in> Step_class \<mu> l k {red_step,dboost_step} then Suc (card (st i)) else card (st i))" for i
+  then have [simp]: "card (st (Suc i)) = (if i \<in> Step_RS then Suc (card (st i)) else card (st i))" for i
     by (simp add: st_def)
 
-  have "p0m ^ card (st i) \<le> (\<Prod>j<i. card (Y(Suc j)) / card (Y j))" for i
+  have "p0m ^ card (st i) \<le> (\<Prod>j<i. card (Y(Suc j)) / card (Y j))" if "i\<le>m"for i
+    using that
   proof (induction i)
     case 0
     then show ?case
       by (auto simp: st_def)
   next
     case (Suc i)
+    then have i: "i \<notin> Step_class \<mu> l k {halted}"
+      using Step_class_not_halted not_halted
+      by (metis add_leE plus_1_eq_Suc)
+    then have Ynz: "card (Y i) > 0"
+        unfolding Y_def using Yseq_gt_0 by blast
+    consider (RS) "i \<in> Step_RS"
+           | (BD) "i \<in> Step_BD \<and> i \<notin> Step_RS"
+      using i stepkind.exhaust by (auto simp: Step_class_def Step_BD_def Step_RS_def)
     then show ?case
-      
-      sorry
+    proof cases
+      case RS
+      then have "p0m ^ card (st (Suc i)) = p0m * p0m ^ card (st i)"
+        by simp
+      also have "... \<le> p0m * (\<Prod>j<i. card (Y(Suc j)) / card (Y j))"
+        using Suc Suc_leD \<open>0 \<le> p0m\<close> mult_left_mono by blast
+      also have "... \<le> (card (Y (Suc i)) / card (Y i)) * (\<Prod>j<i. card (Y (Suc j)) / card (Y j))"
+      proof (intro mult_right_mono)
+        show "p0m \<le> real (card (Y (Suc i))) / real (card (Y i))"
+          by (simp add: RS RS_card Ynz pos_le_divide_eq)
+      qed (simp add: prod_nonneg)
+      also have "... = (\<Prod>j<Suc i. real (card (Y (Suc j))) / real (card (Y j)))"
+        by simp
+      finally show ?thesis .
+    next
+      case BD
+      with Ynz show ?thesis
+        by (simp add: Suc Suc_leD BD_card)
+    qed      
   qed
-
-    consider (RS) "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
-          | (BDH) "i \<in> Step_class \<mu> l k {bblue_step,dreg_step,halted}"
-      using stepkind.exhaust by (auto simp: Step_class_def)
-
-    sorry
-  have "p0m ^ st m \<le> (\<Prod>j<m. card (Y(Suc j)) / card (Y j))"
-    sorry
+  then have "p0m ^ card (st m) \<le> (\<Prod>j<m. card (Y(Suc j)) / card (Y j))"
+    by blast
   also have "... = card (Y m) / card (Y 0)"
-  show ?thesis
+    using Yseq_gt_0 [OF not_halted_below_m]
+apply (simp add: prod_dividef)
+    sorry
+  finally show ?thesis
     sorry
 qed
 

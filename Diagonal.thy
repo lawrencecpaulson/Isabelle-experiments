@@ -963,7 +963,7 @@ lemma Xseq_Suc_subset: "Xseq \<mu> l k (Suc n) \<subseteq> Xseq \<mu> l k n"
   apply (simp add: Xseq_def split: if_split_asm prod.split)
   by (metis degree_reg_subset next_state_subset valid_state_stepper)
 
-lemma Xseq_antimono: "m \<le> n \<Longrightarrow>Xseq \<mu> l k n \<subseteq> Xseq \<mu> l k m"
+lemma Xseq_antimono: "m \<le> n \<Longrightarrow> Xseq \<mu> l k n \<subseteq> Xseq \<mu> l k m"
   by (simp add: Xseq_Suc_subset lift_Suc_antimono_le)
 
 lemma Xseq_subset_V: "Xseq \<mu> l k i \<subseteq> V"
@@ -976,7 +976,7 @@ lemma Yseq_Suc_subset: "Yseq \<mu> l k (Suc n) \<subseteq> Yseq \<mu> l k n"
   apply (simp add: Yseq_def split: if_split_asm prod.split)
   by (metis degree_reg_subset next_state_subset valid_state_stepper)
 
-lemma Yseq_antimono: "m \<le> n \<Longrightarrow>Yseq \<mu> l k n \<subseteq> Yseq \<mu> l k m"
+lemma Yseq_antimono: "m \<le> n \<Longrightarrow> Yseq \<mu> l k n \<subseteq> Yseq \<mu> l k m"
   by (simp add: Yseq_Suc_subset lift_Suc_antimono_le)
 
 lemma Yseq_subset_V: "Yseq \<mu> l k i \<subseteq> V"
