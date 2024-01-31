@@ -647,72 +647,97 @@ proposition Y_6_1_aux:
   assumes "0<\<mu>" "\<mu><1" and "k>0" and big13: "eps k powr (1/2) \<le> 1/3"
   defines "p \<equiv> pee \<mu> l k"
   defines "Y \<equiv> Yseq \<mu> l k"
-  shows "(p0 - 2 * eps k) ^ (s+t) \<le> card (Y i) / card (Y0)"
+  shows "(p0 - 2 * eps k) ^ (s+t) \<le> card (Y m) / card (Y0)"
 proof -
-  have "(p0 - 2 * eps k powr (1/2)) * card (Y i) \<le> card (Y (Suc i))" for i
+  define p0m where "p0m \<equiv> p0 - 2 * eps k powr (1/2)"
+  have BDH: "card (Y i) = card (Y (Suc i))"
+    if "i \<in> Step_class \<mu> l k {bblue_step,dreg_step,halted}" for i
   proof -
-    consider (RS) "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
-      | (BDH) "i \<in> Step_class \<mu> l k {bblue_step,dreg_step,halted}"
-      using stepkind.exhaust by (auto simp: Step_class_def)
-    then show ?thesis
-    proof cases
-      case RS
-      then have Yeq: "Y (Suc i) = Neighbours Red (cvx \<mu> l k i) \<inter> Y i"
-        by (auto simp add: step_kind_defs next_state_def degree_reg_def Y_def cvx_def Let_def split: prod.split if_split_asm)
-      have "odd i"
-        using RS step_odd by (auto simp: Step_class_def)
-      moreover have i_not_halted: "i \<notin> Step_class \<mu> l k {halted}"
-        using RS by (auto simp: Step_class_def)
-      ultimately have iminus1_dreg: "i - 1 \<in> Step_class \<mu> l k {dreg_step}"
-        by (simp add: dreg_before_step not_halted_odd_RBS)
-      have "(p0 - 2 * eps k powr (1/2)) * card (Y i) \<le> (1 - eps k powr (1/2)) * p (i-1) * card (Y i)"
-      proof (cases "i=1")
-        case True
-        with p0_01 show ?thesis 
-          by (simp add: p_def pee_eq_p0 algebra_simps mult_right_mono)
-      next
-        case False
-        with \<open>odd i\<close> have "i>2"
-          by (metis Suc_lessI dvd_refl One_nat_def odd_pos one_add_one plus_1_eq_Suc)
-        have "i-2 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
-        proof (intro not_halted_odd_RBS)
-          show "i - 2 \<notin> Step_class \<mu> l k {halted}"
-            using i_not_halted Step_class_not_halted diff_le_self by blast
-          show "odd (i - 2)"
-            using \<open>2 < i\<close> \<open>odd i\<close> by auto
-        qed
-        have Y_6_2: "p (i-1) \<ge> p0 - 3 * eps k"
-          sorry
-        show ?thesis
-        proof (intro mult_right_mono)
-          have "eps k powr (1/2) * p (i-1) \<le> eps k powr (1/2) * 1"
-            unfolding p_def by (metis mult.commute mult_right_mono powr_ge_pzero pee_le1)
-          moreover have "3 * eps k \<le> eps k powr (1/2)"
-          proof -
-            have "3 * eps k = 3 * (eps k powr (1 / 2))\<^sup>2"
-              using eps_ge0 powr_half_sqrt real_sqrt_pow2 by presburger
-            also have "... \<le> 3 * ((1/3) * eps k powr (1 / 2))"
-              by (smt (verit) big13 mult_right_mono power2_eq_square powr_ge_pzero)
-            also have "... \<le> eps k powr (1/2)"
-              by simp
-            finally show ?thesis .
-          qed
-          ultimately show "p0 - 2 * eps k powr (1 / 2) \<le> (1 - eps k powr (1 / 2)) * p (i - 1)"
-            using Y_6_2 by (simp add: algebra_simps)
-        qed auto
-      qed
-      also have "... \<le> card (Neighbours Red (cvx \<mu> l k i) \<inter> Y i)"
-        using Red_5_8 [OF iminus1_dreg] cvx_in_Xseq RS \<open>odd i\<close> by (fastforce simp: p_def Y_def)
-      finally show ?thesis
-        by (simp add: Yeq)
-    next
-      case BDH
-      then have "Y (Suc i) = Y i"
-        by (auto simp add: step_kind_defs next_state_def degree_reg_def Y_def Let_def split: prod.split if_split_asm)
-      with p0_01 \<open>k>0\<close> show ?thesis
-        by (smt (verit) mult_left_le_one_le neg_prod_le of_nat_0_le_iff powr_ge_pzero)
-    qed
+    have "Y (Suc i) = Y i"
+      using that
+      by (auto simp add: step_kind_defs next_state_def degree_reg_def Y_def split: prod.split if_split_asm)
+    with p0_01 \<open>k>0\<close> show ?thesis
+      by (smt (verit) p0m_def mult_left_le_one_le neg_prod_le of_nat_0_le_iff powr_ge_pzero)
   qed
+  have RS: "p0m * card (Y i) \<le> card (Y (Suc i))"
+    if "i \<in> Step_class \<mu> l k {red_step,dboost_step}" for i
+  proof -
+    have Yeq: "Y (Suc i) = Neighbours Red (cvx \<mu> l k i) \<inter> Y i"
+      using that by (auto simp add: step_kind_defs next_state_def degree_reg_def Y_def cvx_def Let_def split: prod.split if_split_asm)
+    have "odd i"
+      using that step_odd by (auto simp: Step_class_def)
+    moreover have i_not_halted: "i \<notin> Step_class \<mu> l k {halted}"
+      using that by (auto simp: Step_class_def)
+    ultimately have iminus1_dreg: "i - 1 \<in> Step_class \<mu> l k {dreg_step}"
+      by (simp add: dreg_before_step not_halted_odd_RBS)
+    have "p0m * card (Y i) \<le> (1 - eps k powr (1/2)) * p (i-1) * card (Y i)"
+    proof (cases "i=1")
+      case True
+      with p0_01 show ?thesis 
+        by (simp add: p0m_def p_def pee_eq_p0 algebra_simps mult_right_mono)
+    next
+      case False
+      with \<open>odd i\<close> have "i>2"
+        by (metis Suc_lessI dvd_refl One_nat_def odd_pos one_add_one plus_1_eq_Suc)
+      have "i-2 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
+      proof (intro not_halted_odd_RBS)
+        show "i - 2 \<notin> Step_class \<mu> l k {halted}"
+          using i_not_halted Step_class_not_halted diff_le_self by blast
+        show "odd (i - 2)"
+          using \<open>2 < i\<close> \<open>odd i\<close> by auto
+      qed
+      have Y_6_2: "p (i-1) \<ge> p0 - 3 * eps k"
+        sorry
+      show ?thesis
+      proof (intro mult_right_mono)
+        have "eps k powr (1/2) * p (i-1) \<le> eps k powr (1/2) * 1"
+          unfolding p_def by (metis mult.commute mult_right_mono powr_ge_pzero pee_le1)
+        moreover have "3 * eps k \<le> eps k powr (1/2)"
+        proof -
+          have "3 * eps k = 3 * (eps k powr (1 / 2))\<^sup>2"
+            using eps_ge0 powr_half_sqrt real_sqrt_pow2 by presburger
+          also have "... \<le> 3 * ((1/3) * eps k powr (1 / 2))"
+            by (smt (verit) big13 mult_right_mono power2_eq_square powr_ge_pzero)
+          also have "... \<le> eps k powr (1/2)"
+            by simp
+          finally show ?thesis .
+        qed
+        ultimately show "p0m \<le> (1 - eps k powr (1 / 2)) * p (i - 1)"
+          using Y_6_2 by (simp add: p0m_def algebra_simps)
+      qed auto
+    qed
+    also have "... \<le> card (Neighbours Red (cvx \<mu> l k i) \<inter> Y i)"
+      using Red_5_8 [OF iminus1_dreg] cvx_in_Xseq that \<open>odd i\<close> by (fastforce simp: p_def Y_def)
+    finally show ?thesis
+      by (simp add: Yeq)
+  qed
+
+  define st where "st \<equiv> \<lambda>i. Step_class \<mu> l k {red_step,dboost_step} \<inter> {..<i}"
+  have "st (Suc i) = (if i \<in> Step_class \<mu> l k {red_step,dboost_step} then insert i (st i) else st i)" for i
+    by (auto simp: st_def less_Suc_eq)
+  then have "card (st (Suc i)) = (if i \<in> Step_class \<mu> l k {red_step,dboost_step} then Suc (card (st i)) else card (st i))" for i
+    by (simp add: st_def)
+
+  have "p0m ^ card (st i) \<le> (\<Prod>j<i. card (Y(Suc j)) / card (Y j))" for i
+  proof (induction i)
+    case 0
+    then show ?case
+      by (auto simp: st_def)
+  next
+    case (Suc i)
+    then show ?case
+      
+      sorry
+  qed
+
+    consider (RS) "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
+          | (BDH) "i \<in> Step_class \<mu> l k {bblue_step,dreg_step,halted}"
+      using stepkind.exhaust by (auto simp: Step_class_def)
+
+    sorry
+  have "p0m ^ st m \<le> (\<Prod>j<m. card (Y(Suc j)) / card (Y j))"
+    sorry
+  also have "... = card (Y m) / card (Y 0)"
   show ?thesis
     sorry
 qed
