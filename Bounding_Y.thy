@@ -646,7 +646,8 @@ proposition Y_6_1_aux:
   assumes big: "p0 \<ge> 2 * eps k powr (1/2)"
   defines "p \<equiv> pee \<mu> l k"
   defines "Y \<equiv> Yseq \<mu> l k"
-  shows "(p0 - 2 * eps k) ^ (s+t) \<le> card (Y m) / card (Y0)"
+  defines "st \<equiv> Step_class \<mu> l k {red_step,dboost_step} \<inter> {..<m}"
+  shows "(p0 - 2 * eps k powr (1/2)) ^ card st \<le> card (Y m) / card (Y0)"
 proof -
   define p0m where "p0m \<equiv> p0 - 2 * eps k powr (1/2)"
   have "p0m \<ge> 0"
@@ -717,19 +718,17 @@ proof -
     finally show ?thesis
       by (simp add: Yeq)
   qed
-
-  define st where "st \<equiv> \<lambda>i. Step_RS \<inter> {..<i}"
-  have "st (Suc i) = (if i \<in> Step_RS then insert i (st i) else st i)" for i
-    by (auto simp: st_def less_Suc_eq)
-  then have [simp]: "card (st (Suc i)) = (if i \<in> Step_RS then Suc (card (st i)) else card (st i))" for i
-    by (simp add: st_def)
-
-  have "p0m ^ card (st i) \<le> (\<Prod>j<i. card (Y(Suc j)) / card (Y j))" if "i\<le>m"for i
+  define ST where "ST \<equiv> \<lambda>i. Step_RS \<inter> {..<i}"
+  have "ST (Suc i) = (if i \<in> Step_RS then insert i (ST i) else ST i)" for i
+    by (auto simp: ST_def less_Suc_eq)
+  then have [simp]: "card (ST (Suc i)) = (if i \<in> Step_RS then Suc (card (ST i)) else card (ST i))" for i
+    by (simp add: ST_def)
+  have "p0m ^ card (ST i) \<le> (\<Prod>j<i. card (Y(Suc j)) / card (Y j))" if "i\<le>m"for i
     using that
   proof (induction i)
     case 0
     then show ?case
-      by (auto simp: st_def)
+      by (auto simp: ST_def)
   next
     case (Suc i)
     then have i: "i \<notin> Step_class \<mu> l k {halted}"
@@ -743,7 +742,7 @@ proof -
     then show ?case
     proof cases
       case RS
-      then have "p0m ^ card (st (Suc i)) = p0m * p0m ^ card (st i)"
+      then have "p0m ^ card (ST (Suc i)) = p0m * p0m ^ card (ST i)"
         by simp
       also have "... \<le> p0m * (\<Prod>j<i. card (Y(Suc j)) / card (Y j))"
         using Suc Suc_leD \<open>0 \<le> p0m\<close> mult_left_mono by blast
@@ -761,14 +760,17 @@ proof -
         by (simp add: Suc Suc_leD BD_card)
     qed      
   qed
-  then have "p0m ^ card (st m) \<le> (\<Prod>j<m. card (Y(Suc j)) / card (Y j))"
+  then have "p0m ^ card (ST m) \<le> (\<Prod>j<m. card (Y(Suc j)) / card (Y j))"
     by blast
   also have "... = card (Y m) / card (Y 0)"
-    using Yseq_gt_0 [OF not_halted_below_m]
-apply (simp add: prod_dividef)
-    sorry
+  proof -
+    have "\<And>i. i \<le> m \<Longrightarrow> card (Y i) \<noteq> 0"
+      by (metis Yseq_gt_0 Y_def less_irrefl not_halted_below_m)
+    then show ?thesis
+      using prod_lessThan_telescope [where f = "\<lambda>i. real (card (Y i))"] by simp
+  qed
   finally show ?thesis
-    sorry
+    by (simp add: ST_def st_def p0m_def Step_RS_def Y_def)
 qed
 
 

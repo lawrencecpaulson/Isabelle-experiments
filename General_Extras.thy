@@ -9,6 +9,32 @@ thm mult_le_cancel_iff1 (*MOVE TO A BETTER PLACE*)
 lemma disjnt_commute: "disjnt A B = disjnt B A"
   using disjnt_sym by blast
 
+thm sum_telescope
+lemma prod_telescope:
+  fixes f::"nat \<Rightarrow> 'a::field"
+  assumes "\<And>i. i\<le>n \<Longrightarrow> f (Suc i) \<noteq> 0"
+  shows "(\<Prod>i\<le>n. f i / f (Suc i)) = f 0 / f (Suc n)"
+  using assms by (induction n) auto
+
+lemma prod_telescope'':
+  fixes f::"nat \<Rightarrow> 'a::field"
+  assumes "m \<le> n"
+  assumes "\<And>i. i \<in> {m..n} \<Longrightarrow> f i \<noteq> 0"
+  shows   "(\<Prod>i = Suc m..n. f i / f (i - 1)) = f n / (f m)"
+  by (rule dec_induct[OF \<open>m \<le> n\<close>]) (auto simp add: assms field_simps)
+
+lemma prod_lessThan_telescope:
+  fixes f::"nat \<Rightarrow> 'a::field"
+  assumes "\<And>i. i\<le>n \<Longrightarrow> f i \<noteq> 0"
+  shows "(\<Prod>i<n. f (Suc i) / f i) = f n / f 0"
+  using assms by (induction n) auto
+
+lemma prod_lessThan_telescope':
+  fixes f::"nat \<Rightarrow> 'a::field"
+  assumes "\<And>i. i\<le>n \<Longrightarrow> f i \<noteq> 0"
+  shows "(\<Prod>i<n. f i / f (Suc i)) = f 0 / f n"
+  using assms by (induction n) auto
+
 text \<open>A bounded increasing sequence of finite sets eventually terminates\<close>
 lemma Union_incseq_finite:
   assumes fin: "\<And>n. finite (A n)" and N: "\<And>n. card (A n) < N" and "incseq A"
