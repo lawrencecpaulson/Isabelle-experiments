@@ -407,12 +407,10 @@ qed
 
 
 lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (2 * eps k powr (- 1/2)) \<le> 2"
-  apply (simp add: eps_def)
-  by real_asymp
+  unfolding eps_def by real_asymp
 
 lemma "\<forall>\<^sup>\<infinity>k. ((1 + eps k)^2) * eps k powr (1/2) \<le> 1"
-  apply (simp add: eps_def)
-  by real_asymp
+  unfolding eps_def by real_asymp
 
 text \<open>Following Bravik in excluding the even steps (degree regularisation).
       Assuming it hasn't halted, the conclusion also holds for the even cases anyway.\<close>
@@ -429,7 +427,7 @@ proposition Y_6_2_aux:
       "\<And>i. i \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2*(eps k powr (-1/2))"
       and Y_6_4_dbooSt: " \<And>i. i\<in>Step_class \<mu> l k {dboost_step} \<Longrightarrow> p i \<le> p (Suc i)"
     and finite_Z_class: "finite (Z_class \<mu> l k)"
-    and big2: "(1 + eps k) powr (2 * eps k powr (- 1/2)) \<le> 2"
+    and big2: "(1 + eps k) powr (2 * eps k powr (-1/2)) \<le> 2"
     and big1: "((1 + eps k)^2) * eps k powr (1/2) \<le> 1"
     and "k\<ge>16"  \<comment> \<open>bigness assumptions\<close>
   shows "p (Suc j) \<ge> p0 - 3 * eps k"
@@ -500,7 +498,7 @@ next
         show ?case
         proof (cases "j'+2 < m") 
           case True
-          with less.prems \<open>odd m\<close> \<open>even j'\<close>
+          with less.prems
           have Z_if: "Z m = (if p (Suc m) < p (m-1) then insert m (Z (m-2)) else Z (m-2))"
             by (auto simp add: Z_def; 
                 metis le_diff_conv2 Suc_leI add_2_eq_Suc' add_leE even_Suc nat_less_le odd_RBS)
@@ -639,32 +637,72 @@ next
   finally show ?thesis .
 qed
 
+
+
+lemma "\<forall>\<^sup>\<infinity>k. eps k powr (1/2) \<le> 1/3"
+  unfolding eps_def by real_asymp
+
 proposition Y_6_1_aux:
   fixes l k
-  assumes "0<\<mu>" "\<mu><1" and "k>0"
+  assumes "0<\<mu>" "\<mu><1" and "k>0" and big13: "eps k powr (1/2) \<le> 1/3"
   defines "p \<equiv> pee \<mu> l k"
   defines "Y \<equiv> Yseq \<mu> l k"
   shows "(p0 - 2 * eps k) ^ (s+t) \<le> card (Y i) / card (Y0)"
 proof -
-  have "(p0 - 2 * eps k) * card (Y i) \<le> card (Y (Suc i))" for i
+  have "(p0 - 2 * eps k powr (1/2)) * card (Y i) \<le> card (Y (Suc i))" for i
   proof -
-    consider (R) "i \<in> Step_class \<mu> l k {red_step}"
+    consider (RS) "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
            | (BDH) "i \<in> Step_class \<mu> l k {bblue_step,dreg_step,halted}"
-           | (S) "i \<in> Step_class \<mu> l k {dboost_step}"
       using stepkind.exhaust by (auto simp: Step_class_def)
     then show ?thesis
     proof cases
-      case R
-      then show ?thesis sorry
+      case RS
+      then have Yeq: "Y (Suc i) = Neighbours Red (cvx \<mu> l k i) \<inter> Y i"
+        by (auto simp add: step_kind_defs next_state_def degree_reg_def Y_def cvx_def Let_def split: prod.split if_split_asm)
+      have "odd i"
+        using RS step_odd by (auto simp: Step_class_def)
+      moreover have i_not_halted: "i \<notin> Step_class \<mu> l k {halted}"
+        using RS by (auto simp: Step_class_def)
+      ultimately have im1_dreg: "i - 1 \<in> Step_class \<mu> l k {dreg_step}"
+        by (simp add: dreg_before_step not_halted_odd_RBS)
+      have "i>2"
+        sorry
+      have "i-2 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
+      proof (intro not_halted_odd_RBS)
+        show "i - 2 \<notin> Step_class \<mu> l k {halted}"
+          using i_not_halted Step_class_not_halted diff_le_self by blast
+        show "odd (i - 2)"
+          using \<open>2 < i\<close> \<open>odd i\<close> by auto
+      qed
+      have Y_6_2: "p (i-1) \<ge> p0 - 3 * eps k"
+        sorry
+      have "(p0 - 2 * eps k powr (1/2)) * card (Y i) \<le> (1 - eps k powr (1/2)) * p (i-1) * card (Y i)"
+      proof (intro mult_right_mono)
+        have "eps k powr (1/2) * p (i-1) \<le> eps k powr (1/2) * 1"
+          unfolding p_def by (metis mult.commute mult_right_mono powr_ge_pzero pee_le1)
+        moreover have "3 * eps k \<le> eps k powr (1/2)"
+        proof -
+          have "3 * eps k = 3 * (eps k powr (1 / 2))\<^sup>2"
+            using eps_ge0 powr_half_sqrt real_sqrt_pow2 by presburger
+          also have "... \<le> 3 * ((1/3) * eps k powr (1 / 2))"
+            by (smt (verit) big13 mult_right_mono power2_eq_square powr_ge_pzero)
+          also have "... \<le> eps k powr (1/2)"
+            by simp
+          finally show ?thesis .
+        qed
+        ultimately show "p0 - 2 * eps k powr (1 / 2) \<le> (1 - eps k powr (1 / 2)) * p (i - 1)"
+          using Y_6_2 by (simp add: algebra_simps)
+      qed auto
+      also have "... \<le> card (Neighbours Red (cvx \<mu> l k i) \<inter> Y i)"
+        using Red_5_8 [OF im1_dreg] cvx_in_Xseq RS \<open>odd i\<close> by (fastforce simp: p_def Y_def)
+      finally show ?thesis
+        by (simp add: Yeq)
     next
       case BDH
       then have "Y (Suc i) = Y i"
         by (auto simp add: step_kind_defs next_state_def degree_reg_def Y_def Let_def split: prod.split if_split_asm)
       with p0_01 \<open>k>0\<close> show ?thesis
-        by (smt (verit) eps_gt0 mult_le_cancel_right2 of_nat_less_0_iff)
-    next
-      case S
-      then show ?thesis sorry
+        by (smt (verit) mult_left_le_one_le neg_prod_le of_nat_0_le_iff powr_ge_pzero)
     qed
   qed
   show ?thesis
