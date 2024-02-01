@@ -27,7 +27,7 @@ proof -
   have "Xseq \<mu> l k (Suc i) = Neighbours Red (cvx \<mu> l k i) \<inter> X"
        "Yseq \<mu> l k (Suc i) = Neighbours Red (cvx \<mu> l k i) \<inter> Y"
     using step nonterm \<open>odd i\<close> non_mb red
-    by (auto simp add: Xseq_def Yseq_def next_state_def cvx_def Let_def split: prod.split)
+    by (auto simp: Xseq_def Yseq_def next_state_def cvx_def Let_def split: prod.split)
   then show ?thesis
     using red by (simp add: X_def Y_def reddish_def pee_def)
 qed
@@ -81,7 +81,7 @@ proof -
   then have  "Xseq \<mu> l k (Suc i') = X_degree_reg k (Xseq \<mu> l k i') (Yseq \<mu> l k i')"
              "Yseq \<mu> l k (Suc i') = Yseq \<mu> l k i'"
       and nonterm': "\<not> termination_condition l k (Xseq \<mu> l k i') (Yseq \<mu> l k i')"
-    by (auto simp add: degree_reg_def X_degree_reg_def step_kind_defs split: if_split_asm prod.split_asm)
+    by (auto simp: degree_reg_def X_degree_reg_def step_kind_defs split: if_split_asm prod.split_asm)
   then have Xeq: "X = X_degree_reg k (Xseq \<mu> l k i') (Yseq \<mu> l k i')"
        and  Yeq: "Y = Yseq \<mu> l k i'"
     using Suci' by (auto simp: X_def Y_def)
@@ -89,7 +89,7 @@ proof -
   have "T \<subseteq> X"
     using bluebook by (metis V_state choose_blue_book_subset local.step)
   then have T_reds: "\<And>x. x \<in> T \<Longrightarrow> pm * card Y \<le> card (Neighbours Red x \<inter> Y)"
-    by (auto simp add: Xeq Yeq pm_def X_degree_reg_def pee_def red_dense_def)
+    by (auto simp: Xeq Yeq pm_def X_degree_reg_def pee_def red_dense_def)
   have "good_blue_book \<mu> X (S,T)"
     by (metis choose_blue_book_works V_state bluebook local.step)
   then have False if "real (card T) = 0"
@@ -115,7 +115,7 @@ qed
 
 lemmas Y_6_4_dbooSt = Red_5_3
 
-subsection \<open>Towards Lemmas 6.3 and 6.2\<close>
+subsection \<open>Towards Lemmas 6.3\<close>
 
 definition "Z_class \<equiv> \<lambda>\<mu> l k. {i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}.
                                 pee \<mu> l k (Suc i) < pee \<mu> l k (i-1) \<and> pee \<mu> l k (i-1) \<le> p0}"
@@ -141,7 +141,7 @@ qed
 text \<open>Lemma 6.3 except for the limit\<close>
 lemma Y_6_3_Main:
   assumes "0<\<mu>" "\<mu><1" "Colours l k"
-  assumes Red53: "Lemma_5_3 \<mu> l" and bblue_step_limit: "Lemma_bblue_step_limit \<mu> l"
+  assumes Red53: "Lemma_Red_5_3 \<mu> l" and bblue_step_limit: "Lemma_bblue_step_limit \<mu> l"
   defines "p \<equiv> pee \<mu> l k"
   shows "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k"
 proof -
@@ -150,19 +150,19 @@ proof -
   { fix i
     assume i: "i \<in> Step_class \<mu> l k {dboost_step}"
     moreover have "odd i"
-      using step_odd [of i] i  by (force simp add: Step_class_insert_NO_MATCH)
+      using step_odd [of i] i  by (force simp: Step_class_insert_NO_MATCH)
     ultimately have "i-1 \<in> Step_class \<mu> l k {dreg_step}"
       by (simp add: dreg_before_step Step_class_insert_NO_MATCH)
     then have "p (i-1) \<le> p i \<and> p i \<le> p (Suc i)"
       using \<open>Colours l k\<close> Red53 p_def
-      by (metis Lemma_5_3_def One_nat_def Y_6_4_DegreeReg \<open>odd i\<close> i odd_Suc_minus_one)
+      by (metis Lemma_Red_5_3_def One_nat_def Y_6_4_DegreeReg \<open>odd i\<close> i odd_Suc_minus_one)
   }        
   then have dboost: "Step_class \<mu> l k {dboost_step} \<inter> Z_class \<mu> l k = {}"
     by (fastforce simp: Z_class_def p_def)
   { fix i
     assume i: "i \<in> Step_class \<mu> l k {bblue_step} \<inter> Z_class \<mu> l k" 
     then have "i-1 \<in> Step_class \<mu> l k {dreg_step}"
-      using dreg_before_step step_odd i by (force simp add: Step_class_insert_NO_MATCH)
+      using dreg_before_step step_odd i by (force simp: Step_class_insert_NO_MATCH)
     have pee: "p (Suc i) < p (i-1)" "p (i-1) \<le> p0"
       and iB: "i \<in> Step_class \<mu> l k {bblue_step}"
       using i by (auto simp: Z_class_def p_def)
@@ -182,7 +182,7 @@ proof -
     also have "\<dots> \<le> 1/k"
     proof -
       have "real k powr - (1/8) \<le> 1"
-        using \<open>k>0\<close> by (force simp add: less_eq_real_def nat_less_real_le powr_less_one)
+        using \<open>k>0\<close> by (force simp: less_eq_real_def nat_less_real_le powr_less_one)
       then show ?thesis
         by (simp add: alpha_eq eps_def powr_powr divide_le_cancel flip: powr_add)
     qed
@@ -269,16 +269,22 @@ proof -
     by (subst eq) (simp add: sum.union_disjoint dboost fin_bblue fin_red disjoint_iff bblue_not_red)
 qed
 
+definition 
+  "Lemma_6_3 \<equiv> 
+      \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> (\<Sum>i \<in> Z_class \<mu> l k. pee \<mu> l k (i-1) - pee \<mu> l k (Suc i)) \<le> 2 * eps k"
+
 corollary Y_6_3:
   assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> (\<Sum>i \<in> Z_class \<mu> l k. pee \<mu> l k (i-1) - pee \<mu> l k (Suc i)) \<le> 2 * eps k"
+  shows "\<forall>\<^sup>\<infinity>l. Lemma_6_3 \<mu> l"
 proof -
-  have "\<forall>\<^sup>\<infinity>l. Lemma_5_3 \<mu> l \<and> Lemma_bblue_step_limit \<mu> l"
+  have "\<forall>\<^sup>\<infinity>l. Lemma_Red_5_3 \<mu> l \<and> Lemma_bblue_step_limit \<mu> l"
     using eventually_conj Red_5_3 [OF assms] bblue_step_limit [OF \<open>0<\<mu>\<close>]
     by blast
   with Y_6_3_Main[OF assms] show ?thesis
-    by (simp add: eventually_mono)
+    by (simp add: Lemma_6_3_def eventually_mono)
 qed
+
+subsection \<open>Lemma 6.5\<close>
 
 lemma Y_6_5_Red:
   assumes i: "i \<in> Step_class \<mu> l k {red_step}" and "k\<ge>16"
@@ -319,7 +325,7 @@ next
   also have "\<dots> < p i - alpha k (h)"
     using lesspi by (simp add: alpha_def)
   also have "\<dots> \<le> p (Suc i)"
-    using Y_6_4_Red i by (force simp add: h_def p_def)
+    using Y_6_4_Red i by (force simp: h_def p_def)
   finally have "qfun k (h-3) < p (Suc i)" .
   with hgt_greater[OF\<open>k>0\<close>] show ?thesis
     by force
@@ -331,11 +337,15 @@ lemma Y_6_5_DegreeReg:
   using hgt_mono Y_6_4_DegreeReg assms by presburger
 
 
+definition 
+  "Lemma_6_5_dbooSt \<equiv> 
+      \<lambda>\<mu> l. \<forall>k. \<forall>i \<in> Step_class \<mu> l k {dboost_step}.
+                     Colours l k \<longrightarrow> hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k i)"
+
 lemma Y_6_5_dbooSt:
   assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>i \<in> Step_class \<mu> l k {dboost_step}.
-                     Colours l k \<longrightarrow> hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k i)"
-  using Y_6_4_dbooSt[OF assms] unfolding Lemma_5_3_def
+  shows "\<forall>\<^sup>\<infinity>l. Lemma_6_5_dbooSt \<mu> l"
+  using Y_6_4_dbooSt[OF assms] unfolding Lemma_Red_5_3_def Lemma_6_5_dbooSt_def
   by (smt (verit, ccfv_threshold) eventually_at_top_linorder Colours_kn0 hgt_mono)
 
 text \<open>this remark near the top of page 19 only holds in the limit\<close>
@@ -346,7 +356,7 @@ lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (- real (nat \<lfloor>2 * 
 
 definition "Big_Y_6_5_Bblue \<equiv> \<lambda>k. (1 + eps k) powr (- real (nat \<lfloor>2*(eps k powr (-1/2))\<rfloor>)) \<le> 1 - eps k powr (1/2)" 
 
-lemma Y_6_5_Bblue:
+lemma Y_6_5_Bblue_Main:
   fixes k::nat and \<kappa>::real
   defines "\<kappa> \<equiv> eps k powr (-1/2)"
   assumes i: "i \<in> Step_class \<mu> l k {bblue_step}" and "k>0" "0<\<mu>"
@@ -402,31 +412,60 @@ next
     by (smt (verit, del_insts) of_nat_0 hgt_gt_0 nat_less_real_le)
 qed
 
+definition "Lemma_Y_6_5_Bblue \<equiv> \<lambda> \<mu> l. \<forall>k i. k\<ge>l \<longrightarrow> i \<in> Step_class \<mu> l k {bblue_step} \<longrightarrow> hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k (i-1)) - 2 * eps k powr (-1/2)"
 
-lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (2 * eps k powr (- 1/2)) \<le> 2"
-  unfolding eps_def by real_asymp
+lemma Y_6_5_Bblue:
+  assumes "0<\<mu>"
+  shows "\<forall>\<^sup>\<infinity>l. Lemma_Y_6_5_Bblue \<mu> l"
+proof -
+  have "\<forall>\<^sup>\<infinity>l. Big_Y_6_5_Bblue l"
+    unfolding Big_Y_6_5_Bblue_def eps_def
+    by real_asymp
+  then have "\<forall>\<^sup>\<infinity>l. l>0 \<and> (\<forall>k. k\<ge>l \<longrightarrow> Big_Y_6_5_Bblue k)"
+    using eventually_all_ge_at_top
+    using eventually_conj eventually_gt_at_top by blast
+  moreover have "\<And>l. 0 < l \<and> (\<forall>k\<ge>l. Big_Y_6_5_Bblue k) \<Longrightarrow> Lemma_Y_6_5_Bblue \<mu> l"
+    unfolding Lemma_Y_6_5_Bblue_def
+    by (intro strip Y_6_5_Bblue_Main) (auto simp: assms)
+  ultimately show ?thesis
+    by (rule eventually_mono)
+qed
 
-lemma "\<forall>\<^sup>\<infinity>k. ((1 + eps k)^2) * eps k powr (1/2) \<le> 1"
-  unfolding eps_def by real_asymp
+subsection \<open>Lemma 6.2\<close>
 
-text \<open>Following Bravik in excluding the even steps (degree regularisation).
+definition "Big_Y_6_2 \<equiv> \<lambda> \<mu> l. Lemma_6_3 \<mu> l \<and> Lemma_6_5_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l 
+               \<and> Lemma_Red_5_3 \<mu> l \<and> l\<ge>16
+               \<and> (\<forall>k. Colours l k \<longrightarrow> finite (Z_class \<mu> l k))
+               \<and> ((1 + eps l)^2) * eps l powr (1/2) \<le> 1
+               \<and> (1 + eps l) powr (2 * eps l powr (- 1/2)) \<le> 2
+               \<and> l \<ge> 16"
+
+text \<open>establishing the size requirements for 6.2\<close>
+lemma Big_Y_6_2:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_Y_6_2 \<mu> l"
+proof -
+  have "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Z_class \<mu> l k)"
+    using assms finite_Z_class by presburger
+  moreover have "\<forall>\<^sup>\<infinity>l. ((1 + eps l)^2) * eps l powr (1/2) \<le> 1"
+    unfolding eps_def by real_asymp
+  moreover have "\<forall>\<^sup>\<infinity>l. (1 + eps l) powr (2 * eps l powr (- 1/2)) \<le> 2"
+    unfolding eps_def by real_asymp
+  moreover have "\<forall>\<^sup>\<infinity>l. l\<ge>16"
+    by real_asymp
+  ultimately show ?thesis
+    by (simp add: Big_Y_6_2_def eventually_conj Y_6_3 Y_6_5_dbooSt Y_6_5_Bblue Red_5_3 assms)
+qed
+
+text \<open>Following Bhavik in excluding the even steps (degree regularisation).
       Assuming it hasn't halted, the conclusion also holds for the even cases anyway.\<close>
-proposition Y_6_2_aux:
+proposition Y_6_2_Main:
   fixes l k
   assumes "0<\<mu>"
   defines "p \<equiv> pee \<mu> l k"
   defines "RBS \<equiv> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
-  assumes j: "j \<in> RBS" and "k>0"
-  assumes Y_6_3_Main: "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k" 
-    and Y_6_5_dbooSt: 
-      "\<And>i. i \<in> Step_class \<mu> l k {dboost_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p i)"
-    and Y_6_5_Bblue: 
-      "\<And>i. i \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2*(eps k powr (-1/2))"
-      and Y_6_4_dbooSt: " \<And>i. i\<in>Step_class \<mu> l k {dboost_step} \<Longrightarrow> p i \<le> p (Suc i)"
-    and finite_Z_class: "finite (Z_class \<mu> l k)"
-    and big2: "(1 + eps k) powr (2 * eps k powr (-1/2)) \<le> 2"
-    and big1: "((1 + eps k)^2) * eps k powr (1/2) \<le> 1"
-    and "k\<ge>16"  \<comment> \<open>bigness assumptions\<close>
+  assumes j: "j \<in> RBS" "Colours l k"
+  assumes big: "\<And>k. k\<ge>l \<Longrightarrow> Big_Y_6_2 \<mu> k"
   shows "p (Suc j) \<ge> p0 - 3 * eps k"
 proof (cases "p (Suc j) \<ge> p0")
   case True
@@ -435,6 +474,18 @@ proof (cases "p (Suc j) \<ge> p0")
 next
   case False
   then have pj_less: "p(Suc j) < p0" by linarith
+  obtain "k>0" "k\<ge>l"
+    using \<open>Colours l k\<close>
+    by (meson Colours_def Colours_kn0) 
+  then have Y_6_3_Main: "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k" 
+    and Y_6_5_dbooSt: "\<And>i. i \<in> Step_class \<mu> l k {dboost_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p i)"
+    and Y_6_5_Bblue:  "\<And>i. i \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2*(eps k powr (-1/2))"
+    and Y_6_4_dbooSt: " \<And>i. i \<in> Step_class \<mu> l k {dboost_step} \<Longrightarrow> p i \<le> p (Suc i)"
+    and finite_Z_class: "finite (Z_class \<mu> l k)"
+    and big1: "((1 + eps k)^2) * eps k powr (1/2) \<le> 1" and big2: "(1 + eps k) powr (2 * eps k powr (-1/2)) \<le> 2"
+    and "k\<ge>16"
+    using big \<open>Colours l k\<close> 
+    by (auto simp: Big_Y_6_2_def Lemma_6_3_def Lemma_6_5_dbooSt_def Lemma_Y_6_5_Bblue_def Lemma_Red_5_3_def p_def Colours_kn0)
   define J where "J \<equiv> {j'. j'<j \<and> p j' \<ge> p0 \<and> even j'}"
   have "finite J"
     by (auto simp: J_def)
@@ -446,12 +497,12 @@ next
   have non_halted: "j \<notin> Step_class \<mu> l k {halted}"
     using j by (auto simp: Step_class_def RBS_def)
   have exists: "J \<noteq> {}"
-    using \<open>0 < j\<close> \<open>p 0 = p0\<close> by (force simp add: J_def less_eq_real_def)
+    using \<open>0 < j\<close> \<open>p 0 = p0\<close> by (force simp: J_def less_eq_real_def)
   define j' where "j' \<equiv> Max J"
   have "j' \<in> J"
-    using \<open>finite J\<close> exists by (force simp add: j'_def)
+    using \<open>finite J\<close> exists by (force simp: j'_def)
   then have "j' < j" "even j'" and pSj': "p j' \<ge> p0"
-    by (auto simp add: J_def odd_RBS)
+    by (auto simp: J_def odd_RBS)
   have maximal: "j'' \<le> j'" if "j'' \<in> J" for j''
     using \<open>finite J\<close> exists by (simp add: j'_def that)
   have "p (j'+2) - 2 * eps k \<le> p (j'+2) - (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))"
@@ -470,7 +521,7 @@ next
         fix i
         assume i: "i \<in> Z j"
         then have dreg: "i-1 \<in> Step_class \<mu> l k {dreg_step}" and "i\<noteq>0" "j' < i"
-          by (auto simp add: Z_def RBS_def dreg_before_step)
+          by (auto simp: Z_def RBS_def dreg_before_step)
         with i dreg maximal have "p (i-1) < p0"
           unfolding Z_def J_def
           using Suc_less_eq2 less_eq_Suc_le odd_RBS by fastforce
@@ -497,12 +548,12 @@ next
           case True
           with less.prems
           have Z_if: "Z m = (if p (Suc m) < p (m-1) then insert m (Z (m-2)) else Z (m-2))"
-            by (auto simp add: Z_def; 
+            by (auto simp: Z_def; 
                 metis le_diff_conv2 Suc_leI add_2_eq_Suc' add_leE even_Suc nat_less_le odd_RBS)
           have "m-2 \<in> RBS"
             using True \<open>m \<in> RBS\<close> step_odd_minus2 by (auto simp: RBS_def)
           then have *: "p (j'+2) - p (m - Suc 0) \<le> (\<Sum>i\<in>Z (m - 2). p (i-1) - p (Suc i))"
-            using less.IH True less \<open>j' \<in> J\<close> by (force simp add: J_def Suc_less_eq2)
+            using less.IH True less \<open>j' \<in> J\<close> by (force simp: J_def Suc_less_eq2)
           moreover have "m \<notin> Z (m - 2)"
             by (auto simp: Z_def)
           ultimately show ?thesis
@@ -514,7 +565,7 @@ next
           then have "Z m = {}"
             by (auto simp: Z_def)
           then show ?thesis
-            using less.prems False by (auto simp add: eval_nat_numeral)
+            using less.prems False by (auto simp: eval_nat_numeral)
         qed
       qed
       then show ?thesis
@@ -579,7 +630,7 @@ next
       by (simp add: inverse_eq_divide powr_half_sqrt real_div_sqrt)
     have "p0 - p j' \<le> 0"
       by (simp add: pSj')
-    also have "... \<le> 2 * eps k powr (1/2) / k - (eps k powr (1/2)) * (1 + eps k) ^ (hgt k (p j') - 1) / k"
+    also have "\<dots> \<le> 2 * eps k powr (1/2) / k - (eps k powr (1/2)) * (1 + eps k) ^ (hgt k (p j') - 1) / k"
       using mult_left_mono [OF 2, of "eps k powr (1/2) / k"]
       by (simp add: field_simps diff_divide_distrib)
     finally have "p0 - 2 * eps k powr (1/2) / k 
@@ -623,7 +674,7 @@ next
       using Y_6_4_Bblue \<open>0<\<mu>\<close> by (force simp: p_def)
   next
     case S
-    show ?thesis thm assms(9)
+    show ?thesis
       using Y_6_4_DegreeReg S \<open>p (j'+2) < p0\<close> Y_6_4_dbooSt j'_dreg pSj' p_def by fastforce
   qed
   finally have "p0 - eps k \<le> p (j'+2)" .
@@ -634,24 +685,42 @@ next
   finally show ?thesis .
 qed
 
+definition "Lemma_Y_6_2 \<equiv> \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> 
+              (\<forall>j \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}. pee \<mu> l k (Suc j) \<ge> p0 - 3 * eps k)"
 
+lemma Y_6_2:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Lemma_Y_6_2 \<mu> l"
+proof -
+  have big: "\<forall>\<^sup>\<infinity>l. \<forall>k. k\<ge>l \<longrightarrow> Big_Y_6_2 \<mu> k"
+    using Big_Y_6_2 [OF assms] eventually_all_ge_at_top by blast
+  with Y_6_2_Main eventually_mono \<open>0<\<mu>\<close> show ?thesis
+    unfolding Lemma_Y_6_2_def
+    by (smt (verit, del_insts))
+qed
 
+subsection \<open>Lemma 6.1\<close>
+
+text \<open>And therefore @{text "3\<epsilon> \<le> \<epsilon>^{1/2}"}\<close>
 lemma "\<forall>\<^sup>\<infinity>k. eps k powr (1/2) \<le> 1/3"
   unfolding eps_def by real_asymp
 
 proposition Y_6_1_aux:
   fixes l k
-  assumes "0<\<mu>" "\<mu><1" and "k>0" and big13: "eps k powr (1/2) \<le> 1/3"
+  assumes "0<\<mu>" "\<mu><1" and "Colours l k"
   assumes not_halted: "m \<notin> Step_class \<mu> l k {halted}"
-  assumes big: "p0 \<ge> 2 * eps k powr (1/2)"
+    and big13: "eps k powr (1/2) \<le> 1/3" and big_p0: "p0 \<ge> 2 * eps k powr (1/2)"
+  assumes Y_6_2: "Lemma_Y_6_2 \<mu> l"
   defines "p \<equiv> pee \<mu> l k"
   defines "Y \<equiv> Yseq \<mu> l k"
   defines "st \<equiv> Step_class \<mu> l k {red_step,dboost_step} \<inter> {..<m}"
   shows "(p0 - 2 * eps k powr (1/2)) ^ card st \<le> card (Y m) / card (Y0)"
 proof -
+  have "k>0"
+    using Colours_kn0 \<open>Colours l k\<close> by blast 
   define p0m where "p0m \<equiv> p0 - 2 * eps k powr (1/2)"
   have "p0m \<ge> 0"
-    using big by (simp add: p0m_def)
+    using big_p0 by (simp add: p0m_def)
   define Step_RS where "Step_RS \<equiv> Step_class \<mu> l k {red_step,dboost_step}"
   define Step_BD where "Step_BD \<equiv> Step_class \<mu> l k {bblue_step,dreg_step}"
   have not_halted_below_m: "i \<notin> Step_class \<mu> l k {halted}" if "i\<le>m" for i
@@ -661,7 +730,7 @@ proof -
   proof -
     have "Y (Suc i) = Y i"
       using that
-      by (auto simp add: step_kind_defs Step_BD_def next_state_def degree_reg_def Y_def split: prod.split if_split_asm)
+      by (auto simp: step_kind_defs Step_BD_def next_state_def degree_reg_def Y_def split: prod.split if_split_asm)
     with p0_01 \<open>k>0\<close> show ?thesis
       by (smt (verit) p0m_def mult_left_le_one_le neg_prod_le of_nat_0_le_iff powr_ge_pzero)
   qed
@@ -669,7 +738,7 @@ proof -
     if "i \<in> Step_RS" for i
   proof -
     have Yeq: "Y (Suc i) = Neighbours Red (cvx \<mu> l k i) \<inter> Y i"
-      using that by (auto simp add: step_kind_defs Step_RS_def next_state_def degree_reg_def Y_def cvx_def Let_def split: prod.split if_split_asm)
+      using that by (auto simp: step_kind_defs Step_RS_def next_state_def degree_reg_def Y_def cvx_def Let_def split: prod.split if_split_asm)
     have "odd i"
       using that step_odd by (auto simp: Step_class_def Step_RS_def)
     moreover have i_not_halted: "i \<notin> Step_class \<mu> l k {halted}"
@@ -692,27 +761,28 @@ proof -
         show "odd (i - 2)"
           using \<open>2 < i\<close> \<open>odd i\<close> by auto
       qed
-      have Y_6_2: "p (i-1) \<ge> p0 - 3 * eps k"
-        sorry
+      then have Y62: "p (i-1) \<ge> p0 - 3 * eps k"
+        using Y_6_2 \<open>Colours l k\<close> unfolding Lemma_Y_6_2_def p_def
+        by (metis Suc_1 Suc_diff_Suc Suc_lessD \<open>2 < i\<close>)
       show ?thesis
       proof (intro mult_right_mono)
         have "eps k powr (1/2) * p (i-1) \<le> eps k powr (1/2) * 1"
           unfolding p_def by (metis mult.commute mult_right_mono powr_ge_pzero pee_le1)
         moreover have "3 * eps k \<le> eps k powr (1/2)"
         proof -
-          have "3 * eps k = 3 * (eps k powr (1 / 2))\<^sup>2"
+          have "3 * eps k = 3 * (eps k powr (1/2))\<^sup>2"
             using eps_ge0 powr_half_sqrt real_sqrt_pow2 by presburger
-          also have "... \<le> 3 * ((1/3) * eps k powr (1 / 2))"
+          also have "\<dots> \<le> 3 * ((1/3) * eps k powr (1/2))"
             by (smt (verit) big13 mult_right_mono power2_eq_square powr_ge_pzero)
-          also have "... \<le> eps k powr (1/2)"
+          also have "\<dots> \<le> eps k powr (1/2)"
             by simp
           finally show ?thesis .
         qed
-        ultimately show "p0m \<le> (1 - eps k powr (1 / 2)) * p (i - 1)"
-          using Y_6_2 by (simp add: p0m_def algebra_simps)
+        ultimately show "p0m \<le> (1 - eps k powr (1/2)) * p (i - 1)"
+          using Y62 by (simp add: p0m_def algebra_simps)
       qed auto
     qed
-    also have "... \<le> card (Neighbours Red (cvx \<mu> l k i) \<inter> Y i)"
+    also have "\<dots> \<le> card (Neighbours Red (cvx \<mu> l k i) \<inter> Y i)"
       using Red_5_8 [OF iminus1_dreg] cvx_in_Xseq that \<open>odd i\<close> 
         by (fastforce simp: p_def Y_def Step_RS_def)
     finally show ?thesis
@@ -744,14 +814,14 @@ proof -
       case RS
       then have "p0m ^ card (ST (Suc i)) = p0m * p0m ^ card (ST i)"
         by simp
-      also have "... \<le> p0m * (\<Prod>j<i. card (Y(Suc j)) / card (Y j))"
+      also have "\<dots> \<le> p0m * (\<Prod>j<i. card (Y(Suc j)) / card (Y j))"
         using Suc Suc_leD \<open>0 \<le> p0m\<close> mult_left_mono by blast
-      also have "... \<le> (card (Y (Suc i)) / card (Y i)) * (\<Prod>j<i. card (Y (Suc j)) / card (Y j))"
+      also have "\<dots> \<le> (card (Y (Suc i)) / card (Y i)) * (\<Prod>j<i. card (Y (Suc j)) / card (Y j))"
       proof (intro mult_right_mono)
-        show "p0m \<le> real (card (Y (Suc i))) / real (card (Y i))"
+        show "p0m \<le> card (Y (Suc i)) / card (Y i)"
           by (simp add: RS RS_card Ynz pos_le_divide_eq)
       qed (simp add: prod_nonneg)
-      also have "... = (\<Prod>j<Suc i. real (card (Y (Suc j))) / real (card (Y j)))"
+      also have "\<dots> = (\<Prod>j<Suc i.  card (Y (Suc j)) / card (Y j))"
         by simp
       finally show ?thesis .
     next
@@ -762,7 +832,7 @@ proof -
   qed
   then have "p0m ^ card (ST m) \<le> (\<Prod>j<m. card (Y(Suc j)) / card (Y j))"
     by blast
-  also have "... = card (Y m) / card (Y 0)"
+  also have "\<dots> = card (Y m) / card (Y 0)"
   proof -
     have "\<And>i. i \<le> m \<Longrightarrow> card (Y i) \<noteq> 0"
       by (metis Yseq_gt_0 Y_def less_irrefl not_halted_below_m)

@@ -818,13 +818,13 @@ corollary Red_5_2:
   unfolding eventually_sequentially by (meson order.trans)
 
 definition 
-  "Lemma_5_3 \<equiv> 
+  "Lemma_Red_5_3 \<equiv> 
       \<lambda>\<mu> l. \<forall>k. \<forall>i \<in> Step_class \<mu> l k {dboost_step}.
             Colours l k \<longrightarrow> pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
 
 text \<open>This is a weaker consequence of the previous results\<close>
 corollary Red_5_3:
-  assumes "0<\<mu>" "\<mu><1" shows "\<forall>\<^sup>\<infinity>l. Lemma_5_3 \<mu> l"
+  assumes "0<\<mu>" "\<mu><1" shows "\<forall>\<^sup>\<infinity>l. Lemma_Red_5_3 \<mu> l"
 proof -
   define Big where 
     "Big \<equiv> \<lambda>l. 1 / (real l)\<^sup>2 \<le> 1 / (l / eps l / (1 - eps l) + 1) \<and> l>1 \<and> Big_Red_5_1 \<mu> l"
@@ -883,7 +883,7 @@ proof -
       by auto
   qed
   with Big show ?thesis
-    unfolding eventually_sequentially Lemma_5_3_def by (meson order.trans)
+    unfolding eventually_sequentially Lemma_Red_5_3_def by (meson order.trans)
 qed
 
 end (*context Diagonal*)
