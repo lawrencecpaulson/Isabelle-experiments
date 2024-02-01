@@ -4,18 +4,20 @@ theory General_Extras imports
 
 begin
 
-thm mult_le_cancel_iff1 (*MOVE TO A BETTER PLACE*)
+thm mult_le_cancel_iff1 (*2024-02-01: renamed and moved*)
 
+(*2024-02-01: added*)
 lemma disjnt_commute: "disjnt A B = disjnt B A"
   using disjnt_sym by blast
 
-thm sum_telescope
+(*2024-02-01: added*)
 lemma prod_telescope:
   fixes f::"nat \<Rightarrow> 'a::field"
   assumes "\<And>i. i\<le>n \<Longrightarrow> f (Suc i) \<noteq> 0"
   shows "(\<Prod>i\<le>n. f i / f (Suc i)) = f 0 / f (Suc n)"
   using assms by (induction n) auto
 
+(*2024-02-01: added*)
 lemma prod_telescope'':
   fixes f::"nat \<Rightarrow> 'a::field"
   assumes "m \<le> n"
@@ -23,12 +25,14 @@ lemma prod_telescope'':
   shows   "(\<Prod>i = Suc m..n. f i / f (i - 1)) = f n / (f m)"
   by (rule dec_induct[OF \<open>m \<le> n\<close>]) (auto simp add: assms field_simps)
 
+(*2024-02-01: added*)
 lemma prod_lessThan_telescope:
   fixes f::"nat \<Rightarrow> 'a::field"
   assumes "\<And>i. i\<le>n \<Longrightarrow> f i \<noteq> 0"
   shows "(\<Prod>i<n. f (Suc i) / f i) = f n / f 0"
   using assms by (induction n) auto
 
+(*2024-02-01: added*)
 lemma prod_lessThan_telescope':
   fixes f::"nat \<Rightarrow> 'a::field"
   assumes "\<And>i. i\<le>n \<Longrightarrow> f i \<noteq> 0"
@@ -65,14 +69,14 @@ proof (rule ccontr)
     using linorder_not_less by auto
 qed
 
-(*replace existing one in development version, Set_Interval: cleaner proof*)
+(*2024-02-01: replaced existing one*)
 lemma sum_diff_split:
   fixes f:: "nat \<Rightarrow> 'a::ab_group_add"
   assumes "m \<le> n"
   shows "(\<Sum>i\<le>n. f i) - (\<Sum>i<m. f i) = (\<Sum>i\<le>n - m. f(n - i))"
 proof -
   have "\<And>i. i \<le> n-m \<Longrightarrow> \<exists>k\<ge>m. k \<le> n \<and> i = n-k"
-    using \<open>m\<le>n\<close> by presburger
+    by (metis Nat.le_diff_conv2 add.commute \<open>m\<le>n\<close> diff_diff_cancel diff_le_self order.trans)
   then have eq: "{..n-m} = (-)n ` {m..n}"
     by force
   have inj: "inj_on ((-)n) {m..n}"
@@ -85,9 +89,7 @@ proof -
   finally show ?thesis by metis
 qed
 
-(*the corresponding strict inequality can be proved under the assumptions  "1 < s" "s \<le> n"
-  using fact_less_fact_power*)
-thm binomial_fact_lemma
+(*2024-02-01: added*)
 lemma binomial_fact_pow: "(n choose s) * fact s \<le> n^s"
 proof (cases "s \<le> n")
   case True
@@ -112,19 +114,15 @@ proof -
     by presburger
 qed
 
+(*2024-02-01: added*)
 context linordered_semidom
 begin
-
-thm power_le_one_iff (*MOVE TO A BETTER PLACE AND GENERALISE THUS*)
 lemma power_le_one_iff: "0 \<le> a \<Longrightarrow> a ^ n \<le> 1 \<longleftrightarrow> (n = 0 \<or> a \<le> 1)"
   by (metis (mono_tags) gr0I nle_le one_le_power power_le_one self_le_power power_0)
-
 lemma power_less1_D: "a^n < 1 \<Longrightarrow> a < 1"
   using not_le one_le_power by blast
-
 lemma power_less_one_iff: "0 \<le> a \<Longrightarrow> a ^ n < 1 \<longleftrightarrow> (n > 0 \<and> a < 1)"
   by (metis (mono_tags) power_one power_strict_mono power_less1_D less_le_not_le neq0_conv power_0)
-
 end
 
 
