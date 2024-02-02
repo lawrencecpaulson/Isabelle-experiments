@@ -45,7 +45,7 @@ proof -
     define f::"'a \<times> 'a \<times> 'a \<Rightarrow> 'a \<times> 'a \<times> 'a" where "f \<equiv> \<lambda>(y,(x,x')). (x, (x', y))"
     have f: "bij_betw f (SIGMA y:Y. (Neighbours Red y \<inter> X) \<times> (Neighbours Red y \<inter> X))
                         (SIGMA x:X. SIGMA x':X. Neighbours Red x \<inter> Neighbours Red x' \<inter> Y)"
-      by (auto simp add: f_def bij_betw_def inj_on_def image_iff in_Neighbours_iff doubleton_eq_iff insert_commute)
+      by (auto simp: f_def bij_betw_def inj_on_def image_iff in_Neighbours_iff doubleton_eq_iff insert_commute)
     have "(\<Sum>y\<in>Y. (card (Neighbours Red y \<inter> X))\<^sup>2) = card(SIGMA y:Y. (Neighbours Red y \<inter> X) \<times> (Neighbours Red y \<inter> X))"
       by (simp add: \<open>finite Y\<close> finite_Neighbours power2_eq_square)
     also have "\<dots> = card(Sigma X (\<lambda>x. Sigma X (\<lambda>x'. Neighbours Red x \<inter> Neighbours Red x' \<inter> Y)))"
@@ -235,7 +235,7 @@ proof -
     have not_many_bluish: "\<not> many_bluish \<mu> l k X"
       using i not_many_bluish unfolding X_def by blast
     have nonterm: "\<not> termination_condition l k X Y"
-      using X_def Y_def i step_non_terminating by (force simp add: Step_class_def)
+      using X_def Y_def i step_non_terminating by (force simp: Step_class_def)
     moreover have "l powr (2/3) \<le> l powr (3/4)"
       using \<open>l>1\<close> by (simp add: powr_mono)
     ultimately have RNX: "?R < card X"
@@ -258,7 +258,7 @@ proof -
       by (smt (verit, best) of_nat_mult edge_card_le mult.commute mult_right_mono of_nat_0_le_iff of_nat_mono)
     then have W1abs: "\<bar>Weight X Y x y\<bar> \<le> 1" for x y 
       using RNX edge_card_le [of X Y Red] \<open>finite X\<close> 
-      by (fastforce simp add: mult_ac Weight_def divide_simps gen_density_def)
+      by (fastforce simp: mult_ac Weight_def divide_simps gen_density_def)
     then have W1: "Weight X Y x y \<le> 1" for x y
       by (smt (verit))
     have WW_le_cardX: "weight X Y y + Weight X Y y y \<le> card X" if "y \<in> X" for y
@@ -316,7 +316,7 @@ proof -
     have "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k ^ 6 * ?R"
       using \<open>l \<le> k\<close> l unfolding Lemma_5_6_def by blast
     then have cardX_ge: "card X \<ge> k ^ 6 * ?R"
-      using X_def i step_non_terminating by (force simp add: Step_class_def termination_condition_def)
+      using X_def i step_non_terminating by (force simp: Step_class_def termination_condition_def)
     have "-1 / (real k)^5 \<le> - 1 / (real k^6 - 1) + -1 / (real k^6 * ?R)"
     proof -
       have [simp]: "real k * (r * real k ^ 5) = r * k^6" for r
@@ -426,7 +426,7 @@ proof -
     then have "pee \<mu> l k i \<le> qfun k 1"
       by (smt (verit, best) alpha_eq alpha_ge0 One_nat_def add_diff_cancel_left' plus_1_eq_Suc q_Suc_diff zero_less_one)
     then have "eps k powr -(1/2) * alpha k (hgt k ?p) = eps k powr (1/2) / k"
-      using powr_mult_base [of "eps k"] eps_gt0 by (force simp add: Red_5_7c mult.commute)
+      using powr_mult_base [of "eps k"] eps_gt0 by (force simp: Red_5_7c mult.commute)
     also have "\<dots> \<le> eps k powr (1/2) * ?p"
       using p_gt_invk by (smt (verit) divide_inverse inverse_eq_divide mult_left_mono powr_ge_pzero)
     finally have "eps k powr -(1/2) * alpha k (hgt k ?p) \<le> eps k powr (1/2) * ?p" .
@@ -487,6 +487,26 @@ qed
 definition "Big_Red_5_1 \<equiv> \<lambda>\<mu> l. (1-\<mu>) * l > 1 \<and> l powr (5/2) \<ge> 3 / (1-\<mu>) \<and> l powr (1/4) \<ge> 4 
                     \<and> Lemma_5_4 \<mu> l \<and> Lemma_5_6 l" 
 
+lemma card_cvx_Neighbours:
+  fixes \<mu>::real
+  assumes i: "i \<in> Step_class \<mu> l k {red_step,dboost_step}" and \<mu>: "0<\<mu>" "\<mu><1" 
+  defines "x \<equiv> cvx \<mu> l k i"
+  defines "X \<equiv> Xseq \<mu> l k i" 
+  defines "NBX \<equiv> Neighbours Blue x \<inter> X"
+  defines "NRX \<equiv> Neighbours Red x \<inter> X"
+  shows "card NBX \<le> \<mu> * card X" "card NRX \<ge> (1-\<mu>) * card X - 1"
+proof -
+  obtain "x\<in>X" "X\<subseteq>V"
+    by (metis Xseq_subset_V cvx_in_Xseq X_def i x_def)
+  then have card_NRBX: "card NRX + card NBX = card X - 1"
+    using Neighbours_RB [of x X] disjnt_Red_Blue_Neighbours
+    by (simp add: NRX_def NBX_def finite_Neighbours subsetD flip: card_Un_disjnt)
+  moreover have card_NBX_le: "card NBX \<le> \<mu> * card X"
+    by (metis cvx_works NBX_def X_def central_vertex_def i x_def)
+  ultimately show "card NBX \<le> \<mu> * card X" "card NRX \<ge> (1-\<mu>) * card X - 1"
+    by (auto simp: algebra_simps)
+qed
+
 proposition Red_5_1:
   assumes i: "i \<in> Step_class \<mu> l k {red_step,dboost_step}" and \<mu>: "0<\<mu>" "\<mu><1" and Big: "Big_Red_5_1 \<mu> l" "Colours l k"
   defines "p \<equiv> pee \<mu> l k i"
@@ -545,18 +565,16 @@ proof -
   have "X \<subseteq> V"
     by (simp add: Xseq_subset_V XY)
   have "finite NRX" "finite NBX" "finite NRY"
-    by (auto simp add: NRX_def NBX_def NRY_def finite_Neighbours)
+    by (auto simp: NRX_def NBX_def NRY_def finite_Neighbours)
   have "disjnt X Y"
     using Xseq_Yseq_disjnt step stepper_XYseq by blast  
   then have "disjnt NRX NRY" "disjnt NBX NRY"
-    by (auto simp add: NRX_def NBX_def NRY_def disjnt_iff)
-  have card_NBX_le: "card NBX \<le> \<mu> * card X"
-    using central_vertex_def cvx_works i XY x_def NBX_def by presburger
-  moreover have card_NRBX: "card NRX + card NBX = card X - 1"
+    by (auto simp: NRX_def NBX_def NRY_def disjnt_iff)
+  have card_NRBX: "card NRX + card NBX = card X - 1"
     using Neighbours_RB [of x X] \<open>finite NRX\<close> \<open>x\<in>X\<close> \<open>X\<subseteq>V\<close> disjnt_Red_Blue_Neighbours
     by (simp add: NRX_def NBX_def finite_Neighbours subsetD flip: card_Un_disjnt)
-  ultimately have "card NRX \<ge> (1-\<mu>) * card X - 1"
-    by (simp add: algebra_simps)
+  obtain card_NBX_le: "card NBX \<le> \<mu> * card X" and "card NRX \<ge> (1-\<mu>) * card X - 1"
+    unfolding NBX_def NRX_def X_def x_def using \<mu> card_cvx_Neighbours i by metis
   with lA \<open>l\<le>k\<close> X_gt_k have "card NRX > 0"
     by (smt (verit, best) of_nat_0 \<open>\<mu><1\<close> gr0I mult_less_cancel_left_pos nat_less_real_le of_nat_mono)
   have "card NRY > 0"
@@ -618,7 +636,7 @@ proof -
     proof 
       assume empty: "NBX = {}"
       then have cNRX: "card NRX = card X - 1"
-        using card_NRBX by auto
+        using Xx \<open>x \<in> X\<close> by auto
       have "card X > 3"
         using \<open>k\<ge>256\<close> X_gt_k by linarith
       then have "2 * card X / real (card X - 1) < 3"
@@ -767,7 +785,7 @@ proof -
   ultimately have "card (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i) \<le> \<mu> * card (Xseq \<mu> l k i)"
     by (simp add: central_vertex_def)
   then have \<beta>eq: "card (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i) = beta \<mu> l k i * card (Xseq \<mu> l k i)"
-    using Xeq step by (auto simp add: beta_def)
+    using Xeq step by (auto simp: beta_def)
   have SUC: "stepper \<mu> l k (Suc i) = (Neighbours Blue ?x \<inter> X, Neighbours Red ?x \<inter> Y, A, insert ?x B)"
     using step nonterm \<open>odd i\<close> non_mb nonredd
     by (simp add: stepper_def next_state_def Let_def cvx_def)
@@ -868,7 +886,7 @@ proof -
       by (smt (verit, ccfv_SIG) divide_le_eq_1 eps_gt0 kn0 mult_le_cancel_left2 mult_le_cancel_left_pos mult_neg_pos of_nat_0_less_iff times_divide_eq_right)
     then have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) \<le> k / eps k"
       using beta_ge0 [of \<mu> l k i] eps_gt0 [OF kn0] kn0
-      by (auto simp add: divide_simps mult_less_0_iff mult_of_nat_commute split: if_split_asm)
+      by (auto simp: divide_simps mult_less_0_iff mult_of_nat_commute split: if_split_asm)
     then have "((1 - beta \<mu> l k i) / beta \<mu> l k i) \<le> k / eps k / (1 - eps k)"
       by (smt (verit) eps_less1 mult.commute pos_le_divide_eq \<open>1 < k\<close>)
     then have "1 / beta \<mu> l k i \<le> k / eps k / (1 - eps k) + 1"
