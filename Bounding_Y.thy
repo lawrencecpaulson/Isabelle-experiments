@@ -11,43 +11,17 @@ subsection \<open>The following results together are Lemma 6.4\<close>
 text \<open>Compared with the paper, all the indices are greater by one\<close>
 
 lemma Y_6_4_Red: 
-  assumes i: "i \<in> Step_class \<mu> l k {red_step}"
+  assumes "i \<in> Step_class \<mu> l k {red_step}"
   shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i - alpha k (hgt k (pee \<mu> l k i))"
-proof -
-  define X where "X \<equiv> Xseq \<mu> l k i" 
-  define Y where "Y \<equiv> Yseq \<mu> l k i"
-  obtain A B 
-    where step: "stepper \<mu> l k i = (X,Y,A,B)"
-      and nonterm: "\<not> termination_condition l k X Y"
-      and "odd i"
-      and non_mb: "\<not> many_bluish \<mu> l k X"
-      and red: "reddish k X Y (red_density X Y) (cvx \<mu> l k i)"
-    using i
-    by (auto simp: X_def Y_def step_kind_defs cvx_def split: if_split_asm prod.split_asm)
-  have "Xseq \<mu> l k (Suc i) = Neighbours Red (cvx \<mu> l k i) \<inter> X"
-       "Yseq \<mu> l k (Suc i) = Neighbours Red (cvx \<mu> l k i) \<inter> Y"
-    using step nonterm \<open>odd i\<close> non_mb red
-    by (auto simp: Xseq_def Yseq_def next_state_def cvx_def Let_def split: prod.split)
-  then show ?thesis
-    using red by (simp add: X_def Y_def reddish_def pee_def)
-qed
+  using assms
+  by (auto simp add:  step_kind_defs next_state_def Let_def cvx_def reddish_def pee_def
+      split: if_split_asm prod.split)
 
 lemma Y_6_4_DegreeReg: 
   assumes "i \<in> Step_class \<mu> l k {dreg_step}" 
   shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i"
-proof -
-  define X where "X \<equiv> Xseq \<mu> l k i" 
-  define Y where "Y \<equiv> Yseq \<mu> l k i"
-  obtain A B
-    where step: "stepper \<mu> l k i = (X,Y,A,B)"
-      and nonterm: "\<not> termination_condition l k X Y"
-      and "even i"
-    using assms by (auto simp: X_def Y_def step_kind_defs split: if_split_asm prod.split_asm)
-  then have "Yseq \<mu> l k (Suc i) = Y" "Xseq \<mu> l k (Suc i) = X_degree_reg k X Y"
-    by (simp_all add: step_kind_defs next_state_def degree_reg_def)
-  then show ?thesis
-    by (simp add: X_def Xseq_Yseq_disjnt Y_def pee_def red_density_X_degree_reg_ge)
-qed
+  using assms red_density_X_degree_reg_ge [OF Xseq_Yseq_disjnt, of \<mu> l k i]
+  by (auto simp: step_kind_defs degree_reg_def pee_def  split: if_split_asm prod.split_asm )
 
 lemma Y_6_4_Bblue: 
   assumes i: "i \<in> Step_class \<mu> l k {bblue_step}" and "0 < \<mu>"
@@ -198,7 +172,7 @@ proof -
     using bblue_step_limit \<open>Colours l k\<close> by (simp add: \<open>0 < k\<close> frac_le Lemma_bblue_step_limit_def)
   also have "\<dots> \<le> eps k"
   proof -
-    have "l powr (3/4) \<le> k powr (3 / 4)"
+    have "l powr (3/4) \<le> k powr (3/4)"
       by (simp add: \<open>l \<le> k\<close> powr_mono2)
     then show ?thesis
       using powr_add [of k "3/4" "1/4"] 
@@ -842,7 +816,6 @@ proof -
   finally show ?thesis
     by (simp add: ST_def st_def p0m_def Step_RS_def Y_def)
 qed
-
 
 end (*context Diagonal*)
 

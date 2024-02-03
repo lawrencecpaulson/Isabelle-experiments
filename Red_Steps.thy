@@ -74,14 +74,13 @@ proof -
     using assms by real_asymp
   have D34: "\<And>l k. l \<le> k \<Longrightarrow> c * real l powr (3/4)  \<le> c * real k powr (3/4)"
     by (simp add: assms(1) powr_mono2)
-  have "\<forall>\<^sup>\<infinity>l. l * (c * real l powr (3/4) * ln l - real l powr (7/8) / 4) \<le> -1"
+  have D0: "\<forall>\<^sup>\<infinity>l. l * (c * real l powr (3/4) * ln l - real l powr (7/8) / 4) \<le> -1"
     using \<open>c>0\<close> by real_asymp
-  then have "\<forall>\<^sup>\<infinity>l.  \<forall>k\<ge>l. k * (c * real k powr (3/4) * ln k - real k powr (7/8) / 4) \<le> -1"
-    using eventually_all_ge_at_top by blast
+  have "\<And>l k. l \<le> k \<Longrightarrow> c * real l powr (3/4) * ln k \<le> c * real k powr (3/4) * ln k"
+    by (smt (verit, del_insts) D34 One_nat_def bot_nat_0.extremum_uniqueI ln_ge_zero mult_right_mono not_less_eq_eq real_of_nat_ge_one_iff)
   then have D: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. k * (c * real l powr (3/4) * ln k - real k powr (7/8) / 4) \<le> -1"
-    apply (rule eventually_mono)
-    apply (elim all_forward imp_forward2 asm_rl)
-    by (smt (verit, best) D34 mult_left_mono ln_less_zero_iff mult_le_cancel_right nat_le_real_less of_nat_0_le_iff)
+    using eventually_mono [OF eventually_all_ge_at_top [OF D0]]
+    by (smt (verit, ccfv_SIG) mult_left_mono of_nat_0_le_iff)
 
   define BIG where "BIG \<equiv> \<lambda>l. nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3
                 \<and> (l powr (3/4) * (c - 1/32) \<le> -1) 
@@ -147,7 +146,7 @@ proof -
         by (approximation 5)
       finally show ?thesis .
     qed
-    have "\<not> is_Ramsey_number (nat\<lceil>l powr (3/4)\<rceil>) k (nat \<lfloor>exp (c * real l powr (3/4) * ln (real k))\<rfloor>)"
+    have "\<not> is_Ramsey_number (nat\<lceil>l powr (3/4)\<rceil>) k (nat \<lfloor>exp (c * l powr (3/4) * ln k)\<rfloor>)"
       using Ramsey_number_lower_simple [OF _ p01] left right \<open>k\<ge>3\<close> \<open>l\<ge>3\<close>
       unfolding r_def s_def by force
     then show ?thesis
@@ -385,13 +384,10 @@ proof -
   obtain X Y A B
     where step: "stepper \<mu> l k i = (X,Y,A,B)"
       and nonterm: "\<not> termination_condition l k X Y"
-      and "even i"
-    using i
-    by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
-  then have Suc_i: "stepper \<mu> l k (Suc i) = degree_reg k (X,Y,A,B)"
-    by simp
-  have XY: "X = Xseq \<mu> l k i" "Y = Yseq \<mu> l k i"
-    using step stepper_XYseq by auto
+      and "even i" 
+      and Suc_i: "stepper \<mu> l k (Suc i) = degree_reg k (X,Y,A,B)"
+      and XY: "X = Xseq \<mu> l k i" "Y = Yseq \<mu> l k i"
+    using i by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
   have "Xseq \<mu> l k (Suc i) = ((\<lambda>(X, Y, A, B). X) \<circ> stepper \<mu> l k) (Suc i)"
     by (simp add: Xseq_def)
   also have "\<dots> = X_degree_reg k X Y"
@@ -448,17 +444,11 @@ proof
   then have 0: "pee \<mu> l k i > 0"
     using not_halted_pee_gt0 by blast
   have Y': "card (Yseq \<mu> l k (Suc i)) > 0"
-  proof -
-    obtain X Y A B
-      where step: "stepper \<mu> l k i = (X,Y,A,B)" and "even i"
-      using i by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
-    then show ?thesis
-      apply (simp add: Yseq_def degree_reg_def)
-      using Yseq_gt_0 not_halted stepper_XYseq by blast
-  qed
-  have "(1 - eps k powr (1 / 2)) * pee \<mu> l k i * card (Yseq \<mu> l k (Suc i)) \<le> 0"
+    using i Yseq_gt_0 [OF not_halted] stepper_XYseq
+    by (auto simp: step_kind_defs degree_reg_def split: if_split_asm prod.split_asm)
+  have "(1 - eps k powr (1/2)) * pee \<mu> l k i * card (Yseq \<mu> l k (Suc i)) \<le> 0"
     using Red_5_8 [OF i x] con by simp 
-  with 0 Y' have "(1 - eps k powr (1 / 2)) \<le> 0"
+  with 0 Y' have "(1 - eps k powr (1/2)) \<le> 0"
     by (simp add: mult_le_0_iff zero_le_mult_iff)
   then show False
     using \<open>k\<ge>2\<close> powr_le_cancel_iff [of k "1/8" 0]
@@ -540,13 +530,9 @@ proof -
     where step: "stepper \<mu> l k i = (X,Y,A,B)"
       and nonterm: "\<not> termination_condition l k X Y"
       and "odd i"
-      and non_mb: "\<not> many_bluish \<mu> l k X"
-    using i
-    by (auto simp: XY step_kind_defs split: if_split_asm prod.split_asm)
-  then have "card X > 0"
-    using stepper_XYseq by (auto simp: termination_condition_def)
-  have not_halted: "i \<notin> Step_class \<mu> l k {halted}"
-    using i by (auto simp: Step_class_def)
+      and non_mb: "\<not> many_bluish \<mu> l k X" and "card X > 0"
+      and  not_halted: "i \<notin> Step_class \<mu> l k {halted}"
+    using i by (auto simp: XY step_kind_defs termination_condition_def split: if_split_asm prod.split_asm)
   with Yseq_gt_0 XY have "card Y \<noteq> 0"
     by blast
   have cX_RN: "card X > RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
@@ -774,15 +760,14 @@ proof -
       and "odd i"
       and non_mb: "\<not> many_bluish \<mu> l k X"
       and nonredd: "\<not> reddish k X Y (red_density X Y) (choose_central_vx \<mu> (X,Y,A,B))"
+      and Xeq: "X = Xseq \<mu> l k i" and Yeq: "Y = Yseq \<mu> l k i"
     using i
     by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
   then have "?x \<in> Xseq \<mu> l k i"
-    by (metis V_state choose_central_vx_X cvx_def stepper_XYseq)
+    by (metis V_state choose_central_vx_X cvx_def)
   then have "central_vertex \<mu> (Xseq \<mu> l k i) (cvx \<mu> l k i)"
-    by (metis V_state choose_central_vx_works cvx_def local.step non_mb nonterm stepper_XYseq)
-  moreover have Xeq: "X = Xseq \<mu> l k i" and Yeq: "Y = Yseq \<mu> l k i"
-    by (metis step stepper_XYseq surj_pair)+
-  ultimately have "card (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i) \<le> \<mu> * card (Xseq \<mu> l k i)"
+    by (metis V_state choose_central_vx_works cvx_def step non_mb nonterm stepper_XYseq)
+  with Xeq have "card (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i) \<le> \<mu> * card (Xseq \<mu> l k i)"
     by (simp add: central_vertex_def)
   then have \<beta>eq: "card (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i) = beta \<mu> l k i * card (Xseq \<mu> l k i)"
     using Xeq step by (auto simp: beta_def)
