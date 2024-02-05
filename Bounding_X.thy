@@ -27,8 +27,15 @@ lemma X_7_2:
         \<ge> what * (1-\<mu>) ^ card {i \<in> Step_class \<mu> l k {red_step}}"
 proof -
   define R where "R \<equiv> RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
-  have bigR: "1-\<mu> > 1/R"    \<comment> \<open>this is a (weak) bigness assumption\<close>
+  have "nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3" "k\<ge>2"
     sorry
+  then have "R > k"
+    using RN_gt1 R_def by blast
+  moreover have "k > 1 / (1-\<mu>)"
+    sorry
+  ultimately have bigR: "1-\<mu> > 1/R"    \<comment> \<open>this is a (weak) bigness assumption\<close>
+    using \<mu> apply (simp add: divide_simps mult.commute)
+    by (smt (verit, ccfv_SIG) divide_less_eq less_imp_of_nat_less)
   have *: "1-\<mu> - 1/R \<le> card (X (Suc i)) / card (X i)"
     if  "i \<in> Step_class \<mu> l k {red_step}" for i
   proof -
@@ -59,11 +66,11 @@ proof -
       by auto
     have "((1-\<mu>) - 1/R) ^ card (insert i Red_steps) = ((1-\<mu>) - 1/R) * ((1-\<mu>) - 1/R) ^ card (Red_steps)"
       by (simp add: insert)
-    also have "... \<le> (card (X (Suc i)) / card (X i)) * ((1-\<mu>) - 1/R) ^ card (Red_steps)"
+    also have "\<dots> \<le> (card (X (Suc i)) / card (X i)) * ((1-\<mu>) - 1/R) ^ card (Red_steps)"
       using bigR by (intro mult_right_mono * i) auto
-    also have "... \<le> (card (X (Suc i)) / card (X i)) * (\<Prod>i \<in> Red_steps. card (X(Suc i)) / card (X i))"
+    also have "\<dots> \<le> (card (X (Suc i)) / card (X i)) * (\<Prod>i \<in> Red_steps. card (X(Suc i)) / card (X i))"
       using insert by (intro mult_left_mono) auto
-    also have "... = (\<Prod>i\<in>insert i Red_steps. card (X(Suc i)) / card (X i))"
+    also have "\<dots> = (\<Prod>i\<in>insert i Red_steps. card (X(Suc i)) / card (X i))"
       using insert by simp
     finally show ?case .
   qed

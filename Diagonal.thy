@@ -21,6 +21,8 @@ locale Diagonal = fin_sgraph +   \<comment> \<open>finite simple graphs (no loop
   fixes X0 :: "'a set" and Y0 :: "'a set"    \<comment> \<open>initial values\<close>
   assumes XY0: "disjnt X0 Y0" "X0 \<subseteq> V" "Y0 \<subseteq> V"
   assumes infinite_UNIV: "infinite (UNIV::'a set)"
+  assumes Red_edges_XY0: "Red \<inter> all_edges_betw_un X0 Y0 \<noteq> {}"  \<comment> \<open>initial Red density is not 0\<close>
+  assumes Blue_edges_XY0: "Blue \<inter> all_edges_betw_un X0 Y0 \<noteq> {}"  \<comment> \<open>initial Red density is not 1\<close>
 
 context Diagonal
 begin
@@ -350,8 +352,31 @@ definition hgt :: "[nat, real] \<Rightarrow> nat"
 lemma q0 [simp]: "qfun k 0 = p0"
   by (simp add: qfun_def)
 
-lemma p0_01: "0 \<le> p0" "p0 \<le> 1"
-  by (simp_all add: p0_def gen_density_ge0 gen_density_le1)
+lemma card_XY0: "card X0 > 0" "card Y0 > 0"
+  using Red_edges_XY0 finite_X0 finite_Y0 by force+
+
+lemma Red_edges_nonzero: "edge_card Red X0 Y0 > 0"
+  using Red_edges_XY0
+  using Red_E edge_card_def fin_edges finite_subset by fastforce
+
+lemma Blue_edges_nonzero: "edge_card Blue X0 Y0 > 0"
+  using Blue_edges_XY0
+  using Blue_E edge_card_def fin_edges finite_subset by fastforce
+
+lemma Blue_edges_less: "edge_card Red X0 Y0 < card X0 * card Y0"
+  using Blue_edges_XY0
+  apply (simp add: Blue_eq Diff_Int_distrib2)
+  by (metis Int_lower2 all_uedges_betw_subset card_seteq complete edge_card_def edge_card_le fin_edges finite_X0 finite_Y0 finite_subset inf.absorb_iff2 le_neq_implies_less)
+
+lemma p0_01: "0 < p0" "p0 < 1"
+proof -
+  show "0 < p0"
+    using Red_edges_nonzero card_XY0
+    by (auto simp: p0_def gen_density_def divide_simps mult_less_0_iff)
+  show "p0 < 1"
+    using Blue_edges_less card_XY0 less_imp_of_nat_less
+    by (fastforce simp: p0_def gen_density_def divide_simps mult_less_0_iff)
+qed
 
 lemma eps_eq_sqrt: "eps k = 1 / sqrt (sqrt (real k))"
   by (simp add: eps_def powr_minus_divide powr_powr flip: powr_half_sqrt)

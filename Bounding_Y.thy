@@ -172,12 +172,13 @@ proof -
     using bblue_step_limit \<open>Colours l k\<close> by (simp add: \<open>0 < k\<close> frac_le Lemma_bblue_step_limit_def)
   also have "\<dots> \<le> eps k"
   proof -
-    have "l powr (3/4) \<le> k powr (3/4)"
+    have *: "l powr (3/4) \<le> k powr (3/4)"
       by (simp add: \<open>l \<le> k\<close> powr_mono2)
+    have "3 / 4 - (1::real) = - 1/4"
+      by simp
     then show ?thesis
-      using powr_add [of k "3/4" "1/4"] 
-    apply (simp add: eps_def powr_minus divide_simps)
-      by (metis mult_le_cancel_right powr_non_neg)
+      using divide_right_mono [OF *, of k] 
+      by (metis eps_def of_nat_0_le_iff powr_diff powr_one)
   qed
   finally have bblue: "(\<Sum>i\<in>Step_class \<mu> l k {bblue_step} \<inter> Z_class \<mu> l k. p(i-1) - p (Suc i))
                      \<le> eps k" .
@@ -386,7 +387,9 @@ next
     by (smt (verit, del_insts) of_nat_0 hgt_gt_0 nat_less_real_le)
 qed
 
-definition "Lemma_Y_6_5_Bblue \<equiv> \<lambda> \<mu> l. \<forall>k i. k\<ge>l \<longrightarrow> i \<in> Step_class \<mu> l k {bblue_step} \<longrightarrow> hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k (i-1)) - 2 * eps k powr (-1/2)"
+definition "Lemma_Y_6_5_Bblue \<equiv> 
+   \<lambda> \<mu> l. \<forall>k i. k\<ge>l \<longrightarrow> i \<in> Step_class \<mu> l k {bblue_step} 
+                \<longrightarrow> hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k (i-1)) - 2 * eps k powr (-1/2)"
 
 lemma Y_6_5_Bblue:
   assumes "0<\<mu>"
@@ -654,9 +657,8 @@ next
   finally have "p0 - eps k \<le> p (j'+2)" .
   then have "p0 - 3 * eps k \<le> p (j'+2) - 2 * eps k"
     by simp
-  also have "\<dots> \<le> p (Suc j)"
-    using D by blast
-  finally show ?thesis .
+  with D show ?thesis
+    by linarith
 qed
 
 definition "Lemma_Y_6_2 \<equiv> \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> 
@@ -679,12 +681,16 @@ text \<open>And therefore @{text "3\<epsilon> \<le> \<epsilon>^{1/2}"}\<close>
 lemma "\<forall>\<^sup>\<infinity>k. eps k powr (1/2) \<le> 1/3"
   unfolding eps_def by real_asymp
 
+lemma "(\<lambda>k. -2 * real k powr (-1/8) - 2 * (3 * eps k / p0)) \<in> o(\<lambda>k. 1)"
+  using p0_01 unfolding eps_def by real_asymp
+
 proposition Y_6_1_aux:
   fixes l k
   assumes "0<\<mu>" "\<mu><1" and "Colours l k"
   assumes not_halted: "m \<notin> Step_class \<mu> l k {halted}"
-    and big13: "eps k powr (1/2) \<le> 1/3" and big_p0: "p0 \<ge> 2 * eps k powr (1/2)"
+    and big13: "eps k powr (1/2) \<le> 1/3" and big_p0: "p0 > 2 * eps k powr (1/2)"
   assumes Y_6_2: "Lemma_Y_6_2 \<mu> l"
+  assumes dboost_step_limit: "finite (Step_class \<mu> l k {dboost_step})" "card (Step_class \<mu> l k {dboost_step}) < k"
   defines "p \<equiv> pee \<mu> l k"
   defines "Y \<equiv> Yseq \<mu> l k"
   defines "st \<equiv> Step_class \<mu> l k {red_step,dboost_step} \<inter> {..<m}"
@@ -693,7 +699,7 @@ proof -
   have "k>0"
     using Colours_kn0 \<open>Colours l k\<close> by blast 
   define p0m where "p0m \<equiv> p0 - 2 * eps k powr (1/2)"
-  have "p0m \<ge> 0"
+  have "p0m > 0"
     using big_p0 by (simp add: p0m_def)
   define Step_RS where "Step_RS \<equiv> Step_class \<mu> l k {red_step,dboost_step}"
   define Step_BD where "Step_BD \<equiv> Step_class \<mu> l k {bblue_step,dreg_step}"
@@ -732,7 +738,7 @@ proof -
       proof (intro not_halted_odd_RBS)
         show "i - 2 \<notin> Step_class \<mu> l k {halted}"
           using i_not_halted Step_class_not_halted diff_le_self by blast
-        show "odd (i - 2)"
+        show "odd (i-2)"
           using \<open>2 < i\<close> \<open>odd i\<close> by auto
       qed
       then have Y62: "p (i-1) \<ge> p0 - 3 * eps k"
@@ -789,7 +795,7 @@ proof -
       then have "p0m ^ card (ST (Suc i)) = p0m * p0m ^ card (ST i)"
         by simp
       also have "\<dots> \<le> p0m * (\<Prod>j<i. card (Y(Suc j)) / card (Y j))"
-        using Suc Suc_leD \<open>0 \<le> p0m\<close> mult_left_mono by blast
+        using Suc Suc_leD \<open>0 < p0m\<close> mult_left_mono by auto
       also have "\<dots> \<le> (card (Y (Suc i)) / card (Y i)) * (\<Prod>j<i. card (Y (Suc j)) / card (Y j))"
       proof (intro mult_right_mono)
         show "p0m \<le> card (Y (Suc i)) / card (Y i)"
@@ -815,7 +821,39 @@ proof -
   qed
   finally show ?thesis
     by (simp add: ST_def st_def p0m_def Step_RS_def Y_def)
+  obtain red_steps: "finite (Step_class \<mu> l k {red_step})" "card (Step_class \<mu> l k {red_step}) < k"
+    using red_step_limit \<open>0<\<mu>\<close> \<open>Colours l k\<close> by blast
+  with dboost_step_limit 
+  have "st \<subseteq> Step_class \<mu> l k {red_step,dboost_step}" "finite (Step_class \<mu> l k {red_step,dboost_step})"
+    by (auto simp add: st_def Step_class_insert_NO_MATCH)
+  then have "card st \<le> card (Step_class \<mu> l k {red_step,dboost_step})"
+    using card_mono by blast
+  also have "... = card (Step_class \<mu> l k {red_step} \<union> Step_class \<mu> l k {dboost_step})"
+    by (auto simp: Step_class_insert_NO_MATCH)
+  also have "... \<le> k+k"
+    by (smt (verit) of_nat_add dboost_step_limit card_Un_le nat_le_real_less nat_less_real_le red_steps(2))
+  finally have "card st \<le> 2*k"
+    by auto
+  define f where "f \<equiv> \<lambda>k. (2 * real k / ln 2) * ln (1 - 2 * eps k powr (1/2) / p0)"
+  have f: "f \<in> o(\<lambda>k. k)"
+    using p0_01 unfolding eps_def f_def by real_asymp
+  have A: "ln (1 - 2 * eps k powr (1 / 2) / p0) + ln p0 \<le> ln (p0 - 2 * eps k powr (1 / 2))"
+    using big_p0 p0_01 by (simp add: algebra_simps flip: ln_mult)
+  moreover have "2 * real k * ln (1 - 2 * eps k powr (1 / 2) / p0)
+               \<le> (card st) * ln (1 - 2 * eps k powr (1 / 2) / p0)"
+    apply (intro mult_right_mono_neg)
+    using \<open>card st \<le> 2 * k\<close> apply linarith
+    by (smt (verit, best) assms(6) calculation ln_le_cancel_iff powr_ge_pzero)
+  ultimately have "f k * ln 2 + card st * ln p0 \<le> card st * ln (p0 - 2 * eps k powr (1 / 2))"
+    using mult_left_mono [OF A, of "card st"]
+    by (simp add: f_def distrib_left)
+  then have "f k * ln 2 + real (card st) * ln p0
+    \<le> real (card st) * ln (p0 - 2 * eps k powr (1 / 2))"
+    by simp
+  then have "2 powr (f k) * p0 ^ card st \<le> (p0 - 2 * eps k powr (1/2)) ^ card st"
+    by (simp add: big_p0 p0_01 ln_mult ln_powr ln_realpow flip: ln_le_cancel_iff)
 qed
+
 
 end (*context Diagonal*)
 
