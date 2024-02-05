@@ -849,7 +849,7 @@ proof -
   have ln_le: "ln (1 - 2 * eps k powr (1/2) / p0) + ln p0 \<le> ln (p0 - 2 * eps k powr (1/2))"
     using big_p0 p0_01 by (simp add: algebra_simps flip: ln_mult)
   have "2 * real k * ln (1 - 2 * eps k powr (1/2) / p0)
-               \<le> (card st) * ln (1 - 2 * eps k powr (1/2) / p0)"
+      \<le> (card st) * ln (1 - 2 * eps k powr (1/2) / p0)"
   proof (intro mult_right_mono_neg)
     obtain red_steps: "finite (Step_class \<mu> l k {red_step})" "card (Step_class \<mu> l k {red_step}) < k"
       using red_step_limit \<open>0<\<mu>\<close> \<open>Colours l k\<close> by blast
