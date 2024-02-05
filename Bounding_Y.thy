@@ -677,27 +677,50 @@ qed
 
 subsection \<open>Lemma 6.1\<close>
 
-text \<open>And therefore @{text "3\<epsilon> \<le> \<epsilon>^{1/2}"}\<close>
-lemma "\<forall>\<^sup>\<infinity>k. eps k powr (1/2) \<le> 1/3"
-  unfolding eps_def by real_asymp
+definition 
+  "Big_Y_6_1 \<equiv> 
+    \<lambda>\<mu> l. \<forall>k\<ge>l. eps k powr (1/2) \<le> 1/3 \<and> p0 > 2 * eps k powr (1/2) \<and> Lemma_Y_6_2 \<mu> l
+               \<and> Lemma_bblue_dboost_step_limit \<mu> l"
 
-lemma "(\<lambda>k. -2 * real k powr (-1/8) - 2 * (3 * eps k / p0)) \<in> o(\<lambda>k. 1)"
-  using p0_01 unfolding eps_def by real_asymp
+text \<open>establishing the size requirements for 6.1\<close>
+lemma Big_Y_6_1:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_Y_6_1 \<mu> l"
+proof -
+  have [simp]: "Ex ((\<le>) l)" for l::nat
+    by auto
+  have "\<forall>\<^sup>\<infinity>l. eps l powr (1/2) \<le> 1/3" 
+    unfolding eps_def by real_asymp
+  then have A: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. eps k powr (1/2) \<le> 1/3"  \<comment> \<open>And therefore @{text "3\<epsilon> \<le> \<epsilon>^{1/2}"}\<close>
+    by (rule eventually_all_ge_at_top)
+  moreover
+  have "\<forall>\<^sup>\<infinity>l. p0 > 2 * eps l powr (1/2)"
+    using p0_01 unfolding eps_def by real_asymp
+  then have B: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. p0 > 2 * eps k powr (1/2)"  \<comment> \<open>And therefore @{text "2\<epsilon>^{1/2}"} is small enough\<close>
+    by (rule eventually_all_ge_at_top)
+  ultimately show ?thesis
+    by (simp add: all_conj_distrib imp_conjR Big_Y_6_1_def eventually_conj Y_6_2 bblue_dboost_step_limit assms)
+qed
 
-proposition Y_6_1_aux:
+lemma Y_6_1_aux:
+  defines "f \<equiv> \<lambda>k. (2 * real k / ln 2) * ln (1 - 2 * eps k powr (1/2) / p0)"
   fixes l k
-  assumes "0<\<mu>" "\<mu><1" and "Colours l k"
-  assumes not_halted: "m \<notin> Step_class \<mu> l k {halted}"
-    and big13: "eps k powr (1/2) \<le> 1/3" and big_p0: "p0 > 2 * eps k powr (1/2)"
-  assumes Y_6_2: "Lemma_Y_6_2 \<mu> l"
-  assumes dboost_step_limit: "finite (Step_class \<mu> l k {dboost_step})" "card (Step_class \<mu> l k {dboost_step}) < k"
+  assumes "0<\<mu>" "\<mu><1" and big: "Big_Y_6_1 \<mu> l"
+  assumes "Colours l k" and not_halted: "m \<notin> Step_class \<mu> l k {halted}"
   defines "p \<equiv> pee \<mu> l k"
   defines "Y \<equiv> Yseq \<mu> l k"
   defines "st \<equiv> Step_class \<mu> l k {red_step,dboost_step} \<inter> {..<m}"
-  shows "(p0 - 2 * eps k powr (1/2)) ^ card st \<le> card (Y m) / card (Y0)"
+  shows "card (Y m) / card (Y0) \<ge> 2 powr (f k) * p0 ^ card st"
 proof -
   have "k>0"
     using Colours_kn0 \<open>Colours l k\<close> by blast 
+  have big13: "eps k powr (1/2) \<le> 1/3" 
+    and big_p0: "p0 > 2 * eps k powr (1/2)"
+    and Y_6_2: "Lemma_Y_6_2 \<mu> l"
+    and "Lemma_bblue_dboost_step_limit \<mu> l"
+    using big \<open>Colours l k\<close> by (auto simp: Big_Y_6_1_def Colours_def)
+  with \<open>Colours l k\<close> have dboost_step_limit: "finite (Step_class \<mu> l k {dboost_step})" "card (Step_class \<mu> l k {dboost_step}) < k"
+    by (auto simp: Lemma_bblue_dboost_step_limit_def Colours_def)
   define p0m where "p0m \<equiv> p0 - 2 * eps k powr (1/2)"
   have "p0m > 0"
     using big_p0 by (simp add: p0m_def)
@@ -819,41 +842,68 @@ proof -
     then show ?thesis
       using prod_lessThan_telescope [where f = "\<lambda>i. real (card (Y i))"] by simp
   qed
-  finally show ?thesis
+  finally have *: "(p0 - 2 * eps k powr (1/2)) ^ card st \<le> card (Y m) / card (Y0)"
     by (simp add: ST_def st_def p0m_def Step_RS_def Y_def)
-  obtain red_steps: "finite (Step_class \<mu> l k {red_step})" "card (Step_class \<mu> l k {red_step}) < k"
-    using red_step_limit \<open>0<\<mu>\<close> \<open>Colours l k\<close> by blast
-  with dboost_step_limit 
-  have "st \<subseteq> Step_class \<mu> l k {red_step,dboost_step}" "finite (Step_class \<mu> l k {red_step,dboost_step})"
-    by (auto simp add: st_def Step_class_insert_NO_MATCH)
-  then have "card st \<le> card (Step_class \<mu> l k {red_step,dboost_step})"
-    using card_mono by blast
-  also have "... = card (Step_class \<mu> l k {red_step} \<union> Step_class \<mu> l k {dboost_step})"
-    by (auto simp: Step_class_insert_NO_MATCH)
-  also have "... \<le> k+k"
-    by (smt (verit) of_nat_add dboost_step_limit card_Un_le nat_le_real_less nat_less_real_le red_steps(2))
-  finally have "card st \<le> 2*k"
-    by auto
-  define f where "f \<equiv> \<lambda>k. (2 * real k / ln 2) * ln (1 - 2 * eps k powr (1/2) / p0)"
-  have f: "f \<in> o(\<lambda>k. k)"
+  \<comment> \<open>Asymptotic part of the argument\<close>
+  have f: "f \<in> o(\<lambda>k. real k)"
     using p0_01 unfolding eps_def f_def by real_asymp
-  have A: "ln (1 - 2 * eps k powr (1 / 2) / p0) + ln p0 \<le> ln (p0 - 2 * eps k powr (1 / 2))"
+  have A: "ln (1 - 2 * eps k powr (1/2) / p0) + ln p0 \<le> ln (p0 - 2 * eps k powr (1/2))"
     using big_p0 p0_01 by (simp add: algebra_simps flip: ln_mult)
-  moreover have "2 * real k * ln (1 - 2 * eps k powr (1 / 2) / p0)
-               \<le> (card st) * ln (1 - 2 * eps k powr (1 / 2) / p0)"
-    apply (intro mult_right_mono_neg)
-    using \<open>card st \<le> 2 * k\<close> apply linarith
-    by (smt (verit, best) assms(6) calculation ln_le_cancel_iff powr_ge_pzero)
-  ultimately have "f k * ln 2 + card st * ln p0 \<le> card st * ln (p0 - 2 * eps k powr (1 / 2))"
+  moreover have "2 * real k * ln (1 - 2 * eps k powr (1/2) / p0)
+               \<le> (card st) * ln (1 - 2 * eps k powr (1/2) / p0)"
+  proof (intro mult_right_mono_neg)
+    obtain red_steps: "finite (Step_class \<mu> l k {red_step})" "card (Step_class \<mu> l k {red_step}) < k"
+      using red_step_limit \<open>0<\<mu>\<close> \<open>Colours l k\<close> by blast
+    with dboost_step_limit 
+    have "st \<subseteq> Step_class \<mu> l k {red_step,dboost_step}" "finite (Step_class \<mu> l k {red_step,dboost_step})"
+      by (auto simp add: st_def Step_class_insert_NO_MATCH)
+    then have "card st \<le> card (Step_class \<mu> l k {red_step,dboost_step})"
+      using card_mono by blast
+    also have "\<dots> = card (Step_class \<mu> l k {red_step} \<union> Step_class \<mu> l k {dboost_step})"
+      by (auto simp: Step_class_insert_NO_MATCH)
+    also have "\<dots> \<le> k+k"
+      by (smt (verit) of_nat_add dboost_step_limit card_Un_le nat_le_real_less nat_less_real_le red_steps(2))
+    finally show "real (card st) \<le> 2 * real k"
+      by auto
+    show "ln (1 - 2 * eps k powr (1/2) / p0) \<le> 0"
+      using p0_01 big_p0 by simp
+  qed
+  ultimately have "f k * ln 2 + card st * ln p0 \<le> card st * ln (p0 - 2 * eps k powr (1/2))"
     using mult_left_mono [OF A, of "card st"]
     by (simp add: f_def distrib_left)
-  then have "f k * ln 2 + real (card st) * ln p0
-    \<le> real (card st) * ln (p0 - 2 * eps k powr (1 / 2))"
+  then have "f k * ln 2 + card st * ln p0 \<le> card st * ln (p0 - 2 * eps k powr (1/2))"
     by simp
   then have "2 powr (f k) * p0 ^ card st \<le> (p0 - 2 * eps k powr (1/2)) ^ card st"
     by (simp add: big_p0 p0_01 ln_mult ln_powr ln_realpow flip: ln_le_cancel_iff)
+  with * show ?thesis
+    by linarith
 qed
 
+proposition Y_6_1:
+  assumes "0<\<mu>" "\<mu><1" 
+  shows "\<exists>f \<in> o(\<lambda>k. real k).
+          \<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> (\<forall>m. m \<notin> Step_class \<mu> l k {halted} \<longrightarrow>
+             card (Yseq \<mu> l k m) / card (Y0) \<ge> 2 powr (f k) * p0 ^ card (Step_class \<mu> l k {red_step,dboost_step} \<inter> {..<m}))"
+proof
+  show "(\<lambda>k. (2 * real k / ln 2) * ln (1 - 2 * eps k powr (1/2) / p0)) \<in> o(real)"
+    using p0_01 unfolding eps_def by real_asymp
+  show "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow>
+               (\<forall>m. m \<notin> Step_class \<mu> l k {halted} \<longrightarrow>
+                    2 powr
+                    (2 * real k / ln 2 *
+                     ln (1 - 2 * eps k powr (1 / 2) / p0)) *
+                    p0 ^
+                    card
+                     (Step_class \<mu> l k
+                       {stepkind.red_step, dboost_step} \<inter>
+                      {..<m})
+                    \<le> real (card (Yseq \<mu> l k m)) / real (card Y0))"
+    apply (rule eventually_mono [OF Big_Y_6_1 [OF assms]] )
+    apply clarify
+    apply (rule Y_6_1_aux)
+        apply (auto simp: assms)
+    done
+qed
 
 end (*context Diagonal*)
 

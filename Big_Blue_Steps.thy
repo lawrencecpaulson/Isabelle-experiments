@@ -597,11 +597,14 @@ proof -
     by (metis (full_types) REDS_def Step_class_iterates)
 qed
 
+definition 
+  "Lemma_bblue_dboost_step_limit \<equiv> 
+     \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {dboost_step}) 
+          \<and> card (Step_class \<mu> l k {bblue_step}) + card (Step_class \<mu> l k {dboost_step}) < l"
+
 proposition bblue_dboost_step_limit:
   assumes "\<mu>>0"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> 
-            finite (Step_class \<mu> l k {dboost_step}) 
-          \<and> card (Step_class \<mu> l k {bblue_step}) + card (Step_class \<mu> l k {dboost_step}) < l"
+  shows "\<forall>\<^sup>\<infinity>l. Lemma_bblue_dboost_step_limit \<mu> l"
 proof -
   have "finite (Step_class \<mu> l k {dboost_step}) 
       \<and> card (Step_class \<mu> l k {bblue_step}) + card (Step_class \<mu> l k {dboost_step}) < l"
@@ -722,7 +725,7 @@ proof -
       by (metis less_l)
   qed
   with eventually_mono [OF Blue_4_1] \<open>\<mu>>0\<close> show ?thesis
-    by presburger 
+    unfolding Lemma_bblue_dboost_step_limit_def by presburger 
 qed
 
 end

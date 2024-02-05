@@ -77,7 +77,7 @@ proof -
   have D0: "\<forall>\<^sup>\<infinity>l. l * (c * real l powr (3/4) * ln l - real l powr (7/8) / 4) \<le> -1"
     using \<open>c>0\<close> by real_asymp
   have "\<And>l k. l \<le> k \<Longrightarrow> c * real l powr (3/4) * ln k \<le> c * real k powr (3/4) * ln k"
-    by (smt (verit, del_insts) D34 One_nat_def bot_nat_0.extremum_uniqueI ln_ge_zero mult_right_mono not_less_eq_eq real_of_nat_ge_one_iff)
+    by (smt (verit,del_insts) D34 One_nat_def le_0_eq ln_ge_zero mult_right_mono not_less_eq_eq real_of_nat_ge_one_iff)
   then have D: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. k * (c * real l powr (3/4) * ln k - real k powr (7/8) / 4) \<le> -1"
     using eventually_mono [OF eventually_all_ge_at_top [OF D0]]
     by (smt (verit, ccfv_SIG) mult_left_mono of_nat_0_le_iff)
@@ -543,7 +543,7 @@ proof -
     using RN_eq_0_iff m_of_def many_bluish_def non_mb by presburger
   then have "k^4 \<le> k^6 * RN k (m_of l)"
     by (simp add: eval_nat_numeral)
-  also have "... < card X"
+  also have "\<dots> < card X"
     using cX_RN RN_le_RN by linarith
   finally have "card X > k^4" .
   have "x \<in> X"
@@ -615,7 +615,7 @@ proof -
       using pm1 \<open>k>0\<close> mult_mono [OF A less_imp_le [OF pm1]] A by simp
     have "card Y / (2 * real k) \<le> (1 - eps k powr (1/2)) * pee \<mu> l k (i-1) * card Y"
       using mult_left_mono [OF le] by (metis mult.commute divide_inverse inverse_eq_divide of_nat_0_le_iff)
-    also have "... \<le> card NRY"
+    also have "\<dots> \<le> card NRY"
       using pm1 Red_5_8 im1 by (metis NRY_def One_nat_def \<open>odd i\<close> \<open>x \<in> X\<close> XY odd_Suc_minus_one)
     finally have Y_NRY: "card Y / (2 * real k) \<le> card NRY" .
     have "NBX \<noteq> {}"
@@ -627,9 +627,9 @@ proof -
         using \<open>k\<ge>256\<close> X_gt_k by linarith
       then have "2 * card X / real (card X - 1) < 3"
         by (simp add: divide_simps)
-      also have "... \<le> k ^ 2"
+      also have "\<dots> \<le> k ^ 2"
         using mult_mono [OF \<open>k\<ge>256\<close> \<open>k\<ge>256\<close>] by (simp add: power2_eq_square flip: of_nat_mult)
-      also have "... \<le> eps k * k^3"
+      also have "\<dots> \<le> eps k * k^3"
         using \<open>k\<ge>256\<close> by (simp add: eps_def flip: powr_numeral powr_add)
       finally have "(real (2 * card X) / real (card X - 1)) * k^2 < eps k * real (k ^ 3) * k^2"
         using \<open>k>0\<close> by (intro mult_strict_right_mono) auto
@@ -641,14 +641,14 @@ proof -
                \<le> - real (card X) / (real k) ^ 5 + (eps k / k) * real (card NRX) * (card NRY / card Y)"
         using Y_NRY \<open>k>0\<close> \<open>card Y \<noteq> 0\<close>
         by (intro add_mono mult_mono) (auto simp: cNRX eps_def divide_simps)
-      also have "... = - real (card X) / (real k) ^ 5 + (eps k / k) * real (card NRX) * card NRY / card Y"
+      also have "\<dots> = - real (card X) / (real k) ^ 5 + (eps k / k) * real (card NRX) * card NRY / card Y"
         by simp
       also have "\<dots> \<le> - real (card X) / (real k) ^ 5 + alpha k (hgt k p) * real (card NRX) * card NRY / card Y"
         using alpha_ge [OF hgt_gt_0]
         by (intro add_mono mult_right_mono divide_right_mono) auto
       also have "\<dots> \<le> weight X Y x + alpha k (hgt k p) * real (card NRX) * card NRY / real (card Y)"
         using Red_5_4 by simp
-      also have "... \<le> 0"
+      also have "\<dots> \<le> 0"
         using empty 15 by auto
       finally show False
         by simp
@@ -668,7 +668,7 @@ proof -
             \<le> (\<Sum>y \<in> NBX. p * card NRY + Weight X Y x y * card Y)"
       using 15 \<open>card Y \<noteq> 0\<close> apply (simp add: sum_distrib_left sum.distrib)
       by (simp only: sum_distrib_right divide_simps split: if_split_asm)
-    also have "... \<le> (\<Sum>y \<in> NBX. card (Neighbours Red x \<inter> Neighbours Red y \<inter> Y))"
+    also have "\<dots> \<le> (\<Sum>y \<in> NBX. card (Neighbours Red x \<inter> Neighbours Red y \<inter> Y))"
       using \<open>card Y \<noteq> 0\<close> by (simp add: Weight_def pee_def XY NRY_def field_simps p_def)
     also have "\<dots> = edge_card Red NRY NBX"
       using \<open>disjnt NBX NRY\<close> \<open>finite NBX\<close>
@@ -712,9 +712,9 @@ proof -
       using \<open>card X > k^4\<close> \<open>card Y \<noteq> 0\<close> \<open>0 < k\<close> alpha_le_1 by (simp add: algebra_simps frac_le)
     have "- (3 / (\<beta> * real k ^ 4)) \<le> (-2 / real k ^ 4) / \<beta> - alpha k (hgt k p) / (\<beta> * card X)"
       using \<open>\<beta>>0\<close> divide_right_mono [OF B, of \<beta>] \<open>k>0\<close> by (simp add: field_simps)
-    also have "... = (- real (card X) / real k ^ 5) / (\<beta> * real (card X)) * (2 * real k) - alpha k (hgt k p) / (\<beta> * card X)"
+    also have "\<dots> = (- real (card X) / real k ^ 5) / (\<beta> * real (card X)) * (2 * real k) - alpha k (hgt k p) / (\<beta> * card X)"
       using \<open>0 < card X\<close> by (simp add: field_split_simps eval_nat_numeral)
-    also have "... = (- real (card X) / real k ^ 5) * card Y / (\<beta> * real (card X) * (card Y / (2 * real k))) - alpha k (hgt k p) / (\<beta> * card X)"
+    also have "\<dots> = (- real (card X) / real k ^ 5) * card Y / (\<beta> * real (card X) * (card Y / (2 * real k))) - alpha k (hgt k p) / (\<beta> * card X)"
       using \<open>card Y \<noteq> 0\<close> by simp
     also have "\<dots>  \<le> (- real (card X) / real k ^ 5) * card Y / (\<beta> * real (card X) * card NRY) - alpha k (hgt k p) / (\<beta> * card X)"
       using Y_NRY \<open>k>0\<close> \<open>card NRY > 0\<close> \<open>card X > 0\<close> \<open>card Y \<noteq> 0\<close> \<open>\<beta>>0\<close>
@@ -728,10 +728,10 @@ proof -
     have "3 / real k ^ 4 \<le> (1-\<mu>) * eps k ^ 2 / k"
       using \<open>k>0\<close> \<open>\<mu><1\<close> mult_left_mono [OF k52, of k] 
       by (simp add: field_simps eps_def powr_powr powr_mult_base flip: powr_numeral powr_add)
-    also have "... \<le> (1-\<beta>) * eps k ^ 2 / k"
+    also have "\<dots> \<le> (1-\<beta>) * eps k ^ 2 / k"
       using \<open>\<beta>\<le>\<mu>\<close>
       by (intro divide_right_mono mult_right_mono) auto
-    also have "... \<le> (1-\<beta>) * eps k * alpha k (hgt k p)"
+    also have "\<dots> \<le> (1-\<beta>) * eps k * alpha k (hgt k p)"
       using Red_5_7a [of k p] eps_ge0 \<open>\<beta>\<le>\<mu>\<close> \<open>\<mu><1\<close>
       unfolding power2_eq_square divide_inverse mult.assoc
       by (intro mult_mono) auto
