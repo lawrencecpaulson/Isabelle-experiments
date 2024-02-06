@@ -79,6 +79,9 @@ lemma Blue_eq: "Blue = all_edges V - Red"
   using disjnt_Red_Blue Red_Blue_all complete wellformed
   by (auto simp: disjnt_iff)
 
+lemma Red_eq: "Red = all_edges V - Blue"
+  using Blue_eq Red_Blue_all by blast
+
 lemma nontriv: "E \<noteq> {}"
   using Red_E bot.extremum_strict by blast
 
@@ -357,6 +360,12 @@ lemma q0 [simp]: "qfun k 0 = p0"
 lemma card_XY0: "card X0 > 0" "card Y0 > 0"
   using Red_edges_XY0 finite_X0 finite_Y0 by force+
 
+lemma finite_Red [simp]: "finite Red"
+  by (metis Red_Blue_all complete fin_edges finite_Un)
+
+lemma finite_Blue [simp]: "finite Blue"
+  using Blue_E fin_edges finite_subset by blast
+
 lemma Red_edges_nonzero: "edge_card Red X0 Y0 > 0"
   using Red_edges_XY0
   using Red_E edge_card_def fin_edges finite_subset by fastforce
@@ -366,9 +375,14 @@ lemma Blue_edges_nonzero: "edge_card Blue X0 Y0 > 0"
   using Blue_E edge_card_def fin_edges finite_subset by fastforce
 
 lemma Blue_edges_less: "edge_card Red X0 Y0 < card X0 * card Y0"
-  using Blue_edges_XY0
-  apply (simp add: Blue_eq Diff_Int_distrib2)
-  by (metis Int_lower2 all_uedges_betw_subset card_seteq complete edge_card_def edge_card_le fin_edges finite_X0 finite_Y0 finite_subset inf.absorb_iff2 le_neq_implies_less)
+proof -
+  have "edge_card Red X0 Y0 \<noteq> card X0 * card Y0"
+    using Blue_edges_XY0 Blue_eq Diff_Int_distrib2
+    by (metis Diff_eq_empty_iff Int_lower2 all_edges_betw_un_le card_seteq edge_card_def
+        finite_X0 finite_Y0 finite_all_edges_betw_un) 
+  then show ?thesis
+    by (meson edge_card_le finite_X0 finite_Y0 le_eq_less_or_eq)
+qed
 
 lemma p0_01: "0 < p0" "p0 < 1"
 proof -
@@ -461,12 +475,6 @@ lemma hgt_mono:
   assumes "p \<le> q" "0<k"
   shows "hgt k p \<le> hgt k q"
   by (meson assms order.trans hgt_Least hgt_gt_0 hgt_works)
-
-lemma finite_Red [simp]: "finite Red"
-  by (metis Red_Blue_all complete fin_edges finite_Un)
-
-lemma finite_Blue [simp]: "finite Blue"
-  using Blue_E fin_edges finite_subset by blast
 
 
 definition "alpha \<equiv> \<lambda>k h. qfun k h - qfun k (h-1)"
@@ -767,7 +775,8 @@ inductive red_step
          \<Longrightarrow> red_step \<mu> (X,Y,A,B) (Neighbours Red x \<inter> X, Neighbours Red x \<inter> Y, insert x A, B)"
 
 lemma red_step_V_state: 
-  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)"
+  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" 
+          "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)"
   shows "V_state U'"
 proof -
   have "choose_central_vx \<mu> (X, Y, A, B) \<in> V"
@@ -777,7 +786,8 @@ proof -
 qed
 
 lemma red_step_disjoint_state:
-  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
+  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" 
+          "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
   shows "disjoint_state U'"
 proof -
   have "choose_central_vx \<mu> (X, Y, A, B) \<in> X"
@@ -787,7 +797,8 @@ proof -
 qed
 
 lemma red_step_RB_state: 
-  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)" "RB_state (X,Y,A,B)"
+  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y"
+          "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)" "RB_state (X,Y,A,B)"
   shows "RB_state U'"
 proof -
   define x where "x \<equiv> choose_central_vx \<mu> (X, Y, A, B)"
@@ -799,17 +810,18 @@ proof -
     by (auto simp: all_edges_betw_un_insert2 all_edges_betw_un_Un2 intro!: all_uedges_betw_I)
   have B1: "all_edges_betw_un (insert x A) (Neighbours Red x \<inter> X) \<subseteq> Red"
     if "all_edges_betw_un A X \<subseteq> Red"
-    using that \<open>x \<in> X\<close> by (force simp:  all_edges_betw_un_def in_Neighbours_iff)
+    using that \<open>x \<in> X\<close> by (force simp: all_edges_betw_un_def in_Neighbours_iff)
   have B2: "all_edges_betw_un (insert x A) (Neighbours Red x \<inter> Y) \<subseteq> Red"
     if "all_edges_betw_un A Y \<subseteq> Red"
-    using that \<open>x \<in> X\<close> by (force simp:  all_edges_betw_un_def in_Neighbours_iff)
+    using that \<open>x \<in> X\<close> by (force simp: all_edges_betw_un_def in_Neighbours_iff)
   from assms A B1 B2 show ?thesis
-    apply (clarsimp simp: RB_state_def simp flip: x_def   elim!: red_step.cases)
+    apply (clarsimp simp: RB_state_def simp flip: x_def elim!: red_step.cases)
     by (metis Int_Un_eq(2) Un_subset_iff all_edges_betw_un_Un2)
 qed
 
 lemma red_step_valid_state: 
-  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "valid_state (X,Y,A,B)"
+  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" 
+          "\<not> many_bluish \<mu> l k X" "valid_state (X,Y,A,B)"
   shows "valid_state U'"
   by (meson assms red_step_RB_state red_step_V_state red_step_disjoint_state valid_state_def)
 
@@ -820,7 +832,8 @@ inductive density_boost
          \<Longrightarrow> density_boost \<mu> (X,Y,A,B) (Neighbours Blue x \<inter> X, Neighbours Red x \<inter> Y, A, insert x B)"
 
 lemma density_boost_V_state: 
-  assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)"
+  assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" 
+          "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)"
   shows "V_state U'"
 proof -
   have "choose_central_vx \<mu> (X, Y, A, B) \<in> V"
@@ -830,7 +843,8 @@ proof -
 qed
 
 lemma density_boost_disjoint_state:
-  assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
+  assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y"  
+          "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
   shows "disjoint_state U'"
 proof -
   have "choose_central_vx \<mu> (X, Y, A, B) \<in> X"
@@ -847,19 +861,19 @@ proof -
   define x where "x \<equiv> choose_central_vx \<mu> (X, Y, A, B)"
   have "x \<in> X"
     using assms choose_central_vx_X by (simp add: x_def V_state_def)
-  have A: "all_edges_betw_un A (Neighbours Blue x \<inter> X \<union> Neighbours Red x \<inter> Y) \<subseteq> Red"
+  have "all_edges_betw_un A (Neighbours Blue x \<inter> X \<union> Neighbours Red x \<inter> Y) \<subseteq> Red"
     if "all_edges_betw_un A (X \<union> Y) \<subseteq> Red"
     using that by (metis Int_Un_eq(4) Un_subset_iff all_edges_betw_un_Un2)
-  have B: "all_edges_betw_un (insert x B) (insert x B) \<subseteq> Blue"
+  moreover
+  have "all_edges_betw_un (insert x B) (insert x B) \<subseteq> Blue"
     if "all_edges_betw_un B (B \<union> X) \<subseteq> Blue"
-    using that \<open>x \<in> X\<close> all_edges_betw_un_commute 
-    by (auto simp: all_edges_betw_un_insert1 all_edges_betw_un_insert2 all_edges_betw_un_Un2 intro!: all_uedges_betw_I)
-  have C: "all_edges_betw_un (insert x B) (Neighbours Blue x \<inter> X) \<subseteq> Blue"
+    using that \<open>x \<in> X\<close> by (auto simp add: subset_iff set_eq_iff all_edges_betw_un_def)
+  moreover
+  have "all_edges_betw_un (insert x B) (Neighbours Blue x \<inter> X) \<subseteq> Blue"
     if "all_edges_betw_un B (B \<union> X) \<subseteq> Blue"
-    using \<open>x \<in> X\<close> that  
-    apply (auto simp: in_Neighbours_iff all_edges_betw_un_insert1 all_edges_betw_un_insert2 all_edges_betw_un_Un2 intro!: all_uedges_betw_I)
-    by (metis Int_lower2 all_edges_betw_un_mono2 subset_iff)
-  from assms A B C show ?thesis
+    using \<open>x \<in> X\<close> that  by (auto simp: all_edges_betw_un_def subset_iff in_Neighbours_iff)
+  ultimately show ?thesis
+    using assms
     by (auto simp: RB_state_def all_edges_betw_un_Un2 x_def [symmetric]  elim!: density_boost.cases)
 qed
 
@@ -1223,22 +1237,26 @@ lemma cvx_works:
   assumes "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
   shows "central_vertex \<mu> (Xseq \<mu> l k i) (cvx \<mu> l k i)
        \<and> weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) = max_central_vx \<mu> (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
-  using assms not_many_bluish step_non_terminating
-  apply (simp add: Step_class_def Xseq_def cvx_def Yseq_def split: prod.split)
-  by (metis (mono_tags, lifting) choose_central_vx_works V_state case_prod_conv)
+proof -
+  have "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+    using Step_class_def assms step_non_terminating by fastforce
+  then show ?thesis
+    using assms not_many_bluish[OF assms]  
+    apply (simp add: Step_class_def Xseq_def cvx_def Yseq_def split: prod.split prod.split_asm)
+    by (metis V_state choose_central_vx_works)
+qed
 
 lemma cvx_in_Xseq:
   assumes "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
   shows "cvx \<mu> l k i \<in> Xseq \<mu> l k i"
-  apply (simp add: Xseq_def cvx_def Yseq_def split: prod.split)
-  by (metis central_vertex_def cvx_def assms cvx_works stepper_XYseq)
+  using assms cvx_works[OF assms] 
+  by (simp add: Xseq_def central_vertex_def cvx_def split: prod.split_asm)
 
 lemma beta_le:
   assumes "\<mu> > 0" and i: "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
   shows "beta \<mu> l k i \<le> \<mu>"
-  using \<open>\<mu> > 0\<close>
-  apply (simp add: beta_def divide_simps split: prod.split)
-  by (metis i central_vertex_def cvx_works stepper_XYseq)
+  using assms cvx_works[OF i] 
+  by (simp add: beta_def central_vertex_def Xseq_def divide_simps split: prod.split_asm)
 
 end
 
