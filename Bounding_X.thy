@@ -18,23 +18,23 @@ definition bigbeta where
 
 lemma X_7_2:
   fixes l k
-  defines "f \<equiv> \<lambda>k. (real k / ln 2) * ln (1 - 1 / 4^(k-1))"
-  assumes \<mu>: "0<\<mu>" "\<mu><1" "Colours l k" and fin_red: "finite (Step_class \<mu> l k {red_step})"
+  assumes \<mu>: "0<\<mu>" "\<mu><1" 
+  defines "f \<equiv> \<lambda>k. (real k / ln 2) * ln (1 - 1 / (k * (1-\<mu>)))"
+  assumes "Colours l k" and fin_red: "finite (Step_class \<mu> l k {red_step})"
   defines "X \<equiv> Xseq \<mu> l k"
-  defines "NRX \<equiv> \<lambda>i. Neighbours Red (cvx \<mu> l k i) \<inter> X i"
   shows "(\<Prod>i \<in> Step_class \<mu> l k {red_step}. card (X(Suc i)) / card (X i)) 
         \<ge> 2 powr (f k) * (1-\<mu>) ^ card (Step_class \<mu> l k {red_step})"
 proof -
   have "f \<in> o(real)"
-    using p0_01 unfolding eps_def f_def by real_asymp
+    using p0_01 \<mu> unfolding eps_def f_def by real_asymp
   define R where "R \<equiv> RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
-  obtain lk: "0<l" "l\<le>k"
-    using \<open>Colours l k\<close> by (meson Colours_def Colours_ln0)
+  obtain lk: "0<l" "l\<le>k" "0<k"
+    using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   have "nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3" "k\<ge>2"
     sorry
   then have "R > k"
     using RN_gt1 R_def by blast
-  moreover have "k > 1 / (1-\<mu>)"
+  moreover have k\<mu>: "k > 1 / (1-\<mu>)"
     sorry
   ultimately have bigR: "1-\<mu> > 1/R"    \<comment> \<open>this is a (weak) bigness assumption\<close>
     using \<mu> apply (simp add: divide_simps mult.commute)
@@ -42,12 +42,13 @@ proof -
   have *: "1-\<mu> - 1/R \<le> card (X (Suc i)) / card (X i)"
     if  "i \<in> Step_class \<mu> l k {red_step}" for i
   proof -
-    have nextX: "X (Suc i) = NRX i" and nont: "\<not> termination_condition l k (X i) (Yseq \<mu> l k i)"
-      using that by (auto simp: X_def NRX_def step_kind_defs next_state_def cvx_def Let_def split: prod.split)
+    let ?NRX = "\<lambda>i. Neighbours Red (cvx \<mu> l k i) \<inter> X i"
+    have nextX: "X (Suc i) = ?NRX i" and nont: "\<not> termination_condition l k (X i) (Yseq \<mu> l k i)"
+      using that by (auto simp: X_def step_kind_defs next_state_def cvx_def Let_def split: prod.split)
     then have cardX: "card (X i) > R"
       unfolding R_def by (meson not_less termination_condition_def)
-    have 1: "card (NRX i) \<ge> (1-\<mu>) * card (X i) - 1"
-      using that card_cvx_Neighbours \<mu> by (simp add: Step_class_def NRX_def X_def)
+    have 1: "card (?NRX i) \<ge> (1-\<mu>) * card (X i) - 1"
+      using that card_cvx_Neighbours \<mu> by (simp add: Step_class_def X_def)
     have "R \<noteq> 0"
       unfolding RN_eq_0_iff R_def using lk by auto
     with cardX have "(1-\<mu>) - 1 / R \<le> (1-\<mu>) - 1 / card (X i)"
@@ -57,6 +58,8 @@ proof -
     finally show ?thesis .
   qed
   define t where "t \<equiv> card(Step_class \<mu> l k {red_step})"
+  have "t\<ge>0"
+    by (auto simp: t_def)
   have "(1-\<mu> - 1/R) ^ card Red_steps \<le> (\<Prod>i \<in> Red_steps. card (X(Suc i)) / card (X i))"
     if "Red_steps \<subseteq> Step_class \<mu> l k {red_step}" for Red_steps
     using finite_subset [OF that fin_red] that
@@ -81,35 +84,30 @@ proof -
   then have *: "(1-\<mu> - 1/R) ^ t \<le> (\<Prod>i \<in> Step_class \<mu> l k {red_step}. card (X(Suc i)) / card (X i))"
     using t_def by blast
   \<comment> \<open>Asymptotic part of the argument\<close>
-  have "l powr (3 / 4) \<le> l powr 1"
-    using lk by (intro powr_mono) auto
-  then have "nat \<lceil>real l powr (3 / 4)\<rceil> \<le> k"
-    using \<open>l\<le>k\<close> by simp
-  then have "R \<le> RN k k"
-    using RN_mono R_def by blast
-  also have "... \<le> 4 ^(k-1)"
-    by (metis RN_le_power4)
-  finally have "R \<le> 4 ^ (k-1)" .
-  then have "1 - 1/R \<le> 1 - 1 / 4^(k-1)"
-    using \<open>k < R\<close> inverse_of_nat_le by fastforce
-  then have ln_le: "ln (1 - 1/R) \<le> ln (1 - 1 / 4^(k-1))"
-    by (smt (verit) \<mu>(1) bigR ln_le_cancel_iff)
-  have "k * ln (1-\<mu> - 1/R) \<le> t * ln (1-\<mu> - 1/R)"
+  have "1-\<mu> - 1/k \<le> 1-\<mu> - 1/R"
+    using \<open>0<k\<close> \<open>k < R\<close> by (simp add: inverse_of_nat_le)
+  then have ln_le: "ln (1-\<mu> - 1/k) \<le> ln (1-\<mu> - 1/R)"
+    using \<mu> k\<mu> \<open>k>0\<close> \<open>R>k\<close> 
+    by (simp add: bigR divide_simps mult.commute pos_divide_less_eq less_le_trans)
+  have "f k * ln 2 = k * ln (1 - 1 / (k * (1-\<mu>)))"
+    by (simp add: f_def)
+  also have "... \<le> t * ln (1 - 1 / (k * (1-\<mu>)))"
   proof (intro mult_right_mono_neg)
     obtain red_steps: "finite (Step_class \<mu> l k {red_step})" "card (Step_class \<mu> l k {red_step}) < k"
       using red_step_limit \<open>0<\<mu>\<close> \<open>Colours l k\<close> by blast
-    then have "t \<le> k"
-      using t_def by linarith
-    then show "real t \<le> real k"
-      by auto
-    show "ln (1 - \<mu> - 1 / real R) \<le> 0"
-      by (smt (verit) \<mu>(1) bigR ln_le_minus_one of_nat_0_le_iff zero_le_divide_1_iff)
+    show "real t \<le> real k"
+      using nat_less_le red_steps(2) by (simp add: t_def)
+    show "ln (1 - 1 / (k * (1-\<mu>))) \<le> 0"
+      using \<mu>(2) divide_less_eq k\<mu> ln_one_minus_pos_upper_bound by fastforce
   qed
-  then have "f k * ln 2 + t * ln (1-\<mu>) \<le> t * ln (1-\<mu> - 1/R)"
-    using mult_left_mono [OF ln_le, of "t"]
-    by (simp add: f_def distrib_left)
-  then have "f k * ln 2 + t * ln (1-\<mu>) \<le> t * ln (1-\<mu> - 1/R)"
-    by simp
+  also have "... = t * ln ((1-\<mu> - 1/k) / (1-\<mu>))"
+    using \<open>t\<ge>0\<close> \<mu> by (simp add: diff_divide_distrib)
+  also have "... = t * (ln (1-\<mu> - 1/k) - ln (1-\<mu>))"
+    using \<open>t\<ge>0\<close> \<mu> k\<mu> \<open>0<k\<close> by (simp add: ln_div mult.commute pos_divide_less_eq)
+  also have "... \<le> t * (ln (1-\<mu> - 1/R) - ln (1-\<mu>))"
+    by (simp add: ln_le mult_left_mono)
+  finally have "f k * ln 2 + t * ln (1-\<mu>) \<le> t * ln (1-\<mu> - 1/R)"
+    by (simp add: ring_distribs)
   then have "2 powr f k * (1-\<mu>) ^ t \<le> (1-\<mu> - 1/R) ^ t"
     using \<mu> by (simp add: bigR ln_mult ln_powr ln_realpow flip: ln_le_cancel_iff)
   with * show ?thesis
