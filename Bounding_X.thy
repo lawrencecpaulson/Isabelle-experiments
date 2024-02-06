@@ -20,6 +20,7 @@ lemma X_7_2:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   defines "f \<equiv> \<lambda>k. (real k / ln 2) * ln (1 - 1 / (k * (1-\<mu>)))"
+  assumes big: "nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3" "k\<ge>2" "k > 1 / (1-\<mu>)"
   assumes "Colours l k" and fin_red: "finite (Step_class \<mu> l k {red_step})"
   defines "X \<equiv> Xseq \<mu> l k"
   shows "(\<Prod>i \<in> Step_class \<mu> l k {red_step}. card (X(Suc i)) / card (X i)) 
@@ -30,14 +31,10 @@ proof -
   define R where "R \<equiv> RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  have "nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3" "k\<ge>2"
-    sorry
-  then have "R > k"
-    using RN_gt1 R_def by blast
-  moreover have k\<mu>: "k > 1 / (1-\<mu>)"
-    sorry
-  ultimately have bigR: "1-\<mu> > 1/R"    \<comment> \<open>this is a (weak) bigness assumption\<close>
-    using \<mu> apply (simp add: divide_simps mult.commute)
+  have "R > k"
+    using big RN_gt1 R_def by blast
+  with big \<mu> have bigR: "1-\<mu> > 1/R"
+    apply (simp add: divide_simps mult.commute)
     by (smt (verit, ccfv_SIG) divide_less_eq less_imp_of_nat_less)
   have *: "1-\<mu> - 1/R \<le> card (X (Suc i)) / card (X i)"
     if  "i \<in> Step_class \<mu> l k {red_step}" for i
@@ -87,7 +84,7 @@ proof -
   have "1-\<mu> - 1/k \<le> 1-\<mu> - 1/R"
     using \<open>0<k\<close> \<open>k < R\<close> by (simp add: inverse_of_nat_le)
   then have ln_le: "ln (1-\<mu> - 1/k) \<le> ln (1-\<mu> - 1/R)"
-    using \<mu> k\<mu> \<open>k>0\<close> \<open>R>k\<close> 
+    using \<mu> big \<open>k>0\<close> \<open>R>k\<close> 
     by (simp add: bigR divide_simps mult.commute pos_divide_less_eq less_le_trans)
   have "f k * ln 2 = k * ln (1 - 1 / (k * (1-\<mu>)))"
     by (simp add: f_def)
@@ -98,12 +95,12 @@ proof -
     show "real t \<le> real k"
       using nat_less_le red_steps(2) by (simp add: t_def)
     show "ln (1 - 1 / (k * (1-\<mu>))) \<le> 0"
-      using \<mu>(2) divide_less_eq k\<mu> ln_one_minus_pos_upper_bound by fastforce
+      using \<mu>(2) divide_less_eq big ln_one_minus_pos_upper_bound by fastforce
   qed
   also have "... = t * ln ((1-\<mu> - 1/k) / (1-\<mu>))"
     using \<open>t\<ge>0\<close> \<mu> by (simp add: diff_divide_distrib)
   also have "... = t * (ln (1-\<mu> - 1/k) - ln (1-\<mu>))"
-    using \<open>t\<ge>0\<close> \<mu> k\<mu> \<open>0<k\<close> by (simp add: ln_div mult.commute pos_divide_less_eq)
+    using \<open>t\<ge>0\<close> \<mu> big \<open>0<k\<close> by (simp add: ln_div mult.commute pos_divide_less_eq)
   also have "... \<le> t * (ln (1-\<mu> - 1/R) - ln (1-\<mu>))"
     by (simp add: ln_le mult_left_mono)
   finally have "f k * ln 2 + t * ln (1-\<mu>) \<le> t * ln (1-\<mu> - 1/R)"
@@ -113,6 +110,37 @@ proof -
   with * show ?thesis
     by (simp add: t_def)
 qed
+
+definition "get_blue_book \<equiv> \<lambda>\<mu> l k i. let (X,Y,A,B) = stepper \<mu> l k i in choose_blue_book \<mu> (X,Y,A,B)"
+
+lemma
+  assumes i: "i \<in> Step_class \<mu> l k {bblue_step}" 
+    and step: "stepper \<mu> l k i = (X,Y,A,B)"
+    and bb: "get_blue_book \<mu> l k i = (S,T)"
+  shows "stepper \<mu> l k (Suc i) = (T, Y, A, B\<union>S)"
+  using assms
+  by (force simp add: step_kind_defs next_state_def get_blue_book_def split: if_split_asm)
+
+
+lemma X_7_3:
+  fixes l k
+  assumes \<mu>: "0<\<mu>" "\<mu><1" 
+  defines "f \<equiv> \<lambda>k. (real k / ln 2) * ln (1 - 1 / (k * (1-\<mu>)))"
+  assumes bblue_limit: "Lemma_bblue_step_limit \<mu> l" 
+  assumes "Colours l k" 
+  defines "X \<equiv> Xseq \<mu> l k"
+  defines "BB \<equiv> Step_class \<mu> l k {bblue_step}"
+  shows "(\<Prod>i \<in> BB. card (X(Suc i)) / card (X i)) 
+        \<ge> 2 powr (f k) * (1-\<mu>) ^ (l - card (Step_class \<mu> l k {dboost_step}))"
+proof -
+  have "f \<in> o(real)"
+    using p0_01 \<mu> unfolding eps_def f_def by real_asymp
+  obtain lk: "0<l" "l\<le>k" "0<k"
+    using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
+  have "finite BB" "card BB \<le> l powr (3/4)"
+    using \<open>Colours l k\<close> bblue_limit by (auto simp: BB_def Lemma_bblue_step_limit_def)
+
+
 
 end (*context Diagonal*)
 

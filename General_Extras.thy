@@ -181,9 +181,11 @@ subsection \<open>Convexity?\<close>
 (* the definition of convex in the library is incorrect: 
   we speak of a convex function ONLY on a convex set*)
 
+(*2024-02-06: added*)
 lemma mono_on_ident: "mono_on S (\<lambda>x. x)"
   by (simp add: mono_on_def)
 
+(*2024-02-06: added*)
 lemma mono_on_const:
   fixes a :: "'a::order" shows "mono_on S (\<lambda>x. a)"
   by (simp add: mono_on_def)
@@ -204,8 +206,7 @@ lemma concave_on_const: "concave_on S (\<lambda>x. a)"
   by (simp add: concave_on_iff flip: distrib_right)
 
 lemma convex_on_diff:
-  assumes "convex_on S f"
-    and "concave_on S g"
+  assumes "convex_on S f" and "concave_on S g"
   shows "convex_on S (\<lambda>x. f x - g x)"
   using assms concave_on_def convex_on_add by fastforce
 

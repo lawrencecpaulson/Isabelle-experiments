@@ -6,6 +6,8 @@ theory Diagonal imports
 
 begin
 
+hide_const Bseq
+
 section \<open>Locale for the parameters of the construction\<close>
 
 type_synonym 'a config = "'a set \<times> 'a set \<times> 'a set \<times> 'a set"
@@ -527,6 +529,25 @@ lemma
   shows finX: "finite X" and finY: "finite Y" and finA: "finite A" and finB: "finite B"
   using V_state_def assms finV finite_subset by auto
 
+lemma 
+  assumes "valid_state(X,Y,A,B)" 
+  shows A_Red_clique: "clique A Red" and B_Blue_clique: "clique B Blue"
+  using assms
+  by (auto simp: valid_state_def V_state_def RB_state_def all_edges_betw_un_iff_clique all_edges_betw_un_Un2)
+
+lemma A_less_k:
+  assumes valid: "valid_state(X,Y,A,B)" and "Colours l k"
+  shows "card A < k"
+  using assms A_Red_clique[OF valid] unfolding Colours_def size_clique_def valid_state_def V_state_def
+  by (smt (verit) card_Ex_subset case_prod_conv order.trans linorder_not_less smaller_clique)
+
+lemma B_less_l:
+  assumes valid: "valid_state(X,Y,A,B)" and "Colours l k"
+  shows "card B < l"
+  using assms B_Blue_clique[OF valid] unfolding Colours_def size_clique_def valid_state_def V_state_def
+  by (smt (verit) card_Ex_subset case_prod_conv order.trans linorder_not_less smaller_clique)
+
+
 subsection \<open>Degree regularisation\<close>
 
 definition "red_dense \<equiv> \<lambda>k Y p x. card (Neighbours Red x \<inter> Y) \<ge> (p - eps k powr (-1/2) * alpha k (hgt k p)) * card Y"
@@ -974,9 +995,10 @@ proof -
     by (metis linorder_neqE_nat size_clique_def size_clique_smaller stepper_B) 
 qed
 
-
 definition "Xseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). X) \<circ> stepper \<mu> l k"
 definition "Yseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). Y) \<circ> stepper \<mu> l k"
+definition "Aseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). A) \<circ> stepper \<mu> l k"
+definition "Bseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). B) \<circ> stepper \<mu> l k"
 definition "pseq \<mu> l k \<equiv> \<lambda>n. red_density (Xseq \<mu> l k n) (Yseq \<mu> l k n)"
 
 definition "pee \<equiv> \<lambda>\<mu> l k i. red_density (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
@@ -1009,6 +1031,20 @@ lemma Yseq_subset_V: "Yseq \<mu> l k i \<subseteq> V"
 
 lemma Xseq_Yseq_disjnt: "disjnt (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
   by (metis (no_types, opaque_lifting) XY0(1) Xseq_0 Xseq_antimono Yseq_0 Yseq_antimono disjnt_iff le0 subset_eq)
+
+lemma valid_state_seq: "valid_state(Xseq \<mu> l k i, Yseq \<mu> l k i, Aseq \<mu> l k i, Bseq \<mu> l k i)"
+  using valid_state_stepper[of \<mu> l k i]
+  by (force simp add: Xseq_def Yseq_def Aseq_def Bseq_def simp del: valid_state_stepper split: prod.split)
+
+lemma Aseq_less_k:
+  assumes "Colours l k"
+  shows "card (Aseq \<mu> l k i) < k"
+  by (meson A_less_k assms valid_state_seq)
+
+lemma Bseq_less_l:
+  assumes "Colours l k"
+  shows "card (Bseq \<mu> l k i) < l"
+  by (meson B_less_l assms valid_state_seq)
 
 lemma pee_eq_p0: "pee \<mu> l k 0 = p0"
   by (simp add: pee_def p0_def)
