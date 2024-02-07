@@ -954,13 +954,13 @@ next
     by (force simp: next_state_valid degree_reg_valid_state split: prod.split)
 qed
 
-lemma V_state [simp]: "V_state (stepper \<mu> l k n)"
+lemma V_state_stepper: "V_state (stepper \<mu> l k n)"
   using valid_state_def valid_state_stepper by force
 
-lemma disjoint_state_stepper [simp]: "disjoint_state (stepper \<mu> l k n)"
+lemma disjoint_state_stepper: "disjoint_state (stepper \<mu> l k n)"
   using valid_state_def valid_state_stepper by force
 
-lemma RB_state_stepper [simp]: "RB_state (stepper \<mu> l k n)"
+lemma RB_state_stepper: "RB_state (stepper \<mu> l k n)"
   using valid_state_def valid_state_stepper by force
 
 lemma stepper_A:
@@ -968,7 +968,7 @@ lemma stepper_A:
   shows "clique A Red \<and> A\<subseteq>V"
 proof -
   have "A\<subseteq>V"
-    using V_state[of \<mu> l k n] assms by (auto simp: V_state_def)
+    using V_state_stepper[of \<mu> l k n] assms by (auto simp: V_state_def)
   moreover
   have "all_edges_betw_un A A \<subseteq> Red"
     using RB_state_stepper[of \<mu> l k n] assms by (auto simp: RB_state_def)
@@ -991,7 +991,7 @@ lemma stepper_B:
   shows "clique B Blue \<and> B\<subseteq>V"
 proof -
   have "B\<subseteq>V"
-    using V_state[of \<mu> l k n] assms by (auto simp: V_state_def)
+    using V_state_stepper[of \<mu> l k n] assms by (auto simp: V_state_def)
   moreover
   have "all_edges_betw_un B B \<subseteq> Blue"
     using RB_state_stepper[of \<mu> l k n] assms by (auto simp: RB_state_def all_edges_betw_un_Un2)
@@ -1020,11 +1020,11 @@ definition "pee \<equiv> \<lambda>\<mu> l k i. red_density (Xseq \<mu> l k i) (Y
 lemma Xseq_0 [simp]: "Xseq \<mu> l k 0 = X0"
   by (simp add: Xseq_def)
 
-lemma Xseq_Suc_subset: "Xseq \<mu> l k (Suc n) \<subseteq> Xseq \<mu> l k n"
+lemma Xseq_Suc_subset: "Xseq \<mu> l k (Suc i) \<subseteq> Xseq \<mu> l k i"
   apply (simp add: Xseq_def split: if_split_asm prod.split)
   by (metis degree_reg_subset next_state_subset valid_state_stepper)
 
-lemma Xseq_antimono: "m \<le> n \<Longrightarrow> Xseq \<mu> l k n \<subseteq> Xseq \<mu> l k m"
+lemma Xseq_antimono: "j \<le> i \<Longrightarrow> Xseq \<mu> l k i \<subseteq> Xseq \<mu> l k j"
   by (simp add: Xseq_Suc_subset lift_Suc_antimono_le)
 
 lemma Xseq_subset_V: "Xseq \<mu> l k i \<subseteq> V"
@@ -1033,11 +1033,11 @@ lemma Xseq_subset_V: "Xseq \<mu> l k i \<subseteq> V"
 lemma Yseq_0 [simp]: "Yseq \<mu> l k 0 = Y0"
   by (simp add: Yseq_def)
 
-lemma Yseq_Suc_subset: "Yseq \<mu> l k (Suc n) \<subseteq> Yseq \<mu> l k n"
+lemma Yseq_Suc_subset: "Yseq \<mu> l k (Suc i) \<subseteq> Yseq \<mu> l k i"
   apply (simp add: Yseq_def split: if_split_asm prod.split)
   by (metis degree_reg_subset next_state_subset valid_state_stepper)
 
-lemma Yseq_antimono: "m \<le> n \<Longrightarrow> Yseq \<mu> l k n \<subseteq> Yseq \<mu> l k m"
+lemma Yseq_antimono: "j \<le> i \<Longrightarrow> Yseq \<mu> l k i \<subseteq> Yseq \<mu> l k j"
   by (simp add: Yseq_Suc_subset lift_Suc_antimono_le)
 
 lemma Yseq_subset_V: "Yseq \<mu> l k i \<subseteq> V"
@@ -1055,10 +1055,40 @@ lemma Aseq_less_k:
   shows "card (Aseq \<mu> l k i) < k"
   by (meson A_less_k assms valid_state_seq)
 
+lemma Aseq_0 [simp]: "Aseq \<mu> l k 0 = {}"
+  by (simp add: Aseq_def)
+
+lemma Aseq_Suc_subset: "Aseq \<mu> l k i \<subseteq> Aseq \<mu> l k (Suc i)"
+  by (fastforce simp: Aseq_def next_state_def degree_reg_def Let_def split: prod.split)
+
+lemma Aseq_mono: "j \<le> i \<Longrightarrow> Aseq \<mu> l k j \<subseteq> Aseq \<mu> l k i"
+  by (simp add: Aseq_Suc_subset lift_Suc_mono_le)
+
+lemma Aseq_subset_V: "Aseq \<mu> l k i \<subseteq> V"
+  using stepper_A[of \<mu> l k i] by (simp add: Aseq_def split: prod.split) 
+
+lemma finite_Aseq: "finite (Aseq \<mu> l k i)"
+  by (meson Aseq_subset_V finV finite_subset)
+
 lemma Bseq_less_l:
   assumes "Colours l k"
   shows "card (Bseq \<mu> l k i) < l"
   by (meson B_less_l assms valid_state_seq)
+
+lemma Bseq_0 [simp]: "Bseq \<mu> l k 0 = {}"
+  by (simp add: Bseq_def)
+
+lemma Bseq_Suc_subset: "Bseq \<mu> l k i \<subseteq> Bseq \<mu> l k (Suc i)"
+  by (fastforce simp: Bseq_def next_state_def degree_reg_def Let_def split: prod.split)
+
+lemma Bseq_mono: "j \<le> i \<Longrightarrow> Bseq \<mu> l k j \<subseteq> Bseq \<mu> l k i"
+  by (simp add: Bseq_Suc_subset lift_Suc_mono_le)
+
+lemma Bseq_subset_V: "Bseq \<mu> l k i \<subseteq> V"
+  using stepper_B[of \<mu> l k i] by (simp add: Bseq_def split: prod.split) 
+
+lemma finite_Bseq: "finite (Bseq \<mu> l k i)"
+  by (meson Bseq_subset_V finV finite_subset)
 
 lemma pee_eq_p0: "pee \<mu> l k 0 = p0"
   by (simp add: pee_def p0_def)

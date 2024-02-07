@@ -4,6 +4,8 @@ theory General_Extras imports
 
 begin
 
+(* the next lot modify basic HOL*)
+
 thm mult_le_cancel_iff1 (*2024-02-01: renamed and moved*)
 
 (*2024-02-01: added*)
@@ -157,28 +159,30 @@ proof -
     by (simp add: sum_divide_distrib nn_integral_count_space_finite)
 qed
 
-thm emeasure_uniform_count_measure
+(*2024-02-07: added*)
 lemma emeasure_uniform_count_measure_if:
   "finite A \<Longrightarrow> emeasure (uniform_count_measure A) X = (if X \<subseteq> A then card X / card A else 0)"
   by (simp add: emeasure_notin_sets emeasure_uniform_count_measure sets_uniform_count_measure)
 
-thm measure_uniform_count_measure
+(*2024-02-07: added*)
 lemma measure_uniform_count_measure_if:
   "finite A \<Longrightarrow> measure (uniform_count_measure A) X = (if X \<subseteq> A then card X / card A else 0)"
   by (simp add: measure_uniform_count_measure measure_notin_sets sets_uniform_count_measure)
 
+(*2024-02-07: added*)
 lemma emeasure_point_measure_finite_if:
   "finite A \<Longrightarrow> emeasure (point_measure A f) X = (if X \<subseteq> A then \<Sum>a\<in>X. f a else 0)"
   by (simp add: emeasure_point_measure_finite emeasure_notin_sets sets_point_measure)
 
+(*2024-02-07: added*)
 lemma measure_point_measure_finite_if:
   assumes "finite A" "\<And>x. x \<in> A \<Longrightarrow> f x \<ge> 0"
   shows "measure (point_measure A f) X = (if X \<subseteq> A then \<Sum>a\<in>X. f a else 0)"
   by (simp add: Sigma_Algebra.measure_def assms emeasure_point_measure_finite_if subset_eq sum_nonneg)
 
-subsection \<open>Convexity?\<close>
+subsection \<open>Convexity\<close>
 
-(* the definition of convex in the library is incorrect: 
+(* the definition of convex in the Isabelle2023 library is incorrect: 
   we speak of a convex function ONLY on a convex set*)
 
 (*2024-02-06: added*)
@@ -190,38 +194,47 @@ lemma mono_on_const:
   fixes a :: "'a::order" shows "mono_on S (\<lambda>x. a)"
   by (simp add: mono_on_def)
 
-lemma convex_on_iff: "convex_on S f = concave_on S (\<lambda>x. - f x)"
+(*2024-02-07: added*)
+lemma convex_on_iff_concave: "convex_on S f = concave_on S (\<lambda>x. - f x)"
   by (simp add: concave_on_def)
 
+(*2024-02-07: added*)
 lemma convex_on_ident: "convex_on S (\<lambda>x. x)"
   by (simp add: convex_on_def)
 
+(*2024-02-07: added*)
 lemma concave_on_ident: "concave_on S (\<lambda>x. x)"
   by (simp add: concave_on_iff)
 
+(*2024-02-07: added*)
 lemma convex_on_const: "convex_on S (\<lambda>x. a)"
   by (simp add: convex_on_def flip: distrib_right)
 
+(*2024-02-07: added*)
 lemma concave_on_const: "concave_on S (\<lambda>x. a)"
   by (simp add: concave_on_iff flip: distrib_right)
 
+(*2024-02-07: added*)
 lemma convex_on_diff:
   assumes "convex_on S f" and "concave_on S g"
   shows "convex_on S (\<lambda>x. f x - g x)"
   using assms concave_on_def convex_on_add by fastforce
 
+(*2024-02-07: added*)
 lemma concave_on_diff:
   assumes "concave_on S f"
     and "convex_on S g"
   shows "concave_on S (\<lambda>x. f x - g x)"
   using convex_on_diff assms concave_on_def by fastforce
 
+(*2024-02-07: added*)
 lemma concave_on_add:
   assumes "concave_on S f"
     and "concave_on S g"
   shows "concave_on S (\<lambda>x. f x + g x)"
-  using assms convex_on_iff concave_on_diff concave_on_def by fastforce
+  using assms convex_on_iff_concave concave_on_diff concave_on_def by fastforce
 
+(*2024-02-07: added*)
 lemma convex_on_cdiv [intro]:
   fixes c :: real
   assumes "0 \<le> c" and "convex_on S f"
@@ -230,8 +243,7 @@ lemma convex_on_cdiv [intro]:
   using convex_on_cmul [of "inverse c" S f]
   by (simp add: mult.commute assms)
 
-
-
+(*2024-02-07: added*)
 lemma convex_power_even:
   assumes "even n"
   shows "convex_on (UNIV::real set) (\<lambda>x. x^n)"
@@ -244,6 +256,7 @@ proof (intro f''_ge0_imp_convex)
     using assms by (auto simp: zero_le_mult_iff zero_le_even_power)
 qed auto
 
+(*2024-02-07: added*)
 lemma convex_power_odd:
   assumes "odd n"
   shows "convex_on {0::real..} (\<lambda>x. x^n)"
@@ -256,9 +269,11 @@ proof (intro f''_ge0_imp_convex)
     using assms by (auto simp: zero_le_mult_iff zero_le_even_power)
 qed auto
 
+(*2024-02-07: added*)
 lemma convex_power2: "convex_on (UNIV::real set) power2"
   by (simp add: convex_power_even)
 
+(*2024-02-07: added*)
 lemma sum_squared_le_sum_of_squares:
   fixes f :: "'a \<Rightarrow> real"
   assumes "\<And>y. y\<in>Y \<Longrightarrow> f y \<ge> 0" "finite Y" "Y \<noteq> {}"
@@ -289,6 +304,7 @@ lemma mono_on_prod:
   by (induction I rule: infinite_finite_induct)
      (auto simp: mono_on_const Pi_iff prod_nonneg mono_on_mul)
 
+(*2024-02-07: added*)
 lemma convex_on_mul:
   fixes S::"real set"
   assumes "convex_on S f" "convex_on S g" "convex S"
@@ -320,7 +336,6 @@ proof (intro convex_on_linorderI)
   finally show "f ((1-t) *\<^sub>R x + t *\<^sub>R y) * g ((1-t) *\<^sub>R x + t *\<^sub>R y) \<le> (1-t)*(f x*g x) + t*(f y*g y)" 
     by simp
 qed
-
 
 lemma convex_gchoose_aux: "convex_on {k-1..} (\<lambda>a. prod (\<lambda>i. a - of_nat i) {0..<k})"
 proof (induction k)
@@ -627,16 +642,18 @@ proof -
   finally show ?thesis .
 qed
 
-thm measure_space_eq
+(*2024-02-07: added*)
 lemma measure_space_Pow_eq:
   assumes "\<And>X. X \<in> Pow \<Omega> \<Longrightarrow> \<mu> X = \<mu>' X"
   shows "measure_space \<Omega> (Pow \<Omega>) \<mu> = measure_space \<Omega> (Pow \<Omega>) \<mu>'"
   by (metis assms measure_space_def ring_of_sets.positive_cong_eq ring_of_sets_Pow sigma_algebra.countably_additive_eq)
 
+(*2024-02-07: added*)
 lemma finite_count_space: "finite \<Omega> \<Longrightarrow> count_space \<Omega> = measure_of \<Omega> (Pow \<Omega>) card"
   unfolding count_space_def
   by (smt (verit, best) PowD Pow_top count_space_def finite_subset measure_of_eq sets_count_space sets_measure_of)
 
+(*2024-02-07: added*)
 lemma sigma_sets_finite: "\<lbrakk>x \<in> sigma_sets \<Omega> (Pow \<Omega>); finite \<Omega>\<rbrakk> \<Longrightarrow> finite x"
   by (meson finite_subset order.refl sigma_sets_into_sp)
 

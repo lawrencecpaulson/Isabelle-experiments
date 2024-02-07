@@ -111,16 +111,70 @@ proof -
     by (simp add: t_def)
 qed
 
+definition "Bdelta \<equiv> \<lambda> \<mu> l k i. Bseq \<mu> l k (Suc i) - Bseq \<mu> l k i"
+
+lemma card_Bdelta: "card (Bdelta \<mu> l k i) = card (Bseq \<mu> l k (Suc i)) - card (Bseq \<mu> l k i)"
+  by (simp add: Bseq_mono Bdelta_def card_Diff_subset finite_Bseq)
+
+lemma card_Bseq_mono: "card (Bseq \<mu> l k (Suc i)) \<ge> card (Bseq \<mu> l k i)"
+  by (simp add: Bseq_Suc_subset card_mono finite_Bseq)
+
+lemma card_Bseq_sum: "card (Bseq \<mu> l k i) = (\<Sum>j<i. card (Bdelta \<mu> l k j))"
+proof (induction i)
+  case 0
+  then show ?case
+    by auto
+next
+  case (Suc i)
+  with card_Bseq_mono show ?case
+    apply (simp add: card_Bdelta )
+     apply (metis (no_types, lifting) add_diff_inverse_nat le_imp_less_Suc not_less_eq)
+    done
+qed
+
 definition "get_blue_book \<equiv> \<lambda>\<mu> l k i. let (X,Y,A,B) = stepper \<mu> l k i in choose_blue_book \<mu> (X,Y,A,B)"
 
-lemma
-  assumes i: "i \<in> Step_class \<mu> l k {bblue_step}" 
-    and step: "stepper \<mu> l k i = (X,Y,A,B)"
-    and bb: "get_blue_book \<mu> l k i = (S,T)"
-  shows "stepper \<mu> l k (Suc i) = (T, Y, A, B\<union>S)"
+lemma Bdelta_trivial_step:
+  assumes i: "i \<in> Step_class \<mu> l k {red_step,dreg_step,halted}" 
+  shows "Bdelta \<mu> l k i = {}"
   using assms
-  by (force simp add: step_kind_defs next_state_def get_blue_book_def split: if_split_asm)
+  by (auto simp: step_kind_defs next_state_def Bdelta_def Bseq_def Let_def degree_reg_def split: if_split_asm prod.split)
 
+lemma Bdelta_bblue_step:
+  assumes i: "i \<in> Step_class \<mu> l k {bblue_step}" 
+  shows "Bdelta \<mu> l k i = fst (get_blue_book \<mu> l k i)"
+proof -
+  obtain X Y A B S T where step: "stepper \<mu> l k i = (X,Y,A,B)" and bb: "get_blue_book \<mu> l k i = (S,T)"
+                     and valid: "valid_state(X,Y,A,B)"
+    by (metis surj_pair valid_state_stepper)
+  with assms have "stepper \<mu> l k (Suc i) = (T, Y, A, B\<union>S)"
+    by (force simp add: step_kind_defs next_state_def get_blue_book_def split: if_split_asm)
+  moreover have "S \<subseteq> X"
+    using choose_blue_book_subset valid bb 
+    apply (simp add: valid_state_def get_blue_book_def step)
+    by (metis local.step)
+  then have "disjnt S B"
+    using valid by (force simp add: valid_state_def disjoint_state_def disjnt_iff)
+  ultimately show ?thesis
+    using step by (auto simp add: bb Bdelta_def Bseq_def disjnt_iff)
+qed
+
+lemma Bdelta_dboost_step:
+  assumes i: "i \<in> Step_class \<mu> l k {dboost_step}" 
+  shows "\<exists>x \<in> Xseq \<mu> l k i. Bdelta \<mu> l k i = {x}"
+proof -
+  obtain X Y A B where step: "stepper \<mu> l k i = (X,Y,A,B)" and valid: "valid_state(X,Y,A,B)"
+    by (metis surj_pair valid_state_stepper)
+  have cvx: "choose_central_vx \<mu> (X,Y,A,B) \<in> X"
+    by (metis Step_class_insert Un_iff cvx_def cvx_in_Xseq i step stepper_XYseq)
+  then have "\<exists>X' Y'. stepper \<mu> l k (Suc i) = (X', Y', A, insert (choose_central_vx \<mu> (X,Y,A,B)) B)"
+    using assms step
+    by (auto simp add: step_kind_defs next_state_def Let_def split: if_split_asm)
+  moreover have "choose_central_vx \<mu> (X,Y,A,B) \<notin> B"
+    using valid cvx by (force simp add: valid_state_def disjoint_state_def disjnt_iff)
+  ultimately show ?thesis
+    using step cvx by (auto simp add: Bdelta_def Bseq_def disjnt_iff Xseq_def)
+qed
 
 lemma X_7_3:
   fixes l k
