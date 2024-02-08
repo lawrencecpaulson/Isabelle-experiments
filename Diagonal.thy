@@ -1148,6 +1148,9 @@ lemma Step_class_insert_NO_MATCH:
   "NO_MATCH {} K \<Longrightarrow> Step_class \<mu> l k (insert knd K) = (Step_class \<mu> l k {knd}) \<union> (Step_class \<mu> l k K)"
   by (auto simp: Step_class_def)
 
+lemma Step_class_UNIV: "Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step,halted} = UNIV"
+  using Step_class_def stepkind.exhaust by auto
+
 lemmas step_kind_defs = Step_class_def stepper_kind_def next_state_kind_def Xseq_def Yseq_def
 
 lemma disjnt_Step_class: 

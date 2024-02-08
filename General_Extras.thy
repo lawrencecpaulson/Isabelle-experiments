@@ -433,6 +433,7 @@ lemma mbinomial_eq_gchoose [simp]: "k \<le> a \<Longrightarrow> mbinomial a k = 
 
 text \<open>Elementary inequalities about sums vs products\<close>
 
+(*Used only for the next one*)
 lemma add_prod_le:
   fixes f g :: "'a \<Rightarrow> 'b::linordered_idom"
   assumes "finite I" "\<And>i. i \<in> I \<Longrightarrow> f i \<ge> 0 \<and> g i \<ge> 0" "I \<noteq> {}"
@@ -458,6 +459,7 @@ next
   qed auto
 qed
 
+(*unused*)
 lemma sum_prod_le:
   fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c::linordered_idom"
   assumes "finite I" "finite J" "J \<noteq> {}"
@@ -482,9 +484,9 @@ qed
 
 
 
-lemma powr01_less_one: "0 \<le> (a::real) \<Longrightarrow> a < 1 \<Longrightarrow> e>0 \<Longrightarrow> a powr e < 1 "
+lemma powr01_less_one: 
+  fixes a::real shows "\<lbrakk>0 \<le> a; a < 1; e>0\<rbrakk> \<Longrightarrow> a powr e < 1 "
   by (metis powr_less_mono2 powr_one_eq_one)
-
 
 lemma exp_powr_real [simp]:
   fixes x::real shows "exp x powr y = exp (x*y)"
@@ -558,7 +560,7 @@ lemma has_real_derivative_const_powr [derivative_intros]:
   apply (rule assms derivative_eq_intros refl | simp)+
   done
 
-(*Binomial*)
+(*2024-02-07: added*)
 lemma binomial_mono:
   assumes "m \<le> n" shows "m choose k \<le> n choose k"
 proof -
@@ -568,6 +570,8 @@ proof -
     by (simp add: binomial_def card_mono)
 qed
 
+(*These can't go into Binomial because they need type "real"
+They could go to an AFP entry on Ramsey bounds*)
 
 lemma add_choose_le_power: "(n + k) choose n \<le> Suc k ^ n"
 proof -
@@ -593,7 +597,7 @@ lemma choose_le_power: "m choose k \<le> (Suc m - k) ^ k"
 
 lemma gbinomial_mono:
   fixes k::nat and a::real
-  assumes "k \<le> a" "a \<le> b" shows "a gchoose k \<le> b gchoose k"
+  assumes "of_nat k \<le> a" "a \<le> b" shows "a gchoose k \<le> b gchoose k"
   using assms
   by (force simp add: gbinomial_prod_rev intro!: divide_right_mono prod_mono)
 
@@ -604,8 +608,8 @@ lemma gbinomial_is_prod: "(a gchoose k) = (\<Prod>i<k. (a - of_nat i) / (1 + of_
 lemma pow_is_const_prod: "a ^ n = (\<Prod>i<n. a)" for a :: "'a::comm_monoid_mult"
   by simp
 
-(*TAKEN FROM Weighted_Arithmetic_Geometric_Mean-- ADD TO LIBRARY*)
-lemma (in linordered_semidom) prod_mono_strict':
+(*2024-02-07: added*)
+lemma (in linordered_semidom) prod_mono_strict:
   assumes "i \<in> A"
   assumes "finite A"
   assumes "\<And>i. i \<in> A \<Longrightarrow> 0 \<le> f i \<and> f i \<le> g i"
@@ -634,7 +638,7 @@ proof -
   have "fact n = (\<Prod>i=1..n. real i)"
     by (simp add: fact_prod)
   also have "\<dots> < (\<Prod>i=1..n. if i\<le>n-s then real i else n)"
-    using assms by (intro prod_mono_strict' [where i="n-1"]) auto
+    using assms by (intro prod_mono_strict [where i="n-1"]) auto
   also have "\<dots> = (\<Prod>i = 1..n-s. real i) * real n ^ s"
     using \<open>s \<le> n\<close> by (force simp add: prod.If_cases eq)
   also have "\<dots> = fact (n - s) * real n ^ s"

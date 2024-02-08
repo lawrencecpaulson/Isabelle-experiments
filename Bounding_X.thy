@@ -140,9 +140,10 @@ lemma Bdelta_trivial_step:
   using assms
   by (auto simp: step_kind_defs next_state_def Bdelta_def Bseq_def Let_def degree_reg_def split: if_split_asm prod.split)
 
+text \<open>This delta is necessarily finite\<close>
 lemma Bdelta_bblue_step:
   assumes i: "i \<in> Step_class \<mu> l k {bblue_step}" 
-  shows "Bdelta \<mu> l k i = fst (get_blue_book \<mu> l k i)"
+  shows "\<exists>S \<subseteq> Xseq \<mu> l k i. Bdelta \<mu> l k i = S"
 proof -
   obtain X Y A B S T where step: "stepper \<mu> l k i = (X,Y,A,B)" and bb: "get_blue_book \<mu> l k i = (S,T)"
                      and valid: "valid_state(X,Y,A,B)"
@@ -150,23 +151,22 @@ proof -
   with assms have "stepper \<mu> l k (Suc i) = (T, Y, A, B\<union>S)"
     by (force simp add: step_kind_defs next_state_def get_blue_book_def split: if_split_asm)
   moreover have "S \<subseteq> X"
-    using choose_blue_book_subset valid bb 
-    apply (simp add: valid_state_def get_blue_book_def step)
-    by (metis local.step)
-  then have "disjnt S B"
-    using valid by (force simp add: valid_state_def disjoint_state_def disjnt_iff)
+  proof (intro choose_blue_book_subset [THEN conjunct1])
+    show "(S, T) = choose_blue_book \<mu> (X, Y, A, B)"
+      using bb step by (simp add: get_blue_book_def)
+  qed (use valid valid_state_def in auto)
   ultimately show ?thesis
-    using step by (auto simp add: bb Bdelta_def Bseq_def disjnt_iff)
+    by (auto simp add: Xseq_def Bdelta_def Bseq_def step)
 qed
 
 lemma Bdelta_dboost_step:
-  assumes i: "i \<in> Step_class \<mu> l k {dboost_step}" 
+  assumes "i \<in> Step_class \<mu> l k {dboost_step}" 
   shows "\<exists>x \<in> Xseq \<mu> l k i. Bdelta \<mu> l k i = {x}"
 proof -
   obtain X Y A B where step: "stepper \<mu> l k i = (X,Y,A,B)" and valid: "valid_state(X,Y,A,B)"
     by (metis surj_pair valid_state_stepper)
   have cvx: "choose_central_vx \<mu> (X,Y,A,B) \<in> X"
-    by (metis Step_class_insert Un_iff cvx_def cvx_in_Xseq i step stepper_XYseq)
+    by (metis Step_class_insert Un_iff cvx_def cvx_in_Xseq assms step stepper_XYseq)
   then have "\<exists>X' Y'. stepper \<mu> l k (Suc i) = (X', Y', A, insert (choose_central_vx \<mu> (X,Y,A,B)) B)"
     using assms step
     by (auto simp add: step_kind_defs next_state_def Let_def split: if_split_asm)
@@ -176,14 +176,21 @@ proof -
     using step cvx by (auto simp add: Bdelta_def Bseq_def disjnt_iff Xseq_def)
 qed
 
+lemma card_Bdelta_dboost_step:
+  assumes "i \<in> Step_class \<mu> l k {dboost_step}" 
+  shows "card (Bdelta \<mu> l k i) = 1"
+  using Bdelta_dboost_step [OF assms] by force
+
 lemma X_7_3:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   defines "f \<equiv> \<lambda>k. (real k / ln 2) * ln (1 - 1 / (k * (1-\<mu>)))"
   assumes bblue_limit: "Lemma_bblue_step_limit \<mu> l" 
+    and bblue_dboost_step_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
   assumes "Colours l k" 
   defines "X \<equiv> Xseq \<mu> l k"
   defines "BB \<equiv> Step_class \<mu> l k {bblue_step}"
+  defines "S \<equiv> Step_class \<mu> l k {dboost_step}"
   shows "(\<Prod>i \<in> BB. card (X(Suc i)) / card (X i)) 
         \<ge> 2 powr (f k) * (1-\<mu>) ^ (l - card (Step_class \<mu> l k {dboost_step}))"
 proof -
@@ -193,6 +200,45 @@ proof -
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   have "finite BB" "card BB \<le> l powr (3/4)"
     using \<open>Colours l k\<close> bblue_limit by (auto simp: BB_def Lemma_bblue_step_limit_def)
+  have "finite S"
+    using bblue_dboost_step_limit \<open>Colours l k\<close>
+    unfolding S_def Lemma_bblue_dboost_step_limit_def by blast
+  define b where "b \<equiv> \<lambda>i. card (Bdelta \<mu> l k i)"
+  obtain i where "card (Bseq \<mu> l k i) = sum b BB + card S" 
+  proof -
+    define i where "i = Suc (Max (BB \<union> S))"
+    define TRIV where "TRIV \<equiv> Step_class \<mu> l k {red_step,dreg_step,halted} \<inter> {..<i}"
+    have "finite TRIV"
+      by (auto simp: TRIV_def)
+    have eq: "BB \<union> S \<union> TRIV = {..<i}"
+    proof
+      show "BB \<union> S \<union> TRIV \<subseteq> {..<i}"
+        by (auto simp add: i_def TRIV_def \<open>finite BB\<close> \<open>finite S\<close> less_Suc_eq_le)
+      show "{..<i} \<subseteq> BB \<union> S \<union> TRIV"
+        using  stepkind.exhaust by (auto simp: BB_def S_def TRIV_def Step_class_def)
+    qed
+    have dis: "BB \<inter> S = {}" "(BB \<union> S) \<inter> TRIV = {}"
+      by (auto simp: BB_def S_def TRIV_def Step_class_def)
+    show thesis
+    proof
+      have "card (Bseq \<mu> l k i) = (\<Sum>j \<in> BB \<union> S \<union> TRIV. b j)"
+        using card_Bseq_sum eq unfolding b_def by metis
+      also have "... = (\<Sum>j\<in>BB. b j) + (\<Sum>j\<in>S. b j) + (\<Sum>j\<in>TRIV. b j)"
+        by (simp add: sum_Un_nat \<open>finite BB\<close> \<open>finite S\<close> \<open>finite TRIV\<close> dis)
+      also have "... = sum b BB + card S"
+      proof -
+        have "sum b S = card S"
+          by (simp add: b_def S_def card_Bdelta_dboost_step)
+        moreover have "sum b TRIV = 0"
+          by (simp add: b_def TRIV_def Bdelta_trivial_step)
+        ultimately show ?thesis
+          by simp
+      qed
+      finally show "card (Bseq \<mu> l k i) = sum b BB + card S" .
+    qed
+  qed
+  then have "sum b BB \<le> l - card S"
+    by (metis less_diff_conv less_imp_le_nat Bseq_less_l [OF \<open>Colours l k\<close>])
 
 
 

@@ -6,6 +6,24 @@ theory Misc imports
    
 begin
 
+text \<open>Tim Gowers' example\<close>
+lemma "bij_betw f X Y \<longleftrightarrow> (\<forall>A. A\<subseteq>X \<longrightarrow> f ` (X-A) = Y - f`A)"
+  by (metis Diff_empty Diff_eq_empty_iff Diff_subset bij_betw_def image_is_empty 
+            inj_on_image_set_diff subset_antisym subset_image_inj)
+
+lemma "bij_betw f X Y \<longleftrightarrow> (\<forall>A. A\<subseteq>X \<longrightarrow> f ` (X-A) = Y - f`A)"  (is "?L=?R")
+proof
+  show "?L \<Longrightarrow> ?R"
+    by (metis Diff_subset bij_betw_def inj_on_image_set_diff)
+  assume R: ?R
+  show ?L unfolding bij_betw_def
+  proof
+    show "inj_on f X"
+      by (metis R Diff_cancel Diff_eq_empty_iff image_is_empty subset_antisym subset_image_inj)
+  qed (use R in auto)
+qed
+
+
 (*Terrence Tao's example*)
 lemma
   fixes a :: "nat \<Rightarrow> real"
