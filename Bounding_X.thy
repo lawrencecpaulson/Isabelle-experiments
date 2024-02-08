@@ -134,12 +134,6 @@ qed
 
 definition "get_blue_book \<equiv> \<lambda>\<mu> l k i. let (X,Y,A,B) = stepper \<mu> l k i in choose_blue_book \<mu> (X,Y,A,B)"
 
-lemma Bdelta_trivial_step:
-  assumes i: "i \<in> Step_class \<mu> l k {red_step,dreg_step,halted}" 
-  shows "Bdelta \<mu> l k i = {}"
-  using assms
-  by (auto simp: step_kind_defs next_state_def Bdelta_def Bseq_def Let_def degree_reg_def split: if_split_asm prod.split)
-
 text \<open>This delta is necessarily finite\<close>
 lemma Bdelta_bblue_step:
   assumes i: "i \<in> Step_class \<mu> l k {bblue_step}" 
@@ -180,6 +174,12 @@ lemma card_Bdelta_dboost_step:
   assumes "i \<in> Step_class \<mu> l k {dboost_step}" 
   shows "card (Bdelta \<mu> l k i) = 1"
   using Bdelta_dboost_step [OF assms] by force
+
+lemma Bdelta_trivial_step:
+  assumes i: "i \<in> Step_class \<mu> l k {red_step,dreg_step,halted}" 
+  shows "Bdelta \<mu> l k i = {}"
+  using assms
+  by (auto simp: step_kind_defs next_state_def Bdelta_def Bseq_def Let_def degree_reg_def split: if_split_asm prod.split)
 
 lemma X_7_3:
   fixes l k
@@ -237,8 +237,18 @@ proof -
       finally show "card (Bseq \<mu> l k i) = sum b BB + card S" .
     qed
   qed
-  then have "sum b BB \<le> l - card S"
+  then have sum_b_BB: "sum b BB \<le> l - card S"
     by (metis less_diff_conv less_imp_le_nat Bseq_less_l [OF \<open>Colours l k\<close>])
+  with \<mu> have "(1/2) ^ card BB * \<mu> ^ (l - card S) \<le> (1/2) ^ card BB * \<mu> ^ (sum b BB)" 
+    by simp
+  also have "... = (\<Prod>i\<in>BB. \<mu> ^ b i / 2)"
+    by (simp add: power_sum prod_dividef divide_simps)
+  also have "... \<le> (\<Prod>i\<in>BB. card (X (Suc i)) / card (X i))"
+    apply (rule prod_mono)
+    apply (intro conjI)
+    using \<mu>(1) apply force
+    unfolding b_def Bdelta_def
+
 
 
 
