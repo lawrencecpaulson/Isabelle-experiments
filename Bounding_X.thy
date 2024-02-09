@@ -66,7 +66,7 @@ proof -
       by auto
   next
     case (insert i Red_steps)
-    then have i: "i \<in> Step_class \<mu> l k {stepkind.red_step}"
+    then have i: "i \<in> Step_class \<mu> l k {red_step}"
       by auto
     have "((1-\<mu>) - 1/R) ^ card (insert i Red_steps) = ((1-\<mu>) - 1/R) * ((1-\<mu>) - 1/R) ^ card (Red_steps)"
       by (simp add: insert)
@@ -111,7 +111,7 @@ proof -
     by (simp add: t_def)
 qed
 
-definition "Bdelta \<equiv> \<lambda> \<mu> l k i. Bseq \<mu> l k (Suc i) - Bseq \<mu> l k i"
+definition "Bdelta \<equiv> \<lambda> \<mu> l k i. Bseq \<mu> l k (Suc i) \<setminus> Bseq \<mu> l k i"
 
 lemma card_Bdelta: "card (Bdelta \<mu> l k i) = card (Bseq \<mu> l k (Suc i)) - card (Bseq \<mu> l k i)"
   by (simp add: Bseq_mono Bdelta_def card_Diff_subset finite_Bseq)
@@ -143,20 +143,25 @@ proof -
   obtain X Y A B S T where step: "stepper \<mu> l k i = (X,Y,A,B)" and bb: "get_blue_book \<mu> l k i = (S,T)"
     and valid: "valid_state(X,Y,A,B)"
     by (metis surj_pair valid_state_stepper)
-  with assms have *: "stepper \<mu> l k (Suc i) = (T, Y, A, B\<union>S) \<and> good_blue_book \<mu> X (S,T) \<and> Xseq \<mu> l k (Suc i) = T"
-    by (simp add: step_kind_defs next_state_def valid_state_def get_blue_book_def choose_blue_book_works split: if_split_asm)
-  moreover have "S \<subseteq> X"
-  proof (intro choose_blue_book_subset [THEN conjunct1])
-    show "(S, T) = choose_blue_book \<mu> (X, Y, A, B)"
-      using bb step by (simp add: get_blue_book_def)
-  qed (use valid valid_state_def in auto)
-  moreover have "disjnt X B"
-    using valid by (auto simp: valid_state_def disjoint_state_def)
-  ultimately show ?thesis
-    using *
-    apply (rule_tac x="S" in exI)
-    apply (auto simp add: Xseq_def Bdelta_def Bseq_def good_blue_book_def step disjnt_iff)
-    done
+  with assms have *: "stepper \<mu> l k (Suc i) = (T, Y, A, B\<union>S) \<and> good_blue_book \<mu> X (S,T)" 
+    and Xeq: "X = Xseq \<mu> l k i"
+    by (simp_all add: step_kind_defs next_state_def valid_state_def get_blue_book_def choose_blue_book_works split: if_split_asm)
+  show ?thesis
+  proof (intro exI conjI)
+    have "S \<subseteq> X"
+    proof (intro choose_blue_book_subset [THEN conjunct1])
+      show "(S, T) = choose_blue_book \<mu> (X, Y, A, B)"
+        using bb step by (simp add: get_blue_book_def Xseq_def)
+    qed (use valid valid_state_def in force)
+    then show "S \<subseteq> Xseq \<mu> l k i"
+      using Xeq by force
+    have "disjnt X B"
+      using valid by (auto simp: valid_state_def disjoint_state_def)
+    then show "Bdelta \<mu> l k i = S"
+      using * step \<open>S \<subseteq> X\<close> by (auto simp add: Bdelta_def Bseq_def disjnt_iff)
+    show "\<mu> ^ card S * real (card (Xseq \<mu> l k i)) / 2 \<le> real (card (Xseq \<mu> l k (Suc i)))"
+      using * by (auto simp add: Xseq_def good_blue_book_def step)
+  qed
 qed
 
 lemma Bdelta_dboost_step:
@@ -187,6 +192,7 @@ lemma Bdelta_trivial_step:
   using assms
   by (auto simp: step_kind_defs next_state_def Bdelta_def Bseq_def Let_def degree_reg_def split: if_split_asm prod.split)
 
+text \<open>limit version still needs to be written\<close>
 lemma X_7_3:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
@@ -267,6 +273,14 @@ proof -
   qed
   finally show ?thesis .
 qed
+
+lemma X_7_5:
+  fixes l k
+  assumes \<mu>: "0<\<mu>" "\<mu><1" 
+  assumes "Colours l k" 
+  defines "S \<equiv> Step_class \<mu> l k {dboost_step}"
+  shows "card (S \<setminus> dboost_star \<mu> l k) \<le> 3 * eps k powr (1/4) * k"
+proof -
 
 
 end (*context Diagonal*)

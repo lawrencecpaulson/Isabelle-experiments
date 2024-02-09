@@ -4,7 +4,11 @@ theory General_Extras imports
 
 begin
 
-(* the next lot modify basic HOL*)
+
+abbreviation set_difference :: "['a set,'a set] \<Rightarrow> 'a set" (infixl "\<setminus>" 65)
+  where "A \<setminus> B \<equiv> A-B"
+
+(* most of the remainder belongs in an AFP entry concerned with Ramsey theory*)
 
 thm mult_le_cancel_iff1 (*2024-02-01: renamed and moved*)
 
