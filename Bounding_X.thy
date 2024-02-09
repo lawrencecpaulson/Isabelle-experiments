@@ -127,30 +127,36 @@ proof (induction i)
 next
   case (Suc i)
   with card_Bseq_mono show ?case
-    apply (simp add: card_Bdelta )
-     apply (metis (no_types, lifting) add_diff_inverse_nat le_imp_less_Suc not_less_eq)
-    done
+    unfolding card_Bdelta sum.lessThan_Suc
+    by (smt (verit, del_insts) Nat.add_diff_assoc diff_add_inverse)
 qed
 
 definition "get_blue_book \<equiv> \<lambda>\<mu> l k i. let (X,Y,A,B) = stepper \<mu> l k i in choose_blue_book \<mu> (X,Y,A,B)"
 
 text \<open>This delta is necessarily finite\<close>
 lemma Bdelta_bblue_step:
+  fixes \<mu>::real
   assumes i: "i \<in> Step_class \<mu> l k {bblue_step}" 
-  shows "\<exists>S \<subseteq> Xseq \<mu> l k i. Bdelta \<mu> l k i = S"
+  shows "\<exists>S \<subseteq> Xseq \<mu> l k i. Bdelta \<mu> l k i = S
+            \<and> card (Xseq \<mu> l k (Suc i)) \<ge> (\<mu> ^ card S) * card (Xseq \<mu> l k i) / 2"
 proof -
   obtain X Y A B S T where step: "stepper \<mu> l k i = (X,Y,A,B)" and bb: "get_blue_book \<mu> l k i = (S,T)"
-                     and valid: "valid_state(X,Y,A,B)"
+    and valid: "valid_state(X,Y,A,B)"
     by (metis surj_pair valid_state_stepper)
-  with assms have "stepper \<mu> l k (Suc i) = (T, Y, A, B\<union>S)"
-    by (force simp add: step_kind_defs next_state_def get_blue_book_def split: if_split_asm)
+  with assms have *: "stepper \<mu> l k (Suc i) = (T, Y, A, B\<union>S) \<and> good_blue_book \<mu> X (S,T) \<and> Xseq \<mu> l k (Suc i) = T"
+    by (simp add: step_kind_defs next_state_def valid_state_def get_blue_book_def choose_blue_book_works split: if_split_asm)
   moreover have "S \<subseteq> X"
   proof (intro choose_blue_book_subset [THEN conjunct1])
     show "(S, T) = choose_blue_book \<mu> (X, Y, A, B)"
       using bb step by (simp add: get_blue_book_def)
   qed (use valid valid_state_def in auto)
+  moreover have "disjnt X B"
+    using valid by (auto simp: valid_state_def disjoint_state_def)
   ultimately show ?thesis
-    by (auto simp add: Xseq_def Bdelta_def Bseq_def step)
+    using *
+    apply (rule_tac x="S" in exI)
+    apply (auto simp add: Xseq_def Bdelta_def Bseq_def good_blue_book_def step disjnt_iff)
+    done
 qed
 
 lemma Bdelta_dboost_step:
@@ -191,8 +197,7 @@ lemma X_7_3:
   defines "X \<equiv> Xseq \<mu> l k"
   defines "BB \<equiv> Step_class \<mu> l k {bblue_step}"
   defines "S \<equiv> Step_class \<mu> l k {dboost_step}"
-  shows "(\<Prod>i \<in> BB. card (X(Suc i)) / card (X i)) 
-        \<ge> 2 powr (f k) * (1-\<mu>) ^ (l - card (Step_class \<mu> l k {dboost_step}))"
+  shows "(\<Prod>i \<in> BB. card (X(Suc i)) / card (X i)) \<ge> 2 powr (f k) * \<mu> ^ (l - card S)"
 proof -
   have "f \<in> o(real)"
     using p0_01 \<mu> unfolding eps_def f_def by real_asymp
@@ -239,17 +244,25 @@ proof -
   qed
   then have sum_b_BB: "sum b BB \<le> l - card S"
     by (metis less_diff_conv less_imp_le_nat Bseq_less_l [OF \<open>Colours l k\<close>])
-  with \<mu> have "(1/2) ^ card BB * \<mu> ^ (l - card S) \<le> (1/2) ^ card BB * \<mu> ^ (sum b BB)" 
-    by simp
+  have "2 powr (f k) * \<mu> ^ (l - card S) \<le> (1/2) ^ card BB * \<mu> ^ (l - card S)"
+    sorry
+  also have "(1/2) ^ card BB * \<mu> ^ (l - card S) \<le> (1/2) ^ card BB * \<mu> ^ (sum b BB)" 
+    using \<mu> sum_b_BB by simp
   also have "... = (\<Prod>i\<in>BB. \<mu> ^ b i / 2)"
     by (simp add: power_sum prod_dividef divide_simps)
   also have "... \<le> (\<Prod>i\<in>BB. card (X (Suc i)) / card (X i))"
-    apply (rule prod_mono)
-    apply (intro conjI)
-    using \<mu>(1) apply force
-    unfolding b_def Bdelta_def
-
-
+  proof (rule prod_mono)
+    fix i :: nat
+    assume "i \<in> BB"
+    then have "\<not> termination_condition l k (X i) (Yseq \<mu> l k i)"
+      using step_non_terminating by (simp add: BB_def X_def Step_class_def)
+    then have "card (X i) \<noteq> 0"
+      using termination_condition_def by force
+    with \<open>i\<in>BB\<close> \<mu> show "0 \<le> \<mu> ^ b i / 2 \<and> \<mu> ^ b i / 2 \<le> real (card (X (Suc i))) / real (card (X i))"
+      by (force simp: b_def BB_def X_def divide_simps dest!: Bdelta_bblue_step)
+  qed
+  finally show ?thesis .
+qed
 
 
 end (*context Diagonal*)

@@ -1252,7 +1252,7 @@ proof -
 qed
 
 lemma step_non_terminating:
-  assumes "i \<in> Step_class \<mu> l k {red_step,dboost_step,dreg_step}"
+  assumes "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step}"
   shows "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
   using assms
   by (simp add: step_kind_defs split: if_split_asm prod.split_asm)
