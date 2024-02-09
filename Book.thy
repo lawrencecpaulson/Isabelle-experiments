@@ -1,4 +1,4 @@
-theory Diagonal imports
+theory Book imports
   Neighbours
   "HOL-Library.Disjoint_Sets"  "HOL-Decision_Procs.Approximation" 
   "HOL-Library.Infinite_Set"   "HOL-Real_Asymp.Real_Asymp" 
@@ -1274,9 +1274,9 @@ proof -
   have "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
     using Step_class_def assms step_non_terminating by fastforce
   then show ?thesis
-    using assms not_many_bluish[OF assms]  
+    using assms not_many_bluish[OF assms] 
     apply (simp add: Step_class_def Xseq_def cvx_def Yseq_def split: prod.split prod.split_asm)
-    by (metis V_state choose_central_vx_works)
+    by (metis V_state_stepper choose_central_vx_works)
 qed
 
 lemma cvx_in_Xseq:

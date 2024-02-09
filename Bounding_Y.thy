@@ -44,7 +44,7 @@ proof -
   have "disjnt X Y"
     using Xseq_Yseq_disjnt X_def Y_def by blast
   obtain fin: "finite X" "finite Y"
-    by (metis V_state finX finY local.step)
+    by (metis V_state_stepper finX finY local.step)
   have "X \<noteq> {}" "Y \<noteq> {}"
     using gen_density_def nonterm termination_condition_def by fastforce+
   define i' where "i' = i-1"
@@ -61,11 +61,11 @@ proof -
     using Suci' by (auto simp: X_def Y_def)
   define pm where "pm \<equiv> (pee \<mu> l k i' - eps k powr (-1/2) * alpha k (hgt k (pee \<mu> l k i')))"
   have "T \<subseteq> X"
-    using bluebook by (metis V_state choose_blue_book_subset local.step)
+    using bluebook by (metis V_state_stepper choose_blue_book_subset local.step)
   then have T_reds: "\<And>x. x \<in> T \<Longrightarrow> pm * card Y \<le> card (Neighbours Red x \<inter> Y)"
     by (auto simp: Xeq Yeq pm_def X_degree_reg_def pee_def red_dense_def)
   have "good_blue_book \<mu> X (S,T)"
-    by (metis choose_blue_book_works V_state bluebook local.step)
+    by (metis choose_blue_book_works V_state_stepper bluebook local.step)
   then have False if "real (card T) = 0"
     using \<open>0 < \<mu>\<close> \<open>X \<noteq> {}\<close> fin by (simp add: good_blue_book_def pos_prod_le that)
   then have "T\<noteq>{}"

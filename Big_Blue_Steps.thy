@@ -1,6 +1,6 @@
 section \<open>Big Blue Steps: theorems\<close>
 
-theory Big_Blue_Steps imports Diagonal
+theory Big_Blue_Steps imports Book
 
 begin
 
@@ -471,7 +471,7 @@ proof -
         then have "BBLUES(Suc n) = BBLUES n"
           using less_Suc_eq by (auto simp: BBLUES_def) 
         with \<open>B' \<subseteq> B\<close> show ?thesis
-          by (metis Suc V_state card_mono dual_order.trans finB step_n)
+          by (metis Suc V_state_stepper card_mono dual_order.trans finB step_n)
       qed
     qed
     { assume \<section>: "card (Step_class \<mu> l k {bblue_step}) > l powr (3/4)"
@@ -558,7 +558,7 @@ proof -
       have "choose_central_vx \<mu> (X',Y',A',B') \<in> X'"
         using True
         apply (clarsimp simp: stepper_kind_def next_state_kind_def step_n split: if_split_asm)
-        by (metis V_state choose_central_vx_X step_n)
+        by (metis V_state_stepper choose_central_vx_X step_n)
       moreover
       have "disjnt X' A'"
         using \<open>valid_state (X',Y',A',B')\<close> by (simp add: valid_state_def disjoint_state_def)
@@ -573,7 +573,7 @@ proof -
       then have "REDS(Suc n) = REDS n"
         using less_Suc_eq unfolding REDS_def by blast
       with \<open>A' \<subseteq> A\<close> show ?thesis
-        by (smt (verit, best) Suc V_state card_seteq order.trans finA nat_le_linear step_n)
+        by (smt (verit, best) Suc V_state_stepper card_seteq order.trans finA nat_le_linear step_n)
     qed
   qed
   have less_k: "card (REDS n) < k" for n
@@ -669,7 +669,7 @@ proof -
           case 2
           then have "choose_central_vx \<mu> (X',Y',A',B') \<in> X'"
             apply (clarsimp simp: stepper_kind_def next_state_kind_def step_n split: if_split_asm)
-            by (metis V_state choose_central_vx_X step_n)
+            by (metis V_state_stepper choose_central_vx_X step_n)
           moreover have "disjnt B' X'"
             using disjst disjnt_sym by (force simp add: disjoint_state_def)
           ultimately have "choose_central_vx \<mu> (X',Y',A',B') \<notin> B'"
@@ -679,7 +679,7 @@ proof -
             by (auto simp: stepper_kind_def next_state_kind_def next_state_def step_n Let_def split: if_split_asm)
         qed
         moreover have "finite B"
-          by (metis Suc.prems V_state finB)
+          by (metis Suc.prems V_state_stepper finB)
         ultimately show ?thesis
           by (metis card.infinite card_B' card_Suc card_seteq dual_order.trans nat.case nless_le not_less_eq_eq)
       next
@@ -687,7 +687,7 @@ proof -
         then have "BDB (Suc n) = BDB n"
           using less_Suc_eq unfolding BDB_def by blast
         with \<open>B' \<subseteq> B\<close> show ?thesis
-          by (smt (verit, best) Suc V_state card_seteq order.trans finB nat_le_linear step_n)
+          by (smt (verit, best) Suc V_state_stepper card_seteq order.trans finB nat_le_linear step_n)
       qed
     qed
     have less_l: "card (BDB n) < l" for n
