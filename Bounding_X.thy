@@ -50,7 +50,7 @@ proof -
       unfolding RN_eq_0_iff R_def using lk by auto
     with cardX have "(1-\<mu>) - 1 / R \<le> (1-\<mu>) - 1 / card (X i)"
       by (simp add: inverse_of_nat_le)
-    also have "... \<le> card (X (Suc i)) / card (X i)"
+    also have "\<dots> \<le> card (X (Suc i)) / card (X i)"
       using cardX nextX 1 by (simp add: divide_simps)
     finally show ?thesis .
   qed
@@ -88,7 +88,7 @@ proof -
     by (simp add: bigR divide_simps mult.commute pos_divide_less_eq less_le_trans)
   have "f k * ln 2 = k * ln (1 - 1 / (k * (1-\<mu>)))"
     by (simp add: f_def)
-  also have "... \<le> t * ln (1 - 1 / (k * (1-\<mu>)))"
+  also have "\<dots> \<le> t * ln (1 - 1 / (k * (1-\<mu>)))"
   proof (intro mult_right_mono_neg)
     obtain red_steps: "finite (Step_class \<mu> l k {red_step})" "card (Step_class \<mu> l k {red_step}) < k"
       using red_step_limit \<open>0<\<mu>\<close> \<open>Colours l k\<close> by blast
@@ -97,11 +97,11 @@ proof -
     show "ln (1 - 1 / (k * (1-\<mu>))) \<le> 0"
       using \<mu>(2) divide_less_eq big ln_one_minus_pos_upper_bound by fastforce
   qed
-  also have "... = t * ln ((1-\<mu> - 1/k) / (1-\<mu>))"
+  also have "\<dots> = t * ln ((1-\<mu> - 1/k) / (1-\<mu>))"
     using \<open>t\<ge>0\<close> \<mu> by (simp add: diff_divide_distrib)
-  also have "... = t * (ln (1-\<mu> - 1/k) - ln (1-\<mu>))"
+  also have "\<dots> = t * (ln (1-\<mu> - 1/k) - ln (1-\<mu>))"
     using \<open>t\<ge>0\<close> \<mu> big \<open>0<k\<close> by (simp add: ln_div mult.commute pos_divide_less_eq)
-  also have "... \<le> t * (ln (1-\<mu> - 1/R) - ln (1-\<mu>))"
+  also have "\<dots> \<le> t * (ln (1-\<mu> - 1/R) - ln (1-\<mu>))"
     by (simp add: ln_le mult_left_mono)
   finally have "f k * ln 2 + t * ln (1-\<mu>) \<le> t * ln (1-\<mu> - 1/R)"
     by (simp add: ring_distribs)
@@ -133,7 +133,7 @@ qed
 
 definition "get_blue_book \<equiv> \<lambda>\<mu> l k i. let (X,Y,A,B) = stepper \<mu> l k i in choose_blue_book \<mu> (X,Y,A,B)"
 
-text \<open>This delta is necessarily finite\<close>
+text \<open>Tracking changes to X and B. The sets are necessarily finite\<close>
 lemma Bdelta_bblue_step:
   fixes \<mu>::real
   assumes i: "i \<in> Step_class \<mu> l k {bblue_step}" 
@@ -190,7 +190,7 @@ lemma Bdelta_trivial_step:
 lemma X_7_3:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
-  defines "f \<equiv> \<lambda>k. (real k / ln 2) * ln (1 - 1 / (k * (1-\<mu>)))"
+  defines "f \<equiv> \<lambda>k. - (real k powr (3/4))"
   assumes bblue_limit: "Lemma_bblue_step_limit \<mu> l" 
     and bblue_dboost_step_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
   assumes "Colours l k" 
@@ -200,10 +200,10 @@ lemma X_7_3:
   shows "(\<Prod>i \<in> BB. card (X(Suc i)) / card (X i)) \<ge> 2 powr (f k) * \<mu> ^ (l - card S)"
 proof -
   have "f \<in> o(real)"
-    using p0_01 \<mu> unfolding eps_def f_def by real_asymp
+    unfolding f_def by real_asymp
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  have "finite BB" "card BB \<le> l powr (3/4)"
+  have "finite BB" and cardBB: "card BB \<le> l powr (3/4)"
     using \<open>Colours l k\<close> bblue_limit by (auto simp: BB_def Lemma_bblue_step_limit_def)
   have "finite S"
     using bblue_dboost_step_limit \<open>Colours l k\<close>
@@ -228,9 +228,9 @@ proof -
     proof
       have "card (Bseq \<mu> l k i) = (\<Sum>j \<in> BB \<union> S \<union> TRIV. b j)"
         using card_Bseq_sum eq unfolding b_def by metis
-      also have "... = (\<Sum>j\<in>BB. b j) + (\<Sum>j\<in>S. b j) + (\<Sum>j\<in>TRIV. b j)"
+      also have "\<dots> = (\<Sum>j\<in>BB. b j) + (\<Sum>j\<in>S. b j) + (\<Sum>j\<in>TRIV. b j)"
         by (simp add: sum_Un_nat \<open>finite BB\<close> \<open>finite S\<close> \<open>finite TRIV\<close> dis)
-      also have "... = sum b BB + card S"
+      also have "\<dots> = sum b BB + card S"
       proof -
         have "sum b S = card S"
           by (simp add: b_def S_def card_Bdelta_dboost_step)
@@ -244,13 +244,17 @@ proof -
   qed
   then have sum_b_BB: "sum b BB \<le> l - card S"
     by (metis less_diff_conv less_imp_le_nat Bseq_less_l [OF \<open>Colours l k\<close>])
-  have "2 powr (f k) * \<mu> ^ (l - card S) \<le> (1/2) ^ card BB * \<mu> ^ (l - card S)"
-    sorry
+  have "real (card BB) \<le> real k powr (3/4)"
+    using cardBB \<open>l\<le>k\<close> by (smt (verit) divide_nonneg_nonneg of_nat_0_le_iff of_nat_mono powr_mono2)
+  then have "2 powr (f k) \<le> (1/2) ^ card BB"
+    by (simp add: f_def powr_minus divide_simps flip: powr_realpow)
+  then have "2 powr (f k) * \<mu> ^ (l - card S) \<le> (1/2) ^ card BB * \<mu> ^ (l - card S)"
+    by (simp add: \<mu>)
   also have "(1/2) ^ card BB * \<mu> ^ (l - card S) \<le> (1/2) ^ card BB * \<mu> ^ (sum b BB)" 
     using \<mu> sum_b_BB by simp
-  also have "... = (\<Prod>i\<in>BB. \<mu> ^ b i / 2)"
+  also have "\<dots> = (\<Prod>i\<in>BB. \<mu> ^ b i / 2)"
     by (simp add: power_sum prod_dividef divide_simps)
-  also have "... \<le> (\<Prod>i\<in>BB. card (X (Suc i)) / card (X i))"
+  also have "\<dots> \<le> (\<Prod>i\<in>BB. card (X (Suc i)) / card (X i))"
   proof (rule prod_mono)
     fix i :: nat
     assume "i \<in> BB"
