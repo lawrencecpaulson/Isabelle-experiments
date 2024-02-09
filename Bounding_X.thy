@@ -66,7 +66,7 @@ proof -
       by auto
   next
     case (insert i Red_steps)
-    then have i: "i \<in> Step_class \<mu> l k {stepkind.red_step}"
+    then have i: "i \<in> Step_class \<mu> l k {red_step}"
       by auto
     have "((1-\<mu>) - 1/R) ^ card (insert i Red_steps) = ((1-\<mu>) - 1/R) * ((1-\<mu>) - 1/R) ^ card (Red_steps)"
       by (simp add: insert)
@@ -111,7 +111,7 @@ proof -
     by (simp add: t_def)
 qed
 
-definition "Bdelta \<equiv> \<lambda> \<mu> l k i. Bseq \<mu> l k (Suc i) - Bseq \<mu> l k i"
+definition "Bdelta \<equiv> \<lambda> \<mu> l k i. Bseq \<mu> l k (Suc i) \<setminus> Bseq \<mu> l k i"
 
 lemma card_Bdelta: "card (Bdelta \<mu> l k i) = card (Bseq \<mu> l k (Suc i)) - card (Bseq \<mu> l k i)"
   by (simp add: Bseq_mono Bdelta_def card_Diff_subset finite_Bseq)
@@ -187,6 +187,7 @@ lemma Bdelta_trivial_step:
   using assms
   by (auto simp: step_kind_defs next_state_def Bdelta_def Bseq_def Let_def degree_reg_def split: if_split_asm prod.split)
 
+text \<open>limit version still needs to be written\<close>
 lemma X_7_3:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
@@ -267,6 +268,14 @@ proof -
   qed
   finally show ?thesis .
 qed
+
+lemma X_7_5:
+  fixes l k
+  assumes \<mu>: "0<\<mu>" "\<mu><1" 
+  assumes "Colours l k" 
+  defines "S \<equiv> Step_class \<mu> l k {dboost_step}"
+  shows "card (S \<setminus> dboost_star \<mu> l k) \<le> 3 * eps k powr (1/4) * k"
+proof -
 
 
 end (*context Diagonal*)
