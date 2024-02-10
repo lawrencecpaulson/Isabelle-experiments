@@ -728,6 +728,59 @@ proof -
     unfolding Lemma_bblue_dboost_step_limit_def by presburger 
 qed
 
+lemma finite_dreg_step:
+  assumes "finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step})"
+  shows "finite (Step_class \<mu> l k {dreg_step})"
+proof -
+  define n where "n = Max (Step_class \<mu> l k {red_step,bblue_step,dboost_step})"
+  have "i \<le> Suc (Max (Step_class \<mu> l k {stepkind.red_step,bblue_step,dboost_step}))"
+    if "i \<in> Step_class \<mu> l k {dreg_step}" for i
+  proof (cases i)
+    case 0
+    then show ?thesis
+      by simp
+  next
+    case (Suc j)
+    then have "j \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
+      using step_before_freg that by blast
+    with assms show ?thesis
+      by (metis Max_ge Suc Suc_le_mono) 
+  qed
+  then have "Step_class \<mu> l k {dreg_step} \<subseteq> {0..Suc n}"
+    by (auto simp: n_def)
+  then show ?thesis
+    using finite_subset by blast
+qed
+
+lemma Step_class_halted_nonempty_aux:
+  assumes "finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step})"
+  shows "Step_class \<mu> l k {halted} \<noteq> {}"
+proof
+  assume "Step_class \<mu> l k {halted} = {}"
+  then have "Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step,halted} = 
+            Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step}"
+    by (simp add: Step_class_insert_NO_MATCH)
+  moreover have "finite (Step_class \<mu> l k {dreg_step})"
+    using assms finite_dreg_step by blast
+  ultimately show False
+    using Step_class_UNIV assms
+    by (metis Step_class_insert infinite_UNIV_nat infinite_Un)
+qed
+
+lemma Step_class_halted_nonempty:
+  assumes "\<mu>>0"
+  shows "\<forall>\<^sup>\<infinity>l. Colours l k \<longrightarrow> Step_class \<mu> l k {halted} \<noteq> {}"
+proof -
+  have "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {bblue_step})"
+    using Lemma_bblue_step_limit_def bblue_step_limit assms eventually_sequentially by force
+  moreover have "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {dboost_step})"
+    using Lemma_bblue_dboost_step_limit_def assms bblue_dboost_step_limit eventually_sequentially by force
+  ultimately
+  show ?thesis
+    using red_step_limit Step_class_halted_nonempty_aux
+    by (smt (verit, del_insts) Colours_def eventually_sequentially not_less_eq_eq)
+qed
+
 end
 
 end

@@ -1195,6 +1195,11 @@ lemma dreg_before_step:
   shows "i \<in> Step_class \<mu> l k {dreg_step}"
   using assms by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
 
+lemma step_before_freg:
+  assumes "Suc i \<in> Step_class \<mu> l k {dreg_step}"
+  shows "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
+  using assms by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
+
 lemma step_odd: "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step} \<Longrightarrow> odd i" 
   by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
 
