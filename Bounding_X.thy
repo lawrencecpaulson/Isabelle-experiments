@@ -279,7 +279,8 @@ lemma X_7_5:
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   assumes "Colours l k" 
   defines "S \<equiv> Step_class \<mu> l k {dboost_step}"
-  assumes big: "Step_class \<mu> l k {halted} \<noteq> {}"
+  assumes big: "Step_class \<mu> l k {halted} \<noteq> {}" 
+               "\<forall>p. p \<le> 1 \<longrightarrow> hgt k p \<le> 2 * ln k / eps k"
   shows "card (S \<setminus> dboost_star \<mu> l k) \<le> 3 * eps k powr (1/4) * k"
 proof -
   define p where "p \<equiv> pee \<mu> l k"
@@ -291,7 +292,7 @@ proof -
     using \<open>k>0\<close> unfolding eps_def
     by real_asymp
 
-  have "(\<Sum>i<m. real (hgt k (p (Suc i))) - real (hgt k (p i))) = real (hgt k (p m)) - real (hgt k (p 0))"
+  have "(\<Sum>i<m. real (hgt k (p (Suc i))) - hgt k (p i)) = real (hgt k (p m)) - hgt k (p 0)"
     by (rule sum_lessThan_telescope)
   also have "... \<le> 2 * ln k / eps k"
   proof -
@@ -299,11 +300,13 @@ proof -
     have "hgt k (p i) \<ge> 1" for i
       by (simp add: Suc_leI hgt_gt_0)
     moreover have "hgt k (p m) \<le> 2 * ln (real k) / eps k"
- 
-    sorry
-    show ?thesis
-      sorry
+      using big p_def pee_le1 by presburger
+    ultimately show ?thesis
+      by linarith
   qed
+  show ?thesis
+    sorry
+qed
 
 end (*context Diagonal*)
 
