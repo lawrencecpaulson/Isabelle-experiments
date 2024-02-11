@@ -274,14 +274,51 @@ proof -
   finally show ?thesis .
 qed
 
+text \<open>Bhavik's @{text one_lt_q_function} (in his section 5)\<close>
+lemma "\<forall>\<^sup>\<infinity>k. qfun k (nat \<lfloor>2 * ln k / eps k\<rfloor>) \<ge> 1"
+proof -
+  have A: "\<forall>\<^sup>\<infinity>k. 1 \<le> p0 + ((1 + eps k) powr (2 * ln (real k) / eps k - 1) - 1) / k"
+    using p0_01 unfolding eps_def by real_asymp
+  have B: "(1 + eps k) powr (2 * ln (real k) / eps k - 1) \<le> (1 + eps k) ^ (nat \<lfloor>2 * ln k / eps k\<rfloor>)" for k
+    using eps_ge0 [of k] powr_realpow powr_mono
+    by (smt (verit) of_nat_Suc le_nat_floor zero_less_one linorder_not_less nat_eq_iff One_nat_def of_nat_nat real_of_int_floor_add_one_gt)
+  show ?thesis
+    apply (rule eventually_mono [OF A])
+    apply (simp add: qfun_def)
+    using B
+    by (smt (verit, ccfv_SIG) diff_divide_distrib divide_nonneg_nonneg of_nat_0_le_iff) 
+qed
+
 lemma X_7_5:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   assumes "Colours l k" 
   defines "S \<equiv> Step_class \<mu> l k {dboost_step}"
+  assumes big: "Step_class \<mu> l k {halted} \<noteq> {}"
   shows "card (S \<setminus> dboost_star \<mu> l k) \<le> 3 * eps k powr (1/4) * k"
 proof -
+  define p where "p \<equiv> pee \<mu> l k"
+  define m where "m \<equiv> Inf (Step_class \<mu> l k {halted})"
+  obtain lk: "0<l" "l\<le>k" "0<k"
+    using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
 
+  have "(\<lambda>k. 2 * ln k / eps k) \<in> o[at_top](real)"
+    using \<open>k>0\<close> unfolding eps_def
+    by real_asymp
+
+  have "(\<Sum>i<m. real (hgt k (p (Suc i))) - real (hgt k (p i))) = real (hgt k (p m)) - real (hgt k (p 0))"
+    by (rule sum_lessThan_telescope)
+  also have "... \<le> 2 * ln k / eps k"
+  proof -
+    define h where "h \<equiv> nat \<lfloor>2 * ln (real k) / eps k\<rfloor>"
+    have "hgt k (p i) \<ge> 1" for i
+      by (simp add: Suc_leI hgt_gt_0)
+    moreover have "hgt k (p m) \<le> 2 * ln (real k) / eps k"
+ 
+    sorry
+    show ?thesis
+      sorry
+  qed
 
 end (*context Diagonal*)
 

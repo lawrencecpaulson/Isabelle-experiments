@@ -18,7 +18,7 @@ lemma "bij_betw f X Y \<longleftrightarrow> (\<forall>A. A\<subseteq>X \<longrig
 proof
   show "?L \<Longrightarrow> ?R"
     by (metis Diff_subset bij_betw_def inj_on_image_set_diff)
-  assume R: ?R
+  assume ?R
   then have "inj_on f X" "f ` X = Y"
     by (auto simp: inj_on_def)
   then show ?L

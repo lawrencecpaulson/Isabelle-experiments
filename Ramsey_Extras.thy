@@ -24,7 +24,7 @@ lemma upair_define_apply_dom:
   by (force simp add: upair_define_def doubleton_eq_iff)
 
 
-(*for Equipollence*)
+(*2024-02-11: added*)
 text \<open>Dedekind's definition of infinite set\<close>
 lemma infinite_iff_psubset: "infinite A \<longleftrightarrow> (\<exists>B. B \<subset> A \<and> A\<approx>B)"
 proof
@@ -54,18 +54,22 @@ next
     by (metis card_subset_eq eqpoll_finite_iff eqpoll_iff_card psubsetE)
 qed
 
+(*2024-02-11: added*)
 lemma infinite_iff_psubset_le: "infinite A \<longleftrightarrow> (\<exists>B. B \<subset> A \<and> A \<lesssim> B)"
   by (meson eqpoll_imp_lepoll infinite_iff_psubset lepoll_antisym psubsetE subset_imp_lepoll)
 
 (*Ramsey*)
+(*2024-02-11: added*)
 lemma finite_imp_finite_nsets: "finite A \<Longrightarrow> finite ([A]\<^bsup>k\<^esup>)"
   by (simp add: nsets_def)
 
+(*2024-02-11: added*)
 lemma nsets2_E:
   assumes "e \<in> [A]\<^bsup>2\<^esup>"
   obtains x y where "e = {x,y}" "x \<in> A" "y \<in> A" "x\<noteq>y"
   using assms by (auto simp: nsets_def card_2_iff)
 
+(*UNUSED*)
 lemma subset_nsets_2:
   assumes "card A \<ge> 2" shows "A \<subseteq> \<Union>([A]\<^bsup>2\<^esup>)"
 proof -
@@ -76,13 +80,15 @@ proof -
     by (auto simp: nsets_2_eq all_edges_def)
 qed
 
+(*UNUSED*)
 lemma Pow_equals_UN_nsets:
   assumes "finite A" shows "Pow A = \<Union> (nsets A ` {..card A})"
-  proof
-    show "Pow A \<subseteq> \<Union> (nsets A ` {..card A})"
-      using assms finite_subset by (force simp: nsets_def card_mono)
+proof
+  show "Pow A \<subseteq> \<Union> (nsets A ` {..card A})"
+    using assms finite_subset by (force simp: nsets_def card_mono)
 qed (auto simp: nsets_def)
 
+(*UNUSED*)
 lemma nsets_eq_iff:
   assumes "m \<le> card A" "n \<le> card A"
   shows "[A]\<^bsup>m\<^esup> = [A]\<^bsup>n\<^esup> \<longleftrightarrow> m=n \<or> A={}"
@@ -93,6 +99,7 @@ proof
     unfolding nsets_def using  obtain_subset_with_card_n [OF \<open>m \<le> card A\<close>] by blast
 qed (use assms in auto)
 
+(*UNUSED*)
 lemma nsets_disjoint_iff:
   assumes "m \<le> card A" "n \<le> card A" "A \<noteq> {}"
   shows "nsets A m \<inter> nsets A n \<noteq> {} \<longleftrightarrow> m=n"
@@ -102,11 +109,13 @@ proof
     unfolding nsets_def by fastforce
 qed (use assms in \<open>auto simp: nsets_eq_empty_iff\<close>)
 
+(*2024-02-11: added*)
 lemma partn_lstE:
   assumes "partn_lst \<beta> \<alpha> \<gamma>" "f \<in> nsets \<beta> \<gamma>  \<rightarrow>  {..<l}" "length \<alpha> = l"
   obtains i H where "i < length \<alpha>" "H \<in> nsets \<beta> (\<alpha>!i)" "f ` (nsets H \<gamma>) \<subseteq> {i}"
   using partn_lst_def assms by blast
 
+(*2024-02-11: added*)
 lemma partn_lst_less:
   assumes M: "partn_lst \<beta> \<alpha> n" and eq: "length \<alpha>' = length \<alpha>" 
     and le: "\<And>i. i < length \<alpha> \<Longrightarrow> \<alpha>'!i \<le> \<alpha>!i "
@@ -141,7 +150,7 @@ proof (clarsimp simp: partn_lst_def)
   qed
 qed
 
-(*Ramsey?*)
+(*Ramsey? But needs Equipollence*)
 lemma nsets_lepoll_cong:
   assumes "A \<lesssim> B"
   shows "[A]\<^bsup>k\<^esup> \<lesssim> [B]\<^bsup>k\<^esup>"
@@ -189,6 +198,7 @@ lemma finite_nsets_iff:
   shows "finite ([A]\<^bsup>k\<^esup>) \<longleftrightarrow> finite A"
   using assms finite_imp_finite_nsets infinite_imp_infinite_nsets by blast
 
+(*UNUSED? [simprule]*)
 lemma card_nsets [simp]: "card (nsets A k) = card A choose k"
 proof (cases "finite A")
   case True

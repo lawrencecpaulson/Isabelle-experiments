@@ -466,6 +466,14 @@ lemma hgt_Least:
   shows "hgt k p \<le> h"
   by (simp add: Suc_leI assms hgt_def Least_le)
 
+lemma real_hgt_Least:
+  assumes "h \<le> nat (floor r)" "0<h" "p \<le> qfun k h"
+  shows "real (hgt k p) \<le> r"
+  apply (rule order_trans [OF of_nat_mono])
+   apply (rule hgt_Least)
+    apply (rule assms)+
+  using assms by linarith
+
 lemma hgt_greater:
   assumes "0<k" "p > qfun k h"
   shows "hgt k p > h"
