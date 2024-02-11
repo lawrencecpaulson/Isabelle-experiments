@@ -424,6 +424,28 @@ lemma qfun_mono: "\<lbrakk>k>0; h'\<le>h\<rbrakk> \<Longrightarrow> qfun k h' \<
 lemma q_Suc_diff: "qfun k (Suc h) - qfun k h = eps k * (1 + eps k)^h / k"
   by (simp add: qfun_def field_split_simps)
 
+text \<open>Bhavik's @{text one_lt_q_function} (in his section 5)\<close>
+lemma qfun_ge1:
+  defines "f \<equiv> \<lambda>k. 2 * ln k / eps k"
+  shows "\<forall>\<^sup>\<infinity>k. qfun k (nat \<lfloor>f k\<rfloor>) \<ge> 1"
+proof -
+  have "\<forall>\<^sup>\<infinity>k. 1 \<le> p0 + ((1 + eps k) powr (f k - 1) - 1) / k" "\<forall>\<^sup>\<infinity>k. k>0 "
+    using p0_01 unfolding eps_def f_def by real_asymp+
+  then have *: "\<forall>\<^sup>\<infinity>k. k>0 \<and> 1 \<le> p0 + ((1 + eps k) powr (f k - 1) - 1) / k"
+    using eventually_conj by blast  
+  show ?thesis
+  proof (rule eventually_mono [OF *])
+    fix k
+    assume \<section>: "0 < k \<and> 1 \<le> p0 + ((1 + eps k) powr (f k - 1) - 1) / real k"
+    then have "(1 + eps k) powr (f k - 1) \<le> (1 + eps k) ^ nat \<lfloor>f k\<rfloor>"
+      using eps_gt0 [of k] by (simp flip: powr_realpow) linarith
+    with \<section> show "1 \<le> qfun k (nat \<lfloor>f k\<rfloor>)"
+      by (smt (verit) divide_right_mono of_nat_0_le_iff qfun_def)
+  qed
+qed
+
+(*height_upper_bound*)
+
 lemma height_exists:
   assumes "k>0"
   obtains h where "p \<le> qfun k h \<and> h>0"
@@ -466,6 +488,7 @@ lemma hgt_Least:
   shows "hgt k p \<le> h"
   by (simp add: Suc_leI assms hgt_def Least_le)
 
+(*PROBABLY WORTHLESS*)
 lemma real_hgt_Least:
   assumes "h \<le> nat (floor r)" "0<h" "p \<le> qfun k h"
   shows "real (hgt k p) \<le> r"

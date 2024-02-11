@@ -274,21 +274,6 @@ proof -
   finally show ?thesis .
 qed
 
-text \<open>Bhavik's @{text one_lt_q_function} (in his section 5)\<close>
-lemma "\<forall>\<^sup>\<infinity>k. qfun k (nat \<lfloor>2 * ln k / eps k\<rfloor>) \<ge> 1"
-proof -
-  have A: "\<forall>\<^sup>\<infinity>k. 1 \<le> p0 + ((1 + eps k) powr (2 * ln (real k) / eps k - 1) - 1) / k"
-    using p0_01 unfolding eps_def by real_asymp
-  have B: "(1 + eps k) powr (2 * ln (real k) / eps k - 1) \<le> (1 + eps k) ^ (nat \<lfloor>2 * ln k / eps k\<rfloor>)" for k
-    using eps_ge0 [of k] powr_realpow powr_mono
-    by (smt (verit) of_nat_Suc le_nat_floor zero_less_one linorder_not_less nat_eq_iff One_nat_def of_nat_nat real_of_int_floor_add_one_gt)
-  show ?thesis
-    apply (rule eventually_mono [OF A])
-    apply (simp add: qfun_def)
-    using B
-    by (smt (verit, ccfv_SIG) diff_divide_distrib divide_nonneg_nonneg of_nat_0_le_iff) 
-qed
-
 lemma X_7_5:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
