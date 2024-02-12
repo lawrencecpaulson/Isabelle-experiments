@@ -278,23 +278,45 @@ lemma X_7_5:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   assumes "Colours l k" 
-  defines "S \<equiv> Step_class \<mu> l k {dboost_step}"
+  defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   assumes big: "Step_class \<mu> l k {halted} \<noteq> {}" 
                "\<forall>p. p \<le> 1 \<longrightarrow> hgt k p \<le> 2 * ln k / eps k"
-  shows "card (S \<setminus> dboost_star \<mu> l k) \<le> 3 * eps k powr (1/4) * k"
+  shows "card (\<S> \<setminus> dboost_star \<mu> l k) \<le> 3 * eps k powr (1/4) * k"
 proof -
+  define \<D> where "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
+  define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
   define p where "p \<equiv> pee \<mu> l k"
-  define m where "m \<equiv> Inf (Step_class \<mu> l k {halted})"
+  define m where "m \<equiv> Inf \<H>"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
 
-  have "(\<lambda>k. 2 * ln k / eps k) \<in> o[at_top](real)"
+  have m_minimal: "i \<notin> \<H>" if "i < m" for i
+    using that
+    by (metis m_def not_le wellorder_Inf_le1)
+
+  (*Limit argument: is the following for sufficiently large k? Does k need to be bound locally?*)
+  have o: "(\<lambda>k. 2 * ln k / eps k) \<in> o[at_top](real)"
     using \<open>k>0\<close> unfolding eps_def
     by real_asymp
 
-  have "(\<Sum>i<m. real (hgt k (p (Suc i))) - hgt k (p i)) = real (hgt k (p m)) - hgt k (p 0)"
-    by (rule sum_lessThan_telescope)
-  also have "... \<le> 2 * ln k / eps k"
+  have oddset: "{..<n} \<setminus> \<D> = {i \<in> {..<n}. odd i}" if "n\<le>m" for n
+    using m_minimal step_odd step_even not_halted_even_dreg that
+    by (auto simp: \<D>_def \<H>_def Step_class_insert_NO_MATCH)
+  have "(\<Sum>i \<in> {..<m} \<setminus> \<D>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) 
+     \<le> real (hgt k (p m)) - hgt k (p 0)"
+  proof (cases "even m")
+    case True
+    then show ?thesis
+      by (simp add: oddset sum_odds_even [where f = "\<lambda>i. real (hgt k (p i))"])
+  next
+    case False
+    have "hgt k (p (m - Suc 0)) \<le> hgt k (p m)"
+      using Y_6_5_DegreeReg [of "m-1"] \<open>k>0\<close> False m_minimal not_halted_even_dreg odd_pos  
+      by (fastforce simp: p_def \<H>_def)
+    with False show ?thesis
+      by (simp add: oddset sum_odds_odd [where f = "\<lambda>i. real (hgt k (p i))"])
+  qed
+  also have "\<dots> \<le> 2 * ln k / eps k"
   proof -
     define h where "h \<equiv> nat \<lfloor>2 * ln (real k) / eps k\<rfloor>"
     have "hgt k (p i) \<ge> 1" for i
@@ -304,6 +326,7 @@ proof -
     ultimately show ?thesis
       by linarith
   qed
+  finally have "(\<Sum>i \<in> {..<m} \<setminus> \<D>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<le> 2 * ln k / eps k" .
   show ?thesis
     sorry
 qed

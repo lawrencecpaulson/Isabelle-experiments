@@ -45,6 +45,46 @@ lemma prod_lessThan_telescope':
   shows "(\<Prod>i<n. f i / f (Suc i)) = f 0 / f n"
   using assms by (induction n) auto
 
+lemma sum_odds_even:
+  fixes f :: "nat \<Rightarrow> 'a :: ab_group_add"
+  assumes "even m"
+  shows "(\<Sum>i \<in> {i. i<m \<and> odd i}. f (Suc i) - f (i -Suc 0)) = f m - f 0"
+  using assms
+proof (induction m rule: less_induct)
+  case (less m)
+  show ?case
+  proof (cases "m<2")
+    case True
+    with \<open>even m\<close> have "m=0"
+      using nat_dvd_not_less by blast
+    then show ?thesis
+      by simp
+  next
+    case False
+    have eq: "{i. i<m \<and> odd i} = insert (m-1) {i. i<m-2 \<and> odd i}"
+    proof
+      show "{i. i < m \<and> odd i} \<subseteq> insert (m - 1) {i. i < m - 2 \<and> odd i}"
+        using \<open>even m\<close>
+        by clarify (metis Suc_lessI add_2_eq_Suc' diff_Suc_1 even_Suc_Suc_iff less_diff_conv)
+    qed (use False less in auto)
+    have [simp]: "\<not> (m - Suc 0 < m - 2)"
+      by linarith
+    show ?thesis
+      using False  by (simp add: eq less flip: numeral_2_eq_2)
+  qed
+qed 
+
+lemma sum_odds_odd:
+  fixes f :: "nat \<Rightarrow> 'a :: ab_group_add"
+  assumes "odd m"
+  shows "(\<Sum>i \<in> {i. i<m \<and> odd i}. f (Suc i) - f (i -Suc 0)) = f (m-1) - f 0"
+proof -
+  have eq: "{i. i<m \<and> odd i} = {i. i<m-1 \<and> odd i}"
+    using assms not_less_iff_gr_or_eq by fastforce
+  show ?thesis
+    by (simp add: sum_odds_even eq assms)
+qed
+
 text \<open>A bounded increasing sequence of finite sets eventually terminates\<close>
 lemma Union_incseq_finite:
   assumes fin: "\<And>n. finite (A n)" and N: "\<And>n. card (A n) < N" and "incseq A"
