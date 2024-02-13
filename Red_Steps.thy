@@ -812,18 +812,18 @@ qed
 
 corollary Red_5_2:
   assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. \<forall>i \<in> Step_class \<mu> l k {dboost_step}.
-         Colours l k \<longrightarrow>
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k.  Colours l k 
+    \<longrightarrow> (\<forall>i \<in> Step_class \<mu> l k {dboost_step}.
          pee \<mu> l k (Suc i) - pee \<mu> l k i
          \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i))
-      \<and> beta \<mu> l k i > 0"
+      \<and> beta \<mu> l k i > 0)"
   using Big_Red_5_1 Red_5_2_Main assms 
   unfolding eventually_sequentially by (meson order.trans)
 
 definition 
   "Lemma_Red_5_3 \<equiv> 
-      \<lambda>\<mu> l. \<forall>k. \<forall>i \<in> Step_class \<mu> l k {dboost_step}.
-            Colours l k \<longrightarrow> pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
+      \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> (\<forall>i \<in> Step_class \<mu> l k {dboost_step}.
+            pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2)"
 
 text \<open>This is a weaker consequence of the previous results\<close>
 corollary Red_5_3:

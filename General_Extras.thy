@@ -4,9 +4,17 @@ theory General_Extras imports
 
 begin
 
-
+(*?*)
 abbreviation set_difference :: "['a set,'a set] \<Rightarrow> 'a set" (infixl "\<setminus>" 65)
   where "A \<setminus> B \<equiv> A-B"
+
+(*2024-02-13: added*)
+lemma induct_nat_012[case_names 0 1 ge2]:
+  "P 0 \<Longrightarrow> P (Suc 0) \<Longrightarrow> (\<And>n. P n \<Longrightarrow> P (Suc n) \<Longrightarrow> P (Suc (Suc n))) \<Longrightarrow> P n"
+proof (induction_schema, pat_completeness)
+  show "wf (Wellfounded.measure id)"
+    by simp
+qed auto
 
 (* most of the remainder belongs in an AFP entry concerned with Ramsey theory*)
 

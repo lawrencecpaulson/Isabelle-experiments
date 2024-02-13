@@ -89,6 +89,27 @@ qed
 
 lemmas Y_6_4_dbooSt = Red_5_3
 
+text \<open>This variant covers a gap of two, thanks to degree regularisation\<close>
+corollary Y_6_4_dbooSt':
+  assumes "0<\<mu>" "\<mu><1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k 
+     \<longrightarrow> (\<forall>i \<in> Step_class \<mu> l k {dboost_step}. pee \<mu> l k (Suc i) \<ge> pee \<mu> l k (i-1))"
+proof -
+  have "pee \<mu> l k (i - 1) \<le> pee \<mu> l k (Suc i)"
+    if "Colours l k""pee \<mu> l k i \<le> pee \<mu> l k (Suc i)" "i \<in> Step_class \<mu> l k {dboost_step}"
+    for l k i
+  proof -
+    have "odd i"
+      using step_odd that by (force simp add: Step_class_insert_NO_MATCH)
+    with step_odd that have "i-1 \<in> Step_class \<mu> l k {dreg_step}"
+      by (simp add: Step_class_insert_NO_MATCH dreg_before_step)
+    then show ?thesis
+      by (smt (verit, best) One_nat_def Y_6_4_DegreeReg \<open>odd i\<close> odd_Suc_minus_one that(2))
+  qed
+  with  eventually_mono [OF Red_5_3 [OF assms]] show ?thesis
+    unfolding Lemma_Red_5_3_def by presburger 
+qed
+
 subsection \<open>Towards Lemmas 6.3\<close>
 
 definition "Z_class \<equiv> \<lambda>\<mu> l k. {i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}.
@@ -488,7 +509,7 @@ next
   also have "\<dots> \<le> p (Suc j)"
   proof -
     define Z where "Z \<equiv> \<lambda>j. {i. p (Suc i) < p (i-1) \<and> j'+2 < i \<and> i\<le>j \<and> i \<in> RBS}"
-    have "Z i \<subseteq> {Suc j'<..i}" for i
+    have Zsub: "Z i \<subseteq> {Suc j'<..i}" for i
       by (auto simp: Z_def)
     then have finZ: "finite (Z i)" for i
       by (meson finite_greaterThanAtMost finite_subset)

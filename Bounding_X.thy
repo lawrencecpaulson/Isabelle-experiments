@@ -284,6 +284,8 @@ lemma X_7_5:
   shows "card (\<S> \<setminus> dboost_star \<mu> l k) \<le> 3 * eps k powr (1/4) * k"
 proof -
   define \<D> where "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
+  define \<R> where "\<R> \<equiv> Step_class \<mu> l k {red_step}"
+  define \<S> where "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
   define p where "p \<equiv> pee \<mu> l k"
   define m where "m \<equiv> Inf \<H>"
@@ -327,6 +329,9 @@ proof -
       by linarith
   qed
   finally have "(\<Sum>i \<in> {..<m} \<setminus> \<D>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<le> 2 * ln k / eps k" .
+  have "(\<Sum>i \<in> \<R>\<union>\<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<ge> eps k powr (-1/4) * card (\<S> \<setminus> dboost_star \<mu> l k)"
+    using Y_6_4_dbooSt'
+    sorry
   show ?thesis
     sorry
 qed
