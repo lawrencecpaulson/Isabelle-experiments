@@ -279,6 +279,7 @@ lemma X_7_5:
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   assumes "Colours l k" 
   defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
+  defines  "\<S>\<S> \<equiv> dboost_star \<mu> l k"
   assumes big: "Step_class \<mu> l k {halted} \<noteq> {}" and bblue: "Lemma_bblue_dboost_step_limit \<mu> l"
           and hub: "\<forall>p. p \<le> 1 \<longrightarrow> hgt k p \<le> 2 * ln k / eps k" (*height_upper_bound*)
           and 16: "k\<ge>16" (*for Y_6_5_Red*)
@@ -290,6 +291,11 @@ proof -
   define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
   define p where "p \<equiv> pee \<mu> l k"
   define m where "m \<equiv> Inf \<H>"
+  have \<S>\<S>: "\<S>\<S> = {i \<in> \<S>. hgt k (p (Suc i)) - hgt k (p i) \<le> eps k powr (-1/4)}"
+       and "\<S>\<S> \<subseteq> \<S>"
+    by (auto simp add: \<S>\<S>_def \<S>_def dboost_star_def p_def)
+  have in_S: "hgt k (p (Suc i)) - hgt k (p i) > eps k powr (-1/4)" if "i \<in>  \<S> \<setminus> \<S>\<S>" for i
+    using that by (fastforce simp add: \<S>\<S>)
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   have "finite \<R>"
@@ -326,16 +332,33 @@ proof -
   qed
   also have "\<dots> \<le> 2 * ln k / eps k"
   proof -
-    define h where "h \<equiv> nat \<lfloor>2 * ln (real k) / eps k\<rfloor>"
+    define h where "h \<equiv> nat \<lfloor>2 * ln k / eps k\<rfloor>"
     have "hgt k (p i) \<ge> 1" for i
       by (simp add: Suc_leI hgt_gt_0)
-    moreover have "hgt k (p m) \<le> 2 * ln (real k) / eps k"
+    moreover have "hgt k (p m) \<le> 2 * ln k / eps k"
       using hub p_def pee_le1 by blast 
     ultimately show ?thesis
       by linarith
   qed
   finally have "(\<Sum>i \<in> {..<m} \<setminus> \<D>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<le> 2 * ln k / eps k" .
-  have "(\<Sum>i \<in> \<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<ge> eps k powr (-1/4) * card (\<S> \<setminus> dboost_star \<mu> l k)"
+  obtain cardss:  "card \<S>\<S> \<le> card \<S>" "card (\<S> \<setminus> \<S>\<S>) = card \<S> - card \<S>\<S>"
+    by (meson \<open>\<S>\<S> \<subseteq> \<S>\<close> \<open>finite \<S>\<close> card_Diff_subset card_mono infinite_super)
+  have "(\<Sum>i \<in> \<S> \<setminus> \<S>\<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<ge> (\<Sum>i \<in> \<S> \<setminus> \<S>\<S>. eps k powr (-1/4))"
+  proof (rule sum_mono)
+    fix i :: nat
+    assume i: "i \<in> \<S> \<setminus> \<S>\<S>"
+    then have "odd i" (*REPETITION*)
+      unfolding \<S>_def by (metis DiffE Step_class_insert UnCI step_odd)
+    with i have "i-1 \<in> \<D>"       
+      by (simp add: \<S>_def \<D>_def dreg_before_step Step_class_insert_NO_MATCH)
+    with i show "eps k powr (- 1 / 4) \<le> real (hgt k (p (Suc i))) - real (hgt k (p (i - 1)))"
+      using \<open>odd i\<close> in_S[of i] Y_6_5_DegreeReg[of "i-1"]
+      apply (simp add: p_def)
+      using \<D>_def lk(3) not_less_iff_gr_or_eq by fastforce
+  qed
+  then have "(\<Sum>i \<in> \<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<ge> eps k powr (-1/4) * card (\<S> \<setminus> \<S>\<S>)"
+apply (simp add: mult.commute)
+    apply (simp add: cardss \<open>\<S>\<S> \<subseteq> \<S>\<close> of_nat_diff algebra_simps)
     using Y_6_4_dbooSt'
     sorry
   moreover
@@ -354,7 +377,7 @@ proof -
       by linarith
   qed
   ultimately have "(\<Sum>i \<in> \<R>\<union>\<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) 
-          \<ge> eps k powr (-1/4) * card (\<S> \<setminus> dboost_star \<mu> l k) - 2 * card \<R>"
+          \<ge> eps k powr (-1/4) * card (\<S> \<setminus> \<S>\<S>) - 2 * card \<R>"
     by (simp add: sum.union_disjoint \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
   show ?thesis
     sorry
