@@ -343,12 +343,15 @@ proof -
   proof (rule sum_mono)
     fix i :: nat
     assume "i \<in> \<R>"
-    then have "i-1 \<in> \<D>"
-      sorry
-    with \<open>i \<in> \<R>\<close> show "- 2 \<le> real (hgt k (p (Suc i))) - real (hgt k (p (i - 1)))"
-      unfolding \<R>_def using Y_6_5_Red [of i \<mu> l k] 16 Y_6_5_DegreeReg[of "i-1" \<mu> l k]
-      apply (auto simp: algebra_simps)
-      sorry
+    then have "odd i"
+      unfolding \<R>_def by (metis Step_class_insert UnCI step_odd)
+    with \<open>i \<in> \<R>\<close> have "i-1 \<in> \<D>"       
+      by (simp add: \<R>_def \<D>_def dreg_before_step Step_class_insert_NO_MATCH)
+    with \<open>i \<in> \<R>\<close> have "hgt k (p (i - 1)) - 2 \<le> hgt k (p (Suc i))"
+      using \<open>odd i\<close> Y_6_5_Red[of i] 16 Y_6_5_DegreeReg[of "i-1"]
+      by (force simp: algebra_simps \<R>_def \<D>_def p_def)
+    then show "- 2 \<le> real (hgt k (p (Suc i))) - real (hgt k (p (i - 1)))"
+      by linarith
   qed
   ultimately have "(\<Sum>i \<in> \<R>\<union>\<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) 
           \<ge> eps k powr (-1/4) * card (\<S> \<setminus> dboost_star \<mu> l k) - 2 * card \<R>"
