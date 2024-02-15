@@ -274,7 +274,7 @@ proof -
   finally show ?thesis .
 qed
 
-lemma X_7_5:
+lemma X_7_5_aux:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   assumes "Colours l k" 
@@ -283,6 +283,7 @@ lemma X_7_5:
   assumes big: "Step_class \<mu> l k {halted} \<noteq> {}" and bblue: "Lemma_bblue_dboost_step_limit \<mu> l"
           and hub: "\<forall>p. p \<le> 1 \<longrightarrow> hgt k p \<le> 2 * ln k / eps k" (*height_upper_bound*)
           and 16: "k\<ge>16" (*for Y_6_5_Red*)
+          and Y64B: "Lemma_Y_6_4_dbooSt \<mu> l"
   shows "card (\<S> \<setminus> dboost_star \<mu> l k) \<le> 3 * eps k powr (1/4) * k"
 proof -
   define \<D> where "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
@@ -296,6 +297,8 @@ proof -
     by (auto simp add: \<S>\<S>_def \<S>_def dboost_star_def p_def)
   have in_S: "hgt k (p (Suc i)) - hgt k (p i) > eps k powr (-1/4)" if "i \<in>  \<S> \<setminus> \<S>\<S>" for i
     using that by (fastforce simp add: \<S>\<S>)
+  have odd: "odd i" if "i \<in> \<R> \<or> i \<in> \<S>" for i
+    using that unfolding \<R>_def \<S>_def by (metis Step_class_insert UnCI step_odd)
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   have "finite \<R>"
@@ -343,36 +346,36 @@ proof -
   finally have "(\<Sum>i \<in> {..<m} \<setminus> \<D>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<le> 2 * ln k / eps k" .
   obtain cardss:  "card \<S>\<S> \<le> card \<S>" "card (\<S> \<setminus> \<S>\<S>) = card \<S> - card \<S>\<S>"
     by (meson \<open>\<S>\<S> \<subseteq> \<S>\<close> \<open>finite \<S>\<close> card_Diff_subset card_mono infinite_super)
-  have "(\<Sum>i \<in> \<S> \<setminus> \<S>\<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<ge> (\<Sum>i \<in> \<S> \<setminus> \<S>\<S>. eps k powr (-1/4))"
-  proof (rule sum_mono)
-    fix i :: nat
-    assume i: "i \<in> \<S> \<setminus> \<S>\<S>"
-    then have "odd i" (*REPETITION*)
-      unfolding \<S>_def by (metis DiffE Step_class_insert UnCI step_odd)
-    with i have "i-1 \<in> \<D>"       
-      by (simp add: \<S>_def \<D>_def dreg_before_step Step_class_insert_NO_MATCH)
-    with i show "eps k powr (- 1 / 4) \<le> real (hgt k (p (Suc i))) - real (hgt k (p (i - 1)))"
-      using \<open>odd i\<close> in_S[of i] Y_6_5_DegreeReg[of "i-1"]
-      apply (simp add: p_def)
-      using \<D>_def lk(3) not_less_iff_gr_or_eq by fastforce
+  have "(\<Sum>i \<in> \<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<ge> eps k powr (-1/4) * card (\<S> \<setminus> \<S>\<S>)"
+  proof -
+    have "(\<Sum>i \<in> \<S> \<setminus> \<S>\<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<ge> (\<Sum>i \<in> \<S> \<setminus> \<S>\<S>. eps k powr (-1/4))"
+    proof (rule sum_mono)
+      fix i :: nat
+      assume i: "i \<in> \<S> \<setminus> \<S>\<S>"
+      with i odd have "i-1 \<in> \<D>"       
+        by (simp add: \<S>_def \<D>_def dreg_before_step Step_class_insert_NO_MATCH)
+      with i odd show "eps k powr (- 1 / 4) \<le> real (hgt k (p (Suc i))) - real (hgt k (p (i - 1)))"
+        using in_S[of i] Y_6_5_DegreeReg[of "i-1" \<mu> l k] \<open>k>0\<close>
+        apply (simp add: p_def \<D>_def)
+        by (smt (verit, best) nat_less_le of_nat_0_less_iff of_nat_diff powr_ge_pzero zero_less_diff)
+    qed
+    moreover
+    have "(\<Sum>i \<in> \<S>\<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<ge> 0"
+      using Y64B \<open>Colours l k\<close> \<open>k>0\<close>  
+      by (force simp add: Lemma_Y_6_4_dbooSt_def p_def \<S>\<S> \<S>_def hgt_mono intro: sum_nonneg)
+    ultimately show ?thesis
+      by (simp add: mult.commute sum.subset_diff [OF \<open>\<S>\<S> \<subseteq> \<S>\<close> \<open>finite \<S>\<close>])
   qed
-  then have "(\<Sum>i \<in> \<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<ge> eps k powr (-1/4) * card (\<S> \<setminus> \<S>\<S>)"
-apply (simp add: mult.commute)
-    apply (simp add: cardss \<open>\<S>\<S> \<subseteq> \<S>\<close> of_nat_diff algebra_simps)
-    using Y_6_4_dbooSt'
-    sorry
   moreover
   have "(\<Sum>i \<in> \<R>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<ge> (\<Sum>i \<in> \<R>. -2)"
   proof (rule sum_mono)
     fix i :: nat
-    assume "i \<in> \<R>"
-    then have "odd i"
-      unfolding \<R>_def by (metis Step_class_insert UnCI step_odd)
-    with \<open>i \<in> \<R>\<close> have "i-1 \<in> \<D>"       
+    assume i: "i \<in> \<R>"
+    with i odd have "i-1 \<in> \<D>"       
       by (simp add: \<R>_def \<D>_def dreg_before_step Step_class_insert_NO_MATCH)
-    with \<open>i \<in> \<R>\<close> have "hgt k (p (i - 1)) - 2 \<le> hgt k (p (Suc i))"
-      using \<open>odd i\<close> Y_6_5_Red[of i] 16 Y_6_5_DegreeReg[of "i-1"]
-      by (force simp: algebra_simps \<R>_def \<D>_def p_def)
+    with i odd have "hgt k (p (i - 1)) - 2 \<le> hgt k (p (Suc i))"
+      using Y_6_5_Red[of i] 16 Y_6_5_DegreeReg[of "i-1"]
+      by (fastforce simp: algebra_simps \<R>_def \<D>_def p_def)
     then show "- 2 \<le> real (hgt k (p (Suc i))) - real (hgt k (p (i - 1)))"
       by linarith
   qed

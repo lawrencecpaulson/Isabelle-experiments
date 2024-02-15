@@ -87,13 +87,14 @@ proof -
 qed
 
 
-lemmas Y_6_4_dbooSt = Red_5_3
+definition "Lemma_Y_6_4_dbooSt \<equiv> 
+   \<lambda> \<mu> l. \<forall>k. Colours l k \<longrightarrow> (\<forall>i \<in> Step_class \<mu> l k {dboost_step}. pee \<mu> l k (Suc i) \<ge> pee \<mu> l k (i-1))"
 
-text \<open>This variant covers a gap of two, thanks to degree regularisation\<close>
-corollary Y_6_4_dbooSt':
+text \<open>The basic form is actually @{thm[source]Red_5_3}. This variant covers a gap of two, 
+     thanks to degree regularisation\<close>
+corollary Y_6_4_dbooSt:
   assumes "0<\<mu>" "\<mu><1" 
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k 
-     \<longrightarrow> (\<forall>i \<in> Step_class \<mu> l k {dboost_step}. pee \<mu> l k (Suc i) \<ge> pee \<mu> l k (i-1))"
+  shows "\<forall>\<^sup>\<infinity>l. Lemma_Y_6_4_dbooSt \<mu> l"
 proof -
   have "pee \<mu> l k (i - 1) \<le> pee \<mu> l k (Suc i)"
     if "Colours l k""pee \<mu> l k i \<le> pee \<mu> l k (Suc i)" "i \<in> Step_class \<mu> l k {dboost_step}"
@@ -107,7 +108,7 @@ proof -
       by (smt (verit, best) One_nat_def Y_6_4_DegreeReg \<open>odd i\<close> odd_Suc_minus_one that(2))
   qed
   with  eventually_mono [OF Red_5_3 [OF assms]] show ?thesis
-    unfolding Lemma_Red_5_3_def by presburger 
+    unfolding Lemma_Red_5_3_def Lemma_Y_6_4_dbooSt_def by presburger 
 qed
 
 subsection \<open>Towards Lemmas 6.3\<close>
@@ -342,7 +343,7 @@ definition
 lemma Y_6_5_dbooSt:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Lemma_6_5_dbooSt \<mu> l"
-  using Y_6_4_dbooSt[OF assms] unfolding Lemma_Red_5_3_def Lemma_6_5_dbooSt_def
+  using Red_5_3[OF assms] unfolding Lemma_Red_5_3_def Lemma_6_5_dbooSt_def
   by (smt (verit, ccfv_threshold) eventually_at_top_linorder Colours_kn0 hgt_mono)
 
 text \<open>this remark near the top of page 19 only holds in the limit\<close>
