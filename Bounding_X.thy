@@ -279,32 +279,27 @@ lemma X_7_5_aux:
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   assumes "Colours l k" 
   defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
-  defines  "\<S>\<S> \<equiv> dboost_star \<mu> l k"
+  defines "\<S>\<S> \<equiv> dboost_star \<mu> l k"
   assumes big: "Step_class \<mu> l k {halted} \<noteq> {}" 
-          and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
-          and B_limit: "Lemma_bblue_step_limit \<mu> l"
-          and hub: "\<forall>p. p \<le> 1 \<longrightarrow> hgt k p \<le> 2 * ln k / eps k" (*height_upper_bound*)
-          and 16: "k\<ge>16" (*for Y_6_5_Red*)
-          and Y64S: "Lemma_Y_6_4_dbooSt \<mu> l"
-          and Y65B: "Lemma_Y_6_5_Bblue \<mu> l"
+      and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
+      and B_limit: "Lemma_bblue_step_limit \<mu> l"
+      and hub: "\<forall>p. p \<le> 1 \<longrightarrow> hgt k p \<le> 2 * ln k / eps k" (*height_upper_bound*)
+      and 16: "k\<ge>16" (*for Y_6_5_Red*)
+      and Y64S: "Lemma_Y_6_4_dbooSt \<mu> l"
+      and Y65B: "Lemma_Y_6_5_Bblue \<mu> l"
   shows "card (\<S> \<setminus>\<S>\<S>) \<le> 3 * eps k powr (1/4) * k"
 proof -
   define \<D> where "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
   define \<R> where "\<R> \<equiv> Step_class \<mu> l k {red_step}"
   define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
-  define \<S> where "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
   define p where "p \<equiv> pee \<mu> l k"
   define m where "m \<equiv> Inf \<H>"
   define h where "h \<equiv> \<lambda>i. real (hgt k (p i))"
-
-  have \<S>\<S>: "\<S>\<S> = {i \<in> \<S>. h(Suc i) - h i \<le> eps k powr (-1/4)}"
-       and "\<S>\<S> \<subseteq> \<S>"
+  have \<S>\<S>: "\<S>\<S> = {i \<in> \<S>. h(Suc i) - h i \<le> eps k powr (-1/4)}" and "\<S>\<S> \<subseteq> \<S>"
     by (auto simp add: \<S>\<S>_def \<S>_def dboost_star_def p_def h_def)
-
   have in_S: "h(Suc i) - h i > eps k powr (-1/4)" if "i \<in> \<S>\<setminus>\<S>\<S>" for i
     using that by (fastforce simp add: \<S>\<S>)
-
   have odd: "odd i" if "i \<in> \<R> \<or> i \<in> \<S>" for i
     using that unfolding \<R>_def \<S>_def by (metis Step_class_insert UnCI step_odd)
   obtain lk: "0<l" "l\<le>k" "0<k"
@@ -325,30 +320,12 @@ proof -
     by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
 
   define f where "f \<equiv> \<lambda>k. 2 * ln k / eps k"  \<comment> \<open>a small bound for a summation\<close>
-  have f_o: "f \<in> o[at_top](real)"
-    using \<open>k>0\<close> unfolding eps_def f_def by real_asymp
-
-  have oddset: "{..<n} \<setminus> \<D> = {i \<in> {..<n}. odd i}" if "n\<le>m" for n
-    using m_minimal step_odd step_even not_halted_even_dreg that
+  have oddset: "{..<m} \<setminus> \<D> = {i \<in> {..<m}. odd i}" 
+    using m_minimal step_odd step_even not_halted_even_dreg 
     by (auto simp: \<D>_def \<H>_def Step_class_insert_NO_MATCH)
-
-
-  have 26: "(\<Sum>i \<in> {..<m} \<setminus> \<D>. h(Suc i) - h(i-1)) \<le> h m - h 0"
-  proof (cases "even m")
-    case True
-    then show ?thesis
-      by (simp add: oddset sum_odds_even)
-  next
-    case False
-    have "hgt k (p (m - Suc 0)) \<le> hgt k (p m)"
-      using Y_6_5_DegreeReg [of "m-1"] \<open>k>0\<close> False m_minimal not_halted_even_dreg odd_pos  
-      by (fastforce simp: p_def \<H>_def)
-    then have "h(m - Suc 0) \<le> h m"
-      using h_def of_nat_mono by blast
-    with False show ?thesis
-      by (simp add: oddset sum_odds_odd)
-  qed
-  also have XXXXXXXXXXXXX: "\<dots> \<le> f k"
+  have "(\<Sum>i<m. h(Suc i) - h i) = h m - h 0" 
+    by (simp add: sum_lessThan_telescope)
+  also have "\<dots> \<le> f k"
   proof -
     have "hgt k (p i) \<ge> 1" for i
       by (simp add: Suc_leI hgt_gt_0)
@@ -357,11 +334,7 @@ proof -
     ultimately show ?thesis
       by (simp add: h_def)
   qed
-  finally have 256: "(\<Sum>i \<in> {..<m} \<setminus> \<D>. h(Suc i) - h(i-1)) \<le> f k" .
-
-  have 25: "(\<Sum>i<m. h(Suc i) - h i) \<le> f k" \<comment> \<open>is this the version we actually want?\<close>
-    by (simp add: XXXXXXXXXXXXX sum_lessThan_telescope)
-
+  finally have 25: "(\<Sum>i<m. h(Suc i) - h i) \<le> f k" .
       \<comment> \<open>working on 27\<close>
   obtain cardss:  "card \<S>\<S> \<le> card \<S>" "card (\<S>\<setminus>\<S>\<S>) = card \<S> - card \<S>\<S>"
     by (meson \<open>\<S>\<S> \<subseteq> \<S>\<close> \<open>finite \<S>\<close> card_Diff_subset card_mono infinite_super)
@@ -402,8 +375,6 @@ proof -
 
       \<comment> \<open>working on 28\<close>
   define g where "g \<equiv> \<lambda>k. -2 * real k powr (7/8)"  \<comment> \<open>a small bound for a summation\<close>
-  have g_o: "g \<in> o[at_top](real)"
-    using \<open>k>0\<close> unfolding g_def by real_asymp
   have "g k \<le> -2 * eps k powr (-1/2) * card \<B>"
   proof -
     have "k powr (1/8) * card \<B> \<le> k powr (1/8) * l powr (3/4)"
@@ -430,7 +401,6 @@ proof -
       by (simp add: mult.commute)
   qed
   finally have 28: "g k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))" .
-
   with 27
   have "g k + (eps k powr (-1/4) * card (\<S>\<setminus>\<S>\<S>) - 2 * card \<R>) \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1)) + (\<Sum>i \<in> \<R>\<union>\<S>. h(Suc i) - h(i-1))"
     by simp
@@ -450,17 +420,40 @@ proof -
       by simp
   qed
   also have "\<dots> \<le> h m - h 0"
-    by (rule 26)   (* so: a big restructuring may be necessary*)
+  proof (cases "even m")
+    case True
+    then show ?thesis
+      by (simp add: oddset sum_odds_even)
+  next
+    case False
+    have "hgt k (p (m - Suc 0)) \<le> hgt k (p m)"
+      using Y_6_5_DegreeReg [of "m-1"] \<open>k>0\<close> False m_minimal not_halted_even_dreg odd_pos  
+      by (fastforce simp: p_def \<H>_def)
+    then have "h(m - Suc 0) \<le> h m"
+      using h_def of_nat_mono by blast
+    with False show ?thesis
+      by (simp add: oddset sum_odds_odd)
+  qed
   also have "... = (\<Sum>i<m. h(Suc i) - h i)"
     by (simp add: sum_lessThan_telescope)
   finally have "g k + (eps k powr (-1/4) * card (\<S>\<setminus>\<S>\<S>) - real (2 * card \<R>)) \<le> (\<Sum>i<m. h (Suc i) - h i)" .
-  moreover
-  have "\<forall>\<^sup>\<infinity>k. f k - g k \<le> eps k powr (1/4) * k"
-    unfolding f_def g_def eps_def by real_asymp
-  ultimately
-  show ?thesis
-    using 25
+  then have "g k + (eps k powr (-1/4) * real (card (\<S> \<setminus> \<S>\<S>)) - real (2 * card \<R>)) \<le> f k"
+    using 25 by linarith
+  then have "real (card (\<S> \<setminus> \<S>\<S>)) \<le> (f k - g k + 2 * card \<R>) * eps k powr (1/4)"
+    using eps_gt0 [OF \<open>k>0\<close>]
+    by (simp add: powr_minus field_simps del: div_add div_mult_self3)
+  moreover have "f k - g k \<le> k"
     sorry
+(*
+  have "\<forall>\<^sup>\<infinity>k. f k - g k \<le> k"
+    unfolding f_def g_def eps_def by real_asymp
+*)
+  moreover have "card \<R> < k"
+      using red_step_limit \<mu> \<open>Colours l k\<close> unfolding \<R>_def by blast
+    ultimately have  "real (card (\<S> \<setminus> \<S>\<S>)) \<le> (k + 2 * k) * eps k powr (1/4)"
+      by (smt (verit, best) of_nat_add mult_2 mult_diff_mult nat_less_real_le pos_prod_lt powr_ge_pzero)
+    then show ?thesis
+      by (simp add: algebra_simps)
 qed
 
 end (*context Diagonal*)
