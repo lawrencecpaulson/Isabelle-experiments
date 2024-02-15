@@ -280,14 +280,18 @@ lemma X_7_5_aux:
   assumes "Colours l k" 
   defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   defines  "\<S>\<S> \<equiv> dboost_star \<mu> l k"
-  assumes big: "Step_class \<mu> l k {halted} \<noteq> {}" and bblue: "Lemma_bblue_dboost_step_limit \<mu> l"
+  assumes big: "Step_class \<mu> l k {halted} \<noteq> {}" 
+          and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
+          and B_limit: "Lemma_bblue_step_limit \<mu> l"
           and hub: "\<forall>p. p \<le> 1 \<longrightarrow> hgt k p \<le> 2 * ln k / eps k" (*height_upper_bound*)
           and 16: "k\<ge>16" (*for Y_6_5_Red*)
-          and Y64B: "Lemma_Y_6_4_dbooSt \<mu> l"
-  shows "card (\<S> \<setminus> dboost_star \<mu> l k) \<le> 3 * eps k powr (1/4) * k"
+          and Y64S: "Lemma_Y_6_4_dbooSt \<mu> l"
+          and Y65B: "Lemma_Y_6_5_Bblue \<mu> l"
+  shows "card (\<S> \<setminus>\<S>\<S>) \<le> 3 * eps k powr (1/4) * k"
 proof -
   define \<D> where "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
   define \<R> where "\<R> \<equiv> Step_class \<mu> l k {red_step}"
+  define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
   define \<S> where "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
   define p where "p \<equiv> pee \<mu> l k"
@@ -304,7 +308,7 @@ proof -
   have "finite \<R>"
     using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
   have "finite \<S>"
-    using bblue by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
+    using BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
   have [simp]: "\<R> \<inter> \<S> = {}"
     by (auto simp add: \<R>_def \<S>_def Step_class_def)
   have m_minimal: "i \<notin> \<H>" if "i < m" for i
@@ -343,7 +347,8 @@ proof -
     ultimately show ?thesis
       by linarith
   qed
-  finally have "(\<Sum>i \<in> {..<m} \<setminus> \<D>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<le> 2 * ln k / eps k" .
+  finally have 256: "(\<Sum>i \<in> {..<m} \<setminus> \<D>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<le> 2 * ln k / eps k" .
+      \<comment> \<open>working on 27\<close>
   obtain cardss:  "card \<S>\<S> \<le> card \<S>" "card (\<S> \<setminus> \<S>\<S>) = card \<S> - card \<S>\<S>"
     by (meson \<open>\<S>\<S> \<subseteq> \<S>\<close> \<open>finite \<S>\<close> card_Diff_subset card_mono infinite_super)
   have "(\<Sum>i \<in> \<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<ge> eps k powr (-1/4) * card (\<S> \<setminus> \<S>\<S>)"
@@ -361,7 +366,7 @@ proof -
     qed
     moreover
     have "(\<Sum>i \<in> \<S>\<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<ge> 0"
-      using Y64B \<open>Colours l k\<close> \<open>k>0\<close>  
+      using Y64S \<open>Colours l k\<close> \<open>k>0\<close>  
       by (force simp add: Lemma_Y_6_4_dbooSt_def p_def \<S>\<S> \<S>_def hgt_mono intro: sum_nonneg)
     ultimately show ?thesis
       by (simp add: mult.commute sum.subset_diff [OF \<open>\<S>\<S> \<subseteq> \<S>\<close> \<open>finite \<S>\<close>])
@@ -379,9 +384,36 @@ proof -
     then show "- 2 \<le> real (hgt k (p (Suc i))) - real (hgt k (p (i - 1)))"
       by linarith
   qed
-  ultimately have "(\<Sum>i \<in> \<R>\<union>\<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) 
+  ultimately have 27: "(\<Sum>i \<in> \<R>\<union>\<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) 
           \<ge> eps k powr (-1/4) * card (\<S> \<setminus> \<S>\<S>) - 2 * card \<R>"
     by (simp add: sum.union_disjoint \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
+      \<comment> \<open>working on 28\<close>
+  have "-2 * k powr (7/8) \<le> -2 * eps k powr (-1/2) * card \<B>"
+  proof -
+    have "k powr (1/8) * card \<B> \<le> k powr (1/8) * l powr (3/4)"
+      using B_limit \<open>Colours l k\<close>
+      by (simp add: Lemma_bblue_step_limit_def \<B>_def mult_left_mono)
+    also have "... \<le> k powr (1/8) * k powr (3/4)"
+      by (simp add: \<open>l\<le>k\<close> mult_mono powr_mono2)
+    also have "... = k powr (7/8)"
+      by (simp flip: powr_add)
+    finally show ?thesis
+      by (simp add: eps_def powr_powr)
+  qed
+  also have "\<dots> \<le> (\<Sum>i \<in> \<B>. real (hgt k (p (Suc i))) - hgt k (p (i-1)))"
+  proof -
+    have "(\<Sum>i \<in> \<B>. -2 * eps k powr (-1/2)) \<le> (\<Sum>i \<in> \<B>. real (hgt k (p (Suc i))) - hgt k (p (i-1)))"
+    proof (rule sum_mono)
+      fix i :: nat
+      assume i: "i \<in> \<B>"
+      show "-2 * eps k powr (-1/2) \<le> real (hgt k (p (Suc i))) - real (hgt k (p (i - 1)))"
+        using Y65B \<open>Colours l k\<close> \<open>l\<le>k\<close> \<open>k>0\<close> i
+        by (fastforce simp add: Lemma_Y_6_5_Bblue_def p_def \<B>_def)
+    qed
+    then show ?thesis 
+      by (simp add: mult.commute)
+  qed
+  finally have 28: "-2 * k powr (7/8) \<le> (\<Sum>i \<in> \<B>. real (hgt k (p (Suc i))) - hgt k (p (i-1)))" .
   show ?thesis
     sorry
 qed
