@@ -315,15 +315,15 @@ proof -
     using that
     by (metis m_def not_le wellorder_Inf_le1)
 
-  (*Limit argument: is the following for sufficiently large k? Does k need to be bound locally?*)
-  have o: "(\<lambda>k. 2 * ln k / eps k) \<in> o[at_top](real)"
-    using \<open>k>0\<close> unfolding eps_def
-    by real_asymp
+  define f where "f \<equiv> \<lambda>k. 2 * ln k / eps k"  \<comment> \<open>a small bound for a summation\<close>
+  have f_o: "f \<in> o[at_top](real)"
+    using \<open>k>0\<close> unfolding eps_def f_def by real_asymp
 
   have oddset: "{..<n} \<setminus> \<D> = {i \<in> {..<n}. odd i}" if "n\<le>m" for n
     using m_minimal step_odd step_even not_halted_even_dreg that
     by (auto simp: \<D>_def \<H>_def Step_class_insert_NO_MATCH)
-  have "(\<Sum>i \<in> {..<m} \<setminus> \<D>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) 
+
+  have 26: "(\<Sum>i \<in> {..<m} \<setminus> \<D>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) 
      \<le> real (hgt k (p m)) - hgt k (p 0)"
   proof (cases "even m")
     case True
@@ -337,17 +337,17 @@ proof -
     with False show ?thesis
       by (simp add: oddset sum_odds_odd [where f = "\<lambda>i. real (hgt k (p i))"])
   qed
-  also have "\<dots> \<le> 2 * ln k / eps k"
+  also have "\<dots> \<le> f k"
   proof -
-    define h where "h \<equiv> nat \<lfloor>2 * ln k / eps k\<rfloor>"
+    define h where "h \<equiv> nat \<lfloor>f k\<rfloor>"
     have "hgt k (p i) \<ge> 1" for i
       by (simp add: Suc_leI hgt_gt_0)
-    moreover have "hgt k (p m) \<le> 2 * ln k / eps k"
-      using hub p_def pee_le1 by blast 
+    moreover have "hgt k (p m) \<le> f k"
+      using hub p_def pee_le1 unfolding f_def by blast 
     ultimately show ?thesis
       by linarith
   qed
-  finally have 256: "(\<Sum>i \<in> {..<m} \<setminus> \<D>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<le> 2 * ln k / eps k" .
+  finally have 256: "(\<Sum>i \<in> {..<m} \<setminus> \<D>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<le> f k" .
       \<comment> \<open>working on 27\<close>
   obtain cardss:  "card \<S>\<S> \<le> card \<S>" "card (\<S> \<setminus> \<S>\<S>) = card \<S> - card \<S>\<S>"
     by (meson \<open>\<S>\<S> \<subseteq> \<S>\<close> \<open>finite \<S>\<close> card_Diff_subset card_mono infinite_super)
@@ -388,7 +388,10 @@ proof -
           \<ge> eps k powr (-1/4) * card (\<S> \<setminus> \<S>\<S>) - 2 * card \<R>"
     by (simp add: sum.union_disjoint \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
       \<comment> \<open>working on 28\<close>
-  have "-2 * k powr (7/8) \<le> -2 * eps k powr (-1/2) * card \<B>"
+  define g where "g \<equiv> \<lambda>k. -2 * real k powr (7/8)"  \<comment> \<open>a small bound for a summation\<close>
+  have g_o: "g \<in> o[at_top](real)"
+    using \<open>k>0\<close> unfolding g_def by real_asymp
+  have "g k \<le> -2 * eps k powr (-1/2) * card \<B>"
   proof -
     have "k powr (1/8) * card \<B> \<le> k powr (1/8) * l powr (3/4)"
       using B_limit \<open>Colours l k\<close>
@@ -398,7 +401,7 @@ proof -
     also have "... = k powr (7/8)"
       by (simp flip: powr_add)
     finally show ?thesis
-      by (simp add: eps_def powr_powr)
+      by (simp add: eps_def powr_powr g_def)
   qed
   also have "\<dots> \<le> (\<Sum>i \<in> \<B>. real (hgt k (p (Suc i))) - hgt k (p (i-1)))"
   proof -
@@ -413,7 +416,12 @@ proof -
     then show ?thesis 
       by (simp add: mult.commute)
   qed
-  finally have 28: "-2 * k powr (7/8) \<le> (\<Sum>i \<in> \<B>. real (hgt k (p (Suc i))) - hgt k (p (i-1)))" .
+  finally have 28: "g k \<le> (\<Sum>i \<in> \<B>. real (hgt k (p (Suc i))) - hgt k (p (i-1)))" .
+
+  have "(\<Sum>i \<in> {..<m} \<setminus> \<D>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<le> real (hgt k (p m)) - hgt k (p 0)"
+    by (rule 26)   (* so: a big restructuring may be necessary*)
+  also have "... = (\<Sum>i<m. real (hgt k (p (Suc i))) - hgt k (p i))"
+    by (simp add: sum_lessThan_telescope [where f = "\<lambda>i. real (hgt k (p i))"])
   show ?thesis
     sorry
 qed
