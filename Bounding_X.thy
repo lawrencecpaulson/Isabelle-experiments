@@ -10,7 +10,7 @@ begin
 text \<open>the set of moderate density-boost steps (page 20)\<close>
 definition dboost_star where
   "dboost_star \<equiv> \<lambda>\<mu> l k. 
-  {i \<in> Step_class \<mu> l k {dboost_step}. hgt k (pee \<mu> l k (Suc i)) - hgt k (pee \<mu> l k i) \<le> eps k powr (-1/4)}"
+  {i \<in> Step_class \<mu> l k {dboost_step}. real (hgt k (pee \<mu> l k (Suc i))) - hgt k (pee \<mu> l k i) \<le> eps k powr (-1/4)}"
 
 definition bigbeta where
   "bigbeta \<equiv> \<lambda>\<mu> l k. 
@@ -201,75 +201,75 @@ lemma X_7_3:
     and bblue_dboost_step_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
   assumes "Colours l k" 
   defines "X \<equiv> Xseq \<mu> l k"
-  defines "BB \<equiv> Step_class \<mu> l k {bblue_step}"
-  defines "S \<equiv> Step_class \<mu> l k {dboost_step}"
-  shows "(\<Prod>i \<in> BB. card (X(Suc i)) / card (X i)) \<ge> 2 powr (f k) * \<mu> ^ (l - card S)"
+  defines "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
+  defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
+  shows "(\<Prod>i \<in> \<B>. card (X(Suc i)) / card (X i)) \<ge> 2 powr (f k) * \<mu> ^ (l - card \<S>)"
 proof -
   have "f \<in> o(real)"
     unfolding f_def by real_asymp
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  have "finite BB" and cardBB: "card BB \<le> l powr (3/4)"
-    using \<open>Colours l k\<close> bblue_limit by (auto simp: BB_def Lemma_bblue_step_limit_def)
-  have "finite S"
+  have "finite \<B>" and card\<B>: "card \<B> \<le> l powr (3/4)"
+    using \<open>Colours l k\<close> bblue_limit by (auto simp: \<B>_def Lemma_bblue_step_limit_def)
+  have "finite \<S>"
     using bblue_dboost_step_limit \<open>Colours l k\<close>
-    unfolding S_def Lemma_bblue_dboost_step_limit_def by blast
+    unfolding \<S>_def Lemma_bblue_dboost_step_limit_def by blast
   define b where "b \<equiv> \<lambda>i. card (Bdelta \<mu> l k i)"
-  obtain i where "card (Bseq \<mu> l k i) = sum b BB + card S" 
+  obtain i where "card (Bseq \<mu> l k i) = sum b \<B> + card \<S>" 
   proof -
-    define i where "i = Suc (Max (BB \<union> S))"
+    define i where "i = Suc (Max (\<B> \<union> \<S>))"
     define TRIV where "TRIV \<equiv> Step_class \<mu> l k {red_step,dreg_step,halted} \<inter> {..<i}"
     have "finite TRIV"
       by (auto simp: TRIV_def)
-    have eq: "BB \<union> S \<union> TRIV = {..<i}"
+    have eq: "\<B> \<union> \<S> \<union> TRIV = {..<i}"
     proof
-      show "BB \<union> S \<union> TRIV \<subseteq> {..<i}"
-        by (auto simp add: i_def TRIV_def \<open>finite BB\<close> \<open>finite S\<close> less_Suc_eq_le)
-      show "{..<i} \<subseteq> BB \<union> S \<union> TRIV"
-        using  stepkind.exhaust by (auto simp: BB_def S_def TRIV_def Step_class_def)
+      show "\<B> \<union> \<S> \<union> TRIV \<subseteq> {..<i}"
+        by (auto simp add: i_def TRIV_def \<open>finite \<B>\<close> \<open>finite \<S>\<close> less_Suc_eq_le)
+      show "{..<i} \<subseteq> \<B> \<union> \<S> \<union> TRIV"
+        using  stepkind.exhaust by (auto simp: \<B>_def \<S>_def TRIV_def Step_class_def)
     qed
-    have dis: "BB \<inter> S = {}" "(BB \<union> S) \<inter> TRIV = {}"
-      by (auto simp: BB_def S_def TRIV_def Step_class_def)
+    have dis: "\<B> \<inter> \<S> = {}" "(\<B> \<union> \<S>) \<inter> TRIV = {}"
+      by (auto simp: \<B>_def \<S>_def TRIV_def Step_class_def)
     show thesis
     proof
-      have "card (Bseq \<mu> l k i) = (\<Sum>j \<in> BB \<union> S \<union> TRIV. b j)"
+      have "card (Bseq \<mu> l k i) = (\<Sum>j \<in> \<B> \<union> \<S> \<union> TRIV. b j)"
         using card_Bseq_sum eq unfolding b_def by metis
-      also have "\<dots> = (\<Sum>j\<in>BB. b j) + (\<Sum>j\<in>S. b j) + (\<Sum>j\<in>TRIV. b j)"
-        by (simp add: sum_Un_nat \<open>finite BB\<close> \<open>finite S\<close> \<open>finite TRIV\<close> dis)
-      also have "\<dots> = sum b BB + card S"
+      also have "\<dots> = (\<Sum>j\<in>\<B>. b j) + (\<Sum>j\<in>\<S>. b j) + (\<Sum>j\<in>TRIV. b j)"
+        by (simp add: sum_Un_nat \<open>finite \<B>\<close> \<open>finite \<S>\<close> \<open>finite TRIV\<close> dis)
+      also have "\<dots> = sum b \<B> + card \<S>"
       proof -
-        have "sum b S = card S"
-          by (simp add: b_def S_def card_Bdelta_dboost_step)
+        have "sum b \<S> = card \<S>"
+          by (simp add: b_def \<S>_def card_Bdelta_dboost_step)
         moreover have "sum b TRIV = 0"
           by (simp add: b_def TRIV_def Bdelta_trivial_step)
         ultimately show ?thesis
           by simp
       qed
-      finally show "card (Bseq \<mu> l k i) = sum b BB + card S" .
+      finally show "card (Bseq \<mu> l k i) = sum b \<B> + card \<S>" .
     qed
   qed
-  then have sum_b_BB: "sum b BB \<le> l - card S"
+  then have sum_b_\<B>: "sum b \<B> \<le> l - card \<S>"
     by (metis less_diff_conv less_imp_le_nat Bseq_less_l [OF \<open>Colours l k\<close>])
-  have "real (card BB) \<le> real k powr (3/4)"
-    using cardBB \<open>l\<le>k\<close> by (smt (verit) divide_nonneg_nonneg of_nat_0_le_iff of_nat_mono powr_mono2)
-  then have "2 powr (f k) \<le> (1/2) ^ card BB"
+  have "real (card \<B>) \<le> real k powr (3/4)"
+    using card\<B> \<open>l\<le>k\<close> by (smt (verit) divide_nonneg_nonneg of_nat_0_le_iff of_nat_mono powr_mono2)
+  then have "2 powr (f k) \<le> (1/2) ^ card \<B>"
     by (simp add: f_def powr_minus divide_simps flip: powr_realpow)
-  then have "2 powr (f k) * \<mu> ^ (l - card S) \<le> (1/2) ^ card BB * \<mu> ^ (l - card S)"
+  then have "2 powr (f k) * \<mu> ^ (l - card \<S>) \<le> (1/2) ^ card \<B> * \<mu> ^ (l - card \<S>)"
     by (simp add: \<mu>)
-  also have "(1/2) ^ card BB * \<mu> ^ (l - card S) \<le> (1/2) ^ card BB * \<mu> ^ (sum b BB)" 
-    using \<mu> sum_b_BB by simp
-  also have "\<dots> = (\<Prod>i\<in>BB. \<mu> ^ b i / 2)"
+  also have "(1/2) ^ card \<B> * \<mu> ^ (l - card \<S>) \<le> (1/2) ^ card \<B> * \<mu> ^ (sum b \<B>)" 
+    using \<mu> sum_b_\<B> by simp
+  also have "\<dots> = (\<Prod>i\<in>\<B>. \<mu> ^ b i / 2)"
     by (simp add: power_sum prod_dividef divide_simps)
-  also have "\<dots> \<le> (\<Prod>i\<in>BB. card (X (Suc i)) / card (X i))"
+  also have "\<dots> \<le> (\<Prod>i\<in>\<B>. card (X (Suc i)) / card (X i))"
   proof (rule prod_mono)
     fix i :: nat
-    assume "i \<in> BB"
+    assume "i \<in> \<B>"
     then have "\<not> termination_condition l k (X i) (Yseq \<mu> l k i)"
-      using step_non_terminating by (simp add: BB_def X_def Step_class_def)
+      using step_non_terminating by (simp add: \<B>_def X_def Step_class_def)
     then have "card (X i) \<noteq> 0"
       using termination_condition_def by force
-    with \<open>i\<in>BB\<close> \<mu> show "0 \<le> \<mu> ^ b i / 2 \<and> \<mu> ^ b i / 2 \<le> real (card (X (Suc i))) / real (card (X i))"
-      by (force simp: b_def BB_def X_def divide_simps dest!: Bdelta_bblue_step)
+    with \<open>i\<in>\<B>\<close> \<mu> show "0 \<le> \<mu> ^ b i / 2 \<and> \<mu> ^ b i / 2 \<le> real (card (X (Suc i))) / real (card (X i))"
+      by (force simp: b_def \<B>_def X_def divide_simps dest!: Bdelta_bblue_step)
   qed
   finally show ?thesis .
 qed
@@ -296,24 +296,33 @@ proof -
   define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
   define p where "p \<equiv> pee \<mu> l k"
   define m where "m \<equiv> Inf \<H>"
-  have \<S>\<S>: "\<S>\<S> = {i \<in> \<S>. hgt k (p (Suc i)) - hgt k (p i) \<le> eps k powr (-1/4)}"
+  define h where "h \<equiv> \<lambda>i. real (hgt k (p i))"
+
+  have \<S>\<S>: "\<S>\<S> = {i \<in> \<S>. h(Suc i) - h i \<le> eps k powr (-1/4)}"
        and "\<S>\<S> \<subseteq> \<S>"
-    by (auto simp add: \<S>\<S>_def \<S>_def dboost_star_def p_def)
-  have in_S: "hgt k (p (Suc i)) - hgt k (p i) > eps k powr (-1/4)" if "i \<in>  \<S> \<setminus> \<S>\<S>" for i
+    by (auto simp add: \<S>\<S>_def \<S>_def dboost_star_def p_def h_def)
+
+  have in_S: "h(Suc i) - h i > eps k powr (-1/4)" if "i \<in> \<S>\<setminus>\<S>\<S>" for i
     using that by (fastforce simp add: \<S>\<S>)
+
   have odd: "odd i" if "i \<in> \<R> \<or> i \<in> \<S>" for i
     using that unfolding \<R>_def \<S>_def by (metis Step_class_insert UnCI step_odd)
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   have "finite \<R>"
     using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
+  have "finite \<B>"
+    using B_limit \<open>Colours l k\<close> by (simp add: Lemma_bblue_step_limit_def \<B>_def)
   have "finite \<S>"
     using BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
-  have [simp]: "\<R> \<inter> \<S> = {}"
-    by (auto simp add: \<R>_def \<S>_def Step_class_def)
-  have m_minimal: "i \<notin> \<H>" if "i < m" for i
-    using that
-    by (metis m_def not_le wellorder_Inf_le1)
+  have [simp]: "\<R> \<inter> \<S> = {}" "\<B> \<inter> (\<R> \<union> \<S>) = {}"
+    by (auto simp add: \<R>_def \<S>_def \<B>_def Step_class_def)
+  have "\<H> \<noteq> {}"
+    using \<H>_def big by blast
+  then have "m \<in> \<H>"
+    by (simp add: Inf_nat_def1 m_def)
+  then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
+    by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
 
   define f where "f \<equiv> \<lambda>k. 2 * ln k / eps k"  \<comment> \<open>a small bound for a summation\<close>
   have f_o: "f \<in> o[at_top](real)"
@@ -323,56 +332,60 @@ proof -
     using m_minimal step_odd step_even not_halted_even_dreg that
     by (auto simp: \<D>_def \<H>_def Step_class_insert_NO_MATCH)
 
-  have 26: "(\<Sum>i \<in> {..<m} \<setminus> \<D>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) 
-     \<le> real (hgt k (p m)) - hgt k (p 0)"
+
+  have 26: "(\<Sum>i \<in> {..<m} \<setminus> \<D>. h(Suc i) - h(i-1)) \<le> h m - h 0"
   proof (cases "even m")
     case True
     then show ?thesis
-      by (simp add: oddset sum_odds_even [where f = "\<lambda>i. real (hgt k (p i))"])
+      by (simp add: oddset sum_odds_even)
   next
     case False
     have "hgt k (p (m - Suc 0)) \<le> hgt k (p m)"
       using Y_6_5_DegreeReg [of "m-1"] \<open>k>0\<close> False m_minimal not_halted_even_dreg odd_pos  
       by (fastforce simp: p_def \<H>_def)
+    then have "h(m - Suc 0) \<le> h m"
+      using h_def of_nat_mono by blast
     with False show ?thesis
-      by (simp add: oddset sum_odds_odd [where f = "\<lambda>i. real (hgt k (p i))"])
+      by (simp add: oddset sum_odds_odd)
   qed
-  also have "\<dots> \<le> f k"
+  also have XXXXXXXXXXXXX: "\<dots> \<le> f k"
   proof -
-    define h where "h \<equiv> nat \<lfloor>f k\<rfloor>"
     have "hgt k (p i) \<ge> 1" for i
       by (simp add: Suc_leI hgt_gt_0)
     moreover have "hgt k (p m) \<le> f k"
       using hub p_def pee_le1 unfolding f_def by blast 
     ultimately show ?thesis
-      by linarith
+      by (simp add: h_def)
   qed
-  finally have 256: "(\<Sum>i \<in> {..<m} \<setminus> \<D>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<le> f k" .
+  finally have 256: "(\<Sum>i \<in> {..<m} \<setminus> \<D>. h(Suc i) - h(i-1)) \<le> f k" .
+
+  have 25: "(\<Sum>i<m. h(Suc i) - h i) \<le> f k" \<comment> \<open>is this the version we actually want?\<close>
+    by (simp add: XXXXXXXXXXXXX sum_lessThan_telescope)
+
       \<comment> \<open>working on 27\<close>
-  obtain cardss:  "card \<S>\<S> \<le> card \<S>" "card (\<S> \<setminus> \<S>\<S>) = card \<S> - card \<S>\<S>"
+  obtain cardss:  "card \<S>\<S> \<le> card \<S>" "card (\<S>\<setminus>\<S>\<S>) = card \<S> - card \<S>\<S>"
     by (meson \<open>\<S>\<S> \<subseteq> \<S>\<close> \<open>finite \<S>\<close> card_Diff_subset card_mono infinite_super)
-  have "(\<Sum>i \<in> \<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<ge> eps k powr (-1/4) * card (\<S> \<setminus> \<S>\<S>)"
+  have "(\<Sum>i \<in> \<S>. h(Suc i) - h(i-1)) \<ge> eps k powr (-1/4) * card (\<S>\<setminus>\<S>\<S>)"
   proof -
-    have "(\<Sum>i \<in> \<S> \<setminus> \<S>\<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<ge> (\<Sum>i \<in> \<S> \<setminus> \<S>\<S>. eps k powr (-1/4))"
+    have "(\<Sum>i \<in> \<S>\<setminus>\<S>\<S>. h(Suc i) - h(i-1)) \<ge> (\<Sum>i \<in> \<S>\<setminus>\<S>\<S>. eps k powr (-1/4))"
     proof (rule sum_mono)
       fix i :: nat
-      assume i: "i \<in> \<S> \<setminus> \<S>\<S>"
+      assume i: "i \<in> \<S>\<setminus>\<S>\<S>"
       with i odd have "i-1 \<in> \<D>"       
         by (simp add: \<S>_def \<D>_def dreg_before_step Step_class_insert_NO_MATCH)
-      with i odd show "eps k powr (- 1 / 4) \<le> real (hgt k (p (Suc i))) - real (hgt k (p (i - 1)))"
+      with i odd show "eps k powr (-1/4) \<le> h(Suc i) - h(i-1)"
         using in_S[of i] Y_6_5_DegreeReg[of "i-1" \<mu> l k] \<open>k>0\<close>
-        apply (simp add: p_def \<D>_def)
-        by (smt (verit, best) nat_less_le of_nat_0_less_iff of_nat_diff powr_ge_pzero zero_less_diff)
+        by (simp add: p_def \<D>_def h_def)
     qed
     moreover
-    have "(\<Sum>i \<in> \<S>\<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<ge> 0"
+    have "(\<Sum>i \<in> \<S>\<S>. h(Suc i) - h(i-1)) \<ge> 0"
       using Y64S \<open>Colours l k\<close> \<open>k>0\<close>  
-      by (force simp add: Lemma_Y_6_4_dbooSt_def p_def \<S>\<S> \<S>_def hgt_mono intro: sum_nonneg)
+      by (force simp add: Lemma_Y_6_4_dbooSt_def p_def h_def \<S>\<S> \<S>_def hgt_mono intro: sum_nonneg)
     ultimately show ?thesis
       by (simp add: mult.commute sum.subset_diff [OF \<open>\<S>\<S> \<subseteq> \<S>\<close> \<open>finite \<S>\<close>])
   qed
   moreover
-  have "(\<Sum>i \<in> \<R>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<ge> (\<Sum>i \<in> \<R>. -2)"
+  have "(\<Sum>i \<in> \<R>. h(Suc i) - h(i-1)) \<ge> (\<Sum>i \<in> \<R>. -2)"
   proof (rule sum_mono)
     fix i :: nat
     assume i: "i \<in> \<R>"
@@ -381,12 +394,12 @@ proof -
     with i odd have "hgt k (p (i - 1)) - 2 \<le> hgt k (p (Suc i))"
       using Y_6_5_Red[of i] 16 Y_6_5_DegreeReg[of "i-1"]
       by (fastforce simp: algebra_simps \<R>_def \<D>_def p_def)
-    then show "- 2 \<le> real (hgt k (p (Suc i))) - real (hgt k (p (i - 1)))"
-      by linarith
+    then show "- 2 \<le> h(Suc i) - h(i-1)"
+      unfolding h_def by linarith
   qed
-  ultimately have 27: "(\<Sum>i \<in> \<R>\<union>\<S>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) 
-          \<ge> eps k powr (-1/4) * card (\<S> \<setminus> \<S>\<S>) - 2 * card \<R>"
+  ultimately have 27: "(\<Sum>i \<in> \<R>\<union>\<S>. h(Suc i) - h(i-1)) \<ge> eps k powr (-1/4) * card (\<S>\<setminus>\<S>\<S>) - 2 * card \<R>"
     by (simp add: sum.union_disjoint \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
+
       \<comment> \<open>working on 28\<close>
   define g where "g \<equiv> \<lambda>k. -2 * real k powr (7/8)"  \<comment> \<open>a small bound for a summation\<close>
   have g_o: "g \<in> o[at_top](real)"
@@ -403,26 +416,50 @@ proof -
     finally show ?thesis
       by (simp add: eps_def powr_powr g_def)
   qed
-  also have "\<dots> \<le> (\<Sum>i \<in> \<B>. real (hgt k (p (Suc i))) - hgt k (p (i-1)))"
+  also have "\<dots> \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
   proof -
-    have "(\<Sum>i \<in> \<B>. -2 * eps k powr (-1/2)) \<le> (\<Sum>i \<in> \<B>. real (hgt k (p (Suc i))) - hgt k (p (i-1)))"
+    have "(\<Sum>i \<in> \<B>. -2 * eps k powr (-1/2)) \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
     proof (rule sum_mono)
       fix i :: nat
       assume i: "i \<in> \<B>"
-      show "-2 * eps k powr (-1/2) \<le> real (hgt k (p (Suc i))) - real (hgt k (p (i - 1)))"
+      show "-2 * eps k powr (-1/2) \<le> h(Suc i) - h(i-1)"
         using Y65B \<open>Colours l k\<close> \<open>l\<le>k\<close> \<open>k>0\<close> i
-        by (fastforce simp add: Lemma_Y_6_5_Bblue_def p_def \<B>_def)
+        by (fastforce simp add: Lemma_Y_6_5_Bblue_def p_def \<B>_def h_def)
     qed
     then show ?thesis 
       by (simp add: mult.commute)
   qed
-  finally have 28: "g k \<le> (\<Sum>i \<in> \<B>. real (hgt k (p (Suc i))) - hgt k (p (i-1)))" .
+  finally have 28: "g k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))" .
 
-  have "(\<Sum>i \<in> {..<m} \<setminus> \<D>. real (hgt k (p (Suc i))) - hgt k (p (i-1))) \<le> real (hgt k (p m)) - hgt k (p 0)"
+  with 27
+  have "g k + (eps k powr (-1/4) * card (\<S>\<setminus>\<S>\<S>) - 2 * card \<R>) \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1)) + (\<Sum>i \<in> \<R>\<union>\<S>. h(Suc i) - h(i-1))"
+    by simp
+  also have "\<dots> = (\<Sum>i \<in> \<B> \<union> (\<R>\<union>\<S>). h(Suc i) - h(i-1))"
+    by (simp add: \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close> sum.union_disjoint)
+  also have "\<dots> = (\<Sum>i \<in> {..<m} \<setminus> \<D>. h(Suc i) - h(i-1))"
+  proof -
+    have "i \<in> \<B> \<union> (\<R>\<union>\<S>)" if "i<m" "i \<notin> \<D>" for i
+      using that unfolding \<D>_def \<B>_def \<R>_def \<S>_def
+      by (metis Step_class_insert not_halted_even_dreg not_halted_odd_RBS Un_iff \<H>_def m_minimal)
+    moreover
+    have "i \<in> {..<m} \<setminus> \<D>" if "i \<in> \<B> \<union> (\<R>\<union>\<S>)" for i
+      using that by (auto simp: \<D>_def \<B>_def \<R>_def \<S>_def \<H>_def Step_class_def simp flip: m_minimal)
+    ultimately have "\<B> \<union> (\<R>\<union>\<S>) = {..<m} \<setminus> \<D>"
+      by auto
+    then show ?thesis
+      by simp
+  qed
+  also have "\<dots> \<le> h m - h 0"
     by (rule 26)   (* so: a big restructuring may be necessary*)
-  also have "... = (\<Sum>i<m. real (hgt k (p (Suc i))) - hgt k (p i))"
-    by (simp add: sum_lessThan_telescope [where f = "\<lambda>i. real (hgt k (p i))"])
+  also have "... = (\<Sum>i<m. h(Suc i) - h i)"
+    by (simp add: sum_lessThan_telescope)
+  finally have "g k + (eps k powr (-1/4) * card (\<S>\<setminus>\<S>\<S>) - real (2 * card \<R>)) \<le> (\<Sum>i<m. h (Suc i) - h i)" .
+  moreover
+  have "\<forall>\<^sup>\<infinity>k. f k - g k \<le> eps k powr (1/4) * k"
+    unfolding f_def g_def eps_def by real_asymp
+  ultimately
   show ?thesis
+    using 25
     sorry
 qed
 
