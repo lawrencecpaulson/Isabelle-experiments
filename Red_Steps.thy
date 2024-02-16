@@ -806,7 +806,7 @@ proof -
   moreover have "\<forall>\<^sup>\<infinity>l. l powr (1/4) \<ge> 4"
     using \<open>\<mu><1\<close> by real_asymp
   ultimately show ?thesis
-    by (simp add: Big_Red_5_1_def eventually_conj Red_5_4 [OF assms] Red_5_6)
+    by (simp add: Big_Red_5_1_def eventually_conj_iff Red_5_4 [OF assms] Red_5_6)
 qed
 
 

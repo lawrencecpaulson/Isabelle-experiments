@@ -722,7 +722,7 @@ proof -
   then have B: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. p0 > 2 * eps k powr (1/2)"  \<comment> \<open>And therefore @{text "2\<epsilon>^{1/2}"} is small enough\<close>
     by (rule eventually_all_ge_at_top)
   ultimately show ?thesis
-    by (simp add: all_conj_distrib imp_conjR Big_Y_6_1_def eventually_conj Y_6_2 bblue_dboost_step_limit assms)
+    by (simp add: eventually_conj_iff all_conj_distrib imp_conjR Big_Y_6_1_def Y_6_2 bblue_dboost_step_limit assms)
 qed
 
 lemma Y_6_1_aux:

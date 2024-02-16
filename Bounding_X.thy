@@ -282,9 +282,9 @@ subsection \<open>Lemma 7.5\<close>
 
 definition 
   "Big_X_7_5 \<equiv> 
-    \<lambda>\<mu> l. \<forall>k\<ge>l. Lemma_Step_class_halted_nonempty \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l
+    \<lambda>\<mu> l. Lemma_Step_class_halted_nonempty \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l
                \<and> Lemma_bblue_step_limit \<mu> l \<and> Lemma_Y_6_4_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l
-               \<and> Lemma_height_upper_bound k \<and> k\<ge>16"
+               \<and> (\<forall>k\<ge>l. Lemma_height_upper_bound k \<and> k\<ge>16 \<and> (2 * ln k / eps k + 2 * k powr (7/8) \<le> k))"
 
 text \<open>establishing the size requirements for 7.5\<close>
 lemma Big_X_7_5:
@@ -293,17 +293,12 @@ lemma Big_X_7_5:
 proof -
   have [simp]: "Ex ((\<le>) l)" for l::nat
     by auto
-  have "\<forall>\<^sup>\<infinity>l. eps l powr (1/2) \<le> 1/3" 
+  have A: "\<forall>\<^sup>\<infinity>l. 2 * ln l / eps l + 2 * real l powr (7/8) \<le> l" 
     unfolding eps_def by real_asymp
-  then have A: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. eps k powr (1/2) \<le> 1/3"  \<comment> \<open>And therefore @{text "3\<epsilon> \<le> \<epsilon>^{1/2}"}\<close>
-    by (rule eventually_all_ge_at_top)
-  moreover
-  have "\<forall>\<^sup>\<infinity>l. p0 > 2 * eps l powr (1/2)"
-    using p0_01 unfolding eps_def by real_asymp
-  then have B: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. p0 > 2 * eps k powr (1/2)"  \<comment> \<open>And therefore @{text "2\<epsilon>^{1/2}"} is small enough\<close>
-    by (rule eventually_all_ge_at_top)
-  ultimately show ?thesis
-    by (simp add: all_conj_distrib imp_conjR Big_X_7_5_def eventually_conj Y_6_2 bblue_dboost_step_limit assms)
+  show ?thesis
+    unfolding Big_X_7_5_def using assms eventually_all_ge_at_top [OF height_upper_bound]
+    by (simp add: eventually_conj_iff Step_class_halted_nonempty bblue_dboost_step_limit 
+        bblue_step_limit Y_6_4_dbooSt Y_6_5_Bblue height_upper_bound A eventually_all_ge_at_top)
 qed
 
 thm height_upper_bound
@@ -339,6 +334,7 @@ proof -
       and Y65B: "Lemma_Y_6_5_Bblue \<mu> l"
       and hub: "Lemma_height_upper_bound k"
       and 16: "k\<ge>16" (*for Y_6_5_Red*)
+      and fg: "2 * ln k / eps k + 2 * k powr (7/8) \<le> k"
     using big by (auto simp: Big_X_7_5_def)
   have "finite \<R>"
     using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
@@ -481,11 +477,7 @@ proof -
     using eps_gt0 [OF \<open>k>0\<close>]
     by (simp add: powr_minus field_simps del: div_add div_mult_self3)
   moreover have "f k - g k \<le> k"
-    sorry
-(*
-  have "\<forall>\<^sup>\<infinity>k. f k - g k \<le> k"
-    unfolding f_def g_def eps_def by real_asymp
-*)
+    using fg by (simp add: f_def g_def)
   moreover have "card \<R> < k"
       using red_step_limit \<mu> \<open>Colours l k\<close> unfolding \<R>_def by blast
     ultimately have  "real (card (\<S> \<setminus> \<S>\<S>)) \<le> (k + 2 * k) * eps k powr (1/4)"
@@ -493,6 +485,13 @@ proof -
     then show ?thesis
       by (simp add: algebra_simps)
 qed
+
+proposition X_7_5:
+  assumes "0<\<mu>" "\<mu><1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> card (Step_class \<mu> l k {dboost_step} \<setminus> dboost_star \<mu> l k) 
+                \<le> 3 * eps k powr (1/4) * k"
+  apply (rule eventually_mono [OF Big_X_7_5 [OF assms]])
+    by (intro X_7_5_aux strip) (auto simp: assms)
 
 end (*context Diagonal*)
 
