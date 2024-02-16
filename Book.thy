@@ -1148,8 +1148,11 @@ definition
   "beta \<equiv> \<lambda>\<mu> l k i. 
     (let (X,Y,A,B) = stepper \<mu> l k i in card(Neighbours Blue (cvx \<mu> l k i) \<inter> X) / card X)"
 
+lemma beta_eq: "beta \<mu> l k i = card(Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i) / card (Xseq \<mu> l k i)"
+  by (simp add: beta_def cvx_def Xseq_def split: prod.split)
+
 lemma beta_ge0: "beta \<mu> l k i \<ge> 0"
-  by (simp add: beta_def split: prod.split)
+  by (simp add: beta_eq)
 
 
 subsection \<open>The classes of execution steps\<close>

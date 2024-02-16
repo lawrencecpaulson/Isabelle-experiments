@@ -283,8 +283,8 @@ subsection \<open>Lemma 7.5\<close>
 definition 
   "Big_X_7_5 \<equiv> 
     \<lambda>\<mu> l. Lemma_Step_class_halted_nonempty \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l
-               \<and> Lemma_bblue_step_limit \<mu> l \<and> Lemma_Y_6_4_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l
-               \<and> (\<forall>k\<ge>l. Lemma_height_upper_bound k \<and> k\<ge>16 \<and> (2 * ln k / eps k + 2 * k powr (7/8) \<le> k))"
+        \<and> Lemma_bblue_step_limit \<mu> l \<and> Lemma_Y_6_4_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l
+        \<and> (\<forall>k\<ge>l. Lemma_height_upper_bound k \<and> k\<ge>16 \<and> (2 * ln k / eps k + 2 * k powr (7/8) \<le> k))"
 
 text \<open>establishing the size requirements for 7.5\<close>
 lemma Big_X_7_5:
@@ -301,8 +301,6 @@ proof -
         bblue_step_limit Y_6_4_dbooSt Y_6_5_Bblue height_upper_bound A eventually_all_ge_at_top)
 qed
 
-thm height_upper_bound
-
 lemma X_7_5_aux:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
@@ -310,7 +308,7 @@ lemma X_7_5_aux:
   defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   defines "\<S>\<S> \<equiv> dboost_star \<mu> l k"
   assumes big: "Big_X_7_5 \<mu> l"
-  shows "card (\<S> \<setminus>\<S>\<S>) \<le> 3 * eps k powr (1/4) * k"
+  shows "card (\<S>\<setminus>\<S>\<S>) \<le> 3 * eps k powr (1/4) * k"
 proof -
   define \<D> where "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
   define \<R> where "\<R> \<equiv> Step_class \<mu> l k {red_step}"
@@ -479,19 +477,59 @@ proof -
   moreover have "f k - g k \<le> k"
     using fg by (simp add: f_def g_def)
   moreover have "card \<R> < k"
-      using red_step_limit \<mu> \<open>Colours l k\<close> unfolding \<R>_def by blast
-    ultimately have  "real (card (\<S> \<setminus> \<S>\<S>)) \<le> (k + 2 * k) * eps k powr (1/4)"
-      by (smt (verit, best) of_nat_add mult_2 mult_diff_mult nat_less_real_le pos_prod_lt powr_ge_pzero)
-    then show ?thesis
-      by (simp add: algebra_simps)
+    using red_step_limit \<mu> \<open>Colours l k\<close> unfolding \<R>_def by blast
+  ultimately have "card (\<S>\<setminus>\<S>\<S>) \<le> (k + 2 * k) * eps k powr (1/4)"
+    by (smt (verit, best) of_nat_add mult_2 mult_diff_mult nat_less_real_le pos_prod_lt powr_ge_pzero)
+  then show ?thesis
+    by (simp add: algebra_simps)
 qed
 
 proposition X_7_5:
   assumes "0<\<mu>" "\<mu><1" 
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> card (Step_class \<mu> l k {dboost_step} \<setminus> dboost_star \<mu> l k) 
                 \<le> 3 * eps k powr (1/4) * k"
-  apply (rule eventually_mono [OF Big_X_7_5 [OF assms]])
-    by (intro X_7_5_aux strip) (auto simp: assms)
+  using assms
+    by (rule eventually_mono [OF Big_X_7_5]) (intro X_7_5_aux strip, auto simp: assms)
+
+subsection \<open>Lemma 7.4\<close>
+
+definition 
+  "Big_X_7_4 \<equiv> 
+    \<lambda>\<mu> l. True"
+
+lemma X_7_4_aux:
+  fixes l k
+  defines "f \<equiv> \<lambda>k. (2 * real k / ln 2) * ln (1 - 2 * eps k powr (1/2) / p0)"
+  assumes \<mu>: "0<\<mu>" "\<mu><1" 
+  assumes "Colours l k" 
+  defines "X \<equiv> Xseq \<mu> l k"
+  defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
+  assumes big: "Big_X_7_5 \<mu> l"
+  shows "(\<Prod>i\<in>\<S>. card (X (Suc i)) / card (X i)) \<ge> 2 powr f k * bigbeta \<mu> l k ^ card \<S>"
+proof -
+  have \<beta>: "beta \<mu> l k i = card (X (Suc i)) / card (X i)" if "i \<in> \<S>" for i
+  proof -
+    have "X (Suc i) = Neighbours Blue (cvx \<mu> l k i) \<inter> X i"
+      using that unfolding \<S>_def X_def
+      by (auto simp add: step_kind_defs next_state_def cvx_def Let_def split: prod.split)
+    then show ?thesis
+      by (force simp add: X_def beta_eq)
+  qed
+  then have A: "(\<Prod>i\<in>\<S>. card (X (Suc i)) / card (X i)) = (\<Prod>i\<in>\<S>. beta \<mu> l k i)"
+    by force
+  define \<S>\<S> where "\<S>\<S> \<equiv> dboost_star \<mu> l k"
+  have "(\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. 1 / beta \<mu> l k i) \<le> k powr (2 * card(\<S>\<setminus>\<S>\<S>))"
+    sorry
+  also have "... \<le> exp (6 * eps k powr (1/4) * k * ln k)"
+    sorry
+  finally have "(\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. 1 / beta \<mu> l k i) \<le> exp (6 * eps k powr (1/4) * k * ln k)" .
+  (*Not quite what we want*)
+  have "(\<lambda>k. (6 * eps k powr (1/4) * k * ln k)) \<in> o(real)"
+    unfolding eps_def by real_asymp
+    
+  show ?thesis
+    sorry
+qed
 
 end (*context Diagonal*)
 
