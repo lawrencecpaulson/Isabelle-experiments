@@ -767,18 +767,18 @@ proof
     by (metis Step_class_insert infinite_UNIV_nat infinite_Un)
 qed
 
+definition "Lemma_Step_class_halted_nonempty \<equiv> \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> Step_class \<mu> l k {halted} \<noteq> {}"
+
 lemma Step_class_halted_nonempty:
   assumes "\<mu>>0"
-  shows "\<forall>\<^sup>\<infinity>l. Colours l k \<longrightarrow> Step_class \<mu> l k {halted} \<noteq> {}"
+  shows "\<forall>\<^sup>\<infinity>l. Lemma_Step_class_halted_nonempty \<mu> l"
 proof -
-  have "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {bblue_step})"
-    using Lemma_bblue_step_limit_def bblue_step_limit assms eventually_sequentially by force
-  moreover have "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {dboost_step})"
-    using Lemma_bblue_dboost_step_limit_def assms bblue_dboost_step_limit eventually_sequentially by force
-  ultimately
-  show ?thesis
-    using red_step_limit Step_class_halted_nonempty_aux
-    by (smt (verit, del_insts) Colours_def eventually_sequentially not_less_eq_eq)
+  have "\<And>i. Lemma_bblue_step_limit \<mu> i \<and> Lemma_bblue_dboost_step_limit \<mu> i \<Longrightarrow> Lemma_Step_class_halted_nonempty \<mu> i"
+    unfolding Lemma_Step_class_halted_nonempty_def Lemma_bblue_dboost_step_limit_def Lemma_bblue_step_limit_def
+    by (metis Step_class_halted_nonempty_aux Step_class_insert assms finite_Un red_step_limit(1))
+  then show ?thesis
+    using eventually_mono [OF eventually_conj]
+    by (smt (verit, best) assms bblue_dboost_step_limit bblue_step_limit)
 qed
 
 end

@@ -505,8 +505,11 @@ proof -
   qed
 qed
 
+definition "Lemma_height_upper_bound \<equiv> \<lambda>k. \<forall>p. p \<le> 1 \<longrightarrow> hgt k p \<le> 2 * ln k / eps k"
+
 text \<open>Bhavik's height_upper_bound [somehow the limit he proved wasn't necessary]\<close>
-lemma height_upper_bound: "\<forall>\<^sup>\<infinity>k. \<forall>p. p \<le> 1 \<longrightarrow> hgt k p \<le> 2 * ln k / eps k"
+lemma height_upper_bound: "\<forall>\<^sup>\<infinity>k. Lemma_height_upper_bound k"
+  unfolding Lemma_height_upper_bound_def
   using real_hgt_Least eventually_mono [OF qfun_ge1] p0_01
   by (smt (verit) q0 nat_le_0 nat_mono zero_less_nat_eq)
 

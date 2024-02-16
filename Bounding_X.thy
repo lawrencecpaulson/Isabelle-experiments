@@ -16,6 +16,8 @@ definition bigbeta where
   "bigbeta \<equiv> \<lambda>\<mu> l k. 
    let S = dboost_star \<mu> l k in if S = {} then \<mu> else (card S) * inverse (\<Sum>i\<in>S. inverse (beta \<mu> l k i))"
 
+subsection \<open>Lemma 7.2\<close>
+
 lemma X_7_2:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
@@ -110,6 +112,8 @@ proof -
   with * show ?thesis
     by (simp add: t_def)
 qed
+
+subsection \<open>Lemma 7.3\<close>
 
 definition "Bdelta \<equiv> \<lambda> \<mu> l k i. Bseq \<mu> l k (Suc i) \<setminus> Bseq \<mu> l k i"
 
@@ -274,19 +278,43 @@ proof -
   finally show ?thesis .
 qed
 
+subsection \<open>Lemma 7.5\<close>
+
+definition 
+  "Big_X_7_5 \<equiv> 
+    \<lambda>\<mu> l. \<forall>k\<ge>l. Lemma_Step_class_halted_nonempty \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l
+               \<and> Lemma_bblue_step_limit \<mu> l \<and> Lemma_Y_6_4_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l
+               \<and> Lemma_height_upper_bound k \<and> k\<ge>16"
+
+text \<open>establishing the size requirements for 7.5\<close>
+lemma Big_X_7_5:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_5 \<mu> l"
+proof -
+  have [simp]: "Ex ((\<le>) l)" for l::nat
+    by auto
+  have "\<forall>\<^sup>\<infinity>l. eps l powr (1/2) \<le> 1/3" 
+    unfolding eps_def by real_asymp
+  then have A: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. eps k powr (1/2) \<le> 1/3"  \<comment> \<open>And therefore @{text "3\<epsilon> \<le> \<epsilon>^{1/2}"}\<close>
+    by (rule eventually_all_ge_at_top)
+  moreover
+  have "\<forall>\<^sup>\<infinity>l. p0 > 2 * eps l powr (1/2)"
+    using p0_01 unfolding eps_def by real_asymp
+  then have B: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. p0 > 2 * eps k powr (1/2)"  \<comment> \<open>And therefore @{text "2\<epsilon>^{1/2}"} is small enough\<close>
+    by (rule eventually_all_ge_at_top)
+  ultimately show ?thesis
+    by (simp add: all_conj_distrib imp_conjR Big_X_7_5_def eventually_conj Y_6_2 bblue_dboost_step_limit assms)
+qed
+
+thm height_upper_bound
+
 lemma X_7_5_aux:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   assumes "Colours l k" 
   defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   defines "\<S>\<S> \<equiv> dboost_star \<mu> l k"
-  assumes big: "Step_class \<mu> l k {halted} \<noteq> {}" 
-      and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
-      and B_limit: "Lemma_bblue_step_limit \<mu> l"
-      and hub: "\<forall>p. p \<le> 1 \<longrightarrow> hgt k p \<le> 2 * ln k / eps k" (*height_upper_bound*)
-      and 16: "k\<ge>16" (*for Y_6_5_Red*)
-      and Y64S: "Lemma_Y_6_4_dbooSt \<mu> l"
-      and Y65B: "Lemma_Y_6_5_Bblue \<mu> l"
+  assumes big: "Big_X_7_5 \<mu> l"
   shows "card (\<S> \<setminus>\<S>\<S>) \<le> 3 * eps k powr (1/4) * k"
 proof -
   define \<D> where "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
@@ -304,6 +332,14 @@ proof -
     using that unfolding \<R>_def \<S>_def by (metis Step_class_insert UnCI step_odd)
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
+  then have halt: "Lemma_Step_class_halted_nonempty \<mu> l" 
+      and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
+      and B_limit: "Lemma_bblue_step_limit \<mu> l"
+      and Y64S: "Lemma_Y_6_4_dbooSt \<mu> l"
+      and Y65B: "Lemma_Y_6_5_Bblue \<mu> l"
+      and hub: "Lemma_height_upper_bound k"
+      and 16: "k\<ge>16" (*for Y_6_5_Red*)
+    using big by (auto simp: Big_X_7_5_def)
   have "finite \<R>"
     using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
   have "finite \<B>"
@@ -312,8 +348,10 @@ proof -
     using BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
   have [simp]: "\<R> \<inter> \<S> = {}" "\<B> \<inter> (\<R> \<union> \<S>) = {}"
     by (auto simp add: \<R>_def \<S>_def \<B>_def Step_class_def)
-  have "\<H> \<noteq> {}"
-    using \<H>_def big by blast
+  have "Step_class \<mu> l k {halted} \<noteq> {}"
+    using halt \<open>Colours l k\<close> by (simp add: Lemma_Step_class_halted_nonempty_def)
+  then have "\<H> \<noteq> {}"
+    using \<H>_def by blast
   then have "m \<in> \<H>"
     by (simp add: Inf_nat_def1 m_def)
   then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
@@ -330,7 +368,7 @@ proof -
     have "hgt k (p i) \<ge> 1" for i
       by (simp add: Suc_leI hgt_gt_0)
     moreover have "hgt k (p m) \<le> f k"
-      using hub p_def pee_le1 unfolding f_def by blast 
+      using hub p_def pee_le1 unfolding f_def Lemma_height_upper_bound_def by blast 
     ultimately show ?thesis
       by (simp add: h_def)
   qed
