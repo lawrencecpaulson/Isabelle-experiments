@@ -404,7 +404,6 @@ proof -
   qed
   ultimately have 27: "(\<Sum>i \<in> \<R>\<union>\<S>. h(Suc i) - h(i-1)) \<ge> eps k powr (-1/4) * card (\<S>\<setminus>\<S>\<S>) - 2 * card \<R>"
     by (simp add: sum.union_disjoint \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
-
       \<comment> \<open>working on 28\<close>
   define g where "g \<equiv> \<lambda>k. -2 * real k powr (7/8)"  \<comment> \<open>a small bound for a summation\<close>
   have "g k \<le> -2 * eps k powr (-1/2) * card \<B>"
@@ -495,7 +494,7 @@ subsection \<open>Lemma 7.4\<close>
 
 definition 
   "Big_X_7_4 \<equiv> 
-    \<lambda>\<mu> l. True"
+    \<lambda>\<mu> l. Lemma_Red_5_3 \<mu> l \<and> Big_X_7_5 \<mu> l"
 
 lemma X_7_4_aux:
   fixes l k
@@ -504,9 +503,16 @@ lemma X_7_4_aux:
   assumes "Colours l k" 
   defines "X \<equiv> Xseq \<mu> l k"
   defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
-  assumes big: "Big_X_7_5 \<mu> l"
+  assumes big: "Big_X_7_4 \<mu> l"
   shows "(\<Prod>i\<in>\<S>. card (X (Suc i)) / card (X i)) \<ge> 2 powr f k * bigbeta \<mu> l k ^ card \<S>"
 proof -
+  define \<S>\<S> where "\<S>\<S> \<equiv> dboost_star \<mu> l k"
+  define p where "p \<equiv> pee \<mu> l k"
+  have X75: "card (\<S>\<setminus>\<S>\<S>) \<le> 3 * eps k powr (1/4) * k" 
+  and R53:  "\<And>i. i \<in> \<S> \<Longrightarrow> p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
+    using X_7_5_aux assms by (auto simp: Big_X_7_4_def Lemma_Red_5_3_def p_def \<S>_def \<S>\<S>_def)
+  obtain lk: "0<l" "l\<le>k" "0<k"
+    using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   have \<beta>: "beta \<mu> l k i = card (X (Suc i)) / card (X i)" if "i \<in> \<S>" for i
   proof -
     have "X (Suc i) = Neighbours Blue (cvx \<mu> l k i) \<inter> X i"
@@ -517,15 +523,29 @@ proof -
   qed
   then have A: "(\<Prod>i\<in>\<S>. card (X (Suc i)) / card (X i)) = (\<Prod>i\<in>\<S>. beta \<mu> l k i)"
     by force
-  define \<S>\<S> where "\<S>\<S> \<equiv> dboost_star \<mu> l k"
-  have "(\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. 1 / beta \<mu> l k i) \<le> k powr (2 * card(\<S>\<setminus>\<S>\<S>))"
-    sorry
+  \<comment> \<open>bounding the immoderate steps\<close>
+  define f where "f \<equiv> \<lambda>k. 6 * eps k powr (1/4) * k * ln k / ln 2"
+  have "(\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. 1 / beta \<mu> l k i) \<le> (\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. real k ^ 2)"
+  proof (rule prod_mono)
+    fix i
+    assume i: "i \<in> \<S> \<setminus> \<S>\<S>"
+    with R53 \<open>k>0\<close> beta_ge0 [of \<mu> l k i]
+    show "0 \<le> 1 / beta \<mu> l k i \<and> 1 / beta \<mu> l k i \<le> (real k)\<^sup>2"
+      by (force simp: R53 divide_simps mult.commute)
+  qed
+  then have "(\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. 1 / beta \<mu> l k i) \<le> real k ^ (2 * card(\<S>\<setminus>\<S>\<S>))"
+    by (simp add: power_mult)
+  also have "... = real k powr (2 * card(\<S>\<setminus>\<S>\<S>))"
+    by (metis \<open>k>0\<close> of_nat_0_less_iff powr_realpow)
+  also have "... \<le> k powr (2 * 3 * eps k powr (1/4) * k)"
+    using X75 \<open>k>0\<close> by (intro powr_mono; linarith) 
   also have "... \<le> exp (6 * eps k powr (1/4) * k * ln k)"
-    sorry
-  finally have "(\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. 1 / beta \<mu> l k i) \<le> exp (6 * eps k powr (1/4) * k * ln k)" .
-  (*Not quite what we want*)
-  have "(\<lambda>k. (6 * eps k powr (1/4) * k * ln k)) \<in> o(real)"
-    unfolding eps_def by real_asymp
+    by (simp add: powr_def)
+  also have "... = 2 powr f k"
+    by (simp add: f_def powr_def)
+  finally have B: "(\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. 1 / beta \<mu> l k i) \<le>  2 powr f k" .
+  have "f \<in> o(real)"
+    unfolding eps_def f_def by real_asymp
     
   show ?thesis
     sorry
