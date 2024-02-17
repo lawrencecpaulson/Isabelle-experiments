@@ -571,7 +571,12 @@ proof -
     by (simp add: powr_powr beta_ge0 prod_nonneg)
   also have "... \<le> (1 / (card \<S>\<S>) * (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i)) powr (card \<S>\<S>)"
     using \<open>card \<S>\<S> > 0\<close> by (simp add: field_simps sum_divide_distrib)
-  finally have "(\<Prod>i\<in>\<S>\<S>. 1 / beta \<mu> l k i) \<le> (1 / (card \<S>\<S>) * (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i)) powr (card \<S>\<S>)" .
+  also have "... \<le> bigbeta \<mu> l k powr (- (card \<S>\<S>))"
+    using \<open>\<S>\<S> \<noteq> {}\<close> \<open>card \<S>\<S> > 0\<close>
+    apply (simp add: bigbeta_def divide_simps powr_minus flip: \<S>\<S>_def)
+    apply (simp add: powr_divide beta_ge0 sum_nonneg)
+    done
+  finally have "(\<Prod>i\<in>\<S>\<S>. 1 / beta \<mu> l k i) \<le> bigbeta \<mu> l k powr (- (card \<S>\<S>))" .
 
   show ?thesis
     sorry
