@@ -494,7 +494,7 @@ subsection \<open>Lemma 7.4\<close>
 
 definition 
   "Big_X_7_4 \<equiv> 
-    \<lambda>\<mu> l. Lemma_Red_5_3 \<mu> l \<and> Big_X_7_5 \<mu> l"
+    \<lambda>\<mu> l. Lemma_bblue_dboost_step_limit \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Big_X_7_5 \<mu> l"
 
 lemma X_7_4_aux:
   fixes l k
@@ -513,6 +513,13 @@ proof -
     using X_7_5_aux assms by (auto simp: Big_X_7_4_def Lemma_Red_5_3_def p_def \<S>_def \<S>\<S>_def)
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
+  then have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
+    using big by (auto simp: Big_X_7_4_def)
+  have "finite \<S>"
+    using BS_limit 
+    by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
+  then have "finite \<S>\<S>"
+    unfolding \<S>\<S>_def \<S>_def dboost_star_def by auto
   have \<beta>: "beta \<mu> l k i = card (X (Suc i)) / card (X i)" if "i \<in> \<S>" for i
   proof -
     have "X (Suc i) = Neighbours Blue (cvx \<mu> l k i) \<inter> X i"
@@ -546,7 +553,26 @@ proof -
   finally have B: "(\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. 1 / beta \<mu> l k i) \<le>  2 powr f k" .
   have "f \<in> o(real)"
     unfolding eps_def f_def by real_asymp
-    
+  \<comment> \<open>bounding the moderate steps\<close>  
+  have "\<S>\<S> \<noteq> {}"
+    sorry
+  then have "card \<S>\<S> > 0"
+    using \<open>finite \<S>\<S>\<close> card_0_eq by blast
+  have "(\<Prod>i\<in>\<S>\<S>. 1 / beta \<mu> l k i) powr (1 / card \<S>\<S>) \<le> (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i / card \<S>\<S>)"
+  proof (rule arith_geom_mean [OF \<open>finite \<S>\<S>\<close> \<open>\<S>\<S> \<noteq> {}\<close>])
+    show "\<And>i. i \<in> \<S>\<S> \<Longrightarrow> 0 \<le> 1 / beta \<mu> l k i"
+      by (simp add: beta_ge0)
+  qed
+  then have "((\<Prod>i\<in>\<S>\<S>. 1 / beta \<mu> l k i) powr (1 / card \<S>\<S>)) powr (card \<S>\<S>) 
+          \<le> (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i / card \<S>\<S>) powr (card \<S>\<S>)"
+    using powr_mono2 by auto
+  with \<open>card \<S>\<S> > 0\<close> 
+  have "(\<Prod>i\<in>\<S>\<S>. 1 / beta \<mu> l k i) \<le> (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i / card \<S>\<S>) powr (card \<S>\<S>)"
+    by (simp add: powr_powr beta_ge0 prod_nonneg)
+  also have "... \<le> (1 / (card \<S>\<S>) * (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i)) powr (card \<S>\<S>)"
+    using \<open>card \<S>\<S> > 0\<close> by (simp add: field_simps sum_divide_distrib)
+  finally have "(\<Prod>i\<in>\<S>\<S>. 1 / beta \<mu> l k i) \<le> (1 / (card \<S>\<S>) * (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i)) powr (card \<S>\<S>)" .
+
   show ?thesis
     sorry
 qed

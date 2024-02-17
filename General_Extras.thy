@@ -4,6 +4,8 @@ theory General_Extras imports
 
 begin
 
+(*GO TO XXXXXX*)
+
 (*?*)
 abbreviation set_difference :: "['a set,'a set] \<Rightarrow> 'a set" (infixl "\<setminus>" 65)
   where "A \<setminus> B \<equiv> A-B"
@@ -535,10 +537,24 @@ next
 qed
 
 
-
+(*XXXXXX*)
 lemma powr01_less_one: 
-  fixes a::real shows "\<lbrakk>0 \<le> a; a < 1; e>0\<rbrakk> \<Longrightarrow> a powr e < 1 "
-  by (metis powr_less_mono2 powr_one_eq_one)
+  fixes a::real 
+  assumes "0 < a" "a < 1"  
+  shows "a powr e < 1 \<longleftrightarrow> e>0"
+proof
+  show "a powr e < 1 \<Longrightarrow> e>0"
+    using assms not_less_iff_gr_or_eq powr_less_mono2_neg by fastforce
+  show "e>0 \<Longrightarrow> a powr e < 1"
+    by (metis assms less_eq_real_def powr_less_mono2 powr_one_eq_one)
+qed
+
+lemma prod_powr_distrib:
+  fixes  x :: "'a \<Rightarrow> real"
+  assumes "\<And>i. i\<in>I \<Longrightarrow> x i \<ge> 0"
+  shows "(prod x I) powr r = (\<Prod>i\<in>I. x i powr r)"
+  using assms
+  by (induction I rule: infinite_finite_induct) (auto simp add: powr_mult prod_nonneg)
 
 lemma exp_powr_real [simp]:
   fixes x::real shows "exp x powr y = exp (x*y)"
@@ -550,7 +566,7 @@ lemma exp_minus_ge:
 
 lemma exp_minus_greater: 
   fixes x::real shows "1 - x < exp (-x) \<longleftrightarrow> x \<noteq> 0"
-  by (smt (verit, best) exp_ge_add_one_self exp_gt_zero exp_zero ln_eq_minus_one ln_exp)
+  by (smt (verit) exp_minus_ge exp_eq_one_iff exp_gt_zero ln_eq_minus_one ln_exp)
 
 
 lemma exp_powr_complex [simp]:
@@ -558,6 +574,63 @@ lemma exp_powr_complex [simp]:
   assumes "-pi < Im(x)" "Im(x) \<le> pi"
   shows "exp x powr y = exp (x*y)"
   using assms by (simp add: powr_def mult.commute)
+
+
+thm convex_on_sum
+
+lemma concave_on_sum:
+  fixes a :: "'a \<Rightarrow> real"
+    and y :: "'a \<Rightarrow> 'b::real_vector"
+    and f :: "'b \<Rightarrow> real"
+  assumes "finite S" "S \<noteq> {}"
+    and "concave_on C f" 
+    and "convex C"  (*DELETE FOR 2024*)
+    and "(\<Sum>i \<in> S. a i) = 1"
+    and "\<And>i. i \<in> S \<Longrightarrow> a i \<ge> 0"
+    and "\<And>i. i \<in> S \<Longrightarrow> y i \<in> C"
+  shows "f (\<Sum>i \<in> S. a i *\<^sub>R y i) \<ge> (\<Sum>i \<in> S. a i * f (y i))"
+proof -
+  have "(uminus \<circ> f) (\<Sum>i\<in>S. a i *\<^sub>R y i) \<le> (\<Sum>i\<in>S. a i * (uminus \<circ> f) (y i))"
+  proof (intro convex_on_sum)
+    show "convex_on C (uminus \<circ> f)"
+      by (simp add: assms convex_on_iff_concave)
+  qed (use assms in auto)
+  then show ?thesis
+    by (simp add: sum_negf o_def)
+qed
+
+lemma arith_geom_mean:
+  fixes x :: "'a \<Rightarrow> real"
+  assumes "finite S" "S \<noteq> {}"
+    and x: "\<And>i. i \<in> S \<Longrightarrow> x i \<ge> 0"
+  shows "(\<Sum>i \<in> S. x i / card S) \<ge> (\<Prod>i \<in> S. x i) powr (1 / card S)"
+proof (cases "\<exists>i\<in>S. x i = 0")
+  case True
+  then have "(\<Prod>i \<in> S. x i) = 0"
+    by (simp add: \<open>finite S\<close>)
+  moreover have "(\<Sum>i \<in> S. x i / card S) \<ge> 0"
+    by (simp add: sum_nonneg x)
+  ultimately show ?thesis
+    by simp
+next
+  case False
+  have "ln (\<Sum>i \<in> S. (1 / card S) *\<^sub>R x i) \<ge> (\<Sum>i \<in> S. (1 / card S) * ln (x i))"
+  proof (intro concave_on_sum)
+    show "concave_on {0<..} ln"
+      by (simp add: ln_concave)
+    show "\<And>i. i\<in>S \<Longrightarrow> x i \<in> {0<..}"
+      using False x by fastforce
+  qed (use assms False in auto)
+  moreover have "(\<Sum>i \<in> S. (1 / card S) *\<^sub>R x i) > 0"
+    using False assms by (simp add: card_gt_0_iff less_eq_real_def sum_pos)
+  ultimately have "(\<Sum>i \<in> S. (1 / card S) *\<^sub>R x i) \<ge> exp (\<Sum>i \<in> S. (1 / card S) * ln (x i))"
+    using ln_ge_iff by blast
+  then have "(\<Sum>i \<in> S. x i / card S) \<ge> exp (\<Sum>i \<in> S. ln (x i) / card S)"
+    by (simp add: divide_simps)
+  then show ?thesis
+    using assms False
+    by (smt (verit, ccfv_SIG) divide_inverse exp_ln exp_powr_real exp_sum inverse_eq_divide prod.cong prod_powr_distrib) 
+qed
 
 thm choose_two
 lemma choose_two_real: "of_nat (n choose 2) = real n * (real n - 1) / 2"
