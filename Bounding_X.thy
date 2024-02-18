@@ -16,6 +16,81 @@ definition bigbeta where
   "bigbeta \<equiv> \<lambda>\<mu> l k. 
    let S = dboost_star \<mu> l k in if S = {} then \<mu> else (card S) * inverse (\<Sum>i\<in>S. inverse (beta \<mu> l k i))"
 
+lemma dboost_star_subset: "dboost_star \<mu> l k \<subseteq> Step_class \<mu> l k {dboost_step}"
+  by (auto simp: dboost_star_def)
+
+lemma bigbeta_ge_0:
+  assumes \<mu>: "0<\<mu>"  
+  shows "bigbeta \<mu> l k \<ge> 0"
+  using assms by (simp add: bigbeta_def Let_def beta_ge0 sum_nonneg)
+
+lemma bigbeta_gt_0:
+  assumes \<mu>: "0<\<mu>"  "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> bigbeta \<mu> l k > 0"
+proof -
+  { fix l k
+    assume  0: "\<forall>i\<in>Step_class \<mu> l k {dboost_step}. 0 < beta \<mu> l k i" 
+      and fin: "finite (Step_class \<mu> l k {dboost_step})"
+    have *: "0 < bigbeta \<mu> l k"
+    proof (cases "dboost_star \<mu> l k = {}")
+      case True
+      then show ?thesis
+        using assms by (simp add: bigbeta_def)
+    next
+      case False
+      then have "card (dboost_star \<mu> l k) > 0"
+        by (meson card_gt_0_iff dboost_star_subset fin finite_subset)
+      with 0 show ?thesis
+        by (auto simp add: bigbeta_def Let_def zero_less_mult_iff card_gt_0_iff dboost_star_def intro!: sum_pos)
+    qed
+  }
+  then show ?thesis
+    using eventually_mono [OF eventually_conj [OF beta_gt_0 [OF assms] bblue_dboost_step_limit [OF \<open>\<mu>>0\<close>]]]
+      Lemma_bblue_dboost_step_limit_def
+    by presburger
+qed
+
+
+lemma bigbeta_le_1:
+  assumes \<mu>: "0<\<mu>"  "\<mu><1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> bigbeta \<mu> l k < 1"
+proof -
+  { fix l k
+    assume 0: "\<forall>i\<in>Step_class \<mu> l k {dboost_step}. 0 < beta \<mu> l k i" 
+      and fin: "finite (Step_class \<mu> l k {dboost_step})"
+    have *: "bigbeta \<mu> l k < 1"
+    proof (cases "dboost_star \<mu> l k = {}")
+      case True
+      then show ?thesis
+        using assms by (simp add: bigbeta_def)
+    next
+      case False
+      then have gt0: "card (dboost_star \<mu> l k) > 0"
+        by (meson card_gt_0_iff dboost_star_subset fin finite_subset)
+      have "real (card (dboost_star \<mu> l k)) = (\<Sum>i\<in>dboost_star \<mu> l k. 1)"
+        by simp
+      also have "...  < (\<Sum>i\<in>dboost_star \<mu> l k. 1 / beta \<mu> l k i)"
+        using gt0 0
+        apply (intro sum_strict_mono)
+        using card_ge_0_finite apply blast
+        using False apply blast
+        apply (simp add: divide_simps)
+        apply (auto simp: )
+        apply (smt (verit) beta_ge0)
+        apply (smt (verit, best) Step_class_insert  UnCI \<mu> beta_le dboost_star_subset subset_iff)
+        using dboost_star_subset by fastforce
+      finally show ?thesis
+        apply (auto simp add: bigbeta_def Let_def zero_less_mult_iff card_gt_0_iff)
+        apply (erule notE)
+        by (simp add: divide_simps)
+    qed
+  }
+  then show ?thesis
+    using eventually_mono [OF eventually_conj [OF beta_gt_0 [OF assms] bblue_dboost_step_limit [OF \<open>\<mu>>0\<close>]]]
+      Lemma_bblue_dboost_step_limit_def
+    by presburger
+qed
+
 subsection \<open>Lemma 7.2\<close>
 
 lemma X_7_2:

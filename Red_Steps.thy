@@ -809,10 +809,10 @@ proof -
     by (simp add: Big_Red_5_1_def eventually_conj_iff Red_5_4 [OF assms] Red_5_6)
 qed
 
-
+(*CURRENTLY UNUSED*)
 corollary Red_5_2:
   assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k.  Colours l k 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k 
     \<longrightarrow> (\<forall>i \<in> Step_class \<mu> l k {dboost_step}.
          pee \<mu> l k (Suc i) - pee \<mu> l k i
          \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i))
@@ -887,6 +887,16 @@ proof -
   qed
   with Big show ?thesis
     unfolding eventually_sequentially Lemma_Red_5_3_def by (meson order.trans)
+qed
+
+corollary beta_gt_0:
+  assumes "0<\<mu>" "\<mu><1" shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> (\<forall>i \<in> Step_class \<mu> l k {dboost_step}. beta \<mu> l k i > 0)"
+proof (rule eventually_mono [OF Red_5_3 [OF assms]])
+  fix l
+  assume "Lemma_Red_5_3 \<mu> l"
+  then
+  show "\<forall>k. Colours l k \<longrightarrow> (\<forall>i\<in>Step_class \<mu> l k {dboost_step}. 0 < beta \<mu> l k i)"
+    by (smt (verit) Colours_kn0 Lemma_Red_5_3_def of_nat_0_less_iff zero_less_divide_iff zero_less_power)
 qed
 
 end (*context Diagonal*)
