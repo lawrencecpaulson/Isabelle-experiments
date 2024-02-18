@@ -25,7 +25,7 @@ lemma bigbeta_ge_0:
   using assms by (simp add: bigbeta_def Let_def beta_ge0 sum_nonneg)
 
 lemma bigbeta_gt_0:
-  assumes \<mu>: "0<\<mu>"  "\<mu><1"
+  assumes "0<\<mu>"  "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> bigbeta \<mu> l k > 0"
 proof -
   { fix l k
@@ -51,8 +51,8 @@ proof -
 qed
 
 
-lemma bigbeta_le_1:
-  assumes \<mu>: "0<\<mu>"  "\<mu><1" 
+lemma bigbeta_less_1:
+  assumes "0<\<mu>"  "\<mu><1" 
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> bigbeta \<mu> l k < 1"
 proof -
   { fix l k
@@ -70,19 +70,18 @@ proof -
       have "real (card (dboost_star \<mu> l k)) = (\<Sum>i\<in>dboost_star \<mu> l k. 1)"
         by simp
       also have "...  < (\<Sum>i\<in>dboost_star \<mu> l k. 1 / beta \<mu> l k i)"
-        using gt0 0
-        apply (intro sum_strict_mono)
-        using card_ge_0_finite apply blast
-        using False apply blast
-        apply (simp add: divide_simps)
-        apply (auto simp: )
-        apply (smt (verit) beta_ge0)
-        apply (smt (verit, best) Step_class_insert  UnCI \<mu> beta_le dboost_star_subset subset_iff)
-        using dboost_star_subset by fastforce
+      proof (intro sum_strict_mono)
+        show "finite (dboost_star \<mu> l k)"
+          using card_gt_0_iff gt0 by blast
+        fix i
+        assume "i \<in> dboost_star \<mu> l k"
+        with assms
+        show "1 < 1 / beta \<mu> l k i"
+          by (smt (verit, ccfv_threshold) "0" Step_class_insert UnCI beta_le dboost_star_subset
+              less_divide_eq_1 subset_iff)
+      qed (use False in auto)
       finally show ?thesis
-        apply (auto simp add: bigbeta_def Let_def zero_less_mult_iff card_gt_0_iff)
-        apply (erule notE)
-        by (simp add: divide_simps)
+        using False by (simp add: bigbeta_def Let_def divide_simps)
     qed
   }
   then show ?thesis
