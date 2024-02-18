@@ -46,7 +46,7 @@ proof -
   }
   then show ?thesis
     using eventually_mono [OF eventually_conj [OF beta_gt_0 [OF assms] bblue_dboost_step_limit [OF \<open>\<mu>>0\<close>]]]
-      Lemma_bblue_dboost_step_limit_def
+    unfolding Lemma_bblue_dboost_step_limit_def Lemma_beta_gt_0_def
     by presburger
 qed
 
@@ -568,11 +568,12 @@ subsection \<open>Lemma 7.4\<close>
 
 definition 
   "Big_X_7_4 \<equiv> 
-    \<lambda>\<mu> l. Lemma_bblue_dboost_step_limit \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Big_X_7_5 \<mu> l"
+    \<lambda>\<mu> l. Lemma_bblue_dboost_step_limit \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Big_X_7_5 \<mu> l
+        \<and> Lemma_beta_gt_0 \<mu> l"
 
 lemma X_7_4_aux:
   fixes l k
-  defines "f \<equiv> \<lambda>k. (2 * real k / ln 2) * ln (1 - 2 * eps k powr (1/2) / p0)"
+  defines "f \<equiv> \<lambda>k. 6 * eps k powr (1/4) * k * ln k / ln 2"
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   assumes "Colours l k" 
   defines "X \<equiv> Xseq \<mu> l k"
@@ -587,8 +588,11 @@ proof -
     using X_7_5_aux assms by (auto simp: Big_X_7_4_def Lemma_Red_5_3_def p_def \<S>_def \<S>\<S>_def)
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  then have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
+  then have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l" 
+    and "Lemma_beta_gt_0 \<mu> l"
     using big by (auto simp: Big_X_7_4_def)
+  then have beta_gt_0: "\<forall>i\<in>\<S>. 0 < beta \<mu> l k i"
+    by (simp add: Lemma_beta_gt_0_def \<S>_def \<open>Colours l k\<close>)
   have "finite \<S>"
     using BS_limit 
     by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
@@ -605,7 +609,6 @@ proof -
   then have A: "(\<Prod>i\<in>\<S>. card (X (Suc i)) / card (X i)) = (\<Prod>i\<in>\<S>. beta \<mu> l k i)"
     by force
   \<comment> \<open>bounding the immoderate steps\<close>
-  define f where "f \<equiv> \<lambda>k. 6 * eps k powr (1/4) * k * ln k / ln 2"
   have "(\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. 1 / beta \<mu> l k i) \<le> (\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. real k ^ 2)"
   proof (rule prod_mono)
     fix i
@@ -624,10 +627,28 @@ proof -
     by (simp add: powr_def)
   also have "... = 2 powr f k"
     by (simp add: f_def powr_def)
-  finally have B: "(\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. 1 / beta \<mu> l k i) \<le>  2 powr f k" .
+  finally have B: "(\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. 1 / beta \<mu> l k i) \<le> 2 powr f k" .
   have "f \<in> o(real)"
     unfolding eps_def f_def by real_asymp
-  \<comment> \<open>bounding the moderate steps\<close>  
+  show ?thesis
+  proof (cases "\<S>\<S> = {}")
+  \<comment> \<open>bounding the moderate steps\<close>
+    case True
+    with B have "(\<Prod>i\<in>\<S>. 1 / beta \<mu> l k i) \<le> 2 powr f k"
+      by simp
+    with True \<mu> beta_gt_0 show ?thesis
+      apply (simp add: bigbeta_def \<S>\<S>_def A)
+      apply (simp add: prod_dividef divide_simps split: if_split_asm)
+        defer
+      using prod_pos apply force
+      using Groups_Big.linordered_semidom_class.prod_pos apply blast
+      apply (rule order_trans)
+
+      sorry
+  next
+    case False
+    then show ?thesis sorry
+  qed  
   have "\<S>\<S> \<noteq> {}"
     sorry
   then have "card \<S>\<S> > 0"
@@ -646,7 +667,7 @@ proof -
   also have "... \<le> (1 / (card \<S>\<S>) * (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i)) powr (card \<S>\<S>)"
     using \<open>card \<S>\<S> > 0\<close> by (simp add: field_simps sum_divide_distrib)
   also have "... \<le> bigbeta \<mu> l k powr (- (card \<S>\<S>))"
-    using \<open>\<S>\<S> \<noteq> {}\<close> \<open>card \<S>\<S> > 0\<close>
+    using \<open>\<S>\<S> \<noteq> {}\<close> \<open>card \<S>\<S> > 0\<close> 
     apply (simp add: bigbeta_def divide_simps powr_minus flip: \<S>\<S>_def)
     apply (simp add: powr_divide beta_ge0 sum_nonneg)
     done

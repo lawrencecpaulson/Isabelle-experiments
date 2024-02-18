@@ -538,6 +538,19 @@ qed
 
 
 (*XXXXXX*)
+
+(*REPLACE*)
+context linordered_semidom
+begin
+
+lemma prod_nonneg: "(\<And>a. a\<in>A \<Longrightarrow> 0 \<le> f a) \<Longrightarrow> 0 \<le> prod f A"
+  by (induct A rule: infinite_finite_induct) simp_all
+
+lemma prod_pos: "(\<And>a. a\<in>A \<Longrightarrow> 0 < f a) \<Longrightarrow> 0 < prod f A"
+  by (induct A rule: infinite_finite_induct) simp_all
+
+end
+
 lemma powr01_less_one: 
   fixes a::real 
   assumes "0 < a" "a < 1"  
