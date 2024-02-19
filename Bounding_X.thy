@@ -711,6 +711,15 @@ proof
     by (intro X_7_4_aux strip) (auto simp: assms)
 qed
 
+subsection \<open>Observation 7.7\<close>
+
+lemma X_7_7:
+  assumes "0<\<mu>" "\<mu><1" and i: "i \<in> Step_class \<mu> l k {dreg_step}"
+  defines "p \<equiv> pee \<mu> l k"
+  defines "X \<equiv> Xseq \<mu> l k"
+  shows "p (Suc i) - p i 
+         \<ge> card (X i \<setminus> X (Suc i)) / card (X i) * eps k powr (-1/2) * alpha k (hgt i (p i))"
+
 end (*context Diagonal*)
 
 end
