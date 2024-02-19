@@ -365,8 +365,6 @@ lemma Big_X_7_5:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_5 \<mu> l"
 proof -
-  have [simp]: "Ex ((\<le>) l)" for l::nat
-    by auto
   have A: "\<forall>\<^sup>\<infinity>l. 2 * ln l / eps l + 2 * real l powr (7/8) \<le> l" 
     unfolding eps_def by real_asymp
   show ?thesis
@@ -557,20 +555,34 @@ proof -
     by (simp add: algebra_simps)
 qed
 
+definition 
+  "Lemma_X_7_5 \<equiv> 
+      \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> card (Step_class \<mu> l k {dboost_step} \<setminus> dboost_star \<mu> l k) 
+                \<le> 3 * eps k powr (1/4) * k"
+
 proposition X_7_5:
   assumes "0<\<mu>" "\<mu><1" 
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> card (Step_class \<mu> l k {dboost_step} \<setminus> dboost_star \<mu> l k) 
-                \<le> 3 * eps k powr (1/4) * k"
-  using assms
+  shows "\<forall>\<^sup>\<infinity>l. Lemma_X_7_5 \<mu> l"
+  using assms unfolding Lemma_X_7_5_def
     by (rule eventually_mono [OF Big_X_7_5]) (intro X_7_5_aux strip, auto simp: assms)
 
 subsection \<open>Lemma 7.4\<close>
 
 definition 
   "Big_X_7_4 \<equiv> 
-    \<lambda>\<mu> l. Lemma_bblue_dboost_step_limit \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Big_X_7_5 \<mu> l
+    \<lambda>\<mu> l. Lemma_X_7_5 \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l \<and> Lemma_Red_5_3 \<mu> l
         \<and> Lemma_beta_gt_0 \<mu> l \<and> (\<forall>k. Colours l k \<longrightarrow> 0 < bigbeta \<mu> l k \<and> bigbeta \<mu> l k < 1)"
-(*bigbeta_gt_0 bigbeta_less_1*)
+
+text \<open>establishing the size requirements for 7.4\<close>
+lemma Big_X_7_4:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_4 \<mu> l"
+proof -
+  show ?thesis
+    unfolding Big_X_7_4_def using assms eventually_all_ge_at_top [OF height_upper_bound]
+    by (simp add: eventually_conj_iff all_imp_conj_distrib X_7_5 bblue_dboost_step_limit 
+         Red_5_3 Y_6_5_Bblue height_upper_bound beta_gt_0 bigbeta_gt_0 bigbeta_less_1 eventually_all_ge_at_top)
+qed
 
 lemma X_7_4_aux:
   fixes l k
@@ -584,14 +596,14 @@ lemma X_7_4_aux:
 proof -
   define \<S>\<S> where "\<S>\<S> \<equiv> dboost_star \<mu> l k"
   define p where "p \<equiv> pee \<mu> l k"
-  have X75: "card (\<S>\<setminus>\<S>\<S>) \<le> 3 * eps k powr (1/4) * k" 
-    and R53:  "\<And>i. i \<in> \<S> \<Longrightarrow> p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
-    using X_7_5_aux assms by (auto simp: Big_X_7_4_def Lemma_Red_5_3_def p_def \<S>_def \<S>\<S>_def)
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  then have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l" and bigbeta_01: "0 < bigbeta \<mu> l k" "bigbeta \<mu> l k < 1"
-    and "Lemma_beta_gt_0 \<mu> l"
-    using big \<open>Colours l k\<close> by (auto simp: Big_X_7_4_def)
+  then have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l" 
+    and bigbeta_01: "0 < bigbeta \<mu> l k" "bigbeta \<mu> l k < 1"
+    and "Lemma_beta_gt_0 \<mu> l" and X75: "card (\<S>\<setminus>\<S>\<S>) \<le> 3 * eps k powr (1/4) * k" 
+    and R53:  "\<And>i. i \<in> \<S> \<Longrightarrow> p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
+    using big \<open>Colours l k\<close> 
+    by (auto simp: Big_X_7_4_def Lemma_X_7_5_def Lemma_Red_5_3_def p_def \<S>_def \<S>\<S>_def)
   then have beta_gt_0: "\<forall>i\<in>\<S>. 0 < beta \<mu> l k i"
     by (simp add: Lemma_beta_gt_0_def \<S>_def \<open>Colours l k\<close>)
   have "finite \<S>"
@@ -639,10 +651,6 @@ proof -
   then have A: "(\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. beta \<mu> l k i) \<ge> 2 powr f k"
     using prod_beta_gt_0[of "\<S>\<setminus>\<S>\<S>"]
     by (simp add: powr_minus prod_dividef mult.commute divide_simps)
-
-  have "f \<in> o(real)"
-    unfolding eps_def f_def by real_asymp
-
 \<comment> \<open>bounding the moderate steps\<close>
   have "(\<Prod>i\<in>\<S>\<S>. 1 / beta \<mu> l k i) \<le> bigbeta \<mu> l k powr (- (card \<S>\<S>))"
   proof (cases "\<S>\<S> = {}")
@@ -685,6 +693,23 @@ proof -
   then show ?thesis
     by (simp add: "*" bigbeta_01 powr_realpow)
 qed  
+
+proposition X_7_4:
+  assumes "0<\<mu>" "\<mu><1" 
+  shows "\<exists>f \<in> o(\<lambda>k. real k).
+     \<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> 
+              (\<Prod>i \<in> Step_class \<mu> l k {dboost_step}. card (Xseq \<mu> l k (Suc i)) / card (Xseq \<mu> l k i)) 
+            \<ge> 2 powr f k * bigbeta \<mu> l k ^ card (Step_class \<mu> l k {dboost_step})"
+proof
+  let ?f = "\<lambda>k. -6 * eps k powr (1/4) * k * ln k / ln 2"
+  show "?f \<in> o(real)"
+    unfolding eps_def by real_asymp
+  show "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow>
+               (\<Prod>i \<in> Step_class \<mu> l k {dboost_step}. card (Xseq \<mu> l k (Suc i)) / card (Xseq \<mu> l k i)) 
+            \<ge> 2 powr ?f k * bigbeta \<mu> l k ^ card (Step_class \<mu> l k {dboost_step})"
+    apply (rule eventually_mono [OF Big_X_7_4 [OF assms]])
+    by (intro X_7_4_aux strip) (auto simp: assms)
+qed
 
 end (*context Diagonal*)
 
