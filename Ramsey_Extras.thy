@@ -1281,7 +1281,7 @@ proof -
   have p01: "0<p" "p<1"
     using assms by (auto simp: p_def)
   have "exp ((real s - 1) * (real t - 1) / (2*(s+t))) \<le> exp (t / (s+t)) powr ((s-1)/2)"
-    using \<open>s \<ge> 3\<close> by (simp add: mult_ac divide_simps of_nat_diff)
+    using \<open>s \<ge> 3\<close> by (simp add: mult_ac divide_simps of_nat_diff exp_powr_real)
   with assms p01 have "n \<le> exp (t / (s+t)) powr ((s-1)/2)"
     by linarith
   then have "n * p powr ((s-1)/2) \<le> (exp (t / (s+t)) * p) powr ((s-1)/2)"
@@ -1442,17 +1442,6 @@ proof -
     by fastforce
 qed
 
-thm powr_mono
-lemma powr_antimono:
-  fixes x :: real
-  assumes "a \<le> b" "0<x" "x \<le> 1" shows "x powr b \<le> x powr a"
-proof -
-  have "inverse x powr a \<le> inverse x powr b"
-    by (simp add: assms one_le_inverse powr_mono)
-  then show ?thesis
-    using assms(2) inverse_powr by auto
-qed
-
 text \<open>Bhavik Mehta: choose-free version for very small @{term p}\<close>
 lemma Ramsey_number_lower_simple: 
   assumes n: "of_real n ^ k * p powr (real k^2 / 4) + of_real n ^ l * exp (-p * real l ^ 2 / 4) < 1"
@@ -1466,7 +1455,7 @@ proof (rule Ramsey_number_lower_gen)
     also have "... = real (Suc n - k)^k * p powr (real k * (real k - 1) / 2)"
       by (metis choose_two_real p01(1) powr_realpow)
     also have "... \<le> of_real n ^ k * p powr (real k^2 / 4)"
-      using p01 \<open>k>1\<close> by (intro mult_mono powr_antimono) (auto simp: power2_eq_square)
+      using p01 \<open>k>1\<close> by (intro mult_mono powr_mono') (auto simp: power2_eq_square)
     finally show ?thesis .
   qed
   moreover

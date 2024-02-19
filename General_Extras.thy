@@ -4,7 +4,9 @@ theory General_Extras imports
 
 begin
 
-(*GO TO XXXXXX*)
+(* TODO Move from Multiseries_expansion_bounds*)
+lemma powr_mono': "a \<le> (b::real) \<Longrightarrow> x \<ge> 0 \<Longrightarrow> x \<le> 1 \<Longrightarrow> x powr b \<le> x powr a"
+  using powr_mono[of "-b" "-a" "inverse x"] by (auto simp: powr_def ln_inverse ln_div field_split_simps)
 
 (*?*)
 abbreviation set_difference :: "['a set,'a set] \<Rightarrow> 'a set" (infixl "\<setminus>" 65)
@@ -539,7 +541,7 @@ qed
 
 (*XXXXXX*)
 
-(*REPLACE*)
+(*REPLACED 2024-02-19*)
 context linordered_semidom
 begin
 
@@ -551,6 +553,7 @@ lemma prod_pos: "(\<And>a. a\<in>A \<Longrightarrow> 0 < f a) \<Longrightarrow> 
 
 end
 
+(*added 2024-02-19*)
 lemma powr01_less_one: 
   fixes a::real 
   assumes "0 < a" "a < 1"  
@@ -562,6 +565,7 @@ proof
     by (metis assms less_eq_real_def powr_less_mono2 powr_one_eq_one)
 qed
 
+(*added 2024-02-19*)
 lemma prod_powr_distrib:
   fixes  x :: "'a \<Rightarrow> real"
   assumes "\<And>i. i\<in>I \<Longrightarrow> x i \<ge> 0"
@@ -569,28 +573,30 @@ lemma prod_powr_distrib:
   using assms
   by (induction I rule: infinite_finite_induct) (auto simp add: powr_mult prod_nonneg)
 
-lemma exp_powr_real [simp]:
+(*added 2024-02-19*)
+lemma exp_powr_real:
   fixes x::real shows "exp x powr y = exp (x*y)"
   by (simp add: powr_def)
 
+(*added 2024-02-19*)
 lemma exp_minus_ge: 
   fixes x::real shows "1 - x \<le> exp (-x)"
   by (smt (verit) exp_ge_add_one_self)
 
+(*added 2024-02-19*)
 lemma exp_minus_greater: 
   fixes x::real shows "1 - x < exp (-x) \<longleftrightarrow> x \<noteq> 0"
   by (smt (verit) exp_minus_ge exp_eq_one_iff exp_gt_zero ln_eq_minus_one ln_exp)
 
-
-lemma exp_powr_complex [simp]:
+(*added 2024-02-19*)
+lemma exp_powr_complex:
   fixes x::complex 
   assumes "-pi < Im(x)" "Im(x) \<le> pi"
   shows "exp x powr y = exp (x*y)"
   using assms by (simp add: powr_def mult.commute)
 
 
-thm convex_on_sum
-
+(*added 2024-02-19*)
 lemma concave_on_sum:
   fixes a :: "'a \<Rightarrow> real"
     and y :: "'a \<Rightarrow> 'b::real_vector"
@@ -612,6 +618,7 @@ proof -
     by (simp add: sum_negf o_def)
 qed
 
+(*added 2024-02-19*)
 lemma arith_geom_mean:
   fixes x :: "'a \<Rightarrow> real"
   assumes "finite S" "S \<noteq> {}"
@@ -645,26 +652,12 @@ next
     by (smt (verit, ccfv_SIG) divide_inverse exp_ln exp_powr_real exp_sum inverse_eq_divide prod.cong prod_powr_distrib) 
 qed
 
-thm choose_two
-lemma choose_two_real: "of_nat (n choose 2) = real n * (real n - 1) / 2"
-proof (cases "even n")
-  case True
-  then show ?thesis
-    by (auto simp: choose_two dvd_def)
-next
-  case False
-  then have "even (n-1)"
-    by simp
-  then show ?thesis
-    by (auto simp: choose_two dvd_def)
-qed
 
-
-thm powr_half_sqrt
+(*added 2024-02-19*)
 lemma powr_half_sqrt_powr: "0 \<le> x \<Longrightarrow> x powr (a/2) = sqrt(x powr a)"
   by (metis divide_inverse mult.left_neutral powr_ge_pzero powr_half_sqrt powr_powr)
 
-text \<open>derivatives of real powers\<close>
+(*added 2024-02-19*)
 lemma has_derivative_powr [derivative_intros]:
   assumes "\<And>x. (f has_derivative f') (at x)" "\<And>x. (g has_derivative g') (at x)"
     "\<And>x. f x > (0::real)"
@@ -680,15 +673,16 @@ proof -
   done
 qed
 
+(*added 2024-02-19*)
 lemma has_derivative_const_powr [derivative_intros]:
-  assumes "\<And>x. (f has_derivative f') (at x)"
-    "a \<noteq> (0::real)"
+  assumes "\<And>x. (f has_derivative f') (at x)" "a \<noteq> (0::real)"
   shows "((\<lambda>x. a powr (f x)) has_derivative (\<lambda>y. f' y * ln a * a powr (f x))) (at x)"
   using assms
   apply (simp add: powr_def)
   apply (rule assms derivative_eq_intros refl)+
   done
 
+(*added 2024-02-19*)
 lemma has_real_derivative_const_powr [derivative_intros]:
   assumes "\<And>x. (f has_real_derivative f' x) (at x)"
     "a \<noteq> (0::real)"
@@ -710,6 +704,20 @@ qed
 
 (*These can't go into Binomial because they need type "real"
 They could go to an AFP entry on Ramsey bounds*)
+
+thm choose_two
+lemma choose_two_real: "of_nat (n choose 2) = real n * (real n - 1) / 2"
+proof (cases "even n")
+  case True
+  then show ?thesis
+    by (auto simp: choose_two dvd_def)
+next
+  case False
+  then have "even (n-1)"
+    by simp
+  then show ?thesis
+    by (auto simp: choose_two dvd_def)
+qed
 
 lemma add_choose_le_power: "(n + k) choose n \<le> Suc k ^ n"
 proof -
@@ -742,9 +750,6 @@ lemma gbinomial_mono:
 lemma gbinomial_is_prod: "(a gchoose k) = (\<Prod>i<k. (a - of_nat i) / (1 + of_nat i))"
   unfolding gbinomial_prod_rev
   by (induction k; simp add: divide_simps)
-
-lemma pow_is_const_prod: "a ^ n = (\<Prod>i<n. a)" for a :: "'a::comm_monoid_mult"
-  by simp
 
 (*2024-02-07: added*)
 lemma (in linordered_semidom) prod_mono_strict:
