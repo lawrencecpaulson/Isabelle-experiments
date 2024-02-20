@@ -714,7 +714,7 @@ qed
 subsection \<open>Observation 7.7\<close>
 
 lemma X_7_7:
-  assumes "0<\<mu>" "\<mu><1" and i: "i \<in> Step_class \<mu> l k {dreg_step}"
+  assumes "0<\<mu>" "\<mu><1" and "k>0" and i: "i \<in> Step_class \<mu> l k {dreg_step}"
   defines "X \<equiv> Xseq \<mu> l k"
   defines "p \<equiv> pee \<mu> l k"
   defines "q \<equiv> eps k powr (-1/2) * alpha k (hgt k (p i))"
@@ -738,12 +738,11 @@ proof -
     using Xseq_Yseq_disjnt X_def Y_def by blast
   have Xnon0: "card (X i) > 0" and Ynon0: "card (Y i) > 0"
     using i by (simp_all add: X_def Y_def Xseq_gt_0 Yseq_gt_0 Step_class_def)
-  have XSnon0: "card (X (Suc i)) > 0" 
-    unfolding X_def
-    apply (intro Xseq_gt_0)
-    using i apply (simp add: Step_class_def)
-    using i X_def Xseq_gt_0 Step_class_def
-    sorry
+  have "q > 0"
+    using \<open>k>0\<close>
+    apply (simp add: q_def)
+    by (smt (verit, best) eps_gt0 alpha_hgt_ge divide_le_0_iff nonzero_divide_mult_cancel_right of_nat_0_less_iff powr_nonneg_iff)
+
   have Xdif: "X i \<setminus> X (Suc i) = {x \<in> X i. card (Neighbours Red x \<inter> Y i) < (p i - q) * card (Y i)}"
     using X by force
   have "edge_card Red (X i \<setminus> X (Suc i)) (Y i) = (\<Sum>x \<in> X i \<setminus> X (Suc i). real (card (Neighbours Red x \<inter> Y i)))"
@@ -756,18 +755,23 @@ proof -
     done
   also have "... \<le> (\<Sum>x \<in> X i \<setminus> X (Suc i). (p i - q) * card (Y i))"
     by (smt (verit, del_insts) Xdif mem_Collect_eq sum_mono)
-  finally have "edge_card Red (X i \<setminus> X (Suc i)) (Y i) \<le> card (X i \<setminus> X (Suc i)) * (p i - q) * card (Y i)" 
+  finally have A: "edge_card Red (X i \<setminus> X (Suc i)) (Y i) \<le> card (X i \<setminus> X (Suc i)) * (p i - q) * card (Y i)" 
     by simp
-  then have "p i * real (card (X i)) * real (card (Y i)) - real (edge_card Red (X (Suc i)) (Y i))
+  have False if "X (Suc i) = {}"
+    using A \<open>q>0\<close> Xnon0 Ynon0 that 
+    by (simp add: edge_card_eq_pee X_def Y_def p_def mult_le_0_iff)
+  then have XSnon0: "card (X (Suc i)) > 0"
+    using card_gt_0_iff finX by blast 
+  have "p i * real (card (X i)) * real (card (Y i)) - real (edge_card Red (X (Suc i)) (Y i))
              \<le> real (card (X i \<setminus> X (Suc i))) * (p i - q) * real (card (Y i))"
-    by (metis edge_card_eq_pee edge_card_mono X_def Y_def Xsub \<open>disjnt (X i) (Y i)\<close> p_def edge_card_diff finX of_nat_diff)
+    by (metis A edge_card_eq_pee edge_card_mono X_def Y_def Xsub \<open>disjnt (X i) (Y i)\<close> p_def edge_card_diff finX of_nat_diff)
   moreover have "real (card (X (Suc i))) \<le> real (card (X i))"
     using Xsub by (simp add: card_le)
-  ultimately have *: "edge_card Red (X (Suc i)) (Y i) \<ge> p i * card (X (Suc i)) * card (Y i) + card (X i \<setminus> X (Suc i)) * q * card (Y i)"
+  ultimately have B: "edge_card Red (X (Suc i)) (Y i) \<ge> p i * card (X (Suc i)) * card (Y i) + card (X i \<setminus> X (Suc i)) * q * card (Y i)"
     using Xnon0 
     by (smt (verit, del_insts) Xsub card_Diff_subset card_gt_0_iff card_le left_diff_distrib finite_subset mult_of_nat_commute of_nat_diff) 
   have "edge_card Red (X (Suc i)) (Y i) / (card (X (Suc i)) * card (Y i)) \<ge> p i + card (X i \<setminus> X (Suc i)) * q / card (X (Suc i))"
-    using divide_right_mono [OF *, of "card (X (Suc i)) * card (Y i)"] XSnon0 Ynon0
+    using divide_right_mono [OF B, of "card (X (Suc i)) * card (Y i)"] XSnon0 Ynon0
     by (simp add: add_divide_distrib split: if_split_asm)
   moreover have "p (Suc i) = real (edge_card Red (X (Suc i)) (Y i)) / (real (card (Y i)) * real (card (X (Suc i))))"
     using Y by (simp add: p_def pee_def gen_density_def X_def Y_def)
