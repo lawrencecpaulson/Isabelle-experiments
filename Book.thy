@@ -1067,6 +1067,9 @@ lemma Xseq_antimono: "j \<le> i \<Longrightarrow> Xseq \<mu> l k i \<subseteq> X
 lemma Xseq_subset_V: "Xseq \<mu> l k i \<subseteq> V"
   using XY0 Xseq_0 Xseq_antimono by blast
 
+lemma finite_Xseq: "finite (Xseq \<mu> l k i)"
+  by (meson Xseq_subset_V finV finite_subset)
+
 lemma Yseq_0 [simp]: "Yseq \<mu> l k 0 = Y0"
   by (simp add: Yseq_def)
 
@@ -1080,8 +1083,15 @@ lemma Yseq_antimono: "j \<le> i \<Longrightarrow> Yseq \<mu> l k i \<subseteq> Y
 lemma Yseq_subset_V: "Yseq \<mu> l k i \<subseteq> V"
   using XY0 Yseq_0 Yseq_antimono by blast
 
+lemma finite_Yseq: "finite (Yseq \<mu> l k i)"
+  by (meson Yseq_subset_V finV finite_subset)
+
 lemma Xseq_Yseq_disjnt: "disjnt (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
   by (metis (no_types, opaque_lifting) XY0(1) Xseq_0 Xseq_antimono Yseq_0 Yseq_antimono disjnt_iff le0 subset_eq)
+
+lemma edge_card_eq_pee: 
+  "edge_card Red (Xseq \<mu> l k i) (Yseq \<mu> l k i) = pee \<mu> l k i * card (Xseq \<mu> l k i) * card (Yseq \<mu> l k i)"
+  by (simp add: pee_def gen_density_def finite_Xseq finite_Yseq)
 
 lemma valid_state_seq: "valid_state(Xseq \<mu> l k i, Yseq \<mu> l k i, Aseq \<mu> l k i, Bseq \<mu> l k i)"
   using valid_state_stepper[of \<mu> l k i]
@@ -1220,6 +1230,11 @@ lemma not_halted_pee_gt0:
   assumes "i \<notin> Step_class \<mu> l k {halted}" 
   shows "pee \<mu> l k i > 0" 
   using not_halted_pee_gt [OF assms] linorder_not_le order_less_le_trans by fastforce
+
+lemma Xseq_gt_0:
+  assumes "i \<notin> Step_class \<mu> l k {halted}"
+  shows "card (Xseq \<mu> l k i) > 0"
+  by (metis Xseq_gt_RN assms gr0I less_zeroE) 
 
 lemma Yseq_gt_0:
   assumes "i \<notin> Step_class \<mu> l k {halted}"

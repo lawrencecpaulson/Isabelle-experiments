@@ -14,7 +14,7 @@ lemma Y_6_4_Red:
   assumes "i \<in> Step_class \<mu> l k {red_step}"
   shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i - alpha k (hgt k (pee \<mu> l k i))"
   using assms
-  by (auto simp add:  step_kind_defs next_state_def Let_def cvx_def reddish_def pee_def
+  by (auto simp add: step_kind_defs next_state_def Let_def cvx_def reddish_def pee_def
       split: if_split_asm prod.split)
 
 lemma Y_6_4_DegreeReg: 
