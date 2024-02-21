@@ -96,9 +96,9 @@ lemma X_7_2:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   defines "f \<equiv> \<lambda>k. (real k / ln 2) * ln (1 - 1 / (k * (1-\<mu>)))"
+  defines "X \<equiv> Xseq \<mu> l k"
   assumes big: "nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3" "k\<ge>2" "k > 1 / (1-\<mu>)"
   assumes "Colours l k" and fin_red: "finite (Step_class \<mu> l k {red_step})"
-  defines "X \<equiv> Xseq \<mu> l k"
   shows "(\<Prod>i \<in> Step_class \<mu> l k {red_step}. card (X(Suc i)) / card (X i)) 
         \<ge> 2 powr (f k) * (1-\<mu>) ^ card (Step_class \<mu> l k {red_step})"
 proof -
@@ -365,20 +365,19 @@ lemma Big_X_7_5:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_5 \<mu> l"
 proof -
-  have A: "\<forall>\<^sup>\<infinity>l. 2 * ln l / eps l + 2 * real l powr (7/8) \<le> l" 
+  have "\<forall>\<^sup>\<infinity>l. 2 * ln l / eps l + 2 * real l powr (7/8) \<le> l" 
     unfolding eps_def by real_asymp
-  show ?thesis
+  then show ?thesis
     unfolding Big_X_7_5_def using assms eventually_all_ge_at_top [OF height_upper_bound]
     by (simp add: eventually_conj_iff Step_class_halted_nonempty bblue_dboost_step_limit 
-        bblue_step_limit Y_6_4_dbooSt Y_6_5_Bblue height_upper_bound A eventually_all_ge_at_top)
+        bblue_step_limit Y_6_4_dbooSt Y_6_5_Bblue height_upper_bound eventually_all_ge_at_top)
 qed
 
 lemma X_7_5_aux:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   assumes "Colours l k" 
-  defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
-  defines "\<S>\<S> \<equiv> dboost_star \<mu> l k"
+  defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}" and "\<S>\<S> \<equiv> dboost_star \<mu> l k"
   assumes big: "Big_X_7_5 \<mu> l"
   shows "card (\<S>\<setminus>\<S>\<S>) \<le> 3 * eps k powr (1/4) * k"
 proof -
@@ -589,9 +588,8 @@ lemma X_7_4_aux:
   defines "f \<equiv> \<lambda>k. -6 * eps k powr (1/4) * k * ln k / ln 2"
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   assumes "Colours l k" 
-  defines "X \<equiv> Xseq \<mu> l k"
-  defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   assumes big: "Big_X_7_4 \<mu> l"
+  defines "X \<equiv> Xseq \<mu> l k" and "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   shows "(\<Prod>i\<in>\<S>. card (X (Suc i)) / card (X i)) \<ge> 2 powr f k * bigbeta \<mu> l k ^ card \<S>"
 proof -
   define \<S>\<S> where "\<S>\<S> \<equiv> dboost_star \<mu> l k"
@@ -753,13 +751,12 @@ proof -
     by (smt (verit, del_insts) Xdif mem_Collect_eq sum_mono)
   finally have A: "edge_card Red (X i \<setminus> X (Suc i)) (Y i) \<le> card (X i \<setminus> X (Suc i)) * (p i - q) * card (Y i)" 
     by (simp add: edge_card_commute)
-  have False if "X (Suc i) = {}"
-    using A \<open>q>0\<close> Xnon0 Ynon0 that 
-    by (simp add: edge_card_eq_pee X_def Y_def p_def mult_le_0_iff)
+  then have False if "X (Suc i) = {}"
+    using \<open>q>0\<close> Xnon0 Ynon0 that  by (simp add: edge_card_eq_pee X_def Y_def p_def mult_le_0_iff)
   then have XSnon0: "card (X (Suc i)) > 0"
     using card_gt_0_iff finX by blast 
-  have "p i * real (card (X i)) * real (card (Y i)) - real (edge_card Red (X (Suc i)) (Y i))
-             \<le> real (card (X i \<setminus> X (Suc i))) * (p i - q) * real (card (Y i))"
+  have "p i * card (X i) * real (card (Y i)) - edge_card Red (X (Suc i)) (Y i)
+     \<le> card (X i \<setminus> X (Suc i)) * (p i - q) * card (Y i)"
     by (metis A edge_card_eq_pee edge_card_mono X_def Y_def Xsub \<open>disjnt (X i) (Y i)\<close> p_def edge_card_diff finX of_nat_diff)
   moreover have "real (card (X (Suc i))) \<le> real (card (X i))"
     using Xsub by (simp add: card_le)
@@ -804,17 +801,16 @@ proof -
         X_def Y_def split: if_split_asm prod.split_asm)
   have XSnon0: "card (X (Suc i)) > 0"
     using X_7_7 assms by simp
-
   have finX: "finite (X i)" for i
     using finite_Xseq X_def by blast
   have Xsub[simp]: "X (Suc i) \<subseteq> X i"
     using Xseq_Suc_subset X_def by blast
   then have card_le: "card (X (Suc i)) \<le> card (X i)"
     by (simp add: card_mono finX)
-  have 2: "2 / (real k ^2 + 2) \<ge> 1 / k^2"
-    using \<open>k\<ge>2\<close>
-    apply (simp add: divide_simps)
-    by (metis of_nat_numeral add_nonneg_eq_0_iff of_nat_0_le_iff of_nat_mono of_nat_power zero_less_numeral self_le_ge2_pow)
+  have "real k ^ 2 \<ge> 2"
+    using \<open>k\<ge>2\<close> by (metis numeral_le_real_of_nat_iff of_nat_eq_of_nat_power_cancel_iff self_le_ge2_pow) 
+  then have 2: "2 / (real k ^ 2 + 2) \<ge> 1 / k^2"
+    by (simp add: divide_simps)
   have "q * card (X i \<setminus> X (Suc i)) / card (X (Suc i)) \<le> p (Suc i) - p i"
     using X_7_7 assms by (simp add: p_def q_def mult_of_nat_commute)
   also have "\<dots> \<le> 1"
@@ -832,6 +828,38 @@ proof -
     using mult_right_mono [OF 2, of "card (X i)"] by simp
 qed
 
+subsection \<open>Lemma 7.9\<close>
+
+lemma X_7_9:
+  assumes \<mu>: "0<\<mu>" "\<mu><1" and k: "k\<ge>2" "eps k powr (1/2) / k \<ge> 2 / k^2" 
+    and i: "i \<in> Step_class \<mu> l k {dreg_step}"
+  defines "X \<equiv> Xseq \<mu> l k" and "p \<equiv> pee \<mu> l k"
+  assumes pge: "p i \<ge> p0" and "hgt k (p (Suc i)) \<le> hgt k (p i) + eps k powr (-1/4)"
+  shows "card (X (Suc i)) \<ge> (1 - 2 * eps k powr (1/4)) * card (X i)"
+proof -
+  let ?q = "eps k powr (-1/2) * alpha k (hgt k (p i))"
+  have "k>0" using k by auto
+  have Xsub[simp]: "X (Suc i) \<subseteq> X i"
+    using Xseq_Suc_subset X_def by blast
+  have finX: "finite (X i)" for i
+    using finite_Xseq X_def by blast
+  then have card_le: "card (X (Suc i)) \<le> card (X i)"
+    by (simp add: card_mono finX)
+  have "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * ?q \<le> p (Suc i) - p i"
+    using X_7_7 X_def \<mu> i k p_def by auto
+  also have "... \<le> 2 * eps k powr (-1/4) * alpha k (hgt k (p i))"
+    sorry
+  finally have 29: "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * ?q \<le> 2 * eps k powr (-1/4) * alpha k (hgt k (p i))" .
+  then have "card (X i \<setminus> X (Suc i)) \<le> 2 * eps k powr (1/4) * card (X (Suc i))"
+    using eps_ge0 [of k] \<open>k>0\<close>
+    apply (simp add: powr_minus divide_simps split: if_split_asm)
+
+    sorry
+  also have "... \<le> 2 * eps k powr (1/4) * card (X i)"
+    by (simp add: card_le mult_mono')
+  finally show ?thesis
+    by (simp add: card_Diff_subset finX of_nat_diff card_le algebra_simps)
+qed
 
 end (*context Diagonal*)
 
