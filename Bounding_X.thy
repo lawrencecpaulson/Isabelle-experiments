@@ -845,16 +845,22 @@ proof -
     using finite_Xseq X_def by blast
   then have card_le: "card (X (Suc i)) \<le> card (X i)"
     by (simp add: card_mono finX)
+  have XSnon0: "card (X (Suc i)) > 0"
+    using X_7_7 X_def \<mu> \<open>0 < k\<close> i by blast
   have "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * ?q \<le> p (Suc i) - p i"
     using X_7_7 X_def \<mu> i k p_def by auto
   also have "... \<le> 2 * eps k powr (-1/4) * alpha k (hgt k (p i))"
     sorry
   finally have 29: "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * ?q \<le> 2 * eps k powr (-1/4) * alpha k (hgt k (p i))" .
+  moreover have "alpha k (hgt k (p i)) > 0"
+    by (smt (verit, ccfv_SIG) eps_gt0 \<open>0 < k\<close> alpha_ge divide_le_0_iff hgt_gt_0 of_nat_0_less_iff)
+  ultimately have "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * eps k powr (-1/2) \<le> 2 * eps k powr (-1/4)" 
+    using mult_le_cancel_right by fastforce
+  then have "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) \<le> 2 * eps k powr (-1/4) * eps k powr (1/2)" 
+    using \<open>0 < k\<close> eps_gt0 [of k]
+    by (simp add: powr_minus divide_simps mult.commute zero_compare_simps split: if_split_asm)
   then have "card (X i \<setminus> X (Suc i)) \<le> 2 * eps k powr (1/4) * card (X (Suc i))"
-    using eps_ge0 [of k] \<open>k>0\<close>
-    apply (simp add: powr_minus divide_simps split: if_split_asm)
-
-    sorry
+    using XSnon0 by (simp add: field_simps flip: powr_add)
   also have "... \<le> 2 * eps k powr (1/4) * card (X i)"
     by (simp add: card_le mult_mono')
   finally show ?thesis
