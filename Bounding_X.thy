@@ -19,12 +19,12 @@ definition bigbeta where
 lemma dboost_star_subset: "dboost_star \<mu> l k \<subseteq> Step_class \<mu> l k {dboost_step}"
   by (auto simp: dboost_star_def)
 
-lemma bigbeta_ge_0:
+lemma bigbeta_ge0:
   assumes \<mu>: "0<\<mu>"  
   shows "bigbeta \<mu> l k \<ge> 0"
   using assms by (simp add: bigbeta_def Let_def beta_ge0 sum_nonneg)
 
-lemma bigbeta_gt_0:
+lemma bigbeta_gt0:
   assumes "0<\<mu>"  "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> bigbeta \<mu> l k > 0"
 proof -
@@ -51,7 +51,7 @@ proof -
 qed
 
 
-lemma bigbeta_less_1:
+lemma bigbeta_less1:
   assumes "0<\<mu>"  "\<mu><1" 
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> bigbeta \<mu> l k < 1"
 proof -
@@ -581,7 +581,7 @@ proof -
   show ?thesis
     unfolding Big_X_7_4_def using assms eventually_all_ge_at_top [OF height_upper_bound]
     by (simp add: eventually_conj_iff all_imp_conj_distrib X_7_5 bblue_dboost_step_limit 
-         Red_5_3 Y_6_5_Bblue height_upper_bound beta_gt_0 bigbeta_gt_0 bigbeta_less_1 eventually_all_ge_at_top)
+         Red_5_3 Y_6_5_Bblue height_upper_bound beta_gt_0 bigbeta_gt0 bigbeta_less1 eventually_all_ge_at_top)
 qed
 
 lemma X_7_4_aux:
@@ -718,7 +718,7 @@ lemma X_7_7:
   defines "X \<equiv> Xseq \<mu> l k"
   defines "p \<equiv> pee \<mu> l k"
   defines "q \<equiv> eps k powr (-1/2) * alpha k (hgt k (p i))"
-  shows "p (Suc i) - p i \<ge> card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * q"
+  shows "p (Suc i) - p i \<ge> card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * q \<and> card (X (Suc i)) > 0"
 proof -
   have finX: "finite (X i)" for i
     using finite_Xseq X_def by blast
@@ -742,21 +742,17 @@ proof -
     using \<open>k>0\<close>
     apply (simp add: q_def)
     by (smt (verit, best) eps_gt0 alpha_hgt_ge divide_le_0_iff nonzero_divide_mult_cancel_right of_nat_0_less_iff powr_nonneg_iff)
-
   have Xdif: "X i \<setminus> X (Suc i) = {x \<in> X i. card (Neighbours Red x \<inter> Y i) < (p i - q) * card (Y i)}"
     using X by force
-  have "edge_card Red (X i \<setminus> X (Suc i)) (Y i) = (\<Sum>x \<in> X i \<setminus> X (Suc i). real (card (Neighbours Red x \<inter> Y i)))"
-     apply (subst edge_card_commute)
-     apply (subst edge_card_eq_sum_Neighbours)
-    using Red_E(2) apply auto[1]
-    apply (simp add: finX)
-      apply (metis Diff_subset \<open>disjnt (X i) (Y i)\<close> disjnt_subset2 disjnt_sym)
-     apply (auto simp: )
-    done
+  have disYX: "disjnt (Y i) (X i \<setminus> X (Suc i))"
+    by (metis Diff_subset \<open>disjnt (X i) (Y i)\<close> disjnt_subset2 disjnt_sym)
+  have "edge_card Red (Y i) (X i \<setminus> X (Suc i)) 
+      = (\<Sum>x \<in> X i \<setminus> X (Suc i). real (card (Neighbours Red x \<inter> Y i)))"
+    using edge_card_eq_sum_Neighbours [OF _ _ disYX] finX Red_E by simp
   also have "... \<le> (\<Sum>x \<in> X i \<setminus> X (Suc i). (p i - q) * card (Y i))"
     by (smt (verit, del_insts) Xdif mem_Collect_eq sum_mono)
   finally have A: "edge_card Red (X i \<setminus> X (Suc i)) (Y i) \<le> card (X i \<setminus> X (Suc i)) * (p i - q) * card (Y i)" 
-    by simp
+    by (simp add: edge_card_commute)
   have False if "X (Suc i) = {}"
     using A \<open>q>0\<close> Xnon0 Ynon0 that 
     by (simp add: edge_card_eq_pee X_def Y_def p_def mult_le_0_iff)
@@ -776,7 +772,64 @@ proof -
   moreover have "p (Suc i) = real (edge_card Red (X (Suc i)) (Y i)) / (real (card (Y i)) * real (card (X (Suc i))))"
     using Y by (simp add: p_def pee_def gen_density_def X_def Y_def)
   ultimately show ?thesis
-    by (simp add: algebra_simps)
+    by (simp add: algebra_simps XSnon0)
+qed
+
+subsection \<open>Lemma 7.8\<close>
+
+lemma "\<forall>\<^sup>\<infinity>k. eps k powr (1/2) / k \<ge> 2 / k^2"
+  unfolding eps_def
+  by real_asymp
+
+lemma X_7_8:
+  assumes "0<\<mu>" "\<mu><1" and k: "k\<ge>2" "eps k powr (1/2) / k \<ge> 2 / k^2" 
+    and i: "i \<in> Step_class \<mu> l k {dreg_step}"
+  defines "X \<equiv> Xseq \<mu> l k"
+  shows "card (X (Suc i)) \<ge> card (X i) / k^2"
+proof -
+  define p where "p \<equiv> pee \<mu> l k"
+  define q where "q \<equiv> eps k powr (-1/2) * alpha k (hgt k (p i))"
+  have "k>0" using k by auto
+  have "2 / k^2 \<le> eps k powr (1/2) / k"
+    using k by simp
+  also have "... \<le> q"
+    using \<open>k>0\<close> eps_gt0[of k] Red_5_7a [of k "p i"]
+    by (simp add: q_def powr_minus divide_simps flip: powr_add)
+  finally have q_ge: "q \<ge> 2 / k^2" .
+  define Y where "Y \<equiv> Yseq \<mu> l k"
+  have "X (Suc i) = {x \<in> X i. red_dense k (Y i) (red_density (X i) (Y i)) x}"   
+   and Y: "Y (Suc i) = Y i"
+    using i
+    by (simp_all add: step_kind_defs next_state_def X_degree_reg_def degree_reg_def 
+        X_def Y_def split: if_split_asm prod.split_asm)
+  have XSnon0: "card (X (Suc i)) > 0"
+    using X_7_7 assms by simp
+
+  have finX: "finite (X i)" for i
+    using finite_Xseq X_def by blast
+  have Xsub[simp]: "X (Suc i) \<subseteq> X i"
+    using Xseq_Suc_subset X_def by blast
+  then have card_le: "card (X (Suc i)) \<le> card (X i)"
+    by (simp add: card_mono finX)
+  have 2: "2 / (real k ^2 + 2) \<ge> 1 / k^2"
+    using \<open>k\<ge>2\<close>
+    apply (simp add: divide_simps)
+    by (metis of_nat_numeral add_nonneg_eq_0_iff of_nat_0_le_iff of_nat_mono of_nat_power zero_less_numeral self_le_ge2_pow)
+  have "q * card (X i \<setminus> X (Suc i)) / card (X (Suc i)) \<le> p (Suc i) - p i"
+    using X_7_7 assms by (simp add: p_def q_def mult_of_nat_commute)
+  also have "\<dots> \<le> 1"
+    by (smt (verit) p_def pee_ge0 pee_le1)
+  finally have "q * card (X i \<setminus> X (Suc i)) \<le> card (X (Suc i))" 
+    using XSnon0 by auto
+  with q_ge have "card (X (Suc i)) \<ge> (2 / k^2) * card (X i \<setminus> X (Suc i))"
+    by (smt (verit, best) mult_right_mono of_nat_0_le_iff)
+  then have "card (X (Suc i)) * (1 + 2/k^2) \<ge> (2/k^2) * card (X i)"
+    by (simp add: card_Diff_subset finX of_nat_diff card_le diff_divide_distrib field_simps)
+  then have "card (X (Suc i)) \<ge> (2/(real k ^ 2 + 2)) * card (X i)"
+    using \<open>k>0\<close> add_nonneg_nonneg[of "real k^2" 2]
+    by (simp del: add_nonneg_nonneg add: divide_simps split: if_split_asm)
+  then show ?thesis
+    using mult_right_mono [OF 2, of "card (X i)"] by simp
 qed
 
 
