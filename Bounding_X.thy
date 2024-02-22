@@ -851,7 +851,7 @@ proof -
     using X_7_7 X_def \<mu> i k p_def by auto
   also have "... \<le> 2 * eps k powr (-1/4) * alpha k (hgt k (p i))"
   proof -
-    have DD: "hgt k (p i) \<le> hgt k (p (Suc i))"  (* bears on the question of whether to use real or integer powers*)
+    have hgt_le: "hgt k (p i) \<le> hgt k (p (Suc i))" 
       using Y_6_5_DegreeReg \<open>0 < k\<close> i p_def by blast
     have A: "p (Suc i) \<le> qfun k (hgt k (p (Suc i)))"
       by (simp add: \<open>0 < k\<close> hgt_works)
@@ -859,13 +859,14 @@ proof -
       using hgt_Least [of "hgt k (p i) - 1" "p i" k] \<open>p i \<ge> p0\<close> by force
     have "p (Suc i) - p i \<le> qfun k (hgt k (p (Suc i))) - qfun k (hgt k (p i) - 1)"
       using A B by auto
+    also have "... = ((1 + eps k) ^ (Suc (hgt k (p i) - 1 + hgt k (p (Suc i))) - hgt k (p i)) -
+                      (1 + eps k) ^ (hgt k (p i) - 1))    /  k"
+      using \<open>k>0\<close> eps_gt0 [of k] hgt_le \<open>p i \<ge> p0\<close> hgt_gt_0 [of k]
+      by (simp add: qfun_def Suc_diff_eq_diff_pred hgt_gt_0 diff_divide_distrib)
     also have "... = alpha k (hgt k (p i)) / eps k * ((1 + eps k) ^ (1 + hgt k (p (Suc i)) - hgt k (p i)) - 1)"
-      using \<open>k>0\<close> eps_gt0 [of k] DD \<open>p i \<ge> p0\<close> hgt_gt_0 [of k]
-      apply (simp add: alpha_eq right_diff_distrib of_nat_diff flip: powr_realpow powr_add diff_divide_distrib)
-      apply (subst of_nat_diff)
-      using Suc_leI apply blast
-      apply (simp add: qfun_def)
-      by (simp add: diff_divide_distrib powr_realpow)
+      using \<open>k>0\<close>  hgt_le hgt_gt_0 [of k]
+      by (simp add: alpha_eq right_diff_distrib flip: diff_divide_distrib power_add)
+
     show ?thesis
       sorry
   qed
