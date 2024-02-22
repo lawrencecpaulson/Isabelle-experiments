@@ -834,7 +834,7 @@ lemma X_7_9:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and k: "k\<ge>2" "eps k powr (1/2) / k \<ge> 2 / k^2" 
     and i: "i \<in> Step_class \<mu> l k {dreg_step}"
   defines "X \<equiv> Xseq \<mu> l k" and "p \<equiv> pee \<mu> l k"
-  assumes pge: "p i \<ge> p0" and "hgt k (p (Suc i)) \<le> hgt k (p i) + eps k powr (-1/4)"
+  assumes "p i \<ge> p0" and hgt: "hgt k (p (Suc i)) \<le> hgt k (p i) + eps k powr (-1/4)"
   shows "card (X (Suc i)) \<ge> (1 - 2 * eps k powr (1/4)) * card (X i)"
 proof -
   let ?q = "eps k powr (-1/2) * alpha k (hgt k (p i))"
@@ -850,7 +850,25 @@ proof -
   have "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * ?q \<le> p (Suc i) - p i"
     using X_7_7 X_def \<mu> i k p_def by auto
   also have "... \<le> 2 * eps k powr (-1/4) * alpha k (hgt k (p i))"
-    sorry
+  proof -
+    have DD: "hgt k (p i) \<le> hgt k (p (Suc i))"  (* bears on the question of whether to use real or integer powers*)
+      using Y_6_5_DegreeReg \<open>0 < k\<close> i p_def by blast
+    have A: "p (Suc i) \<le> qfun k (hgt k (p (Suc i)))"
+      by (simp add: \<open>0 < k\<close> hgt_works)
+    have B: "qfun k (hgt k (p i) - 1) \<le> p i"
+      using hgt_Least [of "hgt k (p i) - 1" "p i" k] \<open>p i \<ge> p0\<close> by force
+    have "p (Suc i) - p i \<le> qfun k (hgt k (p (Suc i))) - qfun k (hgt k (p i) - 1)"
+      using A B by auto
+    also have "... = alpha k (hgt k (p i)) / eps k * ((1 + eps k) ^ (1 + hgt k (p (Suc i)) - hgt k (p i)) - 1)"
+      using \<open>k>0\<close> eps_gt0 [of k] DD \<open>p i \<ge> p0\<close> hgt_gt_0 [of k]
+      apply (simp add: alpha_eq right_diff_distrib of_nat_diff flip: powr_realpow powr_add diff_divide_distrib)
+      apply (subst of_nat_diff)
+      using Suc_leI apply blast
+      apply (simp add: qfun_def)
+      by (simp add: diff_divide_distrib powr_realpow)
+    show ?thesis
+      sorry
+  qed
   finally have 29: "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * ?q \<le> 2 * eps k powr (-1/4) * alpha k (hgt k (p i))" .
   moreover have "alpha k (hgt k (p i)) > 0"
     by (smt (verit, ccfv_SIG) eps_gt0 \<open>0 < k\<close> alpha_ge divide_le_0_iff hgt_gt_0 of_nat_0_less_iff)
