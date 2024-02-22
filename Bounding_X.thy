@@ -836,14 +836,18 @@ lemma "\<forall>\<^sup>\<infinity>k. Big_7_9 k"
   unfolding eps_def Big_7_9_def
   by real_asymp
 
-lemma
+lemma one_plus_powr_le:
   fixes p::real
-  assumes "0\<le>p" "p\<le>1" "x\<ge>0" "x<1" 
-  shows "(1+x)powr p - 1 \<le> x*p"
-  apply (simp add: powr_def)
-  apply (auto simp: )
-   defer
-  oops
+  assumes "0\<le>p" "p\<le>1" "x\<ge>0"  
+  shows "(1+x) powr p - 1 \<le> x*p"
+proof (rule gen_upper_bound_increasing [OF \<open>x\<ge>0\<close>])
+  fix y::real
+  assume y: "0 \<le> y" "y \<le> x"
+  show "((\<lambda>x. x * p - ((1 + x) powr p - 1)) has_real_derivative p - (1+y)powr (p-1) * p) (at y)"
+    using assms y by (intro derivative_eq_intros | simp)+
+  show "p - (1+y)powr (p-1) * p \<ge> 0"
+    using y assms less_eq_real_def powr_less_one by fastforce
+qed auto
 
 lemma X_7_9:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and k: "k\<ge>2" "eps k powr (1/2) / k \<ge> 2 / k^2" 
