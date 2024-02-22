@@ -830,14 +830,31 @@ qed
 
 subsection \<open>Lemma 7.9\<close>
 
+definition "Big_7_9 \<equiv> \<lambda>k. ((1 + eps k) powr (eps k powr (-1/4) + 1) - 1) / eps k \<le> 2 * eps k powr (-1/4)"
+
+lemma "\<forall>\<^sup>\<infinity>k. Big_7_9 k"
+  unfolding eps_def Big_7_9_def
+  by real_asymp
+
+lemma
+  fixes p::real
+  assumes "0\<le>p" "p\<le>1" "x\<ge>0" "x<1" 
+  shows "(1+x)powr p - 1 \<le> x*p"
+  apply (simp add: powr_def)
+  apply (auto simp: )
+   defer
+  oops
+
 lemma X_7_9:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and k: "k\<ge>2" "eps k powr (1/2) / k \<ge> 2 / k^2" 
     and i: "i \<in> Step_class \<mu> l k {dreg_step}"
-  defines "X \<equiv> Xseq \<mu> l k" and "p \<equiv> pee \<mu> l k"
-  assumes "p i \<ge> p0" and hgt: "hgt k (p (Suc i)) \<le> hgt k (p i) + eps k powr (-1/4)"
+  defines "X \<equiv> Xseq \<mu> l k" and "p \<equiv> pee \<mu> l k" 
+  defines "h \<equiv> \<lambda>i. hgt k (p i)"
+  assumes "p i \<ge> p0" and hgt: "h (Suc i) \<le> h i + eps k powr (-1/4)"
+    and big: "Big_7_9 k"
   shows "card (X (Suc i)) \<ge> (1 - 2 * eps k powr (1/4)) * card (X i)"
 proof -
-  let ?q = "eps k powr (-1/2) * alpha k (hgt k (p i))"
+  let ?q = "eps k powr (-1/2) * alpha k (h i)"
   have "k>0" using k by auto
   have Xsub[simp]: "X (Suc i) \<subseteq> X i"
     using Xseq_Suc_subset X_def by blast
@@ -848,30 +865,40 @@ proof -
   have XSnon0: "card (X (Suc i)) > 0"
     using X_7_7 X_def \<mu> \<open>0 < k\<close> i by blast
   have "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * ?q \<le> p (Suc i) - p i"
-    using X_7_7 X_def \<mu> i k p_def by auto
-  also have "... \<le> 2 * eps k powr (-1/4) * alpha k (hgt k (p i))"
+    using X_7_7 X_def \<mu> i k p_def h_def by auto
+  also have "... \<le> 2 * eps k powr (-1/4) * alpha k (h i)"
   proof -
-    have hgt_le: "hgt k (p i) \<le> hgt k (p (Suc i))" 
-      using Y_6_5_DegreeReg \<open>0 < k\<close> i p_def by blast
-    have A: "p (Suc i) \<le> qfun k (hgt k (p (Suc i)))"
-      by (simp add: \<open>0 < k\<close> hgt_works)
-    have B: "qfun k (hgt k (p i) - 1) \<le> p i"
-      using hgt_Least [of "hgt k (p i) - 1" "p i" k] \<open>p i \<ge> p0\<close> by force
-    have "p (Suc i) - p i \<le> qfun k (hgt k (p (Suc i))) - qfun k (hgt k (p i) - 1)"
+    have hgt_le: "h i \<le> h (Suc i)" 
+      using Y_6_5_DegreeReg \<open>0 < k\<close> i p_def h_def by blast
+    have A: "p (Suc i) \<le> qfun k (h (Suc i))"
+      by (simp add: \<open>0 < k\<close> h_def hgt_works)
+    have B: "qfun k (h i - 1) \<le> p i"
+      using hgt_Least [of "h i - 1" "p i" k] \<open>p i \<ge> p0\<close> by (force simp: h_def)
+    have "p (Suc i) - p i \<le> qfun k (h (Suc i)) - qfun k (h i - 1)"
       using A B by auto
-    also have "... = ((1 + eps k) ^ (Suc (hgt k (p i) - 1 + hgt k (p (Suc i))) - hgt k (p i)) -
-                      (1 + eps k) ^ (hgt k (p i) - 1))    /  k"
+    also have "... = ((1 + eps k) ^ (Suc (h i - 1 + h (Suc i)) - h i) -
+                      (1 + eps k) ^ (h i - 1))    /  k"
       using \<open>k>0\<close> eps_gt0 [of k] hgt_le \<open>p i \<ge> p0\<close> hgt_gt_0 [of k]
-      by (simp add: qfun_def Suc_diff_eq_diff_pred hgt_gt_0 diff_divide_distrib)
-    also have "... = alpha k (hgt k (p i)) / eps k * ((1 + eps k) ^ (1 + hgt k (p (Suc i)) - hgt k (p i)) - 1)"
+      by (simp add: h_def qfun_def Suc_diff_eq_diff_pred hgt_gt_0 diff_divide_distrib)
+    also have "... = alpha k (h i) / eps k * ((1 + eps k) ^ (1 + h (Suc i) - h i) - 1)"
       using \<open>k>0\<close>  hgt_le hgt_gt_0 [of k]
-      by (simp add: alpha_eq right_diff_distrib flip: diff_divide_distrib power_add)
-
-    show ?thesis
-      sorry
+      by (simp add: h_def alpha_eq right_diff_distrib flip: diff_divide_distrib power_add)
+    also have "... \<le> 2 * eps k powr (-1/4) * alpha k (h i)"
+    proof -
+      have "((1 + eps k) ^ (1 + h (Suc i) - h i) - 1)  / eps k \<le> ((1 + eps k) powr (eps k powr (-1/4) + 1) - 1) / eps k"
+        using hgt eps_ge0 [of k] hgt_le powr_mono_both by (force simp flip: powr_realpow intro: divide_right_mono)
+      also have "... \<le> 2 * eps k powr (-1/4)"
+        using big by (meson Big_7_9_def)
+      finally have *: "((1 + eps k) ^ (1 + h (Suc i) - h i) - 1) / eps k \<le> 2 * eps k powr (-1/4)" .
+      show ?thesis
+        using mult_left_mono [OF *, of "alpha k (h i)"]
+        by (smt (verit) alpha_ge0 mult.commute times_divide_eq_right)
+    qed
+    finally show ?thesis .
   qed
-  finally have 29: "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * ?q \<le> 2 * eps k powr (-1/4) * alpha k (hgt k (p i))" .
-  moreover have "alpha k (hgt k (p i)) > 0"
+  finally have 29: "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * ?q \<le> 2 * eps k powr (-1/4) * alpha k (h i)" .
+  moreover have "alpha k (h i) > 0"
+    unfolding h_def
     by (smt (verit, ccfv_SIG) eps_gt0 \<open>0 < k\<close> alpha_ge divide_le_0_iff hgt_gt_0 of_nat_0_less_iff)
   ultimately have "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * eps k powr (-1/2) \<le> 2 * eps k powr (-1/4)" 
     using mult_le_cancel_right by fastforce
