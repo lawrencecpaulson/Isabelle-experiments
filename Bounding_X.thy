@@ -69,7 +69,7 @@ proof -
         by (meson card_gt_0_iff dboost_star_subset fin finite_subset)
       have "real (card (dboost_star \<mu> l k)) = (\<Sum>i\<in>dboost_star \<mu> l k. 1)"
         by simp
-      also have "...  < (\<Sum>i\<in>dboost_star \<mu> l k. 1 / beta \<mu> l k i)"
+      also have "\<dots>  < (\<Sum>i\<in>dboost_star \<mu> l k. 1 / beta \<mu> l k i)"
       proof (intro sum_strict_mono)
         show "finite (dboost_star \<mu> l k)"
           using card_gt_0_iff gt0 by blast
@@ -482,9 +482,9 @@ proof -
     have "k powr (1/8) * card \<B> \<le> k powr (1/8) * l powr (3/4)"
       using B_limit \<open>Colours l k\<close>
       by (simp add: Lemma_bblue_step_limit_def \<B>_def mult_left_mono)
-    also have "... \<le> k powr (1/8) * k powr (3/4)"
+    also have "\<dots> \<le> k powr (1/8) * k powr (3/4)"
       by (simp add: \<open>l\<le>k\<close> mult_mono powr_mono2)
-    also have "... = k powr (7/8)"
+    also have "\<dots> = k powr (7/8)"
       by (simp flip: powr_add)
     finally show ?thesis
       by (simp add: eps_def powr_powr g_def)
@@ -536,7 +536,7 @@ proof -
     with False show ?thesis
       by (simp add: oddset sum_odds_odd)
   qed
-  also have "... = (\<Sum>i<m. h(Suc i) - h i)"
+  also have "\<dots> = (\<Sum>i<m. h(Suc i) - h i)"
     by (simp add: sum_lessThan_telescope)
   finally have "g k + (eps k powr (-1/4) * card (\<S>\<setminus>\<S>\<S>) - real (2 * card \<R>)) \<le> (\<Sum>i<m. h (Suc i) - h i)" .
   then have "g k + (eps k powr (-1/4) * real (card (\<S> \<setminus> \<S>\<S>)) - real (2 * card \<R>)) \<le> f k"
@@ -637,13 +637,13 @@ proof -
   qed
   then have "(\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. 1 / beta \<mu> l k i) \<le> real k ^ (2 * card(\<S>\<setminus>\<S>\<S>))"
     by (simp add: power_mult)
-  also have "... = real k powr (2 * card(\<S>\<setminus>\<S>\<S>))"
+  also have "\<dots> = real k powr (2 * card(\<S>\<setminus>\<S>\<S>))"
     by (metis \<open>k>0\<close> of_nat_0_less_iff powr_realpow)
-  also have "... \<le> k powr (2 * 3 * eps k powr (1/4) * k)"
+  also have "\<dots> \<le> k powr (2 * 3 * eps k powr (1/4) * k)"
     using X75 \<open>k>0\<close> by (intro powr_mono; linarith) 
-  also have "... \<le> exp (6 * eps k powr (1/4) * k * ln k)"
+  also have "\<dots> \<le> exp (6 * eps k powr (1/4) * k * ln k)"
     by (simp add: powr_def)
-  also have "... = 2 powr -f k"
+  also have "\<dots> = 2 powr -f k"
     by (simp add: f_def powr_def)
   finally have "(\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. 1 / beta \<mu> l k i) \<le> 2 powr -f k" .
   then have A: "(\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. beta \<mu> l k i) \<ge> 2 powr f k"
@@ -669,9 +669,9 @@ proof -
     with \<open>card \<S>\<S> > 0\<close> 
     have "(\<Prod>i\<in>\<S>\<S>. 1 / beta \<mu> l k i) \<le> (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i / card \<S>\<S>) powr (card \<S>\<S>)"
       by (simp add: powr_powr beta_ge0 prod_nonneg)
-    also have "... \<le> (1 / (card \<S>\<S>) * (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i)) powr (card \<S>\<S>)"
+    also have "\<dots> \<le> (1 / (card \<S>\<S>) * (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i)) powr (card \<S>\<S>)"
       using \<open>card \<S>\<S> > 0\<close> by (simp add: field_simps sum_divide_distrib)
-    also have "... \<le> bigbeta \<mu> l k powr (- (card \<S>\<S>))"
+    also have "\<dots> \<le> bigbeta \<mu> l k powr (- (card \<S>\<S>))"
       using \<open>\<S>\<S> \<noteq> {}\<close> \<open>card \<S>\<S> > 0\<close> 
       apply (simp add: bigbeta_def divide_simps powr_minus flip: \<S>\<S>_def)
       apply (simp add: powr_divide beta_ge0 sum_nonneg)
@@ -683,9 +683,9 @@ proof -
     by (simp add: \<open>\<S>\<S> \<subseteq> \<S>\<close> powr_minus prod_dividef mult.commute divide_simps)
   have "2 powr f k * bigbeta \<mu> l k powr card \<S> \<le> 2 powr f k * bigbeta \<mu> l k powr card \<S>\<S>"
     using bigbeta_01 card_SSS by (simp add: powr_mono')
-  also have "... \<le> (\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. beta \<mu> l k i) * (\<Prod>i\<in>\<S>\<S>. beta \<mu> l k i)"
+  also have "\<dots> \<le> (\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. beta \<mu> l k i) * (\<Prod>i\<in>\<S>\<S>. beta \<mu> l k i)"
     using beta_ge0 by (intro mult_mono A B) (auto simp add: prod_nonneg)
-  also have "... = (\<Prod>i\<in>\<S>. beta \<mu> l k i)"
+  also have "\<dots> = (\<Prod>i\<in>\<S>. beta \<mu> l k i)"
     by (metis \<open>\<S>\<S> \<subseteq> \<S>\<close> \<open>finite \<S>\<close> prod.subset_diff)
   finally have "2 powr f k * bigbeta \<mu> l k powr real (card \<S>) \<le> prod (beta \<mu> l k) \<S>" .
   then show ?thesis
@@ -747,7 +747,7 @@ proof -
   have "edge_card Red (Y i) (X i \<setminus> X (Suc i)) 
       = (\<Sum>x \<in> X i \<setminus> X (Suc i). real (card (Neighbours Red x \<inter> Y i)))"
     using edge_card_eq_sum_Neighbours [OF _ _ disYX] finX Red_E by simp
-  also have "... \<le> (\<Sum>x \<in> X i \<setminus> X (Suc i). (p i - q) * card (Y i))"
+  also have "\<dots> \<le> (\<Sum>x \<in> X i \<setminus> X (Suc i). (p i - q) * card (Y i))"
     by (smt (verit, del_insts) Xdif mem_Collect_eq sum_mono)
   finally have A: "edge_card Red (X i \<setminus> X (Suc i)) (Y i) \<le> card (X i \<setminus> X (Suc i)) * (p i - q) * card (Y i)" 
     by (simp add: edge_card_commute)
@@ -789,7 +789,7 @@ proof -
   have "k>0" using k by auto
   have "2 / k^2 \<le> eps k powr (1/2) / k"
     using k by simp
-  also have "... \<le> q"
+  also have "\<dots> \<le> q"
     using \<open>k>0\<close> eps_gt0[of k] Red_5_7a [of k "p i"]
     by (simp add: q_def powr_minus divide_simps flip: powr_add)
   finally have q_ge: "q \<ge> 2 / k^2" .
@@ -853,12 +853,12 @@ lemma X_7_9:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and k: "k\<ge>2" "eps k powr (1/2) / k \<ge> 2 / k^2" 
     and i: "i \<in> Step_class \<mu> l k {dreg_step}"
   defines "X \<equiv> Xseq \<mu> l k" and "p \<equiv> pee \<mu> l k" 
-  defines "h \<equiv> \<lambda>i. hgt k (p i)"
-  assumes "p i \<ge> p0" and hgt: "h (Suc i) \<le> h i + eps k powr (-1/4)"
+  defines "hp \<equiv> \<lambda>i. hgt k (p i)"
+  assumes "p i \<ge> p0" and hgt: "hp (Suc i) \<le> hp i + eps k powr (-1/4)"
     and big: "Big_7_9 k"
   shows "card (X (Suc i)) \<ge> (1 - 2 * eps k powr (1/4)) * card (X i)"
 proof -
-  let ?q = "eps k powr (-1/2) * alpha k (h i)"
+  let ?q = "eps k powr (-1/2) * alpha k (hp i)"
   have "k>0" using k by auto
   have Xsub[simp]: "X (Suc i) \<subseteq> X i"
     using Xseq_Suc_subset X_def by blast
@@ -869,40 +869,40 @@ proof -
   have XSnon0: "card (X (Suc i)) > 0"
     using X_7_7 X_def \<mu> \<open>0 < k\<close> i by blast
   have "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * ?q \<le> p (Suc i) - p i"
-    using X_7_7 X_def \<mu> i k p_def h_def by auto
-  also have "... \<le> 2 * eps k powr (-1/4) * alpha k (h i)"
+    using X_7_7 X_def \<mu> i k p_def hp_def by auto
+  also have "\<dots> \<le> 2 * eps k powr (-1/4) * alpha k (hp i)"
   proof -
-    have hgt_le: "h i \<le> h (Suc i)" 
-      using Y_6_5_DegreeReg \<open>0 < k\<close> i p_def h_def by blast
-    have A: "p (Suc i) \<le> qfun k (h (Suc i))"
-      by (simp add: \<open>0 < k\<close> h_def hgt_works)
-    have B: "qfun k (h i - 1) \<le> p i"
-      using hgt_Least [of "h i - 1" "p i" k] \<open>p i \<ge> p0\<close> by (force simp: h_def)
-    have "p (Suc i) - p i \<le> qfun k (h (Suc i)) - qfun k (h i - 1)"
+    have hgt_le: "hp i \<le> hp (Suc i)" 
+      using Y_6_5_DegreeReg \<open>0 < k\<close> i p_def hp_def by blast
+    have A: "p (Suc i) \<le> qfun k (hp (Suc i))"
+      by (simp add: \<open>0 < k\<close> hp_def hgt_works)
+    have B: "qfun k (hp i - 1) \<le> p i"
+      using hgt_Least [of "hp i - 1" "p i" k] \<open>p i \<ge> p0\<close> by (force simp: hp_def)
+    have "p (Suc i) - p i \<le> qfun k (hp (Suc i)) - qfun k (hp i - 1)"
       using A B by auto
-    also have "... = ((1 + eps k) ^ (Suc (h i - 1 + h (Suc i)) - h i) -
-                      (1 + eps k) ^ (h i - 1))    /  k"
+    also have "\<dots> = ((1 + eps k) ^ (Suc (hp i - 1 + hp (Suc i)) - hp i) -
+                      (1 + eps k) ^ (hp i - 1))    /  k"
       using \<open>k>0\<close> eps_gt0 [of k] hgt_le \<open>p i \<ge> p0\<close> hgt_gt_0 [of k]
-      by (simp add: h_def qfun_def Suc_diff_eq_diff_pred hgt_gt_0 diff_divide_distrib)
-    also have "... = alpha k (h i) / eps k * ((1 + eps k) ^ (1 + h (Suc i) - h i) - 1)"
+      by (simp add: hp_def qfun_def Suc_diff_eq_diff_pred hgt_gt_0 diff_divide_distrib)
+    also have "\<dots> = alpha k (hp i) / eps k * ((1 + eps k) ^ (1 + hp (Suc i) - hp i) - 1)"
       using \<open>k>0\<close>  hgt_le hgt_gt_0 [of k]
-      by (simp add: h_def alpha_eq right_diff_distrib flip: diff_divide_distrib power_add)
-    also have "... \<le> 2 * eps k powr (-1/4) * alpha k (h i)"
+      by (simp add: hp_def alpha_eq right_diff_distrib flip: diff_divide_distrib power_add)
+    also have "\<dots> \<le> 2 * eps k powr (-1/4) * alpha k (hp i)"
     proof -
-      have "((1 + eps k) ^ (1 + h (Suc i) - h i) - 1)  / eps k \<le> ((1 + eps k) powr (eps k powr (-1/4) + 1) - 1) / eps k"
+      have "((1 + eps k) ^ (1 + hp (Suc i) - hp i) - 1)  / eps k \<le> ((1 + eps k) powr (eps k powr (-1/4) + 1) - 1) / eps k"
         using hgt eps_ge0 [of k] hgt_le powr_mono_both by (force simp flip: powr_realpow intro: divide_right_mono)
-      also have "... \<le> 2 * eps k powr (-1/4)"
+      also have "\<dots> \<le> 2 * eps k powr (-1/4)"
         using big by (meson Big_7_9_def)
-      finally have *: "((1 + eps k) ^ (1 + h (Suc i) - h i) - 1) / eps k \<le> 2 * eps k powr (-1/4)" .
+      finally have *: "((1 + eps k) ^ (1 + hp (Suc i) - hp i) - 1) / eps k \<le> 2 * eps k powr (-1/4)" .
       show ?thesis
-        using mult_left_mono [OF *, of "alpha k (h i)"]
+        using mult_left_mono [OF *, of "alpha k (hp i)"]
         by (smt (verit) alpha_ge0 mult.commute times_divide_eq_right)
     qed
     finally show ?thesis .
   qed
-  finally have 29: "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * ?q \<le> 2 * eps k powr (-1/4) * alpha k (h i)" .
-  moreover have "alpha k (h i) > 0"
-    unfolding h_def
+  finally have 29: "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * ?q \<le> 2 * eps k powr (-1/4) * alpha k (hp i)" .
+  moreover have "alpha k (hp i) > 0"
+    unfolding hp_def
     by (smt (verit, ccfv_SIG) eps_gt0 \<open>0 < k\<close> alpha_ge divide_le_0_iff hgt_gt_0 of_nat_0_less_iff)
   ultimately have "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * eps k powr (-1/2) \<le> 2 * eps k powr (-1/4)" 
     using mult_le_cancel_right by fastforce
@@ -911,10 +911,22 @@ proof -
     by (simp add: powr_minus divide_simps mult.commute zero_compare_simps split: if_split_asm)
   then have "card (X i \<setminus> X (Suc i)) \<le> 2 * eps k powr (1/4) * card (X (Suc i))"
     using XSnon0 by (simp add: field_simps flip: powr_add)
-  also have "... \<le> 2 * eps k powr (1/4) * card (X i)"
+  also have "\<dots> \<le> 2 * eps k powr (1/4) * card (X i)"
     by (simp add: card_le mult_mono')
   finally show ?thesis
     by (simp add: card_Diff_subset finX of_nat_diff card_le algebra_simps)
+qed
+
+lemma X_7_10:
+  fixes l k
+  assumes "0<\<mu>" "\<mu><1" and "k>0" 
+  defines "p \<equiv> pee \<mu> l k"
+  defines "hp \<equiv> \<lambda>i. hgt k (p i)"
+  defines "RS \<equiv> Step_class \<mu> l k {red_step,dboost_step}"
+  shows "card {i \<in> RS. hp i \<ge> hp (i-1) + eps k powr (-1/4)} \<le> 3 * eps k powr (1/4) * k"
+proof -
+  show ?thesis
+    sorry
 qed
 
 end (*context Diagonal*)
