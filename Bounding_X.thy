@@ -354,24 +354,34 @@ qed
 
 subsection \<open>Lemma 7.5\<close>
 
+text \<open>Small $o(k)$ bounds on summations for this section\<close>
+
+definition "ok_fun_26 \<equiv> \<lambda>k. 2 * ln k / eps k" 
+
+definition "ok_fun_28 \<equiv> \<lambda>k. -2 * real k powr (7/8)"  
+
+lemma ok_fun_26: "ok_fun_26 \<in> o(real)" and ok_fun_28: "ok_fun_28 \<in> o(real)"
+  unfolding ok_fun_26_def ok_fun_28_def eps_def by real_asymp+
+
 definition 
   "Big_X_7_5 \<equiv> 
     \<lambda>\<mu> l. Lemma_Step_class_halted_nonempty \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l
         \<and> Lemma_bblue_step_limit \<mu> l \<and> Lemma_Y_6_4_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l
-        \<and> (\<forall>k\<ge>l. Lemma_height_upper_bound k \<and> k\<ge>16 \<and> (2 * ln k / eps k + 2 * k powr (7/8) \<le> k))"
+        \<and> (\<forall>k\<ge>l. Lemma_height_upper_bound k \<and> k\<ge>16 \<and> (ok_fun_26 k - ok_fun_28 k \<le> k))"
 
 text \<open>establishing the size requirements for 7.5\<close>
 lemma Big_X_7_5:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_5 \<mu> l"
 proof -
-  have "\<forall>\<^sup>\<infinity>l. 2 * ln l / eps l + 2 * real l powr (7/8) \<le> l" 
-    unfolding eps_def by real_asymp
+  have "\<forall>\<^sup>\<infinity>l. ok_fun_26 l - ok_fun_28 l \<le> l" 
+    unfolding eps_def ok_fun_26_def ok_fun_28_def by real_asymp
   then show ?thesis
     unfolding Big_X_7_5_def using assms eventually_all_ge_at_top [OF height_upper_bound]
     by (simp add: eventually_conj_iff Step_class_halted_nonempty bblue_dboost_step_limit 
         bblue_step_limit Y_6_4_dbooSt Y_6_5_Bblue height_upper_bound eventually_all_ge_at_top)
 qed
+
 
 lemma X_26_and_28:
   fixes l k
@@ -384,44 +394,28 @@ lemma X_26_and_28:
   defines "m \<equiv> Inf \<H>"
   defines "p \<equiv> pee \<mu> l k"
   defines "h \<equiv> \<lambda>i. real (hgt k (p i))"
-  obtains f g where "f \<in> o(real)" "g \<in> o(real)" 
-                    "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> f k"
-                    "g k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
+  obtains "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
+          "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
 proof -
   define \<R> where "\<R> \<equiv> Step_class \<mu> l k {red_step}"
   define \<S> where "\<S> \<equiv> Step_class \<mu> l k {dboost_step}" 
-  have odd: "odd i" if "i \<in> \<R> \<or> i \<in> \<S>" for i
-    using that unfolding \<R>_def \<S>_def by (metis Step_class_insert UnCI step_odd)
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   then have halt: "Lemma_Step_class_halted_nonempty \<mu> l" 
-      and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
-      and B_limit: "Lemma_bblue_step_limit \<mu> l"
-      and Y65B: "Lemma_Y_6_5_Bblue \<mu> l"
-      and hub: "Lemma_height_upper_bound k"
+    and B_limit: "Lemma_bblue_step_limit \<mu> l"
+    and Y65B: "Lemma_Y_6_5_Bblue \<mu> l"
+    and hub: "Lemma_height_upper_bound k"
     using big by (auto simp: Big_X_7_5_def)
-  have "finite \<R>"
-    using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
-  have "finite \<B>"
-    using B_limit \<open>Colours l k\<close> by (simp add: Lemma_bblue_step_limit_def \<B>_def)
-  have "finite \<S>"
-    using BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
-  have [simp]: "\<R> \<inter> \<S> = {}" "\<B> \<inter> (\<R> \<union> \<S>) = {}"
-    by (auto simp add: \<R>_def \<S>_def \<B>_def Step_class_def)
-  have "\<H> \<noteq> {}"
-    using \<H>_def halt \<open>Colours l k\<close> by (simp add: Lemma_Step_class_halted_nonempty_def)
   then have "m \<in> \<H>"
-    by (simp add: Inf_nat_def1 m_def)
+    using \<H>_def \<open>Colours l k\<close> 
+    by (simp add: Inf_nat_def1 m_def Lemma_Step_class_halted_nonempty_def)
   then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
     by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
-
-  define f where "f \<equiv> \<lambda>k. 2 * ln k / eps k"  \<comment> \<open>a small bound for a summation\<close>
   have oddset: "{..<m} \<setminus> \<D> = {i \<in> {..<m}. odd i}" 
     using m_minimal step_odd step_even not_halted_even_dreg 
     by (auto simp: \<D>_def \<H>_def Step_class_insert_NO_MATCH)
       \<comment> \<open>working on 28\<close>
-  define g where "g \<equiv> \<lambda>k. -2 * real k powr (7/8)"  \<comment> \<open>a small bound for a summation\<close>
-  have "g k \<le> -2 * eps k powr (-1/2) * card \<B>"
+  have "ok_fun_28 k \<le> -2 * eps k powr (-1/2) * card \<B>"
   proof -
     have "k powr (1/8) * card \<B> \<le> k powr (1/8) * l powr (3/4)"
       using B_limit \<open>Colours l k\<close>
@@ -431,7 +425,7 @@ proof -
     also have "\<dots> = k powr (7/8)"
       by (simp flip: powr_add)
     finally show ?thesis
-      by (simp add: eps_def powr_powr g_def)
+      by (simp add: eps_def powr_powr ok_fun_28_def)
   qed
   also have "\<dots> \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
   proof -
@@ -446,7 +440,7 @@ proof -
     then show ?thesis 
       by (simp add: mult.commute)
   qed
-  finally have 28: "g k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))" .
+  finally have 28: "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))" .
   have "(\<Sum>i \<in> {..<m} \<setminus> \<D>. h(Suc i) - h(i-1)) \<le> h m - h 0"
   proof (cases "even m")
     case True
@@ -466,20 +460,18 @@ proof -
     by (simp add: sum_lessThan_telescope)
   also have "\<dots> = h m - h 0" 
     by (simp add: sum_lessThan_telescope)
-  also have "\<dots> \<le> f k"
+  also have "\<dots> \<le> ok_fun_26 k"
   proof -
     have "hgt k (p i) \<ge> 1" for i
       by (simp add: Suc_leI hgt_gt_0)
-    moreover have "hgt k (p m) \<le> f k"
-      using hub p_def pee_le1 unfolding f_def Lemma_height_upper_bound_def by blast 
+    moreover have "hgt k (p m) \<le> ok_fun_26 k"
+      using hub p_def pee_le1 unfolding ok_fun_26_def Lemma_height_upper_bound_def by blast 
     ultimately show ?thesis
       by (simp add: h_def)
   qed
-  finally have 26: "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i - 1)) \<le> f k" .
-  moreover have "f \<in> o(real)" "g \<in> o(real)"
-    unfolding f_def g_def eps_def by real_asymp+
-  ultimately show ?thesis
-    using "28" that by blast
+  finally have 26: "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i - 1)) \<le> ok_fun_26 k" .
+  with 28 show ?thesis
+    using that by blast
 qed
 
 lemma X_7_5_aux:
@@ -497,6 +489,11 @@ proof -
   define p where "p \<equiv> pee \<mu> l k"
   define m where "m \<equiv> Inf \<H>"
   define h where "h \<equiv> \<lambda>i. real (hgt k (p i))"
+  obtain 26: "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
+     and 28: "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
+    unfolding \<B>_def \<D>_def \<H>_def h_def m_def p_def
+    using X_26_and_28 assms(1-3) big by blast
+
   have \<S>\<S>: "\<S>\<S> = {i \<in> \<S>. h(Suc i) - h i \<le> eps k powr (-1/4)}" and "\<S>\<S> \<subseteq> \<S>"
     by (auto simp add: \<S>\<S>_def \<S>_def dboost_star_def p_def h_def)
   have in_S: "h(Suc i) - h i > eps k powr (-1/4)" if "i \<in> \<S>\<setminus>\<S>\<S>" for i
@@ -509,11 +506,14 @@ proof -
       and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
       and B_limit: "Lemma_bblue_step_limit \<mu> l"
       and Y64S: "Lemma_Y_6_4_dbooSt \<mu> l"
-      and Y65B: "Lemma_Y_6_5_Bblue \<mu> l"
-      and hub: "Lemma_height_upper_bound k"
       and 16: "k\<ge>16" (*for Y_6_5_Red*)
-      and fg: "2 * ln k / eps k + 2 * k powr (7/8) \<le> k"
+      and ok_fun: "ok_fun_26 k - ok_fun_28 k \<le> k"
     using big by (auto simp: Big_X_7_5_def)
+  then have "m \<in> \<H>"
+    using \<H>_def \<open>Colours l k\<close> 
+    by (simp add: Inf_nat_def1 m_def Lemma_Step_class_halted_nonempty_def)
+  then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
+    by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
   have "finite \<R>"
     using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
   have "finite \<B>"
@@ -522,32 +522,7 @@ proof -
     using BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
   have [simp]: "\<R> \<inter> \<S> = {}" "\<B> \<inter> (\<R> \<union> \<S>) = {}"
     by (auto simp add: \<R>_def \<S>_def \<B>_def Step_class_def)
-  have "Step_class \<mu> l k {halted} \<noteq> {}"
-    using halt \<open>Colours l k\<close> by (simp add: Lemma_Step_class_halted_nonempty_def)
-  then have "\<H> \<noteq> {}"
-    using \<H>_def by blast
-  then have "m \<in> \<H>"
-    by (simp add: Inf_nat_def1 m_def)
-  then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
-    by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
 
-  define f where "f \<equiv> \<lambda>k. 2 * ln k / eps k"  \<comment> \<open>a small bound for a summation\<close>
-  have oddset: "{..<m} \<setminus> \<D> = {i \<in> {..<m}. odd i}" 
-    using m_minimal step_odd step_even not_halted_even_dreg 
-    by (auto simp: \<D>_def \<H>_def Step_class_insert_NO_MATCH)
-  have "(\<Sum>i<m. h(Suc i) - h i) = h m - h 0" 
-    by (simp add: sum_lessThan_telescope)
-  also have "\<dots> \<le> f k"
-  proof -
-    have "hgt k (p i) \<ge> 1" for i
-      by (simp add: Suc_leI hgt_gt_0)
-    moreover have "hgt k (p m) \<le> f k"
-      using hub p_def pee_le1 unfolding f_def Lemma_height_upper_bound_def by blast 
-    ultimately show ?thesis
-      by (simp add: h_def)
-  qed
-  finally have 25: "(\<Sum>i<m. h(Suc i) - h i) \<le> f k" .
-      \<comment> \<open>working on 27\<close>
   obtain cardss:  "card \<S>\<S> \<le> card \<S>" "card (\<S>\<setminus>\<S>\<S>) = card \<S> - card \<S>\<S>"
     by (meson \<open>\<S>\<S> \<subseteq> \<S>\<close> \<open>finite \<S>\<close> card_Diff_subset card_mono infinite_super)
   have "(\<Sum>i \<in> \<S>. h(Suc i) - h(i-1)) \<ge> eps k powr (-1/4) * card (\<S>\<setminus>\<S>\<S>)"
@@ -584,54 +559,8 @@ proof -
   qed
   ultimately have 27: "(\<Sum>i \<in> \<R>\<union>\<S>. h(Suc i) - h(i-1)) \<ge> eps k powr (-1/4) * card (\<S>\<setminus>\<S>\<S>) - 2 * card \<R>"
     by (simp add: sum.union_disjoint \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
-      \<comment> \<open>working on 28\<close>
-  define g where "g \<equiv> \<lambda>k. -2 * real k powr (7/8)"  \<comment> \<open>a small bound for a summation\<close>
-  have "g k \<le> -2 * eps k powr (-1/2) * card \<B>"
-  proof -
-    have "k powr (1/8) * card \<B> \<le> k powr (1/8) * l powr (3/4)"
-      using B_limit \<open>Colours l k\<close>
-      by (simp add: Lemma_bblue_step_limit_def \<B>_def mult_left_mono)
-    also have "\<dots> \<le> k powr (1/8) * k powr (3/4)"
-      by (simp add: \<open>l\<le>k\<close> mult_mono powr_mono2)
-    also have "\<dots> = k powr (7/8)"
-      by (simp flip: powr_add)
-    finally show ?thesis
-      by (simp add: eps_def powr_powr g_def)
-  qed
-  also have "\<dots> \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
-  proof -
-    have "(\<Sum>i \<in> \<B>. -2 * eps k powr (-1/2)) \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
-    proof (rule sum_mono)
-      fix i :: nat
-      assume i: "i \<in> \<B>"
-      show "-2 * eps k powr (-1/2) \<le> h(Suc i) - h(i-1)"
-        using Y65B \<open>Colours l k\<close> \<open>l\<le>k\<close> \<open>k>0\<close> i
-        by (fastforce simp add: Lemma_Y_6_5_Bblue_def p_def \<B>_def h_def)
-    qed
-    then show ?thesis 
-      by (simp add: mult.commute)
-  qed
-  finally have 28: "g k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))" .
-  have "(\<Sum>i \<in> {..<m} \<setminus> \<D>. h(Suc i) - h(i-1)) \<le> h m - h 0"
-  proof (cases "even m")
-    case True
-    then show ?thesis
-      by (simp add: oddset sum_odds_even)
-  next
-    case False
-    have "hgt k (p (m - Suc 0)) \<le> hgt k (p m)"
-      using Y_6_5_DegreeReg [of "m-1"] \<open>k>0\<close> False m_minimal not_halted_even_dreg odd_pos  
-      by (fastforce simp: p_def \<H>_def)
-    then have "h(m - Suc 0) \<le> h m"
-      using h_def of_nat_mono by blast
-    with False show ?thesis
-      by (simp add: oddset sum_odds_odd)
-  qed
-  also have "\<dots> = (\<Sum>i<m. h(Suc i) - h i)"
-    by (simp add: sum_lessThan_telescope)
-  finally have 26: "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i - 1)) \<le> f k" using 25 by simp
 
-  have "g k + (eps k powr (-1/4) * card (\<S>\<setminus>\<S>\<S>) - 2 * card \<R>) \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1)) + (\<Sum>i \<in> \<R>\<union>\<S>. h(Suc i) - h(i-1))"
+  have "ok_fun_28 k + (eps k powr (-1/4) * card (\<S>\<setminus>\<S>\<S>) - 2 * card \<R>) \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1)) + (\<Sum>i \<in> \<R>\<union>\<S>. h(Suc i) - h(i-1))"
     using 27 28 by simp
   also have "\<dots> = (\<Sum>i \<in> \<B> \<union> (\<R>\<union>\<S>). h(Suc i) - h(i-1))"
     by (simp add: \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close> sum.union_disjoint)
@@ -648,17 +577,15 @@ proof -
     then show ?thesis
       by simp
   qed
-  finally have "g k + (eps k powr (-1/4) * card (\<S>\<setminus>\<S>\<S>) - real (2 * card \<R>)) \<le> f k" 
+  finally have "ok_fun_28 k + (eps k powr (-1/4) * card (\<S>\<setminus>\<S>\<S>) - real (2 * card \<R>)) \<le> ok_fun_26 k" 
     using 26 by simp
-  then have "real (card (\<S> \<setminus> \<S>\<S>)) \<le> (f k - g k + 2 * card \<R>) * eps k powr (1/4)"
+  then have "real (card (\<S> \<setminus> \<S>\<S>)) \<le> (ok_fun_26 k - ok_fun_28 k + 2 * card \<R>) * eps k powr (1/4)"
     using eps_gt0 [OF \<open>k>0\<close>]
     by (simp add: powr_minus field_simps del: div_add div_mult_self3)
-  moreover have "f k - g k \<le> k"
-    using fg by (simp add: f_def g_def)
   moreover have "card \<R> < k"
     using red_step_limit \<mu> \<open>Colours l k\<close> unfolding \<R>_def by blast
   ultimately have "card (\<S>\<setminus>\<S>\<S>) \<le> (k + 2 * k) * eps k powr (1/4)"
-    by (smt (verit, best) of_nat_add mult_2 mult_diff_mult nat_less_real_le pos_prod_lt powr_ge_pzero)
+    by (smt (verit, best) ok_fun of_nat_add mult_2 mult_diff_mult nat_less_real_le pos_prod_lt powr_ge_pzero)
   then show ?thesis
     by (simp add: algebra_simps)
 qed
@@ -1028,12 +955,25 @@ qed
 
 lemma X_7_10:
   fixes l k
-  assumes "0<\<mu>" "\<mu><1" and "k>0" 
+  assumes "0<\<mu>" "\<mu><1" and "Colours l k"  
   defines "p \<equiv> pee \<mu> l k"
   defines "hp \<equiv> \<lambda>i. hgt k (p i)"
   defines "RS \<equiv> Step_class \<mu> l k {red_step,dboost_step}"
+  defines "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
+  defines "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
+  defines "\<H> \<equiv> Step_class \<mu> l k {halted}"
+  defines "m \<equiv> Inf \<H>"
+  defines "p \<equiv> pee \<mu> l k"
+  defines "h \<equiv> \<lambda>i. real (hgt k (p i))"
+  assumes big: "Big_X_7_5 \<mu> l"
   shows "card {i \<in> RS. hp i \<ge> hp (i-1) + eps k powr (-1/4)} \<le> 3 * eps k powr (1/4) * k"
 proof -
+  obtain 26: "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
+     and 28: "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
+    unfolding \<B>_def \<D>_def \<H>_def h_def m_def p_def
+    using X_26_and_28 assms(1-3) big by blast
+  obtain lk: "0<l" "l\<le>k" "0<k"
+    using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   show ?thesis
     sorry
 qed
