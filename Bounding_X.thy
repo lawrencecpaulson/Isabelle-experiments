@@ -958,22 +958,87 @@ lemma X_7_10:
   assumes "0<\<mu>" "\<mu><1" and "Colours l k"  
   defines "p \<equiv> pee \<mu> l k"
   defines "hp \<equiv> \<lambda>i. hgt k (p i)"
-  defines "RS \<equiv> Step_class \<mu> l k {red_step,dboost_step}"
+  defines "\<R> \<equiv> Step_class \<mu> l k {red_step}"
+  defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   defines "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
   defines "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
   defines "\<H> \<equiv> Step_class \<mu> l k {halted}"
   defines "m \<equiv> Inf \<H>"
-  defines "p \<equiv> pee \<mu> l k"
   defines "h \<equiv> \<lambda>i. real (hgt k (p i))"
+  defines "RSS \<equiv> {i \<in> \<R>\<union>\<S>. hp i \<ge> hp (i-1) + eps k powr (-1/4)}"
   assumes big: "Big_X_7_5 \<mu> l"
-  shows "card {i \<in> RS. hp i \<ge> hp (i-1) + eps k powr (-1/4)} \<le> 3 * eps k powr (1/4) * k"
+  shows "card RSS \<le> 3 * eps k powr (1/4) * k"
 proof -
   obtain 26: "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
      and 28: "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
     unfolding \<B>_def \<D>_def \<H>_def h_def m_def p_def
     using X_26_and_28 assms(1-3) big by blast
+  have odd: "odd i" if "i \<in> \<R> \<or> i \<in> \<S>" for i
+    using that unfolding \<R>_def \<S>_def by (metis Step_class_insert UnCI step_odd)
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
+  then have halt: "Lemma_Step_class_halted_nonempty \<mu> l" 
+    and B_limit: "Lemma_bblue_step_limit \<mu> l"
+    and Y65B: "Lemma_Y_6_5_Bblue \<mu> l"
+    and hub: "Lemma_height_upper_bound k"
+    using big by (auto simp: Big_X_7_5_def)
+  then have "m \<in> \<H>"
+    using \<H>_def \<open>Colours l k\<close> 
+    by (simp add: Inf_nat_def1 m_def Lemma_Step_class_halted_nonempty_def)
+  then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
+    by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
+
+  have "(\<lambda>k. ok_fun_26 k - ok_fun_28 k) \<in> o(real)"
+    using ok_fun_26 ok_fun_28 sum_in_smallo(2) by blast
+
+  have "\<R>\<union>\<S> \<subseteq> {..<m} \<setminus> \<D> \<setminus> \<B>" and BmD: "\<B> \<subseteq> {..<m} \<setminus> \<D>"
+    by (auto simp: \<R>_def \<S>_def \<D>_def \<B>_def \<H>_def Step_class_def simp flip: m_minimal)
+  then
+  have RS_eq: "\<R>\<union>\<S> = {..<m} \<setminus> \<D> - \<B>"
+    apply (auto simp: \<R>_def \<S>_def \<D>_def \<B>_def \<H>_def Step_class_def simp flip: m_minimal)[1]
+    using stepkind.exhaust by blast
+
+  have "(\<Sum>i\<in>\<R>\<union>\<S>. h (Suc i) - h (i-1)) = (\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) - (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
+    unfolding RS_eq by (intro sum_diff BmD) auto
+  also have "... \<le> ok_fun_26 k - ok_fun_28 k"
+    using 26 28 by linarith
+  finally have "(\<Sum>i\<in>\<R>\<union>\<S>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k - ok_fun_28 k" .
+
+  have "(\<Sum>i \<in> \<S>. h(Suc i) - h(i-1)) \<ge> eps k powr (-1/4) * card RSS"
+  proof -
+    have "(\<Sum>i \<in> RSS. h(Suc i) - h(i-1)) \<ge> (\<Sum>i \<in> RSS. eps k powr (-1/4))"
+    proof (rule sum_mono)
+      fix i :: nat
+      assume i: "i \<in> RSS"
+      with i odd have "i-1 \<in> \<D>"       
+        by (simp add: \<S>_def \<D>_def dreg_before_step Step_class_insert_NO_MATCH)
+      with i odd show "eps k powr (-1/4) \<le> h(Suc i) - h(i-1)"
+        using in_S[of i] Y_6_5_DegreeReg[of "i-1" \<mu> l k] \<open>k>0\<close>
+        by (simp add: p_def \<D>_def h_def)
+    qed
+    moreover
+    have "(\<Sum>i \<in> \<S>\<S>. h(Suc i) - h(i-1)) \<ge> 0"
+      using Y64S \<open>Colours l k\<close> \<open>k>0\<close>  
+      by (force simp add: Lemma_Y_6_4_dbooSt_def p_def h_def \<S>\<S> \<S>_def hgt_mono intro: sum_nonneg)
+    ultimately show ?thesis
+      by (simp add: mult.commute sum.subset_diff [OF \<open>\<S>\<S> \<subseteq> \<S>\<close> \<open>finite \<S>\<close>])
+  qed
+  moreover
+  have "(\<Sum>i \<in> \<R>. h(Suc i) - h(i-1)) \<ge> (\<Sum>i \<in> \<R>. -2)"
+  proof (rule sum_mono)
+    fix i :: nat
+    assume i: "i \<in> \<R>"
+    with i odd have "i-1 \<in> \<D>"       
+      by (simp add: \<R>_def \<D>_def dreg_before_step Step_class_insert_NO_MATCH)
+    with i odd have "hgt k (p (i - 1)) - 2 \<le> hgt k (p (Suc i))"
+      using Y_6_5_Red[of i] 16 Y_6_5_DegreeReg[of "i-1"]
+      by (fastforce simp: algebra_simps \<R>_def \<D>_def p_def)
+    then show "- 2 \<le> h(Suc i) - h(i-1)"
+      unfolding h_def by linarith
+  qed
+  ultimately have 27: "(\<Sum>i \<in> \<R>\<union>\<S>. h(Suc i) - h(i-1)) \<ge> eps k powr (-1/4) * card RSS - 2 * card \<R>"
+    by (simp add: sum.union_disjoint \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
+
   show ?thesis
     sorry
 qed

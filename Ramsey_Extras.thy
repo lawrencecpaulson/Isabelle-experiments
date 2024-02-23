@@ -210,7 +210,7 @@ next
     by (cases "k=0"; simp add: finite_nsets_iff)
 qed
 
-subsection \<open>Erdos--Sekeres theorem\<close>
+subsection \<open>Erdos--Szekeres theorem\<close>
 
 text \<open>There's always a 0-clique\<close>
 lemma partn_lst_0: "\<gamma> > 0 \<Longrightarrow> partn_lst \<beta> (0#\<alpha>) \<gamma>"
@@ -1352,8 +1352,6 @@ theorem RN_lower_off_diag:
   using Ramsey_number_lower_off_diag [OF assms] is_Ramsey_number_RN by force
 
 text \<open>The original Ramsey number lower bound, by Erdős\<close>
-(* requires re-factoring to take advantage of card_Pow_diff and with a symmetric treatment of 
-independent sets, and also utilising Andrew's simpler estimation *)
 proposition Ramsey_number_lower:  
   fixes n s::nat
   assumes "s \<ge> 3" and n: "real n \<le> 2 powr (s/2)"
