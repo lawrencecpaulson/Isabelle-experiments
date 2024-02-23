@@ -641,8 +641,7 @@ proof -
   then have beta_gt_0: "\<forall>i\<in>\<S>. 0 < beta \<mu> l k i"
     by (simp add: Lemma_beta_gt_0_def \<S>_def \<open>Colours l k\<close>)
   have "finite \<S>"
-    using BS_limit 
-    by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
+    using BS_limit  by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
   moreover have "\<S>\<S> \<subseteq> \<S>"
     unfolding \<S>\<S>_def \<S>_def dboost_star_def by auto
   ultimately have "finite \<S>\<S>"
@@ -955,9 +954,8 @@ qed
 
 lemma X_7_10:
   fixes l k
-  assumes "0<\<mu>" "\<mu><1" and "Colours l k"  
+  assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
   defines "p \<equiv> pee \<mu> l k"
-  defines "hp \<equiv> \<lambda>i. hgt k (p i)"
   defines "\<R> \<equiv> Step_class \<mu> l k {red_step}"
   defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   defines "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
@@ -965,8 +963,8 @@ lemma X_7_10:
   defines "\<H> \<equiv> Step_class \<mu> l k {halted}"
   defines "m \<equiv> Inf \<H>"
   defines "h \<equiv> \<lambda>i. real (hgt k (p i))"
-  defines "RSS \<equiv> {i \<in> \<R>\<union>\<S>. hp i \<ge> hp (i-1) + eps k powr (-1/4)}"
-  assumes big: "Big_X_7_5 \<mu> l"
+  defines "RSS \<equiv> {i \<in> \<R>\<union>\<S>. h i \<ge> h (i-1) + eps k powr (-1/4)}"
+  assumes big: "Big_X_7_5 \<mu> l" and Y_6_5_S: "Lemma_6_5_dbooSt \<mu> l"
   shows "card RSS \<le> 3 * eps k powr (1/4) * k"
 proof -
   obtain 26: "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
@@ -978,9 +976,11 @@ proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   then have halt: "Lemma_Step_class_halted_nonempty \<mu> l" 
+    and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
     and B_limit: "Lemma_bblue_step_limit \<mu> l"
     and Y65B: "Lemma_Y_6_5_Bblue \<mu> l"
     and hub: "Lemma_height_upper_bound k"
+    and 16: "k\<ge>16" (*for Y_6_5_Red*)
     using big by (auto simp: Big_X_7_5_def)
   then have "m \<in> \<H>"
     using \<H>_def \<open>Colours l k\<close> 
@@ -1004,17 +1004,33 @@ proof -
     using 26 28 by linarith
   finally have "(\<Sum>i\<in>\<R>\<union>\<S>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k - ok_fun_28 k" .
 
+
+  have "finite \<R>"
+    using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
+  have "finite \<B>"
+    using B_limit \<open>Colours l k\<close> by (simp add: Lemma_bblue_step_limit_def \<B>_def)
+  have "finite \<S>"
+    using BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
+
+  have in_RSS: "h i - h (i-1) \<ge> eps k powr (-1/4)" if "i \<in> RSS" for i
+    using that by (auto simp: RSS_def)
+
+
   have "(\<Sum>i \<in> \<S>. h(Suc i) - h(i-1)) \<ge> eps k powr (-1/4) * card RSS"
   proof -
-    have "(\<Sum>i \<in> RSS. h(Suc i) - h(i-1)) \<ge> (\<Sum>i \<in> RSS. eps k powr (-1/4))"
+    let ?S = "{i \<in> \<S>. h i \<ge> h (i-1) + eps k powr (-1/4)}"
+    have "(\<Sum>i \<in> ?S. h(Suc i) - h(i-1)) \<ge> (\<Sum>i \<in> ?S. eps k powr (-1/4))"
     proof (rule sum_mono)
       fix i :: nat
-      assume i: "i \<in> RSS"
-      with i odd have "i-1 \<in> \<D>"       
-        by (simp add: \<S>_def \<D>_def dreg_before_step Step_class_insert_NO_MATCH)
-      with i odd show "eps k powr (-1/4) \<le> h(Suc i) - h(i-1)"
-        using in_S[of i] Y_6_5_DegreeReg[of "i-1" \<mu> l k] \<open>k>0\<close>
-        by (simp add: p_def \<D>_def h_def)
+      assume i: "i \<in> ?S"
+      have "hgt k (pee \<mu> l k i) \<le> hgt k (pee \<mu> l k (Suc i))"
+        using i 
+        apply (auto simp: \<R>_def \<S>_def)
+        using Y_6_5_S unfolding Lemma_6_5_dbooSt_def
+        using assms(3) by blast 
+      then show "eps k powr (-1/4) \<le> h(Suc i) - h(i-1)"
+        using in_RSS[of i] i \<open>k>0\<close>
+        by (simp add: RSS_def h_def p_def)
     qed
     moreover
     have "(\<Sum>i \<in> \<S>\<S>. h(Suc i) - h(i-1)) \<ge> 0"
