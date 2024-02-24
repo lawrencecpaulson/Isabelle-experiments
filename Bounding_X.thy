@@ -1016,30 +1016,51 @@ proof -
     using that by (auto simp: RSS_def)
 
 
-  have "(\<Sum>i \<in> \<S>. h(Suc i) - h(i-1)) \<ge> eps k powr (-1/4) * card RSS"
-  proof -
-    let ?S = "{i \<in> \<S>. h i \<ge> h (i-1) + eps k powr (-1/4)}"
-    have "(\<Sum>i \<in> ?S. h(Suc i) - h(i-1)) \<ge> (\<Sum>i \<in> ?S. eps k powr (-1/4))"
-    proof (rule sum_mono)
-      fix i :: nat
-      assume i: "i \<in> ?S"
-      have "hgt k (pee \<mu> l k i) \<le> hgt k (pee \<mu> l k (Suc i))"
-        using i 
-        apply (auto simp: \<R>_def \<S>_def)
-        using Y_6_5_S unfolding Lemma_6_5_dbooSt_def
-        using assms(3) by blast 
-      then show "eps k powr (-1/4) \<le> h(Suc i) - h(i-1)"
-        using in_RSS[of i] i \<open>k>0\<close>
-        by (simp add: RSS_def h_def p_def)
-    qed
-    moreover
-    have "(\<Sum>i \<in> \<S>\<S>. h(Suc i) - h(i-1)) \<ge> 0"
-      using Y64S \<open>Colours l k\<close> \<open>k>0\<close>  
-      by (force simp add: Lemma_Y_6_4_dbooSt_def p_def h_def \<S>\<S> \<S>_def hgt_mono intro: sum_nonneg)
-    ultimately show ?thesis
-      by (simp add: mult.commute sum.subset_diff [OF \<open>\<S>\<S> \<subseteq> \<S>\<close> \<open>finite \<S>\<close>])
+  have "card RSS * eps k powr (-1/4) = (\<Sum>i \<in> RSS. eps k powr (-1/4))"
+    by simp
+
+
+  have "(\<Sum>i \<in> RSS. h(Suc i) - h(i-1)) + (\<Sum>i \<in> \<R>\<union>\<S>\<setminus>RSS. h(Suc i) - h(i-1)) = (\<Sum>i \<in> \<R>\<union>\<S>. h(Suc i) - h(i-1))"
+    apply (subst sum_diff)
+      apply (simp add: \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
+     apply (force simp add: RSS_def)
+    apply (force simp add: )
+    done
+
+
+  have "(\<Sum>i \<in> \<S>. h(Suc i) - h(i-1)) \<ge> (\<Sum>i \<in> \<S>. 0)"
+  proof (rule sum_mono)
+    fix i :: nat
+    assume i: "i \<in> \<S>"
+    then have *: "hgt k (pee \<mu> l k i) \<le> hgt k (pee \<mu> l k (Suc i))"
+      using Y_6_5_S unfolding Lemma_6_5_dbooSt_def
+      using assms(3) \<S>_def by blast
+    with i odd have "i-1 \<in> \<D>"       
+      by (simp add: \<S>_def \<D>_def dreg_before_step Step_class_insert_NO_MATCH)
+    then have "hgt k (pee \<mu> l k (i-1)) \<le> hgt k (pee \<mu> l k i)"
+      using  i \<open>k>0\<close> unfolding h_def p_def
+      by (metis Suc_diff_1 Y_6_5_DegreeReg \<D>_def odd odd_pos)
+    with * show "0 \<le> h(Suc i) - h(i-1)"
+      using  i \<open>k>0\<close> unfolding h_def p_def by linarith
   qed
-  moreover
+  
+  
+  let ?S = "{i \<in> \<S>. h i \<ge> h (i-1) + eps k powr (-1/4)}"
+  have "(\<Sum>i \<in> ?S. h(Suc i) - h(i-1)) \<ge> (\<Sum>i \<in> ?S. eps k powr (-1/4))"
+  proof (rule sum_mono)
+    fix i :: nat
+    assume i: "i \<in> ?S"
+    have "hgt k (pee \<mu> l k i) \<le> hgt k (pee \<mu> l k (Suc i))"
+      using i 
+      apply (auto simp: \<R>_def \<S>_def)
+      using Y_6_5_S unfolding Lemma_6_5_dbooSt_def
+      using assms(3) by blast 
+    then show "eps k powr (-1/4) \<le> h(Suc i) - h(i-1)"
+      using in_RSS[of i] i \<open>k>0\<close>
+      by (simp add: RSS_def h_def p_def)
+  qed
+
+
   have "(\<Sum>i \<in> \<R>. h(Suc i) - h(i-1)) \<ge> (\<Sum>i \<in> \<R>. -2)"
   proof (rule sum_mono)
     fix i :: nat
@@ -1052,7 +1073,63 @@ proof -
     then show "- 2 \<le> h(Suc i) - h(i-1)"
       unfolding h_def by linarith
   qed
-  ultimately have 27: "(\<Sum>i \<in> \<R>\<union>\<S>. h(Suc i) - h(i-1)) \<ge> eps k powr (-1/4) * card RSS - 2 * card \<R>"
+
+  have "(\<Sum>i \<in> RSS. eps k powr (-1/4)) + (\<Sum>i \<in> RSS. if i \<in> \<R> then -2 else 0) = (\<Sum>i \<in> RSS. eps k powr (-1/4) + (if i \<in> \<R> then -2 else 0))"
+    by (simp add: sum.distrib)
+  also have "(\<Sum>i \<in> RSS. eps k powr (-1/4) + (if i \<in> \<R> then -2 else 0)) \<le> (\<Sum>i \<in> RSS. h(Suc i) - h(i-1))"
+  proof (rule sum_mono)
+    fix i :: nat
+    assume i: "i \<in> RSS"
+    with i odd[of i] dreg_before_step'[of i] have D: "i-1 \<in> \<D>"       
+      by (auto simp add: RSS_def \<S>_def \<R>_def \<D>_def dreg_before_step Step_class_def)
+    then have *: "hgt k (p (i-1)) \<le> hgt k (p i)"
+      using \<open>k>0\<close> unfolding h_def p_def \<D>_def
+      by (metis Suc_pred' Y_6_5_DegreeReg diff_0_eq_0 gr0I le_eq_less_or_eq)
+    show "eps k powr (- 1 / 4) + (if i \<in> \<R> then - 2 else 0) \<le> h (Suc i) - h (i - 1)"
+    proof (cases "i \<in> \<R>")
+      case True
+      then have "h i - 2 \<le> h (Suc i)"
+        using Y_6_5_Red[of i] 16
+        by (fastforce simp add: algebra_simps \<R>_def \<D>_def h_def p_def)
+      with * True show ?thesis
+        apply (simp add: h_def)
+        by (smt (verit, ccfv_SIG) assms(11) assms(4) divide_minus_left i in_RSS numeral_nat(7))
+    next
+      case False
+      then have "h (i - Suc 0) + eps k powr - (1 / 4) \<le> h i"
+        by (smt (verit) divide_minus_left i in_RSS numeral_nat(7))
+      then show ?thesis
+        using * i False \<open>k>0\<close>
+        apply (simp add: RSS_def h_def p_def)
+        using Diagonal.Lemma_6_5_dbooSt_def Diagonal_axioms assms(14) assms(3) assms(6) by fastforce
+    qed
+  qed
+    then
+    have "hgt k (pee \<mu> l k i) \<le> hgt k (pee \<mu> l k (Suc i))"
+      unfolding RSS_def
+apply (auto simp: )
+      using i 
+      apply (auto simp: \<R>_def \<S>_def)
+      using Y_6_5_S unfolding Lemma_6_5_dbooSt_def
+      using assms(3) by blast 
+    then show "eps k powr (-1/4) \<le> h(Suc i) - h(i-1)"
+      using in_RSS[of i] i \<open>k>0\<close>
+      by (simp add: RSS_def h_def p_def)
+  qed
+
+
+
+  have "(\<Sum>i \<in> \<R>. h(Suc i) - h(i-1)) + (\<Sum>i \<in> ?S. h(Suc i) - h(i-1)) \<le> (\<Sum>i \<in> \<R>\<union>\<S>. h(Suc i) - h(i-1))"
+    apply (subst sum.union_disjoint)
+       apply (simp_all add: \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
+     apply (force simp add: \<R>_def \<S>_def Step_class_def)
+
+     apply (force simp add: RSS_def)
+    apply (force simp add: )
+    done
+
+
+  have 27: "(\<Sum>i \<in> \<R>\<union>\<S>. h(Suc i) - h(i-1)) \<ge> eps k powr (-1/4) * card RSS - 2 * card \<R>"
     by (simp add: sum.union_disjoint \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
 
   show ?thesis
