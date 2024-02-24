@@ -401,7 +401,7 @@ proof -
   define \<S> where "\<S> \<equiv> Step_class \<mu> l k {dboost_step}" 
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  then have halt: "Lemma_Step_class_halted_nonempty \<mu> l" 
+  then have "Lemma_Step_class_halted_nonempty \<mu> l" 
     and B_limit: "Lemma_bblue_step_limit \<mu> l"
     and Y65B: "Lemma_Y_6_5_Bblue \<mu> l"
     and hub: "Lemma_height_upper_bound k"
@@ -502,7 +502,7 @@ proof -
     using that unfolding \<R>_def \<S>_def by (metis Step_class_insert UnCI step_odd)
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  then have halt: "Lemma_Step_class_halted_nonempty \<mu> l" 
+  then have "Lemma_Step_class_halted_nonempty \<mu> l" 
       and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
       and B_limit: "Lemma_bblue_step_limit \<mu> l"
       and Y64S: "Lemma_Y_6_4_dbooSt \<mu> l"
@@ -965,7 +965,7 @@ lemma X_7_10:
   defines "h \<equiv> \<lambda>i. real (hgt k (p i))"
   defines "H \<equiv> {i. h i \<ge> h (i-1) + eps k powr (-1/4)}"
   assumes big: "Big_X_7_5 \<mu> l" and Y_6_5_S: "Lemma_6_5_dbooSt \<mu> l"
-  shows "card {(\<R>\<union>\<S>) \<inter> H} \<le> 3 * eps k powr (1/4) * k"
+  shows "card ((\<R>\<union>\<S>) \<inter> H) \<le> 3 * eps k powr (1/4) * k"
 proof -
   obtain 26: "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
      and 28: "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
@@ -975,38 +975,30 @@ proof -
     using that unfolding \<R>_def \<S>_def by (metis Step_class_insert UnCI step_odd)
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  then have halt: "Lemma_Step_class_halted_nonempty \<mu> l" 
+  then have "Lemma_Step_class_halted_nonempty \<mu> l" 
     and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
-    and B_limit: "Lemma_bblue_step_limit \<mu> l"
-    and Y65B: "Lemma_Y_6_5_Bblue \<mu> l"
     and hub: "Lemma_height_upper_bound k"
     and 16: "k\<ge>16" (*for Y_6_5_Red*)
+    and ok_le_k: "ok_fun_26 k - ok_fun_28 k \<le> k"
     using big by (auto simp: Big_X_7_5_def)
   then have "m \<in> \<H>"
     using \<H>_def \<open>Colours l k\<close> 
     by (simp add: Inf_nat_def1 m_def Lemma_Step_class_halted_nonempty_def)
   then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
     by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
-
-  have "(\<lambda>k. ok_fun_26 k - ok_fun_28 k) \<in> o(real)"
-    using ok_fun_26 ok_fun_28 sum_in_smallo(2) by blast
-
   have "\<R>\<union>\<S> \<subseteq> {..<m} \<setminus> \<D> \<setminus> \<B>" and BmD: "\<B> \<subseteq> {..<m} \<setminus> \<D>"
     by (auto simp: \<R>_def \<S>_def \<D>_def \<B>_def \<H>_def Step_class_def simp flip: m_minimal)
-  then
-  have RS_eq: "\<R>\<union>\<S> = {..<m} \<setminus> \<D> - \<B>"
-    apply (auto simp: \<R>_def \<S>_def \<D>_def \<B>_def \<H>_def Step_class_def simp flip: m_minimal)[1]
+  then have RS_eq: "\<R>\<union>\<S> = {..<m} \<setminus> \<D> - \<B>"
+    apply (auto simp: \<R>_def \<S>_def \<D>_def \<B>_def \<H>_def Step_class_def simp flip: m_minimal)
     using stepkind.exhaust by blast
   have "(\<Sum>i\<in>\<R>\<union>\<S>. h (Suc i) - h (i-1)) = (\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) - (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
     unfolding RS_eq by (intro sum_diff BmD) auto
   also have "... \<le> ok_fun_26 k - ok_fun_28 k"
     using 26 28 by linarith
-  finally have "(\<Sum>i\<in>\<R>\<union>\<S>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k - ok_fun_28 k" .
+  finally have *: "(\<Sum>i\<in>\<R>\<union>\<S>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k - ok_fun_28 k" .
 
   have "finite \<R>"
     using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
-  have "finite \<B>"
-    using B_limit \<open>Colours l k\<close> by (simp add: Lemma_bblue_step_limit_def \<B>_def)
   have "finite \<S>"
     using BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
 
@@ -1063,12 +1055,17 @@ proof -
       qed
     qed
   qed
-  finally have 27: "card ((\<R>\<union>\<S>) \<inter> H) * eps k powr (-1/4) - 2 * card \<R>
-             \<le> (\<Sum>i\<in>\<R>\<union>\<S>. h (Suc i) - h (i-1))"
+  also have "... \<le> k"
+    using * ok_le_k
+    by linarith
+  finally have "card ((\<R>\<union>\<S>) \<inter> H) * eps k powr (-1/4) - 2 * card \<R> \<le> k"
     by linarith 
-
-  show ?thesis
-    sorry
+  moreover have "card \<R> \<le> k"
+    by (metis \<R>_def \<open>\<mu>>0\<close> \<open>Colours l k\<close> nless_le red_step_limit(2))
+  ultimately have "card ((\<R>\<union>\<S>) \<inter> H) * eps k powr (-1/4) \<le> 3 * k"
+    by linarith
+  with eps_gt0 [OF\<open>k>0\<close>] show ?thesis
+    by (simp add: powr_minus divide_simps mult.commute split: if_split_asm)
 qed
 
 end (*context Diagonal*)
