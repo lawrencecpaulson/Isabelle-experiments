@@ -865,10 +865,10 @@ qed
 
 subsection \<open>Lemma 7.9\<close>
 
-definition "Big_7_9 \<equiv> \<lambda>k. ((1 + eps k) powr (eps k powr (-1/4) + 1) - 1) / eps k \<le> 2 * eps k powr (-1/4)"
+definition "Big_X_7_9 \<equiv> \<lambda>k. ((1 + eps k) powr (eps k powr (-1/4) + 1) - 1) / eps k \<le> 2 * eps k powr (-1/4)"
 
-lemma "\<forall>\<^sup>\<infinity>k. Big_7_9 k"
-  unfolding eps_def Big_7_9_def
+lemma "\<forall>\<^sup>\<infinity>k. Big_X_7_9 k"
+  unfolding eps_def Big_X_7_9_def
   by real_asymp
 
 lemma one_plus_powr_le:
@@ -890,7 +890,7 @@ lemma X_7_9:
   defines "X \<equiv> Xseq \<mu> l k" and "p \<equiv> pee \<mu> l k" 
   defines "hp \<equiv> \<lambda>i. hgt k (p i)"
   assumes "p i \<ge> p0" and hgt: "hp (Suc i) \<le> hp i + eps k powr (-1/4)"
-    and big: "Big_7_9 k"
+    and big: "Big_X_7_9 k"
   shows "card (X (Suc i)) \<ge> (1 - 2 * eps k powr (1/4)) * card (X i)"
 proof -
   let ?q = "eps k powr (-1/2) * alpha k (hp i)"
@@ -927,7 +927,7 @@ proof -
       have "((1 + eps k) ^ (1 + hp (Suc i) - hp i) - 1)  / eps k \<le> ((1 + eps k) powr (eps k powr (-1/4) + 1) - 1) / eps k"
         using hgt eps_ge0 [of k] hgt_le powr_mono_both by (force simp flip: powr_realpow intro: divide_right_mono)
       also have "\<dots> \<le> 2 * eps k powr (-1/4)"
-        using big by (meson Big_7_9_def)
+        using big by (meson Big_X_7_9_def)
       finally have *: "((1 + eps k) ^ (1 + hp (Suc i) - hp i) - 1) / eps k \<le> 2 * eps k powr (-1/4)" .
       show ?thesis
         using mult_left_mono [OF *, of "alpha k (hp i)"]
@@ -952,6 +952,8 @@ proof -
     by (simp add: card_Diff_subset finX of_nat_diff card_le algebra_simps)
 qed
 
+subsection \<open>Lemma 7.10\<close>
+
 lemma X_7_10:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
@@ -963,9 +965,9 @@ lemma X_7_10:
   defines "\<H> \<equiv> Step_class \<mu> l k {halted}"
   defines "m \<equiv> Inf \<H>"
   defines "h \<equiv> \<lambda>i. real (hgt k (p i))"
-  defines "H \<equiv> {i. h i \<ge> h (i-1) + eps k powr (-1/4)}"
+  defines "C \<equiv> {i. h i \<ge> h (i-1) + eps k powr (-1/4)}"
   assumes big: "Big_X_7_5 \<mu> l" and Y_6_5_S: "Lemma_6_5_dbooSt \<mu> l"
-  shows "card ((\<R>\<union>\<S>) \<inter> H) \<le> 3 * eps k powr (1/4) * k"
+  shows "card ((\<R>\<union>\<S>) \<inter> C) \<le> 3 * eps k powr (1/4) * k"
 proof -
   obtain 26: "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
      and 28: "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
@@ -1016,10 +1018,10 @@ proof -
       using \<open>k>0\<close> unfolding h_def p_def by linarith
   qed
 
-  have "card ((\<R>\<union>\<S>) \<inter> H) * eps k powr (-1/4) + real (card \<R>) * (-2)
-      = (\<Sum>i \<in> \<R>\<union>\<S>. if i\<in>H then eps k powr (-1/4) else 0) + (\<Sum>i \<in> \<R>\<union>\<S>. if i\<in>\<R> then -2 else 0)"
+  have "card ((\<R>\<union>\<S>) \<inter> C) * eps k powr (-1/4) + real (card \<R>) * (-2)
+      = (\<Sum>i \<in> \<R>\<union>\<S>. if i\<in>C then eps k powr (-1/4) else 0) + (\<Sum>i \<in> \<R>\<union>\<S>. if i\<in>\<R> then -2 else 0)"
     by (simp add: \<open>finite \<R>\<close> \<open>finite \<S>\<close> Int_commute Int_left_commute flip: sum.inter_restrict)
-  also have "\<dots> = (\<Sum>i \<in> \<R>\<union>\<S>. (if i\<in>H then eps k powr (-1/4) else 0) + (if i\<in>\<R> then -2 else 0))"
+  also have "\<dots> = (\<Sum>i \<in> \<R>\<union>\<S>. (if i\<in>C then eps k powr (-1/4) else 0) + (if i\<in>\<R> then -2 else 0))"
     by (simp add: sum.distrib)
   also have "\<dots> \<le> (\<Sum>i \<in> \<R>\<union>\<S>. h(Suc i) - h(i-1))"
   proof (rule sum_mono)
@@ -1030,21 +1032,21 @@ proof -
     then have *: "hgt k (p (i-1)) \<le> hgt k (p i)"
       using \<open>k>0\<close> unfolding h_def p_def \<D>_def
       by (metis Suc_pred' Y_6_5_DegreeReg diff_0_eq_0 gr0I le_eq_less_or_eq)
-    show "(if i\<in>H then eps k powr (-1/4) else 0) + (if i\<in>\<R> then - 2 else 0) \<le> h (Suc i) - h (i-1)"
+    show "(if i\<in>C then eps k powr (-1/4) else 0) + (if i\<in>\<R> then - 2 else 0) \<le> h (Suc i) - h (i-1)"
     proof (cases "i\<in>\<R>")
       case True
       then have "h i - 2 \<le> h (Suc i)"
         using Y_6_5_Red[of i] 16 by (force simp: algebra_simps \<R>_def h_def p_def)
       with * True show ?thesis
-        by (simp add: h_def H_def)
+        by (simp add: h_def C_def)
     next
       case nonR: False
       with i have "i\<in>\<S>" by blast
       show ?thesis
-      proof (cases "i\<in>H")
+      proof (cases "i\<in>C")
         case True
-        then have "h (i - Suc 0) + eps k powr - (1 / 4) \<le> h i"
-          by (simp add: H_def)
+        then have "h (i - Suc 0) + eps k powr (-1/4) \<le> h i"
+          by (simp add: C_def)
         then show ?thesis
           using * i nonR \<open>k>0\<close> Y_6_5_S \<open>Colours l k\<close>
           by (force simp add: h_def p_def \<S>_def Lemma_6_5_dbooSt_def)
@@ -1058,15 +1060,73 @@ proof -
   also have "... \<le> k"
     using * ok_le_k
     by linarith
-  finally have "card ((\<R>\<union>\<S>) \<inter> H) * eps k powr (-1/4) - 2 * card \<R> \<le> k"
+  finally have "card ((\<R>\<union>\<S>) \<inter> C) * eps k powr (-1/4) - 2 * card \<R> \<le> k"
     by linarith 
   moreover have "card \<R> \<le> k"
     by (metis \<R>_def \<open>\<mu>>0\<close> \<open>Colours l k\<close> nless_le red_step_limit(2))
-  ultimately have "card ((\<R>\<union>\<S>) \<inter> H) * eps k powr (-1/4) \<le> 3 * k"
+  ultimately have "card ((\<R>\<union>\<S>) \<inter> C) * eps k powr (-1/4) \<le> 3 * k"
     by linarith
   with eps_gt0 [OF\<open>k>0\<close>] show ?thesis
     by (simp add: powr_minus divide_simps mult.commute split: if_split_asm)
 qed
+
+
+subsection \<open>Lemma 7.11\<close>
+
+
+definition "Big_X_7_11 \<equiv> \<lambda>k. eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1"
+
+lemma "\<forall>\<^sup>\<infinity>k. Big_X_7_11 k"
+  unfolding eps_def Big_X_7_11_def
+  by real_asymp
+
+lemma X_7_11:
+  fixes l k
+  assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
+  defines "p \<equiv> pee \<mu> l k"
+  defines "\<R> \<equiv> Step_class \<mu> l k {red_step}"
+  defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
+  defines "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
+  defines "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
+  defines "\<H> \<equiv> Step_class \<mu> l k {halted}"
+  defines "m \<equiv> Inf \<H>"
+  defines "h \<equiv> \<lambda>i. real (hgt k (p i))"
+  defines "C \<equiv> {i. p i \<ge> p (i-1) + eps k powr (-1/4) * alpha k 1 \<and> p (i-1) \<le> p0}"
+  assumes big: "Big_X_7_5 \<mu> l" and Y_6_5_S: "Lemma_6_5_dbooSt \<mu> l"
+         and big_711: "Big_X_7_11 k"
+  shows "card ((\<R>\<union>\<S>) \<inter> C) \<le> 4 * eps k powr (1/4) * k"
+proof -
+  define qstar where "qstar \<equiv> p0 + eps k powr (-1/4) * alpha k 1"
+  define pstar where "pstar \<equiv> \<lambda>i. min (p i, qstar)"
+  obtain lk: "0<l" "l\<le>k" "0<k"
+    using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
+  then have "Lemma_Step_class_halted_nonempty \<mu> l" 
+    and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
+    and hub: "Lemma_height_upper_bound k"
+    and 16: "k\<ge>16" (*for Y_6_5_Red*)
+    and ok_le_k: "ok_fun_26 k - ok_fun_28 k \<le> k"
+    using big by (auto simp: Big_X_7_5_def)
+  then have "m \<in> \<H>"
+    using \<H>_def \<open>Colours l k\<close> 
+    by (simp add: Inf_nat_def1 m_def Lemma_Step_class_halted_nonempty_def)
+  then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
+    by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
+
+  have "hgt k qstar \<le> 2 * eps k powr (-1/4)"
+    using  \<open>k>0\<close> big_711
+    apply (simp add: alpha_def qfun_def Big_X_7_11_def)
+    apply (intro real_hgt_Least [where h = "2 * nat(floor (eps k powr (-1/4)))"])
+      apply (force simp add: )
+    apply (smt (verit, ccfv_SIG) "16" Suc_lessI divisors_zero eps_gt0 eps_less1 floor_less_one int_ops(2) le_num_simps(2) nat_eq_iff2 neq0_conv numeral_nat(7) of_nat_less_iff pos2 powr01_less_one semiring_norm(172) verit_comp_simplify(28) verit_comp_simplify(4) zero_less_divide_iff)
+    apply (simp add: qstar_def alpha_def qfun_def algebra_simps)
+     apply (intro divide_right_mono)
+     apply (simp add: qfun_def)
+    by simp
+
+  show ?thesis
+    sorry
+qed
+
 
 end (*context Diagonal*)
 
