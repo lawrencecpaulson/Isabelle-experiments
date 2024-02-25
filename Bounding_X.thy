@@ -1075,6 +1075,7 @@ subsection \<open>Lemma 7.11\<close>
 
 
 definition "Big_X_7_11 \<equiv> \<lambda>k. 
+  Big_Y_6_5_Bblue k \<and>
    eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1
     \<and> k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)
     \<and> ((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"
@@ -1101,7 +1102,6 @@ lemma X_7_11:
   defines "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
   defines "\<H> \<equiv> Step_class \<mu> l k {halted}"
   defines "m \<equiv> Inf \<H>"
-  defines "h \<equiv> \<lambda>i. real (hgt k (p i))"
   defines "C \<equiv> {i. p i \<ge> p (i-1) + eps k powr (-1/4) * alpha k 1 \<and> p (i-1) \<le> p0}"
   assumes big: "Big_X_7_5 \<mu> l" and Y_6_5_S: "Lemma_6_5_dbooSt \<mu> l"
          and big_711: "Big_X_7_11 k"
@@ -1113,6 +1113,7 @@ proof -
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   then have halt: "Lemma_Step_class_halted_nonempty \<mu> l" 
     and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
+    and B_limit: "Lemma_bblue_step_limit \<mu> l"
     and hub: "Lemma_height_upper_bound k"
     and 16: "k\<ge>16" (*for Y_6_5_Red*)
     and ok_le_k: "ok_fun_26 k - ok_fun_28 k \<le> k"
@@ -1125,7 +1126,10 @@ proof -
   have 711: "eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1"
     and big34: "k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)"
     and le2: "((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"
+    and "Big_Y_6_5_Bblue k"
     using big_711 by (auto simp: Big_X_7_11_def)
+  then have Y_6_5_B: "\<And>i. i \<in> \<B> \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2 * eps k powr (-1/2)"
+    using Y_6_5_Bblue_Main \<open>\<mu>>0\<close> \<open>k>0\<close> unfolding \<B>_def p_def by blast
 
   have "hgt k qstar \<le> 2 * eps k powr (-1/4)"
   proof (intro real_hgt_Least [where h = "2 * nat(floor (eps k powr (-1/4)))"])
@@ -1171,6 +1175,49 @@ proof -
   have "- alpha k 1 * k \<le> -2 * eps k powr (-1/2) * alpha k 1 * k powr (3/4)"
     using mult_right_mono_neg [OF big34, of "- alpha k 1"]  alpha_ge0 [of k 1]
     by (simp add: mult_ac)
+  also have "... \<le> - (eps k powr (-1/2)) * alpha k (hgt k qstar + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor>) * card \<B>"
+  proof -
+    have "card \<B> \<le> l powr (3/4)"
+      using B_limit \<open>Colours l k\<close> by (simp add: Lemma_bblue_step_limit_def \<B>_def)
+    also have "... \<le> k powr (3/4)"
+      by (simp add: powr_mono2 \<open>l\<le>k\<close>)
+    finally have 1: "card \<B> \<le> k powr (3/4)" .
+    have 2: "2 * alpha k 1 \<ge> alpha k (hgt k qstar + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor>)" 
+      by (smt (verit) alpha_ge0)
+    show ?thesis
+      using mult_right_mono_neg [OF mult_mono [OF 1 2], of "- (eps k powr (- 1 / 2))"]
+            alpha_ge0 [of k] by (simp add: mult_ac)
+  qed
+  also have "... \<le> (\<Sum>i\<in>\<B>. pstar (Suc i) - pstar (i-1))"
+  proof -
+    { fix i
+      assume "i \<in> \<B>"
+      have *: "pstar (i - Suc 0) = pstar(Suc i) \<and> pstar (Suc i) = qstar" 
+        if "hgt k (p (i-1)) > hgt k qstar + 2 * eps k powr (-1/2)"
+      proof -
+        have "hgt k (p (Suc i)) > hgt k qstar"
+          using that Y_6_5_B \<open>i \<in> \<B>\<close> by (force simp add: p_def \<R>_def)
+        then show ?thesis
+          unfolding pstar_def 
+          by (smt (verit, ccfv_SIG) One_nat_def hgt_mono leD \<open>k>0\<close> of_nat_mono powr_non_neg that)
+      qed
+      have **: "p (Suc i) \<ge> p (i-1) - (eps k powr (-1/2)) * alpha k (hgt k (p (i-1)))"
+        using Y_6_4_Bblue \<open>i \<in> \<B>\<close> \<open>\<mu>>0\<close> unfolding p_def \<B>_def by blast
+      have "- (eps k powr (-1/2)) * alpha k (hgt k qstar + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor>)
+          \<le> pstar (Suc i) - pstar (i-1)"
+        using \<open>i \<in> \<B>\<close> * ** alpha_ge0 [of k]
+        unfolding pstar_def
+        apply (simp add: )
+        apply atomize
+        apply (simp add: pstar_def min_def split: if_split_asm)
+           apply (smt (verit) alpha_mono assms(4) diff_add_0 diff_is_0_eq hgt_gt_0 hgt_mono lk(3) mult_left_mono powr_ge_pzero)
+        defer
+        apply (smt (verit, del_insts) alpha_ge0 powr_ge_pzero zero_compare_simps(4))
+        apply (auto simp: )
+        sorry  }
+  then show ?thesis
+    by (smt (verit, ccfv_SIG) mult_of_nat_commute sum_constant sum_mono)
+qed
 
   show ?thesis
     sorry
