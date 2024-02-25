@@ -1117,14 +1117,13 @@ proof -
     and 16: "k\<ge>16" (*for Y_6_5_Red*)
     and ok_le_k: "ok_fun_26 k - ok_fun_28 k \<le> k"
     using big by (auto simp: Big_X_7_5_def)
-  then have "m \<in> \<H>"
-    using \<H>_def \<open>Colours l k\<close> 
-    by (simp add: Inf_nat_def1 m_def Lemma_Step_class_halted_nonempty_def)
+  with \<open>Colours l k\<close> have "m \<in> \<H>"
+    by (simp add: Inf_nat_def1 \<H>_def m_def Lemma_Step_class_halted_nonempty_def)
   then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
     by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
 
   have 711: "eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1"
-    and A: "k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)"
+    and big34: "k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)"
     and le2: "((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"
     using big_711 by (auto simp: Big_X_7_11_def)
 
@@ -1149,13 +1148,28 @@ proof -
     using mult_right_mono_neg [OF B, of "- (eps k)"] eps_ge0 [of k]
     by (simp add: alpha_eq divide_simps mult_ac)
   also have "... \<le> (\<Sum>i\<in>\<R>. pstar (Suc i) - pstar i)"
-    sorry
-  finally have "- 2 * alpha k 1 * k \<le> (\<Sum>i\<in>\<R>. pstar (Suc i) - pstar i)" .
-
-
+  proof -
+    { fix i
+      assume "i \<in> \<R>"
+      moreover
+      have "pstar (Suc i) = pstar i" if "hgt k (p i) > hgt k qstar + 2"
+      proof -
+        have "hgt k (p (Suc i)) > hgt k qstar"
+          using that Y_6_5_Red 16 \<open>i \<in> \<R>\<close> by (force simp add: p_def \<R>_def)
+        then show ?thesis
+          by (smt (verit) that add_lessD1 hgt_mono' lk(3) pstar_def)
+      qed
+      ultimately have "- alpha k (hgt k qstar + 2) \<le> pstar (Suc i) - pstar i"
+        unfolding pstar_def p_def \<R>_def
+        by (smt (verit, del_insts) Y_6_4_Red alpha_ge0 alpha_mono hgt_gt_0 linorder_not_less)
+    }
+    then show ?thesis
+      by (smt (verit, ccfv_SIG) mult_of_nat_commute sum_constant sum_mono)
+  qed
+  finally have A: "- 2 * alpha k 1 * k \<le> (\<Sum>i\<in>\<R>. pstar (Suc i) - pstar i)" .
 
   have "- alpha k 1 * k \<le> -2 * eps k powr (-1/2) * alpha k 1 * k powr (3/4)"
-    using mult_right_mono_neg [OF A, of "- alpha k 1"]  alpha_ge0 [of k 1]
+    using mult_right_mono_neg [OF big34, of "- alpha k 1"]  alpha_ge0 [of k 1]
     by (simp add: mult_ac)
 
   show ?thesis

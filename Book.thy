@@ -477,10 +477,20 @@ lemma hgt_greater:
   shows "hgt k p > h"
   by (smt (verit) assms linorder_le_less_linear qfun_mono height_exists hgt_works)
 
+lemma hgt_le_imp_qfun_ge:
+  assumes "hgt k p \<le> h" "0<k"
+  shows "p \<le> qfun k h"
+  by (meson assms hgt_greater not_less)
+
 lemma hgt_mono:
   assumes "p \<le> q" "0<k"
   shows "hgt k p \<le> hgt k q"
   by (meson assms order.trans hgt_Least hgt_gt_0 hgt_works)
+
+lemma hgt_mono':
+  assumes "hgt k p < hgt k q" "0<k"
+  shows "p < q"
+  by (smt (verit) assms hgt_mono leD)
 
 text \<open>Bhavik's @{text one_lt_q_function} (in his section 5)\<close>
 lemma qfun_ge1:
