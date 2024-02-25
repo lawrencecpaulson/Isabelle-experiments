@@ -508,7 +508,7 @@ text \<open>Bhavik's height_upper_bound [somehow the limit he proved wasn't nece
 lemma height_upper_bound: "\<forall>\<^sup>\<infinity>k. Lemma_height_upper_bound k"
   unfolding Lemma_height_upper_bound_def
   using real_hgt_Least eventually_mono [OF qfun_ge1] p0_01
-  by (smt (verit) q0 nat_le_0 nat_mono zero_less_nat_eq)
+  by (smt (verit, best) nat_floor_neg of_nat_0_less_iff of_nat_floor of_nat_le_0_iff q0)
 
 
 definition "alpha \<equiv> \<lambda>k h. qfun k h - qfun k (h-1)"

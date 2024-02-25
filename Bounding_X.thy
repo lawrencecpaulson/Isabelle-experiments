@@ -1074,10 +1074,21 @@ qed
 subsection \<open>Lemma 7.11\<close>
 
 
-definition "Big_X_7_11 \<equiv> \<lambda>k. eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1"
+definition "Big_X_7_11 \<equiv> \<lambda>k. 
+   eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1
+    \<and> k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)
+    \<and> ((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"
 
 lemma "\<forall>\<^sup>\<infinity>k. Big_X_7_11 k"
   unfolding eps_def Big_X_7_11_def
+  by real_asymp
+
+lemma "\<forall>\<^sup>\<infinity>k. k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)"
+  unfolding eps_def 
+  by real_asymp
+
+lemma "\<forall>\<^sup>\<infinity>k. ((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"
+  unfolding eps_def 
   by real_asymp
 
 lemma X_7_11:
@@ -1097,10 +1108,10 @@ lemma X_7_11:
   shows "card ((\<R>\<union>\<S>) \<inter> C) \<le> 4 * eps k powr (1/4) * k"
 proof -
   define qstar where "qstar \<equiv> p0 + eps k powr (-1/4) * alpha k 1"
-  define pstar where "pstar \<equiv> \<lambda>i. min (p i, qstar)"
+  define pstar where "pstar \<equiv> \<lambda>i. min (p i) qstar"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  then have "Lemma_Step_class_halted_nonempty \<mu> l" 
+  then have halt: "Lemma_Step_class_halted_nonempty \<mu> l" 
     and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
     and hub: "Lemma_height_upper_bound k"
     and 16: "k\<ge>16" (*for Y_6_5_Red*)
@@ -1112,16 +1123,40 @@ proof -
   then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
     by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
 
+  have 711: "eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1"
+    and A: "k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)"
+    and le2: "((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"
+    using big_711 by (auto simp: Big_X_7_11_def)
+
   have "hgt k qstar \<le> 2 * eps k powr (-1/4)"
-    using  \<open>k>0\<close> big_711
-    apply (simp add: alpha_def qfun_def Big_X_7_11_def)
-    apply (intro real_hgt_Least [where h = "2 * nat(floor (eps k powr (-1/4)))"])
-      apply (force simp add: )
-    apply (smt (verit, ccfv_SIG) "16" Suc_lessI divisors_zero eps_gt0 eps_less1 floor_less_one int_ops(2) le_num_simps(2) nat_eq_iff2 neq0_conv numeral_nat(7) of_nat_less_iff pos2 powr01_less_one semiring_norm(172) verit_comp_simplify(28) verit_comp_simplify(4) zero_less_divide_iff)
-    apply (simp add: qstar_def alpha_def qfun_def algebra_simps)
-     apply (intro divide_right_mono)
-     apply (simp add: qfun_def)
-    by simp
+  proof (intro real_hgt_Least [where h = "2 * nat(floor (eps k powr (-1/4)))"])
+    show "0 < 2 * nat \<lfloor>eps k powr (- 1 / 4)\<rfloor>"
+      using \<open>k>0\<close> eps_gt0 [of k] by (simp add: eps_le1 powr_le1 powr_minus_divide)
+    show "qstar \<le> qfun k (2 * nat \<lfloor>eps k powr (- 1 / 4)\<rfloor>)"
+      using \<open>k>0\<close> 711
+      by (simp add: qstar_def alpha_def qfun_def divide_right_mono mult.commute)
+  qed auto
+  then have "((1 + eps k) * (1 + eps k) ^ hgt k qstar) \<le> ((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4)))"
+    by (smt (verit) eps_ge0 mult_left_mono powr_mono powr_realpow)
+  also have "((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"
+    using le2 by simp
+  finally have "(1 + eps k) * (1 + eps k) ^ hgt k qstar \<le> 2" .
+  moreover have "card \<R> \<le> k"
+    by (simp add: \<R>_def \<open>0<\<mu>\<close> \<open>Colours l k\<close> less_imp_le red_step_limit(2))
+  ultimately have B: "((1 + eps k) * (1 + eps k) ^ hgt k qstar) * card \<R> \<le> 2 * real k"
+    by (intro mult_mono) auto
+  have "- 2 * alpha k 1 * k \<le> - alpha k (hgt k qstar + 2) * card \<R>"
+    using mult_right_mono_neg [OF B, of "- (eps k)"] eps_ge0 [of k]
+    by (simp add: alpha_eq divide_simps mult_ac)
+  also have "... \<le> (\<Sum>i\<in>\<R>. pstar (Suc i) - pstar i)"
+    sorry
+  finally have "- 2 * alpha k 1 * k \<le> (\<Sum>i\<in>\<R>. pstar (Suc i) - pstar i)" .
+
+
+
+  have "- alpha k 1 * k \<le> -2 * eps k powr (-1/2) * alpha k 1 * k powr (3/4)"
+    using mult_right_mono_neg [OF A, of "- alpha k 1"]  alpha_ge0 [of k 1]
+    by (simp add: mult_ac)
 
   show ?thesis
     sorry
