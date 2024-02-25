@@ -1092,6 +1092,10 @@ lemma "\<forall>\<^sup>\<infinity>k. ((1 + eps k) * (1 + eps k) powr (2 * eps k 
   unfolding eps_def 
   by real_asymp
 
+lemma  "\<forall>\<^sup>\<infinity>k. (1 + eps k) ^ (nat \<lfloor>2 * eps k powr - (1 / 4)\<rfloor> + nat \<lfloor>2 * eps k powr - (1 / 2)\<rfloor> - 1) \<le> 2"
+  unfolding eps_def 
+  by real_asymp
+
 lemma X_7_11:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
@@ -1131,7 +1135,7 @@ proof -
   then have Y_6_5_B: "\<And>i. i \<in> \<B> \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2 * eps k powr (-1/2)"
     using Y_6_5_Bblue_Main \<open>\<mu>>0\<close> \<open>k>0\<close> unfolding \<B>_def p_def by blast
 
-  have "hgt k qstar \<le> 2 * eps k powr (-1/4)"
+  have E: "hgt k qstar \<le> 2 * eps k powr (-1/4)"
   proof (intro real_hgt_Least [where h = "2 * nat(floor (eps k powr (-1/4)))"])
     show "0 < 2 * nat \<lfloor>eps k powr (- 1 / 4)\<rfloor>"
       using \<open>k>0\<close> eps_gt0 [of k] by (simp add: eps_le1 powr_le1 powr_minus_divide)
@@ -1155,69 +1159,89 @@ proof -
   proof -
     { fix i
       assume "i \<in> \<R>"
-      moreover
-      have "pstar (Suc i) = pstar i" if "hgt k (p i) > hgt k qstar + 2"
-      proof -
-        have "hgt k (p (Suc i)) > hgt k qstar"
-          using that Y_6_5_Red 16 \<open>i \<in> \<R>\<close> by (force simp add: p_def \<R>_def)
+      have "- alpha k (hgt k qstar + 2) \<le> pstar (Suc i) - pstar i"
+      proof (cases "hgt k (p i) > hgt k qstar + 2")
+        case True
+        then have "hgt k (p (Suc i)) > hgt k qstar"
+          using Y_6_5_Red 16 \<open>i \<in> \<R>\<close> by (force simp add: p_def \<R>_def)
+        then have "pstar (Suc i) = pstar i"
+          by (smt (verit) True add_lessD1 hgt_mono' lk(3) pstar_def)
         then show ?thesis
-          by (smt (verit) that add_lessD1 hgt_mono' lk(3) pstar_def)
+          by (simp add: alpha_ge0)
+      next
+        case False
+        with \<open>i \<in> \<R>\<close> show ?thesis
+          unfolding pstar_def p_def \<R>_def
+          by (smt (verit, del_insts) Y_6_4_Red alpha_ge0 alpha_mono hgt_gt_0 linorder_not_less)
       qed
-      ultimately have "- alpha k (hgt k qstar + 2) \<le> pstar (Suc i) - pstar i"
-        unfolding pstar_def p_def \<R>_def
-        by (smt (verit, del_insts) Y_6_4_Red alpha_ge0 alpha_mono hgt_gt_0 linorder_not_less)
     }
     then show ?thesis
       by (smt (verit, ccfv_SIG) mult_of_nat_commute sum_constant sum_mono)
   qed
   finally have A: "- 2 * alpha k 1 * k \<le> (\<Sum>i\<in>\<R>. pstar (Suc i) - pstar i)" .
 
-  have "- alpha k 1 * k \<le> -2 * eps k powr (-1/2) * alpha k 1 * k powr (3/4)"
+  let ?e12 = "eps k powr (-1/2)"
+  have "- alpha k 1 * k \<le> -2 * ?e12 * alpha k 1 * k powr (3/4)"
     using mult_right_mono_neg [OF big34, of "- alpha k 1"]  alpha_ge0 [of k 1]
     by (simp add: mult_ac)
-  also have "... \<le> - (eps k powr (-1/2)) * alpha k (hgt k qstar + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor>) * card \<B>"
+  also have "... \<le> -?e12 * alpha k (hgt k qstar + nat \<lfloor>2 * ?e12\<rfloor>) * card \<B>"
   proof -
     have "card \<B> \<le> l powr (3/4)"
       using B_limit \<open>Colours l k\<close> by (simp add: Lemma_bblue_step_limit_def \<B>_def)
     also have "... \<le> k powr (3/4)"
       by (simp add: powr_mono2 \<open>l\<le>k\<close>)
     finally have 1: "card \<B> \<le> k powr (3/4)" .
-    have 2: "2 * alpha k 1 \<ge> alpha k (hgt k qstar + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor>)" 
-      by (smt (verit) alpha_ge0)
+    have F: "(1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * ?e12\<rfloor> - 1) \<le> 2"
+      (*LIMIT*)
+      sorry
+    have "alpha k (hgt k qstar + nat \<lfloor>2 * ?e12\<rfloor>) \<le> alpha k (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * ?e12\<rfloor>)"
+      apply (rule alpha_mono)
+      using E apply linarith
+      by (simp add: hgt_gt_0)
+    also have "... \<le> 2 * alpha k 1"
+      apply (simp add: alpha_eq hgt_gt_0)
+      apply (subst alpha_eq)
+       defer
+       apply (intro divide_right_mono)
+      using mult_right_mono [OF F, of "eps k"] eps_ge0
+        apply (simp add: mult_ac)
+       apply (auto simp: )
+      by (smt (verit) E Suc_leI divide_minus_left hgt_gt_0 numeral_nat(7) real_of_nat_ge_one_iff)
+    finally have 2: "2 * alpha k 1 \<ge> alpha k (hgt k qstar + nat \<lfloor>2 * ?e12\<rfloor>)" .
     show ?thesis
-      using mult_right_mono_neg [OF mult_mono [OF 1 2], of "- (eps k powr (- 1 / 2))"]
+      using mult_right_mono_neg [OF mult_mono [OF 1 2], of "-?e12"]
             alpha_ge0 [of k] by (simp add: mult_ac)
   qed
   also have "... \<le> (\<Sum>i\<in>\<B>. pstar (Suc i) - pstar (i-1))"
   proof -
     { fix i
       assume "i \<in> \<B>"
-      have *: "pstar (i - Suc 0) = pstar(Suc i) \<and> pstar (Suc i) = qstar" 
-        if "hgt k (p (i-1)) > hgt k qstar + 2 * eps k powr (-1/2)"
-      proof -
-        have "hgt k (p (Suc i)) > hgt k qstar"
-          using that Y_6_5_B \<open>i \<in> \<B>\<close> by (force simp add: p_def \<R>_def)
-        then show ?thesis
+      have "-?e12 * alpha k (hgt k qstar + nat \<lfloor>2 * ?e12\<rfloor>) \<le> pstar (Suc i) - pstar (i-1)"
+      proof (cases "hgt k (p (i-1)) > hgt k qstar + 2 * ?e12")
+        case True
+        then have "hgt k (p (Suc i)) > hgt k qstar"
+          using Y_6_5_B \<open>i \<in> \<B>\<close> by (force simp add: p_def \<R>_def)
+        then have "pstar (i-1) = pstar(Suc i)" 
           unfolding pstar_def 
-          by (smt (verit, ccfv_SIG) One_nat_def hgt_mono leD \<open>k>0\<close> of_nat_mono powr_non_neg that)
+          by (smt (verit) True of_nat_le_iff hgt_mono hgt_mono' \<open>k>0\<close> powr_non_neg) 
+        then show ?thesis
+          by (simp add: alpha_ge0)
+      next
+        case False
+        then have "hgt k (p (i - Suc 0)) \<le> hgt k qstar + nat \<lfloor>2 * ?e12\<rfloor>"
+          by simp linarith
+        moreover 
+        have **: "p (Suc i) \<ge> p (i-1) - ?e12 * alpha k (hgt k (p (i-1)))"
+          using Y_6_4_Bblue \<open>i \<in> \<B>\<close> \<open>\<mu>>0\<close> unfolding p_def \<B>_def by blast
+        ultimately show ?thesis
+          using alpha_ge0 [of k]
+          apply (simp add: pstar_def)
+          by (smt (verit, best) alpha_mono hgt_gt_0 mult_left_mono powr_ge_pzero zero_le_mult_iff)
       qed
-      have **: "p (Suc i) \<ge> p (i-1) - (eps k powr (-1/2)) * alpha k (hgt k (p (i-1)))"
-        using Y_6_4_Bblue \<open>i \<in> \<B>\<close> \<open>\<mu>>0\<close> unfolding p_def \<B>_def by blast
-      have "- (eps k powr (-1/2)) * alpha k (hgt k qstar + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor>)
-          \<le> pstar (Suc i) - pstar (i-1)"
-        using \<open>i \<in> \<B>\<close> * ** alpha_ge0 [of k]
-        unfolding pstar_def
-        apply (simp add: )
-        apply atomize
-        apply (simp add: pstar_def min_def split: if_split_asm)
-           apply (smt (verit) alpha_mono assms(4) diff_add_0 diff_is_0_eq hgt_gt_0 hgt_mono lk(3) mult_left_mono powr_ge_pzero)
-        defer
-        apply (smt (verit, del_insts) alpha_ge0 powr_ge_pzero zero_compare_simps(4))
-        apply (auto simp: )
-        sorry  }
-  then show ?thesis
-    by (smt (verit, ccfv_SIG) mult_of_nat_commute sum_constant sum_mono)
-qed
+    }
+    then show ?thesis
+      by (smt (verit, ccfv_SIG) mult_of_nat_commute sum_constant sum_mono)
+  qed
 
   show ?thesis
     sorry
