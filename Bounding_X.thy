@@ -1078,7 +1078,8 @@ definition "Big_X_7_11 \<equiv> \<lambda>k.
   Big_Y_6_5_Bblue k \<and>
    eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1
     \<and> k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)
-    \<and> ((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"
+    \<and> ((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2
+    \<and> (1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
 
 lemma "\<forall>\<^sup>\<infinity>k. Big_X_7_11 k"
   unfolding eps_def Big_X_7_11_def
@@ -1092,7 +1093,7 @@ lemma "\<forall>\<^sup>\<infinity>k. ((1 + eps k) * (1 + eps k) powr (2 * eps k 
   unfolding eps_def 
   by real_asymp
 
-lemma  "\<forall>\<^sup>\<infinity>k. (1 + eps k) ^ (nat \<lfloor>2 * eps k powr - (1 / 4)\<rfloor> + nat \<lfloor>2 * eps k powr - (1 / 2)\<rfloor> - 1) \<le> 2"
+lemma  "\<forall>\<^sup>\<infinity>k. (1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
   unfolding eps_def 
   by real_asymp
 
@@ -1130,12 +1131,13 @@ proof -
   have 711: "eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1"
     and big34: "k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)"
     and le2: "((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"
+             "(1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
     and "Big_Y_6_5_Bblue k"
     using big_711 by (auto simp: Big_X_7_11_def)
   then have Y_6_5_B: "\<And>i. i \<in> \<B> \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2 * eps k powr (-1/2)"
     using Y_6_5_Bblue_Main \<open>\<mu>>0\<close> \<open>k>0\<close> unfolding \<B>_def p_def by blast
 
-  have E: "hgt k qstar \<le> 2 * eps k powr (-1/4)"
+  have hgt_qstar_le: "hgt k qstar \<le> 2 * eps k powr (-1/4)"
   proof (intro real_hgt_Least [where h = "2 * nat(floor (eps k powr (-1/4)))"])
     show "0 < 2 * nat \<lfloor>eps k powr (- 1 / 4)\<rfloor>"
       using \<open>k>0\<close> eps_gt0 [of k] by (simp add: eps_le1 powr_le1 powr_minus_divide)
@@ -1191,22 +1193,21 @@ proof -
     also have "... \<le> k powr (3/4)"
       by (simp add: powr_mono2 \<open>l\<le>k\<close>)
     finally have 1: "card \<B> \<le> k powr (3/4)" .
-    have F: "(1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * ?e12\<rfloor> - 1) \<le> 2"
-      (*LIMIT*)
-      sorry
     have "alpha k (hgt k qstar + nat \<lfloor>2 * ?e12\<rfloor>) \<le> alpha k (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * ?e12\<rfloor>)"
-      apply (rule alpha_mono)
-      using E apply linarith
-      by (simp add: hgt_gt_0)
+    proof (rule alpha_mono)
+      show "hgt k qstar + nat \<lfloor>2 * ?e12\<rfloor> \<le> nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * ?e12\<rfloor>"
+        using hgt_qstar_le by linarith
+    qed (simp add: hgt_gt_0)
     also have "... \<le> 2 * alpha k 1"
-      apply (simp add: alpha_eq hgt_gt_0)
-      apply (subst alpha_eq)
-       defer
-       apply (intro divide_right_mono)
-      using mult_right_mono [OF F, of "eps k"] eps_ge0
-        apply (simp add: mult_ac)
-       apply (auto simp: )
-      by (smt (verit) E Suc_leI divide_minus_left hgt_gt_0 numeral_nat(7) real_of_nat_ge_one_iff)
+    proof -
+      have *: "(1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * ?e12\<rfloor> - 1) \<le> 2"
+        using le2 by simp
+      have "1 \<le> 2 * eps k powr (-1/4)"
+        by (smt (verit) hgt_qstar_le Suc_leI divide_minus_left hgt_gt_0 numeral_nat(7) real_of_nat_ge_one_iff)
+      then show ?thesis
+        using mult_right_mono [OF *, of "eps k"] eps_ge0 
+        by (simp add: alpha_eq hgt_gt_0 divide_right_mono mult.commute)
+    qed
     finally have 2: "2 * alpha k 1 \<ge> alpha k (hgt k qstar + nat \<lfloor>2 * ?e12\<rfloor>)" .
     show ?thesis
       using mult_right_mono_neg [OF mult_mono [OF 1 2], of "-?e12"]
@@ -1234,14 +1235,14 @@ proof -
         have **: "p (Suc i) \<ge> p (i-1) - ?e12 * alpha k (hgt k (p (i-1)))"
           using Y_6_4_Bblue \<open>i \<in> \<B>\<close> \<open>\<mu>>0\<close> unfolding p_def \<B>_def by blast
         ultimately show ?thesis
-          using alpha_ge0 [of k]
           apply (simp add: pstar_def)
-          by (smt (verit, best) alpha_mono hgt_gt_0 mult_left_mono powr_ge_pzero zero_le_mult_iff)
+          by (smt (verit, best) alpha_ge0 alpha_mono hgt_gt_0 mult_left_mono powr_ge_pzero zero_le_mult_iff)
       qed
     }
     then show ?thesis
       by (smt (verit, ccfv_SIG) mult_of_nat_commute sum_constant sum_mono)
   qed
+  finally have B: "- alpha k 1 * real k \<le> (\<Sum>i\<in>\<B>. pstar (Suc i) - pstar (i-1))" .
 
   show ?thesis
     sorry
