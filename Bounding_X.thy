@@ -1007,13 +1007,11 @@ proof -
   have h_ge_0_if_S: "h(Suc i) - h(i-1) \<ge> 0" if "i \<in> \<S>" for i
   proof -
     have *: "hgt k (pee \<mu> l k i) \<le> hgt k (pee \<mu> l k (Suc i))"
-      using Y_6_5_S that unfolding Lemma_6_5_dbooSt_def
-      using assms(3) \<S>_def by blast
-    with that odd have "i-1 \<in> \<D>"       
-      by (simp add: \<S>_def \<D>_def dreg_before_step Step_class_insert_NO_MATCH)
+      using Y_6_5_S \<open>Colours l k\<close> that unfolding \<S>_def Lemma_6_5_dbooSt_def by blast
+    have "i-1 \<in> \<D>"
+      using that odd by (simp add: \<S>_def \<D>_def dreg_before_step Step_class_insert_NO_MATCH)
     then have "hgt k (pee \<mu> l k (i-1)) \<le> hgt k (pee \<mu> l k i)"
-      using that \<open>k>0\<close> unfolding h_def p_def
-      by (metis Suc_diff_1 Y_6_5_DegreeReg \<D>_def odd odd_pos)
+      using that \<open>k>0\<close> by (metis Suc_diff_1 Y_6_5_DegreeReg \<D>_def odd odd_pos)
     with * show "0 \<le> h(Suc i) - h(i-1)"
       using \<open>k>0\<close> unfolding h_def p_def by linarith
   qed
@@ -1074,12 +1072,12 @@ qed
 subsection \<open>Lemma 7.11\<close>
 
 
-definition "Big_X_7_11 \<equiv> \<lambda>k. 
-  Big_Y_6_5_Bblue k \<and>
-   eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1
+definition "Big_X_7_11 \<equiv> \<lambda>\<mu> l.
+  (\<forall>k. Colours l k \<longrightarrow> 
+   Big_Y_6_5_Bblue k \<and> eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1
     \<and> k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)
     \<and> ((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2
-    \<and> (1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
+    \<and> (1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2)"
 
 lemma "\<forall>\<^sup>\<infinity>k. Big_X_7_11 k"
   unfolding eps_def Big_X_7_11_def
@@ -1109,7 +1107,7 @@ lemma X_7_11:
   defines "m \<equiv> Inf \<H>"
   defines "C \<equiv> {i. p i \<ge> p (i-1) + eps k powr (-1/4) * alpha k 1 \<and> p (i-1) \<le> p0}"
   assumes big: "Big_X_7_5 \<mu> l" and Y_6_5_S: "Lemma_6_5_dbooSt \<mu> l"
-         and big_711: "Big_X_7_11 k"
+         and big_711: "Big_X_7_11 \<mu> l"
   shows "card ((\<R>\<union>\<S>) \<inter> C) \<le> 4 * eps k powr (1/4) * k"
 proof -
   define qstar where "qstar \<equiv> p0 + eps k powr (-1/4) * alpha k 1"
@@ -1133,9 +1131,14 @@ proof -
     and le2: "((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"
              "(1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
     and "Big_Y_6_5_Bblue k"
-    using big_711 by (auto simp: Big_X_7_11_def)
+    using big_711 \<open>Colours l k\<close> by (auto simp: Big_X_7_11_def \<S>_def p_def)
   then have Y_6_5_B: "\<And>i. i \<in> \<B> \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2 * eps k powr (-1/2)"
     using Y_6_5_Bblue_Main \<open>\<mu>>0\<close> \<open>k>0\<close> unfolding \<B>_def p_def by blast
+
+  have "finite \<R>"
+    using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
+  have "finite \<S>"
+    using BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
 
   have hgt_qstar_le: "hgt k qstar \<le> 2 * eps k powr (-1/4)"
   proof (intro real_hgt_Least [where h = "2 * nat(floor (eps k powr (-1/4)))"])
@@ -1242,7 +1245,28 @@ proof -
     then show ?thesis
       by (smt (verit, ccfv_SIG) mult_of_nat_commute sum_constant sum_mono)
   qed
-  finally have B: "- alpha k 1 * real k \<le> (\<Sum>i\<in>\<B>. pstar (Suc i) - pstar (i-1))" .
+  finally have B: "- alpha k 1 * k \<le> (\<Sum>i\<in>\<B>. pstar (Suc i) - pstar (i-1))" .
+
+  have "eps k powr (-1/4) * alpha k 1 * card ((\<R>\<union>\<S>) \<inter> C) \<le> (\<Sum>i\<in>\<R>\<union>\<S>. if i \<in> C then eps k powr (-1/4) * alpha k 1 else 0)"
+    by (simp add: \<open>finite \<R>\<close> \<open>finite \<S>\<close> flip: sum.inter_restrict)
+  also have "(\<Sum>i\<in>\<R>\<union>\<S>. if i \<in> C then eps k powr (-1/4) * alpha k 1 else 0) \<le> (\<Sum>i\<in>\<R>\<union>\<S>. pstar i - pstar (i-1))"
+  proof (intro sum_mono)
+    fix i
+    assume i: "i \<in> \<R> \<union> \<S>"
+    then have odd: "odd i" 
+      unfolding \<R>_def \<S>_def by (metis Step_class_Un Un_iff insert_is_Un step_odd)
+    then have "i-1 \<in> \<D>"
+      using i dreg_before_step unfolding \<R>_def \<S>_def \<D>_def One_nat_def
+      by (metis Step_class_insert Un_iff odd_Suc_minus_one)
+    then have "pee \<mu> l k (i-1) \<le> pee \<mu> l k i"
+      using i \<open>k>0\<close> by (metis Suc_diff_1 Y_6_4_DegreeReg \<D>_def odd odd_pos)
+    then have p_le: "pstar (i-1) \<le> pstar i"
+      by (fastforce simp: pstar_def p_def)
+    show "(if i \<in> C then eps k powr (- 1 / 4) * alpha k 1 else 0) \<le> pstar i - pstar (i - 1)"
+      using i C_def p_le pstar_def qstar_def by auto
+  qed
+  finally have C: "eps k powr (-1/4) * alpha k 1 * card ((\<R>\<union>\<S>) \<inter> C) \<le> (\<Sum>i\<in>\<R>\<union>\<S>. pstar i - pstar (i-1))" .
+
 
   show ?thesis
     sorry
