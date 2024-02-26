@@ -1072,7 +1072,7 @@ qed
 subsection \<open>Lemma 7.11\<close>
 
 
-definition "Big_X_7_11 \<equiv> \<lambda>\<mu> l.
+definition "Big_X_7_11 \<equiv> \<lambda>\<mu> l. Lemma_Red_5_3 \<mu> l \<and>
   (\<forall>k. Colours l k \<longrightarrow> 
    Big_Y_6_5_Bblue k \<and> eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1
     \<and> k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)
@@ -1125,26 +1125,38 @@ proof -
     by (simp add: Inf_nat_def1 \<H>_def m_def Lemma_Step_class_halted_nonempty_def)
   then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
     by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
+  then have oddset: "{..<m} \<setminus> \<D> = {i \<in> {..<m}. odd i}" 
+    using step_odd step_even not_halted_even_dreg 
+    by (auto simp: \<D>_def \<H>_def Step_class_insert_NO_MATCH)
 
   have 711: "eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1"
     and big34: "k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)"
     and le2: "((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"
              "(1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
     and "Big_Y_6_5_Bblue k"
-    using big_711 \<open>Colours l k\<close> by (auto simp: Big_X_7_11_def \<S>_def p_def)
+    and R53:  "\<And>i. i \<in> \<S> \<Longrightarrow> p (Suc i) \<ge> p i"
+    using big_711 \<open>Colours l k\<close> 
+    by (auto simp: Lemma_Red_5_3_def Big_X_7_11_def \<S>_def p_def)
   then have Y_6_5_B: "\<And>i. i \<in> \<B> \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2 * eps k powr (-1/2)"
     using Y_6_5_Bblue_Main \<open>\<mu>>0\<close> \<open>k>0\<close> unfolding \<B>_def p_def by blast
 
   have "finite \<R>"
     using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
+  have "finite \<B>"
+    using B_limit \<open>Colours l k\<close> by (simp add: Lemma_bblue_step_limit_def \<B>_def)
   have "finite \<S>"
     using BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
 
+  have [simp]: "\<R> \<inter> \<S> = {}"
+    by (simp add: \<R>_def \<S>_def Step_class_def disjoint_iff)
+  have [simp]: "(\<R> \<union> \<S>) \<inter> \<B> = {}"
+    by (simp add: \<R>_def \<S>_def \<B>_def Step_class_def disjoint_iff)
+
   have hgt_qstar_le: "hgt k qstar \<le> 2 * eps k powr (-1/4)"
   proof (intro real_hgt_Least [where h = "2 * nat(floor (eps k powr (-1/4)))"])
-    show "0 < 2 * nat \<lfloor>eps k powr (- 1 / 4)\<rfloor>"
+    show "0 < 2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>"
       using \<open>k>0\<close> eps_gt0 [of k] by (simp add: eps_le1 powr_le1 powr_minus_divide)
-    show "qstar \<le> qfun k (2 * nat \<lfloor>eps k powr (- 1 / 4)\<rfloor>)"
+    show "qstar \<le> qfun k (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>)"
       using \<open>k>0\<close> 711
       by (simp add: qstar_def alpha_def qfun_def divide_right_mono mult.commute)
   qed auto
@@ -1183,7 +1195,11 @@ proof -
     then show ?thesis
       by (smt (verit, ccfv_SIG) mult_of_nat_commute sum_constant sum_mono)
   qed
-  finally have A: "- 2 * alpha k 1 * k \<le> (\<Sum>i\<in>\<R>. pstar (Suc i) - pstar i)" .
+  finally have "- 2 * alpha k 1 * k \<le> (\<Sum>i\<in>\<R>. pstar (Suc i) - pstar i)" .
+  moreover have "0 \<le> (\<Sum>i\<in>\<S>. pstar (Suc i) - pstar i)"
+    using R53 by (intro sum_nonneg) (force simp add:  pstar_def)
+  ultimately have RS_half: "- 2 * alpha k 1 * k \<le> (\<Sum>i\<in>\<R>\<union>\<S>. pstar (Suc i) - pstar i)"
+    by (simp add: \<open>finite \<R>\<close> \<open>finite \<S>\<close> sum.union_disjoint)
 
   let ?e12 = "eps k powr (-1/2)"
   have "- alpha k 1 * k \<le> -2 * ?e12 * alpha k 1 * k powr (3/4)"
@@ -1253,22 +1269,67 @@ proof -
   proof (intro sum_mono)
     fix i
     assume i: "i \<in> \<R> \<union> \<S>"
-    then have odd: "odd i" 
-      unfolding \<R>_def \<S>_def by (metis Step_class_Un Un_iff insert_is_Un step_odd)
-    then have "i-1 \<in> \<D>"
-      using i dreg_before_step unfolding \<R>_def \<S>_def \<D>_def One_nat_def
+    have odd: "odd i" 
+      using i unfolding \<R>_def \<S>_def by (metis Step_class_Un Un_iff insert_is_Un step_odd)
+    with i have "i-1 \<in> \<D>"
+      using dreg_before_step unfolding \<R>_def \<S>_def \<D>_def One_nat_def
       by (metis Step_class_insert Un_iff odd_Suc_minus_one)
     then have "pee \<mu> l k (i-1) \<le> pee \<mu> l k i"
-      using i \<open>k>0\<close> by (metis Suc_diff_1 Y_6_4_DegreeReg \<D>_def odd odd_pos)
-    then have p_le: "pstar (i-1) \<le> pstar i"
+      by (metis Suc_diff_1 Y_6_4_DegreeReg \<D>_def odd odd_pos)
+    then have  "pstar (i-1) \<le> pstar i"
       by (fastforce simp: pstar_def p_def)
-    show "(if i \<in> C then eps k powr (- 1 / 4) * alpha k 1 else 0) \<le> pstar i - pstar (i - 1)"
-      using i C_def p_le pstar_def qstar_def by auto
+    then show "(if i \<in> C then eps k powr (-1/4) * alpha k 1 else 0) \<le> pstar i - pstar (i - 1)"
+      using C_def pstar_def qstar_def by auto
   qed
   finally have C: "eps k powr (-1/4) * alpha k 1 * card ((\<R>\<union>\<S>) \<inter> C) \<le> (\<Sum>i\<in>\<R>\<union>\<S>. pstar i - pstar (i-1))" .
 
+  have psplit: "pstar (Suc i) - pstar (i-1) = (pstar (Suc i) - pstar i) + (pstar i - pstar (i-1))" for i
+    by simp
+  have RS: "eps k powr (-1/4) * alpha k 1 * card ((\<R>\<union>\<S>) \<inter> C) + (- 2 * alpha k 1 * k) \<le> (\<Sum>i\<in>\<R>\<union>\<S>. pstar (Suc i) - pstar (i-1))"
+    unfolding psplit sum.distrib using RS_half C by linarith
 
+  have k16: "k powr (1/16) \<le> k powr 1"
+    using \<open>k>0\<close> by (intro powr_mono) auto
+
+  have meq: "{..<m} \<setminus> \<D> = (\<R>\<union>\<S>) \<union> \<B>"
+    apply (auto simp: \<R>_def \<S>_def \<D>_def \<B>_def \<H>_def Step_class_def simp flip: m_minimal)
+    using stepkind.exhaust by blast
+
+
+  have "(eps k powr (-1/4) * alpha k 1 * card ((\<R>\<union>\<S>) \<inter> C) + (- 2 * alpha k 1 * k))
+        + (- alpha k 1 * k)
+      \<le> (\<Sum>i \<in> \<R>\<union>\<S>. pstar(Suc i) - pstar(i-1)) + (\<Sum>i\<in>\<B>. pstar(Suc i) - pstar(i-1))"
+    using RS B by linarith
+  also have "\<dots> = (\<Sum>i \<in> {..<m} \<setminus> \<D>. pstar(Suc i) - pstar(i-1))"
+    by (simp add: meq \<open>finite \<R>\<close> \<open>finite \<B>\<close> \<open>finite \<S>\<close> sum.union_disjoint)
+  also have "\<dots> \<le> pstar m - pstar 0"
+  proof (cases "even m")
+    case False
+    have "p (m - Suc 0) \<le> p m"
+      using Y_6_4_DegreeReg [of "m-1"] \<open>k>0\<close> False m_minimal not_halted_even_dreg odd_pos  
+      by (fastforce simp: p_def \<H>_def)
+    then have "pstar(m - Suc 0) \<le> pstar m"
+      by (simp add: pstar_def)
+    with False show ?thesis
+      by (simp add: oddset sum_odds_odd)
+  qed (simp add: oddset sum_odds_even)
+  also have "\<dots> = (\<Sum>i<m. pstar(Suc i) - pstar i)"
+    by (simp add: sum_lessThan_telescope)
+  also have "\<dots> = pstar m - pstar 0" 
+    by (simp add: sum_lessThan_telescope)
+  also have "\<dots> \<le> alpha k 1 * eps k powr (-1/4)"
+    using alpha_ge0 by (simp add: mult.commute pee_eq_p0 pstar_def qstar_def p_def) 
+  also have "... \<le> alpha k 1 * k"
+    using alpha_ge0 k16 by (intro powr_mono mult_left_mono) (auto simp add: eps_def powr_powr)
+  finally have "eps k powr (-1/4) * alpha k 1 * real (card ((\<R> \<union> \<S>) \<inter> C)) \<le> 4 * (real k * alpha k 1)"
+    by simp
+  then have "eps k powr (-1/4) * real (card ((\<R> \<union> \<S>) \<inter> C)) \<le> 4 * real k"
+    using alpha_ge0[of k 1] \<open>k>0\<close>
+apply (simp add: mult_ac)
   show ?thesis
+    using alpha_ge0[of k 1] \<open>k>0\<close>
+    apply (simp add: powr_minus divide_simps split: if_split_asm)
+
     sorry
 qed
 
