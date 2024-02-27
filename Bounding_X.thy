@@ -1073,19 +1073,21 @@ qed
 subsection \<open>Lemma 7.11\<close>
 
 (*Big_X_7_5 is used (rather than the conclusion) because that theorem is split in two*)
+
+definition "Big_X_7_11_inequalities \<equiv> \<lambda>k. 
+              eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1
+            \<and> k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)
+            \<and> ((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2
+            \<and> (1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
+
 definition "Big_X_7_11 \<equiv> \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Lemma_6_5_dbooSt \<mu> l \<and>
-           Lemma_Y_6_5_Bblue \<mu> l \<and>
-  (\<forall>k. l\<le>k \<longrightarrow> 
-   eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1
-    \<and> k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)
-    \<and> ((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2
-    \<and> (1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2)"
+           Lemma_Y_6_5_Bblue \<mu> l \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_11_inequalities k)"
 
 text \<open>establishing the size requirements for 7.11\<close>
 lemma Big_X_7_11:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_11 \<mu> l"
-  unfolding Big_X_7_11_def eventually_conj_iff all_imp_conj_distrib eps_def
+  unfolding Big_X_7_11_def Big_X_7_11_inequalities_def eventually_conj_iff all_imp_conj_distrib eps_def
   apply (simp add: Red_5_3 Big_X_7_5 Y_6_5_dbooSt Y_6_5_Bblue assms)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
@@ -1115,7 +1117,8 @@ proof -
              "(1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
     and "Lemma_Y_6_5_Bblue \<mu> l"
     and R53:  "\<And>i. i \<in> \<S> \<Longrightarrow> p (Suc i) \<ge> p i"
-    using big \<open>Colours l k\<close> \<open>l\<le>k\<close> by (auto simp: Lemma_Red_5_3_def Big_X_7_11_def \<S>_def p_def)
+    using big \<open>Colours l k\<close> \<open>l\<le>k\<close> 
+      by (auto simp: Lemma_Red_5_3_def Big_X_7_11_def Big_X_7_11_inequalities_def \<S>_def p_def)
   then have Y_6_5_B: "\<And>i. i \<in> \<B> \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2 * eps k powr (-1/2)"
     using \<open>\<mu>>0\<close> \<open>l\<le>k\<close> unfolding \<B>_def p_def by (meson Lemma_Y_6_5_Bblue_def)
   have halt: "Lemma_Step_class_halted_nonempty \<mu> l" 
@@ -1338,6 +1341,39 @@ lemma X_7_11:
   using Big_X_7_11 [OF assms]
   by eventually_elim (metis (no_types, lifting) assms X_7_11_aux Step_class_insert) 
 
+subsection \<open>Lemma 7.12\<close>
+
+definition "Big_X_7_12 \<equiv> \<lambda>\<mu> l. True"
+
+lemma X_7_12_aux:
+  fixes l k
+  assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
+  defines "X \<equiv> Xseq \<mu> l k"
+  defines "\<R> \<equiv> Step_class \<mu> l k {red_step}"
+  defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
+  defines "C \<equiv> {i. card (X i) < (1 - 2 * eps k powr (1/4)) * card (X (i-1))}"
+  assumes big: "Big_X_7_12 \<mu> l"
+  shows "card ((\<R>\<union>\<S>) \<inter> C) \<le> 7 * eps k powr (1/4) * k"
+proof -
+  define qstar where "qstar \<equiv> p0 + eps k powr (-1/4) * alpha k 1"
+  define pstar where "pstar \<equiv> \<lambda>i. min (p i) qstar"
+  define \<D> where "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
+  define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
+  define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
+  define m where "m \<equiv> Inf \<H>"
+  obtain lk: "0<l" "l\<le>k" "0<k"
+    using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
+
+  have odd: "odd i" if "i \<in> \<R> \<or> i \<in> \<S>" for i
+    using that unfolding \<R>_def \<S>_def by (metis Step_class_insert UnCI step_odd)
+  { fix i
+    assume i: "i \<in> \<R> \<union> \<S>"
+    with odd have "odd i"
+      by force
+  }
+  show ?thesis
+    sorry
+qed
 
 end (*context Diagonal*)
 
