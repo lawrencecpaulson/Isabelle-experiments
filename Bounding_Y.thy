@@ -411,7 +411,7 @@ next
 qed
 
 definition "Lemma_Y_6_5_Bblue \<equiv> 
-   \<lambda> \<mu> l. \<forall>k i. k\<ge>l \<longrightarrow> i \<in> Step_class \<mu> l k {bblue_step} 
+   \<lambda>\<mu> l. \<forall>k i. k\<ge>l \<longrightarrow> i \<in> Step_class \<mu> l k {bblue_step} 
                 \<longrightarrow> hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k (i-1)) - 2 * eps k powr (-1/2)"
 
 lemma Y_6_5_Bblue:

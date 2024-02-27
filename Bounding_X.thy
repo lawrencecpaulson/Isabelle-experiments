@@ -612,12 +612,9 @@ text \<open>establishing the size requirements for 7.4\<close>
 lemma Big_X_7_4:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_4 \<mu> l"
-proof -
-  show ?thesis
-    unfolding Big_X_7_4_def using assms eventually_all_ge_at_top [OF height_upper_bound]
-    by (simp add: eventually_conj_iff all_imp_conj_distrib X_7_5 bblue_dboost_step_limit 
-         Red_5_3 Y_6_5_Bblue height_upper_bound beta_gt_0 bigbeta_gt0 bigbeta_less1 eventually_all_ge_at_top)
-qed
+  unfolding Big_X_7_4_def using assms eventually_all_ge_at_top [OF height_upper_bound]
+  by (simp add: eventually_conj_iff all_imp_conj_distrib X_7_5 bblue_dboost_step_limit 
+      Red_5_3 Y_6_5_Bblue height_upper_bound beta_gt_0 bigbeta_gt0 bigbeta_less1 eventually_all_ge_at_top)
 
 lemma X_7_4_aux:
   fixes l k
@@ -953,6 +950,8 @@ proof -
 qed
 
 subsection \<open>Lemma 7.10\<close>
+ 
+definition "Big_X_7_10 \<equiv> \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Lemma_6_5_dbooSt \<mu> l"
 
 lemma X_7_10:
   fixes l k
@@ -966,13 +965,9 @@ lemma X_7_10:
   defines "m \<equiv> Inf \<H>"
   defines "h \<equiv> \<lambda>i. real (hgt k (p i))"
   defines "C \<equiv> {i. h i \<ge> h (i-1) + eps k powr (-1/4)}"
-  assumes big: "Big_X_7_5 \<mu> l" and Y_6_5_S: "Lemma_6_5_dbooSt \<mu> l"
+  assumes big: "Big_X_7_10 \<mu> l" 
   shows "card ((\<R>\<union>\<S>) \<inter> C) \<le> 3 * eps k powr (1/4) * k"
 proof -
-  obtain 26: "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
-     and 28: "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
-    unfolding \<B>_def \<D>_def \<H>_def h_def m_def p_def
-    using X_26_and_28 assms(1-3) big by blast
   have odd: "odd i" if "i \<in> \<R> \<or> i \<in> \<S>" for i
     using that unfolding \<R>_def \<S>_def by (metis Step_class_insert UnCI step_odd)
   obtain lk: "0<l" "l\<le>k" "0<k"
@@ -982,7 +977,8 @@ proof -
     and hub: "Lemma_height_upper_bound k"
     and 16: "k\<ge>16" (*for Y_6_5_Red*)
     and ok_le_k: "ok_fun_26 k - ok_fun_28 k \<le> k"
-    using big by (auto simp: Big_X_7_5_def)
+    and Y_6_5_S: "Lemma_6_5_dbooSt \<mu> l"
+    using big by (auto simp: Big_X_7_5_def Big_X_7_10_def)
   then have "m \<in> \<H>"
     using \<H>_def \<open>Colours l k\<close> 
     by (simp add: Inf_nat_def1 m_def Lemma_Step_class_halted_nonempty_def)
@@ -993,6 +989,11 @@ proof -
   then have RS_eq: "\<R>\<union>\<S> = {..<m} \<setminus> \<D> - \<B>"
     apply (auto simp: \<R>_def \<S>_def \<D>_def \<B>_def \<H>_def Step_class_def simp flip: m_minimal)
     using stepkind.exhaust by blast
+  obtain 26: "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
+     and 28: "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
+    using X_26_and_28 assms(1-3) big Y_6_5_S
+    unfolding \<B>_def \<D>_def \<H>_def h_def m_def p_def Big_X_7_10_def
+    by blast
   have "(\<Sum>i\<in>\<R>\<union>\<S>. h (Suc i) - h (i-1)) = (\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) - (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
     unfolding RS_eq by (intro sum_diff BmD) auto
   also have "... \<le> ok_fun_26 k - ok_fun_28 k"
@@ -1071,56 +1072,59 @@ qed
 
 subsection \<open>Lemma 7.11\<close>
 
-
-definition "Big_X_7_11 \<equiv> \<lambda>\<mu> l. Lemma_Red_5_3 \<mu> l \<and>
-  (\<forall>k. Colours l k \<longrightarrow> 
-   Big_Y_6_5_Bblue k \<and> eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1
+(*Big_X_7_5 is used (rather than the conclusion) because that theorem is split in two*)
+definition "Big_X_7_11 \<equiv> \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Lemma_6_5_dbooSt \<mu> l \<and>
+           Lemma_Y_6_5_Bblue \<mu> l \<and>
+  (\<forall>k. l\<le>k \<longrightarrow> 
+   eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1
     \<and> k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)
     \<and> ((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2
     \<and> (1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2)"
 
-lemma "\<forall>\<^sup>\<infinity>k. Big_X_7_11 k"
-  unfolding eps_def Big_X_7_11_def
-  by real_asymp
+text \<open>establishing the size requirements for 7.11\<close>
+lemma Big_X_7_11:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_11 \<mu> l"
+  unfolding Big_X_7_11_def eventually_conj_iff all_imp_conj_distrib eps_def
+  apply (simp add: Red_5_3 Big_X_7_5 Y_6_5_dbooSt Y_6_5_Bblue assms)
+  apply (intro conjI eventually_all_ge_at_top; real_asymp)
+  done
 
-lemma "\<forall>\<^sup>\<infinity>k. k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)"
-  unfolding eps_def 
-  by real_asymp
-
-lemma "\<forall>\<^sup>\<infinity>k. ((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"
-  unfolding eps_def 
-  by real_asymp
-
-lemma  "\<forall>\<^sup>\<infinity>k. (1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
-  unfolding eps_def 
-  by real_asymp
-
-lemma X_7_11:
+lemma X_7_11_aux:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
   defines "p \<equiv> pee \<mu> l k"
   defines "\<R> \<equiv> Step_class \<mu> l k {red_step}"
   defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
-  defines "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
-  defines "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
-  defines "\<H> \<equiv> Step_class \<mu> l k {halted}"
-  defines "m \<equiv> Inf \<H>"
   defines "C \<equiv> {i. p i \<ge> p (i-1) + eps k powr (-1/4) * alpha k 1 \<and> p (i-1) \<le> p0}"
-  assumes big: "Big_X_7_5 \<mu> l" and Y_6_5_S: "Lemma_6_5_dbooSt \<mu> l"
-         and big_711: "Big_X_7_11 \<mu> l"
+  assumes big: "Big_X_7_11 \<mu> l"
   shows "card ((\<R>\<union>\<S>) \<inter> C) \<le> 4 * eps k powr (1/4) * k"
 proof -
   define qstar where "qstar \<equiv> p0 + eps k powr (-1/4) * alpha k 1"
   define pstar where "pstar \<equiv> \<lambda>i. min (p i) qstar"
+  define \<D> where "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
+  define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
+  define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
+  define m where "m \<equiv> Inf \<H>"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  then have halt: "Lemma_Step_class_halted_nonempty \<mu> l" 
+  have big_x75: "Big_X_7_5 \<mu> l" and Y_6_5_S: "Lemma_6_5_dbooSt \<mu> l" 
+    and 711: "eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1"
+    and big34: "k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)"
+    and le2: "((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"
+             "(1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
+    and "Lemma_Y_6_5_Bblue \<mu> l"
+    and R53:  "\<And>i. i \<in> \<S> \<Longrightarrow> p (Suc i) \<ge> p i"
+    using big \<open>Colours l k\<close> \<open>l\<le>k\<close> by (auto simp: Lemma_Red_5_3_def Big_X_7_11_def \<S>_def p_def)
+  then have Y_6_5_B: "\<And>i. i \<in> \<B> \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2 * eps k powr (-1/2)"
+    using \<open>\<mu>>0\<close> \<open>l\<le>k\<close> unfolding \<B>_def p_def by (meson Lemma_Y_6_5_Bblue_def)
+  have halt: "Lemma_Step_class_halted_nonempty \<mu> l" 
     and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
     and B_limit: "Lemma_bblue_step_limit \<mu> l"
     and hub: "Lemma_height_upper_bound k"
     and 16: "k\<ge>16" (*for Y_6_5_Red*)
     and ok_le_k: "ok_fun_26 k - ok_fun_28 k \<le> k"
-    using big by (auto simp: Big_X_7_5_def)
+    using \<open>Colours l k\<close> big_x75 lk by (auto simp: Big_X_7_5_def)
   with \<open>Colours l k\<close> have "m \<in> \<H>"
     by (simp add: Inf_nat_def1 \<H>_def m_def Lemma_Step_class_halted_nonempty_def)
   then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
@@ -1128,17 +1132,6 @@ proof -
   then have oddset: "{..<m} \<setminus> \<D> = {i \<in> {..<m}. odd i}" 
     using step_odd step_even not_halted_even_dreg 
     by (auto simp: \<D>_def \<H>_def Step_class_insert_NO_MATCH)
-
-  have 711: "eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1"
-    and big34: "k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)"
-    and le2: "((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"
-             "(1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
-    and "Big_Y_6_5_Bblue k"
-    and R53:  "\<And>i. i \<in> \<S> \<Longrightarrow> p (Suc i) \<ge> p i"
-    using big_711 \<open>Colours l k\<close> 
-    by (auto simp: Lemma_Red_5_3_def Big_X_7_11_def \<S>_def p_def)
-  then have Y_6_5_B: "\<And>i. i \<in> \<B> \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2 * eps k powr (-1/2)"
-    using Y_6_5_Bblue_Main \<open>\<mu>>0\<close> \<open>k>0\<close> unfolding \<B>_def p_def by blast
 
   have "finite \<R>"
     using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
@@ -1278,7 +1271,7 @@ proof -
       by (metis Suc_diff_1 Y_6_4_DegreeReg \<D>_def odd odd_pos)
     then have  "pstar (i-1) \<le> pstar i"
       by (fastforce simp: pstar_def p_def)
-    then show "(if i \<in> C then eps k powr (-1/4) * alpha k 1 else 0) \<le> pstar i - pstar (i - 1)"
+    then show "(if i \<in> C then eps k powr (-1/4) * alpha k 1 else 0) \<le> pstar i - pstar (i-1)"
       using C_def pstar_def qstar_def by auto
   qed
   finally have C: "eps k powr (-1/4) * alpha k 1 * card ((\<R>\<union>\<S>) \<inter> C) \<le> (\<Sum>i\<in>\<R>\<union>\<S>. pstar i - pstar (i-1))" .
@@ -1294,7 +1287,6 @@ proof -
   have meq: "{..<m} \<setminus> \<D> = (\<R>\<union>\<S>) \<union> \<B>"
     apply (auto simp: \<R>_def \<S>_def \<D>_def \<B>_def \<H>_def Step_class_def simp flip: m_minimal)
     using stepkind.exhaust by blast
-
 
   have "(eps k powr (-1/4) * alpha k 1 * card ((\<R>\<union>\<S>) \<inter> C) + (- 2 * alpha k 1 * k))
         + (- alpha k 1 * k)
@@ -1330,6 +1322,21 @@ proof -
     using alpha_ge0[of k 1] \<open>k>0\<close> eps_gt0 [of k]
     by (simp add: powr_minus divide_simps mult_ac split: if_split_asm)
 qed
+
+
+definition "Lemma_X_7_11 \<equiv> 
+   \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> 
+     card (Step_class \<mu> l k {red_step,dboost_step} \<inter>
+         {i. pee \<mu> l k (i-1) + eps k powr (-1/4) * alpha k 1 \<le> pee \<mu> l k i \<and>
+             pee \<mu> l k (i-1) \<le> p0})
+     \<le> 4 * eps k powr (1/4) * real k"
+
+lemma X_7_11:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Lemma_X_7_11 \<mu> l"
+  unfolding Lemma_X_7_11_def
+  using Big_X_7_11 [OF assms]
+  by eventually_elim (metis (no_types, lifting) assms X_7_11_aux Step_class_insert) 
 
 
 end (*context Diagonal*)
