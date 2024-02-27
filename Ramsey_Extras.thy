@@ -15,13 +15,13 @@ lemma upair_define_apply:
   assumes "\<And>x y. f x y = f y x"
   shows "upair_define f {x,y} = f x y"
   using assms
-  by (force simp add: upair_define_def doubleton_eq_iff)
+  by (force simp: upair_define_def doubleton_eq_iff)
 
 lemma upair_define_apply_dom:
   assumes "\<And>x y. \<lbrakk>x\<in>A; y\<in>A\<rbrakk> \<Longrightarrow> f x y = f y x" "x\<in>A" "y\<in>A"
   shows "upair_define f {x,y} = f x y"
   using assms
-  by (force simp add: upair_define_def doubleton_eq_iff)
+  by (force simp: upair_define_def doubleton_eq_iff)
 
 
 (*2024-02-11: added*)
@@ -94,8 +94,7 @@ lemma nsets_eq_iff:
   shows "[A]\<^bsup>m\<^esup> = [A]\<^bsup>n\<^esup> \<longleftrightarrow> m=n \<or> A={}"
 proof
   assume "[A]\<^bsup>m\<^esup> = [A]\<^bsup>n\<^esup>"
-  then
-  show "m = n \<or> A = {}"
+  then show "m = n \<or> A = {}"
     unfolding nsets_def using  obtain_subset_with_card_n [OF \<open>m \<le> card A\<close>] by blast
 qed (use assms in auto)
 
@@ -150,7 +149,7 @@ proof (clarsimp simp: partn_lst_def)
   qed
 qed
 
-(*Ramsey? But needs Equipollence*)
+(*2024-02-27: added to Library/Ramsey*)
 lemma nsets_lepoll_cong:
   assumes "A \<lesssim> B"
   shows "[A]\<^bsup>k\<^esup> \<lesssim> [B]\<^bsup>k\<^esup>"
@@ -167,11 +166,13 @@ proof -
     by (meson lepoll_def)
 qed
 
+(*2024-02-27: added to Library/Ramsey*)
 lemma nsets_eqpoll_cong:
   assumes "A\<approx>B"
   shows "[A]\<^bsup>k\<^esup> \<approx> [B]\<^bsup>k\<^esup>"
   by (meson assms eqpoll_imp_lepoll eqpoll_sym lepoll_antisym nsets_lepoll_cong)
 
+(*2024-02-27: added to Library/Ramsey*)
 lemma infinite_imp_infinite_nsets:
   assumes inf: "infinite A" and "k>0"
   shows "infinite ([A]\<^bsup>k\<^esup>)"
@@ -193,12 +194,13 @@ proof -
     by (meson \<open>A \<approx> B\<close> eqpoll_imp_lepoll nsets_eqpoll_cong psubsetI)
 qed
 
+(*2024-02-27: added to Library/Ramsey*)
 lemma finite_nsets_iff:
   assumes "k>0"
   shows "finite ([A]\<^bsup>k\<^esup>) \<longleftrightarrow> finite A"
   using assms finite_imp_finite_nsets infinite_imp_infinite_nsets by blast
 
-(*UNUSED? [simprule]*)
+(*2024-02-27: added to Library/Ramsey*)
 lemma card_nsets [simp]: "card (nsets A k) = card A choose k"
 proof (cases "finite A")
   case True
@@ -210,16 +212,17 @@ next
     by (cases "k=0"; simp add: finite_nsets_iff)
 qed
 
-subsection \<open>Erdos--Szekeres theorem\<close>
+subsection \<open>Erdős--Szekeres theorem\<close>
 
-text \<open>There's always a 0-clique\<close>
+(*2024-02-27: added to Library/Ramsey*)
 lemma partn_lst_0: "\<gamma> > 0 \<Longrightarrow> partn_lst \<beta> (0#\<alpha>) \<gamma>"
-  by (force simp add: partn_lst_def nsets_empty_iff)
+  by (force simp: partn_lst_def nsets_empty_iff)
 
+(*2024-02-27: added to Library/Ramsey*)
 lemma partn_lst_0': "\<gamma> > 0 \<Longrightarrow> partn_lst \<beta> (a#0#\<alpha>) \<gamma>"
-  by (force simp add: partn_lst_def nsets_empty_iff)
+  by (force simp: partn_lst_def nsets_empty_iff)
 
-text \<open>The Erdős--Snekeres bound, written explicitly\<close>
+(*2024-02-27: added to Library/Ramsey right down to END*)
 fun ES :: "[nat,nat,nat] \<Rightarrow> nat"
   where "ES 0 k l = max k l"
   |     "ES (Suc r) k l = 
@@ -238,7 +241,7 @@ lemma ES_2: "ES 2 k l = (if k=0 \<or> l=0 then 1 else ES 2 (k-1) l + ES 2 k (l-1
   unfolding numeral_2_eq_2
   by (smt (verit) ES.elims One_nat_def Suc_pred add_gr_0 neq0_conv nat.inject zero_less_Suc)
 
-text \<open>The Erdős--Snekeres upper bound\<close>
+text \<open>The Erdős--Szekeres upper bound\<close>
 lemma ES2_choose: "ES 2 k l = (k+l) choose k"
 proof (induct n \<equiv> "k+l" arbitrary: k l)
   case 0
@@ -312,14 +315,14 @@ proof -
       then have "U \<in> nsets {..<p} p1"
         using U by simp
       then obtain u where u: "bij_betw u {..<p1} U"
-        using ex_bij_betw_nat_finite lessThan_atLeast0 by (fastforce simp add: nsets_def)
+        using ex_bij_betw_nat_finite lessThan_atLeast0 by (fastforce simp: nsets_def)
       have u_nsets: "u ` X \<in> nsets {..p} n" if "X \<in> nsets {..<p1} n" for X n
       proof -
         have "inj_on u X"
           using u that bij_betw_imp_inj_on inj_on_subset by (force simp: nsets_def)
         then show ?thesis
           using Usub u that bij_betwE
-          by (fastforce simp add: nsets_def card_image)
+          by (fastforce simp: nsets_def card_image)
       qed
       define h where "h \<equiv> \<lambda>R. f (u ` R)"
       have "h \<in> nsets {..<p1} (Suc r) \<rightarrow> {..<Suc (Suc 0)}"
@@ -368,7 +371,7 @@ proof -
             using gi by blast
           have "f X = i"
             using gi True \<open>X - {p} \<in> nsets U r\<close> insert_Diff
-            by (fastforce simp add: g_def image_subset_iff)
+            by (fastforce simp: g_def image_subset_iff)
           then show ?thesis
             by (simp add: \<open>f X = i\<close> \<open>g (X - {p}) = i\<close>)
         next
@@ -380,7 +383,7 @@ proof -
             by (fastforce simp: nsets_def image_mono invinv_eq subset_trans)
           then show ?thesis
             using izero jzero hj Xim invu_nsets unfolding h_def
-            by (fastforce simp add: image_subset_iff)
+            by (fastforce simp: image_subset_iff)
         qed
         moreover have "insert p (u ` V) \<in> nsets {..p} q1"
           by (simp add: izero inq1)
@@ -392,7 +395,7 @@ proof -
           using V u_nsets by auto
         moreover have "f ` nsets (u ` V) (Suc r) \<subseteq> {j}"
           using hj
-          by (force simp add: h_def image_subset_iff nsets_def subset_image_inj card_image dest: finite_imageD)
+          by (force simp: h_def image_subset_iff nsets_def subset_image_inj card_image dest: finite_imageD)
         ultimately show ?thesis
           using jone not_less_eq by fastforce
       qed
@@ -401,14 +404,14 @@ proof -
       then have "U \<in> nsets {..<p} p2"
         using U by simp
       then obtain u where u: "bij_betw u {..<p2} U"
-        using ex_bij_betw_nat_finite lessThan_atLeast0 by (fastforce simp add: nsets_def)
+        using ex_bij_betw_nat_finite lessThan_atLeast0 by (fastforce simp: nsets_def)
       have u_nsets: "u ` X \<in> nsets {..p} n" if "X \<in> nsets {..<p2} n" for X n
       proof -
         have "inj_on u X"
           using u that bij_betw_imp_inj_on inj_on_subset by (force simp: nsets_def)
         then show ?thesis
           using Usub u that bij_betwE
-          by (fastforce simp add: nsets_def card_image)
+          by (fastforce simp: nsets_def card_image)
       qed
       define h where "h \<equiv> \<lambda>R. f (u ` R)"
       have "h \<in> nsets {..<p2} (Suc r) \<rightarrow> {..<Suc (Suc 0)}"
@@ -457,7 +460,7 @@ proof -
             using gi by blast
           have "f X = i"
             using gi True \<open>X - {p} \<in> nsets U r\<close> insert_Diff
-            by (fastforce simp add: g_def image_subset_iff)
+            by (fastforce simp: g_def image_subset_iff)
           then show ?thesis
             by (simp add: \<open>f X = i\<close> \<open>g (X - {p}) = i\<close>)
         next
@@ -469,7 +472,7 @@ proof -
             by (fastforce simp: nsets_def image_mono invinv_eq subset_trans)
           then show ?thesis
             using ione jone hj Xim invu_nsets unfolding h_def
-            by (fastforce simp add: image_subset_iff)
+            by (fastforce simp: image_subset_iff)
         qed
         moreover have "insert p (u ` V) \<in> nsets {..p} q2"
           by (simp add: ione inq1)
@@ -498,7 +501,7 @@ proposition ramsey2_full: "partn_lst {..<ES r q1 q2} [q1,q2] r"
 proof (induction r arbitrary: q1 q2)
   case 0
   then show ?case
-    by (auto simp add: partn_lst_def less_Suc_eq ex_in_conv nsets_eq_empty_iff)
+    by (auto simp: partn_lst_def less_Suc_eq ex_in_conv nsets_eq_empty_iff)
 next
   case (Suc r)
   note outer = this
@@ -541,7 +544,7 @@ next
     qed
   qed
 qed
-
+(*2024-02-27: END of additions*)
 
 (* not sure that the type class is the best approach when using Chelsea's locale*)
 class infinite =
@@ -554,8 +557,9 @@ instance prod :: (infinite, type) infinite
 instance list :: (type) infinite
   by intro_classes (simp add: infinite_UNIV_listI)
 
-subsection \<open>Lemmas relating to Ramsey's theorem\<close>
+subsection \<open>Relating cliques to the graph theory library\<close>
 
+(*2024-02-27: added to Library/Ramsey*)
 lemma clique_Un: "\<lbrakk>clique K F; clique L F; \<forall>v\<in>K. \<forall>w\<in>L. v \<noteq> w \<longrightarrow> {v, w} \<in> F\<rbrakk> \<Longrightarrow> clique (K \<union> L) F"
   by (metis UnE clique_def doubleton_eq_iff)
 
@@ -563,7 +567,7 @@ lemma nsets2_eq_all_edges: "[A]\<^bsup>2\<^esup> = all_edges A"
   using card_2_iff' unfolding nsets_def all_edges_def
   by fastforce
 
-
+(*2024-02-27: added to Library/Ramsey*)
 lemma null_clique[simp]: "clique {} E" and null_indep[simp]: "indep {} E"
   by (auto simp: clique_def indep_def)
 
@@ -571,11 +575,13 @@ lemma indep_eq_clique_compl: "indep R E = clique R (all_edges R - E)"
   by (auto simp: indep_def clique_def all_edges_def)
 
 lemma all_edges_subset_iff_clique: "all_edges K \<subseteq> E \<longleftrightarrow> clique K E"
-  by (fastforce simp add: card_2_iff clique_def all_edges_def)
+  by (fastforce simp: card_2_iff clique_def all_edges_def)
 
+(*2024-02-27: added to Library/Ramsey*)
 lemma smaller_clique: "\<lbrakk>clique R E; R' \<subseteq> R\<rbrakk> \<Longrightarrow> clique R' E"
   by (auto simp: clique_def)
 
+(*2024-02-27: added to Library/Ramsey*)
 lemma smaller_indep: "\<lbrakk>indep R E; R' \<subseteq> R\<rbrakk> \<Longrightarrow> indep R' E"
   by (auto simp: indep_def)
 
@@ -602,11 +608,15 @@ abbreviation is_Ramsey_number :: "[nat,nat,nat] \<Rightarrow> bool" where
   "is_Ramsey_number m n r \<equiv> partn_lst {..<r} [m,n] 2"
 
 
+(*2024-02-27: added to Library/Ramsey*)
 definition "monochromatic \<equiv> \<lambda>\<beta> \<alpha> \<gamma> f i. \<exists>H \<in> nsets \<beta> \<alpha>. f ` (nsets H \<gamma>) \<subseteq> {i}"
 
+(*2024-02-27: added to Library/Ramsey AS THE ACTUAL DEFINITION*)
 lemma partn_lst_iff:
   "partn_lst \<beta> \<alpha> \<gamma> \<equiv> \<forall>f \<in> nsets \<beta> \<gamma>  \<rightarrow>  {..<length \<alpha>}. \<exists>i < length \<alpha>. monochromatic \<beta> (\<alpha>!i) \<gamma> f i"
   by (simp add: partn_lst_def monochromatic_def)
+
+(*EVERYTHING BELOW BELONGS IN AN AFP ENTRY*)
 
 lemma is_clique_RN_imp_partn_lst:  
   fixes U :: "'a itself"
@@ -759,7 +769,7 @@ lemma is_Ramsey_number_le:
   assumes "is_Ramsey_number m n r" and le: "m' \<le> m" "n' \<le> n"
   shows "is_Ramsey_number m' n' r"
   using partn_lst_less [where \<alpha> = "[m,n]" and \<alpha>' = "[m',n']"] assms
-  by (force simp add: less_Suc_eq)
+  by (force simp: less_Suc_eq)
 
 definition RN where
   "RN \<equiv> \<lambda>m n. LEAST r. is_Ramsey_number m n r"
@@ -809,7 +819,7 @@ proof (intro strip)
     show "f ` [H]\<^bsup>2\<^esup> \<subseteq> {1-i}"
       using H fless2 by (fastforce simp: f'_def)
     show "H \<in> [{..<r}]\<^bsup>([n, m] ! (1-i))\<^esup>"
-      using \<open>i<2\<close> H by (fastforce simp add: less_2_cases_iff f'_def image_subset_iff)
+      using \<open>i<2\<close> H by (fastforce simp: less_2_cases_iff f'_def image_subset_iff)
   qed auto
 qed
 
@@ -1133,7 +1143,7 @@ proof
     then have [simp]: "e \<notin> coloured F f c" "coloured F (f(e := c)) c' = coloured F f c'" for f c c'
       by (auto simp: coloured_def)
     have inj: "inj_on (\<lambda>(y, g). g(e := y)) ({..<2} \<times> (F \<rightarrow>\<^sub>E {..<2}))"
-      using \<open>e \<notin> F\<close> by (fastforce simp add: inj_on_def fun_eq_iff)
+      using \<open>e \<notin> F\<close> by (fastforce simp: inj_on_def fun_eq_iff)
     show ?case
       using insert
       apply (simp add: pr_def coloured_insert PiE_insert_eq sum.reindex [OF inj] Information.sum_cartesian_product')
@@ -1182,7 +1192,7 @@ proof
         assume f: "f \<in> \<Omega>" and c: "all_edges K \<subseteq> coloured (all_edges W) f c"
         then show "\<exists>g\<in>all_edges W - all_edges K \<rightarrow>\<^sub>E {..<2}. f = (\<lambda>l\<in>all_edges W. if l \<in> all_edges K then c else g l)"
           apply (rule_tac x="restrict f (all_edges W - all_edges K)" in bexI)
-          apply (force simp add: \<Omega>_def coloured_def subset_iff)+
+          apply (force simp: \<Omega>_def coloured_def subset_iff)+
           done
       qed
       show "?R \<subseteq> ?L"
@@ -1267,7 +1277,7 @@ proof
   moreover have "F \<in> [{..<n}]\<^bsup>2\<^esup> \<rightarrow> {..<2}"
     using F by (auto simp: W_def \<Omega>_def nsets2_eq_all_edges)
   ultimately show False
-    using con by (force simp add: W_def partn_lst_def numeral_2_eq_2)
+    using con by (force simp: W_def partn_lst_def numeral_2_eq_2)
 qed
 
 text \<open>Andrew's calculation for the Ramsey lower bound. Symmetric, so works for both colours\<close>
@@ -1310,7 +1320,7 @@ proof -
   proof (intro mult_right_mono)
     show "real (n choose s) \<le> real (n ^ s) / fact s"
       using binomial_fact_pow[of n s] of_nat_mono
-      by (fastforce simp add: divide_simps mult.commute)
+      by (fastforce simp: divide_simps mult.commute)
   qed (use p01 in auto)
   also have "\<dots> < 1 / fact s"
     using B by (simp add: divide_simps)
