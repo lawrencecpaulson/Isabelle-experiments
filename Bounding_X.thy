@@ -1321,16 +1321,14 @@ proof -
     using alpha_ge0 by (simp add: mult.commute pee_eq_p0 pstar_def qstar_def p_def) 
   also have "... \<le> alpha k 1 * k"
     using alpha_ge0 k16 by (intro powr_mono mult_left_mono) (auto simp add: eps_def powr_powr)
-  finally have "eps k powr (-1/4) * alpha k 1 * real (card ((\<R> \<union> \<S>) \<inter> C)) \<le> 4 * (real k * alpha k 1)"
-    by simp
-  then have "eps k powr (-1/4) * real (card ((\<R> \<union> \<S>) \<inter> C)) \<le> 4 * real k"
+  finally have "eps k powr (-1/4) * real (card ((\<R> \<union> \<S>) \<inter> C)) * alpha k 1 \<le> 4 * k * alpha k 1"
+    by (simp add: mult_ac)
+  then have "eps k powr (-1/4) * real (card ((\<R> \<union> \<S>) \<inter> C)) \<le> 4 * k"
     using alpha_ge0[of k 1] \<open>k>0\<close>
-apply (simp add: mult_ac)
-  show ?thesis
-    using alpha_ge0[of k 1] \<open>k>0\<close>
-    apply (simp add: powr_minus divide_simps split: if_split_asm)
-
-    sorry
+    by (smt (verit, ccfv_SIG) alpha_Suc_ge eps_gt0 mult_le_cancel_right numeral_nat(7) of_nat_0_less_iff zero_compare_simps(7))
+  then show ?thesis
+    using alpha_ge0[of k 1] \<open>k>0\<close> eps_gt0 [of k]
+    by (simp add: powr_minus divide_simps mult_ac split: if_split_asm)
 qed
 
 
