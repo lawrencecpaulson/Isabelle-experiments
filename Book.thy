@@ -1252,16 +1252,6 @@ lemma Yseq_gt_0:
 lemma dreg_step_0: "\<not> termination_condition l k X0 Y0 \<Longrightarrow> 0 \<in> Step_class \<mu> l k {dreg_step}"
   by (auto simp: Step_class_def stepper_kind_def)
 
-lemma dreg_before_step:
-  assumes "Suc i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
-  shows "i \<in> Step_class \<mu> l k {dreg_step}"
-  using assms by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
-
-lemma dreg_before_step':
-  assumes "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" "i>0"
-  shows "i - Suc 0 \<in> Step_class \<mu> l k {dreg_step}"
-  by (simp add: assms dreg_before_step)
-
 lemma step_before_freg:
   assumes "Suc i \<in> Step_class \<mu> l k {dreg_step}"
   shows "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
@@ -1283,6 +1273,21 @@ lemma not_halted_odd_RBS: "\<lbrakk>i \<notin> Step_class \<mu> l k {halted}; od
 
 lemma not_halted_even_dreg: "\<lbrakk>i \<notin> Step_class \<mu> l k {halted}; even i\<rbrakk> \<Longrightarrow> i \<in> Step_class \<mu> l k {dreg_step}" 
   by (auto simp: Step_class_def stepper_kind_def next_state_kind_def split: prod.split_asm)
+
+lemma dreg_before_step:
+  assumes "Suc i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
+  shows "i \<in> Step_class \<mu> l k {dreg_step}"
+  using assms by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
+
+lemma dreg_before_step':
+  assumes "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
+  shows "i - Suc 0 \<in> Step_class \<mu> l k {dreg_step}"
+  using assms dreg_before_step step_odd by auto
+
+lemma dreg_before_step1:
+  assumes "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
+  shows "i-1 \<in> Step_class \<mu> l k {dreg_step}"
+  by (simp add: assms dreg_before_step')
 
 lemma step_odd_minus2: 
   assumes "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" "i>1"
@@ -1361,6 +1366,11 @@ lemma cvx_in_Xseq:
   shows "cvx \<mu> l k i \<in> Xseq \<mu> l k i"
   using assms cvx_works[OF assms] 
   by (simp add: Xseq_def central_vertex_def cvx_def split: prod.split_asm)
+
+lemma card_Xseq_pos:
+  assumes "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
+  shows "card (Xseq \<mu> l k i) > 0"
+  by (metis assms card_0_eq cvx_in_Xseq empty_iff finite_Xseq gr0I)
 
 lemma beta_le:
   assumes "\<mu> > 0" and i: "i \<in> Step_class \<mu> l k {red_step,dboost_step}"

@@ -1355,8 +1355,7 @@ lemma X_7_12_aux:
   assumes big: "Big_X_7_12 \<mu> l"
   shows "card ((\<R>\<union>\<S>) \<inter> C) \<le> 7 * eps k powr (1/4) * k"
 proof -
-  define qstar where "qstar \<equiv> p0 + eps k powr (-1/4) * alpha k 1"
-  define pstar where "pstar \<equiv> \<lambda>i. min (p i) qstar"
+  define p where "p \<equiv> pee \<mu> l k"
   define \<D> where "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
   define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
   define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
@@ -1364,12 +1363,42 @@ proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
 
-  have odd: "odd i" if "i \<in> \<R> \<or> i \<in> \<S>" for i
-    using that unfolding \<R>_def \<S>_def by (metis Step_class_insert UnCI step_odd)
   { fix i
-    assume i: "i \<in> \<R> \<union> \<S>"
-    with odd have "odd i"
-      by force
+    assume i: "i \<in> \<R> \<union> \<S>" and iC: "i \<in> C"
+    then have "odd i"
+      unfolding \<R>_def \<S>_def by (metis Step_class_insert Un_iff step_odd)
+    with i have i1: "i-1 \<in> \<D>"
+      unfolding \<R>_def \<S>_def \<D>_def by (metis Step_class_insert Un_iff dreg_before_step1)
+    then have 77: "card (X (i-1) \<setminus> X i) / card (X i) * (eps k powr (-1/2) * alpha k (hgt k (p (i-1))))
+            \<le> p i - p (i-1)"
+      by (metis Suc_diff_1 X_7_7 X_def \<D>_def \<mu> \<open>odd i\<close> lk(3) odd_pos p_def)
+ 
+   have card_Xm1: "card (X (i-1)) = card (X i) + card (X (i-1) \<setminus> X i)"
+      by (metis Xseq_antimono X_def add_diff_inverse_nat card_Diff_subset card_mono diff_le_self 
+          finite_Xseq linorder_not_less)
+    have "card (X i) > 0"
+      by (metis Step_class_insert card_Xseq_pos X_def \<R>_def \<S>_def i)
+    have "card (X (i-1)) > 0"
+      using C_def iC less_irrefl by fastforce
+    moreover have "2 * (card (X (i-1)) * eps k powr (1/4)) < card (X (i-1) \<setminus> X i)"
+      using iC card_Xm1 by (simp add: algebra_simps C_def of_nat_diff)
+    moreover have "card (X i) \<le> 2 * card (X (i-1))"
+      using card_Xm1 by linarith
+    ultimately have "eps k powr (1/4) \<le> card (X (i-1) \<setminus> X i) / card (X (i-1))"
+      by (simp add: divide_simps mult.commute)
+    moreover have "real (card (X i)) \<le> card (X (i-1))"
+      using card_Xm1 by linarith
+    ultimately have 1: "eps k powr (1/4) \<le> card (X (i-1) \<setminus> X i) / card (X i)"
+      by (smt (verit) \<open>0 < card (X i)\<close> frac_le of_nat_0_le_iff of_nat_0_less_iff)
+    have "eps k powr (-1/4) * alpha k 1
+       \<le> card (X (i-1) \<setminus> X i) / card (X i) * eps k powr (-1/2) * alpha k 1"
+      using alpha_ge0 mult_right_mono [OF 1, of "eps k powr (-1/2) * alpha k 1"] 
+      by (simp add: mult_ac flip: powr_add)
+    also have "... \<le> card (X (i-1) \<setminus> X i) / card (X i) * (eps k powr (-1/2) * alpha k (hgt k (p (i-1))))"
+      apply (simp add: alpha_eq)
+      sorry
+    also have "... \<le> p i - p (i-1)"
+      using 77 by simp
   }
   show ?thesis
     sorry
