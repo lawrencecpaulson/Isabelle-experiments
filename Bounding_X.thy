@@ -1378,7 +1378,8 @@ lemma X_7_11:
 subsection \<open>Lemma 7.12\<close>
 
 definition "Big_X_7_12 \<equiv>
-   \<lambda>\<mu> l. Lemma_X_7_11 \<mu> l \<and> Big_finite_components \<mu> l \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_9 k)"
+   \<lambda>\<mu> l. Lemma_X_7_11 \<mu> l \<and> Big_finite_components \<mu> l \<and> Big_X_7_10 \<mu> l
+       \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_9 k)"
 
 lemma X_7_12_aux:
   fixes l k
@@ -1399,12 +1400,14 @@ proof -
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
 
   have 711: "Lemma_X_7_11 \<mu> l" and fin: "Big_finite_components \<mu> l"
+      and big_710: "Big_X_7_10 \<mu> l"
     using big by (auto simp: Big_X_7_12_def)
   have "finite \<R>" "finite \<S>"
     using finite_components [OF \<mu> \<open>Colours l k\<close> fin]
     by (auto simp: \<R>_def \<S>_def Step_class_insert_NO_MATCH)
-  define C11 \<comment> \<open>the condition for Lemma 7.11\<close>
-    where "C11 \<equiv> {i. p i \<ge> p (i-1) + eps k powr (-1/4) * alpha k 1 \<and> p (i-1) \<le> p0}"
+  \<comment> \<open>now the conditions for Lemmas 7.10 and 7.11\<close>
+  define C10 where "C10 \<equiv> {i. hgt k (p i) \<ge> hgt k (p (i-1)) + eps k powr (-1/4)}"
+  define C11 where "C11 \<equiv> {i. p i \<ge> p (i-1) + eps k powr (-1/4) * alpha k 1 \<and> p (i-1) \<le> p0}"
 
   have "(\<R>\<union>\<S>) \<inter> C \<inter> {i. p (i-1) \<le> p0} \<subseteq> (\<R>\<union>\<S>) \<inter> C11"
   proof
@@ -1455,13 +1458,19 @@ proof -
   have B: "card ((\<R>\<union>\<S>) \<inter> C \<setminus> {i. p (i-1) \<le> p0}) \<le> 3 * eps k powr (1/4) * k" 
   proof -
     have "Big_X_7_9 k"
-      using Big_X_7_12_def assms(8) lk(2) by presburger
+      using Big_X_7_12_def big \<open>l\<le>k\<close> by presburger
     then have "card (X (Suc i)) \<ge> (1 - 2 * eps k powr (1/4)) * card (X i)" 
       if "i \<in> Step_class \<mu> l k {dreg_step}" and "p i \<ge> p0" 
           and "hgt k (p (Suc i)) \<le> hgt k (p i) + eps k powr (-1/4)" for i
       using X_7_9 X_def \<mu> p_def that by blast 
-    show ?thesis
+    have "(\<R>\<union>\<S>) \<inter> C \<setminus> {i. p (i-1) \<le> p0} \<subseteq> (\<R>\<union>\<S>) \<inter> C10"
+
       sorry
+    then have "card ((\<R>\<union>\<S>) \<inter> C \<setminus> {i. p (i-1) \<le> p0}) \<le> real (card ((\<R>\<union>\<S>) \<inter> C10))"
+      by (simp add: \<open>finite \<R>\<close> \<open>finite \<S>\<close> card_mono)
+    also have "card ((\<R>\<union>\<S>) \<inter> C10) \<le> 3 * eps k powr (1/4) * k"
+      unfolding \<R>_def \<S>_def C10_def p_def by (intro X_7_10 assms big_710)
+    finally show ?thesis . 
   qed
   have "real (card ((\<R>\<union>\<S>) \<inter> C)) 
            = real (card ((\<R>\<union>\<S>) \<inter> C \<inter> {i. p (i-1) \<le> p0})) + real (card ((\<R>\<union>\<S>) \<inter> C \<setminus> {i. p (i-1) \<le> p0}))"
