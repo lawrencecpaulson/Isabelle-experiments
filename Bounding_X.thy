@@ -533,8 +533,6 @@ proof -
     by (auto simp: \<S>\<S>_def \<S>_def dboost_star_def p_def h_def)
   have in_S: "h(Suc i) - h i > eps k powr (-1/4)" if "i \<in> \<S>\<setminus>\<S>\<S>" for i
     using that by (fastforce simp: \<S>\<S>)
-  have odd: "odd i" if "i \<in> \<R> \<or> i \<in> \<S>" for i
-    using that unfolding \<R>_def \<S>_def by (metis Step_class_insert UnCI step_odd)
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   then have "Lemma_Step_class_halted_nonempty \<mu> l" 
@@ -566,9 +564,9 @@ proof -
     proof (rule sum_mono)
       fix i :: nat
       assume i: "i \<in> \<S>\<setminus>\<S>\<S>"
-      with i odd have "i-1 \<in> \<D>"       
-        by (simp add: \<S>_def \<D>_def dreg_before_step Step_class_insert_NO_MATCH)
-      with i odd show "eps k powr (-1/4) \<le> h(Suc i) - h(i-1)"
+      with i obtain "i-1 \<in> \<D>" "i>0"    
+        using dreg_before_step1 by (fastforce simp add: \<S>_def \<D>_def Step_class_insert_NO_MATCH)
+      with i show "eps k powr (-1/4) \<le> h(Suc i) - h(i-1)"
         using in_S[of i] Y_6_5_DegreeReg[of "i-1" \<mu> l k] \<open>k>0\<close>
         by (simp add: p_def \<D>_def h_def)
     qed
@@ -584,9 +582,9 @@ proof -
   proof (rule sum_mono)
     fix i :: nat
     assume i: "i \<in> \<R>"
-    with i odd have "i-1 \<in> \<D>"       
-      by (simp add: \<R>_def \<D>_def dreg_before_step Step_class_insert_NO_MATCH)
-    with i odd have "hgt k (p (i-1)) - 2 \<le> hgt k (p (Suc i))"
+      with i obtain "i-1 \<in> \<D>" "i>0"    
+        using dreg_before_step1  by (fastforce simp add: \<R>_def \<D>_def Step_class_insert_NO_MATCH)
+    with i have "hgt k (p (i-1)) - 2 \<le> hgt k (p (Suc i))"
       using Y_6_5_Red[of i] 16 Y_6_5_DegreeReg[of "i-1"]
       by (fastforce simp: algebra_simps \<R>_def \<D>_def p_def)
     then show "- 2 \<le> h(Suc i) - h(i-1)"
@@ -1011,8 +1009,6 @@ lemma X_7_10:
   assumes big: "Big_X_7_10 \<mu> l" 
   shows "card ((\<R>\<union>\<S>) \<inter> C) \<le> 3 * eps k powr (1/4) * k"
 proof -
-  have odd: "odd i" if "i \<in> \<R> \<or> i \<in> \<S>" for i
-    using that unfolding \<R>_def \<S>_def by (metis Step_class_insert UnCI step_odd)
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   then have "Lemma_Step_class_halted_nonempty \<mu> l" 
@@ -1039,7 +1035,7 @@ proof -
     by blast
   have "(\<Sum>i\<in>\<R>\<union>\<S>. h (Suc i) - h (i-1)) = (\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) - (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
     unfolding RS_eq by (intro sum_diff BmD) auto
-  also have "... \<le> ok_fun_26 k - ok_fun_28 k"
+  also have "\<dots> \<le> ok_fun_26 k - ok_fun_28 k"
     using 26 28 by linarith
   finally have *: "(\<Sum>i\<in>\<R>\<union>\<S>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k - ok_fun_28 k" .
 
@@ -1069,11 +1065,10 @@ proof -
   proof (rule sum_mono)
     fix i :: nat
     assume i: "i \<in> \<R>\<union>\<S>"
-    with i odd[of i] dreg_before_step'[of i] have D: "i-1 \<in> \<D>"       
-      by (auto simp: \<S>_def \<R>_def \<D>_def dreg_before_step Step_class_def)
+    with i dreg_before_step1[of i] have D: "i-1 \<in> \<D>" "i>0"     
+      by (force simp: \<S>_def \<R>_def \<D>_def dreg_before_step Step_class_def)+
     then have *: "hgt k (p (i-1)) \<le> hgt k (p i)"
-      using \<open>k>0\<close> unfolding h_def p_def \<D>_def
-      by (metis Suc_pred' Y_6_5_DegreeReg diff_0_eq_0 gr0I le_eq_less_or_eq)
+      by (metis Suc_diff_1 Y_6_5_DegreeReg \<D>_def p_def \<open>k>0\<close>)
     show "(if i\<in>C then eps k powr (-1/4) else 0) + (if i\<in>\<R> then - 2 else 0) \<le> h (Suc i) - h (i-1)"
     proof (cases "i\<in>\<R>")
       case True
@@ -1099,7 +1094,7 @@ proof -
       qed
     qed
   qed
-  also have "... \<le> k"
+  also have "\<dots> \<le> k"
     using * ok_le_k
     by linarith
   finally have "card ((\<R>\<union>\<S>) \<inter> C) * eps k powr (-1/4) - 2 * card \<R> \<le> k"
@@ -1186,10 +1181,8 @@ proof -
   have "finite \<S>"
     using BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
 
-  have [simp]: "\<R> \<inter> \<S> = {}"
-    by (simp add: \<R>_def \<S>_def Step_class_def disjoint_iff)
-  have [simp]: "(\<R> \<union> \<S>) \<inter> \<B> = {}"
-    by (simp add: \<R>_def \<S>_def \<B>_def Step_class_def disjoint_iff)
+  have [simp]: "\<R> \<inter> \<S> = {}" and [simp]: "(\<R> \<union> \<S>) \<inter> \<B> = {}"
+    by (simp_all add: \<R>_def \<S>_def \<B>_def Step_class_def disjoint_iff)
 
   have hgt_qstar_le: "hgt k qstar \<le> 2 * eps k powr (-1/4)"
   proof (intro real_hgt_Least [where h = "2 * nat(floor (eps k powr (-1/4)))"])
@@ -1211,7 +1204,7 @@ proof -
   have "- 2 * alpha k 1 * k \<le> - alpha k (hgt k qstar + 2) * card \<R>"
     using mult_right_mono_neg [OF B, of "- (eps k)"] eps_ge0 [of k]
     by (simp add: alpha_eq divide_simps mult_ac)
-  also have "... \<le> (\<Sum>i\<in>\<R>. pstar (Suc i) - pstar i)"
+  also have "\<dots> \<le> (\<Sum>i\<in>\<R>. pstar (Suc i) - pstar i)"
   proof -
     { fix i
       assume "i \<in> \<R>"
@@ -1244,11 +1237,11 @@ proof -
   have "- alpha k 1 * k \<le> -2 * ?e12 * alpha k 1 * k powr (3/4)"
     using mult_right_mono_neg [OF big34, of "- alpha k 1"]  alpha_ge0 [of k 1]
     by (simp add: mult_ac)
-  also have "... \<le> -?e12 * alpha k (hgt k qstar + nat \<lfloor>2 * ?e12\<rfloor>) * card \<B>"
+  also have "\<dots> \<le> -?e12 * alpha k (hgt k qstar + nat \<lfloor>2 * ?e12\<rfloor>) * card \<B>"
   proof -
     have "card \<B> \<le> l powr (3/4)"
       using B_limit \<open>Colours l k\<close> by (simp add: Lemma_bblue_step_limit_def \<B>_def)
-    also have "... \<le> k powr (3/4)"
+    also have "\<dots> \<le> k powr (3/4)"
       by (simp add: powr_mono2 \<open>l\<le>k\<close>)
     finally have 1: "card \<B> \<le> k powr (3/4)" .
     have "alpha k (hgt k qstar + nat \<lfloor>2 * ?e12\<rfloor>) \<le> alpha k (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * ?e12\<rfloor>)"
@@ -1256,7 +1249,7 @@ proof -
       show "hgt k qstar + nat \<lfloor>2 * ?e12\<rfloor> \<le> nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * ?e12\<rfloor>"
         using hgt_qstar_le by linarith
     qed (simp add: hgt_gt_0)
-    also have "... \<le> 2 * alpha k 1"
+    also have "\<dots> \<le> 2 * alpha k 1"
     proof -
       have *: "(1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * ?e12\<rfloor> - 1) \<le> 2"
         using le2 by simp
@@ -1271,7 +1264,7 @@ proof -
       using mult_right_mono_neg [OF mult_mono [OF 1 2], of "-?e12"]
             alpha_ge0 [of k] by (simp add: mult_ac)
   qed
-  also have "... \<le> (\<Sum>i\<in>\<B>. pstar (Suc i) - pstar (i-1))"
+  also have "\<dots> \<le> (\<Sum>i\<in>\<B>. pstar (Suc i) - pstar (i-1))"
   proof -
     { fix i
       assume "i \<in> \<B>"
@@ -1290,7 +1283,7 @@ proof -
         then have "hgt k (p (i - Suc 0)) \<le> hgt k qstar + nat \<lfloor>2 * ?e12\<rfloor>"
           by simp linarith
         moreover 
-        have **: "p (Suc i) \<ge> p (i-1) - ?e12 * alpha k (hgt k (p (i-1)))"
+        have "p (Suc i) \<ge> p (i-1) - ?e12 * alpha k (hgt k (p (i-1)))"
           using Y_6_4_Bblue \<open>i \<in> \<B>\<close> \<open>\<mu>>0\<close> unfolding p_def \<B>_def by blast
         ultimately show ?thesis
           apply (simp add: pstar_def)
@@ -1354,13 +1347,12 @@ proof -
     by (simp add: sum_lessThan_telescope)
   also have "\<dots> \<le> alpha k 1 * eps k powr (-1/4)"
     using alpha_ge0 by (simp add: mult.commute pee_eq_p0 pstar_def qstar_def p_def) 
-  also have "... \<le> alpha k 1 * k"
+  also have "\<dots> \<le> alpha k 1 * k"
     using alpha_ge0 k16 by (intro powr_mono mult_left_mono) (auto simp add: eps_def powr_powr)
-  finally have "eps k powr (-1/4) * real (card ((\<R> \<union> \<S>) \<inter> C)) * alpha k 1 \<le> 4 * k * alpha k 1"
+  finally have "eps k powr (-1/4) * card ((\<R> \<union> \<S>) \<inter> C) * alpha k 1 \<le> 4 * k * alpha k 1"
     by (simp add: mult_ac)
   then have "eps k powr (-1/4) * real (card ((\<R> \<union> \<S>) \<inter> C)) \<le> 4 * k"
-    using alpha_ge0[of k 1] \<open>k>0\<close>
-    by (smt (verit, ccfv_SIG) alpha_Suc_ge eps_gt0 mult_le_cancel_right numeral_nat(7) of_nat_0_less_iff zero_compare_simps(7))
+    using \<open>k>0\<close> by (simp add: divide_simps alpha_eq eps_gt0)
   then show ?thesis
     using alpha_ge0[of k 1] \<open>k>0\<close> eps_gt0 [of k]
     by (simp add: powr_minus divide_simps mult_ac split: if_split_asm)
@@ -1406,9 +1398,6 @@ lemma X_7_12_aux:
 proof -
   define p where "p \<equiv> pee \<mu> l k"
   define \<D> where "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
-  define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
-  define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
-  define m where "m \<equiv> Inf \<H>"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   have 711: "Lemma_X_7_11 \<mu> l" and fin: "Big_finite_components \<mu> l"
@@ -1452,9 +1441,9 @@ proof -
        \<le> card (X (i-1) \<setminus> X i) / card (X i) * (eps k powr (-1/2) * alpha k 1)"
       using alpha_ge0 mult_right_mono [OF 1, of "eps k powr (-1/2) * alpha k 1"] 
       by (simp add: mult_ac flip: powr_add)
-    also have "... \<le> card (X (i-1) \<setminus> X i) / card (X i) * (eps k powr (-1/2) * alpha k (hgt k (p (i-1))))"
+    also have "\<dots> \<le> card (X (i-1) \<setminus> X i) / card (X i) * (eps k powr (-1/2) * alpha k (hgt k (p (i-1))))"
       by (intro mult_left_mono alpha_mono) (auto simp add: Suc_leI hgt_gt_0)
-    also have "... \<le> p i - p (i-1)"
+    also have "\<dots> \<le> p i - p (i-1)"
       using 77 by simp
     finally have "eps k powr (-1/4) * alpha k 1 \<le> p i - p (i-1)" .
     with i show "i \<in> (\<R> \<union> \<S>) \<inter> C11"
@@ -1462,7 +1451,7 @@ proof -
   qed
   then have "real (card ((\<R>\<union>\<S>) \<inter> C \<inter> {i. p (i-1) \<le> p0})) \<le> real (card ((\<R>\<union>\<S>) \<inter> C11))"
     by (simp add: \<open>finite \<R>\<close> \<open>finite \<S>\<close> card_mono)
-  also have "... \<le> 4 * eps k powr (1/4) * k"
+  also have "\<dots> \<le> 4 * eps k powr (1/4) * k"
     using 711 \<open>Colours l k\<close> 
     by (simp add: Lemma_X_7_11_def \<R>_def \<S>_def p_def C11_def Step_class_insert_NO_MATCH)
   finally have A: "card ((\<R>\<union>\<S>) \<inter> C \<inter> {i. p (i-1) \<le> p0}) \<le> 4 * eps k powr (1/4) * k" .
