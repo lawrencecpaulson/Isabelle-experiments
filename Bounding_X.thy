@@ -900,7 +900,7 @@ subsection \<open>Lemma 7.9\<close>
 definition "Big_X_7_9 \<equiv> \<lambda>k. ((1 + eps k) powr (eps k powr (-1/4) + 1) - 1) / eps k \<le> 2 * eps k powr (-1/4)
    \<and> k\<ge>2 \<and> eps k powr (1/2) / k \<ge> 2 / k^2"
 
-lemma "\<forall>\<^sup>\<infinity>k. Big_X_7_9 k"
+lemma Big_X_7_9: "\<forall>\<^sup>\<infinity>k. Big_X_7_9 k"
   unfolding eps_def Big_X_7_9_def eventually_conj_iff eps_def
   by (intro conjI; real_asymp)
 
@@ -989,6 +989,12 @@ qed
 subsection \<open>Lemma 7.10\<close>
  
 definition "Big_X_7_10 \<equiv> \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Lemma_6_5_dbooSt \<mu> l"
+
+text \<open>establishing the size requirements for 7.10\<close>
+lemma Big_X_7_10:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_10 \<mu> l"
+  by (simp add: Big_X_7_10_def  eventually_conj_iff Big_X_7_5 Y_6_5_dbooSt assms)
 
 lemma X_7_10:
   fixes l k
@@ -1381,6 +1387,13 @@ definition "Big_X_7_12 \<equiv>
    \<lambda>\<mu> l. Lemma_X_7_11 \<mu> l \<and> Big_finite_components \<mu> l \<and> Big_X_7_10 \<mu> l
        \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_9 k)"
 
+text \<open>establishing the size requirements for 7.11\<close>
+lemma Big_X_7_12:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_12 \<mu> l"
+  unfolding Big_X_7_12_def eventually_conj_iff  
+  by (simp add: X_7_11 Big_finite_components X_7_10 Big_X_7_10 Big_X_7_9 eventually_all_ge_at_top assms)
+
 lemma X_7_12_aux:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
@@ -1398,7 +1411,6 @@ proof -
   define m where "m \<equiv> Inf \<H>"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-
   have 711: "Lemma_X_7_11 \<mu> l" and fin: "Big_finite_components \<mu> l"
       and big_710: "Big_X_7_10 \<mu> l"
     using big by (auto simp: Big_X_7_12_def)
@@ -1408,7 +1420,6 @@ proof -
   \<comment> \<open>now the conditions for Lemmas 7.10 and 7.11\<close>
   define C10 where "C10 \<equiv> {i. hgt k (p i) \<ge> hgt k (p (i-1)) + eps k powr (-1/4)}"
   define C11 where "C11 \<equiv> {i. p i \<ge> p (i-1) + eps k powr (-1/4) * alpha k 1 \<and> p (i-1) \<le> p0}"
-
   have "(\<R>\<union>\<S>) \<inter> C \<inter> {i. p (i-1) \<le> p0} \<subseteq> (\<R>\<union>\<S>) \<inter> C11"
   proof
     fix i
@@ -1459,13 +1470,21 @@ proof -
   proof -
     have "Big_X_7_9 k"
       using Big_X_7_12_def big \<open>l\<le>k\<close> by presburger
-    then have "card (X (Suc i)) \<ge> (1 - 2 * eps k powr (1/4)) * card (X i)" 
+    then have X79: "card (X (Suc i)) \<ge> (1 - 2 * eps k powr (1/4)) * card (X i)" 
       if "i \<in> Step_class \<mu> l k {dreg_step}" and "p i \<ge> p0" 
           and "hgt k (p (Suc i)) \<le> hgt k (p i) + eps k powr (-1/4)" for i
       using X_7_9 X_def \<mu> p_def that by blast 
     have "(\<R>\<union>\<S>) \<inter> C \<setminus> {i. p (i-1) \<le> p0} \<subseteq> (\<R>\<union>\<S>) \<inter> C10"
-
-      sorry
+      unfolding C10_def C_def
+    proof clarify
+      fix i
+      assume "i \<in> \<R> \<union> \<S>"
+        and \<section>: "card (X i) < (1 - 2 * eps k powr (1/4)) * card (X (i-1))" "\<not> p (i-1) \<le> p0"
+      then obtain "i-1 \<in> \<D>" "i>0"
+        unfolding \<D>_def \<R>_def \<S>_def by (metis dreg_before_step1 Step_class_Un Un_iff insert_is_Un)
+      with X79 \<section> show "hgt k (p (i - 1)) + eps k powr (- 1 / 4) \<le> hgt k (p i)"
+        by (force simp add: \<D>_def)
+    qed
     then have "card ((\<R>\<union>\<S>) \<inter> C \<setminus> {i. p (i-1) \<le> p0}) \<le> real (card ((\<R>\<union>\<S>) \<inter> C10))"
       by (simp add: \<open>finite \<R>\<close> \<open>finite \<S>\<close> card_mono)
     also have "card ((\<R>\<union>\<S>) \<inter> C10) \<le> 3 * eps k powr (1/4) * k"
