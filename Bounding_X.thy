@@ -91,6 +91,7 @@ proof -
     by presburger
 qed
 
+text \<open>it's convenient to package up the criteria for finiteness of all components at once\<close>
 definition 
   "Big_finite_components \<equiv> 
     \<lambda>\<mu> l. Lemma_Step_class_halted_nonempty \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l
@@ -896,11 +897,12 @@ qed
 
 subsection \<open>Lemma 7.9\<close>
 
-definition "Big_X_7_9 \<equiv> \<lambda>k. ((1 + eps k) powr (eps k powr (-1/4) + 1) - 1) / eps k \<le> 2 * eps k powr (-1/4)"
+definition "Big_X_7_9 \<equiv> \<lambda>k. ((1 + eps k) powr (eps k powr (-1/4) + 1) - 1) / eps k \<le> 2 * eps k powr (-1/4)
+   \<and> k\<ge>2 \<and> eps k powr (1/2) / k \<ge> 2 / k^2"
 
 lemma "\<forall>\<^sup>\<infinity>k. Big_X_7_9 k"
-  unfolding eps_def Big_X_7_9_def
-  by real_asymp
+  unfolding eps_def Big_X_7_9_def eventually_conj_iff eps_def
+  by (intro conjI; real_asymp)
 
 lemma one_plus_powr_le:
   fixes p::real
@@ -916,14 +918,15 @@ proof (rule gen_upper_bound_increasing [OF \<open>x\<ge>0\<close>])
 qed auto
 
 lemma X_7_9:
-  assumes \<mu>: "0<\<mu>" "\<mu><1" and k: "k\<ge>2" "eps k powr (1/2) / k \<ge> 2 / k^2" 
-    and i: "i \<in> Step_class \<mu> l k {dreg_step}"
+  assumes \<mu>: "0<\<mu>" "\<mu><1"
+    and i: "i \<in> Step_class \<mu> l k {dreg_step}" and big: "Big_X_7_9 k"
   defines "X \<equiv> Xseq \<mu> l k" and "p \<equiv> pee \<mu> l k" 
   defines "hp \<equiv> \<lambda>i. hgt k (p i)"
   assumes "p i \<ge> p0" and hgt: "hp (Suc i) \<le> hp i + eps k powr (-1/4)"
-    and big: "Big_X_7_9 k"
   shows "card (X (Suc i)) \<ge> (1 - 2 * eps k powr (1/4)) * card (X i)"
 proof -
+  have k: "k\<ge>2" "eps k powr (1/2) / k \<ge> 2 / k^2" 
+    using big by (auto simp: Big_X_7_9_def)
   let ?q = "eps k powr (-1/2) * alpha k (hp i)"
   have "k>0" using k by auto
   have Xsub[simp]: "X (Suc i) \<subseteq> X i"
@@ -1374,7 +1377,8 @@ lemma X_7_11:
 
 subsection \<open>Lemma 7.12\<close>
 
-definition "Big_X_7_12 \<equiv> \<lambda>\<mu> l. Lemma_X_7_11 \<mu> l \<and> Big_finite_components \<mu> l"
+definition "Big_X_7_12 \<equiv>
+   \<lambda>\<mu> l. Lemma_X_7_11 \<mu> l \<and> Big_finite_components \<mu> l \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_9 k)"
 
 lemma X_7_12_aux:
   fixes l k
@@ -1449,7 +1453,16 @@ proof -
     by (simp add: Lemma_X_7_11_def \<R>_def \<S>_def p_def C11_def Step_class_insert_NO_MATCH)
   finally have A: "card ((\<R>\<union>\<S>) \<inter> C \<inter> {i. p (i-1) \<le> p0}) \<le> 4 * eps k powr (1/4) * k" .
   have B: "card ((\<R>\<union>\<S>) \<inter> C \<setminus> {i. p (i-1) \<le> p0}) \<le> 3 * eps k powr (1/4) * k" 
-    sorry
+  proof -
+    have "Big_X_7_9 k"
+      using Big_X_7_12_def assms(8) lk(2) by presburger
+    then have "card (X (Suc i)) \<ge> (1 - 2 * eps k powr (1/4)) * card (X i)" 
+      if "i \<in> Step_class \<mu> l k {dreg_step}" and "p i \<ge> p0" 
+          and "hgt k (p (Suc i)) \<le> hgt k (p i) + eps k powr (-1/4)" for i
+      using X_7_9 X_def \<mu> p_def that by blast 
+    show ?thesis
+      sorry
+  qed
   have "real (card ((\<R>\<union>\<S>) \<inter> C)) 
            = real (card ((\<R>\<union>\<S>) \<inter> C \<inter> {i. p (i-1) \<le> p0})) + real (card ((\<R>\<union>\<S>) \<inter> C \<setminus> {i. p (i-1) \<le> p0}))"
     by (metis card_Int_Diff of_nat_add \<open>finite \<R>\<close> \<open>finite \<S>\<close> finite_Int infinite_Un)
