@@ -7,6 +7,8 @@ begin
 context Diagonal
 begin
 
+subsection \<open>Preliminaries\<close>
+
 text \<open>the set of moderate density-boost steps (page 20)\<close>
 definition dboost_star where
   "dboost_star \<equiv> \<lambda>\<mu> l k. 
@@ -50,7 +52,6 @@ proof -
     by presburger
 qed
 
-
 lemma bigbeta_less1:
   assumes "0<\<mu>"  "\<mu><1" 
   shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> bigbeta \<mu> l k < 1"
@@ -88,6 +89,39 @@ proof -
     using eventually_mono [OF eventually_conj [OF beta_gt_0 [OF assms] bblue_dboost_step_limit [OF \<open>\<mu>>0\<close>]]]
     unfolding Lemma_bblue_dboost_step_limit_def Lemma_beta_gt_0_def
     by presburger
+qed
+
+definition 
+  "Big_finite_components \<equiv> 
+    \<lambda>\<mu> l. Lemma_Step_class_halted_nonempty \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l
+        \<and> Lemma_bblue_step_limit \<mu> l"
+
+text \<open>establishing the size requirements for finiteness\<close>
+lemma Big_finite_components:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_finite_components \<mu> l"
+  unfolding Big_finite_components_def eventually_conj_iff all_imp_conj_distrib 
+  by (simp add: Step_class_halted_nonempty bblue_dboost_step_limit bblue_step_limit assms)
+
+lemma finite_components:
+  assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and big: "Big_finite_components \<mu> l" 
+  shows "Step_class \<mu> l k {halted} \<noteq> {}" "finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step})"
+proof -
+  have red: "finite (Step_class \<mu> l k {red_step})"
+    using \<open>Colours l k\<close> \<mu> red_step_limit by blast
+  have bblue: "finite (Step_class \<mu> l k {bblue_step})"
+    using \<open>Colours l k\<close> big unfolding Big_finite_components_def Lemma_bblue_step_limit_def
+    by blast
+  have dbooSt: "finite (Step_class \<mu> l k {dboost_step})"
+    using \<open>Colours l k\<close> big unfolding Big_finite_components_def Lemma_bblue_dboost_step_limit_def
+    by blast
+  have dreg: "finite (Step_class \<mu> l k {dreg_step})"
+    by (metis red bblue dbooSt finite_dreg_step Step_class_insert finite_Un)
+  show "finite (Step_class \<mu> l k {red_step, bblue_step, dboost_step, dreg_step})"
+    by (metis Step_class_insert bblue dbooSt dreg finite_Un red)
+  show "Step_class \<mu> l k {halted} \<noteq> {}"
+    using \<open>Colours l k\<close> big unfolding Big_finite_components_def Lemma_Step_class_halted_nonempty_def
+    by blast
 qed
 
 subsection \<open>Lemma 7.2\<close>
@@ -1009,10 +1043,10 @@ proof -
   proof -
     have *: "hgt k (pee \<mu> l k i) \<le> hgt k (pee \<mu> l k (Suc i))"
       using Y_6_5_S \<open>Colours l k\<close> that unfolding \<S>_def Lemma_6_5_dbooSt_def by blast
-    have "i-1 \<in> \<D>"
-      using that odd by (simp add: \<S>_def \<D>_def dreg_before_step Step_class_insert_NO_MATCH)
+    obtain "i-1 \<in> \<D>" "i>0"
+      using that \<open>i\<in>\<S>\<close> dreg_before_step1[of i] by (force simp add: \<S>_def \<D>_def Step_class_insert_NO_MATCH)
     then have "hgt k (pee \<mu> l k (i-1)) \<le> hgt k (pee \<mu> l k i)"
-      using that \<open>k>0\<close> by (metis Suc_diff_1 Y_6_5_DegreeReg \<D>_def odd odd_pos)
+      using that \<open>k>0\<close> by (metis Suc_diff_1 Y_6_5_DegreeReg \<D>_def)
     with * show "0 \<le> h(Suc i) - h(i-1)"
       using \<open>k>0\<close> unfolding h_def p_def by linarith
   qed
@@ -1265,14 +1299,11 @@ proof -
   proof (intro sum_mono)
     fix i
     assume i: "i \<in> \<R> \<union> \<S>"
-    have odd: "odd i" 
-      using i unfolding \<R>_def \<S>_def by (metis Step_class_Un Un_iff insert_is_Un step_odd)
-    with i have "i-1 \<in> \<D>"
-      using dreg_before_step unfolding \<R>_def \<S>_def \<D>_def One_nat_def
-      by (metis Step_class_insert Un_iff odd_Suc_minus_one)
+    then obtain "i-1 \<in> \<D>" "i>0"
+      unfolding \<R>_def \<S>_def \<D>_def by (metis dreg_before_step1 Step_class_insert Un_iff)
     then have "pee \<mu> l k (i-1) \<le> pee \<mu> l k i"
-      by (metis Suc_diff_1 Y_6_4_DegreeReg \<D>_def odd odd_pos)
-    then have  "pstar (i-1) \<le> pstar i"
+      by (metis Suc_pred' Y_6_4_DegreeReg \<D>_def)
+    then have "pstar (i-1) \<le> pstar i"
       by (fastforce simp: pstar_def p_def)
     then show "(if i \<in> C then eps k powr (-1/4) * alpha k 1 else 0) \<le> pstar i - pstar (i-1)"
       using C_def pstar_def qstar_def by auto
@@ -1343,7 +1374,7 @@ lemma X_7_11:
 
 subsection \<open>Lemma 7.12\<close>
 
-definition "Big_X_7_12 \<equiv> \<lambda>\<mu> l. True"
+definition "Big_X_7_12 \<equiv> \<lambda>\<mu> l. Lemma_X_7_11 \<mu> l \<and> Big_finite_components \<mu> l"
 
 lemma X_7_12_aux:
   fixes l k
@@ -1363,21 +1394,30 @@ proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
 
-  { fix i
-    assume i: "i \<in> \<R> \<union> \<S>" and iC: "i \<in> C"
-    then have "odd i"
-      unfolding \<R>_def \<S>_def by (metis Step_class_insert Un_iff step_odd)
-    with i have i1: "i-1 \<in> \<D>"
+  have 711: "Lemma_X_7_11 \<mu> l" and fin: "Big_finite_components \<mu> l"
+    using big by (auto simp: Big_X_7_12_def)
+  have "finite \<R>" "finite \<S>"
+    using finite_components [OF \<mu> \<open>Colours l k\<close> fin]
+    by (auto simp: \<R>_def \<S>_def Step_class_insert_NO_MATCH)
+  define C11 \<comment> \<open>the condition for Lemma 7.11\<close>
+    where "C11 \<equiv> {i. p i \<ge> p (i-1) + eps k powr (-1/4) * alpha k 1 \<and> p (i-1) \<le> p0}"
+
+  have "(\<R>\<union>\<S>) \<inter> C \<inter> {i. p (i-1) \<le> p0} \<subseteq> (\<R>\<union>\<S>) \<inter> C11"
+  proof
+    fix i
+    assume i: "i \<in> (\<R>\<union>\<S>) \<inter> C \<inter> {i. p (i-1) \<le> p0}"
+    then have iRS: "i \<in> \<R> \<union> \<S>" and iC: "i \<in> C"
+      by auto
+    then obtain i1: "i-1 \<in> \<D>" "i>0"
       unfolding \<R>_def \<S>_def \<D>_def by (metis Step_class_insert Un_iff dreg_before_step1)
     then have 77: "card (X (i-1) \<setminus> X i) / card (X i) * (eps k powr (-1/2) * alpha k (hgt k (p (i-1))))
             \<le> p i - p (i-1)"
-      by (metis Suc_diff_1 X_7_7 X_def \<D>_def \<mu> \<open>odd i\<close> lk(3) odd_pos p_def)
- 
-   have card_Xm1: "card (X (i-1)) = card (X i) + card (X (i-1) \<setminus> X i)"
+      by (metis Suc_diff_1 X_7_7 X_def \<D>_def \<mu> lk(3) p_def)
+    have card_Xm1: "card (X (i-1)) = card (X i) + card (X (i-1) \<setminus> X i)"
       by (metis Xseq_antimono X_def add_diff_inverse_nat card_Diff_subset card_mono diff_le_self 
           finite_Xseq linorder_not_less)
     have "card (X i) > 0"
-      by (metis Step_class_insert card_Xseq_pos X_def \<R>_def \<S>_def i)
+      by (metis Step_class_insert card_Xseq_pos X_def \<R>_def \<S>_def iRS)
     have "card (X (i-1)) > 0"
       using C_def iC less_irrefl by fastforce
     moreover have "2 * (card (X (i-1)) * eps k powr (1/4)) < card (X (i-1) \<setminus> X i)"
@@ -1391,17 +1431,30 @@ proof -
     ultimately have 1: "eps k powr (1/4) \<le> card (X (i-1) \<setminus> X i) / card (X i)"
       by (smt (verit) \<open>0 < card (X i)\<close> frac_le of_nat_0_le_iff of_nat_0_less_iff)
     have "eps k powr (-1/4) * alpha k 1
-       \<le> card (X (i-1) \<setminus> X i) / card (X i) * eps k powr (-1/2) * alpha k 1"
+       \<le> card (X (i-1) \<setminus> X i) / card (X i) * (eps k powr (-1/2) * alpha k 1)"
       using alpha_ge0 mult_right_mono [OF 1, of "eps k powr (-1/2) * alpha k 1"] 
       by (simp add: mult_ac flip: powr_add)
     also have "... \<le> card (X (i-1) \<setminus> X i) / card (X i) * (eps k powr (-1/2) * alpha k (hgt k (p (i-1))))"
-      apply (simp add: alpha_eq)
-      sorry
+      by (intro mult_left_mono alpha_mono) (auto simp add: Suc_leI hgt_gt_0)
     also have "... \<le> p i - p (i-1)"
       using 77 by simp
-  }
-  show ?thesis
+    finally have "eps k powr (-1/4) * alpha k 1 \<le> p i - p (i-1)" .
+    with i show "i \<in> (\<R> \<union> \<S>) \<inter> C11"
+      by (simp add: C11_def)
+  qed
+  then have "real (card ((\<R>\<union>\<S>) \<inter> C \<inter> {i. p (i-1) \<le> p0})) \<le> real (card ((\<R>\<union>\<S>) \<inter> C11))"
+    by (simp add: \<open>finite \<R>\<close> \<open>finite \<S>\<close> card_mono)
+  also have "... \<le> 4 * eps k powr (1/4) * k"
+    using 711 \<open>Colours l k\<close> 
+    by (simp add: Lemma_X_7_11_def \<R>_def \<S>_def p_def C11_def Step_class_insert_NO_MATCH)
+  finally have A: "card ((\<R>\<union>\<S>) \<inter> C \<inter> {i. p (i-1) \<le> p0}) \<le> 4 * eps k powr (1/4) * k" .
+  have B: "card ((\<R>\<union>\<S>) \<inter> C \<setminus> {i. p (i-1) \<le> p0}) \<le> 3 * eps k powr (1/4) * k" 
     sorry
+  have "real (card ((\<R>\<union>\<S>) \<inter> C)) 
+           = real (card ((\<R>\<union>\<S>) \<inter> C \<inter> {i. p (i-1) \<le> p0})) + real (card ((\<R>\<union>\<S>) \<inter> C \<setminus> {i. p (i-1) \<le> p0}))"
+    by (metis card_Int_Diff of_nat_add \<open>finite \<R>\<close> \<open>finite \<S>\<close> finite_Int infinite_Un)
+  then show ?thesis
+    using A B by linarith 
 qed
 
 end (*context Diagonal*)

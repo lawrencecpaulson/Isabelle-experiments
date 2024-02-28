@@ -1281,13 +1281,13 @@ lemma dreg_before_step:
 
 lemma dreg_before_step':
   assumes "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
-  shows "i - Suc 0 \<in> Step_class \<mu> l k {dreg_step}"
-  using assms dreg_before_step step_odd by auto
+  shows "i - Suc 0 \<in> Step_class \<mu> l k {dreg_step}" "i > 0"
+  using assms dreg_before_step step_odd by (auto simp: odd_pos)
 
 lemma dreg_before_step1:
   assumes "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
-  shows "i-1 \<in> Step_class \<mu> l k {dreg_step}"
-  by (simp add: assms dreg_before_step')
+  shows "i-1 \<in> Step_class \<mu> l k {dreg_step}" "i > 0"
+  using dreg_before_step' [OF assms] by auto
 
 lemma step_odd_minus2: 
   assumes "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" "i>1"

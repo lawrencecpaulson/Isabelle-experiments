@@ -8,6 +8,12 @@ thm all_conj_distrib
 lemma all_imp_conj_distrib: "(\<forall>x. P x \<longrightarrow> Q x \<and> R x) \<longleftrightarrow> (\<forall>x. P x \<longrightarrow> Q x) \<and> (\<forall>x. P x \<longrightarrow> R x)"
   by iprover
 
+lemma card_Int_Diff:
+  assumes "finite A"
+  shows "card A = card (A \<inter> B) + card (A - B)"
+  by (simp add: assms card_Diff_subset_Int card_mono)
+
+
 (* TODO Move from Multiseries_expansion_bounds*)
 lemma powr_mono': "a \<le> (b::real) \<Longrightarrow> x \<ge> 0 \<Longrightarrow> x \<le> 1 \<Longrightarrow> x powr b \<le> x powr a"
   using powr_mono[of "-b" "-a" "inverse x"] by (auto simp: powr_def ln_inverse ln_div field_split_simps)

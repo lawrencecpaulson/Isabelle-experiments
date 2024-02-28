@@ -733,7 +733,7 @@ lemma finite_dreg_step:
   shows "finite (Step_class \<mu> l k {dreg_step})"
 proof -
   define n where "n = Max (Step_class \<mu> l k {red_step,bblue_step,dboost_step})"
-  have "i \<le> Suc (Max (Step_class \<mu> l k {stepkind.red_step,bblue_step,dboost_step}))"
+  have "i \<le> Suc (Max (Step_class \<mu> l k {red_step,bblue_step,dboost_step}))"
     if "i \<in> Step_class \<mu> l k {dreg_step}" for i
   proof (cases i)
     case 0
