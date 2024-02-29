@@ -711,31 +711,31 @@ definition good_blue_book :: "[real, 'a set, 'a set \<times> 'a set] \<Rightarro
 lemma ex_good_blue_book: "good_blue_book \<mu> X ({}, X)"
   by (simp add: good_blue_book_def)
 
-lemma bounded_good_blue_book: "\<lbrakk>good_blue_book \<mu> X (S,T); V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> card S \<le> card X"
+lemma bounded_good_blue_book: "\<lbrakk>good_blue_book \<mu> X (S,T); finite X\<rbrakk> \<Longrightarrow> card S \<le> card X"
   by (simp add: card_mono finX good_blue_book_def)
 
 definition best_blue_book_card :: "[real,'a set] \<Rightarrow> nat" where
   "best_blue_book_card \<equiv> \<lambda>\<mu> X. GREATEST s. \<exists>S T. good_blue_book \<mu> X (S,T) \<and> s = card S"
 
-lemma best_blue_book_is_best: "\<lbrakk>good_blue_book \<mu> X (S,T); V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> card S \<le> best_blue_book_card \<mu> X"
+lemma best_blue_book_is_best: "\<lbrakk>good_blue_book \<mu> X (S,T); finite X\<rbrakk> \<Longrightarrow> card S \<le> best_blue_book_card \<mu> X"
   unfolding best_blue_book_card_def
   by (smt (verit) Greatest_le_nat bounded_good_blue_book)
 
-lemma ex_best_blue_book: "V_state(X,Y,A,B) \<Longrightarrow> \<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S = best_blue_book_card \<mu> X"
+lemma ex_best_blue_book: "finite X \<Longrightarrow> \<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S = best_blue_book_card \<mu> X"
   unfolding best_blue_book_card_def
   by (smt (verit, del_insts) GreatestI_ex_nat bounded_good_blue_book ex_good_blue_book)
 
 definition "choose_blue_book \<equiv> \<lambda>\<mu> (X,Y,A,B). @(S,T). good_blue_book \<mu> X (S,T) \<and> card S = best_blue_book_card \<mu> X"
 
 lemma choose_blue_book_works: 
-  "\<lbrakk>V_state(X,Y,A,B); (S,T) = choose_blue_book \<mu> (X,Y,A,B)\<rbrakk> 
+  "\<lbrakk>finite X; (S,T) = choose_blue_book \<mu> (X,Y,A,B)\<rbrakk> 
   \<Longrightarrow> good_blue_book \<mu> X (S,T) \<and> card S = best_blue_book_card \<mu> X"
   unfolding choose_blue_book_def
   using someI_ex [OF ex_best_blue_book]
   by (metis (mono_tags, lifting) case_prod_conv someI_ex)
 
 lemma choose_blue_book_subset: 
-  "\<lbrakk>V_state(X,Y,A,B); (S,T) = choose_blue_book \<mu> (X,Y,A,B)\<rbrakk> \<Longrightarrow> S \<subseteq> X \<and> T \<subseteq> X \<and> disjnt S T"
+  "\<lbrakk>finite X; (S,T) = choose_blue_book \<mu> (X,Y,A,B)\<rbrakk> \<Longrightarrow> S \<subseteq> X \<and> T \<subseteq> X \<and> disjnt S T"
   using choose_blue_book_works good_blue_book_def book_def by fastforce
 
 
@@ -780,18 +780,18 @@ proof -
     by (meson bluish_def central_vertex_def linorder_linear)
 qed
 
-lemma finite_central_vertex_set: "V_state(X,Y,A,B) \<Longrightarrow> finite {x. central_vertex \<mu> X x}"
-  by (simp add: central_vertex_def finX)
+lemma finite_central_vertex_set: "finite X \<Longrightarrow> finite {x. central_vertex \<mu> X x}"
+  by (simp add: central_vertex_def)
 
 definition max_central_vx :: "[real,'a set,'a set] \<Rightarrow> real" where
   "max_central_vx \<equiv> \<lambda>\<mu> X Y. Max (weight X Y ` {x. central_vertex \<mu> X x})"
 
 lemma central_vx_is_best: 
-  "\<lbrakk>central_vertex \<mu> X x; V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> weight X Y x \<le> max_central_vx \<mu> X Y"
+  "\<lbrakk>central_vertex \<mu> X x; finite X\<rbrakk> \<Longrightarrow> weight X Y x \<le> max_central_vx \<mu> X Y"
   unfolding max_central_vx_def by (simp add: finite_central_vertex_set)
 
 lemma ex_best_central_vx: 
-  "\<lbrakk>\<not> termination_condition l k X Y; \<not> many_bluish \<mu> l k X; V_state(X,Y,A,B)\<rbrakk> 
+  "\<lbrakk>\<not> termination_condition l k X Y; \<not> many_bluish \<mu> l k X; finite X\<rbrakk> 
   \<Longrightarrow> \<exists>x. central_vertex \<mu> X x \<and> weight X Y x = max_central_vx \<mu> X Y"
   unfolding max_central_vx_def
   by (metis empty_iff ex_central_vertex finite_central_vertex_set mem_Collect_eq obtains_MAX)
@@ -801,14 +801,14 @@ text \<open>it's necessary to make a specific choice; a relational treatment mig
 definition "choose_central_vx \<equiv> \<lambda>\<mu> (X,Y,A,B). @x. central_vertex \<mu> X x \<and> weight X Y x = max_central_vx \<mu> X Y"
 
 lemma choose_central_vx_works: 
-  "\<lbrakk>\<not> termination_condition l k X Y; \<not> many_bluish \<mu> l k X; V_state(X,Y,A,B)\<rbrakk> 
+  "\<lbrakk>\<not> termination_condition l k X Y; \<not> many_bluish \<mu> l k X; finite X\<rbrakk> 
   \<Longrightarrow> central_vertex \<mu> X (choose_central_vx \<mu> (X,Y,A,B)) \<and> weight X Y (choose_central_vx \<mu> (X,Y,A,B)) = max_central_vx \<mu> X Y"
   unfolding choose_central_vx_def
   using someI_ex [OF ex_best_central_vx] by force
 
 lemma choose_central_vx_X: 
-  "\<lbrakk>\<not> termination_condition l k X Y; \<not> many_bluish \<mu> l k X; V_state(X,Y,A,B)\<rbrakk> \<Longrightarrow> choose_central_vx \<mu> (X,Y,A,B) \<in> X"
-  using central_vertex_def choose_central_vx_works by presburger
+  "\<lbrakk>\<not> termination_condition l k X Y; \<not> many_bluish \<mu> l k X; finite X\<rbrakk> \<Longrightarrow> choose_central_vx \<mu> (X,Y,A,B) \<in> X"
+  using central_vertex_def choose_central_vx_works by fastforce
 
 subsection \<open>Red step\<close>
 
@@ -823,8 +823,10 @@ lemma red_step_V_state:
           "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)"
   shows "V_state U'"
 proof -
-  have "choose_central_vx \<mu> (X, Y, A, B) \<in> V"
-    using assms choose_central_vx_X  by (simp add: V_state_def subset_eq)
+  have "X \<subseteq> V"
+    using assms by (auto simp: V_state_def)
+  then have "choose_central_vx \<mu> (X, Y, A, B) \<in> V"
+    using assms choose_central_vx_X by (fastforce simp: finX)
   with assms show ?thesis
     by (auto simp: V_state_def elim!: red_step.cases)
 qed
@@ -835,7 +837,7 @@ lemma red_step_disjoint_state:
   shows "disjoint_state U'"
 proof -
   have "choose_central_vx \<mu> (X, Y, A, B) \<in> X"
-    using assms choose_central_vx_X by (simp add: V_state_def)
+    using assms by (metis choose_central_vx_X finX)
   with assms show ?thesis
     by (auto simp: disjoint_state_def disjnt_iff not_own_Neighbour elim!: red_step.cases)
 qed
@@ -846,8 +848,10 @@ lemma red_step_RB_state:
   shows "RB_state U'"
 proof -
   define x where "x \<equiv> choose_central_vx \<mu> (X, Y, A, B)"
+  have [simp]: "finite X"
+    using assms by (simp add: finX)
   have "x \<in> X"
-    using assms choose_central_vx_X by (simp add: x_def V_state_def)
+    using assms choose_central_vx_X by (metis \<open>finite X\<close> x_def)
   have A: "all_edges_betw_un (insert x A) (insert x A) \<subseteq> Red"
     if "all_edges_betw_un A A \<subseteq> Red" "all_edges_betw_un A (X \<union> Y) \<subseteq> Red"
     using that \<open>x \<in> X\<close> all_edges_betw_un_commute 
@@ -880,8 +884,10 @@ lemma density_boost_V_state:
           "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)"
   shows "V_state U'"
 proof -
-  have "choose_central_vx \<mu> (X, Y, A, B) \<in> V"
-    using assms choose_central_vx_X  by (simp add: V_state_def subset_eq)
+  have "X \<subseteq> V"
+    using assms by (auto simp: V_state_def)
+  then have "choose_central_vx \<mu> (X, Y, A, B) \<in> V"
+    using assms choose_central_vx_X finX by fastforce 
   with assms show ?thesis
     by (auto simp: V_state_def elim!: density_boost.cases)
 qed
@@ -891,8 +897,10 @@ lemma density_boost_disjoint_state:
           "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
   shows "disjoint_state U'"
 proof -
-  have "choose_central_vx \<mu> (X, Y, A, B) \<in> X"
-    using assms choose_central_vx_X by (simp add: V_state_def)
+  have "X \<subseteq> V"
+    using assms by (auto simp: V_state_def)
+  then have "choose_central_vx \<mu> (X, Y, A, B) \<in> X"
+    using assms by (metis choose_central_vx_X finX)
   with assms show ?thesis
     by (auto simp: disjoint_state_def disjnt_iff not_own_Neighbour elim!: density_boost.cases)
 qed
@@ -904,7 +912,7 @@ lemma density_boost_RB_state:
 proof -
   define x where "x \<equiv> choose_central_vx \<mu> (X, Y, A, B)"
   have "x \<in> X"
-    using assms choose_central_vx_X by (simp add: x_def V_state_def)
+    using assms by (metis choose_central_vx_X finX x_def)
   have "all_edges_betw_un A (Neighbours Blue x \<inter> X \<union> Neighbours Red x \<inter> Y) \<subseteq> Red"
     if "all_edges_betw_un A (X \<union> Y) \<subseteq> Red"
     using that by (metis Int_Un_eq(4) Un_subset_iff all_edges_betw_un_Un2)
@@ -942,11 +950,11 @@ lemma next_state_valid:
   shows "valid_state (next_state \<mu> l k (X,Y,A,B))"
 proof (cases "many_bluish \<mu> l k X")
   case True
-  then have "big_blue \<mu> (X,Y,A,B) (next_state \<mu> l k (X,Y,A,B))"
+  with finX have "big_blue \<mu> (X,Y,A,B) (next_state \<mu> l k (X,Y,A,B))"
     apply (simp add: next_state_def split: prod.split)
     by (metis assms(1) big_blue.intros choose_blue_book_works valid_state_def)
   then show ?thesis
-    using assms(1) big_blue_valid_state by blast
+    using assms big_blue_valid_state by blast
 next
   case non_bluish: False
   define x where "x = choose_central_vx \<mu> (X,Y,A,B)"
@@ -979,11 +987,11 @@ lemma degree_reg_subset:
   using assms by (auto simp: degree_reg_def X_degree_reg_def)
 
 lemma next_state_subset:
-  assumes "next_state \<mu> l k (X,Y,A,B) = (X',Y',A',B')" "valid_state (X,Y,A,B)"
+  assumes "next_state \<mu> l k (X,Y,A,B) = (X',Y',A',B')" "finite X"
   shows "X' \<subseteq> X \<and> Y' \<subseteq> Y"
   using assms choose_blue_book_subset
-  apply (auto simp: next_state_def valid_state_def Let_def split: if_split_asm prod.split_asm)
-  by (metis insert_absorb insert_subset)
+  apply (clarsimp simp: next_state_def valid_state_def Let_def split: if_split_asm prod.split_asm)
+  by (smt (verit) choose_blue_book_subset subset_eq)
 
 lemma valid_state0: "valid_state (X0, Y0, {}, {})"
   using XY0 by (simp add: valid_state_def V_state_def disjoint_state_def RB_state_def)
@@ -1067,7 +1075,7 @@ lemma Xseq_0 [simp]: "Xseq \<mu> l k 0 = X0"
 
 lemma Xseq_Suc_subset: "Xseq \<mu> l k (Suc i) \<subseteq> Xseq \<mu> l k i"
   apply (simp add: Xseq_def split: if_split_asm prod.split)
-  by (metis degree_reg_subset next_state_subset valid_state_stepper)
+  by (metis V_state_stepper degree_reg_subset finX next_state_subset)
 
 lemma Xseq_antimono: "j \<le> i \<Longrightarrow> Xseq \<mu> l k i \<subseteq> Xseq \<mu> l k j"
   by (simp add: Xseq_Suc_subset lift_Suc_antimono_le)
@@ -1083,7 +1091,7 @@ lemma Yseq_0 [simp]: "Yseq \<mu> l k 0 = Y0"
 
 lemma Yseq_Suc_subset: "Yseq \<mu> l k (Suc i) \<subseteq> Yseq \<mu> l k i"
   apply (simp add: Yseq_def split: if_split_asm prod.split)
-  by (metis degree_reg_subset next_state_subset valid_state_stepper)
+  by (metis V_state_stepper degree_reg_subset finX next_state_subset)
 
 lemma Yseq_antimono: "j \<le> i \<Longrightarrow> Yseq \<mu> l k i \<subseteq> Yseq \<mu> l k j"
   by (simp add: Yseq_Suc_subset lift_Suc_antimono_le)
@@ -1359,7 +1367,7 @@ proof -
   then show ?thesis
     using assms not_many_bluish[OF assms] 
     apply (simp add: Step_class_def Xseq_def cvx_def Yseq_def split: prod.split prod.split_asm)
-    by (metis V_state_stepper choose_central_vx_works)
+    by (metis V_state_stepper choose_central_vx_works finX)
 qed
 
 lemma cvx_in_Xseq:
@@ -1404,23 +1412,23 @@ qed
 
 lemma choose_blue_book_psubset: 
    assumes "\<mu>>0" "many_bluish \<mu> l k X" "Colours l k"
-      and valid: "valid_state (X,Y,A,B)" and ST: "(S,T) = choose_blue_book \<mu> (X,Y,A,B)"
+      and "finite X" and ST: "(S,T) = choose_blue_book \<mu> (X,Y,A,B)"
     shows "T \<noteq> X"
 proof -
   obtain x where "x\<in>X" and x: "good_blue_book \<mu> X ({x}, Neighbours Blue x \<inter> X)"
     using ex_nonempty_blue_book Diagonal_axioms assms by blast
-  with valid have "best_blue_book_card \<mu> X \<noteq> 0"
+  with \<open>finite X\<close> have "best_blue_book_card \<mu> X \<noteq> 0"
     unfolding valid_state_def
     by (metis best_blue_book_is_best card.empty card_seteq empty_not_insert finite.intros singleton_insert_inj_eq)
   then have "S \<noteq> {}"
-    by (metis valid ST card.empty choose_blue_book_works valid_state_def)
-  with valid ST show ?thesis unfolding valid_state_def
+    using \<open>finite X\<close> ST choose_blue_book_works by fastforce
+  with \<open>finite X\<close> ST show ?thesis
     by (metis (no_types, opaque_lifting) choose_blue_book_subset disjnt_iff empty_subsetI equalityI subset_eq)
 qed
 
 lemma next_state_smaller:
   assumes "\<mu>>0"  "Colours l k" "next_state \<mu> l k (X,Y,A,B) = (X',Y',A',B')" 
-    and valid: "valid_state (X,Y,A,B)" and "\<not> termination_condition l k X Y"  
+    and "finite X" and "\<not> termination_condition l k X Y"  
   shows "X' \<subset> X"
 proof -
   have "X' \<subseteq> X"
@@ -1432,8 +1440,8 @@ proof -
     show ?thesis
       using assms 
       apply (auto simp: next_state_def valid_state_def Let_def split: if_split_asm prod.split_asm)
-      apply (metis valid choose_blue_book_psubset)
-      using * choose_central_vx_X
+      apply (metis \<open>finite X\<close> choose_blue_book_psubset)
+      using * choose_central_vx_X Red_E(2)
       apply (metis Red_E(2) order.refl)
       using * choose_central_vx_X
       apply (metis Blue_E(2) order.refl)
@@ -1443,6 +1451,42 @@ proof -
     by auto
 qed
 
-end
+lemma X:
+  assumes "odd i" "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+  obtains A B A' B' where
+  "next_state \<mu> l k (Xseq \<mu> l k i, Yseq \<mu> l k i, A, B) = (Xseq \<mu> l k (Suc i), Yseq \<mu> l k (Suc i), A',B')"
+  using assms
+  by (force simp: Xseq_def Yseq_def split: if_split_asm prod.split_asm prod.split)
 
+lemma Y: 
+  assumes "\<mu>>0" "Colours l k"
+    and i: "Suc (2*i) \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
+  shows "card (Xseq \<mu> l k (Suc (2*i))) + i \<le> card X0"
+  using i
+proof (induction i)
+  case 0
+  then show ?case
+    apply (auto simp: )
+    by (metis Xseq_0 Xseq_Suc_subset card_mono finite_X0)
+next
+  case (Suc i)
+  then have nt: "\<not> termination_condition l k (Xseq \<mu> l k (Suc (2*i))) (Yseq \<mu> l k (Suc (2*i)))"  
+    apply (intro step_non_terminating)
+    by (metis Step_class_insert Suc_1 Un_iff dreg_before_step mult_Suc_right plus_1_eq_Suc plus_nat.simps(2) step_before_freg)
+  obtain A B A' B' where 2:
+    "next_state \<mu> l k (Xseq \<mu> l k (Suc (2*i)), Yseq \<mu> l k (Suc (2*i)), A, B) = (Xseq \<mu> l k (Suc (Suc (2*i))), Yseq \<mu> l k (Suc (Suc (2*i))), A',B')"
+    by (meson "nt" Suc_double_not_eq_double X evenE)
+  have "Xseq \<mu> l k (Suc (Suc (2*i))) \<subset> Xseq \<mu> l k (Suc (2*i))"
+    apply (intro next_state_smaller [OF \<open>\<mu>>0\<close> \<open>Colours l k\<close> 2])
+     apply (simp add: finite_Xseq)
+    by (simp add: "nt")
+  then have "card (Xseq \<mu> l k (Suc (Suc (Suc (2*i))))) < card (Xseq \<mu> l k (Suc (2*i)))"
+    by (smt (verit, best) Xseq_Suc_subset card_seteq order.trans finite_Xseq leD not_le)
+  moreover have "card (Xseq \<mu> l k (Suc (2*i))) + i \<le> card X0"
+    using Suc dreg_before_step step_before_freg by force
+  ultimately show ?case by auto
+qed
+
+end
+                                               
 end
