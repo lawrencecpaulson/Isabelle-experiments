@@ -137,8 +137,6 @@ lemma X_7_2:
   shows "(\<Prod>i \<in> Step_class \<mu> l k {red_step}. card (X(Suc i)) / card (X i)) 
         \<ge> 2 powr (f k) * (1-\<mu>) ^ card (Step_class \<mu> l k {red_step})"
 proof -
-  have "f \<in> o(real)"
-    using p0_01 \<mu> unfolding eps_def f_def by real_asymp
   define R where "R \<equiv> RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
@@ -318,8 +316,6 @@ lemma X_7_3:
   defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   shows "(\<Prod>i \<in> \<B>. card (X(Suc i)) / card (X i)) \<ge> 2 powr (f k) * \<mu> ^ (l - card \<S>)"
 proof -
-  have "f \<in> o(real)"
-    unfolding f_def by real_asymp
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   have "finite \<B>" and card\<B>: "card \<B> \<le> l powr (3/4)"
@@ -521,8 +517,8 @@ proof -
   define \<R> where "\<R> \<equiv> Step_class \<mu> l k {red_step}"
   define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
   define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
-  define p where "p \<equiv> pee \<mu> l k"
   define m where "m \<equiv> Inf \<H>"
+  define p where "p \<equiv> pee \<mu> l k"
   define h where "h \<equiv> \<lambda>i. real (hgt k (p i))"
   obtain 26: "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
      and 28: "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
@@ -838,10 +834,6 @@ proof -
 qed
 
 subsection \<open>Lemma 7.8\<close>
-
-lemma "\<forall>\<^sup>\<infinity>k. eps k powr (1/2) / k \<ge> 2 / k^2"
-  unfolding eps_def
-  by real_asymp
 
 lemma X_7_8:
   assumes "0<\<mu>" "\<mu><1" and k: "k\<ge>2" "eps k powr (1/2) / k \<ge> 2 / k^2" 
@@ -1486,6 +1478,91 @@ proof -
   then show ?thesis
     using A B by linarith 
 qed
+
+subsection \<open>Lemma 7.6\<close>
+
+definition "Big_X_7_6 \<equiv>
+   \<lambda>\<mu> l. Lemma_Step_class_halted_nonempty \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l
+        \<and> Lemma_bblue_step_limit \<mu> l"
+
+text \<open>establishing the size requirements for 7.11\<close>
+lemma Big_X_7_6:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_6 \<mu> l"
+  unfolding Big_X_7_6_def eventually_conj_iff  
+  by (simp add: Step_class_halted_nonempty bblue_dboost_step_limit 
+        bblue_step_limit eventually_all_ge_at_top assms)
+
+(* Final version must exhibit f that works for all k*)
+lemma X_7_6_aux:
+  fixes l k
+  assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
+  defines "X \<equiv> Xseq \<mu> l k"
+  assumes big: "Big_X_7_6 \<mu> l"
+  shows "(\<Prod>i\<in>\<D>. card(X(Suc i)) / card (X i)) = 2 powr f k"
+proof -
+  define \<D> where "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
+  define \<R> where "\<R> \<equiv> Step_class \<mu> l k {red_step}"
+  define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
+  define \<S> where "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
+  define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
+  define m where "m \<equiv> Inf \<H>"
+  define C where "C \<equiv> {i. card (X (Suc i)) < (1 - 2 * eps k powr (1/4)) * card (X i)}"
+  obtain lk: "0<l" "l\<le>k" "0<k"
+    using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
+  then have "Lemma_Step_class_halted_nonempty \<mu> l" 
+      and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
+    and B_limit: "Lemma_bblue_step_limit \<mu> l"
+    using big by (auto simp: Big_X_7_6_def)
+  then have "m \<in> \<H>"
+    using \<H>_def \<open>Colours l k\<close> 
+    by (simp add: Inf_nat_def1 m_def Lemma_Step_class_halted_nonempty_def)
+  then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
+    by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
+  have "finite \<D>" 
+  have "finite \<R>" "card \<R> < k"
+    using \<R>_def assms red_step_limit by blast+ 
+  have "finite \<B>" 
+    using \<open>Colours l k\<close> B_limit by (auto simp: Lemma_bblue_step_limit_def \<B>_def)
+  have "finite \<S>"
+    using \<open>Colours l k\<close> BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def )
+
+  have "card \<D> \<le> card (\<B> \<union> (\<R>\<union>\<S>) \<union> {m})"
+  proof (intro card_inj_on_le)
+    show "Suc ` \<D> \<subseteq> \<B> \<union> (\<R> \<union> \<S>) \<union> {m}"
+    proof clarsimp
+      fix i :: nat
+      assume "i \<in> \<D>" "Suc i \<noteq> m" "Suc i \<notin> \<B>" "Suc i \<notin> \<S>"
+      moreover have "Suc i \<notin> \<D>"
+        by (metis \<D>_def \<open>i \<in> \<D>\<close> even_Suc step_even)
+      moreover have "Suc i \<notin> \<H>"
+        using m_minimal \<open>i \<in> \<D>\<close> \<open>Suc i \<noteq> m\<close> 
+        apply (simp add: \<H>_def \<D>_def)
+        by (metis \<open>Suc i \<noteq> m\<close> empty_iff insert_iff le_neq_implies_less less_eq_Suc_le mem_Collect_eq step_kind_defs(1) stepkind.distinct(19))
+      ultimately show "Suc i \<in> \<R>"
+        using Step_class_UNIV
+        by (force simp add: \<D>_def \<B>_def \<R>_def \<S>_def \<H>_def Step_class_insert_NO_MATCH)
+    qed
+    show "finite (\<B> \<union> (\<R> \<union> \<S>) \<union> {m})"
+      by (simp add: \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
+  qed auto
+  also have "... = card \<B> + card (\<R>\<union>\<S>) + 1"
+  proof -
+    have [simp]: "(\<B> \<union> (\<R> \<union> \<S>)) \<inter> {m} = {}" "\<R> \<inter> \<S> = {}" "\<B> \<inter> (\<R> \<union> \<S>) = {}" "m \<notin> \<B>" "m \<notin> \<R>" "m \<notin> \<S>"
+      using m_minimal by (force simp add: disjoint_iff \<B>_def \<R>_def \<S>_def \<H>_def Step_class_def)+
+    show ?thesis
+      by (simp add: card_Un_disjoint card_insert_if \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
+  qed
+  finally have "card \<D> \<le> card \<B> + card (\<R>\<union>\<S>) + 1" .
+
+  have "card (\<D> \<inter> C) = card \<D> - card (\<D>\<setminus>C)"
+
+    sorry
+  have "card (\<D> \<inter> C) \<le> 7 * eps k powr (1/4) * k + k powr (3/4) + 1"
+    sorry
+    sorry
+
+
 
 end (*context Diagonal*)
 

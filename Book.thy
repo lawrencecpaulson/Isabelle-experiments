@@ -19,7 +19,7 @@ locale Diagonal = fin_sgraph +   \<comment> \<open>finite simple graphs (no loop
   fixes Red Blue :: "'a set set"
   assumes Red_not_Blue: "Red \<noteq> Blue"
   assumes part_RB: "partition_on E {Red,Blue}"
-  \<comment> \<open>the following are local to the program and possibly require their own locale\<close>
+  \<comment> \<open>the following are local to the program\<close>
   fixes X0 :: "'a set" and Y0 :: "'a set"    \<comment> \<open>initial values\<close>
   assumes XY0: "disjnt X0 Y0" "X0 \<subseteq> V" "Y0 \<subseteq> V"
   assumes infinite_UNIV: "infinite (UNIV::'a set)"
@@ -322,7 +322,7 @@ proof -
         edge_card_mono flip: of_nat_mult)
 qed
 
-(*USED??*)
+(*UNUSED 29-02-24*)
 lemma gen_le_edge_density: "gen_density C X Y \<le> edge_density X Y"
 proof (cases "finite X \<and> finite Y")
   case True
@@ -930,7 +930,8 @@ subsection \<open>Steps 2–5 as a function\<close>
 
 definition next_state :: "[real,nat,nat,'a config] \<Rightarrow> 'a config" where
   "next_state \<equiv> \<lambda>\<mu> l k (X,Y,A,B). 
-       if many_bluish \<mu> l k X then let (S,T) = choose_blue_book \<mu> (X,Y,A,B) in (T, Y, A, B\<union>S) 
+       if many_bluish \<mu> l k X 
+       then let (S,T) = choose_blue_book \<mu> (X,Y,A,B) in (T, Y, A, B\<union>S) 
        else let x = choose_central_vx \<mu> (X,Y,A,B) in
             if reddish k X Y (red_density X Y) x 
             then (Neighbours Red x \<inter> X, Neighbours Red x \<inter> Y, insert x A, B)
@@ -1377,6 +1378,70 @@ lemma beta_le:
   shows "beta \<mu> l k i \<le> \<mu>"
   using assms cvx_works[OF i] 
   by (simp add: beta_def central_vertex_def Xseq_def divide_simps split: prod.split_asm)
+
+subsection \<open>Termination proof\<close>
+
+text \<open>Each step decreases the size of @{term X}\<close>
+
+lemma ex_nonempty_blue_book:
+  assumes mb: "many_bluish \<mu> l k X" and "Colours l k"
+    shows "\<exists>x\<in>X. good_blue_book \<mu> X ({x}, Neighbours Blue x \<inter> X)"
+proof -
+  obtain "l > 0" "k > 0"
+    using \<open>Colours l k\<close> Colours_kn0 Colours_ln0 by auto
+  then have "RN k (nat \<lceil>real l powr (2 / 3)\<rceil>) > 0"
+    by (metis RN_eq_0_iff gr0I of_nat_ceiling of_nat_eq_0_iff powr_nonneg_iff)
+  then obtain x where "x\<in>X" and x: "bluish \<mu> X x"
+    using mb unfolding many_bluish_def
+    by (smt (verit) card_eq_0_iff empty_iff equalityI less_le_not_le mem_Collect_eq subset_iff)
+  then show ?thesis
+    apply (auto simp: good_blue_book_def)
+    apply (rule_tac x="x" in bexI)
+     apply (auto simp: book_def)
+    using all_edges_betw_un_def in_Neighbours_iff apply fastforce
+    by (simp add: bluish_def)
+qed
+
+lemma choose_blue_book_psubset: 
+   assumes "\<mu>>0" "many_bluish \<mu> l k X" "Colours l k"
+      and valid: "valid_state (X,Y,A,B)" and ST: "(S,T) = choose_blue_book \<mu> (X,Y,A,B)"
+    shows "T \<noteq> X"
+proof -
+  obtain x where "x\<in>X" and x: "good_blue_book \<mu> X ({x}, Neighbours Blue x \<inter> X)"
+    using ex_nonempty_blue_book Diagonal_axioms assms by blast
+  with valid have "best_blue_book_card \<mu> X \<noteq> 0"
+    unfolding valid_state_def
+    by (metis best_blue_book_is_best card.empty card_seteq empty_not_insert finite.intros singleton_insert_inj_eq)
+  then have "S \<noteq> {}"
+    by (metis valid ST card.empty choose_blue_book_works valid_state_def)
+  with valid ST show ?thesis unfolding valid_state_def
+    by (metis (no_types, opaque_lifting) choose_blue_book_subset disjnt_iff empty_subsetI equalityI subset_eq)
+qed
+
+lemma next_state_smaller:
+  assumes "\<mu>>0"  "Colours l k" "next_state \<mu> l k (X,Y,A,B) = (X',Y',A',B')" 
+    and valid: "valid_state (X,Y,A,B)" and "\<not> termination_condition l k X Y"  
+  shows "X' \<subset> X"
+proof -
+  have "X' \<subseteq> X"
+    using assms next_state_subset by auto
+  moreover have "X' \<noteq> X"
+  proof -
+    have *: "\<not> X \<subseteq> Neighbours rb x \<inter> X" if "x \<in> X" "rb \<subseteq> E" for x rb
+      using that by (auto simp: Neighbours_def subset_iff)
+    show ?thesis
+      using assms 
+      apply (auto simp: next_state_def valid_state_def Let_def split: if_split_asm prod.split_asm)
+      apply (metis valid choose_blue_book_psubset)
+      using * choose_central_vx_X
+      apply (metis Red_E(2) order.refl)
+      using * choose_central_vx_X
+      apply (metis Blue_E(2) order.refl)
+      done
+  qed
+  ultimately show ?thesis
+    by auto
+qed
 
 end
 
