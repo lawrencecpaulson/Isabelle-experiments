@@ -1566,33 +1566,58 @@ proof -
   have 3: "card \<D> = card (\<D> \<inter> C') + card (\<D>\<setminus>C')"
     using \<open>finite \<D>\<close> card_Int_Diff by blast
 
-  have "Big_X_7_8 k" and one_minus_gt0: "1 > 2 * eps k powr (1/4)"
+  have "Big_X_7_8 k" and one_minus_gt0: "1 - 2 * eps k powr (1/4) > 0"
     using big \<open>l\<le>k\<close> by (auto simp: Big_X_7_6_def)
   then have 6: "card (X (Suc i)) \<ge> card (X i) / k^2" if "i \<in> \<D>" for i
     using  X_7_8 \<mu> that by (force simp add: X_def \<D>_def)
 
-  have "(1 - 2 * eps k powr (1 / 4)) * (card (X 0)) \<le> 1 * real (card (X 0))"
+  have "(1 - 2 * eps k powr (1/4)) * (card (X 0)) \<le> 1 * real (card (X 0))"
     by (intro mult_right_mono; force)
   then have "0 \<notin> C"
     by (force simp add: C_def)
   then have C_eq_C': "C = Suc ` C'"
     using nat.exhaust by (auto simp add: C'_def set_eq_iff image_iff)
 
+  define dc where "dc \<equiv> k powr (3/4) + 7 * eps k powr (1/4) * k + 1"
   have 4: "real (card (\<D> \<inter> C')) \<le> real (card ((\<B> \<union> (\<R>\<union>\<S>) \<union> {m}) \<inter> C))"
     using DD \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>
     by (intro of_nat_mono card_inj_on_le [of Suc]) (auto simp: Int_insert_left C_eq_C')
   also have "... \<le> real (card (\<B> \<inter> C)) + real (card ((\<R>\<union>\<S>) \<inter> C)) + 1"
     by (simp add: Int_insert_left Int_Un_distrib2 card_Un_disjoint card_insert_if \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
-  also have "... \<le> k powr (3/4) + 7 * eps k powr (1/4) * k + 1"
-    using Bk_34 712 by linarith 
-  finally have 5: "card (\<D> \<inter> C') \<le> k powr (3/4) + 7 * eps k powr (1/4) * k + 1" .
+  also have "... \<le> dc"
+    using Bk_34 712 dc_def by linarith 
+  finally have 5: "card (\<D> \<inter> C') \<le> dc" .
 
 
 
-  have "(1 - 2 * eps k powr (1/4)) powr (k powr (3/4) + 7 * eps k powr (1/4) * k + 1)
+  have 8: "(1 - 2 * eps k powr (1/4)) powr (dc)
       \<le> (1 - 2 * eps k powr (1/4)) ^ card (\<D> \<inter> C')"
     using 5 one_minus_gt0 by (simp add: powr_mono' flip: powr_realpow [OF one_minus_gt0])
 
+  have D: "card (X i) > 0" if "i \<in> \<D>" for i
+    using that
+    unfolding X_def \<D>_def
+    by (metis X_7_7 Xseq_Suc_subset assms(1) assms(2) card_mono finite_Xseq le_eq_less_or_eq less_zeroE lk(3) not_gr0)
+
+  have "(1 / (real k)\<^sup>2) powr dc * (1 - 2 * eps k powr (1/4)) ^ (k + l + 1)
+      \<le> (1 / (real k)\<^sup>2) ^ card (\<D> \<inter> C') * (1 - 2 * eps k powr (1/4)) ^ card (\<D>\<setminus>C')"
+    using 5 one_minus_gt0 \<open>k>0\<close> apply (simp  flip: power_Suc powr_realpow [of " (1 / (real k)\<^sup>2)"])
+    apply (intro mult_mono powr_mono')
+         apply (force simp add: )
+        apply (force simp add: )
+       apply (force simp add: )
+    using 2 card_mono [OF _ Int_lower1]
+      apply (smt (verit) "3" Suc_eq_plus1 add_leE power_decreasing powr_non_neg)
+     apply (auto simp: )
+    done
+  also have "\<dots> = (\<Prod>i\<in>\<D>. if i \<in> C' then 1 / real k ^ 2 else 1 - 2 * eps k powr (1/4))"
+    by (simp add: prod.If_cases \<open>finite \<D>\<close> Diff_eq)
+  also have "\<dots>  \<le> (\<Prod>i \<in> \<D>. card (X (Suc i)) / card (X i))"
+    using D 6 one_minus_gt0 \<open>k>0\<close>
+    by (simp add: divide_simps C'_def C_def prod_mono)  
+  finally have "(1 / (real k)\<^sup>2) powr dc * (1 - 2 * eps k powr (1/4)) ^ (k + l + 1)
+             \<le> (\<Prod>i \<in> \<D>. card (X (Suc i)) / card (X i))" .
+  
   have "(\<Prod>i \<in> \<D> \<inter> C'. card (X (Suc i)) / card (X i)) = (\<Prod>i\<in>\<D>. if i \<in> C' then card (X (Suc i)) / card (X i) else 1)"
     by (simp add: prod.inter_restrict \<open>finite \<D>\<close>)
   also have "... \<le> (\<Prod>i\<in>\<D>. if i \<in> C' then (1 - 2 * eps k powr (1/4)) else 1)"
@@ -1601,17 +1626,11 @@ proof -
   also have "... = (1 - 2 * eps k powr (1/4)) ^ card (\<D> \<inter> C')"
     by (simp add: \<open>finite \<D>\<close> flip: prod.inter_restrict)
 
-  also have "... \<le> (1 - 2 * eps k powr (1/4)) powr (k powr (3/4) + 7 * eps k powr (1/4) * k + 1)"
-(*NO*)
-    using 5 one_minus_gt0
-    apply (simp add: flip: powr_realpow [OF one_minus_gt0])
-    apply (intro powr_mono')
-apply (auto simp: )
-    apply force
+
 
     sorry
   finally have 7: "(\<Prod>i \<in> \<D> \<inter> C'. card (X (Suc i)) / card (X i))
-             \<le> (1 - 2 * eps k powr (1/4)) powr (k powr (3/4) + 7 * eps k powr (1/4) * k + 1)" .
+             \<le> (1 - 2 * eps k powr (1/4)) powr (dc)" .
 
 end (*context Diagonal*)
 
