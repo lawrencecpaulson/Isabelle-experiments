@@ -85,8 +85,7 @@ proof -
     then have "finite U"
       using finV infinite_super by blast
     have "k \<le> RN m k"
-      using \<open>m\<ge>12\<close>
-      by (metis (no_types) One_nat_def RN_1 RN_3plus RN_commute \<open>0 < m\<close> add_leE kn0 less_one nat_less_le numeral_Bit0 not_le) 
+      using \<open>m\<ge>12\<close> by (simp add: RN_3plus)
     then have "card X \<ge> l"
       by (metis Collect_subset RN_commute W_def Wbig \<open>X\<subseteq>V\<close> card_mono order.trans finV finite_subset \<open>l\<le>k\<close>)
     have "U \<noteq> X"

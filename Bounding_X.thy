@@ -1468,15 +1468,19 @@ qed
 subsection \<open>Lemma 7.6\<close>
 
 definition "Big_X_7_6 \<equiv>
-   \<lambda>\<mu> l. Lemma_bblue_dboost_step_limit \<mu> l \<and> Lemma_bblue_step_limit \<mu> l"
+   \<lambda>\<mu> l. Lemma_bblue_dboost_step_limit \<mu> l \<and> Lemma_bblue_step_limit \<mu> l \<and> Big_X_7_12 \<mu> l"
 
 text \<open>establishing the size requirements for 7.11\<close>
 lemma Big_X_7_6:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_6 \<mu> l"
   unfolding Big_X_7_6_def eventually_conj_iff  
-  by (simp add: bblue_dboost_step_limit 
+  by (simp add: bblue_dboost_step_limit Big_X_7_12
         bblue_step_limit eventually_all_ge_at_top assms)
+
+(*? ? ? ? ?*)
+lemma DD: "\<not>P 0 \<Longrightarrow> Suc ` Collect P = {i. P(i-1)}"
+  using image_iff by fastforce
 
 (* Final version must exhibit f that works for all k*)
 lemma X_7_6_aux:
@@ -1492,21 +1496,36 @@ proof -
   define \<S> where "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
   define m where "m \<equiv> halted_point \<mu> l k"
-  define C where "C \<equiv> {i. card (X (Suc i)) < (1 - 2 * eps k powr (1/4)) * card (X i)}"
+  define C where "C \<equiv> {i. card (X i) < (1 - 2 * eps k powr (1/4)) * card (X (i-1))}"
+  define C' where "C' \<equiv> {i. card (X (Suc i)) < (1 - 2 * eps k powr (1/4)) * card (X i)}"
+  have "Suc i \<in> C \<longleftrightarrow> i \<in> C'" for i
+    by (simp add: C_def C'_def)
+  moreover have "0 \<notin> C"
+    apply (auto simp: C_def)
+    by (smt (verit) mult_left_le_one_le of_nat_less_0_iff powr_non_neg zero_compare_simps(6))
+  ultimately have "C = Suc ` C'"
+    by auto (metis imageI not0_implies_Suc)
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   then have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
     and B_limit: "Lemma_bblue_step_limit \<mu> l"
-    using big by (auto simp: Big_X_7_6_def)
+    and 712: "card ((\<R>\<union>\<S>) \<inter> C) \<le> 7 * eps k powr (1/4) * k"
+    using big X_7_12_aux[OF \<mu> \<open>Colours l k\<close>]
+    by (auto simp: Big_X_7_6_def \<R>_def \<S>_def C_def X_def)
   have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
     unfolding m_def \<H>_def using halted_point_minimal assms by blast
   have "finite \<R>" "card \<R> < k"
     using \<R>_def assms red_step_limit by blast+ 
-  have "finite \<B>" 
+  have "finite \<B>" "card \<B> \<le> l powr (3/4)"
     using \<open>Colours l k\<close> B_limit by (auto simp: Lemma_bblue_step_limit_def \<B>_def)
-  have "finite \<S>"
-    using \<open>Colours l k\<close> BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def )
-
+  then have Bk_34: "card \<B> \<le> k powr (3/4)"
+    using \<open>l\<le>k\<close> by (smt (verit) divide_nonneg_nonneg of_nat_0_le_iff of_nat_mono powr_mono2)
+  have "finite \<S>" and less_l: "card \<B> + card \<S> < l"
+    using \<open>Colours l k\<close> BS_limit by (auto simp add: Lemma_bblue_dboost_step_limit_def \<B>_def \<S>_def)
+  have "finite \<D>"
+    by (metis Step_class_insert \<B>_def \<D>_def \<R>_def \<S>_def \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close> finite_Un finite_dreg_step)
+  have [simp]: "(\<B> \<union> (\<R> \<union> \<S>)) \<inter> {m} = {}" "\<R> \<inter> \<S> = {}" "\<B> \<inter> (\<R> \<union> \<S>) = {}" "m \<notin> \<B>" "m \<notin> \<R>" "m \<notin> \<S>"
+    using m_minimal by (force simp add: disjoint_iff \<B>_def \<R>_def \<S>_def \<H>_def Step_class_def)+
   have "card \<D> \<le> card (\<B> \<union> (\<R>\<union>\<S>) \<union> {m})"
   proof (intro card_inj_on_le)
     show "Suc ` \<D> \<subseteq> \<B> \<union> (\<R> \<union> \<S>) \<union> {m}"
@@ -1515,10 +1534,11 @@ proof -
       assume "i \<in> \<D>" "Suc i \<noteq> m" "Suc i \<notin> \<B>" "Suc i \<notin> \<S>"
       moreover have "Suc i \<notin> \<D>"
         by (metis \<D>_def \<open>i \<in> \<D>\<close> even_Suc step_even)
-      moreover have "Suc i \<notin> \<H>"
-        using m_minimal \<open>i \<in> \<D>\<close> \<open>Suc i \<noteq> m\<close> 
-        apply (simp add: \<H>_def \<D>_def)
-        by (metis \<open>Suc i \<noteq> m\<close> empty_iff insert_iff le_neq_implies_less less_eq_Suc_le mem_Collect_eq step_kind_defs(1) stepkind.distinct(19))
+      moreover 
+      have "stepper_kind \<mu> l k i \<noteq> halted"
+        using \<D>_def \<open>i \<in> \<D>\<close> Step_class_def by force
+      then have "Suc i \<notin> \<H>"
+        using m_minimal \<open>Suc i \<noteq> m\<close> by (simp add: \<H>_def Step_class_def)
       ultimately show "Suc i \<in> \<R>"
         using Step_class_UNIV
         by (force simp add: \<D>_def \<B>_def \<R>_def \<S>_def \<H>_def Step_class_insert_NO_MATCH)
@@ -1526,19 +1546,18 @@ proof -
     show "finite (\<B> \<union> (\<R> \<union> \<S>) \<union> {m})"
       by (simp add: \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
   qed auto
-  also have "... = card \<B> + card (\<R>\<union>\<S>) + 1"
-  proof -
-    have [simp]: "(\<B> \<union> (\<R> \<union> \<S>)) \<inter> {m} = {}" "\<R> \<inter> \<S> = {}" "\<B> \<inter> (\<R> \<union> \<S>) = {}" "m \<notin> \<B>" "m \<notin> \<R>" "m \<notin> \<S>"
-      using m_minimal by (force simp add: disjoint_iff \<B>_def \<R>_def \<S>_def \<H>_def Step_class_def)+
-    show ?thesis
-      by (simp add: card_Un_disjoint card_insert_if \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
-  qed
-  finally have "card \<D> \<le> card \<B> + card (\<R>\<union>\<S>) + 1" .
+  also have "... = card \<B> + card \<R> + card \<S> + 1"
+    by (simp add: card_Un_disjoint card_insert_if \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
+  finally have 1: "card \<D> \<le> card \<B> + card \<R> + card \<S> + 1" .
+  also have "... \<le> k + l + 1"
+    using \<open>card \<R> < k\<close> less_l by linarith
+  finally have 2: "card \<D> \<le> k + l + 1" .
 
   have "card (\<D> \<inter> C) = card \<D> - card (\<D>\<setminus>C)"
+    by (metis \<open>finite \<D>\<close> Diff_Diff_Int Diff_subset card_Diff_subset finite_Diff)
 
-    sorry
   have "card (\<D> \<inter> C) \<le> 7 * eps k powr (1/4) * k + k powr (3/4) + 1"
+    using Bk_34 712 1
     sorry
     sorry
 
