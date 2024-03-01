@@ -1497,14 +1497,13 @@ proof -
   define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
   define m where "m \<equiv> halted_point \<mu> l k"
   define C where "C \<equiv> {i. card (X i) < (1 - 2 * eps k powr (1/4)) * card (X (i-1))}"
-  define C' where "C' \<equiv> {i. card (X (Suc i)) < (1 - 2 * eps k powr (1/4)) * card (X i)}"
-  have "Suc i \<in> C \<longleftrightarrow> i \<in> C'" for i
-    by (simp add: C_def C'_def)
-  moreover have "0 \<notin> C"
+  define C' where "C' \<equiv> Suc -` C"
+  have "0 \<notin> C"
     apply (auto simp: C_def)
     by (smt (verit) mult_left_le_one_le of_nat_less_0_iff powr_non_neg zero_compare_simps(6))
-  ultimately have "C = Suc ` C'"
-    by auto (metis imageI not0_implies_Suc)
+  then have C_eq_C': "C = Suc ` C'"
+    using nat.exhaust by (auto simp add: C'_def set_eq_iff image_iff)
+
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   then have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
@@ -1518,34 +1517,41 @@ proof -
     using \<R>_def assms red_step_limit by blast+ 
   have "finite \<B>" "card \<B> \<le> l powr (3/4)"
     using \<open>Colours l k\<close> B_limit by (auto simp: Lemma_bblue_step_limit_def \<B>_def)
-  then have Bk_34: "card \<B> \<le> k powr (3/4)"
-    using \<open>l\<le>k\<close> by (smt (verit) divide_nonneg_nonneg of_nat_0_le_iff of_nat_mono powr_mono2)
+  then have "card (\<B> \<inter> C) \<le> l powr (3/4)"
+    using card_mono [OF _ Int_lower1] by (smt (verit, best) of_nat_mono)
+  also have "... \<le> k powr (3/4)"
+    by (simp add: \<open>l\<le>k\<close> powr_mono2)
+  finally have Bk_34: "card (\<B> \<inter> C) \<le> k powr (3/4)" .
+
   have "finite \<S>" and less_l: "card \<B> + card \<S> < l"
     using \<open>Colours l k\<close> BS_limit by (auto simp add: Lemma_bblue_dboost_step_limit_def \<B>_def \<S>_def)
   have "finite \<D>"
     by (metis Step_class_insert \<B>_def \<D>_def \<R>_def \<S>_def \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close> finite_Un finite_dreg_step)
   have [simp]: "(\<B> \<union> (\<R> \<union> \<S>)) \<inter> {m} = {}" "\<R> \<inter> \<S> = {}" "\<B> \<inter> (\<R> \<union> \<S>) = {}" "m \<notin> \<B>" "m \<notin> \<R>" "m \<notin> \<S>"
+               "\<B> \<inter> C \<inter> (\<R> \<inter> C \<union> \<S> \<inter> C) = {}" for C
     using m_minimal by (force simp add: disjoint_iff \<B>_def \<R>_def \<S>_def \<H>_def Step_class_def)+
-  have "card \<D> \<le> card (\<B> \<union> (\<R>\<union>\<S>) \<union> {m})"
-  proof (intro card_inj_on_le)
-    show "Suc ` \<D> \<subseteq> \<B> \<union> (\<R> \<union> \<S>) \<union> {m}"
-    proof clarsimp
-      fix i :: nat
-      assume "i \<in> \<D>" "Suc i \<noteq> m" "Suc i \<notin> \<B>" "Suc i \<notin> \<S>"
-      moreover have "Suc i \<notin> \<D>"
-        by (metis \<D>_def \<open>i \<in> \<D>\<close> even_Suc step_even)
-      moreover 
-      have "stepper_kind \<mu> l k i \<noteq> halted"
-        using \<D>_def \<open>i \<in> \<D>\<close> Step_class_def by force
-      then have "Suc i \<notin> \<H>"
-        using m_minimal \<open>Suc i \<noteq> m\<close> by (simp add: \<H>_def Step_class_def)
-      ultimately show "Suc i \<in> \<R>"
-        using Step_class_UNIV
-        by (force simp add: \<D>_def \<B>_def \<R>_def \<S>_def \<H>_def Step_class_insert_NO_MATCH)
-    qed
-    show "finite (\<B> \<union> (\<R> \<union> \<S>) \<union> {m})"
-      by (simp add: \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
-  qed auto
+
+  have "Suc ` \<D> \<subseteq> \<B> \<union> (\<R> \<union> \<S>) \<union> {m}"
+  proof clarsimp
+    fix i :: nat
+    assume "i \<in> \<D>" "Suc i \<noteq> m" "Suc i \<notin> \<B>" "Suc i \<notin> \<S>"
+    moreover have "Suc i \<notin> \<D>"
+      by (metis \<D>_def \<open>i \<in> \<D>\<close> even_Suc step_even)
+    moreover 
+    have "stepper_kind \<mu> l k i \<noteq> halted"
+      using \<D>_def \<open>i \<in> \<D>\<close> Step_class_def by force
+    then have "Suc i \<notin> \<H>"
+      using m_minimal \<open>Suc i \<noteq> m\<close> by (simp add: \<H>_def Step_class_def)
+    ultimately show "Suc i \<in> \<R>"
+      using Step_class_UNIV
+      by (force simp add: \<D>_def \<B>_def \<R>_def \<S>_def \<H>_def Step_class_insert_NO_MATCH)
+  qed
+  then have DD: "Suc i \<in> \<B> \<or> Suc i \<in> \<R> \<or> Suc i \<in> \<S> \<or> Suc i = m" if "i \<in> \<D>" for i
+    using that by force
+  moreover have "finite (\<B> \<union> (\<R> \<union> \<S>) \<union> {m})"
+    by (simp add: \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
+  ultimately have "card \<D> \<le> card (\<B> \<union> (\<R>\<union>\<S>) \<union> {m})"
+    by (intro card_inj_on_le [of Suc]) auto
   also have "... = card \<B> + card \<R> + card \<S> + 1"
     by (simp add: card_Un_disjoint card_insert_if \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
   finally have 1: "card \<D> \<le> card \<B> + card \<R> + card \<S> + 1" .
@@ -1553,10 +1559,23 @@ proof -
     using \<open>card \<R> < k\<close> less_l by linarith
   finally have 2: "card \<D> \<le> k + l + 1" .
 
-  have "card (\<D> \<inter> C) = card \<D> - card (\<D>\<setminus>C)"
+  have 3: "card \<D> = card (\<D> \<inter> C') + card (\<D>\<setminus>C')"
+    using \<open>finite \<D>\<close> card_Int_Diff by blast
+
+  have 4: "real (card (\<D> \<inter> C')) \<le> real (card ((\<B> \<union> (\<R>\<union>\<S>) \<union> {m}) \<inter> C))"
+    using DD \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>
+    by (intro of_nat_mono card_inj_on_le [of Suc]) (auto simp: Int_insert_left C_eq_C')
+  also have "... \<le> real (card (\<B> \<inter> C)) + real (card ((\<R>\<union>\<S>) \<inter> C)) + 1"
+    by (simp add: Int_insert_left Int_Un_distrib2 card_Un_disjoint card_insert_if \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
+  also have "... \<le> k powr (3/4) + 7 * eps k powr (1/4) * k + 1"
+    using Bk_34 712 by linarith 
+  finally have 5: "card (\<D> \<inter> C') \<le> k powr (3/4) + 7 * eps k powr (1/4) * k + 1" .
+
+
+  have "card (\<D> \<inter> C') = card \<D> - card (\<D>\<setminus>C')"
     by (metis \<open>finite \<D>\<close> Diff_Diff_Int Diff_subset card_Diff_subset finite_Diff)
 
-  have "card (\<D> \<inter> C) \<le> 7 * eps k powr (1/4) * k + k powr (3/4) + 1"
+  have "card (\<D> \<inter> C') \<le> 7 * eps k powr (1/4) * k + k powr (3/4) + 1"
     using Bk_34 712 1
     sorry
     sorry
