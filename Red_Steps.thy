@@ -248,7 +248,7 @@ proof -
     finally have ge0: "0 \<le> (\<Sum>y\<in>X. weight X Y y + Weight X Y y y)" .
     have w_maximal: "weight X Y (cvx \<mu> l k i) \<ge> weight X Y x"
       if "central_vertex \<mu> X x" for x
-      by (metis X_def Y_def V_state_stepper i central_vx_is_best cvx_works prod_cases3 stepper_XYseq that)
+      using X_def Y_def \<open>finite X\<close> central_vx_is_best cvx_works i that by presburger
 
     have "\<bar>real (card (S \<inter> Y)) * (real (card X) * real (card Y)) -
            real (edge_card Red X Y) * real (card (T \<inter> Y))\<bar>
@@ -764,9 +764,9 @@ proof -
     using i
     by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
   then have "?x \<in> Xseq \<mu> l k i"
-    by (metis V_state_stepper choose_central_vx_X cvx_def)
+    by (simp add: choose_central_vx_X cvx_def finite_Xseq)
   then have "central_vertex \<mu> (Xseq \<mu> l k i) (cvx \<mu> l k i)"
-    by (metis V_state_stepper choose_central_vx_works cvx_def step non_mb nonterm stepper_XYseq)
+    by (metis Xeq choose_central_vx_works cvx_def finite_Xseq local.step non_mb nonterm)
   with Xeq have "card (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i) \<le> \<mu> * card (Xseq \<mu> l k i)"
     by (simp add: central_vertex_def)
   then have \<beta>eq: "card (Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i) = beta \<mu> l k i * card (Xseq \<mu> l k i)"

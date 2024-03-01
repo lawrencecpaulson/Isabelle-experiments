@@ -439,17 +439,17 @@ proof -
           by (auto simp: stepper_kind_def next_state_kind_def next_state_def step_n split: prod.split_asm if_split_asm)     
         then have VS: "V_state (X',Y,A,B')" and ds: "disjoint_state (X',Y,A,B')"
           using \<open>valid_state (X',Y',A',B')\<close> by (auto simp: valid_state_def)
-        then have "X' \<subseteq> V"
-          by (simp add: V_state_def)
+        then obtain "X' \<subseteq> V" "finite X'"
+          by (metis Xseq_subset_V finX step_n stepper_XYseq)
         then have l14: "l powr (1/4) \<le> real (card S)"
-          using \<open>Colours l k\<close> 41 [OF manyb]
-          by (smt (verit, best) VS best_blue_book_is_best cbb choose_blue_book_works of_nat_mono)
+          using \<open>Colours l k\<close> 41 [OF manyb] 
+          by (smt (verit, best) best_blue_book_is_best cbb choose_blue_book_works of_nat_mono)
         then have ble: "b_of l \<le> card S"
           using b_of_def nat_ceiling_le_eq by presburger
         have S: "good_blue_book \<mu> X' (S,X)"
-          by (metis VS cbb choose_blue_book_works)
+          by (metis choose_blue_book_works \<open>finite X'\<close> cbb)
         have "card S \<le> best_blue_book_card \<mu> X'"
-          using choose_blue_book_works best_blue_book_is_best S VS by blast
+          using S \<open>finite X'\<close> best_blue_book_is_best by blast
         have fin: "finite B'" "finite S"
           using Colours_ln0 \<open>Colours l k\<close> l14 VS finB by force+
         have "disjnt B' S"
@@ -555,10 +555,11 @@ proof -
       have Aeq: "A = insert (choose_central_vx \<mu> (X',Y',A',B')) A'"
         using Suc.prems True
         by (auto simp: stepper_kind_def next_state_kind_def next_state_def Let_def step_n split: if_split_asm)
-      have "choose_central_vx \<mu> (X',Y',A',B') \<in> X'"
+      have "finite X'"
+        by (metis V_state_stepper finX step_n)
+      then have "choose_central_vx \<mu> (X',Y',A',B') \<in> X'"
         using True
-        apply (clarsimp simp: stepper_kind_def next_state_kind_def step_n split: if_split_asm)
-        by (metis V_state_stepper choose_central_vx_X step_n)
+        by (auto simp: choose_central_vx_X stepper_kind_def next_state_kind_def step_n split: if_split_asm)
       moreover
       have "disjnt X' A'"
         using \<open>valid_state (X',Y',A',B')\<close> by (simp add: valid_state_def disjoint_state_def)
@@ -594,7 +595,7 @@ proof -
   ultimately show "finite (Step_class \<mu> l k {red_step})"
     using infinite_super by blast
   with less_k show "card (Step_class \<mu> l k {red_step}) < k"
-    by (metis (full_types) REDS_def Step_class_iterates)
+    by (metis (mono_tags) REDS_def Step_class_iterates)
 qed
 
 definition 
@@ -624,8 +625,8 @@ proof -
       obtain X' Y' A' B' where step_n: "stepper \<mu> l k n = (X',Y',A',B')"
         by (metis surj_pair)
       then obtain "valid_state (X',Y',A',B')" and "V_state (X',Y',A',B')"
-        and disjst: "disjoint_state(X',Y',A',B')"
-        by (metis valid_state_def valid_state_stepper)
+        and disjst: "disjoint_state(X',Y',A',B')" and "finite X'"
+        by (metis finX valid_state_def valid_state_stepper)
       have "B' \<subseteq> B"
         using Suc.prems by (auto simp: next_state_def Let_def degree_reg_def step_n split: prod.split_asm if_split_asm)
       show ?case
@@ -652,15 +653,15 @@ proof -
             by (auto simp: stepper_kind_def next_state_kind_def next_state_def step_n split: prod.split_asm if_split_asm)
           then have VS: "V_state (X',Y,A,B')" and ds: "disjoint_state (X',Y,A,B')"
             using \<open>valid_state (X',Y',A',B')\<close> by (auto simp: valid_state_def)
-          then have "X' \<subseteq> V"
-            by (simp add: V_state_def)
+          then obtain "X' \<subseteq> V" "finite X'"
+            by (metis Xseq_subset_V finX step_n stepper_XYseq)
           then have "l powr (1/4) \<le> real (card S)"
             using \<open>Colours l k\<close> 41 [OF manyb]
             by (smt (verit, best) VS best_blue_book_is_best cbb choose_blue_book_works of_nat_mono)
           then have "S \<noteq> {}"
             using Colours_ln0 \<open>Colours l k\<close> by fastforce
           moreover have "disjnt B' S"
-            using choose_blue_book_subset [OF \<open>V_state (X',Y',A',B')\<close>] disjst cbb
+            using choose_blue_book_subset [OF \<open>finite X'\<close>] disjst cbb
             unfolding disjoint_state_def
             by (smt (verit) in_mono \<open>A' = A\<close> \<open>Y' = Y\<close> disjnt_iff old.prod.case)
           ultimately show ?thesis
@@ -668,8 +669,8 @@ proof -
         next
           case 2
           then have "choose_central_vx \<mu> (X',Y',A',B') \<in> X'"
-            apply (clarsimp simp: stepper_kind_def next_state_kind_def step_n split: if_split_asm)
-            by (metis V_state_stepper choose_central_vx_X step_n)
+            unfolding stepper_kind_def next_state_kind_def 
+            by (auto simp: \<open>finite X'\<close> choose_central_vx_X step_n split: if_split_asm)
           moreover have "disjnt B' X'"
             using disjst disjnt_sym by (force simp add: disjoint_state_def)
           ultimately have "choose_central_vx \<mu> (X',Y',A',B') \<notin> B'"
@@ -681,7 +682,7 @@ proof -
         moreover have "finite B"
           by (metis Suc.prems V_state_stepper finB)
         ultimately show ?thesis
-          by (metis card.infinite card_B' card_Suc card_seteq dual_order.trans nat.case nless_le not_less_eq_eq)
+          by (metis card_B' card_Suc card_seteq le_trans not_less_eq_eq psubset_eq)
       next
         case False
         then have "BDB (Suc n) = BDB n"
@@ -765,20 +766,6 @@ proof
   ultimately show False
     using Step_class_UNIV assms
     by (metis Step_class_insert infinite_UNIV_nat infinite_Un)
-qed
-
-definition "Lemma_Step_class_halted_nonempty \<equiv> \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> Step_class \<mu> l k {halted} \<noteq> {}"
-
-lemma Step_class_halted_nonempty:
-  assumes "\<mu>>0"
-  shows "\<forall>\<^sup>\<infinity>l. Lemma_Step_class_halted_nonempty \<mu> l"
-proof -
-  have "\<And>i. Lemma_bblue_step_limit \<mu> i \<and> Lemma_bblue_dboost_step_limit \<mu> i \<Longrightarrow> Lemma_Step_class_halted_nonempty \<mu> i"
-    unfolding Lemma_Step_class_halted_nonempty_def Lemma_bblue_dboost_step_limit_def Lemma_bblue_step_limit_def
-    by (metis Step_class_halted_nonempty_aux Step_class_insert assms finite_Un red_step_limit(1))
-  then show ?thesis
-    using eventually_mono [OF eventually_conj]
-    by (smt (verit, best) assms bblue_dboost_step_limit bblue_step_limit)
 qed
 
 end

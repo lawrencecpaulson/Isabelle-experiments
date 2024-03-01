@@ -94,7 +94,7 @@ qed
 text \<open>it's convenient to package up the criteria for finiteness of all components at once\<close>
 definition 
   "Big_finite_components \<equiv> 
-    \<lambda>\<mu> l. Lemma_Step_class_halted_nonempty \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l
+    \<lambda>\<mu> l. Lemma_bblue_dboost_step_limit \<mu> l
         \<and> Lemma_bblue_step_limit \<mu> l"
 
 text \<open>establishing the size requirements for finiteness\<close>
@@ -102,11 +102,11 @@ lemma Big_finite_components:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_finite_components \<mu> l"
   unfolding Big_finite_components_def eventually_conj_iff all_imp_conj_distrib 
-  by (simp add: Step_class_halted_nonempty bblue_dboost_step_limit bblue_step_limit assms)
+  by (simp add: bblue_dboost_step_limit bblue_step_limit assms)
 
 lemma finite_components:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and big: "Big_finite_components \<mu> l" 
-  shows "Step_class \<mu> l k {halted} \<noteq> {}" "finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step})"
+  shows "finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step})"
 proof -
   have red: "finite (Step_class \<mu> l k {red_step})"
     using \<open>Colours l k\<close> \<mu> red_step_limit by blast
@@ -120,9 +120,6 @@ proof -
     by (metis red bblue dbooSt finite_dreg_step Step_class_insert finite_Un)
   show "finite (Step_class \<mu> l k {red_step, bblue_step, dboost_step, dreg_step})"
     by (metis Step_class_insert bblue dbooSt dreg finite_Un red)
-  show "Step_class \<mu> l k {halted} \<noteq> {}"
-    using \<open>Colours l k\<close> big unfolding Big_finite_components_def Lemma_Step_class_halted_nonempty_def
-    by blast
 qed
 
 subsection \<open>Lemma 7.2\<close>
@@ -254,16 +251,20 @@ proof -
   obtain X Y A B S T where step: "stepper \<mu> l k i = (X,Y,A,B)" and bb: "get_blue_book \<mu> l k i = (S,T)"
     and valid: "valid_state(X,Y,A,B)"
     by (metis surj_pair valid_state_stepper)
-  with assms have *: "stepper \<mu> l k (Suc i) = (T, Y, A, B\<union>S) \<and> good_blue_book \<mu> X (S,T)" 
+  moreover have "finite X"
+    by (metis V_state_stepper finX step)
+  ultimately have *: "stepper \<mu> l k (Suc i) = (T, Y, A, B\<union>S) \<and> good_blue_book \<mu> X (S,T)" 
     and Xeq: "X = Xseq \<mu> l k i"
-    by (simp_all add: step_kind_defs next_state_def valid_state_def get_blue_book_def choose_blue_book_works split: if_split_asm)
+    using assms
+    apply (simp_all add: step_kind_defs next_state_def valid_state_def get_blue_book_def choose_blue_book_works split: if_split_asm)
+    by (metis choose_blue_book_works)
   show ?thesis
   proof (intro exI conjI)
     have "S \<subseteq> X"
-    proof (intro choose_blue_book_subset [THEN conjunct1])
+    proof (intro choose_blue_book_subset [THEN conjunct1] \<open>finite X\<close>)
       show "(S, T) = choose_blue_book \<mu> (X, Y, A, B)"
         using bb step by (simp add: get_blue_book_def Xseq_def)
-    qed (use valid valid_state_def in force)
+    qed
     then show "S \<subseteq> Xseq \<mu> l k i"
       using Xeq by force
     have "disjnt X B"
@@ -396,7 +397,7 @@ lemma ok_fun_26: "ok_fun_26 \<in> o(real)" and ok_fun_28: "ok_fun_28 \<in> o(rea
 
 definition 
   "Big_X_7_5 \<equiv> 
-    \<lambda>\<mu> l. Lemma_Step_class_halted_nonempty \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l
+    \<lambda>\<mu> l. Lemma_bblue_dboost_step_limit \<mu> l
         \<and> Lemma_bblue_step_limit \<mu> l \<and> Lemma_Y_6_4_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l
         \<and> (\<forall>k\<ge>l. Lemma_height_upper_bound k \<and> k\<ge>16 \<and> (ok_fun_26 k - ok_fun_28 k \<le> k))"
 
@@ -409,7 +410,7 @@ proof -
     unfolding eps_def ok_fun_26_def ok_fun_28_def by real_asymp
   then show ?thesis
     unfolding Big_X_7_5_def using assms eventually_all_ge_at_top [OF height_upper_bound]
-    by (simp add: eventually_conj_iff Step_class_halted_nonempty bblue_dboost_step_limit 
+    by (simp add: eventually_conj_iff bblue_dboost_step_limit 
         bblue_step_limit Y_6_4_dbooSt Y_6_5_Bblue height_upper_bound eventually_all_ge_at_top)
 qed
 
@@ -422,7 +423,7 @@ lemma X_26_and_28:
   defines "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
   defines "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
   defines "\<H> \<equiv> Step_class \<mu> l k {halted}"
-  defines "m \<equiv> Inf \<H>"
+  defines "m \<equiv> halted_point \<mu> l k"
   defines "p \<equiv> pee \<mu> l k"
   defines "h \<equiv> \<lambda>i. real (hgt k (p i))"
   obtains "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
@@ -432,16 +433,12 @@ proof -
   define \<S> where "\<S> \<equiv> Step_class \<mu> l k {dboost_step}" 
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  then have "Lemma_Step_class_halted_nonempty \<mu> l" 
-    and B_limit: "Lemma_bblue_step_limit \<mu> l"
+  then have B_limit: "Lemma_bblue_step_limit \<mu> l"
     and Y65B: "Lemma_Y_6_5_Bblue \<mu> l"
     and hub: "Lemma_height_upper_bound k"
     using big by (auto simp: Big_X_7_5_def)
-  then have "m \<in> \<H>"
-    using \<H>_def \<open>Colours l k\<close> 
-    by (simp add: Inf_nat_def1 m_def Lemma_Step_class_halted_nonempty_def)
-  then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
-    by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
+  have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
+    unfolding m_def  \<H>_def using halted_point_minimal assms by blast
   have oddset: "{..<m} \<setminus> \<D> = {i \<in> {..<m}. odd i}" 
     using m_minimal step_odd step_even not_halted_even_dreg 
     by (auto simp: \<D>_def \<H>_def Step_class_insert_NO_MATCH)
@@ -517,32 +514,28 @@ proof -
   define \<R> where "\<R> \<equiv> Step_class \<mu> l k {red_step}"
   define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
   define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
-  define m where "m \<equiv> Inf \<H>"
+
+  define m where "m \<equiv> halted_point \<mu> l k"
   define p where "p \<equiv> pee \<mu> l k"
   define h where "h \<equiv> \<lambda>i. real (hgt k (p i))"
   obtain 26: "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
      and 28: "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
-    unfolding \<B>_def \<D>_def \<H>_def h_def m_def p_def
-    using X_26_and_28 assms(1-3) big by blast
-
+    using X_26_and_28 assms(1-3) big
+    unfolding \<B>_def \<D>_def h_def m_def p_def Big_X_7_5_def by blast
   have \<S>\<S>: "\<S>\<S> = {i \<in> \<S>. h(Suc i) - h i \<le> eps k powr (-1/4)}" and "\<S>\<S> \<subseteq> \<S>"
     by (auto simp: \<S>\<S>_def \<S>_def dboost_star_def p_def h_def)
   have in_S: "h(Suc i) - h i > eps k powr (-1/4)" if "i \<in> \<S>\<setminus>\<S>\<S>" for i
     using that by (fastforce simp: \<S>\<S>)
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  then have "Lemma_Step_class_halted_nonempty \<mu> l" 
-      and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
+  then have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
       and B_limit: "Lemma_bblue_step_limit \<mu> l"
       and Y64S: "Lemma_Y_6_4_dbooSt \<mu> l"
       and 16: "k\<ge>16" (*for Y_6_5_Red*)
       and ok_fun: "ok_fun_26 k - ok_fun_28 k \<le> k"
     using big by (auto simp: Big_X_7_5_def)
-  then have "m \<in> \<H>"
-    using \<H>_def \<open>Colours l k\<close> 
-    by (simp add: Inf_nat_def1 m_def Lemma_Step_class_halted_nonempty_def)
-  then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
-    by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
+  have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
+    unfolding m_def \<H>_def using halted_point_minimal assms by blast
   have "finite \<R>"
     using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
   have "finite \<B>"
@@ -995,7 +988,7 @@ lemma X_7_10:
   defines "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
   defines "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
   defines "\<H> \<equiv> Step_class \<mu> l k {halted}"
-  defines "m \<equiv> Inf \<H>"
+  defines "m \<equiv> halted_point \<mu> l k"
   defines "h \<equiv> \<lambda>i. real (hgt k (p i))"
   defines "C \<equiv> {i. h i \<ge> h (i-1) + eps k powr (-1/4)}"
   assumes big: "Big_X_7_10 \<mu> l" 
@@ -1003,18 +996,14 @@ lemma X_7_10:
 proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  then have "Lemma_Step_class_halted_nonempty \<mu> l" 
-    and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
+  then have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
     and hub: "Lemma_height_upper_bound k"
     and 16: "k\<ge>16" (*for Y_6_5_Red*)
     and ok_le_k: "ok_fun_26 k - ok_fun_28 k \<le> k"
     and Y_6_5_S: "Lemma_6_5_dbooSt \<mu> l"
     using big by (auto simp: Big_X_7_5_def Big_X_7_10_def)
-  then have "m \<in> \<H>"
-    using \<H>_def \<open>Colours l k\<close> 
-    by (simp add: Inf_nat_def1 m_def Lemma_Step_class_halted_nonempty_def)
-  then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
-    by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
+  have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
+    unfolding m_def \<H>_def using halted_point_minimal assms by blast
   have "\<R>\<union>\<S> \<subseteq> {..<m} \<setminus> \<D> \<setminus> \<B>" and BmD: "\<B> \<subseteq> {..<m} \<setminus> \<D>"
     by (auto simp: \<R>_def \<S>_def \<D>_def \<B>_def \<H>_def Step_class_def simp flip: m_minimal)
   then have RS_eq: "\<R>\<union>\<S> = {..<m} \<setminus> \<D> - \<B>"
@@ -1137,7 +1126,7 @@ proof -
   define \<D> where "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
   define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
   define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
-  define m where "m \<equiv> Inf \<H>"
+  define m where "m \<equiv> halted_point \<mu> l k"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   have big_x75: "Big_X_7_5 \<mu> l" and Y_6_5_S: "Lemma_6_5_dbooSt \<mu> l" 
@@ -1151,17 +1140,14 @@ proof -
       by (auto simp: Lemma_Red_5_3_def Big_X_7_11_def Big_X_7_11_inequalities_def \<S>_def p_def)
   then have Y_6_5_B: "\<And>i. i \<in> \<B> \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2 * eps k powr (-1/2)"
     using \<open>\<mu>>0\<close> \<open>l\<le>k\<close> unfolding \<B>_def p_def by (meson Lemma_Y_6_5_Bblue_def)
-  have halt: "Lemma_Step_class_halted_nonempty \<mu> l" 
-    and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
+  have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
     and B_limit: "Lemma_bblue_step_limit \<mu> l"
     and hub: "Lemma_height_upper_bound k"
     and 16: "k\<ge>16" (*for Y_6_5_Red*)
     and ok_le_k: "ok_fun_26 k - ok_fun_28 k \<le> k"
     using \<open>Colours l k\<close> big_x75 lk by (auto simp: Big_X_7_5_def)
-  with \<open>Colours l k\<close> have "m \<in> \<H>"
-    by (simp add: Inf_nat_def1 \<H>_def m_def Lemma_Step_class_halted_nonempty_def)
-  then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
-    by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
+  have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
+    unfolding m_def \<H>_def using halted_point_minimal assms by blast
   then have oddset: "{..<m} \<setminus> \<D> = {i \<in> {..<m}. odd i}" 
     using step_odd step_even not_halted_even_dreg 
     by (auto simp: \<D>_def \<H>_def Step_class_insert_NO_MATCH)
@@ -1482,15 +1468,14 @@ qed
 subsection \<open>Lemma 7.6\<close>
 
 definition "Big_X_7_6 \<equiv>
-   \<lambda>\<mu> l. Lemma_Step_class_halted_nonempty \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l
-        \<and> Lemma_bblue_step_limit \<mu> l"
+   \<lambda>\<mu> l. Lemma_bblue_dboost_step_limit \<mu> l \<and> Lemma_bblue_step_limit \<mu> l"
 
 text \<open>establishing the size requirements for 7.11\<close>
 lemma Big_X_7_6:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_6 \<mu> l"
   unfolding Big_X_7_6_def eventually_conj_iff  
-  by (simp add: Step_class_halted_nonempty bblue_dboost_step_limit 
+  by (simp add: bblue_dboost_step_limit 
         bblue_step_limit eventually_all_ge_at_top assms)
 
 (* Final version must exhibit f that works for all k*)
@@ -1506,20 +1491,15 @@ proof -
   define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
   define \<S> where "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
-  define m where "m \<equiv> Inf \<H>"
+  define m where "m \<equiv> halted_point \<mu> l k"
   define C where "C \<equiv> {i. card (X (Suc i)) < (1 - 2 * eps k powr (1/4)) * card (X i)}"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  then have "Lemma_Step_class_halted_nonempty \<mu> l" 
-      and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
+  then have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
     and B_limit: "Lemma_bblue_step_limit \<mu> l"
     using big by (auto simp: Big_X_7_6_def)
-  then have "m \<in> \<H>"
-    using \<H>_def \<open>Colours l k\<close> 
-    by (simp add: Inf_nat_def1 m_def Lemma_Step_class_halted_nonempty_def)
-  then have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
-    by (metis Step_class_halted_forever \<H>_def m_def linorder_not_le wellorder_Inf_le1)
-  have "finite \<D>" 
+  have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
+    unfolding m_def \<H>_def using halted_point_minimal assms by blast
   have "finite \<R>" "card \<R> < k"
     using \<R>_def assms red_step_limit by blast+ 
   have "finite \<B>" 

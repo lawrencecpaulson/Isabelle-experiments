@@ -1217,6 +1217,12 @@ lemma Step_class_insert_NO_MATCH:
 lemma Step_class_UNIV: "Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step,halted} = UNIV"
   using Step_class_def stepkind.exhaust by auto
 
+lemma Step_class_cases:
+   "i \<in> Step_class \<mu> l k {stepkind.red_step} \<or> i \<in> Step_class \<mu> l k {bblue_step} \<or>
+    i \<in> Step_class \<mu> l k {dboost_step} \<or> i \<in> Step_class \<mu> l k {dreg_step} \<or>
+    i \<in> Step_class \<mu> l k {halted}"
+  using Step_class_def stepkind.exhaust by auto
+
 lemmas step_kind_defs = Step_class_def stepper_kind_def next_state_kind_def Xseq_def Yseq_def
 
 lemma disjnt_Step_class: 
@@ -1451,14 +1457,14 @@ proof -
     by auto
 qed
 
-lemma X:
+lemma do_next_state:
   assumes "odd i" "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
-  obtains A B A' B' where
-  "next_state \<mu> l k (Xseq \<mu> l k i, Yseq \<mu> l k i, A, B) = (Xseq \<mu> l k (Suc i), Yseq \<mu> l k (Suc i), A',B')"
+  obtains A B A' B' where "next_state \<mu> l k (Xseq \<mu> l k i, Yseq \<mu> l k i, A, B) 
+                        = (Xseq \<mu> l k (Suc i), Yseq \<mu> l k (Suc i), A',B')"
   using assms
   by (force simp: Xseq_def Yseq_def split: if_split_asm prod.split_asm prod.split)
 
-lemma Y: 
+lemma step_bound: 
   assumes "\<mu>>0" "Colours l k"
     and i: "Suc (2*i) \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
   shows "card (Xseq \<mu> l k (Suc (2*i))) + i \<le> card X0"
@@ -1475,7 +1481,7 @@ next
     by (metis Step_class_insert Suc_1 Un_iff dreg_before_step mult_Suc_right plus_1_eq_Suc plus_nat.simps(2) step_before_freg)
   obtain A B A' B' where 2:
     "next_state \<mu> l k (Xseq \<mu> l k (Suc (2*i)), Yseq \<mu> l k (Suc (2*i)), A, B) = (Xseq \<mu> l k (Suc (Suc (2*i))), Yseq \<mu> l k (Suc (Suc (2*i))), A',B')"
-    by (meson "nt" Suc_double_not_eq_double X evenE)
+    by (meson "nt" Suc_double_not_eq_double do_next_state evenE)
   have "Xseq \<mu> l k (Suc (Suc (2*i))) \<subset> Xseq \<mu> l k (Suc (2*i))"
     apply (intro next_state_smaller [OF \<open>\<mu>>0\<close> \<open>Colours l k\<close> 2])
      apply (simp add: finite_Xseq)
@@ -1486,6 +1492,37 @@ next
     using Suc dreg_before_step step_before_freg by force
   ultimately show ?case by auto
 qed
+
+lemma Step_class_halted_nonempty:
+  assumes "\<mu>>0" "Colours l k"
+  shows "Step_class \<mu> l k {halted} \<noteq> {}"
+proof -
+  define i where "i \<equiv> Suc (2 * Suc (card X0))" 
+  have "odd i"
+    by (auto simp: i_def)
+  then have "i \<notin> Step_class \<mu> l k {dreg_step}"
+    using step_even by blast
+  moreover have "i \<notin> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
+    unfolding i_def using step_bound [OF assms] le_add2 not_less_eq_eq by blast
+  ultimately have "i \<in> Step_class \<mu> l k {halted}"
+    using \<open>odd i\<close> not_halted_odd_RBS by blast
+  then show ?thesis
+    by blast
+qed
+
+definition "halted_point \<equiv> \<lambda>\<mu> l k. Inf (Step_class \<mu> l k {halted})"
+
+lemma halted_point_halted:
+  assumes "\<mu>>0" "Colours l k"
+  shows "halted_point \<mu> l k \<in> Step_class \<mu> l k {halted}"
+  using Step_class_halted_nonempty [OF assms] Inf_nat_def1 
+  by (auto simp: halted_point_def)
+
+lemma halted_point_minimal:
+  assumes "\<mu>>0" "Colours l k"
+  shows "i \<notin> Step_class \<mu> l k {halted} \<longleftrightarrow> i < halted_point \<mu> l k"
+  using Step_class_halted_nonempty [OF assms] 
+  by (metis wellorder_Inf_le1 Inf_nat_def1 Step_class_not_halted halted_point_def less_le_not_le nle_le) 
 
 end
                                                
