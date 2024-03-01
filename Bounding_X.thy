@@ -828,17 +828,23 @@ qed
 
 subsection \<open>Lemma 7.8\<close>
 
+definition "Big_X_7_8 \<equiv> \<lambda>k. k\<ge>2 \<and> eps k powr (1/2) / k \<ge> 2 / k^2"
+
+lemma Big_X_7_8: "\<forall>\<^sup>\<infinity>k. Big_X_7_8 k"
+  unfolding eps_def Big_X_7_8_def eventually_conj_iff eps_def
+  by (intro conjI; real_asymp)
+
 lemma X_7_8:
-  assumes "0<\<mu>" "\<mu><1" and k: "k\<ge>2" "eps k powr (1/2) / k \<ge> 2 / k^2" 
+  assumes "0<\<mu>" "\<mu><1" and big: "Big_X_7_8 k" 
     and i: "i \<in> Step_class \<mu> l k {dreg_step}"
   defines "X \<equiv> Xseq \<mu> l k"
   shows "card (X (Suc i)) \<ge> card (X i) / k^2"
 proof -
   define p where "p \<equiv> pee \<mu> l k"
   define q where "q \<equiv> eps k powr (-1/2) * alpha k (hgt k (p i))"
-  have "k>0" using k by auto
+  have "k>0" \<open>k\<ge>2\<close> using big by (auto simp: Big_X_7_8_def)
   have "2 / k^2 \<le> eps k powr (1/2) / k"
-    using k by simp
+    using big by (auto simp: Big_X_7_8_def)
   also have "\<dots> \<le> q"
     using \<open>k>0\<close> eps_gt0[of k] Red_5_7a [of k "p i"]
     by (simp add: q_def powr_minus divide_simps flip: powr_add)
@@ -850,7 +856,7 @@ proof -
     by (simp_all add: step_kind_defs next_state_def X_degree_reg_def degree_reg_def 
         X_def Y_def split: if_split_asm prod.split_asm)
   have XSnon0: "card (X (Suc i)) > 0"
-    using X_7_7 assms by simp
+    using X_7_7 \<open>k>0\<close> assms by simp
   have finX: "finite (X i)" for i
     using finite_Xseq X_def by blast
   have Xsub[simp]: "X (Suc i) \<subseteq> X i"
@@ -862,7 +868,7 @@ proof -
   then have 2: "2 / (real k ^ 2 + 2) \<ge> 1 / k^2"
     by (simp add: divide_simps)
   have "q * card (X i \<setminus> X (Suc i)) / card (X (Suc i)) \<le> p (Suc i) - p i"
-    using X_7_7 assms by (simp add: p_def q_def mult_of_nat_commute)
+    using X_7_7 \<open>k>0\<close> assms by (simp add: p_def q_def mult_of_nat_commute)
   also have "\<dots> \<le> 1"
     by (smt (verit) p_def pee_ge0 pee_le1)
   finally have "q * card (X i \<setminus> X (Suc i)) \<le> card (X (Suc i))" 
@@ -1468,14 +1474,15 @@ qed
 subsection \<open>Lemma 7.6\<close>
 
 definition "Big_X_7_6 \<equiv>
-   \<lambda>\<mu> l. Lemma_bblue_dboost_step_limit \<mu> l \<and> Lemma_bblue_step_limit \<mu> l \<and> Big_X_7_12 \<mu> l"
+   \<lambda>\<mu> l. Lemma_bblue_dboost_step_limit \<mu> l \<and> Lemma_bblue_step_limit \<mu> l \<and> Big_X_7_12 \<mu> l
+         \<and> (\<forall>k. k\<ge>l \<longrightarrow> Big_X_7_8 k)"
 
 text \<open>establishing the size requirements for 7.11\<close>
 lemma Big_X_7_6:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_6 \<mu> l"
   unfolding Big_X_7_6_def eventually_conj_iff  
-  by (simp add: bblue_dboost_step_limit Big_X_7_12
+  by (simp add: bblue_dboost_step_limit Big_X_7_8 Big_X_7_12
         bblue_step_limit eventually_all_ge_at_top assms)
 
 (*? ? ? ? ?*)
@@ -1571,16 +1578,28 @@ proof -
     using Bk_34 712 by linarith 
   finally have 5: "card (\<D> \<inter> C') \<le> k powr (3/4) + 7 * eps k powr (1/4) * k + 1" .
 
+  have "Big_X_7_8 k"
+    using big \<open>l\<le>k\<close> by (auto simp: Big_X_7_6_def)
+  then have 6: "card (X (Suc i)) \<ge> card (X i) / k^2" if "i \<in> \<D>" for i
+    using  X_7_8 \<mu> that by (force simp add: X_def \<D>_def)
 
-  have "card (\<D> \<inter> C') = card \<D> - card (\<D>\<setminus>C')"
-    by (metis \<open>finite \<D>\<close> Diff_Diff_Int Diff_subset card_Diff_subset finite_Diff)
+  have "1 - 2 * eps k powr (1/4) > 0"
+    apply (simp add: eps_def powr_powr)
+    apply (simp add: powr_minus divide_simps)
 
-  have "card (\<D> \<inter> C') \<le> 7 * eps k powr (1/4) * k + k powr (3/4) + 1"
-    using Bk_34 712 1
     sorry
+
+  have "(\<Prod>i \<in> \<D> \<inter> C'. card (X (Suc i)) / card (X i)) = (\<Prod>i\<in>\<D>. if i \<in> C' then card (X (Suc i)) / card (X i) else 1)"
+    by (simp add: prod.inter_restrict \<open>finite \<D>\<close>)
+  also have "... \<le> (\<Prod>i\<in>\<D>. if i \<in> C' then (1 - 2 * eps k powr (1/4)) else 1)"
     sorry
-
-
+  also have "... = (1 - 2 * eps k powr (1/4)) ^ card (\<D> \<inter> C')"
+    by (simp add: \<open>finite \<D>\<close> flip: prod.inter_restrict)
+  also have "... \<le> (1 - 2 * eps k powr (1/4)) powr (k powr (3/4) + 7 * eps k powr (1/4) * k + 1)"
+    using 5 powr_realpow
+    sorry
+  finally have 7: "(\<Prod>i \<in> \<D> \<inter> C'. card (X (Suc i)) / card (X i))
+             \<le> (1 - 2 * eps k powr (1/4)) powr (k powr (3/4) + 7 * eps k powr (1/4) * k + 1)" .
 
 end (*context Diagonal*)
 

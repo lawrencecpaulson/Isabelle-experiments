@@ -60,7 +60,7 @@ proof -
     by (intro eventually_conj m_ge real_l_ge A B C)
 
   have "\<exists>S T. good_blue_book \<mu> X (S, T) \<and> l powr (1/4) \<le> card S"
-    if l: "?Big l" and "X\<subseteq>V" and manyb: "many_bluish \<mu> l k X" and "Colours l k" for l k X
+    if big: "?Big l" and "X\<subseteq>V" and manyb: "many_bluish \<mu> l k X" and "Colours l k" for l k X
   proof -
     obtain ln0: "l>0" and kn0: "k>0"
       using \<open>Colours l k\<close> Colours_kn0 Colours_ln0 by blast
@@ -71,10 +71,8 @@ proof -
     define b where "b \<equiv> b_of l"
     define W where "W \<equiv> {x\<in>X. bluish \<mu> X x}"
     define m where "m \<equiv> m_of l"
-    have "m>0" "m \<ge> 6" "m \<ge> 12"
-      using l by (auto simp: m_def)
-    have "b>0"
-      using l by (simp add: b_def b_of_def)
+    have "m>0" "m \<ge> 6" "m \<ge> 12" "b>0"
+      using big by (auto simp: m_def b_def b_of_def)
     have Wbig: "card W \<ge> RN k m"
       using manyb by (simp add: W_def m_def m_of_def many_bluish_def)
     with Red_Blue_RN obtain U where "U \<subseteq> W" and U_m_Blue: "size_clique m U Blue"
@@ -98,7 +96,7 @@ proof -
     have [simp]: "m \<le> card X"
       using \<open>card U = m\<close> cardU_less_X nless_le by blast
     have lpowr23: "real l powr (2/3) \<le> real l powr 1"
-      using l by (intro powr_mono) auto
+      using ln0 by (intro powr_mono) auto
     then have "m \<le> l"
       by (simp add: m_def m_of_def)
     then have "m \<le> k"
@@ -131,7 +129,7 @@ proof -
         then have "\<mu> * (card X) \<le> real (card (Neighbours Blue u \<inter> (X-U))) + real (m - Suc 0)"
           using W_def \<open>U \<subseteq> W\<close> bluish_def that by force
         then have "\<mu> * (card X - card U) 
-                \<le> real (card (Neighbours Blue u \<inter> (X-U))) + real (m - Suc 0) - \<mu> *card U"
+                \<le> card (Neighbours Blue u \<inter> (X-U)) + real (m - Suc 0) - \<mu> *card U"
           by (smt (verit) cardU_less_X nless_le of_nat_diff right_diff_distrib')
         then have *: "\<mu> * (card X - card U) \<le> real (card (Neighbours Blue u \<inter> (X-U))) + (1-\<mu>)*m"
           using assms by (simp add: \<open>card U = m\<close> left_diff_distrib)
@@ -169,11 +167,11 @@ proof -
     have 6: "real (6*k) \<le> real (2 + k*m)"
       by (metis mult.commute \<open>12\<le>m\<close> mult_le_mono nle_le numeral_Bit0 of_nat_mono trans_le_add2)
     then have km: "k + m \<le> Suc (k * m)"
-      using l \<open>l \<le> k\<close> \<open>m \<le> l\<close> by linarith
+      using big \<open>l \<le> k\<close> \<open>m \<le> l\<close> by linarith
     have "m/2 * (2 + real k * (1-\<mu>)) \<le> m/2 * (2 + real k)"
       using assms by (simp add: algebra_simps)
     also have "\<dots> \<le> (k - 1) * (m - 1)"
-      using l \<open>l \<le> k\<close> 6 \<open>m \<le> k\<close> by (simp add: algebra_simps of_nat_diff km)
+      using big \<open>l \<le> k\<close> 6 \<open>m \<le> k\<close> by (simp add: algebra_simps of_nat_diff km)
     finally  have "(m/2) * (2 + k * (1-\<mu>)) \<le> RN k m"
       using RN_times_lower' [of k m] by linarith
     then have "\<mu> - 2/k \<le> (\<mu> * card X - card U) / (card X - card U)"
@@ -186,7 +184,7 @@ proof -
     proof -
       have 512: "5/12 \<le> (1::real)"
         by simp
-      with l have "l powr (5/12) \<ge> ((6/\<mu>) powr (12/5)) powr (5/12)"
+      with big have "l powr (5/12) \<ge> ((6/\<mu>) powr (12/5)) powr (5/12)"
         by (simp add: powr_mono2)
       then have lge: "l powr (5/12) \<ge> 6/\<mu>"
         using assms powr_powr by force
@@ -197,7 +195,7 @@ proof -
       also have "\<dots> \<le> (2 * l powr (1/4) + 4) / l powr (2/3)"
         using ln0 lpowr23 by (simp add: pos_le_divide_eq pos_divide_le_eq algebra_simps)
       also have "\<dots> \<le> (2 * l powr (1/4) + 4 * l powr (1/4)) / l powr (2/3)"
-        using l by (simp add: divide_right_mono ge_one_powr_ge_zero)
+        using big by (simp add: divide_right_mono ge_one_powr_ge_zero)
       also have "\<dots> = 6 / l powr (5/12)"
         by (simp add: divide_simps flip: powr_add)
       also have "\<dots> \<le> \<mu>"
@@ -211,7 +209,7 @@ proof -
     moreover have "l powr (2/3) \<le> nat \<lceil>real l powr (2/3)\<rceil>"
       using of_nat_ceiling by blast
     ultimately have ble: "b \<le> \<sigma> * m / 2"
-      using mult_left_mono \<open>\<sigma> \<ge> 0\<close> l kn0 \<open>l \<le> k\<close> unfolding b_def m_def powr_diff
+      using mult_left_mono \<open>\<sigma> \<ge> 0\<close> big kn0 \<open>l \<le> k\<close> unfolding b_def m_def powr_diff
       by (simp add: divide_simps)
     then have "\<sigma> > 0"
       using \<open>0 < b\<close> \<open>0 \<le> \<sigma>\<close> less_eq_real_def by force
@@ -227,7 +225,7 @@ proof -
       have 2: "2/k \<le> 2/l"
         by (simp add: \<open>l \<le> k\<close> frac_le ln0)
       also have "\<dots> \<le> (\<mu> - 2/l) * ((5/4) powr (1/b) - 1)"
-        using l by (simp add: b_def)
+        using big by (simp add: b_def)
       also have "\<dots> \<le> \<sigma> * ((5/4) powr (1/b) - 1)"
       proof (intro mult_right_mono)
         show "\<mu> - 2 / real l \<le> \<sigma>"
@@ -245,11 +243,11 @@ proof -
         by (smt (verit, ccfv_SIG) \<open>l \<le> k\<close> eq10 frac_le ln0 of_nat_0_less_iff of_nat_mono)
       moreover
       have "2/l < \<mu>"
-        using l by auto
+        using big by auto
       ultimately have "exp (- (b^2) / ((\<mu> - 2/l) * m)) \<le> exp (- real (b\<^sup>2) / (\<sigma> * real m))"
         using \<open>\<sigma>>0\<close> \<open>m>0\<close> by (simp add: frac_le)
       then show "1 \<le> 5/4 * exp (- of_nat (b\<^sup>2) / (\<sigma> * real m))"
-        by (smt (verit, best) b_def divide_minus_left frac_le l m_def mult_left_mono)
+        by (smt (verit, best) b_def divide_minus_left frac_le big m_def mult_left_mono)
       have "25 * (real m * real m) \<le> 2 powr real m"
         using of_nat_mono [OF power2_12 [OF \<open>12 \<le> m\<close>]] by (simp add: power2_eq_square powr_realpow)
       then have "real (5 * m) \<le>  2 powr (real m / 2)"
