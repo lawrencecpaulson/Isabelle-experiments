@@ -1475,15 +1475,17 @@ subsection \<open>Lemma 7.6\<close>
 
 definition "Big_X_7_6 \<equiv>
    \<lambda>\<mu> l. Lemma_bblue_dboost_step_limit \<mu> l \<and> Lemma_bblue_step_limit \<mu> l \<and> Big_X_7_12 \<mu> l
-         \<and> (\<forall>k. k\<ge>l \<longrightarrow> Big_X_7_8 k)"
+         \<and> (\<forall>k. k\<ge>l \<longrightarrow> Big_X_7_8 k \<and> 1 - 2 * eps k powr (1/4) > 0)"
 
 text \<open>establishing the size requirements for 7.11\<close>
 lemma Big_X_7_6:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_6 \<mu> l"
-  unfolding Big_X_7_6_def eventually_conj_iff  
-  by (simp add: bblue_dboost_step_limit Big_X_7_8 Big_X_7_12
+  unfolding Big_X_7_6_def eventually_conj_iff all_imp_conj_distrib eps_def
+  apply (simp add: bblue_dboost_step_limit Big_X_7_8 Big_X_7_12
         bblue_step_limit eventually_all_ge_at_top assms)
+  apply (intro conjI eventually_all_ge_at_top; real_asymp)
+  done
 
 (*? ? ? ? ?*)
 lemma DD: "\<not>P 0 \<Longrightarrow> Suc ` Collect P = {i. P(i-1)}"
@@ -1505,11 +1507,6 @@ proof -
   define m where "m \<equiv> halted_point \<mu> l k"
   define C where "C \<equiv> {i. card (X i) < (1 - 2 * eps k powr (1/4)) * card (X (i-1))}"
   define C' where "C' \<equiv> Suc -` C"
-  have "0 \<notin> C"
-    apply (auto simp: C_def)
-    by (smt (verit) mult_left_le_one_le of_nat_less_0_iff powr_non_neg zero_compare_simps(6))
-  then have C_eq_C': "C = Suc ` C'"
-    using nat.exhaust by (auto simp add: C'_def set_eq_iff image_iff)
 
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
@@ -1569,6 +1566,18 @@ proof -
   have 3: "card \<D> = card (\<D> \<inter> C') + card (\<D>\<setminus>C')"
     using \<open>finite \<D>\<close> card_Int_Diff by blast
 
+  have "Big_X_7_8 k" and one_minus_gt0: "1 > 2 * eps k powr (1/4)"
+    using big \<open>l\<le>k\<close> by (auto simp: Big_X_7_6_def)
+  then have 6: "card (X (Suc i)) \<ge> card (X i) / k^2" if "i \<in> \<D>" for i
+    using  X_7_8 \<mu> that by (force simp add: X_def \<D>_def)
+
+  have "(1 - 2 * eps k powr (1 / 4)) * (card (X 0)) \<le> 1 * real (card (X 0))"
+    by (intro mult_right_mono; force)
+  then have "0 \<notin> C"
+    by (force simp add: C_def)
+  then have C_eq_C': "C = Suc ` C'"
+    using nat.exhaust by (auto simp add: C'_def set_eq_iff image_iff)
+
   have 4: "real (card (\<D> \<inter> C')) \<le> real (card ((\<B> \<union> (\<R>\<union>\<S>) \<union> {m}) \<inter> C))"
     using DD \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>
     by (intro of_nat_mono card_inj_on_le [of Suc]) (auto simp: Int_insert_left C_eq_C')
@@ -1578,25 +1587,28 @@ proof -
     using Bk_34 712 by linarith 
   finally have 5: "card (\<D> \<inter> C') \<le> k powr (3/4) + 7 * eps k powr (1/4) * k + 1" .
 
-  have "Big_X_7_8 k"
-    using big \<open>l\<le>k\<close> by (auto simp: Big_X_7_6_def)
-  then have 6: "card (X (Suc i)) \<ge> card (X i) / k^2" if "i \<in> \<D>" for i
-    using  X_7_8 \<mu> that by (force simp add: X_def \<D>_def)
 
-  have "1 - 2 * eps k powr (1/4) > 0"
-    apply (simp add: eps_def powr_powr)
-    apply (simp add: powr_minus divide_simps)
 
-    sorry
+  have "(1 - 2 * eps k powr (1/4)) powr (k powr (3/4) + 7 * eps k powr (1/4) * k + 1)
+      \<le> (1 - 2 * eps k powr (1/4)) ^ card (\<D> \<inter> C')"
+    using 5 one_minus_gt0 by (simp add: powr_mono' flip: powr_realpow [OF one_minus_gt0])
 
   have "(\<Prod>i \<in> \<D> \<inter> C'. card (X (Suc i)) / card (X i)) = (\<Prod>i\<in>\<D>. if i \<in> C' then card (X (Suc i)) / card (X i) else 1)"
     by (simp add: prod.inter_restrict \<open>finite \<D>\<close>)
   also have "... \<le> (\<Prod>i\<in>\<D>. if i \<in> C' then (1 - 2 * eps k powr (1/4)) else 1)"
-    sorry
+    apply (intro prod_mono)
+    by (fastforce simp add: C'_def C_def divide_simps)
   also have "... = (1 - 2 * eps k powr (1/4)) ^ card (\<D> \<inter> C')"
     by (simp add: \<open>finite \<D>\<close> flip: prod.inter_restrict)
+
   also have "... \<le> (1 - 2 * eps k powr (1/4)) powr (k powr (3/4) + 7 * eps k powr (1/4) * k + 1)"
-    using 5 powr_realpow
+(*NO*)
+    using 5 one_minus_gt0
+    apply (simp add: flip: powr_realpow [OF one_minus_gt0])
+    apply (intro powr_mono')
+apply (auto simp: )
+    apply force
+
     sorry
   finally have 7: "(\<Prod>i \<in> \<D> \<inter> C'. card (X (Suc i)) / card (X i))
              \<le> (1 - 2 * eps k powr (1/4)) powr (k powr (3/4) + 7 * eps k powr (1/4) * k + 1)" .
