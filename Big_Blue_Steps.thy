@@ -39,8 +39,9 @@ begin
 
 proposition Blue_4_1:
   assumes "0 < \<mu>"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. \<forall>X. X\<subseteq>V \<longrightarrow> many_bluish \<mu> l k X \<longrightarrow> Colours l k \<longrightarrow>
-                  (\<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S \<ge> l powr (1/4))"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> 
+               (\<forall>X. X\<subseteq>V \<longrightarrow> many_bluish \<mu> l k X \<longrightarrow> 
+                    (\<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S \<ge> l powr (1/4)))"
 proof -
   have m_ge: "\<forall>\<^sup>\<infinity>l. m_of l \<ge> i" for i
     unfolding m_of_def by real_asymp
@@ -70,26 +71,22 @@ proof -
     define b where "b \<equiv> b_of l"
     define W where "W \<equiv> {x\<in>X. bluish \<mu> X x}"
     define m where "m \<equiv> m_of l"
-    have "m \<ge> 6" "m \<ge> 12"
+    have "m>0" "m \<ge> 6" "m \<ge> 12"
       using l by (auto simp: m_def)
-    then have "m>0"
-      by simp
     have "b>0"
       using l by (simp add: b_def b_of_def)
     have Wbig: "card W \<ge> RN k m"
       using manyb by (simp add: W_def m_def m_of_def many_bluish_def)
     with Red_Blue_RN obtain U where "U \<subseteq> W" and U_m_Blue: "size_clique m U Blue"
       by (metis W_def \<open>X \<subseteq> V\<close> mem_Collect_eq no_Red_clique subset_eq)
-    then have "card U = m" and "clique U Blue" and "U \<subseteq> V"
-      by (auto simp: size_clique_def)
-    then have "finite U"
-      using finV infinite_super by blast
+    then obtain "card U = m" and "clique U Blue" and "U \<subseteq> V" "finite U"
+      by (simp add: finV finite_subset size_clique_def)
     have "k \<le> RN m k"
       using \<open>m\<ge>12\<close> by (simp add: RN_3plus)
     then have "card X \<ge> l"
       by (metis Collect_subset RN_commute W_def Wbig \<open>X\<subseteq>V\<close> card_mono order.trans finV finite_subset \<open>l\<le>k\<close>)
     have "U \<noteq> X"
-      by (metis U_m_Blue \<open>card U = m\<close> \<open>l \<le> card X\<close> order.order_iff_strict no_Blue_clique size_clique_smaller)
+      by (metis U_m_Blue \<open>card U = m\<close> \<open>l \<le> card X\<close> le_eq_less_or_eq no_Blue_clique size_clique_smaller)
     then have "U \<subset> X"
       using W_def \<open>U \<subseteq> W\<close> by blast
     then have cardU_less_X: "card U < card X"
@@ -152,8 +149,7 @@ proof -
         by (meson sum_bounded_below)
       then have "m * (\<mu> * (card X - card U))
              \<le> (\<Sum>x\<in>U. card (Blue \<inter> all_edges_betw_un {x} (X-U))) + (1-\<mu>) * m\<^sup>2"
-        apply (simp add: sum.distrib power2_eq_square \<open>card U = m\<close>)
-        by (smt (verit) mult.assoc mult_of_nat_commute)
+        by (simp add: sum.distrib power2_eq_square \<open>card U = m\<close> mult_ac)
       also have "\<dots> \<le> card (\<Union>u\<in>U. Blue \<inter> all_edges_betw_un {u} (X-U)) + (1-\<mu>) * m\<^sup>2"
         by (simp add: dfam card_UN_disjoint' \<open>finite U\<close> flip: UN_simps)
       finally have "m * (\<mu> * (card X - card U)) 
