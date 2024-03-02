@@ -316,13 +316,21 @@ lemma Bdelta_trivial_step:
   using assms
   by (auto simp: step_kind_defs next_state_def Bdelta_def Bseq_def Let_def degree_reg_def split: if_split_asm prod.split)
 
+definition "Big_X_7_3 \<equiv> \<lambda>\<mu> l. Lemma_bblue_step_limit \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l"
+
+text \<open>establishing the size requirements for 7.10\<close>
+lemma Big_X_7_3:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_3 \<mu> l"
+  unfolding Big_X_7_3_def
+  by (simp add: bblue_step_limit bblue_dboost_step_limit eventually_conj_iff assms)
+
 text \<open>limit version still needs to be written\<close>
 lemma X_7_3:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   defines "f \<equiv> \<lambda>k. - (real k powr (3/4))"
-  assumes bblue_limit: "Lemma_bblue_step_limit \<mu> l" 
-    and bblue_dboost_step_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
+  assumes big: "Big_X_7_3 \<mu> l"
   assumes "Colours l k" 
   defines "X \<equiv> Xseq \<mu> l k"
   defines "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
@@ -331,11 +339,11 @@ lemma X_7_3:
 proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  have [simp]: "finite \<B>" and card\<B>: "card \<B> \<le> l powr (3/4)"
-    using \<open>Colours l k\<close> bblue_limit by (auto simp: \<B>_def Lemma_bblue_step_limit_def)
-  have [simp]: "finite \<S>"
-    using bblue_dboost_step_limit \<open>Colours l k\<close>
-    unfolding \<S>_def Lemma_bblue_dboost_step_limit_def by blast
+  have bblue_limit: "Lemma_bblue_step_limit \<mu> l" 
+    and bblue_dboost_step_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
+    using big by (auto simp: Big_X_7_3_def)
+  with \<open>Colours l k\<close> have [simp]: "finite \<B>" "finite \<S>" and card\<B>: "card \<B> \<le> l powr (3/4)"
+    by (auto simp: \<B>_def Lemma_bblue_step_limit_def \<S>_def Lemma_bblue_dboost_step_limit_def)
   define b where "b \<equiv> \<lambda>i. card (Bdelta \<mu> l k i)"
   obtain i where "card (Bseq \<mu> l k i) = sum b \<B> + card \<S>" 
   proof -
@@ -995,7 +1003,7 @@ text \<open>establishing the size requirements for 7.10\<close>
 lemma Big_X_7_10:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_10 \<mu> l"
-  by (simp add: Big_X_7_10_def  eventually_conj_iff Big_X_7_5 Y_6_5_dbooSt assms)
+  by (simp add: Big_X_7_10_def eventually_conj_iff Big_X_7_5 Y_6_5_dbooSt assms)
 
 lemma X_7_10:
   fixes l k
@@ -1623,14 +1631,14 @@ qed
 subsection \<open>Lemma 7.1\<close>
 
 definition "Big_X_7_1 \<equiv>
-   \<lambda>\<mu> l. Big_X_7_2 \<mu> l"
+   \<lambda>\<mu> l. Big_X_7_2 \<mu> l \<and> Big_X_7_3 \<mu> l"
 
 text \<open>establishing the size requirements for 7.11\<close>
 lemma Big_X_7_1:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_1 \<mu> l"
   unfolding Big_X_7_1_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_X_7_2 eventually_all_ge_at_top assms)
+  apply (simp add: Big_X_7_2 Big_X_7_3 eventually_all_ge_at_top assms)
   done
 
 lemma X_7_1:
