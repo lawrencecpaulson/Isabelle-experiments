@@ -1487,21 +1487,21 @@ lemma Big_X_7_6:
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
-(*? ? ? ? ?*)
-lemma DD: "\<not>P 0 \<Longrightarrow> Suc ` Collect P = {i. P(i-1)}"
-  using image_iff by fastforce
+definition "ok_fun_X_7_6 \<equiv> 
+  \<lambda>l k. ((1 + (real k + real l)) * ln (1 - 2 * eps k powr (1/4)) -
+                     (k powr (3/4) + 7 * eps k powr (1/4) * k + 1) * (2 * ln k)) / ln 2" 
 
-(* Final version must exhibit f that works for all k*)
+
+lemma ok_fun_X_7_6: "ok_fun_X_7_6 l \<in> o(real)" for l
+    unfolding eps_def ok_fun_X_7_6_def
+    by real_asymp
+
 lemma X_7_6_aux:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
-  defines "X \<equiv> Xseq \<mu> l k"
   assumes big: "Big_X_7_6 \<mu> l"
-  defines "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
-  defines "dc \<equiv> \<lambda>k. k powr (3/4) + 7 * eps k powr (1/4) * k + 1"
-  defines "f \<equiv> \<lambda>l k. ((1 + (real k + real l)) * ln (1 - 2 * eps k powr (1/4)) -
-                     dc k * (2 * ln k)) / ln 2"
-  shows "(\<Prod>i\<in>\<D>. card(X(Suc i)) / card (X i)) \<ge> 2 powr f l k"
+  defines "X \<equiv> Xseq \<mu> l k" and "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
+  shows "(\<Prod>i\<in>\<D>. card(X(Suc i)) / card (X i)) \<ge> 2 powr ok_fun_X_7_6 l k"
 proof -
   define \<R> where "\<R> \<equiv> Step_class \<mu> l k {red_step}"
   define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
@@ -1510,7 +1510,6 @@ proof -
   define m where "m \<equiv> halted_point \<mu> l k"
   define C where "C \<equiv> {i. card (X i) < (1 - 2 * eps k powr (1/4)) * card (X (i-1))}"
   define C' where "C' \<equiv> Suc -` C"
-
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   then have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
@@ -1520,123 +1519,94 @@ proof -
     by (auto simp: Big_X_7_6_def \<R>_def \<S>_def C_def X_def)
   have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
     unfolding m_def \<H>_def using halted_point_minimal assms by blast
-  have "finite \<R>" "card \<R> < k"
+  have [simp]: "finite \<R>" and "card \<R> < k"
     using \<R>_def assms red_step_limit by blast+ 
-  have "finite \<B>" "card \<B> \<le> l powr (3/4)"
+  have [simp]: "finite \<B>" and "card \<B> \<le> l powr (3/4)"
     using \<open>Colours l k\<close> B_limit by (auto simp: Lemma_bblue_step_limit_def \<B>_def)
   then have "card (\<B> \<inter> C) \<le> l powr (3/4)"
     using card_mono [OF _ Int_lower1] by (smt (verit, best) of_nat_mono)
-  also have "... \<le> k powr (3/4)"
+  also have "\<dots> \<le> k powr (3/4)"
     by (simp add: \<open>l\<le>k\<close> powr_mono2)
   finally have Bk_34: "card (\<B> \<inter> C) \<le> k powr (3/4)" .
 
-  have "finite \<S>" and less_l: "card \<B> + card \<S> < l"
+  have [simp]: "finite \<S>" and less_l: "card \<B> + card \<S> < l"
     using \<open>Colours l k\<close> BS_limit by (auto simp add: Lemma_bblue_dboost_step_limit_def \<B>_def \<S>_def)
-  have "finite \<D>"
+  have [simp]: "finite \<D>"
     by (metis Step_class_insert \<B>_def \<D>_def \<R>_def \<S>_def \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close> finite_Un finite_dreg_step)
   have [simp]: "(\<B> \<union> (\<R> \<union> \<S>)) \<inter> {m} = {}" "\<R> \<inter> \<S> = {}" "\<B> \<inter> (\<R> \<union> \<S>) = {}" "m \<notin> \<B>" "m \<notin> \<R>" "m \<notin> \<S>"
                "\<B> \<inter> C \<inter> (\<R> \<inter> C \<union> \<S> \<inter> C) = {}" for C
     using m_minimal by (force simp add: disjoint_iff \<B>_def \<R>_def \<S>_def \<H>_def Step_class_def)+
 
-  have "Suc ` \<D> \<subseteq> \<B> \<union> (\<R> \<union> \<S>) \<union> {m}"
-  proof clarsimp
-    fix i :: nat
-    assume "i \<in> \<D>" "Suc i \<noteq> m" "Suc i \<notin> \<B>" "Suc i \<notin> \<S>"
-    moreover have "Suc i \<notin> \<D>"
-      by (metis \<D>_def \<open>i \<in> \<D>\<close> even_Suc step_even)
-    moreover 
-    have "stepper_kind \<mu> l k i \<noteq> halted"
-      using \<D>_def \<open>i \<in> \<D>\<close> Step_class_def by force
-    then have "Suc i \<notin> \<H>"
-      using m_minimal \<open>Suc i \<noteq> m\<close> by (simp add: \<H>_def Step_class_def)
-    ultimately show "Suc i \<in> \<R>"
-      using Step_class_UNIV
-      by (force simp add: \<D>_def \<B>_def \<R>_def \<S>_def \<H>_def Step_class_insert_NO_MATCH)
-  qed
-  then have DD: "Suc i \<in> \<B> \<or> Suc i \<in> \<R> \<or> Suc i \<in> \<S> \<or> Suc i = m" if "i \<in> \<D>" for i
-    using that by force
-  moreover have "finite (\<B> \<union> (\<R> \<union> \<S>) \<union> {m})"
-    by (simp add: \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
-  ultimately have "card \<D> \<le> card (\<B> \<union> (\<R>\<union>\<S>) \<union> {m})"
-    by (intro card_inj_on_le [of Suc]) auto
-  also have "... = card \<B> + card \<R> + card \<S> + 1"
-    by (simp add: card_Un_disjoint card_insert_if \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
-  finally have 1: "card \<D> \<le> card \<B> + card \<R> + card \<S> + 1" .
-  also have "... \<le> k + l + 1"
-    using \<open>card \<R> < k\<close> less_l by linarith
-  finally have 2: "card \<D> \<le> k + l + 1" .
-
-  have 3: "card \<D> = card (\<D> \<inter> C') + card (\<D>\<setminus>C')"
-    using \<open>finite \<D>\<close> card_Int_Diff by blast
-
   have "Big_X_7_8 k" and one_minus_gt0: "1 - 2 * eps k powr (1/4) > 0"
     using big \<open>l\<le>k\<close> by (auto simp: Big_X_7_6_def)
-  then have 6: "card (X (Suc i)) \<ge> card (X i) / k^2" if "i \<in> \<D>" for i
-    using  X_7_8 \<mu> that by (force simp add: X_def \<D>_def)
+  then have X78: "card (X (Suc i)) \<ge> card (X i) / k^2" if "i \<in> \<D>" for i
+    using X_7_8 \<mu> that by (force simp add: X_def \<D>_def)
 
-  have "(1 - 2 * eps k powr (1/4)) * (card (X 0)) \<le> 1 * real (card (X 0))"
-    by (intro mult_right_mono; force)
-  then have "0 \<notin> C"
-    by (force simp add: C_def)
-  then have C_eq_C': "C = Suc ` C'"
-    using nat.exhaust by (auto simp add: C'_def set_eq_iff image_iff)
-
-  have dc_pos: "dc k > 0" for k
-    unfolding dc_def
+  let ?DC = "\<lambda>k. k powr (3/4) + 7 * eps k powr (1/4) * k + 1"
+  have dc_pos: "?DC k > 0" for k
     by (smt (verit) of_nat_less_0_iff powr_ge_pzero zero_le_mult_iff)
+  have X_pos: "card (X i) > 0" if "i \<in> \<D>" for i
+  proof -
+    have "card (X (Suc i)) > 0"
+      using \<mu> that X_7_7 \<open>k>0\<close> unfolding \<D>_def X_def by blast
+    then show ?thesis
+      by (metis X_def Xseq_Suc_subset card_mono finite_Xseq gr0I leD)
+  qed
+  have "ok_fun_X_7_6 l k = log 2 ((1 / (real k)\<^sup>2) powr ?DC k * (1 - 2 * eps k powr (1/4)) ^ (k + l + 1))"
+    unfolding ok_fun_X_7_6_def log_def
+    using dc_pos \<open>k>0\<close> one_minus_gt0 by (simp add: ln_powr ln_mult ln_div ln_realpow flip: power_Suc)
+  then have "2 powr ok_fun_X_7_6 l k = (1 / (real k)\<^sup>2) powr ?DC k * (1 - 2 * eps k powr (1/4)) ^ (k + l + 1)"
+    using powr_eq_iff \<open>k>0\<close> one_minus_gt0 by auto
+  also have "\<dots> \<le> (1 / (real k)\<^sup>2) powr card (\<D> \<inter> C') * (1 - 2 * eps k powr (1/4)) ^ card (\<D>\<setminus>C')"
+  proof (intro mult_mono powr_mono')
+    have "Suc ` \<D> \<subseteq> \<B> \<union> (\<R> \<union> \<S>) \<union> {m}"
+    proof clarsimp
+      fix i :: nat
+      assume "i \<in> \<D>" "Suc i \<noteq> m" "Suc i \<notin> \<B>" "Suc i \<notin> \<S>"
+      moreover have "Suc i \<notin> \<D>"
+        by (metis \<D>_def \<open>i \<in> \<D>\<close> even_Suc step_even)
+      moreover 
+      have "stepper_kind \<mu> l k i \<noteq> halted"
+        using \<D>_def \<open>i \<in> \<D>\<close> Step_class_def by force
+      then have "Suc i \<notin> \<H>"
+        using m_minimal \<open>Suc i \<noteq> m\<close> by (simp add: \<H>_def Step_class_def)
+      ultimately show "Suc i \<in> \<R>"
+        using Step_class_UNIV
+        by (force simp add: \<D>_def \<B>_def \<R>_def \<S>_def \<H>_def Step_class_insert_NO_MATCH)
+    qed
+    then have ifD: "Suc i \<in> \<B> \<or> Suc i \<in> \<R> \<or> Suc i \<in> \<S> \<or> Suc i = m" if "i \<in> \<D>" for i
+      using that by force
+    then have "card \<D> \<le> card (\<B> \<union> (\<R>\<union>\<S>) \<union> {m})"
+      by (intro card_inj_on_le [of Suc]) auto
+    also have "\<dots> = card \<B> + card \<R> + card \<S> + 1"
+      by (simp add: card_Un_disjoint card_insert_if)
+    also have "\<dots> \<le> k + l + 1"
+      using \<open>card \<R> < k\<close> less_l by linarith
+    finally have card_D: "card \<D> \<le> k + l + 1" .
 
-  have 4: "real (card (\<D> \<inter> C')) \<le> real (card ((\<B> \<union> (\<R>\<union>\<S>) \<union> {m}) \<inter> C))"
-    using DD \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>
-    by (intro of_nat_mono card_inj_on_le [of Suc]) (auto simp: Int_insert_left C_eq_C')
-  also have "... \<le> real (card (\<B> \<inter> C)) + real (card ((\<R>\<union>\<S>) \<inter> C)) + 1"
-    by (simp add: Int_insert_left Int_Un_distrib2 card_Un_disjoint card_insert_if \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
-  also have "... \<le> dc k"
-    using Bk_34 712 dc_def by force 
-  finally have 5: "card (\<D> \<inter> C') \<le> dc k" .
-
-
-
-  have 8: "(1 - 2 * eps k powr (1/4)) powr (dc k)
-      \<le> (1 - 2 * eps k powr (1/4)) ^ card (\<D> \<inter> C')"
-    using 5 one_minus_gt0 by (simp add: powr_mono' flip: powr_realpow [OF one_minus_gt0])
-
-  have D: "card (X i) > 0" if "i \<in> \<D>" for i
-    using that
-    unfolding X_def \<D>_def
-    by (metis X_7_7 Xseq_Suc_subset assms(1) assms(2) card_mono finite_Xseq le_eq_less_or_eq less_zeroE lk(3) not_gr0)
-
-  have "(1 / (real k)\<^sup>2) powr (dc k) * (1 - 2 * eps k powr (1/4)) ^ (k + l + 1)
-      \<le> (1 / (real k)\<^sup>2) ^ card (\<D> \<inter> C') * (1 - 2 * eps k powr (1/4)) ^ card (\<D>\<setminus>C')"
-    using 5 one_minus_gt0 \<open>k>0\<close> apply (simp  flip: power_Suc powr_realpow [of " (1 / (real k)\<^sup>2)"])
-    apply (intro mult_mono powr_mono')
-         apply (force simp add: )
-        apply (force simp add: )
-       apply (force simp add: )
-    using 2 card_mono [OF _ Int_lower1]
-      apply (smt (verit) "3" Suc_eq_plus1 add_leE power_decreasing powr_non_neg)
-     apply (auto simp: )
-    done
+    have "(1 - 2 * eps k powr (1/4)) * card (X 0) \<le> 1 * real (card (X 0))"
+      by (intro mult_right_mono; force)
+    then have "0 \<notin> C"
+      by (force simp add: C_def)
+    then have C_eq_C': "C = Suc ` C'"
+      using nat.exhaust by (auto simp add: C'_def set_eq_iff image_iff)
+    have "card (\<D> \<inter> C') \<le> real (card ((\<B> \<union> (\<R>\<union>\<S>) \<union> {m}) \<inter> C))"
+      using ifD by (intro of_nat_mono card_inj_on_le [of Suc]) (auto simp: Int_insert_left C_eq_C')
+    also have "\<dots> \<le> card (\<B> \<inter> C) + real (card ((\<R>\<union>\<S>) \<inter> C)) + 1"
+      by (simp add: Int_insert_left Int_Un_distrib2 card_Un_disjoint card_insert_if)
+    also have "\<dots> \<le> ?DC k"
+      using Bk_34 712 by force 
+    finally show "real (card (\<D> \<inter> C')) \<le> ?DC k" .
+    have "card (\<D>\<setminus>C') \<le> card \<D>"
+      using \<open>finite \<D>\<close> by (simp add: card_mono)
+    then show "(1 - 2 * eps k powr (1/4)) ^ (k+l+1) \<le> (1 - 2 * eps k powr (1/4)) ^ card (\<D>\<setminus>C')"
+      by (smt (verit) card_D add_leD2 one_minus_gt0 power_decreasing powr_ge_pzero)
+  qed (use one_minus_gt0 \<open>k>0\<close> in auto)
   also have "\<dots> = (\<Prod>i\<in>\<D>. if i \<in> C' then 1 / real k ^ 2 else 1 - 2 * eps k powr (1/4))"
-    by (simp add: prod.If_cases \<open>finite \<D>\<close> Diff_eq)
-  also have "\<dots>  \<le> (\<Prod>i \<in> \<D>. card (X (Suc i)) / card (X i))"
-    using D 6 one_minus_gt0 \<open>k>0\<close>
-    by (simp add: divide_simps C'_def C_def prod_mono)  
-  finally have G: "(1 / (real k)\<^sup>2) powr dc k * (1 - 2 * eps k powr (1/4)) ^ (k + l + 1)
-             \<le> (\<Prod>i \<in> \<D>. card (X (Suc i)) / card (X i))" .
-
-  have F: "f l k = log 2 ((1 / (real k)\<^sup>2) powr dc k * (1 - 2 * eps k powr (1/4)) ^ (k + l + 1))"
-    using dc_pos \<open>k>0\<close> one_minus_gt0 f_def log_def
-    by (simp add: ln_powr ln_mult ln_div ln_realpow flip: power_Suc)
-  then have "2 powr f l k = (1 / (real k)\<^sup>2) powr dc k * (1 - 2 * eps k powr (1/4)) ^ (k + l + 1)"
-    using powr_eq_iff
-    by (smt (verit, best) lk(3) of_nat_zero_less_power_iff one_minus_gt0 pos_prod_le powr_nonneg_iff zero_compare_simps(9) zero_less_power)
-  then show ?thesis
-    using G
-    by linarith
-
-  have "f l \<in> o(real)" for l
-    unfolding eps_def f_def dc_def
-    by real_asymp
+    by (simp add: lk(3) powr_realpow prod.If_cases Diff_eq)
+  also have "\<dots> \<le> (\<Prod>i \<in> \<D>. card (X (Suc i)) / card (X i))"
+    using X_pos X78 one_minus_gt0 \<open>k>0\<close> by (simp add: divide_simps C'_def C_def prod_mono)  
+  finally show ?thesis .
 qed
 
 
