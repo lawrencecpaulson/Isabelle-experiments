@@ -1537,6 +1537,30 @@ lemma before_halted_eq:
   shows "{..<halted_point \<mu> l k} = Step_class \<mu> l k {dreg_step,red_step,bblue_step,dboost_step}"
   using halted_point_minimal [OF assms] by (force simp add: halted_eq_Compl)
 
+lemma halted_stepper_add_eq:
+  assumes "\<mu>>0" "Colours l k"
+  shows "stepper \<mu> l k (halted_point \<mu> l k + i) = stepper \<mu> l k (halted_point \<mu> l k)"
+proof (induction i)
+  case 0
+  then show ?case
+    by auto
+next
+  case (Suc i)
+  have hlt: "stepper_kind \<mu> l k (halted_point \<mu> l k) = halted"
+    using Step_class_def assms halted_point_halted by force
+  obtain X Y A B where *: "stepper \<mu> l k (halted_point \<mu> l k) = (X, Y, A, B)"
+    by (metis surj_pair)
+  with hlt have "termination_condition l k X Y"
+    by (simp add: stepper_kind_def next_state_kind_def split: if_split_asm)
+  with * show ?case
+    by (simp add: Suc)
+qed
+
+lemma halted_stepper_eq:
+  assumes \<section>: "\<mu>>0" "Colours l k" and i: "i \<ge> halted_point \<mu> l k"
+  shows "stepper \<mu> l k i = stepper \<mu> l k (halted_point \<mu> l k)"
+  by (metis le_iff_add halted_stepper_add_eq[OF \<section>] i)
+
 end
                                                
 end

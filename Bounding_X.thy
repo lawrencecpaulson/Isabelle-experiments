@@ -139,11 +139,11 @@ definition "ok_fun_X_7_2 \<equiv> \<lambda>\<mu> k. (real k / ln 2) * ln (1 - 1 
 lemma X_7_2:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
-  defines "X \<equiv> Xseq \<mu> l k"
+  defines "X \<equiv> Xseq \<mu> l k" and "\<R> \<equiv> Step_class \<mu> l k {red_step}"
   assumes big: "Big_X_7_2 \<mu> l"
-  assumes "Colours l k" and fin_red: "finite (Step_class \<mu> l k {red_step})"
-  shows "(\<Prod>i \<in> Step_class \<mu> l k {red_step}. card (X(Suc i)) / card (X i)) 
-        \<ge> 2 powr (ok_fun_X_7_2 \<mu> k) * (1-\<mu>) ^ card (Step_class \<mu> l k {red_step})"
+  assumes "Colours l k" 
+  shows "(\<Prod>i\<in>\<R>. card (X(Suc i)) / card (X i)) 
+        \<ge> 2 powr (ok_fun_X_7_2 \<mu> k) * (1-\<mu>) ^ card \<R>"
 proof -
   define R where "R \<equiv> RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
   obtain lk: "0<l" "l\<le>k" "0<k"
@@ -156,15 +156,15 @@ proof -
   with k_gt \<mu> have bigR: "1-\<mu> > 1/R"
     by (smt (verit, best) less_imp_of_nat_less ln_div ln_le_cancel_iff zero_less_divide_iff)
   have *: "1-\<mu> - 1/R \<le> card (X (Suc i)) / card (X i)"
-    if  "i \<in> Step_class \<mu> l k {red_step}" for i
+    if  "i \<in> \<R>" for i
   proof -
     let ?NRX = "\<lambda>i. Neighbours Red (cvx \<mu> l k i) \<inter> X i"
     have nextX: "X (Suc i) = ?NRX i" and nont: "\<not> termination_condition l k (X i) (Yseq \<mu> l k i)"
-      using that by (auto simp: X_def step_kind_defs next_state_def cvx_def Let_def split: prod.split)
+      using that by (auto simp: \<R>_def X_def step_kind_defs next_state_def cvx_def Let_def split: prod.split)
     then have cardX: "card (X i) > R"
       unfolding R_def by (meson not_less termination_condition_def)
     have 1: "card (?NRX i) \<ge> (1-\<mu>) * card (X i) - 1"
-      using that card_cvx_Neighbours \<mu> by (simp add: Step_class_def X_def)
+      using that card_cvx_Neighbours \<mu> by (simp add: \<R>_def Step_class_def X_def)
     have "R \<noteq> 0"
       unfolding RN_eq_0_iff R_def using lk by auto
     with cardX have "(1-\<mu>) - 1 / R \<le> (1-\<mu>) - 1 / card (X i)"
@@ -173,11 +173,13 @@ proof -
       using cardX nextX 1 by (simp add: divide_simps)
     finally show ?thesis .
   qed
-  define t where "t \<equiv> card(Step_class \<mu> l k {red_step})"
+  have fin_red: "finite \<R>"
+    using red_step_limit \<mu> \<open>Colours l k\<close> by (auto simp: \<R>_def)
+  define t where "t \<equiv> card \<R>"
   have "t\<ge>0"
     by (auto simp: t_def)
   have "(1-\<mu> - 1/R) ^ card Red_steps \<le> (\<Prod>i \<in> Red_steps. card (X(Suc i)) / card (X i))"
-    if "Red_steps \<subseteq> Step_class \<mu> l k {red_step}" for Red_steps
+    if "Red_steps \<subseteq> \<R>" for Red_steps
     using finite_subset [OF that fin_red] that
   proof induction
     case empty
@@ -185,7 +187,7 @@ proof -
       by auto
   next
     case (insert i Red_steps)
-    then have i: "i \<in> Step_class \<mu> l k {red_step}"
+    then have i: "i \<in> \<R>"
       by auto
     have "((1-\<mu>) - 1/R) ^ card (insert i Red_steps) = ((1-\<mu>) - 1/R) * ((1-\<mu>) - 1/R) ^ card (Red_steps)"
       by (simp add: insert)
@@ -197,7 +199,7 @@ proof -
       using insert by simp
     finally show ?case .
   qed
-  then have *: "(1-\<mu> - 1/R) ^ t \<le> (\<Prod>i \<in> Step_class \<mu> l k {red_step}. card (X(Suc i)) / card (X i))"
+  then have *: "(1-\<mu> - 1/R) ^ t \<le> (\<Prod>i \<in> \<R>. card (X(Suc i)) / card (X i))"
     using t_def by blast
   \<comment> \<open>Asymptotic part of the argument\<close>
   have "1-\<mu> - 1/k \<le> 1-\<mu> - 1/R"
@@ -209,8 +211,8 @@ proof -
     by (simp add: ok_fun_X_7_2_def)
   also have "\<dots> \<le> t * ln (1 - 1 / (k * (1-\<mu>)))"
   proof (intro mult_right_mono_neg)
-    obtain red_steps: "finite (Step_class \<mu> l k {red_step})" "card (Step_class \<mu> l k {red_step}) < k"
-      using red_step_limit \<open>0<\<mu>\<close> \<open>Colours l k\<close> by blast
+    obtain red_steps: "finite \<R>" "card \<R> < k"
+      using red_step_limit \<open>0<\<mu>\<close> \<open>Colours l k\<close> by (auto simp: \<R>_def)
     show "real t \<le> real k"
       using nat_less_le red_steps(2) by (simp add: t_def)
     show "ln (1 - 1 / (k * (1-\<mu>))) \<le> 0"
@@ -769,6 +771,7 @@ proof -
     by (simp add: "*" bigbeta_01 powr_realpow)
 qed  
 
+(** MAYVBE WE DON'T NEED THIS **)
 proposition X_7_4:
   assumes "0<\<mu>" "\<mu><1" 
   shows "\<exists>f \<in> o(\<lambda>k. real k).
@@ -1517,7 +1520,7 @@ lemma ok_fun_X_7_6: "ok_fun_X_7_6 l \<in> o(real)" for l
     unfolding eps_def ok_fun_X_7_6_def
     by real_asymp
 
-lemma X_7_6_aux:
+lemma X_7_6:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
   assumes big: "Big_X_7_6 \<mu> l"
@@ -1646,7 +1649,7 @@ lemma Big_X_7_1:
 lemma X_7_1:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
-  assumes big: "Big_X_7_6 \<mu> l"
+  assumes big: "Big_X_7_1 \<mu> l"
   defines "X \<equiv> Xseq \<mu> l k" and "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
   defines "\<R> \<equiv> Step_class \<mu> l k {red_step}"
   defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
@@ -1655,6 +1658,18 @@ proof -
   define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
   define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
   define m where "m \<equiv> halted_point \<mu> l k"
+  have 72: "Big_X_7_2 \<mu> l" and 73: "Big_X_7_3 \<mu> l" and 74: "Big_X_7_4 \<mu> l" and 76: "Big_X_7_6 \<mu> l"
+    using big by (auto simp: Big_X_7_1_def)
+  have R: "(\<Prod>i\<in>\<R>. card (X(Suc i)) / card (X i)) \<ge> 2 powr (ok_fun_X_7_2 \<mu> k) * (1-\<mu>) ^ card \<R>"
+    unfolding X_def \<R>_def using 72 \<mu> \<open>Colours l k\<close> X_7_2 by meson
+  have B: "(\<Prod>i \<in> \<B>. card (X(Suc i)) / card (X i)) \<ge> 2 powr (ok_fun_X_7_3 k) * \<mu> ^ (l - card \<S>)"
+    unfolding X_def \<B>_def \<S>_def using 73 \<mu> \<open>Colours l k\<close> X_7_3 by meson
+  have S: "(\<Prod>i\<in>\<S>. card (X (Suc i)) / card (X i)) \<ge> 2 powr ok_fun_X_7_4 k * bigbeta \<mu> l k ^ card \<S>"
+    unfolding X_def \<S>_def using 74 \<mu> \<open>Colours l k\<close> X_7_4_aux by meson
+  have D: "(\<Prod>i\<in>\<D>. card(X(Suc i)) / card (X i)) \<ge> 2 powr ok_fun_X_7_6 l k"
+    unfolding X_def \<D>_def using 76 \<mu> \<open>Colours l k\<close> X_7_6 by meson
+
+  sorry
   show ?thesis
     sorry
 qed
