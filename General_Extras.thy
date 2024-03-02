@@ -13,12 +13,16 @@ lemma card_Int_Diff:
   shows "card A = card (A \<inter> B) + card (A - B)"
   by (simp add: assms card_Diff_subset_Int card_mono)
 
+lemma powr_eq_iff:
+  assumes "y>0" "b>1"
+  shows "b powr x = y \<longleftrightarrow> log b y = x"
+  using assms by auto
 
 (* TODO Move from Multiseries_expansion_bounds*)
 lemma powr_mono': "a \<le> (b::real) \<Longrightarrow> x \<ge> 0 \<Longrightarrow> x \<le> 1 \<Longrightarrow> x powr b \<le> x powr a"
   using powr_mono[of "-b" "-a" "inverse x"] by (auto simp: powr_def ln_inverse ln_div field_split_simps)
 
-(*?*)
+(*NOT FOR THE DISTRIBUTION?*)
 abbreviation set_difference :: "['a set,'a set] \<Rightarrow> 'a set" (infixl "\<setminus>" 65)
   where "A \<setminus> B \<equiv> A-B"
 
