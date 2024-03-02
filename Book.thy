@@ -807,7 +807,7 @@ lemma choose_central_vx_works:
   using someI_ex [OF ex_best_central_vx] by force
 
 lemma choose_central_vx_X: 
-  "\<lbrakk>\<not> termination_condition l k X Y; \<not> many_bluish \<mu> l k X; finite X\<rbrakk> \<Longrightarrow> choose_central_vx \<mu> (X,Y,A,B) \<in> X"
+  "\<lbrakk>\<not> many_bluish \<mu> l k X; \<not> termination_condition l k X Y; finite X\<rbrakk> \<Longrightarrow> choose_central_vx \<mu> (X,Y,A,B) \<in> X"
   using central_vertex_def choose_central_vx_works by fastforce
 
 subsection \<open>Red step\<close>
@@ -1408,17 +1408,15 @@ proof -
   then obtain x where "x\<in>X" and x: "bluish \<mu> X x"
     using mb unfolding many_bluish_def
     by (smt (verit) card_eq_0_iff empty_iff equalityI less_le_not_le mem_Collect_eq subset_iff)
-  then show ?thesis
-    apply (auto simp: good_blue_book_def)
-    apply (rule_tac x="x" in bexI)
-     apply (auto simp: book_def)
-    using all_edges_betw_un_def in_Neighbours_iff apply fastforce
-    by (simp add: bluish_def)
+  have "book {x} (Neighbours Blue x \<inter> X) Blue"
+    by (force simp add: book_def all_edges_betw_un_def in_Neighbours_iff)
+  with x show ?thesis
+    by (auto simp: bluish_def good_blue_book_def \<open>x \<in> X\<close>)
 qed
 
 lemma choose_blue_book_psubset: 
-   assumes "\<mu>>0" "many_bluish \<mu> l k X" "Colours l k"
-      and "finite X" and ST: "(S,T) = choose_blue_book \<mu> (X,Y,A,B)"
+  assumes "many_bluish \<mu> l k X" and ST: "choose_blue_book \<mu> (X,Y,A,B) = (S,T)"
+    and "\<mu>>0" "Colours l k" "finite X"
     shows "T \<noteq> X"
 proof -
   obtain x where "x\<in>X" and x: "good_blue_book \<mu> X ({x}, Neighbours Blue x \<inter> X)"
@@ -1427,14 +1425,14 @@ proof -
     unfolding valid_state_def
     by (metis best_blue_book_is_best card.empty card_seteq empty_not_insert finite.intros singleton_insert_inj_eq)
   then have "S \<noteq> {}"
-    using \<open>finite X\<close> ST choose_blue_book_works by fastforce
+    by (metis \<open>finite X\<close> ST choose_blue_book_works card.empty)
   with \<open>finite X\<close> ST show ?thesis
     by (metis (no_types, opaque_lifting) choose_blue_book_subset disjnt_iff empty_subsetI equalityI subset_eq)
 qed
 
 lemma next_state_smaller:
   assumes "\<mu>>0"  "Colours l k" "next_state \<mu> l k (X,Y,A,B) = (X',Y',A',B')" 
-    and "finite X" and "\<not> termination_condition l k X Y"  
+    and "finite X" and nont: "\<not> termination_condition l k X Y"  
   shows "X' \<subset> X"
 proof -
   have "X' \<subseteq> X"
@@ -1444,14 +1442,20 @@ proof -
     have *: "\<not> X \<subseteq> Neighbours rb x \<inter> X" if "x \<in> X" "rb \<subseteq> E" for x rb
       using that by (auto simp: Neighbours_def subset_iff)
     show ?thesis
-      using assms 
-      apply (auto simp: next_state_def valid_state_def Let_def split: if_split_asm prod.split_asm)
-      apply (metis \<open>finite X\<close> choose_blue_book_psubset)
-      using * choose_central_vx_X Red_E(2)
-      apply (metis Red_E(2) order.refl)
-      using * choose_central_vx_X
-      apply (metis Blue_E(2) order.refl)
-      done
+    proof (cases "many_bluish \<mu> l k X")
+      case True
+      with assms show ?thesis 
+        by (auto simp add: next_state_def split: if_split_asm prod.split_asm
+            dest!:  choose_blue_book_psubset [OF True])
+    next
+      case False
+      then have "choose_central_vx \<mu> (X,Y,A,B) \<in> X"
+        by (simp add: assms(4) choose_central_vx_X nont)
+      with assms *[of _ Red] *[of _ Blue] \<open>X' \<subseteq> X\<close> Red_E Blue_E False
+      choose_central_vx_X [OF False nont]
+      show ?thesis
+        by (fastforce simp add: next_state_def Let_def split: if_split_asm prod.split_asm)
+    qed
   qed
   ultimately show ?thesis
     by auto
@@ -1523,6 +1527,15 @@ lemma halted_point_minimal:
   shows "i \<notin> Step_class \<mu> l k {halted} \<longleftrightarrow> i < halted_point \<mu> l k"
   using Step_class_halted_nonempty [OF assms] 
   by (metis wellorder_Inf_le1 Inf_nat_def1 Step_class_not_halted halted_point_def less_le_not_le nle_le) 
+
+lemma halted_eq_Compl:
+  "Step_class \<mu> l k {dreg_step,red_step,bblue_step,dboost_step} = - Step_class \<mu> l k {halted}"
+  using Step_class_UNIV [of \<mu> l k] by (auto simp: Step_class_def)
+
+lemma before_halted_eq:
+  assumes "\<mu>>0" "Colours l k"
+  shows "{..<halted_point \<mu> l k} = Step_class \<mu> l k {dreg_step,red_step,bblue_step,dboost_step}"
+  using halted_point_minimal [OF assms] by (force simp add: halted_eq_Compl)
 
 end
                                                
