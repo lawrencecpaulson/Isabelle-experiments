@@ -124,12 +124,22 @@ qed
 
 subsection \<open>Lemma 7.2\<close>
 
+definition "Big_X_7_2 \<equiv>
+   \<lambda>\<mu> l. nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3 \<and> l > 1 / (1-\<mu>)"
+
+text \<open>establishing the size requirements for 7.11\<close>
+lemma Big_X_7_2:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_2 \<mu> l"
+  unfolding Big_X_7_2_def eventually_conj_iff all_imp_conj_distrib eps_def
+  by (intro conjI; real_asymp)
+
 lemma X_7_2:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   defines "f \<equiv> \<lambda>k. (real k / ln 2) * ln (1 - 1 / (k * (1-\<mu>)))"
   defines "X \<equiv> Xseq \<mu> l k"
-  assumes big: "nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3" "k\<ge>2" "k > 1 / (1-\<mu>)"
+  assumes big: "Big_X_7_2 \<mu> l"
   assumes "Colours l k" and fin_red: "finite (Step_class \<mu> l k {red_step})"
   shows "(\<Prod>i \<in> Step_class \<mu> l k {red_step}. card (X(Suc i)) / card (X i)) 
         \<ge> 2 powr (f k) * (1-\<mu>) ^ card (Step_class \<mu> l k {red_step})"
@@ -137,11 +147,13 @@ proof -
   define R where "R \<equiv> RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  have "R > k"
-    using big RN_gt1 R_def by blast
-  with big \<mu> have bigR: "1-\<mu> > 1/R"
-    apply (simp add: divide_simps mult.commute)
-    by (smt (verit, ccfv_SIG) divide_less_eq less_imp_of_nat_less)
+  with big have l34_ge3: "nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3" and k_gt: "k > 1 / (1-\<mu>)"
+    by (auto simp: Big_X_7_2_def)
+  then obtain "R > k" "k \<ge> 2"
+    using \<mu> RN_gt1 R_def \<open>l\<le>k\<close>
+    by (smt (verit, best) divide_le_eq_1_pos fact_2 nat_le_real_less of_nat_fact)
+  with k_gt \<mu> have bigR: "1-\<mu> > 1/R"
+    by (smt (verit, best) less_imp_of_nat_less ln_div ln_le_cancel_iff zero_less_divide_iff)
   have *: "1-\<mu> - 1/R \<le> card (X (Suc i)) / card (X i)"
     if  "i \<in> Step_class \<mu> l k {red_step}" for i
   proof -
@@ -190,7 +202,7 @@ proof -
   have "1-\<mu> - 1/k \<le> 1-\<mu> - 1/R"
     using \<open>0<k\<close> \<open>k < R\<close> by (simp add: inverse_of_nat_le)
   then have ln_le: "ln (1-\<mu> - 1/k) \<le> ln (1-\<mu> - 1/R)"
-    using \<mu> big \<open>k>0\<close> \<open>R>k\<close> 
+    using \<mu> k_gt \<open>R>k\<close> 
     by (simp add: bigR divide_simps mult.commute pos_divide_less_eq less_le_trans)
   have "f k * ln 2 = k * ln (1 - 1 / (k * (1-\<mu>)))"
     by (simp add: f_def)
@@ -201,12 +213,12 @@ proof -
     show "real t \<le> real k"
       using nat_less_le red_steps(2) by (simp add: t_def)
     show "ln (1 - 1 / (k * (1-\<mu>))) \<le> 0"
-      using \<mu>(2) divide_less_eq big ln_one_minus_pos_upper_bound by fastforce
+      using \<mu>(2) divide_less_eq k_gt ln_one_minus_pos_upper_bound by fastforce
   qed
   also have "\<dots> = t * ln ((1-\<mu> - 1/k) / (1-\<mu>))"
     using \<open>t\<ge>0\<close> \<mu> by (simp add: diff_divide_distrib)
   also have "\<dots> = t * (ln (1-\<mu> - 1/k) - ln (1-\<mu>))"
-    using \<open>t\<ge>0\<close> \<mu> big \<open>0<k\<close> by (simp add: ln_div mult.commute pos_divide_less_eq)
+    using \<open>t\<ge>0\<close> \<mu> k_gt \<open>0<k\<close> by (simp add: ln_div mult.commute pos_divide_less_eq)
   also have "\<dots> \<le> t * (ln (1-\<mu> - 1/R) - ln (1-\<mu>))"
     by (simp add: ln_le mult_left_mono)
   finally have "f k * ln 2 + t * ln (1-\<mu>) \<le> t * ln (1-\<mu> - 1/R)"
@@ -1608,6 +1620,34 @@ proof -
   finally show ?thesis .
 qed
 
+subsection \<open>Lemma 7.1\<close>
+
+definition "Big_X_7_1 \<equiv>
+   \<lambda>\<mu> l. Big_X_7_2 \<mu> l"
+
+text \<open>establishing the size requirements for 7.11\<close>
+lemma Big_X_7_1:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_1 \<mu> l"
+  unfolding Big_X_7_1_def eventually_conj_iff all_imp_conj_distrib eps_def
+  apply (simp add: Big_X_7_2 eventually_all_ge_at_top assms)
+  done
+
+lemma X_7_1:
+  fixes l k
+  assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
+  assumes big: "Big_X_7_6 \<mu> l"
+  defines "X \<equiv> Xseq \<mu> l k" and "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
+  defines "\<R> \<equiv> Step_class \<mu> l k {red_step}"
+  defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
+  shows "card (X i) \<ge> 2 powr f * \<mu>^l * (1-\<mu>) ^ card \<R> * (beta \<mu> l k i / \<mu>) ^ card \<S> * card X0"
+proof -
+  define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
+  define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
+  define m where "m \<equiv> halted_point \<mu> l k"
+  show ?thesis
+    sorry
+qed
 
 end (*context Diagonal*)
 
