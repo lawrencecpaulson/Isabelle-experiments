@@ -319,9 +319,9 @@ lemma X_7_3:
 proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  have "finite \<B>" and card\<B>: "card \<B> \<le> l powr (3/4)"
+  have [simp]: "finite \<B>" and card\<B>: "card \<B> \<le> l powr (3/4)"
     using \<open>Colours l k\<close> bblue_limit by (auto simp: \<B>_def Lemma_bblue_step_limit_def)
-  have "finite \<S>"
+  have [simp]: "finite \<S>"
     using bblue_dboost_step_limit \<open>Colours l k\<close>
     unfolding \<S>_def Lemma_bblue_dboost_step_limit_def by blast
   define b where "b \<equiv> \<lambda>i. card (Bdelta \<mu> l k i)"
@@ -329,12 +329,12 @@ proof -
   proof -
     define i where "i = Suc (Max (\<B> \<union> \<S>))"
     define TRIV where "TRIV \<equiv> Step_class \<mu> l k {red_step,dreg_step,halted} \<inter> {..<i}"
-    have "finite TRIV"
+    have [simp]: "finite TRIV"
       by (auto simp: TRIV_def)
     have eq: "\<B> \<union> \<S> \<union> TRIV = {..<i}"
     proof
       show "\<B> \<union> \<S> \<union> TRIV \<subseteq> {..<i}"
-        by (auto simp: i_def TRIV_def \<open>finite \<B>\<close> \<open>finite \<S>\<close> less_Suc_eq_le)
+        by (auto simp: i_def TRIV_def less_Suc_eq_le)
       show "{..<i} \<subseteq> \<B> \<union> \<S> \<union> TRIV"
         using  stepkind.exhaust by (auto simp: \<B>_def \<S>_def TRIV_def Step_class_def)
     qed
@@ -345,7 +345,7 @@ proof -
       have "card (Bseq \<mu> l k i) = (\<Sum>j \<in> \<B> \<union> \<S> \<union> TRIV. b j)"
         using card_Bseq_sum eq unfolding b_def by metis
       also have "\<dots> = (\<Sum>j\<in>\<B>. b j) + (\<Sum>j\<in>\<S>. b j) + (\<Sum>j\<in>TRIV. b j)"
-        by (simp add: sum_Un_nat \<open>finite \<B>\<close> \<open>finite \<S>\<close> \<open>finite TRIV\<close> dis)
+        by (simp add: sum_Un_nat dis)
       also have "\<dots> = sum b \<B> + card \<S>"
       proof -
         have "sum b \<S> = card \<S>"
@@ -536,11 +536,11 @@ proof -
     using big by (auto simp: Big_X_7_5_def)
   have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
     unfolding m_def \<H>_def using halted_point_minimal assms by blast
-  have "finite \<R>"
+  have [simp]: "finite \<R>"
     using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
-  have "finite \<B>"
+  have [simp]: "finite \<B>"
     using B_limit \<open>Colours l k\<close> by (simp add: Lemma_bblue_step_limit_def \<B>_def)
-  have "finite \<S>"
+  have [simp]: "finite \<S>"
     using BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
   have [simp]: "\<R> \<inter> \<S> = {}" "\<B> \<inter> (\<R>\<union>\<S>) = {}"
     by (auto simp: \<R>_def \<S>_def \<B>_def Step_class_def)
@@ -580,12 +580,12 @@ proof -
       unfolding h_def by linarith
   qed
   ultimately have 27: "(\<Sum>i \<in> \<R>\<union>\<S>. h(Suc i) - h(i-1)) \<ge> eps k powr (-1/4) * card (\<S>\<setminus>\<S>\<S>) - 2 * card \<R>"
-    by (simp add: sum.union_disjoint \<open>finite \<R>\<close> \<open>finite \<S>\<close>)
+    by (simp add: sum.union_disjoint)
 
   have "ok_fun_28 k + (eps k powr (-1/4) * card (\<S>\<setminus>\<S>\<S>) - 2 * card \<R>) \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1)) + (\<Sum>i \<in> \<R>\<union>\<S>. h(Suc i) - h(i-1))"
     using 27 28 by simp
   also have "\<dots> = (\<Sum>i \<in> \<B> \<union> (\<R>\<union>\<S>). h(Suc i) - h(i-1))"
-    by (simp add: \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close> sum.union_disjoint)
+    by (simp add: sum.union_disjoint)
   also have "\<dots> = (\<Sum>i \<in> {..<m} \<setminus> \<D>. h(Suc i) - h(i-1))"
   proof -
     have "i \<in> \<B> \<union> (\<R>\<union>\<S>)" if "i<m" "i \<notin> \<D>" for i
@@ -659,12 +659,12 @@ proof -
     by (auto simp: Big_X_7_4_def Lemma_X_7_5_def Lemma_Red_5_3_def p_def \<S>_def \<S>\<S>_def)
   then have beta_gt_0: "\<forall>i\<in>\<S>. 0 < beta \<mu> l k i"
     by (simp add: Lemma_beta_gt_0_def \<S>_def \<open>Colours l k\<close>)
-  have "finite \<S>"
+  have [simp]: "finite \<S>"
     using BS_limit  by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
   moreover have "\<S>\<S> \<subseteq> \<S>"
     unfolding \<S>\<S>_def \<S>_def dboost_star_def by auto
-  ultimately have "finite \<S>\<S>"
-    using finite_subset by auto
+  ultimately have [simp]: "finite \<S>\<S>"
+    using finite_subset by blast
   have card_SSS: "card \<S>\<S> \<le> card \<S>"
     by (metis \<S>\<S>_def \<S>_def \<open>finite \<S>\<close> card_mono dboost_star_subset)
   have \<beta>: "beta \<mu> l k i = card (X (Suc i)) / card (X i)" if "i \<in> \<S>" for i
@@ -720,7 +720,7 @@ proof -
     then have "((\<Prod>i\<in>\<S>\<S>. 1 / beta \<mu> l k i) powr (1 / card \<S>\<S>)) powr (card \<S>\<S>) 
           \<le> (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i / card \<S>\<S>) powr (card \<S>\<S>)"
       using powr_mono2 by auto
-    with \<open>card \<S>\<S> > 0\<close> 
+    with \<open>\<S>\<S> \<noteq> {}\<close> 
     have "(\<Prod>i\<in>\<S>\<S>. 1 / beta \<mu> l k i) \<le> (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i / card \<S>\<S>) powr (card \<S>\<S>)"
       by (simp add: powr_powr beta_ge0 prod_nonneg)
     also have "\<dots> \<le> (1 / (card \<S>\<S>) * (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i)) powr (card \<S>\<S>)"
@@ -1026,9 +1026,9 @@ proof -
     using 26 28 by linarith
   finally have *: "(\<Sum>i\<in>\<R>\<union>\<S>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k - ok_fun_28 k" .
 
-  have "finite \<R>"
+  have [simp]: "finite \<R>"
     using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
-  have "finite \<S>"
+  have [simp]: "finite \<S>"
     using BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
 
   have h_ge_0_if_S: "h(Suc i) - h(i-1) \<ge> 0" if "i \<in> \<S>" for i
@@ -1045,7 +1045,7 @@ proof -
 
   have "card ((\<R>\<union>\<S>) \<inter> C) * eps k powr (-1/4) + real (card \<R>) * (-2)
       = (\<Sum>i \<in> \<R>\<union>\<S>. if i\<in>C then eps k powr (-1/4) else 0) + (\<Sum>i \<in> \<R>\<union>\<S>. if i\<in>\<R> then -2 else 0)"
-    by (simp add: \<open>finite \<R>\<close> \<open>finite \<S>\<close> Int_commute Int_left_commute flip: sum.inter_restrict)
+    by (simp add: Int_commute Int_left_commute flip: sum.inter_restrict)
   also have "\<dots> = (\<Sum>i \<in> \<R>\<union>\<S>. (if i\<in>C then eps k powr (-1/4) else 0) + (if i\<in>\<R> then -2 else 0))"
     by (simp add: sum.distrib)
   also have "\<dots> \<le> (\<Sum>i \<in> \<R>\<union>\<S>. h(Suc i) - h(i-1))"
@@ -1158,11 +1158,11 @@ proof -
     using step_odd step_even not_halted_even_dreg 
     by (auto simp: \<D>_def \<H>_def Step_class_insert_NO_MATCH)
 
-  have "finite \<R>"
+  have [simp]: "finite \<R>"
     using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
-  have "finite \<B>"
+  have [simp]: "finite \<B>"
     using B_limit \<open>Colours l k\<close> by (simp add: Lemma_bblue_step_limit_def \<B>_def)
-  have "finite \<S>"
+  have [simp]: "finite \<S>"
     using BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
 
   have [simp]: "\<R> \<inter> \<S> = {}" and [simp]: "(\<R> \<union> \<S>) \<inter> \<B> = {}"
@@ -1198,7 +1198,7 @@ proof -
         then have "hgt k (p (Suc i)) > hgt k qstar"
           using Y_6_5_Red 16 \<open>i \<in> \<R>\<close> by (force simp add: p_def \<R>_def)
         then have "pstar (Suc i) = pstar i"
-          by (smt (verit) True add_lessD1 hgt_mono' lk(3) pstar_def)
+          by (smt (verit) True add_lessD1 hgt_mono' \<open>k>0\<close> pstar_def)
         then show ?thesis
           by (simp add: alpha_ge0)
       next
@@ -1215,7 +1215,7 @@ proof -
   moreover have "0 \<le> (\<Sum>i\<in>\<S>. pstar (Suc i) - pstar i)"
     using R53 by (intro sum_nonneg) (force simp add:  pstar_def)
   ultimately have RS_half: "- 2 * alpha k 1 * k \<le> (\<Sum>i\<in>\<R>\<union>\<S>. pstar (Suc i) - pstar i)"
-    by (simp add: \<open>finite \<R>\<close> \<open>finite \<S>\<close> sum.union_disjoint)
+    by (simp add: sum.union_disjoint)
 
   let ?e12 = "eps k powr (-1/2)"
   have "- alpha k 1 * k \<le> -2 * ?e12 * alpha k 1 * k powr (3/4)"
@@ -1280,7 +1280,7 @@ proof -
   finally have B: "- alpha k 1 * k \<le> (\<Sum>i\<in>\<B>. pstar (Suc i) - pstar (i-1))" .
 
   have "eps k powr (-1/4) * alpha k 1 * card ((\<R>\<union>\<S>) \<inter> C) \<le> (\<Sum>i\<in>\<R>\<union>\<S>. if i \<in> C then eps k powr (-1/4) * alpha k 1 else 0)"
-    by (simp add: \<open>finite \<R>\<close> \<open>finite \<S>\<close> flip: sum.inter_restrict)
+    by (simp add: flip: sum.inter_restrict)
   also have "(\<Sum>i\<in>\<R>\<union>\<S>. if i \<in> C then eps k powr (-1/4) * alpha k 1 else 0) \<le> (\<Sum>i\<in>\<R>\<union>\<S>. pstar i - pstar (i-1))"
   proof (intro sum_mono)
     fix i
@@ -1313,7 +1313,7 @@ proof -
       \<le> (\<Sum>i \<in> \<R>\<union>\<S>. pstar(Suc i) - pstar(i-1)) + (\<Sum>i\<in>\<B>. pstar(Suc i) - pstar(i-1))"
     using RS B by linarith
   also have "\<dots> = (\<Sum>i \<in> {..<m} \<setminus> \<D>. pstar(Suc i) - pstar(i-1))"
-    by (simp add: meq \<open>finite \<R>\<close> \<open>finite \<B>\<close> \<open>finite \<S>\<close> sum.union_disjoint)
+    by (simp add: meq sum.union_disjoint)
   also have "\<dots> \<le> pstar m - pstar 0"
   proof (cases "even m")
     case False
@@ -1387,7 +1387,7 @@ proof -
   have 711: "Lemma_X_7_11 \<mu> l" and fin: "Big_finite_components \<mu> l"
       and big_710: "Big_X_7_10 \<mu> l"
     using big by (auto simp: Big_X_7_12_def)
-  have "finite \<R>" "finite \<S>"
+  have [simp]: "finite \<R>" "finite \<S>"
     using finite_components [OF \<mu> \<open>Colours l k\<close> fin]
     by (auto simp: \<R>_def \<S>_def Step_class_insert_NO_MATCH)
   \<comment> \<open>now the conditions for Lemmas 7.10 and 7.11\<close>
@@ -1403,7 +1403,7 @@ proof -
       unfolding \<R>_def \<S>_def \<D>_def by (metis Step_class_insert Un_iff dreg_before_step1)
     then have 77: "card (X (i-1) \<setminus> X i) / card (X i) * (eps k powr (-1/2) * alpha k (hgt k (p (i-1))))
             \<le> p i - p (i-1)"
-      by (metis Suc_diff_1 X_7_7 X_def \<D>_def \<mu> lk(3) p_def)
+      by (metis Suc_diff_1 X_7_7 X_def \<D>_def \<mu> \<open>k>0\<close> p_def)
     have card_Xm1: "card (X (i-1)) = card (X i) + card (X (i-1) \<setminus> X i)"
       by (metis Xseq_antimono X_def add_diff_inverse_nat card_Diff_subset card_mono diff_le_self 
           finite_Xseq linorder_not_less)
@@ -1434,7 +1434,7 @@ proof -
       by (simp add: C11_def)
   qed
   then have "real (card ((\<R>\<union>\<S>) \<inter> C \<inter> {i. p (i-1) \<le> p0})) \<le> real (card ((\<R>\<union>\<S>) \<inter> C11))"
-    by (simp add: \<open>finite \<R>\<close> \<open>finite \<S>\<close> card_mono)
+    by (simp add: card_mono)
   also have "\<dots> \<le> 4 * eps k powr (1/4) * k"
     using 711 \<open>Colours l k\<close> 
     by (simp add: Lemma_X_7_11_def \<R>_def \<S>_def p_def C11_def Step_class_insert_NO_MATCH)
@@ -1459,7 +1459,7 @@ proof -
         by (force simp add: \<D>_def)
     qed
     then have "card ((\<R>\<union>\<S>) \<inter> C \<setminus> {i. p (i-1) \<le> p0}) \<le> real (card ((\<R>\<union>\<S>) \<inter> C10))"
-      by (simp add: \<open>finite \<R>\<close> \<open>finite \<S>\<close> card_mono)
+      by (simp add: card_mono)
     also have "card ((\<R>\<union>\<S>) \<inter> C10) \<le> 3 * eps k powr (1/4) * k"
       unfolding \<R>_def \<S>_def C10_def p_def by (intro X_7_10 assms big_710)
     finally show ?thesis . 
@@ -1490,7 +1490,6 @@ lemma Big_X_7_6:
 definition "ok_fun_X_7_6 \<equiv> 
   \<lambda>l k. ((1 + (real k + real l)) * ln (1 - 2 * eps k powr (1/4)) -
                      (k powr (3/4) + 7 * eps k powr (1/4) * k + 1) * (2 * ln k)) / ln 2" 
-
 
 lemma ok_fun_X_7_6: "ok_fun_X_7_6 l \<in> o(real)" for l
     unfolding eps_def ok_fun_X_7_6_def
@@ -1603,7 +1602,7 @@ proof -
       by (smt (verit) card_D add_leD2 one_minus_gt0 power_decreasing powr_ge_pzero)
   qed (use one_minus_gt0 \<open>k>0\<close> in auto)
   also have "\<dots> = (\<Prod>i\<in>\<D>. if i \<in> C' then 1 / real k ^ 2 else 1 - 2 * eps k powr (1/4))"
-    by (simp add: lk(3) powr_realpow prod.If_cases Diff_eq)
+    by (simp add: \<open>k>0\<close> powr_realpow prod.If_cases Diff_eq)
   also have "\<dots> \<le> (\<Prod>i \<in> \<D>. card (X (Suc i)) / card (X i))"
     using X_pos X78 one_minus_gt0 \<open>k>0\<close> by (simp add: divide_simps C'_def C_def prod_mono)  
   finally show ?thesis .
