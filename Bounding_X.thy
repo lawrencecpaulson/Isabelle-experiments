@@ -4,6 +4,21 @@ theory Bounding_X imports Bounding_Y
 
 begin
 
+lemma prod_lessThan_telescope_nz:
+  fixes f::"nat \<Rightarrow> 'a::field"
+  assumes "\<And>i. i<n \<Longrightarrow> f i \<noteq> 0" "n>0"
+  shows "(\<Prod>i<n. f (Suc i) / f i) = f n / f 0"
+proof -
+  obtain n' where n': "n = Suc n'"
+    using assms gr0_conv_Suc by blast
+  then have "\<And>i. i<n' \<Longrightarrow> f i \<noteq> 0"
+    using assms less_Suc_eq by presburger
+  then show ?thesis
+    using prod_lessThan_telescope[where f=f]
+    by (simp add: assms n')
+qed
+
+
 context Diagonal
 begin
 
@@ -135,6 +150,11 @@ lemma Big_X_7_2:
   by (intro conjI; real_asymp)
 
 definition "ok_fun_X_7_2 \<equiv> \<lambda>\<mu> k. (real k / ln 2) * ln (1 - 1 / (k * (1-\<mu>)))" 
+
+lemma ok_fun_X_7_2:
+  assumes "0<\<mu>" "\<mu><1" 
+  shows "ok_fun_X_7_2 \<mu> \<in> o(real)"
+  using assms unfolding ok_fun_X_7_2_def  by real_asymp
 
 lemma X_7_2:
   fixes l k
@@ -330,7 +350,9 @@ lemma Big_X_7_3:
 
 definition "ok_fun_X_7_3 \<equiv> \<lambda>k. - (real k powr (3/4))" 
 
-text \<open>limit version still needs to be written\<close>
+lemma ok_fun_X_7_3: "ok_fun_X_7_3  \<in> o(real)"
+  unfolding ok_fun_X_7_3_def by real_asymp
+
 lemma X_7_3:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
@@ -663,6 +685,9 @@ lemma Big_X_7_4:
       Red_5_3 Y_6_5_Bblue height_upper_bound beta_gt_0 bigbeta_gt0 bigbeta_less1 eventually_all_ge_at_top)
 
 definition "ok_fun_X_7_4 \<equiv> \<lambda>k. -6 * eps k powr (1/4) * k * ln k / ln 2" 
+
+lemma ok_fun_X_7_4: "ok_fun_X_7_4 \<in> o(real)"
+  unfolding ok_fun_X_7_4_def eps_def by real_asymp
 
 lemma X_7_4_aux:
   fixes l k
@@ -1517,8 +1542,7 @@ definition "ok_fun_X_7_6 \<equiv>
                      (k powr (3/4) + 7 * eps k powr (1/4) * k + 1) * (2 * ln k)) / ln 2" 
 
 lemma ok_fun_X_7_6: "ok_fun_X_7_6 l \<in> o(real)" for l
-    unfolding eps_def ok_fun_X_7_6_def
-    by real_asymp
+  unfolding eps_def ok_fun_X_7_6_def by real_asymp
 
 lemma X_7_6:
   fixes l k
@@ -1636,42 +1660,93 @@ qed
 subsection \<open>Lemma 7.1\<close>
 
 definition "Big_X_7_1 \<equiv>
-   \<lambda>\<mu> l. Big_X_7_2 \<mu> l \<and> Big_X_7_3 \<mu> l \<and> Big_X_7_4 \<mu> l \<and> Big_X_7_6 \<mu> l"
+   \<lambda>\<mu> l. Big_X_7_2 \<mu> l \<and> Big_X_7_3 \<mu> l \<and> Big_X_7_4 \<mu> l \<and> Big_X_7_6 \<mu> l
+       \<and> Big_finite_components \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l"
 
 text \<open>establishing the size requirements for 7.11\<close>
 lemma Big_X_7_1:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_1 \<mu> l"
   unfolding Big_X_7_1_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_X_7_2 Big_X_7_3 Big_X_7_4 Big_X_7_6 eventually_all_ge_at_top assms)
+  apply (simp add: Big_X_7_2 Big_X_7_3 Big_X_7_4 Big_X_7_6 Big_finite_components
+          bblue_dboost_step_limit eventually_all_ge_at_top assms)
   done
+
+definition "ok_fun_X_7_1 \<equiv> \<lambda>\<mu> l k. ok_fun_X_7_2 \<mu> k + ok_fun_X_7_3 k + ok_fun_X_7_4 k + ok_fun_X_7_6 l k"
+
+lemma ok_fun_X_7_1:
+  assumes "0<\<mu>" "\<mu><1" 
+  shows "ok_fun_X_7_1 \<mu> l \<in> o(real)"
+  using ok_fun_X_7_2 ok_fun_X_7_3 ok_fun_X_7_4 ok_fun_X_7_6
+  by (simp add: assms ok_fun_X_7_1_def sum_in_smallo)
 
 lemma X_7_1:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
   assumes big: "Big_X_7_1 \<mu> l"
   defines "X \<equiv> Xseq \<mu> l k" and "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
-  defines "\<R> \<equiv> Step_class \<mu> l k {red_step}"
-  defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
-  shows "card (X i) \<ge> 2 powr f * \<mu>^l * (1-\<mu>) ^ card \<R> * (beta \<mu> l k i / \<mu>) ^ card \<S> * card X0"
+  defines "\<R> \<equiv> Step_class \<mu> l k {red_step}" and "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
+  defines "m \<equiv>  halted_point \<mu> l k"
+  shows "card (X m) \<ge> 2 powr ok_fun_X_7_1 \<mu> l k * \<mu>^l * (1-\<mu>) ^ card \<R> * (bigbeta \<mu> l k / \<mu>) ^ card \<S> * card X0"
 proof -
   define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
   define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
-  define m where "m \<equiv> halted_point \<mu> l k"
-  have 72: "Big_X_7_2 \<mu> l" and 73: "Big_X_7_3 \<mu> l" and 74: "Big_X_7_4 \<mu> l" and 76: "Big_X_7_6 \<mu> l"
+  have 72: "Big_X_7_2 \<mu> l" and 73: "Big_X_7_3 \<mu> l" and 74: "Big_X_7_4 \<mu> l" 
+    and 76: "Big_X_7_6 \<mu> l" and finite: "Big_finite_components \<mu> l"
+    and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
     using big by (auto simp: Big_X_7_1_def)
+  then have [simp]: "finite \<R>" "finite \<B>" "finite \<S>" "finite \<D>" 
+                    "\<R>\<inter>\<B> = {}" "\<S>\<inter>\<D> = {}" "(\<R>\<union>\<B>)\<inter>(\<S>\<union>\<D>) = {}"
+    using finite_components assms by (auto simp add: \<R>_def \<B>_def \<S>_def \<D>_def Step_class_def)
+  have BS_le_l: "card \<B> + card \<S> < l"
+    using BS_limit \<open>Colours l k\<close> unfolding Lemma_bblue_dboost_step_limit_def \<S>_def \<B>_def
+    by blast
+  
   have R: "(\<Prod>i\<in>\<R>. card (X(Suc i)) / card (X i)) \<ge> 2 powr (ok_fun_X_7_2 \<mu> k) * (1-\<mu>) ^ card \<R>"
     unfolding X_def \<R>_def using 72 \<mu> \<open>Colours l k\<close> X_7_2 by meson
-  have B: "(\<Prod>i \<in> \<B>. card (X(Suc i)) / card (X i)) \<ge> 2 powr (ok_fun_X_7_3 k) * \<mu> ^ (l - card \<S>)"
+  have B: "(\<Prod>i\<in>\<B>. card (X(Suc i)) / card (X i)) \<ge> 2 powr (ok_fun_X_7_3 k) * \<mu> ^ (l - card \<S>)"
     unfolding X_def \<B>_def \<S>_def using 73 \<mu> \<open>Colours l k\<close> X_7_3 by meson
   have S: "(\<Prod>i\<in>\<S>. card (X (Suc i)) / card (X i)) \<ge> 2 powr ok_fun_X_7_4 k * bigbeta \<mu> l k ^ card \<S>"
     unfolding X_def \<S>_def using 74 \<mu> \<open>Colours l k\<close> X_7_4_aux by meson
   have D: "(\<Prod>i\<in>\<D>. card(X(Suc i)) / card (X i)) \<ge> 2 powr ok_fun_X_7_6 l k"
     unfolding X_def \<D>_def using 76 \<mu> \<open>Colours l k\<close> X_7_6 by meson
+  have below_m: "\<R>\<union>\<B>\<union>\<S>\<union>\<D> = {..<m}"
+    using assms by (auto simp: m_def \<R>_def \<B>_def \<S>_def \<D>_def before_halted_eq Step_class_insert_NO_MATCH)
 
-  sorry
+  have "m>0"
+    unfolding m_def
+    by (simp add: \<open>\<mu>>0\<close> \<open>Colours l k\<close> halted_point_nonzero)
+  have X_nz: "\<And>i. i < m \<Longrightarrow> card (X i) \<noteq> 0"
+    unfolding m_def using assms below_halted_point_cardX by blast
+  with \<open>m>0\<close> have tele: "(\<Prod>i<m. card (X(Suc i)) / card (X i)) = card (X m) / card (X 0)"
+    by (simp add: prod_lessThan_telescope_nz [where f = "\<lambda>i. real (card (X i))"])
+  have X0_nz: "card (X 0) > 0"
+    using \<open>0 < m\<close> X_nz by blast
+
+  have "2 powr ok_fun_X_7_1 \<mu> l k * \<mu>^l * (1-\<mu>) ^ card \<R> * (bigbeta \<mu> l k / \<mu>) ^ card \<S>
+     \<le> 2 powr ok_fun_X_7_1 \<mu> l k * \<mu> ^ (l - card \<S>) * (1-\<mu>) ^ card \<R> * (bigbeta \<mu> l k ^ card \<S>)"
+    using \<mu> BS_le_l by (simp add: power_diff power_divide)
+  also have "... \<le> (\<Prod>i\<in>\<R>\<union>\<B>\<union>\<S>\<union>\<D>. card (X(Suc i)) / card (X i))"
+  proof -
+    have "(\<Prod>i\<in>(\<R>\<union>\<B>)\<union>(\<S>\<union>\<D>). card (X(Suc i)) / card (X i)) 
+         \<ge> ((2 powr (ok_fun_X_7_2 \<mu> k) * (1-\<mu>) ^ card \<R>) * (2 powr (ok_fun_X_7_3 k) * \<mu> ^ (l - card \<S>)))
+          * ((2 powr ok_fun_X_7_4 k * bigbeta \<mu> l k ^ card \<S>) * (2 powr ok_fun_X_7_6 l k))"
+      using \<open>\<mu>>0\<close> by (auto simp: R B S D prod.union_disjoint prod_nonneg bigbeta_ge0 intro!: mult_mono)
+    then show ?thesis
+      by (simp add: Un_assoc mult_ac powr_add ok_fun_X_7_1_def)
+  qed
+  also have "... \<le> (\<Prod>i<m. card (X(Suc i)) / card (X i))"
+  proof -
+    have "\<R>\<union>\<B>\<union>\<S>\<union>\<D> = {..<m}"
+      using assms by (auto simp: m_def \<R>_def \<B>_def \<S>_def \<D>_def before_halted_eq Step_class_insert_NO_MATCH)
+    then show ?thesis by simp
+  qed
+  finally
   show ?thesis
-    sorry
+    using X0_nz \<mu> tele
+    apply (simp add: divide_simps)
+    apply (auto simp: X_def)
+    done
 qed
 
 end (*context Diagonal*)

@@ -32,17 +32,6 @@ begin
 lemma finite_X0: "finite X0" and finite_Y0: "finite Y0"
   using XY0 finV finite_subset by blast+
 
-(*This wants to be a locale. But nested locales don't seem to work, and having separate
-locales for different parts of the development gets confusing here.*)
-  \<comment> \<open>l: blue limit, and k: red limit\<close>
-definition "Colours \<equiv> \<lambda>l k. l \<le> k \<and> \<not> (\<exists>K. size_clique k K Red) \<and> \<not> (\<exists>K. size_clique l K Blue)"
-
-lemma Colours_ln0: "Colours l k \<Longrightarrow> l>0"
-  by (force simp: Colours_def size_clique_def clique_def)
-
-lemma Colours_kn0: "Colours l k \<Longrightarrow> k>0"
-  using Colours_def Colours_ln0 not_le by auto
-
 (*
 locale Colours = Diagonal + 
   fixes l::nat       \<comment> \<open>blue limit\<close>
@@ -575,6 +564,21 @@ definition "RB_state \<equiv> \<lambda>(X,Y,A,B). all_edges_betw_un A A \<subset
 definition "valid_state \<equiv> \<lambda>U. V_state U \<and> disjoint_state U \<and> RB_state U"
 
 definition "termination_condition \<equiv> \<lambda>l k X Y. card X \<le> RN k (nat \<lceil>real l powr (3/4)\<rceil>) \<or> red_density X Y \<le> 1/k"
+
+(*This wants to be a locale. But nested locales don't seem to work, and having separate
+locales for different parts of the development gets confusing here.*)
+  \<comment> \<open>l: blue limit, and k: red limit\<close>
+
+text \<open>Basic conditions for the book algorithm. We also don't want it to terminate
+without executing even one step.\<close>
+definition "Colours \<equiv> \<lambda>l k. l \<le> k \<and> \<not> (\<exists>K. size_clique k K Red) \<and> \<not> (\<exists>K. size_clique l K Blue)
+        \<and> \<not> termination_condition l k X0 Y0"
+
+lemma Colours_ln0: "Colours l k \<Longrightarrow> l>0"
+  by (force simp: Colours_def size_clique_def clique_def)
+
+lemma Colours_kn0: "Colours l k \<Longrightarrow> k>0"
+  using Colours_def Colours_ln0 not_le by auto
 
 lemma 
   assumes "V_state(X,Y,A,B)" 
@@ -1243,8 +1247,10 @@ lemma Step_class_not_halted: "\<lbrakk>i \<notin> Step_class \<mu> l k {halted};
 
 lemma
   assumes "i \<notin> Step_class \<mu> l k {halted}" 
-  shows not_halted_pee_gt: "pee \<mu> l k i > 1/k" 
+  shows not_halted_pee_gt: "pee \<mu> l k i > 1/k"
+    and Xseq_gt0: "card (Xseq \<mu> l k i) > 0"
     and Xseq_gt_RN: "card (Xseq \<mu> l k i) > RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
+    and not_termination_condition: "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
   using assms
   by (auto simp: step_kind_defs termination_condition_def pee_def split: if_split_asm prod.split_asm)
 
@@ -1560,6 +1566,27 @@ lemma halted_stepper_eq:
   assumes \<section>: "\<mu>>0" "Colours l k" and i: "i \<ge> halted_point \<mu> l k"
   shows "stepper \<mu> l k i = stepper \<mu> l k (halted_point \<mu> l k)"
   by (metis le_iff_add halted_stepper_add_eq[OF \<section>] i)
+
+lemma below_halted_point_nontermination:
+  assumes "i < halted_point \<mu> l k" "\<mu>>0" "Colours l k"
+  shows  "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+  by (simp add: assms halted_point_minimal not_termination_condition)
+
+lemma below_halted_point_cardX:
+  assumes "i < halted_point \<mu> l k" "\<mu>>0" "Colours l k"
+  shows  "card (Xseq \<mu> l k i) > 0"
+  using Xseq_gt_0 assms halted_point_minimal halted_stepper_eq
+  by blast
+
+lemma halted_point_nonzero:
+  assumes "\<mu>>0" "Colours l k"
+  shows  "halted_point \<mu> l k > 0"
+proof -
+  have "stepper_kind \<mu> l k 0 \<noteq> halted"
+    using assms by (simp add: stepper_kind_def Colours_def)
+  with halted_point_minimal [OF assms] show ?thesis
+    by (simp add: Step_class_def)
+qed
 
 end
                                                
