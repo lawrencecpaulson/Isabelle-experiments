@@ -4,21 +4,6 @@ theory Bounding_X imports Bounding_Y
 
 begin
 
-lemma prod_lessThan_telescope_nz:
-  fixes f::"nat \<Rightarrow> 'a::field"
-  assumes "\<And>i. i<n \<Longrightarrow> f i \<noteq> 0" "n>0"
-  shows "(\<Prod>i<n. f (Suc i) / f i) = f n / f 0"
-proof -
-  obtain n' where n': "n = Suc n'"
-    using assms gr0_conv_Suc by blast
-  then have "\<And>i. i<n' \<Longrightarrow> f i \<noteq> 0"
-    using assms less_Suc_eq by presburger
-  then show ?thesis
-    using prod_lessThan_telescope[where f=f]
-    by (simp add: assms n')
-qed
-
-
 context Diagonal
 begin
 
@@ -1718,8 +1703,8 @@ proof -
     by (simp add: \<open>\<mu>>0\<close> \<open>Colours l k\<close> halted_point_nonzero)
   have X_nz: "\<And>i. i < m \<Longrightarrow> card (X i) \<noteq> 0"
     unfolding m_def using assms below_halted_point_cardX by blast
-  with \<open>m>0\<close> have tele: "(\<Prod>i<m. card (X(Suc i)) / card (X i)) = card (X m) / card (X 0)"
-    by (simp add: prod_lessThan_telescope_nz [where f = "\<lambda>i. real (card (X i))"])
+  with \<open>m>0\<close> have tele: "card (X m) = (\<Prod>i<m. card (X(Suc i)) / card (X i)) * card (X 0)"
+    by (simp add: prod_lessThan_telescope [where f = "\<lambda>i. real (card (X i))"])
   have X0_nz: "card (X 0) > 0"
     using \<open>0 < m\<close> X_nz by blast
 
@@ -1741,12 +1726,8 @@ proof -
       using assms by (auto simp: m_def \<R>_def \<B>_def \<S>_def \<D>_def before_halted_eq Step_class_insert_NO_MATCH)
     then show ?thesis by simp
   qed
-  finally
-  show ?thesis
-    using X0_nz \<mu> tele
-    apply (simp add: divide_simps)
-    apply (auto simp: X_def)
-    done
+  finally show ?thesis
+    using X0_nz \<mu> unfolding tele by (simp add: divide_simps X_def)
 qed
 
 end (*context Diagonal*)

@@ -18,6 +18,21 @@ lemma powr_eq_iff:
   shows "b powr x = y \<longleftrightarrow> log b y = x"
   using assms by auto
 
+(*REPLACE*)
+lemma prod_lessThan_telescope:
+  fixes f::"nat \<Rightarrow> 'a::field"
+  assumes "\<And>i. i<n \<Longrightarrow> f i \<noteq> 0" 
+  shows "(\<Prod>i<n. f (Suc i) / f i) * f 0 = f n"
+  using assms
+by (induction n) (auto simp: divide_simps)
+
+(*2024-02-01: added*)
+lemma prod_lessThan_telescope':
+  fixes f::"nat \<Rightarrow> 'a::field"
+  assumes "\<And>i. i\<le>n \<Longrightarrow> f i \<noteq> 0"
+  shows "(\<Prod>i<n. f i / f (Suc i)) * f n = f 0"
+  using assms by (induction n) auto
+
 (* TODO Move from Multiseries_expansion_bounds*)
 lemma powr_mono': "a \<le> (b::real) \<Longrightarrow> x \<ge> 0 \<Longrightarrow> x \<le> 1 \<Longrightarrow> x powr b \<le> x powr a"
   using powr_mono[of "-b" "-a" "inverse x"] by (auto simp: powr_def ln_inverse ln_div field_split_simps)
@@ -56,20 +71,6 @@ lemma prod_telescope'':
   assumes "\<And>i. i \<in> {m..n} \<Longrightarrow> f i \<noteq> 0"
   shows   "(\<Prod>i = Suc m..n. f i / f (i - 1)) = f n / (f m)"
   by (rule dec_induct[OF \<open>m \<le> n\<close>]) (auto simp add: assms field_simps)
-
-(*2024-02-01: added*)
-lemma prod_lessThan_telescope:
-  fixes f::"nat \<Rightarrow> 'a::field"
-  assumes "\<And>i. i\<le>n \<Longrightarrow> f i \<noteq> 0"
-  shows "(\<Prod>i<n. f (Suc i) / f i) = f n / f 0"
-  using assms by (induction n) auto
-
-(*2024-02-01: added*)
-lemma prod_lessThan_telescope':
-  fixes f::"nat \<Rightarrow> 'a::field"
-  assumes "\<And>i. i\<le>n \<Longrightarrow> f i \<noteq> 0"
-  shows "(\<Prod>i<n. f i / f (Suc i)) = f 0 / f n"
-  using assms by (induction n) auto
 
 lemma sum_odds_even:
   fixes f :: "nat \<Rightarrow> 'a :: ab_group_add"

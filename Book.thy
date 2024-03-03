@@ -569,8 +569,8 @@ definition "termination_condition \<equiv> \<lambda>l k X Y. card X \<le> RN k (
 locales for different parts of the development gets confusing here.*)
   \<comment> \<open>l: blue limit, and k: red limit\<close>
 
-text \<open>Basic conditions for the book algorithm. We also don't want it to terminate
-without executing even one step.\<close>
+text \<open>Basic conditions for the book algorithm.\<close>
+text\<open>We also don't want it to terminate without executing even one step [NOT ACTUALLY NEEDED]\<close>
 definition "Colours \<equiv> \<lambda>l k. l \<le> k \<and> \<not> (\<exists>K. size_clique k K Red) \<and> \<not> (\<exists>K. size_clique l K Blue)
         \<and> \<not> termination_condition l k X0 Y0"
 
