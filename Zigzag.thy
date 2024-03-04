@@ -29,6 +29,7 @@ lemma Big_ZZ_8_1:
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
+
 lemma ZZ_8_1:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and big: "Big_ZZ_8_1 \<mu> l" 
   defines "\<S>\<S> \<equiv> dboost_star \<mu> l k" and "\<R> \<equiv> Step_class \<mu> l k {red_step}"
@@ -50,8 +51,50 @@ proof -
   have mh_gt1: "max_height k > 1"
     using big by (simp add: Big_ZZ_8_1_def \<open>l\<le>k\<close>) 
 
+  have "\<Delta> i  \<ge> 0 \<longleftrightarrow> (\<forall>h>0. \<Delta>\<Delta> i h \<ge> 0)" for i
+    apply (auto simp: \<Delta>_def \<Delta>\<Delta>_def) 
+     apply (simp add: pp_def)
+     apply (auto simp: )[1]
+    using diff_le_self lk(3) qfun_mono apply presburger
+    using diff_le_self lk(3) qfun_mono apply presburger
+    apply (simp add: pp_def split: )
+    apply (frule_tac x="hgt k (p i)" in spec)
+    apply (drule_tac x="hgt k (p (Suc i))" in spec)
+    using hgt_less_imp_qfun_less [of "hgt k _ - 1", where k=k] 
+    using hgt_le_imp_qfun_ge [OF order_refl, where k=k] \<open>k>0\<close>
+    using hgt_gt_0 [of k "p i"]     using hgt_gt_0 [of k "p (Suc i)"]
 
-  have "\<Delta>\<Delta> i h = (if h=1 then pp (Suc i) h - pp i h  else XX i)" if "h>0" for i h
+    apply (simp add:  split: if_split_asm)
+    apply (smt (verit, best))
+    apply (smt (verit, best))
+    apply (smt (verit, best))
+    apply (smt (verit, best))
+    apply (smt (verit, ccfv_threshold) diff_Suc_less hgt_greater hgt_gt_0)
+    apply (smt (verit, best))
+    apply (metis basic_trans_rules(24) hgt_gt_0)
+    apply (smt (verit, best))
+               defer
+               defer
+               apply (smt (verit, best))
+              apply (smt (verit, best))
+    defer
+             apply (smt (verit, best))
+            apply (smt (verit, best))
+    apply (smt (verit, best))
+          apply (smt (verit, best))
+    apply (smt (verit, best))
+    apply (smt (verit, best))
+    apply (smt (verit, best))
+    apply (smt (verit) Suc_leI diff_Suc_less nat_less_le)
+    apply (smt (verit) Suc_leI diff_Suc_less nat_less_le)
+    apply (smt (verit) Suc_leI diff_Suc_less nat_less_le)
+    done
+
+
+
+  have "\<Delta>\<Delta> i h = (if h=1 then pp (Suc i) h - pp i h
+     else if (p i \<le> qfun k (h-1) \<and> p (Suc i) \<le> qfun k (h-1)) \<or> (p i \<ge> qfun k h \<and> p (Suc i) \<ge> qfun k h) then 0 
+     else  p (Suc i) - p i)" if "h>0" for i h
     unfolding \<Delta>\<Delta>_def pp_def
     using qfun_strict_mono [OF \<open>k>0\<close>, of "h-1" h] that
 

@@ -469,6 +469,11 @@ lemma hgt_greater:
   shows "hgt k p > h"
   by (smt (verit) assms linorder_le_less_linear qfun_mono height_exists hgt_works)
 
+lemma hgt_less_imp_qfun_less:
+  assumes "0<h" "h < hgt k p"
+  shows "p > qfun k h"
+  by (metis assms hgt_Least not_le)  
+
 lemma hgt_le_imp_qfun_ge:
   assumes "hgt k p \<le> h" "0<k"
   shows "p \<le> qfun k h"

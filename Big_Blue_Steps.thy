@@ -43,21 +43,12 @@ proposition Blue_4_1:
                (\<forall>X. X\<subseteq>V \<longrightarrow> many_bluish \<mu> l k X \<longrightarrow> 
                     (\<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S \<ge> l powr (1/4)))"
 proof -
-  have m_ge: "\<forall>\<^sup>\<infinity>l. m_of l \<ge> i" for i
-    unfolding m_of_def by real_asymp
-  have real_l_ge: "\<forall>\<^sup>\<infinity>l. real l \<ge> r" for r
-    by real_asymp
-  have A: "\<forall>\<^sup>\<infinity>l. 1 \<le> 5/4 * exp (- ((b_of l)^2) / ((\<mu> - 2/l) * m_of l))"
-    using assms unfolding b_of_def m_of_def by real_asymp
-  have B: "\<forall>\<^sup>\<infinity>l. \<mu> - 2/l > 0"
-    using assms by real_asymp
-  have C: "\<forall>\<^sup>\<infinity>l. 2/l \<le> (\<mu> - 2/l) * ((5/4) powr (1/b_of l) - 1)"
-    using assms unfolding b_of_def by real_asymp
-  let ?Big = "\<lambda>l. m_of l \<ge> 12 \<and> real l \<ge> (6/\<mu>) powr (12/5) \<and> real l \<ge> 15
-                    \<and> 1 \<le> 5/4 * exp (- ((b_of l)^2) / ((\<mu> - 2/l) * m_of l)) \<and> \<mu> - 2/l > 0
-                    \<and> 2/l \<le> (\<mu> - 2/l) * ((5/4) powr (1/b_of l) - 1)"
+
+  let ?Big = "\<lambda>l. m_of l \<ge> 12  \<and>  l \<ge> (6/\<mu>) powr (12/5)  \<and>  l \<ge> 15
+               \<and> 1 \<le> 5/4 * exp (- ((b_of l)^2) / ((\<mu> - 2/l) * m_of l))  \<and>  \<mu> > 2/l
+               \<and> 2/l \<le> (\<mu> - 2/l) * ((5/4) powr (1/b_of l) - 1)"
   have big_enough_l: "\<forall>\<^sup>\<infinity>l. ?Big l"
-    by (intro eventually_conj m_ge real_l_ge A B C)
+    unfolding m_of_def b_of_def using assms by (intro eventually_conj; real_asymp)
 
   have "\<exists>S T. good_blue_book \<mu> X (S, T) \<and> l powr (1/4) \<le> card S"
     if big: "?Big l" and "X\<subseteq>V" and manyb: "many_bluish \<mu> l k X" and "Colours l k" for l k X
@@ -97,10 +88,8 @@ proof -
       using \<open>card U = m\<close> cardU_less_X nless_le by blast
     have lpowr23: "real l powr (2/3) \<le> real l powr 1"
       using ln0 by (intro powr_mono) auto
-    then have "m \<le> l"
-      by (simp add: m_def m_of_def)
-    then have "m \<le> k"
-      using \<open>l \<le> k\<close> by auto
+    then have "m \<le> l" "m \<le> k"
+      using \<open>l \<le> k\<close> by (auto simp: m_def m_of_def)
     then have "m < RN k m"
       using \<open>12 \<le> m\<close> RN_gt2 by auto
     also have cX: "RN k m \<le> card X"
@@ -305,42 +294,38 @@ proof -
     qed auto
     finally have 11: "\<mu>^b / 2 * card X \<le> \<Phi> / (m choose b)"
       by simp 
+
     define \<Omega> where "\<Omega> \<equiv> nsets U b"  \<comment>\<open>Choose a random subset of size @{term b}\<close>
     have card\<Omega>: "card \<Omega> = m choose b"
       by (simp add: \<Omega>_def \<open>card U = m\<close>)
-    then have fin\<Omega>: "finite \<Omega>" and "\<Omega> \<noteq> {}"
+    then have fin\<Omega>: "finite \<Omega>" and "\<Omega> \<noteq> {}" and "card \<Omega> > 0"
       using \<open>b \<le> m\<close> not_less by fastforce+
-    then have "card \<Omega> > 0"
-      by (simp add: card_gt_0_iff)
     define M where "M \<equiv> uniform_count_measure \<Omega>"
-    have space_eq: "space M = \<Omega>"
-      by (simp add: M_def space_uniform_count_measure)
-    have sets_eq: "sets M = Pow \<Omega>"
-      by (simp add: M_def sets_uniform_count_measure)
     interpret P: prob_space M
       using M_def \<open>b \<le> m\<close> card\<Omega> fin\<Omega> prob_space_uniform_count_measure by force
     have measure_eq: "measure M C = (if C \<subseteq> \<Omega> then card C / card \<Omega> else 0)" for C
       by (simp add: M_def fin\<Omega> measure_uniform_count_measure_if) 
 
     define Int_NB where "Int_NB \<equiv> \<lambda>S. \<Inter>v\<in>S. Neighbours Blue v \<inter> (X-U)"
-    have sum_card_NB: 
-      "(\<Sum>A\<in>\<Omega>. card (\<Inter>(Neighbours Blue ` A) \<inter> Y)) = (\<Sum>v\<in>Y. card (Neighbours Blue v \<inter> U) choose b)"
+    have sum_card_NB: "(\<Sum>A\<in>\<Omega>. card (\<Inter>(Neighbours Blue ` A) \<inter> Y)) 
+                     = (\<Sum>v\<in>Y. card (Neighbours Blue v \<inter> U) choose b)"
       if "finite Y" "Y \<subseteq> X-U" for Y
       using that
     proof (induction Y)
       case (insert y Y)
       have *: "\<Omega> \<inter> {A. \<forall>x\<in>A. y \<in> Neighbours Blue x} = nsets (Neighbours Blue y \<inter> U) b"
         "\<Omega> \<inter> - {A. \<forall>x\<in>A. y \<in> Neighbours Blue x} = \<Omega> - nsets (Neighbours Blue y \<inter> U) b"
+        "[Neighbours Blue y \<inter> U]\<^bsup>b\<^esup> \<subseteq> \<Omega>"
         using insert.prems by (auto simp: \<Omega>_def nsets_def in_Neighbours_iff insert_commute)
       then show ?case
-        using insert fin\<Omega>
-        apply (simp add: Int_insert_right sum_Suc sum.If_cases if_distrib [of card] flip: insert.IH)
-        by (smt (verit, best) Int_lower1 add.commute sum.subset_diff)
+        using insert fin\<Omega> 
+        by (simp add: Int_insert_right sum_Suc sum.If_cases if_distrib [of card] 
+            sum.subset_diff flip: insert.IH)
     qed auto
+
     have "(\<Sum>x\<in>\<Omega>. card (if x = {} then UNIV else \<Inter> (Neighbours Blue ` x) \<inter> (X-U))) 
-          = (\<Sum>x\<in>\<Omega>. card (\<Inter> (Neighbours Blue ` x) \<inter> (X-U)))"
-      unfolding \<Omega>_def nsets_def using \<open>0 < b\<close>
-      by (force simp add: intro: sum.cong)
+        = (\<Sum>x\<in>\<Omega>. card (\<Inter> (Neighbours Blue ` x) \<inter> (X-U)))"
+      unfolding \<Omega>_def nsets_def using \<open>0 < b\<close> by (force intro: sum.cong)
     also have "\<dots> = (\<Sum>v\<in>X - U. card (Neighbours Blue v \<inter> U) choose b)"
       by (metis sum_card_NB \<open>X\<subseteq>V\<close> dual_order.refl finV finite_Diff rev_finite_subset)
     finally have "sum (card o Int_NB) \<Omega> = \<Phi>"
@@ -362,8 +347,8 @@ proof -
         using linorder_class.Min_le [OF \<open>finite L\<close>]
         by (fastforce simp add: algebra_simps \<epsilon>_def L_def)
       then have "P.expectation (\<lambda>S. card (Int_NB S)) \<le> \<Phi> / (m choose b) - \<epsilon>"
-        using M_def P P.not_empty not_integrable_integral_eq space_eq \<open>\<epsilon> > 0\<close>
-        by (intro P.integral_le_const) fastforce+
+        using P P.not_empty not_integrable_integral_eq \<open>\<epsilon> > 0\<close>
+        by (intro P.integral_le_const) (fastforce simp: M_def space_uniform_count_measure)+
       then show False
         using P \<open>0 < \<epsilon>\<close> by auto
     qed

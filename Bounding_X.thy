@@ -124,8 +124,7 @@ qed
 
 subsection \<open>Lemma 7.2\<close>
 
-definition "Big_X_7_2 \<equiv>
-   \<lambda>\<mu> l. nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3 \<and> l > 1 / (1-\<mu>)"
+definition "Big_X_7_2 \<equiv> \<lambda>\<mu> l. nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3 \<and> l > 1 / (1-\<mu>)"
 
 text \<open>establishing the size requirements for 7.11\<close>
 lemma Big_X_7_2:
@@ -1123,8 +1122,9 @@ definition "Big_X_7_11_inequalities \<equiv> \<lambda>k.
             \<and> ((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2
             \<and> (1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
 
-definition "Big_X_7_11 \<equiv> \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Lemma_6_5_dbooSt \<mu> l \<and>
-           Lemma_Y_6_5_Bblue \<mu> l \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_11_inequalities k)"
+definition "Big_X_7_11 \<equiv> 
+      \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Lemma_6_5_dbooSt \<mu> l \<and>
+            Lemma_Y_6_5_Bblue \<mu> l \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_11_inequalities k)"
 
 text \<open>establishing the size requirements for 7.11\<close>
 lemma Big_X_7_11:
@@ -1495,19 +1495,17 @@ definition "Big_X_7_6 \<equiv>
    \<lambda>\<mu> l. Lemma_bblue_dboost_step_limit \<mu> l \<and> Lemma_bblue_step_limit \<mu> l \<and> Big_X_7_12 \<mu> l
          \<and> (\<forall>k. k\<ge>l \<longrightarrow> Big_X_7_8 k \<and> 1 - 2 * eps k powr (1/4) > 0)"
 
-text \<open>establishing the size requirements for 7.11\<close>
 lemma Big_X_7_6:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_6 \<mu> l"
   unfolding Big_X_7_6_def eventually_conj_iff all_imp_conj_distrib eps_def
   apply (simp add: bblue_dboost_step_limit Big_X_7_8 Big_X_7_12
         bblue_step_limit eventually_all_ge_at_top assms)
-  apply (intro conjI eventually_all_ge_at_top; real_asymp)
-  done
+  by (intro  eventually_all_ge_at_top; real_asymp)
 
 definition "ok_fun_X_7_6 \<equiv> 
-  \<lambda>l k. ((1 + (real k + real l)) * ln (1 - 2 * eps k powr (1/4)) -
-                     (k powr (3/4) + 7 * eps k powr (1/4) * k + 1) * (2 * ln k)) / ln 2" 
+  \<lambda>l k. ((1 + (real k + real l)) * ln (1 - 2 * eps k powr (1/4)) 
+      - (k powr (3/4) + 7 * eps k powr (1/4) * k + 1) * (2 * ln k)) / ln 2" 
 
 lemma ok_fun_X_7_6: "ok_fun_X_7_6 l \<in> o(real)" for l
   unfolding eps_def ok_fun_X_7_6_def by real_asymp
