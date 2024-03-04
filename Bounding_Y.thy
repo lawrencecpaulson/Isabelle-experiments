@@ -863,7 +863,7 @@ proof -
     have "\<And>i. i \<le> m \<Longrightarrow> card (Y i) \<noteq> 0"
       by (metis Yseq_gt_0 Y_def less_irrefl not_halted_below_m)
     then show ?thesis
-      using prod_lessThan_telescope [where f = "\<lambda>i. real (card (Y i))"]
+      using prod_lessThan_telescope_mult [where f = "\<lambda>i. real (card (Y i))"]
       by (simp add: nonzero_eq_divide_eq)
   qed
   finally have *: "(p0 - 2 * eps k powr (1/2)) ^ card st \<le> card (Y m) / card (Y0)"

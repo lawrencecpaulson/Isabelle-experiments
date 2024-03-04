@@ -407,6 +407,9 @@ lemma eps_less1:
   assumes "k>1" shows "eps k < 1"
   by (smt (verit) assms eps_def less_imp_of_nat_less of_nat_1 powr_less_one zero_le_divide_iff)
 
+lemma qfun_strict_mono: "\<lbrakk>k>0; h'<h\<rbrakk> \<Longrightarrow> qfun k h' < qfun k h"
+  by (simp add: qfun_def eps_gt0 power_strict_increasing divide_strict_right_mono)
+
 lemma qfun_mono: "\<lbrakk>k>0; h'\<le>h\<rbrakk> \<Longrightarrow> qfun k h' \<le> qfun k h"
   by (simp add: qfun_def eps_ge0 frac_le power_increasing)
 

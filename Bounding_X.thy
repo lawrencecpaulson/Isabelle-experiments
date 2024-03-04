@@ -674,7 +674,7 @@ definition "ok_fun_X_7_4 \<equiv> \<lambda>k. -6 * eps k powr (1/4) * k * ln k /
 lemma ok_fun_X_7_4: "ok_fun_X_7_4 \<in> o(real)"
   unfolding ok_fun_X_7_4_def eps_def by real_asymp
 
-lemma X_7_4_aux:
+lemma X_7_4:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   assumes "Colours l k" 
@@ -780,23 +780,6 @@ proof -
   then show ?thesis
     by (simp add: "*" bigbeta_01 powr_realpow)
 qed  
-
-(** MAYVBE WE DON'T NEED THIS **)
-proposition X_7_4:
-  assumes "0<\<mu>" "\<mu><1" 
-  shows "\<exists>f \<in> o(\<lambda>k. real k).
-     \<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> 
-              (\<Prod>i \<in> Step_class \<mu> l k {dboost_step}. card (Xseq \<mu> l k (Suc i)) / card (Xseq \<mu> l k i)) 
-            \<ge> 2 powr f k * bigbeta \<mu> l k ^ card (Step_class \<mu> l k {dboost_step})"
-proof
-  show "ok_fun_X_7_4 \<in> o(real)"
-    unfolding eps_def ok_fun_X_7_4_def by real_asymp
-  show "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow>
-               (\<Prod>i \<in> Step_class \<mu> l k {dboost_step}. card (Xseq \<mu> l k (Suc i)) / card (Xseq \<mu> l k i)) 
-            \<ge> 2 powr ok_fun_X_7_4 k * bigbeta \<mu> l k ^ card (Step_class \<mu> l k {dboost_step})"
-    apply (rule eventually_mono [OF Big_X_7_4 [OF assms]])
-    by (intro X_7_4_aux strip) (auto simp: assms)
-qed
 
 subsection \<open>Observation 7.7\<close>
 
@@ -1692,7 +1675,7 @@ proof -
   have B: "(\<Prod>i\<in>\<B>. card (X(Suc i)) / card (X i)) \<ge> 2 powr (ok_fun_X_7_3 k) * \<mu> ^ (l - card \<S>)"
     unfolding X_def \<B>_def \<S>_def using 73 \<mu> \<open>Colours l k\<close> X_7_3 by meson
   have S: "(\<Prod>i\<in>\<S>. card (X (Suc i)) / card (X i)) \<ge> 2 powr ok_fun_X_7_4 k * bigbeta \<mu> l k ^ card \<S>"
-    unfolding X_def \<S>_def using 74 \<mu> \<open>Colours l k\<close> X_7_4_aux by meson
+    unfolding X_def \<S>_def using 74 \<mu> \<open>Colours l k\<close> X_7_4 by meson
   have D: "(\<Prod>i\<in>\<D>. card(X(Suc i)) / card (X i)) \<ge> 2 powr ok_fun_X_7_6 l k"
     unfolding X_def \<D>_def using 76 \<mu> \<open>Colours l k\<close> X_7_6 by meson
   have below_m: "\<R>\<union>\<B>\<union>\<S>\<union>\<D> = {..<m}"
@@ -1704,7 +1687,7 @@ proof -
   have X_nz: "\<And>i. i < m \<Longrightarrow> card (X i) \<noteq> 0"
     unfolding m_def using assms below_halted_point_cardX by blast
   with \<open>m>0\<close> have tele: "card (X m) = (\<Prod>i<m. card (X(Suc i)) / card (X i)) * card (X 0)"
-    by (simp add: prod_lessThan_telescope [where f = "\<lambda>i. real (card (X i))"])
+    by (simp add: prod_lessThan_telescope_mult [where f = "\<lambda>i. real (card (X i))"])
   have X0_nz: "card (X 0) > 0"
     using \<open>0 < m\<close> X_nz by blast
 

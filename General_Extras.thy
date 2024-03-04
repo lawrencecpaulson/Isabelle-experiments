@@ -18,8 +18,8 @@ lemma powr_eq_iff:
   shows "b powr x = y \<longleftrightarrow> log b y = x"
   using assms by auto
 
-(*REPLACE*)
-lemma prod_lessThan_telescope:
+text \<open>yet another telescope variant, with weaker promises but a different conclusion\<close>
+lemma prod_lessThan_telescope_mult:
   fixes f::"nat \<Rightarrow> 'a::field"
   assumes "\<And>i. i<n \<Longrightarrow> f i \<noteq> 0" 
   shows "(\<Prod>i<n. f (Suc i) / f i) * f 0 = f n"
