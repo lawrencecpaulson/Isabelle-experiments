@@ -51,21 +51,22 @@ proof -
   have mh_gt1: "max_height k > 1"
     using big by (simp add: Big_ZZ_8_1_def \<open>l\<le>k\<close>) 
 
-  have "\<Delta> i  \<ge> 0 \<longleftrightarrow> (\<forall>h>0. \<Delta>\<Delta> i h \<ge> 0)" for i
-    apply (auto simp: \<Delta>_def \<Delta>\<Delta>_def) 
-     apply (simp add: pp_def)
-     apply (auto simp: )[1]
-    using diff_le_self lk(3) qfun_mono apply presburger
-    using diff_le_self lk(3) qfun_mono apply presburger
-    apply (simp add: pp_def split: )
-    apply (drule_tac x="hgt k (p i)" in spec)
-    using hgt_less_imp_qfun_less [of "hgt k (p i) - 1", where k=k] 
-    using hgt_le_imp_qfun_ge [OF order_refl, of k "p i"] \<open>k>0\<close>
-    using hgt_gt_0 [of k "p i"]
-    apply (simp add: )
-    by (smt (verit) One_nat_def Suc_lessI diff_less less_one)
-
-
+  have \<Delta>0: "\<Delta> i \<ge> 0 \<longleftrightarrow> (\<forall>h>0. \<Delta>\<Delta> i h \<ge> 0)" for i
+  proof (intro iffI strip)
+    fix h::nat
+    assume "0 \<le> \<Delta> i" and "0 < h"
+    then show "0 \<le> \<Delta>\<Delta> i h"
+      using qfun_mono [of k "h-1" h] \<open>k>0\<close> by (auto simp: \<Delta>_def \<Delta>\<Delta>_def pp_def) 
+  next
+    assume "\<forall>h>0. 0 \<le> \<Delta>\<Delta> i h"
+    then have "pp i (hgt k (p i)) \<le> pp (Suc i) (hgt k (p i))"
+      by (simp add: hgt_gt_0 \<Delta>\<Delta>_def)
+    then show "0 \<le> \<Delta> i"
+      using hgt_less_imp_qfun_less [of "hgt k (p i) - 1" k "p i"] 
+      using hgt_le_imp_qfun_ge [OF order_refl, of k "p i"] 
+      using hgt_gt_0 [of k "p i"] \<open>k>0\<close>
+      by (simp add: \<Delta>_def pp_def split: if_split_asm)
+  qed
 
   have "\<Delta>\<Delta> i h = (if h=1 then pp (Suc i) h - pp i h
      else if (p i \<le> qfun k (h-1) \<and> p (Suc i) \<le> qfun k (h-1)) \<or> (p i \<ge> qfun k h \<and> p (Suc i) \<ge> qfun k h) then 0 
