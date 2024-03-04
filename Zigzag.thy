@@ -58,37 +58,12 @@ proof -
     using diff_le_self lk(3) qfun_mono apply presburger
     using diff_le_self lk(3) qfun_mono apply presburger
     apply (simp add: pp_def split: )
-    apply (frule_tac x="hgt k (p i)" in spec)
-    apply (drule_tac x="hgt k (p (Suc i))" in spec)
-    using hgt_less_imp_qfun_less [of "hgt k _ - 1", where k=k] 
-    using hgt_le_imp_qfun_ge [OF order_refl, where k=k] \<open>k>0\<close>
-    using hgt_gt_0 [of k "p i"]     using hgt_gt_0 [of k "p (Suc i)"]
-
-    apply (simp add:  split: if_split_asm)
-    apply (smt (verit, best))
-    apply (smt (verit, best))
-    apply (smt (verit, best))
-    apply (smt (verit, best))
-    apply (smt (verit, ccfv_threshold) diff_Suc_less hgt_greater hgt_gt_0)
-    apply (smt (verit, best))
-    apply (metis basic_trans_rules(24) hgt_gt_0)
-    apply (smt (verit, best))
-               defer
-               defer
-               apply (smt (verit, best))
-              apply (smt (verit, best))
-    defer
-             apply (smt (verit, best))
-            apply (smt (verit, best))
-    apply (smt (verit, best))
-          apply (smt (verit, best))
-    apply (smt (verit, best))
-    apply (smt (verit, best))
-    apply (smt (verit, best))
-    apply (smt (verit) Suc_leI diff_Suc_less nat_less_le)
-    apply (smt (verit) Suc_leI diff_Suc_less nat_less_le)
-    apply (smt (verit) Suc_leI diff_Suc_less nat_less_le)
-    done
+    apply (drule_tac x="hgt k (p i)" in spec)
+    using hgt_less_imp_qfun_less [of "hgt k (p i) - 1", where k=k] 
+    using hgt_le_imp_qfun_ge [OF order_refl, of k "p i"] \<open>k>0\<close>
+    using hgt_gt_0 [of k "p i"]
+    apply (simp add: )
+    by (smt (verit) One_nat_def Suc_lessI diff_less less_one)
 
 
 
