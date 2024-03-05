@@ -13,22 +13,17 @@ lemma sum_from_1_telescope:
 context Diagonal
 begin
 
-text \<open>Bhavit: "The maximum value of the height, for the sums in section 8"\<close>
-definition "max_height \<equiv> \<lambda>k. nat \<lfloor>2 / eps k * ln k\<rfloor> + 1" 
-
 definition "ok_fun_ZZ_8_1 \<equiv> \<lambda>k. 0" 
 
 definition "Big_ZZ_8_1 \<equiv>
-   \<lambda>\<mu> l. (\<forall>k. k\<ge>l \<longrightarrow> max_height k > 1)"
+   \<lambda>\<mu> l. (\<forall>k. k\<ge>l \<longrightarrow> True)"
 
 lemma Big_ZZ_8_1:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_1 \<mu> l"
-  unfolding Big_ZZ_8_1_def eventually_conj_iff all_imp_conj_distrib max_height_def eps_def
+  unfolding Big_ZZ_8_1_def eventually_conj_iff all_imp_conj_distrib  eps_def
   apply (simp add:  eventually_all_ge_at_top assms)
-  apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
-
 
 lemma ZZ_8_1:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and big: "Big_ZZ_8_1 \<mu> l" 
@@ -51,22 +46,73 @@ proof -
   have mh_gt1: "max_height k > 1"
     using big by (simp add: Big_ZZ_8_1_def \<open>l\<le>k\<close>) 
 
+  have "hgt k 1 = xxx"
+apply (simp add: hgt_def qfun_def)
+    sorry
+
+  have pp_eq_hgt [simp]: "pp i (hgt k (p i)) = p i" for i
+    using hgt_less_imp_qfun_less [of "hgt k (p i) - 1" k "p i"]  
+    using hgt_works [of k "p i"] hgt_gt_0 [of k "p i"] \<open>k>0\<close> pp_eq by force
+
+  have pp_less_hgt [simp]: "pp i h = qfun k h" if "0<h" "h < hgt k (p i)" for h i
+  proof (cases "h=1")
+    case True
+    then show ?thesis
+      using hgt_less_imp_qfun_less pp_def that by auto
+  next
+    case False
+    with that show ?thesis
+      using hgt_works [of k "p i"] hgt_gt_0 [of k "p i"] \<open>k>0\<close> 
+      using hgt_less_imp_qfun_less qfun_strict_mono that
+      by (force simp add: pp_eq)
+  qed
+
+  have pp_gt_hgt [simp]: "pp i h = qfun k (h-1)" if "h > hgt k (p i)" for h i
+    using hgt_gt_0 [of k "p i"] \<open>k>0\<close> that
+    by (simp add: pp_def hgt_le_imp_qfun_ge)
+
   have \<Delta>0: "\<Delta> i \<ge> 0 \<longleftrightarrow> (\<forall>h>0. \<Delta>\<Delta> i h \<ge> 0)" for i
   proof (intro iffI strip)
     fix h::nat
-    assume "0 \<le> \<Delta> i" and "0 < h"
-    then show "0 \<le> \<Delta>\<Delta> i h"
+    assume "0 \<le> \<Delta> i" "0 < h" then show "0 \<le> \<Delta>\<Delta> i h"
       using qfun_mono [of k "h-1" h] \<open>k>0\<close> by (auto simp: \<Delta>_def \<Delta>\<Delta>_def pp_def) 
   next
     assume "\<forall>h>0. 0 \<le> \<Delta>\<Delta> i h"
-    then have "pp i (hgt k (p i)) \<le> pp (Suc i) (hgt k (p i))"
-      by (simp add: hgt_gt_0 \<Delta>\<Delta>_def)
+    then have "p i \<le> pp (Suc i) (hgt k (p i))"
+      unfolding \<Delta>\<Delta>_def
+      by (smt (verit, best) hgt_gt_0 pp_eq_hgt)
     then show "0 \<le> \<Delta> i"
-      using hgt_less_imp_qfun_less [of "hgt k (p i) - 1" k "p i"] 
-      using hgt_le_imp_qfun_ge [OF order_refl, of k "p i"] 
+      using hgt_less_imp_qfun_less [of "hgt k (p i) - 1" k "p i"]  
       using hgt_gt_0 [of k "p i"] \<open>k>0\<close>
       by (simp add: \<Delta>_def pp_def split: if_split_asm)
   qed
+
+  have sum_pp: "(\<Sum>h=1..n. pp i h) = (if hgt k (p i) \<le> n then p i + (\<Sum>h=1..<n. qfun k h) else (\<Sum>h=1..n. qfun k h))" 
+    if "n>0" for n i
+    using that
+  proof (induction n)
+    case (Suc n)
+    show ?case
+    proof (cases "n=0")
+      case True
+      then show ?thesis
+        using \<open>k>0\<close> hgt_Least [of 1 "p i" k]
+        by (simp add: pp_def hgt_le_imp_qfun_ge min_def)
+    next
+      case False
+      then have IH: "sum (pp i) {1..n} =
+                    (if hgt k (p i) \<le> n then p i + sum (qfun k) {1..<n} else sum (qfun k) {1..n})"
+        using Suc.IH by blast
+      with False show ?thesis
+        apply (simp split: if_split_asm)
+        by (smt (verit, best) le_Suc_eq not_less_eq pp_eq_hgt sum.head_if)
+    qed
+  qed auto
+
+
+  have "\<Delta> i = (\<Sum>h=1..<max_height k. \<Delta>\<Delta> i h)" if "i<m" for i
+    unfolding \<Delta>\<Delta>_def \<Delta>_def
+
 
   have "\<Delta>\<Delta> i h = (if h=1 then pp (Suc i) h - pp i h
      else if (p i \<le> qfun k (h-1) \<and> p (Suc i) \<le> qfun k (h-1)) \<or> (p i \<ge> qfun k h \<and> p (Suc i) \<ge> qfun k h) then 0 

@@ -447,12 +447,6 @@ lemma hgt_works:
   shows "p \<le> qfun k (hgt k p)"
   using assms by (metis (no_types, lifting) LeastI_ex height_exists hgt_def not_gr0)
 
-(*PROBABLY WORTHLESS*)
-lemma hgt_works':
-  assumes "p \<le> p0"  
-  shows "p \<le> qfun k (hgt k p)"
-  using assms by (smt (verit, best) divide_eq_eq hgt_works not_gr0 of_nat_eq_0_iff p0_01(2) qfun_def)
-
 lemma hgt_Least:
   assumes "0<h" "p \<le> qfun k h"
   shows "hgt k p \<le> h"

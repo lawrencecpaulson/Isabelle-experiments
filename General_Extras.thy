@@ -4,15 +4,17 @@ theory General_Extras imports
 
 begin
 
-thm all_conj_distrib
+(*2024-03-05: added*)
 lemma all_imp_conj_distrib: "(\<forall>x. P x \<longrightarrow> Q x \<and> R x) \<longleftrightarrow> (\<forall>x. P x \<longrightarrow> Q x) \<and> (\<forall>x. P x \<longrightarrow> R x)"
   by iprover
 
+(*2024-03-05: added*)
 lemma card_Int_Diff:
   assumes "finite A"
   shows "card A = card (A \<inter> B) + card (A - B)"
   by (simp add: assms card_Diff_subset_Int card_mono)
 
+(*2024-03-05: added*)
 lemma powr_eq_iff:
   assumes "y>0" "b>1"
   shows "b powr x = y \<longleftrightarrow> log b y = x"
