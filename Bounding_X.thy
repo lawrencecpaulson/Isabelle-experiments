@@ -418,7 +418,7 @@ subsection \<open>Lemma 7.5\<close>
 
 text \<open>Small $o(k)$ bounds on summations for this section\<close>
 
-text \<open>This is Bhavik's upper bound for heights\<close>
+text \<open>This is the explicit upper bound for heights given just below (5) on page 9\<close>
 definition "ok_fun_26 \<equiv> \<lambda>k. 2 * ln k / eps k" 
 
 definition "ok_fun_28 \<equiv> \<lambda>k. -2 * real k powr (7/8)"  

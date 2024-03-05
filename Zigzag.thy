@@ -106,9 +106,20 @@ proof -
   qed auto
   have sum_pp: "(\<Sum>h=Suc 0..maxh. pp i h) = p i + (\<Sum>h=1..<maxh. qfun k h)" for i
     using \<open>1 < maxh\<close> by (simp add: hgt_le_maxh sum_pp_aux)
-  have \<Delta>_eq: "\<Delta> i = (\<Sum>h=1..maxh. \<Delta>\<Delta> i h)" for i
+  have 33: "\<Delta> i = (\<Sum>h=1..maxh. \<Delta>\<Delta> i h)" for i
     by (simp add: \<Delta>\<Delta>_def \<Delta>_def sum_subtractf sum_pp)
 
+  have A: "(\<Sum>i<m. \<Delta>\<Delta> i h) \<le> alpha k h" if "0<h" for h
+    using qfun_mono [of k "h-1" h] \<open>k>0\<close>
+    unfolding \<Delta>\<Delta>_def alpha_def sum_lessThan_telescope [where f = "\<lambda>i. pp i h"]
+    by (auto simp add: pp_def p_def pee_eq_p0)
+
+  have B: "(\<Sum>i<m. \<Delta>\<Delta> i h) = 0" if "\<And>i. i<m \<Longrightarrow> h > hgt k (p i)" for h
+    sorry
+
+  have 34: "(\<Sum>h=Suc 0..maxh. \<Sum>i<m. \<Delta>\<Delta> i h / alpha k h) \<le> 2 * ln k / eps k"
+
+    sorry
 
   show ?thesis
     sorry

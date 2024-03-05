@@ -473,7 +473,7 @@ lemma hgt_le_imp_qfun_ge:
   shows "p \<le> qfun k h"
   by (meson assms hgt_greater not_less)
 
-text \<open>this gives us an upper bound for heights, namely @{term "hgt k 1"}\<close>
+text \<open>This gives us an upper bound for heights, namely @{term "hgt k 1"}, but it's not explicit.\<close>
 lemma hgt_mono:
   assumes "p \<le> q" "0<k"
   shows "hgt k p \<le> hgt k q"
@@ -484,7 +484,6 @@ lemma hgt_mono':
   shows "p < q"
   by (smt (verit) assms hgt_mono leD)
 
-text \<open>Bhavik's @{text one_lt_q_function} (in his section 5)\<close>
 lemma qfun_ge1:
   defines "f \<equiv> \<lambda>k. 2 * ln k / eps k"
   shows "\<forall>\<^sup>\<infinity>k. qfun k (nat \<lfloor>f k\<rfloor>) \<ge> 1"
@@ -506,7 +505,7 @@ qed
 
 definition "Lemma_height_upper_bound \<equiv> \<lambda>k. \<forall>p. p \<le> 1 \<longrightarrow> hgt k p \<le> 2 * ln k / eps k"
 
-text \<open>Bhavik's height_upper_bound [somehow the limit he proved wasn't necessary].
+text \<open>Height_upper_bound given just below (5) on page 9.
   Although we can bound all Heights by monotonicity (since @{term "p\<le>1"}), 
   we need to exhibit a specific $o(k)$ function.\<close>
 lemma height_upper_bound: "\<forall>\<^sup>\<infinity>k. Lemma_height_upper_bound k"
