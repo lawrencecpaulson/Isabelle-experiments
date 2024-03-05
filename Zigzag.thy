@@ -43,12 +43,12 @@ proof -
   have pp_eq: "pp i h = (if h=1 then min (p i) (qfun k 1)
                           else max (qfun k (h-1)) (min (p i) (qfun k h)))" for i h
     using qfun_mono [OF \<open>k>0\<close>, of "h-1" h] by (auto simp: pp_def max_def)
-  have mh_gt1: "max_height k > 1"
-    using big by (simp add: Big_ZZ_8_1_def \<open>l\<le>k\<close>) 
 
-  have "hgt k 1 = xxx"
-apply (simp add: hgt_def qfun_def)
-    sorry
+  define maxh where "maxh \<equiv> Suc (hgt k 1)"  (*alternatively, use height_upper_bound*)
+  have "maxh > 1"
+    by (simp add: maxh_def hgt_gt_0)
+  have hgt_le_maxh: "hgt k (p i) \<le> maxh" for i
+    using \<open>k>0\<close> by (simp add: hgt_mono le_SucI maxh_def p_def pee_le1)
 
   have pp_eq_hgt [simp]: "pp i (hgt k (p i)) = p i" for i
     using hgt_less_imp_qfun_less [of "hgt k (p i) - 1" k "p i"]  
@@ -87,7 +87,7 @@ apply (simp add: hgt_def qfun_def)
       by (simp add: \<Delta>_def pp_def split: if_split_asm)
   qed
 
-  have sum_pp: "(\<Sum>h=1..n. pp i h) = (if hgt k (p i) \<le> n then p i + (\<Sum>h=1..<n. qfun k h) else (\<Sum>h=1..n. qfun k h))" 
+  have sum_pp_aux: "(\<Sum>h=Suc 0..n. pp i h) = (if hgt k (p i) \<le> n then p i + (\<Sum>h=1..<n. qfun k h) else (\<Sum>h=1..n. qfun k h))" 
     if "n>0" for n i
     using that
   proof (induction n)
@@ -100,36 +100,15 @@ apply (simp add: hgt_def qfun_def)
         by (simp add: pp_def hgt_le_imp_qfun_ge min_def)
     next
       case False
-      then have IH: "sum (pp i) {1..n} =
-                    (if hgt k (p i) \<le> n then p i + sum (qfun k) {1..<n} else sum (qfun k) {1..n})"
-        using Suc.IH by blast
-      with False show ?thesis
-        apply (simp split: if_split_asm)
-        by (smt (verit, best) le_Suc_eq not_less_eq pp_eq_hgt sum.head_if)
+      with Suc show ?thesis
+        by (simp split: if_split_asm) (smt (verit) le_Suc_eq not_less_eq pp_eq_hgt sum.head_if)
     qed
   qed auto
+  have sum_pp: "(\<Sum>h=Suc 0..maxh. pp i h) = p i + (\<Sum>h=1..<maxh. qfun k h)" for i
+    using \<open>1 < maxh\<close> by (simp add: hgt_le_maxh sum_pp_aux)
+  have \<Delta>_eq: "\<Delta> i = (\<Sum>h=1..maxh. \<Delta>\<Delta> i h)" for i
+    by (simp add: \<Delta>\<Delta>_def \<Delta>_def sum_subtractf sum_pp)
 
-
-  have "\<Delta> i = (\<Sum>h=1..<max_height k. \<Delta>\<Delta> i h)" if "i<m" for i
-    unfolding \<Delta>\<Delta>_def \<Delta>_def
-
-
-  have "\<Delta>\<Delta> i h = (if h=1 then pp (Suc i) h - pp i h
-     else if (p i \<le> qfun k (h-1) \<and> p (Suc i) \<le> qfun k (h-1)) \<or> (p i \<ge> qfun k h \<and> p (Suc i) \<ge> qfun k h) then 0 
-     else  p (Suc i) - p i)" if "h>0" for i h
-    unfolding \<Delta>\<Delta>_def pp_def
-    using qfun_strict_mono [OF \<open>k>0\<close>, of "h-1" h] that
-
-    apply (simp add: )
-apply (auto simp: )
-    apply linarith
-    sorry
-
-  have "\<Delta> i = (\<Sum>h=1..<max_height k. \<Delta>\<Delta> i h)" if "i<m" for i
-    unfolding \<Delta>\<Delta>_def \<Delta>_def
-
-
-    sorry
 
   show ?thesis
     sorry
