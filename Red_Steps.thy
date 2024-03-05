@@ -344,7 +344,7 @@ proof -
 qed
 
 lemma Red_5_7a: "eps k / k \<le> alpha k (hgt k p)"
-  by (simp add: alpha_ge hgt_gt_0)
+  by (simp add: alpha_ge hgt_gt0)
 
 lemma Red_5_7b: 
   assumes "p \<ge> qfun k 0" shows "alpha k (hgt k p) \<le> eps k * (p - qfun k 0 + 1/k)"
@@ -352,7 +352,7 @@ proof -
   have qh_le_p: "qfun k (hgt k p - Suc 0) \<le> p"
     by (smt (verit) assms diff_Suc_less diff_le_self hgt_Least le_antisym nat_less_le zero_less_iff_neq_zero)
   have "hgt k p > 0"
-    by (simp add: Suc_leI hgt_gt_0)
+    by (simp add: Suc_leI hgt_gt0)
   then have "alpha k (hgt k p) = eps k * (1 + eps k) ^ (hgt k p - 1) / k"
     using alpha_eq by blast
   also have "\<dots> = eps k * (qfun k (hgt k p - 1) - qfun k 0 + 1/k)"
@@ -366,7 +366,7 @@ lemma Red_5_7c:
   assumes "p \<le> qfun k 1" shows "alpha k (hgt k p) = eps k / k"
 proof -
   have "hgt k p > 0"
-    by (simp add: Suc_leI hgt_gt_0)
+    by (simp add: Suc_leI hgt_gt0)
   then have "alpha k (hgt k p) = alpha k 1"
     using Suc_le_D hgt_Least Suc_le_eq assms by fastforce
   also have "\<dots> = eps k / k"
@@ -644,7 +644,7 @@ proof -
       also have "\<dots> = - real (card X) / (real k) ^ 5 + (eps k / k) * real (card NRX) * card NRY / card Y"
         by simp
       also have "\<dots> \<le> - real (card X) / (real k) ^ 5 + alpha k (hgt k p) * real (card NRX) * card NRY / card Y"
-        using alpha_ge [OF hgt_gt_0]
+        using alpha_ge [OF hgt_gt0]
         by (intro add_mono mult_right_mono divide_right_mono) auto
       also have "\<dots> \<le> weight X Y x + alpha k (hgt k p) * real (card NRX) * card NRY / real (card Y)"
         using Red_5_4 by simp
@@ -848,7 +848,7 @@ proof -
       using \<open>l \<le> k\<close> l by (auto simp: Big_def)
     let ?h = "hgt k (pee \<mu> l k i)"
     have "?h > 0"
-      by (simp add: hgt_gt_0 kn0 pee_le1)
+      by (simp add: hgt_gt0 kn0 pee_le1)
     then obtain \<alpha>: "alpha k ?h \<ge> 0" and *: "alpha k ?h \<ge> eps k / k"
       using alpha_ge0 \<open>k>1\<close> alpha_ge by auto
     moreover have "-5/4 = -1/4 - (1::real)"

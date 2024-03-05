@@ -522,7 +522,7 @@ proof -
   also have "\<dots> \<le> ok_fun_26 k"
   proof -
     have "hgt k (p i) \<ge> 1" for i
-      by (simp add: Suc_leI hgt_gt_0)
+      by (simp add: Suc_leI hgt_gt0)
     moreover have "hgt k (p m) \<le> ok_fun_26 k"
       using hub p_def pee_le1 unfolding ok_fun_26_def Lemma_height_upper_bound_def by blast 
     ultimately show ?thesis
@@ -958,10 +958,10 @@ proof -
       using A B by auto
     also have "\<dots> = ((1 + eps k) ^ (Suc (hp i - 1 + hp (Suc i)) - hp i) -
                       (1 + eps k) ^ (hp i - 1))    /  k"
-      using \<open>k>0\<close> eps_gt0 [of k] hgt_le \<open>p i \<ge> p0\<close> hgt_gt_0 [of k]
-      by (simp add: hp_def qfun_def Suc_diff_eq_diff_pred hgt_gt_0 diff_divide_distrib)
+      using \<open>k>0\<close> eps_gt0 [of k] hgt_le \<open>p i \<ge> p0\<close> hgt_gt0 [of k]
+      by (simp add: hp_def qfun_def Suc_diff_eq_diff_pred hgt_gt0 diff_divide_distrib)
     also have "\<dots> = alpha k (hp i) / eps k * ((1 + eps k) ^ (1 + hp (Suc i) - hp i) - 1)"
-      using \<open>k>0\<close>  hgt_le hgt_gt_0 [of k]
+      using \<open>k>0\<close>  hgt_le hgt_gt0 [of k]
       by (simp add: hp_def alpha_eq right_diff_distrib flip: diff_divide_distrib power_add)
     also have "\<dots> \<le> 2 * eps k powr (-1/4) * alpha k (hp i)"
     proof -
@@ -979,7 +979,7 @@ proof -
   finally have 29: "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * ?q \<le> 2 * eps k powr (-1/4) * alpha k (hp i)" .
   moreover have "alpha k (hp i) > 0"
     unfolding hp_def
-    by (smt (verit, ccfv_SIG) eps_gt0 \<open>0 < k\<close> alpha_ge divide_le_0_iff hgt_gt_0 of_nat_0_less_iff)
+    by (smt (verit, ccfv_SIG) eps_gt0 \<open>0 < k\<close> alpha_ge divide_le_0_iff hgt_gt0 of_nat_0_less_iff)
   ultimately have "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * eps k powr (-1/2) \<le> 2 * eps k powr (-1/4)" 
     using mult_le_cancel_right by fastforce
   then have "card (X i \<setminus> X (Suc i)) / card (X (Suc i)) \<le> 2 * eps k powr (-1/4) * eps k powr (1/2)" 
@@ -1224,7 +1224,7 @@ proof -
         case False
         with \<open>i \<in> \<R>\<close> show ?thesis
           unfolding pstar_def p_def \<R>_def
-          by (smt (verit, del_insts) Y_6_4_Red alpha_ge0 alpha_mono hgt_gt_0 linorder_not_less)
+          by (smt (verit, del_insts) Y_6_4_Red alpha_ge0 alpha_mono hgt_gt0 linorder_not_less)
       qed
     }
     then show ?thesis
@@ -1251,16 +1251,16 @@ proof -
     proof (rule alpha_mono)
       show "hgt k qstar + nat \<lfloor>2 * ?e12\<rfloor> \<le> nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * ?e12\<rfloor>"
         using hgt_qstar_le by linarith
-    qed (simp add: hgt_gt_0)
+    qed (simp add: hgt_gt0)
     also have "\<dots> \<le> 2 * alpha k 1"
     proof -
       have *: "(1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * ?e12\<rfloor> - 1) \<le> 2"
         using le2 by simp
       have "1 \<le> 2 * eps k powr (-1/4)"
-        by (smt (verit) hgt_qstar_le Suc_leI divide_minus_left hgt_gt_0 numeral_nat(7) real_of_nat_ge_one_iff)
+        by (smt (verit) hgt_qstar_le Suc_leI divide_minus_left hgt_gt0 numeral_nat(7) real_of_nat_ge_one_iff)
       then show ?thesis
         using mult_right_mono [OF *, of "eps k"] eps_ge0 
-        by (simp add: alpha_eq hgt_gt_0 divide_right_mono mult.commute)
+        by (simp add: alpha_eq hgt_gt0 divide_right_mono mult.commute)
     qed
     finally have 2: "2 * alpha k 1 \<ge> alpha k (hgt k qstar + nat \<lfloor>2 * ?e12\<rfloor>)" .
     show ?thesis
@@ -1290,7 +1290,7 @@ proof -
           using Y_6_4_Bblue \<open>i \<in> \<B>\<close> \<open>\<mu>>0\<close> unfolding p_def \<B>_def by blast
         ultimately show ?thesis
           apply (simp add: pstar_def)
-          by (smt (verit, best) alpha_ge0 alpha_mono hgt_gt_0 mult_left_mono powr_ge_pzero zero_le_mult_iff)
+          by (smt (verit, best) alpha_ge0 alpha_mono hgt_gt0 mult_left_mono powr_ge_pzero zero_le_mult_iff)
       qed
     }
     then show ?thesis
@@ -1445,7 +1445,7 @@ proof -
       using alpha_ge0 mult_right_mono [OF 1, of "eps k powr (-1/2) * alpha k 1"] 
       by (simp add: mult_ac flip: powr_add)
     also have "\<dots> \<le> card (X (i-1) \<setminus> X i) / card (X i) * (eps k powr (-1/2) * alpha k (hgt k (p (i-1))))"
-      by (intro mult_left_mono alpha_mono) (auto simp add: Suc_leI hgt_gt_0)
+      by (intro mult_left_mono alpha_mono) (auto simp add: Suc_leI hgt_gt0)
     also have "\<dots> \<le> p i - p (i-1)"
       using 77 by simp
     finally have "eps k powr (-1/4) * alpha k 1 \<le> p i - p (i-1)" .

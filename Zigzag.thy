@@ -16,13 +16,13 @@ begin
 definition "ok_fun_ZZ_8_1 \<equiv> \<lambda>k. 0" 
 
 definition "Big_ZZ_8_1 \<equiv>
-   \<lambda>\<mu> l. (\<forall>k. k\<ge>l \<longrightarrow> True)"
+   \<lambda>\<mu> l. (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k)"
 
 lemma Big_ZZ_8_1:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_1 \<mu> l"
   unfolding Big_ZZ_8_1_def eventually_conj_iff all_imp_conj_distrib  eps_def
-  apply (simp add:  eventually_all_ge_at_top assms)
+  apply (simp add: height_upper_bound eventually_all_ge_at_top assms)
   done
 
 lemma ZZ_8_1:
@@ -44,15 +44,21 @@ proof -
                           else max (qfun k (h-1)) (min (p i) (qfun k h)))" for i h
     using qfun_mono [OF \<open>k>0\<close>, of "h-1" h] by (auto simp: pp_def max_def)
 
-  define maxh where "maxh \<equiv> Suc (hgt k 1)"  (*alternatively, use height_upper_bound*)
-  have "maxh > 1"
-    by (simp add: maxh_def hgt_gt_0)
-  have hgt_le_maxh: "hgt k (p i) \<le> maxh" for i
-    using \<open>k>0\<close> by (simp add: hgt_mono le_SucI maxh_def p_def pee_le1)
+  define maxh where "maxh \<equiv> nat\<lceil>2 * ln k / eps k\<rceil> + 1"  
+  have maxh: "\<And>p. p\<le>1 \<Longrightarrow> hgt k p \<le> 2 * ln k / eps k" 
+    using big \<open>k\<ge>l\<close> by (auto simp: Big_ZZ_8_1_def Lemma_height_upper_bound_def)
+  then have "1 \<le> 2 * ln k / eps k"
+    using hgt_gt0 [of k 1] by force
+  then have "maxh > 1"
+    by (simp add: maxh_def eps_gt0)
+  have "hgt k p < maxh" if "p\<le>1"for p
+    using that \<open>k>0\<close> maxh[of "p"] unfolding maxh_def by linarith
+  then have hgt_le_maxh: "hgt k (p i) < maxh" for i
+    using p_def pee_le1 by auto
 
   have pp_eq_hgt [simp]: "pp i (hgt k (p i)) = p i" for i
     using hgt_less_imp_qfun_less [of "hgt k (p i) - 1" k "p i"]  
-    using hgt_works [of k "p i"] hgt_gt_0 [of k "p i"] \<open>k>0\<close> pp_eq by force
+    using hgt_works [of k "p i"] hgt_gt0 [of k "p i"] \<open>k>0\<close> pp_eq by force
 
   have pp_less_hgt [simp]: "pp i h = qfun k h" if "0<h" "h < hgt k (p i)" for h i
   proof (cases "h=1")
@@ -62,13 +68,13 @@ proof -
   next
     case False
     with that show ?thesis
-      using hgt_works [of k "p i"] hgt_gt_0 [of k "p i"] \<open>k>0\<close> 
+      using hgt_works [of k "p i"] hgt_gt0 [of k "p i"] \<open>k>0\<close> 
       using hgt_less_imp_qfun_less qfun_strict_mono that
       by (force simp add: pp_eq)
   qed
 
   have pp_gt_hgt [simp]: "pp i h = qfun k (h-1)" if "h > hgt k (p i)" for h i
-    using hgt_gt_0 [of k "p i"] \<open>k>0\<close> that
+    using hgt_gt0 [of k "p i"] \<open>k>0\<close> that
     by (simp add: pp_def hgt_le_imp_qfun_ge)
 
   have \<Delta>0: "\<Delta> i \<ge> 0 \<longleftrightarrow> (\<forall>h>0. \<Delta>\<Delta> i h \<ge> 0)" for i
@@ -80,10 +86,10 @@ proof -
     assume "\<forall>h>0. 0 \<le> \<Delta>\<Delta> i h"
     then have "p i \<le> pp (Suc i) (hgt k (p i))"
       unfolding \<Delta>\<Delta>_def
-      by (smt (verit, best) hgt_gt_0 pp_eq_hgt)
+      by (smt (verit, best) hgt_gt0 pp_eq_hgt)
     then show "0 \<le> \<Delta> i"
       using hgt_less_imp_qfun_less [of "hgt k (p i) - 1" k "p i"]  
-      using hgt_gt_0 [of k "p i"] \<open>k>0\<close>
+      using hgt_gt0 [of k "p i"] \<open>k>0\<close>
       by (simp add: \<Delta>_def pp_def split: if_split_asm)
   qed
 
@@ -105,7 +111,7 @@ proof -
     qed
   qed auto
   have sum_pp: "(\<Sum>h=Suc 0..maxh. pp i h) = p i + (\<Sum>h=1..<maxh. qfun k h)" for i
-    using \<open>1 < maxh\<close> by (simp add: hgt_le_maxh sum_pp_aux)
+    using \<open>1 < maxh\<close> by (simp add: hgt_le_maxh less_or_eq_imp_le sum_pp_aux)
   have 33: "\<Delta> i = (\<Sum>h=1..maxh. \<Delta>\<Delta> i h)" for i
     by (simp add: \<Delta>\<Delta>_def \<Delta>_def sum_subtractf sum_pp)
 
@@ -114,11 +120,17 @@ proof -
     unfolding \<Delta>\<Delta>_def alpha_def sum_lessThan_telescope [where f = "\<lambda>i. pp i h"]
     by (auto simp add: pp_def p_def pee_eq_p0)
 
-  have B: "(\<Sum>i<m. \<Delta>\<Delta> i h) = 0" if "\<And>i. i<m \<Longrightarrow> h > hgt k (p i)" for h
+  have "(\<Sum>i<m. \<Delta>\<Delta> i h) = 0" if "\<And>i. i\<le>m \<Longrightarrow> h > hgt k (p i)" for h
+    using that by (simp add: sum.neutral \<Delta>\<Delta>_def)
+  then have B: "(\<Sum>i<m. \<Delta>\<Delta> i h) = 0" if "h \<ge> maxh" for h
+    by (meson hgt_le_maxh le_simps le_trans not_less_eq that)
+  have "(\<Sum>h=Suc 0..maxh. \<Sum>i<m. \<Delta>\<Delta> i h / alpha k h) \<le> (\<Sum>h=Suc 0..maxh. 1)"
+
     sorry
-
+  also have "... \<le> 2 * ln k / eps k"
+apply (simp add: maxh_def)
   have 34: "(\<Sum>h=Suc 0..maxh. \<Sum>i<m. \<Delta>\<Delta> i h / alpha k h) \<le> 2 * ln k / eps k"
-
+    using A B
     sorry
 
   show ?thesis

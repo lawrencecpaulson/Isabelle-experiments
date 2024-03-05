@@ -172,7 +172,7 @@ proof -
           by (smt (verit) one_le_power pee divide_nonneg_nonneg eps_ge0 of_nat_less_0_iff)
       qed auto
       then show ?thesis
-        by (metis One_nat_def Suc_pred' diff_is_0_eq hgt_gt_0)
+        by (metis One_nat_def Suc_pred' diff_is_0_eq hgt_gt0)
     qed
     then have "p (i-1) - p (Suc i) \<le> eps k powr (-1/2) * alpha k 1"
       using pee iB Y_6_4_Bblue \<open>0<\<mu>\<close> by (fastforce simp: p_def)
@@ -215,7 +215,7 @@ proof -
       apply (simp add: p_def Step_class_insert_NO_MATCH)
       by (metis odd_Suc_minus_one)
     consider (1) "hgt k (p i) = 1" | (2) "hgt k (p i) > 1"
-      by (metis hgt_gt_0 less_one nat_neq_iff)
+      by (metis hgt_gt0 less_one nat_neq_iff)
     then have "p (i-1) - p i + alpha k (hgt k (p i)) \<le> eps k / k"
     proof cases
       case 1
@@ -292,7 +292,7 @@ lemma Y_6_5_Red:
 proof (cases "h \<le> 3")
   case True
   have "hgt k (p (Suc i)) \<ge> 1"
-    by (simp add: Suc_leI hgt_gt_0)
+    by (simp add: Suc_leI hgt_gt0)
   with True show ?thesis
     by linarith
 next
@@ -312,7 +312,7 @@ next
   have lesspi: "qfun k (h-1) < p i"
     using False hgt_Least [of "h-1" "p i" k] unfolding h_def by linarith
   have A: "(1 + eps k) ^ h = (1 + eps k) * (1 + eps k) ^ (h - Suc 0)"
-    using False power.simps by (metis h_def Suc_pred hgt_gt_0)
+    using False power.simps by (metis h_def Suc_pred hgt_gt0)
   have B: "(1 + eps k) ^ (h - 3) = 1 / (1 + eps k)^2 * (1 + eps k) ^ (h - Suc 0)"
     using eps_gt0 [OF \<open>k>0\<close>] False
     by (simp add: divide_simps Suc_diff_Suc numeral_3_eq_3 flip: power_add)
@@ -407,7 +407,7 @@ proof (cases "h > 2*\<kappa> + 1")
 next
   case False
   then show ?thesis
-    by (smt (verit, del_insts) of_nat_0 hgt_gt_0 nat_less_real_le)
+    by (smt (verit, del_insts) of_nat_0 hgt_gt0 nat_less_real_le)
 qed
 
 definition "Lemma_Y_6_5_Bblue \<equiv> 
@@ -625,7 +625,7 @@ next
   proof -
     have 2: "(1 + eps k) ^ (hgt k (p j') - Suc 0) \<le> 2"
       using B big2 \<open>k>0\<close> eps_ge0
-      by (smt (verit) diff_Suc_less hgt_gt_0 nat_less_real_le powr_mono powr_realpow)
+      by (smt (verit) diff_Suc_less hgt_gt0 nat_less_real_le powr_mono powr_realpow)
     have *: "x \<ge> (0::real) \<Longrightarrow> inverse (x powr (1/2)) * x = x powr (1/2)" for x
       by (simp add: inverse_eq_divide powr_half_sqrt real_div_sqrt)
     have "p0 - p j' \<le> 0"
@@ -648,7 +648,7 @@ next
     then have h_le3: "hgt k (p j') \<le> 3"
       using Y_6_5_DegreeReg [OF j'_dreg \<open>k>0\<close>] by (simp add: p_def)
     have alpha1: "alpha k (hgt k (p (Suc j'))) \<le> eps k * (1 + eps k) ^ 2 / k"
-      by (metis alpha_Suc_eq alpha_mono hgt_gt_0 hs_le3 numeral_nat(3))
+      by (metis alpha_Suc_eq alpha_mono hgt_gt0 hs_le3 numeral_nat(3))
     have alpha2: "alpha k (hgt k (p j')) \<ge> eps k / k"
       by (simp add: Red_5_7a)
     have "p j' - eps k powr (- 1/2) * alpha k (hgt k (p j')) 

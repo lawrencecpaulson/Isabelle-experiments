@@ -439,7 +439,7 @@ proof -
     using that by blast 
 qed
 
-lemma hgt_gt_0: "hgt k p > 0"
+lemma hgt_gt0: "hgt k p > 0"
   by (smt (verit, best) LeastI_ex gr0I height_exists hgt_def zero_less_one)
 
 lemma hgt_works:
@@ -477,7 +477,7 @@ text \<open>This gives us an upper bound for heights, namely @{term "hgt k 1"}, 
 lemma hgt_mono:
   assumes "p \<le> q" "0<k"
   shows "hgt k p \<le> hgt k q"
-  by (meson assms order.trans hgt_Least hgt_gt_0 hgt_works)
+  by (meson assms order.trans hgt_Least hgt_gt0 hgt_works)
 
 lemma hgt_mono':
   assumes "hgt k p < hgt k q" "0<k"
@@ -541,10 +541,10 @@ lemma alpha_eq:
   by (metis Suc_pred' alpha_Suc_eq assms)
 
 lemma alpha_hgt_ge: "alpha k (hgt k p) \<ge> eps k / k"
-  by (simp add: alpha_ge hgt_gt_0)
+  by (simp add: alpha_ge hgt_gt0)
 
 lemma alpha_hgt_eq: "alpha k (hgt k p) = eps k * (1 + eps k) ^ (hgt k p -1) / k"
-  using alpha_eq hgt_gt_0 by presburger
+  using alpha_eq hgt_gt0 by presburger
 
 lemma alpha_mono: "\<lbrakk>h' \<le> h; 0 < h'\<rbrakk> \<Longrightarrow> alpha k h' \<le> alpha k h"
   by (simp add: alpha_eq eps_ge0 divide_right_mono mult_left_mono power_increasing)
