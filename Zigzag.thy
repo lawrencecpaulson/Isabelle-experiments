@@ -16,13 +16,14 @@ begin
 definition "ok_fun_ZZ_8_1 \<equiv> \<lambda>k. 0" 
 
 definition "Big_ZZ_8_1 \<equiv>
-   \<lambda>\<mu> l. Lemma_Red_5_3 \<mu> l \<and> Big_finite_components \<mu> l \<and> (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k)"
+   \<lambda>\<mu> l. Lemma_Red_5_2 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Big_finite_components \<mu> l \<and> 
+         (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k)"
 
 lemma Big_ZZ_8_1:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_1 \<mu> l"
   unfolding Big_ZZ_8_1_def eventually_conj_iff all_imp_conj_distrib  eps_def
-  apply (simp add: Red_5_3 Big_finite_components height_upper_bound eventually_all_ge_at_top assms)
+  apply (simp add: Red_5_2 Red_5_3 Big_finite_components height_upper_bound eventually_all_ge_at_top assms)
   done
 
 lemma ZZ_8_1:
@@ -144,13 +145,25 @@ proof -
   then have "finite \<B>" "finite \<R>" "finite \<S>"
     by (auto simp add: \<B>_def \<R>_def \<S>_def Step_class_insert_NO_MATCH)
 
-  have R53: "\<And>i. i \<in> \<S> \<Longrightarrow> p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
-    using big \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_1_def Lemma_Red_5_3_def p_def \<S>_def)
+  have R52: "p (Suc i) - p i \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (p i))"
+    and beta_gt0: "beta \<mu> l k i > 0"
+    and R53: "p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
+    if "i \<in> \<S>" for i
+    using big \<open>Colours l k\<close> that
+    by (auto simp: Big_ZZ_8_1_def Lemma_Red_5_2_def Lemma_Red_5_3_def p_def \<S>_def)
+
   have \<Delta>\<Delta>_ge0: "\<Delta>\<Delta> i h \<ge> 0" if "i \<in> \<S>" "h \<ge> 1" for i h
     using that R53 [OF \<open>i \<in> \<S>\<close>] by (fastforce simp add: \<Delta>\<Delta>_def pp_eq)
 
+  have SS: "real (hgt k (p (Suc i))) - hgt k (p i) \<le> eps k powr (-1/4)" if "i \<in> \<S>\<S>" for i
+    using that by (simp add: \<S>\<S>_def dboost_star_def p_def)
+
+  have 36: "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) \<le> \<Delta> i / alpha k (hgt k (p i))"
+    if "i \<in> \<S>" for i
+    using R52 alpha_gt0 [OF \<open>k>0\<close> hgt_gt0] beta_gt0 that by (simp add: \<Delta>_def divide_simps)
+
   have 35: "(1 - eps k powr (1/2)) * (1 - beta \<mu> l k i / beta \<mu> l k i)
-      \<le> (\<Sum>h=Suc 0..maxh. \<Delta>\<Delta> i h / alpha k h)" if "i\<in>\<S>\<S>" for i
+      \<le> (\<Sum>h=Suc 0..maxh. \<Delta>\<Delta> i h / alpha k h)" if "i \<in> \<S>\<S>" for i
     sorry
   \<comment> \<open>now we are able to prove claim 8.2\<close>
   have "(1 - eps k powr (1/2)) * (\<Sum>i\<in>\<S>\<S>. (1 - beta \<mu> l k i / beta \<mu> l k i))

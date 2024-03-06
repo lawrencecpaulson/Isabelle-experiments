@@ -336,14 +336,14 @@ lemma Y_6_5_DegreeReg:
 
 
 definition 
-  "Lemma_6_5_dbooSt \<equiv> 
+  "Lemma_Y_6_5_dbooSt \<equiv> 
       \<lambda>\<mu> l. \<forall>k. \<forall>i \<in> Step_class \<mu> l k {dboost_step}.
                      Colours l k \<longrightarrow> hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k i)"
 
 lemma Y_6_5_dbooSt:
   assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Lemma_6_5_dbooSt \<mu> l"
-  using Red_5_3[OF assms] unfolding Lemma_Red_5_3_def Lemma_6_5_dbooSt_def
+  shows "\<forall>\<^sup>\<infinity>l. Lemma_Y_6_5_dbooSt \<mu> l"
+  using Red_5_3[OF assms] unfolding Lemma_Red_5_3_def Lemma_Y_6_5_dbooSt_def
   by (smt (verit, ccfv_threshold) eventually_at_top_linorder Colours_kn0 hgt_mono)
 
 text \<open>this remark near the top of page 19 only holds in the limit\<close>
@@ -433,7 +433,7 @@ qed
 
 subsection \<open>Lemma 6.2\<close>
 
-definition "Big_Y_6_2 \<equiv> \<lambda> \<mu> l. Lemma_6_3 \<mu> l \<and> Lemma_6_5_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l 
+definition "Big_Y_6_2 \<equiv> \<lambda> \<mu> l. Lemma_6_3 \<mu> l \<and> Lemma_Y_6_5_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l 
                \<and> Lemma_Red_5_3 \<mu> l \<and> l\<ge>16
                \<and> (\<forall>k. Colours l k \<longrightarrow> finite (Z_class \<mu> l k))
                \<and> ((1 + eps l)^2) * eps l powr (1/2) \<le> 1
@@ -485,7 +485,7 @@ next
     and big1: "((1 + eps k)^2) * eps k powr (1/2) \<le> 1" and big2: "(1 + eps k) powr (2 * eps k powr (-1/2)) \<le> 2"
     and "k\<ge>16"
     using big \<open>Colours l k\<close> 
-    by (auto simp: Big_Y_6_2_def Lemma_6_3_def Lemma_6_5_dbooSt_def Lemma_Y_6_5_Bblue_def Lemma_Red_5_3_def p_def Colours_kn0)
+    by (auto simp: Big_Y_6_2_def Lemma_6_3_def Lemma_Y_6_5_dbooSt_def Lemma_Y_6_5_Bblue_def Lemma_Red_5_3_def p_def Colours_kn0)
   define J where "J \<equiv> {j'. j'<j \<and> p j' \<ge> p0 \<and> even j'}"
   have "finite J"
     by (auto simp: J_def)

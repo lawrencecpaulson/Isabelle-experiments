@@ -994,7 +994,7 @@ qed
 
 subsection \<open>Lemma 7.10\<close>
  
-definition "Big_X_7_10 \<equiv> \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Lemma_6_5_dbooSt \<mu> l"
+definition "Big_X_7_10 \<equiv> \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Lemma_Y_6_5_dbooSt \<mu> l"
 
 text \<open>establishing the size requirements for 7.10\<close>
 lemma Big_X_7_10:
@@ -1023,7 +1023,7 @@ proof -
     and hub: "Lemma_height_upper_bound k"
     and 16: "k\<ge>16" (*for Y_6_5_Red*)
     and ok_le_k: "ok_fun_26 k - ok_fun_28 k \<le> k"
-    and Y_6_5_S: "Lemma_6_5_dbooSt \<mu> l"
+    and Y_6_5_S: "Lemma_Y_6_5_dbooSt \<mu> l"
     using big by (auto simp: Big_X_7_5_def Big_X_7_10_def)
   have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
     unfolding m_def \<H>_def using halted_point_minimal assms by blast
@@ -1051,7 +1051,7 @@ proof -
   have h_ge_0_if_S: "h(Suc i) - h(i-1) \<ge> 0" if "i \<in> \<S>" for i
   proof -
     have *: "hgt k (pee \<mu> l k i) \<le> hgt k (pee \<mu> l k (Suc i))"
-      using Y_6_5_S \<open>Colours l k\<close> that unfolding \<S>_def Lemma_6_5_dbooSt_def by blast
+      using Y_6_5_S \<open>Colours l k\<close> that unfolding \<S>_def Lemma_Y_6_5_dbooSt_def by blast
     obtain "i-1 \<in> \<D>" "i>0"
       using that \<open>i\<in>\<S>\<close> dreg_before_step1[of i] by (force simp add: \<S>_def \<D>_def Step_class_insert_NO_MATCH)
     then have "hgt k (pee \<mu> l k (i-1)) \<le> hgt k (pee \<mu> l k i)"
@@ -1090,7 +1090,7 @@ proof -
           by (simp add: C_def)
         then show ?thesis
           using * i nonR \<open>k>0\<close> Y_6_5_S \<open>Colours l k\<close>
-          by (force simp add: h_def p_def \<S>_def Lemma_6_5_dbooSt_def)
+          by (force simp add: h_def p_def \<S>_def Lemma_Y_6_5_dbooSt_def)
       next
         case False
         with nonR \<open>i\<in>\<S>\<close> h_ge_0_if_S show ?thesis
@@ -1123,7 +1123,7 @@ definition "Big_X_7_11_inequalities \<equiv> \<lambda>k.
             \<and> (1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
 
 definition "Big_X_7_11 \<equiv> 
-      \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Lemma_6_5_dbooSt \<mu> l \<and>
+      \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Lemma_Y_6_5_dbooSt \<mu> l \<and>
             Lemma_Y_6_5_Bblue \<mu> l \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_11_inequalities k)"
 
 text \<open>establishing the size requirements for 7.11\<close>
@@ -1153,7 +1153,7 @@ proof -
   define m where "m \<equiv> halted_point \<mu> l k"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  have big_x75: "Big_X_7_5 \<mu> l" and Y_6_5_S: "Lemma_6_5_dbooSt \<mu> l" 
+  have big_x75: "Big_X_7_5 \<mu> l" and Y_6_5_S: "Lemma_Y_6_5_dbooSt \<mu> l" 
     and 711: "eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1"
     and big34: "k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)"
     and le2: "((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"

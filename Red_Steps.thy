@@ -809,16 +809,19 @@ proof -
     by (simp add: Big_Red_5_1_def eventually_conj_iff Red_5_4 [OF assms] Red_5_6)
 qed
 
-(*CURRENTLY UNUSED*)
-corollary Red_5_2:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k 
+definition 
+  "Lemma_Red_5_2 \<equiv> 
+      \<lambda>\<mu> l. \<forall>k. Colours l k 
     \<longrightarrow> (\<forall>i \<in> Step_class \<mu> l k {dboost_step}.
          pee \<mu> l k (Suc i) - pee \<mu> l k i
          \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i))
       \<and> beta \<mu> l k i > 0)"
+
+corollary Red_5_2:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Lemma_Red_5_2 \<mu> l"
   using Big_Red_5_1 Red_5_2_Main assms 
-  unfolding eventually_sequentially by (meson order.trans)
+  unfolding eventually_sequentially Lemma_Red_5_2_def by (meson order.trans)
 
 definition 
   "Lemma_Red_5_3 \<equiv> 

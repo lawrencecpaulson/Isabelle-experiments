@@ -533,6 +533,9 @@ qed
 lemma alpha_ge: "h>0 \<Longrightarrow> alpha k h \<ge> eps k / k"
   by (metis Suc_pred alpha_Suc_ge)
 
+lemma alpha_gt0: "\<lbrakk>k>0; h>0\<rbrakk> \<Longrightarrow> alpha k h > 0"
+  by (smt (verit) alpha_ge divide_pos_pos eps_gt0 of_nat_0_less_iff)
+
 lemma alpha_Suc_eq: "alpha k (Suc h) = eps k * (1 + eps k) ^ h / k"
   by (simp add: alpha_def q_Suc_diff)
 
@@ -1178,6 +1181,7 @@ text \<open>The central vertex at each step (though only defined in some cases),
 definition cvx :: "[real,nat,nat,nat] \<Rightarrow> 'a" where
   "cvx \<equiv> \<lambda>\<mu> l k i. choose_central_vx \<mu> (stepper \<mu> l k i)"
 
+text \<open>the indexing of @{term beta} is as in the paper --- and different from that of @{term Xseq}\<close>
 definition 
   "beta \<equiv> \<lambda>\<mu> l k i. 
     (let (X,Y,A,B) = stepper \<mu> l k i in card(Neighbours Blue (cvx \<mu> l k i) \<inter> X) / card X)"
