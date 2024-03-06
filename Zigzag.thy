@@ -4,7 +4,6 @@ theory Zigzag imports Bounding_X
 
 begin
 
-
 lemma sum_from_1_telescope:
   "m > 0 \<Longrightarrow> (\<Sum>n=1..<m. f (Suc n) - f n :: 'a :: ab_group_add) = f m - f 1"
   by (induction m) (simp_all add: algebra_simps)
@@ -15,15 +14,18 @@ begin
 
 definition "ok_fun_ZZ_8_1 \<equiv> \<lambda>k. 0" 
 
+definition "Big_ZZ_8_2 \<equiv> \<lambda>k. (1 + eps k powr (1/2)) \<ge> (1 + eps k) powr (eps k powr (-1/4))"
+
 definition "Big_ZZ_8_1 \<equiv>
    \<lambda>\<mu> l. Lemma_Red_5_2 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Big_finite_components \<mu> l \<and> 
-         (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k)"
+         (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k \<and> Big_ZZ_8_2 k)"
 
 lemma Big_ZZ_8_1:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_1 \<mu> l"
-  unfolding Big_ZZ_8_1_def eventually_conj_iff all_imp_conj_distrib  eps_def
+  unfolding Big_ZZ_8_1_def Big_ZZ_8_2_def eventually_conj_iff all_imp_conj_distrib eps_def
   apply (simp add: Red_5_2 Red_5_3 Big_finite_components height_upper_bound eventually_all_ge_at_top assms)
+  apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
 lemma ZZ_8_1:
@@ -155,19 +157,64 @@ proof -
   have \<Delta>\<Delta>_ge0: "\<Delta>\<Delta> i h \<ge> 0" if "i \<in> \<S>" "h \<ge> 1" for i h
     using that R53 [OF \<open>i \<in> \<S>\<close>] by (fastforce simp add: \<Delta>\<Delta>_def pp_eq)
 
-  have SS: "real (hgt k (p (Suc i))) - hgt k (p i) \<le> eps k powr (-1/4)" if "i \<in> \<S>\<S>" for i
-    using that by (simp add: \<S>\<S>_def dboost_star_def p_def)
+  have \<Delta>\<Delta>_eq_0: "\<Delta>\<Delta> i h = 0" if "hgt k (p i) \<le> hgt k (p (Suc i))" "hgt k (p (Suc i)) < h" for h i
+    using \<Delta>\<Delta>_def that by fastforce
 
-  have 36: "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) \<le> \<Delta> i / alpha k (hgt k (p i))"
-    if "i \<in> \<S>" for i
-    using R52 alpha_gt0 [OF \<open>k>0\<close> hgt_gt0] beta_gt0 that by (simp add: \<Delta>_def divide_simps)
+  have 35: "(1 - eps k powr (1/2)) * ((1 - beta \<mu> l k i) / beta \<mu> l k i)
+          \<le> (\<Sum>h=Suc 0..maxh. \<Delta>\<Delta> i h / alpha k h)"   (is "?L \<le> ?R")
+    if "i \<in> \<S>\<S>" for i
+  proof -
+    have "i \<in> \<S>"
+      using \<open>\<S>\<S> \<subseteq> \<S>\<close> that by blast
+    have [simp]: "real (hgt k x - Suc 0) = real (hgt k x) - 1" for x
+      using hgt_gt0 [of k x] by linarith
 
-  have 35: "(1 - eps k powr (1/2)) * (1 - beta \<mu> l k i / beta \<mu> l k i)
-      \<le> (\<Sum>h=Suc 0..maxh. \<Delta>\<Delta> i h / alpha k h)" if "i \<in> \<S>\<S>" for i
-    sorry
+    have 36: "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) \<le> \<Delta> i / alpha k (hgt k (p i))"
+      using R52 alpha_gt0 [OF \<open>k>0\<close> hgt_gt0] beta_gt0 that \<open>\<S>\<S> \<subseteq> \<S>\<close> by (force simp add: \<Delta>_def divide_simps)
+
+    have k_big: "(1 + eps k powr (1/2)) \<ge> (1 + eps k) powr (eps k powr (-1/4))"
+      using big \<open>k\<ge>l\<close> by (auto simp: Big_ZZ_8_1_def Big_ZZ_8_2_def)
+    have *: "\<And>x::real. x > 0 \<Longrightarrow> (1 - x powr (1 / 2)) * (1 + x powr (1 / 2)) = 1 - x"
+      by (simp add: algebra_simps flip: powr_add)
+    have "?L = (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) / (1 + eps k powr (1/2))"
+      using beta_gt0 [OF \<open>i \<in> \<S>\<close>] eps_gt0 [OF \<open>k>0\<close>] k_big by (force simp add: divide_simps *)
+    also have "... \<le> \<Delta> i / alpha k (hgt k (p i)) / (1 + eps k powr (1/2))"
+      by (intro 36 divide_right_mono) auto
+    also have "... \<le> \<Delta> i / alpha k (hgt k (p i)) / (1 + eps k) powr (real (hgt k (p (Suc i))) - hgt k (p i))"
+    proof (intro divide_left_mono)
+      have "real (hgt k (p (Suc i))) - hgt k (p i) \<le> eps k powr (-1/4)"
+        using that by (simp add: \<S>\<S>_def dboost_star_def p_def)
+      then show "(1 + eps k) powr (real (hgt k (p (Suc i))) - real (hgt k (p i))) \<le> 1 + eps k powr (1 / 2)"
+        using k_big by (smt (verit) eps_ge0 powr_mono)
+      show "0 \<le> \<Delta> i / alpha k (hgt k (p i))"
+        by (simp add: \<Delta>0 \<Delta>\<Delta>_ge0 \<open>i \<in> \<S>\<close> alpha_ge0)
+      show "0 < (1 + eps k powr (1 / 2)) * (1 + eps k) powr (real (hgt k (p (Suc i))) - real (hgt k (p i)))"
+        using eps_gt0 [OF \<open>k>0\<close>] by (smt (verit) powr_gt_zero zero_less_mult_iff)
+    qed
+    also have "... \<le> \<Delta> i / alpha k (hgt k (p (Suc i)))"
+    proof (simp add: field_simps , intro divide_left_mono)
+      show "alpha k (hgt k (p (Suc i))) \<le> alpha k (hgt k (p i)) * (1 + eps k) powr (real (hgt k (p (Suc i))) - real (hgt k (p i)))"
+        using eps_gt0[OF \<open>k>0\<close>] hgt_gt0[of k]
+        apply (simp add: alpha_eq hgt_gt0)
+        apply (intro divide_right_mono)
+         apply (simp add: hgt_gt0 of_nat_diff flip: powr_realpow powr_add)
+        by simp
+      show "0 \<le> \<Delta> i"
+        by (simp add: \<Delta>0 \<Delta>\<Delta>_ge0 \<open>i \<in> \<S>\<close>)
+      show "0 < alpha k (hgt k (p i)) * (1 + eps k) powr (real (hgt k (p (Suc i))) - real (hgt k (p i))) * alpha k (hgt k (p (Suc i)))"
+        by (smt (verit) alpha_gt0 eps_gt0 hgt_gt0 lk(3) mult_sign_intros(5) powr_gt_zero)
+    qed
+    also have "... \<le> ?R"
+      unfolding 33
+      apply (simp add: sum_divide_distrib)
+      apply (intro sum_mono divide_left_mono)
+
+      sorry
+    finally show ?thesis .
+  qed
   \<comment> \<open>now we are able to prove claim 8.2\<close>
-  have "(1 - eps k powr (1/2)) * (\<Sum>i\<in>\<S>\<S>. (1 - beta \<mu> l k i / beta \<mu> l k i))
-     = (\<Sum>i\<in>\<S>\<S>. (1 - eps k powr (1/2)) * (1 - beta \<mu> l k i / beta \<mu> l k i))"
+  have "(1 - eps k powr (1/2)) * (\<Sum>i\<in>\<S>\<S>. ((1 - beta \<mu> l k i) / beta \<mu> l k i))
+     = (\<Sum>i\<in>\<S>\<S>. (1 - eps k powr (1/2)) * ((1 - beta \<mu> l k i) / beta \<mu> l k i))"
     using sum_distrib_left by blast
   also have "... \<le> (\<Sum>i\<in>\<S>\<S>. \<Sum>h=Suc 0..maxh. \<Delta>\<Delta> i h / alpha k h)"
     by (intro sum_mono 35)
@@ -175,7 +222,7 @@ proof -
     using sum.swap by fastforce
   also have "... \<le> (\<Sum>h=Suc 0..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)"
     by (intro sum_mono sum_mono2) (auto simp: \<open>finite \<S>\<close> \<open>\<S>\<S> \<subseteq> \<S>\<close> \<Delta>\<Delta>_ge0 alpha_ge0)
-  finally have 82: "(1 - eps k powr (1/2)) * (\<Sum>i\<in>\<S>\<S>. (1 - beta \<mu> l k i / beta \<mu> l k i))
+  finally have 82: "(1 - eps k powr (1/2)) * (\<Sum>i\<in>\<S>\<S>. ((1 - beta \<mu> l k i) / beta \<mu> l k i))
       \<le> (\<Sum>h=Suc 0..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)" .
 
   have "(\<lambda>k. 1 + 2 * ln k / eps k) \<in> o(real)"  (*? ?*)

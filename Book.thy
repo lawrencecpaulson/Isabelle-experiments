@@ -514,7 +514,7 @@ lemma height_upper_bound: "\<forall>\<^sup>\<infinity>k. Lemma_height_upper_boun
   by (smt (verit, best) nat_floor_neg of_nat_0_less_iff of_nat_floor of_nat_le_0_iff q0)
 
 
-definition "alpha \<equiv> \<lambda>k h. qfun k h - qfun k (h-1)"
+definition alpha :: "nat \<Rightarrow> nat \<Rightarrow> real" where "alpha \<equiv> \<lambda>k h. qfun k h - qfun k (h-1)"
 
 lemma alpha_0 [simp]: "alpha 0 h = 0" and alpha_0' [simp]: "alpha k 0 = 0"
   by (auto simp add: alpha_def qfun_def)
