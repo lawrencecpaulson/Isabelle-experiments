@@ -4,11 +4,6 @@ theory Zigzag imports Bounding_X
 
 begin
 
-lemma sum_from_1_telescope:
-  "m > 0 \<Longrightarrow> (\<Sum>n=1..<m. f (Suc n) - f n :: 'a :: ab_group_add) = f m - f 1"
-  by (induction m) (simp_all add: algebra_simps)
-
-
 context Diagonal
 begin
 
@@ -206,10 +201,33 @@ proof -
     qed
     also have "... \<le> ?R"
       unfolding 33
-      apply (simp add: sum_divide_distrib)
-      apply (intro sum_mono divide_left_mono)
+      using   \<Delta>\<Delta>_eq_0
 
-      sorry
+      apply (simp add: sum_divide_distrib)
+    proof (intro sum_mono)
+      fix h
+      assume h: "h \<in> {Suc 0..maxh}"
+      show "\<Delta>\<Delta> i h / alpha k (hgt k (p (Suc i))) \<le> \<Delta>\<Delta> i h / alpha k h"
+      proof (cases  "hgt k (p i) \<le> hgt k (p (Suc i)) \<and> hgt k (p (Suc i)) < h")
+        case False
+        then show ?thesis
+          using \<open>k>0\<close> h
+          apply (auto simp: )
+          using R53 \<open>i \<in> \<S>\<close> hgt_mono \<open>k>0\<close> apply blast
+          apply (simp add: not_less)
+          apply (intro divide_left_mono)
+          apply (metis alpha_0' alpha_ge0 alpha_mono gr0I)
+           defer
+           apply (simp add: zero_less_mult_iff)
+           apply (auto simp: )
+          using alpha_gt0 hgt_gt0 apply presburger
+             apply (intro alpha_gt0)
+              apply (auto simp: )
+          using alpha_gt0 hgt_gt0 apply presburger
+          using Suc_le_lessD alpha_gt0 apply blast
+          by (simp add: \<Delta>\<Delta>_ge0 \<open>i \<in> \<S>\<close>)
+      qed (auto simp: \<Delta>\<Delta>_eq_0)
+    qed
     finally show ?thesis .
   qed
   \<comment> \<open>now we are able to prove claim 8.2\<close>
