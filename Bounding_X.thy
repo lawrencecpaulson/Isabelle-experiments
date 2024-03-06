@@ -460,7 +460,6 @@ lemma X_26_and_28:
   obtains "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
           "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
 proof -
-  define \<R> where "\<R> \<equiv> Step_class \<mu> l k {red_step}"
   define \<S> where "\<S> \<equiv> Step_class \<mu> l k {dboost_step}" 
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)

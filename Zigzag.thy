@@ -16,13 +16,13 @@ begin
 definition "ok_fun_ZZ_8_1 \<equiv> \<lambda>k. 0" 
 
 definition "Big_ZZ_8_1 \<equiv>
-   \<lambda>\<mu> l. (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k)"
+   \<lambda>\<mu> l. Lemma_Red_5_3 \<mu> l \<and> Big_finite_components \<mu> l \<and> (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k)"
 
 lemma Big_ZZ_8_1:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_1 \<mu> l"
   unfolding Big_ZZ_8_1_def eventually_conj_iff all_imp_conj_distrib  eps_def
-  apply (simp add: height_upper_bound eventually_all_ge_at_top assms)
+  apply (simp add: Red_5_3 Big_finite_components height_upper_bound eventually_all_ge_at_top assms)
   done
 
 lemma ZZ_8_1:
@@ -134,10 +134,40 @@ proof -
     using \<open>maxh > 1\<close> by (simp add: maxh_def)
   finally have 34: "(\<Sum>h=Suc 0..maxh. \<Sum>i<m. \<Delta>\<Delta> i h / alpha k h) \<le> 1 + 2 * ln k / eps k" .
 
+  define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}" 
+  define \<S> where "\<S> \<equiv> Step_class \<mu> l k {dboost_step}" 
+  define \<S>\<S> where "\<S>\<S> \<equiv> dboost_star \<mu> l k"
+  have "\<S>\<S> \<subseteq> \<S>"
+    unfolding \<S>\<S>_def \<S>_def dboost_star_def by auto
+  have "finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step})"
+    using big \<mu> \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_1_def finite_components) 
+  then have "finite \<B>" "finite \<R>" "finite \<S>"
+    by (auto simp add: \<B>_def \<R>_def \<S>_def Step_class_insert_NO_MATCH)
+
+  have R53: "\<And>i. i \<in> \<S> \<Longrightarrow> p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
+    using big \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_1_def Lemma_Red_5_3_def p_def \<S>_def)
+  have \<Delta>\<Delta>_ge0: "\<Delta>\<Delta> i h \<ge> 0" if "i \<in> \<S>" "h \<ge> 1" for i h
+    using that R53 [OF \<open>i \<in> \<S>\<close>] by (fastforce simp add: \<Delta>\<Delta>_def pp_eq)
+
+  have 35: "(1 - eps k powr (1/2)) * (1 - beta \<mu> l k i / beta \<mu> l k i)
+      \<le> (\<Sum>h=Suc 0..maxh. \<Delta>\<Delta> i h / alpha k h)" if "i\<in>\<S>\<S>" for i
+    sorry
+  \<comment> \<open>now we are able to prove claim 8.2\<close>
+  have "(1 - eps k powr (1/2)) * (\<Sum>i\<in>\<S>\<S>. (1 - beta \<mu> l k i / beta \<mu> l k i))
+     = (\<Sum>i\<in>\<S>\<S>. (1 - eps k powr (1/2)) * (1 - beta \<mu> l k i / beta \<mu> l k i))"
+    using sum_distrib_left by blast
+  also have "... \<le> (\<Sum>i\<in>\<S>\<S>. \<Sum>h=Suc 0..maxh. \<Delta>\<Delta> i h / alpha k h)"
+    by (intro sum_mono 35)
+  also have "... = (\<Sum>h=Suc 0..maxh. \<Sum>i\<in>\<S>\<S>. \<Delta>\<Delta> i h / alpha k h)"
+    using sum.swap by fastforce
+  also have "... \<le> (\<Sum>h=Suc 0..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)"
+    by (intro sum_mono sum_mono2) (auto simp: \<open>finite \<S>\<close> \<open>\<S>\<S> \<subseteq> \<S>\<close> \<Delta>\<Delta>_ge0 alpha_ge0)
+  finally have 82: "(1 - eps k powr (1/2)) * (\<Sum>i\<in>\<S>\<S>. (1 - beta \<mu> l k i / beta \<mu> l k i))
+      \<le> (\<Sum>h=Suc 0..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)" .
+
   have "(\<lambda>k. 1 + 2 * ln k / eps k) \<in> o(real)"  (*? ?*)
     unfolding eps_def by real_asymp
 
-    sorry
   show ?thesis
     sorry
 qed
