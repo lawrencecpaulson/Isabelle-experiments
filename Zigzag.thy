@@ -141,20 +141,16 @@ proof -
     using big \<mu> \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_1_def finite_components) 
   then have "finite \<B>" "finite \<R>" "finite \<S>"
     by (auto simp add: \<B>_def \<R>_def \<S>_def Step_class_insert_NO_MATCH)
-
   have R52: "p (Suc i) - p i \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (p i))"
     and beta_gt0: "beta \<mu> l k i > 0"
     and R53: "p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
     if "i \<in> \<S>" for i
     using big \<open>Colours l k\<close> that
     by (auto simp: Big_ZZ_8_1_def Lemma_Red_5_2_def Lemma_Red_5_3_def p_def \<S>_def)
-
   have \<Delta>\<Delta>_ge0: "\<Delta>\<Delta> i h \<ge> 0" if "i \<in> \<S>" "h \<ge> 1" for i h
     using that R53 [OF \<open>i \<in> \<S>\<close>] by (fastforce simp add: \<Delta>\<Delta>_def pp_eq)
-
   have \<Delta>\<Delta>_eq_0: "\<Delta>\<Delta> i h = 0" if "hgt k (p i) \<le> hgt k (p (Suc i))" "hgt k (p (Suc i)) < h" for h i
     using \<Delta>\<Delta>_def that by fastforce
-
   have 35: "(1 - eps k powr (1/2)) * ((1 - beta \<mu> l k i) / beta \<mu> l k i)
           \<le> (\<Sum>h=1..maxh. \<Delta>\<Delta> i h / alpha k h)"   (is "?L \<le> ?R")
     if "i \<in> \<S>\<S>" for i
@@ -163,10 +159,8 @@ proof -
       using \<open>\<S>\<S> \<subseteq> \<S>\<close> that by blast
     have [simp]: "real (hgt k x - Suc 0) = real (hgt k x) - 1" for x
       using hgt_gt0 [of k x] by linarith
-
     have 36: "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) \<le> \<Delta> i / alpha k (hgt k (p i))"
       using R52 alpha_gt0 [OF \<open>k>0\<close> hgt_gt0] beta_gt0 that \<open>\<S>\<S> \<subseteq> \<S>\<close> by (force simp add: \<Delta>_def divide_simps)
-
     have k_big: "(1 + eps k powr (1/2)) \<ge> (1 + eps k) powr (eps k powr (-1/4))"
       using big \<open>k\<ge>l\<close> by (auto simp: Big_ZZ_8_1_def Big_ZZ_8_2_def)
     have *: "\<And>x::real. x > 0 \<Longrightarrow> (1 - x powr (1 / 2)) * (1 + x powr (1 / 2)) = 1 - x"
@@ -206,22 +200,24 @@ proof -
       show "\<Delta>\<Delta> i h / alpha k (hgt k (p (Suc i))) \<le> \<Delta>\<Delta> i h / alpha k h"
       proof (cases  "hgt k (p i) \<le> hgt k (p (Suc i)) \<and> hgt k (p (Suc i)) < h")
         case False
+        then consider "hgt k (p i) > hgt k (p (Suc i))" | "hgt k (p (Suc i)) \<ge> h"
+          by linarith
         then show ?thesis
-          using \<open>k>0\<close> h
-          apply (auto simp: )
-          using R53 \<open>i \<in> \<S>\<close> hgt_mono \<open>k>0\<close> apply blast
-          apply (simp add: not_less)
-          apply (intro divide_left_mono)
-          apply (metis alpha_0' alpha_ge0 alpha_mono gr0I)
-           defer
-           apply (simp add: zero_less_mult_iff)
-           apply (auto simp: )
-          using alpha_gt0 hgt_gt0 apply presburger
-             apply (intro alpha_gt0)
-              apply (auto simp: )
-          using alpha_gt0 hgt_gt0 apply presburger
-          using Suc_le_lessD alpha_gt0 apply blast
-          by (simp add: \<Delta>\<Delta>_ge0 \<open>i \<in> \<S>\<close>)
+        proof cases
+          case 1
+          then show ?thesis
+            using R53 \<open>i \<in> \<S>\<close> hgt_mono' by fastforce
+        next
+          case 2
+          have "alpha k h \<le> alpha k (hgt k (p (Suc i)))"
+            using "2" alpha_mono h by auto
+          moreover have "0 \<le> \<Delta>\<Delta> i h"
+            using \<Delta>\<Delta>_ge0 \<open>i \<in> \<S>\<close> h by presburger
+          moreover have "0 < alpha k (hgt k (p (Suc i))) * alpha k h"
+            using h \<open>k>0\<close> by (simp add: zero_less_mult_iff alpha_gt0 hgt_gt0)
+          ultimately show ?thesis
+            by (meson divide_left_mono)
+        qed
       qed (auto simp: \<Delta>\<Delta>_eq_0)
     qed
     finally show ?thesis .
@@ -238,6 +234,7 @@ proof -
     by (intro sum_mono sum_mono2) (auto simp: \<open>finite \<S>\<close> \<open>\<S>\<S> \<subseteq> \<S>\<close> \<Delta>\<Delta>_ge0 alpha_ge0)
   finally have 82: "(1 - eps k powr (1/2)) * (\<Sum>i\<in>\<S>\<S>. ((1 - beta \<mu> l k i) / beta \<mu> l k i))
       \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)" .
+
 
   have "(\<lambda>k. 1 + 2 * ln k / eps k) \<in> o(real)"  (*? ?*)
     unfolding eps_def by real_asymp
