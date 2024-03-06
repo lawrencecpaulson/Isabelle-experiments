@@ -128,7 +128,7 @@ proof -
     then show "(\<Sum>i<m. \<Delta>\<Delta> i h / alpha k h) \<le> 1"
       using alpha_ge0 [of k h] by (simp add: divide_simps flip: sum_divide_distrib) 
   qed
-  also have "... \<le> 1 + 2 * ln k / eps k"
+  also have "\<dots> \<le> 1 + 2 * ln k / eps k"
     using \<open>maxh > 1\<close> by (simp add: maxh_def)
   finally have 34: "(\<Sum>h=Suc 0..maxh. \<Sum>i<m. \<Delta>\<Delta> i h / alpha k h) \<le> 1 + 2 * ln k / eps k" .
 
@@ -156,7 +156,7 @@ proof -
     using \<Delta>\<Delta>_def that by fastforce
 
   have 35: "(1 - eps k powr (1/2)) * ((1 - beta \<mu> l k i) / beta \<mu> l k i)
-          \<le> (\<Sum>h=Suc 0..maxh. \<Delta>\<Delta> i h / alpha k h)"   (is "?L \<le> ?R")
+          \<le> (\<Sum>h=1..maxh. \<Delta>\<Delta> i h / alpha k h)"   (is "?L \<le> ?R")
     if "i \<in> \<S>\<S>" for i
   proof -
     have "i \<in> \<S>"
@@ -173,9 +173,9 @@ proof -
       by (simp add: algebra_simps flip: powr_add)
     have "?L = (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) / (1 + eps k powr (1/2))"
       using beta_gt0 [OF \<open>i \<in> \<S>\<close>] eps_gt0 [OF \<open>k>0\<close>] k_big by (force simp add: divide_simps *)
-    also have "... \<le> \<Delta> i / alpha k (hgt k (p i)) / (1 + eps k powr (1/2))"
+    also have "\<dots> \<le> \<Delta> i / alpha k (hgt k (p i)) / (1 + eps k powr (1/2))"
       by (intro 36 divide_right_mono) auto
-    also have "... \<le> \<Delta> i / alpha k (hgt k (p i)) / (1 + eps k) powr (real (hgt k (p (Suc i))) - hgt k (p i))"
+    also have "\<dots> \<le> \<Delta> i / alpha k (hgt k (p i)) / (1 + eps k) powr (real (hgt k (p (Suc i))) - hgt k (p i))"
     proof (intro divide_left_mono)
       have "real (hgt k (p (Suc i))) - hgt k (p i) \<le> eps k powr (-1/4)"
         using that by (simp add: \<S>\<S>_def dboost_star_def p_def)
@@ -186,27 +186,23 @@ proof -
       show "0 < (1 + eps k powr (1 / 2)) * (1 + eps k) powr (real (hgt k (p (Suc i))) - real (hgt k (p i)))"
         using eps_gt0 [OF \<open>k>0\<close>] by (smt (verit) powr_gt_zero zero_less_mult_iff)
     qed
-    also have "... \<le> \<Delta> i / alpha k (hgt k (p (Suc i)))"
-    proof (simp add: field_simps , intro divide_left_mono)
-      show "alpha k (hgt k (p (Suc i))) \<le> alpha k (hgt k (p i)) * (1 + eps k) powr (real (hgt k (p (Suc i))) - real (hgt k (p i)))"
+    also have "\<dots> \<le> \<Delta> i / alpha k (hgt k (p (Suc i)))"
+    proof -
+      have "alpha k (hgt k (p (Suc i))) \<le> alpha k (hgt k (p i)) * (1 + eps k) powr (real (hgt k (p (Suc i))) - real (hgt k (p i)))"
         using eps_gt0[OF \<open>k>0\<close>] hgt_gt0[of k]
-        apply (simp add: alpha_eq hgt_gt0)
-        apply (intro divide_right_mono)
-         apply (simp add: hgt_gt0 of_nat_diff flip: powr_realpow powr_add)
-        by simp
-      show "0 \<le> \<Delta> i"
+        by (simp add: alpha_eq divide_right_mono flip: powr_realpow powr_add)
+      moreover have "0 \<le> \<Delta> i"
         by (simp add: \<Delta>0 \<Delta>\<Delta>_ge0 \<open>i \<in> \<S>\<close>)
-      show "0 < alpha k (hgt k (p i)) * (1 + eps k) powr (real (hgt k (p (Suc i))) - real (hgt k (p i))) * alpha k (hgt k (p (Suc i)))"
-        by (smt (verit) alpha_gt0 eps_gt0 hgt_gt0 lk(3) mult_sign_intros(5) powr_gt_zero)
+      moreover have "0 < alpha k (hgt k (p i)) * (1 + eps k) powr (real (hgt k (p (Suc i))) - hgt k (p i)) * alpha k (hgt k (p (Suc i)))"
+        by (smt (verit) alpha_gt0 eps_gt0 hgt_gt0 \<open>k>0\<close> mult_pos_pos powr_gt_zero)
+      ultimately show ?thesis
+        by (simp add: divide_left_mono)
     qed
-    also have "... \<le> ?R"
-      unfolding 33
-      using   \<Delta>\<Delta>_eq_0
-
-      apply (simp add: sum_divide_distrib)
+    also have "\<dots> \<le> ?R"
+      unfolding 33 sum_divide_distrib
     proof (intro sum_mono)
       fix h
-      assume h: "h \<in> {Suc 0..maxh}"
+      assume h: "h \<in> {1..maxh}"
       show "\<Delta>\<Delta> i h / alpha k (hgt k (p (Suc i))) \<le> \<Delta>\<Delta> i h / alpha k h"
       proof (cases  "hgt k (p i) \<le> hgt k (p (Suc i)) \<and> hgt k (p (Suc i)) < h")
         case False
@@ -234,14 +230,14 @@ proof -
   have "(1 - eps k powr (1/2)) * (\<Sum>i\<in>\<S>\<S>. ((1 - beta \<mu> l k i) / beta \<mu> l k i))
      = (\<Sum>i\<in>\<S>\<S>. (1 - eps k powr (1/2)) * ((1 - beta \<mu> l k i) / beta \<mu> l k i))"
     using sum_distrib_left by blast
-  also have "... \<le> (\<Sum>i\<in>\<S>\<S>. \<Sum>h=Suc 0..maxh. \<Delta>\<Delta> i h / alpha k h)"
+  also have "\<dots> \<le> (\<Sum>i\<in>\<S>\<S>. \<Sum>h=1..maxh. \<Delta>\<Delta> i h / alpha k h)"
     by (intro sum_mono 35)
-  also have "... = (\<Sum>h=Suc 0..maxh. \<Sum>i\<in>\<S>\<S>. \<Delta>\<Delta> i h / alpha k h)"
+  also have "\<dots> = (\<Sum>h=1..maxh. \<Sum>i\<in>\<S>\<S>. \<Delta>\<Delta> i h / alpha k h)"
     using sum.swap by fastforce
-  also have "... \<le> (\<Sum>h=Suc 0..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)"
+  also have "\<dots> \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)"
     by (intro sum_mono sum_mono2) (auto simp: \<open>finite \<S>\<close> \<open>\<S>\<S> \<subseteq> \<S>\<close> \<Delta>\<Delta>_ge0 alpha_ge0)
   finally have 82: "(1 - eps k powr (1/2)) * (\<Sum>i\<in>\<S>\<S>. ((1 - beta \<mu> l k i) / beta \<mu> l k i))
-      \<le> (\<Sum>h=Suc 0..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)" .
+      \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)" .
 
   have "(\<lambda>k. 1 + 2 * ln k / eps k) \<in> o(real)"  (*? ?*)
     unfolding eps_def by real_asymp
