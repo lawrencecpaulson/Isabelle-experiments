@@ -44,7 +44,7 @@ proof -
                           else max (qfun k (h-1)) (min (p i) (qfun k h)))" for i h
     using qfun_mono [OF \<open>k>0\<close>, of "h-1" h] by (auto simp: pp_def max_def)
 
-  define maxh where "maxh \<equiv> nat\<lceil>2 * ln k / eps k\<rceil> + 1"  
+  define maxh where "maxh \<equiv> nat\<lfloor>2 * ln k / eps k\<rfloor> + 1"  
   have maxh: "\<And>p. p\<le>1 \<Longrightarrow> hgt k p \<le> 2 * ln k / eps k" 
     using big \<open>k\<ge>l\<close> by (auto simp: Big_ZZ_8_1_def Lemma_height_upper_bound_def)
   then have "1 \<le> 2 * ln k / eps k"
@@ -115,24 +115,29 @@ proof -
   have 33: "\<Delta> i = (\<Sum>h=1..maxh. \<Delta>\<Delta> i h)" for i
     by (simp add: \<Delta>\<Delta>_def \<Delta>_def sum_subtractf sum_pp)
 
-  have A: "(\<Sum>i<m. \<Delta>\<Delta> i h) \<le> alpha k h" if "0<h" for h
-    using qfun_mono [of k "h-1" h] \<open>k>0\<close>
-    unfolding \<Delta>\<Delta>_def alpha_def sum_lessThan_telescope [where f = "\<lambda>i. pp i h"]
-    by (auto simp add: pp_def p_def pee_eq_p0)
-
   have "(\<Sum>i<m. \<Delta>\<Delta> i h) = 0" if "\<And>i. i\<le>m \<Longrightarrow> h > hgt k (p i)" for h
     using that by (simp add: sum.neutral \<Delta>\<Delta>_def)
   then have B: "(\<Sum>i<m. \<Delta>\<Delta> i h) = 0" if "h \<ge> maxh" for h
     by (meson hgt_le_maxh le_simps le_trans not_less_eq that)
   have "(\<Sum>h=Suc 0..maxh. \<Sum>i<m. \<Delta>\<Delta> i h / alpha k h) \<le> (\<Sum>h=Suc 0..maxh. 1)"
+  proof (intro sum_mono)
+    fix h
+    assume "h \<in> {Suc 0..maxh}"
+    have "(\<Sum>i<m. \<Delta>\<Delta> i h) \<le> alpha k h"
+      using qfun_mono [of k "h-1" h] \<open>k>0\<close>
+      unfolding \<Delta>\<Delta>_def alpha_def sum_lessThan_telescope [where f = "\<lambda>i. pp i h"]
+      by (auto simp add: pp_def p_def pee_eq_p0)
+    then show "(\<Sum>i<m. \<Delta>\<Delta> i h / alpha k h) \<le> 1"
+      using alpha_ge0 [of k h] by (simp add: divide_simps flip: sum_divide_distrib) 
+  qed
+  also have "... \<le> 1 + 2 * ln k / eps k"
+    using \<open>maxh > 1\<close> by (simp add: maxh_def)
+  finally have 34: "(\<Sum>h=Suc 0..maxh. \<Sum>i<m. \<Delta>\<Delta> i h / alpha k h) \<le> 1 + 2 * ln k / eps k" .
+
+  have "(\<lambda>k. 1 + 2 * ln k / eps k) \<in> o(real)"  (*? ?*)
+    unfolding eps_def by real_asymp
 
     sorry
-  also have "... \<le> 2 * ln k / eps k"
-apply (simp add: maxh_def)
-  have 34: "(\<Sum>h=Suc 0..maxh. \<Sum>i<m. \<Delta>\<Delta> i h / alpha k h) \<le> 2 * ln k / eps k"
-    using A B
-    sorry
-
   show ?thesis
     sorry
 qed
