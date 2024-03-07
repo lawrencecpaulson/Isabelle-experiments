@@ -12,8 +12,9 @@ definition "ok_fun_ZZ_8_1 \<equiv> \<lambda>k. 0"
 definition "Big_ZZ_8_2 \<equiv> \<lambda>k. (1 + eps k powr (1/2)) \<ge> (1 + eps k) powr (eps k powr (-1/4))"
 
 definition "Big_ZZ_8_1 \<equiv>
-   \<lambda>\<mu> l. Lemma_Red_5_2 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Big_finite_components \<mu> l \<and> 
-         (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k \<and> Big_ZZ_8_2 k \<and> k\<ge>16)"
+   \<lambda>\<mu> l. Lemma_Red_5_2 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Big_finite_components \<mu> l
+        \<and> Lemma_bblue_step_limit \<mu> l
+        \<and> (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k \<and> Big_ZZ_8_2 k \<and> k\<ge>16)"
 
 text \<open>@{term "k\<ge>16"} is for @{text Y_6_5_Red}\<close>
 
@@ -21,7 +22,8 @@ lemma Big_ZZ_8_1:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_1 \<mu> l"
   unfolding Big_ZZ_8_1_def Big_ZZ_8_2_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Red_5_2 Red_5_3 Big_finite_components height_upper_bound eventually_all_ge_at_top assms)
+  apply (simp add: Red_5_2 Red_5_3 Big_finite_components bblue_step_limit 
+       height_upper_bound eventually_all_ge_at_top assms)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
@@ -134,6 +136,7 @@ proof -
     using \<open>maxh > 1\<close> by (simp add: maxh_def)
   finally have 34: "(\<Sum>h=Suc 0..maxh. \<Sum>i<m. \<Delta>\<Delta> i h / alpha k h) \<le> 1 + 2 * ln k / eps k" .
 
+  define \<D> where "\<D> \<equiv> Step_class \<mu> l k {dreg_step}" 
   define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}" 
   define \<S> where "\<S> \<equiv> Step_class \<mu> l k {dboost_step}" 
   define \<S>\<S> where "\<S>\<S> \<equiv> dboost_star \<mu> l k"
@@ -146,9 +149,11 @@ proof -
   have R52: "p (Suc i) - p i \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (p i))"
     and beta_gt0: "beta \<mu> l k i > 0"
     and R53: "p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
+    and card\<B>: "card \<B> \<le> l powr (3/4)"
     if "i \<in> \<S>" for i
     using big \<open>Colours l k\<close> that
-    by (auto simp: Big_ZZ_8_1_def Lemma_Red_5_2_def Lemma_Red_5_3_def p_def \<S>_def)
+    by (auto simp: Big_ZZ_8_1_def Lemma_Red_5_2_def Lemma_Red_5_3_def Lemma_bblue_step_limit_def
+         p_def \<B>_def \<S>_def)
   have \<Delta>\<Delta>_ge0: "\<Delta>\<Delta> i h \<ge> 0" if "i \<in> \<S>" "h \<ge> 1" for i h
     using that R53 [OF \<open>i \<in> \<S>\<close>] by (fastforce simp add: \<Delta>\<Delta>_def pp_eq)
   have \<Delta>\<Delta>_eq_0: "\<Delta>\<Delta> i h = 0" if "hgt k (p i) \<le> hgt k (p (Suc i))" "hgt k (p (Suc i)) < h" for h i
@@ -236,7 +241,7 @@ proof -
     by (intro sum_mono sum_mono2) (auto simp: \<open>finite \<S>\<close> \<open>\<S>\<S> \<subseteq> \<S>\<close> \<Delta>\<Delta>_ge0 alpha_ge0)
   finally have 82: "(1 - eps k powr (1/2)) * (\<Sum>i\<in>\<S>\<S>. ((1 - beta \<mu> l k i) / beta \<mu> l k i))
       \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)" .
-
+  \<comment> \<open>leading onto claim 8.3\<close>
   have \<Delta>alpha: "- 1 \<le> \<Delta> i / alpha k (hgt k (p i))" if "i \<in> \<R>" for i
     using Y_6_4_Red [of i] \<open>i \<in> \<R>\<close> alpha_ge0 \<open>k>0\<close>
     unfolding \<Delta>_def \<R>_def p_def
@@ -307,6 +312,16 @@ proof -
   qed
   then have 83: "- (1 + eps k)\<^sup>2 * card \<R> \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<R>. \<Delta>\<Delta> i h / alpha k h)" 
     by (simp add: mult.commute sum.swap [of _ \<R>])
+  \<comment> \<open>now to tackle claim 8.4\<close>
+
+  have \<Delta>0: "\<Delta> i \<ge> 0" if "i \<in> \<D>" for i
+    using Y_6_4_DegreeReg that unfolding \<D>_def \<Delta>_def p_def by auto
+
+  have 38: "-2 * eps k powr(-1/2) \<le> (\<Sum>h = 1..maxh. (\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h) / alpha k h)" if "i \<in> \<B>" for i
+    sorry
+
+  have 84: "-2 * k powr (7/8) \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<B>\<union>\<D>. \<Delta>\<Delta> i h / alpha k h)"
+    sorry
 
   have "(\<lambda>k. 1 + 2 * ln k / eps k) \<in> o(real)"  (*? ?*)
     unfolding eps_def by real_asymp
