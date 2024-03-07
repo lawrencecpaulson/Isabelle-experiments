@@ -237,60 +237,76 @@ proof -
   finally have 82: "(1 - eps k powr (1/2)) * (\<Sum>i\<in>\<S>\<S>. ((1 - beta \<mu> l k i) / beta \<mu> l k i))
       \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)" .
 
-  { fix i 
-    assume "i \<in> \<R>" "\<Delta> i < 0"
-    then have le0: "\<Delta>\<Delta> i h \<le> 0" for h 
-      by (auto simp: \<Delta>\<Delta>_def \<Delta>_def pp_eq)
-    have eq0: "\<Delta>\<Delta> i h = 0" if "1 \<le> h" "h < hgt k (p i) - 2" for h 
-    proof -
-      have "hgt k (p i) - 2 \<le> hgt k (p (Suc i))"
-        using Y_6_5_Red \<open>16 \<le> k\<close> \<open>i \<in> \<R>\<close> p_def unfolding \<R>_def by blast
-      then show ?thesis
-        using that pp_less_hgt[of h] by (auto simp: \<Delta>\<Delta>_def pp_def)
-    qed
+  have \<Delta>alpha: "- 1 \<le> \<Delta> i / alpha k (hgt k (p i))" if "i \<in> \<R>" for i
+    using Y_6_4_Red [of i] \<open>i \<in> \<R>\<close> alpha_ge0 \<open>k>0\<close>
+    unfolding \<Delta>_def \<R>_def p_def
+    by (smt (verit, best) hgt_gt0 alpha_gt0 divide_minus_left less_divide_eq_1_pos)
 
-    have "(1 + eps k)\<^sup>2 * -1 \<le> (1 + eps k)\<^sup>2 * (\<Delta> i / alpha k (hgt k (p i)))"
-    proof (intro mult_left_mono)
-      show "- 1 \<le> \<Delta> i / alpha k (hgt k (p i))"
-        using Y_6_4_Red [of i] \<open>i \<in> \<R>\<close> alpha_ge0
-        apply (simp add: \<Delta>_def p_def \<R>_def divide_simps)
-        by (smt (verit, best))
-    qed auto
-    also have "... \<le> (\<Sum>h=1..maxh. \<Delta>\<Delta> i h / alpha k h)"
-      unfolding 33 sum_distrib_left sum_divide_distrib
-    proof (intro sum_mono)
-      fix h :: nat
-      assume "h \<in> {1..maxh}"
-      then have "1 \<le> h" "h \<le> maxh" by auto
-      show "(1 + eps k)\<^sup>2 * (\<Delta>\<Delta> i h / alpha k (hgt k (p i))) \<le> \<Delta>\<Delta> i h / alpha k h"
-      proof (cases "h < hgt k (p i) - 2")
-        case True
-        then show ?thesis
-          using \<open>1 \<le> h\<close> eq0 by force
-      next
-        case False
-        have *: "(1 + eps k) ^ (hgt k (p i) - Suc 0) \<le> (1 + eps k)\<^sup>2 * (1 + eps k) ^ (h - Suc 0)"
-          using False eps_ge0 unfolding power_add [symmetric] 
-          by (intro power_increasing) auto
-        have **: "(1 + eps k)\<^sup>2 * alpha k h \<ge> alpha k (hgt k (p i))"
-          using \<open>1 \<le> h\<close>
-          using mult_left_mono [OF *, of "eps k"] eps_ge0
-          apply (simp add: alpha_eq hgt_gt0 mult_ac)
-          apply (intro divide_right_mono)
-           apply (auto simp add: )
-          done
+  have "(\<Sum>i\<in>\<R>. - (1 + eps k)\<^sup>2) \<le> (\<Sum>i\<in>\<R>. \<Sum>h=1..maxh. \<Delta>\<Delta> i h / alpha k h)"
+  proof (intro sum_mono)
+    fix i :: nat
+    assume "i \<in> \<R>"
+    show "- (1 + eps k)\<^sup>2 \<le> (\<Sum>h = 1..maxh. \<Delta>\<Delta> i h / alpha k h)"
+    proof (cases "\<Delta> i < 0")
+      case True
+      have "(1 + eps k)\<^sup>2 * -1 \<le> (1 + eps k)\<^sup>2 * (\<Delta> i / alpha k (hgt k (p i)))"
+        using \<Delta>alpha \<open>k>0\<close>
+        by (metis \<open>i \<in> \<R>\<close> less_eq_real_def mult_le_cancel_left_pos mult_zero_left not_less_iff_gr_or_eq power2_less_0)
+      also have "... \<le> (\<Sum>h = 1..maxh. \<Delta>\<Delta> i h / alpha k h)"
+      proof -
+        have le0: "\<Delta>\<Delta> i h \<le> 0" for h 
+          using True by (auto simp: \<Delta>\<Delta>_def \<Delta>_def pp_eq)
+        have eq0: "\<Delta>\<Delta> i h = 0" if "1 \<le> h" "h < hgt k (p i) - 2" for h 
+        proof -
+          have "hgt k (p i) - 2 \<le> hgt k (p (Suc i))"
+            using Y_6_5_Red \<open>16 \<le> k\<close> \<open>i \<in> \<R>\<close> p_def unfolding \<R>_def by blast
+          then show ?thesis
+            using that pp_less_hgt[of h] by (auto simp: \<Delta>\<Delta>_def pp_def)
+        qed
         show ?thesis
-          using alpha_ge0[of k h] le0 [of h] alpha_gt0 [OF \<open>k>0\<close>] \<open>h\<ge>1\<close> hgt_gt0 [of k "p i"]
-          using mult_left_mono_neg [OF **, of "\<Delta>\<Delta> i h"]
-          by (simp add: divide_simps mult_ac)
+          unfolding 33 sum_distrib_left sum_divide_distrib
+        proof (intro sum_mono)
+          fix h :: nat
+          assume "h \<in> {1..maxh}"
+          then have "1 \<le> h" "h \<le> maxh" by auto
+          show "(1 + eps k)\<^sup>2 * (\<Delta>\<Delta> i h / alpha k (hgt k (p i))) \<le> \<Delta>\<Delta> i h / alpha k h"
+          proof (cases "h < hgt k (p i) - 2")
+            case True
+            then show ?thesis
+              using \<open>1 \<le> h\<close> eq0 by force
+          next
+            case False
+            have *: "(1 + eps k) ^ (hgt k (p i) - Suc 0) \<le> (1 + eps k)\<^sup>2 * (1 + eps k) ^ (h - Suc 0)"
+              using False eps_ge0 unfolding power_add [symmetric] 
+              by (intro power_increasing) auto
+            have **: "(1 + eps k)\<^sup>2 * alpha k h \<ge> alpha k (hgt k (p i))"
+              using \<open>1 \<le> h\<close>
+              using mult_left_mono [OF *, of "eps k"] eps_ge0
+              apply (simp add: alpha_eq hgt_gt0 mult_ac)
+              apply (intro divide_right_mono)
+               apply (auto simp add: )
+              done
+            show ?thesis
+              using alpha_ge0[of k h] le0 [of h] alpha_gt0 [OF \<open>k>0\<close>] \<open>h\<ge>1\<close> hgt_gt0 [of k "p i"]
+              using mult_left_mono_neg [OF **, of "\<Delta>\<Delta> i h"]
+              by (simp add: divide_simps mult_ac)
+          qed
+        qed
       qed
+      finally show ?thesis
+        by linarith 
+    next
+      case False
+      then have "\<Delta>\<Delta> i h \<ge> 0" for h
+        using \<Delta>\<Delta>_def \<Delta>_def pp_eq by auto
+      then have "(\<Sum>h = 1..maxh. \<Delta>\<Delta> i h / alpha k h) \<ge> 0"
+        by (simp add: alpha_ge0 sum_nonneg)
+      then show ?thesis
+        by (smt (verit, ccfv_SIG) sum_power2_ge_zero)
     qed
-  }
-
-
-  have 83: "- (1 + eps k)\<^sup>2 * card \<R> \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<R>. \<Delta>\<Delta> i h / alpha k h)" 
-    using 33 alpha_eq
-    sorry
+  qed
+  then have 83: "- (1 + eps k)\<^sup>2 * card \<R> \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<R>. \<Delta>\<Delta> i h / alpha k h)" 
+    by (simp add: mult.commute sum.swap [of _ \<R>])
 
   have "(\<lambda>k. 1 + 2 * ln k / eps k) \<in> o(real)"  (*? ?*)
     unfolding eps_def by real_asymp
