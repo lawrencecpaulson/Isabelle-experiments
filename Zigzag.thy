@@ -13,7 +13,9 @@ definition "Big_ZZ_8_2 \<equiv> \<lambda>k. (1 + eps k powr (1/2)) \<ge> (1 + ep
 
 definition "Big_ZZ_8_1 \<equiv>
    \<lambda>\<mu> l. Lemma_Red_5_2 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Big_finite_components \<mu> l \<and> 
-         (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k \<and> Big_ZZ_8_2 k)"
+         (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k \<and> Big_ZZ_8_2 k \<and> k\<ge>16)"
+
+text \<open>@{term "k\<ge>16"} is for @{text Y_6_5_Red}\<close>
 
 lemma Big_ZZ_8_1:
   assumes "0<\<mu>" "\<mu><1"
@@ -43,7 +45,7 @@ proof -
     using qfun_mono [OF \<open>k>0\<close>, of "h-1" h] by (auto simp: pp_def max_def)
 
   define maxh where "maxh \<equiv> nat\<lfloor>2 * ln k / eps k\<rfloor> + 1"  
-  have maxh: "\<And>p. p\<le>1 \<Longrightarrow> hgt k p \<le> 2 * ln k / eps k" 
+  have maxh: "\<And>p. p\<le>1 \<Longrightarrow> hgt k p \<le> 2 * ln k / eps k" and "k\<ge>16"
     using big \<open>k\<ge>l\<close> by (auto simp: Big_ZZ_8_1_def Lemma_height_upper_bound_def)
   then have "1 \<le> 2 * ln k / eps k"
     using hgt_gt0 [of k 1] by force
@@ -235,6 +237,19 @@ proof -
   finally have 82: "(1 - eps k powr (1/2)) * (\<Sum>i\<in>\<S>\<S>. ((1 - beta \<mu> l k i) / beta \<mu> l k i))
       \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)" .
 
+
+  { fix i
+    assume "i \<in> \<R>"
+    then have "\<Delta>\<Delta> i h \<le> 0" if "\<Delta> i < 0" for h i
+      using \<Delta>\<Delta>_def \<Delta>_def pp_eq that by auto
+    have "hgt k (p i) - 2 \<le> hgt k (p (Suc i))"
+    using Y_6_5_Red
+    using \<R>_def \<open>16 \<le> k\<close> \<open>i \<in> \<R>\<close> p_def by blast
+
+                                       
+    sorry
+  have 83: "- (1 + eps k)\<^sup>2 * card \<R> \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<R>. \<Delta>\<Delta> i h / alpha k h)" 
+    sorry
 
   have "(\<lambda>k. 1 + 2 * ln k / eps k) \<in> o(real)"  (*? ?*)
     unfolding eps_def by real_asymp

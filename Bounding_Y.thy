@@ -287,12 +287,12 @@ subsection \<open>Lemma 6.5\<close>
 lemma Y_6_5_Red:
   assumes i: "i \<in> Step_class \<mu> l k {red_step}" and "k\<ge>16"
   defines "p \<equiv> pee \<mu> l k"
-  defines "h \<equiv> hgt k (p i)"
-  shows "hgt k (p (Suc i)) \<ge> h - 2"
-proof (cases "h \<le> 3")
+  defines "h \<equiv> \<lambda>i. hgt k (p i)"
+  shows "h (Suc i) \<ge> h i - 2"
+proof (cases "h i \<le> 3")
   case True
-  have "hgt k (p (Suc i)) \<ge> 1"
-    by (simp add: Suc_leI hgt_gt0)
+  have "h (Suc i) \<ge> 1"
+    by (simp add: h_def Suc_leI hgt_gt0)
   with True show ?thesis
     by linarith
 next
@@ -307,26 +307,26 @@ next
   have le1: "eps k + 1 / (1 + eps k)\<^sup>2 \<le> 1"
     using mult_left_mono [OF C, of "inverse ((1 + eps k)\<^sup>2)"]
     by (simp add: ring_distribs inverse_eq_divide) (smt (verit))
-  have 0: "0 \<le> (1 + eps k) ^ (h - Suc 0)"
+  have 0: "0 \<le> (1 + eps k) ^ (h i - Suc 0)"
     using eps_ge0 by auto
-  have lesspi: "qfun k (h-1) < p i"
-    using False hgt_Least [of "h-1" "p i" k] unfolding h_def by linarith
-  have A: "(1 + eps k) ^ h = (1 + eps k) * (1 + eps k) ^ (h - Suc 0)"
+  have lesspi: "qfun k (h i - 1) < p i"
+    using False hgt_Least [of "h i - 1" "p i" k] unfolding h_def by linarith
+  have A: "(1 + eps k) ^ h i = (1 + eps k) * (1 + eps k) ^ (h i - Suc 0)"
     using False power.simps by (metis h_def Suc_pred hgt_gt0)
-  have B: "(1 + eps k) ^ (h - 3) = 1 / (1 + eps k)^2 * (1 + eps k) ^ (h - Suc 0)"
+  have B: "(1 + eps k) ^ (h i - 3) = 1 / (1 + eps k)^2 * (1 + eps k) ^ (h i - Suc 0)"
     using eps_gt0 [OF \<open>k>0\<close>] False
     by (simp add: divide_simps Suc_diff_Suc numeral_3_eq_3 flip: power_add)
-  have "qfun k (h-3) \<le> qfun k (h-1) - (qfun k h - qfun k (h-1))"
+  have "qfun k (h i - 3) \<le> qfun k (h i - 1) - (qfun k (h i) - qfun k (h i - 1))"
     using \<open>k>0\<close> mult_left_mono [OF le1 0]
     apply (simp add: qfun_def field_simps A)
     by (simp add: B)
-  also have "\<dots> < p i - alpha k (h)"
+  also have "\<dots> < p i - alpha k (h i)"
     using lesspi by (simp add: alpha_def)
   also have "\<dots> \<le> p (Suc i)"
     using Y_6_4_Red i by (force simp: h_def p_def)
-  finally have "qfun k (h-3) < p (Suc i)" .
+  finally have "qfun k (h i - 3) < p (Suc i)" .
   with hgt_greater[OF\<open>k>0\<close>] show ?thesis
-    by force
+    unfolding h_def by force
 qed
 
 lemma Y_6_5_DegreeReg: 

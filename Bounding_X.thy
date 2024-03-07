@@ -1381,7 +1381,7 @@ definition "Big_X_7_12 \<equiv>
    \<lambda>\<mu> l. Lemma_X_7_11 \<mu> l \<and> Big_finite_components \<mu> l \<and> Big_X_7_10 \<mu> l
        \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_9 k)"
 
-text \<open>establishing the size requirements for 7.11\<close>
+text \<open>establishing the size requirements for 7.12\<close>
 lemma Big_X_7_12:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_12 \<mu> l"
