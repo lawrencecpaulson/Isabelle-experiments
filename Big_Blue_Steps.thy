@@ -721,7 +721,7 @@ proof -
   next
     case (Suc j)
     then have "j \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
-      using step_before_freg that by blast
+      using step_before_dreg that by blast
     with assms show ?thesis
       by (metis Max_ge Suc Suc_le_mono) 
   qed

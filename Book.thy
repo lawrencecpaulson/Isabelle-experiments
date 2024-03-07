@@ -1281,16 +1281,6 @@ lemma Yseq_gt_0:
 lemma dreg_step_0: "\<not> termination_condition l k X0 Y0 \<Longrightarrow> 0 \<in> Step_class \<mu> l k {dreg_step}"
   by (auto simp: Step_class_def stepper_kind_def)
 
-lemma step_before_freg:
-  assumes "Suc i \<in> Step_class \<mu> l k {dreg_step}"
-  shows "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
-  using assms by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
-
-lemma step_before_freg':
-  assumes "i \<in> Step_class \<mu> l k {dreg_step}" "i>0"
-  shows "i - Suc 0\<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
-  by (simp add: assms step_before_freg)
-
 lemma step_odd: "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step} \<Longrightarrow> odd i" 
   by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
 
@@ -1303,6 +1293,16 @@ lemma not_halted_odd_RBS: "\<lbrakk>i \<notin> Step_class \<mu> l k {halted}; od
 lemma not_halted_even_dreg: "\<lbrakk>i \<notin> Step_class \<mu> l k {halted}; even i\<rbrakk> \<Longrightarrow> i \<in> Step_class \<mu> l k {dreg_step}" 
   by (auto simp: Step_class_def stepper_kind_def next_state_kind_def split: prod.split_asm)
 
+lemma step_before_dreg:
+  assumes "Suc i \<in> Step_class \<mu> l k {dreg_step}"
+  shows "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
+  using assms by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
+
+lemma step_before_dreg':
+  assumes "i \<in> Step_class \<mu> l k {dreg_step}" "i>0"
+  shows "i - Suc 0 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
+  by (simp add: assms step_before_dreg)
+
 lemma dreg_before_step:
   assumes "Suc i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
   shows "i \<in> Step_class \<mu> l k {dreg_step}"
@@ -1310,8 +1310,13 @@ lemma dreg_before_step:
 
 lemma dreg_before_step':
   assumes "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
-  shows "i - Suc 0 \<in> Step_class \<mu> l k {dreg_step}" "i > 0"
-  using assms dreg_before_step step_odd by (auto simp: odd_pos)
+  shows "i - Suc 0 \<in> Step_class \<mu> l k {dreg_step}" and "i>0"
+proof -
+  show "i>0"
+    using assms step_odd by force
+  then show "i - Suc 0 \<in> Step_class \<mu> l k {dreg_step}"
+    using assms dreg_before_step Suc_pred by force
+qed
 
 lemma dreg_before_step1:
   assumes "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
@@ -1496,7 +1501,7 @@ next
   case (Suc i)
   then have nt: "\<not> termination_condition l k (Xseq \<mu> l k (Suc (2*i))) (Yseq \<mu> l k (Suc (2*i)))"  
     apply (intro step_non_terminating)
-    by (metis Step_class_insert Suc_1 Un_iff dreg_before_step mult_Suc_right plus_1_eq_Suc plus_nat.simps(2) step_before_freg)
+    by (metis Step_class_insert Suc_1 Un_iff dreg_before_step mult_Suc_right plus_1_eq_Suc plus_nat.simps(2) step_before_dreg)
   obtain A B A' B' where 2:
     "next_state \<mu> l k (Xseq \<mu> l k (Suc (2*i)), Yseq \<mu> l k (Suc (2*i)), A, B) = (Xseq \<mu> l k (Suc (Suc (2*i))), Yseq \<mu> l k (Suc (Suc (2*i))), A',B')"
     by (meson "nt" Suc_double_not_eq_double do_next_state evenE)
@@ -1507,7 +1512,7 @@ next
   then have "card (Xseq \<mu> l k (Suc (Suc (Suc (2*i))))) < card (Xseq \<mu> l k (Suc (2*i)))"
     by (smt (verit, best) Xseq_Suc_subset card_seteq order.trans finite_Xseq leD not_le)
   moreover have "card (Xseq \<mu> l k (Suc (2*i))) + i \<le> card X0"
-    using Suc dreg_before_step step_before_freg by force
+    using Suc dreg_before_step step_before_dreg by force
   ultimately show ?case by auto
 qed
 

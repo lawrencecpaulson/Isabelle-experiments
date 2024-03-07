@@ -154,6 +154,9 @@ proof -
     using big \<open>Colours l k\<close> that
     by (auto simp: Big_ZZ_8_1_def Lemma_Red_5_2_def Lemma_Red_5_3_def Lemma_bblue_step_limit_def
          p_def \<B>_def \<S>_def)
+  have card\<B>: "card \<B> \<le> l powr (3/4)"
+    using big \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_1_def Lemma_bblue_step_limit_def \<B>_def)
+
   have \<Delta>\<Delta>_ge0: "\<Delta>\<Delta> i h \<ge> 0" if "i \<in> \<S>" "h \<ge> 1" for i h
     using that R53 [OF \<open>i \<in> \<S>\<close>] by (fastforce simp add: \<Delta>\<Delta>_def pp_eq)
   have \<Delta>\<Delta>_eq_0: "\<Delta>\<Delta> i h = 0" if "hgt k (p i) \<le> hgt k (p (Suc i))" "hgt k (p (Suc i)) < h" for h i
@@ -256,8 +259,8 @@ proof -
       case True
       have "(1 + eps k)\<^sup>2 * -1 \<le> (1 + eps k)\<^sup>2 * (\<Delta> i / alpha k (hgt k (p i)))"
         using \<Delta>alpha \<open>k>0\<close>
-        by (metis \<open>i \<in> \<R>\<close> less_eq_real_def mult_le_cancel_left_pos mult_zero_left not_less_iff_gr_or_eq power2_less_0)
-      also have "... \<le> (\<Sum>h = 1..maxh. \<Delta>\<Delta> i h / alpha k h)"
+        by (smt (verit, best) power2_less_0 \<open>i \<in> \<R>\<close> mult_le_cancel_left2 mult_minus_right)
+      also have "\<dots> \<le> (\<Sum>h = 1..maxh. \<Delta>\<Delta> i h / alpha k h)"
       proof -
         have le0: "\<Delta>\<Delta> i h \<le> 0" for h 
           using True by (auto simp: \<Delta>\<Delta>_def \<Delta>_def pp_eq)
@@ -285,14 +288,10 @@ proof -
               using False eps_ge0 unfolding power_add [symmetric] 
               by (intro power_increasing) auto
             have **: "(1 + eps k)\<^sup>2 * alpha k h \<ge> alpha k (hgt k (p i))"
-              using \<open>1 \<le> h\<close>
-              using mult_left_mono [OF *, of "eps k"] eps_ge0
-              apply (simp add: alpha_eq hgt_gt0 mult_ac)
-              apply (intro divide_right_mono)
-               apply (auto simp add: )
-              done
+              using \<open>1 \<le> h\<close> mult_left_mono [OF *, of "eps k"] eps_ge0
+              by (simp add: alpha_eq hgt_gt0 mult_ac divide_right_mono)
             show ?thesis
-              using alpha_ge0[of k h] le0 [of h] alpha_gt0 [OF \<open>k>0\<close>] \<open>h\<ge>1\<close> hgt_gt0 [of k "p i"]
+              using le0 alpha_gt0 \<open>k>0\<close> \<open>h\<ge>1\<close> hgt_gt0
               using mult_left_mono_neg [OF **, of "\<Delta>\<Delta> i h"]
               by (simp add: divide_simps mult_ac)
           qed
@@ -317,8 +316,23 @@ proof -
   have \<Delta>0: "\<Delta> i \<ge> 0" if "i \<in> \<D>" for i
     using Y_6_4_DegreeReg that unfolding \<D>_def \<Delta>_def p_def by auto
 
-  have 38: "-2 * eps k powr(-1/2) \<le> (\<Sum>h = 1..maxh. (\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h) / alpha k h)" if "i \<in> \<B>" for i
+  have 39: "-2 * eps k powr(-1/2) \<le> (\<Sum>h = 1..maxh. (\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h) / alpha k h)" 
+      if "i \<in> \<B>" for i
     sorry
+
+  have BRS_D: "(\<lambda>i. i-1) ` (\<B> \<union> \<R> \<union> \<S>) \<subseteq> \<D>"
+    by (force simp add: \<D>_def \<B>_def \<R>_def \<S>_def Step_class_insert_NO_MATCH intro: dreg_before_step')
+
+  have B34: "card \<B> \<le> k powr (3/4)"
+    by (smt (verit) card\<B> \<open>l\<le>k\<close> of_nat_0_le_iff of_nat_mono powr_mono2 zero_le_divide_iff)
+  have "-2 * k powr (7/8) \<le> -2 * eps k powr(-1/2) * k powr (3/4)"
+    by (simp add: eps_def powr_powr flip: powr_add)
+  also have "\<dots> \<le> -2 * eps k powr(-1/2) * card \<B>"
+    using B34 by (intro mult_left_mono_neg powr_mono2) auto
+  also have "\<dots> = (\<Sum>i\<in>\<B>. -2 * eps k powr(-1/2))"
+    by simp
+  also have "\<dots> \<le> (\<Sum>i\<in>\<B>. \<Sum>h = 1..maxh. (\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h) / alpha k h)"
+    by (intro sum_mono 39)
 
   have 84: "-2 * k powr (7/8) \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<B>\<union>\<D>. \<Delta>\<Delta> i h / alpha k h)"
     sorry
