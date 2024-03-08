@@ -145,9 +145,12 @@ proof -
   define \<S>\<S> where "\<S>\<S> \<equiv> dboost_star \<mu> l k"
   have "\<S>\<S> \<subseteq> \<S>"
     unfolding \<S>\<S>_def \<S>_def dboost_star_def by auto
+  have [simp]: "\<B> \<inter> \<D> = {}"
+    by (auto simp: \<D>_def \<B>_def Step_class_def)
+
   have "finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step})"
     using big \<mu> \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_1_def finite_components) 
-  then have "finite \<D>" "finite \<B>" "finite \<R>" "finite \<S>"
+  then have [simp]: "finite \<D>" "finite \<B>" "finite \<R>" "finite \<S>"
     by (auto simp add: \<D>_def \<B>_def \<R>_def \<S>_def Step_class_insert_NO_MATCH)
   have R52: "p (Suc i) - p i \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (p i))"
     and beta_gt0: "beta \<mu> l k i > 0"
@@ -244,7 +247,7 @@ proof -
   also have "\<dots> = (\<Sum>h=1..maxh. \<Sum>i\<in>\<S>\<S>. \<Delta>\<Delta> i h / alpha k h)"
     using sum.swap by fastforce
   also have "\<dots> \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)"
-    by (intro sum_mono sum_mono2) (auto simp: \<open>finite \<S>\<close> \<open>\<S>\<S> \<subseteq> \<S>\<close> \<Delta>\<Delta>_ge0 alpha_ge0)
+    by (intro sum_mono sum_mono2) (auto simp: \<open>\<S>\<S> \<subseteq> \<S>\<close> \<Delta>\<Delta>_ge0 alpha_ge0)
   finally have 82: "(1 - eps k powr (1/2)) * (\<Sum>i\<in>\<S>\<S>. ((1 - beta \<mu> l k i) / beta \<mu> l k i))
       \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)" .
   \<comment> \<open>leading onto claim 8.3\<close>
@@ -388,8 +391,6 @@ proof -
     qed
   qed
 
-  have BRS_D: "(\<lambda>i. i-1) ` (\<B> \<union> \<R> \<union> \<S>) \<subseteq> \<D>"
-    by (force simp add: \<D>_def \<B>_def \<R>_def \<S>_def Step_class_insert_NO_MATCH intro: dreg_before_step')
 
   have B34: "card \<B> \<le> k powr (3/4)"
     by (smt (verit) card\<B> \<open>l\<le>k\<close> of_nat_0_le_iff of_nat_mono powr_mono2 zero_le_divide_iff)
@@ -402,17 +403,28 @@ proof -
   also have "\<dots> \<le> (\<Sum>h = 1..maxh. \<Sum>i\<in>\<B>. (\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h) / alpha k h)"
     unfolding sum.swap [of _ \<B>] by (intro sum_mono 39)
   also have "... \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<B>\<union>\<D>. \<Delta>\<Delta> i h / alpha k h)"
-    sorry
+  proof (intro sum_mono)
+    fix h
+    assume "h \<in> {1..maxh}"
+    have inj_pred: "inj_on (\<lambda>i. i - Suc 0) \<B>"
+      using odd_pos [OF step_odd]   
+      apply (simp add: \<B>_def inj_on_def Step_class_insert_NO_MATCH)
+      by (metis Suc_pred)
+    have "(\<Sum>i\<in>\<B>. \<Delta>\<Delta> (i - Suc 0) h) = (\<Sum>i \<in> (\<lambda>i. i-1) ` \<B>. \<Delta>\<Delta> i h)"
+      by (simp add: sum.reindex [OF inj_pred])
+    also have "... \<le> (\<Sum>i\<in>\<D>. \<Delta>\<Delta> i h)"
+    proof (intro sum_mono2)
+      show "(\<lambda>i. i - 1) ` \<B> \<subseteq> \<D>"
+        by (force simp add: \<D>_def \<B>_def Step_class_insert_NO_MATCH intro: dreg_before_step')
+      show "0 \<le> \<Delta>\<Delta> i h" if "i \<in> \<D> \<setminus> (\<lambda>i. i - 1) ` \<B>" for i
+        using that \<Delta>0 \<Delta>\<Delta>_def \<Delta>_def pp_eq by fastforce
+    qed auto
+    finally have "(\<Sum>i\<in>\<B>. \<Delta>\<Delta> (i - Suc 0) h) \<le> (\<Sum>i\<in>\<D>. \<Delta>\<Delta> i h)" .
+    with alpha_ge0 [of k h]
+    show "(\<Sum>i\<in>\<B>. (\<Delta>\<Delta> (i - 1) h + \<Delta>\<Delta> i h) / alpha k h) \<le> (\<Sum>i \<in> \<B>\<union>\<D>. \<Delta>\<Delta> i h / alpha k h)"
+      by (simp add: divide_right_mono sum.distrib sum.union_disjoint flip: sum_divide_distrib)
+    qed
   finally have 84: "-2 * k powr (7/8) \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<B>\<union>\<D>. \<Delta>\<Delta> i h / alpha k h)" .
-
-  have "(\<Sum>h=1..maxh. \<Sum>i\<in>\<B> \<union> ((\<lambda>i. i-1) ` (\<B> \<union> \<R> \<union> \<S>)). \<Delta>\<Delta> i h / alpha k h) 
-     \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<B>\<union>\<D>. \<Delta>\<Delta> i h / alpha k h)"
-    apply (intro sum_mono sum_mono2)
-    using \<open>finite \<B>\<close> \<open>finite \<D>\<close> apply blast
-    using BRS_D apply blast
-    apply (auto simp: )
-    using  \<Delta>0
-    by (smt (verit, ccfv_threshold) alpha_ge0 DiffE Un_iff \<Delta>0 \<Delta>\<Delta>_def \<Delta>_def divide_less_0_iff pp_eq)
 
   have "(\<lambda>k. 1 + 2 * ln k / eps k) \<in> o(real)"  (*? ?*)
     unfolding eps_def by real_asymp
