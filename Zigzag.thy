@@ -11,18 +11,21 @@ definition "ok_fun_ZZ_8_1 \<equiv> \<lambda>k. 0"
 
 definition "Big_ZZ_8_2 \<equiv> \<lambda>k. (1 + eps k powr (1/2)) \<ge> (1 + eps k) powr (eps k powr (-1/4))"
 
+text \<open>needed for an inequality that pops up in the proof of (39)\<close>
+definition "Big39 \<equiv> \<lambda>k. 1/2 \<le> (1 + eps k) powr (-2 * eps k powr (-1/2))"
+
 definition "Big_ZZ_8_1 \<equiv>
    \<lambda>\<mu> l. Lemma_Red_5_2 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Big_finite_components \<mu> l
-        \<and> Lemma_bblue_step_limit \<mu> l
-        \<and> (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k \<and> Big_ZZ_8_2 k \<and> k\<ge>16)"
+        \<and> Lemma_bblue_step_limit \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l
+        \<and> (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k \<and> Big_ZZ_8_2 k \<and> k\<ge>16 \<and> Big39 k)"
 
 text \<open>@{term "k\<ge>16"} is for @{text Y_6_5_Red}\<close>
 
 lemma Big_ZZ_8_1:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_1 \<mu> l"
-  unfolding Big_ZZ_8_1_def Big_ZZ_8_2_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Red_5_2 Red_5_3 Big_finite_components bblue_step_limit 
+  unfolding Big_ZZ_8_1_def Big_ZZ_8_2_def eventually_conj_iff all_imp_conj_distrib eps_def Big39_def
+  apply (simp add: Red_5_2 Red_5_3 Big_finite_components bblue_step_limit Y_6_5_Bblue
        height_upper_bound eventually_all_ge_at_top assms)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
@@ -144,8 +147,8 @@ proof -
     unfolding \<S>\<S>_def \<S>_def dboost_star_def by auto
   have "finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step})"
     using big \<mu> \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_1_def finite_components) 
-  then have "finite \<B>" "finite \<R>" "finite \<S>"
-    by (auto simp add: \<B>_def \<R>_def \<S>_def Step_class_insert_NO_MATCH)
+  then have "finite \<D>" "finite \<B>" "finite \<R>" "finite \<S>"
+    by (auto simp add: \<D>_def \<B>_def \<R>_def \<S>_def Step_class_insert_NO_MATCH)
   have R52: "p (Suc i) - p i \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (p i))"
     and beta_gt0: "beta \<mu> l k i > 0"
     and R53: "p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
@@ -154,7 +157,7 @@ proof -
     using big \<open>Colours l k\<close> that
     by (auto simp: Big_ZZ_8_1_def Lemma_Red_5_2_def Lemma_Red_5_3_def Lemma_bblue_step_limit_def
          p_def \<B>_def \<S>_def)
-  have card\<B>: "card \<B> \<le> l powr (3/4)"
+  have card\<B>: "card \<B> \<le> l powr (3/4)" and Y65: "Lemma_Y_6_5_Bblue \<mu> l"
     using big \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_1_def Lemma_bblue_step_limit_def \<B>_def)
 
   have \<Delta>\<Delta>_ge0: "\<Delta>\<Delta> i h \<ge> 0" if "i \<in> \<S>" "h \<ge> 1" for i h
@@ -311,18 +314,105 @@ proof -
   qed
   then have 83: "- (1 + eps k)\<^sup>2 * card \<R> \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<R>. \<Delta>\<Delta> i h / alpha k h)" 
     by (simp add: mult.commute sum.swap [of _ \<R>])
+
   \<comment> \<open>now to tackle claim 8.4\<close>
 
   have \<Delta>0: "\<Delta> i \<ge> 0" if "i \<in> \<D>" for i
     using Y_6_4_DegreeReg that unfolding \<D>_def \<Delta>_def p_def by auto
 
-  have 39: "-2 * eps k powr(-1/2) \<le> (\<Sum>h = 1..maxh. (\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h) / alpha k h)" 
-      if "i \<in> \<B>" for i
-    sorry
+  have 39: "-2 * eps k powr(-1/2) \<le> (\<Sum>h = 1..maxh. (\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h) / alpha k h)" (is "?L \<le> ?R")
+    if "i \<in> \<B>" for i
+  proof -
+    have "odd i"
+      using step_odd that by (force simp add: Step_class_insert_NO_MATCH \<B>_def)
+    then have "i>0"
+      using odd_pos by auto
+    show ?thesis
+    proof (cases "\<Delta> (i-1) + \<Delta> i \<ge> 0")
+      case True
+      with \<open>i>0\<close> have "\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h \<ge> 0" if "h\<ge>1" for h
+        by (fastforce simp add: \<Delta>\<Delta>_def \<Delta>_def pp_eq)
+      then have "(\<Sum>h = 1..maxh. (\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h) / alpha k h) \<ge> 0"
+        by (force simp add: alpha_ge0 intro: sum_nonneg)
+      then show ?thesis
+        by (smt (verit, ccfv_SIG) powr_ge_pzero)
+    next
+      case False
+      then have \<Delta>\<Delta>_le0: "\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h \<le> 0" if "h\<ge>1" for h
+        by (smt (verit, best) One_nat_def \<Delta>\<Delta>_def \<Delta>_def \<open>odd i\<close> odd_Suc_minus_one pp_eq)
+      have hge: "hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2 * eps k powr (-1/2)"
+        using Y65 that \<open>l\<le>k\<close> by (simp add: Lemma_Y_6_5_Bblue_def \<B>_def p_def)
+      have \<Delta>\<Delta>0: "\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h = 0" if "h < hgt k (p (i-1)) - 2 * eps k powr (-1/2)" for h
+        using False \<open>odd i\<close> that hge
+        apply (simp add: \<Delta>\<Delta>_def \<Delta>_def pp_eq)  (*COULD SPLIT: h=1 OR h>1*)
+        by (smt (verit) of_nat_le_iff of_nat_less_iff diff_is_0_eq hgt_less_imp_qfun_less less_Suc_eq_0_disj)
+
+      have big39: "1/2 \<le> (1 + eps k) powr (-2 * eps k powr (-1/2))"
+        using big \<open>k\<ge>l\<close> by (auto simp: Big_ZZ_8_1_def Big39_def)
+      have "?L * alpha k (hgt k (p (i-1))) * (1 + eps k) powr (-2 * eps k powr (-1/2))
+           \<le> - (eps k powr (-1/2)) * alpha k (hgt k (p (i-1)))"
+        using mult_left_mono_neg [OF big39, of "- (eps k powr (-1/2)) * alpha k (hgt k (p (i-1))) / 2"]
+        using alpha_ge0 [of k "hgt k (p (i-1))"] eps_ge0 [of k]
+        by (simp add: mult_ac)
+      also have "... \<le> \<Delta> (i-1) + \<Delta> i"
+      proof -
+        have "p (Suc i) \<ge> p (i-1) - (eps k powr (-1/2)) * alpha k (hgt k (p (i-1)))"
+          using Y_6_4_Bblue that \<B>_def \<open>\<mu>>0\<close> p_def by blast
+        with \<open>i>0\<close> show ?thesis
+          by (simp add: \<Delta>_def)
+      qed
+      finally have "?L * alpha k (hgt k (p (i-1))) * (1 + eps k) powr (-2 * eps k powr (-1/2)) \<le> \<Delta> (i-1) + \<Delta> i" .
+      then have "?L \<le> (1 + eps k) powr (2 * eps k powr (-1/2)) * (\<Delta> (i-1) + \<Delta> i) / alpha k (hgt k (p (i-1)))"
+        using alpha_ge0 [of k "hgt k (p (i-1))"] eps_ge0 [of k]
+        by (simp add: powr_minus divide_simps mult_ac)
+      also have "\<dots> \<le> ?R"
+      proof -
+        have "(1 + eps k) powr (2 * eps k powr - (1 / 2)) * (\<Delta>\<Delta> (i - Suc 0) h + \<Delta>\<Delta> i h) / alpha k (hgt k (p (i - Suc 0))) \<le> (\<Delta>\<Delta> (i - Suc 0) h + \<Delta>\<Delta> i h) / alpha k h"
+          if "Suc 0 \<le> h" "h \<le> maxh" for h
+        proof (cases "h < hgt k (p (i-1)) - 2 * eps k powr (-1/2)")
+          case False
+          then have *: "(1 + eps k) powr (2 * eps k powr - (1 / 2)) / alpha k (hgt k (p (i - Suc 0))) \<ge> 1 / alpha k h"
+            using that eps_gt0[of k] \<open>k>0\<close>
+            apply (simp add: alpha_eq)
+            apply (subst alpha_eq)
+            using hgt_gt0 apply blast
+            apply (simp add: alpha_eq divide_simps flip: powr_realpow powr_add)
+            by (smt (verit) hgt_gt0 Num.of_nat_simps(4) Suc_pred less_eq_Suc_le plus_1_eq_Suc)
+          show ?thesis
+            using mult_left_mono_neg [OF * \<Delta>\<Delta>_le0] that by (simp add: Groups.mult_ac) 
+        qed (use \<Delta>\<Delta>0 in auto)
+        then show ?thesis
+          by (force simp add: 33 sum_distrib_left sum_divide_distrib simp flip: sum.distrib intro: sum_mono)
+      qed
+      finally show ?thesis .
+    qed
+  qed
 
   have BRS_D: "(\<lambda>i. i-1) ` (\<B> \<union> \<R> \<union> \<S>) \<subseteq> \<D>"
     by (force simp add: \<D>_def \<B>_def \<R>_def \<S>_def Step_class_insert_NO_MATCH intro: dreg_before_step')
 
+  have "\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h \<ge> 0" if "Suc 0 \<le> h" "h \<le> maxh" and i: "i \<in> \<R> \<or> i \<in> \<S>" for h i
+  proof -
+    have "odd i"
+      using step_odd i by (force simp add: Step_class_insert_NO_MATCH \<R>_def \<S>_def)
+    then have "i>0"
+      using odd_pos by auto
+    moreover have "i-1 \<in> \<D>"
+      using i unfolding \<R>_def \<S>_def \<D>_def
+      by (metis Step_class_insert Un_iff dreg_before_step1(1))
+    ultimately show ?thesis
+      using that unfolding \<Delta>\<Delta>_def \<Delta>_def pp_eq \<R>_def \<S>_def \<D>_def \<R>_def \<S>_def \<D>_def
+      apply (simp add: )
+      apply (erule disjE)
+       defer
+      apply (smt (verit, ccfv_threshold) R53 Suc_pred Y_6_4_DegreeReg \<S>_def p_def)
+          apply (auto simp: min_def max_def)
+
+      using that
+      unfolding \<R>_def
+          apply (auto simp: )
+
+    sorry
   have B34: "card \<B> \<le> k powr (3/4)"
     by (smt (verit) card\<B> \<open>l\<le>k\<close> of_nat_0_le_iff of_nat_mono powr_mono2 zero_le_divide_iff)
   have "-2 * k powr (7/8) \<le> -2 * eps k powr(-1/2) * k powr (3/4)"
@@ -331,10 +421,21 @@ proof -
     using B34 by (intro mult_left_mono_neg powr_mono2) auto
   also have "\<dots> = (\<Sum>i\<in>\<B>. -2 * eps k powr(-1/2))"
     by simp
-  also have "\<dots> \<le> (\<Sum>i\<in>\<B>. \<Sum>h = 1..maxh. (\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h) / alpha k h)"
-    by (intro sum_mono 39)
+  also have "\<dots> \<le> (\<Sum>h = 1..maxh. \<Sum>i\<in>\<B>. (\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h) / alpha k h)"
+    unfolding sum.swap [of _ \<B>] by (intro sum_mono 39)
 
-  have 84: "-2 * k powr (7/8) \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<B>\<union>\<D>. \<Delta>\<Delta> i h / alpha k h)"
+  have "(\<Sum>h=1..maxh. \<Sum>i\<in>\<B> \<union> ((\<lambda>i. i-1) ` (\<B> \<union> \<R> \<union> \<S>)). \<Delta>\<Delta> i h / alpha k h) 
+     \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<B>\<union>\<D>. \<Delta>\<Delta> i h / alpha k h)"
+    apply (intro sum_mono sum_mono2)
+    using \<open>finite \<B>\<close> \<open>finite \<D>\<close> apply blast
+    using BRS_D apply blast
+    apply (auto simp: )
+    using  \<Delta>0
+    by (smt (verit, ccfv_threshold) alpha_ge0 DiffE Un_iff \<Delta>0 \<Delta>\<Delta>_def \<Delta>_def divide_less_0_iff pp_eq)
+
+    using BRS_D
+    sorry
+  finally have 84: "-2 * k powr (7/8) \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<B>\<union>\<D>. \<Delta>\<Delta> i h / alpha k h)"
     sorry
 
   have "(\<lambda>k. 1 + 2 * ln k / eps k) \<in> o(real)"  (*? ?*)

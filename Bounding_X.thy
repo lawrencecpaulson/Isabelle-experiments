@@ -1187,7 +1187,7 @@ proof -
     by (simp_all add: \<R>_def \<S>_def \<B>_def Step_class_def disjoint_iff)
 
   have hgt_qstar_le: "hgt k qstar \<le> 2 * eps k powr (-1/4)"
-  proof (intro real_hgt_Least [where h = "2 * nat(floor (eps k powr (-1/4)))"])
+  proof (intro real_hgt_Least)
     show "0 < 2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>"
       using \<open>k>0\<close> eps_gt0 [of k] by (simp add: eps_le1 powr_le1 powr_minus_divide)
     show "qstar \<le> qfun k (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>)"
