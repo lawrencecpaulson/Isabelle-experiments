@@ -391,28 +391,6 @@ proof -
   have BRS_D: "(\<lambda>i. i-1) ` (\<B> \<union> \<R> \<union> \<S>) \<subseteq> \<D>"
     by (force simp add: \<D>_def \<B>_def \<R>_def \<S>_def Step_class_insert_NO_MATCH intro: dreg_before_step')
 
-  have "\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h \<ge> 0" if "Suc 0 \<le> h" "h \<le> maxh" and i: "i \<in> \<R> \<or> i \<in> \<S>" for h i
-  proof -
-    have "odd i"
-      using step_odd i by (force simp add: Step_class_insert_NO_MATCH \<R>_def \<S>_def)
-    then have "i>0"
-      using odd_pos by auto
-    moreover have "i-1 \<in> \<D>"
-      using i unfolding \<R>_def \<S>_def \<D>_def
-      by (metis Step_class_insert Un_iff dreg_before_step1(1))
-    ultimately show ?thesis
-      using that unfolding \<Delta>\<Delta>_def \<Delta>_def pp_eq \<R>_def \<S>_def \<D>_def \<R>_def \<S>_def \<D>_def
-      apply (simp add: )
-      apply (erule disjE)
-       defer
-      apply (smt (verit, ccfv_threshold) R53 Suc_pred Y_6_4_DegreeReg \<S>_def p_def)
-          apply (auto simp: min_def max_def)
-
-      using that
-      unfolding \<R>_def
-          apply (auto simp: )
-
-    sorry
   have B34: "card \<B> \<le> k powr (3/4)"
     by (smt (verit) card\<B> \<open>l\<le>k\<close> of_nat_0_le_iff of_nat_mono powr_mono2 zero_le_divide_iff)
   have "-2 * k powr (7/8) \<le> -2 * eps k powr(-1/2) * k powr (3/4)"
@@ -423,6 +401,9 @@ proof -
     by simp
   also have "\<dots> \<le> (\<Sum>h = 1..maxh. \<Sum>i\<in>\<B>. (\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h) / alpha k h)"
     unfolding sum.swap [of _ \<B>] by (intro sum_mono 39)
+  also have "... \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<B>\<union>\<D>. \<Delta>\<Delta> i h / alpha k h)"
+    sorry
+  finally have 84: "-2 * k powr (7/8) \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<B>\<union>\<D>. \<Delta>\<Delta> i h / alpha k h)" .
 
   have "(\<Sum>h=1..maxh. \<Sum>i\<in>\<B> \<union> ((\<lambda>i. i-1) ` (\<B> \<union> \<R> \<union> \<S>)). \<Delta>\<Delta> i h / alpha k h) 
      \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<B>\<union>\<D>. \<Delta>\<Delta> i h / alpha k h)"
@@ -432,11 +413,6 @@ proof -
     apply (auto simp: )
     using  \<Delta>0
     by (smt (verit, ccfv_threshold) alpha_ge0 DiffE Un_iff \<Delta>0 \<Delta>\<Delta>_def \<Delta>_def divide_less_0_iff pp_eq)
-
-    using BRS_D
-    sorry
-  finally have 84: "-2 * k powr (7/8) \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<B>\<union>\<D>. \<Delta>\<Delta> i h / alpha k h)"
-    sorry
 
   have "(\<lambda>k. 1 + 2 * ln k / eps k) \<in> o(real)"  (*? ?*)
     unfolding eps_def by real_asymp
