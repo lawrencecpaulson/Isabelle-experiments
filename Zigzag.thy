@@ -11,20 +11,30 @@ definition "ok_fun_ZZ_8_1 \<equiv> \<lambda>k. 0"
 
 definition "Big_ZZ_8_2 \<equiv> \<lambda>k. (1 + eps k powr (1/2)) \<ge> (1 + eps k) powr (eps k powr (-1/4))"
 
-text \<open>needed for an inequality that pops up in the proof of (39)\<close>
+text \<open>An inequality that pops up in the proof of (39)\<close>
 definition "Big39 \<equiv> \<lambda>k. 1/2 \<le> (1 + eps k) powr (-2 * eps k powr (-1/2))"
+
+text \<open>Two inequalities that pops up in the proof of (42)\<close>
+definition "Big42a \<equiv> \<lambda>k. (1 + eps k)\<^sup>2 / (1 - eps k powr (1/2)) \<le> 1 + 2 * k powr (-1/16)" 
+
+definition "Big42b \<equiv> \<lambda>k. 2 * k powr (-1/16) * k
+                 + (1 + 2 * ln k / eps k + 2 * k powr (7/8)) / (1 - eps k powr (1/2))
+     \<le> 3 * real k powr (15/16)"
 
 definition "Big_ZZ_8_1 \<equiv>
    \<lambda>\<mu> l. Lemma_Red_5_2 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Big_finite_components \<mu> l
         \<and> Lemma_bblue_step_limit \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l
-        \<and> (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k \<and> Big_ZZ_8_2 k \<and> k\<ge>16 \<and> Big39 k)"
+        \<and> (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k \<and> Big_ZZ_8_2 k \<and> k\<ge>16 \<and> Big39 k
+                      \<and> Big42a k \<and> Big42b k)"
 
 text \<open>@{term "k\<ge>16"} is for @{text Y_6_5_Red}\<close>
+
 
 lemma Big_ZZ_8_1:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_1 \<mu> l"
-  unfolding Big_ZZ_8_1_def Big_ZZ_8_2_def eventually_conj_iff all_imp_conj_distrib eps_def Big39_def
+  unfolding Big_ZZ_8_1_def Big_ZZ_8_2_def Big39_def Big42a_def Big42b_def
+            eventually_conj_iff all_imp_conj_distrib eps_def
   apply (simp add: Red_5_2 Red_5_3 Big_finite_components bblue_step_limit Y_6_5_Bblue
        height_upper_bound eventually_all_ge_at_top assms)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
@@ -34,7 +44,7 @@ lemma ZZ_8_1:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and big: "Big_ZZ_8_1 \<mu> l" 
   defines "\<S>\<S> \<equiv> dboost_star \<mu> l k" and "\<R> \<equiv> Step_class \<mu> l k {red_step}"
   defines "sum_\<S>\<S> \<equiv> (\<Sum>i\<in>\<S>\<S>. (1 - beta \<mu> l k i) / beta \<mu> l k i)"
-  shows "sum_\<S>\<S> \<le> real (card \<R>) + ok_fun_ZZ_8_1 k"
+  shows "sum_\<S>\<S> \<le> real (card \<R>) + 3 * k powr (15/16)"
 proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
@@ -152,6 +162,9 @@ proof -
     using big \<mu> \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_1_def finite_components) 
   then have [simp]: "finite \<D>" "finite \<B>" "finite \<R>" "finite \<S>"
     by (auto simp add: \<D>_def \<B>_def \<R>_def \<S>_def Step_class_insert_NO_MATCH)
+  have "card \<R> < k"
+    using red_step_limit \<open>0<\<mu>\<close> \<open>Colours l k\<close> by (auto simp: \<R>_def)
+
   have R52: "p (Suc i) - p i \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (p i))"
     and beta_gt0: "beta \<mu> l k i > 0"
     and R53: "p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
@@ -167,7 +180,8 @@ proof -
     using that R53 [OF \<open>i \<in> \<S>\<close>] by (fastforce simp add: \<Delta>\<Delta>_def pp_eq)
   have \<Delta>\<Delta>_eq_0: "\<Delta>\<Delta> i h = 0" if "hgt k (p i) \<le> hgt k (p (Suc i))" "hgt k (p (Suc i)) < h" for h i
     using \<Delta>\<Delta>_def that by fastforce
-  have 35: "(1 - eps k powr (1/2)) * ((1 - beta \<mu> l k i) / beta \<mu> l k i)
+  define oneminus where "oneminus \<equiv> 1 - eps k powr (1/2)"
+  have 35: "oneminus * ((1 - beta \<mu> l k i) / beta \<mu> l k i)
           \<le> (\<Sum>h=1..maxh. \<Delta>\<Delta> i h / alpha k h)"   (is "?L \<le> ?R")
     if "i \<in> \<S>\<S>" for i
   proof -
@@ -182,7 +196,8 @@ proof -
     have *: "\<And>x::real. x > 0 \<Longrightarrow> (1 - x powr (1 / 2)) * (1 + x powr (1 / 2)) = 1 - x"
       by (simp add: algebra_simps flip: powr_add)
     have "?L = (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) / (1 + eps k powr (1/2))"
-      using beta_gt0 [OF \<open>i \<in> \<S>\<close>] eps_gt0 [OF \<open>k>0\<close>] k_big by (force simp add: divide_simps *)
+      using beta_gt0 [OF \<open>i \<in> \<S>\<close>] eps_gt0 [OF \<open>k>0\<close>] k_big 
+      by (force simp add: oneminus_def divide_simps *)
     also have "\<dots> \<le> \<Delta> i / alpha k (hgt k (p i)) / (1 + eps k powr (1/2))"
       by (intro 36 divide_right_mono) auto
     also have "\<dots> \<le> \<Delta> i / alpha k (hgt k (p i)) / (1 + eps k) powr (real (hgt k (p (Suc i))) - hgt k (p i))"
@@ -239,8 +254,8 @@ proof -
     finally show ?thesis .
   qed
   \<comment> \<open>now we are able to prove claim 8.2\<close>
-  have "(1 - eps k powr (1/2)) * sum_\<S>\<S>
-     = (\<Sum>i\<in>\<S>\<S>. (1 - eps k powr (1/2)) * ((1 - beta \<mu> l k i) / beta \<mu> l k i))"
+  have "oneminus * sum_\<S>\<S>
+     = (\<Sum>i\<in>\<S>\<S>. oneminus * ((1 - beta \<mu> l k i) / beta \<mu> l k i))"
     using sum_distrib_left sum_\<S>\<S>_def by blast
   also have "\<dots> \<le> (\<Sum>i\<in>\<S>\<S>. \<Sum>h=1..maxh. \<Delta>\<Delta> i h / alpha k h)"
     by (intro sum_mono 35)
@@ -248,7 +263,7 @@ proof -
     using sum.swap by fastforce
   also have "\<dots> \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)"
     by (intro sum_mono sum_mono2) (auto simp: \<open>\<S>\<S> \<subseteq> \<S>\<close> \<Delta>\<Delta>_ge0 alpha_ge0)
-  finally have 82: "(1 - eps k powr (1/2)) * sum_\<S>\<S>
+  finally have 82: "oneminus * sum_\<S>\<S>
       \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)" .
   \<comment> \<open>leading onto claim 8.3\<close>
   have \<Delta>alpha: "- 1 \<le> \<Delta> i / alpha k (hgt k (p i))" if "i \<in> \<R>" for i
@@ -423,15 +438,12 @@ proof -
     qed
   finally have 84: "-2 * k powr (7/8) \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<B>\<union>\<D>. \<Delta>\<Delta> i h / alpha k h)" .
 
-  have "(\<lambda>k. 1 + 2 * ln k / eps k) \<in> o(real)"  (*? DELETE ?*)
-    unfolding eps_def by real_asymp
-
   have m_eq: "{..<m} = \<R> \<union> \<S> \<union> (\<B> \<union> \<D>)"
     using before_halted_eq \<open>\<mu>>0\<close> \<open>Colours l k\<close>
     by (auto simp add: \<B>_def \<D>_def \<S>_def \<R>_def m_def Step_class_insert_NO_MATCH)
 
   have "- (1 + eps k)\<^sup>2 * real (card \<R>)
-     + (1 - eps k powr (1/2)) * sum_\<S>\<S> 
+     + oneminus * sum_\<S>\<S> 
      - 2 * real k powr (7 / 8) \<le> (\<Sum>h = Suc 0..maxh. \<Sum>i\<in>\<R>. \<Delta>\<Delta> i h / alpha k h)
       + (\<Sum>h = Suc 0..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha k h)
       + (\<Sum>h = Suc 0..maxh. \<Sum>i \<in> \<B> \<union> \<D>. \<Delta>\<Delta> i h / alpha k h) "
@@ -441,18 +453,31 @@ proof -
   also have "\<dots> \<le> 1 + 2 * ln (real k) / eps k"
     using 34 by (simp add: m_eq)
   finally
-  have "(1 - eps k powr (1/2)) * sum_\<S>\<S>
-      - (1 + eps k)\<^sup>2 * card \<R> - 2 * k powr (7/8)
-      \<le> 1 + 2 * ln k / eps k" 
+  have 41: "oneminus * sum_\<S>\<S> - (1 + eps k)\<^sup>2 * card \<R> - 2 * k powr (7/8)
+          \<le> 1 + 2 * ln k / eps k" 
     by simp
-  moreover have "1 - eps k powr (1 / 2) > 0"
-    using \<open>16 \<le> k\<close> eps_gt0 eps_less1 powr01_less_one by force
-  ultimately have "sum_\<S>\<S>
-     \<le> (1 + 2 * ln k / eps k + (1 + eps k)\<^sup>2 * card \<R> + 2 * k powr (7/8)) / (1 - eps k powr (1/2))" 
+  have big42: "(1 + eps k)\<^sup>2 / oneminus \<le> 1 + 2 * k powr (-1/16)"
+              "2 * k powr (-1/16) * k
+             + (1 + 2 * ln k / eps k + 2 * k powr (7/8)) / oneminus
+       \<le> 3 * real k powr (15/16)"
+    using big \<open>l\<le>k\<close> \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_1_def Big42a_def Big42b_def oneminus_def)
+  have "oneminus > 0"
+    using \<open>16 \<le> k\<close> eps_gt0 eps_less1 powr01_less_one by (auto simp: oneminus_def)
+  with 41 have "sum_\<S>\<S>
+        \<le> (1 + 2 * ln k / eps k + (1 + eps k)\<^sup>2 * card \<R> + 2 * k powr (7/8)) / oneminus" 
     by (simp add: mult_ac pos_le_divide_eq diff_le_eq)
-
-  show ?thesis
-    sorry
+  also have "... \<le> card \<R> * (((1 + eps k)\<^sup>2) / oneminus) 
+                 + (1 + 2 * ln k / eps k + 2 * k powr (7/8)) / oneminus"
+    by (simp add: field_simps add_divide_distrib)
+  also have "... \<le> card \<R> * (1 + 2 * k powr (-1/16)) 
+                 + (1 + 2 * ln k / eps k + 2 * k powr (7/8)) / oneminus"
+    using big42 \<open>oneminus > 0\<close> by (intro add_mono mult_mono) auto
+  also have "... \<le> card \<R> + 2 * k powr (-1/16) * k
+                 + (1 + 2 * ln k / eps k + 2 * k powr (7/8)) / oneminus"
+    using \<open>card \<R> < k\<close> by (intro add_mono mult_mono) (auto simp: algebra_simps)
+  also have "... \<le> real (card \<R>) + 3 * real k powr (15/16)"
+    using big42 by force
+  finally show ?thesis .
 qed
 
 end
