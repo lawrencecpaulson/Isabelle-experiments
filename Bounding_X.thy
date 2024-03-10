@@ -91,6 +91,32 @@ proof -
     by presburger
 qed
 
+lemma bigbeta_le:
+  assumes "\<mu> > 0" "Colours l k" and big: "Lemma_beta_gt0 \<mu> l"
+  shows "bigbeta \<mu> l k \<le> \<mu>"
+proof -
+  have "real (card (dboost_star \<mu> l k)) = (\<Sum>i\<in>dboost_star \<mu> l k. 1)"
+    by simp
+  also have "\<dots> \<le> (\<Sum>i\<in>dboost_star \<mu> l k. \<mu> / beta \<mu> l k i)"
+  proof (intro sum_mono)
+    fix i
+    assume i: "i \<in> dboost_star \<mu> l k"
+    then have "beta \<mu> l k i \<le> \<mu>"
+      using beta_le [OF \<open>\<mu> > 0\<close>]
+      by (smt (verit, best) Step_class_insert UnCI dboost_star_subset subset_iff)
+    with i big \<open>Colours l k\<close> show "1 \<le> \<mu> / beta \<mu> l k i"
+      unfolding Lemma_beta_gt0_def
+      by (meson dboost_star_subset le_divide_eq_1_pos subset_iff)
+  qed
+  also have "... = \<mu> * (\<Sum>i\<in>dboost_star \<mu> l k. 1 / beta \<mu> l k i)"
+    by (simp add: sum_distrib_left)
+  finally have "real (card (dboost_star \<mu> l k)) \<le> \<mu> * (\<Sum>i\<in>dboost_star \<mu> l k. 1 / beta \<mu> l k i)" .
+  moreover have "(\<Sum>i\<in>dboost_star \<mu> l k. 1 / beta \<mu> l k i) \<ge> 0"
+    by (simp add: beta_ge0 sum_nonneg)
+  ultimately show ?thesis
+    using assms by (simp add: bigbeta_def Let_def divide_simps)
+qed
+
 text \<open>it's convenient to package up the criteria for finiteness of all components at once\<close>
 definition 
   "Big_finite_components \<equiv> 

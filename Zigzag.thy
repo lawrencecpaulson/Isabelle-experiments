@@ -486,28 +486,27 @@ subsection \<open>Lemma 8.5\<close>
 text \<open>An inequality that pops up in the proof of (39)\<close>
 definition "Big85 \<equiv> \<lambda>k. 3 * eps k powr (1/4) * k \<le> k powr (19/20)"
 
-(*DO WE NEED Lemma_Red_5_3 ?*)
 definition "Big_ZZ_8_5 \<equiv>     
-   \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Big_ZZ_8_1 \<mu> l \<and> Big_finite_components \<mu> l \<and> Lemma_beta_gt0 \<mu> l
-      \<and> (\<forall>k. Colours l k \<longrightarrow> Big85 k \<and> bigbeta \<mu> l k < 1)"
+   \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Big_ZZ_8_1 \<mu> l \<and> Big_finite_components \<mu> l \<and> Lemma_beta_gt0 \<mu> l
+      \<and> (\<forall>k. Colours l k \<longrightarrow> Big85 k \<and> 0 < bigbeta \<mu> l k  \<and> bigbeta \<mu> l k < 1)"
 
 lemma Big_ZZ_8_5:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_5 \<mu> l"
   unfolding Big_ZZ_8_5_def Big85_def
             eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_X_7_5 Red_5_3 Big_ZZ_8_1 Big_finite_components beta_gt0 bigbeta_less1 assms)
+  apply (simp add: Big_X_7_5 bigbeta_gt0 Big_ZZ_8_1 Big_finite_components beta_gt0 bigbeta_less1 assms)
   apply (intro conjI eventually_Colours_at_top; real_asymp)
   done
 
 lemma ZZ_8_5:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and big: "Big_ZZ_8_5 \<mu> l" 
   defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}" and "\<R> \<equiv> Step_class \<mu> l k {red_step}"
-  shows "card \<S> \<le> (bigbeta \<mu> l k / (1 - bigbeta \<mu> l k)) * card \<R> + Ok"
+  shows "card \<S> \<le> (bigbeta \<mu> l k / (1 - bigbeta \<mu> l k)) * card \<R> 
+        + (2 / (1-\<mu>)) * k powr (19/20)"
 proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  define \<R> where "\<R> \<equiv> Step_class \<mu> l k {red_step}" 
   define \<S>\<S> where "\<S>\<S> \<equiv> dboost_star \<mu> l k" 
   have "finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step})"
     using big \<mu> \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_5_def finite_components) 
@@ -522,21 +521,26 @@ proof -
   also have "... \<le> k powr (19/20)"
     using big \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_5_def Big85_def Colours_def)
   finally have *: "real (card \<S>) - card \<S>\<S> \<le> k powr (19/20)" .
-  have ge0: "bigbeta \<mu> l k / (1 - bigbeta \<mu> l k) \<ge> 0"
-    and beta_gt0: "\<And>i. i \<in> \<S> \<Longrightarrow> beta \<mu> l k i > 0"
+  have bigbeta_lt1: "bigbeta \<mu> l k < 1"
+    and bigbeta_gt0: "0 < bigbeta \<mu> l k"
+    and beta_gt0: "\<And>i. i \<in> \<S> \<Longrightarrow> beta \<mu> l k i > 0" 
     using bigbeta_ge0 big \<mu> \<open>Colours l k\<close> 
     by (auto simp: Big_ZZ_8_5_def Lemma_beta_gt0_def \<S>_def)
+  then have ge0: "bigbeta \<mu> l k / (1 - bigbeta \<mu> l k) \<ge> 0"
+    by auto
   show ?thesis
   proof (cases "\<S>\<S> = {}")
     case True
     with * have "card \<S> \<le> k powr (19/20)"
       by simp
-    also have "... \<le> Ok"
-      sorry
+    also have "... \<le> (2 / (1-\<mu>)) * k powr (19/20)"
+      using \<mu> \<open>k>0\<close> by (simp add: divide_simps)
     finally show ?thesis
       by (smt (verit, ccfv_SIG) mult_nonneg_nonneg of_nat_0_le_iff ge0) 
   next
     case False    
+    have bb_le: "bigbeta \<mu> l k \<le> \<mu>"
+      using big bigbeta_le [OF \<open>\<mu>>0\<close> \<open>Colours l k\<close>] by (auto simp: Big_ZZ_8_5_def)
     have "(card \<S> - k powr (19/20)) / bigbeta \<mu> l k \<le> card \<S>\<S> / bigbeta \<mu> l k"
       by (smt (verit) "*" \<mu> bigbeta_ge0 divide_right_mono)
     also have "... = (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i)"
@@ -559,13 +563,20 @@ proof -
     qed
     also have "... \<le> real(card \<S>) + card \<R> + k powr (19/20)"
       by (simp add: \<open>\<S>\<S> \<subseteq> \<S>\<close> card_mono)
-    finally have "(real (card \<S>) - k powr (19/20)) / bigbeta \<mu> l k \<le> real (card \<S>) + card \<R> + k powr (19/20)" .
-    
-    show ?thesis
-      
-      sorry
+    finally have "(card \<S> - k powr (19/20)) / bigbeta \<mu> l k \<le> real (card \<S>) + card \<R> + k powr (19/20)" .
+    then have "card \<S> - k powr (19/20) \<le> (real (card \<S>) + card \<R> + k powr (19/20)) * bigbeta \<mu> l k"
+      using bigbeta_gt0 by (simp add: field_simps)
+    then have "card \<S> * (1 - bigbeta \<mu> l k) \<le> bigbeta \<mu> l k * card \<R> + (1 + bigbeta \<mu> l k) * k powr (19/20)"
+      by (simp add: algebra_simps)
+    then have "card \<S> \<le> (bigbeta \<mu> l k * card \<R> + (1 + bigbeta \<mu> l k) * k powr (19/20)) / (1 - bigbeta \<mu> l k)"
+      using bigbeta_lt1 by (simp add: field_simps)
+    also have "... = (bigbeta \<mu> l k / (1 - bigbeta \<mu> l k)) * card \<R> + ((1 + (bigbeta \<mu> l k)) / (1 - bigbeta \<mu> l k)) * k powr (19/20)"
+      using bigbeta_gt0 bigbeta_lt1 by (simp add: divide_simps)
+    also have "... \<le> (bigbeta \<mu> l k / (1 - bigbeta \<mu> l k)) * card \<R> + (2 / (1-\<mu>)) * k powr (19/20)"
+      using \<mu> bb_le by (intro add_mono order_refl mult_right_mono frac_le) auto
+    finally show ?thesis .
   qed
-
+qed
 
 end
 
