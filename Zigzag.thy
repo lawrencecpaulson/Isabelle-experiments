@@ -501,7 +501,7 @@ lemma Big_ZZ_8_5:
 
 lemma ZZ_8_5:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and big: "Big_ZZ_8_5 \<mu> l" 
-  defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}" and "\<R> \<equiv> Step_class \<mu> l k {red_step}"
+  defines "\<R> \<equiv> Step_class \<mu> l k {red_step}" and "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   shows "card \<S> \<le> (bigbeta \<mu> l k / (1 - bigbeta \<mu> l k)) * card \<R> 
         + (2 / (1-\<mu>)) * k powr (19/20)"
 proof -
@@ -576,6 +576,21 @@ proof -
       using \<mu> bb_le by (intro add_mono order_refl mult_right_mono frac_le) auto
     finally show ?thesis .
   qed
+qed
+
+lemma ZZ_8_6:
+  assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and big: "Big_ZZ_8_5 \<mu> l" 
+  defines "\<R> \<equiv> Step_class \<mu> l k {red_step}" and "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
+  assumes "card \<R> \<ge> k powr (39/40)"
+  shows "bigbeta \<mu> l k \<ge> (1 + o1) * (card \<S> / (card \<S> + card \<R>))"
+proof -
+  obtain lk: "0<l" "l\<le>k" "0<k"
+    using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
+  have "card \<S> \<le> (bigbeta \<mu> l k / (1 - bigbeta \<mu> l k)) * card \<R> 
+                + (2 / (1-\<mu>)) * k powr (19/20)"
+    unfolding \<R>_def \<S>_def by (intro ZZ_8_5 assms)
+  show ?thesis
+    sorry
 qed
 
 end
