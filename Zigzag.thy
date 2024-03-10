@@ -4,10 +4,11 @@ theory Zigzag imports Bounding_X
 
 begin
 
+
 context Diagonal
 begin
 
-definition "ok_fun_ZZ_8_1 \<equiv> \<lambda>k. 0" 
+subsection \<open>Lemma 8.1 (the actual Zigzag Lemma)\<close>
 
 definition "Big_ZZ_8_2 \<equiv> \<lambda>k. (1 + eps k powr (1/2)) \<ge> (1 + eps k) powr (eps k powr (-1/4))"
 
@@ -18,8 +19,8 @@ text \<open>Two inequalities that pops up in the proof of (42)\<close>
 definition "Big42a \<equiv> \<lambda>k. (1 + eps k)\<^sup>2 / (1 - eps k powr (1/2)) \<le> 1 + 2 * k powr (-1/16)" 
 
 definition "Big42b \<equiv> \<lambda>k. 2 * k powr (-1/16) * k
-                 + (1 + 2 * ln k / eps k + 2 * k powr (7/8)) / (1 - eps k powr (1/2))
-     \<le> 3 * real k powr (15/16)"
+                        + (1 + 2 * ln k / eps k + 2 * k powr (7/8)) / (1 - eps k powr (1/2))
+                       \<le> real k powr (19/20)"
 
 definition "Big_ZZ_8_1 \<equiv>
    \<lambda>\<mu> l. Lemma_Red_5_2 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Big_finite_components \<mu> l
@@ -44,7 +45,7 @@ lemma ZZ_8_1:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and big: "Big_ZZ_8_1 \<mu> l" 
   defines "\<S>\<S> \<equiv> dboost_star \<mu> l k" and "\<R> \<equiv> Step_class \<mu> l k {red_step}"
   defines "sum_\<S>\<S> \<equiv> (\<Sum>i\<in>\<S>\<S>. (1 - beta \<mu> l k i) / beta \<mu> l k i)"
-  shows "sum_\<S>\<S> \<le> real (card \<R>) + 3 * k powr (15/16)"
+  shows "sum_\<S>\<S> \<le> real (card \<R>) + k powr (19/20)"
 proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
@@ -459,7 +460,7 @@ proof -
   have big42: "(1 + eps k)\<^sup>2 / oneminus \<le> 1 + 2 * k powr (-1/16)"
               "2 * k powr (-1/16) * k
              + (1 + 2 * ln k / eps k + 2 * k powr (7/8)) / oneminus
-       \<le> 3 * real k powr (15/16)"
+       \<le> real k powr (19/20)"
     using big \<open>l\<le>k\<close> \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_1_def Big42a_def Big42b_def oneminus_def)
   have "oneminus > 0"
     using \<open>16 \<le> k\<close> eps_gt0 eps_less1 powr01_less_one by (auto simp: oneminus_def)
@@ -475,10 +476,96 @@ proof -
   also have "... \<le> card \<R> + 2 * k powr (-1/16) * k
                  + (1 + 2 * ln k / eps k + 2 * k powr (7/8)) / oneminus"
     using \<open>card \<R> < k\<close> by (intro add_mono mult_mono) (auto simp: algebra_simps)
-  also have "... \<le> real (card \<R>) + 3 * real k powr (15/16)"
+  also have "... \<le> real (card \<R>) + real k powr (19/20)"
     using big42 by force
   finally show ?thesis .
 qed
+
+subsection \<open>Lemma 8.5\<close>
+
+text \<open>An inequality that pops up in the proof of (39)\<close>
+definition "Big85 \<equiv> \<lambda>k. 3 * eps k powr (1/4) * k \<le> k powr (19/20)"
+
+(*DO WE NEED Lemma_Red_5_3 ?*)
+definition "Big_ZZ_8_5 \<equiv>     
+   \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Big_ZZ_8_1 \<mu> l \<and> Big_finite_components \<mu> l \<and> Lemma_beta_gt0 \<mu> l
+      \<and> (\<forall>k. Colours l k \<longrightarrow> Big85 k \<and> bigbeta \<mu> l k < 1)"
+
+lemma Big_ZZ_8_5:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_5 \<mu> l"
+  unfolding Big_ZZ_8_5_def Big85_def
+            eventually_conj_iff all_imp_conj_distrib eps_def
+  apply (simp add: Big_X_7_5 Red_5_3 Big_ZZ_8_1 Big_finite_components beta_gt0 bigbeta_less1 assms)
+  apply (intro conjI eventually_Colours_at_top; real_asymp)
+  done
+
+lemma ZZ_8_5:
+  assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and big: "Big_ZZ_8_5 \<mu> l" 
+  defines "\<S> \<equiv> Step_class \<mu> l k {dboost_step}" and "\<R> \<equiv> Step_class \<mu> l k {red_step}"
+  shows "card \<S> \<le> (bigbeta \<mu> l k / (1 - bigbeta \<mu> l k)) * card \<R> + Ok"
+proof -
+  obtain lk: "0<l" "l\<le>k" "0<k"
+    using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
+  define \<R> where "\<R> \<equiv> Step_class \<mu> l k {red_step}" 
+  define \<S>\<S> where "\<S>\<S> \<equiv> dboost_star \<mu> l k" 
+  have "finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step})"
+    using big \<mu> \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_5_def finite_components) 
+  then have [simp]: "finite \<S>"
+    by (auto simp add: \<S>_def Step_class_insert_NO_MATCH)
+  moreover have "\<S>\<S> \<subseteq> \<S>"
+    by (auto simp: \<S>\<S>_def \<S>_def dboost_star_def)
+  ultimately have "real (card \<S>) - real (card \<S>\<S>) = card (\<S>\<setminus>\<S>\<S>)"
+    by (metis card_Diff_subset card_mono finite_subset of_nat_diff)
+  also have "... \<le> 3 * eps k powr (1/4) * k"
+    using \<mu> \<open>Colours l k\<close> big X_7_5_aux by (auto simp: Big_ZZ_8_5_def \<S>\<S>_def \<S>_def)
+  also have "... \<le> k powr (19/20)"
+    using big \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_5_def Big85_def Colours_def)
+  finally have *: "real (card \<S>) - card \<S>\<S> \<le> k powr (19/20)" .
+  have ge0: "bigbeta \<mu> l k / (1 - bigbeta \<mu> l k) \<ge> 0"
+    and beta_gt0: "\<And>i. i \<in> \<S> \<Longrightarrow> beta \<mu> l k i > 0"
+    using bigbeta_ge0 big \<mu> \<open>Colours l k\<close> 
+    by (auto simp: Big_ZZ_8_5_def Lemma_beta_gt0_def \<S>_def)
+  show ?thesis
+  proof (cases "\<S>\<S> = {}")
+    case True
+    with * have "card \<S> \<le> k powr (19/20)"
+      by simp
+    also have "... \<le> Ok"
+      sorry
+    finally show ?thesis
+      by (smt (verit, ccfv_SIG) mult_nonneg_nonneg of_nat_0_le_iff ge0) 
+  next
+    case False    
+    have "(card \<S> - k powr (19/20)) / bigbeta \<mu> l k \<le> card \<S>\<S> / bigbeta \<mu> l k"
+      by (smt (verit) "*" \<mu> bigbeta_ge0 divide_right_mono)
+    also have "... = (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i)"
+    proof (cases "card \<S>\<S> = 0")
+      case False
+      then show ?thesis
+        apply (simp add: bigbeta_def Let_def \<S>\<S>_def)
+        by (smt (verit, ccfv_SIG) inverse_eq_divide inverse_inverse_eq sum.cong)
+    qed (simp add: False card_eq_0_iff)
+    also have "... \<le> real(card \<S>\<S>) + card \<R> + k powr (19/20)"
+    proof -
+      have "(\<Sum>i\<in>\<S>\<S>. (1 - beta \<mu> l k i) / beta \<mu> l k i)
+            \<le> real (card \<R>) + k powr (19/20)"
+        using ZZ_8_1 big \<mu> \<open>Colours l k\<close> 
+        unfolding Big_ZZ_8_5_def \<R>_def \<S>\<S>_def by blast
+      moreover have "(\<Sum>i\<in>\<S>\<S>. beta \<mu> l k i / beta \<mu> l k i) = (\<Sum>i\<in>\<S>\<S>. 1)"
+        using \<open>\<S>\<S> \<subseteq> \<S>\<close> beta_gt0 by (intro sum.cong) (force simp add: )+
+      ultimately show ?thesis
+        by (simp add: field_simps diff_divide_distrib sum_subtractf)
+    qed
+    also have "... \<le> real(card \<S>) + card \<R> + k powr (19/20)"
+      by (simp add: \<open>\<S>\<S> \<subseteq> \<S>\<close> card_mono)
+    finally have "(real (card \<S>) - k powr (19/20)) / bigbeta \<mu> l k \<le> real (card \<S>) + card \<R> + k powr (19/20)" .
+    
+    show ?thesis
+      
+      sorry
+  qed
+
 
 end
 

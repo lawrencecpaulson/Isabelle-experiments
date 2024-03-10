@@ -587,6 +587,13 @@ lemma Colours_ln0: "Colours l k \<Longrightarrow> l>0"
 lemma Colours_kn0: "Colours l k \<Longrightarrow> k>0"
   using Colours_def Colours_ln0 not_le by auto
 
+lemma eventually_Colours_at_top:
+  assumes "eventually P at_top"
+  shows   "eventually (\<lambda>l. \<forall>k. Colours l k \<longrightarrow> P k) at_top"
+  apply (rule eventually_mono [OF eventually_all_ge_at_top [OF assms]])
+  apply (simp add: Colours_def)
+  done
+
 lemma 
   assumes "V_state(X,Y,A,B)" 
   shows finX: "finite X" and finY: "finite Y" and finA: "finite A" and finB: "finite B"
