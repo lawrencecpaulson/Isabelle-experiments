@@ -40,6 +40,9 @@ qed
 
 definition "stir \<equiv> \<lambda>n. fact n / (sqrt (2 * pi * n) * (n / exp 1) ^ n) - 1"
 
+lemma stir_ge0: "n>0 \<Longrightarrow> stir n \<ge> 0"
+  using fact_bounds[of n] by (simp add: stir_def)
+
 lemma stir_to_0: "stir \<longlonglongrightarrow> 0"
   using fact_asymp_equiv by (simp add: asymp_equiv_def stir_def LIM_zero)
 
@@ -62,11 +65,18 @@ proof -
     ultimately have "\<forall>\<^sup>\<infinity>n. ((1 + stir n) * sqrt (2 * pi * n)) \<le> 2 powr (c * n)"
       apply eventually_elim
       apply (simp add: divide_simps mult_less_0_iff split: if_split_asm)
-      by (smt (verit, ccfv_SIG) mult_mono real_sqrt_ge_zero zero_le_mult_iff)
+      by (smt (verit, best) mult_mono real_sqrt_ge_zero zero_le_mult_iff)
     then show ?thesis
-      apply eventually_elim
-      apply (auto simp: )
-      sorry
+    proof (eventually_elim, clarify)
+      fix n
+      assume n: "(1 + stir n) * sqrt (2 * pi * real n) \<le> 2 powr (c * real n)"
+        and "n>0"
+      have "(1 + stir n) * sqrt (2 * pi * real n) \<ge> 1"
+        using stir_ge0
+        by (smt (verit) of_nat_0 \<open>0 < n\<close> mult_less_cancel_left2 nat_less_real_le pi_ge_two real_sqrt_ge_1_iff)
+      with n show "\<bar>log 2 ((1 + stir n) * sqrt (2 * pi * real n))\<bar> \<le> c * real n"
+        by (simp add: abs_if le_powr_iff)
+    qed
   qed
   then show ?thesis
     by (auto simp: smallo_def logstir_def)
@@ -89,7 +99,6 @@ proof -
   have "real (k+l choose l) = fact(k+l) / (fact k * fact l)"
     by (simp add: binomial_fact)
   also have "... = xxx * (k+l) powr(k+1) / (k powr k * l powr l)"
-
     sorry
   show ?thesis
     sorry
