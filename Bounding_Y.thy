@@ -4,7 +4,7 @@ theory Bounding_Y imports Red_Steps
 
 begin
 
-context Diagonal
+context Book
 begin
 
 subsection \<open>The following results together are Lemma 6.4\<close>
@@ -117,25 +117,10 @@ definition "Z_class \<equiv> \<lambda>\<mu> l k. {i \<in> Step_class \<mu> l k {
                                 pee \<mu> l k (Suc i) < pee \<mu> l k (i-1) \<and> pee \<mu> l k (i-1) \<le> p0}"
 
 lemma finite_Z_class:
-  assumes "\<mu>>0"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Z_class \<mu> l k)"
-proof -
-  have R: "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {red_step})"
-    using assms red_step_limit(1) by auto
-  have B: "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {bblue_step})"
-    using bblue_step_limit unfolding Lemma_bblue_step_limit_def
-    by (smt (verit, ccfv_threshold) assms eventually_at_top_linorder)
-  have S: "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {dboost_step})"
-    using bblue_dboost_step_limit [OF assms] eventually_sequentially
-    by (force simp: Lemma_bblue_dboost_step_limit_def)
-  have "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step})"
-    using eventually_mono [OF eventually_conj [OF R eventually_conj [OF B S]]]
-    by (simp add: Step_class_insert_NO_MATCH)
-  then show ?thesis
-    unfolding Z_class_def by (force elim!: eventually_mono)
-qed
+  assumes "0<\<mu>" "Colours l k" shows "finite (Z_class \<mu> l k)"
+  using finite_components [OF assms] by (auto simp: Z_class_def Step_class_insert_NO_MATCH)
 
-text \<open>Lemma 6.3 except for the limit\<close>
+text \<open>Lemma 6.3 except for the limit\<close>   (*abbreviations \<R>, \<B> would be nice here*)
 lemma Y_6_3_Main:
   assumes "0<\<mu>" "\<mu><1" "Colours l k"
   assumes Red53: "Lemma_Red_5_3 \<mu> l" and bblue_step_limit: "Lemma_bblue_step_limit \<mu> l"
@@ -189,8 +174,7 @@ proof -
              \<le> card (Step_class \<mu> l k {bblue_step} \<inter> Z_class \<mu> l k) * (1/k)"
     using sum_bounded_above by (metis (mono_tags, lifting))
   also have "\<dots> \<le> card (Step_class \<mu> l k {bblue_step}) * (1/k)"
-    using bblue_step_limit \<open>Colours l k\<close>
-    by (simp add: divide_le_cancel card_mono Lemma_bblue_step_limit_def)
+    using bblue_step_finite [OF \<open>\<mu>>0\<close> \<open>Colours l k\<close>] by (simp add: divide_le_cancel card_mono)
   also have "\<dots> \<le> l powr (3/4) / k"
     using bblue_step_limit \<open>Colours l k\<close> by (simp add: \<open>0 < k\<close> frac_le Lemma_bblue_step_limit_def)
   also have "\<dots> \<le> eps k"
@@ -244,27 +228,25 @@ proof -
            \<le> card (Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k) * (eps k / k)"
     using sum_bounded_above by (metis (mono_tags, lifting))
   also have "\<dots> \<le> card (Step_class \<mu> l k {red_step}) * (eps k / k)"
-    using eps_ge0[of k] assms
-    by (simp add: divide_le_cancel mult_le_cancel_right card_mono red_step_limit)
+    using eps_ge0[of k] assms red_step_finite
+    by (simp add: divide_le_cancel mult_le_cancel_right card_mono)
   also have "\<dots> \<le> k * (eps k / k)"
     using red_step_limit [OF \<open>0<\<mu>\<close> \<open>Colours l k\<close>]
     by (smt (verit, best) divide_nonneg_nonneg eps_ge0 mult_mono nat_less_real_le of_nat_0_le_iff)
   also have "\<dots> \<le> eps k"
     by (simp add: eps_ge0)
   finally have red: "(\<Sum>i\<in>Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> eps k" .
-  have fin_bblue: "finite (Step_class \<mu> l k {bblue_step})"
-    using Lemma_bblue_step_limit_def \<open>Colours l k\<close> bblue_step_limit by presburger
-  have fin_red: "finite (Step_class \<mu> l k {red_step})"
-    using \<open>0<\<mu>\<close> \<open>Colours l k\<close> red_step_limit(1) by blast
-  have bblue_not_red: "\<And>x. x \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> x \<notin> Step_class \<mu> l k {red_step}"
-    by (simp add: Step_class_def)
+  have *: "finite (Step_class \<mu> l k {bblue_step})" "finite (Step_class \<mu> l k {red_step})"
+          "\<And>x. x \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> x \<notin> Step_class \<mu> l k {red_step}"
+    using finite_components [OF \<open>0<\<mu>\<close> \<open>Colours l k\<close>] 
+    by (auto simp: Step_class_def)
   have eq: "Z_class \<mu> l k = Step_class \<mu> l k {dboost_step} \<inter> Z_class \<mu> l k 
                       \<union> Step_class \<mu> l k {bblue_step} \<inter> Z_class \<mu> l k
                       \<union> Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k"
     by (auto simp: Z_class_def Step_class_insert_NO_MATCH)
   show ?thesis
     using bblue red
-    by (subst eq) (simp add: sum.union_disjoint dboost fin_bblue fin_red disjoint_iff bblue_not_red)
+    by (subst eq) (simp add: sum.union_disjoint dboost disjoint_iff *)
 qed
 
 definition 
@@ -435,7 +417,6 @@ subsection \<open>Lemma 6.2\<close>
 
 definition "Big_Y_6_2 \<equiv> \<lambda> \<mu> l. Lemma_6_3 \<mu> l \<and> Lemma_Y_6_5_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l 
                \<and> Lemma_Red_5_3 \<mu> l \<and> l\<ge>16
-               \<and> (\<forall>k. Colours l k \<longrightarrow> finite (Z_class \<mu> l k))
                \<and> ((1 + eps l)^2) * eps l powr (1/2) \<le> 1
                \<and> (1 + eps l) powr (2 * eps l powr (- 1/2)) \<le> 2
                \<and> l \<ge> 16"
@@ -445,9 +426,7 @@ lemma Big_Y_6_2:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_Y_6_2 \<mu> l"
 proof -
-  have "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> finite (Z_class \<mu> l k)"
-    using assms finite_Z_class by presburger
-  moreover have "\<forall>\<^sup>\<infinity>l. ((1 + eps l)^2) * eps l powr (1/2) \<le> 1"
+  have "\<forall>\<^sup>\<infinity>l. ((1 + eps l)^2) * eps l powr (1/2) \<le> 1"
     unfolding eps_def by real_asymp
   moreover have "\<forall>\<^sup>\<infinity>l. (1 + eps l) powr (2 * eps l powr (- 1/2)) \<le> 2"
     unfolding eps_def by real_asymp
@@ -481,7 +460,6 @@ next
     and Y_6_5_dbooSt: "\<And>i. i \<in> Step_class \<mu> l k {dboost_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p i)"
     and Y_6_5_Bblue:  "\<And>i. i \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2*(eps k powr (-1/2))"
     and Y_6_4_dbooSt: " \<And>i. i \<in> Step_class \<mu> l k {dboost_step} \<Longrightarrow> p i \<le> p (Suc i)"
-    and finite_Z_class: "finite (Z_class \<mu> l k)"
     and big1: "((1 + eps k)^2) * eps k powr (1/2) \<le> 1" and big2: "(1 + eps k) powr (2 * eps k powr (-1/2)) \<le> 2"
     and "k\<ge>16"
     using big \<open>Colours l k\<close> 
@@ -515,7 +493,7 @@ next
     then have finZ: "finite (Z i)" for i
       by (meson finite_greaterThanAtMost finite_subset)
     have *: "(\<Sum>i \<in> Z j. p (i-1) - p (Suc i)) \<le> (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))"
-    proof (intro sum_mono2 [OF finite_Z_class])
+    proof (intro sum_mono2 [OF finite_Z_class [OF \<open>0<\<mu>\<close> \<open>Colours l k\<close>]])
       show "Z j \<subseteq> Z_class \<mu> l k" 
       proof 
         fix i
@@ -742,7 +720,7 @@ proof -
     and Y_6_2: "Lemma_Y_6_2 \<mu> l"
     and "Lemma_bblue_dboost_step_limit \<mu> l"
     using big \<open>Colours l k\<close> by (auto simp: Big_Y_6_1_def Colours_def)
-  with \<open>Colours l k\<close> have dboost_step_limit: "finite (Step_class \<mu> l k {dboost_step})" "card (Step_class \<mu> l k {dboost_step}) < k"
+  with \<open>Colours l k\<close> have dboost_step_limit: "card (Step_class \<mu> l k {dboost_step}) < k"
     by (auto simp: Lemma_bblue_dboost_step_limit_def Colours_def)
   define p0m where "p0m \<equiv> p0 - 2 * eps k powr (1/2)"
   have "p0m > 0"
@@ -874,17 +852,19 @@ proof -
   have "2 * real k * ln (1 - 2 * eps k powr (1/2) / p0)
       \<le> (card st) * ln (1 - 2 * eps k powr (1/2) / p0)"
   proof (intro mult_right_mono_neg)
-    obtain red_steps: "finite (Step_class \<mu> l k {red_step})" "card (Step_class \<mu> l k {red_step}) < k"
+    obtain red_steps: "card (Step_class \<mu> l k {red_step}) < k"
       using red_step_limit \<open>0<\<mu>\<close> \<open>Colours l k\<close> by blast
     with dboost_step_limit 
-    have "st \<subseteq> Step_class \<mu> l k {red_step,dboost_step}" "finite (Step_class \<mu> l k {red_step,dboost_step})"
+    have "st \<subseteq> Step_class \<mu> l k {red_step,dboost_step}" 
       by (auto simp add: st_def Step_class_insert_NO_MATCH)
-    then have "card st \<le> card (Step_class \<mu> l k {red_step,dboost_step})"
+    moreover have "finite (Step_class \<mu> l k {red_step,dboost_step})"
+      using finite_components [OF \<open>0<\<mu>\<close> \<open>Colours l k\<close>] by (auto simp: Step_class_insert_NO_MATCH)
+    ultimately have "card st \<le> card (Step_class \<mu> l k {red_step,dboost_step})"
       using card_mono by blast
     also have "\<dots> = card (Step_class \<mu> l k {red_step} \<union> Step_class \<mu> l k {dboost_step})"
       by (auto simp: Step_class_insert_NO_MATCH)
     also have "\<dots> \<le> k+k"
-      by (smt (verit) of_nat_add dboost_step_limit card_Un_le nat_le_real_less nat_less_real_le red_steps(2))
+      by (smt (verit) of_nat_add dboost_step_limit card_Un_le nat_le_real_less nat_less_real_le red_steps)
     finally show "real (card st) \<le> 2 * real k"
       by auto
     show "ln (1 - 2 * eps k powr (1/2) / p0) \<le> 0"
@@ -918,7 +898,7 @@ proof
     by (intro Y_6_1_aux strip) (auto simp: assms)
 qed
 
-end (*context Diagonal*)
+end (*context Book*)
 
 end
 

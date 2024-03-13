@@ -34,7 +34,7 @@ text \<open>How @{term b} and @{term m} are obtained from @{term l}\<close>
 definition b_of where "b_of \<equiv> \<lambda>l::nat. nat\<lceil>l powr (1/4)\<rceil>"
 definition m_of where "m_of \<equiv> \<lambda>l::nat. nat\<lceil>l powr (2/3)\<rceil>"
 
-context Diagonal
+context Book
 begin
 
 proposition Blue_4_1:
@@ -379,14 +379,14 @@ proof -
     by presburger 
 qed
 
-definition "Lemma_bblue_step_limit \<equiv> \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {bblue_step}) \<and> card (Step_class \<mu> l k {bblue_step}) \<le> l powr (3/4)"
+definition "Lemma_bblue_step_limit \<equiv> \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> card (Step_class \<mu> l k {bblue_step}) \<le> l powr (3/4)"
 
 text \<open>Lemma 4.3\<close>
 proposition bblue_step_limit:
   assumes "\<mu>>0"
   shows "\<forall>\<^sup>\<infinity>l. Lemma_bblue_step_limit \<mu> l"
 proof -
-  have "finite (Step_class \<mu> l k {bblue_step}) \<and> card (Step_class \<mu> l k {bblue_step}) \<le> l powr (3/4)"
+  have "card (Step_class \<mu> l k {bblue_step}) \<le> l powr (3/4)"
     if 41: "\<And>X. many_bluish \<mu> l k X \<Longrightarrow> X\<subseteq>V \<Longrightarrow> \<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S \<ge> l powr (1/4)"
       and "Colours l k" for l k
   proof -
@@ -475,23 +475,7 @@ proof -
       finally have False
         by simp
     } 
-    moreover have "finite (Step_class \<mu> l k {bblue_step})"
-    proof (intro finite_Step_class)
-      show "finite {m. m < n \<and> stepper_kind \<mu> l k m = bblue_step}" for n
-        by fastforce
-      have *: "card{m. m<n \<and> stepper_kind \<mu> l k m = bblue_step} \<le> l div b_of l"
-        if "stepper \<mu> l k n = (X,Y,A,B)" for n X Y A B
-      proof -
-        have "b_of l \<noteq> 0"
-          using Colours_ln0 [OF \<open>Colours l k\<close>] by (simp add: b_of_def)
-        then show ?thesis
-          using cardB_ge [OF that] card_B_limit [OF that \<open>Colours l k\<close>] 
-          by (simp add: BBLUES_def mult.commute less_eq_div_iff_mult_less_eq)
-      qed
-      then show "card {m. m < n \<and> stepper_kind \<mu> l k m = bblue_step} < Suc (l div b_of l)" for n
-        by (meson le_imp_less_Suc prod_cases4)
-    qed
-    ultimately show ?thesis by force
+    then show ?thesis by force
   qed
   with eventually_mono [OF Blue_4_1] \<open>\<mu>>0\<close> show ?thesis
     unfolding Lemma_bblue_step_limit_def by presburger 
@@ -499,7 +483,7 @@ qed
 
 proposition red_step_limit:
   assumes "\<mu>>0" "Colours l k"
-  shows "finite (Step_class \<mu> l k {red_step})" "card (Step_class \<mu> l k {red_step}) < k"
+  shows "card (Step_class \<mu> l k {red_step}) < k"
 proof -
   define REDS where "REDS \<equiv> \<lambda>r. {m. m < r \<and> stepper_kind \<mu> l k m = red_step}"
   have *: "card(REDS n) \<le> card A"
@@ -562,34 +546,23 @@ proof -
     with * show ?thesis
       using \<open>Colours l k\<close> card_A_limit by fastforce
   qed
-  moreover have "\<And>n. finite (REDS n)" "incseq REDS"
-    by (auto simp: REDS_def incseq_def)
-  ultimately have "\<forall>\<^sup>\<infinity>n. \<Union> (range REDS) = REDS n"
-    using Union_incseq_finite by blast
-  then have "finite (\<Union> (range REDS))"
-    using REDS_def eventually_sequentially by force
-  moreover have "(Step_class \<mu> l k {red_step}) \<subseteq> \<Union> (range REDS)"
-    by (auto simp: Step_class_def REDS_def)
-  ultimately show "finite (Step_class \<mu> l k {red_step})"
-    using infinite_super by blast
-  with less_k show "card (Step_class \<mu> l k {red_step}) < k"
-    by (metis (mono_tags) REDS_def Step_class_iterates)
+  then show "card (Step_class \<mu> l k {red_step}) < k"
+    unfolding REDS_def by (metis (mono_tags) Step_class_iterates [OF red_step_finite [OF assms]] )
 qed
 
 definition 
   "Lemma_bblue_dboost_step_limit \<equiv> 
-     \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> finite (Step_class \<mu> l k {dboost_step}) 
-          \<and> card (Step_class \<mu> l k {bblue_step}) + card (Step_class \<mu> l k {dboost_step}) < l"
+     \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow>
+     card (Step_class \<mu> l k {bblue_step}) + card (Step_class \<mu> l k {dboost_step}) < l"
 
 proposition bblue_dboost_step_limit:
   assumes "\<mu>>0"
   shows "\<forall>\<^sup>\<infinity>l. Lemma_bblue_dboost_step_limit \<mu> l"
 proof -
-  have "finite (Step_class \<mu> l k {dboost_step}) 
-      \<and> card (Step_class \<mu> l k {bblue_step}) + card (Step_class \<mu> l k {dboost_step}) < l"
+  have "card (Step_class \<mu> l k {bblue_step}) + card (Step_class \<mu> l k {dboost_step}) < l"
     if 41: "\<And>X. many_bluish \<mu> l k X \<Longrightarrow> X\<subseteq>V \<Longrightarrow> \<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S \<ge> l powr (1/4)"
       and "Colours l k" for l k
-  proof 
+  proof -
     define BDB where "BDB \<equiv> \<lambda>r. {m. m < r \<and> stepper_kind \<mu> l k m \<in> {bblue_step,dboost_step}}"
     have *: "card(BDB n) \<le> card B"
       if "stepper \<mu> l k n = (X,Y,A,B)" for n X Y A B
@@ -686,8 +659,6 @@ proof -
       by (auto simp: Step_class_def BDB_def)
     ultimately have fin: "finite (Step_class \<mu> l k {bblue_step,dboost_step})"
       by fastforce
-    then show "finite (Step_class \<mu> l k {dboost_step})"
-      by (metis Step_class_Un finite_Un insert_is_Un)
     obtain n where "\<Union> (range BDB) = BDB n"
       using ** by force
     then have "card (BDB n) = card (Step_class \<mu> l k {bblue_step} \<union> Step_class \<mu> l k {dboost_step})"
@@ -697,53 +668,14 @@ proof -
       have "disjnt (Step_class \<mu> l k {bblue_step}) (Step_class \<mu> l k {dboost_step})"
         using disjnt_Step_class by auto
       then show ?thesis
-        using fin \<open>finite (Step_class \<mu> l k {dboost_step})\<close>
+        using fin dboost_step_finite [OF assms]
         by (metis Step_class_insert card_Un_disjnt finite_Un)
     qed
-    finally show "card (Step_class \<mu> l k {bblue_step}) + card (Step_class \<mu> l k {dboost_step}) < l"
+    finally show ?thesis
       by (metis less_l)
   qed
   with eventually_mono [OF Blue_4_1] \<open>\<mu>>0\<close> show ?thesis
     unfolding Lemma_bblue_dboost_step_limit_def by presburger 
-qed
-
-lemma finite_dreg_step:
-  assumes "finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step})"
-  shows "finite (Step_class \<mu> l k {dreg_step})"
-proof -
-  define n where "n = Max (Step_class \<mu> l k {red_step,bblue_step,dboost_step})"
-  have "i \<le> Suc (Max (Step_class \<mu> l k {red_step,bblue_step,dboost_step}))"
-    if "i \<in> Step_class \<mu> l k {dreg_step}" for i
-  proof (cases i)
-    case 0
-    then show ?thesis
-      by simp
-  next
-    case (Suc j)
-    then have "j \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
-      using step_before_dreg that by blast
-    with assms show ?thesis
-      by (metis Max_ge Suc Suc_le_mono) 
-  qed
-  then have "Step_class \<mu> l k {dreg_step} \<subseteq> {0..Suc n}"
-    by (auto simp: n_def)
-  then show ?thesis
-    using finite_subset by blast
-qed
-
-lemma Step_class_halted_nonempty_aux:
-  assumes "finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step})"
-  shows "Step_class \<mu> l k {halted} \<noteq> {}"
-proof
-  assume "Step_class \<mu> l k {halted} = {}"
-  then have "Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step,halted} = 
-            Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step}"
-    by (simp add: Step_class_insert_NO_MATCH)
-  moreover have "finite (Step_class \<mu> l k {dreg_step})"
-    using assms finite_dreg_step by blast
-  ultimately show False
-    using Step_class_UNIV assms
-    by (metis Step_class_insert infinite_UNIV_nat infinite_Un)
 qed
 
 end

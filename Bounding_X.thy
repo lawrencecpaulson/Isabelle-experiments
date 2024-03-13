@@ -4,7 +4,7 @@ theory Bounding_X imports Bounding_Y
 
 begin
 
-context Diagonal
+context Book
 begin
 
 subsection \<open>Preliminaries\<close>
@@ -47,9 +47,7 @@ proof -
     qed
   }
   then show ?thesis
-    using eventually_mono [OF eventually_conj [OF beta_gt0 [OF assms] bblue_dboost_step_limit [OF \<open>\<mu>>0\<close>]]]
-    unfolding Lemma_bblue_dboost_step_limit_def Lemma_beta_gt0_def
-    by presburger
+    using eventually_mono [OF beta_gt0] dboost_step_finite Lemma_beta_gt0_def assms by presburger
 qed
 
 lemma bigbeta_less1:
@@ -86,9 +84,7 @@ proof -
     qed
   }
   then show ?thesis
-    using eventually_mono [OF eventually_conj [OF beta_gt0 [OF assms] bblue_dboost_step_limit [OF \<open>\<mu>>0\<close>]]]
-    unfolding Lemma_bblue_dboost_step_limit_def Lemma_beta_gt0_def
-    by presburger
+    using eventually_mono [OF beta_gt0] dboost_step_finite Lemma_beta_gt0_def assms by presburger
 qed
 
 lemma bigbeta_le:
@@ -115,37 +111,6 @@ proof -
     by (simp add: beta_ge0 sum_nonneg)
   ultimately show ?thesis
     using assms by (simp add: bigbeta_def Let_def divide_simps)
-qed
-
-text \<open>it's convenient to package up the criteria for finiteness of all components at once\<close>
-definition 
-  "Big_finite_components \<equiv> 
-    \<lambda>\<mu> l. Lemma_bblue_dboost_step_limit \<mu> l
-        \<and> Lemma_bblue_step_limit \<mu> l"
-
-text \<open>establishing the size requirements for finiteness\<close>
-lemma Big_finite_components:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_finite_components \<mu> l"
-  unfolding Big_finite_components_def eventually_conj_iff all_imp_conj_distrib 
-  by (simp add: bblue_dboost_step_limit bblue_step_limit assms)
-
-lemma finite_components:
-  assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and big: "Big_finite_components \<mu> l" 
-  shows "finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step})"
-proof -
-  have red: "finite (Step_class \<mu> l k {red_step})"
-    using \<open>Colours l k\<close> \<mu> red_step_limit by blast
-  have bblue: "finite (Step_class \<mu> l k {bblue_step})"
-    using \<open>Colours l k\<close> big unfolding Big_finite_components_def Lemma_bblue_step_limit_def
-    by blast
-  have dbooSt: "finite (Step_class \<mu> l k {dboost_step})"
-    using \<open>Colours l k\<close> big unfolding Big_finite_components_def Lemma_bblue_dboost_step_limit_def
-    by blast
-  have dreg: "finite (Step_class \<mu> l k {dreg_step})"
-    by (metis red bblue dbooSt finite_dreg_step Step_class_insert finite_Un)
-  show "finite (Step_class \<mu> l k {red_step, bblue_step, dboost_step, dreg_step})"
-    by (metis Step_class_insert bblue dbooSt dreg finite_Un red)
 qed
 
 subsection \<open>Lemma 7.2\<close>
@@ -204,7 +169,7 @@ proof -
     finally show ?thesis .
   qed
   have fin_red: "finite \<R>"
-    using red_step_limit \<mu> \<open>Colours l k\<close> by (auto simp: \<R>_def)
+    using red_step_finite \<mu> \<open>Colours l k\<close> by (auto simp: \<R>_def)
   define t where "t \<equiv> card \<R>"
   have "t\<ge>0"
     by (auto simp: t_def)
@@ -241,10 +206,10 @@ proof -
     by (simp add: ok_fun_X_7_2_def)
   also have "\<dots> \<le> t * ln (1 - 1 / (k * (1-\<mu>)))"
   proof (intro mult_right_mono_neg)
-    obtain red_steps: "finite \<R>" "card \<R> < k"
+    have red_steps: "card \<R> < k"
       using red_step_limit \<open>0<\<mu>\<close> \<open>Colours l k\<close> by (auto simp: \<R>_def)
     show "real t \<le> real k"
-      using nat_less_le red_steps(2) by (simp add: t_def)
+      using nat_less_le red_steps by (simp add: t_def)
     show "ln (1 - 1 / (k * (1-\<mu>))) \<le> 0"
       using \<mu>(2) divide_less_eq k_gt ln_one_minus_pos_upper_bound by fastforce
   qed
@@ -349,14 +314,6 @@ lemma Bdelta_trivial_step:
   using assms
   by (auto simp: step_kind_defs next_state_def Bdelta_def Bseq_def Let_def degree_reg_def split: if_split_asm prod.split)
 
-definition "Big_X_7_3 \<equiv> \<lambda>\<mu> l. Lemma_bblue_step_limit \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l"
-
-text \<open>establishing the size requirements for 7.10\<close>
-lemma Big_X_7_3:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_3 \<mu> l"
-  unfolding Big_X_7_3_def
-  by (simp add: bblue_step_limit bblue_dboost_step_limit eventually_conj_iff assms)
 
 definition "ok_fun_X_7_3 \<equiv> \<lambda>k. - (real k powr (3/4))" 
 
@@ -366,7 +323,7 @@ lemma ok_fun_X_7_3: "ok_fun_X_7_3  \<in> o(real)"
 lemma X_7_3:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
-  assumes big: "Big_X_7_3 \<mu> l"
+  assumes big: "Lemma_bblue_step_limit \<mu> l"
   assumes "Colours l k" 
   defines "X \<equiv> Xseq \<mu> l k"
   defines "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
@@ -375,11 +332,9 @@ lemma X_7_3:
 proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  have bblue_limit: "Lemma_bblue_step_limit \<mu> l" 
-    and bblue_dboost_step_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
-    using big by (auto simp: Big_X_7_3_def)
-  with \<open>Colours l k\<close> have [simp]: "finite \<B>" "finite \<S>" and card\<B>: "card \<B> \<le> l powr (3/4)"
-    by (auto simp: \<B>_def Lemma_bblue_step_limit_def \<S>_def Lemma_bblue_dboost_step_limit_def)
+  have [simp]: "finite \<B>" "finite \<S>" and card\<B>: "card \<B> \<le> l powr (3/4)"
+    using assms 
+    by (auto simp: \<B>_def Lemma_bblue_step_limit_def \<S>_def bblue_step_finite dboost_step_finite)
   define b where "b \<equiv> \<lambda>i. card (Bdelta \<mu> l k i)"
   obtain i where "card (Bseq \<mu> l k i) = sum b \<B> + card \<S>" 
   proof -
@@ -454,8 +409,7 @@ lemma ok_fun_26: "ok_fun_26 \<in> o(real)" and ok_fun_28: "ok_fun_28 \<in> o(rea
 
 definition 
   "Big_X_7_5 \<equiv> 
-    \<lambda>\<mu> l. Lemma_bblue_dboost_step_limit \<mu> l
-        \<and> Lemma_bblue_step_limit \<mu> l \<and> Lemma_Y_6_4_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l
+    \<lambda>\<mu> l. Lemma_bblue_step_limit \<mu> l \<and> Lemma_Y_6_4_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l
         \<and> (\<forall>k\<ge>l. Lemma_height_upper_bound k \<and> k\<ge>16 \<and> (ok_fun_26 k - ok_fun_28 k \<le> k))"
 
 text \<open>establishing the size requirements for 7.5\<close>
@@ -467,7 +421,7 @@ proof -
     unfolding eps_def ok_fun_26_def ok_fun_28_def by real_asymp
   then show ?thesis
     unfolding Big_X_7_5_def using assms eventually_all_ge_at_top [OF height_upper_bound]
-    by (simp add: eventually_conj_iff bblue_dboost_step_limit 
+    by (simp add: eventually_conj_iff 
         bblue_step_limit Y_6_4_dbooSt Y_6_5_Bblue height_upper_bound eventually_all_ge_at_top)
 qed
 
@@ -584,20 +538,16 @@ proof -
     using that by (fastforce simp: \<S>\<S>)
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  then have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
-      and B_limit: "Lemma_bblue_step_limit \<mu> l"
+  then have B_limit: "Lemma_bblue_step_limit \<mu> l"
       and Y64S: "Lemma_Y_6_4_dbooSt \<mu> l"
       and 16: "k\<ge>16" (*for Y_6_5_Red*)
       and ok_fun: "ok_fun_26 k - ok_fun_28 k \<le> k"
     using big by (auto simp: Big_X_7_5_def)
   have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
     unfolding m_def \<H>_def using halted_point_minimal assms by blast
-  have [simp]: "finite \<R>"
-    using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
-  have [simp]: "finite \<B>"
-    using B_limit \<open>Colours l k\<close> by (simp add: Lemma_bblue_step_limit_def \<B>_def)
-  have [simp]: "finite \<S>"
-    using BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
+  have [simp]: "finite \<R>" "finite \<B>" "finite \<S>"
+    using finite_components [OF \<open>\<mu>>0\<close> \<open>Colours l k\<close>]
+    by (auto simp: Step_class_insert_NO_MATCH \<R>_def \<B>_def \<S>_def)
   have [simp]: "\<R> \<inter> \<S> = {}" "\<B> \<inter> (\<R>\<union>\<S>) = {}"
     by (auto simp: \<R>_def \<S>_def \<B>_def Step_class_def)
 
@@ -683,7 +633,7 @@ subsection \<open>Lemma 7.4\<close>
 
 definition 
   "Big_X_7_4 \<equiv> 
-    \<lambda>\<mu> l. Lemma_X_7_5 \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l \<and> Lemma_Red_5_3 \<mu> l
+    \<lambda>\<mu> l. Lemma_X_7_5 \<mu> l \<and> Lemma_Red_5_3 \<mu> l
         \<and> Lemma_beta_gt0 \<mu> l \<and> (\<forall>k. Colours l k \<longrightarrow> 0 < bigbeta \<mu> l k \<and> bigbeta \<mu> l k < 1)"
 
 text \<open>establishing the size requirements for 7.4\<close>
@@ -691,7 +641,7 @@ lemma Big_X_7_4:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_4 \<mu> l"
   unfolding Big_X_7_4_def using assms eventually_all_ge_at_top [OF height_upper_bound]
-  by (simp add: eventually_conj_iff all_imp_conj_distrib X_7_5 bblue_dboost_step_limit 
+  by (simp add: eventually_conj_iff all_imp_conj_distrib X_7_5  
       Red_5_3 Y_6_5_Bblue height_upper_bound beta_gt0 bigbeta_gt0 bigbeta_less1 eventually_all_ge_at_top)
 
 definition "ok_fun_X_7_4 \<equiv> \<lambda>k. -6 * eps k powr (1/4) * k * ln k / ln 2" 
@@ -711,8 +661,7 @@ proof -
   define p where "p \<equiv> pee \<mu> l k"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  then have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l" 
-    and bigbeta_01: "0 < bigbeta \<mu> l k" "bigbeta \<mu> l k < 1"
+  then have bigbeta_01: "0 < bigbeta \<mu> l k" "bigbeta \<mu> l k < 1"
     and "Lemma_beta_gt0 \<mu> l" and X75: "card (\<S>\<setminus>\<S>\<S>) \<le> 3 * eps k powr (1/4) * k" 
     and R53:  "\<And>i. i \<in> \<S> \<Longrightarrow> p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
     using big \<open>Colours l k\<close> 
@@ -720,7 +669,7 @@ proof -
   then have beta_gt0: "\<forall>i\<in>\<S>. 0 < beta \<mu> l k i"
     by (simp add: Lemma_beta_gt0_def \<S>_def \<open>Colours l k\<close>)
   have [simp]: "finite \<S>"
-    using BS_limit  by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
+    unfolding \<S>_def using assms dboost_step_finite by blast
   moreover have "\<S>\<S> \<subseteq> \<S>"
     unfolding \<S>\<S>_def \<S>_def dboost_star_def by auto
   ultimately have [simp]: "finite \<S>\<S>"
@@ -1045,8 +994,7 @@ lemma X_7_10:
 proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  then have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
-    and hub: "Lemma_height_upper_bound k"
+  then have hub: "Lemma_height_upper_bound k"
     and 16: "k\<ge>16" (*for Y_6_5_Red*)
     and ok_le_k: "ok_fun_26 k - ok_fun_28 k \<le> k"
     and Y_6_5_S: "Lemma_Y_6_5_dbooSt \<mu> l"
@@ -1069,11 +1017,8 @@ proof -
     using 26 28 by linarith
   finally have *: "(\<Sum>i\<in>\<R>\<union>\<S>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k - ok_fun_28 k" .
 
-  have [simp]: "finite \<R>"
-    using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
-  have [simp]: "finite \<S>"
-    using BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
-
+  have [simp]: "finite \<R>" "finite \<S>"
+  using finite_components assms by (auto simp: \<R>_def \<S>_def Step_class_insert_NO_MATCH)
   have h_ge_0_if_S: "h(Suc i) - h(i-1) \<ge> 0" if "i \<in> \<S>" for i
   proof -
     have *: "hgt k (pee \<mu> l k i) \<le> hgt k (pee \<mu> l k (Suc i))"
@@ -1130,7 +1075,7 @@ proof -
   finally have "card ((\<R>\<union>\<S>) \<inter> C) * eps k powr (-1/4) - 2 * card \<R> \<le> k"
     by linarith 
   moreover have "card \<R> \<le> k"
-    by (metis \<R>_def \<open>\<mu>>0\<close> \<open>Colours l k\<close> nless_le red_step_limit(2))
+    by (metis \<R>_def \<open>\<mu>>0\<close> \<open>Colours l k\<close> nless_le red_step_limit)
   ultimately have "card ((\<R>\<union>\<S>) \<inter> C) * eps k powr (-1/4) \<le> 3 * k"
     by linarith
   with eps_gt0 [OF\<open>k>0\<close>] show ?thesis
@@ -1190,8 +1135,7 @@ proof -
       by (auto simp: Lemma_Red_5_3_def Big_X_7_11_def Big_X_7_11_inequalities_def \<S>_def p_def)
   then have Y_6_5_B: "\<And>i. i \<in> \<B> \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2 * eps k powr (-1/2)"
     using \<open>\<mu>>0\<close> \<open>l\<le>k\<close> unfolding \<B>_def p_def by (meson Lemma_Y_6_5_Bblue_def)
-  have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
-    and B_limit: "Lemma_bblue_step_limit \<mu> l"
+  have B_limit: "Lemma_bblue_step_limit \<mu> l"
     and hub: "Lemma_height_upper_bound k"
     and 16: "k\<ge>16" (*for Y_6_5_Red*)
     and ok_le_k: "ok_fun_26 k - ok_fun_28 k \<le> k"
@@ -1201,14 +1145,9 @@ proof -
   then have oddset: "{..<m} \<setminus> \<D> = {i \<in> {..<m}. odd i}" 
     using step_odd step_even not_halted_even_dreg 
     by (auto simp: \<D>_def \<H>_def Step_class_insert_NO_MATCH)
-
-  have [simp]: "finite \<R>"
-    using \<mu> \<open>Colours l k\<close> red_step_limit by (auto simp: \<R>_def)
-  have [simp]: "finite \<B>"
-    using B_limit \<open>Colours l k\<close> by (simp add: Lemma_bblue_step_limit_def \<B>_def)
-  have [simp]: "finite \<S>"
-    using BS_limit by (simp add: Lemma_bblue_dboost_step_limit_def \<S>_def \<open>Colours l k\<close>)
-
+  have [simp]: "finite \<R>" "finite \<B>" "finite \<S>"
+    using finite_components [OF \<open>\<mu>>0\<close> \<open>Colours l k\<close>]
+    by (auto simp: Step_class_insert_NO_MATCH \<R>_def \<B>_def \<S>_def)
   have [simp]: "\<R> \<inter> \<S> = {}" and [simp]: "(\<R> \<union> \<S>) \<inter> \<B> = {}"
     by (simp_all add: \<R>_def \<S>_def \<B>_def Step_class_def disjoint_iff)
 
@@ -1226,7 +1165,7 @@ proof -
     using le2 by simp
   finally have "(1 + eps k) * (1 + eps k) ^ hgt k qstar \<le> 2" .
   moreover have "card \<R> \<le> k"
-    by (simp add: \<R>_def \<open>0<\<mu>\<close> \<open>Colours l k\<close> less_imp_le red_step_limit(2))
+    by (simp add: \<R>_def \<open>0<\<mu>\<close> \<open>Colours l k\<close> less_imp_le red_step_limit)
   ultimately have B: "((1 + eps k) * (1 + eps k) ^ hgt k qstar) * card \<R> \<le> 2 * real k"
     by (intro mult_mono) auto
   have "- 2 * alpha k 1 * k \<le> - alpha k (hgt k qstar + 2) * card \<R>"
@@ -1404,15 +1343,14 @@ lemma X_7_11:
 subsection \<open>Lemma 7.12\<close>
 
 definition "Big_X_7_12 \<equiv>
-   \<lambda>\<mu> l. Lemma_X_7_11 \<mu> l \<and> Big_finite_components \<mu> l \<and> Big_X_7_10 \<mu> l
-       \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_9 k)"
+   \<lambda>\<mu> l. Lemma_X_7_11 \<mu> l \<and> Big_X_7_10 \<mu> l \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_9 k)"
 
 text \<open>establishing the size requirements for 7.12\<close>
 lemma Big_X_7_12:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_12 \<mu> l"
   unfolding Big_X_7_12_def eventually_conj_iff  
-  by (simp add: X_7_11 Big_finite_components X_7_10 Big_X_7_10 Big_X_7_9 eventually_all_ge_at_top assms)
+  by (simp add: X_7_11 X_7_10 Big_X_7_10 Big_X_7_9 eventually_all_ge_at_top assms)
 
 lemma X_7_12_aux:
   fixes l k
@@ -1428,12 +1366,10 @@ proof -
   define \<D> where "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  have 711: "Lemma_X_7_11 \<mu> l" and fin: "Big_finite_components \<mu> l"
-      and big_710: "Big_X_7_10 \<mu> l"
+  have 711: "Lemma_X_7_11 \<mu> l" and big_710: "Big_X_7_10 \<mu> l"
     using big by (auto simp: Big_X_7_12_def)
   have [simp]: "finite \<R>" "finite \<S>"
-    using finite_components [OF \<mu> \<open>Colours l k\<close> fin]
-    by (auto simp: \<R>_def \<S>_def Step_class_insert_NO_MATCH)
+    using finite_components assms by (auto simp: \<R>_def \<S>_def Step_class_insert_NO_MATCH)
   \<comment> \<open>now the conditions for Lemmas 7.10 and 7.11\<close>
   define C10 where "C10 \<equiv> {i. hgt k (p i) \<ge> hgt k (p (i-1)) + eps k powr (-1/4)}"
   define C11 where "C11 \<equiv> {i. p i \<ge> p (i-1) + eps k powr (-1/4) * alpha k 1 \<and> p (i-1) \<le> p0}"
@@ -1559,20 +1495,22 @@ proof -
     by (auto simp: Big_X_7_6_def \<R>_def \<S>_def C_def X_def)
   have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
     unfolding m_def \<H>_def using halted_point_minimal assms by blast
-  have [simp]: "finite \<R>" and "card \<R> < k"
+
+  have [simp]: "finite \<D>" "finite \<R>" "finite \<B>" "finite \<S>"
+    using finite_components [OF \<open>\<mu>>0\<close> \<open>Colours l k\<close>]
+    by (auto simp: Step_class_insert_NO_MATCH \<D>_def \<R>_def \<B>_def \<S>_def)
+  have "card \<R> < k"
     using \<R>_def assms red_step_limit by blast+ 
-  have [simp]: "finite \<B>" and "card \<B> \<le> l powr (3/4)"
+  have "card \<B> \<le> l powr (3/4)"
     using \<open>Colours l k\<close> B_limit by (auto simp: Lemma_bblue_step_limit_def \<B>_def)
   then have "card (\<B> \<inter> C) \<le> l powr (3/4)"
-    using card_mono [OF _ Int_lower1] by (smt (verit, best) of_nat_mono)
+    using card_mono [OF _ Int_lower1] by (smt (verit) \<open>finite \<B>\<close> of_nat_mono)
   also have "\<dots> \<le> k powr (3/4)"
     by (simp add: \<open>l\<le>k\<close> powr_mono2)
   finally have Bk_34: "card (\<B> \<inter> C) \<le> k powr (3/4)" .
 
-  have [simp]: "finite \<S>" and less_l: "card \<B> + card \<S> < l"
+  have less_l: "card \<B> + card \<S> < l"
     using \<open>Colours l k\<close> BS_limit by (auto simp add: Lemma_bblue_dboost_step_limit_def \<B>_def \<S>_def)
-  have [simp]: "finite \<D>"
-    by (metis Step_class_insert \<B>_def \<D>_def \<R>_def \<S>_def \<open>finite \<B>\<close> \<open>finite \<R>\<close> \<open>finite \<S>\<close> finite_Un finite_dreg_step)
   have [simp]: "(\<B> \<union> (\<R> \<union> \<S>)) \<inter> {m} = {}" "\<R> \<inter> \<S> = {}" "\<B> \<inter> (\<R> \<union> \<S>) = {}" "m \<notin> \<B>" "m \<notin> \<R>" "m \<notin> \<S>"
                "\<B> \<inter> C \<inter> (\<R> \<inter> C \<union> \<S> \<inter> C) = {}" for C
     using m_minimal by (force simp add: disjoint_iff \<B>_def \<R>_def \<S>_def \<H>_def Step_class_def)+
@@ -1652,15 +1590,15 @@ qed
 subsection \<open>Lemma 7.1\<close>
 
 definition "Big_X_7_1 \<equiv>
-   \<lambda>\<mu> l. Big_X_7_2 \<mu> l \<and> Big_X_7_3 \<mu> l \<and> Big_X_7_4 \<mu> l \<and> Big_X_7_6 \<mu> l
-       \<and> Big_finite_components \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l"
+   \<lambda>\<mu> l. Big_X_7_2 \<mu> l \<and> Lemma_bblue_step_limit \<mu> l \<and> Big_X_7_4 \<mu> l \<and> Big_X_7_6 \<mu> l
+       \<and> Lemma_bblue_dboost_step_limit \<mu> l"
 
 text \<open>establishing the size requirements for 7.11\<close>
 lemma Big_X_7_1:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_1 \<mu> l"
   unfolding Big_X_7_1_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_X_7_2 Big_X_7_3 Big_X_7_4 Big_X_7_6 Big_finite_components
+  apply (simp add: Big_X_7_2 bblue_step_limit Big_X_7_4 Big_X_7_6 
           bblue_dboost_step_limit eventually_all_ge_at_top assms)
   done
 
@@ -1683,8 +1621,8 @@ lemma X_7_1:
 proof -
   define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
   define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
-  have 72: "Big_X_7_2 \<mu> l" and 73: "Big_X_7_3 \<mu> l" and 74: "Big_X_7_4 \<mu> l" 
-    and 76: "Big_X_7_6 \<mu> l" and finite: "Big_finite_components \<mu> l"
+  have 72: "Big_X_7_2 \<mu> l" and 73: "Lemma_bblue_step_limit \<mu> l" and 74: "Big_X_7_4 \<mu> l" 
+    and 76: "Big_X_7_6 \<mu> l" 
     and BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
     using big by (auto simp: Big_X_7_1_def)
   then have [simp]: "finite \<R>" "finite \<B>" "finite \<S>" "finite \<D>" 
@@ -1737,7 +1675,7 @@ proof -
     using X0_nz \<mu> unfolding tele by (simp add: divide_simps X_def)
 qed
 
-end (*context Diagonal*)
+end (*context Book*)
 
 end
 

@@ -4,7 +4,7 @@ theory Red_Steps imports Big_Blue_Steps
 
 begin
 
-context Diagonal
+context Book
 begin
 
 subsection \<open>Density-boost steps\<close>
@@ -587,7 +587,7 @@ proof -
     have "x \<in> X"
       unfolding x_def using cvx_in_Xseq i XY by blast
     with Neighbours_RB[of x X] have Xx: "X - {x} = NBX \<union> NRX"
-      using Diagonal.Xseq_subset_V Diagonal_axioms NRX_def NBX_def XY by blast
+      using Xseq_subset_V NRX_def NBX_def XY by blast
     have disjnt: "NBX \<inter> NRX = {}"
       by (auto simp: Blue_eq NRX_def NBX_def disjoint_iff in_Neighbours_iff)
     then have "weight X Y x = (\<Sum>y \<in> NRX. Weight X Y x y) + (\<Sum>y \<in> NBX. Weight X Y x y)"
@@ -825,8 +825,8 @@ corollary Red_5_2:
 
 definition 
   "Lemma_Red_5_3 \<equiv> 
-      \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> (\<forall>i \<in> Step_class \<mu> l k {dboost_step}.
-            pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2)"
+      \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> 
+                 (\<forall>i \<in> Step_class \<mu> l k {dboost_step}. pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2)"
 
 text \<open>This is a weaker consequence of the previous results\<close>
 corollary Red_5_3:
@@ -904,6 +904,6 @@ proof (rule eventually_mono [OF Red_5_3 [OF assms]])
     by (smt (verit) Colours_kn0 Lemma_Red_5_3_def of_nat_0_less_iff zero_less_divide_iff zero_less_power)
 qed
 
-end (*context Diagonal*)
+end (*context Book*)
 
 end

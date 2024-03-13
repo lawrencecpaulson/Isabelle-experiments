@@ -14,7 +14,7 @@ type_synonym 'a config = "'a set \<times> 'a set \<times> 'a set \<times> 'a set
 
 (*NOT CLEAR WHETHER \<mu> CAN BE FIXED HERE OR NOT*)
 
-locale Diagonal = fin_sgraph +   \<comment> \<open>finite simple graphs (no loops)\<close>
+locale Book = fin_sgraph +   \<comment> \<open>finite simple graphs (no loops)\<close>
   assumes complete: "E \<equiv> all_edges V"
   fixes Red Blue :: "'a set set"
   assumes Red_not_Blue: "Red \<noteq> Blue"
@@ -26,7 +26,7 @@ locale Diagonal = fin_sgraph +   \<comment> \<open>finite simple graphs (no loop
   assumes Red_edges_XY0: "Red \<inter> all_edges_betw_un X0 Y0 \<noteq> {}"  \<comment> \<open>initial Red density is not 0\<close>
   assumes Blue_edges_XY0: "Blue \<inter> all_edges_betw_un X0 Y0 \<noteq> {}"  \<comment> \<open>initial Red density is not 1\<close>
 
-context Diagonal
+context Book
 begin
 
 lemma finite_X0: "finite X0" and finite_Y0: "finite Y0"
@@ -1446,7 +1446,7 @@ lemma choose_blue_book_psubset:
     shows "T \<noteq> X"
 proof -
   obtain x where "x\<in>X" and x: "good_blue_book \<mu> X ({x}, Neighbours Blue x \<inter> X)"
-    using ex_nonempty_blue_book Diagonal_axioms assms by blast
+    using ex_nonempty_blue_book assms by blast
   with \<open>finite X\<close> have "best_blue_book_card \<mu> X \<noteq> 0"
     unfolding valid_state_def
     by (metis best_blue_book_is_best card.empty card_seteq empty_not_insert finite.intros singleton_insert_inj_eq)
@@ -1562,6 +1562,19 @@ lemma before_halted_eq:
   assumes "\<mu>>0" "Colours l k"
   shows "{..<halted_point \<mu> l k} = Step_class \<mu> l k {dreg_step,red_step,bblue_step,dboost_step}"
   using halted_point_minimal [OF assms] by (force simp add: halted_eq_Compl)
+
+lemma finite_components:
+  assumes "0<\<mu>" "Colours l k" 
+  shows "finite (Step_class \<mu> l k {dreg_step,red_step,bblue_step,dboost_step})"
+  by (metis before_halted_eq [OF assms] finite_lessThan)
+
+lemma
+  assumes "0<\<mu>" "Colours l k" 
+  shows dreg_step_finite: "finite (Step_class \<mu> l k {dreg_step})"
+    and red_step_finite: "finite (Step_class \<mu> l k {red_step})"
+    and bblue_step_finite: "finite (Step_class \<mu> l k {bblue_step})"
+    and dboost_step_finite: "finite (Step_class \<mu> l k {dboost_step})"
+  using finite_components [OF assms] by (auto simp: Step_class_insert_NO_MATCH)
 
 lemma halted_stepper_add_eq:
   assumes "\<mu>>0" "Colours l k"

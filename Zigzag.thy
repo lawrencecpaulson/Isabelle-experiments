@@ -4,8 +4,7 @@ theory Zigzag imports Bounding_X
 
 begin
 
-
-context Diagonal
+context Book
 begin
 
 subsection \<open>Lemma 8.1 (the actual Zigzag Lemma)\<close>
@@ -23,7 +22,7 @@ definition "Big42b \<equiv> \<lambda>k. 2 * k powr (-1/16) * k
                        \<le> real k powr (19/20)"
 
 definition "Big_ZZ_8_1 \<equiv>
-   \<lambda>\<mu> l. Lemma_Red_5_2 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Big_finite_components \<mu> l
+   \<lambda>\<mu> l. Lemma_Red_5_2 \<mu> l \<and> Lemma_Red_5_3 \<mu> l
         \<and> Lemma_bblue_step_limit \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l
         \<and> (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k \<and> Big_ZZ_8_2 k \<and> k\<ge>16 \<and> Big39 k
                       \<and> Big42a k \<and> Big42b k)"
@@ -36,7 +35,7 @@ lemma Big_ZZ_8_1:
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_1 \<mu> l"
   unfolding Big_ZZ_8_1_def Big_ZZ_8_2_def Big39_def Big42a_def Big42b_def
             eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Red_5_2 Red_5_3 Big_finite_components bblue_step_limit Y_6_5_Bblue
+  apply (simp add: Red_5_2 Red_5_3 bblue_step_limit Y_6_5_Bblue
        height_upper_bound eventually_all_ge_at_top assms)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
@@ -159,9 +158,8 @@ proof -
   have BD_disj: "\<B>\<inter>\<D> = {}" and disj: "\<R>\<inter>\<B> = {}" "\<S>\<inter>\<B> = {}" "\<R>\<inter>\<D> = {}" "\<S>\<inter>\<D> = {}" "\<R>\<inter>\<S> = {}"
     by (auto simp: \<D>_def \<R>_def \<B>_def \<S>_def Step_class_def)
 
-  have "finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step})"
-    using big \<mu> \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_1_def finite_components) 
-  then have [simp]: "finite \<D>" "finite \<B>" "finite \<R>" "finite \<S>"
+  have [simp]: "finite \<D>" "finite \<B>" "finite \<R>" "finite \<S>"
+    using finite_components assms 
     by (auto simp: \<D>_def \<B>_def \<R>_def \<S>_def Step_class_insert_NO_MATCH)
   have "card \<R> < k"
     using red_step_limit \<open>0<\<mu>\<close> \<open>Colours l k\<close> by (auto simp: \<R>_def)
@@ -169,8 +167,7 @@ proof -
   have R52: "p (Suc i) - p i \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (p i))"
     and beta_gt0: "beta \<mu> l k i > 0"
     and R53: "p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
-    and card\<B>: "card \<B> \<le> l powr (3/4)"
-    if "i \<in> \<S>" for i
+    and card\<B>: "card \<B> \<le> l powr (3/4)"    if "i \<in> \<S>" for i
     using big \<open>Colours l k\<close> that
     by (auto simp: Big_ZZ_8_1_def Lemma_Red_5_2_def Lemma_Red_5_3_def Lemma_bblue_step_limit_def
          p_def \<B>_def \<S>_def)
@@ -487,7 +484,7 @@ text \<open>An inequality that pops up in the proof of (39)\<close>
 definition "Big85 \<equiv> \<lambda>k. 3 * eps k powr (1/4) * k \<le> k powr (19/20)"
 
 definition "Big_ZZ_8_5 \<equiv>     
-   \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Big_ZZ_8_1 \<mu> l \<and> Big_finite_components \<mu> l \<and> Lemma_beta_gt0 \<mu> l
+   \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Big_ZZ_8_1 \<mu> l \<and> Lemma_beta_gt0 \<mu> l
       \<and> (\<forall>k. Colours l k \<longrightarrow> Big85 k \<and> 0 < bigbeta \<mu> l k  \<and> bigbeta \<mu> l k < 1)"
 
 lemma Big_ZZ_8_5:
@@ -495,7 +492,7 @@ lemma Big_ZZ_8_5:
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_5 \<mu> l"
   unfolding Big_ZZ_8_5_def Big85_def
             eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_X_7_5 bigbeta_gt0 Big_ZZ_8_1 Big_finite_components beta_gt0 bigbeta_less1 assms)
+  apply (simp add: Big_X_7_5 bigbeta_gt0 Big_ZZ_8_1 beta_gt0 bigbeta_less1 assms)
   apply (intro conjI eventually_Colours_at_top; real_asymp)
   done
 
@@ -508,10 +505,8 @@ proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   define \<S>\<S> where "\<S>\<S> \<equiv> dboost_star \<mu> l k" 
-  have "finite (Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step})"
-    using big \<mu> \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_5_def finite_components) 
-  then have [simp]: "finite \<S>"
-    by (auto simp: \<S>_def Step_class_insert_NO_MATCH)
+  have [simp]: "finite \<S>"
+    by (simp add: assms dboost_step_finite)
   moreover have "\<S>\<S> \<subseteq> \<S>"
     by (auto simp: \<S>\<S>_def \<S>_def dboost_star_def)
   ultimately have "real (card \<S>) - real (card \<S>\<S>) = card (\<S>\<setminus>\<S>\<S>)"
@@ -547,8 +542,7 @@ proof -
     proof (cases "card \<S>\<S> = 0")
       case False
       then show ?thesis
-        apply (simp add: bigbeta_def Let_def \<S>\<S>_def)
-        by (smt (verit, ccfv_SIG) inverse_eq_divide inverse_inverse_eq sum.cong)
+        by (simp add: bigbeta_def Let_def \<S>\<S>_def inverse_eq_divide)
     qed (simp add: False card_eq_0_iff)
     also have "\<dots> \<le> real(card \<S>\<S>) + card \<R> + k powr (19/20)"
     proof -
@@ -570,7 +564,8 @@ proof -
       by (simp add: algebra_simps)
     then have "card \<S> \<le> (bigbeta \<mu> l k * card \<R> + (1 + bigbeta \<mu> l k) * k powr (19/20)) / (1 - bigbeta \<mu> l k)"
       using bigbeta_lt1 by (simp add: field_simps)
-    also have "\<dots> = (bigbeta \<mu> l k / (1 - bigbeta \<mu> l k)) * card \<R> + ((1 + (bigbeta \<mu> l k)) / (1 - bigbeta \<mu> l k)) * k powr (19/20)"
+    also have "\<dots> = (bigbeta \<mu> l k / (1 - bigbeta \<mu> l k)) * card \<R> 
+                  + ((1 + bigbeta \<mu> l k) / (1 - bigbeta \<mu> l k)) * k powr (19/20)"
       using bigbeta_gt0 bigbeta_lt1 by (simp add: divide_simps)
     also have "\<dots> \<le> (bigbeta \<mu> l k / (1 - bigbeta \<mu> l k)) * card \<R> + (2 / (1-\<mu>)) * k powr (19/20)"
       using \<mu> bb_le by (intro add_mono order_refl mult_right_mono frac_le) auto
@@ -584,8 +579,7 @@ text \<open>For some reason this was harder than it should have been.
       It does require a further small limit argument.\<close>
 
 definition "Big_ZZ_8_6 \<equiv>     
-   \<lambda>\<mu> l. Big_ZZ_8_5 \<mu> l 
-      \<and> (\<forall>k\<ge>l. 2 / (1-\<mu>) * k powr (19/20) < k powr (39/40))"
+   \<lambda>\<mu> l. Big_ZZ_8_5 \<mu> l \<and> (\<forall>k\<ge>l. 2 / (1-\<mu>) * k powr (19/20) < k powr (39/40))"
 
 lemma Big_ZZ_8_6:
   assumes "0<\<mu>" "\<mu><1"
