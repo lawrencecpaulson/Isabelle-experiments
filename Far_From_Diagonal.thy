@@ -143,37 +143,8 @@ lemma Big_Far_9_3:
   apply (simp add: Big_X_7_1 assms)
   done
 
-corollary Y_6_2_halted:
-  fixes l k
-  assumes \<section>: "0<\<mu>" "Colours l k" and big: "Big_Y_6_2 \<mu> l"
-  defines "m \<equiv> halted_point \<mu> l k"
-  shows "pee \<mu> l k m \<ge> p0 - 3 * eps k"
-proof -
-  have "m-1 \<notin> Step_class \<mu> l k {halted}"
-    by (simp add: \<section> m_def halted_point_minimal halted_point_nonzero)
-  then consider "m-1 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" | "m-1 \<in> Step_class \<mu> l k {dreg_step}"
-    using Book.not_halted_even_dreg Book_axioms not_halted_odd_RBS by blast
-  then show ?thesis
-  proof cases
-    case 1
-    then show ?thesis
-      by (metis Y_6_2 Suc_diff_1 assms halted_point_nonzero)
-  next
-    case 2
-    then consider "m=1" | "m-2 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
-      by (metis "\<section>"(1) One_nat_def Suc_1 Suc_diff_Suc assms(2) assms(4) halted_point_nonzero le_simps(3) nat_less_le step_before_dreg)
-    then show ?thesis
-    proof cases
-      case 1
-      then show ?thesis
-        by (smt (verit, ccfv_SIG) "2" Book.Y_6_4_DegreeReg Book_axioms assms(4) eps_ge0 numeral_nat(7) pee_eq_p0 verit_minus_simplify(1))        
-    next
-      case 2
-      then show ?thesis
-        by (smt (verit, best) "\<section>"(2) Book.Y_6_2 Book_axioms Y_6_4_DegreeReg \<open>\<And>thesis. \<lbrakk>m - 1 \<in> Step_class \<mu> l k {stepkind.red_step, bblue_step, dboost_step} \<Longrightarrow> thesis; m - 1 \<in> Step_class \<mu> l k {dreg_step} \<Longrightarrow> thesis\<rbrakk> \<Longrightarrow> thesis\<close> add_diff_inverse_nat assms(1) assms(4) big diff_diff_left diff_is_0_eq' dreg_before_step1(2) less_Suc_eq_0_disj nat_1_add_1 nat_less_le plus_1_eq_Suc)
-    qed
-  qed
-qed
+lemma "\<forall>\<^sup>\<infinity>k. p0 - 3 * eps k > 1/k"
+  using p0_01 unfolding eps_def by real_asymp
 
 lemma Far_9_3:
   fixes l k

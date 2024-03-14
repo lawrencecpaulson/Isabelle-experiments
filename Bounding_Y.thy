@@ -655,6 +655,49 @@ next
     by linarith
 qed
 
+corollary Y_6_2_halted:
+  fixes l k
+  assumes \<section>: "0<\<mu>" "Colours l k" and big: "Big_Y_6_2 \<mu> l"
+  defines "m \<equiv> halted_point \<mu> l k"
+  shows "pee \<mu> l k m \<ge> p0 - 3 * eps k"
+proof -
+  have "m>0"
+    by (simp add: \<section> m_def halted_point_nonzero)
+  then have "m-1 \<notin> Step_class \<mu> l k {halted}"
+    by (simp add: \<section> m_def halted_point_minimal)
+  then consider "m-1 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" | "m-1 \<in> Step_class \<mu> l k {dreg_step}"
+    using not_halted_even_dreg not_halted_odd_RBS by blast
+  then show ?thesis
+  proof cases
+    case 1
+    then show ?thesis
+      by (metis Y_6_2 Suc_diff_1 assms halted_point_nonzero)
+  next
+    case 2
+    then have *: "pee \<mu> l k m \<ge> pee \<mu> l k (m-1)"
+      by (metis Book.Y_6_4_DegreeReg Book_axioms Suc_pred' \<open>0 < m\<close>)
+    have "odd m"
+      by (metis "2" Book.step_even Book_axioms Suc_diff_1 \<open>0 < m\<close> even_Suc)
+    consider "m=1" | "m\<noteq>1 \<and> m-2 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
+      by (metis 2 Suc_1 Suc_diff_Suc \<open>0 < m\<close> less_one nat_neq_iff step_before_dreg)
+    then show ?thesis
+    proof cases
+      case 1
+      then have "m-1 = 0"
+        by simp
+      then show ?thesis
+        by (smt (verit) "*" eps_ge0 pee_eq_p0)
+    next
+      case 2
+      then obtain j where j: "m-1 = Suc j"
+        using \<open>0 < m\<close> not0_implies_Suc by fastforce
+      then have "pee \<mu> l k (Suc j) \<ge> p0 - 3 * eps k"
+        by (metis "2" Suc_1 Y_6_2 \<section> big diff_Suc_1 diff_Suc_eq_diff_pred)
+      with * j show ?thesis by simp
+    qed
+  qed
+qed
+
 subsection \<open>Lemma 6.1\<close>
 
 definition 
