@@ -1374,11 +1374,14 @@ proof -
     by (metis n that)
 qed
 
-lemma step_non_terminating:
-  assumes "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step}"
-  shows "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
-  using assms
-  by (simp add: step_kind_defs split: if_split_asm prod.split_asm)
+lemma step_non_terminating_iff:
+     "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step} 
+     \<longleftrightarrow> \<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+  by (auto simp add: step_kind_defs split: if_split_asm prod.split_asm)
+
+lemma step_terminating_iff:
+  "i \<in> Step_class \<mu> l k {halted} \<longleftrightarrow> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+  by (auto simp add: step_kind_defs split: if_split_asm prod.split_asm)
 
 lemma not_many_bluish:
   assumes "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
@@ -1395,7 +1398,7 @@ lemma cvx_works:
        \<and> weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) = max_central_vx \<mu> (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
 proof -
   have "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
-    using Step_class_def assms step_non_terminating by fastforce
+    using Step_class_def assms step_non_terminating_iff by fastforce
   then show ?thesis
     using assms not_many_bluish[OF assms] 
     apply (simp add: Step_class_def Xseq_def cvx_def Yseq_def split: prod.split prod.split_asm)
@@ -1507,7 +1510,7 @@ proof (induction i)
 next
   case (Suc i)
   then have nt: "\<not> termination_condition l k (Xseq \<mu> l k (Suc (2*i))) (Yseq \<mu> l k (Suc (2*i)))"  
-    apply (intro step_non_terminating)
+    unfolding step_non_terminating_iff [symmetric]
     by (metis Step_class_insert Suc_1 Un_iff dreg_before_step mult_Suc_right plus_1_eq_Suc plus_nat.simps(2) step_before_dreg)
   obtain A B A' B' where 2:
     "next_state \<mu> l k (Xseq \<mu> l k (Suc (2*i)), Yseq \<mu> l k (Suc (2*i)), A, B) = (Xseq \<mu> l k (Suc (Suc (2*i))), Yseq \<mu> l k (Suc (Suc (2*i))), A',B')"

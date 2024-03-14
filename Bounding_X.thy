@@ -386,7 +386,7 @@ proof -
     fix i :: nat
     assume "i \<in> \<B>"
     then have "\<not> termination_condition l k (X i) (Yseq \<mu> l k i)"
-      using step_non_terminating by (simp add: \<B>_def X_def Step_class_def)
+      by (simp add: \<B>_def X_def Step_class_def flip: step_non_terminating_iff)
     then have "card (X i) \<noteq> 0"
       using termination_condition_def by force
     with \<open>i\<in>\<B>\<close> \<mu> show "0 \<le> \<mu> ^ b i / 2 \<and> \<mu> ^ b i / 2 \<le> real (card (X (Suc i))) / real (card (X i))"

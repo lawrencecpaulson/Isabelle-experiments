@@ -234,7 +234,7 @@ proof -
     have not_many_bluish: "\<not> many_bluish \<mu> l k X"
       using i not_many_bluish unfolding X_def by blast
     have nonterm: "\<not> termination_condition l k X Y"
-      using X_def Y_def i step_non_terminating by (force simp: Step_class_def)
+      using X_def Y_def i step_non_terminating_iff by (force simp: Step_class_def)
     moreover have "l powr (2/3) \<le> l powr (3/4)"
       using \<open>l>1\<close> by (simp add: powr_mono)
     ultimately have RNX: "?R < card X"
@@ -315,7 +315,7 @@ proof -
     have "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k ^ 6 * ?R"
       using \<open>l \<le> k\<close> l unfolding Lemma_5_6_def by blast
     then have cardX_ge: "card X \<ge> k ^ 6 * ?R"
-      using X_def i step_non_terminating by (force simp: Step_class_def termination_condition_def)
+      using X_def i step_non_terminating_iff by (force simp: Step_class_def termination_condition_def)
     have "-1 / (real k)^5 \<le> - 1 / (real k^6 - 1) + -1 / (real k^6 * ?R)"
     proof -
       have [simp]: "real k * (r * real k ^ 5) = r * k^6" for r

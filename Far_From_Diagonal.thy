@@ -132,19 +132,24 @@ context Book
 begin
 
 definition "Big_Far_9_3 \<equiv>     
-   \<lambda>\<mu> l. Big_X_7_1 \<mu> l
-      \<and> (\<forall>k. Colours l k \<longrightarrow> True)"
+   \<lambda>\<mu> l. Big_X_7_1 \<mu> l \<and> Big_Y_6_2 \<mu> l
+      \<and> (\<forall>k\<ge>l. p0 - 3 * eps k > 1/k)"
 
 lemma Big_Far_9_3:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_Far_9_3 \<mu> l"
-  unfolding Big_Far_9_3_def 
-            eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_X_7_1 assms)
+  unfolding Big_Far_9_3_def eventually_conj_iff all_imp_conj_distrib eps_def
+  apply (simp add: Big_X_7_1 Big_Y_6_2 assms)
+  using p0_01
+  apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
-lemma "\<forall>\<^sup>\<infinity>k. p0 - 3 * eps k > 1/k"
-  using p0_01 unfolding eps_def by real_asymp
+
+lemma below_halted_point_nontermination:
+  assumes "\<mu>>0" "\<mu><1" "Colours l k"
+  defines "m \<equiv> halted_point \<mu> l k"
+  shows  "termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+
 
 lemma Far_9_3:
   fixes l k
@@ -160,12 +165,18 @@ proof -
   define \<S> where "\<S> \<equiv> Step_class \<gamma> l k {dboost_step}"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  then have \<gamma>01: "0 < \<gamma>" "\<gamma> < 1"
-    by (auto simp: \<gamma>_def)
-  then have "2 powr ok_fun_X_7_1 \<gamma> l k * \<gamma>^l * (1-\<gamma>) ^ card \<R> * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S> * card X0
+  have \<gamma>01: "0 < \<gamma>" "\<gamma> < 1"
+    using lk by (auto simp: \<gamma>_def)
+
+  have "p0 - 3 * eps k > 1/k" and "pee \<gamma> l k m \<ge> p0 - 3 * eps k"
+    using lk big \<open>Colours l k\<close> by (auto simp: Big_Far_9_3_def Y_6_2_halted \<gamma>_def m_def)
+  then have X_le: "card (Xseq \<gamma> l k m) \<le> RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
+    using halted_point_halted \<open>Colours l k\<close> \<gamma>01
+    by (fastforce simp add: step_terminating_iff termination_condition_def pee_def m_def)
+  have "2 powr ok_fun_X_7_1 \<gamma> l k * \<gamma>^l * (1-\<gamma>) ^ card \<R> * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S> * card X0
               \<le> card (Xseq \<gamma> l k m)"
     unfolding \<R>_def \<S>_def m_def
-    using X_7_1 \<open>Colours l k\<close> big by (intro X_7_1) (auto simp: Big_Far_9_3_def)
+    using \<gamma>01 X_7_1 \<open>Colours l k\<close> big by (intro X_7_1) (auto simp: Big_Far_9_3_def)
   also have "... \<le> RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
     sorry
   obtain f where "f \<in> o(real)" and f: "k+l choose l = 2 powr f k * \<gamma> powr (- real l) * (1-\<gamma>) powr (- real k)" 
