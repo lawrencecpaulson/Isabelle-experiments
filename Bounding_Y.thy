@@ -415,36 +415,29 @@ qed
 
 subsection \<open>Lemma 6.2\<close>
 
-definition "Big_Y_6_2 \<equiv> \<lambda> \<mu> l. Lemma_6_3 \<mu> l \<and> Lemma_Y_6_5_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l 
-               \<and> Lemma_Red_5_3 \<mu> l \<and> l\<ge>16
-               \<and> ((1 + eps l)^2) * eps l powr (1/2) \<le> 1
-               \<and> (1 + eps l) powr (2 * eps l powr (- 1/2)) \<le> 2
-               \<and> l \<ge> 16"
+definition "Big_Y_6_2 \<equiv> \<lambda>\<mu> l. Lemma_6_3 \<mu> l \<and> Lemma_Y_6_5_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l 
+               \<and> Lemma_Red_5_3 \<mu> l
+               \<and> (\<forall>k\<ge>l. ((1 + eps k)^2) * eps k powr (1/2) \<le> 1 
+                       \<and> (1 + eps k) powr (2 * eps k powr (-1/2)) \<le> 2 \<and> k \<ge> 16)"
 
 text \<open>establishing the size requirements for 6.2\<close>
 lemma Big_Y_6_2:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_Y_6_2 \<mu> l"
-proof -
-  have "\<forall>\<^sup>\<infinity>l. ((1 + eps l)^2) * eps l powr (1/2) \<le> 1"
-    unfolding eps_def by real_asymp
-  moreover have "\<forall>\<^sup>\<infinity>l. (1 + eps l) powr (2 * eps l powr (- 1/2)) \<le> 2"
-    unfolding eps_def by real_asymp
-  moreover have "\<forall>\<^sup>\<infinity>l. l\<ge>16"
-    by real_asymp
-  ultimately show ?thesis
-    by (simp add: Big_Y_6_2_def eventually_conj Y_6_3 Y_6_5_dbooSt Y_6_5_Bblue Red_5_3 assms)
-qed
+  unfolding Big_Y_6_2_def eventually_conj_iff all_imp_conj_distrib eps_def
+  apply (simp add: Y_6_3 Y_6_5_dbooSt Y_6_5_Bblue Red_5_3 assms)
+  apply (intro conjI eventually_all_ge_at_top; real_asymp)
+  done
 
 text \<open>Following Bhavik in excluding the even steps (degree regularisation).
       Assuming it hasn't halted, the conclusion also holds for the even cases anyway.\<close>
-proposition Y_6_2_Main:
+proposition Y_6_2:
   fixes l k
   assumes "0<\<mu>"
   defines "p \<equiv> pee \<mu> l k"
   defines "RBS \<equiv> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
   assumes j: "j \<in> RBS" "Colours l k"
-  assumes big: "\<And>k. k\<ge>l \<Longrightarrow> Big_Y_6_2 \<mu> k"
+  assumes big: "Big_Y_6_2 \<mu> l"
   shows "p (Suc j) \<ge> p0 - 3 * eps k"
 proof (cases "p (Suc j) \<ge> p0")
   case True
@@ -551,7 +544,7 @@ next
     qed
     finally show ?thesis .
   qed
-  finally have D: "p (j'+2) - 2 * eps k \<le> p (Suc j)" .
+  finally have p2_le_pSuc: "p (j'+2) - 2 * eps k \<le> p (Suc j)" .
   have "Suc j' \<in> RBS"
     unfolding RBS_def
   proof (intro not_halted_odd_RBS)
@@ -658,50 +651,26 @@ next
   finally have "p0 - eps k \<le> p (j'+2)" .
   then have "p0 - 3 * eps k \<le> p (j'+2) - 2 * eps k"
     by simp
-  with D show ?thesis
+  with p2_le_pSuc show ?thesis
     by linarith
-qed
-
-definition "Lemma_Y_6_2 \<equiv> \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> 
-              (\<forall>j \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}. pee \<mu> l k (Suc j) \<ge> p0 - 3 * eps k)"
-
-lemma Y_6_2:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Lemma_Y_6_2 \<mu> l"
-proof -
-  have big: "\<forall>\<^sup>\<infinity>l. \<forall>k. k\<ge>l \<longrightarrow> Big_Y_6_2 \<mu> k"
-    using Big_Y_6_2 [OF assms] eventually_all_ge_at_top by blast
-  with Y_6_2_Main eventually_mono \<open>0<\<mu>\<close> show ?thesis
-    unfolding Lemma_Y_6_2_def
-    by (smt (verit, del_insts))
 qed
 
 subsection \<open>Lemma 6.1\<close>
 
 definition 
   "Big_Y_6_1 \<equiv> 
-    \<lambda>\<mu> l. \<forall>k\<ge>l. eps k powr (1/2) \<le> 1/3 \<and> p0 > 2 * eps k powr (1/2) \<and> Lemma_Y_6_2 \<mu> l
-               \<and> Lemma_bblue_dboost_step_limit \<mu> l"
+    \<lambda>\<mu> l. Big_Y_6_2 \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l 
+        \<and> (\<forall>k\<ge>l. eps k powr (1/2) \<le> 1/3 \<and> p0 > 2 * eps k powr (1/2))"
 
 text \<open>establishing the size requirements for 6.1\<close>
 lemma Big_Y_6_1:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_Y_6_1 \<mu> l"
-proof -
-  have [simp]: "Ex ((\<le>) l)" for l::nat
-    by auto
-  have "\<forall>\<^sup>\<infinity>l. eps l powr (1/2) \<le> 1/3" 
-    unfolding eps_def by real_asymp
-  then have A: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. eps k powr (1/2) \<le> 1/3"  \<comment> \<open>And therefore @{text "3\<epsilon> \<le> \<epsilon>^{1/2}"}\<close>
-    by (rule eventually_all_ge_at_top)
-  moreover
-  have "\<forall>\<^sup>\<infinity>l. p0 > 2 * eps l powr (1/2)"
-    using p0_01 unfolding eps_def by real_asymp
-  then have B: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. p0 > 2 * eps k powr (1/2)"  \<comment> \<open>And therefore @{text "2\<epsilon>^{1/2}"} is small enough\<close>
-    by (rule eventually_all_ge_at_top)
-  ultimately show ?thesis
-    by (simp add: eventually_conj_iff all_conj_distrib imp_conjR Big_Y_6_1_def Y_6_2 bblue_dboost_step_limit assms)
-qed
+  unfolding Big_Y_6_1_def eventually_conj_iff all_imp_conj_distrib eps_def
+  apply (simp add: Big_Y_6_2 bblue_dboost_step_limit assms)
+  using p0_01
+  apply (intro conjI eventually_all_ge_at_top; real_asymp)
+  done
 
 lemma Y_6_1_aux:
   defines "f \<equiv> \<lambda>k. (2 * real k / ln 2) * ln (1 - 2 * eps k powr (1/2) / p0)"
@@ -717,7 +686,7 @@ proof -
     using Colours_kn0 \<open>Colours l k\<close> by blast 
   have big13: "eps k powr (1/2) \<le> 1/3" 
     and big_p0: "p0 > 2 * eps k powr (1/2)"
-    and Y_6_2: "Lemma_Y_6_2 \<mu> l"
+    and big62: "Big_Y_6_2 \<mu> l"
     and "Lemma_bblue_dboost_step_limit \<mu> l"
     using big \<open>Colours l k\<close> by (auto simp: Big_Y_6_1_def Colours_def)
   with \<open>Colours l k\<close> have dboost_step_limit: "card (Step_class \<mu> l k {dboost_step}) < k"
@@ -766,8 +735,8 @@ proof -
           using \<open>2 < i\<close> \<open>odd i\<close> by auto
       qed
       then have Y62: "p (i-1) \<ge> p0 - 3 * eps k"
-        using Y_6_2 \<open>Colours l k\<close> unfolding Lemma_Y_6_2_def p_def
-        by (metis Suc_1 Suc_diff_Suc Suc_lessD \<open>2 < i\<close>)
+        using Y_6_2 [OF \<open>\<mu>>0\<close> _ \<open>Colours l k\<close> big62] \<open>2 < i\<close> unfolding p_def
+        by (metis Suc_1 Suc_diff_Suc Suc_lessD)
       show ?thesis
       proof (intro mult_right_mono)
         have "eps k powr (1/2) * p (i-1) \<le> eps k powr (1/2) * 1"
