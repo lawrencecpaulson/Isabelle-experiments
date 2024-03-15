@@ -464,7 +464,7 @@ proof -
       have "l = l powr (1/4) * l powr (3/4)"
         by (simp flip: powr_add)
       also have "\<dots> \<le> b_of l * l powr (3/4)"
-        by (simp add: b_of_def mult_mono real_nat_ceiling_ge)
+        by (simp add: b_of_def mult_mono')
       also have "\<dots> \<le> b_of l * card{m. m<n \<and> stepper_kind \<mu> l k m = bblue_step}"
         using card_gt less_eq_real_def by fastforce
       also have "... \<le> card B"

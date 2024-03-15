@@ -823,73 +823,89 @@ corollary Red_5_2:
   using Big_Red_5_1 Red_5_2_Main assms 
   unfolding eventually_sequentially Lemma_Red_5_2_def by (meson order.trans)
 
+subsection \<open>Lemma 5.3\<close>
+
+text \<open>This is a weaker consequence of the previous results\<close>
+
+definition 
+  "Big_Red_5_3 \<equiv> 
+    \<lambda>\<mu> l. Big_Red_5_1 \<mu> l
+        \<and> (\<forall>k\<ge>l. k>1 \<and> 1 / (real k)\<^sup>2 \<le> 1 / (k / eps k / (1 - eps k) + 1))"
+
+text \<open>establishing the size requirements for 5.3\<close>
+lemma Big_Red_5_3:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_Red_5_3 \<mu> l"
+  using assms  
+  apply (simp add: Big_Red_5_3_def eps_def eventually_conj_iff all_imp_conj_distrib Big_Red_5_1)  
+  apply (intro conjI eventually_all_ge_at_top; real_asymp)
+  done
+
+corollary Red_5_3_Main:
+  assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and i: "i \<in> Step_class \<mu> l k {dboost_step}"
+    and big: "Big_Red_5_3 \<mu> l" 
+  shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
+proof 
+  obtain ln0: "l>0" and kn0: "k>0" and "l\<le>k"
+    using \<open>Colours l k\<close> Colours_kn0 Colours_ln0  by (auto simp: Colours_def)
+  have "k>1" and big51: "Big_Red_5_1 \<mu> l"
+    using \<open>l \<le> k\<close> big by (auto simp: Big_Red_5_3_def)
+  let ?h = "hgt k (pee \<mu> l k i)"
+  have "?h > 0"
+    by (simp add: hgt_gt0 kn0 pee_le1)
+  then obtain \<alpha>: "alpha k ?h \<ge> 0" and *: "alpha k ?h \<ge> eps k / k"
+    using alpha_ge0 \<open>k>1\<close> alpha_ge by auto
+  moreover have "-5/4 = -1/4 - (1::real)"
+    by simp
+  ultimately have \<alpha>54: "alpha k ?h \<ge> k powr (-5/4)"
+    unfolding eps_def by (metis powr_diff of_nat_0_le_iff powr_one)
+  have \<beta>: "beta \<mu> l k i \<le> \<mu>"
+    by (metis Step_class_insert Un_iff \<open>0<\<mu>\<close> beta_le i)
+  have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<ge> 0"
+    using beta_ge0[of \<mu> l k i] eps_le1 \<alpha> \<beta> \<open>\<mu><1\<close> \<open>k>1\<close>
+    by (simp add: zero_le_mult_iff zero_le_divide_iff)
+  then show "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i"
+    using Red_5_2_Main [OF i \<mu> big51] \<open>Colours l k\<close> by linarith 
+  have "pee \<mu> l k (Suc i) - pee \<mu> l k i \<le> 1"
+    by (smt (verit) pee_ge0 pee_le1)
+  with Red_5_2_Main [OF i \<mu> big51] \<open>Colours l k\<close>
+  have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<le> 1" and beta_gt0: "beta \<mu> l k i > 0"
+    by linarith+
+  with * have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * eps k / k \<le> 1"
+    by (smt (verit, ccfv_SIG) divide_le_eq_1 eps_gt0 kn0 mult_le_cancel_left2 mult_le_cancel_left_pos mult_neg_pos of_nat_0_less_iff times_divide_eq_right)
+  then have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) \<le> k / eps k"
+    using beta_ge0 [of \<mu> l k i] eps_gt0 [OF kn0] kn0
+    by (auto simp: divide_simps mult_less_0_iff mult_of_nat_commute split: if_split_asm)
+  then have "((1 - beta \<mu> l k i) / beta \<mu> l k i) \<le> k / eps k / (1 - eps k)"
+    by (smt (verit) eps_less1 mult.commute pos_le_divide_eq \<open>1 < k\<close>)
+  then have "1 / beta \<mu> l k i \<le> k / eps k / (1 - eps k) + 1"
+    by (smt (verit, best) div_add_self2)
+  then have "1 / (k / eps k / (1 - eps k) + 1) \<le> beta \<mu> l k i"
+    using beta_gt0 eps_gt0 eps_less1 [OF \<open>k>1\<close>] kn0
+    apply (simp add: divide_simps split: if_split_asm)
+    by (smt (verit, ccfv_SIG) mult.commute mult_less_0_iff)
+  moreover have "1 / k^2 \<le> 1 / (k / eps k / (1 - eps k) + 1)"
+    using Big_Red_5_3_def \<open>l \<le> k\<close> big by fastforce
+  ultimately show "beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
+    by auto
+qed
+
+corollary beta_gt0_Main:
+  assumes "0<\<mu>" "\<mu><1" "Colours l k""i \<in> Step_class \<mu> l k {dboost_step}"
+    and "Big_Red_5_3 \<mu> l" 
+  shows "beta \<mu> l k i > 0"
+  by (meson Big_Red_5_3_def Book.Red_5_2_Main Book_axioms assms)
+
 definition 
   "Lemma_Red_5_3 \<equiv> 
       \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> 
                  (\<forall>i \<in> Step_class \<mu> l k {dboost_step}. pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2)"
 
-text \<open>This is a weaker consequence of the previous results\<close>
 corollary Red_5_3:
   assumes "0<\<mu>" "\<mu><1" shows "\<forall>\<^sup>\<infinity>l. Lemma_Red_5_3 \<mu> l"
-proof -
-  define Big where 
-    "Big \<equiv> \<lambda>l. 1 / (real l)\<^sup>2 \<le> 1 / (l / eps l / (1 - eps l) + 1) \<and> l>1 \<and> Big_Red_5_1 \<mu> l"
-  have "\<forall>\<^sup>\<infinity>l. 1 / (real l)\<^sup>2 \<le> 1 / (l / eps l / (1 - eps l) + 1)"
-    unfolding eps_def by real_asymp
-  moreover have "\<forall>\<^sup>\<infinity>l. l>1"
-    by auto
-  ultimately have Big: "\<forall>\<^sup>\<infinity>l. Big l"
-    using Big_Red_5_1 assms by (simp add: Big_def eventually_conj)
-  have "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
-    if l: "\<forall>k\<ge>l. Big k" and i: "i \<in> Step_class \<mu> l k {dboost_step}" and "Colours l k" for l k i
-  proof 
-    have Big: "Big_Red_5_1 \<mu> l"
-      using l by (auto simp: Big_def)
-    obtain ln0: "l>0" and kn0: "k>0" and "l\<le>k"
-      using \<open>Colours l k\<close> Colours_kn0 Colours_ln0  by (auto simp: Colours_def)
-    have "k>1"
-      using \<open>l \<le> k\<close> l by (auto simp: Big_def)
-    let ?h = "hgt k (pee \<mu> l k i)"
-    have "?h > 0"
-      by (simp add: hgt_gt0 kn0 pee_le1)
-    then obtain \<alpha>: "alpha k ?h \<ge> 0" and *: "alpha k ?h \<ge> eps k / k"
-      using alpha_ge0 \<open>k>1\<close> alpha_ge by auto
-    moreover have "-5/4 = -1/4 - (1::real)"
-      by simp
-    ultimately have \<alpha>54: "alpha k ?h \<ge> k powr (-5/4)"
-      unfolding eps_def by (metis powr_diff of_nat_0_le_iff powr_one)
-    have \<beta>: "beta \<mu> l k i \<le> \<mu>"
-      by (metis Step_class_insert Un_iff \<open>0<\<mu>\<close> beta_le i)
-    have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<ge> 0"
-      using beta_ge0[of \<mu> l k i] eps_le1 \<alpha> \<beta> \<open>\<mu><1\<close> \<open>k>1\<close>
-      by (simp add: zero_le_mult_iff zero_le_divide_iff)
-    then show "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i"
-      using Red_5_2_Main [OF i assms Big] \<open>Colours l k\<close> by linarith 
-    have "pee \<mu> l k (Suc i) - pee \<mu> l k i \<le> 1"
-      by (smt (verit) pee_ge0 pee_le1)
-    with Red_5_2_Main [OF i assms Big] \<open>Colours l k\<close>
-    have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<le> 1" and beta_gt0: "beta \<mu> l k i > 0"
-      by linarith+
-    with * have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * eps k / k \<le> 1"
-      by (smt (verit, ccfv_SIG) divide_le_eq_1 eps_gt0 kn0 mult_le_cancel_left2 mult_le_cancel_left_pos mult_neg_pos of_nat_0_less_iff times_divide_eq_right)
-    then have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) \<le> k / eps k"
-      using beta_ge0 [of \<mu> l k i] eps_gt0 [OF kn0] kn0
-      by (auto simp: divide_simps mult_less_0_iff mult_of_nat_commute split: if_split_asm)
-    then have "((1 - beta \<mu> l k i) / beta \<mu> l k i) \<le> k / eps k / (1 - eps k)"
-      by (smt (verit) eps_less1 mult.commute pos_le_divide_eq \<open>1 < k\<close>)
-    then have "1 / beta \<mu> l k i \<le> k / eps k / (1 - eps k) + 1"
-      by (smt (verit, best) div_add_self2)
-    then have "1 / (k / eps k / (1 - eps k) + 1) \<le> beta \<mu> l k i"
-      using beta_gt0 eps_gt0 eps_less1 [OF \<open>k>1\<close>] kn0
-      apply (simp add: divide_simps split: if_split_asm)
-      by (smt (verit, ccfv_SIG) mult.commute mult_less_0_iff)
-    moreover have "1 / k^2 \<le> 1 / (k / eps k / (1 - eps k) + 1)"
-      using Big_def \<open>l \<le> k\<close> l by fastforce
-    ultimately show "beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
-      by auto
-  qed
-  with Big show ?thesis
-    unfolding eventually_sequentially Lemma_Red_5_3_def by (meson order.trans)
+proof (rule eventually_mono [OF Big_Red_5_3 [OF assms]])
+  show "\<And>l. Big_Red_5_3 \<mu> l \<Longrightarrow> Lemma_Red_5_3 \<mu> l"
+    unfolding Lemma_Red_5_3_def by (metis Red_5_3_Main assms)
 qed
 
 definition "Lemma_beta_gt0 \<equiv> \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> (\<forall>i \<in> Step_class \<mu> l k {dboost_step}. beta \<mu> l k i > 0)"

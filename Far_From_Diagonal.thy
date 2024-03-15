@@ -197,8 +197,7 @@ proof -
     by (simp add: powr_add)
   have "exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>
              \<le> 2 powr (real k + \<lceil>l powr (3/4)\<rceil> - (ok_fun_X_7_1 \<gamma> l k + f k) - 1)"
-    using \<gamma>01 B \<open>k\<ge>2\<close>
-    by (simp add: field_simps powr_add powr_diff of_nat_diff flip: powr_realpow)
+    using \<gamma>01 B \<open>k\<ge>2\<close> by (simp add: field_simps powr_add powr_diff of_nat_diff flip: powr_realpow)
 
   show ?thesis
     sorry

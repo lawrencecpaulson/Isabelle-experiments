@@ -122,8 +122,8 @@ lemma finite_Z_class:
 
 text \<open>Lemma 6.3 except for the limit\<close>   (*abbreviations \<R>, \<B> would be nice here*)
 lemma Y_6_3_Main:
-  assumes "0<\<mu>" "\<mu><1" "Colours l k"
-  assumes Red53: "Lemma_Red_5_3 \<mu> l" and bblue_step_limit: "Lemma_bblue_step_limit \<mu> l"
+  assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"
+  assumes big53: "Big_Red_5_3 \<mu> l" and bblue_step_limit: "Lemma_bblue_step_limit \<mu> l"
   defines "p \<equiv> pee \<mu> l k"
   shows "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k"
 proof -
@@ -136,8 +136,8 @@ proof -
     ultimately have "i-1 \<in> Step_class \<mu> l k {dreg_step}"
       by (simp add: dreg_before_step Step_class_insert_NO_MATCH)
     then have "p (i-1) \<le> p i \<and> p i \<le> p (Suc i)"
-      using \<open>Colours l k\<close> Red53 p_def
-      by (metis Lemma_Red_5_3_def One_nat_def Y_6_4_DegreeReg \<open>odd i\<close> i odd_Suc_minus_one)
+      using \<mu> \<open>Colours l k\<close> big53 p_def
+      by (metis Red_5_3_Main One_nat_def Y_6_4_DegreeReg \<open>odd i\<close> i odd_Suc_minus_one)
   }        
   then have dboost: "Step_class \<mu> l k {dboost_step} \<inter> Z_class \<mu> l k = {}"
     by (fastforce simp: Z_class_def p_def)
@@ -257,9 +257,8 @@ corollary Y_6_3:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Lemma_6_3 \<mu> l"
 proof -
-  have "\<forall>\<^sup>\<infinity>l. Lemma_Red_5_3 \<mu> l \<and> Lemma_bblue_step_limit \<mu> l"
-    using eventually_conj Red_5_3 [OF assms] bblue_step_limit [OF \<open>0<\<mu>\<close>]
-    by blast
+  have "\<forall>\<^sup>\<infinity>l. Big_Red_5_3 \<mu> l \<and> Lemma_bblue_step_limit \<mu> l"
+    using eventually_conj Big_Red_5_3 [OF assms] bblue_step_limit [OF \<open>0<\<mu>\<close>] by metis
   with Y_6_3_Main[OF assms] show ?thesis
     by (simp add: Lemma_6_3_def eventually_mono)
 qed
