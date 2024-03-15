@@ -22,7 +22,7 @@ definition "Big42b \<equiv> \<lambda>k. 2 * k powr (-1/16) * k
                        \<le> real k powr (19/20)"
 
 definition "Big_ZZ_8_1 \<equiv>
-   \<lambda>\<mu> l. Lemma_Red_5_2 \<mu> l \<and> Lemma_Red_5_3 \<mu> l
+   \<lambda>\<mu> l. Lemma_Red_5_2 \<mu> l \<and> Big_Red_5_3 \<mu> l
         \<and> Lemma_bblue_step_limit \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l
         \<and> (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k \<and> Big_ZZ_8_2 k \<and> k\<ge>16 \<and> Big39 k
                       \<and> Big42a k \<and> Big42b k)"
@@ -35,7 +35,7 @@ lemma Big_ZZ_8_1:
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_1 \<mu> l"
   unfolding Big_ZZ_8_1_def Big_ZZ_8_2_def Big39_def Big42a_def Big42b_def
             eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Red_5_2 Red_5_3 bblue_step_limit Y_6_5_Bblue
+  apply (simp add: Red_5_2 Big_Red_5_3 bblue_step_limit Y_6_5_Bblue
        height_upper_bound eventually_all_ge_at_top assms)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
@@ -168,8 +168,8 @@ proof -
     and beta_gt0: "beta \<mu> l k i > 0"
     and R53: "p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
     and card\<B>: "card \<B> \<le> l powr (3/4)"    if "i \<in> \<S>" for i
-    using big \<open>Colours l k\<close> that
-    by (auto simp: Big_ZZ_8_1_def Lemma_Red_5_2_def Lemma_Red_5_3_def Lemma_bblue_step_limit_def
+    using \<mu> big \<open>Colours l k\<close> that
+    by (auto simp: Big_ZZ_8_1_def Lemma_Red_5_2_def Red_5_3 Lemma_bblue_step_limit_def
          p_def \<B>_def \<S>_def)
   have card\<B>: "card \<B> \<le> l powr (3/4)" and Y65: "Lemma_Y_6_5_Bblue \<mu> l"
     using big \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_1_def Lemma_bblue_step_limit_def \<B>_def)
@@ -484,7 +484,7 @@ text \<open>An inequality that pops up in the proof of (39)\<close>
 definition "Big85 \<equiv> \<lambda>k. 3 * eps k powr (1/4) * k \<le> k powr (19/20)"
 
 definition "Big_ZZ_8_5 \<equiv>     
-   \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Big_ZZ_8_1 \<mu> l \<and> Lemma_beta_gt0 \<mu> l
+   \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Big_ZZ_8_1 \<mu> l \<and> Big_Red_5_3 \<mu> l
       \<and> (\<forall>k. Colours l k \<longrightarrow> Big85 k \<and> 0 < bigbeta \<mu> l k  \<and> bigbeta \<mu> l k < 1)"
 
 lemma Big_ZZ_8_5:
@@ -492,7 +492,7 @@ lemma Big_ZZ_8_5:
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_5 \<mu> l"
   unfolding Big_ZZ_8_5_def Big85_def
             eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_X_7_5 bigbeta_gt0 Big_ZZ_8_1 beta_gt0 bigbeta_less1 assms)
+  apply (simp add: Big_Red_5_3 Big_X_7_5 bigbeta_gt0 Big_ZZ_8_1 beta_gt0 bigbeta_less1 assms)
   apply (intro conjI eventually_Colours_at_top; real_asymp)
   done
 
@@ -520,7 +520,7 @@ proof -
     and bigbeta_gt0: "0 < bigbeta \<mu> l k"
     and beta_gt0: "\<And>i. i \<in> \<S> \<Longrightarrow> beta \<mu> l k i > 0" 
     using bigbeta_ge0 big \<mu> \<open>Colours l k\<close> 
-    by (auto simp: Big_ZZ_8_5_def Lemma_beta_gt0_def \<S>_def)
+    by (auto simp: Big_ZZ_8_5_def beta_gt0 \<S>_def)
   then have ge0: "bigbeta \<mu> l k / (1 - bigbeta \<mu> l k) \<ge> 0"
     by auto
   show ?thesis
@@ -535,7 +535,7 @@ proof -
   next
     case False    
     have bb_le: "bigbeta \<mu> l k \<le> \<mu>"
-      using big bigbeta_le [OF \<open>\<mu>>0\<close> \<open>Colours l k\<close>] by (auto simp: Big_ZZ_8_5_def)
+      using big bigbeta_le [OF \<mu> \<open>Colours l k\<close>] by (auto simp: Big_ZZ_8_5_def)
     have "(card \<S> - k powr (19/20)) / bigbeta \<mu> l k \<le> card \<S>\<S> / bigbeta \<mu> l k"
       by (smt (verit) "*" \<mu> bigbeta_ge0 divide_right_mono)
     also have "\<dots> = (\<Sum>i\<in>\<S>\<S>. 1 / beta \<mu> l k i)"
@@ -601,7 +601,7 @@ proof -
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   have bigbeta_lt1: "bigbeta \<mu> l k < 1" and bigbeta_gt0: "0 < bigbeta \<mu> l k"
     using bigbeta_ge0 big \<mu> \<open>Colours l k\<close> 
-    by (auto simp: Big_ZZ_8_6_def Big_ZZ_8_5_def Lemma_beta_gt0_def \<S>_def)
+    by (auto simp: Big_ZZ_8_6_def Big_ZZ_8_5_def beta_gt0 \<S>_def)
   have "a > 0"
     using \<mu> by (simp add: a_def)
   have s_gt_a: "a * k powr (19/20) < card \<S>"

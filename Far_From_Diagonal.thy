@@ -132,14 +132,14 @@ context Book
 begin
 
 definition "Big_Far_9_3 \<equiv>     
-   \<lambda>\<mu> l. Big_X_7_1 \<mu> l \<and> Big_Y_6_2 \<mu> l
+   \<lambda>\<mu> l. Big_ZZ_8_5 \<mu> l \<and> Big_X_7_1 \<mu> l \<and> Big_Y_6_2 \<mu> l \<and> Big_Red_5_3 \<mu> l
       \<and> (\<forall>k\<ge>l. p0 - 3 * eps k > 1/k)"
 
 lemma Big_Far_9_3:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_Far_9_3 \<mu> l"
   unfolding Big_Far_9_3_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_X_7_1 Big_Y_6_2 assms)
+  apply (simp add: Big_ZZ_8_5 Big_X_7_1 Big_Y_6_2 Big_Red_5_3 assms)
   using p0_01
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done

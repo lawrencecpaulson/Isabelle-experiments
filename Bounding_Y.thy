@@ -87,28 +87,19 @@ proof -
 qed
 
 
-definition "Lemma_Y_6_4_dbooSt \<equiv> 
-   \<lambda> \<mu> l. \<forall>k. Colours l k \<longrightarrow> (\<forall>i \<in> Step_class \<mu> l k {dboost_step}. pee \<mu> l k (Suc i) \<ge> pee \<mu> l k (i-1))"
-
 text \<open>The basic form is actually @{thm[source]Red_5_3}. This variant covers a gap of two, 
      thanks to degree regularisation\<close>
 corollary Y_6_4_dbooSt:
-  assumes "0<\<mu>" "\<mu><1" 
-  shows "\<forall>\<^sup>\<infinity>l. Lemma_Y_6_4_dbooSt \<mu> l"
+  assumes "0<\<mu>" "\<mu><1" and "Colours l k" and i: "i \<in> Step_class \<mu> l k {dboost_step}"
+    and big: "Big_Red_5_3 \<mu> l"
+  shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k (i-1)"
 proof -
-  have "pee \<mu> l k (i - 1) \<le> pee \<mu> l k (Suc i)"
-    if "Colours l k""pee \<mu> l k i \<le> pee \<mu> l k (Suc i)" "i \<in> Step_class \<mu> l k {dboost_step}"
-    for l k i
-  proof -
-    have "odd i"
-      using step_odd that by (force simp add: Step_class_insert_NO_MATCH)
-    with step_odd that have "i-1 \<in> Step_class \<mu> l k {dreg_step}"
-      by (simp add: Step_class_insert_NO_MATCH dreg_before_step)
-    then show ?thesis
-      by (smt (verit, best) One_nat_def Y_6_4_DegreeReg \<open>odd i\<close> odd_Suc_minus_one that(2))
-  qed
-  with  eventually_mono [OF Red_5_3 [OF assms]] show ?thesis
-    unfolding Lemma_Red_5_3_def Lemma_Y_6_4_dbooSt_def by presburger 
+  have "odd i"
+    using step_odd i by (force simp add: Step_class_insert_NO_MATCH)
+  with step_odd i have "i-1 \<in> Step_class \<mu> l k {dreg_step}"
+    by (simp add: Step_class_insert_NO_MATCH dreg_before_step)
+  then show ?thesis
+    using Red_5_3 Y_6_4_DegreeReg assms \<open>odd i\<close> by fastforce
 qed
 
 subsection \<open>Towards Lemmas 6.3\<close>
@@ -137,7 +128,7 @@ proof -
       by (simp add: dreg_before_step Step_class_insert_NO_MATCH)
     then have "p (i-1) \<le> p i \<and> p i \<le> p (Suc i)"
       using \<mu> \<open>Colours l k\<close> big53 p_def
-      by (metis Red_5_3_Main One_nat_def Y_6_4_DegreeReg \<open>odd i\<close> i odd_Suc_minus_one)
+      by (metis Red_5_3 One_nat_def Y_6_4_DegreeReg \<open>odd i\<close> i odd_Suc_minus_one)
   }        
   then have dboost: "Step_class \<mu> l k {dboost_step} \<inter> Z_class \<mu> l k = {}"
     by (fastforce simp: Z_class_def p_def)
@@ -324,8 +315,8 @@ definition
 lemma Y_6_5_dbooSt:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Lemma_Y_6_5_dbooSt \<mu> l"
-  using Red_5_3[OF assms] unfolding Lemma_Red_5_3_def Lemma_Y_6_5_dbooSt_def
-  by (smt (verit, ccfv_threshold) eventually_at_top_linorder Colours_kn0 hgt_mono)
+  apply (rule eventually_mono [OF Big_Red_5_3 [OF assms]])
+  using Colours_kn0 Lemma_Y_6_5_dbooSt_def Red_5_3 assms hgt_mono by presburger
 
 text \<open>this remark near the top of page 19 only holds in the limit\<close>
 lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (- real (nat \<lfloor>2 * eps k powr (-1/2)\<rfloor>)) \<le> 1 - eps k powr (1/2)"
@@ -415,7 +406,7 @@ qed
 subsection \<open>Lemma 6.2\<close>
 
 definition "Big_Y_6_2 \<equiv> \<lambda>\<mu> l. Lemma_6_3 \<mu> l \<and> Lemma_Y_6_5_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l 
-               \<and> Lemma_Red_5_3 \<mu> l
+               \<and> Big_Red_5_3 \<mu> l
                \<and> (\<forall>k\<ge>l. ((1 + eps k)^2) * eps k powr (1/2) \<le> 1 
                        \<and> (1 + eps k) powr (2 * eps k powr (-1/2)) \<le> 2 \<and> k \<ge> 16)"
 
@@ -424,7 +415,7 @@ lemma Big_Y_6_2:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_Y_6_2 \<mu> l"
   unfolding Big_Y_6_2_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Y_6_3 Y_6_5_dbooSt Y_6_5_Bblue Red_5_3 assms)
+  apply (simp add: Y_6_3 Y_6_5_dbooSt Y_6_5_Bblue Big_Red_5_3 assms)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
@@ -448,14 +439,20 @@ next
   obtain "k>0" "k\<ge>l"
     using \<open>Colours l k\<close>
     by (meson Colours_def Colours_kn0) 
-  then have Y_6_3_Main: "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k" 
+  then have 
+    big53: "Big_Red_5_3 \<mu> l"
+    and Y_6_3_Main: "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k"
     and Y_6_5_dbooSt: "\<And>i. i \<in> Step_class \<mu> l k {dboost_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p i)"
     and Y_6_5_Bblue:  "\<And>i. i \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2*(eps k powr (-1/2))"
-    and Y_6_4_dbooSt: " \<And>i. i \<in> Step_class \<mu> l k {dboost_step} \<Longrightarrow> p i \<le> p (Suc i)"
     and big1: "((1 + eps k)^2) * eps k powr (1/2) \<le> 1" and big2: "(1 + eps k) powr (2 * eps k powr (-1/2)) \<le> 2"
     and "k\<ge>16"
     using big \<open>Colours l k\<close> 
-    by (auto simp: Big_Y_6_2_def Lemma_6_3_def Lemma_Y_6_5_dbooSt_def Lemma_Y_6_5_Bblue_def Lemma_Red_5_3_def p_def Colours_kn0)
+    by (auto simp: Big_Y_6_2_def Lemma_6_3_def Lemma_Y_6_5_dbooSt_def Lemma_Y_6_5_Bblue_def p_def Colours_kn0)
+  have Y64_S: " \<And>i. i \<in> Step_class \<mu> l k {dboost_step} \<Longrightarrow> p i \<le> p (Suc i)"
+    using big53
+    apply (simp add: p_def)
+
+    sorry
   define J where "J \<equiv> {j'. j'<j \<and> p j' \<ge> p0 \<and> even j'}"
   have "finite J"
     by (auto simp: J_def)
@@ -580,7 +577,7 @@ next
   next
     case S
     then show ?thesis
-      using Y_6_4_DegreeReg \<open>p (j'+2) < p0\<close> p_def Y_6_4_dbooSt j'_dreg pSj' by force
+      using Y_6_4_DegreeReg \<open>p (j'+2) < p0\<close> p_def Y64_S j'_dreg pSj' by force
   qed
   ultimately have B: "hgt k (p j') \<le> 1 + 2 * eps k powr (-1/2)"
     by linarith
@@ -645,7 +642,7 @@ next
   next
     case S
     show ?thesis
-      using Y_6_4_DegreeReg S \<open>p (j'+2) < p0\<close> Y_6_4_dbooSt j'_dreg pSj' p_def by fastforce
+      using Y_6_4_DegreeReg S \<open>p (j'+2) < p0\<close> Y64_S j'_dreg pSj' p_def by fastforce
   qed
   finally have "p0 - eps k \<le> p (j'+2)" .
   then have "p0 - 3 * eps k \<le> p (j'+2) - 2 * eps k"

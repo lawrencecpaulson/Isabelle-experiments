@@ -841,7 +841,7 @@ lemma Big_Red_5_3:
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
-corollary Red_5_3_Main:
+corollary Red_5_3:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and i: "i \<in> Step_class \<mu> l k {dboost_step}"
     and big: "Big_Red_5_3 \<mu> l" 
   shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
@@ -890,35 +890,11 @@ proof
     by auto
 qed
 
-corollary beta_gt0_Main:
-  assumes "0<\<mu>" "\<mu><1" "Colours l k""i \<in> Step_class \<mu> l k {dboost_step}"
+corollary beta_gt0:
+  assumes "0<\<mu>" "\<mu><1" "Colours l k" "i \<in> Step_class \<mu> l k {dboost_step}"
     and "Big_Red_5_3 \<mu> l" 
   shows "beta \<mu> l k i > 0"
   by (meson Big_Red_5_3_def Book.Red_5_2_Main Book_axioms assms)
-
-definition 
-  "Lemma_Red_5_3 \<equiv> 
-      \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> 
-                 (\<forall>i \<in> Step_class \<mu> l k {dboost_step}. pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2)"
-
-corollary Red_5_3:
-  assumes "0<\<mu>" "\<mu><1" shows "\<forall>\<^sup>\<infinity>l. Lemma_Red_5_3 \<mu> l"
-proof (rule eventually_mono [OF Big_Red_5_3 [OF assms]])
-  show "\<And>l. Big_Red_5_3 \<mu> l \<Longrightarrow> Lemma_Red_5_3 \<mu> l"
-    unfolding Lemma_Red_5_3_def by (metis Red_5_3_Main assms)
-qed
-
-definition "Lemma_beta_gt0 \<equiv> \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> (\<forall>i \<in> Step_class \<mu> l k {dboost_step}. beta \<mu> l k i > 0)"
-
-corollary beta_gt0:
-  assumes "0<\<mu>" "\<mu><1" shows "\<forall>\<^sup>\<infinity>l. Lemma_beta_gt0 \<mu> l"
-proof (rule eventually_mono [OF Red_5_3 [OF assms]])
-  fix l
-  assume "Lemma_Red_5_3 \<mu> l"
-  then show "Lemma_beta_gt0 \<mu> l"
-    unfolding Lemma_beta_gt0_def
-    by (smt (verit) Colours_kn0 Lemma_Red_5_3_def of_nat_0_less_iff zero_less_divide_iff zero_less_power)
-qed
 
 end (*context Book*)
 

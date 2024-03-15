@@ -47,7 +47,7 @@ proof -
     qed
   }
   then show ?thesis
-    using eventually_mono [OF beta_gt0] dboost_step_finite Lemma_beta_gt0_def assms by presburger
+    using eventually_mono [OF Big_Red_5_3 [OF assms]] dboost_step_finite beta_gt0 assms by presburger
 qed
 
 lemma bigbeta_less1:
@@ -84,11 +84,11 @@ proof -
     qed
   }
   then show ?thesis
-    using eventually_mono [OF beta_gt0] dboost_step_finite Lemma_beta_gt0_def assms by presburger
+    using eventually_mono [OF Big_Red_5_3 [OF assms]] dboost_step_finite beta_gt0 assms by presburger
 qed
 
 lemma bigbeta_le:
-  assumes "\<mu> > 0" "Colours l k" and big: "Lemma_beta_gt0 \<mu> l"
+  assumes "0<\<mu>" "\<mu><1" "Colours l k" and big: "Big_Red_5_3 \<mu> l"
   shows "bigbeta \<mu> l k \<le> \<mu>"
 proof -
   have "real (card (dboost_star \<mu> l k)) = (\<Sum>i\<in>dboost_star \<mu> l k. 1)"
@@ -100,9 +100,8 @@ proof -
     then have "beta \<mu> l k i \<le> \<mu>"
       using beta_le [OF \<open>\<mu> > 0\<close>]
       by (smt (verit, best) Step_class_insert UnCI dboost_star_subset subset_iff)
-    with i big \<open>Colours l k\<close> show "1 \<le> \<mu> / beta \<mu> l k i"
-      unfolding Lemma_beta_gt0_def
-      by (meson dboost_star_subset le_divide_eq_1_pos subset_iff)
+    with beta_gt0 assms show "1 \<le> \<mu> / beta \<mu> l k i"
+      by (smt (verit) dboost_star_subset divide_less_eq_1_pos i subset_iff)
   qed
   also have "... = \<mu> * (\<Sum>i\<in>dboost_star \<mu> l k. 1 / beta \<mu> l k i)"
     by (simp add: sum_distrib_left)
@@ -409,7 +408,7 @@ lemma ok_fun_26: "ok_fun_26 \<in> o(real)" and ok_fun_28: "ok_fun_28 \<in> o(rea
 
 definition 
   "Big_X_7_5 \<equiv> 
-    \<lambda>\<mu> l. Lemma_bblue_step_limit \<mu> l \<and> Lemma_Y_6_4_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l
+    \<lambda>\<mu> l. Lemma_bblue_step_limit \<mu> l \<and> Big_Red_5_3 \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l
         \<and> (\<forall>k\<ge>l. Lemma_height_upper_bound k \<and> k\<ge>16 \<and> (ok_fun_26 k - ok_fun_28 k \<le> k))"
 
 text \<open>establishing the size requirements for 7.5\<close>
@@ -422,7 +421,7 @@ proof -
   then show ?thesis
     unfolding Big_X_7_5_def using assms eventually_all_ge_at_top [OF height_upper_bound]
     by (simp add: eventually_conj_iff 
-        bblue_step_limit Y_6_4_dbooSt Y_6_5_Bblue height_upper_bound eventually_all_ge_at_top)
+        bblue_step_limit Big_Red_5_3 Y_6_5_Bblue height_upper_bound eventually_all_ge_at_top)
 qed
 
 
@@ -539,7 +538,7 @@ proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   then have B_limit: "Lemma_bblue_step_limit \<mu> l"
-      and Y64S: "Lemma_Y_6_4_dbooSt \<mu> l"
+      and R53: "Big_Red_5_3 \<mu> l"
       and 16: "k\<ge>16" (*for Y_6_5_Red*)
       and ok_fun: "ok_fun_26 k - ok_fun_28 k \<le> k"
     using big by (auto simp: Big_X_7_5_def)
@@ -567,8 +566,11 @@ proof -
     qed
     moreover
     have "(\<Sum>i \<in> \<S>\<S>. h(Suc i) - h(i-1)) \<ge> 0"
-      using Y64S \<open>Colours l k\<close> \<open>k>0\<close>  
-      by (force simp: Lemma_Y_6_4_dbooSt_def p_def h_def \<S>\<S> \<S>_def hgt_mono intro: sum_nonneg)
+    proof (intro sum_nonneg)
+      show "\<And>i. i \<in> \<S>\<S> \<Longrightarrow> 0 \<le> h (Suc i) - h (i - 1)"
+        using Y_6_4_dbooSt \<mu> R53 \<open>Colours l k\<close> \<open>k>0\<close>   
+        by(auto simp: p_def h_def \<S>\<S> \<S>_def hgt_mono)
+    qed
     ultimately show ?thesis
       by (simp add: mult.commute sum.subset_diff [OF \<open>\<S>\<S> \<subseteq> \<S>\<close> \<open>finite \<S>\<close>])
   qed
@@ -633,8 +635,7 @@ subsection \<open>Lemma 7.4\<close>
 
 definition 
   "Big_X_7_4 \<equiv> 
-    \<lambda>\<mu> l. Lemma_X_7_5 \<mu> l \<and> Lemma_Red_5_3 \<mu> l
-        \<and> Lemma_beta_gt0 \<mu> l \<and> (\<forall>k. Colours l k \<longrightarrow> 0 < bigbeta \<mu> l k \<and> bigbeta \<mu> l k < 1)"
+    \<lambda>\<mu> l. Lemma_X_7_5 \<mu> l \<and> Big_Red_5_3 \<mu> l \<and> (\<forall>k. Colours l k \<longrightarrow> 0 < bigbeta \<mu> l k \<and> bigbeta \<mu> l k < 1)"
 
 text \<open>establishing the size requirements for 7.4\<close>
 lemma Big_X_7_4:
@@ -642,7 +643,7 @@ lemma Big_X_7_4:
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_4 \<mu> l"
   unfolding Big_X_7_4_def using assms eventually_all_ge_at_top [OF height_upper_bound]
   by (simp add: eventually_conj_iff all_imp_conj_distrib X_7_5  
-      Red_5_3 Y_6_5_Bblue height_upper_bound beta_gt0 bigbeta_gt0 bigbeta_less1 eventually_all_ge_at_top)
+      Big_Red_5_3 Y_6_5_Bblue height_upper_bound beta_gt0 bigbeta_gt0 bigbeta_less1 eventually_all_ge_at_top)
 
 definition "ok_fun_X_7_4 \<equiv> \<lambda>k. -6 * eps k powr (1/4) * k * ln k / ln 2" 
 
@@ -662,12 +663,12 @@ proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   then have bigbeta_01: "0 < bigbeta \<mu> l k" "bigbeta \<mu> l k < 1"
-    and "Lemma_beta_gt0 \<mu> l" and X75: "card (\<S>\<setminus>\<S>\<S>) \<le> 3 * eps k powr (1/4) * k" 
-    and R53:  "\<And>i. i \<in> \<S> \<Longrightarrow> p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
+    and "Big_Red_5_3 \<mu> l" and X75: "card (\<S>\<setminus>\<S>\<S>) \<le> 3 * eps k powr (1/4) * k" 
     using big \<open>Colours l k\<close> 
-    by (auto simp: Big_X_7_4_def Lemma_X_7_5_def Lemma_Red_5_3_def p_def \<S>_def \<S>\<S>_def)
-  then have beta_gt0: "\<forall>i\<in>\<S>. 0 < beta \<mu> l k i"
-    by (simp add: Lemma_beta_gt0_def \<S>_def \<open>Colours l k\<close>)
+    by (auto simp: Big_X_7_4_def Lemma_X_7_5_def p_def \<S>_def \<S>\<S>_def)
+  then have R53:  "p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2" and beta_gt0: "0 < beta \<mu> l k i"
+    if "i \<in> \<S>" for i
+    using that Red_5_3 beta_gt0 \<mu> \<open>Colours l k\<close> by (auto simp: \<S>_def p_def)
   have [simp]: "finite \<S>"
     unfolding \<S>_def using assms dboost_step_finite by blast
   moreover have "\<S>\<S> \<subseteq> \<S>"
@@ -1094,7 +1095,7 @@ definition "Big_X_7_11_inequalities \<equiv> \<lambda>k.
             \<and> (1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
 
 definition "Big_X_7_11 \<equiv> 
-      \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Lemma_Red_5_3 \<mu> l \<and> Lemma_Y_6_5_dbooSt \<mu> l \<and>
+      \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Big_Red_5_3 \<mu> l \<and> Lemma_Y_6_5_dbooSt \<mu> l \<and>
             Lemma_Y_6_5_Bblue \<mu> l \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_11_inequalities k)"
 
 text \<open>establishing the size requirements for 7.11\<close>
@@ -1102,7 +1103,7 @@ lemma Big_X_7_11:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_11 \<mu> l"
   unfolding Big_X_7_11_def Big_X_7_11_inequalities_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Red_5_3 Big_X_7_5 Y_6_5_dbooSt Y_6_5_Bblue assms)
+  apply (simp add: Big_Red_5_3 Big_X_7_5 Y_6_5_dbooSt Y_6_5_Bblue assms)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
@@ -1131,8 +1132,8 @@ proof -
              "(1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
     and "Lemma_Y_6_5_Bblue \<mu> l"
     and R53:  "\<And>i. i \<in> \<S> \<Longrightarrow> p (Suc i) \<ge> p i"
-    using big \<open>Colours l k\<close> \<open>l\<le>k\<close> 
-      by (auto simp: Lemma_Red_5_3_def Big_X_7_11_def Big_X_7_11_inequalities_def \<S>_def p_def)
+    using \<mu> big \<open>Colours l k\<close> \<open>l\<le>k\<close>
+    by (auto simp: Red_5_3 Big_X_7_11_def Big_X_7_11_inequalities_def \<S>_def p_def)
   then have Y_6_5_B: "\<And>i. i \<in> \<B> \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2 * eps k powr (-1/2)"
     using \<open>\<mu>>0\<close> \<open>l\<le>k\<close> unfolding \<B>_def p_def by (meson Lemma_Y_6_5_Bblue_def)
   have B_limit: "Lemma_bblue_step_limit \<mu> l"
