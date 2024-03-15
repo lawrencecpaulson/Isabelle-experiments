@@ -144,20 +144,14 @@ lemma Big_Far_9_3:
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
-
-lemma below_halted_point_nontermination:
-  assumes "\<mu>>0" "\<mu><1" "Colours l k"
-  defines "m \<equiv> halted_point \<mu> l k"
-  shows  "termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
-
-
 lemma Far_9_3:
   fixes l k
   assumes "Colours l k"  \<comment> \<open>Not mentioned in paper but presumably needed\<close>
   defines "\<gamma> \<equiv> real l / (real k + real l)"
   defines "\<delta> \<equiv> min (1/200) (\<gamma>/20)"
   defines "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
-  assumes \<gamma>15: "\<gamma> \<le> 1/5" and p0: "p0 \<ge> 1/4" and n: "card V \<ge> exp (-\<delta>*k) * (k+l choose l)"
+  assumes \<gamma>15: "\<gamma> \<le> 1/5" and p0: "p0 \<ge> 1/4" and nge: "n \<ge> exp (-\<delta>*k) * (k+l choose l)"
+    and X0ge: "card X0 \<ge> n/2"
   assumes big: "Big_Far_9_3 \<gamma> l"
   shows "card \<R> \<ge> 2*k / 3"
 proof -
@@ -167,24 +161,44 @@ proof -
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   have \<gamma>01: "0 < \<gamma>" "\<gamma> < 1"
     using lk by (auto simp: \<gamma>_def)
+  have "k\<ge>2"
+    sorry
 
-  have "p0 - 3 * eps k > 1/k" and "pee \<gamma> l k m \<ge> p0 - 3 * eps k"
-    using lk big \<open>Colours l k\<close> by (auto simp: Big_Far_9_3_def Y_6_2_halted \<gamma>_def m_def)
-  then have X_le: "card (Xseq \<gamma> l k m) \<le> RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
-    using halted_point_halted \<open>Colours l k\<close> \<gamma>01
-    by (fastforce simp add: step_terminating_iff termination_condition_def pee_def m_def)
-  have "2 powr ok_fun_X_7_1 \<gamma> l k * \<gamma>^l * (1-\<gamma>) ^ card \<R> * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S> * card X0
-              \<le> card (Xseq \<gamma> l k m)"
+  obtain f where "f \<in> o(real)" and f: "k+l choose l = 2 powr f k * \<gamma> powr (- real l) * (1-\<gamma>) powr (- real k)" 
+    unfolding \<gamma>_def using fact_9_4 lk by blast
+  have \<section>: "x powr a * (x powr b * y) = x powr (a+b) * y" for x y a b::real
+    by (simp add: powr_add)
+  have "(2 powr ok_fun_X_7_1 \<gamma> l k * 2 powr f k) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S> * (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) / 2)
+      \<le> 2 powr ok_fun_X_7_1 \<gamma> l k * \<gamma>^l * (1-\<gamma>) ^ card \<R> * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S> * (exp (-\<delta>*k) * (k+l choose l) / 2)"
+    using \<gamma>01 by (simp add: f mult_ac \<section> flip: powr_realpow)
+  also have "\<dots> \<le> 2 powr ok_fun_X_7_1 \<gamma> l k * \<gamma>^l * (1-\<gamma>) ^ card \<R> * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S> * card X0"
+  proof (intro mult_left_mono order_refl)
+    show "exp (- \<delta> * real k) * real (k + l choose l) / 2 \<le> real (card X0)"
+      using X0ge nge by force
+    show "0 \<le> 2 powr ok_fun_X_7_1 \<gamma> l k * \<gamma> ^ l * (1-\<gamma>) ^ card \<R> * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>"
+      using \<gamma>01 bigbeta_ge0 by force
+  qed
+  also have "\<dots> \<le> card (Xseq \<gamma> l k m)"
     unfolding \<R>_def \<S>_def m_def
     using \<gamma>01 X_7_1 \<open>Colours l k\<close> big by (intro X_7_1) (auto simp: Big_Far_9_3_def)
   also have "... \<le> RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
-    sorry
-  obtain f where "f \<in> o(real)" and f: "k+l choose l = 2 powr f k * \<gamma> powr (- real l) * (1-\<gamma>) powr (- real k)" 
-    unfolding \<gamma>_def using fact_9_4 lk by blast
-
-  have "exp (-\<delta>*k) * (1-\<gamma>) powr (-k + card \<R>) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S> \<le> xxx"
-
-    sorry
+  proof -
+    have "p0 - 3 * eps k > 1/k" and "pee \<gamma> l k m \<ge> p0 - 3 * eps k"
+      using lk big \<open>Colours l k\<close> by (auto simp: Big_Far_9_3_def Y_6_2_halted \<gamma>_def m_def)
+    then show ?thesis
+      using halted_point_halted \<open>Colours l k\<close> \<gamma>01
+      by (fastforce simp add: step_terminating_iff termination_condition_def pee_def m_def)
+  qed
+  also have "... \<le> 2 ^ (k + nat\<lceil>l powr (3/4)\<rceil> - 2)"
+    using RN_le_power2 by auto
+  finally have B: "2 powr (ok_fun_X_7_1 \<gamma> l k + f k) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>
+               * exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) / 2
+              \<le> 2 ^ (k + nat \<lceil>l powr (3/4)\<rceil> - 2)" 
+    by (simp add: powr_add)
+  have "exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>
+             \<le> 2 powr (real k + \<lceil>l powr (3/4)\<rceil> - (ok_fun_X_7_1 \<gamma> l k + f k) - 1)"
+    using \<gamma>01 B \<open>k\<ge>2\<close>
+    by (simp add: field_simps powr_add powr_diff of_nat_diff flip: powr_realpow)
 
   show ?thesis
     sorry

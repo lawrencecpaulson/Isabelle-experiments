@@ -4,6 +4,12 @@ theory General_Extras imports
 
 begin
 
+lemma real_nat_int_floor [simp]: "x\<ge>0 \<Longrightarrow> real (nat\<lfloor>x\<rfloor>) = real_of_int \<lfloor>x\<rfloor>"
+  by auto
+
+lemma real_nat_int_ceiling [simp]: "x\<ge>0 \<Longrightarrow> real (nat \<lceil>x\<rceil>) = real_of_int \<lceil>x\<rceil>"
+  by auto
+
 (*2024-03-05: added*)
 lemma all_imp_conj_distrib: "(\<forall>x. P x \<longrightarrow> Q x \<and> R x) \<longleftrightarrow> (\<forall>x. P x \<longrightarrow> Q x) \<and> (\<forall>x. P x \<longrightarrow> R x)"
   by iprover
