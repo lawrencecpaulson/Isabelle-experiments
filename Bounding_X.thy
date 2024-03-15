@@ -1327,33 +1327,19 @@ proof -
 qed
 
 
-definition "Lemma_X_7_11 \<equiv> 
-   \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> 
-     card (Step_class \<mu> l k {red_step,dboost_step} \<inter>
-         {i. pee \<mu> l k (i-1) + eps k powr (-1/4) * alpha k 1 \<le> pee \<mu> l k i \<and>
-             pee \<mu> l k (i-1) \<le> p0})
-     \<le> 4 * eps k powr (1/4) * real k"
-
-lemma X_7_11:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Lemma_X_7_11 \<mu> l"
-  unfolding Lemma_X_7_11_def
-  using Big_X_7_11 [OF assms]
-  by eventually_elim (metis (no_types, lifting) assms X_7_11_aux Step_class_insert) 
-
 subsection \<open>Lemma 7.12\<close>
 
 definition "Big_X_7_12 \<equiv>
-   \<lambda>\<mu> l. Lemma_X_7_11 \<mu> l \<and> Big_X_7_10 \<mu> l \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_9 k)"
+   \<lambda>\<mu> l. Big_X_7_11 \<mu> l \<and> Big_X_7_10 \<mu> l \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_9 k)"
 
 text \<open>establishing the size requirements for 7.12\<close>
 lemma Big_X_7_12:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_12 \<mu> l"
   unfolding Big_X_7_12_def eventually_conj_iff  
-  by (simp add: X_7_11 X_7_10 Big_X_7_10 Big_X_7_9 eventually_all_ge_at_top assms)
+  by (simp add: Big_X_7_11 X_7_10 Big_X_7_10 Big_X_7_9 eventually_all_ge_at_top assms)
 
-lemma X_7_12_aux:
+lemma X_7_12:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
   defines "X \<equiv> Xseq \<mu> l k"
@@ -1367,7 +1353,7 @@ proof -
   define \<D> where "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  have 711: "Lemma_X_7_11 \<mu> l" and big_710: "Big_X_7_10 \<mu> l"
+  have big_711: "Big_X_7_11 \<mu> l" and big_710: "Big_X_7_10 \<mu> l"
     using big by (auto simp: Big_X_7_12_def)
   have [simp]: "finite \<R>" "finite \<S>"
     using finite_components assms by (auto simp: \<R>_def \<S>_def Step_class_insert_NO_MATCH)
@@ -1417,8 +1403,8 @@ proof -
   then have "real (card ((\<R>\<union>\<S>) \<inter> C \<inter> {i. p (i-1) \<le> p0})) \<le> real (card ((\<R>\<union>\<S>) \<inter> C11))"
     by (simp add: card_mono)
   also have "\<dots> \<le> 4 * eps k powr (1/4) * k"
-    using 711 \<open>Colours l k\<close> 
-    by (simp add: Lemma_X_7_11_def \<R>_def \<S>_def p_def C11_def Step_class_insert_NO_MATCH)
+    using X_7_11_aux big_711 \<open>Colours l k\<close> \<mu>
+    by (simp add: \<R>_def \<S>_def p_def C11_def Step_class_insert_NO_MATCH)
   finally have A: "card ((\<R>\<union>\<S>) \<inter> C \<inter> {i. p (i-1) \<le> p0}) \<le> 4 * eps k powr (1/4) * k" .
   have B: "card ((\<R>\<union>\<S>) \<inter> C \<setminus> {i. p (i-1) \<le> p0}) \<le> 3 * eps k powr (1/4) * k" 
   proof -
@@ -1492,7 +1478,7 @@ proof -
   then have BS_limit: "Lemma_bblue_dboost_step_limit \<mu> l"
     and B_limit: "Lemma_bblue_step_limit \<mu> l"
     and 712: "card ((\<R>\<union>\<S>) \<inter> C) \<le> 7 * eps k powr (1/4) * k"
-    using big X_7_12_aux[OF \<mu> \<open>Colours l k\<close>]
+    using big X_7_12[OF \<mu> \<open>Colours l k\<close>]
     by (auto simp: Big_X_7_6_def \<R>_def \<S>_def C_def X_def)
   have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
     unfolding m_def \<H>_def using halted_point_minimal assms by blast

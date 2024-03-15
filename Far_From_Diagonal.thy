@@ -133,7 +133,7 @@ begin
 
 definition "Big_Far_9_3 \<equiv>     
    \<lambda>\<mu> l. Big_ZZ_8_5 \<mu> l \<and> Big_X_7_1 \<mu> l \<and> Big_Y_6_2 \<mu> l \<and> Big_Red_5_3 \<mu> l
-      \<and> (\<forall>k\<ge>l. p0 - 3 * eps k > 1/k)"
+      \<and> (\<forall>k\<ge>l. p0 - 3 * eps k > 1/k \<and> k\<ge>2)"
 
 lemma Big_Far_9_3:
   assumes "0<\<mu>" "\<mu><1"
@@ -159,13 +159,15 @@ proof -
   define \<S> where "\<S> \<equiv> Step_class \<gamma> l k {dboost_step}"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
+  then have "k\<ge>2" and big85: "Big_ZZ_8_5 \<gamma> l" and big71: "Big_X_7_1 \<gamma> l" and big62: "Big_Y_6_2 \<gamma> l" 
+    and big53: "Big_Red_5_3 \<gamma> l"
+    using big by (auto simp: Big_Far_9_3_def)
   have \<gamma>01: "0 < \<gamma>" "\<gamma> < 1"
     using lk by (auto simp: \<gamma>_def)
-  have "k\<ge>2"
-    sorry
 
   obtain f where "f \<in> o(real)" and f: "k+l choose l = 2 powr f k * \<gamma> powr (- real l) * (1-\<gamma>) powr (- real k)" 
     unfolding \<gamma>_def using fact_9_4 lk by blast
+  define g where "g \<equiv> \<lambda>k. (real k + \<lceil>l powr (3/4)\<rceil> - (ok_fun_X_7_1 \<gamma> l k + f k) - 1)"
   have \<section>: "x powr a * (x powr b * y) = x powr (a+b) * y" for x y a b::real
     by (simp add: powr_add)
   have "(2 powr ok_fun_X_7_1 \<gamma> l k * 2 powr f k) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S> * (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) / 2)
@@ -191,13 +193,28 @@ proof -
   qed
   also have "... \<le> 2 ^ (k + nat\<lceil>l powr (3/4)\<rceil> - 2)"
     using RN_le_power2 by auto
-  finally have B: "2 powr (ok_fun_X_7_1 \<gamma> l k + f k) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>
+  finally have "2 powr (ok_fun_X_7_1 \<gamma> l k + f k) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>
                * exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) / 2
               \<le> 2 ^ (k + nat \<lceil>l powr (3/4)\<rceil> - 2)" 
     by (simp add: powr_add)
-  have "exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>
-             \<le> 2 powr (real k + \<lceil>l powr (3/4)\<rceil> - (ok_fun_X_7_1 \<gamma> l k + f k) - 1)"
-    using \<gamma>01 B \<open>k\<ge>2\<close> by (simp add: field_simps powr_add powr_diff of_nat_diff flip: powr_realpow)
+  then have A: "exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>
+             \<le> 2 powr g k"
+    using \<gamma>01 \<open>k\<ge>2\<close> by (simp add: g_def field_simps powr_add powr_diff of_nat_diff flip: powr_realpow)
+
+  have bb_le: "bigbeta \<gamma> l k \<le> \<gamma>"
+    by (meson big Big_Far_9_3_def bigbeta_le \<gamma>01 \<open>Colours l k\<close>)
+  then have B: "card \<S> \<le> bigbeta \<gamma> l k * card \<R> / (1 - bigbeta \<gamma> l k) + (2 / (1-\<gamma>)) * k powr (19/20)" 
+    using ZZ_8_5 [OF \<gamma>01 \<open>Colours l k\<close> big85] by (auto simp: \<R>_def \<S>_def)
+
+  have C: "1 / (1-\<gamma>) \<ge> exp \<gamma>"
+    using exp_minus_ge[of \<gamma>] \<gamma>01 by (simp add: exp_minus divide_simps mult.commute)
+  have "card \<R> < k"
+    using red_step_limit \<gamma>01 \<open>Colours l k\<close> by (auto simp: \<R>_def)
+  have  "ln (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>)
+             \<le> ln (2 powr g k)"
+    using A \<gamma>01
+    apply (subst ln_le_cancel_iff)
+      apply (auto simp: zero_less_mult_iff mult_less_0_iff)
 
   show ?thesis
     sorry
