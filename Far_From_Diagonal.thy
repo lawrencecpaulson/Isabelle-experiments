@@ -164,6 +164,8 @@ proof -
     using big by (auto simp: Big_Far_9_3_def)
   have \<gamma>01: "0 < \<gamma>" "\<gamma> < 1"
     using lk by (auto simp: \<gamma>_def)
+  then have bigbeta01: "bigbeta \<gamma> l k \<in> {0<..<1}"
+    using big53 assms bigbeta_gt0 bigbeta_less1 by force
 
   obtain f where "f \<in> o(real)" and f: "k+l choose l = 2 powr f k * \<gamma> powr (- real l) * (1-\<gamma>) powr (- real k)" 
     unfolding \<gamma>_def using fact_9_4 lk by blast
@@ -210,11 +212,10 @@ proof -
     using exp_minus_ge[of \<gamma>] \<gamma>01 by (simp add: exp_minus divide_simps mult.commute)
   have "card \<R> < k"
     using red_step_limit \<gamma>01 \<open>Colours l k\<close> by (auto simp: \<R>_def)
-  have  "ln (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>)
+
+  have "ln (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>)
              \<le> ln (2 powr g k)"
-    using A \<gamma>01
-    apply (subst ln_le_cancel_iff)
-      apply (auto simp: zero_less_mult_iff mult_less_0_iff)
+    using A \<gamma>01 bigbeta01 by simp
 
   show ?thesis
     sorry

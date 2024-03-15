@@ -485,14 +485,14 @@ definition "Big85 \<equiv> \<lambda>k. 3 * eps k powr (1/4) * k \<le> k powr (19
 
 definition "Big_ZZ_8_5 \<equiv>     
    \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Big_ZZ_8_1 \<mu> l \<and> Big_Red_5_3 \<mu> l
-      \<and> (\<forall>k. Colours l k \<longrightarrow> Big85 k \<and> 0 < bigbeta \<mu> l k  \<and> bigbeta \<mu> l k < 1)"
+      \<and> (\<forall>k. Colours l k \<longrightarrow> Big85 k)"
 
 lemma Big_ZZ_8_5:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_5 \<mu> l"
   unfolding Big_ZZ_8_5_def Big85_def
             eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_Red_5_3 Big_X_7_5 bigbeta_gt0 Big_ZZ_8_1 beta_gt0 bigbeta_less1 assms)
+  apply (simp add: Big_Red_5_3 Big_X_7_5 bigbeta_gt0 Big_ZZ_8_1 assms)
   apply (intro conjI eventually_Colours_at_top; real_asymp)
   done
 
@@ -520,7 +520,7 @@ proof -
     and bigbeta_gt0: "0 < bigbeta \<mu> l k"
     and beta_gt0: "\<And>i. i \<in> \<S> \<Longrightarrow> beta \<mu> l k i > 0" 
     using bigbeta_ge0 big \<mu> \<open>Colours l k\<close> 
-    by (auto simp: Big_ZZ_8_5_def beta_gt0 \<S>_def)
+    by (auto simp: Big_ZZ_8_5_def \<S>_def beta_gt0 bigbeta_gt0 bigbeta_less1)
   then have ge0: "bigbeta \<mu> l k / (1 - bigbeta \<mu> l k) \<ge> 0"
     by auto
   show ?thesis
@@ -601,7 +601,7 @@ proof -
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   have bigbeta_lt1: "bigbeta \<mu> l k < 1" and bigbeta_gt0: "0 < bigbeta \<mu> l k"
     using bigbeta_ge0 big \<mu> \<open>Colours l k\<close> 
-    by (auto simp: Big_ZZ_8_6_def Big_ZZ_8_5_def beta_gt0 \<S>_def)
+    by (auto simp: Big_ZZ_8_6_def Big_ZZ_8_5_def bigbeta_less1 bigbeta_gt0 \<S>_def)
   have "a > 0"
     using \<mu> by (simp add: a_def)
   have s_gt_a: "a * k powr (19/20) < card \<S>"

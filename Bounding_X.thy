@@ -27,8 +27,8 @@ lemma bigbeta_ge0:
   using assms by (simp add: bigbeta_def Let_def beta_ge0 sum_nonneg)
 
 lemma bigbeta_gt0:
-  assumes "0<\<mu>"  "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> bigbeta \<mu> l k > 0"
+  assumes "0<\<mu>" "\<mu><1" "Colours l k" and big: "Big_Red_5_3 \<mu> l"
+  shows "bigbeta \<mu> l k > 0"
 proof -
   { fix l k
     assume  0: "\<forall>i\<in>Step_class \<mu> l k {dboost_step}. 0 < beta \<mu> l k i" 
@@ -47,12 +47,12 @@ proof -
     qed
   }
   then show ?thesis
-    using eventually_mono [OF Big_Red_5_3 [OF assms]] dboost_step_finite beta_gt0 assms by presburger
+    using assms beta_gt0 dboost_step_finite by presburger
 qed
 
 lemma bigbeta_less1:
-  assumes "0<\<mu>"  "\<mu><1" 
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> bigbeta \<mu> l k < 1"
+  assumes "0<\<mu>" "\<mu><1" "Colours l k" and big: "Big_Red_5_3 \<mu> l"
+  shows "bigbeta \<mu> l k < 1"
 proof -
   { fix l k
     assume 0: "\<forall>i\<in>Step_class \<mu> l k {dboost_step}. 0 < beta \<mu> l k i" 
@@ -84,7 +84,7 @@ proof -
     qed
   }
   then show ?thesis
-    using eventually_mono [OF Big_Red_5_3 [OF assms]] dboost_step_finite beta_gt0 assms by presburger
+    using assms beta_gt0 dboost_step_finite by blast
 qed
 
 lemma bigbeta_le:
@@ -635,7 +635,7 @@ subsection \<open>Lemma 7.4\<close>
 
 definition 
   "Big_X_7_4 \<equiv> 
-    \<lambda>\<mu> l. Lemma_X_7_5 \<mu> l \<and> Big_Red_5_3 \<mu> l \<and> (\<forall>k. Colours l k \<longrightarrow> 0 < bigbeta \<mu> l k \<and> bigbeta \<mu> l k < 1)"
+    \<lambda>\<mu> l. Lemma_X_7_5 \<mu> l \<and> Big_Red_5_3 \<mu> l"
 
 text \<open>establishing the size requirements for 7.4\<close>
 lemma Big_X_7_4:
@@ -643,7 +643,7 @@ lemma Big_X_7_4:
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_4 \<mu> l"
   unfolding Big_X_7_4_def using assms eventually_all_ge_at_top [OF height_upper_bound]
   by (simp add: eventually_conj_iff all_imp_conj_distrib X_7_5  
-      Big_Red_5_3 Y_6_5_Bblue height_upper_bound beta_gt0 bigbeta_gt0 bigbeta_less1 eventually_all_ge_at_top)
+      Big_Red_5_3 Y_6_5_Bblue height_upper_bound beta_gt0 eventually_all_ge_at_top)
 
 definition "ok_fun_X_7_4 \<equiv> \<lambda>k. -6 * eps k powr (1/4) * k * ln k / ln 2" 
 
@@ -662,13 +662,14 @@ proof -
   define p where "p \<equiv> pee \<mu> l k"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  then have bigbeta_01: "0 < bigbeta \<mu> l k" "bigbeta \<mu> l k < 1"
-    and "Big_Red_5_3 \<mu> l" and X75: "card (\<S>\<setminus>\<S>\<S>) \<le> 3 * eps k powr (1/4) * k" 
+  then have big53: "Big_Red_5_3 \<mu> l" and X75: "card (\<S>\<setminus>\<S>\<S>) \<le> 3 * eps k powr (1/4) * k" 
     using big \<open>Colours l k\<close> 
     by (auto simp: Big_X_7_4_def Lemma_X_7_5_def p_def \<S>_def \<S>\<S>_def)
   then have R53:  "p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2" and beta_gt0: "0 < beta \<mu> l k i"
     if "i \<in> \<S>" for i
     using that Red_5_3 beta_gt0 \<mu> \<open>Colours l k\<close> by (auto simp: \<S>_def p_def)
+  have bigbeta01: "bigbeta \<mu> l k \<in> {0<..<1}"
+    using big53 assms bigbeta_gt0 bigbeta_less1 by force
   have [simp]: "finite \<S>"
     unfolding \<S>_def using assms dboost_step_finite by blast
   moreover have "\<S>\<S> \<subseteq> \<S>"
@@ -717,7 +718,8 @@ proof -
   have "(\<Prod>i\<in>\<S>\<S>. 1 / beta \<mu> l k i) \<le> bigbeta \<mu> l k powr (- (card \<S>\<S>))"
   proof (cases "\<S>\<S> = {}")
     case True
-    with bigbeta_01 show ?thesis by simp
+    with bigbeta01 show ?thesis
+      by fastforce
   next
     case False
     then have "card \<S>\<S> > 0"
@@ -743,17 +745,17 @@ proof -
     finally show ?thesis .
   qed
   then have B: "(\<Prod>i\<in>\<S>\<S>. beta \<mu> l k i) \<ge> bigbeta \<mu> l k powr (card \<S>\<S>)"
-    using prod_beta_gt0[of "\<S>\<S>"] bigbeta_01
-    by (simp add: \<open>\<S>\<S> \<subseteq> \<S>\<close> powr_minus prod_dividef mult.commute divide_simps)
+    using \<open>\<S>\<S> \<subseteq> \<S>\<close> prod_beta_gt0[of "\<S>\<S>"] bigbeta01
+    by (simp add: powr_minus prod_dividef mult.commute divide_simps)
   have "2 powr ok_fun_X_7_4 k * bigbeta \<mu> l k powr card \<S> \<le> 2 powr ok_fun_X_7_4 k * bigbeta \<mu> l k powr card \<S>\<S>"
-    using bigbeta_01 card_SSS by (simp add: powr_mono')
+    using bigbeta01 big53 card_SSS by (simp add: powr_mono')
   also have "\<dots> \<le> (\<Prod>i\<in>\<S>\<setminus>\<S>\<S>. beta \<mu> l k i) * (\<Prod>i\<in>\<S>\<S>. beta \<mu> l k i)"
     using beta_ge0 by (intro mult_mono A B) (auto simp: prod_nonneg)
   also have "\<dots> = (\<Prod>i\<in>\<S>. beta \<mu> l k i)"
     by (metis \<open>\<S>\<S> \<subseteq> \<S>\<close> \<open>finite \<S>\<close> prod.subset_diff)
   finally have "2 powr ok_fun_X_7_4 k * bigbeta \<mu> l k powr real (card \<S>) \<le> prod (beta \<mu> l k) \<S>" .
-  then show ?thesis
-    by (simp add: "*" bigbeta_01 powr_realpow)
+  with bigbeta01 show ?thesis
+    by (simp add: "*" powr_realpow)
 qed  
 
 subsection \<open>Observation 7.7\<close>
