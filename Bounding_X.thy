@@ -538,7 +538,7 @@ proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   then have B_limit: "Lemma_bblue_step_limit \<mu> l"
-      and R53: "Big_Red_5_3 \<mu> l"
+      and bigR53: "Big_Red_5_3 \<mu> l"
       and 16: "k\<ge>16" (*for Y_6_5_Red*)
       and ok_fun: "ok_fun_26 k - ok_fun_28 k \<le> k"
     using big by (auto simp: Big_X_7_5_def)
@@ -568,7 +568,7 @@ proof -
     have "(\<Sum>i \<in> \<S>\<S>. h(Suc i) - h(i-1)) \<ge> 0"
     proof (intro sum_nonneg)
       show "\<And>i. i \<in> \<S>\<S> \<Longrightarrow> 0 \<le> h (Suc i) - h (i - 1)"
-        using Y_6_4_dbooSt \<mu> R53 \<open>Colours l k\<close> \<open>k>0\<close>   
+        using Y_6_4_dbooSt \<mu> bigR53 \<open>Colours l k\<close> \<open>k>0\<close>   
         by(auto simp: p_def h_def \<S>\<S> \<S>_def hgt_mono)
     qed
     ultimately show ?thesis
@@ -961,13 +961,13 @@ qed
 
 subsection \<open>Lemma 7.10\<close>
  
-definition "Big_X_7_10 \<equiv> \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Lemma_Y_6_5_dbooSt \<mu> l"
+definition "Big_X_7_10 \<equiv> \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Big_Red_5_3 \<mu> l"
 
 text \<open>establishing the size requirements for 7.10\<close>
 lemma Big_X_7_10:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_10 \<mu> l"
-  by (simp add: Big_X_7_10_def eventually_conj_iff Big_X_7_5 Y_6_5_dbooSt assms)
+  by (simp add: Big_X_7_10_def eventually_conj_iff Big_X_7_5 Big_Red_5_3 assms)
 
 lemma X_7_10:
   fixes l k
@@ -989,7 +989,7 @@ proof -
   then have hub: "Lemma_height_upper_bound k"
     and 16: "k\<ge>16" (*for Y_6_5_Red*)
     and ok_le_k: "ok_fun_26 k - ok_fun_28 k \<le> k"
-    and Y_6_5_S: "Lemma_Y_6_5_dbooSt \<mu> l"
+    and bigR53: "Big_Red_5_3 \<mu> l"
     using big by (auto simp: Big_X_7_5_def Big_X_7_10_def)
   have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
     unfolding m_def \<H>_def using halted_point_minimal assms by blast
@@ -1000,7 +1000,7 @@ proof -
     using stepkind.exhaust by blast
   obtain 26: "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
      and 28: "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
-    using X_26_and_28 assms(1-3) big Y_6_5_S
+    using X_26_and_28 assms(1-3) big 
     unfolding \<B>_def \<D>_def \<H>_def h_def m_def p_def Big_X_7_10_def
     by blast
   have "(\<Sum>i\<in>\<R>\<union>\<S>. h (Suc i) - h (i-1)) = (\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) - (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
@@ -1014,7 +1014,7 @@ proof -
   have h_ge_0_if_S: "h(Suc i) - h(i-1) \<ge> 0" if "i \<in> \<S>" for i
   proof -
     have *: "hgt k (pee \<mu> l k i) \<le> hgt k (pee \<mu> l k (Suc i))"
-      using Y_6_5_S \<open>Colours l k\<close> that unfolding \<S>_def Lemma_Y_6_5_dbooSt_def by blast
+      using bigR53 Y_6_5_dbooSt \<mu> \<open>Colours l k\<close> that unfolding \<S>_def by blast
     obtain "i-1 \<in> \<D>" "i>0"
       using that \<open>i\<in>\<S>\<close> dreg_before_step1[of i] by (force simp add: \<S>_def \<D>_def Step_class_insert_NO_MATCH)
     then have "hgt k (pee \<mu> l k (i-1)) \<le> hgt k (pee \<mu> l k i)"
@@ -1052,8 +1052,8 @@ proof -
         then have "h (i - Suc 0) + eps k powr (-1/4) \<le> h i"
           by (simp add: C_def)
         then show ?thesis
-          using * i nonR \<open>k>0\<close> Y_6_5_S \<open>Colours l k\<close>
-          by (force simp add: h_def p_def \<S>_def Lemma_Y_6_5_dbooSt_def)
+          using * i nonR \<open>k>0\<close> bigR53 \<mu> \<open>Colours l k\<close> Y_6_5_dbooSt
+          by (force simp add: h_def p_def \<S>_def)
       next
         case False
         with nonR \<open>i\<in>\<S>\<close> h_ge_0_if_S show ?thesis
@@ -1086,15 +1086,15 @@ definition "Big_X_7_11_inequalities \<equiv> \<lambda>k.
             \<and> (1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
 
 definition "Big_X_7_11 \<equiv> 
-      \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Big_Red_5_3 \<mu> l \<and> Lemma_Y_6_5_dbooSt \<mu> l \<and>
-            Big_Y_6_5_Bblue l \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_11_inequalities k)"
+      \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Big_Red_5_3 \<mu> l \<and> Big_Y_6_5_Bblue l
+          \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_11_inequalities k)"
 
 text \<open>establishing the size requirements for 7.11\<close>
 lemma Big_X_7_11:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_11 \<mu> l"
   unfolding Big_X_7_11_def Big_X_7_11_inequalities_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_Red_5_3 Big_X_7_5 Y_6_5_dbooSt Big_Y_6_5_Bblue assms)
+  apply (simp add: Big_Red_5_3 Big_X_7_5 Big_Y_6_5_Bblue assms)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
@@ -1116,7 +1116,7 @@ proof -
   define m where "m \<equiv> halted_point \<mu> l k"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
-  have big_x75: "Big_X_7_5 \<mu> l" and Y_6_5_S: "Lemma_Y_6_5_dbooSt \<mu> l" 
+  have big_x75: "Big_X_7_5 \<mu> l"  
     and 711: "eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1"
     and big34: "k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)"
     and le2: "((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"

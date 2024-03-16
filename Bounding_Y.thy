@@ -111,33 +111,35 @@ lemma finite_Z_class:
   assumes "0<\<mu>" "Colours l k" shows "finite (Z_class \<mu> l k)"
   using finite_components [OF assms] by (auto simp: Z_class_def Step_class_insert_NO_MATCH)
 
-text \<open>Lemma 6.3 except for the limit\<close>   (*abbreviations \<R>, \<B> would be nice here*)
-lemma Y_6_3_Main:
+lemma Y_6_3:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"
   assumes big53: "Big_Red_5_3 \<mu> l" and bblue_step_limit: "Lemma_bblue_step_limit \<mu> l"
   defines "p \<equiv> pee \<mu> l k"
   shows "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k"
 proof -
+  define \<S> where "\<S> \<equiv> Step_class \<mu> l k {dboost_step}" 
+  define \<R> where "\<R> \<equiv> Step_class \<mu> l k {red_step}"
+  define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
   obtain "k > 0" \<open>l\<le>k\<close>
     by (meson Colours_def Colours_kn0 \<open>Colours l k\<close>)
   { fix i
-    assume i: "i \<in> Step_class \<mu> l k {dboost_step}"
+    assume i: "i \<in> \<S>"
     moreover have "odd i"
-      using step_odd [of i] i  by (force simp: Step_class_insert_NO_MATCH)
+      using step_odd [of i] i  by (force simp: \<S>_def Step_class_insert_NO_MATCH)
     ultimately have "i-1 \<in> Step_class \<mu> l k {dreg_step}"
-      by (simp add: dreg_before_step Step_class_insert_NO_MATCH)
+      by (simp add: \<S>_def dreg_before_step Step_class_insert_NO_MATCH)
     then have "p (i-1) \<le> p i \<and> p i \<le> p (Suc i)"
-      using \<mu> \<open>Colours l k\<close> big53 p_def
+      using \<mu> \<open>Colours l k\<close> big53 p_def \<S>_def
       by (metis Red_5_3 One_nat_def Y_6_4_DegreeReg \<open>odd i\<close> i odd_Suc_minus_one)
   }        
-  then have dboost: "Step_class \<mu> l k {dboost_step} \<inter> Z_class \<mu> l k = {}"
+  then have dboost: "\<S> \<inter> Z_class \<mu> l k = {}"
     by (fastforce simp: Z_class_def p_def)
   { fix i
-    assume i: "i \<in> Step_class \<mu> l k {bblue_step} \<inter> Z_class \<mu> l k" 
+    assume i: "i \<in> \<B> \<inter> Z_class \<mu> l k" 
     then have "i-1 \<in> Step_class \<mu> l k {dreg_step}"
-      using dreg_before_step step_odd i by (force simp: Step_class_insert_NO_MATCH)
+      using dreg_before_step step_odd i by (force simp: \<B>_def Step_class_insert_NO_MATCH)
     have pee: "p (Suc i) < p (i-1)" "p (i-1) \<le> p0"
-      and iB: "i \<in> Step_class \<mu> l k {bblue_step}"
+      and iB: "i \<in> \<B>"
       using i by (auto simp: Z_class_def p_def)
     have "hgt k (p (i-1)) = 1"
     proof -
@@ -151,7 +153,7 @@ proof -
         by (metis One_nat_def Suc_pred' diff_is_0_eq hgt_gt0)
     qed
     then have "p (i-1) - p (Suc i) \<le> eps k powr (-1/2) * alpha k 1"
-      using pee iB Y_6_4_Bblue \<open>0<\<mu>\<close> by (fastforce simp: p_def)
+      using pee iB Y_6_4_Bblue \<open>0<\<mu>\<close> by (fastforce simp: \<B>_def p_def)
     also have "\<dots> \<le> 1/k"
     proof -
       have "real k powr - (1/8) \<le> 1"
@@ -161,13 +163,14 @@ proof -
     qed
     finally have "p (i-1) - p (Suc i) \<le> 1/k" .
   }
-  then have "(\<Sum>i \<in> Step_class \<mu> l k {bblue_step} \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i)) 
-             \<le> card (Step_class \<mu> l k {bblue_step} \<inter> Z_class \<mu> l k) * (1/k)"
+  then have "(\<Sum>i \<in> \<B> \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i)) 
+             \<le> card (\<B> \<inter> Z_class \<mu> l k) * (1/k)"
     using sum_bounded_above by (metis (mono_tags, lifting))
-  also have "\<dots> \<le> card (Step_class \<mu> l k {bblue_step}) * (1/k)"
-    using bblue_step_finite [OF \<open>\<mu>>0\<close> \<open>Colours l k\<close>] by (simp add: divide_le_cancel card_mono)
+  also have "\<dots> \<le> card (\<B>) * (1/k)"
+    using bblue_step_finite [OF \<open>\<mu>>0\<close> \<open>Colours l k\<close>] 
+    by (simp add: \<B>_def divide_le_cancel card_mono)
   also have "\<dots> \<le> l powr (3/4) / k"
-    using bblue_step_limit \<open>Colours l k\<close> by (simp add: \<open>0 < k\<close> frac_le Lemma_bblue_step_limit_def)
+    using bblue_step_limit \<open>Colours l k\<close> by (simp add: \<B>_def \<open>0 < k\<close> frac_le Lemma_bblue_step_limit_def)
   also have "\<dots> \<le> eps k"
   proof -
     have *: "l powr (3/4) \<le> k powr (3/4)"
@@ -178,16 +181,16 @@ proof -
       using divide_right_mono [OF *, of k] 
       by (metis eps_def of_nat_0_le_iff powr_diff powr_one)
   qed
-  finally have bblue: "(\<Sum>i\<in>Step_class \<mu> l k {bblue_step} \<inter> Z_class \<mu> l k. p(i-1) - p (Suc i))
+  finally have bblue: "(\<Sum>i\<in>\<B> \<inter> Z_class \<mu> l k. p(i-1) - p (Suc i))
                      \<le> eps k" .
   { fix i
-    assume i: "i \<in> Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k" 
+    assume i: "i \<in> \<R> \<inter> Z_class \<mu> l k" 
     then have pee_alpha: "p (i-1) - p (Suc i) 
                        \<le> p (i-1) - p i + alpha k (hgt k (p i))"
-      using Y_6_4_Red by (force simp: p_def)
+      using Y_6_4_Red by (force simp: p_def \<R>_def)
     have pee_le: "p (i-1) \<le> p i"
       using dreg_before_step Y_6_4_DegreeReg i step_odd
-      apply (simp add: p_def Step_class_insert_NO_MATCH)
+      apply (simp add: \<R>_def p_def Step_class_insert_NO_MATCH)
       by (metis odd_Suc_minus_one)
     consider (1) "hgt k (p i) = 1" | (2) "hgt k (p i) > 1"
       by (metis hgt_gt0 less_one nat_neq_iff)
@@ -215,43 +218,27 @@ proof -
     with pee_alpha have "p (i-1) - p (Suc i) \<le> eps k / k"
       by linarith
   }
-  then have "(\<Sum>i \<in> Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i))
-           \<le> card (Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k) * (eps k / k)"
+  then have "(\<Sum>i \<in> \<R> \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i))
+           \<le> card (\<R> \<inter> Z_class \<mu> l k) * (eps k / k)"
     using sum_bounded_above by (metis (mono_tags, lifting))
-  also have "\<dots> \<le> card (Step_class \<mu> l k {red_step}) * (eps k / k)"
+  also have "\<dots> \<le> card (\<R>) * (eps k / k)"
     using eps_ge0[of k] assms red_step_finite
-    by (simp add: divide_le_cancel mult_le_cancel_right card_mono)
+    by (simp add: \<R>_def divide_le_cancel mult_le_cancel_right card_mono)
   also have "\<dots> \<le> k * (eps k / k)"
-    using red_step_limit [OF \<open>0<\<mu>\<close> \<open>Colours l k\<close>]
+    using red_step_limit [OF \<open>0<\<mu>\<close> \<open>Colours l k\<close>] \<R>_def
     by (smt (verit, best) divide_nonneg_nonneg eps_ge0 mult_mono nat_less_real_le of_nat_0_le_iff)
   also have "\<dots> \<le> eps k"
     by (simp add: eps_ge0)
-  finally have red: "(\<Sum>i\<in>Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> eps k" .
-  have *: "finite (Step_class \<mu> l k {bblue_step})" "finite (Step_class \<mu> l k {red_step})"
-          "\<And>x. x \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> x \<notin> Step_class \<mu> l k {red_step}"
+  finally have red: "(\<Sum>i\<in>\<R> \<inter> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> eps k" .
+  have *: "finite (\<B>)" "finite (\<R>)"
+          "\<And>x. x \<in> \<B> \<Longrightarrow> x \<notin> \<R>"
     using finite_components [OF \<open>0<\<mu>\<close> \<open>Colours l k\<close>] 
-    by (auto simp: Step_class_def)
-  have eq: "Z_class \<mu> l k = Step_class \<mu> l k {dboost_step} \<inter> Z_class \<mu> l k 
-                      \<union> Step_class \<mu> l k {bblue_step} \<inter> Z_class \<mu> l k
-                      \<union> Step_class \<mu> l k {red_step} \<inter> Z_class \<mu> l k"
-    by (auto simp: Z_class_def Step_class_insert_NO_MATCH)
+    by (auto simp: \<B>_def \<R>_def Step_class_def)
+  have eq: "Z_class \<mu> l k = \<S> \<inter> Z_class \<mu> l k  \<union> \<B> \<inter> Z_class \<mu> l k \<union> \<R> \<inter> Z_class \<mu> l k"
+    by (auto simp: Z_class_def \<B>_def \<R>_def \<S>_def Step_class_insert_NO_MATCH)
   show ?thesis
     using bblue red
     by (subst eq) (simp add: sum.union_disjoint dboost disjoint_iff *)
-qed
-
-definition 
-  "Lemma_6_3 \<equiv> 
-      \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> (\<Sum>i \<in> Z_class \<mu> l k. pee \<mu> l k (i-1) - pee \<mu> l k (Suc i)) \<le> 2 * eps k"
-
-corollary Y_6_3:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Lemma_6_3 \<mu> l"
-proof -
-  have "\<forall>\<^sup>\<infinity>l. Big_Red_5_3 \<mu> l \<and> Lemma_bblue_step_limit \<mu> l"
-    using eventually_conj Big_Red_5_3 [OF assms] bblue_step_limit [OF \<open>0<\<mu>\<close>] by metis
-  with Y_6_3_Main[OF assms] show ?thesis
-    by (simp add: Lemma_6_3_def eventually_mono)
 qed
 
 subsection \<open>Lemma 6.5\<close>
@@ -306,17 +293,11 @@ lemma Y_6_5_DegreeReg:
   shows "hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k i)"
   using hgt_mono Y_6_4_DegreeReg assms by presburger
 
-
-definition 
-  "Lemma_Y_6_5_dbooSt \<equiv> 
-      \<lambda>\<mu> l. \<forall>k. \<forall>i \<in> Step_class \<mu> l k {dboost_step}.
-                     Colours l k \<longrightarrow> hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k i)"
-
-lemma Y_6_5_dbooSt:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Lemma_Y_6_5_dbooSt \<mu> l"
-  apply (rule eventually_mono [OF Big_Red_5_3 [OF assms]])
-  using Colours_kn0 Lemma_Y_6_5_dbooSt_def Red_5_3 assms hgt_mono by presburger
+corollary Y_6_5_dbooSt:
+  assumes "0<\<mu>" "\<mu><1" and "Colours l k" and "i \<in> Step_class \<mu> l k {dboost_step}"
+    and "Big_Red_5_3 \<mu> l" 
+  shows "hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k i)"
+  using Colours_kn0 Red_5_3 assms hgt_mono by blast
 
 text \<open>this remark near the top of page 19 only holds in the limit\<close>
 lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (- real (nat \<lfloor>2 * eps k powr (-1/2)\<rfloor>)) \<le> 1 - eps k powr (1/2)"
@@ -393,8 +374,7 @@ qed
 
 subsection \<open>Lemma 6.2\<close>
 
-definition "Big_Y_6_2 \<equiv> \<lambda>\<mu> l. Lemma_6_3 \<mu> l \<and> Lemma_Y_6_5_dbooSt \<mu> l \<and> Big_Y_6_5_Bblue l 
-               \<and> Big_Red_5_3 \<mu> l
+definition "Big_Y_6_2 \<equiv> \<lambda>\<mu> l. Big_Y_6_5_Bblue l \<and> Big_Red_5_3 \<mu> l \<and> Lemma_bblue_step_limit \<mu> l
                \<and> (\<forall>k\<ge>l. ((1 + eps k)^2) * eps k powr (1/2) \<le> 1 
                        \<and> (1 + eps k) powr (2 * eps k powr (-1/2)) \<le> 2 \<and> k \<ge> 16)"
 
@@ -403,7 +383,7 @@ lemma Big_Y_6_2:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_Y_6_2 \<mu> l"
   unfolding Big_Y_6_2_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Y_6_3 Y_6_5_dbooSt Big_Y_6_5_Bblue Big_Red_5_3 assms)
+  apply (simp add: Big_Y_6_5_Bblue Big_Red_5_3 bblue_step_limit assms)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
@@ -429,13 +409,12 @@ next
     by (meson Colours_def Colours_kn0) 
   then have 
     big53: "Big_Red_5_3 \<mu> l"
-    and Y_6_3_Main: "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k"
-    and Y_6_5_dbooSt: "\<And>i. i \<in> Step_class \<mu> l k {dboost_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p i)"
-    and Y_6_5_Bblue:  "\<And>i. i \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2*(eps k powr (-1/2))"
+    and Y63: "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k"
+    and Y65B:  "\<And>i. i \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2*(eps k powr (-1/2))"
     and big1: "((1 + eps k)^2) * eps k powr (1/2) \<le> 1" and big2: "(1 + eps k) powr (2 * eps k powr (-1/2)) \<le> 2"
     and "k\<ge>16"
-    using big \<mu> \<open>Colours l k\<close> Y_6_5_Bblue
-    by (auto simp: Big_Y_6_2_def Lemma_6_3_def Lemma_Y_6_5_dbooSt_def p_def Colours_kn0)
+    using big \<mu> \<open>Colours l k\<close> Y_6_5_Bblue Y_6_3
+    by (auto simp: Big_Y_6_2_def p_def Colours_kn0)
   have Y64_S: " \<And>i. i \<in> Step_class \<mu> l k {dboost_step} \<Longrightarrow> p i \<le> p (Suc i)"
     using big53 using Red_5_3 [OF \<mu> \<open>Colours l k\<close>] by (simp add: p_def)
   define J where "J \<equiv> {j'. j'<j \<and> p j' \<ge> p0 \<and> even j'}"
@@ -458,7 +437,7 @@ next
   have maximal: "j'' \<le> j'" if "j'' \<in> J" for j''
     using \<open>finite J\<close> exists by (simp add: j'_def that)
   have "p (j'+2) - 2 * eps k \<le> p (j'+2) - (\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i))"
-    using Y_6_3_Main by simp
+    using Y63 by simp
   also have "\<dots> \<le> p (Suc j)"
   proof -
     define Z where "Z \<equiv> \<lambda>j. {i. p (Suc i) < p (i-1) \<and> j'+2 < i \<and> i\<le>j \<and> i \<in> RBS}"
@@ -558,7 +537,7 @@ next
   next
     case B
     show ?thesis
-      using Y_6_5_Bblue [OF B] by (simp add: p_def)
+      using Y65B [OF B] by (simp add: p_def)
   next
     case S
     then show ?thesis

@@ -477,6 +477,15 @@ qed
 definition "Big_Red_5_1 \<equiv> \<lambda>\<mu> l. (1-\<mu>) * l > 1 \<and> l powr (5/2) \<ge> 3 / (1-\<mu>) \<and> l powr (1/4) \<ge> 4 
                     \<and> Lemma_5_4 \<mu> l \<and> Lemma_5_6 l" 
 
+text \<open>establishing the size requirements for 5.1\<close>
+lemma Big_Red_5_1:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_Red_5_1 \<mu> l"
+  using assms
+  apply (simp add: Big_Red_5_1_def eventually_conj_iff eps_def Red_5_4 Red_5_6)
+  apply (intro conjI; real_asymp)
+  done
+
 lemma card_cvx_Neighbours:
   fixes \<mu>::real
   assumes i: "i \<in> Step_class \<mu> l k {red_step,dboost_step}" and \<mu>: "0<\<mu>" "\<mu><1" 
@@ -791,22 +800,6 @@ proof -
     using SUC Xeq Yeq stepper_XYseq by (simp add: pee_def)
   ultimately show ?thesis
     by linarith
-qed
-
-
-text \<open>establishing the size requirements for 5.1\<close>
-lemma Big_Red_5_1:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_Red_5_1 \<mu> l"
-proof -
-  have "\<forall>\<^sup>\<infinity>l. (1-\<mu>) * l > 1"
-    using \<open>\<mu><1\<close> by real_asymp
-  moreover have "\<forall>\<^sup>\<infinity>l. l powr (5/2) \<ge> 3 / (1-\<mu>)"
-    using \<open>\<mu><1\<close> by real_asymp
-  moreover have "\<forall>\<^sup>\<infinity>l. l powr (1/4) \<ge> 4"
-    using \<open>\<mu><1\<close> by real_asymp
-  ultimately show ?thesis
-    by (simp add: Big_Red_5_1_def eventually_conj_iff Red_5_4 [OF assms] Red_5_6)
 qed
 
 definition 
