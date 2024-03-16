@@ -166,10 +166,16 @@ proof -
     using lk by (auto simp: \<gamma>_def)
   then have bigbeta01: "bigbeta \<gamma> l k \<in> {0<..<1}"
     using big53 assms bigbeta_gt0 bigbeta_less1 by force
-
+  have one_minus: "1-\<gamma> = real k / (real k + real l)"
+    using \<open>0<l\<close> by (simp add: \<gamma>_def divide_simps)
   obtain f where "f \<in> o(real)" and f: "k+l choose l = 2 powr f k * \<gamma> powr (- real l) * (1-\<gamma>) powr (- real k)" 
     unfolding \<gamma>_def using fact_9_4 lk by blast
   define g where "g \<equiv> \<lambda>k. (real k + \<lceil>l powr (3/4)\<rceil> - (ok_fun_X_7_1 \<gamma> l k + f k) - 1)"
+
+  have [simp]: "g k \<noteq> 0"
+apply (simp add: g_def )
+    sorry
+
   have \<section>: "x powr a * (x powr b * y) = x powr (a+b) * y" for x y a b::real
     by (simp add: powr_add)
   have "(2 powr ok_fun_X_7_1 \<gamma> l k * 2 powr f k) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S> * (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) / 2)
@@ -213,10 +219,15 @@ proof -
   have "card \<R> < k"
     using red_step_limit \<gamma>01 \<open>Colours l k\<close> by (auto simp: \<R>_def)
 
-  have "ln (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>)
-             \<le> ln (2 powr g k)"
+  have "(card \<R> - real k) * ln (1-\<gamma>) - \<delta>*k + card \<S> * (ln (bigbeta \<gamma> l k) - ln \<gamma>)
+     = ln (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>)"
+    using \<gamma>01 \<open>Colours l k\<close> by (simp add: ln_mult ln_div ln_realpow ln_powr big53 bigbeta_gt0)
+  also have "\<dots> \<le> ln (2 powr g k)"
     using A \<gamma>01 bigbeta01 by simp
-
+  also have "... = g k * ln 2"
+    by (auto simp: ln_powr)
+  finally have "(card \<R> - real k) * ln (1-\<gamma>) - \<delta>*k + card \<S> * (ln (bigbeta \<gamma> l k) - ln \<gamma>)
+              \<le> g k * ln 2" .
   show ?thesis
     sorry
 qed

@@ -512,7 +512,7 @@ proof -
   ultimately have "real (card \<S>) - real (card \<S>\<S>) = card (\<S>\<setminus>\<S>\<S>)"
     by (metis card_Diff_subset card_mono finite_subset of_nat_diff)
   also have "\<dots> \<le> 3 * eps k powr (1/4) * k"
-    using \<mu> \<open>Colours l k\<close> big X_7_5_aux by (auto simp: Big_ZZ_8_5_def \<S>\<S>_def \<S>_def)
+    using \<mu> \<open>Colours l k\<close> big X_7_5 by (auto simp: Big_ZZ_8_5_def \<S>\<S>_def \<S>_def)
   also have "\<dots> \<le> k powr (19/20)"
     using big \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_5_def Big85_def Colours_def)
   finally have *: "real (card \<S>) - card \<S>\<S> \<le> k powr (19/20)" .

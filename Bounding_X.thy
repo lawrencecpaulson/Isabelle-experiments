@@ -511,7 +511,7 @@ proof -
     using that by blast
 qed
 
-lemma X_7_5_aux:
+proposition X_7_5:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   assumes "Colours l k" 
@@ -620,30 +620,19 @@ proof -
     by (simp add: algebra_simps)
 qed
 
-definition 
-  "Lemma_X_7_5 \<equiv> 
-      \<lambda>\<mu> l. \<forall>k. Colours l k \<longrightarrow> card (Step_class \<mu> l k {dboost_step} \<setminus> dboost_star \<mu> l k) 
-                \<le> 3 * eps k powr (1/4) * k"
-
-proposition X_7_5:
-  assumes "0<\<mu>" "\<mu><1" 
-  shows "\<forall>\<^sup>\<infinity>l. Lemma_X_7_5 \<mu> l"
-  using assms unfolding Lemma_X_7_5_def
-    by (rule eventually_mono [OF Big_X_7_5]) (intro X_7_5_aux strip, auto simp: assms)
-
 subsection \<open>Lemma 7.4\<close>
 
 definition 
   "Big_X_7_4 \<equiv> 
-    \<lambda>\<mu> l. Lemma_X_7_5 \<mu> l \<and> Big_Red_5_3 \<mu> l"
+    \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Big_Red_5_3 \<mu> l"
 
 text \<open>establishing the size requirements for 7.4\<close>
 lemma Big_X_7_4:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_4 \<mu> l"
   unfolding Big_X_7_4_def using assms eventually_all_ge_at_top [OF height_upper_bound]
-  by (simp add: eventually_conj_iff all_imp_conj_distrib X_7_5  
-      Big_Red_5_3 Y_6_5_Bblue height_upper_bound beta_gt0 eventually_all_ge_at_top)
+  by (simp add: eventually_conj_iff all_imp_conj_distrib   
+      Big_X_7_5 Big_Red_5_3 Y_6_5_Bblue height_upper_bound beta_gt0 eventually_all_ge_at_top)
 
 definition "ok_fun_X_7_4 \<equiv> \<lambda>k. -6 * eps k powr (1/4) * k * ln k / ln 2" 
 
@@ -663,8 +652,8 @@ proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   then have big53: "Big_Red_5_3 \<mu> l" and X75: "card (\<S>\<setminus>\<S>\<S>) \<le> 3 * eps k powr (1/4) * k" 
-    using big \<open>Colours l k\<close> 
-    by (auto simp: Big_X_7_4_def Lemma_X_7_5_def p_def \<S>_def \<S>\<S>_def)
+    using \<mu> big \<open>Colours l k\<close> 
+    by (auto simp: Big_X_7_4_def X_7_5 p_def \<S>_def \<S>\<S>_def)
   then have R53:  "p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2" and beta_gt0: "0 < beta \<mu> l k i"
     if "i \<in> \<S>" for i
     using that Red_5_3 beta_gt0 \<mu> \<open>Colours l k\<close> by (auto simp: \<S>_def p_def)

@@ -232,7 +232,7 @@ lemma integral_uniform_count_measure:
   assumes "finite A" 
   shows "integral\<^sup>L (uniform_count_measure A) f = sum f A / (card A)"
 proof -
-  have "(integral\<^sup>L (uniform_count_measure A) f) = (\<Sum>x\<in>A. f x / real (card A))" 
+  have "integral\<^sup>L (uniform_count_measure A) f = (\<Sum>x\<in>A. f x / card A)" 
     using assms by (simp add: uniform_count_measure_def lebesgue_integral_point_measure_finite)
   with assms show ?thesis
     by (simp add: sum_divide_distrib nn_integral_count_space_finite)
