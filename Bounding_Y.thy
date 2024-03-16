@@ -324,13 +324,19 @@ lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (- real (nat \<lfloor>2 * 
   by real_asymp
 
 
-definition "Big_Y_6_5_Bblue \<equiv> \<lambda>k. (1 + eps k) powr (- real (nat \<lfloor>2*(eps k powr (-1/2))\<rfloor>)) \<le> 1 - eps k powr (1/2)" 
+definition "Big_Y_6_5_Bblue \<equiv> \<lambda>l. \<forall>k\<ge>l. (1 + eps k) powr (- real (nat \<lfloor>2*(eps k powr (-1/2))\<rfloor>)) \<le> 1 - eps k powr (1/2)" 
 
-lemma Y_6_5_Bblue_Main:
+text \<open>establishing the size requirements for Y 6.5\<close>
+lemma Big_Y_6_5_Bblue:
+  shows "\<forall>\<^sup>\<infinity>l. Big_Y_6_5_Bblue l"
+  unfolding Big_Y_6_5_Bblue_def eps_def by (intro eventually_all_ge_at_top; real_asymp)
+
+lemma Y_6_5_Bblue:
   fixes k::nat and \<kappa>::real
+  assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"
   defines "\<kappa> \<equiv> eps k powr (-1/2)"
-  assumes i: "i \<in> Step_class \<mu> l k {bblue_step}" and "k>0" "0<\<mu>"
-    and big: "Big_Y_6_5_Bblue k"
+  assumes i: "i \<in> Step_class \<mu> l k {bblue_step}"
+    and big: "Big_Y_6_5_Bblue l"
   defines "p \<equiv> pee \<mu> l k"
   defines "h \<equiv> hgt k (p (i-1))"
   shows "hgt k (p (Suc i)) \<ge> h - 2*\<kappa>"
@@ -347,6 +353,8 @@ proof (cases "h > 2*\<kappa> + 1")
   also have "\<dots> \<le> p (Suc i)"
     using Y_6_4_Bblue i \<open>0<\<mu>\<close> h_def p_def \<kappa>_def by blast
   finally have A: "qfun k (h-1) - eps k powr (1/2) * (1 + eps k) ^ (h-1) / k < p (Suc i)" .
+  obtain lk: "0<l" "l\<le>k" "0<k"
+    using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   have ek0: "0 < 1 + eps k"
     by (smt (verit, best) eps_ge0)
   have less_h: "nat \<lfloor>2 * \<kappa>\<rfloor> < h"
@@ -360,7 +368,7 @@ proof (cases "h > 2*\<kappa> + 1")
     have "(1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) = (1 + eps k) ^ (h-1) * (1 + eps k) powr - real(nat \<lfloor>2*\<kappa>\<rfloor>)"
       using less_h ek0 by (simp add: of_nat_diff algebra_simps flip: powr_realpow powr_add)
     also have "\<dots> \<le> (1 - eps k powr (1/2)) * (1 + eps k) ^ (h-1)"
-      using big unfolding \<kappa>_def Big_Y_6_5_Bblue_def
+      using big \<open>l\<le>k\<close> unfolding \<kappa>_def Big_Y_6_5_Bblue_def
       by (metis mult.commute  ge0 mult_left_mono)
     finally have "(1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1)
         \<le> (1 - eps k powr (1/2)) * (1 + eps k) ^ (h-1)" .
@@ -375,37 +383,17 @@ proof (cases "h > 2*\<kappa> + 1")
   then have "h - nat \<lfloor>2 * \<kappa>\<rfloor> \<le> hgt k (p (Suc i))"
     using hgt_greater [OF \<open>k>0\<close>] by force
   with less_h show ?thesis
-    by (smt (verit) assms(1) less_imp_le_nat of_nat_diff of_nat_floor of_nat_mono powr_ge_pzero)
+    unfolding \<kappa>_def
+    by (smt (verit) less_imp_le_nat of_nat_diff of_nat_floor of_nat_mono powr_ge_pzero)
 next
   case False
   then show ?thesis
     by (smt (verit, del_insts) of_nat_0 hgt_gt0 nat_less_real_le)
 qed
 
-definition "Lemma_Y_6_5_Bblue \<equiv> 
-   \<lambda>\<mu> l. \<forall>k i. k\<ge>l \<longrightarrow> i \<in> Step_class \<mu> l k {bblue_step} 
-                \<longrightarrow> hgt k (pee \<mu> l k (Suc i)) \<ge> hgt k (pee \<mu> l k (i-1)) - 2 * eps k powr (-1/2)"
-
-lemma Y_6_5_Bblue:
-  assumes "0<\<mu>"
-  shows "\<forall>\<^sup>\<infinity>l. Lemma_Y_6_5_Bblue \<mu> l"
-proof -
-  have "\<forall>\<^sup>\<infinity>l. Big_Y_6_5_Bblue l"
-    unfolding Big_Y_6_5_Bblue_def eps_def
-    by real_asymp
-  then have "\<forall>\<^sup>\<infinity>l. l>0 \<and> (\<forall>k. k\<ge>l \<longrightarrow> Big_Y_6_5_Bblue k)"
-    using eventually_all_ge_at_top
-    using eventually_conj eventually_gt_at_top by blast
-  moreover have "\<And>l. 0 < l \<and> (\<forall>k\<ge>l. Big_Y_6_5_Bblue k) \<Longrightarrow> Lemma_Y_6_5_Bblue \<mu> l"
-    unfolding Lemma_Y_6_5_Bblue_def
-    by (intro strip Y_6_5_Bblue_Main) (auto simp: assms)
-  ultimately show ?thesis
-    by (rule eventually_mono)
-qed
-
 subsection \<open>Lemma 6.2\<close>
 
-definition "Big_Y_6_2 \<equiv> \<lambda>\<mu> l. Lemma_6_3 \<mu> l \<and> Lemma_Y_6_5_dbooSt \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l 
+definition "Big_Y_6_2 \<equiv> \<lambda>\<mu> l. Lemma_6_3 \<mu> l \<and> Lemma_Y_6_5_dbooSt \<mu> l \<and> Big_Y_6_5_Bblue l 
                \<and> Big_Red_5_3 \<mu> l
                \<and> (\<forall>k\<ge>l. ((1 + eps k)^2) * eps k powr (1/2) \<le> 1 
                        \<and> (1 + eps k) powr (2 * eps k powr (-1/2)) \<le> 2 \<and> k \<ge> 16)"
@@ -415,7 +403,7 @@ lemma Big_Y_6_2:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_Y_6_2 \<mu> l"
   unfolding Big_Y_6_2_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Y_6_3 Y_6_5_dbooSt Y_6_5_Bblue Big_Red_5_3 assms)
+  apply (simp add: Y_6_3 Y_6_5_dbooSt Big_Y_6_5_Bblue Big_Red_5_3 assms)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
@@ -423,7 +411,7 @@ text \<open>Following Bhavik in excluding the even steps (degree regularisation)
       Assuming it hasn't halted, the conclusion also holds for the even cases anyway.\<close>
 proposition Y_6_2:
   fixes l k
-  assumes "0<\<mu>"
+  assumes \<mu>: "0<\<mu>" "\<mu><1"
   defines "p \<equiv> pee \<mu> l k"
   defines "RBS \<equiv> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
   assumes j: "j \<in> RBS" "Colours l k"
@@ -446,13 +434,10 @@ next
     and Y_6_5_Bblue:  "\<And>i. i \<in> Step_class \<mu> l k {bblue_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2*(eps k powr (-1/2))"
     and big1: "((1 + eps k)^2) * eps k powr (1/2) \<le> 1" and big2: "(1 + eps k) powr (2 * eps k powr (-1/2)) \<le> 2"
     and "k\<ge>16"
-    using big \<open>Colours l k\<close> 
-    by (auto simp: Big_Y_6_2_def Lemma_6_3_def Lemma_Y_6_5_dbooSt_def Lemma_Y_6_5_Bblue_def p_def Colours_kn0)
+    using big \<mu> \<open>Colours l k\<close> Y_6_5_Bblue
+    by (auto simp: Big_Y_6_2_def Lemma_6_3_def Lemma_Y_6_5_dbooSt_def p_def Colours_kn0)
   have Y64_S: " \<And>i. i \<in> Step_class \<mu> l k {dboost_step} \<Longrightarrow> p i \<le> p (Suc i)"
-    using big53
-    apply (simp add: p_def)
-
-    sorry
+    using big53 using Red_5_3 [OF \<mu> \<open>Colours l k\<close>] by (simp add: p_def)
   define J where "J \<equiv> {j'. j'<j \<and> p j' \<ge> p0 \<and> even j'}"
   have "finite J"
     by (auto simp: J_def)
@@ -653,7 +638,7 @@ qed
 
 corollary Y_6_2_halted:
   fixes l k
-  assumes \<section>: "0<\<mu>" "Colours l k" and big: "Big_Y_6_2 \<mu> l"
+  assumes \<section>: "0<\<mu>" "\<mu><1" "Colours l k" and big: "Big_Y_6_2 \<mu> l"
   defines "m \<equiv> halted_point \<mu> l k"
   shows "pee \<mu> l k m \<ge> p0 - 3 * eps k"
 proof -
@@ -714,7 +699,7 @@ lemma Big_Y_6_1:
 lemma Y_6_1_aux:
   defines "f \<equiv> \<lambda>k. (2 * real k / ln 2) * ln (1 - 2 * eps k powr (1/2) / p0)"
   fixes l k
-  assumes "0<\<mu>" "\<mu><1" and big: "Big_Y_6_1 \<mu> l"
+  assumes \<mu>: "0<\<mu>" "\<mu><1" and big: "Big_Y_6_1 \<mu> l"
   assumes "Colours l k" and not_halted: "m \<notin> Step_class \<mu> l k {halted}"
   defines "p \<equiv> pee \<mu> l k"
   defines "Y \<equiv> Yseq \<mu> l k"
@@ -774,7 +759,7 @@ proof -
           using \<open>2 < i\<close> \<open>odd i\<close> by auto
       qed
       then have Y62: "p (i-1) \<ge> p0 - 3 * eps k"
-        using Y_6_2 [OF \<open>\<mu>>0\<close> _ \<open>Colours l k\<close> big62] \<open>2 < i\<close> unfolding p_def
+        using Y_6_2 [OF \<mu> _ \<open>Colours l k\<close> big62] \<open>2 < i\<close> unfolding p_def
         by (metis Suc_1 Suc_diff_Suc Suc_lessD)
       show ?thesis
       proof (intro mult_right_mono)

@@ -408,7 +408,7 @@ lemma ok_fun_26: "ok_fun_26 \<in> o(real)" and ok_fun_28: "ok_fun_28 \<in> o(rea
 
 definition 
   "Big_X_7_5 \<equiv> 
-    \<lambda>\<mu> l. Lemma_bblue_step_limit \<mu> l \<and> Big_Red_5_3 \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l
+    \<lambda>\<mu> l. Lemma_bblue_step_limit \<mu> l \<and> Big_Red_5_3 \<mu> l \<and> Big_Y_6_5_Bblue l
         \<and> (\<forall>k\<ge>l. Lemma_height_upper_bound k \<and> k\<ge>16 \<and> (ok_fun_26 k - ok_fun_28 k \<le> k))"
 
 text \<open>establishing the size requirements for 7.5\<close>
@@ -421,7 +421,7 @@ proof -
   then show ?thesis
     unfolding Big_X_7_5_def using assms eventually_all_ge_at_top [OF height_upper_bound]
     by (simp add: eventually_conj_iff 
-        bblue_step_limit Big_Red_5_3 Y_6_5_Bblue height_upper_bound eventually_all_ge_at_top)
+        bblue_step_limit Big_Red_5_3 Big_Y_6_5_Bblue height_upper_bound eventually_all_ge_at_top)
 qed
 
 
@@ -443,9 +443,9 @@ proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   then have B_limit: "Lemma_bblue_step_limit \<mu> l"
-    and Y65B: "Lemma_Y_6_5_Bblue \<mu> l"
+    and bigY65B: "Big_Y_6_5_Bblue l"
     and hub: "Lemma_height_upper_bound k"
-    using big by (auto simp: Big_X_7_5_def)
+    using \<mu> big by (auto simp: Big_X_7_5_def)
   have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < m" for i
     unfolding m_def  \<H>_def using halted_point_minimal assms by blast
   have oddset: "{..<m} \<setminus> \<D> = {i \<in> {..<m}. odd i}" 
@@ -471,8 +471,8 @@ proof -
       fix i :: nat
       assume i: "i \<in> \<B>"
       show "-2 * eps k powr (-1/2) \<le> h(Suc i) - h(i-1)"
-        using Y65B \<open>Colours l k\<close> \<open>l\<le>k\<close> \<open>k>0\<close> i
-        by (fastforce simp: Lemma_Y_6_5_Bblue_def p_def \<B>_def h_def)
+        using bigY65B \<mu> \<open>Colours l k\<close> \<open>k>0\<close> i Y_6_5_Bblue 
+        by (fastforce simp: p_def \<B>_def h_def)
     qed
     then show ?thesis 
       by (simp add: mult.commute)
@@ -632,7 +632,7 @@ lemma Big_X_7_4:
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_4 \<mu> l"
   unfolding Big_X_7_4_def using assms eventually_all_ge_at_top [OF height_upper_bound]
   by (simp add: eventually_conj_iff all_imp_conj_distrib   
-      Big_X_7_5 Big_Red_5_3 Y_6_5_Bblue height_upper_bound beta_gt0 eventually_all_ge_at_top)
+      Big_X_7_5 Big_Red_5_3 height_upper_bound beta_gt0 eventually_all_ge_at_top)
 
 definition "ok_fun_X_7_4 \<equiv> \<lambda>k. -6 * eps k powr (1/4) * k * ln k / ln 2" 
 
@@ -1087,14 +1087,14 @@ definition "Big_X_7_11_inequalities \<equiv> \<lambda>k.
 
 definition "Big_X_7_11 \<equiv> 
       \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Big_Red_5_3 \<mu> l \<and> Lemma_Y_6_5_dbooSt \<mu> l \<and>
-            Lemma_Y_6_5_Bblue \<mu> l \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_11_inequalities k)"
+            Big_Y_6_5_Bblue l \<and> (\<forall>k. l\<le>k \<longrightarrow> Big_X_7_11_inequalities k)"
 
 text \<open>establishing the size requirements for 7.11\<close>
 lemma Big_X_7_11:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_11 \<mu> l"
   unfolding Big_X_7_11_def Big_X_7_11_inequalities_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_Red_5_3 Big_X_7_5 Y_6_5_dbooSt Y_6_5_Bblue assms)
+  apply (simp add: Big_Red_5_3 Big_X_7_5 Y_6_5_dbooSt Big_Y_6_5_Bblue assms)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
@@ -1121,12 +1121,13 @@ proof -
     and big34: "k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)"
     and le2: "((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"
              "(1 + eps k) ^ (nat \<lfloor>2 * eps k powr (-1/4)\<rfloor> + nat \<lfloor>2 * eps k powr (-1/2)\<rfloor> - 1) \<le> 2"
-    and "Lemma_Y_6_5_Bblue \<mu> l"
+    and bigY65B: "Big_Y_6_5_Bblue l"
     and R53:  "\<And>i. i \<in> \<S> \<Longrightarrow> p (Suc i) \<ge> p i"
     using \<mu> big \<open>Colours l k\<close> \<open>l\<le>k\<close>
     by (auto simp: Red_5_3 Big_X_7_11_def Big_X_7_11_inequalities_def \<S>_def p_def)
   then have Y_6_5_B: "\<And>i. i \<in> \<B> \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2 * eps k powr (-1/2)"
-    using \<open>\<mu>>0\<close> \<open>l\<le>k\<close> unfolding \<B>_def p_def by (meson Lemma_Y_6_5_Bblue_def)
+    using \<mu> \<open>Colours l k\<close> bigY65B Y_6_5_Bblue 
+    unfolding \<B>_def p_def by blast 
   have B_limit: "Lemma_bblue_step_limit \<mu> l"
     and hub: "Lemma_height_upper_bound k"
     and 16: "k\<ge>16" (*for Y_6_5_Red*)

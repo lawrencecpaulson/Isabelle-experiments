@@ -23,7 +23,7 @@ definition "Big42b \<equiv> \<lambda>k. 2 * k powr (-1/16) * k
 
 definition "Big_ZZ_8_1 \<equiv>
    \<lambda>\<mu> l. Lemma_Red_5_2 \<mu> l \<and> Big_Red_5_3 \<mu> l
-        \<and> Lemma_bblue_step_limit \<mu> l \<and> Lemma_Y_6_5_Bblue \<mu> l
+        \<and> Lemma_bblue_step_limit \<mu> l \<and> Big_Y_6_5_Bblue l
         \<and> (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k \<and> Big_ZZ_8_2 k \<and> k\<ge>16 \<and> Big39 k
                       \<and> Big42a k \<and> Big42b k)"
 
@@ -35,7 +35,7 @@ lemma Big_ZZ_8_1:
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_1 \<mu> l"
   unfolding Big_ZZ_8_1_def Big_ZZ_8_2_def Big39_def Big42a_def Big42b_def
             eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Red_5_2 Big_Red_5_3 bblue_step_limit Y_6_5_Bblue
+  apply (simp add: Red_5_2 Big_Red_5_3 bblue_step_limit Big_Y_6_5_Bblue
        height_upper_bound eventually_all_ge_at_top assms)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
@@ -171,7 +171,7 @@ proof -
     using \<mu> big \<open>Colours l k\<close> that
     by (auto simp: Big_ZZ_8_1_def Lemma_Red_5_2_def Red_5_3 Lemma_bblue_step_limit_def
          p_def \<B>_def \<S>_def)
-  have card\<B>: "card \<B> \<le> l powr (3/4)" and Y65: "Lemma_Y_6_5_Bblue \<mu> l"
+  have card\<B>: "card \<B> \<le> l powr (3/4)" and bigY65B: "Big_Y_6_5_Bblue l"
     using big \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_1_def Lemma_bblue_step_limit_def \<B>_def)
 
   have \<Delta>\<Delta>_ge0: "\<Delta>\<Delta> i h \<ge> 0" if "i \<in> \<S>" "h \<ge> 1" for i h
@@ -357,7 +357,8 @@ proof -
       then have \<Delta>\<Delta>_le0: "\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h \<le> 0" if "h\<ge>1" for h
         by (smt (verit, best) One_nat_def \<Delta>\<Delta>_def \<Delta>_def \<open>odd i\<close> odd_Suc_minus_one pp_eq)
       have hge: "hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2 * eps k powr (-1/2)"
-        using Y65 that \<open>l\<le>k\<close> by (simp add: Lemma_Y_6_5_Bblue_def \<B>_def p_def)
+        using bigY65B \<mu> \<open>Colours l k\<close> that Y_6_5_Bblue 
+        by (fastforce simp: p_def \<B>_def )
       have \<Delta>\<Delta>0: "\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h = 0" if "0<h" "h < hgt k (p (i-1)) - 2 * eps k powr (-1/2)" for h
         using \<open>odd i\<close> that hge  unfolding \<Delta>\<Delta>_def One_nat_def
         by (smt (verit) of_nat_less_iff odd_Suc_minus_one powr_non_neg pp_less_hgt)
