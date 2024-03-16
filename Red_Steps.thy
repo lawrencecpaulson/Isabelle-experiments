@@ -203,144 +203,140 @@ proof -
     unfolding Lemma_5_6_def by presburger 
 qed
 
-definition "Lemma_5_4 \<equiv> \<lambda>\<mu> l. \<forall>k i. Colours l k \<longrightarrow> i \<in> Step_class \<mu> l k {red_step,dboost_step} \<longrightarrow>
-     weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> - real (card (Xseq \<mu> l k i)) / (real k) ^ 5"
+subsection \<open>Lemma 5.4\<close>
+
+definition "Big_Red_5_4 \<equiv> \<lambda>l. Lemma_5_6 l \<and> (\<forall>k\<ge>l. real k + 2 * real k ^ 6 \<le> real k ^ 7)"
+
+text \<open>establishing the size requirements for 5.4\<close>
+lemma Big_Red_5_4: "\<forall>\<^sup>\<infinity>l. Big_Red_5_4 l"
+  unfolding Big_Red_5_4_def eventually_conj_iff all_imp_conj_distrib eps_def
+  apply (simp add: Red_5_6)
+  apply (intro conjI eventually_all_ge_at_top; real_asymp)
+  done
 
 lemma Red_5_4: 
-  assumes "0<\<mu>" "\<mu><1" 
-  shows "\<forall>\<^sup>\<infinity>l. Lemma_5_4 \<mu> l"
+  assumes "0<\<mu>" "\<mu><1" and "Colours l k" and i: "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
+    and big: "Big_Red_5_4 l"
+  shows "weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> - real (card (Xseq \<mu> l k i)) / (real k) ^ 5"
 proof -
-  let ?Big = "\<lambda>l. (\<forall>k\<ge>l. real k + 2 * real k ^ 6 \<le> real k ^ 7) \<and> Lemma_5_6 l"
-  have 1: "\<forall>\<^sup>\<infinity>l. real l + 2 * real l ^ 6 \<le> real l ^ 7"
-    by real_asymp
-  then have big_enough_l: "\<forall>\<^sup>\<infinity>l. ?Big l"
-    using Red_5_6 eventually_conj eventually_all_ge_at_top by fastforce
-  have "weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> - real (card (Xseq \<mu> l k i)) / (real k) ^ 5"
-    if l: "?Big l" and "Colours l k" and i: "i \<in> Step_class \<mu> l k {red_step,dboost_step}" for l k i
-  proof -
-    define X where "X \<equiv> Xseq \<mu> l k i"
-    define Y where "Y \<equiv> Yseq \<mu> l k i"
-    let ?R = "RN k (m_of l)"
-    have "finite X" "finite Y"
-      unfolding X_def Y_def by (meson finV infinite_super Xseq_subset_V Yseq_subset_V)+
-    have "k\<ge>l"
-      using Colours_def that(2) by auto
-    have "l>0"
-      using Colours_ln0 that(2) by blast
-    moreover have "l\<noteq>1"
-      using l by auto
-    ultimately have "l>1" by linarith
-    with \<open>k\<ge>l\<close> have "k>0" "k>1" by auto
-    have not_many_bluish: "\<not> many_bluish \<mu> l k X"
-      using i not_many_bluish unfolding X_def by blast
-    have nonterm: "\<not> termination_condition l k X Y"
-      using X_def Y_def i step_non_terminating_iff by (force simp: Step_class_def)
-    moreover have "l powr (2/3) \<le> l powr (3/4)"
-      using \<open>l>1\<close> by (simp add: powr_mono)
-    ultimately have RNX: "?R < card X"
-      unfolding termination_condition_def m_of_def
-      by (smt (verit, ccfv_SIG) RN_mono order.trans leI ceiling_mono nat_mono order.refl)
-    have "0 \<le> (\<Sum>x \<in> X. \<Sum>x' \<in> X. Weight X Y x x')"
-      by (simp add: X_def Y_def sum_Weight_ge0 Xseq_subset_V Yseq_subset_V Xseq_Yseq_disjnt)
-    also have "\<dots> = (\<Sum>y \<in> X. weight X Y y + Weight X Y y y)"
-      unfolding weight_def X_def
-      by (smt (verit) sum.cong sum.infinite sum.remove)
-    finally have ge0: "0 \<le> (\<Sum>y\<in>X. weight X Y y + Weight X Y y y)" .
-    have w_maximal: "weight X Y (cvx \<mu> l k i) \<ge> weight X Y x"
-      if "central_vertex \<mu> X x" for x
-      using X_def Y_def \<open>finite X\<close> central_vx_is_best cvx_works i that by presburger
+  obtain lk: "0<l" "l\<le>k" "0<k"
+    using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
+  moreover have "l\<noteq>1"
+    using big by (auto simp: Big_Red_5_4_def)
+  ultimately have "l>1" by linarith
+  with \<open>k\<ge>l\<close> have "k>1" by auto
+  define X where "X \<equiv> Xseq \<mu> l k i"
+  define Y where "Y \<equiv> Yseq \<mu> l k i"
+  let ?R = "RN k (m_of l)"
+  have "finite X" "finite Y"
+    unfolding X_def Y_def by (meson finV infinite_super Xseq_subset_V Yseq_subset_V)+
+  have not_many_bluish: "\<not> many_bluish \<mu> l k X"
+    using i not_many_bluish unfolding X_def by blast
+  have nonterm: "\<not> termination_condition l k X Y"
+    using X_def Y_def i step_non_terminating_iff by (force simp: Step_class_def)
+  moreover have "l powr (2/3) \<le> l powr (3/4)"
+    using \<open>l>1\<close> by (simp add: powr_mono)
+  ultimately have RNX: "?R < card X"
+    unfolding termination_condition_def m_of_def
+    by (smt (verit, ccfv_SIG) RN_mono order.trans leI ceiling_mono nat_mono order.refl)
+  have "0 \<le> (\<Sum>x \<in> X. \<Sum>x' \<in> X. Weight X Y x x')"
+    by (simp add: X_def Y_def sum_Weight_ge0 Xseq_subset_V Yseq_subset_V Xseq_Yseq_disjnt)
+  also have "\<dots> = (\<Sum>y \<in> X. weight X Y y + Weight X Y y y)"
+    unfolding weight_def X_def
+    by (smt (verit) sum.cong sum.infinite sum.remove)
+  finally have ge0: "0 \<le> (\<Sum>y\<in>X. weight X Y y + Weight X Y y y)" .
+  have w_maximal: "weight X Y (cvx \<mu> l k i) \<ge> weight X Y x"
+    if "central_vertex \<mu> X x" for x
+    using X_def Y_def \<open>finite X\<close> central_vx_is_best cvx_works i that by presburger
 
-    have "\<bar>real (card (S \<inter> Y)) * (real (card X) * real (card Y)) -
+  have "\<bar>real (card (S \<inter> Y)) * (real (card X) * real (card Y)) -
            real (edge_card Red X Y) * real (card (T \<inter> Y))\<bar>
         \<le> real (card X) * real (card Y) * real (card Y)" for S T
-      using card_mono [OF _ Int_lower2] \<open>finite X\<close> \<open>finite Y\<close>
-      by (smt (verit, best) of_nat_mult edge_card_le mult.commute mult_right_mono of_nat_0_le_iff of_nat_mono)
-    then have W1abs: "\<bar>Weight X Y x y\<bar> \<le> 1" for x y 
-      using RNX edge_card_le [of X Y Red] \<open>finite X\<close> 
-      by (fastforce simp: mult_ac Weight_def divide_simps gen_density_def)
-    then have W1: "Weight X Y x y \<le> 1" for x y
-      by (smt (verit))
-    have WW_le_cardX: "weight X Y y + Weight X Y y y \<le> card X" if "y \<in> X" for y
-    proof -
-      have "weight X Y y + Weight X Y y y = sum (Weight X Y y) X"
-        by (smt (verit) X_def Xseq_subset_V finV finite_subset sum_diff1 that weight_def)
-      also have "\<dots> \<le> card X"
-        using W1 by (smt (verit) real_of_card sum_mono)
-      finally show ?thesis .
-    qed
-    have "weight X Y x \<le> real (card(X - {x})) * 1" for x
-      unfolding weight_def by (meson DiffE abs_le_D1 sum_bounded_above W1)
-    then have wgt_le_X1: "weight X Y x \<le> card X - 1" if "x \<in> X" for x
-      using that card_Diff_singleton One_nat_def by (smt (verit, best)) 
-    define XB where "XB \<equiv> {x\<in>X. bluish \<mu> X x}"
-    have card_XB: "card XB < ?R"
-      using not_many_bluish by (auto simp: m_of_def many_bluish_def XB_def)
-    have "XB \<subseteq> X" "finite XB"
-      using \<open>finite X\<close> by (auto simp: XB_def)
-    then have cv_non_XB: "\<And>y. y \<in> X - XB \<Longrightarrow> central_vertex \<mu> X y"
-      by (auto simp: central_vertex_def XB_def bluish_def)
-    have "0 \<le> (\<Sum>y\<in>X. weight X Y y + Weight X Y y y)"
-      by (fact ge0)
-    also have "\<dots> = (\<Sum>y\<in>XB. weight X Y y + Weight X Y y y) + (\<Sum>y\<in>X-XB. weight X Y y + Weight X Y y y)"
-      using sum.subset_diff [OF \<open>XB\<subseteq>X\<close>] by (smt (verit) X_def Xseq_subset_V finV finite_subset)
-    also have "\<dots> \<le> (\<Sum>y\<in>XB. weight X Y y + Weight X Y y y) + (\<Sum>y\<in>X-XB. weight X Y (cvx \<mu> l k i) + 1)"
-      by (intro add_mono sum_mono w_maximal W1 order_refl cv_non_XB)
-    also have "\<dots> = (\<Sum>y\<in>XB. weight X Y y + Weight X Y y y) + (card X - card XB) * (weight X Y (cvx \<mu> l k i) + 1)"
-      using \<open>XB\<subseteq>X\<close> \<open>finite XB\<close> by (simp add: card_Diff_subset)
-    also have "\<dots> \<le> card XB * card X + (card X - card XB) * (weight X Y (cvx \<mu> l k i) + 1)"
-      using sum_bounded_above WW_le_cardX
-      by (smt (verit, ccfv_threshold) XB_def mem_Collect_eq of_nat_mult)
-    also have "\<dots> = real (?R * card X) + (real (card XB) - ?R) * card X + (card X - card XB) * (weight X Y (cvx \<mu> l k i) + 1)"
-      using card_XB by (simp add: algebra_simps flip: of_nat_mult of_nat_diff)
-    also have "\<dots> \<le> real (?R * card X) + (card X - ?R) * (weight X Y (cvx \<mu> l k i) + 1)"
-    proof -
-      have "(real (card X) - card XB) * (weight X Y (cvx \<mu> l k i) + 1) 
-          \<le> (real (card X) - ?R) * (weight X Y (cvx \<mu> l k i) + 1) + (real (?R) - card XB) * (weight X Y (cvx \<mu> l k i) + 1)"
-        by (simp add: algebra_simps)
-      also have "\<dots> \<le> (real (card X) - ?R) * (weight X Y (cvx \<mu> l k i) + 1) + (real (?R) - card XB) * card X"
-        using RNX X_def i card_XB cvx_in_Xseq wgt_le_X1 by fastforce
-      finally show ?thesis
-        by (smt (verit, del_insts) RNX \<open>XB \<subseteq> X\<close> \<open>finite X\<close> card_mono nat_less_le of_nat_diff distrib_right)
-    qed
-    finally have weight_ge_0: "0 \<le> ?R * card X + (card X - ?R) * (weight X Y (cvx \<mu> l k i) + 1)" .
-    have rk61: "real k ^ 6 > 1"
-      using \<open>k>1\<close> by simp
-    have k267: "real k + 2 * real k ^ 6 \<le> (real k ^ 7)"
-      using \<open>l \<le> k\<close> l by auto
-    have k_le: "real k ^ 6 + (?R * real k + ?R * (real k ^ 6)) \<le> 1 + ?R * (real k ^ 7)" 
-      using mult_left_mono [OF k267, of ?R] that
-      by (smt (verit, ccfv_SIG) distrib_left card_XB mult_le_cancel_right1 nat_less_real_le of_nat_0_le_iff zero_le_power)
-    have [simp]: "real k ^ m = real k ^ n \<longleftrightarrow> m=n" "real k ^ m < real k ^ n \<longleftrightarrow> m<n" for m n
-      using \<open>1 < k\<close> by auto
-    have "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k ^ 6 * ?R"
-      using \<open>l \<le> k\<close> l unfolding Lemma_5_6_def by blast
-    then have cardX_ge: "card X \<ge> k ^ 6 * ?R"
-      using X_def i step_non_terminating_iff by (force simp: Step_class_def termination_condition_def)
-    have "-1 / (real k)^5 \<le> - 1 / (real k^6 - 1) + -1 / (real k^6 * ?R)"
-    proof -
-      have [simp]: "real k * (r * real k ^ 5) = r * k^6" for r
-        by (simp add: eval_nat_numeral)
-      show ?thesis
-        using rk61 card_XB mult_left_mono [OF k_le, of "real k ^ 5"]
-        by (simp add: field_split_simps)
-    qed
-    also have "\<dots> \<le> - ?R / (real k^6 * ?R - ?R) + -1 / (real k^6 * ?R)"
-      using card_XB rk61  by (simp add: field_split_simps)
-    finally have "-1 / (real k)^5 \<le> - ?R / (real k^6 * ?R - ?R) + -1 / (real k^6 * ?R)" .
-    also have "\<dots> \<le> - ?R / (real (card X) - ?R) + -1 / card X"
-    proof (intro add_mono divide_left_mono_neg)
-      show "real k ^ 6 * real ?R - real ?R \<le> real (card X) - real ?R"
-        using cardX_ge of_nat_mono by fastforce
-      show "real k ^ 6 * real ?R \<le> real (card X)"
-        using cardX_ge of_nat_mono by fastforce
-    qed (use RNX rk61 \<open>0 < k\<close> card_XB in auto)
-    also have "\<dots> \<le> weight X Y (cvx \<mu> l k i) / card X"
-      using RNX mult_left_mono [OF weight_ge_0, of "card X"] by (simp add: field_split_simps of_nat_diff)
-    finally show ?thesis
-      using RNX by (simp add: X_def Y_def divide_simps)
+    using card_mono [OF _ Int_lower2] \<open>finite X\<close> \<open>finite Y\<close>
+    by (smt (verit, best) of_nat_mult edge_card_le mult.commute mult_right_mono of_nat_0_le_iff of_nat_mono)
+  then have W1abs: "\<bar>Weight X Y x y\<bar> \<le> 1" for x y 
+    using RNX edge_card_le [of X Y Red] \<open>finite X\<close> 
+    by (fastforce simp: mult_ac Weight_def divide_simps gen_density_def)
+  then have W1: "Weight X Y x y \<le> 1" for x y
+    by (smt (verit))
+  have WW_le_cardX: "weight X Y y + Weight X Y y y \<le> card X" if "y \<in> X" for y
+  proof -
+    have "weight X Y y + Weight X Y y y = sum (Weight X Y y) X"
+      by (smt (verit) X_def Xseq_subset_V finV finite_subset sum_diff1 that weight_def)
+    also have "\<dots> \<le> card X"
+      using W1 by (smt (verit) real_of_card sum_mono)
+    finally show ?thesis .
   qed
-  with eventually_mono [OF big_enough_l] show ?thesis
-    unfolding Lemma_5_4_def by presburger 
+  have "weight X Y x \<le> real (card(X - {x})) * 1" for x
+    unfolding weight_def by (meson DiffE abs_le_D1 sum_bounded_above W1)
+  then have wgt_le_X1: "weight X Y x \<le> card X - 1" if "x \<in> X" for x
+    using that card_Diff_singleton One_nat_def by (smt (verit, best)) 
+  define XB where "XB \<equiv> {x\<in>X. bluish \<mu> X x}"
+  have card_XB: "card XB < ?R"
+    using not_many_bluish by (auto simp: m_of_def many_bluish_def XB_def)
+  have "XB \<subseteq> X" "finite XB"
+    using \<open>finite X\<close> by (auto simp: XB_def)
+  then have cv_non_XB: "\<And>y. y \<in> X - XB \<Longrightarrow> central_vertex \<mu> X y"
+    by (auto simp: central_vertex_def XB_def bluish_def)
+  have "0 \<le> (\<Sum>y\<in>X. weight X Y y + Weight X Y y y)"
+    by (fact ge0)
+  also have "\<dots> = (\<Sum>y\<in>XB. weight X Y y + Weight X Y y y) + (\<Sum>y\<in>X-XB. weight X Y y + Weight X Y y y)"
+    using sum.subset_diff [OF \<open>XB\<subseteq>X\<close>] by (smt (verit) X_def Xseq_subset_V finV finite_subset)
+  also have "\<dots> \<le> (\<Sum>y\<in>XB. weight X Y y + Weight X Y y y) + (\<Sum>y\<in>X-XB. weight X Y (cvx \<mu> l k i) + 1)"
+    by (intro add_mono sum_mono w_maximal W1 order_refl cv_non_XB)
+  also have "\<dots> = (\<Sum>y\<in>XB. weight X Y y + Weight X Y y y) + (card X - card XB) * (weight X Y (cvx \<mu> l k i) + 1)"
+    using \<open>XB\<subseteq>X\<close> \<open>finite XB\<close> by (simp add: card_Diff_subset)
+  also have "\<dots> \<le> card XB * card X + (card X - card XB) * (weight X Y (cvx \<mu> l k i) + 1)"
+    using sum_bounded_above WW_le_cardX
+    by (smt (verit, ccfv_threshold) XB_def mem_Collect_eq of_nat_mult)
+  also have "\<dots> = real (?R * card X) + (real (card XB) - ?R) * card X + (card X - card XB) * (weight X Y (cvx \<mu> l k i) + 1)"
+    using card_XB by (simp add: algebra_simps flip: of_nat_mult of_nat_diff)
+  also have "\<dots> \<le> real (?R * card X) + (card X - ?R) * (weight X Y (cvx \<mu> l k i) + 1)"
+  proof -
+    have "(real (card X) - card XB) * (weight X Y (cvx \<mu> l k i) + 1) 
+          \<le> (real (card X) - ?R) * (weight X Y (cvx \<mu> l k i) + 1) + (real (?R) - card XB) * (weight X Y (cvx \<mu> l k i) + 1)"
+      by (simp add: algebra_simps)
+    also have "\<dots> \<le> (real (card X) - ?R) * (weight X Y (cvx \<mu> l k i) + 1) + (real (?R) - card XB) * card X"
+      using RNX X_def i card_XB cvx_in_Xseq wgt_le_X1 by fastforce
+    finally show ?thesis
+      by (smt (verit, del_insts) RNX \<open>XB \<subseteq> X\<close> \<open>finite X\<close> card_mono nat_less_le of_nat_diff distrib_right)
+  qed
+  finally have weight_ge_0: "0 \<le> ?R * card X + (card X - ?R) * (weight X Y (cvx \<mu> l k i) + 1)" .
+  have rk61: "real k ^ 6 > 1"
+    using \<open>k>1\<close> by simp
+  have k267: "real k + 2 * real k ^ 6 \<le> (real k ^ 7)"
+    using \<open>l \<le> k\<close> big by (auto simp: Big_Red_5_4_def)
+  have k_le: "real k ^ 6 + (?R * real k + ?R * (real k ^ 6)) \<le> 1 + ?R * (real k ^ 7)" 
+    using mult_left_mono [OF k267, of ?R] assms
+    by (smt (verit, ccfv_SIG) distrib_left card_XB mult_le_cancel_right1 nat_less_real_le of_nat_0_le_iff zero_le_power)
+  have [simp]: "real k ^ m = real k ^ n \<longleftrightarrow> m=n" "real k ^ m < real k ^ n \<longleftrightarrow> m<n" for m n
+    using \<open>1 < k\<close> by auto
+  have "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k ^ 6 * ?R"
+    using \<open>l \<le> k\<close> big by (auto simp: Big_Red_5_4_def Lemma_5_6_def)
+  then have cardX_ge: "card X \<ge> k ^ 6 * ?R"
+    by (meson le_trans nat_le_linear nonterm termination_condition_def)
+  have "-1 / (real k)^5 \<le> - 1 / (real k^6 - 1) + -1 / (real k^6 * ?R)"
+  proof -
+    have [simp]: "real k * (r * real k ^ 5) = r * k^6" for r
+      by (simp add: eval_nat_numeral)
+    show ?thesis
+      using rk61 card_XB mult_left_mono [OF k_le, of "real k ^ 5"]
+      by (simp add: field_split_simps)
+  qed
+  also have "\<dots> \<le> - ?R / (real k^6 * ?R - ?R) + -1 / (real k^6 * ?R)"
+    using card_XB rk61  by (simp add: field_split_simps)
+  finally have "-1 / (real k)^5 \<le> - ?R / (real k^6 * ?R - ?R) + -1 / (real k^6 * ?R)" .
+  also have "\<dots> \<le> - ?R / (real (card X) - ?R) + -1 / card X"
+  proof (intro add_mono divide_left_mono_neg)
+    show "real k ^ 6 * real ?R - real ?R \<le> real (card X) - real ?R"
+      using cardX_ge of_nat_mono by fastforce
+    show "real k ^ 6 * real ?R \<le> real (card X)"
+      using cardX_ge of_nat_mono by fastforce
+  qed (use RNX rk61 \<open>0 < k\<close> card_XB in auto)
+  also have "\<dots> \<le> weight X Y (cvx \<mu> l k i) / card X"
+    using RNX mult_left_mono [OF weight_ge_0, of "card X"] by (simp add: field_split_simps of_nat_diff)
+  finally show ?thesis
+    using RNX by (simp add: X_def Y_def divide_simps)
 qed
 
 lemma Red_5_7a: "eps k / k \<le> alpha k (hgt k p)"
@@ -474,15 +470,17 @@ next
     by (simp add: Suc card_gt_0_iff finite_Neighbours)
 qed
 
-definition "Big_Red_5_1 \<equiv> \<lambda>\<mu> l. (1-\<mu>) * l > 1 \<and> l powr (5/2) \<ge> 3 / (1-\<mu>) \<and> l powr (1/4) \<ge> 4 
-                    \<and> Lemma_5_4 \<mu> l \<and> Lemma_5_6 l" 
+subsection \<open>Lemma 5.1\<close>
+
+definition "Big_Red_5_1 \<equiv> \<lambda>\<mu> l. (1-\<mu>) * real l > 1 \<and> l powr (5/2) \<ge> 3 / (1-\<mu>) \<and> l powr (1/4) \<ge> 4 
+                    \<and> Big_Red_5_4 l \<and> Lemma_5_6 l" 
 
 text \<open>establishing the size requirements for 5.1\<close>
 lemma Big_Red_5_1:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_Red_5_1 \<mu> l"
   using assms
-  apply (simp add: Big_Red_5_1_def eventually_conj_iff eps_def Red_5_4 Red_5_6)
+  apply (simp add: Big_Red_5_1_def eventually_conj_iff eps_def Red_5_6 Big_Red_5_4)
   apply (intro conjI; real_asymp)
   done
 
@@ -507,7 +505,8 @@ proof -
 qed
 
 proposition Red_5_1:
-  assumes i: "i \<in> Step_class \<mu> l k {red_step,dboost_step}" and \<mu>: "0<\<mu>" "\<mu><1" and Big: "Big_Red_5_1 \<mu> l" "Colours l k"
+  assumes i: "i \<in> Step_class \<mu> l k {red_step,dboost_step}" 
+    and \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and Big: "Big_Red_5_1 \<mu> l"
   defines "p \<equiv> pee \<mu> l k i"
   defines "x \<equiv> cvx \<mu> l k i"
   defines "X \<equiv> Xseq \<mu> l k i" and "Y \<equiv> Yseq \<mu> l k i"
@@ -519,9 +518,9 @@ proposition Red_5_1:
        \<or> red_density NBX NRY \<ge> p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha k (hgt k p) \<and> \<beta> > 0"
 proof -
   have Red_5_4: "weight X Y x \<ge> - real (card X) / (real k) ^ 5"
-    using Big i by (auto simp: Big_Red_5_1_def Lemma_5_4_def x_def X_def Y_def)
+    using Big \<mu> \<open>Colours l k\<close> i Red_5_4 by (auto simp: Big_Red_5_1_def x_def X_def Y_def)
   have lA: "(1-\<mu>) * l > 1" and "l\<le>k" and l144: "real l powr (1/4) \<ge> 4"
-    using Big by (auto simp: Big_Red_5_1_def Colours_def)
+    using Big \<open>Colours l k\<close> by (auto simp: Big_Red_5_1_def Colours_def)
   then have k_powr_14: "k powr (1/4) \<ge> 4"
     by (smt (verit) divide_nonneg_nonneg of_nat_0_le_iff of_nat_mono powr_mono2)
   have "k \<ge> 256"
@@ -755,7 +754,7 @@ proof -
 qed
 
 text \<open>This and the previous result are proved under the assumption of a sufficiently large @{term l}\<close>
-corollary Red_5_2_Main:
+corollary Red_5_2:
   assumes i: "i \<in> Step_class \<mu> l k {dboost_step}" and "0<\<mu>" "\<mu><1"
     and Big: "Big_Red_5_1 \<mu> l" "Colours l k"
   shows "pee \<mu> l k (Suc i) - pee \<mu> l k i
@@ -802,20 +801,6 @@ proof -
     by linarith
 qed
 
-definition 
-  "Lemma_Red_5_2 \<equiv> 
-      \<lambda>\<mu> l. \<forall>k. Colours l k 
-    \<longrightarrow> (\<forall>i \<in> Step_class \<mu> l k {dboost_step}.
-         pee \<mu> l k (Suc i) - pee \<mu> l k i
-         \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (pee \<mu> l k i))
-      \<and> beta \<mu> l k i > 0)"
-
-corollary Red_5_2:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Lemma_Red_5_2 \<mu> l"
-  using Big_Red_5_1 Red_5_2_Main assms 
-  unfolding eventually_sequentially Lemma_Red_5_2_def by (meson order.trans)
-
 subsection \<open>Lemma 5.3\<close>
 
 text \<open>This is a weaker consequence of the previous results\<close>
@@ -858,10 +843,10 @@ proof
     using beta_ge0[of \<mu> l k i] eps_le1 \<alpha> \<beta> \<open>\<mu><1\<close> \<open>k>1\<close>
     by (simp add: zero_le_mult_iff zero_le_divide_iff)
   then show "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i"
-    using Red_5_2_Main [OF i \<mu> big51] \<open>Colours l k\<close> by linarith 
+    using Red_5_2 [OF i \<mu> big51] \<open>Colours l k\<close> by linarith 
   have "pee \<mu> l k (Suc i) - pee \<mu> l k i \<le> 1"
     by (smt (verit) pee_ge0 pee_le1)
-  with Red_5_2_Main [OF i \<mu> big51] \<open>Colours l k\<close>
+  with Red_5_2 [OF i \<mu> big51] \<open>Colours l k\<close>
   have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k ?h \<le> 1" and beta_gt0: "beta \<mu> l k i > 0"
     by linarith+
   with * have "(1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * eps k / k \<le> 1"
@@ -878,7 +863,7 @@ proof
     apply (simp add: divide_simps split: if_split_asm)
     by (smt (verit, ccfv_SIG) mult.commute mult_less_0_iff)
   moreover have "1 / k^2 \<le> 1 / (k / eps k / (1 - eps k) + 1)"
-    using Big_Red_5_3_def \<open>l \<le> k\<close> big by fastforce
+    using Big_Red_5_3_def \<open>l \<le> k\<close> big by (metis (no_types, lifting) of_nat_power)
   ultimately show "beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
     by auto
 qed
@@ -887,7 +872,7 @@ corollary beta_gt0:
   assumes "0<\<mu>" "\<mu><1" "Colours l k" "i \<in> Step_class \<mu> l k {dboost_step}"
     and "Big_Red_5_3 \<mu> l" 
   shows "beta \<mu> l k i > 0"
-  by (meson Big_Red_5_3_def Book.Red_5_2_Main Book_axioms assms)
+  by (meson Big_Red_5_3_def Book.Red_5_2 Book_axioms assms)
 
 end (*context Book*)
 
