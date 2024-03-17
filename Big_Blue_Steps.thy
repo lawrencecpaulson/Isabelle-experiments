@@ -23,8 +23,8 @@ next
       by auto
     moreover have "m\<ge>3"
       using Suc by simp
-    ultimately  have "25 * Suc (m+m) \<le> 25 * (m*m)"
-      by (metis Groups.mult_ac(2) dual_order.trans mult_le_mono2 plus_1_eq_Suc semiring_norm(163))
+    ultimately have "25 * Suc (m+m) \<le> 25 * (m*m)"
+      by (metis mult.commute order.trans mult_le_mono2 plus_1_eq_Suc add_Suc)
     with Suc show ?thesis
       by (auto simp: power2_eq_square algebra_simps 2)
   qed
@@ -72,12 +72,16 @@ proof -
     by (metis W_def \<open>X \<subseteq> V\<close> mem_Collect_eq no_Red_clique subset_eq)
   then obtain "card U = m" and "clique U Blue" and "U \<subseteq> V" "finite U"
     by (simp add: finV finite_subset size_clique_def)
-  have "k \<le> RN m k"
-    using \<open>m\<ge>12\<close> by (simp add: RN_3plus)
-  then have "card X \<ge> l"
-    by (metis Collect_subset RN_commute W_def Wbig \<open>X\<subseteq>V\<close> card_mono order.trans finV finite_subset \<open>l\<le>k\<close>)
-  have "U \<noteq> X"
-    by (metis U_m_Blue \<open>card U = m\<close> \<open>l \<le> card X\<close> le_eq_less_or_eq no_Blue_clique size_clique_smaller)
+  have "finite X"
+    using \<open>X\<subseteq>V\<close> finV finite_subset by auto
+  have "k \<le> RN k m"
+    using \<open>m\<ge>12\<close> by (simp add: RN_3plus')
+  moreover have "card W \<le> card X"
+    by (simp add: W_def \<open>finite X\<close> card_mono)
+  ultimately have "card X \<ge> l"
+    using Wbig \<open>l\<le>k\<close> by linarith
+  then have "U \<noteq> X"
+    by (metis U_m_Blue le_eq_less_or_eq no_Blue_clique size_clique_def size_clique_smaller)
   then have "U \<subset> X"
     using W_def \<open>U \<subseteq> W\<close> by blast
   then have cardU_less_X: "card U < card X"
@@ -90,12 +94,12 @@ proof -
     using \<open>card U = m\<close> cardU_less_X nless_le by blast
   have lpowr23: "real l powr (2/3) \<le> real l powr 1"
     using ln0 by (intro powr_mono) auto
-  then have "m \<le> l" "m \<le> k"
-    using \<open>l \<le> k\<close> by (auto simp: m_def m_of_def)
+  then have "m \<le> l" "m\<le>k"
+    using \<open>l\<le>k\<close> by (auto simp: m_def m_of_def)
   then have "m < RN k m"
     using \<open>12 \<le> m\<close> RN_gt2 by auto
   also have cX: "RN k m \<le> card X"
-    using manyb \<open>X\<subseteq>V\<close> by (metis Collect_subset W_def Wbig card_mono order_trans finV finite_subset)
+    using Wbig \<open>card W \<le> card X\<close> by linarith
   finally have "card U < card X"
     using \<open>card U = m\<close> by blast
   text \<open>First part of (10)\<close>
@@ -156,13 +160,13 @@ proof -
   have "\<sigma> \<le> 1"
     by (simp add: \<sigma>_def gen_density_le1)
   have 6: "real (6*k) \<le> real (2 + k*m)"
-    by (metis mult.commute \<open>12\<le>m\<close> mult_le_mono nle_le numeral_Bit0 of_nat_mono trans_le_add2)
+    by (metis mult.commute \<open>6\<le>m\<close> mult_le_mono2 of_nat_mono trans_le_add2)
   then have km: "k + m \<le> Suc (k * m)"
-    using big \<open>l \<le> k\<close> \<open>m \<le> l\<close> by linarith
+    using big \<open>l\<le>k\<close> \<open>m \<le> l\<close> by linarith
   have "m/2 * (2 + real k * (1-\<mu>)) \<le> m/2 * (2 + real k)"
     using assms by (simp add: algebra_simps)
   also have "\<dots> \<le> (k - 1) * (m - 1)"
-    using big \<open>l \<le> k\<close> 6 \<open>m \<le> k\<close> by (simp add: Big_Blue_4_1_def algebra_simps of_nat_diff km)
+    using big \<open>l\<le>k\<close> 6 \<open>m\<le>k\<close> by (simp add: Big_Blue_4_1_def algebra_simps of_nat_diff km)
   finally  have "(m/2) * (2 + k * (1-\<mu>)) \<le> RN k m"
     using RN_times_lower' [of k m] by linarith
   then have "\<mu> - 2/k \<le> (\<mu> * card X - card U) / (card X - card U)"
@@ -193,14 +197,14 @@ proof -
       using lge assms by (simp add: divide_le_eq mult.commute)
     finally have "2*b / m + 2/l \<le> \<mu>" .
     then show ?thesis
-      using \<open>l \<le> k\<close> \<open>m>0\<close> ln0 by (smt (verit, best) frac_le of_nat_0_less_iff of_nat_mono)
+      using \<open>l\<le>k\<close> \<open>m>0\<close> ln0 by (smt (verit, best) frac_le of_nat_0_less_iff of_nat_mono)
   qed
   with eq10 have "2 / (m/b) \<le> \<sigma>"
     by simp
   moreover have "l powr (2/3) \<le> nat \<lceil>real l powr (2/3)\<rceil>"
     using of_nat_ceiling by blast
   ultimately have ble: "b \<le> \<sigma> * m / 2"
-    using mult_left_mono \<open>\<sigma> \<ge> 0\<close> big kn0 \<open>l \<le> k\<close> 
+    using mult_left_mono \<open>\<sigma> \<ge> 0\<close> big kn0 \<open>l\<le>k\<close> 
     by (simp add: Big_Blue_4_1_def powr_diff b_def m_def divide_simps)
   then have "\<sigma> > 0"
     using \<open>0 < b\<close> \<open>0 \<le> \<sigma>\<close> less_eq_real_def by force
@@ -214,16 +218,11 @@ proof -
   have "\<mu>^b * 1 * card X \<le> (5/4 * \<sigma>^b) * (5/4 * exp(- of_nat (b\<^sup>2) / (\<sigma>*m))) * (5/4 * (card X - m))"
   proof (intro mult_mono)
     have 2: "2/k \<le> 2/l"
-      by (simp add: \<open>l \<le> k\<close> frac_le ln0)
+      by (simp add: \<open>l\<le>k\<close> frac_le ln0)
     also have "\<dots> \<le> (\<mu> - 2/l) * ((5/4) powr (1/b) - 1)"
       using big by (simp add: Big_Blue_4_1_def b_def)
     also have "\<dots> \<le> \<sigma> * ((5/4) powr (1/b) - 1)"
-    proof (intro mult_right_mono)
-      show "\<mu> - 2 / real l \<le> \<sigma>"
-        using "2" eq10 by auto
-      show "0 \<le> (5/4) powr (1/b) - 1"
-        by (simp add: ge_one_powr_ge_zero)
-    qed
+      using "2" \<open>0 < b\<close> eq10 by auto
     finally have "2 / real k \<le> \<sigma> * ((5/4) powr (1/b) - 1)" .
     then have 1: "\<mu> \<le> (5/4)powr(1/b) * \<sigma>"
       using eq10 \<open>b>0\<close> by (simp add: algebra_simps)
@@ -231,24 +230,24 @@ proof -
       using power_mono[OF 1, of b] assms \<open>\<sigma>>0\<close> \<open>b>0\<close>
       by (simp add: powr_mult powr_powr flip: powr_realpow)
     have "\<mu> - 2/l \<le> \<sigma>"
-      by (smt (verit, ccfv_SIG) \<open>l \<le> k\<close> eq10 frac_le ln0 of_nat_0_less_iff of_nat_mono)
+      using "2" eq10 by linarith
     moreover have "2/l < \<mu>"
       using big by (auto simp: Big_Blue_4_1_def) 
-    ultimately have "exp (- (b^2) / ((\<mu> - 2/l) * m)) \<le> exp (- real (b\<^sup>2) / (\<sigma> * real m))"
+    ultimately have "exp (- (b^2) / ((\<mu> - 2/l) * m)) \<le> exp (- real (b\<^sup>2) / (\<sigma> * m))"
       using \<open>\<sigma>>0\<close> \<open>m>0\<close> by (simp add: frac_le)
     then show "1 \<le> 5/4 * exp (- of_nat (b\<^sup>2) / (\<sigma> * real m))"
       using big unfolding Big_Blue_4_1_def b_def m_def
       by (smt (verit, best) divide_minus_left frac_le mult_left_mono)
-    have "25 * (real m * real m) \<le> 2 powr real m"
+    have "25 * (real m * real m) \<le> 2 powr m"
       using of_nat_mono [OF power2_12 [OF \<open>12 \<le> m\<close>]] by (simp add: power2_eq_square powr_realpow)
     then have "real (5 * m) \<le>  2 powr (real m / 2)"
       by (simp add: powr_half_sqrt_powr power2_eq_square real_le_rsqrt)
     moreover
     have "card X > 2 powr (m/2)"
-      by (metis RN_commute RN_lower_nodiag \<open>6 \<le> m\<close> \<open>m \<le> k\<close> add_leE less_le_trans cX numeral_Bit0 of_nat_mono)
+      by (metis RN_commute RN_lower_nodiag \<open>6 \<le> m\<close> \<open>m\<le>k\<close> add_leE less_le_trans cX numeral_Bit0 of_nat_mono)
     ultimately have "5 * m \<le> real (card X)"
       by linarith
-    then show "real (card X) \<le> 5/4 * real (card X - m)"
+    then show "card X \<le> 5/4 * (card X - m)"
       using \<open>card U = m\<close> cardU_less_X by simp
   qed (use \<open>0 \<le> \<sigma>\<close> in auto)
   also have "\<dots> \<le> 2 * (\<sigma>^b) * exp(- b\<^sup>2 / (\<sigma>*m)) * ((card X - m))"
@@ -346,8 +345,7 @@ proof -
     have "\<epsilon> > 0"
       using that fin\<Omega> \<open>\<Omega> \<noteq> {}\<close> by (simp add: L_def \<epsilon>_def)
     then have "\<And>S. S \<in> \<Omega> \<Longrightarrow> card (Int_NB S) \<le> \<Phi> / (m choose b) - \<epsilon>"
-      using linorder_class.Min_le [OF \<open>finite L\<close>]
-      by (fastforce simp add: algebra_simps \<epsilon>_def L_def)
+      using Min_le [OF \<open>finite L\<close>] by (fastforce simp: algebra_simps \<epsilon>_def L_def)
     then have "P.expectation (\<lambda>S. card (Int_NB S)) \<le> \<Phi> / (m choose b) - \<epsilon>"
       using P P.not_empty not_integrable_integral_eq \<open>\<epsilon> > 0\<close>
       by (intro P.integral_le_const) (fastforce simp: M_def space_uniform_count_measure)+
@@ -407,12 +405,12 @@ proof -
       obtain S where "A' = A" "Y' = Y" and manyb: "many_bluish \<mu> l k X'" 
         and cbb: "choose_blue_book \<mu> (X',Y,A,B') = (S,X)" and le_cardB: "card (B' \<union> S) \<le> card B"
         using Suc.prems True
-        by (auto simp: stepper_kind_def next_state_kind_def next_state_def step_n split: prod.split_asm if_split_asm)     
+        by (auto simp: step_kind_defs next_state_def step_n split: prod.split_asm if_split_asm)     
       then have VS: "V_state (X',Y,A,B')" and ds: "disjoint_state (X',Y,A,B')"
         using \<open>valid_state (X',Y',A',B')\<close> by (auto simp: valid_state_def)
       then obtain "X' \<subseteq> V" "finite X'"
         by (metis Xseq_subset_V finX step_n stepper_XYseq)
-      then have l14: "l powr (1/4) \<le> real (card S)"
+      then have l14: "l powr (1/4) \<le> card S"
         using \<open>Colours l k\<close> Blue_4_1 [OF \<open>\<mu>>0\<close> \<open>Colours l k\<close> _ manyb big]
         by (smt (verit, best) best_blue_book_is_best cbb choose_blue_book_works of_nat_mono)
       then have ble: "b_of l \<le> card S"
@@ -431,7 +429,7 @@ proof -
         by auto
       also have "\<dots> \<le> card B' + card S"
         using ble card_B' by linarith
-      also have "... \<le> card (B' \<union> S)"
+      also have "\<dots> \<le> card (B' \<union> S)"
         using ble \<open>disjnt B' S\<close> fin by (simp add: card_Un_disjnt)
       finally have **: "b_of l * card (BBLUES (Suc n)) \<le> card B"
         using dual_order.trans le_cardB by blast 
@@ -442,7 +440,7 @@ proof -
       then have "BBLUES(Suc n) = BBLUES n"
         using less_Suc_eq by (auto simp: BBLUES_def) 
       with \<open>B' \<subseteq> B\<close> show ?thesis
-        by (metis Suc V_state_stepper card_mono dual_order.trans finB step_n)
+        by (metis Suc V_state_stepper card_mono order.trans finB step_n)
     qed
   qed
   { assume \<section>: "card (Step_class \<mu> l k {bblue_step}) > l powr (3/4)"
@@ -460,11 +458,11 @@ proof -
       by (simp add: b_of_def mult_mono')
     also have "\<dots> \<le> b_of l * card{m. m<n \<and> stepper_kind \<mu> l k m = bblue_step}"
       using card_gt less_eq_real_def by fastforce
-    also have "... \<le> card B"
+    also have "\<dots> \<le> card B"
       using cardB_ge step of_nat_mono unfolding BBLUES_def by blast
-    also have "... < l"
+    also have "\<dots> < l"
       using stepper_B[OF step] \<open>\<mu>>0\<close> \<open>Colours l k\<close>
-      by (metis Colours_def linorder_neqE_nat of_nat_less_iff size_clique_def size_clique_smaller)
+      by (metis B_less_l step of_nat_less_iff valid_state_stepper)
     finally have False
       by simp
   } 
@@ -506,12 +504,12 @@ proof -
         using step_n REDS_def Suc.IH by blast
       have Aeq: "A = insert (choose_central_vx \<mu> (X',Y',A',B')) A'"
         using Suc.prems True
-        by (auto simp: stepper_kind_def next_state_kind_def next_state_def Let_def step_n split: if_split_asm)
+        by (auto simp: step_kind_defs next_state_def Let_def step_n split: if_split_asm)
       have "finite X'"
         by (metis V_state_stepper finX step_n)
       then have "choose_central_vx \<mu> (X',Y',A',B') \<in> X'"
         using True
-        by (auto simp: choose_central_vx_X stepper_kind_def next_state_kind_def step_n split: if_split_asm)
+        by (auto simp: choose_central_vx_X step_kind_defs step_n split: if_split_asm)
       moreover
       have "disjnt X' A'"
         using \<open>valid_state (X',Y',A',B')\<close> by (simp add: valid_state_def disjoint_state_def)
@@ -582,7 +580,7 @@ proof -
         with 1 obtain S where "A' = A" "Y' = Y" and manyb: "many_bluish \<mu> l k X'" 
           and cbb: "choose_blue_book \<mu> (X',Y,A,B') = (S,X)" and le_cardB: "B = B' \<union> S"
           using Suc.prems 
-          by (auto simp: stepper_kind_def next_state_kind_def next_state_def step_n split: prod.split_asm if_split_asm)
+          by (auto simp: step_kind_defs next_state_def step_n split: prod.split_asm if_split_asm)
         then have VS: "V_state (X',Y,A,B')" and ds: "disjoint_state (X',Y,A,B')"
           using \<open>valid_state (X',Y',A',B')\<close> by (auto simp: valid_state_def)
         then obtain "X' \<subseteq> V" "finite X'"
@@ -601,10 +599,10 @@ proof -
       next
         case 2
         then have "choose_central_vx \<mu> (X',Y',A',B') \<in> X'"
-          unfolding stepper_kind_def next_state_kind_def 
+          unfolding step_kind_defs 
           by (auto simp: \<open>finite X'\<close> choose_central_vx_X step_n split: if_split_asm)
         moreover have "disjnt B' X'"
-          using disjst disjnt_sym by (force simp add: disjoint_state_def)
+          using disjst disjnt_sym by (force simp: disjoint_state_def)
         ultimately have "choose_central_vx \<mu> (X',Y',A',B') \<notin> B'"
           by (meson disjnt_iff)
         then show ?thesis
@@ -619,8 +617,8 @@ proof -
       case False
       then have "BDB (Suc n) = BDB n"
         using less_Suc_eq unfolding BDB_def by blast
-      with \<open>B' \<subseteq> B\<close> show ?thesis
-        by (smt (verit, best) Suc V_state_stepper card_seteq order.trans finB nat_le_linear step_n)
+      with \<open>B' \<subseteq> B\<close> Suc show ?thesis
+        by (metis V_state_stepper card_mono finB le_trans step_n)
     qed
   qed
   have less_l: "card (BDB n) < l" for n

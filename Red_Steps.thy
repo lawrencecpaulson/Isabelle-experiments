@@ -17,8 +17,8 @@ lemma sum_Weight_ge0:
 proof -
   have "finite X" "finite Y"
     using assms finV finite_subset by blast+
-  then have EXY: "edge_card Red X Y = (\<Sum>x\<in>X. card (Neighbours Red x \<inter> Y))"
-    by (metis Red_E assms(3) disjnt_sym edge_card_commute edge_card_eq_sum_Neighbours subset_iff_psubset_eq)
+  with Red_E have EXY: "edge_card Red X Y = (\<Sum>x\<in>X. card (Neighbours Red x \<inter> Y))"
+    by (metis \<open>disjnt X Y\<close> disjnt_sym edge_card_commute edge_card_eq_sum_Neighbours)
   have "(\<Sum>x\<in>X. \<Sum>x'\<in>X. red_density X Y * card (Neighbours Red x \<inter> Y))
        = red_density X Y * card X * edge_card Red X Y"
     using assms Red_E
@@ -152,7 +152,7 @@ proof -
     using Ramsey_number_lower_simple [OF _ p01] left right \<open>k\<ge>3\<close> \<open>l\<ge>3\<close>
     unfolding r_def s_def by force
   then show ?thesis
-    by (metis RN_commute is_Ramsey_number_RN le_nat_floor nle_le partn_lst_greater_resource)
+    by (smt (verit) RN_commute is_Ramsey_number_RN le_nat_floor partn_lst_greater_resource)
 qed  
 
 definition "ineq_Red_5_6 \<equiv> \<lambda>c l. \<forall>k. l \<le> k \<longrightarrow> exp (c * real l powr (3/4) * ln k) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
@@ -220,7 +220,8 @@ lemma Big_Red_5_4: "\<forall>\<^sup>\<infinity>l. Big_Red_5_4 l"
 lemma Red_5_4: 
   assumes "0<\<mu>" "\<mu><1" and "Colours l k" and i: "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
     and big: "Big_Red_5_4 l"
-  shows "weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) \<ge> - real (card (Xseq \<mu> l k i)) / (real k) ^ 5"
+  defines "X \<equiv> Xseq \<mu> l k i" and "Y \<equiv> Yseq \<mu> l k i"
+  shows "weight X Y (cvx \<mu> l k i) \<ge> - card X / (real k) ^ 5"
 proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
@@ -228,8 +229,6 @@ proof -
     using big by (auto simp: Big_Red_5_4_def)
   ultimately have "l>1" by linarith
   with \<open>k\<ge>l\<close> have "k>1" by auto
-  define X where "X \<equiv> Xseq \<mu> l k i"
-  define Y where "Y \<equiv> Yseq \<mu> l k i"
   let ?R = "RN k (m_of l)"
   have "finite X" "finite Y"
     unfolding X_def Y_def by (meson finV infinite_super Xseq_subset_V Yseq_subset_V)+
