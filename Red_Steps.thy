@@ -9,7 +9,8 @@ begin
 
 subsection \<open>Density-boost steps\<close>
 
-text \<open>Observation 5.5\<close>
+subsubsection \<open>Observation 5.5\<close>
+
 lemma sum_Weight_ge0:
   assumes "X \<subseteq> V" "Y \<subseteq> V" "disjnt X Y"
   shows "(\<Sum>x\<in>X. \<Sum>x'\<in>X. Weight X Y x x') \<ge> 0"
@@ -64,153 +65,155 @@ proof -
     by (simp add: Weight_def sum_subtractf inverse_eq_divide flip: sum_divide_distrib)
 qed
 
-lemma Red_5_6_Ramsey:
+subsubsection \<open>Lemma 5.6\<close>
+
+definition "Big_Red_5_6_Ramsey \<equiv> 
+      \<lambda>c l. nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3
+          \<and> (l powr (3/4) * (c - 1/32) \<le> -1) 
+          \<and> (\<forall>k\<ge>l. k * (c * l powr (3/4) * ln k - real k powr (7/8) / 4) \<le> -1)"
+
+text \<open>establishing the size requirements for 5.6\<close>
+lemma Big_Red_5_6_Ramsey:
   assumes "0<c" "c<1/32"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>k. l \<le> k \<longrightarrow> exp (c * real l powr (3/4) * ln k) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
+  shows "\<forall>\<^sup>\<infinity>l. Big_Red_5_6_Ramsey c l"
 proof -
-  have B: "\<forall>\<^sup>\<infinity>l. nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3"
-    by real_asymp
-  have C: "\<forall>\<^sup>\<infinity>l. l powr (3/4) * (c - 1/32) \<le> -1"
-    using assms by real_asymp
   have D34: "\<And>l k. l \<le> k \<Longrightarrow> c * real l powr (3/4)  \<le> c * real k powr (3/4)"
-    by (simp add: assms(1) powr_mono2)
-  have D0: "\<forall>\<^sup>\<infinity>l. l * (c * real l powr (3/4) * ln l - real l powr (7/8) / 4) \<le> -1"
+    by (simp add: assms powr_mono2)
+  have D0: "\<forall>\<^sup>\<infinity>l. l * (c * l powr (3/4) * ln l - l powr (7/8) / 4) \<le> -1"
     using \<open>c>0\<close> by real_asymp
   have "\<And>l k. l \<le> k \<Longrightarrow> c * real l powr (3/4) * ln k \<le> c * real k powr (3/4) * ln k"
     by (smt (verit,del_insts) D34 One_nat_def le_0_eq ln_ge_zero mult_right_mono not_less_eq_eq real_of_nat_ge_one_iff)
   then have D: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. k * (c * real l powr (3/4) * ln k - real k powr (7/8) / 4) \<le> -1"
     using eventually_mono [OF eventually_all_ge_at_top [OF D0]]
     by (smt (verit, ccfv_SIG) mult_left_mono of_nat_0_le_iff)
-
-  define BIG where "BIG \<equiv> \<lambda>l. nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3
-                \<and> (l powr (3/4) * (c - 1/32) \<le> -1) 
-                \<and> (\<forall>k\<ge>l. k * (c * real l powr (3/4) * ln k - real k powr (7/8) / 4) \<le> -1)"
-  have big_enough_l: "\<forall>\<^sup>\<infinity>l. BIG l"
-    unfolding BIG_def by (intro eventually_conj B C D)
-
-  have "exp (c * real l powr (3/4) * ln k) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
-    if l: "BIG l" "l\<le>k" for l k
-  proof -
-    define r where "r \<equiv> nat \<lfloor>exp (c * real l powr (3/4) * ln k)\<rfloor>"
-    define s where "s \<equiv> nat \<lceil>real l powr (3/4)\<rceil>"
-    have "l\<noteq>0"
-      using l unfolding BIG_def
-      by (metis le_minus_one_simps(3) mult_eq_0_iff of_nat_0_eq_iff powr_eq_0_iff)
-    have "3 \<le> s"
-      using that by (auto simp: BIG_def s_def)
-    also have "\<dots> \<le> l"
-      using powr_mono [of "3/4" 1] \<open>l \<noteq> 0\<close> by (simp add: s_def)
-    finally have "3 \<le> l" .
-    then have "k\<ge>3" \<open>k>0\<close> \<open>l>0\<close>
-      using that by auto
-    define p where "p \<equiv> (real k) powr (-1/8)"
-    have p01: "0 < p" "p < 1"
-      using \<open>k\<ge>3\<close> powr_less_one by (auto simp: p_def)
-    have r_le: "r \<le> k powr (c * l powr (3/4))"
-      using p01 \<open>k\<ge>3\<close> unfolding r_def powr_def by force
-
-    have left: "of_real r ^ s * p powr ((real s)\<^sup>2 / 4) < 1/2" 
-    proof -
-      have A: "r powr s \<le> k powr (s * c * l powr (3/4))"
-        using r_le by (smt (verit) mult.commute of_nat_0_le_iff powr_mono2 powr_powr)
-      have B: "p powr ((real s)\<^sup>2 / 4) \<le> k powr (-(real s)\<^sup>2 / 32)"
-        by (simp add: powr_powr p_def power2_eq_square)
-      have C: "(c * l powr (3/4) - s/32) \<le> -1"
-        using l by (simp add: BIG_def s_def algebra_simps) linarith
-      have "of_real r ^ s * p powr ((real s)\<^sup>2 / 4) \<le> k powr (s * (c * l powr (3/4) - s / 32))"
-        using mult_mono [OF A B] \<open>s\<ge>3\<close>
-        by (simp add: power2_eq_square algebra_simps powr_realpow' flip: powr_add)
-      also have "\<dots> \<le> k powr - real s"
-        using C \<open>s\<ge>3\<close> mult_left_mono \<open>k\<ge>3\<close> by fastforce
-      also have "\<dots> \<le> k powr -3"
-        using \<open>k\<ge>3\<close> \<open>s\<ge>3\<close> by (simp add: powr_minus powr_realpow)
-      also have "\<dots> \<le> 3 powr -3"
-        using \<open>k\<ge>3\<close> by (intro powr_mono2') auto
-      also have "\<dots> < 1/2"
-        by auto
-      finally show ?thesis .
-    qed
-    have right: "of_real r ^ k * exp (- p * (real k)\<^sup>2 / 4) < 1/2" 
-    proof -
-      have A: "of_real r ^ k \<le> exp (c * l powr (3/4) * ln k * k)"
-        using r_le \<open>0 < k\<close> \<open>0 < l\<close> by (simp add: powr_def exp_of_nat2_mult)
-      have B: "exp (- p * (real k)\<^sup>2 / 4) \<le> exp (- k * k powr (7/8) / 4)"
-        using \<open>k>0\<close> by (simp add: p_def mult_ac power2_eq_square powr_mult_base)
-      have D: "k * (c * real l powr (3/4) * ln k - real k powr (7/8) / 4) \<le> -1"
-        using that unfolding BIG_def by blast
-      have "of_real r ^ k * exp (- p * (real k)\<^sup>2 / 4) \<le> exp (k * (c * l powr (3/4) * ln k - k powr (7/8) / 4))"
-        using mult_mono [OF A B] by (simp add: algebra_simps s_def flip: exp_add)
-      also have "\<dots> \<le> exp (-1)"
-        using D by blast
-      also have "\<dots> < 1/2"
-        by (approximation 5)
-      finally show ?thesis .
-    qed
-    have "\<not> is_Ramsey_number (nat\<lceil>l powr (3/4)\<rceil>) k (nat \<lfloor>exp (c * l powr (3/4) * ln k)\<rfloor>)"
-      using Ramsey_number_lower_simple [OF _ p01] left right \<open>k\<ge>3\<close> \<open>l\<ge>3\<close>
-      unfolding r_def s_def by force
-    then show ?thesis
-      by (metis RN_commute is_Ramsey_number_RN le_nat_floor nle_le partn_lst_greater_resource)
-  qed  
-  with eventually_mono [OF big_enough_l] is_Ramsey_number_commute show ?thesis
-    by presburger 
+  show ?thesis
+    using assms
+    unfolding Big_Red_5_6_Ramsey_def eventually_conj_iff eps_def m_of_def
+    by (intro conjI eventually_all_ge_at_top D; real_asymp)
 qed
 
-definition "Lemma_5_6 \<equiv> \<lambda>l. \<forall>k. k \<ge> l \<longrightarrow> RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k ^ 6 * RN k (m_of l)"
-
-lemma Red_5_6:
-  shows "\<forall>\<^sup>\<infinity>l. Lemma_5_6 l"
+lemma Red_5_6_Ramsey:
+  assumes "0<c" "c<1/32" and "l\<le>k" and big: "Big_Red_5_6_Ramsey c l"
+  shows "exp (c * real l powr (3/4) * ln k) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
 proof -
-  define c_spec where "c_spec \<equiv> \<lambda>c l. \<forall>k. l \<le> k \<longrightarrow> exp (c * real l powr (3/4) * ln k) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
+  define r where "r \<equiv> nat \<lfloor>exp (c * real l powr (3/4) * ln k)\<rfloor>"
+  define s where "s \<equiv> nat \<lceil>real l powr (3/4)\<rceil>"
+  have "l\<noteq>0"
+    using big by (force simp add: Big_Red_5_6_Ramsey_def)
+  have "3 \<le> s"
+    using assms by (auto simp: Big_Red_5_6_Ramsey_def s_def)
+  also have "\<dots> \<le> l"
+    using powr_mono [of "3/4" 1] \<open>l \<noteq> 0\<close> by (simp add: s_def)
+  finally have "3 \<le> l" .
+  then have "k\<ge>3" \<open>k>0\<close> \<open>l>0\<close>
+    using assms by auto
+  define p where "p \<equiv> (real k) powr (-1/8)"
+  have p01: "0 < p" "p < 1"
+    using \<open>k\<ge>3\<close> powr_less_one by (auto simp: p_def)
+  have r_le: "r \<le> k powr (c * l powr (3/4))"
+    using p01 \<open>k\<ge>3\<close> unfolding r_def powr_def by force
+
+  have left: "of_real r ^ s * p powr ((real s)\<^sup>2 / 4) < 1/2" 
+  proof -
+    have A: "r powr s \<le> k powr (s * c * l powr (3/4))"
+      using r_le by (smt (verit) mult.commute of_nat_0_le_iff powr_mono2 powr_powr)
+    have B: "p powr ((real s)\<^sup>2 / 4) \<le> k powr (-(real s)\<^sup>2 / 32)"
+      by (simp add: powr_powr p_def power2_eq_square)
+    have C: "(c * l powr (3/4) - s/32) \<le> -1"
+      using big by (simp add: Big_Red_5_6_Ramsey_def s_def algebra_simps) linarith
+    have "of_real r ^ s * p powr ((real s)\<^sup>2 / 4) \<le> k powr (s * (c * l powr (3/4) - s / 32))"
+      using mult_mono [OF A B] \<open>s\<ge>3\<close>
+      by (simp add: power2_eq_square algebra_simps powr_realpow' flip: powr_add)
+    also have "\<dots> \<le> k powr - real s"
+      using C \<open>s\<ge>3\<close> mult_left_mono \<open>k\<ge>3\<close> by fastforce
+    also have "\<dots> \<le> k powr -3"
+      using \<open>k\<ge>3\<close> \<open>s\<ge>3\<close> by (simp add: powr_minus powr_realpow)
+    also have "\<dots> \<le> 3 powr -3"
+      using \<open>k\<ge>3\<close> by (intro powr_mono2') auto
+    also have "\<dots> < 1/2"
+      by auto
+    finally show ?thesis .
+  qed
+  have right: "of_real r ^ k * exp (- p * (real k)\<^sup>2 / 4) < 1/2" 
+  proof -
+    have A: "of_real r ^ k \<le> exp (c * l powr (3/4) * ln k * k)"
+      using r_le \<open>0 < k\<close> \<open>0 < l\<close> by (simp add: powr_def exp_of_nat2_mult)
+    have B: "exp (- p * (real k)\<^sup>2 / 4) \<le> exp (- k * k powr (7/8) / 4)"
+      using \<open>k>0\<close> by (simp add: p_def mult_ac power2_eq_square powr_mult_base)
+    have "of_real r ^ k * exp (- p * (real k)\<^sup>2 / 4) \<le> exp (k * (c * l powr (3/4) * ln k - k powr (7/8) / 4))"
+      using mult_mono [OF A B] by (simp add: algebra_simps s_def flip: exp_add)
+    also have "\<dots> \<le> exp (-1)"
+      using assms unfolding Big_Red_5_6_Ramsey_def by blast
+    also have "\<dots> < 1/2"
+      by (approximation 5)
+    finally show ?thesis .
+  qed
+  have "\<not> is_Ramsey_number (nat\<lceil>l powr (3/4)\<rceil>) k (nat \<lfloor>exp (c * l powr (3/4) * ln k)\<rfloor>)"
+    using Ramsey_number_lower_simple [OF _ p01] left right \<open>k\<ge>3\<close> \<open>l\<ge>3\<close>
+    unfolding r_def s_def by force
+  then show ?thesis
+    by (metis RN_commute is_Ramsey_number_RN le_nat_floor nle_le partn_lst_greater_resource)
+qed  
+
+definition "ineq_Red_5_6 \<equiv> \<lambda>c l. \<forall>k. l \<le> k \<longrightarrow> exp (c * real l powr (3/4) * ln k) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
+
+definition "Big_Red_5_6 \<equiv> 
+      \<lambda>l. 6 + m_of l \<le> (1/128) * l powr (3/4) \<and> ineq_Red_5_6 (1/128) l"
+
+text \<open>establishing the size requirements for 5.6\<close>
+lemma Big_Red_5_6: "\<forall>\<^sup>\<infinity>l. Big_Red_5_6 l"
+proof -
   define c::real where "c \<equiv> 1/128"
   have "0 < c" "c < 1/32"
     by (auto simp: c_def)
-  then have c: "\<forall>\<^sup>\<infinity>l. c_spec c l"
-    unfolding c_spec_def using Red_5_6_Ramsey exp_gt_zero by blast
-  let ?Big = "\<lambda>l. 6 + m_of l \<le> c * l powr (3/4) \<and> c_spec c l"
-  have "\<forall>\<^sup>\<infinity>l. 6 + m_of l \<le> c * l powr (3/4)"
-    using \<open>c>0\<close> unfolding m_of_def by real_asymp
-  with eventually_conj [OF _ c] have big_enough_l: "\<forall>\<^sup>\<infinity>l. ?Big l"
-    by blast
-  have "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k ^ 6 * RN k (m_of l)" 
-    if l: "?Big l" and "k \<ge> l" for l k
-  proof (cases "k=0")
-    case False
-    then have "k>0" by simp
-    have "RN k (m_of l) \<le> k ^ (m_of l)"
-      by (metis RN_le_argpower' RN_mono diff_add_inverse diff_le_self le_refl le_trans)
-    also have "\<dots> \<le> exp (m_of l * ln k)"
-      using \<open>k>0\<close> by (simp add: exp_of_nat_mult)
-    finally have "RN k (m_of l) \<le> exp (real (m_of l) * ln k)"
-      by force 
-    then have "real k ^ 6 * RN k (m_of l) \<le> real k ^ 6 * exp (real (m_of l) * ln k)"
-      by (simp add: \<open>0 < k\<close>)
-    also have "\<dots> \<le> exp (c * l powr (3/4) * ln k)"
-    proof -
-      have "(6 + real (m_of l)) * ln (real k) \<le> (c * real l powr (3/4)) * ln (real k)"
-        using l \<open>0 < k\<close> mult_le_cancel_right by fastforce
-      then have "ln (real k ^ 6 * exp (m_of l * ln k)) \<le> ln (exp (c * real l powr (3/4) * ln k))"
-        using \<open>k>0\<close> by (simp add: ln_mult ln_powr algebra_simps flip: powr_numeral)
-      then show ?thesis
-        by (smt (verit) exp_gt_zero ln_le_cancel_iff)
-    qed
-    also have "\<dots> \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
-      using c_spec_def of_nat_mono that by blast
-    finally show "k ^ 6 * RN k (m_of l) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
-      by (metis of_nat_mult of_nat_le_iff of_nat_power)
-  qed auto
-  with eventually_mono [OF big_enough_l] show ?thesis
-    unfolding Lemma_5_6_def by presburger 
+  then have "\<forall>\<^sup>\<infinity>l. ineq_Red_5_6 c l"
+    unfolding ineq_Red_5_6_def using Red_5_6_Ramsey Big_Red_5_6_Ramsey exp_gt_zero
+    by (smt (verit, del_insts) eventually_sequentially) 
+  then show ?thesis
+    unfolding Big_Red_5_6_def eventually_conj_iff eps_def m_of_def
+    by (simp add: c_def; real_asymp)
 qed
+
+lemma Red_5_6:
+  assumes "k \<ge> l" and big: "Big_Red_5_6 l"
+  shows "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k ^ 6 * RN k (m_of l)" 
+proof (cases "k=0")
+  case False
+  then have "k>0" by simp
+  define c::real where "c \<equiv> 1/128"
+  have "RN k (m_of l) \<le> k ^ (m_of l)"
+    by (metis RN_le_argpower' RN_mono diff_add_inverse diff_le_self le_refl le_trans)
+  also have "\<dots> \<le> exp (m_of l * ln k)"
+    using \<open>k>0\<close> by (simp add: exp_of_nat_mult)
+  finally have "RN k (m_of l) \<le> exp (real (m_of l) * ln k)"
+    by force 
+  then have "real k ^ 6 * RN k (m_of l) \<le> real k ^ 6 * exp (real (m_of l) * ln k)"
+    by (simp add: \<open>0 < k\<close>)
+  also have "\<dots> \<le> exp (c * l powr (3/4) * ln k)"
+  proof -
+    have "(6 + real (m_of l)) * ln (real k) \<le> (c * real l powr (3/4)) * ln (real k)"
+      unfolding mult_le_cancel_right
+      using big \<open>0 < k\<close> by (auto simp: c_def Big_Red_5_6_def)
+    then have "ln (real k ^ 6 * exp (m_of l * ln k)) \<le> ln (exp (c * real l powr (3/4) * ln k))"
+      using \<open>k>0\<close> by (simp add: ln_mult ln_powr algebra_simps flip: powr_numeral)
+    then show ?thesis
+      by (smt (verit) exp_gt_zero ln_le_cancel_iff)
+  qed
+  also have "\<dots> \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
+    using assms by (auto simp: ineq_Red_5_6_def Big_Red_5_6_def c_def) 
+  finally show "k ^ 6 * RN k (m_of l) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
+    by (metis of_nat_mult of_nat_le_iff of_nat_power)
+qed auto
+
 
 subsection \<open>Lemma 5.4\<close>
 
-definition "Big_Red_5_4 \<equiv> \<lambda>l. Lemma_5_6 l \<and> (\<forall>k\<ge>l. real k + 2 * real k ^ 6 \<le> real k ^ 7)"
+definition "Big_Red_5_4 \<equiv> \<lambda>l. Big_Red_5_6 l \<and> (\<forall>k\<ge>l. real k + 2 * real k ^ 6 \<le> real k ^ 7)"
 
 text \<open>establishing the size requirements for 5.4\<close>
 lemma Big_Red_5_4: "\<forall>\<^sup>\<infinity>l. Big_Red_5_4 l"
   unfolding Big_Red_5_4_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Red_5_6)
+  apply (simp add: Big_Red_5_6)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
@@ -312,7 +315,7 @@ proof -
   have [simp]: "real k ^ m = real k ^ n \<longleftrightarrow> m=n" "real k ^ m < real k ^ n \<longleftrightarrow> m<n" for m n
     using \<open>1 < k\<close> by auto
   have "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k ^ 6 * ?R"
-    using \<open>l \<le> k\<close> big by (auto simp: Big_Red_5_4_def Lemma_5_6_def)
+    using \<open>l \<le> k\<close> big Red_5_6 by (auto simp: Big_Red_5_4_def)
   then have cardX_ge: "card X \<ge> k ^ 6 * ?R"
     by (meson le_trans nat_le_linear nonterm termination_condition_def)
   have "-1 / (real k)^5 \<le> - 1 / (real k^6 - 1) + -1 / (real k^6 * ?R)"
@@ -473,14 +476,14 @@ qed
 subsection \<open>Lemma 5.1\<close>
 
 definition "Big_Red_5_1 \<equiv> \<lambda>\<mu> l. (1-\<mu>) * real l > 1 \<and> l powr (5/2) \<ge> 3 / (1-\<mu>) \<and> l powr (1/4) \<ge> 4 
-                    \<and> Big_Red_5_4 l \<and> Lemma_5_6 l" 
+                    \<and> Big_Red_5_4 l \<and> Big_Red_5_6 l" 
 
 text \<open>establishing the size requirements for 5.1\<close>
 lemma Big_Red_5_1:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_Red_5_1 \<mu> l"
   using assms
-  apply (simp add: Big_Red_5_1_def eventually_conj_iff eps_def Red_5_6 Big_Red_5_4)
+  apply (simp add: Big_Red_5_1_def eventually_conj_iff eps_def Big_Red_5_6 Big_Red_5_4)
   apply (intro conjI; real_asymp)
   done
 
@@ -530,7 +533,7 @@ proof -
     using Big \<open>l\<le>k\<close> unfolding Big_Red_5_1_def
     by (smt (verit) of_nat_0_le_iff of_nat_mono powr_mono2 zero_le_divide_iff)
   have RN_le_RN: "k ^ 6 * RN k (m_of l) \<le> RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
-    using Big \<open>l \<le> k\<close> by (auto simp: Big_Red_5_1_def Lemma_5_6_def)
+    using Big \<open>l \<le> k\<close> Red_5_6 by (auto simp: Big_Red_5_1_def)
   have l34_ge3: "real l powr (3/4) \<ge> 3"
     by (smt (verit, ccfv_SIG) l144 divide_nonneg_nonneg frac_le of_nat_0_le_iff powr_le1 powr_less_cancel)
   note XY = X_def Y_def
