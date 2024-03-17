@@ -22,9 +22,8 @@ definition "Big42b \<equiv> \<lambda>k. 2 * k powr (-1/16) * k
                        \<le> real k powr (19/20)"
 
 definition "Big_ZZ_8_1 \<equiv>
-   \<lambda>\<mu> l. Big_Red_5_1 \<mu> l \<and> Big_Red_5_3 \<mu> l
-        \<and> Lemma_bblue_step_limit \<mu> l \<and> Big_Y_6_5_Bblue l
-        \<and> (\<forall>k. k\<ge>l \<longrightarrow> Lemma_height_upper_bound k \<and> Big_ZZ_8_2 k \<and> k\<ge>16 \<and> Big39 k
+   \<lambda>\<mu> l. Big_Blue_4_1 \<mu> l \<and> Big_Red_5_1 \<mu> l \<and> Big_Red_5_3 \<mu> l \<and> Big_Y_6_5_Bblue l
+        \<and> (\<forall>k. k\<ge>l \<longrightarrow> Big_height_upper_bound k \<and> Big_ZZ_8_2 k \<and> k\<ge>16 \<and> Big39 k
                       \<and> Big42a k \<and> Big42b k)"
 
 text \<open>@{term "k\<ge>16"} is for @{text Y_6_5_Red}\<close>
@@ -35,8 +34,8 @@ lemma Big_ZZ_8_1:
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_1 \<mu> l"
   unfolding Big_ZZ_8_1_def Big_ZZ_8_2_def Big39_def Big42a_def Big42b_def
             eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_Red_5_1 Big_Red_5_3 bblue_step_limit Big_Y_6_5_Bblue
-       height_upper_bound eventually_all_ge_at_top assms)
+  apply (simp add: Big_Blue_4_1 Big_Red_5_1 Big_Red_5_3 Big_Y_6_5_Bblue
+       Big_height_upper_bound eventually_all_ge_at_top assms)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
@@ -62,7 +61,7 @@ proof -
 
   define maxh where "maxh \<equiv> nat\<lfloor>2 * ln k / eps k\<rfloor> + 1"  
   have maxh: "\<And>p. p\<le>1 \<Longrightarrow> hgt k p \<le> 2 * ln k / eps k" and "k\<ge>16"
-    using big \<open>k\<ge>l\<close> by (auto simp: Big_ZZ_8_1_def Lemma_height_upper_bound_def)
+    using big \<open>k\<ge>l\<close> by (auto simp: Big_ZZ_8_1_def height_upper_bound)
   then have "1 \<le> 2 * ln k / eps k"
     using hgt_gt0 [of k 1] by force
   then have "maxh > 1"
@@ -167,12 +166,11 @@ proof -
   have R52: "p (Suc i) - p i \<ge> (1 - eps k) * ((1 - beta \<mu> l k i) / beta \<mu> l k i) * alpha k (hgt k (p i))"
     and beta_gt0: "beta \<mu> l k i > 0"
     and R53: "p (Suc i) \<ge> p i \<and> beta \<mu> l k i \<ge> 1 / (real k)\<^sup>2"
-    and card\<B>: "card \<B> \<le> l powr (3/4)"    if "i \<in> \<S>" for i
+        if "i \<in> \<S>" for i
     using \<mu> big \<open>Colours l k\<close> Red_5_2 that
-    by (auto simp: Big_ZZ_8_1_def Red_5_3 Lemma_bblue_step_limit_def
-         p_def \<B>_def \<S>_def)
+    by (auto simp: Big_ZZ_8_1_def Red_5_3 p_def \<B>_def \<S>_def)
   have card\<B>: "card \<B> \<le> l powr (3/4)" and bigY65B: "Big_Y_6_5_Bblue l"
-    using big \<open>Colours l k\<close> by (auto simp: Big_ZZ_8_1_def Lemma_bblue_step_limit_def \<B>_def)
+    using \<mu> big \<open>Colours l k\<close> bblue_step_limit by (auto simp: Big_ZZ_8_1_def \<B>_def)
 
   have \<Delta>\<Delta>_ge0: "\<Delta>\<Delta> i h \<ge> 0" if "i \<in> \<S>" "h \<ge> 1" for i h
     using that R53 [OF \<open>i \<in> \<S>\<close>] by (fastforce simp: \<Delta>\<Delta>_def pp_eq)

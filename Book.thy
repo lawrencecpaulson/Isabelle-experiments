@@ -1,3 +1,5 @@
+section \<open>The book algorithm\<close>
+
 theory Book imports
   Neighbours
   "HOL-Library.Disjoint_Sets"  "HOL-Decision_Procs.Approximation" 
@@ -8,7 +10,7 @@ begin
 
 hide_const Bseq
 
-section \<open>Locale for the parameters of the construction\<close>
+subsection \<open>Locale for the parameters of the construction\<close>
 
 type_synonym 'a config = "'a set \<times> 'a set \<times> 'a set \<times> 'a set"
 
@@ -343,7 +345,7 @@ definition qfun :: "[nat, nat] \<Rightarrow> real"
 definition hgt :: "[nat, real] \<Rightarrow> nat"
   where "hgt \<equiv> \<lambda>k p. if k=0 then 1 else (LEAST h. p \<le> qfun k h \<and> h>0)"
 
-lemma q0 [simp]: "qfun k 0 = p0"
+lemma qfun0 [simp]: "qfun k 0 = p0"
   by (simp add: qfun_def)
 
 lemma card_XY0: "card X0 > 0" "card Y0 > 0"
@@ -484,34 +486,24 @@ lemma hgt_mono':
   shows "p < q"
   by (smt (verit) assms hgt_mono leD)
 
-lemma qfun_ge1:
-  defines "f \<equiv> \<lambda>k. 2 * ln k / eps k"
-  shows "\<forall>\<^sup>\<infinity>k. qfun k (nat \<lfloor>f k\<rfloor>) \<ge> 1"
-proof -
-  have "\<forall>\<^sup>\<infinity>k. 1 \<le> p0 + ((1 + eps k) powr (f k - 1) - 1) / k" "\<forall>\<^sup>\<infinity>k. k>0 "
-    using p0_01 unfolding eps_def f_def by real_asymp+
-  then have *: "\<forall>\<^sup>\<infinity>k. k>0 \<and> 1 \<le> p0 + ((1 + eps k) powr (f k - 1) - 1) / k"
-    using eventually_conj by blast  
-  show ?thesis
-  proof (rule eventually_mono [OF *])
-    fix k
-    assume \<section>: "0 < k \<and> 1 \<le> p0 + ((1 + eps k) powr (f k - 1) - 1) / real k"
-    then have "(1 + eps k) powr (f k - 1) \<le> (1 + eps k) ^ nat \<lfloor>f k\<rfloor>"
-      using eps_gt0 [of k] by (simp flip: powr_realpow) linarith
-    with \<section> show "1 \<le> qfun k (nat \<lfloor>f k\<rfloor>)"
-      by (smt (verit) divide_right_mono of_nat_0_le_iff qfun_def)
-  qed
-qed
+definition "hgt_maximum \<equiv> \<lambda>k. 2 * ln (real k) / eps k"
 
-definition "Lemma_height_upper_bound \<equiv> \<lambda>k. \<forall>p. p \<le> 1 \<longrightarrow> hgt k p \<le> 2 * ln k / eps k"
+text \<open>The first of many "bigness assumptions"\<close>
+definition "Big_height_upper_bound \<equiv> \<lambda>k. qfun k (nat \<lfloor>hgt_maximum k\<rfloor>) \<ge> 1"
+
+lemma Big_height_upper_bound:
+  shows "\<forall>\<^sup>\<infinity>k. Big_height_upper_bound k"
+  unfolding Big_height_upper_bound_def hgt_maximum_def eps_def qfun_def by real_asymp
 
 text \<open>Height_upper_bound given just below (5) on page 9.
   Although we can bound all Heights by monotonicity (since @{term "p\<le>1"}), 
   we need to exhibit a specific $o(k)$ function.\<close>
-lemma height_upper_bound: "\<forall>\<^sup>\<infinity>k. Lemma_height_upper_bound k"
-  unfolding Lemma_height_upper_bound_def
-  using real_hgt_Least eventually_mono [OF qfun_ge1] p0_01
-  by (smt (verit, best) nat_floor_neg of_nat_0_less_iff of_nat_floor of_nat_le_0_iff q0)
+lemma height_upper_bound:
+  assumes "p \<le> 1" and big: "Big_height_upper_bound k"
+  shows "hgt k p \<le> 2 * ln k / eps k"
+  using assms real_hgt_Least big p0_01 
+  unfolding Big_height_upper_bound_def hgt_maximum_def
+  by (smt (verit, ccfv_SIG) nat_floor_neg not_gr0 of_nat_floor qfun0)
 
 
 definition alpha :: "nat \<Rightarrow> nat \<Rightarrow> real" where "alpha \<equiv> \<lambda>k h. qfun k h - qfun k (h-1)"
@@ -1505,8 +1497,7 @@ lemma step_bound:
 proof (induction i)
   case 0
   then show ?case
-    apply (auto simp: )
-    by (metis Xseq_0 Xseq_Suc_subset card_mono finite_X0)
+    by (metis Xseq_0 Xseq_Suc_subset add_0_right mult_0_right card_mono finite_X0)
 next
   case (Suc i)
   then have nt: "\<not> termination_condition l k (Xseq \<mu> l k (Suc (2*i))) (Yseq \<mu> l k (Suc (2*i)))"  
@@ -1516,9 +1507,7 @@ next
     "next_state \<mu> l k (Xseq \<mu> l k (Suc (2*i)), Yseq \<mu> l k (Suc (2*i)), A, B) = (Xseq \<mu> l k (Suc (Suc (2*i))), Yseq \<mu> l k (Suc (Suc (2*i))), A',B')"
     by (meson "nt" Suc_double_not_eq_double do_next_state evenE)
   have "Xseq \<mu> l k (Suc (Suc (2*i))) \<subset> Xseq \<mu> l k (Suc (2*i))"
-    apply (intro next_state_smaller [OF \<open>\<mu>>0\<close> \<open>Colours l k\<close> 2])
-     apply (simp add: finite_Xseq)
-    by (simp add: "nt")
+    by (meson "2" finite_Xseq assms next_state_smaller nt)
   then have "card (Xseq \<mu> l k (Suc (Suc (Suc (2*i))))) < card (Xseq \<mu> l k (Suc (2*i)))"
     by (smt (verit, best) Xseq_Suc_subset card_seteq order.trans finite_Xseq leD not_le)
   moreover have "card (Xseq \<mu> l k (Suc (2*i))) + i \<le> card X0"

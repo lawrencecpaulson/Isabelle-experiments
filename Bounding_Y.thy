@@ -113,7 +113,7 @@ lemma finite_Z_class:
 
 lemma Y_6_3:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"
-  assumes big53: "Big_Red_5_3 \<mu> l" and bblue_step_limit: "Lemma_bblue_step_limit \<mu> l"
+  assumes big53: "Big_Red_5_3 \<mu> l" and big41: "Big_Blue_4_1 \<mu> l"
   defines "p \<equiv> pee \<mu> l k"
   shows "(\<Sum>i \<in> Z_class \<mu> l k. p (i-1) - p (Suc i)) \<le> 2 * eps k"
 proof -
@@ -170,12 +170,12 @@ proof -
     using bblue_step_finite [OF \<open>\<mu>>0\<close> \<open>Colours l k\<close>] 
     by (simp add: \<B>_def divide_le_cancel card_mono)
   also have "\<dots> \<le> l powr (3/4) / k"
-    using bblue_step_limit \<open>Colours l k\<close> by (simp add: \<B>_def \<open>0 < k\<close> frac_le Lemma_bblue_step_limit_def)
+    using big41 \<mu> \<open>Colours l k\<close> by (simp add: \<B>_def \<open>0 < k\<close> frac_le bblue_step_limit)
   also have "\<dots> \<le> eps k"
   proof -
     have *: "l powr (3/4) \<le> k powr (3/4)"
       by (simp add: \<open>l \<le> k\<close> powr_mono2)
-    have "3 / 4 - (1::real) = - 1/4"
+    have "3/4 - (1::real) = - 1/4"
       by simp
     then show ?thesis
       using divide_right_mono [OF *, of k] 
@@ -374,7 +374,7 @@ qed
 
 subsection \<open>Lemma 6.2\<close>
 
-definition "Big_Y_6_2 \<equiv> \<lambda>\<mu> l. Big_Y_6_5_Bblue l \<and> Big_Red_5_3 \<mu> l \<and> Lemma_bblue_step_limit \<mu> l
+definition "Big_Y_6_2 \<equiv> \<lambda>\<mu> l. Big_Y_6_5_Bblue l \<and> Big_Red_5_3 \<mu> l \<and> Big_Blue_4_1 \<mu> l
                \<and> (\<forall>k\<ge>l. ((1 + eps k)^2) * eps k powr (1/2) \<le> 1 
                        \<and> (1 + eps k) powr (2 * eps k powr (-1/2)) \<le> 2 \<and> k \<ge> 16)"
 
@@ -383,7 +383,7 @@ lemma Big_Y_6_2:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_Y_6_2 \<mu> l"
   unfolding Big_Y_6_2_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_Y_6_5_Bblue Big_Red_5_3 bblue_step_limit assms)
+  apply (simp add: Big_Y_6_5_Bblue Big_Red_5_3 Big_Blue_4_1 assms)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
@@ -515,7 +515,7 @@ next
     using maximal[of "j'+2"] False \<open>j' < j\<close> j odd_RBS 
     by (simp add: J_def) (smt (verit, best) Suc_lessI even_Suc)
   then have le1: "hgt k (p (j'+2)) \<le> 1"
-    by (smt (verit, best) \<open>k>0\<close> zero_less_one hgt_Least q0 qfun_mono less_imp_le)
+    by (smt (verit, best) \<open>k>0\<close> zero_less_one hgt_Least qfun0 qfun_mono less_imp_le)
   moreover 
   have j'_dreg: "j' \<in> Step_class \<mu> l k {dreg_step}"
     using RBS_def \<open>Suc j' \<in> RBS\<close> dreg_before_step by blast
@@ -662,15 +662,14 @@ subsection \<open>Lemma 6.1\<close>
 
 definition 
   "Big_Y_6_1 \<equiv> 
-    \<lambda>\<mu> l. Big_Y_6_2 \<mu> l \<and> Lemma_bblue_dboost_step_limit \<mu> l 
-        \<and> (\<forall>k\<ge>l. eps k powr (1/2) \<le> 1/3 \<and> p0 > 2 * eps k powr (1/2))"
+    \<lambda>\<mu> l. Big_Y_6_2 \<mu> l \<and> (\<forall>k\<ge>l. eps k powr (1/2) \<le> 1/3 \<and> p0 > 2 * eps k powr (1/2))"
 
 text \<open>establishing the size requirements for 6.1\<close>
 lemma Big_Y_6_1:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_Y_6_1 \<mu> l"
   unfolding Big_Y_6_1_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_Y_6_2 bblue_dboost_step_limit assms)
+  apply (simp add: Big_Y_6_2 assms)
   using p0_01
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
@@ -685,15 +684,15 @@ lemma Y_6_1_aux:
   defines "st \<equiv> Step_class \<mu> l k {red_step,dboost_step} \<inter> {..<m}"
   shows "card (Y m) / card (Y0) \<ge> 2 powr (f k) * p0 ^ card st"
 proof -
-  have "k>0"
-    using Colours_kn0 \<open>Colours l k\<close> by blast 
+  obtain lk: "0<l" "l\<le>k" "0<k"
+    using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   have big13: "eps k powr (1/2) \<le> 1/3" 
     and big_p0: "p0 > 2 * eps k powr (1/2)"
     and big62: "Big_Y_6_2 \<mu> l"
-    and "Lemma_bblue_dboost_step_limit \<mu> l"
-    using big \<open>Colours l k\<close> by (auto simp: Big_Y_6_1_def Colours_def)
-  with \<open>Colours l k\<close> have dboost_step_limit: "card (Step_class \<mu> l k {dboost_step}) < k"
-    by (auto simp: Lemma_bblue_dboost_step_limit_def Colours_def)
+    and big41: "Big_Blue_4_1 \<mu> l"
+    using big \<open>Colours l k\<close> by (auto simp: Big_Y_6_1_def Big_Y_6_2_def Colours_def)
+  with lk \<mu> \<open>Colours l k\<close> have dboost_step_limit: "card (Step_class \<mu> l k {dboost_step}) < k"
+    using bblue_dboost_step_limit by fastforce
   define p0m where "p0m \<equiv> p0 - 2 * eps k powr (1/2)"
   have "p0m > 0"
     using big_p0 by (simp add: p0m_def)
