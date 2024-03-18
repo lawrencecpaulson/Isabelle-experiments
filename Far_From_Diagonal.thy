@@ -150,13 +150,15 @@ lemma Far_9_3:
   defines "\<gamma> \<equiv> real l / (real k + real l)"
   defines "\<delta> \<equiv> min (1/200) (\<gamma>/20)"
   defines "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
+  defines "t \<equiv> card \<R>"
   assumes \<gamma>15: "\<gamma> \<le> 1/5" and p0: "p0 \<ge> 1/4" and nge: "n \<ge> exp (-\<delta>*k) * (k+l choose l)"
     and X0ge: "card X0 \<ge> n/2"
   assumes big: "Big_Far_9_3 \<gamma> l"
-  shows "card \<R> \<ge> 2*k / 3"
+  shows "t \<ge> 2*k / 3"
 proof -
   define m where "m \<equiv> halted_point \<gamma> l k"
   define \<S> where "\<S> \<equiv> Step_class \<gamma> l k {dboost_step}"
+  define \<beta> where "\<beta> \<equiv> bigbeta \<gamma> l k"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   then have "k\<ge>2" and big85: "Big_ZZ_8_5 \<gamma> l" and big71: "Big_X_7_1 \<gamma> l" and big62: "Big_Y_6_2 \<gamma> l" 
@@ -164,10 +166,12 @@ proof -
     using big by (auto simp: Big_Far_9_3_def)
   have \<gamma>01: "0 < \<gamma>" "\<gamma> < 1"
     using lk by (auto simp: \<gamma>_def)
-  then have bigbeta01: "bigbeta \<gamma> l k \<in> {0<..<1}"
-    using big53 assms bigbeta_gt0 bigbeta_less1 by force
+  then have \<beta>01: "0 < \<beta>" "\<beta> < 1"
+    using big53 assms bigbeta_gt0 bigbeta_less1 by (auto simp add: \<beta>_def)
   have one_minus: "1-\<gamma> = real k / (real k + real l)"
     using \<open>0<l\<close> by (simp add: \<gamma>_def divide_simps)
+  have "t < k"
+    using red_step_limit \<gamma>01 \<open>Colours l k\<close> by (auto simp: \<R>_def t_def)
   obtain f where "f \<in> o(real)" and f: "k+l choose l = 2 powr f k * \<gamma> powr (- real l) * (1-\<gamma>) powr (- real k)" 
     unfolding \<gamma>_def using fact_9_4 lk by blast
   define g where "g \<equiv> \<lambda>k. (real k + \<lceil>l powr (3/4)\<rceil> - (ok_fun_X_7_1 \<gamma> l k + f k) - 1)"
@@ -178,18 +182,18 @@ apply (simp add: g_def )
 
   have \<section>: "x powr a * (x powr b * y) = x powr (a+b) * y" for x y a b::real
     by (simp add: powr_add)
-  have "(2 powr ok_fun_X_7_1 \<gamma> l k * 2 powr f k) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S> * (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) / 2)
-      \<le> 2 powr ok_fun_X_7_1 \<gamma> l k * \<gamma>^l * (1-\<gamma>) ^ card \<R> * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S> * (exp (-\<delta>*k) * (k+l choose l) / 2)"
-    using \<gamma>01 by (simp add: f mult_ac \<section> flip: powr_realpow)
-  also have "\<dots> \<le> 2 powr ok_fun_X_7_1 \<gamma> l k * \<gamma>^l * (1-\<gamma>) ^ card \<R> * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S> * card X0"
+  have "(2 powr ok_fun_X_7_1 \<gamma> l k * 2 powr f k) * (\<beta>/\<gamma>) ^ card \<S> * (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) / 2)
+      \<le> 2 powr ok_fun_X_7_1 \<gamma> l k * \<gamma>^l * (1-\<gamma>) ^ t * (\<beta>/\<gamma>) ^ card \<S> * (exp (-\<delta>*k) * (k+l choose l) / 2)"
+    using \<gamma>01 by (simp add: f mult_ac \<section> t_def flip: powr_realpow)
+  also have "\<dots> \<le> 2 powr ok_fun_X_7_1 \<gamma> l k * \<gamma>^l * (1-\<gamma>) ^ t * (\<beta>/\<gamma>) ^ card \<S> * card X0"
   proof (intro mult_left_mono order_refl)
     show "exp (- \<delta> * real k) * real (k + l choose l) / 2 \<le> real (card X0)"
       using X0ge nge by force
-    show "0 \<le> 2 powr ok_fun_X_7_1 \<gamma> l k * \<gamma> ^ l * (1-\<gamma>) ^ card \<R> * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>"
-      using \<gamma>01 bigbeta_ge0 by force
+    show "0 \<le> 2 powr ok_fun_X_7_1 \<gamma> l k * \<gamma> ^ l * (1-\<gamma>) ^ t * (\<beta>/\<gamma>) ^ card \<S>"
+      using \<gamma>01 bigbeta_ge0 by (force simp: \<beta>_def)
   qed
   also have "\<dots> \<le> card (Xseq \<gamma> l k m)"
-    unfolding \<R>_def \<S>_def m_def
+    unfolding \<R>_def \<S>_def m_def t_def \<beta>_def
     using \<gamma>01 X_7_1 \<open>Colours l k\<close> big by (intro X_7_1) (auto simp: Big_Far_9_3_def)
   also have "... \<le> RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
   proof -
@@ -201,33 +205,44 @@ apply (simp add: g_def )
   qed
   also have "... \<le> 2 ^ (k + nat\<lceil>l powr (3/4)\<rceil> - 2)"
     using RN_le_power2 by auto
-  finally have "2 powr (ok_fun_X_7_1 \<gamma> l k + f k) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>
-               * exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) / 2
+  finally have "2 powr (ok_fun_X_7_1 \<gamma> l k + f k) * (\<beta>/\<gamma>) ^ card \<S>
+               * exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) / 2
               \<le> 2 ^ (k + nat \<lceil>l powr (3/4)\<rceil> - 2)" 
     by (simp add: powr_add)
-  then have A: "exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>
+  then have A: "exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) * (\<beta>/\<gamma>) ^ card \<S>
              \<le> 2 powr g k"
     using \<gamma>01 \<open>k\<ge>2\<close> by (simp add: g_def field_simps powr_add powr_diff of_nat_diff flip: powr_realpow)
 
-  have bb_le: "bigbeta \<gamma> l k \<le> \<gamma>"
-    by (meson big Big_Far_9_3_def bigbeta_le \<gamma>01 \<open>Colours l k\<close>)
-  then have B: "card \<S> \<le> bigbeta \<gamma> l k * card \<R> / (1 - bigbeta \<gamma> l k) + (2 / (1-\<gamma>)) * k powr (19/20)" 
-    using ZZ_8_5 [OF \<gamma>01 \<open>Colours l k\<close> big85] by (auto simp: \<R>_def \<S>_def)
-
-  have C: "1 / (1-\<gamma>) \<ge> exp \<gamma>"
-    using exp_minus_ge[of \<gamma>] \<gamma>01 by (simp add: exp_minus divide_simps mult.commute)
-  have "card \<R> < k"
-    using red_step_limit \<gamma>01 \<open>Colours l k\<close> by (auto simp: \<R>_def)
-
-  have "(card \<R> - real k) * ln (1-\<gamma>) - \<delta>*k + card \<S> * (ln (bigbeta \<gamma> l k) - ln \<gamma>)
-     = ln (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + card \<R>) * (bigbeta \<gamma> l k / \<gamma>) ^ card \<S>)"
-    using \<gamma>01 \<open>Colours l k\<close> by (simp add: ln_mult ln_div ln_realpow ln_powr big53 bigbeta_gt0)
+  let ?\<xi> = "\<beta> * t / (1-\<gamma>) + (2 / (1-\<gamma>)) * k powr (19/20)"
+  have bb_le: "\<beta> \<le> \<gamma>"
+    using \<beta>_def \<gamma>01 \<open>Colours l k\<close> big53 bigbeta_le by blast
+  have "\<beta> \<ge> 1 / (real k)^2"
+    unfolding \<beta>_def using \<gamma>01 \<open>Colours l k\<close> big53 bigbeta_ge_square by blast
+  have "card \<S> \<le> \<beta> * t / (1 - \<beta>) + (2 / (1-\<gamma>)) * k powr (19/20)" 
+    using ZZ_8_5 [OF \<gamma>01 \<open>Colours l k\<close> big85] \<gamma>01 by (auto simp: \<R>_def \<S>_def t_def \<beta>_def)
+  also have "... \<le> ?\<xi>" 
+    using bb_le by (simp add: \<gamma>01 bigbeta_ge0 frac_le \<beta>_def)
+  finally have "card \<S> \<le> ?\<xi>" .
+  with bb_le \<beta>01 have "?\<xi> * ln (\<beta>/\<gamma>) \<le> card \<S> * ln (\<beta>/\<gamma>)"
+    by (simp add: mult_right_mono_neg)
+  then have "-?\<xi> * ln (\<gamma> / \<beta>) \<le> card \<S> * ln (\<beta>/\<gamma>)"
+    using \<beta>01 \<gamma>01 by (smt (verit) ln_div minus_mult_minus)
+  then have "\<gamma> * (real k - t) - \<delta>*k - ?\<xi> * ln (\<gamma> / \<beta>) \<le> \<gamma> * (real k - t) - \<delta>*k + card \<S> * ln (\<beta>/\<gamma>)"
+    by linarith
+  also have "\<dots> \<le> (t - real k) * ln (1-\<gamma>) - \<delta>*k + card \<S> * ln (\<beta>/\<gamma>)"
+    using mult_right_mono [OF ln_add_one_self_le_self2 [of "-\<gamma>"], of "real k - t"] 
+    using \<open>t < k\<close> \<gamma>01 
+    by (simp add: algebra_simps)
+  also have "\<dots> = ln (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) * (\<beta>/\<gamma>) ^ card \<S>)"
+    using \<gamma>01 \<beta>01 \<open>Colours l k\<close> by (simp add: ln_mult ln_div ln_realpow ln_powr)
   also have "\<dots> \<le> ln (2 powr g k)"
-    using A \<gamma>01 bigbeta01 by simp
+    using A \<gamma>01 \<beta>01 by simp
   also have "... = g k * ln 2"
     by (auto simp: ln_powr)
-  finally have "(card \<R> - real k) * ln (1-\<gamma>) - \<delta>*k + card \<S> * (ln (bigbeta \<gamma> l k) - ln \<gamma>)
-              \<le> g k * ln 2" .
+  finally have "\<gamma> * (real k - t) - \<delta>*k - ?\<xi> * ln (\<gamma> / \<beta>) \<le> g k * ln 2" .
+  then have "\<gamma> * (real k - t) \<le> ?\<xi> * ln (\<gamma> / \<beta>) + \<delta>*k + g k * ln 2"
+    by simp
+
   show ?thesis
     sorry
 qed

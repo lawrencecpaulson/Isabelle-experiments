@@ -810,9 +810,10 @@ text \<open>This is a weaker consequence of the previous results\<close>
 definition 
   "Big_Red_5_3 \<equiv> 
     \<lambda>\<mu> l. Big_Red_5_1 \<mu> l
-        \<and> (\<forall>k\<ge>l. k>1 \<and> 1 / (real k)\<^sup>2 \<le> 1 / (k / eps k / (1 - eps k) + 1))"
+        \<and> (\<forall>k\<ge>l. k>1 \<and> 1 / (real k)\<^sup>2 \<le> \<mu> \<and> 1 / (real k)\<^sup>2 \<le> 1 / (k / eps k / (1 - eps k) + 1))"
 
-text \<open>establishing the size requirements for 5.3\<close>
+text \<open>establishing the size requirements for 5.3. The one involving @{term \<mu>} will
+be useful later with "big beta".\<close>
 lemma Big_Red_5_3:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_Red_5_3 \<mu> l"

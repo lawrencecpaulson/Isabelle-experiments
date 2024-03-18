@@ -21,70 +21,88 @@ definition bigbeta where
 lemma dboost_star_subset: "dboost_star \<mu> l k \<subseteq> Step_class \<mu> l k {dboost_step}"
   by (auto simp: dboost_star_def)
 
+lemma finite_dboost_star:
+  assumes "0<\<mu>" "Colours l k" 
+  shows "finite (dboost_star \<mu> l k)"
+    by (meson dboost_step_finite assms dboost_star_subset finite_subset)
+
 lemma bigbeta_ge0:
   assumes \<mu>: "0<\<mu>"  
   shows "bigbeta \<mu> l k \<ge> 0"
   using assms by (simp add: bigbeta_def Let_def beta_ge0 sum_nonneg)
 
+lemma bigbeta_ge_square:
+  assumes "0<\<mu>" "\<mu><1" "Colours l k" and big: "Big_Red_5_3 \<mu> l"
+  shows "bigbeta \<mu> l k \<ge> 1 / (real k)^2"
+proof -
+  obtain lk: "0<l" "l\<le>k" "0<k"
+    using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
+  then have k: "k>0" "1 / (real k)\<^sup>2 \<le> \<mu>"
+    using big by (auto simp: Big_Red_5_3_def)
+  have fin: "finite (dboost_star \<mu> l k)"
+    using assms finite_dboost_star by blast
+  have R53: "\<forall>i \<in> Step_class \<mu> l k {dboost_step}. 1 / (real k)^2 \<le> beta \<mu> l k i"
+    using Red_5_3 assms by blast 
+  show "1 / (real k)^2 \<le> bigbeta \<mu> l k"
+  proof (cases "dboost_star \<mu> l k = {}")
+    case True
+    then show ?thesis
+      using assms k by (simp add: bigbeta_def)
+  next
+    case False
+    then have card_gt0: "card (dboost_star \<mu> l k) > 0"
+      by (meson card_gt_0_iff dboost_star_subset fin finite_subset)
+    moreover have *: "\<forall>i \<in> dboost_star \<mu> l k. beta \<mu> l k i > 0 \<and> (real k)^2 \<ge> inverse (beta \<mu> l k i)"
+      using R53 k assms by (simp add: beta_gt0 field_simps dboost_star_def)
+    ultimately have "(\<Sum>i\<in>dboost_star \<mu> l k. inverse (beta \<mu> l k i)) \<le> card (dboost_star \<mu> l k) * (real k)^2"
+      by (simp add: sum_bounded_above)
+    moreover have "(\<Sum>i\<in>dboost_star \<mu> l k. inverse (beta \<mu> l k i)) \<noteq> 0"
+      by (metis * False fin inverse_positive_iff_positive less_irrefl sum_pos)
+    ultimately show ?thesis
+      using False card_gt0 k bigbeta_ge0[OF \<open>0<\<mu>\<close>, of l k] 
+      by (simp add: bigbeta_def Let_def divide_simps split: if_split_asm)
+  qed
+qed
+
+
 lemma bigbeta_gt0:
   assumes "0<\<mu>" "\<mu><1" "Colours l k" and big: "Big_Red_5_3 \<mu> l"
   shows "bigbeta \<mu> l k > 0"
-proof -
-  { fix l k
-    assume  0: "\<forall>i\<in>Step_class \<mu> l k {dboost_step}. 0 < beta \<mu> l k i" 
-      and fin: "finite (Step_class \<mu> l k {dboost_step})"
-    have *: "0 < bigbeta \<mu> l k"
-    proof (cases "dboost_star \<mu> l k = {}")
-      case True
-      then show ?thesis
-        using assms by (simp add: bigbeta_def)
-    next
-      case False
-      then have "card (dboost_star \<mu> l k) > 0"
-        by (meson card_gt_0_iff dboost_star_subset fin finite_subset)
-      with 0 show ?thesis
-        by (auto simp: bigbeta_def Let_def zero_less_mult_iff card_gt_0_iff dboost_star_def intro!: sum_pos)
-    qed
-  }
-  then show ?thesis
-    using assms beta_gt0 dboost_step_finite by presburger
-qed
+  by (smt (verit) Colours_kn0 assms bigbeta_ge_square of_nat_zero_less_power_iff zero_less_divide_iff)
 
 lemma bigbeta_less1:
   assumes "0<\<mu>" "\<mu><1" "Colours l k" and big: "Big_Red_5_3 \<mu> l"
   shows "bigbeta \<mu> l k < 1"
 proof -
-  { fix l k
-    assume 0: "\<forall>i\<in>Step_class \<mu> l k {dboost_step}. 0 < beta \<mu> l k i" 
-      and fin: "finite (Step_class \<mu> l k {dboost_step})"
-    have *: "bigbeta \<mu> l k < 1"
-    proof (cases "dboost_star \<mu> l k = {}")
-      case True
-      then show ?thesis
-        using assms by (simp add: bigbeta_def)
-    next
-      case False
-      then have gt0: "card (dboost_star \<mu> l k) > 0"
-        by (meson card_gt_0_iff dboost_star_subset fin finite_subset)
-      have "real (card (dboost_star \<mu> l k)) = (\<Sum>i\<in>dboost_star \<mu> l k. 1)"
-        by simp
-      also have "\<dots>  < (\<Sum>i\<in>dboost_star \<mu> l k. 1 / beta \<mu> l k i)"
-      proof (intro sum_strict_mono)
-        show "finite (dboost_star \<mu> l k)"
-          using card_gt_0_iff gt0 by blast
-        fix i
-        assume "i \<in> dboost_star \<mu> l k"
-        with assms
-        show "1 < 1 / beta \<mu> l k i"
-          by (smt (verit, ccfv_threshold) "0" Step_class_insert UnCI beta_le dboost_star_subset
-              less_divide_eq_1 subset_iff)
-      qed (use False in auto)
-      finally show ?thesis
-        using False by (simp add: bigbeta_def Let_def divide_simps)
-    qed
-  }
-  then show ?thesis
-    using assms beta_gt0 dboost_step_finite by blast
+  have *: "\<forall>i\<in>Step_class \<mu> l k {dboost_step}. 0 < beta \<mu> l k i"
+    using assms beta_gt0 big by blast 
+  have fin: "finite (Step_class \<mu> l k {dboost_step})"
+    using dboost_step_finite  assms by blast
+  show "bigbeta \<mu> l k < 1"
+  proof (cases "dboost_star \<mu> l k = {}")
+    case True
+    then show ?thesis
+      using assms by (simp add: bigbeta_def)
+  next
+    case False
+    then have gt0: "card (dboost_star \<mu> l k) > 0"
+      by (meson card_gt_0_iff dboost_star_subset fin finite_subset)
+    have "real (card (dboost_star \<mu> l k)) = (\<Sum>i\<in>dboost_star \<mu> l k. 1)"
+      by simp
+    also have "\<dots>  < (\<Sum>i\<in>dboost_star \<mu> l k. 1 / beta \<mu> l k i)"
+    proof (intro sum_strict_mono)
+      show "finite (dboost_star \<mu> l k)"
+        using card_gt_0_iff gt0 by blast
+      fix i
+      assume "i \<in> dboost_star \<mu> l k"
+      with assms
+      show "1 < 1 / beta \<mu> l k i"
+        by (smt (verit, ccfv_threshold) * Step_class_insert UnCI beta_le dboost_star_subset
+            less_divide_eq_1 subset_iff)
+    qed (use False in auto)
+    finally show ?thesis
+      using False by (simp add: bigbeta_def Let_def divide_simps)
+  qed
 qed
 
 lemma bigbeta_le:
