@@ -10,6 +10,9 @@ lemma real_nat_int_floor [simp]: "x\<ge>0 \<Longrightarrow> real (nat\<lfloor>x\
 lemma real_nat_int_ceiling [simp]: "x\<ge>0 \<Longrightarrow> real (nat \<lceil>x\<rceil>) = real_of_int \<lceil>x\<rceil>"
   by auto
 
+lemma ln_mono: "\<And>x::real. \<lbrakk>x \<le> y; 0 < x; 0 < y\<rbrakk> \<Longrightarrow> ln x \<le> ln y"
+  using ln_le_cancel_iff by presburger
+
 (*2024-03-05: added*)
 lemma all_imp_conj_distrib: "(\<forall>x. P x \<longrightarrow> Q x \<and> R x) \<longleftrightarrow> (\<forall>x. P x \<longrightarrow> Q x) \<and> (\<forall>x. P x \<longrightarrow> R x)"
   by iprover
