@@ -279,6 +279,41 @@ proof -
   qed
   finally have 46: "\<gamma> * (real k - t) \<le> (\<beta> * t / (1-\<gamma>)) * ln (\<gamma>/\<beta>) + \<delta>*k + h k" .
 
+  define \<phi> where "\<phi> \<equiv> \<lambda>u. (u / (1-\<gamma>)) * ln (\<gamma>/u)"
+  have ln_eq: "ln (\<gamma> / (\<gamma> / exp 1)) / (1-\<gamma>) = 1/(1-\<gamma>)"
+    using \<gamma>01 by simp
+  have \<phi>: "\<phi> (\<gamma> / exp 1) \<ge> \<phi> \<beta>"
+  proof (cases "\<gamma> / exp 1 \<le> \<beta>")
+    case True
+    show ?thesis 
+    proof (intro DERIV_nonpos_imp_nonincreasing [where f = \<phi>])
+      fix x
+      assume x: "\<gamma> / exp 1 \<le> x" "x \<le> \<beta>"
+      with \<gamma>01 have "x>0"
+        by (smt (verit, best) divide_pos_pos exp_gt_zero)
+      with \<gamma>01 x have "ln (\<gamma>/x) / (1-\<gamma>) - 1 / (1-\<gamma>) \<le> 0"
+        by (smt (verit, ccfv_SIG) divide_pos_pos exp_gt_zero frac_le ln_eq ln_mono)
+      with x \<open>x>0\<close> \<gamma>01 show "\<exists>y. (\<phi> has_real_derivative y) (at x) \<and> y \<le> 0"
+        unfolding \<phi>_def by (intro exI conjI derivative_eq_intros | force)+
+    qed (simp add: True)
+  next
+    case False
+    show ?thesis
+    proof (intro DERIV_nonneg_imp_nondecreasing [where f = \<phi>])
+      fix x
+      assume x: "\<beta> \<le> x" "x \<le> \<gamma> / exp 1"
+      with \<gamma>01 have "x>0"
+        using \<beta>01(1) by linarith
+      with \<gamma>01 x have "ln (\<gamma>/x) / (1-\<gamma>) - 1 / (1-\<gamma>) \<ge> 0"
+        by (smt (verit, best) frac_le ln_eq ln_mono zero_less_divide_iff)
+      with x \<open>x>0\<close> \<gamma>01 show "\<exists>y. (\<phi> has_real_derivative y) (at x) \<and> y \<ge> 0"
+        unfolding \<phi>_def by (intro exI conjI derivative_eq_intros | force)+
+    qed (use False in force)
+  qed
+  have "(\<beta> * t / (1-\<gamma>)) * ln (\<gamma>/\<beta>) + \<delta>*k + h k \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) * ln (\<gamma>/(\<gamma> / exp 1)) + \<delta>*k + h k"
+    using \<gamma>01 mult_right_mono [OF \<phi>, of t]
+    by (simp add: \<phi>_def mult_ac)
+
   show ?thesis
     sorry
 qed
