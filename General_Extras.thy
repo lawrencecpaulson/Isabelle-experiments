@@ -13,6 +13,72 @@ lemma real_nat_int_ceiling [simp]: "x\<ge>0 \<Longrightarrow> real (nat \<lceil>
 lemma ln_mono: "\<And>x::real. \<lbrakk>x \<le> y; 0 < x; 0 < y\<rbrakk> \<Longrightarrow> ln x \<le> ln y"
   using ln_le_cancel_iff by presburger
 
+lemma concave_onD:
+  assumes "concave_on A f"
+  shows "\<And>t x y. t \<ge> 0 \<Longrightarrow> t \<le> 1 \<Longrightarrow> x \<in> A \<Longrightarrow> y \<in> A \<Longrightarrow>
+    f ((1 - t) *\<^sub>R x + t *\<^sub>R y) \<ge> (1 - t) * f x + t * f y"
+  using assms by (auto simp: concave_on_iff)
+
+lemma concave_onD_Icc:
+  assumes "concave_on {x..y} f" "x \<le> (y :: _ :: {real_vector,preorder})"
+  shows "\<And>t. t \<ge> 0 \<Longrightarrow> t \<le> 1 \<Longrightarrow>
+    f ((1 - t) *\<^sub>R x + t *\<^sub>R y) \<ge> (1 - t) * f x + t * f y"
+  using assms(2) by (intro concave_onD [OF assms(1)]) simp_all
+
+lemma concave_onD_Icc':
+  assumes "concave_on {x..y} f" "c \<in> {x..y}"
+  defines "d \<equiv> y - x"
+  shows "f c \<ge> (f y - f x) / d * (c - x) + f x"
+proof -
+  have "- f c \<le> (f x - f y) / d * (c - x) - f x"
+    using assms convex_onD_Icc' [of x y "\<lambda>x. - f x" c]
+    by (simp add: concave_on_def)
+  then show ?thesis
+    by (smt (verit, best) divide_minus_left mult_minus_left)
+qed
+
+lemma concave_onD_Icc'':
+  assumes "concave_on {x..y} f" "c \<in> {x..y}"
+  defines "d \<equiv> y - x"
+  shows "f c \<ge> (f x - f y) / d * (y - c) + f y"
+proof -
+  have "- f c \<le> (f y - f x) / d * (y - c) - f y"
+    using assms convex_onD_Icc'' [of x y "\<lambda>x. - f x" c]
+    by (simp add: concave_on_def)
+  then show ?thesis
+    by (smt (verit, best) divide_minus_left mult_minus_left)
+qed
+
+lemma convex_on_le_max:
+  fixes a::real
+  assumes "convex_on {x..y} f" and a: "a \<in> {x..y}"
+  shows "f a \<le> max (f x) (f y)"
+proof -
+  have *: "(f y - f x) * (a - x) \<le> (f y - f x) * (y - x)" if "f x \<le> f y"
+    using a that by (intro mult_left_mono) auto
+  have "f a \<le> (f y - f x) / (y - x) * (a - x) + f x" 
+    using assms convex_onD_Icc' by blast
+  also have "... \<le> max (f x) (f y)"
+    using a *
+    by (simp add: divide_le_0_iff mult_le_0_iff zero_le_mult_iff max_def add.commute mult.commute scaling_mono)
+  finally show ?thesis .
+qed
+
+lemma concave_on_ge_min:
+  fixes a::real
+  assumes "concave_on {x..y} f" and a: "a \<in> {x..y}"
+  shows "f a \<ge> min (f x) (f y)"
+proof -
+  have *: "(f y - f x) * (a - x) \<ge> (f y - f x) * (y - x)" if "f x \<ge> f y"
+    using a that by (intro mult_left_mono_neg) auto
+  have "min (f x) (f y) \<le> (f y - f x) / (y - x) * (a - x) + f x"
+    using a * apply (simp add: zero_le_divide_iff mult_le_0_iff zero_le_mult_iff min_def)
+    by (smt (verit, best) nonzero_eq_divide_eq pos_divide_le_eq)
+  also have "... \<le> f a"
+    using assms concave_onD_Icc' by blast
+  finally show ?thesis .
+qed
+
 (*2024-03-05: added*)
 lemma all_imp_conj_distrib: "(\<forall>x. P x \<longrightarrow> Q x \<and> R x) \<longleftrightarrow> (\<forall>x. P x \<longrightarrow> Q x) \<and> (\<forall>x. P x \<longrightarrow> R x)"
   by iprover

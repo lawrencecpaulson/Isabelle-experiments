@@ -260,7 +260,7 @@ proof -
         by (smt (verit, best) divide_pos_pos exp_gt_zero)
       with \<gamma>01 x have "ln (\<gamma>/x) / (1-\<gamma>) - 1 / (1-\<gamma>) \<le> 0"
         by (smt (verit, ccfv_SIG) divide_pos_pos exp_gt_zero frac_le ln_eq ln_mono)
-      with x \<open>x>0\<close> \<gamma>01 show "\<exists>y. (\<phi> has_real_derivative y) (at x) \<and> y \<le> 0"
+      with x \<open>x>0\<close> \<gamma>01 show "\<exists>D. (\<phi> has_real_derivative D) (at x) \<and> D \<le> 0"
         unfolding \<phi>_def by (intro exI conjI derivative_eq_intros | force)+
     qed (simp add: True)
   next
@@ -272,7 +272,7 @@ proof -
       with \<beta>01 \<gamma>01 have "x>0" by linarith
       with \<gamma>01 x have "ln (\<gamma>/x) / (1-\<gamma>) - 1 / (1-\<gamma>) \<ge> 0"
         by (smt (verit, best) frac_le ln_eq ln_mono zero_less_divide_iff)
-      with x \<open>x>0\<close> \<gamma>01 show "\<exists>y. (\<phi> has_real_derivative y) (at x) \<and> y \<ge> 0"
+      with x \<open>x>0\<close> \<gamma>01 show "\<exists>D. (\<phi> has_real_derivative D) (at x) \<and> D \<ge> 0"
         unfolding \<phi>_def by (intro exI conjI derivative_eq_intros | force)+
     qed (use False in force)
   qed
@@ -311,19 +311,44 @@ proof -
   also have "\<dots> \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) + \<delta>*k + h k"
     using \<gamma>01 mult_right_mono [OF \<phi>, of t]
     by (simp add: \<phi>_def mult_ac)
-  finally have 46: "\<gamma> * (real k - t) \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) + \<delta>*k + h k" .
+  finally have \<beta>46: "\<gamma> * (real k - t) \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) + \<delta>*k + h k" .
 
-  define c where "c \<equiv> 1 + 1 / (exp 1 * (1-\<gamma>))"
-  have "c>0"
-    using \<gamma>01 by (simp add: add_pos_nonneg c_def)
+  define c where "c \<equiv> \<lambda>x::real. 1 + 1 / (exp 1 * (1-x))" 
+  have [derivative_intros]: "(c has_real_derivative 1 / (exp 1 * (1-x)^2)) (at x)" if "x<1" for x
+    unfolding c_def power2_eq_square
+    using that by (intro exI conjI derivative_eq_intros | force)+
+  have cgt0: "c x > 0" if "x<1" for x
+    using that by (simp add: add_pos_nonneg c_def)
 
-  have "(\<gamma>-\<delta>) * k - h k \<le> t * \<gamma> * c"
-    using 46 by (simp add: c_def algebra_simps)
-  then have "((\<gamma>-\<delta>) * k - h k) / (\<gamma> * c) \<le> t"
-    using \<gamma>01 \<open>c>0\<close> by (simp add: pos_divide_le_eq)
-  then have "t \<ge> (1 - \<delta> / \<gamma>) * k / c - h k / (\<gamma> * c)"
-    using \<gamma>01 \<open>c>0\<close> by (simp add: field_simps)
+  have "(\<gamma>-\<delta>) * k - h k \<le> t * \<gamma> * c \<gamma>"
+    using \<beta>46 by (simp add: c_def algebra_simps)
+  then have "((\<gamma>-\<delta>) * k - h k) / (\<gamma> * c \<gamma>) \<le> t"
+    using \<gamma>01 cgt0 by (simp add: pos_divide_le_eq)
+  then have *: "t \<ge> (1 - \<delta> / \<gamma>) * k / c \<gamma> - h k / (\<gamma> * c \<gamma>)"
+    using \<gamma>01 cgt0[of \<gamma>] by (simp add: field_simps)
 
+  define f47 where "f47 \<equiv> \<lambda>x. (1 - 1/(200*x)) * inverse (c x)"
+  have "concave_on {1/10..1/5} f47"
+    sorry
+  moreover have "f47(1/10) > 2/3"
+  proof -
+    have "(2/3::real) < (1 - 1/40) * inverse(1 + 5 / (4 * exp 1))"
+      by (approximation 15)
+    also have "... \<le> f47 (1/10)"
+      unfolding f47_def c_def by (approximation 15)
+    finally show ?thesis .
+  qed
+  moreover have "f47(1/5) > 2/3"
+  proof -
+    have "(2/3::real) < (1 - 1/40) * inverse(1 + 5 / (4 * exp 1))"
+      by (approximation 15)
+    also have "... \<le> f47 (1/5)"
+      unfolding f47_def c_def
+      by (intro mult_mono) (auto simp: algebra_simps)
+    finally show ?thesis .
+  qed
+  ultimately have "f47(x) > 2/3" if "x \<in> {1/10..1/5}" for x
+    using concave_on_ge_min that by fastforce
 
   show ?thesis
     sorry
