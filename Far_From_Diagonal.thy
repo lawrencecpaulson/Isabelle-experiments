@@ -245,6 +245,37 @@ proof -
   let ?\<xi> = "\<beta> * t / (1-\<gamma>) + (2 / (1-\<gamma>)) * k powr (19/20)"
   have \<beta>_le: "\<beta> \<le> \<gamma>" and \<beta>_ge: "\<beta> \<ge> 1 / (real k)\<^sup>2"
     using \<beta>_def \<gamma>01 \<open>Colours l k\<close> big53 bigbeta_le bigbeta_ge_square by blast+
+  
+  define \<phi> where "\<phi> \<equiv> \<lambda>u. (u / (1-\<gamma>)) * ln (\<gamma>/u)"  \<comment> \<open>finding the maximum via derivatives\<close>
+  have ln_eq: "ln (\<gamma> / (\<gamma> / exp 1)) / (1-\<gamma>) = 1/(1-\<gamma>)"
+    using \<gamma>01 by simp
+  have \<phi>: "\<phi> (\<gamma> / exp 1) \<ge> \<phi> \<beta>"
+  proof (cases "\<gamma> / exp 1 \<le> \<beta>")    \<comment> \<open>Could perhaps avoid case analysis via 2nd derivatives\<close>
+    case True
+    show ?thesis 
+    proof (intro DERIV_nonpos_imp_nonincreasing [where f = \<phi>])
+      fix x
+      assume x: "\<gamma> / exp 1 \<le> x" "x \<le> \<beta>"
+      with \<gamma>01 have "x>0"
+        by (smt (verit, best) divide_pos_pos exp_gt_zero)
+      with \<gamma>01 x have "ln (\<gamma>/x) / (1-\<gamma>) - 1 / (1-\<gamma>) \<le> 0"
+        by (smt (verit, ccfv_SIG) divide_pos_pos exp_gt_zero frac_le ln_eq ln_mono)
+      with x \<open>x>0\<close> \<gamma>01 show "\<exists>y. (\<phi> has_real_derivative y) (at x) \<and> y \<le> 0"
+        unfolding \<phi>_def by (intro exI conjI derivative_eq_intros | force)+
+    qed (simp add: True)
+  next
+    case False
+    show ?thesis
+    proof (intro DERIV_nonneg_imp_nondecreasing [where f = \<phi>])
+      fix x
+      assume x: "\<beta> \<le> x" "x \<le> \<gamma> / exp 1"
+      with \<beta>01 \<gamma>01 have "x>0" by linarith
+      with \<gamma>01 x have "ln (\<gamma>/x) / (1-\<gamma>) - 1 / (1-\<gamma>) \<ge> 0"
+        by (smt (verit, best) frac_le ln_eq ln_mono zero_less_divide_iff)
+      with x \<open>x>0\<close> \<gamma>01 show "\<exists>y. (\<phi> has_real_derivative y) (at x) \<and> y \<ge> 0"
+        unfolding \<phi>_def by (intro exI conjI derivative_eq_intros | force)+
+    qed (use False in force)
+  qed
 
   have "card \<S> \<le> \<beta> * t / (1 - \<beta>) + (2 / (1-\<gamma>)) * k powr (19/20)" 
     using ZZ_8_5 [OF \<gamma>01 \<open>Colours l k\<close> big85] \<gamma>01 by (auto simp: \<R>_def \<S>_def t_def \<beta>_def)
@@ -277,42 +308,22 @@ proof -
     then show ?thesis
       by (simp add: algebra_simps h_def)
   qed
-  finally have 46: "\<gamma> * (real k - t) \<le> (\<beta> * t / (1-\<gamma>)) * ln (\<gamma>/\<beta>) + \<delta>*k + h k" .
-
-  define \<phi> where "\<phi> \<equiv> \<lambda>u. (u / (1-\<gamma>)) * ln (\<gamma>/u)"
-  have ln_eq: "ln (\<gamma> / (\<gamma> / exp 1)) / (1-\<gamma>) = 1/(1-\<gamma>)"
-    using \<gamma>01 by simp
-  have \<phi>: "\<phi> (\<gamma> / exp 1) \<ge> \<phi> \<beta>"
-  proof (cases "\<gamma> / exp 1 \<le> \<beta>")
-    case True
-    show ?thesis 
-    proof (intro DERIV_nonpos_imp_nonincreasing [where f = \<phi>])
-      fix x
-      assume x: "\<gamma> / exp 1 \<le> x" "x \<le> \<beta>"
-      with \<gamma>01 have "x>0"
-        by (smt (verit, best) divide_pos_pos exp_gt_zero)
-      with \<gamma>01 x have "ln (\<gamma>/x) / (1-\<gamma>) - 1 / (1-\<gamma>) \<le> 0"
-        by (smt (verit, ccfv_SIG) divide_pos_pos exp_gt_zero frac_le ln_eq ln_mono)
-      with x \<open>x>0\<close> \<gamma>01 show "\<exists>y. (\<phi> has_real_derivative y) (at x) \<and> y \<le> 0"
-        unfolding \<phi>_def by (intro exI conjI derivative_eq_intros | force)+
-    qed (simp add: True)
-  next
-    case False
-    show ?thesis
-    proof (intro DERIV_nonneg_imp_nondecreasing [where f = \<phi>])
-      fix x
-      assume x: "\<beta> \<le> x" "x \<le> \<gamma> / exp 1"
-      with \<gamma>01 have "x>0"
-        using \<beta>01(1) by linarith
-      with \<gamma>01 x have "ln (\<gamma>/x) / (1-\<gamma>) - 1 / (1-\<gamma>) \<ge> 0"
-        by (smt (verit, best) frac_le ln_eq ln_mono zero_less_divide_iff)
-      with x \<open>x>0\<close> \<gamma>01 show "\<exists>y. (\<phi> has_real_derivative y) (at x) \<and> y \<ge> 0"
-        unfolding \<phi>_def by (intro exI conjI derivative_eq_intros | force)+
-    qed (use False in force)
-  qed
-  have "(\<beta> * t / (1-\<gamma>)) * ln (\<gamma>/\<beta>) + \<delta>*k + h k \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) * ln (\<gamma>/(\<gamma> / exp 1)) + \<delta>*k + h k"
+  also have "\<dots> \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) + \<delta>*k + h k"
     using \<gamma>01 mult_right_mono [OF \<phi>, of t]
     by (simp add: \<phi>_def mult_ac)
+  finally have 46: "\<gamma> * (real k - t) \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) + \<delta>*k + h k" .
+
+  define c where "c \<equiv> 1 + 1 / (exp 1 * (1-\<gamma>))"
+  have "c>0"
+    using \<gamma>01 by (simp add: add_pos_nonneg c_def)
+
+  have "(\<gamma>-\<delta>) * k - h k \<le> t * \<gamma> * c"
+    using 46 by (simp add: c_def algebra_simps)
+  then have "((\<gamma>-\<delta>) * k - h k) / (\<gamma> * c) \<le> t"
+    using \<gamma>01 \<open>c>0\<close> by (simp add: pos_divide_le_eq)
+  then have "t \<ge> (1 - \<delta> / \<gamma>) * k / c - h k / (\<gamma> * c)"
+    using \<gamma>01 \<open>c>0\<close> by (simp add: field_simps)
+
 
   show ?thesis
     sorry
