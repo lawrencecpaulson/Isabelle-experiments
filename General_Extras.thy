@@ -13,6 +13,8 @@ lemma real_nat_int_ceiling [simp]: "x\<ge>0 \<Longrightarrow> real (nat \<lceil>
 lemma ln_mono: "\<And>x::real. \<lbrakk>x \<le> y; 0 < x; 0 < y\<rbrakk> \<Longrightarrow> ln x \<le> ln y"
   using ln_le_cancel_iff by presburger
 
+(*ADD convex_on_mul AGAIN*)
+
 lemma concave_onD:
   assumes "concave_on A f"
   shows "\<And>t x y. t \<ge> 0 \<Longrightarrow> t \<le> 1 \<Longrightarrow> x \<in> A \<Longrightarrow> y \<in> A \<Longrightarrow>
@@ -78,6 +80,44 @@ proof -
     using assms concave_onD_Icc' by blast
   finally show ?thesis .
 qed
+
+lemma concave_on_linorderI [intro?]:
+  fixes A :: "('a::{linorder,real_vector}) set"
+  assumes "\<And>t x y. t > 0 \<Longrightarrow> t < 1 \<Longrightarrow> x \<in> A \<Longrightarrow> y \<in> A \<Longrightarrow> x < y \<Longrightarrow>
+    f ((1 - t) *\<^sub>R x + t *\<^sub>R y) \<ge> (1 - t) * f x + t * f y"
+  shows "concave_on A f"
+  by (smt (verit) assms concave_on_def convex_on_linorderI mult_minus_right)
+
+(*THE CONVEX_ON S MUST GO*)
+lemma concave_on_mul:
+  fixes S::"real set"
+  assumes f: "concave_on S f" and g: "concave_on S g" "convex S"
+  assumes "mono_on S f" "antimono_on S g"
+  assumes fty: "f \<in> S \<rightarrow> {0..}" and gty: "g \<in> S \<rightarrow> {0..}"
+  shows "concave_on S (\<lambda>x. f x * g x)"
+proof (intro concave_on_linorderI)
+  fix t::real and x y
+  assume t: "0 < t" "t < 1" and xy: "x \<in> S" "y \<in> S" "x<y"
+  have inS: "(1-t)*x + t*y \<in> S"
+    using t xy \<open>convex S\<close> by (simp add: convex_alt)
+  have "f x * g y + f y * g x \<ge> f x * g x + f y * g y"
+    using \<open>mono_on S f\<close> \<open>antimono_on S g\<close>
+    unfolding monotone_on_def by (smt (verit, best) left_diff_distrib mult_left_mono xy)
+  with t have *: "t*(1-t) * f x * g y + t*(1-t) * f y * g x \<ge> t*(1-t) * f x * g x + t*(1-t) * f y * g y"
+    by (smt (verit, ccfv_SIG) distrib_left mult_left_mono diff_ge_0_iff_ge mult.assoc)
+  have "(1 - t) * (f x * g x) + t * (f y * g y) \<le> ((1-t) * f x + t * f y) * ((1-t) * g x + t * g y)"
+    using * by (simp add: algebra_simps)
+  also have "... \<le> ((1-t) * f x + t * f y)*g ((1-t)*x + t*y)"
+    using concave_onD [OF \<open>concave_on S g\<close>, of t x y] t xy fty gty inS
+    by (intro mult_mono add_nonneg_nonneg) (auto simp: Pi_iff zero_le_mult_iff)
+  also have "... \<le> f ((1-t)*x + t*y) * g ((1-t)*x + t*y)"
+    using concave_onD [OF \<open>concave_on S f\<close>, of t x y] t xy fty gty inS
+    by (intro mult_mono add_nonneg_nonneg) (auto simp: Pi_iff zero_le_mult_iff)
+  finally show "(1 - t) * (f x * g x) + t * (f y * g y)
+           \<le> f ((1 - t) *\<^sub>R x + t *\<^sub>R y) * g ((1 - t) *\<^sub>R x + t *\<^sub>R y)" 
+    by simp
+qed
+
 
 (*2024-03-05: added*)
 lemma all_imp_conj_distrib: "(\<forall>x. P x \<longrightarrow> Q x \<and> R x) \<longleftrightarrow> (\<forall>x. P x \<longrightarrow> Q x) \<and> (\<forall>x. P x \<longrightarrow> R x)"
@@ -461,22 +501,16 @@ lemma convex_on_mul:
   shows "convex_on S (\<lambda>x. f x*g x)"
 proof (intro convex_on_linorderI)
   fix t::real and x y
-  assume t: "0 < t" "t < 1" and xy: "x \<in> S" "y \<in> S"
-  have "f x*g y + f y*g x \<le> f x*g x + f y*g y"
-    using \<open>mono_on S f\<close> \<open>mono_on S g\<close>
-    by (smt (verit, ccfv_SIG) mono_onD mult_right_mono right_diff_distrib' xy)
-  then have "(1-t) * f x * g y + (1-t) * f y * g x \<le> (1-t) * f x * g x + (1-t) * f y * g y"
-    using t
-    by (metis (mono_tags, opaque_lifting) mult.assoc diff_gt_0_iff_gt distrib_left mult_le_cancel_left_pos)
-  then have *: "t*(1-t) * f x * g y + t*(1-t) * f y * g x \<le> t*(1-t) * f x * g x + t*(1-t) * f y * g y"
-    using t
-    by (metis (mono_tags, opaque_lifting) mult.assoc distrib_left mult_le_cancel_left_pos)  
+  assume t: "0 < t" "t < 1" and xy: "x \<in> S" "y \<in> S" "x<y"
+  have *: "t*(1-t) * f x * g y + t*(1-t) * f y * g x \<le> t*(1-t) * f x * g x + t*(1-t) * f y * g y"
+    using t \<open>mono_on S f\<close> \<open>mono_on S g\<close> xy
+    by (smt (verit, ccfv_SIG) left_diff_distrib mono_onD mult_left_less_imp_less zero_le_mult_iff)
   have inS: "(1-t)*x + t*y \<in> S"
     using t xy \<open>convex S\<close> by (simp add: convex_alt)
-  then have "f ((1-t)*x + t*y) * g ((1-t)*x + t*y) \<le> ((1-t)*f x + t*f y)*g ((1-t)*x + t*y)"
+  then have "f ((1-t)*x + t*y) * g ((1-t)*x + t*y) \<le> ((1-t) * f x + t * f y)*g ((1-t)*x + t*y)"
     using convex_onD [OF \<open>convex_on S f\<close>, of t x y] t xy fty gty
     by (intro mult_mono add_nonneg_nonneg) (auto simp: Pi_iff zero_le_mult_iff)
-  also have "\<dots> \<le> ((1-t)*f x + t*f y) * ((1-t)*g x + t*g y)"
+  also have "\<dots> \<le> ((1-t) * f x + t * f y) * ((1-t)*g x + t*g y)"
     using convex_onD [OF \<open>convex_on S g\<close>, of t x y] t xy fty gty inS
     by (intro mult_mono add_nonneg_nonneg) (auto simp: Pi_iff zero_le_mult_iff)
   also have "\<dots> \<le> (1-t) * (f x*g x) + t * (f y*g y)"

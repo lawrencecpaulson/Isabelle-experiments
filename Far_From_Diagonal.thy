@@ -329,6 +329,8 @@ proof -
 
   define f47 where "f47 \<equiv> \<lambda>x. (1 - 1/(200*x)) * inverse (c x)"
   have "concave_on {1/10..1/5} f47"
+    unfolding f47_def
+
     sorry
   moreover have "f47(1/10) > 2/3"
   proof -
