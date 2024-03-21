@@ -199,11 +199,11 @@ proof -
     then show ?thesis
       unfolding h_def by (metis (mono_tags) \<open>g \<in> o(real)\<close> sum_in_smallo(1) cmult_in_smallo_iff')
   qed
-  have \<section>: "x powr a * (x powr b * y) = x powr (a+b) * y" for x y a b::real
+  have powr_combine_right: "x powr a * (x powr b * y) = x powr (a+b) * y" for x y a b::real
     by (simp add: powr_add)
   have "(2 powr ok_fun_X_7_1 \<gamma> l k * 2 powr ok_fun_94 l k) * (\<beta>/\<gamma>) ^ card \<S> * (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) / 2)
       \<le> 2 powr ok_fun_X_7_1 \<gamma> l k * \<gamma>^l * (1-\<gamma>) ^ t * (\<beta>/\<gamma>) ^ card \<S> * (exp (-\<delta>*k) * (k+l choose l) / 2)"
-    using \<gamma>01 by (simp add: f mult_ac \<section> t_def flip: powr_realpow)
+    using \<gamma>01 by (simp add: f mult_ac powr_combine_right t_def flip: powr_realpow)
   also have "\<dots> \<le> 2 powr ok_fun_X_7_1 \<gamma> l k * \<gamma>^l * (1-\<gamma>) ^ t * (\<beta>/\<gamma>) ^ card \<S> * card X0"
   proof (intro mult_left_mono order_refl)
     show "exp (- \<delta> * real k) * real (k + l choose l) / 2 \<le> real (card X0)"
@@ -320,35 +320,6 @@ proof -
     unfolding c_def power2_eq_square
     using that by (intro exI conjI derivative_eq_intros | force)+
 
-  have "concave_on {0<..<1} (\<lambda>x. inverse (c x))"
-  proof (intro f''_le0_imp_concave)
-    fix x::real
-    assume x: "x \<in> {0<..<1}"
-    have [simp]: "exp 1 * (x - 1) \<noteq> 1"
-      by (metis exp_ge_zero greaterThanLessThan_iff le_iff_diff_le_0 le_numeral_extra(2) less_eq_real_def mult_le_0_iff x)
-    let ?f1 = "\<lambda>x. -exp 1 /(- 1 + exp 1 * (- 1 + x))\<^sup>2"
-    let ?f2 = "\<lambda>x. 2*exp(1)^2/(-1 + exp(1)*(-1 + x))^3"
-    show "((\<lambda>x. inverse (c x)) has_real_derivative ?f1 x) (at x)"
-      unfolding c_def power2_eq_square
-      using x 
-      apply (simp add: )
-      apply (intro exI conjI derivative_eq_intros | force)+
-       apply (smt (verit, best) divide_pos_pos exp_gt_zero mult_pos_pos)
-      apply (simp add: divide_simps)
-      apply (auto simp: )
-        apply (smt (verit) minus_mult_minus more_arith_simps(7))
-      by (metis add_less_same_cancel2 diff_gt_0_iff_gt div_0 less_divide_eq_1 linorder_neqE_linordered_idom mult_less_0_iff not_exp_less_zero)
-    show "(?f1 has_real_derivative ?f2 x) (at x)"
-      using x 
-      apply (simp add: )
-      apply (intro exI conjI derivative_eq_intros | force)+
-      by (simp add: divide_simps eval_nat_numeral)
-    show "?f2 (x::real) \<le> 0"
-      using x
-      apply (simp add: divide_simps)
-      by (smt (verit, ccfv_threshold) exp_gt_zero mult_sign_intros(6))
-  qed auto
-
   have cgt0: "c x > 0" if "x<1" for x
     using that by (simp add: add_pos_nonneg c_def)
 
@@ -356,26 +327,58 @@ proof -
     using \<beta>46 by (simp add: c_def algebra_simps)
   then have "((\<gamma>-\<delta>) * k - h k) / (\<gamma> * c \<gamma>) \<le> t"
     using \<gamma>01 cgt0 by (simp add: pos_divide_le_eq)
-  then have *: "t \<ge> (1 - \<delta> / \<gamma>) * k / c \<gamma> - h k / (\<gamma> * c \<gamma>)"
+  then have *: "t \<ge> (1 - \<delta> / \<gamma>) * k / c \<gamma> - h k / (\<gamma> * c \<gamma>)"   (*THIS BLOCK UNUSED*)
     using \<gamma>01 cgt0[of \<gamma>] by (simp add: field_simps)
 
   define f47 where "f47 \<equiv> \<lambda>x. (1 - 1/(200*x)) * inverse (c x)"
   have "concave_on {1/10..1/5} f47"
     unfolding f47_def
   proof (intro concave_on_mul)
-    show "concave_on {1 / 10..1 / 5} (\<lambda>x. 1 - 1 / (200 * x))"
-      sorry
-    have "convex_on {1 / 10..1 / 5} (\<lambda>x. c x)"
-      sorry
-    then show "concave_on {1 / 10..1 / 5} (\<lambda>x. inverse (c x))"
-      sorry
+    show "concave_on {1 / 10..1 / 5} (\<lambda>x. 1 - 1/(200*x))"
+    proof (intro f''_le0_imp_concave)
+      fix x::real
+      assume "x \<in> {1 / 10..1 / 5}"
+      then have x01: "0<x" "x<1"
+        by auto
+      show "((\<lambda>x. (1 - 1/(200*x))) has_real_derivative 1/(200*x^2)) (at x)"
+        using x01 by (intro derivative_eq_intros | force simp add: eval_nat_numeral)+
+      show "((\<lambda>x. 1/(200*x^2)) has_real_derivative -1/(100*x^3)) (at x)"
+        using x01 by (intro derivative_eq_intros | force simp add: eval_nat_numeral)+
+      show "-1/(100*x^3) \<le> 0"
+        using x01 by (simp add: divide_simps)
+    qed auto
+    show "concave_on {1 / 10..1 / 5} (\<lambda>x. inverse (c x))"
+    proof (intro f''_le0_imp_concave)
+      fix x::real
+      assume "x \<in> {1 / 10..1 / 5}"
+      then have x01: "0<x" "x<1"
+        by auto
+      have swap: "u * (x-1) = (-u) * (1-x)" for u
+        by (metis minus_diff_eq minus_mult_commute)
+      have \<section>: "exp 1 * (x - 1) < 0"
+        using x01
+        by (meson exp_gt_zero less_iff_diff_less_0 mult_less_0_iff)
+      then have non0: "1 + 1 / (exp 1 * (1 - x)) \<noteq> 0"
+        using x01 by (smt (verit) exp_gt_zero mult_pos_pos zero_less_divide_iff)
+      let ?f1 = "\<lambda>x. -exp 1 /(- 1 + exp 1 * (- 1 + x))\<^sup>2"
+      let ?f2 = "\<lambda>x. 2*exp(1)^2/(-1 + exp(1)*(-1 + x))^3"
+      show "((\<lambda>x. inverse (c x)) has_real_derivative ?f1 x) (at x)"
+        unfolding c_def power2_eq_square
+        using x01 \<section> non0
+        apply (intro exI conjI derivative_eq_intros | force)+
+        apply (simp add: divide_simps square_eq_iff swap)
+        done
+      show "(?f1 has_real_derivative ?f2 x) (at x)"
+        using x01 \<section>
+        by (intro derivative_eq_intros | force simp add: divide_simps eval_nat_numeral)+
+      show "?f2 (x::real) \<le> 0"
+        using x01 \<section> by (simp add: divide_simps)
+    qed auto
     show "mono_on {(1::real) / 10..1 / 5} (\<lambda>x. 1 - 1 / (200 * x))"
       by (auto simp: monotone_on_def frac_le)
     show "monotone_on {1 / 10..1 / 5} (\<le>) (\<lambda>x y. y \<le> x) (\<lambda>x. inverse (c x))"
       using C cgt0 by (auto simp: monotone_on_def divide_simps)
   qed (auto simp: c_def)
-
-    sorry
   moreover have "f47(1/10) > 2/3"
   proof -
     have "(2/3::real) < (1 - 1/40) * inverse(1 + 5 / (4 * exp 1))"
