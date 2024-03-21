@@ -4,29 +4,33 @@ theory General_Extras imports
 
 begin
 
-lemma real_nat_int_floor [simp]: "x\<ge>0 \<Longrightarrow> real (nat\<lfloor>x\<rfloor>) = real_of_int \<lfloor>x\<rfloor>"
+(*2024-03-21: added*)
+lemma of_nat_int_floor [simp]: "x\<ge>0 \<Longrightarrow> of_nat (nat\<lfloor>x\<rfloor>) = of_int \<lfloor>x\<rfloor>"
   by auto
 
-lemma real_nat_int_ceiling [simp]: "x\<ge>0 \<Longrightarrow> real (nat \<lceil>x\<rceil>) = real_of_int \<lceil>x\<rceil>"
+(*2024-03-21: added*)
+lemma of_nat_int_ceiling [simp]: "x\<ge>0 \<Longrightarrow> of_nat (nat \<lceil>x\<rceil>) = of_int \<lceil>x\<rceil>"
   by auto
 
+(*2024-03-21: added*)
 lemma ln_mono: "\<And>x::real. \<lbrakk>x \<le> y; 0 < x; 0 < y\<rbrakk> \<Longrightarrow> ln x \<le> ln y"
   using ln_le_cancel_iff by presburger
 
-(*ADD convex_on_mul AGAIN*)
-
+(*2024-03-21: added*)
 lemma concave_onD:
   assumes "concave_on A f"
   shows "\<And>t x y. t \<ge> 0 \<Longrightarrow> t \<le> 1 \<Longrightarrow> x \<in> A \<Longrightarrow> y \<in> A \<Longrightarrow>
     f ((1 - t) *\<^sub>R x + t *\<^sub>R y) \<ge> (1 - t) * f x + t * f y"
   using assms by (auto simp: concave_on_iff)
 
+(*2024-03-21: added*)
 lemma concave_onD_Icc:
   assumes "concave_on {x..y} f" "x \<le> (y :: _ :: {real_vector,preorder})"
   shows "\<And>t. t \<ge> 0 \<Longrightarrow> t \<le> 1 \<Longrightarrow>
     f ((1 - t) *\<^sub>R x + t *\<^sub>R y) \<ge> (1 - t) * f x + t * f y"
   using assms(2) by (intro concave_onD [OF assms(1)]) simp_all
 
+(*2024-03-21: added*)
 lemma concave_onD_Icc':
   assumes "concave_on {x..y} f" "c \<in> {x..y}"
   defines "d \<equiv> y - x"
@@ -39,6 +43,7 @@ proof -
     by (smt (verit, best) divide_minus_left mult_minus_left)
 qed
 
+(*2024-03-21: added*)
 lemma concave_onD_Icc'':
   assumes "concave_on {x..y} f" "c \<in> {x..y}"
   defines "d \<equiv> y - x"
@@ -51,6 +56,7 @@ proof -
     by (smt (verit, best) divide_minus_left mult_minus_left)
 qed
 
+(*2024-03-21: added*)
 lemma convex_on_le_max:
   fixes a::real
   assumes "convex_on {x..y} f" and a: "a \<in> {x..y}"
@@ -60,12 +66,13 @@ proof -
     using a that by (intro mult_left_mono) auto
   have "f a \<le> (f y - f x) / (y - x) * (a - x) + f x" 
     using assms convex_onD_Icc' by blast
-  also have "... \<le> max (f x) (f y)"
+  also have "\<dots> \<le> max (f x) (f y)"
     using a *
     by (simp add: divide_le_0_iff mult_le_0_iff zero_le_mult_iff max_def add.commute mult.commute scaling_mono)
   finally show ?thesis .
 qed
 
+(*2024-03-21: added*)
 lemma concave_on_ge_min:
   fixes a::real
   assumes "concave_on {x..y} f" and a: "a \<in> {x..y}"
@@ -76,11 +83,12 @@ proof -
   have "min (f x) (f y) \<le> (f y - f x) / (y - x) * (a - x) + f x"
     using a * apply (simp add: zero_le_divide_iff mult_le_0_iff zero_le_mult_iff min_def)
     by (smt (verit, best) nonzero_eq_divide_eq pos_divide_le_eq)
-  also have "... \<le> f a"
+  also have "\<dots> \<le> f a"
     using assms concave_onD_Icc' by blast
   finally show ?thesis .
 qed
 
+(*2024-03-21: added*)
 lemma concave_on_linorderI [intro?]:
   fixes A :: "('a::{linorder,real_vector}) set"
   assumes "\<And>t x y. t > 0 \<Longrightarrow> t < 1 \<Longrightarrow> x \<in> A \<Longrightarrow> y \<in> A \<Longrightarrow> x < y \<Longrightarrow>
@@ -88,7 +96,7 @@ lemma concave_on_linorderI [intro?]:
   shows "concave_on A f"
   by (smt (verit) assms concave_on_def convex_on_linorderI mult_minus_right)
 
-(*THE CONVEX_ON S MUST GO*)
+(*2024-03-21: added*)
 lemma concave_on_mul:
   fixes S::"real set"
   assumes f: "concave_on S f" and g: "concave_on S g" "convex S"
@@ -107,10 +115,10 @@ proof (intro concave_on_linorderI)
     by (smt (verit, ccfv_SIG) distrib_left mult_left_mono diff_ge_0_iff_ge mult.assoc)
   have "(1 - t) * (f x * g x) + t * (f y * g y) \<le> ((1-t) * f x + t * f y) * ((1-t) * g x + t * g y)"
     using * by (simp add: algebra_simps)
-  also have "... \<le> ((1-t) * f x + t * f y)*g ((1-t)*x + t*y)"
+  also have "\<dots> \<le> ((1-t) * f x + t * f y)*g ((1-t)*x + t*y)"
     using concave_onD [OF \<open>concave_on S g\<close>, of t x y] t xy fty gty inS
     by (intro mult_mono add_nonneg_nonneg) (auto simp: Pi_iff zero_le_mult_iff)
-  also have "... \<le> f ((1-t)*x + t*y) * g ((1-t)*x + t*y)"
+  also have "\<dots> \<le> f ((1-t)*x + t*y) * g ((1-t)*x + t*y)"
     using concave_onD [OF \<open>concave_on S f\<close>, of t x y] t xy fty gty inS
     by (intro mult_mono add_nonneg_nonneg) (auto simp: Pi_iff zero_le_mult_iff)
   finally show "(1 - t) * (f x * g x) + t * (f y * g y)
@@ -492,7 +500,7 @@ lemma mono_on_prod:
   by (induction I rule: infinite_finite_induct)
      (auto simp: mono_on_const Pi_iff prod_nonneg mono_on_mul)
 
-(*2024-02-07: added*)
+(*2024-03-21: added*)
 lemma convex_on_mul:
   fixes S::"real set"
   assumes "convex_on S f" "convex_on S g" "convex S"

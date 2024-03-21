@@ -314,9 +314,41 @@ proof -
   finally have \<beta>46: "\<gamma> * (real k - t) \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) + \<delta>*k + h k" .
 
   define c where "c \<equiv> \<lambda>x::real. 1 + 1 / (exp 1 * (1-x))" 
+  have C: "mono_on {0<..<1} c"
+    by (auto simp: monotone_on_def c_def field_simps)
   have [derivative_intros]: "(c has_real_derivative 1 / (exp 1 * (1-x)^2)) (at x)" if "x<1" for x
     unfolding c_def power2_eq_square
     using that by (intro exI conjI derivative_eq_intros | force)+
+
+  have "concave_on {0<..<1} (\<lambda>x. inverse (c x))"
+  proof (intro f''_le0_imp_concave)
+    fix x::real
+    assume x: "x \<in> {0<..<1}"
+    have [simp]: "exp 1 * (x - 1) \<noteq> 1"
+      by (metis exp_ge_zero greaterThanLessThan_iff le_iff_diff_le_0 le_numeral_extra(2) less_eq_real_def mult_le_0_iff x)
+    let ?f1 = "\<lambda>x. -exp 1 /(- 1 + exp 1 * (- 1 + x))\<^sup>2"
+    let ?f2 = "\<lambda>x. 2*exp(1)^2/(-1 + exp(1)*(-1 + x))^3"
+    show "((\<lambda>x. inverse (c x)) has_real_derivative ?f1 x) (at x)"
+      unfolding c_def power2_eq_square
+      using x 
+      apply (simp add: )
+      apply (intro exI conjI derivative_eq_intros | force)+
+       apply (smt (verit, best) divide_pos_pos exp_gt_zero mult_pos_pos)
+      apply (simp add: divide_simps)
+      apply (auto simp: )
+        apply (smt (verit) minus_mult_minus more_arith_simps(7))
+      by (metis add_less_same_cancel2 diff_gt_0_iff_gt div_0 less_divide_eq_1 linorder_neqE_linordered_idom mult_less_0_iff not_exp_less_zero)
+    show "(?f1 has_real_derivative ?f2 x) (at x)"
+      using x 
+      apply (simp add: )
+      apply (intro exI conjI derivative_eq_intros | force)+
+      by (simp add: divide_simps eval_nat_numeral)
+    show "?f2 (x::real) \<le> 0"
+      using x
+      apply (simp add: divide_simps)
+      by (smt (verit, ccfv_threshold) exp_gt_zero mult_sign_intros(6))
+  qed auto
+
   have cgt0: "c x > 0" if "x<1" for x
     using that by (simp add: add_pos_nonneg c_def)
 
@@ -330,6 +362,18 @@ proof -
   define f47 where "f47 \<equiv> \<lambda>x. (1 - 1/(200*x)) * inverse (c x)"
   have "concave_on {1/10..1/5} f47"
     unfolding f47_def
+  proof (intro concave_on_mul)
+    show "concave_on {1 / 10..1 / 5} (\<lambda>x. 1 - 1 / (200 * x))"
+      sorry
+    have "convex_on {1 / 10..1 / 5} (\<lambda>x. c x)"
+      sorry
+    then show "concave_on {1 / 10..1 / 5} (\<lambda>x. inverse (c x))"
+      sorry
+    show "mono_on {(1::real) / 10..1 / 5} (\<lambda>x. 1 - 1 / (200 * x))"
+      by (auto simp: monotone_on_def frac_le)
+    show "monotone_on {1 / 10..1 / 5} (\<le>) (\<lambda>x y. y \<le> x) (\<lambda>x. inverse (c x))"
+      using C cgt0 by (auto simp: monotone_on_def divide_simps)
+  qed (auto simp: c_def)
 
     sorry
   moreover have "f47(1/10) > 2/3"
