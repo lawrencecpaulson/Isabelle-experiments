@@ -1463,7 +1463,10 @@ definition "ok_fun_X_7_6 \<equiv>
   \<lambda>l k. ((1 + (real k + real l)) * ln (1 - 2 * eps k powr (1/4)) 
       - (k powr (3/4) + 7 * eps k powr (1/4) * k + 1) * (2 * ln k)) / ln 2" 
 
-lemma ok_fun_X_7_6: "ok_fun_X_7_6 l \<in> o(real)" for l
+lemma ok_fun_X_7_6: "ok_fun_X_7_6 l \<in> o(real)"
+  unfolding eps_def ok_fun_X_7_6_def by real_asymp
+
+lemma ok_fun_X_7_6_diag: "(\<lambda>l. ok_fun_X_7_6 l l) \<in> o(real)"
   unfolding eps_def ok_fun_X_7_6_def by real_asymp
 
 lemma X_7_6:
@@ -1598,6 +1601,12 @@ lemma ok_fun_X_7_1:
   assumes "0<\<mu>" "\<mu><1" 
   shows "ok_fun_X_7_1 \<mu> l \<in> o(real)"
   using ok_fun_X_7_2 ok_fun_X_7_3 ok_fun_X_7_4 ok_fun_X_7_6
+  by (simp add: assms ok_fun_X_7_1_def sum_in_smallo)
+
+lemma ok_fun_X_7_1_diag:
+  assumes "0<\<mu>" "\<mu><1" 
+  shows  "(\<lambda>l. ok_fun_X_7_1 \<mu> l l) \<in> o(real)" 
+  using ok_fun_X_7_2 ok_fun_X_7_3 ok_fun_X_7_4 ok_fun_X_7_6_diag
   by (simp add: assms ok_fun_X_7_1_def sum_in_smallo)
 
 lemma X_7_1:
