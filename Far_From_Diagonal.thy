@@ -136,6 +136,41 @@ qed
 context Book
 begin
 
+definition "ok_fun_9_3g \<equiv> \<lambda>\<gamma> l k. (nat \<lceil>k powr (3/4)\<rceil>) * log 2 k - (ok_fun_X_7_1 \<gamma> l k + ok_fun_94 l k) + 1"
+
+lemma ok_fun_9_3g: 
+  assumes "0 < \<gamma>" "\<gamma> < 1"
+  shows "ok_fun_9_3g \<gamma> l \<in> o(real)"
+proof -
+  have "(\<lambda>k. (nat \<lceil>k powr (3/4)\<rceil>) * log 2 k) \<in> o(real)"
+    by real_asymp
+  then show ?thesis
+    unfolding ok_fun_9_3g_def
+    by (intro ok_fun_X_7_1 [OF assms] ok_fun_94 [of l] sum_in_smallo const_smallo_real)
+qed
+
+definition "ok_fun_9_3h \<equiv> \<lambda>\<beta> \<gamma> l k. (2 / (1-\<gamma>)) * k powr (19/20) * ln (\<gamma>/\<beta>) + ok_fun_9_3g \<gamma> l k * ln 2"
+
+lemma ok_fun_9_3h:
+  assumes "0 < \<gamma>" "\<gamma> < 1"
+  shows  "ok_fun_9_3h \<beta> \<gamma> l \<in> o(real)"
+proof -
+  have "(\<lambda>k. (2 / (1-\<gamma>)) * k powr (19/20) * ln (\<gamma>/\<beta>)) \<in> o(real)"
+    by real_asymp
+  then show ?thesis
+    unfolding ok_fun_9_3h_def by (metis (mono_tags) ok_fun_9_3g assms sum_in_smallo(1) cmult_in_smallo_iff')
+qed
+
+lemma big_ok_fun_9_3h:
+  assumes "0 < \<gamma>" "\<gamma> < 1" "e>0"
+  shows  "\<forall>\<^sup>\<infinity>k. \<bar>ok_fun_9_3h \<beta> \<gamma> l k\<bar> / real k \<le> e"
+proof -
+  have \<section>: "(\<lambda>k. ok_fun_9_3h \<beta> \<gamma> l k / real k) \<in> o(1)"
+    using ok_fun_9_3h tendsto_zero_imp_o1 smalloD_tendsto assms by blast
+  show ?thesis
+    using landau_o.smallD [OF \<section>, of e] \<open>e>0\<close> by (auto simp: smallo_def)
+qed
+
 definition "Big_Far_9_3 \<equiv>     
    \<lambda>\<mu> l. Big_ZZ_8_5 \<mu> l \<and> Big_X_7_1 \<mu> l \<and> Big_Y_6_2 \<mu> l \<and> Big_Red_5_3 \<mu> l
       \<and> (\<forall>k\<ge>l. p0 - 3 * eps k > 1/k \<and> k\<ge>2)"
@@ -182,28 +217,6 @@ proof -
     using red_step_limit \<gamma>01 \<open>Colours l k\<close> by (auto simp: \<R>_def t_def)
   have f: "k+l choose l = 2 powr ok_fun_94 l k * \<gamma> powr (- real l) * (1-\<gamma>) powr (- real k)" 
     unfolding \<gamma>_def using fact_9_4 lk by blast
-  define g where "g \<equiv> \<lambda>k. (nat \<lceil>k powr (3/4)\<rceil>) * log 2 k - (ok_fun_X_7_1 \<gamma> l k + ok_fun_94 l k) + 1"
-  have "g \<in> o(real)"
-  proof -
-    have "(\<lambda>k. (nat \<lceil>k powr (3/4)\<rceil>) * log 2 k) \<in> o(real)"
-      by real_asymp
-    then show ?thesis
-      unfolding g_def
-      by (intro ok_fun_X_7_1 [OF \<gamma>01] ok_fun_94 [of l] sum_in_smallo const_smallo_real)
-  qed
-  define h where "h \<equiv> \<lambda>k. (2 / (1-\<gamma>)) * k powr (19/20) * ln (\<gamma>/\<beta>) + g k * ln 2"
-  have "h \<in> o(real)"
-  proof -
-    have "(\<lambda>k. (2 / (1-\<gamma>)) * k powr (19/20) * ln (\<gamma>/\<beta>)) \<in> o(real)"
-      by real_asymp
-    then show ?thesis
-      unfolding h_def by (metis (mono_tags) \<open>g \<in> o(real)\<close> sum_in_smallo(1) cmult_in_smallo_iff')
-  qed
-  then have E: "(\<lambda>k. h k / real k) \<in> o(1)"
-    by (intro tendsto_zero_imp_o1 smalloD_tendsto)
-  have "\<forall>\<^sup>\<infinity>k. \<bar>h k\<bar> / real k \<le> e" if "e>0" for e
-    using landau_o.smallD [OF E, of e] that
-    by (auto simp: smallo_def)
 
   have powr_combine_right: "x powr a * (x powr b * y) = x powr (a+b) * y" for x y a b::real
     by (simp add: powr_add)
@@ -245,8 +258,8 @@ proof -
               \<le> 2 powr ((nat \<lceil>real k powr (3/4)\<rceil>) * log 2 k)"
     by (simp add: powr_add)
   then have le_2_powr_g: "exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) * (\<beta>/\<gamma>) ^ card \<S>
-             \<le> 2 powr g k"
-    using \<gamma>01 \<open>k\<ge>2\<close> by (simp add: g_def field_simps powr_add powr_diff of_nat_diff flip: powr_realpow)
+             \<le> 2 powr ok_fun_9_3g \<gamma> l k"
+    using \<gamma>01 \<open>k\<ge>2\<close> by (simp add: ok_fun_9_3g_def field_simps powr_add powr_diff of_nat_diff flip: powr_realpow)
 
   let ?\<xi> = "\<beta> * t / (1-\<gamma>) + (2 / (1-\<gamma>)) * k powr (19/20)"
   have \<beta>_le: "\<beta> \<le> \<gamma>" and \<beta>_ge: "\<beta> \<ge> 1 / (real k)\<^sup>2"
@@ -306,29 +319,28 @@ proof -
     by (simp add: algebra_simps)
   also have "\<dots> = ln (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) * (\<beta>/\<gamma>) ^ card \<S>)"
     using \<gamma>01 \<beta>01 \<open>Colours l k\<close> by (simp add: ln_mult ln_div ln_realpow ln_powr)
-  also have "\<dots> \<le> ln (2 powr g k)"
+  also have "\<dots> \<le> ln (2 powr ok_fun_9_3g \<gamma> l k)"
     using le_2_powr_g \<gamma>01 \<beta>01 by simp
-  also have "... = g k * ln 2"
+  also have "... = ok_fun_9_3g \<gamma> l k * ln 2"
     by (auto simp: ln_powr)
-  finally have "\<gamma> * (real k - t) - \<delta>*k - ?\<xi> * ln (\<gamma>/\<beta>) \<le> g k * ln 2" .
-  then have "\<gamma> * (real k - t) \<le> ?\<xi> * ln (\<gamma>/\<beta>) + \<delta>*k + g k * ln 2"
+  finally have "\<gamma> * (real k - t) - \<delta>*k - ?\<xi> * ln (\<gamma>/\<beta>) \<le> ok_fun_9_3g \<gamma> l k * ln 2" .
+  then have "\<gamma> * (real k - t) \<le> ?\<xi> * ln (\<gamma>/\<beta>) + \<delta>*k + ok_fun_9_3g \<gamma> l k * ln 2"
     by simp
-  also have "... \<le> (\<beta> * t / (1-\<gamma>)) * ln (\<gamma>/\<beta>) + \<delta>*k + h k"
+  also have "... \<le> (\<beta> * t / (1-\<gamma>)) * ln (\<gamma>/\<beta>) + \<delta>*k + ok_fun_9_3h \<beta> \<gamma> l k"
   proof -
     have \<section>: "\<gamma>/\<beta> \<le> \<gamma> * (real k)\<^sup>2"
       using \<open>k>0\<close> \<beta>_le \<beta>_ge \<open>\<beta>>0\<close> by (simp add: field_simps)
     then show ?thesis
-      by (simp add: algebra_simps h_def)
+      by (simp add: algebra_simps ok_fun_9_3h_def)
   qed
-  also have "\<dots> \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) + \<delta>*k + h k"
-    using \<gamma>01 mult_right_mono [OF \<phi>, of t]
-    by (simp add: \<phi>_def mult_ac)
-  finally have "\<gamma> * (real k - t) \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) + \<delta>*k + h k" .
-  then have "(\<gamma>-\<delta>) * k - h k \<le> t * \<gamma> * c \<gamma>"
+  also have "\<dots> \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) + \<delta>*k + ok_fun_9_3h \<beta> \<gamma> l k"
+    using \<gamma>01 mult_right_mono [OF \<phi>, of t] by (simp add: \<phi>_def mult_ac)
+  finally have "\<gamma> * (real k - t) \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) + \<delta>*k + ok_fun_9_3h \<beta> \<gamma> l k" .
+  then have "(\<gamma>-\<delta>) * k - ok_fun_9_3h \<beta> \<gamma> l k \<le> t * \<gamma> * c \<gamma>"
     by (simp add: c_def algebra_simps)
-  then have "((\<gamma>-\<delta>) * k - h k) / (\<gamma> * c \<gamma>) \<le> t"
+  then have "((\<gamma>-\<delta>) * k - ok_fun_9_3h \<beta> \<gamma> l k) / (\<gamma> * c \<gamma>) \<le> t"
     using \<gamma>01 cgt0 by (simp add: pos_divide_le_eq)
-  then have *: "t \<ge> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) * k - h k / (\<gamma> * c \<gamma>)"  
+  then have *: "t \<ge> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) * k - ok_fun_9_3h \<beta> \<gamma> l k / (\<gamma> * c \<gamma>)"  
     using \<gamma>01 cgt0[of \<gamma>] by (simp add: field_simps)
 
   define f47 where "f47 \<equiv> \<lambda>x. (1 - 1/(200*x)) * inverse (c x)"
@@ -398,9 +410,9 @@ proof -
     finally show ?thesis .
   qed
   define e::real where "e \<equiv> 0.667 - 2/3"
-  have BIGH: "abs (h k / (\<gamma> * (1 + 1 / (exp 1 * (1 - \<gamma>))))) / k < e"
+  have BIGH: "abs (ok_fun_9_3h \<beta> \<gamma> l k / (\<gamma> * (1 + 1 / (exp 1 * (1 - \<gamma>))))) / k < e"
     using \<open>0<\<gamma>\<close> \<gamma>15 unfolding h_def g_def ok_fun_X_7_1_def sorry
-  have BIGH: "abs (h k / (\<gamma> * c \<gamma> * k)) < e"
+  have BIGH: "abs (ok_fun_9_3h \<beta> \<gamma> l k / (\<gamma> * c \<gamma> * k)) < e"
     using \<open>0<\<gamma>\<close> \<gamma>15 unfolding h_def g_def ok_fun_X_7_1_def 
 
     sorry
@@ -413,11 +425,11 @@ proof -
       by (auto simp: \<delta>_def)
     have "(2/3::real) \<le> f48 \<gamma> - e"
       using 48[OF 1] e_def by force
-    also have "... \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) - h k / (\<gamma> * c \<gamma> * k)"
+    also have "... \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) - ok_fun_9_3h \<beta> \<gamma> l k / (\<gamma> * c \<gamma> * k)"
       unfolding f48_def \<delta>\<gamma> using BIGH by linarith
     finally
-    have A: "2/3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) - h k / (\<gamma> * c \<gamma> * k)" .
-    have "real (2 * k) / 3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) * k - h k / (\<gamma> * c \<gamma>)"
+    have A: "2/3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) - ok_fun_9_3h \<beta> \<gamma> l k / (\<gamma> * c \<gamma> * k)" .
+    have "real (2 * k) / 3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) * k - ok_fun_9_3h \<beta> \<gamma> l k / (\<gamma> * c \<gamma>)"
       using mult_left_mono [OF A, of k] cgt0 [of \<gamma>] \<gamma>01 \<open>k>0\<close>
       by (simp add: divide_simps mult_ac)
     with * show ?thesis
@@ -428,11 +440,11 @@ proof -
       by (auto simp: \<delta>_def)
     have "(2/3::real) \<le> f47 \<gamma> - e"
       using 47[OF 2] e_def by force
-    also have "... \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) - h k / (\<gamma> * c \<gamma> * k)"
+    also have "... \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) - ok_fun_9_3h \<beta> \<gamma> l k / (\<gamma> * c \<gamma> * k)"
       unfolding f47_def \<delta>\<gamma> using BIGH by linarith
     finally
-    have A: "2/3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) - h k / (\<gamma> * c \<gamma> * k)" .
-    have "real (2 * k) / 3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) * k - h k / (\<gamma> * c \<gamma>)"
+    have A: "2/3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) - ok_fun_9_3h \<beta> \<gamma> l k / (\<gamma> * c \<gamma> * k)" .
+    have "real (2 * k) / 3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) * k - ok_fun_9_3h \<beta> \<gamma> l k / (\<gamma> * c \<gamma>)"
       using mult_left_mono [OF A, of k] cgt0 [of \<gamma>] \<gamma>01 \<open>k>0\<close>
       by (simp add: divide_simps mult_ac)
     with * show ?thesis
