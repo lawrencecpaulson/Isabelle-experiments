@@ -199,6 +199,12 @@ proof -
     then show ?thesis
       unfolding h_def by (metis (mono_tags) \<open>g \<in> o(real)\<close> sum_in_smallo(1) cmult_in_smallo_iff')
   qed
+  then have E: "(\<lambda>k. h k / real k) \<in> o(1)"
+    by (intro tendsto_zero_imp_o1 smalloD_tendsto)
+  have "\<forall>\<^sup>\<infinity>k. \<bar>h k\<bar> / real k \<le> e" if "e>0" for e
+    using landau_o.smallD [OF E, of e] that
+    by (auto simp: smallo_def)
+
   have powr_combine_right: "x powr a * (x powr b * y) = x powr (a+b) * y" for x y a b::real
     by (simp add: powr_add)
   have "(2 powr ok_fun_X_7_1 \<gamma> l k * 2 powr ok_fun_94 l k) * (\<beta>/\<gamma>) ^ card \<S> * (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) / 2)
@@ -238,7 +244,7 @@ proof -
                * exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) / 2
               \<le> 2 powr ((nat \<lceil>real k powr (3/4)\<rceil>) * log 2 k)"
     by (simp add: powr_add)
-  then have A: "exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) * (\<beta>/\<gamma>) ^ card \<S>
+  then have le_2_powr_g: "exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) * (\<beta>/\<gamma>) ^ card \<S>
              \<le> 2 powr g k"
     using \<gamma>01 \<open>k\<ge>2\<close> by (simp add: g_def field_simps powr_add powr_diff of_nat_diff flip: powr_realpow)
 
@@ -277,6 +283,12 @@ proof -
     qed (use False in force)
   qed
 
+  define c where "c \<equiv> \<lambda>x::real. 1 + 1 / (exp 1 * (1-x))" 
+  have mono_c: "mono_on {0<..<1} c"
+    by (auto simp: monotone_on_def c_def field_simps)
+  have cgt0: "c x > 0" if "x<1" for x
+    using that by (simp add: add_pos_nonneg c_def)
+
   have "card \<S> \<le> \<beta> * t / (1 - \<beta>) + (2 / (1-\<gamma>)) * k powr (19/20)" 
     using ZZ_8_5 [OF \<gamma>01 \<open>Colours l k\<close> big85] \<gamma>01 by (auto simp: \<R>_def \<S>_def t_def \<beta>_def)
   also have "... \<le> ?\<xi>" 
@@ -295,7 +307,7 @@ proof -
   also have "\<dots> = ln (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) * (\<beta>/\<gamma>) ^ card \<S>)"
     using \<gamma>01 \<beta>01 \<open>Colours l k\<close> by (simp add: ln_mult ln_div ln_realpow ln_powr)
   also have "\<dots> \<le> ln (2 powr g k)"
-    using A \<gamma>01 \<beta>01 by simp
+    using le_2_powr_g \<gamma>01 \<beta>01 by simp
   also have "... = g k * ln 2"
     by (auto simp: ln_powr)
   finally have "\<gamma> * (real k - t) - \<delta>*k - ?\<xi> * ln (\<gamma>/\<beta>) \<le> g k * ln 2" .
@@ -311,23 +323,12 @@ proof -
   also have "\<dots> \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) + \<delta>*k + h k"
     using \<gamma>01 mult_right_mono [OF \<phi>, of t]
     by (simp add: \<phi>_def mult_ac)
-  finally have \<beta>46: "\<gamma> * (real k - t) \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) + \<delta>*k + h k" .
-
-  define c where "c \<equiv> \<lambda>x::real. 1 + 1 / (exp 1 * (1-x))" 
-  have C: "mono_on {0<..<1} c"
-    by (auto simp: monotone_on_def c_def field_simps)
-  have [derivative_intros]: "(c has_real_derivative 1 / (exp 1 * (1-x)^2)) (at x)" if "x<1" for x
-    unfolding c_def power2_eq_square
-    using that by (intro exI conjI derivative_eq_intros | force)+
-
-  have cgt0: "c x > 0" if "x<1" for x
-    using that by (simp add: add_pos_nonneg c_def)
-
-  have "(\<gamma>-\<delta>) * k - h k \<le> t * \<gamma> * c \<gamma>"
-    using \<beta>46 by (simp add: c_def algebra_simps)
+  finally have "\<gamma> * (real k - t) \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) + \<delta>*k + h k" .
+  then have "(\<gamma>-\<delta>) * k - h k \<le> t * \<gamma> * c \<gamma>"
+    by (simp add: c_def algebra_simps)
   then have "((\<gamma>-\<delta>) * k - h k) / (\<gamma> * c \<gamma>) \<le> t"
     using \<gamma>01 cgt0 by (simp add: pos_divide_le_eq)
-  then have *: "t \<ge> (1 - \<delta> / \<gamma>) * k / c \<gamma> - h k / (\<gamma> * c \<gamma>)"   (*THIS BLOCK UNUSED*)
+  then have *: "t \<ge> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) * k - h k / (\<gamma> * c \<gamma>)"  
     using \<gamma>01 cgt0[of \<gamma>] by (simp add: field_simps)
 
   define f47 where "f47 \<equiv> \<lambda>x. (1 - 1/(200*x)) * inverse (c x)"
@@ -377,29 +378,66 @@ proof -
     show "mono_on {(1::real) / 10..1 / 5} (\<lambda>x. 1 - 1 / (200 * x))"
       by (auto simp: monotone_on_def frac_le)
     show "monotone_on {1 / 10..1 / 5} (\<le>) (\<lambda>x y. y \<le> x) (\<lambda>x. inverse (c x))"
-      using C cgt0 by (auto simp: monotone_on_def divide_simps)
+      using mono_c cgt0 by (auto simp: monotone_on_def divide_simps)
   qed (auto simp: c_def)
-  moreover have "f47(1/10) > 2/3"
+  moreover have "f47(1/10) > 0.667"
     unfolding f47_def c_def by (approximation 15)
-  moreover have "f47(1/5) > 2/3"
+  moreover have "f47(1/5) > 0.667"
     unfolding f47_def c_def by (approximation 15)
-  ultimately have 47: "f47 x > 2/3" if "x \<in> {1/10..1/5}" for x
+  ultimately have 47: "f47 x > 0.667" if "x \<in> {1/10..1/5}" for x
     using concave_on_ge_min that by fastforce
 
   define f48 where "f48 \<equiv> \<lambda>x. (1 - 1/20) * inverse (c x)"
-  have 48: "f48 x > 2/3" if "x \<in> {0<..<1/10}" for x
+  have 48: "f48 x > 0.667" if "x \<in> {0<..<1/10}" for x
   proof -
-    have "(2/3::real) < (1 - 1/20) * inverse(c(1/10))"
+    have "(0.667::real) < (1 - 1/20) * inverse(c(1/10))"
       unfolding c_def by (approximation 15)
     also have "... \<le> f48 x"
-      using that 
-      unfolding f48_def c_def
+      using that unfolding f48_def c_def
       by (intro mult_mono le_imp_inverse_le add_mono divide_left_mono) (auto simp: add_pos_pos)
     finally show ?thesis .
   qed
+  define e::real where "e \<equiv> 0.667 - 2/3"
+  have BIGH: "abs (h k / (\<gamma> * (1 + 1 / (exp 1 * (1 - \<gamma>))))) / k < e"
+    using \<open>0<\<gamma>\<close> \<gamma>15 unfolding h_def g_def ok_fun_X_7_1_def sorry
+  have BIGH: "abs (h k / (\<gamma> * c \<gamma> * k)) < e"
+    using \<open>0<\<gamma>\<close> \<gamma>15 unfolding h_def g_def ok_fun_X_7_1_def 
 
-  show ?thesis
     sorry
+  consider "\<gamma> \<in> {0<..<1/10}" | "\<gamma> \<in> {1/10..1/5}"
+    using \<delta>_def \<open>\<gamma> \<le> 1/5\<close> \<gamma>01 by fastforce
+  then show ?thesis
+  proof cases
+    case 1
+    then have \<delta>\<gamma>: "\<delta> / \<gamma> = 1/20"
+      by (auto simp: \<delta>_def)
+    have "(2/3::real) \<le> f48 \<gamma> - e"
+      using 48[OF 1] e_def by force
+    also have "... \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) - h k / (\<gamma> * c \<gamma> * k)"
+      unfolding f48_def \<delta>\<gamma> using BIGH by linarith
+    finally
+    have A: "2/3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) - h k / (\<gamma> * c \<gamma> * k)" .
+    have "real (2 * k) / 3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) * k - h k / (\<gamma> * c \<gamma>)"
+      using mult_left_mono [OF A, of k] cgt0 [of \<gamma>] \<gamma>01 \<open>k>0\<close>
+      by (simp add: divide_simps mult_ac)
+    with * show ?thesis
+      by linarith
+  next
+    case 2
+    then have \<delta>\<gamma>: "\<delta> / \<gamma> = 1/(200*\<gamma>)"
+      by (auto simp: \<delta>_def)
+    have "(2/3::real) \<le> f47 \<gamma> - e"
+      using 47[OF 2] e_def by force
+    also have "... \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) - h k / (\<gamma> * c \<gamma> * k)"
+      unfolding f47_def \<delta>\<gamma> using BIGH by linarith
+    finally
+    have A: "2/3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) - h k / (\<gamma> * c \<gamma> * k)" .
+    have "real (2 * k) / 3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) * k - h k / (\<gamma> * c \<gamma>)"
+      using mult_left_mono [OF A, of k] cgt0 [of \<gamma>] \<gamma>01 \<open>k>0\<close>
+      by (simp add: divide_simps mult_ac)
+    with * show ?thesis
+      by linarith
+  qed
 qed
 
 end (*context Book*)
