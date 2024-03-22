@@ -380,24 +380,23 @@ proof -
       using C cgt0 by (auto simp: monotone_on_def divide_simps)
   qed (auto simp: c_def)
   moreover have "f47(1/10) > 2/3"
-  proof -
-    have "(2/3::real) < (1 - 1/40) * inverse(1 + 5 / (4 * exp 1))"
-      by (approximation 15)
-    also have "... \<le> f47 (1/10)"
-      unfolding f47_def c_def by (approximation 15)
-    finally show ?thesis .
-  qed
+    unfolding f47_def c_def by (approximation 15)
   moreover have "f47(1/5) > 2/3"
+    unfolding f47_def c_def by (approximation 15)
+  ultimately have 47: "f47 x > 2/3" if "x \<in> {1/10..1/5}" for x
+    using concave_on_ge_min that by fastforce
+
+  define f48 where "f48 \<equiv> \<lambda>x. (1 - 1/20) * inverse (c x)"
+  have 48: "f48 x > 2/3" if "x \<in> {0<..<1/10}" for x
   proof -
-    have "(2/3::real) < (1 - 1/40) * inverse(1 + 5 / (4 * exp 1))"
-      by (approximation 15)
-    also have "... \<le> f47 (1/5)"
-      unfolding f47_def c_def
-      by (intro mult_mono) (auto simp: algebra_simps)
+    have "(2/3::real) < (1 - 1/20) * inverse(c(1/10))"
+      unfolding c_def by (approximation 15)
+    also have "... \<le> f48 x"
+      using that 
+      unfolding f48_def c_def
+      by (intro mult_mono le_imp_inverse_le add_mono divide_left_mono) (auto simp: add_pos_pos)
     finally show ?thesis .
   qed
-  ultimately have "f47(x) > 2/3" if "x \<in> {1/10..1/5}" for x
-    using concave_on_ge_min that by fastforce
 
   show ?thesis
     sorry
