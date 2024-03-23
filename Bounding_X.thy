@@ -1457,16 +1457,13 @@ lemma Big_X_7_6:
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_6 \<mu> l"
   unfolding Big_X_7_6_def eventually_conj_iff all_imp_conj_distrib eps_def
   apply (simp add: Big_Blue_4_1 Big_X_7_8 Big_X_7_12 eventually_all_ge_at_top assms)
-  by (intro  eventually_all_ge_at_top; real_asymp)
+  by (intro eventually_all_ge_at_top; real_asymp)
 
 definition "ok_fun_X_7_6 \<equiv> 
-  \<lambda>l k. ((1 + (real k + real l)) * ln (1 - 2 * eps k powr (1/4)) 
+  \<lambda>k. ((1 + 2 * real k) * ln (1 - 2 * eps k powr (1/4)) 
       - (k powr (3/4) + 7 * eps k powr (1/4) * k + 1) * (2 * ln k)) / ln 2" 
 
-lemma ok_fun_X_7_6: "ok_fun_X_7_6 l \<in> o(real)"
-  unfolding eps_def ok_fun_X_7_6_def by real_asymp
-
-lemma ok_fun_X_7_6_diag: "(\<lambda>l. ok_fun_X_7_6 l l) \<in> o(real)"
+lemma ok_fun_X_7_6: "ok_fun_X_7_6 \<in> o(real)"
   unfolding eps_def ok_fun_X_7_6_def by real_asymp
 
 lemma X_7_6:
@@ -1474,7 +1471,7 @@ lemma X_7_6:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
   assumes big: "Big_X_7_6 \<mu> l"
   defines "X \<equiv> Xseq \<mu> l k" and "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
-  shows "(\<Prod>i\<in>\<D>. card(X(Suc i)) / card (X i)) \<ge> 2 powr ok_fun_X_7_6 l k"
+  shows "(\<Prod>i\<in>\<D>. card(X(Suc i)) / card (X i)) \<ge> 2 powr ok_fun_X_7_6 k"
 proof -
   define \<R> where "\<R> \<equiv> Step_class \<mu> l k {red_step}"
   define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
@@ -1526,11 +1523,18 @@ proof -
     then show ?thesis
       by (metis X_def Xseq_Suc_subset card_mono finite_Xseq gr0I leD)
   qed
-  have "ok_fun_X_7_6 l k = log 2 ((1 / (real k)\<^sup>2) powr ?DC k * (1 - 2 * eps k powr (1/4)) ^ (k + l + 1))"
+  have "ok_fun_X_7_6 k \<le> log 2 ((1 / (real k)\<^sup>2) powr ?DC k * (1 - 2 * eps k powr (1/4)) ^ (k + l + 1))"
     unfolding ok_fun_X_7_6_def log_def
-    using dc_pos \<open>k>0\<close> one_minus_gt0 by (simp add: ln_powr ln_mult ln_div ln_realpow flip: power_Suc)
-  then have "2 powr ok_fun_X_7_6 l k = (1 / (real k)\<^sup>2) powr ?DC k * (1 - 2 * eps k powr (1/4)) ^ (k + l + 1)"
-    using powr_eq_iff \<open>k>0\<close> one_minus_gt0 by auto
+    using dc_pos \<open>k>0\<close> one_minus_gt0
+    apply (simp add: ln_powr ln_mult ln_div ln_realpow flip: power_Suc mult.assoc)
+    apply (intro divide_right_mono diff_mono )
+      apply (auto simp: )
+    apply (intro mult_right_mono_neg)
+     apply (auto simp: )
+    using lk(2) by blast
+  then have "2 powr ok_fun_X_7_6 k \<le> (1 / (real k)\<^sup>2) powr ?DC k * (1 - 2 * eps k powr (1/4)) ^ (k + l + 1)"
+    using powr_eq_iff \<open>k>0\<close> one_minus_gt0
+    by (smt (verit, best) less_powr_iff of_nat_zero_less_power_iff pos_prod_le powr_nonneg_iff zero_compare_simps(7) zero_less_power) 
   also have "\<dots> \<le> (1 / (real k)\<^sup>2) powr card (\<D> \<inter> C') * (1 - 2 * eps k powr (1/4)) ^ card (\<D>\<setminus>C')"
   proof (intro mult_mono powr_mono')
     have "Suc ` \<D> \<subseteq> \<B> \<union> (\<R> \<union> \<S>) \<union> {m}"
@@ -1595,18 +1599,12 @@ lemma Big_X_7_1:
   unfolding Big_X_7_1_def eventually_conj_iff all_imp_conj_distrib eps_def
   by (simp add: Big_Blue_4_1 Big_X_7_2 Big_X_7_4 Big_X_7_6 assms)
 
-definition "ok_fun_X_7_1 \<equiv> \<lambda>\<mu> l k. ok_fun_X_7_2 \<mu> k + ok_fun_X_7_3 k + ok_fun_X_7_4 k + ok_fun_X_7_6 l k"
+definition "ok_fun_X_7_1 \<equiv> \<lambda>\<mu> k. ok_fun_X_7_2 \<mu> k + ok_fun_X_7_3 k + ok_fun_X_7_4 k + ok_fun_X_7_6 k"
 
 lemma ok_fun_X_7_1:
   assumes "0<\<mu>" "\<mu><1" 
-  shows "ok_fun_X_7_1 \<mu> l \<in> o(real)"
+  shows "ok_fun_X_7_1 \<mu> \<in> o(real)"
   using ok_fun_X_7_2 ok_fun_X_7_3 ok_fun_X_7_4 ok_fun_X_7_6
-  by (simp add: assms ok_fun_X_7_1_def sum_in_smallo)
-
-lemma ok_fun_X_7_1_diag:
-  assumes "0<\<mu>" "\<mu><1" 
-  shows  "(\<lambda>l. ok_fun_X_7_1 \<mu> l l) \<in> o(real)" 
-  using ok_fun_X_7_2 ok_fun_X_7_3 ok_fun_X_7_4 ok_fun_X_7_6_diag
   by (simp add: assms ok_fun_X_7_1_def sum_in_smallo)
 
 lemma X_7_1:
@@ -1616,7 +1614,7 @@ lemma X_7_1:
   defines "X \<equiv> Xseq \<mu> l k" and "\<D> \<equiv> Step_class \<mu> l k {dreg_step}"
   defines "\<R> \<equiv> Step_class \<mu> l k {red_step}" and "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   defines "m \<equiv>  halted_point \<mu> l k"
-  shows "card (X m) \<ge> 2 powr ok_fun_X_7_1 \<mu> l k * \<mu>^l * (1-\<mu>) ^ card \<R> * (bigbeta \<mu> l k / \<mu>) ^ card \<S> * card X0"
+  shows "card (X m) \<ge> 2 powr ok_fun_X_7_1 \<mu> k * \<mu>^l * (1-\<mu>) ^ card \<R> * (bigbeta \<mu> l k / \<mu>) ^ card \<S> * card X0"
 proof -
   define \<B> where "\<B> \<equiv> Step_class \<mu> l k {bblue_step}"
   define \<H> where "\<H> \<equiv> Step_class \<mu> l k {halted}"
@@ -1636,7 +1634,7 @@ proof -
     unfolding X_def \<B>_def \<S>_def using big41 \<mu> \<open>Colours l k\<close> X_7_3 by meson
   have S: "(\<Prod>i\<in>\<S>. card (X (Suc i)) / card (X i)) \<ge> 2 powr ok_fun_X_7_4 k * bigbeta \<mu> l k ^ card \<S>"
     unfolding X_def \<S>_def using 74 \<mu> \<open>Colours l k\<close> X_7_4 by meson
-  have D: "(\<Prod>i\<in>\<D>. card(X(Suc i)) / card (X i)) \<ge> 2 powr ok_fun_X_7_6 l k"
+  have D: "(\<Prod>i\<in>\<D>. card(X(Suc i)) / card (X i)) \<ge> 2 powr ok_fun_X_7_6 k"
     unfolding X_def \<D>_def using 76 \<mu> \<open>Colours l k\<close> X_7_6 by meson
   have below_m: "\<R>\<union>\<B>\<union>\<S>\<union>\<D> = {..<m}"
     using assms by (auto simp: m_def \<R>_def \<B>_def \<S>_def \<D>_def before_halted_eq Step_class_insert_NO_MATCH)
@@ -1651,14 +1649,14 @@ proof -
   have X0_nz: "card (X 0) > 0"
     using \<open>0 < m\<close> X_nz by blast
 
-  have "2 powr ok_fun_X_7_1 \<mu> l k * \<mu>^l * (1-\<mu>) ^ card \<R> * (bigbeta \<mu> l k / \<mu>) ^ card \<S>
-     \<le> 2 powr ok_fun_X_7_1 \<mu> l k * \<mu> ^ (l - card \<S>) * (1-\<mu>) ^ card \<R> * (bigbeta \<mu> l k ^ card \<S>)"
+  have "2 powr ok_fun_X_7_1 \<mu> k * \<mu>^l * (1-\<mu>) ^ card \<R> * (bigbeta \<mu> l k / \<mu>) ^ card \<S>
+     \<le> 2 powr ok_fun_X_7_1 \<mu> k * \<mu> ^ (l - card \<S>) * (1-\<mu>) ^ card \<R> * (bigbeta \<mu> l k ^ card \<S>)"
     using \<mu> BS_le_l by (simp add: power_diff power_divide)
   also have "... \<le> (\<Prod>i\<in>\<R>\<union>\<B>\<union>\<S>\<union>\<D>. card (X(Suc i)) / card (X i))"
   proof -
     have "(\<Prod>i\<in>(\<R>\<union>\<B>)\<union>(\<S>\<union>\<D>). card (X(Suc i)) / card (X i)) 
          \<ge> ((2 powr (ok_fun_X_7_2 \<mu> k) * (1-\<mu>) ^ card \<R>) * (2 powr (ok_fun_X_7_3 k) * \<mu> ^ (l - card \<S>)))
-          * ((2 powr ok_fun_X_7_4 k * bigbeta \<mu> l k ^ card \<S>) * (2 powr ok_fun_X_7_6 l k))"
+          * ((2 powr ok_fun_X_7_4 k * bigbeta \<mu> l k ^ card \<S>) * (2 powr ok_fun_X_7_6 k))"
       using \<open>\<mu>>0\<close> by (auto simp: R B S D prod.union_disjoint prod_nonneg bigbeta_ge0 intro!: mult_mono)
     then show ?thesis
       by (simp add: Un_assoc mult_ac powr_add ok_fun_X_7_1_def)
