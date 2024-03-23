@@ -126,58 +126,30 @@ proof-
     by (simp add: logstir_def fact_eq_stir_times)
 qed
 
-lemma H:
-  assumes "l>0" shows "- log 2 k \<le> log 2 (real k + real l) - log 2 k - log 2 l"
-  using assms by simp
-
-lemma HH:
-  assumes "l>0" "k>0" shows "- log 2 k \<le> log 2 ( k +  l) - log 2 k - log 2 l"
-  using assms
-  by fastforce
-
 definition "ok_fun_94 \<equiv> \<lambda>k. - logstir k"
 
 lemma ok_fun_94: "ok_fun_94 \<in> o(real)"
   unfolding ok_fun_94_def
   using logstir_o_real by simp 
 
-lemma
-  assumes l: "0 < l" "l \<le> k"
-  shows
- "2 powr logstir (k + l) / (2 powr logstir k * 2 powr logstir l)
-    \<ge> 2 powr ok_fun_94 k"
-proof -
-  have "logstir (k + l) - (logstir k + logstir l) \<ge> ok_fun_94 k"
-  unfolding logstir_def ok_fun_94_def log_def
-  using assms HH
-  apply (auto simp: )
-  apply (intro divide_right_mono ln_mono mult_mono)
-apply (auto simp: )
-  using assms HH
-
-  sorry
-  then show ?thesis
-    by (metis powr_add powr_diff powr_mono rel_simps(25))
-qed
-
 lemma fact_9_4:
   assumes l: "0 < l" "l \<le> k"
   defines "\<gamma> \<equiv> real l / (real k + real l)"
   shows "k+l choose l \<ge> 2 powr ok_fun_94 k * \<gamma> powr (-l) * (1-\<gamma>) powr (-k)" 
-  sorry
 proof -
-  have "real (k+l choose l) = fact(k+l) / (fact k * fact l)"
-    by (simp add: binomial_fact)
-  also have "... = (2 powr (logstir (k+l)) / (2 powr (logstir k)  * 2 powr (logstir l)))
-                 * (k+l) powr(k+l) / (k powr k * l powr l)"
-    using l by (simp add: logfact_eq_stir_times powr_add divide_simps flip: powr_realpow)
-  also have "... \<le> (2 powr ok_fun_94 k) * (k+l) powr(k+l) / (k powr k * l powr l)"
-    apply (intro mult_mono divide_right_mono)
-        apply (auto simp: )
-    apply (simp add: ok_fun_94_def divide_simps flip: powr_add)
-    by (metis add.commute add_0_left add_mono assms(2) le_refl logstir_def logstir_mono mult_2 zero_le)
-  also have "... = 2 powr ok_fun_94 k * \<gamma> powr (- real l) * (1-\<gamma>) powr (- real k)"
+  have *: "ok_fun_94 k \<le> logstir (k + l) - (logstir k + logstir l)"
+apply (auto simp: ok_fun_94_def)
+    sorry
+  have "2 powr ok_fun_94 k * \<gamma> powr (- real l) * (1-\<gamma>) powr (- real k)
+      = (2 powr ok_fun_94 k) * (k+l) powr(k+l) / (k powr k * l powr l)"
     by (simp add: \<gamma>_def powr_minus powr_add powr_divide divide_simps)
+  also have "... \<le> (2 powr (logstir (k+l)) / (2 powr (logstir k)  * 2 powr (logstir l)))
+                 * (k+l) powr(k+l) / (k powr k * l powr l)"
+    by (metis "*" divide_nonneg_nonneg mult_right_mono powr_add powr_diff powr_ge_pzero powr_mono semiring_norm(92) times_divide_eq_right zero_compare_simps(4))
+  also have "... = fact(k+l) / (fact k * fact l)"
+    using l by (simp add: logfact_eq_stir_times powr_add divide_simps flip: powr_realpow)
+  also have "... = real (k+l choose l)"
+    by (simp add: binomial_fact)
   finally show ?thesis .
 qed
 
