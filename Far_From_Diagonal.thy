@@ -95,10 +95,6 @@ lemma fact_eq_stir_times: "n \<noteq> 0 \<Longrightarrow> fact n = (1 + stir n) 
 
 definition "logstir \<equiv> \<lambda>n. if n=0 then 0 else log 2 ((1 + stir n) * sqrt (2 * pi * n))"
 
-text \<open>Thank you, Manuel!\<close>
-lemma ln_less_Digamma: "0 < x \<Longrightarrow> ln x < Digamma (x + 1)"
-  sorry
-
 lemma logstir_o_real: "logstir \<in> o(real)"
 proof -
   have "\<forall>\<^sup>\<infinity>n. 0 < n \<longrightarrow> \<bar>log 2 ((1 + stir n) * sqrt (2 * pi * n))\<bar> \<le> c * real n" if "c>0" for c
@@ -153,7 +149,7 @@ proof (clarsimp simp: monotone_on_def)
       apply (auto simp: ln_div pos_prod_lt field_simps)
       done
     show "GD u > 0"
-      using that by (auto simp: GD_def ln_less_Digamma)
+      using that by (auto simp: GD_def Digamma_plus_1_gt_ln) \<comment> \<open>Thank you, Manuel!\<close>
   qed
   show "G x \<le> G y"
     using x DERIV_pos_imp_increasing [OF _ *] by (force simp: less_eq_real_def)
@@ -163,13 +159,20 @@ lemma mono_logstir: "mono logstir"
 proof (clarsimp simp: monotone_def)
   fix i j::nat
   assume "i\<le>j"
-  then show "logstir i \<le> logstir j"
-    apply (simp add: logstir_def)
-    apply (auto simp: )
-     apply (smt (verit, best) Multiseries_Expansion.intyness_0 mult_less_cancel_left2 nat_less_real_le pi_ge_two real_sqrt_gt_1_iff stir_ge0 zero_le_log_cancel_iff)
-    apply (simp add: zero_less_mult_iff add_pos_nonneg stir_ge0)
-    using mono_G
-    by (simp add: stir_eq_stirG stirG_def monotone_on_def)
+  show "logstir i \<le> logstir j"
+  proof (cases "j=0")
+    case True
+    with \<open>i\<le>j\<close> show ?thesis
+      by auto
+  next
+    case False
+    with pi_ge_two have "1 * 1 \<le> 2 * pi * j"
+      by (intro mult_mono) auto
+    with False stir_ge0 [of j] have *: "1 * 1 \<le> (1 + stir j) * sqrt (2 * pi * real j)"
+      by (intro mult_mono) auto
+    with \<open>i \<le> j\<close> mono_G show ?thesis
+      by (auto simp add: logstir_def stir_eq_stirG stirG_def monotone_on_def)
+  qed
 qed
 
 definition "ok_fun_94 \<equiv> \<lambda>k. - logstir k"

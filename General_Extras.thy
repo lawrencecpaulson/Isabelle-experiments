@@ -4,145 +4,6 @@ theory General_Extras imports
 
 begin
 
-(*2024-03-21: added*)
-lemma of_nat_int_floor [simp]: "x\<ge>0 \<Longrightarrow> of_nat (nat\<lfloor>x\<rfloor>) = of_int \<lfloor>x\<rfloor>"
-  by auto
-
-(*2024-03-21: added*)
-lemma of_nat_int_ceiling [simp]: "x\<ge>0 \<Longrightarrow> of_nat (nat \<lceil>x\<rceil>) = of_int \<lceil>x\<rceil>"
-  by auto
-
-(*2024-03-21: added*)
-lemma ln_mono: "\<And>x::real. \<lbrakk>x \<le> y; 0 < x; 0 < y\<rbrakk> \<Longrightarrow> ln x \<le> ln y"
-  using ln_le_cancel_iff by presburger
-
-(*2024-03-21: added*)
-lemma concave_onD:
-  assumes "concave_on A f"
-  shows "\<And>t x y. t \<ge> 0 \<Longrightarrow> t \<le> 1 \<Longrightarrow> x \<in> A \<Longrightarrow> y \<in> A \<Longrightarrow>
-    f ((1 - t) *\<^sub>R x + t *\<^sub>R y) \<ge> (1 - t) * f x + t * f y"
-  using assms by (auto simp: concave_on_iff)
-
-(*2024-03-21: added*)
-lemma concave_onD_Icc:
-  assumes "concave_on {x..y} f" "x \<le> (y :: _ :: {real_vector,preorder})"
-  shows "\<And>t. t \<ge> 0 \<Longrightarrow> t \<le> 1 \<Longrightarrow>
-    f ((1 - t) *\<^sub>R x + t *\<^sub>R y) \<ge> (1 - t) * f x + t * f y"
-  using assms(2) by (intro concave_onD [OF assms(1)]) simp_all
-
-(*2024-03-21: added*)
-lemma concave_onD_Icc':
-  assumes "concave_on {x..y} f" "c \<in> {x..y}"
-  defines "d \<equiv> y - x"
-  shows "f c \<ge> (f y - f x) / d * (c - x) + f x"
-proof -
-  have "- f c \<le> (f x - f y) / d * (c - x) - f x"
-    using assms convex_onD_Icc' [of x y "\<lambda>x. - f x" c]
-    by (simp add: concave_on_def)
-  then show ?thesis
-    by (smt (verit, best) divide_minus_left mult_minus_left)
-qed
-
-(*2024-03-21: added*)
-lemma concave_onD_Icc'':
-  assumes "concave_on {x..y} f" "c \<in> {x..y}"
-  defines "d \<equiv> y - x"
-  shows "f c \<ge> (f x - f y) / d * (y - c) + f y"
-proof -
-  have "- f c \<le> (f y - f x) / d * (y - c) - f y"
-    using assms convex_onD_Icc'' [of x y "\<lambda>x. - f x" c]
-    by (simp add: concave_on_def)
-  then show ?thesis
-    by (smt (verit, best) divide_minus_left mult_minus_left)
-qed
-
-(*2024-03-21: added*)
-lemma convex_on_le_max:
-  fixes a::real
-  assumes "convex_on {x..y} f" and a: "a \<in> {x..y}"
-  shows "f a \<le> max (f x) (f y)"
-proof -
-  have *: "(f y - f x) * (a - x) \<le> (f y - f x) * (y - x)" if "f x \<le> f y"
-    using a that by (intro mult_left_mono) auto
-  have "f a \<le> (f y - f x) / (y - x) * (a - x) + f x" 
-    using assms convex_onD_Icc' by blast
-  also have "\<dots> \<le> max (f x) (f y)"
-    using a *
-    by (simp add: divide_le_0_iff mult_le_0_iff zero_le_mult_iff max_def add.commute mult.commute scaling_mono)
-  finally show ?thesis .
-qed
-
-(*2024-03-21: added*)
-lemma concave_on_ge_min:
-  fixes a::real
-  assumes "concave_on {x..y} f" and a: "a \<in> {x..y}"
-  shows "f a \<ge> min (f x) (f y)"
-proof -
-  have *: "(f y - f x) * (a - x) \<ge> (f y - f x) * (y - x)" if "f x \<ge> f y"
-    using a that by (intro mult_left_mono_neg) auto
-  have "min (f x) (f y) \<le> (f y - f x) / (y - x) * (a - x) + f x"
-    using a * apply (simp add: zero_le_divide_iff mult_le_0_iff zero_le_mult_iff min_def)
-    by (smt (verit, best) nonzero_eq_divide_eq pos_divide_le_eq)
-  also have "\<dots> \<le> f a"
-    using assms concave_onD_Icc' by blast
-  finally show ?thesis .
-qed
-
-(*2024-03-21: added*)
-lemma concave_on_linorderI [intro?]:
-  fixes A :: "('a::{linorder,real_vector}) set"
-  assumes "\<And>t x y. t > 0 \<Longrightarrow> t < 1 \<Longrightarrow> x \<in> A \<Longrightarrow> y \<in> A \<Longrightarrow> x < y \<Longrightarrow>
-    f ((1 - t) *\<^sub>R x + t *\<^sub>R y) \<ge> (1 - t) * f x + t * f y"
-  shows "concave_on A f"
-  by (smt (verit) assms concave_on_def convex_on_linorderI mult_minus_right)
-
-(*2024-03-21: added*)
-lemma concave_on_mul:
-  fixes S::"real set"
-  assumes f: "concave_on S f" and g: "concave_on S g" "convex S"
-  assumes "mono_on S f" "antimono_on S g"
-  assumes fty: "f \<in> S \<rightarrow> {0..}" and gty: "g \<in> S \<rightarrow> {0..}"
-  shows "concave_on S (\<lambda>x. f x * g x)"
-proof (intro concave_on_linorderI)
-  fix t::real and x y
-  assume t: "0 < t" "t < 1" and xy: "x \<in> S" "y \<in> S" "x<y"
-  have inS: "(1-t)*x + t*y \<in> S"
-    using t xy \<open>convex S\<close> by (simp add: convex_alt)
-  have "f x * g y + f y * g x \<ge> f x * g x + f y * g y"
-    using \<open>mono_on S f\<close> \<open>antimono_on S g\<close>
-    unfolding monotone_on_def by (smt (verit, best) left_diff_distrib mult_left_mono xy)
-  with t have *: "t*(1-t) * f x * g y + t*(1-t) * f y * g x \<ge> t*(1-t) * f x * g x + t*(1-t) * f y * g y"
-    by (smt (verit, ccfv_SIG) distrib_left mult_left_mono diff_ge_0_iff_ge mult.assoc)
-  have "(1 - t) * (f x * g x) + t * (f y * g y) \<le> ((1-t) * f x + t * f y) * ((1-t) * g x + t * g y)"
-    using * by (simp add: algebra_simps)
-  also have "\<dots> \<le> ((1-t) * f x + t * f y)*g ((1-t)*x + t*y)"
-    using concave_onD [OF \<open>concave_on S g\<close>, of t x y] t xy fty gty inS
-    by (intro mult_mono add_nonneg_nonneg) (auto simp: Pi_iff zero_le_mult_iff)
-  also have "\<dots> \<le> f ((1-t)*x + t*y) * g ((1-t)*x + t*y)"
-    using concave_onD [OF \<open>concave_on S f\<close>, of t x y] t xy fty gty inS
-    by (intro mult_mono add_nonneg_nonneg) (auto simp: Pi_iff zero_le_mult_iff)
-  finally show "(1 - t) * (f x * g x) + t * (f y * g y)
-           \<le> f ((1 - t) *\<^sub>R x + t *\<^sub>R y) * g ((1 - t) *\<^sub>R x + t *\<^sub>R y)" 
-    by simp
-qed
-
-
-(*2024-03-05: added*)
-lemma all_imp_conj_distrib: "(\<forall>x. P x \<longrightarrow> Q x \<and> R x) \<longleftrightarrow> (\<forall>x. P x \<longrightarrow> Q x) \<and> (\<forall>x. P x \<longrightarrow> R x)"
-  by iprover
-
-(*2024-03-05: added*)
-lemma card_Int_Diff:
-  assumes "finite A"
-  shows "card A = card (A \<inter> B) + card (A - B)"
-  by (simp add: assms card_Diff_subset_Int card_mono)
-
-(*2024-03-05: added*)
-lemma powr_eq_iff:
-  assumes "y>0" "b>1"
-  shows "b powr x = y \<longleftrightarrow> log b y = x"
-  using assms by auto
-
 text \<open>yet another telescope variant, with weaker promises but a different conclusion\<close>
 lemma prod_lessThan_telescope_mult:
   fixes f::"nat \<Rightarrow> 'a::field"
@@ -151,51 +12,10 @@ lemma prod_lessThan_telescope_mult:
   using assms
 by (induction n) (auto simp: divide_simps)
 
-(*2024-02-01: added*)
-lemma prod_lessThan_telescope':
-  fixes f::"nat \<Rightarrow> 'a::field"
-  assumes "\<And>i. i\<le>n \<Longrightarrow> f i \<noteq> 0"
-  shows "(\<Prod>i<n. f i / f (Suc i)) * f n = f 0"
-  using assms by (induction n) auto
-
-(* TODO Move from Multiseries_expansion_bounds*)
-lemma powr_mono': "a \<le> (b::real) \<Longrightarrow> x \<ge> 0 \<Longrightarrow> x \<le> 1 \<Longrightarrow> x powr b \<le> x powr a"
-  using powr_mono[of "-b" "-a" "inverse x"] by (auto simp: powr_def ln_inverse ln_div field_split_simps)
-
-(*NOT FOR THE DISTRIBUTION?*)
 abbreviation set_difference :: "['a set,'a set] \<Rightarrow> 'a set" (infixl "\<setminus>" 65)
   where "A \<setminus> B \<equiv> A-B"
 
-(*2024-02-13: added*)
-lemma induct_nat_012[case_names 0 1 ge2]:
-  "P 0 \<Longrightarrow> P (Suc 0) \<Longrightarrow> (\<And>n. P n \<Longrightarrow> P (Suc n) \<Longrightarrow> P (Suc (Suc n))) \<Longrightarrow> P n"
-proof (induction_schema, pat_completeness)
-  show "wf (Wellfounded.measure id)"
-    by simp
-qed auto
-
 (* most of the remainder belongs in an AFP entry concerned with Ramsey theory*)
-
-thm mult_le_cancel_iff1 (*2024-02-01: renamed and moved*)
-
-(*2024-02-01: added*)
-lemma disjnt_commute: "disjnt A B = disjnt B A"
-  using disjnt_sym by blast
-
-(*2024-02-01: added*)
-lemma prod_telescope:
-  fixes f::"nat \<Rightarrow> 'a::field"
-  assumes "\<And>i. i\<le>n \<Longrightarrow> f (Suc i) \<noteq> 0"
-  shows "(\<Prod>i\<le>n. f i / f (Suc i)) = f 0 / f (Suc n)"
-  using assms by (induction n) auto
-
-(*2024-02-01: added*)
-lemma prod_telescope'':
-  fixes f::"nat \<Rightarrow> 'a::field"
-  assumes "m \<le> n"
-  assumes "\<And>i. i \<in> {m..n} \<Longrightarrow> f i \<noteq> 0"
-  shows   "(\<Prod>i = Suc m..n. f i / f (i - 1)) = f n / (f m)"
-  by (rule dec_induct[OF \<open>m \<le> n\<close>]) (auto simp add: assms field_simps)
 
 lemma sum_odds_even:
   fixes f :: "nat \<Rightarrow> 'a :: ab_group_add"
@@ -267,34 +87,6 @@ proof (rule ccontr)
     using linorder_not_less by auto
 qed
 
-(*2024-02-01: replaced existing one*)
-lemma sum_diff_split:
-  fixes f:: "nat \<Rightarrow> 'a::ab_group_add"
-  assumes "m \<le> n"
-  shows "(\<Sum>i\<le>n. f i) - (\<Sum>i<m. f i) = (\<Sum>i\<le>n - m. f(n - i))"
-proof -
-  have "\<And>i. i \<le> n-m \<Longrightarrow> \<exists>k\<ge>m. k \<le> n \<and> i = n-k"
-    by (metis Nat.le_diff_conv2 add.commute \<open>m\<le>n\<close> diff_diff_cancel diff_le_self order.trans)
-  then have eq: "{..n-m} = (-)n ` {m..n}"
-    by force
-  have inj: "inj_on ((-)n) {m..n}"
-    by (auto simp: inj_on_def)
-  have "(\<Sum>i\<le>n - m. f(n - i)) = (\<Sum>i=m..n. f i)"
-    by (simp add: eq sum.reindex_cong [OF inj])
-  also have "\<dots> = (\<Sum>i\<le>n. f i) - (\<Sum>i<m. f i)"
-    using sum_diff_nat_ivl[of 0 "m" "Suc n" f] assms
-    by (simp only: atLeast0AtMost atLeast0LessThan atLeastLessThanSuc_atLeastAtMost)
-  finally show ?thesis by metis
-qed
-
-(*2024-02-01: added*)
-lemma binomial_fact_pow: "(n choose s) * fact s \<le> n^s"
-proof (cases "s \<le> n")
-  case True
-  then show ?thesis
-    by (smt (verit) binomial_fact_lemma mult.assoc mult.commute fact_div_fact_le_pow fact_nonzero nonzero_mult_div_cancel_right) 
-qed (simp add: binomial_eq_0)
-
 text \<open>useful for counting the number of edges containing a clique\<close>
 lemma card_Pow_diff:
   assumes "A \<subseteq> B" "finite B"
@@ -311,18 +103,6 @@ proof -
   ultimately show ?thesis
     by presburger
 qed
-
-(*2024-02-01: added*)
-context linordered_semidom
-begin
-lemma power_le_one_iff: "0 \<le> a \<Longrightarrow> a ^ n \<le> 1 \<longleftrightarrow> (n = 0 \<or> a \<le> 1)"
-  by (metis (mono_tags) gr0I nle_le one_le_power power_le_one self_le_power power_0)
-lemma power_less1_D: "a^n < 1 \<Longrightarrow> a < 1"
-  using not_le one_le_power by blast
-lemma power_less_one_iff: "0 \<le> a \<Longrightarrow> a ^ n < 1 \<longleftrightarrow> (n > 0 \<and> a < 1)"
-  by (metis (mono_tags) power_one power_strict_mono power_less1_D less_le_not_le neq0_conv power_0)
-end
-
 
 lemma finite_countable_subset:
   assumes "finite A" and A: "A \<subseteq> (\<Union>i::nat. B i)"
@@ -355,134 +135,7 @@ proof -
     by (simp add: sum_divide_distrib nn_integral_count_space_finite)
 qed
 
-(*2024-02-07: added*)
-lemma emeasure_uniform_count_measure_if:
-  "finite A \<Longrightarrow> emeasure (uniform_count_measure A) X = (if X \<subseteq> A then card X / card A else 0)"
-  by (simp add: emeasure_notin_sets emeasure_uniform_count_measure sets_uniform_count_measure)
-
-(*2024-02-07: added*)
-lemma measure_uniform_count_measure_if:
-  "finite A \<Longrightarrow> measure (uniform_count_measure A) X = (if X \<subseteq> A then card X / card A else 0)"
-  by (simp add: measure_uniform_count_measure measure_notin_sets sets_uniform_count_measure)
-
-(*2024-02-07: added*)
-lemma emeasure_point_measure_finite_if:
-  "finite A \<Longrightarrow> emeasure (point_measure A f) X = (if X \<subseteq> A then \<Sum>a\<in>X. f a else 0)"
-  by (simp add: emeasure_point_measure_finite emeasure_notin_sets sets_point_measure)
-
-(*2024-02-07: added*)
-lemma measure_point_measure_finite_if:
-  assumes "finite A" "\<And>x. x \<in> A \<Longrightarrow> f x \<ge> 0"
-  shows "measure (point_measure A f) X = (if X \<subseteq> A then \<Sum>a\<in>X. f a else 0)"
-  by (simp add: Sigma_Algebra.measure_def assms emeasure_point_measure_finite_if subset_eq sum_nonneg)
-
 subsection \<open>Convexity\<close>
-
-(* the definition of convex in the Isabelle2023 library is incorrect: 
-  we speak of a convex function ONLY on a convex set*)
-
-(*2024-02-06: added*)
-lemma mono_on_ident: "mono_on S (\<lambda>x. x)"
-  by (simp add: mono_on_def)
-
-(*2024-02-06: added*)
-lemma mono_on_const:
-  fixes a :: "'a::order" shows "mono_on S (\<lambda>x. a)"
-  by (simp add: mono_on_def)
-
-(*2024-02-07: added*)
-lemma convex_on_iff_concave: "convex_on S f = concave_on S (\<lambda>x. - f x)"
-  by (simp add: concave_on_def)
-
-(*2024-02-07: added*)
-lemma convex_on_ident: "convex_on S (\<lambda>x. x)"
-  by (simp add: convex_on_def)
-
-(*2024-02-07: added*)
-lemma concave_on_ident: "concave_on S (\<lambda>x. x)"
-  by (simp add: concave_on_iff)
-
-(*2024-02-07: added*)
-lemma convex_on_const: "convex_on S (\<lambda>x. a)"
-  by (simp add: convex_on_def flip: distrib_right)
-
-(*2024-02-07: added*)
-lemma concave_on_const: "concave_on S (\<lambda>x. a)"
-  by (simp add: concave_on_iff flip: distrib_right)
-
-(*2024-02-07: added*)
-lemma convex_on_diff:
-  assumes "convex_on S f" and "concave_on S g"
-  shows "convex_on S (\<lambda>x. f x - g x)"
-  using assms concave_on_def convex_on_add by fastforce
-
-(*2024-02-07: added*)
-lemma concave_on_diff:
-  assumes "concave_on S f"
-    and "convex_on S g"
-  shows "concave_on S (\<lambda>x. f x - g x)"
-  using convex_on_diff assms concave_on_def by fastforce
-
-(*2024-02-07: added*)
-lemma concave_on_add:
-  assumes "concave_on S f"
-    and "concave_on S g"
-  shows "concave_on S (\<lambda>x. f x + g x)"
-  using assms convex_on_iff_concave concave_on_diff concave_on_def by fastforce
-
-(*2024-02-07: added*)
-lemma convex_on_cdiv [intro]:
-  fixes c :: real
-  assumes "0 \<le> c" and "convex_on S f"
-  shows "convex_on S (\<lambda>x. f x / c)"
-  unfolding divide_inverse
-  using convex_on_cmul [of "inverse c" S f]
-  by (simp add: mult.commute assms)
-
-(*2024-02-07: added*)
-lemma convex_power_even:
-  assumes "even n"
-  shows "convex_on (UNIV::real set) (\<lambda>x. x^n)"
-proof (intro f''_ge0_imp_convex)
-  show "((\<lambda>x. x ^ n) has_real_derivative of_nat n * x^(n-1)) (at x)" for x
-    by (rule derivative_eq_intros | simp)+
-  show "((\<lambda>x. of_nat n * x^(n-1)) has_real_derivative of_nat n * of_nat (n-1) * x^(n-2)) (at x)" for x
-    by (rule derivative_eq_intros | simp add: eval_nat_numeral)+
-  show "\<And>x. 0 \<le> real n * real (n - 1) * x ^ (n - 2)"
-    using assms by (auto simp: zero_le_mult_iff zero_le_even_power)
-qed auto
-
-(*2024-02-07: added*)
-lemma convex_power_odd:
-  assumes "odd n"
-  shows "convex_on {0::real..} (\<lambda>x. x^n)"
-proof (intro f''_ge0_imp_convex)
-  show "((\<lambda>x. x ^ n) has_real_derivative of_nat n * x^(n-1)) (at x)" for x
-    by (rule derivative_eq_intros | simp)+
-  show "((\<lambda>x. of_nat n * x^(n-1)) has_real_derivative of_nat n * of_nat (n-1) * x^(n-2)) (at x)" for x
-    by (rule derivative_eq_intros | simp add: eval_nat_numeral)+
-  show "\<And>x. x \<in> {0::real..} \<Longrightarrow> 0 \<le> real n * real (n - 1) * x ^ (n - 2)"
-    using assms by (auto simp: zero_le_mult_iff zero_le_even_power)
-qed auto
-
-(*2024-02-07: added*)
-lemma convex_power2: "convex_on (UNIV::real set) power2"
-  by (simp add: convex_power_even)
-
-(*2024-02-07: added*)
-lemma sum_squared_le_sum_of_squares:
-  fixes f :: "'a \<Rightarrow> real"
-  assumes "\<And>y. y\<in>Y \<Longrightarrow> f y \<ge> 0" "finite Y" "Y \<noteq> {}"
-  shows "(\<Sum>y\<in>Y. f y)\<^sup>2 \<le> (\<Sum>y\<in>Y. (f y)\<^sup>2) * card Y"
-proof (cases "finite Y \<and> Y \<noteq> {}")
-  case True
-  have "(\<Sum>i\<in>Y. f i / real (card Y))\<^sup>2 \<le> (\<Sum>i\<in>Y. (f i)\<^sup>2 / real (card Y))"
-    using assms convex_on_sum [OF _ _ convex_power2, where a = "\<lambda>x. 1 / real(card Y)" and S=Y]
-    by simp
-  then show ?thesis
-    using assms  
-    by (simp add: divide_simps power2_eq_square split: if_split_asm flip: sum_divide_distrib)
-qed auto
 
 lemma mono_on_mul:
   fixes f::"'a::ord \<Rightarrow> 'b::ordered_semiring"
@@ -498,34 +151,7 @@ lemma mono_on_prod:
   shows "mono_on S (\<lambda>x. prod (\<lambda>i. f i x) I)"
   using assms
   by (induction I rule: infinite_finite_induct)
-     (auto simp: mono_on_const Pi_iff prod_nonneg mono_on_mul)
-
-(*2024-03-21: added*)
-lemma convex_on_mul:
-  fixes S::"real set"
-  assumes "convex_on S f" "convex_on S g" "convex S"
-  assumes "mono_on S f" "mono_on S g"
-  assumes fty: "f \<in> S \<rightarrow> {0..}" and gty: "g \<in> S \<rightarrow> {0..}"
-  shows "convex_on S (\<lambda>x. f x*g x)"
-proof (intro convex_on_linorderI)
-  fix t::real and x y
-  assume t: "0 < t" "t < 1" and xy: "x \<in> S" "y \<in> S" "x<y"
-  have *: "t*(1-t) * f x * g y + t*(1-t) * f y * g x \<le> t*(1-t) * f x * g x + t*(1-t) * f y * g y"
-    using t \<open>mono_on S f\<close> \<open>mono_on S g\<close> xy
-    by (smt (verit, ccfv_SIG) left_diff_distrib mono_onD mult_left_less_imp_less zero_le_mult_iff)
-  have inS: "(1-t)*x + t*y \<in> S"
-    using t xy \<open>convex S\<close> by (simp add: convex_alt)
-  then have "f ((1-t)*x + t*y) * g ((1-t)*x + t*y) \<le> ((1-t) * f x + t * f y)*g ((1-t)*x + t*y)"
-    using convex_onD [OF \<open>convex_on S f\<close>, of t x y] t xy fty gty
-    by (intro mult_mono add_nonneg_nonneg) (auto simp: Pi_iff zero_le_mult_iff)
-  also have "\<dots> \<le> ((1-t) * f x + t * f y) * ((1-t)*g x + t*g y)"
-    using convex_onD [OF \<open>convex_on S g\<close>, of t x y] t xy fty gty inS
-    by (intro mult_mono add_nonneg_nonneg) (auto simp: Pi_iff zero_le_mult_iff)
-  also have "\<dots> \<le> (1-t) * (f x*g x) + t * (f y*g y)"
-    using * by (simp add: algebra_simps)
-  finally show "f ((1-t) *\<^sub>R x + t *\<^sub>R y) * g ((1-t) *\<^sub>R x + t *\<^sub>R y) \<le> (1-t)*(f x*g x) + t*(f y*g y)" 
-    by simp
-qed
+     (auto simp: mono_on_const Pi_iff prod_nonneg mono_on_mul mono_onI)
 
 lemma convex_gchoose_aux: "convex_on {k-1..} (\<lambda>a. prod (\<lambda>i. a - of_nat i) {0..<k})"
 proof (induction k)
@@ -534,10 +160,16 @@ proof (induction k)
     by (simp add: convex_on_def)
 next
   case (Suc k)
-  with convex_on_subset have "convex_on {real k..} (\<lambda>a. (\<Prod>i = 0..<k. a - real i) * (a - real k))"
-    by (intro convex_on_mul convex_on_diff convex_on_ident convex_on_const
-              concave_on_const mono_on_mul mono_on_prod;
-        fastforce simp add: Pi_iff prod_nonneg mono_onI)+
+  have "convex_on {real k..} (\<lambda>a. (\<Prod>i = 0..<k. a - real i) * (a - real k))"
+  proof (intro convex_on_mul convex_on_diff)
+    show "convex_on {real k..} (\<lambda>x. \<Prod>i = 0..<k. x - real i)"
+      using Suc convex_on_subset by fastforce
+    show "mono_on {real k..} (\<lambda>x. \<Prod>i = 0..<k. x - real i)"
+      by (force simp: monotone_on_def intro!: prod_mono)
+  next
+    show "(\<lambda>x. \<Prod>i = 0..<k. x - real i) \<in> {real k..} \<rightarrow> {0..}"
+      by (auto intro!: prod_nonneg)
+  qed (auto simp: convex_on_ident concave_on_const mono_onI)
   then show ?case
     by simp
 qed
@@ -596,7 +228,7 @@ proof (intro convex_on_linorderI)
         by (simp add: fk convex_bound_lt order_less_imp_le segment_bound_lemma t)
     qed
   qed
-qed
+qed auto
 
 lemma convex_mfact: 
   assumes "k>0"
@@ -604,7 +236,9 @@ lemma convex_mfact:
   unfolding mfact_def
 proof (rule convex_on_extend)
   show "convex_on {real (k - 1)..} (\<lambda>a. if a < real k - 1 then 0 else \<Prod>i = 0..<k. a - real i)"
-    using convex_gchoose_aux by (auto simp add: convex_on_def prod_nonneg)
+    using convex_gchoose_aux [of k] assms
+    apply (simp add: convex_on_def)
+    by (metis eq_diff_eq le_add_same_cancel2 linorder_not_le segment_bound_lemma)
   show "mono_on {real (k - 1)..} (\<lambda>a. if a < real k - 1 then 0 else \<Prod>i = 0..<k. a - real i)"
     using \<open>k > 0\<close> by (auto simp: mono_on_def intro!: prod_mono)
 qed (use assms in auto)
@@ -673,125 +307,7 @@ next
 qed
 
 
-(*XXXXXX*)
-
-(*REPLACED 2024-02-19*)
-context linordered_semidom
-begin
-
-lemma prod_nonneg: "(\<And>a. a\<in>A \<Longrightarrow> 0 \<le> f a) \<Longrightarrow> 0 \<le> prod f A"
-  by (induct A rule: infinite_finite_induct) simp_all
-
-lemma prod_pos: "(\<And>a. a\<in>A \<Longrightarrow> 0 < f a) \<Longrightarrow> 0 < prod f A"
-  by (induct A rule: infinite_finite_induct) simp_all
-
-end
-
-(*added 2024-02-19*)
-lemma powr01_less_one: 
-  fixes a::real 
-  assumes "0 < a" "a < 1"  
-  shows "a powr e < 1 \<longleftrightarrow> e>0"
-proof
-  show "a powr e < 1 \<Longrightarrow> e>0"
-    using assms not_less_iff_gr_or_eq powr_less_mono2_neg by fastforce
-  show "e>0 \<Longrightarrow> a powr e < 1"
-    by (metis assms less_eq_real_def powr_less_mono2 powr_one_eq_one)
-qed
-
-(*added 2024-02-19*)
-lemma prod_powr_distrib:
-  fixes  x :: "'a \<Rightarrow> real"
-  assumes "\<And>i. i\<in>I \<Longrightarrow> x i \<ge> 0"
-  shows "(prod x I) powr r = (\<Prod>i\<in>I. x i powr r)"
-  using assms
-  by (induction I rule: infinite_finite_induct) (auto simp add: powr_mult prod_nonneg)
-
-(*added 2024-02-19*)
-lemma exp_powr_real:
-  fixes x::real shows "exp x powr y = exp (x*y)"
-  by (simp add: powr_def)
-
-(*added 2024-02-19*)
-lemma exp_minus_ge: 
-  fixes x::real shows "1 - x \<le> exp (-x)"
-  by (smt (verit) exp_ge_add_one_self)
-
-(*added 2024-02-19*)
-lemma exp_minus_greater: 
-  fixes x::real shows "1 - x < exp (-x) \<longleftrightarrow> x \<noteq> 0"
-  by (smt (verit) exp_minus_ge exp_eq_one_iff exp_gt_zero ln_eq_minus_one ln_exp)
-
-(*added 2024-02-19*)
-lemma exp_powr_complex:
-  fixes x::complex 
-  assumes "-pi < Im(x)" "Im(x) \<le> pi"
-  shows "exp x powr y = exp (x*y)"
-  using assms by (simp add: powr_def mult.commute)
-
-
-(*added 2024-02-19*)
-lemma concave_on_sum:
-  fixes a :: "'a \<Rightarrow> real"
-    and y :: "'a \<Rightarrow> 'b::real_vector"
-    and f :: "'b \<Rightarrow> real"
-  assumes "finite S" "S \<noteq> {}"
-    and "concave_on C f" 
-    and "convex C"  (*DELETE FOR 2024*)
-    and "(\<Sum>i \<in> S. a i) = 1"
-    and "\<And>i. i \<in> S \<Longrightarrow> a i \<ge> 0"
-    and "\<And>i. i \<in> S \<Longrightarrow> y i \<in> C"
-  shows "f (\<Sum>i \<in> S. a i *\<^sub>R y i) \<ge> (\<Sum>i \<in> S. a i * f (y i))"
-proof -
-  have "(uminus \<circ> f) (\<Sum>i\<in>S. a i *\<^sub>R y i) \<le> (\<Sum>i\<in>S. a i * (uminus \<circ> f) (y i))"
-  proof (intro convex_on_sum)
-    show "convex_on C (uminus \<circ> f)"
-      by (simp add: assms convex_on_iff_concave)
-  qed (use assms in auto)
-  then show ?thesis
-    by (simp add: sum_negf o_def)
-qed
-
-(*added 2024-02-19*)
-lemma arith_geom_mean:
-  fixes x :: "'a \<Rightarrow> real"
-  assumes "finite S" "S \<noteq> {}"
-    and x: "\<And>i. i \<in> S \<Longrightarrow> x i \<ge> 0"
-  shows "(\<Sum>i \<in> S. x i / card S) \<ge> (\<Prod>i \<in> S. x i) powr (1 / card S)"
-proof (cases "\<exists>i\<in>S. x i = 0")
-  case True
-  then have "(\<Prod>i \<in> S. x i) = 0"
-    by (simp add: \<open>finite S\<close>)
-  moreover have "(\<Sum>i \<in> S. x i / card S) \<ge> 0"
-    by (simp add: sum_nonneg x)
-  ultimately show ?thesis
-    by simp
-next
-  case False
-  have "ln (\<Sum>i \<in> S. (1 / card S) *\<^sub>R x i) \<ge> (\<Sum>i \<in> S. (1 / card S) * ln (x i))"
-  proof (intro concave_on_sum)
-    show "concave_on {0<..} ln"
-      by (simp add: ln_concave)
-    show "\<And>i. i\<in>S \<Longrightarrow> x i \<in> {0<..}"
-      using False x by fastforce
-  qed (use assms False in auto)
-  moreover have "(\<Sum>i \<in> S. (1 / card S) *\<^sub>R x i) > 0"
-    using False assms by (simp add: card_gt_0_iff less_eq_real_def sum_pos)
-  ultimately have "(\<Sum>i \<in> S. (1 / card S) *\<^sub>R x i) \<ge> exp (\<Sum>i \<in> S. (1 / card S) * ln (x i))"
-    using ln_ge_iff by blast
-  then have "(\<Sum>i \<in> S. x i / card S) \<ge> exp (\<Sum>i \<in> S. ln (x i) / card S)"
-    by (simp add: divide_simps)
-  then show ?thesis
-    using assms False
-    by (smt (verit, ccfv_SIG) divide_inverse exp_ln exp_powr_real exp_sum inverse_eq_divide prod.cong prod_powr_distrib) 
-qed
-
-
-(*added 2024-02-19*)
-lemma powr_half_sqrt_powr: "0 \<le> x \<Longrightarrow> x powr (a/2) = sqrt(x powr a)"
-  by (metis divide_inverse mult.left_neutral powr_ge_pzero powr_half_sqrt powr_powr)
-
-(*added 2024-02-19*)
+thm has_derivative_powr (*THIS VERSION IS SIMILAR BUT  NOT THE SAME AS A REPOSITORY VERSION*)
 lemma has_derivative_powr [derivative_intros]:
   assumes "\<And>x. (f has_derivative f') (at x)" "\<And>x. (g has_derivative g') (at x)"
     "\<And>x. f x > (0::real)"
@@ -807,39 +323,10 @@ proof -
   done
 qed
 
-(*added 2024-02-19*)
-lemma has_derivative_const_powr [derivative_intros]:
-  assumes "\<And>x. (f has_derivative f') (at x)" "a \<noteq> (0::real)"
-  shows "((\<lambda>x. a powr (f x)) has_derivative (\<lambda>y. f' y * ln a * a powr (f x))) (at x)"
-  using assms
-  apply (simp add: powr_def)
-  apply (rule assms derivative_eq_intros refl)+
-  done
-
-(*added 2024-02-19*)
-lemma has_real_derivative_const_powr [derivative_intros]:
-  assumes "\<And>x. (f has_real_derivative f' x) (at x)"
-    "a \<noteq> (0::real)"
-  shows "((\<lambda>x. a powr (f x)) has_real_derivative (f' x * ln a * a powr (f x))) (at x)"
-  using assms
-  apply (simp add: powr_def)
-  apply (rule assms derivative_eq_intros refl | simp)+
-  done
-
-(*2024-02-07: added*)
-lemma binomial_mono:
-  assumes "m \<le> n" shows "m choose k \<le> n choose k"
-proof -
-  have "{K. K \<subseteq> {0..<m} \<and> card K = k} \<subseteq> {K. K \<subseteq> {0..<n} \<and> card K = k}"
-    using assms by auto
-  then show ?thesis
-    by (simp add: binomial_def card_mono)
-qed
 
 (*These can't go into Binomial because they need type "real"
 They could go to an AFP entry on Ramsey bounds*)
 
-thm choose_two
 lemma choose_two_real: "of_nat (n choose 2) = real n * (real n - 1) / 2"
 proof (cases "even n")
   case True
@@ -885,26 +372,6 @@ lemma gbinomial_is_prod: "(a gchoose k) = (\<Prod>i<k. (a - of_nat i) / (1 + of_
   unfolding gbinomial_prod_rev
   by (induction k; simp add: divide_simps)
 
-(*2024-02-07: added*)
-lemma (in linordered_semidom) prod_mono_strict:
-  assumes "i \<in> A"
-  assumes "finite A"
-  assumes "\<And>i. i \<in> A \<Longrightarrow> 0 \<le> f i \<and> f i \<le> g i"
-  assumes "\<And>i. i \<in> A \<Longrightarrow> 0 < g i"
-  assumes "f i < g i"
-  shows   "prod f A < prod g A"
-proof -
-  have "prod f A = f i * prod f (A - {i})"
-    using assms by (intro prod.remove)
-  also have "\<dots> \<le> f i * prod g (A - {i})"
-    using assms by (intro mult_left_mono prod_mono) auto
-  also have "\<dots> < g i * prod g (A - {i})"
-    using assms by (intro mult_strict_right_mono prod_pos) auto
-  also have "\<dots> = prod g A"
-    using assms by (intro prod.remove [symmetric])
-  finally show ?thesis .
-qed
-
 lemma fact_less_fact_power:
   assumes "1 < s" "s \<le> n" shows "fact n < fact (n - s) * real n ^ s"
 proof -
@@ -922,21 +389,6 @@ proof -
     by (simp add: fact_prod)
   finally show ?thesis .
 qed
-
-(*2024-02-07: added*)
-lemma measure_space_Pow_eq:
-  assumes "\<And>X. X \<in> Pow \<Omega> \<Longrightarrow> \<mu> X = \<mu>' X"
-  shows "measure_space \<Omega> (Pow \<Omega>) \<mu> = measure_space \<Omega> (Pow \<Omega>) \<mu>'"
-  by (metis assms measure_space_def ring_of_sets.positive_cong_eq ring_of_sets_Pow sigma_algebra.countably_additive_eq)
-
-(*2024-02-07: added*)
-lemma finite_count_space: "finite \<Omega> \<Longrightarrow> count_space \<Omega> = measure_of \<Omega> (Pow \<Omega>) card"
-  unfolding count_space_def
-  by (smt (verit, best) PowD Pow_top count_space_def finite_subset measure_of_eq sets_count_space sets_measure_of)
-
-(*2024-02-07: added*)
-lemma sigma_sets_finite: "\<lbrakk>x \<in> sigma_sets \<Omega> (Pow \<Omega>); finite \<Omega>\<rbrakk> \<Longrightarrow> finite x"
-  by (meson finite_subset order.refl sigma_sets_into_sp)
 
 end
 
