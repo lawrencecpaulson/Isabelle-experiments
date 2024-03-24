@@ -1,5 +1,5 @@
 theory General_Extras imports
-  "HOL-Analysis.Analysis" 
+  "HOL-Analysis.Analysis"  "Landau_Symbols.Landau_More"
   "HOL-ex.Sketch_and_Explore"
 
 begin
@@ -389,6 +389,74 @@ proof -
     by (simp add: fact_prod)
   finally show ?thesis .
 qed
+
+lemma smallo_multiples:
+  assumes f: "f \<in> o(real)" and "k>0"
+  shows "(\<lambda>n. f (k * n)) \<in> o(real)"
+proof (clarsimp simp: smallo_def)
+  fix c::real
+  assume "c>0"
+  then have "c/k > 0"
+    by (simp add: assms)
+  with assms have "\<forall>\<^sub>F n in sequentially. \<bar>f n\<bar> \<le> c / real k * n"
+    by (force simp: smallo_def del: divide_const_simps)
+  then obtain N where "\<And>n. n\<ge>N \<Longrightarrow> \<bar>f n\<bar> \<le> c/k * n"
+    by (meson eventually_at_top_linorder)
+  then have "\<And>m. (k*m)\<ge>N \<Longrightarrow> \<bar>f (k*m)\<bar> \<le> c/k * (k*m)"
+    by blast
+  with \<open>k>0\<close> have "\<forall>\<^sub>F m in sequentially. \<bar>f (k*m)\<bar> \<le> c/k * (k*m)"
+    by (smt (verit, del_insts) One_nat_def Suc_leI eventually_at_top_linorderI mult_1_left mult_le_mono)
+  then show "\<forall>\<^sub>F n in sequentially. \<bar>f (k * n)\<bar> \<le> c * n"
+    by eventually_elim (use \<open>k>0\<close> in auto)
+qed
+
+subsection \<open>An asymptotic form for binomial coefficients via Stirling's formula\<close>
+
+text \<open>From Appendix D.3, page 56\<close>
+
+lemma const_smallo_real: "(\<lambda>n. x) \<in> o(real)"
+  by real_asymp
+
+lemma o_real_shift:
+  assumes "f \<in> o(real)"
+  shows "(\<lambda>i. f(i+j)) \<in> o(real)"
+  unfolding smallo_def
+proof clarify
+  fix c :: real
+  assume "(0::real) < c"
+  then have *: "\<forall>\<^sub>F i in sequentially. norm (f i) \<le> c/2 * norm i"
+    using assms half_gt_zero landau_o.smallD by blast
+  have "\<forall>\<^sub>F i in sequentially. norm (f (i + j)) \<le> c/2 * norm (i + j)"
+    using eventually_all_ge_at_top [OF *]
+    by (metis (mono_tags, lifting) eventually_sequentially le_add1)
+  then have "\<forall>\<^sub>F i in sequentially. i\<ge>j \<longrightarrow> norm (f (i + j)) \<le> c * norm i"
+    apply eventually_elim
+    apply clarsimp
+    by (smt (verit, best) \<open>0 < c\<close> mult_left_mono nat_distrib(2) of_nat_mono)
+  then show "\<forall>\<^sub>F i in sequentially. norm (f (i + j)) \<le> c * norm i"
+    using eventually_mp by fastforce
+qed
+
+lemma tendsto_zero_imp_o1:
+  fixes a :: "nat \<Rightarrow> real"
+  assumes "a \<longlonglongrightarrow> 0"
+  shows "a \<in> o(1)"
+proof -
+  have "\<forall>\<^sub>F n in sequentially. \<bar>a n\<bar> \<le> c" if "c>0" for c
+  proof -
+    have "\<forall>\<^sub>F n in sequentially. \<bar>a n\<bar> < c"
+      by (metis assms order_tendstoD(2) tendsto_rabs_zero_iff that)
+    then show ?thesis
+      by (meson eventually_sequentially less_eq_real_def)
+  qed
+  then show ?thesis
+    by (auto simp: smallo_def)
+qed
+
+lemma tendsto_imp_o1:
+  assumes "a \<longlonglongrightarrow> x"
+  shows "(\<lambda>n. norm (a n - x)) \<in> o(1)"
+  by (simp add: LIM_zero assms tendsto_zero_imp_o1 tendsto_norm_zero)
 
 end
 
