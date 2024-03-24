@@ -75,6 +75,12 @@ lemma tendsto_imp_o1:
 
 definition "stir \<equiv> \<lambda>n. fact n / (sqrt (2 * pi * n) * (n / exp 1) ^ n) - 1"
 
+definition "stir1 \<equiv> \<lambda>n. Gamma (n+1) / (sqrt (2 * pi * n) * (n / exp 1) powr n) - 1"
+
+lemma AA: "n>0 \<Longrightarrow> stir n = stir1 (real n)"
+apply (simp add: stir1_def stir_def flip: Gamma_fact)
+  by (simp add: Groups.add_ac(2) powr_realpow)
+
 lemma stir_ge0: "n>0 \<Longrightarrow> stir n \<ge> 0"
   using fact_bounds[of n] by (simp add: stir_def)
 
@@ -88,6 +94,22 @@ lemma fact_eq_stir_times: "n \<noteq> 0 \<Longrightarrow> fact n = (1 + stir n) 
   by (simp add: stir_def)
 
 definition "logstir \<equiv> \<lambda>n. if n=0 then 0 else log 2 ((1 + stir n) * sqrt (2 * pi * n))"
+
+text \<open>Thank you, Manuel!\<close>
+lemma ME: "0 < x \<Longrightarrow> ln x < Digamma (x + 1)"
+  sorry
+
+lemma A:
+  assumes "x>0"
+  shows "\<exists>D. ((\<lambda>n. ((Gamma (n+1) / ( (n / exp 1) powr n)))) has_real_derivative D) (at x) \<and> D > 0" 
+  using assms
+  unfolding stir1_def 
+  apply (intro derivative_eq_intros exI conjI | rule refl has_real_derivative_powr' | force)+
+     apply (intro derivative_eq_intros exI conjI | rule refl has_real_derivative_powr' | force)+
+  apply (simp add: ln_div pos_prod_lt)
+  apply (intro divide_pos_pos add_pos_pos mult_pos_pos)
+    apply (auto simp: ME)
+  done
 
 lemma logstir_o_real: "logstir \<in> o(real)"
 proof -
@@ -126,6 +148,33 @@ proof-
     by (simp add: logstir_def fact_eq_stir_times)
 qed
 
+lemma C: "mono_on {0<..} (\<lambda>x::real. ((Gamma (x+1) / ( (x / exp 1) powr x))))"
+  unfolding monotone_on_def 
+  using  DERIV_pos_imp_increasing [OF _ A] less_eq_real_def by force
+
+lemma D: "(1 + stir i) * sqrt (2 * pi * real i) = (Gamma (real i + 1) / ( (i / exp 1) powr i))"
+proof (cases "i=0")
+  case False
+  then show ?thesis
+    by (simp add: AA stir1_def)
+qed auto
+
+lemma B: "mono logstir"
+proof (clarsimp simp: monotone_def)
+  fix i j::nat
+  assume "i\<le>j"
+  then show "logstir i \<le> logstir j"
+    apply (simp add: logstir_def)
+    apply (auto simp: )
+     apply (smt (verit, best) Multiseries_Expansion.intyness_0 mult_less_cancel_left2 nat_less_real_le pi_ge_two real_sqrt_gt_1_iff stir_ge0 zero_le_log_cancel_iff)
+    apply (subst log_le_cancel_iff)
+       apply (simp add: )
+    using nat_less_real_le stir_ge0 apply force
+     apply (smt (verit, best) Multiseries_Expansion.intyness_0 m2pi_less_pi mult_pos_pos nat_less_real_le of_nat_mono real_sqrt_gt_0_iff stir_ge0)
+    using C
+    by (simp add: D monotone_on_def)
+qed
+
 definition "ok_fun_94 \<equiv> \<lambda>k. - logstir k"
 
 lemma ok_fun_94: "ok_fun_94 \<in> o(real)"
@@ -138,13 +187,12 @@ lemma fact_9_4:
   shows "k+l choose l \<ge> 2 powr ok_fun_94 k * \<gamma> powr (-l) * (1-\<gamma>) powr (-k)" 
 proof -
   have *: "ok_fun_94 k \<le> logstir (k + l) - (logstir k + logstir l)"
-apply (auto simp: ok_fun_94_def)
-    sorry
+    using B by (auto simp: ok_fun_94_def monotone_def)
   have "2 powr ok_fun_94 k * \<gamma> powr (- real l) * (1-\<gamma>) powr (- real k)
       = (2 powr ok_fun_94 k) * (k+l) powr(k+l) / (k powr k * l powr l)"
     by (simp add: \<gamma>_def powr_minus powr_add powr_divide divide_simps)
   also have "... \<le> (2 powr (logstir (k+l)) / (2 powr (logstir k)  * 2 powr (logstir l)))
-                 * (k+l) powr(k+l) / (k powr k * l powr l)"
+                 * (k+l) powr (k+l) / (k powr k * l powr l)"
     by (metis "*" divide_nonneg_nonneg mult_right_mono powr_add powr_diff powr_ge_pzero powr_mono semiring_norm(92) times_divide_eq_right zero_compare_simps(4))
   also have "... = fact(k+l) / (fact k * fact l)"
     using l by (simp add: logfact_eq_stir_times powr_add divide_simps flip: powr_realpow)
@@ -156,7 +204,7 @@ qed
 context Book
 begin
 
-definition "ok_fun_9_3g \<equiv> \<lambda>\<gamma> k. (nat \<lceil>k powr (3/4)\<rceil>) * log 2 k - (ok_fun_X_7_1 \<gamma> k + ok_fun_94 k) + 1"
+definition "ok_fun_9_3g \<equiv> \<lambda>\<gamma> k. (nat \<lceil>k powr (3/4)\<rceil>) * log 2 k - (ok_fun_71 \<gamma> k + ok_fun_94 k) + 1"
 
 lemma ok_fun_9_3g: 
   assumes "0 < \<gamma>" "\<gamma> < 1"
@@ -166,7 +214,7 @@ proof -
     by real_asymp
   then show ?thesis
     unfolding ok_fun_9_3g_def
-    by (intro ok_fun_X_7_1 [OF assms] ok_fun_94 sum_in_smallo const_smallo_real)
+    by (intro ok_fun_71 [OF assms] ok_fun_94 sum_in_smallo const_smallo_real)
 qed
 
 definition "ok_fun_9_3h \<equiv> \<lambda>\<gamma> k. (2 / (1-\<gamma>)) * k powr (19/20) * (ln \<gamma> + 2 * ln k)
@@ -261,15 +309,15 @@ proof -
 
   have powr_combine_right: "x powr a * (x powr b * y) = x powr (a+b) * y" for x y a b::real
     by (simp add: powr_add)
-  have "(2 powr ok_fun_X_7_1 \<gamma> k * 2 powr ok_fun_94 k) * (\<beta>/\<gamma>) ^ card \<S> * (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) / 2)
-      \<le> 2 powr ok_fun_X_7_1 \<gamma> k * \<gamma>^l * (1-\<gamma>) ^ t * (\<beta>/\<gamma>) ^ card \<S> * (exp (-\<delta>*k) * (k+l choose l) / 2)"
-    using \<gamma>01 \<open>0<\<beta>\<close> mult_right_mono [OF f, of "2 powr ok_fun_X_7_1 \<gamma> k * \<gamma>^l * (1-\<gamma>) ^ t * (\<beta>/\<gamma>) ^ card \<S> * (exp (-\<delta>*k)) / 2"]
+  have "(2 powr ok_fun_71 \<gamma> k * 2 powr ok_fun_94 k) * (\<beta>/\<gamma>) ^ card \<S> * (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) / 2)
+      \<le> 2 powr ok_fun_71 \<gamma> k * \<gamma>^l * (1-\<gamma>) ^ t * (\<beta>/\<gamma>) ^ card \<S> * (exp (-\<delta>*k) * (k+l choose l) / 2)"
+    using \<gamma>01 \<open>0<\<beta>\<close> mult_right_mono [OF f, of "2 powr ok_fun_71 \<gamma> k * \<gamma>^l * (1-\<gamma>) ^ t * (\<beta>/\<gamma>) ^ card \<S> * (exp (-\<delta>*k)) / 2"]
     by (simp add: mult_ac zero_le_mult_iff powr_minus powr_diff divide_simps powr_realpow)
-  also have "\<dots> \<le> 2 powr ok_fun_X_7_1 \<gamma> k * \<gamma>^l * (1-\<gamma>) ^ t * (\<beta>/\<gamma>) ^ card \<S> * card X0"
+  also have "\<dots> \<le> 2 powr ok_fun_71 \<gamma> k * \<gamma>^l * (1-\<gamma>) ^ t * (\<beta>/\<gamma>) ^ card \<S> * card X0"
   proof (intro mult_left_mono order_refl)
     show "exp (- \<delta> * real k) * real (k + l choose l) / 2 \<le> real (card X0)"
       using X0ge nge by force
-    show "0 \<le> 2 powr ok_fun_X_7_1 \<gamma> k * \<gamma> ^ l * (1-\<gamma>) ^ t * (\<beta>/\<gamma>) ^ card \<S>"
+    show "0 \<le> 2 powr ok_fun_71 \<gamma> k * \<gamma> ^ l * (1-\<gamma>) ^ t * (\<beta>/\<gamma>) ^ card \<S>"
       using \<gamma>01 bigbeta_ge0 by (force simp: \<beta>_def)
   qed
   also have "\<dots> \<le> card (Xseq \<gamma> l k m)"
@@ -295,7 +343,7 @@ proof -
     show "0 \<le> real (nat \<lceil>k powr (3/4)\<rceil>)"
       by linarith
   qed (use lk in auto)
-  finally have "2 powr (ok_fun_X_7_1 \<gamma> k + ok_fun_94 k) * (\<beta>/\<gamma>) ^ card \<S>
+  finally have "2 powr (ok_fun_71 \<gamma> k + ok_fun_94 k) * (\<beta>/\<gamma>) ^ card \<S>
                * exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) / 2
               \<le> 2 powr ((nat \<lceil>real k powr (3/4)\<rceil>) * log 2 k)"
     by (simp add: powr_add)
