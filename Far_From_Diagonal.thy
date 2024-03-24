@@ -5,6 +5,10 @@ theory Far_From_Diagonal
 
 begin
 
+subsection \<open>Fact D.3 from the Appendix\<close>
+
+text \<open>And hence, Fact 9.4\<close>
+
 definition "stir \<equiv> \<lambda>n. fact n / (sqrt (2 * pi * n) * (n / exp 1) ^ n) - 1"
 
 text \<open>Generalised to the reals to allow derivatives\<close>
@@ -132,6 +136,39 @@ proof -
     by (simp add: binomial_fact)
   finally show ?thesis .
 qed
+
+subsection \<open>Fact D.2\<close>
+
+text \<open>For Fact 9.6\<close>
+
+lemma D2:
+  fixes k l
+  assumes "t \<le> k"
+  defines "\<gamma> \<equiv> l / (k+l)"
+  shows "(k+l-t choose l) \<le> exp (- \<gamma> * (t-1)^2 / (2*k)) * (k / (k+l))^t * (k+l choose l)"
+proof -
+  have "(k+l-t choose l) * inverse (k+l choose l) = (\<Prod>i<t. (k-i) / (k+l-i))" if  "t \<le> k" for t
+    using that
+  proof (induction t)
+    case 0
+    then show ?case
+      by auto
+  next
+    case (Suc t)
+    then have "t \<le> k"
+      by simp
+    with  Suc.IH [symmetric] Suc(2) show ?case 
+      apply (simp add: field_simps)
+      apply (auto simp: field_simps  of_nat_binomial_eq_mult_binomial_Suc [of _ "k + l - Suc t"])
+      by (smt (verit) of_nat_add Suc_diff_le diff_Suc_Suc distrib_left mult_Suc of_nat_mult trans_le_add1)
+  qed
+
+
+  show ?thesis
+    sorry
+qed
+
+subsection \<open>Lemma 9.3\<close>
 
 context Book
 begin
