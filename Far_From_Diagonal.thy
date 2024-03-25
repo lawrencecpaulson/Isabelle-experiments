@@ -147,7 +147,6 @@ lemma D2:
   defines "\<gamma> \<equiv> l / (real k + real l)"
   shows "(k+l-t choose l) \<le> exp (- \<gamma> * (t-1)^2 / (2*k)) * (k / (k+l))^t * (k+l choose l)"
 proof -
-
   have "(k+l-t choose l) * inverse (k+l choose l) = (\<Prod>i<t. (k-i) / (k+l-i))"
     using \<open>t \<le> k\<close>
   proof (induction t)
@@ -168,33 +167,37 @@ proof -
       unfolding * prod.distrib by (simp add: power_divide)
   qed
   also have "... \<le> (real k / (k+l))^t * exp (- (\<Sum>i<t. real i * real l / (real k * (k+l))))"
-  proof (cases "k=0")
-    case True
-    then show ?thesis
-      by auto
-  next
-    case False
-    show ?thesis 
-      apply (intro mult_left_mono)
-      using \<open>t \<le> k\<close>
-       apply (simp add: exp_sum flip: sum_negf)
-       apply (intro prod_mono conjI)
-        apply (simp add: )
-        apply (smt (verit) assms(1) divide_le_eq_1 le_simps(1) mult_mono mult_nonneg_nonneg nat_less_real_le of_nat_0_le_iff of_nat_add of_nat_diff)
-       apply (rule order_trans)
-        apply (rule exp_minus_ge)
-       apply (simp add: frac_le_eq)
-       apply (auto simp: )
-      by (smt (verit, del_insts) divide_eq_0_iff mult_mono mult_nonneg_nonneg nat_less_real_le not_le of_nat_0_le_iff of_nat_add of_nat_diff zero_compare_simps(5))
+  proof (intro mult_left_mono)
+    have "real i * real l / (real k * real (k + l - i)) \<le> 1"
+      if "i < t" for i
+      using that \<open>t \<le> k\<close> by (simp add: divide_simps mult_mono)
+    moreover have "1 - i * l / (k * real (k + l - i)) \<le> exp (- (i * real l / (k * (k + real l))))" (is "_ \<le> ?R")
+      if "i < t" for i 
+    proof -
+      have "exp (- (i*l / (k * real (k + l - i)))) \<le> ?R"
+        using that \<open>t \<le> k\<close> by (simp add: frac_le_eq divide_le_0_iff mult_mono)
+      with exp_minus_ge show ?thesis
+        by (smt (verit, best)) 
+    qed
+    ultimately show "(\<Prod>i<t. 1 - i * real l / (k * real (k + l - i))) \<le> exp (- (\<Sum>i<t. i * real l / (k * real (k + l))))"
+      by (force simp add: exp_sum simp flip: sum_negf intro!: prod_mono)
+  qed auto
+  finally have *: "(k+l-t choose l) * inverse (k+l choose l) \<le> (real k / (k+l))^t * exp (- (\<Sum>i<t. i * \<gamma> / k))"
+    by (simp add: \<gamma>_def mult.commute)
 
-    using exp_minus_ge
-apply (auto simp: )
-
-
-      done
+  have **: "\<gamma> * (t-1)^2 / (2*k) \<le> (\<Sum>i<t. i * \<gamma> / k)"
+  proof -
+    have g: "(\<Sum>i<t. real i) = real (t*(t-1)) / 2"
+      by (induction t) (auto simp: algebra_simps eval_nat_numeral of_nat_diff)
+    have "\<gamma> * (t-1)^2 / (2*k) \<le> real(t*(t-1)) / 2 * \<gamma>/k"
+      by (simp add: field_simps eval_nat_numeral divide_right_mono mult_mono \<gamma>_def)
+    also have "... = (\<Sum>i<t. i * \<gamma> / k)" 
+      unfolding g [symmetric] by (simp add: sum_distrib_right sum_divide_distrib)
+    finally show ?thesis .
   qed
 
   show ?thesis
+    using * **
     sorry
 qed
 
