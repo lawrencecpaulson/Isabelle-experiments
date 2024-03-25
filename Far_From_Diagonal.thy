@@ -144,25 +144,55 @@ text \<open>For Fact 9.6\<close>
 lemma D2:
   fixes k l
   assumes "t \<le> k"
-  defines "\<gamma> \<equiv> l / (k+l)"
+  defines "\<gamma> \<equiv> l / (real k + real l)"
   shows "(k+l-t choose l) \<le> exp (- \<gamma> * (t-1)^2 / (2*k)) * (k / (k+l))^t * (k+l choose l)"
 proof -
-  have "(k+l-t choose l) * inverse (k+l choose l) = (\<Prod>i<t. (k-i) / (k+l-i))" if  "t \<le> k" for t
-    using that
+
+  have "(k+l-t choose l) * inverse (k+l choose l) = (\<Prod>i<t. (k-i) / (k+l-i))"
+    using \<open>t \<le> k\<close>
   proof (induction t)
-    case 0
-    then show ?case
-      by auto
-  next
     case (Suc t)
     then have "t \<le> k"
       by simp
-    with  Suc.IH [symmetric] Suc(2) show ?case 
+    with Suc.IH [symmetric] Suc(2) show ?case 
       apply (simp add: field_simps)
-      apply (auto simp: field_simps  of_nat_binomial_eq_mult_binomial_Suc [of _ "k + l - Suc t"])
-      by (smt (verit) of_nat_add Suc_diff_le diff_Suc_Suc distrib_left mult_Suc of_nat_mult trans_le_add1)
+      by (metis (no_types, lifting) binomial_absorb_comp diff_Suc_eq_diff_pred diff_add_inverse2 diff_commute of_nat_mult)
+  qed auto
+  also have "... = (real k / (k+l))^t * (\<Prod>i<t. 1 - real i * real l / (real k * (k+l-i)))"
+  proof -
+    have "1 - real i * real l / (real k * (k+l-i)) = ((k-i)/(k+l-i)) * ((k+l) / k)" if "i<t" for i
+      using that \<open>t \<le> k\<close> by (simp add: divide_simps of_nat_diff) argo
+    then have *: "(\<Prod>i<t. 1 - real i * real l / (real k * (k+l-i))) = (\<Prod>i<t. ((k-i)/(k+l-i)) * ((k+l) / k))"
+      by auto
+    show ?thesis
+      unfolding * prod.distrib by (simp add: power_divide)
   qed
+  also have "... \<le> (real k / (k+l))^t * exp (- (\<Sum>i<t. real i * real l / (real k * (k+l))))"
+  proof (cases "k=0")
+    case True
+    then show ?thesis
+      by auto
+  next
+    case False
+    show ?thesis 
+      apply (intro mult_left_mono)
+      using \<open>t \<le> k\<close>
+       apply (simp add: exp_sum flip: sum_negf)
+       apply (intro prod_mono conjI)
+        apply (simp add: )
+        apply (smt (verit) assms(1) divide_le_eq_1 le_simps(1) mult_mono mult_nonneg_nonneg nat_less_real_le of_nat_0_le_iff of_nat_add of_nat_diff)
+       apply (rule order_trans)
+        apply (rule exp_minus_ge)
+       apply (simp add: frac_le_eq)
+       apply (auto simp: )
+      by (smt (verit, del_insts) divide_eq_0_iff mult_mono mult_nonneg_nonneg nat_less_real_le not_le of_nat_0_le_iff of_nat_add of_nat_diff zero_compare_simps(5))
 
+    using exp_minus_ge
+apply (auto simp: )
+
+
+      done
+  qed
 
   show ?thesis
     sorry
