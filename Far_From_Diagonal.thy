@@ -592,7 +592,7 @@ qed
 
 subsection \<open>Lemma 9.5\<close>
 
-definition "Big_Far_9_5 \<equiv> \<lambda>\<mu> l. Big_Y_6_1 \<mu> l"
+definition "Big_Far_9_5 \<equiv> \<lambda>\<mu> l. Big_Red_5_3 \<mu> l \<and> Big_Y_6_1 \<mu> l \<and> Big_ZZ_8_5 \<mu> l"
 
 lemma Far_9_5:
   fixes l k
@@ -600,16 +600,44 @@ lemma Far_9_5:
   assumes "Colours l k" 
   assumes n: "n \<ge> exp (-\<delta> * k) * (k+l choose l)"
   assumes p0: "1/2 \<le> 1-\<gamma>-\<eta>" "1-\<gamma>-\<eta> \<le> p0"
+  assumes "0\<le>\<delta>" "\<delta>\<le>\<gamma>/20" "0\<le>\<eta>"
   assumes big: "Big_Far_9_5 \<gamma> l"
+  defines "\<gamma> \<equiv> real l / (real k + real l)"
   defines "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
   defines "t \<equiv> card \<R>"
   defines "m \<equiv> halted_point \<gamma> l k"
   shows "card (Yseq \<mu> l k m) \<ge> 
      exp (-\<delta> * k + f k) * (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
    * exp (\<gamma>*t^2 / (2*k)) * (k-t-l choose l)"
+proof -
+  define \<beta> where "\<beta> \<equiv> bigbeta \<gamma> l k"
+  obtain lk: "0<l" "l\<le>k" "0<k"
+    using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
+  have \<gamma>01: "0 < \<gamma>" "\<gamma> < 1"
+    using lk by (auto simp: \<gamma>_def)
+  have big85: "Big_ZZ_8_5 \<gamma> l" and big61: "Big_Y_6_1 \<gamma> l" and big53: "Big_Red_5_3 \<gamma> l"
+    using big by (auto simp: Big_Far_9_5_def)
+  have \<beta>_le: "\<beta> \<le> \<gamma>" 
+    using \<beta>_def \<gamma>01 \<open>Colours l k\<close> big53 bigbeta_le by blast 
+  then have 85: "card (Step_class \<gamma> l k {dboost_step}) \<le> (bigbeta \<gamma> l k / (1 - bigbeta \<gamma> l k)) * card \<R> 
+        + (2 / (1-\<gamma>)) * k powr (19/20)"
+    unfolding \<R>_def using ZZ_8_5 \<gamma>01 \<open>Colours l k\<close> big85 by blast
+  have "1/2 \<le> p0"
+    using p0 by linarith
+  then
+  have "2 powr (ok_fun_61 k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * n
+     \<le> 2 powr (ok_fun_61 k) * p0 ^ card (Step_class \<gamma> l k {red_step,dboost_step})"
+    using 85 n
+    sorry
+  have 61: "2 powr (ok_fun_61 k) * p0 ^ card (Step_class \<gamma> l k {red_step,dboost_step}) 
+         \<le> card (Yseq \<gamma> l k m) / card Y0"
+    unfolding m_def
+    using Y_6_1 using \<gamma>01 \<open>Colours l k\<close> big61 by blast
+  show ?thesis
 
   thm Y_6_1
   sorry
+qed
 
 end (*context Book*)
 

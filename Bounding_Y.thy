@@ -674,8 +674,9 @@ lemma Big_Y_6_1:
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
+definition "ok_fun_61 \<equiv> \<lambda>k. (2 * real k / ln 2) * ln (1 - 2 * eps k powr (1/2) / p0)"
+
 lemma Y_6_1:
-  defines "f \<equiv> \<lambda>k. (2 * real k / ln 2) * ln (1 - 2 * eps k powr (1/2) / p0)"
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and big: "Big_Y_6_1 \<mu> l"
   assumes "Colours l k"
@@ -683,7 +684,7 @@ lemma Y_6_1:
   defines "Y \<equiv> Yseq \<mu> l k"
   defines "st \<equiv> Step_class \<mu> l k {red_step,dboost_step}"
   defines "m \<equiv> halted_point \<mu> l k"
-  shows "card (Y m) / card (Y0) \<ge> 2 powr (f k) * p0 ^ card st"
+  shows "card (Y m) / card Y0 \<ge> 2 powr (ok_fun_61 k) * p0 ^ card st"
 proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
@@ -847,12 +848,12 @@ proof -
     show "ln (1 - 2 * eps k powr (1/2) / p0) \<le> 0"
       using p0_01 big_p0 by simp
   qed
-  then have "f k * ln 2 + card st * ln p0 \<le> card st * ln (p0 - 2 * eps k powr (1/2))"
+  then have "ok_fun_61 k * ln 2 + card st * ln p0 \<le> card st * ln (p0 - 2 * eps k powr (1/2))"
     using mult_left_mono [OF ln_le, of "card st"]
-    by (simp add: f_def distrib_left)
-  then have "f k * ln 2 + card st * ln p0 \<le> card st * ln (p0 - 2 * eps k powr (1/2))"
+    by (simp add: ok_fun_61_def distrib_left)
+  then have "ok_fun_61 k * ln 2 + card st * ln p0 \<le> card st * ln (p0 - 2 * eps k powr (1/2))"
     by simp
-  then have "2 powr (f k) * p0 ^ card st \<le> (p0 - 2 * eps k powr (1/2)) ^ card st"
+  then have "2 powr (ok_fun_61 k) * p0 ^ card st \<le> (p0 - 2 * eps k powr (1/2)) ^ card st"
     by (simp add: big_p0 p0_01 ln_mult ln_powr ln_realpow flip: ln_le_cancel_iff)
   with * show ?thesis
     by linarith
