@@ -143,7 +143,7 @@ text \<open>For Fact 9.6\<close>
 
 lemma D2:
   fixes k l
-  assumes "t \<le> k"
+  assumes t: "0<t" "t \<le> k"
   defines "\<gamma> \<equiv> l / (real k + real l)"
   shows "(k+l-t choose l) \<le> exp (- \<gamma> * (t-1)^2 / (2*k)) * (k / (k+l))^t * (k+l choose l)"
 proof -
@@ -182,10 +182,9 @@ proof -
     ultimately show "(\<Prod>i<t. 1 - i * real l / (k * real (k + l - i))) \<le> exp (- (\<Sum>i<t. i * real l / (k * real (k + l))))"
       by (force simp add: exp_sum simp flip: sum_negf intro!: prod_mono)
   qed auto
-  finally have *: "(k+l-t choose l) * inverse (k+l choose l) \<le> (real k / (k+l))^t * exp (- (\<Sum>i<t. i * \<gamma> / k))"
+  finally have 1: "(k+l-t choose l) * inverse (k+l choose l) \<le> (real k / (k+l))^t * exp (- (\<Sum>i<t. i * \<gamma> / k))"
     by (simp add: \<gamma>_def mult.commute)
-
-  have **: "\<gamma> * (t-1)^2 / (2*k) \<le> (\<Sum>i<t. i * \<gamma> / k)"
+  have **: "\<gamma> * (t - 1)^2 / (2*k) \<le> (\<Sum>i<t. i * \<gamma> / k)"
   proof -
     have g: "(\<Sum>i<t. real i) = real (t*(t-1)) / 2"
       by (induction t) (auto simp: algebra_simps eval_nat_numeral of_nat_diff)
@@ -195,11 +194,57 @@ proof -
       unfolding g [symmetric] by (simp add: sum_distrib_right sum_divide_distrib)
     finally show ?thesis .
   qed
-
-  show ?thesis
-    using * **
-    sorry
+  have 0: "0 \<le> real (k + l choose l)"
+    by simp
+  have *: "(k+l-t choose l) \<le> (real k / (k+l))^t * exp (- (\<Sum>i<t. i * \<gamma> / k)) * (k+l choose l)"
+    using order_trans [OF _  mult_right_mono [OF 1 0]]
+    by (simp add: less_eq_real_def)
+  also have "... \<le>  (k / (k+l))^t * exp (- \<gamma> * (t-1)^2 / (2*k)) *(k+l choose l)"
+    using ** by (intro mult_mono) auto
+  also have "... \<le> exp (- \<gamma> * (t-1)^2 / (2 * real k)) * (k / (k+l))^t * (k+l choose l)"
+    by (simp add: mult_ac)
+  finally show ?thesis 
+    using t by (simp add: of_nat_diff)
 qed
+
+text \<open>Statement borrowed from Bhavik; no o(k) function\<close>
+corollary Far_9_6:
+  fixes k l
+  assumes t: "0<t" "t \<le> k"
+  defines "\<gamma> \<equiv> l / (real k + real l)"
+  shows "exp (-1) * (1-\<gamma>) powr (- real t) * exp (\<gamma> * t^2 / real(2*k)) * (k-t+l choose l) \<le> (k+l choose l)"
+proof -
+  have kkl: "k / (real k + real l) = 1 - \<gamma>" "k+l-t = k-t+l"
+    using t by (auto simp add: \<gamma>_def divide_simps)
+  have [simp]: "t + t \<le> Suc (t * t)"
+    using t
+    by (metis One_nat_def Suc_leI mult_2 mult_right_mono nle_le not_less_eq_eq numeral_2_eq_2 mult_1_right)
+  have "0 \<le> \<gamma>" "\<gamma> < 1"
+    using t by (auto simp: \<gamma>_def)
+  then have "\<gamma> * (real t * 2) \<le> \<gamma> + real k * 2"
+    using t by (smt (verit, best) mult_less_cancel_right2 of_nat_0_less_iff of_nat_mono)
+  then have *: "\<gamma> * t^2 / (2*k) - 1 \<le> \<gamma> * (t-1)^2 / (2*k)"
+    using t
+    apply (simp add: of_nat_diff pos_divide_le_eq algebra_simps)
+    apply (simp add: algebra_simps eval_nat_numeral)
+    done
+  then have *: "exp (-1) * exp (\<gamma> * t^2 / (2*k)) \<le> exp (\<gamma> * (t-1)^2 / (2*k))"
+    by (metis exp_add exp_le_cancel_iff uminus_add_conv_diff)
+  have 1: "exp (\<gamma> * (t-1)^2 / (2*k)) * (k+l-t choose l) \<le> (k / (k+l))^t * (k+l choose l)"
+    using mult_right_mono [OF D2 [OF t], of "exp (\<gamma> * (t-1)^2 / (2*k))" l] t
+    by (simp add: \<gamma>_def exp_minus of_nat_diff field_simps)
+  have 2: "(k / (k+l)) powr (- real t) * exp (\<gamma> * (t-1)^2 / (2*k)) * (k+l-t choose l) \<le> (k+l choose l)"
+    using mult_right_mono [OF 1, of "(1-\<gamma>) powr (- real t)"] t
+    by (simp add: powr_minus \<gamma>_def powr_realpow mult_ac divide_simps)
+  then have 3: "(1-\<gamma>) powr (- real t) * exp (\<gamma> * (t-1)^2 / (2*k)) * (k-t+l choose l) \<le> (k+l choose l)"
+    by (simp add: kkl)
+  show ?thesis
+    apply (rule order_trans [OF _ 3])
+    apply (intro mult_right_mono divide_right_mono)
+    using "*" less_eq_real_def apply fastforce+
+    done
+qed
+
 
 subsection \<open>Lemma 9.3\<close>
 
