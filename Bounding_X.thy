@@ -790,7 +790,7 @@ proof -
   have [simp]: "disjnt (X i) (Y i)"
     using Xseq_Yseq_disjnt X_def Y_def by blast
   have Xnon0: "card (X i) > 0" and Ynon0: "card (Y i) > 0"
-    using i by (simp_all add: X_def Y_def Xseq_gt_0 Yseq_gt_0 Step_class_def)
+    using i by (simp_all add: X_def Y_def Xseq_gt0 Yseq_gt0 Step_class_def)
   have "q > 0"
     using \<open>k>0\<close>
     apply (simp add: q_def)

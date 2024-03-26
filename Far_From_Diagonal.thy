@@ -240,9 +240,7 @@ proof -
     by (simp add: kkl)
   show ?thesis
     apply (rule order_trans [OF _ 3])
-    apply (intro mult_right_mono divide_right_mono)
-    using "*" less_eq_real_def apply fastforce+
-    done
+    using "*" less_eq_real_def by fastforce
 qed
 
 
@@ -591,6 +589,27 @@ proof -
       by linarith
   qed
 qed
+
+subsection \<open>Lemma 9.5\<close>
+
+definition "Big_Far_9_5 \<equiv> \<lambda>\<mu> l. Big_Y_6_1 \<mu> l"
+
+lemma Far_9_5:
+  fixes l k
+  fixes \<delta> \<gamma> \<eta>::real
+  assumes "Colours l k" 
+  assumes n: "n \<ge> exp (-\<delta> * k) * (k+l choose l)"
+  assumes p0: "1/2 \<le> 1-\<gamma>-\<eta>" "1-\<gamma>-\<eta> \<le> p0"
+  assumes big: "Big_Far_9_5 \<gamma> l"
+  defines "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
+  defines "t \<equiv> card \<R>"
+  defines "m \<equiv> halted_point \<gamma> l k"
+  shows "card (Yseq \<mu> l k m) \<ge> 
+     exp (-\<delta> * k + f k) * (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
+   * exp (\<gamma>*t^2 / (2*k)) * (k-t-l choose l)"
+
+  thm Y_6_1
+  sorry
 
 end (*context Book*)
 

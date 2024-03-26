@@ -1266,12 +1266,7 @@ lemma not_halted_pee_gt0:
   shows "pee \<mu> l k i > 0" 
   using not_halted_pee_gt [OF assms] linorder_not_le order_less_le_trans by fastforce
 
-lemma Xseq_gt_0:
-  assumes "i \<notin> Step_class \<mu> l k {halted}"
-  shows "card (Xseq \<mu> l k i) > 0"
-  by (metis Xseq_gt_RN assms gr0I less_zeroE) 
-
-lemma Yseq_gt_0:
+lemma Yseq_gt0:
   assumes "i \<notin> Step_class \<mu> l k {halted}"
   shows "card (Yseq \<mu> l k i) > 0"
   using not_halted_pee_gt [OF assms] 
@@ -1600,7 +1595,7 @@ lemma below_halted_point_nontermination:
 lemma below_halted_point_cardX:
   assumes "i < halted_point \<mu> l k" "\<mu>>0" "Colours l k"
   shows  "card (Xseq \<mu> l k i) > 0"
-  using Xseq_gt_0 assms halted_point_minimal halted_stepper_eq
+  using Xseq_gt0 assms halted_point_minimal halted_stepper_eq
   by blast
 
 lemma halted_point_nonzero:

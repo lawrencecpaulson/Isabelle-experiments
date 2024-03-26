@@ -674,14 +674,15 @@ lemma Big_Y_6_1:
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
-lemma Y_6_1_aux:
+lemma Y_6_1:
   defines "f \<equiv> \<lambda>k. (2 * real k / ln 2) * ln (1 - 2 * eps k powr (1/2) / p0)"
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and big: "Big_Y_6_1 \<mu> l"
-  assumes "Colours l k" and not_halted: "m \<notin> Step_class \<mu> l k {halted}"
+  assumes "Colours l k"
   defines "p \<equiv> pee \<mu> l k"
   defines "Y \<equiv> Yseq \<mu> l k"
-  defines "st \<equiv> Step_class \<mu> l k {red_step,dboost_step} \<inter> {..<m}"
+  defines "st \<equiv> Step_class \<mu> l k {red_step,dboost_step}"
+  defines "m \<equiv> halted_point \<mu> l k"
   shows "card (Y m) / card (Y0) \<ge> 2 powr (f k) * p0 ^ card st"
 proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
@@ -698,8 +699,9 @@ proof -
     using big_p0 by (simp add: p0m_def)
   define Step_RS where "Step_RS \<equiv> Step_class \<mu> l k {red_step,dboost_step}"
   define Step_BD where "Step_BD \<equiv> Step_class \<mu> l k {bblue_step,dreg_step}"
-  have not_halted_below_m: "i \<notin> Step_class \<mu> l k {halted}" if "i\<le>m" for i
-    using Step_class_not_halted not_halted that by blast
+  have not_halted_below_m: "i \<notin> Step_class \<mu> l k {halted}" if "i<m" for i
+    using that \<open>0<\<mu>\<close> \<open>Colours l k\<close> unfolding m_def
+    by (simp add:  halted_point_minimal)
   have BD_card: "card (Y i) = card (Y (Suc i))"
     if "i \<in> Step_BD" for i
   proof -
@@ -768,6 +770,9 @@ proof -
     by (auto simp: ST_def less_Suc_eq)
   then have [simp]: "card (ST (Suc i)) = (if i \<in> Step_RS then Suc (card (ST i)) else card (ST i))" for i
     by (simp add: ST_def)
+  have STm: "ST m = st"
+    using \<open>0<\<mu>\<close> \<open>Colours l k\<close>
+    by (auto simp add: ST_def st_def Step_RS_def m_def Step_class_def simp flip: halted_point_minimal)
   have "p0m ^ card (ST i) \<le> (\<Prod>j<i. card (Y(Suc j)) / card (Y j))" if "i\<le>m"for i
     using that
   proof (induction i)
@@ -777,10 +782,9 @@ proof -
   next
     case (Suc i)
     then have i: "i \<notin> Step_class \<mu> l k {halted}"
-      using Step_class_not_halted not_halted
-      by (metis add_leE plus_1_eq_Suc)
+      by (simp add: not_halted_below_m)
     then have Ynz: "card (Y i) > 0"
-        unfolding Y_def using Yseq_gt_0 by blast
+        unfolding Y_def using Yseq_gt0 by blast
     consider (RS) "i \<in> Step_RS"
            | (BD) "i \<in> Step_BD \<and> i \<notin> Step_RS"
       using i stepkind.exhaust by (auto simp: Step_class_def Step_BD_def Step_RS_def)
@@ -809,14 +813,16 @@ proof -
     by blast
   also have "\<dots> = card (Y m) / card (Y 0)"
   proof -
-    have "\<And>i. i \<le> m \<Longrightarrow> card (Y i) \<noteq> 0"
-      by (metis Yseq_gt_0 Y_def less_irrefl not_halted_below_m)
-    then show ?thesis
-      using prod_lessThan_telescope_mult [where f = "\<lambda>i. real (card (Y i))"]
+    have "card (Y 0) \<noteq> 0"
+      by (simp add: Y_def card_XY0(2))
+    moreover have "\<And>i. i < m \<Longrightarrow> card (Y i) \<noteq> 0"
+      by (metis Yseq_gt0 Y_def less_irrefl not_halted_below_m)
+    ultimately show ?thesis
+      using prod_lessThan_telescope_mult [of m "\<lambda>i. real (card (Y i))"]
       by (simp add: nonzero_eq_divide_eq)
   qed
   finally have *: "(p0 - 2 * eps k powr (1/2)) ^ card st \<le> card (Y m) / card (Y0)"
-    by (simp add: ST_def st_def p0m_def Step_RS_def Y_def)
+    by (simp add: STm Y_def p0m_def)
   \<comment> \<open>Asymptotic part of the argument\<close>
   have ln_le: "ln (1 - 2 * eps k powr (1/2) / p0) + ln p0 \<le> ln (p0 - 2 * eps k powr (1/2))"
     using big_p0 p0_01 by (simp add: algebra_simps flip: ln_mult)
@@ -850,23 +856,6 @@ proof -
     by (simp add: big_p0 p0_01 ln_mult ln_powr ln_realpow flip: ln_le_cancel_iff)
   with * show ?thesis
     by linarith
-qed
-
-proposition Y_6_1:
-  assumes "0<\<mu>" "\<mu><1" 
-  shows "\<exists>f \<in> o(\<lambda>k. real k).
-          \<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow> (\<forall>m. m \<notin> Step_class \<mu> l k {halted} \<longrightarrow>
-             card (Yseq \<mu> l k m) / card (Y0) \<ge> 2 powr (f k) * p0 ^ card (Step_class \<mu> l k {red_step,dboost_step} \<inter> {..<m}))"
-proof
-  let ?f = "\<lambda>k. (2 * real k / ln 2) * ln (1 - 2 * eps k powr (1/2) / p0)"
-  show "?f \<in> o(real)"
-    using p0_01 unfolding eps_def by real_asymp
-  show "\<forall>\<^sup>\<infinity>l. \<forall>k. Colours l k \<longrightarrow>
-               (\<forall>m. m \<notin> Step_class \<mu> l k {halted} \<longrightarrow>
-                    2 powr (?f k) * p0 ^ card (Step_class \<mu> l k {red_step,dboost_step} \<inter> {..<m})
-                    \<le> card (Yseq \<mu> l k m) / card Y0)"
-    apply (rule eventually_mono [OF Big_Y_6_1 [OF assms]])
-    by (intro Y_6_1_aux strip) (auto simp: assms)
 qed
 
 end (*context Book*)

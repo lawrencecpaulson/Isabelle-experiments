@@ -442,7 +442,7 @@ proof
   then have 0: "pee \<mu> l k i > 0"
     using not_halted_pee_gt0 by blast
   have Y': "card (Yseq \<mu> l k (Suc i)) > 0"
-    using i Yseq_gt_0 [OF not_halted] stepper_XYseq
+    using i Yseq_gt0 [OF not_halted] stepper_XYseq
     by (auto simp: step_kind_defs degree_reg_def split: if_split_asm prod.split_asm)
   have "(1 - eps k powr (1/2)) * pee \<mu> l k i * card (Yseq \<mu> l k (Suc i)) \<le> 0"
     using Red_5_8 [OF i x] con by simp 
@@ -543,7 +543,7 @@ proof -
       and non_mb: "\<not> many_bluish \<mu> l k X" and "card X > 0"
       and  not_halted: "i \<notin> Step_class \<mu> l k {halted}"
     using i by (auto simp: XY step_kind_defs termination_condition_def split: if_split_asm prod.split_asm)
-  with Yseq_gt_0 XY have "card Y \<noteq> 0"
+  with Yseq_gt0 XY have "card Y \<noteq> 0"
     by blast
   have cX_RN: "card X > RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
     by (meson linorder_not_le nonterm termination_condition_def)
