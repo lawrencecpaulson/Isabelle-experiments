@@ -1,6 +1,6 @@
 theory Ramsey_Extras imports
   General_Extras
-  "HOL-Library.Equipollence" "HOL-Library.Ramsey" 
+  "HOL-Library.Equipollence" "HOL-Library.Ramsey"  "HOL-Library.Infinite_Typeclass" 
   "HOL-Probability.Probability"
   "Undirected_Graph_Theory.Undirected_Graph_Basics"  "Special_Function_Bounds.Exp_Bounds" 
 
@@ -107,18 +107,6 @@ proof
   then show "m = n"
     unfolding nsets_def by fastforce
 qed (use assms in \<open>auto simp: nsets_eq_empty_iff\<close>)
-
-
-(* not sure that the type class is the best approach when using Chelsea's locale*)
-class infinite =
-  assumes infinite_UNIV: "infinite (UNIV::'a set)"
-
-instance nat :: infinite
-  by (intro_classes) simp
-instance prod :: (infinite, type) infinite
-  by intro_classes (simp add: finite_prod infinite_UNIV)
-instance list :: (type) infinite
-  by intro_classes (simp add: infinite_UNIV_listI)
 
 subsection \<open>Relating cliques to the graph theory library\<close>
 

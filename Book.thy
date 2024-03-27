@@ -1557,10 +1557,10 @@ lemma finite_components:
 
 lemma
   assumes "0<\<mu>" "Colours l k" 
-  shows dreg_step_finite: "finite (Step_class \<mu> l k {dreg_step})"
-    and red_step_finite: "finite (Step_class \<mu> l k {red_step})"
-    and bblue_step_finite: "finite (Step_class \<mu> l k {bblue_step})"
-    and dboost_step_finite: "finite (Step_class \<mu> l k {dboost_step})"
+  shows dreg_step_finite  [simp]: "finite (Step_class \<mu> l k {dreg_step})"
+    and red_step_finite   [simp]: "finite (Step_class \<mu> l k {red_step})"
+    and bblue_step_finite [simp]: "finite (Step_class \<mu> l k {bblue_step})"
+    and dboost_step_finite[simp]: "finite (Step_class \<mu> l k {dboost_step})"
   using finite_components [OF assms] by (auto simp: Step_class_insert_NO_MATCH)
 
 lemma halted_stepper_add_eq:
