@@ -610,6 +610,13 @@ lemma ok_fun_95b: "ok_fun_95b \<mu> \<in> o(real)"
 
 definition "Big_Far_9_5 \<equiv> \<lambda>\<mu> l. Big_Red_5_3 \<mu> l \<and> Big_Y_6_1 \<mu> l \<and> Big_ZZ_8_5 \<mu> l"
 
+lemma Big_Far_9_5:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_Far_9_5 \<mu> l"
+  unfolding Big_Far_9_5_def eventually_conj_iff all_imp_conj_distrib eps_def
+  by (simp add: Big_Red_5_3 Big_Y_6_1 Big_ZZ_8_5 assms)
+
+text \<open>Y0 is an additional assumption found Bhavik's version. (He had a couple of others)\<close>
 lemma Far_9_5:
   fixes l k
   fixes \<delta> \<gamma> \<eta>::real
@@ -619,8 +626,7 @@ lemma Far_9_5:
   defines "m \<equiv> halted_point \<gamma> l k"
   assumes "Colours l k" 
   assumes n: "real n \<ge> exp (-\<delta> * k) * (k+l choose l)" and Y0: "card Y0 \<ge> real n / 2"
-  assumes p0: "1/2 \<le> 1-\<gamma>-\<eta>" "1-\<gamma>-\<eta> \<le> p0"
-  assumes "0\<le>\<delta>" "\<delta>\<le>\<gamma>/20" "0\<le>\<eta>"
+  assumes p0: "1/2 \<le> 1-\<gamma>-\<eta>" "1-\<gamma>-\<eta> \<le> p0" and "0\<le>\<eta>"
   assumes big: "Big_Far_9_5 \<gamma> l"
   shows "card (Yseq \<gamma> l k m) \<ge> 
      exp (-\<delta> * k + ok_fun_95b \<gamma> k) * (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
@@ -697,6 +703,53 @@ proof -
   also have "\<dots> \<le> card (Yseq \<gamma> l k m)"
     by (rule *)
   finally show ?thesis .
+qed
+
+subsection \<open>Lemma 9.2\<close>
+
+definition "red_density_V \<equiv> card Red / card E"
+
+definition "Big_Far_9_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l"
+
+text \<open>A little tricky for me to express since my "Colours" assumption includes the allowed 
+    assumption that there are no cliques in the original graph (page 9). So it's a contrapositive\<close>
+lemma Far_9_2:
+  fixes l k
+  fixes \<delta> \<gamma> \<eta>::real
+  defines "\<gamma> \<equiv> real l / (real k + real l)"
+  defines "\<delta> \<equiv> \<gamma>/20"
+  assumes "Colours l k" and "\<gamma> \<le> 1/10" and \<epsilon>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
+  assumes n: "real n \<ge> exp (-\<delta> * k) * (k+l choose l)" 
+  assumes big: "Big_Far_9_2 \<gamma> l"
+  shows "\<not> red_density_V \<ge> 1-\<gamma>-\<epsilon>" 
+proof
+  assume "red_density_V \<ge> 1-\<gamma>-\<epsilon>"
+  define \<R> where "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
+  define t where "t \<equiv> card \<R>"
+  define m where "m \<equiv> halted_point \<gamma> l k"
+  obtain lk: "0<l" "l\<le>k" "0<k"
+    using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
+  have \<gamma>01: "0 < \<gamma>" "\<gamma> < 1"
+    using lk by (auto simp: \<gamma>_def)
+  have big93: "Big_Far_9_3 \<gamma> l" 
+    using big by (auto simp: Big_Far_9_2_def)
+  have t23: "t \<ge> 2*k / 3"
+    unfolding t_def \<R>_def \<gamma>_def
+    apply (rule Far_9_3)
+         apply (rule assms)
+    using assms(1) assms(4) apply linarith
+
+    sorry
+  have "t<k"
+    unfolding t_def \<R>_def using \<gamma>01 \<open>Colours l k\<close> red_step_limit by blast
+
+  have "RN (k-t) l \<le> (k-t+l choose l)"
+    by (simp add: add.commute RN_commute RN_le_choose)
+  also have "\<dots> \<le> card (Yseq \<gamma> l k m)"
+    sorry
+  finally
+  show False
+    sorry
 qed
 
 end (*context Book*)
