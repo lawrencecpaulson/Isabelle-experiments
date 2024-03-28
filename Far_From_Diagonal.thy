@@ -212,7 +212,7 @@ corollary Far_9_6:
   fixes k l
   assumes t: "0<t" "t \<le> k"
   defines "\<gamma> \<equiv> l / (real k + real l)"
-  shows "exp (-1) * (1-\<gamma>) powr (- real t) * exp (\<gamma> * t^2 / real(2*k)) * (k-t+l choose l) \<le> (k+l choose l)"
+  shows "exp (-1) * (1-\<gamma>) powr (- real t) * exp (\<gamma> * (real t)\<^sup>2 / real(2*k)) * (k-t+l choose l) \<le> (k+l choose l)"
 proof -
   have kkl: "k / (real k + real l) = 1 - \<gamma>" "k+l-t = k-t+l"
     using t by (auto simp add: \<gamma>_def divide_simps)
@@ -592,16 +592,23 @@ qed
 
 subsection \<open>Lemma 9.5\<close>
 
-definition "ok_fun_95 \<equiv> \<lambda>\<mu> k. ok_fun_61 k - (1 + (2 / (1-\<mu>)) * k powr (19/20))"
+definition "ok_fun_95a \<equiv> \<lambda>\<mu> k. ok_fun_61 k - (1 + (2 / (1-\<mu>)) * k powr (19/20))"
 
-lemma ok_fun_95: "ok_fun_95 \<mu> \<in> o(real)"
+definition "ok_fun_95b \<equiv> \<lambda>\<mu> k. ln 2 * ok_fun_95a \<mu> k - 1"
+
+lemma ok_fun_95a: "ok_fun_95a \<mu> \<in> o(real)"
 proof -
   have "(\<lambda>k. 1 + (2 / (1-\<mu>)) * k powr (19/20)) \<in> o(real)"
     by real_asymp
   then show ?thesis
-    unfolding ok_fun_95_def
+    unfolding ok_fun_95a_def
     using ok_fun_61 sum_in_smallo by blast
 qed
+
+lemma ok_fun_95b: "ok_fun_95b \<mu> \<in> o(real)"
+  unfolding ok_fun_95b_def
+  using ok_fun_95a
+  using ok_fun_95a by blast
 
 definition "Big_Far_9_5 \<equiv> \<lambda>\<mu> l. Big_Red_5_3 \<mu> l \<and> Big_Y_6_1 \<mu> l \<and> Big_ZZ_8_5 \<mu> l"
 
@@ -617,9 +624,9 @@ lemma Far_9_5:
   assumes p0: "1/2 \<le> 1-\<gamma>-\<eta>" "1-\<gamma>-\<eta> \<le> p0"
   assumes "0\<le>\<delta>" "\<delta>\<le>\<gamma>/20" "0\<le>\<eta>"
   assumes big: "Big_Far_9_5 \<gamma> l"
-  shows "card (Yseq \<mu> l k m) \<ge> 
-     exp (-\<delta> * k + f k) * (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
-   * exp (\<gamma>*t^2 / (2*k)) * (k-t-l choose l)"
+  shows "card (Yseq \<gamma> l k m) \<ge> 
+     exp (-\<delta> * k + ok_fun_95b \<gamma> k) * (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
+   * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) * (k-t+l choose l)"   (is "_ \<ge> ?rhs")
 proof -
   define \<S> where "\<S> \<equiv> Step_class \<gamma> l k {dboost_step}"
   define s where "s \<equiv> card \<S>"
@@ -639,6 +646,10 @@ proof -
   finally have D85: "s \<le> \<gamma>*t / (1-\<gamma>) + (2 / (1-\<gamma>)) * k powr (19/20)"
     by auto
 
+  have t: "0 < t" "t \<le> k"
+    unfolding t_def \<R>_def
+
+    sorry
   have st: "card (Step_class \<gamma> l k {red_step,dboost_step}) = t + s"
     using \<gamma>01 \<open>Colours l k\<close>
     by (simp add: s_def t_def \<R>_def \<S>_def Step_class_insert_NO_MATCH card_Un_disjnt disjnt_Step_class)
@@ -661,13 +672,32 @@ proof -
     using p0 powr_mono2 by (intro mult_mono divide_right_mono) auto
   also have "... = (2 powr (1 + (2 / (1-\<gamma>)) * k powr (19/20))) * p0 ^ (t+s) * card Y0"
     using p0_01 by (simp add: powr_divide powr_add power_add powr_realpow)
-  finally have "2 powr (ok_fun_95 \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * n \<le> 2 powr (ok_fun_61 k) * p0 ^ (t+s) * card Y0"
-    by (simp add: ok_fun_95_def powr_diff field_simps)
-  with 61 have "card (Yseq \<gamma> l k m) \<ge> 2 powr (ok_fun_95 \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * n"
+  finally have "2 powr (ok_fun_95a \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * n \<le> 2 powr (ok_fun_61 k) * p0 ^ (t+s) * card Y0"
+    by (simp add: ok_fun_95a_def powr_diff field_simps)
+  with 61 have *: "card (Yseq \<gamma> l k m) \<ge> 2 powr (ok_fun_95a \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * n"
     by linarith
 
-  show ?thesis
-  sorry
+  have F: "exp (ok_fun_95b \<gamma> k) = 2 powr ok_fun_95a \<gamma> k * exp (- 1)"
+    by (simp add: ok_fun_95b_def exp_diff exp_minus powr_def field_simps)
+  have "?rhs
+   \<le> exp (-\<delta> * k) * 2 powr (ok_fun_95a \<gamma> k) * exp (-1) * (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>))
+         * (((1-\<gamma>-\<eta>)/(1-\<gamma>)) ^t * exp (\<gamma> * (real t)\<^sup>2 / real(2*k)) * (k-t+l choose l))"
+    unfolding exp_add F by simp
+  also have "\<dots> \<le>  exp (-\<delta> * k) * 2 powr (ok_fun_95a \<gamma> k) * (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>))
+         * (exp (-1) * ((1-\<gamma>-\<eta>)/(1-\<gamma>)) ^t * exp (\<gamma> * (real t)\<^sup>2 / real(2*k)) * (k-t+l choose l))"
+    by (simp add: mult.assoc)
+  also have "\<dots> \<le> 2 powr (ok_fun_95a \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * exp (-\<delta> * k)
+                * (exp (-1) * (1-\<gamma>) powr (- real t) * exp (\<gamma> * (real t)\<^sup>2 / real(2*k)) * (k-t+l choose l))"
+    using p0 \<gamma>01
+    unfolding powr_add powr_minus by (simp add: mult_ac divide_simps flip: powr_realpow)
+  also have "\<dots> \<le> 2 powr (ok_fun_95a \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * exp (-\<delta> * k) * (k+l choose l)"
+    unfolding \<gamma>_def using t
+    by (intro mult_mono order_refl Far_9_6) auto
+  also have "\<dots> \<le> 2 powr (ok_fun_95a \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * n"
+    using n mult_left_mono by fastforce
+  also have "\<dots> \<le> card (Yseq \<gamma> l k m)"
+    by (rule *)
+  finally show ?thesis .
 qed
 
 end (*context Book*)
