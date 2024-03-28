@@ -606,9 +606,7 @@ proof -
 qed
 
 lemma ok_fun_95b: "ok_fun_95b \<mu> \<in> o(real)"
-  unfolding ok_fun_95b_def
-  using ok_fun_95a
-  using ok_fun_95a by blast
+  using ok_fun_95a by (auto simp: ok_fun_95b_def sum_in_smallo const_smallo_real)
 
 definition "Big_Far_9_5 \<equiv> \<lambda>\<mu> l. Big_Red_5_3 \<mu> l \<and> Big_Y_6_1 \<mu> l \<and> Big_ZZ_8_5 \<mu> l"
 
@@ -646,10 +644,8 @@ proof -
   finally have D85: "s \<le> \<gamma>*t / (1-\<gamma>) + (2 / (1-\<gamma>)) * k powr (19/20)"
     by auto
 
-  have t: "0 < t" "t \<le> k"
-    unfolding t_def \<R>_def
-
-    sorry
+  have "t<k"
+    unfolding t_def \<R>_def using \<gamma>01 \<open>Colours l k\<close> red_step_limit by blast
   have st: "card (Step_class \<gamma> l k {red_step,dboost_step}) = t + s"
     using \<gamma>01 \<open>Colours l k\<close>
     by (simp add: s_def t_def \<R>_def \<S>_def Step_class_insert_NO_MATCH card_Un_disjnt disjnt_Step_class)
@@ -691,8 +687,11 @@ proof -
     using p0 \<gamma>01
     unfolding powr_add powr_minus by (simp add: mult_ac divide_simps flip: powr_realpow)
   also have "\<dots> \<le> 2 powr (ok_fun_95a \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * exp (-\<delta> * k) * (k+l choose l)"
-    unfolding \<gamma>_def using t
-    by (intro mult_mono order_refl Far_9_6) auto
+  proof (cases "t=0")
+    case False
+    then show ?thesis
+      unfolding \<gamma>_def using \<open>t<k\<close> by (intro mult_mono order_refl Far_9_6) auto
+  qed auto
   also have "\<dots> \<le> 2 powr (ok_fun_95a \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * n"
     using n mult_left_mono by fastforce
   also have "\<dots> \<le> card (Yseq \<gamma> l k m)"
