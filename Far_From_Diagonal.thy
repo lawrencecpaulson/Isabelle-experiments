@@ -592,20 +592,31 @@ qed
 
 subsection \<open>Lemma 9.5\<close>
 
+definition "ok_fun_95 \<equiv> \<lambda>\<mu> k. ok_fun_61 k - (1 + (2 / (1-\<mu>)) * k powr (19/20))"
+
+lemma ok_fun_95: "ok_fun_95 \<mu> \<in> o(real)"
+proof -
+  have "(\<lambda>k. 1 + (2 / (1-\<mu>)) * k powr (19/20)) \<in> o(real)"
+    by real_asymp
+  then show ?thesis
+    unfolding ok_fun_95_def
+    using ok_fun_61 sum_in_smallo by blast
+qed
+
 definition "Big_Far_9_5 \<equiv> \<lambda>\<mu> l. Big_Red_5_3 \<mu> l \<and> Big_Y_6_1 \<mu> l \<and> Big_ZZ_8_5 \<mu> l"
 
 lemma Far_9_5:
   fixes l k
   fixes \<delta> \<gamma> \<eta>::real
+  defines "\<gamma> \<equiv> real l / (real k + real l)"
+  defines "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
+  defines "t \<equiv> card \<R>"
+  defines "m \<equiv> halted_point \<gamma> l k"
   assumes "Colours l k" 
   assumes n: "real n \<ge> exp (-\<delta> * k) * (k+l choose l)" and Y0: "card Y0 \<ge> real n / 2"
   assumes p0: "1/2 \<le> 1-\<gamma>-\<eta>" "1-\<gamma>-\<eta> \<le> p0"
   assumes "0\<le>\<delta>" "\<delta>\<le>\<gamma>/20" "0\<le>\<eta>"
   assumes big: "Big_Far_9_5 \<gamma> l"
-  defines "\<gamma> \<equiv> real l / (real k + real l)"
-  defines "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
-  defines "t \<equiv> card \<R>"
-  defines "m \<equiv> halted_point \<gamma> l k"
   shows "card (Yseq \<mu> l k m) \<ge> 
      exp (-\<delta> * k + f k) * (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
    * exp (\<gamma>*t^2 / (2*k)) * (k-t-l choose l)"
@@ -628,25 +639,11 @@ proof -
   finally have D85: "s \<le> \<gamma>*t / (1-\<gamma>) + (2 / (1-\<gamma>)) * k powr (19/20)"
     by auto
 
-
-
-  have "1/2 \<le> p0"
-    using p0 by linarith
-  moreover
-  have "t+s \<le> t + \<gamma>*t / (1-\<gamma>) + (2 / (1-\<gamma>)) * k powr (19/20)"
-    using D85 by simp
-  ultimately have A: "(1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>) + (2 / (1-\<gamma>)) * k powr (19/20)) \<le> p0 ^ (t+s)"
-    using p0 p0_01 by (simp add: powr_mono_both' flip: powr_realpow)
-
-
-  have "card (Step_class \<gamma> l k {red_step,dboost_step}) = t + s"
+  have st: "card (Step_class \<gamma> l k {red_step,dboost_step}) = t + s"
     using \<gamma>01 \<open>Colours l k\<close>
     by (simp add: s_def t_def \<R>_def \<S>_def Step_class_insert_NO_MATCH card_Un_disjnt disjnt_Step_class)
-
-  have 61: "p0 ^ (t+s) \<le> card (Yseq \<gamma> l k m) / card Y0"
-    unfolding m_def
-    using Y_6_1 using \<gamma>01 \<open>Colours l k\<close> big61 sorry by blast
-
+  then have 61: "2 powr (ok_fun_61 k) * p0 ^ (t+s) * card Y0 \<le> card (Yseq \<gamma> l k m)"
+    using Y_6_1[OF \<gamma>01 big61 \<open>Colours l k\<close>] card_XY0 \<gamma>01 by (simp add: m_def divide_simps)
 
   have "(1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * n \<le> (1-\<gamma>-\<eta>) powr (t+s - (2 / (1-\<gamma>)) * k powr (19/20)) * (2 * card Y0)"
   proof (intro mult_mono)
@@ -661,38 +658,15 @@ proof -
       using \<gamma>01 p0 \<open>0\<le>\<eta>\<close> by (intro powr_mono_both') auto
   qed (use p0 in auto)
   also have "... \<le> p0 powr (t+s) / (1/2) powr ((2 / (1-\<gamma>)) * k powr (19/20)) * (2 * card Y0)"
-    apply (intro mult_mono divide_right_mono)
-       apply (auto simp: )
-    using assms(4) assms(5) powr_mono2 by auto
-  finally
+    using p0 powr_mono2 by (intro mult_mono divide_right_mono) auto
+  also have "... = (2 powr (1 + (2 / (1-\<gamma>)) * k powr (19/20))) * p0 ^ (t+s) * card Y0"
+    using p0_01 by (simp add: powr_divide powr_add power_add powr_realpow)
+  finally have "2 powr (ok_fun_95 \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * n \<le> 2 powr (ok_fun_61 k) * p0 ^ (t+s) * card Y0"
+    by (simp add: ok_fun_95_def powr_diff field_simps)
+  with 61 have "card (Yseq \<gamma> l k m) \<ge> 2 powr (ok_fun_95 \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * n"
+    by linarith
 
-
-
-
-    have "n \<le> 2 * card Y0"
-      using Y0 by auto
-
-    sorry
-
-
-    then have "(1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * (1/2) powr ((2 / (1-\<gamma>)) * k powr (19/20)) \<le> p0 ^ (t+s)"
-      apply (simp add: powr_add)
-
-      using p0 
-      by (simp add: powr_add)
-
-  also 
-  finally have "2 powr (ok_fun_61 k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * n * card Y0 \<le> card (Yseq \<gamma> l k m)" 
-    using card_XY0 by (simp add: divide_simps)
-
-  
-  
-  
   show ?thesis
-
-
-
-  thm Y_6_1
   sorry
 qed
 

@@ -676,6 +676,10 @@ lemma Big_Y_6_1:
 
 definition "ok_fun_61 \<equiv> \<lambda>k. (2 * real k / ln 2) * ln (1 - 2 * eps k powr (1/2) / p0)"
 
+lemma ok_fun_61: "ok_fun_61 \<in> o(real)"
+  unfolding eps_def ok_fun_61_def
+  using p0_01 by real_asymp
+
 lemma Y_6_1:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and big: "Big_Y_6_1 \<mu> l"

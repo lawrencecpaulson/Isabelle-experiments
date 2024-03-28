@@ -3,13 +3,7 @@ theory General_Extras imports
   "HOL-ex.Sketch_and_Explore"
 
 begin
-
-lemma powr_mono_both':
-  fixes x :: real
-  assumes "a \<ge> b" "b\<ge>0" "0 < x" "x \<le> y" "y \<le> 1"
-    shows "x powr a \<le> y powr b"
-  by (meson assms nless_le order.trans powr_mono' powr_mono2)
-
+    
 text \<open>yet another telescope variant, with weaker promises but a different conclusion\<close>
 lemma prod_lessThan_telescope_mult:
   fixes f::"nat \<Rightarrow> 'a::field"
