@@ -209,6 +209,52 @@ next
   finally show ?case .
 qed
 
+lemma sum_eq_card_Neighbours:
+  assumes "x \<in> V" "C \<subseteq> E"
+  shows "(\<Sum>y \<in> V\<setminus>{x}. if {x,y} \<in> C then 1 else 0) = card (Neighbours C x)"
+proof -
+  have "Neighbours C x = (V \<setminus> {x}) \<inter> {y. {x, y} \<in> C}"
+    using assms by (auto simp: Neighbours_def)
+  with finV sum_eq_card [of _ "{y. {x,y}\<in>C}"] show ?thesis by simp
+qed
+
+lemma Neighbours_insert: "Neighbours (insert e C) x = {y. e = {x,y}} \<union> Neighbours C x"
+  by (auto simp: Neighbours_def)
+
+lemma Neighbours_insert_NO_MATCH: "NO_MATCH {} C \<Longrightarrow> Neighbours (insert e C) x = Neighbours {e} x \<union> Neighbours C x"
+  by (auto simp: Neighbours_def)
+
+lemma Neighbours_sing_2:
+  assumes "e \<in> E"
+  shows "(\<Sum>x\<in>V. card (Neighbours {e} x)) = 2"
+proof -
+  obtain u v where uv: "e = {u,v}" "u\<noteq>v"
+    by (meson assms card_2_iff two_edges)
+  then have "u \<in> V" "v \<in> V"
+    using assms uv by blast+
+  have *: "Neighbours {e} x = (if x=u then {v} else if x=v then {u} else {})" for x
+    by (auto simp add: Neighbours_def uv doubleton_eq_iff)
+  show ?thesis
+    using \<open>u\<noteq>v\<close>
+    by (simp add: * if_distrib [of card] finV sum.delta_remove \<open>u \<in> V\<close> \<open>v \<in> V\<close> cong: if_cong)
+qed
+
+lemma sum_Neighbours_eq_card:
+  assumes "finite C" "C\<subseteq>E" 
+  shows "(\<Sum>i\<in>V. card (Neighbours C i)) = card C * 2"
+  using assms
+proof (induction C)
+  case empty
+  then show ?case
+    by (auto simp: Neighbours_def)
+next
+  case (insert e C)
+  then have [simp]: "Neighbours {e} x \<inter> Neighbours C x = {}" for x
+    by (auto simp: Neighbours_def)
+  with insert show ?case
+    by (auto simp: card_Un_disjoint finite_Neighbours Neighbours_insert_NO_MATCH sum.distrib Neighbours_sing_2)
+qed
+
 lemma gen_density_empty [simp]: "gen_density C {} X = 0" "gen_density C X {} = 0"
   by (auto simp: gen_density_def)
 

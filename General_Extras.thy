@@ -3,7 +3,10 @@ theory General_Extras imports
   "HOL-ex.Sketch_and_Explore"
 
 begin
-    
+
+lemma sum_eq_card: "finite A \<Longrightarrow> (\<Sum>x \<in> A. if x \<in> B then 1 else 0) = card (A\<inter>B)"
+  by (metis (no_types, lifting) card_eq_sum sum.cong sum.inter_restrict)
+
 text \<open>yet another telescope variant, with weaker promises but a different conclusion\<close>
 lemma prod_lessThan_telescope_mult:
   fixes f::"nat \<Rightarrow> 'a::field"

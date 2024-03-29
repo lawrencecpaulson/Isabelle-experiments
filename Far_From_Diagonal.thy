@@ -5,6 +5,8 @@ theory Far_From_Diagonal
 
 begin
 
+
+
 subsection \<open>Fact D.3 from the Appendix\<close>
 
 text \<open>And hence, Fact 9.4\<close>
@@ -707,7 +709,53 @@ qed
 
 subsection \<open>Lemma 9.2\<close>
 
-definition "red_density_V \<equiv> card Red / card E"
+definition "red_graph_density \<equiv> card Red / card E"
+
+lemma density_eq_average:
+  "red_graph_density =
+    real (\<Sum> x \<in> V. \<Sum> y \<in> V\<setminus>{x}. if {x,y} \<in> Red then 1 else 0) / (card V * (card V - 1))"
+proof -
+  have cardE: "card E = card V choose 2"
+    using card_all_edges complete finV by blast
+  have *: "(\<Sum>x\<in>V. \<Sum>y\<in>V \<setminus> {x}. if {x, y} \<in> Red then 1 else 0) = card Red * 2"
+    using Red_E by (simp add: sum_eq_card_Neighbours Red_E sum_Neighbours_eq_card)
+  show ?thesis
+    by (auto simp add: red_graph_density_def divide_simps cardE choose_two_real *)
+qed
+
+lemma density_eq_average_partition:
+  assumes k: "0 < k" "k < card V"
+  shows "red_graph_density = (\<Sum>U \<in> nsets V k. red_density U (V\<setminus>U)) / (card V choose k)"
+proof -
+  have cardE: "card E = card V choose 2"
+    using card_all_edges complete finV by blast
+
+  have "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U) / (real (card U) * card (V\<setminus>U)))
+     = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U) / (real k * (card V - k)))"
+    using card_Diff_subset by (intro sum.cong) (auto simp: nsets_def)
+  also have "\<dots> = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U)) / (k * (card V - k))"
+    by (simp add: sum_divide_distrib)
+  finally have *: "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U) / (real (card U) * card (V\<setminus>U)))
+              = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U)) / (k * (card V - k))" .
+
+
+  have "nV choose k \<noteq> 0"
+    using assms(2) by force
+  with k show ?thesis
+    apply (simp add: red_graph_density_def gen_density_def cardE * divide_simps)
+    apply (simp add: *)
+
+apply (simp add: cong: sum.cong)
+
+    apply (auto simp: )
+
+
+
+
+
+proof -
+
+    sorry
 
 definition "Big_Far_9_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l"
 
@@ -719,11 +767,11 @@ lemma Far_9_2:
   defines "\<gamma> \<equiv> real l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/20"
   assumes "Colours l k" and "\<gamma> \<le> 1/10" and \<epsilon>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
-  assumes n: "real n \<ge> exp (-\<delta> * k) * (k+l choose l)" 
+  assumes n: "real nV \<ge> exp (-\<delta> * k) * (k+l choose l)" 
   assumes big: "Big_Far_9_2 \<gamma> l"
-  shows "\<not> red_density_V \<ge> 1-\<gamma>-\<epsilon>" 
+  shows "\<not> red_graph_density \<ge> 1-\<gamma>-\<epsilon>" 
 proof
-  assume "red_density_V \<ge> 1-\<gamma>-\<epsilon>"
+  assume "red_graph_density \<ge> 1-\<gamma>-\<epsilon>"
   define \<R> where "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
   define t where "t \<equiv> card \<R>"
   define m where "m \<equiv> halted_point \<gamma> l k"
