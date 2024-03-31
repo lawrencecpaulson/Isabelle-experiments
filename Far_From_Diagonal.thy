@@ -758,7 +758,7 @@ proof (cases "e \<subseteq> U")
     by (simp add: edge_card_def)
 qed (auto simp: edge_card_def all_edges_betw_un_def)
 
-lemma DD: 
+lemma sum_edge_card_choose: 
   assumes "2\<le>k" 
   shows "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U U) = (nV-2 choose (k-2)) * card Red"
 proof -
@@ -801,7 +801,7 @@ proof -
     by blast
 qed
 
-lemma E:
+lemma sum_nsets_Compl:
   assumes "finite A" "k \<le> card A"
   shows "(\<Sum>U\<in>[A]\<^bsup>k\<^esup>. f (A\<setminus>U)) = (\<Sum>U\<in>[A]\<^bsup>(card A - k)\<^esup>. f U)"
 proof -
@@ -820,27 +820,61 @@ proof -
     using sum.reindex_bij_betw by blast
 qed
 
-
+text \<open>Bhavik's statement; own proof\<close>
 lemma density_eq_average_partition:
   assumes k: "0 < k" "k < card V"
-  shows "red_graph_density = (\<Sum>U \<in> nsets V k. red_density U (V\<setminus>U)) / (card V choose k)"
-proof -
+  shows "red_graph_density = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. red_density U (V\<setminus>U)) / (card V choose k)"
+proof (cases "k=1 \<or> nV = Suc k")
+  case True
+  have eq: "(Red \<inter> {{x, y} |y. y \<in> V \<and> y \<noteq> x \<and> y \<in> V \<and> x \<noteq> y}) 
+           = (\<lambda>y. {x,y}) ` {y. {x, y} \<in> Red}" for x
+    using Red_E by auto
+  have "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. red_density U (V \<setminus> U)) = (\<Sum>x\<in>V. red_density {x} (V \<setminus> {x}))"
+    using True
+  proof
+    assume "k = 1"
+    then have bij: "bij_betw (\<lambda>x. {x}) V ([V]\<^bsup>k\<^esup>)"
+      by (auto simp: inj_on_def bij_betw_def nsets_one)
+    show ?thesis
+      using sum.reindex_bij_betw [OF bij] by (metis (no_types, lifting) sum.cong)
+  next
+    assume \<section>: "nV = Suc k"
+    then have  "V-A \<noteq> {}" if "card A = k" "finite A" for A
+      using that
+      by (metis card.empty card_less_sym_Diff finV lessI not_less0)
+    then have bij: "bij_betw (\<lambda>x. V \<setminus> {x}) V ([V]\<^bsup>k\<^esup>)"
+      using finV \<section> 
+      apply (auto simp: inj_on_def bij_betw_def nsets_def image_iff)
+      by (metis Diff_insert_absorb card.insert card_subset_eq insert_subset subsetI)
+    moreover have "V\<setminus>(V\<setminus>{x}) = {x}" if "x\<in>V" for x
+      using that by auto
+    ultimately show ?thesis
+      using sum.reindex_bij_betw [OF bij] gen_density_commute 
+      by (metis (no_types, lifting) sum.cong) 
+  qed
+  also have "... = (\<Sum>x\<in>V. real (edge_card Red {x} (V \<setminus> {x}))) / (nV-1)"
+    by (simp add: Red_E gen_density_def flip: sum_divide_distrib)
+  also have "... = (\<Sum>i\<in>V. card (Neighbours Red i)) / (nV-1)"
+    unfolding edge_card_def Neighbours_def all_edges_betw_un_def
+    by (simp add: eq card_image inj_on_def doubleton_eq_iff)
+  also have "... = red_graph_density * (card V)"
+    using assms
+    by (simp add: Red_E sum_Neighbours_eq_card red_graph_density_def graph_size choose_two_real of_nat_diff)
+  finally show ?thesis
+    using assms(2) True by fastforce
+next
+  case False
+  then have K: "nV > Suc k" "k\<ge>2" 
+    using assms by auto
+  then have WW: "nV - Suc (Suc (nV - Suc (Suc k))) = k"
+    using k by auto
+  then have [simp]: "nV - 2 choose (nV - Suc (Suc k)) = (nV - 2 choose k)"
+    using binomial_symmetric [of "(nV - Suc (Suc k))"]
+    by simp
   have cardE: "card E = card V choose 2"
     using card_all_edges complete finV by blast
   have "card E > 0"
     using fin_edges nontriv by fastforce
-
-  have "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U) / (real (card U) * card (V\<setminus>U)))
-     = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U) / (real k * (card V - k)))"
-    using card_Diff_subset by (intro sum.cong) (auto simp: nsets_def)
-  also have "\<dots> = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U)) / (k * (card V - k))"
-    by (simp add: sum_divide_distrib)
-  finally have *: "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U) / (real (card U) * card (V\<setminus>U)))
-              = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U)) / (k * (card V - k))" .
-
-  have A: "all_edges_betw_un V V = all_edges_betw_un U U \<union> all_edges_betw_un U (V\<setminus>U) \<union> all_edges_betw_un (V\<setminus>U) (V\<setminus>U)"
-    if "U \<subseteq> V" for U
-    by (smt (verit) that Diff_partition Un_absorb Un_assoc all_edges_betw_un_Un2 all_edges_betw_un_commute)
 
   have B: "edge_card Red V V = edge_card Red U U + edge_card Red U (V\<setminus>U) + edge_card Red (V\<setminus>U) (V\<setminus>U)"
     (is "?L = ?R")
@@ -850,9 +884,11 @@ proof -
       by (meson all_uedges_betw_subset fin_edges finite_subset)
     have dis: "all_edges_betw_un U U \<inter> all_edges_betw_un U (V \<setminus> U) = {}"
       by (auto simp: all_edges_betw_un_def doubleton_eq_iff)
-    have "?L = card (Red \<inter> all_edges_betw_un U U \<union> Red \<inter> all_edges_betw_un U (V \<setminus> U) \<union> Red \<inter> all_edges_betw_un (V \<setminus> U) (V \<setminus> U))"
-      using that
-      by (simp add: edge_card_def Int_Un_distrib  A)
+    have "all_edges_betw_un V V = all_edges_betw_un U U \<union> all_edges_betw_un U (V\<setminus>U) \<union> all_edges_betw_un (V\<setminus>U) (V\<setminus>U)"
+      by (smt (verit) that Diff_partition Un_absorb Un_assoc all_edges_betw_un_Un2 all_edges_betw_un_commute)
+    with that have "?L = card (Red \<inter> all_edges_betw_un U U \<union> Red \<inter> all_edges_betw_un U (V \<setminus> U)
+                             \<union> Red \<inter> all_edges_betw_un (V \<setminus> U) (V \<setminus> U))"
+      by (simp add: edge_card_def Int_Un_distrib)
     also have "... = ?R"
       using fin dis
       apply (subst card_Un_disjoint, auto simp: all_edges_betw_un_def doubleton_eq_iff)+
@@ -870,21 +906,6 @@ proof -
     finally show ?thesis .
   qed
 
-  have K: "nV > Suc k" "k\<ge>2"  (*NB THE CASE k=1 looks easy ALSO nv=Suc k*)
-    sorry
-  then
-  have WW: "nV - Suc (Suc (nV - Suc (Suc k))) = k"
-    using k by auto
-  then have [simp]: "nV - 2 choose (nV - Suc (Suc k)) = (nV - 2 choose k)"
-    using binomial_symmetric [of "(nV - Suc (Suc k))"]
-    by simp
-  have [simp]: "real(nV-2) = real nV - 2"
-    using \<open>0 < graph_size\<close> cardE by auto
-
-
-  have XX: "k * (nV choose k) = nV * (nV - 1 choose (k - 1))"
-    using k(1) times_binomial_minus1_eq by blast 
-
   have "(nV-2 choose k) + (nV-2 choose (k-2)) + 2 * (nV-2 choose (k-1)) = (nV choose k)"
     using k K by (auto simp: choose_reduce_nat [of "nV"] choose_reduce_nat [of "nV-Suc 0"] eval_nat_numeral)
   moreover
@@ -893,24 +914,34 @@ proof -
   ultimately have F: "(nV-1) * (nV-2 choose k) + (nV-1) * (nV-2 choose (k-2)) + 2 * (nV-k) * (nV-1 choose (k-1)) 
       = (nV-1) * (nV choose k)"
     by (smt (verit) add_mult_distrib2 mult.assoc mult.left_commute)
-  have QQQ: "(real k * (real nV - real k) * real (nV choose k)) =
+
+  have "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U) / (real (card U) * card (V\<setminus>U)))
+     = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U) / (real k * (card V - k)))"
+    using card_Diff_subset by (intro sum.cong) (auto simp: nsets_def)
+  also have "\<dots> = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U)) / (k * (card V - k))"
+    by (simp add: sum_divide_distrib)
+  finally have *: "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U) / (real (card U) * card (V\<setminus>U)))
+              = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U)) / (k * (card V - k))" .
+
+  have choose_m1: "nV * (nV - 1 choose (k - 1)) = k * (nV choose k)"
+    using k(1) times_binomial_minus1_eq by presburger 
+  have **: "(real k * (real nV - real k) * real (nV choose k)) =
         (real (nV choose k) - (real (nV - 2 choose (k - 2)) + real (nV - 2 choose k))) *
         real (nV choose 2)"
-    using assms K arg_cong [OF F, of "\<lambda>u. real nV * real u"] XX
+    using assms K arg_cong [OF F, of "\<lambda>u. real nV * real u"] arg_cong [OF choose_m1, of real]
     unfolding of_nat_mult of_nat_add
     apply (simp add: algebra_simps of_nat_diff choose_two_real)
-    by (metis (no_types, opaque_lifting) Groups.add_ac(2) Groups.mult_ac(3) Num.of_nat_simps(5) nat_arith.add2)
+    by (smt (verit, ccfv_threshold) mult.left_commute distrib_left)
   have "nV choose k \<noteq> 0"
     using assms(2) by force
   with k K \<open>card E > 0\<close> finV show ?thesis
     apply (simp add: red_graph_density_def gen_density_def divide_simps B C sum.distrib *)
-    apply (subst E, simp_all)
-    apply (simp add: DD cardE of_nat_diff flip: of_nat_sum)
-    using arg_cong [OF QQQ, of "\<lambda>u. real (card Red) * u"]
+    apply (subst sum_nsets_Compl, simp_all)
+    apply (simp add: sum_edge_card_choose cardE of_nat_diff flip: of_nat_sum)
+    using arg_cong [OF **, of "\<lambda>u. real (card Red) * u"]
     apply (simp add:  field_simps of_nat_diff choose_two_real)
     done
 qed
-
 
 
 definition "Big_Far_9_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l"

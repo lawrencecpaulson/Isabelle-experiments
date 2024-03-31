@@ -54,6 +54,9 @@ end
 
 abbreviation "nV \<equiv> card V"
 
+lemma graph_size: "graph_size = (nV choose 2)"
+  using card_all_edges complete finV by blast
+
 lemma RB_nonempty: "Red \<noteq> {}" "Blue \<noteq> {}"
   using part_RB partition_onD3 by auto
 
