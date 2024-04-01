@@ -105,12 +105,16 @@ lemma Neighbours_Red_Blue:
 lemma disjnt_Red_Blue_Neighbours: "disjnt (Neighbours Red x \<inter> X) (Neighbours Blue x \<inter> X')"
   using disjnt_Red_Blue by (auto simp: disjnt_def Neighbours_def)
 
-lemma clique_imp_all_edges_betw_un: "clique K F \<Longrightarrow> all_edges_betw_un K K \<subseteq> F"
-  by (force simp: clique_def all_edges_betw_un_def)
-
 lemma all_edges_betw_un_iff_clique: "K \<subseteq> V \<Longrightarrow> all_edges_betw_un K K \<subseteq> F \<longleftrightarrow> clique K F"
   unfolding clique_def all_edges_betw_un_def doubleton_eq_iff subset_iff
   by blast
+
+lemma clique_Un:
+  assumes "clique A F" "clique B F" "all_edges_betw_un A B \<subseteq> F" "A \<subseteq> V" "B \<subseteq> V"
+  shows "clique (A \<union> B) F"
+  using assms
+  apply (simp add: clique_def all_edges_betw_un_def subset_iff)
+  by (metis Un_iff doubleton_eq_iff)
 
 lemma indep_Red_iff_clique_Blue: "K \<subseteq> V \<Longrightarrow> indep K Red \<longleftrightarrow> clique K Blue"
   using Blue_eq by auto

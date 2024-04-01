@@ -374,7 +374,10 @@ lemma size_clique_all_edges: "size_clique p K F \<Longrightarrow> all_edges K \<
   by (auto simp: size_clique_def all_edges_def clique_def card_2_iff)
 
 lemma indep_iff_clique: "K \<subseteq> V \<Longrightarrow> indep K F \<longleftrightarrow> clique K (all_edges V - F)"
-  by (auto simp: indep_def clique_def all_edges_def)
+  by simp
+
+lemma clique_imp_all_edges_betw_un: "clique K F \<Longrightarrow> all_edges_betw_un K K \<subseteq> F"
+  by (force simp: clique_def all_edges_betw_un_def)
 
 end
 

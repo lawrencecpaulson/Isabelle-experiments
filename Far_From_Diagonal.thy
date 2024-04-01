@@ -121,7 +121,7 @@ lemma ok_fun_94: "ok_fun_94 \<in> o(real)"
 
 lemma fact_9_4:
   assumes l: "0 < l" "l \<le> k"
-  defines "\<gamma> \<equiv> real l / (real k + real l)"
+  defines "\<gamma> \<equiv> l / (real k + real l)"
   shows "k+l choose l \<ge> 2 powr ok_fun_94 k * \<gamma> powr (-l) * (1-\<gamma>) powr (-k)" 
 proof -
   have *: "ok_fun_94 k \<le> logstir (k + l) - (logstir k + logstir l)"
@@ -159,7 +159,7 @@ proof -
       apply (simp add: field_simps)
       by (metis (no_types, lifting) binomial_absorb_comp diff_Suc_eq_diff_pred diff_add_inverse2 diff_commute of_nat_mult)
   qed auto
-  also have "... = (real k / (k+l))^t * (\<Prod>i<t. 1 - real i * real l / (real k * (k+l-i)))"
+  also have "\<dots> = (real k / (k+l))^t * (\<Prod>i<t. 1 - real i * real l / (real k * (k+l-i)))"
   proof -
     have "1 - real i * real l / (real k * (k+l-i)) = ((k-i)/(k+l-i)) * ((k+l) / k)" if "i<t" for i
       using that \<open>t \<le> k\<close> by (simp add: divide_simps of_nat_diff) argo
@@ -168,7 +168,7 @@ proof -
     show ?thesis
       unfolding * prod.distrib by (simp add: power_divide)
   qed
-  also have "... \<le> (real k / (k+l))^t * exp (- (\<Sum>i<t. real i * real l / (real k * (k+l))))"
+  also have "\<dots> \<le> (real k / (k+l))^t * exp (- (\<Sum>i<t. real i * real l / (real k * (k+l))))"
   proof (intro mult_left_mono)
     have "real i * real l / (real k * real (k + l - i)) \<le> 1"
       if "i < t" for i
@@ -192,7 +192,7 @@ proof -
       by (induction t) (auto simp: algebra_simps eval_nat_numeral of_nat_diff)
     have "\<gamma> * (t-1)^2 / (2*k) \<le> real(t*(t-1)) / 2 * \<gamma>/k"
       by (simp add: field_simps eval_nat_numeral divide_right_mono mult_mono \<gamma>_def)
-    also have "... = (\<Sum>i<t. i * \<gamma> / k)" 
+    also have "\<dots> = (\<Sum>i<t. i * \<gamma> / k)" 
       unfolding g [symmetric] by (simp add: sum_distrib_right sum_divide_distrib)
     finally show ?thesis .
   qed
@@ -201,9 +201,9 @@ proof -
   have *: "(k+l-t choose l) \<le> (real k / (k+l))^t * exp (- (\<Sum>i<t. i * \<gamma> / k)) * (k+l choose l)"
     using order_trans [OF _  mult_right_mono [OF 1 0]]
     by (simp add: less_eq_real_def)
-  also have "... \<le>  (k / (k+l))^t * exp (- \<gamma> * (t-1)^2 / (2*k)) *(k+l choose l)"
+  also have "\<dots> \<le>  (k / (k+l))^t * exp (- \<gamma> * (t-1)^2 / (2*k)) *(k+l choose l)"
     using ** by (intro mult_mono) auto
-  also have "... \<le> exp (- \<gamma> * (t-1)^2 / (2 * real k)) * (k / (k+l))^t * (k+l choose l)"
+  also have "\<dots> \<le> exp (- \<gamma> * (t-1)^2 / (2 * real k)) * (k / (k+l))^t * (k+l choose l)"
     by (simp add: mult_ac)
   finally show ?thesis 
     using t by (simp add: of_nat_diff)
@@ -290,14 +290,14 @@ qed
 definition "Big_Far_9_3 \<equiv>     
    \<lambda>\<mu> l. Big_ZZ_8_5 \<mu> l \<and> Big_X_7_1 \<mu> l \<and> Big_Y_6_2 \<mu> l \<and> Big_Red_5_3 \<mu> l
       \<and> (\<forall>k\<ge>l. p0 - 3 * eps k > 1/k \<and> k\<ge>2
-             \<and> \<bar>ok_fun_93h \<mu> k / (\<mu> * (1 + 1 / (exp 1 * (1 - \<mu>))))\<bar> / k \<le> 0.667 - 2/3)"
+             \<and> \<bar>ok_fun_93h \<mu> k / (\<mu> * (1 + 1 / (exp 1 * (1-\<mu>))))\<bar> / k \<le> 0.667 - 2/3)"
 
 
 lemma Big_Far_9_3:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_Far_9_3 \<mu> l"
 proof -
-  define d where "d \<equiv> \<mu> * (1 + 1 / (exp 1 * (1 - \<mu>)))"
+  define d where "d \<equiv> \<mu> * (1 + 1 / (exp 1 * (1-\<mu>)))"
   have "d > 0"
     using assms by (auto simp: d_def divide_simps add_pos_pos)
   define e::real where "e \<equiv> 0.667 - 2/3"
@@ -324,7 +324,7 @@ text \<open>Here @{term n} really refers to the cardinality of @{term V},
 lemma Far_9_3:
   fixes l k
   assumes "Colours l k"  \<comment> \<open>Not mentioned in paper but presumably needed\<close>
-  defines "\<gamma> \<equiv> real l / (real k + real l)"
+  defines "\<gamma> \<equiv> l / (real k + real l)"
   defines "\<delta> \<equiv> min (1/200) (\<gamma>/20)"
   defines "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
   defines "t \<equiv> card \<R>"
@@ -441,7 +441,7 @@ proof -
   have cgt0: "c x > 0" if "x<1" for x
     using that by (simp add: add_pos_nonneg c_def)
 
-  have "card \<S> \<le> \<beta> * t / (1 - \<beta>) + (2 / (1-\<gamma>)) * k powr (19/20)" 
+  have "card \<S> \<le> \<beta> * t / (1-\<beta>) + (2 / (1-\<gamma>)) * k powr (19/20)" 
     using ZZ_8_5 [OF \<gamma>01 \<open>Colours l k\<close> big85] \<gamma>01 by (auto simp: \<R>_def \<S>_def t_def \<beta>_def)
   also have "\<dots> \<le> ?\<xi>" 
     using \<beta>_le by (simp add: \<gamma>01 bigbeta_ge0 frac_le \<beta>_def)
@@ -473,7 +473,7 @@ proof -
       using \<open>\<beta>>0\<close> \<open>\<gamma>>0\<close> \<open>k>0\<close>
       by (metis divide_pos_pos ln_le_cancel_iff ln_mult mult_2 mult_pos_pos of_nat_0_less_iff power2_eq_square)
     show ?thesis
-      using mult_right_mono [OF X, of "2 * k powr (19/20) / (1 - \<gamma>)"] \<open>\<gamma><1\<close>
+      using mult_right_mono [OF X, of "2 * k powr (19/20) / (1-\<gamma>)"] \<open>\<gamma><1\<close>
       by (simp add: ok_fun_93h_def algebra_simps)
   qed
   also have "\<dots> \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) + \<delta>*k + ok_fun_93h \<gamma> k"
@@ -483,7 +483,7 @@ proof -
     by (simp add: c_def algebra_simps)
   then have "((\<gamma>-\<delta>) * k - ok_fun_93h \<gamma> k) / (\<gamma> * c \<gamma>) \<le> t"
     using \<gamma>01 cgt0 by (simp add: pos_divide_le_eq)
-  then have *: "t \<ge> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) * k - ok_fun_93h \<gamma> k / (\<gamma> * c \<gamma>)"  
+  then have *: "t \<ge> (1-\<delta> / \<gamma>) * inverse (c \<gamma>) * k - ok_fun_93h \<gamma> k / (\<gamma> * c \<gamma>)"  
     using \<gamma>01 cgt0[of \<gamma>] by (simp add: field_simps)
 
   define f47 where "f47 \<equiv> \<lambda>x. (1 - 1/(200*x)) * inverse (c x)"
@@ -514,7 +514,7 @@ proof -
       have \<section>: "exp 1 * (x - 1) < 0"
         using x01
         by (meson exp_gt_zero less_iff_diff_less_0 mult_less_0_iff)
-      then have non0: "1 + 1 / (exp 1 * (1 - x)) \<noteq> 0"
+      then have non0: "1 + 1 / (exp 1 * (1-x)) \<noteq> 0"
         using x01 by (smt (verit) exp_gt_zero mult_pos_pos zero_less_divide_iff)
       let ?f1 = "\<lambda>x. -exp 1 /(- 1 + exp 1 * (- 1 + x))\<^sup>2"
       let ?f2 = "\<lambda>x. 2*exp(1)^2/(-1 + exp(1)*(-1 + x))^3"
@@ -565,11 +565,11 @@ proof -
       by (auto simp: \<delta>_def)
     have "(2/3::real) \<le> f48 \<gamma> - e"
       using 48[OF 1] e_def by force
-    also have "\<dots> \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) - ok_fun_93h \<gamma> k / (\<gamma> * c \<gamma>) / k"
+    also have "\<dots> \<le> (1-\<delta> / \<gamma>) * inverse (c \<gamma>) - ok_fun_93h \<gamma> k / (\<gamma> * c \<gamma>) / k"
       unfolding f48_def \<delta>\<gamma> using BIGH
       by (smt (verit, best) divide_nonneg_nonneg of_nat_0_le_iff zero_less_divide_iff)
     finally
-    have A: "2/3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) - ok_fun_93h \<gamma> k / (\<gamma> * c \<gamma>) / k" .
+    have A: "2/3 \<le> (1-\<delta> / \<gamma>) * inverse (c \<gamma>) - ok_fun_93h \<gamma> k / (\<gamma> * c \<gamma>) / k" .
     have "real (2 * k) / 3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) * k - ok_fun_93h \<gamma> k / (\<gamma> * c \<gamma>)"
       using mult_left_mono [OF A, of k] cgt0 [of \<gamma>] \<gamma>01 \<open>k>0\<close>
       by (simp add: divide_simps mult_ac)
@@ -624,7 +624,7 @@ text \<open>Y0 is an additional assumption found Bhavik's version. (He had a cou
 lemma Far_9_5:
   fixes l k
   fixes \<delta> \<gamma> \<eta>::real
-  defines "\<gamma> \<equiv> real l / (real k + real l)"
+  defines "\<gamma> \<equiv> l / (real k + real l)"
   defines "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
   defines "t \<equiv> card \<R>"
   defines "m \<equiv> halted_point \<gamma> l k"
@@ -647,9 +647,9 @@ proof -
     using big by (auto simp: Big_Far_9_5_def)
   have "\<beta> \<le> \<gamma>" 
     using \<beta>_def \<gamma>01 \<open>Colours l k\<close> big53 bigbeta_le by blast 
-  have 85: "s \<le> (\<beta> / (1 - \<beta>)) * t + (2 / (1-\<gamma>)) * k powr (19/20)"
+  have 85: "s \<le> (\<beta> / (1-\<beta>)) * t + (2 / (1-\<gamma>)) * k powr (19/20)"
     unfolding s_def t_def \<R>_def \<S>_def \<beta>_def using ZZ_8_5 \<gamma>01 \<open>Colours l k\<close> big85 by blast
-  also have "... \<le> (\<gamma> / (1-\<gamma>)) * t + (2 / (1-\<gamma>)) * k powr (19/20)"
+  also have "\<dots> \<le> (\<gamma> / (1-\<gamma>)) * t + (2 / (1-\<gamma>)) * k powr (19/20)"
     using \<gamma>01 \<open>\<beta> \<le> \<gamma>\<close> by (intro add_mono mult_right_mono frac_le) auto
   finally have D85: "s \<le> \<gamma>*t / (1-\<gamma>) + (2 / (1-\<gamma>)) * k powr (19/20)"
     by auto
@@ -667,16 +667,16 @@ proof -
     show "(1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) \<le> (1-\<gamma>-\<eta>) powr (t+s - (2 / (1-\<gamma>)) * k powr (19/20))"
       using D85 \<gamma>01 add_divide_distrib p0 \<open>\<eta>\<ge>0\<close> powr_mono' by fastforce
   qed (use Y0 in auto)
-  also have "... \<le> (1-\<gamma>-\<eta>) powr (t+s) / (1-\<gamma>-\<eta>) powr ((2 / (1-\<gamma>)) * k powr (19/20)) * (2 * card Y0)"
+  also have "\<dots> \<le> (1-\<gamma>-\<eta>) powr (t+s) / (1-\<gamma>-\<eta>) powr ((2 / (1-\<gamma>)) * k powr (19/20)) * (2 * card Y0)"
     by (simp add: divide_powr_uminus powr_diff)
-  also have "... \<le> (1-\<gamma>-\<eta>) powr (t+s) / (1/2) powr ((2 / (1-\<gamma>)) * k powr (19/20)) * (2 * card Y0)"
+  also have "\<dots> \<le> (1-\<gamma>-\<eta>) powr (t+s) / (1/2) powr ((2 / (1-\<gamma>)) * k powr (19/20)) * (2 * card Y0)"
   proof (intro mult_mono divide_left_mono)
     show "(1/2) powr ((2 / (1-\<gamma>)) * k powr (19/20)) \<le> (1-\<gamma>-\<eta>) powr ((2 / (1-\<gamma>)) * k powr (19/20))"
       using \<gamma>01 p0 \<open>0\<le>\<eta>\<close> by (intro powr_mono_both') auto
   qed (use p0 in auto)
-  also have "... \<le> p0 powr (t+s) / (1/2) powr ((2 / (1-\<gamma>)) * k powr (19/20)) * (2 * card Y0)"
+  also have "\<dots> \<le> p0 powr (t+s) / (1/2) powr ((2 / (1-\<gamma>)) * k powr (19/20)) * (2 * card Y0)"
     using p0 powr_mono2 by (intro mult_mono divide_right_mono) auto
-  also have "... = (2 powr (1 + (2 / (1-\<gamma>)) * k powr (19/20))) * p0 ^ (t+s) * card Y0"
+  also have "\<dots> = (2 powr (1 + (2 / (1-\<gamma>)) * k powr (19/20))) * p0 ^ (t+s) * card Y0"
     using p0_01 by (simp add: powr_divide powr_add power_add powr_realpow)
   finally have "2 powr (ok_fun_95a \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * n \<le> 2 powr (ok_fun_61 k) * p0 ^ (t+s) * card Y0"
     by (simp add: ok_fun_95a_def powr_diff field_simps)
@@ -856,12 +856,12 @@ proof (cases "k=1 \<or> nV = Suc k")
       using sum.reindex_bij_betw [OF bij] gen_density_commute 
       by (metis (no_types, lifting) sum.cong) 
   qed
-  also have "... = (\<Sum>x\<in>V. real (edge_card Red {x} (V \<setminus> {x}))) / (nV-1)"
+  also have "\<dots> = (\<Sum>x\<in>V. real (edge_card Red {x} (V \<setminus> {x}))) / (nV-1)"
     by (simp add: Red_E gen_density_def flip: sum_divide_distrib)
-  also have "... = (\<Sum>i\<in>V. card (Neighbours Red i)) / (nV-1)"
+  also have "\<dots> = (\<Sum>i\<in>V. card (Neighbours Red i)) / (nV-1)"
     unfolding edge_card_def Neighbours_def all_edges_betw_un_def
     by (simp add: eq card_image inj_on_def doubleton_eq_iff)
-  also have "... = red_graph_density * (card V)"
+  also have "\<dots> = red_graph_density * (card V)"
     using assms
     by (simp add: Red_E sum_Neighbours_eq_card red_graph_density_def graph_size choose_two_real of_nat_diff)
   finally show ?thesis
@@ -893,7 +893,7 @@ next
     with that have "?L = card (Red \<inter> all_edges_betw_un U U \<union> Red \<inter> all_edges_betw_un U (V \<setminus> U)
                              \<union> Red \<inter> all_edges_betw_un (V \<setminus> U) (V \<setminus> U))"
       by (simp add: edge_card_def Int_Un_distrib)
-    also have "... = ?R"
+    also have "\<dots> = ?R"
       using fin dis
       apply (subst card_Un_disjoint, auto simp: all_edges_betw_un_def doubleton_eq_iff)+
       by (simp add: edge_card_def all_edges_betw_un_def)
@@ -905,7 +905,7 @@ next
   proof -
     have "?L = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red V V - real (edge_card Red U U + edge_card Red (V\<setminus>U) (V\<setminus>U)))"
       unfolding nsets_def by (rule sum.cong) (auto simp: B)
-    also have "... = ?R"
+    also have "\<dots> = ?R"
       by (simp add: sum_subtractf edge_card_V_V)
     finally show ?thesis .
   qed
@@ -977,7 +977,7 @@ text \<open>A little tricky for me to express since my "Colours" assumption incl
 lemma Far_9_2_aux:
   fixes l k
   fixes \<delta> \<gamma> \<eta>::real
-  defines "\<gamma> \<equiv> real l / (real k + real l)"
+  defines "\<gamma> \<equiv> l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/20"
   assumes "Colours l k" and \<gamma>: "\<gamma> \<le> 1/10" and \<eta>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
   assumes nV: "real nV \<ge> exp (-\<delta> * k) * (k+l choose l)" 
@@ -997,21 +997,21 @@ proof -
   have t23: "t \<ge> 2*k / 3"
     unfolding t_def \<R>_def \<gamma>_def
   proof (rule Far_9_3)
-    show "real l / (real k + real l) \<le> 1/5"
+    show "l / (real k + real l) \<le> 1/5"
       using \<gamma> unfolding \<gamma>_def by linarith
-    have "min (1/200) (real l / (real k + real l) / 20) \<ge> \<delta>"
+    have "min (1/200) (l / (real k + real l) / 20) \<ge> \<delta>"
       unfolding \<delta>_def using \<gamma> \<open>0<l\<close> by (simp add: \<gamma>_def)
-    then show "exp (- min (1/200) (real l / (real k + real l) / 20) * real k) * real (k + l choose l) \<le> nV"
+    then show "exp (- min (1/200) (l / (real k + real l) / 20) * real k) * real (k + l choose l) \<le> nV"
       using \<delta>_def \<gamma>_def nV by force
     show "1/4 \<le> p0"
       using \<eta> \<gamma> 0 by linarith
-    show "Big_Far_9_3 (real l / (real k + real l)) l"
+    show "Big_Far_9_3 (l / (real k + real l)) l"
       using \<gamma>_def big93 by blast
   qed (use assms in auto)
   have "t<k"
     unfolding t_def \<R>_def using \<gamma>01 \<open>Colours l k\<close> red_step_limit by blast
 
-  have ge_half: "1/2 \<le> 1 - \<gamma> - \<eta>"
+  have ge_half: "1/2 \<le> 1-\<gamma>-\<eta>"
     using \<gamma> \<eta> by linarith
 
   have 95: "card (Yseq \<gamma> l k m) \<ge>
@@ -1019,37 +1019,105 @@ proof -
    * exp (\<gamma> * (real t)\<^sup>2 / (2 * real k)) * (k-t+l choose l)"
     unfolding \<gamma>_def t_def \<R>_def m_def
   proof (rule Far_9_5)
-    show "1/2 \<le> 1 - real l / (real k + real l) - \<eta>"
+    show "1/2 \<le> 1 - l / (real k + real l) - \<eta>"
       using ge_half \<gamma>_def by blast
-    show "Big_Far_9_5 (real l / (real k + real l)) l"
+    show "Big_Far_9_5 (l / (real k + real l)) l"
       using Big_Far_9_2_def big unfolding \<gamma>_def by presburger
   qed (use assms in auto)
 
-  have "ln((134/150) powr (10/9)) > -1/3 + (1/5::real)"
+  have "ln((134/150) powr (10/9)) \<ge> -1/3 + (1/5::real)"
     by (approximation 10)
-  then have "exp (-1/3 + (1/5::real)) < exp (10/9 * ln (134/150))"
+  then have "exp (-1/3 + (1/5::real)) \<le> exp (10/9 * ln (134/150))"
     by (simp add: ln_powr)
-  also have "... \<le> exp (1 / (1 - \<gamma>) * ln (134/150))"
+  also have "\<dots> \<le> exp (1 / (1-\<gamma>) * ln (134/150))"
     using \<gamma> by (auto simp: divide_simps)
-  also have "... \<le> exp (1 / (1 - \<gamma>) * ln (1 - \<gamma> - \<eta>))"
+  also have "\<dots> \<le> exp (1 / (1-\<gamma>) * ln (1-\<gamma>-\<eta>))"
     using \<gamma> \<eta> by (auto simp: divide_simps)
-  also have "... = (1-\<gamma>-\<eta>) powr (1 / (1-\<gamma>))"
+  also have "\<dots> = (1-\<gamma>-\<eta>) powr (1 / (1-\<gamma>))"
     using ge_half by (simp add: powr_def)
-  finally have "exp (-1/3 + (1/5)) <(1-\<gamma>-\<eta>) powr (1 / (1-\<gamma>))" .
+  finally have A: "exp (-1/3 + 1/5) \<le> (1-\<gamma>-\<eta>) powr (1 / (1-\<gamma>))" .
+
+  have \<section>: "3*t / (10*k) \<le> (-1/3 + 1/5) + t/(2*k)"
+    using t23 \<open>k>0\<close> by (simp add: divide_simps)
+  have "3*\<gamma>*t\<^sup>2 / (10*k) \<le> \<gamma>*t*(-1/3 + 1/5) + \<gamma>*t\<^sup>2/(2*k)"
+    using mult_right_mono [OF \<section>, of "\<gamma>*t"] \<gamma>01
+    by (simp add: eval_nat_numeral algebra_simps) 
+  then have "exp (3*\<gamma>*t\<^sup>2 / (10*k)) \<le> exp (\<gamma>*t*(-1/3 + 1/5)) * exp (\<gamma>*t\<^sup>2/(2*k))"
+    by (simp add: mult_exp_exp)
+  also have "\<dots> = exp (-1/3 + 1/5) powr (\<gamma>*t) * exp (\<gamma>*t\<^sup>2/(2*k))"
+    by (simp add: exp_powr_real)
+  also have "\<dots> \<le> (1-\<gamma>-\<eta>) powr ((\<gamma>*t) / (1-\<gamma>)) * exp (\<gamma>*t\<^sup>2/(2*k))"
+    using \<gamma>01 powr_powr powr_mono2 [of "\<gamma>*t" "exp (-1/3 + 1/5)", OF _ _ A]
+    by (intro mult_right_mono) auto
+  finally have B: "exp (3*\<gamma>*t\<^sup>2 / (10*k)) \<le> (1-\<gamma>-\<eta>) powr ((\<gamma>*t) / (1-\<gamma>)) * exp (\<gamma>*t\<^sup>2/(2*k))" .
+
+  have "\<delta>*k = \<gamma>*k / 20"
+    by (simp add: \<delta>_def)
+  also have "... \<le> 9*\<gamma>*t\<^sup>2 / (80*k)"
+    using mult_mono [OF t23 t23] \<open>\<gamma>>0\<close>
+    by (simp add: eval_nat_numeral divide_simps mult_ac)
+  also have "... < 3*\<gamma>*t\<^sup>2 / (20*k)"
+    using \<open>\<gamma>>0\<close> \<open>k>0\<close> t23 by (simp add: divide_simps)
+  finally have "\<delta>*k < 3*\<gamma>*t\<^sup>2 / (20*k)" .
 
   have "RN (k-t) l \<le> (k-t+l choose l)"
     by (simp add: add.commute RN_commute RN_le_choose)
   also have "\<dots> \<le> card (Yseq \<gamma> l k m)"
     sorry
-  finally
+  finally obtain K 
+      where Ksub: "K \<subseteq> Yseq \<gamma> l k m" 
+      and K: "card K = k-t \<and> clique K Red \<or> card K = l \<and> clique K Blue"
+    by (meson Red_Blue_RN Yseq_subset_V size_clique_def)
   show False
+    using K
+  proof
+    assume K: "card K = k - t \<and> clique K Red"
+    have "clique (K \<union> Aseq \<gamma> l k m) Red"
+    proof (intro clique_Un)
+      show "clique (Aseq \<gamma> l k m) Red"
+        by (meson A_Red_clique valid_state_seq)
+      have "all_edges_betw_un (Aseq \<gamma> l k m) (Yseq \<gamma> l k m) \<subseteq> Red"
+        using valid_state_seq Ksub
+        by (auto simp: valid_state_def RB_state_def all_edges_betw_un_Un2)
+      then show "all_edges_betw_un K (Aseq \<gamma> l k m) \<subseteq> Red"
+        using Ksub all_edges_betw_un_commute all_edges_betw_un_mono2 by blast
+      show "K \<subseteq> V"
+        using Ksub Yseq_subset_V by blast
+    qed (use K Aseq_subset_V in auto)
+    moreover have "card (K \<union> Aseq \<gamma> l k m) = k"
+    proof -
+      have eqt: "card (Aseq \<gamma> l k m) = t"
     sorry
+      have "card (K \<union> Aseq \<gamma> l k m) = card K + card (Aseq \<gamma> l k m) "
+      proof (intro card_Un_disjoint)
+        show "finite K"
+          by (meson Ksub Yseq_subset_V finV finite_subset)
+        have "disjnt (Yseq \<gamma> l k m) (Aseq \<gamma> l k m)"
+          using valid_state_seq by (auto simp: valid_state_def disjoint_state_def)
+        with Ksub show "K \<inter> Aseq \<gamma> l k m = {}"
+          by (auto simp: disjnt_def)
+      qed (simp add: finite_Aseq)
+      also have "... = k"
+        using eqt K \<open>t < k\<close> by simp
+      finally show ?thesis .
+    qed
+    moreover have "K \<union> Aseq \<gamma> l k m \<subseteq> V"
+      using Aseq_subset_V Ksub Yseq_subset_V by blast
+    ultimately show False
+      using \<open>Colours l k\<close> 
+      unfolding Colours_def size_clique_def by blast
+  next
+    assume "card K = l \<and> clique K Blue"
+    then show False
+      using \<open>Colours l k\<close> Ksub Yseq_subset_V
+      unfolding Colours_def size_clique_def by blast
+  qed
 qed
 
 lemma Far_9_2:
   fixes l k
   fixes \<delta> \<gamma> \<eta>::real
-  defines "\<gamma> \<equiv> real l / (real k + real l)"
+  defines "\<gamma> \<equiv> l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/20"
   assumes "Colours l k" and "\<gamma> \<le> 1/10" and \<epsilon>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
   assumes n: "real nV \<ge> exp (-\<delta> * k) * (k+l choose l)" 
