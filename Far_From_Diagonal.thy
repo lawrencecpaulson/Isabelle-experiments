@@ -319,6 +319,8 @@ proof -
     done
 qed
 
+text \<open>Here @{term n} really refers to the cardinality of @{term V}, 
+   so actually @{term nV}\<close>
 lemma Far_9_3:
   fixes l k
   assumes "Colours l k"  \<comment> \<open>Not mentioned in paper but presumably needed\<close>
@@ -471,7 +473,7 @@ proof -
       using \<open>\<beta>>0\<close> \<open>\<gamma>>0\<close> \<open>k>0\<close>
       by (metis divide_pos_pos ln_le_cancel_iff ln_mult mult_2 mult_pos_pos of_nat_0_less_iff power2_eq_square)
     show ?thesis
-      using mult_right_mono [OF X, of "2 * k powr (19 / 20) / (1 - \<gamma>)"] \<open>\<gamma><1\<close>
+      using mult_right_mono [OF X, of "2 * k powr (19/20) / (1 - \<gamma>)"] \<open>\<gamma><1\<close>
       by (simp add: ok_fun_93h_def algebra_simps)
   qed
   also have "\<dots> \<le> ((\<gamma> / exp 1) * t / (1-\<gamma>)) + \<delta>*k + ok_fun_93h \<gamma> k"
@@ -488,10 +490,10 @@ proof -
   have "concave_on {1/10..1/5} f47"
     unfolding f47_def
   proof (intro concave_on_mul)
-    show "concave_on {1 / 10..1 / 5} (\<lambda>x. 1 - 1/(200*x))"
+    show "concave_on {1/10..1/5} (\<lambda>x. 1 - 1/(200*x))"
     proof (intro f''_le0_imp_concave)
       fix x::real
-      assume "x \<in> {1 / 10..1 / 5}"
+      assume "x \<in> {1/10..1/5}"
       then have x01: "0<x" "x<1"
         by auto
       show "((\<lambda>x. (1 - 1/(200*x))) has_real_derivative 1/(200*x^2)) (at x)"
@@ -501,10 +503,10 @@ proof -
       show "-1/(100*x^3) \<le> 0"
         using x01 by (simp add: divide_simps)
     qed auto
-    show "concave_on {1 / 10..1 / 5} (\<lambda>x. inverse (c x))"
+    show "concave_on {1/10..1/5} (\<lambda>x. inverse (c x))"
     proof (intro f''_le0_imp_concave)
       fix x::real
-      assume "x \<in> {1 / 10..1 / 5}"
+      assume "x \<in> {1/10..1/5}"
       then have x01: "0<x" "x<1"
         by auto
       have swap: "u * (x-1) = (-u) * (1-x)" for u
@@ -528,9 +530,9 @@ proof -
       show "?f2 (x::real) \<le> 0"
         using x01 \<section> by (simp add: divide_simps)
     qed auto
-    show "mono_on {(1::real) / 10..1 / 5} (\<lambda>x. 1 - 1 / (200 * x))"
+    show "mono_on {(1::real)/10..1/5} (\<lambda>x. 1 - 1 / (200 * x))"
       by (auto simp: monotone_on_def frac_le)
-    show "monotone_on {1 / 10..1 / 5} (\<le>) (\<lambda>x y. y \<le> x) (\<lambda>x. inverse (c x))"
+    show "monotone_on {1/10..1/5} (\<le>) (\<lambda>x y. y \<le> x) (\<lambda>x. inverse (c x))"
       using mono_c cgt0 by (auto simp: monotone_on_def divide_simps)
   qed (auto simp: c_def)
   moreover have "f47(1/10) > 0.667"
@@ -708,6 +710,9 @@ proof -
 qed
 
 subsection \<open>Lemma 9.2\<close>
+
+text \<open>Equation (45) in the text, page 30, is seemingly a huge gap.
+   The development below relies on binomial coefficient identities.\<close>
 
 definition "red_graph_density \<equiv> card Red / card E"
 
@@ -957,21 +962,29 @@ proof -
     unfolding nsets_def by fastforce
 qed
 
-definition "Big_Far_9_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l"
+
+definition "Big_Far_9_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l \<and> Big_Far_9_5 \<mu> l"
+
+lemma Big_Far_9_2:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_Far_9_2 \<mu> l"
+  unfolding Big_Far_9_2_def eventually_conj_iff all_imp_conj_distrib eps_def
+  by (simp add: Big_Far_9_3 Big_Far_9_5 assms)
+
 
 text \<open>A little tricky for me to express since my "Colours" assumption includes the allowed 
     assumption that there are no cliques in the original graph (page 9). So it's a contrapositive\<close>
-lemma Far_9_2:
+lemma Far_9_2_aux:
   fixes l k
   fixes \<delta> \<gamma> \<eta>::real
   defines "\<gamma> \<equiv> real l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/20"
-  assumes "Colours l k" and "\<gamma> \<le> 1/10" and \<epsilon>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
-  assumes n: "real nV \<ge> exp (-\<delta> * k) * (k+l choose l)" 
+  assumes "Colours l k" and \<gamma>: "\<gamma> \<le> 1/10" and \<eta>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
+  assumes nV: "real nV \<ge> exp (-\<delta> * k) * (k+l choose l)" 
+  assumes 0: "card X0 > real nV / 2" "card Y0 > real nV / 2" "p0 \<ge> 1-\<gamma>-\<eta>"
   assumes big: "Big_Far_9_2 \<gamma> l"
-  shows "\<not> red_graph_density \<ge> 1-\<gamma>-\<epsilon>" 
-proof
-  assume "red_graph_density \<ge> 1-\<gamma>-\<epsilon>"
+  shows False
+proof -
   define \<R> where "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
   define t where "t \<equiv> card \<R>"
   define m where "m \<equiv> halted_point \<gamma> l k"
@@ -983,13 +996,46 @@ proof
     using big by (auto simp: Big_Far_9_2_def)
   have t23: "t \<ge> 2*k / 3"
     unfolding t_def \<R>_def \<gamma>_def
-    apply (rule Far_9_3)
-         apply (rule assms)
-    using assms(1) assms(4) apply linarith
-
-    sorry
+  proof (rule Far_9_3)
+    show "real l / (real k + real l) \<le> 1/5"
+      using \<gamma> unfolding \<gamma>_def by linarith
+    have "min (1/200) (real l / (real k + real l) / 20) \<ge> \<delta>"
+      unfolding \<delta>_def using \<gamma> \<open>0<l\<close> by (simp add: \<gamma>_def)
+    then show "exp (- min (1/200) (real l / (real k + real l) / 20) * real k) * real (k + l choose l) \<le> nV"
+      using \<delta>_def \<gamma>_def nV by force
+    show "1/4 \<le> p0"
+      using \<eta> \<gamma> 0 by linarith
+    show "Big_Far_9_3 (real l / (real k + real l)) l"
+      using \<gamma>_def big93 by blast
+  qed (use assms in auto)
   have "t<k"
     unfolding t_def \<R>_def using \<gamma>01 \<open>Colours l k\<close> red_step_limit by blast
+
+  have ge_half: "1/2 \<le> 1 - \<gamma> - \<eta>"
+    using \<gamma> \<eta> by linarith
+
+  have 95: "card (Yseq \<gamma> l k m) \<ge>
+     exp (-\<delta> * k + ok_fun_95b \<gamma> k) * (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
+   * exp (\<gamma> * (real t)\<^sup>2 / (2 * real k)) * (k-t+l choose l)"
+    unfolding \<gamma>_def t_def \<R>_def m_def
+  proof (rule Far_9_5)
+    show "1/2 \<le> 1 - real l / (real k + real l) - \<eta>"
+      using ge_half \<gamma>_def by blast
+    show "Big_Far_9_5 (real l / (real k + real l)) l"
+      using Big_Far_9_2_def big unfolding \<gamma>_def by presburger
+  qed (use assms in auto)
+
+  have "ln((134/150) powr (10/9)) > -1/3 + (1/5::real)"
+    by (approximation 10)
+  then have "exp (-1/3 + (1/5::real)) < exp (10/9 * ln (134/150))"
+    by (simp add: ln_powr)
+  also have "... \<le> exp (1 / (1 - \<gamma>) * ln (134/150))"
+    using \<gamma> by (auto simp: divide_simps)
+  also have "... \<le> exp (1 / (1 - \<gamma>) * ln (1 - \<gamma> - \<eta>))"
+    using \<gamma> \<eta> by (auto simp: divide_simps)
+  also have "... = (1-\<gamma>-\<eta>) powr (1 / (1-\<gamma>))"
+    using ge_half by (simp add: powr_def)
+  finally have "exp (-1/3 + (1/5)) <(1-\<gamma>-\<eta>) powr (1 / (1-\<gamma>))" .
 
   have "RN (k-t) l \<le> (k-t+l choose l)"
     by (simp add: add.commute RN_commute RN_le_choose)
@@ -999,6 +1045,17 @@ proof
   show False
     sorry
 qed
+
+lemma Far_9_2:
+  fixes l k
+  fixes \<delta> \<gamma> \<eta>::real
+  defines "\<gamma> \<equiv> real l / (real k + real l)"
+  defines "\<delta> \<equiv> \<gamma>/20"
+  assumes "Colours l k" and "\<gamma> \<le> 1/10" and \<epsilon>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
+  assumes n: "real nV \<ge> exp (-\<delta> * k) * (k+l choose l)" 
+  assumes big: "Big_Far_9_2 \<gamma> l"
+  shows "\<not> red_graph_density \<ge> 1-\<gamma>-\<eta>" 
+  sorry
 
 end (*context Book*)
 
