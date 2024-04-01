@@ -822,12 +822,12 @@ qed
 
 text \<open>Bhavik's statement; own proof\<close>
 lemma density_eq_average_partition:
-  assumes k: "0 < k" "k < card V"
+  assumes "0 < k" "k < card V"
   shows "red_graph_density = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. red_density U (V\<setminus>U)) / (card V choose k)"
 proof (cases "k=1 \<or> nV = Suc k")
   case True
   have eq: "(Red \<inter> {{x, y} |y. y \<in> V \<and> y \<noteq> x \<and> y \<in> V \<and> x \<noteq> y}) 
-           = (\<lambda>y. {x,y}) ` {y. {x, y} \<in> Red}" for x
+           = (\<lambda>y. {x,y}) ` {y. {x,y} \<in> Red}" for x
     using Red_E by auto
   have "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. red_density U (V \<setminus> U)) = (\<Sum>x\<in>V. red_density {x} (V \<setminus> {x}))"
     using True
@@ -840,8 +840,7 @@ proof (cases "k=1 \<or> nV = Suc k")
   next
     assume \<section>: "nV = Suc k"
     then have  "V-A \<noteq> {}" if "card A = k" "finite A" for A
-      using that
-      by (metis card.empty card_less_sym_Diff finV lessI not_less0)
+      using that by (metis card.empty card_less_sym_Diff finV lessI not_less0)
     then have bij: "bij_betw (\<lambda>x. V \<setminus> {x}) V ([V]\<^bsup>k\<^esup>)"
       using finV \<section> 
       apply (auto simp: inj_on_def bij_betw_def nsets_def image_iff)
@@ -867,7 +866,7 @@ next
   then have K: "nV > Suc k" "k\<ge>2" 
     using assms by auto
   then have WW: "nV - Suc (Suc (nV - Suc (Suc k))) = k"
-    using k by auto
+    using assms by auto
   then have [simp]: "nV - 2 choose (nV - Suc (Suc k)) = (nV - 2 choose k)"
     using binomial_symmetric [of "(nV - Suc (Suc k))"]
     by simp
@@ -907,10 +906,10 @@ next
   qed
 
   have "(nV-2 choose k) + (nV-2 choose (k-2)) + 2 * (nV-2 choose (k-1)) = (nV choose k)"
-    using k K by (auto simp: choose_reduce_nat [of "nV"] choose_reduce_nat [of "nV-Suc 0"] eval_nat_numeral)
+    using assms K by (auto simp: choose_reduce_nat [of "nV"] choose_reduce_nat [of "nV-Suc 0"] eval_nat_numeral)
   moreover
   have "(nV-1) * (nV-2 choose (k-1)) = (nV-k) * (nV-1 choose (k-1))"
-    by (metis Suc_1 Suc_diff_1 binomial_absorb_comp diff_Suc_eq_diff_pred k(1))
+    by (metis Suc_1 Suc_diff_1 binomial_absorb_comp diff_Suc_eq_diff_pred \<open>k>0\<close>)
   ultimately have F: "(nV-1) * (nV-2 choose k) + (nV-1) * (nV-2 choose (k-2)) + 2 * (nV-k) * (nV-1 choose (k-1)) 
       = (nV-1) * (nV choose k)"
     by (smt (verit) add_mult_distrib2 mult.assoc mult.left_commute)
@@ -924,7 +923,7 @@ next
               = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U)) / (k * (card V - k))" .
 
   have choose_m1: "nV * (nV - 1 choose (k - 1)) = k * (nV choose k)"
-    using k(1) times_binomial_minus1_eq by presburger 
+    using \<open>k>0\<close> times_binomial_minus1_eq by presburger 
   have **: "(real k * (real nV - real k) * real (nV choose k)) =
         (real (nV choose k) - (real (nV - 2 choose (k - 2)) + real (nV - 2 choose k))) *
         real (nV choose 2)"
@@ -932,9 +931,8 @@ next
     unfolding of_nat_mult of_nat_add
     apply (simp add: algebra_simps of_nat_diff choose_two_real)
     by (smt (verit, ccfv_threshold) mult.left_commute distrib_left)
-  have "nV choose k \<noteq> 0"
-    using assms(2) by force
-  with k K \<open>card E > 0\<close> finV show ?thesis
+  show ?thesis
+    using K \<open>card E > 0\<close> finV
     apply (simp add: red_graph_density_def gen_density_def divide_simps B C sum.distrib *)
     apply (subst sum_nsets_Compl, simp_all)
     apply (simp add: sum_edge_card_choose cardE of_nat_diff flip: of_nat_sum)
@@ -943,6 +941,21 @@ next
     done
 qed
 
+lemma exists_density_edge_density:
+  assumes k: "0 < k" "k < card V"
+  obtains U where "card U = k" "U\<subseteq>V" "red_graph_density \<le> red_density U (V\<setminus>U)"
+proof -
+  have False if "\<And>U. U \<in> [V]\<^bsup>k\<^esup> \<Longrightarrow> red_graph_density > red_density U (V\<setminus>U)"
+  proof -
+    have "card([V]\<^bsup>k\<^esup>) > 0"
+      using assms by auto
+    then have "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. red_density U (V \<setminus> U)) < card([V]\<^bsup>k\<^esup>) * red_graph_density"
+      by (meson sum_bounded_above_strict that)
+    with density_eq_average_partition assms show False by force
+  qed
+  with that show thesis
+    unfolding nsets_def by fastforce
+qed
 
 definition "Big_Far_9_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l"
 
