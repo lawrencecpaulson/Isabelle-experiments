@@ -605,8 +605,7 @@ proof -
   have "(\<lambda>k. 1 + (2 / (1-\<mu>)) * k powr (19/20)) \<in> o(real)"
     by real_asymp
   then show ?thesis
-    unfolding ok_fun_95a_def
-    using ok_fun_61 sum_in_smallo by blast
+    unfolding ok_fun_95a_def using ok_fun_61 sum_in_smallo by blast
 qed
 
 lemma ok_fun_95b: "ok_fun_95b \<mu> \<in> o(real)"
@@ -709,7 +708,7 @@ proof -
   finally show ?thesis .
 qed
 
-subsection \<open>Lemma 9.2\<close>
+subsection \<open>Lemma 9.2 preliminaries\<close>
 
 text \<open>Equation (45) in the text, page 30, is seemingly a huge gap.
    The development below relies on binomial coefficient identities.\<close>
@@ -962,6 +961,15 @@ proof -
     unfolding nsets_def by fastforce
 qed
 
+subsection \<open>Lemma 9.2 actual proof\<close>
+
+lemma 
+  assumes "0<\<mu>" "\<mu><1" "1/4 \<le> p0"
+  shows "\<forall>\<^sup>\<infinity>k. ok_fun_95b \<mu> k \<ge> 0"
+  using assms
+  unfolding ok_fun_95b_def ok_fun_95a_def ok_fun_61_def eps_def
+  by real_asymp
+  oops
 
 definition "Big_Far_9_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l \<and> Big_Far_9_5 \<mu> l"
 
@@ -972,7 +980,7 @@ lemma Big_Far_9_2:
   by (simp add: Big_Far_9_3 Big_Far_9_5 assms)
 
 
-lemma DD: "\<lbrakk>x\<ge>1; y\<ge>1\<rbrakk> \<Longrightarrow> x*y \<ge> (1::real)"
+lemma mult_ge1_iff: "\<lbrakk>x\<ge>1; y\<ge>1\<rbrakk> \<Longrightarrow> x*y \<ge> (1::real)"
   by (smt (verit, best) mult_less_cancel_right2)
 
 text \<open>A little tricky for me to express since my "Colours" assumption includes the allowed 
@@ -1077,26 +1085,27 @@ proof -
   qed
   also have "... = (1-\<gamma>-\<eta>) / (1-\<gamma>)"
     using \<gamma>01 by (simp add: divide_simps)
-  finally have "exp (- 3*\<gamma>*t / (20*k)) \<le> (1-\<gamma>-\<eta>) / (1-\<gamma>)" .
+  finally have \<section>: "exp (- 3*\<gamma>*t / (20*k)) \<le> (1-\<gamma>-\<eta>) / (1-\<gamma>)" .
+  have D: "exp (- 3*\<gamma>*t\<^sup>2 / (20*k)) \<le> ((1-\<gamma>-\<eta>) / (1-\<gamma>))^t"
+    using powr_mono2 [of t, OF _ _ \<section>] ge_half \<gamma>01
+    by (simp add: eval_nat_numeral powr_powr exp_powr_real mult_ac flip: powr_realpow)
 
   have "RN (k-t) l \<le> (k-t+l choose l)"
     by (simp add: add.commute RN_commute RN_le_choose)
   also have "\<dots> \<le> card (Yseq \<gamma> l k m)"
   proof -
     have "1 * real(k-t+l choose l) 
-            \<le> exp (\<delta> * k + ok_fun_95b \<gamma> k) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t * (k-t+l choose l)"
-      apply (intro mult_right_mono DD)
-        defer
-apply (auto simp: )
-apply (simp add: )
-      using  C 
-      sorry
-    also have "\<dots> \<le> exp (2*\<delta>*k) * exp (-\<delta> * k + ok_fun_95b \<gamma> k) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
+            \<le> exp (\<delta> * k + -\<delta> * k + ok_fun_95b \<gamma> k) * (k-t+l choose l)"
+      apply (simp add: )
+      by (intro mult_right_mono mult_ge1_iff) auto
+    also have "\<dots> \<le> exp (3*\<gamma>*t\<^sup>2 / (20*k) + -\<delta> * k + ok_fun_95b \<gamma> k) * (k-t+l choose l)"
+      using C by (intro mult_right_mono) auto
+    also have "\<dots> \<le> exp (3*\<gamma>*t\<^sup>2 / (10*k)) * exp (-\<delta> * k + ok_fun_95b \<gamma> k) * exp (- 3*\<gamma>*t\<^sup>2 / (20*k))
             * (k-t+l choose l)"
       by (simp add: flip: exp_add)
     also have "\<dots> \<le> exp (3*\<gamma>*t\<^sup>2 / (10*k)) * exp (-\<delta> * k + ok_fun_95b \<gamma> k) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
             * (k-t+l choose l)"
-      using \<gamma>01 ge_half C by (intro mult_right_mono) auto
+      using \<gamma>01 ge_half D by (intro mult_right_mono) auto
     also have "\<dots> \<le> (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * t\<^sup>2 / (2 * k)) * exp (-\<delta> * k + ok_fun_95b \<gamma> k) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
             * (k-t+l choose l)"
       using \<gamma>01 ge_half by (intro mult_right_mono B) auto
