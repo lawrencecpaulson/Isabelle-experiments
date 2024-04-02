@@ -972,6 +972,9 @@ lemma Big_Far_9_2:
   by (simp add: Big_Far_9_3 Big_Far_9_5 assms)
 
 
+lemma DD: "\<lbrakk>x\<ge>1; y\<ge>1\<rbrakk> \<Longrightarrow> x*y \<ge> (1::real)"
+  by (smt (verit, best) mult_less_cancel_right2)
+
 text \<open>A little tricky for me to express since my "Colours" assumption includes the allowed 
     assumption that there are no cliques in the original graph (page 9). So it's a contrapositive\<close>
 lemma Far_9_2_aux:
@@ -1013,18 +1016,6 @@ proof -
 
   have ge_half: "1/2 \<le> 1-\<gamma>-\<eta>"
     using \<gamma> \<eta> by linarith
-
-  have 95: "card (Yseq \<gamma> l k m) \<ge>
-     exp (-\<delta> * k + ok_fun_95b \<gamma> k) * (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
-   * exp (\<gamma> * (real t)\<^sup>2 / (2 * real k)) * (k-t+l choose l)"
-    unfolding \<gamma>_def t_def \<R>_def m_def
-  proof (rule Far_9_5)
-    show "1/2 \<le> 1 - l / (real k + real l) - \<eta>"
-      using ge_half \<gamma>_def by blast
-    show "Big_Far_9_5 (l / (real k + real l)) l"
-      using Big_Far_9_2_def big unfolding \<gamma>_def by presburger
-  qed (use assms in auto)
-
   have "ln((134/150) powr (10/9)) \<ge> -1/3 + (1/5::real)"
     by (approximation 10)
   then have "exp (-1/3 + (1/5::real)) \<le> exp (10/9 * ln (134/150))"
@@ -1058,12 +1049,72 @@ proof -
     by (simp add: eval_nat_numeral divide_simps mult_ac)
   also have "... < 3*\<gamma>*t\<^sup>2 / (20*k)"
     using \<open>\<gamma>>0\<close> \<open>k>0\<close> t23 by (simp add: divide_simps)
-  finally have "\<delta>*k < 3*\<gamma>*t\<^sup>2 / (20*k)" .
+  finally have C: "\<delta>*k < 3*\<gamma>*t\<^sup>2 / (20*k)" .
+
+  have "exp (- 3*\<gamma>*t / (20*k)) \<le> exp (-3 * \<eta>/2)"
+  proof -
+    have \<section>: "1 \<le> 3/2 * real t / (real k)"
+      using t23 \<open>k>0\<close> by (auto simp: divide_simps)
+    have "\<gamma> / 15 \<le> \<gamma> * real t / (10 * real k)"
+      using mult_right_mono [OF \<section>, of "\<gamma>/15"] \<gamma>01 by auto
+    with \<eta> show ?thesis
+      by simp
+  qed
+  also have "... \<le> 1 - \<eta> / (1-\<gamma>)"
+  proof -
+    have \<section>: "2 / 3 \<le> (1 - \<gamma> - \<eta>)"
+      using \<gamma> \<eta> by linarith
+    have "1 / (1 - \<eta> / (1 - \<gamma>)) = 1 + \<eta> / (1-\<gamma>-\<eta>)"
+      using ge_half \<eta> by (simp add: divide_simps split: if_split_asm)
+    also have "\<dots> \<le> 1 + 3 * \<eta> / 2"
+      using mult_right_mono [OF \<section>, of \<eta>] \<eta> ge_half
+      by (simp add: divide_simps algebra_simps)
+    also have "... \<le> exp (3 * \<eta> / 2)"
+      using exp_minus_ge [of "-3*\<eta>/2"] by simp
+    finally show ?thesis
+      using \<gamma>01 ge_half 
+      by (simp add: exp_minus divide_simps mult.commute split: if_split_asm)
+  qed
+  also have "... = (1-\<gamma>-\<eta>) / (1-\<gamma>)"
+    using \<gamma>01 by (simp add: divide_simps)
+  finally have "exp (- 3*\<gamma>*t / (20*k)) \<le> (1-\<gamma>-\<eta>) / (1-\<gamma>)" .
 
   have "RN (k-t) l \<le> (k-t+l choose l)"
     by (simp add: add.commute RN_commute RN_le_choose)
   also have "\<dots> \<le> card (Yseq \<gamma> l k m)"
-    sorry
+  proof -
+    have "1 * real(k-t+l choose l) 
+            \<le> exp (\<delta> * k + ok_fun_95b \<gamma> k) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t * (k-t+l choose l)"
+      apply (intro mult_right_mono DD)
+        defer
+apply (auto simp: )
+apply (simp add: )
+      using  C 
+      sorry
+    also have "\<dots> \<le> exp (2*\<delta>*k) * exp (-\<delta> * k + ok_fun_95b \<gamma> k) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
+            * (k-t+l choose l)"
+      by (simp add: flip: exp_add)
+    also have "\<dots> \<le> exp (3*\<gamma>*t\<^sup>2 / (10*k)) * exp (-\<delta> * k + ok_fun_95b \<gamma> k) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
+            * (k-t+l choose l)"
+      using \<gamma>01 ge_half C by (intro mult_right_mono) auto
+    also have "\<dots> \<le> (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * t\<^sup>2 / (2 * k)) * exp (-\<delta> * k + ok_fun_95b \<gamma> k) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
+            * (k-t+l choose l)"
+      using \<gamma>01 ge_half by (intro mult_right_mono B) auto
+    also have "\<dots> \<le> exp (-\<delta> * k + ok_fun_95b \<gamma> k) * (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
+                   * exp (\<gamma> * (real t)\<^sup>2 / (2 * real k)) * (k-t+l choose l)"
+      by (simp add: mult_ac)
+    also have 95: "\<dots> \<le> real (card (Yseq \<gamma> l k m))"
+      unfolding \<gamma>_def t_def \<R>_def m_def
+    proof (rule Far_9_5)
+      show "1/2 \<le> 1 - l / (real k + real l) - \<eta>"
+        using ge_half \<gamma>_def by blast
+      show "Big_Far_9_5 (l / (real k + real l)) l"
+        using Big_Far_9_2_def big unfolding \<gamma>_def by presburger
+    qed (use assms in auto)
+    finally have "real(k-t+l choose l) \<le> real (card (Yseq \<gamma> l k m))" by simp
+    then show ?thesis
+      by fastforce
+  qed
   finally obtain K 
       where Ksub: "K \<subseteq> Yseq \<gamma> l k m" 
       and K: "card K = k-t \<and> clique K Red \<or> card K = l \<and> clique K Blue"
