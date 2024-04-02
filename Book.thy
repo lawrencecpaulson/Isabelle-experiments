@@ -1594,6 +1594,11 @@ lemma halted_point_minimal:
   using Step_class_halted_nonempty [OF assms] 
   by (metis wellorder_Inf_le1 Inf_nat_def1 Step_class_not_halted halted_point_def less_le_not_le nle_le) 
 
+lemma halted_point_minimal':
+  assumes "\<mu>>0" "Colours l k"
+  shows "stepper_kind \<mu> l k i \<noteq> halted \<longleftrightarrow> i < halted_point \<mu> l k"
+  using assms by (simp add: Step_class_def flip: halted_point_minimal)
+
 lemma halted_eq_Compl:
   "Step_class \<mu> l k {dreg_step,red_step,bblue_step,dboost_step} = - Step_class \<mu> l k {halted}"
   using Step_class_UNIV [of \<mu> l k] by (auto simp: Step_class_def)

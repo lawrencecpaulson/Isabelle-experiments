@@ -1087,7 +1087,8 @@ proof -
     moreover have "card (K \<union> Aseq \<gamma> l k m) = k"
     proof -
       have eqt: "card (Aseq \<gamma> l k m) = t"
-    sorry
+        using red_step_eq_Aseq
+        using \<R>_def \<gamma>01 \<open>Colours l k\<close> m_def t_def by presburger
       have "card (K \<union> Aseq \<gamma> l k m) = card K + card (Aseq \<gamma> l k m) "
       proof (intro card_Un_disjoint)
         show "finite K"

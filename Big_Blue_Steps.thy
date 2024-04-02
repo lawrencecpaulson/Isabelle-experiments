@@ -469,81 +469,79 @@ proof -
   then show ?thesis by force
 qed
 
-proposition red_step_limit:
+
+lemma red_steps_eq_A:
+  fixes \<mu>::real and l k
+  defines "REDS \<equiv> \<lambda>r. {i. i < r \<and> stepper_kind \<mu> l k i = red_step}"
+  shows "card(REDS n) = card (Aseq \<mu> l k n)"
+proof (induction n)
+  case 0
+  then show ?case
+    by (auto simp: REDS_def)
+next
+  case (Suc n)
+  let ?X = "Xseq \<mu> l k n"
+  let ?Y = "Yseq \<mu> l k n"
+  let ?A = "Aseq \<mu> l k n"
+  let ?B = "Bseq \<mu> l k n"
+  show ?case
+  proof (cases "stepper_kind \<mu> l k n = red_step")
+    case True
+    then have "REDS (Suc n) = insert n (REDS n)" "card (insert n (REDS n)) = Suc (card (REDS n))"
+      by (auto simp: REDS_def)
+    then have [simp]: "card (REDS (Suc n)) = Suc (card (REDS n))"
+      by presburger
+    have Aeq: "Aseq \<mu> l k (Suc n) = insert (choose_central_vx \<mu> (?X,?Y,?A,?B)) ?A"
+      using Suc.prems True 
+      by (auto simp add: step_kind_defs Aseq_def Bseq_def next_state_def Let_def split: if_split_asm prod.split)
+    have "finite (Xseq \<mu> l k n)"
+      using finite_Xseq by presburger
+    then have "choose_central_vx \<mu> (?X,?Y,?A,?B) \<in> ?X"
+      using True
+      by (simp add: step_kind_defs choose_central_vx_X split: if_split_asm prod.split_asm)
+    moreover
+    have "disjnt ?X ?A"
+      using valid_state_seq by (simp add: valid_state_def disjoint_state_def)
+    ultimately have "choose_central_vx \<mu> (?X,?Y,?A,?B) \<notin> Aseq \<mu> l k n"
+      by (simp add: disjnt_iff)
+    then show ?thesis
+      by (simp add: Aeq Suc.IH finite_Aseq)
+  next
+    case False
+    then have "REDS(Suc n) = REDS n"
+      using less_Suc_eq unfolding REDS_def by blast
+    moreover have "Aseq \<mu> l k (Suc n) = ?A"
+      using False
+      by (auto simp add: Aseq_def step_kind_defs degree_reg_def next_state_def Let_def split: prod.split)
+    ultimately show ?thesis
+      using Suc.IH by presburger
+  qed
+qed
+
+proposition red_step_eq_Aseq:
+  assumes "\<mu>>0" "Colours l k"
+  defines "m \<equiv> halted_point \<mu> l k"
+  shows "card (Step_class \<mu> l k {red_step}) = card (Aseq \<mu> l k m)"
+proof -
+  have "card{i. i < m \<and> stepper_kind \<mu> l k i = red_step} = card (Aseq \<mu> l k m)"
+    by (rule red_steps_eq_A)
+  moreover have "(Step_class \<mu> l k {red_step}) = {i. i < m \<and> stepper_kind \<mu> l k i = red_step}"
+    using assms halted_point_minimal' by (fastforce simp: m_def Step_class_def)
+  ultimately show ?thesis
+    by argo
+qed
+
+proposition red_step_limit: 
   assumes "\<mu>>0" "Colours l k"
   shows "card (Step_class \<mu> l k {red_step}) < k"
-proof -
-  define REDS where "REDS \<equiv> \<lambda>r. {m. m < r \<and> stepper_kind \<mu> l k m = red_step}"
-  have *: "card(REDS n) \<le> card A"
-    if "stepper \<mu> l k n = (X,Y,A,B)" for n X Y A B
-    using that
-  proof (induction n arbitrary: X Y A B)
-    case 0
-    then show ?case
-      by (auto simp: REDS_def)
-  next
-    case (Suc n)
-    obtain X' Y' A' B' where step_n: "stepper \<mu> l k n = (X',Y',A',B')"
-      by (metis surj_pair)
-    then have "valid_state (X',Y',A',B')"
-      by (metis valid_state_stepper)
-    then have "finite A'"
-      using finA valid_state_def by auto
-    have "A' \<subseteq> A"
-      using Suc.prems by (auto simp: next_state_def Let_def degree_reg_def step_n split: prod.split_asm if_split_asm)
-    show ?case
-    proof (cases "stepper_kind \<mu> l k n = red_step")
-      case True
-      then have "REDS (Suc n) = insert n (REDS n)"
-        by (auto simp: REDS_def)
-      moreover have "card (insert n (REDS n)) = Suc (card (REDS n))"
-        by (simp add: REDS_def)
-      ultimately have [simp]: "card (REDS (Suc n)) = Suc (card (REDS n))"
-        by presburger
-      have card_A': "card (REDS n) \<le> card A'"
-        using step_n REDS_def Suc.IH by blast
-      have Aeq: "A = insert (choose_central_vx \<mu> (X',Y',A',B')) A'"
-        using Suc.prems True
-        by (auto simp: step_kind_defs next_state_def Let_def step_n split: if_split_asm)
-      have "finite X'"
-        by (metis V_state_stepper finX step_n)
-      then have "choose_central_vx \<mu> (X',Y',A',B') \<in> X'"
-        using True
-        by (auto simp: choose_central_vx_X step_kind_defs step_n split: if_split_asm)
-      moreover
-      have "disjnt X' A'"
-        using \<open>valid_state (X',Y',A',B')\<close> by (simp add: valid_state_def disjoint_state_def)
-      ultimately have "choose_central_vx \<mu> (X',Y',A',B') \<notin> A'"
-        by (simp add: disjnt_iff)
-      then have "card (REDS (Suc n)) \<le> card A"
-        by (simp add: Aeq \<open>finite A'\<close> card_A')
-      then show ?thesis
-        by (simp add: REDS_def)
-    next
-      case False
-      then have "REDS(Suc n) = REDS n"
-        using less_Suc_eq unfolding REDS_def by blast
-      with \<open>A' \<subseteq> A\<close> show ?thesis
-        by (smt (verit, best) Suc V_state_stepper card_seteq order.trans finA nat_le_linear step_n)
-    qed
-  qed
-  have less_k: "card (REDS n) < k" for n
-  proof -
-    obtain X Y A B where step: "stepper \<mu> l k n = (X,Y,A,B)"
-      using prod_cases4 by blast
-    with * show ?thesis
-      using \<open>Colours l k\<close> card_A_limit by fastforce
-  qed
-  then show "card (Step_class \<mu> l k {red_step}) < k"
-    unfolding REDS_def by (metis (mono_tags) Step_class_iterates [OF red_step_finite [OF assms]] )
-qed
+  using Aseq_less_k assms red_step_eq_Aseq by presburger
 
 proposition bblue_dboost_step_limit:
   assumes "\<mu>>0" and "Colours l k" and big: "Big_Blue_4_1 \<mu> l"
   shows "card (Step_class \<mu> l k {bblue_step}) + card (Step_class \<mu> l k {dboost_step}) < l"
 proof -
-  define BDB where "BDB \<equiv> \<lambda>r. {m. m < r \<and> stepper_kind \<mu> l k m \<in> {bblue_step,dboost_step}}"
-  have *: "card(BDB n) \<le> card B"
+  define BDB where "BDB \<equiv> \<lambda>r. {i. i < r \<and> stepper_kind \<mu> l k i \<in> {bblue_step,dboost_step}}"
+  have *: "card(BDB n) \<le> card B"   (*AN UGLY, MESSY AND NEEDLESS FORMULATION*)
     if "stepper \<mu> l k n = (X,Y,A,B)" for n X Y A B
     using that
   proof (induction n arbitrary: X Y A B)
