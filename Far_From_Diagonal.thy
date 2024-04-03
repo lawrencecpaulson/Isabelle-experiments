@@ -963,22 +963,23 @@ qed
 
 subsection \<open>Lemma 9.2 actual proof\<close>
 
-lemma 
-  assumes "0<\<mu>" "\<mu><1" "1/4 \<le> p0"
-  shows "\<forall>\<^sup>\<infinity>k. ok_fun_95b \<mu> k \<ge> 0"
-  using assms
+lemma error_9_2:
+  assumes "0<\<mu>" "\<mu><1" 
+  shows "\<forall>\<^sup>\<infinity>k. ok_fun_95b \<mu> k + \<mu>*k/60 \<ge> 0"
+  using assms p0_01
   unfolding ok_fun_95b_def ok_fun_95a_def ok_fun_61_def eps_def
   by real_asymp
-  oops
 
-definition "Big_Far_9_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l \<and> Big_Far_9_5 \<mu> l"
+definition "Big_Far_9_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l \<and> Big_Far_9_5 \<mu> l
+                \<and> (\<forall>k\<ge>l. ok_fun_95b \<mu> k + \<mu>*k/60 \<ge> 0)"
 
 lemma Big_Far_9_2:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_Far_9_2 \<mu> l"
   unfolding Big_Far_9_2_def eventually_conj_iff all_imp_conj_distrib eps_def
-  by (simp add: Big_Far_9_3 Big_Far_9_5 assms)
-
+  apply (simp add: Big_Far_9_3 Big_Far_9_5 assms)
+    apply (intro conjI eventually_all_ge_at_top error_9_2 [OF assms])
+  done
 
 lemma mult_ge1_iff: "\<lbrakk>x\<ge>1; y\<ge>1\<rbrakk> \<Longrightarrow> x*y \<ge> (1::real)"
   by (smt (verit, best) mult_less_cancel_right2)
@@ -1050,14 +1051,12 @@ proof -
     by (intro mult_right_mono) auto
   finally have B: "exp (3*\<gamma>*t\<^sup>2 / (10*k)) \<le> (1-\<gamma>-\<eta>) powr ((\<gamma>*t) / (1-\<gamma>)) * exp (\<gamma>*t\<^sup>2/(2*k))" .
 
-  have "\<delta>*k = \<gamma>*k / 20"
-    by (simp add: \<delta>_def)
-  also have "... \<le> 9*\<gamma>*t\<^sup>2 / (80*k)"
-    using mult_mono [OF t23 t23] \<open>\<gamma>>0\<close>
-    by (simp add: eval_nat_numeral divide_simps mult_ac)
-  also have "... < 3*\<gamma>*t\<^sup>2 / (20*k)"
-    using \<open>\<gamma>>0\<close> \<open>k>0\<close> t23 by (simp add: divide_simps)
-  finally have C: "\<delta>*k < 3*\<gamma>*t\<^sup>2 / (20*k)" .
+
+  have \<section>: "(2*k / 3)^2 \<le> t\<^sup>2"
+    using t23 by auto
+  have C: "\<delta>*k + \<gamma>*k/60 \<le> 3*\<gamma>*t\<^sup>2 / (20*k)"
+    using \<open>k>0\<close> \<gamma>01 mult_right_mono [OF \<section>, of "\<gamma>/(80*k)"]
+    by (simp add: field_simps \<delta>_def eval_nat_numeral)
 
   have "exp (- 3*\<gamma>*t / (20*k)) \<le> exp (-3 * \<eta>/2)"
   proof -
@@ -1095,21 +1094,21 @@ proof -
   also have "\<dots> \<le> card (Yseq \<gamma> l k m)"
   proof -
     have "1 * real(k-t+l choose l) 
-            \<le> exp (\<delta> * k + -\<delta> * k + ok_fun_95b \<gamma> k) * (k-t+l choose l)"
-      apply (simp add: )
+            \<le> exp (ok_fun_95b \<gamma> k + \<gamma>*k/60) * (k-t+l choose l)"
+      using big  \<open>k\<ge>l\<close> unfolding Big_Far_9_2_def
       by (intro mult_right_mono mult_ge1_iff) auto
     also have "\<dots> \<le> exp (3*\<gamma>*t\<^sup>2 / (20*k) + -\<delta> * k + ok_fun_95b \<gamma> k) * (k-t+l choose l)"
-      using C by (intro mult_right_mono) auto
-    also have "\<dots> \<le> exp (3*\<gamma>*t\<^sup>2 / (10*k)) * exp (-\<delta> * k + ok_fun_95b \<gamma> k) * exp (- 3*\<gamma>*t\<^sup>2 / (20*k))
+      using C by simp
+    also have "\<dots> = exp (3*\<gamma>*t\<^sup>2 / (10*k)) * exp (-\<delta> * k + ok_fun_95b \<gamma> k) * exp (- 3*\<gamma>*t\<^sup>2 / (20*k))
             * (k-t+l choose l)"
-      by (simp add: flip: exp_add)
+      by (simp flip: exp_add)
     also have "\<dots> \<le> exp (3*\<gamma>*t\<^sup>2 / (10*k)) * exp (-\<delta> * k + ok_fun_95b \<gamma> k) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
             * (k-t+l choose l)"
       using \<gamma>01 ge_half D by (intro mult_right_mono) auto
     also have "\<dots> \<le> (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * t\<^sup>2 / (2 * k)) * exp (-\<delta> * k + ok_fun_95b \<gamma> k) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
             * (k-t+l choose l)"
       using \<gamma>01 ge_half by (intro mult_right_mono B) auto
-    also have "\<dots> \<le> exp (-\<delta> * k + ok_fun_95b \<gamma> k) * (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
+    also have "\<dots> = exp (-\<delta> * k + ok_fun_95b \<gamma> k) * (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
                    * exp (\<gamma> * (real t)\<^sup>2 / (2 * real k)) * (k-t+l choose l)"
       by (simp add: mult_ac)
     also have 95: "\<dots> \<le> real (card (Yseq \<gamma> l k m))"
@@ -1120,7 +1119,7 @@ proof -
       show "Big_Far_9_5 (l / (real k + real l)) l"
         using Big_Far_9_2_def big unfolding \<gamma>_def by presburger
     qed (use assms in auto)
-    finally have "real(k-t+l choose l) \<le> real (card (Yseq \<gamma> l k m))" by simp
+    finally have "(k-t+l choose l) \<le> real (card (Yseq \<gamma> l k m))" by simp
     then show ?thesis
       by fastforce
   qed
