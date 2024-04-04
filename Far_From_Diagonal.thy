@@ -11,10 +11,10 @@ subsection \<open>Fact D.3 from the Appendix\<close>
 
 text \<open>And hence, Fact 9.4\<close>
 
-definition "stir \<equiv> \<lambda>n. fact n / (sqrt (2 * pi * n) * (n / exp 1) ^ n) - 1"
+definition "stir \<equiv> \<lambda>n. fact n / (sqrt (2*pi*n) * (n / exp 1) ^ n) - 1"
 
 text \<open>Generalised to the reals to allow derivatives\<close>
-definition "stirG \<equiv> \<lambda>n. Gamma (n+1) / (sqrt (2 * pi * n) * (n / exp 1) powr n) - 1"
+definition "stirG \<equiv> \<lambda>n. Gamma (n+1) / (sqrt (2*pi*n) * (n / exp 1) powr n) - 1"
 
 lemma stir_eq_stirG: "n>0 \<Longrightarrow> stir n = stirG (real n)"
   by (simp add: stirG_def stir_def add.commute powr_realpow Gamma_fact)
@@ -28,23 +28,29 @@ lemma stir_to_0: "stir \<longlonglongrightarrow> 0"
 lemma stir_o1: "stir \<in> o(1)"
   using stir_to_0 tendsto_zero_imp_o1 by presburger
 
-lemma fact_eq_stir_times: "n \<noteq> 0 \<Longrightarrow> fact n = (1 + stir n) * (sqrt (2 * pi * n) * (n / exp 1) ^ n)"
+lemma fact_eq_stir_times: "n \<noteq> 0 \<Longrightarrow> fact n = (1 + stir n) * (sqrt (2*pi*n) * (n / exp 1) ^ n)"
   by (simp add: stir_def)
 
-definition "logstir \<equiv> \<lambda>n. if n=0 then 0 else log 2 ((1 + stir n) * sqrt (2 * pi * n))"
+definition "logstir \<equiv> \<lambda>n. if n=0 then 0 else log 2 ((1 + stir n) * sqrt (2*pi*n))"
 
 lemma logstir_o_real: "logstir \<in> o(real)"
 proof -
-  have "\<forall>\<^sup>\<infinity>n. 0 < n \<longrightarrow> \<bar>log 2 ((1 + stir n) * sqrt (2 * pi * n))\<bar> \<le> c * real n" if "c>0" for c
+  have "\<forall>\<^sup>\<infinity>n. 0 < n \<longrightarrow> \<bar>log 2 ((1 + stir n) * sqrt (2*pi*n))\<bar> \<le> c * real n" if "c>0" for c
   proof -
-    have "\<forall>\<^sup>\<infinity>n. 2 powr (c*n) / sqrt (2 * pi * n) \<ge> c+1"
+    have "\<forall>\<^sup>\<infinity>n. 2 powr (c*n) / sqrt (2*pi*n) \<ge> c+1"
       using that by real_asymp
     moreover have "\<forall>\<^sup>\<infinity>n. \<bar>stir n\<bar> \<le> c"
       using stir_o1 that by (auto simp: smallo_def)
-    ultimately have "\<forall>\<^sup>\<infinity>n. ((1 + stir n) * sqrt (2 * pi * n)) \<le> 2 powr (c * n)"
-      apply eventually_elim
-      apply (simp add: divide_simps mult_less_0_iff split: if_split_asm)
-      by (smt (verit, best) mult_mono real_sqrt_ge_zero zero_le_mult_iff)
+    ultimately have "\<forall>\<^sup>\<infinity>n. ((1 + stir n) * sqrt (2*pi*n)) \<le> 2 powr (c * n)"
+    proof eventually_elim
+      fix n
+      assume c1: "c+1 \<le> 2 powr (c * n) / sqrt (2*pi*n)" and lec: "\<bar>stir n\<bar> \<le> c"
+      then have "stir n \<le> c"
+        by auto
+      then show "(1 + stir n) * sqrt (2*pi*n) \<le> 2 powr (c*n)"
+        using mult_right_mono [OF c1, of "sqrt (2*pi*n)"] lec
+        by (smt (verit, ccfv_SIG) c1 mult_right_mono nonzero_eq_divide_eq pos_prod_le powr_gt_zero)
+    qed
     then show ?thesis
     proof (eventually_elim, clarify)
       fix n
@@ -156,8 +162,8 @@ proof -
     then have "t \<le> k"
       by simp
     with Suc.IH [symmetric] Suc(2) show ?case 
-      apply (simp add: field_simps)
-      by (metis (no_types, lifting) binomial_absorb_comp diff_Suc_eq_diff_pred diff_add_inverse2 diff_commute of_nat_mult)
+      apply (simp add: field_simps flip: of_nat_mult)
+      by (metis binomial_absorb_comp diff_Suc_eq_diff_pred diff_add_inverse2 diff_commute)
   qed auto
   also have "\<dots> = (real k / (k+l))^t * (\<Prod>i<t. 1 - real i * real l / (real k * (k+l-i)))"
   proof -
@@ -226,9 +232,9 @@ proof -
   then have "\<gamma> * (real t * 2) \<le> \<gamma> + real k * 2"
     using t by (smt (verit, best) mult_less_cancel_right2 of_nat_0_less_iff of_nat_mono)
   then have *: "\<gamma> * t^2 / (2*k) - 1 \<le> \<gamma> * (t-1)^2 / (2*k)"
-    using t
-    apply (simp add: of_nat_diff pos_divide_le_eq algebra_simps)
-    apply (simp add: algebra_simps eval_nat_numeral)
+    using t 
+    apply (simp add: power2_eq_square of_nat_diff pos_divide_le_eq divide_simps)
+    apply (simp add: algebra_simps)
     done
   then have *: "exp (-1) * exp (\<gamma> * t^2 / (2*k)) \<le> exp (\<gamma> * (t-1)^2 / (2*k))"
     by (metis exp_add exp_le_cancel_iff uminus_add_conv_diff)
@@ -893,9 +899,8 @@ next
                              \<union> Red \<inter> all_edges_betw_un (V \<setminus> U) (V \<setminus> U))"
       by (simp add: edge_card_def Int_Un_distrib)
     also have "\<dots> = ?R"
-      using fin dis
-      apply (subst card_Un_disjoint, auto simp: all_edges_betw_un_def doubleton_eq_iff)+
-      by (simp add: edge_card_def all_edges_betw_un_def)
+      using fin dis 
+      by (subst card_Un_disjoint, auto simp: edge_card_def all_edges_betw_un_def doubleton_eq_iff)+
     finally show ?thesis .
   qed
   have C: "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. real (edge_card Red U (V\<setminus>U)))
@@ -935,14 +940,15 @@ next
     unfolding of_nat_mult of_nat_add
     apply (simp add: algebra_simps of_nat_diff choose_two_real)
     by (smt (verit, ccfv_threshold) mult.left_commute distrib_left)
+  have eq: "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. real (edge_card Red (V\<setminus>U) (V\<setminus>U))) 
+          = (\<Sum>U\<in>[V]\<^bsup>(nV-k)\<^esup>. real (edge_card Red U U))"
+    using K finV by (subst sum_nsets_Compl, simp_all)
   show ?thesis
-    using K \<open>card E > 0\<close> finV
-    apply (simp add: red_graph_density_def gen_density_def divide_simps B C sum.distrib *)
-    apply (subst sum_nsets_Compl, simp_all)
-    apply (simp add: sum_edge_card_choose cardE of_nat_diff flip: of_nat_sum)
-    using arg_cong [OF **, of "\<lambda>u. real (card Red) * u"]
-    apply (simp add:  field_simps of_nat_diff choose_two_real)
-    done
+    unfolding red_graph_density_def gen_density_def
+    using K \<open>card E > 0\<close> 
+    apply (simp add: eq divide_simps B C sum.distrib *)
+    apply (simp add: ** sum_edge_card_choose cardE of_nat_diff flip: of_nat_sum)
+    by argo
 qed
 
 lemma exists_density_edge_density:
@@ -991,9 +997,10 @@ lemma Far_9_2_aux:
   fixes \<delta> \<gamma> \<eta>::real
   defines "\<gamma> \<equiv> l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/20"
+  assumes 0: "card X0 > real nV / 2" "card Y0 > real nV / 2" "p0 \<ge> 1-\<gamma>-\<eta>"
+     \<comment>\<open>These are the assumptions about the red density of the graph\<close>
   assumes "Colours l k" and \<gamma>: "\<gamma> \<le> 1/10" and \<eta>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
   assumes nV: "real nV \<ge> exp (-\<delta> * k) * (k+l choose l)" 
-  assumes 0: "card X0 > real nV / 2" "card Y0 > real nV / 2" "p0 \<ge> 1-\<gamma>-\<eta>"
   assumes big: "Big_Far_9_2 \<gamma> l"
   shows False
 proof -
@@ -1067,22 +1074,22 @@ proof -
     with \<eta> show ?thesis
       by simp
   qed
-  also have "... \<le> 1 - \<eta> / (1-\<gamma>)"
+  also have "\<dots> \<le> 1 - \<eta> / (1-\<gamma>)"
   proof -
-    have \<section>: "2 / 3 \<le> (1 - \<gamma> - \<eta>)"
+    have \<section>: "2/3 \<le> (1 - \<gamma> - \<eta>)"
       using \<gamma> \<eta> by linarith
-    have "1 / (1 - \<eta> / (1 - \<gamma>)) = 1 + \<eta> / (1-\<gamma>-\<eta>)"
+    have "1 / (1 - \<eta> / (1-\<gamma>)) = 1 + \<eta> / (1-\<gamma>-\<eta>)"
       using ge_half \<eta> by (simp add: divide_simps split: if_split_asm)
     also have "\<dots> \<le> 1 + 3 * \<eta> / 2"
       using mult_right_mono [OF \<section>, of \<eta>] \<eta> ge_half
       by (simp add: divide_simps algebra_simps)
-    also have "... \<le> exp (3 * \<eta> / 2)"
+    also have "\<dots> \<le> exp (3 * \<eta> / 2)"
       using exp_minus_ge [of "-3*\<eta>/2"] by simp
     finally show ?thesis
       using \<gamma>01 ge_half 
       by (simp add: exp_minus divide_simps mult.commute split: if_split_asm)
   qed
-  also have "... = (1-\<gamma>-\<eta>) / (1-\<gamma>)"
+  also have "\<dots> = (1-\<gamma>-\<eta>) / (1-\<gamma>)"
     using \<gamma>01 by (simp add: divide_simps)
   finally have \<section>: "exp (- 3*\<gamma>*t / (20*k)) \<le> (1-\<gamma>-\<eta>) / (1-\<gamma>)" .
   have D: "exp (- 3*\<gamma>*t\<^sup>2 / (20*k)) \<le> ((1-\<gamma>-\<eta>) / (1-\<gamma>))^t"
@@ -1157,7 +1164,7 @@ proof -
         with Ksub show "K \<inter> Aseq \<gamma> l k m = {}"
           by (auto simp: disjnt_def)
       qed (simp add: finite_Aseq)
-      also have "... = k"
+      also have "\<dots> = k"
         using eqt K \<open>t < k\<close> by simp
       finally show ?thesis .
     qed
@@ -1174,6 +1181,9 @@ proof -
   qed
 qed
 
+end (*context Book*)
+
+text \<open>Needs to be proved OUTSIDE THE LOCALE\<close>
 lemma Far_9_2:
   fixes l k
   fixes \<delta> \<gamma> \<eta>::real
@@ -1184,7 +1194,5 @@ lemma Far_9_2:
   assumes big: "Big_Far_9_2 \<gamma> l"
   shows "\<not> red_graph_density \<ge> 1-\<gamma>-\<eta>" 
   sorry
-
-end (*context Book*)
 
 end
