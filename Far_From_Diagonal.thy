@@ -719,121 +719,36 @@ subsection \<open>Lemma 9.2 preliminaries\<close>
 text \<open>Equation (45) in the text, page 30, is seemingly a huge gap.
    The development below relies on binomial coefficient identities.\<close>
 
-definition "red_graph_density \<equiv> card Red / card E"
-
+text \<open>Could be generalised to any complete graph\<close>
 lemma density_eq_average:
-  "red_graph_density =
-    real (\<Sum>x \<in> V. \<Sum>y \<in> V\<setminus>{x}. if {x,y} \<in> Red then 1 else 0) / (card V * (card V - 1))"
+  assumes "C \<subseteq> E"
+  shows "graph_density C =
+    real (\<Sum>x \<in> V. \<Sum>y \<in> V\<setminus>{x}. if {x,y} \<in> C then 1 else 0) / (card V * (card V - 1))"
 proof -
   have cardE: "card E = card V choose 2"
     using card_all_edges complete finV by blast
-  have *: "(\<Sum>x\<in>V. \<Sum>y\<in>V\<setminus>{x}. if {x, y} \<in> Red then 1 else 0) = card Red * 2"
-    using Red_E by (simp add: sum_eq_card_Neighbours Red_E sum_Neighbours_eq_card)
+  have "finite C"
+    using assms fin_edges finite_subset by blast
+  then have *: "(\<Sum>x\<in>V. \<Sum>y\<in>V\<setminus>{x}. if {x, y} \<in> C then 1 else 0) = card C * 2"
+    using assms by (simp add: sum_eq_card_Neighbours sum_Neighbours_eq_card)
   show ?thesis
-    by (auto simp add: red_graph_density_def divide_simps cardE choose_two_real *)
+    by (auto simp add: graph_density_def divide_simps cardE choose_two_real *)
 qed
 
-lemma edge_card_V_V: "edge_card Red V V = card Red"
+lemma edge_card_V_V: 
+  assumes "C \<subseteq> E"
+  shows "edge_card C V V = card C"
 proof -
-  have "Red \<subseteq> all_edges_betw_un V V"
-    using Red_E
-    by (metis all_edges_betw_un_iff_clique clique_iff complete subset_refl)
+  have "C \<subseteq> all_edges_betw_un V V"
+    using assms by (metis all_edges_betw_un_iff_clique clique_iff complete subset_refl)
   then show ?thesis
     by (metis Int_absorb2 edge_card_def)
-qed
-
-lemma edge_card_insert:
-  assumes "NO_MATCH {} F" and "e \<notin> F"
-    shows  "edge_card (insert e F) X Y = edge_card {e} X Y + edge_card F X Y"
-proof -
-  have fin: "finite (all_edges_betw_un X Y)"
-    by (meson all_uedges_betw_subset fin_edges finite_subset)
-  have "insert e F \<inter> all_edges_betw_un X Y 
-      = {e} \<inter> all_edges_betw_un X Y \<union> F \<inter> all_edges_betw_un X Y"
-    by auto
-  with \<open>e\<notin>F\<close> show ?thesis
-    by (auto simp: edge_card_def card_Un_disjoint disjoint_iff fin )
-qed
-
-lemma edge_card_sing:
-  assumes "e \<in> E"
-  shows "edge_card {e} U U = (if e \<subseteq> U then 1 else 0)"
-proof (cases "e \<subseteq> U")
-  case True
-  obtain x y where xy: "e = {x,y}" "x\<noteq>y"
-    using assms by (metis card_2_iff two_edges)
-  with True assms have "{e} \<inter> all_edges_betw_un U U = {e}"
-    by (auto simp: all_edges_betw_un_def)
-  with True show ?thesis
-    by (simp add: edge_card_def)
-qed (auto simp: edge_card_def all_edges_betw_un_def)
-
-lemma sum_edge_card_choose: 
-  assumes "2\<le>k" 
-  shows "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U U) = (nV-2 choose (k-2)) * card Red"
-proof -
-  have *: "card {A \<in> [V]\<^bsup>k\<^esup>. e \<subseteq> A} = nV-2 choose (k-2)" if e: "e \<in> Red" for e
-  proof -
-    have "e \<subseteq> V"
-      using Red_E e wellformed by force
-    obtain x y where xy: "e = {x,y}" "x\<noteq>y"
-      using Red_E e by (metis in_mono card_2_iff two_edges)
-    define \<A> where "\<A> \<equiv> {A \<in> [V]\<^bsup>k\<^esup>. e \<subseteq> A}"
-    have "\<And>A. A \<in> \<A> \<Longrightarrow> A = e \<union> (A\<setminus>e) \<and> A\<setminus>e \<in> [V\<setminus>e]\<^bsup>(k - 2)\<^esup>"
-      by (auto simp: \<A>_def nsets_def xy)
-    moreover have "\<And>xa. \<lbrakk>xa \<in> [V \<setminus> e]\<^bsup>(k - 2)\<^esup>\<rbrakk> \<Longrightarrow> e \<union> xa \<in> \<A>"
-      using \<open>e \<subseteq> V\<close> assms
-      by (auto simp: \<A>_def nsets_def xy card_insert_if)
-    ultimately have "\<A> = (\<union>)e ` [V\<setminus>e]\<^bsup>(k-2)\<^esup>"
-      by auto
-    moreover have "inj_on ((\<union>) e) ([V\<setminus>e]\<^bsup>(k - 2)\<^esup>)"
-      by (auto simp: inj_on_def nsets_def)
-    moreover have "card (V\<setminus>e) = nV-2"
-      by (metis Red_E(2) \<open>e \<in> Red\<close> basic_trans_rules(31) card_Diff_subset finV rev_finite_subset two_edges wellformed)
-    ultimately show ?thesis
-      using assms by (simp add: card_image \<A>_def)
-  qed
-  have "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card R U U) = ((card V - 2) choose (k-2)) * card R"
-    if "R \<subseteq> Red" for R
-    using finite_subset[OF that finite_Red] that
-  proof (induction R)
-    case empty
-    then show ?case
-      by (simp add: edge_card_def)
-  next
-    case (insert e R)
-    with Red_E have "e\<in>E" by blast
-    with insert show ?case
-      by (simp add: edge_card_insert * sum.distrib edge_card_sing Ramsey.finite_imp_finite_nsets 
-           finV flip: sum.inter_filter)
-  qed
-  then show ?thesis
-    by blast
-qed
-
-lemma sum_nsets_Compl:
-  assumes "finite A" "k \<le> card A"
-  shows "(\<Sum>U\<in>[A]\<^bsup>k\<^esup>. f (A\<setminus>U)) = (\<Sum>U\<in>[A]\<^bsup>(card A - k)\<^esup>. f U)"
-proof -
-  have "B \<in> (\<setminus>) A ` [A]\<^bsup>k\<^esup>" if "B \<in> [A]\<^bsup>(card A - k)\<^esup>" for B
-  proof -
-    have "card (A\<setminus>B) = k"
-      using assms that by (simp add: nsets_def card_Diff_subset)
-    moreover have "B = A\<setminus>(A\<setminus>B)"
-      using that by (auto simp: nsets_def)
-    ultimately show ?thesis
-      using assms unfolding nsets_def image_iff by blast
-  qed
-  then have "bij_betw (\<lambda>U. A\<setminus>U) ([A]\<^bsup>k\<^esup>) ([A]\<^bsup>(card A - k)\<^esup>)"
-    using assms by (auto simp: nsets_def bij_betw_def inj_on_def card_Diff_subset)
-  then show ?thesis
-    using sum.reindex_bij_betw by blast
 qed
 
 text \<open>Bhavik's statement; own proof\<close>
 lemma density_eq_average_partition:
   assumes "0 < k" "k < card V"
-  shows "red_graph_density = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. red_density U (V\<setminus>U)) / (card V choose k)"
+  shows "graph_density Red = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. red_density U (V\<setminus>U)) / (card V choose k)"
 proof (cases "k=1 \<or> nV = Suc k")
   case True
   have eq: "(Red \<inter> {{x, y} |y. y \<in> V \<and> y \<noteq> x \<and> y \<in> V \<and> x \<noteq> y}) 
@@ -866,9 +781,9 @@ proof (cases "k=1 \<or> nV = Suc k")
   also have "\<dots> = (\<Sum>i\<in>V. card (Neighbours Red i)) / (nV-1)"
     unfolding edge_card_def Neighbours_def all_edges_betw_un_def
     by (simp add: eq card_image inj_on_def doubleton_eq_iff)
-  also have "\<dots> = red_graph_density * (card V)"
+  also have "\<dots> = graph_density Red * (card V)"
     using assms
-    by (simp add: Red_E sum_Neighbours_eq_card red_graph_density_def graph_size choose_two_real of_nat_diff)
+    by (simp add: Red_E sum_Neighbours_eq_card graph_density_def graph_size choose_two_real of_nat_diff)
   finally show ?thesis
     using assms(2) True by fastforce
 next
@@ -910,7 +825,7 @@ next
     have "?L = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red V V - real (edge_card Red U U + edge_card Red (V\<setminus>U) (V\<setminus>U)))"
       unfolding nsets_def by (rule sum.cong) (auto simp: B)
     also have "\<dots> = ?R"
-      by (simp add: sum_subtractf edge_card_V_V)
+      by (simp add: Red_E sum_subtractf edge_card_V_V)
     finally show ?thesis .
   qed
 
@@ -944,8 +859,8 @@ next
           = (\<Sum>U\<in>[V]\<^bsup>(nV-k)\<^esup>. real (edge_card Red U U))"
     using K finV by (subst sum_nsets_Compl, simp_all)
   show ?thesis
-    unfolding red_graph_density_def gen_density_def
-    using K \<open>card E > 0\<close> 
+    unfolding graph_density_def gen_density_def
+    using K \<open>card E > 0\<close> Red_E
     apply (simp add: eq divide_simps B C sum.distrib *)
     apply (simp add: ** sum_edge_card_choose cardE of_nat_diff flip: of_nat_sum)
     by argo
@@ -953,13 +868,13 @@ qed
 
 lemma exists_density_edge_density:
   assumes k: "0 < k" "k < card V"
-  obtains U where "card U = k" "U\<subseteq>V" "red_graph_density \<le> red_density U (V\<setminus>U)"
+  obtains U where "card U = k" "U\<subseteq>V" "graph_density Red \<le> red_density U (V\<setminus>U)"
 proof -
-  have False if "\<And>U. U \<in> [V]\<^bsup>k\<^esup> \<Longrightarrow> red_graph_density > red_density U (V\<setminus>U)"
+  have False if "\<And>U. U \<in> [V]\<^bsup>k\<^esup> \<Longrightarrow> graph_density Red > red_density U (V\<setminus>U)"
   proof -
     have "card([V]\<^bsup>k\<^esup>) > 0"
       using assms by auto
-    then have "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. red_density U (V \<setminus> U)) < card([V]\<^bsup>k\<^esup>) * red_graph_density"
+    then have "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. red_density U (V \<setminus> U)) < card([V]\<^bsup>k\<^esup>) * graph_density Red"
       by (meson sum_bounded_above_strict that)
     with density_eq_average_partition assms show False by force
   qed
@@ -1188,13 +1103,14 @@ lemma Far_9_2:
   fixes \<delta> \<gamma> \<eta>::real
   defines "\<gamma> \<equiv> l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/20"
-  assumes "Colours l k" and "\<gamma> \<le> 1/10" and \<epsilon>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
+  assumes "\<gamma> \<le> 1/10" and \<epsilon>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
   assumes n: "real nV \<ge> exp (-\<delta> * k) * (k+l choose l)" 
-  assumes big: "Big_Far_9_2 \<gamma> l"
+  assumes gd: "graph_density Red \<ge> 1-\<gamma>-\<eta>" 
+  assumes big: "Big_Far_9_2 \<gamma> l" and "l\<le>k"
   shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue)"
 
 
-  shows "\<not> red_graph_density \<ge> 1-\<gamma>-\<eta>" 
+  shows
   sorry
 
 

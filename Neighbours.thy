@@ -451,6 +451,97 @@ proof (cases "finite X \<and> finite Y")
     by (simp add: gen_density_def edge_card_def edge_density_def divide_right_mono)
 qed (auto simp: gen_density_def edge_density_def)
 
+
+definition "graph_density \<equiv> \<lambda>C. card C / card E"
+
+lemma edge_card_insert:
+  assumes "NO_MATCH {} F" and "e \<notin> F"
+    shows  "edge_card (insert e F) X Y = edge_card {e} X Y + edge_card F X Y"
+proof -
+  have fin: "finite (all_edges_betw_un X Y)"
+    by (meson all_uedges_betw_subset fin_edges finite_subset)
+  have "insert e F \<inter> all_edges_betw_un X Y 
+      = {e} \<inter> all_edges_betw_un X Y \<union> F \<inter> all_edges_betw_un X Y"
+    by auto
+  with \<open>e\<notin>F\<close> show ?thesis
+    by (auto simp: edge_card_def card_Un_disjoint disjoint_iff fin )
+qed
+
+lemma edge_card_sing:
+  assumes "e \<in> E"
+  shows "edge_card {e} U U = (if e \<subseteq> U then 1 else 0)"
+proof (cases "e \<subseteq> U")
+  case True
+  obtain x y where xy: "e = {x,y}" "x\<noteq>y"
+    using assms by (metis card_2_iff two_edges)
+  with True assms have "{e} \<inter> all_edges_betw_un U U = {e}"
+    by (auto simp: all_edges_betw_un_def)
+  with True show ?thesis
+    by (simp add: edge_card_def)
+qed (auto simp: edge_card_def all_edges_betw_un_def)
+
+lemma sum_edge_card_choose: 
+  assumes "2\<le>k" "C \<subseteq> E"
+  shows "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card C U U) = (card V - 2 choose (k-2)) * card C"
+proof -
+  have *: "card {A \<in> [V]\<^bsup>k\<^esup>. e \<subseteq> A} = card V - 2 choose (k-2)" if e: "e \<in> C" for e
+  proof -
+    have "e \<subseteq> V"
+      using \<open>C\<subseteq>E\<close> e wellformed by force
+    obtain x y where xy: "e = {x,y}" "x\<noteq>y"
+      using \<open>C\<subseteq>E\<close> e by (metis in_mono card_2_iff two_edges)
+    define \<A> where "\<A> \<equiv> {A \<in> [V]\<^bsup>k\<^esup>. e \<subseteq> A}"
+    have "\<And>A. A \<in> \<A> \<Longrightarrow> A = e \<union> (A\<setminus>e) \<and> A\<setminus>e \<in> [V\<setminus>e]\<^bsup>(k - 2)\<^esup>"
+      by (auto simp: \<A>_def nsets_def xy)
+    moreover have "\<And>xa. \<lbrakk>xa \<in> [V \<setminus> e]\<^bsup>(k - 2)\<^esup>\<rbrakk> \<Longrightarrow> e \<union> xa \<in> \<A>"
+      using \<open>e \<subseteq> V\<close> assms
+      by (auto simp: \<A>_def nsets_def xy card_insert_if)
+    ultimately have "\<A> = (\<union>)e ` [V\<setminus>e]\<^bsup>(k-2)\<^esup>"
+      by auto
+    moreover have "inj_on ((\<union>) e) ([V\<setminus>e]\<^bsup>(k - 2)\<^esup>)"
+      by (auto simp: inj_on_def nsets_def)
+    moreover have "card (V\<setminus>e) = card V - 2"
+      by (metis \<open>C\<subseteq>E\<close> \<open>e \<in> C\<close> subsetD card_Diff_subset finV finite_subset two_edges wellformed)
+    ultimately show ?thesis
+      using assms by (simp add: card_image \<A>_def)
+  qed
+  have "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card R U U) = ((card V - 2) choose (k-2)) * card R"
+    if "finite R" "R \<subseteq> C" for R
+    using that
+  proof (induction R)
+    case empty
+    then show ?case
+      by (simp add: edge_card_def)
+  next
+    case (insert e R)
+    with assms have "e\<in>E" by blast
+    with insert show ?case
+      by (simp add: edge_card_insert * sum.distrib edge_card_sing Ramsey.finite_imp_finite_nsets 
+           finV flip: sum.inter_filter)
+  qed
+  then show ?thesis
+    by (meson \<open>C\<subseteq>E\<close> fin_edges finite_subset set_eq_subset)
+qed
+
+lemma sum_nsets_Compl:
+  assumes "finite A" "k \<le> card A"
+  shows "(\<Sum>U\<in>[A]\<^bsup>k\<^esup>. f (A\<setminus>U)) = (\<Sum>U\<in>[A]\<^bsup>(card A - k)\<^esup>. f U)"
+proof -
+  have "B \<in> (\<setminus>) A ` [A]\<^bsup>k\<^esup>" if "B \<in> [A]\<^bsup>(card A - k)\<^esup>" for B
+  proof -
+    have "card (A\<setminus>B) = k"
+      using assms that by (simp add: nsets_def card_Diff_subset)
+    moreover have "B = A\<setminus>(A\<setminus>B)"
+      using that by (auto simp: nsets_def)
+    ultimately show ?thesis
+      using assms unfolding nsets_def image_iff by blast
+  qed
+  then have "bij_betw (\<lambda>U. A\<setminus>U) ([A]\<^bsup>k\<^esup>) ([A]\<^bsup>(card A - k)\<^esup>)"
+    using assms by (auto simp: nsets_def bij_betw_def inj_on_def card_Diff_subset)
+  then show ?thesis
+    using sum.reindex_bij_betw by blast
+qed
+
 end  (*fin_sgraph*)
 
 
