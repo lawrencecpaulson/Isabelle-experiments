@@ -257,8 +257,9 @@ proof -
     using card_mono [OF _ Int_lower2] \<open>finite X\<close> \<open>finite Y\<close>
     by (smt (verit, best) of_nat_mult edge_card_le mult.commute mult_right_mono of_nat_0_le_iff of_nat_mono)
   then have W1abs: "\<bar>Weight X Y x y\<bar> \<le> 1" for x y 
-    using RNX edge_card_le [of X Y Red] \<open>finite X\<close> 
-    by (fastforce simp: mult_ac Weight_def divide_simps gen_density_def)
+    using RNX edge_card_le [of X Y Red] \<open>finite X\<close> \<open>finite Y\<close>
+    apply (simp add: mult_ac Weight_def divide_simps gen_density_def)
+    by (metis Int_lower2 card_mono mult_of_nat_commute)
   then have W1: "Weight X Y x y \<le> 1" for x y
     by (smt (verit))
   have WW_le_cardX: "weight X Y y + Weight X Y y y \<le> card X" if "y \<in> X" for y

@@ -1,189 +1,11 @@
+section \<open>Library material: the neighbours of vertices\<close>
+
+text \<open>Preliminaries for the Book Algorithm\<close>
+
 theory Neighbours imports
    Ramsey_Extras "Undirected_Graph_Theory.Undirected_Graph_Basics" 
 
 begin
-
-text \<open>Preliminaries for the Book Algorithm\<close>
-
-subsection \<open>Fact D1\<close>
-
-text \<open>from appendix D, page 55\<close>
-lemma Fact_D1_73_aux:
-  fixes \<sigma>::real and m b::nat  
-  assumes \<sigma>: "0<\<sigma>" and bm: "real b < real m"
-  shows  "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
-proof -
-  have "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = (\<Prod>i<b. (\<sigma>*m - i) / (real m - real i))"
-    using bm by (simp add: gbinomial_prod_rev prod_dividef atLeast0LessThan)
-  also have "\<dots> = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
-    using bm
-  proof (induction b)
-    case 0
-    then show ?case
-      by simp
-  next
-    case (Suc b)
-    then have "b<m"
-      by linarith
-    with \<sigma> show ?case 
-      by (simp add: Suc field_simps)
-  qed
-  finally show ?thesis .
-qed
-
-text \<open>This is fact 4.2 (page 11) as well as equation (73), page 55.\<close>
-lemma Fact_D1_73:
-  fixes \<sigma>::real and m b::nat  
-  assumes \<sigma>: "0<\<sigma>" "\<sigma>\<le>1" and b: "real b \<le> \<sigma> * m / 2"
-  shows  "(\<sigma>*m) gchoose b \<in> {\<sigma>^b * (real m gchoose b) * exp (- (real b ^ 2) / (\<sigma>*m)) .. \<sigma>^b * (m gchoose b)}"
-proof (cases "m=0 \<or> b=0")
-  case True
-  then show ?thesis
-    using True assms by auto
-next
-  case False
-  then have "\<sigma> * m / 2 < real m"
-    using \<sigma> by auto
-  with b \<sigma> False have bm: "real b < real m"
-    by linarith
-  then have nonz: "m gchoose b \<noteq> 0"
-    by (simp add: flip: binomial_gbinomial)
-  have EQ: "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))" 
-    using Fact_D1_73_aux \<open>0<\<sigma>\<close> bm by blast
-  also have "\<dots> \<le> \<sigma> ^ b * 1"
-  proof (intro mult_left_mono prod_le_1 conjI)
-    fix i assume "i \<in> {..<b}"
-    with b \<sigma> bm show "0 \<le> 1 - (1 - \<sigma>) * i / (\<sigma> * (real m - i))"
-      by (simp add: field_split_simps)
-  qed (use \<sigma> bm in auto)
-  finally have upper: "(\<sigma>*m) gchoose b \<le> \<sigma>^b * (m gchoose b)"
-    using nonz by (simp add: divide_simps flip: binomial_gbinomial)
-  have *: "exp (-2 * real i / (\<sigma>*m)) \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))" if "i<b" for i
-  proof -
-    have exp_le: "1-x \<ge> exp (-2 * x)" if "0 \<le>x" "x \<le> 1/2" for x::real
-    proof -
-      have "exp (-2 * x) = inverse (exp (2*x))"
-        by (simp add: exp_minus)
-      also have "\<dots> \<le> inverse (1 + 2*x)"
-        using exp_ge_add_one_self that by auto
-      also have "\<dots> \<le> 1-x"
-        using that by (simp add: mult_left_le field_simps)
-      finally show ?thesis .
-    qed
-    have "exp (-2 * real i / (\<sigma>*m)) = exp (-2 * (i / (\<sigma>*m)))"
-      by simp
-    also have "\<dots> \<le> 1 - i/(\<sigma> * m)"
-    using b that by (intro exp_le) auto
-    also have "\<dots> \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))"
-      using \<sigma> b that 
-      apply (simp add: field_split_simps)
-      using bm by linarith
-    finally show ?thesis .
-  qed
-  have "sum real {..<b} \<le> real b ^ 2 / 2"
-    by (induction b) (auto simp: power2_eq_square algebra_simps)
-  with \<sigma> have "exp (- (real b ^ 2) / (\<sigma>*m)) \<le> exp (- (2 * (\<Sum>i<b. i) / (\<sigma>*m)))"
-    by (simp add: mult_less_0_iff divide_simps)
-  also have "\<dots> = exp (\<Sum>i<b. -2 * real i / (\<sigma>*m))"
-    by (simp add: sum_negf sum_distrib_left sum_divide_distrib)
-  also have "\<dots> = (\<Prod>i<b. exp (-2 * real i / (\<sigma>*m)))"
-    using exp_sum by blast
-  also have "\<dots> \<le> (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
-    using * by (force intro: prod_mono)
-  finally have "exp (- (real b)\<^sup>2 / (\<sigma> * real m)) \<le> (\<Prod>i<b. 1 - (1 - \<sigma>) * real i / (\<sigma> * (real m - real i)))" .
-  with EQ have "\<sigma>^b * exp (- (real b ^ 2) / (\<sigma>*m)) \<le> ((\<sigma>*m) gchoose b) * inverse (real m gchoose b)"
-    by (simp add: \<sigma>)
-  with \<sigma> bm have lower: "\<sigma>^b * (real m gchoose b) * exp (- (real b ^ 2) / (\<sigma>*m)) \<le> (\<sigma>*m) gchoose b"
-    by (simp add: field_split_simps flip: binomial_gbinomial)
-  with upper show ?thesis 
-    by simp
-qed
-
-lemma exp_inequality_17:
-  fixes x::real
-  assumes "0 \<le> x" "x \<le> 1/7"
-  shows "1 - 4*x/3 \<ge> exp (-3*x/2)"
-proof -
-  have "x * 7 \<le> 1"
-    using assms by auto
-  with \<open>0 \<le> x\<close> have "45 * (x * (x * x)) + (42 * (x * x)) + 36/49 * x * x \<le> x * 8"
-    using assms by sos
-  moreover have "x * x * (36 * x * x) \<le> (1/7)*(1/7) * (36 * x * x)"
-    using assms by (intro mult_mono) auto
-  ultimately have *: "45 * (x * (x * x)) + (42 * (x * x) + x * (x * (x * x) * 36)) \<le> x * 8"
-    by simp
-  have "exp (-3*x/2) = inverse (exp (3*x/2))"
-    by (simp add: exp_minus)
-  also have "\<dots> \<le> inverse (1 + 3*x/2 + (1/2)*(3*x/2)^2 + (1/6)*(3*x/2)^3)"
-    apply (intro le_imp_inverse_le exp_lower_taylor_2)
-    by (smt (verit) divide_nonneg_nonneg mult_nonneg_nonneg \<open>0 \<le> x\<close> zero_le_power)
-  also have "\<dots> \<le> 1 - 4*x/3"
-    using assms *
-    apply (simp add: field_split_simps eval_nat_numeral not_less)
-    by (smt (verit, best) mult_nonneg_nonneg)
-  finally show ?thesis .
-qed
-
-text \<open>additional part\<close>
-lemma Fact_D1_75:
-  fixes \<sigma>::real and m b::nat  
-  assumes \<sigma>: "0<\<sigma>" "\<sigma><1" and b: "real b \<le> \<sigma> * m / 2" and b': "b \<le> m/7" and \<sigma>': "\<sigma> \<ge> 7/15"
-  shows  "(\<sigma>*m) gchoose b \<ge> exp (- (3 * real b ^ 2) / (4*m)) * \<sigma>^b * (m gchoose b)"
-proof (cases "m=0 \<or> b=0")
-  case True
-  then show ?thesis
-    using True assms by auto
-next
-  case False
-  with b \<sigma> have bm: "real b < real m"
-    by (smt (verit, ccfv_SIG) le_divide_eq_1_pos of_nat_le_0_iff pos_less_divide_eq times_divide_eq_left)
-  have *: "exp (- 3 * real i / (2*m)) \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))" if "i<b" for i
-  proof -
-    have im: "0 \<le> i/m" "i/m \<le> 1/7"
-      using b' that by auto
-    have "exp (- 3* real i / (2*m)) \<le> 1 - 4*i / (3*m)"
-      using exp_inequality_17 [OF im] by (simp add: mult.commute)
-    also have "\<dots> \<le> 1 - 8*i / (7 * (real m - real b))"
-    proof -
-      have "real i * (real b * 7) \<le> real i * real m"
-        using b' by (simp add: mult_left_mono)
-      then show ?thesis
-        using b' by (simp add: field_split_simps)
-    qed
-    also have "\<dots> \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))"
-    proof -
-      have 1: "(1 - \<sigma>) / \<sigma> \<le> 8/7"
-        using \<sigma> \<sigma>' that
-        by (simp add: field_split_simps)
-      have 2: "1 / (real m - real i) \<le> 1 / (real m - real b)"
-        using \<sigma> \<sigma>' b'  that by (simp add: field_split_simps)
-      have "(1 - \<sigma>) / (\<sigma> * (real m - real i)) \<le> 8 / (7 * (real m - real b))"
-        using mult_mono [OF 1 2] b' that by auto 
-      then show ?thesis
-        apply simp
-        by (metis mult.commute mult_left_mono of_nat_0_le_iff times_divide_eq_right)
-    qed
-    finally show ?thesis .
-  qed
-  have EQ: "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))" 
-    using Fact_D1_73_aux \<open>0<\<sigma>\<close> bm by blast
-  have "sum real {..<b} \<le> real b ^ 2 / 2"
-    by (induction b) (auto simp: power2_eq_square algebra_simps)
-  with \<sigma> have "exp (- (3 * real b ^ 2) / (4*m)) \<le> exp (- (3 * (\<Sum>i<b. i) / (2*m)))"
-    by (simp add: mult_less_0_iff divide_simps)
-  also have "\<dots> = exp (\<Sum>i<b. -3 * real i / (2*m))"
-    by (simp add: sum_negf sum_distrib_left sum_divide_distrib)
-  also have "\<dots> = (\<Prod>i<b. exp (-3 * real i / (2*m)))"
-    using exp_sum by blast
-  also have "\<dots> \<le> (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
-    using * by (force intro: prod_mono)
-  finally have "exp (- (3 * real b ^ 2) / (4*m)) \<le> (\<Prod>i<b. 1 - (1-\<sigma>) * i / (\<sigma> * (real m - real i)))" .
-  with EQ have "\<sigma>^b * exp (- (3 * real b ^ 2) / (4*m)) \<le> ((\<sigma>*m) gchoose b) * inverse (m gchoose b)"
-    by (simp add: assms)
-  with \<sigma> bm show ?thesis
-    by (simp add: field_split_simps flip: binomial_gbinomial)
-qed
-
 
 section \<open>Preliminary definitions\<close>
 
@@ -340,7 +162,7 @@ lemma book_imp_disjnt: "book S T F \<Longrightarrow> disjnt S T"
 
 end
 
-context sgraph
+context fin_sgraph
 begin
 
 declare singleton_not_edge [simp]
@@ -379,7 +201,257 @@ lemma indep_iff_clique: "K \<subseteq> V \<Longrightarrow> indep K F \<longleftr
 lemma clique_imp_all_edges_betw_un: "clique K F \<Longrightarrow> all_edges_betw_un K K \<subseteq> F"
   by (force simp: clique_def all_edges_betw_un_def)
 
-end
+
+
+text \<open>for calculating the perimeter p\<close>
+
+definition "edge_card \<equiv> \<lambda>C X Y. card (C \<inter> all_edges_betw_un X Y)"
+
+definition "gen_density \<equiv> \<lambda>C X Y. edge_card C X Y / (card X * card Y)"
+
+lemma edge_card_empty [simp]: "edge_card C {} X = 0" "edge_card C X {} = 0"
+  by (auto simp: edge_card_def)
+
+lemma edge_card_commute: "edge_card C X Y = edge_card C Y X"
+  using all_edges_betw_un_commute edge_card_def by presburger
+
+lemma edge_card_le: 
+  assumes "finite X" "finite Y"
+  shows "edge_card C X Y \<le> card X * card Y"
+unfolding edge_card_def
+  by (metis Int_lower2 all_edges_betw_un_le assms card_mono finite_all_edges_betw_un order_trans)
+
+text \<open>the assumption that @{term Z} is disjoint from @{term X} (or else @{term Y}) is necessary\<close>
+lemma edge_card_Un:
+  assumes "disjnt X Y" "disjnt X Z" "finite X" "finite Y"
+  shows "edge_card C (X \<union> Y) Z = edge_card C X Z + edge_card C Y Z"
+proof -
+  have "disjnt (C \<inter> all_edges_betw_un X Z) (C \<inter> all_edges_betw_un Y Z)"
+    using assms by (meson Int_iff disjnt_all_edges_betw_un disjnt_iff)
+  then show ?thesis
+    unfolding edge_card_def
+    by (metis Int_Un_distrib all_uedges_betw_subset card_Un_disjnt fin_edges finite_Int 
+            finite_subset all_edges_betw_un_Un1)
+qed
+
+lemma edge_card_diff:
+  assumes "Y\<subseteq>X" "disjnt X Z" "finite X" 
+  shows "edge_card C (X-Y) Z = edge_card C X Z - edge_card C Y Z"
+  by (metis Diff_disjoint Diff_partition Diff_subset assms diff_add_inverse disjnt_def disjnt_subset1 edge_card_Un finite_subset)
+
+lemma edge_card_mono:
+  assumes "Y\<subseteq>X" shows "edge_card C Y Z \<le> edge_card C X Z"
+  unfolding edge_card_def
+proof (intro card_mono)
+  show "finite (C \<inter> all_edges_betw_un X Z)"
+    by (meson all_uedges_betw_subset fin_edges finite_Int finite_subset)
+  show "C \<inter> all_edges_betw_un Y Z \<subseteq> C \<inter> all_edges_betw_un X Z"
+    by (meson Int_mono all_edges_betw_un_mono1 assms subset_refl)
+qed
+
+lemma edge_card_eq_sum_Neighbours:
+  assumes "C\<subseteq>E" and B: "finite B" "disjnt A B"
+  shows "edge_card C A B = (\<Sum>i\<in>B. card (Neighbours C i \<inter> A))"
+  using B
+proof (induction B)
+  case empty
+  then show ?case
+    by (auto simp: edge_card_def)
+next
+  case (insert b B)
+  have "finite C"
+    using assms(1) fin_edges finite_subset by blast
+  have bij: "bij_betw (\<lambda>e. the_elem(e-{b})) (C \<inter> {{x, b} |x. x \<in> A}) (Neighbours C b \<inter> A)"
+    unfolding bij_betw_def
+  proof
+    have [simp]: "the_elem ({x, b} - {b}) = x" if "x \<in> A" for x
+      using insert.prems by (simp add: disjnt_iff insert_Diff_if that)
+    show "inj_on (\<lambda>e. the_elem (e - {b})) (C \<inter> {{x, b} |x. x \<in> A})"
+      by (auto simp: inj_on_def)
+    show "(\<lambda>e. the_elem (e - {b})) ` (C \<inter> {{x, b} |x. x \<in> A}) = Neighbours C b \<inter> A"
+      by (fastforce simp: Neighbours_def insert_commute image_iff Bex_def)
+  qed
+  have "edge_card C A (insert b B) = card (C \<inter> ({{x,b} |x. x \<in> A} \<union> all_edges_betw_un A B))"
+    using \<open>C \<subseteq> E\<close> 
+    apply (simp add: edge_card_def all_edges_betw_un_insert2 Int_Un_distrib Int_ac)
+    by (metis (no_types, lifting) Int_absorb2 Int_assoc Un_commute)
+  also have "\<dots> = card ((C \<inter> ({{x,b} |x. x \<in> A}) \<union> (C \<inter> all_edges_betw_un A B)))"
+    by (simp add: Int_Un_distrib)
+  also have "\<dots> = card (C \<inter> {{x,b} |x. x \<in> A}) + card (C \<inter> all_edges_betw_un A B)"
+  proof (rule card_Un_disjnt)
+    show "disjnt (C \<inter> {{x, b} |x. x \<in> A}) (C \<inter> all_edges_betw_un A B)"
+      using insert by (auto simp: disjnt_iff all_edges_betw_un_def doubleton_eq_iff)
+  qed (use \<open>finite C\<close> in auto)
+  also have "\<dots> = card (Neighbours C b \<inter> A) + card (C \<inter> all_edges_betw_un A B)"
+    using bij_betw_same_card [OF bij] by simp
+  also have "\<dots> = (\<Sum>i\<in>insert b B. card (Neighbours C i \<inter> A))"
+    using insert by (simp add: edge_card_def)
+  finally show ?case .
+qed
+
+lemma sum_eq_card_Neighbours:
+  assumes "x \<in> V" "C \<subseteq> E"
+  shows "(\<Sum>y \<in> V\<setminus>{x}. if {x,y} \<in> C then 1 else 0) = card (Neighbours C x)"
+proof -
+  have "Neighbours C x = (V \<setminus> {x}) \<inter> {y. {x, y} \<in> C}"
+    using assms wellformed by (auto simp: Neighbours_def)
+  with finV sum_eq_card [of _ "{y. {x,y}\<in>C}"] show ?thesis by simp
+qed
+
+lemma Neighbours_insert: "Neighbours (insert e C) x = {y. e = {x,y}} \<union> Neighbours C x"
+  by (auto simp: Neighbours_def)
+
+lemma Neighbours_insert_NO_MATCH: "NO_MATCH {} C \<Longrightarrow> Neighbours (insert e C) x = Neighbours {e} x \<union> Neighbours C x"
+  by (auto simp: Neighbours_def)
+
+lemma Neighbours_sing_2:
+  assumes "e \<in> E"
+  shows "(\<Sum>x\<in>V. card (Neighbours {e} x)) = 2"
+proof -
+  obtain u v where uv: "e = {u,v}" "u\<noteq>v"
+    by (meson assms card_2_iff two_edges)
+  then have "u \<in> V" "v \<in> V"
+    using assms wellformed uv by blast+
+  have *: "Neighbours {e} x = (if x=u then {v} else if x=v then {u} else {})" for x
+    by (auto simp add: Neighbours_def uv doubleton_eq_iff)
+  show ?thesis
+    using \<open>u\<noteq>v\<close>
+    by (simp add: * if_distrib [of card] finV sum.delta_remove \<open>u \<in> V\<close> \<open>v \<in> V\<close> cong: if_cong)
+qed
+
+lemma sum_Neighbours_eq_card:
+  assumes "finite C" "C\<subseteq>E" 
+  shows "(\<Sum>i\<in>V. card (Neighbours C i)) = card C * 2"
+  using assms
+proof (induction C)
+  case empty
+  then show ?case
+    by (auto simp: Neighbours_def)
+next
+  case (insert e C)
+  then have [simp]: "Neighbours {e} x \<inter> Neighbours C x = {}" for x
+    by (auto simp: Neighbours_def)
+  with insert show ?case
+    by (auto simp: card_Un_disjoint finite_Neighbours Neighbours_insert_NO_MATCH sum.distrib Neighbours_sing_2)
+qed
+
+lemma gen_density_empty [simp]: "gen_density C {} X = 0" "gen_density C X {} = 0"
+  by (auto simp: gen_density_def)
+
+lemma gen_density_commute: "gen_density C X Y = gen_density C Y X"
+  by (simp add: edge_card_commute gen_density_def)
+
+lemma gen_density_ge0: "gen_density C X Y \<ge> 0"
+  by (auto simp: gen_density_def)
+
+lemma gen_density_gt0: 
+  assumes "finite X" "finite Y" "{x,y} \<in> C" "x \<in> X" "y \<in> Y" "C \<subseteq> E"
+  shows "gen_density C X Y > 0"
+proof -
+  have xy: "{x,y} \<in> all_edges_betw_un X Y"
+    using assms by (force simp: all_edges_betw_un_def)
+  moreover have "finite (all_edges_betw_un X Y)"
+    by (simp add: assms finite_all_edges_betw_un)
+  ultimately have "edge_card C X Y > 0"
+    by (metis IntI assms(3) card_0_eq edge_card_def emptyE finite_Int gr0I)
+  with xy show ?thesis
+    using assms gen_density_def less_eq_real_def by fastforce
+qed
+
+lemma gen_density_le_1_minus: 
+  shows "gen_density C X Y \<le> 1 - gen_density (E-C) X Y"
+proof (cases "finite X \<and> finite Y")
+  case True
+  have "C \<inter> all_edges_betw_un X Y \<union> (E - C) \<inter> all_edges_betw_un X Y = all_edges_betw_un X Y"
+    by (auto simp: all_edges_betw_un_def)
+  with True have "(edge_card C X Y) + (edge_card (E - C) X Y) \<le> card (all_edges_betw_un X Y)"
+    unfolding edge_card_def
+    by (metis Diff_Int_distrib2 Diff_disjoint card_Un_disjoint card_Un_le finite_Int finite_all_edges_betw_un)
+  with True show ?thesis
+    apply (simp add: gen_density_def field_split_simps)
+    by (smt (verit) all_edges_betw_un_le of_nat_add of_nat_mono of_nat_mult)
+qed (auto simp: gen_density_def)
+
+lemma gen_density_lt1: 
+  assumes "{x,y} \<in> E-C" "x \<in> X" "y \<in> Y" "C \<subseteq> E"
+  shows "gen_density C X Y < 1"
+proof (cases "finite X \<and> finite Y")
+  case True
+  then have "0 < gen_density (E - C) X Y"
+    using assms gen_density_gt0 by auto
+  have "gen_density C X Y \<le> 1 - gen_density (E - C) X Y"
+    by (intro gen_density_le_1_minus)
+  then show ?thesis
+    using \<open>0 < gen_density (E - C) X Y\<close> by linarith
+qed (auto simp: gen_density_def)
+
+lemma gen_density_le1: "gen_density C X Y \<le> 1"
+  unfolding gen_density_def
+  by (smt (verit) card.infinite divide_le_eq_1 edge_card_le mult_eq_0_iff of_nat_le_0_iff of_nat_mono)
+
+lemma gen_density_Un_le:
+  assumes "disjnt X Y" "disjnt X Z" "finite X" "finite Y"
+  shows "gen_density C (X\<union>Y) Z \<le> gen_density C X Z + gen_density C Y Z"
+proof (cases "X={} \<or> Y={} \<or> Z={}")
+  case True
+  then show ?thesis
+    by (auto simp: gen_density_def)
+next
+  case False
+  with assms show ?thesis
+    apply (simp add: gen_density_def edge_card_Un card_Un_disjnt add_divide_distrib field_simps)
+    by (smt (verit, best) card_0_eq frac_le mult_eq_0_iff mult_pos_pos of_nat_0_eq_iff of_nat_le_0_iff)
+qed
+
+lemma gen_density_diff_ge:
+  assumes "disjnt X Z" "finite X" "Y\<subseteq>X"
+  shows "gen_density C (X-Y) Z \<ge> gen_density C X Z - gen_density C Y Z"
+  using assms
+  by (smt (verit, del_insts) Diff_disjoint Diff_partition Diff_subset disjnt_def disjnt_subset1
+          gen_density_Un_le finite_subset)
+
+lemma gen_density_le_iff:
+  assumes "disjnt X Z" "finite X" "Y\<subseteq>X" "Y \<noteq> {}" "finite Z"
+  shows "gen_density C X Z \<le> gen_density C Y Z \<longleftrightarrow> 
+        edge_card C X Z / card X \<le> edge_card C Y Z / card Y"
+  using assms by (simp add: gen_density_def divide_simps mult_less_0_iff zero_less_mult_iff)
+
+text \<open>"Removing vertices whose degree is less than the average can only increase the density 
+from the remaining set" (page 17) \<close>
+lemma gen_density_below_avg_ge:
+  assumes "disjnt X Z" "finite X" "Y\<subset>X" "finite Z" 
+    and genY: "gen_density C Y Z \<le> gen_density C X Z"
+  shows "gen_density C (X-Y) Z \<ge> gen_density C X Z"
+proof -
+  have "real (edge_card C Y Z) / card Y \<le> real (edge_card C X Z) / card X"
+    using assms
+    by (force simp add: gen_density_def divide_simps zero_less_mult_iff split: if_split_asm)
+  have "card Y < card X"
+    by (simp add: assms psubset_card_mono)
+  have *: "finite Y" "Y \<subseteq> X" "X\<noteq>{}"
+    using assms finite_subset by blast+
+  then
+  have "card X * edge_card C Y Z \<le> card Y * edge_card C X Z"
+    using genY assms
+    by (simp add: gen_density_def field_split_simps card_eq_0_iff flip: of_nat_mult split: if_split_asm)
+  with assms * \<open>card Y < card X\<close> show ?thesis
+    by (simp add: gen_density_le_iff field_split_simps edge_card_diff card_Diff_subset of_nat_diff 
+        edge_card_mono flip: of_nat_mult)
+qed
+
+(*UNUSED 29-02-24*)
+lemma gen_le_edge_density: "gen_density C X Y \<le> edge_density X Y"
+proof (cases "finite X \<and> finite Y")
+  case True
+  then have "card (C \<inter> all_edges_betw_un X Y) \<le> card (all_edges_betw_un X Y)"
+    by (simp add: all_edges_betw_un_iff_mk_edge card_mono finite_all_edges_between')
+  also have "\<dots> \<le> card (all_edges_between X Y)"
+    by (simp add: all_edges_betw_un_iff_mk_edge card_image_le finite_all_edges_between')
+  finally show ?thesis
+    by (simp add: gen_density_def edge_card_def edge_density_def divide_right_mono)
+qed (auto simp: gen_density_def edge_density_def)
+
+end  (*fin_sgraph*)
 
 
 end

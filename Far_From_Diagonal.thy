@@ -1058,7 +1058,6 @@ proof -
     by (intro mult_right_mono) auto
   finally have B: "exp (3*\<gamma>*t\<^sup>2 / (10*k)) \<le> (1-\<gamma>-\<eta>) powr ((\<gamma>*t) / (1-\<gamma>)) * exp (\<gamma>*t\<^sup>2/(2*k))" .
 
-
   have \<section>: "(2*k / 3)^2 \<le> t\<^sup>2"
     using t23 by auto
   have C: "\<delta>*k + \<gamma>*k/60 \<le> 3*\<gamma>*t\<^sup>2 / (20*k)"
@@ -1192,7 +1191,29 @@ lemma Far_9_2:
   assumes "Colours l k" and "\<gamma> \<le> 1/10" and \<epsilon>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
   assumes n: "real nV \<ge> exp (-\<delta> * k) * (k+l choose l)" 
   assumes big: "Big_Far_9_2 \<gamma> l"
+  shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue)"
+
+
   shows "\<not> red_graph_density \<ge> 1-\<gamma>-\<eta>" 
   sorry
+
+
+  oops
+"l \<le> k \<and> \<not> 
+        \<and> \<not> termination_condition l k X0 Y0"
+
+lemma Far_9_1_aux:
+  fixes l k
+  fixes \<delta> \<gamma>::real
+  defines "\<gamma> \<equiv> l / (real k + real l)"
+  defines "\<delta> \<equiv> \<gamma>/20"
+  assumes 0: "card X0 > real nV / 2" "card Y0 > real nV / 2" "p0 \<ge> 1-\<gamma>-\<eta>"
+     \<comment>\<open>These are the assumptions about the red density of the graph\<close>
+  assumes "Colours l k" and \<gamma>: "\<gamma> \<le> 1/10" 
+  assumes nV: "real nV \<ge> exp (-\<delta> * k) * (k+l choose l)" 
+  assumes big: "Big_Far_9_2 \<gamma> l"
+  shows "RN k l \<le> exp (-\<delta> * f k) * (k+l choose l)"
+proof -
+
 
 end
