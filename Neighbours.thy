@@ -542,6 +542,184 @@ proof -
     using sum.reindex_bij_betw by blast
 qed
 
+subsection \<open>Lemma 9.2 preliminaries\<close>
+
+text \<open>Equation (45) in the text, page 30, is seemingly a huge gap.
+   The development below relies on binomial coefficient identities.\<close>
+
+text \<open>Could be generalised to any complete graph\<close>
+lemma density_eq_average:
+  assumes "C \<subseteq> E" and complete: "E = all_edges V"
+  shows "graph_density C =
+    real (\<Sum>x \<in> V. \<Sum>y \<in> V\<setminus>{x}. if {x,y} \<in> C then 1 else 0) / (card V * (card V - 1))"
+proof -
+  have cardE: "card E = card V choose 2"
+    using card_all_edges complete finV by blast
+  have "finite C"
+    using assms fin_edges finite_subset by blast
+  then have *: "(\<Sum>x\<in>V. \<Sum>y\<in>V\<setminus>{x}. if {x, y} \<in> C then 1 else 0) = card C * 2"
+    using assms by (simp add: sum_eq_card_Neighbours sum_Neighbours_eq_card)
+  show ?thesis
+    by (auto simp add: graph_density_def divide_simps cardE choose_two_real *)
+qed
+
+lemma edge_card_V_V: 
+  assumes "C \<subseteq> E" and complete: "E = all_edges V"
+  shows "edge_card C V V = card C"
+proof -
+  have "C \<subseteq> all_edges_betw_un V V"
+    using assms clique_iff complete subset_refl
+    by (metis all_uedges_betw_I all_uedges_betw_subset clique_def)
+  then show ?thesis
+    by (metis Int_absorb2 edge_card_def)
+qed
+
+text \<open>Bhavik's statement; own proof\<close>
+lemma density_eq_average_partition:
+  assumes k: "0 < k" "k < card V" and "C \<subseteq> E" and complete: "E = all_edges V"
+  shows "graph_density C = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. gen_density C U (V\<setminus>U)) / (card V choose k)"
+proof (cases "k=1 \<or> gorder = Suc k")
+  case True
+  then have [simp]: "gorder choose k = gorder" by auto
+  have eq: "(C \<inter> {{x, y} |y. y \<in> V \<and> y \<noteq> x \<and> {x, y} \<in> E}) 
+           = (\<lambda>y. {x,y}) ` {y. {x,y} \<in> C}" for x
+    using \<open>C\<subseteq>E\<close> wellformed by fastforce
+  have "V \<noteq> {}"
+    using assms by force
+  then have nontriv: "E \<noteq> {}"
+    using assms card_all_edges finV by force
+  have "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. gen_density C U (V \<setminus> U)) = (\<Sum>x\<in>V. gen_density C {x} (V \<setminus> {x}))"
+    using True
+  proof
+    assume "k = 1"
+    then have bij: "bij_betw (\<lambda>x. {x}) V ([V]\<^bsup>k\<^esup>)"
+      by (auto simp: inj_on_def bij_betw_def nsets_one)
+    show ?thesis
+      using sum.reindex_bij_betw [OF bij] by (metis (no_types, lifting) sum.cong)
+  next
+    assume \<section>: "gorder = Suc k"
+    then have  "V-A \<noteq> {}" if "card A = k" "finite A" for A
+      using that
+      by (metis assms(2) card.empty card_less_sym_Diff finV less_nat_zero_code)
+    then have bij: "bij_betw (\<lambda>x. V \<setminus> {x}) V ([V]\<^bsup>k\<^esup>)"
+      using finV \<section> 
+      apply (auto simp: inj_on_def bij_betw_def nsets_def image_iff)
+      by (metis Diff_insert_absorb card.insert card_subset_eq insert_subset subsetI)
+    moreover have "V\<setminus>(V\<setminus>{x}) = {x}" if "x\<in>V" for x
+      using that by auto
+    ultimately show ?thesis
+      using sum.reindex_bij_betw [OF bij] gen_density_commute 
+      by (metis (no_types, lifting) sum.cong) 
+  qed
+  also have "\<dots> = (\<Sum>x\<in>V. real (edge_card C {x} (V \<setminus> {x}))) / (gorder - 1)"
+    by (simp add: \<open>C\<subseteq>E\<close> gen_density_def flip: sum_divide_distrib)
+  also have "\<dots> = (\<Sum>i\<in>V. card (Neighbours C i)) / (gorder - 1)"
+    unfolding edge_card_def Neighbours_def all_edges_betw_un_def
+    by (simp add: eq card_image inj_on_def doubleton_eq_iff)
+  also have "... = graph_density C * gorder"
+    using assms density_eq_average [OF \<open>C\<subseteq>E\<close> complete]
+    by (simp add: sum_eq_card_Neighbours)
+  finally show ?thesis
+    using k by simp
+next
+  case False
+  then have K: "gorder > Suc k" "k\<ge>2" 
+    using assms by auto
+  then have "gorder - Suc (Suc (gorder - Suc (Suc k))) = k"
+    using assms by auto
+  then have [simp]: "gorder - 2 choose (gorder - Suc (Suc k)) = (gorder - 2 choose k)"
+    using binomial_symmetric [of "(gorder - Suc (Suc k))"]
+    by simp
+  have cardE: "card E = card V choose 2"
+    using card_all_edges complete finV by blast
+  have "card E > 0"
+    using k cardE by auto
+  have in_E_iff [iff]: "{v,w} \<in> E \<longleftrightarrow> v\<in>V \<and> w\<in>V \<and> v\<noteq>w" for v w
+    by (auto simp: complete all_edges_alt doubleton_eq_iff)
+
+  have B: "edge_card C V V = edge_card C U U + edge_card C U (V\<setminus>U) + edge_card C (V\<setminus>U) (V\<setminus>U)"
+    (is "?L = ?R")
+    if "U \<subseteq> V" for U
+  proof -
+    have fin: "finite (all_edges_betw_un U U')" for U'
+      by (meson all_uedges_betw_subset fin_edges finite_subset)
+    have dis: "all_edges_betw_un U U \<inter> all_edges_betw_un U (V \<setminus> U) = {}"
+      by (auto simp: all_edges_betw_un_def doubleton_eq_iff)
+    have "all_edges_betw_un V V = all_edges_betw_un U U \<union> all_edges_betw_un U (V\<setminus>U) \<union> all_edges_betw_un (V\<setminus>U) (V\<setminus>U)"
+      by (smt (verit) that Diff_partition Un_absorb Un_assoc all_edges_betw_un_Un2 all_edges_betw_un_commute)
+    with that have "?L = card (C \<inter> all_edges_betw_un U U \<union> C \<inter> all_edges_betw_un U (V \<setminus> U)
+                             \<union> C \<inter> all_edges_betw_un (V \<setminus> U) (V \<setminus> U))"
+      by (simp add: edge_card_def Int_Un_distrib)
+    also have "\<dots> = ?R"
+      using fin dis \<open>C\<subseteq>E\<close> fin_edges finite_subset
+      by ((subst card_Un_disjoint)?, fastforce simp: edge_card_def all_edges_betw_un_def doubleton_eq_iff)+
+    finally show ?thesis .
+  qed
+  have C: "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. real (edge_card C U (V\<setminus>U)))
+      = (card V choose k) * card C - real(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card C U U + edge_card C (V\<setminus>U) (V\<setminus>U))"
+    (is "?L = ?R")
+  proof -
+    have "?L = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card C V V - real (edge_card C U U + edge_card C (V\<setminus>U) (V\<setminus>U)))"
+      unfolding nsets_def by (rule sum.cong) (auto simp: B)
+    also have "\<dots> = ?R"
+      using \<open>C\<subseteq>E\<close> complete edge_card_V_V 
+      by (simp add: \<open>C\<subseteq>E\<close> sum_subtractf edge_card_V_V)
+    finally show ?thesis .
+  qed
+
+  have "(gorder-2 choose k) + (gorder-2 choose (k-2)) + 2 * (gorder-2 choose (k-1)) = (gorder choose k)"
+    using assms K by (auto simp: choose_reduce_nat [of "gorder"] choose_reduce_nat [of "gorder-Suc 0"] eval_nat_numeral)
+  moreover
+  have "(gorder - 1) * (gorder-2 choose (k-1)) = (gorder-k) * (gorder-1 choose (k-1))"
+    by (metis Suc_1 Suc_diff_1 binomial_absorb_comp diff_Suc_eq_diff_pred \<open>k>0\<close>)
+  ultimately have F: "(gorder - 1) * (gorder-2 choose k) + (gorder - 1) * (gorder-2 choose (k-2)) + 2 * (gorder-k) * (gorder-1 choose (k-1)) 
+      = (gorder - 1) * (gorder choose k)"
+    by (smt (verit) add_mult_distrib2 mult.assoc mult.left_commute)
+
+  have "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card C U (V\<setminus>U) / (real (card U) * card (V\<setminus>U)))
+     = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card C U (V\<setminus>U) / (real k * (card V - k)))"
+    using card_Diff_subset by (intro sum.cong) (auto simp: nsets_def)
+  also have "\<dots> = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card C U (V\<setminus>U)) / (k * (card V - k))"
+    by (simp add: sum_divide_distrib)
+  finally have *: "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card C U (V\<setminus>U) / (real (card U) * card (V\<setminus>U)))
+              = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card C U (V\<setminus>U)) / (k * (card V - k))" .
+
+  have choose_m1: "gorder * (gorder - 1 choose (k - 1)) = k * (gorder choose k)"
+    using \<open>k>0\<close> times_binomial_minus1_eq by presburger 
+  have **: "(real k * (real gorder - real k) * real (gorder choose k)) =
+        (real (gorder choose k) - (real (gorder - 2 choose (k - 2)) + real (gorder - 2 choose k))) *
+        real (gorder choose 2)"
+    using assms K arg_cong [OF F, of "\<lambda>u. real gorder * real u"] arg_cong [OF choose_m1, of real]
+    unfolding of_nat_mult of_nat_add
+    apply (simp add: algebra_simps of_nat_diff choose_two_real)
+    by (smt (verit, ccfv_threshold) mult.left_commute distrib_left)
+  have eq: "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. real (edge_card C (V\<setminus>U) (V\<setminus>U))) 
+          = (\<Sum>U\<in>[V]\<^bsup>(gorder-k)\<^esup>. real (edge_card C U U))"
+    using K finV by (subst sum_nsets_Compl, simp_all)
+  show ?thesis
+    unfolding graph_density_def gen_density_def
+    using K \<open>card E > 0\<close> \<open>C\<subseteq>E\<close>
+    apply (simp add: eq divide_simps B C sum.distrib *)
+    apply (simp add: ** sum_edge_card_choose cardE of_nat_diff flip: of_nat_sum)
+    by argo
+qed
+
+lemma exists_density_edge_density:
+  assumes k: "0 < k" "k < card V" and "C \<subseteq> E" and complete: "E = all_edges V"
+  obtains U where "card U = k" "U\<subseteq>V" "graph_density C \<le> gen_density C U (V\<setminus>U)"
+proof -
+  have False if "\<And>U. U \<in> [V]\<^bsup>k\<^esup> \<Longrightarrow> graph_density C > gen_density C U (V\<setminus>U)"
+  proof -
+    have "card([V]\<^bsup>k\<^esup>) > 0"
+      using assms by auto
+    then have "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. gen_density C U (V \<setminus> U)) < card([V]\<^bsup>k\<^esup>) * graph_density C"
+      by (meson sum_bounded_above_strict that)
+    with density_eq_average_partition assms show False by force
+  qed
+  with that show thesis
+    unfolding nsets_def by fastforce
+qed
+
 end  (*fin_sgraph*)
 
 

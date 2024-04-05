@@ -17,7 +17,7 @@ type_synonym 'a config = "'a set \<times> 'a set \<times> 'a set \<times> 'a set
 (*NOT CLEAR WHETHER \<mu> CAN BE FIXED HERE OR NOT*)
 
 locale Book = fin_sgraph +   \<comment> \<open>finite simple graphs (no loops)\<close>
-  assumes complete: "E \<equiv> all_edges V"
+  assumes complete: "E = all_edges V"
   fixes Red Blue :: "'a set set"
   assumes Red_not_Blue: "Red \<noteq> Blue"
   assumes part_RB: "partition_on E {Red,Blue}"
@@ -26,7 +26,6 @@ locale Book = fin_sgraph +   \<comment> \<open>finite simple graphs (no loops)\<
   assumes XY0: "disjnt X0 Y0" "X0 \<subseteq> V" "Y0 \<subseteq> V"
   assumes infinite_UNIV: "infinite (UNIV::'a set)"
   assumes Red_edges_XY0: "Red \<inter> all_edges_betw_un X0 Y0 \<noteq> {}"  \<comment> \<open>initial Red density is not 0\<close>
-  assumes Blue_edges_XY0: "Blue \<inter> all_edges_betw_un X0 Y0 \<noteq> {}"  \<comment> \<open>initial Red density is not 1\<close>
 
 context Book
 begin
@@ -165,28 +164,16 @@ lemma Red_edges_nonzero: "edge_card Red X0 Y0 > 0"
   using Red_edges_XY0
   using Red_E edge_card_def fin_edges finite_subset by fastforce
 
-lemma Blue_edges_nonzero: "edge_card Blue X0 Y0 > 0"
-  using Blue_edges_XY0
-  using Blue_E edge_card_def fin_edges finite_subset by fastforce
+lemma Blue_edges_le: "edge_card Red X0 Y0 \<le> card X0 * card Y0"
+  using edge_card_le finite_X0 finite_Y0 by force
 
-lemma Blue_edges_less: "edge_card Red X0 Y0 < card X0 * card Y0"
-proof -
-  have "edge_card Red X0 Y0 \<noteq> card X0 * card Y0"
-    using Blue_edges_XY0 Blue_eq Diff_Int_distrib2
-    by (metis Diff_eq_empty_iff Int_lower2 all_edges_betw_un_le card_seteq edge_card_def
-        finite_X0 finite_Y0 finite_all_edges_betw_un) 
-  then show ?thesis
-    by (meson edge_card_le finite_X0 finite_Y0 le_eq_less_or_eq)
-qed
-
-lemma p0_01: "0 < p0" "p0 < 1"
+lemma p0_01: "0 < p0" "p0 \<le> 1"
 proof -
   show "0 < p0"
     using Red_edges_nonzero card_XY0
     by (auto simp: p0_def gen_density_def divide_simps mult_less_0_iff)
-  show "p0 < 1"
-    using Blue_edges_less card_XY0 less_imp_of_nat_less
-    by (fastforce simp: p0_def gen_density_def divide_simps mult_less_0_iff)
+  show "p0 \<le> 1"
+    by (simp add: gen_density_le1 p0_def)
 qed
 
 lemma eps_eq_sqrt: "eps k = 1 / sqrt (sqrt (real k))"
@@ -293,7 +280,7 @@ lemma hgt_mono':
 definition "hgt_maximum \<equiv> \<lambda>k. 2 * ln (real k) / eps k"
 
 text \<open>The first of many "bigness assumptions"\<close>
-definition "Big_height_upper_bound \<equiv> \<lambda>k. qfun k (nat \<lfloor>hgt_maximum k\<rfloor>) \<ge> 1"
+definition "Big_height_upper_bound \<equiv> \<lambda>k. qfun k (nat \<lfloor>hgt_maximum k\<rfloor>) > 1"
 
 lemma Big_height_upper_bound:
   shows "\<forall>\<^sup>\<infinity>k. Big_height_upper_bound k"

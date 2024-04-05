@@ -5,8 +5,6 @@ theory Far_From_Diagonal
 
 begin
 
-
-
 subsection \<open>Fact D.3 from the Appendix\<close>
 
 text \<open>And hence, Fact 9.4\<close>
@@ -334,8 +332,8 @@ lemma Far_9_3:
   defines "\<delta> \<equiv> min (1/200) (\<gamma>/20)"
   defines "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
   defines "t \<equiv> card \<R>"
-  assumes \<gamma>15: "\<gamma> \<le> 1/5" and p0: "p0 \<ge> 1/4" and nge: "n \<ge> exp (-\<delta>*k) * (k+l choose l)"
-    and X0ge: "card X0 \<ge> n/2"
+  assumes \<gamma>15: "\<gamma> \<le> 1/5" and p0: "p0 \<ge> 1/4" 
+    and nge: "n \<ge> exp (-\<delta>*k) * (k+l choose l)" and X0ge: "real (card X0) \<ge> n/2"
   assumes big: "Big_Far_9_3 \<gamma> l"
   shows "t \<ge> 2*k / 3"
 proof -
@@ -370,14 +368,14 @@ proof -
     by (simp add: mult_ac zero_le_mult_iff powr_minus powr_diff divide_simps powr_realpow)
   also have "\<dots> \<le> 2 powr ok_fun_71 \<gamma> k * \<gamma>^l * (1-\<gamma>) ^ t * (\<beta>/\<gamma>) ^ card \<S> * card X0"
   proof (intro mult_left_mono order_refl)
-    show "exp (- \<delta> * real k) * real (k + l choose l) / 2 \<le> real (card X0)"
+    show "exp (-\<delta> * k) * real (k+l choose l) / 2 \<le> real (card X0)"
       using X0ge nge by force
     show "0 \<le> 2 powr ok_fun_71 \<gamma> k * \<gamma> ^ l * (1-\<gamma>) ^ t * (\<beta>/\<gamma>) ^ card \<S>"
       using \<gamma>01 bigbeta_ge0 by (force simp: \<beta>_def)
   qed
   also have "\<dots> \<le> card (Xseq \<gamma> l k m)"
     unfolding \<R>_def \<S>_def m_def t_def \<beta>_def
-    using \<gamma>01 X_7_1 \<open>Colours l k\<close> big by (intro X_7_1) (auto simp: Big_Far_9_3_def)
+    using \<gamma>01 \<open>Colours l k\<close> big by (intro X_7_1) (auto simp: Big_Far_9_3_def)
   also have "\<dots> \<le> RN k l34"
   proof -
     have "p0 - 3 * eps k > 1/k" and "pee \<gamma> l k m \<ge> p0 - 3 * eps k"
@@ -602,13 +600,13 @@ qed
 
 subsection \<open>Lemma 9.5\<close>
 
-definition "ok_fun_95a \<equiv> \<lambda>\<mu> k. ok_fun_61 k - (1 + (2 / (1-\<mu>)) * k powr (19/20))"
+definition "ok_fun_95a \<equiv> \<lambda>\<mu> k. ok_fun_61 k - (2 + (2 / (1-\<mu>)) * k powr (19/20))"
 
 definition "ok_fun_95b \<equiv> \<lambda>\<mu> k. ln 2 * ok_fun_95a \<mu> k - 1"
 
 lemma ok_fun_95a: "ok_fun_95a \<mu> \<in> o(real)"
 proof -
-  have "(\<lambda>k. 1 + (2 / (1-\<mu>)) * k powr (19/20)) \<in> o(real)"
+  have "(\<lambda>k. 2 + (2 / (1-\<mu>)) * k powr (19/20)) \<in> o(real)"
     by real_asymp
   then show ?thesis
     unfolding ok_fun_95a_def using ok_fun_61 sum_in_smallo by blast
@@ -625,7 +623,8 @@ lemma Big_Far_9_5:
   unfolding Big_Far_9_5_def eventually_conj_iff all_imp_conj_distrib eps_def
   by (simp add: Big_Red_5_3 Big_Y_6_1 Big_ZZ_8_5 assms)
 
-text \<open>Y0 is an additional assumption found Bhavik's version. (He had a couple of others)\<close>
+text \<open>Y0 is an additional assumption found Bhavik's version. (He had a couple of others).
+ The first $o(k)$ function adjusts for the error in $n/2$\<close>
 lemma Far_9_5:
   fixes l k
   fixes \<delta> \<gamma> \<eta>::real
@@ -634,7 +633,7 @@ lemma Far_9_5:
   defines "t \<equiv> card \<R>"
   defines "m \<equiv> halted_point \<gamma> l k"
   assumes "Colours l k" 
-  assumes n: "real n \<ge> exp (-\<delta> * k) * (k+l choose l)" and Y0: "card Y0 \<ge> real n / 2"
+  assumes nV: "real nV \<ge> exp (-\<delta> * k) * (k+l choose l)" and Y0: "card Y0 \<ge> nV div 2"
   assumes p0: "1/2 \<le> 1-\<gamma>-\<eta>" "1-\<gamma>-\<eta> \<le> p0" and "0\<le>\<eta>"
   assumes big: "Big_Far_9_5 \<gamma> l"
   shows "card (Yseq \<gamma> l k m) \<ge> 
@@ -667,25 +666,32 @@ proof -
   then have 61: "2 powr (ok_fun_61 k) * p0 ^ (t+s) * card Y0 \<le> card (Yseq \<gamma> l k m)"
     using Y_6_1[OF \<gamma>01 big61 \<open>Colours l k\<close>] card_XY0 \<gamma>01 by (simp add: m_def divide_simps)
 
-  have "(1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * n \<le> (1-\<gamma>-\<eta>) powr (t+s - (2 / (1-\<gamma>)) * k powr (19/20)) * (2 * card Y0)"
+  have "(1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * nV \<le> (1-\<gamma>-\<eta>) powr (t+s - (2 / (1-\<gamma>)) * k powr (19/20)) * (4 * card Y0)"
   proof (intro mult_mono)
     show "(1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) \<le> (1-\<gamma>-\<eta>) powr (t+s - (2 / (1-\<gamma>)) * k powr (19/20))"
       using D85 \<gamma>01 add_divide_distrib p0 \<open>\<eta>\<ge>0\<close> powr_mono' by fastforce
+    have "nV \<ge> 2"
+      by (metis nontriv wellformed two_edges card_mono ex_in_conv finV)
+    then have "nV \<le> 4 * (nV div 2)" by linarith
+    also have "... \<le> 4 * card Y0"
+      using Y0 mult_le_mono2 by presburger 
+    finally show "real nV \<le> real (4 * card Y0)"      
+      by force
   qed (use Y0 in auto)
-  also have "\<dots> \<le> (1-\<gamma>-\<eta>) powr (t+s) / (1-\<gamma>-\<eta>) powr ((2 / (1-\<gamma>)) * k powr (19/20)) * (2 * card Y0)"
+  also have "\<dots> \<le> (1-\<gamma>-\<eta>) powr (t+s) / (1-\<gamma>-\<eta>) powr ((2 / (1-\<gamma>)) * k powr (19/20)) * (4 * card Y0)"
     by (simp add: divide_powr_uminus powr_diff)
-  also have "\<dots> \<le> (1-\<gamma>-\<eta>) powr (t+s) / (1/2) powr ((2 / (1-\<gamma>)) * k powr (19/20)) * (2 * card Y0)"
+  also have "\<dots> \<le> (1-\<gamma>-\<eta>) powr (t+s) / (1/2) powr ((2 / (1-\<gamma>)) * k powr (19/20)) * (4 * card Y0)"
   proof (intro mult_mono divide_left_mono)
     show "(1/2) powr ((2 / (1-\<gamma>)) * k powr (19/20)) \<le> (1-\<gamma>-\<eta>) powr ((2 / (1-\<gamma>)) * k powr (19/20))"
       using \<gamma>01 p0 \<open>0\<le>\<eta>\<close> by (intro powr_mono_both') auto
   qed (use p0 in auto)
-  also have "\<dots> \<le> p0 powr (t+s) / (1/2) powr ((2 / (1-\<gamma>)) * k powr (19/20)) * (2 * card Y0)"
+  also have "\<dots> \<le> p0 powr (t+s) / (1/2) powr ((2 / (1-\<gamma>)) * k powr (19/20)) * (4 * card Y0)"
     using p0 powr_mono2 by (intro mult_mono divide_right_mono) auto
-  also have "\<dots> = (2 powr (1 + (2 / (1-\<gamma>)) * k powr (19/20))) * p0 ^ (t+s) * card Y0"
+  also have "\<dots> = (2 powr (2 + (2 / (1-\<gamma>)) * k powr (19/20))) * p0 ^ (t+s) * card Y0"
     using p0_01 by (simp add: powr_divide powr_add power_add powr_realpow)
-  finally have "2 powr (ok_fun_95a \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * n \<le> 2 powr (ok_fun_61 k) * p0 ^ (t+s) * card Y0"
+  finally have "2 powr (ok_fun_95a \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * nV \<le> 2 powr (ok_fun_61 k) * p0 ^ (t+s) * card Y0"
     by (simp add: ok_fun_95a_def powr_diff field_simps)
-  with 61 have *: "card (Yseq \<gamma> l k m) \<ge> 2 powr (ok_fun_95a \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * n"
+  with 61 have *: "card (Yseq \<gamma> l k m) \<ge> 2 powr (ok_fun_95a \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * nV"
     by linarith
 
   have F: "exp (ok_fun_95b \<gamma> k) = 2 powr ok_fun_95a \<gamma> k * exp (- 1)"
@@ -707,179 +713,11 @@ proof -
     then show ?thesis
       unfolding \<gamma>_def using \<open>t<k\<close> by (intro mult_mono order_refl Far_9_6) auto
   qed auto
-  also have "\<dots> \<le> 2 powr (ok_fun_95a \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * n"
-    using n mult_left_mono by fastforce
+  also have "\<dots> \<le> 2 powr (ok_fun_95a \<gamma> k) * (1-\<gamma>-\<eta>) powr (t + \<gamma>*t / (1-\<gamma>)) * nV"
+    using nV mult_left_mono by fastforce
   also have "\<dots> \<le> card (Yseq \<gamma> l k m)"
     by (rule *)
   finally show ?thesis .
-qed
-
-subsection \<open>Lemma 9.2 preliminaries\<close>
-
-text \<open>Equation (45) in the text, page 30, is seemingly a huge gap.
-   The development below relies on binomial coefficient identities.\<close>
-
-text \<open>Could be generalised to any complete graph\<close>
-lemma density_eq_average:
-  assumes "C \<subseteq> E"
-  shows "graph_density C =
-    real (\<Sum>x \<in> V. \<Sum>y \<in> V\<setminus>{x}. if {x,y} \<in> C then 1 else 0) / (card V * (card V - 1))"
-proof -
-  have cardE: "card E = card V choose 2"
-    using card_all_edges complete finV by blast
-  have "finite C"
-    using assms fin_edges finite_subset by blast
-  then have *: "(\<Sum>x\<in>V. \<Sum>y\<in>V\<setminus>{x}. if {x, y} \<in> C then 1 else 0) = card C * 2"
-    using assms by (simp add: sum_eq_card_Neighbours sum_Neighbours_eq_card)
-  show ?thesis
-    by (auto simp add: graph_density_def divide_simps cardE choose_two_real *)
-qed
-
-lemma edge_card_V_V: 
-  assumes "C \<subseteq> E"
-  shows "edge_card C V V = card C"
-proof -
-  have "C \<subseteq> all_edges_betw_un V V"
-    using assms by (metis all_edges_betw_un_iff_clique clique_iff complete subset_refl)
-  then show ?thesis
-    by (metis Int_absorb2 edge_card_def)
-qed
-
-text \<open>Bhavik's statement; own proof\<close>
-lemma density_eq_average_partition:
-  assumes "0 < k" "k < card V"
-  shows "graph_density Red = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. red_density U (V\<setminus>U)) / (card V choose k)"
-proof (cases "k=1 \<or> nV = Suc k")
-  case True
-  have eq: "(Red \<inter> {{x, y} |y. y \<in> V \<and> y \<noteq> x \<and> y \<in> V \<and> x \<noteq> y}) 
-           = (\<lambda>y. {x,y}) ` {y. {x,y} \<in> Red}" for x
-    using Red_E by auto
-  have "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. red_density U (V \<setminus> U)) = (\<Sum>x\<in>V. red_density {x} (V \<setminus> {x}))"
-    using True
-  proof
-    assume "k = 1"
-    then have bij: "bij_betw (\<lambda>x. {x}) V ([V]\<^bsup>k\<^esup>)"
-      by (auto simp: inj_on_def bij_betw_def nsets_one)
-    show ?thesis
-      using sum.reindex_bij_betw [OF bij] by (metis (no_types, lifting) sum.cong)
-  next
-    assume \<section>: "nV = Suc k"
-    then have  "V-A \<noteq> {}" if "card A = k" "finite A" for A
-      using that by (metis card.empty card_less_sym_Diff finV lessI not_less0)
-    then have bij: "bij_betw (\<lambda>x. V \<setminus> {x}) V ([V]\<^bsup>k\<^esup>)"
-      using finV \<section> 
-      apply (auto simp: inj_on_def bij_betw_def nsets_def image_iff)
-      by (metis Diff_insert_absorb card.insert card_subset_eq insert_subset subsetI)
-    moreover have "V\<setminus>(V\<setminus>{x}) = {x}" if "x\<in>V" for x
-      using that by auto
-    ultimately show ?thesis
-      using sum.reindex_bij_betw [OF bij] gen_density_commute 
-      by (metis (no_types, lifting) sum.cong) 
-  qed
-  also have "\<dots> = (\<Sum>x\<in>V. real (edge_card Red {x} (V \<setminus> {x}))) / (nV-1)"
-    by (simp add: Red_E gen_density_def flip: sum_divide_distrib)
-  also have "\<dots> = (\<Sum>i\<in>V. card (Neighbours Red i)) / (nV-1)"
-    unfolding edge_card_def Neighbours_def all_edges_betw_un_def
-    by (simp add: eq card_image inj_on_def doubleton_eq_iff)
-  also have "\<dots> = graph_density Red * (card V)"
-    using assms
-    by (simp add: Red_E sum_Neighbours_eq_card graph_density_def graph_size choose_two_real of_nat_diff)
-  finally show ?thesis
-    using assms(2) True by fastforce
-next
-  case False
-  then have K: "nV > Suc k" "k\<ge>2" 
-    using assms by auto
-  then have WW: "nV - Suc (Suc (nV - Suc (Suc k))) = k"
-    using assms by auto
-  then have [simp]: "nV - 2 choose (nV - Suc (Suc k)) = (nV - 2 choose k)"
-    using binomial_symmetric [of "(nV - Suc (Suc k))"]
-    by simp
-  have cardE: "card E = card V choose 2"
-    using card_all_edges complete finV by blast
-  have "card E > 0"
-    using fin_edges nontriv by fastforce
-
-  have B: "edge_card Red V V = edge_card Red U U + edge_card Red U (V\<setminus>U) + edge_card Red (V\<setminus>U) (V\<setminus>U)"
-    (is "?L = ?R")
-    if "U \<subseteq> V" for U
-  proof -
-    have fin: "finite (all_edges_betw_un U U')" for U'
-      by (meson all_uedges_betw_subset fin_edges finite_subset)
-    have dis: "all_edges_betw_un U U \<inter> all_edges_betw_un U (V \<setminus> U) = {}"
-      by (auto simp: all_edges_betw_un_def doubleton_eq_iff)
-    have "all_edges_betw_un V V = all_edges_betw_un U U \<union> all_edges_betw_un U (V\<setminus>U) \<union> all_edges_betw_un (V\<setminus>U) (V\<setminus>U)"
-      by (smt (verit) that Diff_partition Un_absorb Un_assoc all_edges_betw_un_Un2 all_edges_betw_un_commute)
-    with that have "?L = card (Red \<inter> all_edges_betw_un U U \<union> Red \<inter> all_edges_betw_un U (V \<setminus> U)
-                             \<union> Red \<inter> all_edges_betw_un (V \<setminus> U) (V \<setminus> U))"
-      by (simp add: edge_card_def Int_Un_distrib)
-    also have "\<dots> = ?R"
-      using fin dis 
-      by (subst card_Un_disjoint, auto simp: edge_card_def all_edges_betw_un_def doubleton_eq_iff)+
-    finally show ?thesis .
-  qed
-  have C: "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. real (edge_card Red U (V\<setminus>U)))
-      = (card V choose k) * card Red - real(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U U + edge_card Red (V\<setminus>U) (V\<setminus>U))"
-    (is "?L = ?R")
-  proof -
-    have "?L = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red V V - real (edge_card Red U U + edge_card Red (V\<setminus>U) (V\<setminus>U)))"
-      unfolding nsets_def by (rule sum.cong) (auto simp: B)
-    also have "\<dots> = ?R"
-      by (simp add: Red_E sum_subtractf edge_card_V_V)
-    finally show ?thesis .
-  qed
-
-  have "(nV-2 choose k) + (nV-2 choose (k-2)) + 2 * (nV-2 choose (k-1)) = (nV choose k)"
-    using assms K by (auto simp: choose_reduce_nat [of "nV"] choose_reduce_nat [of "nV-Suc 0"] eval_nat_numeral)
-  moreover
-  have "(nV-1) * (nV-2 choose (k-1)) = (nV-k) * (nV-1 choose (k-1))"
-    by (metis Suc_1 Suc_diff_1 binomial_absorb_comp diff_Suc_eq_diff_pred \<open>k>0\<close>)
-  ultimately have F: "(nV-1) * (nV-2 choose k) + (nV-1) * (nV-2 choose (k-2)) + 2 * (nV-k) * (nV-1 choose (k-1)) 
-      = (nV-1) * (nV choose k)"
-    by (smt (verit) add_mult_distrib2 mult.assoc mult.left_commute)
-
-  have "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U) / (real (card U) * card (V\<setminus>U)))
-     = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U) / (real k * (card V - k)))"
-    using card_Diff_subset by (intro sum.cong) (auto simp: nsets_def)
-  also have "\<dots> = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U)) / (k * (card V - k))"
-    by (simp add: sum_divide_distrib)
-  finally have *: "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U) / (real (card U) * card (V\<setminus>U)))
-              = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. edge_card Red U (V\<setminus>U)) / (k * (card V - k))" .
-
-  have choose_m1: "nV * (nV - 1 choose (k - 1)) = k * (nV choose k)"
-    using \<open>k>0\<close> times_binomial_minus1_eq by presburger 
-  have **: "(real k * (real nV - real k) * real (nV choose k)) =
-        (real (nV choose k) - (real (nV - 2 choose (k - 2)) + real (nV - 2 choose k))) *
-        real (nV choose 2)"
-    using assms K arg_cong [OF F, of "\<lambda>u. real nV * real u"] arg_cong [OF choose_m1, of real]
-    unfolding of_nat_mult of_nat_add
-    apply (simp add: algebra_simps of_nat_diff choose_two_real)
-    by (smt (verit, ccfv_threshold) mult.left_commute distrib_left)
-  have eq: "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. real (edge_card Red (V\<setminus>U) (V\<setminus>U))) 
-          = (\<Sum>U\<in>[V]\<^bsup>(nV-k)\<^esup>. real (edge_card Red U U))"
-    using K finV by (subst sum_nsets_Compl, simp_all)
-  show ?thesis
-    unfolding graph_density_def gen_density_def
-    using K \<open>card E > 0\<close> Red_E
-    apply (simp add: eq divide_simps B C sum.distrib *)
-    apply (simp add: ** sum_edge_card_choose cardE of_nat_diff flip: of_nat_sum)
-    by argo
-qed
-
-lemma exists_density_edge_density:
-  assumes k: "0 < k" "k < card V"
-  obtains U where "card U = k" "U\<subseteq>V" "graph_density Red \<le> red_density U (V\<setminus>U)"
-proof -
-  have False if "\<And>U. U \<in> [V]\<^bsup>k\<^esup> \<Longrightarrow> graph_density Red > red_density U (V\<setminus>U)"
-  proof -
-    have "card([V]\<^bsup>k\<^esup>) > 0"
-      using assms by auto
-    then have "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. red_density U (V \<setminus> U)) < card([V]\<^bsup>k\<^esup>) * graph_density Red"
-      by (meson sum_bounded_above_strict that)
-    with density_eq_average_partition assms show False by force
-  qed
-  with that show thesis
-    unfolding nsets_def by fastforce
 qed
 
 subsection \<open>Lemma 9.2 actual proof\<close>
@@ -912,7 +750,7 @@ lemma Far_9_2_aux:
   fixes \<delta> \<gamma> \<eta>::real
   defines "\<gamma> \<equiv> l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/20"
-  assumes 0: "card X0 > real nV / 2" "card Y0 > real nV / 2" "p0 \<ge> 1-\<gamma>-\<eta>"
+  assumes 0: "real (card X0) \<ge> nV/2" "card Y0 \<ge> nV div 2" "p0 \<ge> 1-\<gamma>-\<eta>"
      \<comment>\<open>These are the assumptions about the red density of the graph\<close>
   assumes "Colours l k" and \<gamma>: "\<gamma> \<le> 1/10" and \<eta>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
   assumes nV: "real nV \<ge> exp (-\<delta> * k) * (k+l choose l)" 
@@ -1098,25 +936,51 @@ qed
 end (*context Book*)
 
 text \<open>Needs to be proved OUTSIDE THE LOCALE\<close>
-lemma Far_9_2:
+lemma (in fin_sgraph) Far_9_2:
+  fixes Red Blue :: "'a set set"
   fixes l k
   fixes \<delta> \<gamma> \<eta>::real
   defines "\<gamma> \<equiv> l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/20"
-  assumes "\<gamma> \<le> 1/10" and \<epsilon>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
-  assumes n: "real nV \<ge> exp (-\<delta> * k) * (k+l choose l)" 
+  assumes complete: "E = all_edges V"
+  assumes Red_not_Blue: "Red \<noteq> Blue"
+  assumes part_RB: "partition_on E {Red,Blue}"
+  assumes infinite_UNIV: "infinite (UNIV::'a set)"
+  assumes n: "real gorder \<ge> exp (-\<delta> * k) * (k+l choose l)" 
   assumes gd: "graph_density Red \<ge> 1-\<gamma>-\<eta>" 
   assumes big: "Big_Far_9_2 \<gamma> l" and "l\<le>k"
+  assumes "\<gamma> \<le> 1/10" and \<epsilon>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
   shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue)"
-
-
-  shows
-  sorry
-
-
-  oops
-"l \<le> k \<and> \<not> 
-        \<and> \<not> termination_condition l k X0 Y0"
+proof -
+  have "Red \<subseteq> E"
+    using part_RB by (auto simp: partition_on_def)
+  have "gorder\<ge>2"
+    sorry
+  then have "0 < gorder div 2" "gorder div 2 < gorder"
+    by auto
+  then obtain Y0 where card_Y0: "card Y0 = gorder div 2" and "Y0\<subseteq>V" 
+          and Y0: "graph_density Red \<le> gen_density Red Y0 (V\<setminus>Y0)"
+    using exists_density_edge_density \<open>Red \<subseteq> E\<close> complete by blast
+  define X0 where "X0 \<equiv> V \<setminus> Y0"
+  interpret Book V E Red Blue Y0 X0
+  proof
+    show "X0\<subseteq>V" "disjnt Y0 X0"
+      by (auto simp: X0_def disjnt_iff)
+    have "1-\<gamma>-\<eta> \<ge> 4/5"
+      using \<open>\<gamma> \<le> 1/10\<close> \<open>\<eta> \<le> \<gamma>/15\<close> by linarith
+    then have "gen_density Red Y0 X0 \<ge> 4/5"
+      using Y0 gd unfolding X0_def by linarith
+    then show "Red \<inter> all_edges_betw_un Y0 X0 \<noteq> {}"
+      by (auto simp: gen_density_def edge_card_def)
+  qed (use assms \<open>Y0\<subseteq>V\<close> in auto)
+  have "card X0 \<ge> gorder / 2"
+    using card_Y0 \<open>Y0\<subseteq>V\<close> unfolding X0_def
+    by (simp add: card_Diff_subset finite_X0)
+  have "\<not> termination_condition l k Y0 X0"
+    sorry
+  show ?thesis
+    sorry
+qed
 
 lemma Far_9_1_aux:
   fixes l k
