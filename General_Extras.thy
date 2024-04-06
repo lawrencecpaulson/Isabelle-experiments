@@ -4,6 +4,9 @@ theory General_Extras imports
 
 begin
 
+lemma mult_le_1_iff: "\<lbrakk>x\<ge>1; y\<ge>1\<rbrakk> \<Longrightarrow> x*y \<ge> (1::real)"
+  by (smt (verit, best) mult_less_cancel_right2)
+
 lemma sum_eq_card: "finite A \<Longrightarrow> (\<Sum>x \<in> A. if x \<in> B then 1 else 0) = card (A\<inter>B)"
   by (metis (no_types, lifting) card_eq_sum sum.cong sum.inter_restrict)
 

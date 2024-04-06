@@ -58,18 +58,18 @@ type_synonym 'a config = "'a set \<times> 'a set \<times> 'a set \<times> 'a set
 locale Book_Basis = fin_sgraph +  
   fixes p0_min :: real
   assumes p0_min: "0 < p0_min" "p0_min < 1"
+  assumes complete: "E = all_edges V"
+  assumes infinite_UNIV: "infinite (UNIV::'a set)"
 
 (*NOT CLEAR WHETHER \<mu> CAN BE FIXED HERE OR NOT*)
 
 locale Book = Book_Basis +   \<comment> \<open>finite simple graphs (no loops)\<close>
-  assumes complete: "E = all_edges V"
   fixes Red Blue :: "'a set set"
   assumes Red_not_Blue: "Red \<noteq> Blue"
   assumes part_RB: "partition_on E {Red,Blue}"
   \<comment> \<open>the following are local to the program\<close>
   fixes X0 :: "'a set" and Y0 :: "'a set"    \<comment> \<open>initial values\<close>
   assumes XY0: "disjnt X0 Y0" "X0 \<subseteq> V" "Y0 \<subseteq> V"
-  assumes infinite_UNIV: "infinite (UNIV::'a set)"
   assumes density_ge_p0_min: "gen_density Red X0 Y0 \<ge> p0_min"
 
 context Book
@@ -409,13 +409,6 @@ lemma Colours_ln0: "Colours l k \<Longrightarrow> l>0"
 
 lemma Colours_kn0: "Colours l k \<Longrightarrow> k>0"
   using Colours_def Colours_ln0 not_le by auto
-
-lemma eventually_Colours_at_top:
-  assumes "eventually P at_top"
-  shows   "eventually (\<lambda>l. \<forall>k. Colours l k \<longrightarrow> P k) at_top"
-  apply (rule eventually_mono [OF eventually_all_ge_at_top [OF assms]])
-  apply (simp add: Colours_def)
-  done
 
 lemma 
   assumes "V_state(X,Y,A,B)" 

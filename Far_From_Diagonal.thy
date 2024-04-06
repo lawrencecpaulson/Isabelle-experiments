@@ -252,9 +252,6 @@ qed
 
 subsection \<open>Lemma 9.3\<close>
 
-context Book
-begin
-
 definition "ok_fun_93g \<equiv> \<lambda>\<gamma> k. (nat \<lceil>k powr (3/4)\<rceil>) * log 2 k - (ok_fun_71 \<gamma> k + ok_fun_94 k) + 1"
 
 lemma ok_fun_93g: 
@@ -291,11 +288,13 @@ proof -
     using landau_o.smallD [OF \<section>, of e] \<open>e>0\<close> by (auto simp: smallo_def)
 qed
 
+context Book_Basis
+begin
+
 definition "Big_Far_9_3 \<equiv>     
    \<lambda>\<mu> l. Big_ZZ_8_5 \<mu> l \<and> Big_X_7_1 \<mu> l \<and> Big_Y_6_2 \<mu> l \<and> Big_Red_5_3 \<mu> l
-      \<and> (\<forall>k\<ge>l. p0 - 3 * eps k > 1/k \<and> k\<ge>2
+      \<and> (\<forall>k\<ge>l. p0_min - 3 * eps k > 1/k \<and> k\<ge>2
              \<and> \<bar>ok_fun_93h \<mu> k / (\<mu> * (1 + 1 / (exp 1 * (1-\<mu>))))\<bar> / k \<le> 0.667 - 2/3)"
-
 
 lemma Big_Far_9_3:
   assumes "0<\<mu>" "\<mu><1"
@@ -316,16 +315,18 @@ proof -
       apply eventually_elim 
       by (metis \<open>0 < d\<close> abs_div_pos divide_divide_eq_left' divide_le_eq mult.commute)
   qed
-  with p0_01 show ?thesis
+  with p0_min show ?thesis
     unfolding Big_Far_9_3_def eventually_conj_iff all_imp_conj_distrib eps_def d_def e_def
     apply (simp add: Big_ZZ_8_5 Big_X_7_1 Big_Y_6_2 Big_Red_5_3 assms)
     apply (intro conjI eventually_all_ge_at_top; real_asymp)
     done
 qed
 
+end
+
 text \<open>Here @{term n} really refers to the cardinality of @{term V}, 
    so actually @{term nV}\<close>
-lemma Far_9_3:
+lemma (in Book) Far_9_3:
   fixes l k
   assumes "Colours l k"  \<comment> \<open>Not mentioned in paper but presumably needed\<close>
   defines "\<gamma> \<equiv> l / (real k + real l)"
@@ -380,7 +381,7 @@ proof -
   also have "\<dots> \<le> RN k l34"
   proof -
     have "p0 - 3 * eps k > 1/k" and "pee \<gamma> l k m \<ge> p0 - 3 * eps k"
-      using lk big \<open>Colours l k\<close> by (auto simp: Big_Far_9_3_def Y_6_2_halted \<gamma>_def m_def)
+      using lk big \<open>Colours l k\<close> p0_ge by (auto simp: Big_Far_9_3_def Y_6_2_halted \<gamma>_def m_def)
     then show ?thesis
       using halted_point_halted \<open>Colours l k\<close> \<gamma>01
       by (fastforce simp: step_terminating_iff termination_condition_def pee_def m_def l34_def)
@@ -601,6 +602,9 @@ qed
 
 subsection \<open>Lemma 9.5\<close>
 
+context Book_Basis
+begin
+
 definition "ok_fun_95a \<equiv> \<lambda>\<mu> k. ok_fun_61 k - (2 + (2 / (1-\<mu>)) * k powr (19/20))"
 
 definition "ok_fun_95b \<equiv> \<lambda>\<mu> k. ln 2 * ok_fun_95a \<mu> k - 1"
@@ -624,9 +628,11 @@ lemma Big_Far_9_5:
   unfolding Big_Far_9_5_def eventually_conj_iff all_imp_conj_distrib eps_def
   by (simp add: Big_Red_5_3 Big_Y_6_1 Big_ZZ_8_5 assms)
 
+end
+
 text \<open>Y0 is an additional assumption found Bhavik's version. (He had a couple of others).
  The first $o(k)$ function adjusts for the error in $n/2$\<close>
-lemma Far_9_5:
+lemma (in Book) Far_9_5:
   fixes l k
   fixes \<delta> \<gamma> \<eta>::real
   defines "\<gamma> \<equiv> l / (real k + real l)"
@@ -723,10 +729,13 @@ qed
 
 subsection \<open>Lemma 9.2 actual proof\<close>
 
+context Book_Basis
+begin
+
 lemma error_9_2:
   assumes "0<\<mu>" "\<mu><1" 
   shows "\<forall>\<^sup>\<infinity>k. ok_fun_95b \<mu> k + \<mu>*k/60 \<ge> 0"
-  using assms p0_01
+  using assms p0_min
   unfolding ok_fun_95b_def ok_fun_95a_def ok_fun_61_def eps_def
   by real_asymp
 
@@ -741,12 +750,9 @@ lemma Big_Far_9_2:
     apply (intro conjI eventually_all_ge_at_top error_9_2 [OF assms])
   done
 
-lemma mult_ge1_iff: "\<lbrakk>x\<ge>1; y\<ge>1\<rbrakk> \<Longrightarrow> x*y \<ge> (1::real)"
-  by (smt (verit, best) mult_less_cancel_right2)
-
 text \<open>A little tricky for me to express since my "Colours" assumption includes the allowed 
     assumption that there are no cliques in the original graph (page 9). So it's a contrapositive\<close>
-lemma Far_9_2_aux:
+lemma (in Book) Far_9_2_aux:
   fixes l k
   fixes \<delta> \<gamma> \<eta>::real
   defines "\<gamma> \<equiv> l / (real k + real l)"
@@ -856,7 +862,7 @@ proof -
     have "1 * real(k-t+l choose l) 
             \<le> exp (ok_fun_95b \<gamma> k + \<gamma>*k/60) * (k-t+l choose l)"
       using big  \<open>k\<ge>l\<close> unfolding Big_Far_9_2_def
-      by (intro mult_right_mono mult_ge1_iff) auto
+      by (intro mult_right_mono mult_le_1_iff) auto
     also have "\<dots> \<le> exp (3*\<gamma>*t\<^sup>2 / (20*k) + -\<delta> * k + ok_fun_95b \<gamma> k) * (k-t+l choose l)"
       using C by simp
     also have "\<dots> = exp (3*\<gamma>*t\<^sup>2 / (10*k)) * exp (-\<delta> * k + ok_fun_95b \<gamma> k) * exp (- 3*\<gamma>*t\<^sup>2 / (20*k))
@@ -934,10 +940,8 @@ proof -
   qed
 qed
 
-end (*context Book*)
-
-text \<open>Needs to be proved OUTSIDE THE LOCALE\<close>
-lemma (in fin_sgraph) Far_9_2:
+text \<open>Needs to be proved OUTSIDE THE BOOK LOCALE\<close>
+lemma (in Book_Basis) Far_9_2:
   fixes Red Blue :: "'a set set"
   fixes l k
   fixes \<delta> \<gamma> \<eta>::real
@@ -956,48 +960,55 @@ proof (rule ccontr)
   assume neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
   have "Red \<subseteq> E"
     using part_RB by (auto simp: partition_on_def)
-  have "gorder\<ge>2"
-    sorry
+  have 45: "1-\<gamma>-\<eta> \<ge> 4/5"
+    using \<open>\<gamma> \<le> 1/10\<close> \<open>\<eta> \<le> \<gamma>/15\<close> by linarith
+  with gd have "graph_density Red \<ge> 4/5"
+    by simp
+  with part_RB have "Red \<noteq> {}"
+    by (metis insertCI partition_on_def)
+  with \<open>Red \<subseteq> E\<close> have "E \<noteq> {}"
+    by auto
+  then have "gorder\<ge>2"
+    by (metis card_mono ex_in_conv finV two_edges wellformed)
   then have "0 < gorder div 2" "gorder div 2 < gorder"
     by auto
   then obtain Y0 where card_Y0: "card Y0 = gorder div 2" and "Y0\<subseteq>V" 
           and Y0: "graph_density Red \<le> gen_density Red Y0 (V\<setminus>Y0)"
     using exists_density_edge_density \<open>Red \<subseteq> E\<close> complete by blast
   define X0 where "X0 \<equiv> V \<setminus> Y0"
-  have "1-\<gamma>-\<eta> \<ge> 4/5"
-    using \<open>\<gamma> \<le> 1/10\<close> \<open>\<eta> \<le> \<gamma>/15\<close> by linarith
-  then have gd45: "gen_density Red X0 Y0 \<ge> 4/5"
-    using X0_def Y0 gd gen_density_commute by auto
-  interpret Book V E Red Blue X0 Y0
+  have gd45: "gen_density Red X0 Y0 \<ge> 4/5"
+    using 45 X0_def Y0 gd gen_density_commute by auto
+  interpret Book V E p0_min Red Blue X0 Y0
   proof
     show "X0\<subseteq>V" "disjnt X0 Y0"
       by (auto simp: X0_def disjnt_iff)
-    show "Red \<inter> all_edges_betw_un X0 Y0 \<noteq> {}"
-      using gd45 by (auto simp: gen_density_def edge_card_def)
+    show "p0_min \<le> gen_density Red X0 Y0"
+      sorry
   qed (use assms \<open>Y0\<subseteq>V\<close> in auto)
   have card_X0: "card X0 \<ge> nV/2"
     using card_Y0 \<open>Y0\<subseteq>V\<close> unfolding X0_def
     by (simp add: card_Diff_subset finite_Y0)
-  have "k>1"
-    sorry
-  then
+  have False if "l<2"
+    using neg that Red_Blue_RN [of 2 gorder V] \<open>gorder\<ge>2\<close> 
+    apply (simp add: size_clique_def )
+    by (metis One_nat_def RN_1' Red_Blue_RN bot_least  card.empty ex_card less_2_cases neg null_clique one_le_numeral neq0_conv)
+  with \<open>k\<ge>l\<close> have "l\<ge>2" "k\<ge>2"
+    by force+
   have "red_density X0 Y0 > 1 / real k"
-
-
     sorry
   moreover have "RN k (nat \<lceil>real l powr (3 / 4)\<rceil>) < card X0"
-    using n card_X0
+    using n card_X0 neg
     sorry
   ultimately
   have "\<not> termination_condition l k X0 Y0"
     by (auto simp: termination_condition_def)
-
-    sorry
   with neg \<open>l\<le>k\<close> have "Colours l k"
     by (auto simp: Colours_def)
   show False
-    using Far_9_2_aux
-    sorry
+  proof (intro Far_9_2_aux [of l k \<eta>])
+    show "1 - real l / (real k + real l) - \<eta> \<le> p0"
+      using X0_def Y0 \<gamma>_def gd gen_density_commute p0_def by force
+  qed (use assms card_X0 card_Y0 \<open>Colours l k\<close> in auto)
 qed
 
 lemma Far_9_1_aux:

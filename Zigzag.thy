@@ -4,9 +4,6 @@ theory Zigzag imports Bounding_X
 
 begin
 
-context Book
-begin
-
 subsection \<open>Lemma 8.1 (the actual Zigzag Lemma)\<close>
 
 definition "Big_ZZ_8_2 \<equiv> \<lambda>k. (1 + eps k powr (1/2)) \<ge> (1 + eps k) powr (eps k powr (-1/4))"
@@ -39,7 +36,7 @@ lemma Big_ZZ_8_1:
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
-lemma ZZ_8_1:
+lemma (in Book) ZZ_8_1:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and big: "Big_ZZ_8_1 \<mu> l" 
   defines "\<S>\<S> \<equiv> dboost_star \<mu> l k" and "\<R> \<equiv> Step_class \<mu> l k {red_step}"
   defines "sum_\<S>\<S> \<equiv> (\<Sum>i\<in>\<S>\<S>. (1 - beta \<mu> l k i) / beta \<mu> l k i)"
@@ -484,17 +481,17 @@ definition "inequality85 \<equiv> \<lambda>k. 3 * eps k powr (1/4) * k \<le> k p
 
 definition "Big_ZZ_8_5 \<equiv>     
    \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Big_ZZ_8_1 \<mu> l \<and> Big_Red_5_3 \<mu> l
-      \<and> (\<forall>k. Colours l k \<longrightarrow> inequality85 k)"
+      \<and> (\<forall>k\<ge>l. inequality85 k)"
 
 lemma Big_ZZ_8_5:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_5 \<mu> l"
   unfolding Big_ZZ_8_5_def inequality85_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_Red_5_3 Big_X_7_5 bigbeta_gt0 Big_ZZ_8_1 assms)
-  apply (intro conjI eventually_Colours_at_top; real_asymp)
+  apply (simp add: Big_Red_5_3 Big_X_7_5 Big_ZZ_8_1 assms)
+  apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
-lemma ZZ_8_5:
+lemma (in Book) ZZ_8_5:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and big: "Big_ZZ_8_5 \<mu> l" 
   defines "\<R> \<equiv> Step_class \<mu> l k {red_step}" and "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
   shows "card \<S> \<le> (bigbeta \<mu> l k / (1 - bigbeta \<mu> l k)) * card \<R> 
@@ -588,7 +585,7 @@ lemma Big_ZZ_8_6:
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
-lemma ZZ_8_6:
+lemma (in Book) ZZ_8_6:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and big: "Big_ZZ_8_6 \<mu> l" 
   defines "\<R> \<equiv> Step_class \<mu> l k {red_step}" and "\<S> \<equiv> Step_class \<mu> l k {dboost_step}"
     and "a \<equiv> 2 / (1-\<mu>)"
@@ -626,7 +623,5 @@ proof -
     by (simp add: divide_simps split: if_split_asm)
   finally show ?thesis .
 qed
-
-end
 
 end

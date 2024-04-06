@@ -449,6 +449,9 @@ proof -
 qed
 
 
+context Book
+begin
+
 lemma X_26_and_28:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
@@ -643,6 +646,8 @@ proof -
     by (simp add: algebra_simps)
 qed
 
+end
+
 subsection \<open>Lemma 7.4\<close>
 
 definition 
@@ -655,12 +660,15 @@ lemma Big_X_7_4:
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_4 \<mu> l"
   unfolding Big_X_7_4_def using assms 
   by (simp add: eventually_conj_iff all_imp_conj_distrib   
-      Big_X_7_5 Big_Red_5_3 Big_height_upper_bound beta_gt0 eventually_all_ge_at_top)
+      Big_X_7_5 Big_Red_5_3 Big_height_upper_bound eventually_all_ge_at_top)
 
 definition "ok_fun_74 \<equiv> \<lambda>k. -6 * eps k powr (1/4) * k * ln k / ln 2" 
 
 lemma ok_fun_74: "ok_fun_74 \<in> o(real)"
   unfolding ok_fun_74_def eps_def by real_asymp
+
+context Book
+begin
 
 lemma X_7_4:
   fixes l k
@@ -833,6 +841,8 @@ proof -
     by (simp add: algebra_simps XSnon0)
 qed
 
+end
+
 subsection \<open>Lemma 7.8\<close>
 
 definition "Big_X_7_8 \<equiv> \<lambda>k. k\<ge>2 \<and> eps k powr (1/2) / k \<ge> 2 / k^2"
@@ -841,7 +851,7 @@ lemma Big_X_7_8: "\<forall>\<^sup>\<infinity>k. Big_X_7_8 k"
   unfolding eps_def Big_X_7_8_def eventually_conj_iff eps_def
   by (intro conjI; real_asymp)
 
-lemma X_7_8:
+lemma (in Book) X_7_8:
   assumes "0<\<mu>" "\<mu><1" and big: "Big_X_7_8 k" 
     and i: "i \<in> Step_class \<mu> l k {dreg_step}"
   defines "X \<equiv> Xseq \<mu> l k"
@@ -913,7 +923,7 @@ proof (rule gen_upper_bound_increasing [OF \<open>x\<ge>0\<close>])
     using y assms less_eq_real_def powr_less_one by fastforce
 qed auto
 
-lemma X_7_9:
+lemma (in Book) X_7_9:
   assumes \<mu>: "0<\<mu>" "\<mu><1"
     and i: "i \<in> Step_class \<mu> l k {dreg_step}" and big: "Big_X_7_9 k"
   defines "X \<equiv> Xseq \<mu> l k" and "p \<equiv> pee \<mu> l k" 
@@ -948,7 +958,7 @@ proof -
     also have "\<dots> = ((1 + eps k) ^ (Suc (hp i - 1 + hp (Suc i)) - hp i) -
                       (1 + eps k) ^ (hp i - 1))    /  k"
       using \<open>k>0\<close> eps_gt0 [of k] hgt_le \<open>p i \<ge> p0\<close> hgt_gt0 [of k]
-      by (simp add: hp_def qfun_def Suc_diff_eq_diff_pred hgt_gt0 diff_divide_distrib)
+      by (simp add: hp_def qfun_eq Suc_diff_eq_diff_pred hgt_gt0 diff_divide_distrib)
     also have "\<dots> = alpha k (hp i) / eps k * ((1 + eps k) ^ (1 + hp (Suc i) - hp i) - 1)"
       using \<open>k>0\<close>  hgt_le hgt_gt0 [of k]
       by (simp add: hp_def alpha_eq right_diff_distrib flip: diff_divide_distrib power_add)
@@ -992,7 +1002,7 @@ lemma Big_X_7_10:
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_10 \<mu> l"
   by (simp add: Big_X_7_10_def eventually_conj_iff Big_X_7_5 Big_Red_5_3 assms)
 
-lemma X_7_10:
+lemma (in Book) X_7_10:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
   defines "p \<equiv> pee \<mu> l k"
@@ -1121,7 +1131,7 @@ lemma Big_X_7_11:
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
-lemma X_7_11_aux:
+lemma (in Book) X_7_11_aux:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
   defines "p \<equiv> pee \<mu> l k"
@@ -1173,7 +1183,7 @@ proof -
       using \<open>k>0\<close> eps_gt0 [of k] by (simp add: eps_le1 powr_le1 powr_minus_divide)
     show "qstar \<le> qfun k (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>)"
       using \<open>k>0\<close> 711
-      by (simp add: qstar_def alpha_def qfun_def divide_right_mono mult.commute)
+      by (simp add: qstar_def alpha_def qfun_eq divide_right_mono mult.commute)
   qed auto
   then have "((1 + eps k) * (1 + eps k) ^ hgt k qstar) \<le> ((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4)))"
     by (smt (verit) eps_ge0 mult_left_mono powr_mono powr_realpow)
@@ -1352,9 +1362,9 @@ lemma Big_X_7_12:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_X_7_12 \<mu> l"
   unfolding Big_X_7_12_def eventually_conj_iff  
-  by (simp add: Big_X_7_11 X_7_10 Big_X_7_10 Big_X_7_9 eventually_all_ge_at_top assms)
+  by (simp add: Big_X_7_11 Big_X_7_10 Big_X_7_9 eventually_all_ge_at_top assms)
 
-lemma X_7_12:
+lemma (in Book) X_7_12:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
   defines "X \<equiv> Xseq \<mu> l k"
@@ -1472,7 +1482,7 @@ definition "ok_fun_76 \<equiv>
 lemma ok_fun_76: "ok_fun_76 \<in> o(real)"
   unfolding eps_def ok_fun_76_def by real_asymp
 
-lemma X_7_6:
+lemma (in Book) X_7_6:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
   assumes big: "Big_X_7_6 \<mu> l"
@@ -1607,7 +1617,7 @@ lemma ok_fun_71:
   using ok_fun_72 ok_fun_73 ok_fun_74 ok_fun_76
   by (simp add: assms ok_fun_71_def sum_in_smallo)
 
-lemma X_7_1:
+lemma (in Book) X_7_1:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"  
   assumes big: "Big_X_7_1 \<mu> l"
@@ -1670,8 +1680,6 @@ proof -
   finally show ?thesis
     using X0_nz \<mu> unfolding tele by (simp add: divide_simps X_def)
 qed
-
-end (*context Book*)
 
 end
 
