@@ -130,6 +130,8 @@ proof -
     using assms by (simp add: bigbeta_def Let_def divide_simps)
 qed
 
+end
+
 subsection \<open>Lemma 7.2\<close>
 
 definition "Big_X_7_2 \<equiv> \<lambda>\<mu> l. nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3 \<and> l > 1 / (1-\<mu>)"
@@ -148,7 +150,7 @@ lemma ok_fun_72:
   shows "ok_fun_72 \<mu> \<in> o(real)"
   using assms unfolding ok_fun_72_def  by real_asymp
 
-lemma X_7_2:
+lemma (in Book) X_7_2:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   defines "X \<equiv> Xseq \<mu> l k" and "\<R> \<equiv> Step_class \<mu> l k {red_step}"
@@ -246,6 +248,9 @@ qed
 
 subsection \<open>Lemma 7.3\<close>
 
+context Book
+begin
+
 definition "Bdelta \<equiv> \<lambda> \<mu> l k i. Bseq \<mu> l k (Suc i) \<setminus> Bseq \<mu> l k i"
 
 lemma card_Bdelta: "card (Bdelta \<mu> l k i) = card (Bseq \<mu> l k (Suc i)) - card (Bseq \<mu> l k i)"
@@ -331,13 +336,14 @@ lemma Bdelta_trivial_step:
   using assms
   by (auto simp: step_kind_defs next_state_def Bdelta_def Bseq_def Let_def degree_reg_def split: if_split_asm prod.split)
 
+end
 
 definition "ok_fun_73 \<equiv> \<lambda>k. - (real k powr (3/4))" 
 
 lemma ok_fun_73: "ok_fun_73  \<in> o(real)"
   unfolding ok_fun_73_def by real_asymp
 
-lemma X_7_3:
+lemma (in Book) X_7_3:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" 
   assumes big: "Big_Blue_4_1 \<mu> l"

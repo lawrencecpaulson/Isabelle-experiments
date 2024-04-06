@@ -65,6 +65,8 @@ proof -
     by (simp add: Weight_def sum_subtractf inverse_eq_divide flip: sum_divide_distrib)
 qed
 
+end
+
 subsubsection \<open>Lemma 5.6\<close>
 
 definition "Big_Red_5_6_Ramsey \<equiv> 
@@ -174,7 +176,7 @@ proof -
     by (simp add: c_def; real_asymp)
 qed
 
-lemma Red_5_6:
+lemma (in Book) Red_5_6:
   assumes "k \<ge> l" and big: "Big_Red_5_6 l"
   shows "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k ^ 6 * RN k (m_of l)" 
 proof (cases "k=0")
@@ -205,7 +207,6 @@ proof (cases "k=0")
     by (metis of_nat_mult of_nat_le_iff of_nat_power)
 qed auto
 
-
 subsection \<open>Lemma 5.4\<close>
 
 definition "Big_Red_5_4 \<equiv> \<lambda>l. Big_Red_5_6 l \<and> (\<forall>k\<ge>l. real k + 2 * real k ^ 6 \<le> real k ^ 7)"
@@ -216,6 +217,9 @@ lemma Big_Red_5_4: "\<forall>\<^sup>\<infinity>l. Big_Red_5_4 l"
   apply (simp add: Big_Red_5_6)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
+
+context Book
+begin
 
 lemma Red_5_4: 
   assumes "0<\<mu>" "\<mu><1" and "Colours l k" and i: "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
@@ -355,7 +359,7 @@ proof -
   then have "alpha k (hgt k p) = eps k * (1 + eps k) ^ (hgt k p - 1) / k"
     using alpha_eq by blast
   also have "\<dots> = eps k * (qfun k (hgt k p - 1) - qfun k 0 + 1/k)"
-    by (simp add: diff_divide_distrib qfun_def)
+    by (simp add: diff_divide_distrib qfun_eq)
   also have "\<dots> \<le> eps k * (p - qfun k 0 + 1/k)"
     by (smt (verit) qh_le_p mult.commute mult_right_mono One_nat_def eps_def powr_ge_pzero)
   finally show ?thesis .
@@ -473,6 +477,8 @@ next
     by (simp add: Suc card_gt_0_iff finite_Neighbours)
 qed
 
+end
+
 subsection \<open>Lemma 5.1\<close>
 
 definition "Big_Red_5_1 \<equiv> \<lambda>\<mu> l. (1-\<mu>) * real l > 1 \<and> l powr (5/2) \<ge> 3 / (1-\<mu>) \<and> l powr (1/4) \<ge> 4 
@@ -486,6 +492,9 @@ lemma Big_Red_5_1:
   apply (simp add: Big_Red_5_1_def eventually_conj_iff eps_def Big_Red_5_6 Big_Red_5_4)
   apply (intro conjI; real_asymp)
   done
+
+context Book
+begin
 
 lemma card_cvx_Neighbours:
   fixes \<mu>::real
@@ -804,6 +813,8 @@ proof -
     by linarith
 qed
 
+end
+
 subsection \<open>Lemma 5.3\<close>
 
 text \<open>This is a weaker consequence of the previous results\<close>
@@ -822,6 +833,9 @@ lemma Big_Red_5_3:
   apply (simp add: Big_Red_5_3_def eps_def eventually_conj_iff all_imp_conj_distrib Big_Red_5_1)  
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
+
+context Book
+begin
 
 corollary Red_5_3:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and i: "i \<in> Step_class \<mu> l k {dboost_step}"

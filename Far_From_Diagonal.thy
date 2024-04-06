@@ -333,7 +333,8 @@ lemma Far_9_3:
   defines "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
   defines "t \<equiv> card \<R>"
   assumes \<gamma>15: "\<gamma> \<le> 1/5" and p0: "p0 \<ge> 1/4" 
-    and nge: "n \<ge> exp (-\<delta>*k) * (k+l choose l)" and X0ge: "real (card X0) \<ge> n/2"
+    and nge: "n \<ge> exp (-\<delta>*k) * (k+l choose l)" 
+    and X0ge: "real (card X0) \<ge> n/2"  (*card X0 \<ge> n div 2 makes a harder proof*)
   assumes big: "Big_Far_9_3 \<gamma> l"
   shows "t \<ge> 2*k / 3"
 proof -
@@ -951,7 +952,8 @@ lemma (in fin_sgraph) Far_9_2:
   assumes big: "Big_Far_9_2 \<gamma> l" and "l\<le>k"
   assumes "\<gamma> \<le> 1/10" and \<epsilon>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
   shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue)"
-proof -
+proof (rule ccontr)
+  assume neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
   have "Red \<subseteq> E"
     using part_RB by (auto simp: partition_on_def)
   have "gorder\<ge>2"
@@ -962,23 +964,39 @@ proof -
           and Y0: "graph_density Red \<le> gen_density Red Y0 (V\<setminus>Y0)"
     using exists_density_edge_density \<open>Red \<subseteq> E\<close> complete by blast
   define X0 where "X0 \<equiv> V \<setminus> Y0"
-  interpret Book V E Red Blue Y0 X0
+  have "1-\<gamma>-\<eta> \<ge> 4/5"
+    using \<open>\<gamma> \<le> 1/10\<close> \<open>\<eta> \<le> \<gamma>/15\<close> by linarith
+  then have gd45: "gen_density Red X0 Y0 \<ge> 4/5"
+    using X0_def Y0 gd gen_density_commute by auto
+  interpret Book V E Red Blue X0 Y0
   proof
-    show "X0\<subseteq>V" "disjnt Y0 X0"
+    show "X0\<subseteq>V" "disjnt X0 Y0"
       by (auto simp: X0_def disjnt_iff)
-    have "1-\<gamma>-\<eta> \<ge> 4/5"
-      using \<open>\<gamma> \<le> 1/10\<close> \<open>\<eta> \<le> \<gamma>/15\<close> by linarith
-    then have "gen_density Red Y0 X0 \<ge> 4/5"
-      using Y0 gd unfolding X0_def by linarith
-    then show "Red \<inter> all_edges_betw_un Y0 X0 \<noteq> {}"
-      by (auto simp: gen_density_def edge_card_def)
+    show "Red \<inter> all_edges_betw_un X0 Y0 \<noteq> {}"
+      using gd45 by (auto simp: gen_density_def edge_card_def)
   qed (use assms \<open>Y0\<subseteq>V\<close> in auto)
-  have "card X0 \<ge> gorder / 2"
+  have card_X0: "card X0 \<ge> nV/2"
     using card_Y0 \<open>Y0\<subseteq>V\<close> unfolding X0_def
-    by (simp add: card_Diff_subset finite_X0)
-  have "\<not> termination_condition l k Y0 X0"
+    by (simp add: card_Diff_subset finite_Y0)
+  have "k>1"
     sorry
-  show ?thesis
+  then
+  have "red_density X0 Y0 > 1 / real k"
+
+
+    sorry
+  moreover have "RN k (nat \<lceil>real l powr (3 / 4)\<rceil>) < card X0"
+    using n card_X0
+    sorry
+  ultimately
+  have "\<not> termination_condition l k X0 Y0"
+    by (auto simp: termination_condition_def)
+
+    sorry
+  with neg \<open>l\<le>k\<close> have "Colours l k"
+    by (auto simp: Colours_def)
+  show False
+    using Far_9_2_aux
     sorry
 qed
 

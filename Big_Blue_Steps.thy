@@ -213,9 +213,6 @@ text \<open>How @{term b} and @{term m} are obtained from @{term l}\<close>
 definition b_of where "b_of \<equiv> \<lambda>l::nat. nat\<lceil>l powr (1/4)\<rceil>"
 definition m_of where "m_of \<equiv> \<lambda>l::nat. nat\<lceil>l powr (2/3)\<rceil>"
 
-context Book
-begin
-
 definition "Big_Blue_4_1 \<equiv> 
       \<lambda>\<mu> l. m_of l \<ge> 12  \<and>  l \<ge> (6/\<mu>) powr (12/5)  \<and>  l \<ge> 15
                \<and> 1 \<le> 5/4 * exp (- ((b_of l)^2) / ((\<mu> - 2/l) * m_of l))  \<and>  \<mu> > 2/l
@@ -228,6 +225,9 @@ lemma Big_Blue_4_1:
   using assms
   unfolding Big_Blue_4_1_def eventually_conj_iff m_of_def b_of_def
   by (intro conjI eventually_all_ge_at_top; real_asymp)
+
+context Book
+begin
 
 proposition Blue_4_1:
   assumes "0 < \<mu>" and "Colours l k" "X\<subseteq>V" and manyb: "many_bluish \<mu> l k X"

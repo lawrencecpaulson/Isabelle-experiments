@@ -4,11 +4,11 @@ theory Bounding_Y imports Red_Steps
 
 begin
 
+subsection \<open>The following results together are Lemma 6.4\<close>
+text \<open>Compared with the paper, all the indices are greater by one!!\<close>
+
 context Book
 begin
-
-subsection \<open>The following results together are Lemma 6.4\<close>
-text \<open>Compared with the paper, all the indices are greater by one\<close>
 
 lemma Y_6_4_Red: 
   assumes "i \<in> Step_class \<mu> l k {red_step}"
@@ -146,7 +146,7 @@ proof -
       have "hgt k (p (i-1)) \<le> 1"
       proof (intro hgt_Least)
         show "p (i-1) \<le> qfun k 1"
-          unfolding qfun_def
+          unfolding qfun_eq
           by (smt (verit) one_le_power pee divide_nonneg_nonneg eps_ge0 of_nat_less_0_iff)
       qed auto
       then show ?thesis
@@ -277,7 +277,7 @@ next
     by (simp add: divide_simps Suc_diff_Suc numeral_3_eq_3 flip: power_add)
   have "qfun k (h i - 3) \<le> qfun k (h i - 1) - (qfun k (h i) - qfun k (h i - 1))"
     using \<open>k>0\<close> mult_left_mono [OF le1 0]
-    apply (simp add: qfun_def field_simps A)
+    apply (simp add: qfun_eq field_simps A)
     by (simp add: B)
   also have "\<dots> < p i - alpha k (h i)"
     using lesspi by (simp add: alpha_def)
@@ -304,6 +304,7 @@ lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (- real (nat \<lfloor>2 * 
   unfolding eps_def
   by real_asymp
 
+end
 
 definition "Big_Y_6_5_Bblue \<equiv> \<lambda>l. \<forall>k\<ge>l. (1 + eps k) powr (- real (nat \<lfloor>2*(eps k powr (-1/2))\<rfloor>)) \<le> 1 - eps k powr (1/2)" 
 
@@ -312,7 +313,7 @@ lemma Big_Y_6_5_Bblue:
   shows "\<forall>\<^sup>\<infinity>l. Big_Y_6_5_Bblue l"
   unfolding Big_Y_6_5_Bblue_def eps_def by (intro eventually_all_ge_at_top; real_asymp)
 
-lemma Y_6_5_Bblue:
+lemma (in Book) Y_6_5_Bblue:
   fixes k::nat and \<kappa>::real
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k"
   defines "\<kappa> \<equiv> eps k powr (-1/2)"
@@ -341,7 +342,7 @@ proof (cases "h > 2*\<kappa> + 1")
   have less_h: "nat \<lfloor>2 * \<kappa>\<rfloor> < h"
     using True \<open>0 < h - 1\<close> by linarith
   have "qfun k (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) = p0 + ((1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) - 1) / k"
-    by (simp add: qfun_def)
+    by (simp add: qfun_eq)
   also have "\<dots> \<le> p0 + ((1 - eps k powr (1/2)) * (1 + eps k) ^ (h-1) - 1) / k"
   proof -
     have ge0: "(1 + eps k) ^ (h-1) \<ge> 0"
@@ -357,7 +358,7 @@ proof (cases "h > 2*\<kappa> + 1")
       by (intro add_left_mono divide_right_mono diff_right_mono) auto
   qed
   also have "\<dots> \<le> qfun k (h-1) - eps k powr (1/2) * (1 + eps k) ^ (h-1) / real k"
-    using \<open>k>0\<close> eps_ge0 by (simp add: qfun_def powr_half_sqrt field_simps)
+    using \<open>k>0\<close> eps_ge0 by (simp add: qfun_eq powr_half_sqrt field_simps)
   also have "\<dots> < p (Suc i)"
     using A by blast
   finally have "qfun k (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) < p (Suc i)" .
@@ -386,6 +387,9 @@ lemma Big_Y_6_2:
   apply (simp add: Big_Y_6_5_Bblue Big_Red_5_3 Big_Blue_4_1 assms)
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
+
+context Book
+begin
 
 text \<open>Following Bhavik in excluding the even steps (degree regularisation).
       Assuming it hasn't halted, the conclusion also holds for the even cases anyway.\<close>
@@ -551,7 +555,7 @@ next
     unfolding powr_add [symmetric] using \<open>k\<ge>16\<close> order.trans nle_le by fastforce
   have "p0 - eps k \<le> qfun k 0 - 2 * eps k powr (1/2) / k"
     using mult_left_mono [OF 8, of "k powr (-1/8)"] \<open>k>0\<close> 
-    by (simp add: qfun_def eps_def powr_powr field_simps flip: powr_add)
+    by (simp add: qfun_eq eps_def powr_powr field_simps flip: powr_add)
   also have "\<dots> \<le> p j'  - eps k powr (-1/2) * alpha k (hgt k (p j'))"
   proof -
     have 2: "(1 + eps k) ^ (hgt k (p j') - Suc 0) \<le> 2"
@@ -658,29 +662,43 @@ proof -
   qed
 qed
 
+end
+
 subsection \<open>Lemma 6.1\<close>
+
+context Book_Basis
+begin
+
+definition "ok_fun_61 \<equiv> \<lambda>k. (2 * real k / ln 2) * ln (1 - 2 * eps k powr (1/2) / p0_min)"
+
+text \<open>Not actually used, but justifies the definition above\<close>
+lemma ok_fun_61_works:
+  assumes "k>0" "p0_min > 2 * eps k powr (1/2)"
+  shows "2 powr (ok_fun_61 k) = (1 - 2 * (eps k) powr(1/2) / p0_min) ^ (2*k)"
+  using eps_gt0[of k] p0_min assms
+  by (simp add: powr_def ok_fun_61_def flip: powr_realpow)
+
+lemma ok_fun_61: "ok_fun_61 \<in> o(real)"
+  unfolding eps_def ok_fun_61_def
+  using p0_min by real_asymp
 
 definition 
   "Big_Y_6_1 \<equiv> 
-    \<lambda>\<mu> l. Big_Y_6_2 \<mu> l \<and> (\<forall>k\<ge>l. eps k powr (1/2) \<le> 1/3 \<and> p0 > 2 * eps k powr (1/2))"
+    \<lambda>\<mu> l. Big_Y_6_2 \<mu> l \<and> (\<forall>k\<ge>l. eps k powr (1/2) \<le> 1/3 \<and> p0_min > 2 * eps k powr (1/2))"
 
 text \<open>establishing the size requirements for 6.1\<close>
 lemma Big_Y_6_1:
   assumes "0<\<mu>" "\<mu><1"
   shows "\<forall>\<^sup>\<infinity>l. Big_Y_6_1 \<mu> l"
+  using p0_min
   unfolding Big_Y_6_1_def eventually_conj_iff all_imp_conj_distrib eps_def
   apply (simp add: Big_Y_6_2 assms)
-  using p0_01
   apply (intro conjI eventually_all_ge_at_top; real_asymp)
   done
 
-definition "ok_fun_61 \<equiv> \<lambda>k. (2 * real k / ln 2) * ln (1 - 2 * eps k powr (1/2) / p0)"
+end
 
-lemma ok_fun_61: "ok_fun_61 \<in> o(real)"
-  unfolding eps_def ok_fun_61_def
-  using p0_01 by real_asymp
-
-lemma Y_6_1:
+lemma (in Book) Y_6_1:
   fixes l k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and big: "Big_Y_6_1 \<mu> l"
   assumes "Colours l k"
@@ -693,7 +711,7 @@ proof -
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   have big13: "eps k powr (1/2) \<le> 1/3" 
-    and big_p0: "p0 > 2 * eps k powr (1/2)"
+    and big_p0: "p0_min > 2 * eps k powr (1/2)"
     and big62: "Big_Y_6_2 \<mu> l"
     and big41: "Big_Blue_4_1 \<mu> l"
     using big \<open>Colours l k\<close> by (auto simp: Big_Y_6_1_def Big_Y_6_2_def Colours_def)
@@ -701,7 +719,7 @@ proof -
     using bblue_dboost_step_limit by fastforce
   define p0m where "p0m \<equiv> p0 - 2 * eps k powr (1/2)"
   have "p0m > 0"
-    using big_p0 by (simp add: p0m_def)
+    using big_p0 p0_ge by (simp add: p0m_def)
   define Step_RS where "Step_RS \<equiv> Step_class \<mu> l k {red_step,dboost_step}"
   define Step_BD where "Step_BD \<equiv> Step_class \<mu> l k {bblue_step,dreg_step}"
   have not_halted_below_m: "i \<notin> Step_class \<mu> l k {halted}" if "i<m" for i
@@ -829,14 +847,8 @@ proof -
   finally have *: "(p0 - 2 * eps k powr (1/2)) ^ card st \<le> card (Y m) / card (Y0)"
     by (simp add: STm Y_def p0m_def)
   \<comment> \<open>Asymptotic part of the argument\<close>
-  have ln_le: "ln (1 - 2 * eps k powr (1/2) / p0) + ln p0 \<le> ln (p0 - 2 * eps k powr (1/2))"
-    using big_p0 p0_01 by (simp add: algebra_simps flip: ln_mult)
-  have "2 * real k * ln (1 - 2 * eps k powr (1/2) / p0)
-      \<le> (card st) * ln (1 - 2 * eps k powr (1/2) / p0)"
-  proof (intro mult_right_mono_neg)
-    obtain red_steps: "card (Step_class \<mu> l k {red_step}) < k"
-      using red_step_limit \<open>0<\<mu>\<close> \<open>Colours l k\<close> by blast
-    with dboost_step_limit 
+  have st_le_2k: "card st \<le> 2 * k"
+  proof -
     have "st \<subseteq> Step_class \<mu> l k {red_step,dboost_step}" 
       by (auto simp add: st_def Step_class_insert_NO_MATCH)
     moreover have "finite (Step_class \<mu> l k {red_step,dboost_step})"
@@ -846,24 +858,34 @@ proof -
     also have "\<dots> = card (Step_class \<mu> l k {red_step} \<union> Step_class \<mu> l k {dboost_step})"
       by (auto simp: Step_class_insert_NO_MATCH)
     also have "\<dots> \<le> k+k"
-      by (smt (verit) of_nat_add dboost_step_limit card_Un_le nat_le_real_less nat_less_real_le red_steps)
-    finally show "real (card st) \<le> 2 * real k"
+      using \<mu> \<open>Colours l k\<close>
+      by (meson add_le_mono card_Un_le dboost_step_limit le_trans less_imp_le_nat red_step_limit)
+    finally show ?thesis 
       by auto
-    show "ln (1 - 2 * eps k powr (1/2) / p0) \<le> 0"
-      using p0_01 big_p0 by simp
   qed
-  then have "ok_fun_61 k * ln 2 + card st * ln p0 \<le> card st * ln (p0 - 2 * eps k powr (1/2))"
-    using mult_left_mono [OF ln_le, of "card st"]
-    by (simp add: ok_fun_61_def distrib_left)
-  then have "ok_fun_61 k * ln 2 + card st * ln p0 \<le> card st * ln (p0 - 2 * eps k powr (1/2))"
-    by simp
-  then have "2 powr (ok_fun_61 k) * p0 ^ card st \<le> (p0 - 2 * eps k powr (1/2)) ^ card st"
-    by (simp add: big_p0 p0_01 ln_mult ln_powr ln_realpow flip: ln_le_cancel_iff)
+  have "2 powr (ok_fun_61 k) * p0 ^ card st \<le> (p0 - 2 * eps k powr (1/2)) ^ card st"
+  proof -
+    have "2 powr (ok_fun_61 k) = (1 - 2 * (eps k) powr(1/2) / p0_min) ^ (2*k)"
+      using eps_gt0[of k] p0_min big_p0
+      by (simp add: powr_def ok_fun_61_def flip: powr_realpow)
+    also have "\<dots> \<le> (1 - 2 * (eps k) powr(1/2) / p0) ^ (2*k)"
+      using p0_ge p0_min big_p0 by (intro power_mono) (auto simp: frac_le)
+    also have "\<dots> \<le> (1 - 2 * (eps k) powr(1/2) / p0) ^ card st"
+      using big_p0 p0_01 \<open>0 < p0m\<close>
+      by (intro power_decreasing st_le_2k) (auto simp: p0m_def)
+    finally have \<section>: "2 powr ok_fun_61 k \<le> (1 - 2 * eps k powr (1/2) / p0) ^ card st" .
+
+    have "(1 - 2 * eps k powr (1 / 2) / p0) ^ card st * p0 ^ card st
+       = ((1 - 2 * eps k powr (1 / 2) / p0) * p0) ^ card st"
+      by (simp add: power_mult_distrib)
+    also have "... = (p0 - 2 * eps k powr (1 / 2)) ^ card st"
+      using p0_01 by (simp add: algebra_simps)
+    finally show ?thesis
+      using mult_right_mono [OF \<section>, of "p0 ^ card st"] p0_01 by auto 
+  qed
   with * show ?thesis
     by linarith
 qed
-
-end (*context Book*)
 
 end
 
