@@ -960,8 +960,8 @@ proof (rule ccontr)
   assume neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
   have "Red \<subseteq> E"
     using part_RB by (auto simp: partition_on_def)
-  have 45: "1-\<gamma>-\<eta> \<ge> 4/5"
-    using \<open>\<gamma> \<le> 1/10\<close> \<open>\<eta> \<le> \<gamma>/15\<close> by linarith
+  have nearly_1: "1-\<gamma>-\<eta> \<ge> 0.89"
+    using \<open>\<gamma> \<le> 1/10\<close> \<open>\<eta> \<le> \<gamma>/15\<close> by (auto simp: power2_eq_square)
   with gd have "graph_density Red \<ge> 4/5"
     by simp
   with part_RB have "Red \<noteq> {}"
@@ -976,14 +976,14 @@ proof (rule ccontr)
           and Y0: "graph_density Red \<le> gen_density Red Y0 (V\<setminus>Y0)"
     using exists_density_edge_density \<open>Red \<subseteq> E\<close> complete by blast
   define X0 where "X0 \<equiv> V \<setminus> Y0"
-  have gd45: "gen_density Red X0 Y0 \<ge> 4/5"
-    using 45 X0_def Y0 gd gen_density_commute by auto
+  have gd_nearly_1: "gen_density Red X0 Y0 \<ge> 4/5"
+    using nearly_1 X0_def Y0 gd gen_density_commute by auto
   interpret Book V E p0_min Red Blue X0 Y0
   proof
     show "X0\<subseteq>V" "disjnt X0 Y0"
       by (auto simp: X0_def disjnt_iff)
     show "p0_min \<le> gen_density Red X0 Y0"
-      sorry
+      sorry  (*Not a hard constraint, just p0_min \<le> 0.893*)
   qed (use assms \<open>Y0\<subseteq>V\<close> in auto)
   have card_X0: "card X0 \<ge> nV/2"
     using card_Y0 \<open>Y0\<subseteq>V\<close> unfolding X0_def
@@ -994,16 +994,8 @@ proof (rule ccontr)
     by (metis One_nat_def RN_1' Red_Blue_RN bot_least  card.empty ex_card less_2_cases neg null_clique one_le_numeral neq0_conv)
   with \<open>k\<ge>l\<close> have "l\<ge>2" "k\<ge>2"
     by force+
-  have "red_density X0 Y0 > 1 / real k"
-    sorry
-  moreover have "RN k (nat \<lceil>real l powr (3 / 4)\<rceil>) < card X0"
-    using n card_X0 neg
-    sorry
-  ultimately
-  have "\<not> termination_condition l k X0 Y0"
-    by (auto simp: termination_condition_def)
-  with neg \<open>l\<le>k\<close> have "Colours l k"
-    by (auto simp: Colours_def)
+  have "Colours l k"
+    using neg \<open>l\<le>k\<close> by (auto simp: Colours_def)
   show False
   proof (intro Far_9_2_aux [of l k \<eta>])
     show "1 - real l / (real k + real l) - \<eta> \<le> p0"

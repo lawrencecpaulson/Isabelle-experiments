@@ -1648,17 +1648,16 @@ proof -
     unfolding X_def \<D>_def using 76 \<mu> \<open>Colours l k\<close> X_7_6 by meson
   have below_m: "\<R>\<union>\<B>\<union>\<S>\<union>\<D> = {..<m}"
     using assms by (auto simp: m_def \<R>_def \<B>_def \<S>_def \<D>_def before_halted_eq Step_class_insert_NO_MATCH)
-
-  have "m>0"
-    unfolding m_def
-    by (simp add: \<open>\<mu>>0\<close> \<open>Colours l k\<close> halted_point_nonzero)
   have X_nz: "\<And>i. i < m \<Longrightarrow> card (X i) \<noteq> 0"
     unfolding m_def using assms below_halted_point_cardX by blast
-  with \<open>m>0\<close> have tele: "card (X m) = (\<Prod>i<m. card (X(Suc i)) / card (X i)) * card (X 0)"
-    by (simp add: prod_lessThan_telescope_mult [where f = "\<lambda>i. real (card (X i))"])
+  have tele: "card (X m) = (\<Prod>i<m. card (X(Suc i)) / card (X i)) * card (X 0)"
+  proof (cases "m=0")
+    case False
+    with X_nz show ?thesis
+      by (simp add: prod_lessThan_telescope_mult [where f = "\<lambda>i. real (card (X i))"])
+  qed auto
   have X0_nz: "card (X 0) > 0"
-    using \<open>0 < m\<close> X_nz by blast
-
+    by (simp add: X_def card_XY0)
   have "2 powr ok_fun_71 \<mu> k * \<mu>^l * (1-\<mu>) ^ card \<R> * (bigbeta \<mu> l k / \<mu>) ^ card \<S>
      \<le> 2 powr ok_fun_71 \<mu> k * \<mu> ^ (l - card \<S>) * (1-\<mu>) ^ card \<R> * (bigbeta \<mu> l k ^ card \<S>)"
     using \<mu> BS_le_l by (simp add: power_diff power_divide)

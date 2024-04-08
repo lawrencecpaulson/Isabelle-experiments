@@ -401,8 +401,7 @@ locales for different parts of the development gets confusing here.*)
 
 text \<open>Basic conditions for the book algorithm.\<close>
 text\<open>We also don't want it to terminate without executing even one step [NOT ACTUALLY NEEDED]\<close>
-definition "Colours \<equiv> \<lambda>l k. l \<le> k \<and> \<not> (\<exists>K. size_clique k K Red) \<and> \<not> (\<exists>K. size_clique l K Blue)
-        \<and> \<not> termination_condition l k X0 Y0"
+definition "Colours \<equiv> \<lambda>l k. l \<le> k \<and> \<not> (\<exists>K. size_clique k K Red) \<and> \<not> (\<exists>K. size_clique l K Blue)"
 
 lemma Colours_ln0: "Colours l k \<Longrightarrow> l>0"
   by (force simp: Colours_def size_clique_def clique_def)
@@ -1426,16 +1425,6 @@ lemma below_halted_point_cardX:
   shows  "card (Xseq \<mu> l k i) > 0"
   using Xseq_gt0 assms halted_point_minimal halted_stepper_eq
   by blast
-
-lemma halted_point_nonzero:
-  assumes "\<mu>>0" "Colours l k"
-  shows  "halted_point \<mu> l k > 0"
-proof -
-  have "stepper_kind \<mu> l k 0 \<noteq> halted"
-    using assms by (simp add: stepper_kind_def Colours_def)
-  with halted_point_minimal [OF assms] show ?thesis
-    by (simp add: Step_class_def)
-qed
 
 end
                                                

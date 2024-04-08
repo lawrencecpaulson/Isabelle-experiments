@@ -624,9 +624,12 @@ corollary Y_6_2_halted:
   assumes \<section>: "0<\<mu>" "\<mu><1" "Colours l k" and big: "Big_Y_6_2 \<mu> l"
   defines "m \<equiv> halted_point \<mu> l k"
   shows "pee \<mu> l k m \<ge> p0 - 3 * eps k"
-proof -
-  have "m>0"
-    by (simp add: \<section> m_def halted_point_nonzero)
+proof (cases "m=0")
+  case True
+  then show ?thesis
+    by (simp add: eps_ge0 pee_eq_p0)
+next
+  case False
   then have "m-1 \<notin> Step_class \<mu> l k {halted}"
     by (simp add: \<section> m_def halted_point_minimal)
   then consider "m-1 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" | "m-1 \<in> Step_class \<mu> l k {dreg_step}"
@@ -634,16 +637,15 @@ proof -
   then show ?thesis
   proof cases
     case 1
-    then show ?thesis
-      by (metis Y_6_2 Suc_diff_1 assms halted_point_nonzero)
+    with False \<section> Y_6_2[of \<mu> "m-1"] big show ?thesis by simp
   next
-    case 2
+    case m1_dreg: 2
     then have *: "pee \<mu> l k m \<ge> pee \<mu> l k (m-1)"
-      by (metis Book.Y_6_4_DegreeReg Book_axioms Suc_pred' \<open>0 < m\<close>)
+      using False Y_6_4_DegreeReg[of "m-1"] by simp
     have "odd m"
-      by (metis "2" Book.step_even Book_axioms Suc_diff_1 \<open>0 < m\<close> even_Suc)
-    consider "m=1" | "m\<noteq>1 \<and> m-2 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
-      by (metis 2 Suc_1 Suc_diff_Suc \<open>0 < m\<close> less_one nat_neq_iff step_before_dreg)
+      using m1_dreg False step_even[of "m-1"] by simp
+    then consider "m=1" | "m\<ge>2"
+      by (metis False less_2_cases One_nat_def not_le)
     then show ?thesis
     proof cases
       case 1
@@ -653,10 +655,13 @@ proof -
         by (smt (verit) "*" eps_ge0 pee_eq_p0)
     next
       case 2
+      then have m2: "m-2 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
+        using step_before_dreg[of "m-2"] m1_dreg
+        by (simp add: flip: Suc_diff_le)
       then obtain j where j: "m-1 = Suc j"
-        using \<open>0 < m\<close> not0_implies_Suc by fastforce
+        using 2 not0_implies_Suc by fastforce
       then have "pee \<mu> l k (Suc j) \<ge> p0 - 3 * eps k"
-        by (metis "2" Suc_1 Y_6_2 \<section> big diff_Suc_1 diff_Suc_eq_diff_pred)
+        by (metis m2 Suc_1 Y_6_2 \<section> big diff_Suc_1 diff_Suc_eq_diff_pred)
       with * j show ?thesis by simp
     qed
   qed
