@@ -953,21 +953,14 @@ lemma (in Book_Basis) Far_9_2:
   assumes infinite_UNIV: "infinite (UNIV::'a set)"
   assumes n: "real gorder \<ge> exp (-\<delta> * k) * (k+l choose l)" 
   assumes gd: "graph_density Red \<ge> 1-\<gamma>-\<eta>" 
+    and p0_min_OK: "p0_min \<le> 1-\<gamma>-\<eta>"  (*NEEDED TO INTERPRET BOOK LOCALE*)
   assumes big: "Big_Far_9_2 \<gamma> l" and "l\<le>k"
   assumes "\<gamma> \<le> 1/10" and \<epsilon>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
   shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue)"
 proof (rule ccontr)
   assume neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
-  have "Red \<subseteq> E"
+  have "Red \<subseteq> E" "Red \<noteq> {}" "E \<noteq> {}"
     using part_RB by (auto simp: partition_on_def)
-  have nearly_1: "1-\<gamma>-\<eta> \<ge> 0.89"
-    using \<open>\<gamma> \<le> 1/10\<close> \<open>\<eta> \<le> \<gamma>/15\<close> by (auto simp: power2_eq_square)
-  with gd have "graph_density Red \<ge> 4/5"
-    by simp
-  with part_RB have "Red \<noteq> {}"
-    by (metis insertCI partition_on_def)
-  with \<open>Red \<subseteq> E\<close> have "E \<noteq> {}"
-    by auto
   then have "gorder\<ge>2"
     by (metis card_mono ex_in_conv finV two_edges wellformed)
   then have "0 < gorder div 2" "gorder div 2 < gorder"
@@ -976,14 +969,12 @@ proof (rule ccontr)
           and Y0: "graph_density Red \<le> gen_density Red Y0 (V\<setminus>Y0)"
     using exists_density_edge_density \<open>Red \<subseteq> E\<close> complete by blast
   define X0 where "X0 \<equiv> V \<setminus> Y0"
-  have gd_nearly_1: "gen_density Red X0 Y0 \<ge> 4/5"
-    using nearly_1 X0_def Y0 gd gen_density_commute by auto
   interpret Book V E p0_min Red Blue X0 Y0
   proof
     show "X0\<subseteq>V" "disjnt X0 Y0"
       by (auto simp: X0_def disjnt_iff)
     show "p0_min \<le> gen_density Red X0 Y0"
-      sorry  (*Not a hard constraint, just p0_min \<le> 0.893*)
+      using X0_def Y0 gd gen_density_commute p0_min_OK by auto
   qed (use assms \<open>Y0\<subseteq>V\<close> in auto)
   have card_X0: "card X0 \<ge> nV/2"
     using card_Y0 \<open>Y0\<subseteq>V\<close> unfolding X0_def
@@ -1003,6 +994,17 @@ proof (rule ccontr)
   qed (use assms card_X0 card_Y0 \<open>Colours l k\<close> in auto)
 qed
 
+subsection \<open>Lemma 9.1\<close>
+
+definition "Big_Far_0_1 \<equiv> \<lambda>\<mu> l. True"
+
+lemma Big_Far_0_1:
+  assumes "0<\<mu>" "\<mu><1"
+  shows "\<forall>\<^sup>\<infinity>l. Big_Far_0_1 \<mu> l"
+  unfolding Big_Far_0_1_def eventually_conj_iff all_imp_conj_distrib eps_def
+  apply (simp add: Big_Far_9_3  assms)
+  done
+
 lemma Far_9_1_aux:
   fixes l k
   fixes \<delta> \<gamma>::real
@@ -1011,8 +1013,7 @@ lemma Far_9_1_aux:
   assumes 0: "card X0 > real nV / 2" "card Y0 > real nV / 2" "p0 \<ge> 1-\<gamma>-\<eta>"
      \<comment>\<open>These are the assumptions about the red density of the graph\<close>
   assumes "Colours l k" and \<gamma>: "\<gamma> \<le> 1/10" 
-  assumes nV: "real nV \<ge> exp (-\<delta> * k) * (k+l choose l)" 
-  assumes big: "Big_Far_9_2 \<gamma> l"
+  assumes big: "Big_Far_0_1 \<gamma> l"
   shows "RN k l \<le> exp (-\<delta> * f k) * (k+l choose l)"
 proof -
 
