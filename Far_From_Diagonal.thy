@@ -1005,17 +1005,53 @@ lemma Big_Far_0_1:
   apply (simp add: Big_Far_9_3  assms)
   done
 
-lemma Far_9_1_aux:
+(** THE f BELOW NEEDS TO BE o(real)**)
+lemma (in Book) Far_9_1:
   fixes l k
   fixes \<delta> \<gamma>::real
   defines "\<gamma> \<equiv> l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/20"
-  assumes 0: "card X0 > real nV / 2" "card Y0 > real nV / 2" "p0 \<ge> 1-\<gamma>-\<eta>"
-     \<comment>\<open>These are the assumptions about the red density of the graph\<close>
   assumes "Colours l k" and \<gamma>: "\<gamma> \<le> 1/10" 
   assumes big: "Big_Far_0_1 \<gamma> l"
   shows "RN k l \<le> exp (-\<delta> * f k) * (k+l choose l)"
 proof -
+  define \<xi>::real where "\<xi> \<equiv> 1/15"
+  define n49 where "n49 \<equiv> \<lambda>m. (RN k l - 1) * (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k + l - real i))"
 
+  define ge49 where "ge49 \<equiv> \<lambda>W. card (V \<inter> (\<Inter>w\<in>W. Neighbours Blue w)) \<ge> n49 (card W)"
+
+  have "ge49 {}" if "RN k l - Suc 0 \<le> nV"
+    by (simp add: ge49_def n49_def that)
+
+  { fix W
+    assume "W\<subseteq>V"
+    assume "nV = RN k l - 1"
+    assume 49: "ge49 W"
+    assume max49: "\<And>x. x\<in>V\<setminus>W \<Longrightarrow> \<not> ge49 (insert x W)"
+    define U where "U \<equiv> V \<inter> (\<Inter>w\<in>W. Neighbours Blue w)"
+    define EU where "EU \<equiv> E \<inter> Pow U"
+    define RedU where "RedU \<equiv> Red \<inter> Pow U"
+    define BlueU where "BlueU \<equiv> Blue \<inter> Pow U"
+    interpret UBB: Book_Basis U "E \<inter> Pow U" p0_min 
+    proof
+      fix e :: "'a set"
+      assume "e \<in> E \<inter> Pow U"
+      with two_edges show "e \<subseteq> U" "card e = 2" by auto
+    next
+      show "finite U"
+        using U_def finV by blast
+      show "0 < p0_min" "p0_min < 1"
+        by (auto simp add: p0_min)
+      have "x \<in> E" if "x \<in> all_edges U" for x 
+        by (metis Int_lower1 U_def all_edges_mono complete subsetD that)
+      then show "E \<inter> Pow U = all_edges U"
+        using comp_sgraph.wellformed by (fastforce simp: U_def e_in_all_edges_ss)
+      show "infinite (UNIV::'a set)"
+        by (simp add: local.infinite_UNIV)
+    qed
+  }
+  show ?thesis
+    sorry
+qed
 
 end
