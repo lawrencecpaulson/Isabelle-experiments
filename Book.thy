@@ -161,8 +161,14 @@ lemma clique_Un:
   assumes "clique A F" "clique B F" "all_edges_betw_un A B \<subseteq> F" "A \<subseteq> V" "B \<subseteq> V"
   shows "clique (A \<union> B) F"
   using assms
-  apply (simp add: clique_def all_edges_betw_un_def subset_iff)
-  by (metis Un_iff doubleton_eq_iff)
+  unfolding clique_def all_edges_betw_un_def subset_iff
+  by (smt (verit, best) UnE in_E_iff insert_commute mem_Collect_eq)
+
+lemma clique_insert:
+  assumes "clique A F" "all_edges_betw_un {x} A \<subseteq> F" "A \<subseteq> V" "x \<in> V"
+  shows "clique (insert x A) F"
+  using assms
+  by (metis Un_subset_iff clique_def insert_is_Un insert_subset clique_Un singletonD)
 
 lemma indep_Red_iff_clique_Blue: "K \<subseteq> V \<Longrightarrow> indep K Red \<longleftrightarrow> clique K Blue"
   using Blue_eq by auto

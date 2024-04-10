@@ -7,7 +7,7 @@ theory Neighbours imports
 
 begin
 
-section \<open>Preliminary definitions\<close>
+subsection \<open>Preliminary definitions\<close>
 
 definition Neighbours :: "'a set set \<Rightarrow> 'a \<Rightarrow> 'a set" where
   "Neighbours \<equiv> \<lambda>E x. {y. {x,y} \<in> E}"
