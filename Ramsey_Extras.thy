@@ -69,6 +69,14 @@ lemma nsets2_E:
   obtains x y where "e = {x,y}" "x \<in> A" "y \<in> A" "x\<noteq>y"
   using assms by (auto simp: nsets_def card_2_iff)
 
+lemma sum_nsets_one: "(\<Sum>U\<in>[V]\<^bsup>Suc 0\<^esup>. f U) = (\<Sum>x\<in>V. f {x})"
+proof -
+  have bij: "bij_betw (\<lambda>x. {x}) V ([V]\<^bsup>Suc 0\<^esup>)"
+    by (auto simp: inj_on_def bij_betw_def nsets_one)
+  show ?thesis
+    using sum.reindex_bij_betw [OF bij] by (metis (no_types, lifting) sum.cong)
+qed
+
 (*UNUSED*)
 lemma subset_nsets_2:
   assumes "card A \<ge> 2" shows "A \<subseteq> \<Union>([A]\<^bsup>2\<^esup>)"

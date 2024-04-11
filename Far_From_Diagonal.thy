@@ -1045,6 +1045,7 @@ proof -
     define EU where "EU \<equiv> E \<inter> Pow U"
     define RedU where "RedU \<equiv> Red \<inter> Pow U"
     define BlueU where "BlueU \<equiv> Blue \<inter> Pow U"
+    assume "card U > 1"
 
     have "\<gamma>' > 0"
       using is_good_card [OF 49] by (simp add: \<gamma>'_def m_def)
@@ -1082,7 +1083,7 @@ proof -
       using "49" is_good_clique_def m_def size_clique_def by blast
 
     have card_EU: "card EU > 0"
-      sorry
+      using \<open>card U > 1\<close> UBB.complete by (simp add: EU_def UBB.finV card_all_edges)
     then have "card U > 1"
       by (simp add: EU_def UBB.complete UBB.finV card_all_edges)
     have BlueU_eq: "BlueU = EU \<setminus> RedU" 
@@ -1097,6 +1098,8 @@ proof -
 
       have Nx: "Neighbours BlueU x \<inter> (U \<setminus> {x}) = Neighbours BlueU x" for x 
         using that by (auto simp: BlueU_eq EU_def Neighbours_def)
+
+      
       have "BlueU \<subseteq> E \<inter> Pow U"
         using BlueU_eq EU_def by blast
       with UBB.exists_density_edge_density [of 1 BlueU]
@@ -1107,6 +1110,7 @@ proof -
       then have *: "(\<gamma>' + \<eta>) * (card U - 1) \<le> card (Neighbours BlueU x)"
         using \<open>BlueU \<subseteq> E \<inter> Pow U\<close> \<open>card U > 1\<close> \<open>x \<in> U\<close>
         by (simp add: UBB.gen_density_def UBB.edge_card_eq_sum_Neighbours UBB.finV divide_simps Nx)
+
       have "x \<in> V\<setminus>W"
         using U_def \<open>x \<in> U\<close> \<open>U \<subseteq> V\<close> by auto
       moreover

@@ -452,8 +452,6 @@ proof (cases "finite X \<and> finite Y")
 qed (auto simp: gen_density_def edge_density_def)
 
 
-definition "graph_density \<equiv> \<lambda>C. card C / card E"
-
 lemma edge_card_insert:
   assumes "NO_MATCH {} F" and "e \<notin> F"
     shows  "edge_card (insert e F) X Y = edge_card {e} X Y + edge_card F X Y"
@@ -547,6 +545,8 @@ subsection \<open>Lemma 9.2 preliminaries\<close>
 text \<open>Equation (45) in the text, page 30, is seemingly a huge gap.
    The development below relies on binomial coefficient identities.\<close>
 
+definition "graph_density \<equiv> \<lambda>C. card C / card E"
+
 text \<open>Could be generalised to any complete graph\<close>
 lemma density_eq_average:
   assumes "C \<subseteq> E" and complete: "E = all_edges V"
@@ -592,10 +592,8 @@ proof (cases "k=1 \<or> gorder = Suc k")
     using True
   proof
     assume "k = 1"
-    then have bij: "bij_betw (\<lambda>x. {x}) V ([V]\<^bsup>k\<^esup>)"
-      by (auto simp: inj_on_def bij_betw_def nsets_one)
-    show ?thesis
-      using sum.reindex_bij_betw [OF bij] by (metis (no_types, lifting) sum.cong)
+    then show ?thesis
+      by (simp add: sum_nsets_one)
   next
     assume \<section>: "gorder = Suc k"
     then have  "V-A \<noteq> {}" if "card A = k" "finite A" for A
@@ -719,6 +717,11 @@ proof -
   with that show thesis
     unfolding nsets_def by fastforce
 qed
+
+lemma density_eq_sum_card_Neighbours:
+  assumes "C \<subseteq> E" "E = all_edges V"
+  shows "graph_density C = real (\<Sum>x\<in>V. card (Neighbours C x)) / (card V * (card V - 1))"
+  using assms density_eq_average sum_eq_card_Neighbours by auto
 
 end  (*fin_sgraph*)
 
