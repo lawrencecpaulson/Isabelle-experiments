@@ -5,6 +5,12 @@ theory Far_From_Diagonal
 
 begin
 
+lemma of_nat_add_numeral: "of_nat n + numeral w = of_nat (n + numeral w)"
+  by simp
+
+lemma of_nat_mult_numeral: "of_nat n * numeral w = of_nat (n * numeral w)"
+  by simp
+
 subsection \<open>Fact D.3 from the Appendix\<close>
 
 text \<open>And hence, Fact 9.4\<close>
@@ -1015,17 +1021,19 @@ lemma (in Book) Far_9_1:
   assumes big: "Big_Far_0_1 \<gamma> l"
   shows "RN k l \<le> exp (-\<delta> * f k) * (k+l choose l)"
 proof -
+  obtain ln0: "l>0" and kn0: "k>0" and "l\<le>k"
+    using \<open>Colours l k\<close> Colours_kn0 Colours_ln0  by (auto simp: Colours_def)
   define \<xi>::real where "\<xi> \<equiv> 1/15"
      \<comment>\<open>Bhavik's terminology below\<close>
   define U_lower_bound_ratio where "U_lower_bound_ratio 
         \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k + l - real i))"
   define is_good_clique where  "is_good_clique
     \<equiv> \<lambda>n K. clique K Blue \<and> K \<subseteq> V \<and>
-             card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w)) 
-             \<ge> of_nat n * U_lower_bound_ratio (card K)"
+             card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
+             \<ge> real n * U_lower_bound_ratio (card K)"
 
   have is_good_mull: "is_good_clique n {}" if "n \<le> nV" for n
-    by (simp add: is_good_clique_def U_lower_bound_ratio_def that)
+    using that by (simp add: is_good_clique_def U_lower_bound_ratio_def)
 
   have is_good_card: "card K < l" if "is_good_clique n K" for n K
     using \<open>Colours l k\<close> that
@@ -1055,6 +1063,26 @@ proof -
       using \<open>W \<subseteq> V\<close> finV finite_subset by blast
     have "U \<subseteq> V"
       using \<open>W \<noteq> {}\<close> Blue_E by (force simp: U_def in_Neighbours_iff)
+    then have VUU: "V \<inter> U = U"
+      by blast
+    have "0<m"
+      using \<open>W \<noteq> {}\<close> \<open>finite W\<close> m_def by fastforce
+    have "m<l"
+      using "49" is_good_card m_def by blast
+
+    \<comment> \<open>Bhavik's gamma'_le_gamma_iff\<close>
+    have "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (real k * real l) + (real l * real l) < (real k * real m) + (real l * (real m * 2))"
+      using \<open>m < l\<close>
+      apply (simp add: \<gamma>'_def \<gamma>_def eval_nat_numeral divide_simps; simp add: algebra_simps)
+      by (metis kn0 mult_less_cancel_left_pos of_nat_0_less_iff distrib_left)
+    also have "...  \<longleftrightarrow> (l * (k + l)) / (k + 2 * l) < m"
+      using \<open>m < l\<close> by (simp add: field_simps)
+    finally have gamma'_le_gamma_iff: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (l * (k + l)) / (k + 2 * l) < m" .
+    have YKK: "\<gamma>*k \<le> m" if "\<gamma>' < \<gamma>\<^sup>2"
+      unfolding \<gamma>_def
+      using that \<open>0<k\<close> \<open>0<m\<close> \<open>m < l\<close>
+      apply (simp add: gamma'_le_gamma_iff divide_simps distrib_left)
+      by (smt (verit, best)  less_imp_of_nat_less mult_right_mono distrib_left of_nat_0_le_iff)
 
     obtain [iff]: "finite RedU" "finite BlueU" "RedU \<subseteq> EU"
       using BlueU_def EU_def RedU_def Red_E by auto
@@ -1129,8 +1157,7 @@ proof -
           using \<open>W \<subseteq> V\<close> \<open>x \<in> V\<setminus>W\<close> by auto
       next
         have \<section>: "nV * U_lower_bound_ratio m \<le> card U"
-          using 49 \<open>W \<noteq> {}\<close> \<open>U \<subseteq> V\<close> unfolding is_good_clique_def m_def U_def
-          by (metis Int_absorb2 Int_commute)
+          using 49 VUU unfolding is_good_clique_def m_def U_def by force
 
         have VV: "Neighbours Blue x \<inter> U = Neighbours BlueU x"
           using \<open>x \<in> U\<close> by (auto simp: BlueU_def U_def Neighbours_def)
@@ -1143,10 +1170,9 @@ proof -
           by (simp add: ulb_ins)
         also have "... \<le> real (card U) * (1+\<xi>) * \<gamma>'"
           using mult_right_mono [OF \<section>, of "(1+\<xi>) * \<gamma>'"] \<open>0 < \<eta>\<close> \<open>0 < \<gamma>'\<close> \<eta>_def by argo
-        also have "... \<le> real (card (\<Inter> (Neighbours Blue ` insert x W)))"
+        also have "... \<le> card (\<Inter> (Neighbours Blue ` insert x W))"
           apply (auto simp: )
-          using *
-          using \<open>W \<subseteq> V\<close> \<open>x \<in> V\<setminus>W\<close> \<open>finite W\<close>
+          using * \<open>W \<subseteq> V\<close> \<open>x \<in> V\<setminus>W\<close> \<open>finite W\<close>
           apply (simp add: U_lower_bound_ratio_def)
           apply (simp add: flip: U_def)
           apply (simp add: VV)
@@ -1156,7 +1182,7 @@ proof -
           apply (simp add: \<xi>_def \<eta>_def)
             (*SO CLOSE, BUT NO*)
           sorry
-        also have "... = card (V \<inter> \<Inter> (Neighbours Blue ` insert x W))"
+        also have "... = real (card (V \<inter> \<Inter> (Neighbours Blue ` insert x W)))"
           apply (simp add: )
           by (metis Int_absorb1 Int_lower2 U_def \<open>U \<subseteq> V\<close> subset_trans)
         finally show "nV * U_lower_bound_ratio (card (insert x W)) \<le> card (V \<inter> \<Inter> (Neighbours Blue ` insert x W))" .
