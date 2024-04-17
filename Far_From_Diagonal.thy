@@ -686,7 +686,7 @@ proof -
     have "nV \<ge> 2"
       by (metis nontriv wellformed two_edges card_mono ex_in_conv finV)
     then have "nV \<le> 4 * (nV div 2)" by linarith
-    also have "... \<le> 4 * card Y0"
+    also have "\<dots> \<le> 4 * card Y0"
       using Y0 mult_le_mono2 by presburger 
     finally show "real nV \<le> real (4 * card Y0)"      
       by force
@@ -1029,7 +1029,7 @@ proof -
         \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k + l - real i))"
   define is_good_clique where  "is_good_clique
     \<equiv> \<lambda>n K. clique K Blue \<and> K \<subseteq> V \<and>
-             card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
+             card K + card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
              \<ge> real n * U_lower_bound_ratio (card K)"
 
   have is_good_mull: "is_good_clique n {}" if "n \<le> nV" for n
@@ -1069,13 +1069,17 @@ proof -
       using \<open>W \<noteq> {}\<close> \<open>finite W\<close> m_def by fastforce
     have "m<l"
       using "49" is_good_card m_def by blast
+    then have \<gamma>1516: "\<gamma>' \<le> 15/16"
+      using \<gamma>_def \<gamma> by (simp add: \<gamma>'_def divide_simps)
+    then have \<gamma>'_le1: "(1+\<xi>) * \<gamma>' \<le> 1"
+      by (simp add: \<xi>_def)
 
     \<comment> \<open>Bhavik's gamma'_le_gamma_iff\<close>
     have "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (real k * real l) + (real l * real l) < (real k * real m) + (real l * (real m * 2))"
       using \<open>m < l\<close>
       apply (simp add: \<gamma>'_def \<gamma>_def eval_nat_numeral divide_simps; simp add: algebra_simps)
       by (metis kn0 mult_less_cancel_left_pos of_nat_0_less_iff distrib_left)
-    also have "...  \<longleftrightarrow> (l * (k + l)) / (k + 2 * l) < m"
+    also have "\<dots>  \<longleftrightarrow> (l * (k + l)) / (k + 2 * l) < m"
       using \<open>m < l\<close> by (simp add: field_simps)
     finally have gamma'_le_gamma_iff: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (l * (k + l)) / (k + 2 * l) < m" .
     have YKK: "\<gamma>*k \<le> m" if "\<gamma>' < \<gamma>\<^sup>2"
@@ -1127,7 +1131,6 @@ proof -
       have Nx: "Neighbours BlueU x \<inter> (U \<setminus> {x}) = Neighbours BlueU x" for x 
         using that by (auto simp: BlueU_eq EU_def Neighbours_def)
 
-      
       have "BlueU \<subseteq> E \<inter> Pow U"
         using BlueU_eq EU_def by blast
       with UBB.exists_density_edge_density [of 1 BlueU]
@@ -1139,7 +1142,7 @@ proof -
         using \<open>BlueU \<subseteq> E \<inter> Pow U\<close> \<open>card U > 1\<close> \<open>x \<in> U\<close>
         by (simp add: UBB.gen_density_def UBB.edge_card_eq_sum_Neighbours UBB.finV divide_simps Nx)
 
-      have "x \<in> V\<setminus>W"
+      have x: "x \<in> V\<setminus>W"
         using U_def \<open>x \<in> U\<close> \<open>U \<subseteq> V\<close> by auto
       moreover
       have "is_good_clique nV (insert x W)"
@@ -1156,36 +1159,30 @@ proof -
         show "insert x W \<subseteq> V"
           using \<open>W \<subseteq> V\<close> \<open>x \<in> V\<setminus>W\<close> by auto
       next
-        have \<section>: "nV * U_lower_bound_ratio m \<le> card U"
+        have \<section>: "nV * U_lower_bound_ratio m \<le> m + card U"
           using 49 VUU unfolding is_good_clique_def m_def U_def by force
-
-        have VV: "Neighbours Blue x \<inter> U = Neighbours BlueU x"
+        have NB_Int_U: "Neighbours Blue x \<inter> U = Neighbours BlueU x"
           using \<open>x \<in> U\<close> by (auto simp: BlueU_def U_def Neighbours_def)
-
-        have ulb_ins: "U_lower_bound_ratio (card (insert x W)) 
-                     = U_lower_bound_ratio m * (1+\<xi>) * \<gamma>'"
+        have ulb_ins: "U_lower_bound_ratio (card (insert x W)) = U_lower_bound_ratio m * (1+\<xi>) * \<gamma>'"
           using \<open>x \<in> V\<setminus>W\<close> \<open>finite W\<close> by (simp add: m_def U_lower_bound_ratio_def \<gamma>'_def)
-        have "real nV * U_lower_bound_ratio (card (insert x W)) 
-           = real nV * U_lower_bound_ratio m * (1+\<xi>) * \<gamma>'"
+        have "nV * U_lower_bound_ratio (card (insert x W))  = nV * U_lower_bound_ratio m * (1+\<xi>) * \<gamma>'"
           by (simp add: ulb_ins)
-        also have "... \<le> real (card U) * (1+\<xi>) * \<gamma>'"
+        also have "\<dots> \<le> real (m + card U) * (1+\<xi>) * \<gamma>'"
           using mult_right_mono [OF \<section>, of "(1+\<xi>) * \<gamma>'"] \<open>0 < \<eta>\<close> \<open>0 < \<gamma>'\<close> \<eta>_def by argo
-        also have "... \<le> card (\<Inter> (Neighbours Blue ` insert x W))"
-          apply (auto simp: )
-          using * \<open>W \<subseteq> V\<close> \<open>x \<in> V\<setminus>W\<close> \<open>finite W\<close>
-          apply (simp add: U_lower_bound_ratio_def)
-          apply (simp add: flip: U_def)
-          apply (simp add: VV)
-          apply (rule order_trans)
-           defer
-           apply assumption
-          apply (simp add: \<xi>_def \<eta>_def)
-            (*SO CLOSE, BUT NO*)
-          sorry
-        also have "... = real (card (V \<inter> \<Inter> (Neighbours Blue ` insert x W)))"
-          apply (simp add: )
-          by (metis Int_absorb1 Int_lower2 U_def \<open>U \<subseteq> V\<close> subset_trans)
-        finally show "nV * U_lower_bound_ratio (card (insert x W)) \<le> card (V \<inter> \<Inter> (Neighbours Blue ` insert x W))" .
+        also have "\<dots> \<le> m + card U * (1+\<xi>) * \<gamma>'"
+          using mult_left_mono [OF \<gamma>'_le1, of m] by (simp add: algebra_simps)
+        also have "\<dots> \<le> Suc m + (\<gamma>' + \<eta>) * (UBB.gorder - Suc 0)"
+          using * \<open>x \<in> V\<setminus>W\<close> \<open>finite W\<close> \<open>1 < UBB.gorder\<close> \<gamma>1516
+          apply (simp add: U_lower_bound_ratio_def \<xi>_def \<eta>_def)
+          by (simp add: of_nat_diff algebra_simps)
+        also have "\<dots> \<le> Suc m + card (\<Inter> (Neighbours Blue ` insert x W))"
+          using \<open>1 < UBB.gorder\<close> \<gamma>1516 * \<open>W \<subseteq> V\<close> \<open>x \<in> V\<setminus>W\<close> \<open>finite W\<close>
+          by (smt (verit) INT_insert U_def NB_Int_U One_nat_def of_nat_add)
+        also have "\<dots> = real (card (insert x W) + card (V \<inter> \<Inter> (Neighbours Blue ` insert x W)))"
+          using x \<open>finite W\<close> VUU unfolding m_def U_def
+          by (metis DiffE INT_insert Int_left_commute card.insert)
+        finally show "nV * U_lower_bound_ratio (card(insert x W)) 
+                   \<le> card(insert x W) + card (V \<inter> \<Inter> (Neighbours Blue ` insert x W))" .
       qed
       ultimately show False
         using max49 by blast
