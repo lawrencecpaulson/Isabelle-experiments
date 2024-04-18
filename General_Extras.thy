@@ -10,6 +10,75 @@ lemma mult_le_1_iff: "\<lbrakk>x\<ge>1; y\<ge>1\<rbrakk> \<Longrightarrow> x*y \
 lemma sum_eq_card: "finite A \<Longrightarrow> (\<Sum>x \<in> A. if x \<in> B then 1 else 0) = card (A\<inter>B)"
   by (metis (no_types, lifting) card_eq_sum sum.cong sum.inter_restrict)
 
+thm lift_Suc_mono_le (*Generalising this, in Nat*)
+context order
+begin
+
+lemma lift_Suc_mono_le:
+  assumes mono: "\<And>n. n\<in>N \<Longrightarrow> f n \<le> f (Suc n)"
+    and "n \<le> n'" and subN: "{n..<n'} \<subseteq> N"
+  shows "f n \<le> f n'"
+proof (cases "n < n'")
+  case True
+  then show ?thesis
+    using subN
+  proof (induction n n' rule: less_Suc_induct)
+    case (1 i)
+    then show ?case
+      by (simp add: mono subsetD) 
+  next
+    case (2 i j k)
+    have "f i \<le> f j" "f j \<le> f k"
+      using 2 by force+
+    then show ?case by auto 
+  qed
+next
+  case False
+  with \<open>n \<le> n'\<close> show ?thesis by auto
+qed
+
+lemma lift_Suc_antimono_le:
+  assumes mono: "\<And>n. n\<in>N \<Longrightarrow> f n \<ge> f (Suc n)"
+    and "n \<le> n'" and subN: "{n..<n'} \<subseteq> N"
+  shows "f n \<ge> f n'"
+proof (cases "n < n'")
+  case True
+  then show ?thesis
+    using subN
+  proof (induction n n' rule: less_Suc_induct)
+    case (1 i)
+    then show ?case
+      by (simp add: mono subsetD) 
+  next
+    case (2 i j k)
+    have "f i \<ge> f j" "f j \<ge> f k"
+      using 2 by force+
+    then show ?case by auto 
+  qed
+next
+  case False
+  with \<open>n \<le> n'\<close> show ?thesis by auto
+qed
+
+lemma lift_Suc_mono_less:
+  assumes mono: "\<And>n. n\<in>N \<Longrightarrow> f n < f (Suc n)"
+    and "n < n'" and subN: "{n..<n'} \<subseteq> N"
+  shows "f n < f n'"
+  using \<open>n < n'\<close>
+  using subN
+proof (induction n n' rule: less_Suc_induct)
+  case (1 i)
+  then show ?case
+    by (simp add: mono subsetD) 
+next
+  case (2 i j k)
+  have "f i < f j" "f j < f k"
+    using 2 by force+
+  then show ?case by auto 
+qed
+ 
+end
+
 text \<open>yet another telescope variant, with weaker promises but a different conclusion\<close>
 lemma prod_lessThan_telescope_mult:
   fixes f::"nat \<Rightarrow> 'a::field"

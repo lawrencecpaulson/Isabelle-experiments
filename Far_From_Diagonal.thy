@@ -1025,14 +1025,31 @@ proof -
     using \<open>Colours l k\<close> Colours_kn0 Colours_ln0  by (auto simp: Colours_def)
   define \<xi>::real where "\<xi> \<equiv> 1/15"
      \<comment>\<open>Bhavik's terminology below\<close>
-  define U_lower_bound_ratio where "U_lower_bound_ratio 
-        \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k + l - real i))"
-  define is_good_clique where  "is_good_clique
-    \<equiv> \<lambda>n K. clique K Blue \<and> K \<subseteq> V \<and>
-             card K + card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
-             \<ge> real n * U_lower_bound_ratio (card K)"
+  define U_lower_bound_ratio where 
+        "U_lower_bound_ratio \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k + l - real i))"
+  define is_good_clique where  
+        "is_good_clique \<equiv> \<lambda>n K. clique K Blue \<and> K \<subseteq> V \<and>
+                                 card K + card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
+                                 \<ge> real n * U_lower_bound_ratio (card K)"
 
-  have is_good_mull: "is_good_clique n {}" if "n \<le> nV" for n
+  have l9k: "l \<le> 9*k"
+    using \<gamma> \<open>l \<le> k\<close> by (auto simp: \<gamma>_def divide_simps)
+  have U_lower_bound_ratio_ge0: "0 \<le> U_lower_bound_ratio m" if "m < l" for m
+    using that by (auto simp: U_lower_bound_ratio_def \<xi>_def zero_le_mult_iff intro!: prod_nonneg)
+  have "U_lower_bound_ratio (Suc m) \<le> U_lower_bound_ratio m" if "m < l" for m
+  proof -
+    have \<section>: "1+\<xi> \<le> (k + l - real m) / (l - real m)"
+      using l9k that by (auto simp: divide_simps \<xi>_def)
+    have [simp]: "U_lower_bound_ratio (Suc m) = ((1+\<xi>) * (l - real m) / (k + real l - real m)) * U_lower_bound_ratio m"
+      by (simp add: U_lower_bound_ratio_def)
+    show ?thesis
+      using mult_left_mono [OF \<section>, of "U_lower_bound_ratio m"]  that
+      by (simp add: U_lower_bound_ratio_ge0 field_simps)
+  qed
+  then have "antimono_on {..<l} U_lower_bound_ratio"
+    by (auto simp: monotone_on_def intro: lift_Suc_antimono_le [of "{..<l}"])
+
+  have is_good_empty: "is_good_clique n {}" if "n \<le> nV" for n
     using that by (simp add: is_good_clique_def U_lower_bound_ratio_def)
 
   have is_good_card: "card K < l" if "is_good_clique n K" for n K
@@ -1042,7 +1059,7 @@ proof -
 
   { fix W
     assume "W\<subseteq>V"
-    assume "nV = RN k l - 1"
+    assume nV_eq: "nV = RN k l - 1"
     assume 49: "is_good_clique nV W"
     assume max49: "\<And>x. x\<in>V\<setminus>W \<Longrightarrow> \<not> is_good_clique nV (insert x W)"
     assume "W \<noteq> {}"
@@ -1073,20 +1090,8 @@ proof -
       using \<gamma>_def \<gamma> by (simp add: \<gamma>'_def divide_simps)
     then have \<gamma>'_le1: "(1+\<xi>) * \<gamma>' \<le> 1"
       by (simp add: \<xi>_def)
-
-    \<comment> \<open>Bhavik's gamma'_le_gamma_iff\<close>
-    have "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (real k * real l) + (real l * real l) < (real k * real m) + (real l * (real m * 2))"
-      using \<open>m < l\<close>
-      apply (simp add: \<gamma>'_def \<gamma>_def eval_nat_numeral divide_simps; simp add: algebra_simps)
-      by (metis kn0 mult_less_cancel_left_pos of_nat_0_less_iff distrib_left)
-    also have "\<dots>  \<longleftrightarrow> (l * (k + l)) / (k + 2 * l) < m"
-      using \<open>m < l\<close> by (simp add: field_simps)
-    finally have gamma'_le_gamma_iff: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (l * (k + l)) / (k + 2 * l) < m" .
-    have YKK: "\<gamma>*k \<le> m" if "\<gamma>' < \<gamma>\<^sup>2"
-      unfolding \<gamma>_def
-      using that \<open>0<k\<close> \<open>0<m\<close> \<open>m < l\<close>
-      apply (simp add: gamma'_le_gamma_iff divide_simps distrib_left)
-      by (smt (verit, best)  less_imp_of_nat_less mult_right_mono distrib_left of_nat_0_le_iff)
+    have "\<gamma>' \<le> \<gamma>"
+      using \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def field_simps)
 
     obtain [iff]: "finite RedU" "finite BlueU" "RedU \<subseteq> EU"
       using BlueU_def EU_def RedU_def Red_E by auto
@@ -1187,7 +1192,40 @@ proof -
       ultimately show False
         using max49 by blast
     qed
-    then have "UBB.graph_density RedU \<ge> 1 - \<gamma>' - \<eta>" by force
+    then have *: "UBB.graph_density RedU \<ge> 1 - \<gamma>' - \<eta>" by force
+
+    \<comment> \<open>Bhavik's gamma'_le_gamma_iff\<close>
+    have "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (real k * real l) + (real l * real l) < (real k * real m) + (real l * (real m * 2))"
+      using \<open>m < l\<close>
+      apply (simp add: \<gamma>'_def \<gamma>_def eval_nat_numeral divide_simps; simp add: algebra_simps)
+      by (metis kn0 mult_less_cancel_left_pos of_nat_0_less_iff distrib_left)
+    also have "\<dots>  \<longleftrightarrow> (l * (k + l)) / (k + 2 * l) < m"
+      using \<open>m < l\<close> by (simp add: field_simps)
+    finally have gamma'_le_gamma_iff: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (l * (k + l)) / (k + 2 * l) < m" .
+    
+    have ?thesis
+    proof (cases "\<gamma>' < \<gamma>\<^sup>2")
+      case True
+      have YKK: "\<gamma>*k \<le> m" 
+        unfolding \<gamma>_def
+        using \<open>0<k\<close> \<open>0<m\<close> \<open>m < l\<close> True
+        apply (simp add: gamma'_le_gamma_iff divide_simps distrib_left)
+        by (smt (verit, best) less_imp_of_nat_less mult_right_mono distrib_left of_nat_0_le_iff)
+
+      have "RN k l > 0"
+        by (metis RN_eq_0_iff gr0I kn0 ln0)
+      then have "nV < (k+l choose l)"
+        by (metis nV_eq RN_le_choose RN_commute add.commute less_le_trans diff_less less_one)
+
+      have "nV * U_lower_bound_ratio (card U) \<ge> (k+l-m choose l-m)"
+
+    sorry
+      then show ?thesis sorry
+    next
+      case False
+      then show ?thesis sorry
+    qed
+
   }
   show ?thesis
     sorry
