@@ -1015,7 +1015,8 @@ lemma Big_Far_0_1:
 lemma (in Book) Far_9_1:
   fixes l k
   fixes \<delta> \<gamma>::real
-  defines "\<gamma> \<equiv> l / (real k + real l)"
+  defines "gamma \<equiv> \<lambda>m. (l - real m) / (k + real l - real m)"
+  defines "\<gamma> \<equiv> gamma 0"
   defines "\<delta> \<equiv> \<gamma>/20"
   assumes "Colours l k" and \<gamma>: "\<gamma> \<le> 1/10" 
   assumes big: "Big_Far_0_1 \<gamma> l"
@@ -1031,7 +1032,8 @@ proof -
         "is_good_clique \<equiv> \<lambda>n K. clique K Blue \<and> K \<subseteq> V \<and>
                                  card K + card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
                                  \<ge> real n * U_lower_bound_ratio (card K)"
-
+  have \<gamma>_eq: "\<gamma> = l / (k + real l)"
+    by (simp add: \<gamma>_def gamma_def)
   have l9k: "l \<le> 9*k"
     using \<gamma> \<open>l \<le> k\<close> by (auto simp: \<gamma>_def divide_simps)
   have U_lower_bound_ratio_ge0: "0 \<le> U_lower_bound_ratio m" if "m < l" for m
@@ -1046,8 +1048,14 @@ proof -
       using mult_left_mono [OF \<section>, of "U_lower_bound_ratio m"]  that
       by (simp add: U_lower_bound_ratio_ge0 field_simps)
   qed
-  then have "antimono_on {..<l} U_lower_bound_ratio"
+  then have Ulb_decreasing: "antimono_on {..<l} U_lower_bound_ratio"
     by (auto simp: monotone_on_def intro: lift_Suc_antimono_le [of "{..<l}"])
+
+  define mstar where "mstar \<equiv> LEAST m. gamma m < \<gamma>\<^sup>2"
+  have "gamma l < \<gamma>\<^sup>2"
+    using \<open>l>0\<close> by (simp add: gamma_def \<gamma>_def of_nat_diff)
+  then obtain mstar_works: "gamma mstar < \<gamma>\<^sup>2" and mstar_le: "\<And>m. gamma m < \<gamma>\<^sup>2 \<Longrightarrow> mstar \<le> m"
+    by (metis mstar_def wellorder_Least_lemma)
 
   have is_good_empty: "is_good_clique n {}" if "n \<le> nV" for n
     using that by (simp add: is_good_clique_def U_lower_bound_ratio_def)
@@ -1056,6 +1064,32 @@ proof -
     using \<open>Colours l k\<close> that
     unfolding Colours_def is_good_clique_def
     by (metis nat_neq_iff size_clique_def size_clique_smaller)
+
+  have "l>1"
+    using \<open>Colours l k\<close> 
+    apply (simp add: Colours_def)
+    by (metis Nat.add_0_right RN_1' Red_Blue_RN Suc_leI Suc_lessI XY0(3) card_XY0(2) less_add_Suc2 ln0 size_clique_smaller)
+
+  \<comment> \<open>Following Bhavik in dividing by @{term "exp 1"}\<close>
+  define n where "n \<equiv> nat\<lceil>RN k l / exp 1\<rceil>"
+  have "n < RN k l"
+  proof -
+    have "RN k l \<ge> 2"
+      using \<open>l>1\<close> \<open>k\<ge>l\<close> by (metis RN_2' RN_mono Suc_1 Suc_leI le_trans)
+    then have "3 + real (RN k l) \<le> (5/2) * real (RN k l)"
+      by linarith
+    moreover have "(5/2::real) < exp 1"
+      by (approximation 5)+
+    moreover have "RN k l \<ge> 2"
+      sorry
+    ultimately have "exp 1 + real (RN k l) \<le> exp 1 * real (RN k l)"
+      by (smt (verit, best) exp_le mult_right_mono of_nat_0_le_iff)
+    moreover have "0 \<le> \<lceil>real (RN k l) / exp 1\<rceil>"
+      by (metis ceiling_mono ceiling_zero exp_ge_zero of_nat_0_le_iff zero_le_divide_iff)
+    ultimately show ?thesis
+      by (simp add: n_def nat_less_iff ceiling_less_iff field_simps)
+  qed
+
 
   { fix W
     assume "W\<subseteq>V"
@@ -1072,6 +1106,11 @@ proof -
     define BlueU where "BlueU \<equiv> Blue \<inter> Pow U"
     assume "card U > 1"
 
+    have "RN k l > 0"
+      by (metis RN_eq_0_iff gr0I kn0 ln0)
+    then have "nV < (k+l choose l)"
+      by (metis nV_eq RN_le_choose RN_commute add.commute less_le_trans diff_less less_one)
+
     have "\<gamma>' > 0"
       using is_good_card [OF 49] by (simp add: \<gamma>'_def m_def)
     then have "\<eta> > 0"
@@ -1087,11 +1126,11 @@ proof -
     have "m<l"
       using "49" is_good_card m_def by blast
     then have \<gamma>1516: "\<gamma>' \<le> 15/16"
-      using \<gamma>_def \<gamma> by (simp add: \<gamma>'_def divide_simps)
+      using \<gamma>_def \<gamma> by (simp add: \<gamma>'_def gamma_def divide_simps)
     then have \<gamma>'_le1: "(1+\<xi>) * \<gamma>' \<le> 1"
       by (simp add: \<xi>_def)
     have "\<gamma>' \<le> \<gamma>"
-      using \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def field_simps)
+      using \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def gamma_def field_simps)
 
     obtain [iff]: "finite RedU" "finite BlueU" "RedU \<subseteq> EU"
       using BlueU_def EU_def RedU_def Red_E by auto
@@ -1197,7 +1236,7 @@ proof -
     \<comment> \<open>Bhavik's gamma'_le_gamma_iff\<close>
     have "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (real k * real l) + (real l * real l) < (real k * real m) + (real l * (real m * 2))"
       using \<open>m < l\<close>
-      apply (simp add: \<gamma>'_def \<gamma>_def eval_nat_numeral divide_simps; simp add: algebra_simps)
+      apply (simp add: \<gamma>'_def \<gamma>_eq eval_nat_numeral divide_simps; simp add: algebra_simps)
       by (metis kn0 mult_less_cancel_left_pos of_nat_0_less_iff distrib_left)
     also have "\<dots>  \<longleftrightarrow> (l * (k + l)) / (k + 2 * l) < m"
       using \<open>m < l\<close> by (simp add: field_simps)
@@ -1207,15 +1246,11 @@ proof -
     proof (cases "\<gamma>' < \<gamma>\<^sup>2")
       case True
       have YKK: "\<gamma>*k \<le> m" 
-        unfolding \<gamma>_def
+        unfolding \<gamma>_eq
         using \<open>0<k\<close> \<open>0<m\<close> \<open>m < l\<close> True
         apply (simp add: gamma'_le_gamma_iff divide_simps distrib_left)
         by (smt (verit, best) less_imp_of_nat_less mult_right_mono distrib_left of_nat_0_le_iff)
 
-      have "RN k l > 0"
-        by (metis RN_eq_0_iff gr0I kn0 ln0)
-      then have "nV < (k+l choose l)"
-        by (metis nV_eq RN_le_choose RN_commute add.commute less_le_trans diff_less less_one)
 
       have "nV * U_lower_bound_ratio (card U) \<ge> (k+l-m choose l-m)"
 
@@ -1225,9 +1260,10 @@ proof -
       case False
       then show ?thesis sorry
     qed
-
+    have "False"
+    sorry
   }
-  show ?thesis
+  then show ?thesis
     sorry
 qed
 
