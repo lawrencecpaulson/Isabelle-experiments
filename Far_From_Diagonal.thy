@@ -1011,7 +1011,6 @@ lemma Big_Far_0_1:
   apply (simp add: Big_Far_9_3  assms)
   done
 
-(** THE f BELOW NEEDS TO BE o(real)**)
 lemma (in Book) Far_9_1:
   fixes l k
   fixes \<delta> \<gamma>::real
@@ -1020,8 +1019,9 @@ lemma (in Book) Far_9_1:
   defines "\<delta> \<equiv> \<gamma>/20"
   assumes "Colours l k" and \<gamma>: "\<gamma> \<le> 1/10" 
   assumes big: "Big_Far_0_1 \<gamma> l"
-  shows "RN k l \<le> exp (-\<delta> * f k) * (k+l choose l)"
-proof -
+  shows "RN k l \<le> exp (-\<delta> * k + 1) * (k+l choose l)"
+proof (rule ccontr)
+  assume non: "\<not> RN k l \<le> exp (-\<delta> * k + 1) * (k+l choose l)"
   obtain ln0: "l>0" and kn0: "k>0" and "l\<le>k"
     using \<open>Colours l k\<close> Colours_kn0 Colours_ln0  by (auto simp: Colours_def)
   define \<xi>::real where "\<xi> \<equiv> 1/15"
@@ -1042,7 +1042,8 @@ proof -
   proof -
     have \<section>: "1+\<xi> \<le> (k + l - real m) / (l - real m)"
       using l9k that by (auto simp: divide_simps \<xi>_def)
-    have [simp]: "U_lower_bound_ratio (Suc m) = ((1+\<xi>) * (l - real m) / (k + real l - real m)) * U_lower_bound_ratio m"
+    have [simp]: "U_lower_bound_ratio (Suc m)
+               = ((1+\<xi>) * (l - real m) / (k + real l - real m)) * U_lower_bound_ratio m"
       by (simp add: U_lower_bound_ratio_def)
     show ?thesis
       using mult_left_mono [OF \<section>, of "U_lower_bound_ratio m"]  that
@@ -1065,23 +1066,22 @@ proof -
     unfolding Colours_def is_good_clique_def
     by (metis nat_neq_iff size_clique_def size_clique_smaller)
 
-  have "l>1"
-    using \<open>Colours l k\<close> 
-    apply (simp add: Colours_def)
-    by (metis Nat.add_0_right RN_1' Red_Blue_RN Suc_leI Suc_lessI XY0(3) card_XY0(2) less_add_Suc2 ln0 size_clique_smaller)
+  have ln1: "l \<noteq> Suc 0"
+    using \<open>Colours l k\<close> unfolding Colours_def
+    by (metis RN_1 RN_commute Red_Blue_RN XY0(2) card_XY0(1) less_eq_Suc_le)
+  with ln0 have "l\<ge>2"
+    by linarith
 
   \<comment> \<open>Following Bhavik in dividing by @{term "exp 1"}\<close>
   define n where "n \<equiv> nat\<lceil>RN k l / exp 1\<rceil>"
   have "n < RN k l"
   proof -
     have "RN k l \<ge> 2"
-      using \<open>l>1\<close> \<open>k\<ge>l\<close> by (metis RN_2' RN_mono Suc_1 Suc_leI le_trans)
+      using \<open>l\<ge>2\<close> \<open>k\<ge>l\<close> by (metis RN_2' RN_mono le_trans)
     then have "3 + real (RN k l) \<le> (5/2) * real (RN k l)"
       by linarith
     moreover have "(5/2::real) < exp 1"
-      by (approximation 5)+
-    moreover have "RN k l \<ge> 2"
-      sorry
+      by (approximation 5)
     ultimately have "exp 1 + real (RN k l) \<le> exp 1 * real (RN k l)"
       by (smt (verit, best) exp_le mult_right_mono of_nat_0_le_iff)
     moreover have "0 \<le> \<lceil>real (RN k l) / exp 1\<rceil>"
@@ -1089,7 +1089,12 @@ proof -
     ultimately show ?thesis
       by (simp add: n_def nat_less_iff ceiling_less_iff field_simps)
   qed
-
+  have "real n \<ge> RN k l / exp 1"
+    using n_def real_nat_ceiling_ge by presburger
+  moreover have "exp (- \<delta> * real k) * real (k + l choose l) < real (RN k l) / exp 1"
+    using non by (simp add: exp_diff exp_minus not_le field_simps)
+  ultimately have "n > exp (-\<delta> * k) * (k+l choose l)"
+    by argo
 
   { fix W
     assume "W\<subseteq>V"
