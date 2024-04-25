@@ -79,6 +79,50 @@ qed
  
 end
 
+
+lemma of_nat_add_numeral: "of_nat n + numeral w = of_nat (n + numeral w)"
+  by simp
+
+lemma of_nat_mult_numeral: "of_nat n * numeral w = of_nat (n * numeral w)"
+  by simp
+
+(*ADD TO GROUPS_BIG?*)
+lemma (in linordered_semidom) prod_negD: "prod f A < 0 \<Longrightarrow> \<exists>a\<in>A. f a < 0"
+  using prod_nonneg [of A f] by fastforce
+
+thm sum_diff_split
+lemma prod_divide_nat_ivl:
+  fixes f :: "nat \<Rightarrow> 'a::idom_divide"
+  shows "\<lbrakk> m \<le> n; n \<le> p; prod f {m..<n} \<noteq> 0\<rbrakk> \<Longrightarrow> prod f {m..<p} div prod f {m..<n} = prod f {n..<p}"
+  using prod.atLeastLessThan_concat [of m n p f,symmetric]
+  by (simp add: ac_simps)
+
+lemma prod_divide_split:
+  fixes f:: "nat \<Rightarrow> 'a::idom_divide"
+  assumes "m \<le> n" "(\<Prod>i<m. f i) \<noteq> 0"
+  shows "(\<Prod>i\<le>n. f i) div (\<Prod>i<m. f i) = (\<Prod>i\<le>n - m. f(n - i))"
+proof -
+  have "\<And>i. i \<le> n-m \<Longrightarrow> \<exists>k\<ge>m. k \<le> n \<and> i = n-k"
+    by (metis Nat.le_diff_conv2 add.commute \<open>m\<le>n\<close> diff_diff_cancel diff_le_self order.trans)
+  then have eq: "{..n-m} = (-)n ` {m..n}"
+    by force
+  have inj: "inj_on ((-)n) {m..n}"
+    by (auto simp: inj_on_def)
+  have "(\<Prod>i\<le>n - m. f(n - i)) = (\<Prod>i=m..n. f i)"
+    by (simp add: eq prod.reindex_cong [OF inj])
+  also have "\<dots> = (\<Prod>i\<le>n. f i) div (\<Prod>i<m. f i)"
+    using prod_divide_nat_ivl[of 0 "m" "Suc n" f] assms
+    by (force simp add: atLeast0AtMost atLeast0LessThan atLeastLessThanSuc_atLeastAtMost)
+  finally show ?thesis by metis
+qed
+
+lemma exp_mono:
+  fixes x y :: real
+  assumes "x \<le> y"
+  shows "exp x \<le> exp y"
+  using assms exp_le_cancel_iff by force
+
+
 text \<open>yet another telescope variant, with weaker promises but a different conclusion\<close>
 lemma prod_lessThan_telescope_mult:
   fixes f::"nat \<Rightarrow> 'a::field"
