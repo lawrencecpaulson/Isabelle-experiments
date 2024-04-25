@@ -917,7 +917,7 @@ lemma Xseq_Suc_subset: "Xseq \<mu> l k (Suc i) \<subseteq> Xseq \<mu> l k i"
   by (metis V_state_stepper degree_reg_subset finX next_state_subset)
 
 lemma Xseq_antimono: "j \<le> i \<Longrightarrow> Xseq \<mu> l k i \<subseteq> Xseq \<mu> l k j"
-  by (simp add: Xseq_Suc_subset lift_Suc_antimono_le)
+  by (simp add: lift_Suc_antimono_le[of UNIV] Xseq_Suc_subset)
 
 lemma Xseq_subset_V: "Xseq \<mu> l k i \<subseteq> V"
   using XY0 Xseq_0 Xseq_antimono by blast
@@ -933,7 +933,7 @@ lemma Yseq_Suc_subset: "Yseq \<mu> l k (Suc i) \<subseteq> Yseq \<mu> l k i"
   by (metis V_state_stepper degree_reg_subset finX next_state_subset)
 
 lemma Yseq_antimono: "j \<le> i \<Longrightarrow> Yseq \<mu> l k i \<subseteq> Yseq \<mu> l k j"
-  by (simp add: Yseq_Suc_subset lift_Suc_antimono_le)
+  by (simp add: Yseq_Suc_subset lift_Suc_antimono_le[of UNIV])
 
 lemma Yseq_subset_V: "Yseq \<mu> l k i \<subseteq> V"
   using XY0 Yseq_0 Yseq_antimono by blast
@@ -964,7 +964,7 @@ lemma Aseq_Suc_subset: "Aseq \<mu> l k i \<subseteq> Aseq \<mu> l k (Suc i)"
   by (fastforce simp: Aseq_def next_state_def degree_reg_def Let_def split: prod.split)
 
 lemma Aseq_mono: "j \<le> i \<Longrightarrow> Aseq \<mu> l k j \<subseteq> Aseq \<mu> l k i"
-  by (simp add: Aseq_Suc_subset lift_Suc_mono_le)
+  by (simp add: Aseq_Suc_subset lift_Suc_mono_le[of UNIV])
 
 lemma Aseq_subset_V: "Aseq \<mu> l k i \<subseteq> V"
   using stepper_A[of \<mu> l k i] by (simp add: Aseq_def split: prod.split) 
@@ -984,7 +984,7 @@ lemma Bseq_Suc_subset: "Bseq \<mu> l k i \<subseteq> Bseq \<mu> l k (Suc i)"
   by (fastforce simp: Bseq_def next_state_def degree_reg_def Let_def split: prod.split)
 
 lemma Bseq_mono: "j \<le> i \<Longrightarrow> Bseq \<mu> l k j \<subseteq> Bseq \<mu> l k i"
-  by (simp add: Bseq_Suc_subset lift_Suc_mono_le)
+  by (simp add: Bseq_Suc_subset lift_Suc_mono_le[of UNIV])
 
 lemma Bseq_subset_V: "Bseq \<mu> l k i \<subseteq> V"
   using stepper_B[of \<mu> l k i] by (simp add: Bseq_def split: prod.split) 

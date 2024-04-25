@@ -1021,7 +1021,7 @@ proof (rule ccontr)
   define \<xi>::real where "\<xi> \<equiv> 1/15"
      \<comment>\<open>Bhavik's terminology below\<close>
   define U_lower_bound_ratio where 
-        "U_lower_bound_ratio \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k + l - real i))"
+        "U_lower_bound_ratio \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k+l - real i))"
   define is_good_clique where  
         "is_good_clique \<equiv> \<lambda>n K. clique K Blue \<and> K \<subseteq> V \<and>
                                  card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
@@ -1120,6 +1120,8 @@ proof (rule ccontr)
       using \<open>W \<noteq> {}\<close> Blue_E by (force simp: U_def in_Neighbours_iff)
     then have VUU: "V \<inter> U = U"
       by blast
+    have "disjnt U W"
+      by (fastforce simp: U_def disjnt_iff)
     have "0<m"
       using \<open>W \<noteq> {}\<close> \<open>finite W\<close> m_def by fastforce
     have "m<l"
@@ -1278,7 +1280,7 @@ proof (rule ccontr)
         unfolding PM_def using \<open>m>0\<close> \<open>m < l\<close> kn0
         by (simp add: atLeast0LessThan of_nat_diff flip: prod_inversef)
       finally have "(\<Prod>i<l-m. (k + l - m - i) / (l - m - i)) = (k+l choose l) * PM" .
-      then have DD: "real(k+l choose l) = (\<Prod>i<l-m. (k + l - (m+i)) / (l - (m+i))) / PM"
+      then have kl_choose: "real(k+l choose l) = (\<Prod>i<l-m. (k + l - (m+i)) / (l - (m+i))) / PM"
         using prod_gt0 by (simp add: field_simps)
 
       have "ln (1 + \<xi>) * 20 \<ge> 1"
@@ -1292,11 +1294,58 @@ proof (rule ccontr)
         using mult_mono [OF less_imp_le [OF nV_gt] powerm]
         by (simp add: exp_minus field_simps)
       then have "nV * (1+\<xi>)^m * PM \<ge> (\<Prod>i<l-m. (k + l - (m+i)) / (l - (m+i)))"
-        using \<open>m<l\<close> prod_gt0 by (force simp add: DD divide_simps split: if_split_asm)
-      then have "nV * U_lower_bound_ratio m \<ge> (k+l-m choose (l-m))"
+        using \<open>m<l\<close> prod_gt0 by (force simp add: kl_choose divide_simps split: if_split_asm)
+      then have *: "nV * U_lower_bound_ratio m \<ge> (k+l-m choose (l-m))"
         by (simp add: PM_def U_lower_bound_ratio_def binomial_altdef_of_nat atLeast0LessThan)
 
-      then show ?thesis sorry
+      have "m \<le> (k+l-m-1 choose 1)"
+        using \<open>l\<le>k\<close> \<open>m<l\<close> by simp
+      also have "\<dots> \<le> (k+l-m-1 choose (l-m))"
+        using \<open>l\<le>k\<close> \<open>0 < m\<close> \<open>m<l\<close> by (intro Transcendental.binomial_mono) auto
+      finally have m_le_choose: "m \<le> (k+l-m-1 choose (l-m))" .
+      have "RN k (l-m) \<le> k + (l - m) - 2 choose (k - 1)"
+        by (rule RN_le_binomial)
+      also have "\<dots> \<le> (k+l-m-1 choose k)"
+        using \<open>l\<le>k\<close> \<open>m<l\<close> choose_reduce_nat by simp
+      also have "... = (k+l-m-1 choose (l-m-1))"
+        using \<open>m<l\<close> by (simp add: binomial_symmetric [of k])
+      also have "... = (k+l-m choose (l-m)) - (k+l-m-1 choose (l-m))"
+        using \<open>l\<le>k\<close> \<open>m<l\<close> choose_reduce_nat by simp
+      also have "... \<le> (k+l-m choose (l-m)) - m"
+        using m_le_choose by linarith
+      finally have "RN k (l - m) \<le> (k+l-m choose (l-m)) - m" .
+      then have "card U \<ge> RN k (l-m)"
+        using 49 * VUU unfolding is_good_clique_def U_def m_def by fastforce
+      with Red_Blue_RN \<open>Colours l k\<close> \<open>U \<subseteq> V\<close>
+      obtain K where "K \<subseteq> U" "size_clique (l-m) K Blue"
+        unfolding Colours_def by metis
+      then have K: "card K = l - m" "clique K Blue"
+        by (auto simp: size_clique_def)
+      define K' where "K' \<equiv> K \<union> W"
+      have "card K' = l"
+        unfolding K'_def
+        sketch (subst card_Un_disjnt)
+      proof (subst card_Un_disjnt)
+        show "finite K" "finite W"
+          using UBB.finV \<open>K \<subseteq> U\<close> finite_subset \<open>finite W\<close> by blast+
+        show "disjnt K W"
+          using \<open>disjnt U W\<close> \<open>K \<subseteq> U\<close> disjnt_subset1 by blast
+        show "card K + card W = l"
+          using K \<open>m < l\<close> m_def by auto
+      qed
+      moreover have "clique K' Blue"
+        using \<open>clique K Blue\<close> clique_W
+        unfolding K'_def size_clique_def
+        apply (intro Ramsey.clique_Un)
+        apply meson
+        apply blast
+        using \<open>K \<subseteq> U\<close>
+        apply (auto simp: U_def subset_iff)
+        by (metis in_Neighbours_iff insert_commute)
+      ultimately have "size_clique l K' Blue"
+        unfolding K'_def size_clique_def using \<open>K \<subseteq> U\<close> \<open>U \<subseteq> V\<close> \<open>W \<subseteq> V\<close> by auto
+      then show ?thesis
+        using Colours_def \<open>Colours l k\<close> by force
     next
       case False
       then show ?thesis sorry
@@ -1304,7 +1353,7 @@ proof (rule ccontr)
     have "False"
     sorry
   }
-  then show ?thesis
+  then show False
     sorry
 qed
 
