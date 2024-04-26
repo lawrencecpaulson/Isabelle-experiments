@@ -60,6 +60,34 @@ locale Book_Basis = fin_sgraph +
   assumes p0_min: "0 < p0_min" "p0_min < 1"
   assumes complete: "E = all_edges V"
   assumes infinite_UNIV: "infinite (UNIV::'a set)"
+begin
+
+abbreviation "nV \<equiv> card V"
+
+lemma graph_size: "graph_size = (nV choose 2)"
+  using card_all_edges complete finV by blast
+
+lemma in_E_iff [iff]: "{v,w} \<in> E \<longleftrightarrow> v\<in>V \<and> w\<in>V \<and> v\<noteq>w"
+  by (auto simp: complete all_edges_alt doubleton_eq_iff)
+
+lemma all_edges_betw_un_iff_clique: "K \<subseteq> V \<Longrightarrow> all_edges_betw_un K K \<subseteq> F \<longleftrightarrow> clique K F"
+  unfolding clique_def all_edges_betw_un_def doubleton_eq_iff subset_iff
+  by blast
+
+lemma clique_Un:
+  assumes "clique A F" "clique B F" "all_edges_betw_un A B \<subseteq> F" "A \<subseteq> V" "B \<subseteq> V"
+  shows "clique (A \<union> B) F"
+  using assms
+  unfolding clique_def all_edges_betw_un_def subset_iff
+  by (smt (verit, best) UnE in_E_iff insert_commute mem_Collect_eq)
+
+lemma clique_insert:
+  assumes "clique A F" "all_edges_betw_un {x} A \<subseteq> F" "A \<subseteq> V" "x \<in> V"
+  shows "clique (insert x A) F"
+  using assms
+  by (metis Un_subset_iff clique_def insert_is_Un insert_subset clique_Un singletonD)
+
+end
 
 (*NOT CLEAR WHETHER \<mu> CAN BE FIXED HERE OR NOT*)
 
@@ -100,11 +128,6 @@ lemma kn0: "k > 0"
 end
 *)
 
-abbreviation "nV \<equiv> card V"
-
-lemma graph_size: "graph_size = (nV choose 2)"
-  using card_all_edges complete finV by blast
-
 lemma RB_nonempty: "Red \<noteq> {}" "Blue \<noteq> {}"
   using part_RB partition_onD3 by auto
 
@@ -126,9 +149,6 @@ lemma Red_eq: "Red = all_edges V - Blue"
 
 lemma nontriv: "E \<noteq> {}"
   using Red_E bot.extremum_strict by blast
-
-lemma in_E_iff [iff]: "{v,w} \<in> E \<longleftrightarrow> v\<in>V \<and> w\<in>V \<and> v\<noteq>w"
-  by (auto simp: complete all_edges_alt doubleton_eq_iff)
 
 lemma no_singleton_Blue [simp]: "{a} \<notin> Blue"
   using Blue_E by auto
@@ -152,23 +172,6 @@ lemma Neighbours_Red_Blue:
 
 lemma disjnt_Red_Blue_Neighbours: "disjnt (Neighbours Red x \<inter> X) (Neighbours Blue x \<inter> X')"
   using disjnt_Red_Blue by (auto simp: disjnt_def Neighbours_def)
-
-lemma all_edges_betw_un_iff_clique: "K \<subseteq> V \<Longrightarrow> all_edges_betw_un K K \<subseteq> F \<longleftrightarrow> clique K F"
-  unfolding clique_def all_edges_betw_un_def doubleton_eq_iff subset_iff
-  by blast
-
-lemma clique_Un:
-  assumes "clique A F" "clique B F" "all_edges_betw_un A B \<subseteq> F" "A \<subseteq> V" "B \<subseteq> V"
-  shows "clique (A \<union> B) F"
-  using assms
-  unfolding clique_def all_edges_betw_un_def subset_iff
-  by (smt (verit, best) UnE in_E_iff insert_commute mem_Collect_eq)
-
-lemma clique_insert:
-  assumes "clique A F" "all_edges_betw_un {x} A \<subseteq> F" "A \<subseteq> V" "x \<in> V"
-  shows "clique (insert x A) F"
-  using assms
-  by (metis Un_subset_iff clique_def insert_is_Un insert_subset clique_Un singletonD)
 
 lemma indep_Red_iff_clique_Blue: "K \<subseteq> V \<Longrightarrow> indep K Red \<longleftrightarrow> clique K Blue"
   using Blue_eq by auto
@@ -406,7 +409,6 @@ locales for different parts of the development gets confusing here.*)
   \<comment> \<open>l: blue limit, and k: red limit\<close>
 
 text \<open>Basic conditions for the book algorithm.\<close>
-text\<open>We also don't want it to terminate without executing even one step [NOT ACTUALLY NEEDED]\<close>
 definition "Colours \<equiv> \<lambda>l k. l \<le> k \<and> \<not> (\<exists>K. size_clique k K Red) \<and> \<not> (\<exists>K. size_clique l K Blue)"
 
 lemma Colours_ln0: "Colours l k \<Longrightarrow> l>0"

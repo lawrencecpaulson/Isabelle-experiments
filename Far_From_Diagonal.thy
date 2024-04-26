@@ -996,38 +996,45 @@ qed
 
 subsection \<open>Lemma 9.1\<close>
 
-definition "Big_Far_0_1 \<equiv> \<lambda>\<mu> l. True"
+definition "Big_Far_9_1 \<equiv> \<lambda>\<mu> l. Big_Far_9_2 \<mu> l \<and> p0_min \<le> 1 - (1/10) * (1 + 1/15)"
 
-lemma Big_Far_0_1:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_Far_0_1 \<mu> l"
-  unfolding Big_Far_0_1_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_Far_9_3  assms)
+(*NOTE ASSUMPTION ON p0_min*)
+lemma Big_Far_9_1:
+  assumes "0<\<mu>" "\<mu><1" and "p0_min \<le> 67/75"
+  shows "\<forall>\<^sup>\<infinity>l. Big_Far_9_1 \<mu> l"
+  using assms
+  unfolding Big_Far_9_1_def eventually_conj_iff all_imp_conj_distrib eps_def
+  apply (simp add: Big_Far_9_2)
   done
 
-lemma (in Book) Far_9_1:
+
+lemma (in Book_Basis) Far_9_1:
   fixes l k
   fixes \<delta> \<gamma>::real
   defines "gamma \<equiv> \<lambda>m. (l - real m) / (k + real l - real m)"
-  defines "\<gamma> \<equiv> gamma 0"
+  defines "\<gamma> \<equiv> gamma 0"  (*IS THIS FUNCTION NEEDED?*)
   defines "\<delta> \<equiv> \<gamma>/20"
-  assumes "Colours l k" and \<gamma>: "\<gamma> \<le> 1/10" 
-  assumes big: "Big_Far_0_1 \<gamma> l"
+  assumes \<gamma>: "\<gamma> \<le> 1/10" 
+  assumes big: "Big_Far_9_1 \<gamma> l"
   shows "RN k l \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
 proof (rule ccontr)
   assume non: "\<not> RN k l \<le> exp (-\<delta> * k + 1) * (k+l choose l)"
-  obtain ln0: "l>0" and kn0: "k>0" and "l\<le>k"
-    using \<open>Colours l k\<close> Colours_kn0 Colours_ln0  by (auto simp: Colours_def)
+  with RN_eq_0_iff have "l>0" by force
+  have \<gamma>_eq: "\<gamma> = l / (k + real l)"
+    by (simp add: \<gamma>_def gamma_def)
+  with \<open>l>0\<close> have YLK: "(1-\<gamma>)*l = \<gamma>*k"
+    by (simp add: field_simps)
+  have "l\<le>k"
+    using \<gamma>_eq \<gamma> nat_le_real_less by fastforce
+  with \<open>l>0\<close> have "k>0" by linarith
+  have ln1: False if "l = 1"
+    using non \<open>k>0\<close> by (simp add: that \<gamma>_eq \<delta>_def mult_le_1_iff)
+  with \<open>l>0\<close> have "l\<ge>2"
+    by force
   define \<xi>::real where "\<xi> \<equiv> 1/15"
      \<comment>\<open>Bhavik's terminology below\<close>
   define U_lower_bound_ratio where 
         "U_lower_bound_ratio \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k+l - real i))"
-  define is_good_clique where  
-        "is_good_clique \<equiv> \<lambda>n K. clique K Blue \<and> K \<subseteq> V \<and>
-                                 card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
-                                 \<ge> real n * U_lower_bound_ratio (card K) - card K"
-  have \<gamma>_eq: "\<gamma> = l / (k + real l)"
-    by (simp add: \<gamma>_def gamma_def)
   have l9k: "l \<le> 9*k"
     using \<gamma> \<open>l \<le> k\<close> by (auto simp: \<gamma>_def divide_simps)
   have U_lower_bound_ratio_ge0: "0 \<le> U_lower_bound_ratio m" if "m < l" for m
@@ -1046,33 +1053,27 @@ proof (rule ccontr)
   then have Ulb_decreasing: "antimono_on {..<l} U_lower_bound_ratio"
     by (auto simp: monotone_on_def intro: lift_Suc_antimono_le [of "{..<l}"])
 
+  (*NEEDED?*)
   define mstar where "mstar \<equiv> LEAST m. gamma m < \<gamma>\<^sup>2"
   have "gamma l < \<gamma>\<^sup>2"
     using \<open>l>0\<close> by (simp add: gamma_def \<gamma>_def of_nat_diff)
   then obtain mstar_works: "gamma mstar < \<gamma>\<^sup>2" and mstar_le: "\<And>m. gamma m < \<gamma>\<^sup>2 \<Longrightarrow> mstar \<le> m"
     by (metis mstar_def wellorder_Least_lemma)
 
-  have is_good_empty: "is_good_clique n {}" if "n \<le> nV" for n
-    using that by (simp add: is_good_clique_def U_lower_bound_ratio_def)
-
-  have is_good_card: "card K < l" if "is_good_clique n K" for n K
-    using \<open>Colours l k\<close> that
-    unfolding Colours_def is_good_clique_def
-    by (metis nat_neq_iff size_clique_def size_clique_smaller)
-
-  have ln1: "l \<noteq> Suc 0"
-    using \<open>Colours l k\<close> unfolding Colours_def
-    by (metis RN_1 RN_commute Red_Blue_RN XY0(2) card_XY0(1) less_eq_Suc_le)
-  with ln0 have "l\<ge>2"
-    by linarith
-
-
-  { fix W
+  { fix W and Red Blue :: "'a set set"
     assume "W\<subseteq>V"
+    assume "W \<noteq> {}"
     assume nV_eq: "nV = nat\<lceil>RN k l / exp 1\<rceil>"
+    assume Red_not_Blue: "Red \<noteq> Blue"
+    assume part_RB: "partition_on E {Red,Blue}"
+    define is_good_clique where  
+      "is_good_clique \<equiv> \<lambda>n K. clique K Blue \<and> K \<subseteq> V \<and>
+                                 card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
+                                 \<ge> real n * U_lower_bound_ratio (card K) - card K"
+    assume no_Red_K: "\<not> (\<exists>K. size_clique k K Red)" 
+    assume no_Blue_K: "\<not> (\<exists>K. size_clique l K Blue)" 
     assume 49: "is_good_clique nV W"
     assume max49: "\<And>x. x\<in>V\<setminus>W \<Longrightarrow> \<not> is_good_clique nV (insert x W)"
-    assume "W \<noteq> {}"
     define m where "m \<equiv> card W"
     define \<gamma>' where "\<gamma>' \<equiv> (l - real m) / (k + l - real m)"
     define \<eta> where "\<eta> \<equiv> \<xi> * \<gamma>'"
@@ -1080,9 +1081,31 @@ proof (rule ccontr)
     define EU where "EU \<equiv> E \<inter> Pow U"
     define RedU where "RedU \<equiv> Red \<inter> Pow U"
     define BlueU where "BlueU \<equiv> Blue \<inter> Pow U"
-    assume "card U > 1"
+    assume "card U > 1"  (*NEEDED?*)
 
-  \<comment> \<open>Following Bhavik in dividing by @{term "exp 1"}\<close>
+    have Red_E: "Red \<subseteq> E" and Blue_E: "Blue \<subseteq> E" 
+      using part_RB Red_not_Blue by (auto simp: partition_on_def disjnt_iff pairwise_def)
+    have disjnt_Red_Blue: "disjnt Red Blue"
+      by (metis Red_not_Blue pairwise_insert part_RB partition_on_def singletonI)
+    have Blue_eq: "Blue = all_edges V - Red"
+      using disjnt_Red_Blue complete wellformed part_RB
+      by (auto simp: disjnt_iff partition_on_def)
+
+    have Red_Blue_RN: "\<exists>K \<subseteq> X. size_clique m K Red \<or> size_clique n K Blue"
+      if "card X \<ge> RN m n" "X\<subseteq>V" for m n and X :: "'a set"
+      using partn_lst_imp_is_clique_RN [OF is_Ramsey_number_RN [of m n]] finV that  
+      unfolding is_clique_RN_def size_clique_def clique_indep_def Blue_eq
+      by (metis clique_iff_indep infinite_super subset_trans)
+
+    have is_good_empty: "is_good_clique n {}" if "n \<le> nV" for n
+      using that by (simp add: is_good_clique_def U_lower_bound_ratio_def)
+
+    have is_good_card: "card K < l" if "is_good_clique n K" for n K
+      using no_Blue_K that
+      unfolding is_good_clique_def
+      by (metis nat_neq_iff size_clique_def size_clique_smaller)
+
+    \<comment> \<open>Following Bhavik in dividing by @{term "exp 1"}\<close>
     have "nV < RN k l"
     proof -
       have "RN k l \<ge> 2"
@@ -1106,7 +1129,7 @@ proof (rule ccontr)
       by argo
 
     have "RN k l > 0"
-      by (metis RN_eq_0_iff gr0I kn0 ln0)
+      by (metis RN_eq_0_iff gr0I \<open>k>0\<close> \<open>l>0\<close>)
     with \<open>nV < RN k l\<close> have nV_less: "nV < (k+l choose l)"
       by (metis add.commute RN_commute RN_le_choose le_trans linorder_not_less)
 
@@ -1117,11 +1140,11 @@ proof (rule ccontr)
     have "finite W"
       using \<open>W \<subseteq> V\<close> finV finite_subset by blast
     have "U \<subseteq> V"
-      using \<open>W \<noteq> {}\<close> Blue_E by (force simp: U_def in_Neighbours_iff)
+      using \<open>W \<noteq> {}\<close> Blue_E wellformed_alt_snd by (force simp: U_def in_Neighbours_iff)
     then have VUU: "V \<inter> U = U"
       by blast
     have "disjnt U W"
-      by (fastforce simp: U_def disjnt_iff)
+      by (metis Blue_E INT_E U_def disjnt_iff not_own_Neighbour)
     have "0<m"
       using \<open>W \<noteq> {}\<close> \<open>finite W\<close> m_def by fastforce
     have "m<l"
@@ -1131,10 +1154,14 @@ proof (rule ccontr)
     then have \<gamma>'_le1: "(1+\<xi>) * \<gamma>' \<le> 1"
       by (simp add: \<xi>_def)
     have "\<gamma>' < \<gamma>"
-      using \<open>m<l\<close> \<open>0 < m\<close> kn0 by (simp add: \<gamma>_def \<gamma>'_def gamma_def field_simps)
+      using \<open>m<l\<close> \<open>0 < m\<close>  \<open>k>0\<close> by (simp add: \<gamma>_def \<gamma>'_def gamma_def field_simps)
+
+    have cardU: "nV * U_lower_bound_ratio m \<le> m + card U"
+      using 49 VUU unfolding is_good_clique_def m_def U_def by force
 
     obtain [iff]: "finite RedU" "finite BlueU" "RedU \<subseteq> EU"
-      using BlueU_def EU_def RedU_def Red_E by auto
+      using BlueU_def EU_def RedU_def Red_E Blue_E fin_edges finite_subset 
+      by fastforce
     have card_RedU_le: "card RedU \<le> card EU"
       by (metis EU_def \<open>RedU \<subseteq> EU\<close> card_mono fin_edges finite_Int)
     interpret UBB: Book_Basis U "E \<inter> Pow U" p0_min 
@@ -1150,10 +1177,9 @@ proof (rule ccontr)
       have "x \<in> E" if "x \<in> all_edges U" for x 
         using \<open>U \<subseteq> V\<close> all_edges_mono that complete by blast
       then show "E \<inter> Pow U = all_edges U"
-        using comp_sgraph.wellformed \<open>U \<subseteq> V\<close>
-        using e_in_all_edges_ss by auto
+        using comp_sgraph.wellformed \<open>U \<subseteq> V\<close> e_in_all_edges_ss by auto
       show "infinite (UNIV::'a set)"
-        by (simp add: local.infinite_UNIV)
+        by (simp add: infinite_UNIV)
     qed
 
     have clique_W: "size_clique m W Blue"
@@ -1161,8 +1187,6 @@ proof (rule ccontr)
 
     have card_EU: "card EU > 0"
       using \<open>card U > 1\<close> UBB.complete by (simp add: EU_def UBB.finV card_all_edges)
-    then have "card U > 1"
-      by (simp add: EU_def UBB.complete UBB.finV card_all_edges)
     have BlueU_eq: "BlueU = EU \<setminus> RedU" 
       using Blue_eq complete by (fastforce simp add: BlueU_def RedU_def EU_def)
     have [simp]: "UBB.graph_size = card EU"
@@ -1188,7 +1212,7 @@ proof (rule ccontr)
         by (simp add: UBB.gen_density_def UBB.edge_card_eq_sum_Neighbours UBB.finV divide_simps Nx)
 
       have x: "x \<in> V\<setminus>W"
-        using U_def \<open>x \<in> U\<close> \<open>U \<subseteq> V\<close> by auto
+        using \<open>x \<in> U\<close> \<open>U \<subseteq> V\<close> \<open>disjnt U W\<close> by (auto simp: U_def disjnt_iff)
       moreover
       have "is_good_clique nV (insert x W)"
         unfolding is_good_clique_def
@@ -1204,8 +1228,6 @@ proof (rule ccontr)
         show "insert x W \<subseteq> V"
           using \<open>W \<subseteq> V\<close> \<open>x \<in> V\<setminus>W\<close> by auto
       next
-        have \<section>: "nV * U_lower_bound_ratio m \<le> m + card U"
-          using 49 VUU unfolding is_good_clique_def m_def U_def by force
         have NB_Int_U: "Neighbours Blue x \<inter> U = Neighbours BlueU x"
           using \<open>x \<in> U\<close> by (auto simp: BlueU_def U_def Neighbours_def)
         have ulb_ins: "U_lower_bound_ratio (card (insert x W)) = U_lower_bound_ratio m * (1+\<xi>) * \<gamma>'"
@@ -1213,7 +1235,7 @@ proof (rule ccontr)
         have "nV * U_lower_bound_ratio (card (insert x W))  = nV * U_lower_bound_ratio m * (1+\<xi>) * \<gamma>'"
           by (simp add: ulb_ins)
         also have "\<dots> \<le> real (m + card U) * (1+\<xi>) * \<gamma>'"
-          using mult_right_mono [OF \<section>, of "(1+\<xi>) * \<gamma>'"] \<open>0 < \<eta>\<close> \<open>0 < \<gamma>'\<close> \<eta>_def by argo
+          using mult_right_mono [OF cardU, of "(1+\<xi>) * \<gamma>'"] \<open>0 < \<eta>\<close> \<open>0 < \<gamma>'\<close> \<eta>_def by argo
         also have "\<dots> \<le> m + card U * (1+\<xi>) * \<gamma>'"
           using mult_left_mono [OF \<gamma>'_le1, of m] by (simp add: algebra_simps)
         also have "\<dots> \<le> Suc m + (\<gamma>' + \<eta>) * (UBB.gorder - Suc 0)"
@@ -1234,19 +1256,44 @@ proof (rule ccontr)
         using max49 by blast
     qed
     then have *: "UBB.graph_density RedU \<ge> 1 - \<gamma>' - \<eta>" by force
+    moreover have "\<gamma>'+\<eta> < 1"
+      using \<open>\<gamma>' < \<gamma>\<close> \<gamma> by (simp add: \<eta>_def \<xi>_def)
+    ultimately have "RedU \<noteq> {}"
+      by (auto simp: UBB.graph_density_def)
 
 
-
-    \<comment> \<open>Bhavik's gamma'_le_gamma_iff\<close>
+    \<comment> \<open>Bhavik's gamma'_le_gamma_iff NEEDED?\<close>
     have "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (real k * real l) + (real l * real l) < (real k * real m) + (real l * (real m * 2))"
       using \<open>m < l\<close>
       apply (simp add: \<gamma>'_def \<gamma>_eq eval_nat_numeral divide_simps; simp add: algebra_simps)
-      by (metis kn0 mult_less_cancel_left_pos of_nat_0_less_iff distrib_left)
+      by (metis \<open>k>0\<close> mult_less_cancel_left_pos of_nat_0_less_iff distrib_left)
     also have "\<dots>  \<longleftrightarrow> (l * (k + l)) / (k + 2 * l) < m"
       using \<open>m < l\<close> by (simp add: field_simps)
     finally have gamma'_le_gamma_iff: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (l * (k + l)) / (k + 2 * l) < m" .
 
-
+    have extend_Blue_clique: "\<exists>K'. size_clique l K' Blue" 
+      if "K \<subseteq> U" "size_clique (l-m) K Blue" for K
+    proof -
+      have K: "card K = l - m" "clique K Blue"
+        using that by (auto simp: size_clique_def)
+      define K' where "K' \<equiv> K \<union> W"
+      have "card K' = l"
+        unfolding K'_def
+      proof (subst card_Un_disjnt)
+        show "finite K" "finite W"
+          using UBB.finV \<open>K \<subseteq> U\<close> finite_subset \<open>finite W\<close> by blast+
+        show "disjnt K W"
+          using \<open>disjnt U W\<close> \<open>K \<subseteq> U\<close> disjnt_subset1 by blast
+        show "card K + card W = l"
+          using K \<open>m < l\<close> m_def by auto
+      qed
+      moreover have "clique K' Blue"
+        using \<open>clique K Blue\<close> clique_W \<open>K \<subseteq> U\<close>
+        unfolding K'_def size_clique_def U_def 
+        by (force simp: in_Neighbours_iff insert_commute intro: Ramsey.clique_Un)
+      ultimately show ?thesis
+        unfolding K'_def size_clique_def using \<open>K \<subseteq> U\<close> \<open>U \<subseteq> V\<close> \<open>W \<subseteq> V\<close> by auto
+    qed
 
     have ?thesis
     proof (cases "\<gamma>' < \<gamma>\<^sup>2")
@@ -1277,13 +1324,13 @@ proof (rule ccontr)
       also have "... = (k+l choose l) * inverse (\<Prod>i<m. real (k + l - i) / real (l - i))"
         by (simp add: field_simps atLeast0LessThan binomial_altdef_of_nat) 
       also have "... = (k+l choose l) * PM"
-        unfolding PM_def using \<open>m>0\<close> \<open>m < l\<close> kn0
+        unfolding PM_def using \<open>m>0\<close> \<open>m < l\<close>  \<open>k>0\<close>
         by (simp add: atLeast0LessThan of_nat_diff flip: prod_inversef)
       finally have "(\<Prod>i<l-m. (k + l - m - i) / (l - m - i)) = (k+l choose l) * PM" .
       then have kl_choose: "real(k+l choose l) = (\<Prod>i<l-m. (k + l - (m+i)) / (l - (m+i))) / PM"
         using prod_gt0 by (simp add: field_simps)
 
-      have "ln (1 + \<xi>) * 20 \<ge> 1"
+      have "ln (1+\<xi>) * 20 \<ge> 1"
         unfolding \<xi>_def by (approximation 10)
       with YKK have \<section>: "m * ln (1+\<xi>) \<ge> \<delta> * k"
         unfolding \<delta>_def using zero_le_one mult_mono by fastforce
@@ -1316,38 +1363,114 @@ proof (rule ccontr)
       finally have "RN k (l - m) \<le> (k+l-m choose (l-m)) - m" .
       then have "card U \<ge> RN k (l-m)"
         using 49 * VUU unfolding is_good_clique_def U_def m_def by fastforce
-      with Red_Blue_RN \<open>Colours l k\<close> \<open>U \<subseteq> V\<close>
-      obtain K where "K \<subseteq> U" "size_clique (l-m) K Blue"
-        unfolding Colours_def by metis
-      then have K: "card K = l - m" "clique K Blue"
-        by (auto simp: size_clique_def)
-      define K' where "K' \<equiv> K \<union> W"
-      have "card K' = l"
-        unfolding K'_def
-        sketch (subst card_Un_disjnt)
-      proof (subst card_Un_disjnt)
-        show "finite K" "finite W"
-          using UBB.finV \<open>K \<subseteq> U\<close> finite_subset \<open>finite W\<close> by blast+
-        show "disjnt K W"
-          using \<open>disjnt U W\<close> \<open>K \<subseteq> U\<close> disjnt_subset1 by blast
-        show "card K + card W = l"
-          using K \<open>m < l\<close> m_def by auto
-      qed
-      moreover have "clique K' Blue"
-        using \<open>clique K Blue\<close> clique_W
-        unfolding K'_def size_clique_def
-        apply (intro Ramsey.clique_Un)
-        apply meson
-        apply blast
-        using \<open>K \<subseteq> U\<close>
-        apply (auto simp: U_def subset_iff)
-        by (metis in_Neighbours_iff insert_commute)
-      ultimately have "size_clique l K' Blue"
-        unfolding K'_def size_clique_def using \<open>K \<subseteq> U\<close> \<open>U \<subseteq> V\<close> \<open>W \<subseteq> V\<close> by auto
-      then show ?thesis
-        using Colours_def \<open>Colours l k\<close> by force
+      with Red_Blue_RN no_Red_K \<open>U \<subseteq> V\<close>
+      obtain K where "K \<subseteq> U" "size_clique (l-m) K Blue" by meson
+      then have False
+        using no_Blue_K extend_Blue_clique by blast
+
+      \<comment> \<open>Further material in the note, getting the bound on RN\<close>
+      have "1+\<xi> > exp (1/20)"
+        unfolding \<xi>_def by (approximation 10)
+      have "m \<ge> (1-\<gamma>)*l"
+        using YKK YLK by linarith
+
+      show ?thesis
+        sorry
+
     next
       case False
+      then have YMK: "\<gamma>-\<gamma>' \<le> m/k"
+        using \<open>l>0\<close> \<open>m<l\<close> 
+        apply (simp add: \<gamma>_eq \<gamma>'_def divide_simps)
+        apply (simp add: algebra_simps)
+        by (smt (verit, best) mult_left_mono mult_right_mono nat_less_real_le of_nat_0_le_iff)
+      define \<delta>' where "\<delta>' \<equiv> \<gamma>'/20"
+
+      have no_RedU_K: "\<not> (\<exists>K. UBB.size_clique k K RedU)"
+        using no_Red_K \<open>U \<subseteq> V\<close>
+        unfolding RedU_def UBB.size_clique_def size_clique_def
+        by (metis Int_subset_iff VUU all_edges_subset_iff_clique)
+
+      have "(\<exists>K. UBB.size_clique k K RedU) \<or> (\<exists>K. UBB.size_clique (l-m) K BlueU)"
+      proof (intro UBB.Far_9_2)
+        show "E \<inter> Pow U = all_edges U"
+          by (simp add: UBB.complete)
+        show "RedU \<noteq> BlueU"
+          by (metis BlueU_eq Diff_iff card_EU card_gt_0_iff equals0I)
+        have False if "BlueU = {}"
+        proof -
+          have "RedU = EU"
+            using BlueU_eq that by blast
+          then have "clique U RedU"
+            by (simp add: EU_def UBB.complete clique_iff)
+          moreover have "card U \<ge> k"
+            using cardU nV_eq
+            sorry
+          ultimately have "UBB.size_clique k U RedU"
+            by (metis UBB.size_clique_def ex_card no_RedU_K smaller_clique)
+          with no_RedU_K show False
+            by blast
+        qed
+        then show "partition_on (E \<inter> Pow U) {RedU, BlueU}"
+          using \<open>RedU \<subseteq> EU\<close> \<open>RedU \<noteq> {}\<close>
+          by (auto simp: partition_on_def pairwise_def disjnt_iff EU_def BlueU_eq)
+        show "infinite (UNIV::'a set)"
+          by (simp add: local.infinite_UNIV)
+
+        have "exp (\<delta>*k) * exp (-\<delta>'*k) = exp (\<gamma>*k/20 - \<gamma>'*k/20)"
+          unfolding \<delta>_def \<delta>'_def by (simp add: mult_exp_exp) 
+        also have "... \<le> exp (m/20)"
+          using YMK \<open>0 < k\<close> by (simp add: left_diff_distrib divide_simps)
+        also have "... \<le> (1+\<xi>)^m"
+        proof -
+          have \<section>: "ln (16 / 15) * 20 \<ge> (1::real)"
+            by (approximation 5)
+          show ?thesis
+            using mult_left_mono [OF \<section>] 
+            by (simp add: \<xi>_def powr_def mult_ac flip: powr_realpow)
+        qed
+        finally have expexp: "exp (\<delta>*k) * exp (-\<delta>'*k) \<le> (1+\<xi>) ^ m" .
+
+        have "exp (- \<delta> * k) * (k + l - m choose (l-m)) \<le> UBB.nV"
+          using nV_eq cardU 
+          unfolding U_lower_bound_ratio_def
+
+          apply (simp add: UBB.nV_def)
+          sorry
+        then show "exp (- ((l-m) / (k + real (l-m)) / 20) * k) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
+          by (simp add: \<delta>_def \<gamma>_eq)
+      next
+        show "1 - real (l-m) / (real k + real (l-m)) - \<eta> \<le> UBB.graph_density RedU"
+          using * \<open>\<gamma>' < \<gamma>\<close> \<open>m < l\<close> unfolding \<gamma>_eq \<gamma>'_def
+          by (smt (verit) less_or_eq_imp_le of_nat_add of_nat_diff)
+        have "p0_min \<le> 1 - (1/10) * (1+\<xi>)"
+          using big by (auto simp: Big_Far_9_1_def \<xi>_def)
+        also have "\<dots> \<le> 1 - \<gamma> - \<eta>"
+          using \<open>\<gamma>' < \<gamma>\<close> \<gamma> by (auto simp: \<eta>_def \<xi>_def)
+        also have "... \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>"
+          using \<open>\<gamma>' < \<gamma>\<close> \<open>m<l\<close> by (simp add: \<gamma>_eq \<gamma>'_def of_nat_diff algebra_simps)
+        finally show "p0_min \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>" .
+      next
+        show "UBB.Big_Far_9_2 (real (l-m) / (real k + real (l-m))) (l-m)"
+          using big apply (auto simp: \<gamma>_eq Big_Far_9_1_def)
+          sorry
+        show "l-m \<le> k"
+          using \<open>l \<le> k\<close> by auto
+        show "(l-m) / (real k + real (l-m)) \<le> 1/10"
+          using \<gamma> \<gamma>_eq \<open>m < l\<close> by fastforce
+        show "0 \<le> \<eta>"
+          using \<open>0 < \<eta>\<close> by linarith
+        show "\<eta> \<le> (l-m) / (real k + real (l-m)) / 15"
+          using mult_right_mono [OF less_imp_le [OF \<open>\<gamma>' < \<gamma>\<close>], of \<xi>]
+          by (simp add: \<eta>_def \<gamma>'_def \<open>m < l\<close> \<xi>_def add_diff_eq less_or_eq_imp_le mult.commute of_nat_diff)
+      qed
+      with no_RedU_K obtain K where "K \<subseteq> U" "UBB.size_clique (l-m) K BlueU"
+        by (meson UBB.size_clique_def)
+      then have False
+        using no_Blue_K extend_Blue_clique VUU
+        unfolding UBB.size_clique_def size_clique_def BlueU_def
+        by (metis Int_subset_iff all_edges_subset_iff_clique) 
+
       then show ?thesis sorry
     qed
     have "False"
