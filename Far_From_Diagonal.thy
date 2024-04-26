@@ -948,19 +948,21 @@ lemma (in Book_Basis) Far_9_2:
   defines "\<gamma> \<equiv> l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/20"
   assumes complete: "E = all_edges V"
-  assumes Red_not_Blue: "Red \<noteq> Blue"
-  assumes part_RB: "partition_on E {Red,Blue}"
+  assumes Red_E: "Red \<subseteq> E"
+  assumes Blue_def: "Blue = E-Red"
   assumes infinite_UNIV: "infinite (UNIV::'a set)"
   assumes n: "real gorder \<ge> exp (-\<delta> * k) * (k+l choose l)" 
   assumes gd: "graph_density Red \<ge> 1-\<gamma>-\<eta>" 
     and p0_min_OK: "p0_min \<le> 1-\<gamma>-\<eta>"  (*NEEDED TO INTERPRET BOOK LOCALE*)
   assumes big: "Big_Far_9_2 \<gamma> l" and "l\<le>k"
-  assumes "\<gamma> \<le> 1/10" and \<epsilon>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
+  assumes "\<gamma> \<le> 1/10" and \<eta>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
   shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue)"
 proof (rule ccontr)
   assume neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
-  have "Red \<subseteq> E" "Red \<noteq> {}" "E \<noteq> {}"
-    using part_RB by (auto simp: partition_on_def)
+  have "Red \<noteq> {}"
+    using gd \<eta> p0_min p0_min_OK by (auto simp: graph_density_def)
+  with Red_E have "Red \<subseteq> E" "E \<noteq> {}"
+    by auto
   then have "gorder\<ge>2"
     by (metis card_mono ex_in_conv finV two_edges wellformed)
   then have "0 < gorder div 2" "gorder div 2 < gorder"
@@ -969,7 +971,7 @@ proof (rule ccontr)
           and Y0: "graph_density Red \<le> gen_density Red Y0 (V\<setminus>Y0)"
     using exists_density_edge_density \<open>Red \<subseteq> E\<close> complete by blast
   define X0 where "X0 \<equiv> V \<setminus> Y0"
-  interpret Book V E p0_min Red Blue X0 Y0
+  interpret Book V E p0_min Red Blue X0 Y0 
   proof
     show "X0\<subseteq>V" "disjnt X0 Y0"
       by (auto simp: X0_def disjnt_iff)
@@ -1395,25 +1397,10 @@ proof (rule ccontr)
       proof (intro UBB.Far_9_2)
         show "E \<inter> Pow U = all_edges U"
           by (simp add: UBB.complete)
-        show "RedU \<noteq> BlueU"
-          by (metis BlueU_eq Diff_iff card_EU card_gt_0_iff equals0I)
-        have False if "BlueU = {}"
-        proof -
-          have "RedU = EU"
-            using BlueU_eq that by blast
-          then have "clique U RedU"
-            by (simp add: EU_def UBB.complete clique_iff)
-          moreover have "card U \<ge> k"
-            using cardU nV_eq
-            sorry
-          ultimately have "UBB.size_clique k U RedU"
-            by (metis UBB.size_clique_def ex_card no_RedU_K smaller_clique)
-          with no_RedU_K show False
-            by blast
-        qed
-        then show "partition_on (E \<inter> Pow U) {RedU, BlueU}"
-          using \<open>RedU \<subseteq> EU\<close> \<open>RedU \<noteq> {}\<close>
-          by (auto simp: partition_on_def pairwise_def disjnt_iff EU_def BlueU_eq)
+        show "RedU \<subseteq> E \<inter> Pow U"
+          using EU_def \<open>RedU \<subseteq> EU\<close> by auto
+        show "BlueU = E \<inter> Pow U \<setminus> RedU"
+          using BlueU_eq EU_def by fastforce
         show "infinite (UNIV::'a set)"
           by (simp add: local.infinite_UNIV)
 
@@ -1434,11 +1421,10 @@ proof (rule ccontr)
         have "exp (- \<delta> * k) * (k + l - m choose (l-m)) \<le> UBB.nV"
           using nV_eq cardU 
           unfolding U_lower_bound_ratio_def
-
-          apply (simp add: UBB.nV_def)
           sorry
         then show "exp (- ((l-m) / (k + real (l-m)) / 20) * k) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
-          by (simp add: \<delta>_def \<gamma>_eq)
+          apply (simp add: \<delta>_def \<gamma>_eq)
+          sorry
       next
         show "1 - real (l-m) / (real k + real (l-m)) - \<eta> \<le> UBB.graph_density RedU"
           using * \<open>\<gamma>' < \<gamma>\<close> \<open>m < l\<close> unfolding \<gamma>_eq \<gamma>'_def

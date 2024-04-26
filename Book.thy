@@ -93,8 +93,8 @@ end
 
 locale Book = Book_Basis +   \<comment> \<open>finite simple graphs (no loops)\<close>
   fixes Red Blue :: "'a set set"
-  assumes Red_not_Blue: "Red \<noteq> Blue"
-  assumes part_RB: "partition_on E {Red,Blue}"
+  assumes Red_E: "Red \<subseteq> E"
+  assumes Blue_def: "Blue = E-Red"
   \<comment> \<open>the following are local to the program\<close>
   fixes X0 :: "'a set" and Y0 :: "'a set"    \<comment> \<open>initial values\<close>
   assumes XY0: "disjnt X0 Y0" "X0 \<subseteq> V" "Y0 \<subseteq> V"
@@ -128,27 +128,26 @@ lemma kn0: "k > 0"
 end
 *)
 
-lemma RB_nonempty: "Red \<noteq> {}" "Blue \<noteq> {}"
-  using part_RB partition_onD3 by auto
-
-lemma Red_E: "Red \<subset> E" "Red \<subseteq> E" and Blue_E: "Blue \<subset> E" "Blue \<subseteq> E" 
-  using part_RB Red_not_Blue by (auto simp: partition_on_def disjnt_iff pairwise_def)
+lemma Blue_E: "Blue \<subseteq> E"
+  by (simp add: Blue_def) 
 
 lemma disjnt_Red_Blue: "disjnt Red Blue"
-  by (metis Red_not_Blue pairwise_insert part_RB partition_on_def singletonI)
+  by (simp add: Blue_def disjnt_def)
 
 lemma Red_Blue_all: "Red \<union> Blue = all_edges V"
-  using part_RB complete by (auto simp: partition_on_def)
+  using Blue_def Red_E complete by blast
 
 lemma Blue_eq: "Blue = all_edges V - Red"
-  using disjnt_Red_Blue Red_Blue_all complete wellformed
-  by (auto simp: disjnt_iff)
+  using Blue_def complete by auto
 
 lemma Red_eq: "Red = all_edges V - Blue"
   using Blue_eq Red_Blue_all by blast
 
+lemma Red_nonempty: "Red \<noteq> {}"
+  using Red_edges_XY0 by blast
+
 lemma nontriv: "E \<noteq> {}"
-  using Red_E bot.extremum_strict by blast
+  using Red_E Red_nonempty by force
 
 lemma no_singleton_Blue [simp]: "{a} \<notin> Blue"
   using Blue_E by auto
