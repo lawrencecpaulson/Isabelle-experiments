@@ -1,13 +1,13 @@
 section \<open>The Zigzag Lemma\<close>
-
+                                                        
 theory Zigzag imports Bounding_X
-
-begin
-
+                                             
+begin                  
+          
 subsection \<open>Lemma 8.1 (the actual Zigzag Lemma)\<close>
 
 definition "Big_ZZ_8_2 \<equiv> \<lambda>k. (1 + eps k powr (1/2)) \<ge> (1 + eps k) powr (eps k powr (-1/4))"
-
+                                                 
 text \<open>An inequality that pops up in the proof of (39)\<close>
 definition "Big39 \<equiv> \<lambda>k. 1/2 \<le> (1 + eps k) powr (-2 * eps k powr (-1/2))"
 
@@ -27,13 +27,13 @@ text \<open>@{term "k\<ge>16"} is for @{text Y_6_5_Red}\<close>
 
 
 lemma Big_ZZ_8_1:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_1 \<mu> l"
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_ZZ_8_1 \<mu> l"
+  using assms Big_Blue_4_1 Big_Red_5_1 Big_Red_5_3 Big_Y_6_5_Bblue
   unfolding Big_ZZ_8_1_def Big_ZZ_8_2_def Big39_def Big42a_def Big42b_def
             eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_Blue_4_1 Big_Red_5_1 Big_Red_5_3 Big_Y_6_5_Bblue
-       Big_height_upper_bound eventually_all_ge_at_top assms)
-  apply (intro conjI eventually_all_ge_at_top; real_asymp)
+  apply (simp add: eventually_conj_iff eventually_frequently_const_simps)   
+  apply (intro conjI strip eventually_all_ge_at_top Big_height_upper_bound; real_asymp)
   done
 
 lemma (in Book) ZZ_8_1:
@@ -484,11 +484,12 @@ definition "Big_ZZ_8_5 \<equiv>
       \<and> (\<forall>k\<ge>l. inequality85 k)"
 
 lemma Big_ZZ_8_5:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_5 \<mu> l"
-  unfolding Big_ZZ_8_5_def inequality85_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_Red_5_3 Big_X_7_5 Big_ZZ_8_1 assms)
-  apply (intro conjI eventually_all_ge_at_top; real_asymp)
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_ZZ_8_5 \<mu> l"
+  using assms Big_Red_5_3 Big_X_7_5 Big_ZZ_8_1
+  unfolding Big_ZZ_8_5_def inequality85_def eps_def
+  apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)       
+  apply (intro conjI strip eventually_all_ge_at_top; real_asymp)     
   done
 
 lemma (in Book) ZZ_8_5:
@@ -577,13 +578,15 @@ definition "Big_ZZ_8_6 \<equiv>
    \<lambda>\<mu> l. Big_ZZ_8_5 \<mu> l \<and> (\<forall>k\<ge>l. 2 / (1-\<mu>) * k powr (19/20) < k powr (39/40))"
 
 lemma Big_ZZ_8_6:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_ZZ_8_6 \<mu> l"
-  unfolding Big_ZZ_8_6_def eventually_conj_iff all_imp_conj_distrib eps_def
-  using assms
-  apply (simp add: Big_ZZ_8_5)
-  apply (intro conjI eventually_all_ge_at_top; real_asymp)
-  done
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_ZZ_8_6 \<mu> l"
+  using assms Big_ZZ_8_5
+  unfolding Big_ZZ_8_6_def
+  apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
+  apply (intro conjI strip eventually_all_ge_at_top eventually_all_geI1 [where L=1])   
+   apply real_asymp
+  apply (auto simp: )
+  by (smt (verit, best) frac_le powr_ge_pzero)
 
 lemma (in Book) ZZ_8_6:
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours l k" and big: "Big_ZZ_8_6 \<mu> l" 

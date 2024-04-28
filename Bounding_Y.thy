@@ -381,11 +381,12 @@ definition "Big_Y_6_2 \<equiv> \<lambda>\<mu> l. Big_Y_6_5_Bblue l \<and> Big_Re
 
 text \<open>establishing the size requirements for 6.2\<close>
 lemma Big_Y_6_2:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_Y_6_2 \<mu> l"
-  unfolding Big_Y_6_2_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_Y_6_5_Bblue Big_Red_5_3 Big_Blue_4_1 assms)
-  apply (intro conjI eventually_all_ge_at_top; real_asymp)
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_Y_6_2 \<mu> l"
+  using assms Big_Y_6_5_Bblue Big_Red_5_3 Big_Blue_4_1
+  unfolding Big_Y_6_2_def eps_def
+  apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
+  apply (intro conjI strip eventually_all_geI1 eventually_all_ge_at_top; real_asymp)
   done
 
 context Book
@@ -693,12 +694,12 @@ definition
 
 text \<open>establishing the size requirements for 6.1\<close>
 lemma Big_Y_6_1:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_Y_6_1 \<mu> l"
-  using p0_min
-  unfolding Big_Y_6_1_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_Y_6_2 assms)
-  apply (intro conjI eventually_all_ge_at_top; real_asymp)
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_Y_6_1 \<mu> l"
+  using p0_min assms Big_Y_6_2
+  unfolding Big_Y_6_1_def eps_def
+  apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
+  apply (intro conjI strip eventually_all_ge_at_top eventually_all_geI0; real_asymp)
   done
 
 end

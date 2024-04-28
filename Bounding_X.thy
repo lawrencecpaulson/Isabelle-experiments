@@ -138,10 +138,14 @@ definition "Big_X_7_2 \<equiv> \<lambda>\<mu> l. nat \<lceil>real l powr (3/4)\<
 
 text \<open>establishing the size requirements for 7.11\<close>
 lemma Big_X_7_2:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_2 \<mu> l"
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_X_7_2 \<mu> l"
   unfolding Big_X_7_2_def eventually_conj_iff all_imp_conj_distrib eps_def
-  by (intro conjI; real_asymp)
+  apply (simp add: eventually_conj_iff all_imp_conj_distrib 
+       eventually_frequently_const_simps)  
+  apply (intro conjI strip eventually_all_geI1[where L=1] eventually_all_ge_at_top)
+  apply real_asymp+
+  by (smt (verit, best) assms(2) frac_le)
 
 definition "ok_fun_72 \<equiv> \<lambda>\<mu> k. (real k / ln 2) * ln (1 - 1 / (k * (1-\<mu>)))" 
 
@@ -437,17 +441,18 @@ definition
 
 text \<open>establishing the size requirements for 7.5\<close>
 lemma Big_X_7_5:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_5 \<mu> l"
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_X_7_5 \<mu> l"
 proof -
-  have "\<forall>\<^sup>\<infinity>l. ok_fun_26 l - ok_fun_28 l \<le> l" 
+  have ok: "\<forall>\<^sup>\<infinity>l. ok_fun_26 l - ok_fun_28 l \<le> l" 
     unfolding eps_def ok_fun_26_def ok_fun_28_def by real_asymp
-  then show ?thesis
-    unfolding Big_X_7_5_def using assms
-    by (simp add: eventually_conj_iff Big_Blue_4_1 Big_Red_5_3 Big_Y_6_5_Bblue 
-           Big_height_upper_bound eventually_all_ge_at_top)
+  show ?thesis
+    using assms Big_Y_6_5_Bblue Big_Red_5_3 Big_Blue_4_1 
+    unfolding Big_X_7_5_def 
+    apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
+    apply (intro conjI strip eventually_all_ge_at_top ok Big_height_upper_bound; real_asymp)
+    done
 qed
-
 
 context Book
 begin
@@ -651,16 +656,16 @@ end
 subsection \<open>Lemma 7.4\<close>
 
 definition 
-  "Big_X_7_4 \<equiv> 
-    \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Big_Red_5_3 \<mu> l"
+  "Big_X_7_4 \<equiv> \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Big_Red_5_3 \<mu> l"
 
 text \<open>establishing the size requirements for 7.4\<close>
 lemma Big_X_7_4:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_4 \<mu> l"
-  unfolding Big_X_7_4_def using assms 
-  by (simp add: eventually_conj_iff all_imp_conj_distrib   
-      Big_X_7_5 Big_Red_5_3 Big_height_upper_bound eventually_all_ge_at_top)
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_X_7_4 \<mu> l"
+  using assms Big_X_7_5 Big_Red_5_3
+  unfolding Big_X_7_4_def  
+  by (simp add: eventually_conj_iff all_imp_conj_distrib  eventually_frequently_const_simps)
+
 
 definition "ok_fun_74 \<equiv> \<lambda>k. -6 * eps k powr (1/4) * k * ln k / ln 2" 
 
@@ -998,9 +1003,10 @@ definition "Big_X_7_10 \<equiv> \<lambda>\<mu> l. Big_X_7_5 \<mu> l \<and> Big_R
 
 text \<open>establishing the size requirements for 7.10\<close>
 lemma Big_X_7_10:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_10 \<mu> l"
-  by (simp add: Big_X_7_10_def eventually_conj_iff Big_X_7_5 Big_Red_5_3 assms)
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_X_7_10 \<mu> l"
+  using Big_X_7_10_def Big_X_7_4 Big_X_7_4_def assms by force
+
 
 lemma (in Book) X_7_10:
   fixes l k
@@ -1124,11 +1130,12 @@ definition "Big_X_7_11 \<equiv>
 
 text \<open>establishing the size requirements for 7.11\<close>
 lemma Big_X_7_11:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_11 \<mu> l"
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_X_7_11 \<mu> l"
+  using assms Big_Red_5_3 Big_X_7_5 Big_Y_6_5_Bblue
   unfolding Big_X_7_11_def Big_X_7_11_inequalities_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_Red_5_3 Big_X_7_5 Big_Y_6_5_Bblue assms)
-  apply (intro conjI eventually_all_ge_at_top; real_asymp)
+  apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
+  apply (intro conjI strip eventually_all_geI0 eventually_all_ge_at_top; real_asymp)
   done
 
 lemma (in Book) X_7_11_aux:
@@ -1359,10 +1366,12 @@ definition "Big_X_7_12 \<equiv>
 
 text \<open>establishing the size requirements for 7.12\<close>
 lemma Big_X_7_12:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_12 \<mu> l"
-  unfolding Big_X_7_12_def eventually_conj_iff  
-  by (simp add: Big_X_7_11 Big_X_7_10 Big_X_7_9 eventually_all_ge_at_top assms)
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_X_7_12 \<mu> l"
+  using assms Big_X_7_11 Big_X_7_10 Big_X_7_9
+  unfolding Big_X_7_12_def eventually_conj_iff
+  apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)
+  using eventually_all_ge_at_top by blast  
 
 lemma (in Book) X_7_12:
   fixes l k
@@ -1469,11 +1478,13 @@ definition "Big_X_7_6 \<equiv>
    \<lambda>\<mu> l. Big_Blue_4_1 \<mu> l \<and> Big_X_7_12 \<mu> l \<and> (\<forall>k. k\<ge>l \<longrightarrow> Big_X_7_8 k \<and> 1 - 2 * eps k powr (1/4) > 0)"
 
 lemma Big_X_7_6:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_6 \<mu> l"
-  unfolding Big_X_7_6_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_Blue_4_1 Big_X_7_8 Big_X_7_12 eventually_all_ge_at_top assms)
-  by (intro eventually_all_ge_at_top; real_asymp)
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_X_7_6 \<mu> l"
+  using assms Big_Blue_4_1 Big_X_7_8 Big_X_7_12
+  unfolding Big_X_7_6_def eps_def
+  apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps eventually_all_ge_at_top)  
+  apply (intro conjI strip eventually_all_geI0 eventually_all_ge_at_top; real_asymp)
+  done
 
 definition "ok_fun_76 \<equiv> 
   \<lambda>k. ((1 + 2 * real k) * ln (1 - 2 * eps k powr (1/4)) 
@@ -1604,10 +1615,11 @@ definition "Big_X_7_1 \<equiv>
 
 text \<open>establishing the size requirements for 7.11\<close>
 lemma Big_X_7_1:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_X_7_1 \<mu> l"
-  unfolding Big_X_7_1_def eventually_conj_iff all_imp_conj_distrib eps_def
-  by (simp add: Big_Blue_4_1 Big_X_7_2 Big_X_7_4 Big_X_7_6 assms)
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_X_7_1 \<mu> l"
+  unfolding Big_X_7_1_def
+  using assms Big_Blue_4_1 Big_X_7_2 Big_X_7_4 Big_X_7_6
+  by (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
 
 definition "ok_fun_71 \<equiv> \<lambda>\<mu> k. ok_fun_72 \<mu> k + ok_fun_73 k + ok_fun_74 k + ok_fun_76 k"
 

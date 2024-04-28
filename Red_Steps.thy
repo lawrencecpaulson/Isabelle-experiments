@@ -486,11 +486,17 @@ definition "Big_Red_5_1 \<equiv> \<lambda>\<mu> l. (1-\<mu>) * real l > 1 \<and>
 
 text \<open>establishing the size requirements for 5.1\<close>
 lemma Big_Red_5_1:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_Red_5_1 \<mu> l"
-  using assms
-  apply (simp add: Big_Red_5_1_def eventually_conj_iff eps_def Big_Red_5_6 Big_Red_5_4)
-  apply (intro conjI; real_asymp)
+  assumes "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_Red_5_1 \<mu> l"
+  using assms Big_Red_5_6 Big_Red_5_4
+  unfolding Big_Red_5_1_def  
+  apply (simp add:  eventually_frequently_const_simps all_imp_conj_distrib eventually_conj_iff)
+  apply (intro conjI strip eventually_all_geI1 [where L=1])
+      apply real_asymp+
+     apply (smt (verit, best) mult_pos_neg mult_right_mono)
+    apply real_asymp+
+  apply (smt (verit, ccfv_SIG) frac_le)      
+  apply real_asymp+
   done
 
 context Book
@@ -824,14 +830,18 @@ definition
     \<lambda>\<mu> l. Big_Red_5_1 \<mu> l
         \<and> (\<forall>k\<ge>l. k>1 \<and> 1 / (real k)\<^sup>2 \<le> \<mu> \<and> 1 / (real k)\<^sup>2 \<le> 1 / (k / eps k / (1 - eps k) + 1))"
 
-text \<open>establishing the size requirements for 5.3. The one involving @{term \<mu>} will
-be useful later with "big beta".\<close>
+text \<open>establishing the size requirements for 5.3. The one involving @{term \<mu>},
+namely @{term "1 / (real k)\<^sup>2 \<le> \<mu>"}, will be useful later with "big beta".\<close>
 lemma Big_Red_5_3:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_Red_5_3 \<mu> l"
-  using assms  
-  apply (simp add: Big_Red_5_3_def eps_def eventually_conj_iff all_imp_conj_distrib Big_Red_5_1)  
-  apply (intro conjI eventually_all_ge_at_top; real_asymp)
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_Red_5_3 \<mu> l"
+  using assms Big_Red_5_1
+  apply (simp add: Big_Red_5_3_def eps_def eventually_conj_iff all_imp_conj_distrib 
+       eventually_frequently_const_simps)  
+  apply (intro conjI strip eventually_all_geI0[where L=1] eventually_all_ge_at_top)
+  apply real_asymp+
+  apply auto[1]
+  apply real_asymp+
   done
 
 context Book

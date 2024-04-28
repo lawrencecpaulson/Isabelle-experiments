@@ -279,13 +279,30 @@ proof -
 qed
 
 lemma big_ok_fun_93h:
-  assumes "0 < \<gamma>" "\<gamma> < 1" "e>0" "C > 0"
-  shows  "\<forall>\<^sup>\<infinity>k. \<bar>ok_fun_93h \<gamma> k\<bar> / real k \<le> e"
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  assumes "e>0" 
+  shows  "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> \<bar>ok_fun_93h \<mu> k\<bar> / real k \<le> e"
+proof -
+  define f where "f \<equiv> \<lambda>k. ok_fun_73 k + ok_fun_74 k + ok_fun_76 k + ok_fun_94 k"
+  have "f \<in> o(real)"
+    by (simp add: f_def ok_fun_73 ok_fun_74 ok_fun_76 ok_fun_94 sum_in_smallo(1))
+  show ?thesis
+  using assms
+  unfolding ok_fun_93h_def ok_fun_93g_def ok_fun_71_def ok_fun_72_def
+    apply (simp add: )  
+  apply (intro eventually_all_geI1 [where L=XXXXXXXX])
+   apply (simp add: ok_fun_73_def ok_fun_74_def ok_fun_76_def ok_fun_94_def eps_def)
+   apply real_asymp
+   defer
+apply (auto simp: )
+  sorry
 proof -
   have \<section>: "(\<lambda>k. ok_fun_93h \<gamma> k / real k) \<in> o(1)"
-    using ok_fun_93h tendsto_zero_imp_o1 smalloD_tendsto assms by blast
+    using ok_fun_93h tendsto_zero_imp_o1 smalloD_tendsto assms
+    sorry
+    by blast
   show ?thesis
-    using landau_o.smallD [OF \<section>, of e] \<open>e>0\<close> by (auto simp: smallo_def)
+    using landau_o.smallD [OF \<section>, of e] \<open>e>0\<close> assms by (auto simp: smallo_def)
 qed
 
 context Book_Basis
@@ -297,28 +314,62 @@ definition "Big_Far_9_3 \<equiv>
              \<and> \<bar>ok_fun_93h \<mu> k / (\<mu> * (1 + 1 / (exp 1 * (1-\<mu>))))\<bar> / k \<le> 0.667 - 2/3)"
 
 lemma Big_Far_9_3:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_Far_9_3 \<mu> l"
+  assumes "0<\<mu>0" "\<mu>0\<le>\<mu>1" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_Far_9_3 \<mu> l"
 proof -
-  define d where "d \<equiv> \<mu> * (1 + 1 / (exp 1 * (1-\<mu>)))"
-  have "d > 0"
+  define d where "d \<equiv> \<lambda>\<mu>::real. \<mu> * (1 + 1 / (exp 1 * (1-\<mu>)))"
+  have "d \<mu>0 > 0" 
     using assms by (auto simp: d_def divide_simps add_pos_pos)
+  then have dgt: "d \<mu> \<ge> d \<mu>0" if "\<mu> \<in> {\<mu>0..\<mu>1}" for \<mu>
+    using that assms
+    apply (auto simp: d_def)
+    apply (intro mult_mono)
+       apply (auto simp: )
+    by (simp add: frac_le)
+
   define e::real where "e \<equiv> 0.667 - 2/3"
   have "e>0"
     by (simp add: e_def)
-  have *: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. \<bar>ok_fun_93h \<mu> k / d\<bar> / k \<le> e" 
+  have *: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. (\<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> \<bar>ok_fun_93h \<mu> k / d \<mu>\<bar> / k \<le> e)" 
   proof -
-    have "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. \<bar>ok_fun_93h \<mu> k\<bar> / real k \<le> d*e" 
-      using \<open>0 < d\<close> \<open>0 < e\<close> assms big_ok_fun_93h[OF assms] mult_pos_pos[of d e]
-      using eventually_all_ge_at_top by blast
+    have "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. (\<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> \<bar>ok_fun_93h \<mu> k\<bar> / k \<le> d \<mu>0 * e)" 
+      apply (intro eventually_all_ge_at_top)
+      using mult_pos_pos[OF \<open>d \<mu>0 > 0\<close> \<open>e>0\<close>]
+      using assms(1) assms(3) big_ok_fun_93h by blast  
+    then show ?thesis
+      apply eventually_elim 
+      using dgt \<open>0 < d \<mu>0\<close> \<open>0 < e\<close>
+      apply (auto simp: mult_ac divide_simps mult_less_0_iff zero_less_mult_iff split: if_split_asm)
+      by (smt (verit) mult_less_cancel_left nat_neq_iff of_nat_0_le_iff)
+  qed
+  with p0_min show ?thesis
+    unfolding Big_Far_9_3_def eps_def d_def e_def
+    using assms Big_ZZ_8_5 Big_X_7_1 Big_Y_6_2 Big_Red_5_3
+    apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
+    apply (intro conjI strip eventually_all_ge_at_top)
+      apply real_asymp+
+    apply (erule eventually_mono)
+    by presburger
+qed
+
+
+
+
+    proof -
+    have "0<\<mu>" "\<mu><1" using \<mu> assms by force+
+    have "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> (\<forall>k\<ge>l. \<bar>ok_fun_93h \<mu> k\<bar> / real k \<le> d \<mu> * e)" 
+      using \<open>0 < d\<close> \<open>0 < e\<close> big_ok_fun_93h[OF \<open>0<\<mu>\<close> \<open>\<mu><1\<close>] \<mu> 
+      using mult_pos_pos[of d e] eventually_all_ge_at_top 
+      by blast
     then show ?thesis
       apply eventually_elim 
       by (metis \<open>0 < d\<close> abs_div_pos divide_divide_eq_left' divide_le_eq mult.commute)
-  qed
+  qed 
   with p0_min show ?thesis
-    unfolding Big_Far_9_3_def eventually_conj_iff all_imp_conj_distrib eps_def d_def e_def
-    apply (simp add: Big_ZZ_8_5 Big_X_7_1 Big_Y_6_2 Big_Red_5_3 assms)
-    apply (intro conjI eventually_all_ge_at_top; real_asymp)
+    unfolding Big_Far_9_3_def eps_def d_def e_def
+    using assms Big_ZZ_8_5 Big_X_7_1 Big_Y_6_2 Big_Red_5_3
+    apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
+    apply (intro conjI strip eventually_all_ge_at_top; real_asymp)
     done
 qed
 
@@ -623,10 +674,11 @@ lemma ok_fun_95b: "ok_fun_95b \<mu> \<in> o(real)"
 definition "Big_Far_9_5 \<equiv> \<lambda>\<mu> l. Big_Red_5_3 \<mu> l \<and> Big_Y_6_1 \<mu> l \<and> Big_ZZ_8_5 \<mu> l"
 
 lemma Big_Far_9_5:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_Far_9_5 \<mu> l"
-  unfolding Big_Far_9_5_def eventually_conj_iff all_imp_conj_distrib eps_def
-  by (simp add: Big_Red_5_3 Big_Y_6_1 Big_ZZ_8_5 assms)
+  assumes "0<\<mu>0" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0\<le>\<mu> \<and> \<mu><1 \<longrightarrow> Big_Far_9_5 \<mu> l"
+  using assms Big_Red_5_3 Big_Y_6_1 Big_ZZ_8_5
+  unfolding Big_Far_9_5_def  eps_def
+  by (simp add: eventually_conj_iff eventually_frequently_const_simps)  
 
 end
 
@@ -743,12 +795,12 @@ definition "Big_Far_9_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l \<and> Bi
                 \<and> (\<forall>k\<ge>l. ok_fun_95b \<mu> k + \<mu>*k/60 \<ge> 0)"
 
 lemma Big_Far_9_2:
-  assumes "0<\<mu>" "\<mu><1"
-  shows "\<forall>\<^sup>\<infinity>l. Big_Far_9_2 \<mu> l"
-  unfolding Big_Far_9_2_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_Far_9_3 Big_Far_9_5 assms)
-    apply (intro conjI eventually_all_ge_at_top error_9_2 [OF assms])
-  done
+  assumes "0<\<mu>0" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0\<le>\<mu> \<and> \<mu><1 \<longrightarrow> Big_Far_9_2 \<mu> l"
+  using assms Big_Far_9_3 Big_Far_9_5
+  unfolding Big_Far_9_2_def 
+  apply (simp add: eventually_conj_iff eventually_frequently_const_simps)  
+  using eventually_all_ge_at_top error_9_2 less_le_trans by blast
 
 text \<open>A little tricky for me to express since my "Colours" assumption includes the allowed 
     assumption that there are no cliques in the original graph (page 9). So it's a contrapositive\<close>
@@ -1002,8 +1054,8 @@ definition "Big_Far_9_1 \<equiv> \<lambda>\<mu> l. Big_Far_9_2 \<mu> l \<and> p0
 
 (*NOTE ASSUMPTION ON p0_min*)
 lemma Big_Far_9_1:
-  assumes "0<\<mu>" "\<mu><1" and "p0_min \<le> 67/75"
-  shows "\<forall>\<^sup>\<infinity>l. Big_Far_9_1 \<mu> l"
+  assumes "0<\<mu>0" and "p0_min \<le> 67/75"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0\<le>\<mu> \<and> \<mu><1 \<longrightarrow> Big_Far_9_1 \<mu> l"
   using assms
   unfolding Big_Far_9_1_def eventually_conj_iff all_imp_conj_distrib eps_def
   apply (simp add: Big_Far_9_2)
@@ -1437,6 +1489,8 @@ proof (rule ccontr)
           using \<open>\<gamma>' < \<gamma>\<close> \<open>m<l\<close> by (simp add: \<gamma>_eq \<gamma>'_def of_nat_diff algebra_simps)
         finally show "p0_min \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>" .
       next
+        have "\<gamma>' \<ge> \<gamma>\<^sup>2"
+          using False by force
         show "UBB.Big_Far_9_2 (real (l-m) / (real k + real (l-m))) (l-m)"
           using big apply (auto simp: \<gamma>_eq Big_Far_9_1_def)
           sorry

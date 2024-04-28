@@ -113,7 +113,7 @@ proof -
     by simp
   have "exp (-3*x/2) = inverse (exp (3*x/2))"
     by (simp add: exp_minus)
-  also have "\<dots> \<le> inverse (1 + 3*x/2 + (1/2)*(3*x/2)^2 + (1/6)*(3*x/2)^3)"
+  also have "\<dots> \<le> inverse (1 + 3*x/2 + (1/2)*(3*x/2)\<^sup>2 + (1/6)*(3*x/2)^3)"
     apply (intro le_imp_inverse_le exp_lower_taylor_2)
     by (smt (verit) divide_nonneg_nonneg mult_nonneg_nonneg \<open>0 \<le> x\<close> zero_le_power)
   also have "\<dots> \<le> 1 - 4*x/3"
@@ -183,7 +183,7 @@ next
     by (simp add: field_split_simps flip: binomial_gbinomial)
 qed
 
-lemma power2_12: "m \<ge> 12 \<Longrightarrow> 25 * m^2 \<le> 2^m"
+lemma power2_12: "m \<ge> 12 \<Longrightarrow> 25 * m\<^sup>2 \<le> 2^m"
 proof (induction m)
   case 0
   then show ?case by auto
@@ -215,16 +215,57 @@ definition m_of where "m_of \<equiv> \<lambda>l::nat. nat\<lceil>l powr (2/3)\<r
 
 definition "Big_Blue_4_1 \<equiv> 
       \<lambda>\<mu> l. m_of l \<ge> 12  \<and>  l \<ge> (6/\<mu>) powr (12/5)  \<and>  l \<ge> 15
-               \<and> 1 \<le> 5/4 * exp (- ((b_of l)^2) / ((\<mu> - 2/l) * m_of l))  \<and>  \<mu> > 2/l
+               \<and> 1 \<le> 5/4 * exp (- real((b_of l)\<^sup>2) / ((\<mu> - 2/l) * m_of l))  \<and>  \<mu> > 2/l
                \<and> 2/l \<le> (\<mu> - 2/l) * ((5/4) powr (1/b_of l) - 1)"
 
-text \<open>establishing the size requirements for 4.1\<close>
+lemma eventually_all_geI0:
+  assumes  "\<forall>\<^sup>\<infinity>l. P \<mu>0 l"  "\<And>l \<mu>. \<lbrakk>P \<mu>0 l; \<mu>0\<le>\<mu>; \<mu>\<le>\<mu>1; l \<ge> L\<rbrakk> \<Longrightarrow> P \<mu> l"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> P \<mu> l"
+  by (smt (verit, del_insts) assms eventually_sequentially eventually_elim2)
+
+lemma eventually_all_geI1:
+  assumes  "\<forall>\<^sup>\<infinity>l. P \<mu>1 l"  "\<And>l \<mu>. \<lbrakk>P \<mu>1 l; \<mu>0\<le>\<mu>; \<mu>\<le>\<mu>1; l \<ge> L\<rbrakk> \<Longrightarrow> P \<mu> l"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> P \<mu> l"
+  by (smt (verit, del_insts) assms eventually_sequentially eventually_elim2)
+
+text \<open>Establishing the size requirements for 4.1.
+   NOTE: it doesn't become clear until SECTION 9 that all bounds involving
+     the parameter @{term \<mu>} must hold for a RANGE of values\<close>
 lemma Big_Blue_4_1:
-  assumes "0<\<mu>"
-  shows "\<forall>\<^sup>\<infinity>l. Big_Blue_4_1 \<mu> l"
-  using assms
-  unfolding Big_Blue_4_1_def eventually_conj_iff m_of_def b_of_def
-  by (intro conjI eventually_all_ge_at_top; real_asymp)
+  assumes "0<\<mu>0"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_Blue_4_1 \<mu> l"
+proof -
+  have 3: "3 / \<mu>0 > 0"
+    using assms by force
+  have 2: "\<mu>0 * nat \<lceil>3 / \<mu>0\<rceil> > 2"
+    by (smt (verit, best) Groups.mult_ac(2) assms of_nat_ceiling pos_less_divide_eq)
+  show ?thesis
+    using assms 2 3
+    unfolding Big_Blue_4_1_def eps_def 
+    apply (simp add: eventually_conj_iff all_imp_conj_distrib m_of_def b_of_def eventually_frequently_const_simps)  
+    apply (intro conjI strip eventually_all_ge_at_top eventually_all_geI0 [where L="nat \<lceil>3/\<mu>0\<rceil>"])
+            apply real_asymp+
+          apply (smt (verit, ccfv_SIG) divide_pos_pos frac_le powr_mono2)
+         apply real_asymp+
+        defer
+        apply real_asymp+
+       apply linarith
+      apply real_asymp+
+     apply (smt (verit, best) ceiling_correct divide_less_eq_1_pos divide_nonneg_nonneg ge_one_powr_ge_zero mult_right_mono powr_ge_pzero)
+    apply (erule order_trans)
+    apply (simp add: )
+    apply (intro divide_left_mono)
+      apply (meson ceiling_correct diff_right_mono dual_order.trans landau_omega.R_mult_right_mono powr_ge_pzero)
+     apply (simp add: )
+    apply (simp add: zero_less_mult_iff)
+    apply (auto simp: )[1]
+                   apply (simp_all add: divide_simps mult.commute split: if_split_asm)
+       apply (smt (verit, ccfv_SIG) mult_right_mono of_nat_0_le_iff)
+      apply (smt (verit, best) mult_right_mono of_nat_0_le_iff)
+     apply (smt (verit, best) mult_right_mono of_nat_0_le_iff)
+    apply (smt (verit, ccfv_SIG) mult_right_mono of_nat_0_le_iff)
+    done
+qed
 
 context Book
 begin
@@ -394,7 +435,7 @@ proof -
     using \<open>\<sigma> \<le> 1\<close> \<open>m>0\<close> by auto
   with ble have "b \<le> m"
     by linarith
-  have "\<mu>^b * 1 * card X \<le> (5/4 * \<sigma>^b) * (5/4 * exp(- of_nat (b\<^sup>2) / (\<sigma>*m))) * (5/4 * (card X - m))"
+  have "\<mu>^b * 1 * card X \<le> (5/4 * \<sigma>^b) * (5/4 * exp(- real(b\<^sup>2) / (\<sigma>*m))) * (5/4 * (card X - m))"
   proof (intro mult_mono)
     have 2: "2/k \<le> 2/l"
       by (simp add: \<open>l\<le>k\<close> frac_le ln0)
@@ -412,9 +453,9 @@ proof -
       using "2" eq10 by linarith
     moreover have "2/l < \<mu>"
       using big by (auto simp: Big_Blue_4_1_def) 
-    ultimately have "exp (- (b^2) / ((\<mu> - 2/l) * m)) \<le> exp (- real (b\<^sup>2) / (\<sigma> * m))"
+    ultimately have "exp (- real(b\<^sup>2) / ((\<mu> - 2/l) * m)) \<le> exp (- real (b\<^sup>2) / (\<sigma> * m))"
       using \<open>\<sigma>>0\<close> \<open>m>0\<close> by (simp add: frac_le)
-    then show "1 \<le> 5/4 * exp (- of_nat (b\<^sup>2) / (\<sigma> * real m))"
+    then show "1 \<le> 5/4 * exp (- real(b\<^sup>2) / (\<sigma> * real m))"
       using big unfolding Big_Blue_4_1_def b_def m_def
       by (smt (verit, best) divide_minus_left frac_le mult_left_mono)
     have "25 * (real m * real m) \<le> 2 powr m"
