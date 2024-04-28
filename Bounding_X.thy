@@ -150,9 +150,37 @@ lemma Big_X_7_2:
 definition "ok_fun_72 \<equiv> \<lambda>\<mu> k. (real k / ln 2) * ln (1 - 1 / (k * (1-\<mu>)))" 
 
 lemma ok_fun_72:
-  assumes "0<\<mu>" "\<mu><1" 
+  assumes "\<mu><1" 
   shows "ok_fun_72 \<mu> \<in> o(real)"
-  using assms unfolding ok_fun_72_def  by real_asymp
+  using assms unfolding ok_fun_72_def by real_asymp
+
+lemma ok_fun_72_uniform:
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  assumes "e>0" 
+  shows   "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> \<bar>ok_fun_72 \<mu> k\<bar> / k \<le> e" 
+proof (intro eventually_all_geI1 [where L = "Suc(nat\<lceil>1/(1-\<mu>1)\<rceil>)"])
+  show "\<forall>\<^sup>\<infinity>k. \<bar>ok_fun_72 \<mu>1 k\<bar> / real k \<le> e"
+    using assms unfolding ok_fun_72_def by real_asymp
+next
+  fix k \<mu>
+  assume le_e: "\<bar>ok_fun_72 \<mu>1 k\<bar> / real k \<le> e"
+    and \<mu>: "\<mu>0 \<le> \<mu>" "\<mu> \<le> \<mu>1"
+    and k: "Suc(nat\<lceil>1/(1-\<mu>1)\<rceil>) \<le> k"
+  with assms have "1 > 1 / (real k * (1 - \<mu>1))"
+    by (smt (verit, best) of_nat_Suc le_divide_eq_1 mult_imp_le_div_pos nat_le_real_less of_nat_ceiling)
+  then have *: "1 > 1 / (real k * (1 - r))" if "r\<le>\<mu>1" for r
+    using that
+    by (smt (verit, ccfv_threshold) assms(2) divide_less_eq_1 mult_eq_0_iff mult_left_mono of_nat_eq_0_iff of_nat_le_0_iff)
+  obtain "\<mu><1" "k>0" using \<mu> k assms by force
+  then have "\<bar>ok_fun_72 \<mu> k\<bar> \<le> \<bar>ok_fun_72 \<mu>1 k\<bar>"
+    using \<mu> * assms
+    apply (simp add: ok_fun_72_def abs_mult zero_less_mult_iff abs_of_neg)
+    apply (intro divide_right_mono)
+     apply (auto simp: frac_le)
+    done
+  then show "\<bar>ok_fun_72 \<mu> k\<bar> / real k \<le> e"
+    by (smt (verit, best) le_e divide_right_mono of_nat_0_le_iff)
+qed
 
 lemma (in Book) X_7_2:
   fixes l k
@@ -664,7 +692,7 @@ lemma Big_X_7_4:
   shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_X_7_4 \<mu> l"
   using assms Big_X_7_5 Big_Red_5_3
   unfolding Big_X_7_4_def  
-  by (simp add: eventually_conj_iff all_imp_conj_distrib  eventually_frequently_const_simps)
+  by (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)
 
 
 definition "ok_fun_74 \<equiv> \<lambda>k. -6 * eps k powr (1/4) * k * ln k / ln 2" 

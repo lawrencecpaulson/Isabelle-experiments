@@ -5,6 +5,9 @@ theory Far_From_Diagonal
 
 begin
 
+lemma all_imp_commute: "(\<forall>x. P x \<longrightarrow> (\<forall>y. Q y \<longrightarrow> R x y)) \<longleftrightarrow> (\<forall>y. Q y \<longrightarrow> (\<forall>x. P x \<longrightarrow> R x y))"
+  by auto
+
 subsection \<open>Fact D.3 from the Appendix\<close>
 
 text \<open>And hence, Fact 9.4\<close>
@@ -278,8 +281,8 @@ proof -
     unfolding ok_fun_93h_def by (metis (mono_tags) ok_fun_93g assms sum_in_smallo(1) cmult_in_smallo_iff')
 qed
 
-lemma big_ok_fun_93h:
-  assumes "0<\<mu>0" "\<mu>1<1" 
+lemma ok_fun_93h_uniform:
+  assumes \<mu>01: "0<\<mu>0" "\<mu>1<1" 
   assumes "e>0" 
   shows  "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> \<bar>ok_fun_93h \<mu> k\<bar> / k \<le> e"
 proof -
@@ -305,43 +308,25 @@ proof -
       using assms gr0I by force
     have ln_k: "ln k \<ge> ln (1/\<mu>0)"
       using k \<open>0<\<mu>0\<close> ln_mono by fastforce
-    with that \<mu> k assms(1,2) 
-    have "\<bar>g \<mu> k\<bar> \<le> \<bar>g \<mu>1 k\<bar>"       
-      apply (simp add: g_def abs_mult)
-      apply (intro frac_le mult_mono)
-               apply (auto simp: )
+    with \<mu> \<mu>01 
+    have "\<bar>ln \<mu> + 2 * ln (real k)\<bar> \<le> \<bar>ln \<mu>1 + 2 * ln (real k)\<bar>"
       by (smt (verit) ln_div ln_mono ln_one)
+    with \<mu> k \<open>\<mu>1 < 1\<close>
+    have "\<bar>g \<mu> k\<bar> \<le> \<bar>g \<mu>1 k\<bar>"       
+      by (simp add: g_def abs_mult frac_le mult_mono)
     then show "\<bar>g \<mu> k\<bar> / real k \<le> e"
       by (smt (verit, best) divide_right_mono le_e of_nat_less_0_iff)
   qed
+  have A: "\<forall>\<^sup>\<infinity>k. \<bar>\<lceil>k powr (3/4)\<rceil> * ln k\<bar> / k \<le> e" if "e>0" for e
+    using that by real_asymp
   have "ok_fun_93h \<mu> k = g \<mu> k +
-         \<lceil>k powr (3 / 4)\<rceil> * ln k - ((ok_fun_72 \<mu> k + f k) - 1) * ln 2" for \<mu> k
+         \<lceil>k powr (3/4)\<rceil> * ln k - ((ok_fun_72 \<mu> k + f k) - 1) * ln 2" for \<mu> k
     by (simp add: ok_fun_93h_def g_def ok_fun_71_def ok_fun_93g_def f_def log_def field_simps)
 
   show ?thesis
-  using assms
-  unfolding ok_fun_93h_def ok_fun_93g_def ok_fun_71_def ok_fun_72_def
+  using assms ok_fun_72_uniform[OF \<mu>01]
     apply (simp add: )  
-  apply (intro eventually_all_geI1 [where L=XXXXXXXX])
-   apply (simp add: algebra_simps abs_mult)
-   apply real_asymp
-   defer
-   apply (rule order_trans)
-  prefer 2
-    apply assumption
-   apply (intro divide_right_mono)
-    apply (simp add: abs_if algebra_simps split: if_split_asm)
-
-     apply (auto simp: )
-apply (intro mult_mono divide_right_mono)
   sorry
-proof -
-  have \<section>: "(\<lambda>k. ok_fun_93h \<gamma> k / real k) \<in> o(1)"
-    using ok_fun_93h tendsto_zero_imp_o1 smalloD_tendsto assms
-    sorry
-    by blast
-  show ?thesis
-    using landau_o.smallD [OF \<section>, of e] \<open>e>0\<close> assms by (auto simp: smallo_def)
 qed
 
 context Book_Basis
@@ -360,50 +345,23 @@ proof -
   have "d \<mu>0 > 0" 
     using assms by (auto simp: d_def divide_simps add_pos_pos)
   then have dgt: "d \<mu> \<ge> d \<mu>0" if "\<mu> \<in> {\<mu>0..\<mu>1}" for \<mu>
-    using that assms
-    apply (auto simp: d_def)
-    apply (intro mult_mono)
-       apply (auto simp: )
-    by (simp add: frac_le)
+    using that assms by (auto simp: d_def frac_le mult_mono)
 
   define e::real where "e \<equiv> 0.667 - 2/3"
   have "e>0"
     by (simp add: e_def)
-  have *: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. (\<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> \<bar>ok_fun_93h \<mu> k / d \<mu>\<bar> / k \<le> e)" 
+  have *: "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> (\<forall>k\<ge>l. \<bar>ok_fun_93h \<mu> k / d \<mu>\<bar> / k \<le> e)" 
   proof -
     have "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. (\<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> \<bar>ok_fun_93h \<mu> k\<bar> / k \<le> d \<mu>0 * e)" 
       apply (intro eventually_all_ge_at_top)
-      using mult_pos_pos[OF \<open>d \<mu>0 > 0\<close> \<open>e>0\<close>]
-      using assms(1) assms(3) big_ok_fun_93h by blast  
+      using mult_pos_pos[OF \<open>d \<mu>0 > 0\<close> \<open>e>0\<close>] assms(1) assms(3) ok_fun_93h_uniform 
+      by blast  
     then show ?thesis
       apply eventually_elim 
       using dgt \<open>0 < d \<mu>0\<close> \<open>0 < e\<close>
       apply (auto simp: mult_ac divide_simps mult_less_0_iff zero_less_mult_iff split: if_split_asm)
       by (smt (verit) mult_less_cancel_left nat_neq_iff of_nat_0_le_iff)
   qed
-  with p0_min show ?thesis
-    unfolding Big_Far_9_3_def eps_def d_def e_def
-    using assms Big_ZZ_8_5 Big_X_7_1 Big_Y_6_2 Big_Red_5_3
-    apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
-    apply (intro conjI strip eventually_all_ge_at_top)
-      apply real_asymp+
-    apply (erule eventually_mono)
-    by presburger
-qed
-
-
-
-
-    proof -
-    have "0<\<mu>" "\<mu><1" using \<mu> assms by force+
-    have "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> (\<forall>k\<ge>l. \<bar>ok_fun_93h \<mu> k\<bar> / real k \<le> d \<mu> * e)" 
-      using \<open>0 < d\<close> \<open>0 < e\<close> big_ok_fun_93h[OF \<open>0<\<mu>\<close> \<open>\<mu><1\<close>] \<mu> 
-      using mult_pos_pos[of d e] eventually_all_ge_at_top 
-      by blast
-    then show ?thesis
-      apply eventually_elim 
-      by (metis \<open>0 < d\<close> abs_div_pos divide_divide_eq_left' divide_le_eq mult.commute)
-  qed 
   with p0_min show ?thesis
     unfolding Big_Far_9_3_def eps_def d_def e_def
     using assms Big_ZZ_8_5 Big_X_7_1 Big_Y_6_2 Big_Red_5_3
@@ -713,11 +671,11 @@ lemma ok_fun_95b: "ok_fun_95b \<mu> \<in> o(real)"
 definition "Big_Far_9_5 \<equiv> \<lambda>\<mu> l. Big_Red_5_3 \<mu> l \<and> Big_Y_6_1 \<mu> l \<and> Big_ZZ_8_5 \<mu> l"
 
 lemma Big_Far_9_5:
-  assumes "0<\<mu>0" 
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0\<le>\<mu> \<and> \<mu><1 \<longrightarrow> Big_Far_9_5 \<mu> l"
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> Big_Far_9_5 \<mu> l"
   using assms Big_Red_5_3 Big_Y_6_1 Big_ZZ_8_5
   unfolding Big_Far_9_5_def  eps_def
-  by (simp add: eventually_conj_iff eventually_frequently_const_simps)  
+  by (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
 
 end
 
@@ -824,8 +782,8 @@ context Book_Basis
 begin
 
 lemma error_9_2:
-  assumes "0<\<mu>" "\<mu><1" 
-  shows "\<forall>\<^sup>\<infinity>k. ok_fun_95b \<mu> k + \<mu>*k/60 \<ge> 0"
+  assumes "0<\<mu>0" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> ok_fun_95b \<mu> k + \<mu>*k/60 \<ge> 0"
   using assms p0_min
   unfolding ok_fun_95b_def ok_fun_95a_def ok_fun_61_def eps_def
   by real_asymp
@@ -834,12 +792,18 @@ definition "Big_Far_9_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l \<and> Bi
                 \<and> (\<forall>k\<ge>l. ok_fun_95b \<mu> k + \<mu>*k/60 \<ge> 0)"
 
 lemma Big_Far_9_2:
-  assumes "0<\<mu>0" 
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0\<le>\<mu> \<and> \<mu><1 \<longrightarrow> Big_Far_9_2 \<mu> l"
-  using assms Big_Far_9_3 Big_Far_9_5
-  unfolding Big_Far_9_2_def 
-  apply (simp add: eventually_conj_iff eventually_frequently_const_simps)  
-  using eventually_all_ge_at_top error_9_2 less_le_trans by blast
+  assumes "0<\<mu>0" "\<mu>0\<le>\<mu>1" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> Big_Far_9_2 \<mu> l"
+proof -
+  have "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. (\<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 0 \<le> ok_fun_95b \<mu> k + \<mu> * real k / 60)"
+    apply (intro eventually_all_ge_at_top)
+    using assms error_9_2 by blast
+  then show ?thesis
+    using assms Big_Far_9_3 Big_Far_9_5
+    unfolding Big_Far_9_2_def 
+    apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
+    using all_imp_commute
+    by (smt (verit, ccfv_threshold) eventually_sequentially)
 
 text \<open>A little tricky for me to express since my "Colours" assumption includes the allowed 
     assumption that there are no cliques in the original graph (page 9). So it's a contrapositive\<close>
