@@ -8,6 +8,24 @@ begin
 lemma all_imp_commute: "(\<forall>x. P x \<longrightarrow> (\<forall>y. Q y \<longrightarrow> R x y)) \<longleftrightarrow> (\<forall>y. Q y \<longrightarrow> (\<forall>x. P x \<longrightarrow> R x y))"
   by auto
 
+context ordered_ab_group_add_abs
+begin
+
+lemma I0: "\<bar>b\<bar> + \<bar>a\<bar> \<le> z \<Longrightarrow> \<bar>a+b\<bar> \<le> z"
+  by (metis local.abs_triangle_ineq local.add_ac(2) local.order_trans)
+
+lemma J0: "\<bar>b\<bar> + \<bar>a\<bar> \<le> z \<Longrightarrow> \<bar>a-b\<bar> \<le> z"
+  by (metis local.abs_triangle_ineq4 local.add_ac(2) local.order_trans)
+
+lemma I: "\<bar>a\<bar> + c + \<bar>b\<bar> \<le> z \<Longrightarrow> \<bar>a+b\<bar> + c \<le> z"
+  using add_ac
+  by (metis local.abs_triangle_ineq  local.add_left_mono local.order.trans)
+
+lemma J: "\<bar>a\<bar> + c + \<bar>b\<bar> \<le> z \<Longrightarrow> \<bar>a-b\<bar> + c \<le> z"
+  by (metis abs_triangle_ineq4 add_diff_cancel diff_add_eq dual_order.trans le_diff_eq)
+
+end
+
 subsection \<open>Fact D.3 from the Appendix\<close>
 
 text \<open>And hence, Fact 9.4\<close>
@@ -286,14 +304,7 @@ lemma ok_fun_93h_uniform:
   assumes "e>0" 
   shows  "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> \<bar>ok_fun_93h \<mu> k\<bar> / k \<le> e"
 proof -
-  define e' where "e' \<equiv> (e/2)/ln 2"
-  have "e' > 0"
-    using assms by (simp add: e'_def) 
   define f where "f \<equiv> \<lambda>k. ok_fun_73 k + ok_fun_74 k + ok_fun_76 k + ok_fun_94 k"
-  have "f \<in> o(real)"
-    by (simp add: f_def ok_fun_73 ok_fun_74 ok_fun_76 ok_fun_94 sum_in_smallo(1))
-  then have "\<forall>\<^sup>\<infinity>k. \<bar>f k\<bar> \<le> e' * k"
-    using \<open>e'>0\<close> by (auto simp: smallo_def)
   define g where "g \<equiv> \<lambda>\<mu> k. 2 * real k powr (19/20) * (ln \<mu> + 2 * ln k) / (1-\<mu>)"
   have g: "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> \<bar>g \<mu> k\<bar> / k \<le> e" if "e>0" for e
   proof (intro eventually_all_geI1 [where L = "nat\<lceil>1 / \<mu>0\<rceil>"])
@@ -317,16 +328,43 @@ proof -
     then show "\<bar>g \<mu> k\<bar> / real k \<le> e"
       by (smt (verit, best) divide_right_mono le_e of_nat_less_0_iff)
   qed
-  have A: "\<forall>\<^sup>\<infinity>k. \<bar>\<lceil>k powr (3/4)\<rceil> * ln k\<bar> / k \<le> e" if "e>0" for e
-    using that by real_asymp
-  have "ok_fun_93h \<mu> k = g \<mu> k +
+  have eq93: "ok_fun_93h \<mu> k = g \<mu> k +
          \<lceil>k powr (3/4)\<rceil> * ln k - ((ok_fun_72 \<mu> k + f k) - 1) * ln 2" for \<mu> k
     by (simp add: ok_fun_93h_def g_def ok_fun_71_def ok_fun_93g_def f_def log_def field_simps)
 
-  show ?thesis
-  using assms ok_fun_72_uniform[OF \<mu>01]
-    apply (simp add: )  
-  sorry
+  have ln2: "ln 2 \<ge> (0::real)"
+    by simp
+  have le93: "\<bar>ok_fun_93h \<mu> k\<bar> 
+     \<le> \<bar>g \<mu> k\<bar> + \<bar>\<lceil>k powr (3/4)\<rceil> * ln k\<bar> + (\<bar>ok_fun_72 \<mu> k\<bar> + \<bar>f k\<bar> + 1) * ln 2" for \<mu> k
+    unfolding eq93
+    apply (simp add: distrib_right left_diff_distrib add.assoc)
+    by (smt (verit) ln2 mult_minus_left zero_less_mult_iff)
+  define e5 where "e5 \<equiv> e/5"
+  have "e5 > 0"
+    by (simp add: \<open>e>0\<close> e5_def)
+  then have A: "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> \<bar>g \<mu> k\<bar> / k \<le> e5" 
+    using g by simp
+  have B: "\<forall>\<^sup>\<infinity>k. \<bar>\<lceil>k powr (3/4)\<rceil> * ln k\<bar> / k \<le> e5" 
+    using \<open>0 < e5\<close> by real_asymp
+  have C: "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> \<bar>ok_fun_72 \<mu> k\<bar> * ln 2 / k \<le> e5"
+    using ln2 assms ok_fun_72_uniform[OF \<mu>01, of "e5 / ln 2"] \<open>e5 > 0\<close>
+    by (simp add: divide_simps)
+  have "f \<in> o(real)"
+    by (simp add: f_def ok_fun_73 ok_fun_74 ok_fun_76 ok_fun_94 sum_in_smallo(1))
+  then have D: "\<forall>\<^sup>\<infinity>k. \<bar>f k\<bar> * ln 2 / k \<le> e5"
+    using \<open>e5 > 0\<close> ln2
+    by (force simp add: smallo_def field_simps eventually_at_top_dense dest!: spec [where x="e5 / ln 2"])
+  have E: "\<forall>\<^sup>\<infinity>k.  ln 2 / k \<le> e5"
+    using \<open>e5 > 0\<close> ln2 by real_asymp
+  have "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> \<bar>ok_fun_93h \<mu> k\<bar> / real k \<le> e5+e5+e5+e5+e5"
+    using A B C D E
+    apply eventually_elim
+    apply clarify
+    apply (rule order_trans [OF  divide_right_mono [OF le93]])
+    apply (fastforce simp: add_divide_distrib distrib_right)+
+    done
+  then show ?thesis
+    by (simp add: e5_def)
 qed
 
 context Book_Basis
@@ -353,8 +391,8 @@ proof -
   have *: "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> (\<forall>k\<ge>l. \<bar>ok_fun_93h \<mu> k / d \<mu>\<bar> / k \<le> e)" 
   proof -
     have "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. (\<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> \<bar>ok_fun_93h \<mu> k\<bar> / k \<le> d \<mu>0 * e)" 
-      apply (intro eventually_all_ge_at_top)
-      using mult_pos_pos[OF \<open>d \<mu>0 > 0\<close> \<open>e>0\<close>] assms(1) assms(3) ok_fun_93h_uniform 
+      using mult_pos_pos[OF \<open>d \<mu>0 > 0\<close> \<open>e>0\<close>] assms
+      using ok_fun_93h_uniform eventually_all_ge_at_top
       by blast  
     then show ?thesis
       apply eventually_elim 
