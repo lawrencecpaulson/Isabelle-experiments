@@ -281,20 +281,59 @@ qed
 lemma big_ok_fun_93h:
   assumes "0<\<mu>0" "\<mu>1<1" 
   assumes "e>0" 
-  shows  "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> \<bar>ok_fun_93h \<mu> k\<bar> / real k \<le> e"
+  shows  "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> \<bar>ok_fun_93h \<mu> k\<bar> / k \<le> e"
 proof -
+  define e' where "e' \<equiv> (e/2)/ln 2"
+  have "e' > 0"
+    using assms by (simp add: e'_def) 
   define f where "f \<equiv> \<lambda>k. ok_fun_73 k + ok_fun_74 k + ok_fun_76 k + ok_fun_94 k"
   have "f \<in> o(real)"
     by (simp add: f_def ok_fun_73 ok_fun_74 ok_fun_76 ok_fun_94 sum_in_smallo(1))
+  then have "\<forall>\<^sup>\<infinity>k. \<bar>f k\<bar> \<le> e' * k"
+    using \<open>e'>0\<close> by (auto simp: smallo_def)
+  define g where "g \<equiv> \<lambda>\<mu> k. 2 * real k powr (19/20) * (ln \<mu> + 2 * ln k) / (1-\<mu>)"
+  have g: "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> \<bar>g \<mu> k\<bar> / k \<le> e" if "e>0" for e
+  proof (intro eventually_all_geI1 [where L = "nat\<lceil>1 / \<mu>0\<rceil>"])
+    show "\<forall>\<^sup>\<infinity>k. \<bar>g \<mu>1 k\<bar> / real k \<le> e"
+      using assms that unfolding g_def by real_asymp
+  next
+    fix k \<mu> 
+    assume le_e: "\<bar>g \<mu>1 k\<bar> / k \<le> e"
+      and \<mu>: "\<mu>0 \<le> \<mu>" "\<mu> \<le> \<mu>1"
+      and k: "nat \<lceil>1/\<mu>0\<rceil> \<le> k"
+    then have "k>0"
+      using assms gr0I by force
+    have ln_k: "ln k \<ge> ln (1/\<mu>0)"
+      using k \<open>0<\<mu>0\<close> ln_mono by fastforce
+    with that \<mu> k assms(1,2) 
+    have "\<bar>g \<mu> k\<bar> \<le> \<bar>g \<mu>1 k\<bar>"       
+      apply (simp add: g_def abs_mult)
+      apply (intro frac_le mult_mono)
+               apply (auto simp: )
+      by (smt (verit) ln_div ln_mono ln_one)
+    then show "\<bar>g \<mu> k\<bar> / real k \<le> e"
+      by (smt (verit, best) divide_right_mono le_e of_nat_less_0_iff)
+  qed
+  have "ok_fun_93h \<mu> k = g \<mu> k +
+         \<lceil>k powr (3 / 4)\<rceil> * ln k - ((ok_fun_72 \<mu> k + f k) - 1) * ln 2" for \<mu> k
+    by (simp add: ok_fun_93h_def g_def ok_fun_71_def ok_fun_93g_def f_def log_def field_simps)
+
   show ?thesis
   using assms
   unfolding ok_fun_93h_def ok_fun_93g_def ok_fun_71_def ok_fun_72_def
     apply (simp add: )  
   apply (intro eventually_all_geI1 [where L=XXXXXXXX])
-   apply (simp add: ok_fun_73_def ok_fun_74_def ok_fun_76_def ok_fun_94_def eps_def)
+   apply (simp add: algebra_simps abs_mult)
    apply real_asymp
    defer
-apply (auto simp: )
+   apply (rule order_trans)
+  prefer 2
+    apply assumption
+   apply (intro divide_right_mono)
+    apply (simp add: abs_if algebra_simps split: if_split_asm)
+
+     apply (auto simp: )
+apply (intro mult_mono divide_right_mono)
   sorry
 proof -
   have \<section>: "(\<lambda>k. ok_fun_93h \<gamma> k / real k) \<in> o(1)"
