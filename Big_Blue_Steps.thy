@@ -218,16 +218,6 @@ definition "Big_Blue_4_1 \<equiv>
                \<and> 1 \<le> 5/4 * exp (- real((b_of l)\<^sup>2) / ((\<mu> - 2/l) * m_of l))  \<and>  \<mu> > 2/l
                \<and> 2/l \<le> (\<mu> - 2/l) * ((5/4) powr (1/b_of l) - 1)"
 
-lemma eventually_all_geI0:
-  assumes  "\<forall>\<^sup>\<infinity>l. P \<mu>0 l"  "\<And>l \<mu>. \<lbrakk>P \<mu>0 l; \<mu>0\<le>\<mu>; \<mu>\<le>\<mu>1; l \<ge> L\<rbrakk> \<Longrightarrow> P \<mu> l"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> P \<mu> l"
-  by (smt (verit, del_insts) assms eventually_sequentially eventually_elim2)
-
-lemma eventually_all_geI1:
-  assumes  "\<forall>\<^sup>\<infinity>l. P \<mu>1 l"  "\<And>l \<mu>. \<lbrakk>P \<mu>1 l; \<mu>0\<le>\<mu>; \<mu>\<le>\<mu>1; l \<ge> L\<rbrakk> \<Longrightarrow> P \<mu> l"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> P \<mu> l"
-  by (smt (verit, del_insts) assms eventually_sequentially eventually_elim2)
-
 text \<open>Establishing the size requirements for 4.1.
    NOTE: it doesn't become clear until SECTION 9 that all bounds involving
      the parameter @{term \<mu>} must hold for a RANGE of values\<close>

@@ -9,7 +9,7 @@ lemma all_imp_commute: "(\<forall>x. P x \<longrightarrow> (\<forall>y. Q y \<lo
   by auto
 
 context ordered_ab_group_add_abs
-begin
+begin (*useful?*)
 
 lemma I0: "\<bar>b\<bar> + \<bar>a\<bar> \<le> z \<Longrightarrow> \<bar>a+b\<bar> \<le> z"
   by (metis local.abs_triangle_ineq local.add_ac(2) local.order_trans)
@@ -822,9 +822,22 @@ begin
 lemma error_9_2:
   assumes "0<\<mu>0" "\<mu>1<1" 
   shows "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> ok_fun_95b \<mu> k + \<mu>*k/60 \<ge> 0"
-  using assms p0_min
-  unfolding ok_fun_95b_def ok_fun_95a_def ok_fun_61_def eps_def
-  by real_asymp
+proof (intro eventually_all_geI0 [where L = "XXX"])
+  show "\<forall>\<^sup>\<infinity>k. 0 \<le> ok_fun_95b \<mu>0 k + \<mu>0 * real k / 60"
+    using assms p0_min
+    unfolding ok_fun_95b_def ok_fun_95a_def ok_fun_61_def eps_def by real_asymp
+next
+  fix k \<mu>
+  assume \<section>: "0 \<le> ok_fun_95b \<mu>0 k + \<mu>0 * real k / 60"
+    and "\<mu>0 \<le> \<mu>" and "\<mu> \<le> \<mu>1" and "XXX \<le> k"
+  then have "ok_fun_95b \<mu>0 k + \<mu>0 * real k / 60 \<le> ok_fun_95b \<mu> k + \<mu> * real k / 60"
+    using assms
+    apply (auto simp: ok_fun_95b_def ok_fun_95a_def)
+    apply (simp add: algebra_simps)
+    sorry
+  then show "0 \<le> ok_fun_95b \<mu> k + \<mu> * real k / 60"
+    using "\<section>" by argo
+qed
 
 definition "Big_Far_9_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l \<and> Big_Far_9_5 \<mu> l
                 \<and> (\<forall>k\<ge>l. ok_fun_95b \<mu> k + \<mu>*k/60 \<ge> 0)"
@@ -842,6 +855,7 @@ proof -
     apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
     using all_imp_commute
     by (smt (verit, ccfv_threshold) eventually_sequentially)
+qed
 
 text \<open>A little tricky for me to express since my "Colours" assumption includes the allowed 
     assumption that there are no cliques in the original graph (page 9). So it's a contrapositive\<close>
@@ -1095,12 +1109,11 @@ definition "Big_Far_9_1 \<equiv> \<lambda>\<mu> l. Big_Far_9_2 \<mu> l \<and> p0
 
 (*NOTE ASSUMPTION ON p0_min*)
 lemma Big_Far_9_1:
-  assumes "0<\<mu>0" and "p0_min \<le> 67/75"
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0\<le>\<mu> \<and> \<mu><1 \<longrightarrow> Big_Far_9_1 \<mu> l"
+  assumes "0<\<mu>0" "\<mu>0\<le>\<mu>1" "\<mu>1<1" and "p0_min \<le> 67/75"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> Big_Far_9_1 \<mu> l"
   using assms
   unfolding Big_Far_9_1_def eventually_conj_iff all_imp_conj_distrib eps_def
-  apply (simp add: Big_Far_9_2)
-  done
+  by (simp add: Big_Far_9_2)
 
 lemma (in Book_Basis) Far_9_1:
   fixes l k
