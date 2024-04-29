@@ -87,6 +87,76 @@ lemma clique_insert:
   using assms
   by (metis Un_subset_iff clique_def insert_is_Un insert_subset clique_Un singletonD)
 
+lemma less_RN_Red_Blue:
+  fixes l k
+  assumes nV: "nV < RN k l"
+  obtains Red Blue :: "'a set set"
+  where "Red \<subseteq> E" "Blue = E-Red" "\<not> (\<exists>K. size_clique k K Red)" "\<not> (\<exists>K. size_clique l K Blue)" 
+proof -
+  have "\<not> is_Ramsey_number k l nV"
+    using RN_le assms leD by blast
+  then obtain f where f: "f \<in> nsets {..<nV} 2 \<rightarrow> {..<2}" 
+            and noclique: "\<And>i. i<2 \<Longrightarrow> \<not> monochromatic {..<nV} ([k,l] ! i) 2 f i"
+    by (auto simp add: partn_lst_def eval_nat_numeral)
+  obtain \<phi> where \<phi>: "bij_betw \<phi> {..<nV} V"
+    using bij_betw_from_nat_into_finite finV by blast
+  define \<theta> where "\<theta> \<equiv> inv_into {..<nV} \<phi>"
+  have \<theta>: "bij_betw \<theta> V {..<nV}"
+    using \<phi> \<theta>_def bij_betw_inv_into by blast
+  have emap: "bij_betw (\<lambda>e. \<phi>`e) (nsets {..<nV} 2) E"
+    by (metis \<phi> bij_betw_nsets complete nsets2_eq_all_edges)
+
+  define Red  where "Red \<equiv>  (\<lambda>e. \<phi>`e) ` ((f -` {0}) \<inter> nsets {..<nV} 2)"
+  define Blue where "Blue \<equiv> (\<lambda>e. \<phi>`e) ` ((f -` {1}) \<inter> nsets {..<nV} 2)"
+  have "Red \<subseteq> E"
+    using bij_betw_imp_surj_on[OF emap] by (auto simp add: Red_def)
+  have "Blue = E-Red"
+    using emap f
+    by (auto simp: Red_def Blue_def bij_betw_def inj_on_eq_iff image_iff Pi_iff)
+  have no_Red_K: False if "size_clique k K Red" for K
+  proof -
+    have KR: "clique K Red" and Kk: "card K = k" and "K\<subseteq>V"
+      using that by (auto simp: size_clique_def)
+    then have "\<theta>`K \<in> [{..<nV}]\<^bsup>card K\<^esup>"
+      by (smt (verit, ccfv_threshold) \<theta> bij_betwE bij_betw_nsets finV mem_Collect_eq nsets_def finite_subset)
+    moreover have "f ` [\<theta>`K]\<^bsup>2\<^esup> \<subseteq> {0}"
+    proof (clarsimp elim!: nsets2_E)
+      fix v w
+      assume eq: "\<theta> v \<noteq> \<theta> w" and "v \<in> K" "w \<in> K"
+      then have "\<exists>e\<in>f -` {0} \<inter> [{..<nV}]\<^bsup>2\<^esup>. {v, w} = \<phi> ` e"
+        using KR by (fastforce simp: clique_def Red_def)
+      then show "f {\<theta> v, \<theta> w} = 0"
+        using bij_betw_inv_into_left [OF \<phi>]
+        by (auto simp: \<theta>_def doubleton_eq_iff insert_commute elim!: nsets2_E)
+    qed
+    ultimately show False
+      using noclique [of 0] Kk
+      by (simp add: size_clique_def monochromatic_def)
+  qed
+  have no_Blue_K: False if "size_clique l K Blue" for K
+  proof -
+    have KB: "clique K Blue" and Kl: "card K = l" and "K\<subseteq>V"
+      using that by (auto simp: size_clique_def)
+    then have "\<theta>`K \<in> [{..<nV}]\<^bsup>card K\<^esup>"
+      by (smt (verit, ccfv_threshold) \<theta> bij_betwE bij_betw_nsets finV mem_Collect_eq nsets_def finite_subset)
+    moreover have "f ` [\<theta>`K]\<^bsup>2\<^esup> \<subseteq> {1}"
+    proof (clarsimp elim !: nsets2_E)
+      fix v w
+      assume eq: "\<theta> v \<noteq> \<theta> w" and "v \<in> K" "w \<in> K"
+      then have "\<exists>e\<in>f -` {1} \<inter> [{..<nV}]\<^bsup>2\<^esup>. {v, w} = \<phi> ` e"
+        using KB by (fastforce simp: clique_def Blue_def)
+      then show "f {\<theta> v, \<theta> w} = Suc 0"
+        using bij_betw_inv_into_left [OF \<phi>]
+        by (auto simp: \<theta>_def doubleton_eq_iff insert_commute elim!: nsets2_E)
+    qed
+    ultimately show False
+      using noclique [of 1] Kl
+      by (simp add: size_clique_def monochromatic_def)
+  qed
+  show thesis
+    using \<open>Blue = E \<setminus> Red\<close> \<open>Red \<subseteq> E\<close> no_Blue_K no_Red_K that by presburger
+qed
+
 end
 
 (*NOT CLEAR WHETHER \<mu> CAN BE FIXED HERE OR NOT*)

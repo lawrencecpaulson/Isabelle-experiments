@@ -1102,7 +1102,6 @@ lemma Big_Far_9_1:
   apply (simp add: Big_Far_9_2)
   done
 
-
 lemma (in Book_Basis) Far_9_1:
   fixes l k
   fixes \<delta> \<gamma>::real
@@ -1155,51 +1154,7 @@ proof (rule ccontr)
   then obtain mstar_works: "gamma mstar < \<gamma>\<^sup>2" and mstar_le: "\<And>m. gamma m < \<gamma>\<^sup>2 \<Longrightarrow> mstar \<le> m"
     by (metis mstar_def wellorder_Least_lemma)
 
-  { fix W and Red Blue :: "'a set set"
-    assume "W\<subseteq>V"
-    assume "W \<noteq> {}"
-    assume nV_eq: "nV = nat\<lceil>RN k l / exp 1\<rceil>"
-    assume Red_not_Blue: "Red \<noteq> Blue"
-    assume part_RB: "partition_on E {Red,Blue}"
-    define is_good_clique where  
-      "is_good_clique \<equiv> \<lambda>n K. clique K Blue \<and> K \<subseteq> V \<and>
-                                 card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
-                                 \<ge> real n * U_lower_bound_ratio (card K) - card K"
-    assume no_Red_K: "\<not> (\<exists>K. size_clique k K Red)" 
-    assume no_Blue_K: "\<not> (\<exists>K. size_clique l K Blue)" 
-    assume 49: "is_good_clique nV W"
-    assume max49: "\<And>x. x\<in>V\<setminus>W \<Longrightarrow> \<not> is_good_clique nV (insert x W)"
-    define m where "m \<equiv> card W"
-    define \<gamma>' where "\<gamma>' \<equiv> (l - real m) / (k + l - real m)"
-    define \<eta> where "\<eta> \<equiv> \<xi> * \<gamma>'"
-    define U where "U \<equiv> (\<Inter>w\<in>W. Neighbours Blue w)"
-    define EU where "EU \<equiv> E \<inter> Pow U"
-    define RedU where "RedU \<equiv> Red \<inter> Pow U"
-    define BlueU where "BlueU \<equiv> Blue \<inter> Pow U"
-    assume "card U > 1"  (*NEEDED?*)
-
-    have Red_E: "Red \<subseteq> E" and Blue_E: "Blue \<subseteq> E" 
-      using part_RB Red_not_Blue by (auto simp: partition_on_def disjnt_iff pairwise_def)
-    have disjnt_Red_Blue: "disjnt Red Blue"
-      by (metis Red_not_Blue pairwise_insert part_RB partition_on_def singletonI)
-    have Blue_eq: "Blue = all_edges V - Red"
-      using disjnt_Red_Blue complete wellformed part_RB
-      by (auto simp: disjnt_iff partition_on_def)
-
-    have Red_Blue_RN: "\<exists>K \<subseteq> X. size_clique m K Red \<or> size_clique n K Blue"
-      if "card X \<ge> RN m n" "X\<subseteq>V" for m n and X :: "'a set"
-      using partn_lst_imp_is_clique_RN [OF is_Ramsey_number_RN [of m n]] finV that  
-      unfolding is_clique_RN_def size_clique_def clique_indep_def Blue_eq
-      by (metis clique_iff_indep infinite_super subset_trans)
-
-    have is_good_empty: "is_good_clique n {}" if "n \<le> nV" for n
-      using that by (simp add: is_good_clique_def U_lower_bound_ratio_def)
-
-    have is_good_card: "card K < l" if "is_good_clique n K" for n K
-      using no_Blue_K that
-      unfolding is_good_clique_def
-      by (metis nat_neq_iff size_clique_def size_clique_smaller)
-
+  { assume nV_eq: "nV = nat\<lceil>RN k l / exp 1\<rceil>"
     \<comment> \<open>Following Bhavik in dividing by @{term "exp 1"}\<close>
     have "nV < RN k l"
     proof -
@@ -1216,6 +1171,47 @@ proof (rule ccontr)
       ultimately show ?thesis
         by (simp add: nV_eq nat_less_iff ceiling_less_iff field_simps)
     qed
+    with less_RN_Red_Blue obtain Red Blue :: "'a set set"
+      where Red_E: "Red \<subseteq> E" and Blue_def: "Blue = E-Red" 
+        and no_Red_K: "\<not> (\<exists>K. size_clique k K Red)"
+        and no_Blue_K: "\<not> (\<exists>K. size_clique l K Blue)" by metis
+    have Blue_E: "Blue \<subseteq> E" and disjnt_Red_Blue: "disjnt Red Blue" and Blue_eq: "Blue = all_edges V - Red"
+      using complete by (auto simp add: Blue_def disjnt_iff) 
+
+    define is_good_clique where
+      "is_good_clique \<equiv> \<lambda>n K. clique K Blue \<and> K \<subseteq> V \<and>
+                                 card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
+                                 \<ge> real n * U_lower_bound_ratio (card K) - card K"
+
+    obtain W where "W\<subseteq>V" "W \<noteq> {}"
+      and 49: "is_good_clique nV W"
+      and max49: "\<And>x. x\<in>V\<setminus>W \<Longrightarrow> \<not> is_good_clique nV (insert x W)"
+      sorry
+
+    define m where "m \<equiv> card W"
+    define \<gamma>' where "\<gamma>' \<equiv> (l - real m) / (k + l - real m)"
+    define \<eta> where "\<eta> \<equiv> \<xi> * \<gamma>'"
+
+    have Red_Blue_RN: "\<exists>K \<subseteq> X. size_clique m K Red \<or> size_clique n K Blue"
+      if "card X \<ge> RN m n" "X\<subseteq>V" for m n and X :: "'a set"
+      using partn_lst_imp_is_clique_RN [OF is_Ramsey_number_RN [of m n]] finV that  
+      unfolding is_clique_RN_def size_clique_def clique_indep_def Blue_eq
+      by (metis clique_iff_indep infinite_super subset_trans)
+    define U where "U \<equiv> (\<Inter>w\<in>W. Neighbours Blue w)"
+    define EU where "EU \<equiv> E \<inter> Pow U"
+    define RedU where "RedU \<equiv> Red \<inter> Pow U"
+    define BlueU where "BlueU \<equiv> Blue \<inter> Pow U"
+    have "card U > 1"  (*NEEDED?*)
+      sorry
+
+    have is_good_empty: "is_good_clique n {}" if "n \<le> nV" for n
+      using that by (simp add: is_good_clique_def U_lower_bound_ratio_def)
+
+    have is_good_card: "card K < l" if "is_good_clique n K" for n K
+      using no_Blue_K that
+      unfolding is_good_clique_def
+      by (metis nat_neq_iff size_clique_def size_clique_smaller)
+
     have "real nV \<ge> RN k l / exp 1"
       using nV_eq real_nat_ceiling_ge by presburger
     moreover have "exp (- \<delta> * real k) * real (k + l choose l) < real (RN k l) / exp 1"
@@ -1560,5 +1556,6 @@ proof (rule ccontr)
   then show False
     sorry
 qed
+
 
 end
