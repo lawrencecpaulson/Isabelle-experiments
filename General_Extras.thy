@@ -4,6 +4,8 @@ theory General_Extras imports
 
 begin
 
+declare eventually_frequently_const_simps [simp]
+
 lemma mult_le_1_iff: "\<lbrakk>x\<ge>1; y\<ge>1\<rbrakk> \<Longrightarrow> x*y \<ge> (1::real)"
   by (smt (verit, best) mult_less_cancel_right2)
 

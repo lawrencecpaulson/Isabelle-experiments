@@ -228,33 +228,39 @@ proof -
   have 3: "3 / \<mu>0 > 0"
     using assms by force
   have 2: "\<mu>0 * nat \<lceil>3 / \<mu>0\<rceil> > 2"
-    by (smt (verit, best) Groups.mult_ac(2) assms of_nat_ceiling pos_less_divide_eq)
-  show ?thesis
-    using assms 2 3
-    unfolding Big_Blue_4_1_def eps_def 
-    apply (simp add: eventually_conj_iff all_imp_conj_distrib m_of_def b_of_def eventually_frequently_const_simps)  
-    apply (intro conjI strip eventually_all_ge_at_top eventually_all_geI0 [where L="nat \<lceil>3/\<mu>0\<rceil>"])
-            apply real_asymp+
-          apply (smt (verit, ccfv_SIG) divide_pos_pos frac_le powr_mono2)
-         apply real_asymp+
-        defer
-        apply real_asymp+
-       apply linarith
-      apply real_asymp+
-     apply (smt (verit, best) ceiling_correct divide_less_eq_1_pos divide_nonneg_nonneg ge_one_powr_ge_zero mult_right_mono powr_ge_pzero)
+    by (smt (verit, best) mult.commute assms of_nat_ceiling pos_less_divide_eq)
+  have "\<forall>\<^sup>\<infinity>l. 12 \<le> m_of l"
+    unfolding m_of_def by real_asymp
+  moreover have "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> (6 / \<mu>) powr (12 / 5) \<le> l"
+    using assms
+    apply (intro eventually_all_geI0, real_asymp)
+    by (smt (verit, ccfv_SIG) divide_pos_pos frac_le powr_mono2)
+  moreover have "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 4 \<le> 5 * exp (- ((real (b_of l))\<^sup>2 / ((\<mu> - 2 / real l) * real (m_of l))))"
+    using assms
+    unfolding b_of_def m_of_def
+    apply (intro eventually_all_geI0 [where L="nat \<lceil>3/\<mu>0\<rceil>"], real_asymp)
     apply (erule order_trans)
-    apply (simp add: )
-    apply (intro divide_left_mono)
-      apply (meson ceiling_correct diff_right_mono dual_order.trans landau_omega.R_mult_right_mono powr_ge_pzero)
-     apply (simp add: )
-    apply (simp add: zero_less_mult_iff)
-    apply (auto simp: )[1]
-                   apply (simp_all add: divide_simps mult.commute split: if_split_asm)
-       apply (smt (verit, ccfv_SIG) mult_right_mono of_nat_0_le_iff)
-      apply (smt (verit, best) mult_right_mono of_nat_0_le_iff)
-     apply (smt (verit, best) mult_right_mono of_nat_0_le_iff)
-    apply (smt (verit, ccfv_SIG) mult_right_mono of_nat_0_le_iff)
+    apply (intro mult_mono divide_left_mono | simp)+
+    using 2 3 
+        apply (auto simp: zero_less_mult_iff divide_simps mult.commute split: if_split_asm)
+    apply (smt (verit, best) mult_right_mono of_nat_0_le_iff)
+         apply (smt (verit) powr_ge_pzero)
+    using gr0I apply force
+       apply (smt (verit, ccfv_SIG) mult_right_mono of_nat_0_le_iff)+
     done
+  moreover have "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 2 / real l < \<mu>"
+    using assms
+    by (intro eventually_all_geI0, real_asymp, linarith)
+  moreover have "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 2 / real l \<le> (\<mu> - 2 / real l) * ((5 / 4) powr (1 / real (b_of l)) - 1)"
+    using assms
+    unfolding b_of_def
+    apply (intro eventually_all_geI0 [where L="nat \<lceil>2/\<mu>0\<rceil>"], real_asymp)
+    apply (erule order_trans)
+    apply (intro mult_right_mono)
+     apply (auto simp: divide_simps ge_one_powr_ge_zero mult.commute)
+    done
+  ultimately show ?thesis
+    by (auto simp add: Big_Blue_4_1_def eventually_conj_iff all_imp_conj_distrib)
 qed
 
 context Book

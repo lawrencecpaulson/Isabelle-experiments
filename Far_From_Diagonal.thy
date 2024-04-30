@@ -845,7 +845,7 @@ definition "Big_Far_9_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l \<and> Bi
                 \<and> (\<forall>k\<ge>l. ok_fun_95b k + \<mu>*k/60 \<ge> 0)"
 
 lemma Big_Far_9_2:
-  assumes "0<\<mu>0" "\<mu>0<\<mu>1" "\<mu>1<1" 
+  assumes "0<\<mu>0" "\<mu>0\<le>\<mu>1" "\<mu>1<1" 
   shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> Big_Far_9_2 \<mu> l"
 proof -
   have "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. (\<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 0 \<le> ok_fun_95b k + \<mu> * k / 60)"
