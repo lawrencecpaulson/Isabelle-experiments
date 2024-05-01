@@ -1499,7 +1499,7 @@ proof (rule ccontr)
         using \<gamma> \<open>l>0\<close> by (simp add: \<gamma>_eq field_split_simps)
       finally have "m \<le> real l * (1 - (10/11)*\<gamma>)"  (*NEEDED?*)
         by force
-      then have H: "real l - real m \<ge> (10/11) * \<gamma> * l"
+      then have lm_bound: "real l - real m \<ge> (10/11) * \<gamma> * l"
         by (simp add: algebra_simps)
 
       define \<delta>' where "\<delta>' \<equiv> \<gamma>'/20"
@@ -1555,17 +1555,12 @@ proof (rule ccontr)
       next
         have "\<gamma>' \<ge> \<gamma>\<^sup>2"
           using False by force
-        show "UBB.Big_Far_9_2 (real (l-m) / (real k + real (l-m))) (l-m)"
-          using big \<open>\<gamma>' < \<gamma>\<close> \<gamma> \<open>m<l\<close> False  apply (auto simp: \<gamma>_eq UBB.Big_Far_9_1_def)
-          apply (drule_tac x="l-m" in spec)
-          using H
-          apply (simp add: \<gamma>_eq)
-          apply (auto simp: )
-          apply (drule_tac x="\<gamma>'" in spec)
-          apply (auto simp: )
-          using \<open>\<gamma>' < \<gamma>\<close> assms(4) apply linarith
-          apply (simp add: \<gamma>'_def algebra_simps of_nat_diff)
-          done
+        then have "UBB.Big_Far_9_2 \<gamma>' (l-m)"
+          using big \<open>\<gamma>' < \<gamma>\<close> \<gamma> \<open>m<l\<close> lm_bound unfolding UBB.Big_Far_9_1_def
+          by (smt (verit, del_insts) less_imp_le of_nat_diff)
+        then
+        show "UBB.Big_Far_9_2 ((l-m) / (real k + real (l-m))) (l-m)"
+          by (simp add: \<gamma>'_def \<open>m < l\<close> add_diff_eq less_or_eq_imp_le of_nat_diff)
         show "l-m \<le> k"
           using \<open>l \<le> k\<close> by auto
         show "(l-m) / (real k + real (l-m)) \<le> 1/10"
