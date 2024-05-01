@@ -134,8 +134,8 @@ proof (cases "m=0 \<or> b=0")
     using True assms by auto
 next
   case False
-  with b \<sigma> have bm: "real b < real m"
-    by (smt (verit, ccfv_SIG) le_divide_eq_1_pos of_nat_le_0_iff pos_less_divide_eq times_divide_eq_left)
+  with b b' \<sigma> have bm: "real b < real m"
+    by linarith
   have *: "exp (- 3 * real i / (2*m)) \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))" if "i<b" for i
   proof -
     have im: "0 \<le> i/m" "i/m \<le> 1/7"
@@ -156,11 +156,11 @@ next
         by (simp add: field_split_simps)
       have 2: "1 / (real m - real i) \<le> 1 / (real m - real b)"
         using \<sigma> \<sigma>' b'  that by (simp add: field_split_simps)
-      have "(1 - \<sigma>) / (\<sigma> * (real m - real i)) \<le> 8 / (7 * (real m - real b))"
+      have \<section>: "(1 - \<sigma>) / (\<sigma> * (real m - real i)) \<le> 8 / (7 * (real m - real b))"
         using mult_mono [OF 1 2] b' that by auto 
-      then show ?thesis
-        apply simp
-        by (metis mult.commute mult_left_mono of_nat_0_le_iff times_divide_eq_right)
+      show ?thesis
+        using mult_left_mono [OF \<section>, of i]
+        by (simp add: mult_of_nat_commute)
     qed
     finally show ?thesis .
   qed
@@ -235,27 +235,27 @@ proof -
     using assms
     apply (intro eventually_all_geI0, real_asymp)
     by (smt (verit, ccfv_SIG) divide_pos_pos frac_le powr_mono2)
-  moreover have "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 4 \<le> 5 * exp (- ((real (b_of l))\<^sup>2 / ((\<mu> - 2 / real l) * real (m_of l))))"
+  moreover have "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 4 \<le> 5 * exp (- ((real (b_of l))\<^sup>2 / ((\<mu> - 2/l) * real (m_of l))))"
   proof (intro eventually_all_geI0 [where L = "nat \<lceil>3/\<mu>0\<rceil>"])
-    show "\<forall>\<^sup>\<infinity>l. 4 \<le> 5 * exp (- ((real (b_of l))\<^sup>2 / ((\<mu>0 - 2 / real l) * real (m_of l))))"
+    show "\<forall>\<^sup>\<infinity>l. 4 \<le> 5 * exp (- ((real (b_of l))\<^sup>2 / ((\<mu>0 - 2/l) * real (m_of l))))"
     unfolding b_of_def m_of_def using assms by real_asymp
   next
     fix l \<mu>
-    assume \<section>: "4 \<le> 5 * exp (- ((real (b_of l))\<^sup>2 / ((\<mu>0 - 2 / real l) * real (m_of l))))"
+    assume \<section>: "4 \<le> 5 * exp (- ((real (b_of l))\<^sup>2 / ((\<mu>0 - 2/l) * real (m_of l))))"
       and "\<mu>0 \<le> \<mu>" "\<mu> \<le> \<mu>1" and lel: "nat \<lceil>3 / \<mu>0\<rceil> \<le> l"
     then have "l>0"
       using "3" by linarith
     then have 0: "m_of l > 0"
       using 3 by (auto simp: m_of_def)
-    have "\<mu>0 > 2 / real l"
+    have "\<mu>0 > 2/l"
       using lel assms by (auto simp: divide_simps mult.commute)
-    then show "4 \<le> 5 * exp (- ((real (b_of l))\<^sup>2 / ((\<mu> - 2 / real l) * real (m_of l))))"
+    then show "4 \<le> 5 * exp (- ((real (b_of l))\<^sup>2 / ((\<mu> - 2/l) * real (m_of l))))"
       using order_trans [OF \<section>] by (simp add: "0" \<open>\<mu>0 \<le> \<mu>\<close> frac_le)
   qed
-  moreover have "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 2 / real l < \<mu>"
+  moreover have "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 2/l < \<mu>"
     using assms
     by (intro eventually_all_geI0, real_asymp, linarith)
-  moreover have "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 2 / real l \<le> (\<mu> - 2 / real l) * ((5 / 4) powr (1 / real (b_of l)) - 1)"
+  moreover have "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 2/l \<le> (\<mu> - 2/l) * ((5 / 4) powr (1 / real (b_of l)) - 1)"
   proof -
     have "\<And>l \<mu>. \<mu>0 \<le> \<mu> \<Longrightarrow> \<mu>0 - 2/l \<le> \<mu> - 2/l"
       by (auto simp: divide_simps ge_one_powr_ge_zero mult.commute) 

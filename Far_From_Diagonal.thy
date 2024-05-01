@@ -1112,7 +1112,7 @@ definition "Big_Far_9_1 \<equiv> \<lambda>\<mu> l. Big_Far_9_2 \<mu> l"
 
 (*NOTE ASSUMPTION ON p0_min*)
 lemma Big_Far_9_1:
-  assumes "0<\<mu>0" "\<mu>0\<le>\<mu>1" "\<mu>1<1" and "p0_min \<le> 67/75"
+  assumes "0<\<mu>0" "\<mu>0\<le>\<mu>1" "\<mu>1<1" 
   shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> Big_Far_9_1 \<mu> l"
   using assms
   unfolding Big_Far_9_1_def eventually_conj_iff all_imp_conj_distrib eps_def

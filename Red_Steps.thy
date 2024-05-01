@@ -235,7 +235,7 @@ proof -
   with \<open>k\<ge>l\<close> have "k>1" by auto
   let ?R = "RN k (m_of l)"
   have "finite X" "finite Y"
-    unfolding X_def Y_def by (meson finV infinite_super Xseq_subset_V Yseq_subset_V)+
+    by (auto simp add: X_def Y_def  finite_Xseq finite_Yseq)
   have not_many_bluish: "\<not> many_bluish \<mu> l k X"
     using i not_many_bluish unfolding X_def by blast
   have nonterm: "\<not> termination_condition l k X Y"
@@ -244,7 +244,7 @@ proof -
     using \<open>l>1\<close> by (simp add: powr_mono)
   ultimately have RNX: "?R < card X"
     unfolding termination_condition_def m_of_def
-    by (smt (verit, ccfv_SIG) RN_mono order.trans leI ceiling_mono nat_mono order.refl)
+    by (meson RN_mono order.trans ceiling_mono le_refl nat_mono not_le)
   have "0 \<le> (\<Sum>x \<in> X. \<Sum>x' \<in> X. Weight X Y x x')"
     by (simp add: X_def Y_def sum_Weight_ge0 Xseq_subset_V Yseq_subset_V Xseq_Yseq_disjnt)
   also have "\<dots> = (\<Sum>y \<in> X. weight X Y y + Weight X Y y y)"
@@ -408,7 +408,7 @@ proof -
     have "i \<notin> Step_class \<mu> l k {halted}"
       using i by (simp add: Step_class_def)
     then have p0: "1/k < p0"
-      by (metis Step_class_halted_forever le_eq_less_or_eq not_halted_pee_gt not_gr0 pee_eq_p0)
+      by (metis Step_class_not_halted gr0I nat_less_le not_halted_pee_gt pee_eq_p0)
     have 0: "eps k powr -(1/2) \<ge> 0"
       by simp
     have "eps k powr -(1/2) * alpha k (hgt k ?p) \<le> eps k powr (1/2) * (?p - qfun k 0 + 1/k)"
@@ -423,7 +423,7 @@ proof -
   next
     case False
     then have "pee \<mu> l k i \<le> qfun k 1"
-      by (smt (verit, best) alpha_eq alpha_ge0 One_nat_def add_diff_cancel_left' plus_1_eq_Suc q_Suc_diff zero_less_one)
+      by (smt (verit) One_nat_def alpha_Suc_eq alpha_ge0 q_Suc_diff)
     then have "eps k powr -(1/2) * alpha k (hgt k ?p) = eps k powr (1/2) / k"
       using powr_mult_base [of "eps k"] eps_gt0 by (force simp: Red_5_7c mult.commute)
     also have "\<dots> \<le> eps k powr (1/2) * ?p"
@@ -489,15 +489,18 @@ lemma Big_Red_5_1:
   assumes "\<mu>1<1" 
   shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_Red_5_1 \<mu> l"
   using assms Big_Red_5_6 Big_Red_5_4
-  unfolding Big_Red_5_1_def  
-  apply (simp add:  eventually_frequently_const_simps all_imp_conj_distrib eventually_conj_iff)
-  apply (intro conjI strip eventually_all_geI1 [where L=1])
-      apply real_asymp+
-     apply (smt (verit, best) mult_pos_neg mult_right_mono)
-    apply real_asymp+
-  apply (smt (verit, ccfv_SIG) frac_le)      
-  apply real_asymp+
-  done
+  unfolding Big_Red_5_1_def all_imp_conj_distrib eventually_conj_iff
+proof (simp, intro conjI strip eventually_all_geI1)
+  fix l \<mu>
+  assume  "1 < (1 - \<mu>1) * real l" "\<mu> \<le> \<mu>1"
+  then show "1 < (1 - \<mu>) * real l"
+    by (smt (verit, best) mult_right_mono of_nat_0_le_iff)
+next
+  fix l \<mu>
+  assume "3 / (1 - \<mu>1) \<le> real l powr (5 / 2)" "\<mu> \<le> \<mu>1"
+  then show "3 / (1 - \<mu>) \<le> real l powr (5 / 2)"
+    by (smt (verit, ccfv_SIG)  assms frac_le)
+qed real_asymp+
 
 context Book
 begin
@@ -703,7 +706,8 @@ proof -
       by (simp add: edge_card_commute)
     finally have Red_bound: 
       "p * card NBX * card NRY + alpha k (hgt k p) * card NRX * card NRY + weight X Y x * card Y \<le> edge_card Red NBX NRY" .
-    then have "(p * card NBX * card NRY + alpha k (hgt k p) * card NRX * card NRY + weight X Y x * card Y) / (card NBX * card NRY) \<le> red_density NBX NRY"
+    then have "(p * card NBX * card NRY + alpha k (hgt k p) * card NRX * card NRY + weight X Y x * card Y)
+             / (card NBX * card NRY) \<le> red_density NBX NRY"
       by (metis divide_le_cancel gen_density_def of_nat_less_0_iff)
     then have "p + alpha k (hgt k p) * card NRX / card NBX + weight X Y x * card Y / (card NBX * card NRY) \<le> red_density NBX NRY" 
       using \<open>card NBX > 0\<close> \<open>card NRY > 0\<close> by (simp add: add_divide_distrib)
@@ -836,12 +840,9 @@ lemma Big_Red_5_3:
   assumes "0<\<mu>0" "\<mu>1<1" 
   shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_Red_5_3 \<mu> l"
   using assms Big_Red_5_1
-  apply (simp add: Big_Red_5_3_def eps_def eventually_conj_iff all_imp_conj_distrib 
-       eventually_frequently_const_simps)  
-  apply (intro conjI strip eventually_all_geI0[where L=1] eventually_all_ge_at_top)
-  apply real_asymp+
-  apply auto[1]
-  apply real_asymp+
+  apply (simp add: Big_Red_5_3_def eps_def eventually_conj_iff all_imp_conj_distrib)  
+  apply (intro conjI strip eventually_all_geI0 eventually_all_ge_at_top)
+  apply (real_asymp|force)+
   done
 
 context Book
