@@ -1108,7 +1108,7 @@ qed
 
 subsection \<open>Lemma 9.1\<close>
 
-definition "Big_Far_9_1 \<equiv> \<lambda>\<mu> l. Big_Far_9_2 \<mu> l \<and> p0_min \<le> 1 - (1/10) * (1 + 1/15)"
+definition "Big_Far_9_1 \<equiv> \<lambda>\<mu> l. Big_Far_9_2 \<mu> l"
 
 (*NOTE ASSUMPTION ON p0_min*)
 lemma Big_Far_9_1:
@@ -1125,7 +1125,8 @@ lemma (in Book_Basis) Far_9_1:
   defines "\<gamma> \<equiv> gamma 0"  (*IS THIS FUNCTION NEEDED?*)
   defines "\<delta> \<equiv> \<gamma>/20"
   assumes \<gamma>: "\<gamma> \<le> 1/10" 
-  assumes big: "Big_Far_9_1 \<gamma> l"
+  assumes big: "\<forall>l'. real l' \<ge> (10/11) * \<gamma> * l \<longrightarrow> (\<forall>\<mu>. \<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/10 \<longrightarrow> Big_Far_9_1 \<mu> l')"
+  assumes p0_min_91: "p0_min \<le> 1 - (1/10) * (1 + 1/15)"
   shows "RN k l \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
 proof (rule ccontr)
   assume non: "\<not> RN k l \<le> exp (-\<delta> * k + 1) * (k+l choose l)"
@@ -1370,7 +1371,7 @@ proof (rule ccontr)
 
 
     \<comment> \<open>Bhavik's gamma'_le_gamma_iff NEEDED?\<close>
-    have "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (real k * real l) + (real l * real l) < (real k * real m) + (real l * (real m * 2))"
+    have G: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (real k * real l) + (real l * real l) < (real k * real m) + (real l * (real m * 2))"
       using \<open>m < l\<close>
       apply (simp add: \<gamma>'_def \<gamma>_eq eval_nat_numeral divide_simps; simp add: algebra_simps)
       by (metis \<open>k>0\<close> mult_less_cancel_left_pos of_nat_0_less_iff distrib_left)
@@ -1491,6 +1492,16 @@ proof (rule ccontr)
         apply (simp add: \<gamma>_eq \<gamma>'_def divide_simps)
         apply (simp add: algebra_simps)
         by (smt (verit, best) mult_left_mono mult_right_mono nat_less_real_le of_nat_0_le_iff)
+
+      have "m \<le> l * (k + real l) / (k + 2 * real l)"
+        using False gamma'_le_gamma_iff by auto 
+      also have "... \<le> l * (1 - (10/11)*\<gamma>)"
+        using \<gamma> \<open>l>0\<close> by (simp add: \<gamma>_eq field_split_simps)
+      finally have "m \<le> real l * (1 - (10/11)*\<gamma>)"  (*NEEDED?*)
+        by force
+      then have H: "real l - real m \<ge> (10/11) * \<gamma> * l"
+        by (simp add: algebra_simps)
+
       define \<delta>' where "\<delta>' \<equiv> \<gamma>'/20"
 
       have no_RedU_K: "\<not> (\<exists>K. UBB.size_clique k K RedU)"
@@ -1535,7 +1546,7 @@ proof (rule ccontr)
           using * \<open>\<gamma>' < \<gamma>\<close> \<open>m < l\<close> unfolding \<gamma>_eq \<gamma>'_def
           by (smt (verit) less_or_eq_imp_le of_nat_add of_nat_diff)
         have "p0_min \<le> 1 - (1/10) * (1+\<xi>)"
-          using big by (auto simp: Big_Far_9_1_def \<xi>_def)
+          using p0_min_91 by (auto simp: \<xi>_def)
         also have "\<dots> \<le> 1 - \<gamma> - \<eta>"
           using \<open>\<gamma>' < \<gamma>\<close> \<gamma> by (auto simp: \<eta>_def \<xi>_def)
         also have "... \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>"
@@ -1545,8 +1556,16 @@ proof (rule ccontr)
         have "\<gamma>' \<ge> \<gamma>\<^sup>2"
           using False by force
         show "UBB.Big_Far_9_2 (real (l-m) / (real k + real (l-m))) (l-m)"
-          using big apply (auto simp: \<gamma>_eq Big_Far_9_1_def)
-          sorry
+          using big \<open>\<gamma>' < \<gamma>\<close> \<gamma> \<open>m<l\<close> False  apply (auto simp: \<gamma>_eq UBB.Big_Far_9_1_def)
+          apply (drule_tac x="l-m" in spec)
+          using H
+          apply (simp add: \<gamma>_eq)
+          apply (auto simp: )
+          apply (drule_tac x="\<gamma>'" in spec)
+          apply (auto simp: )
+          using \<open>\<gamma>' < \<gamma>\<close> assms(4) apply linarith
+          apply (simp add: \<gamma>'_def algebra_simps of_nat_diff)
+          done
         show "l-m \<le> k"
           using \<open>l \<le> k\<close> by auto
         show "(l-m) / (real k + real (l-m)) \<le> 1/10"
