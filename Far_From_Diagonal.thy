@@ -1170,7 +1170,8 @@ proof (rule ccontr)
   qed
 
   have "n \<le> exp (- \<delta> * k) * ((k + l) choose l)"
-  proof -
+  proof (rule ccontr)
+    assume ncon: "\<not> n \<le> exp (- \<delta> * k) * ((k + l) choose l)"
     define V where "V \<equiv> {..<n}"
     define E where "E \<equiv> all_edges V" 
     interpret Book_Basis V E
@@ -1394,7 +1395,7 @@ proof (rule ccontr)
         unfolding K'_def size_clique_def using \<open>K \<subseteq> U\<close> \<open>U \<subseteq> V\<close> \<open>W \<subseteq> V\<close> by auto
     qed
 
-    show ?thesis
+    show False
     proof (cases "\<gamma>' < \<gamma>\<^sup>2")
       case True
       have YKK: "\<gamma>*k \<le> m" 
@@ -1437,7 +1438,7 @@ proof (rule ccontr)
         using exp_mono [OF \<section>]
         by (smt (verit) \<eta>_def \<open>0 < \<eta>\<close> \<open>0 < \<gamma>'\<close> exp_ln_iff exp_of_nat_mult zero_le_mult_iff)
       have "n * (1+\<xi>)^m \<ge> (k+l choose l)"
-        using mult_mono [OF less_imp_le [OF n_gt] powerm]
+        using mult_mono [OF less_imp_le [OF nV_gt] powerm]
         by (simp add: exp_minus field_simps)
       then have "n * (1+\<xi>)^m * PM \<ge> (\<Prod>i<l-m. (k + l - (m+i)) / (l - (m+i)))"
         using \<open>m<l\<close> prod_gt0 by (force simp add: kl_choose divide_simps split: if_split_asm)
@@ -1460,19 +1461,23 @@ proof (rule ccontr)
       also have "... \<le> (k+l-m choose (l-m)) - m"
         using m_le_choose by linarith
       finally have "RN k (l - m) \<le> (k+l-m choose (l-m)) - m" .
-      then have "card U \<ge> RN k (l-m)"
+      then have DDD: "card U \<ge> RN k (l-m)"
         using 49 * VUU unfolding is_good_clique_def U_def m_def by fastforce
-      with Red_Blue_RN no_Red_K \<open>U \<subseteq> V\<close>
-      obtain K where "K \<subseteq> U" "size_clique (l-m) K Blue" by meson
-      then have False
-        using no_Blue_K extend_Blue_clique by blast
-      then show ?thesis ..
+      
 
       \<comment> \<open>Further material in the note, getting the bound on RN\<close>
       have "1+\<xi> > exp (1/20)"
         unfolding \<xi>_def by (approximation 10)
       have "m \<ge> (1-\<gamma>)*l"
         using YKK YLK by linarith
+      have "RN k l \<le> (1+\<xi>) powr (-real m) * (k+l choose l)"
+
+    sorry
+
+      from DDD Red_Blue_RN no_Red_K \<open>U \<subseteq> V\<close>
+      obtain K where "K \<subseteq> U" "size_clique (l-m) K Blue" by meson
+      then show False
+        using no_Blue_K extend_Blue_clique by blast
 
     next
       case False
@@ -1521,13 +1526,11 @@ proof (rule ccontr)
         qed
         finally have expexp: "exp (\<delta>*k) * exp (-\<delta>'*k) \<le> (1+\<xi>) ^ m" .
 
-        have "exp (- \<delta> * k) * (k + l - m choose (l-m)) \<le> UBB.nV"
-          using n_def cardU 
-          unfolding U_lower_bound_ratio_def
+        have "exp (- \<gamma>'*k / 20) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
           sorry
         then show "exp (- ((l-m) / (k + real (l-m)) / 20) * k) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
-          apply (simp add: \<delta>_def \<gamma>_eq)
-          sorry
+          using \<open>m < l\<close> apply (simp add: \<gamma>'_def of_nat_diff)
+          by argo
       next
         show "1 - real (l-m) / (real k + real (l-m)) - \<eta> \<le> UBB.graph_density RedU"
           using * \<open>\<gamma>' < \<gamma>\<close> \<open>m < l\<close> unfolding \<gamma>_eq \<gamma>'_def
@@ -1561,11 +1564,10 @@ proof (rule ccontr)
       qed auto
       with no_RedU_K obtain K where "K \<subseteq> U" "UBB.size_clique (l-m) K BlueU"
         by (meson UBB.size_clique_def)
-      then have False
+      then show False
         using no_Blue_K extend_Blue_clique VUU
         unfolding UBB.size_clique_def size_clique_def BlueU_def
         by (metis Int_subset_iff all_edges_subset_iff_clique) 
-      then show ?thesis ..
     qed
   qed
   moreover
