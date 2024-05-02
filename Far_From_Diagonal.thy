@@ -346,7 +346,7 @@ proof -
     by (simp add: e5_def)
 qed
 
-context Book_Basis
+context P0_min
 begin
 
 definition "Big_Far_9_3 \<equiv>     
@@ -667,7 +667,7 @@ qed
 
 subsection \<open>Lemma 9.5\<close>
 
-context Book_Basis
+context P0_min
 begin
 
 text \<open>Again stolen from Bhavik: cannot allow a dependence on @{term \<gamma>}\<close>
@@ -805,7 +805,7 @@ qed
 
 subsection \<open>Lemma 9.2 actual proof\<close>
 
-context Book_Basis
+context P0_min
 begin
 
 lemma error_9_2:
@@ -1088,25 +1088,27 @@ end
 
 subsection \<open>Lemma 9.1\<close>
 
-definition "Big_Far_9_1 \<equiv> \<lambda>p0 \<mu> l. Book_Basis.Big_Far_9_2 p0 \<mu> l" (*PROBABLY NEEDS TO SPECIFY A range of values*)
+context P0_min
+begin
+
+definition "Big_Far_9_1 \<equiv> \<lambda>\<mu> l. Big_Far_9_2 \<mu> l" (*PROBABLY NEEDS TO SPECIFY A range of values*)
 
 lemma Big_Far_9_1:
   assumes "0<\<mu>0" "\<mu>0\<le>\<mu>1" "\<mu>1<1" 
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> Big_Far_9_1 p0 \<mu> l"
-  using assms Book_Basis.Big_Far_9_2
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> Big_Far_9_1 \<mu> l"
+  using assms 
   unfolding Big_Far_9_1_def eventually_conj_iff all_imp_conj_distrib eps_def
-  sorry
-  apply (simp add: Book_Basis.Big_Far_9_2)
+  by (simp add: Big_Far_9_2)
 
 lemma Far_9_1:
   fixes l k::nat
-  fixes \<delta> \<gamma> p0_min::real
+  fixes \<delta> \<gamma>::real
   defines "gamma \<equiv> \<lambda>m. (real l - real m) / (real k + real l - real m)"
   defines "\<gamma> \<equiv> gamma 0"  (*IS THIS FUNCTION NEEDED?*)
   defines "\<delta> \<equiv> \<gamma>/20"
   assumes \<gamma>: "\<gamma> \<le> 1/10" 
-  assumes big: "\<forall>l'. real l' \<ge> (10/11) * \<gamma> * l \<longrightarrow> (\<forall>\<mu>. \<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/10 \<longrightarrow> Big_Far_9_1 p0_min_91 \<mu> l')"
-  assumes p0_min_91: "0 < p0_min" "p0_min \<le> 1 - (1/10) * (1 + 1/15)"
+  assumes big: "\<forall>l'. real l' \<ge> (10/11) * \<gamma> * l \<longrightarrow> (\<forall>\<mu>. \<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/10 \<longrightarrow> Big_Far_9_1 \<mu> l')"
+  assumes p0_min_91: "p0_min \<le> 1 - (1/10) * (1 + 1/15)"
   shows "RN k l \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
 proof (rule ccontr)
   assume non: "\<not> RN k l \<le> exp (-\<delta> * k + 1) * (k+l choose l)"
@@ -1275,8 +1277,6 @@ proof (rule ccontr)
     next
       show "finite U"
         using \<open>U \<subseteq> V\<close> by (simp add: V_def finite_subset)
-      show "0 < p0_min" "p0_min < 1"
-        by (auto simp: p0_min)
       have "x \<in> E" if "x \<in> all_edges U" for x 
         using \<open>U \<subseteq> V\<close> all_edges_mono that complete E_def by blast
       then show "E \<inter> Pow U = all_edges U"
@@ -1526,8 +1526,12 @@ proof (rule ccontr)
         qed
         finally have expexp: "exp (\<delta>*k) * exp (-\<delta>'*k) \<le> (1+\<xi>) ^ m" .
 
-        have "exp (- \<gamma>'*k / 20) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
+        have "exp (- \<gamma>'*k / 20) * (k + (l-m) choose (l-m)) \<le> real n * U_lower_bound_ratio m - m"
+          using YMK n_def nV_gt
           sorry
+        also have "\<dots> \<le> UBB.nV"
+          using cardU by linarith
+        finally have "exp (- \<gamma>'*k / 20) * (k + (l-m) choose (l-m)) \<le> UBB.nV" .
         then show "exp (- ((l-m) / (k + real (l-m)) / 20) * k) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
           using \<open>m < l\<close> apply (simp add: \<gamma>'_def of_nat_diff)
           by argo
@@ -1545,12 +1549,11 @@ proof (rule ccontr)
       next
         have "\<gamma>' \<ge> \<gamma>\<^sup>2"
           using False by force
-        then have "UBB.Big_Far_9_2 \<gamma>' (l-m)"
-          using big \<open>\<gamma>' < \<gamma>\<close> \<gamma> \<open>m<l\<close> lm_bound unfolding UBB.Big_Far_9_1_def
-          sorry
+        then have "Big_Far_9_2 \<gamma>' (l-m)"
+          using big \<open>\<gamma>' < \<gamma>\<close> \<gamma> \<open>m<l\<close> lm_bound unfolding Big_Far_9_1_def
           by (smt (verit, del_insts) less_imp_le of_nat_diff)
         then
-        show "UBB.Big_Far_9_2 ((l-m) / (real k + real (l-m))) (l-m)"
+        show "Big_Far_9_2 ((l-m) / (real k + real (l-m))) (l-m)"
           by (simp add: \<gamma>'_def \<open>m < l\<close> add_diff_eq less_or_eq_imp_le of_nat_diff)
         show "l-m \<le> k"
           using \<open>l \<le> k\<close> by auto

@@ -55,9 +55,11 @@ lemma Big_height_upper_bound:
 
 type_synonym 'a config = "'a set \<times> 'a set \<times> 'a set \<times> 'a set"
 
-locale Book_Basis = fin_sgraph +  
+locale P0_min =   
   fixes p0_min :: real
   assumes p0_min: "0 < p0_min" "p0_min < 1"
+
+locale Book_Basis = fin_sgraph + P0_min +
   assumes complete: "E = all_edges V"
   assumes infinite_UNIV: "infinite (UNIV::'a set)"
 begin

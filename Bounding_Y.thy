@@ -672,7 +672,7 @@ end
 
 subsection \<open>Lemma 6.1\<close>
 
-context Book_Basis
+context P0_min
 begin
 
 definition "ok_fun_61 \<equiv> \<lambda>k. (2 * real k / ln 2) * ln (1 - 2 * eps k powr (1/2) / p0_min)"
