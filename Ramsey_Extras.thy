@@ -575,7 +575,7 @@ lemma RN_le_add_RN_RN:
   by simp
 
 text \<open>Cribbed from Bhavik Mehta\<close>
-lemma RN_le_binomial: "RN k l \<le> (k + l - 2) choose (k - 1)"
+lemma RN_le_choose_strong: "RN k l \<le> (k + l - 2) choose (k - 1)"
 proof (induction n \<equiv> "k+l" arbitrary: k l)
   case 0
   then show ?case
