@@ -1117,6 +1117,8 @@ proof (rule ccontr)
     by (simp add: \<gamma>_def gamma_def)
   with \<open>l>0\<close> have YLK: "(1-\<gamma>)*l = \<gamma>*k"
     by (simp add: field_simps)
+  have l9k: "9*l \<le> k"
+    using \<open>l>0\<close> \<gamma> by (auto simp: \<gamma>_eq divide_simps)
   have "l\<le>k"
     using \<gamma>_eq \<gamma> nat_le_real_less by fastforce
   with \<open>l>0\<close> have "k>0" by linarith
@@ -1128,14 +1130,12 @@ proof (rule ccontr)
      \<comment>\<open>Bhavik's terminology below\<close>
   define U_lower_bound_ratio where 
         "U_lower_bound_ratio \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k+l - real i))"
-  have l9k: "l \<le> 9*k"
-    using \<gamma> \<open>l \<le> k\<close> by (auto simp: \<gamma>_def divide_simps)
   have U_lower_bound_ratio_ge0: "0 \<le> U_lower_bound_ratio m" if "m < l" for m
     using that by (auto simp: U_lower_bound_ratio_def \<xi>_def zero_le_mult_iff intro!: prod_nonneg)
   have "U_lower_bound_ratio (Suc m) \<le> U_lower_bound_ratio m" if "m < l" for m   (*UNUSED*)
   proof -
     have \<section>: "1+\<xi> \<le> (k + l - real m) / (l - real m)"
-      using l9k that by (auto simp: divide_simps \<xi>_def)
+      using \<open>l\<le>k\<close> that by (auto simp: divide_simps \<xi>_def)
     have [simp]: "U_lower_bound_ratio (Suc m)
                = ((1+\<xi>) * (l - real m) / (k + real l - real m)) * U_lower_bound_ratio m"
       by (simp add: U_lower_bound_ratio_def)
@@ -1201,6 +1201,14 @@ proof (rule ccontr)
                                  card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
                                  \<ge> real i * U_lower_bound_ratio (card K) - card K"
 
+
+  have is_good_empty: "is_good_clique i {}" if "i \<le> n" for i
+    using that by (simp add: is_good_clique_def U_lower_bound_ratio_def E_def V_def)
+
+  have is_good_card: "card K < l" if "is_good_clique i K" for i K
+    using no_Blue_K that
+    unfolding is_good_clique_def 
+    by (metis nat_neq_iff size_clique_def size_clique_smaller)
   obtain W where 49: "is_good_clique n W"
     and max49: "\<And>x. x\<in>V\<setminus>W \<Longrightarrow> \<not> is_good_clique n (insert x W)"
     sorry
@@ -1220,13 +1228,6 @@ proof (rule ccontr)
   define RedU where "RedU \<equiv> Red \<inter> Pow U"
   define BlueU where "BlueU \<equiv> Blue \<inter> Pow U"
 
-  have is_good_empty: "is_good_clique i {}" if "i \<le> n" for i
-    using that by (simp add: is_good_clique_def U_lower_bound_ratio_def E_def V_def)
-
-  have is_good_card: "card K < l" if "is_good_clique i K" for i K
-    using no_Blue_K that
-    unfolding is_good_clique_def 
-    by (metis nat_neq_iff size_clique_def size_clique_smaller)
 
   have "RN k l > 0"
     by (metis RN_eq_0_iff gr0I \<open>k>0\<close> \<open>l>0\<close>)
@@ -1276,8 +1277,81 @@ proof (rule ccontr)
   have clique_W: "size_clique m W Blue"
     using "49" is_good_clique_def m_def size_clique_def V_def by blast
 
-  have "card U > 1"
+  define PM where "PM \<equiv> \<Prod>i<m. (l - real i) / (k + l - real i)"
+  then have U_lower_m: "U_lower_bound_ratio m = (1+\<xi>)^m * PM"
+    using U_lower_bound_ratio_def by blast
+  have prod_gt0: "PM > 0"
+    unfolding PM_def using \<open>m<l\<close> by (intro prod_pos) auto
+
+  have inj: "inj_on (\<lambda>i. i-m) {m..<l}" \<comment>\<open>relating the power and binomials; maybe easier using factorials\<close>
+    by (auto simp: inj_on_def)
+  have "(\<Prod>i<l. real (k + l - i) / real (l - i)) / (\<Prod>i<m. real (k + l - i) / real (l - i))
+          = (\<Prod>i = m..<l. real (k + l - i) / real (l - i))"
+    using prod_divide_nat_ivl [of 0 m l "\<lambda>i. real (k+l-i) / real (l-i)"] \<open>m < l\<close>
+    by (simp add: atLeast0LessThan)
+  also have "... = (\<Prod>i<l - m. (k + l - m - i) / (l - m - i))"
+    apply (rule prod.reindex_cong [OF inj, symmetric])
+    by (auto simp: image_minus_const_atLeastLessThan_nat)
+  finally
+  have "(\<Prod>i<l - m. (k + l - m - i) / (l - m - i)) 
+          = (\<Prod>i<l. (k + l - i) / (l - i)) / (\<Prod>i<m. (k + l - i) / (l - i))" 
+    by linarith
+  also have "... = (k+l choose l) * inverse (\<Prod>i<m. (k + l - i) / (l - i))"
+    by (simp add: field_simps atLeast0LessThan binomial_altdef_of_nat) 
+  also have "... = (k+l choose l) * PM"
+    unfolding PM_def using \<open>m < l\<close> \<open>k>0\<close>
+    by (simp add: atLeast0LessThan of_nat_diff flip: prod_inversef)
+  finally have klm_choose: "(k+l-m choose (l-m)) = (k+l choose l) * PM"
+    by (simp add: atLeast0LessThan binomial_altdef_of_nat)
+  then have kl_choose: "real(k+l choose l) = (k+l-m choose (l-m)) / PM"
+    using prod_gt0 by (simp add: field_simps)
+
+  (************)
+
+  have exp\<delta>: "exp \<delta> < 200/199"
     sorry
+
+  have \<section>: "Suc l - q \<le> (k+q choose q) / exp(\<delta>*k) * (1+\<xi>) ^ (l - q)"
+    if "1\<le>q" "q\<le>l" for q
+    using that
+  proof (induction q rule: nat_induct_at_least)
+    case base
+    then show ?case
+      apply (simp add: )
+      by simp
+  next
+    case (Suc q)
+    then have \<section>: "(1 + \<xi>) ^ (l - q) = (1 + \<xi>) * (1 + \<xi>) ^ (l - Suc q)"
+      by (metis Suc_diff_le diff_Suc_Suc power.simps(2))
+    have **: "real(k + q choose q) \<le> real(k + q choose Suc q)" "0 \<le> (1 + \<xi>) ^ (l - Suc q)"
+      using \<open>Suc q \<le> l\<close> l9k by (auto simp: \<xi>_def binomial_mono) 
+    have "(k + q choose q) * (1 + \<xi>) ^ (l - q) /
+        exp (\<delta> * k) - 1 \<le> (real (k + q choose q) + (k + q choose Suc q)) *
+           (1 + \<xi>) ^ (l - Suc q) / exp (\<delta> * k)"
+      using mult_right_mono [OF **] unfolding \<section> by (simp add: \<xi>_def field_simps add_increasing)
+    with Suc show ?case by force      
+  qed
+  have "1 + real m \<le> (k+l-m choose (l-m)) / exp \<delta> ^ k * (1+\<xi>) ^ m"
+    using \<open>m<l\<close> \<section> [of "l - m"] by (simp add: Suc_diff_Suc exp_of_nat2_mult)
+  also have "\<dots> \<le> (k+l-m choose (l-m)) / exp (\<delta> * k) * (1+\<xi>) ^ m"
+    by (simp add: exp_of_nat2_mult)
+  also have "\<dots> < PM * (real n * (1+\<xi>) ^ m)"
+  proof -
+    have \<section>: "(k+l choose l) / exp (\<delta> * k) < n"
+      by (simp add: less_eq_real_def nexp_gt pos_divide_less_eq)
+    show ?thesis
+      using mult_strict_left_mono [OF \<section>, of "PM * (1+\<xi>) ^ m"] klm_choose prod_gt0
+      by (auto simp add: field_simps \<xi>_def)
+  qed
+  also have "... = real n * U_lower_bound_ratio m"
+    by (simp add: U_lower_m)
+  finally have "1 < real n * U_lower_bound_ratio m - real (card W)"
+    using m_def by auto
+  then have "card U > 1"
+    using cardU m_def by linarith
+
+(************)
+
   have card_EU: "card EU > 0"
     using \<open>card U > 1\<close> UBB.complete by (simp add: EU_def UBB.finV card_all_edges)
   have BlueU_eq: "BlueU = EU \<setminus> RedU" 
@@ -1386,35 +1460,6 @@ proof (rule ccontr)
     ultimately show ?thesis
       unfolding K'_def size_clique_def using \<open>K \<subseteq> U\<close> \<open>U \<subseteq> V\<close> \<open>W \<subseteq> V\<close> by auto
   qed
-
-  define PM where "PM \<equiv> \<Prod>i<m. (l - real i) / (k + l - real i)"
-  then have U_lower_m: "U_lower_bound_ratio m = (1+\<xi>)^m * PM"
-    using U_lower_bound_ratio_def by blast
-  have prod_gt0: "PM > 0"
-    unfolding PM_def using \<open>m<l\<close> by (intro prod_pos) auto
-
-  have inj: "inj_on (\<lambda>i. i-m) {m..<l}" \<comment>\<open>relating the power and binomials; maybe easier using factorials\<close>
-    by (auto simp: inj_on_def)
-  have "(\<Prod>i<l. real (k + l - i) / real (l - i)) / (\<Prod>i<m. real (k + l - i) / real (l - i))
-          = (\<Prod>i = m..<l. real (k + l - i) / real (l - i))"
-    using prod_divide_nat_ivl [of 0 m l "\<lambda>i. real (k+l-i) / real (l-i)"] \<open>m < l\<close>
-    by (simp add: atLeast0LessThan)
-  also have "... = (\<Prod>i<l - m. (k + l - m - i) / (l - m - i))"
-    apply (rule prod.reindex_cong [OF inj, symmetric])
-    by (auto simp: image_minus_const_atLeastLessThan_nat)
-  finally
-  have "(\<Prod>i<l - m. (k + l - m - i) / (l - m - i)) 
-          = (\<Prod>i<l. (k + l - i) / (l - i)) / (\<Prod>i<m. (k + l - i) / (l - i))" 
-    by linarith
-  also have "... = (k+l choose l) * inverse (\<Prod>i<m. (k + l - i) / (l - i))"
-    by (simp add: field_simps atLeast0LessThan binomial_altdef_of_nat) 
-  also have "... = (k+l choose l) * PM"
-    unfolding PM_def using \<open>m < l\<close> \<open>k>0\<close>
-    by (simp add: atLeast0LessThan of_nat_diff flip: prod_inversef)
-  finally have klm_choose: "(k+l-m choose (l-m)) = (k+l choose l) * PM"
-    by (simp add: atLeast0LessThan binomial_altdef_of_nat)
-  then have kl_choose: "real(k+l choose l) = (k+l-m choose (l-m)) / PM"
-    using prod_gt0 by (simp add: field_simps)
 
   show False
   proof (cases "\<gamma>' < \<gamma>\<^sup>2")
