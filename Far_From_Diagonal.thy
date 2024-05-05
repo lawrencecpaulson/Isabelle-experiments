@@ -1127,9 +1127,9 @@ proof (rule ccontr)
   with \<open>l>0\<close> have "l\<ge>2"
     by force
   define \<xi>::real where "\<xi> \<equiv> 1/15"
-     \<comment>\<open>Bhavik's terminology below\<close>
+    \<comment>\<open>Bhavik's terminology below\<close>
   define U_lower_bound_ratio where 
-        "U_lower_bound_ratio \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k+l - real i))"
+    "U_lower_bound_ratio \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k+l - real i))"
   have U_lower_bound_ratio_ge0: "0 \<le> U_lower_bound_ratio m" if "m < l" for m
     using that by (auto simp: U_lower_bound_ratio_def \<xi>_def zero_le_mult_iff intro!: prod_nonneg)
   have "U_lower_bound_ratio (Suc m) \<le> U_lower_bound_ratio m" if "m < l" for m   (*UNUSED*)
@@ -1146,7 +1146,7 @@ proof (rule ccontr)
   then have Ulb_decreasing: "antimono_on {..<l} U_lower_bound_ratio"   (*UNUSED*)
     by (auto simp: monotone_on_def intro: lift_Suc_antimono_le [of "{..<l}"])
 
-  (*NEEDED?*)
+(*NEEDED?*)
   define mstar where "mstar \<equiv> LEAST m. gamma m < \<gamma>\<^sup>2"
   have "gamma l < \<gamma>\<^sup>2"
     using \<open>l>0\<close> by (simp add: gamma_def \<gamma>_def of_nat_diff)
@@ -1201,17 +1201,34 @@ proof (rule ccontr)
                                  card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
                                  \<ge> real i * U_lower_bound_ratio (card K) - card K"
 
-
   have is_good_empty: "is_good_clique i {}" if "i \<le> n" for i
     using that by (simp add: is_good_clique_def U_lower_bound_ratio_def E_def V_def)
-
   have is_good_card: "card K < l" if "is_good_clique i K" for i K
     using no_Blue_K that
     unfolding is_good_clique_def 
     by (metis nat_neq_iff size_clique_def size_clique_smaller)
-  obtain W where 49: "is_good_clique n W"
-    and max49: "\<And>x. x\<in>V\<setminus>W \<Longrightarrow> \<not> is_good_clique n (insert x W)"
-    sorry
+  define GC where "GC \<equiv> {C. is_good_clique n C}"
+  have "GC \<noteq> {}"
+    using GC_def is_good_empty by auto
+  have "GC \<subseteq> Pow V"
+    by (auto simp: is_good_clique_def GC_def)
+  then have "finite GC"
+    by (simp add: finV finite_subset)
+  then obtain W where "W \<in> GC" and MaxW: "Max (card ` GC) = card W"
+    using \<open>GC \<noteq> {}\<close> obtains_MAX by blast
+  then have 49: "is_good_clique n W"
+    using GC_def by blast
+  have max49: "\<not> is_good_clique n (insert x W)" if "x\<in>V\<setminus>W" for x
+  proof 
+    assume x: "is_good_clique n (insert x W)"
+    then have "card (insert x W) = Suc (card W)"
+      using finV is_good_clique_def finite_subset that by fastforce
+    with x \<open>finite GC\<close> have "Max (card ` GC) \<ge> Suc (card W)"
+      by (simp add: GC_def rev_image_eqI)
+    then show False
+      by (simp add: MaxW)
+  qed
+
   have "W\<subseteq>V"
     using 49 by (auto simp: is_good_clique_def)
   define m where "m \<equiv> card W"
@@ -1306,7 +1323,7 @@ proof (rule ccontr)
   then have kl_choose: "real(k+l choose l) = (k+l-m choose (l-m)) / PM"
     using prod_gt0 by (simp add: field_simps)
 
-  \<comment>\<open>Now a huge effort just to show that @{term U} is nontrivial.
+\<comment>\<open>Now a huge effort just to show that @{term U} is nontrivial.
      Proof probably shows its cardinality exceeds a multiple of @{term l}\<close>
   have "exp (k / (20*(k+l))) \<le> exp(1/20)"
     using \<open>m < l\<close> by fastforce
@@ -1447,7 +1464,7 @@ proof (rule ccontr)
   ultimately have "RedU \<noteq> {}"
     by (auto simp: UBB.graph_density_def)
 
-  \<comment> \<open>Bhavik's gamma'_le_gamma_iff\<close>
+\<comment> \<open>Bhavik's gamma'_le_gamma_iff\<close>
   have "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (real k * real l) + (real l * real l) < (real k * real m) + (real l * (real m * 2))"
     using \<open>m < l\<close>
     apply (simp add: \<gamma>'_def \<gamma>_eq eval_nat_numeral divide_simps; simp add: algebra_simps)
