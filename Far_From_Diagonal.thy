@@ -128,7 +128,7 @@ lemma fact_9_4:
   defines "\<gamma> \<equiv> l / (real k + real l)"
   shows "k+l choose l \<ge> 2 powr ok_fun_94 k * \<gamma> powr (-l) * (1-\<gamma>) powr (-k)" 
 proof -
-  have *: "ok_fun_94 k \<le> logstir (k + l) - (logstir k + logstir l)"
+  have *: "ok_fun_94 k \<le> logstir (k+l) - (logstir k + logstir l)"
     using mono_logstir by (auto simp: ok_fun_94_def monotone_def)
   have "2 powr ok_fun_94 k * \<gamma> powr (- real l) * (1-\<gamma>) powr (- real k)
       = (2 powr ok_fun_94 k) * (k+l) powr(k+l) / (k powr k * l powr l)"
@@ -185,7 +185,7 @@ proof -
       with exp_minus_ge show ?thesis
         by (smt (verit, best)) 
     qed
-    ultimately show "(\<Prod>i<t. 1 - i * real l / (k * real (k + l - i))) \<le> exp (- (\<Sum>i<t. i * real l / (k * real (k + l))))"
+    ultimately show "(\<Prod>i<t. 1 - i * real l / (k * real (k + l - i))) \<le> exp (- (\<Sum>i<t. i * real l / (k * real (k+l))))"
       by (force simp add: exp_sum simp flip: sum_negf intro!: prod_mono)
   qed auto
   finally have 1: "(k+l-t choose l) * inverse (k+l choose l) \<le> (real k / (k+l))^t * exp (- (\<Sum>i<t. i * \<gamma> / k))"
@@ -1173,9 +1173,9 @@ proof (rule ccontr)
 
   have "real (k + l choose l) / exp (- 1 + \<delta> * real k) < real (RN k l)"
     by (smt (verit) divide_inverse exp_minus mult_minus_left mult_of_nat_commute non)
-  then have "(RN k l / exp 1) * exp (\<delta>*k) > ((k + l) choose l)"
+  then have "(RN k l / exp 1) * exp (\<delta>*k) > ((k+l) choose l)"
     unfolding exp_add exp_minus by (simp add: field_simps)
-  then have nexp_gt: "n * exp (\<delta>*k) > ((k + l) choose l)"
+  then have nexp_gt: "n * exp (\<delta>*k) > ((k+l) choose l)"
     by (metis less_le_trans exp_ge_zero mult_right_mono n_def real_nat_ceiling_ge)
 
   define V where "V \<equiv> {..<n}"
@@ -1289,16 +1289,16 @@ proof (rule ccontr)
           = (\<Prod>i = m..<l. real (k + l - i) / real (l - i))"
     using prod_divide_nat_ivl [of 0 m l "\<lambda>i. real (k+l-i) / real (l-i)"] \<open>m < l\<close>
     by (simp add: atLeast0LessThan)
-  also have "... = (\<Prod>i<l - m. (k + l - m - i) / (l - m - i))"
+  also have "\<dots> = (\<Prod>i<l - m. (k + l - m - i) / (l - m - i))"
     apply (rule prod.reindex_cong [OF inj, symmetric])
     by (auto simp: image_minus_const_atLeastLessThan_nat)
   finally
   have "(\<Prod>i<l - m. (k + l - m - i) / (l - m - i)) 
           = (\<Prod>i<l. (k + l - i) / (l - i)) / (\<Prod>i<m. (k + l - i) / (l - i))" 
     by linarith
-  also have "... = (k+l choose l) * inverse (\<Prod>i<m. (k + l - i) / (l - i))"
+  also have "\<dots> = (k+l choose l) * inverse (\<Prod>i<m. (k + l - i) / (l - i))"
     by (simp add: field_simps atLeast0LessThan binomial_altdef_of_nat) 
-  also have "... = (k+l choose l) * PM"
+  also have "\<dots> = (k+l choose l) * PM"
     unfolding PM_def using \<open>m < l\<close> \<open>k>0\<close>
     by (simp add: atLeast0LessThan of_nat_diff flip: prod_inversef)
   finally have klm_choose: "(k+l-m choose (l-m)) = (k+l choose l) * PM"
@@ -1306,29 +1306,50 @@ proof (rule ccontr)
   then have kl_choose: "real(k+l choose l) = (k+l-m choose (l-m)) / PM"
     using prod_gt0 by (simp add: field_simps)
 
-  (************)
-
-  have exp\<delta>: "exp \<delta> < 200/199"
-    sorry
+  \<comment>\<open>Now a huge effort just to show that @{term U} is nontrivial.
+     Proof probably shows its cardinality exceeds a multiple of @{term l}\<close>
+  have "exp (k / (20*(k+l))) \<le> exp(1/20)"
+    using \<open>m < l\<close> by fastforce
+  also have "\<dots> \<le> (1+\<xi>)"
+    unfolding \<xi>_def by (approximation 10)
+  finally have exp120: "exp (k / real (20 * (k+l))) \<le> 1 + \<xi>" .
 
   have \<section>: "Suc l - q \<le> (k+q choose q) / exp(\<delta>*k) * (1+\<xi>) ^ (l - q)"
     if "1\<le>q" "q\<le>l" for q
     using that
   proof (induction q rule: nat_induct_at_least)
     case base
+    have "l * exp (k / (20*(k+l))) ^ l = l * exp (k / (20*(k+l))) ^ (l-1) * exp (k / (20*(k+l)))"
+      by (simp add: power_eq_if)
+    also have "\<dots> \<le> l * (1+\<xi>) ^ (l-1) * exp (k / (20*(k+l)))"
+      using exp120 \<open>0 < l\<close> power_mono by fastforce
+    also have "\<dots> \<le> (1 + real k) * (1+\<xi>) ^ (l-1)"
+    proof -
+      have \<section>: "l * exp (k / (20 * (k+l))) \<le> l * (1+\<xi>)"
+        by (meson exp120 mult_left_mono of_nat_0_le_iff)
+      also have "\<dots> \<le> 1+k"
+        using l9k by (auto simp: \<xi>_def)
+      finally have \<section>: "l * exp (k / (20 * (k+l))) \<le> 1+k" .
+      show ?thesis
+        using mult_right_mono [OF \<section>, of "(1+\<xi>) ^ (l-1)"] by (simp add: \<xi>_def)
+    qed
+    finally have "exp (k / (20*(k+l))) ^ l * l \<le> (1 + real k) * (1+\<xi>) ^ (l-1)"
+      by argo 
+    then have "l \<le> (1 + real k) * (1+\<xi>) ^ (l-1) / exp (k / (20*(k+l))) ^ l"
+      by (simp add: mult_of_nat_commute pos_le_divide_eq)
     then show ?case
-      apply (simp add: )
-      by simp
+      apply (simp add: \<delta>_def \<gamma>_eq)
+      by (metis mult.commute exp_of_nat2_mult times_divide_eq_right)
   next
     case (Suc q)
-    then have \<section>: "(1 + \<xi>) ^ (l - q) = (1 + \<xi>) * (1 + \<xi>) ^ (l - Suc q)"
+    then have \<section>: "(1+\<xi>) ^ (l - q) = (1+\<xi>) * (1+\<xi>) ^ (l - Suc q)"
       by (metis Suc_diff_le diff_Suc_Suc power.simps(2))
-    have **: "real(k + q choose q) \<le> real(k + q choose Suc q)" "0 \<le> (1 + \<xi>) ^ (l - Suc q)"
+    have \<dagger>: "real(k + q choose q) \<le> real(k + q choose Suc q)" "0 \<le> (1+\<xi>) ^ (l - Suc q)"
       using \<open>Suc q \<le> l\<close> l9k by (auto simp: \<xi>_def binomial_mono) 
-    have "(k + q choose q) * (1 + \<xi>) ^ (l - q) /
+    have "(k + q choose q) * (1+\<xi>) ^ (l - q) /
         exp (\<delta> * k) - 1 \<le> (real (k + q choose q) + (k + q choose Suc q)) *
-           (1 + \<xi>) ^ (l - Suc q) / exp (\<delta> * k)"
-      using mult_right_mono [OF **] unfolding \<section> by (simp add: \<xi>_def field_simps add_increasing)
+           (1+\<xi>) ^ (l - Suc q) / exp (\<delta> * k)"
+      using mult_right_mono [OF \<dagger>] unfolding \<section> by (simp add: \<xi>_def field_simps add_increasing)
     with Suc show ?case by force      
   qed
   have "1 + real m \<le> (k+l-m choose (l-m)) / exp \<delta> ^ k * (1+\<xi>) ^ m"
@@ -1343,14 +1364,12 @@ proof (rule ccontr)
       using mult_strict_left_mono [OF \<section>, of "PM * (1+\<xi>) ^ m"] klm_choose prod_gt0
       by (auto simp add: field_simps \<xi>_def)
   qed
-  also have "... = real n * U_lower_bound_ratio m"
+  also have "\<dots> = real n * U_lower_bound_ratio m"
     by (simp add: U_lower_m)
-  finally have "1 < real n * U_lower_bound_ratio m - real (card W)"
-    using m_def by auto
-  then have "card U > 1"
+  finally have "1 < real n * U_lower_bound_ratio m - m"
+    by auto
+  then have "card U > 1"  \<comment>\<open>again -- probably this proof could be strengthened a lot\<close>
     using cardU m_def by linarith
-
-(************)
 
   have card_EU: "card EU > 0"
     using \<open>card U > 1\<close> UBB.complete by (simp add: EU_def UBB.finV card_all_edges)
@@ -1433,9 +1452,9 @@ proof (rule ccontr)
     using \<open>m < l\<close>
     apply (simp add: \<gamma>'_def \<gamma>_eq eval_nat_numeral divide_simps; simp add: algebra_simps)
     by (metis \<open>k>0\<close> mult_less_cancel_left_pos of_nat_0_less_iff distrib_left)
-  also have "\<dots>  \<longleftrightarrow> (l * (k + l)) / (k + 2 * l) < m"
+  also have "\<dots>  \<longleftrightarrow> (l * (k+l)) / (k + 2 * l) < m"
     using \<open>m < l\<close> by (simp add: field_simps)
-  finally have gamma'_le_gamma_iff: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (l * (k + l)) / (k + 2 * l) < m" .
+  finally have gamma'_le_gamma_iff: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (l * (k+l)) / (k + 2 * l) < m" .
 
   have extend_Blue_clique: "\<exists>K'. size_clique l K' Blue" 
     if "K \<subseteq> U" "size_clique (l-m) K Blue" for K
@@ -1496,11 +1515,11 @@ proof (rule ccontr)
       by (rule RN_le_choose_strong)
     also have "\<dots> \<le> (k+l-m-1 choose k)"
       using \<open>l\<le>k\<close> \<open>m<l\<close> choose_reduce_nat by simp
-    also have "... = (k+l-m-1 choose (l-m-1))"
+    also have "\<dots> = (k+l-m-1 choose (l-m-1))"
       using \<open>m<l\<close> by (simp add: binomial_symmetric [of k])
-    also have "... = (k+l-m choose (l-m)) - (k+l-m-1 choose (l-m))"
+    also have "\<dots> = (k+l-m choose (l-m)) - (k+l-m-1 choose (l-m))"
       using \<open>l\<le>k\<close> \<open>m<l\<close> choose_reduce_nat by simp
-    also have "... \<le> (k+l-m choose (l-m)) - m"
+    also have "\<dots> \<le> (k+l-m choose (l-m)) - m"
       using m_le_choose by linarith
     finally have "RN k (l - m) \<le> (k+l-m choose (l-m)) - m" .
     then have "card U \<ge> RN k (l-m)"
@@ -1520,7 +1539,7 @@ proof (rule ccontr)
 
     have "m \<le> l * (k + real l) / (k + 2 * real l)"
       using False gamma'_le_gamma_iff by auto 
-    also have "... \<le> l * (1 - (10/11)*\<gamma>)"
+    also have "\<dots> \<le> l * (1 - (10/11)*\<gamma>)"
       using \<gamma> \<open>l>0\<close> by (simp add: \<gamma>_eq field_split_simps)
     finally have "m \<le> real l * (1 - (10/11)*\<gamma>)" 
       by force
@@ -1544,9 +1563,9 @@ proof (rule ccontr)
 
       have "exp (\<delta>*k) * exp (-\<delta>'*k) = exp (\<gamma>*k/20 - \<gamma>'*k/20)"
         unfolding \<delta>_def \<delta>'_def by (simp add: mult_exp_exp) 
-      also have "... \<le> exp (m/20)"
+      also have "\<dots> \<le> exp (m/20)"
         using YMK \<open>0 < k\<close> by (simp add: left_diff_distrib divide_simps)
-      also have "... \<le> (1+\<xi>)^m"
+      also have "\<dots> \<le> (1+\<xi>)^m"
       proof -
         have \<section>: "ln (16 / 15) * 20 \<ge> (1::real)"
           by (approximation 5)
@@ -1558,13 +1577,13 @@ proof (rule ccontr)
 
       have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) = exp (-\<delta>'*k) * PM * (k+l choose l)"
         using \<open>m < l\<close> klm_choose by force
-      also have "... < n * exp (\<delta>*k) * exp (-\<delta>'*k) * PM"
+      also have "\<dots> < n * exp (\<delta>*k) * exp (-\<delta>'*k) * PM"
         using nexp_gt prod_gt0 by auto 
-      also have "... \<le> n * (1+\<xi>) ^ m * PM"
+      also have "\<dots> \<le> n * (1+\<xi>) ^ m * PM"
         using expexp less_eq_real_def prod_gt0 by fastforce
-      also have "... \<le> n * U_lower_bound_ratio m"
+      also have "\<dots> \<le> n * U_lower_bound_ratio m"
         by (simp add: U_lower_m)
-      also have "... \<le> n * U_lower_bound_ratio m - m"  \<comment> \<open>stuck here: the "minus m"\<close>
+      also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment> \<open>stuck here: the "minus m"\<close>
         sorry
       finally have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) \<le> real n * U_lower_bound_ratio m - m"
         by linarith 
@@ -1582,7 +1601,7 @@ proof (rule ccontr)
         using p0_min_91 by (auto simp: \<xi>_def)
       also have "\<dots> \<le> 1 - \<gamma> - \<eta>"
         using \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> by (auto simp: \<eta>_def \<xi>_def)
-      also have "... \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>"
+      also have "\<dots> \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>"
         using \<open>\<gamma>' \<le> \<gamma>\<close> \<open>m<l\<close> by (simp add: \<gamma>_eq \<gamma>'_def of_nat_diff algebra_simps)
       finally show "p0_min \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>" .
     next
