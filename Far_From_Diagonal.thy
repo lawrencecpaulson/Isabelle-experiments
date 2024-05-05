@@ -174,18 +174,18 @@ proof -
   qed
   also have "\<dots> \<le> (real k / (k+l))^t * exp (- (\<Sum>i<t. real i * real l / (real k * (k+l))))"
   proof (intro mult_left_mono)
-    have "real i * real l / (real k * real (k + l - i)) \<le> 1"
+    have "real i * real l / (real k * real (k+l-i)) \<le> 1"
       if "i < t" for i
       using that \<open>t \<le> k\<close> by (simp add: divide_simps mult_mono)
-    moreover have "1 - i * l / (k * real (k + l - i)) \<le> exp (- (i * real l / (k * (k + real l))))" (is "_ \<le> ?R")
+    moreover have "1 - i * l / (k * real (k+l-i)) \<le> exp (- (i * real l / (k * (k + real l))))" (is "_ \<le> ?R")
       if "i < t" for i 
     proof -
-      have "exp (- (i*l / (k * real (k + l - i)))) \<le> ?R"
+      have "exp (- (i*l / (k * real (k+l-i)))) \<le> ?R"
         using that \<open>t \<le> k\<close> by (simp add: frac_le_eq divide_le_0_iff mult_mono)
       with exp_minus_ge show ?thesis
         by (smt (verit, best)) 
     qed
-    ultimately show "(\<Prod>i<t. 1 - i * real l / (k * real (k + l - i))) \<le> exp (- (\<Sum>i<t. i * real l / (k * real (k+l))))"
+    ultimately show "(\<Prod>i<t. 1 - i * real l / (k * real (k+l-i))) \<le> exp (- (\<Sum>i<t. i * real l / (k * real (k+l))))"
       by (force simp add: exp_sum simp flip: sum_negf intro!: prod_mono)
   qed auto
   finally have 1: "(k+l-t choose l) * inverse (k+l choose l) \<le> (real k / (k+l))^t * exp (- (\<Sum>i<t. i * \<gamma> / k))"
@@ -1103,8 +1103,7 @@ lemma Big_Far_9_1:
 lemma Far_9_1:
   fixes l k::nat
   fixes \<delta> \<gamma>::real
-  defines "gamma \<equiv> \<lambda>m. (real l - real m) / (real k + real l - real m)"
-  defines "\<gamma> \<equiv> gamma 0"  (*IS THIS FUNCTION NEEDED?*)
+  defines "\<gamma> \<equiv> real l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/20"
   assumes \<gamma>: "\<gamma> \<le> 1/10" 
   assumes big: "\<forall>l'. real l' \<ge> (10/11) * \<gamma> * l \<longrightarrow> (\<forall>\<mu>. \<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/10 \<longrightarrow> Big_Far_9_1 \<mu> l')"
@@ -1113,48 +1112,21 @@ lemma Far_9_1:
 proof (rule ccontr)
   assume non: "\<not> RN k l \<le> exp (-\<delta> * k + 1) * (k+l choose l)"
   with RN_eq_0_iff have "l>0" by force
-  have \<gamma>_eq: "\<gamma> = l / (k + real l)"
-    by (simp add: \<gamma>_def gamma_def)
-  with \<open>l>0\<close> have YLK: "(1-\<gamma>)*l = \<gamma>*k"
-    by (simp add: field_simps)
   have l9k: "9*l \<le> k"
-    using \<open>l>0\<close> \<gamma> by (auto simp: \<gamma>_eq divide_simps)
+    using \<open>l>0\<close> \<gamma> by (auto simp: \<gamma>_def divide_simps)
   have "l\<le>k"
-    using \<gamma>_eq \<gamma> nat_le_real_less by fastforce
+    using \<gamma>_def \<gamma> nat_le_real_less by fastforce
   with \<open>l>0\<close> have "k>0" by linarith
   have ln1: False if "l = 1"
-    using non \<open>k>0\<close> by (simp add: that \<gamma>_eq \<delta>_def mult_le_1_iff)
+    using non \<open>k>0\<close> by (simp add: that \<gamma>_def \<delta>_def mult_le_1_iff)
   with \<open>l>0\<close> have "l\<ge>2"
     by force
   define \<xi>::real where "\<xi> \<equiv> 1/15"
     \<comment>\<open>Bhavik's terminology below\<close>
   define U_lower_bound_ratio where 
     "U_lower_bound_ratio \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k+l - real i))"
-  have U_lower_bound_ratio_ge0: "0 \<le> U_lower_bound_ratio m" if "m < l" for m
-    using that by (auto simp: U_lower_bound_ratio_def \<xi>_def zero_le_mult_iff intro!: prod_nonneg)
-  have "U_lower_bound_ratio (Suc m) \<le> U_lower_bound_ratio m" if "m < l" for m   (*UNUSED*)
-  proof -
-    have \<section>: "1+\<xi> \<le> (k + l - real m) / (l - real m)"
-      using \<open>l\<le>k\<close> that by (auto simp: divide_simps \<xi>_def)
-    have [simp]: "U_lower_bound_ratio (Suc m)
-               = ((1+\<xi>) * (l - real m) / (k + real l - real m)) * U_lower_bound_ratio m"
-      by (simp add: U_lower_bound_ratio_def)
-    show ?thesis
-      using mult_left_mono [OF \<section>, of "U_lower_bound_ratio m"]  that
-      by (simp add: U_lower_bound_ratio_ge0 field_simps)
-  qed
-  then have Ulb_decreasing: "antimono_on {..<l} U_lower_bound_ratio"   (*UNUSED*)
-    by (auto simp: monotone_on_def intro: lift_Suc_antimono_le [of "{..<l}"])
-
-(*NEEDED?*)
-  define mstar where "mstar \<equiv> LEAST m. gamma m < \<gamma>\<^sup>2"
-  have "gamma l < \<gamma>\<^sup>2"
-    using \<open>l>0\<close> by (simp add: gamma_def \<gamma>_def of_nat_diff)
-  then obtain mstar_works: "gamma mstar < \<gamma>\<^sup>2" and mstar_le: "\<And>m. gamma m < \<gamma>\<^sup>2 \<Longrightarrow> mstar \<le> m"
-    by (metis mstar_def wellorder_Least_lemma)
-
   define n where "n \<equiv> nat\<lceil>RN k l / exp 1\<rceil>"
-    \<comment> \<open>Following Bhavik in dividing by @{term "exp 1"}\<close>
+    \<comment> \<open>Following Bhavik: dividing by @{term "exp 1"} rather than subtracting 1\<close>
   have "n < RN k l"
   proof -
     have "RN k l \<ge> 2"
@@ -1165,13 +1137,13 @@ proof (rule ccontr)
       by (approximation 5)
     ultimately have "exp 1 + real (RN k l) \<le> exp 1 * real (RN k l)"
       by (smt (verit, best) exp_le mult_right_mono of_nat_0_le_iff)
-    moreover have "0 \<le> \<lceil>real (RN k l) / exp 1\<rceil>"
+    moreover have "0 \<le> \<lceil>RN k l / exp 1\<rceil>"
       by (metis ceiling_mono ceiling_zero exp_ge_zero of_nat_0_le_iff zero_le_divide_iff)
     ultimately show ?thesis
       by (simp add: n_def nat_less_iff ceiling_less_iff field_simps)
   qed
 
-  have "real (k + l choose l) / exp (- 1 + \<delta> * real k) < real (RN k l)"
+  have "real (k + l choose l) / exp (- 1 + \<delta>*k) < real (RN k l)"
     by (smt (verit) divide_inverse exp_minus mult_minus_left mult_of_nat_commute non)
   then have "(RN k l / exp 1) * exp (\<delta>*k) > ((k+l) choose l)"
     unfolding exp_add exp_minus by (simp add: field_simps)
@@ -1201,15 +1173,13 @@ proof (rule ccontr)
                                  card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
                                  \<ge> real i * U_lower_bound_ratio (card K) - card K"
 
-  have is_good_empty: "is_good_clique i {}" if "i \<le> n" for i
-    using that by (simp add: is_good_clique_def U_lower_bound_ratio_def E_def V_def)
   have is_good_card: "card K < l" if "is_good_clique i K" for i K
     using no_Blue_K that
     unfolding is_good_clique_def 
     by (metis nat_neq_iff size_clique_def size_clique_smaller)
   define GC where "GC \<equiv> {C. is_good_clique n C}"
   have "GC \<noteq> {}"
-    using GC_def is_good_empty by auto
+    by (auto simp: GC_def is_good_clique_def U_lower_bound_ratio_def E_def V_def)
   have "GC \<subseteq> Pow V"
     by (auto simp: is_good_clique_def GC_def)
   then have "finite GC"
@@ -1232,7 +1202,7 @@ proof (rule ccontr)
   have "W\<subseteq>V"
     using 49 by (auto simp: is_good_clique_def)
   define m where "m \<equiv> card W"
-  define \<gamma>' where "\<gamma>' \<equiv> (l - real m) / (k + l - real m)"
+  define \<gamma>' where "\<gamma>' \<equiv> (l - real m) / (k+l-real m)"
   define \<eta> where "\<eta> \<equiv> \<xi> * \<gamma>'"
 
   have Red_Blue_RN: "\<exists>K \<subseteq> X. size_clique m K Red \<or> size_clique n K Blue"
@@ -1244,7 +1214,6 @@ proof (rule ccontr)
   define EU where "EU \<equiv> E \<inter> Pow U"
   define RedU where "RedU \<equiv> Red \<inter> Pow U"
   define BlueU where "BlueU \<equiv> Blue \<inter> Pow U"
-
 
   have "RN k l > 0"
     by (metis RN_eq_0_iff gr0I \<open>k>0\<close> \<open>l>0\<close>)
@@ -1266,7 +1235,7 @@ proof (rule ccontr)
   have "m<l"
     using "49" is_good_card m_def by blast
   then have \<gamma>1516: "\<gamma>' \<le> 15/16"
-    using \<gamma>_def \<gamma> by (simp add: \<gamma>'_def gamma_def divide_simps)
+    using \<gamma>_def \<gamma> by (simp add: \<gamma>'_def divide_simps)
   then have \<gamma>'_le1: "(1+\<xi>) * \<gamma>' \<le> 1"
     by (simp add: \<xi>_def)
 
@@ -1294,7 +1263,7 @@ proof (rule ccontr)
   have clique_W: "size_clique m W Blue"
     using "49" is_good_clique_def m_def size_clique_def V_def by blast
 
-  define PM where "PM \<equiv> \<Prod>i<m. (l - real i) / (k + l - real i)"
+  define PM where "PM \<equiv> \<Prod>i<m. (l - real i) / (k+l-real i)"
   then have U_lower_m: "U_lower_bound_ratio m = (1+\<xi>)^m * PM"
     using U_lower_bound_ratio_def by blast
   have prod_gt0: "PM > 0"
@@ -1302,18 +1271,18 @@ proof (rule ccontr)
 
   have inj: "inj_on (\<lambda>i. i-m) {m..<l}" \<comment>\<open>relating the power and binomials; maybe easier using factorials\<close>
     by (auto simp: inj_on_def)
-  have "(\<Prod>i<l. real (k + l - i) / real (l - i)) / (\<Prod>i<m. real (k + l - i) / real (l - i))
-          = (\<Prod>i = m..<l. real (k + l - i) / real (l - i))"
+  have "(\<Prod>i<l. real (k+l-i) / real (l-i)) / (\<Prod>i<m. real (k+l-i) / real (l-i))
+          = (\<Prod>i = m..<l. real (k+l-i) / real (l-i))"
     using prod_divide_nat_ivl [of 0 m l "\<lambda>i. real (k+l-i) / real (l-i)"] \<open>m < l\<close>
     by (simp add: atLeast0LessThan)
-  also have "\<dots> = (\<Prod>i<l - m. (k + l - m - i) / (l - m - i))"
+  also have "\<dots> = (\<Prod>i<l - m. (k+l-m - i) / (l-m-i))"
     apply (rule prod.reindex_cong [OF inj, symmetric])
     by (auto simp: image_minus_const_atLeastLessThan_nat)
   finally
-  have "(\<Prod>i<l - m. (k + l - m - i) / (l - m - i)) 
-          = (\<Prod>i<l. (k + l - i) / (l - i)) / (\<Prod>i<m. (k + l - i) / (l - i))" 
+  have "(\<Prod>i<l - m. (k+l-m - i) / (l-m-i)) 
+          = (\<Prod>i<l. (k+l-i) / (l-i)) / (\<Prod>i<m. (k+l-i) / (l-i))" 
     by linarith
-  also have "\<dots> = (k+l choose l) * inverse (\<Prod>i<m. (k + l - i) / (l - i))"
+  also have "\<dots> = (k+l choose l) * inverse (\<Prod>i<m. (k+l-i) / (l-i))"
     by (simp add: field_simps atLeast0LessThan binomial_altdef_of_nat) 
   also have "\<dots> = (k+l choose l) * PM"
     unfolding PM_def using \<open>m < l\<close> \<open>k>0\<close>
@@ -1355,7 +1324,7 @@ proof (rule ccontr)
     then have "l \<le> (1 + real k) * (1+\<xi>) ^ (l-1) / exp (k / (20*(k+l))) ^ l"
       by (simp add: mult_of_nat_commute pos_le_divide_eq)
     then show ?case
-      apply (simp add: \<delta>_def \<gamma>_eq)
+      apply (simp add: \<delta>_def \<gamma>_def)
       by (metis mult.commute exp_of_nat2_mult times_divide_eq_right)
   next
     case (Suc q)
@@ -1370,7 +1339,7 @@ proof (rule ccontr)
     with Suc show ?case by force      
   qed
   have "1 + real m \<le> (k+l-m choose (l-m)) / exp \<delta> ^ k * (1+\<xi>) ^ m"
-    using \<open>m<l\<close> \<section> [of "l - m"] by (simp add: Suc_diff_Suc exp_of_nat2_mult)
+    using \<open>m<l\<close> \<section> [of "l-m"] by (simp add: Suc_diff_Suc exp_of_nat2_mult)
   also have "\<dots> \<le> (k+l-m choose (l-m)) / exp (\<delta> * k) * (1+\<xi>) ^ m"
     by (simp add: exp_of_nat2_mult)
   also have "\<dots> < PM * (real n * (1+\<xi>) ^ m)"
@@ -1395,7 +1364,7 @@ proof (rule ccontr)
   have [simp]: "UBB.graph_size = card EU"
     using EU_def by blast
   have "\<gamma>' \<le> \<gamma>"
-    using \<open>m<l\<close> \<open>k>0\<close> by (simp add: \<gamma>_def \<gamma>'_def gamma_def field_simps)
+    using \<open>m<l\<close> \<open>k>0\<close> by (simp add: \<gamma>_def \<gamma>'_def field_simps)
   have False if "UBB.graph_density RedU < 1 - \<gamma>' - \<eta>"
   proof -    \<comment>\<open>by maximality, etc.\<close>
     have \<section>: "UBB.graph_density BlueU \<ge> \<gamma>' + \<eta>" 
@@ -1465,18 +1434,18 @@ proof (rule ccontr)
     by (auto simp: UBB.graph_density_def)
 
 \<comment> \<open>Bhavik's gamma'_le_gamma_iff\<close>
-  have "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (real k * real l) + (real l * real l) < (real k * real m) + (real l * (real m * 2))"
+  have \<gamma>'\<gamma>2: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (real k * real l) + (real l * real l) < (real k * real m) + (real l * (real m * 2))"
     using \<open>m < l\<close>
-    apply (simp add: \<gamma>'_def \<gamma>_eq eval_nat_numeral divide_simps; simp add: algebra_simps)
+    apply (simp add: \<gamma>'_def \<gamma>_def eval_nat_numeral divide_simps; simp add: algebra_simps)
     by (metis \<open>k>0\<close> mult_less_cancel_left_pos of_nat_0_less_iff distrib_left)
   also have "\<dots>  \<longleftrightarrow> (l * (k+l)) / (k + 2 * l) < m"
     using \<open>m < l\<close> by (simp add: field_simps)
-  finally have gamma'_le_gamma_iff: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (l * (k+l)) / (k + 2 * l) < m" .
+  finally have \<gamma>'\<gamma>2_iff: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (l * (k+l)) / (k + 2 * l) < m" .
 
   have extend_Blue_clique: "\<exists>K'. size_clique l K' Blue" 
     if "K \<subseteq> U" "size_clique (l-m) K Blue" for K
   proof -
-    have K: "card K = l - m" "clique K Blue"
+    have K: "card K = l-m" "clique K Blue"
       using that by (auto simp: size_clique_def)
     define K' where "K' \<equiv> K \<union> W"
     have "card K' = l"
@@ -1500,11 +1469,10 @@ proof (rule ccontr)
   show False
   proof (cases "\<gamma>' < \<gamma>\<^sup>2")
     case True
-    have YKK: "\<gamma>*k \<le> m" 
-      unfolding \<gamma>_eq
-      using \<open>0<k\<close> \<open>m < l\<close> True
-      apply (simp add: gamma'_le_gamma_iff divide_simps distrib_left)
-      by (smt (verit, best) less_imp_of_nat_less mult_right_mono distrib_left of_nat_0_le_iff)
+    with \<gamma>'\<gamma>2 have YKK: "\<gamma>*k \<le> m" 
+      using \<open>0<k\<close> \<open>m < l\<close> 
+      apply (simp add: \<gamma>_def field_simps)
+      by (smt (verit, best) distrib_left mult_left_mono of_nat_0_le_iff)
 
     have ln1\<xi>: "ln (1+\<xi>) * 20 \<ge> 1"
       unfolding \<xi>_def by (approximation 10)
@@ -1528,7 +1496,7 @@ proof (rule ccontr)
       finally have m_le_choose: "m \<le> (k+l-m-1 choose (l-m))" .
       then show ?thesis .
     qed auto
-    have "RN k (l-m) \<le> k + (l - m) - 2 choose (k - 1)"
+    have "RN k (l-m) \<le> k + (l-m) - 2 choose (k - 1)"
       by (rule RN_le_choose_strong)
     also have "\<dots> \<le> (k+l-m-1 choose k)"
       using \<open>l\<le>k\<close> \<open>m<l\<close> choose_reduce_nat by simp
@@ -1538,26 +1506,25 @@ proof (rule ccontr)
       using \<open>l\<le>k\<close> \<open>m<l\<close> choose_reduce_nat by simp
     also have "\<dots> \<le> (k+l-m choose (l-m)) - m"
       using m_le_choose by linarith
-    finally have "RN k (l - m) \<le> (k+l-m choose (l-m)) - m" .
+    finally have "RN k (l-m) \<le> (k+l-m choose (l-m)) - m" .
     then have "card U \<ge> RN k (l-m)"
       using 49 * VUU unfolding is_good_clique_def U_def m_def by fastforce
     with Red_Blue_RN no_Red_K \<open>U \<subseteq> V\<close>
     obtain K where "K \<subseteq> U" "size_clique (l-m) K Blue" by meson
     then show False
       using no_Blue_K extend_Blue_clique by blast
-
   next
     case False
     then have YMK: "\<gamma>-\<gamma>' \<le> m/k"
       using \<open>l>0\<close> \<open>m<l\<close> 
-      apply (simp add: \<gamma>_eq \<gamma>'_def divide_simps)
+      apply (simp add: \<gamma>_def \<gamma>'_def divide_simps)
       apply (simp add: algebra_simps)
       by (smt (verit, best) mult_left_mono mult_right_mono nat_less_real_le of_nat_0_le_iff)
 
     have "m \<le> l * (k + real l) / (k + 2 * real l)"
-      using False gamma'_le_gamma_iff by auto 
+      using False \<gamma>'\<gamma>2_iff by auto 
     also have "\<dots> \<le> l * (1 - (10/11)*\<gamma>)"
-      using \<gamma> \<open>l>0\<close> by (simp add: \<gamma>_eq field_split_simps)
+      using \<gamma> \<open>l>0\<close> by (simp add: \<gamma>_def field_split_simps)
     finally have "m \<le> real l * (1 - (10/11)*\<gamma>)" 
       by force
     then have lm_bound: "real l - real m \<ge> (10/11) * \<gamma> * l"
@@ -1565,10 +1532,8 @@ proof (rule ccontr)
 
     define \<delta>' where "\<delta>' \<equiv> \<gamma>'/20"
     have no_RedU_K: "\<not> (\<exists>K. UBB.size_clique k K RedU)"
-      using no_Red_K \<open>U \<subseteq> V\<close>
-      unfolding RedU_def UBB.size_clique_def size_clique_def
-      by (metis Int_subset_iff VUU all_edges_subset_iff_clique)
-
+      unfolding UBB.size_clique_def RedU_def
+      by (metis Int_subset_iff  VUU all_edges_subset_iff_clique no_Red_K size_clique_def)
     have "(\<exists>K. UBB.size_clique k K RedU) \<or> (\<exists>K. UBB.size_clique (l-m) K BlueU)"
     proof (intro UBB.Far_9_2)
       show "E \<inter> Pow U = all_edges U"
@@ -1612,14 +1577,14 @@ proof (rule ccontr)
         by argo
     next
       show "1 - real (l-m) / (real k + real (l-m)) - \<eta> \<le> UBB.graph_density RedU"
-        using * \<open>\<gamma>' \<le> \<gamma>\<close> \<open>m < l\<close> unfolding \<gamma>_eq \<gamma>'_def
+        using * \<open>\<gamma>' \<le> \<gamma>\<close> \<open>m < l\<close> unfolding \<gamma>_def \<gamma>'_def
         by (smt (verit) less_or_eq_imp_le of_nat_add of_nat_diff)
       have "p0_min \<le> 1 - (1/10) * (1+\<xi>)"
         using p0_min_91 by (auto simp: \<xi>_def)
       also have "\<dots> \<le> 1 - \<gamma> - \<eta>"
         using \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> by (auto simp: \<eta>_def \<xi>_def)
       also have "\<dots> \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>"
-        using \<open>\<gamma>' \<le> \<gamma>\<close> \<open>m<l\<close> by (simp add: \<gamma>_eq \<gamma>'_def of_nat_diff algebra_simps)
+        using \<open>\<gamma>' \<le> \<gamma>\<close> \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def of_nat_diff algebra_simps)
       finally show "p0_min \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>" .
     next
       have "Big_Far_9_2 \<gamma>' (l-m)"
@@ -1630,7 +1595,7 @@ proof (rule ccontr)
       show "l-m \<le> k"
         using \<open>l \<le> k\<close> by auto
       show "(l-m) / (real k + real (l-m)) \<le> 1/10"
-        using \<gamma> \<gamma>_eq \<open>m < l\<close> by fastforce
+        using \<gamma> \<gamma>_def \<open>m < l\<close> by fastforce
       show "0 \<le> \<eta>"
         using \<open>0 < \<eta>\<close> by linarith
       show "\<eta> \<le> (l-m) / (real k + real (l-m)) / 15"
