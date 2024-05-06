@@ -382,12 +382,9 @@ proof -
         proof (cases "h < hgt k (p (i-1)) - 2 * eps k powr (-1/2)")
           case False
           then have *: "(1 + eps k) powr (2 * eps k powr - (1/2)) / alpha k (hgt k (p (i - Suc 0))) \<ge> 1 / alpha k h"
-            using that eps_gt0[of k] \<open>k>0\<close>
-            apply (simp add: alpha_eq)
-            apply (subst alpha_eq)
-            using hgt_gt0 apply blast
+            using that eps_gt0[of k] \<open>k>0\<close> hgt_gt0[of k]
             apply (simp add: alpha_eq divide_simps flip: powr_realpow powr_add)
-            by (smt (verit) hgt_gt0 Num.of_nat_simps(4) Suc_pred less_eq_Suc_le plus_1_eq_Suc)
+            by (smt (verit) Num.of_nat_simps(3) Suc_pred)
           show ?thesis
             using mult_left_mono_neg [OF * \<Delta>\<Delta>_le0] that by (simp add: Groups.mult_ac) 
         qed (use h \<Delta>\<Delta>0 in auto)

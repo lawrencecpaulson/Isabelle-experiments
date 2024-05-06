@@ -368,11 +368,11 @@ lemma convex_mfact:
 proof (rule convex_on_extend)
   show "convex_on {real (k - 1)..} (\<lambda>a. if a < real k - 1 then 0 else \<Prod>i = 0..<k. a - real i)"
     using convex_gchoose_aux [of k] assms
-    apply (simp add: convex_on_def)
-    by (metis eq_diff_eq le_add_same_cancel2 linorder_not_le segment_bound_lemma)
+    apply (simp add: convex_on_def Ball_def)
+    by (smt (verit, del_insts) distrib_right mult_cancel_right2 mult_left_mono)
   show "mono_on {real (k - 1)..} (\<lambda>a. if a < real k - 1 then 0 else \<Prod>i = 0..<k. a - real i)"
     using \<open>k > 0\<close> by (auto simp: mono_on_def intro!: prod_mono)
-qed (use assms in auto)
+qed (use assms gr0_conv_Suc in force)
 
 definition mbinomial :: "real \<Rightarrow> nat \<Rightarrow> real"
   where "mbinomial \<equiv> \<lambda>a k. mfact a k / fact k"

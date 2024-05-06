@@ -159,9 +159,10 @@ proof -
     case (Suc t)
     then have "t \<le> k"
       by simp
-    with Suc.IH [symmetric] Suc(2) show ?case 
-      apply (simp add: field_simps flip: of_nat_mult)
+    have "(k + l - t) * (k + l - Suc t choose l) = (k - t) * (k + l - t choose l)"
       by (metis binomial_absorb_comp diff_Suc_eq_diff_pred diff_add_inverse2 diff_commute)
+    with Suc.IH [symmetric] Suc(2) show ?case 
+      by (simp add: field_simps flip: of_nat_mult of_nat_diff)
   qed auto
   also have "\<dots> = (real k / (k+l))^t * (\<Prod>i<t. 1 - real i * real l / (real k * (k+l-i)))"
   proof -
@@ -452,7 +453,7 @@ proof -
       by (fastforce simp: step_terminating_iff termination_condition_def pee_def m_def l34_def)
   qed
   also have "\<dots> \<le> k powr (l34-1)"   \<comment> \<open>Bhavik's off-diagonal upper bound; can't use @{term "2^(k+l34)"}\<close>
-    using lk \<open>l34>0\<close> RN_le_argpower' of_nat_mono by (simp add: powr_realpow)
+    using RN_le_argpower' \<open>k>0\<close> powr_realpow by auto
   also have "\<dots> \<le> k powr l34"
     using \<open>k>0\<close> powr_mono by force
   also have "\<dots> \<le> 2 powr (l34 * log 2 k)"
@@ -838,7 +839,7 @@ proof -
     by (smt (verit, ccfv_threshold) eventually_sequentially)
 qed
 
-text \<open>A little tricky for me to express since my "Colours" assumption includes the allowed 
+text \<open>A little tricky to express since my "Colours" assumption includes the allowed 
     assumption that there are no cliques in the original graph (page 9). So it's a contrapositive\<close>
 lemma (in Book) Far_9_2_aux:
   fixes l k
@@ -1563,7 +1564,7 @@ proof (rule ccontr)
         using nexp_gt prod_gt0 by auto 
       also have "\<dots> \<le> n * (1+\<xi>) ^ m * PM"
         using expexp less_eq_real_def prod_gt0 by fastforce
-      also have "\<dots> \<le> n * U_lower_bound_ratio m"
+      also have "\<dots> = n * U_lower_bound_ratio m"
         by (simp add: U_lower_m)
       also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment> \<open>stuck here: the "minus m"\<close>
         sorry

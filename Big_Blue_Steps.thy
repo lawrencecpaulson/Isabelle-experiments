@@ -395,7 +395,7 @@ proof -
     using kn0 assms cardU_less_X \<open>card U = m\<close> cX by (simp add: of_nat_diff field_simps)
   also have "\<dots> \<le> \<sigma>"
     using \<open>m>0\<close> \<open>card U = m\<close> cardU_less_X cardXU edge_card_XU
-    by (simp add: \<sigma>_def gen_density_def field_simps mult_less_0_iff zero_less_mult_iff)
+    by (simp add: \<sigma>_def gen_density_def divide_simps mult_ac)
   finally have eq10: "\<mu> - 2/k \<le> \<sigma>" .
   have "2 * b / m \<le> \<mu> - 2/k"
   proof -
@@ -472,8 +472,10 @@ proof -
     then show "card X \<le> 5/4 * (card X - m)"
       using \<open>card U = m\<close> cardU_less_X by simp
   qed (use \<open>0 \<le> \<sigma>\<close> in auto)
-  also have "\<dots> \<le> 2 * (\<sigma>^b) * exp(- b\<^sup>2 / (\<sigma>*m)) * ((card X - m))"
-    by (simp add: \<open>0 \<le> \<sigma>\<close>)
+  also have "\<dots> = (125/64) * (\<sigma>^b) * exp(- (real b)\<^sup>2 / (\<sigma>*m)) * (card X - m)"
+    by simp
+  also have "\<dots> \<le> 2 * (\<sigma>^b) * exp(- (real b)\<^sup>2 / (\<sigma>*m)) * (card X - m)"
+    by (intro mult_right_mono) (auto simp: \<open>0 \<le> \<sigma>\<close>)
   finally have "\<mu>^b/2 * card X \<le> \<sigma>^b * exp(- of_nat (b\<^sup>2) / (\<sigma>*m)) * card (X-U)"
     by (simp add: \<open>card U = m\<close> cardXU real_cardXU)
   also have "\<dots> \<le> 1/(m choose b) * ((\<sigma>*m) gchoose b) * card (X-U)"

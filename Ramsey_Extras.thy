@@ -605,7 +605,7 @@ next
 qed
 
 lemma RN_le_power2: "RN i j \<le> 2 ^ (i+j-2)"
-  using RN_le_binomial binomial_le_pow2 le_trans by blast
+  by (meson RN_le_choose_strong binomial_le_pow2 le_trans)
 
 lemma RN_le_power4: "RN i i \<le> 4 ^ (i-1)"
 proof -
@@ -624,7 +624,7 @@ proof (cases "i=0 \<or> j=0")
 next
   case False
   then show ?thesis
-    using RN_le_binomial [of i j] add_choose_le_power[of "i-1" "j-1"]
+    using RN_le_choose_strong [of i j] add_choose_le_power[of "i-1" "j-1"]
     by (simp add: numeral_2_eq_2)
 qed
 
