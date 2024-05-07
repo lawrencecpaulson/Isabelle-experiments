@@ -584,8 +584,7 @@ proof -
       have swap: "u * (x-1) = (-u) * (1-x)" for u
         by (metis minus_diff_eq minus_mult_commute)
       have \<section>: "exp 1 * (x - 1) < 0"
-        using x01
-        by (meson exp_gt_zero less_iff_diff_less_0 mult_less_0_iff)
+        using x01 by (meson exp_gt_zero less_iff_diff_less_0 mult_less_0_iff)
       then have non0: "1 + 1 / (exp 1 * (1-x)) \<noteq> 0"
         using x01 by (smt (verit) exp_gt_zero mult_pos_pos zero_less_divide_iff)
       let ?f1 = "\<lambda>x. -exp 1 /(- 1 + exp 1 * (- 1 + x))\<^sup>2"
@@ -657,9 +656,9 @@ proof -
       unfolding f47_def \<delta>\<gamma> using BIGH
       by (smt (verit, best) divide_right_mono of_nat_0_le_iff)
     finally
-    have \<section>: "2/3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) - ok_fun_93h \<gamma> k / (\<gamma> * c \<gamma>) / k" .
+    have "2/3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) - ok_fun_93h \<gamma> k / (\<gamma> * c \<gamma>) / k" .
+    from mult_left_mono [OF this, of k] cgt0 [of \<gamma>] \<gamma>01 \<open>k>0\<close>
     have "real (2 * k) / 3 \<le> (1 - \<delta> / \<gamma>) * inverse (c \<gamma>) * k - ok_fun_93h \<gamma> k / (\<gamma> * c \<gamma>)"
-      using mult_left_mono [OF \<section>, of k] cgt0 [of \<gamma>] \<gamma>01 \<open>k>0\<close>
       by (simp add: divide_simps mult_ac)
     with * show ?thesis
       by linarith
@@ -839,6 +838,8 @@ proof -
     by (smt (verit, ccfv_threshold) eventually_sequentially)
 qed
 
+end
+
 text \<open>A little tricky to express since my "Colours" assumption includes the allowed 
     assumption that there are no cliques in the original graph (page 9). So it's a contrapositive\<close>
 lemma (in Book) Far_9_2_aux:
@@ -893,10 +894,10 @@ proof -
     using ge_half by (simp add: powr_def)
   finally have A: "exp (-1/3 + 1/5) \<le> (1-\<gamma>-\<eta>) powr (1 / (1-\<gamma>))" .
 
-  have \<section>: "3*t / (10*k) \<le> (-1/3 + 1/5) + t/(2*k)"
+  have "3*t / (10*k) \<le> (-1/3 + 1/5) + t/(2*k)"
     using t23 \<open>k>0\<close> by (simp add: divide_simps)
+  from mult_right_mono [OF this, of "\<gamma>*t"] \<gamma>01
   have "3*\<gamma>*t\<^sup>2 / (10*k) \<le> \<gamma>*t*(-1/3 + 1/5) + \<gamma>*t\<^sup>2/(2*k)"
-    using mult_right_mono [OF \<section>, of "\<gamma>*t"] \<gamma>01
     by (simp add: eval_nat_numeral algebra_simps) 
   then have "exp (3*\<gamma>*t\<^sup>2 / (10*k)) \<le> exp (\<gamma>*t*(-1/3 + 1/5)) * exp (\<gamma>*t\<^sup>2/(2*k))"
     by (simp add: mult_exp_exp)
@@ -907,19 +908,18 @@ proof -
     by (intro mult_right_mono) auto
   finally have B: "exp (3*\<gamma>*t\<^sup>2 / (10*k)) \<le> (1-\<gamma>-\<eta>) powr ((\<gamma>*t) / (1-\<gamma>)) * exp (\<gamma>*t\<^sup>2/(2*k))" .
 
-  have \<section>: "(2*k / 3)^2 \<le> t\<^sup>2"
+  have "(2*k / 3)^2 \<le> t\<^sup>2"
     using t23 by auto
+  from \<open>k>0\<close> \<gamma>01 mult_right_mono [OF this, of "\<gamma>/(80*k)"]
   have C: "\<delta>*k + \<gamma>*k/60 \<le> 3*\<gamma>*t\<^sup>2 / (20*k)"
-    using \<open>k>0\<close> \<gamma>01 mult_right_mono [OF \<section>, of "\<gamma>/(80*k)"]
     by (simp add: field_simps \<delta>_def eval_nat_numeral)
 
   have "exp (- 3*\<gamma>*t / (20*k)) \<le> exp (-3 * \<eta>/2)"
   proof -
-    have \<section>: "1 \<le> 3/2 * real t / (real k)"
+    have "1 \<le> 3/2 * real t / (real k)"
       using t23 \<open>k>0\<close> by (auto simp: divide_simps)
-    have "\<gamma> / 15 \<le> \<gamma> * real t / (10 * real k)"
-      using mult_right_mono [OF \<section>, of "\<gamma>/15"] \<gamma>01 by auto
-    with \<eta> show ?thesis
+    from mult_right_mono [OF this, of "\<gamma>/15"] \<gamma>01 \<eta> 
+    show ?thesis
       by simp
   qed
   also have "\<dots> \<le> 1 - \<eta> / (1-\<gamma>)"
@@ -939,9 +939,9 @@ proof -
   qed
   also have "\<dots> = (1-\<gamma>-\<eta>) / (1-\<gamma>)"
     using \<gamma>01 by (simp add: divide_simps)
-  finally have \<section>: "exp (- 3*\<gamma>*t / (20*k)) \<le> (1-\<gamma>-\<eta>) / (1-\<gamma>)" .
+  finally have "exp (- 3*\<gamma>*t / (20*k)) \<le> (1-\<gamma>-\<eta>) / (1-\<gamma>)" .
+  from powr_mono2 [of t, OF _ _ this] ge_half \<gamma>01
   have D: "exp (- 3*\<gamma>*t\<^sup>2 / (20*k)) \<le> ((1-\<gamma>-\<eta>) / (1-\<gamma>))^t"
-    using powr_mono2 [of t, OF _ _ \<section>] ge_half \<gamma>01
     by (simp add: eval_nat_numeral powr_powr exp_powr_real mult_ac flip: powr_realpow)
 
   have "RN (k-t) l \<le> (k-t+l choose l)"
@@ -1070,10 +1070,15 @@ proof (rule ccontr)
   have card_X0: "card X0 \<ge> nV/2"
     using card_Y0 \<open>Y0\<subseteq>V\<close> unfolding X0_def
     by (simp add: card_Diff_subset finite_Y0)
+  have "Colours l k"
+    using neg \<open>l\<le>k\<close> by (auto simp: Colours_def)
   have False if "l<2"
-    using neg that Red_Blue_RN [of 2 gorder V] \<open>gorder\<ge>2\<close> 
-    apply (simp add: size_clique_def )
-    by (metis One_nat_def RN_1' Red_Blue_RN bot_least  card.empty ex_card less_2_cases neg null_clique one_le_numeral neq0_conv)
+    using that unfolding less_2_cases_iff
+  proof
+    assume "l = Suc 0" with neg Red_Blue_RN [of 2 gorder V] \<open>gorder\<ge>2\<close> 
+    show False
+      by (metis RN_1_le RN_commute Red_Blue_RN card_Ex_subset nat_le_linear not_less_eq_eq numeral_2_eq_2)
+  qed (use Colours_ln0 \<open>Colours l k\<close> in auto)
   with \<open>k\<ge>l\<close> have "l\<ge>2" "k\<ge>2"
     by force+
   have "Colours l k"
@@ -1085,14 +1090,12 @@ proof (rule ccontr)
   qed (use assms card_X0 card_Y0 \<open>Colours l k\<close> in auto)
 qed
 
-end
-
 subsection \<open>Lemma 9.1\<close>
 
 context P0_min
 begin
 
-definition "Big_Far_9_1 \<equiv> \<lambda>\<mu> l. Big_Far_9_2 \<mu> l" (*PROBABLY NEEDS TO SPECIFY A range of values*)
+definition "Big_Far_9_1 \<equiv> \<lambda>\<mu> l. Big_Far_9_2 \<mu> l" 
 
 lemma Big_Far_9_1:
   assumes "0<\<mu>0" "\<mu>0\<le>\<mu>1" "\<mu>1<1" 
@@ -1301,7 +1304,7 @@ proof (rule ccontr)
     unfolding \<xi>_def by (approximation 10)
   finally have exp120: "exp (k / real (20 * (k+l))) \<le> 1 + \<xi>" .
 
-  have \<section>: "Suc l - q \<le> (k+q choose q) / exp(\<delta>*k) * (1+\<xi>) ^ (l - q)"
+  have *: "Suc l - q \<le> (k+q choose q) / exp(\<delta>*k) * (1+\<xi>) ^ (l - q)"
     if "1\<le>q" "q\<le>l" for q
     using that
   proof (induction q rule: nat_induct_at_least)
@@ -1316,9 +1319,9 @@ proof (rule ccontr)
         by (meson exp120 mult_left_mono of_nat_0_le_iff)
       also have "\<dots> \<le> 1+k"
         using l9k by (auto simp: \<xi>_def)
-      finally have \<section>: "l * exp (k / (20 * (k+l))) \<le> 1+k" .
-      show ?thesis
-        using mult_right_mono [OF \<section>, of "(1+\<xi>) ^ (l-1)"] by (simp add: \<xi>_def)
+      finally have "l * exp (k / (20 * (k+l))) \<le> 1+k" .
+      from mult_right_mono [OF this, of "(1+\<xi>) ^ (l-1)"] 
+      show ?thesis by (simp add: \<xi>_def)
     qed
     finally have "exp (k / (20*(k+l))) ^ l * l \<le> (1 + real k) * (1+\<xi>) ^ (l-1)"
       by argo 
@@ -1329,18 +1332,18 @@ proof (rule ccontr)
       by (metis mult.commute exp_of_nat2_mult times_divide_eq_right)
   next
     case (Suc q)
-    then have \<section>: "(1+\<xi>) ^ (l - q) = (1+\<xi>) * (1+\<xi>) ^ (l - Suc q)"
+    then have \<ddagger>: "(1+\<xi>) ^ (l - q) = (1+\<xi>) * (1+\<xi>) ^ (l - Suc q)"
       by (metis Suc_diff_le diff_Suc_Suc power.simps(2))
-    have \<dagger>: "real(k + q choose q) \<le> real(k + q choose Suc q)" "0 \<le> (1+\<xi>) ^ (l - Suc q)"
+    have "real(k + q choose q) \<le> real(k + q choose Suc q)" "0 \<le> (1+\<xi>) ^ (l - Suc q)"
       using \<open>Suc q \<le> l\<close> l9k by (auto simp: \<xi>_def binomial_mono) 
-    have "(k + q choose q) * (1+\<xi>) ^ (l - q) /
-        exp (\<delta> * k) - 1 \<le> (real (k + q choose q) + (k + q choose Suc q)) *
-           (1+\<xi>) ^ (l - Suc q) / exp (\<delta> * k)"
-      using mult_right_mono [OF \<dagger>] unfolding \<section> by (simp add: \<xi>_def field_simps add_increasing)
+    from mult_right_mono [OF this]
+    have "(k + q choose q) * (1+\<xi>) ^ (l - q) / exp (\<delta> * k) - 1 
+        \<le> (real (k + q choose q) + (k + q choose Suc q)) * (1+\<xi>) ^ (l - Suc q) / exp (\<delta> * k)"
+      unfolding \<ddagger> by (simp add: \<xi>_def field_simps add_increasing)
     with Suc show ?case by force      
   qed
   have "1 + real m \<le> (k+l-m choose (l-m)) / exp \<delta> ^ k * (1+\<xi>) ^ m"
-    using \<open>m<l\<close> \<section> [of "l-m"] by (simp add: Suc_diff_Suc exp_of_nat2_mult)
+    using \<open>m<l\<close> * [of "l-m"] by (simp add: Suc_diff_Suc exp_of_nat2_mult)
   also have "\<dots> \<le> (k+l-m choose (l-m)) / exp (\<delta> * k) * (1+\<xi>) ^ m"
     by (simp add: exp_of_nat2_mult)
   also have "\<dots> < PM * (real n * (1+\<xi>) ^ m)"
@@ -1550,10 +1553,10 @@ proof (rule ccontr)
         using YMK \<open>0 < k\<close> by (simp add: left_diff_distrib divide_simps)
       also have "\<dots> \<le> (1+\<xi>)^m"
       proof -
-        have \<section>: "ln (16 / 15) * 20 \<ge> (1::real)"
+        have "ln (16 / 15) * 20 \<ge> (1::real)"
           by (approximation 5)
+        from mult_left_mono [OF this] 
         show ?thesis
-          using mult_left_mono [OF \<section>] 
           by (simp add: \<xi>_def powr_def mult_ac flip: powr_realpow)
       qed
       finally have expexp: "exp (\<delta>*k) * exp (-\<delta>'*k) \<le> (1+\<xi>) ^ m" .
@@ -1611,5 +1614,7 @@ proof (rule ccontr)
       by (metis Int_subset_iff all_edges_subset_iff_clique) 
   qed
 qed
+
+end (*context P0_min*)
 
 end
