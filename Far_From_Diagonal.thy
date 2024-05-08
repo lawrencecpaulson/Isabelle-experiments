@@ -840,6 +840,72 @@ qed
 
 end
 
+lemma (in Book) Far_9_2_conclusion:
+  fixes l k
+  fixes \<gamma>::real
+  defines "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
+  defines "t \<equiv> card \<R>"
+  defines "m \<equiv> halted_point \<gamma> l k"
+  assumes "Colours l k" and \<gamma>01: "0 < \<gamma>" "\<gamma> < 1"
+  assumes Y: "(k-t+l choose l) \<le> card (Yseq \<gamma> l k m)"
+  shows False
+proof -
+  have "t<k"
+    unfolding t_def \<R>_def using \<gamma>01 \<open>Colours l k\<close> red_step_limit by blast
+  have "RN (k-t) l \<le> card (Yseq \<gamma> l k m)"
+    by (metis Y add.commute RN_commute RN_le_choose le_trans)
+  then obtain K 
+    where Ksub: "K \<subseteq> Yseq \<gamma> l k m" 
+      and K: "card K = k-t \<and> clique K Red \<or> card K = l \<and> clique K Blue"
+    by (meson Red_Blue_RN Yseq_subset_V size_clique_def)
+  show False
+    using K
+  proof
+    assume K: "card K = k - t \<and> clique K Red"
+    have "clique (K \<union> Aseq \<gamma> l k m) Red"
+    proof (intro clique_Un)
+      show "clique (Aseq \<gamma> l k m) Red"
+        by (meson A_Red_clique valid_state_seq)
+      have "all_edges_betw_un (Aseq \<gamma> l k m) (Yseq \<gamma> l k m) \<subseteq> Red"
+        using valid_state_seq Ksub
+        by (auto simp: valid_state_def RB_state_def all_edges_betw_un_Un2)
+      then show "all_edges_betw_un K (Aseq \<gamma> l k m) \<subseteq> Red"
+        using Ksub all_edges_betw_un_commute all_edges_betw_un_mono2 by blast
+      show "K \<subseteq> V"
+        using Ksub Yseq_subset_V by blast
+    qed (use K Aseq_subset_V in auto)
+    moreover have "card (K \<union> Aseq \<gamma> l k m) = k"
+    proof -
+      have eqt: "card (Aseq \<gamma> l k m) = t"
+        using red_step_eq_Aseq
+        using \<R>_def \<gamma>01 \<open>Colours l k\<close> m_def t_def by presburger
+      have "card (K \<union> Aseq \<gamma> l k m) = card K + card (Aseq \<gamma> l k m) "
+      proof (intro card_Un_disjoint)
+        show "finite K"
+          by (meson Ksub Yseq_subset_V finV finite_subset)
+        have "disjnt (Yseq \<gamma> l k m) (Aseq \<gamma> l k m)"
+          using valid_state_seq by (auto simp: valid_state_def disjoint_state_def)
+        with Ksub show "K \<inter> Aseq \<gamma> l k m = {}"
+          by (auto simp: disjnt_def)
+      qed (simp add: finite_Aseq)
+      also have "\<dots> = k"
+        using eqt K \<open>t < k\<close> by simp
+      finally show ?thesis .
+    qed
+    moreover have "K \<union> Aseq \<gamma> l k m \<subseteq> V"
+      using Aseq_subset_V Ksub Yseq_subset_V by blast
+    ultimately show False
+      using \<open>Colours l k\<close> 
+      unfolding Colours_def size_clique_def by blast
+  next
+    assume "card K = l \<and> clique K Blue"
+    then show False
+      using \<open>Colours l k\<close> Ksub Yseq_subset_V
+      unfolding Colours_def size_clique_def by blast
+  qed
+qed
+
+
 text \<open>A little tricky to express since my "Colours" assumption includes the allowed 
     assumption that there are no cliques in the original graph (page 9). So it's a contrapositive\<close>
 lemma (in Book) Far_9_2_aux:
@@ -944,9 +1010,7 @@ proof -
   have D: "exp (- 3*\<gamma>*t\<^sup>2 / (20*k)) \<le> ((1-\<gamma>-\<eta>) / (1-\<gamma>))^t"
     by (simp add: eval_nat_numeral powr_powr exp_powr_real mult_ac flip: powr_realpow)
 
-  have "RN (k-t) l \<le> (k-t+l choose l)"
-    by (simp add: add.commute RN_commute RN_le_choose)
-  also have "\<dots> \<le> card (Yseq \<gamma> l k m)"
+  have "(k-t+l choose l) \<le> card (Yseq \<gamma> l k m)"
   proof -
     have "1 * real(k-t+l choose l) 
             \<le> exp (ok_fun_95b k + \<gamma>*k/60) * (k-t+l choose l)"
@@ -978,55 +1042,8 @@ proof -
     then show ?thesis
       by fastforce
   qed
-  finally obtain K 
-      where Ksub: "K \<subseteq> Yseq \<gamma> l k m" 
-      and K: "card K = k-t \<and> clique K Red \<or> card K = l \<and> clique K Blue"
-    by (meson Red_Blue_RN Yseq_subset_V size_clique_def)
-  show False
-    using K
-  proof
-    assume K: "card K = k - t \<and> clique K Red"
-    have "clique (K \<union> Aseq \<gamma> l k m) Red"
-    proof (intro clique_Un)
-      show "clique (Aseq \<gamma> l k m) Red"
-        by (meson A_Red_clique valid_state_seq)
-      have "all_edges_betw_un (Aseq \<gamma> l k m) (Yseq \<gamma> l k m) \<subseteq> Red"
-        using valid_state_seq Ksub
-        by (auto simp: valid_state_def RB_state_def all_edges_betw_un_Un2)
-      then show "all_edges_betw_un K (Aseq \<gamma> l k m) \<subseteq> Red"
-        using Ksub all_edges_betw_un_commute all_edges_betw_un_mono2 by blast
-      show "K \<subseteq> V"
-        using Ksub Yseq_subset_V by blast
-    qed (use K Aseq_subset_V in auto)
-    moreover have "card (K \<union> Aseq \<gamma> l k m) = k"
-    proof -
-      have eqt: "card (Aseq \<gamma> l k m) = t"
-        using red_step_eq_Aseq
-        using \<R>_def \<gamma>01 \<open>Colours l k\<close> m_def t_def by presburger
-      have "card (K \<union> Aseq \<gamma> l k m) = card K + card (Aseq \<gamma> l k m) "
-      proof (intro card_Un_disjoint)
-        show "finite K"
-          by (meson Ksub Yseq_subset_V finV finite_subset)
-        have "disjnt (Yseq \<gamma> l k m) (Aseq \<gamma> l k m)"
-          using valid_state_seq by (auto simp: valid_state_def disjoint_state_def)
-        with Ksub show "K \<inter> Aseq \<gamma> l k m = {}"
-          by (auto simp: disjnt_def)
-      qed (simp add: finite_Aseq)
-      also have "\<dots> = k"
-        using eqt K \<open>t < k\<close> by simp
-      finally show ?thesis .
-    qed
-    moreover have "K \<union> Aseq \<gamma> l k m \<subseteq> V"
-      using Aseq_subset_V Ksub Yseq_subset_V by blast
-    ultimately show False
-      using \<open>Colours l k\<close> 
-      unfolding Colours_def size_clique_def by blast
-  next
-    assume "card K = l \<and> clique K Blue"
-    then show False
-      using \<open>Colours l k\<close> Ksub Yseq_subset_V
-      unfolding Colours_def size_clique_def by blast
-  qed
+  then show False
+    using Far_9_2_conclusion [OF \<open>Colours l k\<close> \<gamma>01] by (simp flip: \<R>_def m_def t_def)
 qed
 
 text \<open>Needs to be proved OUTSIDE THE BOOK LOCALE\<close>

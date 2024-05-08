@@ -5,8 +5,7 @@ theory Closer_To_Diagonal
 
 begin
 
-
-subsection \<open>Lemma 10.2 actual proof\<close>
+subsection \<open>Lemma 10.2\<close>
 
 context P0_min
 begin
@@ -35,10 +34,13 @@ proof -
   define \<R> where "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
   define t where "t \<equiv> card \<R>"
   define m where "m \<equiv> halted_point \<gamma> l k"
+  define \<delta>::real where "\<delta> \<equiv> 1/200"
   obtain lk: "0<l" "l\<le>k" "0<k"
     using \<open>Colours l k\<close> by (meson Colours_def Colours_kn0 Colours_ln0)
   have \<gamma>01: "0 < \<gamma>" "\<gamma> < 1"
     using lk by (auto simp: \<gamma>_def)
+  have "t<k"
+    unfolding t_def \<R>_def using \<gamma>01 \<open>Colours l k\<close> red_step_limit by blast
   have big93: "Big_Far_9_3 \<gamma> l" 
     using big by (auto simp: Big_Far_10_2_def)
   have t23: "t \<ge> 2*k / 3"
@@ -55,7 +57,33 @@ proof -
     show "Big_Far_9_3 (l / (real k + real l)) l"
       using \<gamma>_def big93 by blast
   qed (use assms in auto)
-  have "t<k"
-    unfolding t_def \<R>_def using \<gamma>01 \<open>Colours l k\<close> red_step_limit by blast
+
+  have "exp (-(\<gamma>/20) * k + ok_fun_95b k) \<le> exp (-\<delta> * k + ok_fun_95b k)"
+    using \<gamma>01 apply (simp add: \<delta>_def)
+    by (metis Groups.mult_ac(3) \<gamma>(1) divide_le_eq_numeral1(1) mult_less_cancel_left2 of_nat_0_le_iff vector_space_over_itself.scale_scale verit_comp_simplify(3))
+
+  have "card (Yseq \<gamma> l k m) \<ge> 
+               exp (-\<delta> * k + ok_fun_95b k) * (1-\<gamma>) powr (\<gamma>*t / (1-\<gamma>)) * ((1-\<gamma>)/(1-\<gamma>))^t 
+             * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) * (k-t+l choose l)"
+    unfolding \<gamma>_def m_def 
+  proof (rule order_trans [OF _ Far_9_5])
+    show "exp (-\<delta> * k) * real (k + l choose l) \<le> real nV"
+      using nV by (auto simp: \<delta>_def)
+    show "1 / 2 \<le> 1 - l / (k + real l) - 0"
+      using divide_le_eq_1 \<open>l\<le>k\<close> by fastforce
+  next
+    show "Big_Far_9_5 (real l / (real k + real l)) l"
+      using big by (simp add: Big_Far_10_2_def \<gamma>_def)
+  qed (use 0 \<open>k>0\<close> \<open>Colours l k\<close> in \<open>auto simp flip: t_def \<gamma>_def \<R>_def\<close>)
+  then have 52: "card (Yseq \<gamma> l k m) \<ge> 
+               exp (-\<delta> * k + ok_fun_95b k) * (1-\<gamma>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) * (k-t+l choose l)"
+    using \<gamma> by simp
+  have "(k-t+l choose l) \<le> 
+        exp (-\<delta> * k + ok_fun_95b k) * (1-\<gamma>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) * (k-t+l choose l)"
+    sorry
+  with 52 have "(k-t+l choose l) \<le> card (Yseq \<gamma> l k m)" by linarith
+  then show False
+    using Far_9_2_conclusion [OF \<open>Colours l k\<close> \<gamma>01] by (simp flip: \<R>_def m_def t_def)
+qed
 
 end
