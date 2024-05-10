@@ -50,34 +50,22 @@ proof -
   have T: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. (\<forall>\<mu>. x320 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> k/200 \<le> ok_fun_95b k + \<mu>*k / real 30)"
     using assms 
     apply (intro eventually_all_ge_at_top eventually_all_geI0 error_10_2_True)
-    apply (auto simp: x320_def divide_right_mono mult_right_mono elim!: order_trans)
-    by (metis Groups.mult_ac(2) more_arith_simps(11) mult_right_mono of_nat_0_le_iff)
+    apply (auto simp: mult_right_mono elim!: order_trans)
+    done
   have F: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. (\<forall>\<mu>. 1/10 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> k/200 \<le> ok_fun_95b k + \<mu>*k / real 15)"
     using assms 
     apply (intro eventually_all_ge_at_top eventually_all_geI0 error_10_2_False)
-    apply (auto simp: divide_right_mono mult_right_mono elim!: order_trans)
-    using Suc_n_not_le_n
-    by (metis Groups.mult_ac(3) mult_le_cancel_left1 mult_of_nat_commute of_nat_less_0_iff)
+    using less_eq_real_def apply (fastforce elim!: order_trans)
+    done
   have "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. (\<forall>\<mu>. 1/10 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> k/200 \<le> ok_fun_95b k + (if \<mu> > x320 then \<mu>*k/30 else \<mu>*k/15))"
     using assms
     apply (split if_split)
-    unfolding eventually_conj_iff all_imp_conj_distrib all_conj_distrib imp_conjL [symmetric]
-    apply (rule )
-     apply (rule eventually_mono [OF T])
-     apply (force simp add: )
-    apply (rule eventually_mono [OF F])
-    apply (force simp add: )
-    done
+    unfolding eventually_conj_iff all_imp_conj_distrib all_conj_distrib 
+    by (force intro:  eventually_mono [OF T] eventually_mono [OF F])
   then show ?thesis
     using assms Big_Far_9_3[of "1/10"] Big_Far_9_5[of "1/10"]
-    unfolding Big_Far_10_2_def 
-    unfolding eventually_conj_iff all_imp_conj_distrib all_conj_distrib imp_conjL [symmetric]
-    apply (intro conjI)
-      apply (simp add: )
-     apply (simp add: )
-    apply (erule eventually_mono)
-    apply (force simp add: )
-    done
+    unfolding Big_Far_10_2_def eventually_conj_iff all_imp_conj_distrib 
+    by (force simp add: elim!: eventually_mono)
 qed
 
 
@@ -94,7 +82,6 @@ lemma (in Book) Far_10_2_aux:
   assumes big: "Big_Far_10_2 \<gamma> l"
   shows False
 proof -
-
   define \<R> where "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
   define t where "t \<equiv> card \<R>"
   define m where "m \<equiv> halted_point \<gamma> l k"
@@ -140,7 +127,6 @@ proof -
     using \<gamma> by simp
 
   define gamf where "gamf \<equiv> \<lambda>x::real. (1-x) powr (1/(1-x))"
-
   have deriv_gamf: "\<exists>y. DERIV gamf x :> y \<and> y \<le> 0" if "0<a" "a\<le>x" "x\<le>b" "b<1" for a b x
     unfolding gamf_def
     apply (rule exI conjI DERIV_powr derivative_eq_intros | use that in force)+
@@ -171,7 +157,7 @@ proof -
       unfolding gamf_def using \<gamma>01 powr_powr by fastforce
     from mult_left_mono [OF this, of "exp (\<gamma> * (real t)\<^sup>2 / (2*k))"]
     have "(1-\<gamma>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) \<ge> exp (-17/60 * (\<gamma>*t) + (\<gamma> * (real t)\<^sup>2 / (2*k)))"
-      by (smt (verit) Groups.mult_ac(2) exp_add exp_ge_zero exp_powr_real)
+      by (smt (verit) mult.commute exp_add exp_ge_zero exp_powr_real)
     moreover have "(-17/60 * (\<gamma>*t) + (\<gamma> * (real t)\<^sup>2 / (2*k))) \<ge> (3*\<gamma> * (real t)\<^sup>2 / (40*k))"
       using t23 \<open>k>0\<close> \<open>\<gamma>>0\<close> by (simp add: divide_simps eval_nat_numeral)
     ultimately have "(1-\<gamma>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) \<ge> exp (3*\<gamma> * (real t)\<^sup>2 / (40*k))"
@@ -190,12 +176,9 @@ proof -
     finally have \<dagger>: "\<delta>*k - ok_fun_95b k \<le> 3 * \<gamma> * (real t)\<^sup>2 / (20*k)" .
 
     have "gamf \<gamma> \<ge> gamf x320"
-      apply (intro DERIV_nonpos_imp_nonincreasing[of \<gamma> "x320" gamf] )
-      using False apply (force simp add: )
-      apply (rule deriv_gamf [of \<gamma>])
       using False \<gamma>
-         apply (auto simp: x320_def)
-      done
+      by (intro DERIV_nonpos_imp_nonincreasing[of \<gamma> "x320" gamf] deriv_gamf)
+         (auto simp: x320_def)
     moreover have "ln (gamf x320) \<ge> -1/3 + 1/10"
       unfolding gamf_def x320_def by (approximation 6)
     moreover have "gamf x320 > 0"
@@ -207,7 +190,7 @@ proof -
       unfolding gamf_def using \<gamma>01 powr_powr by fastforce
     from mult_left_mono [OF this, of "exp (\<gamma> * (real t)\<^sup>2 / (2*k))"]
     have "(1-\<gamma>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) \<ge> exp (-7/30 * (\<gamma>*t) + (\<gamma> * (real t)\<^sup>2 / (2*k)))"
-      by (smt (verit) Groups.mult_ac(2) exp_add exp_ge_zero exp_powr_real)
+      by (smt (verit) mult.commute exp_add exp_ge_zero exp_powr_real)
     moreover have "(-7/30 * (\<gamma>*t) + (\<gamma> * (real t)\<^sup>2 / (2*k))) \<ge> (3*\<gamma> * (real t)\<^sup>2 / (20*k))"
       using t23 \<open>k>0\<close> \<open>\<gamma>>0\<close> by (simp add: divide_simps eval_nat_numeral)
     ultimately have "(1-\<gamma>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) \<ge> exp (3*\<gamma> * (real t)\<^sup>2 / (20*k))"
