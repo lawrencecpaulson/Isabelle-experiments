@@ -83,7 +83,7 @@ end
 lemma eventually_all_geI0:
   assumes "\<forall>\<^sub>F l in sequentially. P \<mu>0 l"  
           "\<And>l \<mu>. \<lbrakk>P \<mu>0 l; \<mu>0\<le>\<mu>; \<mu>\<le>\<mu>1; l \<ge> L\<rbrakk> \<Longrightarrow> P \<mu> l"
-        shows "\<forall>\<^sub>F l in sequentially. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> P \<mu> l"
+  shows "\<forall>\<^sub>F l in sequentially. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> P \<mu> l"
   by (smt (verit, del_insts) assms eventually_sequentially eventually_elim2)
 
 lemma eventually_all_geI1:

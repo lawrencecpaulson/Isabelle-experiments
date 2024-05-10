@@ -809,14 +809,14 @@ context P0_min
 begin
 
 lemma error_9_2:
-  assumes "\<mu>>0"
-  shows "\<forall>\<^sup>\<infinity>k. ok_fun_95b k + \<mu> * real k / 60 \<ge> 0"
+  assumes "\<mu>>0" "d > 0"
+  shows "\<forall>\<^sup>\<infinity>k. ok_fun_95b k + \<mu> * real k / d \<ge> 0"
 proof -
-  have "\<forall>\<^sup>\<infinity>k. \<bar>ok_fun_95b k\<bar> \<le> (\<mu>/60) * real k"
+  have "\<forall>\<^sup>\<infinity>k. \<bar>ok_fun_95b k\<bar> \<le> (\<mu>/d) * k"
     using ok_fun_95b assms unfolding smallo_def
-    by (auto dest!: spec [where x = "\<mu>/60"])
+    by (auto dest!: spec [where x = "\<mu>/d"])
   then show ?thesis
-    by eventually_elim linarith
+    by eventually_elim force
 qed
 
 definition "Big_Far_9_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l \<and> Big_Far_9_5 \<mu> l
@@ -834,7 +834,7 @@ proof -
   then show ?thesis
     using assms Big_Far_9_3 Big_Far_9_5
     unfolding Big_Far_9_2_def 
-    apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
+    apply (simp add: eventually_conj_iff all_imp_conj_distrib)  
     by (smt (verit, ccfv_threshold) eventually_sequentially)
 qed
 
@@ -1014,7 +1014,7 @@ proof -
   proof -
     have "1 * real(k-t+l choose l) 
             \<le> exp (ok_fun_95b k + \<gamma>*k/60) * (k-t+l choose l)"
-      using big  \<open>k\<ge>l\<close> unfolding Big_Far_9_2_def
+      using big \<open>k\<ge>l\<close> unfolding Big_Far_9_2_def
       by (intro mult_right_mono mult_le_1_iff) auto
     also have "\<dots> \<le> exp (3*\<gamma>*t\<^sup>2 / (20*k) + -\<delta> * k + ok_fun_95b k) * (k-t+l choose l)"
       using C by simp
