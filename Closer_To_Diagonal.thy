@@ -40,12 +40,12 @@ lemma error_10_2_True: "\<forall>\<^sup>\<infinity>k. ok_fun_95b k + x320 * real
 lemma error_10_2_False: "\<forall>\<^sup>\<infinity>k. ok_fun_95b k + (1/10) * real k / real 15 \<ge> k/200"
   by (intro error_10_2) auto
 
-definition "Big_Far_10_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l \<and> Big_Far_9_5 \<mu> l
+definition "Big_Closer_10_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l \<and> Big_Far_9_5 \<mu> l
                 \<and> (\<forall>k\<ge>l. ok_fun_95b k + (if \<mu> > x320 then \<mu>*k/30 else \<mu>*k/15) \<ge> k/200)"
 
-lemma Big_Far_10_2:
+lemma Big_Closer_10_2:
   assumes "1/10\<le>\<mu>1" "\<mu>1<1" 
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. 1/10 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> Big_Far_10_2 \<mu> l"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. 1/10 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> Big_Closer_10_2 \<mu> l"
 proof -
   have T: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. (\<forall>\<mu>. x320 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> k/200 \<le> ok_fun_95b k + \<mu>*k / real 30)"
     using assms 
@@ -64,14 +64,15 @@ proof -
     by (force intro:  eventually_mono [OF T] eventually_mono [OF F])
   then show ?thesis
     using assms Big_Far_9_3[of "1/10"] Big_Far_9_5[of "1/10"]
-    unfolding Big_Far_10_2_def eventually_conj_iff all_imp_conj_distrib 
+    unfolding Big_Closer_10_2_def eventually_conj_iff all_imp_conj_distrib 
     by (force simp add: elim!: eventually_mono)
 qed
 
+end (*context P0_min*)
 
 text \<open>A little tricky to express since my "Colours" assumption includes the allowed 
     assumption that there are no cliques in the original graph (page 10). So it's a contrapositive\<close>
-lemma (in Book) Far_10_2_aux:
+lemma (in Book) Closer_10_2_aux:
   fixes l k
   fixes \<gamma>::real
   defines "\<gamma> \<equiv> l / (real k + real l)"
@@ -79,7 +80,7 @@ lemma (in Book) Far_10_2_aux:
      \<comment>\<open>These are the assumptions about the red density of the graph\<close>
   assumes "Colours l k" and \<gamma>: "1/10 \<le> \<gamma>" "\<gamma> \<le> 1/5"
   assumes nV: "real nV \<ge> exp (-k/200) * (k+l choose l)" 
-  assumes big: "Big_Far_10_2 \<gamma> l"
+  assumes big: "Big_Closer_10_2 \<gamma> l"
   shows False
 proof -
   define \<R> where "\<R> \<equiv> Step_class \<gamma> l k {red_step}"
@@ -93,7 +94,7 @@ proof -
   have "t<k"
     unfolding t_def \<R>_def using \<gamma>01 \<open>Colours l k\<close> red_step_limit by blast
   have big93: "Big_Far_9_3 \<gamma> l" 
-    using big by (auto simp: Big_Far_10_2_def Big_Far_9_2_def)
+    using big by (auto simp: Big_Closer_10_2_def Big_Far_9_2_def)
   have t23: "t \<ge> 2*k / 3"
     unfolding t_def \<R>_def \<gamma>_def
   proof (rule Far_9_3)
@@ -120,7 +121,7 @@ proof -
       using divide_le_eq_1 \<open>l\<le>k\<close> by fastforce
   next
     show "Big_Far_9_5 (real l / (real k + real l)) l"
-      using big by (simp add: Big_Far_10_2_def Big_Far_9_2_def \<gamma>_def)
+      using big by (simp add: Big_Closer_10_2_def Big_Far_9_2_def \<gamma>_def)
   qed (use 0 \<open>k>0\<close> \<open>Colours l k\<close> in \<open>auto simp flip: t_def \<gamma>_def \<R>_def\<close>)
   then have 52: "card (Yseq \<gamma> l k m) \<ge> 
                exp (-\<delta> * k + ok_fun_95b k) * (1-\<gamma>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) * (k-t+l choose l)"
@@ -136,7 +137,7 @@ proof -
   proof (cases "\<gamma> > x320")
     case True
     then have "ok_fun_95b k + \<gamma>*k / 30 \<ge> k/200"
-      using big \<open>k\<ge>l\<close> by (auto simp: Big_Far_10_2_def Big_Far_9_2_def)
+      using big \<open>k\<ge>l\<close> by (auto simp: Big_Closer_10_2_def Big_Far_9_2_def)
     with True \<open>k>0\<close> have "\<delta> * k - ok_fun_95b k \<le> (\<gamma>/30) * k"
       by (simp add: \<delta>_def)
     also have "\<dots> \<le> 3 * \<gamma> * (real t)\<^sup>2 / (40*k)"
@@ -167,7 +168,7 @@ proof -
   next
     case False
     then have "ok_fun_95b k + \<gamma>*k / 15 \<ge> k/200"
-      using big \<open>k\<ge>l\<close> by (auto simp: Big_Far_10_2_def Big_Far_9_2_def)
+      using big \<open>k\<ge>l\<close> by (auto simp: Big_Closer_10_2_def Big_Far_9_2_def)
     with \<open>k>0\<close> have "\<delta> * k - ok_fun_95b k \<le> (\<gamma>/15) * k"
       by (simp add: \<delta>_def x320_def)    
     also have "\<dots> \<le> 3 * \<gamma> * (real t)\<^sup>2 / (20*k)"
@@ -209,7 +210,7 @@ proof -
 qed
 
 text \<open>Needs to be proved OUTSIDE THE BOOK LOCALE\<close>
-lemma (in Book_Basis) Far_10_2:
+lemma (in Book_Basis) Closer_10_2:
   fixes Red Blue :: "'a set set"
   fixes l k
   fixes \<gamma>::real
@@ -221,7 +222,7 @@ lemma (in Book_Basis) Far_10_2:
   assumes nV: "real nV \<ge> exp (-k/200) * (k+l choose l)" 
   assumes gd: "graph_density Red \<ge> 1-\<gamma>" 
     and p0_min_OK: "p0_min \<le> 1-\<gamma>"  
-  assumes big: "Big_Far_10_2 \<gamma> l" and "l\<le>k"
+  assumes big: "Big_Closer_10_2 \<gamma> l" and "l\<le>k"
   assumes \<gamma>: "1/10 \<le> \<gamma>" "\<gamma> \<le> 1/5"
   shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue)"
 proof (rule ccontr)
@@ -237,12 +238,133 @@ proof (rule ccontr)
   have "Colours l k"
     using neg \<open>l\<le>k\<close> by (auto simp: Colours_def)
   show False
-  proof (intro Far_10_2_aux [of l k])
+  proof (intro Closer_10_2_aux [of l k])
     show "1 - real l / (real k + real l) \<le> p0"
       using X0_def \<gamma>_def gd gd_le gen_density_commute p0_def by auto
   qed (use assms card_X0 card_Y0 \<open>Colours l k\<close> in auto)
 qed
 
-end (*context P0_min*)
+subsection \<open>Lemma 10.1\<close>
+
+context P0_min
+begin
+
+(*MAYBE NO NEED*)
+definition "Big_Closer_10_1 \<equiv> \<lambda>\<mu> l. Big_Closer_10_2 \<mu> l" 
+
+lemma Big_Closer_10_1:
+  assumes "1/10\<le>\<mu>1" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. 1/10 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> Big_Closer_10_1 \<mu> l"
+  using assms 
+  unfolding Big_Closer_10_1_def eventually_conj_iff all_imp_conj_distrib eps_def
+  by (simp add: Big_Closer_10_2)
+
+lemma Closer_10_1:
+  fixes l k::nat
+  fixes \<delta> \<gamma>::real
+  defines "\<gamma> \<equiv> real l / (real k + real l)"
+  defines "\<delta> \<equiv> \<gamma>/40"
+  assumes \<gamma>: "\<gamma> \<le> 1/5" 
+  assumes big: "\<forall>l'. real l' \<ge> (10/11) * \<gamma> * l \<longrightarrow> (\<forall>\<mu>. \<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/5 \<longrightarrow> Big_Closer_10_1 \<mu> l')"
+  assumes p0_min_91: "p0_min \<le> 1 - (1/10) * (1 + 1/15)"
+  shows "RN k l \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
+proof (cases "\<gamma> \<le> 1/10")
+  case True
+  show ?thesis
+    unfolding \<delta>_def
+    apply (intro order.trans [OF Far_9_1])
+    using True apply (force simp add: \<gamma>_def)
+    using big 
+      defer
+    using assms apply (force simp add: )
+     apply (simp add: \<gamma>_def)
+    apply (smt (verit) frac_le mult_nonneg_nonneg of_nat_0_le_iff)
+    sorry
+next
+  case False
+  show ?thesis
+  proof (rule ccontr)
+    assume non: "\<not> RN k l \<le> exp (-\<delta> * k + 1) * (k+l choose l)"
+    with RN_eq_0_iff have "l>0" by force
+    have l4k: "4*l \<le> k"
+      using \<open>l>0\<close> \<gamma> by (auto simp: \<gamma>_def divide_simps)
+    have "l\<le>k"
+      using \<gamma>_def \<gamma> nat_le_real_less by fastforce
+    with \<open>l>0\<close> have "k>0" by linarith
+    have ln1: False if "l = 1"
+      using non \<open>k>0\<close> by (simp add: that \<gamma>_def \<delta>_def mult_le_1_iff)
+    with \<open>l>0\<close> have "l\<ge>2"
+      by force
+
+    define U_lower_bound_ratio where 
+      "U_lower_bound_ratio \<equiv> \<lambda>m. (\<Prod>i<m. (l - real i) / (k+l - real i))"
+    define n where "n \<equiv> nat\<lceil>RN k l / exp 1\<rceil>"
+    have "n < RN k l"
+      using RN_divide_e_less \<open>2 \<le> l\<close> \<open>l \<le> k\<close> n_def by force
+
+    have "real (k + l choose l) / exp (- 1 + \<delta>*k) < real (RN k l)"
+      by (smt (verit) divide_inverse exp_minus mult_minus_left mult_of_nat_commute non)
+    then have "(RN k l / exp 1) * exp (\<delta>*k) > ((k+l) choose l)"
+      unfolding exp_add exp_minus by (simp add: field_simps)
+    then have nexp_gt: "n * exp (\<delta>*k) > ((k+l) choose l)"
+      by (metis less_le_trans exp_ge_zero mult_right_mono n_def real_nat_ceiling_ge)
+
+    define V where "V \<equiv> {..<n}"
+    define E where "E \<equiv> all_edges V" 
+    interpret Book_Basis V E
+    proof
+      show "\<And>e. e \<in> E \<Longrightarrow> e \<subseteq> V"
+        by (simp add: E_def comp_sgraph.wellformed)
+      show "\<And>e. e \<in> E \<Longrightarrow> card e = 2"
+        by (simp add: E_def comp_sgraph.two_edges)
+    qed (use p0_min_91 V_def E_def in auto)
+    have [simp]: "nV = n"
+      by (simp add: V_def)
+    then obtain Red Blue
+      where Red_E: "Red \<subseteq> E" and Blue_def: "Blue = E-Red" 
+        and no_Red_K: "\<not> (\<exists>K. size_clique k K Red)"
+        and no_Blue_K: "\<not> (\<exists>K. size_clique l K Blue)"
+      by (metis \<open>n < RN k l\<close> less_RN_Red_Blue)
+    have Blue_E: "Blue \<subseteq> E" and disjnt_Red_Blue: "disjnt Red Blue" and Blue_eq: "Blue = all_edges V - Red"
+      using complete by (auto simp: Blue_def disjnt_iff E_def) 
+    define is_good_clique where
+      "is_good_clique \<equiv> \<lambda>i K. clique K Blue \<and> K \<subseteq> V \<and>
+                                 card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
+                                 \<ge> real i * U_lower_bound_ratio (card K) - card K"
+    have is_good_card: "card K < l" if "is_good_clique i K" for i K
+      using no_Blue_K that
+      unfolding is_good_clique_def 
+      by (metis nat_neq_iff size_clique_def size_clique_smaller)
+    define GC where "GC \<equiv> {C. is_good_clique n C}"
+    have "GC \<noteq> {}"
+      by (auto simp: GC_def is_good_clique_def U_lower_bound_ratio_def E_def V_def)
+    have "GC \<subseteq> Pow V"
+      by (auto simp: is_good_clique_def GC_def)
+    then have "finite GC"
+      by (simp add: finV finite_subset)
+    then obtain W where "W \<in> GC" and MaxW: "Max (card ` GC) = card W"
+      using \<open>GC \<noteq> {}\<close> obtains_MAX by blast
+    then have 53: "is_good_clique n W"
+      using GC_def by blast
+    have max53: "\<not> is_good_clique n (insert x W)" if "x\<in>V\<setminus>W" for x
+    proof 
+      assume x: "is_good_clique n (insert x W)"
+      then have "card (insert x W) = Suc (card W)"
+        using finV is_good_clique_def finite_subset that by fastforce
+      with x \<open>finite GC\<close> have "Max (card ` GC) \<ge> Suc (card W)"
+        by (simp add: GC_def rev_image_eqI)
+      then show False
+        by (simp add: MaxW)
+    qed
+
+    have "W\<subseteq>V"
+      using 53 by (auto simp: is_good_clique_def)
+    define m where "m \<equiv> card W"
+    define \<gamma>' where "\<gamma>' \<equiv> (l - real m) / (k+l-real m)"
+
+
+    show False sorry
+  qed
+qed
 
 end

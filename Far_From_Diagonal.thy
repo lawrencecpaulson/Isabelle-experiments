@@ -1134,17 +1134,27 @@ qed
 
 subsection \<open>Lemma 9.1\<close>
 
+    \<comment> \<open>Following Bhavik: dividing by @{term "exp 1"} rather than subtracting 1\<close>
+lemma RN_divide_e_less:
+  assumes "l\<ge>2" "k\<ge>2"
+  shows "nat\<lceil>RN k l / exp 1\<rceil> < RN k l"
+proof -
+  have "RN k l \<ge> 2" by (metis RN_2 RN_mono assms)
+  then have "3 + real (RN k l) \<le> (5/2) * real (RN k l)"
+    by linarith
+  moreover have "(5/2::real) < exp 1"
+    by (approximation 5)
+  ultimately have "exp 1 + real (RN k l) \<le> exp 1 * real (RN k l)"
+    by (smt (verit, best) exp_le mult_right_mono of_nat_0_le_iff)
+  moreover have "0 \<le> \<lceil>RN k l / exp 1\<rceil>"
+    by (metis ceiling_mono ceiling_zero exp_ge_zero of_nat_0_le_iff zero_le_divide_iff)
+  ultimately show ?thesis
+    by (simp add: nat_less_iff ceiling_less_iff field_simps)
+qed
+
+
 context P0_min
 begin
-
-definition "Big_Far_9_1 \<equiv> \<lambda>\<mu> l. Big_Far_9_2 \<mu> l" 
-
-lemma Big_Far_9_1:
-  assumes "0<\<mu>0" "\<mu>0\<le>\<mu>1" "\<mu>1<1" 
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> Big_Far_9_1 \<mu> l"
-  using assms 
-  unfolding Big_Far_9_1_def eventually_conj_iff all_imp_conj_distrib eps_def
-  by (simp add: Big_Far_9_2)
 
 lemma Far_9_1:
   fixes l k::nat
@@ -1152,7 +1162,7 @@ lemma Far_9_1:
   defines "\<gamma> \<equiv> real l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/20"
   assumes \<gamma>: "\<gamma> \<le> 1/10" 
-  assumes big: "\<forall>l'. real l' \<ge> (10/11) * \<gamma> * l \<longrightarrow> (\<forall>\<mu>. \<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/10 \<longrightarrow> Big_Far_9_1 \<mu> l')"
+  assumes big: "\<forall>l'. real l' \<ge> (10/11) * \<gamma> * l \<longrightarrow> (\<forall>\<mu>. \<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<mu> l')"
   assumes p0_min_91: "p0_min \<le> 1 - (1/10) * (1 + 1/15)"
   shows "RN k l \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
 proof (rule ccontr)
@@ -1174,20 +1184,7 @@ proof (rule ccontr)
   define n where "n \<equiv> nat\<lceil>RN k l / exp 1\<rceil>"
     \<comment> \<open>Following Bhavik: dividing by @{term "exp 1"} rather than subtracting 1\<close>
   have "n < RN k l"
-  proof -
-    have "RN k l \<ge> 2"
-      using \<open>l\<ge>2\<close> \<open>k\<ge>l\<close> by (metis RN_2' RN_mono le_trans)
-    then have "3 + real (RN k l) \<le> (5/2) * real (RN k l)"
-      by linarith
-    moreover have "(5/2::real) < exp 1"
-      by (approximation 5)
-    ultimately have "exp 1 + real (RN k l) \<le> exp 1 * real (RN k l)"
-      by (smt (verit, best) exp_le mult_right_mono of_nat_0_le_iff)
-    moreover have "0 \<le> \<lceil>RN k l / exp 1\<rceil>"
-      by (metis ceiling_mono ceiling_zero exp_ge_zero of_nat_0_le_iff zero_le_divide_iff)
-    ultimately show ?thesis
-      by (simp add: n_def nat_less_iff ceiling_less_iff field_simps)
-  qed
+    using RN_divide_e_less \<open>2 \<le> l\<close> \<open>l \<le> k\<close> n_def by force
 
   have "real (k + l choose l) / exp (- 1 + \<delta>*k) < real (RN k l)"
     by (smt (verit) divide_inverse exp_minus mult_minus_left mult_of_nat_commute non)
@@ -1218,7 +1215,6 @@ proof (rule ccontr)
     "is_good_clique \<equiv> \<lambda>i K. clique K Blue \<and> K \<subseteq> V \<and>
                                  card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
                                  \<ge> real i * U_lower_bound_ratio (card K) - card K"
-
   have is_good_card: "card K < l" if "is_good_clique i K" for i K
     using no_Blue_K that
     unfolding is_good_clique_def 
@@ -1634,7 +1630,7 @@ proof (rule ccontr)
       finally show "p0_min \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>" .
     next
       have "Big_Far_9_2 \<gamma>' (l-m)"
-        using False big \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> \<open>m<l\<close> lm_bound unfolding Big_Far_9_1_def
+        using False big \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> \<open>m<l\<close> lm_bound unfolding Big_Far_9_2_def
         by (smt (verit, del_insts) less_imp_le of_nat_diff)
       then show "Big_Far_9_2 ((l-m) / (real k + real (l-m))) (l-m)"
         by (simp add: \<gamma>'_def \<open>m < l\<close> add_diff_eq less_or_eq_imp_le of_nat_diff)
