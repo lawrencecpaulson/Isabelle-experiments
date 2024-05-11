@@ -208,4 +208,41 @@ proof -
     using Far_9_2_conclusion [OF \<open>Colours l k\<close> \<gamma>01] by (simp flip: \<R>_def m_def t_def)
 qed
 
+text \<open>Needs to be proved OUTSIDE THE BOOK LOCALE\<close>
+lemma (in Book_Basis) Far_10_2:
+  fixes Red Blue :: "'a set set"
+  fixes l k
+  fixes \<gamma>::real
+  defines "\<gamma> \<equiv> l / (real k + real l)"
+  assumes complete: "E = all_edges V"
+  assumes Red_E: "Red \<subseteq> E"
+  assumes Blue_def: "Blue = E-Red"
+  assumes infinite_UNIV: "infinite (UNIV::'a set)"
+  assumes nV: "real nV \<ge> exp (-k/200) * (k+l choose l)" 
+  assumes gd: "graph_density Red \<ge> 1-\<gamma>" 
+    and p0_min_OK: "p0_min \<le> 1-\<gamma>"  
+  assumes big: "Big_Far_10_2 \<gamma> l" and "l\<le>k"
+  assumes \<gamma>: "1/10 \<le> \<gamma>" "\<gamma> \<le> 1/5"
+  shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue)"
+proof (rule ccontr)
+  assume neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
+  then obtain X0 Y0 where "l\<ge>2" and card_X0: "card X0 \<ge> nV/2" 
+    and card_Y0: "card Y0 = gorder div 2" 
+    and X0_def: "X0 = V \<setminus> Y0" and "Y0\<subseteq>V" 
+    and gd_le: "graph_density Red \<le> gen_density Red Y0 (V\<setminus>Y0)"
+    and "Book V E p0_min Red Blue X0 Y0" 
+    by (smt (verit, ccfv_SIG) Basis_imp_Book assms p0_min)
+  then interpret Book V E p0_min Red Blue X0 Y0
+    by blast 
+  have "Colours l k"
+    using neg \<open>l\<le>k\<close> by (auto simp: Colours_def)
+  show False
+  proof (intro Far_10_2_aux [of l k])
+    show "1 - real l / (real k + real l) \<le> p0"
+      using X0_def \<gamma>_def gd gd_le gen_density_commute p0_def by auto
+  qed (use assms card_X0 card_Y0 \<open>Colours l k\<close> in auto)
+qed
+
+end (*context P0_min*)
+
 end

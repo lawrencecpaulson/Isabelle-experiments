@@ -1046,6 +1046,56 @@ proof -
     using Far_9_2_conclusion [OF \<open>Colours l k\<close> \<gamma>01] by (simp flip: \<R>_def m_def t_def)
 qed
 
+text \<open>Mediation of 9.2 (and 10.2) from locale @{term Book_Basis} to @{term Basis}}\<close>
+lemma (in Book_Basis) Basis_imp_Book:
+  fixes Red Blue :: "'a set set"
+  fixes l k
+  assumes complete: "E = all_edges V"
+  assumes Red_E: "Red \<subseteq> E"
+  assumes Blue_def: "Blue = E-Red"
+  assumes infinite_UNIV: "infinite (UNIV::'a set)"
+  assumes p0_min_OK: "0 < p0_min" and gd: "p0_min \<le> graph_density Red"
+  assumes "l\<le>k"
+  assumes neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
+  obtains X0 Y0 where "l\<ge>2" "card X0 \<ge> nV/2" "card Y0 = gorder div 2" and "X0 = V \<setminus> Y0" "Y0\<subseteq>V" 
+    and "graph_density Red \<le> gen_density Red Y0 (V\<setminus>Y0)"
+    and "Book V E p0_min Red Blue X0 Y0" 
+proof -
+  have "Red \<noteq> {}"
+    using gd p0_min p0_min_OK by (auto simp: graph_density_def)
+  then have "gorder \<ge> 2"
+    by (metis Red_E card_mono ex_in_conv finV subset_empty two_edges wellformed)
+  then have "0 < gorder div 2" "gorder div 2 < gorder"
+    by auto
+  then obtain Y0 where Y0: "card Y0 = gorder div 2" "Y0\<subseteq>V" 
+    "graph_density Red \<le> gen_density Red Y0 (V\<setminus>Y0)"
+    using exists_density_edge_density \<open>Red \<subseteq> E\<close> complete by blast
+  define X0 where "X0 \<equiv> V \<setminus> Y0"
+  interpret Book V E p0_min Red Blue X0 Y0 
+  proof
+    show "X0\<subseteq>V" "disjnt X0 Y0"
+      by (auto simp: X0_def disjnt_iff)
+    show "p0_min \<le> gen_density Red X0 Y0"
+      using X0_def Y0 gd gen_density_commute p0_min_OK by auto
+  qed (use assms \<open>Y0\<subseteq>V\<close> in auto)
+  have "Colours l k"
+    using neg \<open>l\<le>k\<close> by (auto simp: Colours_def)
+  have False if "l<2"
+    using that unfolding less_2_cases_iff
+  proof
+    assume "l = Suc 0" with neg Red_Blue_RN [of 2 gorder V] gorder_ge2
+    show False
+      by (metis RN_1_le RN_commute Red_Blue_RN card_Ex_subset nat_le_linear not_less_eq_eq numeral_2_eq_2)
+  qed (use Colours_ln0 \<open>Colours l k\<close> in auto)
+  with \<open>k\<ge>l\<close> have "l\<ge>2"
+    by force
+  have card_X0: "card X0 \<ge> nV/2"
+    using Y0 \<open>Y0\<subseteq>V\<close> unfolding X0_def
+    by (simp add: card_Diff_subset finite_Y0)
+  then show thesis
+    using Y0 Book_axioms X0_def \<open>l\<ge>2\<close> that by blast
+qed
+
 text \<open>Needs to be proved OUTSIDE THE BOOK LOCALE\<close>
 lemma (in Book_Basis) Far_9_2:
   fixes Red Blue :: "'a set set"
@@ -1057,7 +1107,7 @@ lemma (in Book_Basis) Far_9_2:
   assumes Red_E: "Red \<subseteq> E"
   assumes Blue_def: "Blue = E-Red"
   assumes infinite_UNIV: "infinite (UNIV::'a set)"
-  assumes n: "real gorder \<ge> exp (-\<delta> * k) * (k+l choose l)" 
+  assumes nV: "real nV \<ge> exp (-\<delta> * k) * (k+l choose l)" 
   assumes gd: "graph_density Red \<ge> 1-\<gamma>-\<eta>" 
     and p0_min_OK: "p0_min \<le> 1-\<gamma>-\<eta>"  (*NEEDED TO INTERPRET BOOK LOCALE*)
   assumes big: "Big_Far_9_2 \<gamma> l" and "l\<le>k"
@@ -1065,45 +1115,20 @@ lemma (in Book_Basis) Far_9_2:
   shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue)"
 proof (rule ccontr)
   assume neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
-  have "Red \<noteq> {}"
-    using gd \<eta> p0_min p0_min_OK by (auto simp: graph_density_def)
-  with Red_E have "Red \<subseteq> E" "E \<noteq> {}"
-    by auto
-  then have "gorder\<ge>2"
-    by (metis card_mono ex_in_conv finV two_edges wellformed)
-  then have "0 < gorder div 2" "gorder div 2 < gorder"
-    by auto
-  then obtain Y0 where card_Y0: "card Y0 = gorder div 2" and "Y0\<subseteq>V" 
-          and Y0: "graph_density Red \<le> gen_density Red Y0 (V\<setminus>Y0)"
-    using exists_density_edge_density \<open>Red \<subseteq> E\<close> complete by blast
-  define X0 where "X0 \<equiv> V \<setminus> Y0"
-  interpret Book V E p0_min Red Blue X0 Y0 
-  proof
-    show "X0\<subseteq>V" "disjnt X0 Y0"
-      by (auto simp: X0_def disjnt_iff)
-    show "p0_min \<le> gen_density Red X0 Y0"
-      using X0_def Y0 gd gen_density_commute p0_min_OK by auto
-  qed (use assms \<open>Y0\<subseteq>V\<close> in auto)
-  have card_X0: "card X0 \<ge> nV/2"
-    using card_Y0 \<open>Y0\<subseteq>V\<close> unfolding X0_def
-    by (simp add: card_Diff_subset finite_Y0)
-  have "Colours l k"
-    using neg \<open>l\<le>k\<close> by (auto simp: Colours_def)
-  have False if "l<2"
-    using that unfolding less_2_cases_iff
-  proof
-    assume "l = Suc 0" with neg Red_Blue_RN [of 2 gorder V] \<open>gorder\<ge>2\<close> 
-    show False
-      by (metis RN_1_le RN_commute Red_Blue_RN card_Ex_subset nat_le_linear not_less_eq_eq numeral_2_eq_2)
-  qed (use Colours_ln0 \<open>Colours l k\<close> in auto)
-  with \<open>k\<ge>l\<close> have "l\<ge>2" "k\<ge>2"
-    by force+
+  then obtain X0 Y0 where "l\<ge>2" and card_X0: "card X0 \<ge> nV/2" 
+    and card_Y0: "card Y0 = gorder div 2" 
+    and X0_def: "X0 = V \<setminus> Y0" and "Y0\<subseteq>V" 
+    and gd_le: "graph_density Red \<le> gen_density Red Y0 (V\<setminus>Y0)"
+    and "Book V E p0_min Red Blue X0 Y0" 
+    by (smt (verit, ccfv_SIG) Basis_imp_Book assms p0_min)
+  then interpret Book V E p0_min Red Blue X0 Y0
+    by blast 
   have "Colours l k"
     using neg \<open>l\<le>k\<close> by (auto simp: Colours_def)
   show False
   proof (intro Far_9_2_aux [of l k \<eta>])
     show "1 - real l / (real k + real l) - \<eta> \<le> p0"
-      using X0_def Y0 \<gamma>_def gd gen_density_commute p0_def by force
+      using X0_def \<gamma>_def gd gd_le gen_density_commute p0_def by auto
   qed (use assms card_X0 card_Y0 \<open>Colours l k\<close> in auto)
 qed
 

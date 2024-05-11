@@ -219,6 +219,10 @@ lemma Red_eq: "Red = all_edges V - Blue"
 lemma Red_nonempty: "Red \<noteq> {}"
   using Red_edges_XY0 by blast
 
+lemma gorder_ge2: "gorder \<ge> 2"
+  using Red_nonempty
+  by (metis Red_E card_mono equals0I finV subset_empty two_edges wellformed)
+
 lemma nontriv: "E \<noteq> {}"
   using Red_E Red_nonempty by force
 
