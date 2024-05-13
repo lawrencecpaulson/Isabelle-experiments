@@ -249,7 +249,31 @@ subsection \<open>Lemma 10.1\<close>
 context P0_min
 begin
 
-(*MAYBE NO NEED*)
+lemma Big_10_imp_Big_9:
+  assumes big: "Big_Closer_10_2 \<mu> l" and \<mu>: "0 < \<mu>" "\<mu> \<le> 1/10"
+  shows "Big_Far_9_2 \<mu> l"
+  unfolding Big_Far_9_2_def
+proof (intro conjI strip)
+  show "Big_Far_9_3 \<mu> l" "Big_Far_9_5 \<mu> l"
+    using Big_Closer_10_2_def big by presburger+
+next
+  fix k :: nat
+  assume "l \<le> k"
+  have \<section>: "\<mu> / 15 - 1 / 200 \<le> \<mu> / 60"
+    using \<mu> by simp
+  have "\<mu> \<le> x320"
+    using assms by (auto simp: x320_def)
+  with \<open>l\<le>k\<close> have "real k / 200 \<le> ok_fun_95b k + \<mu> * real k / 15"
+    using big by (auto simp: Big_Closer_10_2_def)
+  moreover
+  have "\<mu> * real k / 15 - real k / 200 \<le> \<mu> * real k / 60"
+    using mult_right_mono [OF \<section>, of k] 
+    unfolding left_diff_distrib by linarith
+  ultimately show "0 \<le> ok_fun_95b k + \<mu> * real k / 60"
+    by linarith
+qed
+
+(*MAYBE NO NEED TO DEFINE THIS*)
 definition "Big_Closer_10_1 \<equiv> \<lambda>\<mu> l. Big_Closer_10_2 \<mu> l" 
 
 lemma Big_Closer_10_1:
@@ -257,7 +281,7 @@ lemma Big_Closer_10_1:
   shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. 1/10 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> Big_Closer_10_1 \<mu> l"
   using assms 
   unfolding Big_Closer_10_1_def eventually_conj_iff all_imp_conj_distrib eps_def
-  by (simp add: Big_Closer_10_2)
+  using Big_Closer_10_2 by blast
 
 lemma Closer_10_1:
   fixes l k::nat
@@ -268,34 +292,42 @@ lemma Closer_10_1:
   assumes big: "\<forall>l'. real l' \<ge> (10/11) * \<gamma> * l \<longrightarrow> (\<forall>\<mu>. \<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/5 \<longrightarrow> Big_Closer_10_1 \<mu> l')"
   assumes p0_min_91: "p0_min \<le> 1 - (1/10) * (1 + 1/15)"
   shows "RN k l \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
-proof (cases "\<gamma> \<le> 1/10")
-  case True
-  show ?thesis
-    unfolding \<delta>_def
-    apply (intro order.trans [OF Far_9_1])
-    using True apply (force simp add: \<gamma>_def)
-    using big 
-      defer
-    using assms apply (force simp add: )
-     apply (simp add: \<gamma>_def)
-    apply (smt (verit) frac_le mult_nonneg_nonneg of_nat_0_le_iff)
-    sorry
-next
-  case False
-  show ?thesis
-  proof (rule ccontr)
-    assume non: "\<not> RN k l \<le> exp (-\<delta> * k + 1) * (k+l choose l)"
-    with RN_eq_0_iff have "l>0" by force
-    have l4k: "4*l \<le> k"
-      using \<open>l>0\<close> \<gamma> by (auto simp: \<gamma>_def divide_simps)
-    have "l\<le>k"
-      using \<gamma>_def \<gamma> nat_le_real_less by fastforce
-    with \<open>l>0\<close> have "k>0" by linarith
-    have ln1: False if "l = 1"
-      using non \<open>k>0\<close> by (simp add: that \<gamma>_def \<delta>_def mult_le_1_iff)
-    with \<open>l>0\<close> have "l\<ge>2"
-      by force
-
+proof (rule ccontr)
+  assume non: "\<not> RN k l \<le> exp (-\<delta> * k + 1) * (k+l choose l)"
+  with RN_eq_0_iff have "l>0" by force
+  have l4k: "4*l \<le> k"
+    using \<open>l>0\<close> \<gamma> by (auto simp: \<gamma>_def divide_simps)
+  have "l\<le>k"
+    using \<gamma>_def \<gamma> nat_le_real_less by fastforce
+  with \<open>l>0\<close> have "k>0" by linarith
+  have ln1: False if "l = 1"
+    using non \<open>k>0\<close> by (simp add: that \<gamma>_def \<delta>_def mult_le_1_iff)
+  with \<open>l>0\<close> have "l\<ge>2"
+    by force
+  show False
+  proof (cases "\<gamma> \<le> 1/10")
+    case True
+    have "\<gamma>>0"
+      using \<open>0 < l\<close> \<gamma>_def by auto
+    have "RN k l \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
+    proof (intro order.trans [OF Far_9_1])
+      show "\<forall>l'. 10 / 11 * (real l / (real k + real l)) * real l \<le> real l' \<longrightarrow> (\<forall>\<mu>. (real l / (real k + real l))\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1 / 10 \<longrightarrow> Big_Far_9_2 \<mu> l')"
+        using big
+        unfolding \<gamma>_def [symmetric] Big_Closer_10_1_def
+        apply clarify
+        apply (drule_tac x="l'" in spec)
+        apply (simp add: )
+        apply (drule_tac x="\<mu>" in spec)
+        apply (auto simp add: dest!: Big_10_imp_Big_9)
+        by (meson \<open>0 < \<gamma>\<close> basic_trans_rules(22) zero_less_power)
+    next
+      show "exp (- (real l / (real k + real l) / 20) * real k + 1) * real (k + l choose l) \<le> exp (-\<delta>*k + 1) * (k + l choose l)"
+        by (smt (verit, best) \<open>0 < \<gamma>\<close> \<gamma>_def \<delta>_def exp_mono frac_le mult_right_mono of_nat_0_le_iff)
+    qed (use p0_min_91 True \<gamma>_def in auto)
+    then show False
+      using non by blast
+  next
+    case False
     define U_lower_bound_ratio where 
       "U_lower_bound_ratio \<equiv> \<lambda>m. (\<Prod>i<m. (l - real i) / (k+l - real i))"
     define n where "n \<equiv> nat\<lceil>RN k l / exp 1\<rceil>"
@@ -356,7 +388,6 @@ next
       then show False
         by (simp add: MaxW)
     qed
-
     have "W\<subseteq>V"
       using 53 by (auto simp: is_good_clique_def)
     define m where "m \<equiv> card W"
