@@ -1152,6 +1152,36 @@ proof -
     by (simp add: nat_less_iff ceiling_less_iff field_simps)
 qed
 
+lemma kl_choose: 
+  fixes l k::nat
+  assumes "m<l" "k>0"
+  defines "PM \<equiv> \<Prod>i<m. (l - real i) / (k+l-real i)"
+  shows "real(k+l choose l) = (k+l-m choose (l-m)) / PM"
+proof -
+  have inj: "inj_on (\<lambda>i. i-m) {m..<l}" \<comment>\<open>relating the power and binomials; maybe easier using factorials\<close>
+    by (auto simp: inj_on_def)
+  have "(\<Prod>i<l. real (k+l-i) / real (l-i)) / (\<Prod>i<m. real (k+l-i) / real (l-i))
+          = (\<Prod>i = m..<l. real (k+l-i) / real (l-i))"
+    using prod_divide_nat_ivl [of 0 m l "\<lambda>i. real (k+l-i) / real (l-i)"] \<open>m < l\<close>
+    by (simp add: atLeast0LessThan)
+  also have "\<dots> = (\<Prod>i<l - m. (k+l-m - i) / (l-m-i))"
+    apply (rule prod.reindex_cong [OF inj, symmetric])
+    by (auto simp: image_minus_const_atLeastLessThan_nat)
+  finally
+  have "(\<Prod>i<l - m. (k+l-m - i) / (l-m-i)) 
+          = (\<Prod>i<l. (k+l-i) / (l-i)) / (\<Prod>i<m. (k+l-i) / (l-i))" 
+    by linarith
+  also have "\<dots> = (k+l choose l) * inverse (\<Prod>i<m. (k+l-i) / (l-i))"
+    by (simp add: field_simps atLeast0LessThan binomial_altdef_of_nat) 
+  also have "\<dots> = (k+l choose l) * PM"
+    unfolding PM_def using \<open>m < l\<close> \<open>k>0\<close>
+    by (simp add: atLeast0LessThan of_nat_diff flip: prod_inversef)
+  finally have klm_choose: "(k+l-m choose (l-m)) = (k+l choose l) * PM"
+    by (simp add: atLeast0LessThan binomial_altdef_of_nat)
+  then show "real(k+l choose l) = (k+l-m choose (l-m)) / PM"
+    by auto
+qed
+
 
 context P0_min
 begin
@@ -1275,7 +1305,7 @@ proof (rule ccontr)
   have "disjnt U W"
     using Blue_E not_own_Neighbour unfolding E_def V_def U_def disjnt_iff by blast
   have "m<l"
-    using "49" is_good_card m_def by blast
+    using 49 is_good_card m_def by blast
   then have \<gamma>1516: "\<gamma>' \<le> 15/16"
     using \<gamma>_def \<gamma> by (simp add: \<gamma>'_def divide_simps)
   then have \<gamma>'_le1: "(1+\<xi>) * \<gamma>' \<le> 1"
@@ -1303,7 +1333,7 @@ proof (rule ccontr)
   qed auto
 
   have clique_W: "size_clique m W Blue"
-    using "49" is_good_clique_def m_def size_clique_def V_def by blast
+    using 49 is_good_clique_def m_def size_clique_def V_def by blast
 
   define PM where "PM \<equiv> \<Prod>i<m. (l - real i) / (k+l-real i)"
   then have U_lower_m: "U_lower_bound_ratio m = (1+\<xi>)^m * PM"
@@ -1311,28 +1341,8 @@ proof (rule ccontr)
   have prod_gt0: "PM > 0"
     unfolding PM_def using \<open>m<l\<close> by (intro prod_pos) auto
 
-  have inj: "inj_on (\<lambda>i. i-m) {m..<l}" \<comment>\<open>relating the power and binomials; maybe easier using factorials\<close>
-    by (auto simp: inj_on_def)
-  have "(\<Prod>i<l. real (k+l-i) / real (l-i)) / (\<Prod>i<m. real (k+l-i) / real (l-i))
-          = (\<Prod>i = m..<l. real (k+l-i) / real (l-i))"
-    using prod_divide_nat_ivl [of 0 m l "\<lambda>i. real (k+l-i) / real (l-i)"] \<open>m < l\<close>
-    by (simp add: atLeast0LessThan)
-  also have "\<dots> = (\<Prod>i<l - m. (k+l-m - i) / (l-m-i))"
-    apply (rule prod.reindex_cong [OF inj, symmetric])
-    by (auto simp: image_minus_const_atLeastLessThan_nat)
-  finally
-  have "(\<Prod>i<l - m. (k+l-m - i) / (l-m-i)) 
-          = (\<Prod>i<l. (k+l-i) / (l-i)) / (\<Prod>i<m. (k+l-i) / (l-i))" 
-    by linarith
-  also have "\<dots> = (k+l choose l) * inverse (\<Prod>i<m. (k+l-i) / (l-i))"
-    by (simp add: field_simps atLeast0LessThan binomial_altdef_of_nat) 
-  also have "\<dots> = (k+l choose l) * PM"
-    unfolding PM_def using \<open>m < l\<close> \<open>k>0\<close>
-    by (simp add: atLeast0LessThan of_nat_diff flip: prod_inversef)
-  finally have klm_choose: "(k+l-m choose (l-m)) = (k+l choose l) * PM"
-    by (simp add: atLeast0LessThan binomial_altdef_of_nat)
-  then have kl_choose: "real(k+l choose l) = (k+l-m choose (l-m)) / PM"
-    using prod_gt0 by (simp add: field_simps)
+  have kl_choose: "real(k+l choose l) = (k+l-m choose (l-m)) / PM"
+    unfolding PM_def using kl_choose \<open>0 < k\<close> \<open>m < l\<close> by blast
 
 \<comment>\<open>Now a huge effort just to show that @{term U} is nontrivial.
      Proof probably shows its cardinality exceeds a multiple of @{term l}\<close>
@@ -1436,7 +1446,7 @@ proof (rule ccontr)
       show "clique (insert x W) Blue"
       proof (intro clique_insert)
         show "clique W Blue"
-          using "49" is_good_clique_def by blast
+          using 49 is_good_clique_def by blast
         show "all_edges_betw_un {x} W \<subseteq> Blue"
           using \<open>x\<in>U\<close> by (auto simp: U_def all_edges_betw_un_def insert_commute in_Neighbours_iff )
       qed (use \<open>W \<subseteq> V\<close> \<open>x \<in> V\<setminus>W\<close> in auto)
@@ -1470,10 +1480,6 @@ proof (rule ccontr)
       using max49 by blast
   qed
   then have *: "UBB.graph_density RedU \<ge> 1 - \<gamma>' - \<eta>" by force
-  moreover have "\<gamma>'+\<eta> < 1"
-    using \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> by (simp add: \<eta>_def \<xi>_def)
-  ultimately have "RedU \<noteq> {}"
-    by (auto simp: UBB.graph_density_def)
 
 \<comment> \<open>Bhavik's gamma'_le_gamma_iff\<close>
   have \<gamma>'\<gamma>2: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (real k * real l) + (real l * real l) < (real k * real m) + (real l * (real m * 2))"
@@ -1483,7 +1489,7 @@ proof (rule ccontr)
   also have "\<dots>  \<longleftrightarrow> (l * (k+l)) / (k + 2 * l) < m"
     using \<open>m < l\<close> by (simp add: field_simps)
   finally have \<gamma>'\<gamma>2_iff: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (l * (k+l)) / (k + 2 * l) < m" .
-
+  \<comment> \<open>in both cases below, we find a blue clique of size @{term"l-m"}\<close>
   have extend_Blue_clique: "\<exists>K'. size_clique l K' Blue" 
     if "K \<subseteq> U" "size_clique (l-m) K Blue" for K
   proof -
@@ -1525,7 +1531,7 @@ proof (rule ccontr)
       by (smt (verit) \<eta>_def \<open>0 < \<eta>\<close> \<open>0 < \<gamma>'\<close> exp_ln_iff exp_of_nat_mult zero_le_mult_iff)
     have "n * (1+\<xi>)^m \<ge> (k+l choose l)"
       by (smt (verit, best) mult_left_mono nexp_gt of_nat_0_le_iff powerm)
-    then have *: "n * U_lower_bound_ratio m \<ge> (k+l-m choose (l-m))"
+    then have **: "n * U_lower_bound_ratio m \<ge> (k+l-m choose (l-m))"
       using \<open>m<l\<close> prod_gt0 by (simp add: U_lower_m klm_choose)
 
     have m_le_choose: "m \<le> (k+l-m-1 choose (l-m))"
@@ -1534,7 +1540,7 @@ proof (rule ccontr)
       have "m \<le> (k+l-m-1 choose 1)"
         using \<open>l\<le>k\<close> \<open>m<l\<close> by simp
       also have "\<dots> \<le> (k+l-m-1 choose (l-m))"
-        using False \<open>l\<le>k\<close> \<open>m<l\<close> by (intro Transcendental.binomial_mono) auto
+        using False \<open>l\<le>k\<close> \<open>m<l\<close> by (intro binomial_mono) auto
       finally have m_le_choose: "m \<le> (k+l-m-1 choose (l-m))" .
       then show ?thesis .
     qed auto
@@ -1550,14 +1556,14 @@ proof (rule ccontr)
       using m_le_choose by linarith
     finally have "RN k (l-m) \<le> (k+l-m choose (l-m)) - m" .
     then have "card U \<ge> RN k (l-m)"
-      using 49 * VUU unfolding is_good_clique_def U_def m_def by fastforce
+      using 49 ** VUU unfolding is_good_clique_def U_def m_def by fastforce
     with Red_Blue_RN no_Red_K \<open>U \<subseteq> V\<close>
     obtain K where "K \<subseteq> U" "size_clique (l-m) K Blue" by meson
     then show False
       using no_Blue_K extend_Blue_clique by blast
   next
     case False
-    then have YMK: "\<gamma>-\<gamma>' \<le> m/k"
+    have YMK: "\<gamma>-\<gamma>' \<le> m/k"
       using \<open>l>0\<close> \<open>m<l\<close> 
       apply (simp add: \<gamma>_def \<gamma>'_def divide_simps)
       apply (simp add: algebra_simps)
