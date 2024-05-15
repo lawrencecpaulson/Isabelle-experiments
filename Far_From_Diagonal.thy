@@ -1176,7 +1176,7 @@ proof -
   also have "\<dots> = (k+l choose l) * PM"
     unfolding PM_def using \<open>m < l\<close> \<open>k>0\<close>
     by (simp add: atLeast0LessThan of_nat_diff flip: prod_inversef)
-  finally have klm_choose: "(k+l-m choose (l-m)) = (k+l choose l) * PM"
+  finally have "(k+l-m choose (l-m)) = (k+l choose l) * PM"
     by (simp add: atLeast0LessThan binomial_altdef_of_nat)
   then show "real(k+l choose l) = (k+l-m choose (l-m)) / PM"
     by auto
@@ -1399,7 +1399,7 @@ proof (rule ccontr)
     have \<section>: "(k+l choose l) / exp (\<delta> * k) < n"
       by (simp add: less_eq_real_def nexp_gt pos_divide_less_eq)
     show ?thesis
-      using mult_strict_left_mono [OF \<section>, of "PM * (1+\<xi>) ^ m"] klm_choose prod_gt0
+      using mult_strict_left_mono [OF \<section>, of "PM * (1+\<xi>) ^ m"] kl_choose prod_gt0
       by (auto simp add: field_simps \<xi>_def)
   qed
   also have "\<dots> = real n * U_lower_bound_ratio m"
@@ -1532,7 +1532,7 @@ proof (rule ccontr)
     have "n * (1+\<xi>)^m \<ge> (k+l choose l)"
       by (smt (verit, best) mult_left_mono nexp_gt of_nat_0_le_iff powerm)
     then have **: "n * U_lower_bound_ratio m \<ge> (k+l-m choose (l-m))"
-      using \<open>m<l\<close> prod_gt0 by (simp add: U_lower_m klm_choose)
+      using \<open>m<l\<close> prod_gt0 kl_choose by (auto simp add: U_lower_m field_simps)
 
     have m_le_choose: "m \<le> (k+l-m-1 choose (l-m))"
     proof (cases "m=0")
@@ -1569,15 +1569,6 @@ proof (rule ccontr)
       apply (simp add: algebra_simps)
       by (smt (verit, best) mult_left_mono mult_right_mono nat_less_real_le of_nat_0_le_iff)
 
-    have "m \<le> l * (k + real l) / (k + 2 * real l)"
-      using False \<gamma>'\<gamma>2_iff by auto 
-    also have "\<dots> \<le> l * (1 - (10/11)*\<gamma>)"
-      using \<gamma> \<open>l>0\<close> by (simp add: \<gamma>_def field_split_simps)
-    finally have "m \<le> real l * (1 - (10/11)*\<gamma>)" 
-      by force
-    then have lm_bound: "real l - real m \<ge> (10/11) * \<gamma> * l"
-      by (simp add: algebra_simps)
-
     define \<delta>' where "\<delta>' \<equiv> \<gamma>'/20"
     have no_RedU_K: "\<not> (\<exists>K. UBB.size_clique k K RedU)"
       unfolding UBB.size_clique_def RedU_def
@@ -1606,7 +1597,7 @@ proof (rule ccontr)
       finally have expexp: "exp (\<delta>*k) * exp (-\<delta>'*k) \<le> (1+\<xi>) ^ m" .
 
       have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) = exp (-\<delta>'*k) * PM * (k+l choose l)"
-        using \<open>m < l\<close> klm_choose by force
+        using \<open>m < l\<close> kl_choose by force
       also have "\<dots> < n * exp (\<delta>*k) * exp (-\<delta>'*k) * PM"
         using nexp_gt prod_gt0 by auto 
       also have "\<dots> \<le> n * (1+\<xi>) ^ m * PM"
@@ -1635,8 +1626,16 @@ proof (rule ccontr)
         using \<open>\<gamma>' \<le> \<gamma>\<close> \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def of_nat_diff algebra_simps)
       finally show "p0_min \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>" .
     next
-      have "Big_Far_9_2 \<gamma>' (l-m)"
-        using False big \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> \<open>m<l\<close> lm_bound unfolding Big_Far_9_2_def
+      have "m \<le> l * (k + real l) / (k + 2 * real l)"
+        using False \<gamma>'\<gamma>2_iff by auto 
+      also have "\<dots> \<le> l * (1 - (10/11)*\<gamma>)"
+        using \<gamma> \<open>l>0\<close> by (simp add: \<gamma>_def field_split_simps)
+      finally have "m \<le> real l * (1 - (10/11)*\<gamma>)" 
+        by force
+      then have "real l - real m \<ge> (10/11) * \<gamma> * l"
+        by (simp add: algebra_simps)
+      then have "Big_Far_9_2 \<gamma>' (l-m)"
+        using False big \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> \<open>m<l\<close> unfolding Big_Far_9_2_def
         by (smt (verit, del_insts) less_imp_le of_nat_diff)
       then show "Big_Far_9_2 ((l-m) / (real k + real (l-m))) (l-m)"
         by (simp add: \<gamma>'_def \<open>m < l\<close> add_diff_eq less_or_eq_imp_le of_nat_diff)
@@ -1648,7 +1647,7 @@ proof (rule ccontr)
         using \<open>0 < \<eta>\<close> by linarith
       show "\<eta> \<le> (l-m) / (real k + real (l-m)) / 15"
         using mult_right_mono [OF \<open>\<gamma>' \<le> \<gamma>\<close>, of \<xi>]
-        by (simp add: \<eta>_def \<gamma>'_def \<open>m < l\<close> \<xi>_def add_diff_eq less_or_eq_imp_le mult.commute of_nat_diff)
+        by (simp add: \<eta>_def \<gamma>'_def \<open>m < l\<close> \<xi>_def add_diff_eq less_or_eq_imp_le mult.commute)
     qed auto
     with no_RedU_K obtain K where "K \<subseteq> U" "UBB.size_clique (l-m) K BlueU"
       by (meson UBB.size_clique_def)

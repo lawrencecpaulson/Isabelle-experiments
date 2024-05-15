@@ -547,6 +547,17 @@ text \<open>Equation (45) in the text, page 30, is seemingly a huge gap.
 
 definition "graph_density \<equiv> \<lambda>C. card C / card E"
 
+lemma graph_density_Un:
+  assumes "disjnt C D" "C \<subseteq> E" "D \<subseteq> E" 
+  shows "graph_density (C \<union> D) = graph_density C + graph_density D"
+proof (cases "card E > 0")
+  case True
+  with assms obtain "finite C" "finite D"
+    by (metis card_ge_0_finite finite_subset)
+  with assms show ?thesis
+    by (auto simp: graph_density_def card_Un_disjnt divide_simps)
+qed (auto simp: graph_density_def)
+
 text \<open>Could be generalised to any complete graph\<close>
 lemma density_eq_average:
   assumes "C \<subseteq> E" and complete: "E = all_edges V"
