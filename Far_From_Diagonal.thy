@@ -1352,7 +1352,7 @@ proof (rule ccontr)
     unfolding \<xi>_def by (approximation 10)
   finally have exp120: "exp (k / real (20 * (k+l))) \<le> 1 + \<xi>" .
 
-  have *: "Suc l - q \<le> (k+q choose q) / exp(\<delta>*k) * (1+\<xi>) ^ (l - q)"
+  have "Suc l - q \<le> (k+q choose q) / exp(\<delta>*k) * (1+\<xi>) ^ (l - q)"
     if "1\<le>q" "q\<le>l" for q
     using that
   proof (induction q rule: nat_induct_at_least)
@@ -1390,8 +1390,9 @@ proof (rule ccontr)
       unfolding \<ddagger> by (simp add: \<xi>_def field_simps add_increasing)
     with Suc show ?case by force      
   qed
+  from \<open>m<l\<close> this [of "l-m"] 
   have "1 + real m \<le> (k+l-m choose (l-m)) / exp \<delta> ^ k * (1+\<xi>) ^ m"
-    using \<open>m<l\<close> * [of "l-m"] by (simp add: Suc_diff_Suc exp_of_nat2_mult)
+    by (simp add: Suc_diff_Suc exp_of_nat2_mult)
   also have "\<dots> \<le> (k+l-m choose (l-m)) / exp (\<delta> * k) * (1+\<xi>) ^ m"
     by (simp add: exp_of_nat2_mult)
   also have "\<dots> < PM * (real n * (1+\<xi>) ^ m)"
@@ -1409,7 +1410,7 @@ proof (rule ccontr)
   then have "card U > 1"  \<comment>\<open>again -- probably this proof could be strengthened a lot\<close>
     using cardU m_def by linarith
 
-  have card_EU: "card EU > 0"
+  have "card EU > 0"
     using \<open>card U > 1\<close> UBB.complete by (simp add: EU_def UBB.finV card_all_edges)
   have BlueU_eq: "BlueU = EU \<setminus> RedU" 
     using Blue_eq complete by (fastforce simp add: BlueU_def RedU_def EU_def V_def E_def)
@@ -1420,8 +1421,8 @@ proof (rule ccontr)
   have False if "UBB.graph_density RedU < 1 - \<gamma>' - \<eta>"
   proof -    \<comment>\<open>by maximality, etc.\<close>
     have \<section>: "UBB.graph_density BlueU \<ge> \<gamma>' + \<eta>" 
-      using that card_EU card_RedU_le 
-      by (simp add: BlueU_eq UBB.graph_density_def diff_divide_distrib card_Diff_subset of_nat_diff)
+      using that \<open>card EU > 0\<close> card_RedU_le 
+      by (simp add: BlueU_eq UBB.graph_density_def diff_divide_distrib card_Diff_subset)
 
     have Nx: "Neighbours BlueU x \<inter> (U \<setminus> {x}) = Neighbours BlueU x" for x 
       using that by (auto simp: BlueU_eq EU_def Neighbours_def)
@@ -1479,7 +1480,7 @@ proof (rule ccontr)
     ultimately show False
       using max49 by blast
   qed
-  then have *: "UBB.graph_density RedU \<ge> 1 - \<gamma>' - \<eta>" by force
+  then have gd_RedU_ge: "UBB.graph_density RedU \<ge> 1 - \<gamma>' - \<eta>" by force
 
 \<comment> \<open>Bhavik's gamma'_le_gamma_iff\<close>
   have \<gamma>'\<gamma>2: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (real k * real l) + (real l * real l) < (real k * real m) + (real l * (real m * 2))"
@@ -1602,9 +1603,8 @@ proof (rule ccontr)
         using nexp_gt prod_gt0 by auto 
       also have "\<dots> \<le> n * (1+\<xi>) ^ m * PM"
         using expexp less_eq_real_def prod_gt0 by fastforce
-      also have "\<dots> = n * U_lower_bound_ratio m"
-        by (simp add: U_lower_m)
       also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment> \<open>stuck here: the "minus m"\<close>
+        apply (simp add: U_lower_m)
         sorry
       finally have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) \<le> real n * U_lower_bound_ratio m - m"
         by linarith 
@@ -1612,18 +1612,18 @@ proof (rule ccontr)
         using cardU by linarith
       finally have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) \<le> UBB.nV" .
       then show "exp (- ((l-m) / (k + real (l-m)) / 20) * k) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
-        using \<open>m < l\<close> apply (simp add: \<delta>'_def \<gamma>'_def of_nat_diff)
+        using \<open>m < l\<close> apply (simp add: \<delta>'_def \<gamma>'_def)
         by argo
     next
       show "1 - real (l-m) / (real k + real (l-m)) - \<eta> \<le> UBB.graph_density RedU"
-        using * \<open>\<gamma>' \<le> \<gamma>\<close> \<open>m < l\<close> unfolding \<gamma>_def \<gamma>'_def
+        using gd_RedU_ge \<open>\<gamma>' \<le> \<gamma>\<close> \<open>m < l\<close> unfolding \<gamma>_def \<gamma>'_def
         by (smt (verit) less_or_eq_imp_le of_nat_add of_nat_diff)
       have "p0_min \<le> 1 - (1/10) * (1+\<xi>)"
         using p0_min_91 by (auto simp: \<xi>_def)
       also have "\<dots> \<le> 1 - \<gamma> - \<eta>"
         using \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> by (auto simp: \<eta>_def \<xi>_def)
       also have "\<dots> \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>"
-        using \<open>\<gamma>' \<le> \<gamma>\<close> \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def of_nat_diff algebra_simps)
+        using \<open>\<gamma>' \<le> \<gamma>\<close> \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def algebra_simps)
       finally show "p0_min \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>" .
     next
       have "m \<le> l * (k + real l) / (k + 2 * real l)"
@@ -1638,9 +1638,7 @@ proof (rule ccontr)
         using False big \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> \<open>m<l\<close> unfolding Big_Far_9_2_def
         by (smt (verit, del_insts) less_imp_le of_nat_diff)
       then show "Big_Far_9_2 ((l-m) / (real k + real (l-m))) (l-m)"
-        by (simp add: \<gamma>'_def \<open>m < l\<close> add_diff_eq less_or_eq_imp_le of_nat_diff)
-      show "l-m \<le> k"
-        using \<open>l \<le> k\<close> by auto
+        by (simp add: \<gamma>'_def \<open>m < l\<close> add_diff_eq less_or_eq_imp_le)
       show "(l-m) / (real k + real (l-m)) \<le> 1/10"
         using \<gamma> \<gamma>_def \<open>m < l\<close> by fastforce
       show "0 \<le> \<eta>"
@@ -1648,7 +1646,7 @@ proof (rule ccontr)
       show "\<eta> \<le> (l-m) / (real k + real (l-m)) / 15"
         using mult_right_mono [OF \<open>\<gamma>' \<le> \<gamma>\<close>, of \<xi>]
         by (simp add: \<eta>_def \<gamma>'_def \<open>m < l\<close> \<xi>_def add_diff_eq less_or_eq_imp_le mult.commute)
-    qed auto
+    qed (use \<open>l \<le> k\<close> in auto)
     with no_RedU_K obtain K where "K \<subseteq> U" "UBB.size_clique (l-m) K BlueU"
       by (meson UBB.size_clique_def)
     then show False

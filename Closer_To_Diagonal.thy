@@ -493,10 +493,15 @@ proof (rule ccontr)
         unfolding K'_def size_clique_def using \<open>K \<subseteq> U\<close> \<open>U \<subseteq> V\<close> \<open>W \<subseteq> V\<close> by auto
     qed
 
-    show False
-    proof (cases "\<gamma>' \<ge> 1/10")
-      case True
-      have False if "UBB.graph_density BlueU >  \<gamma>'"
+    have YMK: "\<gamma>-\<gamma>' \<le> m/k"
+      using \<open>l>0\<close> \<open>m<l\<close> 
+      apply (simp add: \<gamma>_def \<gamma>'_def divide_simps)
+      apply (simp add: algebra_simps)
+      by (smt (verit, best) mult_left_mono mult_right_mono nat_less_real_le of_nat_0_le_iff)
+    have "\<gamma>' \<le> \<gamma>"
+      using \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def field_simps)
+
+      have False if "UBB.graph_density BlueU > \<gamma>'"
       proof -    \<comment>\<open>by maximality, etc.\<close>
 
         have Nx: "Neighbours BlueU x \<inter> (U \<setminus> {x}) = Neighbours BlueU x" for x 
@@ -554,18 +559,15 @@ proof (rule ccontr)
         ultimately show False
           using max53 by blast
       qed
-      then have *: "UBB.graph_density BlueU \<le>  \<gamma>'" by force
+      then have *: "UBB.graph_density BlueU \<le> \<gamma>'" by force
 
-      have YMK: "\<gamma>-\<gamma>' \<le> m/k"
-        using \<open>l>0\<close> \<open>m<l\<close> 
-        apply (simp add: \<gamma>_def \<gamma>'_def divide_simps)
-        apply (simp add: algebra_simps)
-        by (smt (verit, best) mult_left_mono mult_right_mono nat_less_real_le of_nat_0_le_iff)
-      have "\<gamma>' \<le> \<gamma>"
-        using \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def field_simps)
       have no_RedU_K: "\<not> (\<exists>K. UBB.size_clique k K RedU)"
         unfolding UBB.size_clique_def RedU_def
         by (metis Int_subset_iff  VUU all_edges_subset_iff_clique no_Red_K size_clique_def)
+
+    show False
+    proof (cases "\<gamma>' \<ge> 1/10")
+      case True
       have "(\<exists>K. UBB.size_clique k K RedU) \<or> (\<exists>K. UBB.size_clique (l-m) K BlueU)"
       proof (intro UBB.Closer_10_2)
         show "E \<inter> Pow U = all_edges U"
@@ -581,21 +583,17 @@ proof (rule ccontr)
           using \<open>0 < k\<close> by auto
         then have expexp: "exp (\<delta>*k) * exp (- real k/200) \<le> 1"
           by (metis divide_minus_left exp_ge_zero exp_minus_inverse mult_right_mono)
-
         have "exp (- real k/200) * (k + (l-m) choose (l-m)) = exp (- real k/200) * U_lower_bound_ratio m * (k+l choose l)"
           using \<open>m < l\<close> kl_choose by force
         also have "\<dots> < n * exp (\<delta>*k) * exp (- real k/200) * U_lower_bound_ratio m"
           using nexp_gt prod_gt0 by auto 
-        also have "\<dots> \<le> n * U_lower_bound_ratio m"
-          using expexp less_eq_real_def prod_gt0 by fastforce
         also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment> \<open>stuck here: the "minus m"\<close>
-          sorry
+          using expexp less_eq_real_def prod_gt0 sorry
         finally have "exp (- real k/200) * (k + (l-m) choose (l-m)) \<le> real n * U_lower_bound_ratio m - m"
           by linarith 
         also have "\<dots> \<le> UBB.nV"
           using cardU by linarith
-        finally have "exp (- real k/200) * (k + (l-m) choose (l-m)) \<le> UBB.nV" .
-        then show "exp (- real k / 200) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
+        finally show "exp (- real k / 200) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
           using \<open>m < l\<close> by (simp add: \<gamma>'_def)
       next
         have "1 - \<gamma>' \<le> UBB.graph_density RedU"
@@ -605,15 +603,10 @@ proof (rule ccontr)
         then show "1 - real (l-m) / (real k + real (l-m)) \<le> UBB.graph_density RedU"
           unfolding \<gamma>'_def using \<open>m<l\<close> by (smt (verit, ccfv_threshold) less_imp_le_nat of_nat_add of_nat_diff) 
       next
-        have "p0_min \<le> 1 - 1/5"
-          using p0_min_101 by (auto simp: )
-        also have "\<dots> \<le> 1 - \<gamma>"
-          using \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> by (auto simp: )
-        also have "\<dots> \<le> 1 - (l-m) / (real k + real (l-m))"
-          using \<open>\<gamma>' \<le> \<gamma>\<close> \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def algebra_simps)
-        finally show "p0_min \<le> 1 - (l-m) / (real k + real (l-m))" .
+        show "p0_min \<le> 1 - real (l - m) / (real k + real (l - m))"
+          using p0_min_101 \<open>\<gamma>'\<le>\<gamma>\<close> \<open>m < l\<close> \<gamma>
+          by (smt (verit, del_insts) of_nat_add \<gamma>'_def less_imp_le_nat of_nat_diff) 
       next
-
         have "m \<le> real l * (1 - (10/11)*\<gamma>)" 
           using \<open>m<l\<close> \<open>\<gamma>>1/10\<close> \<open>\<gamma>'\<ge>1/10\<close> \<gamma> apply (simp add: \<gamma>_def \<gamma>'_def field_simps)
           by (smt (verit, ccfv_SIG) Groups.mult_ac(2) mult_left_mono distrib_left)
@@ -643,7 +636,67 @@ proof (rule ccontr)
         by (metis Int_subset_iff all_edges_subset_iff_clique) 
     next
       case False
-      then show False sorry
+      then have DD: "1/10 - 1/k \<le> \<gamma>'"
+        using \<open>\<gamma>>1/10\<close> \<open>l>0\<close> \<open>l\<le>k\<close> l4k \<open>m<l\<close>
+        apply (simp add: \<gamma>_def \<gamma>'_def)
+        apply (simp add: divide_simps split: if_split_asm)
+         apply (simp add: field_simps)
+        defer
+        sorry
+      have "(\<exists>K. UBB.size_clique k K RedU) \<or> (\<exists>K. UBB.size_clique (l-m) K BlueU)"
+      proof (intro UBB.Far_9_2)
+        show "E \<inter> Pow U = all_edges U"
+          by (simp add: UBB.complete)
+        show "RedU \<subseteq> E \<inter> Pow U"
+          using EU_def \<open>RedU \<subseteq> EU\<close> by auto
+        show "BlueU = E \<inter> Pow U \<setminus> RedU"
+          using BlueU_eq EU_def by fastforce
+      next
+        have "\<delta> \<le> \<gamma>'/20"
+          using DD apply (simp add: \<delta>_def field_simps)
+          sorry
+        then have "exp (\<delta> * real k) \<le> exp (\<gamma>'/20 * k)"
+          using \<open>0 < k\<close> by auto
+        then have expexp: "exp (\<delta>*k) * exp (-\<gamma>'/20 * k) \<le> 1"
+          by (simp add: mult_exp_exp)
+         have "exp (-\<gamma>'/20 * k) * (k + (l-m) choose (l-m)) = exp (-\<gamma>'/20 * k) * U_lower_bound_ratio m * (k+l choose l)"
+          using \<open>m < l\<close> kl_choose by force
+        also have "\<dots> < n * exp (\<delta>*k) * exp (-\<gamma>'/20 * k) * U_lower_bound_ratio m"
+          using nexp_gt prod_gt0 by auto 
+        also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment> \<open>stuck here: the "minus m"\<close>
+          using expexp less_eq_real_def prod_gt0 sorry (* by fastforce*)
+        finally have "exp (-\<gamma>'/20 * k) * (k + (l-m) choose (l-m)) \<le> real n * U_lower_bound_ratio m - m"
+          by linarith 
+        also have "\<dots> \<le> UBB.nV"
+          using cardU by linarith
+       finally show "exp (- (real (l - m) / (real k + real (l - m)) / 20) * real k) * real (k + (l - m) choose l - m) \<le> real UBB.nV"
+          using \<open>m < l\<close> by (simp add: \<gamma>'_def) argo
+      next
+        have "1 - \<gamma>' \<le> UBB.graph_density RedU"
+          using * \<open>card EU > 0\<close> card_EU 
+          apply (simp add: UBB.graph_density_def BlueU_eq divide_simps split: if_split_asm)
+          by argo
+        show "1 - real (l - m) / (real k + real (l - m)) - 0 \<le> UBB.graph_density RedU"
+          unfolding \<gamma>'_def using \<open>m<l\<close>
+          by (smt (verit) \<gamma>'_def \<open>1 - \<gamma>' \<le> UBB.graph_density RedU\<close> less_imp_le_nat of_nat_add of_nat_diff)
+      next
+        show "p0_min \<le> 1 - real (l - m) / (real k + real (l - m)) - 0"
+          using p0_min_101 \<open>\<gamma>'\<le>\<gamma>\<close> \<open>m < l\<close> \<gamma>
+          by (smt (verit, del_insts) of_nat_add \<gamma>'_def less_imp_le_nat of_nat_diff) 
+      next
+        show "Big_Far_9_2 (real (l - m) / (real k + real (l - m))) (l - m)"
+          using big
+          sorry
+      next
+        show "real (l - m) / (real k + real (l - m)) \<le> 1 / 10"
+          using False \<open>m < l\<close> by (force simp: \<gamma>'_def)
+      qed (use \<open>l \<le> k\<close> in auto)
+      with no_RedU_K obtain K where "K \<subseteq> U" "UBB.size_clique (l-m) K BlueU"
+        by (meson UBB.size_clique_def)
+      then show False
+        using no_Blue_K extend_Blue_clique VUU
+        unfolding UBB.size_clique_def size_clique_def BlueU_def
+        by (metis Int_subset_iff all_edges_subset_iff_clique) 
     qed
   qed
 qed
