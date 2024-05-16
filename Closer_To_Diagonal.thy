@@ -329,8 +329,9 @@ proof (rule ccontr)
       using non by blast
   next
     case False
-    then have "\<gamma>>1/10" by auto
-      \<comment> \<open>unfortunately, a considerable overlap with the proof of 9.2\<close>
+    with \<open>l>0\<close> have "\<gamma>>1/10" and k9l: "k < 9*l"
+      by (auto simp: \<gamma>_def)
+      \<comment> \<open>Much overlap with the proof of 9.2, but key differences too\<close>
     define U_lower_bound_ratio where 
       "U_lower_bound_ratio \<equiv> \<lambda>m. (\<Prod>i<m. (l - real i) / (k+l - real i))"
     define n where "n \<equiv> nat\<lceil>RN k l / exp 1\<rceil>"
@@ -370,9 +371,14 @@ proof (rule ccontr)
       using no_Blue_K that
       unfolding is_good_clique_def 
       by (metis nat_neq_iff size_clique_def size_clique_smaller)
-    define GC where "GC \<equiv> {C. is_good_clique n C}"
-    have "GC \<noteq> {}"
-      by (auto simp: GC_def is_good_clique_def U_lower_bound_ratio_def E_def V_def)
+    define max_m where "max_m \<equiv> Suc (nat \<lfloor>l - k/9\<rfloor>)"
+    define GC where "GC \<equiv> {C. is_good_clique n C \<and> card C \<le> max_m}"
+    have maxm_bounds: "l - k/9 \<le> max_m" "max_m \<le> l+1 - k/9"
+      using k9l unfolding max_m_def by linarith+
+    have "max_m > 0"
+      using max_m_def by blast
+    then have "GC \<noteq> {}"
+      by (auto simp: GC_def is_good_clique_def U_lower_bound_ratio_def E_def V_def intro: exI [where x="{}"])
     have "GC \<subseteq> Pow V"
       by (auto simp: is_good_clique_def GC_def)
     then have "finite GC"
@@ -381,13 +387,14 @@ proof (rule ccontr)
       using \<open>GC \<noteq> {}\<close> obtains_MAX by blast
     then have 53: "is_good_clique n W"
       using GC_def by blast
-    have max53: "\<not> is_good_clique n (insert x W)" if "x\<in>V\<setminus>W" for x
+
+    have max53: "\<not> (is_good_clique n (insert x W) \<and> card (insert x W) \<le> max_m)" if "x\<in>V\<setminus>W" for x
     proof 
-      assume x: "is_good_clique n (insert x W)"
+      assume x: "is_good_clique n (insert x W) \<and> card (insert x W) \<le> max_m"
       then have "card (insert x W) = Suc (card W)"
         using finV is_good_clique_def finite_subset that by fastforce
       with x \<open>finite GC\<close> have "Max (card ` GC) \<ge> Suc (card W)"
-        by (simp add: GC_def rev_image_eqI)
+        by (metis (no_types, lifting) GC_def Max_ge finite_imageI image_iff mem_Collect_eq)
       then show False
         by (simp add: MaxW)
     qed
@@ -395,6 +402,14 @@ proof (rule ccontr)
       using 53 by (auto simp: is_good_clique_def)
     define m where "m \<equiv> card W"
     define \<gamma>' where "\<gamma>' \<equiv> (l - real m) / (k+l-real m)"
+
+    (*Trying to set up the case analysis for \<gamma>'*)
+    have "m < max_m \<and> (\<forall>x\<in>V\<setminus>W. \<not> is_good_clique n (insert x W)) \<or> m = max_m"
+      using max53 GC_def \<open>W \<in> GC\<close> \<open>W \<subseteq> V\<close> finV finite_subset m_def by fastforce
+    have "\<gamma>' \<ge> 1/10" if "m < max_m"
+      using \<open>\<gamma>>1/10\<close> maxm_bounds that apply (auto simp: \<gamma>_def \<gamma>'_def)
+    sorry
+
 
     have Red_Blue_RN: "\<exists>K \<subseteq> X. size_clique m K Red \<or> size_clique n K Blue"
       if "card X \<ge> RN m n" "X\<subseteq>V" for m n and X 
