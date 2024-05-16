@@ -636,13 +636,35 @@ proof (rule ccontr)
         by (metis Int_subset_iff all_edges_subset_iff_clique) 
     next
       case False
+      have "1/10 - 1/k \<le> \<gamma>'" if "m = Suc(nat(floor(l - k/9)))" (*Bhavik's small_gap_for_next*)
+      proof -
+        have \<section>: "l-m \<ge> k/9 - 1"
+          using \<open>\<gamma>>1/10\<close> \<open>k>0\<close> apply (simp add: that \<gamma>_def) by linarith
+        have "1/10 - 1/k \<le> 1 - k / (10*k/9 - 1)"
+          using False \<open>m<l\<close> \<open>k>0\<close> by (simp add: \<gamma>'_def field_simps)
+        also have "... \<le> 1 - k / (k + l - m)"
+          using \<open>l\<le>k\<close> \<open>m<l\<close> \<section> by (simp add: divide_left_mono)
+        also have "... = \<gamma>'"
+          using  \<open>l>0\<close> \<open>l\<le>k\<close> \<open>m<l\<close> \<open>k>0\<close> by (simp add: \<gamma>'_def divide_simps)
+        finally show "1 / 10 - 1 / real k \<le> \<gamma>'" .
+      qed
       then have DD: "1/10 - 1/k \<le> \<gamma>'"
-        using \<open>\<gamma>>1/10\<close> \<open>l>0\<close> \<open>l\<le>k\<close> l4k \<open>m<l\<close>
+        using \<open>k>0\<close> \<open>\<gamma>>1/10\<close> \<open>l>0\<close> \<open>l\<le>k\<close> \<open>m<l\<close>
         apply (simp add: \<gamma>_def \<gamma>'_def)
         apply (simp add: divide_simps split: if_split_asm)
-         apply (simp add: field_simps)
-        defer
-        sorry
+        apply (simp add: algebra_simps)
+
+
+      have "\<gamma>-\<gamma>' = m*k / ((k+l) * (k+l-m))"
+        using \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def field_split_simps split: if_split_asm)
+      moreover have "m*k / ((k+l) * (k+l-m)) \<le> m/k"
+        using \<open>\<gamma>>1/10\<close> \<open>l>0\<close> \<open>l\<le>k\<close> l4k \<open>m<l\<close> False
+        apply (simp add: \<gamma>_def \<gamma>'_def)
+        apply (simp add: divide_simps split: if_split_asm)
+        apply (simp add: algebra_simps)
+        by (smt (verit, ccfv_SIG) less_imp_le_nat mult_left_mono of_nat_le_iff)
+      ultimately have DD: "1/10 - 1/k \<le> \<gamma>'"
+        by argo
       have "(\<exists>K. UBB.size_clique k K RedU) \<or> (\<exists>K. UBB.size_clique (l-m) K BlueU)"
       proof (intro UBB.Far_9_2)
         show "E \<inter> Pow U = all_edges U"
