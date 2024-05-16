@@ -331,7 +331,7 @@ proof (rule ccontr)
     case False
     with \<open>l>0\<close> have "\<gamma>>1/10" and k9l: "k < 9*l"
       by (auto simp: \<gamma>_def)
-      \<comment> \<open>Much overlap with the proof of 9.2, but key differences too\<close>
+        \<comment> \<open>Much overlap with the proof of 9.2, but key differences too\<close>
     define U_lower_bound_ratio where 
       "U_lower_bound_ratio \<equiv> \<lambda>m. (\<Prod>i<m. (l - real i) / (k+l - real i))"
     define n where "n \<equiv> nat\<lceil>RN k l / exp 1\<rceil>"
@@ -387,7 +387,13 @@ proof (rule ccontr)
       using \<open>GC \<noteq> {}\<close> obtains_MAX by blast
     then have 53: "is_good_clique n W"
       using GC_def by blast
+    then have "W\<subseteq>V"
+      by (auto simp: is_good_clique_def)
 
+    define m where "m \<equiv> card W"
+    define \<gamma>' where "\<gamma>' \<equiv> (l - real m) / (k+l-real m)"
+
+\<comment> \<open>Setting up the case analysis for @{term \<gamma>'}\<close>
     have max53: "\<not> (is_good_clique n (insert x W) \<and> card (insert x W) \<le> max_m)" if "x\<in>V\<setminus>W" for x
     proof 
       assume x: "is_good_clique n (insert x W) \<and> card (insert x W) \<le> max_m"
@@ -398,18 +404,8 @@ proof (rule ccontr)
       then show False
         by (simp add: MaxW)
     qed
-    have "W\<subseteq>V"
-      using 53 by (auto simp: is_good_clique_def)
-    define m where "m \<equiv> card W"
-    define \<gamma>' where "\<gamma>' \<equiv> (l - real m) / (k+l-real m)"
-
-    (*Trying to set up the case analysis for \<gamma>'*)
-    have "m < max_m \<and> (\<forall>x\<in>V\<setminus>W. \<not> is_good_clique n (insert x W)) \<or> m = max_m"
-      using max53 GC_def \<open>W \<in> GC\<close> \<open>W \<subseteq> V\<close> finV finite_subset m_def by fastforce
-    have "\<gamma>' \<ge> 1/10" if "m < max_m"
-      using \<open>\<gamma>>1/10\<close> maxm_bounds that apply (auto simp: \<gamma>_def \<gamma>'_def)
-    sorry
-
+    then have clique_cases: "m < max_m \<and> (\<forall>x\<in>V\<setminus>W. \<not> is_good_clique n (insert x W)) \<or> m = max_m"
+      using GC_def \<open>W \<in> GC\<close> \<open>W \<subseteq> V\<close> finV finite_subset m_def by fastforce
 
     have Red_Blue_RN: "\<exists>K \<subseteq> X. size_clique m K Red \<or> size_clique n K Blue"
       if "card X \<ge> RN m n" "X\<subseteq>V" for m n and X 
@@ -516,7 +512,18 @@ proof (rule ccontr)
     have "\<gamma>' \<le> \<gamma>"
       using \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def field_simps)
 
-      have False if "UBB.graph_density BlueU > \<gamma>'"
+    have no_RedU_K: "\<not> (\<exists>K. UBB.size_clique k K RedU)"
+      unfolding UBB.size_clique_def RedU_def
+      by (metis Int_subset_iff  VUU all_edges_subset_iff_clique no_Red_K size_clique_def)
+
+    consider "m < max_m" | "m = max_m"
+      using clique_cases by blast
+    then show False
+    proof cases
+      case 1
+      then have "\<gamma>' \<ge> 1/10"
+        using \<open>\<gamma>>1/10\<close> \<open>k>0\<close> maxm_bounds  by (auto simp: \<gamma>_def \<gamma>'_def) 
+      have False if "UBB.graph_density BlueU > \<gamma>'"   (***********? ? ?*****)
       proof -    \<comment>\<open>by maximality, etc.\<close>
 
         have Nx: "Neighbours BlueU x \<inter> (U \<setminus> {x}) = Neighbours BlueU x" for x 
@@ -572,17 +579,9 @@ proof (rule ccontr)
             by simp
         qed
         ultimately show False
-          using max53 by blast
+          using 1 clique_cases by blast
       qed
       then have *: "UBB.graph_density BlueU \<le> \<gamma>'" by force
-
-      have no_RedU_K: "\<not> (\<exists>K. UBB.size_clique k K RedU)"
-        unfolding UBB.size_clique_def RedU_def
-        by (metis Int_subset_iff  VUU all_edges_subset_iff_clique no_Red_K size_clique_def)
-
-    show False
-    proof (cases "\<gamma>' \<ge> 1/10")
-      case True
       have "(\<exists>K. UBB.size_clique k K RedU) \<or> (\<exists>K. UBB.size_clique (l-m) K BlueU)"
       proof (intro UBB.Closer_10_2)
         show "E \<inter> Pow U = all_edges U"
@@ -641,8 +640,9 @@ proof (rule ccontr)
         show "(l-m) / (real k + real (l-m)) \<le> 1/5"
           using \<gamma> \<gamma>_def \<open>m < l\<close> by fastforce
         show "1/10 \<le> (l-m) / (real k + real (l-m))"
-          using True \<gamma>'_def \<open>m < l\<close> by auto
+          using \<gamma>'_def \<open>1/10 \<le> \<gamma>'\<close> \<open>m < l\<close> by auto
       qed auto
+
       with no_RedU_K obtain K where "K \<subseteq> U" "UBB.size_clique (l-m) K BlueU"
         by (meson UBB.size_clique_def)
       then show False
@@ -650,36 +650,22 @@ proof (rule ccontr)
         unfolding UBB.size_clique_def size_clique_def BlueU_def
         by (metis Int_subset_iff all_edges_subset_iff_clique) 
     next
-      case False
-      have "1/10 - 1/k \<le> \<gamma>'" if "m = Suc(nat(floor(l - k/9)))" (*Bhavik's small_gap_for_next*)
+      case 2
+      then have B: "\<gamma>' \<le> 1/10"
+
+        sorry
+      have "1/10 - 1/k \<le> \<gamma>'"   (*Bhavik's small_gap_for_next*)
       proof -
         have \<section>: "l-m \<ge> k/9 - 1"
-          using \<open>\<gamma>>1/10\<close> \<open>k>0\<close> apply (simp add: that \<gamma>_def) by linarith
+          using \<open>\<gamma>>1/10\<close> \<open>k>0\<close> 2 apply (simp add: max_m_def \<gamma>_def) by linarith
         have "1/10 - 1/k \<le> 1 - k / (10*k/9 - 1)"
-          using False \<open>m<l\<close> \<open>k>0\<close> by (simp add: \<gamma>'_def field_simps)
+          using B \<open>m<l\<close> \<open>k>0\<close> by (simp add: \<gamma>'_def field_simps)
         also have "... \<le> 1 - k / (k + l - m)"
           using \<open>l\<le>k\<close> \<open>m<l\<close> \<section> by (simp add: divide_left_mono)
         also have "... = \<gamma>'"
           using  \<open>l>0\<close> \<open>l\<le>k\<close> \<open>m<l\<close> \<open>k>0\<close> by (simp add: \<gamma>'_def divide_simps)
         finally show "1 / 10 - 1 / real k \<le> \<gamma>'" .
       qed
-      then have DD: "1/10 - 1/k \<le> \<gamma>'"
-        using \<open>k>0\<close> \<open>\<gamma>>1/10\<close> \<open>l>0\<close> \<open>l\<le>k\<close> \<open>m<l\<close>
-        apply (simp add: \<gamma>_def \<gamma>'_def)
-        apply (simp add: divide_simps split: if_split_asm)
-        apply (simp add: algebra_simps)
-
-
-      have "\<gamma>-\<gamma>' = m*k / ((k+l) * (k+l-m))"
-        using \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def field_split_simps split: if_split_asm)
-      moreover have "m*k / ((k+l) * (k+l-m)) \<le> m/k"
-        using \<open>\<gamma>>1/10\<close> \<open>l>0\<close> \<open>l\<le>k\<close> l4k \<open>m<l\<close> False
-        apply (simp add: \<gamma>_def \<gamma>'_def)
-        apply (simp add: divide_simps split: if_split_asm)
-        apply (simp add: algebra_simps)
-        by (smt (verit, ccfv_SIG) less_imp_le_nat mult_left_mono of_nat_le_iff)
-      ultimately have DD: "1/10 - 1/k \<le> \<gamma>'"
-        by argo
       have "(\<exists>K. UBB.size_clique k K RedU) \<or> (\<exists>K. UBB.size_clique (l-m) K BlueU)"
       proof (intro UBB.Far_9_2)
         show "E \<inter> Pow U = all_edges U"
@@ -696,7 +682,7 @@ proof (rule ccontr)
           using \<open>0 < k\<close> by auto
         then have expexp: "exp (\<delta>*k) * exp (-\<gamma>'/20 * k) \<le> 1"
           by (simp add: mult_exp_exp)
-         have "exp (-\<gamma>'/20 * k) * (k + (l-m) choose (l-m)) = exp (-\<gamma>'/20 * k) * U_lower_bound_ratio m * (k+l choose l)"
+        have "exp (-\<gamma>'/20 * k) * (k + (l-m) choose (l-m)) = exp (-\<gamma>'/20 * k) * U_lower_bound_ratio m * (k+l choose l)"
           using \<open>m < l\<close> kl_choose by force
         also have "\<dots> < n * exp (\<delta>*k) * exp (-\<gamma>'/20 * k) * U_lower_bound_ratio m"
           using nexp_gt prod_gt0 by auto 
@@ -706,7 +692,7 @@ proof (rule ccontr)
           by linarith 
         also have "\<dots> \<le> UBB.nV"
           using cardU by linarith
-       finally show "exp (- (real (l - m) / (real k + real (l - m)) / 20) * real k) * real (k + (l - m) choose l - m) \<le> real UBB.nV"
+        finally show "exp (- (real (l - m) / (real k + real (l - m)) / 20) * real k) * real (k + (l - m) choose l - m) \<le> real UBB.nV"
           using \<open>m < l\<close> by (simp add: \<gamma>'_def) argo
       next
         have "1 - \<gamma>' \<le> UBB.graph_density RedU"
