@@ -102,7 +102,7 @@ proof -
       using \<gamma> unfolding \<gamma>_def by linarith
     have "min (1/200) (l / (real k + real l) / 20) = 1/200"
        using \<gamma> \<open>0<l\<close> by (simp add: \<gamma>_def)
-    then show "exp (- min (1/200) (l / (real k + real l) / 20) * real k) * real (k + l choose l) \<le> nV"
+    then show "exp (- min (1/200) (l / (real k + real l) / 20) * real k) * real (k+l choose l) \<le> nV"
       using nV by (metis divide_real_def inverse_eq_divide minus_mult_right mult.commute)
     show "1/4 \<le> p0"
       using \<gamma> 0 by linarith
@@ -115,7 +115,7 @@ proof -
              * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) * (k-t+l choose l)"
     unfolding \<gamma>_def m_def 
   proof (rule order_trans [OF _ Far_9_5])
-    show "exp (-\<delta> * k) * real (k + l choose l) \<le> real nV"
+    show "exp (-\<delta> * k) * real (k+l choose l) \<le> real nV"
       using nV by (auto simp: \<delta>_def)
     show "1 / 2 \<le> 1 - l / (k + real l) - 0"
       using divide_le_eq_1 \<open>l\<le>k\<close> by fastforce
@@ -290,20 +290,21 @@ lemma Closer_10_1:
   defines "\<delta> \<equiv> \<gamma>/40"
   assumes \<gamma>: "\<gamma> \<le> 1/5" 
   assumes big: "\<forall>l'. real l' \<ge> (10/11) * \<gamma> * l \<longrightarrow> (\<forall>\<mu>. \<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/5 \<longrightarrow> Big_Closer_10_1 \<mu> l')"
+  assumes "l\<ge>2"
   assumes p0_min_101: "p0_min \<le> 1 - 1/5"
-  shows "RN k l \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
+  shows "RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
 proof (rule ccontr)
-  assume non: "\<not> RN k l \<le> exp (-\<delta> * k + 1) * (k+l choose l)"
+  assume non: "\<not> RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
   with RN_eq_0_iff have "l>0" by force
   have l4k: "4*l \<le> k"
     using \<open>l>0\<close> \<gamma> by (auto simp: \<gamma>_def divide_simps)
   have "l\<le>k"
     using \<gamma>_def \<gamma> nat_le_real_less by fastforce
   with \<open>l>0\<close> have "k>0" by linarith
-  have ln1: False if "l = 1"
-    using non \<open>k>0\<close> by (simp add: that \<gamma>_def \<delta>_def mult_le_1_iff)
-  with \<open>l>0\<close> have "l\<ge>2"
-    by force
+  have exp_gt21: "exp (x + 2) > exp (x + 1)" for x::real
+    by auto
+  have exp2: "exp (2::real) = exp 1 * exp 1"
+    by (simp add: mult_exp_exp)
   show False
   proof (cases "\<gamma> \<le> 1/10")
     case True
@@ -321,11 +322,11 @@ proof (rule ccontr)
       then show "Big_Far_9_2 \<mu> l'"
         by (smt (verit, ccfv_threshold) Big_10_imp_Big_9 \<gamma>_def tenth \<open>0 < \<gamma>\<close> zero_less_power)
     next
-      show "exp (- (l / (k + real l) / 20) * k + 1) * (k + l choose l) \<le> exp (-\<delta>*k + 1) * (k + l choose l)"
+      show "exp (- (l / (k + real l) / 20) * k + 1) * (k+l choose l) \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
         by (smt (verit, best) \<open>0 < \<gamma>\<close> \<gamma>_def \<delta>_def exp_mono frac_le mult_right_mono of_nat_0_le_iff)
     qed (use p0_min_101 True \<gamma>_def in auto)
     then show False
-      using non by blast
+      using non exp_gt21 by (smt (verit, ccfv_SIG) mult_right_mono of_nat_0_le_iff)
   next
     case False
     with \<open>l>0\<close> have "\<gamma>>1/10" and k9l: "k < 9*l"
@@ -337,12 +338,16 @@ proof (rule ccontr)
     have "n < RN k l"
       using RN_divide_e_less \<open>2 \<le> l\<close> \<open>l \<le> k\<close> n_def by force
 
-    have "(k+l choose l) / exp (-1 + \<delta>*k) < real (RN k l)"
+    have "(k+l choose l) / exp (-3 + \<delta>*k) < real (RN k l)"
       by (smt (verit) divide_inverse exp_minus mult_minus_left mult_of_nat_commute non)
-    then have "(RN k l / exp 1) * exp (\<delta>*k) > ((k+l) choose l)"
-      unfolding exp_add exp_minus by (simp add: field_simps)
-    then have nexp_gt: "n * exp (\<delta>*k) > ((k+l) choose l)"
-      by (metis less_le_trans exp_ge_zero mult_right_mono n_def real_nat_ceiling_ge)
+    then have "(k+l choose l) < (RN k l / exp (real 2)) * exp (\<delta>*k - 1)"
+      by (simp add: divide_simps exp_add exp_diff flip: exp_add)
+    also have "... \<le> n * exp (\<delta>*k - 2)"
+      unfolding n_def by (simp add: divide_simps exp_diff exp2 ceiling_divide_upper)
+    finally have nexp_gt': "n * exp (\<delta>*k) > (k+l choose l) * exp 2"
+      by (metis exp_diff exp_gt_zero linorder_not_le pos_divide_le_eq times_divide_eq_right)
+    then have nexp_gt: "n * exp (\<delta>*k) > (k+l choose l)"
+      using less_le_trans linorder_not_le by fastforce
 
     define V where "V \<equiv> {..<n}"
     define E where "E \<equiv> all_edges V" 
@@ -478,7 +483,7 @@ proof (rule ccontr)
     have [simp]: "UBB.graph_size = card EU"
       using EU_def by blast
 
-\<comment> \<open>in both cases below, we find a blue key click of size @{term"l-m"}\<close>
+\<comment> \<open>in both cases below, we find a blue clique of size @{term"l-m"}\<close>
     have extend_Blue_clique: "\<exists>K'. size_clique l K' Blue" 
       if "K \<subseteq> U" "size_clique (l-m) K Blue" for K
     proof -
@@ -503,7 +508,7 @@ proof (rule ccontr)
         unfolding K'_def size_clique_def using \<open>K \<subseteq> U\<close> \<open>U \<subseteq> V\<close> \<open>W \<subseteq> V\<close> by auto
     qed
 
-    have YMK: "\<gamma>-\<gamma>' \<le> m/k"
+    have YMK: "\<gamma>-\<gamma>' \<le> m/k"  (*UNUSED*)
       using \<open>l>0\<close> \<open>m<l\<close> 
       apply (simp add: \<gamma>_def \<gamma>'_def divide_simps)
       apply (simp add: algebra_simps)
@@ -680,8 +685,26 @@ proof (rule ccontr)
         show "p0_min \<le> 1 - 1 / 10 * (1 + 1 / 15)"
           using p0_min_101 by auto
       qed
+      also have "... \<le> real n * U_lower_bound_ratio m"
+      proof -
+        have "\<gamma> * real k \<le> k/5"
+          using \<gamma> \<open>0 < k\<close> by auto
+        also have "... \<le> \<gamma>' * (real k * 2) + 2"
+          using mult_left_mono [OF 110, of "k*2"] \<open>k>0\<close> by (simp add: algebra_simps)
+        finally have "\<gamma> * real k \<le> \<gamma>' * (real k * 2) + 2" .
+         then have expexp: "exp (\<delta> * real k) * exp (-\<gamma>'*k / 20 - 1) \<le> 1"
+           by (simp add: \<delta>_def flip: exp_add)
+        have "exp (-\<gamma>'*k/20 + 1) * (k + (l-m) choose (l-m)) = exp (-\<gamma>'*k/20+1) * U_lower_bound_ratio m * (k+l choose l)"
+          using \<open>m < l\<close> kl_choose by force
+        also have "\<dots> < n * exp (\<delta>*k) * exp (-\<gamma>'*k/20 - 1) * U_lower_bound_ratio m"
+          using nexp_gt' prod_gt0 by (simp add: exp2 exp_diff exp_minus' mult_ac pos_less_divide_eq)
+        also have "\<dots> \<le> n * U_lower_bound_ratio m"
+          using expexp less_eq_real_def prod_gt0 by fastforce
+        finally show ?thesis
+          using \<open>m < l\<close> by (simp add: \<gamma>'_def) argo
+      qed
       also have "\<dots> \<le> card U"
-
+        using cardU  (*the same problem: plus m*)
         sorry
       finally have "RN k (l-m) \<le> UBB.nV" by linarith
       then show False

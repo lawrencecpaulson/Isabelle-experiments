@@ -4,6 +4,11 @@ theory General_Extras imports
 
 begin
 
+lemma exp_minus': "exp (-x) = 1 / (exp x)"
+  for x :: "'a::{real_normed_field,banach}"
+  by (simp add: exp_minus inverse_eq_divide)
+
+
 declare eventually_frequently_const_simps [simp]
 
 lemma mult_le_1_iff: "\<lbrakk>x\<ge>1; y\<ge>1\<rbrakk> \<Longrightarrow> x*y \<ge> (1::real)"
