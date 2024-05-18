@@ -1134,7 +1134,7 @@ qed
 
 subsection \<open>Lemma 9.1\<close>
 
-    \<comment> \<open>Following Bhavik: dividing by @{term "exp 1"} rather than subtracting 1\<close>
+text \<open>Following Bhavik: dividing by @{term "exp 1"} rather than subtracting 1\<close>
 lemma RN_divide_e_less:
   assumes "l\<ge>2" "k\<ge>2"
   shows "nat\<lceil>RN k l / exp 1\<rceil> < RN k l"

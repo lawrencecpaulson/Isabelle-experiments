@@ -417,11 +417,6 @@ proof (rule ccontr)
       unfolding is_clique_RN_def size_clique_def clique_indep_def Blue_eq 
       by (metis clique_iff_indep finite_subset subset_trans)
     define U where "U \<equiv> V \<inter> (\<Inter>w\<in>W. Neighbours Blue w)"
-    define EU where "EU \<equiv> E \<inter> Pow U"
-    define RedU where "RedU \<equiv> Red \<inter> Pow U"
-    define BlueU where "BlueU \<equiv> Blue \<inter> Pow U"
-    have RedU_eq: "RedU = EU \<setminus> BlueU"
-      using BlueU_def Blue_def EU_def RedU_def Red_E by fastforce
     have "RN k l > 0"
       by (metis RN_eq_0_iff gr0I \<open>k>0\<close> \<open>l>0\<close>)
     with \<open>n < RN k l\<close> have n_less: "n < (k+l choose l)"
@@ -445,26 +440,6 @@ proof (rule ccontr)
     have cardU: "n * U_lower_bound_ratio m \<le> m + card U"
       using 53 VUU unfolding is_good_clique_def m_def U_def by force
 
-    obtain [iff]: "finite RedU" "finite BlueU" "RedU \<subseteq> EU"
-      using BlueU_def EU_def RedU_def E_def V_def Red_E Blue_E fin_edges finite_subset  by blast 
-    then have card_EU: "card EU = card RedU + card BlueU"
-      by (simp add: BlueU_def Blue_def Diff_Int_distrib2 EU_def RedU_def card_Diff_subset card_mono)
-    then have card_RedU_le: "card RedU \<le> card EU"
-      by linarith
-    interpret UBB: Book_Basis U "E \<inter> Pow U" p0_min 
-    proof
-      fix e 
-      assume "e \<in> E \<inter> Pow U"
-      with two_edges show "e \<subseteq> U" "card e = 2" by auto
-    next
-      show "finite U"
-        using \<open>U \<subseteq> V\<close> by (simp add: V_def finite_subset)
-      have "x \<in> E" if "x \<in> all_edges U" for x 
-        using \<open>U \<subseteq> V\<close> all_edges_mono that complete E_def by blast
-      then show "E \<inter> Pow U = all_edges U"
-        using comp_sgraph.wellformed \<open>U \<subseteq> V\<close> by (auto intro: e_in_all_edges_ss)
-    qed auto
-
     have clique_W: "size_clique m W Blue"
       using 53 is_good_clique_def m_def size_clique_def V_def by blast
 
@@ -472,16 +447,6 @@ proof (rule ccontr)
       unfolding U_lower_bound_ratio_def using \<open>m<l\<close> by (intro prod_pos) auto
     have kl_choose: "real(k+l choose l) = (k+l-m choose (l-m)) / U_lower_bound_ratio m"
       unfolding U_lower_bound_ratio_def using kl_choose \<open>0 < k\<close> \<open>m < l\<close> by blast
-
-    have "card U > 1"  \<comment>\<open>the proof used in 9.2 does not work, but maybe 9.4 helps\<close>
-      sorry
-
-    have "card EU > 0"
-      using \<open>card U > 1\<close> UBB.complete by (simp add: EU_def UBB.finV card_all_edges)
-    have BlueU_eq: "BlueU = EU \<setminus> RedU" 
-      using Blue_eq complete by (fastforce simp add: BlueU_def RedU_def EU_def V_def E_def)
-    have [simp]: "UBB.graph_size = card EU"
-      using EU_def by blast
 
 \<comment> \<open>in both cases below, we find a blue clique of size @{term"l-m"}\<close>
     have extend_Blue_clique: "\<exists>K'. size_clique l K' Blue" 
@@ -494,7 +459,7 @@ proof (rule ccontr)
         unfolding K'_def
       proof (subst card_Un_disjnt)
         show "finite K" "finite W"
-          using UBB.finV \<open>K \<subseteq> U\<close> finite_subset \<open>finite W\<close> by blast+
+          using finV \<open>K \<subseteq> U\<close> \<open>U\<subseteq>V\<close> finite_subset \<open>finite W\<close> that by meson+
         show "disjnt K W"
           using \<open>disjnt U W\<close> \<open>K \<subseteq> U\<close> disjnt_subset1 by blast
         show "card K + card W = l"
@@ -516,10 +481,6 @@ proof (rule ccontr)
     have "\<gamma>' \<le> \<gamma>"
       using \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def field_simps)
 
-    have no_RedU_K: "\<not> (\<exists>K. UBB.size_clique k K RedU)"
-      unfolding UBB.size_clique_def RedU_def
-      by (metis Int_subset_iff  VUU all_edges_subset_iff_clique no_Red_K size_clique_def)
-
     consider "m < max_m" | "m = max_m"
       using clique_cases by blast
     then show False
@@ -527,7 +488,44 @@ proof (rule ccontr)
       case 1
       then have "\<gamma>' \<ge> 1/10"
         using \<open>\<gamma>>1/10\<close> \<open>k>0\<close> maxm_bounds  by (auto simp: \<gamma>_def \<gamma>'_def) 
-      have False if "UBB.graph_density BlueU > \<gamma>'" 
+
+      have "card U > 1"  \<comment>\<open>the proof used in 9.2 does not work\<close>
+        sorry
+
+      \<comment>\<open>Restricting attention to U\<close>
+      define EU where "EU \<equiv> E \<inter> Pow U"
+      define RedU where "RedU \<equiv> Red \<inter> Pow U"
+      define BlueU where "BlueU \<equiv> Blue \<inter> Pow U"
+      have RedU_eq: "RedU = EU \<setminus> BlueU"
+        using BlueU_def Blue_def EU_def RedU_def Red_E by fastforce
+      obtain [iff]: "finite RedU" "finite BlueU" "RedU \<subseteq> EU"
+        using BlueU_def EU_def RedU_def E_def V_def Red_E Blue_E fin_edges finite_subset by blast 
+      then have card_EU: "card EU = card RedU + card BlueU"
+        by (simp add: BlueU_def Blue_def Diff_Int_distrib2 EU_def RedU_def card_Diff_subset card_mono)
+      then have card_RedU_le: "card RedU \<le> card EU"
+        by linarith
+      interpret UBB: Book_Basis U "E \<inter> Pow U" p0_min 
+      proof
+        fix e assume "e \<in> E \<inter> Pow U"
+        with two_edges show "e \<subseteq> U" "card e = 2" by auto
+      next
+        show "finite U"
+          using \<open>U \<subseteq> V\<close> by (simp add: V_def finite_subset)
+        have "x \<in> E" if "x \<in> all_edges U" for x 
+          using \<open>U \<subseteq> V\<close> all_edges_mono that complete E_def by blast
+        then show "E \<inter> Pow U = all_edges U"
+          using comp_sgraph.wellformed \<open>U \<subseteq> V\<close> by (auto intro: e_in_all_edges_ss)
+      qed auto
+
+      have "card EU > 0"
+        by (metis \<open>card U > 1\<close> EU_def Suc_1 Suc_leI UBB.graph_size zero_less_binomial)
+
+      have BlueU_eq: "BlueU = EU \<setminus> RedU" 
+        using Blue_eq complete by (fastforce simp add: BlueU_def RedU_def EU_def V_def E_def)
+      have [simp]: "UBB.graph_size = card EU"
+        using EU_def by blast
+
+      have False if "UBB.graph_density BlueU > \<gamma>'"
       proof -    \<comment>\<open>by maximality, etc.; only possible in case 1\<close>
         have Nx: "Neighbours BlueU x \<inter> (U \<setminus> {x}) = Neighbours BlueU x" for x 
           using that by (auto simp: BlueU_eq EU_def Neighbours_def)
@@ -644,8 +642,10 @@ proof (rule ccontr)
         show "1/10 \<le> (l-m) / (real k + real (l-m))"
           using \<gamma>'_def \<open>1/10 \<le> \<gamma>'\<close> \<open>m < l\<close> by auto
       qed auto
-
-      with no_RedU_K obtain K where "K \<subseteq> U" "UBB.size_clique (l-m) K BlueU"
+      moreover have "\<not> (\<exists>K. UBB.size_clique k K RedU)"
+        unfolding UBB.size_clique_def RedU_def
+        by (metis Int_subset_iff VUU all_edges_subset_iff_clique no_Red_K size_clique_def)
+      ultimately obtain K where "K \<subseteq> U" "UBB.size_clique (l-m) K BlueU"
         by (meson UBB.size_clique_def)
       then show False
         using no_Blue_K extend_Blue_clique VUU
@@ -692,8 +692,8 @@ proof (rule ccontr)
         also have "... \<le> \<gamma>' * (real k * 2) + 2"
           using mult_left_mono [OF 110, of "k*2"] \<open>k>0\<close> by (simp add: algebra_simps)
         finally have "\<gamma> * real k \<le> \<gamma>' * (real k * 2) + 2" .
-         then have expexp: "exp (\<delta> * real k) * exp (-\<gamma>'*k / 20 - 1) \<le> 1"
-           by (simp add: \<delta>_def flip: exp_add)
+        then have expexp: "exp (\<delta> * real k) * exp (-\<gamma>'*k / 20 - 1) \<le> 1"
+          by (simp add: \<delta>_def flip: exp_add)
         have "exp (-\<gamma>'*k/20 + 1) * (k + (l-m) choose (l-m)) = exp (-\<gamma>'*k/20+1) * U_lower_bound_ratio m * (k+l choose l)"
           using \<open>m < l\<close> kl_choose by force
         also have "\<dots> < n * exp (\<delta>*k) * exp (-\<gamma>'*k/20 - 1) * U_lower_bound_ratio m"
@@ -706,7 +706,7 @@ proof (rule ccontr)
       also have "\<dots> \<le> card U"
         using cardU  (*the same problem: plus m*)
         sorry
-      finally have "RN k (l-m) \<le> UBB.nV" by linarith
+      finally have "RN k (l-m) \<le> card U" by linarith
       then show False
         using Red_Blue_RN \<open>U \<subseteq> V\<close> extend_Blue_clique no_Blue_K no_Red_K by blast
     qed
