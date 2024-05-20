@@ -8,6 +8,13 @@ lemma exp_minus': "exp (-x) = 1 / (exp x)"
   for x :: "'a::{real_normed_field,banach}"
   by (simp add: exp_minus inverse_eq_divide)
 
+lemma gchoose_ge0: "\<And>r::real. r \<in> Nats \<Longrightarrow> r gchoose k \<ge> 0"
+  by (metis Nats_cases binomial_gbinomial of_nat_0_le_iff)
+
+lemma ln_strict_mono: "\<And>x::real. \<lbrakk>x < y; 0 < x; 0 < y\<rbrakk> \<Longrightarrow> ln x < ln y"
+  using ln_less_cancel_iff by blast
+
+
 
 declare eventually_frequently_const_simps [simp]
 

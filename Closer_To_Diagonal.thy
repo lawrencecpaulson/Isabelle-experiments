@@ -5,16 +5,6 @@ theory Closer_To_Diagonal
 
 begin
 
-
-lemma gchoose_ge0: "\<And>r::real. r \<in> Nats \<Longrightarrow> r gchoose k \<ge> 0"
-  by (metis Nats_cases binomial_gbinomial of_nat_0_le_iff)
-
-
-
-lemma ln_strict_mono: "\<And>x::real. \<lbrakk>x < y; 0 < x; 0 < y\<rbrakk> \<Longrightarrow> ln x < ln y"
-  using ln_less_cancel_iff by blast
-
-
 subsection \<open>Lemma 10.2\<close>
 
 context P0_min
@@ -572,66 +562,6 @@ proof (rule ccontr)
       then have "card U > 1"  \<comment>\<open>again -- probably this proof could be strengthened a lot\<close>
         using cardU m_def by linarith
 
-      (*DELETE?*)
-      have A: "\<gamma>' ^ i \<le> U_lower_bound_ratio i" if "i\<le>m" for i
-        using that
-      proof (induction i)
-        case 0
-        then show ?case
-          by (auto simp: U_lower_bound_ratio_def)
-      next
-        case (Suc i)
-        then have "\<gamma>' \<le> (real l - real i) / (real k + real l - real i)"
-          using \<open>k>0\<close> \<open>l\<le>k\<close> \<open>m<l\<close>
-          by (simp add: \<gamma>'_def field_simps)
-        with Suc show ?case
-          unfolding U_lower_bound_ratio_def power_Suc prod.lessThan_Suc
-          by (metis (no_types, lifting) mult.commute of_nat_add Suc_leD \<open>0 < \<gamma>'\<close> less_eq_real_def mult_mono' zero_less_power)
-      qed
-
-      have "l\<ge>7"
-        sorry
-      then obtain k3: "k\<ge>3" "nat(\<lceil>k/9\<rceil>) \<ge> 3"
-        using l4k \<open>l\<le>k\<close> by linarith
-      then have RNk9: "RN k (nat \<lceil>k/9\<rceil>) > 0"
-        by (metis RN_eq_0_iff gr0I not_numeral_le_zero)
-      have k9_lel: "\<lceil>k/9\<rceil> \<le> l"
-        using k9l by linarith
-      have "\<delta>*k \<le> k/200"
-        using \<gamma> by (simp add: \<open>0 < k\<close> \<delta>_def)
-      also have "\<dots> < (k-1) * (\<lceil>k/9\<rceil>-1)/(2*(k + \<lceil>k/9\<rceil>)) - 1"
-        sorry
-      also have "... < ln (RN k (nat(\<lceil>k/9\<rceil>))) - 1"
-        using ln_strict_mono [OF RN_lower_off_diag [of k "nat(\<lceil>k/9\<rceil>)"]] k3
-        by (force simp add: RN_eq_0_iff)
-      also have "... \<le> ln (RN k (nat(\<lceil>k/9\<rceil>)) / exp 1)"
-        by (simp add: RNk9 ln_div)
-      also have "... \<le> ln n"
-        unfolding n_def
-      proof (intro ln_mono)
-        show "real (RN k (nat \<lceil>real k / 9\<rceil>)) / exp 1 \<le> real (nat \<lceil>real (RN k l) / exp 1\<rceil>)"
-          using RN_mono k9_lel
-          by (smt (verit, best) divide_right_mono exp_ge_zero nat_le_iff of_nat_ceiling of_nat_le_iff)
-      qed (auto simp: \<open>0 < RN k l\<close> RNk9)
-      finally have "n > exp (\<delta>*k)"
-        by (metis mult_zero_left exp_less_mono exp_ln_iff nexp_gt not_less_iff_gr_or_eq of_nat_less_0_iff)
-      then have "exp (\<delta>*k) * U_lower_bound_ratio m \<le> real (m + card U)"
-        using cardU by (smt (verit) mult_right_mono prod_gt0)
-      then have "exp (\<delta>*k) * \<gamma>' ^ m \<le> real (m + card U)"
-        by (simp add: A landau_omega.R_trans)
-
-
-
-      have "real (k + l - m choose l - m) < n * U_lower_bound_ratio m * exp (\<delta> * real k)"
-        using local.kl_choose nexp_gt
-        by (metis Groups.mult_ac(2) divide_less_eq more_arith_simps(11) prod_gt0)
-      then have "real (k + l - m choose l - m) *  exp (-\<delta>*k) < n * U_lower_bound_ratio m"
-        by (metis approximation_preproc_floatarith(8) exp_gt_zero exp_minus mult_minus_left pos_divide_less_eq)
-      then have "real (k + l - m choose l - m) * exp (-\<delta>*k) < real (m + card U)"
-        using cardU by argo
-      (*DELETE?*)
-
-
       \<comment>\<open>Restricting attention to U\<close>
       define EU where "EU \<equiv> E \<inter> Pow U"
       define RedU where "RedU \<equiv> Red \<inter> Pow U"
@@ -661,14 +591,11 @@ proof (rule ccontr)
         using Blue_eq complete by (fastforce simp add: BlueU_def RedU_def EU_def V_def E_def)
       have [simp]: "UBB.graph_size = card EU"
         using EU_def by blast
+      have "card EU > 0"
+        using \<open>card U > 1\<close> UBB.complete by (simp add: EU_def UBB.finV card_all_edges)
 
       have False if "UBB.graph_density BlueU > \<gamma>'"
       proof -    \<comment>\<open>by maximality, etc.; only possible in case 1\<close>
-        have "card EU > 0"
-          using that \<open>0 < \<gamma>'\<close> by (force simp: \<gamma>'_def UBB.graph_density_def intro: gr0I)
-        then have "card U > 1"
-          using UBB.graph_size by auto
-
         have Nx: "Neighbours BlueU x \<inter> (U \<setminus> {x}) = Neighbours BlueU x" for x 
           using that by (auto simp: BlueU_eq EU_def Neighbours_def)
         have "BlueU \<subseteq> E \<inter> Pow U"
@@ -751,12 +678,9 @@ proof (rule ccontr)
           using cardU by linarith
         finally show "exp (- real k / 200) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
           using \<open>m < l\<close> by (simp add: \<gamma>'_def)
-        then have "UBB.nV > 1"
-          sorry
-        then have "card EU > 0"
-          using UBB.graph_size by auto
-        then have "1 - \<gamma>' \<le> UBB.graph_density RedU"
-          using * card_EU 
+
+        have "1 - \<gamma>' \<le> UBB.graph_density RedU"
+          using * card_EU \<open>card EU > 0\<close>
           apply (simp add: UBB.graph_density_def BlueU_eq divide_simps split: if_split_asm)
           by argo
         then show "1 - real (l-m) / (real k + real (l-m)) \<le> UBB.graph_density RedU"
