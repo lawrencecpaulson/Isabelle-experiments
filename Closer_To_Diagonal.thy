@@ -401,9 +401,8 @@ proof (rule ccontr)
     define m where "m \<equiv> card W"
     define \<gamma>' where "\<gamma>' \<equiv> (l - real m) / (k+l-real m)"
 
-\<comment> \<open>Setting up the case analysis for @{term \<gamma>'}\<close>
     have max53: "\<not> (is_good_clique n (insert x W) \<and> card (insert x W) \<le> max_m)" if "x\<in>V\<setminus>W" for x
-    proof 
+    proof    \<comment> \<open>Setting up the case analysis for @{term \<gamma>'}\<close>
       assume x: "is_good_clique n (insert x W) \<and> card (insert x W) \<le> max_m"
       then have "card (insert x W) = Suc (card W)"
         using finV is_good_clique_def finite_subset that by fastforce
@@ -452,7 +451,7 @@ proof (rule ccontr)
     have kl_choose: "real(k+l choose l) = (k+l-m choose (l-m)) / U_lower_bound_ratio m"
       unfolding U_lower_bound_ratio_def using kl_choose \<open>0 < k\<close> \<open>m < l\<close> by blast
 
-\<comment> \<open>in both cases below, we find a blue clique of size @{term"l-m"}\<close>
+    \<comment> \<open>in both cases below, we find a blue clique of size @{term"l-m"}\<close>
     have extend_Blue_clique: "\<exists>K'. size_clique l K' Blue" 
       if "K \<subseteq> U" "size_clique (l-m) K Blue" for K
     proof -
@@ -485,22 +484,21 @@ proof (rule ccontr)
     have "\<gamma>' \<le> \<gamma>"
       using \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def field_simps)
 
-
     consider "m < max_m" | "m = max_m"
       using clique_cases by blast
     then show False
     proof cases
       case 1
       then have "\<gamma>' \<ge> 1/10"
-        using \<open>\<gamma>>1/10\<close> \<open>k>0\<close> maxm_bounds  by (auto simp: \<gamma>_def \<gamma>'_def) 
-
+        using \<open>\<gamma>>1/10\<close> \<open>k>0\<close> maxm_bounds by (auto simp: \<gamma>_def \<gamma>'_def) 
       have k9: "k\<ge>9"
         using \<open>l \<le> k\<close> l9 le_trans by blast
+      then have k9k: "0 < 9 + 9 * real_of_int \<lfloor>k/9\<rfloor> / k"
+        using \<open>k>0\<close> by (smt (verit) divide_nonneg_nonneg of_nat_0_le_iff of_nat_int_floor)
 
-      then have FF[simp]: "0 < 9 + 9 * real_of_int \<lfloor>real k / 9\<rfloor> / real k"
-        using \<open>k>0\<close>
-        by (smt (verit) divide_nonneg_nonneg of_nat_0_le_iff of_nat_int_floor)
-
+      \<comment>\<open>As with 9: a huge effort just to show that @{term U} is nontrivial.
+         Proof probably shows its cardinality exceeds a multiple of @{term l}.
+         Different here is that we know that @{term "\<gamma>' \<ge> 1/10"}\<close>
       have "Suc l - q \<le> (k+q choose q) / exp(\<delta>*k)"
         if "nat\<lfloor>k/9\<rfloor> \<le> q" "q\<le>l"  for q
         using that
@@ -517,18 +515,16 @@ proof (rule ccontr)
         also have "\<dots> \<le> exp(\<lfloor>k/9\<rfloor> * ln(9)) * exp (-real k/200)"
           by (simp add: mult_exp_exp)
         also have "\<dots> \<le> exp(\<lfloor>k/9\<rfloor> * ln(9 + (9 * nat \<lfloor>k/9\<rfloor>) / k)) * exp (-real k/200)"
-          by (intro mult_mono exp_mono) auto
+          using k9k by (intro mult_mono exp_mono) auto
         also have "\<dots> \<le> (9 + (9 * nat \<lfloor>k/9\<rfloor>) / k) ^ nat \<lfloor>k/9\<rfloor> * exp (-real k/200)"
-          apply (simp add: powr_def flip: powr_realpow)
-          using FF by linarith
+          using k9k by (auto simp add: powr_def simp flip: powr_realpow)
         also have "\<dots> \<le> ((k + nat \<lfloor>k/9\<rfloor>) / (k/9)) ^ nat \<lfloor>k/9\<rfloor> * exp (-real k/200)"
           using \<open>k>0\<close> by (auto simp: mult.commute)
         also have "\<dots> \<le> ((k + nat \<lfloor>k/9\<rfloor>) / nat \<lfloor>k/9\<rfloor>) ^ nat \<lfloor>k/9\<rfloor> * exp (-real k/200)"
-          using k9
-          apply (intro mult_mono power_mono divide_left_mono)
-                apply (auto simp: )
-          apply linarith
-          done
+        proof (intro mult_mono power_mono divide_left_mono)
+          show "nat \<lfloor>k/9\<rfloor> \<le> k/9"
+            by linarith
+        qed (use k9 in auto)
         also have "\<dots> \<le> (k + nat \<lfloor>k/9\<rfloor> gchoose nat \<lfloor>k/9\<rfloor>) * exp (-real k/200)"
           by (meson exp_gt_zero gbinomial_ge_n_over_k_pow_k le_add2 mult_le_cancel_right_pos of_nat_mono)
         also have "\<dots> \<le> (k + nat \<lfloor>k/9\<rfloor> choose nat \<lfloor>k/9\<rfloor>) * exp (-real k/200)"
@@ -544,7 +540,7 @@ proof (rule ccontr)
       qed
       from \<open>m<l\<close> this [of "l-m"] 
       have "1 + real m \<le> (k+l-m choose (l-m)) / exp \<delta> ^ k"
-        using \<open>\<gamma>' \<ge> 1/10\<close>
+        using \<open>\<gamma>' \<ge> 1/10\<close> 
         apply (simp add: Suc_diff_Suc exp_of_nat2_mult \<gamma>'_def)
         by linarith
       also have "\<dots> \<le> (k+l-m choose (l-m)) / exp (\<delta> * k)"
@@ -620,7 +616,7 @@ proof (rule ccontr)
             show "clique W Blue"
               using 53 is_good_clique_def by blast
             show "all_edges_betw_un {x} W \<subseteq> Blue"
-              using \<open>x\<in>U\<close> by (auto simp: U_def all_edges_betw_un_def insert_commute in_Neighbours_iff )
+              using \<open>x\<in>U\<close> by (auto simp: U_def all_edges_betw_un_def insert_commute in_Neighbours_iff)
           qed (use \<open>W \<subseteq> V\<close> \<open>x \<in> V\<setminus>W\<close> in auto)
         next
           show "insert x W \<subseteq> V"
@@ -686,7 +682,7 @@ proof (rule ccontr)
         then show "1 - real (l-m) / (real k + real (l-m)) \<le> UBB.graph_density RedU"
           unfolding \<gamma>'_def using \<open>m<l\<close> by (smt (verit, ccfv_threshold) less_imp_le_nat of_nat_add of_nat_diff) 
       next
-        show "p0_min \<le> 1 - real (l - m) / (real k + real (l - m))"
+        show "p0_min \<le> 1 - real (l-m) / (real k + real (l-m))"
           using p0_min_101 \<open>\<gamma>'\<le>\<gamma>\<close> \<open>m < l\<close> \<gamma>
           by (smt (verit, del_insts) of_nat_add \<gamma>'_def less_imp_le_nat of_nat_diff) 
       next
@@ -697,7 +693,7 @@ proof (rule ccontr)
         then have "real l - real m \<ge> (10/11) * \<gamma> * l"
           by (simp add: algebra_simps)
         moreover
-        have "\<gamma>\<^sup>2 \<le> \<gamma>' \<and> \<gamma>' \<le> 1 / 5"
+        have "\<gamma>\<^sup>2 \<le> \<gamma>' \<and> \<gamma>' \<le> 1/5"
           using mult_mono [OF \<gamma> \<gamma>] \<open>\<gamma>'\<ge>1/10\<close> \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> by (auto simp: power2_eq_square)
         ultimately        
         have "Big_Closer_10_2 \<gamma>' (l-m)"
@@ -738,14 +734,14 @@ proof (rule ccontr)
         finally show "1/10 - 1 / real k \<le> \<gamma>'" .
       qed
 
-      have "RN k (l-m) \<le> exp (- ((l - m) / (k + real (l - m)) / 20) * real k + 1) * (k + (l - m) choose l-m)"
+      have "RN k (l-m) \<le> exp (- ((l-m) / (k + real (l-m)) / 20) * k + 1) * (k + (l-m) choose l-m)"
       proof (intro Far_9_1 strip)
-        show "real (l - m) / (real k + real (l - m)) \<le> 1 / 10"
+        show "real (l-m) / (real k + real (l-m)) \<le> 1 / 10"
           using \<gamma>'_def \<gamma>'_le110 \<open>m < l\<close> by auto
       next
         fix l' \<mu>
-        assume \<section>: "10 / 11 * (real (l - m) / (real k + real (l - m))) * real (l - m) \<le> real l'"
-          and "(real (l - m) / (real k + real (l - m)))\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1 / 10"
+        assume \<section>: "10 / 11 * (real (l-m) / (real k + real (l-m))) * real (l-m) \<le> real l'"
+          and "(real (l-m) / (real k + real (l-m)))\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1 / 10"
         show "Big_Far_9_2 \<mu> l'"
           apply (intro Big_10_imp_Big_9)
           using big 
