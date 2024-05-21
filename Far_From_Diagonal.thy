@@ -383,7 +383,7 @@ proof -
   with p0_min show ?thesis
     unfolding Big_Far_9_3_def eps_def d_def e_def
     using assms Big_ZZ_8_5 Big_X_7_1 Big_Y_6_2 Big_Red_5_3
-    apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
+    apply (simp add: eventually_conj_iff all_imp_conj_distrib)  
     apply (intro conjI strip eventually_all_ge_at_top; real_asymp)
     done
 qed
@@ -1216,11 +1216,11 @@ proof (rule ccontr)
   have "n < RN k l"
     using RN_divide_e_less \<open>2 \<le> l\<close> \<open>l \<le> k\<close> n_def by force
 
-  have "real (k + l choose l) / exp (- 1 + \<delta>*k) < real (RN k l)"
+  have "real (k + l choose l) / exp (- 1 + \<delta>*k) < RN k l"
     by (smt (verit) divide_inverse exp_minus mult_minus_left mult_of_nat_commute non)
-  then have "(RN k l / exp 1) * exp (\<delta>*k) > ((k+l) choose l)"
+  then have "(RN k l / exp 1) * exp (\<delta>*k) > (k+l choose l)"
     unfolding exp_add exp_minus by (simp add: field_simps)
-  then have nexp_gt: "n * exp (\<delta>*k) > ((k+l) choose l)"
+  then have nexp_gt: "n * exp (\<delta>*k) > (k+l choose l)"
     by (metis less_le_trans exp_ge_zero mult_right_mono n_def real_nat_ceiling_ge)
 
   define V where "V \<equiv> {..<n}"
@@ -1289,8 +1289,6 @@ proof (rule ccontr)
 
   have "RN k l > 0"
     by (metis RN_eq_0_iff gr0I \<open>k>0\<close> \<open>l>0\<close>)
-  with \<open>n < RN k l\<close> have n_less: "n < (k+l choose l)"
-    by (metis add.commute RN_commute RN_le_choose le_trans linorder_not_less)
 
   have "\<gamma>' > 0"
     using is_good_card [OF 49] by (simp add: \<gamma>'_def m_def)
@@ -1344,7 +1342,7 @@ proof (rule ccontr)
   have kl_choose: "real(k+l choose l) = (k+l-m choose (l-m)) / PM"
     unfolding PM_def using kl_choose \<open>0 < k\<close> \<open>m < l\<close> by blast
 
-\<comment>\<open>Now a huge effort just to show that @{term U} is nontrivial.
+  \<comment>\<open>Now a huge effort just to show that @{term U} is nontrivial.
      Proof probably shows its cardinality exceeds a multiple of @{term l}\<close>
   have "exp (k / (20*(k+l))) \<le> exp(1/20)"
     using \<open>m < l\<close> by fastforce
@@ -1376,8 +1374,7 @@ proof (rule ccontr)
     then have "l \<le> (1 + real k) * (1+\<xi>) ^ (l-1) / exp (k / (20*(k+l))) ^ l"
       by (simp add: mult_of_nat_commute pos_le_divide_eq)
     then show ?case
-      apply (simp add: \<delta>_def \<gamma>_def)
-      by (metis mult.commute exp_of_nat2_mult times_divide_eq_right)
+      by (simp add: \<delta>_def \<gamma>_def field_simps flip: exp_of_nat2_mult)
   next
     case (Suc q)
     then have \<ddagger>: "(1+\<xi>) ^ (l - q) = (1+\<xi>) * (1+\<xi>) ^ (l - Suc q)"
@@ -1563,7 +1560,7 @@ proof (rule ccontr)
     then show False
       using no_Blue_K extend_Blue_clique by blast
   next
-    case False
+    case False 
     have YMK: "\<gamma>-\<gamma>' \<le> m/k"
       using \<open>l>0\<close> \<open>m<l\<close> 
       apply (simp add: \<gamma>_def \<gamma>'_def divide_simps)
