@@ -819,8 +819,7 @@ proof -
     by eventually_elim force
 qed
 
-definition "Big_Far_9_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l \<and> Big_Far_9_5 \<mu> l
-                \<and> (\<forall>k\<ge>l. ok_fun_95b k + \<mu>*k/60 \<ge> 0)"
+definition "Big_Far_9_2 \<equiv> \<lambda>\<mu> l. Big_Far_9_3 \<mu> l \<and> Big_Far_9_5 \<mu> l \<and> (\<forall>k\<ge>l. ok_fun_95b k + \<mu>*k/60 \<ge> 0)"
 
 lemma Big_Far_9_2:
   assumes "0<\<mu>0" "\<mu>0\<le>\<mu>1" "\<mu>1<1" 
@@ -1192,7 +1191,7 @@ lemma Far_9_1:
   defines "\<gamma> \<equiv> real l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/20"
   assumes \<gamma>: "\<gamma> \<le> 1/10" 
-  assumes big: "\<forall>l'. real l' \<ge> (10/11) * \<gamma> * l \<longrightarrow> (\<forall>\<mu>. \<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<mu> l')"
+  assumes big: "l\<ge>3" "\<forall>l'. real l' \<ge> (10/11) * \<gamma> * l \<longrightarrow> (\<forall>\<mu>. \<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<mu> l')"
   assumes p0_min_91: "p0_min \<le> 1 - (1/10) * (1 + 1/15)"
   shows "RN k l \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
 proof (rule ccontr)
@@ -1211,17 +1210,30 @@ proof (rule ccontr)
     \<comment>\<open>Bhavik's terminology below\<close>
   define U_lower_bound_ratio where 
     "U_lower_bound_ratio \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k+l - real i))"
-  define n where "n \<equiv> nat\<lceil>RN k l / exp 1\<rceil>"
-    \<comment> \<open>Following Bhavik: dividing by @{term "exp 1"} rather than subtracting 1\<close>
-  have "n < RN k l"
-    using RN_divide_e_less \<open>2 \<le> l\<close> \<open>l \<le> k\<close> n_def by force
+  define n where "n \<equiv> nat\<lceil>RN k l - 1\<rceil>"
+
+  have "k\<ge>27"
+    using l9k \<open>l\<ge>3\<close> by linarith
+  have "exp 1 / (exp 1 - 2) < (27::real)"
+    by (approximation 5)
+  also have RN27: "\<dots> \<le> RN k l"
+    by (meson RN_3plus' \<open>l\<ge>3\<close> \<open>k\<ge>27\<close> le_trans numeral_le_real_of_nat_iff)
+  finally have "exp 1 / (exp 1 - 2) < RN k l" .
+  moreover have "n < RN k l"
+    using RN27 by (simp add: n_def)
+  moreover have "2 < exp (1::real)"
+    by (approximation 5)
+  ultimately have nRNe: "n / 2 > RN k l / exp 1"
+    by (simp add: n_def field_split_simps)
 
   have "real (k + l choose l) / exp (- 1 + \<delta>*k) < RN k l"
     by (smt (verit) divide_inverse exp_minus mult_minus_left mult_of_nat_commute non)
   then have "(RN k l / exp 1) * exp (\<delta>*k) > (k+l choose l)"
     unfolding exp_add exp_minus by (simp add: field_simps)
+  with nRNe have n2exp_gt: "(n/2) * exp (\<delta>*k) > (k+l choose l)"
+    by (smt (verit, best) exp_gt_zero mult_le_cancel_right_pos)
   then have nexp_gt: "n * exp (\<delta>*k) > (k+l choose l)"
-    by (metis less_le_trans exp_ge_zero mult_right_mono n_def real_nat_ceiling_ge)
+    by simp
 
   define V where "V \<equiv> {..<n}"
   define E where "E \<equiv> all_edges V" 
@@ -1344,37 +1356,45 @@ proof (rule ccontr)
 
   \<comment>\<open>Now a huge effort just to show that @{term U} is nontrivial.
      Proof probably shows its cardinality exceeds a multiple of @{term l}\<close>
-  have "exp (k / (20*(k+l))) \<le> exp(1/20)"
-    using \<open>m < l\<close> by fastforce
+  define ekl20 where "ekl20 \<equiv> exp (k / (20*(k+l)))"
+  have ekl20_eq: "exp (\<delta>*k) = ekl20^l"
+      by (simp add: \<delta>_def \<gamma>_def ekl20_def field_simps flip: exp_of_nat2_mult)
+  have "ekl20 \<le> exp(1/20)"
+    unfolding ekl20_def using \<open>m < l\<close> by fastforce
   also have "\<dots> \<le> (1+\<xi>)"
     unfolding \<xi>_def by (approximation 10)
-  finally have exp120: "exp (k / real (20 * (k+l))) \<le> 1 + \<xi>" .
+  finally have exp120: "ekl20 \<le> 1 + \<xi>" .
+  have ekl20_gt0: "0 < ekl20"
+    by (simp add: ekl20_def)
 
-  have "Suc l - q \<le> (k+q choose q) / exp(\<delta>*k) * (1+\<xi>) ^ (l - q)"
+  have "l + Suc l - q \<le> (k+q choose q) / exp(\<delta>*k) * (1+\<xi>) ^ (l - q)"
     if "1\<le>q" "q\<le>l" for q
     using that
   proof (induction q rule: nat_induct_at_least)
     case base
-    have "l * exp (k / (20*(k+l))) ^ l = l * exp (k / (20*(k+l))) ^ (l-1) * exp (k / (20*(k+l)))"
-      by (simp add: power_eq_if)
-    also have "\<dots> \<le> l * (1+\<xi>) ^ (l-1) * exp (k / (20*(k+l)))"
-      using exp120 \<open>0 < l\<close> power_mono by fastforce
-    also have "\<dots> \<le> (1 + real k) * (1+\<xi>) ^ (l-1)"
+    have "ekl20^l = ekl20^(l-1) * ekl20"
+      by (metis \<open>0 < l\<close> power_minus_mult)
+    also have "\<dots> \<le> (1+\<xi>) ^ (l-1) * ekl20"
+      using ekl20_def exp120 power_mono by fastforce
+    also have "\<dots> \<le> 2 * (1+\<xi>) ^ (l-1)"
     proof -
-      have \<section>: "l * exp (k / (20 * (k+l))) \<le> l * (1+\<xi>)"
-        by (meson exp120 mult_left_mono of_nat_0_le_iff)
-      also have "\<dots> \<le> 1+k"
-        using l9k by (auto simp: \<xi>_def)
-      finally have "l * exp (k / (20 * (k+l))) \<le> 1+k" .
+      have \<section>: "ekl20 \<le> 2"
+        using \<xi>_def exp120 by linarith
       from mult_right_mono [OF this, of "(1+\<xi>) ^ (l-1)"] 
-      show ?thesis by (simp add: \<xi>_def)
+      show ?thesis by (simp add: mult_ac \<xi>_def)
     qed
-    finally have "exp (k / (20*(k+l))) ^ l * l \<le> (1 + real k) * (1+\<xi>) ^ (l-1)"
+    finally have "ekl20^l \<le> 2 * (1+\<xi>) ^ (l-1)"
       by argo 
-    then have "l \<le> (1 + real k) * (1+\<xi>) ^ (l-1) / exp (k / (20*(k+l))) ^ l"
-      by (simp add: mult_of_nat_commute pos_le_divide_eq)
+    then have "1/2 \<le> (1+\<xi>) ^ (l-1) / ekl20^l"
+      using ekl20_def by auto
+    moreover have "2 * real l / (1 + real k) \<le> 1/2"
+      using l9k by (simp add: divide_simps)
+    ultimately have "2 * real l / (1 + real k) \<le> (1+\<xi>) ^ (l-1) / ekl20^l"
+      by linarith
+    then have "2 * real l \<le> (1 + real k) * (1+\<xi>) ^ (l-1) / ekl20^l"
+      by (simp add: field_simps)
     then show ?case
-      by (simp add: \<delta>_def \<gamma>_def field_simps flip: exp_of_nat2_mult)
+      by (simp add: ekl20_eq)
   next
     case (Suc q)
     then have \<ddagger>: "(1+\<xi>) ^ (l - q) = (1+\<xi>) * (1+\<xi>) ^ (l - Suc q)"
@@ -1388,8 +1408,8 @@ proof (rule ccontr)
     with Suc show ?case by force      
   qed
   from \<open>m<l\<close> this [of "l-m"] 
-  have "1 + real m \<le> (k+l-m choose (l-m)) / exp \<delta> ^ k * (1+\<xi>) ^ m"
-    by (simp add: Suc_diff_Suc exp_of_nat2_mult)
+  have "1 + l + real m \<le> (k+l-m choose (l-m)) / exp \<delta> ^ k * (1+\<xi>) ^ m"
+    by (simp add: Suc_leI exp_of_nat2_mult)
   also have "\<dots> \<le> (k+l-m choose (l-m)) / exp (\<delta> * k) * (1+\<xi>) ^ m"
     by (simp add: exp_of_nat2_mult)
   also have "\<dots> < PM * (real n * (1+\<xi>) ^ m)"
@@ -1402,8 +1422,8 @@ proof (rule ccontr)
   qed
   also have "\<dots> = real n * U_lower_bound_ratio m"
     by (simp add: U_lower_m)
-  finally have "1 < real n * U_lower_bound_ratio m - m"
-    by auto
+  finally have U_MINUS_M: "l+1 < real n * U_lower_bound_ratio m - m"
+    by linarith
   then have "card U > 1"  \<comment>\<open>again -- probably this proof could be strengthened a lot\<close>
     using cardU m_def by linarith
 
@@ -1594,15 +1614,18 @@ proof (rule ccontr)
       qed
       finally have expexp: "exp (\<delta>*k) * exp (-\<delta>'*k) \<le> (1+\<xi>) ^ m" .
 
+      \<comment> \<open>the "minus @{term m} fix relies on getting a factor of two in the @{term n} factor\<close>
+      have correct_m: "real m < (n/2) * U_lower_bound_ratio m"
+        using U_MINUS_M \<open>m < l\<close> by auto
+
       have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) = exp (-\<delta>'*k) * PM * (k+l choose l)"
         using \<open>m < l\<close> kl_choose by force
-      also have "\<dots> < n * exp (\<delta>*k) * exp (-\<delta>'*k) * PM"
-        using nexp_gt prod_gt0 by auto 
-      also have "\<dots> \<le> n * (1+\<xi>) ^ m * PM"
+      also have "\<dots> < (n/2) * exp (\<delta>*k) * exp (-\<delta>'*k) * PM"
+        using n2exp_gt prod_gt0 by auto 
+      also have "\<dots> \<le> (n/2) * (1+\<xi>) ^ m * PM"
         using expexp less_eq_real_def prod_gt0 by fastforce
       also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment> \<open>stuck here: the "minus m"\<close>
-        apply (simp add: U_lower_m)
-        sorry
+        using PM_def U_MINUS_M U_lower_bound_ratio_def \<open>m < l\<close> by fastforce
       finally have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) \<le> real n * U_lower_bound_ratio m - m"
         by linarith 
       also have "\<dots> \<le> UBB.nV"
