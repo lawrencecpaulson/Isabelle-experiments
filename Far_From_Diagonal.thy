@@ -1207,11 +1207,10 @@ proof (rule ccontr)
   with \<open>l>0\<close> have "l\<ge>2"
     by force
   define \<xi>::real where "\<xi> \<equiv> 1/15"
-    \<comment>\<open>Bhavik's terminology below\<close>
-  define U_lower_bound_ratio where 
+  define U_lower_bound_ratio where \<comment>\<open>Bhavik's terminology\<close>
     "U_lower_bound_ratio \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k+l - real i))"
-  define n where "n \<equiv> nat\<lceil>RN k l - 1\<rceil>"
 
+  define n where "n \<equiv> nat\<lceil>RN k l - 1\<rceil>"
   have "k\<ge>27"
     using l9k \<open>l\<ge>3\<close> by linarith
   have "exp 1 / (exp 1 - 2) < (27::real)"
@@ -1226,7 +1225,7 @@ proof (rule ccontr)
   ultimately have nRNe: "n / 2 > RN k l / exp 1"
     by (simp add: n_def field_split_simps)
 
-  have "real (k + l choose l) / exp (- 1 + \<delta>*k) < RN k l"
+  have "(k+l choose l) / exp (-1 + \<delta>*k) < RN k l"
     by (smt (verit) divide_inverse exp_minus mult_minus_left mult_of_nat_commute non)
   then have "(RN k l / exp 1) * exp (\<delta>*k) > (k+l choose l)"
     unfolding exp_add exp_minus by (simp add: field_simps)
@@ -1422,9 +1421,9 @@ proof (rule ccontr)
   qed
   also have "\<dots> = real n * U_lower_bound_ratio m"
     by (simp add: U_lower_m)
-  finally have U_MINUS_M: "l+1 < real n * U_lower_bound_ratio m - m"
+  finally have U_MINUS_M: "l+1 < real n * U_lower_bound_ratio m - m" \<comment>\<open>could have more multiples of @{term l}\<close>
     by linarith
-  then have "card U > 1"  \<comment>\<open>again -- probably this proof could be strengthened a lot\<close>
+  then have "card U > 1"
     using cardU m_def by linarith
 
   have "card EU > 0"
@@ -1614,17 +1613,13 @@ proof (rule ccontr)
       qed
       finally have expexp: "exp (\<delta>*k) * exp (-\<delta>'*k) \<le> (1+\<xi>) ^ m" .
 
-      \<comment> \<open>the "minus @{term m} fix relies on getting a factor of two in the @{term n} factor\<close>
-      have correct_m: "real m < (n/2) * U_lower_bound_ratio m"
-        using U_MINUS_M \<open>m < l\<close> by auto
-
       have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) = exp (-\<delta>'*k) * PM * (k+l choose l)"
         using \<open>m < l\<close> kl_choose by force
       also have "\<dots> < (n/2) * exp (\<delta>*k) * exp (-\<delta>'*k) * PM"
         using n2exp_gt prod_gt0 by auto 
       also have "\<dots> \<le> (n/2) * (1+\<xi>) ^ m * PM"
         using expexp less_eq_real_def prod_gt0 by fastforce
-      also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment> \<open>stuck here: the "minus m"\<close>
+      also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment> \<open>where I was stuck: the "minus m"\<close>
         using PM_def U_MINUS_M U_lower_bound_ratio_def \<open>m < l\<close> by fastforce
       finally have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) \<le> real n * U_lower_bound_ratio m - m"
         by linarith 

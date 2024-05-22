@@ -283,7 +283,7 @@ lemma Big_Closer_10_1:
   using Big_Closer_10_2 by blast
 
 
-lemma "\<forall>\<^sup>\<infinity>k. 2 + k/4 \<le> exp (of_int\<lfloor>k/9\<rfloor> * 2 - k/200)"
+lemma "\<forall>\<^sup>\<infinity>k. 2 + k/2 \<le> exp (of_int\<lfloor>k/9\<rfloor> * 2 - k/200)"
   by (real_asymp)
 
 lemma Closer_10_1:
@@ -293,12 +293,12 @@ lemma Closer_10_1:
   defines "\<delta> \<equiv> \<gamma>/40"
   assumes \<gamma>: "\<gamma> \<le> 1/5" 
   assumes big: "\<forall>l'. real l' \<ge> (10/11) * \<gamma> * l \<longrightarrow> (\<forall>\<mu>. \<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/5 \<longrightarrow> Big_Closer_10_1 \<mu> l')"
-  assumes big': "2 + k/4 \<le> exp (of_int\<lfloor>k/9\<rfloor> * 2 - k / 200)" and l9: "l\<ge>9"
-  assumes "l\<ge>2"
+  assumes big': "2 + k/2 \<le> exp (of_int\<lfloor>k/9\<rfloor> * 2 - k / 200)" and l9: "l\<ge>9"
+  assumes "l\<ge>3"
   assumes p0_min_101: "p0_min \<le> 1 - 1/5"
-  shows "RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
+  shows "RN k l \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
 proof (rule ccontr)
-  assume non: "\<not> RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
+  assume non: "\<not> RN k l \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
   with RN_eq_0_iff have "l>0" by force
   have l4k: "4*l \<le> k"
     using \<open>l>0\<close> \<gamma> by (auto simp: \<gamma>_def divide_simps)
@@ -307,8 +307,6 @@ proof (rule ccontr)
   with \<open>l>0\<close> have "k>0" by linarith
   have exp_gt21: "exp (x + 2) > exp (x + 1)" for x::real
     by auto
-  have exp2: "exp (2::real) = exp 1 * exp 1"
-    by (simp add: mult_exp_exp)
   show False
   proof (cases "\<gamma> \<le> 1/10")
     case True
@@ -328,30 +326,40 @@ proof (rule ccontr)
     next
       show "exp (- (l / (k + real l) / 20) * k + 1) * (k+l choose l) \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
         by (smt (verit, best) \<open>0 < \<gamma>\<close> \<gamma>_def \<delta>_def exp_mono frac_le mult_right_mono of_nat_0_le_iff)
-    qed (use p0_min_101 True \<gamma>_def in auto)
+    qed (use \<open>l\<ge>9\<close> p0_min_101 True \<gamma>_def in auto)
     then show False
       using non exp_gt21 by (smt (verit, ccfv_SIG) mult_right_mono of_nat_0_le_iff)
   next
     case False
     with \<open>l>0\<close> have "\<gamma>>1/10" and k9l: "k < 9*l"
       by (auto simp: \<gamma>_def)
-        \<comment> \<open>Much overlap with the proof of 9.2, but key differences too\<close>
+    \<comment> \<open>Much overlap with the proof of 9.2, but key differences too\<close>
     define U_lower_bound_ratio where 
       "U_lower_bound_ratio \<equiv> \<lambda>m. (\<Prod>i<m. (l - real i) / (k+l - real i))"
-    define n where "n \<equiv> nat\<lceil>RN k l / exp 1\<rceil>"
-    have "n < RN k l"
-      using RN_divide_e_less \<open>2 \<le> l\<close> \<open>l \<le> k\<close> n_def by force
 
-    have "(k+l choose l) / exp (-3 + \<delta>*k) < real (RN k l)"
+    define n where "n \<equiv> nat\<lceil>RN k l - 1\<rceil>"
+    have "k\<ge>12"
+      using l4k \<open>l\<ge>3\<close> by linarith
+    have "exp 1 / (exp 1 - 2) < (12::real)"
+      by (approximation 5)
+    also have RN12: "\<dots> \<le> RN k l"
+      by (meson RN_3plus' \<open>l\<ge>3\<close> \<open>k\<ge>12\<close> le_trans numeral_le_real_of_nat_iff)
+    finally have "exp 1 / (exp 1 - 2) < RN k l" .
+    moreover have "n < RN k l"
+      using RN12 by (simp add: n_def)
+    moreover have "2 < exp (1::real)"
+      by (approximation 5)
+    ultimately have nRNe: "n/2 > RN k l / exp 1"
+      by (simp add: n_def field_split_simps)
+
+    have "(k+l choose l) / exp (-1 + \<delta>*k) < RN k l"
       by (smt (verit) divide_inverse exp_minus mult_minus_left mult_of_nat_commute non)
-    then have "(k+l choose l) < (RN k l / exp (real 2)) * exp (\<delta>*k - 1)"
-      by (simp add: divide_simps exp_add exp_diff flip: exp_add)
-    also have "... \<le> n * exp (\<delta>*k - 2)"
-      unfolding n_def by (simp add: divide_simps exp_diff exp2 ceiling_divide_upper)
-    finally have nexp_gt': "n * exp (\<delta>*k) > (k+l choose l) * exp 2"
-      by (metis exp_diff exp_gt_zero linorder_not_le pos_divide_le_eq times_divide_eq_right)
+    then have "(RN k l / exp 1) * exp (\<delta>*k) > (k+l choose l)"
+      unfolding exp_add exp_minus by (simp add: field_simps)
+    with nRNe have n2exp_gt: "(n/2) * exp (\<delta>*k) > (k+l choose l)"
+      by (smt (verit, best) exp_gt_zero mult_le_cancel_right_pos)
     then have nexp_gt: "n * exp (\<delta>*k) > (k+l choose l)"
-      using less_le_trans linorder_not_le by fastforce
+      by simp
 
     define V where "V \<equiv> {..<n}"
     define E where "E \<equiv> all_edges V" 
@@ -499,14 +507,14 @@ proof (rule ccontr)
       \<comment>\<open>As with 9: a huge effort just to show that @{term U} is nontrivial.
          Proof probably shows its cardinality exceeds a multiple of @{term l}.
          Different here is that we know that @{term "\<gamma>' \<ge> 1/10"}\<close>
-      have "Suc l - q \<le> (k+q choose q) / exp(\<delta>*k)"
+      have "l + Suc l - q \<le> (k+q choose q) / exp(\<delta>*k)"
         if "nat\<lfloor>k/9\<rfloor> \<le> q" "q\<le>l"  for q
         using that
       proof (induction q rule: nat_induct_at_least)
         case base
         have ln9: "ln (9::real) \<ge> 2"
           by (approximation 5)
-        have "real (Suc l - nat \<lfloor>k / 9\<rfloor>) \<le> 2 + k/4"
+        have "l + real (Suc l - nat\<lfloor>k/9\<rfloor>) \<le> 2 + k/2"
           using l4k by linarith
         also have "\<dots> \<le> exp(of_int\<lfloor>k/9\<rfloor> * 2 - k/200)"
           using big' by blast
@@ -514,24 +522,24 @@ proof (rule ccontr)
           by (intro exp_mono diff_mono mult_left_mono ln9) auto
         also have "\<dots> \<le> exp(\<lfloor>k/9\<rfloor> * ln(9)) * exp (-real k/200)"
           by (simp add: mult_exp_exp)
-        also have "\<dots> \<le> exp(\<lfloor>k/9\<rfloor> * ln(9 + (9 * nat \<lfloor>k/9\<rfloor>) / k)) * exp (-real k/200)"
+        also have "\<dots> \<le> exp(\<lfloor>k/9\<rfloor> * ln(9 + (9 * nat\<lfloor>k/9\<rfloor>) / k)) * exp (-real k/200)"
           using k9k by (intro mult_mono exp_mono) auto
-        also have "\<dots> \<le> (9 + (9 * nat \<lfloor>k/9\<rfloor>) / k) ^ nat \<lfloor>k/9\<rfloor> * exp (-real k/200)"
+        also have "\<dots> \<le> (9 + (9 * nat\<lfloor>k/9\<rfloor>) / k) ^ nat\<lfloor>k/9\<rfloor> * exp (-real k/200)"
           using k9k by (auto simp add: powr_def simp flip: powr_realpow)
-        also have "\<dots> \<le> ((k + nat \<lfloor>k/9\<rfloor>) / (k/9)) ^ nat \<lfloor>k/9\<rfloor> * exp (-real k/200)"
+        also have "\<dots> \<le> ((k + nat\<lfloor>k/9\<rfloor>) / (k/9)) ^ nat\<lfloor>k/9\<rfloor> * exp (-real k/200)"
           using \<open>k>0\<close> by (auto simp: mult.commute)
-        also have "\<dots> \<le> ((k + nat \<lfloor>k/9\<rfloor>) / nat \<lfloor>k/9\<rfloor>) ^ nat \<lfloor>k/9\<rfloor> * exp (-real k/200)"
+        also have "\<dots> \<le> ((k + nat\<lfloor>k/9\<rfloor>) / nat\<lfloor>k/9\<rfloor>) ^ nat\<lfloor>k/9\<rfloor> * exp (-real k/200)"
         proof (intro mult_mono power_mono divide_left_mono)
-          show "nat \<lfloor>k/9\<rfloor> \<le> k/9"
+          show "nat\<lfloor>k/9\<rfloor> \<le> k/9"
             by linarith
         qed (use k9 in auto)
-        also have "\<dots> \<le> (k + nat \<lfloor>k/9\<rfloor> gchoose nat \<lfloor>k/9\<rfloor>) * exp (-real k/200)"
+        also have "\<dots> \<le> (k + nat\<lfloor>k/9\<rfloor> gchoose nat\<lfloor>k/9\<rfloor>) * exp (-real k/200)"
           by (meson exp_gt_zero gbinomial_ge_n_over_k_pow_k le_add2 mult_le_cancel_right_pos of_nat_mono)
-        also have "\<dots> \<le> (k + nat \<lfloor>k/9\<rfloor> choose nat \<lfloor>k/9\<rfloor>) * exp (-real k/200)"
+        also have "\<dots> \<le> (k + nat\<lfloor>k/9\<rfloor> choose nat\<lfloor>k/9\<rfloor>) * exp (-real k/200)"
           by (simp add: binomial_gbinomial)
-        also have "\<dots> \<le> (k + nat \<lfloor>k/9\<rfloor> choose nat \<lfloor>k/9\<rfloor>) / exp (\<delta> * k)"
+        also have "\<dots> \<le> (k + nat\<lfloor>k/9\<rfloor> choose nat\<lfloor>k/9\<rfloor>) / exp (\<delta> * k)"
           using \<gamma> \<open>0 < k\<close> by (simp add: algebra_simps \<delta>_def exp_minus' frac_le)
-        finally show ?case .
+        finally show ?case by linarith
       next
         case (Suc q)
         then show ?case
@@ -539,7 +547,7 @@ proof (rule ccontr)
           by (smt (verit) divide_right_mono exp_ge_zero of_nat_0_le_iff)
       qed
       from \<open>m<l\<close> this [of "l-m"] 
-      have "1 + real m \<le> (k+l-m choose (l-m)) / exp \<delta> ^ k"
+      have "1 + l + real m \<le> (k+l-m choose (l-m)) / exp \<delta> ^ k"
         using \<open>\<gamma>' \<ge> 1/10\<close> 
         apply (simp add: Suc_diff_Suc exp_of_nat2_mult \<gamma>'_def)
         by linarith
@@ -553,10 +561,14 @@ proof (rule ccontr)
           using mult_strict_left_mono [OF \<section>, of "U_lower_bound_ratio m"] kl_choose prod_gt0
           by (auto simp add: field_simps )
       qed
-      finally have "1 < real n * U_lower_bound_ratio m - m"
+      finally have U_MINUS_M: "1+l < real n * U_lower_bound_ratio m - m"
         by argo
       then have "card U > 1"  \<comment>\<open>again -- probably this proof could be strengthened a lot\<close>
         using cardU m_def by linarith
+
+      \<comment> \<open>the "minus @{term m} fix relies on getting a factor of two in the @{term n} factor\<close>
+      have correct_m: "real m < (n/2) * U_lower_bound_ratio m"
+        using U_MINUS_M \<open>m < l\<close> by auto
 
       \<comment>\<open>Restricting attention to U\<close>
       define EU where "EU \<equiv> E \<inter> Pow U"
@@ -664,10 +676,12 @@ proof (rule ccontr)
           by (metis divide_minus_left exp_ge_zero exp_minus_inverse mult_right_mono)
         have "exp (- real k/200) * (k + (l-m) choose (l-m)) = exp (- real k/200) * U_lower_bound_ratio m * (k+l choose l)"
           using \<open>m < l\<close> kl_choose by force
-        also have "\<dots> < n * exp (\<delta>*k) * exp (- real k/200) * U_lower_bound_ratio m"
-          using nexp_gt prod_gt0 by auto 
+        also have "\<dots> < (n/2) * exp (\<delta>*k) * exp (- real k/200) * U_lower_bound_ratio m"
+          using n2exp_gt prod_gt0 by auto 
+        also have "\<dots> \<le> (n/2) * U_lower_bound_ratio m"
+          using mult_left_mono [OF expexp, of "(n/2) * U_lower_bound_ratio m"] prod_gt0 by (simp add: mult_ac)
         also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment> \<open>stuck here: the "minus m"\<close>
-          using expexp less_eq_real_def prod_gt0 sorry
+          using U_MINUS_M \<open>m < l\<close> by auto
         finally have "exp (- real k/200) * (k + (l-m) choose (l-m)) \<le> real n * U_lower_bound_ratio m - m"
           by linarith 
         also have "\<dots> \<le> UBB.nV"
@@ -750,6 +764,8 @@ proof (rule ccontr)
       next
         show "p0_min \<le> 1 - 1 / 10 * (1 + 1 / 15)"
           using p0_min_101 by auto
+        show "3 \<le> l - m" (*? ? ?*)
+          sorry
       qed
       also have "... \<le> real n * U_lower_bound_ratio m"
       proof -
