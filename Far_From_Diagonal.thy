@@ -1222,7 +1222,7 @@ proof (rule ccontr)
     using RN27 by (simp add: n_def)
   moreover have "2 < exp (1::real)"
     by (approximation 5)
-  ultimately have nRNe: "n / 2 > RN k l / exp 1"
+  ultimately have nRNe: "n/2 > RN k l / exp 1"
     by (simp add: n_def field_split_simps)
 
   have "(k+l choose l) / exp (-1 + \<delta>*k) < RN k l"
