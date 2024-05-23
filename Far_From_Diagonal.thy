@@ -1185,13 +1185,15 @@ qed
 context P0_min
 begin
 
+text \<open>The text claims the result for all @{term k} and @{term l}, not just those sufficiently large, 
+  but the $o(k)$ function allowed in the exponent provides a fudge factor\<close>
 lemma Far_9_1:
   fixes l k::nat
   fixes \<delta> \<gamma>::real
   defines "\<gamma> \<equiv> real l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/20"
   assumes \<gamma>: "\<gamma> \<le> 1/10" 
-  assumes big: "l\<ge>3" "\<forall>l'. real l' \<ge> (10/11) * \<gamma> * l \<longrightarrow> (\<forall>\<mu>. \<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<mu> l')"
+  assumes big: "l\<ge>3" "\<forall>l' \<mu>. real l' \<ge> (10/11) * \<gamma> * l \<longrightarrow> \<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<mu> l'"
   assumes p0_min_91: "p0_min \<le> 1 - (1/10) * (1 + 1/15)"
   shows "RN k l \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
 proof (rule ccontr)

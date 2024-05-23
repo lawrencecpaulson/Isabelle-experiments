@@ -770,20 +770,38 @@ proof (rule ccontr)
         by (metis Int_subset_iff all_edges_subset_iff_clique) 
     next
       case 2
-
       have "RN k (l-m) \<le> exp (- ((l-m) / (k + real (l-m)) / 20) * k + 1) * (k + (l-m) choose l-m)"
       proof (intro Far_9_1 strip)
         show "real (l-m) / (real k + real (l-m)) \<le> 1 / 10"
           using \<gamma>'_def 2 \<open>m < l\<close> by auto
       next
         fix l' \<mu>
-        assume \<section>: "10 / 11 * (real (l-m) / (real k + real (l-m))) * real (l-m) \<le> real l'"
-          and "(real (l-m) / (real k + real (l-m)))\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1 / 10"
+        assume l': "10/11 * (real (l-m) / (real k + real (l-m))) * real (l-m) \<le> real l'"
+          and \<mu>: "(real (l-m) / (real k + real (l-m)))\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1 / 10"
         show "Big_Far_9_2 \<mu> l'"
-          apply (intro Big_10_imp_Big_9)
-          using big 
-          unfolding Big_Closer_10_1_def  (* our bigness assumption needs to be strengthened*)
-          sorry
+        proof (intro Big_10_imp_Big_9)
+          have "(real (l-m) / (real k + real (l-m)))\<^sup>2 > 0"
+            using \<open>m<l\<close> \<open>k>0\<close> by (simp add: divide_simps power2_eq_square)
+          with \<mu> show "0 < \<mu>" by linarith
+          have "\<gamma> * real l \<le> (real (l - m) / (real k + real (l - m))) * real (l - m)"
+            apply (simp add: \<gamma>_def)
+            sorry
+          moreover
+          have "\<gamma>'\<^sup>2 \<le> \<mu>"
+            using \<mu> \<open>m<l\<close> by (simp add: \<gamma>'_def) argo
+          then have "\<gamma>\<^sup>2 \<le> \<mu>"
+            sorry
+          ultimately show "Big_Closer_10_2 \<mu> l'"
+            using big l'
+            unfolding Big_Closer_10_1_def  (* our bigness assumption needs to be strengthened*)
+            apply (drule_tac x="l'" in spec)
+            apply safe
+             defer
+             apply (drule_tac x="\<mu>" in spec)
+            using \<mu> apply argo
+            by linarith
+        next
+        qed (use \<mu> in auto)
       next
         show "p0_min \<le> 1 - 1 / 10 * (1 + 1 / 15)"
           using p0_min_101 by auto
