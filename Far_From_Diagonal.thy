@@ -1174,7 +1174,7 @@ proof -
     by (simp add: field_simps atLeast0LessThan binomial_altdef_of_nat) 
   also have "\<dots> = (k+l choose l) * PM"
     unfolding PM_def using \<open>m < l\<close> \<open>k>0\<close>
-    by (simp add: atLeast0LessThan of_nat_diff flip: prod_inversef)
+    by (simp add: atLeast0LessThan flip: prod_inversef)
   finally have "(k+l-m choose (l-m)) = (k+l choose l) * PM"
     by (simp add: atLeast0LessThan binomial_altdef_of_nat)
   then show "real(k+l choose l) = (k+l-m choose (l-m)) / PM"
@@ -1200,15 +1200,14 @@ proof -
   define M where "M \<equiv> nat\<lceil>11*N / (10*\<mu>)\<rceil>"
   have "(10/11) * \<mu> * l \<ge> N" if "l \<ge> M" for l
     using that by (simp add: M_def \<open>\<mu>>0\<close> mult_of_nat_commute pos_divide_le_eq)
-  with N have "\<forall>l\<ge>M. \<forall>l' \<gamma>. 10 / 11 * \<mu> * l \<le> l' \<longrightarrow> \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1 / 10 \<longrightarrow> Big_Far_9_2 \<gamma> l'"
+  with N have "\<forall>l\<ge>M. \<forall>l' \<gamma>. (10/11) * \<mu> * l \<le> l' \<longrightarrow> \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1 / 10 \<longrightarrow> Big_Far_9_2 \<gamma> l'"
     by (smt (verit, ccfv_SIG) of_nat_le_iff)
-  then have "\<forall>\<^sup>\<infinity>l. \<forall>l' \<gamma>. 10 / 11 * \<mu> * l \<le> l' \<longrightarrow> \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1 / 10 \<longrightarrow> Big_Far_9_2 \<gamma> l'"
+  then have "\<forall>\<^sup>\<infinity>l. \<forall>l' \<gamma>. (10/11) * \<mu> * l \<le> l' \<longrightarrow> \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1 / 10 \<longrightarrow> Big_Far_9_2 \<gamma> l'"
     by (auto simp: eventually_sequentially)
   moreover have "\<forall>\<^sup>\<infinity>l. l\<ge>3"
     by simp
   ultimately show ?thesis
-    unfolding Big_Far_9_1_def
-    by eventually_elim auto
+    unfolding Big_Far_9_1_def by eventually_elim auto
 qed
 
 text \<open>The text claims the result for all @{term k} and @{term l}, not just those sufficiently large, 
