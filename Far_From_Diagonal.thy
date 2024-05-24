@@ -1185,6 +1185,31 @@ qed
 context P0_min
 begin
 
+
+definition "Big_Far_9_1 \<equiv> \<lambda>\<mu> l. l\<ge>3 \<and> (\<forall>l' \<gamma>. real l' \<ge> (10/11) * \<mu> * l \<longrightarrow> \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<gamma> l')"
+
+lemma Big_Far_9_1:
+  assumes "0<\<mu>" "\<mu>\<^sup>2 \<le> 1/10" 
+  shows "\<forall>\<^sup>\<infinity>l. Big_Far_9_1 \<mu> l"
+proof -
+  have "\<forall>\<^sup>\<infinity>l. \<forall>\<gamma>. \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<gamma> l"
+    using assms by (intro Big_Far_9_2) auto
+  then obtain N where N: "\<forall>l\<ge>N. \<forall>\<gamma>. \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<gamma> l"
+    using eventually_sequentially by auto
+  define M where "M \<equiv> nat\<lceil>11*N / (10*\<mu>)\<rceil>"
+  have "(10/11) * \<mu> * l \<ge> N" if "l \<ge> M" for l
+    using that by (simp add: M_def \<open>\<mu>>0\<close> mult_of_nat_commute pos_divide_le_eq)
+  with N have "\<forall>l\<ge>M. \<forall>l' \<gamma>. 10 / 11 * \<mu> * l \<le> l' \<longrightarrow> \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1 / 10 \<longrightarrow> Big_Far_9_2 \<gamma> l'"
+    by (smt (verit, ccfv_SIG) of_nat_le_iff)
+  then have "\<forall>\<^sup>\<infinity>l. \<forall>l' \<gamma>. 10 / 11 * \<mu> * l \<le> l' \<longrightarrow> \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1 / 10 \<longrightarrow> Big_Far_9_2 \<gamma> l'"
+    by (auto simp: eventually_sequentially)
+  moreover have "\<forall>\<^sup>\<infinity>l. l\<ge>3"
+    by simp
+  ultimately show ?thesis
+    unfolding Big_Far_9_1_def
+    by eventually_elim auto
+qed
+
 text \<open>The text claims the result for all @{term k} and @{term l}, not just those sufficiently large, 
   but the $o(k)$ function allowed in the exponent provides a fudge factor\<close>
 lemma Far_9_1:
@@ -1193,7 +1218,7 @@ lemma Far_9_1:
   defines "\<gamma> \<equiv> real l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/20"
   assumes \<gamma>: "\<gamma> \<le> 1/10" 
-  assumes big: "l\<ge>3" "\<forall>l' \<mu>. real l' \<ge> (10/11) * \<gamma> * l \<longrightarrow> \<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<mu> l'"
+  assumes big: "Big_Far_9_1 \<gamma> l"
   assumes p0_min_91: "p0_min \<le> 1 - (1/10) * (1 + 1/15)"
   shows "RN k l \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
 proof (rule ccontr)
@@ -1213,6 +1238,8 @@ proof (rule ccontr)
     "U_lower_bound_ratio \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k+l - real i))"
 
   define n where "n \<equiv> nat\<lceil>RN k l - 1\<rceil>"
+  have "l\<ge>3"
+    using big by (auto simp: Big_Far_9_1_def)
   have "k\<ge>27"
     using l9k \<open>l\<ge>3\<close> by linarith
   have "exp 1 / (exp 1 - 2) < (27::real)"
@@ -1652,8 +1679,8 @@ proof (rule ccontr)
       then have "real l - real m \<ge> (10/11) * \<gamma> * l"
         by (simp add: algebra_simps)
       then have "Big_Far_9_2 \<gamma>' (l-m)"
-        using False big \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> \<open>m<l\<close> unfolding Big_Far_9_2_def
-        by (smt (verit, del_insts) less_imp_le of_nat_diff)
+        using False big \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> \<open>m<l\<close>
+        by (simp add: Big_Far_9_1_def)
       then show "Big_Far_9_2 ((l-m) / (real k + real (l-m))) (l-m)"
         by (simp add: \<gamma>'_def \<open>m < l\<close> add_diff_eq less_or_eq_imp_le)
       show "(l-m) / (real k + real (l-m)) \<le> 1/10"
