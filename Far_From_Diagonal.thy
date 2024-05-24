@@ -1186,7 +1186,8 @@ context P0_min
 begin
 
 
-definition "Big_Far_9_1 \<equiv> \<lambda>\<mu> l. l\<ge>3 \<and> (\<forall>l' \<gamma>. real l' \<ge> (10/11) * \<mu> * l \<longrightarrow> \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<gamma> l')"
+definition Big_Far_9_1 :: "real \<Rightarrow> nat \<Rightarrow> bool" where
+  "Big_Far_9_1 \<equiv> \<lambda>\<mu> l. l\<ge>3 \<and> (\<forall>l' \<gamma>. real l' \<ge> (10/11) * \<mu> * real l \<longrightarrow> \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<gamma> l')"
 
 lemma Big_Far_9_1:
   assumes "0<\<mu>" "\<mu>\<^sup>2 \<le> 1/10" 
@@ -1229,10 +1230,6 @@ proof (rule ccontr)
   have "l\<le>k"
     using \<gamma>_def \<gamma> nat_le_real_less by fastforce
   with \<open>l>0\<close> have "k>0" by linarith
-  have ln1: False if "l = 1"
-    using non \<open>k>0\<close> by (simp add: that \<gamma>_def \<delta>_def mult_le_1_iff)
-  with \<open>l>0\<close> have "l\<ge>2"
-    by force
   define \<xi>::real where "\<xi> \<equiv> 1/15"
   define U_lower_bound_ratio where \<comment>\<open>Bhavik's terminology\<close>
     "U_lower_bound_ratio \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k+l - real i))"

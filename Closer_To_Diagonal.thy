@@ -322,15 +322,19 @@ proof (rule ccontr)
       using \<open>0 < l\<close> \<gamma>_def by auto
     have "RN k l \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
     proof (intro order.trans [OF Far_9_1] strip)
-      fix l' \<mu> 
-      assume l': "10 / 11 * (l / (k + real l)) * l \<le> real l'"
-        and tenth: "(l / (k + real l))\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/10"
-      then have "\<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/5"
-        by (simp add: \<gamma>_def)
-      with l' big have "Big_Closer_10_2 \<mu> l'"
-        by (auto simp: Big_Closer_10_1_def \<gamma>_def)
-      then show "Big_Far_9_2 \<mu> l'"
-        by (smt (verit, ccfv_threshold) Big_10_imp_Big_9 \<gamma>_def tenth \<open>0 < \<gamma>\<close> zero_less_power)
+      show "Big_Far_9_1 (real l / (real k + real l)) l"
+        unfolding Big_Far_9_1_def
+      proof (intro conjI strip)
+        fix l' \<mu> 
+        assume l': "10 / 11 * (l / (k + real l)) * l \<le> real l'"
+          and tenth: "(l / (k + real l))\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/10"
+        then have "\<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/5"
+          by (simp add: \<gamma>_def)
+        with l' big have "Big_Closer_10_2 \<mu> l'"
+          by (auto simp: Big_Closer_10_1_def \<gamma>_def)
+        then show "Big_Far_9_2 \<mu> l'"
+          by (smt (verit, ccfv_threshold) Big_10_imp_Big_9 \<gamma>_def tenth \<open>0 < \<gamma>\<close> zero_less_power)
+      qed (use \<open>3 \<le> l\<close> in auto)
     next
       show "exp (- (l / (k + real l) / 20) * k + 1) * (k+l choose l) \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
         by (smt (verit, best) \<open>0 < \<gamma>\<close> \<gamma>_def \<delta>_def exp_mono frac_le mult_right_mono of_nat_0_le_iff)
@@ -363,7 +367,7 @@ proof (rule ccontr)
       by (smt (verit) divide_inverse exp_minus mult_minus_left mult_of_nat_commute non)
     then have "(k+l choose l) < (RN k l / exp (real 2)) * exp (\<delta>*k - 1)"
       by (simp add: divide_simps exp_add exp_diff flip: exp_add)
-    also have "... \<le> (n/2) * exp (\<delta>*k - 2)"
+    also have "\<dots> \<le> (n/2) * exp (\<delta>*k - 2)"
       using nRNe by (simp add: divide_simps exp_diff)
     finally have n2exp_gt': "(n/2) * exp (\<delta>*k) > (k+l choose l) * exp 2"
       by (metis exp_diff exp_gt_zero linorder_not_le pos_divide_le_eq times_divide_eq_right)
@@ -521,9 +525,9 @@ proof (rule ccontr)
           using \<open>\<gamma>>1/10\<close> \<open>k>0\<close> 2 by (simp add: max_m_def \<gamma>_def) linarith
         have "1/10 - 1/k \<le> 1 - k / (10*k/9 - 1)"
           using \<gamma>'_le110 \<open>m<l\<close> \<open>k>0\<close> by (simp add: \<gamma>'_def field_simps)
-        also have "... \<le> 1 - k / (k + l - m)"
+        also have "\<dots> \<le> 1 - k / (k + l - m)"
           using \<open>l\<le>k\<close> \<open>m<l\<close> \<section> by (simp add: divide_left_mono)
-        also have "... = \<gamma>'"
+        also have "\<dots> = \<gamma>'"
           using \<open>l>0\<close> \<open>l\<le>k\<close> \<open>m<l\<close> \<open>k>0\<close> by (simp add: \<gamma>'_def divide_simps)
         finally show "1/10 - 1 / real k \<le> \<gamma>'" .
       qed
@@ -772,46 +776,51 @@ proof (rule ccontr)
       case 2
       have "RN k (l-m) \<le> exp (- ((l-m) / (k + real (l-m)) / 20) * k + 1) * (k + (l-m) choose l-m)"
       proof (intro Far_9_1 strip)
-        show "real (l-m) / (real k + real (l-m)) \<le> 1 / 10"
+        show "real (l-m) / (real k + real (l-m)) \<le> 1/10"
           using \<gamma>'_def 2 \<open>m < l\<close> by auto
       next
-        fix l' \<mu>
-        assume l': "10/11 * (real (l-m) / (real k + real (l-m))) * real (l-m) \<le> real l'"
-          and \<mu>: "(real (l-m) / (real k + real (l-m)))\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1 / 10"
-        show "Big_Far_9_2 \<mu> l'"
-        proof (intro Big_10_imp_Big_9)
-          have "(real (l-m) / (real k + real (l-m)))\<^sup>2 > 0"
-            using \<open>m<l\<close> \<open>k>0\<close> by (simp add: divide_simps power2_eq_square)
-          with \<mu> show "0 < \<mu>" by linarith
-          have "\<gamma> * real l \<le> (real (l - m) / (real k + real (l - m))) * real (l - m)"
-            apply (simp add: \<gamma>_def)
-            sorry
-          moreover
-          have "\<gamma>'\<^sup>2 \<le> \<mu>"
-            using \<mu> \<open>m<l\<close> by (simp add: \<gamma>'_def) argo
-          then have "\<gamma>\<^sup>2 \<le> \<mu>"
-            sorry
-          ultimately show "Big_Closer_10_2 \<mu> l'"
-            using big l'
-            unfolding Big_Closer_10_1_def  (* our bigness assumption needs to be strengthened*)
-            apply (drule_tac x="l'" in spec)
-            apply safe
-             defer
-             apply (drule_tac x="\<mu>" in spec)
-            using \<mu> apply argo
-            by linarith
+        show "Big_Far_9_1 (real (l - m) / (k + real (l - m))) (l-m)"
+          unfolding Big_Far_9_1_def
+        proof (intro conjI strip)
+          fix l' \<mu>
+          assume l': "10/11 * (real (l-m) / (real k + real (l-m))) * real (l-m) \<le> real l'"
+            and \<mu>: "(real (l-m) / (real k + real (l-m)))\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/10"
+          show "Big_Far_9_2 \<mu> l'"
+          proof (intro Big_10_imp_Big_9)
+            have "(real (l-m) / (real k + real (l-m)))\<^sup>2 > 0"
+              using \<open>m<l\<close> \<open>k>0\<close> by (simp add: divide_simps power2_eq_square)
+            with \<mu> show "0 < \<mu>" by linarith
+            have "\<gamma> * real l \<le> (real (l - m) / (real k + real (l - m))) * real (l - m)"
+              apply (simp add: \<gamma>_def)
+              sorry
+            moreover
+            have "\<gamma>'\<^sup>2 \<le> \<mu>"
+              using \<mu> \<open>m<l\<close> by (simp add: \<gamma>'_def) argo
+            then have "\<gamma>\<^sup>2 \<le> \<mu>"
+              sorry
+            ultimately show "Big_Closer_10_2 \<mu> l'"
+              using big l'
+              unfolding Big_Closer_10_1_def  (* our bigness assumption needs to be strengthened*)
+              apply (drule_tac x="l'" in spec)
+              apply safe
+               defer
+               apply (drule_tac x="\<mu>" in spec)
+              using \<mu> apply argo
+              by linarith
+          next
+          qed (use \<mu> in auto)
         next
-        qed (use \<mu> in auto)
+          show "3 \<le> l-m" using \<open>k/10 \<le> l-m\<close> \<open>k\<ge>36\<close> by linarith
+        qed
       next
-        show "p0_min \<le> 1 - 1 / 10 * (1 + 1 / 15)"
+        show "p0_min \<le> 1 - 1/10 * (1 + 1 / 15)"
           using p0_min_101 by auto
-        show "3 \<le> l-m" using \<open>k/10 \<le> l-m\<close> \<open>k\<ge>36\<close> by linarith
       qed
-      also have "... \<le> real n * U_lower_bound_ratio m - m"
+      also have "\<dots> \<le> real n * U_lower_bound_ratio m - m"
       proof -
         have "\<gamma> * real k \<le> k/5"
           using \<gamma> \<open>0 < k\<close> by auto
-        also have "... \<le> \<gamma>' * (real k * 2) + 2"
+        also have "\<dots> \<le> \<gamma>' * (real k * 2) + 2"
           using mult_left_mono [OF 110, of "k*2"] \<open>k>0\<close> by (simp add: algebra_simps)
         finally have "\<gamma> * real k \<le> \<gamma>' * (real k * 2) + 2" .
         then have expexp: "exp (\<delta> * real k) * exp (-\<gamma>'*k / 20 - 1) \<le> 1"
