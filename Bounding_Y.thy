@@ -14,7 +14,7 @@ lemma Y_6_4_Red:
   assumes "i \<in> Step_class \<mu> l k {red_step}"
   shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k i - alpha k (hgt k (pee \<mu> l k i))"
   using assms
-  by (auto simp add: step_kind_defs next_state_def Let_def cvx_def reddish_def pee_def
+  by (auto simp: step_kind_defs next_state_def Let_def cvx_def reddish_def pee_def
       split: if_split_asm prod.split)
 
 lemma Y_6_4_DegreeReg: 
@@ -95,7 +95,7 @@ corollary Y_6_4_dbooSt:
   shows "pee \<mu> l k (Suc i) \<ge> pee \<mu> l k (i-1)"
 proof -
   have "odd i"
-    using step_odd i by (force simp add: Step_class_insert_NO_MATCH)
+    using step_odd i by (force simp: Step_class_insert_NO_MATCH)
   with step_odd i have "i-1 \<in> Step_class \<mu> l k {dreg_step}"
     by (simp add: Step_class_insert_NO_MATCH dreg_before_step)
   then show ?thesis
@@ -801,7 +801,7 @@ proof -
     by (simp add: ST_def)
   have STm: "ST m = st"
     using \<open>0<\<mu>\<close> \<open>Colours l k\<close>
-    by (auto simp add: ST_def st_def Step_RS_def m_def Step_class_def simp flip: halted_point_minimal)
+    by (auto simp: ST_def st_def Step_RS_def m_def Step_class_def simp flip: halted_point_minimal)
   have "p0m ^ card (ST i) \<le> (\<Prod>j<i. card (Y(Suc j)) / card (Y j))" if "i\<le>m"for i
     using that
   proof (induction i)
@@ -856,7 +856,7 @@ proof -
   have st_le_2k: "card st \<le> 2 * k"
   proof -
     have "st \<subseteq> Step_class \<mu> l k {red_step,dboost_step}" 
-      by (auto simp add: st_def Step_class_insert_NO_MATCH)
+      by (auto simp: st_def Step_class_insert_NO_MATCH)
     moreover have "finite (Step_class \<mu> l k {red_step,dboost_step})"
       using finite_components [OF \<open>0<\<mu>\<close> \<open>Colours l k\<close>] by (auto simp: Step_class_insert_NO_MATCH)
     ultimately have "card st \<le> card (Step_class \<mu> l k {red_step,dboost_step})"

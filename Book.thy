@@ -100,7 +100,7 @@ proof -
     using RN_le assms leD by blast
   then obtain f where f: "f \<in> nsets {..<nV} 2 \<rightarrow> {..<2}" 
             and noclique: "\<And>i. i<2 \<Longrightarrow> \<not> monochromatic {..<nV} ([k,l] ! i) 2 f i"
-    by (auto simp add: partn_lst_def eval_nat_numeral)
+    by (auto simp: partn_lst_def eval_nat_numeral)
   obtain \<phi> where \<phi>: "bij_betw \<phi> {..<nV} V"
     using bij_betw_from_nat_into_finite finV by blast
   define \<theta> where "\<theta> \<equiv> inv_into {..<nV} \<phi>"
@@ -112,7 +112,7 @@ proof -
   define Red  where "Red \<equiv>  (\<lambda>e. \<phi>`e) ` ((f -` {0}) \<inter> nsets {..<nV} 2)"
   define Blue where "Blue \<equiv> (\<lambda>e. \<phi>`e) ` ((f -` {1}) \<inter> nsets {..<nV} 2)"
   have "Red \<subseteq> E"
-    using bij_betw_imp_surj_on[OF emap] by (auto simp add: Red_def)
+    using bij_betw_imp_surj_on[OF emap] by (auto simp: Red_def)
   have "Blue = E-Red"
     using emap f
     by (auto simp: Red_def Blue_def bij_betw_def inj_on_eq_iff image_iff Pi_iff)
@@ -425,7 +425,7 @@ lemma height_upper_bound:
 definition alpha :: "nat \<Rightarrow> nat \<Rightarrow> real" where "alpha \<equiv> \<lambda>k h. qfun k h - qfun k (h-1)"
 
 lemma alpha_0 [simp]: "alpha 0 h = 0" and alpha_0' [simp]: "alpha k 0 = 0"
-  by (auto simp add: alpha_def qfun_eq)
+  by (auto simp: alpha_def qfun_eq)
 
 lemma alpha_ge0: "alpha k h \<ge> 0"
   by (simp add: alpha_def qfun_eq divide_le_cancel eps_gt0)
@@ -559,7 +559,7 @@ lemma red_density_X_degree_reg_ge:
 proof (cases "X={} \<or> infinite X \<or> infinite Y")
   case True
   then show ?thesis
-    by (force simp add: gen_density_def X_degree_reg_def)
+    by (force simp: gen_density_def X_degree_reg_def)
 next
   case False
   then have "finite X" "finite Y"
@@ -836,7 +836,7 @@ proof -
   moreover
   have "all_edges_betw_un (insert x B) (insert x B) \<subseteq> Blue"
     if "all_edges_betw_un B (B \<union> X) \<subseteq> Blue"
-    using that \<open>x \<in> X\<close> by (auto simp add: subset_iff set_eq_iff all_edges_betw_un_def)
+    using that \<open>x \<in> X\<close> by (auto simp: subset_iff set_eq_iff all_edges_betw_un_def)
   moreover
   have "all_edges_betw_un (insert x B) (Neighbours Blue x \<inter> X) \<subseteq> Blue"
     if "all_edges_betw_un B (B \<union> X) \<subseteq> Blue"
@@ -1028,7 +1028,7 @@ lemma edge_card_eq_pee:
 
 lemma valid_state_seq: "valid_state(Xseq \<mu> l k i, Yseq \<mu> l k i, Aseq \<mu> l k i, Bseq \<mu> l k i)"
   using valid_state_stepper[of \<mu> l k i]
-  by (force simp add: Xseq_def Yseq_def Aseq_def Bseq_def simp del: valid_state_stepper split: prod.split)
+  by (force simp: Xseq_def Yseq_def Aseq_def Bseq_def simp del: valid_state_stepper split: prod.split)
 
 lemma Aseq_less_k:
   assumes "Colours l k"
@@ -1148,7 +1148,7 @@ lemma disjnt_Step_class:
   by (auto simp: Step_class_def disjnt_iff)
 
 lemma halted_imp_next_halted: "stepper_kind \<mu> l k i = halted \<Longrightarrow> stepper_kind \<mu> l k (Suc i) = halted"
-  by (auto simp add: step_kind_defs split: prod.split if_split_asm)
+  by (auto simp: step_kind_defs split: prod.split if_split_asm)
 
 lemma halted_imp_ge_halted: "stepper_kind \<mu> l k i = halted \<Longrightarrow> stepper_kind \<mu> l k (i+n) = halted"
   by (induction n) (auto simp: halted_imp_next_halted)
@@ -1271,11 +1271,11 @@ qed
 lemma step_non_terminating_iff:
      "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step} 
      \<longleftrightarrow> \<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
-  by (auto simp add: step_kind_defs split: if_split_asm prod.split_asm)
+  by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
 
 lemma step_terminating_iff:
   "i \<in> Step_class \<mu> l k {halted} \<longleftrightarrow> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
-  by (auto simp add: step_kind_defs split: if_split_asm prod.split_asm)
+  by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
 
 lemma not_many_bluish:
   assumes "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
@@ -1332,7 +1332,7 @@ proof -
     using mb unfolding many_bluish_def
     by (smt (verit) card_eq_0_iff empty_iff equalityI less_le_not_le mem_Collect_eq subset_iff)
   have "book {x} (Neighbours Blue x \<inter> X) Blue"
-    by (force simp add: book_def all_edges_betw_un_def in_Neighbours_iff)
+    by (force simp: book_def all_edges_betw_un_def in_Neighbours_iff)
   with x show ?thesis
     by (auto simp: bluish_def good_blue_book_def \<open>x \<in> X\<close>)
 qed
@@ -1368,7 +1368,7 @@ proof -
     proof (cases "many_bluish \<mu> l k X")
       case True
       with assms show ?thesis 
-        by (auto simp add: next_state_def split: if_split_asm prod.split_asm
+        by (auto simp: next_state_def split: if_split_asm prod.split_asm
             dest!:  choose_blue_book_psubset [OF True])
     next
       case False
@@ -1377,7 +1377,7 @@ proof -
       with assms *[of _ Red] *[of _ Blue] \<open>X' \<subseteq> X\<close> Red_E Blue_E False
       choose_central_vx_X [OF False nont]
       show ?thesis
-        by (fastforce simp add: next_state_def Let_def split: if_split_asm prod.split_asm)
+        by (fastforce simp: next_state_def Let_def split: if_split_asm prod.split_asm)
     qed
   qed
   ultimately show ?thesis
@@ -1460,7 +1460,7 @@ lemma halted_eq_Compl:
 lemma before_halted_eq:
   assumes "\<mu>>0" "Colours l k"
   shows "{..<halted_point \<mu> l k} = Step_class \<mu> l k {dreg_step,red_step,bblue_step,dboost_step}"
-  using halted_point_minimal [OF assms] by (force simp add: halted_eq_Compl)
+  using halted_point_minimal [OF assms] by (force simp: halted_eq_Compl)
 
 lemma finite_components:
   assumes "0<\<mu>" "Colours l k" 

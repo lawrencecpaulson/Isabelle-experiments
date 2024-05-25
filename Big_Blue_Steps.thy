@@ -266,7 +266,7 @@ proof -
       by (smt (verit, best) divide_less_eq_1_pos divide_nonneg_nonneg ge_one_powr_ge_zero mult_right_mono of_nat_0_le_iff)
   qed
   ultimately show ?thesis
-    by (auto simp add: Big_Blue_4_1_def eventually_conj_iff all_imp_conj_distrib)
+    by (auto simp: Big_Blue_4_1_def eventually_conj_iff all_imp_conj_distrib)
 qed
 
 context Book
@@ -717,7 +717,7 @@ next
       by presburger
     have Aeq: "Aseq \<mu> l k (Suc n) = insert (choose_central_vx \<mu> (?X,?Y,?A,?B)) ?A"
       using Suc.prems True 
-      by (auto simp add: step_kind_defs Aseq_def Bseq_def next_state_def Let_def split: if_split_asm prod.split)
+      by (auto simp: step_kind_defs Aseq_def Bseq_def next_state_def Let_def split: if_split_asm prod.split)
     have "finite (Xseq \<mu> l k n)"
       using finite_Xseq by presburger
     then have "choose_central_vx \<mu> (?X,?Y,?A,?B) \<in> ?X"
@@ -736,7 +736,7 @@ next
       using less_Suc_eq unfolding REDS_def by blast
     moreover have "Aseq \<mu> l k (Suc n) = ?A"
       using False
-      by (auto simp add: Aseq_def step_kind_defs degree_reg_def next_state_def Let_def split: prod.split)
+      by (auto simp: Aseq_def step_kind_defs degree_reg_def next_state_def Let_def split: prod.split)
     ultimately show ?thesis
       using Suc.IH by presburger
   qed

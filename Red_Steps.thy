@@ -101,7 +101,7 @@ proof -
   define r where "r \<equiv> nat \<lfloor>exp (c * real l powr (3/4) * ln k)\<rfloor>"
   define s where "s \<equiv> nat \<lceil>real l powr (3/4)\<rceil>"
   have "l\<noteq>0"
-    using big by (force simp add: Big_Red_5_6_Ramsey_def)
+    using big by (force simp: Big_Red_5_6_Ramsey_def)
   have "3 \<le> s"
     using assms by (auto simp: Big_Red_5_6_Ramsey_def s_def)
   also have "\<dots> \<le> l"
@@ -235,7 +235,7 @@ proof -
   with \<open>k\<ge>l\<close> have "k>1" by auto
   let ?R = "RN k (m_of l)"
   have "finite X" "finite Y"
-    by (auto simp add: X_def Y_def  finite_Xseq finite_Yseq)
+    by (auto simp: X_def Y_def  finite_Xseq finite_Yseq)
   have not_many_bluish: "\<not> many_bluish \<mu> l k X"
     using i not_many_bluish unfolding X_def by blast
   have nonterm: "\<not> termination_condition l k X Y"

@@ -187,7 +187,7 @@ proof -
         by (smt (verit, best)) 
     qed
     ultimately show "(\<Prod>i<t. 1 - i * real l / (k * real (k+l-i))) \<le> exp (- (\<Sum>i<t. i * real l / (k * real (k+l))))"
-      by (force simp add: exp_sum simp flip: sum_negf intro!: prod_mono)
+      by (force simp: exp_sum simp flip: sum_negf intro!: prod_mono)
   qed auto
   finally have 1: "(k+l-t choose l) * inverse (k+l choose l) \<le> (real k / (k+l))^t * exp (- (\<Sum>i<t. i * \<gamma> / k))"
     by (simp add: \<gamma>_def mult.commute)
@@ -333,7 +333,7 @@ proof -
     by (simp add: f_def ok_fun_73 ok_fun_74 ok_fun_76 ok_fun_94 sum_in_smallo(1))
   then have D: "\<forall>\<^sup>\<infinity>k. \<bar>f k\<bar> * ln 2 / k \<le> e5"
     using \<open>e5 > 0\<close> ln2
-    by (force simp add: smallo_def field_simps eventually_at_top_dense dest!: spec [where x="e5 / ln 2"])
+    by (force simp: smallo_def field_simps eventually_at_top_dense dest!: spec [where x="e5 / ln 2"])
   have E: "\<forall>\<^sup>\<infinity>k.  ln 2 / k \<le> e5"
     using \<open>e5 > 0\<close> ln2 by real_asymp
   have "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> \<bar>ok_fun_93h \<mu> k\<bar> / real k \<le> e5+e5+e5+e5+e5"
@@ -1391,7 +1391,7 @@ proof (rule ccontr)
   have ekl20_gt0: "0 < ekl20"
     by (simp add: ekl20_def)
 
-  have "l + Suc l - q \<le> (k+q choose q) / exp(\<delta>*k) * (1+\<xi>) ^ (l - q)"
+  have "3*l + Suc l - q \<le> (k+q choose q) / exp(\<delta>*k) * (1+\<xi>) ^ (l - q)"
     if "1\<le>q" "q\<le>l" for q
     using that
   proof (induction q rule: nat_induct_at_least)
@@ -1411,11 +1411,11 @@ proof (rule ccontr)
       by argo 
     then have "1/2 \<le> (1+\<xi>) ^ (l-1) / ekl20^l"
       using ekl20_def by auto
-    moreover have "2 * real l / (1 + real k) \<le> 1/2"
+    moreover have "4 * real l / (1 + real k) \<le> 1/2"
       using l9k by (simp add: divide_simps)
-    ultimately have "2 * real l / (1 + real k) \<le> (1+\<xi>) ^ (l-1) / ekl20^l"
+    ultimately have "4 * real l / (1 + real k) \<le> (1+\<xi>) ^ (l-1) / ekl20^l"
       by linarith
-    then have "2 * real l \<le> (1 + real k) * (1+\<xi>) ^ (l-1) / ekl20^l"
+    then have "4 * real l \<le> (1 + real k) * (1+\<xi>) ^ (l-1) / ekl20^l"
       by (simp add: field_simps)
     then show ?case
       by (simp add: ekl20_eq)
@@ -1432,7 +1432,7 @@ proof (rule ccontr)
     with Suc show ?case by force      
   qed
   from \<open>m<l\<close> this [of "l-m"] 
-  have "1 + l + real m \<le> (k+l-m choose (l-m)) / exp \<delta> ^ k * (1+\<xi>) ^ m"
+  have "1 + 3*l + real m \<le> (k+l-m choose (l-m)) / exp \<delta> ^ k * (1+\<xi>) ^ m"
     by (simp add: Suc_leI exp_of_nat2_mult)
   also have "\<dots> \<le> (k+l-m choose (l-m)) / exp (\<delta> * k) * (1+\<xi>) ^ m"
     by (simp add: exp_of_nat2_mult)
@@ -1442,19 +1442,18 @@ proof (rule ccontr)
       by (simp add: less_eq_real_def nexp_gt pos_divide_less_eq)
     show ?thesis
       using mult_strict_left_mono [OF \<section>, of "PM * (1+\<xi>) ^ m"] kl_choose prod_gt0
-      by (auto simp add: field_simps \<xi>_def)
+      by (auto simp: field_simps \<xi>_def)
   qed
   also have "\<dots> = real n * U_lower_bound_ratio m"
     by (simp add: U_lower_m)
-  finally have U_MINUS_M: "l+1 < real n * U_lower_bound_ratio m - m" \<comment>\<open>could have more multiples of @{term l}\<close>
+  finally have U_MINUS_M: "3*l + 1 < real n * U_lower_bound_ratio m - m"
     by linarith
-  then have "card U > 1"
-    using cardU m_def by linarith
-
-  have "card EU > 0"
-    using \<open>card U > 1\<close> UBB.complete by (simp add: EU_def UBB.finV card_all_edges)
+  then have cardU_gt: "card U > 3*l + 1"
+    using cardU by linarith
+  with UBB.complete have "card EU > 0" "card U > 1"
+    by (simp_all add: EU_def UBB.finV card_all_edges)
   have BlueU_eq: "BlueU = EU \<setminus> RedU" 
-    using Blue_eq complete by (fastforce simp add: BlueU_def RedU_def EU_def V_def E_def)
+    using Blue_eq complete by (fastforce simp: BlueU_def RedU_def EU_def V_def E_def)
   have [simp]: "UBB.graph_size = card EU"
     using EU_def by blast
   have "\<gamma>' \<le> \<gamma>"
@@ -1464,10 +1463,8 @@ proof (rule ccontr)
     have \<section>: "UBB.graph_density BlueU \<ge> \<gamma>' + \<eta>" 
       using that \<open>card EU > 0\<close> card_RedU_le 
       by (simp add: BlueU_eq UBB.graph_density_def diff_divide_distrib card_Diff_subset)
-
     have Nx: "Neighbours BlueU x \<inter> (U \<setminus> {x}) = Neighbours BlueU x" for x 
       using that by (auto simp: BlueU_eq EU_def Neighbours_def)
-
     have "BlueU \<subseteq> E \<inter> Pow U"
       using BlueU_eq EU_def by blast
     with UBB.exists_density_edge_density [of 1 BlueU]
@@ -1507,9 +1504,9 @@ proof (rule ccontr)
       also have "\<dots> \<le> m + card U * (1+\<xi>) * \<gamma>'"
         using mult_left_mono [OF \<gamma>'_le1, of m] by (simp add: algebra_simps)
       also have "\<dots> \<le> Suc m + (\<gamma>' + \<eta>) * (UBB.gorder - Suc 0)"
-        using * \<open>x \<in> V\<setminus>W\<close> \<open>finite W\<close> \<open>1 < UBB.gorder\<close> \<gamma>1516
+        using * \<open>x \<in> V\<setminus>W\<close> \<open>finite W\<close> cardU_gt \<gamma>1516
         apply (simp add: U_lower_bound_ratio_def \<xi>_def \<eta>_def)
-        by (simp add: of_nat_diff algebra_simps)
+        by (simp add: algebra_simps)
       also have "\<dots> \<le> Suc m + card (V \<inter> \<Inter> (Neighbours Blue ` insert x W))"
         using * NB_Int_U finV by (simp add: U_def Int_ac)
       also have "\<dots> = real (card (insert x W) + card (V \<inter> \<Inter> (Neighbours Blue ` insert x W)))"
@@ -1574,7 +1571,7 @@ proof (rule ccontr)
     have "n * (1+\<xi>)^m \<ge> (k+l choose l)"
       by (smt (verit, best) mult_left_mono nexp_gt of_nat_0_le_iff powerm)
     then have **: "n * U_lower_bound_ratio m \<ge> (k+l-m choose (l-m))"
-      using \<open>m<l\<close> prod_gt0 kl_choose by (auto simp add: U_lower_m field_simps)
+      using \<open>m<l\<close> prod_gt0 kl_choose by (auto simp: U_lower_m field_simps)
 
     have m_le_choose: "m \<le> (k+l-m-1 choose (l-m))"
     proof (cases "m=0")

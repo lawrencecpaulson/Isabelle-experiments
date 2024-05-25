@@ -17,7 +17,7 @@ proof -
   have "d>0" "\<mu>>0"
     using assms  by (auto simp: divide_simps split: if_split_asm)
   then have *: "real k \<le> \<mu> * (real k * 200) / real d" for k
-    using assms by (fastforce simp add: divide_simps less_eq_real_def)
+    using assms by (fastforce simp: divide_simps less_eq_real_def)
   have "\<forall>\<^sup>\<infinity>k. \<bar>ok_fun_95b k\<bar> \<le> (\<mu>/d - 1/200) * k"
     using ok_fun_95b assms unfolding smallo_def
     by (auto dest!: spec [where x = "\<mu>/d"])
@@ -64,7 +64,7 @@ proof -
   then show ?thesis
     using assms Big_Far_9_3[of "1/10"] Big_Far_9_5[of "1/10"]
     unfolding Big_Closer_10_2_def eventually_conj_iff all_imp_conj_distrib 
-    by (force simp add: elim!: eventually_mono)
+    by (force simp: elim!: eventually_mono)
 qed
 
 end (*context P0_min*)
@@ -333,10 +333,12 @@ proof (rule ccontr)
         then have \<dagger>: "\<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/5"
           by (simp add: \<gamma>_def)
         have "Big_Closer_10_2 \<mu> l'"
-          apply (intro Big_10_2I)
-          apply (smt (verit, ccfv_SIG) \<gamma>_def \<open>0 < \<gamma>\<close> frac_le l' mult_less_cancel_right of_nat_0_le_iff)
-          apply (smt (verit) "\<dagger>" \<open>0 < \<gamma>\<close> divide_self_if pos_le_divide_eq power_mono zero_compare_simps(5))
-          using "\<dagger>" by blast
+        proof (intro Big_10_2I)
+          show "8 / 55 * \<gamma> * real l \<le> real l'"
+            by (smt (verit, ccfv_SIG) \<gamma>_def \<open>0 < \<gamma>\<close> frac_le l' mult_right_mono of_nat_0_le_iff)
+          show "(2/5 * \<gamma>)\<^sup>2 \<le> \<mu>"
+            by (smt (verit) "\<dagger>" \<open>0 < \<gamma>\<close> divide_self_if pos_le_divide_eq power_mono zero_le_divide_iff)
+        qed (use \<dagger> in auto)
         then show "Big_Far_9_2 \<mu> l'"
           by (smt (verit, ccfv_threshold) Big_10_imp_Big_9 \<gamma>_def tenth \<open>0 < \<gamma>\<close> zero_less_power)
       qed (use \<open>3 \<le> l\<close> in auto)
@@ -504,11 +506,6 @@ proof (rule ccontr)
         unfolding K'_def size_clique_def using \<open>K \<subseteq> U\<close> \<open>U \<subseteq> V\<close> \<open>W \<subseteq> V\<close> by auto
     qed
 
-    have YMK: "\<gamma>-\<gamma>' \<le> m/k"  (*UNUSED*)
-      using \<open>l>0\<close> \<open>m<l\<close> 
-      apply (simp add: \<gamma>_def \<gamma>'_def divide_simps)
-      apply (simp add: algebra_simps)
-      by (smt (verit, best) mult_left_mono mult_right_mono nat_less_real_le of_nat_0_le_iff)
     have "\<gamma>' \<le> \<gamma>"
       using \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def field_simps)
 
@@ -550,8 +547,7 @@ proof (rule ccontr)
       by linarith
 
     \<comment>\<open>As with 9: a huge effort just to show that @{term U} is nontrivial.
-         Proof probably shows its cardinality exceeds a multiple of @{term l}.
-         Different here is that we know that @{term "\<gamma>' \<ge> 1/10"}\<close>
+         Proof actually shows its cardinality exceeds a small multiple of @{term l} (7/5).\<close>
     have "l + Suc l - q \<le> (k+q choose q) / exp(\<delta>*k)"
       if "nat\<lfloor>k/10\<rfloor> \<le> q" "q\<le>l"  for q
       using that
@@ -572,7 +568,7 @@ proof (rule ccontr)
       also have "\<dots> \<le> exp(\<lfloor>k/10\<rfloor> * ln(10 + (10 * nat\<lfloor>k/10\<rfloor>) / k)) * exp (-real k/200)"
         using \<dagger> by (intro mult_mono exp_mono) auto
       also have "\<dots> \<le> (10 + (10 * nat\<lfloor>k/10\<rfloor>) / k) ^ nat\<lfloor>k/10\<rfloor> * exp (-real k/200)"
-        using \<dagger> by (auto simp add: powr_def simp flip: powr_realpow)
+        using \<dagger> by (auto simp: powr_def simp flip: powr_realpow)
       also have "\<dots> \<le> ((k + nat\<lfloor>k/10\<rfloor>) / (k/10)) ^ nat\<lfloor>k/10\<rfloor> * exp (-real k/200)"
         using \<open>k>0\<close> by (auto simp: mult.commute)
       also have "\<dots> \<le> ((k + nat\<lfloor>k/10\<rfloor>) / nat\<lfloor>k/10\<rfloor>) ^ nat\<lfloor>k/10\<rfloor> * exp (-real k/200)"
@@ -604,12 +600,12 @@ proof (rule ccontr)
         by (simp add: less_eq_real_def nexp_gt pos_divide_less_eq)
       show ?thesis
         using mult_strict_left_mono [OF \<section>, of "U_lower_bound_ratio m"] kl_choose prod_gt0
-        by (auto simp add: field_simps )
+        by (auto simp: field_simps )
     qed
     finally have U_MINUS_M: "1+l < real n * U_lower_bound_ratio m - m"
       by argo
-    then have "card U > 1" 
-      using cardU m_def by linarith
+    then have cardU_gt: "card U > l + 1" "card U > 1"
+      using cardU by linarith+
 
     show False
       using \<gamma>'_cases
@@ -641,7 +637,7 @@ proof (rule ccontr)
       qed auto
 
       have BlueU_eq: "BlueU = EU \<setminus> RedU" 
-        using Blue_eq complete by (fastforce simp add: BlueU_def RedU_def EU_def V_def E_def)
+        using Blue_eq complete by (fastforce simp: BlueU_def RedU_def EU_def V_def E_def)
       have [simp]: "UBB.graph_size = card EU"
         using EU_def by blast
       have "card EU > 0"
@@ -756,7 +752,7 @@ proof (rule ccontr)
           using mult_mono [OF \<gamma> \<gamma>] \<open>\<gamma>'\<ge>1/10\<close> \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> by (auto simp: power2_eq_square)
         ultimately        
         have "Big_Closer_10_2 \<gamma>' (l-m)"
-          using big \<open>m<l\<close> by (force simp add: Big_Closer_10_1_def)
+          using big \<open>m<l\<close> by (force simp: Big_Closer_10_1_def)
         then show "Big_Closer_10_2 ((l-m) / (real k + real (l-m))) (l-m)"
           by (simp add: \<gamma>'_def \<open>m < l\<close> add_diff_eq less_or_eq_imp_le)
       next
@@ -795,7 +791,6 @@ proof (rule ccontr)
               using \<open>m<l\<close> \<open>k>0\<close> by (simp add: divide_simps power2_eq_square)
             with \<mu> show "0 < \<mu>" by linarith
             show "Big_Closer_10_2 \<mu> l'"
-              unfolding Big_Closer_10_1_def 
             proof (intro Big_10_2I)
               have A: "(2/5)*l \<le> l-m"
                 using \<open>k/10 \<le> l-m\<close> l4k by linarith
@@ -813,8 +808,9 @@ proof (rule ccontr)
                 by simp 
               have "(8/55) * \<gamma> * l \<le> (10/11) * \<gamma>' * (l - m)"
                 using mult_mono [OF A B] \<open>\<gamma>>1/10\<close> by (simp add: mult_ac)
-              with l' show "8 / 55 * \<gamma> * l \<le> l'"
-                by (smt (verit, ccfv_threshold) Num.of_nat_simps(4) \<gamma>'_def diff_is_0_eq' mult_eq_0_iff nat_le_linear of_nat_diff)
+              with l' \<open>m<l\<close> show "8/55 * \<gamma> * l \<le> l'"
+                unfolding \<gamma>'_def
+                by (smt (verit) of_nat_0 of_nat_add diff_is_0_eq le_add2 mult_cancel_right2 nat_le_linear of_nat_diff)
             qed (use \<mu> in auto)
           next
           qed (use \<mu> in auto)

@@ -176,7 +176,7 @@ lemma Neighbours_eq_all_edges_betw_un':
   using wellformed 
   apply (auto simp: Neighbours_def all_edges_betw_un_def insert_commute )
   apply (rule_tac x="{xa,x}" in bexI)
-   apply (force simp add: insert_commute all_edges_betw_un_def)+
+   apply (force simp: insert_commute all_edges_betw_un_def)+
   done
 
 lemma book_insert: 
@@ -313,7 +313,7 @@ proof -
   then have "u \<in> V" "v \<in> V"
     using assms wellformed uv by blast+
   have *: "Neighbours {e} x = (if x=u then {v} else if x=v then {u} else {})" for x
-    by (auto simp add: Neighbours_def uv doubleton_eq_iff)
+    by (auto simp: Neighbours_def uv doubleton_eq_iff)
   show ?thesis
     using \<open>u\<noteq>v\<close>
     by (simp add: * if_distrib [of card] finV sum.delta_remove \<open>u \<in> V\<close> \<open>v \<in> V\<close> cong: if_cong)
@@ -425,7 +425,7 @@ lemma gen_density_below_avg_ge:
 proof -
   have "real (edge_card C Y Z) / card Y \<le> real (edge_card C X Z) / card X"
     using assms
-    by (force simp add: gen_density_def divide_simps zero_less_mult_iff split: if_split_asm)
+    by (force simp: gen_density_def divide_simps zero_less_mult_iff split: if_split_asm)
   have "card Y < card X"
     by (simp add: assms psubset_card_mono)
   have *: "finite Y" "Y \<subseteq> X" "X\<noteq>{}"
@@ -571,7 +571,7 @@ proof -
   then have *: "(\<Sum>x\<in>V. \<Sum>y\<in>V\<setminus>{x}. if {x, y} \<in> C then 1 else 0) = card C * 2"
     using assms by (simp add: sum_eq_card_Neighbours sum_Neighbours_eq_card)
   show ?thesis
-    by (auto simp add: graph_density_def divide_simps cardE choose_two_real *)
+    by (auto simp: graph_density_def divide_simps cardE choose_two_real *)
 qed
 
 lemma edge_card_V_V: 

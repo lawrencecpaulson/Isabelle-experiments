@@ -136,7 +136,7 @@ proof -
     by (simp add: eq prod.reindex_cong [OF inj])
   also have "\<dots> = (\<Prod>i\<le>n. f i) div (\<Prod>i<m. f i)"
     using prod_divide_nat_ivl[of 0 "m" "Suc n" f] assms
-    by (force simp add: atLeast0AtMost atLeast0LessThan atLeastLessThanSuc_atLeastAtMost)
+    by (force simp: atLeast0AtMost atLeast0LessThan atLeastLessThanSuc_atLeastAtMost)
   finally show ?thesis by metis
 qed
 
@@ -342,7 +342,7 @@ proof (intro convex_on_linorderI)
       by (intro convex_onD [OF cf]) auto
   next
     case False
-    then have "x < k" and fxk: "f x = f k" by (auto simp add: fk)
+    then have "x < k" and fxk: "f x = f k" by (auto simp: fk)
     show ?thesis
     proof (cases "k \<le> y")
       case True
@@ -509,7 +509,7 @@ lemma gbinomial_mono:
   fixes k::nat and a::real
   assumes "of_nat k \<le> a" "a \<le> b" shows "a gchoose k \<le> b gchoose k"
   using assms
-  by (force simp add: gbinomial_prod_rev intro!: divide_right_mono prod_mono)
+  by (force simp: gbinomial_prod_rev intro!: divide_right_mono prod_mono)
 
 lemma gbinomial_is_prod: "(a gchoose k) = (\<Prod>i<k. (a - of_nat i) / (1 + of_nat i))"
   unfolding gbinomial_prod_rev
@@ -527,7 +527,7 @@ proof -
   also have "\<dots> < (\<Prod>i=1..n. if i\<le>n-s then real i else n)"
     using assms by (intro prod_mono_strict [where i="n-1"]) auto
   also have "\<dots> = (\<Prod>i = 1..n-s. real i) * real n ^ s"
-    using \<open>s \<le> n\<close> by (force simp add: prod.If_cases eq)
+    using \<open>s \<le> n\<close> by (force simp: prod.If_cases eq)
   also have "\<dots> = fact (n - s) * real n ^ s"
     by (simp add: fact_prod)
   finally show ?thesis .
