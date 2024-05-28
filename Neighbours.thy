@@ -171,17 +171,10 @@ lemma Neighbours_eq_all_edges_betw_un:
   "Neighbours E x = \<Union> (all_edges_betw_un V {x}) - {x}"
   using wellformed by (auto simp: Neighbours_def all_edges_betw_un_def insert_commute )
 
-lemma Neighbours_eq_all_edges_betw_un':
-  "F \<subseteq> E \<Longrightarrow> Neighbours F x = \<Union> (all_edges_betw_un V {x} \<inter> F) - {x}"
-  using wellformed 
-  apply (auto simp: Neighbours_def all_edges_betw_un_def insert_commute )
-  apply (rule_tac x="{xa,x}" in bexI)
-   apply (force simp: insert_commute all_edges_betw_un_def)+
-  done
-
 lemma book_insert: 
   "book (insert v S) T F \<longleftrightarrow> book S T F \<and> v \<notin> T \<and> all_edges_betw_un {v} (S \<union> T) \<subseteq> F"
-  by (auto simp: book_def all_edges_betw_un_insert1 all_edges_betw_un_insert2 all_edges_betw_un_Un2 insert_commute subset_iff)
+  unfolding book_def all_edges_betw_un_insert1
+  by (auto simp:  all_edges_betw_un_insert2 all_edges_betw_un_Un2 insert_commute subset_iff)
 
 text \<open>Cliques of a given number of vertices; the definition of clique from Ramsey is used\<close>
 
@@ -218,26 +211,35 @@ lemma edge_card_commute: "edge_card C X Y = edge_card C Y X"
 lemma edge_card_le: 
   assumes "finite X" "finite Y"
   shows "edge_card C X Y \<le> card X * card Y"
-unfolding edge_card_def
-  by (metis Int_lower2 all_edges_betw_un_le assms card_mono finite_all_edges_betw_un order_trans)
+proof -
+  have "edge_card C X Y \<le> card (all_edges_betw_un X Y)"
+    by (simp add: assms card_mono edge_card_def finite_all_edges_betw_un)
+  then show ?thesis
+    by (meson all_edges_betw_un_le assms le_trans)
+qed
 
-text \<open>the assumption that @{term Z} is disjoint from @{term X} (or else @{term Y}) is necessary\<close>
+text \<open>the assumption that @{term Z} is disjoint from @{term X} (or @{term Y}) is necessary\<close>
 lemma edge_card_Un:
   assumes "disjnt X Y" "disjnt X Z" "finite X" "finite Y"
   shows "edge_card C (X \<union> Y) Z = edge_card C X Z + edge_card C Y Z"
 proof -
+  have [simp]: "finite (all_edges_betw_un U Z)" for U
+    by (meson all_uedges_betw_subset fin_edges finite_subset)
   have "disjnt (C \<inter> all_edges_betw_un X Z) (C \<inter> all_edges_betw_un Y Z)"
     using assms by (meson Int_iff disjnt_all_edges_betw_un disjnt_iff)
   then show ?thesis
-    unfolding edge_card_def
-    by (metis Int_Un_distrib all_uedges_betw_subset card_Un_disjnt fin_edges finite_Int 
-            finite_subset all_edges_betw_un_Un1)
+    by (simp add: edge_card_def card_Un_disjnt all_edges_betw_un_Un1 Int_Un_distrib)
 qed
 
 lemma edge_card_diff:
   assumes "Y\<subseteq>X" "disjnt X Z" "finite X" 
   shows "edge_card C (X-Y) Z = edge_card C X Z - edge_card C Y Z"
-  by (metis Diff_disjoint Diff_partition Diff_subset assms diff_add_inverse disjnt_def disjnt_subset1 edge_card_Un finite_subset)
+proof -
+  have "(X\<setminus>Y) \<union> Y = X" "disjnt (X\<setminus>Y) Y"
+    by (auto simp: Un_absorb2 assms disjnt_iff)
+  then show ?thesis
+    by (metis add_diff_cancel_right' assms disjnt_Un1 edge_card_Un finite_Diff finite_subset)
+qed
 
 lemma edge_card_mono:
   assumes "Y\<subseteq>X" shows "edge_card C Y Z \<le> edge_card C X Z"

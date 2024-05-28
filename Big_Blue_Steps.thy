@@ -59,12 +59,12 @@ next
     using nonz by (simp add: divide_simps flip: binomial_gbinomial)
   have *: "exp (-2 * real i / (\<sigma>*m)) \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))" if "i<b" for i
   proof -
+    have "i \<le> m"
+      using bm that by linarith
     have exp_le: "1-x \<ge> exp (-2 * x)" if "0 \<le>x" "x \<le> 1/2" for x::real
     proof -
-      have "exp (-2 * x) = inverse (exp (2*x))"
-        by (simp add: exp_minus)
-      also have "\<dots> \<le> inverse (1 + 2*x)"
-        using exp_ge_add_one_self that by auto
+      have "exp (-2 * x) \<le> inverse (1 + 2*x)"
+        using exp_ge_add_one_self that by (simp add: exp_minus)
       also have "\<dots> \<le> 1-x"
         using that by (simp add: mult_left_le field_simps)
       finally show ?thesis .
@@ -74,9 +74,7 @@ next
     also have "\<dots> \<le> 1 - i/(\<sigma> * m)"
     using b that by (intro exp_le) auto
     also have "\<dots> \<le> 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i))"
-      using \<sigma> b that 
-      apply (simp add: field_split_simps)
-      using bm by linarith
+      using \<sigma> b that \<open>i \<le> m\<close> by (simp add: field_split_simps)
     finally show ?thesis .
   qed
   have "sum real {..<b} \<le> real b ^ 2 / 2"

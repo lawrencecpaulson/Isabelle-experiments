@@ -16,7 +16,7 @@ lemma ln_strict_mono: "\<And>x::real. \<lbrakk>x < y; 0 < x; 0 < y\<rbrakk> \<Lo
 
 
 
-declare eventually_frequently_const_simps [simp]
+declare eventually_frequently_const_simps [simp] of_nat_diff [simp]
 
 lemma mult_le_1_iff: "\<lbrakk>x\<ge>1; y\<ge>1\<rbrakk> \<Longrightarrow> x*y \<ge> (1::real)"
   by (smt (verit, best) mult_less_cancel_right2)

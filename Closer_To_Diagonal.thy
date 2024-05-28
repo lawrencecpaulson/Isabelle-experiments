@@ -272,7 +272,6 @@ next
     by linarith
 qed
 
-(*MAYBE NO NEED TO DEFINE THIS*)
 definition "Big_Closer_10_1 \<equiv> \<lambda>\<mu> l. Big_Closer_10_2 \<mu> l" 
 
 lemma Big_Closer_10_1:
@@ -303,12 +302,11 @@ lemma Closer_10_1:
   shows "RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
 proof (rule ccontr)
   assume non: "\<not> RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
-  with RN_eq_0_iff have "l>0" by force
-  have l4k: "4*l \<le> k"
-    using \<open>l>0\<close> \<gamma> by (auto simp: \<gamma>_def divide_simps)
   have "l\<le>k"
     using \<gamma>_def \<gamma> nat_le_real_less by fastforce
-  with \<open>l>0\<close> have "k>0" by linarith
+  with \<open>l\<ge>3\<close> have "l>0" "k>0" by linarith+
+  then have l4k: "4*l \<le> k"
+    using \<gamma> by (auto simp: \<gamma>_def divide_simps)
   have "k\<ge>36"
     using \<open>l\<ge>9\<close> l4k by linarith
   have exp_gt21: "exp (x + 2) > exp (x + 1)" for x::real
@@ -774,8 +772,8 @@ proof (rule ccontr)
         by (metis Int_subset_iff all_edges_subset_iff_clique) 
     next
       case 2
-      have "RN k (l-m) \<le> exp (- ((l-m) / (k + real (l-m)) / 20) * k + 1) * (k + (l-m) choose l-m)"
-      proof (intro Far_9_1 strip)
+      have "RN k (l-m) \<le> exp (- ((l-m) / (k + real (l-m)) / 20) * k + 1) * (k + (l-m) choose (l-m))"
+      proof (intro Far_9_1 strip)thm Far_9_1[of "l-m" k]
         show "real (l-m) / (real k + real (l-m)) \<le> 1/10"
           using \<gamma>'_def 2 \<open>m < l\<close> by auto
       next
@@ -849,5 +847,7 @@ proof (rule ccontr)
     qed
   qed
 qed
+
+end (*context P0_min*)
 
 end
