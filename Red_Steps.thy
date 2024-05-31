@@ -84,8 +84,8 @@ proof -
   have D0: "\<forall>\<^sup>\<infinity>l. l * (c * l powr (3/4) * ln l - l powr (7/8) / 4) \<le> -1"
     using \<open>c>0\<close> by real_asymp
   have "\<And>l k. l \<le> k \<Longrightarrow> c * real l powr (3/4) * ln k \<le> c * real k powr (3/4) * ln k"
-    by (smt (verit,del_insts) D34 One_nat_def le_0_eq ln_ge_zero mult_right_mono not_less_eq_eq real_of_nat_ge_one_iff)
-  then have D: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. k * (c * real l powr (3/4) * ln k - real k powr (7/8) / 4) \<le> -1"
+    using D34 le_eq_less_or_eq mult_right_mono by fastforce
+  then have D: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. k * (c * l powr (3/4) * ln k - real k powr (7/8) / 4) \<le> -1"
     using eventually_mono [OF eventually_all_ge_at_top [OF D0]]
     by (smt (verit, ccfv_SIG) mult_left_mono of_nat_0_le_iff)
   show ?thesis
@@ -96,10 +96,10 @@ qed
 
 lemma Red_5_6_Ramsey:
   assumes "0<c" "c<1/32" and "l\<le>k" and big: "Big_Red_5_6_Ramsey c l"
-  shows "exp (c * real l powr (3/4) * ln k) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
+  shows "exp (c * l powr (3/4) * ln k) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
 proof -
-  define r where "r \<equiv> nat \<lfloor>exp (c * real l powr (3/4) * ln k)\<rfloor>"
-  define s where "s \<equiv> nat \<lceil>real l powr (3/4)\<rceil>"
+  define r where "r \<equiv> nat \<lfloor>exp (c * l powr (3/4) * ln k)\<rfloor>"
+  define s where "s \<equiv> nat \<lceil>l powr (3/4)\<rceil>"
   have "l\<noteq>0"
     using big by (force simp: Big_Red_5_6_Ramsey_def)
   have "3 \<le> s"
@@ -187,16 +187,16 @@ proof (cases "k=0")
     by (metis RN_le_argpower' RN_mono diff_add_inverse diff_le_self le_refl le_trans)
   also have "\<dots> \<le> exp (m_of l * ln k)"
     using \<open>k>0\<close> by (simp add: exp_of_nat_mult)
-  finally have "RN k (m_of l) \<le> exp (real (m_of l) * ln k)"
+  finally have "RN k (m_of l) \<le> exp (m_of l * ln k)"
     by force 
-  then have "real k ^ 6 * RN k (m_of l) \<le> real k ^ 6 * exp (real (m_of l) * ln k)"
+  then have "real k ^ 6 * RN k (m_of l) \<le> real k ^ 6 * exp (m_of l * ln k)"
     by (simp add: \<open>0 < k\<close>)
   also have "\<dots> \<le> exp (c * l powr (3/4) * ln k)"
   proof -
-    have "(6 + real (m_of l)) * ln (real k) \<le> (c * real l powr (3/4)) * ln (real k)"
+    have "(6 + real (m_of l)) * ln (real k) \<le> (c * l powr (3/4)) * ln (real k)"
       unfolding mult_le_cancel_right
       using big \<open>0 < k\<close> by (auto simp: c_def Big_Red_5_6_def)
-    then have "ln (real k ^ 6 * exp (m_of l * ln k)) \<le> ln (exp (c * real l powr (3/4) * ln k))"
+    then have "ln (real k ^ 6 * exp (m_of l * ln k)) \<le> ln (exp (c * l powr (3/4) * ln k))"
       using \<open>k>0\<close> by (simp add: ln_mult ln_powr algebra_simps flip: powr_numeral)
     then show ?thesis
       by (smt (verit) exp_gt_zero ln_le_cancel_iff)
@@ -235,7 +235,7 @@ proof -
   with \<open>k\<ge>l\<close> have "k>1" by auto
   let ?R = "RN k (m_of l)"
   have "finite X" "finite Y"
-    by (auto simp: X_def Y_def  finite_Xseq finite_Yseq)
+    by (auto simp: X_def Y_def finite_Xseq finite_Yseq)
   have not_many_bluish: "\<not> many_bluish \<mu> l k X"
     using i not_many_bluish unfolding X_def by blast
   have nonterm: "\<not> termination_condition l k X Y"
@@ -341,7 +341,7 @@ proof -
       using cardX_ge of_nat_mono by fastforce
   qed (use RNX rk61 \<open>0 < k\<close> card_XB in auto)
   also have "\<dots> \<le> weight X Y (cvx \<mu> l k i) / card X"
-    using RNX mult_left_mono [OF weight_ge_0, of "card X"] by (simp add: field_split_simps of_nat_diff)
+    using RNX mult_left_mono [OF weight_ge_0, of "card X"] by (simp add: field_split_simps)
   finally show ?thesis
     using RNX by (simp add: X_def Y_def divide_simps)
 qed
@@ -353,7 +353,7 @@ lemma Red_5_7b:
   assumes "p \<ge> qfun k 0" shows "alpha k (hgt k p) \<le> eps k * (p - qfun k 0 + 1/k)"
 proof -
   have qh_le_p: "qfun k (hgt k p - Suc 0) \<le> p"
-    by (smt (verit) assms diff_Suc_less diff_le_self hgt_Least le_antisym nat_less_le zero_less_iff_neq_zero)
+    by (smt (verit) assms diff_Suc_less hgt_gt0 hgt_less_imp_qfun_less zero_less_iff_neq_zero)
   have "hgt k p > 0"
     by (simp add: Suc_leI hgt_gt0)
   then have "alpha k (hgt k p) = eps k * (1 + eps k) ^ (hgt k p - 1) / k"
@@ -361,21 +361,13 @@ proof -
   also have "\<dots> = eps k * (qfun k (hgt k p - 1) - qfun k 0 + 1/k)"
     by (simp add: diff_divide_distrib qfun_eq)
   also have "\<dots> \<le> eps k * (p - qfun k 0 + 1/k)"
-    by (smt (verit) qh_le_p mult.commute mult_right_mono One_nat_def eps_def powr_ge_pzero)
+    by (simp add: eps_ge0 landau_o.R_mult_left_mono qh_le_p)
   finally show ?thesis .
 qed
 
 lemma Red_5_7c: 
   assumes "p \<le> qfun k 1" shows "alpha k (hgt k p) = eps k / k"
-proof -
-  have "hgt k p > 0"
-    by (simp add: Suc_leI hgt_gt0)
-  then have "alpha k (hgt k p) = alpha k 1"
-    using Suc_le_D hgt_Least Suc_le_eq assms by fastforce
-  also have "\<dots> = eps k / k"
-    by (simp add: alpha_Suc_eq)
-  finally show ?thesis .
-qed
+  using Book.alpha_hgt_eq Book_axioms assms hgt_Least by fastforce
 
 lemma Red_5_8:
   assumes i: "i \<in> Step_class \<mu> l k {dreg_step}" 
@@ -497,9 +489,9 @@ proof (simp, intro conjI strip eventually_all_geI1)
     by (smt (verit, best) mult_right_mono of_nat_0_le_iff)
 next
   fix l \<mu>
-  assume "3 / (1 - \<mu>1) \<le> real l powr (5 / 2)" "\<mu> \<le> \<mu>1"
-  then show "3 / (1 - \<mu>) \<le> real l powr (5 / 2)"
-    by (smt (verit, ccfv_SIG)  assms frac_le)
+  assume "3 / (1 - \<mu>1) \<le> real l powr (5/2)" "\<mu> \<le> \<mu>1"
+  then show "3 / (1 - \<mu>) \<le> real l powr (5/2)"
+    by (smt (verit, ccfv_SIG) assms frac_le)
 qed real_asymp+
 
 context Book
@@ -540,7 +532,7 @@ proposition Red_5_1:
 proof -
   have Red_5_4: "weight X Y x \<ge> - real (card X) / (real k) ^ 5"
     using Big \<mu> \<open>Colours l k\<close> i Red_5_4 by (auto simp: Big_Red_5_1_def x_def X_def Y_def)
-  have lA: "(1-\<mu>) * l > 1" and "l\<le>k" and l144: "real l powr (1/4) \<ge> 4"
+  have lA: "(1-\<mu>) * l > 1" and "l\<le>k" and l144: "l powr (1/4) \<ge> 4"
     using Big \<open>Colours l k\<close> by (auto simp: Big_Red_5_1_def Colours_def)
   then have k_powr_14: "k powr (1/4) \<ge> 4"
     by (smt (verit) divide_nonneg_nonneg of_nat_0_le_iff of_nat_mono powr_mono2)
@@ -550,9 +542,9 @@ proof -
   have k52: "3 / (1-\<mu>) \<le> k powr (5/2)"
     using Big \<open>l\<le>k\<close> unfolding Big_Red_5_1_def
     by (smt (verit) of_nat_0_le_iff of_nat_mono powr_mono2 zero_le_divide_iff)
-  have RN_le_RN: "k ^ 6 * RN k (m_of l) \<le> RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
+  have RN_le_RN: "k ^ 6 * RN k (m_of l) \<le> RN k (nat \<lceil>l powr (3/4)\<rceil>)"
     using Big \<open>l \<le> k\<close> Red_5_6 by (auto simp: Big_Red_5_1_def)
-  have l34_ge3: "real l powr (3/4) \<ge> 3"
+  have l34_ge3: "l powr (3/4) \<ge> 3"
     by (smt (verit, ccfv_SIG) l144 divide_nonneg_nonneg frac_le of_nat_0_le_iff powr_le1 powr_less_cancel)
   note XY = X_def Y_def
   obtain A B
@@ -564,7 +556,7 @@ proof -
     using i by (auto simp: XY step_kind_defs termination_condition_def split: if_split_asm prod.split_asm)
   with Yseq_gt0 XY have "card Y \<noteq> 0"
     by blast
-  have cX_RN: "card X > RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
+  have cX_RN: "card X > RN k (nat \<lceil>l powr (3/4)\<rceil>)"
     by (meson linorder_not_le nonterm termination_condition_def)
   then have X_gt_k: "card X > k"
     by (metis l34_ge3 RN_3plus' of_nat_numeral order.trans le_natceiling_iff not_less)

@@ -727,11 +727,10 @@ proof (rule ccontr)
           using cardU by linarith
         finally show "exp (- real k / 200) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
           using \<open>m < l\<close> by (simp add: \<gamma>'_def)
-
+      next
         have "1 - \<gamma>' \<le> UBB.graph_density RedU"
-          using * card_EU \<open>card EU > 0\<close>
-          apply (simp add: UBB.graph_density_def BlueU_eq divide_simps split: if_split_asm)
-          by argo
+          using * card_EU \<open>card EU > 0\<close> 
+          by (simp add: UBB.graph_density_def BlueU_eq field_split_simps split: if_split_asm)
         then show "1 - real (l-m) / (real k + real (l-m)) \<le> UBB.graph_density RedU"
           unfolding \<gamma>'_def using \<open>m<l\<close> by (smt (verit, ccfv_threshold) less_imp_le_nat of_nat_add of_nat_diff) 
       next
