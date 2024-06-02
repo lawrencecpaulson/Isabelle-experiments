@@ -327,7 +327,7 @@ proof (cases "h > 2*\<kappa> + 1")
   then have "0 < h - 1"
     by (smt (verit, best) \<kappa>_def one_less_of_natD powr_non_neg zero_less_diff)
   with True have "p (i-1) > qfun k (h-1)"
-    by (smt (verit, best) h_def diff_le_self diff_less hgt_Least le_antisym zero_less_one nat_less_le)
+    by (simp add: h_def hgt_less_imp_qfun_less)
   then have "qfun k (h-1) - eps k powr (1/2) * (1 + eps k) ^ (h-1) / k < p (i-1) - \<kappa> * alpha k h"
     using \<open>0 < h-1\<close> Y_6_4_Bblue [OF i] \<open>0<\<mu>\<close> eps_ge0
     apply (simp add: alpha_eq p_def \<kappa>_def)
@@ -348,7 +348,7 @@ proof (cases "h > 2*\<kappa> + 1")
     have ge0: "(1 + eps k) ^ (h-1) \<ge> 0"
       using eps_ge0 by auto
     have "(1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) = (1 + eps k) ^ (h-1) * (1 + eps k) powr - real(nat \<lfloor>2*\<kappa>\<rfloor>)"
-      using less_h ek0 by (simp add: of_nat_diff algebra_simps flip: powr_realpow powr_add)
+      using less_h ek0 by (simp add: algebra_simps flip: powr_realpow powr_add)
     also have "\<dots> \<le> (1 - eps k powr (1/2)) * (1 + eps k) ^ (h-1)"
       using big \<open>l\<le>k\<close> unfolding \<kappa>_def Big_Y_6_5_Bblue_def
       by (metis mult.commute  ge0 mult_left_mono)
@@ -385,7 +385,7 @@ lemma Big_Y_6_2:
   shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_Y_6_2 \<mu> l"
   using assms Big_Y_6_5_Bblue Big_Red_5_3 Big_Blue_4_1
   unfolding Big_Y_6_2_def eps_def
-  apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
+  apply (simp add: eventually_conj_iff all_imp_conj_distrib)  
   apply (intro conjI strip eventually_all_geI1 eventually_all_ge_at_top; real_asymp)
   done
 
@@ -496,12 +496,12 @@ next
             by (simp add: Z_if finZ)
         next
           case False
-          have [simp]: "m = Suc j'"
-            using False \<open>odd m\<close> \<open>j' < m\<close> \<open>even j'\<close> by presburger
-          then have "Z m = {}"
+          then have [simp]: "m = Suc j'"
+            using \<open>odd m\<close> \<open>j' < m\<close> \<open>even j'\<close> by presburger
+          have "Z m = {}"
             by (auto simp: Z_def)
           then show ?thesis
-            using less.prems False by (auto simp: eval_nat_numeral)
+            by simp
         qed
       qed
       then show ?thesis
@@ -520,7 +520,7 @@ next
     using maximal[of "j'+2"] False \<open>j' < j\<close> j odd_RBS 
     by (simp add: J_def) (smt (verit, best) Suc_lessI even_Suc)
   then have le1: "hgt k (p (j'+2)) \<le> 1"
-    by (smt (verit, best) \<open>k>0\<close> zero_less_one hgt_Least qfun0 qfun_mono less_imp_le)
+    by (smt (verit) \<open>0 < k\<close> hgt_Least qfun0 qfun_strict_mono zero_less_one)
   moreover 
   have j'_dreg: "j' \<in> Step_class \<mu> l k {dreg_step}"
     using RBS_def \<open>Suc j' \<in> RBS\<close> dreg_before_step by blast
@@ -534,7 +534,7 @@ next
   then have hgt_le_hgt: "hgt k (p j') \<le> hgt k (p (j'+2)) + 2 * eps k powr (-1/2)"
   proof cases
     case R
-    have "real (hgt k (p j')) \<le> real (hgt k (pee \<mu> l k (Suc j')))"
+    have "real (hgt k (p j')) \<le> hgt k (pee \<mu> l k (Suc j'))"
       using Y_6_5_DegreeReg[OF j'_dreg] \<open>k>0\<close> by (simp add: eval_nat_numeral p_def)
     also have "\<dots> \<le> hgt k (p (j'+2)) + 2 * eps k powr (-1/2)"
       using Y_6_5_Red[OF R \<open>k\<ge>16\<close>] 1 by (simp add: eval_nat_numeral p_def)
@@ -562,7 +562,7 @@ next
     have 2: "(1 + eps k) ^ (hgt k (p j') - Suc 0) \<le> 2"
       using B big2 \<open>k>0\<close> eps_ge0
       by (smt (verit) diff_Suc_less hgt_gt0 nat_less_real_le powr_mono powr_realpow)
-    have *: "x \<ge> (0::real) \<Longrightarrow> inverse (x powr (1/2)) * x = x powr (1/2)" for x
+    have *: "x \<ge> 0 \<Longrightarrow> inverse (x powr (1/2)) * x = x powr (1/2)" for x::real
       by (simp add: inverse_eq_divide powr_half_sqrt real_div_sqrt)
     have "p0 - p j' \<le> 0"
       by (simp add: pSj')
@@ -650,10 +650,8 @@ next
     then show ?thesis
     proof cases
       case 1
-      then have "m-1 = 0"
-        by simp
-      then show ?thesis
-        by (smt (verit) "*" eps_ge0 pee_eq_p0)
+      then show ?thesis thm verit_minus_simplify(1)
+        by (smt (verit, best) "*" eps_ge0 pee_eq_p0 cancel_comm_monoid_add_class.diff_cancel)
     next
       case 2
       then have m2: "m-2 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
@@ -698,7 +696,7 @@ lemma Big_Y_6_1:
   shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_Y_6_1 \<mu> l"
   using p0_min assms Big_Y_6_2
   unfolding Big_Y_6_1_def eps_def
-  apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
+  apply (simp add: eventually_conj_iff all_imp_conj_distrib)  
   apply (intro conjI strip eventually_all_ge_at_top eventually_all_geI0; real_asymp)
   done
 
@@ -880,7 +878,6 @@ proof -
       using big_p0 p0_01 \<open>0 < p0m\<close>
       by (intro power_decreasing st_le_2k) (auto simp: p0m_def)
     finally have \<section>: "2 powr ok_fun_61 k \<le> (1 - 2 * eps k powr (1/2) / p0) ^ card st" .
-
     have "(1 - 2 * eps k powr (1 / 2) / p0) ^ card st * p0 ^ card st
        = ((1 - 2 * eps k powr (1 / 2) / p0) * p0) ^ card st"
       by (simp add: power_mult_distrib)
