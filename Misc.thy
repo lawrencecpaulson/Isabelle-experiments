@@ -1,10 +1,60 @@
 section \<open>Misc experiments\<close>
 
 theory Misc imports
-  "HOL-Analysis.Analysis" "HOL-Decision_Procs.Approximation"
+  "HOL-Analysis.Analysis" "HOL-Decision_Procs.Approximation"  "HOL-Real_Asymp.Real_Asymp" 
  "HOL-ex.Sketch_and_Explore"
    
 begin
+
+lemma "eventually (\<lambda>x::real. 1 - 1/x \<le> ln(x)) (at_right 0)"
+  by real_asymp
+
+lemma "eventually (\<lambda>x::real. 1 / x \<le> 1 / x\<^sup>2) (at 0)"
+  by real_asymp
+
+lemma "eventually (\<lambda>x::real. 1 / \<bar>x\<bar> \<le> 1 / x\<^sup>2) (at 0)"
+  by real_asymp
+
+lemma "eventually (\<lambda>x::real. 1 / \<bar>x\<bar> \<le> 1 / x\<^sup>2) (at_left 0)"
+  by real_asymp
+
+lemma sin_npi_numeral [simp]: "sin(Num.numeral n * pi) = 0"
+  by (simp add: sin_zero_iff_int2)
+
+lemma sin_npi2_numeral [simp]: "sin (pi * Num.numeral n) = 0"
+  by (metis of_nat_numeral sin_npi2)
+
+lemma cos_npi_numeral [simp]: "cos (Num.numeral n * pi) = (- 1) ^ Num.numeral n"
+  by (metis cos_npi of_nat_numeral)
+
+lemma cos_npi2_numeral [simp]: "cos (pi * Num.numeral n) = (- 1) ^ Num.numeral n"
+  by (metis cos_npi2 of_nat_numeral)
+
+lemma "\<exists>f'. ((\<lambda>x. exp(-x)*cos(2*pi*x)) has_real_derivative f' t) (at t) \<and> P(f' t)" for t
+  apply (rule exI conjI derivative_eq_intros | force)+
+  oops
+
+(*Source: https://tutorial.math.lamar.edu/Solutions/CalcII/IntegrationByParts/Prob6.aspx*)
+lemma deriv_prob6: "((\<lambda>x. x^2 * sin(4*x)/4 - sin(4*x)/32 + x * cos(4*x)/8) 
+        has_real_derivative x^2 * cos(4*x)) (at x)" for x
+  apply (rule exI derivative_eq_intros refl | force)+
+  apply (simp add: field_simps)
+  done
+
+lemma "((\<lambda>x. x^2 * cos(4*x)) has_integral (pi/8)) {0..pi}"
+proof -
+  define f where "f \<equiv> \<lambda>x::real. x^2 * sin(4*x)/4 - sin(4*x)/32 + x * cos(4*x)/8"
+  have derf: "(f has_vector_derivative x^2 * cos(4*x)) (at x within {0..pi})" for x
+    unfolding f_def has_real_derivative_iff_has_vector_derivative [symmetric]
+    by (rule exI derivative_eq_intros refl | force simp: field_simps)+
+  moreover have "f pi - f 0 = pi/8"
+    by (simp add: f_def mult.commute)
+  ultimately show ?thesis
+    using fundamental_theorem_of_calculus [OF _ derf]
+    by (simp add: f_def field_simps)
+qed
+
+
 
 
 lemma DD: "x>(0::real) \<Longrightarrow> y>0 \<Longrightarrow> x powr (ln y) = y powr (ln x)"
