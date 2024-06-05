@@ -24,27 +24,46 @@ lemma (in Book) DDG:
   assumes X0ge: "real (card X0) \<ge> nV/2" and "p0 \<ge> 1/2"
   shows "nV \<le> 2 ^ f k * inverse \<mu> ^ k * (1 / (1-\<mu>)) ^ t * (\<mu> / bigbeta \<mu> k k) ^ s"
 proof -
+  define g where "g \<equiv> \<lambda>k. ((nat \<lceil>real k powr (3/4)\<rceil>) * log 2 k)"
+  have "k>0"
+    using Colours_kn0 \<open>Colours k k\<close> by auto
   have big53: "Big_Red_5_3 \<mu> k"
     using Big_Y_6_2_def assms(5) by presburger
   then have bb_gt0: "bigbeta \<mu> k k > 0"
     using \<mu> \<open>Colours k k\<close> bigbeta_gt0 by blast
-  have "1/4 \<le> p0 - 3 * eps k"
-    sorry
-  also have "\<dots> \<le> pee \<mu> k k m"
-    using Y_6_2_halted assms by blast
-  finally have "pee \<mu> k k m \<ge> 1/4" .
+
+  have k34: "k powr (3/4) \<le> k powr 1"
+    using \<open>k>0\<close> by (intro powr_mono) auto
+
 
   have "2 powr (ok_fun_71 \<mu> k - 1) * \<mu>^k * (1-\<mu>) ^ t * (bigbeta \<mu> k k / \<mu>) ^ s * nV
       \<le> 2 powr ok_fun_71 \<mu> k * \<mu>^k * (1-\<mu>) ^ t * (bigbeta \<mu> k k / \<mu>) ^ s * card X0"
-    using X0ge \<mu> by (simp add: powr_diff mult.assoc bigbeta_ge0  mult_left_mono)
+    using X0ge \<mu> by (simp add: powr_diff mult.assoc bigbeta_ge0 mult_left_mono)
   also have "... \<le> card (X m)"
     using X_7_1 assms by blast
-  finally have 58: "card (X m) \<ge> 2 powr (ok_fun_71 \<mu> k - 1) * \<mu>^k * (1-\<mu>) ^ t * (bigbeta \<mu> k k / \<mu>) ^ s * nV" .
-  then have "nV \<le> 2 powr (1 - ok_fun_71 \<mu> k) * (1/\<mu>)^k * (1 / (1-\<mu>)) ^ t * (\<mu> / bigbeta \<mu> k k) ^ s * card (X m)"
-    using \<mu> bb_gt0 by (simp add: powr_diff mult.commute divide_simps)
-
+  also have "... \<le> 2 powr (g k)"
+  proof -
+    have "1/k < 1/4"
       sorry
+    also have "\<dots> \<le> p0 - 3 * eps k"
+      sorry
+    also have "\<dots> \<le> pee \<mu> k k m"
+      using Y_6_2_halted assms by blast
+    finally have "pee \<mu> k k m > 1/k" .
+    moreover have "termination_condition k k (X m) (Yseq \<mu> k k m)"
+      unfolding m_def X_def
+      using \<mu> \<open>Colours k k\<close> halted_point_halted step_terminating_iff by blast
+    ultimately have "card (X m) \<le> RN k (nat \<lceil>real k powr (3/4)\<rceil>)"
+      by (simp add: pee_def termination_condition_def X_def)
+    then show ?thesis
+      unfolding g_def by (meson RN34_le_2powr_ok \<open>0 < k\<close> of_nat_le_iff order.refl order.trans)
+  qed
+  finally have 58: "2 powr (g k) \<ge> 2 powr (ok_fun_71 \<mu> k - 1) * \<mu>^k * (1-\<mu>) ^ t * (bigbeta \<mu> k k / \<mu>) ^ s * nV" .
+  then have "nV \<le> 2 powr (1 - ok_fun_71 \<mu> k + g k) * (1/\<mu>)^k * (1 / (1-\<mu>)) ^ t * (\<mu> / bigbeta \<mu> k k) ^ s"
+    using \<mu> bb_gt0 by (simp add: powr_diff powr_add mult.commute divide_simps) argo
 
+  moreover have "RN k k \<le> nV / card (X m)"
+      sorry
 
 lemma From_11_2:
   fixes k::nat and \<mu>::real

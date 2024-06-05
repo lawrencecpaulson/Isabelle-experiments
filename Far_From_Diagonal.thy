@@ -388,7 +388,32 @@ proof -
     done
 qed
 
-end
+end (*context P0_Min*)
+
+lemma "(\<lambda>k. (nat \<lceil>real k powr (3/4)\<rceil>) * log 2 k) \<in> o(real)"
+  by real_asymp
+
+lemma RN34_le_2powr_ok:
+  fixes l k::nat
+  assumes "l \<le> k" "0<k"
+  defines "l34 \<equiv> nat \<lceil>real l powr (3/4)\<rceil>"
+  shows "RN k l34 \<le> 2 powr ((nat \<lceil>k powr (3/4)\<rceil>) * log 2 k)"
+proof -
+  have "RN k l34 \<le> k powr (l34-1)"
+    \<comment> \<open>Bhavik's off-diagonal Ramsey upper bound; can't use @{term "2^(k+l34)"}\<close>
+    using RN_le_argpower' \<open>k>0\<close> powr_realpow by auto
+  also have "\<dots> \<le> k powr l34"
+    using \<open>k>0\<close> powr_mono by force
+  also have "\<dots> \<le> 2 powr (l34 * log 2 k)"
+    by (smt (verit, best) mult.commute \<open>k>0\<close> of_nat_0_less_iff powr_log_cancel powr_powr)
+  also have "\<dots> \<le> 2 powr ((nat \<lceil>real k powr (3/4)\<rceil>) * log 2 k)"
+    unfolding l34_def 
+  proof (intro powr_mono powr_mono2 mult_mono ceiling_mono of_nat_mono nat_mono \<open>l \<le> k\<close>)
+    show "0 \<le> real (nat \<lceil>k powr (3/4)\<rceil>)"
+      by linarith
+  qed (use assms in auto)
+  finally show ?thesis .
+qed
 
 text \<open>Here @{term n} really refers to the cardinality of @{term V}, 
    so actually @{term nV}\<close>
@@ -452,18 +477,8 @@ proof -
       using halted_point_halted \<open>Colours l k\<close> \<gamma>01
       by (fastforce simp: step_terminating_iff termination_condition_def pee_def m_def l34_def)
   qed
-  also have "\<dots> \<le> k powr (l34-1)"   \<comment> \<open>Bhavik's off-diagonal upper bound; can't use @{term "2^(k+l34)"}\<close>
-    using RN_le_argpower' \<open>k>0\<close> powr_realpow by auto
-  also have "\<dots> \<le> k powr l34"
-    using \<open>k>0\<close> powr_mono by force
-  also have "\<dots> \<le> 2 powr (l34 * log 2 k)"
-    by (smt (verit, best) mult.commute \<open>k>0\<close> of_nat_0_less_iff powr_log_cancel powr_powr)
   also have "\<dots> \<le> 2 powr ((nat \<lceil>real k powr (3/4)\<rceil>) * log 2 k)"
-    unfolding l34_def 
-  proof (intro powr_mono powr_mono2 mult_mono ceiling_mono of_nat_mono nat_mono lk)
-    show "0 \<le> real (nat \<lceil>k powr (3/4)\<rceil>)"
-      by linarith
-  qed (use lk in auto)
+    using RN34_le_2powr_ok l34_def lk by blast
   finally have "2 powr (ok_fun_71 \<gamma> k + ok_fun_94 k) * (\<beta>/\<gamma>) ^ card \<S>
                * exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) / 2
               \<le> 2 powr ((nat \<lceil>real k powr (3/4)\<rceil>) * log 2 k)"
