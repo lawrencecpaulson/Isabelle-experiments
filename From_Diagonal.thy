@@ -15,7 +15,7 @@ begin
 lemma (in Book) From_11_2:
   fixes k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours k k"  
-  assumes big71: "Big_X_7_1 \<mu> k" and big62: "Big_Y_6_2 \<mu> k" and big86: "Big_ZZ_8_6 \<mu> k" and big\<mu>: "1 \<le> \<mu> * (real k)\<^sup>2"
+  assumes big71: "Big_X_7_1 \<mu> k" and big62: "Big_Y_6_2 \<mu> k" and big86: "Big_ZZ_8_6 \<mu> k" and big\<mu>1: "1 \<le> \<mu> * real k"
   defines "X \<equiv> Xseq \<mu> k k" and "\<D> \<equiv> Step_class \<mu> k k {dreg_step}"
   defines "\<R> \<equiv> Step_class \<mu> k k {red_step}" and "\<S> \<equiv> Step_class \<mu> k k {dboost_step}"
   defines "t \<equiv> card \<R>" and "s \<equiv> card \<S>"
@@ -24,6 +24,8 @@ lemma (in Book) From_11_2:
   obtains f::"nat\<Rightarrow>real" where "f \<in> o(real)"
                  "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * real(s+t) / s) + f(k)"
 proof -
+  have big\<mu>2: "1 \<le> \<mu> * (real k)\<^sup>2"
+    by (smt (verit, ccfv_SIG) Suc_leI assms(1) assms(7) mult_mono numeral_nat(7) of_nat_0_le_iff of_nat_0_less_iff power2_eq_square power_less1_D power_less_power_Suc real_of_nat_ge_one_iff zero_le_power)
   define g where "g \<equiv> \<lambda>k. ((nat \<lceil>real k powr (3/4)\<rceil>) * log 2 k)"
   have g: "g \<in> o(real)"
     unfolding g_def by real_asymp
@@ -33,6 +35,8 @@ proof -
     using Big_Y_6_2_def assms(5) by presburger
   then have bb_gt0: "bigbeta \<mu> k k > 0"
     using \<mu> \<open>Colours k k\<close> bigbeta_gt0 by blast
+  have "t < k"
+    by (simp add: \<R>_def \<mu> t_def \<open>Colours k k\<close> red_step_limit)
 
   have k34: "k powr (3/4) \<le> k powr 1"
     using \<open>k>0\<close> by (intro powr_mono) auto
@@ -40,9 +44,9 @@ proof -
   have "2 powr (ok_fun_71 \<mu> k - 1) * \<mu>^k * (1-\<mu>) ^ t * (bigbeta \<mu> k k / \<mu>) ^ s * nV
       \<le> 2 powr ok_fun_71 \<mu> k * \<mu>^k * (1-\<mu>) ^ t * (bigbeta \<mu> k k / \<mu>) ^ s * card X0"
     using X0ge \<mu> by (simp add: powr_diff mult.assoc bigbeta_ge0 mult_left_mono)
-  also have "... \<le> card (X m)"
+  also have "\<dots> \<le> card (X m)"
     using X_7_1 assms by blast
-  also have "... \<le> 2 powr (g k)"
+  also have "\<dots> \<le> 2 powr (g k)"
   proof -
     have "1/k < 1/4"
       sorry
@@ -60,7 +64,7 @@ proof -
       unfolding g_def by (meson RN34_le_2powr_ok \<open>0 < k\<close> of_nat_le_iff order.refl order.trans)
   qed
   finally have 58: "2 powr (g k) \<ge> 2 powr (ok_fun_71 \<mu> k - 1) * \<mu>^k * (1-\<mu>) ^ t * (bigbeta \<mu> k k / \<mu>) ^ s * nV" .
-  then have 59: "nV \<le> 2 powr (1 - ok_fun_71 \<mu> k + g k) * inverse \<mu> ^ k * inverse(1-\<mu>) ^ t * (\<mu> / bigbeta \<mu> k k) ^ s"
+  then have 59: "nV \<le> 2 powr (1 - ok_fun_71 \<mu> k + g k) * (1/\<mu>) ^ k * (1 / (1-\<mu>)) ^ t * (\<mu> / bigbeta \<mu> k k) ^ s"
     using \<mu> bb_gt0 by (simp add: powr_diff powr_add mult.commute divide_simps) argo
 
   define a where "a \<equiv> 2 / (1-\<mu>)"
@@ -73,32 +77,81 @@ proof -
     have h: "h \<in> o(real)"
       unfolding h_def by real_asymp
 
-    have DD: "(\<mu> / bigbeta \<mu> k k) ^ s \<ge> 0"
-      using \<mu> bb_gt0 by fastforce
-
     have \<beta>: "bigbeta \<mu> k k \<ge> 1 / (real k)\<^sup>2"
       using \<open>Colours k k\<close> \<mu> big53 bigbeta_ge_square by blast
     then have "(\<mu> / bigbeta \<mu> k k) ^ s \<le> (\<mu> * (real k)\<^sup>2) ^ s"
       using bb_gt0 \<open>k>0\<close> \<mu> by (intro power_mono) (auto simp add: divide_simps mult.commute)
-    also have "... \<le> (\<mu> * (real k)\<^sup>2) powr (k powr (39/40))"
-      using \<mu> big\<mu> 1 by (smt (verit) powr_less_mono powr_one_eq_one powr_realpow)
-    also have "... = 2 powr (log 2 ((\<mu> * (real k)\<^sup>2) powr (k powr (39/40))))"
-      by (smt (verit, best) big\<mu> powr_gt_zero powr_log_cancel)
-    also have "... = 2 powr h k"
-      using \<mu> big\<mu> \<open>k>0\<close> by (simp add: log_powr log_nat_power log_mult h_def)
+    also have "\<dots> \<le> (\<mu> * (real k)\<^sup>2) powr (k powr (39/40))"
+      using \<mu> big\<mu>2 1 by (smt (verit) powr_less_mono powr_one_eq_one powr_realpow)
+    also have "\<dots> = 2 powr (log 2 ((\<mu> * (real k)\<^sup>2) powr (k powr (39/40))))"
+      by (smt (verit, best) big\<mu>2 powr_gt_zero powr_log_cancel)
+    also have "\<dots> = 2 powr h k"
+      using \<mu> big\<mu>2 \<open>k>0\<close> by (simp add: log_powr log_nat_power log_mult h_def)
     finally have \<section>: "(\<mu> / bigbeta \<mu> k k) ^ s \<le> 2 powr h k" .
-    have *: "nV \<le> 2 powr (1 - ok_fun_71 \<mu> k + g k) * inverse \<mu> ^ k * inverse(1-\<mu>) ^ t * 2 powr h k"
-      using 59 mult_left_mono [OF \<section>, of "2 powr (1 - ok_fun_71 \<mu> k + g k) * inverse \<mu> ^ k * inverse(1-\<mu>) ^ t"]
-      apply (simp add: mult_ac)
-      by (smt (verit) \<mu> plus_inverse_ge_2 pos_prod_lt powr_ge_pzero zero_less_power)
+    have \<section>: "nV \<le> 2 powr (1 - ok_fun_71 \<mu> k + g k) * (1/\<mu>) ^ k * (1 / (1-\<mu>)) ^ t * 2 powr h k"
+      using 59 mult_left_mono [OF \<section>, of "2 powr (1 - ok_fun_71 \<mu> k + g k) * (1/\<mu>) ^ k * (1 / (1-\<mu>)) ^ t"]
+      by (smt (verit) \<mu> pos_prod_le powr_nonneg_iff zero_less_divide_iff zero_less_power)
+    have *: "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + (1 - ok_fun_71 \<mu> k + g k + h k)"
+      using \<mu> gorder_ge2
+      by (simp add: log_mult log_nat_power order.trans [OF Transcendental.log_mono [OF _ _ \<section>]])
+
+    define sl where "sl \<equiv> \<lambda>k. \<bar>k powr (39/40) * (log 2 \<mu> + log 2 k)\<bar>"
+    have sl: "sl \<in> o(real)"
+      unfolding sl_def by real_asymp
+    have le_sl: "\<bar>s * log 2 (\<mu> * real(s+t) / s)\<bar> \<le> sl k"
+    proof (cases "s>0")
+      case True
+      with \<open>s>0\<close> have \<mu>eq: "\<mu> * (s + real t) / s = \<mu> * (1 + t/s)"
+        by (auto simp: distrib_left)
+      show ?thesis 
+      proof (cases "log 2 (\<mu> * real(s+t) / s) \<le> 0")
+        case True
+        have "s * (- log 2 (\<mu> * (1 + t/s))) \<le> real k powr (39/40) * (log 2 \<mu> + log 2 (real k))"
+        proof (intro mult_mono)
+          show "s \<le> k powr (39 / 40)"
+            using "1" by linarith
+        next
+          have "inverse (\<mu> * (1 + real t / real s)) \<le> \<mu> * k"
+            sorry
+          then show "- log 2 (\<mu> * (1 + real t / real s)) \<le> log 2 \<mu> + log 2 (real k)"
+            apply (subst log_inverse [symmetric])
+            apply (smt (verit, del_insts) \<mu>(1) divide_nonneg_nonneg mult_pos_pos of_nat_0_le_iff)
+            by (metis Num.of_nat_simps(1) Transcendental.log_mono \<mu>(1) \<open>0 < k\<close> \<open>0 < s\<close> add_sign_intros(2) arith_special(3) div_0 divide_pos_pos field_class.field_divide_inverse less_add_same_cancel2 log_mult mult.left_neutral mult_sign_intros(5) not_gr0 of_nat_0_less_iff zero_less_one)
+        qed (use True \<mu>eq in auto)
+        then show ?thesis
+          using \<mu> \<open>s>0\<close> big\<mu>1
+          apply (auto simp: sl_def mult_le_0_iff \<mu>eq)
+          by (smt (verit) Num.of_nat_simps(4) True \<mu>eq of_nat_0_less_iff pos_prod_le)
+      next
+        case False
+        then have "\<bar>s * log 2 (\<mu> * real (s+t) / s)\<bar> \<le> k powr (39/40) * log 2 (\<mu> * real (s+t) / s)"
+          using "1" by auto
+        also have "... = k powr (39/40) * (log 2 \<mu> + log 2 (1 + t/s))"
+          by (smt (verit) Num.of_nat_simps(4) \<mu>eq assms(1) log_mult of_nat_0_le_iff zero_compare_simps(5))
+        also have "... \<le> k powr (39/40) * (log 2 \<mu> + log 2 k)"
+        proof -
+          have \<dagger>: "0 < 1 + t/s"
+            by (smt (verit) divide_nonneg_nonneg of_nat_0_le_iff)
+          then have "1 + t/s \<le> 1 + t"
+            using \<open>s>0\<close>
+            by (metis Groups.add_ac(2) Multiseries_Expansion.intyness_1 add_left_mono div_by_1 frac_le nat_arith.rule0 nat_less_real_le of_nat_0_le_iff of_nat_add zero_less_one)
+          also have "... \<le> k"
+            using \<open>t < k\<close> by linarith
+          finally show ?thesis
+            using \<mu> \<dagger> by (intro mult_left_mono add_mono Transcendental.log_mono) auto
+        qed
+        also have "... \<le> sl k"
+          unfolding sl_def by linarith
+        finally show ?thesis .
+      qed 
+    qed (auto simp: sl_def)
     show ?thesis
     proof
-      let ?f = "\<lambda>k. 1 - ok_fun_71 \<mu> k + g k + h k"
+      let ?f = "\<lambda>k. 1 - ok_fun_71 \<mu> k + g k + h k + sl k"
       show "?f \<in> o(real)"
-        using g h \<mu> by (simp add: const_smallo_real ok_fun_71 sum_in_smallo)
+        using g h sl \<mu> by (simp add: const_smallo_real ok_fun_71 sum_in_smallo)
       show "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * real(s+t) / s) + ?f(k)"
-        using * apply (simp add: powr_add powr_diff mult_ac)
-        sorry
+        using le_sl by (intro order.trans [OF *]) auto
     qed
   next
     case 2
