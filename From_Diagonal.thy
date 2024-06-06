@@ -25,7 +25,7 @@ lemma (in Book) From_11_2:
                  "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * real(s+t) / s) + f(k)"
 proof -
   have big\<mu>2: "1 \<le> \<mu> * (real k)\<^sup>2"
-    by (smt (verit, ccfv_SIG) Suc_leI assms(1) assms(7) mult_mono numeral_nat(7) of_nat_0_le_iff of_nat_0_less_iff power2_eq_square power_less1_D power_less_power_Suc real_of_nat_ge_one_iff zero_le_power)
+    unfolding power2_eq_square by (smt (verit, ccfv_SIG) big\<mu>1 \<mu> mult_less_cancel_left1 mult_mono')
   define g where "g \<equiv> \<lambda>k. ((nat \<lceil>real k powr (3/4)\<rceil>) * log 2 k)"
   have g: "g \<in> o(real)"
     unfolding g_def by real_asymp
@@ -111,30 +111,31 @@ proof -
           show "s \<le> k powr (39 / 40)"
             using "1" by linarith
         next
-          have "inverse (\<mu> * (1 + real t / real s)) \<le> \<mu> * k"
+          have "0 < \<mu> * (1 + real t / real s)"
+            using \<mu> \<open>0 < s\<close> by (simp add: zero_less_mult_iff add_num_frac)
+          moreover have "inverse (\<mu> * (1 + real t / real s)) \<le> \<mu> * k"
             sorry
-          then show "- log 2 (\<mu> * (1 + real t / real s)) \<le> log 2 \<mu> + log 2 (real k)"
-            apply (subst log_inverse [symmetric])
-            apply (smt (verit, del_insts) \<mu>(1) divide_nonneg_nonneg mult_pos_pos of_nat_0_le_iff)
-            by (metis Num.of_nat_simps(1) Transcendental.log_mono \<mu>(1) \<open>0 < k\<close> \<open>0 < s\<close> add_sign_intros(2) arith_special(3) div_0 divide_pos_pos field_class.field_divide_inverse less_add_same_cancel2 log_mult mult.left_neutral mult_sign_intros(5) not_gr0 of_nat_0_less_iff zero_less_one)
+          ultimately show "- log 2 (\<mu> * (1 + real t / real s)) \<le> log 2 \<mu> + log 2 (real k)"
+            using \<mu> \<open>0 < k\<close> by (simp add: zero_less_mult_iff flip: log_inverse log_mult)
         qed (use True \<mu>eq in auto)
-        then show ?thesis
-          using \<mu> \<open>s>0\<close> big\<mu>1
-          apply (auto simp: sl_def mult_le_0_iff \<mu>eq)
-          by (smt (verit) Num.of_nat_simps(4) True \<mu>eq of_nat_0_less_iff pos_prod_le)
+        with \<mu> \<open>s>0\<close> big\<mu>1 True show ?thesis
+          by (simp add: \<mu>eq sl_def mult_le_0_iff)
       next
         case False
         then have "\<bar>s * log 2 (\<mu> * real (s+t) / s)\<bar> \<le> k powr (39/40) * log 2 (\<mu> * real (s+t) / s)"
           using "1" by auto
+        also have "... = k powr (39/40) * (log 2 (\<mu> * (1 + t/s)))"
+          by (simp add: \<mu>eq)
         also have "... = k powr (39/40) * (log 2 \<mu> + log 2 (1 + t/s))"
-          by (smt (verit) Num.of_nat_simps(4) \<mu>eq assms(1) log_mult of_nat_0_le_iff zero_compare_simps(5))
+          using \<mu> by (smt (verit, best) divide_nonneg_nonneg log_mult of_nat_0_le_iff) 
         also have "... \<le> k powr (39/40) * (log 2 \<mu> + log 2 k)"
         proof -
           have \<dagger>: "0 < 1 + t/s"
             by (smt (verit) divide_nonneg_nonneg of_nat_0_le_iff)
+          have "real t \<le> real t * real s"
+            using True mult_le_cancel_left1 by fastforce
           then have "1 + t/s \<le> 1 + t"
-            using \<open>s>0\<close>
-            by (metis Groups.add_ac(2) Multiseries_Expansion.intyness_1 add_left_mono div_by_1 frac_le nat_arith.rule0 nat_less_real_le of_nat_0_le_iff of_nat_add zero_less_one)
+            by (simp add: True pos_divide_le_eq)
           also have "... \<le> k"
             using \<open>t < k\<close> by linarith
           finally show ?thesis
