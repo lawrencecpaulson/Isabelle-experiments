@@ -15,7 +15,7 @@ begin
 lemma (in Book) From_11_2:
   fixes k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours k k"  
-  assumes big71: "Big_X_7_1 \<mu> k" and big62: "Big_Y_6_2 \<mu> k" and big86: "Big_ZZ_8_6 \<mu> k" and big\<mu>1: "1 \<le> \<mu> * real k"
+  assumes big71: "Big_X_7_1 \<mu> k" and big62: "Big_Y_6_2 \<mu> k" and big86: "Big_ZZ_8_6 \<mu> k" and big\<mu>: "1 \<le> \<mu>^2 * real k"
   defines "X \<equiv> Xseq \<mu> k k" and "\<D> \<equiv> Step_class \<mu> k k {dreg_step}"
   defines "\<R> \<equiv> Step_class \<mu> k k {red_step}" and "\<S> \<equiv> Step_class \<mu> k k {dboost_step}"
   defines "t \<equiv> card \<R>" and "s \<equiv> card \<S>"
@@ -24,6 +24,9 @@ lemma (in Book) From_11_2:
   obtains f::"nat\<Rightarrow>real" where "f \<in> o(real)"
                  "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * real(s+t) / s) + f(k)"
 proof -
+  have big\<mu>1: "1 \<le> \<mu> * real k"
+    using big\<mu> \<mu>
+    by (smt (verit, best) mult_less_cancel_right2 mult_right_mono of_nat_less_0_iff power2_eq_square)
   have big\<mu>2: "1 \<le> \<mu> * (real k)\<^sup>2"
     unfolding power2_eq_square by (smt (verit, ccfv_SIG) big\<mu>1 \<mu> mult_less_cancel_left1 mult_mono')
   define g where "g \<equiv> \<lambda>k. ((nat \<lceil>real k powr (3/4)\<rceil>) * log 2 k)"
@@ -103,6 +106,16 @@ proof -
       case True
       with \<open>s>0\<close> have \<mu>eq: "\<mu> * (s + real t) / s = \<mu> * (1 + t/s)"
         by (auto simp: distrib_left)
+      have lek: "1 + t/s \<le> k" (* used only once, so move down?*)
+      proof -
+        have "real t \<le> real t * real s"
+          using True mult_le_cancel_left1 by fastforce
+        then have "1 + t/s \<le> 1 + t"
+          by (simp add: True pos_divide_le_eq)
+        also have "... \<le> k"
+          using \<open>t < k\<close> by linarith
+        finally show ?thesis .
+      qed
       show ?thesis 
       proof (cases "log 2 (\<mu> * real(s+t) / s) \<le> 0")
         case True
@@ -111,10 +124,13 @@ proof -
           show "s \<le> k powr (39 / 40)"
             using "1" by linarith
         next
-          have "0 < \<mu> * (1 + real t / real s)"
+          have "inverse (\<mu> * (1 + t/s)) \<le> inverse \<mu>"
+            using \<mu> inverse_le_1_iff by fastforce
+          also have "\<dots> \<le> \<mu> * k"
+            using big\<mu> \<mu> by (metis neq_iff mult.assoc mult_le_cancel_left_pos power2_eq_square right_inverse)
+          finally have "inverse (\<mu> * (1 + t/s)) \<le> \<mu> * k" .
+          moreover have "0 < \<mu> * (1 + real t / real s)"
             using \<mu> \<open>0 < s\<close> by (simp add: zero_less_mult_iff add_num_frac)
-          moreover have "inverse (\<mu> * (1 + real t / real s)) \<le> \<mu> * k"
-            sorry
           ultimately show "- log 2 (\<mu> * (1 + real t / real s)) \<le> log 2 \<mu> + log 2 (real k)"
             using \<mu> \<open>0 < k\<close> by (simp add: zero_less_mult_iff flip: log_inverse log_mult)
         qed (use True \<mu>eq in auto)
@@ -130,16 +146,10 @@ proof -
           using \<mu> by (smt (verit, best) divide_nonneg_nonneg log_mult of_nat_0_le_iff) 
         also have "... \<le> k powr (39/40) * (log 2 \<mu> + log 2 k)"
         proof -
-          have \<dagger>: "0 < 1 + t/s"
+          have "0 < 1 + t/s"
             by (smt (verit) divide_nonneg_nonneg of_nat_0_le_iff)
-          have "real t \<le> real t * real s"
-            using True mult_le_cancel_left1 by fastforce
-          then have "1 + t/s \<le> 1 + t"
-            by (simp add: True pos_divide_le_eq)
-          also have "... \<le> k"
-            using \<open>t < k\<close> by linarith
-          finally show ?thesis
-            using \<mu> \<dagger> by (intro mult_left_mono add_mono Transcendental.log_mono) auto
+          then show ?thesis
+            using \<mu> lek by (intro mult_left_mono add_mono Transcendental.log_mono) auto
         qed
         also have "... \<le> sl k"
           unfolding sl_def by linarith
