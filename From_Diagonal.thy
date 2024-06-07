@@ -5,15 +5,35 @@ theory From_Diagonal
 
 begin
 
-lemma "\<forall>\<^sup>\<infinity>k. 1/4 \<le> 1/2 - 3 * eps k"
+lemma "\<forall>\<^sup>\<infinity>k. 1/k \<le> 1/2 - 3 * eps k"
   unfolding eps_def by real_asymp
 
-(* this will need to cover a closed interval, as usual; do I need a single k?*)
-lemma 
-  assumes "0<\<mu>0" "\<mu>0 \<le> \<mu>" "\<mu> \<le> \<mu>1" "\<mu>1<1" 
-  shows "\<forall>\<^sup>\<infinity>k. 2 / (1-\<mu>) * real k powr (-1/40) < 1"
-  using assms by real_asymp
+definition "Big_From_11_2 \<equiv>     
+   \<lambda>\<mu> k. Big_ZZ_8_6 \<mu> k \<and> Big_X_7_1 \<mu> k \<and> Big_Y_6_2 \<mu> k \<and> Big_Red_5_3 \<mu> k \<and> Big_Blue_4_1 \<mu> k 
+       \<and> 1 \<le> \<mu>^2 * real k \<and> 2 / (1-\<mu>) * real k powr (-1/40) < 1 \<and> 1/k < 1/2 - 3 * eps k"
 
+lemma Big_From_11_2:
+  assumes "0<\<mu>0" "\<mu>0 \<le> \<mu>1" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_From_11_2 \<mu> k"
+proof -
+  have A: "(\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 1 \<le> \<mu>\<^sup>2 * k)"
+    using assms
+    apply (intro eventually_all_geI0)
+     apply real_asymp
+    apply (meson landau_omega.R_trans less_eq_real_def mult_right_mono of_nat_0_le_iff power_mono)
+    done
+  have B: "(\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 2 / (1-\<mu>) * real k powr (-1/40) < 1)"
+    using assms
+    apply (intro eventually_all_geI1)
+     apply real_asymp
+    by simp
+  have C: "\<forall>\<^sup>\<infinity>k. 1/k < 1/2 - 3 * eps k"
+    unfolding eps_def by real_asymp
+  show ?thesis
+    unfolding Big_From_11_2_def
+    using assms Big_ZZ_8_6 Big_X_7_1 Big_Y_6_2 Big_Red_5_3 Big_Blue_4_1 A B C
+    by (simp add: eventually_conj_iff all_imp_conj_distrib)  
+qed
 
 context Book
 begin
@@ -21,8 +41,7 @@ begin
 lemma (in Book) From_11_2:
   fixes k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours k k"  
-  assumes big71: "Big_X_7_1 \<mu> k" and big62: "Big_Y_6_2 \<mu> k" and big86: "Big_ZZ_8_6 \<mu> k" and big\<mu>: "1 \<le> \<mu>^2 * real k"
-   and big_le1: "2 / (1-\<mu>) * real k powr (-1/40) < 1"
+  assumes big: "Big_From_11_2 \<mu> k"
   defines "X \<equiv> Xseq \<mu> k k" and "\<D> \<equiv> Step_class \<mu> k k {dreg_step}"
   defines "\<R> \<equiv> Step_class \<mu> k k {red_step}" and "\<S> \<equiv> Step_class \<mu> k k {dboost_step}"
   defines "t \<equiv> card \<R>" and "s \<equiv> card \<S>"
@@ -31,8 +50,10 @@ lemma (in Book) From_11_2:
   obtains f::"nat\<Rightarrow>real" where "f \<in> o(real)"
                  "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * real(s+t) / s) + f(k)"
 proof -
-  have big41: "Big_Blue_4_1 \<mu> k"
-    using Big_X_7_1_def big71 by presburger
+  have big71: "Big_X_7_1 \<mu> k" and big62: "Big_Y_6_2 \<mu> k" and big86: "Big_ZZ_8_6 \<mu> k" and big53: "Big_Red_5_3 \<mu> k"
+    and big41: "Big_Blue_4_1 \<mu> k" and big\<mu>: "1 \<le> \<mu>^2 * real k"
+    and big_le1: "2 / (1-\<mu>) * real k powr (-1/40) < 1"
+    using big by (auto simp: Big_From_11_2_def)
   have big\<mu>1: "1 \<le> \<mu> * real k"
     using big\<mu> \<mu>
     by (smt (verit, best) mult_less_cancel_right2 mult_right_mono of_nat_less_0_iff power2_eq_square)
@@ -43,10 +64,8 @@ proof -
     unfolding g_def by real_asymp
   have "k>0"
     using Colours_kn0 \<open>Colours k k\<close> by auto
-  have big53: "Big_Red_5_3 \<mu> k"
-    using Big_Y_6_2_def assms(5) by presburger
-  then have bb_gt0: "bigbeta \<mu> k k > 0"
-    using \<mu> \<open>Colours k k\<close> bigbeta_gt0 by blast
+  have bb_gt0: "bigbeta \<mu> k k > 0"
+    using big53 \<mu> \<open>Colours k k\<close> bigbeta_gt0 by blast
   have "t < k"
     by (simp add: \<R>_def \<mu> t_def \<open>Colours k k\<close> red_step_limit)
   have "s < k"
@@ -61,15 +80,13 @@ proof -
       \<le> 2 powr ok_fun_71 \<mu> k * \<mu>^k * (1-\<mu>) ^ t * (bigbeta \<mu> k k / \<mu>) ^ s * card X0"
     using X0ge \<mu> by (simp add: powr_diff mult.assoc bigbeta_ge0 mult_left_mono)
   also have "\<dots> \<le> card (X m)"
-    using X_7_1 assms by blast
+    using X_7_1 assms big71 by blast
   also have "\<dots> \<le> 2 powr (g k)"
   proof -
-    have "1/k < 1/4"
-      sorry
-    also have "\<dots> \<le> p0 - 3 * eps k"
-      sorry
+    have "1/k < p0 - 3 * eps k"
+    using big \<open>p0 \<ge> 1/2\<close> by (auto simp: Big_From_11_2_def)
     also have "\<dots> \<le> pee \<mu> k k m"
-      using Y_6_2_halted assms by blast
+      using Y_6_2_halted big62 assms by blast
     finally have "pee \<mu> k k m > 1/k" .
     moreover have "termination_condition k k (X m) (Yseq \<mu> k k m)"
       unfolding m_def X_def
