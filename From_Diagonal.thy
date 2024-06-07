@@ -5,9 +5,15 @@ theory From_Diagonal
 
 begin
 
-
 lemma "\<forall>\<^sup>\<infinity>k. 1/4 \<le> 1/2 - 3 * eps k"
   unfolding eps_def by real_asymp
+
+(* this will need to cover a closed interval, as usual; do I need a single k?*)
+lemma 
+  assumes "0<\<mu>0" "\<mu>0 \<le> \<mu>" "\<mu> \<le> \<mu>1" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>k. 2 / (1-\<mu>) * real k powr (-1/40) < 1"
+  using assms by real_asymp
+
 
 context Book
 begin
@@ -16,6 +22,7 @@ lemma (in Book) From_11_2:
   fixes k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours k k"  
   assumes big71: "Big_X_7_1 \<mu> k" and big62: "Big_Y_6_2 \<mu> k" and big86: "Big_ZZ_8_6 \<mu> k" and big\<mu>: "1 \<le> \<mu>^2 * real k"
+   and big_le1: "2 / (1-\<mu>) * real k powr (-1/40) < 1"
   defines "X \<equiv> Xseq \<mu> k k" and "\<D> \<equiv> Step_class \<mu> k k {dreg_step}"
   defines "\<R> \<equiv> Step_class \<mu> k k {red_step}" and "\<S> \<equiv> Step_class \<mu> k k {dboost_step}"
   defines "t \<equiv> card \<R>" and "s \<equiv> card \<S>"
@@ -24,6 +31,8 @@ lemma (in Book) From_11_2:
   obtains f::"nat\<Rightarrow>real" where "f \<in> o(real)"
                  "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * real(s+t) / s) + f(k)"
 proof -
+  have big41: "Big_Blue_4_1 \<mu> k"
+    using Big_X_7_1_def big71 by presburger
   have big\<mu>1: "1 \<le> \<mu> * real k"
     using big\<mu> \<mu>
     by (smt (verit, best) mult_less_cancel_right2 mult_right_mono of_nat_less_0_iff power2_eq_square)
@@ -40,6 +49,10 @@ proof -
     using \<mu> \<open>Colours k k\<close> bigbeta_gt0 by blast
   have "t < k"
     by (simp add: \<R>_def \<mu> t_def \<open>Colours k k\<close> red_step_limit)
+  have "s < k"
+    unfolding \<S>_def \<mu> s_def
+    using \<open>Colours k k\<close> bblue_dboost_step_limit big41 \<mu>  
+    by (meson le_add2 le_less_trans)
 
   have k34: "k powr (3/4) \<le> k powr 1"
     using \<open>k>0\<close> by (intro powr_mono) auto
@@ -71,7 +84,9 @@ proof -
     using \<mu> bb_gt0 by (simp add: powr_diff powr_add mult.commute divide_simps) argo
 
   define a where "a \<equiv> 2 / (1-\<mu>)"
-  consider "s < k powr (39/40)" | "bigbeta \<mu> k k \<ge> (1 - a * k powr (-1/40)) * (s / (s + t))"
+  have ok_less1: "a * real k powr (-1/40) < 1"
+    unfolding a_def using big_le1 by blast
+  consider "s < k powr (39/40)" | "s \<ge> k powr (39/40)" "bigbeta \<mu> k k \<ge> (1 - a * k powr (-1/40)) * (s / (s + t))"
     using ZZ_8_6 big86 \<open>Colours k k\<close> \<mu> a_def by (force simp: s_def t_def \<S>_def \<R>_def)
   then show ?thesis
   proof cases
@@ -90,13 +105,12 @@ proof -
       by (smt (verit, best) big\<mu>2 powr_gt_zero powr_log_cancel)
     also have "\<dots> = 2 powr h k"
       using \<mu> big\<mu>2 \<open>k>0\<close> by (simp add: log_powr log_nat_power log_mult h_def)
-    finally have \<section>: "(\<mu> / bigbeta \<mu> k k) ^ s \<le> 2 powr h k" .
-    have \<section>: "nV \<le> 2 powr (1 - ok_fun_71 \<mu> k + g k) * (1/\<mu>) ^ k * (1 / (1-\<mu>)) ^ t * 2 powr h k"
-      using 59 mult_left_mono [OF \<section>, of "2 powr (1 - ok_fun_71 \<mu> k + g k) * (1/\<mu>) ^ k * (1 / (1-\<mu>)) ^ t"]
+    finally have \<dagger>: "(\<mu> / bigbeta \<mu> k k) ^ s \<le> 2 powr h k" .
+    have \<ddagger>: "nV \<le> 2 powr (1 - ok_fun_71 \<mu> k + g k) * (1/\<mu>) ^ k * (1 / (1-\<mu>)) ^ t * 2 powr h k"
+      using 59 mult_left_mono [OF \<dagger>, of "2 powr (1 - ok_fun_71 \<mu> k + g k) * (1/\<mu>) ^ k * (1 / (1-\<mu>)) ^ t"]
       by (smt (verit) \<mu> pos_prod_le powr_nonneg_iff zero_less_divide_iff zero_less_power)
     have *: "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + (1 - ok_fun_71 \<mu> k + g k + h k)"
-      using \<mu> gorder_ge2
-      by (simp add: log_mult log_nat_power order.trans [OF Transcendental.log_mono [OF _ _ \<section>]])
+      using \<mu> gorder_ge2 by (simp add: log_mult log_nat_power order.trans [OF Transcendental.log_mono [OF _ _ \<ddagger>]])
 
     define sl where "sl \<equiv> \<lambda>k. \<bar>k powr (39/40) * (log 2 \<mu> + log 2 k)\<bar>"
     have sl: "sl \<in> o(real)"
@@ -166,7 +180,39 @@ proof -
     qed
   next
     case 2
-    then show ?thesis sorry
+    then have "s > 0"
+      using \<open>0 < k\<close> powr_gt_zero by fastforce
+    define h where "h \<equiv> \<lambda>k. real k * log 2 (1 - a * k powr (-1/40))"
+    have h: "h \<in> o(real)"
+      using \<mu> unfolding a_def h_def by real_asymp
+
+    have "s * log 2 (\<mu> / bigbeta \<mu> k k) = s * log 2 \<mu> - s * log 2 (bigbeta \<mu> k k)"
+      using \<mu> bb_gt0 2 by (simp add: log_divide algebra_simps)
+    also have "... \<le> s * log 2 \<mu> - s * log 2 ((1 - a * k powr (-1/40)) * (s / (s + t)))"
+      using 2 \<open>s>0\<close> ok_less1 by (intro diff_mono order_refl mult_left_mono Transcendental.log_mono) auto
+    also have "... = s * log 2 \<mu> - s * (log 2 (1 - a * k powr (-1/40)) + log 2 (s / (s + t)))"
+      using \<open>0 < s\<close> a_def add_log_eq_powr big_le1 by auto
+    also have "... = s * log 2 (\<mu> * (real(s+t) / s)) - s * log 2 (1 - a * k powr (-1/40))"
+      using \<mu> \<open>s>0\<close> by (simp add: log_divide log_mult ring_distribs flip: times_divide_eq_right)
+    also have "... < s * log 2 (\<mu> * (real(s+t) / s)) - h k"
+    proof -
+      have "log 2 (1 - a * real k powr (-1/40)) < 0"
+        using \<mu> \<open>0 < k\<close> a_def ok_less1 by auto
+      with \<open>s<k\<close> show ?thesis
+        by (simp add: h_def)
+    qed
+    finally have \<dagger>: "s * log 2 (\<mu> / bigbeta \<mu> k k) < s * log 2 (\<mu> * (real(s+t) / s)) - h k" .
+    show ?thesis
+    proof
+      let ?f = "\<lambda>k. 1 - ok_fun_71 \<mu> k + g k - h k"
+      show "?f \<in> o(real)"
+        using g h \<mu> by (simp add: const_smallo_real ok_fun_71 sum_in_smallo)
+      have *: "log 2 nV \<le> s * log 2 (\<mu> / bigbeta \<mu> k k) + k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + (1 - ok_fun_71 \<mu> k + g k)"
+        using \<mu> gorder_ge2 
+        by (simp add: bb_gt0 log_mult log_nat_power order.trans [OF Transcendental.log_mono [OF _ _ 59]])
+      with \<dagger> show "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * real(s+t) / s) + ?f k"
+        by simp
+    qed
   qed
 qed
 

@@ -579,7 +579,7 @@ lemma Big_ZZ_8_6:
   shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_ZZ_8_6 \<mu> l"
   using assms Big_ZZ_8_5
   unfolding Big_ZZ_8_6_def
-  apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
+  apply (simp add: eventually_conj_iff all_imp_conj_distrib)  
   apply (intro conjI strip eventually_all_ge_at_top eventually_all_geI1 [where L=1])   
    apply real_asymp
   apply (auto simp: )
