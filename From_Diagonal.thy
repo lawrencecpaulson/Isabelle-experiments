@@ -5,8 +5,7 @@ theory From_Diagonal
 
 begin
 
-lemma "\<forall>\<^sup>\<infinity>k. 1/k \<le> 1/2 - 3 * eps k"
-  unfolding eps_def by real_asymp
+subsection \<open>Lemma 2.2\<close>
 
 definition "Big_From_11_2 \<equiv>     
    \<lambda>\<mu> k. Big_ZZ_8_6 \<mu> k \<and> Big_X_7_1 \<mu> k \<and> Big_Y_6_2 \<mu> k \<and> Big_Red_5_3 \<mu> k \<and> Big_Blue_4_1 \<mu> k 
@@ -41,7 +40,7 @@ lemma (in Book) From_11_2:
   defines "\<R> \<equiv> Step_class \<mu> k k {red_step}" and "\<S> \<equiv> Step_class \<mu> k k {dboost_step}"
   defines "t \<equiv> card \<R>" and "s \<equiv> card \<S>"
   defines "m \<equiv> halted_point \<mu> k k"
-  assumes 0: "card X0 \<ge> real nV / 2" and "p0 \<ge> 1/2"
+  assumes 0: "card X0 \<ge> nV div 2" and "p0 \<ge> 1/2"
   obtains f::"nat\<Rightarrow>real" where "f \<in> o(real)"
                  "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * real(s+t) / s) + f(k)"
 proof -
@@ -71,9 +70,12 @@ proof -
   have k34: "k powr (3/4) \<le> k powr 1"
     using \<open>k>0\<close> by (intro powr_mono) auto
 
-  have "2 powr (ok_fun_71 \<mu> k - 1) * \<mu>^k * (1-\<mu>) ^ t * (bigbeta \<mu> k k / \<mu>) ^ s * nV
+  define g712 where "g712 \<equiv> \<lambda>k. 2 - ok_fun_71 \<mu> k + g k"
+  have "nV \<le> 4 * card X0"
+    using 0 card_XY0 by (auto simp: odd_iff_mod_2_eq_one)
+  with \<mu> have "2 powr (ok_fun_71 \<mu> k - 2) * \<mu>^k * (1-\<mu>) ^ t * (bigbeta \<mu> k k / \<mu>) ^ s * nV
       \<le> 2 powr ok_fun_71 \<mu> k * \<mu>^k * (1-\<mu>) ^ t * (bigbeta \<mu> k k / \<mu>) ^ s * card X0"
-    using X0ge \<mu> by (simp add: powr_diff mult.assoc bigbeta_ge0 mult_left_mono)
+    using \<mu> by (simp add: powr_diff mult.assoc bigbeta_ge0 mult_left_mono)
   also have "\<dots> \<le> card (Xseq \<mu> k k m)"
     using X_7_1 assms big71 by blast
   also have "\<dots> \<le> 2 powr (g k)"
@@ -91,9 +93,9 @@ proof -
     then show ?thesis
       unfolding g_def by (meson RN34_le_2powr_ok \<open>0 < k\<close> of_nat_le_iff order.refl order.trans)
   qed
-  finally have 58: "2 powr (g k) \<ge> 2 powr (ok_fun_71 \<mu> k - 1) * \<mu>^k * (1-\<mu>) ^ t * (bigbeta \<mu> k k / \<mu>) ^ s * nV" .
-  then have 59: "nV \<le> 2 powr (1 - ok_fun_71 \<mu> k + g k) * (1/\<mu>) ^ k * (1 / (1-\<mu>)) ^ t * (\<mu> / bigbeta \<mu> k k) ^ s"
-    using \<mu> bb_gt0 by (simp add: powr_diff powr_add mult.commute divide_simps) argo
+  finally have 58: "2 powr (g k) \<ge> 2 powr (ok_fun_71 \<mu> k - 2) * \<mu>^k * (1-\<mu>) ^ t * (bigbeta \<mu> k k / \<mu>) ^ s * nV" .
+  then have 59: "nV \<le> 2 powr (g712 k) * (1/\<mu>) ^ k * (1 / (1-\<mu>)) ^ t * (\<mu> / bigbeta \<mu> k k) ^ s"
+    using \<mu> bb_gt0 by (simp add: g712_def powr_diff powr_add mult.commute divide_simps) argo
 
   define a where "a \<equiv> 2 / (1-\<mu>)"
   have ok_less1: "a * real k powr (-1/40) < 1"
@@ -118,10 +120,10 @@ proof -
     also have "\<dots> = 2 powr h k"
       using \<mu> big\<mu>2 \<open>k>0\<close> by (simp add: log_powr log_nat_power log_mult h_def)
     finally have \<dagger>: "(\<mu> / bigbeta \<mu> k k) ^ s \<le> 2 powr h k" .
-    have \<ddagger>: "nV \<le> 2 powr (1 - ok_fun_71 \<mu> k + g k) * (1/\<mu>) ^ k * (1 / (1-\<mu>)) ^ t * 2 powr h k"
-      using 59 mult_left_mono [OF \<dagger>, of "2 powr (1 - ok_fun_71 \<mu> k + g k) * (1/\<mu>) ^ k * (1 / (1-\<mu>)) ^ t"]
+    have \<ddagger>: "nV \<le> 2 powr (g712 k) * (1/\<mu>) ^ k * (1 / (1-\<mu>)) ^ t * 2 powr h k"
+      using 59 mult_left_mono [OF \<dagger>, of "2 powr (g712 k) * (1/\<mu>) ^ k * (1 / (1-\<mu>)) ^ t"]
       by (smt (verit) \<mu> pos_prod_le powr_nonneg_iff zero_less_divide_iff zero_less_power)
-    have *: "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + (1 - ok_fun_71 \<mu> k + g k + h k)"
+    have *: "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + (g712 k + h k)"
       using \<mu> gorder_ge2 by (simp add: log_mult log_nat_power order.trans [OF Transcendental.log_mono [OF _ _ \<ddagger>]])
 
     define sl where "sl \<equiv> \<lambda>k. \<bar>k powr (39/40) * (log 2 \<mu> + log 2 k)\<bar>"
@@ -180,9 +182,9 @@ proof -
     qed (auto simp: sl_def)
     show ?thesis
     proof
-      let ?f = "\<lambda>k. 1 - ok_fun_71 \<mu> k + g k + h k + sl k"
+      let ?f = "\<lambda>k. g712 k + h k + sl k"
       show "?f \<in> o(real)"
-        using g h sl \<mu> by (simp add: const_smallo_real ok_fun_71 sum_in_smallo)
+        using g h sl \<mu> by (simp add: g712_def const_smallo_real ok_fun_71 sum_in_smallo)
       show "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * real(s+t) / s) + ?f(k)"
         using le_sl by (intro order.trans [OF *]) auto
     qed
@@ -193,7 +195,6 @@ proof -
     define h where "h \<equiv> \<lambda>k. real k * log 2 (1 - a * k powr (-1/40))"
     have h: "h \<in> o(real)"
       using \<mu> unfolding a_def h_def by real_asymp
-
     have "s * log 2 (\<mu> / bigbeta \<mu> k k) = s * log 2 \<mu> - s * log 2 (bigbeta \<mu> k k)"
       using \<mu> bb_gt0 2 by (simp add: log_divide algebra_simps)
     also have "\<dots> \<le> s * log 2 \<mu> - s * log 2 ((1 - a * k powr (-1/40)) * (s / (s + t)))"
@@ -212,10 +213,10 @@ proof -
     finally have \<dagger>: "s * log 2 (\<mu> / bigbeta \<mu> k k) < s * log 2 (\<mu> * (real(s+t) / s)) - h k" .
     show ?thesis
     proof
-      let ?f = "\<lambda>k. 1 - ok_fun_71 \<mu> k + g k - h k"
+      let ?f = "\<lambda>k. g712 k - h k"
       show "?f \<in> o(real)"
-        using g h \<mu> by (simp add: const_smallo_real ok_fun_71 sum_in_smallo)
-      have "log 2 nV \<le> s * log 2 (\<mu> / bigbeta \<mu> k k) + k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + (1 - ok_fun_71 \<mu> k + g k)"
+        using g h \<mu> by (simp add: g712_def const_smallo_real ok_fun_71 sum_in_smallo)
+      have "log 2 nV \<le> s * log 2 (\<mu> / bigbeta \<mu> k k) + k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + (g712 k)"
         using \<mu> gorder_ge2 
         by (simp add: bb_gt0 log_mult log_nat_power order.trans [OF Transcendental.log_mono [OF _ _ 59]])
       with \<dagger> show "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * real(s+t) / s) + ?f k"
@@ -224,6 +225,8 @@ proof -
   qed
 qed
 
+subsection \<open>Lemma 2.3\<close>
+
 lemma (in Book) From_11_3:
   fixes k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours k k"  
@@ -231,32 +234,33 @@ lemma (in Book) From_11_3:
   defines "\<R> \<equiv> Step_class \<mu> k k {red_step}" and "\<S> \<equiv> Step_class \<mu> k k {dboost_step}"
   defines "t \<equiv> card \<R>" and "s \<equiv> card \<S>"
   defines "m \<equiv> halted_point \<mu> k k"
-  assumes 0: "card Y0 \<ge> nV / 2" and "p0 \<ge> 1/2"
-  shows "log 2 nV \<le> log 2 (RN k (k-t)) + s + t + 1 - ok_fun_61 k"
+  assumes 0: "card Y0 \<ge> nV div 2" and "p0 \<ge> 1/2"
+  shows "log 2 nV \<le> log 2 (RN k (k-t)) + s + t + 2 - ok_fun_61 k"
 proof -
   define RS where "RS \<equiv> Step_class \<mu> k k {red_step,dboost_step}"
   have "RS = \<R> \<union> \<S>"
-    using Book.Step_class_insert Book_axioms \<R>_def \<S>_def RS_def by blast
+    using Step_class_insert \<R>_def \<S>_def RS_def by blast
   moreover obtain "finite \<R>" "finite \<S>"
     by (simp add: \<R>_def \<S>_def \<open>0<\<mu>\<close> \<open>Colours k k\<close>)
   moreover have "disjnt \<R> \<S>"
     using \<R>_def \<S>_def disjnt_Step_class by auto
   ultimately have card_RS: "card RS = t+s"
     by (simp add: t_def s_def card_Un_disjnt)
+  have 4: "nV/4 \<le> card Y0"
+    using 0 card_XY0 by (auto simp: odd_iff_mod_2_eq_one)
   have ge0: "0 \<le> 2 powr ok_fun_61 k * p0 ^ card RS"
     using p0_01 by fastforce
-  have "2 powr (- real s - real t + ok_fun_61 k - 1) * nV = 2 powr (ok_fun_61 k - 1) * (1/2) ^ card RS * nV"
+  have "2 powr (- real s - real t + ok_fun_61 k - 2) * nV = 2 powr (ok_fun_61 k - 2) * (1/2) ^ card RS * nV"
     by (simp add: powr_add powr_diff powr_minus power_add powr_realpow divide_simps card_RS)
-  also have "\<dots> \<le> 2 powr (ok_fun_61 k - 1) * p0 ^ card RS * nV"
-    using \<open>p0 \<ge> 1/2\<close>
-    by (meson mult_left_mono mult_right_mono of_nat_0_le_iff power_mono powr_ge_pzero zero_le_divide_1_iff zero_le_numeral)
-  also have "\<dots> \<le> 2 powr (ok_fun_61 k) * p0 ^ card RS * (nV/2)"
+  also have "\<dots> \<le> 2 powr (ok_fun_61 k - 2) * p0 ^ card RS * nV"
+    using power_mono [OF \<open>p0 \<ge> 1/2\<close>] gorder_ge2 by auto
+  also have "\<dots> \<le> 2 powr (ok_fun_61 k) * p0 ^ card RS * (nV/4)"
     by (simp add: divide_simps powr_diff split: if_split_asm)
   also have "... \<le> 2 powr (ok_fun_61 k) * p0 ^ card RS * card Y0"
-    using ge0 0 mult_left_mono by blast
+    using   mult_left_mono [OF 4 ge0 ] by simp
   also have "... \<le> card (Yseq \<mu> k k m)"
     using Y_6_1 [OF \<mu> big \<open>Colours k k\<close>] by (simp add: m_def RS_def divide_simps split: if_split_asm)
-  finally have "2 powr (- real s - real t + ok_fun_61 k - 1) * nV \<le> card (Yseq \<mu> k k m)" .
+  finally have "2 powr (- real s - real t + ok_fun_61 k - 2) * nV \<le> card (Yseq \<mu> k k m)" .
   moreover
   { assume "card (Yseq \<mu> k k m) \<ge> RN k (k-t)"
     then obtain K where K: "K \<subseteq> Yseq \<mu> k k m" and "size_clique (k-t) K Red \<or> size_clique k K Blue"
@@ -270,12 +274,10 @@ proof -
       show "disjnt K (Aseq \<mu> k k m)"
         using valid_state_seq[of \<mu> k k m] K disjnt_subset1
         by (auto simp: valid_state_def disjoint_state_def)
-      have cardA: "card (Aseq \<mu> k k m) = t"
+      have "card (Aseq \<mu> k k m) = t"
         using \<open>\<mu>>0\<close> \<open>Colours k k\<close> red_step_eq_Aseq \<R>_def t_def m_def by presburger
-      have "card K = k-t"
-        using KRed size_clique_def by blast
-      with cardA Aseq_less_k[OF \<open>Colours k k\<close>] show "card K + card (Aseq \<mu> k k m) = k"
-        using nat_less_le by force
+      then show "card K + card (Aseq \<mu> k k m) = k"
+        using Aseq_less_k[OF \<open>Colours k k\<close>] nat_less_le KRed size_clique_def by force
     qed
     moreover have "clique (K \<union> Aseq \<mu> k k m) Red"
     proof -
@@ -298,15 +300,16 @@ proof -
     with \<open>Colours k k\<close> have False
       by (simp add: Colours_def)
   } 
-  ultimately have *: "2 powr (- real s - real t + ok_fun_61 k - 1) * nV < RN k (k-t)"
+  ultimately have *: "2 powr (- real s - real t + ok_fun_61 k - 2) * nV < RN k (k-t)"
     by fastforce
-  have "- real s - real t + ok_fun_61 k - 1 + log 2 nV = log 2 (2 powr (-s - t + ok_fun_61 k - 1) * nV)"
+  have "- real s - real t + ok_fun_61 k - 2 + log 2 nV = log 2 (2 powr (- real s - real t + ok_fun_61 k - 2) * nV)"
     using add_log_eq_powr gorder_ge2 by auto
   also have "... \<le> log 2 (RN k (k-t))"
     using "*" Transcendental.log_mono gorder_ge2 less_eq_real_def by auto
-  finally show "log 2 nV \<le> log 2 (RN k (k - t)) + real s + real t + 1 - ok_fun_61 k"
+  finally show "log 2 nV \<le> log 2 (RN k (k - t)) + real s + real t + 2 - ok_fun_61 k"
     by linarith
 qed
 
+subsection \<open>Lemma 2.1\<close>
 
 end
