@@ -316,12 +316,65 @@ definition "FF \<equiv> \<lambda>k x y. log 2 (RN k (k - nat\<lfloor>x * real k\
 
 definition "GG \<equiv> \<lambda>\<mu> x y. log 2 (1/\<mu>) + x * log 2 (1/(1-\<mu>)) + y * log 2 (\<mu> * (x+y) / y)"
 
-theorem From_11_1:
-  assumes "0 < \<mu>" "\<mu> < 1" "\<eta> > 0"
+theorem (in P0_min) From_11_1:
+  assumes "0 < \<mu>" "\<mu> < 1" "\<eta> > 0" and "k\<ge>3" and p0_min12: "p0_min \<le> 1/2"
   shows "log 2 (RN k k) / real k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (FF k x y) (G \<mu> x y) + \<eta>)"
 proof -
-  show ?thesis
-    sorry
+  have "k>0"
+    using \<open>k\<ge>3\<close> by simp
+  define n where "n \<equiv> RN k k - 1"
+  define V where "V \<equiv> {..<n}"
+  define E where "E \<equiv> all_edges V" 
+  interpret Book_Basis V E
+  proof
+    show "\<And>e. e \<in> E \<Longrightarrow> e \<subseteq> V"
+      by (simp add: E_def comp_sgraph.wellformed)
+    show "\<And>e. e \<in> E \<Longrightarrow> card e = 2"
+      by (simp add: E_def comp_sgraph.two_edges)
+  qed (use V_def E_def in auto)
+
+  have "RN k k \<ge> 3"
+    using \<open>k\<ge>3\<close> RN_3plus le_trans by blast 
+  then have "n < RN k k"
+    by (simp add: n_def)
+  have [simp]: "nV = n"
+    by (simp add: V_def)
+  then obtain Red Blue
+    where Red_E: "Red \<subseteq> E" and Blue_def: "Blue = E-Red" 
+      and no_Red_K: "\<not> (\<exists>K. size_clique k K Red)"
+      and no_Blue_K: "\<not> (\<exists>K. size_clique k K Blue)"
+    by (metis \<open>n < RN k k\<close> less_RN_Red_Blue)
+  have Blue_E: "Blue \<subseteq> E" and disjnt_Red_Blue: "disjnt Red Blue" and Blue_eq: "Blue = all_edges V - Red"
+    using complete by (auto simp: Blue_def disjnt_iff E_def) 
+  have "nV > 1"
+    using \<open>RN k k \<ge> 3\<close> \<open>nV=n\<close> n_def by linarith
+  with graph_size have "graph_size > 0"
+    by simp
+  then have "graph_density E = 1"
+    by (simp add: graph_density_def)
+  then have "graph_density Red + graph_density Blue = 1"
+    using graph_density_Un [OF disjnt_Red_Blue] by (simp add: Blue_def Red_E Un_absorb1)
+  then consider (Red) "graph_density Red \<ge> 1/2" | (Blue) "graph_density Blue \<ge> 1/2"
+    by force
+  then show ?thesis
+  proof cases
+    case Red
+    obtain X0 Y0 where "card X0 \<ge> nV/2" "card Y0 = gorder div 2" and "X0 = V \<setminus> Y0" "Y0\<subseteq>V"
+      and "1/2 \<le> gen_density Red X0 Y0"
+      and "Book V E p0_min Red Blue X0 Y0" 
+    proof (rule Basis_imp_Book [OF _ Red_E])
+      show "E = all_edges V"
+        using E_def by auto
+      show "p0_min \<le> graph_density Red"
+        using p0_min12 Red by linarith
+      show "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique k K Blue))"
+        using no_Blue_K no_Red_K by blast
+    qed (use p0_min Blue_def Red in auto)
+    then show ?thesis sorry
+  next
+    case Blue
+    then show ?thesis sorry
+  qed
 qed
 
 end

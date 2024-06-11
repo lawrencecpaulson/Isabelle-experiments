@@ -1072,7 +1072,7 @@ lemma (in Book_Basis) Basis_imp_Book:
   assumes "l\<le>k"
   assumes neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
   obtains X0 Y0 where "l\<ge>2" "card X0 \<ge> nV/2" "card Y0 = gorder div 2" and "X0 = V \<setminus> Y0" "Y0\<subseteq>V" 
-    and "graph_density Red \<le> gen_density Red Y0 (V\<setminus>Y0)"
+    and "graph_density Red \<le> gen_density Red X0 Y0"
     and "Book V E p0_min Red Blue X0 Y0" 
 proof -
   have "Red \<noteq> {}"
@@ -1082,8 +1082,8 @@ proof -
   then have "0 < gorder div 2" "gorder div 2 < gorder"
     by auto
   then obtain Y0 where Y0: "card Y0 = gorder div 2" "Y0\<subseteq>V" 
-    "graph_density Red \<le> gen_density Red Y0 (V\<setminus>Y0)"
-    using exists_density_edge_density \<open>Red \<subseteq> E\<close> complete by blast
+    "graph_density Red \<le> gen_density Red (V\<setminus>Y0) Y0"
+    by (metis complete Red_E exists_density_edge_density gen_density_commute)
   define X0 where "X0 \<equiv> V \<setminus> Y0"
   interpret Book V E p0_min Red Blue X0 Y0 
   proof
@@ -1132,7 +1132,7 @@ proof (rule ccontr)
   then obtain X0 Y0 where "l\<ge>2" and card_X0: "card X0 \<ge> nV/2" 
     and card_Y0: "card Y0 = gorder div 2" 
     and X0_def: "X0 = V \<setminus> Y0" and "Y0\<subseteq>V" 
-    and gd_le: "graph_density Red \<le> gen_density Red Y0 (V\<setminus>Y0)"
+    and gd_le: "graph_density Red \<le> gen_density Red X0 Y0"
     and "Book V E p0_min Red Blue X0 Y0" 
     by (smt (verit, ccfv_SIG) Basis_imp_Book assms p0_min)
   then interpret Book V E p0_min Red Blue X0 Y0
@@ -1248,7 +1248,7 @@ proof (rule ccontr)
   define U_lower_bound_ratio where \<comment>\<open>Bhavik's terminology\<close>
     "U_lower_bound_ratio \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k+l - real i))"
 
-  define n where "n \<equiv> nat\<lceil>RN k l - 1\<rceil>"
+  define n where "n \<equiv> RN k l - 1"
   have "l\<ge>3"
     using big by (auto simp: Big_Far_9_1_def)
   have "k\<ge>27"
@@ -1282,7 +1282,7 @@ proof (rule ccontr)
       by (simp add: E_def comp_sgraph.wellformed)
     show "\<And>e. e \<in> E \<Longrightarrow> card e = 2"
       by (simp add: E_def comp_sgraph.two_edges)
-  qed (use p0_min_91 V_def E_def in auto)
+  qed (use V_def E_def in auto)
   have [simp]: "nV = n"
     by (simp add: V_def)
   then obtain Red Blue
