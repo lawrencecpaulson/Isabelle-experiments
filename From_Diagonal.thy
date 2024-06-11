@@ -312,4 +312,16 @@ qed
 
 subsection \<open>Lemma 2.1\<close>
 
+definition "FF \<equiv> \<lambda>k x y. log 2 (RN k (k - nat\<lfloor>x * real k\<rfloor>)) / real k + x + y"
+
+definition "GG \<equiv> \<lambda>\<mu> x y. log 2 (1/\<mu>) + x * log 2 (1/(1-\<mu>)) + y * log 2 (\<mu> * (x+y) / y)"
+
+theorem From_11_1:
+  assumes "0 < \<mu>" "\<mu> < 1" "\<eta> > 0"
+  shows "log 2 (RN k k) / real k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (FF k x y) (G \<mu> x y) + \<eta>)"
+proof -
+  show ?thesis
+    sorry
+qed
+
 end

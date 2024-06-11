@@ -288,7 +288,7 @@ lemma "\<forall>\<^sup>\<infinity>k. 2 + k/2 \<le> exp (of_int\<lfloor>k/9\<rflo
 lemma "\<forall>\<^sup>\<infinity>k. real k ^ 2 - 10 * real k > (k/10)* (10 + 9*k)"
   by real_asymp
 
-lemma Closer_10_1:
+theorem Closer_10_1:
   fixes l k::nat
   fixes \<delta> \<gamma>::real
   defines "\<gamma> \<equiv> real l / (real k + real l)"

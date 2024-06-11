@@ -1227,7 +1227,7 @@ qed
 
 text \<open>The text claims the result for all @{term k} and @{term l}, not just those sufficiently large, 
   but the $o(k)$ function allowed in the exponent provides a fudge factor\<close>
-lemma Far_9_1:
+theorem Far_9_1:
   fixes l k::nat
   fixes \<delta> \<gamma>::real
   defines "\<gamma> \<equiv> real l / (real k + real l)"
