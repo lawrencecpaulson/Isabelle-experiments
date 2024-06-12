@@ -42,7 +42,7 @@ lemma (in Book) From_11_2:
   defines "m \<equiv> halted_point \<mu> k k"
   assumes 0: "card X0 \<ge> nV div 2" and "p0 \<ge> 1/2"
   obtains f::"nat\<Rightarrow>real" where "f \<in> o(real)"
-                 "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * real(s+t) / s) + f(k)"
+                 "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * (s + real t) / s) + f(k)"
 proof -
   have big71: "Big_X_7_1 \<mu> k" and big62: "Big_Y_6_2 \<mu> k" and big86: "Big_ZZ_8_6 \<mu> k" and big53: "Big_Red_5_3 \<mu> k"
     and big41: "Big_Blue_4_1 \<mu> k" and big\<mu>: "1 \<le> \<mu>^2 * real k"
@@ -185,7 +185,7 @@ proof -
       let ?f = "\<lambda>k. g712 k + h k + sl k"
       show "?f \<in> o(real)"
         using g h sl \<mu> by (simp add: g712_def const_smallo_real ok_fun_71 sum_in_smallo)
-      show "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * real(s+t) / s) + ?f(k)"
+      show "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * (s + real t) / s) + ?f(k)"
         using le_sl by (intro order.trans [OF *]) auto
     qed
   next
@@ -219,7 +219,7 @@ proof -
       have "log 2 nV \<le> s * log 2 (\<mu> / bigbeta \<mu> k k) + k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + (g712 k)"
         using \<mu> gorder_ge2 
         by (simp add: bb_gt0 log_mult log_nat_power order.trans [OF Transcendental.log_mono [OF _ _ 59]])
-      with \<dagger> show "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * real(s+t) / s) + ?f k"
+      with \<dagger> show "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * (s + real t) / s) + ?f k"
         by simp
     qed
   qed
@@ -310,18 +310,55 @@ proof -
     by linarith
 qed
 
-subsection \<open>Lemma 2.1\<close>
+subsection \<open>Theorem 2.1\<close>
 
 definition "FF \<equiv> \<lambda>k x y. log 2 (RN k (k - nat\<lfloor>x * real k\<rfloor>)) / real k + x + y"
 
 definition "GG \<equiv> \<lambda>\<mu> x y. log 2 (1/\<mu>) + x * log 2 (1/(1-\<mu>)) + y * log 2 (\<mu> * (x+y) / y)"
 
-theorem (in P0_min) From_11_1:
-  assumes "0 < \<mu>" "\<mu> < 1" "\<eta> > 0" and "k\<ge>3" and p0_min12: "p0_min \<le> 1/2"
-  shows "log 2 (RN k k) / real k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (FF k x y) (G \<mu> x y) + \<eta>)"
+(* actually it is undefined when x=1; could we use 1+R(k,k') in the definition?*)
+lemma FF:
+  assumes "x \<in> {0..1}" "y \<in> {0..u}"
+  shows "FF k x y \<le> FF k 0 u + 1"
+proof -
+  have "log 2 (real (RN k (k - nat \<lfloor>x * real k\<rfloor>))) / real k \<le> log 2 (real (RN k k)) / real k"
+    apply (intro divide_right_mono Transcendental.log_mono)
+       apply (auto simp: )
+     defer
+     apply (simp add: RN_mono)
+
+    sorry
+  then show ?thesis
+    by (smt (verit) FF_def assms(1) assms(2) atLeastAtMost_iff diff_zero floor_zero mult_cancel_left1 nat_code(2))
+qed
+
+lemma FF2:
+  assumes "y' \<le> y"
+  shows "FF k x y' \<le> FF k x y"
+  by (simp add: FF_def assms)
+
+
+context P0_min
+begin 
+
+definition "Big_From_11_1 \<equiv> \<lambda>\<mu> k. Big_From_11_2 \<mu> k \<and> Big_Y_6_1 \<mu> k"
+
+lemma Big_From_11_1:
+  assumes "0<\<mu>0" "\<mu>0 \<le> \<mu>1" "\<mu>1<1" 
+  shows "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_From_11_1 \<mu> k"
+  unfolding Big_From_11_1_def
+  using assms Big_From_11_2 Big_Y_6_1
+  by (simp add: eventually_conj_iff all_imp_conj_distrib)  
+
+theorem From_11_1:
+  assumes \<mu>: "0 < \<mu>" "\<mu> < 1" and "\<eta> > 0" and "k\<ge>3" and p0_min12: "p0_min \<le> 1/2"
+  and big: "Big_From_11_1 \<mu> k"
+  shows "log 2 (RN k k) / real k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>)"
 proof -
   have "k>0"
     using \<open>k\<ge>3\<close> by simp
+  have big41: "Big_Blue_4_1 \<mu> k" and big61: "Big_Y_6_1 \<mu> k" and big11_2: "Big_From_11_2 \<mu> k"
+    using big by (auto simp: Big_From_11_1_def Big_Y_6_1_def Big_Y_6_2_def)
   define n where "n \<equiv> RN k k - 1"
   define V where "V \<equiv> {..<n}"
   define E where "E \<equiv> all_edges V" 
@@ -359,8 +396,9 @@ proof -
   then show ?thesis
   proof cases
     case Red
-    obtain X0 Y0 where "card X0 \<ge> nV/2" "card Y0 = gorder div 2" and "X0 = V \<setminus> Y0" "Y0\<subseteq>V"
-      and "1/2 \<le> gen_density Red X0 Y0"
+    obtain X0 Y0 where card_X0: "card X0 \<ge> nV/2" and card_Y0: "card Y0 = gorder div 2"
+      and "X0 = V \<setminus> Y0" "Y0\<subseteq>V"
+      and p0_half: "1/2 \<le> gen_density Red X0 Y0"
       and "Book V E p0_min Red Blue X0 Y0" 
     proof (rule Basis_imp_Book [OF _ Red_E])
       show "E = all_edges V"
@@ -370,11 +408,94 @@ proof -
       show "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique k K Blue))"
         using no_Blue_K no_Red_K by blast
     qed (use p0_min Blue_def Red in auto)
-    then show ?thesis sorry
+    then interpret Book V E p0_min Red Blue X0 Y0
+      by meson
+    have "Colours k k"
+      using Colours_def no_Blue_K no_Red_K by auto
+
+    define \<R> where "\<R> \<equiv> Step_class \<mu> k k {red_step}" 
+    define \<S> where "\<S> \<equiv> Step_class \<mu> k k {dboost_step}"
+    define t where "t \<equiv> card \<R>" 
+    define s where "s \<equiv> card \<S>"
+    define m where "m \<equiv> halted_point \<mu> k k"
+    define x where "x \<equiv> t/k"
+    define y where "y \<equiv> s/k"
+    define v where "v \<equiv> min (FF k x y) (GG \<mu> x y) + \<eta>"
+    have sts: "(s + real t) / s = (x+y) / y"
+      using \<open>k>0\<close> by (simp add: x_def y_def field_simps)
+    have "t < k"
+      by (simp add: \<R>_def \<mu> t_def \<open>Colours k k\<close> red_step_limit)
+    have "s < k"   (*USED?*)
+      unfolding \<S>_def \<mu> s_def
+      using \<open>Colours k k\<close> bblue_dboost_step_limit big41 \<mu>  
+      by (meson le_add2 le_less_trans)
+
+    show ?thesis
+    proof (intro cSup_upper2 cSUP_least imageI bdd_aboveI2)
+      have "nV div 2 \<le> card Y0"
+        by (simp add: card_Y0)
+      then have \<section>: "log 2 nV \<le> log 2 (RN k (k-t)) + s + t + 2 - ok_fun_61 k"
+        using From_11_3 [OF \<mu> \<open>Colours k k\<close> big61] p0_half by (auto simp: \<R>_def \<S>_def p0_def s_def t_def)
+      have "log 2 nV / k \<le> log 2 (RN k (k-t)) / k + x + y + (2 - ok_fun_61 k) / k"
+        using \<open>k>0\<close> divide_right_mono [OF \<section>, of k] add_divide_distrib x_def y_def
+        by (smt (verit) add_uminus_conv_diff of_nat_0_le_iff)
+      also have "... = FF k x y + (2 - ok_fun_61 k) / k"
+        by (simp add: FF_def x_def)
+      finally have leFF: "log 2 nV / k \<le> FF k x y + (2 - ok_fun_61 k) / k" .
+
+      have "nV div 2 \<le> card X0"
+        using card_X0 by linarith
+      then obtain f::"nat\<Rightarrow>real" where "f \<in> o(real)"
+        and f: "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * (s + real t) / s) + f(k)"
+        using From_11_2 [OF \<mu> \<open>Colours k k\<close> big11_2] p0_half
+        unfolding s_def t_def p0_def \<R>_def \<S>_def by blast
+          (* lemma 11.2 must be modified so that the o(k) function is explicit*)
+      have "log 2 nV / k \<le> log 2 (1/\<mu>) + x * log 2 (1 / (1-\<mu>)) + y * log 2 (\<mu> * (s + real t) / s) + f(k)/k"
+        using \<open>k>0\<close> divide_right_mono [OF f, of k]
+        by (simp add: add_divide_distrib x_def y_def)
+      also have "... = GG \<mu> x y + f k / k"
+        by (metis GG_def sts times_divide_eq_right)
+      finally have leGG: "log 2 nV / k \<le> GG \<mu> x y + f k / k" .
+
+      show "log 2 (real (RN k k)) / real k \<le> v"
+        unfolding v_def FF_def GG_def
+
+        sorry
+    next
+      show "v \<in> (\<lambda>x. \<Squnion>y\<in>{0..\<mu> * x / (1 - \<mu>) + \<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>) ` {0..1}"
+        apply (auto simp: v_def image_iff)
+        apply (rule_tac x="x" in bexI)
+         apply (auto simp: )
+          defer
+          apply (force simp: x_def)
+        using \<open>t < k\<close> apply (force simp: x_def)
+        unfolding x_def
+
+        sorry
+    next
+      fix x y :: real
+      assume x: "x \<in> {0..1}" and y: "y \<in> {0..\<mu> * x / (1 - \<mu>) + \<eta>}"
+      have FF_ub: "FF k x y \<le> FF k 0 (\<mu> / (1 - \<mu>) + \<eta>) + 1"
+      proof (rule order.trans)
+        show "FF k x y \<le> FF k 0 y + 1"
+          using x y by (simp add: FF)
+      next
+        have "y \<le> \<mu> / (1 - \<mu>) + \<eta>"
+          using x y \<mu> by simp (smt (verit, best) frac_le mult_left_le)
+        then show "FF k 0 y + 1 \<le> FF k 0 (\<mu> / (1 - \<mu>) + \<eta>) + 1"
+          by (simp add: FF2)
+      qed
+      show "min (FF k x y) (GG \<mu> x y) + \<eta> \<le> FF k 0 (\<mu> / (1 - \<mu>) + \<eta>) + 1 + \<eta>"
+        using FF_ub by auto
+    qed (use \<mu> \<open>\<eta>>0\<close> in auto)
   next
     case Blue
-    then show ?thesis sorry
+    then show ?thesis
+      (* the exact same thing with colours reversed, done via a lemma*)
+      sorry
   qed
 qed
+
+end (*P0_min*)
 
 end

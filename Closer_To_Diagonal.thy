@@ -230,8 +230,8 @@ proof (rule ccontr)
   then obtain X0 Y0 where "l\<ge>2" and card_X0: "card X0 \<ge> nV/2" 
     and card_Y0: "card Y0 = gorder div 2" 
     and X0_def: "X0 = V \<setminus> Y0" and "Y0\<subseteq>V" 
-    and gd_le: "graph_density Red \<le> gen_density Red Y0 (V\<setminus>Y0)"
-    and "Book V E p0_min Red Blue X0 Y0" 
+    and gd_le: "graph_density Red \<le> gen_density Red X0 Y0"
+    and "Book V E p0_min Red Blue X0 Y0"
     by (smt (verit, ccfv_SIG) Basis_imp_Book assms p0_min)
   then interpret Book V E p0_min Red Blue X0 Y0
     by blast 
@@ -244,7 +244,7 @@ proof (rule ccontr)
   qed (use assms card_X0 card_Y0 \<open>Colours l k\<close> in auto)
 qed
 
-subsection \<open>Lemma 10.1\<close>
+subsection \<open>Theorem 10.1\<close>
 
 context P0_min
 begin

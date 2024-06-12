@@ -1146,7 +1146,7 @@ proof (rule ccontr)
   qed (use assms card_X0 card_Y0 \<open>Colours l k\<close> in auto)
 qed
 
-subsection \<open>Lemma 9.1\<close>
+subsection \<open>Theorem 9.1\<close>
 
 text \<open>Following Bhavik: dividing by @{term "exp 1"} rather than subtracting 1\<close>
 lemma RN_divide_e_less:
