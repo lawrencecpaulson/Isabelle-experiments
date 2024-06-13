@@ -485,7 +485,7 @@ lemma Big_ZZ_8_5:
   shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_ZZ_8_5 \<mu> l"
   using assms Big_Red_5_3 Big_X_7_5 Big_ZZ_8_1
   unfolding Big_ZZ_8_5_def inequality85_def eps_def
-  apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)       
+  apply (simp add: eventually_conj_iff all_imp_conj_distrib)       
   apply (intro conjI strip eventually_all_ge_at_top; real_asymp)     
   done
 
