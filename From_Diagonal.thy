@@ -20,6 +20,9 @@ lemma ok_fun_11_2a: "ok_fun_11_2a \<in> o(real)"
   unfolding ok_fun_11_2a_def
   by real_asymp
 
+text \<open>possibly, the functions that depend upon @{term \<mu>} need a more refined analysis to cover 
+a closed interval of possible values. But possibly not, as the text implies @{term "\<mu>=2/5"}.\<close>
+
 lemma ok_fun_11_2b: "ok_fun_11_2b \<mu> \<in> o(real)"
   unfolding ok_fun_11_2b_def by real_asymp
 
@@ -372,40 +375,51 @@ lemma FF2: "y' \<le> y \<Longrightarrow> FF k x y' \<le> FF k x y"
 context P0_min
 begin 
 
-lemma
-  assumes "\<eta> > 0" 
-  shows  "\<forall>\<^sup>\<infinity>k. (2 - ok_fun_61 k) / k \<le> \<eta>"
+
+definition "ok_fun_11_1 \<equiv> \<lambda>\<mu> k. max (ok_fun_11_2 \<mu> k) (2 - ok_fun_61 k)"
+
+lemma ok_fun_11_1:
+  assumes "0<\<mu>" "\<mu><1" 
+  shows "ok_fun_11_1 \<mu> \<in> o(real)"
+  unfolding ok_fun_11_1_def
+  by (simp add: assms const_smallo_real maxmin_in_smallo ok_fun_11_2 ok_fun_61 sum_in_smallo)
+
+lemma eventually_le_\<eta>:
+  assumes "\<eta> > 0" and \<mu>: "0<\<mu>" "\<mu><1" 
+  shows "\<forall>\<^sup>\<infinity>k. ok_fun_11_1 \<mu> k / k \<le> \<eta>"
 proof -
-  have "(\<lambda>k. 2 - ok_fun_61 k) \<in> o(real)"
-    using const_smallo_real ok_fun_61 sum_in_smallo by blast
-  then have "(\<lambda>k. (2 - ok_fun_61 k) / k) \<in> o(\<lambda>k. 1)"
-    apply (auto simp: smallo_def divide_simps)
-    using eventually_mono by fastforce
-  with assms show ?thesis
-    apply (auto simp: smallo_def)
-    apply (drule_tac x="\<eta>" in spec)
-    apply (auto simp: )
-    by (metis (mono_tags, lifting) abs_divide abs_le_D1 abs_of_nonneg eventually_mono of_nat_0_le_iff)
+  have "(\<lambda>k. ok_fun_11_1 \<mu> k / k) \<in> o(\<lambda>k. 1)"
+    using eventually_mono ok_fun_11_1 [OF \<mu>] by (fastforce simp: smallo_def divide_simps)
+  with assms have "\<forall>\<^sup>\<infinity>k. \<bar>ok_fun_11_1 \<mu> k\<bar> / real k \<le> \<eta>"
+    by (auto simp: smallo_def)
+  then show ?thesis
+    by (metis (mono_tags, lifting) eventually_mono abs_divide abs_le_D1 abs_of_nat)
 qed
 
-definition "Big_From_11_1 \<equiv> \<lambda>\<mu> k. Big_From_11_2 \<mu> k \<and> Big_ZZ_8_5 \<mu> k \<and> Big_Y_6_1 \<mu> k"
+definition "Big_From_11_1 \<equiv> 
+       \<lambda>\<eta> \<mu> k. Big_From_11_2 \<mu> k \<and> Big_ZZ_8_5 \<mu> k \<and> Big_Y_6_1 \<mu> k \<and> ok_fun_11_1 \<mu> k / k \<le> \<eta>"
 
+text \<open>in sections 9 and 10 (and by implication all proceeding sections), we needed to consider 
+  a closed interval of possible values of @{term \<mu>}. Let's hope, maybe not here. }\<close>
 lemma Big_From_11_1:
-  assumes "0<\<mu>0" "\<mu>0 \<le> \<mu>1" "\<mu>1<1" 
-  shows "\<forall>\<^sup>\<infinity>k. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_From_11_1 \<mu> k"
+  assumes "\<eta> > 0" "0<\<mu>" "\<mu><1" 
+  shows "\<forall>\<^sup>\<infinity>k. Big_From_11_1 \<eta> \<mu> k"
   unfolding Big_From_11_1_def
-  using assms Big_From_11_2 Big_ZZ_8_5 Big_Y_6_1
-  by (simp add: eventually_conj_iff all_imp_conj_distrib)  
+  using assms Big_From_11_2 Big_ZZ_8_5 Big_Y_6_1 eventually_le_\<eta>
+  apply (simp add: eventually_conj_iff all_imp_conj_distrib)
+  by (metis (mono_tags, lifting) eventually_sequentially landau_o.R_refl)  
+
 
 theorem From_11_1:
   assumes \<mu>: "0 < \<mu>" "\<mu> < 1" and "\<eta> > 0" and "k\<ge>3" and p0_min12: "p0_min \<le> 1/2"
-  and big: "Big_From_11_1 \<mu> k"
+  and big: "Big_From_11_1 \<eta> \<mu> k"
   shows "log 2 (RN k k) / real k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>)"
 proof -
   have "k>0"
     using \<open>k\<ge>3\<close> by simp
   have big41: "Big_Blue_4_1 \<mu> k" and big61: "Big_Y_6_1 \<mu> k" 
     and big85: "Big_ZZ_8_5 \<mu> k" and big11_2: "Big_From_11_2 \<mu> k"
+    and le_\<eta>: "ok_fun_11_1 \<mu> k / k \<le> \<eta>"
     using big by (auto simp: Big_From_11_1_def Big_Y_6_1_def Big_Y_6_2_def)
   then have big53: "Big_Red_5_3 \<mu> k"
     by (meson Big_From_11_2_def)
@@ -491,26 +505,32 @@ proof -
         by (smt (verit) add_uminus_conv_diff of_nat_0_le_iff)
       also have "... = FF k x y + (2 - ok_fun_61 k) / k"
         by (simp add: FF_def x_def)
-      finally have leFF: "log 2 nV / k \<le> FF k x y + (2 - ok_fun_61 k) / k" .
+      also have "... \<le> FF k x y + ok_fun_11_1 \<mu> k / k"
+        by (simp add: ok_fun_11_1_def divide_right_mono)
+      finally have le_FF: "log 2 nV / k \<le> FF k x y + ok_fun_11_1 \<mu> k / k" .
 
       have "nV div 2 \<le> card X0"
         using card_X0 by linarith
-      then obtain f::"nat\<Rightarrow>real" where "f \<in> o(real)"
-        and f: "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * (s + real t) / s) + f(k)"
+      then have f: "log 2 nV \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * (s + real t) / s)
+                + ok_fun_11_2 \<mu> k"
         using From_11_2 [OF \<mu> \<open>Colours k k\<close> big11_2] p0_half
         unfolding s_def t_def p0_def \<R>_def \<S>_def by blast
-          (* lemma 11.2 must be modified so that the o(k) function is explicit*)
-      have "log 2 nV / k \<le> log 2 (1/\<mu>) + x * log 2 (1 / (1-\<mu>)) + y * log 2 (\<mu> * (s + real t) / s) + f(k)/k"
+      have "log 2 nV / k \<le> log 2 (1/\<mu>) + x * log 2 (1 / (1-\<mu>)) + y * log 2 (\<mu> * (s + real t) / s)
+                          + ok_fun_11_2 \<mu> k / k"
         using \<open>k>0\<close> divide_right_mono [OF f, of k]
         by (simp add: add_divide_distrib x_def y_def)
-      also have "... = GG \<mu> x y + f k / k"
+      also have "... = GG \<mu> x y + ok_fun_11_2 \<mu> k / k"
         by (metis GG_def sts times_divide_eq_right)
-      finally have leGG: "log 2 nV / k \<le> GG \<mu> x y + f k / k" .
-
-      show "log 2 (real (RN k k)) / real k \<le> v"
-        unfolding v_def FF_def GG_def
-
+      also have "... \<le> GG \<mu> x y + ok_fun_11_1 \<mu> k / k"
+        by (simp add: ok_fun_11_1_def divide_right_mono)
+      finally have le_GG: "log 2 nV / k \<le> GG \<mu> x y + ok_fun_11_1 \<mu> k / k" .
+      have "log 2 nV / real k \<le> v"
+        unfolding v_def using le_\<eta> le_FF le_GG by linarith
+      then have "log 2 (1 + nV) / real k \<le> v"
+        (* the simplest way to allow this "plus one" is by adding 1 to the o(k) bound*)
         sorry
+      then show "log 2 (real (RN k k)) / real k \<le> v"
+        using n_def \<open>1 < nV\<close> by auto
     next
       have beta_le: "bigbeta \<mu> k k \<le> \<mu>"
         by (simp add: \<open>Colours k k\<close> assms big53 bigbeta_le)
