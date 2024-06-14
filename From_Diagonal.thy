@@ -358,24 +358,40 @@ qed
 
 subsection \<open>Theorem 2.1\<close>
 
+(* actually it is undefined when x=1; could we use 1+R(k,k') in the definition?*)
 definition "FF \<equiv> \<lambda>k x y. log 2 (RN k (k - nat\<lfloor>x * real k\<rfloor>)) / real k + x + y"
 
 definition "GG \<equiv> \<lambda>\<mu> x y. log 2 (1/\<mu>) + x * log 2 (1/(1-\<mu>)) + y * log 2 (\<mu> * (x+y) / y)"
 
-(* actually it is undefined when x=1; could we use 1+R(k,k') in the definition?*)
+definition "FF_bound \<equiv> \<lambda>k u. FF k 0 u + \<bar>FF k 1 u\<bar> + 1"
+
+
+(* the ugly mess here fixes the singularity when x=1*)
 lemma FF:
-  assumes "x \<in> {0..1}" "y \<in> {0..u}"
-  shows "FF k x y \<le> FF k 0 u + 1"
-proof -
-  have "log 2 (real (RN k (k - nat \<lfloor>x * real k\<rfloor>))) / real k \<le> log 2 (real (RN k k)) / real k"
+  assumes "x \<in> {0..1}" "y \<in> {0..u}" "k>0"
+  shows "FF k x y \<le> FF_bound k u"
+proof (cases "x=1")
+  case True
+  have "u \<ge> 0"
+    using assms by simp
+  then have "FF k 0 u \<ge> 0"
+    apply (simp add: FF_def)
+    by (metis RN_times_lower' div_0 le_log2_of_power less_one linorder_not_le of_nat_0 of_nat_0_le_iff of_nat_le_iff power_0 zero_compare_simps(3) zero_compare_simps(5))
+  with assms show ?thesis
+    by (simp add: True FF_def abs_if FF_bound_def)
+next
+  case False
+  with assms have "x<1" by auto
+  with \<open>k>0\<close> have "nat \<lfloor>x * real k\<rfloor> < k"
+    by (smt (verit, ccfv_SIG) mult_less_cancel_right2 nat_eq_iff of_nat_0_less_iff of_nat_floor of_nat_less_imp_less zero_le_floor)
+  then have "log 2 (real (RN k (k - nat \<lfloor>x * real k\<rfloor>))) / real k \<le> log 2 (real (RN k k)) / real k"
     apply (intro divide_right_mono Transcendental.log_mono)
        apply (auto simp: )
-     defer
+    apply (simp add: RN_eq_0_iff zero_order(4))
      apply (simp add: RN_mono)
-
-    sorry
+    done
   then show ?thesis
-    using assms by (simp add: FF_def)
+    using assms by (auto simp add: FF_def FF_bound_def)
 qed
 
 lemma FF2: "y' \<le> y \<Longrightarrow> FF k x y' \<le> FF k x y"
@@ -393,7 +409,7 @@ lemma ok_fun_11_1:
   unfolding ok_fun_11_1_def
   by (simp add: assms const_smallo_real maxmin_in_smallo ok_fun_11_2 ok_fun_61 sum_in_smallo)
 
-lemma eventually_le_\<eta>:
+lemma eventually_ok111_le_\<eta>:
   assumes "\<eta> > 0" and \<mu>: "0<\<mu>" "\<mu><1" 
   shows "\<forall>\<^sup>\<infinity>k. ok_fun_11_1 \<mu> k / k \<le> \<eta>"
 proof -
@@ -405,8 +421,14 @@ proof -
     by (metis (mono_tags, lifting) eventually_mono abs_divide abs_le_D1 abs_of_nat)
 qed
 
+lemma eventually_powr_le_\<eta>:
+  assumes "\<eta> > 0" 
+  shows "\<forall>\<^sup>\<infinity>k. (2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta>"
+  using assms by real_asymp
+
 definition "Big_From_11_1 \<equiv> 
-       \<lambda>\<eta> \<mu> k. Big_From_11_2 \<mu> k \<and> Big_ZZ_8_5 \<mu> k \<and> Big_Y_6_1 \<mu> k \<and> ok_fun_11_1 \<mu> k / k \<le> \<eta>"
+   \<lambda>\<eta> \<mu> k. Big_From_11_2 \<mu> k \<and> Big_ZZ_8_5 \<mu> k \<and> Big_Y_6_1 \<mu> k \<and> ok_fun_11_1 \<mu> k / k \<le> \<eta>
+         \<and> (2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta>"
 
 text \<open>in sections 9 and 10 (and by implication all proceeding sections), we needed to consider 
   a closed interval of possible values of @{term \<mu>}. Let's hope, maybe not here. }\<close>
@@ -414,7 +436,7 @@ lemma Big_From_11_1:
   assumes "\<eta> > 0" "0<\<mu>" "\<mu><1" 
   shows "\<forall>\<^sup>\<infinity>k. Big_From_11_1 \<eta> \<mu> k"
   unfolding Big_From_11_1_def
-  using assms Big_From_11_2 Big_ZZ_8_5 Big_Y_6_1 eventually_le_\<eta>
+  using assms Big_From_11_2 Big_ZZ_8_5 Big_Y_6_1 eventually_ok111_le_\<eta> eventually_powr_le_\<eta>
   apply (simp add: eventually_conj_iff all_imp_conj_distrib)
   by (metis (mono_tags, lifting) eventually_sequentially landau_o.R_refl)  
 
@@ -428,7 +450,8 @@ proof -
     using \<open>k\<ge>3\<close> by simp
   have big41: "Big_Blue_4_1 \<mu> k" and big61: "Big_Y_6_1 \<mu> k" 
     and big85: "Big_ZZ_8_5 \<mu> k" and big11_2: "Big_From_11_2 \<mu> k"
-    and le_\<eta>: "ok_fun_11_1 \<mu> k / k \<le> \<eta>"
+    and ok111_le_\<eta>: "ok_fun_11_1 \<mu> k / k \<le> \<eta>"
+    and powr_le_\<eta>: "(2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta>"
     using big by (auto simp: Big_From_11_1_def Big_Y_6_1_def Big_Y_6_2_def)
   then have big53: "Big_Red_5_3 \<mu> k"
     by (meson Big_From_11_2_def)
@@ -486,7 +509,24 @@ proof -
     have "Colours k k"
       using Colours_def no_Blue_K no_Red_K by auto
 
-    define \<R> where "\<R> \<equiv> Step_class \<mu> k k {red_step}" 
+    have FF_GG_bound: "min (FF k x y) (GG \<mu> x y) + \<eta> \<le> FF_bound k (\<mu> / (1 - \<mu>) + \<eta>) + \<eta>"
+      if x: "x \<in> {0..1}" and y: "y \<in> {0..\<mu> * x / (1 - \<mu>) + \<eta>}" for x y
+    proof -
+      have FF_ub: "FF k x y \<le> FF_bound k (\<mu> / (1 - \<mu>) + \<eta>)"
+      proof (rule order.trans)
+        show "FF k x y \<le> FF_bound k y"
+          using x y \<open>0 < k\<close> by (simp add: FF)
+      next
+        have "y \<le> \<mu> / (1 - \<mu>) + \<eta>"
+          using x y \<mu> by simp (smt (verit, best) frac_le mult_left_le)
+        then show "FF_bound k y \<le> FF_bound k (\<mu> / (1 - \<mu>) + \<eta>)"
+          by (simp add: FF_bound_def FF_def)
+      qed
+      show ?thesis
+        using FF_ub by auto
+    qed
+
+    define \<R> where "\<R> \<equiv> Step_class \<mu> k k {red_step}"
     define \<S> where "\<S> \<equiv> Step_class \<mu> k k {dboost_step}"
     define t where "t \<equiv> card \<R>" 
     define s where "s \<equiv> card \<S>"
@@ -498,13 +538,34 @@ proof -
       using \<open>k>0\<close> by (simp add: x_def y_def field_simps)
     have "t < k"
       by (simp add: \<R>_def \<mu> t_def \<open>Colours k k\<close> red_step_limit)
+    then obtain x01: "0\<le>x" "x\<le>1"
+      by (auto simp: x_def)
     have "s < k"   (*USED?*)
       unfolding \<S>_def \<mu> s_def
       using \<open>Colours k k\<close> bblue_dboost_step_limit big41 \<mu>  
       by (meson le_add2 le_less_trans)
 
+    define w where "w \<equiv> (\<Squnion>y\<in>{0..\<mu> * x / (1 - \<mu>) + \<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>)"
+
+
     show ?thesis
     proof (intro cSup_upper2 cSUP_least imageI bdd_aboveI2)
+      show "w \<in> (\<lambda>x. \<Squnion>y\<in>{0..\<mu> * x / (1 - \<mu>) + \<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>) ` {0..1}"
+        using x01 by (force simp: w_def intro!: image_eqI [where x=x])
+    next
+      have beta_le: "bigbeta \<mu> k k \<le> \<mu>"
+        by (simp add: \<open>Colours k k\<close> assms big53 bigbeta_le)
+      have "s \<le> (bigbeta \<mu> k k / (1 - bigbeta \<mu> k k)) * t + (2 / (1-\<mu>)) * k powr (19/20)"
+        using ZZ_8_5 [OF \<mu> \<open>Colours k k\<close> big85] by (auto simp: \<R>_def \<S>_def s_def t_def)
+      also have "\<dots> \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * k powr (19/20)"
+        by (smt (verit, ccfv_SIG) \<mu> beta_le frac_le mult_right_mono of_nat_0_le_iff)
+      also have "\<dots> \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * (k powr (-1/20) * k powr 1)"
+        unfolding powr_add [symmetric] by simp
+      finally have "s \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * k powr (-1/20) * k" 
+        by simp
+      with powr_le_\<eta> have \<dagger>: "s \<le> (\<mu> / (1-\<mu>)) * t + \<eta> * k"
+        by (smt (verit, ccfv_SIG) mult_right_mono of_nat_0_le_iff)
+
       have "nV div 2 \<le> card Y0"
         by (simp add: card_Y0)
       then have \<section>: "log 2 (Suc nV) \<le> log 2 (RN k (k-t)) + s + t + 2 - ok_fun_61 k"
@@ -534,66 +595,28 @@ proof -
         by (simp add: ok_fun_11_1_def divide_right_mono)
       finally have le_GG: "log 2 (Suc nV) / k \<le> GG \<mu> x y + ok_fun_11_1 \<mu> k / k" .
       have "log 2 (Suc nV) / real k \<le> v"
-        unfolding v_def using le_\<eta> le_FF le_GG by linarith
-      then show "log 2 (real (RN k k)) / real k \<le> v"
+        unfolding v_def using ok111_le_\<eta> le_FF le_GG by linarith
+      then have "log 2 (real (RN k k)) / real k \<le> v"
         using n_def \<open>1 < nV\<close> by auto
-    next
-      have beta_le: "bigbeta \<mu> k k \<le> \<mu>"
-        by (simp add: \<open>Colours k k\<close> assms big53 bigbeta_le)
-      have "s \<le> (bigbeta \<mu> k k / (1 - bigbeta \<mu> k k)) * t + (2 / (1-\<mu>)) * k powr (19/20)"
-        using ZZ_8_5 [OF \<mu> \<open>Colours k k\<close> big85] by (auto simp: \<R>_def \<S>_def s_def t_def)
-      also have "\<dots> \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * k powr (19/20)"
-        by (smt (verit, ccfv_SIG) \<mu> beta_le frac_le mult_right_mono of_nat_0_le_iff)
-      also have "\<dots> \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * (k powr (-1/20) * k powr 1)"
-        unfolding powr_add [symmetric] by simp
-      finally have \<section>: "s \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * k powr (-1/20) * k" 
-        by simp
-      have \<ddagger>: "y \<le> (\<mu> / (1-\<mu>)) * x + (2 / (1-\<mu>)) * k powr (-1/20)" 
-        using divide_right_mono [OF \<section>, of k] \<open>0<k\<close>
-        by (simp add: add_divide_distrib x_def y_def)
-      have DD: "(2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta>"
-        sorry
-
-      show "v \<in> (\<lambda>x. \<Squnion>y\<in>{0..\<mu> * x / (1 - \<mu>) + \<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>) ` {0..1}"
-        apply (auto simp: v_def image_iff)
-        apply (rule_tac x="x" in bexI)
-         apply (auto simp: )
-          defer
-          apply (force simp: x_def)
-        using \<open>t < k\<close> apply (force simp: x_def)
-        apply (intro order.antisym cSup_upper)
-          apply (auto simp: image_iff)
-          apply (rule )
-           apply (force simp: )
-          apply (auto simp: )
-           apply (simp add: y_def)
-        using \<ddagger> DD apply fastforce
-         defer
-         apply (intro cSUP_least)
-        using \<mu> \<open>\<eta> > 0\<close> apply (auto simp: x_def)[1]
-         apply (auto simp: )
-          apply (rule min.coboundedI1)
-          defer
-          apply (rule min.coboundedI2)
-          apply (simp add: GG_def)
-        unfolding x_def
-
-        sorry
-    next
-      fix x y :: real
-      assume x: "x \<in> {0..1}" and y: "y \<in> {0..\<mu> * x / (1 - \<mu>) + \<eta>}"
-      have FF_ub: "FF k x y \<le> FF k 0 (\<mu> / (1 - \<mu>) + \<eta>) + 1"
-      proof (rule order.trans)
-        show "FF k x y \<le> FF k 0 y + 1"
-          using x y by (simp add: FF)
+      also have "... \<le> w"
+        unfolding w_def v_def
+        sketch (intro  cSup_upper2)
+      proof (intro cSup_upper2)
+        have "y \<in> {0..\<mu> * x / (1 - \<mu>) + \<eta>}"
+        using divide_right_mono [OF \<dagger>, of k] \<open>k>0\<close> by (simp add: x_def y_def) argo
+        then show "min (FF k x y) (GG \<mu> x y) + \<eta> \<in> (\<lambda>y. min (FF k x y) (GG \<mu> x y) + \<eta>) ` {0..\<mu> * x / (1 - \<mu>) + \<eta>}"
+          by blast
       next
-        have "y \<le> \<mu> / (1 - \<mu>) + \<eta>"
-          using x y \<mu> by simp (smt (verit, best) frac_le mult_left_le)
-        then show "FF k 0 y + 1 \<le> FF k 0 (\<mu> / (1 - \<mu>) + \<eta>) + 1"
-          by (simp add: FF2)
-      qed
-      show "min (FF k x y) (GG \<mu> x y) + \<eta> \<le> FF k 0 (\<mu> / (1 - \<mu>) + \<eta>) + 1 + \<eta>"
-        using FF_ub by auto
+        show "bdd_above ((\<lambda>y. min (FF k x y) (GG \<mu> x y) + \<eta>) ` {0..\<mu> * x / (1 - \<mu>) + \<eta>})"
+          using FF_GG_bound [of x] x01
+          by (meson atLeastAtMost_iff bdd_aboveI2)
+      qed auto
+      finally show "log 2 (real (RN k k)) / real k \<le> w" .
+    next
+      fix x y 
+      assume "x \<in> {0..1}" "y \<in> {0..\<mu> * x / (1 - \<mu>) + \<eta>}"
+      then show "min (FF k x y) (GG \<mu> x y) + \<eta> \<le> FF_bound k (\<mu> / (1 - \<mu>) + \<eta>) + \<eta>"
+        using FF_GG_bound by blast
     qed (use \<mu> \<open>\<eta>>0\<close> in auto)
   next
     case Blue
