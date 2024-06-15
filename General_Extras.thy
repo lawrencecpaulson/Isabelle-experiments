@@ -4,6 +4,36 @@ theory General_Extras imports
 
 begin
 
+thm of_nat_le_iff
+context linordered_nonzero_semiring
+begin
+
+lemma one_of_nat_le_iff [simp]: "1 \<le> of_nat k \<longleftrightarrow> 1 \<le> k"
+  using of_nat_le_iff [of 1] by simp
+
+lemma numeral_nat_le_iff [simp]: "numeral n \<le> of_nat k \<longleftrightarrow> numeral n \<le> k"
+  using of_nat_le_iff [of "numeral n"] by simp
+
+lemma of_nat_le_1_iff [simp]: "of_nat k \<le> 1 \<longleftrightarrow> k \<le> 1"
+  using of_nat_le_iff [of _ 1] by simp
+
+lemma of_nat_le_numeral_iff [simp]: "of_nat k \<le> numeral n \<longleftrightarrow> k \<le> numeral n"
+  using of_nat_le_iff [of _ "numeral n"] by simp
+
+lemma one_of_nat_less_iff [simp]: "1 < of_nat k \<longleftrightarrow> 1 < k"
+  using of_nat_less_iff [of 1] by simp
+
+lemma numeral_nat_less_iff [simp]: "numeral n < of_nat k \<longleftrightarrow> numeral n < k"
+  using of_nat_less_iff [of "numeral n"] by simp
+
+lemma of_nat_less_1_iff [simp]: "of_nat k < 1 \<longleftrightarrow> k < 1"
+  using of_nat_less_iff [of _ 1] by simp
+
+lemma of_nat_less_numeral_iff [simp]: "of_nat k < numeral n \<longleftrightarrow> k < numeral n"
+  using of_nat_less_iff [of _ "numeral n"] by simp
+
+end
+
 lemma exp_minus': "exp (-x) = 1 / (exp x)"
   for x :: "'a::{real_normed_field,banach}"
   by (simp add: exp_minus inverse_eq_divide)
@@ -13,6 +43,9 @@ lemma gchoose_ge0: "\<And>r::real. r \<in> Nats \<Longrightarrow> r gchoose k \<
 
 lemma ln_strict_mono: "\<And>x::real. \<lbrakk>x < y; 0 < x; 0 < y\<rbrakk> \<Longrightarrow> ln x < ln y"
   using ln_less_cancel_iff by blast
+
+lemma zero_le_log_I: "1 < a \<Longrightarrow> 1 \<le> x \<Longrightarrow> 0 \<le> log a x"
+  using log_le_cancel_iff[of a 1 x] by simp
 
 
 thm sum_in_smallo

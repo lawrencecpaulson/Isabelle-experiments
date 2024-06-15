@@ -156,8 +156,8 @@ proof -
       using pee iB Y_6_4_Bblue \<open>0<\<mu>\<close> by (fastforce simp: \<B>_def p_def)
     also have "\<dots> \<le> 1/k"
     proof -
-      have "real k powr - (1/8) \<le> 1"
-        using \<open>k>0\<close> by (force simp: less_eq_real_def nat_less_real_le powr_less_one)
+      have "k powr (-1/8) \<le> 1"
+        using \<open>k>0\<close> by (simp add: ge_one_powr_ge_zero powr_minus_divide)
       then show ?thesis
         by (simp add: alpha_eq eps_def powr_powr divide_le_cancel flip: powr_add)
     qed
