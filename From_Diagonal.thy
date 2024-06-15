@@ -450,6 +450,147 @@ lemma Big_From_11_1:
   by (metis (mono_tags, lifting) eventually_sequentially landau_o.R_refl)  
 
 
+text \<open>The body of the proof has been extracted to allow the symmetry argument\<close>
+lemma (in Book_Basis) From_11_1_Body:
+  fixes V :: "'a set"
+  assumes \<mu>: "0 < \<mu>" "\<mu> < 1" and "\<eta> > 0" and "k>0" and ge_RN: "Suc nV \<ge> RN k k"
+    and Red: "graph_density Red \<ge> 1/2" 
+    and p0_min12: "p0_min \<le> 1/2"
+    and Red_E: "Red \<subseteq> E" and Blue_def: "Blue = E\<setminus>Red" 
+    and no_Red_K: "\<not> (\<exists>K. size_clique k K Red)"
+    and no_Blue_K: "\<not> (\<exists>K. size_clique k K Blue)"
+    and big: "Big_From_11_1 \<eta> \<mu> k"
+  shows "log 2 (RN k k) / real k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>)"
+proof -  
+  have big41: "Big_Blue_4_1 \<mu> k" and big61: "Big_Y_6_1 \<mu> k" 
+    and big85: "Big_ZZ_8_5 \<mu> k" and big11_2: "Big_From_11_2 \<mu> k"
+    and ok111_le_\<eta>: "ok_fun_11_1 \<mu> k / k \<le> \<eta>"
+    and powr_le_\<eta>: "(2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta>"
+    using big by (auto simp: Big_From_11_1_def Big_Y_6_1_def Big_Y_6_2_def)
+  then have big53: "Big_Red_5_3 \<mu> k"
+    by (meson Big_From_11_2_def)
+
+  obtain X0 Y0 where card_X0: "card X0 \<ge> nV/2" and card_Y0: "card Y0 = gorder div 2"
+    and "X0 = V \<setminus> Y0" "Y0\<subseteq>V"
+    and p0_half: "1/2 \<le> gen_density Red X0 Y0"
+    and "Book V E p0_min Red Blue X0 Y0" 
+  proof (rule Basis_imp_Book [OF _ Red_E])
+    show "E = all_edges V"
+      using complete by auto
+    show "p0_min \<le> graph_density Red"
+      using p0_min12 Red by linarith
+    show "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique k K Blue))"
+      using no_Blue_K no_Red_K by blast
+  qed (use infinite_UNIV p0_min Blue_def Red in auto)
+  then interpret Book V E p0_min Red Blue X0 Y0
+    by meson
+  have "Colours k k"
+    using Colours_def no_Blue_K no_Red_K by auto
+  have FF_GG_bound: "min (FF k x y) (GG \<mu> x y) + \<eta> \<le> FF_bound k (\<mu> / (1-\<mu>) + \<eta>) + \<eta>"
+    if x: "x \<in> {0..1}" and y: "y \<in> {0..\<mu> * x / (1-\<mu>) + \<eta>}" for x y
+  proof -
+    have FF_ub: "FF k x y \<le> FF_bound k (\<mu> / (1-\<mu>) + \<eta>)"
+    proof (rule order.trans)
+      show "FF k x y \<le> FF_bound k y"
+        using x y \<open>0 < k\<close> by (simp add: FF)
+    next
+      have "y \<le> \<mu> / (1-\<mu>) + \<eta>"
+        using x y \<mu> by simp (smt (verit, best) frac_le mult_left_le)
+      then show "FF_bound k y \<le> FF_bound k (\<mu> / (1-\<mu>) + \<eta>)"
+        by (simp add: FF_bound_def FF_def)
+    qed
+    show ?thesis
+      using FF_ub by auto
+  qed
+  define \<R> where "\<R> \<equiv> Step_class \<mu> k k {red_step}"
+  define \<S> where "\<S> \<equiv> Step_class \<mu> k k {dboost_step}"
+  define t where "t \<equiv> card \<R>" 
+  define s where "s \<equiv> card \<S>"
+  define m where "m \<equiv> halted_point \<mu> k k"
+  define x where "x \<equiv> t/k"
+  define y where "y \<equiv> s/k"
+  define v where "v \<equiv> min (FF k x y) (GG \<mu> x y) + \<eta>"
+  have sts: "(s + real t) / s = (x+y) / y"
+    using \<open>k>0\<close> by (simp add: x_def y_def field_simps)
+  have "t < k"
+    by (simp add: \<R>_def \<mu> t_def \<open>Colours k k\<close> red_step_limit)
+  then obtain x01: "0\<le>x" "x\<le>1"
+    by (auto simp: x_def)
+
+  define w where "w \<equiv> (\<Squnion>y\<in>{0..\<mu> * x / (1-\<mu>) + \<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>)"
+  show ?thesis
+  proof (intro cSup_upper2 cSUP_least imageI bdd_aboveI2)
+    show "w \<in> (\<lambda>x. \<Squnion>y\<in>{0..\<mu> * x / (1-\<mu>) + \<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>) ` {0..1}"
+      using x01 by (force simp: w_def intro!: image_eqI [where x=x])
+  next
+    have beta_le: "bigbeta \<mu> k k \<le> \<mu>"
+      using \<open>Colours k k\<close> \<mu> big53 bigbeta_le by blast
+    have "s \<le> (bigbeta \<mu> k k / (1 - bigbeta \<mu> k k)) * t + (2 / (1-\<mu>)) * k powr (19/20)"
+      using ZZ_8_5 [OF \<mu> \<open>Colours k k\<close> big85] by (auto simp: \<R>_def \<S>_def s_def t_def)
+    also have "\<dots> \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * k powr (19/20)"
+      by (smt (verit, ccfv_SIG) \<mu> beta_le frac_le mult_right_mono of_nat_0_le_iff)
+    also have "\<dots> \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * (k powr (-1/20) * k powr 1)"
+      unfolding powr_add [symmetric] by simp
+    finally have "s \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * k powr (-1/20) * k" 
+      by simp
+    with powr_le_\<eta> have \<dagger>: "s \<le> (\<mu> / (1-\<mu>)) * t + \<eta> * k"
+      by (smt (verit, ccfv_SIG) mult_right_mono of_nat_0_le_iff)
+
+    have "nV div 2 \<le> card Y0"
+      by (simp add: card_Y0)
+    then have \<section>: "log 2 (Suc nV) \<le> log 2 (RN k (k-t)) + s + t + 2 - ok_fun_61 k"
+      using From_11_3 [OF \<mu> \<open>Colours k k\<close> big61] p0_half by (auto simp: \<R>_def \<S>_def p0_def s_def t_def)
+    have "log 2 (Suc nV) / k \<le> log 2 (RN k (k-t)) / k + x + y + (2 - ok_fun_61 k) / k"
+      using \<open>k>0\<close> divide_right_mono [OF \<section>, of k] add_divide_distrib x_def y_def
+      by (smt (verit) add_uminus_conv_diff of_nat_0_le_iff)
+    also have "... = FF k x y + (2 - ok_fun_61 k) / k"
+      by (simp add: FF_def x_def)
+    also have "... \<le> FF k x y + ok_fun_11_1 \<mu> k / k"
+      by (simp add: ok_fun_11_1_def divide_right_mono)
+    finally have le_FF: "log 2 (Suc nV) / k \<le> FF k x y + ok_fun_11_1 \<mu> k / k" .
+
+    have "nV div 2 \<le> card X0"
+      using card_X0 by linarith
+    then have 112: "log 2 (Suc nV) \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * (s + real t) / s)
+                + ok_fun_11_2 \<mu> k"
+      using From_11_2 [OF \<mu> \<open>Colours k k\<close> big11_2] p0_half
+      unfolding s_def t_def p0_def \<R>_def \<S>_def by blast
+    have "log 2 (Suc nV) / k \<le> log 2 (1/\<mu>) + x * log 2 (1 / (1-\<mu>)) + y * log 2 (\<mu> * (s + real t) / s)
+                          + ok_fun_11_2 \<mu> k / k"
+      using \<open>k>0\<close> divide_right_mono [OF 112, of k]
+      by (simp add: add_divide_distrib x_def y_def)
+    also have "... = GG \<mu> x y + ok_fun_11_2 \<mu> k / k"
+      by (metis GG_def sts times_divide_eq_right)
+    also have "... \<le> GG \<mu> x y + ok_fun_11_1 \<mu> k / k"
+      by (simp add: ok_fun_11_1_def divide_right_mono)
+    finally have le_GG: "log 2 (Suc nV) / k \<le> GG \<mu> x y + ok_fun_11_1 \<mu> k / k" .
+    have "RN k k > 0"
+      by (metis RN_eq_0_iff \<open>k>0\<close> gr0I)
+    moreover have "log 2 (Suc nV) / real k \<le> v"
+      unfolding v_def using ok111_le_\<eta> le_FF le_GG by linarith
+    ultimately have "log 2 (RN k k) / k \<le> v"
+      using ge_RN \<open>k>0\<close>
+      by (smt (verit, best) Transcendental.log_mono divide_right_mono of_nat_0_less_iff of_nat_mono)
+    also have "... \<le> w"
+      unfolding w_def v_def
+    proof (intro cSup_upper2)
+      have "y \<in> {0..\<mu> * x / (1-\<mu>) + \<eta>}"
+        using divide_right_mono [OF \<dagger>, of k] \<open>k>0\<close> by (simp add: x_def y_def) argo
+      then show "min (FF k x y) (GG \<mu> x y) + \<eta> \<in> (\<lambda>y. min (FF k x y) (GG \<mu> x y) + \<eta>) ` {0..\<mu> * x / (1-\<mu>) + \<eta>}"
+        by blast
+    next
+      show "bdd_above ((\<lambda>y. min (FF k x y) (GG \<mu> x y) + \<eta>) ` {0..\<mu> * x / (1-\<mu>) + \<eta>})"
+        by (meson FF_GG_bound [of x] x01 atLeastAtMost_iff bdd_aboveI2)
+    qed auto
+    finally show "log 2 (real (RN k k)) / real k \<le> w" .
+  next
+    fix x y 
+    assume "x \<in> {0..1}" "y \<in> {0..\<mu> * x / (1-\<mu>) + \<eta>}"
+    then show "min (FF k x y) (GG \<mu> x y) + \<eta> \<le> FF_bound k (\<mu> / (1-\<mu>) + \<eta>) + \<eta>"
+      using FF_GG_bound by blast
+  qed (use \<mu> \<open>\<eta>>0\<close> in auto)
+qed
+
 theorem From_11_1:
   assumes \<mu>: "0 < \<mu>" "\<mu> < 1" and "\<eta> > 0" and "k\<ge>3" and p0_min12: "p0_min \<le> 1/2"
   and big: "Big_From_11_1 \<eta> \<mu> k"
@@ -482,7 +623,7 @@ proof -
   have [simp]: "nV = n"
     by (simp add: V_def)
   then obtain Red Blue
-    where Red_E: "Red \<subseteq> E" and Blue_def: "Blue = E-Red" 
+    where Red_E: "Red \<subseteq> E" and Blue_def: "Blue = E\<setminus>Red" 
       and no_Red_K: "\<not> (\<exists>K. size_clique k K Red)"
       and no_Blue_K: "\<not> (\<exists>K. size_clique k K Blue)"
     by (metis \<open>n < RN k k\<close> less_RN_Red_Blue)
@@ -501,131 +642,31 @@ proof -
   then show ?thesis
   proof cases
     case Red
-    obtain X0 Y0 where card_X0: "card X0 \<ge> nV/2" and card_Y0: "card Y0 = gorder div 2"
-      and "X0 = V \<setminus> Y0" "Y0\<subseteq>V"
-      and p0_half: "1/2 \<le> gen_density Red X0 Y0"
-      and "Book V E p0_min Red Blue X0 Y0" 
-    proof (rule Basis_imp_Book [OF _ Red_E])
-      show "E = all_edges V"
-        using E_def by auto
-      show "p0_min \<le> graph_density Red"
-        using p0_min12 Red by linarith
-      show "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique k K Blue))"
-        using no_Blue_K no_Red_K by blast
-    qed (use p0_min Blue_def Red in auto)
-    then interpret Book V E p0_min Red Blue X0 Y0
-      by meson
-    have "Colours k k"
-      using Colours_def no_Blue_K no_Red_K by auto
-    have FF_GG_bound: "min (FF k x y) (GG \<mu> x y) + \<eta> \<le> FF_bound k (\<mu> / (1-\<mu>) + \<eta>) + \<eta>"
-      if x: "x \<in> {0..1}" and y: "y \<in> {0..\<mu> * x / (1-\<mu>) + \<eta>}" for x y
-    proof -
-      have FF_ub: "FF k x y \<le> FF_bound k (\<mu> / (1-\<mu>) + \<eta>)"
-      proof (rule order.trans)
-        show "FF k x y \<le> FF_bound k y"
-          using x y \<open>0 < k\<close> by (simp add: FF)
-      next
-        have "y \<le> \<mu> / (1-\<mu>) + \<eta>"
-          using x y \<mu> by simp (smt (verit, best) frac_le mult_left_le)
-        then show "FF_bound k y \<le> FF_bound k (\<mu> / (1-\<mu>) + \<eta>)"
-          by (simp add: FF_bound_def FF_def)
-      qed
-      show ?thesis
-        using FF_ub by auto
-    qed
-    define \<R> where "\<R> \<equiv> Step_class \<mu> k k {red_step}"
-    define \<S> where "\<S> \<equiv> Step_class \<mu> k k {dboost_step}"
-    define t where "t \<equiv> card \<R>" 
-    define s where "s \<equiv> card \<S>"
-    define m where "m \<equiv> halted_point \<mu> k k"
-    define x where "x \<equiv> t/k"
-    define y where "y \<equiv> s/k"
-    define v where "v \<equiv> min (FF k x y) (GG \<mu> x y) + \<eta>"
-    have sts: "(s + real t) / s = (x+y) / y"
-      using \<open>k>0\<close> by (simp add: x_def y_def field_simps)
-    have "t < k"
-      by (simp add: \<R>_def \<mu> t_def \<open>Colours k k\<close> red_step_limit)
-    then obtain x01: "0\<le>x" "x\<le>1"
-      by (auto simp: x_def)
-    have "s < k"   (*USED?*)
-      unfolding \<S>_def \<mu> s_def
-      using \<open>Colours k k\<close> bblue_dboost_step_limit big41 \<mu>  
-      by (meson le_add2 le_less_trans)
-
-    define w where "w \<equiv> (\<Squnion>y\<in>{0..\<mu> * x / (1-\<mu>) + \<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>)"
     show ?thesis
-    proof (intro cSup_upper2 cSUP_least imageI bdd_aboveI2)
-      show "w \<in> (\<lambda>x. \<Squnion>y\<in>{0..\<mu> * x / (1-\<mu>) + \<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>) ` {0..1}"
-        using x01 by (force simp: w_def intro!: image_eqI [where x=x])
+    proof (intro From_11_1_Body)
     next
-      have beta_le: "bigbeta \<mu> k k \<le> \<mu>"
-        by (simp add: \<open>Colours k k\<close> assms big53 bigbeta_le)
-      have "s \<le> (bigbeta \<mu> k k / (1 - bigbeta \<mu> k k)) * t + (2 / (1-\<mu>)) * k powr (19/20)"
-        using ZZ_8_5 [OF \<mu> \<open>Colours k k\<close> big85] by (auto simp: \<R>_def \<S>_def s_def t_def)
-      also have "\<dots> \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * k powr (19/20)"
-        by (smt (verit, ccfv_SIG) \<mu> beta_le frac_le mult_right_mono of_nat_0_le_iff)
-      also have "\<dots> \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * (k powr (-1/20) * k powr 1)"
-        unfolding powr_add [symmetric] by simp
-      finally have "s \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * k powr (-1/20) * k" 
-        by simp
-      with powr_le_\<eta> have \<dagger>: "s \<le> (\<mu> / (1-\<mu>)) * t + \<eta> * k"
-        by (smt (verit, ccfv_SIG) mult_right_mono of_nat_0_le_iff)
-
-      have "nV div 2 \<le> card Y0"
-        by (simp add: card_Y0)
-      then have \<section>: "log 2 (Suc nV) \<le> log 2 (RN k (k-t)) + s + t + 2 - ok_fun_61 k"
-        using From_11_3 [OF \<mu> \<open>Colours k k\<close> big61] p0_half by (auto simp: \<R>_def \<S>_def p0_def s_def t_def)
-      have "log 2 (Suc nV) / k \<le> log 2 (RN k (k-t)) / k + x + y + (2 - ok_fun_61 k) / k"
-        using \<open>k>0\<close> divide_right_mono [OF \<section>, of k] add_divide_distrib x_def y_def
-        by (smt (verit) add_uminus_conv_diff of_nat_0_le_iff)
-      also have "... = FF k x y + (2 - ok_fun_61 k) / k"
-        by (simp add: FF_def x_def)
-      also have "... \<le> FF k x y + ok_fun_11_1 \<mu> k / k"
-        by (simp add: ok_fun_11_1_def divide_right_mono)
-      finally have le_FF: "log 2 (Suc nV) / k \<le> FF k x y + ok_fun_11_1 \<mu> k / k" .
-
-      have "nV div 2 \<le> card X0"
-        using card_X0 by linarith
-      then have 112: "log 2 (Suc nV) \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * (s + real t) / s)
-                + ok_fun_11_2 \<mu> k"
-        using From_11_2 [OF \<mu> \<open>Colours k k\<close> big11_2] p0_half
-        unfolding s_def t_def p0_def \<R>_def \<S>_def by blast
-      have "log 2 (Suc nV) / k \<le> log 2 (1/\<mu>) + x * log 2 (1 / (1-\<mu>)) + y * log 2 (\<mu> * (s + real t) / s)
-                          + ok_fun_11_2 \<mu> k / k"
-        using \<open>k>0\<close> divide_right_mono [OF 112, of k]
-        by (simp add: add_divide_distrib x_def y_def)
-      also have "... = GG \<mu> x y + ok_fun_11_2 \<mu> k / k"
-        by (metis GG_def sts times_divide_eq_right)
-      also have "... \<le> GG \<mu> x y + ok_fun_11_1 \<mu> k / k"
-        by (simp add: ok_fun_11_1_def divide_right_mono)
-      finally have le_GG: "log 2 (Suc nV) / k \<le> GG \<mu> x y + ok_fun_11_1 \<mu> k / k" .
-      have "log 2 (Suc nV) / real k \<le> v"
-        unfolding v_def using ok111_le_\<eta> le_FF le_GG by linarith
-      then have "log 2 (real (RN k k)) / real k \<le> v"
-        using n_def \<open>1 < nV\<close> by auto
-      also have "... \<le> w"
-        unfolding w_def v_def
-      proof (intro cSup_upper2)
-        have "y \<in> {0..\<mu> * x / (1-\<mu>) + \<eta>}"
-        using divide_right_mono [OF \<dagger>, of k] \<open>k>0\<close> by (simp add: x_def y_def) argo
-        then show "min (FF k x y) (GG \<mu> x y) + \<eta> \<in> (\<lambda>y. min (FF k x y) (GG \<mu> x y) + \<eta>) ` {0..\<mu> * x / (1-\<mu>) + \<eta>}"
-          by blast
-      next
-        show "bdd_above ((\<lambda>y. min (FF k x y) (GG \<mu> x y) + \<eta>) ` {0..\<mu> * x / (1-\<mu>) + \<eta>})"
-          by (meson FF_GG_bound [of x] x01 atLeastAtMost_iff bdd_aboveI2)
-      qed auto
-      finally show "log 2 (real (RN k k)) / real k \<le> w" .
-    next
-      fix x y 
-      assume "x \<in> {0..1}" "y \<in> {0..\<mu> * x / (1-\<mu>) + \<eta>}"
-      then show "min (FF k x y) (GG \<mu> x y) + \<eta> \<le> FF_bound k (\<mu> / (1-\<mu>) + \<eta>) + \<eta>"
-        using FF_GG_bound by blast
-    qed (use \<mu> \<open>\<eta>>0\<close> in auto)
+      show "RN k k \<le> Suc nV"
+        by (simp add: n_def)
+      show "\<nexists>K. size_clique k K Red"
+        using no_Red_K by blast
+      show "\<nexists>K. size_clique k K Blue"
+        using no_Blue_K by blast
+    qed (use Red Red_E Blue_def assms in auto)
   next
     case Blue
-    then show ?thesis
-      (* the exact same thing with colours reversed, done via a lemma*)
-      sorry
+    show ?thesis
+    proof (intro From_11_1_Body)
+      show "RN k k \<le> Suc nV"
+        by (simp add: n_def)
+      show "Blue \<subseteq> E"
+        by (simp add: Blue_E)
+      show "Red = E \<setminus> Blue"
+        by (simp add: Blue_def Red_E double_diff)
+      show "\<nexists>K. size_clique k K Red"
+        using no_Red_K by blast
+      show "\<nexists>K. size_clique k K Blue"
+        using no_Blue_K by blast
+    qed (use Blue Red_E Blue_def assms in auto)
   qed
 qed
 
