@@ -68,6 +68,9 @@ proof -
     by (simp add: eventually_conj_iff all_imp_conj_distrib)  
 qed
 
+text \<open>Simply to prevent issues about the positioning of the function @{term real}}\<close>
+abbreviation "H \<equiv> \<lambda>\<mu> s t. \<mu> * (real s + real t) / real s"
+
 text \<open>the text refers to the actual Ramsey number but I don't see how that could work.
 Theorem 11.1 will define @{term n} to be one less than the Ramsay number, hence we add that one back here.\<close>
 lemma (in Book) From_11_2:
@@ -79,7 +82,7 @@ lemma (in Book) From_11_2:
   defines "m \<equiv> halted_point \<mu> k k"
   defines "nV' \<equiv> Suc nV"
   assumes 0: "card X0 \<ge> nV div 2" and "p0 \<ge> 1/2"
-  shows "log 2 nV' \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * (s + real t) / s) + ok_fun_11_2 \<mu> k"
+  shows "log 2 nV' \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (H \<mu> s t) + ok_fun_11_2 \<mu> k"
 proof -
   have "k>0"
     using Colours_kn0 \<open>Colours k k\<close> by auto
@@ -151,13 +154,13 @@ proof -
     have h: "h c \<in> o(real)" for c
       unfolding h_def by real_asymp
 
-    have le_h: "\<bar>s * log 2 (\<mu> * real(s+t) / s)\<bar> \<le> h 1 k"
+    have le_h: "\<bar>s * log 2 (H \<mu> s t)\<bar> \<le> h 1 k"
     proof (cases "s>0")
       case True
-      with \<open>s>0\<close> have \<mu>eq: "\<mu> * (s + real t) / s = \<mu> * (1 + t/s)"
+      with \<open>s>0\<close> have \<mu>eq: "H \<mu> s t = \<mu> * (1 + t/s)"
         by (auto simp: distrib_left)
       show ?thesis 
-      proof (cases "log 2 (\<mu> * real(s+t) / s) \<le> 0")
+      proof (cases "log 2 (H \<mu> s t) \<le> 0")
         case True
         have "s * (- log 2 (\<mu> * (1 + t/s))) \<le> real k powr (39/40) * (log 2 \<mu> + log 2 (real k))"
         proof (intro mult_mono)
@@ -188,7 +191,7 @@ proof -
             using \<open>t < k\<close> by linarith
           finally show ?thesis .
         qed
-        have "\<bar>s * log 2 (\<mu> * real (s+t) / s)\<bar> \<le> k powr (39/40) * log 2 (\<mu> * real (s+t) / s)"
+        have "\<bar>s * log 2 (H \<mu> s t)\<bar> \<le> k powr (39/40) * log 2 (H \<mu> s t)"
           using False "1" by auto
         also have "\<dots> = k powr (39/40) * (log 2 (\<mu> * (1 + t/s)))"
           by (simp add: \<mu>eq)
@@ -230,9 +233,9 @@ proof -
         by (smt (verit, del_insts) of_nat_add distrib_left le_h)
       moreover have "log 2 \<mu> < 0"
         using \<mu> by simp
-      ultimately have "g712 k + h 2 k \<le> s * log 2 (\<mu> * (s + real t) / s) + ok_fun_11_2 \<mu> k"
+      ultimately have "g712 k + h 2 k \<le> s * log 2 (H \<mu> s t) + ok_fun_11_2 \<mu> k"
         by (smt (verit, best) \<open>0 < k\<close> distrib_left h3 le_ok_fun nat_neq_iff of_nat_eq_0_iff pos_prod_lt powr_gt_zero)
-      then show "log 2 nV' \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * (s + real t) / s) + ok_fun_11_2 \<mu> k"
+      then show "log 2 nV' \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (H \<mu> s t) + ok_fun_11_2 \<mu> k"
         using "*" by linarith
     qed
   next
@@ -246,16 +249,16 @@ proof -
       using 2 \<open>s>0\<close> ok_less1 by (intro diff_mono order_refl mult_left_mono Transcendental.log_mono) auto
     also have "\<dots> = s * log 2 \<mu> - s * (log 2 (1 - a * k powr (-1/40)) + log 2 (s / (s + t)))"
       using \<open>0 < s\<close> a_def add_log_eq_powr big_le1 by auto
-    also have "\<dots> = s * log 2 (\<mu> * (real(s+t) / s)) - s * log 2 (1 - a * k powr (-1/40))"
-      using \<mu> \<open>s>0\<close> by (simp add: log_divide log_mult ring_distribs flip: times_divide_eq_right)
-    also have "\<dots> < s * log 2 (\<mu> * (real(s+t) / s)) - h k"
+    also have "\<dots> = s * log 2 (H \<mu> s t) - s * log 2 (1 - a * k powr (-1/40))"
+      using \<open>0 < \<mu>\<close> \<open>0 < s\<close> minus_log_eq_powr by (auto simp flip: right_diff_distrib')
+    also have "\<dots> < s * log 2 (H \<mu> s t) - h k"
     proof -
       have "log 2 (1 - a * real k powr (-1/40)) < 0"
         using \<mu> \<open>0 < k\<close> a_def ok_less1 by auto
       with \<open>s<k\<close> show ?thesis
         by (simp add: h_def)
     qed
-    finally have \<dagger>: "s * log 2 (\<mu> / bigbeta \<mu> k k) < s * log 2 (\<mu> * (real(s+t) / s)) - h k" .
+    finally have \<dagger>: "s * log 2 (\<mu> / bigbeta \<mu> k k) < s * log 2 (H \<mu> s t) - h k" .
     show ?thesis
     proof -
       have le_ok_fun: "g712 k - h k \<le> ok_fun_11_2 \<mu> k"
@@ -263,7 +266,7 @@ proof -
       have "log 2 nV' \<le> s * log 2 (\<mu> / bigbeta \<mu> k k) + k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + (g712 k)"
         using \<mu> \<open>nV' \<ge> 2\<close> 
         by (simp add: bb_gt0 log_mult log_nat_power order.trans [OF Transcendental.log_mono [OF _ _ 59]])
-      with \<dagger> le_ok_fun show "log 2 nV' \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * (s + real t) / s) + ok_fun_11_2 \<mu> k"
+      with \<dagger> le_ok_fun show "log 2 nV' \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (H \<mu> s t) + ok_fun_11_2 \<mu> k"
         by simp
     qed
   qed
@@ -445,9 +448,9 @@ lemma Big_From_11_1:
   assumes "\<eta> > 0" "0<\<mu>" "\<mu><1" 
   shows "\<forall>\<^sup>\<infinity>k. Big_From_11_1 \<eta> \<mu> k"
   unfolding Big_From_11_1_def
-  using assms Big_From_11_2 Big_ZZ_8_5 Big_Y_6_1 eventually_ok111_le_\<eta> eventually_powr_le_\<eta>
-  apply (simp add: eventually_conj_iff all_imp_conj_distrib)
-  by (metis (mono_tags, lifting) eventually_sequentially landau_o.R_refl)  
+  using assms Big_From_11_2 Big_ZZ_8_5 Big_Y_6_1 eventually_ok111_le_\<eta> eventually_powr_le_\<eta> 
+  apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_sequentially)
+  by (metis (mono_tags, lifting) order.refl)  
 
 
 text \<open>The body of the proof has been extracted to allow the symmetry argument\<close>
@@ -551,11 +554,11 @@ proof -
 
     have "nV div 2 \<le> card X0"
       using card_X0 by linarith
-    then have 112: "log 2 (Suc nV) \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (\<mu> * (s + real t) / s)
+    then have 112: "log 2 (Suc nV) \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (H \<mu> s t)
                 + ok_fun_11_2 \<mu> k"
       using From_11_2 [OF \<mu> \<open>Colours k k\<close> big11_2] p0_half
       unfolding s_def t_def p0_def \<R>_def \<S>_def by blast
-    have "log 2 (Suc nV) / k \<le> log 2 (1/\<mu>) + x * log 2 (1 / (1-\<mu>)) + y * log 2 (\<mu> * (s + real t) / s)
+    have "log 2 (Suc nV) / k \<le> log 2 (1/\<mu>) + x * log 2 (1 / (1-\<mu>)) + y * log 2 (H \<mu> s t)
                           + ok_fun_11_2 \<mu> k / k"
       using \<open>k>0\<close> divide_right_mono [OF 112, of k]
       by (simp add: add_divide_distrib x_def y_def)
@@ -620,14 +623,14 @@ proof -
     using \<open>k\<ge>3\<close> RN_3plus le_trans by blast 
   then have "n < RN k k"
     by (simp add: n_def)
-  have [simp]: "nV = n"
+  moreover have [simp]: "nV = n"
     by (simp add: V_def)
-  then obtain Red Blue
+  ultimately obtain Red Blue
     where Red_E: "Red \<subseteq> E" and Blue_def: "Blue = E\<setminus>Red" 
       and no_Red_K: "\<not> (\<exists>K. size_clique k K Red)"
       and no_Blue_K: "\<not> (\<exists>K. size_clique k K Blue)"
     by (metis \<open>n < RN k k\<close> less_RN_Red_Blue)
-  have Blue_E: "Blue \<subseteq> E" and disjnt_Red_Blue: "disjnt Red Blue" and Blue_eq: "Blue = all_edges V - Red"
+  have Blue_E: "Blue \<subseteq> E" and disjnt_Red_Blue: "disjnt Red Blue" and Blue_eq: "Blue = all_edges V \<setminus> Red"
     using complete by (auto simp: Blue_def disjnt_iff E_def) 
   have "nV > 1"
     using \<open>RN k k \<ge> 3\<close> \<open>nV=n\<close> n_def by linarith

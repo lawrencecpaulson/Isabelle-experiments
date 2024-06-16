@@ -4,7 +4,6 @@ theory Book imports
   Neighbours
   "HOL-Library.Disjoint_Sets"  "HOL-Decision_Procs.Approximation" 
   "HOL-Library.Infinite_Set"   "HOL-Real_Asymp.Real_Asymp" 
-  "HOL-ex.Sketch_and_Explore"
 
 begin
 
@@ -80,9 +79,7 @@ lemma all_edges_betw_un_iff_clique: "K \<subseteq> V \<Longrightarrow> all_edges
 lemma clique_Un:
   assumes "clique A F" "clique B F" "all_edges_betw_un A B \<subseteq> F" "A \<subseteq> V" "B \<subseteq> V"
   shows "clique (A \<union> B) F"
-  using assms
-  unfolding clique_def all_edges_betw_un_def subset_iff
-  by (smt (verit, best) UnE in_E_iff insert_commute mem_Collect_eq)
+  using assms by (simp add: all_uedges_betw_I clique_Un subset_iff)
 
 lemma clique_insert:
   assumes "clique A F" "all_edges_betw_un {x} A \<subseteq> F" "A \<subseteq> V" "x \<in> V"
@@ -94,7 +91,7 @@ lemma less_RN_Red_Blue:
   fixes l k
   assumes nV: "nV < RN k l"
   obtains Red Blue :: "'a set set"
-  where "Red \<subseteq> E" "Blue = E-Red" "\<not> (\<exists>K. size_clique k K Red)" "\<not> (\<exists>K. size_clique l K Blue)" 
+  where "Red \<subseteq> E" "Blue = E\<setminus>Red" "\<not> (\<exists>K. size_clique k K Red)" "\<not> (\<exists>K. size_clique l K Blue)" 
 proof -
   have "\<not> is_Ramsey_number k l nV"
     using RN_le assms leD by blast
@@ -120,8 +117,8 @@ proof -
   proof -
     have KR: "clique K Red" and Kk: "card K = k" and "K\<subseteq>V"
       using that by (auto simp: size_clique_def)
-    then have "\<theta>`K \<in> [{..<nV}]\<^bsup>card K\<^esup>"
-      by (smt (verit, ccfv_threshold) \<theta> bij_betwE bij_betw_nsets finV mem_Collect_eq nsets_def finite_subset)
+    with \<theta> have "\<theta>`K \<in> [{..<nV}]\<^bsup>card K\<^esup>"
+      by (smt (verit, ccfv_threshold) bij_betwE bij_betw_nsets finV mem_Collect_eq nsets_def finite_subset)
     moreover have "f ` [\<theta>`K]\<^bsup>2\<^esup> \<subseteq> {0}"
     proof (clarsimp elim!: nsets2_E)
       fix v w
@@ -161,8 +158,6 @@ proof -
 qed
 
 end
-
-(*NOT CLEAR WHETHER \<mu> CAN BE FIXED HERE OR NOT*)
 
 locale Book = Book_Basis +   \<comment> \<open>finite simple graphs (no loops)\<close>
   fixes Red Blue :: "'a set set"
@@ -366,7 +361,7 @@ lemma hgt_works:
 lemma hgt_Least':
   assumes "0<h" "p \<le> qfun_base k h"
   shows "hgt k p \<le> h"
-  by (smt (verit, del_insts) assms hgt_def less_one not_gr0 not_less p0_01 qfun_def Least_le)
+  by (smt (verit, del_insts) One_nat_def Suc_leI assms hgt_def p0_01 qfun_def Least_le)
 
 lemma hgt_Least:
   assumes "0<h" "p \<le> qfun k h"
@@ -640,7 +635,7 @@ lemma best_blue_book_is_best: "\<lbrakk>good_blue_book \<mu> X (S,T); finite X\<
 
 lemma ex_best_blue_book: "finite X \<Longrightarrow> \<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S = best_blue_book_card \<mu> X"
   unfolding best_blue_book_card_def
-  by (smt (verit, del_insts) GreatestI_ex_nat bounded_good_blue_book ex_good_blue_book)
+  by (smt (verit) GreatestI_ex_nat bounded_good_blue_book ex_good_blue_book)
 
 definition "choose_blue_book \<equiv> \<lambda>\<mu> (X,Y,A,B). @(S,T). good_blue_book \<mu> X (S,T) \<and> card S = best_blue_book_card \<mu> X"
 
