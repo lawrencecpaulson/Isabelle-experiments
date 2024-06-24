@@ -317,9 +317,6 @@ lemma RN_le: "\<lbrakk>is_Ramsey_number m n r\<rbrakk> \<Longrightarrow> RN m n 
 lemma RN_le_ES: "RN i j \<le> ES 2 i j"
   by (simp add: RN_le ramsey2_full)
 
-lemma RN_le_choose: "RN k l \<le> (k+l) choose k"
-  by (metis ES2_choose ramsey2_full RN_le)
-
 lemma RN_mono:
   assumes "m' \<le> m" "n' \<le> n"
   shows "RN m' n' \<le> RN m n"
@@ -365,6 +362,12 @@ lemma RN_commute_aux: "RN n m \<le> RN m n"
 
 lemma RN_commute: "RN m n = RN n m"
   by (simp add: RN_commute_aux le_antisym)
+
+lemma RN_le_choose: "RN k l \<le> (k+l choose k)"
+  by (metis ES2_choose ramsey2_full RN_le)
+
+lemma RN_le_choose': "RN k l \<le> (k+l choose l)"
+  by (metis RN_commute RN_le_choose add.commute)
 
 
 lemma RN_0 [simp]: "RN 0 m = 0"

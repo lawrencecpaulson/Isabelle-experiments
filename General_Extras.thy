@@ -37,6 +37,20 @@ lemma of_nat_eq_numeral_iff [simp]: "of_nat k = numeral n \<longleftrightarrow> 
 
 end
 
+
+lemma floor_ceiling_diff_le: "0 \<le> r \<Longrightarrow> nat\<lfloor>real k - r\<rfloor> \<le> k - nat\<lceil>r\<rceil>"
+  by linarith
+
+lemma floor_ceiling_diff_le': "nat\<lfloor>r - real k\<rfloor> \<le> nat\<lceil>r\<rceil> - k"
+  by linarith
+
+lemma ceiling_floor_diff_ge: "nat\<lceil>r - real k\<rceil> \<ge> nat\<lfloor>r\<rfloor> - k"
+  by linarith
+
+lemma ceiling_floor_diff_ge': "r \<le> k \<Longrightarrow> nat\<lceil>r - real k\<rceil> \<le> k - nat\<lfloor>r\<rfloor>"
+  by linarith
+
+
 lemma exp_minus': "exp (-x) = 1 / (exp x)"
   for x :: "'a::{real_normed_field,banach}"
   by (simp add: exp_minus inverse_eq_divide)

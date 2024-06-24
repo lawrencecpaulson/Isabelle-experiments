@@ -363,19 +363,22 @@ qed
 
 subsection \<open>Theorem 2.1\<close>
 
-(* actually it is undefined when x=1; could we use 1+R(k,k') in the definition?*)
-definition "FF \<equiv> \<lambda>k x y. log 2 (RN k (k - nat\<lfloor>x * real k\<rfloor>)) / real k + x + y"
+(* actually it is undefined when k=0 or x=1; could we use 1+R(k,k') in the definition?*)
+definition FF :: "nat \<Rightarrow> real \<Rightarrow> real \<Rightarrow> real" where
+ "FF \<equiv> \<lambda>k x y. log 2 (RN k (nat\<lfloor>real k - x * real k\<rfloor>)) / real k + x + y"
 
-definition "GG \<equiv> \<lambda>\<mu> x y. log 2 (1/\<mu>) + x * log 2 (1/(1-\<mu>)) + y * log 2 (\<mu> * (x+y) / y)"
+definition GG :: "real \<Rightarrow> real \<Rightarrow> real \<Rightarrow> real" where
+  "GG \<equiv> \<lambda>\<mu> x y. log 2 (1/\<mu>) + x * log 2 (1/(1-\<mu>)) + y * log 2 (\<mu> * (x+y) / y)"
 
-definition "FF_bound \<equiv> \<lambda>k u. FF k 0 u + \<bar>FF k 1 u\<bar> + 1"
+definition FF_bound :: "nat \<Rightarrow> real \<Rightarrow> real" where
+  "FF_bound \<equiv> \<lambda>k u. FF k 0 u + \<bar>FF k 1 u\<bar> + 1"
 
 
 (* the ugly mess here fixes the singularity when x=1. We just add in \<bar>FF k 1 u\<bar>, whatever it may be!*)
 lemma FF:
-  assumes "x \<in> {0..1}" "y \<in> {0..u}" "k>0"
+  assumes x: "x \<in> {0..1}" and "y \<in> {0..u}" "k>0"
   shows "FF k x y \<le> FF_bound k u"
-proof (cases "x=1")
+proof (cases "\<lfloor>k - x*k\<rfloor> = 0")
   case True  \<comment>\<open>all this nonsense just to handle the singularity\<close>
   have "u \<ge> 0"
     using assms by simp
@@ -393,17 +396,19 @@ proof (cases "x=1")
     by (simp add: True FF_def abs_if FF_bound_def)
 next
   case False
-  with \<open>k>0\<close> assms have *: "\<lfloor>x*k\<rfloor> < k"
-    by (simp add: floor_less_iff) 
-  with \<open>k>0\<close>
-    have *: "nat \<lfloor>x*k\<rfloor> < k" by linarith
-  have "log 2 (RN k (k - nat \<lfloor>x*k\<rfloor>)) / k \<le> log 2 (RN k k) / k"
+  with \<open>k>0\<close> assms have *: "0 < \<lfloor>k - x*k\<rfloor>"
+    using linorder_neqE_linordered_idom by fastforce
+  have le_k: "k - x*k \<le> k"
+    using x by auto
+  then have le_k: "nat \<lfloor>k - x*k\<rfloor> \<le> k"
+    by linarith
+  have "log 2 (RN k (nat \<lfloor>k - x*k\<rfloor>)) / k \<le> log 2 (RN k k) / k"
   proof (intro divide_right_mono Transcendental.log_mono)
-    show "0 < real (RN k (k - nat \<lfloor>x*k\<rfloor>))"
-      using * by (simp add: RN_eq_0_iff zero_less_iff_neq_zero)
-  qed (auto simp: RN_mono)
+    show "0 < real (RN k (nat \<lfloor>k - x*k\<rfloor>))"
+      by (metis RN_eq_0_iff \<open>k>0\<close> gr_zeroI * of_nat_0_less_iff zero_less_nat_eq) 
+  qed (auto simp: RN_mono le_k)
   then show ?thesis
-    using assms by (auto simp add: FF_def FF_bound_def)
+    using assms False le_SucE by (fastforce simp: FF_def FF_bound_def)
 qed
 
 lemma FF2: "y' \<le> y \<Longrightarrow> FF k x y' \<le> FF k x y"
@@ -539,6 +544,8 @@ proof -
     with powr_le_\<eta> have \<dagger>: "s \<le> (\<mu> / (1-\<mu>)) * t + \<eta> * k"
       by (smt (verit, ccfv_SIG) mult_right_mono of_nat_0_le_iff)
 
+    have k_minus_t: "nat \<lfloor>real k - real t\<rfloor> = k-t"
+      by linarith
     have "nV div 2 \<le> card Y0"
       by (simp add: card_Y0)
     then have \<section>: "log 2 (Suc nV) \<le> log 2 (RN k (k-t)) + s + t + 2 - ok_fun_61 k"
@@ -547,7 +554,7 @@ proof -
       using \<open>k>0\<close> divide_right_mono [OF \<section>, of k] add_divide_distrib x_def y_def
       by (smt (verit) add_uminus_conv_diff of_nat_0_le_iff)
     also have "... = FF k x y + (2 - ok_fun_61 k) / k"
-      by (simp add: FF_def x_def)
+      by (simp add: FF_def x_def k_minus_t)
     also have "... \<le> FF k x y + ok_fun_11_1 \<mu> k / k"
       by (simp add: ok_fun_11_1_def divide_right_mono)
     finally have le_FF: "log 2 (Suc nV) / k \<le> FF k x y + ok_fun_11_1 \<mu> k / k" .
