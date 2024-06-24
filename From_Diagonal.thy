@@ -427,7 +427,7 @@ lemma eventually_ok111_le_\<eta>:
 proof -
   have "(\<lambda>k. ok_fun_11_1 \<mu> k / k) \<in> o(\<lambda>k. 1)"
     using eventually_mono ok_fun_11_1 [OF \<mu>] by (fastforce simp: smallo_def divide_simps)
-  with assms have "\<forall>\<^sup>\<infinity>k. \<bar>ok_fun_11_1 \<mu> k\<bar> / real k \<le> \<eta>"
+  with assms have "\<forall>\<^sup>\<infinity>k. \<bar>ok_fun_11_1 \<mu> k\<bar> / k \<le> \<eta>"
     by (auto simp: smallo_def)
   then show ?thesis
     by (metis (mono_tags, lifting) eventually_mono abs_divide abs_le_D1 abs_of_nat)
@@ -463,7 +463,7 @@ lemma (in Book_Basis) From_11_1_Body:
     and no_Red_K: "\<not> (\<exists>K. size_clique k K Red)"
     and no_Blue_K: "\<not> (\<exists>K. size_clique k K Blue)"
     and big: "Big_From_11_1 \<eta> \<mu> k"
-  shows "log 2 (RN k k) / real k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>)"
+  shows "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>)"
 proof -  
   have big41: "Big_Blue_4_1 \<mu> k" and big61: "Big_Y_6_1 \<mu> k" 
     and big85: "Big_ZZ_8_5 \<mu> k" and big11_2: "Big_From_11_2 \<mu> k"
@@ -569,7 +569,7 @@ proof -
     finally have le_GG: "log 2 (Suc nV) / k \<le> GG \<mu> x y + ok_fun_11_1 \<mu> k / k" .
     have "RN k k > 0"
       by (metis RN_eq_0_iff \<open>k>0\<close> gr0I)
-    moreover have "log 2 (Suc nV) / real k \<le> v"
+    moreover have "log 2 (Suc nV) / k \<le> v"
       unfolding v_def using ok111_le_\<eta> le_FF le_GG by linarith
     ultimately have "log 2 (RN k k) / k \<le> v"
       using ge_RN \<open>k>0\<close>
@@ -585,7 +585,7 @@ proof -
       show "bdd_above ((\<lambda>y. min (FF k x y) (GG \<mu> x y) + \<eta>) ` {0..\<mu> * x / (1-\<mu>) + \<eta>})"
         by (meson FF_GG_bound [of x] x01 atLeastAtMost_iff bdd_aboveI2)
     qed auto
-    finally show "log 2 (real (RN k k)) / real k \<le> w" .
+    finally show "log 2 (real (RN k k)) / k \<le> w" .
   next
     fix x y 
     assume "x \<in> {0..1}" "y \<in> {0..\<mu> * x / (1-\<mu>) + \<eta>}"
@@ -597,7 +597,7 @@ qed
 theorem From_11_1:
   assumes \<mu>: "0 < \<mu>" "\<mu> < 1" and "\<eta> > 0" and "k\<ge>3" and p0_min12: "p0_min \<le> 1/2"
   and big: "Big_From_11_1 \<eta> \<mu> k"
-  shows "log 2 (RN k k) / real k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>)"
+  shows "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>)"
 proof -
   have "k>0"
     using \<open>k\<ge>3\<close> by simp
@@ -674,5 +674,7 @@ proof -
 qed
 
 end (*P0_min*)
+
+hide_const H
 
 end

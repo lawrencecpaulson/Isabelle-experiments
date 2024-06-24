@@ -32,6 +32,9 @@ lemma of_nat_less_1_iff [simp]: "of_nat k < 1 \<longleftrightarrow> k < 1"
 lemma of_nat_less_numeral_iff [simp]: "of_nat k < numeral n \<longleftrightarrow> k < numeral n"
   using of_nat_less_iff [of _ "numeral n"] by simp
 
+lemma of_nat_eq_numeral_iff [simp]: "of_nat k = numeral n \<longleftrightarrow> k = numeral n"
+  using of_nat_eq_iff [of _ "numeral n"] by simp
+
 end
 
 lemma exp_minus': "exp (-x) = 1 / (exp x)"
