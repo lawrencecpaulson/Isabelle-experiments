@@ -69,32 +69,39 @@ qed
 
 definition "g \<equiv> GG (2/5)"
 
+lemma g_eq: "g x y = log 2 (5/2) + x * log 2 (5/3) + y * log 2 ((2 * (x+y)) / (5*y))"
+  by (simp add: g_def GG_def)
+
 definition "f1 \<equiv> \<lambda>x y. x + y + (2-x) * H(1/(2-x))"
 
+(*A singularity of x=1. Okay if we put ln(0) = 0! *)
+text \<open>Claim (62)\<close>
 lemma FF_le_f1:
   fixes k::nat and x y::real
   assumes x: "0 \<le> x" "x \<le> 1" and y: "0 \<le> y" "y \<le> 1" and "k>0"
   shows "FF k x y \<le> f1 x y"
 proof -
-  let ?kkm = "k + k - nat \<lceil>x*k\<rceil>"
+  let ?kl = "k + k - nat \<lceil>x*k\<rceil>"
+  have gt0: "nat\<lfloor>k - x*k\<rfloor> > 0"
+    sorry
+  have kk_less_1: "k / ?kl < 1"
+    using x gt0 by (simp add: field_split_simps, linarith)
   have le: "nat\<lfloor>k - x*k\<rfloor> \<le> k - nat\<lceil>x*k\<rceil>"
     using floor_ceiling_diff_le x
     by (meson mult_left_le_one_le mult_nonneg_nonneg of_nat_0_le_iff)
-  have gt0: "nat\<lfloor>k - x*k\<rfloor> > 0"
-    sorry
-  then have RN_gt0: "RN k (nat\<lfloor>k - x*k\<rfloor>) > 0"
-    by (metis RN_eq_0_iff \<open>k>0\<close> gr0I)
+  have RN_gt0: "RN k (nat\<lfloor>k - x*k\<rfloor>) > 0"
+    by (metis gt0 RN_eq_0_iff \<open>k>0\<close> gr0I)
   then have \<section>: "RN k (nat\<lfloor>k - x*k\<rfloor>) \<le> k + nat\<lfloor>k - x*k\<rfloor> choose k"
     using RN_le_choose by force
   also have "... \<le> k + k - nat\<lceil>x*k\<rceil> choose k"
   proof (intro Binomial.binomial_mono)
-    show "k + nat \<lfloor>k - x*k\<rfloor> \<le> ?kkm"
+    show "k + nat \<lfloor>k - x*k\<rfloor> \<le> ?kl"
       using RN_gt0 le linorder_not_le by fastforce
   qed
-  finally have "RN k (nat \<lfloor>real k - x*k\<rfloor>) \<le> ?kkm choose k" .
-  with RN_gt0 have "FF k x y \<le> log 2 (?kkm choose k) / k + x + y"
+  finally have "RN k (nat \<lfloor>real k - x*k\<rfloor>) \<le> ?kl choose k" .
+  with RN_gt0 have "FF k x y \<le> log 2 (?kl choose k) / k + x + y"
     by (simp add: FF_def divide_right_mono nat_less_real_le)
-  also have "\<dots> \<le> (?kkm * H(k/?kkm)) / k + x + y"
+  also have "\<dots> \<le> (?kl * H(k/?kl)) / k + x + y"
   proof -
     have "k \<le> k + k - nat\<lceil>x*k\<rceil>"
       using gt0 by linarith
@@ -103,30 +110,56 @@ proof -
   qed
   also have "... \<le> f1 x y"
   proof -
-    have 1: "?kkm / k \<le> 2-x"
+    have 1: "?kl / k \<le> 2-x"
         using x by (simp add: field_split_simps)
-    have 2: "H (real k / ?kkm) \<le> H (1 / (2-x))"
+    have 2: "H (k / ?kl) \<le> H (1 / (2-x))"
     proof (intro H_half_mono')
-      show "1 / 2 \<le> 1 / (2-x)"
-        using x by auto
-    next
-      show "1 / (2-x) \<le> k / ?kkm"
-        using x gt0 by (simp add: field_split_simps) linarith
-    next
-      show "real k / ?kkm < 1"
-        by (smt (verit, best) Multiseries_Expansion.intyness_0 Num.of_nat_simps(4) approximation_preproc_nat(4) divide_less_eq_1 gt0 le less_imp_of_nat_less of_nat_mono)
-    qed
-    have "?kkm / k * H (k / ?kkm) \<le> (2-x) * H (1 / (2-x))"
-    proof (intro mult_mono [OF 1 2] H_ge0)
-      show "real k / ?kkm \<le> 1"
-        using x gt0 by (simp add: divide_simps) linarith
-    qed (use x in auto)
+      show "1 / (2-x) \<le> k / ?kl"
+        using x gt0 by (simp add: field_split_simps, linarith)
+    qed (use x kk_less_1 in auto)
+    have "?kl / k * H (k / ?kl) \<le> (2-x) * H (1 / (2-x))"
+      using x mult_mono [OF 1 2 _ H_ge0] kk_less_1 by fastforce
     then show ?thesis
       by (simp add: f1_def)
   qed
   finally show ?thesis .
 qed
 
-lemma g_eq: "g x y = log 2 (5/2) + x * log 2 (5/3) + y * log 2 ((2 * (x+y)) / (5*y))"
-  by (simp add: g_def GG_def)
 
+definition "f2 \<equiv> \<lambda>x y. f1 x y - (log 2 (exp 1) / 40) * (1-x) / (2-x)"
+
+text \<open>Claim (63)\<close>
+lemma (in P0_min) FF_le_f2:
+  fixes k::nat and x y::real
+  assumes x: "3/4 \<le> x" "x \<le> 1" and y: "0 \<le> y" "y \<le> 1" and "k>0"
+  shows "FF k x y \<le> f2 x y"
+proof -
+  { fix l
+    assume l: "real l = k - x*k"
+    define \<gamma> where "\<gamma> \<equiv> real l / (real k + real l)"
+    define \<delta> where "\<delta> \<equiv> \<gamma>/40"
+    have A: "l / real(k+l) = (1-x)/(2-x)"
+      using x \<open>k>0\<close> by (simp add: l field_simps)
+    with x have \<gamma>: "\<gamma> \<le> 1/5" 
+      by (simp add: \<gamma>_def)
+    have "RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
+      unfolding \<delta>_def \<gamma>_def
+    proof (rule Closer_10_1)
+      show "real l / (real k + real l) \<le> 1 / 5"
+        using \<gamma> \<gamma>_def by blast
+    next
+      show "\<forall>l'. 8 / 55 * (real l / (real k + real l)) * real l \<le> real l' \<longrightarrow> (\<forall>\<mu>. (2 / 5 * (real l / (real k + real l)))\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1 / 5 \<longrightarrow> Big_Closer_10_1 \<mu> l')"
+        sorry
+    next
+      show "2 + real k / 2 \<le> exp (real_of_int \<lfloor>real k / 10\<rfloor> * 2 - real k / 200)"
+        sorry
+    next
+      show "9 \<le> l"
+        sorry
+    next
+      show "real k / 10 * real (10 + 9 * k) < (real k)\<^sup>2 - 10 * real k"
+        sorry
+    next
+      show "p0_min \<le> 1 - 1 / 5"
+        sorry
+    qed

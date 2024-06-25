@@ -297,14 +297,13 @@ theorem Closer_10_1:
   assumes big: "\<forall>l'. real l' \<ge> (8/55) * \<gamma> * l \<longrightarrow> (\<forall>\<mu>. ((2/5)*\<gamma>)\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/5 \<longrightarrow> Big_Closer_10_1 \<mu> l')"
   assumes big': "2 + k/2 \<le> exp (of_int\<lfloor>k/10\<rfloor> * 2 - k / 200)" and l9: "l\<ge>9"
     and big'': "real k ^ 2 - 10 * real k > (k/10) * (10 + 9*k)"
-  assumes "l\<ge>3"
   assumes p0_min_101: "p0_min \<le> 1 - 1/5"
   shows "RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
 proof (rule ccontr)
   assume non: "\<not> RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
   have "l\<le>k"
     using \<gamma>_def \<gamma> nat_le_real_less by fastforce
-  with \<open>l\<ge>3\<close> have "l>0" "k>0" by linarith+
+  with \<open>l\<ge>9\<close> have "l>0" "k>0" "l\<ge>3" by linarith+
   then have l4k: "4*l \<le> k"
     using \<gamma> by (auto simp: \<gamma>_def divide_simps)
   have "k\<ge>36"
