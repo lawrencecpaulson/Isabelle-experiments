@@ -131,35 +131,38 @@ definition "f2 \<equiv> \<lambda>x y. f1 x y - (log 2 (exp 1) / 40) * (1-x) / (2
 text \<open>Claim (63)\<close>
 lemma (in P0_min) FF_le_f2:
   fixes k::nat and x y::real
-  assumes x: "3/4 \<le> x" "x \<le> 1" and y: "0 \<le> y" "y \<le> 1" and "k>0"
+  assumes x: "3/4 \<le> x" "x \<le> 1" and y: "0 \<le> y" "y \<le> 1"
+  and l: "real l = k - x*k"
+  assumes p0_min_101: "p0_min \<le> 1 - 1/5"
+  defines "\<gamma> \<equiv> real l / (real k + real l)"
+  defines "\<gamma>0 \<equiv> min \<gamma> (0.07)" 
+  assumes big: "Big_Closer_10_1 \<gamma>0 l"
   shows "FF k x y \<le> f2 x y"
 proof -
-  { fix l
-    assume l: "real l = k - x*k"
-    define \<gamma> where "\<gamma> \<equiv> real l / (real k + real l)"
-    define \<delta> where "\<delta> \<equiv> \<gamma>/40"
-    have A: "l / real(k+l) = (1-x)/(2-x)"
-      using x \<open>k>0\<close> by (simp add: l field_simps)
-    with x have \<gamma>: "\<gamma> \<le> 1/5" 
-      by (simp add: \<gamma>_def)
-    have "RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
-      unfolding \<delta>_def \<gamma>_def
-    proof (rule Closer_10_1)
-      show "real l / (real k + real l) \<le> 1 / 5"
-        using \<gamma> \<gamma>_def by blast
-    next
-      show "\<forall>l'. 8 / 55 * (real l / (real k + real l)) * real l \<le> real l' \<longrightarrow> (\<forall>\<mu>. (2 / 5 * (real l / (real k + real l)))\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1 / 5 \<longrightarrow> Big_Closer_10_1 \<mu> l')"
-        sorry
-    next
-      show "2 + real k / 2 \<le> exp (real_of_int \<lfloor>real k / 10\<rfloor> * 2 - real k / 200)"
-        sorry
-    next
-      show "9 \<le> l"
-        sorry
-    next
-      show "real k / 10 * real (10 + 9 * k) < (real k)\<^sup>2 - 10 * real k"
-        sorry
-    next
-      show "p0_min \<le> 1 - 1 / 5"
-        sorry
-    qed
+  have "l>0"
+    using big by (simp add: Big_Closer_10_1_def)
+  have "x>0"
+    using x by linarith
+  with l have "k\<ge>l"
+    by (smt (verit, del_insts) of_nat_0_le_iff of_nat_le_iff pos_prod_lt)
+  have "k>0"
+    using \<open>0 < l\<close> \<open>l \<le> k\<close> by force
+  define \<delta> where "\<delta> \<equiv> \<gamma>/40"
+  have A: "l / real(k+l) = (1-x)/(2-x)"
+    using x \<open>k>0\<close> by (simp add: l field_simps)
+  with x have \<gamma>: "\<gamma> \<le> 1/5" 
+    by (simp add: \<gamma>_def)
+  have *: "RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
+    unfolding \<delta>_def \<gamma>_def
+  proof (rule Closer_10_1)
+    show "real l / (real k + real l) \<le> 1/5"
+      using \<gamma> \<gamma>_def by blast
+    have "min (l / (k + real l)) 0.07 > 0"
+      using \<open>l>0\<close> by force 
+    then show "Big_Closer_10_1 (min (l / (k + real l)) 0.07) l"
+      using big \<gamma>0_def \<gamma>_def by blast
+  qed (use p0_min_101 in auto)
+  show ?thesis
+    unfolding FF_def f2_def
+    sorry
+qed

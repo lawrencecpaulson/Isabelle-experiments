@@ -315,14 +315,15 @@ theorem Closer_10_1:
   defines "\<gamma>0 \<equiv> min \<gamma> (0.07)"  \<comment>\<open>Since @{term "k\<ge>36"}, the lower bound @{term"1/10-1/36"} works\<close>
   assumes big: "Big_Closer_10_1 \<gamma>0 l"
   assumes \<gamma>: "\<gamma> \<le> 1/5" 
-  assumes "l\<ge>9"
   assumes p0_min_101: "p0_min \<le> 1 - 1/5"
   shows "RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
 proof (rule ccontr)
   assume non: "\<not> RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
   have "l\<le>k"
     using \<gamma>_def \<gamma> nat_le_real_less by fastforce
-  with \<open>l\<ge>9\<close> have "l>0" "k>0" "l\<ge>3" by linarith+
+  moreover have "l\<ge>9"
+    using big by (simp add: Big_Closer_10_1_def)
+  ultimately have "l>0" "k>0" "l\<ge>3" by linarith+
   then have l4k: "4*l \<le> k"
     using \<gamma> by (auto simp: \<gamma>_def divide_simps)
   have "k\<ge>36"
