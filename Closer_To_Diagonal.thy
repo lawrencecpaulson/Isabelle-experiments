@@ -54,8 +54,7 @@ proof -
   have F: "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. (\<forall>\<mu>. 1/10 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> k/200 \<le> ok_fun_95b k + \<mu>*k / real 15)"
     using assms 
     apply (intro eventually_all_ge_at_top eventually_all_geI0 error_10_2_False)
-    using less_eq_real_def apply (fastforce elim!: order_trans)
-    done
+    by (smt (verit, ccfv_SIG) divide_right_mono mult_right_mono of_nat_0_le_iff)
   have "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. (\<forall>\<mu>. 1/10 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> k/200 \<le> ok_fun_95b k + (if \<mu> > x320 then \<mu>*k/30 else \<mu>*k/15))"
     using assms
     apply (split if_split)
@@ -272,31 +271,69 @@ next
     by linarith
 qed
 
-definition "Big_Closer_10_1 \<equiv> \<lambda>\<mu> l. Big_Closer_10_2 \<mu> l" 
+definition "Big101a \<equiv> \<lambda>k. 2 + real k / 2 \<le> exp (of_int\<lfloor>k/10\<rfloor> * 2 - k/200)"
+
+definition "Big101b \<equiv> \<lambda>k. (real k)\<^sup>2 - 10 * real k > (k/10) * (10 + 9*k)"
+
+definition "Big_Closer_10_1 
+  \<equiv> \<lambda>\<mu> l. l\<ge>9 \<and> (\<forall>k\<ge>l. Big101a k \<and> Big101b k)"
+
+text \<open>The proof considers a smaller graph, so @{term l} needs to be so big
+   that the smaller @{term l'} will be big enough.\<close>
 
 lemma Big_Closer_10_1:
-  assumes "1/10\<le>\<mu>1" "\<mu>1<1" 
-  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. 1/10 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> Big_Closer_10_1 \<mu> l"
+  fixes \<mu>::real and \<gamma>0::real
+  assumes "1/5 \<le> \<mu>" "\<mu><1" "\<gamma>0>0"
+  shows "\<forall>\<^sup>\<infinity>l. Big_Closer_10_1 \<mu> l"
+proof -
+  have a: "\<forall>\<^sup>\<infinity>k. Big101a k"
+    unfolding Big101a_def by real_asymp
+  have b: "\<forall>\<^sup>\<infinity>k. Big101b k"
+    unfolding Big101b_def by real_asymp
+
+  have "\<forall>\<^sup>\<infinity>l. \<forall>\<gamma>. \<gamma>0 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_1 \<gamma> l"
+    using Big_Far_9_1 \<open>\<gamma>0>0\<close> eventually_sequentially order.trans by blast
+  then obtain N where N: "\<forall>l\<ge>N. \<forall>\<gamma>. \<gamma>0 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_1 \<gamma> l"
+    using eventually_sequentially by auto
+  define M where "M \<equiv> nat\<lceil>5*N / 2\<rceil>"
+  have "nat\<lfloor>(2/5) * l\<rfloor> \<ge> N" if "l \<ge> M" for l
+    using that assms by (simp add: M_def le_nat_floor)
+  with N have "\<forall>l\<ge>M. \<forall>l' \<gamma>. nat\<lfloor>(2/5) * l\<rfloor> \<le> l' \<longrightarrow> \<gamma>0 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_1 \<gamma> l'"
+    by (meson order.trans)
+  then have c: "\<forall>\<^sup>\<infinity>l. \<forall>l' \<gamma>. nat\<lfloor>(2/5) * l\<rfloor> \<le> l' \<longrightarrow> \<gamma>0 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_1 \<gamma> l'"
+    by (auto simp: eventually_sequentially)
+  
+  have "\<forall>\<^sup>\<infinity>l. \<forall>\<gamma>. ((2/5)*\<mu>)\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> \<mu> \<longrightarrow> Big_Closer_10_2 \<gamma> l"
+    using assms
+    Big_Closer_10_2 [of \<mu>]
+    apply (intro Big_Closer_10_2)
+    sorry
+  then obtain N where N: "\<forall>l\<ge>N. \<forall>\<gamma>. ((2/5)*\<mu>)\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> \<mu> \<longrightarrow> Big_Closer_10_2 \<gamma> l"
+    using eventually_sequentially by auto
+  define M where "M \<equiv> nat\<lceil>55*N / (8*\<mu>)\<rceil>"
+  have "(8/55) * \<mu> * l \<ge> N" if "l \<ge> M" for l
+    using that assms by (simp add: M_def mult_of_nat_commute pos_divide_le_eq)
+  with N have "\<forall>l\<ge>M. \<forall>l' \<gamma>. (8/55) * \<mu> * l \<le> l' \<longrightarrow> ((2/5)*\<mu>)\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> \<mu> \<longrightarrow> Big_Closer_10_2 \<gamma> l'"
+    by (smt (verit, ccfv_SIG) of_nat_le_iff)
+  then have c: "\<forall>\<^sup>\<infinity>l. \<forall>l' \<gamma>. (8/55) * \<mu> * l \<le> l' \<longrightarrow> ((2/5)*\<mu>)\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> \<mu> \<longrightarrow> Big_Closer_10_2 \<gamma> l'"
+    by (auto simp: eventually_sequentially)
+  show ?thesis
   using assms 
   unfolding Big_Closer_10_1_def eventually_conj_iff all_imp_conj_distrib eps_def
-  using Big_Closer_10_2 by blast
-
-
-lemma "\<forall>\<^sup>\<infinity>k. 2 + k/2 \<le> exp (of_int\<lfloor>k/9\<rfloor> * 2 - k/200)"
-  by real_asymp
-
-lemma "\<forall>\<^sup>\<infinity>k. real k ^ 2 - 10 * real k > (k/10)* (10 + 9*k)"
-  by real_asymp
+  using a b c eventually_all_ge_at_top eventually_ge_at_top by blast
+qed
 
 theorem Closer_10_1:
   fixes l k::nat
   fixes \<delta> \<gamma>::real
   defines "\<gamma> \<equiv> real l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/40"
+  defines "\<gamma>0 \<equiv> min \<gamma> (0.07)"
   assumes \<gamma>: "\<gamma> \<le> 1/5" 
-  assumes big: "\<forall>l'. real l' \<ge> (8/55) * \<gamma> * l \<longrightarrow> (\<forall>\<mu>. ((2/5)*\<gamma>)\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/5 \<longrightarrow> Big_Closer_10_1 \<mu> l')"
+  assumes big91: "\<And>l' \<mu>. \<lbrakk>l' \<ge> nat\<lfloor>(2/5) * l\<rfloor>; \<gamma>0 \<le> \<mu>; \<mu> \<le> 1/10\<rbrakk> \<Longrightarrow> Big_Far_9_1 \<mu> l'"
+  assumes big: "\<forall>l'. l' \<ge> nat \<lfloor>2/5 * l\<rfloor> \<longrightarrow> (\<forall>\<mu>. 1/10 \<le> \<mu> \<and> \<mu> \<le> 1/5 \<longrightarrow> Big_Closer_10_2 \<mu> l')"
   assumes big': "2 + k/2 \<le> exp (of_int\<lfloor>k/10\<rfloor> * 2 - k / 200)" and l9: "l\<ge>9"
-    and big'': "real k ^ 2 - 10 * real k > (k/10) * (10 + 9*k)"
+    and big'': "(real k)\<^sup>2 - 10 * real k > (k/10) * (10 + 9*k)"
   assumes p0_min_101: "p0_min \<le> 1 - 1/5"
   shows "RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
 proof (rule ccontr)
@@ -312,8 +349,8 @@ proof (rule ccontr)
     by auto
   have exp2: "exp (2::real) = exp 1 * exp 1"
     by (simp add: mult_exp_exp)
-  have Big_10_2I: "\<And>l' \<mu>. \<lbrakk>8 / 55 * \<gamma> * l \<le> real l'; (2 / 5 * \<gamma>)\<^sup>2 \<le> \<mu>; \<mu> \<le> 1 / 5\<rbrakk> \<Longrightarrow> Big_Closer_10_2 \<mu> l'"
-    using Big_Closer_10_1_def big by presburger
+  have Big_10_2I: "\<And>l' \<mu>. \<lbrakk>nat \<lfloor>2/5 * l\<rfloor> \<le> l'; 1/10 \<le> \<mu>; \<mu> \<le> 1 / 5\<rbrakk> \<Longrightarrow> Big_Closer_10_2 \<mu> l'"
+    using big by presburger
   show False
   proof (cases "\<gamma> \<le> 1/10")
     case True
@@ -322,23 +359,10 @@ proof (rule ccontr)
     have "RN k l \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
     proof (intro order.trans [OF Far_9_1] strip)
       show "Big_Far_9_1 (real l / (real k + real l)) l"
-        unfolding Big_Far_9_1_def
-      proof (intro conjI strip)
-        fix l' \<mu> 
-        assume l': "10 / 11 * (l / (k + real l)) * l \<le> real l'"
-          and tenth: "(l / (k + real l))\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/10"
-        then have \<dagger>: "\<gamma>\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/5"
-          by (simp add: \<gamma>_def)
-        have "Big_Closer_10_2 \<mu> l'"
-        proof (intro Big_10_2I)
-          show "8 / 55 * \<gamma> * real l \<le> real l'"
-            by (smt (verit, ccfv_SIG) \<gamma>_def \<open>0 < \<gamma>\<close> frac_le l' mult_right_mono of_nat_0_le_iff)
-          show "(2/5 * \<gamma>)\<^sup>2 \<le> \<mu>"
-            by (smt (verit) "\<dagger>" \<open>0 < \<gamma>\<close> divide_self_if pos_le_divide_eq power_mono zero_le_divide_iff)
-        qed (use \<dagger> in auto)
-        then show "Big_Far_9_2 \<mu> l'"
-          by (smt (verit, ccfv_threshold) Big_10_imp_Big_9 \<gamma>_def tenth \<open>0 < \<gamma>\<close> zero_less_power)
-      qed (use \<open>3 \<le> l\<close> in auto)
+        using True
+        apply (intro big91)
+          apply(auto simp: \<gamma>0_def \<gamma>_def)
+        by linarith
     next
       show "exp (- (l / (k + real l) / 20) * k + 1) * (k+l choose l) \<le> exp (-\<delta>*k + 1) * (k+l choose l)"
         by (smt (verit, best) \<open>0 < \<gamma>\<close> \<gamma>_def \<delta>_def exp_mono frac_le mult_right_mono of_nat_0_le_iff)
@@ -349,7 +373,7 @@ proof (rule ccontr)
     case False
     with \<open>l>0\<close> have "\<gamma>>0" "\<gamma>>1/10" and k9l: "k < 9*l"
       by (auto simp: \<gamma>_def)
-    \<comment> \<open>Much overlap with the proof of 9.2, but key differences too\<close>
+    \<comment>\<open>Much overlap with the proof of 9.2, but key differences too\<close>
     define U_lower_bound_ratio where 
       "U_lower_bound_ratio \<equiv> \<lambda>m. (\<Prod>i<m. (l - real i) / (k+l - real i))"
     define n where "n \<equiv> nat\<lceil>RN k l - 1\<rceil>"
@@ -429,7 +453,7 @@ proof (rule ccontr)
     define \<gamma>' where "\<gamma>' \<equiv> (l - real m) / (k+l-real m)"
 
     have max53: "\<not> (is_good_clique n (insert x W) \<and> card (insert x W) \<le> max_m)" if "x\<in>V\<setminus>W" for x
-    proof    \<comment> \<open>Setting up the case analysis for @{term \<gamma>'}\<close>
+    proof    \<comment>\<open>Setting up the case analysis for @{term \<gamma>'}\<close>
       assume x: "is_good_clique n (insert x W) \<and> card (insert x W) \<le> max_m"
       then have "card (insert x W) = Suc (card W)"
         using finV is_good_clique_def finite_subset that by fastforce
@@ -478,7 +502,7 @@ proof (rule ccontr)
     have kl_choose: "real(k+l choose l) = (k+l-m choose (l-m)) / U_lower_bound_ratio m"
       unfolding U_lower_bound_ratio_def using kl_choose \<open>0 < k\<close> \<open>m < l\<close> by blast
 
-    \<comment> \<open>in both cases below, we find a blue clique of size @{term"l-m"}\<close>
+    \<comment>\<open>in both cases below, we find a blue clique of size @{term"l-m"}\<close>
     have extend_Blue_clique: "\<exists>K'. size_clique l K' Blue" 
       if "K \<subseteq> U" "size_clique (l-m) K Blue" for K
     proof -
@@ -536,12 +560,15 @@ proof (rule ccontr)
     note \<gamma>'_cases = this
     have 110: "1/10 - 1/k \<le> \<gamma>'"
       using \<gamma>'_cases by (smt (verit, best) divide_nonneg_nonneg of_nat_0_le_iff)
-    with \<open>m<l\<close> \<open>k>0\<close> have "real k ^ 2 - 10 * real k \<le> (l-m)* (10 + 9*k)"
+    have "(real k)\<^sup>2 - 10 * real k \<le> (l-m) * (10 + 9*k)"
+      using 110 \<open>m<l\<close> \<open>k>0\<close>
       by (simp add: \<gamma>'_def field_split_simps power2_eq_square)
     with big'' have "k/10 \<le> l-m"
       by (smt (verit, best) mult_right_mono of_nat_0_le_iff of_nat_mult)
     then have k10_lm: "nat \<lfloor>k/10\<rfloor> \<le> l - m"
       by linarith
+    have lm_ge_25: "nat \<lfloor>2/5 * l\<rfloor> \<le> l - m"
+      using False l4k k10_lm by linarith
 
     \<comment>\<open>As with 9: a huge effort just to show that @{term U} is nontrivial.
          Proof actually shows its cardinality exceeds a small multiple of @{term l} (7/5).\<close>
@@ -718,7 +745,7 @@ proof (rule ccontr)
           using n2exp_gt prod_gt0 by auto 
         also have "\<dots> \<le> (n/2) * U_lower_bound_ratio m"
           using mult_left_mono [OF expexp, of "(n/2) * U_lower_bound_ratio m"] prod_gt0 by (simp add: mult_ac)
-        also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment> \<open>formerly stuck here, due to the "minus @{term m}"\<close>
+        also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment>\<open>formerly stuck here, due to the "minus @{term m}"\<close>
           using U_MINUS_M \<open>m < l\<close> by auto
         finally have "exp (- real k/200) * (k + (l-m) choose (l-m)) \<le> real n * U_lower_bound_ratio m - m"
           by linarith 
@@ -744,11 +771,11 @@ proof (rule ccontr)
         then have "real l - real m \<ge> (10/11) * \<gamma> * l"
           by (simp add: algebra_simps)
         moreover
-        have "(2 * \<gamma> / 5)\<^sup>2 \<le> \<gamma>' \<and> \<gamma>' \<le> 1/5"
+        have "1/10 \<le> \<gamma>' \<and> \<gamma>' \<le> 1/5"
           using mult_mono [OF \<gamma> \<gamma>] \<open>\<gamma>'\<ge>1/10\<close> \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> by (auto simp: power2_eq_square)
         ultimately        
         have "Big_Closer_10_2 \<gamma>' (l-m)"
-          using big \<open>m<l\<close> by (force simp: Big_Closer_10_1_def)
+          using lm_ge_25 by (intro Big_10_2I) auto
         then show "Big_Closer_10_2 ((l-m) / (real k + real (l-m))) (l-m)"
           by (simp add: \<gamma>'_def \<open>m < l\<close> add_diff_eq less_or_eq_imp_le)
       next
@@ -771,48 +798,24 @@ proof (rule ccontr)
     next
       case 2
       have "RN k (l-m) \<le> exp (- ((l-m) / (k + real (l-m)) / 20) * k + 1) * (k + (l-m) choose (l-m))"
-      proof (intro Far_9_1 strip)thm Far_9_1[of "l-m" k]
+      proof (intro Far_9_1 strip)
         show "real (l-m) / (real k + real (l-m)) \<le> 1/10"
           using \<gamma>'_def 2 \<open>m < l\<close> by auto
       next
+
         show "Big_Far_9_1 (real (l-m) / (k + real (l-m))) (l-m)"
-          unfolding Big_Far_9_1_def
-        proof (intro conjI strip)
-          fix l' \<mu>
-          assume l': "10/11 * (real (l-m) / (real k + real (l-m))) * real (l-m) \<le> real l'"
-            and \<mu>: "(real (l-m) / (real k + real (l-m)))\<^sup>2 \<le> \<mu> \<and> \<mu> \<le> 1/10"
-          show "Big_Far_9_2 \<mu> l'"
-          proof (intro Big_10_imp_Big_9)
-            have "(real (l-m) / (real k + real (l-m)))\<^sup>2 > 0"
-              using \<open>m<l\<close> \<open>k>0\<close> by (simp add: divide_simps power2_eq_square)
-            with \<mu> show "0 < \<mu>" by linarith
-            show "Big_Closer_10_2 \<mu> l'"
-            proof (intro Big_10_2I)
-              have A: "(2/5)*l \<le> l-m"
-                using \<open>k/10 \<le> l-m\<close> l4k by linarith
-              then have "(2/5)*\<gamma> \<le> (l-m) / (real k + real l)"
-                unfolding \<gamma>_def by (metis of_nat_add divide_right_mono of_nat_0_le_iff times_divide_eq_right)
-              also have "\<dots> \<le> \<gamma>'"
-                using \<open>m<l\<close> by (simp add: \<gamma>'_def divide_simps)
-              finally have B: "(2/5)*\<gamma> \<le> \<gamma>'"
-                by fastforce
-              then have "(2*\<gamma>/5)\<^sup>2 \<le> \<gamma>'\<^sup>2"
-                using \<open>\<gamma>' \<le> \<gamma>\<close> by fastforce
-              also have "\<dots> \<le> \<mu>"
-                using \<mu> \<open>m<l\<close> by (simp add: \<gamma>'_def) argo
-              finally show "(2 / 5 * \<gamma>)\<^sup>2 \<le> \<mu>"
-                by simp 
-              have "(8/55) * \<gamma> * l \<le> (10/11) * \<gamma>' * (l - m)"
-                using mult_mono [OF A B] \<open>\<gamma>>1/10\<close> by (simp add: mult_ac)
-              with l' \<open>m<l\<close> show "8/55 * \<gamma> * l \<le> l'"
-                unfolding \<gamma>'_def
-                by (smt (verit) of_nat_0 of_nat_add diff_is_0_eq le_add2 mult_cancel_right2 nat_le_linear of_nat_diff)
-            qed (use \<mu> in auto)
-          next
-          qed (use \<mu> in auto)
+        proof (intro big91 [OF lm_ge_25])
+          have "0.07 \<le> (1::real)/10 - 1/36"
+            by (approximation 5)
+          also have "... \<le> 1/10 - 1/k"
+            using \<open>k\<ge>36\<close> by (intro diff_mono divide_right_mono) auto
+          finally have 7: "\<gamma>' \<ge> 0.07" using 110 by linarith
+          with \<open>m<l\<close> show "\<gamma>0 \<le> real (l - m) / (real k + real (l - m))"
+            by (simp add: \<gamma>0_def min_le_iff_disj \<gamma>'_def algebra_simps)
         next
-          show "3 \<le> l-m" using \<open>k/10 \<le> l-m\<close> \<open>k\<ge>36\<close> by linarith
-        qed
+          show "real (l - m) / (real k + real (l - m)) \<le> 1/10"
+            using 2 \<open>m<l\<close> by (simp add: \<gamma>'_def)
+        qed 
       next
         show "p0_min \<le> 1 - 1/10 * (1 + 1 / 15)"
           using p0_min_101 by auto

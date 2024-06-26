@@ -650,7 +650,7 @@ next
     then show ?thesis
     proof cases
       case 1
-      then show ?thesis thm verit_minus_simplify(1)
+      then show ?thesis 
         by (smt (verit, best) "*" eps_ge0 pee_eq_p0 cancel_comm_monoid_add_class.diff_cancel)
     next
       case 2

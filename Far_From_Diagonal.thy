@@ -1150,24 +1150,6 @@ qed
 
 subsection \<open>Theorem 9.1\<close>
 
-text \<open>Following Bhavik: dividing by @{term "exp 1"} rather than subtracting 1\<close>
-lemma RN_divide_e_less:
-  assumes "l\<ge>2" "k\<ge>2"
-  shows "nat\<lceil>RN k l / exp 1\<rceil> < RN k l"
-proof -
-  have "RN k l \<ge> 2" by (metis RN_2 RN_mono assms)
-  then have "3 + real (RN k l) \<le> (5/2) * real (RN k l)"
-    by linarith
-  moreover have "(5/2::real) < exp 1"
-    by (approximation 5)
-  ultimately have "exp 1 + real (RN k l) \<le> exp 1 * real (RN k l)"
-    by (smt (verit, best) exp_le mult_right_mono of_nat_0_le_iff)
-  moreover have "0 \<le> \<lceil>RN k l / exp 1\<rceil>"
-    by (metis ceiling_mono ceiling_zero exp_ge_zero of_nat_0_le_iff zero_le_divide_iff)
-  ultimately show ?thesis
-    by (simp add: nat_less_iff ceiling_less_iff field_simps)
-qed
-
 lemma kl_choose: 
   fixes l k::nat
   assumes "m<l" "k>0"
@@ -1203,14 +1185,50 @@ context P0_min
 begin
 
 
+text \<open>The proof considers a smaller graph, so @{term l} needs to be so big
+   that the smaller @{term l'} will be big enough.\<close>
 definition Big_Far_9_1 :: "real \<Rightarrow> nat \<Rightarrow> bool" where
   "Big_Far_9_1 \<equiv> \<lambda>\<mu> l. l\<ge>3 \<and> (\<forall>l' \<gamma>. real l' \<ge> (10/11) * \<mu> * real l \<longrightarrow> \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<gamma> l')"
 
+text \<open>The proof of theorem 10.1 requires a range of values\<close>
 lemma Big_Far_9_1:
-  assumes "0<\<mu>" "\<mu>\<^sup>2 \<le> 1/10" 
+  assumes "0<\<mu>0" "\<mu>0\<le>1/10"
+  shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> 1/10 \<longrightarrow> Big_Far_9_1 \<mu> l"
+proof -
+  have "\<mu>0\<^sup>2 \<le> 1/10"
+    using assms by (smt (verit, ccfv_threshold) le_divide_eq_1 mult_left_le power2_eq_square)
+  then have "\<forall>\<^sup>\<infinity>l. \<forall>\<gamma>. \<mu>0\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<gamma> l"
+    using assms by (intro Big_Far_9_2) auto
+  then obtain N where N: "\<forall>l\<ge>N. \<forall>\<gamma>. \<mu>0\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<gamma> l"
+    using eventually_sequentially by auto
+  define M where "M \<equiv> nat\<lceil>11*N / (10*\<mu>0)\<rceil>"
+  have "(10/11) * \<mu>0 * l \<ge> N" if "l \<ge> M" for l
+    using that by (simp add: M_def \<open>\<mu>0>0\<close> mult_of_nat_commute pos_divide_le_eq)
+  with N have "\<forall>l\<ge>M. \<forall>l' \<gamma>. (10/11) * \<mu>0 * l \<le> l' \<longrightarrow> \<mu>0\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1 / 10 \<longrightarrow> Big_Far_9_2 \<gamma> l'"
+    by (smt (verit, ccfv_SIG) of_nat_le_iff)
+  then have "\<forall>\<^sup>\<infinity>l. \<forall>l' \<gamma>. (10/11) * \<mu>0 * l \<le> l' \<longrightarrow> \<mu>0\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1 / 10 \<longrightarrow> Big_Far_9_2 \<gamma> l'"
+    by (auto simp: eventually_sequentially)
+  moreover have "\<forall>\<^sup>\<infinity>l. l\<ge>3"
+    by simp
+  ultimately show ?thesis
+    unfolding Big_Far_9_1_def apply eventually_elim 
+    apply clarify
+    apply (drule_tac x="l'" in spec)
+    apply (drule_tac x="\<gamma>" in spec)
+    apply (auto simp: )
+    apply (smt (verit, ccfv_SIG) mult_right_mono of_nat_0_le_iff)
+    by (smt (verit) assms(1) power_mono)
+qed
+
+(*
+text \<open>The weaker assumption @{term "\<mu>\<^sup>2 \<le> 1/10"} also works\<close>
+lemma Big_Far_9_1:
+  assumes "0 < \<mu>" "\<mu> \<le> 1/10" 
   shows "\<forall>\<^sup>\<infinity>l. Big_Far_9_1 \<mu> l"
 proof -
-  have "\<forall>\<^sup>\<infinity>l. \<forall>\<gamma>. \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<gamma> l"
+  have "\<mu>\<^sup>2 \<le> 1/10"
+    by (smt (verit, best) assms mult_le_cancel_left1 power2_eq_square le_divide_eq_1)
+  then have "\<forall>\<^sup>\<infinity>l. \<forall>\<gamma>. \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<gamma> l"
     using assms by (intro Big_Far_9_2) auto
   then obtain N where N: "\<forall>l\<ge>N. \<forall>\<gamma>. \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<gamma> l"
     using eventually_sequentially by auto
@@ -1226,8 +1244,9 @@ proof -
   ultimately show ?thesis
     unfolding Big_Far_9_1_def by eventually_elim auto
 qed
+*)
 
-text \<open>The text claims the result for all @{term k} and @{term l}, not just those sufficiently large, 
+text \<open>The text claims the result for all @{term k} and @{term l}, not just those sufficiently large,
   but the $o(k)$ function allowed in the exponent provides a fudge factor\<close>
 theorem Far_9_1:
   fixes l k::nat
