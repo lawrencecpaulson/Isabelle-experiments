@@ -1163,7 +1163,7 @@ proof -
     using prod_divide_nat_ivl [of 0 m l "\<lambda>i. real (k+l-i) / real (l-i)"] \<open>m < l\<close>
     by (simp add: atLeast0LessThan)
   also have "\<dots> = (\<Prod>i<l - m. (k+l-m - i) / (l-m-i))"
-    apply (rule prod.reindex_cong [OF inj, symmetric])
+    apply (intro prod.reindex_cong [OF inj, symmetric])
     by (auto simp: image_minus_const_atLeastLessThan_nat)
   finally
   have "(\<Prod>i<l - m. (k+l-m - i) / (l-m-i)) 
@@ -1211,40 +1211,10 @@ proof -
   moreover have "\<forall>\<^sup>\<infinity>l. l\<ge>3"
     by simp
   ultimately show ?thesis
-    unfolding Big_Far_9_1_def apply eventually_elim 
-    apply clarify
-    apply (drule_tac x="l'" in spec)
-    apply (drule_tac x="\<gamma>" in spec)
-    apply (auto simp: )
-    apply (smt (verit, ccfv_SIG) mult_right_mono of_nat_0_le_iff)
-    by (smt (verit) assms(1) power_mono)
+    unfolding Big_Far_9_1_def 
+    apply eventually_elim 
+    by (smt (verit) \<open>0<\<mu>0\<close> mult_left_mono mult_right_mono of_nat_less_0_iff power_mono zero_less_mult_iff)
 qed
-
-(*
-text \<open>The weaker assumption @{term "\<mu>\<^sup>2 \<le> 1/10"} also works\<close>
-lemma Big_Far_9_1:
-  assumes "0 < \<mu>" "\<mu> \<le> 1/10" 
-  shows "\<forall>\<^sup>\<infinity>l. Big_Far_9_1 \<mu> l"
-proof -
-  have "\<mu>\<^sup>2 \<le> 1/10"
-    by (smt (verit, best) assms mult_le_cancel_left1 power2_eq_square le_divide_eq_1)
-  then have "\<forall>\<^sup>\<infinity>l. \<forall>\<gamma>. \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<gamma> l"
-    using assms by (intro Big_Far_9_2) auto
-  then obtain N where N: "\<forall>l\<ge>N. \<forall>\<gamma>. \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1/10 \<longrightarrow> Big_Far_9_2 \<gamma> l"
-    using eventually_sequentially by auto
-  define M where "M \<equiv> nat\<lceil>11*N / (10*\<mu>)\<rceil>"
-  have "(10/11) * \<mu> * l \<ge> N" if "l \<ge> M" for l
-    using that by (simp add: M_def \<open>\<mu>>0\<close> mult_of_nat_commute pos_divide_le_eq)
-  with N have "\<forall>l\<ge>M. \<forall>l' \<gamma>. (10/11) * \<mu> * l \<le> l' \<longrightarrow> \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1 / 10 \<longrightarrow> Big_Far_9_2 \<gamma> l'"
-    by (smt (verit, ccfv_SIG) of_nat_le_iff)
-  then have "\<forall>\<^sup>\<infinity>l. \<forall>l' \<gamma>. (10/11) * \<mu> * l \<le> l' \<longrightarrow> \<mu>\<^sup>2 \<le> \<gamma> \<and> \<gamma> \<le> 1 / 10 \<longrightarrow> Big_Far_9_2 \<gamma> l'"
-    by (auto simp: eventually_sequentially)
-  moreover have "\<forall>\<^sup>\<infinity>l. l\<ge>3"
-    by simp
-  ultimately show ?thesis
-    unfolding Big_Far_9_1_def by eventually_elim auto
-qed
-*)
 
 text \<open>The text claims the result for all @{term k} and @{term l}, not just those sufficiently large,
   but the $o(k)$ function allowed in the exponent provides a fudge factor\<close>

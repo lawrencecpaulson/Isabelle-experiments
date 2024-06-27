@@ -7,6 +7,9 @@ begin
 
 definition "H \<equiv> \<lambda>p. -p * log 2 p - (1-p) * log 2 (1-p)"
 
+lemma H0 [simp]: "H 0 = 0" and H1 [simp]: "H 1 = 0"
+  by (auto simp: H_def)
+
 lemma H_reflect: "H (1-p) = H p"
   by (simp add: H_def)
 
@@ -93,7 +96,7 @@ proof -
     by (metis gt0 RN_eq_0_iff \<open>k>0\<close> gr0I)
   then have \<section>: "RN k (nat\<lfloor>k - x*k\<rfloor>) \<le> k + nat\<lfloor>k - x*k\<rfloor> choose k"
     using RN_le_choose by force
-  also have "... \<le> k + k - nat\<lceil>x*k\<rceil> choose k"
+  also have "\<dots> \<le> k + k - nat\<lceil>x*k\<rceil> choose k"
   proof (intro Binomial.binomial_mono)
     show "k + nat \<lfloor>k - x*k\<rfloor> \<le> ?kl"
       using RN_gt0 le linorder_not_le by fastforce
@@ -108,7 +111,7 @@ proof -
     then show ?thesis
       by (simp add: H_12_1 divide_right_mono)
   qed
-  also have "... \<le> f1 x y"
+  also have "\<dots> \<le> f1 x y"
   proof -
     have 1: "?kl / k \<le> 2-x"
         using x by (simp add: field_split_simps)
@@ -128,7 +131,7 @@ qed
 
 definition "f2 \<equiv> \<lambda>x y. f1 x y - (log 2 (exp 1) / 40) * (1-x) / (2-x)"
 
-text \<open>Claim (63)\<close>
+text \<open>Claim (63) IN WEAKENED FORM\<close>
 lemma (in P0_min) FF_le_f2:
   fixes k::nat and x y::real
   assumes x: "3/4 \<le> x" "x \<le> 1" and y: "0 \<le> y" "y \<le> 1"
@@ -137,7 +140,7 @@ lemma (in P0_min) FF_le_f2:
   defines "\<gamma> \<equiv> real l / (real k + real l)"
   defines "\<gamma>0 \<equiv> min \<gamma> (0.07)" 
   assumes big: "Big_Closer_10_1 \<gamma>0 l"
-  shows "FF k x y \<le> f2 x y"
+  shows "FF k x y \<le> f2 x y + 3 / (real k * ln 2)"
 proof -
   have "l>0"
     using big by (simp add: Big_Closer_10_1_def)
@@ -147,12 +150,20 @@ proof -
     by (smt (verit, del_insts) of_nat_0_le_iff of_nat_le_iff pos_prod_lt)
   have "k>0"
     using \<open>0 < l\<close> \<open>l \<le> k\<close> by force
+  have RN_gt0: "RN k l > 0"
+    by (metis RN_eq_0_iff \<open>0 < k\<close> \<open>0 < l\<close> gr0I)
   define \<delta> where "\<delta> \<equiv> \<gamma>/40"
   have A: "l / real(k+l) = (1-x)/(2-x)"
     using x \<open>k>0\<close> by (simp add: l field_simps)
-  with x have \<gamma>: "\<gamma> \<le> 1/5" 
-    by (simp add: \<gamma>_def)
-  have *: "RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
+  have B: "real(k+l) / k = 2-x"
+    using \<open>0 < k\<close> l by auto
+  have \<gamma>: "\<gamma> \<le> 1/5" 
+    using x A by (simp add: \<gamma>_def)
+  have "1 - 1 / (2-x) = (1-x) / (2-x)"
+    using x by (simp add: divide_simps)
+  then have Heq: "H (1 / (2-x)) = H ((1-x) / (2-x))"
+    by (metis H_reflect)
+  have "RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
     unfolding \<delta>_def \<gamma>_def
   proof (rule Closer_10_1)
     show "real l / (real k + real l) \<le> 1/5"
@@ -162,7 +173,28 @@ proof -
     then show "Big_Closer_10_1 (min (l / (k + real l)) 0.07) l"
       using big \<gamma>0_def \<gamma>_def by blast
   qed (use p0_min_101 in auto)
-  show ?thesis
-    unfolding FF_def f2_def
-    sorry
+  with RN_gt0 have "FF k x y \<le> log 2 (exp (-\<delta>*k + 3) * (k+l choose l)) / k + x + y"
+    unfolding FF_def
+    by (intro add_mono divide_right_mono Transcendental.log_mono; simp flip: l)
+  also have "\<dots> = (log 2 (exp (-\<delta>*k + 3)) + log 2 (k+l choose l)) / k + x + y"
+    by (simp add: log_mult)
+  also have "\<dots> \<le> ((-\<delta>*k + 3) / ln 2 + (k+l) * H(l/(k+l))) / k + x + y"
+    using H_12_1
+    by (smt (verit, ccfv_SIG) General_Extras.log_exp divide_right_mono le_add2 of_nat_0_le_iff)
+  also have "\<dots> = (-\<delta>*k + 3) / k / ln 2 + (k+l) / k * H(l/(k+l)) + x + y"
+    by argo
+  also have "\<dots> = -\<delta> / ln 2 + 3 / (k * ln 2) + (2-x) * H((1-x)/(2-x)) + x + y"
+  proof -
+    have "(-\<delta>*k + 3) / k / ln 2 = -\<delta> / ln 2 + 3 / (k * ln 2)"
+      using \<open>0 < k\<close> by (simp add: divide_simps)
+    moreover have "(k+l) / k * H(l/(k+l)) = (2-x) * H((1-x)/(2-x))"
+      using A B by presburger
+    ultimately show ?thesis
+      by argo
+  qed
+  also have "\<dots> = - (log 2 (exp 1) / 40) * (1-x) / (2-x) + 3 / (k * ln 2) + (2-x) * H((1-x)/(2-x)) + x + y"
+    using A by (force simp: \<delta>_def \<gamma>_def field_simps)
+  also have "\<dots> \<le> f2 x y + 3 / (real k * ln 2)"
+    by (simp add: Heq f1_def f2_def)
+  finally show ?thesis .
 qed

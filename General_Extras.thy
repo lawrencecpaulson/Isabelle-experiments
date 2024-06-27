@@ -4,6 +4,13 @@ theory General_Extras imports
 
 begin
 
+
+thm log_exp (*RENAME EXISTING LOG_EXP TO log_power*)
+thm log_def
+lemma log_exp [simp]: "log b (exp x) = x / ln b"
+  by (simp add: log_def)
+
+
 thm of_nat_le_iff
 context linordered_nonzero_semiring
 begin
