@@ -54,7 +54,6 @@ lemma Big_height_upper_bound:
 
 type_synonym 'a config = "'a set \<times> 'a set \<times> 'a set \<times> 'a set"
 
-(* possibly this should also fix the values of 0 < \<mu>0 < \<mu>1 < 1 and serve as the base of all bigness properties *)
 locale P0_min =   
   fixes p0_min :: real
   assumes p0_min: "0 < p0_min" "p0_min < 1"

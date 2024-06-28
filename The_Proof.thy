@@ -132,7 +132,7 @@ qed
 definition "f2 \<equiv> \<lambda>x y. f1 x y - (log 2 (exp 1) / 40) * (1-x) / (2-x)"
 
 text \<open>Claim (63) IN WEAKENED FORM\<close>
-lemma (in P0_min) FF_le_f2:
+lemma (in P0_min) FF_le_f2_aux:
   fixes k::nat and x y::real
   assumes x: "3/4 \<le> x" "x \<le> 1" and y: "0 \<le> y" "y \<le> 1"
   and l: "real l = k - x*k"
@@ -148,8 +148,7 @@ proof -
     using x by linarith
   with l have "k\<ge>l"
     by (smt (verit, del_insts) of_nat_0_le_iff of_nat_le_iff pos_prod_lt)
-  have "k>0"
-    using \<open>0 < l\<close> \<open>l \<le> k\<close> by force
+  with \<open>0 < l\<close> have "k>0" by force
   have RN_gt0: "RN k l > 0"
     by (metis RN_eq_0_iff \<open>0 < k\<close> \<open>0 < l\<close> gr0I)
   define \<delta> where "\<delta> \<equiv> \<gamma>/40"
@@ -198,3 +197,101 @@ proof -
     by (simp add: Heq f1_def f2_def)
   finally show ?thesis .
 qed
+
+text \<open>probably we are able to assume that the variables are rational\<close>
+lemma (in P0_min) FF_le_f2:
+  fixes x y::real
+  assumes x: "3/4 \<le> x" "x \<le> 1" and y: "0 \<le> y" "y \<le> 1"
+  assumes p0_min_101: "p0_min \<le> 1 - 1/5"
+  defines "\<gamma> \<equiv> (1-x) / (2-x)"
+  shows "FF k x y \<le> f2 x y + 3 / (real k * ln 2)"
+proof (cases "x=1")
+  case True
+  then show ?thesis 
+    by (simp add: FF_def f2_def f1_def)
+next
+  case False
+  with x have "x<1"
+    by linarith
+  define \<gamma>0 where "\<gamma>0 \<equiv> min \<gamma> (0.07)" 
+  have \<gamma>: "0<\<gamma>" "\<gamma> \<le> 1/5"
+    using x \<open>x<1\<close> y by (auto simp add: \<gamma>_def divide_simps)
+  then have "\<gamma>0>0"
+    by (simp add: \<gamma>0_def)
+  then obtain l where big: "Big_Closer_10_1 \<gamma>0 l"
+    by (meson Big_Closer_10_1 eventually_sequentially order.refl)
+  have "l>0"
+    using big by (simp add: Big_Closer_10_1_def)
+  have "x>0"
+    using x by linarith
+  define k where "k = nat\<lceil>l/(1-x)\<rceil>"
+  have "k\<ge>l"
+    using x False by (simp add: k_def divide_simps mult_left_le le_natceiling_iff)
+  with \<open>0 < l\<close> have "k>0" by force
+
+  have lle: "l \<le> (1-x) * k"
+    unfolding k_def
+    by (metis \<open>x < 1\<close> diff_gt_0_iff_gt mult.commute pos_divide_le_eq real_nat_ceiling_ge)
+
+  have RN_gt0: "RN k l > 0"
+    by (metis RN_eq_0_iff \<open>0 < k\<close> \<open>0 < l\<close> gr0I)
+  define \<delta> where "\<delta> \<equiv> \<gamma>/40"
+  have "1 - 1 / (2-x) = (1-x) / (2-x)"
+    using x by (simp add: divide_simps)
+  then have Heq: "H (1 / (2-x)) = H ((1-x) / (2-x))"
+    by (metis H_reflect)
+  have "RN k l \<le> exp (- (l / (k + real l) / 40) * k + 3) * (k+l choose l)"
+    unfolding \<delta>_def \<gamma>_def
+  proof (rule Closer_10_1)
+    have "1-x \<le> 1/4"
+      using x by linarith
+    then have "4 * real l \<le> k"
+      using mult_left_mono [OF lle, of 4] mult_ac
+      by (metis (no_types, opaque_lifting) le_divide_eq_numeral1(1) mult_left_le of_nat_0_le_iff order.trans zero_le_numeral)
+    then show "l / (k + real l) \<le> 1/5"
+      by (simp add: divide_simps)
+    have "min (l / (k + real l)) 0.07 > 0"
+      using \<open>l>0\<close> by force 
+    then show "Big_Closer_10_1 (min (l / (k + real l)) 0.07) l"
+      using big \<gamma>0_def \<gamma>_def by blast
+  qed (use p0_min_101 in auto)
+
+
+
+
+
+  oops
+
+lemma DD:
+  fixes \<delta>::real
+  assumes "0 < \<delta>" "\<delta> \<le> 1 / 2^11"
+  shows "\<forall>\<^sup>\<infinity>k. log 2 (RN k k) / k \<le> 2-\<delta>"
+  sorry
+
+text \<open>Main theorem 1.1: the exponent is approximately 3.9987\<close>
+theorem 
+  obtains \<epsilon>::real where "\<epsilon>>0" "\<forall>\<^sup>\<infinity>k. RN k k \<le> (4-\<epsilon>)^k"
+proof
+  let ?\<epsilon> = "0.00135::real"
+  let ?\<delta> = "1 / 2^11::real"
+  have "?\<delta> > 0"
+    by simp
+  then have "\<forall>\<^sup>\<infinity>k. k>0 \<and> log 2 (RN k k) / k \<le> 2-?\<delta>"
+    unfolding eventually_conj_iff using DD eventually_gt_at_top by blast
+  then have A: "\<forall>\<^sup>\<infinity>k. RN k k \<le> (2 powr (2-?\<delta>)) ^ k"
+  proof (eventually_elim)
+    case (elim k)
+    then have "log 2 (RN k k) \<le> (2-?\<delta>) * k"
+      by (meson of_nat_0_less_iff pos_divide_le_eq)
+    then have "RN k k \<le> 2 powr ((2-?\<delta>) * k)"
+      by (smt (verit, best) Transcendental.log_le_iff powr_ge_pzero)
+    then show "RN k k \<le> (2 powr (2-?\<delta>)) ^ k"
+      by (simp add: mult.commute powr_power)
+  qed
+  moreover have "2 powr (2-?\<delta>) \<le> 4 - ?\<epsilon>"
+    by (approximation 50)
+  ultimately show "\<forall>\<^sup>\<infinity>k. real (RN k k) \<le> (4-?\<epsilon>) ^ k"
+    by (smt (verit) power_mono powr_ge_pzero eventually_mono)
+qed auto
+
+end

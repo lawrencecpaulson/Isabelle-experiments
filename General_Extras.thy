@@ -4,6 +4,11 @@ theory General_Extras imports
 
 begin
 
+axiomatization
+  where ln0 [simp]: "ln 0 = 0"
+
+lemma log0 [simp]: "log b 0 = 0"
+  by (simp add: log_def)
 
 thm log_exp (*RENAME EXISTING LOG_EXP TO log_power*)
 thm log_def

@@ -363,7 +363,7 @@ qed
 
 subsection \<open>Theorem 2.1\<close>
 
-(* actually it is undefined when k=0 or x=1; could we use 1+R(k,k') in the definition?*)
+(* actually it is undefined when k=0 or x=1; Lean puts ln(0) = 0*)
 definition FF :: "nat \<Rightarrow> real \<Rightarrow> real \<Rightarrow> real" where
  "FF \<equiv> \<lambda>k x y. log 2 (RN k (nat\<lfloor>real k - x * real k\<rfloor>)) / real k + x + y"
 
@@ -371,29 +371,25 @@ definition GG :: "real \<Rightarrow> real \<Rightarrow> real \<Rightarrow> real"
   "GG \<equiv> \<lambda>\<mu> x y. log 2 (1/\<mu>) + x * log 2 (1/(1-\<mu>)) + y * log 2 (\<mu> * (x+y) / y)"
 
 definition FF_bound :: "nat \<Rightarrow> real \<Rightarrow> real" where
-  "FF_bound \<equiv> \<lambda>k u. FF k 0 u + \<bar>FF k 1 u\<bar> + 1"
+  "FF_bound \<equiv> \<lambda>k u. FF k 0 u + 1"
 
+lemma log2_RN_ge0: "0 \<le> log 2 (RN k k) / k"
+proof (cases "k=0")
+  case False
+  then have "RN k k \<ge> 1"
+    by (simp add: RN_eq_0_iff leI)
+  then show ?thesis
+    by simp
+qed auto
 
-(* the ugly mess here fixes the singularity when x=1. We just add in \<bar>FF k 1 u\<bar>, whatever it may be!*)
+(* even with ln(0) = 0, the singularity requires its own case*)
 lemma FF:
   assumes x: "x \<in> {0..1}" and "y \<in> {0..u}" "k>0"
   shows "FF k x y \<le> FF_bound k u"
 proof (cases "\<lfloor>k - x*k\<rfloor> = 0")
-  case True  \<comment>\<open>all this nonsense just to handle the singularity\<close>
-  have "u \<ge> 0"
-    using assms by simp
-  have "0 \<le> log 2 (RN k k) / k"
-  proof (cases "k=0")
-    case False
-    then have "RN k k \<ge> 1"
-      by (simp add: RN_eq_0_iff leI)
-    then show ?thesis
-      by simp
-  qed auto
-  with \<open>u \<ge> 0\<close> have "FF k 0 u \<ge> 0"
-    by (simp add: FF_def)
-  with assms show ?thesis
-    by (simp add: True FF_def abs_if FF_bound_def)
+  case True  \<comment>\<open>to handle the singularity\<close>
+  with assms log2_RN_ge0[of k] show ?thesis
+    by (simp add: True FF_def FF_bound_def) 
 next
   case False
   with \<open>k>0\<close> assms have *: "0 < \<lfloor>k - x*k\<rfloor>"
@@ -416,7 +412,6 @@ lemma FF2: "y' \<le> y \<Longrightarrow> FF k x y' \<le> FF k x y"
 
 context P0_min
 begin 
-
 
 definition "ok_fun_11_1 \<equiv> \<lambda>\<mu> k. max (ok_fun_11_2 \<mu> k) (2 - ok_fun_61 k)"
 
