@@ -4,6 +4,11 @@ theory General_Extras imports
 
 begin
 
+thm eventually_sequentially
+lemma frequently_sequentially:
+  "frequently P sequentially \<longleftrightarrow> (\<forall>N. \<exists>n\<ge>N. P n)"
+  by (simp add: frequently_def eventually_sequentially)
+
 axiomatization
   where ln0 [simp]: "ln 0 = 0"
 

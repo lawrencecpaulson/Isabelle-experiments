@@ -363,7 +363,8 @@ qed
 
 subsection \<open>Theorem 2.1\<close>
 
-(* actually it is undefined when k=0 or x=1; Lean puts ln(0) = 0*)
+(* actually it is undefined when k=0 or x=1; Lean puts ln(0) = 0.
+   AND IT DEPENDS UPON k!!*)
 definition FF :: "nat \<Rightarrow> real \<Rightarrow> real \<Rightarrow> real" where
  "FF \<equiv> \<lambda>k x y. log 2 (RN k (nat\<lfloor>real k - x * real k\<rfloor>)) / real k + x + y"
 

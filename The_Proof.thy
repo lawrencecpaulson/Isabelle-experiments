@@ -198,10 +198,13 @@ proof -
   finally show ?thesis .
 qed
 
-text \<open>probably we are able to assume that the variables are rational\<close>
+
+(*THEOREM 10.1 NEEDS TO BE UNCONDITIONAL RE BIGNESS. AND THIS IS STILL WEAK*)
+text \<open>probably we are able to assume that x is rational\<close>
 lemma (in P0_min) FF_le_f2:
   fixes x y::real
-  assumes x: "3/4 \<le> x" "x \<le> 1" and y: "0 \<le> y" "y \<le> 1"
+  assumes x: "3/4 \<le> x" "x \<le> 1" and xeq: "x = real t / real k" 
+      and y: "0 \<le> y" "y \<le> 1"
   assumes p0_min_101: "p0_min \<le> 1 - 1/5"
   defines "\<gamma> \<equiv> (1-x) / (2-x)"
   shows "FF k x y \<le> f2 x y + 3 / (real k * ln 2)"
@@ -211,56 +214,44 @@ proof (cases "x=1")
     by (simp add: FF_def f2_def f1_def)
 next
   case False
-  with x have "x<1"
-    by linarith
+  with x have "0<x" "x<1"
+    by linarith+
+  with xeq \<open>x<1\<close> obtain "k>0" "t<k"
+    by (smt (verit, del_insts) Multiseries_Expansion.intyness_0 assms(1) divide_le_0_iff divide_less_eq_1 of_nat_less_iff zero_order(4))
   define \<gamma>0 where "\<gamma>0 \<equiv> min \<gamma> (0.07)" 
   have \<gamma>: "0<\<gamma>" "\<gamma> \<le> 1/5"
     using x \<open>x<1\<close> y by (auto simp add: \<gamma>_def divide_simps)
   then have "\<gamma>0>0"
     by (simp add: \<gamma>0_def)
-  then obtain l where big: "Big_Closer_10_1 \<gamma>0 l"
-    by (meson Big_Closer_10_1 eventually_sequentially order.refl)
+(*
+  then have big: "\<forall>\<^sup>\<infinity>l. Big_Closer_10_1 \<gamma>0 l"
+    by (meson Big_Closer_10_1)
+  moreover have "frequently (\<lambda>l. (k-t) dvd l) sequentially"
+    apply (simp add: frequently_sequentially)
+    by (metis Suc_diff_Suc \<open>t < k\<close> dvd_triv_left less_one more_arith_simps(5) mult_le_cancel2 nat.simps(3) not_le)
+  ultimately obtain l where big: "(k-t) dvd l \<and> Big_Closer_10_1 \<gamma>0 l"
+    by (smt (verit, del_insts) frequently_cong not_frequently_False)
+  then obtain c where leq: "l = (k-t)*c"
+    by blast
+*)
+  define l where "l = k-t"
   have "l>0"
-    using big by (simp add: Big_Closer_10_1_def)
-  have "x>0"
-    using x by linarith
-  define k where "k = nat\<lceil>l/(1-x)\<rceil>"
-  have "k\<ge>l"
-    using x False by (simp add: k_def divide_simps mult_left_le le_natceiling_iff)
-  with \<open>0 < l\<close> have "k>0" by force
-
-  have lle: "l \<le> (1-x) * k"
-    unfolding k_def
-    by (metis \<open>x < 1\<close> diff_gt_0_iff_gt mult.commute pos_divide_le_eq real_nat_ceiling_ge)
-
-  have RN_gt0: "RN k l > 0"
-    by (metis RN_eq_0_iff \<open>0 < k\<close> \<open>0 < l\<close> gr0I)
-  define \<delta> where "\<delta> \<equiv> \<gamma>/40"
-  have "1 - 1 / (2-x) = (1-x) / (2-x)"
-    using x by (simp add: divide_simps)
-  then have Heq: "H (1 / (2-x)) = H ((1-x) / (2-x))"
-    by (metis H_reflect)
-  have "RN k l \<le> exp (- (l / (k + real l) / 40) * k + 3) * (k+l choose l)"
-    unfolding \<delta>_def \<gamma>_def
-  proof (rule Closer_10_1)
-    have "1-x \<le> 1/4"
-      using x by linarith
-    then have "4 * real l \<le> k"
-      using mult_left_mono [OF lle, of 4] mult_ac
-      by (metis (no_types, opaque_lifting) le_divide_eq_numeral1(1) mult_left_le of_nat_0_le_iff order.trans zero_le_numeral)
-    then show "l / (k + real l) \<le> 1/5"
-      by (simp add: divide_simps)
-    have "min (l / (k + real l)) 0.07 > 0"
-      using \<open>l>0\<close> by force 
-    then show "Big_Closer_10_1 (min (l / (k + real l)) 0.07) l"
-      using big \<gamma>0_def \<gamma>_def by blast
-  qed (use p0_min_101 in auto)
-
-
-
-
-
-  oops
+    by (simp add: \<open>t < k\<close> l_def)
+  have \<gamma>eq: "\<gamma> = real l / (real k + real l)"
+    using \<open>0 < k\<close> \<open>t < k\<close>
+    by (simp add: \<gamma>_def l_def xeq divide_simps)
+  show ?thesis
+  proof (intro FF_le_f2_aux x y)
+    show "real l = real k - x * real k"
+      using \<open>t < k\<close> by (simp add: l_def xeq)
+  next
+    show "p0_min \<le> 1 - 1 / 5"
+      using p0_min_101 by blast
+  next
+    show "Big_Closer_10_1 (min (real l / (real k + real l)) (7 / 10\<^sup>2)) l"
+      sorry
+  qed
+qed
 
 lemma DD:
   fixes \<delta>::real
