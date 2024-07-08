@@ -44,6 +44,11 @@ lemma H_half_mono':
   shows "H p' \<ge> H p"
   using H_half_mono [of "1-p" "1-p'"] H_reflect assms by auto
 
+lemma H_bounded:
+  assumes "0 \<le> p" "p \<le> 1"
+  shows "H p \<le> H(1/2)"
+  by (smt (verit, best) H0 H1 H_ge0 H_half_mono H_half_mono' assms)
+
 text \<open>Many thanks to Fedor Petrov on mathoverflow\<close>
 lemma H_12_1:
   fixes a b::nat
@@ -77,29 +82,66 @@ lemma g_eq: "g x y = log 2 (5/2) + x * log 2 (5/3) + y * log 2 ((2 * (x+y)) / (5
 
 definition "f1 \<equiv> \<lambda>x y. x + y + (2-x) * H(1/(2-x))"
 
+definition "f2 \<equiv> \<lambda>x y. f1 x y - (log 2 (exp 1) / 40) * (1-x) / (2-x)"
+
+definition "ff \<equiv> \<lambda>x y. if x < 3/4 then f1 x y else f2 x y"
+
+definition "ff_bound \<equiv> 2 + 2 * H(1/2)"
+
+lemma le_ff_bound:
+  assumes "x \<in> {0..1}" and "y \<in> {0..1}" 
+  shows "ff x y \<le> ff_bound"
+proof -
+  have H: "H(1 / (2-x)) \<le> H(1/2)"
+    using assms by (intro H_bounded) auto
+  have "ff x y \<le> f1 x y"
+    using assms by (simp add: ff_def f2_def)
+  also have "... \<le> 1 + 1 + 2 * H(1/2)"
+    unfolding f1_def
+    using assms H by (intro add_mono mult_mono H_ge0) auto
+  also have "... \<le> ff_bound"
+    by (simp add: ff_bound_def)
+  finally show ?thesis .
+qed
+
+lemma ff_GG_bound:
+  assumes x: "x \<in> {0..1}" and y: "y \<in> {0..3/4}" 
+  shows "min (ff x y) (GG \<mu> x y) \<le> ff_bound"
+proof -
+  have "ff x y \<le> ff_bound"
+    using assms by (intro le_ff_bound) auto
+  then show ?thesis
+    by auto
+qed
+
+
+
 (*A singularity of x=1. Okay if we put ln(0) = 0! *)
 text \<open>Claim (62)\<close>
 lemma FF_le_f1:
   fixes k::nat and x y::real
   assumes x: "0 \<le> x" "x \<le> 1" and y: "0 \<le> y" "y \<le> 1" and "k>0"
   shows "FF k x y \<le> f1 x y"
-proof -
+proof (cases "nat\<lfloor>k - x*k\<rfloor> = 0")
+  case True
+  with x show ?thesis
+    by (simp add: FF_def f1_def H_ge0)
+next
+  case False
   let ?kl = "k + k - nat \<lceil>x*k\<rceil>"
-  have gt0: "nat\<lfloor>k - x*k\<rfloor> > 0"
-    sorry
   have kk_less_1: "k / ?kl < 1"
-    using x gt0 by (simp add: field_split_simps, linarith)
+    using x False by (simp add: field_split_simps, linarith)
   have le: "nat\<lfloor>k - x*k\<rfloor> \<le> k - nat\<lceil>x*k\<rceil>"
     using floor_ceiling_diff_le x
     by (meson mult_left_le_one_le mult_nonneg_nonneg of_nat_0_le_iff)
   have RN_gt0: "RN k (nat\<lfloor>k - x*k\<rfloor>) > 0"
-    by (metis gt0 RN_eq_0_iff \<open>k>0\<close> gr0I)
+    by (metis False RN_eq_0_iff \<open>k>0\<close> gr0I)
   then have \<section>: "RN k (nat\<lfloor>k - x*k\<rfloor>) \<le> k + nat\<lfloor>k - x*k\<rfloor> choose k"
     using RN_le_choose by force
   also have "\<dots> \<le> k + k - nat\<lceil>x*k\<rceil> choose k"
   proof (intro Binomial.binomial_mono)
     show "k + nat \<lfloor>k - x*k\<rfloor> \<le> ?kl"
-      using RN_gt0 le linorder_not_le by fastforce
+      using False le by linarith
   qed
   finally have "RN k (nat \<lfloor>real k - x*k\<rfloor>) \<le> ?kl choose k" .
   with RN_gt0 have "FF k x y \<le> log 2 (?kl choose k) / k + x + y"
@@ -107,7 +149,7 @@ proof -
   also have "\<dots> \<le> (?kl * H(k/?kl)) / k + x + y"
   proof -
     have "k \<le> k + k - nat\<lceil>x*k\<rceil>"
-      using gt0 by linarith
+      using False by linarith
     then show ?thesis
       by (simp add: H_12_1 divide_right_mono)
   qed
@@ -118,7 +160,7 @@ proof -
     have 2: "H (k / ?kl) \<le> H (1 / (2-x))"
     proof (intro H_half_mono')
       show "1 / (2-x) \<le> k / ?kl"
-        using x gt0 by (simp add: field_split_simps, linarith)
+        using x False by (simp add: field_split_simps, linarith)
     qed (use x kk_less_1 in auto)
     have "?kl / k * H (k / ?kl) \<le> (2-x) * H (1 / (2-x))"
       using x mult_mono [OF 1 2 _ H_ge0] kk_less_1 by fastforce
@@ -129,7 +171,6 @@ proof -
 qed
 
 
-definition "f2 \<equiv> \<lambda>x y. f1 x y - (log 2 (exp 1) / 40) * (1-x) / (2-x)"
 
 text \<open>Claim (63) IN WEAKENED FORM\<close>
 lemma (in P0_min) FF_le_f2_aux:
@@ -252,6 +293,43 @@ next
       sorry
   qed
 qed
+
+theorem C:
+  assumes \<mu>: "\<mu>=2/5" and "0 < \<eta>" "\<eta> \<le> 3/4 - 2/3" 
+  shows "(SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (ff x y) (GG \<mu> x y) + \<eta>)
+        \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>)"
+proof (intro cSUP_subset_mono)
+  show "bdd_above ((\<lambda>x. \<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..1})"
+    apply (intro bdd_aboveI [where M = "ff_bound + \<eta>"])
+    apply (auto simp: )
+    using ff_GG_bound 
+    sorry
+next
+  fix x :: real
+  assume x: "x \<in> {0..1}"
+  show "{0..\<mu> * x / (1 - \<mu>) + \<eta>} \<subseteq> {0..3/4}"
+    using x assms unfolding \<mu> by auto
+  show "{0..\<mu> * x / (1 - \<mu>) + \<eta>} \<noteq> {}"
+    using x assms unfolding \<mu> by auto
+  show "bdd_above ((\<lambda>y. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..3/4})"
+    using ff_GG_bound [OF x]
+    by (intro bdd_above.I2 [where M = "ff_bound+\<eta>"]) force
+qed auto
+
+
+theorem From_11_1_fixed:
+  assumes \<mu>: "0 < \<mu>" "\<mu> < 1" and "\<eta> > 0" and "k\<ge>3" and p0_min12: "p0_min \<le> 1/2"
+  and big: "Big_From_11_1 \<eta> \<mu> k"
+  shows "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (ff x y) (GG \<mu> x y) + \<eta>)"
+  sorry
+
+lemma 123:
+  fixes \<delta>::real
+  assumes "0 < \<delta>" "\<delta> \<le> 1 / 2^11"
+  shows "(SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (gg x y)) \<le> 2-\<delta>"
+  sorry
+
+
 
 lemma DD:
   fixes \<delta>::real

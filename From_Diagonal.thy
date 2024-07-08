@@ -384,8 +384,8 @@ proof (cases "k=0")
 qed auto
 
 (* even with ln(0) = 0, the singularity requires its own case*)
-lemma FF:
-  assumes x: "x \<in> {0..1}" and "y \<in> {0..u}" "k>0"
+lemma le_FF_bound:
+  assumes x: "x \<in> {0..1}" and "y \<in> {0..u}" 
   shows "FF k x y \<le> FF_bound k u"
 proof (cases "\<lfloor>k - x*k\<rfloor> = 0")
   case True  \<comment>\<open>to handle the singularity\<close>
@@ -393,7 +393,8 @@ proof (cases "\<lfloor>k - x*k\<rfloor> = 0")
     by (simp add: True FF_def FF_bound_def) 
 next
   case False
-  with \<open>k>0\<close> assms have *: "0 < \<lfloor>k - x*k\<rfloor>"
+  with gr0I have "k>0" by fastforce
+  with False assms have *: "0 < \<lfloor>k - x*k\<rfloor>"
     using linorder_neqE_linordered_idom by fastforce
   have le_k: "k - x*k \<le> k"
     using x by auto
@@ -410,6 +411,24 @@ qed
 
 lemma FF2: "y' \<le> y \<Longrightarrow> FF k x y' \<le> FF k x y"
   by (simp add: FF_def)
+
+lemma FF_GG_bound:
+  assumes \<mu>: "0 < \<mu>" "\<mu> < 1" and x: "x \<in> {0..1}" and y: "y \<in> {0..\<mu> * x / (1-\<mu>) + \<eta>}" 
+  shows "min (FF k x y) (GG \<mu> x y) + \<eta> \<le> FF_bound k (\<mu> / (1-\<mu>) + \<eta>) + \<eta>"
+proof -
+  have FF_ub: "FF k x y \<le> FF_bound k (\<mu> / (1-\<mu>) + \<eta>)"
+  proof (rule order.trans)
+    show "FF k x y \<le> FF_bound k y"
+      using x y by (simp add: le_FF_bound)
+  next
+    have "y \<le> \<mu> / (1-\<mu>) + \<eta>"
+      using x y \<mu> by simp (smt (verit, best) frac_le mult_left_le)
+    then show "FF_bound k y \<le> FF_bound k (\<mu> / (1-\<mu>) + \<eta>)"
+      by (simp add: FF_bound_def FF_def)
+  qed
+  show ?thesis
+    using FF_ub by auto
+qed
 
 context P0_min
 begin 
@@ -490,22 +509,6 @@ proof -
     by meson
   have "Colours k k"
     using Colours_def no_Blue_K no_Red_K by auto
-  have FF_GG_bound: "min (FF k x y) (GG \<mu> x y) + \<eta> \<le> FF_bound k (\<mu> / (1-\<mu>) + \<eta>) + \<eta>"
-    if x: "x \<in> {0..1}" and y: "y \<in> {0..\<mu> * x / (1-\<mu>) + \<eta>}" for x y
-  proof -
-    have FF_ub: "FF k x y \<le> FF_bound k (\<mu> / (1-\<mu>) + \<eta>)"
-    proof (rule order.trans)
-      show "FF k x y \<le> FF_bound k y"
-        using x y \<open>0 < k\<close> by (simp add: FF)
-    next
-      have "y \<le> \<mu> / (1-\<mu>) + \<eta>"
-        using x y \<mu> by simp (smt (verit, best) frac_le mult_left_le)
-      then show "FF_bound k y \<le> FF_bound k (\<mu> / (1-\<mu>) + \<eta>)"
-        by (simp add: FF_bound_def FF_def)
-    qed
-    show ?thesis
-      using FF_ub by auto
-  qed
   define \<R> where "\<R> \<equiv> Step_class \<mu> k k {red_step}"
   define \<S> where "\<S> \<equiv> Step_class \<mu> k k {dboost_step}"
   define t where "t \<equiv> card \<R>" 
@@ -586,14 +589,14 @@ proof -
         by blast
     next
       show "bdd_above ((\<lambda>y. min (FF k x y) (GG \<mu> x y) + \<eta>) ` {0..\<mu> * x / (1-\<mu>) + \<eta>})"
-        by (meson FF_GG_bound [of x] x01 atLeastAtMost_iff bdd_aboveI2)
+        by (meson FF_GG_bound [of \<mu> x] \<mu> x01 atLeastAtMost_iff bdd_aboveI2)
     qed auto
     finally show "log 2 (real (RN k k)) / k \<le> w" .
   next
     fix x y 
     assume "x \<in> {0..1}" "y \<in> {0..\<mu> * x / (1-\<mu>) + \<eta>}"
-    then show "min (FF k x y) (GG \<mu> x y) + \<eta> \<le> FF_bound k (\<mu> / (1-\<mu>) + \<eta>) + \<eta>"
-      using FF_GG_bound by blast
+    with \<mu> FF_GG_bound show "min (FF k x y) (GG \<mu> x y) + \<eta> \<le> FF_bound k (\<mu> / (1-\<mu>) + \<eta>) + \<eta>"
+      by blast
   qed (use \<mu> \<open>\<eta>>0\<close> in auto)
 qed
 
