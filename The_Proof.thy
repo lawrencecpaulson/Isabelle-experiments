@@ -294,16 +294,21 @@ next
   qed
 qed
 
+theorem bdd_above_ff_GG:
+  assumes "x \<in> {0..1}"
+  shows "bdd_above ((\<lambda>y. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..3/4})"
+  using ff_GG_bound [OF assms]
+  by (intro bdd_above.I2 [where M = "ff_bound+\<eta>"]) force
+
+
 theorem C:
   assumes \<mu>: "\<mu>=2/5" and "0 < \<eta>" "\<eta> \<le> 3/4 - 2/3" 
   shows "(SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (ff x y) (GG \<mu> x y) + \<eta>)
         \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>)"
 proof (intro cSUP_subset_mono)
   show "bdd_above ((\<lambda>x. \<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..1})"
-    apply (intro bdd_aboveI [where M = "ff_bound + \<eta>"])
-    apply (auto simp: )
-    using ff_GG_bound 
-    sorry
+    using bdd_above_ff_GG
+    by (intro bdd_aboveI [where M = "ff_bound + \<eta>"]) (auto simp: cSup_le_iff ff_GG_bound)
 next
   fix x :: real
   assume x: "x \<in> {0..1}"
@@ -317,11 +322,23 @@ next
 qed auto
 
 
+context P0_min
+begin 
+
 theorem From_11_1_fixed:
-  assumes \<mu>: "0 < \<mu>" "\<mu> < 1" and "\<eta> > 0" and "k\<ge>3" and p0_min12: "p0_min \<le> 1/2"
+  assumes \<mu>: "\<mu>=2/5" and "0 < \<eta>" "\<eta> \<le> 3/4 - 2/3" and "k\<ge>3" and p0_min12: "p0_min \<le> 1/2"
   and big: "Big_From_11_1 \<eta> \<mu> k"
-  shows "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (ff x y) (GG \<mu> x y) + \<eta>)"
-  sorry
+shows "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>)"
+      (is "?L\<le>?R")
+proof -
+  have "?L \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>)"
+    using assms by (intro From_11_1) auto
+  also have "... \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (ff x y) (GG \<mu> x y) + \<eta>)"
+    sorry
+  also have "... \<le> ?R"
+    using assms by (intro C) auto
+  finally show ?thesis .
+qed
 
 lemma 123:
   fixes \<delta>::real
@@ -345,7 +362,7 @@ proof
   let ?\<delta> = "1 / 2^11::real"
   have "?\<delta> > 0"
     by simp
-  then have "\<forall>\<^sup>\<infinity>k. k>0 \<and> log 2 (RN k k) / k \<le> 2-?\<delta>"
+  then have "\<forall>\<^sup>\<infinity>k. k>0 \<and> log 2 (RN k k) / k \<le> 2 - ?\<delta>"
     unfolding eventually_conj_iff using DD eventually_gt_at_top by blast
   then have A: "\<forall>\<^sup>\<infinity>k. RN k k \<le> (2 powr (2-?\<delta>)) ^ k"
   proof (eventually_elim)
@@ -362,5 +379,7 @@ proof
   ultimately show "\<forall>\<^sup>\<infinity>k. real (RN k k) \<le> (4-?\<epsilon>) ^ k"
     by (smt (verit) power_mono powr_ge_pzero eventually_mono)
 qed auto
+
+end (*P0_min*)
 
 end
