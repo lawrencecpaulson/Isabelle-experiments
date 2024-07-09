@@ -88,6 +88,9 @@ definition "ff \<equiv> \<lambda>x y. if x < 3/4 then f1 x y else f2 x y"
 
 definition "ff_bound \<equiv> 2 + 2 * H(1/2)"
 
+text \<open>The proofs involving @{term Sup} are needlessly difficult because ultimately 
+the sets involved are finite, eliminating the need to demonstrate boundedness\<close>
+
 lemma le_ff_bound:
   assumes "x \<in> {0..1}" and "y \<in> {0..1}" 
   shows "ff x y \<le> ff_bound"
@@ -294,22 +297,23 @@ next
   qed
 qed
 
-theorem bdd_above_ff_GG:
+lemma bdd_above_ff_GG:
   assumes "x \<in> {0..1}"
   shows "bdd_above ((\<lambda>y. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..3/4})"
   using ff_GG_bound [OF assms]
   by (intro bdd_above.I2 [where M = "ff_bound+\<eta>"]) force
 
+lemma bdd_above_SUP_ff_GG:
+  "bdd_above ((\<lambda>x. \<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..1})"
+    using bdd_above_ff_GG
+    by (intro bdd_aboveI [where M = "ff_bound + \<eta>"]) (auto simp: cSup_le_iff ff_GG_bound)
 
-theorem C:
+
+lemma C:
   assumes \<mu>: "\<mu>=2/5" and "0 < \<eta>" "\<eta> \<le> 3/4 - 2/3" 
   shows "(SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (ff x y) (GG \<mu> x y) + \<eta>)
         \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>)"
-proof (intro cSUP_subset_mono)
-  show "bdd_above ((\<lambda>x. \<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..1})"
-    using bdd_above_ff_GG
-    by (intro bdd_aboveI [where M = "ff_bound + \<eta>"]) (auto simp: cSup_le_iff ff_GG_bound)
-next
+proof (intro cSUP_subset_mono bdd_above_SUP_ff_GG)
   fix x :: real
   assume x: "x \<in> {0..1}"
   show "{0..\<mu> * x / (1 - \<mu>) + \<eta>} \<subseteq> {0..3/4}"
@@ -321,12 +325,11 @@ next
     by (intro bdd_above.I2 [where M = "ff_bound+\<eta>"]) force
 qed auto
 
-
 context P0_min
 begin 
 
 theorem From_11_1_fixed:
-  assumes \<mu>: "\<mu>=2/5" and "0 < \<eta>" "\<eta> \<le> 3/4 - 2/3" and "k\<ge>3" and p0_min12: "p0_min \<le> 1/2"
+  assumes \<mu>: "\<mu>=2/5" and "0 < \<eta>" "\<eta> \<le> 3/4 - 2/3" and p0_min12: "p0_min \<le> 1/2"
   and big: "Big_From_11_1 \<eta> \<mu> k"
 shows "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>)"
       (is "?L\<le>?R")
@@ -347,12 +350,47 @@ lemma 123:
   sorry
 
 
-
 lemma DD:
   fixes \<delta>::real
-  assumes "0 < \<delta>" "\<delta> \<le> 1 / 2^11"
+  assumes \<delta>: "0 < \<delta>" "\<delta> \<le> 1 / 2^11" and p0_min12: "p0_min \<le> 1/2"
   shows "\<forall>\<^sup>\<infinity>k. log 2 (RN k k) / k \<le> 2-\<delta>"
-  sorry
+proof -
+  { fix \<eta>::real
+    assume \<eta>: "0 < \<eta>" "\<eta> \<le> 1/12"
+    define \<mu>::real where "\<mu> \<equiv> 2/5"
+    have "\<forall>\<^sup>\<infinity>k. Big_From_11_1 \<eta> \<mu> k"
+      unfolding \<mu>_def using \<eta> by (intro Big_From_11_1) auto
+    moreover have "log 2 (real (RN k k)) / k \<le> 2-\<delta> + \<eta>" if "Big_From_11_1 \<eta> \<mu> k" for k
+    proof -
+      have *: "(\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>) = (\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y)) + \<eta>"
+        if "x \<in> {0..1}" for x
+        using bdd_above_ff_GG [OF that, of \<mu> 0]
+        by (simp add: add.commute [of _ \<eta>] Sup_add_eq)
+      have "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>)"
+        using that p0_min12 \<eta> \<mu>_def
+        by (intro From_11_1_fixed) auto
+      also have "... \<le> (SUP x \<in> {0..1}. (SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y)) + \<eta>)"
+      proof (intro cSUP_subset_mono bdd_above.I2 [where M = "ff_bound+\<eta>"])
+        fix x :: real
+        assume x: "x \<in> {0..1}"
+        have "(\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>) \<le> ff_bound + \<eta>"
+          using bdd_above_ff_GG [OF x] ff_GG_bound [OF x] by (simp add: cSup_le_iff)
+        with * [OF x] show "(\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y)) + \<eta> \<le> ff_bound + \<eta>" 
+            by simp
+      qed (use * in auto)
+      also have "... = (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y)) + \<eta>"
+        using bdd_above_SUP_ff_GG [of \<mu> 0]
+        by (simp add: add.commute [of _ \<eta>] Sup_add_eq)
+      also have "... \<le> 2-\<delta> + \<eta>"
+        using 123 [OF \<delta>] by simp
+      finally show ?thesis .
+    qed
+    ultimately have "\<forall>\<^sup>\<infinity>k. log 2 (RN k k) / k \<le> 2-\<delta> + \<eta>"
+      by (meson eventually_mono)
+  }
+  then show ?thesis
+    by (meson divide_pos_pos order.refl rel_simps(68) zero_less_numeral)
+qed
 
 text \<open>Main theorem 1.1: the exponent is approximately 3.9987\<close>
 theorem 

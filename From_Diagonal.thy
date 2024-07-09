@@ -460,10 +460,12 @@ lemma eventually_powr_le_\<eta>:
 
 definition "Big_From_11_1 \<equiv> 
    \<lambda>\<eta> \<mu> k. Big_From_11_2 \<mu> k \<and> Big_ZZ_8_5 \<mu> k \<and> Big_Y_6_1 \<mu> k \<and> ok_fun_11_1 \<mu> k / k \<le> \<eta>
-         \<and> (2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta>"
+         \<and> (2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta> \<and> k\<ge>3"
 
-text \<open>in sections 9 and 10 (and by implication all proceeding sections), we needed to consider 
-  a closed interval of possible values of @{term \<mu>}. Let's hope, maybe not here. }\<close>
+text \<open>In sections 9 and 10 (and by implication all proceeding sections), we needed to consider 
+  a closed interval of possible values of @{term \<mu>}. Let's hope, maybe not here. 
+The fact below can only be proved with the strict inequality @{term "\<eta> > 0"}, 
+which is why it is also strict in the theorems depending on this property.\<close>
 lemma Big_From_11_1:
   assumes "\<eta> > 0" "0<\<mu>" "\<mu><1" 
   shows "\<forall>\<^sup>\<infinity>k. Big_From_11_1 \<eta> \<mu> k"
@@ -476,7 +478,7 @@ lemma Big_From_11_1:
 text \<open>The body of the proof has been extracted to allow the symmetry argument\<close>
 lemma (in Book_Basis) From_11_1_Body:
   fixes V :: "'a set"
-  assumes \<mu>: "0 < \<mu>" "\<mu> < 1" and "\<eta> > 0" and "k>0" and ge_RN: "Suc nV \<ge> RN k k"
+  assumes \<mu>: "0 < \<mu>" "\<mu> < 1" and "\<eta> > 0" and ge_RN: "Suc nV \<ge> RN k k"
     and Red: "graph_density Red \<ge> 1/2" 
     and p0_min12: "p0_min \<le> 1/2"
     and Red_E: "Red \<subseteq> E" and Blue_def: "Blue = E\<setminus>Red" 
@@ -488,7 +490,7 @@ proof -
   have big41: "Big_Blue_4_1 \<mu> k" and big61: "Big_Y_6_1 \<mu> k" 
     and big85: "Big_ZZ_8_5 \<mu> k" and big11_2: "Big_From_11_2 \<mu> k"
     and ok111_le_\<eta>: "ok_fun_11_1 \<mu> k / k \<le> \<eta>"
-    and powr_le_\<eta>: "(2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta>"
+    and powr_le_\<eta>: "(2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta>" and "k>0"
     using big by (auto simp: Big_From_11_1_def Big_Y_6_1_def Big_Y_6_2_def)
   then have big53: "Big_Red_5_3 \<mu> k"
     by (meson Big_From_11_2_def)
@@ -601,19 +603,20 @@ proof -
 qed
 
 theorem From_11_1:
-  assumes \<mu>: "0 < \<mu>" "\<mu> < 1" and "\<eta> > 0" and "k\<ge>3" and p0_min12: "p0_min \<le> 1/2"
+  assumes \<mu>: "0 < \<mu>" "\<mu> < 1" and "\<eta> > 0" and p0_min12: "p0_min \<le> 1/2"
   and big: "Big_From_11_1 \<eta> \<mu> k"
   shows "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (FF k x y) (GG \<mu> x y) + \<eta>)"
 proof -
-  have "k>0"
-    using \<open>k\<ge>3\<close> by simp
   have big41: "Big_Blue_4_1 \<mu> k" and big61: "Big_Y_6_1 \<mu> k" 
     and big85: "Big_ZZ_8_5 \<mu> k" and big11_2: "Big_From_11_2 \<mu> k"
     and ok111_le_\<eta>: "ok_fun_11_1 \<mu> k / k \<le> \<eta>"
-    and powr_le_\<eta>: "(2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta>"
+    and powr_le_\<eta>: "(2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta>" 
+    and "k\<ge>3"
     using big by (auto simp: Big_From_11_1_def Big_Y_6_1_def Big_Y_6_2_def)
   then have big53: "Big_Red_5_3 \<mu> k"
     by (meson Big_From_11_2_def)
+  have "k>0"
+    using \<open>k\<ge>3\<close> by simp
   define n where "n \<equiv> RN k k - 1"
   define V where "V \<equiv> {..<n}"
   define E where "E \<equiv> all_edges V" 
