@@ -349,75 +349,77 @@ lemma 123:
   shows "(SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (gg x y)) \<le> 2-\<delta>"
   sorry
 
+end (*P0_min*)
 
-lemma DD:
-  fixes \<delta>::real
-  assumes \<delta>: "0 < \<delta>" "\<delta> \<le> 1 / 2^11" and p0_min12: "p0_min \<le> 1/2"
-  shows "\<forall>\<^sup>\<infinity>k. log 2 (RN k k) / k \<le> 2-\<delta>"
+text \<open>we subtract a tiny bit, as we seem to need this gap\<close>
+definition delta'::real where "delta' \<equiv> 1 / 2^11 - 1 / 2^18"
+
+lemma Aux_1_1:
+  assumes p0_min12: "p0_min \<le> 1/2"
+  shows "\<forall>\<^sup>\<infinity>k. log 2 (RN k k) / k \<le> 2 - delta'"
 proof -
-  { fix \<eta>::real
-    assume \<eta>: "0 < \<eta>" "\<eta> \<le> 1/12"
-    define \<mu>::real where "\<mu> \<equiv> 2/5"
-    have "\<forall>\<^sup>\<infinity>k. Big_From_11_1 \<eta> \<mu> k"
-      unfolding \<mu>_def using \<eta> by (intro Big_From_11_1) auto
-    moreover have "log 2 (real (RN k k)) / k \<le> 2-\<delta> + \<eta>" if "Big_From_11_1 \<eta> \<mu> k" for k
-    proof -
-      have *: "(\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>) = (\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y)) + \<eta>"
-        if "x \<in> {0..1}" for x
-        using bdd_above_ff_GG [OF that, of \<mu> 0]
-        by (simp add: add.commute [of _ \<eta>] Sup_add_eq)
-      have "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>)"
-        using that p0_min12 \<eta> \<mu>_def
-        by (intro From_11_1_fixed) auto
-      also have "... \<le> (SUP x \<in> {0..1}. (SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y)) + \<eta>)"
-      proof (intro cSUP_subset_mono bdd_above.I2 [where M = "ff_bound+\<eta>"])
-        fix x :: real
-        assume x: "x \<in> {0..1}"
-        have "(\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>) \<le> ff_bound + \<eta>"
-          using bdd_above_ff_GG [OF x] ff_GG_bound [OF x] by (simp add: cSup_le_iff)
-        with * [OF x] show "(\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y)) + \<eta> \<le> ff_bound + \<eta>" 
-            by simp
-      qed (use * in auto)
-      also have "... = (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y)) + \<eta>"
-        using bdd_above_SUP_ff_GG [of \<mu> 0]
-        by (simp add: add.commute [of _ \<eta>] Sup_add_eq)
-      also have "... \<le> 2-\<delta> + \<eta>"
-        using 123 [OF \<delta>] by simp
-      finally show ?thesis .
-    qed
-    ultimately have "\<forall>\<^sup>\<infinity>k. log 2 (RN k k) / k \<le> 2-\<delta> + \<eta>"
-      by (meson eventually_mono)
-  }
+  define p0_min::real where "p0_min \<equiv> 1/2"
+  interpret P0_min p0_min
+  proof qed (auto simp: p0_min_def)
+  define \<delta>::real where "\<delta> \<equiv> 1 / 2^11"
+  define \<eta>::real where "\<eta> \<equiv> 1 / 2^18"
+  have \<eta>: "0 < \<eta>" "\<eta> \<le> 1/12"
+    by (auto simp: \<eta>_def)
+  define \<mu>::real where "\<mu> \<equiv> 2/5"
+  have "\<forall>\<^sup>\<infinity>k. Big_From_11_1 \<eta> \<mu> k"
+    unfolding \<mu>_def using \<eta> by (intro Big_From_11_1) auto
+  moreover have "log 2 (real (RN k k)) / k \<le> 2-\<delta> + \<eta>" if "Big_From_11_1 \<eta> \<mu> k" for k
+  proof -
+    have *: "(\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>) = (\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y)) + \<eta>"
+      if "x \<in> {0..1}" for x
+      using bdd_above_ff_GG [OF that, of \<mu> 0]
+      by (simp add: add.commute [of _ \<eta>] Sup_add_eq)
+    have "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>)"
+      using that p0_min12 \<eta> \<mu>_def
+      by (intro From_11_1_fixed) (auto simp: p0_min_def)
+    also have "... \<le> (SUP x \<in> {0..1}. (SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y)) + \<eta>)"
+    proof (intro cSUP_subset_mono bdd_above.I2 [where M = "ff_bound+\<eta>"])
+      fix x :: real
+      assume x: "x \<in> {0..1}"
+      have "(\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>) \<le> ff_bound + \<eta>"
+        using bdd_above_ff_GG [OF x] ff_GG_bound [OF x] by (simp add: cSup_le_iff)
+      with * [OF x] show "(\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y)) + \<eta> \<le> ff_bound + \<eta>" 
+        by simp
+    qed (use * in auto)
+    also have "... = (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y)) + \<eta>"
+      using bdd_above_SUP_ff_GG [of \<mu> 0]
+      by (simp add: add.commute [of _ \<eta>] Sup_add_eq)
+    also have "... \<le> 2-\<delta> + \<eta>"
+      using 123 [of "1 / 2^11"] by (auto simp: \<delta>_def)
+    finally show ?thesis .
+  qed
+  ultimately have "\<forall>\<^sup>\<infinity>k. log 2 (RN k k) / k \<le> 2-\<delta> + \<eta>"
+    by (meson eventually_mono)
   then show ?thesis
-    by (meson divide_pos_pos order.refl rel_simps(68) zero_less_numeral)
+    by (simp add: \<delta>_def \<eta>_def delta'_def)
 qed
 
 text \<open>Main theorem 1.1: the exponent is approximately 3.9987\<close>
-theorem 
+theorem Main_1_1:
   obtains \<epsilon>::real where "\<epsilon>>0" "\<forall>\<^sup>\<infinity>k. RN k k \<le> (4-\<epsilon>)^k"
 proof
-  let ?\<epsilon> = "0.00135::real"
-  let ?\<delta> = "1 / 2^11::real"
-  have "?\<delta> > 0"
-    by simp
-  then have "\<forall>\<^sup>\<infinity>k. k>0 \<and> log 2 (RN k k) / k \<le> 2 - ?\<delta>"
-    unfolding eventually_conj_iff using DD eventually_gt_at_top by blast
-  then have A: "\<forall>\<^sup>\<infinity>k. RN k k \<le> (2 powr (2-?\<delta>)) ^ k"
+  let ?\<epsilon> = "0.00134::real"
+  have "\<forall>\<^sup>\<infinity>k. k>0 \<and> log 2 (RN k k) / k \<le> 2 - delta'"
+    unfolding eventually_conj_iff using Aux_1_1 eventually_gt_at_top by blast 
+  then have A: "\<forall>\<^sup>\<infinity>k. RN k k \<le> (2 powr (2-delta')) ^ k"
   proof (eventually_elim)
     case (elim k)
-    then have "log 2 (RN k k) \<le> (2-?\<delta>) * k"
+    then have "log 2 (RN k k) \<le> (2-delta') * k"
       by (meson of_nat_0_less_iff pos_divide_le_eq)
-    then have "RN k k \<le> 2 powr ((2-?\<delta>) * k)"
+    then have "RN k k \<le> 2 powr ((2-delta') * k)"
       by (smt (verit, best) Transcendental.log_le_iff powr_ge_pzero)
-    then show "RN k k \<le> (2 powr (2-?\<delta>)) ^ k"
+    then show "RN k k \<le> (2 powr (2-delta')) ^ k"
       by (simp add: mult.commute powr_power)
   qed
-  moreover have "2 powr (2-?\<delta>) \<le> 4 - ?\<epsilon>"
-    by (approximation 50)
+  moreover have "2 powr (2-delta') \<le> 4 - ?\<epsilon>"
+    unfolding delta'_def by (approximation 50)
   ultimately show "\<forall>\<^sup>\<infinity>k. real (RN k k) \<le> (4-?\<epsilon>) ^ k"
     by (smt (verit) power_mono powr_ge_pzero eventually_mono)
 qed auto
-
-end (*P0_min*)
 
 end
