@@ -118,6 +118,18 @@ proof -
     by auto
 qed
 
+lemma bdd_above_ff_GG:
+  assumes "x \<in> {0..1}" "u\<le>1"
+  shows "bdd_above ((\<lambda>y. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..u})"
+  using ff_GG_bound assms
+  by (intro bdd_above.I2 [where M = "ff_bound+\<eta>"]) force
+
+lemma bdd_above_SUP_ff_GG:
+  assumes "u \<in> {0..1} \<rightarrow> {0..1}"
+  shows "bdd_above ((\<lambda>x. \<Squnion>y\<in>{0..u x}. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..1})"
+  using bdd_above_ff_GG assms
+  by (intro bdd_aboveI [where M = "ff_bound + \<eta>"]) (auto simp: cSup_le_iff ff_GG_bound Pi_iff)
+
 
 
 (*A singularity if x=1. Okay if we put ln(0) = 0! *)
@@ -246,6 +258,245 @@ proof -
 qed
 
 
+
+text \<open>The body of the proof has been extracted to allow the symmetry argument\<close>
+lemma (in Book_Basis) From_11_1_Body:
+  fixes V :: "'a set"
+  assumes \<mu>: "0 < \<mu>" "\<mu> < 1" and "\<eta> > 0" and le1: "\<mu>/(1-\<mu>) + \<eta> \<le> 1"
+    and ge_RN: "Suc nV \<ge> RN k k"
+    and Red: "graph_density Red \<ge> 1/2" 
+    and p0_min12: "p0_min \<le> 1/2"
+    and Red_E: "Red \<subseteq> E" and Blue_def: "Blue = E\<setminus>Red" 
+    and no_Red_K: "\<not> (\<exists>K. size_clique k K Red)"
+    and no_Blue_K: "\<not> (\<exists>K. size_clique k K Blue)"
+    and big: "Big_From_11_1 \<eta> \<mu> k"
+  shows "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (ff x y) (GG \<mu> x y) + \<eta>)"
+proof -  
+  have big41: "Big_Blue_4_1 \<mu> k" and big61: "Big_Y_6_1 \<mu> k" 
+    and big85: "Big_ZZ_8_5 \<mu> k" and big11_2: "Big_From_11_2 \<mu> k"
+    and ok111_le_\<eta>: "ok_fun_11_1 \<mu> k / k \<le> \<eta>"
+    and powr_le_\<eta>: "(2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta>" and "k>0"
+    using big by (auto simp: Big_From_11_1_def Big_Y_6_1_def Big_Y_6_2_def)
+  then have big53: "Big_Red_5_3 \<mu> k"
+    by (meson Big_From_11_2_def)
+
+  obtain X0 Y0 where card_X0: "card X0 \<ge> nV/2" and card_Y0: "card Y0 = gorder div 2"
+    and "X0 = V \<setminus> Y0" "Y0\<subseteq>V"
+    and p0_half: "1/2 \<le> gen_density Red X0 Y0"
+    and "Book V E p0_min Red Blue X0 Y0" 
+  proof (rule Basis_imp_Book [OF _ Red_E])
+    show "E = all_edges V"
+      using complete by auto
+    show "p0_min \<le> graph_density Red"
+      using p0_min12 Red by linarith
+    show "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique k K Blue))"
+      using no_Blue_K no_Red_K by blast
+  qed (use infinite_UNIV p0_min Blue_def Red in auto)
+  then interpret Book V E p0_min Red Blue X0 Y0
+    by meson
+  have "Colours k k"
+    using Colours_def no_Blue_K no_Red_K by auto
+  define \<R> where "\<R> \<equiv> Step_class \<mu> k k {red_step}"
+  define \<S> where "\<S> \<equiv> Step_class \<mu> k k {dboost_step}"
+  define t where "t \<equiv> card \<R>" 
+  define s where "s \<equiv> card \<S>"
+  define m where "m \<equiv> halted_point \<mu> k k"
+  define x where "x \<equiv> t/k"
+  define y where "y \<equiv> s/k"
+  define v where "v \<equiv> min (ff x y) (GG \<mu> x y) + \<eta>"
+  have sts: "(s + real t) / s = (x+y) / y"
+    using \<open>k>0\<close> by (simp add: x_def y_def field_simps)
+  have "t<k"
+    by (simp add: \<R>_def \<mu> t_def \<open>Colours k k\<close> red_step_limit)
+  then obtain x01: "0\<le>x" "x<1"
+    by (auto simp: x_def)
+  have "s<k"
+    unfolding s_def \<S>_def
+    by (meson \<mu> \<open>Colours k k\<close> le_less_trans bblue_dboost_step_limit big41 le_add2)
+  then obtain y01: "0\<le>y" "y<1"
+    by (auto simp: y_def)
+  define w where "w \<equiv> (\<Squnion>y\<in>{0..\<mu>*x/(1-\<mu>)+\<eta>}. min (ff x y) (GG \<mu> x y) + \<eta>)"
+  show ?thesis
+  proof (intro cSup_upper2 cSUP_least imageI)
+    show "w \<in> (\<lambda>x. \<Squnion>y\<in>{0..\<mu>*x/(1-\<mu>)+\<eta>}. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..1}"
+      using x01 by (force simp: w_def intro!: image_eqI [where x=x])
+  next
+    have beta_le: "bigbeta \<mu> k k \<le> \<mu>"
+      using \<open>Colours k k\<close> \<mu> big53 bigbeta_le by blast
+    have "s \<le> (bigbeta \<mu> k k / (1 - bigbeta \<mu> k k)) * t + (2 / (1-\<mu>)) * k powr (19/20)"
+      using ZZ_8_5 [OF \<mu> \<open>Colours k k\<close> big85] by (auto simp: \<R>_def \<S>_def s_def t_def)
+    also have "\<dots> \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * k powr (19/20)"
+      by (smt (verit, ccfv_SIG) \<mu> beta_le frac_le mult_right_mono of_nat_0_le_iff)
+    also have "\<dots> \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * (k powr (-1/20) * k powr 1)"
+      unfolding powr_add [symmetric] by simp
+    finally have "s \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * k powr (-1/20) * k" 
+      by simp
+    with powr_le_\<eta> have \<dagger>: "s \<le> (\<mu> / (1-\<mu>)) * t + \<eta> * k"
+      by (smt (verit, ccfv_SIG) mult_right_mono of_nat_0_le_iff)
+
+    have k_minus_t: "nat \<lfloor>real k - real t\<rfloor> = k-t"
+      by linarith
+    have "nV div 2 \<le> card Y0"
+      by (simp add: card_Y0)
+    then have \<section>: "log 2 (Suc nV) \<le> log 2 (RN k (k-t)) + s + t + 2 - ok_fun_61 k"
+      using From_11_3 [OF \<mu> \<open>Colours k k\<close> big61] p0_half by (auto simp: \<R>_def \<S>_def p0_def s_def t_def)
+
+    have 122: "FF k x y \<le> ff x y"
+    proof -
+      have "FF k x y \<le> f1 x y"
+        using x01 y01
+        by (intro FF_le_f1) auto
+      moreover
+      have "FF k x y \<le> f2 x y + 3 / (real k * ln 2)" if "x \<ge> 3/4"
+      proof (intro FF_le_f2_aux that)
+        define l where "l \<equiv> k-t"
+        define \<gamma> where "\<gamma> \<equiv> real l / (real k + real l)"
+        have "\<gamma> = (1-x) / (2-x)"
+          using \<open>0 < k\<close> \<open>t < k\<close> by (simp add: l_def \<gamma>_def x_def divide_simps)
+        then have "\<gamma> \<le> 1/5"
+          using that \<open>x<1\<close> by simp
+        show "real l = real k - x * real k"
+          using \<open>t < k\<close> by (simp add: l_def x_def)
+        show "Big_Closer_10_1 (min (real l / (real k + real l)) (0.07)) l"
+          sorry
+      qed (use x01 y01 p0_min12 in auto)
+      have "FF k x y \<le> f2 x y" if "x \<ge> 3/4"
+        sorry
+      ultimately
+      show ?thesis
+        by (auto simp: ff_def) 
+    qed
+    have "log 2 (Suc nV) / k \<le> log 2 (RN k (k-t)) / k + x + y + (2 - ok_fun_61 k) / k"
+      using \<open>k>0\<close> divide_right_mono [OF \<section>, of k] add_divide_distrib x_def y_def
+      by (smt (verit) add_uminus_conv_diff of_nat_0_le_iff)
+    also have "... = FF k x y + (2 - ok_fun_61 k) / k"
+      by (simp add: FF_def x_def k_minus_t)
+    also have "... \<le> ff x y + (2 - ok_fun_61 k) / k"
+      by (simp add: 122)
+    also have "... \<le> ff x y + ok_fun_11_1 \<mu> k / k"
+      by (simp add: ok_fun_11_1_def divide_right_mono)
+    finally have le_FF: "log 2 (Suc nV) / k \<le> ff x y + ok_fun_11_1 \<mu> k / k" .
+
+    have "nV div 2 \<le> card X0"
+      using card_X0 by linarith
+    then have 112: "log 2 (Suc nV) \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (ratio \<mu> s t)
+                + ok_fun_11_2 \<mu> k"
+      using From_11_2 [OF \<mu> \<open>Colours k k\<close> big11_2] p0_half
+      unfolding s_def t_def p0_def \<R>_def \<S>_def by blast
+    have "log 2 (Suc nV) / k \<le> log 2 (1/\<mu>) + x * log 2 (1 / (1-\<mu>)) + y * log 2 (ratio \<mu> s t)
+                          + ok_fun_11_2 \<mu> k / k"
+      using \<open>k>0\<close> divide_right_mono [OF 112, of k]
+      by (simp add: add_divide_distrib x_def y_def)
+    also have "... = GG \<mu> x y + ok_fun_11_2 \<mu> k / k"
+      by (metis GG_def sts times_divide_eq_right)
+    also have "... \<le> GG \<mu> x y + ok_fun_11_1 \<mu> k / k"
+      by (simp add: ok_fun_11_1_def divide_right_mono)
+    finally have le_GG: "log 2 (Suc nV) / k \<le> GG \<mu> x y + ok_fun_11_1 \<mu> k / k" .
+    have "RN k k > 0"
+      by (metis RN_eq_0_iff \<open>k>0\<close> gr0I)
+    moreover have "log 2 (Suc nV) / k \<le> v"
+      unfolding v_def using ok111_le_\<eta> le_FF le_GG by linarith
+    ultimately have "log 2 (RN k k) / k \<le> v"
+      using ge_RN \<open>k>0\<close>
+      by (smt (verit, best) Transcendental.log_mono divide_right_mono of_nat_0_less_iff of_nat_mono)
+    also have "... \<le> w"
+      unfolding w_def v_def
+    proof (intro cSup_upper2)
+      have "y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}"
+        using divide_right_mono [OF \<dagger>, of k] \<open>k>0\<close> by (simp add: x_def y_def) argo
+      then show "min (ff x y) (GG \<mu> x y) + \<eta> \<in> (\<lambda>y. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..\<mu>*x/(1-\<mu>)+\<eta>}"
+        by blast
+    next
+      have "\<mu>*x/(1-\<mu>)+\<eta> \<le> 1"
+        by (smt (verit, best) \<mu>(2) assms(1) assms(4) frac_le mult_left_le x01(2))
+      then show "bdd_above ((\<lambda>y. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..\<mu>*x/(1-\<mu>)+\<eta>})"
+        by (simp add: bdd_above_ff_GG less_imp_le x01)
+    qed auto
+    finally show "log 2 (real (RN k k)) / k \<le> w" .
+  next
+    show "bdd_above ((\<lambda>x. \<Squnion>y\<in>{0..\<mu> * x / (1 - \<mu>) + \<eta>}. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..1})"
+    proof (rule bdd_above_SUP_ff_GG)
+      show "(\<lambda>x. \<mu>*x/(1-\<mu>)+\<eta>) \<in> {0..1} \<rightarrow> {0..1}"
+        using \<mu> \<open>\<eta>>0\<close> le1
+        apply clarsimp
+        by (smt (verit, best) frac_le mult_left_le)
+    qed
+  qed 
+qed
+
+theorem (in P0_min) From_11_1:
+  assumes \<mu>: "0 < \<mu>" "\<mu> < 1" and "\<eta> > 0" and le1: "\<mu>/(1-\<mu>) + \<eta> \<le> 1" 
+    and p0_min12: "p0_min \<le> 1/2" and big: "Big_From_11_1 \<eta> \<mu> k"
+  shows "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (ff x y) (GG \<mu> x y) + \<eta>)"
+proof -
+  have "k\<ge>3"
+    using big by (auto simp: Big_From_11_1_def)
+  define n where "n \<equiv> RN k k - 1"
+  define V where "V \<equiv> {..<n}"
+  define E where "E \<equiv> all_edges V" 
+  interpret Book_Basis V E
+  proof
+    show "\<And>e. e \<in> E \<Longrightarrow> e \<subseteq> V"
+      by (simp add: E_def comp_sgraph.wellformed)
+    show "\<And>e. e \<in> E \<Longrightarrow> card e = 2"
+      by (simp add: E_def comp_sgraph.two_edges)
+  qed (use V_def E_def in auto)
+
+  have "RN k k \<ge> 3"
+    using \<open>k\<ge>3\<close> RN_3plus le_trans by blast 
+  then have "n < RN k k"
+    by (simp add: n_def)
+  moreover have [simp]: "nV = n"
+    by (simp add: V_def)
+  ultimately obtain Red Blue
+    where Red_E: "Red \<subseteq> E" and Blue_def: "Blue = E\<setminus>Red" 
+      and no_Red_K: "\<not> (\<exists>K. size_clique k K Red)"
+      and no_Blue_K: "\<not> (\<exists>K. size_clique k K Blue)"
+    by (metis \<open>n < RN k k\<close> less_RN_Red_Blue)
+  have Blue_E: "Blue \<subseteq> E" and disjnt_Red_Blue: "disjnt Red Blue" and Blue_eq: "Blue = all_edges V \<setminus> Red"
+    using complete by (auto simp: Blue_def disjnt_iff E_def) 
+  have "nV > 1"
+    using \<open>RN k k \<ge> 3\<close> \<open>nV=n\<close> n_def by linarith
+  with graph_size have "graph_size > 0"
+    by simp
+  then have "graph_density E = 1"
+    by (simp add: graph_density_def)
+  then have "graph_density Red + graph_density Blue = 1"
+    using graph_density_Un [OF disjnt_Red_Blue] by (simp add: Blue_def Red_E Un_absorb1)
+  then consider (Red) "graph_density Red \<ge> 1/2" | (Blue) "graph_density Blue \<ge> 1/2"
+    by force
+  then show ?thesis
+  proof cases
+    case Red
+    show ?thesis
+    proof (intro From_11_1_Body)
+    next
+      show "RN k k \<le> Suc nV"
+        by (simp add: n_def)
+      show "\<nexists>K. size_clique k K Red"
+        using no_Red_K by blast
+      show "\<nexists>K. size_clique k K Blue"
+        using no_Blue_K by blast
+    qed (use Red Red_E Blue_def assms in auto)
+  next
+    case Blue
+    show ?thesis
+    proof (intro From_11_1_Body)
+      show "RN k k \<le> Suc nV"
+        by (simp add: n_def)
+      show "Blue \<subseteq> E"
+        by (simp add: Blue_E)
+      show "Red = E \<setminus> Blue"
+        by (simp add: Blue_def Red_E double_diff)
+      show "\<nexists>K. size_clique k K Red"
+        using no_Red_K by blast
+      show "\<nexists>K. size_clique k K Blue"
+        using no_Blue_K by blast
+    qed (use Blue Red_E Blue_def assms in auto)
+  qed
+qed
+
+
 (*THEOREM 10.1 NEEDS TO BE UNCONDITIONAL RE BIGNESS. AND THIS IS STILL WEAK*)
 text \<open>probably we are able to assume that x is rational\<close>
 lemma (in P0_min) FF_le_f2:
@@ -300,18 +551,6 @@ next
   qed
 qed
 
-lemma bdd_above_ff_GG:
-  assumes "x \<in> {0..1}" "u\<le>1"
-  shows "bdd_above ((\<lambda>y. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..u})"
-  using ff_GG_bound assms
-  by (intro bdd_above.I2 [where M = "ff_bound+\<eta>"]) force
-
-lemma bdd_above_SUP_ff_GG:
-  assumes "u \<in> {0..1} \<rightarrow> {0..1}"
-  shows "bdd_above ((\<lambda>x. \<Squnion>y\<in>{0..u x}. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..1})"
-  using bdd_above_ff_GG assms
-  by (intro bdd_aboveI [where M = "ff_bound + \<eta>"]) (auto simp: cSup_le_iff ff_GG_bound Pi_iff)
-
 text \<open>this result closes the gap between the different ranges of the suprema,
           And it could be folded into the proof below\<close>
 lemma C:
@@ -344,36 +583,11 @@ proof -
     unfolding u_def \<mu> using \<eta> by (auto simp: Pi_iff)
   then have ux1: "u x \<le> 1" if "x \<in> {0..1}" for x
     using that by fastforce
-  have "?L \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..u x}. min (FF k x y) (GG \<mu> x y) + \<eta>)"
-    using assms unfolding u_def by (intro From_11_1) auto
-  also have "... \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..u x}. min (ff x y) (GG \<mu> x y) + \<eta>)"
-  proof (intro cSUP_subset_mono order.refl)
-    show "bdd_above ((\<lambda>x. \<Squnion>y\<in>{0..u x}. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..1})"
-      by (rule bdd_above_SUP_ff_GG [OF u01])
-    fix x :: real
-    assume x: "x \<in> {0..1}"
-    then show "bdd_above ((\<lambda>y. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..u x})"
-      using ff_GG_bound [OF x] ux1[of x]
-      by (intro bdd_above.I2 [where M = "ff_bound+\<eta>"]) auto
-  next
-    fix x y :: real
-    assume x: "x \<in> {0..1}" and y: "y \<in> {0..u x}"
-    with  ux1[of x] have "FF k x y \<le> f1 x y"
-      by (intro FF_le_f1) auto
-    moreover
-    have "FF k x y \<le> f2 x y + 3 / (real k * ln 2)" if "x \<ge> 3/4"
-    proof (intro FF_le_f2)
-      show "x = real t / real k"
-        sorry
-    qed (use x y ux1[of x] that p0_min12 in auto)
-    have "FF k x y \<le> f2 x y" if "x \<ge> 3/4"
-      sorry
-    ultimately
-    have "FF k x y \<le> ff x y"
-      by (auto simp: ff_def)
-    then show "min (FF k x y) (GG \<mu> x y) + \<eta> \<le> min (ff x y) (GG \<mu> x y) + \<eta>"
-      by simp
-  qed (use u01 in auto)
+  have 1: "\<mu> / (1 - \<mu>) + \<eta> \<le> 1"
+    unfolding \<mu> using \<eta> by simp
+  then have "?L \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..u x}. min (ff x y) (GG \<mu> x y) + \<eta>)"
+    using assms unfolding u_def 
+    by (intro From_11_1 1) auto
   also have "... \<le> ?R"
     unfolding u_def using assms by (intro C) auto
   finally show ?thesis .
