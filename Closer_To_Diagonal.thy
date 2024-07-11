@@ -259,8 +259,10 @@ definition "Big101c \<equiv> \<lambda>\<gamma>0 l. \<forall>l' \<gamma>. l' \<ge
 
 definition "Big101d \<equiv> \<lambda>l. (\<forall>l' \<gamma>. l' \<ge> nat \<lfloor>2/5 * l\<rfloor> \<longrightarrow> 1/10 \<le> \<gamma> \<longrightarrow> \<gamma> \<le> 1/5 \<longrightarrow> Big_Closer_10_2 \<gamma> l')"
 
-definition "Big_Closer_10_1 \<equiv> \<lambda>\<gamma>0 l. l\<ge>9 \<and> Big101c \<gamma>0 l \<and> Big101d l \<and> (\<forall>k\<ge>l. Big101a k \<and> Big101b k)"
+definition "Big_Closer_10_1 \<equiv> \<lambda>\<gamma>0 l. l\<ge>9 \<and> (\<forall>k\<ge>l. Big101c \<gamma>0 k \<and> Big101d k \<and> Big101a k \<and> Big101b k)"
 
+lemma Big_Closer_10_1_upward: "\<lbrakk>Big_Closer_10_1 \<gamma> l; l \<le> k\<rbrakk> \<Longrightarrow> Big_Closer_10_1 \<gamma> k"
+  using Big_Closer_10_1_def by fastforce
 
 text \<open>The need for @term{\<gamma>0} it's unfortunate, but it seems simpler to hide the precise value 
   in the main proof.\<close>
@@ -307,6 +309,8 @@ proof -
     by blast
 qed
 
+text \<open>The strange constant @{term \<gamma>0} is needed for the case where we consider a subgraph;
+  see near the end of this proof\<close>
 theorem Closer_10_1:
   fixes l k::nat
   fixes \<delta> \<gamma>::real
@@ -333,7 +337,7 @@ proof (rule ccontr)
   have exp2: "exp (2::real) = exp 1 * exp 1"
     by (simp add: mult_exp_exp)
   have Big91_I:"\<And>l' \<mu>. \<lbrakk>l' \<ge> nat \<lfloor>2/5 * l\<rfloor>; \<gamma>0 \<le> \<mu>; \<mu> \<le> 1/10\<rbrakk> \<Longrightarrow> Big_Far_9_1 \<mu> l'"
-    using big by (meson Big101c_def Big_Closer_10_1_def)
+    using big by (meson Big101c_def Big_Closer_10_1_def order.refl)
   show False
   proof (cases "\<gamma> \<le> 1/10")
     case True
@@ -748,7 +752,7 @@ proof (rule ccontr)
           by (smt (verit, del_insts) of_nat_add \<gamma>'_def less_imp_le_nat of_nat_diff) 
       next
         have Big_10_2I: "\<And>l' \<mu>. \<lbrakk>nat \<lfloor>2/5 * l\<rfloor> \<le> l'; 1/10 \<le> \<mu>; \<mu> \<le> 1 / 5\<rbrakk> \<Longrightarrow> Big_Closer_10_2 \<mu> l'"
-          using big by (meson Big101d_def Big_Closer_10_1_def)
+          using big by (meson Big101d_def Big_Closer_10_1_def order.refl)
         have "m \<le> real l * (1 - (10/11)*\<gamma>)" 
           using \<open>m<l\<close> \<open>\<gamma>>1/10\<close> \<open>\<gamma>'\<ge>1/10\<close> \<gamma> 
           apply (simp add: \<gamma>_def \<gamma>'_def field_simps)
@@ -830,6 +834,59 @@ proof (rule ccontr)
       then show False
         using Red_Blue_RN \<open>U \<subseteq> V\<close> extend_Blue_clique no_Blue_K no_Red_K by blast
     qed
+  qed
+qed
+
+definition "ok_fun_10_1 \<equiv> \<lambda>\<gamma> k. if Big_Closer_10_1 (min \<gamma> 0.07) (nat\<lceil>((\<gamma> / (1-\<gamma>)) * k)\<rceil>) then 3 else (\<gamma>/40 * k)"
+
+lemma ok_fun_10_1:
+  assumes "0 < \<gamma>" "\<gamma> < 1"
+  shows "ok_fun_10_1 \<gamma> \<in> o(real)"
+proof -
+  define \<gamma>0 where "\<gamma>0 \<equiv> min \<gamma> 0.07"
+  have "\<gamma>0 > 0"
+    using assms by (simp add: \<gamma>0_def)
+  then have "\<forall>\<^sup>\<infinity>l. Big_Closer_10_1 \<gamma>0 l"
+    by (simp add: Big_Closer_10_1)
+  then obtain l where "\<And>l'. l' \<ge> l \<Longrightarrow> Big_Closer_10_1 \<gamma>0 l'"
+    using eventually_sequentially by auto
+  moreover
+  have "nat\<lceil>((\<gamma> / (1-\<gamma>)) * k)\<rceil> \<ge> l" if "real k \<ge> l/\<gamma> - l" for k
+    using that assms
+    by (auto simp: field_simps intro!: le_natceiling_iff)
+  ultimately have "\<forall>\<^sup>\<infinity>k. Big_Closer_10_1 (min \<gamma> 0.07) (nat\<lceil>((\<gamma> / (1-\<gamma>)) * k)\<rceil>)"
+    by (smt (verit) \<gamma>0_def eventually_sequentially nat_ceiling_le_eq)
+  then have "\<forall>\<^sup>\<infinity>k. ok_fun_10_1 \<gamma> k = 3"
+    by (simp add: ok_fun_10_1_def eventually_mono)
+  then show ?thesis
+    by (simp add: const_smallo_real landau_o.small.in_cong)
+qed
+
+theorem Closer_10_1_unconditional:
+  fixes l k::nat
+  fixes \<delta> \<gamma>::real
+  defines "\<gamma> \<equiv> real l / (real k + real l)"
+  defines "\<delta> \<equiv> \<gamma>/40"
+  assumes \<gamma>: "0 < \<gamma>" "\<gamma> \<le> 1/5" 
+  assumes p0_min_101: "p0_min \<le> 1 - 1/5"
+  shows "RN k l \<le> exp (-\<delta>*k + ok_fun_10_1 \<gamma> k) * (k+l choose l)"
+proof -
+  define \<gamma>0 where "\<gamma>0 \<equiv> min \<gamma> 0.07"
+  show ?thesis
+  proof (cases "Big_Closer_10_1 \<gamma>0 l")
+    case True
+    show ?thesis
+      using Closer_10_1 [OF True [unfolded \<gamma>0_def \<gamma>_def]] assms
+      by (simp add: ok_fun_10_1_def \<gamma>_def \<delta>_def RN_le_choose')
+  next
+    case False
+    have "(nat \<lceil>\<gamma> * k / (1 - \<gamma>)\<rceil>) \<le> l"
+      by (simp add: \<gamma>_def divide_simps)
+    with False Big_Closer_10_1_upward
+    have "\<not> Big_Closer_10_1 \<gamma>0 (nat \<lceil>\<gamma> * k / (1 - \<gamma>)\<rceil>)"
+      by blast
+    then show ?thesis
+      by (simp add: ok_fun_10_1_def \<delta>_def \<gamma>0_def RN_le_choose')
   qed
 qed
 

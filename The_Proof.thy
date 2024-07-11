@@ -198,11 +198,11 @@ lemma (in P0_min) FF_le_f2_aux:
   assumes p0_min_101: "p0_min \<le> 1 - 1/5"
   defines "\<gamma> \<equiv> real l / (real k + real l)"
   defines "\<gamma>0 \<equiv> min \<gamma> (0.07)" 
-  assumes big: "Big_Closer_10_1 \<gamma>0 l"
-  shows "FF k x y \<le> f2 x y + 3 / (real k * ln 2)"
+  assumes "\<gamma> > 0"
+  shows "FF k x y \<le> f2 x y + ok_fun_10_1 \<gamma> k / (k * ln 2)"
 proof -
   have "l>0"
-    using big by (simp add: Big_Closer_10_1_def)
+    using \<open>\<gamma>>0\<close> \<gamma>_def less_irrefl by fastforce
   have "x>0"
     using x by linarith
   with l have "k\<ge>l"
@@ -221,38 +221,36 @@ proof -
     using x by (simp add: divide_simps)
   then have Heq: "H (1 / (2-x)) = H ((1-x) / (2-x))"
     by (metis H_reflect)
-  have "RN k l \<le> exp (-\<delta>*k + 3) * (k+l choose l)"
+  have "RN k l \<le> exp (-\<delta>*k + ok_fun_10_1 \<gamma> k) * (k+l choose l)"
     unfolding \<delta>_def \<gamma>_def
-  proof (rule Closer_10_1)
-    show "real l / (real k + real l) \<le> 1/5"
-      using \<gamma> \<gamma>_def by blast
+  proof (rule Closer_10_1_unconditional)
+    show "0 < l / (real k + real l)" "l / (real k + real l) \<le> 1/5"
+      using \<gamma> \<open>\<gamma> > 0\<close> by (auto simp: \<gamma>_def)
     have "min (l / (k + real l)) 0.07 > 0"
       using \<open>l>0\<close> by force 
-    then show "Big_Closer_10_1 (min (l / (k + real l)) 0.07) l"
-      using big \<gamma>0_def \<gamma>_def by blast
   qed (use p0_min_101 in auto)
-  with RN_gt0 have "FF k x y \<le> log 2 (exp (-\<delta>*k + 3) * (k+l choose l)) / k + x + y"
+  with RN_gt0 have "FF k x y \<le> log 2 (exp (-\<delta>*k + ok_fun_10_1 \<gamma> k) * (k+l choose l)) / k + x + y"
     unfolding FF_def
     by (intro add_mono divide_right_mono Transcendental.log_mono; simp flip: l)
-  also have "\<dots> = (log 2 (exp (-\<delta>*k + 3)) + log 2 (k+l choose l)) / k + x + y"
+  also have "\<dots> = (log 2 (exp (-\<delta>*k + ok_fun_10_1 \<gamma> k)) + log 2 (k+l choose l)) / k + x + y"
     by (simp add: log_mult)
-  also have "\<dots> \<le> ((-\<delta>*k + 3) / ln 2 + (k+l) * H(l/(k+l))) / k + x + y"
+  also have "\<dots> \<le> ((-\<delta>*k + ok_fun_10_1 \<gamma> k) / ln 2 + (k+l) * H(l/(k+l))) / k + x + y"
     using H_12_1
     by (smt (verit, ccfv_SIG) General_Extras.log_exp divide_right_mono le_add2 of_nat_0_le_iff)
-  also have "\<dots> = (-\<delta>*k + 3) / k / ln 2 + (k+l) / k * H(l/(k+l)) + x + y"
+  also have "\<dots> = (-\<delta>*k + ok_fun_10_1 \<gamma> k) / k / ln 2 + (k+l) / k * H(l/(k+l)) + x + y"
     by argo
-  also have "\<dots> = -\<delta> / ln 2 + 3 / (k * ln 2) + (2-x) * H((1-x)/(2-x)) + x + y"
+  also have "\<dots> = -\<delta> / ln 2 + ok_fun_10_1 \<gamma> k / (k * ln 2) + (2-x) * H((1-x)/(2-x)) + x + y"
   proof -
-    have "(-\<delta>*k + 3) / k / ln 2 = -\<delta> / ln 2 + 3 / (k * ln 2)"
+    have "(-\<delta>*k + ok_fun_10_1 \<gamma> k) / k / ln 2 = -\<delta> / ln 2 + ok_fun_10_1 \<gamma> k / (k * ln 2)"
       using \<open>0 < k\<close> by (simp add: divide_simps)
     moreover have "(k+l) / k * H(l/(k+l)) = (2-x) * H((1-x)/(2-x))"
       using A B by presburger
     ultimately show ?thesis
       by argo
   qed
-  also have "\<dots> = - (log 2 (exp 1) / 40) * (1-x) / (2-x) + 3 / (k * ln 2) + (2-x) * H((1-x)/(2-x)) + x + y"
+  also have "\<dots> = - (log 2 (exp 1) / 40) * (1-x) / (2-x) + ok_fun_10_1 \<gamma> k / (k * ln 2) + (2-x) * H((1-x)/(2-x)) + x + y"
     using A by (force simp: \<delta>_def \<gamma>_def field_simps)
-  also have "\<dots> \<le> f2 x y + 3 / (real k * ln 2)"
+  also have "\<dots> \<le> f2 x y + ok_fun_10_1 \<gamma> k / (real k * ln 2)"
     by (simp add: Heq f1_def f2_def)
   finally show ?thesis .
 qed
@@ -343,22 +341,23 @@ proof -
 
     have 122: "FF k x y \<le> ff x y"
     proof -
+      define l where "l \<equiv> k-t"
+      define \<gamma> where "\<gamma> \<equiv> real l / (real k + real l)"
       have "FF k x y \<le> f1 x y"
         using x01 y01
         by (intro FF_le_f1) auto
       moreover
-      have "FF k x y \<le> f2 x y + 3 / (real k * ln 2)" if "x \<ge> 3/4"
+      have "FF k x y \<le> f2 x y + ok_fun_10_1 \<gamma> k / (k * ln 2)" if "x \<ge> 3/4"
+        unfolding \<gamma>_def
       proof (intro FF_le_f2_aux that)
-        define l where "l \<equiv> k-t"
-        define \<gamma> where "\<gamma> \<equiv> real l / (real k + real l)"
         have "\<gamma> = (1-x) / (2-x)"
           using \<open>0 < k\<close> \<open>t < k\<close> by (simp add: l_def \<gamma>_def x_def divide_simps)
         then have "\<gamma> \<le> 1/5"
           using that \<open>x<1\<close> by simp
         show "real l = real k - x * real k"
           using \<open>t < k\<close> by (simp add: l_def x_def)
-        show "Big_Closer_10_1 (min (real l / (real k + real l)) (0.07)) l"
-          sorry
+        show "0 < l / (k + real l)"
+          using \<open>t < k\<close> l_def by auto
       qed (use x01 y01 p0_min12 in auto)
       have "FF k x y \<le> f2 x y" if "x \<ge> 3/4"
         sorry
@@ -493,61 +492,6 @@ proof -
       show "\<nexists>K. size_clique k K Blue"
         using no_Blue_K by blast
     qed (use Blue Red_E Blue_def assms in auto)
-  qed
-qed
-
-
-(*THEOREM 10.1 NEEDS TO BE UNCONDITIONAL RE BIGNESS. AND THIS IS STILL WEAK*)
-text \<open>probably we are able to assume that x is rational\<close>
-lemma (in P0_min) FF_le_f2:
-  fixes x y::real
-  assumes x: "3/4 \<le> x" "x \<le> 1" and xeq: "x = real t / real k" 
-      and y: "0 \<le> y" "y \<le> 1"
-  assumes p0_min_101: "p0_min \<le> 1 - 1/5"
-  defines "\<gamma> \<equiv> (1-x) / (2-x)"
-  shows "FF k x y \<le> f2 x y + 3 / (real k * ln 2)"
-proof (cases "x=1")
-  case True
-  then show ?thesis 
-    by (simp add: FF_def f2_def f1_def)
-next
-  case False
-  with x have "0<x" "x<1"
-    by linarith+
-  with xeq \<open>x<1\<close> obtain "k>0" "t<k"
-    by (smt (verit, del_insts) Multiseries_Expansion.intyness_0 assms(1) divide_le_0_iff divide_less_eq_1 of_nat_less_iff zero_order(4))
-  define \<gamma>0 where "\<gamma>0 \<equiv> min \<gamma> (0.07)" 
-  have \<gamma>: "0<\<gamma>" "\<gamma> \<le> 1/5"
-    using x \<open>x<1\<close> y by (auto simp add: \<gamma>_def divide_simps)
-  then have "\<gamma>0>0"
-    by (simp add: \<gamma>0_def)
-(*
-  then have big: "\<forall>\<^sup>\<infinity>l. Big_Closer_10_1 \<gamma>0 l"
-    by (meson Big_Closer_10_1)
-  moreover have "frequently (\<lambda>l. (k-t) dvd l) sequentially"
-    apply (simp add: frequently_sequentially)
-    by (metis Suc_diff_Suc \<open>t < k\<close> dvd_triv_left less_one more_arith_simps(5) mult_le_cancel2 nat.simps(3) not_le)
-  ultimately obtain l where big: "(k-t) dvd l \<and> Big_Closer_10_1 \<gamma>0 l"
-    by (smt (verit, del_insts) frequently_cong not_frequently_False)
-  then obtain c where leq: "l = (k-t)*c"
-    by blast
-*)
-  define l where "l = k-t"
-  have "l>0"
-    by (simp add: \<open>t < k\<close> l_def)
-  have \<gamma>eq: "\<gamma> = real l / (real k + real l)"
-    using \<open>0 < k\<close> \<open>t < k\<close>
-    by (simp add: \<gamma>_def l_def xeq divide_simps)
-  show ?thesis
-  proof (intro FF_le_f2_aux x y)
-    show "real l = real k - x * real k"
-      using \<open>t < k\<close> by (simp add: l_def xeq)
-  next
-    show "p0_min \<le> 1 - 1 / 5"
-      using p0_min_101 by blast
-  next
-    show "Big_Closer_10_1 (min (real l / (real k + real l)) (7 / 10\<^sup>2)) l"
-      sorry
   qed
 qed
 
