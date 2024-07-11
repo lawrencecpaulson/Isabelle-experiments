@@ -310,9 +310,10 @@ lemma bdd_above_SUP_ff_GG:
   assumes "u \<in> {0..1} \<rightarrow> {0..1}"
   shows "bdd_above ((\<lambda>x. \<Squnion>y\<in>{0..u x}. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..1})"
   using bdd_above_ff_GG assms
-    by (intro bdd_aboveI [where M = "ff_bound + \<eta>"]) (auto simp: cSup_le_iff ff_GG_bound Pi_iff)
+  by (intro bdd_aboveI [where M = "ff_bound + \<eta>"]) (auto simp: cSup_le_iff ff_GG_bound Pi_iff)
 
-text \<open>this result closes the gap between the different ranges of the suprema\<close>
+text \<open>this result closes the gap between the different ranges of the suprema,
+          And it could be folded into the proof below\<close>
 lemma C:
   assumes \<mu>: "\<mu>=2/5" and "0 < \<eta>" "\<eta> \<le> 3/4 - 2/3" 
   shows "(SUP x \<in> {0..1}. SUP y \<in> {0..\<mu>*x/(1-\<mu>)+\<eta>}. min (ff x y) (GG \<mu> x y) + \<eta>)
