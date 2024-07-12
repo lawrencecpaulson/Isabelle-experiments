@@ -130,8 +130,6 @@ lemma bdd_above_SUP_ff_GG:
   using bdd_above_ff_GG assms
   by (intro bdd_aboveI [where M = "ff_bound + \<eta>"]) (auto simp: cSup_le_iff ff_GG_bound Pi_iff)
 
-
-
 (*A singularity if x=1. Okay if we put ln(0) = 0! *)
 text \<open>Claim (62)\<close>
 lemma FF_le_f1:
@@ -191,7 +189,7 @@ qed
 
 
 text \<open>Claim (63) IN WEAKENED FORM\<close>
-lemma (in P0_min) FF_le_f2_aux:
+lemma (in P0_min) FF_le_f2:
   fixes k::nat and x y::real
   assumes x: "3/4 \<le> x" "x \<le> 1" and y: "0 \<le> y" "y \<le> 1"
   and l: "real l = k - x*k"
@@ -256,10 +254,11 @@ proof -
 qed
 
 
-text \<open>The body of the proof has been extracted to allow the symmetry argument\<close>
+text \<open>The body of the proof has been extracted to allow the symmetry argument.
+  And 1/12 is 3/4-2/3, the latter number corresponding to @{term "\<mu>=2/5"}\<close>
 lemma (in Book_Basis) From_11_1_Body:
   fixes V :: "'a set"
-  assumes \<mu>: "0 < \<mu>" "\<mu> \<le> 2/5" and "\<eta> > 0" and le: "\<eta> \<le> 3/4 - 2/3"
+  assumes \<mu>: "0 < \<mu>" "\<mu> \<le> 2/5" and \<eta>: "0 < \<eta>" "\<eta> \<le> 1/12"
     and ge_RN: "Suc nV \<ge> RN k k"
     and Red: "graph_density Red \<ge> 1/2" 
     and p0_min12: "p0_min \<le> 1/2"
@@ -269,16 +268,13 @@ lemma (in Book_Basis) From_11_1_Body:
     and big: "Big_From_11_1 \<eta> \<mu> k"
   shows "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>)"
 proof -  
-  have big41: "Big_Blue_4_1 \<mu> k" and big61: "Big_Y_6_1 \<mu> k" 
-    and big85: "Big_ZZ_8_5 \<mu> k" and big11_2: "Big_From_11_2 \<mu> k"
-    and ok111_le_\<eta>: "ok_fun_11_1 \<mu> k / k \<le> \<eta>"
-    and powr_le_\<eta>: "(2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta>" and "k>0"
-    using big by (auto simp: Big_From_11_1_def Big_Y_6_1_def Big_Y_6_2_def)
-  then have big53: "Big_Red_5_3 \<mu> k"
-    by (meson Big_From_11_2_def)
-  have "\<mu> < 1"
-    using \<mu> by auto
-
+  have 12: "3/4 - 2/3 = (1/12::real)"
+    by simp
+  define \<eta>' where "\<eta>' \<equiv> \<eta>/2"
+  have \<eta>': "0 < \<eta>'" "\<eta>' \<le> 1/12"
+    using \<eta> by (auto simp add: \<eta>'_def)
+  have "k>0"
+    using big by (simp add: Big_From_11_1_def)
   obtain X0 Y0 where card_X0: "card X0 \<ge> nV/2" and card_Y0: "card Y0 = gorder div 2"
     and "X0 = V \<setminus> Y0" "Y0\<subseteq>V"
     and p0_half: "1/2 \<le> gen_density Red X0 Y0"
@@ -302,18 +298,31 @@ proof -
   define m where "m \<equiv> halted_point \<mu> k k"
   define x where "x \<equiv> t/k"
   define y where "y \<equiv> s/k"
-  define v where "v \<equiv> min (ff x y) (GG \<mu> x y) + \<eta>"
   have sts: "(s + real t) / s = (x+y) / y"
     using \<open>k>0\<close> by (simp add: x_def y_def field_simps)
   have "t<k"
     by (simp add: \<R>_def \<mu> t_def \<open>Colours k k\<close> red_step_limit)
   then obtain x01: "0\<le>x" "x<1"
     by (auto simp: x_def)
+
+  have big41: "Big_Blue_4_1 \<mu> k" and big61: "Big_Y_6_1 \<mu> k" 
+    and big85: "Big_ZZ_8_5 \<mu> k" and big11_2: "Big_From_11_2 \<mu> k"
+    and ok111_le: "ok_fun_11_1 \<mu> k / k \<le> \<eta>'"
+    and powr_le: "(2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta>'" and "k>0"
+    using big by (auto simp: Big_From_11_1_def Big_Y_6_1_def Big_Y_6_2_def \<eta>'_def)
+  then have big53: "Big_Red_5_3 \<mu> k"
+    by (meson Big_From_11_2_def)
+  have "\<mu> < 1"
+    using \<mu> by auto
+  
   have "s<k"
     unfolding s_def \<S>_def
     by (meson \<mu> \<open>Colours k k\<close> le_less_trans bblue_dboost_step_limit big41 le_add2)
   then obtain y01: "0\<le>y" "y<1"
     by (auto simp: y_def)
+
+  text \<open>Now that @{term x} and @{term y} are fixed, here's the body of the outer supremum\<close>
+  define v where "v \<equiv> min (ff x y) (GG \<mu> x y) + \<eta>"
   define w where "w \<equiv> (\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>)"
   show ?thesis
   proof (intro cSup_upper2 cSUP_least imageI)
@@ -332,12 +341,18 @@ proof -
       unfolding powr_add [symmetric] by simp
     also have "\<dots> \<le> (2/3) * t + (2 / (1-\<mu>)) * (k powr (-1/20)) * k"
       using mult_right_mono [OF \<mu>23, of t] by (simp add: mult_ac)
-    also have "\<dots> \<le> (3/4 - \<eta>) * k + (2 / (1-\<mu>)) * (k powr (-1/20)) * k"
-      using \<mu> le
-      by (smt (verit, ccfv_SIG) \<open>t < k\<close> divide_pos_pos less_imp_of_nat_less mult_mono of_nat_0_le_iff)
-    finally have "s \<le> (3/4 - \<eta>) * k + (2 / (1-\<mu>)) * k powr (-1/20) * k" 
+    also have "\<dots> \<le> (3/4 - \<eta>') * k + (2 / (1-\<mu>)) * (k powr (-1/20)) * k"
+    proof -
+      have "(2/3) * t \<le> (2/3) * k"
+        using \<open>t < k\<close> by simp
+      also have "... \<le> (3/4 - \<eta>') * k"
+        using 12 \<eta>' by (smt (verit) mult_right_mono of_nat_0_le_iff)
+      finally show ?thesis
+        by simp
+    qed
+    finally have "s \<le> (3/4 - \<eta>') * k + (2 / (1-\<mu>)) * k powr (-1/20) * k" 
       by simp
-    with mult_right_mono [OF powr_le_\<eta>, of k] have \<dagger>: "s \<le> 3/4 * k"
+    with mult_right_mono [OF powr_le, of k] have \<dagger>: "s \<le> 3/4 * k"
       by (simp add: mult.commute right_diff_distrib')
 
     have k_minus_t: "nat \<lfloor>real k - real t\<rfloor> = k-t"
@@ -347,7 +362,7 @@ proof -
     then have \<section>: "log 2 (Suc nV) \<le> log 2 (RN k (k-t)) + s + t + 2 - ok_fun_61 k"
       using From_11_3 [OF _ _ \<open>Colours k k\<close> big61] p0_half \<mu> by (auto simp: \<R>_def \<S>_def p0_def s_def t_def)
 
-    have 122: "FF k x y \<le> ff x y"
+    have 122: "FF k x y \<le> ff x y + \<eta>'"
     proof -
       define l where "l \<equiv> k-t"
       define \<gamma> where "\<gamma> \<equiv> real l / (real k + real l)"
@@ -357,7 +372,7 @@ proof -
       moreover
       have "FF k x y \<le> f2 x y + ok_fun_10_1 \<gamma> k / (k * ln 2)" if "x \<ge> 3/4"
         unfolding \<gamma>_def
-      proof (intro FF_le_f2_aux that)
+      proof (intro FF_le_f2 that)
         have "\<gamma> = (1-x) / (2-x)"
           using \<open>0 < k\<close> \<open>t < k\<close> by (simp add: l_def \<gamma>_def x_def divide_simps)
         then have "\<gamma> \<le> 1/5"
@@ -367,22 +382,22 @@ proof -
         show "0 < l / (k + real l)"
           using \<open>t < k\<close> l_def by auto
       qed (use x01 y01 p0_min12 in auto)
-      have "FF k x y \<le> f2 x y" if "x \<ge> 3/4"
-        sorry
+      moreover have "ok_fun_10_1 \<gamma> k / (k * ln 2) \<le> \<eta>'"
+        using ok_fun_10_1_le by blast
       ultimately
       show ?thesis
-        by (auto simp: ff_def) 
+        using \<eta>' by (auto simp: ff_def)
     qed
     have "log 2 (Suc nV) / k \<le> log 2 (RN k (k-t)) / k + x + y + (2 - ok_fun_61 k) / k"
       using \<open>k>0\<close> divide_right_mono [OF \<section>, of k] add_divide_distrib x_def y_def
       by (smt (verit) add_uminus_conv_diff of_nat_0_le_iff)
     also have "... = FF k x y + (2 - ok_fun_61 k) / k"
       by (simp add: FF_def x_def k_minus_t)
-    also have "... \<le> ff x y + (2 - ok_fun_61 k) / k"
+    also have "... \<le> ff x y + \<eta>' + (2 - ok_fun_61 k) / k"
       by (simp add: 122)
-    also have "... \<le> ff x y + ok_fun_11_1 \<mu> k / k"
+    also have "... \<le> ff x y + \<eta>' + ok_fun_11_1 \<mu> k / k"
       by (simp add: ok_fun_11_1_def divide_right_mono)
-    finally have le_FF: "log 2 (Suc nV) / k \<le> ff x y + ok_fun_11_1 \<mu> k / k" .
+    finally have le_FF: "log 2 (Suc nV) / k \<le> ff x y + \<eta>' + ok_fun_11_1 \<mu> k / k" .
 
     have "nV div 2 \<le> card X0"
       using card_X0 by linarith
@@ -402,7 +417,7 @@ proof -
     have "RN k k > 0"
       by (metis RN_eq_0_iff \<open>k>0\<close> gr0I)
     moreover have "log 2 (Suc nV) / k \<le> v"
-      unfolding v_def using ok111_le_\<eta> le_FF le_GG by linarith
+      using \<eta> ok111_le le_FF le_GG unfolding \<eta>'_def v_def by linarith
     ultimately have "log 2 (RN k k) / k \<le> v"
       using ge_RN \<open>k>0\<close>
       by (smt (verit, best) Transcendental.log_mono divide_right_mono of_nat_0_less_iff of_nat_mono)
@@ -425,7 +440,7 @@ proof -
 qed 
 
 theorem (in P0_min) From_11_1:
-  assumes \<mu>: "0 < \<mu>" "\<mu> \<le> 2/5" and "\<eta> > 0" and le: "\<eta> \<le> 3/4 - 2/3"
+  assumes \<mu>: "0 < \<mu>" "\<mu> \<le> 2/5" and "\<eta> > 0" and le: "\<eta> \<le> 1/12"
     and p0_min12: "p0_min \<le> 1/2" and big: "Big_From_11_1 \<eta> \<mu> k"
   shows "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>)"
 proof -

@@ -459,8 +459,8 @@ lemma eventually_powr_le_\<eta>:
   using assms by real_asymp
 
 definition "Big_From_11_1 \<equiv> 
-   \<lambda>\<eta> \<mu> k. Big_From_11_2 \<mu> k \<and> Big_ZZ_8_5 \<mu> k \<and> Big_Y_6_1 \<mu> k \<and> ok_fun_11_1 \<mu> k / k \<le> \<eta>
-         \<and> (2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta> \<and> k\<ge>3"
+   \<lambda>\<eta> \<mu> k. Big_From_11_2 \<mu> k \<and> Big_ZZ_8_5 \<mu> k \<and> Big_Y_6_1 \<mu> k \<and> ok_fun_11_1 \<mu> k / k \<le> \<eta>/2
+         \<and> (2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta>/2 \<and> k\<ge>3"
 
 text \<open>In sections 9 and 10 (and by implication all proceeding sections), we needed to consider 
   a closed interval of possible values of @{term \<mu>}. Let's hope, maybe not here. 
@@ -470,9 +470,9 @@ lemma Big_From_11_1:
   assumes "\<eta> > 0" "0<\<mu>" "\<mu><1" 
   shows "\<forall>\<^sup>\<infinity>k. Big_From_11_1 \<eta> \<mu> k"
   unfolding Big_From_11_1_def
-  using assms Big_From_11_2 Big_ZZ_8_5 Big_Y_6_1 eventually_ok111_le_\<eta> eventually_powr_le_\<eta> 
-  apply (simp add: eventually_conj_iff all_imp_conj_distrib eventually_sequentially)
-  by (metis (mono_tags, lifting) order.refl)  
+  using assms Big_From_11_2[of \<mu> \<mu>] Big_ZZ_8_5[of \<mu> \<mu>] Big_Y_6_1[of \<mu> \<mu>]
+  using eventually_ok111_le_\<eta>[of "\<eta>/2"] eventually_powr_le_\<eta>[of "\<eta>/2"]
+  by (auto simp: eventually_conj_iff all_imp_conj_distrib eventually_sequentially)
 
 text \<open>The actual proof of theorem 11.1 is now combined with the development of section 12,
 since the concepts seem to be in capably mixed up.\<close>
