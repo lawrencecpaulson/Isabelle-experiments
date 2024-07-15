@@ -139,8 +139,8 @@ lemma bdd_above_ff_GG:
   by (intro bdd_above.I2 [where M = "4+\<eta>"]) force
 
 lemma bdd_above_SUP_ff_GG:
-  assumes "u \<in> {0..1} \<rightarrow> {0..1}"
-  shows "bdd_above ((\<lambda>x. \<Squnion>y\<in>{0..u x}. ffGG \<mu> x y + \<eta>) ` {0..1})"
+  assumes "0\<le>u" "u\<le>1"
+  shows "bdd_above ((\<lambda>x. \<Squnion>y\<in>{0..u}. ffGG \<mu> x y + \<eta>) ` {0..1})"
   using bdd_above_ff_GG assms
   by (intro bdd_aboveI [where M = "4 + \<eta>"]) (auto simp: cSup_le_iff ff_GG_bound Pi_iff)
 
@@ -382,8 +382,11 @@ proof -
     qed
     finally have "s \<le> (3/4 - \<eta>') * k + (2 / (1-\<mu>)) * k powr (-1/20) * k" 
       by simp
-    with mult_right_mono [OF powr_le, of k] have \<dagger>: "s \<le> 3/4 * k"
+    with mult_right_mono [OF powr_le, of k] 
+    have \<dagger>: "s \<le> 3/4 * k"
       by (simp add: mult.commute right_diff_distrib')
+    then have "y \<le> 3/4"
+        by (metis \<dagger> \<open>0 < k\<close> of_nat_0_less_iff pos_divide_le_eq y_def)
 
     have k_minus_t: "nat \<lfloor>real k - real t\<rfloor> = k-t"
       by linarith
@@ -392,49 +395,8 @@ proof -
     then have \<section>: "log 2 (Suc nV) \<le> log 2 (RN k (k-t)) + s + t + 2 - ok_fun_61 k"
       using From_11_3 [OF _ _ \<open>Colours k k\<close> big61] p0_half \<mu> by (auto simp: \<R>_def \<S>_def p0_def s_def t_def)
 
-    have 122: "FF k x y \<le> ff x y + \<eta>'"
-    proof -
-      define l where "l \<equiv> k-t"
-      define \<gamma> where "\<gamma> \<equiv> real l / (real k + real l)"
-      have "x < 0.99"
-        sorry
-      then have "\<gamma> \<ge> 1/101"
-        using \<open>k>0\<close>
-        by (simp add: \<gamma>_def l_def x_def divide_simps)
-
-      have "FF k x y \<le> f1 x y"
-        using x01 y01
-        by (intro FF_le_f1) auto
-      moreover
-      have "FF k x y \<le> f2 x y + ok_fun_10_1 \<gamma> k / (k * ln 2)" if "x \<ge> 3/4"
-        unfolding \<gamma>_def
-      proof (intro FF_le_f2 that)
-        have "\<gamma> = (1-x) / (2-x)"
-          using \<open>0 < k\<close> \<open>t < k\<close> by (simp add: l_def \<gamma>_def x_def divide_simps)
-        then have "\<gamma> \<le> 1/5"
-          using that \<open>x<1\<close> by simp
-        show "real l = real k - x * real k"
-          using \<open>t < k\<close> by (simp add: l_def x_def)
-        show "0 < l / (k + real l)"
-          using \<open>t < k\<close> l_def by auto
-      qed (use x01 y01 p0_min12 in auto)
-      moreover have "ok_fun_10_1 \<gamma> k / (k * ln 2) \<le> \<eta>'"
-        using ok_fun_10_1_le (*A THEOREM THAT DOES NOT EXIST BECAUSE WE NEED A LOWER BOUND FOR GAMMA*)
-        by blast
-      ultimately
-      show ?thesis
-        using \<eta>' by (auto simp: ff_def)
-    qed
-    have "log 2 (Suc nV) / k \<le> log 2 (RN k (k-t)) / k + x + y + (2 - ok_fun_61 k) / k"
-      using \<open>k>0\<close> divide_right_mono [OF \<section>, of k] add_divide_distrib x_def y_def
-      by (smt (verit) add_uminus_conv_diff of_nat_0_le_iff)
-    also have "... = FF k x y + (2 - ok_fun_61 k) / k"
-      by (simp add: FF_def x_def k_minus_t)
-    also have "... \<le> ff x y + \<eta>' + (2 - ok_fun_61 k) / k"
-      by (simp add: 122)
-    also have "... \<le> ff x y + \<eta>' + ok_fun_11_1 \<mu> k / k"
-      by (simp add: ok_fun_11_1_def divide_right_mono)
-    finally have le_FF: "log 2 (Suc nV) / k \<le> ff x y + \<eta>' + ok_fun_11_1 \<mu> k / k" .
+    define l where "l \<equiv> k-t"
+    define \<gamma> where "\<gamma> \<equiv> real l / (real k + real l)"
 
     have "nV div 2 \<le> card X0"
       using card_X0 by linarith
@@ -451,10 +413,68 @@ proof -
     also have "... \<le> GG \<mu> x y + ok_fun_11_1 \<mu> k / k"
       by (simp add: ok_fun_11_1_def divide_right_mono)
     finally have le_GG: "log 2 (Suc nV) / k \<le> GG \<mu> x y + ok_fun_11_1 \<mu> k / k" .
+
+    have "log 2 (Suc nV) / k \<le> log 2 (RN k (k-t)) / k + x + y + (2 - ok_fun_61 k) / k"
+      using \<open>k>0\<close> divide_right_mono [OF \<section>, of k] add_divide_distrib x_def y_def
+      by (smt (verit) add_uminus_conv_diff of_nat_0_le_iff)
+    also have "... = FF k x y + (2 - ok_fun_61 k) / k"
+      by (simp add: FF_def x_def k_minus_t)
+    finally have DD: "log 2 (Suc nV) / k \<le> FF k x y + (2 - ok_fun_61 k) / k" .
+
     have "RN k k > 0"
       by (metis RN_eq_0_iff \<open>k>0\<close> gr0I)
     moreover have "log 2 (Suc nV) / k \<le> ffGG \<mu> x y + \<eta>"
-      using \<eta> ok111_le le_FF le_GG unfolding \<eta>'_def ffGG_def by linarith
+    proof (cases "x < 0.99")
+      case True
+      then have "\<gamma> \<ge> 1/101"
+        using \<open>k>0\<close> \<open>t<k\<close> by (simp add: \<gamma>_def l_def x_def divide_simps)
+      have 122: "FF k x y \<le> ff x y + \<eta>'"
+      proof -
+        have "FF k x y \<le> f1 x y"
+          using x01 y01
+          by (intro FF_le_f1) auto
+        moreover
+        have "FF k x y \<le> f2 x y + ok_fun_10_1 \<gamma> k / (k * ln 2)" if "x \<ge> 3/4"
+          unfolding \<gamma>_def
+        proof (intro FF_le_f2 that)
+          have "\<gamma> = (1-x) / (2-x)"
+            using \<open>0 < k\<close> \<open>t < k\<close> by (simp add: l_def \<gamma>_def x_def divide_simps)
+          then have "\<gamma> \<le> 1/5"
+            using that \<open>x<1\<close> by simp
+          show "real l = real k - x * real k"
+            using \<open>t < k\<close> by (simp add: l_def x_def)
+          show "0 < l / (k + real l)"
+            using \<open>t < k\<close> l_def by auto
+        qed (use x01 y01 p0_min12 in auto)
+        moreover have "ok_fun_10_1 \<gamma> k / (k * ln 2) \<le> \<eta>'"
+          using ok_fun_10_1_le (*A THEOREM THAT DOES NOT EXIST BECAUSE WE NEED A LOWER BOUND FOR GAMMA*)
+          by blast
+        ultimately
+        show ?thesis
+          using \<eta>' by (auto simp: ff_def)
+      qed
+      have "log 2 (Suc nV) / k \<le> FF k x y + (2 - ok_fun_61 k) / k"
+        by (metis DD)
+      also have "... \<le> ff x y + \<eta>' + (2 - ok_fun_61 k) / k"
+        by (simp add: 122)
+      also have "... \<le> ff x y + \<eta>' + ok_fun_11_1 \<mu> k / k"
+        by (simp add: ok_fun_11_1_def divide_right_mono)
+      finally have le_ff: "log 2 (Suc nV) / k \<le> ff x y + \<eta>' + ok_fun_11_1 \<mu> k / k" .
+      then show ?thesis
+        using \<eta> ok111_le le_ff le_GG unfolding \<eta>'_def ffGG_def by linarith
+    next
+      case False
+      have "log 2 (Suc nV) / k \<le> FF k x y + (2 - ok_fun_61 k) / k"
+        by (metis DD)
+      also have "\<dots> \<le> f1 x y + (2 - ok_fun_61 k) / k"
+        apply (simp add: )
+        by (metis FF_le_f1 less_eq_real_def x01 y01)
+      also have "... \<le> 1.9 + (2 - ok_fun_61 k) / k"
+        by (smt (verit) False \<open>y \<le> 3 / 4\<close> f1_le_19 x01(2) y01(1))
+      also have "... \<le> ffGG \<mu> x y + \<eta>"
+        by (smt (verit) P0_min.intro P0_min.ok_fun_11_1_def \<eta>'(1) \<eta>'_def divide_right_mono ffGG_def field_sum_of_halves of_nat_0_le_iff ok111_le p0_min(1) p0_min(2))
+      finally show ?thesis .
+    qed
     ultimately have "log 2 (RN k k) / k \<le> ffGG \<mu> x y + \<eta>"
       using ge_RN \<open>k>0\<close>
       by (smt (verit, best) Transcendental.log_mono divide_right_mono of_nat_0_less_iff of_nat_mono)
@@ -595,7 +615,7 @@ proof -
         by simp
     qed (use * in auto)
     also have "... = (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. ffGG \<mu> x y) + \<eta>"
-      using bdd_above_SUP_ff_GG [of "\<lambda>_. 3/4"  \<mu> 0]
+      using bdd_above_SUP_ff_GG [of "3/4"  \<mu> 0]
       by (simp add: add.commute [of _ \<eta>] Sup_add_eq)
     also have "... \<le> 2-\<delta> + \<eta>"
       using 123 [of "1 / 2^11"]
