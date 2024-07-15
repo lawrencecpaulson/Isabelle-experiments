@@ -5,7 +5,7 @@ theory From_Diagonal
 
 begin
 
-subsection \<open>Lemma 2.2\<close>
+subsection \<open>Lemma 11.2\<close>
 
 definition "ok_fun_11_2a \<equiv> \<lambda>k. \<lceil>real k powr (3/4)\<rceil> * log 2 k"
 
@@ -72,7 +72,7 @@ text \<open>Simply to prevent issues about the positioning of the function @{ter
 abbreviation "ratio \<equiv> \<lambda>\<mu> s t. \<mu> * (real s + real t) / real s"
 
 text \<open>the text refers to the actual Ramsey number but I don't see how that could work.
-Theorem 11.1 will define @{term n} to be one less than the Ramsay number, hence we add that one back here.\<close>
+Theorem 11.1 will define @{term n} to be one less than the Ramsey number, hence we add that one back here.\<close>
 lemma (in Book) From_11_2:
   fixes k
   assumes \<mu>: "0<\<mu>" "\<mu><1" and "Colours k k"  
@@ -272,7 +272,7 @@ proof -
   qed
 qed
 
-subsection \<open>Lemma 2.3\<close>
+subsection \<open>Lemma 11.3\<close>
 
 text \<open>same remark as in Lemma 11.2 about the use of the Ramsey number in the conclusion\<close>
 lemma (in Book) From_11_3:
@@ -361,12 +361,12 @@ proof -
     by linarith
 qed
 
-subsection \<open>Theorem 2.1\<close>
+subsection \<open>Theorem 11.1\<close>
 
 (* actually it is undefined when k=0 or x=1; Lean puts ln(0) = 0.
    AND IT DEPENDS UPON k!!*)
 definition FF :: "nat \<Rightarrow> real \<Rightarrow> real \<Rightarrow> real" where
- "FF \<equiv> \<lambda>k x y. log 2 (RN k (nat\<lfloor>real k - x * real k\<rfloor>)) / real k + x + y"
+  "FF \<equiv> \<lambda>k x y. log 2 (RN k (nat\<lfloor>real k - x * real k\<rfloor>)) / real k + x + y"
 
 definition GG :: "real \<Rightarrow> real \<Rightarrow> real \<Rightarrow> real" where
   "GG \<equiv> \<lambda>\<mu> x y. log 2 (1/\<mu>) + x * log 2 (1/(1-\<mu>)) + y * log 2 (\<mu> * (x+y) / y)"
@@ -475,7 +475,7 @@ lemma Big_From_11_1:
   by (auto simp: eventually_conj_iff all_imp_conj_distrib eventually_sequentially)
 
 text \<open>The actual proof of theorem 11.1 is now combined with the development of section 12,
-since the concepts seem to be in capably mixed up.\<close>
+since the concepts seem to be inescapably mixed up.\<close>
 
 end (*P0_min*)
 

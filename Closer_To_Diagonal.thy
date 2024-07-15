@@ -264,6 +264,9 @@ definition "Big_Closer_10_1 \<equiv> \<lambda>\<gamma>0 l. l\<ge>9 \<and> (\<for
 lemma Big_Closer_10_1_upward: "\<lbrakk>Big_Closer_10_1 \<gamma> l; l \<le> k\<rbrakk> \<Longrightarrow> Big_Closer_10_1 \<gamma> k"
   using Big_Closer_10_1_def by fastforce
 
+lemma Big_Closer_10_1_upward': "\<lbrakk>Big_Closer_10_1 \<gamma>0 l; \<gamma>0 \<le> \<gamma>\<rbrakk> \<Longrightarrow> Big_Closer_10_1 \<gamma> l"
+  by (auto simp: Big_Closer_10_1_def Big101c_def)
+
 text \<open>The need for @term{\<gamma>0} is unfortunate, but it seems simpler to hide the precise value 
   in the main proof.\<close>
 lemma Big_Closer_10_1:

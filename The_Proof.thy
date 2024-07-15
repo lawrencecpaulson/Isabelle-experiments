@@ -20,9 +20,17 @@ lemma H_ge0:
   by (smt (verit, best) assms mult_minus_left mult_le_0_iff zero_less_log_cancel_iff)
 
 lemma H_half_mono:
-  assumes "0<p'" "p'\<le>p" "p \<le> 1/2"
+  assumes "0\<le>p'" "p'\<le>p" "p \<le> 1/2"
   shows "H p' \<le> H p"
-proof -
+proof (cases "p'=0")
+  case True
+  then have "H p' = 0"
+    by (auto simp: H_def)
+  then show ?thesis
+    by (smt (verit) H_ge0 True assms(2) assms(3) divide_le_eq_1_pos)
+next
+  case False
+  with assms have "p'>0" by simp
   have "(H has_real_derivative 0) (at (1/2))" 
     unfolding H_def by (rule derivative_eq_intros | force)+
   define dH where "dH \<equiv> \<lambda>x::real. -ln(x)/ln(2) + ln(1 - x)/ln(2)"
@@ -36,18 +44,21 @@ proof -
   have "dH x \<ge> 0" if "0<x" "x\<le>1/2" for x
     using that by (simp add: dH_def divide_right_mono)
   ultimately show ?thesis
-    by (smt (verit) dH DERIV_nonneg_imp_nondecreasing assms le_divide_eq_1_pos)
+    by (smt (verit) dH DERIV_nonneg_imp_nondecreasing \<open>p'>0\<close> assms le_divide_eq_1_pos)
 qed
 
 lemma H_half_mono':
-  assumes "1/2 \<le> p'" "p'\<le>p" "p < 1"
+  assumes "1/2 \<le> p'" "p'\<le>p" "p \<le> 1"
   shows "H p' \<ge> H p"
   using H_half_mono [of "1-p" "1-p'"] H_reflect assms by auto
 
-lemma H_bounded:
+lemma H_half: "H(1/2) = 1"
+  by (simp add: H_def log_divide)
+
+lemma H_le1:
   assumes "0 \<le> p" "p \<le> 1"
-  shows "H p \<le> H(1/2)"
-  by (smt (verit, best) H0 H1 H_ge0 H_half_mono H_half_mono' assms)
+  shows "H p \<le> 1"
+  by (smt (verit, best) H0 H1 H_ge0 H_half_mono H_half_mono' H_half assms)
 
 text \<open>Many thanks to Fedor Petrov on mathoverflow\<close>
 lemma H_12_1:
@@ -75,10 +86,10 @@ next
     using p01 False assms unfolding H_def by (simp add: field_simps)
 qed 
 
-definition "g \<equiv> GG (2/5)"
+definition "gg \<equiv> GG (2/5)"
 
-lemma g_eq: "g x y = log 2 (5/2) + x * log 2 (5/3) + y * log 2 ((2 * (x+y)) / (5*y))"
-  by (simp add: g_def GG_def)
+lemma g_eq: "gg x y = log 2 (5/2) + x * log 2 (5/3) + y * log 2 ((2 * (x+y)) / (5*y))"
+  by (simp add: gg_def GG_def)
 
 definition "f1 \<equiv> \<lambda>x y. x + y + (2-x) * H(1/(2-x))"
 
@@ -86,49 +97,52 @@ definition "f2 \<equiv> \<lambda>x y. f1 x y - (log 2 (exp 1) / 40) * (1-x) / (2
 
 definition "ff \<equiv> \<lambda>x y. if x < 3/4 then f1 x y else f2 x y"
 
-definition "ff_bound \<equiv> 2 + 2 * H(1/2)"
+text \<open>Incorporating Bhavik‘s idea, which gives us a lower bound for @{term \<gamma>} of 1/101\<close>
+definition ffGG :: "real \<Rightarrow> real \<Rightarrow> real \<Rightarrow> real" where
+  "ffGG \<equiv> \<lambda>\<mu> x y. max 1.9 (min (ff x y) (GG \<mu> x y))"
 
 text \<open>The proofs involving @{term Sup} are needlessly difficult because ultimately 
 the sets involved are finite, eliminating the need to demonstrate boundedness.
 Simpler might be to use the extended reals.\<close>
 
-lemma le_ff_bound:
-  assumes "x \<in> {0..1}" and "y \<in> {0..1}" 
-  shows "ff x y \<le> ff_bound"
+lemma f1_le:
+  assumes "x\<le>1" 
+  shows "f1 x y \<le> y+2"
+  unfolding f1_def
+  using H_le1 [of "1/(2-x)"] assms
+  by (smt (verit) divide_le_eq_1_pos divide_nonneg_nonneg mult_left_le)
+
+lemma ff_le4:
+  assumes "x\<le>1" "y\<le>1"
+  shows "ff x y \<le> 4"
 proof -
-  have H: "H(1 / (2-x)) \<le> H(1/2)"
-    using assms by (intro H_bounded) auto
+  have H: "H(1 / (2-x)) \<le> 1"
+    using assms by (intro H_le1) auto
   have "ff x y \<le> f1 x y"
     using assms by (simp add: ff_def f2_def)
-  also have "... \<le> 1 + 1 + 2 * H(1/2)"
-    unfolding f1_def
-    using assms H by (intro add_mono mult_mono H_ge0) auto
-  also have "... \<le> ff_bound"
-    by (simp add: ff_bound_def)
+  also have "... \<le> y + 2"
+    using assms by (simp add: f1_le)
+  also have "... \<le> 4"
+    using assms by simp
   finally show ?thesis .
 qed
 
 lemma ff_GG_bound:
-  assumes x: "x \<in> {0..1}" and y: "y \<in> {0..1}" 
-  shows "min (ff x y) (GG \<mu> x y) \<le> ff_bound"
-proof -
-  have "ff x y \<le> ff_bound"
-    using assms by (intro le_ff_bound) auto
-  then show ?thesis
-    by auto
-qed
+  assumes "x\<le>1" "y\<le>1"
+  shows "ffGG \<mu> x y \<le> 4"
+  using ff_le4 [OF assms] by (auto simp: ffGG_def)
 
 lemma bdd_above_ff_GG:
-  assumes "x \<in> {0..1}" "u\<le>1"
-  shows "bdd_above ((\<lambda>y. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..u})"
+  assumes "x\<le>1" "u\<le>1"
+  shows "bdd_above ((\<lambda>y. ffGG \<mu> x y + \<eta>) ` {0..u})"
   using ff_GG_bound assms
-  by (intro bdd_above.I2 [where M = "ff_bound+\<eta>"]) force
+  by (intro bdd_above.I2 [where M = "4+\<eta>"]) force
 
 lemma bdd_above_SUP_ff_GG:
   assumes "u \<in> {0..1} \<rightarrow> {0..1}"
-  shows "bdd_above ((\<lambda>x. \<Squnion>y\<in>{0..u x}. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..1})"
+  shows "bdd_above ((\<lambda>x. \<Squnion>y\<in>{0..u x}. ffGG \<mu> x y + \<eta>) ` {0..1})"
   using bdd_above_ff_GG assms
-  by (intro bdd_aboveI [where M = "ff_bound + \<eta>"]) (auto simp: cSup_le_iff ff_GG_bound Pi_iff)
+  by (intro bdd_aboveI [where M = "4 + \<eta>"]) (auto simp: cSup_le_iff ff_GG_bound Pi_iff)
 
 (*A singularity if x=1. Okay if we put ln(0) = 0! *)
 text \<open>Claim (62)\<close>
@@ -186,7 +200,24 @@ next
   finally show ?thesis .
 qed
 
-
+text \<open>Bhavik's @{text "eleven_one_large_end"}\<close>
+lemma f1_le_19:
+  fixes k::nat and x y::real
+  assumes x: "0.99 \<le> x" "x \<le> 1" and y: "0 \<le> y" "y \<le> 3/4"
+  shows "f1 x y \<le> 1.9"
+proof -
+  have A: "2-x \<le> 1.01"
+    using x by simp
+  have "H (1 / (2-x)) \<le> H (1 / (2-0.99))"
+    using x by (intro H_half_mono') (auto simp: divide_simps)
+  also have "\<dots> \<le> 0.081"
+    unfolding H_def by (approximation 50)
+  finally have B: "H (1 / (2-x)) \<le> 0.081" .
+  have "(2-x) * H (1 / (2-x)) \<le> 1.01 * 0.081"
+    using mult_mono [OF A B] x
+    by (smt (verit) A H_ge0 divide_le_eq_1_pos divide_nonneg_nonneg)
+  with assms show ?thesis by (auto simp: f1_def)
+qed
 
 text \<open>Claim (63) IN WEAKENED FORM\<close>
 lemma (in P0_min) FF_le_f2:
@@ -266,7 +297,7 @@ lemma (in Book_Basis) From_11_1_Body:
     and no_Red_K: "\<not> (\<exists>K. size_clique k K Red)"
     and no_Blue_K: "\<not> (\<exists>K. size_clique k K Blue)"
     and big: "Big_From_11_1 \<eta> \<mu> k"
-  shows "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>)"
+  shows "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. ffGG \<mu> x y + \<eta>)"
 proof -  
   have 12: "3/4 - 2/3 = (1/12::real)"
     by simp
@@ -322,11 +353,10 @@ proof -
     by (auto simp: y_def)
 
   text \<open>Now that @{term x} and @{term y} are fixed, here's the body of the outer supremum\<close>
-  define v where "v \<equiv> min (ff x y) (GG \<mu> x y) + \<eta>"
-  define w where "w \<equiv> (\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>)"
+  define w where "w \<equiv> (\<Squnion>y\<in>{0..3/4}. ffGG \<mu> x y + \<eta>)"
   show ?thesis
-  proof (intro cSup_upper2 cSUP_least imageI)
-    show "w \<in> (\<lambda>x. \<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..1}"
+  proof (intro cSup_upper2 imageI)
+    show "w \<in> (\<lambda>x. \<Squnion>y\<in>{0..3/4}. ffGG \<mu> x y + \<eta>) ` {0..1}"
       using x01 by (force simp: w_def intro!: image_eqI [where x=x])
   next
     have \<mu>23: "\<mu> / (1-\<mu>) \<le> 2/3"
@@ -366,6 +396,12 @@ proof -
     proof -
       define l where "l \<equiv> k-t"
       define \<gamma> where "\<gamma> \<equiv> real l / (real k + real l)"
+      have "x < 0.99"
+        sorry
+      then have "\<gamma> \<ge> 1/101"
+        using \<open>k>0\<close>
+        by (simp add: \<gamma>_def l_def x_def divide_simps)
+
       have "FF k x y \<le> f1 x y"
         using x01 y01
         by (intro FF_le_f1) auto
@@ -383,7 +419,8 @@ proof -
           using \<open>t < k\<close> l_def by auto
       qed (use x01 y01 p0_min12 in auto)
       moreover have "ok_fun_10_1 \<gamma> k / (k * ln 2) \<le> \<eta>'"
-        using ok_fun_10_1_le by blast
+        using ok_fun_10_1_le (*A THEOREM THAT DOES NOT EXIST BECAUSE WE NEED A LOWER BOUND FOR GAMMA*)
+        by blast
       ultimately
       show ?thesis
         using \<eta>' by (auto simp: ff_def)
@@ -416,25 +453,25 @@ proof -
     finally have le_GG: "log 2 (Suc nV) / k \<le> GG \<mu> x y + ok_fun_11_1 \<mu> k / k" .
     have "RN k k > 0"
       by (metis RN_eq_0_iff \<open>k>0\<close> gr0I)
-    moreover have "log 2 (Suc nV) / k \<le> v"
-      using \<eta> ok111_le le_FF le_GG unfolding \<eta>'_def v_def by linarith
-    ultimately have "log 2 (RN k k) / k \<le> v"
+    moreover have "log 2 (Suc nV) / k \<le> ffGG \<mu> x y + \<eta>"
+      using \<eta> ok111_le le_FF le_GG unfolding \<eta>'_def ffGG_def by linarith
+    ultimately have "log 2 (RN k k) / k \<le> ffGG \<mu> x y + \<eta>"
       using ge_RN \<open>k>0\<close>
       by (smt (verit, best) Transcendental.log_mono divide_right_mono of_nat_0_less_iff of_nat_mono)
     also have "... \<le> w"
-      unfolding w_def v_def
+      unfolding w_def 
     proof (intro cSup_upper2)
       have "y \<in> {0..3/4}"
         using divide_right_mono [OF \<dagger>, of k] \<open>k>0\<close> by (simp add: x_def y_def) 
-      then show "min (ff x y) (GG \<mu> x y) + \<eta> \<in> (\<lambda>y. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..3/4}"
+      then show "ffGG \<mu> x y + \<eta> \<in> (\<lambda>y. ffGG \<mu> x y + \<eta>) ` {0..3/4}"
         by blast
     next
-      show "bdd_above ((\<lambda>y. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..3/4})"
+      show "bdd_above ((\<lambda>y. ffGG \<mu> x y + \<eta>) ` {0..3/4})"
         by (simp add: bdd_above_ff_GG less_imp_le x01)
     qed auto
     finally show "log 2 (real (RN k k)) / k \<le> w" .
   next
-    show "bdd_above ((\<lambda>x. \<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>) ` {0..1})"
+    show "bdd_above ((\<lambda>x. \<Squnion>y\<in>{0..3/4}. ffGG \<mu> x y + \<eta>) ` {0..1})"
       by (auto intro: bdd_above_SUP_ff_GG)
   qed
 qed 
@@ -442,7 +479,7 @@ qed
 theorem (in P0_min) From_11_1:
   assumes \<mu>: "0 < \<mu>" "\<mu> \<le> 2/5" and "\<eta> > 0" and le: "\<eta> \<le> 1/12"
     and p0_min12: "p0_min \<le> 1/2" and big: "Big_From_11_1 \<eta> \<mu> k"
-  shows "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>)"
+  shows "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. ffGG \<mu> x y + \<eta>)"
 proof -
   have "k\<ge>3"
     using big by (auto simp: Big_From_11_1_def)
@@ -517,7 +554,7 @@ begin
 lemma 123:
   fixes \<delta>::real
   assumes "0 < \<delta>" "\<delta> \<le> 1 / 2^11"
-  shows "(SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (gg x y)) \<le> 2-\<delta>"
+  shows "(SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. ffGG (2/5) x y) \<le> 2-\<delta>"
   sorry
 
 end (*P0_min*)
@@ -541,27 +578,28 @@ proof -
     unfolding \<mu>_def using \<eta> by (intro Big_From_11_1) auto
   moreover have "log 2 (real (RN k k)) / k \<le> 2-\<delta> + \<eta>" if "Big_From_11_1 \<eta> \<mu> k" for k
   proof -
-    have *: "(\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>) = (\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y)) + \<eta>"
-      if "x \<in> {0..1}" for x
+    have *: "(\<Squnion>y\<in>{0..3/4}. ffGG \<mu> x y + \<eta>) = (\<Squnion>y\<in>{0..3/4}. ffGG \<mu> x y) + \<eta>"
+      if "x\<le>1" for x
       using bdd_above_ff_GG [OF that, of "3/4" \<mu> 0]
       by (simp add: add.commute [of _ \<eta>] Sup_add_eq)
-    have "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>)"
+    have "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. ffGG \<mu> x y + \<eta>)"
       using that p0_min12 \<eta> \<mu>_def
       by (intro From_11_1) (auto simp: p0_min_def)
-    also have "... \<le> (SUP x \<in> {0..1}. (SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y)) + \<eta>)"
-    proof (intro cSUP_subset_mono bdd_above.I2 [where M = "ff_bound+\<eta>"])
+    also have "... \<le> (SUP x \<in> {0..1}. (SUP y \<in> {0..3/4}. ffGG \<mu> x y) + \<eta>)"
+    proof (intro cSUP_subset_mono bdd_above.I2 [where M = "4+\<eta>"])
       fix x :: real
       assume x: "x \<in> {0..1}"
-      have "(\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y) + \<eta>) \<le> ff_bound + \<eta>"
-        using bdd_above_ff_GG [OF x] ff_GG_bound [OF x] by (simp add: cSup_le_iff)
-      with * [OF x] show "(\<Squnion>y\<in>{0..3/4}. min (ff x y) (GG \<mu> x y)) + \<eta> \<le> ff_bound + \<eta>" 
+      have "(\<Squnion>y\<in>{0..3/4}. ffGG \<mu> x y + \<eta>) \<le> 4 + \<eta>"
+        using bdd_above_ff_GG ff_GG_bound x by (simp add: cSup_le_iff)
+      with * x show "(\<Squnion>y\<in>{0..3/4}. ffGG \<mu> x y) + \<eta> \<le> 4 + \<eta>" 
         by simp
     qed (use * in auto)
-    also have "... = (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. min (ff x y) (GG \<mu> x y)) + \<eta>"
+    also have "... = (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. ffGG \<mu> x y) + \<eta>"
       using bdd_above_SUP_ff_GG [of "\<lambda>_. 3/4"  \<mu> 0]
       by (simp add: add.commute [of _ \<eta>] Sup_add_eq)
     also have "... \<le> 2-\<delta> + \<eta>"
-      using 123 [of "1 / 2^11"] by (auto simp: \<delta>_def)
+      using 123 [of "1 / 2^11"]
+      unfolding \<delta>_def ffGG_def by (auto simp: \<delta>_def ffGG_def \<mu>_def)
     finally show ?thesis .
   qed
   ultimately have "\<forall>\<^sup>\<infinity>k. log 2 (RN k k) / k \<le> 2-\<delta> + \<eta>"
