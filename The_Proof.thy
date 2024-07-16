@@ -219,7 +219,7 @@ proof -
   with assms show ?thesis by (auto simp: f1_def)
 qed
 
-text \<open>Claim (63) IN WEAKENED FORM\<close>
+text \<open>Claim (63) in weakened form; we get rid of the extra bit later\<close>
 lemma (in P0_min) FF_le_f2:
   fixes k::nat and x y::real
   assumes x: "3/4 \<le> x" "x \<le> 1" and y: "0 \<le> y" "y \<le> 1"
@@ -304,8 +304,8 @@ proof -
   define \<eta>' where "\<eta>' \<equiv> \<eta>/2"
   have \<eta>': "0 < \<eta>'" "\<eta>' \<le> 1/12"
     using \<eta> by (auto simp add: \<eta>'_def)
-  have "k>0"
-    using big by (simp add: Big_From_11_1_def)
+  have "k>0" and big101: "Big_Closer_10_1 (1/101) (nat\<lceil>k/100\<rceil>)" and ok_fun_10_1_le: "3 / (k * ln 2) \<le> \<eta>'"
+    using big by (auto simp add: Big_From_11_1_def \<eta>'_def)
   obtain X0 Y0 where card_X0: "card X0 \<ge> nV/2" and card_Y0: "card Y0 = gorder div 2"
     and "X0 = V \<setminus> Y0" "Y0\<subseteq>V"
     and p0_half: "1/2 \<le> gen_density Red X0 Y0"
@@ -397,7 +397,8 @@ proof -
 
     define l where "l \<equiv> k-t"
     define \<gamma> where "\<gamma> \<equiv> real l / (real k + real l)"
-
+    have "\<gamma> < 1"
+      using \<open>t < k\<close> by (simp add: \<gamma>_def)
     have "nV div 2 \<le> card X0"
       using card_X0 by linarith
     then have 112: "log 2 (Suc nV) \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (ratio \<mu> s t)
@@ -424,10 +425,18 @@ proof -
     have "RN k k > 0"
       by (metis RN_eq_0_iff \<open>k>0\<close> gr0I)
     moreover have "log 2 (Suc nV) / k \<le> ffGG \<mu> x y + \<eta>"
-    proof (cases "x < 0.99")
+    proof (cases "x < 0.99")  \<comment> \<open>a further case split that gives a lower bound for gamma\<close>
       case True
-      then have "\<gamma> \<ge> 1/101"
-        using \<open>k>0\<close> \<open>t<k\<close> by (simp add: \<gamma>_def l_def x_def divide_simps)
+      have \<ddagger>: "Big_Closer_10_1 (min \<gamma> 0.07) (nat \<lceil>\<gamma> * real k / (1 - \<gamma>)\<rceil>)"
+        sketch (intro Big_Closer_10_1_upward [OF big101])
+      proof (intro Big_Closer_10_1_upward [OF big101])
+        show "1 / 101 \<le> min \<gamma> (7 / 10\<^sup>2)"
+          using \<open>k>0\<close> \<open>t<k\<close> True by (simp add: \<gamma>_def l_def x_def divide_simps)
+        with \<open>\<gamma> < 1\<close> less_eq_real_def have "k / 100 \<le> \<gamma> * k / (1 - \<gamma>)"
+          by (fastforce simp: field_simps)
+        then show "nat \<lceil>k / 100\<rceil> \<le> nat \<lceil>\<gamma> * k / (1 - \<gamma>)\<rceil>"
+          using ceiling_mono nat_mono by blast
+      qed
       have 122: "FF k x y \<le> ff x y + \<eta>'"
       proof -
         have "FF k x y \<le> f1 x y"
@@ -447,10 +456,8 @@ proof -
             using \<open>t < k\<close> l_def by auto
         qed (use x01 y01 p0_min12 in auto)
         moreover have "ok_fun_10_1 \<gamma> k / (k * ln 2) \<le> \<eta>'"
-          using ok_fun_10_1_le (*A THEOREM THAT DOES NOT EXIST BECAUSE WE NEED A LOWER BOUND FOR GAMMA*)
-          by blast
-        ultimately
-        show ?thesis
+          using \<ddagger> ok_fun_10_1_le by (simp add: ok_fun_10_1_def)
+        ultimately show ?thesis
           using \<eta>' by (auto simp: ff_def)
       qed
       have "log 2 (Suc nV) / k \<le> FF k x y + (2 - ok_fun_61 k) / k"
@@ -463,12 +470,11 @@ proof -
       then show ?thesis
         using \<eta> ok111_le le_ff le_GG unfolding \<eta>'_def ffGG_def by linarith
     next
-      case False
+      case False  \<comment> \<open>in this case, we can use the existing bound involving @{term f1}\<close>
       have "log 2 (Suc nV) / k \<le> FF k x y + (2 - ok_fun_61 k) / k"
         by (metis DD)
       also have "\<dots> \<le> f1 x y + (2 - ok_fun_61 k) / k"
-        apply (simp add: )
-        by (metis FF_le_f1 less_eq_real_def x01 y01)
+        using x01 y01 FF_le_f1 [of x y] by simp
       also have "... \<le> 1.9 + (2 - ok_fun_61 k) / k"
         by (smt (verit) False \<open>y \<le> 3 / 4\<close> f1_le_19 x01(2) y01(1))
       also have "... \<le> ffGG \<mu> x y + \<eta>"
@@ -575,7 +581,14 @@ lemma 123:
   fixes \<delta>::real
   assumes "0 < \<delta>" "\<delta> \<le> 1 / 2^11"
   shows "(SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. ffGG (2/5) x y) \<le> 2-\<delta>"
-  sorry
+proof -
+  have "min (ff x y) (GG (2/5) x y) \<le> 1.9" if "x \<in> {0..1}" "y \<in> {0..3/4}" for x y
+    sorry
+  moreover have "1.9 \<le> 2-\<delta>"
+    using assms by auto
+  ultimately show ?thesis
+    by (intro cSUP_least) (auto simp: ffGG_def)
+qed
 
 end (*P0_min*)
 

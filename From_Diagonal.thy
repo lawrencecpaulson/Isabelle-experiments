@@ -460,7 +460,8 @@ lemma eventually_powr_le_\<eta>:
 
 definition "Big_From_11_1 \<equiv> 
    \<lambda>\<eta> \<mu> k. Big_From_11_2 \<mu> k \<and> Big_ZZ_8_5 \<mu> k \<and> Big_Y_6_1 \<mu> k \<and> ok_fun_11_1 \<mu> k / k \<le> \<eta>/2
-         \<and> (2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta>/2 \<and> k\<ge>3"
+         \<and> (2 / (1-\<mu>)) * k powr (-1/20) \<le> \<eta>/2 
+         \<and> Big_Closer_10_1 (1/101) (nat\<lceil>k/100\<rceil>) \<and> 3 / (k * ln 2) \<le> \<eta>/2 \<and> k\<ge>3"
 
 text \<open>In sections 9 and 10 (and by implication all proceeding sections), we needed to consider 
   a closed interval of possible values of @{term \<mu>}. Let's hope, maybe not here. 
@@ -469,10 +470,20 @@ which is why it is also strict in the theorems depending on this property.\<clos
 lemma Big_From_11_1:
   assumes "\<eta> > 0" "0<\<mu>" "\<mu><1" 
   shows "\<forall>\<^sup>\<infinity>k. Big_From_11_1 \<eta> \<mu> k"
+proof -
+  have "\<forall>\<^sup>\<infinity>l. Big_Closer_10_1 (1/101) l"
+    by (rule Big_Closer_10_1) auto
+  then have a: "\<forall>\<^sup>\<infinity>k. Big_Closer_10_1 (1/101) (nat\<lceil>k/100\<rceil>)"
+    unfolding eventually_sequentially
+    by (meson le_divide_eq_numeral1(1) le_natceiling_iff nat_ceiling_le_eq)
+  have b: "\<forall>\<^sup>\<infinity>k. 3 / (k * ln 2) \<le> \<eta>/2"
+    using \<open>\<eta>>0\<close> by real_asymp
+  show ?thesis
   unfolding Big_From_11_1_def
-  using assms Big_From_11_2[of \<mu> \<mu>] Big_ZZ_8_5[of \<mu> \<mu>] Big_Y_6_1[of \<mu> \<mu>]
-  using eventually_ok111_le_\<eta>[of "\<eta>/2"] eventually_powr_le_\<eta>[of "\<eta>/2"]
+  using assms a b Big_From_11_2[of \<mu> \<mu>] Big_ZZ_8_5[of \<mu> \<mu>] Big_Y_6_1[of \<mu> \<mu>]
+  using eventually_ok111_le_\<eta>[of "\<eta>/2"] eventually_powr_le_\<eta> [of "\<eta>/2"]
   by (auto simp: eventually_conj_iff all_imp_conj_distrib eventually_sequentially)
+qed
 
 text \<open>The actual proof of theorem 11.1 is now combined with the development of section 12,
 since the concepts seem to be inescapably mixed up.\<close>
