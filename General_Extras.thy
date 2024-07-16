@@ -54,6 +54,24 @@ lemma of_nat_eq_numeral_iff [simp]: "of_nat k = numeral n \<longleftrightarrow> 
 
 end
 
+thm deriv_nonneg_imp_mono
+proposition deriv_nonpos_imp_antimono:
+  assumes deriv: "\<And>x. x \<in> {a..b} \<Longrightarrow> (g has_real_derivative g' x) (at x)"
+  assumes nonneg: "\<And>x. x \<in> {a..b} \<Longrightarrow> g' x \<le> 0"
+  assumes "a \<le> b"
+  shows "g b \<le> g a"
+proof -
+  have "- g a \<le> - g b"
+  proof (rule deriv_nonneg_imp_mono [where g = "\<lambda>x. - g x"])
+    fix x
+    assume x: "x \<in> {a..b}"
+    show "((\<lambda>x. - g x) has_real_derivative - g' x) (at x)"
+      by (rule derivative_eq_intros deriv x refl)+
+    show "0 \<le> - g' x"
+      using nonneg [OF x] by simp
+  qed (rule \<open>a\<le>b\<close>)
+  then show ?thesis by simp
+qed
 
 lemma floor_ceiling_diff_le: "0 \<le> r \<Longrightarrow> nat\<lfloor>real k - r\<rfloor> \<le> k - nat\<lceil>r\<rceil>"
   by linarith

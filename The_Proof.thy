@@ -5,7 +5,17 @@ theory The_Proof
 
 begin
 
+subsection \<open>The bounding functions\<close>
+
 definition "H \<equiv> \<lambda>p. -p * log 2 p - (1-p) * log 2 (1-p)"
+
+definition dH where "dH \<equiv> \<lambda>x::real. -ln(x)/ln(2) + ln(1 - x)/ln(2)"
+
+lemma dH: 
+  assumes "0<x" "x<1"
+  shows "(H has_real_derivative dH x) (at x)"
+  unfolding H_def dH_def log_def
+  by (rule derivative_eq_intros | use assms in force)+
 
 lemma H0 [simp]: "H 0 = 0" and H1 [simp]: "H 1 = 0"
   by (auto simp: H_def)
@@ -31,13 +41,6 @@ proof (cases "p'=0")
 next
   case False
   with assms have "p'>0" by simp
-  have "(H has_real_derivative 0) (at (1/2))" 
-    unfolding H_def by (rule derivative_eq_intros | force)+
-  define dH where "dH \<equiv> \<lambda>x::real. -ln(x)/ln(2) + ln(1 - x)/ln(2)"
-  have dH: "(H has_real_derivative dH x) (at x)"
-    if "0<x" "x<1" for x
-    unfolding H_def dH_def log_def
-    by (rule derivative_eq_intros | use that in force)+
   have "dH(1/2) = 0"
     by (simp add: dH_def)
   moreover
@@ -88,7 +91,7 @@ qed
 
 definition "gg \<equiv> GG (2/5)"
 
-lemma g_eq: "gg x y = log 2 (5/2) + x * log 2 (5/3) + y * log 2 ((2 * (x+y)) / (5*y))"
+lemma gg_eq: "gg x y = log 2 (5/2) + x * log 2 (5/3) + y * log 2 ((2 * (x+y)) / (5*y))"
   by (simp add: gg_def GG_def)
 
 definition "f1 \<equiv> \<lambda>x y. x + y + (2-x) * H(1/(2-x))"
@@ -144,8 +147,7 @@ lemma bdd_above_SUP_ff_GG:
   using bdd_above_ff_GG assms
   by (intro bdd_aboveI [where M = "4 + \<eta>"]) (auto simp: cSup_le_iff ff_GG_bound Pi_iff)
 
-(*A singularity if x=1. Okay if we put ln(0) = 0! *)
-text \<open>Claim (62)\<close>
+text \<open>Claim (62). A singularity if $x=1$. Okay if we put $\ln(0) = 0$\<close>
 lemma FF_le_f1:
   fixes k::nat and x y::real
   assumes x: "0 \<le> x" "x \<le> 1" and y: "0 \<le> y" "y \<le> 1"
@@ -430,11 +432,11 @@ proof -
       have \<ddagger>: "Big_Closer_10_1 (min \<gamma> 0.07) (nat \<lceil>\<gamma> * real k / (1 - \<gamma>)\<rceil>)"
         sketch (intro Big_Closer_10_1_upward [OF big101])
       proof (intro Big_Closer_10_1_upward [OF big101])
-        show "1 / 101 \<le> min \<gamma> (7 / 10\<^sup>2)"
+        show "1/101 \<le> min \<gamma> 0.07"
           using \<open>k>0\<close> \<open>t<k\<close> True by (simp add: \<gamma>_def l_def x_def divide_simps)
-        with \<open>\<gamma> < 1\<close> less_eq_real_def have "k / 100 \<le> \<gamma> * k / (1 - \<gamma>)"
+        with \<open>\<gamma> < 1\<close> less_eq_real_def have "k/100 \<le> \<gamma> * k / (1 - \<gamma>)"
           by (fastforce simp: field_simps)
-        then show "nat \<lceil>k / 100\<rceil> \<le> nat \<lceil>\<gamma> * k / (1 - \<gamma>)\<rceil>"
+        then show "nat \<lceil>k/100\<rceil> \<le> nat \<lceil>\<gamma> * k / (1 - \<gamma>)\<rceil>"
           using ceiling_mono nat_mono by blast
       qed
       have 122: "FF k x y \<le> ff x y + \<eta>'"
@@ -476,7 +478,7 @@ proof -
       also have "\<dots> \<le> f1 x y + (2 - ok_fun_61 k) / k"
         using x01 y01 FF_le_f1 [of x y] by simp
       also have "... \<le> 1.9 + (2 - ok_fun_61 k) / k"
-        by (smt (verit) False \<open>y \<le> 3 / 4\<close> f1_le_19 x01(2) y01(1))
+        by (smt (verit) False \<open>y \<le> 3/4\<close> f1_le_19 x01(2) y01(1))
       also have "... \<le> ffGG \<mu> x y + \<eta>"
         by (smt (verit) P0_min.intro P0_min.ok_fun_11_1_def \<eta>'(1) \<eta>'_def divide_right_mono ffGG_def field_sum_of_halves of_nat_0_le_iff ok111_le p0_min(1) p0_min(2))
       finally show ?thesis .
@@ -574,6 +576,146 @@ proof -
   qed
 qed
 
+subsection \<open>The monster calculation from appendix A\<close>
+
+lemma DERIV_nonneg_imp_increasing_open:
+  fixes a b :: real
+    and f :: "real \<Rightarrow> real"
+  assumes "a \<le> b"
+    and "\<And>x. a < x \<Longrightarrow> x < b \<Longrightarrow> (\<exists>y. DERIV f x :> y \<and> y \<ge> 0)"
+    and con: "continuous_on {a..b} f"
+  shows "f a \<le> f b"
+proof (cases "a=b")
+  case False
+  with \<open>a\<le>b\<close> have "a<b" by simp
+  show ?thesis 
+  proof (rule ccontr)
+    assume f: "\<not> ?thesis"
+    have "\<exists>l z. a < z \<and> z < b \<and> DERIV f z :> l \<and> f b - f a = (b - a) * l"
+      by (rule MVT) (use assms \<open>a<b\<close> real_differentiable_def in \<open>force+\<close>)
+    then obtain l z where z: "a < z" "z < b" "DERIV f z :> l" and "f b - f a = (b - a) * l"
+      by auto
+    with assms z f show False
+      by (metis DERIV_unique diff_ge_0_iff_ge zero_le_mult_iff)
+  qed
+qed auto
+
+lemma DERIV_nonpos_imp_decreasing_open:
+  fixes a b :: real
+    and f :: "real \<Rightarrow> real"
+  assumes "a \<le> b"
+    and "\<And>x. a < x \<Longrightarrow> x < b \<Longrightarrow> \<exists>y. DERIV f x :> y \<and> y \<le> 0"
+    and con: "continuous_on {a..b} f"
+  shows "f a \<ge> f b"
+proof -
+  have "(\<lambda>x. -f x) a \<le> (\<lambda>x. -f x) b"
+  proof (rule DERIV_nonneg_imp_increasing_open [of a b])
+    show "\<And>x. \<lbrakk>a < x; x < b\<rbrakk> \<Longrightarrow> \<exists>y. ((\<lambda>x. - f x) has_real_derivative y) (at x) \<and> 0 \<le> y"
+      using assms
+      by (metis Deriv.field_differentiable_minus neg_0_le_iff_le)
+    show "continuous_on {a..b} (\<lambda>x. - f x)"
+      using con continuous_on_minus by blast
+  qed (use assms in auto)
+  then show ?thesis
+    by simp
+qed
+
+
+text \<open>Needed just for the $x=1$ case\<close>
+lemma H_ineq: 
+  assumes "0 \<le> x" "x \<le> 1"
+  shows "(1-x) / (2-x) \<le> H (1 / (2-x))"
+  apply (rule gen_lower_bound_decreasing [OF \<open>x\<le>1\<close>])
+  unfolding H_def log_def
+    apply (rule derivative_eq_intros)+
+
+  sorry
+
+lemma dH: 
+  assumes "0<x" "x<1"
+  shows "(H has_real_derivative dH x) (at x)"
+  unfolding H_def dH_def log_def
+  by (rule derivative_eq_intros | use assms in force)+
+
+subsubsection \<open>Observation A.1\<close>
+
+lemma mono_on_gg:
+  assumes "0 < y" 
+  shows "mono_on {0<..<1} (\<lambda>x. gg x y)"
+  using assms
+  unfolding monotone_on_def gg_def GG_def
+  apply clarsimp
+  by (smt (verit, ccfv_SIG) Transcendental.log_mono divide_less_eq_1 divide_pos_pos divide_right_mono mult_left_mono mult_right_mono zero_le_log_cancel_iff)
+
+lemma antimono_on_ff:
+  assumes "0 < y" "y < 1"
+  shows "antimono_on {1/2..1} (\<lambda>x. ff x y)"
+proof -
+  have \<section>: "1 - 1 / (2-x) = (1-x) / (2-x)" if "x<2" for x::real
+    using that by (simp add: divide_simps)
+  define df1 where "df1 \<equiv> \<lambda>x. log 2 ((2-2*x) / (2-x))"
+  have Df1: "((\<lambda>x. f1 x y) has_real_derivative df1 x) (at x)" 
+    if "1/2\<le>x" "x<1" for x 
+  proof -
+    have "(2 - x * 2) = 2 * (1-x)"
+      by simp
+    then have [simp]: "log 2 (2 - x * 2) = log 2 (1-x) + 1"
+      using log_mult [of 2 "1-x" 2] that by (smt (verit, best) log_eq_one)
+    show ?thesis
+      using assms that
+      unfolding f1_def H_def df1_def
+      apply -
+      apply (rule derivative_eq_intros | simp)+
+      apply (simp add: log_divide divide_simps)
+      apply (simp add: algebra_simps)
+      done
+  qed
+  have Df2: "((\<lambda>x. f2 x y) has_real_derivative df1 x + inverse (ln 2 * 40 * (2-x)\<^sup>2)) (at x)" 
+    if "1/2\<le>x" "x<1" for x 
+    using assms that
+    unfolding f2_def
+    apply -
+    apply (rule derivative_eq_intros Df1 | simp)+
+    apply (simp add: divide_simps power2_eq_square)
+    done
+  have f1: "f1 x' y \<le> f1 x y"
+    if "x \<in> {1/2..1}" "x' \<in> {1/2..1}" "x \<le> x'" "x' \<le> 1" for x x'::real
+  proof (cases "x'=1")
+    case True
+    then show ?thesis
+      using that H_ineq [of x] by (auto simp: f1_def field_simps)
+  next
+    case False
+    with that have "x'<1" by auto
+    with that show ?thesis
+      by (intro deriv_nonpos_imp_antimono [OF Df1 [unfolded df1_def]]) auto
+  qed
+  have f1f2: "f2 x' y \<le> f1 x y"
+    if "x \<in> {1/2..1}" "x' \<in> {1/2..1}" "x \<le> x'" "x < 3/4" "\<not> x' < 3/4" for x x'::real
+    using that
+    apply (simp add: f2_def)
+    by (smt (verit, best) divide_nonneg_nonneg f1 ln_le_zero_iff pos_prod_lt that)
+
+  have f2: "f2 x' y \<le> f2 x y"
+    if A: "x \<in> {1/2..1}" "x' \<in> {1/2..1}" "x \<le> x'" and B: "\<not> x < 3/4" for x x'::real
+  proof (cases "x'=1")
+    case True
+    then show ?thesis
+      using that f1 [OF A]
+      apply (simp add: f2_def)
+
+      sorry
+  next
+    case False
+    with that show ?thesis 
+      apply (intro deriv_nonpos_imp_antimono [OF Df2])
+         apply (auto simp: df1_def)
+      sorry
+  qed
+  show ?thesis
+    using f1 f1f2 f2 by (simp add: monotone_on_def ff_def)
+qed
+
 context P0_min
 begin 
 
@@ -591,6 +733,8 @@ proof -
 qed
 
 end (*P0_min*)
+
+subsection \<open>Concluding the proof\<close>
 
 text \<open>we subtract a tiny bit, as we seem to need this gap\<close>
 definition delta'::real where "delta' \<equiv> 1 / 2^11 - 1 / 2^18"
