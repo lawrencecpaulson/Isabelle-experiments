@@ -631,12 +631,6 @@ lemma H_ineq:
 
   sorry
 
-lemma dH: 
-  assumes "0<x" "x<1"
-  shows "(H has_real_derivative dH x) (at x)"
-  unfolding H_def dH_def log_def
-  by (rule derivative_eq_intros | use assms in force)+
-
 subsubsection \<open>Observation A.1\<close>
 
 lemma mono_on_gg:
@@ -644,8 +638,23 @@ lemma mono_on_gg:
   shows "mono_on {0<..<1} (\<lambda>x. gg x y)"
   using assms
   unfolding monotone_on_def gg_def GG_def
-  apply clarsimp
-  by (smt (verit, ccfv_SIG) Transcendental.log_mono divide_less_eq_1 divide_pos_pos divide_right_mono mult_left_mono mult_right_mono zero_le_log_cancel_iff)
+  by (intro strip add_mono) (auto simp add: divide_right_mono)
+
+text \<open>Thanks to Manuel Eberl\<close>
+lemma continuous_on_x_ln: "continuous_on {0..} (\<lambda>x::real. x * ln x)"
+proof -
+  have "continuous (at x within {0..}) (\<lambda>x. x * ln x)"
+    if "x \<ge> 0" for x :: real
+  proof (cases "x = 0")
+    case True
+    have "continuous (at_right 0) (\<lambda>x::real. x * ln x)"
+      unfolding continuous_within by real_asymp
+    thus ?thesis
+      using True by (simp add: at_within_Ici_at_right)
+  qed (auto intro!: continuous_intros)
+  thus ?thesis
+    by (simp add: continuous_on_eq_continuous_within)
+qed
 
 lemma antimono_on_ff:
   assumes "0 < y" "y < 1"
@@ -678,17 +687,29 @@ proof -
     apply (rule derivative_eq_intros Df1 | simp)+
     apply (simp add: divide_simps power2_eq_square)
     done
+  have \<section>: "(\<lambda>x::real. (1 - 1/(2-x)) * ln (1 - 1/(2-x))) = (\<lambda>x. x * ln x) o (\<lambda>x. 1 - 1/(2-x))"
+    by (simp add: o_def)
+  have cont_xln: "continuous_on {0..1} (\<lambda>x::real. (1 - 1/(2-x)) * ln (1 - 1/(2-x)))"
+    unfolding \<section>
+  proof (rule continuous_intros)
+    show "continuous_on {0::real..1} (\<lambda>x. 1 - 1/(2-x))"
+      by (intro continuous_intros) auto
+  next
+    show "continuous_on ((\<lambda>x::real. 1 - 1/(2-x)) ` {0..1}) (\<lambda>x. x * ln x)"
+      by (rule continuous_on_subset [OF continuous_on_x_ln]) auto
+  qed
   have f1: "f1 x' y \<le> f1 x y"
     if "x \<in> {1/2..1}" "x' \<in> {1/2..1}" "x \<le> x'" "x' \<le> 1" for x x'::real
-  proof (cases "x'=1")
-    case True
-    then show ?thesis
-      using that H_ineq [of x] by (auto simp: f1_def field_simps)
+  proof (rule DERIV_nonpos_imp_decreasing_open [OF \<open>x \<le> x'\<close>, where f = "\<lambda>x. f1 x y"])
+    fix u :: real
+    assume "x < u" "u < x'"
+    with that show "\<exists>ya. ((\<lambda>x. f1 x y) has_real_derivative ya) (at u) \<and> ya \<le> 0"
+      by - (rule exI conjI  Df1 [unfolded df1_def] | simp)+
   next
-    case False
-    with that have "x'<1" by auto
-    with that show ?thesis
-      by (intro deriv_nonpos_imp_antimono [OF Df1 [unfolded df1_def]]) auto
+    show "continuous_on {x..x'} (\<lambda>x. f1 x y)"
+      using that
+      apply (simp add: f1_def H_def log_def)
+      by (intro continuous_on_subset [OF cont_xln] continuous_intros) auto
   qed
   have f1f2: "f2 x' y \<le> f1 x y"
     if "x \<in> {1/2..1}" "x' \<in> {1/2..1}" "x \<le> x'" "x < 3/4" "\<not> x' < 3/4" for x x'::real

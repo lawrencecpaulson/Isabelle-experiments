@@ -4,15 +4,30 @@ theory General_Extras imports
 
 begin
 
+(*deriv_nonneg_imp_mono: 10 uses; probably redundant thanks to DERIV_nonneg_imp_nondecreasing
+pos_deriv_imp_strict_mono: only two uses, both in Transcendental; delete?
+*)
+thm pos_deriv_imp_strict_mono deriv_nonneg_imp_mono
+
 thm eventually_sequentially
 lemma frequently_sequentially:
   "frequently P sequentially \<longleftrightarrow> (\<forall>N. \<exists>n\<ge>N. P n)"
   by (simp add: frequently_def eventually_sequentially)
 
-axiomatization
+thm at_within_Icc_at_right
+lemma (in order_topology)
+  shows at_within_Ici_at_right: "at a within {a..} = at_right a"
+    and at_within_Iic_at_left:  "at a within {..a} = at_left a"
+  using order_tendstoD(2)[OF tendsto_ident_at [where s = "{a<..}"]]
+  using order_tendstoD(1)[OF tendsto_ident_at[where s = "{..<a}"]]
+  by (auto intro!: order_class.order_antisym filter_leI
+      simp: eventually_at_filter less_le
+      elim: eventually_elim2)
+
+axiomatization(*NOT TO IMPORT*)
   where ln0 [simp]: "ln 0 = 0"
 
-lemma log0 [simp]: "log b 0 = 0"
+lemma log0 [simp]: "log b 0 = 0"(*NOT TO IMPORT*)
   by (simp add: log_def)
 
 thm log_exp (*RENAME EXISTING LOG_EXP TO log_power*)
