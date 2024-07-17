@@ -620,17 +620,6 @@ proof -
     by simp
 qed
 
-
-text \<open>Needed just for the $x=1$ case\<close>
-lemma H_ineq: 
-  assumes "0 \<le> x" "x \<le> 1"
-  shows "(1-x) / (2-x) \<le> H (1 / (2-x))"
-  apply (rule gen_lower_bound_decreasing [OF \<open>x\<le>1\<close>])
-  unfolding H_def log_def
-    apply (rule derivative_eq_intros)+
-
-  sorry
-
 subsubsection \<open>Observation A.1\<close>
 
 lemma mono_on_gg:
@@ -656,6 +645,24 @@ proof -
     by (simp add: continuous_on_eq_continuous_within)
 qed
 
+lemma continuous_on_f1: "continuous_on {..1} (\<lambda>x. f1 x y)"
+proof -
+  have \<section>: "(\<lambda>x::real. (1 - 1/(2-x)) * ln (1 - 1/(2-x))) = (\<lambda>x. x * ln x) o (\<lambda>x. 1 - 1/(2-x))"
+    by (simp add: o_def)
+  have cont_xln: "continuous_on {..1} (\<lambda>x::real. (1 - 1/(2-x)) * ln (1 - 1/(2-x)))"
+    unfolding \<section>
+  proof (rule continuous_intros)
+    show "continuous_on {..1::real} (\<lambda>x. 1 - 1/(2-x))"
+      by (intro continuous_intros) auto
+  next
+    show "continuous_on ((\<lambda>x::real. 1 - 1/(2-x)) ` {..1}) (\<lambda>x. x * ln x)"
+      by (rule continuous_on_subset [OF continuous_on_x_ln]) auto
+  qed
+  show ?thesis
+    apply (simp add: f1_def H_def log_def)
+    by (intro continuous_on_subset [OF cont_xln] continuous_intros) auto
+qed
+
 lemma antimono_on_ff:
   assumes "0 < y" "y < 1"
   shows "antimono_on {1/2..1} (\<lambda>x. ff x y)"
@@ -679,37 +686,24 @@ proof -
       apply (simp add: algebra_simps)
       done
   qed
-  have Df2: "((\<lambda>x. f2 x y) has_real_derivative df1 x + inverse (ln 2 * 40 * (2-x)\<^sup>2)) (at x)" 
+  define \<Delta> where "\<Delta> \<equiv> \<lambda>u::real. 1 / (ln 2 * 40 * (2 - u)\<^sup>2)"
+  have Df2: "((\<lambda>x. f2 x y) has_real_derivative df1 x + \<Delta> x) (at x)" 
     if "1/2\<le>x" "x<1" for x 
-    using assms that
-    unfolding f2_def
+    using assms that unfolding f2_def \<Delta>_def
     apply -
     apply (rule derivative_eq_intros Df1 | simp)+
     apply (simp add: divide_simps power2_eq_square)
     done
-  have \<section>: "(\<lambda>x::real. (1 - 1/(2-x)) * ln (1 - 1/(2-x))) = (\<lambda>x. x * ln x) o (\<lambda>x. 1 - 1/(2-x))"
-    by (simp add: o_def)
-  have cont_xln: "continuous_on {0..1} (\<lambda>x::real. (1 - 1/(2-x)) * ln (1 - 1/(2-x)))"
-    unfolding \<section>
-  proof (rule continuous_intros)
-    show "continuous_on {0::real..1} (\<lambda>x. 1 - 1/(2-x))"
-      by (intro continuous_intros) auto
-  next
-    show "continuous_on ((\<lambda>x::real. 1 - 1/(2-x)) ` {0..1}) (\<lambda>x. x * ln x)"
-      by (rule continuous_on_subset [OF continuous_on_x_ln]) auto
-  qed
   have f1: "f1 x' y \<le> f1 x y"
     if "x \<in> {1/2..1}" "x' \<in> {1/2..1}" "x \<le> x'" "x' \<le> 1" for x x'::real
   proof (rule DERIV_nonpos_imp_decreasing_open [OF \<open>x \<le> x'\<close>, where f = "\<lambda>x. f1 x y"])
     fix u :: real
     assume "x < u" "u < x'"
-    with that show "\<exists>ya. ((\<lambda>x. f1 x y) has_real_derivative ya) (at u) \<and> ya \<le> 0"
-      by - (rule exI conjI  Df1 [unfolded df1_def] | simp)+
+    with that show "\<exists>D. ((\<lambda>x. f1 x y) has_real_derivative D) (at u) \<and> D \<le> 0"
+      by - (rule exI conjI Df1 [unfolded df1_def] | simp)+
   next
     show "continuous_on {x..x'} (\<lambda>x. f1 x y)"
-      using that
-      apply (simp add: f1_def H_def log_def)
-      by (intro continuous_on_subset [OF cont_xln] continuous_intros) auto
+      using that by (intro continuous_on_subset [OF continuous_on_f1]) auto
   qed
   have f1f2: "f2 x' y \<le> f1 x y"
     if "x \<in> {1/2..1}" "x' \<in> {1/2..1}" "x \<le> x'" "x < 3/4" "\<not> x' < 3/4" for x x'::real
@@ -719,19 +713,31 @@ proof -
 
   have f2: "f2 x' y \<le> f2 x y"
     if A: "x \<in> {1/2..1}" "x' \<in> {1/2..1}" "x \<le> x'" and B: "\<not> x < 3/4" for x x'::real
-  proof (cases "x'=1")
-    case True
-    then show ?thesis
-      using that f1 [OF A]
-      apply (simp add: f2_def)
-
-      sorry
+  proof (rule DERIV_nonpos_imp_decreasing_open [OF \<open>x \<le> x'\<close> , where f = "\<lambda>x. f2 x y"])
+    fix u :: real
+    assume u: "x < u" "u < x'"
+    have "((\<lambda>x. f2 x y) has_real_derivative df1 u + \<Delta> u) (at u)"
+      using u that by (intro Df2) auto
+    moreover have "df1 u + \<Delta> u \<le> 0"
+    proof -
+      have "df1 (1/2) \<le> -1/2"
+        unfolding df1_def by (approximation 20)
+      moreover have "df1 u \<le> df1 (1/2)"
+        using u that unfolding df1_def
+        by (intro Transcendental.log_mono) (auto simp: divide_simps)
+      moreover have "\<Delta> 1 \<le> 0.04"
+        unfolding \<Delta>_def by (approximation 20)
+      moreover have "\<Delta> u \<le> \<Delta> 1"
+        using u that by (auto simp: \<Delta>_def divide_simps)
+      ultimately show ?thesis
+        by auto
+    qed
+    ultimately show "\<exists>D. ((\<lambda>x. f2 x y) has_real_derivative D) (at u) \<and> D \<le> 0"
+      by blast
   next
-    case False
-    with that show ?thesis 
-      apply (intro deriv_nonpos_imp_antimono [OF Df2])
-         apply (auto simp: df1_def)
-      sorry
+    show "continuous_on {x..x'} (\<lambda>x. f2 x y)"
+      unfolding f2_def
+      using that by (intro continuous_on_subset [OF continuous_on_f1] continuous_intros) auto
   qed
   show ?thesis
     using f1 f1f2 f2 by (simp add: monotone_on_def ff_def)
