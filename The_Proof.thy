@@ -11,7 +11,7 @@ definition "H \<equiv> \<lambda>p. -p * log 2 p - (1-p) * log 2 (1-p)"
 
 definition dH where "dH \<equiv> \<lambda>x::real. -ln(x)/ln(2) + ln(1 - x)/ln(2)"
 
-lemma dH: 
+lemma dH [derivative_intros]: 
   assumes "0<x" "x<1"
   shows "(H has_real_derivative dH x) (at x)"
   unfolding H_def dH_def log_def
@@ -663,29 +663,32 @@ proof -
     by (intro continuous_on_subset [OF cont_xln] continuous_intros) auto
 qed
 
+definition df1 where "df1 \<equiv> \<lambda>x. log 2 ((2-2*x) / (2-x))"
+
+lemma Df1 [derivative_intros]: 
+  assumes "x<1"
+  shows "((\<lambda>x. f1 x y) has_real_derivative df1 x) (at x)"
+proof -
+  have "(2 - x * 2) = 2 * (1-x)"
+    by simp
+  then have [simp]: "log 2 (2 - x * 2) = log 2 (1-x) + 1"
+    using log_mult [of 2 "1-x" 2] assms by (smt (verit, best) log_eq_one)
+  show ?thesis
+    using assms 
+    unfolding f1_def H_def df1_def
+    apply -
+    apply (rule derivative_eq_intros | simp)+
+    apply (simp add: log_divide divide_simps)
+    apply (simp add: algebra_simps)
+    done
+qed
+
 lemma antimono_on_ff:
   assumes "0 < y" "y < 1"
   shows "antimono_on {1/2..1} (\<lambda>x. ff x y)"
 proof -
   have \<section>: "1 - 1 / (2-x) = (1-x) / (2-x)" if "x<2" for x::real
     using that by (simp add: divide_simps)
-  define df1 where "df1 \<equiv> \<lambda>x. log 2 ((2-2*x) / (2-x))"
-  have Df1: "((\<lambda>x. f1 x y) has_real_derivative df1 x) (at x)" 
-    if "1/2\<le>x" "x<1" for x 
-  proof -
-    have "(2 - x * 2) = 2 * (1-x)"
-      by simp
-    then have [simp]: "log 2 (2 - x * 2) = log 2 (1-x) + 1"
-      using log_mult [of 2 "1-x" 2] that by (smt (verit, best) log_eq_one)
-    show ?thesis
-      using assms that
-      unfolding f1_def H_def df1_def
-      apply -
-      apply (rule derivative_eq_intros | simp)+
-      apply (simp add: log_divide divide_simps)
-      apply (simp add: algebra_simps)
-      done
-  qed
   define \<Delta> where "\<Delta> \<equiv> \<lambda>u::real. 1 / (ln 2 * 40 * (2 - u)\<^sup>2)"
   have Df2: "((\<lambda>x. f2 x y) has_real_derivative df1 x + \<Delta> x) (at x)" 
     if "1/2\<le>x" "x<1" for x 
@@ -742,6 +745,91 @@ proof -
   show ?thesis
     using f1 f1f2 f2 by (simp add: monotone_on_def ff_def)
 qed
+
+subsubsection \<open>Claim A.2\<close>
+
+text \<open>Called simply @{term x} in the paper, but are you kidding me?\<close>
+definition "x_of \<equiv> \<lambda>y::real. 3*y/5 + 0.5454"
+
+lemma x_of: "x_of \<in> {0..3/4} \<rightarrow> {1/2..1}"
+  by (simp add: x_of_def)
+
+definition "y_of \<equiv> \<lambda>x::real. 5 * x/3 - 0.909"
+
+lemma y_of_x_of [simp]: "y_of (x_of y) = y"
+  by (simp add: x_of_def y_of_def)
+
+lemma x_of_y_of [simp]: "x_of (y_of x) = x"
+  by (simp add: x_of_def y_of_def divide_simps)
+
+lemma A2_0:  "gg (x_of 0) 0 \<le> 2 - 1/2^11"
+  by (simp add: gg_def GG_def x_of_def) (approximation 5)
+
+lemma A2_34: "gg (x_of 0.434) 0.434 \<le> 2 - 1/2^11"
+  by (simp add: gg_def GG_def x_of_def) (approximation 50)
+
+(*
+Objective value: 1.99928194085537
+ y = .433900889799793
+*)
+lemma A2: 
+  assumes "y \<in> {0..3/4}"
+  shows "gg (x_of y) y \<le> 2 - 1/2^11"
+proof -
+  have 52: "log 2 (5/2) \<le> 1.321928095"
+    by (approximation 50)
+  have 53: "log 2 (5/3) \<le> 0.7369655945"
+    by (approximation 50)
+  have "gg (x_of y) y \<le> 1.321928095 + (3 * y / 5 + 2727 / 5000) * 0.7369655945
+                       + y * log 2 ((16*y / 5 + 2727 / 2500) / (5*y))"
+    unfolding gg_def GG_def x_of_def
+    using assms 52 mult_left_mono [OF 53, of "3 * y / 5 + 2727 / 5000"]
+    by (simp add:  del: divide_const_simps)
+  also have "... \<le> 4095/2048"
+    apply (simp add: log_def)
+    by (approximation 1000 splitting: y = 16 taylor: y = 3)
+    sorry
+  finally show ?thesis by simp
+qed
+
+lemma A3: 
+  assumes "y \<in> {0..0.341}"
+  shows "f1 (x_of y) y \<le> 2 - 1/2^11"
+proof -
+  define \<phi> where "\<phi> \<equiv> \<lambda>x. 8 * x / 3 - 0.909 + (2-x) * H(1/(2-x))"
+  have "f1 (x_of y) y = f1 (x_of y) (5 * x_of y/3 - 0.909)"
+    using y_of_def y_of_x_of by presburger
+  also have "\<dots> = \<phi> (x_of y)"
+    by (simp add: f1_def \<phi>_def)
+  finally have A: "f1 (x_of y) y = \<phi> (x_of y)" .
+
+  define D where "D \<equiv> \<lambda>x. 8/3 + log 2 ((1-x)/(2-x))"
+  have "((\<lambda>x. f1 x (y_of x)) has_real_derivative D x) (at x)" if "x \<in> {0..0.813}" for x
+    using that unfolding f1_def y_of_def D_def log_def H_def
+    apply -
+    apply (rule derivative_eq_intros  refl | force)+
+    apply (simp add: ln_div)
+    apply (simp add: divide_simps)
+    apply (simp add: algebra_simps)
+    by (simp add: ln_div right_diff_distrib')
+
+
+  by (rule derivative_eq_intros | use assms in force)+
+
+
+  have "gg (x_of y) y \<le> 1.321928095 + (3 * y / 5 + 2727 / 5000) * 0.7369655945
+                       + y * log 2 ((16*y / 5 + 2727 / 2500) / (5*y))"
+    unfolding gg_def GG_def x_of_def
+    using assms 52 mult_left_mono [OF 53, of "3 * y / 5 + 2727 / 5000"]
+    by (simp add:  del: divide_const_simps)
+  also have "... \<le> 4095/2048"
+    apply (simp add: log_def)
+    by (approximation 1000 splitting: y = 16 taylor: y = 3)
+    sorry
+  finally show ?thesis by simp
+qed
+
+
 
 context P0_min
 begin 
