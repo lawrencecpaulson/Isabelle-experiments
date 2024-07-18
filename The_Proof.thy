@@ -96,7 +96,7 @@ lemma gg_eq: "gg x y = log 2 (5/2) + x * log 2 (5/3) + y * log 2 ((2 * (x+y)) / 
 
 definition "f1 \<equiv> \<lambda>x y. x + y + (2-x) * H(1/(2-x))"
 
-definition "f2 \<equiv> \<lambda>x y. f1 x y - (log 2 (exp 1) / 40) * (1-x) / (2-x)"
+definition "f2 \<equiv> \<lambda>x y. f1 x y - 1 / (40 * ln 2) * (1-x) / (2-x)"
 
 definition "ff \<equiv> \<lambda>x y. if x < 3/4 then f1 x y else f2 x y"
 
@@ -663,7 +663,7 @@ proof -
     by (intro continuous_on_subset [OF cont_xln] continuous_intros) auto
 qed
 
-definition df1 where "df1 \<equiv> \<lambda>x. log 2 ((2-2*x) / (2-x))"
+definition df1 where "df1 \<equiv> \<lambda>x. log 2 ((2 * (1-x)) / (2-x))"
 
 lemma Df1 [derivative_intros]: 
   assumes "x<1"
@@ -683,20 +683,23 @@ proof -
     done
 qed
 
+definition delta where "delta \<equiv> \<lambda>u::real. 1 / (ln 2 * 40 * (2 - u)\<^sup>2)"
+
+lemma Df2: 
+  assumes "1/2\<le>x" "x<1" 
+  shows "((\<lambda>x. f2 x y) has_real_derivative df1 x + delta x) (at x)" 
+  using assms unfolding f2_def delta_def
+  apply -
+  apply (rule derivative_eq_intros Df1 | simp)+
+  apply (simp add: divide_simps power2_eq_square)
+  done
+
 lemma antimono_on_ff:
   assumes "0 < y" "y < 1"
   shows "antimono_on {1/2..1} (\<lambda>x. ff x y)"
 proof -
   have \<section>: "1 - 1 / (2-x) = (1-x) / (2-x)" if "x<2" for x::real
     using that by (simp add: divide_simps)
-  define \<Delta> where "\<Delta> \<equiv> \<lambda>u::real. 1 / (ln 2 * 40 * (2 - u)\<^sup>2)"
-  have Df2: "((\<lambda>x. f2 x y) has_real_derivative df1 x + \<Delta> x) (at x)" 
-    if "1/2\<le>x" "x<1" for x 
-    using assms that unfolding f2_def \<Delta>_def
-    apply -
-    apply (rule derivative_eq_intros Df1 | simp)+
-    apply (simp add: divide_simps power2_eq_square)
-    done
   have f1: "f1 x' y \<le> f1 x y"
     if "x \<in> {1/2..1}" "x' \<in> {1/2..1}" "x \<le> x'" "x' \<le> 1" for x x'::real
   proof (rule DERIV_nonpos_imp_decreasing_open [OF \<open>x \<le> x'\<close>, where f = "\<lambda>x. f1 x y"])
@@ -719,19 +722,19 @@ proof -
   proof (rule DERIV_nonpos_imp_decreasing_open [OF \<open>x \<le> x'\<close> , where f = "\<lambda>x. f2 x y"])
     fix u :: real
     assume u: "x < u" "u < x'"
-    have "((\<lambda>x. f2 x y) has_real_derivative df1 u + \<Delta> u) (at u)"
+    have "((\<lambda>x. f2 x y) has_real_derivative df1 u + delta u) (at u)"
       using u that by (intro Df2) auto
-    moreover have "df1 u + \<Delta> u \<le> 0"
+    moreover have "df1 u + delta u \<le> 0"
     proof -
       have "df1 (1/2) \<le> -1/2"
         unfolding df1_def by (approximation 20)
       moreover have "df1 u \<le> df1 (1/2)"
         using u that unfolding df1_def
         by (intro Transcendental.log_mono) (auto simp: divide_simps)
-      moreover have "\<Delta> 1 \<le> 0.04"
-        unfolding \<Delta>_def by (approximation 20)
-      moreover have "\<Delta> u \<le> \<Delta> 1"
-        using u that by (auto simp: \<Delta>_def divide_simps)
+      moreover have "delta 1 \<le> 0.04"
+        unfolding delta_def by (approximation 20)
+      moreover have "delta u \<le> delta 1"
+        using u that by (auto simp: delta_def divide_simps)
       ultimately show ?thesis
         by auto
     qed
@@ -761,6 +764,33 @@ lemma y_of_x_of [simp]: "y_of (x_of y) = y"
 
 lemma x_of_y_of [simp]: "x_of (y_of x) = x"
   by (simp add: x_of_def y_of_def divide_simps)
+
+lemma Df1_y [derivative_intros]: 
+  assumes "x<1"
+  shows "((\<lambda>x. f1 x (y_of x)) has_real_derivative 5/3 + df1 x) (at x)"
+proof -
+  have "(2 - x * 2) = 2 * (1-x)"
+    by simp
+  then have [simp]: "log 2 (2 - x * 2) = log 2 (1-x) + 1"
+    using log_mult [of 2 "1-x" 2] assms by (smt (verit, best) log_eq_one)
+  show ?thesis
+    using assms 
+    unfolding f1_def y_of_def H_def df1_def
+    apply -
+    apply (rule derivative_eq_intros refl | simp)+
+    apply (simp add: log_divide divide_simps)
+    apply (simp add: algebra_simps)
+    done
+qed
+
+lemma Df2_y [derivative_intros]: 
+  assumes "1/2\<le>x" "x<1" 
+  shows "((\<lambda>x. f2 x (y_of x)) has_real_derivative 5/3 + df1 x + delta x) (at x)"
+  using assms unfolding f2_def delta_def
+  apply -
+  apply (rule derivative_eq_intros Df1 | simp)+
+  apply (simp add: divide_simps power2_eq_square)
+  done
 
 lemma A2_0:  "gg (x_of 0) 0 \<le> 2 - 1/2^11"
   by (simp add: gg_def GG_def x_of_def) (approximation 5)
@@ -795,32 +825,27 @@ lemma A3:
   assumes "y \<in> {0..0.341}"
   shows "f1 (x_of y) y \<le> 2 - 1/2^11"
 proof -
-  define D where "D \<equiv> \<lambda>x. 8/3 + log 2 ((1-x)/(2-x))"
+  define D where "D \<equiv> \<lambda>x. 5/3 + df1 x"
   define I where "I \<equiv> {0.5454 .. 3/4::real}"
   define x where "x \<equiv> x_of y"
   then have yeq: "y = y_of x"
     by (metis y_of_x_of)
   have "x \<in> {x_of 0 .. x_of 0.341}"
-    using assms
-    by (simp add: x_def x_of_def del: divide_const_simps)
+    using assms by (simp add: x_def x_of_def del: divide_const_simps)
   then have x: "x \<in> I"
     by (simp add: x_of_def I_def)
 
   have D: "((\<lambda>x. f1 x (y_of x)) has_real_derivative D x) (at x)" if "x \<in> I" for x
-    using that unfolding f1_def y_of_def D_def log_def H_def I_def
-    apply -  (*UGLY PROOF: need chain rule, DERIV_chain'*)
-    apply (rule derivative_eq_intros  refl | force)+
-    apply (simp add: ln_div)
-    apply (simp add: divide_simps)
-    apply (simp add: algebra_simps)
-    by (simp add: ln_div right_diff_distrib')
+    using that Df1_y by (force simp: D_def I_def)
   have Dgt0: "D x \<ge> 0" if "x \<in> I" for x
-  proof -
-    have "2 powr (-8/3) \<le> (1-x) / (2-x)"
+  proof - (*NEW PROOF NEEDED*)
+    have "2 powr (-5/3 - 1) \<le> (1-x) / (2-x)"
       using that unfolding I_def by (approximation 50)
-    then show ?thesis
-      unfolding D_def
-      by (smt (verit) divide_minus_left le_powr_iff log_powr_cancel powr_gt_zero)
+    with that show ?thesis
+      unfolding D_def df1_def I_def
+      unfolding powr_diff
+      apply (simp add: )
+      by (smt (verit, best) add_divide_distrib field_sum_of_halves le_powr_iff log_powr_cancel powr_gt_zero powr_one)
   qed
   have "f1 x y = f1 x (y_of x)"
     by (simp add: yeq)
@@ -834,6 +859,37 @@ proof -
   finally show ?thesis
     using x_def by auto
 qed
+
+
+lemma A4: 
+  assumes "y \<in> {0.341..3/4}"
+  shows "f2 (x_of y) y \<le> 2 - 1/2^11"
+proof -
+  define D where "D \<equiv> \<lambda>x. 5/3 + df1 x + delta x"
+  define I where "I \<equiv> {3/4..<1::real}" 
+  define x where "x \<equiv> x_of y"
+  then have yeq: "y = y_of x"
+    by (metis y_of_x_of)
+  have "x \<in> {x_of 0.341 .. x_of (3/4)}"
+    using assms by (simp add: x_def x_of_def del: divide_const_simps)
+  then have x: "x \<in> I"
+    by (simp add: x_of_def I_def)
+  have D: "((\<lambda>x. f2 x (y_of x)) has_real_derivative D x) (at x)" if "x \<in> I" for x
+    using that Df2_y by (force simp: D_def I_def)
+  have Dgt0: "D x \<ge> 0" if "x \<in> I" for x
+    sorry
+  have "f2 x y = f2 x (y_of x)"
+    by (simp add: yeq)
+  also have "... \<le> f2 (0.817) (y_of (0.817))"
+    sorry (*A similar problem to claim A.2*)
+  also have "... < 1.9993"
+    by (simp add: f1_def f2_def H_def y_of_def) (approximation 50)
+  also have "... < 2 - 1/2^11"
+    by (approximation 50)
+  finally show ?thesis
+    using x_def by auto
+qed
+
 
 
 context P0_min
