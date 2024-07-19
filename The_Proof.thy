@@ -282,7 +282,7 @@ proof -
   also have "\<dots> = - (log 2 (exp 1) / 40) * (1-x) / (2-x) + ok_fun_10_1 \<gamma> k / (k * ln 2) + (2-x) * H((1-x)/(2-x)) + x + y"
     using A by (force simp: \<delta>_def \<gamma>_def field_simps)
   also have "\<dots> \<le> f2 x y + ok_fun_10_1 \<gamma> k / (real k * ln 2)"
-    by (simp add: Heq f1_def f2_def)
+    by (simp add: Heq f1_def f2_def mult_ac)
   finally show ?thesis .
 qed
 
@@ -578,55 +578,13 @@ qed
 
 subsection \<open>The monster calculation from appendix A\<close>
 
-lemma DERIV_nonneg_imp_increasing_open:
-  fixes a b :: real
-    and f :: "real \<Rightarrow> real"
-  assumes "a \<le> b"
-    and "\<And>x. a < x \<Longrightarrow> x < b \<Longrightarrow> (\<exists>y. DERIV f x :> y \<and> y \<ge> 0)"
-    and con: "continuous_on {a..b} f"
-  shows "f a \<le> f b"
-proof (cases "a=b")
-  case False
-  with \<open>a\<le>b\<close> have "a<b" by simp
-  show ?thesis 
-  proof (rule ccontr)
-    assume f: "\<not> ?thesis"
-    have "\<exists>l z. a < z \<and> z < b \<and> DERIV f z :> l \<and> f b - f a = (b - a) * l"
-      by (rule MVT) (use assms \<open>a<b\<close> real_differentiable_def in \<open>force+\<close>)
-    then obtain l z where z: "a < z" "z < b" "DERIV f z :> l" and "f b - f a = (b - a) * l"
-      by auto
-    with assms z f show False
-      by (metis DERIV_unique diff_ge_0_iff_ge zero_le_mult_iff)
-  qed
-qed auto
-
-lemma DERIV_nonpos_imp_decreasing_open:
-  fixes a b :: real
-    and f :: "real \<Rightarrow> real"
-  assumes "a \<le> b"
-    and "\<And>x. a < x \<Longrightarrow> x < b \<Longrightarrow> \<exists>y. DERIV f x :> y \<and> y \<le> 0"
-    and con: "continuous_on {a..b} f"
-  shows "f a \<ge> f b"
-proof -
-  have "(\<lambda>x. -f x) a \<le> (\<lambda>x. -f x) b"
-  proof (rule DERIV_nonneg_imp_increasing_open [of a b])
-    show "\<And>x. \<lbrakk>a < x; x < b\<rbrakk> \<Longrightarrow> \<exists>y. ((\<lambda>x. - f x) has_real_derivative y) (at x) \<and> 0 \<le> y"
-      using assms
-      by (metis Deriv.field_differentiable_minus neg_0_le_iff_le)
-    show "continuous_on {a..b} (\<lambda>x. - f x)"
-      using con continuous_on_minus by blast
-  qed (use assms in auto)
-  then show ?thesis
-    by simp
-qed
-
 subsubsection \<open>Observation A.1\<close>
 
 lemma mono_on_gg:
   assumes "0 < y" 
   shows "mono_on {0<..<1} (\<lambda>x. gg x y)"
   using assms
-  unfolding monotone_on_def gg_def GG_def
+  unfolding monotone_on_def gg_eq
   by (intro strip add_mono) (auto simp add: divide_right_mono)
 
 text \<open>Thanks to Manuel Eberl\<close>
@@ -792,33 +750,79 @@ lemma Df2_y [derivative_intros]:
   apply (simp add: divide_simps power2_eq_square)
   done
 
-lemma A2_0:  "gg (x_of 0) 0 \<le> 2 - 1/2^11"
-  by (simp add: gg_def GG_def x_of_def) (approximation 5)
+definition "Dg_x \<equiv> \<lambda>y. 3 * log 2 (5/3) / 5 +
+    (log 2 ((16 * y / 5 + 1.0908) / (5 * y)) +
+     (16 * y / 5 - (16 * y + 5.454) / 5) / (ln 2 * (16 * y / 5 + 1.0908)))"
 
-lemma A2_34: "gg (x_of 0.434) 0.434 \<le> 2 - 1/2^11"
-  by (simp add: gg_def GG_def x_of_def) (approximation 50)
+lemma Dg_x [derivative_intros]: 
+  assumes "y \<in> {0<..<3/4}"
+  shows "((\<lambda>y. gg (x_of y) y) has_real_derivative Dg_x y) (at y)"
+  using assms 
+  unfolding x_of_def gg_def GG_def Dg_x_def
+  apply -
+  apply (rule derivative_eq_intros refl | simp)+
+  done
 
-(*
+(*Claim A2 is difficult because it comes *close*, and it is hard to solve for the maximum point
+  (where the derivative goes to 0).
 Objective value: 1.99928194085537
  y = .433900889799793
 *)
+
+lemma A2_aux: 
+  assumes "y \<in> {1/10 .. 3/4}"
+  shows "gg (x_of y) y \<le> 2 - 1/2^11"
+  using assms
+unfolding gg_eq x_of_def 
+  by (approximation 24 splitting: y = 12)
+
 lemma A2: 
   assumes "y \<in> {0..3/4}"
   shows "gg (x_of y) y \<le> 2 - 1/2^11"
 proof -
-  have 52: "log 2 (5/2) \<le> 1.321928095"
-    by (approximation 50)
-  have 53: "log 2 (5/3) \<le> 0.7369655945"
-    by (approximation 50)
-  have "gg (x_of y) y \<le> 1.321928095 + (3 * y / 5 + 2727 / 5000) * 0.7369655945
-                       + y * log 2 ((16*y / 5 + 2727 / 2500) / (5*y))"
-    unfolding gg_def GG_def x_of_def
-    using assms 52 mult_left_mono [OF 53, of "3 * y / 5 + 2727 / 5000"]
-    by (simp add:  del: divide_const_simps)
-  also have "... \<le> 4095/2048"
-    apply (simp add: log_def)
-    by (approximation 1000 splitting: y = 16 taylor: y = 3)
-  finally show ?thesis by simp
+  have ?thesis if "y \<in> {0..1/10}"
+  proof -
+    have "gg (x_of y) y \<le> gg (x_of (1/10)) (1/10)"
+    proof (rule DERIV_nonneg_imp_increasing_open [of y "1/10"])
+      fix y' :: real
+      assume y': "y < y'" "y' < 1/10"
+      show "\<exists>D. ((\<lambda>u. gg (x_of u) u) has_real_derivative D) (at y') \<and> 0 \<le> D"
+        sketch (intro exI conjI)
+      proof (intro exI conjI)
+        show "((\<lambda>u. gg (x_of u) u) has_real_derivative Dg_x y') (at y')"
+          using y' that by (intro derivative_eq_intros) auto
+      next
+        show "0 \<le> Dg_x y'"
+          using y' that
+          apply (simp add: Dg_x_def)
+          sorry
+      qed
+    next
+      let ?f = "\<lambda>x. x * log 2 ((16*x/5 + 2727/2500) / (5*x))"
+      have \<dagger>: "continuous_on {0..} ?f"
+      proof -
+        have "continuous (at x within {0..}) ?f"
+          if "x \<ge> 0" for x :: real
+        proof (cases "x = 0")
+          case True
+          have "continuous (at_right 0) ?f"
+            unfolding continuous_within by real_asymp
+          thus ?thesis
+            using True by (simp add: at_within_Ici_at_right)
+        qed (use that in \<open>auto intro!: continuous_intros\<close>)
+        thus ?thesis
+          by (simp add: continuous_on_eq_continuous_within)
+      qed
+      show "continuous_on {y..1/10} (\<lambda>y. gg (x_of y) y)"
+        unfolding gg_eq x_of_def using that
+        by (force intro: continuous_on_subset [OF \<dagger>] continuous_intros)
+    qed (use that in auto)
+    also have "... \<le> 2 - 1/2^11"
+      using A2_aux by fastforce
+    finally show ?thesis .
+  qed
+  with A2_aux show ?thesis
+    by (meson assms atLeastAtMost_iff linear)
 qed
 
 lemma A3: 

@@ -88,6 +88,48 @@ proof -
   then show ?thesis by simp
 qed
 
+lemma DERIV_nonneg_imp_increasing_open:
+  fixes a b :: real
+    and f :: "real \<Rightarrow> real"
+  assumes "a \<le> b"
+    and "\<And>x. a < x \<Longrightarrow> x < b \<Longrightarrow> (\<exists>y. DERIV f x :> y \<and> y \<ge> 0)"
+    and con: "continuous_on {a..b} f"
+  shows "f a \<le> f b"
+proof (cases "a=b")
+  case False
+  with \<open>a\<le>b\<close> have "a<b" by simp
+  show ?thesis 
+  proof (rule ccontr)
+    assume f: "\<not> ?thesis"
+    have "\<exists>l z. a < z \<and> z < b \<and> DERIV f z :> l \<and> f b - f a = (b - a) * l"
+      by (rule MVT) (use assms \<open>a<b\<close> real_differentiable_def in \<open>force+\<close>)
+    then obtain l z where z: "a < z" "z < b" "DERIV f z :> l" and "f b - f a = (b - a) * l"
+      by auto
+    with assms z f show False
+      by (metis DERIV_unique diff_ge_0_iff_ge zero_le_mult_iff)
+  qed
+qed auto
+
+lemma DERIV_nonpos_imp_decreasing_open:
+  fixes a b :: real
+    and f :: "real \<Rightarrow> real"
+  assumes "a \<le> b"
+    and "\<And>x. a < x \<Longrightarrow> x < b \<Longrightarrow> \<exists>y. DERIV f x :> y \<and> y \<le> 0"
+    and con: "continuous_on {a..b} f"
+  shows "f a \<ge> f b"
+proof -
+  have "(\<lambda>x. -f x) a \<le> (\<lambda>x. -f x) b"
+  proof (rule DERIV_nonneg_imp_increasing_open [of a b])
+    show "\<And>x. \<lbrakk>a < x; x < b\<rbrakk> \<Longrightarrow> \<exists>y. ((\<lambda>x. - f x) has_real_derivative y) (at x) \<and> 0 \<le> y"
+      using assms
+      by (metis Deriv.field_differentiable_minus neg_0_le_iff_le)
+    show "continuous_on {a..b} (\<lambda>x. - f x)"
+      using con continuous_on_minus by blast
+  qed (use assms in auto)
+  then show ?thesis
+    by simp
+qed
+
 lemma floor_ceiling_diff_le: "0 \<le> r \<Longrightarrow> nat\<lfloor>real k - r\<rfloor> \<le> k - nat\<lceil>r\<rceil>"
   by linarith
 
