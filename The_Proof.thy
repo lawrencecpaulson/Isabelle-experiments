@@ -750,9 +750,14 @@ lemma Df2_y [derivative_intros]:
   apply (simp add: divide_simps power2_eq_square)
   done
 
-definition "Dg_x \<equiv> \<lambda>y. 3 * log 2 (5/3) / 5 +
-    (log 2 ((16 * y / 5 + 1.0908) / (5 * y)) +
-     (16 * y / 5 - (16 * y + 5.454) / 5) / (ln 2 * (16 * y / 5 + 1.0908)))"
+definition "Dg_x \<equiv> \<lambda>y. 3 * log 2 (5/3) / 5 + log 2 ((2727 + y * 8000) / (y * 12500)) 
+                     - 2727 / (ln 2 * (2727 + y * 8000))"
+
+lemma "2727 / (ln 2 * (2727 + y * 8000)) = 1 / (ln 2 * (1 + y * 8000/2727))" if "y>0" for y::real
+  using that
+  apply (subst divide_simps)
+apply (simp add: )
+  done
 
 lemma Dg_x [derivative_intros]: 
   assumes "y \<in> {0<..<3/4}"
@@ -761,41 +766,68 @@ lemma Dg_x [derivative_intros]:
   unfolding x_of_def gg_def GG_def Dg_x_def
   apply -
   apply (rule derivative_eq_intros refl | simp)+
+  apply (simp add: field_simps)
   done
 
-(*Claim A2 is difficult because it comes *close*, and it is hard to solve for the maximum point
+(*Claim A2 is difficult because it comes *real close*, and it is hard to solve for the maximum point
   (where the derivative goes to 0).
 Objective value: 1.99928194085537
  y = .433900889799793
 *)
 
+(* this could be a lot faster if we increased the lower bound, at least to 0.1*)
 lemma A2_aux: 
-  assumes "y \<in> {1/10 .. 3/4}"
+  assumes "y \<in> {1/100 .. 3/4}"
   shows "gg (x_of y) y \<le> 2 - 1/2^11"
   using assms
 unfolding gg_eq x_of_def 
-  by (approximation 24 splitting: y = 12)
+  by (approximation 21 splitting: y = 13)
 
+text \<open>due to the singularity at zero, we need to cover the zero case analytically, 
+but at least we have already covered the maximum point\<close>
 lemma A2: 
   assumes "y \<in> {0..3/4}"
   shows "gg (x_of y) y \<le> 2 - 1/2^11"
 proof -
-  have ?thesis if "y \<in> {0..1/10}"
+  have ?thesis if "y \<in> {0..1/100}"
   proof -
-    have "gg (x_of y) y \<le> gg (x_of (1/10)) (1/10)"
-    proof (rule DERIV_nonneg_imp_increasing_open [of y "1/10"])
+    have "gg (x_of y) y \<le> gg (x_of (1/100)) (1/100)"
+    proof (rule DERIV_nonneg_imp_increasing_open [of y "1/100"])
       fix y' :: real
-      assume y': "y < y'" "y' < 1/10"
+      assume y': "y < y'" "y' < 1/100"
+      then have "y'>0"
+        using that by auto
       show "\<exists>D. ((\<lambda>u. gg (x_of u) u) has_real_derivative D) (at y') \<and> 0 \<le> D"
-        sketch (intro exI conjI)
       proof (intro exI conjI)
         show "((\<lambda>u. gg (x_of u) u) has_real_derivative Dg_x y') (at y')"
           using y' that by (intro derivative_eq_intros) auto
       next
-        show "0 \<le> Dg_x y'"
-          using y' that
-          apply (simp add: Dg_x_def)
+        define Num where "Num \<equiv> 3 * log 2 (5/3) / 5 * (ln 2 * (2727 + y' * 8000)) + log 2 ((2727 + y' * 8000) / (y' * 12500)) * (ln 2 * (2727 + y' * 8000)) - 2727"
+
+        have A: "835.81 \<le> 3 * log 2 (5/3) / 5 * ln 2 * 2727"
+          by (approximation 30)
+        have B: "2451.9 \<le> 3 * log 2 (5/3) / 5 * ln 2 * 8000"
+          by (approximation 30)
+        have "Dg_x y' = Num / (ln 2 * (2727 + y' * 8000))"
+          using \<open>y'>0\<close> by (simp add: Dg_x_def Num_def add_divide_distrib diff_divide_distrib)
+        moreover
+        have "0 \<le> 3 * log 2 (5 / 3) / 5 * (ln 2 * (2727 + y' * 8000)) +
+         log 2 ((2727 + y' * 8000) / (y' * 12500)) * (ln 2 * (2727 + y' * 8000)) -
+         2727"
           sorry
+
+        have "-1891.19 + 2451.9 * y' + log 2 ((2727 + y' * 8000) / (y' * 12500)) * (ln 2 * (2727 + y' * 8000)) 
+             = 835.81 + 2451.9 * y' + log 2 ((2727 + y' * 8000) / (y' * 12500)) * (ln 2 * (2727 + y' * 8000)) 
+              - 2727"
+          by simp  (*cannot use ALSO*)
+        have "835.81 + 2451.9 * y' + log 2 ((2727 + y' * 8000) / (y' * 12500)) * (ln 2 * (2727 + y' * 8000)) 
+              - 2727 \<le> Num"
+          using A mult_right_mono [OF B, of y'] \<open>y'>0\<close>
+          unfolding Num_def ring_distribs
+          by (intro add_mono diff_mono order.refl) (auto simp: mult_ac)
+        finally have "Num \<ge> 0" .
+        ultimately show "0 \<le> Dg_x y'"
+          using \<open>0 < y'\<close> by auto
       qed
     next
       let ?f = "\<lambda>x. x * log 2 ((16*x/5 + 2727/2500) / (5*x))"
@@ -813,7 +845,7 @@ proof -
         thus ?thesis
           by (simp add: continuous_on_eq_continuous_within)
       qed
-      show "continuous_on {y..1/10} (\<lambda>y. gg (x_of y) y)"
+      show "continuous_on {y..1/100} (\<lambda>y. gg (x_of y) y)"
         unfolding gg_eq x_of_def using that
         by (force intro: continuous_on_subset [OF \<dagger>] continuous_intros)
     qed (use that in auto)
