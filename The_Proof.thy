@@ -791,13 +791,12 @@ Objective value: 1.99928194085537
  y = .433900889799793
 *)
 
-(* this could be a lot faster if we increased the lower bound, at least to 0.1*)
 lemma A2_aux: 
-  assumes "y \<in> {1/100 .. 3/4}"
+  assumes "y \<in> {1/10 .. 3/4}"
   shows "gg (x_of y) y \<le> 2 - 1/2^11"
   using assms
 unfolding gg_eq x_of_def 
-  by (approximation 21 splitting: y = 13)
+  by (approximation 24 splitting: y = 12)
 
 text \<open>due to the singularity at zero, we need to cover the zero case analytically, 
 but at least we have already covered the maximum point\<close>
@@ -805,12 +804,12 @@ lemma A2:
   assumes "y \<in> {0..3/4}"
   shows "gg (x_of y) y \<le> 2 - 1/2^11"
 proof -
-  have ?thesis if "y \<in> {0..1/100}"
+  have ?thesis if "y \<in> {0..1/10}"
   proof -
-    have "gg (x_of y) y \<le> gg (x_of (1/100)) (1/100)"
-    proof (rule DERIV_nonneg_imp_increasing_open [of y "1/100"])
+    have "gg (x_of y) y \<le> gg (x_of (1/10)) (1/10)"
+    proof (rule DERIV_nonneg_imp_increasing_open [of y "1/10"])
       fix y' :: real
-      assume y': "y < y'" "y' < 1/100"
+      assume y': "y < y'" "y' < 1/10"
       then have "y'>0"
         using that by auto
       show "\<exists>D. ((\<lambda>u. gg (x_of u) u) has_real_derivative D) (at y') \<and> 0 \<le> D"
@@ -825,9 +824,9 @@ proof -
           by (approximation 30)
         have C: "Dg_x y' = Num / (ln 2 * (2727 + y' * 8000))"
           using \<open>y'>0\<close> by (simp add: Dg_x_def Num_def add_divide_distrib diff_divide_distrib)
-        have "0 \<le> -1891.19 + log 2 (2727 / 125) * (ln 2 * (2727))"
+        have "0 \<le> -1891.19 + log 2 (2727 / 1250) * (ln 2 * (2727))"
           by (approximation 10)
-        also have "\<dots> \<le> -1891.19 + log 2 (2727 / ((1/100) * 12500)) * (ln 2 * (2727 + 0 * 8000))"
+        also have "\<dots> = -1891.19 + log 2 (2727 / ((1/10) * 12500)) * (ln 2 * (2727 + 0 * 8000))"
           by simp
         also have "\<dots> \<le> -1891.19 + 2451.9 * y' + log 2 ((2727 + y' * 8000) / (y' * 12500)) * (ln 2 * (2727 + y' * 8000)) "
           using y' \<open>0 < y'\<close>
@@ -859,7 +858,7 @@ proof -
         thus ?thesis
           by (simp add: continuous_on_eq_continuous_within)
       qed
-      show "continuous_on {y..1/100} (\<lambda>y. gg (x_of y) y)"
+      show "continuous_on {y..1/10} (\<lambda>y. gg (x_of y) y)"
         unfolding gg_eq x_of_def using that
         by (force intro: continuous_on_subset [OF \<dagger>] continuous_intros)
     qed (use that in auto)
