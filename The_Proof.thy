@@ -826,8 +826,6 @@ proof -
           using \<open>y'>0\<close> by (simp add: Dg_x_def Num_def add_divide_distrib diff_divide_distrib)
         have "0 \<le> -1891.19 + log 2 (2727 / 1250) * (ln 2 * (2727))"
           by (approximation 10)
-        also have "\<dots> = -1891.19 + log 2 (2727 / ((1/10) * 12500)) * (ln 2 * (2727 + 0 * 8000))"
-          by simp
         also have "\<dots> \<le> -1891.19 + 2451.9 * y' + log 2 ((2727 + y' * 8000) / (y' * 12500)) * (ln 2 * (2727 + y' * 8000)) "
           using y' \<open>0 < y'\<close>
           by (intro add_mono mult_mono Transcendental.log_mono frac_le order.refl) auto
