@@ -5,6 +5,22 @@ theory The_Proof
 
 begin
 
+thm mult_mono divide_left_mono
+
+context linordered_field
+begin
+
+(*REPLACE*)
+lemma divide_left_mono:
+  "\<lbrakk>b \<le> a; 0 \<le> c; 0 < b\<rbrakk> \<Longrightarrow> c / a \<le> c / b"
+  by (auto simp: field_simps zero_less_mult_iff mult_right_mono)
+
+lemma divide_mono:
+  "\<lbrakk>b \<le> a; c \<le> d; 0 < b; 0 \<le> c\<rbrakk> \<Longrightarrow> c / a \<le> d / b"
+  by (simp add: local.frac_le)
+
+end
+
 subsection \<open>The bounding functions\<close>
 
 definition "H \<equiv> \<lambda>p. -p * log 2 p - (1-p) * log 2 (1-p)"
@@ -803,30 +819,28 @@ proof -
           using y' that by (intro derivative_eq_intros) auto
       next
         define Num where "Num \<equiv> 3 * log 2 (5/3) / 5 * (ln 2 * (2727 + y' * 8000)) + log 2 ((2727 + y' * 8000) / (y' * 12500)) * (ln 2 * (2727 + y' * 8000)) - 2727"
-
         have A: "835.81 \<le> 3 * log 2 (5/3) / 5 * ln 2 * 2727"
           by (approximation 30)
         have B: "2451.9 \<le> 3 * log 2 (5/3) / 5 * ln 2 * 8000"
           by (approximation 30)
-        have "Dg_x y' = Num / (ln 2 * (2727 + y' * 8000))"
+        have C: "Dg_x y' = Num / (ln 2 * (2727 + y' * 8000))"
           using \<open>y'>0\<close> by (simp add: Dg_x_def Num_def add_divide_distrib diff_divide_distrib)
-        moreover
-        have "0 \<le> 3 * log 2 (5 / 3) / 5 * (ln 2 * (2727 + y' * 8000)) +
-         log 2 ((2727 + y' * 8000) / (y' * 12500)) * (ln 2 * (2727 + y' * 8000)) -
-         2727"
-          sorry
-
-        have "-1891.19 + 2451.9 * y' + log 2 ((2727 + y' * 8000) / (y' * 12500)) * (ln 2 * (2727 + y' * 8000)) 
-             = 835.81 + 2451.9 * y' + log 2 ((2727 + y' * 8000) / (y' * 12500)) * (ln 2 * (2727 + y' * 8000)) 
+        have "0 \<le> -1891.19 + log 2 (2727 / 125) * (ln 2 * (2727))"
+          by (approximation 10)
+        also have "\<dots> \<le> -1891.19 + log 2 (2727 / ((1/100) * 12500)) * (ln 2 * (2727 + 0 * 8000))"
+          by simp
+        also have "\<dots> \<le> -1891.19 + 2451.9 * y' + log 2 ((2727 + y' * 8000) / (y' * 12500)) * (ln 2 * (2727 + y' * 8000)) "
+          using y' \<open>0 < y'\<close>
+          by (intro add_mono mult_mono Transcendental.log_mono frac_le order.refl) auto
+        also have "\<dots> = 835.81 + 2451.9 * y' + log 2 ((2727 + y' * 8000) / (y' * 12500)) * (ln 2 * (2727 + y' * 8000)) 
               - 2727"
-          by simp  (*cannot use ALSO*)
-        have "835.81 + 2451.9 * y' + log 2 ((2727 + y' * 8000) / (y' * 12500)) * (ln 2 * (2727 + y' * 8000)) 
-              - 2727 \<le> Num"
+          by simp 
+        also have "\<dots> \<le> Num"
           using A mult_right_mono [OF B, of y'] \<open>y'>0\<close>
           unfolding Num_def ring_distribs
           by (intro add_mono diff_mono order.refl) (auto simp: mult_ac)
         finally have "Num \<ge> 0" .
-        ultimately show "0 \<le> Dg_x y'"
+        with C show "0 \<le> Dg_x y'"
           using \<open>0 < y'\<close> by auto
       qed
     next
