@@ -596,12 +596,15 @@ subsection \<open>The monster calculation from appendix A\<close>
 
 subsubsection \<open>Observation A.1\<close>
 
-lemma mono_on_gg:
-  assumes "0 < y" 
-  shows "mono_on {0<..<1} (\<lambda>x. gg x y)"
-  using assms
-  unfolding monotone_on_def gg_eq
-  by (intro strip add_mono) (auto simp add: divide_right_mono)
+lemma gg_increasing:
+  assumes "x \<le> x'" "0 \<le> x" "0 \<le> y" 
+  shows "gg x y \<le> gg x' y"
+proof (cases "y=0")
+  case False
+  with assms show ?thesis
+    unfolding gg_eq by (intro add_mono mult_left_mono divide_right_mono Transcendental.log_mono) auto    
+qed (auto simp: gg_eq assms)
+
 
 text \<open>Thanks to Manuel Eberl\<close>
 lemma continuous_on_x_ln: "continuous_on {0..} (\<lambda>x::real. x * ln x)"
@@ -669,7 +672,7 @@ lemma Df2:
   done
 
 lemma antimono_on_ff:
-  assumes "0 < y" "y < 1"
+  assumes "0 \<le> y" "y < 1"
   shows "antimono_on {1/2..1} (\<lambda>x. ff x y)"
 proof -
   have \<section>: "1 - 1 / (2-x) = (1-x) / (2-x)" if "x<2" for x::real
@@ -914,12 +917,38 @@ lemma 123:
   assumes "0 < \<delta>" "\<delta> \<le> 1 / 2^11"
   shows "(SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. ffGG (2/5) x y) \<le> 2-\<delta>"
 proof -
-  have "min (ff x y) (GG (2/5) x y) \<le> 1.9" if "x \<in> {0..1}" "y \<in> {0..3/4}" for x y
-    sorry
-  moreover have "1.9 \<le> 2-\<delta>"
+  have "min (ff x y) (gg x y) \<le> 2 - 1/2^11" if "x \<in> {0..1}" "y \<in> {0..3/4}" for x y
+  proof (cases "x \<le> x_of y")
+    case True
+    with that have "gg x y \<le> gg (x_of y) y"
+      by (intro gg_increasing) auto
+    with A2 that show ?thesis
+      by fastforce
+  next
+    case False
+    with that have "ff x y \<le> ff (x_of y) y"
+      by (intro monotone_onD [OF antimono_on_ff]) (auto simp: x_of_def)
+    also have "... \<le> 2 - 1/2^11"
+    proof (cases "x_of y < 3/4")
+      case True
+      with that have "f1 (x_of y) y \<le> 2 - 1/2^11"
+        by (intro A3) (auto simp: x_of_def)
+      then show ?thesis
+        using True ff_def by presburger
+    next
+      case False
+      with that have "f2 (x_of y) y \<le> 2 - 1/2^11"
+        by (intro A4) (auto simp: x_of_def)
+      then show ?thesis
+        using False ff_def by presburger
+    qed
+    finally show ?thesis
+      by linarith 
+  qed
+  moreover have "2 - 1/2^11 \<le> 2-\<delta>"
     using assms by auto
   ultimately show ?thesis
-    by (intro cSUP_least) (auto simp: ffGG_def)
+    by (fastforce simp: ffGG_def gg_def intro!: cSUP_least)
 qed
 
 end (*P0_min*)
