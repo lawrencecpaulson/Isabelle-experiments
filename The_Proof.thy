@@ -112,7 +112,7 @@ lemma gg_eq: "gg x y = log 2 (5/2) + x * log 2 (5/3) + y * log 2 ((2 * (x+y)) / 
 
 definition "f1 \<equiv> \<lambda>x y. x + y + (2-x) * H(1/(2-x))"
 
-definition "f2 \<equiv> \<lambda>x y. f1 x y - 1 / (40 * ln 2) * (1-x) / (2-x)"
+definition "f2 \<equiv> \<lambda>x y. f1 x y - (1 / (40 * ln 2)) * ((1-x) / (2-x))"
 
 definition "ff \<equiv> \<lambda>x y. if x < 3/4 then f1 x y else f2 x y"
 
@@ -637,7 +637,7 @@ proof -
     by (intro continuous_on_subset [OF cont_xln] continuous_intros) auto
 qed
 
-definition df1 where "df1 \<equiv> \<lambda>x. log 2 ((2 * (1-x)) / (2-x))"
+definition df1 where "df1 \<equiv> \<lambda>x. log 2 (2 * ((1-x) / (2-x)))"
 
 lemma Df1 [derivative_intros]: 
   assumes "x<1"
@@ -723,7 +723,7 @@ proof -
     using f1 f1f2 f2 by (simp add: monotone_on_def ff_def)
 qed
 
-subsubsection \<open>Claim A.2\<close>
+subsubsection \<open>Claims A.2–A.4\<close>
 
 text \<open>Called simply @{term x} in the paper, but are you kidding me?\<close>
 definition "x_of \<equiv> \<lambda>y::real. 3*y/5 + 0.5454"
@@ -769,12 +769,6 @@ lemma Df2_y [derivative_intros]:
 definition "Dg_x \<equiv> \<lambda>y. 3 * log 2 (5/3) / 5 + log 2 ((2727 + y * 8000) / (y * 12500)) 
                      - 2727 / (ln 2 * (2727 + y * 8000))"
 
-lemma "2727 / (ln 2 * (2727 + y * 8000)) = 1 / (ln 2 * (1 + y * 8000/2727))" if "y>0" for y::real
-  using that
-  apply (subst divide_simps)
-apply (simp add: )
-  done
-
 lemma Dg_x [derivative_intros]: 
   assumes "y \<in> {0<..<3/4}"
   shows "((\<lambda>y. gg (x_of y) y) has_real_derivative Dg_x y) (at y)"
@@ -785,21 +779,13 @@ lemma Dg_x [derivative_intros]:
   apply (simp add: field_simps)
   done
 
-(*Claim A2 is difficult because it comes *real close*, and it is hard to solve for the maximum point
+text \<open>Claim A2 is difficult because it comes *real close*: max value = 1.999281, when y = 0.4339.
+There is no simple closed form for the maximum point
   (where the derivative goes to 0).
-Objective value: 1.99928194085537
- y = .433900889799793
-*)
+\<close>
 
-lemma A2_aux: 
-  assumes "y \<in> {1/10 .. 3/4}"
-  shows "gg (x_of y) y \<le> 2 - 1/2^11"
-  using assms
-unfolding gg_eq x_of_def 
-  by (approximation 24 splitting: y = 12)
-
-text \<open>due to the singularity at zero, we need to cover the zero case analytically, 
-but at least we have already covered the maximum point\<close>
+text \<open>Due to the singularity at zero, we need to cover the zero case analytically, 
+but at least interval arithmetic covers the maximum point\<close>
 lemma A2: 
   assumes "y \<in> {0..3/4}"
   shows "gg (x_of y) y \<le> 2 - 1/2^11"
@@ -861,10 +847,14 @@ proof -
         by (force intro: continuous_on_subset [OF \<dagger>] continuous_intros)
     qed (use that in auto)
     also have "... \<le> 2 - 1/2^11"
-      using A2_aux by fastforce
+      unfolding gg_eq x_of_def by (approximation 10)
     finally show ?thesis .
   qed
-  with A2_aux show ?thesis
+  moreover
+  have ?thesis if "y \<in> {1/10 .. 3/4}"
+    using that unfolding gg_eq x_of_def 
+    by (approximation 24 splitting: y = 12)
+  ultimately show ?thesis
     by (meson assms atLeastAtMost_iff linear)
 qed
 
@@ -907,36 +897,13 @@ proof -
     using x_def by auto
 qed
 
-
+text \<open>This one also comes close: max value = 1.999271, when y = 0.4526. 
+The specified upper bound is 1.99951\<close>
 lemma A4: 
   assumes "y \<in> {0.341..3/4}"
   shows "f2 (x_of y) y \<le> 2 - 1/2^11"
-proof -
-  define D where "D \<equiv> \<lambda>x. 5/3 + df1 x + delta x"
-  define I where "I \<equiv> {3/4..<1::real}" 
-  define x where "x \<equiv> x_of y"
-  then have yeq: "y = y_of x"
-    by (metis y_of_x_of)
-  have "x \<in> {x_of 0.341 .. x_of (3/4)}"
-    using assms by (simp add: x_def x_of_def del: divide_const_simps)
-  then have x: "x \<in> I"
-    by (simp add: x_of_def I_def)
-  have D: "((\<lambda>x. f2 x (y_of x)) has_real_derivative D x) (at x)" if "x \<in> I" for x
-    using that Df2_y by (force simp: D_def I_def)
-  have Dgt0: "D x \<ge> 0" if "x \<in> I" for x
-    sorry
-  have "f2 x y = f2 x (y_of x)"
-    by (simp add: yeq)
-  also have "... \<le> f2 (0.817) (y_of (0.817))"
-    sorry (*A similar problem to claim A.2*)
-  also have "... < 1.9993"
-    by (simp add: f1_def f2_def H_def y_of_def) (approximation 50)
-  also have "... < 2 - 1/2^11"
-    by (approximation 50)
-  finally show ?thesis
-    using x_def by auto
-qed
-
+  unfolding f2_def f1_def x_of_def H_def
+  using assms by (approximation 18 splitting: y = 13)
 
 
 context P0_min
