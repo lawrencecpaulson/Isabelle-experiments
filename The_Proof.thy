@@ -139,9 +139,9 @@ proof -
     using assms by (intro H_le1) auto
   have "ff x y \<le> f1 x y"
     using assms by (simp add: ff_def f2_def)
-  also have "... \<le> y + 2"
+  also have "\<dots> \<le> y + 2"
     using assms by (simp add: f1_le)
-  also have "... \<le> 4"
+  also have "\<dots> \<le> 4"
     using assms by simp
   finally show ?thesis .
 qed
@@ -393,7 +393,7 @@ proof -
     proof -
       have "(2/3) * t \<le> (2/3) * k"
         using \<open>t < k\<close> by simp
-      also have "... \<le> (3/4 - \<eta>') * k"
+      also have "\<dots> \<le> (3/4 - \<eta>') * k"
         using 12 \<eta>' by (smt (verit) mult_right_mono of_nat_0_le_iff)
       finally show ?thesis
         by simp
@@ -427,16 +427,16 @@ proof -
                           + ok_fun_11_2 \<mu> k / k"
       using \<open>k>0\<close> divide_right_mono [OF 112, of k]
       by (simp add: add_divide_distrib x_def y_def)
-    also have "... = GG \<mu> x y + ok_fun_11_2 \<mu> k / k"
+    also have "\<dots> = GG \<mu> x y + ok_fun_11_2 \<mu> k / k"
       by (metis GG_def sts times_divide_eq_right)
-    also have "... \<le> GG \<mu> x y + ok_fun_11_1 \<mu> k / k"
+    also have "\<dots> \<le> GG \<mu> x y + ok_fun_11_1 \<mu> k / k"
       by (simp add: ok_fun_11_1_def divide_right_mono)
     finally have le_GG: "log 2 (Suc nV) / k \<le> GG \<mu> x y + ok_fun_11_1 \<mu> k / k" .
 
     have "log 2 (Suc nV) / k \<le> log 2 (RN k (k-t)) / k + x + y + (2 - ok_fun_61 k) / k"
       using \<open>k>0\<close> divide_right_mono [OF \<section>, of k] add_divide_distrib x_def y_def
       by (smt (verit) add_uminus_conv_diff of_nat_0_le_iff)
-    also have "... = FF k x y + (2 - ok_fun_61 k) / k"
+    also have "\<dots> = FF k x y + (2 - ok_fun_61 k) / k"
       by (simp add: FF_def x_def k_minus_t)
     finally have DD: "log 2 (Suc nV) / k \<le> FF k x y + (2 - ok_fun_61 k) / k" .
 
@@ -480,9 +480,9 @@ proof -
       qed
       have "log 2 (Suc nV) / k \<le> FF k x y + (2 - ok_fun_61 k) / k"
         by (metis DD)
-      also have "... \<le> ff x y + \<eta>' + (2 - ok_fun_61 k) / k"
+      also have "\<dots> \<le> ff x y + \<eta>' + (2 - ok_fun_61 k) / k"
         by (simp add: 122)
-      also have "... \<le> ff x y + \<eta>' + ok_fun_11_1 \<mu> k / k"
+      also have "\<dots> \<le> ff x y + \<eta>' + ok_fun_11_1 \<mu> k / k"
         by (simp add: ok_fun_11_1_def divide_right_mono)
       finally have le_ff: "log 2 (Suc nV) / k \<le> ff x y + \<eta>' + ok_fun_11_1 \<mu> k / k" .
       then show ?thesis
@@ -493,16 +493,16 @@ proof -
         by (metis DD)
       also have "\<dots> \<le> f1 x y + (2 - ok_fun_61 k) / k"
         using x01 y01 FF_le_f1 [of x y] by simp
-      also have "... \<le> 1.9 + (2 - ok_fun_61 k) / k"
+      also have "\<dots> \<le> 1.9 + (2 - ok_fun_61 k) / k"
         by (smt (verit) False \<open>y \<le> 3/4\<close> f1_le_19 x01(2) y01(1))
-      also have "... \<le> ffGG \<mu> x y + \<eta>"
+      also have "\<dots> \<le> ffGG \<mu> x y + \<eta>"
         by (smt (verit) P0_min.intro P0_min.ok_fun_11_1_def \<eta>'(1) \<eta>'_def divide_right_mono ffGG_def field_sum_of_halves of_nat_0_le_iff ok111_le p0_min(1) p0_min(2))
       finally show ?thesis .
     qed
     ultimately have "log 2 (RN k k) / k \<le> ffGG \<mu> x y + \<eta>"
       using ge_RN \<open>k>0\<close>
       by (smt (verit, best) Transcendental.log_mono divide_right_mono of_nat_0_less_iff of_nat_mono)
-    also have "... \<le> w"
+    also have "\<dots> \<le> w"
       unfolding w_def 
     proof (intro cSup_upper2)
       have "y \<in> {0..3/4}"
@@ -849,7 +849,7 @@ proof -
         unfolding gg_eq x_of_def using that
         by (force intro: continuous_on_subset [OF \<dagger>] continuous_intros)
     qed (use that in auto)
-    also have "... \<le> 2 - 1/2^11"
+    also have "\<dots> \<le> 2 - 1/2^11"
       unfolding gg_eq x_of_def by (approximation 10)
     finally show ?thesis .
   qed
@@ -878,23 +878,15 @@ proof -
   have D: "((\<lambda>x. f1 x (y_of x)) has_real_derivative D x) (at x)" if "x \<in> I" for x
     using that Df1_y by (force simp: D_def I_def)
   have Dgt0: "D x \<ge> 0" if "x \<in> I" for x
-  proof - (*NEW PROOF NEEDED*)
-    have "2 powr (-5/3 - 1) \<le> (1-x) / (2-x)"
-      using that unfolding I_def by (approximation 50)
-    with that show ?thesis
-      unfolding D_def df1_def I_def
-      unfolding powr_diff
-      apply (simp add: )
-      by (smt (verit, best) add_divide_distrib field_sum_of_halves le_powr_iff log_powr_cancel powr_gt_zero powr_one)
-  qed
+    using that unfolding D_def df1_def I_def by (approximation 10)
   have "f1 x y = f1 x (y_of x)"
     by (simp add: yeq)
-  also have "... \<le> f1 (3/4) (y_of (3/4))"
+  also have "\<dots> \<le> f1 (3/4) (y_of (3/4))"
     using x Dgt0
     by (force simp: I_def intro!: D DERIV_nonneg_imp_nondecreasing [where f = "\<lambda>x. f1 x (y_of x)"])
-  also have "... < 1.994"
+  also have "\<dots> < 1.994"
     by (simp add: f1_def H_def y_of_def) (approximation 50)
-  also have "... < 2 - 1/2^11"
+  also have "\<dots> < 2 - 1/2^11"
     by (approximation 50)
   finally show ?thesis
     using x_def by auto
@@ -928,7 +920,7 @@ proof -
     case False
     with that have "ff x y \<le> ff (x_of y) y"
       by (intro monotone_onD [OF antimono_on_ff]) (auto simp: x_of_def)
-    also have "... \<le> 2 - 1/2^11"
+    also have "\<dots> \<le> 2 - 1/2^11"
     proof (cases "x_of y < 3/4")
       case True
       with that have "f1 (x_of y) y \<le> 2 - 1/2^11"
@@ -981,7 +973,7 @@ proof -
     have "log 2 (RN k k) / k \<le> (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. ffGG \<mu> x y + \<eta>)"
       using that p0_min12 \<eta> \<mu>_def
       by (intro From_11_1) (auto simp: p0_min_def)
-    also have "... \<le> (SUP x \<in> {0..1}. (SUP y \<in> {0..3/4}. ffGG \<mu> x y) + \<eta>)"
+    also have "\<dots> \<le> (SUP x \<in> {0..1}. (SUP y \<in> {0..3/4}. ffGG \<mu> x y) + \<eta>)"
     proof (intro cSUP_subset_mono bdd_above.I2 [where M = "4+\<eta>"])
       fix x :: real
       assume x: "x \<in> {0..1}"
@@ -990,10 +982,10 @@ proof -
       with * x show "(\<Squnion>y\<in>{0..3/4}. ffGG \<mu> x y) + \<eta> \<le> 4 + \<eta>" 
         by simp
     qed (use * in auto)
-    also have "... = (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. ffGG \<mu> x y) + \<eta>"
+    also have "\<dots> = (SUP x \<in> {0..1}. SUP y \<in> {0..3/4}. ffGG \<mu> x y) + \<eta>"
       using bdd_above_SUP_ff_GG [of "3/4"  \<mu> 0]
       by (simp add: add.commute [of _ \<eta>] Sup_add_eq)
-    also have "... \<le> 2-\<delta> + \<eta>"
+    also have "\<dots> \<le> 2-\<delta> + \<eta>"
       using 123 [of "1 / 2^11"]
       unfolding \<delta>_def ffGG_def by (auto simp: \<delta>_def ffGG_def \<mu>_def)
     finally show ?thesis .
@@ -1011,7 +1003,7 @@ proof
   let ?\<epsilon> = "0.00134::real"
   have "\<forall>\<^sup>\<infinity>k. k>0 \<and> log 2 (RN k k) / k \<le> 2 - delta'"
     unfolding eventually_conj_iff using Aux_1_1 eventually_gt_at_top by blast 
-  then have A: "\<forall>\<^sup>\<infinity>k. RN k k \<le> (2 powr (2-delta')) ^ k"
+  then have "\<forall>\<^sup>\<infinity>k. RN k k \<le> (2 powr (2-delta')) ^ k"
   proof (eventually_elim)
     case (elim k)
     then have "log 2 (RN k k) \<le> (2-delta') * k"
@@ -1022,7 +1014,7 @@ proof
       by (simp add: mult.commute powr_power)
   qed
   moreover have "2 powr (2-delta') \<le> 4 - ?\<epsilon>"
-    unfolding delta'_def by (approximation 50)
+    unfolding delta'_def by (approximation 25)
   ultimately show "\<forall>\<^sup>\<infinity>k. real (RN k k) \<le> (4-?\<epsilon>) ^ k"
     by (smt (verit) power_mono powr_ge_pzero eventually_mono)
 qed auto
