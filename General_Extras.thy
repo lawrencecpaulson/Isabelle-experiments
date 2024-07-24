@@ -4,17 +4,34 @@ theory General_Extras imports
 
 begin
 
-(*deriv_nonneg_imp_mono: 10 uses; probably redundant thanks to DERIV_nonneg_imp_nondecreasing
-pos_deriv_imp_strict_mono: only two uses, both in Transcendental; delete?
-*)
-thm pos_deriv_imp_strict_mono deriv_nonneg_imp_mono
 
-thm eventually_sequentially
+thm mult_mono divide_left_mono
+
+context linordered_field
+begin
+
+(*REPLACE*)
+lemma divide_left_mono:
+  "\<lbrakk>b \<le> a; 0 \<le> c; 0 < b\<rbrakk> \<Longrightarrow> c / a \<le> c / b"
+  by (auto simp: field_simps zero_less_mult_iff mult_right_mono)
+
+lemma divide_mono:
+  "\<lbrakk>b \<le> a; c \<le> d; 0 < b; 0 \<le> c\<rbrakk> \<Longrightarrow> c / a \<le> d / b"
+  by (simp add: local.frac_le)
+
+end
+
+
+(*deriv_nonneg_imp_mono: 10 uses; probably redundant thanks to DERIV_nonneg_imp_nondecreasing; delete?
+*)
+thm  deriv_nonneg_imp_mono
+
+(*migrated 2024-07-23*)
 lemma frequently_sequentially:
   "frequently P sequentially \<longleftrightarrow> (\<forall>N. \<exists>n\<ge>N. P n)"
   by (simp add: frequently_def eventually_sequentially)
 
-thm at_within_Icc_at_right
+(*migrated 2024-07-23*)
 lemma (in order_topology)
   shows at_within_Ici_at_right: "at a within {a..} = at_right a"
     and at_within_Iic_at_left:  "at a within {..a} = at_left a"
@@ -38,109 +55,109 @@ lemma log_exp [simp]: "log b (exp x) = x / ln b"
 
 thm of_nat_le_iff
 context linordered_nonzero_semiring
-begin
-
-lemma one_of_nat_le_iff [simp]: "1 \<le> of_nat k \<longleftrightarrow> 1 \<le> k"
-  using of_nat_le_iff [of 1] by simp
-
-lemma numeral_nat_le_iff [simp]: "numeral n \<le> of_nat k \<longleftrightarrow> numeral n \<le> k"
-  using of_nat_le_iff [of "numeral n"] by simp
-
-lemma of_nat_le_1_iff [simp]: "of_nat k \<le> 1 \<longleftrightarrow> k \<le> 1"
-  using of_nat_le_iff [of _ 1] by simp
-
-lemma of_nat_le_numeral_iff [simp]: "of_nat k \<le> numeral n \<longleftrightarrow> k \<le> numeral n"
-  using of_nat_le_iff [of _ "numeral n"] by simp
-
-lemma one_of_nat_less_iff [simp]: "1 < of_nat k \<longleftrightarrow> 1 < k"
-  using of_nat_less_iff [of 1] by simp
-
-lemma numeral_nat_less_iff [simp]: "numeral n < of_nat k \<longleftrightarrow> numeral n < k"
-  using of_nat_less_iff [of "numeral n"] by simp
-
-lemma of_nat_less_1_iff [simp]: "of_nat k < 1 \<longleftrightarrow> k < 1"
-  using of_nat_less_iff [of _ 1] by simp
-
-lemma of_nat_less_numeral_iff [simp]: "of_nat k < numeral n \<longleftrightarrow> k < numeral n"
-  using of_nat_less_iff [of _ "numeral n"] by simp
-
-lemma of_nat_eq_numeral_iff [simp]: "of_nat k = numeral n \<longleftrightarrow> k = numeral n"
-  using of_nat_eq_iff [of _ "numeral n"] by simp
+begin (*migrated 2024-07-23*)
+    
+    lemma one_of_nat_le_iff [simp]: "1 \<le> of_nat k \<longleftrightarrow> 1 \<le> k"
+      using of_nat_le_iff [of 1] by simp
+    
+    lemma numeral_nat_le_iff [simp]: "numeral n \<le> of_nat k \<longleftrightarrow> numeral n \<le> k"
+      using of_nat_le_iff [of "numeral n"] by simp
+    
+    lemma of_nat_le_1_iff [simp]: "of_nat k \<le> 1 \<longleftrightarrow> k \<le> 1"
+      using of_nat_le_iff [of _ 1] by simp
+    
+    lemma of_nat_le_numeral_iff [simp]: "of_nat k \<le> numeral n \<longleftrightarrow> k \<le> numeral n"
+      using of_nat_le_iff [of _ "numeral n"] by simp
+    
+    lemma one_of_nat_less_iff [simp]: "1 < of_nat k \<longleftrightarrow> 1 < k"
+      using of_nat_less_iff [of 1] by simp
+    
+    lemma numeral_nat_less_iff [simp]: "numeral n < of_nat k \<longleftrightarrow> numeral n < k"
+      using of_nat_less_iff [of "numeral n"] by simp
+    
+    lemma of_nat_less_1_iff [simp]: "of_nat k < 1 \<longleftrightarrow> k < 1"
+      using of_nat_less_iff [of _ 1] by simp
+    
+    lemma of_nat_less_numeral_iff [simp]: "of_nat k < numeral n \<longleftrightarrow> k < numeral n"
+      using of_nat_less_iff [of _ "numeral n"] by simp
+    
+    lemma of_nat_eq_numeral_iff [simp]: "of_nat k = numeral n \<longleftrightarrow> k = numeral n"
+      using of_nat_eq_iff [of _ "numeral n"] by simp
 
 end
 
-thm deriv_nonneg_imp_mono
-proposition deriv_nonpos_imp_antimono:
-  assumes deriv: "\<And>x. x \<in> {a..b} \<Longrightarrow> (g has_real_derivative g' x) (at x)"
-  assumes nonneg: "\<And>x. x \<in> {a..b} \<Longrightarrow> g' x \<le> 0"
-  assumes "a \<le> b"
-  shows "g b \<le> g a"
-proof -
-  have "- g a \<le> - g b"
-  proof (rule deriv_nonneg_imp_mono [where g = "\<lambda>x. - g x"])
-    fix x
-    assume x: "x \<in> {a..b}"
-    show "((\<lambda>x. - g x) has_real_derivative - g' x) (at x)"
-      by (rule derivative_eq_intros deriv x refl)+
-    show "0 \<le> - g' x"
-      using nonneg [OF x] by simp
-  qed (rule \<open>a\<le>b\<close>)
-  then show ?thesis by simp
-qed
+    proposition deriv_nonpos_imp_antimono:(*migrated 2024-07-23*)
+      assumes deriv: "\<And>x. x \<in> {a..b} \<Longrightarrow> (g has_real_derivative g' x) (at x)"
+      assumes nonneg: "\<And>x. x \<in> {a..b} \<Longrightarrow> g' x \<le> 0"
+      assumes "a \<le> b"
+      shows "g b \<le> g a"
+    proof -
+      have "- g a \<le> - g b"
+      proof (rule deriv_nonneg_imp_mono [where g = "\<lambda>x. - g x"])
+        fix x
+        assume x: "x \<in> {a..b}"
+        show "((\<lambda>x. - g x) has_real_derivative - g' x) (at x)"
+          by (rule derivative_eq_intros deriv x refl)+
+        show "0 \<le> - g' x"
+          using nonneg [OF x] by simp
+      qed (rule \<open>a\<le>b\<close>)
+      then show ?thesis by simp
+    qed
+    
+    lemma DERIV_nonneg_imp_increasing_open:(*migrated 2024-07-23*)
+      fixes a b :: real
+        and f :: "real \<Rightarrow> real"
+      assumes "a \<le> b"
+        and "\<And>x. a < x \<Longrightarrow> x < b \<Longrightarrow> (\<exists>y. DERIV f x :> y \<and> y \<ge> 0)"
+        and con: "continuous_on {a..b} f"
+      shows "f a \<le> f b"
+    proof (cases "a=b")
+      case False
+      with \<open>a\<le>b\<close> have "a<b" by simp
+      show ?thesis 
+      proof (rule ccontr)
+        assume f: "\<not> ?thesis"
+        have "\<exists>l z. a < z \<and> z < b \<and> DERIV f z :> l \<and> f b - f a = (b - a) * l"
+          by (rule MVT) (use assms \<open>a<b\<close> real_differentiable_def in \<open>force+\<close>)
+        then obtain l z where z: "a < z" "z < b" "DERIV f z :> l" and "f b - f a = (b - a) * l"
+          by auto
+        with assms z f show False
+          by (metis DERIV_unique diff_ge_0_iff_ge zero_le_mult_iff)
+      qed
+    qed auto
+    
+    lemma DERIV_nonpos_imp_decreasing_open:(*migrated 2024-07-23*)
+      fixes a b :: real
+        and f :: "real \<Rightarrow> real"
+      assumes "a \<le> b"
+        and "\<And>x. a < x \<Longrightarrow> x < b \<Longrightarrow> \<exists>y. DERIV f x :> y \<and> y \<le> 0"
+        and con: "continuous_on {a..b} f"
+      shows "f a \<ge> f b"
+    proof -
+      have "(\<lambda>x. -f x) a \<le> (\<lambda>x. -f x) b"
+      proof (rule DERIV_nonneg_imp_increasing_open [of a b])
+        show "\<And>x. \<lbrakk>a < x; x < b\<rbrakk> \<Longrightarrow> \<exists>y. ((\<lambda>x. - f x) has_real_derivative y) (at x) \<and> 0 \<le> y"
+          using assms
+          by (metis Deriv.field_differentiable_minus neg_0_le_iff_le)
+        show "continuous_on {a..b} (\<lambda>x. - f x)"
+          using con continuous_on_minus by blast
+      qed (use assms in auto)
+      then show ?thesis
+        by simp
+    qed
 
-lemma DERIV_nonneg_imp_increasing_open:
-  fixes a b :: real
-    and f :: "real \<Rightarrow> real"
-  assumes "a \<le> b"
-    and "\<And>x. a < x \<Longrightarrow> x < b \<Longrightarrow> (\<exists>y. DERIV f x :> y \<and> y \<ge> 0)"
-    and con: "continuous_on {a..b} f"
-  shows "f a \<le> f b"
-proof (cases "a=b")
-  case False
-  with \<open>a\<le>b\<close> have "a<b" by simp
-  show ?thesis 
-  proof (rule ccontr)
-    assume f: "\<not> ?thesis"
-    have "\<exists>l z. a < z \<and> z < b \<and> DERIV f z :> l \<and> f b - f a = (b - a) * l"
-      by (rule MVT) (use assms \<open>a<b\<close> real_differentiable_def in \<open>force+\<close>)
-    then obtain l z where z: "a < z" "z < b" "DERIV f z :> l" and "f b - f a = (b - a) * l"
-      by auto
-    with assms z f show False
-      by (metis DERIV_unique diff_ge_0_iff_ge zero_le_mult_iff)
-  qed
-qed auto
-
-lemma DERIV_nonpos_imp_decreasing_open:
-  fixes a b :: real
-    and f :: "real \<Rightarrow> real"
-  assumes "a \<le> b"
-    and "\<And>x. a < x \<Longrightarrow> x < b \<Longrightarrow> \<exists>y. DERIV f x :> y \<and> y \<le> 0"
-    and con: "continuous_on {a..b} f"
-  shows "f a \<ge> f b"
-proof -
-  have "(\<lambda>x. -f x) a \<le> (\<lambda>x. -f x) b"
-  proof (rule DERIV_nonneg_imp_increasing_open [of a b])
-    show "\<And>x. \<lbrakk>a < x; x < b\<rbrakk> \<Longrightarrow> \<exists>y. ((\<lambda>x. - f x) has_real_derivative y) (at x) \<and> 0 \<le> y"
-      using assms
-      by (metis Deriv.field_differentiable_minus neg_0_le_iff_le)
-    show "continuous_on {a..b} (\<lambda>x. - f x)"
-      using con continuous_on_minus by blast
-  qed (use assms in auto)
-  then show ?thesis
-    by simp
-qed
-
-lemma floor_ceiling_diff_le: "0 \<le> r \<Longrightarrow> nat\<lfloor>real k - r\<rfloor> \<le> k - nat\<lceil>r\<rceil>"
-  by linarith
-
-lemma floor_ceiling_diff_le': "nat\<lfloor>r - real k\<rfloor> \<le> nat\<lceil>r\<rceil> - k"
-  by linarith
-
-lemma ceiling_floor_diff_ge: "nat\<lceil>r - real k\<rceil> \<ge> nat\<lfloor>r\<rfloor> - k"
-  by linarith
-
-lemma ceiling_floor_diff_ge': "r \<le> k \<Longrightarrow> nat\<lceil>r - real k\<rceil> \<le> k - nat\<lfloor>r\<rfloor>"
-  by linarith
+  (*migrated 2024-07-23*)
+  lemma floor_ceiling_diff_le: "0 \<le> r \<Longrightarrow> nat\<lfloor>real k - r\<rfloor> \<le> k - nat\<lceil>r\<rceil>"
+    by linarith
+  
+  lemma floor_ceiling_diff_le': "nat\<lfloor>r - real k\<rfloor> \<le> nat\<lceil>r\<rceil> - k"
+    by linarith
+  
+  lemma ceiling_floor_diff_ge: "nat\<lceil>r - real k\<rceil> \<ge> nat\<lfloor>r\<rfloor> - k"
+    by linarith
+  
+  lemma ceiling_floor_diff_ge': "r \<le> k \<Longrightarrow> nat\<lceil>r - real k\<rceil> \<le> k - nat\<lfloor>r\<rfloor>"
+    by linarith
 
 
 lemma exp_minus': "exp (-x) = 1 / (exp x)"
@@ -174,93 +191,94 @@ proof -
     by (smt (verit) eventually_elim2 landau_o.smallI)+
 qed
 
-
+(*migrated 2024-06?*)
 declare eventually_frequently_const_simps [simp] of_nat_diff [simp]
 
-lemma mult_le_1_iff: "\<lbrakk>x\<ge>1; y\<ge>1\<rbrakk> \<Longrightarrow> x*y \<ge> (1::real)"
+lemma mult_ge1_I: "\<lbrakk>x\<ge>1; y\<ge>1\<rbrakk> \<Longrightarrow> x*y \<ge> (1::real)"
   by (smt (verit, best) mult_less_cancel_right2)
 
 lemma sum_eq_card: "finite A \<Longrightarrow> (\<Sum>x \<in> A. if x \<in> B then 1 else 0) = card (A\<inter>B)"
   by (metis (no_types, lifting) card_eq_sum sum.cong sum.inter_restrict)
 
-thm lift_Suc_mono_le (*Generalising this, in Nat*)
+thm lift_Suc_mono_le (*Generalising those in Nat*) (*migrated 2024-07-23*)
 context order
 begin
-
-lemma lift_Suc_mono_le:
-  assumes mono: "\<And>n. n\<in>N \<Longrightarrow> f n \<le> f (Suc n)"
-    and "n \<le> n'" and subN: "{n..<n'} \<subseteq> N"
-  shows "f n \<le> f n'"
-proof (cases "n < n'")
-  case True
-  then show ?thesis
-    using subN
-  proof (induction n n' rule: less_Suc_induct)
-    case (1 i)
-    then show ?case
-      by (simp add: mono subsetD) 
-  next
-    case (2 i j k)
-    have "f i \<le> f j" "f j \<le> f k"
-      using 2 by force+
-    then show ?case by auto 
-  qed
-next
-  case False
-  with \<open>n \<le> n'\<close> show ?thesis by auto
-qed
-
-lemma lift_Suc_antimono_le:
-  assumes mono: "\<And>n. n\<in>N \<Longrightarrow> f n \<ge> f (Suc n)"
-    and "n \<le> n'" and subN: "{n..<n'} \<subseteq> N"
-  shows "f n \<ge> f n'"
-proof (cases "n < n'")
-  case True
-  then show ?thesis
-    using subN
-  proof (induction n n' rule: less_Suc_induct)
-    case (1 i)
-    then show ?case
-      by (simp add: mono subsetD) 
-  next
-    case (2 i j k)
-    have "f i \<ge> f j" "f j \<ge> f k"
-      using 2 by force+
-    then show ?case by auto 
-  qed
-next
-  case False
-  with \<open>n \<le> n'\<close> show ?thesis by auto
-qed
-
-lemma lift_Suc_mono_less:
-  assumes mono: "\<And>n. n\<in>N \<Longrightarrow> f n < f (Suc n)"
-    and "n < n'" and subN: "{n..<n'} \<subseteq> N"
-  shows "f n < f n'"
-  using \<open>n < n'\<close>
-  using subN
-proof (induction n n' rule: less_Suc_induct)
-  case (1 i)
-  then show ?case
-    by (simp add: mono subsetD) 
-next
-  case (2 i j k)
-  have "f i < f j" "f j < f k"
-    using 2 by force+
-  then show ?case by auto 
-qed
+    
+    lemma lift_Suc_mono_le:
+      assumes mono: "\<And>n. n\<in>N \<Longrightarrow> f n \<le> f (Suc n)"
+        and "n \<le> n'" and subN: "{n..<n'} \<subseteq> N"
+      shows "f n \<le> f n'"
+    proof (cases "n < n'")
+      case True
+      then show ?thesis
+        using subN
+      proof (induction n n' rule: less_Suc_induct)
+        case (1 i)
+        then show ?case
+          by (simp add: mono subsetD) 
+      next
+        case (2 i j k)
+        have "f i \<le> f j" "f j \<le> f k"
+          using 2 by force+
+        then show ?case by auto 
+      qed
+    next
+      case False
+      with \<open>n \<le> n'\<close> show ?thesis by auto
+    qed
+    
+    lemma lift_Suc_antimono_le:
+      assumes mono: "\<And>n. n\<in>N \<Longrightarrow> f n \<ge> f (Suc n)"
+        and "n \<le> n'" and subN: "{n..<n'} \<subseteq> N"
+      shows "f n \<ge> f n'"
+    proof (cases "n < n'")
+      case True
+      then show ?thesis
+        using subN
+      proof (induction n n' rule: less_Suc_induct)
+        case (1 i)
+        then show ?case
+          by (simp add: mono subsetD) 
+      next
+        case (2 i j k)
+        have "f i \<ge> f j" "f j \<ge> f k"
+          using 2 by force+
+        then show ?case by auto 
+      qed
+    next
+      case False
+      with \<open>n \<le> n'\<close> show ?thesis by auto
+    qed
+    
+    lemma lift_Suc_mono_less:
+      assumes mono: "\<And>n. n\<in>N \<Longrightarrow> f n < f (Suc n)"
+        and "n < n'" and subN: "{n..<n'} \<subseteq> N"
+      shows "f n < f n'"
+      using \<open>n < n'\<close>
+      using subN
+    proof (induction n n' rule: less_Suc_induct)
+      case (1 i)
+      then show ?case
+        by (simp add: mono subsetD) 
+    next
+      case (2 i j k)
+      have "f i < f j" "f j < f k"
+        using 2 by force+
+      then show ?case by auto 
+    qed
  
 end
+
 lemma eventually_all_geI0:
-  assumes "\<forall>\<^sub>F l in sequentially. P \<mu>0 l"  
-          "\<And>l \<mu>. \<lbrakk>P \<mu>0 l; \<mu>0\<le>\<mu>; \<mu>\<le>\<mu>1; l \<ge> L\<rbrakk> \<Longrightarrow> P \<mu> l"
-  shows "\<forall>\<^sub>F l in sequentially. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> P \<mu> l"
+  assumes "\<forall>\<^sub>F l in sequentially. P a l"  
+          "\<And>l x. \<lbrakk>P a l; a\<le>x; x\<le>b; l \<ge> L\<rbrakk> \<Longrightarrow> P x l"
+  shows "\<forall>\<^sub>F l in sequentially. \<forall>x. a \<le> x \<and> x \<le> b \<longrightarrow> P x l"
   by (smt (verit, del_insts) assms eventually_sequentially eventually_elim2)
 
 lemma eventually_all_geI1:
-  assumes "\<forall>\<^sub>F l in sequentially. P \<mu>1 l"  
-          "\<And>l \<mu>. \<lbrakk>P \<mu>1 l; \<mu>0\<le>\<mu>; \<mu>\<le>\<mu>1; l \<ge> L\<rbrakk> \<Longrightarrow> P \<mu> l"
-  shows "\<forall>\<^sub>F l in sequentially. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> P \<mu> l"
+  assumes "\<forall>\<^sub>F l in sequentially. P b l"  
+          "\<And>l x. \<lbrakk>P b l; a\<le>x; x\<le>b; l \<ge> L\<rbrakk> \<Longrightarrow> P x l"
+  shows "\<forall>\<^sub>F l in sequentially. \<forall>x. a \<le> x \<and> x \<le> b \<longrightarrow> P x l"
   by (smt (verit, del_insts) assms eventually_sequentially eventually_elim2)
 
 lemma of_nat_add_numeral: "of_nat n + numeral w = of_nat (n + numeral w)"
@@ -273,31 +291,31 @@ lemma of_nat_mult_numeral: "of_nat n * numeral w = of_nat (n * numeral w)"
 lemma (in linordered_semidom) prod_negD: "prod f A < 0 \<Longrightarrow> \<exists>a\<in>A. f a < 0"
   using prod_nonneg [of A f] by fastforce
 
-thm sum_diff_split
-lemma prod_divide_nat_ivl:
-  fixes f :: "nat \<Rightarrow> 'a::idom_divide"
-  shows "\<lbrakk> m \<le> n; n \<le> p; prod f {m..<n} \<noteq> 0\<rbrakk> \<Longrightarrow> prod f {m..<p} div prod f {m..<n} = prod f {n..<p}"
-  using prod.atLeastLessThan_concat [of m n p f,symmetric]
-  by (simp add: ac_simps)
 
-lemma prod_divide_split:
-  fixes f:: "nat \<Rightarrow> 'a::idom_divide"
-  assumes "m \<le> n" "(\<Prod>i<m. f i) \<noteq> 0"
-  shows "(\<Prod>i\<le>n. f i) div (\<Prod>i<m. f i) = (\<Prod>i\<le>n - m. f(n - i))"
-proof -
-  have "\<And>i. i \<le> n-m \<Longrightarrow> \<exists>k\<ge>m. k \<le> n \<and> i = n-k"
-    by (metis Nat.le_diff_conv2 add.commute \<open>m\<le>n\<close> diff_diff_cancel diff_le_self order.trans)
-  then have eq: "{..n-m} = (-)n ` {m..n}"
-    by force
-  have inj: "inj_on ((-)n) {m..n}"
-    by (auto simp: inj_on_def)
-  have "(\<Prod>i\<le>n - m. f(n - i)) = (\<Prod>i=m..n. f i)"
-    by (simp add: eq prod.reindex_cong [OF inj])
-  also have "\<dots> = (\<Prod>i\<le>n. f i) div (\<Prod>i<m. f i)"
-    using prod_divide_nat_ivl[of 0 "m" "Suc n" f] assms
-    by (force simp: atLeast0AtMost atLeast0LessThan atLeastLessThanSuc_atLeastAtMost)
-  finally show ?thesis by metis
-qed
+    lemma prod_divide_nat_ivl: (*migrated 2024-07-23*)
+      fixes f :: "nat \<Rightarrow> 'a::idom_divide"
+      shows "\<lbrakk> m \<le> n; n \<le> p; prod f {m..<n} \<noteq> 0\<rbrakk> \<Longrightarrow> prod f {m..<p} div prod f {m..<n} = prod f {n..<p}"
+      using prod.atLeastLessThan_concat [of m n p f,symmetric]
+      by (simp add: ac_simps)
+    
+    lemma prod_divide_split: (*migrated 2024-07-23*)
+      fixes f:: "nat \<Rightarrow> 'a::idom_divide"
+      assumes "m \<le> n" "(\<Prod>i<m. f i) \<noteq> 0"
+      shows "(\<Prod>i\<le>n. f i) div (\<Prod>i<m. f i) = (\<Prod>i\<le>n - m. f(n - i))"
+    proof -
+      have "\<And>i. i \<le> n-m \<Longrightarrow> \<exists>k\<ge>m. k \<le> n \<and> i = n-k"
+        by (metis Nat.le_diff_conv2 add.commute \<open>m\<le>n\<close> diff_diff_cancel diff_le_self order.trans)
+      then have eq: "{..n-m} = (-)n ` {m..n}"
+        by force
+      have inj: "inj_on ((-)n) {m..n}"
+        by (auto simp: inj_on_def)
+      have "(\<Prod>i\<le>n - m. f(n - i)) = (\<Prod>i=m..n. f i)"
+        by (simp add: eq prod.reindex_cong [OF inj])
+      also have "\<dots> = (\<Prod>i\<le>n. f i) div (\<Prod>i<m. f i)"
+        using prod_divide_nat_ivl[of 0 "m" "Suc n" f] assms
+        by (force simp: atLeast0AtMost atLeast0LessThan atLeastLessThanSuc_atLeastAtMost)
+      finally show ?thesis by metis
+    qed
 
 lemma exp_mono:
   fixes x y :: real

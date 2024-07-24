@@ -201,8 +201,8 @@ proof -
         using k_big by (smt (verit) eps_ge0 powr_mono)
       show "0 \<le> \<Delta> i / alpha k (hgt k (p i))"
         by (simp add: \<Delta>0 \<Delta>\<Delta>_ge0 \<open>i \<in> \<S>\<close> alpha_ge0)
-      show "0 < (1 + eps k powr (1/2)) * (1 + eps k) powr (real (hgt k (p (Suc i))) - real (hgt k (p i)))"
-        using eps_gt0 [OF \<open>k>0\<close>] by (smt (verit) powr_gt_zero zero_less_mult_iff)
+      show "0 < (1 + eps k) powr (real (hgt k (p (Suc i))) - real (hgt k (p i)))"
+        using eps_gt0 [OF \<open>k>0\<close>] by auto
     qed
     also have "\<dots> \<le> \<Delta> i / alpha k (hgt k (p (Suc i)))"
     proof -
@@ -211,8 +211,8 @@ proof -
         by (simp add: alpha_eq divide_right_mono flip: powr_realpow powr_add)
       moreover have "0 \<le> \<Delta> i"
         by (simp add: \<Delta>0 \<Delta>\<Delta>_ge0 \<open>i \<in> \<S>\<close>)
-      moreover have "0 < alpha k (hgt k (p i)) * (1 + eps k) powr (real (hgt k (p (Suc i))) - hgt k (p i)) * alpha k (hgt k (p (Suc i)))"
-        by (smt (verit) alpha_gt0 eps_gt0 hgt_gt0 \<open>k>0\<close> mult_pos_pos powr_gt_zero)
+      moreover have "0 < alpha k (hgt k (p (Suc i)))"
+        by (simp add: alpha_gt0 hgt_gt0 \<open>k>0\<close>)
       ultimately show ?thesis
         by (simp add: divide_left_mono)
     qed
@@ -237,10 +237,10 @@ proof -
             using "2" alpha_mono h by auto
           moreover have "0 \<le> \<Delta>\<Delta> i h"
             using \<Delta>\<Delta>_ge0 \<open>i \<in> \<S>\<close> h by presburger
-          moreover have "0 < alpha k (hgt k (p (Suc i))) * alpha k h"
-            using h \<open>k>0\<close> by (simp add: zero_less_mult_iff alpha_gt0 hgt_gt0)
+          moreover have "0 < alpha k h"
+            using h \<open>k>0\<close> by (simp add: alpha_gt0 hgt_gt0)
           ultimately show ?thesis
-            by (meson divide_left_mono)
+            by (simp add: divide_left_mono)
         qed
       qed (auto simp: \<Delta>\<Delta>_eq_0)
     qed

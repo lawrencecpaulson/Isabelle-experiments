@@ -5,22 +5,6 @@ theory The_Proof
 
 begin
 
-thm mult_mono divide_left_mono
-
-context linordered_field
-begin
-
-(*REPLACE*)
-lemma divide_left_mono:
-  "\<lbrakk>b \<le> a; 0 \<le> c; 0 < b\<rbrakk> \<Longrightarrow> c / a \<le> c / b"
-  by (auto simp: field_simps zero_less_mult_iff mult_right_mono)
-
-lemma divide_mono:
-  "\<lbrakk>b \<le> a; c \<le> d; 0 < b; 0 \<le> c\<rbrakk> \<Longrightarrow> c / a \<le> d / b"
-  by (simp add: local.frac_le)
-
-end
-
 subsection \<open>The bounding functions\<close>
 
 definition "H \<equiv> \<lambda>p. -p * log 2 p - (1-p) * log 2 (1-p)"
@@ -856,7 +840,7 @@ proof -
   moreover
   have ?thesis if "y \<in> {1/10 .. 3/4}"
     using that unfolding gg_eq x_of_def 
-    by (approximation 24 splitting: y = 12)
+    by (approximation 24 splitting: y = 12)   \<comment>\<open>many thanks to Fabian Immler\<close>
   ultimately show ?thesis
     by (meson assms atLeastAtMost_iff linear)
 qed
@@ -904,6 +888,7 @@ lemma A4:
 context P0_min
 begin 
 
+text \<open>The truly horrible Lemma 12.3\<close>
 lemma 123:
   fixes \<delta>::real
   assumes "0 < \<delta>" "\<delta> \<le> 1 / 2^11"

@@ -1031,7 +1031,7 @@ proof -
     have "1 * real(k-t+l choose l) 
             \<le> exp (ok_fun_95b k + \<gamma>*k/60) * (k-t+l choose l)"
       using big \<open>k\<ge>l\<close> unfolding Big_Far_9_2_def
-      by (intro mult_right_mono mult_le_1_iff) auto
+      by (intro mult_right_mono mult_ge1_I) auto
     also have "\<dots> \<le> exp (3*\<gamma>*t\<^sup>2 / (20*k) + -\<delta> * k + ok_fun_95b k) * (k-t+l choose l)"
       using C by simp
     also have "\<dots> = exp (3*\<gamma>*t\<^sup>2 / (10*k)) * exp (-\<delta> * k + ok_fun_95b k) * exp (- 3*\<gamma>*t\<^sup>2 / (20*k))
