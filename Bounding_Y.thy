@@ -12,7 +12,7 @@ begin
 
 lemma Y_6_4_Red: 
   assumes "i \<in> Step_class \<mu> {red_step}"
-  shows "pee \<mu> (Suc i) \<ge> pee \<mu> i - alpha (hgt k (pee \<mu> i))"
+  shows "pee \<mu> (Suc i) \<ge> pee \<mu> i - alpha (hgt (pee \<mu> i))"
   using assms
   by (auto simp: step_kind_defs next_state_def Let_def cvx_def reddish_def pee_def
       split: if_split_asm prod.split)
@@ -25,7 +25,7 @@ lemma Y_6_4_DegreeReg:
 
 lemma Y_6_4_Bblue: 
   assumes i: "i \<in> Step_class \<mu> {bblue_step}" and "0 < \<mu>"
-  shows "pee \<mu> (Suc i) \<ge> pee \<mu> (i-1) - (eps k powr (-1/2)) * alpha (hgt k (pee \<mu> (i-1)))"
+  shows "pee \<mu> (Suc i) \<ge> pee \<mu> (i-1) - (eps k powr (-1/2)) * alpha (hgt (pee \<mu> (i-1)))"
 proof -
   define X where "X \<equiv> Xseq \<mu> i" 
   define Y where "Y \<equiv> Yseq \<mu> i"
@@ -59,7 +59,7 @@ proof -
   then have Xeq: "X = X_degree_reg (Xseq \<mu> i') (Yseq \<mu> i')"
        and  Yeq: "Y = Yseq \<mu> i'"
     using Suci' by (auto simp: X_def Y_def)
-  define pm where "pm \<equiv> (pee \<mu> i' - eps k powr (-1/2) * alpha (hgt k (pee \<mu> i')))"
+  define pm where "pm \<equiv> (pee \<mu> i' - eps k powr (-1/2) * alpha (hgt (pee \<mu> i')))"
   have "T \<subseteq> X"
     using bluebook by (simp add: choose_blue_book_subset fin(1))
   then have T_reds: "\<And>x. x \<in> T \<Longrightarrow> pm * card Y \<le> card (Neighbours Red x \<inter> Y)"
@@ -139,9 +139,9 @@ proof -
     have pee: "p (Suc i) < p (i-1)" "p (i-1) \<le> p0"
       and iB: "i \<in> \<B>"
       using i by (auto simp: Z_class_def p_def)
-    have "hgt k (p (i-1)) = 1"
+    have "hgt (p (i-1)) = 1"
     proof -
-      have "hgt k (p (i-1)) \<le> 1"
+      have "hgt (p (i-1)) \<le> 1"
       proof (intro hgt_Least)
         show "p (i-1) \<le> qfun k 1"
           unfolding qfun_eq
@@ -184,15 +184,15 @@ proof -
   { fix i
     assume i: "i \<in> \<R> \<inter> Z_class \<mu>" 
     then have pee_alpha: "p (i-1) - p (Suc i) 
-                       \<le> p (i-1) - p i + alpha (hgt k (p i))"
+                       \<le> p (i-1) - p i + alpha (hgt (p i))"
       using Y_6_4_Red by (force simp: p_def \<R>_def)
     have pee_le: "p (i-1) \<le> p i"
       using dreg_before_step Y_6_4_DegreeReg i step_odd
       apply (simp add: \<R>_def p_def Step_class_insert_NO_MATCH)
       by (metis odd_Suc_minus_one)
-    consider (1) "hgt k (p i) = 1" | (2) "hgt k (p i) > 1"
+    consider (1) "hgt (p i) = 1" | (2) "hgt (p i) > 1"
       by (metis hgt_gt0 less_one nat_neq_iff)
-    then have "p (i-1) - p i + alpha (hgt k (p i)) \<le> eps k / k"
+    then have "p (i-1) - p i + alpha (hgt (p i)) \<le> eps k / k"
     proof cases
       case 1
       then show ?thesis
@@ -206,7 +206,7 @@ proof -
       also have pee2: "\<dots> \<le> p i"
         using alpha_eq p_gt_q by (smt (verit, best) kn0 qfun_mono zero_le_one) 
       finally have "p (i-1) \<le> p i" .
-      then have "p (i-1) - p i + alpha (hgt k (p i)) 
+      then have "p (i-1) - p i + alpha (hgt (p i)) 
               \<le> qfun k 0 - p i + eps k * (p i - qfun k 0 + 1/k)"
         using Red_5_7b pee_le_q0 pee2 by fastforce
       also have "\<dots> \<le> eps k / k"
@@ -244,7 +244,7 @@ subsection \<open>Lemma 6.5\<close>
 lemma Y_6_5_Red:
   assumes i: "i \<in> Step_class \<mu> {red_step}" and "k\<ge>16"
   defines "p \<equiv> pee \<mu>"
-  defines "h \<equiv> \<lambda>i. hgt k (p i)"
+  defines "h \<equiv> \<lambda>i. hgt (p i)"
   shows "h (Suc i) \<ge> h i - 2"
 proof (cases "h i \<le> 3")
   case True
@@ -282,19 +282,19 @@ next
   also have "\<dots> \<le> p (Suc i)"
     using Y_6_4_Red i by (force simp: h_def p_def)
   finally have "qfun k (h i - 3) < p (Suc i)" .
-  with hgt_greater[OF kn0] show ?thesis
+  with hgt_greater show ?thesis
     unfolding h_def by force
 qed
 
 lemma Y_6_5_DegreeReg: 
   assumes "i \<in> Step_class \<mu> {dreg_step}" and "k>0"
-  shows "hgt k (pee \<mu> (Suc i)) \<ge> hgt k (pee \<mu> i)"
+  shows "hgt (pee \<mu> (Suc i)) \<ge> hgt (pee \<mu> i)"
   using hgt_mono Y_6_4_DegreeReg assms by presburger
 
 corollary Y_6_5_dbooSt:
   assumes "0<\<mu>" "\<mu><1" and "i \<in> Step_class \<mu> {dboost_step}"
     and "Big_Red_5_3 \<mu> l" 
-  shows "hgt k (pee \<mu> (Suc i)) \<ge> hgt k (pee \<mu> i)"
+  shows "hgt (pee \<mu> (Suc i)) \<ge> hgt (pee \<mu> i)"
   using kn0 Red_5_3 assms hgt_mono by blast
 
 text \<open>this remark near the top of page 19 only holds in the limit\<close>
@@ -318,8 +318,8 @@ lemma (in Book) Y_6_5_Bblue:
   assumes i: "i \<in> Step_class \<mu> {bblue_step}"
     and big: "Big_Y_6_5_Bblue l"
   defines "p \<equiv> pee \<mu>"
-  defines "h \<equiv> hgt k (p (i-1))"
-  shows "hgt k (p (Suc i)) \<ge> h - 2*\<kappa>"
+  defines "h \<equiv> hgt (p (i-1))"
+  shows "hgt (p (Suc i)) \<ge> h - 2*\<kappa>"
 proof (cases "h > 2*\<kappa> + 1")
   case True
   then have "0 < h - 1"
@@ -358,8 +358,8 @@ proof (cases "h > 2*\<kappa> + 1")
   also have "\<dots> < p (Suc i)"
     using A by blast
   finally have "qfun k (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) < p (Suc i)" .
-  then have "h - nat \<lfloor>2 * \<kappa>\<rfloor> \<le> hgt k (p (Suc i))"
-    using hgt_greater [OF kn0] by force
+  then have "h - nat \<lfloor>2 * \<kappa>\<rfloor> \<le> hgt (p (Suc i))"
+    using hgt_greater by force
   with less_h show ?thesis
     unfolding \<kappa>_def
     by (smt (verit) less_imp_le_nat of_nat_diff of_nat_floor of_nat_mono powr_ge_pzero)
@@ -406,7 +406,7 @@ next
   then have pj_less: "p(Suc j) < p0" by linarith
   have big53: "Big_Red_5_3 \<mu> l"
     and Y63: "(\<Sum>i \<in> Z_class \<mu>. p (i-1) - p (Suc i)) \<le> 2 * eps k"
-    and Y65B:  "\<And>i. i \<in> Step_class \<mu> {bblue_step} \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2*(eps k powr (-1/2))"
+    and Y65B:  "\<And>i. i \<in> Step_class \<mu> {bblue_step} \<Longrightarrow> hgt (p (Suc i)) \<ge> hgt (p (i-1)) - 2*(eps k powr (-1/2))"
     and big1: "((1 + eps k)^2) * eps k powr (1/2) \<le> 1" and big2: "(1 + eps k) powr (2 * eps k powr (-1/2)) \<le> 2"
     and "k\<ge>16"
     using big \<mu> Y_6_5_Bblue Y_6_3 kn0 l_le_k by (auto simp: Big_Y_6_2_def p_def)
@@ -509,7 +509,7 @@ next
   then have "p (j'+2) < p0"
     using maximal[of "j'+2"] False \<open>j' < j\<close> j odd_RBS 
     by (simp add: J_def) (smt (verit, best) Suc_lessI even_Suc)
-  then have le1: "hgt k (p (j'+2)) \<le> 1"
+  then have le1: "hgt (p (j'+2)) \<le> 1"
     by (smt (verit) kn0 hgt_Least qfun0 qfun_strict_mono zero_less_one)
   moreover 
   have j'_dreg: "j' \<in> Step_class \<mu> {dreg_step}"
@@ -521,12 +521,12 @@ next
          | (S) "Suc j' \<in> Step_class \<mu> {dboost_step}"
     by (metis Step_class_insert UnE \<open>Suc j' \<in> RBS\<close> RBS_def)
   note j'_cases = this
-  then have hgt_le_hgt: "hgt k (p j') \<le> hgt k (p (j'+2)) + 2 * eps k powr (-1/2)"
+  then have hgt_le_hgt: "hgt (p j') \<le> hgt (p (j'+2)) + 2 * eps k powr (-1/2)"
   proof cases
     case R
-    have "real (hgt k (p j')) \<le> hgt k (pee \<mu> (Suc j'))"
+    have "real (hgt (p j')) \<le> hgt (pee \<mu> (Suc j'))"
       using Y_6_5_DegreeReg[OF j'_dreg] kn0 by (simp add: eval_nat_numeral p_def)
-    also have "\<dots> \<le> hgt k (p (j'+2)) + 2 * eps k powr (-1/2)"
+    also have "\<dots> \<le> hgt (p (j'+2)) + 2 * eps k powr (-1/2)"
       using Y_6_5_Red[OF R \<open>k\<ge>16\<close>] 1 by (simp add: eval_nat_numeral p_def)
     finally show ?thesis .
   next
@@ -538,7 +538,7 @@ next
     then show ?thesis
       using Y_6_4_DegreeReg \<open>p (j'+2) < p0\<close> p_def Y64_S j'_dreg pSj' by force
   qed
-  ultimately have B: "hgt k (p j') \<le> 1 + 2 * eps k powr (-1/2)"
+  ultimately have B: "hgt (p j') \<le> 1 + 2 * eps k powr (-1/2)"
     by linarith
   have "2 \<le> real k powr (1/2)"
     using \<open>k\<ge>16\<close> by (simp add: powr_half_sqrt real_le_rsqrt)
@@ -547,20 +547,20 @@ next
   have "p0 - eps k \<le> qfun k 0 - 2 * eps k powr (1/2) / k"
     using mult_left_mono [OF 8, of "k powr (-1/8)"] kn0 
     by (simp add: qfun_eq eps_def powr_powr field_simps flip: powr_add)
-  also have "\<dots> \<le> p j'  - eps k powr (-1/2) * alpha (hgt k (p j'))"
+  also have "\<dots> \<le> p j'  - eps k powr (-1/2) * alpha (hgt (p j'))"
   proof -
-    have 2: "(1 + eps k) ^ (hgt k (p j') - Suc 0) \<le> 2"
+    have 2: "(1 + eps k) ^ (hgt (p j') - Suc 0) \<le> 2"
       using B big2 kn0 eps_ge0
       by (smt (verit) diff_Suc_less hgt_gt0 nat_less_real_le powr_mono powr_realpow)
     have *: "x \<ge> 0 \<Longrightarrow> inverse (x powr (1/2)) * x = x powr (1/2)" for x::real
       by (simp add: inverse_eq_divide powr_half_sqrt real_div_sqrt)
     have "p0 - p j' \<le> 0"
       by (simp add: pSj')
-    also have "\<dots> \<le> 2 * eps k powr (1/2) / k - (eps k powr (1/2)) * (1 + eps k) ^ (hgt k (p j') - 1) / k"
+    also have "\<dots> \<le> 2 * eps k powr (1/2) / k - (eps k powr (1/2)) * (1 + eps k) ^ (hgt (p j') - 1) / k"
       using mult_left_mono [OF 2, of "eps k powr (1/2) / k"]
       by (simp add: field_simps diff_divide_distrib)
     finally have "p0 - 2 * eps k powr (1/2) / k 
-       \<le> p j' - (eps k powr (1/2)) * (1 + eps k) ^ (hgt k (p j') - 1) / k"
+       \<le> p j' - (eps k powr (1/2)) * (1 + eps k) ^ (hgt (p j') - 1) / k"
       by simp
     with * [OF eps_ge0] show ?thesis
       by (simp add: alpha_hgt_eq powr_minus) (metis mult.assoc)
@@ -569,25 +569,25 @@ next
     using j'_cases
   proof cases
     case R
-    have hs_le3: "hgt k (p (Suc j')) \<le> 3"
+    have hs_le3: "hgt (p (Suc j')) \<le> 3"
       using le1 Y_6_5_Red[OF R \<open>k\<ge>16\<close>] by (simp add: p_def)
-    then have h_le3: "hgt k (p j') \<le> 3"
+    then have h_le3: "hgt (p j') \<le> 3"
       using Y_6_5_DegreeReg [OF j'_dreg kn0] by (simp add: p_def)
-    have alpha1: "alpha (hgt k (p (Suc j'))) \<le> eps k * (1 + eps k) ^ 2 / k"
+    have alpha1: "alpha (hgt (p (Suc j'))) \<le> eps k * (1 + eps k) ^ 2 / k"
       by (metis alpha_Suc_eq alpha_mono hgt_gt0 hs_le3 numeral_nat(3))
-    have alpha2: "alpha (hgt k (p j')) \<ge> eps k / k"
+    have alpha2: "alpha (hgt (p j')) \<ge> eps k / k"
       by (simp add: Red_5_7a)
-    have "p j' - eps k powr (- 1/2) * alpha (hgt k (p j')) 
-       \<le> p (Suc j') - alpha (hgt k (p (Suc j')))"
+    have "p j' - eps k powr (- 1/2) * alpha (hgt (p j')) 
+       \<le> p (Suc j') - alpha (hgt (p (Suc j')))"
     proof -
-      have "alpha (hgt k (p (Suc j'))) \<le> (1 + eps k)\<^sup>2 * alpha (hgt k (p j'))"
+      have "alpha (hgt (p (Suc j'))) \<le> (1 + eps k)\<^sup>2 * alpha (hgt (p j'))"
         using alpha1 mult_left_mono [OF alpha2, of "(1 + eps k)\<^sup>2"]
         by (simp add: mult.commute)
-      also have "\<dots> \<le> inverse (eps k powr (1/2)) * alpha (hgt k (p j'))"
-        using mult_left_mono [OF big1, of "alpha (hgt k (p j'))"] eps_gt0[OF kn0] alpha_ge0
+      also have "\<dots> \<le> inverse (eps k powr (1/2)) * alpha (hgt (p j'))"
+        using mult_left_mono [OF big1, of "alpha (hgt (p j'))"] eps_gt0[OF kn0] alpha_ge0
         by (simp add: divide_simps mult_ac)
-      finally have "alpha (hgt k (p (Suc j')))
-                 \<le> inverse (eps k powr (1/2)) * alpha (hgt k (p j'))" .
+      finally have "alpha (hgt (p (Suc j')))
+                 \<le> inverse (eps k powr (1/2)) * alpha (hgt (p j'))" .
       then show ?thesis
         using Y_6_4_DegreeReg[OF j'_dreg] by (simp add: p_def powr_minus)
     qed

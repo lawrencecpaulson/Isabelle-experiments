@@ -12,7 +12,7 @@ subsection \<open>Preliminaries\<close>
 text \<open>the set of moderate density-boost steps (page 20)\<close>
 definition dboost_star where
   "dboost_star \<equiv> \<lambda>\<mu>. 
-  {i \<in> Step_class \<mu> {dboost_step}. real (hgt k (pee \<mu> (Suc i))) - hgt k (pee \<mu> i) \<le> eps k powr (-1/4)}"
+  {i \<in> Step_class \<mu> {dboost_step}. real (hgt (pee \<mu> (Suc i))) - hgt (pee \<mu> i) \<le> eps k powr (-1/4)}"
 
 definition bigbeta where
   "bigbeta \<equiv> \<lambda>\<mu>. 
@@ -472,7 +472,7 @@ lemma X_26_and_28:
   defines "\<H> \<equiv> Step_class \<mu> {halted}"
   defines "m \<equiv> halted_point \<mu>"
   defines "p \<equiv> pee \<mu>"
-  defines "h \<equiv> \<lambda>i. real (hgt k (p i))"
+  defines "h \<equiv> \<lambda>i. real (hgt (p i))"
   obtains "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
           "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
 proof -
@@ -514,7 +514,7 @@ proof -
   have "(\<Sum>i \<in> {..<m} \<setminus> \<D>. h(Suc i) - h(i-1)) \<le> h m - h 0"
   proof (cases "even m")
     case False
-    have "hgt k (p (m - Suc 0)) \<le> hgt k (p m)"
+    have "hgt (p (m - Suc 0)) \<le> hgt (p m)"
       using Y_6_5_DegreeReg [of "m-1"] kn0 False m_minimal not_halted_even_dreg odd_pos  
       by (fastforce simp: p_def \<H>_def)
     then have "h(m - Suc 0) \<le> h m"
@@ -524,9 +524,9 @@ proof -
   qed (simp add: oddset sum_odds_even)
   also have "\<dots> \<le> ok_fun_26 k"
   proof -
-    have "hgt k (p i) \<ge> 1" for i
+    have "hgt (p i) \<ge> 1" for i
       by (simp add: Suc_leI hgt_gt0)
-    moreover have "hgt k (p m) \<le> ok_fun_26 k"
+    moreover have "hgt (p m) \<le> ok_fun_26 k"
       using hub p_def pee_le1 height_upper_bound unfolding ok_fun_26_def by blast 
     ultimately show ?thesis
       by (simp add: h_def)
@@ -549,7 +549,7 @@ proof -
 
   define m where "m \<equiv> halted_point \<mu>"
   define p where "p \<equiv> pee \<mu>"
-  define h where "h \<equiv> \<lambda>i. real (hgt k (p i))"
+  define h where "h \<equiv> \<lambda>i. real (hgt (p i))"
   obtain 26: "(\<Sum>i\<in>{..<m} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
      and 28: "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
     using X_26_and_28 assms(1-3) big
@@ -602,7 +602,7 @@ proof -
     assume i: "i \<in> \<R>"
       with i obtain "i-1 \<in> \<D>" "i>0"    
         using dreg_before_step1 by (fastforce simp: \<R>_def \<D>_def Step_class_insert_NO_MATCH)
-    with i have "hgt k (p (i-1)) - 2 \<le> hgt k (p (Suc i))"
+    with i have "hgt (p (i-1)) - 2 \<le> hgt (p (Suc i))"
       using Y_6_5_Red[of i] 16 Y_6_5_DegreeReg[of "i-1"]
       by (fastforce simp: algebra_simps \<R>_def \<D>_def p_def)
     then show "- 2 \<le> h(Suc i) - h(i-1)"
@@ -771,7 +771,7 @@ lemma X_7_7:
   assumes "0<\<mu>" "\<mu><1" and "k>0" and i: "i \<in> Step_class \<mu> {dreg_step}"
   defines "X \<equiv> Xseq \<mu>"
   defines "p \<equiv> pee \<mu>"
-  defines "q \<equiv> eps k powr (-1/2) * alpha (hgt k (p i))"
+  defines "q \<equiv> eps k powr (-1/2) * alpha (hgt (p i))"
   shows "p (Suc i) - p i \<ge> card (X i \<setminus> X (Suc i)) / card (X (Suc i)) * q \<and> card (X (Suc i)) > 0"
 proof -
   have finX: "finite (X i)" for i
@@ -792,7 +792,7 @@ proof -
     using Xseq_Yseq_disjnt X_def Y_def by blast
   have Xnon0: "card (X i) > 0" and Ynon0: "card (Y i) > 0"
     using i by (simp_all add: X_def Y_def Xseq_gt0 Yseq_gt0 Step_class_def)
-  have "alpha (hgt k (p i)) > 0"
+  have "alpha (hgt (p i)) > 0"
     by (simp add: alpha_gt0 kn0 hgt_gt0)
   with kn0 have "q > 0"
     by (smt (verit) q_def eps_gt0 mult_pos_pos powr_gt_zero)
@@ -845,7 +845,7 @@ lemma (in Book) X_7_8:
   shows "card (X (Suc i)) \<ge> card (X i) / k^2"
 proof -
   define p where "p \<equiv> pee \<mu>"
-  define q where "q \<equiv> eps k powr (-1/2) * alpha (hgt k (p i))"
+  define q where "q \<equiv> eps k powr (-1/2) * alpha (hgt (p i))"
   have "k>0" \<open>k\<ge>2\<close> using big by (auto simp: Big_X_7_8_def)
   have "2 / k^2 \<le> eps k powr (1/2) / k"
     using big by (auto simp: Big_X_7_8_def)
@@ -914,7 +914,7 @@ lemma (in Book) X_7_9:
   assumes \<mu>: "0<\<mu>" "\<mu><1"
     and i: "i \<in> Step_class \<mu> {dreg_step}" and big: "Big_X_7_9 k"
   defines "X \<equiv> Xseq \<mu>" and "p \<equiv> pee \<mu>" 
-  defines "hp \<equiv> \<lambda>i. hgt k (p i)"
+  defines "hp \<equiv> \<lambda>i. hgt (p i)"
   assumes "p i \<ge> p0" and hgt: "hp (Suc i) \<le> hp i + eps k powr (-1/4)"
   shows "card (X (Suc i)) \<ge> (1 - 2 * eps k powr (1/4)) * card (X i)"
 proof -
@@ -999,7 +999,7 @@ lemma (in Book) X_7_10:
   defines "\<B> \<equiv> Step_class \<mu> {bblue_step}"
   defines "\<H> \<equiv> Step_class \<mu> {halted}"
   defines "m \<equiv> halted_point \<mu>"
-  defines "h \<equiv> \<lambda>i. real (hgt k (p i))"
+  defines "h \<equiv> \<lambda>i. real (hgt (p i))"
   defines "C \<equiv> {i. h i \<ge> h (i-1) + eps k powr (-1/4)}"
   assumes big: "Big_X_7_10 \<mu> l" 
   shows "card ((\<R>\<union>\<S>) \<inter> C) \<le> 3 * eps k powr (1/4) * k"
@@ -1030,11 +1030,11 @@ proof -
   using finite_components assms by (auto simp: \<R>_def \<S>_def Step_class_insert_NO_MATCH)
   have h_ge_0_if_S: "h(Suc i) - h(i-1) \<ge> 0" if "i \<in> \<S>" for i
   proof -
-    have *: "hgt k (pee \<mu> i) \<le> hgt k (pee \<mu> (Suc i))"
+    have *: "hgt (pee \<mu> i) \<le> hgt (pee \<mu> (Suc i))"
       using bigR53 Y_6_5_dbooSt \<mu> that unfolding \<S>_def by blast
     obtain "i-1 \<in> \<D>" "i>0"
       using that \<open>i\<in>\<S>\<close> dreg_before_step1[of i] by (force simp: \<S>_def \<D>_def Step_class_insert_NO_MATCH)
-    then have "hgt k (pee \<mu> (i-1)) \<le> hgt k (pee \<mu> i)"
+    then have "hgt (pee \<mu> (i-1)) \<le> hgt (pee \<mu> i)"
       using that kn0 by (metis Suc_diff_1 Y_6_5_DegreeReg \<D>_def)
     with * show "0 \<le> h(Suc i) - h(i-1)"
       using kn0 unfolding h_def p_def by linarith
@@ -1051,7 +1051,7 @@ proof -
     assume i: "i \<in> \<R>\<union>\<S>"
     with i dreg_before_step1[of i] have D: "i-1 \<in> \<D>" "i>0"     
       by (force simp: \<S>_def \<R>_def \<D>_def dreg_before_step Step_class_def)+
-    then have *: "hgt k (p (i-1)) \<le> hgt k (p i)"
+    then have *: "hgt (p (i-1)) \<le> hgt (p i)"
       by (metis Suc_diff_1 Y_6_5_DegreeReg \<D>_def p_def kn0)
     show "(if i\<in>C then eps k powr (-1/4) else 0) + (if i\<in>\<R> then - 2 else 0) \<le> h (Suc i) - h (i-1)"
     proof (cases "i\<in>\<R>")
@@ -1140,7 +1140,7 @@ proof -
     and R53:  "\<And>i. i \<in> \<S> \<Longrightarrow> p (Suc i) \<ge> p i"
     using \<mu> big l_le_k
     by (auto simp: Red_5_3 Big_X_7_11_def Big_X_7_11_inequalities_def \<S>_def p_def)
-  then have Y_6_5_B: "\<And>i. i \<in> \<B> \<Longrightarrow> hgt k (p (Suc i)) \<ge> hgt k (p (i-1)) - 2 * eps k powr (-1/2)"
+  then have Y_6_5_B: "\<And>i. i \<in> \<B> \<Longrightarrow> hgt (p (Suc i)) \<ge> hgt (p (i-1)) - 2 * eps k powr (-1/2)"
     using \<mu> bigY65B Y_6_5_Bblue 
     unfolding \<B>_def p_def by blast 
   have big41: "Big_Blue_4_1 \<mu> l"
@@ -1159,7 +1159,7 @@ proof -
   have [simp]: "\<R> \<inter> \<S> = {}" and [simp]: "(\<R> \<union> \<S>) \<inter> \<B> = {}"
     by (simp_all add: \<R>_def \<S>_def \<B>_def Step_class_def disjoint_iff)
 
-  have hgt_qstar_le: "hgt k qstar \<le> 2 * eps k powr (-1/4)"
+  have hgt_qstar_le: "hgt qstar \<le> 2 * eps k powr (-1/4)"
   proof (intro real_hgt_Least)
     show "0 < 2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>"
       using kn0 eps_gt0 [of k] by (simp add: eps_le1 powr_le1 powr_minus_divide)
@@ -1167,26 +1167,26 @@ proof -
       using kn0 711
       by (simp add: qstar_def alpha_def qfun_eq divide_right_mono mult.commute)
   qed auto
-  then have "((1 + eps k) * (1 + eps k) ^ hgt k qstar) \<le> ((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4)))"
+  then have "((1 + eps k) * (1 + eps k) ^ hgt qstar) \<le> ((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4)))"
     by (smt (verit) eps_ge0 mult_left_mono powr_mono powr_realpow)
   also have "((1 + eps k) * (1 + eps k) powr (2 * eps k powr (-1/4))) \<le> 2"
     using le2 by simp
-  finally have "(1 + eps k) * (1 + eps k) ^ hgt k qstar \<le> 2" .
+  finally have "(1 + eps k) * (1 + eps k) ^ hgt qstar \<le> 2" .
   moreover have "card \<R> \<le> k"
     by (simp add: \<R>_def \<open>0<\<mu>\<close> less_imp_le red_step_limit)
-  ultimately have B: "((1 + eps k) * (1 + eps k) ^ hgt k qstar) * card \<R> \<le> 2 * real k"
+  ultimately have B: "((1 + eps k) * (1 + eps k) ^ hgt qstar) * card \<R> \<le> 2 * real k"
     by (intro mult_mono) auto
-  have "- 2 * alpha 1 * k \<le> - alpha (hgt k qstar + 2) * card \<R>"
+  have "- 2 * alpha 1 * k \<le> - alpha (hgt qstar + 2) * card \<R>"
     using mult_right_mono_neg [OF B, of "- (eps k)"] eps_ge0 [of k]
     by (simp add: alpha_eq divide_simps mult_ac)
   also have "\<dots> \<le> (\<Sum>i\<in>\<R>. pstar (Suc i) - pstar i)"
   proof -
     { fix i
       assume "i \<in> \<R>"
-      have "- alpha (hgt k qstar + 2) \<le> pstar (Suc i) - pstar i"
-      proof (cases "hgt k (p i) > hgt k qstar + 2")
+      have "- alpha (hgt qstar + 2) \<le> pstar (Suc i) - pstar i"
+      proof (cases "hgt (p i) > hgt qstar + 2")
         case True
-        then have "hgt k (p (Suc i)) > hgt k qstar"
+        then have "hgt (p (Suc i)) > hgt qstar"
           using Y_6_5_Red 16 \<open>i \<in> \<R>\<close> by (force simp: p_def \<R>_def)
         then have "pstar (Suc i) = pstar i"
           by (smt (verit) True add_lessD1 hgt_mono' kn0 pstar_def)
@@ -1209,7 +1209,7 @@ proof -
     by (simp add: sum.union_disjoint)
 
   let ?e12 = "eps k powr (-1/2)"
-  define h' where "h' \<equiv> hgt k qstar + nat \<lfloor>2 * ?e12\<rfloor>"
+  define h' where "h' \<equiv> hgt qstar + nat \<lfloor>2 * ?e12\<rfloor>"
   have "- alpha 1 * k \<le> -2 * ?e12 * alpha 1 * k powr (3/4)"
     using mult_right_mono_neg [OF big34, of "- alpha 1"]  alpha_ge0 [of 1]
     by (simp add: mult_ac)
@@ -1244,9 +1244,9 @@ proof -
     { fix i
       assume "i \<in> \<B>"
       have "-?e12 * alpha (h') \<le> pstar (Suc i) - pstar (i-1)"
-      proof (cases "hgt k (p (i-1)) > hgt k qstar + 2 * ?e12")
+      proof (cases "hgt (p (i-1)) > hgt qstar + 2 * ?e12")
         case True
-        then have "hgt k (p (Suc i)) > hgt k qstar"
+        then have "hgt (p (Suc i)) > hgt qstar"
           using Y_6_5_B \<open>i \<in> \<B>\<close> by (force simp: p_def \<R>_def)
         then have "pstar (i-1) = pstar(Suc i)" 
           unfolding pstar_def 
@@ -1255,11 +1255,11 @@ proof -
           by (simp add: alpha_ge0)
       next
         case False
-        then have "hgt k (p (i-1)) \<le> h'"
+        then have "hgt (p (i-1)) \<le> h'"
           by (simp add: h'_def) linarith 
-        then have \<dagger>: "alpha (hgt k (p (i-1))) \<le> alpha h'"
+        then have \<dagger>: "alpha (hgt (p (i-1))) \<le> alpha h'"
           by (intro alpha_mono hgt_gt0)
-        have "p (Suc i) \<ge> p (i-1) - ?e12 * alpha (hgt k (p (i-1)))"
+        have "p (Suc i) \<ge> p (i-1) - ?e12 * alpha (hgt (p (i-1)))"
           using Y_6_4_Bblue \<open>i \<in> \<B>\<close> \<open>\<mu>>0\<close> unfolding p_def \<B>_def by blast
         with mult_left_mono [OF \<dagger>, of ?e12] show ?thesis
           unfolding pstar_def
@@ -1365,7 +1365,7 @@ proof -
   have [simp]: "finite \<R>" "finite \<S>"
     using finite_components assms by (auto simp: \<R>_def \<S>_def Step_class_insert_NO_MATCH)
   \<comment> \<open>now the conditions for Lemmas 7.10 and 7.11\<close>
-  define C10 where "C10 \<equiv> {i. hgt k (p i) \<ge> hgt k (p (i-1)) + eps k powr (-1/4)}"
+  define C10 where "C10 \<equiv> {i. hgt (p i) \<ge> hgt (p (i-1)) + eps k powr (-1/4)}"
   define C11 where "C11 \<equiv> {i. p i \<ge> p (i-1) + eps k powr (-1/4) * alpha 1 \<and> p (i-1) \<le> p0}"
   have "(\<R>\<union>\<S>) \<inter> C \<inter> {i. p (i-1) \<le> p0} \<subseteq> (\<R>\<union>\<S>) \<inter> C11"
   proof
@@ -1375,7 +1375,7 @@ proof -
       by auto
     then obtain i1: "i-1 \<in> \<D>" "i>0"
       unfolding \<R>_def \<S>_def \<D>_def by (metis Step_class_insert Un_iff dreg_before_step1)
-    then have 77: "card (X (i-1) \<setminus> X i) / card (X i) * (eps k powr (-1/2) * alpha (hgt k (p (i-1))))
+    then have 77: "card (X (i-1) \<setminus> X i) / card (X i) * (eps k powr (-1/2) * alpha (hgt (p (i-1))))
             \<le> p i - p (i-1)"
       by (metis Suc_diff_1 X_7_7 X_def \<D>_def \<mu> kn0 p_def)
     have card_Xm1: "card (X (i-1)) = card (X i) + card (X (i-1) \<setminus> X i)"
@@ -1399,7 +1399,7 @@ proof -
        \<le> card (X (i-1) \<setminus> X i) / card (X i) * (eps k powr (-1/2) * alpha 1)"
       using alpha_ge0 mult_right_mono [OF 1, of "eps k powr (-1/2) * alpha 1"] 
       by (simp add: mult_ac flip: powr_add)
-    also have "\<dots> \<le> card (X (i-1) \<setminus> X i) / card (X i) * (eps k powr (-1/2) * alpha (hgt k (p (i-1))))"
+    also have "\<dots> \<le> card (X (i-1) \<setminus> X i) / card (X i) * (eps k powr (-1/2) * alpha (hgt (p (i-1))))"
       by (intro mult_left_mono alpha_mono) (auto simp: Suc_leI hgt_gt0)
     also have "\<dots> \<le> p i - p (i-1)"
       using 77 by simp
@@ -1419,7 +1419,7 @@ proof -
       using Big_X_7_12_def big l_le_k by presburger
     then have X79: "card (X (Suc i)) \<ge> (1 - 2 * eps k powr (1/4)) * card (X i)" 
       if "i \<in> Step_class \<mu> {dreg_step}" and "p i \<ge> p0" 
-          and "hgt k (p (Suc i)) \<le> hgt k (p i) + eps k powr (-1/4)" for i
+          and "hgt (p (Suc i)) \<le> hgt (p i) + eps k powr (-1/4)" for i
       using X_7_9 X_def \<mu> p_def that by blast 
     have "(\<R>\<union>\<S>) \<inter> C \<setminus> {i. p (i-1) \<le> p0} \<subseteq> (\<R>\<union>\<S>) \<inter> C10"
       unfolding C10_def C_def
@@ -1429,7 +1429,7 @@ proof -
         and \<section>: "card (X i) < (1 - 2 * eps k powr (1/4)) * card (X (i-1))" "\<not> p (i-1) \<le> p0"
       then obtain "i-1 \<in> \<D>" "i>0"
         unfolding \<D>_def \<R>_def \<S>_def by (metis dreg_before_step1 Step_class_Un Un_iff insert_is_Un)
-      with X79 \<section> show "hgt k (p (i - 1)) + eps k powr (-1/4) \<le> hgt k (p i)"
+      with X79 \<section> show "hgt (p (i - 1)) + eps k powr (-1/4) \<le> hgt (p i)"
         by (force simp: \<D>_def)
     qed
     then have "card ((\<R>\<union>\<S>) \<inter> C \<setminus> {i. p (i-1) \<le> p0}) \<le> real (card ((\<R>\<union>\<S>) \<inter> C10))"

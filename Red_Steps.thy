@@ -344,19 +344,19 @@ proof -
     using RNX by (simp add: X_def Y_def divide_simps)
 qed
 
-lemma Red_5_7a: "eps k / k \<le> alpha (hgt k p)"
+lemma Red_5_7a: "eps k / k \<le> alpha (hgt p)"
   by (simp add: alpha_ge hgt_gt0)
 
 lemma Red_5_7b: 
-  assumes "p \<ge> qfun k 0" shows "alpha (hgt k p) \<le> eps k * (p - qfun k 0 + 1/k)"
+  assumes "p \<ge> qfun k 0" shows "alpha (hgt p) \<le> eps k * (p - qfun k 0 + 1/k)"
 proof -
-  have qh_le_p: "qfun k (hgt k p - Suc 0) \<le> p"
+  have qh_le_p: "qfun k (hgt p - Suc 0) \<le> p"
     by (smt (verit) assms diff_Suc_less hgt_gt0 hgt_less_imp_qfun_less zero_less_iff_neq_zero)
-  have "hgt k p > 0"
+  have "hgt p > 0"
     by (simp add: Suc_leI hgt_gt0)
-  then have "alpha (hgt k p) = eps k * (1 + eps k) ^ (hgt k p - 1) / k"
+  then have "alpha (hgt p) = eps k * (1 + eps k) ^ (hgt p - 1) / k"
     using alpha_eq by blast
-  also have "\<dots> = eps k * (qfun k (hgt k p - 1) - qfun k 0 + 1/k)"
+  also have "\<dots> = eps k * (qfun k (hgt p - 1) - qfun k 0 + 1/k)"
     by (simp add: diff_divide_distrib qfun_eq)
   also have "\<dots> \<le> eps k * (p - qfun k 0 + 1/k)"
     by (simp add: eps_ge0 landau_o.R_mult_left_mono qh_le_p)
@@ -364,7 +364,7 @@ proof -
 qed
 
 lemma Red_5_7c: 
-  assumes "p \<le> qfun k 1" shows "alpha (hgt k p) = eps k / k"
+  assumes "p \<le> qfun k 1" shows "alpha (hgt p) = eps k / k"
   using Book.alpha_hgt_eq Book_axioms assms hgt_Least by fastforce
 
 lemma Red_5_8:
@@ -390,7 +390,7 @@ proof -
     using Suc_i step by (auto simp: degree_reg_def stepper_XYseq)
   have p_gt_invk: "?p > 1/k"
     using "XY" nonterm pee_def termination_condition_def by auto
-  have RedN: "(?p - eps k powr -(1/2) * alpha (hgt k ?p)) * card Y \<le> card (Neighbours Red x \<inter> Y)"
+  have RedN: "(?p - eps k powr -(1/2) * alpha (hgt ?p)) * card Y \<le> card (Neighbours Red x \<inter> Y)"
     using x XY by (simp add: XSuc YSuc X_degree_reg_def pee_def red_dense_def)
   show ?thesis
   proof (cases "?p \<ge> qfun k 0")
@@ -401,25 +401,25 @@ proof -
       by (metis Step_class_not_halted gr0I nat_less_le not_halted_pee_gt pee_eq_p0)
     have 0: "eps k powr -(1/2) \<ge> 0"
       by simp
-    have "eps k powr -(1/2) * alpha (hgt k ?p) \<le> eps k powr (1/2) * (?p - qfun k 0 + 1/k)"
+    have "eps k powr -(1/2) * alpha (hgt ?p) \<le> eps k powr (1/2) * (?p - qfun k 0 + 1/k)"
       using mult_left_mono [OF Red_5_7b [OF True] 0]
       by (simp add: eps_def powr_mult_base flip: mult_ac)
     also have "\<dots> \<le> eps k powr (1/2) * ?p"
       using p0 by (intro mult_left_mono) (auto simp flip: pee_eq_p0)
-    finally have "eps k powr -(1/2) * alpha (hgt k ?p) \<le> eps k powr (1/2) * ?p" .
-    then have "(1 - (eps k) powr (1/2)) * ?p * (card Y) \<le> (?p - eps k powr -(1/2) * alpha (hgt k ?p)) * card Y"
+    finally have "eps k powr -(1/2) * alpha (hgt ?p) \<le> eps k powr (1/2) * ?p" .
+    then have "(1 - (eps k) powr (1/2)) * ?p * (card Y) \<le> (?p - eps k powr -(1/2) * alpha (hgt ?p)) * card Y"
       by (intro mult_right_mono) (auto simp: algebra_simps)
     with XY RedN YSuc show ?thesis by fastforce
   next
     case False
     then have "pee \<mu> i \<le> qfun k 1"
       by (smt (verit) One_nat_def alpha_Suc_eq alpha_ge0 q_Suc_diff)
-    then have "eps k powr -(1/2) * alpha (hgt k ?p) = eps k powr (1/2) / k"
+    then have "eps k powr -(1/2) * alpha (hgt ?p) = eps k powr (1/2) / k"
       using powr_mult_base [of "eps k"] eps_gt0 by (force simp: Red_5_7c mult.commute)
     also have "\<dots> \<le> eps k powr (1/2) * ?p"
       using p_gt_invk by (smt (verit) divide_inverse inverse_eq_divide mult_left_mono powr_ge_pzero)
-    finally have "eps k powr -(1/2) * alpha (hgt k ?p) \<le> eps k powr (1/2) * ?p" .
-    then have "(1 - (eps k) powr (1/2)) * ?p * (card Y) \<le> (?p - eps k powr -(1/2) * alpha (hgt k ?p)) * card Y"
+    finally have "eps k powr -(1/2) * alpha (hgt ?p) \<le> eps k powr (1/2) * ?p" .
+    then have "(1 - (eps k) powr (1/2)) * ?p * (card Y) \<le> (?p - eps k powr -(1/2) * alpha (hgt ?p)) * card Y"
       by (intro mult_right_mono) (auto simp: algebra_simps)
     with XY RedN YSuc show ?thesis by fastforce
   qed
@@ -525,8 +525,8 @@ proposition Red_5_1:
   defines "NRX \<equiv> Neighbours Red x \<inter> X"
   defines "NRY \<equiv> Neighbours Red x \<inter> Y"
   defines "\<beta> \<equiv> card NBX / card X"
-  shows "red_density NRX NRY \<ge> p - alpha (hgt k p)
-       \<or> red_density NBX NRY \<ge> p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha (hgt k p) \<and> \<beta> > 0"
+  shows "red_density NRX NRY \<ge> p - alpha (hgt p)
+       \<or> red_density NBX NRY \<ge> p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha (hgt p) \<and> \<beta> > 0"
 proof -
   have Red_5_4: "weight X Y x \<ge> - real (card X) / (real k) ^ 5"
     using Big \<mu> i Red_5_4 by (auto simp: Big_Red_5_1_def x_def X_def Y_def)
@@ -586,9 +586,9 @@ proof -
     using Y_Neighbours_nonempty [OF i] \<open>k\<ge>256\<close> NRY_def \<open>finite NRY\<close> \<open>x \<in> X\<close> card_0_eq XY by force
   show ?thesis
   proof (cases "(\<Sum>y \<in> NRX. Weight X Y x y) 
-             \<ge> - alpha (hgt k p) * card NRX * card NRY / card Y")
+             \<ge> - alpha (hgt p) * card NRX * card NRY / card Y")
     case True
-    then have "(p - alpha (hgt k p)) * (card NRX * card NRY) \<le> (\<Sum>y \<in> NRX. p * card NRY + Weight X Y x y * card Y)"
+    then have "(p - alpha (hgt p)) * (card NRX * card NRY) \<le> (\<Sum>y \<in> NRX. p * card NRY + Weight X Y x y * card Y)"
       using \<open>card Y \<noteq> 0\<close> by (simp add: field_simps sum_distrib_left sum.distrib)
     also have "\<dots> = (\<Sum>y \<in> NRX. card (Neighbours Red x \<inter> Neighbours Red y \<inter> Y))"
       using \<open>card Y \<noteq> 0\<close> by (simp add: Weight_def pee_def XY NRY_def field_simps p_def)
@@ -597,7 +597,7 @@ proof -
       by (simp add: disjnt_sym edge_card_eq_sum_Neighbours Red_E psubset_imp_subset NRY_def Int_ac)
     also have "\<dots> = edge_card Red NRX NRY"
       by (simp add: edge_card_commute)
-    finally have "(p - alpha (hgt k p)) * real (card NRX * card NRY) \<le> real (edge_card Red NRX NRY)" .
+    finally have "(p - alpha (hgt p)) * real (card NRX * card NRY) \<le> real (edge_card Red NRX NRY)" .
     then show ?thesis
       using \<open>card NRX > 0\<close> \<open>card NRY > 0\<close> 
       by (simp add: NRX_def NRY_def gen_density_def field_split_simps XY)
@@ -613,7 +613,7 @@ proof -
       by (simp add: weight_def Xx sum.union_disjoint finite_Neighbours NRX_def NBX_def)
     with False 
     have 15: "(\<Sum>y \<in> NBX. Weight X Y x y) 
-        \<ge> weight X Y x + alpha (hgt k p) * card NRX * card NRY / card Y"
+        \<ge> weight X Y x + alpha (hgt p) * card NRX * card NRY / card Y"
       by linarith    
     have pm1: "pee \<mu> (i-1) > 1/k"
       by (meson Step_class_not_halted diff_le_self not_halted not_halted_pee_gt)
@@ -662,10 +662,10 @@ proof -
         by (intro add_mono mult_mono) (auto simp: cNRX eps_def divide_simps)
       also have "\<dots> = - real (card X) / (real k) ^ 5 + (eps k / k) * real (card NRX) * card NRY / card Y"
         by simp
-      also have "\<dots> \<le> - real (card X) / (real k) ^ 5 + alpha (hgt k p) * real (card NRX) * card NRY / card Y"
+      also have "\<dots> \<le> - real (card X) / (real k) ^ 5 + alpha (hgt p) * real (card NRX) * card NRY / card Y"
         using alpha_ge [OF hgt_gt0]
         by (intro add_mono mult_right_mono divide_right_mono) auto
-      also have "\<dots> \<le> weight X Y x + alpha (hgt k p) * real (card NRX) * card NRY / real (card Y)"
+      also have "\<dots> \<le> weight X Y x + alpha (hgt p) * real (card NRX) * card NRY / real (card Y)"
         using Red_5_4 by simp
       also have "\<dots> \<le> 0"
         using empty 15 by auto
@@ -682,8 +682,8 @@ proof -
       using X_gt_k card_NRBX by (simp add: \<beta>_eq field_simps)
     have cNBX: "card NBX = \<beta> * card X"
       using \<open>0 < card X\<close> by (simp add: \<beta>_eq)
-    let ?E16 = "p + ((1-\<beta>)/\<beta>) * alpha (hgt k p) - alpha (hgt k p) / (\<beta> * card X) + weight X Y x * card Y / (\<beta> * card X * card NRY)"
-    have "p * card NBX * card NRY + alpha (hgt k p) * card NRX * card NRY + weight X Y x * card Y
+    let ?E16 = "p + ((1-\<beta>)/\<beta>) * alpha (hgt p) - alpha (hgt p) / (\<beta> * card X) + weight X Y x * card Y / (\<beta> * card X * card NRY)"
+    have "p * card NBX * card NRY + alpha (hgt p) * card NRX * card NRY + weight X Y x * card Y
             \<le> (\<Sum>y \<in> NBX. p * card NRY + Weight X Y x y * card Y)"
       using 15 \<open>card Y \<noteq> 0\<close> apply (simp add: sum_distrib_left sum.distrib)
       by (simp only: sum_distrib_right divide_simps split: if_split_asm)
@@ -695,18 +695,18 @@ proof -
     also have "\<dots> = edge_card Red NBX NRY"
       by (simp add: edge_card_commute)
     finally have Red_bound: 
-      "p * card NBX * card NRY + alpha (hgt k p) * card NRX * card NRY + weight X Y x * card Y \<le> edge_card Red NBX NRY" .
-    then have "(p * card NBX * card NRY + alpha (hgt k p) * card NRX * card NRY + weight X Y x * card Y)
+      "p * card NBX * card NRY + alpha (hgt p) * card NRX * card NRY + weight X Y x * card Y \<le> edge_card Red NBX NRY" .
+    then have "(p * card NBX * card NRY + alpha (hgt p) * card NRX * card NRY + weight X Y x * card Y)
              / (card NBX * card NRY) \<le> red_density NBX NRY"
       by (metis divide_le_cancel gen_density_def of_nat_less_0_iff)
-    then have "p + alpha (hgt k p) * card NRX / card NBX + weight X Y x * card Y / (card NBX * card NRY) \<le> red_density NBX NRY" 
+    then have "p + alpha (hgt p) * card NRX / card NBX + weight X Y x * card Y / (card NBX * card NRY) \<le> red_density NBX NRY" 
       using \<open>card NBX > 0\<close> \<open>card NRY > 0\<close> by (simp add: add_divide_distrib)
     then have 16: "?E16 \<le> red_density NBX NRY" 
       using \<open>\<beta>>0\<close> \<open>card X > 0\<close>
       by (simp add: cNRX cNBX algebra_simps add_divide_distrib diff_divide_distrib)
     consider "qfun k 0 \<le> p" | "p \<le> qfun k 1"
       by (smt (verit) alpha_Suc_eq alpha_ge0 One_nat_def q_Suc_diff)
-    then have alpha_le_1: "alpha (hgt k p) \<le> 1"
+    then have alpha_le_1: "alpha (hgt p) \<le> 1"
     proof cases
       case 1
       have "p * eps k + eps k / real k \<le> 1 + eps k * p0"
@@ -728,22 +728,22 @@ proof -
       show ?thesis
         using Red_5_7c [OF 2] \<open>k\<ge>256\<close> eps_less1 [of k] by simp
     qed
-    have B: "- (3 / (real k ^ 4)) \<le> (-2 / real k ^ 4) - alpha (hgt k p) / card X"
+    have B: "- (3 / (real k ^ 4)) \<le> (-2 / real k ^ 4) - alpha (hgt p) / card X"
       using \<open>card X > k^4\<close> \<open>card Y \<noteq> 0\<close> \<open>0 < k\<close> alpha_le_1 by (simp add: algebra_simps frac_le)
-    have "- (3 / (\<beta> * real k ^ 4)) \<le> (-2 / real k ^ 4) / \<beta> - alpha (hgt k p) / (\<beta> * card X)"
+    have "- (3 / (\<beta> * real k ^ 4)) \<le> (-2 / real k ^ 4) / \<beta> - alpha (hgt p) / (\<beta> * card X)"
       using \<open>\<beta>>0\<close> divide_right_mono [OF B, of \<beta>] \<open>k>0\<close> by (simp add: field_simps)
-    also have "\<dots> = (- real (card X) / real k ^ 5) / (\<beta> * real (card X)) * (2 * real k) - alpha (hgt k p) / (\<beta> * card X)"
+    also have "\<dots> = (- real (card X) / real k ^ 5) / (\<beta> * real (card X)) * (2 * real k) - alpha (hgt p) / (\<beta> * card X)"
       using \<open>0 < card X\<close> by (simp add: field_split_simps eval_nat_numeral)
-    also have "\<dots> = (- real (card X) / real k ^ 5) * card Y / (\<beta> * real (card X) * (card Y / (2 * real k))) - alpha (hgt k p) / (\<beta> * card X)"
+    also have "\<dots> = (- real (card X) / real k ^ 5) * card Y / (\<beta> * real (card X) * (card Y / (2 * real k))) - alpha (hgt p) / (\<beta> * card X)"
       using \<open>card Y \<noteq> 0\<close> by simp
-    also have "\<dots>  \<le> (- real (card X) / real k ^ 5) * card Y / (\<beta> * real (card X) * card NRY) - alpha (hgt k p) / (\<beta> * card X)"
+    also have "\<dots>  \<le> (- real (card X) / real k ^ 5) * card Y / (\<beta> * real (card X) * card NRY) - alpha (hgt p) / (\<beta> * card X)"
       using Y_NRY \<open>k>0\<close> \<open>card NRY > 0\<close> \<open>card X > 0\<close> \<open>card Y \<noteq> 0\<close> \<open>\<beta>>0\<close>
       by (intro diff_mono divide_right_mono mult_left_mono divide_left_mono_neg) auto
-    also have "\<dots>  \<le> weight X Y x * card Y / (\<beta> * real (card X) * card NRY) - alpha (hgt k p) / (\<beta> * card X)"
+    also have "\<dots>  \<le> weight X Y x * card Y / (\<beta> * real (card X) * card NRY) - alpha (hgt p) / (\<beta> * card X)"
       using Red_5_4 \<open>k>0\<close> \<open>0 < \<beta>\<close>
       by (intro diff_mono divide_right_mono mult_right_mono) auto
-    finally have "- (3 / (\<beta> * real k ^ 4)) \<le> weight X Y x * card Y / (\<beta> * real (card X) * card NRY) - alpha (hgt k p) / (\<beta> * card X)" .
-    then have 17: "p + ((1-\<beta>)/\<beta>) * alpha (hgt k p) - 3 / (\<beta> * real k ^ 4) \<le> ?E16"
+    finally have "- (3 / (\<beta> * real k ^ 4)) \<le> weight X Y x * card Y / (\<beta> * real (card X) * card NRY) - alpha (hgt p) / (\<beta> * card X)" .
+    then have 17: "p + ((1-\<beta>)/\<beta>) * alpha (hgt p) - 3 / (\<beta> * real k ^ 4) \<le> ?E16"
       by simp
     have "3 / real k ^ 4 \<le> (1-\<mu>) * eps k ^ 2 / k"
       using \<open>k>0\<close> \<open>\<mu><1\<close> mult_left_mono [OF k52, of k] 
@@ -751,14 +751,14 @@ proof -
     also have "\<dots> \<le> (1-\<beta>) * eps k ^ 2 / k"
       using \<open>\<beta>\<le>\<mu>\<close>
       by (intro divide_right_mono mult_right_mono) auto
-    also have "\<dots> \<le> (1-\<beta>) * eps k * alpha (hgt k p)"
+    also have "\<dots> \<le> (1-\<beta>) * eps k * alpha (hgt p)"
       using Red_5_7a [of p] eps_ge0 \<open>\<beta>\<le>\<mu>\<close> \<open>\<mu><1\<close>
       unfolding power2_eq_square divide_inverse mult.assoc
       by (intro mult_mono) auto
-    finally have "3 / real k ^ 4 \<le> (1-\<beta>) * eps k * alpha (hgt k p)" .
-    then have "p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha (hgt k p) \<le> p + ((1-\<beta>)/\<beta>) * alpha (hgt k p) - 3 / (\<beta> * real k ^ 4)"
+    finally have "3 / real k ^ 4 \<le> (1-\<beta>) * eps k * alpha (hgt p)" .
+    then have "p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha (hgt p) \<le> p + ((1-\<beta>)/\<beta>) * alpha (hgt p) - 3 / (\<beta> * real k ^ 4)"
       using \<open>0<\<beta>\<close> by (simp add: field_simps)
-    with 16 17 have "p + (1 - eps k) * ((1 - \<beta>) / \<beta>) * alpha (hgt k p) \<le> red_density NBX NRY"
+    with 16 17 have "p + (1 - eps k) * ((1 - \<beta>) / \<beta>) * alpha (hgt p) \<le> red_density NBX NRY"
       by linarith
     then show ?thesis
       using \<open>0 < \<beta>\<close> NBX_def NRY_def XY by fastforce
@@ -770,7 +770,7 @@ corollary Red_5_2:
   assumes i: "i \<in> Step_class \<mu> {dboost_step}" and "0<\<mu>" "\<mu><1"
     and Big: "Big_Red_5_1 \<mu> l"
   shows "pee \<mu> (Suc i) - pee \<mu> i
-         \<ge> (1 - eps k) * ((1 - beta \<mu> i) / beta \<mu> i) * alpha (hgt k (pee \<mu> i)) \<and>
+         \<ge> (1 - eps k) * ((1 - beta \<mu> i) / beta \<mu> i) * alpha (hgt (pee \<mu> i)) \<and>
            beta \<mu> i > 0"
 proof -
   let ?x = "cvx \<mu> i"
@@ -799,9 +799,9 @@ proof -
   have "choose_central_vx \<mu> (X,Y,A,B) = cvx \<mu> i"
     by (simp add: cvx_def step)
   with nonredd have "red_density (Neighbours Red (cvx \<mu> i) \<inter> X) (Neighbours Red (cvx \<mu> i) \<inter> Y)
-                   < pee \<mu> i - alpha (hgt k (red_density X Y))"
+                   < pee \<mu> i - alpha (hgt (red_density X Y))"
     using nonredd by (simp add: reddish_def pee)
-  then have "pee \<mu> i + (1 - eps k) * ((1 - beta \<mu> i) / beta \<mu> i) * alpha (hgt k (pee \<mu> i))
+  then have "pee \<mu> i + (1 - eps k) * ((1 - beta \<mu> i) / beta \<mu> i) * alpha (hgt (pee \<mu> i))
       \<le> red_density (Neighbours Blue (cvx \<mu> i) \<inter> Xseq \<mu> i)
           (Neighbours Red (cvx \<mu> i) \<inter> Yseq \<mu> i) \<and> beta \<mu> i > 0"
     using Red_5_1 Un_iff Xeq Yeq assms gen_density_ge0 pee Step_class_insert
@@ -845,7 +845,7 @@ corollary Red_5_3:
 proof 
   have "k>1" and big51: "Big_Red_5_1 \<mu> l"
     using l_le_k big by (auto simp: Big_Red_5_3_def)
-  let ?h = "hgt k (pee \<mu> i)"
+  let ?h = "hgt (pee \<mu> i)"
   have "?h > 0"
     by (simp add: hgt_gt0 kn0 pee_le1)
   then obtain \<alpha>: "alpha ?h \<ge> 0" and *: "alpha ?h \<ge> eps k / k"

@@ -266,8 +266,8 @@ definition qfun :: "[nat, nat] \<Rightarrow> real"
 lemma qfun_eq: "qfun \<equiv> \<lambda>k h. p0 + ((1 + eps k)^h - 1) / k"
   by (simp add: qfun_def qfun_base_def)
 
-definition hgt :: "[nat, real] \<Rightarrow> nat"
-  where "hgt \<equiv> \<lambda>k p. if k=0 then 1 else (LEAST h. p \<le> qfun k h \<and> h>0)"
+definition hgt :: "real \<Rightarrow> nat"
+  where "hgt \<equiv> \<lambda>p. LEAST h. p \<le> qfun k h \<and> h>0"
 
 lemma qfun0 [simp]: "qfun k 0 = p0"
   by (simp add: qfun_eq)
@@ -342,58 +342,57 @@ proof -
     using p0_01 qfun_def that by force
 qed
 
-lemma hgt_gt0: "hgt k p > 0"
-  by (smt (verit, best) LeastI_ex gr0I height_exists hgt_def zero_less_one)
+lemma hgt_gt0: "hgt p > 0"
+  unfolding hgt_def
+  by (smt (verit, best) LeastI height_exists kn0)
 
-lemma hgt_works:
-  assumes "k>0" 
-  shows "p \<le> qfun k (hgt k p)"
-  using assms by (metis (no_types, lifting) LeastI_ex height_exists hgt_def not_gr0)
+lemma hgt_works: "p \<le> qfun k (hgt p)"
+  by (metis (no_types, lifting) LeastI height_exists hgt_def kn0)
 
 lemma hgt_Least':
   assumes "0<h" "p \<le> qfun_base k h"
-  shows "hgt k p \<le> h"
+  shows "hgt p \<le> h"
   by (smt (verit, del_insts) One_nat_def Suc_leI assms hgt_def p0_01 qfun_def Least_le)
 
 lemma hgt_Least:
   assumes "0<h" "p \<le> qfun k h"
-  shows "hgt k p \<le> h"
+  shows "hgt p \<le> h"
   by (simp add: Suc_leI assms hgt_def Least_le)
 
 lemma real_hgt_Least':
   assumes "real h \<le> r" "0<h" "p \<le> qfun_base k h"
-  shows "real (hgt k p) \<le> r"
+  shows "real (hgt p) \<le> r"
   using assms
   by (meson hgt_Least' of_nat_mono order.trans)
 
 lemma real_hgt_Least:
   assumes "real h \<le> r" "0<h" "p \<le> qfun k h"
-  shows "real (hgt k p) \<le> r"
+  shows "real (hgt p) \<le> r"
   using assms by (meson assms order.trans hgt_Least of_nat_mono)
 
 lemma hgt_greater:
-  assumes "0<k" "p > qfun k h"
-  shows "hgt k p > h"
-  by (smt (verit) assms linorder_le_less_linear qfun_mono height_exists hgt_works)
+  assumes "p > qfun k h"
+  shows "hgt p > h"
+  by (meson assms hgt_works kn0 not_less order.trans qfun_mono)
 
 lemma hgt_less_imp_qfun_less:
-  assumes "0<h" "h < hgt k p"
+  assumes "0<h" "h < hgt p"
   shows "p > qfun k h"
   by (metis assms hgt_Least not_le)  
 
 lemma hgt_le_imp_qfun_ge:
-  assumes "hgt k p \<le> h" "0<k"
+  assumes "hgt p \<le> h"
   shows "p \<le> qfun k h"
   by (meson assms hgt_greater not_less)
 
-text \<open>This gives us an upper bound for heights, namely @{term "hgt k 1"}, but it's not explicit.\<close>
+text \<open>This gives us an upper bound for heights, namely @{term "hgt 1"}, but it's not explicit.\<close>
 lemma hgt_mono:
-  assumes "p \<le> q" "0<k"
-  shows "hgt k p \<le> hgt k q"
+  assumes "p \<le> q"
+  shows "hgt p \<le> hgt q"
   by (meson assms order.trans hgt_Least hgt_gt0 hgt_works)
 
 lemma hgt_mono':
-  assumes "hgt k p < hgt k q" "0<k"
+  assumes "hgt p < hgt q"
   shows "p < q"
   by (smt (verit) assms hgt_mono leD)
 
@@ -402,12 +401,10 @@ text \<open>Height_upper_bound given just below (5) on page 9.
   we need to exhibit a specific $o(k)$ function.\<close>
 lemma height_upper_bound:
   assumes "p \<le> 1" and big: "Big_height_upper_bound k"
-  shows "hgt k p \<le> 2 * ln k / eps k"
+  shows "hgt p \<le> 2 * ln k / eps k"
   using assms real_hgt_Least big nat_floor_neg not_gr0 of_nat_floor
   unfolding Big_height_upper_bound_def hgt_maximum_def
   by (smt (verit, ccfv_SIG) p0_01(1) power.simps(1) qfun_def qfun_eq zero_less_divide_iff) 
-
-
 
 definition alpha :: "nat \<Rightarrow> real" where "alpha \<equiv> \<lambda>h. qfun k h - qfun k (h-1)"
 
@@ -425,8 +422,8 @@ qed
 lemma alpha_ge: "h>0 \<Longrightarrow> alpha h \<ge> eps k / k"
   by (metis Suc_pred alpha_Suc_ge)
 
-lemma alpha_gt0: "\<lbrakk>k>0; h>0\<rbrakk> \<Longrightarrow> alpha h > 0"
-  by (smt (verit) alpha_ge divide_pos_pos eps_gt0 of_nat_0_less_iff)
+lemma alpha_gt0: "h>0 \<Longrightarrow> alpha h > 0"
+  by (metis alpha_ge alpha_ge0 eps_gt0 kn0 nle_le not_le of_nat_0_less_iff zero_less_divide_iff)
 
 lemma alpha_Suc_eq: "alpha (Suc h) = eps k * (1 + eps k) ^ h / k"
   by (simp add: alpha_def q_Suc_diff)
@@ -435,10 +432,10 @@ lemma alpha_eq:
   assumes "h>0" shows "alpha h = eps k * (1 + eps k) ^ (h-1) / k"
   by (metis Suc_pred' alpha_Suc_eq assms)
 
-lemma alpha_hgt_ge: "alpha (hgt k p) \<ge> eps k / k"
+lemma alpha_hgt_ge: "alpha (hgt p) \<ge> eps k / k"
   by (simp add: alpha_ge hgt_gt0)
 
-lemma alpha_hgt_eq: "alpha (hgt k p) = eps k * (1 + eps k) ^ (hgt k p -1) / k"
+lemma alpha_hgt_eq: "alpha (hgt p) = eps k * (1 + eps k) ^ (hgt p -1) / k"
   using alpha_eq hgt_gt0 by presburger
 
 lemma alpha_mono: "\<lbrakk>h' \<le> h; 0 < h'\<rbrakk> \<Longrightarrow> alpha h' \<le> alpha h"
@@ -490,7 +487,7 @@ lemma B_less_l:
 
 subsection \<open>Degree regularisation\<close>
 
-definition "red_dense \<equiv> \<lambda>Y p x. card (Neighbours Red x \<inter> Y) \<ge> (p - eps k powr (-1/2) * alpha (hgt k p)) * card Y"
+definition "red_dense \<equiv> \<lambda>Y p x. card (Neighbours Red x \<inter> Y) \<ge> (p - eps k powr (-1/2) * alpha (hgt p)) * card Y"
 
 definition "X_degree_reg \<equiv> \<lambda>X Y. {x \<in> X. red_dense Y (red_density X Y) x}"
 
@@ -700,7 +697,7 @@ lemma choose_central_vx_X:
 
 subsection \<open>Red step\<close>
 
-definition "reddish \<equiv> \<lambda>k X Y p x. red_density (Neighbours Red x \<inter> X) (Neighbours Red x \<inter> Y) \<ge> p - alpha (hgt k p)"
+definition "reddish \<equiv> \<lambda>k X Y p x. red_density (Neighbours Red x \<inter> X) (Neighbours Red x \<inter> Y) \<ge> p - alpha (hgt p)"
 
 inductive red_step 
   where "\<lbrakk>reddish k X Y (red_density X Y) x; x = choose_central_vx \<mu> (X,Y,A,B)\<rbrakk> 
