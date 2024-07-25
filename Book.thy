@@ -260,16 +260,16 @@ definition weight :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a \<Rightarrow>
 definition p0 :: "real"
   where "p0 \<equiv> red_density X0 Y0"
 
-definition qfun :: "[nat, nat] \<Rightarrow> real"
-  where "qfun \<equiv> \<lambda>k h. p0 + qfun_base k h"
+definition qfun :: "nat \<Rightarrow> real"
+  where "qfun \<equiv> \<lambda>h. p0 + qfun_base k h"
 
-lemma qfun_eq: "qfun \<equiv> \<lambda>k h. p0 + ((1 + eps k)^h - 1) / k"
+lemma qfun_eq: "qfun \<equiv> \<lambda>h. p0 + ((1 + eps k)^h - 1) / k"
   by (simp add: qfun_def qfun_base_def)
 
 definition hgt :: "real \<Rightarrow> nat"
-  where "hgt \<equiv> \<lambda>p. LEAST h. p \<le> qfun k h \<and> h>0"
+  where "hgt \<equiv> \<lambda>p. LEAST h. p \<le> qfun h \<and> h>0"
 
-lemma qfun0 [simp]: "qfun k 0 = p0"
+lemma qfun0 [simp]: "qfun 0 = p0"
   by (simp add: qfun_eq)
 
 lemma p0_ge: "p0 \<ge> p0_min" 
@@ -300,23 +300,22 @@ proof -
     by (simp add: gen_density_le1 p0_def)
 qed
 
-lemma qfun_strict_mono: "\<lbrakk>k>0; h'<h\<rbrakk> \<Longrightarrow> qfun k h' < qfun k h"
-  by (simp add: qfun_eq eps_gt0 power_strict_increasing divide_strict_right_mono)
+lemma qfun_strict_mono: "h'<h \<Longrightarrow> qfun h' < qfun h"
+  by (simp add: divide_strict_right_mono eps_gt0 kn0 qfun_eq)
 
-lemma qfun_mono: "\<lbrakk>k>0; h'\<le>h\<rbrakk> \<Longrightarrow> qfun k h' \<le> qfun k h"
-  by (simp add: qfun_eq eps_ge0 frac_le power_increasing)
+lemma qfun_mono: "h'\<le>h \<Longrightarrow> qfun h' \<le> qfun h"
+  by (metis less_eq_real_def nat_less_le qfun_strict_mono)
 
-lemma q_Suc_diff: "qfun k (Suc h) - qfun k h = eps k * (1 + eps k)^h / k"
+lemma q_Suc_diff: "qfun (Suc h) - qfun h = eps k * (1 + eps k)^h / k"
   by (simp add: qfun_eq field_split_simps)
 
 lemma height_exists':
-  assumes "k>0"
   obtains h where "p \<le> qfun_base k h \<and> h>0"
 proof -
   have 1: "1 + eps k \<ge> 1"
     by (auto simp: eps_def)
   have "\<forall>\<^sup>\<infinity>h. p \<le> real h * eps k / real k"
-    using assms p0_01 unfolding eps_def by real_asymp
+    using p0_01 kn0 unfolding eps_def by real_asymp
   then obtain h where "p \<le> real h * eps k / real k"
     by (meson eventually_sequentially order.refl)
   also have "... \<le> ((1 + eps k) ^ h - 1) / real k"
@@ -326,28 +325,28 @@ proof -
     using power_increasing [OF le_SucI [OF order_refl] 1]
     by (simp add: divide_right_mono)
   finally have "p \<le> qfun_base k (Suc h)"
-    unfolding qfun_base_def using assms p0_01 by blast
+    unfolding qfun_base_def using p0_01 by blast
   then show thesis
     using that by blast 
 qed
 
 
 lemma height_exists:
-  assumes "k>0"
-  obtains h where "p \<le> qfun k h \<and> h>0"
+  obtains h where "p \<le> qfun h" "h>0"
 proof -
   obtain h' where "p \<le> qfun_base k h' \<and> h'>0"
-    using assms height_exists' by blast
+    using height_exists' by blast
   then show thesis
-    using p0_01 qfun_def that by force
+    using p0_01 qfun_def that
+    by (metis add_strict_increasing less_eq_real_def)
 qed
 
 lemma hgt_gt0: "hgt p > 0"
   unfolding hgt_def
   by (smt (verit, best) LeastI height_exists kn0)
 
-lemma hgt_works: "p \<le> qfun k (hgt p)"
-  by (metis (no_types, lifting) LeastI height_exists hgt_def kn0)
+lemma hgt_works: "p \<le> qfun (hgt p)"
+  by (metis (no_types, lifting) LeastI height_exists hgt_def)
 
 lemma hgt_Least':
   assumes "0<h" "p \<le> qfun_base k h"
@@ -355,7 +354,7 @@ lemma hgt_Least':
   by (smt (verit, del_insts) One_nat_def Suc_leI assms hgt_def p0_01 qfun_def Least_le)
 
 lemma hgt_Least:
-  assumes "0<h" "p \<le> qfun k h"
+  assumes "0<h" "p \<le> qfun h"
   shows "hgt p \<le> h"
   by (simp add: Suc_leI assms hgt_def Least_le)
 
@@ -366,23 +365,23 @@ lemma real_hgt_Least':
   by (meson hgt_Least' of_nat_mono order.trans)
 
 lemma real_hgt_Least:
-  assumes "real h \<le> r" "0<h" "p \<le> qfun k h"
+  assumes "real h \<le> r" "0<h" "p \<le> qfun h"
   shows "real (hgt p) \<le> r"
   using assms by (meson assms order.trans hgt_Least of_nat_mono)
 
 lemma hgt_greater:
-  assumes "p > qfun k h"
+  assumes "p > qfun h"
   shows "hgt p > h"
   by (meson assms hgt_works kn0 not_less order.trans qfun_mono)
 
 lemma hgt_less_imp_qfun_less:
   assumes "0<h" "h < hgt p"
-  shows "p > qfun k h"
+  shows "p > qfun h"
   by (metis assms hgt_Least not_le)  
 
 lemma hgt_le_imp_qfun_ge:
   assumes "hgt p \<le> h"
-  shows "p \<le> qfun k h"
+  shows "p \<le> qfun h"
   by (meson assms hgt_greater not_less)
 
 text \<open>This gives us an upper bound for heights, namely @{term "hgt 1"}, but it's not explicit.\<close>
@@ -406,7 +405,7 @@ lemma height_upper_bound:
   unfolding Big_height_upper_bound_def hgt_maximum_def
   by (smt (verit, ccfv_SIG) p0_01(1) power.simps(1) qfun_def qfun_eq zero_less_divide_iff) 
 
-definition alpha :: "nat \<Rightarrow> real" where "alpha \<equiv> \<lambda>h. qfun k h - qfun k (h-1)"
+definition alpha :: "nat \<Rightarrow> real" where "alpha \<equiv> \<lambda>h. qfun h - qfun (h-1)"
 
 lemma alpha_ge0: "alpha h \<ge> 0"
   by (simp add: alpha_def qfun_eq divide_le_cancel eps_gt0)

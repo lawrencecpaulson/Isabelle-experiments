@@ -44,15 +44,15 @@ lemma (in Book) ZZ_8_1:
 proof -
   define m where "m \<equiv> halted_point \<mu>"
   define p where "p \<equiv> pee \<mu>"
-  define pp where "pp \<equiv> \<lambda>i h. if h=1 then min (p i) (qfun k 1)
-                          else if p i \<le> qfun k (h-1) then qfun k (h-1) 
-                          else if p i \<ge> qfun k h then qfun k h
+  define pp where "pp \<equiv> \<lambda>i h. if h=1 then min (p i) (qfun 1)
+                          else if p i \<le> qfun (h-1) then qfun (h-1) 
+                          else if p i \<ge> qfun h then qfun h
                           else p i"
   define \<Delta> where "\<Delta> \<equiv> \<lambda>i. p (Suc i) - p i"
   define \<Delta>\<Delta> where "\<Delta>\<Delta> \<equiv> \<lambda>i h. pp (Suc i) h - pp i h"
-  have pp_eq: "pp i h = (if h=1 then min (p i) (qfun k 1)
-                          else max (qfun k (h-1)) (min (p i) (qfun k h)))" for i h
-    using qfun_mono [OF kn0, of "h-1" h] by (auto simp: pp_def max_def)
+  have pp_eq: "pp i h = (if h=1 then min (p i) (qfun 1)
+                          else max (qfun (h-1)) (min (p i) (qfun h)))" for i h
+    using qfun_mono [of "h-1" h] by (auto simp: pp_def max_def)
 
   define maxh where "maxh \<equiv> nat\<lfloor>2 * ln k / eps k\<rfloor> + 1"  
   have maxh: "\<And>p. p\<le>1 \<Longrightarrow> hgt p \<le> 2 * ln k / eps k" and "k\<ge>16"
@@ -70,7 +70,7 @@ proof -
     using hgt_less_imp_qfun_less [of "hgt (p i) - 1" "p i"]  
     using hgt_works [of "p i"] hgt_gt0 [of "p i"] kn0 pp_eq by force
 
-  have pp_less_hgt [simp]: "pp i h = qfun k h" if "0<h" "h < hgt (p i)" for h i
+  have pp_less_hgt [simp]: "pp i h = qfun h" if "0<h" "h < hgt (p i)" for h i
   proof (cases "h=1")
     case True
     then show ?thesis
@@ -81,7 +81,7 @@ proof -
       using alpha_def alpha_ge0 hgt_less_imp_qfun_less pp_eq by force
   qed
 
-  have pp_gt_hgt [simp]: "pp i h = qfun k (h-1)" if "h > hgt (p i)" for h i
+  have pp_gt_hgt [simp]: "pp i h = qfun (h-1)" if "h > hgt (p i)" for h i
     using hgt_gt0 [of "p i"] kn0 that
     by (simp add: pp_def hgt_le_imp_qfun_ge)
 
@@ -101,7 +101,7 @@ proof -
       by (simp add: \<Delta>_def pp_def split: if_split_asm)
   qed
 
-  have sum_pp_aux: "(\<Sum>h=Suc 0..n. pp i h) = (if hgt (p i) \<le> n then p i + (\<Sum>h=1..<n. qfun k h) else (\<Sum>h=1..n. qfun k h))" 
+  have sum_pp_aux: "(\<Sum>h=Suc 0..n. pp i h) = (if hgt (p i) \<le> n then p i + (\<Sum>h=1..<n. qfun h) else (\<Sum>h=1..n. qfun h))" 
     if "n>0" for n i
     using that
   proof (induction n)
@@ -118,7 +118,7 @@ proof -
         by (simp split: if_split_asm) (smt (verit) le_Suc_eq not_less_eq pp_eq_hgt sum.head_if)
     qed
   qed auto
-  have sum_pp: "(\<Sum>h=Suc 0..maxh. pp i h) = p i + (\<Sum>h=1..<maxh. qfun k h)" for i
+  have sum_pp: "(\<Sum>h=Suc 0..maxh. pp i h) = p i + (\<Sum>h=1..<maxh. qfun h)" for i
     using \<open>1 < maxh\<close> by (simp add: hgt_le_maxh less_or_eq_imp_le sum_pp_aux)
   have 33: "\<Delta> i = (\<Sum>h=1..maxh. \<Delta>\<Delta> i h)" for i
     by (simp add: \<Delta>\<Delta>_def \<Delta>_def sum_subtractf sum_pp)

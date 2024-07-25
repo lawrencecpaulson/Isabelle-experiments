@@ -143,7 +143,7 @@ proof -
     proof -
       have "hgt (p (i-1)) \<le> 1"
       proof (intro hgt_Least)
-        show "p (i-1) \<le> qfun k 1"
+        show "p (i-1) \<le> qfun 1"
           unfolding qfun_eq
           by (smt (verit) one_le_power pee divide_nonneg_nonneg eps_ge0 of_nat_less_0_iff)
       qed auto
@@ -199,15 +199,15 @@ proof -
         by (smt (verit) Red_5_7c kn0 pee_le hgt_works) 
     next
       case 2
-      then have p_gt_q: "p i > qfun k 1"
+      then have p_gt_q: "p i > qfun 1"
         by (meson hgt_Least not_le zero_less_one)
-      have pee_le_q0: "p (i-1) \<le> qfun k 0"
+      have pee_le_q0: "p (i-1) \<le> qfun 0"
         using 2 Z_class_def p_def i by auto
       also have pee2: "\<dots> \<le> p i"
         using alpha_eq p_gt_q by (smt (verit, best) kn0 qfun_mono zero_le_one) 
       finally have "p (i-1) \<le> p i" .
       then have "p (i-1) - p i + alpha (hgt (p i)) 
-              \<le> qfun k 0 - p i + eps k * (p i - qfun k 0 + 1/k)"
+              \<le> qfun 0 - p i + eps k * (p i - qfun 0 + 1/k)"
         using Red_5_7b pee_le_q0 pee2 by fastforce
       also have "\<dots> \<le> eps k / k"
         using kn0 pee2 by (simp add: algebra_simps) (smt (verit) affine_ineq eps_le1)
@@ -266,14 +266,14 @@ next
     by (simp add: ring_distribs inverse_eq_divide) (smt (verit))
   have 0: "0 \<le> (1 + eps k) ^ (h i - Suc 0)"
     using eps_ge0 by auto
-  have lesspi: "qfun k (h i - 1) < p i"
+  have lesspi: "qfun (h i - 1) < p i"
     using False hgt_Least [of "h i - 1" "p i"] unfolding h_def by linarith
   have A: "(1 + eps k) ^ h i = (1 + eps k) * (1 + eps k) ^ (h i - Suc 0)"
     using False power.simps by (metis h_def Suc_pred hgt_gt0)
   have B: "(1 + eps k) ^ (h i - 3) = 1 / (1 + eps k)^2 * (1 + eps k) ^ (h i - Suc 0)"
     using eps_gt0 [OF kn0] False
     by (simp add: divide_simps Suc_diff_Suc numeral_3_eq_3 flip: power_add)
-  have "qfun k (h i - 3) \<le> qfun k (h i - 1) - (qfun k (h i) - qfun k (h i - 1))"
+  have "qfun (h i - 3) \<le> qfun (h i - 1) - (qfun (h i) - qfun (h i - 1))"
     using kn0 mult_left_mono [OF le1 0]
     apply (simp add: qfun_eq field_simps A)
     by (simp add: B)
@@ -281,7 +281,7 @@ next
     using lesspi by (simp add: alpha_def)
   also have "\<dots> \<le> p (Suc i)"
     using Y_6_4_Red i by (force simp: h_def p_def)
-  finally have "qfun k (h i - 3) < p (Suc i)" .
+  finally have "qfun (h i - 3) < p (Suc i)" .
   with hgt_greater show ?thesis
     unfolding h_def by force
 qed
@@ -324,20 +324,20 @@ proof (cases "h > 2*\<kappa> + 1")
   case True
   then have "0 < h - 1"
     by (smt (verit, best) \<kappa>_def one_less_of_natD powr_non_neg zero_less_diff)
-  with True have "p (i-1) > qfun k (h-1)"
+  with True have "p (i-1) > qfun (h-1)"
     by (simp add: h_def hgt_less_imp_qfun_less)
-  then have "qfun k (h-1) - eps k powr (1/2) * (1 + eps k) ^ (h-1) / k < p (i-1) - \<kappa> * alpha h"
+  then have "qfun (h-1) - eps k powr (1/2) * (1 + eps k) ^ (h-1) / k < p (i-1) - \<kappa> * alpha h"
     using \<open>0 < h-1\<close> Y_6_4_Bblue [OF i] \<open>0<\<mu>\<close> eps_ge0
     apply (simp add: alpha_eq p_def \<kappa>_def)
     by (smt (verit, best) field_sum_of_halves mult.assoc mult.commute powr_mult_base)
   also have "\<dots> \<le> p (Suc i)"
     using Y_6_4_Bblue i \<open>0<\<mu>\<close> h_def p_def \<kappa>_def by blast
-  finally have A: "qfun k (h-1) - eps k powr (1/2) * (1 + eps k) ^ (h-1) / k < p (Suc i)" .
+  finally have A: "qfun (h-1) - eps k powr (1/2) * (1 + eps k) ^ (h-1) / k < p (Suc i)" .
   have ek0: "0 < 1 + eps k"
     by (smt (verit, best) eps_ge0)
   have less_h: "nat \<lfloor>2 * \<kappa>\<rfloor> < h"
     using True \<open>0 < h - 1\<close> by linarith
-  have "qfun k (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) = p0 + ((1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) - 1) / k"
+  have "qfun (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) = p0 + ((1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) - 1) / k"
     by (simp add: qfun_eq)
   also have "\<dots> \<le> p0 + ((1 - eps k powr (1/2)) * (1 + eps k) ^ (h-1) - 1) / k"
   proof -
@@ -353,11 +353,11 @@ proof (cases "h > 2*\<kappa> + 1")
     then show ?thesis
       by (intro add_left_mono divide_right_mono diff_right_mono) auto
   qed
-  also have "\<dots> \<le> qfun k (h-1) - eps k powr (1/2) * (1 + eps k) ^ (h-1) / real k"
+  also have "\<dots> \<le> qfun (h-1) - eps k powr (1/2) * (1 + eps k) ^ (h-1) / real k"
     using kn0 eps_ge0 by (simp add: qfun_eq powr_half_sqrt field_simps)
   also have "\<dots> < p (Suc i)"
     using A by blast
-  finally have "qfun k (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) < p (Suc i)" .
+  finally have "qfun (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) < p (Suc i)" .
   then have "h - nat \<lfloor>2 * \<kappa>\<rfloor> \<le> hgt (p (Suc i))"
     using hgt_greater by force
   with less_h show ?thesis
@@ -544,7 +544,7 @@ next
     using \<open>k\<ge>16\<close> by (simp add: powr_half_sqrt real_le_rsqrt)
   then have 8: "2 \<le> real k powr 1 * real k powr -(1/8)"
     unfolding powr_add [symmetric] using \<open>k\<ge>16\<close> order.trans nle_le by fastforce
-  have "p0 - eps k \<le> qfun k 0 - 2 * eps k powr (1/2) / k"
+  have "p0 - eps k \<le> qfun 0 - 2 * eps k powr (1/2) / k"
     using mult_left_mono [OF 8, of "k powr (-1/8)"] kn0 
     by (simp add: qfun_eq eps_def powr_powr field_simps flip: powr_add)
   also have "\<dots> \<le> p j'  - eps k powr (-1/2) * alpha (hgt (p j'))"

@@ -936,11 +936,11 @@ proof -
   proof -
     have hgt_le: "hp i \<le> hp (Suc i)" 
       using Y_6_5_DegreeReg \<open>0 < k\<close> i p_def hp_def by blast
-    have A: "p (Suc i) \<le> qfun k (hp (Suc i))"
+    have A: "p (Suc i) \<le> qfun (hp (Suc i))"
       by (simp add: \<open>0 < k\<close> hp_def hgt_works)
-    have B: "qfun k (hp i - 1) \<le> p i"
+    have B: "qfun (hp i - 1) \<le> p i"
       using hgt_Least [of "hp i - 1" "p i"] \<open>p i \<ge> p0\<close> by (force simp: hp_def)
-    have "p (Suc i) - p i \<le> qfun k (hp (Suc i)) - qfun k (hp i - 1)"
+    have "p (Suc i) - p i \<le> qfun (hp (Suc i)) - qfun (hp i - 1)"
       using A B by auto
     also have "\<dots> = ((1 + eps k) ^ (Suc (hp i - 1 + hp (Suc i)) - hp i) -
                       (1 + eps k) ^ (hp i - 1))    /  k"
@@ -1163,7 +1163,7 @@ proof -
   proof (intro real_hgt_Least)
     show "0 < 2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>"
       using kn0 eps_gt0 [of k] by (simp add: eps_le1 powr_le1 powr_minus_divide)
-    show "qstar \<le> qfun k (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>)"
+    show "qstar \<le> qfun (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>)"
       using kn0 711
       by (simp add: qstar_def alpha_def qfun_eq divide_right_mono mult.commute)
   qed auto

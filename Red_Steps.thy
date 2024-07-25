@@ -348,23 +348,23 @@ lemma Red_5_7a: "eps k / k \<le> alpha (hgt p)"
   by (simp add: alpha_ge hgt_gt0)
 
 lemma Red_5_7b: 
-  assumes "p \<ge> qfun k 0" shows "alpha (hgt p) \<le> eps k * (p - qfun k 0 + 1/k)"
+  assumes "p \<ge> qfun 0" shows "alpha (hgt p) \<le> eps k * (p - qfun 0 + 1/k)"
 proof -
-  have qh_le_p: "qfun k (hgt p - Suc 0) \<le> p"
+  have qh_le_p: "qfun (hgt p - Suc 0) \<le> p"
     by (smt (verit) assms diff_Suc_less hgt_gt0 hgt_less_imp_qfun_less zero_less_iff_neq_zero)
   have "hgt p > 0"
     by (simp add: Suc_leI hgt_gt0)
   then have "alpha (hgt p) = eps k * (1 + eps k) ^ (hgt p - 1) / k"
     using alpha_eq by blast
-  also have "\<dots> = eps k * (qfun k (hgt p - 1) - qfun k 0 + 1/k)"
+  also have "\<dots> = eps k * (qfun (hgt p - 1) - qfun 0 + 1/k)"
     by (simp add: diff_divide_distrib qfun_eq)
-  also have "\<dots> \<le> eps k * (p - qfun k 0 + 1/k)"
+  also have "\<dots> \<le> eps k * (p - qfun 0 + 1/k)"
     by (simp add: eps_ge0 landau_o.R_mult_left_mono qh_le_p)
   finally show ?thesis .
 qed
 
 lemma Red_5_7c: 
-  assumes "p \<le> qfun k 1" shows "alpha (hgt p) = eps k / k"
+  assumes "p \<le> qfun 1" shows "alpha (hgt p) = eps k / k"
   using Book.alpha_hgt_eq Book_axioms assms hgt_Least by fastforce
 
 lemma Red_5_8:
@@ -393,7 +393,7 @@ proof -
   have RedN: "(?p - eps k powr -(1/2) * alpha (hgt ?p)) * card Y \<le> card (Neighbours Red x \<inter> Y)"
     using x XY by (simp add: XSuc YSuc X_degree_reg_def pee_def red_dense_def)
   show ?thesis
-  proof (cases "?p \<ge> qfun k 0")
+  proof (cases "?p \<ge> qfun 0")
     case True
     have "i \<notin> Step_class \<mu> {halted}"
       using i by (simp add: Step_class_def)
@@ -401,7 +401,7 @@ proof -
       by (metis Step_class_not_halted gr0I nat_less_le not_halted_pee_gt pee_eq_p0)
     have 0: "eps k powr -(1/2) \<ge> 0"
       by simp
-    have "eps k powr -(1/2) * alpha (hgt ?p) \<le> eps k powr (1/2) * (?p - qfun k 0 + 1/k)"
+    have "eps k powr -(1/2) * alpha (hgt ?p) \<le> eps k powr (1/2) * (?p - qfun 0 + 1/k)"
       using mult_left_mono [OF Red_5_7b [OF True] 0]
       by (simp add: eps_def powr_mult_base flip: mult_ac)
     also have "\<dots> \<le> eps k powr (1/2) * ?p"
@@ -412,7 +412,7 @@ proof -
     with XY RedN YSuc show ?thesis by fastforce
   next
     case False
-    then have "pee \<mu> i \<le> qfun k 1"
+    then have "pee \<mu> i \<le> qfun 1"
       by (smt (verit) One_nat_def alpha_Suc_eq alpha_ge0 q_Suc_diff)
     then have "eps k powr -(1/2) * alpha (hgt ?p) = eps k powr (1/2) / k"
       using powr_mult_base [of "eps k"] eps_gt0 by (force simp: Red_5_7c mult.commute)
@@ -704,7 +704,7 @@ proof -
     then have 16: "?E16 \<le> red_density NBX NRY" 
       using \<open>\<beta>>0\<close> \<open>card X > 0\<close>
       by (simp add: cNRX cNBX algebra_simps add_divide_distrib diff_divide_distrib)
-    consider "qfun k 0 \<le> p" | "p \<le> qfun k 1"
+    consider "qfun 0 \<le> p" | "p \<le> qfun 1"
       by (smt (verit) alpha_Suc_eq alpha_ge0 One_nat_def q_Suc_diff)
     then have alpha_le_1: "alpha (hgt p) \<le> 1"
     proof cases
@@ -719,7 +719,7 @@ proof -
           unfolding divide_inverse
           by (intro mult_left_mono) (auto simp: eps_def)
       qed
-      then have "eps k * (p - qfun k 0 + 1 / real k) \<le> 1"
+      then have "eps k * (p - qfun 0 + 1 / real k) \<le> 1"
         by (simp add: algebra_simps)
       then show ?thesis
         using Red_5_7b [OF 1] by linarith
