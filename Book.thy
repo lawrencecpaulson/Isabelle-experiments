@@ -166,6 +166,11 @@ locale Book = Book_Basis +   \<comment> \<open>finite simple graphs (no loops)\<
   fixes X0 :: "'a set" and Y0 :: "'a set"    \<comment> \<open>initial values\<close>
   assumes XY0: "disjnt X0 Y0" "X0 \<subseteq> V" "Y0 \<subseteq> V"
   assumes density_ge_p0_min: "gen_density Red X0 Y0 \<ge> p0_min"
+  fixes l::nat       \<comment> \<open>blue limit\<close>
+  fixes k::nat       \<comment> \<open>red limit\<close>
+  assumes l_le_k: "l \<le> k" \<comment> \<open>they should be "sufficiently large"\<close>
+  assumes no_Red_clique: "\<not> (\<exists>K. size_clique k K Red)"
+  assumes no_Blue_clique: "\<not> (\<exists>K. size_clique l K Blue)"
 
 context Book
 begin
@@ -177,23 +182,11 @@ lemma Red_edges_XY0: "Red \<inter> all_edges_betw_un X0 Y0 \<noteq> {}"
 lemma finite_X0: "finite X0" and finite_Y0: "finite Y0"
   using XY0 finV finite_subset by blast+
 
-(*
-locale Colours = Book + 
-  fixes l::nat       \<comment> \<open>blue limit\<close>
-  fixes k::nat       \<comment> \<open>red limit\<close>
-  assumes lk: "l \<le> k" \<comment> \<open>they should be "sufficiently large"\<close>
-  assumes no_Red_clique: "\<not> (\<exists>K. size_clique k K Red)"
-  assumes no_Blue_clique: "\<not> (\<exists>K. size_clique l K Blue)"
-begin
-
 lemma ln0: "l>0"
   using no_Blue_clique by (force simp: size_clique_def clique_def)
 
 lemma kn0: "k > 0"
-  using  lk ln0 by auto
-
-end
-*)
+  using  l_le_k ln0 by auto
 
 lemma Blue_E: "Blue \<subseteq> E"
   by (simp add: Blue_def) 
@@ -416,15 +409,12 @@ lemma height_upper_bound:
 
 
 
-definition alpha :: "nat \<Rightarrow> nat \<Rightarrow> real" where "alpha \<equiv> \<lambda>k h. qfun k h - qfun k (h-1)"
+definition alpha :: "nat \<Rightarrow> real" where "alpha \<equiv> \<lambda>h. qfun k h - qfun k (h-1)"
 
-lemma alpha_0 [simp]: "alpha 0 h = 0" and alpha_0' [simp]: "alpha k 0 = 0"
-  by (auto simp: alpha_def qfun_eq)
-
-lemma alpha_ge0: "alpha k h \<ge> 0"
+lemma alpha_ge0: "alpha h \<ge> 0"
   by (simp add: alpha_def qfun_eq divide_le_cancel eps_gt0)
 
-lemma alpha_Suc_ge: "alpha k (Suc h) \<ge> eps k / k"
+lemma alpha_Suc_ge: "alpha (Suc h) \<ge> eps k / k"
 proof -
   have "(1 + eps k) ^ h \<ge> 1"
     by (simp add: eps_def)
@@ -432,26 +422,26 @@ proof -
     by (simp add: alpha_def qfun_eq eps_gt0 field_split_simps)
 qed
 
-lemma alpha_ge: "h>0 \<Longrightarrow> alpha k h \<ge> eps k / k"
+lemma alpha_ge: "h>0 \<Longrightarrow> alpha h \<ge> eps k / k"
   by (metis Suc_pred alpha_Suc_ge)
 
-lemma alpha_gt0: "\<lbrakk>k>0; h>0\<rbrakk> \<Longrightarrow> alpha k h > 0"
+lemma alpha_gt0: "\<lbrakk>k>0; h>0\<rbrakk> \<Longrightarrow> alpha h > 0"
   by (smt (verit) alpha_ge divide_pos_pos eps_gt0 of_nat_0_less_iff)
 
-lemma alpha_Suc_eq: "alpha k (Suc h) = eps k * (1 + eps k) ^ h / k"
+lemma alpha_Suc_eq: "alpha (Suc h) = eps k * (1 + eps k) ^ h / k"
   by (simp add: alpha_def q_Suc_diff)
 
 lemma alpha_eq: 
-  assumes "h>0" shows "alpha k h = eps k * (1 + eps k) ^ (h-1) / k"
+  assumes "h>0" shows "alpha h = eps k * (1 + eps k) ^ (h-1) / k"
   by (metis Suc_pred' alpha_Suc_eq assms)
 
-lemma alpha_hgt_ge: "alpha k (hgt k p) \<ge> eps k / k"
+lemma alpha_hgt_ge: "alpha (hgt k p) \<ge> eps k / k"
   by (simp add: alpha_ge hgt_gt0)
 
-lemma alpha_hgt_eq: "alpha k (hgt k p) = eps k * (1 + eps k) ^ (hgt k p -1) / k"
+lemma alpha_hgt_eq: "alpha (hgt k p) = eps k * (1 + eps k) ^ (hgt k p -1) / k"
   using alpha_eq hgt_gt0 by presburger
 
-lemma alpha_mono: "\<lbrakk>h' \<le> h; 0 < h'\<rbrakk> \<Longrightarrow> alpha k h' \<le> alpha k h"
+lemma alpha_mono: "\<lbrakk>h' \<le> h; 0 < h'\<rbrakk> \<Longrightarrow> alpha h' \<le> alpha h"
   by (simp add: alpha_eq eps_ge0 divide_right_mono mult_left_mono power_increasing)
 
 definition all_incident_edges :: "'a set \<Rightarrow> 'a set set" where
@@ -472,20 +462,7 @@ definition "RB_state \<equiv> \<lambda>(X,Y,A,B). all_edges_betw_un A A \<subset
 
 definition "valid_state \<equiv> \<lambda>U. V_state U \<and> disjoint_state U \<and> RB_state U"
 
-definition "termination_condition \<equiv> \<lambda>l k X Y. card X \<le> RN k (nat \<lceil>real l powr (3/4)\<rceil>) \<or> red_density X Y \<le> 1/k"
-
-(*This wants to be a locale. But nested locales don't seem to work, and having separate
-locales for different parts of the development gets confusing here.*)
-  \<comment> \<open>l: blue limit, and k: red limit\<close>
-
-text \<open>Basic conditions for the book algorithm.\<close>
-definition "Colours \<equiv> \<lambda>l k. l \<le> k \<and> \<not> (\<exists>K. size_clique k K Red) \<and> \<not> (\<exists>K. size_clique l K Blue)"
-
-lemma Colours_ln0: "Colours l k \<Longrightarrow> l>0"
-  by (force simp: Colours_def size_clique_def clique_def)
-
-lemma Colours_kn0: "Colours l k \<Longrightarrow> k>0"
-  using Colours_def Colours_ln0 not_le by auto
+definition "termination_condition \<equiv> \<lambda>X Y. card X \<le> RN k (nat \<lceil>real l powr (3/4)\<rceil>) \<or> red_density X Y \<le> 1/k"
 
 lemma 
   assumes "V_state(X,Y,A,B)" 
@@ -499,44 +476,44 @@ lemma
   by (auto simp: valid_state_def V_state_def RB_state_def all_edges_betw_un_iff_clique all_edges_betw_un_Un2)
 
 lemma A_less_k:
-  assumes valid: "valid_state(X,Y,A,B)" and "Colours l k"
+  assumes valid: "valid_state(X,Y,A,B)" 
   shows "card A < k"
-  using assms A_Red_clique[OF valid] unfolding Colours_def size_clique_def valid_state_def V_state_def
+  using assms A_Red_clique[OF valid] no_Red_clique unfolding size_clique_def valid_state_def V_state_def
   by (smt (verit) card_Ex_subset case_prod_conv order.trans linorder_not_less smaller_clique)
 
 lemma B_less_l:
-  assumes valid: "valid_state(X,Y,A,B)" and "Colours l k"
+  assumes valid: "valid_state(X,Y,A,B)"
   shows "card B < l"
-  using assms B_Blue_clique[OF valid] unfolding Colours_def size_clique_def valid_state_def V_state_def
+  using assms B_Blue_clique[OF valid] no_Blue_clique unfolding size_clique_def valid_state_def V_state_def
   by (smt (verit) card_Ex_subset case_prod_conv order.trans linorder_not_less smaller_clique)
 
 
 subsection \<open>Degree regularisation\<close>
 
-definition "red_dense \<equiv> \<lambda>k Y p x. card (Neighbours Red x \<inter> Y) \<ge> (p - eps k powr (-1/2) * alpha k (hgt k p)) * card Y"
+definition "red_dense \<equiv> \<lambda>Y p x. card (Neighbours Red x \<inter> Y) \<ge> (p - eps k powr (-1/2) * alpha (hgt k p)) * card Y"
 
-definition "X_degree_reg \<equiv> \<lambda>k X Y. {x \<in> X. red_dense k Y (red_density X Y) x}"
+definition "X_degree_reg \<equiv> \<lambda>X Y. {x \<in> X. red_dense Y (red_density X Y) x}"
 
-definition "degree_reg \<equiv> \<lambda>k (X,Y,A,B). (X_degree_reg k X Y, Y, A, B)"
+definition "degree_reg \<equiv> \<lambda>(X,Y,A,B). (X_degree_reg X Y, Y, A, B)"
 
-lemma X_degree_reg_subset: "X_degree_reg k X Y \<subseteq> X"
+lemma X_degree_reg_subset: "X_degree_reg X Y \<subseteq> X"
   by (auto simp: X_degree_reg_def)
 
-lemma degree_reg_V_state: "V_state U \<Longrightarrow> V_state (degree_reg k U)"
+lemma degree_reg_V_state: "V_state U \<Longrightarrow> V_state (degree_reg U)"
   by (auto simp: degree_reg_def X_degree_reg_def V_state_def)
 
-lemma degree_reg_disjoint_state: "disjoint_state U \<Longrightarrow> disjoint_state (degree_reg k U)"
+lemma degree_reg_disjoint_state: "disjoint_state U \<Longrightarrow> disjoint_state (degree_reg U)"
   by (auto simp: degree_reg_def X_degree_reg_def disjoint_state_def disjnt_iff)
 
-lemma degree_reg_RB_state: "RB_state U \<Longrightarrow> RB_state (degree_reg k U)"
+lemma degree_reg_RB_state: "RB_state U \<Longrightarrow> RB_state (degree_reg U)"
   apply (simp add: degree_reg_def RB_state_def all_edges_betw_un_Un2 split: prod.split prod.split_asm)
   by (meson X_degree_reg_subset all_edges_betw_un_mono2 dual_order.trans)
 
-lemma degree_reg_valid_state: "valid_state U \<Longrightarrow> valid_state (degree_reg k U)"
+lemma degree_reg_valid_state: "valid_state U \<Longrightarrow> valid_state (degree_reg U)"
   by (simp add: degree_reg_RB_state degree_reg_V_state degree_reg_disjoint_state valid_state_def)
 
 lemma not_red_dense_sum_less:
-  assumes "\<And>x. x \<in> X \<Longrightarrow> \<not> red_dense k Y p x" and "X\<noteq>{}" "finite X"
+  assumes "\<And>x. x \<in> X \<Longrightarrow> \<not> red_dense Y p x" and "X\<noteq>{}" "finite X"
   shows "(\<Sum>x\<in>X. card (Neighbours Red x \<inter> Y)) < p * real (card Y) * card X"
 proof -
   have "\<And>x. x \<in> X \<Longrightarrow> card (Neighbours Red x \<inter> Y) < p * real (card Y)"
@@ -549,7 +526,7 @@ qed
 
 lemma red_density_X_degree_reg_ge:
   assumes "disjnt X Y"
-  shows "red_density (X_degree_reg k X Y) Y \<ge> red_density X Y"
+  shows "red_density (X_degree_reg X Y) Y \<ge> red_density X Y"
 proof (cases "X={} \<or> infinite X \<or> infinite Y")
   case True
   then show ?thesis
@@ -558,7 +535,7 @@ next
   case False
   then have "finite X" "finite Y"
     by auto
-  { assume "\<And>x. x \<in> X \<Longrightarrow> \<not> red_dense k Y (red_density X Y) x"
+  { assume "\<And>x. x \<in> X \<Longrightarrow> \<not> red_dense Y (red_density X Y) x"
     with False have "(\<Sum>x\<in>X. card (Neighbours Red x \<inter> Y)) < red_density X Y * real (card Y) * card X"
       using \<open>finite X\<close> not_red_dense_sum_less by blast
     with Red_E have "edge_card Red Y X < (red_density X Y * real (card Y)) * card X"
@@ -566,12 +543,12 @@ next
     then have False
       by (simp add: gen_density_def edge_card_commute split: if_split_asm)
   }
-  then obtain x where x: "x \<in> X" "red_dense k Y (red_density X Y) x"
+  then obtain x where x: "x \<in> X" "red_dense Y (red_density X Y) x"
     by blast
-  define X' where "X' \<equiv> {x \<in> X. \<not> red_dense k Y (red_density X Y) x}"
+  define X' where "X' \<equiv> {x \<in> X. \<not> red_dense Y (red_density X Y) x}"
   have X': "finite X'" "disjnt Y X'"
     using assms \<open>finite X\<close> by (auto simp: X'_def disjnt_iff)
-  have eq: "X_degree_reg k X Y = X - X'"
+  have eq: "X_degree_reg X Y = X - X'"
     by (auto simp: X_degree_reg_def X'_def)
   show ?thesis
   proof (cases "X'={}")
@@ -587,7 +564,7 @@ next
       proof (intro not_red_dense_sum_less)
         fix x
         assume "x \<in> X'"
-        show "\<not> red_dense k Y (red_density X Y) x"
+        show "\<not> red_dense Y (red_density X Y) x"
           using \<open>x \<in> X'\<close> by (simp add: X'_def)
       qed (use False X' in auto)
       then have "card X * (\<Sum>x\<in>X'. card (Neighbours Red x \<inter> Y)) < card X' * edge_card Red Y X"
@@ -612,8 +589,8 @@ subsection \<open>Big blue steps: code\<close>
 definition bluish :: "[real,'a set,'a] \<Rightarrow> bool" where
   "bluish \<equiv> \<lambda>\<mu> X x. card (Neighbours Blue x \<inter> X) \<ge> \<mu> * real (card X)"
 
-definition many_bluish :: "[real, nat,nat,'a set] \<Rightarrow> bool" where
-  "many_bluish \<equiv> \<lambda>\<mu> l k X. card {x\<in>X. bluish \<mu> X x} \<ge> RN k (nat \<lceil>l powr (2/3)\<rceil>)"
+definition many_bluish :: "[real, 'a set] \<Rightarrow> bool" where
+  "many_bluish \<equiv> \<lambda>\<mu> X. card {x\<in>X. bluish \<mu> X x} \<ge> RN k (nat \<lceil>l powr (2/3)\<rceil>)"
 
 definition good_blue_book :: "[real, 'a set, 'a set \<times> 'a set] \<Rightarrow> bool" where
  "good_blue_book \<equiv> \<lambda>\<mu> X. \<lambda>(S,T). book S T Blue \<and> S\<subseteq>X \<and> T\<subseteq>X 
@@ -652,7 +629,7 @@ lemma choose_blue_book_subset:
 
 text \<open>expressing the complicated preconditions inductively\<close>
 inductive big_blue
-  where "\<lbrakk>many_bluish \<mu> l k X; good_blue_book \<mu> X (S,T); card S = best_blue_book_card \<mu> X\<rbrakk> \<Longrightarrow> big_blue \<mu> (X,Y,A,B) (T, Y, A, B\<union>S)"
+  where "\<lbrakk>many_bluish \<mu> X; good_blue_book \<mu> X (S,T); card S = best_blue_book_card \<mu> X\<rbrakk> \<Longrightarrow> big_blue \<mu> (X,Y,A,B) (T, Y, A, B\<union>S)"
 
 lemma big_blue_V_state: "\<lbrakk>big_blue \<mu> U U'; V_state U\<rbrakk> \<Longrightarrow> V_state U'"
   by (force simp: good_blue_book_def V_state_def elim!: big_blue.cases)
@@ -674,7 +651,7 @@ definition central_vertex :: "[real,'a set,'a] \<Rightarrow> bool" where
   "central_vertex \<equiv> \<lambda>\<mu> X x. x \<in> X \<and> card (Neighbours Blue x \<inter> X) \<le> \<mu> * real (card X)"
 
 lemma ex_central_vertex:
-  assumes "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X"
+  assumes "\<not> termination_condition X Y" "\<not> many_bluish \<mu> X"
   shows "\<exists>x. central_vertex \<mu> X x"
 proof -
   have "l \<noteq> 0"
@@ -702,7 +679,7 @@ lemma central_vx_is_best:
   unfolding max_central_vx_def by (simp add: finite_central_vertex_set)
 
 lemma ex_best_central_vx: 
-  "\<lbrakk>\<not> termination_condition l k X Y; \<not> many_bluish \<mu> l k X; finite X\<rbrakk> 
+  "\<lbrakk>\<not> termination_condition X Y; \<not> many_bluish \<mu> X; finite X\<rbrakk> 
   \<Longrightarrow> \<exists>x. central_vertex \<mu> X x \<and> weight X Y x = max_central_vx \<mu> X Y"
   unfolding max_central_vx_def
   by (metis empty_iff ex_central_vertex finite_central_vertex_set mem_Collect_eq obtains_MAX)
@@ -712,26 +689,26 @@ text \<open>it's necessary to make a specific choice; a relational treatment mig
 definition "choose_central_vx \<equiv> \<lambda>\<mu> (X,Y,A,B). @x. central_vertex \<mu> X x \<and> weight X Y x = max_central_vx \<mu> X Y"
 
 lemma choose_central_vx_works: 
-  "\<lbrakk>\<not> termination_condition l k X Y; \<not> many_bluish \<mu> l k X; finite X\<rbrakk> 
+  "\<lbrakk>\<not> termination_condition X Y; \<not> many_bluish \<mu> X; finite X\<rbrakk> 
   \<Longrightarrow> central_vertex \<mu> X (choose_central_vx \<mu> (X,Y,A,B)) \<and> weight X Y (choose_central_vx \<mu> (X,Y,A,B)) = max_central_vx \<mu> X Y"
   unfolding choose_central_vx_def
   using someI_ex [OF ex_best_central_vx] by force
 
 lemma choose_central_vx_X: 
-  "\<lbrakk>\<not> many_bluish \<mu> l k X; \<not> termination_condition l k X Y; finite X\<rbrakk> \<Longrightarrow> choose_central_vx \<mu> (X,Y,A,B) \<in> X"
+  "\<lbrakk>\<not> many_bluish \<mu> X; \<not> termination_condition X Y; finite X\<rbrakk> \<Longrightarrow> choose_central_vx \<mu> (X,Y,A,B) \<in> X"
   using central_vertex_def choose_central_vx_works by fastforce
 
 subsection \<open>Red step\<close>
 
-definition "reddish \<equiv> \<lambda>k X Y p x. red_density (Neighbours Red x \<inter> X) (Neighbours Red x \<inter> Y) \<ge> p - alpha k (hgt k p)"
+definition "reddish \<equiv> \<lambda>k X Y p x. red_density (Neighbours Red x \<inter> X) (Neighbours Red x \<inter> Y) \<ge> p - alpha (hgt k p)"
 
 inductive red_step 
   where "\<lbrakk>reddish k X Y (red_density X Y) x; x = choose_central_vx \<mu> (X,Y,A,B)\<rbrakk> 
          \<Longrightarrow> red_step \<mu> (X,Y,A,B) (Neighbours Red x \<inter> X, Neighbours Red x \<inter> Y, insert x A, B)"
 
 lemma red_step_V_state: 
-  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" 
-          "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)"
+  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition X Y" 
+          "\<not> many_bluish \<mu> X" "V_state (X,Y,A,B)"
   shows "V_state U'"
 proof -
   have "X \<subseteq> V"
@@ -743,8 +720,8 @@ proof -
 qed
 
 lemma red_step_disjoint_state:
-  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" 
-          "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
+  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition X Y" 
+          "\<not> many_bluish \<mu> X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
   shows "disjoint_state U'"
 proof -
   have "choose_central_vx \<mu> (X, Y, A, B) \<in> X"
@@ -754,8 +731,8 @@ proof -
 qed
 
 lemma red_step_RB_state: 
-  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y"
-          "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)" "RB_state (X,Y,A,B)"
+  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition X Y"
+          "\<not> many_bluish \<mu> X" "V_state (X,Y,A,B)" "RB_state (X,Y,A,B)"
   shows "RB_state U'"
 proof -
   define x where "x \<equiv> choose_central_vx \<mu> (X, Y, A, B)"
@@ -779,8 +756,8 @@ proof -
 qed
 
 lemma red_step_valid_state: 
-  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" 
-          "\<not> many_bluish \<mu> l k X" "valid_state (X,Y,A,B)"
+  assumes "red_step \<mu> (X,Y,A,B) U'" "\<not> termination_condition X Y" 
+          "\<not> many_bluish \<mu> X" "valid_state (X,Y,A,B)"
   shows "valid_state U'"
   by (meson assms red_step_RB_state red_step_V_state red_step_disjoint_state valid_state_def)
 
@@ -791,8 +768,8 @@ inductive density_boost
          \<Longrightarrow> density_boost \<mu> (X,Y,A,B) (Neighbours Blue x \<inter> X, Neighbours Red x \<inter> Y, A, insert x B)"
 
 lemma density_boost_V_state: 
-  assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" 
-          "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)"
+  assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition X Y" 
+          "\<not> many_bluish \<mu> X" "V_state (X,Y,A,B)"
   shows "V_state U'"
 proof -
   have "X \<subseteq> V"
@@ -804,8 +781,8 @@ proof -
 qed
 
 lemma density_boost_disjoint_state:
-  assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y"  
-          "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
+  assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition X Y"  
+          "\<not> many_bluish \<mu> X" "V_state (X,Y,A,B)" "disjoint_state (X,Y,A,B)"
   shows "disjoint_state U'"
 proof -
   have "X \<subseteq> V"
@@ -817,7 +794,7 @@ proof -
 qed
 
 lemma density_boost_RB_state: 
-  assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "V_state (X,Y,A,B)" 
+  assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish \<mu> X" "V_state (X,Y,A,B)" 
     and rb: "RB_state (X,Y,A,B)"
   shows "RB_state U'"
 proof -
@@ -841,15 +818,15 @@ proof -
 qed
 
 lemma density_boost_valid_state:
-  assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition l k X Y" "\<not> many_bluish \<mu> l k X" "valid_state (X,Y,A,B)"
+  assumes "density_boost \<mu> (X,Y,A,B) U'" "\<not> termination_condition X Y" "\<not> many_bluish \<mu> X" "valid_state (X,Y,A,B)"
   shows "valid_state U'"
   by (meson assms density_boost_RB_state density_boost_V_state density_boost_disjoint_state valid_state_def)
 
 subsection \<open>Steps 2–5 as a function\<close>
 
-definition next_state :: "[real,nat,nat,'a config] \<Rightarrow> 'a config" where
-  "next_state \<equiv> \<lambda>\<mu> l k (X,Y,A,B). 
-       if many_bluish \<mu> l k X 
+definition next_state :: "[real,'a config] \<Rightarrow> 'a config" where
+  "next_state \<equiv> \<lambda>\<mu> (X,Y,A,B). 
+       if many_bluish \<mu> X 
        then let (S,T) = choose_blue_book \<mu> (X,Y,A,B) in (T, Y, A, B\<union>S) 
        else let x = choose_central_vx \<mu> (X,Y,A,B) in
             if reddish k X Y (red_density X Y) x 
@@ -857,11 +834,11 @@ definition next_state :: "[real,nat,nat,'a config] \<Rightarrow> 'a config" wher
             else (Neighbours Blue x \<inter> X, Neighbours Red x \<inter> Y, A, insert x B)"
 
 lemma next_state_valid:
-  assumes "valid_state (X,Y,A,B)" "\<not> termination_condition l k X Y"
-  shows "valid_state (next_state \<mu> l k (X,Y,A,B))"
-proof (cases "many_bluish \<mu> l k X")
+  assumes "valid_state (X,Y,A,B)" "\<not> termination_condition X Y"
+  shows "valid_state (next_state \<mu> (X,Y,A,B))"
+proof (cases "many_bluish \<mu> X")
   case True
-  with finX have "big_blue \<mu> (X,Y,A,B) (next_state \<mu> l k (X,Y,A,B))"
+  with finX have "big_blue \<mu> (X,Y,A,B) (next_state \<mu> (X,Y,A,B))"
     apply (simp add: next_state_def split: prod.split)
     by (metis assms(1) big_blue.intros choose_blue_book_works valid_state_def)
   then show ?thesis
@@ -872,33 +849,33 @@ next
   show ?thesis
   proof (cases "reddish k X Y (red_density X Y) x")
     case True
-    with non_bluish have "red_step \<mu> (X,Y,A,B) (next_state \<mu> l k (X,Y,A,B))"
+    with non_bluish have "red_step \<mu> (X,Y,A,B) (next_state \<mu> (X,Y,A,B))"
       by (simp add: next_state_def Let_def x_def red_step.intros split: prod.split)
     then show ?thesis
       using assms non_bluish red_step_valid_state by blast      
   next
     case False
-    with non_bluish have "density_boost \<mu> (X,Y,A,B) (next_state \<mu> l k (X,Y,A,B))"
+    with non_bluish have "density_boost \<mu> (X,Y,A,B) (next_state \<mu> (X,Y,A,B))"
       by (simp add: next_state_def Let_def x_def density_boost.intros split: prod.split)
     then show ?thesis
       using assms density_boost_valid_state non_bluish by blast
   qed
 qed
 
-primrec stepper :: "[real,nat,nat,nat] \<Rightarrow> 'a config" where
-  "stepper \<mu> l k 0 = (X0,Y0,{},{})"
-| "stepper \<mu> l k (Suc n) = 
-     (let (X,Y,A,B) = stepper \<mu> l k n in 
-      if termination_condition l k X Y then (X,Y,A,B) 
-      else if even n then degree_reg k (X,Y,A,B) else next_state \<mu> l k (X,Y,A,B))"
+primrec stepper :: "[real,nat] \<Rightarrow> 'a config" where
+  "stepper \<mu> 0 = (X0,Y0,{},{})"
+| "stepper \<mu> (Suc n) = 
+     (let (X,Y,A,B) = stepper \<mu> n in 
+      if termination_condition X Y then (X,Y,A,B) 
+      else if even n then degree_reg (X,Y,A,B) else next_state \<mu> (X,Y,A,B))"
 
 lemma degree_reg_subset:
-  assumes "degree_reg k (X,Y,A,B) = (X',Y',A',B')" 
+  assumes "degree_reg (X,Y,A,B) = (X',Y',A',B')" 
   shows "X' \<subseteq> X \<and> Y' \<subseteq> Y"
   using assms by (auto simp: degree_reg_def X_degree_reg_def)
 
 lemma next_state_subset:
-  assumes "next_state \<mu> l k (X,Y,A,B) = (X',Y',A',B')" "finite X"
+  assumes "next_state \<mu> (X,Y,A,B) = (X',Y',A',B')" "finite X"
   shows "X' \<subseteq> X \<and> Y' \<subseteq> Y"
   using assms choose_blue_book_subset
   apply (clarsimp simp: next_state_def valid_state_def Let_def split: if_split_asm prod.split_asm)
@@ -907,7 +884,7 @@ lemma next_state_subset:
 lemma valid_state0: "valid_state (X0, Y0, {}, {})"
   using XY0 by (simp add: valid_state_def V_state_def disjoint_state_def RB_state_def)
 
-lemma valid_state_stepper [simp]: "valid_state (stepper \<mu> l k n)"
+lemma valid_state_stepper [simp]: "valid_state (stepper \<mu> n)"
 proof (induction n)
   case 0
   then show ?case
@@ -918,178 +895,173 @@ next
     by (force simp: next_state_valid degree_reg_valid_state split: prod.split)
 qed
 
-lemma V_state_stepper: "V_state (stepper \<mu> l k n)"
+lemma V_state_stepper: "V_state (stepper \<mu> n)"
   using valid_state_def valid_state_stepper by force
 
-lemma disjoint_state_stepper: "disjoint_state (stepper \<mu> l k n)"
+lemma disjoint_state_stepper: "disjoint_state (stepper \<mu> n)"
   using valid_state_def valid_state_stepper by force
 
-lemma RB_state_stepper: "RB_state (stepper \<mu> l k n)"
+lemma RB_state_stepper: "RB_state (stepper \<mu> n)"
   using valid_state_def valid_state_stepper by force
 
 lemma stepper_A:
-  assumes \<section>: "stepper \<mu> l k n = (X,Y,A,B)"
+  assumes \<section>: "stepper \<mu> n = (X,Y,A,B)"
   shows "clique A Red \<and> A\<subseteq>V"
 proof -
   have "A\<subseteq>V"
-    using V_state_stepper[of \<mu> l k n] assms by (auto simp: V_state_def)
+    using V_state_stepper[of \<mu> n] assms by (auto simp: V_state_def)
   moreover
   have "all_edges_betw_un A A \<subseteq> Red"
-    using RB_state_stepper[of \<mu> l k n] assms by (auto simp: RB_state_def)
+    using RB_state_stepper[of \<mu> n] assms by (auto simp: RB_state_def)
   ultimately show ?thesis
     using all_edges_betw_un_iff_clique by simp
 qed
 
 lemma card_A_limit:
-  assumes "stepper \<mu> l k n = (X,Y,A,B)" "Colours l k" shows "card A < k"
+  assumes "stepper \<mu> n = (X,Y,A,B)" shows "card A < k"
 proof -
   have "clique A Red"
     using stepper_A assms by auto
   then show "card A < k"
-    using assms unfolding Colours_def
+    using assms no_Red_clique
     by (metis linorder_neqE_nat size_clique_def size_clique_smaller stepper_A) 
 qed
 
 lemma stepper_B:
-  assumes "stepper \<mu> l k n = (X,Y,A,B)"
+  assumes "stepper \<mu> n = (X,Y,A,B)"
   shows "clique B Blue \<and> B\<subseteq>V"
 proof -
   have "B\<subseteq>V"
-    using V_state_stepper[of \<mu> l k n] assms by (auto simp: V_state_def)
+    using V_state_stepper[of \<mu> n] assms by (auto simp: V_state_def)
   moreover
   have "all_edges_betw_un B B \<subseteq> Blue"
-    using RB_state_stepper[of \<mu> l k n] assms by (auto simp: RB_state_def all_edges_betw_un_Un2)
+    using RB_state_stepper[of \<mu> n] assms by (auto simp: RB_state_def all_edges_betw_un_Un2)
   ultimately show ?thesis
     using all_edges_betw_un_iff_clique by simp
 qed
 
 lemma card_B_limit:
-  assumes "stepper \<mu> l k n = (X,Y,A,B)" "Colours l k" shows "card B < l"
+  assumes "stepper \<mu> n = (X,Y,A,B)" shows "card B < l"
 proof -
   have "clique B Blue"
     using stepper_B assms by auto
   then show "card B < l"
-    using assms unfolding Colours_def
+    using assms no_Blue_clique
     by (metis linorder_neqE_nat size_clique_def size_clique_smaller stepper_B) 
 qed
 
-definition "Xseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). X) \<circ> stepper \<mu> l k"
-definition "Yseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). Y) \<circ> stepper \<mu> l k"
-definition "Aseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). A) \<circ> stepper \<mu> l k"
-definition "Bseq \<mu> l k \<equiv> (\<lambda>(X,Y,A,B). B) \<circ> stepper \<mu> l k"
-definition "pseq \<mu> l k \<equiv> \<lambda>n. red_density (Xseq \<mu> l k n) (Yseq \<mu> l k n)"
+definition "Xseq \<mu> \<equiv> (\<lambda>(X,Y,A,B). X) \<circ> stepper \<mu>"
+definition "Yseq \<mu> \<equiv> (\<lambda>(X,Y,A,B). Y) \<circ> stepper \<mu>"
+definition "Aseq \<mu> \<equiv> (\<lambda>(X,Y,A,B). A) \<circ> stepper \<mu>"
+definition "Bseq \<mu> \<equiv> (\<lambda>(X,Y,A,B). B) \<circ> stepper \<mu>"
+definition "pseq \<mu> \<equiv> \<lambda>n. red_density (Xseq \<mu> n) (Yseq \<mu> n)"
 
-definition "pee \<equiv> \<lambda>\<mu> l k i. red_density (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+definition "pee \<equiv> \<lambda>\<mu> i. red_density (Xseq \<mu> i) (Yseq \<mu> i)"
 
-lemma Xseq_0 [simp]: "Xseq \<mu> l k 0 = X0"
+lemma Xseq_0 [simp]: "Xseq \<mu> 0 = X0"
   by (simp add: Xseq_def)
 
-lemma Xseq_Suc_subset: "Xseq \<mu> l k (Suc i) \<subseteq> Xseq \<mu> l k i"
+lemma Xseq_Suc_subset: "Xseq \<mu> (Suc i) \<subseteq> Xseq \<mu> i"
   apply (simp add: Xseq_def split: if_split_asm prod.split)
   by (metis V_state_stepper degree_reg_subset finX next_state_subset)
 
-lemma Xseq_antimono: "j \<le> i \<Longrightarrow> Xseq \<mu> l k i \<subseteq> Xseq \<mu> l k j"
+lemma Xseq_antimono: "j \<le> i \<Longrightarrow> Xseq \<mu> i \<subseteq> Xseq \<mu> j"
   by (simp add: lift_Suc_antimono_le[of UNIV] Xseq_Suc_subset)
 
-lemma Xseq_subset_V: "Xseq \<mu> l k i \<subseteq> V"
+lemma Xseq_subset_V: "Xseq \<mu> i \<subseteq> V"
   using XY0 Xseq_0 Xseq_antimono by blast
 
-lemma finite_Xseq: "finite (Xseq \<mu> l k i)"
+lemma finite_Xseq: "finite (Xseq \<mu> i)"
   by (meson Xseq_subset_V finV finite_subset)
 
-lemma Yseq_0 [simp]: "Yseq \<mu> l k 0 = Y0"
+lemma Yseq_0 [simp]: "Yseq \<mu> 0 = Y0"
   by (simp add: Yseq_def)
 
-lemma Yseq_Suc_subset: "Yseq \<mu> l k (Suc i) \<subseteq> Yseq \<mu> l k i"
+lemma Yseq_Suc_subset: "Yseq \<mu> (Suc i) \<subseteq> Yseq \<mu> i"
   apply (simp add: Yseq_def split: if_split_asm prod.split)
   by (metis V_state_stepper degree_reg_subset finX next_state_subset)
 
-lemma Yseq_antimono: "j \<le> i \<Longrightarrow> Yseq \<mu> l k i \<subseteq> Yseq \<mu> l k j"
+lemma Yseq_antimono: "j \<le> i \<Longrightarrow> Yseq \<mu> i \<subseteq> Yseq \<mu> j"
   by (simp add: Yseq_Suc_subset lift_Suc_antimono_le[of UNIV])
 
-lemma Yseq_subset_V: "Yseq \<mu> l k i \<subseteq> V"
+lemma Yseq_subset_V: "Yseq \<mu> i \<subseteq> V"
   using XY0 Yseq_0 Yseq_antimono by blast
 
-lemma finite_Yseq: "finite (Yseq \<mu> l k i)"
+lemma finite_Yseq: "finite (Yseq \<mu> i)"
   by (meson Yseq_subset_V finV finite_subset)
 
-lemma Xseq_Yseq_disjnt: "disjnt (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+lemma Xseq_Yseq_disjnt: "disjnt (Xseq \<mu> i) (Yseq \<mu> i)"
   by (metis (no_types, opaque_lifting) XY0(1) Xseq_0 Xseq_antimono Yseq_0 Yseq_antimono disjnt_iff le0 subset_eq)
 
 lemma edge_card_eq_pee: 
-  "edge_card Red (Xseq \<mu> l k i) (Yseq \<mu> l k i) = pee \<mu> l k i * card (Xseq \<mu> l k i) * card (Yseq \<mu> l k i)"
+  "edge_card Red (Xseq \<mu> i) (Yseq \<mu> i) = pee \<mu> i * card (Xseq \<mu> i) * card (Yseq \<mu> i)"
   by (simp add: pee_def gen_density_def finite_Xseq finite_Yseq)
 
-lemma valid_state_seq: "valid_state(Xseq \<mu> l k i, Yseq \<mu> l k i, Aseq \<mu> l k i, Bseq \<mu> l k i)"
-  using valid_state_stepper[of \<mu> l k i]
+lemma valid_state_seq: "valid_state(Xseq \<mu> i, Yseq \<mu> i, Aseq \<mu> i, Bseq \<mu> i)"
+  using valid_state_stepper[of \<mu> i]
   by (force simp: Xseq_def Yseq_def Aseq_def Bseq_def simp del: valid_state_stepper split: prod.split)
 
-lemma Aseq_less_k:
-  assumes "Colours l k"
-  shows "card (Aseq \<mu> l k i) < k"
-  by (meson A_less_k assms valid_state_seq)
+lemma Aseq_less_k: "card (Aseq \<mu> i) < k"
+  by (meson A_less_k valid_state_seq)
 
-lemma Aseq_0 [simp]: "Aseq \<mu> l k 0 = {}"
+lemma Aseq_0 [simp]: "Aseq \<mu> 0 = {}"
   by (simp add: Aseq_def)
 
-lemma Aseq_Suc_subset: "Aseq \<mu> l k i \<subseteq> Aseq \<mu> l k (Suc i)"
+lemma Aseq_Suc_subset: "Aseq \<mu> i \<subseteq> Aseq \<mu> (Suc i)"
   by (fastforce simp: Aseq_def next_state_def degree_reg_def Let_def split: prod.split)
 
-lemma Aseq_mono: "j \<le> i \<Longrightarrow> Aseq \<mu> l k j \<subseteq> Aseq \<mu> l k i"
+lemma Aseq_mono: "j \<le> i \<Longrightarrow> Aseq \<mu> j \<subseteq> Aseq \<mu> i"
   by (simp add: Aseq_Suc_subset lift_Suc_mono_le[of UNIV])
 
-lemma Aseq_subset_V: "Aseq \<mu> l k i \<subseteq> V"
-  using stepper_A[of \<mu> l k i] by (simp add: Aseq_def split: prod.split) 
+lemma Aseq_subset_V: "Aseq \<mu> i \<subseteq> V"
+  using stepper_A[of \<mu> i] by (simp add: Aseq_def split: prod.split) 
 
-lemma finite_Aseq: "finite (Aseq \<mu> l k i)"
+lemma finite_Aseq: "finite (Aseq \<mu> i)"
   by (meson Aseq_subset_V finV finite_subset)
 
-lemma Bseq_less_l:
-  assumes "Colours l k"
-  shows "card (Bseq \<mu> l k i) < l"
-  by (meson B_less_l assms valid_state_seq)
+lemma Bseq_less_l: "card (Bseq \<mu> i) < l"
+  by (meson B_less_l valid_state_seq)
 
-lemma Bseq_0 [simp]: "Bseq \<mu> l k 0 = {}"
+lemma Bseq_0 [simp]: "Bseq \<mu> 0 = {}"
   by (simp add: Bseq_def)
 
-lemma Bseq_Suc_subset: "Bseq \<mu> l k i \<subseteq> Bseq \<mu> l k (Suc i)"
+lemma Bseq_Suc_subset: "Bseq \<mu> i \<subseteq> Bseq \<mu> (Suc i)"
   by (fastforce simp: Bseq_def next_state_def degree_reg_def Let_def split: prod.split)
 
-lemma Bseq_mono: "j \<le> i \<Longrightarrow> Bseq \<mu> l k j \<subseteq> Bseq \<mu> l k i"
+lemma Bseq_mono: "j \<le> i \<Longrightarrow> Bseq \<mu> j \<subseteq> Bseq \<mu> i"
   by (simp add: Bseq_Suc_subset lift_Suc_mono_le[of UNIV])
 
-lemma Bseq_subset_V: "Bseq \<mu> l k i \<subseteq> V"
-  using stepper_B[of \<mu> l k i] by (simp add: Bseq_def split: prod.split) 
+lemma Bseq_subset_V: "Bseq \<mu> i \<subseteq> V"
+  using stepper_B[of \<mu> i] by (simp add: Bseq_def split: prod.split) 
 
-lemma finite_Bseq: "finite (Bseq \<mu> l k i)"
+lemma finite_Bseq: "finite (Bseq \<mu> i)"
   by (meson Bseq_subset_V finV finite_subset)
 
-lemma pee_eq_p0: "pee \<mu> l k 0 = p0"
+lemma pee_eq_p0: "pee \<mu> 0 = p0"
   by (simp add: pee_def p0_def)
 
-lemma pee_ge0: "pee \<mu> l k i \<ge> 0"
+lemma pee_ge0: "pee \<mu> i \<ge> 0"
   by (simp add: gen_density_ge0 pee_def)
 
-lemma pee_le1: "pee \<mu> l k i \<le> 1"
+lemma pee_le1: "pee \<mu> i \<le> 1"
   using gen_density_le1 pee_def by presburger
 
-lemma pseq_0: "p0 = pseq \<mu> l k 0"
+lemma pseq_0: "p0 = pseq \<mu> 0"
   by (simp add: p0_def pseq_def Xseq_def Yseq_def)
 
 text \<open>The central vertex at each step (though only defined in some cases), 
   @{term "x_i"} in the paper\<close>
-definition cvx :: "[real,nat,nat,nat] \<Rightarrow> 'a" where
-  "cvx \<equiv> \<lambda>\<mu> l k i. choose_central_vx \<mu> (stepper \<mu> l k i)"
+definition "cvx \<equiv> \<lambda>\<mu> i. choose_central_vx \<mu> (stepper \<mu> i)"
 
 text \<open>the indexing of @{term beta} is as in the paper --- and different from that of @{term Xseq}\<close>
 definition 
-  "beta \<equiv> \<lambda>\<mu> l k i. 
-    (let (X,Y,A,B) = stepper \<mu> l k i in card(Neighbours Blue (cvx \<mu> l k i) \<inter> X) / card X)"
+  "beta \<equiv> \<lambda>\<mu> i. 
+    (let (X,Y,A,B) = stepper \<mu> i in card(Neighbours Blue (cvx \<mu> i) \<inter> X) / card X)"
 
-lemma beta_eq: "beta \<mu> l k i = card(Neighbours Blue (cvx \<mu> l k i) \<inter> Xseq \<mu> l k i) / card (Xseq \<mu> l k i)"
+lemma beta_eq: "beta \<mu> i = card(Neighbours Blue (cvx \<mu> i) \<inter> Xseq \<mu> i) / card (Xseq \<mu> i)"
   by (simp add: beta_def cvx_def Xseq_def split: prod.split)
 
-lemma beta_ge0: "beta \<mu> l k i \<ge> 0"
+lemma beta_ge0: "beta \<mu> i \<ge> 0"
   by (simp add: beta_eq)
 
 
@@ -1098,194 +1070,194 @@ subsection \<open>The classes of execution steps\<close>
 text \<open>For R, B, S, D\<close>
 datatype stepkind = red_step | bblue_step | dboost_step | dreg_step | halted
 
-definition next_state_kind :: "[real,nat,nat,'a config] \<Rightarrow> stepkind" where
-  "next_state_kind \<equiv> \<lambda>\<mu> l k (X,Y,A,B). 
-       if many_bluish \<mu> l k X then bblue_step 
+definition next_state_kind :: "[real,'a config] \<Rightarrow> stepkind" where
+  "next_state_kind \<equiv> \<lambda>\<mu> (X,Y,A,B). 
+       if many_bluish \<mu> X then bblue_step 
        else let x = choose_central_vx \<mu> (X,Y,A,B) in
             if reddish k X Y (red_density X Y) x then red_step
             else dboost_step"
 
-definition stepper_kind :: "[real,nat,nat,nat] \<Rightarrow> stepkind" where
-  "stepper_kind \<mu> l k i = 
-     (let (X,Y,A,B) = stepper \<mu> l k i in 
-      if termination_condition l k X Y then halted 
-      else if even i then dreg_step else next_state_kind \<mu> l k (X,Y,A,B))"
+definition stepper_kind :: "[real,nat] \<Rightarrow> stepkind" where
+  "stepper_kind \<mu> i = 
+     (let (X,Y,A,B) = stepper \<mu> i in 
+      if termination_condition X Y then halted 
+      else if even i then dreg_step else next_state_kind \<mu> (X,Y,A,B))"
 
-definition "Step_class \<equiv> \<lambda>\<mu> l k knd. {n. stepper_kind \<mu> l k n \<in> knd}"
+definition "Step_class \<equiv> \<lambda>\<mu> knd. {n. stepper_kind \<mu> n \<in> knd}"
 
-lemma subset_Step_class: "\<lbrakk>i \<in> Step_class \<mu> l k K'; K' \<subseteq> K\<rbrakk> \<Longrightarrow> i \<in> Step_class \<mu> l k K"
+lemma subset_Step_class: "\<lbrakk>i \<in> Step_class \<mu> K'; K' \<subseteq> K\<rbrakk> \<Longrightarrow> i \<in> Step_class \<mu> K"
   by (auto simp: Step_class_def)
 
-lemma Step_class_Un: "Step_class \<mu> l k (K' \<union> K) = Step_class \<mu> l k K' \<union> Step_class \<mu> l k K"
+lemma Step_class_Un: "Step_class \<mu> (K' \<union> K) = Step_class \<mu> K' \<union> Step_class \<mu> K"
   by (auto simp: Step_class_def)
 
-lemma Step_class_insert: "Step_class \<mu> l k (insert knd K) = (Step_class \<mu> l k {knd}) \<union> (Step_class \<mu> l k K)"
+lemma Step_class_insert: "Step_class \<mu> (insert knd K) = (Step_class \<mu> {knd}) \<union> (Step_class \<mu> K)"
   by (auto simp: Step_class_def)
 
 lemma Step_class_insert_NO_MATCH:
-  "NO_MATCH {} K \<Longrightarrow> Step_class \<mu> l k (insert knd K) = (Step_class \<mu> l k {knd}) \<union> (Step_class \<mu> l k K)"
+  "NO_MATCH {} K \<Longrightarrow> Step_class \<mu> (insert knd K) = (Step_class \<mu> {knd}) \<union> (Step_class \<mu> K)"
   by (auto simp: Step_class_def)
 
-lemma Step_class_UNIV: "Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step,halted} = UNIV"
+lemma Step_class_UNIV: "Step_class \<mu> {red_step,bblue_step,dboost_step,dreg_step,halted} = UNIV"
   using Step_class_def stepkind.exhaust by auto
 
 lemma Step_class_cases:
-   "i \<in> Step_class \<mu> l k {stepkind.red_step} \<or> i \<in> Step_class \<mu> l k {bblue_step} \<or>
-    i \<in> Step_class \<mu> l k {dboost_step} \<or> i \<in> Step_class \<mu> l k {dreg_step} \<or>
-    i \<in> Step_class \<mu> l k {halted}"
+   "i \<in> Step_class \<mu> {stepkind.red_step} \<or> i \<in> Step_class \<mu> {bblue_step} \<or>
+    i \<in> Step_class \<mu> {dboost_step} \<or> i \<in> Step_class \<mu> {dreg_step} \<or>
+    i \<in> Step_class \<mu> {halted}"
   using Step_class_def stepkind.exhaust by auto
 
 lemmas step_kind_defs = Step_class_def stepper_kind_def next_state_kind_def Xseq_def Yseq_def
 
 lemma disjnt_Step_class: 
-  "disjnt knd knd' \<Longrightarrow> disjnt (Step_class \<mu> l k knd) (Step_class \<mu> l k knd')"
+  "disjnt knd knd' \<Longrightarrow> disjnt (Step_class \<mu> knd) (Step_class \<mu> knd')"
   by (auto simp: Step_class_def disjnt_iff)
 
-lemma halted_imp_next_halted: "stepper_kind \<mu> l k i = halted \<Longrightarrow> stepper_kind \<mu> l k (Suc i) = halted"
+lemma halted_imp_next_halted: "stepper_kind \<mu> i = halted \<Longrightarrow> stepper_kind \<mu> (Suc i) = halted"
   by (auto simp: step_kind_defs split: prod.split if_split_asm)
 
-lemma halted_imp_ge_halted: "stepper_kind \<mu> l k i = halted \<Longrightarrow> stepper_kind \<mu> l k (i+n) = halted"
+lemma halted_imp_ge_halted: "stepper_kind \<mu> i = halted \<Longrightarrow> stepper_kind \<mu> (i+n) = halted"
   by (induction n) (auto simp: halted_imp_next_halted)
 
-lemma Step_class_halted_forever: "\<lbrakk>i \<in> Step_class \<mu> l k {halted}; i\<le>j\<rbrakk> \<Longrightarrow> j \<in> Step_class \<mu> l k {halted}"
+lemma Step_class_halted_forever: "\<lbrakk>i \<in> Step_class \<mu> {halted}; i\<le>j\<rbrakk> \<Longrightarrow> j \<in> Step_class \<mu> {halted}"
   by (simp add: Step_class_def) (metis halted_imp_ge_halted le_iff_add)
 
-lemma Step_class_not_halted: "\<lbrakk>i \<notin> Step_class \<mu> l k {halted}; i\<ge>j\<rbrakk> \<Longrightarrow> j \<notin> Step_class \<mu> l k {halted}"
+lemma Step_class_not_halted: "\<lbrakk>i \<notin> Step_class \<mu> {halted}; i\<ge>j\<rbrakk> \<Longrightarrow> j \<notin> Step_class \<mu> {halted}"
   using Step_class_halted_forever by blast
 
 lemma
-  assumes "i \<notin> Step_class \<mu> l k {halted}" 
-  shows not_halted_pee_gt: "pee \<mu> l k i > 1/k"
-    and Xseq_gt0: "card (Xseq \<mu> l k i) > 0"
-    and Xseq_gt_RN: "card (Xseq \<mu> l k i) > RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
-    and not_termination_condition: "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+  assumes "i \<notin> Step_class \<mu> {halted}" 
+  shows not_halted_pee_gt: "pee \<mu> i > 1/k"
+    and Xseq_gt0: "card (Xseq \<mu> i) > 0"
+    and Xseq_gt_RN: "card (Xseq \<mu> i) > RN k (nat \<lceil>real l powr (3/4)\<rceil>)"
+    and not_termination_condition: "\<not> termination_condition (Xseq \<mu> i) (Yseq \<mu> i)"
   using assms
   by (auto simp: step_kind_defs termination_condition_def pee_def split: if_split_asm prod.split_asm)
 
 lemma not_halted_pee_gt0:
-  assumes "i \<notin> Step_class \<mu> l k {halted}" 
-  shows "pee \<mu> l k i > 0" 
+  assumes "i \<notin> Step_class \<mu> {halted}" 
+  shows "pee \<mu> i > 0" 
   using not_halted_pee_gt [OF assms] linorder_not_le order_less_le_trans by fastforce
 
 lemma Yseq_gt0:
-  assumes "i \<notin> Step_class \<mu> l k {halted}"
-  shows "card (Yseq \<mu> l k i) > 0"
+  assumes "i \<notin> Step_class \<mu> {halted}"
+  shows "card (Yseq \<mu> i) > 0"
   using not_halted_pee_gt [OF assms] 
   by (auto simp: pee_def gen_density_def divide_simps mult_less_0_iff zero_less_mult_iff split: if_split_asm)
 
-lemma dreg_step_0: "\<not> termination_condition l k X0 Y0 \<Longrightarrow> 0 \<in> Step_class \<mu> l k {dreg_step}"
+lemma dreg_step_0: "\<not> termination_condition X0 Y0 \<Longrightarrow> 0 \<in> Step_class \<mu> {dreg_step}"
   by (auto simp: Step_class_def stepper_kind_def)
 
-lemma step_odd: "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step} \<Longrightarrow> odd i" 
+lemma step_odd: "i \<in> Step_class \<mu> {red_step,bblue_step,dboost_step} \<Longrightarrow> odd i" 
   by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
 
-lemma step_even: "i \<in> Step_class \<mu> l k {dreg_step} \<Longrightarrow> even i" 
+lemma step_even: "i \<in> Step_class \<mu> {dreg_step} \<Longrightarrow> even i" 
   by (auto simp: Step_class_def stepper_kind_def next_state_kind_def split: if_split_asm prod.split_asm)
 
-lemma not_halted_odd_RBS: "\<lbrakk>i \<notin> Step_class \<mu> l k {halted}; odd i\<rbrakk> \<Longrightarrow> i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
+lemma not_halted_odd_RBS: "\<lbrakk>i \<notin> Step_class \<mu> {halted}; odd i\<rbrakk> \<Longrightarrow> i \<in> Step_class \<mu> {red_step,bblue_step,dboost_step}" 
   by (auto simp: Step_class_def stepper_kind_def next_state_kind_def split: prod.split_asm)
 
-lemma not_halted_even_dreg: "\<lbrakk>i \<notin> Step_class \<mu> l k {halted}; even i\<rbrakk> \<Longrightarrow> i \<in> Step_class \<mu> l k {dreg_step}" 
+lemma not_halted_even_dreg: "\<lbrakk>i \<notin> Step_class \<mu> {halted}; even i\<rbrakk> \<Longrightarrow> i \<in> Step_class \<mu> {dreg_step}" 
   by (auto simp: Step_class_def stepper_kind_def next_state_kind_def split: prod.split_asm)
 
 lemma step_before_dreg:
-  assumes "Suc i \<in> Step_class \<mu> l k {dreg_step}"
-  shows "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
+  assumes "Suc i \<in> Step_class \<mu> {dreg_step}"
+  shows "i \<in> Step_class \<mu> {red_step,bblue_step,dboost_step}"
   using assms by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
 
 lemma step_before_dreg':
-  assumes "i \<in> Step_class \<mu> l k {dreg_step}" "i>0"
-  shows "i - Suc 0 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
+  assumes "i \<in> Step_class \<mu> {dreg_step}" "i>0"
+  shows "i - Suc 0 \<in> Step_class \<mu> {red_step,bblue_step,dboost_step}"
   by (simp add: assms step_before_dreg)
 
 lemma dreg_before_step:
-  assumes "Suc i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
-  shows "i \<in> Step_class \<mu> l k {dreg_step}"
+  assumes "Suc i \<in> Step_class \<mu> {red_step,bblue_step,dboost_step}" 
+  shows "i \<in> Step_class \<mu> {dreg_step}"
   using assms by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
 
 lemma dreg_before_step':
-  assumes "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
-  shows "i - Suc 0 \<in> Step_class \<mu> l k {dreg_step}" and "i>0"
+  assumes "i \<in> Step_class \<mu> {red_step,bblue_step,dboost_step}" 
+  shows "i - Suc 0 \<in> Step_class \<mu> {dreg_step}" and "i>0"
 proof -
   show "i>0"
     using assms step_odd by force
-  then show "i - Suc 0 \<in> Step_class \<mu> l k {dreg_step}"
+  then show "i - Suc 0 \<in> Step_class \<mu> {dreg_step}"
     using assms dreg_before_step Suc_pred by force
 qed
 
 lemma dreg_before_step1:
-  assumes "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
-  shows "i-1 \<in> Step_class \<mu> l k {dreg_step}" "i > 0"
+  assumes "i \<in> Step_class \<mu> {red_step,bblue_step,dboost_step}" 
+  shows "i-1 \<in> Step_class \<mu> {dreg_step}" "i > 0"
   using dreg_before_step' [OF assms] by auto
 
 lemma step_odd_minus2: 
-  assumes "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" "i>1"
-  shows "i-2 \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}" 
+  assumes "i \<in> Step_class \<mu> {red_step,bblue_step,dboost_step}" "i>1"
+  shows "i-2 \<in> Step_class \<mu> {red_step,bblue_step,dboost_step}" 
 proof -
   have "odd (i-2)"
     using assms step_odd by auto
-  then have "i-2 \<notin> Step_class \<mu> l k {dreg_step}"
+  then have "i-2 \<notin> Step_class \<mu> {dreg_step}"
     using step_even by blast
-  moreover have "i \<notin> Step_class \<mu> l k {halted}"
+  moreover have "i \<notin> Step_class \<mu> {halted}"
     using assms by (auto simp: Step_class_def)
-  then have "i-2 \<notin> Step_class \<mu> l k {halted}"
+  then have "i-2 \<notin> Step_class \<mu> {halted}"
     using Step_class_not_halted diff_le_self by blast
   ultimately show ?thesis
     using stepkind.exhaust by (auto simp: Step_class_def)
 qed
 
 lemma finite_Step_class:
-  assumes "\<And>n. finite {m. m<n \<and> stepper_kind \<mu> l k m = knd}"
-  assumes "\<And>n. card {m. m<n \<and> stepper_kind \<mu> l k m = knd} < N"
-  shows "finite (Step_class \<mu> l k {knd})"
+  assumes "\<And>n. finite {m. m<n \<and> stepper_kind \<mu> m = knd}"
+  assumes "\<And>n. card {m. m<n \<and> stepper_kind \<mu> m = knd} < N"
+  shows "finite (Step_class \<mu> {knd})"
 proof -
-  have "incseq (\<lambda>n. {m. m<n \<and> stepper_kind \<mu> l k m = knd})"
+  have "incseq (\<lambda>n. {m. m<n \<and> stepper_kind \<mu> m = knd})"
     by (auto simp: incseq_def)
-  moreover have "(\<Union>n. {m. m<n \<and> stepper_kind \<mu> l k m = knd}) = (Step_class \<mu> l k {knd})"
+  moreover have "(\<Union>n. {m. m<n \<and> stepper_kind \<mu> m = knd}) = (Step_class \<mu> {knd})"
     by (auto simp: Step_class_def)
   ultimately show ?thesis
     by (smt (verit) eventually_sequentially order.refl Union_incseq_finite assms)
 qed
 
 lemma Step_class_iterates:
-  assumes "finite (Step_class \<mu> l k {knd})"
-  obtains n where "Step_class \<mu> l k {knd} = {m. m<n \<and> stepper_kind \<mu> l k m = knd}"
+  assumes "finite (Step_class \<mu> {knd})"
+  obtains n where "Step_class \<mu> {knd} = {m. m<n \<and> stepper_kind \<mu> m = knd}"
 proof -
-  have eq: "(Step_class \<mu> l k {knd}) = (\<Union>i. {m. m<i \<and> stepper_kind \<mu> l k m = knd})"
+  have eq: "(Step_class \<mu> {knd}) = (\<Union>i. {m. m<i \<and> stepper_kind \<mu> m = knd})"
     by (auto simp: Step_class_def)
-  then obtain n where n: "(Step_class \<mu> l k {knd}) = (\<Union>i<n. {m. m<i \<and> stepper_kind \<mu> l k m = knd})"
+  then obtain n where n: "(Step_class \<mu> {knd}) = (\<Union>i<n. {m. m<i \<and> stepper_kind \<mu> m = knd})"
     using finite_countable_equals[OF assms] by blast
   with Step_class_def 
-  have "{m. m<n \<and> stepper_kind \<mu> l k m = knd} = (\<Union>i<n. {m. m<i \<and> stepper_kind \<mu> l k m = knd})"
+  have "{m. m<n \<and> stepper_kind \<mu> m = knd} = (\<Union>i<n. {m. m<i \<and> stepper_kind \<mu> m = knd})"
     by auto
   then show ?thesis
     by (metis n that)
 qed
 
 lemma step_non_terminating_iff:
-     "i \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step,dreg_step} 
-     \<longleftrightarrow> \<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+     "i \<in> Step_class \<mu> {red_step,bblue_step,dboost_step,dreg_step} 
+     \<longleftrightarrow> \<not> termination_condition (Xseq \<mu> i) (Yseq \<mu> i)"
   by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
 
 lemma step_terminating_iff:
-  "i \<in> Step_class \<mu> l k {halted} \<longleftrightarrow> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+  "i \<in> Step_class \<mu> {halted} \<longleftrightarrow> termination_condition (Xseq \<mu> i) (Yseq \<mu> i)"
   by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
 
 lemma not_many_bluish:
-  assumes "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
-  shows "\<not> many_bluish \<mu> l k (Xseq \<mu> l k i)"
+  assumes "i \<in> Step_class \<mu> {red_step,dboost_step}"
+  shows "\<not> many_bluish \<mu> (Xseq \<mu> i)"
   using assms
   by (simp add: step_kind_defs split: if_split_asm prod.split_asm)
 
-lemma stepper_XYseq: "stepper \<mu> l k i = (X,Y,A,B) \<Longrightarrow> X = Xseq \<mu> l k i \<and> Y = Yseq \<mu> l k i"
+lemma stepper_XYseq: "stepper \<mu> i = (X,Y,A,B) \<Longrightarrow> X = Xseq \<mu> i \<and> Y = Yseq \<mu> i"
   using Xseq_def Yseq_def by fastforce
 
 lemma cvx_works:
-  assumes "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
-  shows "central_vertex \<mu> (Xseq \<mu> l k i) (cvx \<mu> l k i)
-       \<and> weight (Xseq \<mu> l k i) (Yseq \<mu> l k i) (cvx \<mu> l k i) = max_central_vx \<mu> (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+  assumes "i \<in> Step_class \<mu> {red_step,dboost_step}"
+  shows "central_vertex \<mu> (Xseq \<mu> i) (cvx \<mu> i)
+       \<and> weight (Xseq \<mu> i) (Yseq \<mu> i) (cvx \<mu> i) = max_central_vx \<mu> (Xseq \<mu> i) (Yseq \<mu> i)"
 proof -
-  have "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+  have "\<not> termination_condition (Xseq \<mu> i) (Yseq \<mu> i)"
     using Step_class_def assms step_non_terminating_iff by fastforce
   then show ?thesis
     using assms not_many_bluish[OF assms] 
@@ -1294,19 +1266,19 @@ proof -
 qed
 
 lemma cvx_in_Xseq:
-  assumes "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
-  shows "cvx \<mu> l k i \<in> Xseq \<mu> l k i"
+  assumes "i \<in> Step_class \<mu> {red_step,dboost_step}"
+  shows "cvx \<mu> i \<in> Xseq \<mu> i"
   using assms cvx_works[OF assms] 
   by (simp add: Xseq_def central_vertex_def cvx_def split: prod.split_asm)
 
 lemma card_Xseq_pos:
-  assumes "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
-  shows "card (Xseq \<mu> l k i) > 0"
+  assumes "i \<in> Step_class \<mu> {red_step,dboost_step}"
+  shows "card (Xseq \<mu> i) > 0"
   by (metis assms card_0_eq cvx_in_Xseq empty_iff finite_Xseq gr0I)
 
 lemma beta_le:
-  assumes "\<mu> > 0" and i: "i \<in> Step_class \<mu> l k {red_step,dboost_step}"
-  shows "beta \<mu> l k i \<le> \<mu>"
+  assumes "\<mu> > 0" and i: "i \<in> Step_class \<mu> {red_step,dboost_step}"
+  shows "beta \<mu> i \<le> \<mu>"
   using assms cvx_works[OF i] 
   by (simp add: beta_def central_vertex_def Xseq_def divide_simps split: prod.split_asm)
 
@@ -1315,13 +1287,11 @@ subsection \<open>Termination proof\<close>
 text \<open>Each step decreases the size of @{term X}\<close>
 
 lemma ex_nonempty_blue_book:
-  assumes mb: "many_bluish \<mu> l k X" and "Colours l k"
+  assumes mb: "many_bluish \<mu> X"
     shows "\<exists>x\<in>X. good_blue_book \<mu> X ({x}, Neighbours Blue x \<inter> X)"
 proof -
-  obtain "l > 0" "k > 0"
-    using \<open>Colours l k\<close> Colours_kn0 Colours_ln0 by auto
-  then have "RN k (nat \<lceil>real l powr (2 / 3)\<rceil>) > 0"
-    by (metis RN_eq_0_iff gr0I of_nat_ceiling of_nat_eq_0_iff powr_nonneg_iff)
+  have "RN k (nat \<lceil>real l powr (2 / 3)\<rceil>) > 0"
+    by (metis kn0 ln0 RN_eq_0_iff gr0I of_nat_ceiling of_nat_eq_0_iff powr_nonneg_iff)
   then obtain x where "x\<in>X" and x: "bluish \<mu> X x"
     using mb unfolding many_bluish_def
     by (smt (verit) card_eq_0_iff empty_iff equalityI less_le_not_le mem_Collect_eq subset_iff)
@@ -1332,8 +1302,8 @@ proof -
 qed
 
 lemma choose_blue_book_psubset: 
-  assumes "many_bluish \<mu> l k X" and ST: "choose_blue_book \<mu> (X,Y,A,B) = (S,T)"
-    and "\<mu>>0" "Colours l k" "finite X"
+  assumes "many_bluish \<mu> X" and ST: "choose_blue_book \<mu> (X,Y,A,B) = (S,T)"
+    and "\<mu>>0" "finite X"
     shows "T \<noteq> X"
 proof -
   obtain x where "x\<in>X" and x: "good_blue_book \<mu> X ({x}, Neighbours Blue x \<inter> X)"
@@ -1348,8 +1318,8 @@ proof -
 qed
 
 lemma next_state_smaller:
-  assumes "\<mu>>0"  "Colours l k" "next_state \<mu> l k (X,Y,A,B) = (X',Y',A',B')" 
-    and "finite X" and nont: "\<not> termination_condition l k X Y"  
+  assumes "\<mu>>0" "next_state \<mu> (X,Y,A,B) = (X',Y',A',B')" 
+    and "finite X" and nont: "\<not> termination_condition X Y"  
   shows "X' \<subset> X"
 proof -
   have "X' \<subseteq> X"
@@ -1359,7 +1329,7 @@ proof -
     have *: "\<not> X \<subseteq> Neighbours rb x \<inter> X" if "x \<in> X" "rb \<subseteq> E" for x rb
       using that by (auto simp: Neighbours_def subset_iff)
     show ?thesis
-    proof (cases "many_bluish \<mu> l k X")
+    proof (cases "many_bluish \<mu> X")
       case True
       with assms show ?thesis 
         by (auto simp: next_state_def split: if_split_asm prod.split_asm
@@ -1367,7 +1337,7 @@ proof -
     next
       case False
       then have "choose_central_vx \<mu> (X,Y,A,B) \<in> X"
-        by (simp add: assms(4) choose_central_vx_X nont)
+        by (simp add: \<open>finite X\<close> choose_central_vx_X nont)
       with assms *[of _ Red] *[of _ Blue] \<open>X' \<subseteq> X\<close> Red_E Blue_E False
       choose_central_vx_X [OF False nont]
       show ?thesis
@@ -1379,16 +1349,16 @@ proof -
 qed
 
 lemma do_next_state:
-  assumes "odd i" "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
-  obtains A B A' B' where "next_state \<mu> l k (Xseq \<mu> l k i, Yseq \<mu> l k i, A, B) 
-                        = (Xseq \<mu> l k (Suc i), Yseq \<mu> l k (Suc i), A',B')"
+  assumes "odd i" "\<not> termination_condition (Xseq \<mu> i) (Yseq \<mu> i)"
+  obtains A B A' B' where "next_state \<mu> (Xseq \<mu> i, Yseq \<mu> i, A, B) 
+                        = (Xseq \<mu> (Suc i), Yseq \<mu> (Suc i), A',B')"
   using assms
   by (force simp: Xseq_def Yseq_def split: if_split_asm prod.split_asm prod.split)
 
 lemma step_bound: 
-  assumes "\<mu>>0" "Colours l k"
-    and i: "Suc (2*i) \<in> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
-  shows "card (Xseq \<mu> l k (Suc (2*i))) + i \<le> card X0"
+  assumes "\<mu>>0"
+    and i: "Suc (2*i) \<in> Step_class \<mu> {red_step,bblue_step,dboost_step}"
+  shows "card (Xseq \<mu> (Suc (2*i))) + i \<le> card X0"
   using i
 proof (induction i)
   case 0
@@ -1396,111 +1366,111 @@ proof (induction i)
     by (metis Xseq_0 Xseq_Suc_subset add_0_right mult_0_right card_mono finite_X0)
 next
   case (Suc i)
-  then have nt: "\<not> termination_condition l k (Xseq \<mu> l k (Suc (2*i))) (Yseq \<mu> l k (Suc (2*i)))"  
+  then have nt: "\<not> termination_condition (Xseq \<mu> (Suc (2*i))) (Yseq \<mu> (Suc (2*i)))"  
     unfolding step_non_terminating_iff [symmetric]
     by (metis Step_class_insert Suc_1 Un_iff dreg_before_step mult_Suc_right plus_1_eq_Suc plus_nat.simps(2) step_before_dreg)
   obtain A B A' B' where 2:
-    "next_state \<mu> l k (Xseq \<mu> l k (Suc (2*i)), Yseq \<mu> l k (Suc (2*i)), A, B) = (Xseq \<mu> l k (Suc (Suc (2*i))), Yseq \<mu> l k (Suc (Suc (2*i))), A',B')"
+    "next_state \<mu> (Xseq \<mu> (Suc (2*i)), Yseq \<mu> (Suc (2*i)), A, B) = (Xseq \<mu> (Suc (Suc (2*i))), Yseq \<mu> (Suc (Suc (2*i))), A',B')"
     by (meson "nt" Suc_double_not_eq_double do_next_state evenE)
-  have "Xseq \<mu> l k (Suc (Suc (2*i))) \<subset> Xseq \<mu> l k (Suc (2*i))"
+  have "Xseq \<mu> (Suc (Suc (2*i))) \<subset> Xseq \<mu> (Suc (2*i))"
     by (meson "2" finite_Xseq assms next_state_smaller nt)
-  then have "card (Xseq \<mu> l k (Suc (Suc (Suc (2*i))))) < card (Xseq \<mu> l k (Suc (2*i)))"
+  then have "card (Xseq \<mu> (Suc (Suc (Suc (2*i))))) < card (Xseq \<mu> (Suc (2*i)))"
     by (smt (verit, best) Xseq_Suc_subset card_seteq order.trans finite_Xseq leD not_le)
-  moreover have "card (Xseq \<mu> l k (Suc (2*i))) + i \<le> card X0"
+  moreover have "card (Xseq \<mu> (Suc (2*i))) + i \<le> card X0"
     using Suc dreg_before_step step_before_dreg by force
   ultimately show ?case by auto
 qed
 
 lemma Step_class_halted_nonempty:
-  assumes "\<mu>>0" "Colours l k"
-  shows "Step_class \<mu> l k {halted} \<noteq> {}"
+  assumes "\<mu>>0"
+  shows "Step_class \<mu> {halted} \<noteq> {}"
 proof -
   define i where "i \<equiv> Suc (2 * Suc (card X0))" 
   have "odd i"
     by (auto simp: i_def)
-  then have "i \<notin> Step_class \<mu> l k {dreg_step}"
+  then have "i \<notin> Step_class \<mu> {dreg_step}"
     using step_even by blast
-  moreover have "i \<notin> Step_class \<mu> l k {red_step,bblue_step,dboost_step}"
+  moreover have "i \<notin> Step_class \<mu> {red_step,bblue_step,dboost_step}"
     unfolding i_def using step_bound [OF assms] le_add2 not_less_eq_eq by blast
-  ultimately have "i \<in> Step_class \<mu> l k {halted}"
+  ultimately have "i \<in> Step_class \<mu> {halted}"
     using \<open>odd i\<close> not_halted_odd_RBS by blast
   then show ?thesis
     by blast
 qed
 
-definition "halted_point \<equiv> \<lambda>\<mu> l k. Inf (Step_class \<mu> l k {halted})"
+definition "halted_point \<equiv> \<lambda>\<mu>. Inf (Step_class \<mu> {halted})"
 
 lemma halted_point_halted:
-  assumes "\<mu>>0" "Colours l k"
-  shows "halted_point \<mu> l k \<in> Step_class \<mu> l k {halted}"
+  assumes "\<mu>>0"
+  shows "halted_point \<mu> \<in> Step_class \<mu> {halted}"
   using Step_class_halted_nonempty [OF assms] Inf_nat_def1 
   by (auto simp: halted_point_def)
 
 lemma halted_point_minimal:
-  assumes "\<mu>>0" "Colours l k"
-  shows "i \<notin> Step_class \<mu> l k {halted} \<longleftrightarrow> i < halted_point \<mu> l k"
+  assumes "\<mu>>0"
+  shows "i \<notin> Step_class \<mu> {halted} \<longleftrightarrow> i < halted_point \<mu>"
   using Step_class_halted_nonempty [OF assms] 
   by (metis wellorder_Inf_le1 Inf_nat_def1 Step_class_not_halted halted_point_def less_le_not_le nle_le) 
 
 lemma halted_point_minimal':
-  assumes "\<mu>>0" "Colours l k"
-  shows "stepper_kind \<mu> l k i \<noteq> halted \<longleftrightarrow> i < halted_point \<mu> l k"
+  assumes "\<mu>>0"
+  shows "stepper_kind \<mu> i \<noteq> halted \<longleftrightarrow> i < halted_point \<mu>"
   using assms by (simp add: Step_class_def flip: halted_point_minimal)
 
 lemma halted_eq_Compl:
-  "Step_class \<mu> l k {dreg_step,red_step,bblue_step,dboost_step} = - Step_class \<mu> l k {halted}"
-  using Step_class_UNIV [of \<mu> l k] by (auto simp: Step_class_def)
+  "Step_class \<mu> {dreg_step,red_step,bblue_step,dboost_step} = - Step_class \<mu> {halted}"
+  using Step_class_UNIV [of \<mu>] by (auto simp: Step_class_def)
 
 lemma before_halted_eq:
-  assumes "\<mu>>0" "Colours l k"
-  shows "{..<halted_point \<mu> l k} = Step_class \<mu> l k {dreg_step,red_step,bblue_step,dboost_step}"
+  assumes "\<mu>>0"
+  shows "{..<halted_point \<mu>} = Step_class \<mu> {dreg_step,red_step,bblue_step,dboost_step}"
   using halted_point_minimal [OF assms] by (force simp: halted_eq_Compl)
 
 lemma finite_components:
-  assumes "0<\<mu>" "Colours l k" 
-  shows "finite (Step_class \<mu> l k {dreg_step,red_step,bblue_step,dboost_step})"
+  assumes "0<\<mu>" 
+  shows "finite (Step_class \<mu> {dreg_step,red_step,bblue_step,dboost_step})"
   by (metis before_halted_eq [OF assms] finite_lessThan)
 
 lemma
-  assumes "0<\<mu>" "Colours l k" 
-  shows dreg_step_finite  [simp]: "finite (Step_class \<mu> l k {dreg_step})"
-    and red_step_finite   [simp]: "finite (Step_class \<mu> l k {red_step})"
-    and bblue_step_finite [simp]: "finite (Step_class \<mu> l k {bblue_step})"
-    and dboost_step_finite[simp]: "finite (Step_class \<mu> l k {dboost_step})"
+  assumes "0<\<mu>" 
+  shows dreg_step_finite  [simp]: "finite (Step_class \<mu> {dreg_step})"
+    and red_step_finite   [simp]: "finite (Step_class \<mu> {red_step})"
+    and bblue_step_finite [simp]: "finite (Step_class \<mu> {bblue_step})"
+    and dboost_step_finite[simp]: "finite (Step_class \<mu> {dboost_step})"
   using finite_components [OF assms] by (auto simp: Step_class_insert_NO_MATCH)
 
 lemma halted_stepper_add_eq:
-  assumes "\<mu>>0" "Colours l k"
-  shows "stepper \<mu> l k (halted_point \<mu> l k + i) = stepper \<mu> l k (halted_point \<mu> l k)"
+  assumes "\<mu>>0"
+  shows "stepper \<mu> (halted_point \<mu> + i) = stepper \<mu> (halted_point \<mu>)"
 proof (induction i)
   case 0
   then show ?case
     by auto
 next
   case (Suc i)
-  have hlt: "stepper_kind \<mu> l k (halted_point \<mu> l k) = halted"
+  have hlt: "stepper_kind \<mu> (halted_point \<mu>) = halted"
     using Step_class_def assms halted_point_halted by force
-  obtain X Y A B where *: "stepper \<mu> l k (halted_point \<mu> l k) = (X, Y, A, B)"
+  obtain X Y A B where *: "stepper \<mu> (halted_point \<mu>) = (X, Y, A, B)"
     by (metis surj_pair)
-  with hlt have "termination_condition l k X Y"
+  with hlt have "termination_condition X Y"
     by (simp add: stepper_kind_def next_state_kind_def split: if_split_asm)
   with * show ?case
     by (simp add: Suc)
 qed
 
 lemma halted_stepper_eq:
-  assumes \<section>: "\<mu>>0" "Colours l k" and i: "i \<ge> halted_point \<mu> l k"
-  shows "stepper \<mu> l k i = stepper \<mu> l k (halted_point \<mu> l k)"
+  assumes \<section>: "\<mu>>0" and i: "i \<ge> halted_point \<mu>"
+  shows "stepper \<mu> i = stepper \<mu> (halted_point \<mu>)"
   by (metis le_iff_add halted_stepper_add_eq[OF \<section>] i)
 
 lemma below_halted_point_nontermination:
-  assumes "i < halted_point \<mu> l k" "\<mu>>0" "Colours l k"
-  shows  "\<not> termination_condition l k (Xseq \<mu> l k i) (Yseq \<mu> l k i)"
+  assumes "i < halted_point \<mu>" "\<mu>>0"
+  shows  "\<not> termination_condition (Xseq \<mu> i) (Yseq \<mu> i)"
   by (simp add: assms halted_point_minimal not_termination_condition)
 
 lemma below_halted_point_cardX:
-  assumes "i < halted_point \<mu> l k" "\<mu>>0" "Colours l k"
-  shows  "card (Xseq \<mu> l k i) > 0"
+  assumes "i < halted_point \<mu>" "\<mu>>0"
+  shows  "card (Xseq \<mu> i) > 0"
   using Xseq_gt0 assms halted_point_minimal halted_stepper_eq
   by blast
 
