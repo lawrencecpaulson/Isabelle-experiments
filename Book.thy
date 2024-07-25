@@ -987,7 +987,7 @@ lemma finite_Yseq: "finite (Yseq \<mu> i)"
   by (meson Yseq_subset_V finV finite_subset)
 
 lemma Xseq_Yseq_disjnt: "disjnt (Xseq \<mu> i) (Yseq \<mu> i)"
-  by (metis (no_types, opaque_lifting) XY0(1) Xseq_0 Xseq_antimono Yseq_0 Yseq_antimono disjnt_iff le0 subset_eq)
+  by (metis XY0(1) Xseq_0 Xseq_antimono Yseq_0 Yseq_antimono disjnt_subset1 disjnt_sym zero_le)
 
 lemma edge_card_eq_pee: 
   "edge_card Red (Xseq \<mu> i) (Yseq \<mu> i) = pee \<mu> i * card (Xseq \<mu> i) * card (Yseq \<mu> i)"
