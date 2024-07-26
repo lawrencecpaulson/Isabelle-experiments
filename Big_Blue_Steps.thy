@@ -750,7 +750,7 @@ proposition bblue_dboost_step_limit:
   shows "card (Step_class {bblue_step}) + card (Step_class {dboost_step}) < l"
 proof -
   define BDB where "BDB \<equiv> \<lambda>r. {i. i < r \<and> stepper_kind i \<in> {bblue_step,dboost_step}}"
-  have *: "card(BDB n) \<le> card B"   (*AN UGLY, MESSY AND NEEDLESS FORMULATION*)
+  have *: "card(BDB n) \<le> card B"  \<comment>\<open>looks clunky but gives access to all state components\<close>
     if "stepper n = (X,Y,A,B)" for n X Y A B
     using that
   proof (induction n arbitrary: X Y A B)

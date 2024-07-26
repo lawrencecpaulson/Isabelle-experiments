@@ -610,8 +610,7 @@ definition many_bluish :: "'a set \<Rightarrow> bool" where
   "many_bluish \<equiv> \<lambda>X. card {x\<in>X. bluish X x} \<ge> RN k (nat \<lceil>l powr (2/3)\<rceil>)"
 
 definition good_blue_book :: "['a set, 'a set \<times> 'a set] \<Rightarrow> bool" where
- "good_blue_book \<equiv> \<lambda>X. \<lambda>(S,T). book S T Blue \<and> S\<subseteq>X \<and> T\<subseteq>X 
-                               \<and> card T \<ge> (\<mu> ^ card S) * real (card X) / 2"
+ "good_blue_book \<equiv> \<lambda>X. \<lambda>(S,T). book S T Blue \<and> S\<subseteq>X \<and> T\<subseteq>X \<and> card T \<ge> (\<mu> ^ card S) * card X / 2"
 
 lemma ex_good_blue_book: "good_blue_book X ({}, X)"
   by (simp add: good_blue_book_def)
@@ -922,7 +921,7 @@ lemma RB_state_stepper: "RB_state (stepper n)"
   using valid_state_def valid_state_stepper by force
 
 lemma stepper_A:
-  assumes \<section>: "stepper n = (X,Y,A,B)"
+  assumes "stepper n = (X,Y,A,B)"
   shows "clique A Red \<and> A\<subseteq>V"
 proof -
   have "A\<subseteq>V"
@@ -932,16 +931,6 @@ proof -
     using RB_state_stepper[of n] assms by (auto simp: RB_state_def)
   ultimately show ?thesis
     using all_edges_betw_un_iff_clique by simp
-qed
-
-lemma card_A_limit:
-  assumes "stepper n = (X,Y,A,B)" shows "card A < k"
-proof -
-  have "clique A Red"
-    using stepper_A assms by auto
-  then show "card A < k"
-    using assms no_Red_clique
-    by (metis linorder_neqE_nat size_clique_def size_clique_smaller stepper_A) 
 qed
 
 lemma stepper_B:
