@@ -163,9 +163,6 @@ locale No_Cliques = Book_Basis + P0_min +
   assumes Red_E: "Red \<subseteq> E"
   assumes Blue_def: "Blue = E-Red"
   \<comment> \<open>the following are local to the program\<close>
-  fixes X0 :: "'a set" and Y0 :: "'a set"    \<comment> \<open>initial values\<close>
-  assumes XY0: "disjnt X0 Y0" "X0 \<subseteq> V" "Y0 \<subseteq> V"
-  assumes density_ge_p0_min: "gen_density Red X0 Y0 \<ge> p0_min"
   fixes l::nat       \<comment> \<open>blue limit\<close>
   fixes k::nat       \<comment> \<open>red limit\<close>
   assumes l_le_k: "l \<le> k" \<comment> \<open>they should be "sufficiently large"\<close>
@@ -175,20 +172,19 @@ locale No_Cliques = Book_Basis + P0_min +
 locale Book = Book_Basis + No_Cliques +
   fixes \<mu>::real      \<comment> \<open>governs the big blue steps\<close>
   assumes \<mu>01: "0 < \<mu>" "\<mu> < 1"
+  fixes X0 :: "'a set" and Y0 :: "'a set"    \<comment> \<open>initial values\<close>
+  assumes XY0: "disjnt X0 Y0" "X0 \<subseteq> V" "Y0 \<subseteq> V"
+  assumes density_ge_p0_min: "gen_density Red X0 Y0 \<ge> p0_min"
 
 locale Book' = Book_Basis + No_Cliques +
   fixes \<gamma>::real      \<comment> \<open>governs the big blue steps\<close>
   assumes \<gamma>_def: "\<gamma> = real l / (real k + real l)"
+  fixes X0 :: "'a set" and Y0 :: "'a set"    \<comment> \<open>initial values\<close>
+  assumes XY0: "disjnt X0 Y0" "X0 \<subseteq> V" "Y0 \<subseteq> V"
+  assumes density_ge_p0_min: "gen_density Red X0 Y0 \<ge> p0_min"
 
 context No_Cliques
 begin
-
-lemma Red_edges_XY0: "Red \<inter> all_edges_betw_un X0 Y0 \<noteq> {}" 
-  using density_ge_p0_min p0_min
-  by (auto simp: gen_density_def edge_card_def)
-
-lemma finite_X0: "finite X0" and finite_Y0: "finite Y0"
-  using XY0 finV finite_subset by blast+
 
 lemma ln0: "l>0"
   using no_Blue_clique by (force simp: size_clique_def clique_def)
@@ -210,6 +206,32 @@ lemma Blue_eq: "Blue = all_edges V - Red"
 
 lemma Red_eq: "Red = all_edges V - Blue"
   using Blue_eq Red_Blue_all by blast
+
+lemma disjnt_Red_Blue_Neighbours: "disjnt (Neighbours Red x \<inter> X) (Neighbours Blue x \<inter> X')"
+  using disjnt_Red_Blue by (auto simp: disjnt_def Neighbours_def)
+
+lemma indep_Red_iff_clique_Blue: "K \<subseteq> V \<Longrightarrow> indep K Red \<longleftrightarrow> clique K Blue"
+  using Blue_eq by auto
+
+lemma Red_Blue_RN:
+  fixes X :: "'a set"
+  assumes "card X \<ge> RN m n" "X\<subseteq>V"
+  shows "\<exists>K \<subseteq> X. size_clique m K Red \<or> size_clique n K Blue"
+  using partn_lst_imp_is_clique_RN [OF is_Ramsey_number_RN [of m n]]  assms indep_Red_iff_clique_Blue 
+  unfolding is_clique_RN_def size_clique_def clique_indep_def
+  by (metis finV finite_subset subset_eq)
+
+end
+
+context Book
+begin
+
+lemma Red_edges_XY0: "Red \<inter> all_edges_betw_un X0 Y0 \<noteq> {}" 
+  using density_ge_p0_min p0_min
+  by (auto simp: gen_density_def edge_card_def)
+
+lemma finite_X0: "finite X0" and finite_Y0: "finite Y0"
+  using XY0 finV finite_subset by blast+
 
 lemma Red_nonempty: "Red \<noteq> {}"
   using Red_edges_XY0 by blast
@@ -240,20 +262,6 @@ lemma Neighbours_Red_Blue:
   assumes "x \<in> V" 
   shows "Neighbours Red x = V - insert x (Neighbours Blue x)"
   using Red_E assms by (auto simp: Blue_eq Neighbours_def complete all_edges_def)
-
-lemma disjnt_Red_Blue_Neighbours: "disjnt (Neighbours Red x \<inter> X) (Neighbours Blue x \<inter> X')"
-  using disjnt_Red_Blue by (auto simp: disjnt_def Neighbours_def)
-
-lemma indep_Red_iff_clique_Blue: "K \<subseteq> V \<Longrightarrow> indep K Red \<longleftrightarrow> clique K Blue"
-  using Blue_eq by auto
-
-lemma Red_Blue_RN:
-  fixes X :: "'a set"
-  assumes "card X \<ge> RN m n" "X\<subseteq>V"
-  shows "\<exists>K \<subseteq> X. size_clique m K Red \<or> size_clique n K Blue"
-  using partn_lst_imp_is_clique_RN [OF is_Ramsey_number_RN [of m n]]  assms indep_Red_iff_clique_Blue 
-  unfolding is_clique_RN_def size_clique_def clique_indep_def
-  by (metis finV finite_subset subset_eq)
 
 abbreviation "red_density X Y \<equiv> gen_density Red X Y"
 abbreviation "blue_density X Y \<equiv> gen_density Blue X Y"
@@ -1475,11 +1483,11 @@ sublocale Book' \<subseteq> Book where \<mu>=\<gamma>
 proof
   show "0 < \<gamma>" "\<gamma> < 1"
     using ln0 kn0 by (auto simp: \<gamma>_def)
-qed
+qed (use XY0 density_ge_p0_min in auto)
 
 lemma (in Book) Book':
   assumes "\<gamma> = real l / (real k + real l)"
-  shows "Book' V E p0_min Red Blue X0 Y0 l k \<gamma>"
-proof qed (use assms in auto)
+  shows "Book' V E p0_min Red Blue l k \<gamma> X0 Y0"
+proof qed (use assms XY0 density_ge_p0_min in auto)
 
 end

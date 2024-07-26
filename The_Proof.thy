@@ -308,19 +308,20 @@ proof -
     using \<eta> by (auto simp add: \<eta>'_def)
   have "k>0" and big101: "Big_Closer_10_1 (1/101) (nat\<lceil>k/100\<rceil>)" and ok_fun_10_1_le: "3 / (k * ln 2) \<le> \<eta>'"
     using big by (auto simp add: Big_From_11_1_def \<eta>'_def)
+  interpret No_Cliques where l=k
+    using assms unfolding No_Cliques_def No_Cliques_axioms_def
+    using Book_Basis_axioms P0_min_axioms by blast
   obtain X0 Y0 where card_X0: "card X0 \<ge> nV/2" and card_Y0: "card Y0 = gorder div 2"
     and "X0 = V \<setminus> Y0" "Y0\<subseteq>V"
     and p0_half: "1/2 \<le> gen_density Red X0 Y0"
-    and "Book V E p0_min Red Blue X0 Y0 k k \<mu>" 
-  proof (rule Basis_imp_Book [OF Red_E])
+    and "Book V E p0_min Red Blue k k \<mu> X0 Y0" 
+  proof (rule Basis_imp_Book)
     show "p0_min \<le> graph_density Red"
       using p0_min12 Red by linarith
-    show "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique k K Blue))"
-      using no_Blue_K no_Red_K by blast
     show "0 < \<mu>" "\<mu> < 1"
       using \<mu> by auto
   qed (use infinite_UNIV p0_min Blue_def Red \<mu> in auto)
-  then interpret Book V E p0_min Red Blue X0 Y0 k k \<mu>
+  then interpret Book V E p0_min Red Blue k k \<mu> X0 Y0
     by meson
   define \<R> where "\<R> \<equiv> Step_class {red_step}"
   define \<S> where "\<S> \<equiv> Step_class {dboost_step}"

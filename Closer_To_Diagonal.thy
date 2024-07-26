@@ -218,15 +218,15 @@ lemma (in Book_Basis) Closer_10_2:
   shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue)"
 proof (rule ccontr)
   assume neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
-  then have "l>0"
-    by (metis bot_nat_0.not_eq_extremum card.empty clique_def empty_iff size_clique_def subsetI)
-  with neg obtain X0 Y0 where "l\<ge>2" and card_X0: "card X0 \<ge> nV/2" 
+  interpret No_Cliques
+    using assms neg by (metis Book_Basis_axioms No_Cliques_axioms_def No_Cliques_def P0_min_axioms) 
+  obtain X0 Y0 where "l\<ge>2" and card_X0: "card X0 \<ge> nV/2" 
     and card_Y0: "card Y0 = gorder div 2" 
     and X0_def: "X0 = V \<setminus> Y0" and "Y0\<subseteq>V" 
     and gd_le: "graph_density Red \<le> gen_density Red X0 Y0"
-    and "Book' V E p0_min Red Blue X0 Y0 l k \<gamma>"
-    by (smt (verit, ccfv_SIG) Basis_imp_Book' assms p0_min)
-  then interpret Book' V E p0_min Red Blue X0 Y0 l k \<gamma>
+    and "Book' V E p0_min Red Blue l k \<gamma> X0 Y0"
+    by (smt (verit, ccfv_SIG) Basis_imp_Book' assms p0_min neg ln0)
+  then interpret Book' V E p0_min Red Blue l k \<gamma> X0 Y0
     by blast 
   show False
   proof (intro Closer_10_2_aux)

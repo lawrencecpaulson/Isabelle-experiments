@@ -1038,20 +1038,16 @@ qed
 
 text \<open>Mediation of 9.2 (and 10.2) from locale @{term Book_Basis} to the book locales
    with the starting sets of equal size\<close>
-lemma (in Book_Basis) Basis_imp_Book:
-  fixes Red Blue :: "'a set set"
-  assumes Red_E: "Red \<subseteq> E"
-  assumes Blue_def: "Blue = E-Red"
-  assumes infinite_UNIV: "infinite (UNIV::'a set)"
-  assumes p0_min_OK: "0 < p0_min" and gd: "p0_min \<le> graph_density Red"
-  assumes "l\<le>k" and \<mu>01: "0 < \<mu>" "\<mu> < 1"
-  assumes neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
-  obtains X0 Y0 where "l\<ge>2" "card X0 \<ge> real nV / 2" "card Y0 = gorder div 2" and "X0 = V \<setminus> Y0" "Y0\<subseteq>V" 
+lemma (in No_Cliques) Basis_imp_Book:
+  assumes gd: "p0_min \<le> graph_density Red"
+  assumes \<mu>01: "0 < \<mu>" "\<mu> < 1"
+  obtains X0 Y0 where "l\<ge>2" "card X0 \<ge> real nV / 2" "card Y0 = gorder div 2" 
+    and "X0 = V \<setminus> Y0" "Y0\<subseteq>V" 
     and "graph_density Red \<le> gen_density Red X0 Y0"
-    and "Book V E p0_min Red Blue X0 Y0 l k \<mu>" 
+    and "Book V E p0_min Red Blue l k \<mu> X0 Y0" 
 proof -
   have "Red \<noteq> {}"
-    using gd p0_min p0_min_OK by (auto simp: graph_density_def)
+    using gd p0_min by (auto simp: graph_density_def)
   then have "gorder \<ge> 2"
     by (metis Red_E card_mono ex_in_conv finV subset_empty two_edges wellformed)
   then have "0 < gorder div 2" "gorder div 2 < gorder"
@@ -1060,53 +1056,47 @@ proof -
     "graph_density Red \<le> gen_density Red (V\<setminus>Y0) Y0"
     by (metis complete Red_E exists_density_edge_density gen_density_commute)
   define X0 where "X0 \<equiv> V \<setminus> Y0" 
-  interpret Book V E p0_min Red Blue X0 Y0 l k \<mu>
+  interpret Book V E p0_min Red Blue l k \<mu> X0 Y0
   proof
     show "X0\<subseteq>V" "disjnt X0 Y0"
       by (auto simp: X0_def disjnt_iff)
     show "p0_min \<le> gen_density Red X0 Y0"
-      using X0_def Y0 gd gen_density_commute p0_min_OK by auto
+      using X0_def Y0 gd gen_density_commute p0_min by auto
   qed (use assms \<open>Y0\<subseteq>V\<close> in auto)
   have False if "l<2"
     using that unfolding less_2_cases_iff
   proof
-    assume "l = Suc 0" with neg Red_Blue_RN [of 2 gorder V] gorder_ge2
+    assume "l = Suc 0" with no_Red_clique no_Blue_clique Red_Blue_RN [of 2 gorder V] gorder_ge2
     show False
-      by (metis RN_1_le RN_commute Red_Blue_RN card_Ex_subset nat_le_linear not_less_eq_eq numeral_2_eq_2)
+      by (metis RN_1' Red_Blue_RN Suc_leI Y0 \<open>0 < nV div 2\<close> kn0)
   qed (use ln0 in auto)
-  with \<open>k\<ge>l\<close> have "l\<ge>2"
+  with l_le_k have "l\<ge>2"
     by force
   have card_X0: "card X0 \<ge> nV/2"
     using Y0 \<open>Y0\<subseteq>V\<close> unfolding X0_def
     by (simp add: card_Diff_subset finite_Y0)
   then show thesis
-    using Y0 Book_axioms X0_def \<open>l\<ge>2\<close> neg that by auto
+    using Y0 Book_axioms X0_def \<open>l\<ge>2\<close> no_Red_clique no_Blue_clique that by auto
 qed
 
 text \<open>As above, for @{term Book'}\<close>
-lemma (in Book_Basis) Basis_imp_Book':
-  fixes Red Blue :: "'a set set"
-  assumes Red_E: "Red \<subseteq> E"
-  assumes Blue_def: "Blue = E-Red"
-  assumes infinite_UNIV: "infinite (UNIV::'a set)"
-  assumes p0_min_OK: "0 < p0_min" and gd: "p0_min \<le> graph_density Red"
+lemma (in No_Cliques) Basis_imp_Book':
+  assumes gd: "p0_min \<le> graph_density Red"
   assumes l: "0<l" "l\<le>k"
-  assumes neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
   obtains X0 Y0 where "l\<ge>2" "card X0 \<ge> real nV / 2" "card Y0 = gorder div 2" and "X0 = V \<setminus> Y0" "Y0\<subseteq>V" 
     and "graph_density Red \<le> gen_density Red X0 Y0"
-    and "Book' V E p0_min Red Blue X0 Y0 l k (real l / (real k + real l))" 
+    and "Book' V E p0_min Red Blue l k (real l / (real k + real l)) X0 Y0" 
 proof -
   define \<gamma> where "\<gamma> \<equiv> real l / (real k + real l)"
   have "0 < \<gamma>" "\<gamma> < 1"
     using l by (auto simp: \<gamma>_def)
-  with assms Basis_imp_Book [of Red Blue l k \<gamma>]
+  with assms Basis_imp_Book [of  \<gamma>]
   obtain X0 Y0 where *: "l\<ge>2" "card X0 \<ge> real nV / 2" "card Y0 = gorder div 2" "X0 = V \<setminus> Y0" "Y0\<subseteq>V" 
-    "graph_density Red \<le> gen_density Red X0 Y0"
-    "Book V E p0_min Red Blue X0 Y0 l k \<gamma>"
+    "graph_density Red \<le> gen_density Red X0 Y0" "Book V E p0_min Red Blue l k \<gamma> X0 Y0"
     by blast
-  then interpret Book V E p0_min Red Blue X0 Y0 l k \<gamma>
+  then interpret Book V E p0_min Red Blue l k \<gamma> X0 Y0
     by blast
-  have "Book' V E p0_min Red Blue X0 Y0 l k \<gamma>"
+  have "Book' V E p0_min Red Blue l k \<gamma> X0 Y0"
     using Book' \<gamma>_def by auto
   with * assms show ?thesis
     using \<gamma>_def  that by blast
@@ -1131,15 +1121,15 @@ lemma (in Book_Basis) Far_9_2:
   shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue)"
 proof (rule ccontr)
   assume neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
-  then have "l>0"
-    by (metis bot_nat_0.not_eq_extremum card.empty clique_def empty_iff size_clique_def subsetI)
-    with neg obtain X0 Y0 where "l\<ge>2" and card_X0: "card X0 \<ge> real nV / 2" 
+  interpret No_Cliques
+    using assms neg by (metis Book_Basis_axioms No_Cliques_axioms_def No_Cliques_def P0_min_axioms) 
+  obtain X0 Y0 where "l\<ge>2" and card_X0: "card X0 \<ge> real nV / 2" 
     and card_Y0: "card Y0 = gorder div 2" 
     and X0_def: "X0 = V \<setminus> Y0" and "Y0\<subseteq>V" 
     and gd_le: "graph_density Red \<le> gen_density Red X0 Y0"
-    and "Book' V E p0_min Red Blue X0 Y0 l k \<gamma>" 
-    by (smt (verit, ccfv_SIG) Basis_imp_Book' assms p0_min)
-  then interpret Book' V E p0_min Red Blue X0 Y0
+    and "Book' V E p0_min Red Blue l k \<gamma> X0 Y0" 
+    by (smt (verit, ccfv_SIG) Basis_imp_Book' assms p0_min neg ln0)
+  then interpret Book' V E p0_min Red Blue l k \<gamma> X0 Y0
     by blast 
   show False
   proof (intro Far_9_2_aux [of \<eta>])
@@ -1566,7 +1556,6 @@ proof (rule ccontr)
       using \<open>0<k\<close> \<open>m < l\<close> 
       apply (simp add: \<gamma>_def field_simps)
       by (smt (verit, best) distrib_left mult_left_mono of_nat_0_le_iff)
-
     have ln1\<xi>: "ln (1+\<xi>) * 20 \<ge> 1"
       unfolding \<xi>_def by (approximation 10)
     with YKK have \<section>: "m * ln (1+\<xi>) \<ge> \<delta> * k"
