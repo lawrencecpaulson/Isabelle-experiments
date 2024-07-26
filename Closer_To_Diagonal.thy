@@ -70,9 +70,7 @@ end (*context P0_min*)
 
 text \<open>A little tricky to express since the Book locale assumes that 
     there are no cliques in the original graph (page 10). So it's a contrapositive\<close>
-lemma (in Book) Closer_10_2_aux:
-  fixes \<gamma>::real
-  defines "\<gamma> \<equiv> l / (real k + real l)"
+lemma (in Book') Closer_10_2_aux:
   assumes 0: "real (card X0) \<ge> nV/2" "card Y0 \<ge> nV div 2" "p0 \<ge> 1-\<gamma>"
      \<comment>\<open>These are the assumptions about the red density of the graph\<close>
   assumes \<gamma>: "1/10 \<le> \<gamma>" "\<gamma> \<le> 1/5"
@@ -80,9 +78,8 @@ lemma (in Book) Closer_10_2_aux:
   assumes big: "Big_Closer_10_2 \<gamma> l"
   shows False
 proof -
-  define \<R> where "\<R> \<equiv> Step_class \<gamma> {red_step}"
+  define \<R> where "\<R> \<equiv> Step_class {red_step}"
   define t where "t \<equiv> card \<R>"
-  define m where "m \<equiv> halted_point \<gamma>"
   define \<delta>::real where "\<delta> \<equiv> 1/200"
   have \<gamma>01: "0 < \<gamma>" "\<gamma> < 1"
     using ln0 l_le_k by (auto simp: \<gamma>_def)
@@ -91,35 +88,32 @@ proof -
   have big93: "Big_Far_9_3 \<gamma> l" 
     using big by (auto simp: Big_Closer_10_2_def Big_Far_9_2_def)
   have t23: "t \<ge> 2*k / 3"
-    unfolding t_def \<R>_def \<gamma>_def
+    unfolding t_def \<R>_def
   proof (rule Far_9_3)
-    show "l / (real k + real l) \<le> 1/5"
-      using \<gamma> unfolding \<gamma>_def by linarith
     have "min (1/200) (l / (real k + real l) / 20) = 1/200"
        using \<gamma> ln0 by (simp add: \<gamma>_def)
-    then show "exp (- min (1/200) (l / (real k + real l) / 20) * real k) * real (k+l choose l) \<le> nV"
-      using nV divide_real_def inverse_eq_divide minus_mult_right mult.commute
+    then show "exp (- min (1/200) (\<gamma> / 20) * real k) * real (k+l choose l) \<le> nV"
+      using nV divide_real_def inverse_eq_divide minus_mult_right mult.commute \<gamma>_def
       by (metis of_int_of_nat_eq of_int_minus)
     show "1/4 \<le> p0"
       using \<gamma> 0 by linarith
-    show "Big_Far_9_3 (l / (real k + real l)) l"
+    show "Big_Far_9_3 \<gamma> l"
       using \<gamma>_def big93 by blast
-  qed (use assms in auto)
+  qed (use assms \<gamma>_def in auto)
 
-  have "card (Yseq \<gamma> m) \<ge> 
+  have "card (Yseq halted_point) \<ge> 
                exp (-\<delta> * k + ok_fun_95b k) * (1-\<gamma>) powr (\<gamma>*t / (1-\<gamma>)) * ((1-\<gamma>)/(1-\<gamma>))^t 
              * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) * (k-t+l choose l)"
-    unfolding \<gamma>_def m_def 
   proof (rule order_trans [OF _ Far_9_5])
     show "exp (-\<delta> * k) * real (k+l choose l) \<le> real nV"
       using nV by (auto simp: \<delta>_def)
-    show "1 / 2 \<le> 1 - l / (k + real l) - 0"
-      using divide_le_eq_1 l_le_k by fastforce
+    show "1 / 2 \<le> 1 - \<gamma> - 0"
+      using divide_le_eq_1 l_le_k \<gamma>_def by fastforce
   next
-    show "Big_Far_9_5 (l / (k + real l)) l"
+    show "Big_Far_9_5 \<gamma> l"
       using big by (simp add: Big_Closer_10_2_def Big_Far_9_2_def \<gamma>_def)
   qed (use 0 kn0 in \<open>auto simp flip: t_def \<gamma>_def \<R>_def\<close>)
-  then have 52: "card (Yseq \<gamma> m) \<ge> 
+  then have 52: "card (Yseq halted_point) \<ge> 
                exp (-\<delta> * k + ok_fun_95b k) * (1-\<gamma>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) * (k-t+l choose l)"
     using \<gamma> by simp
 
@@ -200,13 +194,13 @@ proof -
   then have "(k-t+l choose l) \<le>
         exp (-\<delta> * k + ok_fun_95b k) * (1-\<gamma>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) * (k-t+l choose l)"
     by auto
-  with 52 have "(k-t+l choose l) \<le> card (Yseq \<gamma> m)" by linarith
+  with 52 have "(k-t+l choose l) \<le> card (Yseq halted_point)" by linarith
   then show False
-    using Far_9_2_conclusion [OF \<gamma>01] by (simp flip: \<R>_def m_def t_def)
+    using Far_9_2_conclusion by (simp flip: \<R>_def t_def)
 qed
 
 
-text \<open>Needs to be proved OUTSIDE THE BOOK LOCALE\<close>
+text \<open>Needs to be proved OUTSIDE THE BOOK LOCALES\<close>
 lemma (in Book_Basis) Closer_10_2:
   fixes Red Blue :: "'a set set"
   fixes l k
@@ -224,17 +218,19 @@ lemma (in Book_Basis) Closer_10_2:
   shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue)"
 proof (rule ccontr)
   assume neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
-  then obtain X0 Y0 where "l\<ge>2" and card_X0: "card X0 \<ge> nV/2" 
+  then have "l>0"
+    by (metis bot_nat_0.not_eq_extremum card.empty clique_def empty_iff size_clique_def subsetI)
+  with neg obtain X0 Y0 where "l\<ge>2" and card_X0: "card X0 \<ge> nV/2" 
     and card_Y0: "card Y0 = gorder div 2" 
     and X0_def: "X0 = V \<setminus> Y0" and "Y0\<subseteq>V" 
     and gd_le: "graph_density Red \<le> gen_density Red X0 Y0"
-    and "Book V E p0_min Red Blue X0 Y0 l k"
-    by (smt (verit, ccfv_SIG) Basis_imp_Book assms p0_min)
-  then interpret Book V E p0_min Red Blue X0 Y0 l k
+    and "Book' V E p0_min Red Blue X0 Y0 l k \<gamma>"
+    by (smt (verit, ccfv_SIG) Basis_imp_Book' assms p0_min)
+  then interpret Book' V E p0_min Red Blue X0 Y0 l k \<gamma>
     by blast 
   show False
   proof (intro Closer_10_2_aux)
-    show "1 - real l / (real k + real l) \<le> p0"
+    show "1 - \<gamma>\<le> p0"
       using X0_def \<gamma>_def gd gd_le gen_density_commute p0_def by auto
   qed (use assms card_X0 card_Y0 in auto)
 qed

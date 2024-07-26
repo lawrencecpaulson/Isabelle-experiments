@@ -271,14 +271,14 @@ context Book
 begin
 
 proposition Blue_4_1:
-  assumes "0 < \<mu>" and "X\<subseteq>V" and manyb: "many_bluish \<mu> X"
+  assumes "X\<subseteq>V" and manyb: "many_bluish X"
     and big: "Big_Blue_4_1 \<mu> l"
-  shows "\<exists>S T. good_blue_book \<mu> X (S,T) \<and> card S \<ge> l powr (1/4)"
+  shows "\<exists>S T. good_blue_book X (S,T) \<and> card S \<ge> l powr (1/4)"
 proof -
   have lpowr0[simp]: "0 \<le> \<lceil>l powr r\<rceil>" for r
     by (metis ceiling_mono ceiling_zero powr_ge_pzero)
   define b where "b \<equiv> b_of l"
-  define W where "W \<equiv> {x\<in>X. bluish \<mu> X x}"
+  define W where "W \<equiv> {x\<in>X. bluish X x}"
   define m where "m \<equiv> m_of l"
   have "m>0" "m \<ge> 6" "m \<ge> 12" "b>0"
     using big by (auto simp: Big_Blue_4_1_def m_def b_def b_of_def)
@@ -380,7 +380,7 @@ proof -
   then have km: "k + m \<le> Suc (k * m)"
     using big l_le_k \<open>m \<le> l\<close> by linarith
   have "m/2 * (2 + real k * (1-\<mu>)) \<le> m/2 * (2 + real k)"
-    using assms by (simp add: algebra_simps)
+    using assms \<mu>01 by (simp add: algebra_simps)
   also have "\<dots> \<le> (k - 1) * (m - 1)"
     using big l_le_k 6 \<open>m\<le>k\<close> by (simp add: Big_Blue_4_1_def algebra_simps of_nat_diff km)
   finally  have "(m/2) * (2 + k * (1-\<mu>)) \<le> RN k m"
@@ -398,7 +398,7 @@ proof -
     with big have "l powr (5/12) \<ge> ((6/\<mu>) powr (12/5)) powr (5/12)"
       by (simp add: Big_Blue_4_1_def powr_mono2)
     then have lge: "l powr (5/12) \<ge> 6/\<mu>"
-      using assms powr_powr by force
+      using assms \<mu>01 powr_powr by force
     have "2 * b \<le> 2 * (l powr (1/4) + 1)"
       by (simp add: b_def b_of_def del: zero_le_ceiling distrib_left_numeral)
     then have "2*b / m + 2/l \<le> 2 * (l powr (1/4) + 1) / l powr (2/3) + 2/l"
@@ -410,7 +410,7 @@ proof -
     also have "\<dots> = 6 / l powr (5/12)"
       by (simp add: divide_simps flip: powr_add)
     also have "\<dots> \<le> \<mu>"
-      using lge assms by (simp add: divide_le_eq mult.commute)
+      using lge assms \<mu>01 by (simp add: divide_le_eq mult.commute)
     finally have "2*b / m + 2/l \<le> \<mu>" .
     then show ?thesis
       using l_le_k \<open>m>0\<close> ln0 by (smt (verit, best) frac_le of_nat_0_less_iff of_nat_mono)
@@ -443,7 +443,7 @@ proof -
     then have 1: "\<mu> \<le> (5/4)powr(1/b) * \<sigma>"
       using eq10 \<open>b>0\<close> by (simp add: algebra_simps)
     show "\<mu> ^ b \<le> 5/4 * \<sigma> ^ b"
-      using power_mono[OF 1, of b] assms \<open>\<sigma>>0\<close> \<open>b>0\<close>
+      using power_mono[OF 1, of b] assms \<open>\<sigma>>0\<close> \<open>b>0\<close> \<mu>01
       by (simp add: powr_mult powr_powr flip: powr_realpow)
     have "\<mu> - 2/l \<le> \<sigma>"
       using "2" eq10 by linarith
@@ -586,7 +586,7 @@ proof -
   have "all_edges_betw_un S (S \<union> Int_NB S) \<subseteq> Blue"
     using \<open>clique S Blue\<close> unfolding all_edges_betw_un_def Neighbours_def clique_def Int_NB_def
     by fastforce
-  then have "good_blue_book \<mu> X (S, Int_NB S)"
+  then have "good_blue_book X (S, Int_NB S)"
     using \<open>S\<subseteq>U\<close> \<open>v \<in> S\<close> \<open>U \<subset> X\<close> S \<open>card S = b\<close>
     unfolding good_blue_book_def book_def size_clique_def Int_NB_def disjnt_iff
     by blast
@@ -596,60 +596,60 @@ qed
 
 text \<open>Lemma 4.3\<close>
 proposition bblue_step_limit:
-  assumes "\<mu>>0" and big: "Big_Blue_4_1 \<mu> l"
-  shows "card (Step_class \<mu> {bblue_step}) \<le> l powr (3/4)"
+  assumes big: "Big_Blue_4_1 \<mu> l"
+  shows "card (Step_class {bblue_step}) \<le> l powr (3/4)"
 proof -
-  define BBLUES where "BBLUES \<equiv> \<lambda>r. {m. m < r \<and> stepper_kind \<mu> m = bblue_step}"
-  have cardB_ge: "card (Bseq \<mu> n) \<ge> b_of l * card(BBLUES n)"
+  define BBLUES where "BBLUES \<equiv> \<lambda>r. {m. m < r \<and> stepper_kind m = bblue_step}"
+  have cardB_ge: "card (Bseq n) \<ge> b_of l * card(BBLUES n)"
     for n
   proof (induction n)
     case 0 then show ?case by (auto simp: BBLUES_def)
   next
     case (Suc n)
     show ?case
-    proof (cases "stepper_kind \<mu> n = bblue_step")
+    proof (cases "stepper_kind n = bblue_step")
       case True
       have [simp]: "card (insert n (BBLUES n)) = Suc (card (BBLUES n))"
         by (simp add: BBLUES_def)
-      have card_B': "card (Bseq \<mu> (Suc n)) \<ge> b_of l * card (BBLUES n)"
+      have card_B': "card (Bseq (Suc n)) \<ge> b_of l * card (BBLUES n)"
         using Suc.IH
         by (meson Bseq_Suc_subset card_mono finite_Bseq le_trans)
 
-      define S where "S \<equiv> fst (choose_blue_book \<mu> (Xseq \<mu> n, Yseq \<mu> n, Aseq \<mu> n, Bseq \<mu> n))"
-      have BSuc: "Bseq \<mu> (Suc n) = Bseq \<mu> n \<union> S" 
-        and manyb: "many_bluish \<mu> (Xseq \<mu> n)" 
-        and cbb: "choose_blue_book \<mu> (Xseq \<mu> n, Yseq \<mu> n, Aseq \<mu> n, Bseq \<mu> n) 
-                = (S, Xseq \<mu> (Suc n))" 
-        and same: "Aseq \<mu> (Suc n) = Aseq \<mu> n" "Yseq \<mu> (Suc n) = Yseq \<mu> n"
+      define S where "S \<equiv> fst (choose_blue_book (Xseq n, Yseq n, Aseq n, Bseq n))"
+      have BSuc: "Bseq (Suc n) = Bseq n \<union> S" 
+        and manyb: "many_bluish (Xseq n)" 
+        and cbb: "choose_blue_book (Xseq n, Yseq n, Aseq n, Bseq n) 
+                = (S, Xseq (Suc n))" 
+        and same: "Aseq (Suc n) = Aseq n" "Yseq (Suc n) = Yseq n"
         using True
         by (force simp: S_def step_kind_defs next_state_def Aseq_def Bseq_def 
             split: prod.split if_split_asm)+  
 
       have l14: "l powr (1/4) \<le> card S"
-        using Blue_4_1 [OF \<open>\<mu>>0\<close> Xseq_subset_V manyb big]
+        using Blue_4_1 [OF Xseq_subset_V manyb big]
         by (smt (verit, best) choose_blue_book_works best_blue_book_is_best cbb finite_Xseq of_nat_mono)
       then have ble: "b_of l \<le> card S"
         using b_of_def nat_ceiling_le_eq by presburger
-      have S: "good_blue_book \<mu> (Xseq \<mu> n) (S, Xseq \<mu> (Suc n))"
+      have S: "good_blue_book (Xseq n) (S, Xseq (Suc n))"
         by (metis cbb choose_blue_book_works finite_Xseq)
-      then have "card S \<le> best_blue_book_card \<mu> (Xseq \<mu> n)"
+      then have "card S \<le> best_blue_book_card (Xseq n)"
         by (simp add: best_blue_book_is_best finite_Xseq)
       have finS: "finite S"
         using ln0 l14 card.infinite by force 
-      have "disjnt (Bseq \<mu> n) (Xseq \<mu> n)"
-        using valid_state_seq [of \<mu> n]
+      have "disjnt (Bseq n) (Xseq n)"
+        using valid_state_seq [of n]
         by (auto simp: Bseq_def Xseq_def valid_state_def disjoint_state_def disjnt_iff split: prod.split_asm)
-      then have dBS: "disjnt (Bseq \<mu> n) S"
+      then have dBS: "disjnt (Bseq n) S"
         using S cbb by (force simp: good_blue_book_def book_def disjnt_iff) 
       have eq: "BBLUES(Suc n) = insert n (BBLUES n)"
         using less_Suc_eq True unfolding BBLUES_def by blast
       then have "b_of l * card (BBLUES (Suc n)) = b_of l + b_of l * card (BBLUES n)"
         by auto
-      also have "\<dots> \<le> card (Bseq \<mu> n) + card S"
+      also have "\<dots> \<le> card (Bseq n) + card S"
         using ble card_B' Suc.IH by linarith
-      also have "\<dots> \<le> card (Bseq \<mu> n \<union> S)"
+      also have "\<dots> \<le> card (Bseq n \<union> S)"
         using ble dBS by (simp add: card_Un_disjnt finS finite_Bseq)
-      finally have **: "b_of l * card (BBLUES (Suc n)) \<le> card (Bseq \<mu> (Suc n))"
+      finally have **: "b_of l * card (BBLUES (Suc n)) \<le> card (Bseq (Suc n))"
         using order.trans BSuc by argo 
       then show ?thesis
         by (simp add: BBLUES_def)
@@ -661,23 +661,23 @@ proof -
         by (metis Bseq_Suc_subset Suc.IH card_mono finite_Bseq le_trans)
     qed
   qed
-  { assume \<section>: "card (Step_class \<mu> {bblue_step}) > l powr (3/4)"
-    then have fin: "finite (Step_class \<mu> {bblue_step})"
+  { assume \<section>: "card (Step_class {bblue_step}) > l powr (3/4)"
+    then have fin: "finite (Step_class {bblue_step})"
       using card.infinite by fastforce
-    then obtain n where n: "(Step_class \<mu> {bblue_step}) = {m. m<n \<and> stepper_kind \<mu> m = bblue_step}"
+    then obtain n where n: "(Step_class {bblue_step}) = {m. m<n \<and> stepper_kind m = bblue_step}"
       using Step_class_iterates by blast
-    with \<section> have card_gt: "card{m. m<n \<and> stepper_kind \<mu> m = bblue_step} > l powr (3/4)"
+    with \<section> have card_gt: "card{m. m<n \<and> stepper_kind m = bblue_step} > l powr (3/4)"
       by (simp add: n)
     have "l = l powr (1/4) * l powr (3/4)"
       by (simp flip: powr_add)
     also have "\<dots> \<le> b_of l * l powr (3/4)"
       by (simp add: b_of_def mult_mono')
-    also have "\<dots> \<le> b_of l * card{m. m<n \<and> stepper_kind \<mu> m = bblue_step}"
+    also have "\<dots> \<le> b_of l * card{m. m<n \<and> stepper_kind m = bblue_step}"
       using card_gt less_eq_real_def by fastforce
-    also have "\<dots> \<le> card (Bseq \<mu> n)"
+    also have "\<dots> \<le> card (Bseq n)"
       using cardB_ge step of_nat_mono unfolding BBLUES_def by blast
     also have "\<dots> < l"
-      using \<open>\<mu>>0\<close> by (simp add: Bseq_less_l)
+      by (simp add: Bseq_less_l)
     finally have False
       by simp
   } 
@@ -686,38 +686,37 @@ qed
 
 
 lemma red_steps_eq_A:
-  fixes \<mu>::real 
-  defines "REDS \<equiv> \<lambda>r. {i. i < r \<and> stepper_kind \<mu> i = red_step}"
-  shows "card(REDS n) = card (Aseq \<mu> n)"
+  defines "REDS \<equiv> \<lambda>r. {i. i < r \<and> stepper_kind i = red_step}"
+  shows "card(REDS n) = card (Aseq n)"
 proof (induction n)
   case 0
   then show ?case
     by (auto simp: REDS_def)
 next
   case (Suc n)
-  let ?X = "Xseq \<mu> n"
-  let ?Y = "Yseq \<mu> n"
-  let ?A = "Aseq \<mu> n"
-  let ?B = "Bseq \<mu> n"
+  let ?X = "Xseq n"
+  let ?Y = "Yseq n"
+  let ?A = "Aseq n"
+  let ?B = "Bseq n"
   show ?case
-  proof (cases "stepper_kind \<mu> n = red_step")
+  proof (cases "stepper_kind n = red_step")
     case True
     then have "REDS (Suc n) = insert n (REDS n)" "card (insert n (REDS n)) = Suc (card (REDS n))"
       by (auto simp: REDS_def)
     then have [simp]: "card (REDS (Suc n)) = Suc (card (REDS n))"
       by presburger
-    have Aeq: "Aseq \<mu> (Suc n) = insert (choose_central_vx \<mu> (?X,?Y,?A,?B)) ?A"
+    have Aeq: "Aseq (Suc n) = insert (choose_central_vx (?X,?Y,?A,?B)) ?A"
       using Suc.prems True 
       by (auto simp: step_kind_defs Aseq_def Bseq_def next_state_def Let_def split: if_split_asm prod.split)
-    have "finite (Xseq \<mu> n)"
+    have "finite (Xseq n)"
       using finite_Xseq by presburger
-    then have "choose_central_vx \<mu> (?X,?Y,?A,?B) \<in> ?X"
+    then have "choose_central_vx (?X,?Y,?A,?B) \<in> ?X"
       using True
       by (simp add: step_kind_defs choose_central_vx_X split: if_split_asm prod.split_asm)
     moreover
     have "disjnt ?X ?A"
       using valid_state_seq by (simp add: valid_state_def disjoint_state_def)
-    ultimately have "choose_central_vx \<mu> (?X,?Y,?A,?B) \<notin> Aseq \<mu> n"
+    ultimately have "choose_central_vx (?X,?Y,?A,?B) \<notin> Aseq n"
       by (simp add: disjnt_iff)
     then show ?thesis
       by (simp add: Aeq Suc.IH finite_Aseq)
@@ -725,7 +724,7 @@ next
     case False
     then have "REDS(Suc n) = REDS n"
       using less_Suc_eq unfolding REDS_def by blast
-    moreover have "Aseq \<mu> (Suc n) = ?A"
+    moreover have "Aseq (Suc n) = ?A"
       using False
       by (auto simp: Aseq_def step_kind_defs degree_reg_def next_state_def Let_def split: prod.split)
     ultimately show ?thesis
@@ -733,31 +732,26 @@ next
   qed
 qed
 
-proposition red_step_eq_Aseq:
-  assumes "\<mu>>0"
-  defines "m \<equiv> halted_point \<mu>"
-  shows "card (Step_class \<mu> {red_step}) = card (Aseq \<mu> m)"
+proposition red_step_eq_Aseq: "card (Step_class {red_step}) = card (Aseq halted_point)"
 proof -
-  have "card{i. i < m \<and> stepper_kind \<mu> i = red_step} = card (Aseq \<mu> m)"
+  have "card{i. i < halted_point \<and> stepper_kind i = red_step} = card (Aseq halted_point)"
     by (rule red_steps_eq_A)
-  moreover have "(Step_class \<mu> {red_step}) = {i. i < m \<and> stepper_kind \<mu> i = red_step}"
-    using assms halted_point_minimal' by (fastforce simp: m_def Step_class_def)
+  moreover have "(Step_class {red_step}) = {i. i < halted_point \<and> stepper_kind i = red_step}"
+    using halted_point_minimal' by (fastforce simp: Step_class_def)
   ultimately show ?thesis
     by argo
 qed
 
-proposition red_step_limit: 
-  assumes "\<mu>>0"
-  shows "card (Step_class \<mu> {red_step}) < k"
-  by (simp add: Aseq_less_k assms l_le_k red_step_eq_Aseq)
+proposition red_step_limit: "card (Step_class {red_step}) < k"
+  using Aseq_less_k red_step_eq_Aseq by presburger
 
 proposition bblue_dboost_step_limit:
-  assumes "\<mu>>0" and big: "Big_Blue_4_1 \<mu> l"
-  shows "card (Step_class \<mu> {bblue_step}) + card (Step_class \<mu> {dboost_step}) < l"
+  assumes big: "Big_Blue_4_1 \<mu> l"
+  shows "card (Step_class {bblue_step}) + card (Step_class {dboost_step}) < l"
 proof -
-  define BDB where "BDB \<equiv> \<lambda>r. {i. i < r \<and> stepper_kind \<mu> i \<in> {bblue_step,dboost_step}}"
+  define BDB where "BDB \<equiv> \<lambda>r. {i. i < r \<and> stepper_kind i \<in> {bblue_step,dboost_step}}"
   have *: "card(BDB n) \<le> card B"   (*AN UGLY, MESSY AND NEEDLESS FORMULATION*)
-    if "stepper \<mu> n = (X,Y,A,B)" for n X Y A B
+    if "stepper n = (X,Y,A,B)" for n X Y A B
     using that
   proof (induction n arbitrary: X Y A B)
     case 0
@@ -765,7 +759,7 @@ proof -
       by (auto simp: BDB_def)
   next
     case (Suc n)
-    obtain X' Y' A' B' where step_n: "stepper \<mu> n = (X',Y',A',B')"
+    obtain X' Y' A' B' where step_n: "stepper n = (X',Y',A',B')"
       by (metis surj_pair)
     then obtain "valid_state (X',Y',A',B')" and "V_state (X',Y',A',B')"
       and disjst: "disjoint_state(X',Y',A',B')" and "finite X'"
@@ -773,7 +767,7 @@ proof -
     have "B' \<subseteq> B"
       using Suc.prems by (auto simp: next_state_def Let_def degree_reg_def step_n split: prod.split_asm if_split_asm)
     show ?case
-    proof (cases "stepper_kind \<mu> n \<in> {bblue_step,dboost_step}")
+    proof (cases "stepper_kind n \<in> {bblue_step,dboost_step}")
       case True
       then have "BDB (Suc n) = insert n (BDB n)"
         by (auto simp: BDB_def)
@@ -783,15 +777,15 @@ proof -
         by presburger
       have card_B': "card (BDB n) \<le> card B'"
         using step_n BDB_def Suc.IH by blast
-      consider "stepper_kind \<mu> n = bblue_step" | "stepper_kind \<mu> n = dboost_step"
+      consider "stepper_kind n = bblue_step" | "stepper_kind n = dboost_step"
         using True by force
       then have Bigger: "B' \<subset> B"
       proof cases
         case 1
         then have "\<not> termination_condition X' Y'"
           by (auto simp: stepper_kind_def step_n)
-        with 1 obtain S where "A' = A" "Y' = Y" and manyb: "many_bluish \<mu> X'" 
-          and cbb: "choose_blue_book \<mu> (X',Y,A,B') = (S,X)" and le_cardB: "B = B' \<union> S"
+        with 1 obtain S where "A' = A" "Y' = Y" and manyb: "many_bluish X'" 
+          and cbb: "choose_blue_book (X',Y,A,B') = (S,X)" and le_cardB: "B = B' \<union> S"
           using Suc.prems 
           by (auto simp: step_kind_defs next_state_def step_n split: prod.split_asm if_split_asm)
         then have VS: "V_state (X',Y,A,B')" and ds: "disjoint_state (X',Y,A,B')"
@@ -799,7 +793,7 @@ proof -
         then obtain "X' \<subseteq> V" "finite X'"
           by (metis Xseq_subset_V finX step_n stepper_XYseq)
         then have "l powr (1/4) \<le> real (card S)"
-        using Blue_4_1 [OF \<open>\<mu>>0\<close> _ manyb big]
+        using Blue_4_1 [OF _ manyb big]
           by (smt (verit, best) VS best_blue_book_is_best cbb choose_blue_book_works of_nat_mono)
         then have "S \<noteq> {}"
           using ln0 by fastforce
@@ -811,12 +805,12 @@ proof -
           by (metis \<open>B' \<subseteq> B\<close> disjnt_Un1 disjnt_self_iff_empty le_cardB psubsetI)
       next
         case 2
-        then have "choose_central_vx \<mu> (X',Y',A',B') \<in> X'"
+        then have "choose_central_vx (X',Y',A',B') \<in> X'"
           unfolding step_kind_defs 
           by (auto simp: \<open>finite X'\<close> choose_central_vx_X step_n split: if_split_asm)
         moreover have "disjnt B' X'"
           using disjst disjnt_sym by (force simp: disjoint_state_def)
-        ultimately have "choose_central_vx \<mu> (X',Y',A',B') \<notin> B'"
+        ultimately have "choose_central_vx (X',Y',A',B') \<notin> B'"
           by (meson disjnt_iff)
         then show ?thesis
           using 2 Suc.prems 
@@ -836,7 +830,7 @@ proof -
   qed
   have less_l: "card (BDB n) < l" for n
   proof -
-    obtain X Y A B where "stepper \<mu> n = (X,Y,A,B)"
+    obtain X Y A B where "stepper n = (X,Y,A,B)"
       using prod_cases4 by blast
     with * show ?thesis
       using card_B_limit by fastforce
@@ -847,17 +841,17 @@ proof -
     using Union_incseq_finite by blast
   then have "finite (\<Union> (range BDB))"
     using BDB_def eventually_sequentially by force
-  moreover have Uneq: "\<Union> (range BDB) = Step_class \<mu> {bblue_step,dboost_step}"
+  moreover have Uneq: "\<Union> (range BDB) = Step_class {bblue_step,dboost_step}"
     by (auto simp: Step_class_def BDB_def)
-  ultimately have fin: "finite (Step_class \<mu> {bblue_step,dboost_step})"
+  ultimately have fin: "finite (Step_class {bblue_step,dboost_step})"
     by fastforce
   obtain n where "\<Union> (range BDB) = BDB n"
     using ** by force
-  then have "card (BDB n) = card (Step_class \<mu> {bblue_step} \<union> Step_class \<mu> {dboost_step})"
+  then have "card (BDB n) = card (Step_class {bblue_step} \<union> Step_class {dboost_step})"
     by (metis Step_class_insert Uneq)
-  also have "\<dots> = card (Step_class \<mu> {bblue_step}) + card (Step_class \<mu> {dboost_step})"
+  also have "\<dots> = card (Step_class {bblue_step}) + card (Step_class {dboost_step})"
   proof -
-    have "disjnt (Step_class \<mu> {bblue_step}) (Step_class \<mu> {dboost_step})"
+    have "disjnt (Step_class {bblue_step}) (Step_class {dboost_step})"
       using disjnt_Step_class by auto
     then show ?thesis
       by (metis Step_class_insert card_Un_disjnt fin finite_Un)

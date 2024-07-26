@@ -311,22 +311,21 @@ proof -
   obtain X0 Y0 where card_X0: "card X0 \<ge> nV/2" and card_Y0: "card Y0 = gorder div 2"
     and "X0 = V \<setminus> Y0" "Y0\<subseteq>V"
     and p0_half: "1/2 \<le> gen_density Red X0 Y0"
-    and "Book V E p0_min Red Blue X0 Y0 k k" 
-  proof (rule Basis_imp_Book [OF _ Red_E])
-    show "E = all_edges V"
-      using complete by auto
+    and "Book V E p0_min Red Blue X0 Y0 k k \<mu>" 
+  proof (rule Basis_imp_Book [OF Red_E])
     show "p0_min \<le> graph_density Red"
       using p0_min12 Red by linarith
     show "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique k K Blue))"
       using no_Blue_K no_Red_K by blast
-  qed (use infinite_UNIV p0_min Blue_def Red in auto)
-  then interpret Book V E p0_min Red Blue X0 Y0 k k
+    show "0 < \<mu>" "\<mu> < 1"
+      using \<mu> by auto
+  qed (use infinite_UNIV p0_min Blue_def Red \<mu> in auto)
+  then interpret Book V E p0_min Red Blue X0 Y0 k k \<mu>
     by meson
-  define \<R> where "\<R> \<equiv> Step_class \<mu> {red_step}"
-  define \<S> where "\<S> \<equiv> Step_class \<mu> {dboost_step}"
+  define \<R> where "\<R> \<equiv> Step_class {red_step}"
+  define \<S> where "\<S> \<equiv> Step_class {dboost_step}"
   define t where "t \<equiv> card \<R>" 
   define s where "s \<equiv> card \<S>"
-  define m where "m \<equiv> halted_point \<mu>"
   define x where "x \<equiv> t/k"
   define y where "y \<equiv> s/k"
   have sts: "(s + real t) / s = (x+y) / y"
@@ -361,10 +360,10 @@ proof -
   next
     have \<mu>23: "\<mu> / (1-\<mu>) \<le> 2/3"
       using \<mu> by (simp add: divide_simps)
-    have beta_le: "bigbeta \<mu> \<le> \<mu>"
+    have beta_le: "bigbeta \<le> \<mu>"
       using \<open>\<mu><1\<close> \<mu> big53 bigbeta_le by blast
-    have "s \<le> (bigbeta \<mu> / (1 - bigbeta \<mu>)) * t + (2 / (1-\<mu>)) * k powr (19/20)"
-      using ZZ_8_5 [OF _ _ big85] \<mu> by (auto simp: \<R>_def \<S>_def s_def t_def)
+    have "s \<le> (bigbeta / (1 - bigbeta)) * t + (2 / (1-\<mu>)) * k powr (19/20)"
+      using ZZ_8_5 [OF big85] \<mu> by (auto simp: \<R>_def \<S>_def s_def t_def)
     also have "\<dots> \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * k powr (19/20)"
       by (smt (verit, ccfv_SIG) \<open>\<mu><1\<close> \<mu> beta_le frac_le mult_right_mono of_nat_0_le_iff)
     also have "\<dots> \<le> (\<mu> / (1-\<mu>)) * t + (2 / (1-\<mu>)) * (k powr (-1/20) * k powr 1)"
@@ -393,7 +392,7 @@ proof -
     have "nV div 2 \<le> card Y0"
       by (simp add: card_Y0)
     then have \<section>: "log 2 (Suc nV) \<le> log 2 (RN k (k-t)) + s + t + 2 - ok_fun_61 k"
-      using From_11_3 [OF _ _ _ big61] p0_half \<mu> by (auto simp: \<R>_def \<S>_def p0_def s_def t_def)
+      using From_11_3 [OF _ big61] p0_half \<mu> by (auto simp: \<R>_def \<S>_def p0_def s_def t_def)
 
     define l where "l \<equiv> k-t"
     define \<gamma> where "\<gamma> \<equiv> real l / (real k + real l)"
@@ -403,7 +402,7 @@ proof -
       using card_X0 by linarith
     then have 112: "log 2 (Suc nV) \<le> k * log 2 (1/\<mu>) + t * log 2 (1 / (1-\<mu>)) + s * log 2 (ratio \<mu> s t)
                 + ok_fun_11_2 \<mu> k"
-      using From_11_2 [OF _ _ _ big11_2] p0_half \<mu>
+      using From_11_2 [OF _ big11_2] p0_half \<mu>
       unfolding s_def t_def p0_def \<R>_def \<S>_def by force
     have "log 2 (Suc nV) / k \<le> log 2 (1/\<mu>) + x * log 2 (1 / (1-\<mu>)) + y * log 2 (ratio \<mu> s t)
                           + ok_fun_11_2 \<mu> k / k"
