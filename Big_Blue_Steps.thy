@@ -15,7 +15,7 @@ proof -
   have "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = (\<Prod>i<b. (\<sigma>*m - i) / (real m - real i))"
     using bm by (simp add: gbinomial_prod_rev prod_dividef atLeast0LessThan)
   also have "\<dots> = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
-    using bm
+    using bm 
   proof (induction b)
     case 0
     then show ?case
@@ -87,7 +87,7 @@ next
     using exp_sum by blast
   also have "\<dots> \<le> (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
     using * by (force intro: prod_mono)
-  finally have "exp (- (real b)\<^sup>2 / (\<sigma> * real m)) \<le> (\<Prod>i<b. 1 - (1 - \<sigma>) * real i / (\<sigma> * (real m - real i)))" .
+  finally have "exp (- (real b)\<^sup>2 / (\<sigma> * m)) \<le> (\<Prod>i<b. 1 - (1 - \<sigma>) * i / (\<sigma> * (real m - real i)))" .
   with EQ have "\<sigma>^b * exp (- (real b ^ 2) / (\<sigma>*m)) \<le> ((\<sigma>*m) gchoose b) * inverse (real m gchoose b)"
     by (simp add: \<sigma>)
   with \<sigma> bm have lower: "\<sigma>^b * (real m gchoose b) * exp (- (real b ^ 2) / (\<sigma>*m)) \<le> (\<sigma>*m) gchoose b"
@@ -96,29 +96,25 @@ next
     by simp
 qed
 
+text \<open>Exact at zero, so cannot be done using the approximation method\<close>
 lemma exp_inequality_17:
   fixes x::real
   assumes "0 \<le> x" "x \<le> 1/7"
   shows "1 - 4*x/3 \<ge> exp (-3*x/2)"
-proof -
-  have "x * 7 \<le> 1"
-    using assms by auto
-  with \<open>0 \<le> x\<close> have "45 * (x * (x * x)) + (42 * (x * x)) + 36/49 * x * x \<le> x * 8"
-    using assms by sos
-  moreover have "x * x * (36 * x * x) \<le> (1/7)*(1/7) * (36 * x * x)"
-    using assms by (intro mult_mono) auto
-  ultimately have *: "45 * (x * (x * x)) + (42 * (x * x) + x * (x * (x * x) * 36)) \<le> x * 8"
-    by simp
-  have "exp (-3*x/2) = inverse (exp (3*x/2))"
-    by (simp add: exp_minus)
-  also have "\<dots> \<le> inverse (1 + 3*x/2 + (1/2)*(3*x/2)\<^sup>2 + (1/6)*(3*x/2)^3)"
-    apply (intro le_imp_inverse_le exp_lower_taylor_2)
-    by (smt (verit) divide_nonneg_nonneg mult_nonneg_nonneg \<open>0 \<le> x\<close> zero_le_power)
-  also have "\<dots> \<le> 1 - 4*x/3"
-    using assms *
-    apply (simp add: field_split_simps eval_nat_numeral not_less)
-    by (smt (verit, best) mult_nonneg_nonneg)
+proof (cases "x \<le> 1/12")
+  case True
+  have "exp (-3*x/2) \<le> 1/(1 + (3*x)/2)"
+    using exp_ge_add_one_self [of "3*x/2"] assms
+    by (simp add: exp_minus divide_simps)
+  also have "... \<le> 1 - 4*x/3"
+    using assms True mult_left_le [of "x*12"] by (simp add: field_simps)
   finally show ?thesis .
+next
+  case False
+  with assms have "x \<in> {1/12..1/7}"
+    by auto
+  then show ?thesis
+    by (approximation 12 splitting: x=5)
 qed
 
 text \<open>additional part\<close>
@@ -251,8 +247,7 @@ proof -
       using order_trans [OF \<section>] by (simp add: "0" \<open>\<mu>0 \<le> \<mu>\<close> frac_le)
   qed
   moreover have "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 2/l < \<mu>"
-    using assms
-    by (intro eventually_all_geI0, real_asymp, linarith)
+    using assms by (intro eventually_all_geI0, real_asymp, linarith)
   moreover have "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 2/l \<le> (\<mu> - 2/l) * ((5 / 4) powr (1 / real (b_of l)) - 1)"
   proof -
     have "\<And>l \<mu>. \<mu>0 \<le> \<mu> \<Longrightarrow> \<mu>0 - 2/l \<le> \<mu> - 2/l"
@@ -297,7 +292,7 @@ proof -
   ultimately have "card X \<ge> l"
     using Wbig l_le_k by linarith
   then have "U \<noteq> X"
-    by (metis U_m_Blue le_eq_less_or_eq no_Blue_clique size_clique_def size_clique_smaller)
+    by (metis U_m_Blue \<open>card U = m\<close> le_eq_less_or_eq no_Blue_clique size_clique_smaller)
   then have "U \<subset> X"
     using W_def \<open>U \<subseteq> W\<close> by blast
   then have cardU_less_X: "card U < card X"
@@ -349,7 +344,7 @@ proof -
       moreover have "(\<lambda>x. {u,x}) ` (Neighbours Blue u \<inter> (X-U)) \<subseteq> Blue \<inter> all_edges_betw_un {u} (X-U)"
         using Blue_E by (auto simp: Neighbours_def all_edges_betw_un_def)
       ultimately have "card (Neighbours Blue u \<inter> (X-U)) \<le> card (Blue \<inter> all_edges_betw_un {u} (X-U))"
-        by (metis NBX_split Blue_eq card_image card_mono complete fin_edges finite_Diff finite_Int inj_on_Un)
+        by (metis NBX_split card_inj_on_le finite_Blue finite_Int inj_on_Un)
       with * show ?thesis
         by auto
     qed
@@ -382,11 +377,11 @@ proof -
   have "m/2 * (2 + real k * (1-\<mu>)) \<le> m/2 * (2 + real k)"
     using assms \<mu>01 by (simp add: algebra_simps)
   also have "\<dots> \<le> (k - 1) * (m - 1)"
-    using big l_le_k 6 \<open>m\<le>k\<close> by (simp add: Big_Blue_4_1_def algebra_simps of_nat_diff km)
+    using big l_le_k 6 \<open>m\<le>k\<close> by (simp add: Big_Blue_4_1_def algebra_simps km)
   finally  have "(m/2) * (2 + k * (1-\<mu>)) \<le> RN k m"
     using RN_times_lower' [of k m] by linarith
   then have "\<mu> - 2/k \<le> (\<mu> * card X - card U) / (card X - card U)"
-    using kn0 assms cardU_less_X \<open>card U = m\<close> cX by (simp add: of_nat_diff field_simps)
+    using kn0 assms cardU_less_X \<open>card U = m\<close> cX by (simp add: field_simps)
   also have "\<dots> \<le> \<sigma>"
     using \<open>m>0\<close> \<open>card U = m\<close> cardU_less_X cardXU edge_card_XU
     by (simp add: \<sigma>_def gen_density_def divide_simps mult_ac)
@@ -413,7 +408,8 @@ proof -
       using lge assms \<mu>01 by (simp add: divide_le_eq mult.commute)
     finally have "2*b / m + 2/l \<le> \<mu>" .
     then show ?thesis
-      using l_le_k \<open>m>0\<close> ln0 by (smt (verit, best) frac_le of_nat_0_less_iff of_nat_mono)
+      using l_le_k \<open>m>0\<close> ln0
+      by (smt (verit, best) frac_le of_nat_0_less_iff of_nat_mono)
   qed
   with eq10 have "2 / (m/b) \<le> \<sigma>"
     by simp
@@ -483,9 +479,8 @@ proof -
       using \<open>b\<le>m\<close> cardU_less_X \<open>0 < \<sigma>\<close> \<open>0 < m gchoose b\<close>
       by (simp add: field_split_simps binomial_gbinomial)
   qed auto
-  also have "\<dots> = 1/(m choose b) * (((\<sigma>*m) gchoose b) * card (X-U))"
-    by (simp add: mult.assoc)
   also have "\<dots> \<le> 1/(m choose b) * \<Phi>"
+    unfolding mult.assoc
   proof (intro mult_left_mono)
     have eeq: "edge_card Blue U (X-U) = (\<Sum>i\<in>X-U. card (Neighbours Blue i \<inter> U))"
     proof (intro edge_card_eq_sum_Neighbours)
@@ -509,7 +504,7 @@ proof -
     with ble 
     show "(\<sigma>*m gchoose b) * card (X-U) \<le> \<Phi>"
       unfolding * \<Phi>_def 
-      by (simp add: cardU_less_X cardXU binomial_gbinomial divide_simps  flip: sum_distrib_left sum_divide_distrib)
+      by (simp add: cardU_less_X cardXU binomial_gbinomial divide_simps flip: sum_distrib_left sum_divide_distrib)
   qed auto
   finally have 11: "\<mu>^b / 2 * card X \<le> \<Phi> / (m choose b)"
     by simp 
@@ -694,29 +689,22 @@ proof (induction n)
     by (auto simp: REDS_def)
 next
   case (Suc n)
-  let ?X = "Xseq n"
-  let ?Y = "Yseq n"
-  let ?A = "Aseq n"
-  let ?B = "Bseq n"
   show ?case
   proof (cases "stepper_kind n = red_step")
     case True
-    then have "REDS (Suc n) = insert n (REDS n)" "card (insert n (REDS n)) = Suc (card (REDS n))"
+    then have [simp]: "REDS (Suc n) = insert n (REDS n)" "card (insert n (REDS n)) = Suc (card (REDS n))"
       by (auto simp: REDS_def)
-    then have [simp]: "card (REDS (Suc n)) = Suc (card (REDS n))"
-      by presburger
-    have Aeq: "Aseq (Suc n) = insert (choose_central_vx (?X,?Y,?A,?B)) ?A"
+    have Aeq: "Aseq (Suc n) = insert (choose_central_vx (Xseq n,Yseq n,Aseq n,Bseq n)) (Aseq n)"
       using Suc.prems True 
       by (auto simp: step_kind_defs Aseq_def Bseq_def next_state_def Let_def split: if_split_asm prod.split)
     have "finite (Xseq n)"
       using finite_Xseq by presburger
-    then have "choose_central_vx (?X,?Y,?A,?B) \<in> ?X"
+    then have "choose_central_vx (Xseq n,Yseq n,Aseq n,Bseq n) \<in> Xseq n"
       using True
       by (simp add: step_kind_defs choose_central_vx_X split: if_split_asm prod.split_asm)
-    moreover
-    have "disjnt ?X ?A"
+    moreover have "disjnt (Xseq n) (Aseq n)"
       using valid_state_seq by (simp add: valid_state_def disjoint_state_def)
-    ultimately have "choose_central_vx (?X,?Y,?A,?B) \<notin> Aseq n"
+    ultimately have "choose_central_vx (Xseq n,Yseq n,Aseq n,Bseq n) \<notin> Aseq n"
       by (simp add: disjnt_iff)
     then show ?thesis
       by (simp add: Aeq Suc.IH finite_Aseq)
@@ -724,7 +712,7 @@ next
     case False
     then have "REDS(Suc n) = REDS n"
       using less_Suc_eq unfolding REDS_def by blast
-    moreover have "Aseq (Suc n) = ?A"
+    moreover have "Aseq (Suc n) = Aseq n"
       using False
       by (auto simp: Aseq_def step_kind_defs degree_reg_def next_state_def Let_def split: prod.split)
     ultimately show ?thesis
@@ -788,13 +776,11 @@ proof -
           and cbb: "choose_blue_book (X',Y,A,B') = (S,X)" and le_cardB: "B = B' \<union> S"
           using Suc.prems 
           by (auto simp: step_kind_defs next_state_def step_n split: prod.split_asm if_split_asm)
-        then have VS: "V_state (X',Y,A,B')" and ds: "disjoint_state (X',Y,A,B')"
-          using \<open>valid_state (X',Y',A',B')\<close> by (auto simp: valid_state_def)
         then obtain "X' \<subseteq> V" "finite X'"
-          by (metis Xseq_subset_V finX step_n stepper_XYseq)
+          using Xseq_subset_V \<open>finite X'\<close> step_n stepper_XYseq by blast
         then have "l powr (1/4) \<le> real (card S)"
-        using Blue_4_1 [OF _ manyb big]
-          by (smt (verit, best) VS best_blue_book_is_best cbb choose_blue_book_works of_nat_mono)
+          using Blue_4_1 [OF _ manyb big]
+          by (smt (verit, best) of_nat_mono best_blue_book_is_best cbb choose_blue_book_works)
         then have "S \<noteq> {}"
           using ln0 by fastforce
         moreover have "disjnt B' S"
@@ -829,12 +815,7 @@ proof -
     qed
   qed
   have less_l: "card (BDB n) < l" for n
-  proof -
-    obtain X Y A B where "stepper n = (X,Y,A,B)"
-      using prod_cases4 by blast
-    with * show ?thesis
-      using card_B_limit by fastforce
-  qed
+    by (meson card_B_limit * order.trans linorder_not_le prod_cases4)
   moreover have fin: "\<And>n. finite (BDB n)" "incseq BDB"
     by (auto simp: BDB_def incseq_def)
   ultimately have **: "\<forall>\<^sup>\<infinity>n. \<Union> (range BDB) = BDB n"
@@ -850,12 +831,7 @@ proof -
   then have "card (BDB n) = card (Step_class {bblue_step} \<union> Step_class {dboost_step})"
     by (metis Step_class_insert Uneq)
   also have "\<dots> = card (Step_class {bblue_step}) + card (Step_class {dboost_step})"
-  proof -
-    have "disjnt (Step_class {bblue_step}) (Step_class {dboost_step})"
-      using disjnt_Step_class by auto
-    then show ?thesis
-      by (metis Step_class_insert card_Un_disjnt fin finite_Un)
-  qed
+    by (simp add: card_Un_disjnt disjnt_Step_class)
   finally show ?thesis
     by (metis less_l)
 qed
