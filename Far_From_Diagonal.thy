@@ -1070,6 +1070,8 @@ proof -
     using Y0 Book_axioms X0_def \<open>l\<ge>2\<close> no_Red_clique no_Blue_clique that by auto
 qed
 
+subsection \<open>Material that needs to be proved OUTSIDE the book locales\<close>
+
 text \<open>As above, for @{term Book'}\<close>
 lemma (in No_Cliques) Basis_imp_Book':
   assumes gd: "p0_min \<le> graph_density Red"
@@ -1093,33 +1095,22 @@ proof -
     using \<gamma>_def  that by blast
 qed
 
-text \<open>Needs to be proved OUTSIDE THE BOOK LOCALES\<close>
-lemma (in Book_Basis) Far_9_2:
-  fixes Red Blue :: "'a set set"
-  fixes l k
+lemma (in No_Cliques) Far_9_2:
   fixes \<delta> \<gamma> \<eta>::real
   defines "\<gamma> \<equiv> l / (real k + real l)"
   defines "\<delta> \<equiv> \<gamma>/20"
-  assumes complete: "E = all_edges V"
-  assumes Red_E: "Red \<subseteq> E"
-  assumes Blue_def: "Blue = E-Red"
-  assumes infinite_UNIV: "infinite (UNIV::'a set)"
   assumes nV: "real nV \<ge> exp (-\<delta> * k) * (k+l choose l)" 
-  assumes gd: "graph_density Red \<ge> 1-\<gamma>-\<eta>" 
-    and p0_min_OK: "p0_min \<le> 1-\<gamma>-\<eta>"  
-  assumes big: "Big_Far_9_2 \<gamma> l" and "l\<le>k"
+  assumes gd: "graph_density Red \<ge> 1-\<gamma>-\<eta>" and p0_min_OK: "p0_min \<le> 1-\<gamma>-\<eta>"  
+  assumes big: "Big_Far_9_2 \<gamma> l" 
   assumes "\<gamma> \<le> 1/10" and \<eta>: "0\<le>\<eta>" "\<eta> \<le> \<gamma>/15"
-  shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue)"
-proof (rule ccontr)
-  assume neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
-  interpret No_Cliques
-  proof qed (use Red_E Blue_def \<open>l\<le>k\<close> neg in auto)
+  shows False
+proof -
   obtain X0 Y0 where "l\<ge>2" and card_X0: "card X0 \<ge> real nV / 2" 
     and card_Y0: "card Y0 = gorder div 2" 
     and X0_def: "X0 = V \<setminus> Y0" and "Y0\<subseteq>V" 
     and gd_le: "graph_density Red \<le> gen_density Red X0 Y0"
     and "Book' V E p0_min Red Blue l k \<gamma> X0 Y0" 
-    by (smt (verit, ccfv_SIG) Basis_imp_Book' assms p0_min neg ln0)
+    using Basis_imp_Book' assms p0_min no_Red_clique no_Blue_clique ln0 by auto
   then interpret Book' V E p0_min Red Blue l k \<gamma> X0 Y0
     by blast 
   show False
@@ -1598,76 +1589,78 @@ proof (rule ccontr)
       unfolding UBB.size_clique_def RedU_def
       by (metis Int_subset_iff  VUU all_edges_subset_iff_clique no_Red_K size_clique_def)
     have "(\<exists>K. UBB.size_clique k K RedU) \<or> (\<exists>K. UBB.size_clique (l-m) K BlueU)"
-    proof (intro UBB.Far_9_2)
-      show "E \<inter> Pow U = all_edges U"
-        by (simp add: UBB.complete)
-      show "RedU \<subseteq> E \<inter> Pow U"
-        using EU_def \<open>RedU \<subseteq> EU\<close> by auto
-      show "BlueU = E \<inter> Pow U \<setminus> RedU"
-        using BlueU_eq EU_def by fastforce
+    proof (rule ccontr)
+      assume neg: "\<not> ((\<exists>K. UBB.size_clique k K RedU) \<or> (\<exists>K. UBB.size_clique (l - m) K BlueU))"
+      interpret UBB_NC: No_Cliques U "E \<inter> Pow U" p0_min RedU BlueU "l-m" k
+      proof
+        show "BlueU = E \<inter> Pow U \<setminus> RedU"
+          using BlueU_eq EU_def by fastforce
+      qed (use neg EU_def \<open>RedU \<subseteq> EU\<close> no_RedU_K \<open>l\<le>k\<close> in auto)
+      show False
+      proof (intro UBB_NC.Far_9_2)
+        have "exp (\<delta>*k) * exp (-\<delta>'*k) = exp (\<gamma>*k/20 - \<gamma>'*k/20)"
+          unfolding \<delta>_def \<delta>'_def by (simp add: mult_exp_exp) 
+        also have "\<dots> \<le> exp (m/20)"
+          using YMK \<open>0 < k\<close> by (simp add: left_diff_distrib divide_simps)
+        also have "\<dots> \<le> (1+\<xi>)^m"
+        proof -
+          have "ln (16 / 15) * 20 \<ge> (1::real)"
+            by (approximation 5)
+          from mult_left_mono [OF this] 
+          show ?thesis
+            by (simp add: \<xi>_def powr_def mult_ac flip: powr_realpow)
+        qed
+        finally have expexp: "exp (\<delta>*k) * exp (-\<delta>'*k) \<le> (1+\<xi>) ^ m" .
 
-      have "exp (\<delta>*k) * exp (-\<delta>'*k) = exp (\<gamma>*k/20 - \<gamma>'*k/20)"
-        unfolding \<delta>_def \<delta>'_def by (simp add: mult_exp_exp) 
-      also have "\<dots> \<le> exp (m/20)"
-        using YMK \<open>0 < k\<close> by (simp add: left_diff_distrib divide_simps)
-      also have "\<dots> \<le> (1+\<xi>)^m"
-      proof -
-        have "ln (16 / 15) * 20 \<ge> (1::real)"
-          by (approximation 5)
-        from mult_left_mono [OF this] 
-        show ?thesis
-          by (simp add: \<xi>_def powr_def mult_ac flip: powr_realpow)
+        have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) = exp (-\<delta>'*k) * PM * (k+l choose l)"
+          using \<open>m < l\<close> kl_choose by force
+        also have "\<dots> < (n/2) * exp (\<delta>*k) * exp (-\<delta>'*k) * PM"
+          using n2exp_gt prod_gt0 by auto 
+        also have "\<dots> \<le> (n/2) * (1+\<xi>) ^ m * PM"
+          using expexp less_eq_real_def prod_gt0 by fastforce
+        also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment>\<open>where I was stuck: the "minus m"\<close>
+          using PM_def U_MINUS_M U_lower_bound_ratio_def \<open>m < l\<close> by fastforce
+        finally have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) \<le> n * U_lower_bound_ratio m - m"
+          by linarith 
+        also have "\<dots> \<le> UBB.nV"
+          using cardU by linarith
+        finally have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) \<le> UBB.nV" .
+        then show "exp (- ((l-m) / (k + real (l-m)) / 20) * k) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
+          using \<open>m < l\<close> by (simp add: \<delta>'_def \<gamma>'_def) argo
+      next
+        show "1 - real (l-m) / (real k + real (l-m)) - \<eta> \<le> UBB.graph_density RedU"
+          using gd_RedU_ge \<open>\<gamma>' \<le> \<gamma>\<close> \<open>m < l\<close> unfolding \<gamma>_def \<gamma>'_def
+          by (smt (verit) less_or_eq_imp_le of_nat_add of_nat_diff)
+        have "p0_min \<le> 1 - (1/10) * (1+\<xi>)"
+          using p0_min_91 by (auto simp: \<xi>_def)
+        also have "\<dots> \<le> 1 - \<gamma> - \<eta>"
+          using \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> by (auto simp: \<eta>_def \<xi>_def)
+        also have "\<dots> \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>"
+          using \<open>\<gamma>' \<le> \<gamma>\<close> \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def algebra_simps)
+        finally show "p0_min \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>" .
+      next
+        have "m \<le> l * (k + real l) / (k + 2 * real l)"
+          using False \<gamma>'\<gamma>2_iff by auto 
+        also have "\<dots> \<le> l * (1 - (10/11)*\<gamma>)"
+          using \<gamma> \<open>l>0\<close> by (simp add: \<gamma>_def field_split_simps)
+        finally have "m \<le> real l * (1 - (10/11)*\<gamma>)" 
+          by force
+        then have "real l - real m \<ge> (10/11) * \<gamma> * l"
+          by (simp add: algebra_simps)
+        then have "Big_Far_9_2 \<gamma>' (l-m)"
+          using False big \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> \<open>m<l\<close>
+          by (simp add: Big_Far_9_1_def)
+        then show "Big_Far_9_2 ((l-m) / (real k + real (l-m))) (l-m)"
+          by (simp add: \<gamma>'_def \<open>m < l\<close> add_diff_eq less_or_eq_imp_le)
+        show "(l-m) / (real k + real (l-m)) \<le> 1/10"
+          using \<gamma> \<gamma>_def \<open>m < l\<close> by fastforce
+        show "0 \<le> \<eta>"
+          using \<open>0 < \<eta>\<close> by linarith
+        show "\<eta> \<le> (l-m) / (real k + real (l-m)) / 15"
+          using mult_right_mono [OF \<open>\<gamma>' \<le> \<gamma>\<close>, of \<xi>]
+          by (simp add: \<eta>_def \<gamma>'_def \<open>m < l\<close> \<xi>_def add_diff_eq less_or_eq_imp_le mult.commute)
       qed
-      finally have expexp: "exp (\<delta>*k) * exp (-\<delta>'*k) \<le> (1+\<xi>) ^ m" .
-
-      have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) = exp (-\<delta>'*k) * PM * (k+l choose l)"
-        using \<open>m < l\<close> kl_choose by force
-      also have "\<dots> < (n/2) * exp (\<delta>*k) * exp (-\<delta>'*k) * PM"
-        using n2exp_gt prod_gt0 by auto 
-      also have "\<dots> \<le> (n/2) * (1+\<xi>) ^ m * PM"
-        using expexp less_eq_real_def prod_gt0 by fastforce
-      also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment>\<open>where I was stuck: the "minus m"\<close>
-        using PM_def U_MINUS_M U_lower_bound_ratio_def \<open>m < l\<close> by fastforce
-      finally have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) \<le> n * U_lower_bound_ratio m - m"
-        by linarith 
-      also have "\<dots> \<le> UBB.nV"
-        using cardU by linarith
-      finally have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) \<le> UBB.nV" .
-      then show "exp (- ((l-m) / (k + real (l-m)) / 20) * k) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
-        using \<open>m < l\<close> by (simp add: \<delta>'_def \<gamma>'_def) argo
-    next
-      show "1 - real (l-m) / (real k + real (l-m)) - \<eta> \<le> UBB.graph_density RedU"
-        using gd_RedU_ge \<open>\<gamma>' \<le> \<gamma>\<close> \<open>m < l\<close> unfolding \<gamma>_def \<gamma>'_def
-        by (smt (verit) less_or_eq_imp_le of_nat_add of_nat_diff)
-      have "p0_min \<le> 1 - (1/10) * (1+\<xi>)"
-        using p0_min_91 by (auto simp: \<xi>_def)
-      also have "\<dots> \<le> 1 - \<gamma> - \<eta>"
-        using \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> by (auto simp: \<eta>_def \<xi>_def)
-      also have "\<dots> \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>"
-        using \<open>\<gamma>' \<le> \<gamma>\<close> \<open>m<l\<close> by (simp add: \<gamma>_def \<gamma>'_def algebra_simps)
-      finally show "p0_min \<le> 1 - (l-m) / (real k + real (l-m)) - \<eta>" .
-    next
-      have "m \<le> l * (k + real l) / (k + 2 * real l)"
-        using False \<gamma>'\<gamma>2_iff by auto 
-      also have "\<dots> \<le> l * (1 - (10/11)*\<gamma>)"
-        using \<gamma> \<open>l>0\<close> by (simp add: \<gamma>_def field_split_simps)
-      finally have "m \<le> real l * (1 - (10/11)*\<gamma>)" 
-        by force
-      then have "real l - real m \<ge> (10/11) * \<gamma> * l"
-        by (simp add: algebra_simps)
-      then have "Big_Far_9_2 \<gamma>' (l-m)"
-        using False big \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> \<open>m<l\<close>
-        by (simp add: Big_Far_9_1_def)
-      then show "Big_Far_9_2 ((l-m) / (real k + real (l-m))) (l-m)"
-        by (simp add: \<gamma>'_def \<open>m < l\<close> add_diff_eq less_or_eq_imp_le)
-      show "(l-m) / (real k + real (l-m)) \<le> 1/10"
-        using \<gamma> \<gamma>_def \<open>m < l\<close> by fastforce
-      show "0 \<le> \<eta>"
-        using \<open>0 < \<eta>\<close> by linarith
-      show "\<eta> \<le> (l-m) / (real k + real (l-m)) / 15"
-        using mult_right_mono [OF \<open>\<gamma>' \<le> \<gamma>\<close>, of \<xi>]
-        by (simp add: \<eta>_def \<gamma>'_def \<open>m < l\<close> \<xi>_def add_diff_eq less_or_eq_imp_le mult.commute)
-    qed (use \<open>l \<le> k\<close> in auto)
+    qed
     with no_RedU_K obtain K where "K \<subseteq> U" "UBB.size_clique (l-m) K BlueU"
       by (meson UBB.size_clique_def)
     then show False
