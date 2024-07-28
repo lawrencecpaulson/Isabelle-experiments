@@ -997,9 +997,9 @@ proof (rule Ramsey_number_lower_gen)
   proof -
     have "real (n choose k) * p ^ (k choose 2) \<le> real (Suc n - k)^k * p ^ (k choose 2)"
       using choose_le_power p01 by simp
-    also have "... = real (Suc n - k)^k * p powr (real k * (real k - 1) / 2)"
+    also have "\<dots> = real (Suc n - k)^k * p powr (real k * (real k - 1) / 2)"
       by (metis choose_two_real p01(1) powr_realpow)
-    also have "... \<le> of_real n ^ k * p powr (real k^2 / 4)"
+    also have "\<dots> \<le> of_real n ^ k * p powr (real k^2 / 4)"
       using p01 \<open>k>1\<close> by (intro mult_mono powr_mono') (auto simp: power2_eq_square)
     finally show ?thesis .
   qed
@@ -1012,7 +1012,7 @@ proof (rule Ramsey_number_lower_gen)
         by (metis binomial_eq_0_iff binomial_le_pow linorder_not_le of_nat_0 of_nat_0_le_iff of_nat_mono of_nat_power of_real_of_nat_eq)
       have "l * p \<le> 2 * (1 - real l) * -p"
         using assms by (auto simp: algebra_simps)
-      also have "... \<le> 2 * (1 - real l) * ln (1-p)"
+      also have "\<dots> \<le> 2 * (1 - real l) * ln (1-p)"
         using p01 \<open>l>1\<close> ln_add_one_self_le_self2 [of "-p"]
         by (intro mult_left_mono_neg) auto
       finally have "real l * (real l * p) \<le> real l * (2 * (1 - real l) * ln (1-p))"

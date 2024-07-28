@@ -627,7 +627,7 @@ proof (cases "k=1 \<or> gorder = Suc k")
   also have "\<dots> = (\<Sum>i\<in>V. card (Neighbours C i)) / (gorder - 1)"
     unfolding edge_card_def Neighbours_def all_edges_betw_un_def
     by (simp add: eq card_image inj_on_def doubleton_eq_iff)
-  also have "... = graph_density C * gorder"
+  also have "\<dots> = graph_density C * gorder"
     using assms density_eq_average [OF \<open>C\<subseteq>E\<close> complete]
     by (simp add: sum_eq_card_Neighbours)
   finally show ?thesis

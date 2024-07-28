@@ -298,9 +298,9 @@ proof -
     using power_mono [OF \<open>p0 \<ge> 1/2\<close>] \<open>nV' \<ge> 2\<close> by auto
   also have "\<dots> \<le> 2 powr (ok_fun_61 k) * p0 ^ card RS * (nV'/4)"
     by (simp add: divide_simps powr_diff split: if_split_asm)
-  also have "... \<le> 2 powr (ok_fun_61 k) * p0 ^ card RS * card Y0"
+  also have "\<dots> \<le> 2 powr (ok_fun_61 k) * p0 ^ card RS * card Y0"
     using   mult_left_mono [OF 4 ge0 ] by simp
-  also have "... \<le> card (Yseq halted_point)"
+  also have "\<dots> \<le> card (Yseq halted_point)"
     using Y_6_1 big \<open>l=k\<close> by (auto simp add: RS_def divide_simps split: if_split_asm)
   finally have "2 powr (- real s - real t + ok_fun_61 k - 2) * nV' \<le> card (Yseq halted_point)" .
   moreover
@@ -346,7 +346,7 @@ proof -
     by fastforce
   have "- real s - real t + ok_fun_61 k - 2 + log 2 nV' = log 2 (2 powr (- real s - real t + ok_fun_61 k - 2) * nV')"
     using add_log_eq_powr \<open>nV' \<ge> 2\<close> by auto
-  also have "... \<le> log 2 (RN k (k-t))"
+  also have "\<dots> \<le> log 2 (RN k (k-t))"
     using "*" Transcendental.log_mono \<open>nV' \<ge> 2\<close> less_eq_real_def by auto
   finally show "log 2 nV' \<le> log 2 (RN k (k - t)) + real s + real t + 2 - ok_fun_61 k"
     by linarith

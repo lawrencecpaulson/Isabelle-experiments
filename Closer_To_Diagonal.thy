@@ -58,8 +58,8 @@ proof -
   have "\<forall>\<^sup>\<infinity>l. \<forall>k\<ge>l. (\<forall>\<mu>. 1/10 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> k/200 \<le> ok_fun_95b k + (if \<mu> > x320 then \<mu>*k/30 else \<mu>*k/15))"
     using assms
     apply (split if_split)
-    unfolding eventually_conj_iff all_imp_conj_distrib all_conj_distrib 
-    by (force intro:  eventually_mono [OF T] eventually_mono [OF F])
+    unfolding eventually_conj_iff all_imp_conj_distrib all_conj_distrib
+    by (force intro: eventually_mono [OF T] eventually_mono [OF F])
   then show ?thesis
     using assms Big_Far_9_3[of "1/10"] Big_Far_9_5[of "1/10"]
     unfolding Big_Closer_10_2_def eventually_conj_iff all_imp_conj_distrib 
@@ -107,14 +107,14 @@ proof -
   proof (rule order_trans [OF _ Far_9_5])
     show "exp (-\<delta> * k) * real (k+l choose l) \<le> real nV"
       using nV by (auto simp: \<delta>_def)
-    show "1 / 2 \<le> 1 - \<gamma> - 0"
+    show "1/2 \<le> 1 - \<gamma> - 0"
       using divide_le_eq_1 l_le_k \<gamma>_def by fastforce
   next
     show "Big_Far_9_5 \<gamma> l"
       using big by (simp add: Big_Closer_10_2_def Big_Far_9_2_def \<gamma>_def)
   qed (use 0 kn0 in \<open>auto simp flip: t_def \<gamma>_def \<R>_def\<close>)
   then have 52: "card (Yseq halted_point) \<ge> 
-               exp (-\<delta> * k + ok_fun_95b k) * (1-\<gamma>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) * (k-t+l choose l)"
+                 exp (-\<delta> * k + ok_fun_95b k) * (1-\<gamma>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) * (k-t+l choose l)"
     using \<gamma> by simp
 
   define gamf where "gamf \<equiv> \<lambda>x::real. (1-x) powr (1/(1-x))"
@@ -189,7 +189,7 @@ proof -
     with \<dagger> show ?thesis
       by (smt (verit, best) exp_le_cancel_iff)
   qed
-  then have "1 \<le> exp (-\<delta>*k + ok_fun_95b k) * (1 - \<gamma>) powr (\<gamma> * real t / (1 - \<gamma>)) * exp (\<gamma> * (real t)\<^sup>2 / real (2 * k))"
+  then have "1 \<le> exp (-\<delta>*k + ok_fun_95b k) * (1-\<gamma>) powr (\<gamma> * t / (1-\<gamma>)) * exp (\<gamma> * (real t)\<^sup>2 / (2 * k))"
     by (simp add: exp_add exp_diff mult_ac pos_divide_le_eq)
   then have "(k-t+l choose l) \<le>
         exp (-\<delta> * k + ok_fun_95b k) * (1-\<gamma>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) * (k-t+l choose l)"
@@ -787,7 +787,7 @@ proof (rule ccontr)
         proof (intro Big91_I [OF lm_ge_25])
           have "0.07 \<le> (1::real)/10 - 1/36"
             by (approximation 5)
-          also have "... \<le> 1/10 - 1/k"
+          also have "\<dots> \<le> 1/10 - 1/k"
             using \<open>k\<ge>36\<close> by (intro diff_mono divide_right_mono) auto
           finally have 7: "\<gamma>' \<ge> 0.07" using 110 by linarith
           with \<open>m<l\<close> show "\<gamma>0 \<le> real (l - m) / (real k + real (l - m))"
@@ -872,10 +872,10 @@ proof -
       by (simp add: ok_fun_10_1_def \<gamma>_def \<delta>_def RN_le_choose')
   next
     case False
-    have "(nat \<lceil>\<gamma> * k / (1 - \<gamma>)\<rceil>) \<le> l"
+    have "(nat \<lceil>\<gamma> * k / (1-\<gamma>)\<rceil>) \<le> l"
       by (simp add: \<gamma>_def divide_simps)
     with False Big_Closer_10_1_upward
-    have "\<not> Big_Closer_10_1 \<gamma>0 (nat \<lceil>\<gamma> * k / (1 - \<gamma>)\<rceil>)"
+    have "\<not> Big_Closer_10_1 \<gamma>0 (nat \<lceil>\<gamma> * k / (1-\<gamma>)\<rceil>)"
       by blast
     then show ?thesis
       by (simp add: ok_fun_10_1_def \<delta>_def \<gamma>0_def RN_le_choose')

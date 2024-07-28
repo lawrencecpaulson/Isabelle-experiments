@@ -77,14 +77,14 @@ proof -
          = (\<Sum>i = 1..k. f (a + real i / real n * (b - a))) * (b - a) / real n + 
            f (a + real (Suc k) / real n * (b - a)) * (b - a) / real n"
       by (simp add: field_split_simps)
-    also have "... \<le> integral {a .. a + (real k / real n) * (b-a)} f + 
+    also have "\<dots> \<le> integral {a .. a + (real k / real n) * (b-a)} f + 
                  f (a + real (Suc k) / real n * (b - a)) * (b - a) / real n"
       using Suc by simp
-    also have "... \<le> integral {a .. a + (real k / real n) * (b-a)} f + 
+    also have "\<dots> \<le> integral {a .. a + (real k / real n) * (b-a)} f + 
                  integral {a + (real k / real n) * (b-a) .. a + (Suc k / real n) * (b-a)} 
                           (\<lambda>x. f (a + real (Suc k) / real n * (b - a)))"
       using \<open>a \<le> b\<close> by (simp add: field_split_simps)
-    also have "... \<le> integral {a .. a + (real k / real n) * (b-a)} f + 
+    also have "\<dots> \<le> integral {a .. a + (real k / real n) * (b-a)} f + 
                  integral {a + (real k / real n) * (b-a) .. a + (Suc k / real n) * (b-a)} f"
       using \<open>a \<le> b\<close> \<open>n \<noteq> 0\<close> 
       apply (clarsimp simp add: j)
@@ -93,7 +93,7 @@ proof -
        apply (rule monotone_on_subset [OF ant])
       apply (auto simp: field_split_simps mult_right_mono)
       done
-    also have "... = integral {a..a + real (Suc k) / real n * (b - a)} f"
+    also have "\<dots> = integral {a..a + real (Suc k) / real n * (b - a)} f"
     proof (rule Henstock_Kurzweil_Integration.integral_combine)
       have "{a..a + real (Suc k) / real n * (b - a)} \<subseteq> {a..b}"
         using \<open>a \<le> b\<close> by (auto simp: field_split_simps mult_right_mono j)

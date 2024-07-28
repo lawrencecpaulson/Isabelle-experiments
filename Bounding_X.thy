@@ -112,7 +112,7 @@ proof -
     with beta_gt0 assms show "1 \<le> \<mu> / beta i"
       by (smt (verit) dboost_star_subset divide_less_eq_1_pos i subset_iff)
   qed
-  also have "... = \<mu> * (\<Sum>i\<in>dboost_star. 1 / beta i)"
+  also have "\<dots> = \<mu> * (\<Sum>i\<in>dboost_star. 1 / beta i)"
     by (simp add: sum_distrib_left)
   finally have "real (card (dboost_star)) \<le> \<mu> * (\<Sum>i\<in>dboost_star. 1 / beta i)" .
   moreover have "(\<Sum>i\<in>dboost_star. 1 / beta i) \<ge> 0"
@@ -159,10 +159,9 @@ next
   with assms have "1 > 1 / (real k * (1 - \<mu>1))"
     by (smt (verit, best) of_nat_Suc le_divide_eq_1 mult_imp_le_div_pos nat_le_real_less of_nat_ceiling)
   then have *: "1 > 1 / (real k * (1 - r))" if "r\<le>\<mu>1" for r
-    using that
-    by (smt (verit, ccfv_threshold) assms(2) divide_less_eq_1 mult_eq_0_iff mult_left_mono of_nat_eq_0_iff of_nat_le_0_iff)
+    using that assms k less_le_trans by fastforce
   have \<dagger>: "1 / (k * (1 - \<mu>)) \<le> 1 / (k * (1 - \<mu>1))"
-    by (smt (verit, best) \<mu> assms frac_less2 mult_cancel_left mult_left_mono mult_pos_pos of_nat_0_le_iff)
+    using \<mu> assms by (simp add: divide_simps mult_less_0_iff)
   obtain "\<mu><1" "k>0" using \<mu> k assms by force
   then have "\<bar>ok_fun_72 \<mu> k\<bar> \<le> \<bar>ok_fun_72 \<mu>1 k\<bar>"
     using \<mu> * assms \<dagger>
@@ -234,8 +233,7 @@ proof -
   have "1-\<mu> - 1/k \<le> 1-\<mu> - 1/R"
     using kn0 \<open>k < R\<close> by (simp add: inverse_of_nat_le)
   then have ln_le: "ln (1-\<mu> - 1/k) \<le> ln (1-\<mu> - 1/R)"
-    using \<mu>01 k_gt \<open>R>k\<close> 
-    by (simp add: bigR divide_simps mult.commute pos_divide_less_eq less_le_trans)
+    using \<mu>01 k_gt \<open>R>k\<close> by (simp add: bigR divide_simps mult.commute less_le_trans)
   have "ok_fun_72 \<mu> k * ln 2 = k * ln (1 - 1 / (k * (1-\<mu>)))"
     by (simp add: ok_fun_72_def)
   also have "\<dots> \<le> t * ln (1 - 1 / (k * (1-\<mu>)))"
@@ -290,7 +288,7 @@ definition "get_blue_book \<equiv> \<lambda>i. let (X,Y,A,B) = stepper i in choo
 
 text \<open>Tracking changes to X and B. The sets are necessarily finite\<close>
 lemma Bdelta_bblue_step:
-  assumes i: "i \<in> Step_class {bblue_step}" 
+  assumes "i \<in> Step_class {bblue_step}" 
   shows "\<exists>S \<subseteq> Xseq i. Bdelta \<mu> i = S
             \<and> card (Xseq (Suc i)) \<ge> (\<mu> ^ card S) * card (Xseq i) / 2"
 proof -
@@ -301,7 +299,7 @@ proof -
     by (metis V_state_stepper finX step)
   ultimately have *: "stepper (Suc i) = (T, Y, A, B\<union>S) \<and> good_blue_book X (S,T)" 
     and Xeq: "X = Xseq i"
-    using assms
+    using assms 
     apply (simp_all add: step_kind_defs next_state_def valid_state_def get_blue_book_def choose_blue_book_works split: if_split_asm)
     by (metis choose_blue_book_works)
   show ?thesis
@@ -377,7 +375,7 @@ proof -
       show "\<B> \<union> \<S> \<union> TRIV \<subseteq> {..<i}"
         by (auto simp: i_def TRIV_def less_Suc_eq_le)
       show "{..<i} \<subseteq> \<B> \<union> \<S> \<union> TRIV"
-        using  stepkind.exhaust by (auto simp: \<B>_def \<S>_def TRIV_def Step_class_def)
+        using stepkind.exhaust by (auto simp: \<B>_def \<S>_def TRIV_def Step_class_def)
     qed
     have dis: "\<B> \<inter> \<S> = {}" "(\<B> \<union> \<S>) \<inter> TRIV = {}"
       by (auto simp: \<B>_def \<S>_def TRIV_def Step_class_def)
@@ -395,7 +393,8 @@ proof -
   then have sum_b_\<B>: "sum b \<B> \<le> l - card \<S>"
     by (metis Bseq_less_l less_diff_conv nat_less_le)
   have "real (card \<B>) \<le> real k powr (3/4)"
-    using card\<B> l_le_k by (smt (verit) divide_nonneg_nonneg of_nat_0_le_iff of_nat_mono powr_mono2)
+    using card\<B> l_le_k
+    by (smt (verit, best) divide_nonneg_pos of_nat_0_le_iff of_nat_mono powr_mono2)
   then have "2 powr (ok_fun_73 k) \<le> (1/2) ^ card \<B>"
     by (simp add: ok_fun_73_def powr_minus divide_simps flip: powr_realpow)
   then have "2 powr (ok_fun_73 k) * \<mu> ^ (l - card \<S>) \<le> (1/2) ^ card \<B> * \<mu> ^ (l - card \<S>)"
@@ -412,7 +411,7 @@ proof -
       by (simp add: \<B>_def Step_class_def flip: step_non_terminating_iff)
     then have "card (Xseq i) \<noteq> 0"
       using termination_condition_def by force
-    with \<open>i\<in>\<B>\<close> \<mu>01 show "0 \<le> \<mu> ^ b i / 2 \<and> \<mu> ^ b i / 2 \<le> real (card (Xseq (Suc i))) / real (card (Xseq i))"
+    with \<open>i\<in>\<B>\<close> \<mu>01 show "0 \<le> \<mu> ^ b i / 2 \<and> \<mu> ^ b i / 2 \<le> card (Xseq (Suc i)) / card (Xseq i)"
       by (force simp: b_def \<B>_def divide_simps dest!: Bdelta_bblue_step)
   qed
   finally show ?thesis .
@@ -500,7 +499,7 @@ proof -
   proof (cases "even halted_point")
     case False
     have "hgt (pee (halted_point - Suc 0)) \<le> hgt (pee halted_point)"
-      using Y_6_5_DegreeReg [of "halted_point-1"] kn0 False m_minimal not_halted_even_dreg odd_pos  
+      using Y_6_5_DegreeReg [of "halted_point-1"] False m_minimal not_halted_even_dreg odd_pos  
       by (fastforce simp: \<H>_def)
     then have "h(halted_point - Suc 0) \<le> h halted_point"
       using h_def of_nat_mono by blast
@@ -530,7 +529,6 @@ proof -
   define \<D> where "\<D> \<equiv> Step_class {dreg_step}"
   define \<R> where "\<R> \<equiv> Step_class {red_step}"
   define \<B> where "\<B> \<equiv> Step_class {bblue_step}"
-  define \<H> where "\<H> \<equiv> Step_class {halted}"
   define h where "h \<equiv> \<lambda>i. real (hgt (pee i))"
   obtain 26: "(\<Sum>i\<in>{..<halted_point} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
      and 28: "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
@@ -545,10 +543,8 @@ proof -
       and 16: "k\<ge>16" (*for Y_6_5_Red*)
       and ok_fun: "ok_fun_26 k - ok_fun_28 k \<le> k"
     using big l_le_k by (auto simp: Big_X_7_5_def)
-  have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < halted_point" for i
-    unfolding \<H>_def using halted_point_minimal assms by blast
   have [simp]: "finite \<R>" "finite \<B>" "finite \<S>"
-    using finite_components by (auto simp: Step_class_insert_NO_MATCH \<R>_def \<B>_def \<S>_def)
+    using finite_components by (auto simp: \<R>_def \<B>_def \<S>_def)
   have [simp]: "\<R> \<inter> \<S> = {}" "\<B> \<inter> (\<R>\<union>\<S>) = {}"
     by (auto simp: \<R>_def \<S>_def \<B>_def Step_class_def)
 
@@ -598,10 +594,10 @@ proof -
   proof -
     have "i \<in> \<B> \<union> (\<R>\<union>\<S>)" if "i < halted_point" "i \<notin> \<D>" for i
       using that unfolding \<D>_def \<B>_def \<R>_def \<S>_def
-      by (metis Step_class_insert not_halted_even_dreg not_halted_odd_RBS Un_iff \<H>_def m_minimal)
+      using Step_class_cases halted_point_minimal by auto
     moreover
     have "i \<in> {..<halted_point} \<setminus> \<D>" if "i \<in> \<B> \<union> (\<R>\<union>\<S>)" for i
-      using that by (auto simp: \<D>_def \<B>_def \<R>_def \<S>_def \<H>_def Step_class_def simp flip: m_minimal)
+      using halted_point_minimal' that by (force simp: \<D>_def \<B>_def \<R>_def \<S>_def  Step_class_def)
     ultimately have "\<B> \<union> (\<R>\<union>\<S>) = {..<halted_point} \<setminus> \<D>"
       by auto
     then show ?thesis
@@ -964,7 +960,6 @@ lemma (in Book) X_7_10:
   defines "\<S> \<equiv> Step_class {dboost_step}"
   defines "\<D> \<equiv> Step_class {dreg_step}"
   defines "\<B> \<equiv> Step_class {bblue_step}"
-  defines "\<H> \<equiv> Step_class {halted}"
   defines "h \<equiv> \<lambda>i. real (hgt (pee i))"
   defines "C \<equiv> {i. h i \<ge> h (i-1) + eps k powr (-1/4)}"
   assumes big: "Big_X_7_10 \<mu> l" 
@@ -975,17 +970,14 @@ proof -
     and ok_le_k: "ok_fun_26 k - ok_fun_28 k \<le> k"
     and bigR53: "Big_Red_5_3 \<mu> l"
     using big l_le_k by (auto simp: Big_X_7_5_def Big_X_7_10_def)
-  have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < halted_point" for i
-    unfolding \<H>_def using halted_point_minimal assms by blast
   have "\<R>\<union>\<S> \<subseteq> {..<halted_point} \<setminus> \<D> \<setminus> \<B>" and BmD: "\<B> \<subseteq> {..<halted_point} \<setminus> \<D>"
-    by (auto simp: \<R>_def \<S>_def \<D>_def \<B>_def \<H>_def Step_class_def simp flip: m_minimal)
+    using halted_point_minimal'
+    by (fastforce simp: \<R>_def \<S>_def \<D>_def \<B>_def  Step_class_def)+
   then have RS_eq: "\<R>\<union>\<S> = {..<halted_point} \<setminus> \<D> - \<B>"
-    using m_minimal Step_class_cases \<R>_def \<S>_def \<D>_def \<B>_def \<H>_def by blast
+    using halted_point_minimal Step_class_cases by (auto simp: \<R>_def \<S>_def \<D>_def \<B>_def)
   obtain 26: "(\<Sum>i\<in>{..<halted_point} \<setminus> \<D>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k"
      and 28: "ok_fun_28 k \<le> (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
-    using X_26_and_28 assms(1-3) big 
-    unfolding \<B>_def \<D>_def \<H>_def h_def Big_X_7_10_def
-    by blast
+    using X_26_and_28 big unfolding \<B>_def \<D>_def h_def Big_X_7_10_def by blast
   have "(\<Sum>i\<in>\<R>\<union>\<S>. h (Suc i) - h (i-1)) = (\<Sum>i\<in>{..<halted_point} \<setminus> \<D>. h (Suc i) - h (i-1)) - (\<Sum>i \<in> \<B>. h(Suc i) - h(i-1))"
     unfolding RS_eq by (intro sum_diff BmD) auto
   also have "\<dots> \<le> ok_fun_26 k - ok_fun_28 k"
@@ -993,7 +985,7 @@ proof -
   finally have *: "(\<Sum>i\<in>\<R>\<union>\<S>. h (Suc i) - h (i-1)) \<le> ok_fun_26 k - ok_fun_28 k" .
 
   have [simp]: "finite \<R>" "finite \<S>"
-  using finite_components assms by (auto simp: \<R>_def \<S>_def Step_class_insert_NO_MATCH)
+  using finite_components by (auto simp: \<R>_def \<S>_def)
   have h_ge_0_if_S: "h(Suc i) - h(i-1) \<ge> 0" if "i \<in> \<S>" for i
   proof -
     have *: "hgt (pee i) \<le> hgt (pee (Suc i))"
@@ -1081,7 +1073,7 @@ lemma Big_X_7_11:
   apply (intro conjI strip eventually_all_geI0 eventually_all_ge_at_top; real_asymp)
   done
 
-lemma (in Book) X_7_11_aux:
+lemma (in Book) X_7_11:
   defines "\<R> \<equiv> Step_class {red_step}"
   defines "\<S> \<equiv> Step_class {dboost_step}"
   defines "C \<equiv> {i. pee i \<ge> pee (i-1) + eps k powr (-1/4) * alpha 1 \<and> pee (i-1) \<le> p0}"
@@ -1092,7 +1084,6 @@ proof -
   define pstar where "pstar \<equiv> \<lambda>i. min (pee i) qstar"
   define \<D> where "\<D> \<equiv> Step_class {dreg_step}"
   define \<B> where "\<B> \<equiv> Step_class {bblue_step}"
-  define \<H> where "\<H> \<equiv> Step_class {halted}"
   have big_x75: "Big_X_7_5 \<mu> l"  
     and 711: "eps k * eps k powr (-1/4) \<le> (1 + eps k) ^ (2 * nat \<lfloor>eps k powr (-1/4)\<rfloor>) - 1"
     and big34: "k \<ge> 2 * eps k powr (-1/2) * k powr (3/4)"
@@ -1109,13 +1100,10 @@ proof -
     and 16: "k\<ge>16" (*for Y_6_5_Red*)
     and ok_le_k: "ok_fun_26 k - ok_fun_28 k \<le> k"
     using big_x75 l_le_k by (auto simp: Big_X_7_5_def)
-  have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < halted_point" for i
-    unfolding \<H>_def using halted_point_minimal assms by blast
-  then have oddset: "{..<halted_point} \<setminus> \<D> = {i \<in> {..<halted_point}. odd i}" 
-    using step_odd step_even not_halted_even_dreg 
-    by (auto simp: \<D>_def \<H>_def Step_class_insert_NO_MATCH)
+  have oddset: "{..<halted_point} \<setminus> \<D> = {i \<in> {..<halted_point}. odd i}" 
+    using step_odd step_even not_halted_even_dreg halted_point_minimal by (auto simp: \<D>_def)
   have [simp]: "finite \<R>" "finite \<B>" "finite \<S>"
-    using finite_components by (auto simp: Step_class_insert_NO_MATCH \<R>_def \<B>_def \<S>_def)
+    using finite_components by (auto simp: \<R>_def \<B>_def \<S>_def)
   have [simp]: "\<R> \<inter> \<S> = {}" and [simp]: "(\<R> \<union> \<S>) \<inter> \<B> = {}"
     by (simp_all add: \<R>_def \<S>_def \<B>_def Step_class_def disjoint_iff)
 
@@ -1149,7 +1137,7 @@ proof -
         then have "hgt (pee (Suc i)) > hgt qstar"
           using Y_6_5_Red 16 \<open>i \<in> \<R>\<close> by (force simp: \<R>_def)
         then have "pstar (Suc i) = pstar i"
-          by (smt (verit) True add_lessD1 hgt_mono' kn0 pstar_def)
+          using True hgt_mono' pstar_def by fastforce
         then show ?thesis
           by (simp add: alpha_ge0)
       next
@@ -1164,7 +1152,7 @@ proof -
   qed
   finally have "- 2 * alpha 1 * k \<le> (\<Sum>i\<in>\<R>. pstar (Suc i) - pstar i)" .
   moreover have "0 \<le> (\<Sum>i\<in>\<S>. pstar (Suc i) - pstar i)"
-    using R53 by (intro sum_nonneg) (force simp:  pstar_def)
+    using R53 by (intro sum_nonneg) (force simp: pstar_def)
   ultimately have RS_half: "- 2 * alpha 1 * k \<le> (\<Sum>i\<in>\<R>\<union>\<S>. pstar (Suc i) - pstar i)"
     by (simp add: sum.union_disjoint)
 
@@ -1209,8 +1197,8 @@ proof -
         then have "hgt (pee (Suc i)) > hgt qstar"
           using Y_6_5_B \<open>i \<in> \<B>\<close> by (force simp: \<R>_def)
         then have "pstar (i-1) = pstar(Suc i)" 
-          unfolding pstar_def 
-          by (smt (verit) True of_nat_le_iff hgt_mono hgt_mono' kn0 powr_non_neg) 
+          unfolding pstar_def
+          by (smt (verit) True hgt_mono' of_nat_less_iff powr_non_neg) 
         then show ?thesis
           by (simp add: alpha_ge0)
       next
@@ -1223,7 +1211,7 @@ proof -
           using Y_6_4_Bblue \<open>i \<in> \<B>\<close> unfolding \<B>_def by blast
         with mult_left_mono [OF \<dagger>, of ?e12] show ?thesis
           unfolding pstar_def
-          by (smt (verit, best) alpha_ge0 mult_minus_left powr_non_neg mult_le_0_iff) 
+          by (smt (verit) alpha_ge0 mult_minus_left powr_non_neg mult_le_0_iff)
       qed
     }
     then show ?thesis
@@ -1257,8 +1245,7 @@ proof -
     using kn0 by (intro powr_mono) auto
 
   have meq: "{..<halted_point} \<setminus> \<D> = (\<R>\<union>\<S>) \<union> \<B>"
-    using Step_class_cases
-    by (force simp: \<R>_def \<S>_def \<D>_def \<B>_def \<H>_def Step_class_def simp flip: m_minimal)
+    using Step_class_cases halted_point_minimal' by(fastforce simp: \<R>_def \<S>_def \<D>_def \<B>_def Step_class_def)
 
   have "(eps k powr (-1/4) * alpha 1 * card ((\<R>\<union>\<S>) \<inter> C) + (- 2 * alpha 1 * k))
         + (- alpha 1 * k)
@@ -1270,8 +1257,8 @@ proof -
   proof (cases "even halted_point")
     case False
     have "pee (halted_point - Suc 0) \<le> pee halted_point"
-      using Y_6_4_DegreeReg [of "halted_point-1"] kn0 False m_minimal not_halted_even_dreg odd_pos  
-      by (fastforce simp: \<H>_def)
+      using Y_6_4_DegreeReg [of "halted_point-1"] False not_halted_even_dreg odd_pos 
+      by (auto simp: halted_point_minimal)
     then have "pstar(halted_point - Suc 0) \<le> pstar halted_point"
       by (simp add: pstar_def)
     with False show ?thesis
@@ -1320,7 +1307,7 @@ proof -
   have big_711: "Big_X_7_11 \<mu> l" and big_710: "Big_X_7_10 \<mu> l"
     using big by (auto simp: Big_X_7_12_def)
   have [simp]: "finite \<R>" "finite \<S>"
-    using finite_components assms by (auto simp: \<R>_def \<S>_def Step_class_insert_NO_MATCH)
+    using finite_components by (auto simp: \<R>_def \<S>_def)
   \<comment> \<open>now the conditions for Lemmas 7.10 and 7.11\<close>
   define C10 where "C10 \<equiv> {i. hgt (pee i) \<ge> hgt (pee (i-1)) + eps k powr (-1/4)}"
   define C11 where "C11 \<equiv> {i. pee i \<ge> pee (i-1) + eps k powr (-1/4) * alpha 1 \<and> pee (i-1) \<le> p0}"
@@ -1343,7 +1330,7 @@ proof -
     have "card (Xseq (i-1)) > 0"
       using C_def iC less_irrefl by fastforce
     moreover have "2 * (card (Xseq (i-1)) * eps k powr (1/4)) < card (Xseq (i-1) \<setminus> Xseq i)"
-      using iC card_Xm1 by (simp add: algebra_simps C_def of_nat_diff)
+      using iC card_Xm1 by (simp add: algebra_simps C_def)
     moreover have "card (Xseq i) \<le> 2 * card (Xseq (i-1))"
       using card_Xm1 by linarith
     ultimately have "eps k powr (1/4) \<le> card (Xseq (i-1) \<setminus> Xseq i) / card (Xseq (i-1))"
@@ -1367,7 +1354,7 @@ proof -
   then have "real (card ((\<R>\<union>\<S>) \<inter> C \<inter> {i. pee (i-1) \<le> p0})) \<le> real (card ((\<R>\<union>\<S>) \<inter> C11))"
     by (simp add: card_mono)
   also have "\<dots> \<le> 4 * eps k powr (1/4) * k"
-    using X_7_11_aux big_711 by (simp add: \<R>_def \<S>_def C11_def Step_class_insert_NO_MATCH)
+    using X_7_11 big_711 by (simp add: \<R>_def \<S>_def C11_def Step_class_insert_NO_MATCH)
   finally have A: "card ((\<R>\<union>\<S>) \<inter> C \<inter> {i. pee (i-1) \<le> p0}) \<le> 4 * eps k powr (1/4) * k" .
   have B: "card ((\<R>\<union>\<S>) \<inter> C \<setminus> {i. pee (i-1) \<le> p0}) \<le> 3 * eps k powr (1/4) * k" 
   proof -
@@ -1430,17 +1417,14 @@ proof -
   define \<R> where "\<R> \<equiv> Step_class {red_step}"
   define \<B> where "\<B> \<equiv> Step_class {bblue_step}"
   define \<S> where "\<S> \<equiv> Step_class {dboost_step}"
-  define \<H> where "\<H> \<equiv> Step_class {halted}"
   define C where "C \<equiv> {i. card (Xseq i) < (1 - 2 * eps k powr (1/4)) * card (Xseq (i-1))}"
   define C' where "C' \<equiv> Suc -` C"
   have big41: "Big_Blue_4_1 \<mu> l"
     and 712: "card ((\<R>\<union>\<S>) \<inter> C) \<le> 7 * eps k powr (1/4) * k"
     using big X_7_12 l_le_k by (auto simp: Big_X_7_6_def \<R>_def \<S>_def C_def)
-  have m_minimal: "i \<notin> \<H> \<longleftrightarrow> i < halted_point" for i
-    unfolding \<H>_def using halted_point_minimal assms by blast
 
   have [simp]: "finite \<D>" "finite \<R>" "finite \<B>" "finite \<S>"
-    using finite_components by (auto simp: Step_class_insert_NO_MATCH \<D>_def \<R>_def \<B>_def \<S>_def)
+    using finite_components by (auto simp: \<D>_def \<R>_def \<B>_def \<S>_def)
   have "card \<R> < k"
     using \<R>_def assms red_step_limit by blast+ 
   have "card \<B> \<le> l powr (3/4)"
@@ -1454,8 +1438,8 @@ proof -
   have less_l: "card \<B> + card \<S> < l"
     using bblue_dboost_step_limit big41 by (auto simp: \<B>_def \<S>_def)
   have [simp]: "(\<B> \<union> (\<R> \<union> \<S>)) \<inter> {halted_point} = {}" "\<R> \<inter> \<S> = {}" "\<B> \<inter> (\<R> \<union> \<S>) = {}" "halted_point \<notin> \<B>" "halted_point \<notin> \<R>" "halted_point \<notin> \<S>"
-               "\<B> \<inter> C \<inter> (\<R> \<inter> C \<union> \<S> \<inter> C) = {}" for C
-    using m_minimal by (force simp: disjoint_iff \<B>_def \<R>_def \<S>_def \<H>_def Step_class_def)+
+    "\<B> \<inter> C \<inter> (\<R> \<inter> C \<union> \<S> \<inter> C) = {}" for C
+    using halted_point_minimal' by (force simp: \<B>_def \<R>_def \<S>_def Step_class_def)+
 
   have "Big_X_7_8 k" and one_minus_gt0: "1 - 2 * eps k powr (1/4) > 0"
     using big l_le_k by (auto simp: Big_X_7_6_def)
@@ -1489,11 +1473,9 @@ proof -
       moreover 
       have "stepper_kind i \<noteq> halted"
         using \<D>_def \<open>i \<in> \<D>\<close> Step_class_def by force
-      then have "Suc i \<notin> \<H>"
-        using m_minimal \<open>Suc i \<noteq> halted_point\<close> by (simp add: \<H>_def Step_class_def)
       ultimately show "Suc i \<in> \<R>"
-        using Step_class_UNIV
-        by (force simp: \<D>_def \<B>_def \<R>_def \<S>_def \<H>_def Step_class_insert_NO_MATCH)
+        using halted_point_minimal' halted_point_minimal
+        using Step_class_cases Suc_lessI \<B>_def \<D>_def \<R>_def \<S>_def by blast
     qed
     then have ifD: "Suc i \<in> \<B> \<or> Suc i \<in> \<R> \<or> Suc i \<in> \<S> \<or> Suc i = halted_point" if "i \<in> \<D>" for i
       using that by force
@@ -1559,14 +1541,13 @@ lemma (in Book) X_7_1:
   shows "card (Xseq halted_point) \<ge> 2 powr ok_fun_71 \<mu> k * \<mu>^l * (1-\<mu>) ^ card \<R> * (bigbeta / \<mu>) ^ card \<S> * card X0"
 proof -
   define \<B> where "\<B> \<equiv> Step_class {bblue_step}"
-  define \<H> where "\<H> \<equiv> Step_class {halted}"
   have 72: "Big_X_7_2 \<mu> l" and 74: "Big_X_7_4 \<mu> l" 
     and 76: "Big_X_7_6 \<mu> l" 
     and big41: "Big_Blue_4_1 \<mu> l"
     using big by (auto simp: Big_X_7_1_def)
   then have [simp]: "finite \<R>" "finite \<B>" "finite \<S>" "finite \<D>" 
                     "\<R>\<inter>\<B> = {}" "\<S>\<inter>\<D> = {}" "(\<R>\<union>\<B>)\<inter>(\<S>\<union>\<D>) = {}"
-    using finite_components assms by (auto simp: \<R>_def \<B>_def \<S>_def \<D>_def Step_class_def)
+    using finite_components by (auto simp: \<R>_def \<B>_def \<S>_def \<D>_def Step_class_def)
   have BS_le_l: "card \<B> + card \<S> < l"
     using big41 bblue_dboost_step_limit by (auto simp: \<S>_def \<B>_def)
   
@@ -1593,7 +1574,7 @@ proof -
   have "2 powr ok_fun_71 \<mu> k * \<mu>^l * (1-\<mu>) ^ card \<R> * (bigbeta / \<mu>) ^ card \<S>
      \<le> 2 powr ok_fun_71 \<mu> k * \<mu> ^ (l - card \<S>) * (1-\<mu>) ^ card \<R> * (bigbeta ^ card \<S>)"
     using \<mu>01 BS_le_l by (simp add: power_diff power_divide)
-  also have "... \<le> (\<Prod>i\<in>\<R>\<union>\<B>\<union>\<S>\<union>\<D>. card (Xseq(Suc i)) / card (Xseq i))"
+  also have "\<dots> \<le> (\<Prod>i\<in>\<R>\<union>\<B>\<union>\<S>\<union>\<D>. card (Xseq(Suc i)) / card (Xseq i))"
   proof -
     have "(\<Prod>i\<in>(\<R>\<union>\<B>)\<union>(\<S>\<union>\<D>). card (Xseq(Suc i)) / card (Xseq i)) 
          \<ge> ((2 powr (ok_fun_72 \<mu> k) * (1-\<mu>) ^ card \<R>) * (2 powr (ok_fun_73 k) * \<mu> ^ (l - card \<S>)))
@@ -1602,7 +1583,7 @@ proof -
     then show ?thesis
       by (simp add: Un_assoc mult_ac powr_add ok_fun_71_def)
   qed
-  also have "... \<le> (\<Prod>i < halted_point. card (Xseq(Suc i)) / card (Xseq i))"
+  also have "\<dots> \<le> (\<Prod>i < halted_point. card (Xseq(Suc i)) / card (Xseq i))"
     using below_m by auto
   finally show ?thesis
     using X0_nz \<mu>01 unfolding tele by (simp add: divide_simps)

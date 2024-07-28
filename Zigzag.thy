@@ -121,7 +121,8 @@ proof -
   have 33: "\<Delta> i = (\<Sum>h=1..maxh. \<Delta>\<Delta> i h)" for i
     by (simp add: \<Delta>\<Delta>_def \<Delta>_def sum_subtractf sum_pp)
 
-  have "(\<Sum>i<halted_point. \<Delta>\<Delta> i h) = 0" if "\<And>i. i\<le>halted_point \<Longrightarrow> h > hgt (pee i)" for h
+  have "(\<Sum>i<halted_point. \<Delta>\<Delta> i h) = 0" 
+    if "\<And>i. i\<le>halted_point \<Longrightarrow> h > hgt (pee i)" for h
     using that by (simp add: sum.neutral \<Delta>\<Delta>_def)
   then have B: "(\<Sum>i<halted_point. \<Delta>\<Delta> i h) = 0" if "h \<ge> maxh" for h
     by (meson hgt_le_maxh le_simps le_trans not_less_eq that)
@@ -158,8 +159,7 @@ proof -
     and beta_gt0: "beta i > 0"
     and R53: "pee (Suc i) \<ge> pee i \<and> beta i \<ge> 1 / (real k)\<^sup>2"
         if "i \<in> \<S>" for i
-    using big Red_5_2 that
-    by (auto simp: Big_ZZ_8_1_def Red_5_3 \<B>_def \<S>_def)
+    using big Red_5_2 that by (auto simp: Big_ZZ_8_1_def Red_5_3 \<B>_def \<S>_def)
   have card\<B>: "card \<B> \<le> l powr (3/4)" and bigY65B: "Big_Y_6_5_Bblue l"
     using big bblue_step_limit by (auto simp: Big_ZZ_8_1_def \<B>_def)
 
@@ -241,8 +241,7 @@ proof -
     finally show ?thesis .
   qed
   \<comment> \<open>now we are able to prove claim 8.2\<close>
-  have "oneminus * sum_SS
-     = (\<Sum>i\<in>dboost_star. oneminus * ((1 - beta i) / beta i))"
+  have "oneminus * sum_SS = (\<Sum>i\<in>dboost_star. oneminus * ((1 - beta i) / beta i))"
     using sum_distrib_left sum_SS_def by blast
   also have "\<dots> \<le> (\<Sum>i\<in>dboost_star. \<Sum>h=1..maxh. \<Delta>\<Delta> i h / alpha h)"
     by (intro sum_mono 35)
@@ -254,7 +253,7 @@ proof -
       \<le> (\<Sum>h=1..maxh. \<Sum>i\<in>\<S>. \<Delta>\<Delta> i h / alpha h)" .
   \<comment> \<open>leading onto claim 8.3\<close>
   have \<Delta>alpha: "- 1 \<le> \<Delta> i / alpha (hgt (pee i))" if "i \<in> \<R>" for i
-    using Y_6_4_Red [of i] \<open>i \<in> \<R>\<close> alpha_ge0 kn0
+    using Y_6_4_Red [of i] \<open>i \<in> \<R>\<close> 
     unfolding \<Delta>_def \<R>_def
     by (smt (verit, best) hgt_gt0 alpha_gt0 divide_minus_left less_divide_eq_1_pos)
 
@@ -266,7 +265,7 @@ proof -
     proof (cases "\<Delta> i < 0")
       case True
       have "(1 + eps k)\<^sup>2 * -1 \<le> (1 + eps k)\<^sup>2 * (\<Delta> i / alpha (hgt (pee i)))"
-        using \<Delta>alpha kn0
+        using \<Delta>alpha 
         by (smt (verit, best) power2_less_0 \<open>i \<in> \<R>\<close> mult_le_cancel_left2 mult_minus_right)
       also have "\<dots> \<le> (\<Sum>h = 1..maxh. \<Delta>\<Delta> i h / alpha h)"
       proof -
@@ -299,8 +298,7 @@ proof -
               using \<open>1 \<le> h\<close> mult_left_mono [OF *, of "eps k"] eps_ge0
               by (simp add: alpha_eq hgt_gt0 mult_ac divide_right_mono)
             show ?thesis
-              using le0 alpha_gt0 kn0 \<open>h\<ge>1\<close> hgt_gt0
-              using mult_left_mono_neg [OF **, of "\<Delta>\<Delta> i h"]
+              using le0 alpha_gt0 \<open>h\<ge>1\<close> hgt_gt0 mult_left_mono_neg [OF **, of "\<Delta>\<Delta> i h"]
               by (simp add: divide_simps mult_ac)
           qed
         qed
@@ -348,7 +346,7 @@ proof -
       have hge: "hgt (pee (Suc i)) \<ge> hgt (pee (i-1)) - 2 * eps k powr (-1/2)"
         using bigY65B that Y_6_5_Bblue by (fastforce simp: \<B>_def )
       have \<Delta>\<Delta>0: "\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h = 0" if "0<h" "h < hgt (pee (i-1)) - 2 * eps k powr (-1/2)" for h
-        using \<open>odd i\<close> that hge  unfolding \<Delta>\<Delta>_def One_nat_def
+        using \<open>odd i\<close> that hge unfolding \<Delta>\<Delta>_def One_nat_def
         by (smt (verit) of_nat_less_iff odd_Suc_minus_one powr_non_neg pp_less_hgt)
       have big39: "1/2 \<le> (1 + eps k) powr (-2 * eps k powr (-1/2))"
         using big l_le_k by (auto simp: Big_ZZ_8_1_def Big39_def)
@@ -404,7 +402,7 @@ proof -
     assume "h \<in> {1..maxh}"
     have inj_pred: "inj_on (\<lambda>i. i - Suc 0) \<B>"
       using odd_pos [OF step_odd]   
-      apply (simp add: \<B>_def inj_on_def Step_class_insert_NO_MATCH)
+      apply (auto simp add: \<B>_def inj_on_def Step_class_insert_NO_MATCH)
       by (metis Suc_pred)
     have "(\<Sum>i\<in>\<B>. \<Delta>\<Delta> (i - Suc 0) h) = (\<Sum>i \<in> (\<lambda>i. i-1) ` \<B>. \<Delta>\<Delta> i h)"
       by (simp add: sum.reindex [OF inj_pred])
@@ -490,7 +488,7 @@ proof -
   have [simp]: "finite \<S>"
     by (simp add: \<S>_def)
   moreover have "dboost_star \<subseteq> \<S>"
-    by (auto simp: dboost_star_def \<S>_def dboost_star_def)
+    by (auto simp: dboost_star_def \<S>_def)
   ultimately have "real (card \<S>) - real (card dboost_star) = card (\<S>\<setminus>dboost_star)"
     by (metis card_Diff_subset card_mono finite_subset of_nat_diff)
   also have "\<dots> \<le> 3 * eps k powr (1/4) * k"
@@ -498,9 +496,7 @@ proof -
   also have "\<dots> \<le> k powr (19/20)"
     using big l_le_k by (auto simp: Big_ZZ_8_5_def inequality85_def)
   finally have *: "real (card \<S>) - card dboost_star \<le> k powr (19/20)" .
-  have bigbeta_lt1: "bigbeta < 1"
-    and bigbeta_gt0: "0 < bigbeta"
-    and beta_gt0: "\<And>i. i \<in> \<S> \<Longrightarrow> beta i > 0" 
+  have bigbeta_lt1: "bigbeta < 1" and bigbeta_gt0: "0 < bigbeta" and beta_gt0: "\<And>i. i \<in> \<S> \<Longrightarrow> beta i > 0" 
     using bigbeta_ge0 big by (auto simp: Big_ZZ_8_5_def \<S>_def beta_gt0 bigbeta_gt0 bigbeta_less1)
   then have ge0: "bigbeta / (1 - bigbeta) \<ge> 0"
     by auto
@@ -569,8 +565,7 @@ lemma Big_ZZ_8_6:
   apply (simp add: eventually_conj_iff all_imp_conj_distrib)  
   apply (intro conjI strip eventually_all_ge_at_top eventually_all_geI1 [where L=1])   
    apply real_asymp
-  apply (auto simp: )
-  by (smt (verit, best) frac_le powr_ge_pzero)
+  by (smt (verit, ccfv_SIG) frac_le powr_ge_pzero)
 
 lemma (in Book) ZZ_8_6:
   assumes big: "Big_ZZ_8_6 \<mu> l" 

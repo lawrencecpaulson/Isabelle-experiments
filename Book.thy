@@ -334,10 +334,10 @@ proof -
     using p0_01 kn0 unfolding eps_def by real_asymp
   then obtain h where "p \<le> real h * eps k / real k"
     by (meson eventually_sequentially order.refl)
-  also have "... \<le> ((1 + eps k) ^ h - 1) / real k"
+  also have "\<dots> \<le> ((1 + eps k) ^ h - 1) / real k"
     using linear_plus_1_le_power [of "eps k" h]
     by (intro divide_right_mono add_mono) (auto simp: eps_def add_ac)
-  also have "... \<le> ((1 + eps k) ^ Suc h - 1) / real k"
+  also have "\<dots> \<le> ((1 + eps k) ^ Suc h - 1) / real k"
     using power_increasing [OF le_SucI [OF order_refl] 1]
     by (simp add: divide_right_mono)
   finally have "p \<le> qfun_base k (Suc h)"

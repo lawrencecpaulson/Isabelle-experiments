@@ -83,7 +83,7 @@ lemma
 proof -
   have "1 + \<epsilon> powr k \<le> ((1 + \<epsilon>) powr k)"
     apply (simp add: powr_def)
-    apply (auto simp: )
+    apply auto
     using assms(1) apply linarith
 
     sorry

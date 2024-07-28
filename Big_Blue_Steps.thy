@@ -106,7 +106,7 @@ proof (cases "x \<le> 1/12")
   have "exp (-3*x/2) \<le> 1/(1 + (3*x)/2)"
     using exp_ge_add_one_self [of "3*x/2"] assms
     by (simp add: exp_minus divide_simps)
-  also have "... \<le> 1 - 4*x/3"
+  also have "\<dots> \<le> 1 - 4*x/3"
     using assms True mult_left_le [of "x*12"] by (simp add: field_simps)
   finally show ?thesis .
 next

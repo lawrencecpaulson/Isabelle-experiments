@@ -52,12 +52,11 @@ proof -
     then show ?thesis
     proof (eventually_elim, clarify)
       fix n
-      assume n: "(1 + stir n) * sqrt (2 * pi * real n) \<le> 2 powr (c * real n)"
+      assume n: "(1 + stir n) * sqrt (2 * pi * n) \<le> 2 powr (c * n)"
         and "n>0"
       have "(1 + stir n) * sqrt (2 * pi * real n) \<ge> 1"
-        using stir_ge0
-        by (smt (verit) of_nat_0 \<open>0 < n\<close> mult_less_cancel_left2 nat_less_real_le pi_ge_two real_sqrt_ge_1_iff)
-      with n show "\<bar>log 2 ((1 + stir n) * sqrt (2 * pi * real n))\<bar> \<le> c * real n"
+        using stir_ge0 \<open>0 < n\<close> mult_ge1_I pi_ge_two by auto
+      with n show "\<bar>log 2 ((1 + stir n) * sqrt (2 * pi * n))\<bar> \<le> c * n"
         by (simp add: abs_if le_powr_iff)
     qed
   qed
@@ -84,14 +83,11 @@ proof (clarsimp simp: monotone_on_def)
   have *: "\<exists>D. (G has_real_derivative D) (at u) \<and> D > 0" if "0 < u" for u 
   proof (intro exI conjI)
     show "(G has_real_derivative GD u) (at u)"
-      using that
       unfolding G_def GD_def
-      apply-
-      apply (rule derivative_eq_intros has_real_derivative_powr' | force)+
-      apply (auto simp: ln_div pos_prod_lt field_simps)
-      done
+      using that
+      by (force intro!: derivative_eq_intros has_real_derivative_powr' simp: ln_div pos_prod_lt field_simps)
     show "GD u > 0"
-      using that by (auto simp: GD_def Digamma_plus_1_gt_ln) \<comment> \<open>Thank you, Manuel!\<close>
+      using that by (auto simp: GD_def Digamma_plus_1_gt_ln) \<comment>\<open>Thank you, Manuel!\<close>
   qed
   show "G x \<le> G y"
     using x DERIV_pos_imp_increasing [OF _ *] by (force simp: less_eq_real_def)
@@ -135,7 +131,8 @@ proof -
     by (simp add: \<gamma>_def powr_minus powr_add powr_divide divide_simps)
   also have "\<dots> \<le> (2 powr (logstir (k+l)) / (2 powr (logstir k)  * 2 powr (logstir l)))
                  * (k+l) powr (k+l) / (k powr k * l powr l)"
-    by (metis "*" divide_nonneg_nonneg mult_right_mono powr_add powr_diff powr_ge_pzero powr_mono semiring_norm(92) times_divide_eq_right zero_compare_simps(4))
+    by (smt (verit, del_insts) * mult_mono' powr_add powr_diff powr_ge_pzero
+        powr_mono of_nat_numeral divide_le_cancel mult_less_0_iff)
   also have "\<dots> = fact(k+l) / (fact k * fact l)"
     using l by (simp add: logfact_eq_stir_times powr_add divide_simps flip: powr_realpow)
   also have "\<dots> = real (k+l choose l)"
@@ -167,7 +164,7 @@ proof -
   also have "\<dots> = (real k / (k+l))^t * (\<Prod>i<t. 1 - real i * real l / (real k * (k+l-i)))"
   proof -
     have "1 - real i * real l / (real k * (k+l-i)) = ((k-i)/(k+l-i)) * ((k+l) / k)" if "i<t" for i
-      using that \<open>t \<le> k\<close> by (simp add: divide_simps of_nat_diff) argo
+      using that \<open>t \<le> k\<close> by (simp add: divide_simps) argo
     then have *: "(\<Prod>i<t. 1 - real i * real l / (real k * (k+l-i))) = (\<Prod>i<t. ((k-i)/(k+l-i)) * ((k+l) / k))"
       by auto
     show ?thesis
@@ -189,12 +186,13 @@ proof -
     ultimately show "(\<Prod>i<t. 1 - i * real l / (k * real (k+l-i))) \<le> exp (- (\<Sum>i<t. i * real l / (k * real (k+l))))"
       by (force simp: exp_sum simp flip: sum_negf intro!: prod_mono)
   qed auto
-  finally have 1: "(k+l-t choose l) * inverse (k+l choose l) \<le> (real k / (k+l))^t * exp (- (\<Sum>i<t. i * \<gamma> / k))"
+  finally have 1: "(k+l-t choose l) * inverse (k+l choose l) 
+                 \<le> (real k / (k+l))^t * exp (- (\<Sum>i<t. i * \<gamma> / k))"
     by (simp add: \<gamma>_def mult.commute)
   have **: "\<gamma> * (t - 1)^2 / (2*k) \<le> (\<Sum>i<t. i * \<gamma> / k)"
   proof -
     have g: "(\<Sum>i<t. real i) = real (t*(t-1)) / 2"
-      by (induction t) (auto simp: algebra_simps eval_nat_numeral of_nat_diff)
+      by (induction t) (auto simp: algebra_simps eval_nat_numeral)
     have "\<gamma> * (t-1)^2 / (2*k) \<le> real(t*(t-1)) / 2 * \<gamma>/k"
       by (simp add: field_simps eval_nat_numeral divide_right_mono mult_mono \<gamma>_def)
     also have "\<dots> = (\<Sum>i<t. i * \<gamma> / k)" 
@@ -203,7 +201,7 @@ proof -
   qed
   have 0: "0 \<le> real (k + l choose l)"
     by simp
-  have *: "(k+l-t choose l) \<le> (real k / (k+l))^t * exp (- (\<Sum>i<t. i * \<gamma> / k)) * (k+l choose l)"
+  have *: "(k+l-t choose l) \<le> (k / (k+l))^t * exp (- (\<Sum>i<t. i * \<gamma> / k)) * (k+l choose l)"
     using order_trans [OF _  mult_right_mono [OF 1 0]]
     by (simp add: less_eq_real_def)
   also have "\<dots> \<le>  (k / (k+l))^t * exp (- \<gamma> * (t-1)^2 / (2*k)) *(k+l choose l)"
@@ -232,14 +230,14 @@ proof -
     using t by (smt (verit, best) mult_less_cancel_right2 of_nat_0_less_iff of_nat_mono)
   then have *: "\<gamma> * t^2 / (2*k) - 1 \<le> \<gamma> * (t-1)^2 / (2*k)"
     using t 
-    apply (simp add: power2_eq_square of_nat_diff pos_divide_le_eq divide_simps)
+    apply (simp add: power2_eq_square pos_divide_le_eq divide_simps)
     apply (simp add: algebra_simps)
     done
   then have *: "exp (-1) * exp (\<gamma> * t^2 / (2*k)) \<le> exp (\<gamma> * (t-1)^2 / (2*k))"
     by (metis exp_add exp_le_cancel_iff uminus_add_conv_diff)
   have 1: "exp (\<gamma> * (t-1)^2 / (2*k)) * (k+l-t choose l) \<le> (k / (k+l))^t * (k+l choose l)"
     using mult_right_mono [OF D2 [OF t], of "exp (\<gamma> * (t-1)^2 / (2*k))" l] t
-    by (simp add: \<gamma>_def exp_minus of_nat_diff field_simps)
+    by (simp add: \<gamma>_def exp_minus field_simps)
   have 2: "(k / (k+l)) powr (- real t) * exp (\<gamma> * (t-1)^2 / (2*k)) * (k+l-t choose l) \<le> (k+l choose l)"
     using mult_right_mono [OF 1, of "(1-\<gamma>) powr (- real t)"] t
     by (simp add: powr_minus \<gamma>_def powr_realpow mult_ac divide_simps)
@@ -292,9 +290,7 @@ proof -
       using assms that unfolding g_def by real_asymp
   next
     fix k \<mu> 
-    assume le_e: "\<bar>g \<mu>1 k\<bar> / k \<le> e"
-      and \<mu>: "\<mu>0 \<le> \<mu>" "\<mu> \<le> \<mu>1"
-      and k: "nat \<lceil>1/\<mu>0\<rceil> \<le> k"
+    assume le_e: "\<bar>g \<mu>1 k\<bar> / k \<le> e" and \<mu>: "\<mu>0 \<le> \<mu>" "\<mu> \<le> \<mu>1" and k: "nat \<lceil>1/\<mu>0\<rceil> \<le> k"
     then have "k>0"
       using assms gr0I by force
     have ln_k: "ln k \<ge> ln (1/\<mu>0)"
@@ -318,7 +314,7 @@ proof -
      \<le> \<bar>g \<mu> k\<bar> + \<bar>\<lceil>k powr (3/4)\<rceil> * ln k\<bar> + (\<bar>ok_fun_72 \<mu> k\<bar> + \<bar>f k\<bar> + 1) * ln 2" for \<mu> k
     unfolding eq93
     apply (simp add: distrib_right left_diff_distrib add.assoc)
-    by (smt (verit) ln2 mult_minus_left zero_less_mult_iff)
+    by (smt (verit) ln2 mult_minus_left mult_less_0_iff)
   define e5 where "e5 \<equiv> e/5"
   have "e5 > 0"
     by (simp add: \<open>e>0\<close> e5_def)
@@ -402,7 +398,7 @@ proof -
   have \<section>: "\<lceil>l powr (3/4)\<rceil> \<le> \<lceil>k powr (3/4)\<rceil>"
     by (simp add: assms(1) ceiling_mono powr_mono2)
   have "RN k l34 \<le> k powr (l34-1)"
-    \<comment> \<open>Bhavik's off-diagonal Ramsey upper bound; can't use @{term "2^(k+l34)"}\<close>
+    \<comment>\<open>Bhavik's off-diagonal Ramsey upper bound; can't use @{term "2^(k+l34)"}\<close>
     using RN_le_argpower' \<open>k>0\<close> powr_realpow by auto
   also have "\<dots> \<le> k powr l34"
     using \<open>k>0\<close> powr_mono by force
@@ -425,13 +421,14 @@ lemma (in Book') Far_9_3:
   defines "t \<equiv> card \<R>"
   assumes \<gamma>15: "\<gamma> \<le> 1/5" and p0: "p0 \<ge> 1/4" 
     and nge: "n \<ge> exp (-\<delta> * real k) * (k+l choose l)" 
-    and X0ge: "real (card X0) \<ge> n/2"  (*card X0 \<ge> n div 2 makes a harder proof*)
+    and X0ge: "card X0 \<ge> n/2" 
+           \<comment>\<open>Because @{term"card X0 \<ge> n div 2"} makes the proof harder\<close>
   assumes big: "Big_Far_9_3 \<gamma> l"
   shows "t \<ge> 2*k / 3"
 proof -
   define \<S> where "\<S> \<equiv> Step_class {dboost_step}"
-  have "k\<ge>2" and big85: "Big_ZZ_8_5 \<gamma> l" and big71: "Big_X_7_1 \<gamma> l" and big62: "Big_Y_6_2 \<gamma> l" 
-    and big53: "Big_Red_5_3 \<gamma> l"
+  have "k\<ge>2" and big85: "Big_ZZ_8_5 \<gamma> l" and big71: "Big_X_7_1 \<gamma> l" 
+    and big62: "Big_Y_6_2 \<gamma> l"  and big53: "Big_Red_5_3 \<gamma> l"
     using big l_le_k by (auto simp: Big_Far_9_3_def)
   define l34 where "l34 \<equiv> nat \<lceil>real l powr (3/4)\<rceil>"
   have "l34 > 0"
@@ -443,11 +440,10 @@ proof -
   have one_minus: "1-\<gamma> = real k / (real k + real l)"
     using ln0 by (simp add: \<gamma>_def divide_simps)
   have "t < k"
-    using red_step_limit \<gamma>01 by (auto simp: \<R>_def t_def)
+    using red_step_limit by (auto simp: \<R>_def t_def)
   have f: "2 powr ok_fun_94 k * \<gamma> powr (- real l) * (1-\<gamma>) powr (- real k)
           \<le> k+l choose l" 
     unfolding \<gamma>_def using fact_9_4 l_le_k ln0 by blast
-
   have powr_combine_right: "x powr a * (x powr b * y) = x powr (a+b) * y" for x y a b::real
     by (simp add: powr_add)
   have "(2 powr ok_fun_71 \<gamma> k * 2 powr ok_fun_94 k) * (bigbeta/\<gamma>) ^ card \<S> * (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) / 2)
@@ -476,7 +472,7 @@ proof -
     using RN34_le_2powr_ok l34_def l_le_k ln0 by blast
   finally have "2 powr (ok_fun_71 \<gamma> k + ok_fun_94 k) * (bigbeta/\<gamma>) ^ card \<S>
                * exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) / 2
-              \<le> 2 powr (\<lceil>real k powr (3/4)\<rceil> * log 2 k)"
+              \<le> 2 powr (\<lceil>k powr (3/4)\<rceil> * log 2 k)"
     by (simp add: powr_add)
   then have le_2_powr_g: "exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) * (bigbeta/\<gamma>) ^ card \<S>
              \<le> 2 powr ok_fun_93g \<gamma> k"
@@ -486,11 +482,11 @@ proof -
   have bigbeta_le: "bigbeta \<le> \<gamma>" and bigbeta_ge: "bigbeta \<ge> 1 / (real k)\<^sup>2"
     using bigbeta_def \<gamma>01 big53 bigbeta_le bigbeta_ge_square by blast+
   
-  define \<phi> where "\<phi> \<equiv> \<lambda>u. (u / (1-\<gamma>)) * ln (\<gamma>/u)"  \<comment> \<open>finding the maximum via derivatives\<close>
+  define \<phi> where "\<phi> \<equiv> \<lambda>u. (u / (1-\<gamma>)) * ln (\<gamma>/u)"  \<comment>\<open>finding the maximum via derivatives\<close>
   have ln_eq: "ln (\<gamma> / (\<gamma> / exp 1)) / (1-\<gamma>) = 1/(1-\<gamma>)"
     using \<gamma>01 by simp
   have \<phi>: "\<phi> (\<gamma> / exp 1) \<ge> \<phi> bigbeta"
-  proof (cases "\<gamma> / exp 1 \<le> bigbeta")    \<comment> \<open>Could perhaps avoid case analysis via 2nd derivatives\<close>
+  proof (cases "\<gamma> / exp 1 \<le> bigbeta")    \<comment>\<open>Could perhaps avoid case analysis via 2nd derivatives\<close>
     case True
     show ?thesis 
     proof (intro DERIV_nonpos_imp_nonincreasing [where f = \<phi>])
@@ -535,8 +531,7 @@ proof -
   then have "\<gamma> * (real k - t) - \<delta>*k - ?\<xi> * ln (\<gamma>/bigbeta) \<le> \<gamma> * (real k - t) - \<delta>*k + card \<S> * ln (bigbeta/\<gamma>)"
     by linarith
   also have "\<dots> \<le> (t - real k) * ln (1-\<gamma>) - \<delta>*k + card \<S> * ln (bigbeta/\<gamma>)"
-    using mult_right_mono [OF ln_add_one_self_le_self2 [of "-\<gamma>"], of "real k - t"] 
-    using \<open>t < k\<close> \<gamma>01 
+    using \<open>t < k\<close> \<gamma>01 mult_right_mono [OF ln_add_one_self_le_self2 [of "-\<gamma>"], of "real k - t"] 
     by (simp add: algebra_simps)
   also have "\<dots> = ln (exp (-\<delta>*k) * (1-\<gamma>) powr (- real k + t) * (bigbeta/\<gamma>) ^ card \<S>)"
     using \<gamma>01 bigbeta01 by (simp add: ln_mult ln_div ln_realpow ln_powr)
@@ -576,8 +571,7 @@ proof -
     proof (intro f''_le0_imp_concave)
       fix x::real
       assume "x \<in> {1/10..1/5}"
-      then have x01: "0<x" "x<1"
-        by auto
+      then have x01: "0<x" "x<1" by auto
       show "((\<lambda>x. (1 - 1/(200*x))) has_real_derivative 1/(200*x^2)) (at x)"
         using x01 by (intro derivative_eq_intros | force simp: eval_nat_numeral)+
       show "((\<lambda>x. 1/(200*x^2)) has_real_derivative -1/(100*x^3)) (at x)"
@@ -589,8 +583,7 @@ proof -
     proof (intro f''_le0_imp_concave)
       fix x::real
       assume "x \<in> {1/10..1/5}"
-      then have x01: "0<x" "x<1"
-        by auto
+      then have x01: "0<x" "x<1" by auto
       have swap: "u * (x-1) = (-u) * (1-x)" for u
         by (metis minus_diff_eq minus_mult_commute)
       have \<section>: "exp 1 * (x - 1) < 0"
@@ -703,7 +696,7 @@ lemma Big_Far_9_5:
   shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> Big_Far_9_5 \<mu> l"
   using assms Big_Red_5_3 Big_Y_6_1 Big_ZZ_8_5
   unfolding Big_Far_9_5_def  eps_def
-  by (simp add: eventually_conj_iff all_imp_conj_distrib eventually_frequently_const_simps)  
+  by (simp add: eventually_conj_iff all_imp_conj_distrib)  
 
 end
 
@@ -835,7 +828,7 @@ proof -
     done
   then show ?thesis
     using assms Big_Far_9_3 Big_Far_9_5
-    unfolding Big_Far_9_2_def 
+    unfolding Big_Far_9_2_def
     apply (simp add: eventually_conj_iff all_imp_conj_distrib)  
     by (smt (verit, ccfv_threshold) eventually_sequentially)
 qed
@@ -926,7 +919,7 @@ proof -
       using \<gamma> unfolding \<gamma>_def by linarith
     have "min (1/200) (\<gamma> / 20) \<ge> \<delta>"
       unfolding \<delta>_def using \<gamma> ln0 by (simp add: \<gamma>_def)
-    then show "exp (- min (1/200) (\<gamma> / 20) * real k) * real (k + l choose l) \<le> nV"
+    then show "exp (- min (1/200) (\<gamma> / 20) * k) * (k+l choose l) \<le> nV"
       using \<delta>_def \<gamma>_def nV by force
     show "1/4 \<le> p0"
       using \<eta> \<gamma> 0 by linarith
@@ -972,7 +965,7 @@ proof -
 
   have "exp (- 3*\<gamma>*t / (20*k)) \<le> exp (-3 * \<eta>/2)"
   proof -
-    have "1 \<le> 3/2 * real t / (real k)"
+    have "1 \<le> 3/2 * t/k"
       using t23 kn0 by (auto simp: divide_simps)
     from mult_right_mono [OF this, of "\<gamma>/15"] \<gamma>01 \<eta> 
     show ?thesis
@@ -1014,8 +1007,8 @@ proof -
     also have "\<dots> \<le> exp (3*\<gamma>*t\<^sup>2 / (10*k)) * exp (-\<delta> * k + ok_fun_95b k) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
             * (k-t+l choose l)"
       using \<gamma>01 ge_half D by (intro mult_right_mono) auto
-    also have "\<dots> \<le> (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * t\<^sup>2 / (2 * k)) * exp (-\<delta> * k + ok_fun_95b k) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
-            * (k-t+l choose l)"
+    also have "\<dots> \<le> (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * t\<^sup>2 / (2*k)) * exp (-\<delta> * k + ok_fun_95b k) 
+                  * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t * (k-t+l choose l)"
       using \<gamma>01 ge_half by (intro mult_right_mono B) auto
     also have "\<dots> = exp (-\<delta> * k + ok_fun_95b k) * (1-\<gamma>-\<eta>) powr (\<gamma>*t / (1-\<gamma>)) * ((1-\<gamma>-\<eta>)/(1-\<gamma>))^t 
                     * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) * (k-t+l choose l)"
@@ -1028,9 +1021,7 @@ proof -
       show "Big_Far_9_5 (\<gamma>) l"
         using Big_Far_9_2_def big unfolding \<gamma>_def by presburger
     qed (use assms in auto)
-    finally have "(k-t+l choose l) \<le> real (card (Yseq halted_point))" by simp
-    then show ?thesis
-      by fastforce
+    finally show ?thesis by simp
   qed
   then show False
     using Far_9_2_conclusion by (simp flip: \<R>_def t_def)
@@ -1050,7 +1041,7 @@ proof -
     using gd p0_min by (auto simp: graph_density_def)
   then have "gorder \<ge> 2"
     by (metis Red_E card_mono ex_in_conv finV subset_empty two_edges wellformed)
-  then have "0 < gorder div 2" "gorder div 2 < gorder"
+  then have div2: "0 < gorder div 2" "gorder div 2 < gorder"
     by auto
   then obtain Y0 where Y0: "card Y0 = gorder div 2" "Y0\<subseteq>V" 
     "graph_density Red \<le> gen_density Red (V\<setminus>Y0) Y0"
@@ -1066,9 +1057,9 @@ proof -
   have False if "l<2"
     using that unfolding less_2_cases_iff
   proof
-    assume "l = Suc 0" with no_Red_clique no_Blue_clique Red_Blue_RN [of 2 gorder V] gorder_ge2
-    show False
-      by (metis RN_1' Red_Blue_RN Suc_leI Y0 \<open>0 < nV div 2\<close> kn0)
+    assume "l = Suc 0" 
+    with Y0 div2 show False
+      by (metis RN_1' no_Red_clique no_Blue_clique Red_Blue_RN Suc_leI kn0)
   qed (use ln0 in auto)
   with l_le_k have "l\<ge>2"
     by force
@@ -1122,7 +1113,7 @@ lemma (in Book_Basis) Far_9_2:
 proof (rule ccontr)
   assume neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
   interpret No_Cliques
-    using assms neg by (metis Book_Basis_axioms No_Cliques_axioms_def No_Cliques_def P0_min_axioms) 
+  proof qed (use Red_E Blue_def \<open>l\<le>k\<close> neg in auto)
   obtain X0 Y0 where "l\<ge>2" and card_X0: "card X0 \<ge> real nV / 2" 
     and card_Y0: "card Y0 = gorder div 2" 
     and X0_def: "X0 = V \<setminus> Y0" and "Y0\<subseteq>V" 
@@ -1145,13 +1136,13 @@ lemma kl_choose:
   fixes l k::nat
   assumes "m<l" "k>0"
   defines "PM \<equiv> \<Prod>i<m. (l - real i) / (k+l-real i)"
-  shows "real(k+l choose l) = (k+l-m choose (l-m)) / PM"
+  shows "(k+l choose l) = (k+l-m choose (l-m)) / PM"
 proof -
   have inj: "inj_on (\<lambda>i. i-m) {m..<l}" \<comment>\<open>relating the power and binomials; maybe easier using factorials\<close>
     by (auto simp: inj_on_def)
-  have "(\<Prod>i<l. real (k+l-i) / real (l-i)) / (\<Prod>i<m. real (k+l-i) / real (l-i))
-          = (\<Prod>i = m..<l. real (k+l-i) / real (l-i))"
-    using prod_divide_nat_ivl [of 0 m l "\<lambda>i. real (k+l-i) / real (l-i)"] \<open>m < l\<close>
+  have "(\<Prod>i<l. (k+l-i) / (l-i)) / (\<Prod>i<m. (k+l-i) / (l-i))
+          = (\<Prod>i = m..<l. (k+l-i) / (l-i))"
+    using prod_divide_nat_ivl [of 0 m l "\<lambda>i. (k+l-i) / (l-i)"] \<open>m < l\<close>
     by (simp add: atLeast0LessThan)
   also have "\<dots> = (\<Prod>i<l - m. (k+l-m - i) / (l-m-i))"
     apply (intro prod.reindex_cong [OF inj, symmetric])
@@ -1174,7 +1165,6 @@ qed
 
 context P0_min
 begin
-
 
 text \<open>The proof considers a smaller graph, so @{term l} needs to be so big
    that the smaller @{term l'} will be big enough.\<close>
@@ -1227,7 +1217,7 @@ proof (rule ccontr)
     using \<gamma>_def \<gamma> nat_le_real_less by fastforce
   with \<open>l>0\<close> have "k>0" by linarith
   define \<xi>::real where "\<xi> \<equiv> 1/15"
-  define U_lower_bound_ratio where \<comment>\<open>Bhavik's terminology\<close>
+  define U_lower_bound_ratio where \<comment>\<open>Bhavik's name\<close>
     "U_lower_bound_ratio \<equiv> \<lambda>m. (1+\<xi>)^m * (\<Prod>i<m. (l - real i) / (k+l - real i))"
 
   define n where "n \<equiv> RN k l - 1"
@@ -1272,15 +1262,15 @@ proof (rule ccontr)
       and no_Red_K: "\<not> (\<exists>K. size_clique k K Red)"
       and no_Blue_K: "\<not> (\<exists>K. size_clique l K Blue)"
     by (metis \<open>n < RN k l\<close> less_RN_Red_Blue)
-  have Blue_E: "Blue \<subseteq> E" and disjnt_Red_Blue: "disjnt Red Blue" and Blue_eq: "Blue = all_edges V - Red"
+  have Blue_E: "Blue \<subseteq> E" and disjnt_Red_Blue: "disjnt Red Blue" 
+     and Blue_eq: "Blue = all_edges V - Red"
     using complete by (auto simp: Blue_def disjnt_iff E_def) 
   define is_good_clique where
     "is_good_clique \<equiv> \<lambda>i K. clique K Blue \<and> K \<subseteq> V \<and>
                                  card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
                                  \<ge> real i * U_lower_bound_ratio (card K) - card K"
   have is_good_card: "card K < l" if "is_good_clique i K" for i K
-    using no_Blue_K that
-    unfolding is_good_clique_def 
+    using no_Blue_K that unfolding is_good_clique_def 
     by (metis nat_neq_iff size_clique_def size_clique_smaller)
   define GC where "GC \<equiv> {C. is_good_clique n C}"
   have "GC \<noteq> {}"
@@ -1345,7 +1335,7 @@ proof (rule ccontr)
     using 49 VUU unfolding is_good_clique_def U_def m_def by force
 
   obtain [iff]: "finite RedU" "finite BlueU" "RedU \<subseteq> EU"
-    using BlueU_def EU_def RedU_def E_def V_def Red_E Blue_E fin_edges finite_subset  by blast 
+    using BlueU_def EU_def RedU_def E_def V_def Red_E Blue_E fin_edges finite_subset by blast 
   have card_RedU_le: "card RedU \<le> card EU"
     by (metis EU_def E_def \<open>RedU \<subseteq> EU\<close> card_mono fin_all_edges finite_Int)
   interpret UBB: Book_Basis U "E \<inter> Pow U" p0_min 
@@ -1483,7 +1473,7 @@ proof (rule ccontr)
         show "clique W Blue"
           using 49 is_good_clique_def by blast
         show "all_edges_betw_un {x} W \<subseteq> Blue"
-          using \<open>x\<in>U\<close> by (auto simp: U_def all_edges_betw_un_def insert_commute in_Neighbours_iff )
+          using \<open>x\<in>U\<close> by (auto simp: U_def all_edges_betw_un_def insert_commute in_Neighbours_iff)
       qed (use \<open>W \<subseteq> V\<close> \<open>x \<in> V\<setminus>W\<close> in auto)
     next
       show "insert x W \<subseteq> V"
@@ -1516,7 +1506,7 @@ proof (rule ccontr)
   qed
   then have gd_RedU_ge: "UBB.graph_density RedU \<ge> 1 - \<gamma>' - \<eta>" by force
 
-  \<comment> \<open>Bhavik's gamma'_le_gamma_iff\<close>
+  \<comment>\<open>Bhavik's gamma'_le_gamma_iff\<close>
   have \<gamma>'\<gamma>2: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (real k * real l) + (real l * real l) < (real k * real m) + (real l * (real m * 2))"
     using \<open>m < l\<close>
     apply (simp add: \<gamma>'_def \<gamma>_def eval_nat_numeral divide_simps; simp add: algebra_simps)
@@ -1524,7 +1514,7 @@ proof (rule ccontr)
   also have "\<dots>  \<longleftrightarrow> (l * (k+l)) / (k + 2 * l) < m"
     using \<open>m < l\<close> by (simp add: field_simps)
   finally have \<gamma>'\<gamma>2_iff: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (l * (k+l)) / (k + 2 * l) < m" .
-  \<comment> \<open>in both cases below, we find a blue clique of size @{term"l-m"}\<close>
+  \<comment>\<open>in both cases below, we find a blue clique of size @{term"l-m"}\<close>
   have extend_Blue_clique: "\<exists>K'. size_clique l K' Blue" 
     if "K \<subseteq> U" "size_clique (l-m) K Blue" for K
   proof -
@@ -1636,16 +1626,15 @@ proof (rule ccontr)
         using n2exp_gt prod_gt0 by auto 
       also have "\<dots> \<le> (n/2) * (1+\<xi>) ^ m * PM"
         using expexp less_eq_real_def prod_gt0 by fastforce
-      also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment> \<open>where I was stuck: the "minus m"\<close>
+      also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment>\<open>where I was stuck: the "minus m"\<close>
         using PM_def U_MINUS_M U_lower_bound_ratio_def \<open>m < l\<close> by fastforce
-      finally have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) \<le> real n * U_lower_bound_ratio m - m"
+      finally have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) \<le> n * U_lower_bound_ratio m - m"
         by linarith 
       also have "\<dots> \<le> UBB.nV"
         using cardU by linarith
       finally have "exp (-\<delta>'*k) * (k + (l-m) choose (l-m)) \<le> UBB.nV" .
       then show "exp (- ((l-m) / (k + real (l-m)) / 20) * k) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
-        using \<open>m < l\<close> apply (simp add: \<delta>'_def \<gamma>'_def)
-        by argo
+        using \<open>m < l\<close> by (simp add: \<delta>'_def \<gamma>'_def) argo
     next
       show "1 - real (l-m) / (real k + real (l-m)) - \<eta> \<le> UBB.graph_density RedU"
         using gd_RedU_ge \<open>\<gamma>' \<le> \<gamma>\<close> \<open>m < l\<close> unfolding \<gamma>_def \<gamma>'_def

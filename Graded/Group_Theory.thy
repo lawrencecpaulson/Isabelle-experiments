@@ -489,7 +489,7 @@ locale left_translations_of_monoid = monoid begin
 (*
   We take the liberty of omitting "left_" from the name of the translation operation.  The derived
   transformation monoid and group won't be qualified with "left" either.  This avoids qualifications
-  such as "left.left_...".  In contexts where left and right translations are used simultaneously,
+  such as "left.left_\<dots>".  In contexts where left and right translations are used simultaneously,
   notably subgroup_of_group, qualifiers are needed.
 *)
 
@@ -1293,7 +1293,7 @@ lemma CongruenceD: "(a, b) \<in> Congruence \<Longrightarrow> \<exists>k\<in>K. 
 text \<open>
   ``We showed in the last section that the relation we are considering is an equivalence relation in
   @{term G} for any subgroup @{term K} of @{term G}.  We now proceed to show that normality of @{term K}
-  ensures that [...] $a \equiv b \pmod{K}$ is a congruence.''
+  ensures that [\<dots>] $a \equiv b \pmod{K}$ is a congruence.''
 \<close>
 text \<open>p 55, ll 30--32; p 56, ll 1, 22--28\<close>
 sublocale group_congruence where E = Congruence rewrites "Normal = K"

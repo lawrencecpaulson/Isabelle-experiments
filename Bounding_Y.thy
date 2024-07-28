@@ -837,7 +837,7 @@ proof -
     have "(1 - 2 * eps k powr (1/2) / p0) ^ card st * p0 ^ card st
        = ((1 - 2 * eps k powr (1/2) / p0) * p0) ^ card st"
       by (simp add: power_mult_distrib)
-    also have "... = (p0 - 2 * eps k powr (1/2)) ^ card st"
+    also have "\<dots> = (p0 - 2 * eps k powr (1/2)) ^ card st"
       using p0_01 by (simp add: algebra_simps)
     finally show ?thesis
       using mult_right_mono [OF \<section>, of "p0 ^ card st"] p0_01 by auto 
