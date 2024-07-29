@@ -557,7 +557,7 @@ proof -
       fix i :: nat
       assume i: "i \<in> \<S>\<setminus>\<S>\<S>"
       with i obtain "i-1 \<in> \<D>" "i>0"    
-        using dreg_before_step1 by (fastforce simp: \<S>_def \<D>_def Step_class_insert_NO_MATCH)
+        using dreg_before_step1 dreg_before_gt0 by (fastforce simp: \<S>_def \<D>_def Step_class_insert_NO_MATCH)
       with i show "eps k powr (-1/4) \<le> h(Suc i) - h(i-1)"
         using in_S[of i] Y_6_5_DegreeReg[of "i-1"] by (simp add: \<D>_def h_def)
     qed
@@ -576,7 +576,8 @@ proof -
     fix i :: nat
     assume i: "i \<in> \<R>"
       with i obtain "i-1 \<in> \<D>" "i>0"    
-        using dreg_before_step1 by (fastforce simp: \<R>_def \<D>_def Step_class_insert_NO_MATCH)
+        using dreg_before_step1 dreg_before_gt0 
+          by (fastforce simp: \<R>_def \<D>_def Step_class_insert_NO_MATCH)
     with i have "hgt (pee (i-1)) - 2 \<le> hgt (pee (Suc i))"
       using Y_6_5_Red[of i] 16 Y_6_5_DegreeReg[of "i-1"]
       by (fastforce simp: algebra_simps \<R>_def \<D>_def)
@@ -999,7 +1000,8 @@ proof -
     have *: "hgt (pee i) \<le> hgt (pee (Suc i))"
       using bigR53 Y_6_5_dbooSt that unfolding \<S>_def by blast
     obtain "i-1 \<in> \<D>" "i>0"
-      using that \<open>i\<in>\<S>\<close> dreg_before_step1[of i] by (force simp: \<S>_def \<D>_def Step_class_insert_NO_MATCH)
+      using that \<open>i\<in>\<S>\<close> dreg_before_step1[of i] dreg_before_gt0[of i]
+      by (force simp: \<S>_def \<D>_def Step_class_insert_NO_MATCH)
     then have "hgt (pee (i-1)) \<le> hgt (pee i)"
       using that kn0 by (metis Suc_diff_1 Y_6_5_DegreeReg \<D>_def)
     with * show "0 \<le> h(Suc i) - h(i-1)"
@@ -1015,7 +1017,7 @@ proof -
   proof (rule sum_mono)
     fix i :: nat
     assume i: "i \<in> \<R>\<union>\<S>"
-    with i dreg_before_step1[of i] have D: "i-1 \<in> \<D>" "i>0"     
+    with i dreg_before_step1 dreg_before_gt0 have D: "i-1 \<in> \<D>" "i>0"     
       by (force simp: \<S>_def \<R>_def \<D>_def dreg_before_step Step_class_def)+
     then have *: "hgt (pee (i-1)) \<le> hgt (pee i)"
       by (metis Suc_diff_1 Y_6_5_DegreeReg \<D>_def)
@@ -1234,7 +1236,7 @@ proof -
     fix i
     assume i: "i \<in> \<R> \<union> \<S>"
     then obtain "i-1 \<in> \<D>" "i>0"
-      unfolding \<R>_def \<S>_def \<D>_def by (metis dreg_before_step1 Step_class_insert Un_iff)
+      unfolding \<R>_def \<S>_def \<D>_def by (metis dreg_before_step1 dreg_before_gt0 Step_class_insert Un_iff)
     then have "pee (i-1) \<le> pee i"
       by (metis Suc_pred' Y_6_4_DegreeReg \<D>_def)
     then have "pstar (i-1) \<le> pstar i"
@@ -1326,7 +1328,7 @@ proof -
     then have iRS: "i \<in> \<R> \<union> \<S>" and iC: "i \<in> C"
       by auto
     then obtain i1: "i-1 \<in> \<D>" "i>0"
-      unfolding \<R>_def \<S>_def \<D>_def by (metis Step_class_insert Un_iff dreg_before_step1)
+      unfolding \<R>_def \<S>_def \<D>_def by (metis Step_class_insert Un_iff dreg_before_step1 dreg_before_gt0)
     then have 77: "card (Xseq (i-1) \<setminus> Xseq i) / card (Xseq i) * (eps k powr (-1/2) * alpha (hgt (pee (i-1))))
             \<le> pee i - pee (i-1)"
       by (metis Suc_diff_1 X_7_7 \<D>_def)
@@ -1379,7 +1381,8 @@ proof -
       assume "i \<in> \<R> \<union> \<S>"
         and \<section>: "card (Xseq i) < (1 - 2 * eps k powr (1/4)) * card (Xseq (i-1))" "\<not> pee (i-1) \<le> p0"
       then obtain "i-1 \<in> \<D>" "i>0"
-        unfolding \<D>_def \<R>_def \<S>_def by (metis dreg_before_step1 Step_class_Un Un_iff insert_is_Un)
+        unfolding \<D>_def \<R>_def \<S>_def 
+        by (metis dreg_before_step1 dreg_before_gt0 Step_class_Un Un_iff insert_is_Un)
       with X79 \<section> show "hgt (pee (i - 1)) + eps k powr (-1/4) \<le> hgt (pee i)"
         by (force simp: \<D>_def)
     qed

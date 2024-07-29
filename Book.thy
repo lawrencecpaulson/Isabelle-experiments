@@ -495,14 +495,14 @@ lemma
 lemma A_less_k:
   assumes valid: "valid_state(X,Y,A,B)" 
   shows "card A < k"
-  using assms A_Red_clique[OF valid] no_Red_clique unfolding size_clique_def valid_state_def V_state_def
-  by (smt (verit) card_Ex_subset case_prod_conv order.trans linorder_not_less smaller_clique)
+  using assms A_Red_clique[OF valid] no_Red_clique unfolding valid_state_def V_state_def
+  by (metis nat_neq_iff prod.case size_clique_def size_clique_smaller)
 
 lemma B_less_l:
   assumes valid: "valid_state(X,Y,A,B)"
   shows "card B < l"
-  using assms B_Blue_clique[OF valid] no_Blue_clique unfolding size_clique_def valid_state_def V_state_def
-  by (smt (verit) card_Ex_subset case_prod_conv order.trans linorder_not_less smaller_clique)
+  using assms B_Blue_clique[OF valid] no_Blue_clique unfolding valid_state_def V_state_def
+  by (metis nat_neq_iff prod.case size_clique_def size_clique_smaller)
 
 
 subsection \<open>Degree regularisation\<close>
@@ -914,9 +914,6 @@ qed
 lemma V_state_stepper: "V_state (stepper n)"
   using valid_state_def valid_state_stepper by force
 
-lemma disjoint_state_stepper: "disjoint_state (stepper n)"
-  using valid_state_def valid_state_stepper by force
-
 lemma RB_state_stepper: "RB_state (stepper n)"
   using valid_state_def valid_state_stepper by force
 
@@ -1013,35 +1010,28 @@ lemma Aseq_less_k: "card (Aseq i) < k"
 lemma Aseq_0 [simp]: "Aseq 0 = {}"
   by (simp add: Aseq_def)
 
-lemma Aseq_Suc_subset: "Aseq i \<subseteq> Aseq (Suc i)"
-  by (fastforce simp: Aseq_def next_state_def degree_reg_def Let_def split: prod.split)
+lemma Aseq_Suc_subset: "Aseq i \<subseteq> Aseq (Suc i)" and  Bseq_Suc_subset: "Bseq i \<subseteq> Bseq (Suc i)"
+  by (auto simp: Aseq_def Bseq_def next_state_def degree_reg_def Let_def split: prod.split)
 
-lemma Aseq_mono: "j \<le> i \<Longrightarrow> Aseq j \<subseteq> Aseq i"
-  by (simp add: Aseq_Suc_subset lift_Suc_mono_le[of UNIV])
+lemma
+  assumes "j \<le> i"
+  shows Aseq_mono: "Aseq j \<subseteq> Aseq i" and Bseq_mono: "Bseq j \<subseteq> Bseq i"
+  using assms by (auto simp add: Aseq_Suc_subset Bseq_Suc_subset lift_Suc_mono_le[of UNIV])
 
 lemma Aseq_subset_V: "Aseq i \<subseteq> V"
   using stepper_A[of i] by (simp add: Aseq_def split: prod.split) 
 
-lemma finite_Aseq: "finite (Aseq i)"
-  by (meson Aseq_subset_V finV finite_subset)
+lemma Bseq_subset_V: "Bseq i \<subseteq> V"
+  using stepper_B[of i] by (simp add: Bseq_def split: prod.split) 
+
+lemma finite_Aseq: "finite (Aseq i)" and finite_Bseq: "finite (Bseq i)"
+  by (meson Aseq_subset_V Bseq_subset_V finV finite_subset)+
 
 lemma Bseq_less_l: "card (Bseq i) < l"
   by (meson B_less_l valid_state_seq)
 
 lemma Bseq_0 [simp]: "Bseq 0 = {}"
   by (simp add: Bseq_def)
-
-lemma Bseq_Suc_subset: "Bseq i \<subseteq> Bseq (Suc i)"
-  by (fastforce simp: Bseq_def next_state_def degree_reg_def Let_def split: prod.split)
-
-lemma Bseq_mono: "j \<le> i \<Longrightarrow> Bseq j \<subseteq> Bseq i"
-  by (simp add: Bseq_Suc_subset lift_Suc_mono_le[of UNIV])
-
-lemma Bseq_subset_V: "Bseq i \<subseteq> V"
-  using stepper_B[of i] by (simp add: Bseq_def split: prod.split) 
-
-lemma finite_Bseq: "finite (Bseq i)"
-  by (meson Bseq_subset_V finV finite_subset)
 
 lemma pee_eq_p0: "pee 0 = p0"
   by (simp add: pee_def p0_def)
@@ -1150,9 +1140,6 @@ lemma Yseq_gt0:
   using not_halted_pee_gt [OF assms] 
   by (auto simp: pee_def gen_density_def divide_simps mult_less_0_iff zero_less_mult_iff split: if_split_asm)
 
-lemma dreg_step_0: "\<not> termination_condition X0 Y0 \<Longrightarrow> 0 \<in> Step_class {dreg_step}"
-  by (auto simp: Step_class_def stepper_kind_def)
-
 lemma step_odd: "i \<in> Step_class {red_step,bblue_step,dboost_step} \<Longrightarrow> odd i" 
   by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
 
@@ -1180,9 +1167,10 @@ lemma dreg_before_step:
   shows "i \<in> Step_class {dreg_step}"
   using assms by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
 
-lemma dreg_before_step':
+lemma 
   assumes "i \<in> Step_class {red_step,bblue_step,dboost_step}" 
-  shows "i - Suc 0 \<in> Step_class {dreg_step}" and "i>0"
+  shows dreg_before_step': "i - Suc 0 \<in> Step_class {dreg_step}" 
+    and dreg_before_gt0: "i>0"
 proof -
   show "i>0"
     using assms gr0I step_odd by force
@@ -1192,37 +1180,13 @@ qed
 
 lemma dreg_before_step1:
   assumes "i \<in> Step_class {red_step,bblue_step,dboost_step}" 
-  shows "i-1 \<in> Step_class {dreg_step}" "i > 0"
+  shows "i-1 \<in> Step_class {dreg_step}" 
   using dreg_before_step' [OF assms] by auto
 
 lemma step_odd_minus2: 
   assumes "i \<in> Step_class {red_step,bblue_step,dboost_step}" "i>1"
-  shows "i-2 \<in> Step_class {red_step,bblue_step,dboost_step}" 
-proof -
-  have "odd (i-2)"
-    using assms step_odd by auto
-  then have "i-2 \<notin> Step_class {dreg_step}"
-    using step_even by blast
-  moreover have "i \<notin> Step_class {halted}"
-    using assms by (auto simp: Step_class_def)
-  then have "i-2 \<notin> Step_class {halted}"
-    using Step_class_not_halted diff_le_self by blast
-  ultimately show ?thesis
-    using stepkind.exhaust by (auto simp: Step_class_def)
-qed
-
-lemma finite_Step_class:
-  assumes "\<And>n. finite {m. m<n \<and> stepper_kind m = knd}"
-  assumes "\<And>n. card {m. m<n \<and> stepper_kind m = knd} < N"
-  shows "finite (Step_class {knd})"
-proof -
-  have "incseq (\<lambda>n. {m. m<n \<and> stepper_kind m = knd})"
-    by (auto simp: incseq_def)
-  moreover have "(\<Union>n. {m. m<n \<and> stepper_kind m = knd}) = (Step_class {knd})"
-    by (auto simp: Step_class_def)
-  ultimately show ?thesis
-    by (smt (verit) eventually_sequentially order.refl Union_incseq_finite assms)
-qed
+  shows "i-2 \<in> Step_class {red_step,bblue_step,dboost_step}"
+  by (metis Suc_1 Suc_diff_Suc assms dreg_before_step1 step_before_dreg) 
 
 lemma Step_class_iterates:
   assumes "finite (Step_class {knd})"
@@ -1394,10 +1358,8 @@ proof -
     using step_even by blast
   moreover have "i \<notin> Step_class {red_step,bblue_step,dboost_step}"
     unfolding i_def using step_bound le_add2 not_less_eq_eq by blast
-  ultimately have "i \<in> Step_class {halted}"
+  ultimately show ?thesis
     using \<open>odd i\<close> not_halted_odd_RBS by blast
-  then show ?thesis
-    by blast
 qed
 
 definition "halted_point \<equiv> Inf (Step_class {halted})"
@@ -1454,11 +1416,6 @@ lemma halted_stepper_eq:
   assumes i: "i \<ge> halted_point"
   shows "stepper i = stepper (halted_point)"
   using \<mu>01 by (metis assms halted_stepper_add_eq le_iff_add)
-
-lemma below_halted_point_nontermination:
-  assumes "i < halted_point"
-  shows  "\<not> termination_condition (Xseq i) (Yseq i)"
-  using \<mu>01 by (simp add: assms halted_point_minimal not_termination_condition)
 
 lemma below_halted_point_cardX:
   assumes "i < halted_point"
