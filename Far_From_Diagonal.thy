@@ -1587,10 +1587,10 @@ proof (rule ccontr)
     define \<delta>' where "\<delta>' \<equiv> \<gamma>'/20"
     have no_RedU_K: "\<not> (\<exists>K. UBB.size_clique k K RedU)"
       unfolding UBB.size_clique_def RedU_def
-      by (metis Int_subset_iff  VUU all_edges_subset_iff_clique no_Red_K size_clique_def)
+      by (metis Int_subset_iff VUU all_edges_subset_iff_clique no_Red_K size_clique_def)
     have "(\<exists>K. UBB.size_clique k K RedU) \<or> (\<exists>K. UBB.size_clique (l-m) K BlueU)"
     proof (rule ccontr)
-      assume neg: "\<not> ((\<exists>K. UBB.size_clique k K RedU) \<or> (\<exists>K. UBB.size_clique (l - m) K BlueU))"
+      assume neg: "\<not> ((\<exists>K. UBB.size_clique k K RedU) \<or> (\<exists>K. UBB.size_clique (l-m) K BlueU))"
       interpret UBB_NC: No_Cliques U "E \<inter> Pow U" p0_min RedU BlueU "l-m" k
       proof
         show "BlueU = E \<inter> Pow U \<setminus> RedU"

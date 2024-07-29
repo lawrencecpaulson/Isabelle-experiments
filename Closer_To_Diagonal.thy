@@ -199,33 +199,24 @@ proof -
     using Far_9_2_conclusion by (simp flip: \<R>_def t_def)
 qed
 
+subsection \<open>Material that needs to be proved OUTSIDE the book locales\<close>
 
-text \<open>Needs to be proved OUTSIDE THE BOOK LOCALES\<close>
-lemma (in Book_Basis) Closer_10_2:
-  fixes Red Blue :: "'a set set"
-  fixes l k
+lemma (in No_Cliques) Closer_10_2:
   fixes \<gamma>::real
   defines "\<gamma> \<equiv> l / (real k + real l)"
-  assumes complete: "E = all_edges V"
-  assumes Red_E: "Red \<subseteq> E"
-  assumes Blue_def: "Blue = E-Red"
-  assumes infinite_UNIV: "infinite (UNIV::'a set)"
-  assumes nV: "real nV \<ge> exp (-k/200) * (k+l choose l)" 
+  assumes nV: "real nV \<ge> exp (- real k/200) * (k+l choose l)" 
   assumes gd: "graph_density Red \<ge> 1-\<gamma>" 
     and p0_min_OK: "p0_min \<le> 1-\<gamma>"  
   assumes big: "Big_Closer_10_2 \<gamma> l" and "l\<le>k"
   assumes \<gamma>: "1/10 \<le> \<gamma>" "\<gamma> \<le> 1/5"
-  shows "(\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue)"
-proof (rule ccontr)
-  assume neg: "\<not> ((\<exists>K. size_clique k K Red) \<or> (\<exists>K. size_clique l K Blue))"
-  interpret No_Cliques
-    using assms neg by (metis Book_Basis_axioms No_Cliques_axioms_def No_Cliques_def P0_min_axioms) 
+  shows False
+proof -
   obtain X0 Y0 where "l\<ge>2" and card_X0: "card X0 \<ge> nV/2" 
     and card_Y0: "card Y0 = gorder div 2" 
     and X0_def: "X0 = V \<setminus> Y0" and "Y0\<subseteq>V" 
     and gd_le: "graph_density Red \<le> gen_density Red X0 Y0"
     and "Book' V E p0_min Red Blue l k \<gamma> X0 Y0"
-    by (smt (verit, ccfv_SIG) Basis_imp_Book' assms p0_min neg ln0)
+    by (smt (verit, ccfv_SIG) Basis_imp_Book' assms p0_min p0_min no_Red_clique no_Blue_clique ln0)
   then interpret Book' V E p0_min Red Blue l k \<gamma> X0 Y0
     by blast 
   show False
@@ -703,75 +694,77 @@ proof (rule ccontr)
           using 1 clique_cases by blast
       qed
       then have *: "UBB.graph_density BlueU \<le> \<gamma>'" by force
-      have "(\<exists>K. UBB.size_clique k K RedU) \<or> (\<exists>K. UBB.size_clique (l-m) K BlueU)"
-      proof (intro UBB.Closer_10_2)
-        show "E \<inter> Pow U = all_edges U"
-          by (simp add: UBB.complete)
-        show "RedU \<subseteq> E \<inter> Pow U"
-          using EU_def \<open>RedU \<subseteq> EU\<close> by auto
-        show "BlueU = E \<inter> Pow U \<setminus> RedU"
-          using BlueU_eq EU_def by fastforce
-      next
-        have "\<delta> \<le> 1/200"
-          using \<gamma> by (simp add: \<delta>_def field_simps)
-        then have "exp (\<delta> * real k) \<le> exp (real k/200)"
-          using \<open>0 < k\<close> by auto
-        then have expexp: "exp (\<delta>*k) * exp (- real k/200) \<le> 1"
-          by (metis divide_minus_left exp_ge_zero exp_minus_inverse mult_right_mono)
-        have "exp (- real k/200) * (k + (l-m) choose (l-m)) = exp (- real k/200) * U_lower_bound_ratio m * (k+l choose l)"
-          using \<open>m < l\<close> kl_choose by force
-        also have "\<dots> < (n/2) * exp (\<delta>*k) * exp (- real k/200) * U_lower_bound_ratio m"
-          using n2exp_gt prod_gt0 by auto 
-        also have "\<dots> \<le> (n/2) * U_lower_bound_ratio m"
-          using mult_left_mono [OF expexp, of "(n/2) * U_lower_bound_ratio m"] prod_gt0 by (simp add: mult_ac)
-        also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment>\<open>formerly stuck here, due to the "minus @{term m}"\<close>
-          using U_MINUS_M \<open>m < l\<close> by auto
-        finally have "exp (- real k/200) * (k + (l-m) choose (l-m)) \<le> real n * U_lower_bound_ratio m - m"
-          by linarith 
-        also have "\<dots> \<le> UBB.nV"
-          using cardU by linarith
-        finally show "exp (- real k / 200) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
-          using \<open>m < l\<close> by (simp add: \<gamma>'_def)
-      next
-        have "1 - \<gamma>' \<le> UBB.graph_density RedU"
-          using * card_EU \<open>card EU > 0\<close> 
-          by (simp add: UBB.graph_density_def BlueU_eq field_split_simps split: if_split_asm)
-        then show "1 - real (l-m) / (real k + real (l-m)) \<le> UBB.graph_density RedU"
-          unfolding \<gamma>'_def using \<open>m<l\<close> by (smt (verit, ccfv_threshold) less_imp_le_nat of_nat_add of_nat_diff) 
-      next
-        show "p0_min \<le> 1 - real (l-m) / (real k + real (l-m))"
-          using p0_min_101 \<open>\<gamma>'\<le>\<gamma>\<close> \<open>m < l\<close> \<gamma>
-          by (smt (verit, del_insts) of_nat_add \<gamma>'_def less_imp_le_nat of_nat_diff) 
-      next
-        have Big_10_2I: "\<And>l' \<mu>. \<lbrakk>nat \<lfloor>2/5 * l\<rfloor> \<le> l'; 1/10 \<le> \<mu>; \<mu> \<le> 1 / 5\<rbrakk> \<Longrightarrow> Big_Closer_10_2 \<mu> l'"
-          using big by (meson Big101d_def Big_Closer_10_1_def order.refl)
-        have "m \<le> real l * (1 - (10/11)*\<gamma>)" 
-          using \<open>m<l\<close> \<open>\<gamma>>1/10\<close> \<open>\<gamma>'\<ge>1/10\<close> \<gamma> 
-          apply (simp add: \<gamma>_def \<gamma>'_def field_simps)
-          by (smt (verit, ccfv_SIG) mult.commute mult_left_mono distrib_left)
-        then have "real l - real m \<ge> (10/11) * \<gamma> * l"
-          by (simp add: algebra_simps)
-        moreover
-        have "1/10 \<le> \<gamma>' \<and> \<gamma>' \<le> 1/5"
-          using mult_mono [OF \<gamma> \<gamma>] \<open>\<gamma>'\<ge>1/10\<close> \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> by (auto simp: power2_eq_square)
-        ultimately        
-        have "Big_Closer_10_2 \<gamma>' (l-m)"
-          using lm_ge_25 by (intro Big_10_2I) auto
-        then show "Big_Closer_10_2 ((l-m) / (real k + real (l-m))) (l-m)"
-          by (simp add: \<gamma>'_def \<open>m < l\<close> add_diff_eq less_or_eq_imp_le)
-      next
-        show "l-m \<le> k"
-          using \<open>l \<le> k\<close> by auto
-        show "(l-m) / (real k + real (l-m)) \<le> 1/5"
-          using \<gamma> \<gamma>_def \<open>m < l\<close> by fastforce
-        show "1/10 \<le> (l-m) / (real k + real (l-m))"
-          using \<gamma>'_def \<open>1/10 \<le> \<gamma>'\<close> \<open>m < l\<close> by auto
-      qed auto
-      moreover have "\<not> (\<exists>K. UBB.size_clique k K RedU)"
+      have no_RedU_K: "\<not> (\<exists>K. UBB.size_clique k K RedU)"
         unfolding UBB.size_clique_def RedU_def
         by (metis Int_subset_iff VUU all_edges_subset_iff_clique no_Red_K size_clique_def)
-      ultimately obtain K where "K \<subseteq> U" "UBB.size_clique (l-m) K BlueU"
-        by (meson UBB.size_clique_def)
+      have "(\<exists>K. UBB.size_clique k K RedU) \<or> (\<exists>K. UBB.size_clique (l-m) K BlueU)"
+      proof (rule ccontr)
+        assume neg: "\<not> ((\<exists>K. UBB.size_clique k K RedU) \<or> (\<exists>K. UBB.size_clique (l-m) K BlueU))"
+        interpret UBB_NC: No_Cliques U "E \<inter> Pow U" p0_min RedU BlueU "l-m" k
+        proof
+          show "BlueU = E \<inter> Pow U \<setminus> RedU"
+            using BlueU_eq EU_def by fastforce
+        qed (use neg EU_def \<open>RedU \<subseteq> EU\<close> no_RedU_K \<open>l\<le>k\<close> in auto)
+        show False
+        proof (intro UBB_NC.Closer_10_2)
+          have "\<delta> \<le> 1/200"
+            using \<gamma> by (simp add: \<delta>_def field_simps)
+          then have "exp (\<delta> * real k) \<le> exp (real k/200)"
+            using \<open>0 < k\<close> by auto
+          then have expexp: "exp (\<delta>*k) * exp (- real k/200) \<le> 1"
+            by (metis divide_minus_left exp_ge_zero exp_minus_inverse mult_right_mono)
+          have "exp (- real k/200) * (k + (l-m) choose (l-m)) = exp (- real k/200) * U_lower_bound_ratio m * (k+l choose l)"
+            using \<open>m < l\<close> kl_choose by force
+          also have "\<dots> < (n/2) * exp (\<delta>*k) * exp (- real k/200) * U_lower_bound_ratio m"
+            using n2exp_gt prod_gt0 by auto 
+          also have "\<dots> \<le> (n/2) * U_lower_bound_ratio m"
+            using mult_left_mono [OF expexp, of "(n/2) * U_lower_bound_ratio m"] prod_gt0 by (simp add: mult_ac)
+          also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment>\<open>formerly stuck here, due to the "minus @{term m}"\<close>
+            using U_MINUS_M \<open>m < l\<close> by auto
+          finally have "exp (- real k/200) * (k + (l-m) choose (l-m)) \<le> real n * U_lower_bound_ratio m - m"
+            by linarith 
+          also have "\<dots> \<le> UBB.nV"
+            using cardU by linarith
+          finally show "exp (- real k / 200) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
+            using \<open>m < l\<close> by (simp add: \<gamma>'_def)
+        next
+          have "1 - \<gamma>' \<le> UBB.graph_density RedU"
+            using * card_EU \<open>card EU > 0\<close> 
+            by (simp add: UBB.graph_density_def BlueU_eq field_split_simps split: if_split_asm)
+          then show "1 - real (l-m) / (real k + real (l-m)) \<le> UBB.graph_density RedU"
+            unfolding \<gamma>'_def using \<open>m<l\<close> by (smt (verit, ccfv_threshold) less_imp_le_nat of_nat_add of_nat_diff) 
+        next
+          show "p0_min \<le> 1 - real (l-m) / (real k + real (l-m))"
+            using p0_min_101 \<open>\<gamma>'\<le>\<gamma>\<close> \<open>m < l\<close> \<gamma>
+            by (smt (verit, del_insts) of_nat_add \<gamma>'_def less_imp_le_nat of_nat_diff) 
+        next
+          have Big_10_2I: "\<And>l' \<mu>. \<lbrakk>nat \<lfloor>2/5 * l\<rfloor> \<le> l'; 1/10 \<le> \<mu>; \<mu> \<le> 1 / 5\<rbrakk> \<Longrightarrow> Big_Closer_10_2 \<mu> l'"
+            using big by (meson Big101d_def Big_Closer_10_1_def order.refl)
+          have "m \<le> real l * (1 - (10/11)*\<gamma>)" 
+            using \<open>m<l\<close> \<open>\<gamma>>1/10\<close> \<open>\<gamma>'\<ge>1/10\<close> \<gamma> 
+            apply (simp add: \<gamma>_def \<gamma>'_def field_simps)
+            by (smt (verit, ccfv_SIG) mult.commute mult_left_mono distrib_left)
+          then have "real l - real m \<ge> (10/11) * \<gamma> * l"
+            by (simp add: algebra_simps)
+          moreover
+          have "1/10 \<le> \<gamma>' \<and> \<gamma>' \<le> 1/5"
+            using mult_mono [OF \<gamma> \<gamma>] \<open>\<gamma>'\<ge>1/10\<close> \<open>\<gamma>' \<le> \<gamma>\<close> \<gamma> by (auto simp: power2_eq_square)
+          ultimately        
+          have "Big_Closer_10_2 \<gamma>' (l-m)"
+            using lm_ge_25 by (intro Big_10_2I) auto
+          then show "Big_Closer_10_2 ((l-m) / (real k + real (l-m))) (l-m)"
+            by (simp add: \<gamma>'_def \<open>m < l\<close> add_diff_eq less_or_eq_imp_le)
+        next
+          show "l-m \<le> k"
+            using \<open>l \<le> k\<close> by auto
+          show "(l-m) / (real k + real (l-m)) \<le> 1/5"
+            using \<gamma> \<gamma>_def \<open>m < l\<close> by fastforce
+          show "1/10 \<le> (l-m) / (real k + real (l-m))"
+            using \<gamma>'_def \<open>1/10 \<le> \<gamma>'\<close> \<open>m < l\<close> by auto
+        qed 
+      qed
+      with no_RedU_K UBB.size_clique_def obtain K where "K \<subseteq> U" "UBB.size_clique (l-m) K BlueU"
+        by meson 
       then show False
         using no_Blue_K extend_Blue_clique VUU
         unfolding UBB.size_clique_def size_clique_def BlueU_def
@@ -790,10 +783,10 @@ proof (rule ccontr)
           also have "\<dots> \<le> 1/10 - 1/k"
             using \<open>k\<ge>36\<close> by (intro diff_mono divide_right_mono) auto
           finally have 7: "\<gamma>' \<ge> 0.07" using 110 by linarith
-          with \<open>m<l\<close> show "\<gamma>0 \<le> real (l - m) / (real k + real (l - m))"
+          with \<open>m<l\<close> show "\<gamma>0 \<le> real (l-m) / (real k + real (l-m))"
             by (simp add: \<gamma>0_def min_le_iff_disj \<gamma>'_def algebra_simps)
         next
-          show "real (l - m) / (real k + real (l - m)) \<le> 1/10"
+          show "real (l-m) / (real k + real (l-m)) \<le> 1/10"
             using 2 \<open>m<l\<close> by (simp add: \<gamma>'_def)
         qed 
       next
