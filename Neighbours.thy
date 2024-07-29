@@ -291,6 +291,9 @@ next
   finally show ?case .
 qed
 
+lemma sum_eq_card: "finite A \<Longrightarrow> (\<Sum>x \<in> A. if x \<in> B then 1 else 0) = card (A\<inter>B)"
+  by (metis (no_types, lifting) card_eq_sum sum.cong sum.inter_restrict)
+
 lemma sum_eq_card_Neighbours:
   assumes "x \<in> V" "C \<subseteq> E"
   shows "(\<Sum>y \<in> V\<setminus>{x}. if {x,y} \<in> C then 1 else 0) = card (Neighbours C x)"

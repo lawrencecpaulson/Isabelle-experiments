@@ -11,11 +11,11 @@ context linordered_field
 begin
 
 (*REPLACE*)
-lemma divide_left_mono:
+lemma divide_left_mono:(*migrated 2024-07-29*)
   "\<lbrakk>b \<le> a; 0 \<le> c; 0 < b\<rbrakk> \<Longrightarrow> c / a \<le> c / b"
   by (auto simp: field_simps zero_less_mult_iff mult_right_mono)
 
-lemma divide_mono:
+lemma divide_mono:(*migrated 2024-07-29*)
   "\<lbrakk>b \<le> a; c \<le> d; 0 < b; 0 \<le> c\<rbrakk> \<Longrightarrow> c / a \<le> d / b"
   by (simp add: local.frac_le)
 
@@ -46,12 +46,6 @@ axiomatization(*NOT TO IMPORT*)
 
 lemma log0 [simp]: "log b 0 = 0"(*NOT TO IMPORT*)
   by (simp add: log_def)
-
-thm log_exp (*RENAME EXISTING LOG_EXP TO log_power*)
-thm log_def
-lemma log_exp [simp]: "log b (exp x) = x / ln b"
-  by (simp add: log_def)
-
 
 thm of_nat_le_iff
 context linordered_nonzero_semiring
@@ -160,19 +154,24 @@ end
     by linarith
 
 
-lemma exp_minus': "exp (-x) = 1 / (exp x)"
-  for x :: "'a::{real_normed_field,banach}"
-  by (simp add: exp_minus inverse_eq_divide)
+thm log_exp (*RENAME EXISTING LOG_EXP TO log_power*)
+thm log_def
+    lemma log_exp [simp]: "log b (exp x) = x / ln b"(*migrated 2024-07-29*)
+      by (simp add: log_def)
 
-lemma gchoose_ge0: "\<And>r::real. r \<in> Nats \<Longrightarrow> r gchoose k \<ge> 0"
-  by (metis Nats_cases binomial_gbinomial of_nat_0_le_iff)
 
-lemma ln_strict_mono: "\<And>x::real. \<lbrakk>x < y; 0 < x; 0 < y\<rbrakk> \<Longrightarrow> ln x < ln y"
+  lemma exp_mono:
+    fixes x y :: real
+    assumes "x \<le> y"
+    shows "exp x \<le> exp y"
+    using assms exp_le_cancel_iff by force
+  
+  lemma exp_minus': "exp (-x) = 1 / (exp x)"
+    for x :: "'a::{real_normed_field,banach}"
+    by (simp add: exp_minus inverse_eq_divide)
+
+  lemma ln_strict_mono:(*migrated 2024-07-29*) "\<And>x::real. \<lbrakk>x < y; 0 < x; 0 < y\<rbrakk> \<Longrightarrow> ln x < ln y"
   using ln_less_cancel_iff by blast
-
-lemma zero_le_log_I: "1 < a \<Longrightarrow> 1 \<le> x \<Longrightarrow> 0 \<le> log a x"
-  using log_le_cancel_iff[of a 1 x] by simp
-
 
 thm sum_in_smallo
 lemma maxmin_in_smallo:
@@ -194,11 +193,9 @@ qed
 (*migrated 2024-06?*)
 declare eventually_frequently_const_simps [simp] of_nat_diff [simp]
 
+(*migrated 2024-07-29*)
 lemma mult_ge1_I: "\<lbrakk>x\<ge>1; y\<ge>1\<rbrakk> \<Longrightarrow> x*y \<ge> (1::real)"
   by (smt (verit, best) mult_less_cancel_right2)
-
-lemma sum_eq_card: "finite A \<Longrightarrow> (\<Sum>x \<in> A. if x \<in> B then 1 else 0) = card (A\<inter>B)"
-  by (metis (no_types, lifting) card_eq_sum sum.cong sum.inter_restrict)
 
 thm lift_Suc_mono_le (*Generalising those in Nat*) (*migrated 2024-07-23*)
 context order
@@ -281,17 +278,6 @@ lemma eventually_all_geI1:
   shows "\<forall>\<^sub>F l in sequentially. \<forall>x. a \<le> x \<and> x \<le> b \<longrightarrow> P x l"
   by (smt (verit, del_insts) assms eventually_sequentially eventually_elim2)
 
-lemma of_nat_add_numeral: "of_nat n + numeral w = of_nat (n + numeral w)"
-  by simp
-
-lemma of_nat_mult_numeral: "of_nat n * numeral w = of_nat (n * numeral w)"
-  by simp
-
-(*ADD TO GROUPS_BIG?*)
-lemma (in linordered_semidom) prod_negD: "prod f A < 0 \<Longrightarrow> \<exists>a\<in>A. f a < 0"
-  using prod_nonneg [of A f] by fastforce
-
-
     lemma prod_divide_nat_ivl: (*migrated 2024-07-23*)
       fixes f :: "nat \<Rightarrow> 'a::idom_divide"
       shows "\<lbrakk> m \<le> n; n \<le> p; prod f {m..<n} \<noteq> 0\<rbrakk> \<Longrightarrow> prod f {m..<p} div prod f {m..<n} = prod f {n..<p}"
@@ -316,12 +302,6 @@ lemma (in linordered_semidom) prod_negD: "prod f A < 0 \<Longrightarrow> \<exist
         by (force simp: atLeast0AtMost atLeast0LessThan atLeastLessThanSuc_atLeastAtMost)
       finally show ?thesis by metis
     qed
-
-lemma exp_mono:
-  fixes x y :: real
-  assumes "x \<le> y"
-  shows "exp x \<le> exp y"
-  using assms exp_le_cancel_iff by force
 
 
 text \<open>yet another telescope variant, with weaker promises but a different conclusion\<close>
