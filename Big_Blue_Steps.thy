@@ -377,7 +377,7 @@ proof -
   have "m/2 * (2 + real k * (1-\<mu>)) \<le> m/2 * (2 + real k)"
     using assms \<mu>01 by (simp add: algebra_simps)
   also have "\<dots> \<le> (k - 1) * (m - 1)"
-    using big l_le_k 6 \<open>m\<le>k\<close> by (simp add: Big_Blue_4_1_def algebra_simps km)
+    using big l_le_k 6 \<open>m\<le>k\<close> by (simp add: Big_Blue_4_1_def algebra_simps add_divide_distrib km)
   finally  have "(m/2) * (2 + k * (1-\<mu>)) \<le> RN k m"
     using RN_times_lower' [of k m] by linarith
   then have "\<mu> - 2/k \<le> (\<mu> * card X - card U) / (card X - card U)"
@@ -399,7 +399,7 @@ proof -
     then have "2*b / m + 2/l \<le> 2 * (l powr (1/4) + 1) / l powr (2/3) + 2/l"
       by (simp add: m_def m_of_def frac_le ln0 del: zero_le_ceiling distrib_left_numeral)
     also have "\<dots> \<le> (2 * l powr (1/4) + 4) / l powr (2/3)"
-      using ln0 lpowr23 by (simp add: pos_le_divide_eq pos_divide_le_eq algebra_simps)
+      using ln0 lpowr23 by (simp add: pos_le_divide_eq pos_divide_le_eq add_divide_distrib algebra_simps)
     also have "\<dots> \<le> (2 * l powr (1/4) + 4 * l powr (1/4)) / l powr (2/3)"
       using big by (simp add: Big_Blue_4_1_def divide_right_mono ge_one_powr_ge_zero)
     also have "\<dots> = 6 / l powr (5/12)"

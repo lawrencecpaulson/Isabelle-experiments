@@ -86,7 +86,7 @@ next
     using Transcendental.log_mono [OF _ _ \<section>]
     by (simp add: p01 assms log_mult log_nat_power)
   then show ?thesis
-    using p01 False assms unfolding H_def by (simp add: field_simps)
+    using p01 False assms unfolding H_def by (simp add: divide_simps)
 qed 
 
 definition "gg \<equiv> GG (2/5)"
@@ -245,7 +245,7 @@ proof -
   have A: "l / real(k+l) = (1-x)/(2-x)"
     using x \<open>k>0\<close> by (simp add: l field_simps)
   have B: "real(k+l) / k = 2-x"
-    using \<open>0 < k\<close> l by auto
+    using \<open>0 < k\<close> l by (auto simp: divide_simps left_diff_distrib)
   have \<gamma>: "\<gamma> \<le> 1/5" 
     using x A by (simp add: \<gamma>_def)
   have "1 - 1 / (2-x) = (1-x) / (2-x)"
@@ -330,7 +330,7 @@ proof -
   define x where "x \<equiv> t/k"
   define y where "y \<equiv> s/k"
   have sts: "(s + real t) / s = (x+y) / y"
-    using \<open>k>0\<close> by (simp add: x_def y_def field_simps)
+    using \<open>k>0\<close> by (simp add: x_def y_def divide_simps)
   have "t<k"
     by (simp add: \<R>_def \<mu> t_def red_step_limit)
   then obtain x01: "0\<le>x" "x<1"
@@ -719,7 +719,7 @@ lemma x_of: "x_of \<in> {0..3/4} \<rightarrow> {1/2..1}"
 definition "y_of \<equiv> \<lambda>x::real. 5 * x/3 - 0.909"
 
 lemma y_of_x_of [simp]: "y_of (x_of y) = y"
-  by (simp add: x_of_def y_of_def)
+  by (simp add: x_of_def y_of_def add_divide_distrib)
 
 lemma x_of_y_of [simp]: "x_of (y_of x) = x"
   by (simp add: x_of_def y_of_def divide_simps)

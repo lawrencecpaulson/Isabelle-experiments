@@ -561,8 +561,7 @@ proof -
   then have "((\<gamma>-\<delta>) * k - ok_fun_93h \<gamma> k) / (\<gamma> * c \<gamma>) \<le> t"
     using \<gamma>01 cgt0 by (simp add: pos_divide_le_eq)
   then have *: "t \<ge> (1-\<delta> / \<gamma>) * inverse (c \<gamma>) * k - ok_fun_93h \<gamma> k / (\<gamma> * c \<gamma>)"  
-    using \<gamma>01 cgt0[of \<gamma>] by (simp add: field_simps)
-
+    using \<gamma>01 cgt0[of \<gamma>] by (simp add: divide_simps)
   define f47 where "f47 \<equiv> \<lambda>x. (1 - 1/(200*x)) * inverse (c x)"
   have "concave_on {1/10..1/5} f47"
     unfolding f47_def

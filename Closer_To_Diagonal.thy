@@ -564,7 +564,7 @@ proof (rule ccontr)
       also have "\<dots> \<le> (10 + (10 * nat\<lfloor>k/10\<rfloor>) / k) ^ nat\<lfloor>k/10\<rfloor> * exp (-real k/200)"
         using \<dagger> by (auto simp: powr_def simp flip: powr_realpow)
       also have "\<dots> \<le> ((k + nat\<lfloor>k/10\<rfloor>) / (k/10)) ^ nat\<lfloor>k/10\<rfloor> * exp (-real k/200)"
-        using \<open>k>0\<close> by (auto simp: mult.commute)
+        using \<open>k>0\<close> by (simp add: mult.commute add_divide_distrib)
       also have "\<dots> \<le> ((k + nat\<lfloor>k/10\<rfloor>) / nat\<lfloor>k/10\<rfloor>) ^ nat\<lfloor>k/10\<rfloor> * exp (-real k/200)"
       proof (intro mult_mono power_mono divide_left_mono)
         show "nat\<lfloor>k/10\<rfloor> \<le> k/10"

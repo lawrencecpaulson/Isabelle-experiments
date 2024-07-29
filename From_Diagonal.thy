@@ -151,7 +151,7 @@ proof -
     proof (cases "s>0")
       case True
       with \<open>s>0\<close> have \<mu>eq: "ratio \<mu> s t = \<mu> * (1 + t/s)"
-        by (auto simp: distrib_left)
+        by (auto simp: distrib_left add_divide_distrib)
       show ?thesis 
       proof (cases "log 2 (ratio \<mu> s t) \<le> 0")
         case True

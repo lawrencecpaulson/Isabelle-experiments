@@ -373,7 +373,7 @@ proof (cases "finite X \<and> finite Y")
     unfolding edge_card_def
     by (metis Diff_Int_distrib2 Diff_disjoint card_Un_disjoint card_Un_le finite_Int finite_all_edges_betw_un)
   with True show ?thesis
-    apply (simp add: gen_density_def field_split_simps)
+    apply (simp add: gen_density_def divide_simps)
     by (smt (verit) all_edges_betw_un_le of_nat_add of_nat_mono of_nat_mult)
 qed (auto simp: gen_density_def)
 
@@ -704,9 +704,8 @@ next
         (real (gorder choose k) - (real (gorder - 2 choose (k - 2)) + real (gorder - 2 choose k))) *
         real (gorder choose 2)"
     using assms K arg_cong [OF F, of "\<lambda>u. real gorder * real u"] arg_cong [OF choose_m1, of real]
-    unfolding of_nat_mult of_nat_add
-    apply (simp add: algebra_simps of_nat_diff choose_two_real)
-    by (smt (verit, ccfv_threshold) mult.left_commute distrib_left)
+    apply (simp add: choose_two_real ring_distribs)
+    by (smt (verit) distrib_right mult.assoc mult_2_right mult_of_nat_commute)
   have eq: "(\<Sum>U\<in>[V]\<^bsup>k\<^esup>. real (edge_card C (V\<setminus>U) (V\<setminus>U))) 
           = (\<Sum>U\<in>[V]\<^bsup>(gorder-k)\<^esup>. real (edge_card C U U))"
     using K finV by (subst sum_nsets_Compl, simp_all)

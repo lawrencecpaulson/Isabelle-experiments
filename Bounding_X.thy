@@ -868,14 +868,22 @@ lemma one_plus_powr_le:
   fixes p::real
   assumes "0\<le>p" "p\<le>1" "x\<ge>0"  
   shows "(1+x) powr p - 1 \<le> x*p"
-proof (rule gen_upper_bound_increasing [OF \<open>x\<ge>0\<close>])
-  fix y::real
-  assume y: "0 \<le> y" "y \<le> x"
-  show "((\<lambda>x. x * p - ((1 + x) powr p - 1)) has_real_derivative p - (1+y)powr (p-1) * p) (at y)"
-    using assms y by (intro derivative_eq_intros | simp)+
-  show "p - (1+y)powr (p-1) * p \<ge> 0"
-    using y assms less_eq_real_def powr_less_one by fastforce
-qed auto
+proof -
+  define f where "f \<equiv> \<lambda>x. x*p - ((1+x) powr p - 1)"
+  have "0 \<le> f 0"
+    by (simp add: f_def)
+  also have "\<dots> \<le> f x"
+  proof (intro DERIV_nonneg_imp_nondecreasing[of concl: f] exI conjI assms)
+    fix y::real
+    assume y: "0 \<le> y" "y \<le> x"
+    show "(f has_real_derivative p - (1+y)powr (p-1) * p) (at y)"
+      unfolding f_def using assms y by (intro derivative_eq_intros | simp)+
+    show "p - (1+y)powr (p-1) * p \<ge> 0"
+      using y assms less_eq_real_def powr_less_one by fastforce
+  qed
+  finally show ?thesis
+    by (simp add: f_def)
+qed
 
 lemma (in Book) X_7_9:
   assumes i: "i \<in> Step_class {dreg_step}" and big: "Big_X_7_9 k"

@@ -263,8 +263,7 @@ next
     by (simp add: divide_simps Suc_diff_Suc numeral_3_eq_3 flip: power_add)
   have "qfun (h i - 3) \<le> qfun (h i - 1) - (qfun (h i) - qfun (h i - 1))"
     using kn0 mult_left_mono [OF le1 0]
-    apply (simp add: qfun_eq field_simps A)
-    by (simp add: B)
+    by (simp add: qfun_eq A B algebra_simps divide_right_mono flip: add_divide_distrib diff_divide_distrib)
   also have "\<dots> < pee i - alpha (h i)"
     using lesspi by (simp add: alpha_def)
   also have "\<dots> \<le> pee (Suc i)"

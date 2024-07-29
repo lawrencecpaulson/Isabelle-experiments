@@ -663,7 +663,7 @@ proof -
     have "\<beta> \<le> \<mu>"
       using X_gt_k card_NBX_le by (simp add: \<beta>_eq NBX_def divide_simps)
     have cNRX: "card NRX = (1-\<beta>) * card X - 1"
-      using X_gt_k card_NRBX by (simp add: \<beta>_eq field_simps)
+      using X_gt_k card_NRBX  by (simp add: \<beta>_eq divide_simps)
     have cNBX: "card NBX = \<beta> * card X"
       using \<open>0 < card X\<close> by (simp add: \<beta>_eq)
     let ?E16 = "p + ((1-\<beta>)/\<beta>) * alpha (hgt p) - alpha (hgt p) / (\<beta> * card X) + weight X Y x * card Y / (\<beta> * card X * card NRY)"
@@ -738,9 +738,9 @@ proof -
       using Red_5_7a [of p] eps_ge0 \<open>\<beta>\<le>\<mu>\<close> \<mu>01
       unfolding power2_eq_square divide_inverse mult.assoc
       by (intro mult_mono) auto
-    finally have "3 / real k ^ 4 \<le> (1-\<beta>) * eps k * alpha (hgt p)" .
-    then have "p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha (hgt p) \<le> p + ((1-\<beta>)/\<beta>) * alpha (hgt p) - 3 / (\<beta> * real k ^ 4)"
-      using \<open>0<\<beta>\<close> by (simp add: field_simps)
+    finally have \<dagger>: "3 / real k ^ 4 \<le> (1-\<beta>) * eps k * alpha (hgt p)" .
+    have "p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha (hgt p) + 3 / (\<beta> * real k ^ 4) \<le> p + ((1-\<beta>)/\<beta>) * alpha (hgt p)"
+      using \<open>0<\<beta>\<close> \<open>k>0\<close> mult_left_mono [OF \<dagger>, of \<beta>] by (simp add: field_simps )
     with 16 17 have "p + (1 - eps k) * ((1 - \<beta>) / \<beta>) * alpha (hgt p) \<le> red_density NBX NRY"
       by linarith
     then show ?thesis
@@ -853,10 +853,10 @@ proof
   then have "(1 - eps k) * ((1 - beta i) / beta i) \<le> k / eps k"
     using beta_ge0 [of i] eps_gt0 [OF kn0] kn0
     by (auto simp: divide_simps mult_less_0_iff mult_of_nat_commute split: if_split_asm)
-  then have "((1 - beta i) / beta i) \<le> k / eps k / (1 - eps k)"
+  then have "(1 - beta i) / beta i \<le> k / eps k / (1 - eps k)"
     by (smt (verit) eps_less1 mult.commute pos_le_divide_eq \<open>1 < k\<close>)
   then have "1 / beta i \<le> k / eps k / (1 - eps k) + 1"
-    by (smt (verit, best) div_add_self2)
+    using beta_gt0 by (simp add: diff_divide_distrib)
   then have "1 / (k / eps k / (1 - eps k) + 1) \<le> beta i"
     using beta_gt0 eps_gt0 eps_less1 [OF \<open>k>1\<close>] kn0
     apply (simp add: divide_simps split: if_split_asm)

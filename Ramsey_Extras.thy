@@ -2,72 +2,11 @@ theory Ramsey_Extras imports
   General_Extras
   "HOL-Library.Equipollence" "HOL-Library.Ramsey"  "HOL-Library.Infinite_Typeclass" 
   "HOL-Probability.Probability"
-  "Undirected_Graph_Theory.Undirected_Graph_Basics"  "Special_Function_Bounds.Exp_Bounds" 
+  "Undirected_Graph_Theory.Undirected_Graph_Basics" 
 
 begin
 
 section \<open>Material for the Ramsey's theorem development\<close>
-
-(*NOT USED ATM*)
-definition "upair_define \<equiv> \<lambda>f e. THE u. \<exists>x y. e = {x,y} \<and> u = f x y"
-
-lemma upair_define_apply:
-  assumes "\<And>x y. f x y = f y x"
-  shows "upair_define f {x,y} = f x y"
-  using assms
-  by (force simp: upair_define_def doubleton_eq_iff)
-
-lemma upair_define_apply_dom:
-  assumes "\<And>x y. \<lbrakk>x\<in>A; y\<in>A\<rbrakk> \<Longrightarrow> f x y = f y x" "x\<in>A" "y\<in>A"
-  shows "upair_define f {x,y} = f x y"
-  using assms
-  by (force simp: upair_define_def doubleton_eq_iff)
-
-
-(*2024-02-11: added*)
-text \<open>Dedekind's definition of infinite set\<close>
-lemma infinite_iff_psubset: "infinite A \<longleftrightarrow> (\<exists>B. B \<subset> A \<and> A\<approx>B)"
-proof
-  assume "infinite A"
-  then obtain f :: "nat \<Rightarrow> 'a" where "inj f" and f: "range f \<subseteq> A"
-    by (meson infinite_countable_subset)
-  define C where "C \<equiv> A - range f"
-  have C: "A = range f \<union> C" "range f \<inter> C = {}"
-    using f by (auto simp: C_def)
-  have *: "range (f \<circ> Suc) \<subset> range f"
-    using inj_eq [OF \<open>inj f\<close>] by (fastforce simp: set_eq_iff)
-  have "range f \<union> C \<approx> range (f \<circ> Suc) \<union> C"
-  proof (intro Un_eqpoll_cong)
-    show "range f \<approx> range (f \<circ> Suc)"
-      by (meson \<open>inj f\<close> eqpoll_refl inj_Suc inj_compose inj_on_image_eqpoll_2)
-    show "disjnt (range f) C"
-      by (simp add: C disjnt_def)
-    then show "disjnt (range (f \<circ> Suc)) C"
-      using "*" disjnt_subset1 by blast
-  qed auto
-  moreover have "range (f \<circ> Suc) \<union> C \<subset> A"
-    using "*" f C_def by blast
-  ultimately show "\<exists>B\<subset>A. A \<approx> B"
-    by (metis C(1))
-next
-  assume "\<exists>B\<subset>A. A \<approx> B" then show "infinite A"
-    by (metis card_subset_eq eqpoll_finite_iff eqpoll_iff_card psubsetE)
-qed
-
-(*2024-02-11: added*)
-lemma infinite_iff_psubset_le: "infinite A \<longleftrightarrow> (\<exists>B. B \<subset> A \<and> A \<lesssim> B)"
-  by (meson eqpoll_imp_lepoll infinite_iff_psubset lepoll_antisym psubsetE subset_imp_lepoll)
-
-(*Ramsey*)
-(*2024-02-11: added*)
-lemma finite_imp_finite_nsets: "finite A \<Longrightarrow> finite ([A]\<^bsup>k\<^esup>)"
-  by (simp add: nsets_def)
-
-(*2024-02-11: added*)
-lemma nsets2_E:
-  assumes "e \<in> [A]\<^bsup>2\<^esup>"
-  obtains x y where "e = {x,y}" "x \<in> A" "y \<in> A" "x\<noteq>y"
-  using assms by (auto simp: nsets_def card_2_iff)
 
 lemma sum_nsets_one: "(\<Sum>U\<in>[V]\<^bsup>Suc 0\<^esup>. f U) = (\<Sum>x\<in>V. f {x})"
 proof -
@@ -76,45 +15,6 @@ proof -
   show ?thesis
     using sum.reindex_bij_betw [OF bij] by (metis (no_types, lifting) sum.cong)
 qed
-
-(*UNUSED*)
-lemma subset_nsets_2:
-  assumes "card A \<ge> 2" shows "A \<subseteq> \<Union>([A]\<^bsup>2\<^esup>)"
-proof -
-  obtain x y where "x \<in> A" "y \<in> A" "x\<noteq>y"
-    using assms
-    by (metis One_nat_def Suc_1 card.infinite card_le_Suc0_iff_eq nat_le_linear not_less_eq_eq)
-  then show ?thesis
-    by (auto simp: nsets_2_eq all_edges_def)
-qed
-
-(*UNUSED*)
-lemma Pow_equals_UN_nsets:
-  assumes "finite A" shows "Pow A = \<Union> (nsets A ` {..card A})"
-proof
-  show "Pow A \<subseteq> \<Union> (nsets A ` {..card A})"
-    using assms finite_subset by (force simp: nsets_def card_mono)
-qed (auto simp: nsets_def)
-
-(*UNUSED*)
-lemma nsets_eq_iff:
-  assumes "m \<le> card A" "n \<le> card A"
-  shows "[A]\<^bsup>m\<^esup> = [A]\<^bsup>n\<^esup> \<longleftrightarrow> m=n \<or> A={}"
-proof
-  assume "[A]\<^bsup>m\<^esup> = [A]\<^bsup>n\<^esup>"
-  then show "m = n \<or> A = {}"
-    unfolding nsets_def using  obtain_subset_with_card_n [OF \<open>m \<le> card A\<close>] by blast
-qed (use assms in auto)
-
-(*UNUSED*)
-lemma nsets_disjoint_iff:
-  assumes "m \<le> card A" "n \<le> card A" "A \<noteq> {}"
-  shows "nsets A m \<inter> nsets A n \<noteq> {} \<longleftrightarrow> m=n"
-proof
-  assume "[A]\<^bsup>m\<^esup> \<inter> [A]\<^bsup>n\<^esup> \<noteq> {}"
-  then show "m = n"
-    unfolding nsets_def by fastforce
-qed (use assms in \<open>auto simp: nsets_eq_empty_iff\<close>)
 
 subsection \<open>Relating cliques to the graph theory library\<close>
 
@@ -479,20 +379,23 @@ lemma powr_half_ge:
   assumes "x\<ge>4"
   shows "x \<le> 2 powr (x/2)"
 proof -
-  have 1: "x \<le> 2 powr (x/2)" if "x=4"
-    using that by simp
-  have 2: "((\<lambda>x. 2 powr (x/2) - x) has_real_derivative ln 2 * (2 powr (y/2 - 1)) - 1) (at y)" for y
-    by (rule derivative_eq_intros refl | simp add: powr_diff)+
-  have 3: "ln 2 * (2 powr (y/2 - 1)) - 1 \<ge> 0" if "4 \<le> y" for y::real
-  proof -
-    have "1 \<le> ln 2 * 2 powr ((4 - 2) / (2::real))"
-      using ln2_ge_two_thirds by simp
-    also have "\<dots> \<le> ln 2 * (2 powr (y/2 - 1))"
-      using that by (intro mult_left_mono powr_mono) auto
-    finally show ?thesis by simp
+  define f where "f \<equiv> \<lambda>x::real. 2 powr (x/2) - x"
+  have "f 4 \<le> f x"
+  proof (intro DERIV_nonneg_imp_nondecreasing[of concl: f] exI conjI assms)
+    show "(f has_real_derivative ln 2 * (2 powr (y/2 - 1)) - 1) (at y)" for y
+      unfolding f_def by (rule derivative_eq_intros refl | simp add: powr_diff)+
+    show "ln 2 * (2 powr (y/2 - 1)) - 1 \<ge> 0" if "4 \<le> y" for y::real
+    proof -
+      have "1 \<le> ln 2 * 2 powr ((4 - 2) / (2::real))"
+        using ln2_ge_two_thirds by simp
+      also have "\<dots> \<le> ln 2 * (2 powr (y/2 - 1))"
+        using that by (intro mult_left_mono powr_mono) auto
+      finally show ?thesis by simp
+    qed
   qed
-  show ?thesis
-    by (rule gen_upper_bound_increasing [OF assms 2 3]) auto
+  moreover have "f 4 = 0" by (simp add: f_def)
+  ultimately show ?thesis
+    by (simp add: f_def)
 qed
 
 lemma Ramsey_number_zero: "\<not> is_Ramsey_number (Suc m) (Suc n) 0"
@@ -926,7 +829,7 @@ proof
     then have "2 * n powr s \<le> 2 powr ((2 + s * s) / 2)"
       by (simp add: add_divide_distrib powr_add)
     then show ?thesis
-      using n \<open>n>0\<close> by (simp add: field_simps flip: powr_realpow powr_add)
+      using n \<open>n>0\<close>  by (simp add: divide_simps flip: powr_realpow powr_add) argo
   qed
   also have "\<dots> < 1"
   proof -
