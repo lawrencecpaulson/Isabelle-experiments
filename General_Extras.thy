@@ -7,21 +7,6 @@ begin
 
 thm mult_mono divide_left_mono
 
-context linordered_field
-begin
-
-(*REPLACE*)
-lemma divide_left_mono:(*migrated 2024-07-29*)
-  "\<lbrakk>b \<le> a; 0 \<le> c; 0 < b\<rbrakk> \<Longrightarrow> c / a \<le> c / b"
-  by (auto simp: field_simps zero_less_mult_iff mult_right_mono)
-
-lemma divide_mono:(*migrated 2024-07-29*)
-  "\<lbrakk>b \<le> a; c \<le> d; 0 < b; 0 \<le> c\<rbrakk> \<Longrightarrow> c / a \<le> d / b"
-  by (simp add: local.frac_le)
-
-end
-
-
 (*deriv_nonneg_imp_mono: 10 uses; probably redundant thanks to DERIV_nonneg_imp_nondecreasing; delete?
 *)
 thm  deriv_nonneg_imp_mono

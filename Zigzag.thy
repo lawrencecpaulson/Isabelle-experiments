@@ -1,7 +1,7 @@
 section \<open>The Zigzag Lemma\<close>
                                                         
 theory Zigzag imports Bounding_X
-                                             
+
 begin                  
           
 subsection \<open>Lemma 8.1 (the actual Zigzag Lemma)\<close>
@@ -188,7 +188,7 @@ proof -
     also have "\<dots> \<le> \<Delta> i / alpha (hgt (pee i)) / (1 + eps k powr (1/2))"
       by (intro 36 divide_right_mono) auto
     also have "\<dots> \<le> \<Delta> i / alpha (hgt (pee i)) / (1 + eps k) powr (real (hgt (pee (Suc i))) - hgt (pee i))"
-    proof (intro divide_left_mono)
+    proof (intro divide_left_mono mult_pos_pos)
       have "real (hgt (pee (Suc i))) - hgt (pee i) \<le> eps k powr (-1/4)"
         using that by (simp add: dboost_star_def)
       then show "(1 + eps k) powr (real (hgt (pee (Suc i))) - real (hgt (pee i))) \<le> 1 + eps k powr (1/2)"
@@ -197,7 +197,7 @@ proof -
         by (simp add: \<Delta>0 \<Delta>\<Delta>_ge0 \<open>i \<in> \<S>\<close> alpha_ge0)
       show "0 < (1 + eps k) powr (real (hgt (pee (Suc i))) - real (hgt (pee i)))"
         using eps_gt0 [OF kn0] by auto
-    qed
+    qed (auto simp: add_strict_increasing)
     also have "\<dots> \<le> \<Delta> i / alpha (hgt (pee (Suc i)))"
     proof -
       have "alpha (hgt (pee (Suc i))) \<le> alpha (hgt (pee i)) * (1 + eps k) powr (real (hgt (pee (Suc i))) - real (hgt (pee i)))"
