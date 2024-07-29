@@ -2,35 +2,11 @@ section \<open>Library material: the neighbours of vertices\<close>
 
 text \<open>Preliminaries for the Book Algorithm\<close>
 
-theory Neighbours imports
-   Ramsey_Extras "Undirected_Graph_Theory.Undirected_Graph_Basics" 
+theory Neighbours imports Ramsey_Extras
 
 begin
 
-subsection \<open>Preliminary definitions\<close>
-
-definition Neighbours :: "'a set set \<Rightarrow> 'a \<Rightarrow> 'a set" where
-  "Neighbours \<equiv> \<lambda>E x. {y. {x,y} \<in> E}"
-
-lemma in_Neighbours_iff: "y \<in> Neighbours E x \<longleftrightarrow> {x,y} \<in> E"
-  by (simp add: Neighbours_def)
-
-lemma finite_Neighbours:
-  assumes "finite E"
-  shows "finite (Neighbours E x)"
-proof -
-  have "Neighbours E x \<subseteq> Neighbours {X\<in>E. finite X} x"
-    by (auto simp: Neighbours_def)
-  also have "\<dots> \<subseteq> (\<Union>{X\<in>E. finite X})"
-    by (meson Union_iff in_Neighbours_iff insert_iff subset_iff)
-  finally show ?thesis
-    using assms finite_subset by fastforce
-qed
-
-lemma (in fin_sgraph) not_own_Neighbour: "E' \<subseteq> E \<Longrightarrow> x \<notin> Neighbours E' x"
-  by (force simp: Neighbours_def singleton_not_edge)
-
-section \<open>Preliminaries on graphs\<close>
+subsection \<open>Preliminaries on graphs\<close>
 
 context ulgraph
 begin
@@ -149,18 +125,30 @@ lemma disjnt_all_edges_betw_un:
   using assms
   by (auto simp: all_edges_betw_un_def disjnt_iff doubleton_eq_iff)
 
-text \<open>this notion, mentioned on Page 3, is a little vague: "a graph on vertex set @{term"S \<union> T"} 
-that contains all edges incident to @{term"S"}"\<close>
-definition book :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a set set \<Rightarrow> bool" where
-  "book \<equiv> \<lambda>S T F. disjnt S T \<and> all_edges_betw_un S (S\<union>T) \<subseteq> F"
-
-lemma book_empty [simp]: "book {} T F"
-  by (auto simp: book_def)
-
-lemma book_imp_disjnt: "book S T F \<Longrightarrow> disjnt S T"
-  by (auto simp: book_def)
-
 end
+
+subsection \<open>Neighbours of a vertex\<close>
+
+definition Neighbours :: "'a set set \<Rightarrow> 'a \<Rightarrow> 'a set" where
+  "Neighbours \<equiv> \<lambda>E x. {y. {x,y} \<in> E}"
+
+lemma in_Neighbours_iff: "y \<in> Neighbours E x \<longleftrightarrow> {x,y} \<in> E"
+  by (simp add: Neighbours_def)
+
+lemma finite_Neighbours:
+  assumes "finite E"
+  shows "finite (Neighbours E x)"
+proof -
+  have "Neighbours E x \<subseteq> Neighbours {X\<in>E. finite X} x"
+    by (auto simp: Neighbours_def)
+  also have "\<dots> \<subseteq> (\<Union>{X\<in>E. finite X})"
+    by (meson Union_iff in_Neighbours_iff insert_iff subset_iff)
+  finally show ?thesis
+    using assms finite_subset by fastforce
+qed
+
+lemma (in fin_sgraph) not_own_Neighbour: "E' \<subseteq> E \<Longrightarrow> x \<notin> Neighbours E' x"
+  by (force simp: Neighbours_def singleton_not_edge)
 
 context fin_sgraph
 begin
@@ -170,6 +158,18 @@ declare singleton_not_edge [simp]
 lemma Neighbours_eq_all_edges_betw_un:
   "Neighbours E x = \<Union> (all_edges_betw_un V {x}) - {x}"
   using wellformed by (auto simp: Neighbours_def all_edges_betw_un_def insert_commute )
+
+text \<open>"A graph on vertex set @{term"S \<union> T"}  that contains all edges incident to @{term"S"}"
+  (page 3). In fact, @{term S} is a clique and every vertex in @{term T} 
+  has an edge into @{term S}.\<close>
+definition book :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a set set \<Rightarrow> bool" where
+  "book \<equiv> \<lambda>S T F. disjnt S T \<and> all_edges_betw_un S (S\<union>T) \<subseteq> F"
+
+lemma book_empty [simp]: "book {} T F"
+  by (auto simp: book_def)
+
+lemma book_imp_disjnt: "book S T F \<Longrightarrow> disjnt S T"
+  by (auto simp: book_def)
 
 lemma book_insert: 
   "book (insert v S) T F \<longleftrightarrow> book S T F \<and> v \<notin> T \<and> all_edges_betw_un {v} (S \<union> T) \<subseteq> F"
@@ -185,18 +185,10 @@ lemma size_clique_smaller: "\<lbrakk>size_clique p K F; p' < p\<rbrakk> \<Longri
   unfolding size_clique_def
   by (meson card_Ex_subset order.trans less_imp_le_nat smaller_clique)
 
-lemma size_clique_all_edges: "size_clique p K F \<Longrightarrow> all_edges K \<subseteq> F"
-  by (auto simp: size_clique_def all_edges_def clique_def card_2_iff)
-
 lemma indep_iff_clique: "K \<subseteq> V \<Longrightarrow> indep K F \<longleftrightarrow> clique K (all_edges V - F)"
   by simp
 
-lemma clique_imp_all_edges_betw_un: "clique K F \<Longrightarrow> all_edges_betw_un K K \<subseteq> F"
-  by (force simp: clique_def all_edges_betw_un_def)
-
-
-
-text \<open>for calculating the perimeter p\<close>
+subsection \<open>Density: for calculating the parameter p\<close>
 
 definition "edge_card \<equiv> \<lambda>C X Y. card (C \<inter> all_edges_betw_un X Y)"
 
@@ -303,9 +295,6 @@ proof -
   with finV sum_eq_card [of _ "{y. {x,y}\<in>C}"] show ?thesis by simp
 qed
 
-lemma Neighbours_insert: "Neighbours (insert e C) x = {y. e = {x,y}} \<union> Neighbours C x"
-  by (auto simp: Neighbours_def)
-
 lemma Neighbours_insert_NO_MATCH: "NO_MATCH {} C \<Longrightarrow> Neighbours (insert e C) x = Neighbours {e} x \<union> Neighbours C x"
   by (auto simp: Neighbours_def)
 
@@ -363,6 +352,10 @@ proof -
     using assms gen_density_def less_eq_real_def by fastforce
 qed
 
+lemma gen_density_le1: "gen_density C X Y \<le> 1"
+  unfolding gen_density_def
+  by (smt (verit) card.infinite divide_le_eq_1 edge_card_le mult_eq_0_iff of_nat_le_0_iff of_nat_mono)
+
 lemma gen_density_le_1_minus: 
   shows "gen_density C X Y \<le> 1 - gen_density (E-C) X Y"
 proof (cases "finite X \<and> finite Y")
@@ -389,31 +382,6 @@ proof (cases "finite X \<and> finite Y")
   then show ?thesis
     using \<open>0 < gen_density (E - C) X Y\<close> by linarith
 qed (auto simp: gen_density_def)
-
-lemma gen_density_le1: "gen_density C X Y \<le> 1"
-  unfolding gen_density_def
-  by (smt (verit) card.infinite divide_le_eq_1 edge_card_le mult_eq_0_iff of_nat_le_0_iff of_nat_mono)
-
-lemma gen_density_Un_le:
-  assumes "disjnt X Y" "disjnt X Z" "finite X" "finite Y"
-  shows "gen_density C (X\<union>Y) Z \<le> gen_density C X Z + gen_density C Y Z"
-proof (cases "X={} \<or> Y={} \<or> Z={}")
-  case True
-  then show ?thesis
-    by (auto simp: gen_density_def)
-next
-  case False
-  with assms show ?thesis
-    apply (simp add: gen_density_def edge_card_Un card_Un_disjnt add_divide_distrib field_simps)
-    by (smt (verit, best) card_0_eq frac_le mult_eq_0_iff mult_pos_pos of_nat_0_eq_iff of_nat_le_0_iff)
-qed
-
-lemma gen_density_diff_ge:
-  assumes "disjnt X Z" "finite X" "Y\<subseteq>X"
-  shows "gen_density C (X-Y) Z \<ge> gen_density C X Z - gen_density C Y Z"
-  using assms
-  by (smt (verit, del_insts) Diff_disjoint Diff_partition Diff_subset disjnt_def disjnt_subset1
-          gen_density_Un_le finite_subset)
 
 lemma gen_density_le_iff:
   assumes "disjnt X Z" "finite X" "Y\<subseteq>X" "Y \<noteq> {}" "finite Z"
@@ -443,19 +411,6 @@ proof -
     by (simp add: gen_density_le_iff field_split_simps edge_card_diff card_Diff_subset of_nat_diff 
         edge_card_mono flip: of_nat_mult)
 qed
-
-(*UNUSED 29-02-24*)
-lemma gen_le_edge_density: "gen_density C X Y \<le> edge_density X Y"
-proof (cases "finite X \<and> finite Y")
-  case True
-  then have "card (C \<inter> all_edges_betw_un X Y) \<le> card (all_edges_betw_un X Y)"
-    by (simp add: all_edges_betw_un_iff_mk_edge card_mono finite_all_edges_between')
-  also have "\<dots> \<le> card (all_edges_between X Y)"
-    by (simp add: all_edges_betw_un_iff_mk_edge card_image_le finite_all_edges_between')
-  finally show ?thesis
-    by (simp add: gen_density_def edge_card_def edge_density_def divide_right_mono)
-qed (auto simp: gen_density_def edge_density_def)
-
 
 lemma edge_card_insert:
   assumes "NO_MATCH {} F" and "e \<notin> F"
@@ -591,7 +546,7 @@ proof -
 qed
 
 text \<open>Bhavik's statement; own proof\<close>
-lemma density_eq_average_partition:
+proposition density_eq_average_partition:
   assumes k: "0 < k" "k < card V" and "C \<subseteq> E" and complete: "E = all_edges V"
   shows "graph_density C = (\<Sum>U\<in>[V]\<^bsup>k\<^esup>. gen_density C U (V\<setminus>U)) / (card V choose k)"
 proof (cases "k=1 \<or> gorder = Suc k")
@@ -713,7 +668,7 @@ next
     unfolding graph_density_def gen_density_def
     using K \<open>card E > 0\<close> \<open>C\<subseteq>E\<close>
     apply (simp add: eq divide_simps B C sum.distrib *)
-    apply (simp add: ** sum_edge_card_choose cardE of_nat_diff flip: of_nat_sum)
+    apply (simp add: ** sum_edge_card_choose cardE flip: of_nat_sum)
     by argo
 qed
 
@@ -732,11 +687,6 @@ proof -
   with that show thesis
     unfolding nsets_def by fastforce
 qed
-
-lemma density_eq_sum_card_Neighbours:
-  assumes "C \<subseteq> E" "E = all_edges V"
-  shows "graph_density C = real (\<Sum>x\<in>V. card (Neighbours C x)) / (card V * (card V - 1))"
-  using assms density_eq_average sum_eq_card_Neighbours by auto
 
 end  (*fin_sgraph*)
 

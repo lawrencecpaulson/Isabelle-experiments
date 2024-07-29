@@ -1,6 +1,5 @@
 theory Ramsey_Extras imports
-  General_Extras
-  "HOL-Library.Equipollence" "HOL-Library.Ramsey"  "HOL-Library.Infinite_Typeclass" 
+  General_Extras "HOL-Library.Ramsey"  "HOL-Library.Infinite_Typeclass" 
   "HOL-Probability.Probability"
   "Undirected_Graph_Theory.Undirected_Graph_Basics" 
 

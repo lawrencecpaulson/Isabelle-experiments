@@ -3,7 +3,7 @@ section \<open>The book algorithm\<close>
 theory Book imports
   Neighbours
   "HOL-Library.Disjoint_Sets"  "HOL-Decision_Procs.Approximation" 
-  "HOL-Library.Infinite_Set"   "HOL-Real_Asymp.Real_Asymp" 
+  "HOL-Real_Asymp.Real_Asymp" 
 
 begin
 

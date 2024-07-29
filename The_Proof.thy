@@ -428,7 +428,6 @@ proof -
     proof (cases "x < 0.99")  \<comment> \<open>a further case split that gives a lower bound for gamma\<close>
       case True
       have \<ddagger>: "Big_Closer_10_1 (min \<gamma> 0.07) (nat \<lceil>\<gamma> * real k / (1 - \<gamma>)\<rceil>)"
-        sketch (intro Big_Closer_10_1_upward [OF big101])
       proof (intro Big_Closer_10_1_upward [OF big101])
         show "1/101 \<le> min \<gamma> 0.07"
           using \<open>k>0\<close> \<open>t<k\<close> True by (simp add: \<gamma>_def l_def x_def divide_simps)

@@ -1,6 +1,5 @@
 theory General_Extras imports
   "HOL-Analysis.Analysis"  "Landau_Symbols.Landau_More"
-  "HOL-ex.Sketch_and_Explore"
 
 begin
 
