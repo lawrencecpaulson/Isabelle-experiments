@@ -313,6 +313,58 @@ proof
 qed
 
 
+text \<open>Elementary inequalities about sums vs products\<close>
+
+(*Used only for the next one*)
+lemma add_prod_le:
+  fixes f g :: "'a \<Rightarrow> 'b::linordered_idom"
+  assumes "finite I" "\<And>i. i \<in> I \<Longrightarrow> f i \<ge> 0 \<and> g i \<ge> 0" "I \<noteq> {}"
+  shows "(\<Prod>i\<in>I. f i) + (\<Prod>i\<in>I. g i) \<le> (\<Prod>i\<in>I. f i + g i)"
+  using assms
+proof (induction I)
+  case empty
+  then show ?case
+    by simp
+next
+  case (insert i I)
+  show ?case
+  proof (cases "I={}")
+    case False
+    then have "prod f I + prod g I \<le> (\<Prod>i\<in>I. f i + g i)"
+      using insert by force
+    moreover have "(\<Prod>i\<in>I. f i) \<le> (\<Prod>i\<in>I. f i + g i)"
+      by (simp add: insert.prems prod_mono)
+    moreover have "(\<Prod>i\<in>I. g i) \<le> (\<Prod>i\<in>I. f i + g i)"
+      by (simp add: insert.prems prod_mono)
+    ultimately show ?thesis
+      by (simp add: algebra_simps insert add_mono mult_left_mono)
+  qed auto
+qed
+
+(*unused*)
+lemma sum_prod_le:
+  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c::linordered_idom"
+  assumes "finite I" "finite J" "J \<noteq> {}"
+  and fge0: "\<And>i j. \<lbrakk>i\<in>I; j\<in>J\<rbrakk> \<Longrightarrow> f i j \<ge> 0"
+  shows "(\<Sum>i\<in>I. \<Prod>j\<in>J. f i j) \<le> (\<Prod>j\<in>J. \<Sum>i\<in>I. f i j)"
+  using \<open>finite I\<close> fge0
+proof (induction I)
+  case empty
+  then show ?case by simp
+next
+  case (insert a I)
+  have "(\<Sum>i \<in> insert a I. prod (f i) J) = (\<Sum>i\<in>I. prod (f i) J) + prod (f a) J"
+    using insert.hyps by force
+  also have "\<dots> \<le> (\<Prod>j\<in>J. \<Sum>i\<in>I. f i j) + prod (f a) J"
+    by (simp add: insert)
+  also have "\<dots> \<le> (\<Prod>j\<in>J. (\<Sum>i\<in>I. f i j) + f a j)"
+    by (intro add_prod_le) (auto simp: assms insert sum_nonneg)
+  also have "\<dots> = (\<Prod>j\<in>J. \<Sum>i\<in>insert a I. f i j)"
+    by (simp add: add.commute insert.hyps)
+  finally show ?case .
+qed
+
+
 
 
 lemma "\<not> (\<exists>q::rat. q^2 = 2)"

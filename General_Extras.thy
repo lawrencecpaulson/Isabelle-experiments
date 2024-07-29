@@ -4,12 +4,46 @@ theory General_Extras imports
 
 begin
 
+(*REPLACE*)
+proposition deriv_nonneg_imp_mono:
+  assumes deriv: "\<And>x. x \<in> {a..b} \<Longrightarrow> (g has_real_derivative g' x) (at x)"
+  assumes nonneg: "\<And>x. x \<in> {a..b} \<Longrightarrow> g' x \<ge> 0"
+  assumes ab: "a \<le> b"
+  shows "g a \<le> g b"
+  by (meson atLeastAtMost_iff DERIV_nonneg_imp_nondecreasing [of concl: g] assms)
 
-thm mult_mono divide_left_mono
 
-(*deriv_nonneg_imp_mono: 10 uses; probably redundant thanks to DERIV_nonneg_imp_nondecreasing; delete?
-*)
-thm  deriv_nonneg_imp_mono
+lemma integral_uniform_count_measure:
+  assumes "finite A" 
+  shows "integral\<^sup>L (uniform_count_measure A) f = sum f A / (card A)"
+proof -
+  have "integral\<^sup>L (uniform_count_measure A) f = (\<Sum>x\<in>A. f x / card A)" 
+    using assms by (simp add: uniform_count_measure_def lebesgue_integral_point_measure_finite)
+  with assms show ?thesis
+    by (simp add: sum_divide_distrib nn_integral_count_space_finite)
+qed
+
+
+thm sum_in_smallo
+lemma maxmin_in_smallo:
+  assumes "f \<in> o[F](h)" "g \<in> o[F](h)"
+  shows   "(\<lambda>k. max (f k) (g k)) \<in> o[F](h)" "(\<lambda>k. min (f k) (g k)) \<in> o[F](h)"
+proof -
+  { fix c::real
+    assume "c>0"
+    with assms smallo_def
+    have "\<forall>\<^sub>F x in F. norm (f x) \<le> c * norm(h x)" "\<forall>\<^sub>F x in F. norm(g x) \<le> c * norm(h x)"
+      by (auto simp: smallo_def)
+    then have "\<forall>\<^sub>F x in F. norm (max (f x) (g x)) \<le> c * norm(h x) \<and> norm (min (f x) (g x)) \<le> c * norm(h x)"
+      by (smt (verit) eventually_elim2 max_def min_def)
+  } with assms   
+  show "(\<lambda>x. max (f x) (g x)) \<in> o[F](h)" "(\<lambda>x. min (f x) (g x)) \<in> o[F](h)"
+    by (smt (verit) eventually_elim2 landau_o.smallI)+
+qed
+
+
+(*ALSO TO MIGRATE;
+mono_on_mul mono_on_prod convex_gchoose gbinomial_mono gbinomial_is_prod smallo_multiples*)
 
 (*migrated 2024-07-23*)
 lemma frequently_sequentially:
@@ -145,12 +179,12 @@ thm log_def
       by (simp add: log_def)
 
 
-  lemma exp_mono:
+  lemma exp_mono:(*migrated 2024-07-29*)
     fixes x y :: real
     assumes "x \<le> y"
     shows "exp x \<le> exp y"
     using assms exp_le_cancel_iff by force
-  
+  (*migrated 2024-07-29*)
   lemma exp_minus': "exp (-x) = 1 / (exp x)"
     for x :: "'a::{real_normed_field,banach}"
     by (simp add: exp_minus inverse_eq_divide)
@@ -158,22 +192,6 @@ thm log_def
   lemma ln_strict_mono:(*migrated 2024-07-29*) "\<And>x::real. \<lbrakk>x < y; 0 < x; 0 < y\<rbrakk> \<Longrightarrow> ln x < ln y"
   using ln_less_cancel_iff by blast
 
-thm sum_in_smallo
-lemma maxmin_in_smallo:
-  assumes "f \<in> o[F](h)" "g \<in> o[F](h)"
-  shows   "(\<lambda>k. max (f k) (g k)) \<in> o[F](h)" "(\<lambda>k. min (f k) (g k)) \<in> o[F](h)"
-proof -
-  { fix c::real
-    assume "c>0"
-    with assms smallo_def
-    have "\<forall>\<^sub>F x in F. norm (f x) \<le> c * norm(h x)" "\<forall>\<^sub>F x in F. norm(g x) \<le> c * norm(h x)"
-      by (auto simp: smallo_def)
-    then have "\<forall>\<^sub>F x in F. norm (max (f x) (g x)) \<le> c * norm(h x) \<and> norm (min (f x) (g x)) \<le> c * norm(h x)"
-      by (smt (verit) eventually_elim2 max_def min_def)
-  } with assms   
-  show "(\<lambda>x. max (f x) (g x)) \<in> o[F](h)" "(\<lambda>x. min (f x) (g x)) \<in> o[F](h)"
-    by (smt (verit) eventually_elim2 landau_o.smallI)+
-qed
 
 (*migrated 2024-06?*)
 declare eventually_frequently_const_simps [simp] of_nat_diff [simp]
@@ -410,16 +428,6 @@ lemma finite_countable_equals:
   by (smt (verit, best) UNIV_I UN_iff finite_countable_subset assms equalityI subset_iff)
 
 
-lemma integral_uniform_count_measure:
-  assumes "finite A" 
-  shows "integral\<^sup>L (uniform_count_measure A) f = sum f A / (card A)"
-proof -
-  have "integral\<^sup>L (uniform_count_measure A) f = (\<Sum>x\<in>A. f x / card A)" 
-    using assms by (simp add: uniform_count_measure_def lebesgue_integral_point_measure_finite)
-  with assms show ?thesis
-    by (simp add: sum_divide_distrib nn_integral_count_space_finite)
-qed
-
 subsection \<open>Convexity\<close>
 
 lemma mono_on_mul:
@@ -539,75 +547,6 @@ lemma mbinomial_eq_choose [simp]: "mbinomial (real n) k = n choose k"
 
 lemma mbinomial_eq_gchoose [simp]: "k \<le> a \<Longrightarrow> mbinomial a k = a gchoose k"
   by (simp add: gbinomial_prod_rev mbinomial_def mfact_def)
-
-text \<open>Elementary inequalities about sums vs products\<close>
-
-(*Used only for the next one*)
-lemma add_prod_le:
-  fixes f g :: "'a \<Rightarrow> 'b::linordered_idom"
-  assumes "finite I" "\<And>i. i \<in> I \<Longrightarrow> f i \<ge> 0 \<and> g i \<ge> 0" "I \<noteq> {}"
-  shows "(\<Prod>i\<in>I. f i) + (\<Prod>i\<in>I. g i) \<le> (\<Prod>i\<in>I. f i + g i)"
-  using assms
-proof (induction I)
-  case empty
-  then show ?case
-    by simp
-next
-  case (insert i I)
-  show ?case
-  proof (cases "I={}")
-    case False
-    then have "prod f I + prod g I \<le> (\<Prod>i\<in>I. f i + g i)"
-      using insert by force
-    moreover have "(\<Prod>i\<in>I. f i) \<le> (\<Prod>i\<in>I. f i + g i)"
-      by (simp add: insert.prems prod_mono)
-    moreover have "(\<Prod>i\<in>I. g i) \<le> (\<Prod>i\<in>I. f i + g i)"
-      by (simp add: insert.prems prod_mono)
-    ultimately show ?thesis
-      by (simp add: algebra_simps insert add_mono mult_left_mono)
-  qed auto
-qed
-
-(*unused*)
-lemma sum_prod_le:
-  fixes f :: "'a \<Rightarrow> 'b \<Rightarrow> 'c::linordered_idom"
-  assumes "finite I" "finite J" "J \<noteq> {}"
-  and fge0: "\<And>i j. \<lbrakk>i\<in>I; j\<in>J\<rbrakk> \<Longrightarrow> f i j \<ge> 0"
-  shows "(\<Sum>i\<in>I. \<Prod>j\<in>J. f i j) \<le> (\<Prod>j\<in>J. \<Sum>i\<in>I. f i j)"
-  using \<open>finite I\<close> fge0
-proof (induction I)
-  case empty
-  then show ?case by simp
-next
-  case (insert a I)
-  have "(\<Sum>i \<in> insert a I. prod (f i) J) = (\<Sum>i\<in>I. prod (f i) J) + prod (f a) J"
-    using insert.hyps by force
-  also have "\<dots> \<le> (\<Prod>j\<in>J. \<Sum>i\<in>I. f i j) + prod (f a) J"
-    by (simp add: insert)
-  also have "\<dots> \<le> (\<Prod>j\<in>J. (\<Sum>i\<in>I. f i j) + f a j)"
-    by (intro add_prod_le) (auto simp: assms insert sum_nonneg)
-  also have "\<dots> = (\<Prod>j\<in>J. \<Sum>i\<in>insert a I. f i j)"
-    by (simp add: add.commute insert.hyps)
-  finally show ?case .
-qed
-
-
-thm has_derivative_powr (*THIS VERSION IS SIMILAR BUT  NOT THE SAME AS A REPOSITORY VERSION*)
-lemma has_derivative_powr [derivative_intros]:
-  assumes "\<And>x. (f has_derivative f') (at x)" "\<And>x. (g has_derivative g') (at x)"
-    "\<And>x. f x > (0::real)"
-  shows "((\<lambda>x. f x powr g x) has_derivative (\<lambda>y. (g x * (f' y / f x) + g' y * ln (f x)) * (f x) powr (g x))) (at x)"
-proof -
-  have [simp]: "\<And>x. f x \<noteq> 0"
-    by (smt (verit, best) assms(3))
-  show ?thesis
-  using assms
-  apply (simp add: powr_def)
-  apply (rule exI assms derivative_eq_intros refl)+
-  apply (simp add: powr_def divide_inverse assms mult_ac)
-  done
-qed
-
 
 (*These can't go into Binomial because they need type "real"
 They could go to an AFP entry on Ramsey bounds*)
