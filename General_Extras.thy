@@ -3,7 +3,9 @@ theory General_Extras imports
 
 begin
 
-(*REPLACE*)
+(*ALMOST ALL ARE JUST FOR DIAGONAL*)
+
+thm deriv_nonneg_imp_mono (*REPLACE [shorter proof]*)
 proposition deriv_nonneg_imp_mono:
   assumes deriv: "\<And>x. x \<in> {a..b} \<Longrightarrow> (g has_real_derivative g' x) (at x)"
   assumes nonneg: "\<And>x. x \<in> {a..b} \<Longrightarrow> g' x \<ge> 0"
@@ -11,7 +13,7 @@ proposition deriv_nonneg_imp_mono:
   shows "g a \<le> g b"
   by (meson atLeastAtMost_iff DERIV_nonneg_imp_nondecreasing [of concl: g] assms)
 
-
+(*for Big Blue Steps*)
 lemma integral_uniform_count_measure:
   assumes "finite A" 
   shows "integral\<^sup>L (uniform_count_measure A) f = sum f A / (card A)"
@@ -23,7 +25,7 @@ proof -
 qed
 
 
-thm sum_in_smallo
+thm sum_in_smallo  (*for Diagonal*)
 lemma maxmin_in_smallo:
   assumes "f \<in> o[F](h)" "g \<in> o[F](h)"
   shows   "(\<lambda>k. max (f k) (g k)) \<in> o[F](h)" "(\<lambda>k. min (f k) (g k)) \<in> o[F](h)"
@@ -44,12 +46,7 @@ qed
 (*ALSO TO MIGRATE;
 mono_on_mul mono_on_prod convex_gchoose gbinomial_mono gbinomial_is_prod smallo_multiples*)
 
-(*migrated 2024-07-23*)
-lemma frequently_sequentially:
-  "frequently P sequentially \<longleftrightarrow> (\<forall>N. \<exists>n\<ge>N. P n)"
-  by (simp add: frequently_def eventually_sequentially)
-
-(*migrated 2024-07-23*)
+(*migrated 2024-07-23. Diagonal*)
 lemma (in order_topology)
   shows at_within_Ici_at_right: "at a within {a..} = at_right a"
     and at_within_Iic_at_left:  "at a within {..a} = at_left a"
@@ -59,7 +56,7 @@ lemma (in order_topology)
       simp: eventually_at_filter less_le
       elim: eventually_elim2)
 
-axiomatization(*NOT TO IMPORT*)
+axiomatization(*NOT TO IMPORT. Diagonal*)
   where ln0 [simp]: "ln 0 = 0"
 
 lemma log0 [simp]: "log b 0 = 0"(*NOT TO IMPORT*)
@@ -98,25 +95,7 @@ begin (*migrated 2024-07-23*)
 
 end
 
-    proposition deriv_nonpos_imp_antimono:(*migrated 2024-07-23*)
-      assumes deriv: "\<And>x. x \<in> {a..b} \<Longrightarrow> (g has_real_derivative g' x) (at x)"
-      assumes nonneg: "\<And>x. x \<in> {a..b} \<Longrightarrow> g' x \<le> 0"
-      assumes "a \<le> b"
-      shows "g b \<le> g a"
-    proof -
-      have "- g a \<le> - g b"
-      proof (rule deriv_nonneg_imp_mono [where g = "\<lambda>x. - g x"])
-        fix x
-        assume x: "x \<in> {a..b}"
-        show "((\<lambda>x. - g x) has_real_derivative - g' x) (at x)"
-          by (rule derivative_eq_intros deriv x refl)+
-        show "0 \<le> - g' x"
-          using nonneg [OF x] by simp
-      qed (rule \<open>a\<le>b\<close>)
-      then show ?thesis by simp
-    qed
-    
-    lemma DERIV_nonneg_imp_increasing_open:(*migrated 2024-07-23*)
+    lemma DERIV_nonneg_imp_increasing_open:(*migrated 2024-07-23. Diagonal*)
       fixes a b :: real
         and f :: "real \<Rightarrow> real"
       assumes "a \<le> b"
@@ -138,7 +117,7 @@ end
       qed
     qed auto
     
-    lemma DERIV_nonpos_imp_decreasing_open:(*migrated 2024-07-23*)
+    lemma DERIV_nonpos_imp_decreasing_open:(*migrated 2024-07-23. Diagonal*)
       fixes a b :: real
         and f :: "real \<Rightarrow> real"
       assumes "a \<le> b"
@@ -158,31 +137,23 @@ end
         by simp
     qed
 
-  (*migrated 2024-07-23*)
+  (*migrated 2024-07-23. Diagonal*)
   lemma floor_ceiling_diff_le: "0 \<le> r \<Longrightarrow> nat\<lfloor>real k - r\<rfloor> \<le> k - nat\<lceil>r\<rceil>"
     by linarith
   
-  lemma floor_ceiling_diff_le': "nat\<lfloor>r - real k\<rfloor> \<le> nat\<lceil>r\<rceil> - k"
-    by linarith
-  
-  lemma ceiling_floor_diff_ge: "nat\<lceil>r - real k\<rceil> \<ge> nat\<lfloor>r\<rfloor> - k"
-    by linarith
-  
-  lemma ceiling_floor_diff_ge': "r \<le> k \<Longrightarrow> nat\<lceil>r - real k\<rceil> \<le> k - nat\<lfloor>r\<rfloor>"
-    by linarith
 
-
-thm log_exp (*RENAME EXISTING LOG_EXP TO log_power*)
+thm log_exp (*RENAME EXISTING LOG_EXP TO log_power. Diagonal*)
 thm log_def
     lemma log_exp [simp]: "log b (exp x) = x / ln b"(*migrated 2024-07-29*)
       by (simp add: log_def)
 
 
-  lemma exp_mono:(*migrated 2024-07-29*)
+  lemma exp_mono:(*migrated 2024-07-29. Diagonal*)
     fixes x y :: real
     assumes "x \<le> y"
     shows "exp x \<le> exp y"
     using assms exp_le_cancel_iff by force
+
   (*migrated 2024-07-29*)
   lemma exp_minus': "exp (-x) = 1 / (exp x)"
     for x :: "'a::{real_normed_field,banach}"
@@ -549,41 +520,6 @@ lemma mbinomial_eq_gchoose [simp]: "k \<le> a \<Longrightarrow> mbinomial a k = 
 
 (*These can't go into Binomial because they need type "real"
 They could go to an AFP entry on Ramsey bounds*)
-
-lemma choose_two_real: "of_nat (n choose 2) = real n * (real n - 1) / 2"
-proof (cases "even n")
-  case True
-  then show ?thesis
-    by (auto simp: choose_two dvd_def)
-next
-  case False
-  then have "even (n-1)"
-    by simp
-  then show ?thesis
-    by (auto simp: choose_two dvd_def)
-qed
-
-lemma add_choose_le_power: "(n + k) choose n \<le> Suc k ^ n"
-proof -
-  have *: "(\<Prod>i<n. of_nat (n+k - i) / of_nat (n - i)) \<le> (\<Prod>i<n. real (Suc k))"
-  proof (intro prod_mono conjI)
-    fix i
-    assume i: "i \<in> {..<n}"
-    then have "real (n + k - i) / real (n - i) = 1 + k/real(n-i)"
-      by (auto simp: divide_simps)
-    also have "\<dots> \<le> 1 + real k"
-      using i by (simp add: divide_inverse inverse_le_1_iff mult_left_le)
-    finally show "real (n + k - i) / real (n - i) \<le> real (Suc k)" 
-      by simp
-  qed auto
-  then have "real((n + k) choose n) \<le> real (Suc k ^ n)"
-    by (simp add: binomial_altdef_of_nat lessThan_atLeast0)
-  then show ?thesis
-    by linarith
-qed
-
-lemma choose_le_power: "m choose k \<le> (Suc m - k) ^ k"
-  by (metis Suc_diff_le add_choose_le_power add_diff_inverse_nat binomial_eq_0_iff less_le_not_le nle_le zero_le)
 
 lemma gbinomial_mono:
   fixes k::nat and a::real

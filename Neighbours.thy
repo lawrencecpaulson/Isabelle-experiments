@@ -2,7 +2,7 @@ section \<open>Library material: the neighbours of vertices\<close>
 
 text \<open>Preliminaries for the Book Algorithm\<close>
 
-theory Neighbours imports Ramsey_Extras
+theory Neighbours imports General_Extras Ramsey_Extras
 
 begin
 
@@ -689,6 +689,5 @@ proof -
 qed
 
 end  (*fin_sgraph*)
-
 
 end

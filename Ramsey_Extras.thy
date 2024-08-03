@@ -1,11 +1,50 @@
+section \<open>Lower bounds for Ramsey numbers\<close>
+
+text \<open>The classical Erdős--Szekeres upper bound is proved in the original Ramsey theory.\<close>
+
 theory Ramsey_Extras imports
-  General_Extras "HOL-Library.Ramsey"  "HOL-Library.Infinite_Typeclass" 
+  "HOL-Library.Ramsey"  "HOL-Library.Infinite_Typeclass" 
   "HOL-Probability.Probability"
   "Undirected_Graph_Theory.Undirected_Graph_Basics" 
 
 begin
 
-section \<open>Material for the Ramsey's theorem development\<close>
+subsection \<open>Preliminaries\<close>
+
+lemma choose_two_real: "of_nat (n choose 2) = real n * (real n - 1) / 2"
+proof (cases "even n")
+  case True
+  then show ?thesis
+    by (auto simp: choose_two dvd_def)
+next
+  case False
+  then have "even (n-1)"
+    by simp
+  then show ?thesis
+    by (auto simp: choose_two dvd_def)
+qed
+
+lemma add_choose_le_power: "(n + k) choose n \<le> Suc k ^ n"
+proof -
+  have *: "(\<Prod>i<n. of_nat (n+k - i) / of_nat (n - i)) \<le> (\<Prod>i<n. real (Suc k))"
+  proof (intro prod_mono conjI)
+    fix i
+    assume i: "i \<in> {..<n}"
+    then have "real (n + k - i) / real (n - i) = 1 + k/real(n-i)"
+      by (auto simp: divide_simps)
+    also have "\<dots> \<le> 1 + real k"
+      using i by (simp add: divide_inverse inverse_le_1_iff mult_left_le)
+    finally show "real (n + k - i) / real (n - i) \<le> real (Suc k)" 
+      by simp
+  qed auto
+  then have "real((n + k) choose n) \<le> real (Suc k ^ n)"
+    by (simp add: binomial_altdef_of_nat lessThan_atLeast0)
+  then show ?thesis
+    by linarith
+qed
+
+lemma choose_le_power: "m choose k \<le> (Suc m - k) ^ k"
+  by (metis Suc_diff_le add_choose_le_power add_diff_inverse_nat binomial_eq_0_iff less_le_not_le nle_le zero_le)
 
 lemma sum_nsets_one: "(\<Sum>U\<in>[V]\<^bsup>Suc 0\<^esup>. f U) = (\<Sum>x\<in>V. f {x})"
 proof -
@@ -16,6 +55,8 @@ proof -
 qed
 
 subsection \<open>Relating cliques to the graph theory library\<close>
+
+text \<open>When talking about Ramsey numbers, sometimes cliques are best, sometimes colour maps\<close>
 
 lemma nsets2_eq_all_edges: "[A]\<^bsup>2\<^esup> = all_edges A"
   using card_2_iff' unfolding nsets_def all_edges_def
@@ -38,8 +79,6 @@ lemma indep_all_edges_iff: "indep K (E \<inter> all_edges K) \<longleftrightarro
 lemma clique_indep_all_edges_iff: "clique_indep s t K (E \<inter> all_edges K) = clique_indep s t K E"
   by (simp add: clique_all_edges_iff clique_indep_def indep_all_edges_iff)
 
-text \<open>When talking about Ramsey numbers, sometimes cliques are best, sometimes colour maps\<close>
-
 text \<open>identifying Ramsey numbers (possibly not the minimum) for a given type and pair of integers\<close>
 definition is_clique_RN where
   "is_clique_RN \<equiv> \<lambda>U::'a itself. \<lambda>m n r. 
@@ -48,8 +87,6 @@ definition is_clique_RN where
 text \<open>could be generalised to allow e.g. any hereditarily finite set\<close>
 abbreviation is_Ramsey_number :: "[nat,nat,nat] \<Rightarrow> bool" where 
   "is_Ramsey_number m n r \<equiv> partn_lst {..<r} [m,n] 2"
-
-(*EVERYTHING BELOW BELONGS IN AN AFP ENTRY*)
 
 lemma is_clique_RN_imp_partn_lst:  
   fixes U :: "'a itself"
@@ -105,7 +142,7 @@ proof (intro strip)
         using e \<open>K\<subseteq>V\<close> \<phi> by (fastforce simp: card_2_iff)
       then show ?thesis
         using e 1 f bij_betw_imp_surj_on [OF \<phi>] 
-        apply (simp add: indep_def E_def card_2_iff Pi_iff less_2_cases doubleton_eq_iff image_iff)
+        apply (simp add: indep_def E_def card_2_iff Pi_iff doubleton_eq_iff image_iff)
         by (metis \<open>K \<subseteq> V\<close> doubleton_in_nsets_2 imageI in_mono less_2_cases_iff less_irrefl numeral_2_eq_2)
     qed
     then have "f ` [\<phi> ` K]\<^bsup>2\<^esup> \<subseteq> {Suc 0}"
@@ -150,7 +187,7 @@ proof (intro strip)
   define K where "K \<equiv> \<phi> ` H"
   have [simp]: "\<And>v w. \<lbrakk>v \<in> K; w \<in> K\<rbrakk> \<Longrightarrow> inv_into {..<card V} \<phi> v = inv_into {..<card V} \<phi> w \<longleftrightarrow> v=w"
     using bij_betw_inv_into_right [OF \<phi>] H V \<phi>
-    by (metis (no_types, opaque_lifting) K_def subsetD bij_betw_imp_surj_on image_mono lessThan_subset_iff)
+    by (metis K_def image_mono inv_into_injective lessThan_subset_iff subset_iff)
   have "K \<subseteq> V"
     using H \<phi> V bij_betw_imp_surj_on by (fastforce simp: K_def nsets_def)
   have [simp]: "card (\<phi> ` H) = card H"
@@ -567,7 +604,8 @@ proof
   have fin_\<Omega>[simp]: "finite \<Omega>"
     by (simp add: \<Omega>_def finite_PiE \<open>finite W\<close> finite_all_edges)
   have coloured_insert: 
-    "coloured (insert e F) f c = (if f e = c then insert e (coloured F f c) else coloured F f c)"  for f e c F
+    "coloured (insert e F) f c = (if f e = c then insert e (coloured F f c) else coloured F f c)"  
+    for f e c F
     by (auto simp: coloured_def)
   have eq2: "{..<2} = {0, Suc 0}"
     by (simp add: insert_commute lessThan_Suc numeral_2_eq_2)
@@ -828,7 +866,7 @@ proof
     then have "2 * n powr s \<le> 2 powr ((2 + s * s) / 2)"
       by (simp add: add_divide_distrib powr_add)
     then show ?thesis
-      using n \<open>n>0\<close>  by (simp add: divide_simps flip: powr_realpow powr_add) argo
+      using n \<open>n>0\<close> by (simp add: divide_simps flip: powr_realpow powr_add) argo
   qed
   also have "\<dots> < 1"
   proof -
@@ -836,7 +874,7 @@ proof
     proof (induction k)
       case 0
       have "2 powr (5/2) = sqrt (2^5)"
-        by (metis divide_inverse mult.left_neutral numeral_powr_numeral_real powr_ge_pzero powr_half_sqrt powr_powr)
+        by (simp add: powr_half_sqrt_powr)
       also have "\<dots> < sqrt 36"
         by (intro real_sqrt_less_mono) auto
       finally show ?case
@@ -844,9 +882,7 @@ proof
     next
       case (Suc k)
       have "2 powr (1 + real (Suc k + 3) / 2) = 2 powr (1/2) * 2 powr (1 + (k+3)/2)"
-        apply (simp add: powr_add powr_half_sqrt_powr real_sqrt_mult)
-        apply (simp flip: real_sqrt_mult)
-        done
+        by (simp add: powr_add powr_half_sqrt_powr flip: real_sqrt_mult)
       also have "\<dots> \<le> sqrt 2 * fact (k+3)"
         using Suc.IH by (simp add: powr_half_sqrt)
       also have "\<dots> < real(k + 4) * fact (k + 3)"
@@ -878,54 +914,17 @@ corollary RN_lower_nodiag:
   by (meson RN_lower RN_mono assms less_le_trans le_refl of_nat_mono)                       
 
 theorem RN_lower_self:
-  assumes "k \<ge> 4"
+  assumes "k \<ge> 3"
   shows "RN k k > k"
-proof -
-  have "k \<le> 2 powr (k/2)"
-    using powr_half_ge numeral_le_real_of_nat_iff assms by blast
+proof (cases "k=3")
+  case False
+  with assms have "k\<ge>4" by linarith
+  then have "k \<le> 2 powr (k/2)"
+    using powr_half_ge numeral_le_real_of_nat_iff by blast
   also have "\<dots> < RN k k"
     using assms by (intro RN_lower) auto
   finally show ?thesis
     by fastforce
-qed
-
-text \<open>Bhavik Mehta: choose-free version for very small @{term p}\<close>
-lemma Ramsey_number_lower_simple: 
-  assumes n: "of_real n ^ k * p powr (real k^2 / 4) + of_real n ^ l * exp (-p * real l ^ 2 / 4) < 1"
-  assumes p01: "0<p" "p<1" and "k>1" "l>1"
-  shows "\<not> is_Ramsey_number k l n"
-proof (rule Ramsey_number_lower_gen)
-  have "real (n choose k) * p ^ (k choose 2) \<le> of_real n ^ k * p powr (real k^2 / 4)"
-  proof -
-    have "real (n choose k) * p ^ (k choose 2) \<le> real (Suc n - k)^k * p ^ (k choose 2)"
-      using choose_le_power p01 by simp
-    also have "\<dots> = real (Suc n - k)^k * p powr (real k * (real k - 1) / 2)"
-      by (metis choose_two_real p01(1) powr_realpow)
-    also have "\<dots> \<le> of_real n ^ k * p powr (real k^2 / 4)"
-      using p01 \<open>k>1\<close> by (intro mult_mono powr_mono') (auto simp: power2_eq_square)
-    finally show ?thesis .
-  qed
-  moreover
-  have "real (n choose l) * (1 - p) ^ (l choose 2) \<le> of_real n ^ l * exp (-p * real l ^ 2 / 4)"
-  proof -
-    show ?thesis
-    proof (intro mult_mono)
-      show "real (n choose l) \<le> of_real (real n) ^ l"
-        by (metis binomial_eq_0_iff binomial_le_pow linorder_not_le of_nat_0 of_nat_0_le_iff of_nat_mono of_nat_power of_real_of_nat_eq)
-      have "l * p \<le> 2 * (1 - real l) * -p"
-        using assms by (auto simp: algebra_simps)
-      also have "\<dots> \<le> 2 * (1 - real l) * ln (1-p)"
-        using p01 \<open>l>1\<close> ln_add_one_self_le_self2 [of "-p"]
-        by (intro mult_left_mono_neg) auto
-      finally have "real l * (real l * p) \<le> real l * (2 * (1 - real l) * ln (1-p))"
-        using mult_left_mono \<open>l>1\<close> by fastforce
-      with p01 show "(1 - p) ^ (l choose 2) \<le> exp (- p * (real l)\<^sup>2 / 4)"
-        by (simp add: field_simps power2_eq_square powr_def choose_two_real flip: powr_realpow)
-    qed (use p01 in auto)
-  qed
-  ultimately
-  show "real (n choose k) * p ^ (k choose 2) + real (n choose l) * (1 - p) ^ (l choose 2) < 1"
-    using n by linarith
-qed (use p01 in auto)
+qed (simp add: RN_gt2)
 
 end
