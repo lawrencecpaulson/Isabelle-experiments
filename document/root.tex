@@ -13,26 +13,26 @@
 
 \begin{document}
 
-\title{Euler's Polynedron Formula}
+\title{Ramsey Number Bounds}
 \author{Lawrence C. Paulson}
 \maketitle
 
 \begin{abstract}
-Euler stated in 1752 that every convex polyhedron satisfied the formula $V - E + F = 2$ 
-where $V$, $E$ and $F$ are the numbers of its vertices, edges, and faces. For three dimensions,
-the well-known proof involves removing one face and then flattening the remainder to form a planar graph,
-which then is iteratively transformed to leave a single triangle. The history of that proof is extensively
-discussed and elaborated by Imre Lakatos~\cite{lakatos}, leaving one finally wondering whether
-the theorem even holds. The formal proof provided here has been ported from HOL Light, 
-where it is credited to Lawrence~\cite{lawrence-short}. The proof generalises Euler's observation
-from solid polyhedra to convex polytopes of arbitrary dimension.
+Ramsey's theorem~\cite{bollobas-graph-theory} implies that for any given natural numbers $k$ and $l$, there exists some $R(k,l)$
+such that a graph having at least $R(k,l)$ vertices must have either a clique of cardinality $k$
+or an anticlique (independent set) of cardinality $l$. Equivalently, for a \emph{complete} graph of size $R(k,l)$,
+every red/blue colouring of the edges must yield an entirely red $k$-clique or an entirely blue $l$-clique.
+Although $R(k,l)$ is for practical purposes impossible to calculate from $k$ and $l$, 
+some upper and lower bounds are known. The celebrated probabilistic argument by Paul Erdős is 
+formalised here, with various of its consequences.
 \end{abstract}
 
 \newpage
 \tableofcontents
 
 \paragraph*{Acknowledgements}
-The author was supported by the ERC Advanced Grant ALEXANDRIA (Project 742178) funded by the European Research Council. 
+Many thanks to Andrew Thomason and Chelsea Edmonds for their help with the probabilistic proofs.
+The author was supported by the ERC Advanced Grant ALEXANDRIA (Project 742178), funded by the European Research Council. 
 
 \newpage
 
