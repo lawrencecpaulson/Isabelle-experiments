@@ -1,15 +1,20 @@
 section \<open>Lower bounds for Ramsey numbers\<close>
 
-text \<open>The classical Erdős--Szekeres upper bound is proved in the original Ramsey theory.\<close>
+text \<open>Probabilistic proofs of lower bounds for Ramsey numbers. Variations and strengthenings of 
+the classical Erdős--Szekeres upper bound, which is proved in the original Ramsey theory
+ Also a number of simple properties of Ramsey numbers, including the equivalence of the clique/anticlique 
+ and edge colouring definitions.\<close>
 
-theory Ramsey_Extras imports
-  "HOL-Library.Ramsey"  "HOL-Library.Infinite_Typeclass" 
-  "HOL-Probability.Probability"
+
+theory Ramsey_Bounds 
+  imports "HOL-Library.Ramsey" "HOL-Library.Infinite_Typeclass" "HOL-Probability.Probability"
   "Undirected_Graph_Theory.Undirected_Graph_Basics" 
 
 begin
 
 subsection \<open>Preliminaries\<close>
+
+text \<open>Elementary facts involving binomial coefficients\<close>
 
 lemma choose_two_real: "of_nat (n choose 2) = real n * (real n - 1) / 2"
 proof (cases "even n")
@@ -54,7 +59,7 @@ proof -
     using sum.reindex_bij_betw [OF bij] by (metis (no_types, lifting) sum.cong)
 qed
 
-subsection \<open>Relating cliques to the graph theory library\<close>
+subsection \<open>Relating cliques to graphs; Ramsey numbers\<close>
 
 text \<open>When talking about Ramsey numbers, sometimes cliques are best, sometimes colour maps\<close>
 
@@ -233,7 +238,7 @@ text \<open>All complete graphs of a given cardinality are the same\<close>
 lemma is_clique_RN_any_type:
   assumes "is_clique_RN (U::'a itself) m n r" "infinite (UNIV::'a set)" 
   shows "is_clique_RN (V::'b::infinite itself) m n r"
-  by (metis  partn_lst_imp_is_clique_RN is_clique_RN_imp_partn_lst assms)
+  by (metis partn_lst_imp_is_clique_RN is_clique_RN_imp_partn_lst assms)
 
 lemma is_Ramsey_number_le:
   assumes "is_Ramsey_number m n r" and le: "m' \<le> m" "n' \<le> n"
@@ -289,6 +294,8 @@ proof (intro strip)
       using \<open>i<2\<close> H by (fastforce simp: less_2_cases_iff f'_def image_subset_iff)
   qed auto
 qed
+
+subsection \<open>Elementary properties of Ramsey numbers\<close>
 
 lemma is_Ramsey_number_commute: "is_Ramsey_number m n r \<longleftrightarrow> is_Ramsey_number n m r"
   by (meson is_Ramsey_number_commute_aux)
@@ -410,32 +417,10 @@ lemma indep_iff: "F \<subseteq> all_edges K \<Longrightarrow> indep K F \<longle
 lemma all_edges_empty_iff: "all_edges K = {} \<longleftrightarrow> (\<exists>v. K \<subseteq> {v})"
   using clique_iff [OF empty_subsetI] by (metis clique_def empty_iff singleton_iff subset_iff)
 
-lemma powr_half_ge:
-  fixes x::real
-  assumes "x\<ge>4"
-  shows "x \<le> 2 powr (x/2)"
-proof -
-  define f where "f \<equiv> \<lambda>x::real. 2 powr (x/2) - x"
-  have "f 4 \<le> f x"
-  proof (intro DERIV_nonneg_imp_nondecreasing[of concl: f] exI conjI assms)
-    show "(f has_real_derivative ln 2 * (2 powr (y/2 - 1)) - 1) (at y)" for y
-      unfolding f_def by (rule derivative_eq_intros refl | simp add: powr_diff)+
-    show "ln 2 * (2 powr (y/2 - 1)) - 1 \<ge> 0" if "4 \<le> y" for y::real
-    proof -
-      have "1 \<le> ln 2 * 2 powr ((4 - 2) / (2::real))"
-        using ln2_ge_two_thirds by simp
-      also have "\<dots> \<le> ln 2 * (2 powr (y/2 - 1))"
-        using that by (intro mult_left_mono powr_mono) auto
-      finally show ?thesis by simp
-    qed
-  qed
-  moreover have "f 4 = 0" by (simp add: f_def)
-  ultimately show ?thesis
-    by (simp add: f_def)
-qed
-
 lemma Ramsey_number_zero: "\<not> is_Ramsey_number (Suc m) (Suc n) 0"
   by (metis RN_1 RN_le is_Ramsey_number_le not_one_le_zero Suc_le_eq One_nat_def zero_less_Suc)
+
+subsection \<open>The product lower bound\<close>
 
 lemma Ramsey_number_times_lower: "\<not> is_clique_RN (TYPE(nat*nat)) (Suc m) (Suc n) (m*n)"
 proof
@@ -491,6 +476,8 @@ lemma RN_gt2:
   assumes "2 \<le> k" "3 \<le> l" shows "k < RN l k"
   by (simp add: RN_commute assms RN_gt1)
 
+subsection \<open>A variety of upper bounds, including a stronger Erdős--Szekeres\<close>
+
 lemma RN_1_le: "RN (Suc 0) l \<le> Suc 0"
   by (metis RN_0' RN_1 gr_zeroI le_cases less_imp_le)
 
@@ -515,6 +502,7 @@ lemma RN_le_add_RN_RN:
   shows "RN i j \<le> RN (i - Suc 0) j + RN i (j - Suc 0)"
   using is_Ramsey_number_add RN_le assms is_Ramsey_number_RN
   by simp
+
 
 text \<open>Cribbed from Bhavik Mehta\<close>
 lemma RN_le_choose_strong: "RN k l \<le> (k + l - 2) choose (k - 1)"
@@ -573,9 +561,11 @@ qed
 lemma RN_le_argpower': "RN j i \<le> j ^ (i-1)"
   using RN_commute RN_le_argpower by presburger
 
+subsection \<open>Probabilistic lower bounds: the main  theorem and applications\<close>
+
 text \<open>General probabilistic setup, omitting the actual probability calculation.
-  Andrew Thomason's proof\<close> 
-proposition Ramsey_number_lower_gen:  
+  Andrew Thomason's proof (private communication)\<close> 
+theorem Ramsey_number_lower_gen:  
   fixes n k::nat and p::real
   assumes n: "(n choose k) * p ^ (k choose 2) + (n choose l) * (1 - p) ^ (l choose 2) < 1"
   assumes p01: "0<p" "p<1"
@@ -913,7 +903,31 @@ corollary RN_lower_nodiag:
   shows "RN k l > 2 powr (k/2)"
   by (meson RN_lower RN_mono assms less_le_trans le_refl of_nat_mono)                       
 
-theorem RN_lower_self:
+lemma powr_half_ge:
+  fixes x::real
+  assumes "x\<ge>4"
+  shows "x \<le> 2 powr (x/2)"
+proof -
+  define f where "f \<equiv> \<lambda>x::real. 2 powr (x/2) - x"
+  have "f 4 \<le> f x"
+  proof (intro DERIV_nonneg_imp_nondecreasing[of concl: f] exI conjI assms)
+    show "(f has_real_derivative ln 2 * (2 powr (y/2 - 1)) - 1) (at y)" for y
+      unfolding f_def by (rule derivative_eq_intros refl | simp add: powr_diff)+
+    show "ln 2 * (2 powr (y/2 - 1)) - 1 \<ge> 0" if "4 \<le> y" for y::real
+    proof -
+      have "1 \<le> ln 2 * 2 powr ((4 - 2) / (2::real))"
+        using ln2_ge_two_thirds by simp
+      also have "\<dots> \<le> ln 2 * (2 powr (y/2 - 1))"
+        using that by (intro mult_left_mono powr_mono) auto
+      finally show ?thesis by simp
+    qed
+  qed
+  moreover have "f 4 = 0" by (simp add: f_def)
+  ultimately show ?thesis
+    by (simp add: f_def)
+qed
+
+corollary RN_lower_self:
   assumes "k \<ge> 3"
   shows "RN k k > k"
 proof (cases "k=3")
