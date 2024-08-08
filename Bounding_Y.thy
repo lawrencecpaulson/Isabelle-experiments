@@ -4,6 +4,16 @@ theory Bounding_Y imports Red_Steps
 
 begin
 
+text \<open>yet another telescope variant, with weaker promises but a different conclusion;
+as written it holds even if @{term"n=0"}\<close>
+
+lemma prod_lessThan_telescope_mult:
+  fixes f::"nat \<Rightarrow> 'a::field"
+  assumes "\<And>i. i<n \<Longrightarrow> f i \<noteq> 0" 
+  shows "(\<Prod>i<n. f (Suc i) / f i) * f 0 = f n"
+  using assms
+by (induction n) (auto simp: divide_simps)
+
 subsection \<open>The following results together are Lemma 6.4\<close>
 text \<open>Compared with the paper, all the indices are greater by one!!\<close>
 

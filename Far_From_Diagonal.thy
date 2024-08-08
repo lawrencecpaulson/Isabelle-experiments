@@ -4,6 +4,50 @@ theory Far_From_Diagonal
   imports Zigzag "Stirling_Formula.Stirling_Formula"
 
 begin
+                               
+
+subsection \<open>An asymptotic form for binomial coefficients via Stirling's formula\<close>
+
+text \<open>From Appendix D.3, page 56\<close>
+
+lemma const_smallo_real: "(\<lambda>n. x) \<in> o(real)"
+  by real_asymp
+
+lemma o_real_shift:
+  assumes "f \<in> o(real)"
+  shows "(\<lambda>i. f(i+j)) \<in> o(real)"
+  unfolding smallo_def
+proof clarify
+  fix c :: real
+  assume "(0::real) < c"
+  then have *: "\<forall>\<^sub>F i in sequentially. norm (f i) \<le> c/2 * norm i"
+    using assms half_gt_zero landau_o.smallD by blast
+  have "\<forall>\<^sub>F i in sequentially. norm (f (i + j)) \<le> c/2 * norm (i + j)"
+    using eventually_all_ge_at_top [OF *]
+    by (metis (mono_tags, lifting) eventually_sequentially le_add1)
+  then have "\<forall>\<^sub>F i in sequentially. i\<ge>j \<longrightarrow> norm (f (i + j)) \<le> c * norm i"
+    apply eventually_elim
+    apply clarsimp
+    by (smt (verit, best) \<open>0 < c\<close> mult_left_mono nat_distrib(2) of_nat_mono)
+  then show "\<forall>\<^sub>F i in sequentially. norm (f (i + j)) \<le> c * norm i"
+    using eventually_mp by fastforce
+qed
+
+lemma tendsto_zero_imp_o1:
+  fixes a :: "nat \<Rightarrow> real"
+  assumes "a \<longlonglongrightarrow> 0"
+  shows "a \<in> o(1)"
+proof -
+  have "\<forall>\<^sub>F n in sequentially. \<bar>a n\<bar> \<le> c" if "c>0" for c
+  proof -
+    have "\<forall>\<^sub>F n in sequentially. \<bar>a n\<bar> < c"
+      by (metis assms order_tendstoD(2) tendsto_rabs_zero_iff that)
+    then show ?thesis
+      by (meson eventually_sequentially less_eq_real_def)
+  qed
+  then show ?thesis
+    by (auto simp: smallo_def)
+qed
 
 subsection \<open>Fact D.3 from the Appendix\<close>
 

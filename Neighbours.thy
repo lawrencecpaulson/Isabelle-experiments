@@ -6,6 +6,9 @@ theory Neighbours imports General_Extras Ramsey_Bounds
 
 begin
 
+abbreviation set_difference :: "['a set,'a set] \<Rightarrow> 'a set" (infixl "\<setminus>" 65)
+  where "A \<setminus> B \<equiv> A-B"
+
 subsection \<open>Preliminaries on graphs\<close>
 
 context ulgraph

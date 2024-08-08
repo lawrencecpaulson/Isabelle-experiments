@@ -4,6 +4,164 @@ theory Big_Blue_Steps imports Book
 
 begin
 
+subsection \<open>Preliminaries\<close>
+
+text \<open>A bounded increasing sequence of finite sets eventually terminates\<close>
+lemma Union_incseq_finite:
+  assumes fin: "\<And>n. finite (A n)" and N: "\<And>n. card (A n) < N" and "incseq A"
+  shows "\<forall>\<^sub>F k in sequentially. \<Union> (range A) = A k"
+proof (rule ccontr)
+  assume "\<not> ?thesis"
+  then have "\<forall>k. \<exists>l\<ge>k. \<Union> (range A) \<noteq> A l"
+    using eventually_sequentially by force
+  then have "\<forall>k. \<exists>l\<ge>k. \<exists>m\<ge>l. A m \<noteq> A l"
+    by (smt (verit, ccfv_threshold) \<open>incseq A\<close> cSup_eq_maximum image_iff monotoneD nle_le rangeI)
+  then have "\<forall>k. \<exists>l\<ge>k. A l - A k \<noteq> {}"
+    by (metis \<open>incseq A\<close> diff_shunt_var monotoneD nat_le_linear subset_antisym)
+  then obtain f where f: "\<And>k. f k \<ge> k \<and> A (f k) - A k \<noteq> {}"
+    by metis
+  have "card (A ((f^^i)0)) \<ge> i" for i
+  proof (induction i)
+    case 0
+    then show ?case
+      by auto
+  next
+    case (Suc i)
+    have "card (A ((f ^^ i) 0)) < card (A (f ((f ^^ i) 0)))"
+      by (metis Diff_cancel \<open>incseq A\<close> card_seteq f fin leI monotoneD)
+    then show ?case
+      using Suc by simp
+  qed
+  with N show False
+    using linorder_not_less by auto
+qed
+
+text \<open>Two lemmas for proving "bigness lemmas" over a closed interval\<close>
+
+lemma eventually_all_geI0:
+  assumes "\<forall>\<^sub>F l in sequentially. P a l"  
+          "\<And>l x. \<lbrakk>P a l; a\<le>x; x\<le>b; l \<ge> L\<rbrakk> \<Longrightarrow> P x l"
+  shows "\<forall>\<^sub>F l in sequentially. \<forall>x. a \<le> x \<and> x \<le> b \<longrightarrow> P x l"
+  by (smt (verit, del_insts) assms eventually_sequentially eventually_elim2)
+
+lemma eventually_all_geI1:
+  assumes "\<forall>\<^sub>F l in sequentially. P b l"  
+    "\<And>l x. \<lbrakk>P b l; a\<le>x; x\<le>b; l \<ge> L\<rbrakk> \<Longrightarrow> P x l"
+  shows "\<forall>\<^sub>F l in sequentially. \<forall>x. a \<le> x \<and> x \<le> b \<longrightarrow> P x l"
+  by (smt (verit, del_insts) assms eventually_sequentially eventually_elim2)
+
+text \<open>Mehta's binomial function: convex on the entire real line and coinciding with 
+gchoose under weak conditions\<close>
+
+definition "mfact \<equiv> \<lambda>a k. if a < real k - 1 then 0 else prod (\<lambda>i. a - of_nat i) {0..<k}"
+
+text \<open>Mehta's special rule for convexity, my proof\<close>
+lemma convex_on_extend:
+  fixes f :: "real \<Rightarrow> real"
+  assumes cf: "convex_on {k..} f" and mon: "mono_on {k..} f" 
+    and fk: "\<And>x. x<k \<Longrightarrow> f x = f k"
+  shows "convex_on UNIV f"
+proof (intro convex_on_linorderI)
+  fix t x y :: real
+  assume t: "0 < t" "t < 1" and "x < y"
+  let ?u = "((1 - t) *\<^sub>R x + t *\<^sub>R y)"
+  show "f ?u \<le> (1 - t) * f x + t * f y"
+  proof (cases "k \<le> x")
+    case True
+    with \<open>x < y\<close> t show ?thesis
+      by (intro convex_onD [OF cf]) auto
+  next
+    case False
+    then have "x < k" and fxk: "f x = f k" by (auto simp: fk)
+    show ?thesis
+    proof (cases "k \<le> y")
+      case True
+      then have "f y \<ge> f k"
+        using mon mono_onD by auto
+      have kle: "k \<le> (1 - t) * k + t * y"
+        using True segment_bound_lemma t by auto
+      have fle: "f ((1 - t) *\<^sub>R k + t *\<^sub>R y) \<le> (1 - t) * f k + t * f y"
+        using t True by (intro convex_onD [OF cf]) auto
+      with False
+      show ?thesis
+      proof (cases "?u < k")
+        case True
+        then show ?thesis
+          using \<open>f k \<le> f y\<close> fxk fk segment_bound_lemma t by auto
+      next
+        case False
+        have "f ?u \<le> f ((1 - t) *\<^sub>R k + t *\<^sub>R y)"
+          using kle \<open>x < k\<close> False t by (intro mono_onD [OF mon]) auto
+        then show ?thesis
+          using fle fxk by auto
+      qed
+    next
+      case False
+      with \<open>x < k\<close> show ?thesis
+        by (simp add: fk convex_bound_lt order_less_imp_le segment_bound_lemma t)
+    qed
+  qed
+qed auto
+
+lemma convex_mfact: 
+  assumes "k>0"
+  shows "convex_on UNIV (\<lambda>a. mfact a k)"
+  unfolding mfact_def
+proof (rule convex_on_extend)
+  show "convex_on {real (k - 1)..} (\<lambda>a. if a < real k - 1 then 0 else \<Prod>i = 0..<k. a - real i)"
+    using convex_gchoose_aux [of k] assms
+    apply (simp add: convex_on_def Ball_def)
+    by (smt (verit, del_insts) distrib_right mult_cancel_right2 mult_left_mono)
+  show "mono_on {real (k - 1)..} (\<lambda>a. if a < real k - 1 then 0 else \<Prod>i = 0..<k. a - real i)"
+    using \<open>k > 0\<close> by (auto simp: mono_on_def intro!: prod_mono)
+qed (use assms gr0_conv_Suc in force)
+
+definition mbinomial :: "real \<Rightarrow> nat \<Rightarrow> real"
+  where "mbinomial \<equiv> \<lambda>a k. mfact a k / fact k"
+
+lemma convex_mbinomial: "k>0 \<Longrightarrow> convex_on UNIV (\<lambda>x. mbinomial x k)"
+  by (simp add: mbinomial_def convex_mfact convex_on_cdiv)
+
+lemma mbinomial_eq_choose [simp]: "mbinomial (real n) k = n choose k"
+  by (simp add: binomial_gbinomial gbinomial_prod_rev mbinomial_def mfact_def)
+
+lemma mbinomial_eq_gchoose [simp]: "k \<le> a \<Longrightarrow> mbinomial a k = a gchoose k"
+  by (simp add: gbinomial_prod_rev mbinomial_def mfact_def)
+
+
+
+(*migrated 2024-08-06*)
+lemma gbinomial_mono:
+  fixes k::nat and a::real
+  assumes "of_nat k \<le> a" "a \<le> b" shows "a gchoose k \<le> b gchoose k"
+  using assms
+  by (force simp: gbinomial_prod_rev intro!: divide_right_mono prod_mono)
+
+(*migrated 2024-08-06*)
+lemma gbinomial_is_prod: "(a gchoose k) = (\<Prod>i<k. (a - of_nat i) / (1 + of_nat i))"
+  unfolding gbinomial_prod_rev
+  by (induction k; simp add: divide_simps)
+
+lemma smallo_multiples: (*migrated 2024-08-06*)
+  assumes f: "f \<in> o(real)" and "k>0"
+  shows "(\<lambda>n. f (k * n)) \<in> o(real)"
+proof (clarsimp simp: smallo_def)
+  fix c::real
+  assume "c>0"
+  then have "c/k > 0"
+    by (simp add: assms)
+  with assms have "\<forall>\<^sub>F n in sequentially. \<bar>f n\<bar> \<le> c / real k * n"
+    by (force simp: smallo_def del: divide_const_simps)
+  then obtain N where "\<And>n. n\<ge>N \<Longrightarrow> \<bar>f n\<bar> \<le> c/k * n"
+    by (meson eventually_at_top_linorder)
+  then have "\<And>m. (k*m)\<ge>N \<Longrightarrow> \<bar>f (k*m)\<bar> \<le> c/k * (k*m)"
+    by blast
+  with \<open>k>0\<close> have "\<forall>\<^sub>F m in sequentially. \<bar>f (k*m)\<bar> \<le> c/k * (k*m)"
+    by (smt (verit, del_insts) One_nat_def Suc_leI eventually_at_top_linorderI mult_1_left mult_le_mono)
+  then show "\<forall>\<^sub>F n in sequentially. \<bar>f (k * n)\<bar> \<le> c * n"
+    by eventually_elim (use \<open>k>0\<close> in auto)
+qed
+
 subsection \<open>Preliminaries: Fact D1\<close>
 
 text \<open>from appendix D, page 55\<close>

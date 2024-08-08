@@ -55,6 +55,42 @@ proof -
 qed
 
 
+lemma fact_less_fact_power:
+  assumes "1 < s" "s \<le> n" shows "fact n < fact (n - s) * real n ^ s"
+proof -
+  have eq: "{Suc 0..n} \<inter> {x. x \<le> n - s} = {Suc 0..n-s}" "{Suc 0..n} \<inter> -{x. x \<le> n-s} = {Suc (n-s)..n}" 
+    using assms by auto
+  have inj: "inj_on ((+)s) A" for A
+    by simp
+  have "fact n = (\<Prod>i=1..n. real i)"
+    by (simp add: fact_prod)
+  also have "\<dots> < (\<Prod>i=1..n. if i\<le>n-s then real i else n)"
+    using assms by (intro prod_mono_strict [where i="n-1"]) auto
+  also have "\<dots> = (\<Prod>i = 1..n-s. real i) * real n ^ s"
+    using \<open>s \<le> n\<close> by (force simp: prod.If_cases eq)
+  also have "\<dots> = fact (n - s) * real n ^ s"
+    by (simp add: fact_prod)
+  finally show ?thesis .
+qed
+
+
+text \<open>useful for counting the number of edges containing a clique\<close>
+lemma card_Pow_diff:
+  assumes "A \<subseteq> B" "finite B"
+  shows "card {X \<in> Pow B. A \<subseteq> X} = 2 ^ (card B - card A)"
+proof -
+  have inj: "inj_on ((\<union>) A) (Pow (B-A))"
+    using assms by (auto simp: inj_on_def)
+  have "\<And>C. \<lbrakk>A \<subseteq> C; C \<subseteq> B\<rbrakk> \<Longrightarrow> C \<in> (\<union>) A ` Pow (B - A)"
+    by (metis Diff_mono Diff_partition PowI imageI subset_refl)
+  with assms have "{X \<in> Pow B. A \<subseteq> X} = (\<union>)A ` Pow (B-A)"
+    by blast
+  moreover have "card \<dots> = 2 ^ (card B - card A)"
+    using inj assms by (simp add: card_Diff_subset card_Pow card_image finite_subset)
+  ultimately show ?thesis
+    by presburger
+qed
+
 
 
 lemma DD: "x>(0::real) \<Longrightarrow> y>0 \<Longrightarrow> x powr (ln y) = y powr (ln x)"
