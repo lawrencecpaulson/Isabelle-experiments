@@ -36,9 +36,6 @@ lemma all_uedges_betw_I: "x \<in> X \<Longrightarrow> y \<in> Y \<Longrightarrow
 lemma all_edges_betw_un_subset: "all_edges_betw_un X Y \<subseteq> Pow (X\<union>Y)"
   by (auto simp: all_edges_betw_un_def)
 
-lemma all_edges_betw_un_rem_wf: "all_edges_betw_un X Y = all_edges_betw_un (X \<inter> V) (Y \<inter> V)"
-  using wellformed by (simp add: all_edges_betw_un_def) blast 
-
 lemma all_edges_betw_un_empty [simp]:
   "all_edges_betw_un {} Z = {}" "all_edges_betw_un Z {} = {}"
   by (auto simp: all_edges_betw_un_def)
@@ -69,22 +66,6 @@ lemma all_edges_betw_un_Un2:
   "all_edges_betw_un X (Y \<union> Z) = all_edges_betw_un X Y \<union> all_edges_betw_un X Z"
   by (auto simp: all_edges_betw_un_def)
 
-lemma all_edges_betw_un_Int1:
-  "disjnt Y Z \<Longrightarrow> all_edges_betw_un (X \<inter> Y) Z = all_edges_betw_un X Z \<inter> all_edges_betw_un Y Z"
-  by (fastforce simp: all_edges_betw_un_def doubleton_eq_iff disjnt_def)
-
-lemma all_edges_betw_un_Int2:
-  "disjnt Z X \<Longrightarrow> all_edges_betw_un X (Y \<inter> Z) = all_edges_betw_un X Y \<inter> all_edges_betw_un X Z"
-  by (fastforce simp: all_edges_betw_un_def doubleton_eq_iff disjnt_def)
-
-lemma all_edges_betw_un_diff1:
-  "Z \<subseteq> Y \<Longrightarrow> all_edges_betw_un (X - Y) Z = all_edges_betw_un X Z - all_edges_betw_un Y Z"
-  by (fastforce simp: all_edges_betw_un_def doubleton_eq_iff)
-
-lemma all_edges_betw_un_diff2:
-  "X \<subseteq> Z \<Longrightarrow> all_edges_betw_un X (Y - Z) = all_edges_betw_un X Y - all_edges_betw_un X Z"
-  by (fastforce simp: all_edges_betw_un_def doubleton_eq_iff)
-
 lemma finite_all_edges_betw_un:
   assumes "finite X" "finite Y"
   shows "finite (all_edges_betw_un X Y)"
@@ -98,22 +79,6 @@ lemma all_edges_betw_un_Union2:
   "all_edges_betw_un X (Union \<Y>) = (\<Union>Y\<in>\<Y>. all_edges_betw_un X Y)"
   by (auto simp: all_edges_betw_un_def)
 
-lemma all_edges_betw_un_UN1:
-  "all_edges_betw_un (\<Union>i\<in>I. X i) Y = (\<Union>i\<in>I. all_edges_betw_un (X i) Y)"
-  by (auto simp: all_edges_betw_un_def)
-
-lemma all_edges_betw_un_UN2:
-  "all_edges_betw_un X (\<Union>i\<in>I. Y i) = (\<Union>i\<in>I. all_edges_betw_un X (Y i))"
-  by (auto simp: all_edges_betw_un_def)
-
-lemma all_edges_betw_un_INT1:
-  "\<lbrakk>i\<in>I; disjnt (X i) Y\<rbrakk> \<Longrightarrow> all_edges_betw_un (\<Inter>i\<in>I. X i) Y = (\<Inter>i\<in>I. all_edges_betw_un (X i) Y)"
-  by (simp add: all_edges_betw_un_def disjnt_iff set_eq_iff) (smt (verit) doubleton_eq_iff)
-
-lemma all_edges_betw_un_INT2:
-  "\<lbrakk>i\<in>I; disjnt X (Y i)\<rbrakk> \<Longrightarrow> all_edges_betw_un X (\<Inter>i\<in>I. Y i) = (\<Inter>i\<in>I. all_edges_betw_un X (Y i))"
-  by (simp add: all_edges_betw_un_def disjnt_iff set_eq_iff) (smt (verit) doubleton_eq_iff)
-
 lemma all_edges_betw_un_mono1:
   "Y \<subseteq> Z \<Longrightarrow> all_edges_betw_un Y X \<subseteq> all_edges_betw_un Z X"
   by (auto simp: all_edges_betw_un_def)
@@ -125,8 +90,7 @@ lemma all_edges_betw_un_mono2:
 lemma disjnt_all_edges_betw_un:
   assumes "disjnt X Y" "disjnt X Z"
   shows "disjnt (all_edges_betw_un X Z) (all_edges_betw_un Y Z)"
-  using assms
-  by (auto simp: all_edges_betw_un_def disjnt_iff doubleton_eq_iff)
+  using assms by (auto simp: all_edges_betw_un_def disjnt_iff doubleton_eq_iff)
 
 end
 
@@ -158,26 +122,11 @@ begin
 
 declare singleton_not_edge [simp]
 
-lemma Neighbours_eq_all_edges_betw_un:
-  "Neighbours E x = \<Union> (all_edges_betw_un V {x}) - {x}"
-  using wellformed by (auto simp: Neighbours_def all_edges_betw_un_def insert_commute )
-
 text \<open>"A graph on vertex set @{term"S \<union> T"}  that contains all edges incident to @{term"S"}"
   (page 3). In fact, @{term S} is a clique and every vertex in @{term T} 
   has an edge into @{term S}.\<close>
 definition book :: "'a set \<Rightarrow> 'a set \<Rightarrow> 'a set set \<Rightarrow> bool" where
   "book \<equiv> \<lambda>S T F. disjnt S T \<and> all_edges_betw_un S (S\<union>T) \<subseteq> F"
-
-lemma book_empty [simp]: "book {} T F"
-  by (auto simp: book_def)
-
-lemma book_imp_disjnt: "book S T F \<Longrightarrow> disjnt S T"
-  by (auto simp: book_def)
-
-lemma book_insert: 
-  "book (insert v S) T F \<longleftrightarrow> book S T F \<and> v \<notin> T \<and> all_edges_betw_un {v} (S \<union> T) \<subseteq> F"
-  unfolding book_def all_edges_betw_un_insert1
-  by (auto simp:  all_edges_betw_un_insert2 all_edges_betw_un_Un2 insert_commute subset_iff)
 
 text \<open>Cliques of a given number of vertices; the definition of clique from Ramsey is used\<close>
 
@@ -187,9 +136,6 @@ definition size_clique :: "nat \<Rightarrow> 'a set \<Rightarrow> 'a set set \<R
 lemma size_clique_smaller: "\<lbrakk>size_clique p K F; p' < p\<rbrakk> \<Longrightarrow> \<exists>K'. size_clique p' K' F"
   unfolding size_clique_def
   by (meson card_Ex_subset order.trans less_imp_le_nat smaller_clique)
-
-lemma indep_iff_clique: "K \<subseteq> V \<Longrightarrow> indep K F \<longleftrightarrow> clique K (all_edges V - F)"
-  by simp
 
 subsection \<open>Density: for calculating the parameter p\<close>
 
@@ -268,12 +214,10 @@ next
     show "(\<lambda>e. the_elem (e - {b})) ` (C \<inter> {{x, b} |x. x \<in> A}) = Neighbours C b \<inter> A"
       by (fastforce simp: Neighbours_def insert_commute image_iff Bex_def)
   qed
-  have "edge_card C A (insert b B) = card (C \<inter> ({{x,b} |x. x \<in> A} \<union> all_edges_betw_un A B))"
-    using \<open>C \<subseteq> E\<close> 
-    apply (simp add: edge_card_def all_edges_betw_un_insert2 Int_Un_distrib Int_ac)
-    by (metis (no_types, lifting) Int_absorb2 Int_assoc Un_commute)
-  also have "\<dots> = card ((C \<inter> ({{x,b} |x. x \<in> A}) \<union> (C \<inter> all_edges_betw_un A B)))"
-    by (simp add: Int_Un_distrib)
+  have "(C \<inter> all_edges_betw_un A (insert b B)) = (C \<inter> ({{x, b} |x. x \<in> A} \<union> all_edges_betw_un A B))"
+    using \<open>C \<subseteq> E\<close> by (auto simp: all_edges_betw_un_insert2)
+  then have "edge_card C A (insert b B) = card ((C \<inter> ({{x,b} |x. x \<in> A}) \<union> (C \<inter> all_edges_betw_un A B)))"
+    by (simp add: edge_card_def Int_Un_distrib)
   also have "\<dots> = card (C \<inter> {{x,b} |x. x \<in> A}) + card (C \<inter> all_edges_betw_un A B)"
   proof (rule card_Un_disjnt)
     show "disjnt (C \<inter> {{x, b} |x. x \<in> A}) (C \<inter> all_edges_betw_un A B)"
@@ -411,7 +355,7 @@ proof -
     using genY assms
     by (simp add: gen_density_def field_split_simps card_eq_0_iff flip: of_nat_mult split: if_split_asm)
   with assms * \<open>card Y < card X\<close> show ?thesis
-    by (simp add: gen_density_le_iff field_split_simps edge_card_diff card_Diff_subset of_nat_diff 
+    by (simp add: gen_density_le_iff field_split_simps edge_card_diff card_Diff_subset 
         edge_card_mono flip: of_nat_mult)
 qed
 

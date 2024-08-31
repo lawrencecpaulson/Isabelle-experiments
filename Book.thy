@@ -304,9 +304,6 @@ lemma Red_edges_nonzero: "edge_card Red X0 Y0 > 0"
   using Red_edges_XY0
   using Red_E edge_card_def fin_edges finite_subset by fastforce
 
-lemma Blue_edges_le: "edge_card Red X0 Y0 \<le> card X0 * card Y0"
-  using edge_card_le finite_X0 finite_Y0 by force
-
 lemma p0_01: "0 < p0" "p0 \<le> 1"
 proof -
   show "0 < p0"
@@ -364,21 +361,10 @@ lemma hgt_gt0: "hgt p > 0"
 lemma hgt_works: "p \<le> qfun (hgt p)"
   by (metis (no_types, lifting) LeastI height_exists hgt_def)
 
-lemma hgt_Least':
-  assumes "0<h" "p \<le> qfun_base k h"
-  shows "hgt p \<le> h"
-  by (smt (verit, del_insts) One_nat_def Suc_leI assms hgt_def p0_01 qfun_def Least_le)
-
 lemma hgt_Least:
   assumes "0<h" "p \<le> qfun h"
   shows "hgt p \<le> h"
   by (simp add: Suc_leI assms hgt_def Least_le)
-
-lemma real_hgt_Least':
-  assumes "real h \<le> r" "0<h" "p \<le> qfun_base k h"
-  shows "real (hgt p) \<le> r"
-  using assms
-  by (meson hgt_Least' of_nat_mono order.trans)
 
 lemma real_hgt_Least:
   assumes "real h \<le> r" "0<h" "p \<le> qfun h"
@@ -446,9 +432,6 @@ lemma alpha_Suc_eq: "alpha (Suc h) = eps k * (1 + eps k) ^ h / k"
 lemma alpha_eq: 
   assumes "h>0" shows "alpha h = eps k * (1 + eps k) ^ (h-1) / k"
   by (metis Suc_pred' alpha_Suc_eq assms)
-
-lemma alpha_hgt_ge: "alpha (hgt p) \<ge> eps k / k"
-  by (simp add: alpha_ge hgt_gt0)
 
 lemma alpha_hgt_eq: "alpha (hgt p) = eps k * (1 + eps k) ^ (hgt p -1) / k"
   using alpha_eq hgt_gt0 by presburger
@@ -524,7 +507,7 @@ lemma degree_reg_disjoint_state: "disjoint_state U \<Longrightarrow> disjoint_st
 
 lemma degree_reg_RB_state: "RB_state U \<Longrightarrow> RB_state (degree_reg U)"
   apply (simp add: degree_reg_def RB_state_def all_edges_betw_un_Un2 split: prod.split prod.split_asm)
-  by (meson X_degree_reg_subset all_edges_betw_un_mono2 dual_order.trans)
+  by (meson X_degree_reg_subset all_edges_betw_un_mono2 order.trans)
 
 lemma degree_reg_valid_state: "valid_state U \<Longrightarrow> valid_state (degree_reg U)"
   by (simp add: degree_reg_RB_state degree_reg_V_state degree_reg_disjoint_state valid_state_def)
@@ -536,7 +519,7 @@ proof -
   have "\<And>x. x \<in> X \<Longrightarrow> card (Neighbours Red x \<inter> Y) < p * real (card Y)"
     using assms
     unfolding red_dense_def
-    by (smt (verit, ccfv_SIG) alpha_ge0 distrib_right mult_minus_left of_nat_0_le_iff powr_ge_pzero zero_less_mult_iff)
+    by (smt (verit) alpha_ge0 mult_right_mono of_nat_0_le_iff powr_ge_pzero zero_le_mult_iff)
   with \<open>X\<noteq>{}\<close> show ?thesis
     by (smt (verit) \<open>finite X\<close> of_nat_sum sum_strict_mono mult_of_nat_commute sum_constant)
 qed
@@ -613,7 +596,7 @@ definition good_blue_book :: "['a set, 'a set \<times> 'a set] \<Rightarrow> boo
  "good_blue_book \<equiv> \<lambda>X. \<lambda>(S,T). book S T Blue \<and> S\<subseteq>X \<and> T\<subseteq>X \<and> card T \<ge> (\<mu> ^ card S) * card X / 2"
 
 lemma ex_good_blue_book: "good_blue_book X ({}, X)"
-  by (simp add: good_blue_book_def)
+  by (simp add: good_blue_book_def book_def)
 
 lemma bounded_good_blue_book: "\<lbrakk>good_blue_book X (S,T); finite X\<rbrakk> \<Longrightarrow> card S \<le> card X"
   by (simp add: card_mono finX good_blue_book_def)
@@ -651,8 +634,7 @@ lemma big_blue_V_state: "\<lbrakk>big_blue U U'; V_state U\<rbrakk> \<Longrighta
   by (force simp: good_blue_book_def V_state_def elim!: big_blue.cases)
 
 lemma big_blue_disjoint_state: "\<lbrakk>big_blue U U'; disjoint_state U\<rbrakk> \<Longrightarrow> disjoint_state U'"
-  apply (clarsimp simp add: good_blue_book_def disjoint_state_def elim!: big_blue.cases)
-  by (metis book_imp_disjnt disjnt_subset1 disjnt_sym)
+  by (force simp: book_def disjnt_iff good_blue_book_def disjoint_state_def elim!: big_blue.cases)
 
 lemma big_blue_RB_state: "\<lbrakk>big_blue U U'; RB_state U\<rbrakk> \<Longrightarrow> RB_state U'"
   apply (clarsimp simp add: good_blue_book_def book_def RB_state_def all_edges_betw_un_Un1 all_edges_betw_un_Un2 elim!: big_blue.cases)
@@ -917,41 +899,22 @@ lemma V_state_stepper: "V_state (stepper n)"
 lemma RB_state_stepper: "RB_state (stepper n)"
   using valid_state_def valid_state_stepper by force
 
-lemma stepper_A:
+lemma
   assumes "stepper n = (X,Y,A,B)"
-  shows "clique A Red \<and> A\<subseteq>V"
+  shows stepper_A: "clique A Red \<and> A\<subseteq>V" and stepper_B: "clique B Blue \<and> B\<subseteq>V"
 proof -
-  have "A\<subseteq>V"
+  have "A\<subseteq>V" "B\<subseteq>V"
     using V_state_stepper[of n] assms by (auto simp: V_state_def)
   moreover
-  have "all_edges_betw_un A A \<subseteq> Red"
-    using RB_state_stepper[of n] assms by (auto simp: RB_state_def)
-  ultimately show ?thesis
-    using all_edges_betw_un_iff_clique by simp
-qed
-
-lemma stepper_B:
-  assumes "stepper n = (X,Y,A,B)"
-  shows "clique B Blue \<and> B\<subseteq>V"
-proof -
-  have "B\<subseteq>V"
-    using V_state_stepper[of n] assms by (auto simp: V_state_def)
-  moreover
-  have "all_edges_betw_un B B \<subseteq> Blue"
+  have "all_edges_betw_un A A \<subseteq> Red" "all_edges_betw_un B B \<subseteq> Blue"
     using RB_state_stepper[of n] assms by (auto simp: RB_state_def all_edges_betw_un_Un2)
-  ultimately show ?thesis
-    using all_edges_betw_un_iff_clique by simp
+  ultimately show "clique A Red \<and> A\<subseteq>V" "clique B Blue \<and> B\<subseteq>V"
+    using all_edges_betw_un_iff_clique by auto
 qed
 
 lemma card_B_limit:
   assumes "stepper n = (X,Y,A,B)" shows "card B < l"
-proof -
-  have "clique B Blue"
-    using stepper_B assms by auto
-  then show "card B < l"
-    using assms no_Blue_clique
-    by (metis linorder_neqE_nat size_clique_def size_clique_smaller stepper_B) 
-qed
+  by (metis B_less_l assms valid_state_stepper)
 
 definition "Xseq \<equiv> (\<lambda>(X,Y,A,B). X) \<circ> stepper"
 definition "Yseq \<equiv> (\<lambda>(X,Y,A,B). Y) \<circ> stepper"
@@ -964,9 +927,9 @@ definition "pee \<equiv> \<lambda>i. red_density (Xseq i) (Yseq i)"
 lemma Xseq_0 [simp]: "Xseq 0 = X0"
   by (simp add: Xseq_def)
 
-lemma Xseq_Suc_subset: "Xseq (Suc i) \<subseteq> Xseq i"
-  apply (simp add: Xseq_def split: if_split_asm prod.split)
-  by (metis V_state_stepper degree_reg_subset finX next_state_subset)
+lemma Xseq_Suc_subset: "Xseq (Suc i) \<subseteq> Xseq i" and  Yseq_Suc_subset: "Yseq (Suc i) \<subseteq> Yseq i"
+   apply (simp_all add: Xseq_def Yseq_def split: if_split_asm prod.split)
+  by (metis V_state_stepper degree_reg_subset finX next_state_subset)+
 
 lemma Xseq_antimono: "j \<le> i \<Longrightarrow> Xseq i \<subseteq> Xseq j"
   by (simp add: lift_Suc_antimono_le[of UNIV] Xseq_Suc_subset)
@@ -979,10 +942,6 @@ lemma finite_Xseq: "finite (Xseq i)"
 
 lemma Yseq_0 [simp]: "Yseq 0 = Y0"
   by (simp add: Yseq_def)
-
-lemma Yseq_Suc_subset: "Yseq (Suc i) \<subseteq> Yseq i"
-  apply (simp add: Yseq_def split: if_split_asm prod.split)
-  by (metis V_state_stepper degree_reg_subset finX next_state_subset)
 
 lemma Yseq_antimono: "j \<le> i \<Longrightarrow> Yseq i \<subseteq> Yseq j"
   by (simp add: Yseq_Suc_subset lift_Suc_antimono_le[of UNIV])
@@ -1010,7 +969,7 @@ lemma Aseq_less_k: "card (Aseq i) < k"
 lemma Aseq_0 [simp]: "Aseq 0 = {}"
   by (simp add: Aseq_def)
 
-lemma Aseq_Suc_subset: "Aseq i \<subseteq> Aseq (Suc i)" and  Bseq_Suc_subset: "Bseq i \<subseteq> Bseq (Suc i)"
+lemma Aseq_Suc_subset: "Aseq i \<subseteq> Aseq (Suc i)" and Bseq_Suc_subset: "Bseq i \<subseteq> Bseq (Suc i)"
   by (auto simp: Aseq_def Bseq_def next_state_def degree_reg_def Let_def split: prod.split)
 
 lemma
@@ -1137,8 +1096,8 @@ lemma not_halted_pee_gt0:
 lemma Yseq_gt0:
   assumes "i \<notin> Step_class {halted}"
   shows "card (Yseq i) > 0"
-  using not_halted_pee_gt [OF assms] 
-  by (auto simp: pee_def gen_density_def divide_simps mult_less_0_iff zero_less_mult_iff split: if_split_asm)
+  using not_halted_pee_gt [OF assms]
+  using card_gt_0_iff finite_Yseq pee_def by fastforce 
 
 lemma step_odd: "i \<in> Step_class {red_step,bblue_step,dboost_step} \<Longrightarrow> odd i" 
   by (auto simp: Step_class_def stepper_kind_def split: if_split_asm prod.split_asm)
@@ -1156,11 +1115,6 @@ lemma step_before_dreg:
   assumes "Suc i \<in> Step_class {dreg_step}"
   shows "i \<in> Step_class {red_step,bblue_step,dboost_step}"
   using assms by (auto simp: step_kind_defs split: if_split_asm prod.split_asm)
-
-lemma step_before_dreg':
-  assumes "i \<in> Step_class {dreg_step}" "i>0"
-  shows "i - Suc 0 \<in> Step_class {red_step,bblue_step,dboost_step}"
-  by (simp add: assms step_before_dreg)
 
 lemma dreg_before_step:
   assumes "Suc i \<in> Step_class {red_step,bblue_step,dboost_step}" 
@@ -1246,9 +1200,9 @@ lemma card_Xseq_pos:
   by (metis assms card_0_eq cvx_in_Xseq empty_iff finite_Xseq gr0I)
 
 lemma beta_le:
-  assumes i: "i \<in> Step_class {red_step,dboost_step}"
+  assumes "i \<in> Step_class {red_step,dboost_step}"
   shows "beta i \<le> \<mu>"
-  using assms cvx_works[OF i] \<mu>01
+  using assms cvx_works[OF assms] \<mu>01
   by (simp add: beta_def central_vertex_def Xseq_def divide_simps split: prod.split_asm)
 
 subsection \<open>Termination proof\<close>

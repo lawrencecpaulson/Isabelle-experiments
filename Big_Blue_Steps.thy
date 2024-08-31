@@ -4,6 +4,40 @@ theory Big_Blue_Steps imports Book
 
 begin
 
+subsection \<open>Material to delete for Isabelle 2025\<close>
+
+(*migrated 2024-08-06*)
+lemma gbinomial_mono:
+  fixes k::nat and a::real
+  assumes "of_nat k \<le> a" "a \<le> b" shows "a gchoose k \<le> b gchoose k"
+  using assms
+  by (force simp: gbinomial_prod_rev intro!: divide_right_mono prod_mono)
+
+(*migrated 2024-08-06*)
+lemma gbinomial_is_prod: "(a gchoose k) = (\<Prod>i<k. (a - of_nat i) / (1 + of_nat i))"
+  unfolding gbinomial_prod_rev
+  by (induction k; simp add: divide_simps)
+
+lemma smallo_multiples: (*migrated 2024-08-06*)
+  assumes f: "f \<in> o(real)" and "k>0"
+  shows "(\<lambda>n. f (k * n)) \<in> o(real)"
+proof (clarsimp simp: smallo_def)
+  fix c::real
+  assume "c>0"
+  then have "c/k > 0"
+    by (simp add: assms)
+  with assms have "\<forall>\<^sub>F n in sequentially. \<bar>f n\<bar> \<le> c / real k * n"
+    by (force simp: smallo_def del: divide_const_simps)
+  then obtain N where "\<And>n. n\<ge>N \<Longrightarrow> \<bar>f n\<bar> \<le> c/k * n"
+    by (meson eventually_at_top_linorder)
+  then have "\<And>m. (k*m)\<ge>N \<Longrightarrow> \<bar>f (k*m)\<bar> \<le> c/k * (k*m)"
+    by blast
+  with \<open>k>0\<close> have "\<forall>\<^sub>F m in sequentially. \<bar>f (k*m)\<bar> \<le> c/k * (k*m)"
+    by (smt (verit, del_insts) One_nat_def Suc_leI eventually_at_top_linorderI mult_1_left mult_le_mono)
+  then show "\<forall>\<^sub>F n in sequentially. \<bar>f (k * n)\<bar> \<le> c * n"
+    by eventually_elim (use \<open>k>0\<close> in auto)
+qed
+
 subsection \<open>Preliminaries\<close>
 
 text \<open>A bounded increasing sequence of finite sets eventually terminates\<close>
@@ -128,40 +162,6 @@ lemma mbinomial_eq_choose [simp]: "mbinomial (real n) k = n choose k"
 lemma mbinomial_eq_gchoose [simp]: "k \<le> a \<Longrightarrow> mbinomial a k = a gchoose k"
   by (simp add: gbinomial_prod_rev mbinomial_def mfact_def)
 
-
-
-(*migrated 2024-08-06*)
-lemma gbinomial_mono:
-  fixes k::nat and a::real
-  assumes "of_nat k \<le> a" "a \<le> b" shows "a gchoose k \<le> b gchoose k"
-  using assms
-  by (force simp: gbinomial_prod_rev intro!: divide_right_mono prod_mono)
-
-(*migrated 2024-08-06*)
-lemma gbinomial_is_prod: "(a gchoose k) = (\<Prod>i<k. (a - of_nat i) / (1 + of_nat i))"
-  unfolding gbinomial_prod_rev
-  by (induction k; simp add: divide_simps)
-
-lemma smallo_multiples: (*migrated 2024-08-06*)
-  assumes f: "f \<in> o(real)" and "k>0"
-  shows "(\<lambda>n. f (k * n)) \<in> o(real)"
-proof (clarsimp simp: smallo_def)
-  fix c::real
-  assume "c>0"
-  then have "c/k > 0"
-    by (simp add: assms)
-  with assms have "\<forall>\<^sub>F n in sequentially. \<bar>f n\<bar> \<le> c / real k * n"
-    by (force simp: smallo_def del: divide_const_simps)
-  then obtain N where "\<And>n. n\<ge>N \<Longrightarrow> \<bar>f n\<bar> \<le> c/k * n"
-    by (meson eventually_at_top_linorder)
-  then have "\<And>m. (k*m)\<ge>N \<Longrightarrow> \<bar>f (k*m)\<bar> \<le> c/k * (k*m)"
-    by blast
-  with \<open>k>0\<close> have "\<forall>\<^sub>F m in sequentially. \<bar>f (k*m)\<bar> \<le> c/k * (k*m)"
-    by (smt (verit, del_insts) One_nat_def Suc_leI eventually_at_top_linorderI mult_1_left mult_le_mono)
-  then show "\<forall>\<^sub>F n in sequentially. \<bar>f (k * n)\<bar> \<le> c * n"
-    by eventually_elim (use \<open>k>0\<close> in auto)
-qed
-
 subsection \<open>Preliminaries: Fact D1\<close>
 
 text \<open>from appendix D, page 55\<close>
@@ -173,18 +173,7 @@ proof -
   have "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = (\<Prod>i<b. (\<sigma>*m - i) / (real m - real i))"
     using bm by (simp add: gbinomial_prod_rev prod_dividef atLeast0LessThan)
   also have "\<dots> = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
-    using bm 
-  proof (induction b)
-    case 0
-    then show ?case
-      by simp
-  next
-    case (Suc b)
-    then have "b<m"
-      by linarith
-    with \<sigma> show ?case 
-      by (simp add: Suc field_simps)
-  qed
+    using bm \<sigma>by (induction b) (auto simp: field_simps)
   finally show ?thesis .
 qed
 
@@ -329,8 +318,8 @@ next
   also have "\<dots> \<le> (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
     using * by (force intro: prod_mono)
   finally have "exp (- (3 * real b ^ 2) / (4*m)) \<le> (\<Prod>i<b. 1 - (1-\<sigma>) * i / (\<sigma> * (real m - real i)))" .
-  with EQ have "\<sigma>^b * exp (- (3 * real b ^ 2) / (4*m)) \<le> ((\<sigma>*m) gchoose b) * inverse (m gchoose b)"
-    by (simp add: assms)
+  with EQ have "\<sigma>^b * exp (- (3 * real b ^ 2) / (4*m)) \<le> ((\<sigma>*m) gchoose b) / (m gchoose b)"
+    by (simp add: assms field_simps)
   with \<sigma> bm show ?thesis
     by (simp add: field_split_simps flip: binomial_gbinomial)
 qed
@@ -350,12 +339,10 @@ next
       by auto
   next
     case 2
-    then have "1+m+m \<le> 3*m"
-      by auto
-    moreover have "m\<ge>3"
-      using Suc by simp
-    ultimately have "25 * Suc (m+m) \<le> 25 * (m*m)"
-      by (metis mult.commute order.trans mult_le_mono2 plus_1_eq_Suc add_Suc)
+    then have "Suc(m+m) \<le> m*3" "m\<ge>3"
+      using Suc by auto
+    then have "25 * Suc (m+m) \<le> 25 * (m*m)"
+      by (metis le_trans mult_le_mono2)
     with Suc show ?thesis
       by (auto simp: power2_eq_square algebra_simps 2)
   qed
@@ -414,7 +401,7 @@ proof -
       using assms
       unfolding b_of_def
       apply (intro eventually_all_geI0, real_asymp)
-      by (smt (verit, best) divide_less_eq_1_pos divide_nonneg_nonneg ge_one_powr_ge_zero mult_right_mono of_nat_0_le_iff)
+      by (smt (verit, best) divide_le_eq_1 ge_one_powr_ge_zero mult_right_mono of_nat_0_le_iff zero_le_divide_1_iff)
   qed
   ultimately show ?thesis
     by (auto simp: Big_Blue_4_1_def eventually_conj_iff all_imp_conj_distrib)
@@ -737,8 +724,8 @@ proof -
   obtain v where "v \<in> S"
     using \<open>0 < b\<close> \<open>card S = b\<close> by fastforce
   have "all_edges_betw_un S (S \<union> Int_NB S) \<subseteq> Blue"
-    using \<open>clique S Blue\<close> unfolding all_edges_betw_un_def Neighbours_def clique_def Int_NB_def
-    by fastforce
+    using \<open>clique S Blue\<close>
+    unfolding all_edges_betw_un_def Neighbours_def clique_def Int_NB_def by fastforce
   then have "good_blue_book X (S, Int_NB S)"
     using \<open>S\<subseteq>U\<close> \<open>v \<in> S\<close> \<open>U \<subset> X\<close> S \<open>card S = b\<close>
     unfolding good_blue_book_def book_def size_clique_def Int_NB_def disjnt_iff
@@ -771,8 +758,7 @@ proof -
       define S where "S \<equiv> fst (choose_blue_book (Xseq n, Yseq n, Aseq n, Bseq n))"
       have BSuc: "Bseq (Suc n) = Bseq n \<union> S" 
         and manyb: "many_bluish (Xseq n)" 
-        and cbb: "choose_blue_book (Xseq n, Yseq n, Aseq n, Bseq n) 
-                = (S, Xseq (Suc n))" 
+        and cbb: "choose_blue_book (Xseq n, Yseq n, Aseq n, Bseq n) = (S, Xseq (Suc n))" 
         and same: "Aseq (Suc n) = Aseq n" "Yseq (Suc n) = Yseq n"
         using True
         by (force simp: S_def step_kind_defs next_state_def Aseq_def Bseq_def 
