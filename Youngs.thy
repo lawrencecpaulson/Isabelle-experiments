@@ -195,7 +195,7 @@ proof (clarsimp simp add: continuous_on_eq_continuous_within)
   have "continuous_on {f a..y+1} g" 
   proof -
     obtain "continuous_on {a..u} f"  "strict_mono_on f {a..u}"
-      using contf sm continuous_on_subset by (force simp add: strict_mono_on_def)
+      using contf sm continuous_on_subset by (force simp: strict_mono_on_def)
     moreover have "continuous_on (f ` {a..u}) g"
       using assms continuous_on_subset
       by (intro continuous_on_inv) fastforce+
@@ -425,7 +425,7 @@ proof (cases "a=0")
       moreover have "lower x \<ge> 0"
         unfolding lower_def using \<open>n > 0\<close> \<open>a \<ge> 0\<close> \<open>0 \<le> x\<close> by force
       ultimately show ?thesis
-        using sm strict_mono_on_leD by (fastforce simp add: f1_def)
+        using sm strict_mono_on_leD by (fastforce simp: f1_def)
     qed
     define upper where "upper \<equiv> \<lambda>x. a_seg\<lceil>real n * x / a\<rceil>"
     define f2 where "f2 \<equiv> f \<circ> upper"

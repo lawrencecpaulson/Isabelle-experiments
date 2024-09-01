@@ -120,9 +120,8 @@ proof -
   define gamf where "gamf \<equiv> \<lambda>x::real. (1-x) powr (1/(1-x))"
   have deriv_gamf: "\<exists>y. DERIV gamf x :> y \<and> y \<le> 0" if "0<a" "a\<le>x" "x\<le>b" "b<1" for a b x
     unfolding gamf_def
-    apply (rule exI conjI DERIV_powr derivative_eq_intros | use that in force)+
-    by (smt (verit, del_insts) divide_le_0_iff ln_one_minus_pos_upper_bound mult_le_0_iff powr_ge_pzero that)
-
+    using that ln_less_self[of "1-x"]
+    by (force intro!: DERIV_powr derivative_eq_intros simp: divide_simps mult_le_0_iff simp del: ln_less_self)
   have "(1-\<gamma>) powr (\<gamma>*t / (1-\<gamma>)) * exp (\<gamma> * (real t)\<^sup>2 / (2*k)) \<ge> exp (\<delta>*k - ok_fun_95b k)"
   proof (cases "\<gamma> > x320")
     case True
@@ -205,8 +204,7 @@ lemma (in No_Cliques) Closer_10_2:
   fixes \<gamma>::real
   defines "\<gamma> \<equiv> l / (real k + real l)"
   assumes nV: "real nV \<ge> exp (- real k/200) * (k+l choose l)" 
-  assumes gd: "graph_density Red \<ge> 1-\<gamma>" 
-    and p0_min_OK: "p0_min \<le> 1-\<gamma>"  
+  assumes gd: "graph_density Red \<ge> 1-\<gamma>"  and p0_min_OK: "p0_min \<le> 1-\<gamma>"  
   assumes big: "Big_Closer_10_2 \<gamma> l" and "l\<le>k"
   assumes \<gamma>: "1/10 \<le> \<gamma>" "\<gamma> \<le> 1/5"
   shows False
@@ -216,7 +214,7 @@ proof -
     and X0_def: "X0 = V \<setminus> Y0" and "Y0\<subseteq>V" 
     and gd_le: "graph_density Red \<le> gen_density Red X0 Y0"
     and "Book' V E p0_min Red Blue l k \<gamma> X0 Y0"
-    by (smt (verit, ccfv_SIG) Basis_imp_Book' assms p0_min p0_min no_Red_clique no_Blue_clique ln0)
+    using Basis_imp_Book' assms order.trans ln0 by blast
   then interpret Book' V E p0_min Red Blue l k \<gamma> X0 Y0
     by blast 
   show False
@@ -247,8 +245,8 @@ definition "Big_Closer_10_1 \<equiv> \<lambda>\<gamma>0 l. l\<ge>9 \<and> (\<for
 lemma Big_Closer_10_1_upward: "\<lbrakk>Big_Closer_10_1 \<gamma>0 l; l \<le> k; \<gamma>0 \<le> \<gamma>\<rbrakk> \<Longrightarrow> Big_Closer_10_1 \<gamma> k"
   unfolding Big_Closer_10_1_def Big101c_def by (meson order.trans)
 
-text \<open>The need for @term{\<gamma>0} is unfortunate, but it seems simpler to hide the precise value 
-  in the main proof.\<close>
+text \<open>The need for @term{\<gamma>0} is unfortunate, but it seems simpler to hide 
+  the precise value of this term in the main proof.\<close>
 lemma Big_Closer_10_1:
   fixes \<gamma>0::real
   assumes "\<gamma>0>0"
@@ -363,7 +361,7 @@ proof (rule ccontr)
 
     have "(k+l choose l) / exp (-3 + \<delta>*k) < RN k l"
       by (smt (verit) divide_inverse exp_minus mult_minus_left mult_of_nat_commute non)
-    then have "(k+l choose l) < (RN k l / exp (real 2)) * exp (\<delta>*k - 1)"
+    then have "(k+l choose l) < (RN k l / exp 2) * exp (\<delta>*k - 1)"
       by (simp add: divide_simps exp_add exp_diff flip: exp_add)
     also have "\<dots> \<le> (n/2) * exp (\<delta>*k - 2)"
       using nRNe by (simp add: divide_simps exp_diff)
@@ -393,19 +391,16 @@ proof (rule ccontr)
     have Blue_E: "Blue \<subseteq> E" and disjnt_Red_Blue: "disjnt Red Blue" and Blue_eq: "Blue = all_edges V - Red"
       using complete by (auto simp: Blue_def disjnt_iff E_def) 
     define is_good_clique where
-      "is_good_clique \<equiv> \<lambda>i K. clique K Blue \<and> K \<subseteq> V \<and>
-                                   card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
-                                  \<ge> real i * U_lower_bound_ratio (card K) - card K"
+      "is_good_clique \<equiv> \<lambda>i K. clique K Blue \<and> K \<subseteq> V
+                            \<and> card (V \<inter> (\<Inter>w\<in>K. Neighbours Blue w))
+                            \<ge> i * U_lower_bound_ratio (card K) - card K"
     have is_good_card: "card K < l" if "is_good_clique i K" for i K
-      using no_Blue_K that
-      unfolding is_good_clique_def 
+      using no_Blue_K that unfolding is_good_clique_def 
       by (metis nat_neq_iff size_clique_def size_clique_smaller)
     define max_m where "max_m \<equiv> Suc (nat \<lfloor>l - k/9\<rfloor>)"
     define GC where "GC \<equiv> {C. is_good_clique n C \<and> card C \<le> max_m}"
-    have maxm_bounds: "l - k/9 \<le> max_m" "max_m \<le> l+1 - k/9"
+    have maxm_bounds: "l - k/9 \<le> max_m" "max_m \<le> l+1 - k/9" "max_m > 0"
       using k9l unfolding max_m_def by linarith+
-    have "max_m > 0"
-      using max_m_def by blast
     then have "GC \<noteq> {}"
       by (auto simp: GC_def is_good_clique_def U_lower_bound_ratio_def E_def V_def intro: exI [where x="{}"])
     have "GC \<subseteq> Pow V"
@@ -463,10 +458,8 @@ proof (rule ccontr)
 
     have cardU: "n * U_lower_bound_ratio m \<le> m + card U"
       using 53 VUU unfolding is_good_clique_def m_def U_def by force
-
     have clique_W: "size_clique m W Blue"
       using 53 is_good_clique_def m_def size_clique_def V_def by blast
-
     have prod_gt0: "U_lower_bound_ratio m > 0"
       unfolding U_lower_bound_ratio_def using \<open>m<l\<close> by (intro prod_pos) auto
     have kl_choose: "real(k+l choose l) = (k+l-m choose (l-m)) / U_lower_bound_ratio m"
@@ -580,7 +573,7 @@ proof (rule ccontr)
     next
       case (Suc q)
       then show ?case
-        apply (simp add: )
+        apply simp
         by (smt (verit) divide_right_mono exp_ge_zero of_nat_0_le_iff)
     qed
     from \<open>m<l\<close> this [of "l-m"] 
@@ -594,7 +587,7 @@ proof (rule ccontr)
         by (simp add: less_eq_real_def nexp_gt pos_divide_less_eq)
       show ?thesis
         using mult_strict_left_mono [OF \<section>, of "U_lower_bound_ratio m"] kl_choose prod_gt0
-        by (auto simp: field_simps )
+        by (auto simp: field_simps)
     qed
     finally have U_MINUS_M: "1+l < real n * U_lower_bound_ratio m - m"
       by argo
@@ -721,11 +714,9 @@ proof (rule ccontr)
             using mult_left_mono [OF expexp, of "(n/2) * U_lower_bound_ratio m"] prod_gt0 by (simp add: mult_ac)
           also have "\<dots> \<le> n * U_lower_bound_ratio m - m"  \<comment>\<open>formerly stuck here, due to the "minus @{term m}"\<close>
             using U_MINUS_M \<open>m < l\<close> by auto
-          finally have "exp (- real k/200) * (k + (l-m) choose (l-m)) \<le> real n * U_lower_bound_ratio m - m"
-            by linarith 
-          also have "\<dots> \<le> UBB.nV"
+          finally have "exp (- real k/200) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
             using cardU by linarith
-          finally show "exp (- real k / 200) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
+          then show "exp (- real k / 200) * (k + (l-m) choose (l-m)) \<le> UBB.nV"
             using \<open>m < l\<close> by (simp add: \<gamma>'_def)
         next
           have "1 - \<gamma>' \<le> UBB.graph_density RedU"

@@ -138,11 +138,11 @@ proof (cases "a=0")
   show ?thesis 
   proof (rule antisym)
     show "(SUP x\<in>A. a * f x) \<le> a * Sup (f ` A)"
-      using assms bdd by (auto simp add: cSup_le_iff cSup_upper mult_left_mono)
+      using assms bdd by (auto simp: cSup_le_iff cSup_upper mult_left_mono)
     have "\<And>x. x \<in> A \<Longrightarrow> f x \<le> (SUP x\<in>A. a * f x) / a"
       by (simp add: False assms bdd cSup_upper less_le mult_imp_le_div_pos)
     then have "Sup (f ` A) \<le> (SUP x\<in>A. a * f x) / a"
-      using assms by (auto simp add: cSup_le_iff)
+      using assms by (auto simp: cSup_le_iff)
     with False assms show "a * Sup (f ` A) \<le> (SUP x\<in>A. a * f x)"
       by (auto simp: field_simps)
   qed 
@@ -162,7 +162,7 @@ proof (cases "a=0")
     have "\<And>x. x\<in>A \<Longrightarrow> (INF x\<in>A. a * f x) / a \<le> f x"
       by (metis (full_types) False \<open>a \<ge> 0\<close> bdd cINF_lower divide_le_eq less_le mult.commute)
     then have "(INF x\<in>A. a * f x)/a \<le> Inf (f ` A)"
-      using assms by (auto simp add: le_cInf_iff)
+      using assms by (auto simp: le_cInf_iff)
     with False assms show "(INF x\<in>A. a * f x) \<le> a * Inf (f ` A)"
       by (auto simp: field_simps)
   qed 

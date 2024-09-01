@@ -975,7 +975,7 @@ lemma Aseq_Suc_subset: "Aseq i \<subseteq> Aseq (Suc i)" and Bseq_Suc_subset: "B
 lemma
   assumes "j \<le> i"
   shows Aseq_mono: "Aseq j \<subseteq> Aseq i" and Bseq_mono: "Bseq j \<subseteq> Bseq i"
-  using assms by (auto simp add: Aseq_Suc_subset Bseq_Suc_subset lift_Suc_mono_le[of UNIV])
+  using assms by (auto simp: Aseq_Suc_subset Bseq_Suc_subset lift_Suc_mono_le[of UNIV])
 
 lemma Aseq_subset_V: "Aseq i \<subseteq> V"
   using stepper_A[of i] by (simp add: Aseq_def split: prod.split) 
@@ -1061,7 +1061,8 @@ lemma Step_class_cases:
     i \<in> Step_class {halted}"
   using Step_class_def stepkind.exhaust by auto
 
-lemmas step_kind_defs = Step_class_def stepper_kind_def next_state_kind_def Xseq_def Yseq_def
+lemmas step_kind_defs = Step_class_def stepper_kind_def next_state_kind_def
+                        Xseq_def Yseq_def Aseq_def Bseq_def cvx_def Let_def
 
 lemma disjnt_Step_class: 
   "disjnt knd knd' \<Longrightarrow> disjnt (Step_class knd) (Step_class knd')"

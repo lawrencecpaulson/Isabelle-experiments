@@ -369,7 +369,7 @@ proof -
       = {e} \<inter> all_edges_betw_un X Y \<union> F \<inter> all_edges_betw_un X Y"
     by auto
   with \<open>e\<notin>F\<close> show ?thesis
-    by (auto simp: edge_card_def card_Un_disjoint disjoint_iff fin )
+    by (auto simp: edge_card_def card_Un_disjoint disjoint_iff fin)
 qed
 
 lemma edge_card_sing:

@@ -4,28 +4,28 @@ theory Red_Steps imports Big_Blue_Steps
 
 begin
 
-text \<open>Bhavik Mehta: choose-free version for very small @{term p}\<close>
+text \<open>Bhavik Mehta: choose-free Ramsey lower bound that's okay for very small @{term p}\<close>
 lemma Ramsey_number_lower_simple: 
-  assumes n: "of_real n ^ k * p powr (real k^2 / 4) + of_real n ^ l * exp (-p * real l ^ 2 / 4) < 1"
+  assumes n: "of_real n^k * p powr (real k^2 / 4) + of_real n^l * exp (-p * real l^2 / 4) < 1"
   assumes p01: "0<p" "p<1" and "k>1" "l>1"
   shows "\<not> is_Ramsey_number k l n"
 proof (rule Ramsey_number_lower_gen)
-  have "real (n choose k) * p ^ (k choose 2) \<le> of_real n ^ k * p powr (real k^2 / 4)"
+  have "real (n choose k) * p^(k choose 2) \<le> of_real n^k * p powr (real k^2 / 4)"
   proof -
-    have "real (n choose k) * p ^ (k choose 2) \<le> real (Suc n - k)^k * p ^ (k choose 2)"
+    have "real (n choose k) * p^(k choose 2) \<le> real (Suc n - k)^k * p^(k choose 2)"
       using choose_le_power p01 by simp
-    also have "\<dots> = real (Suc n - k)^k * p powr (real k * (real k - 1) / 2)"
+    also have "\<dots> = real (Suc n - k)^k * p powr (k * (real k - 1) / 2)"
       by (metis choose_two_real p01(1) powr_realpow)
-    also have "\<dots> \<le> of_real n ^ k * p powr (real k^2 / 4)"
+    also have "\<dots> \<le> of_real n^k * p powr (real k^2 / 4)"
       using p01 \<open>k>1\<close> by (intro mult_mono powr_mono') (auto simp: power2_eq_square)
     finally show ?thesis .
   qed
   moreover
-  have "real (n choose l) * (1 - p) ^ (l choose 2) \<le> of_real n ^ l * exp (-p * real l ^ 2 / 4)"
+  have "real (n choose l) * (1 - p)^(l choose 2) \<le> of_real n^l * exp (-p * real l^2 / 4)"
   proof -
     show ?thesis
     proof (intro mult_mono)
-      show "real (n choose l) \<le> of_real (real n) ^ l"
+      show "real (n choose l) \<le> of_real (real n)^l"
         by (metis binomial_eq_0_iff binomial_le_pow linorder_not_le of_nat_0 of_nat_0_le_iff of_nat_mono of_nat_power of_real_of_nat_eq)
       have "l * p \<le> 2 * (1 - real l) * -p"
         using assms by (auto simp: algebra_simps)
@@ -34,12 +34,12 @@ proof (rule Ramsey_number_lower_gen)
         by (intro mult_left_mono_neg) auto
       finally have "real l * (real l * p) \<le> real l * (2 * (1 - real l) * ln (1-p))"
         using mult_left_mono \<open>l>1\<close> by fastforce
-      with p01 show "(1 - p) ^ (l choose 2) \<le> exp (- p * (real l)\<^sup>2 / 4)"
+      with p01 show "(1 - p)^(l choose 2) \<le> exp (- p * (real l)\<^sup>2 / 4)"
         by (simp add: field_simps power2_eq_square powr_def choose_two_real flip: powr_realpow)
     qed (use p01 in auto)
   qed
   ultimately
-  show "real (n choose k) * p ^ (k choose 2) + real (n choose l) * (1 - p) ^ (l choose 2) < 1"
+  show "real (n choose k) * p^(k choose 2) + real (n choose l) * (1 - p)^(l choose 2) < 1"
     using n by linarith
 qed (use p01 in auto)
 
@@ -63,7 +63,7 @@ proof -
        = red_density X Y * card X * edge_card Red X Y"
     using assms Red_E
     by (simp add: EXY power2_eq_square edge_card_eq_sum_Neighbours flip: sum_distrib_left)
-  also have "\<dots> = red_density X Y ^ 2 * card X ^ 2 * card Y"
+  also have "\<dots> = red_density X Y^2 * card X^2 * card Y"
     by (simp add: power2_eq_square gen_density_def)
   also have "\<dots> = ((\<Sum>i\<in>Y. card (Neighbours Red i \<inter> X)) / (real (card X) * real (card Y)))\<^sup>2 * (card X)\<^sup>2 * card Y"
     using Red_E \<open>finite Y\<close> assms
@@ -108,14 +108,14 @@ subsubsection \<open>Lemma 5.6\<close>
 definition "Big_Red_5_6_Ramsey \<equiv> 
       \<lambda>c l. nat \<lceil>real l powr (3/4)\<rceil> \<ge> 3
           \<and> (l powr (3/4) * (c - 1/32) \<le> -1) 
-          \<and> (\<forall>k\<ge>l. k * (c * l powr (3/4) * ln k - real k powr (7/8) / 4) \<le> -1)"
+          \<and> (\<forall>k\<ge>l. k * (c * l powr (3/4) * ln k - k powr (7/8) / 4) \<le> -1)"
 
 text \<open>establishing the size requirements for 5.6\<close>
 lemma Big_Red_5_6_Ramsey:
   assumes "0<c" "c<1/32"
   shows "\<forall>\<^sup>\<infinity>l. Big_Red_5_6_Ramsey c l"
 proof -
-  have D34: "\<And>l k. l \<le> k \<Longrightarrow> c * real l powr (3/4)  \<le> c * real k powr (3/4)"
+  have D34: "\<And>l k. l \<le> k \<Longrightarrow> c * real l powr (3/4) \<le> c * real k powr (3/4)"
     by (simp add: assms powr_mono2)
   have D0: "\<forall>\<^sup>\<infinity>l. l * (c * l powr (3/4) * ln l - l powr (7/8) / 4) \<le> -1"
     using \<open>c>0\<close> by real_asymp
@@ -145,13 +145,13 @@ proof -
   finally have "3 \<le> l" .
   then have "k\<ge>3" \<open>k>0\<close> \<open>l>0\<close>
     using assms by auto
-  define p where "p \<equiv> (real k) powr (-1/8)"
+  define p where "p \<equiv> k powr (-1/8)"
   have p01: "0 < p" "p < 1"
     using \<open>k\<ge>3\<close> powr_less_one by (auto simp: p_def)
   have r_le: "r \<le> k powr (c * l powr (3/4))"
     using p01 \<open>k\<ge>3\<close> unfolding r_def powr_def by force
 
-  have left: "of_real r ^ s * p powr ((real s)\<^sup>2 / 4) < 1/2" 
+  have left: "of_real r^s * p powr ((real s)\<^sup>2 / 4) < 1/2" 
   proof -
     have A: "r powr s \<le> k powr (s * c * l powr (3/4))"
       using r_le by (smt (verit) mult.commute of_nat_0_le_iff powr_mono2 powr_powr)
@@ -159,7 +159,7 @@ proof -
       by (simp add: powr_powr p_def power2_eq_square)
     have C: "(c * l powr (3/4) - s/32) \<le> -1"
       using big by (simp add: Big_Red_5_6_Ramsey_def s_def algebra_simps) linarith
-    have "of_real r ^ s * p powr ((real s)\<^sup>2 / 4) \<le> k powr (s * (c * l powr (3/4) - s / 32))"
+    have "of_real r^s * p powr ((real s)\<^sup>2 / 4) \<le> k powr (s * (c * l powr (3/4) - s / 32))"
       using mult_mono [OF A B] \<open>s\<ge>3\<close>
       by (simp add: power2_eq_square algebra_simps powr_realpow' flip: powr_add)
     also have "\<dots> \<le> k powr - real s"
@@ -172,13 +172,13 @@ proof -
       by auto
     finally show ?thesis .
   qed
-  have right: "of_real r ^ k * exp (- p * (real k)\<^sup>2 / 4) < 1/2" 
+  have right: "r^k * exp (- p * (real k)\<^sup>2 / 4) < 1/2" 
   proof -
-    have A: "of_real r ^ k \<le> exp (c * l powr (3/4) * ln k * k)"
+    have A: "r^k \<le> exp (c * l powr (3/4) * ln k * k)"
       using r_le \<open>0 < k\<close> \<open>0 < l\<close> by (simp add: powr_def exp_of_nat2_mult)
     have B: "exp (- p * (real k)\<^sup>2 / 4) \<le> exp (- k * k powr (7/8) / 4)"
       using \<open>k>0\<close> by (simp add: p_def mult_ac power2_eq_square powr_mult_base)
-    have "of_real r ^ k * exp (- p * (real k)\<^sup>2 / 4) \<le> exp (k * (c * l powr (3/4) * ln k - k powr (7/8) / 4))"
+    have "r^k * exp (- p * (real k)\<^sup>2 / 4) \<le> exp (k * (c * l powr (3/4) * ln k - k powr (7/8) / 4))"
       using mult_mono [OF A B] by (simp add: algebra_simps s_def flip: exp_add)
     also have "\<dots> \<le> exp (-1)"
       using assms unfolding Big_Red_5_6_Ramsey_def by blast
@@ -214,36 +214,36 @@ qed
 
 lemma (in Book) Red_5_6:
   assumes big: "Big_Red_5_6 l"
-  shows "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k ^ 6 * RN k (m_of l)" 
+  shows "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k^6 * RN k (m_of l)" 
 proof -
   define c::real where "c \<equiv> 1/128"
-  have "RN k (m_of l) \<le> k ^ (m_of l)"
+  have "RN k (m_of l) \<le> k^(m_of l)"
     by (metis RN_le_argpower' RN_mono diff_add_inverse diff_le_self le_refl le_trans)
   also have "\<dots> \<le> exp (m_of l * ln k)"
     using kn0 by (simp add: exp_of_nat_mult)
   finally have "RN k (m_of l) \<le> exp (m_of l * ln k)"
     by force 
-  then have "real k ^ 6 * RN k (m_of l) \<le> real k ^ 6 * exp (m_of l * ln k)"
+  then have "k^6 * RN k (m_of l) \<le> real k^6 * exp (m_of l * ln k)"
     by (simp add: kn0)
   also have "\<dots> \<le> exp (c * l powr (3/4) * ln k)"
   proof -
     have "(6 + real (m_of l)) * ln (real k) \<le> (c * l powr (3/4)) * ln (real k)"
       unfolding mult_le_cancel_right
       using big kn0 by (auto simp: c_def Big_Red_5_6_def)
-    then have "ln (real k ^ 6 * exp (m_of l * ln k)) \<le> ln (exp (c * l powr (3/4) * ln k))"
+    then have "ln (real k^6 * exp (m_of l * ln k)) \<le> ln (exp (c * l powr (3/4) * ln k))"
       using kn0 by (simp add: ln_mult ln_powr algebra_simps flip: powr_numeral)
     then show ?thesis
       by (smt (verit) exp_gt_zero ln_le_cancel_iff)
   qed
   also have "\<dots> \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
     using assms l_le_k by (auto simp: ineq_Red_5_6_def Big_Red_5_6_def c_def)
-  finally show "k ^ 6 * RN k (m_of l) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
-    by (metis of_nat_mult of_nat_le_iff of_nat_power)
+  finally show "k^6 * RN k (m_of l) \<le> RN k (nat\<lceil>l powr (3/4)\<rceil>)"
+    using of_nat_le_iff by blast
 qed 
 
 subsection \<open>Lemma 5.4\<close>
 
-definition "Big_Red_5_4 \<equiv> \<lambda>l. Big_Red_5_6 l \<and> (\<forall>k\<ge>l. real k + 2 * real k ^ 6 \<le> real k ^ 7)"
+definition "Big_Red_5_4 \<equiv> \<lambda>l. Big_Red_5_6 l \<and> (\<forall>k\<ge>l. real k + 2 * real k^6 \<le> real k^7)"
 
 text \<open>establishing the size requirements for 5.4\<close>
 lemma Big_Red_5_4: "\<forall>\<^sup>\<infinity>l. Big_Red_5_4 l"
@@ -259,7 +259,7 @@ lemma Red_5_4:
   assumes i: "i \<in> Step_class {red_step,dboost_step}"
     and big: "Big_Red_5_4 l"
   defines "X \<equiv> Xseq i" and "Y \<equiv> Yseq i"
-  shows "weight X Y (cvx i) \<ge> - card X / (real k) ^ 5"
+  shows "weight X Y (cvx i) \<ge> - card X / (real k)^5"
 proof -
   have "l\<noteq>1"
     using big by (auto simp: Big_Red_5_4_def)
@@ -340,35 +340,30 @@ proof -
       by (smt (verit, del_insts) RNX \<open>XB \<subseteq> X\<close> \<open>finite X\<close> card_mono nat_less_le of_nat_diff distrib_right)
   qed
   finally have weight_ge_0: "0 \<le> ?R * card X + (card X - ?R) * (weight X Y (cvx i) + 1)" .
-  have rk61: "real k ^ 6 > 1"
+  have rk61: "real k^6 > 1"
     using \<open>k>1\<close> by simp
-  have k267: "real k + 2 * real k ^ 6 \<le> (real k ^ 7)"
+  have k267: "real k + 2 * real k^6 \<le> (real k^7)"
     using \<open>l \<le> k\<close> big by (auto simp: Big_Red_5_4_def)
-  have k_le: "real k ^ 6 + (?R * real k + ?R * (real k ^ 6)) \<le> 1 + ?R * (real k ^ 7)" 
+  have k_le: "real k^6 + (?R * real k + ?R * (real k^6)) \<le> 1 + ?R * (real k^7)" 
     using mult_left_mono [OF k267, of ?R] assms
     by (smt (verit, ccfv_SIG) distrib_left card_XB mult_le_cancel_right1 nat_less_real_le of_nat_0_le_iff zero_le_power)
-  have [simp]: "real k ^ m = real k ^ n \<longleftrightarrow> m=n" "real k ^ m < real k ^ n \<longleftrightarrow> m<n" for m n
+  have [simp]: "real k^m = real k^n \<longleftrightarrow> m=n" "real k^m < real k^n \<longleftrightarrow> m<n" for m n
     using \<open>1 < k\<close> by auto
-  have "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k ^ 6 * ?R"
+  have "RN k (nat\<lceil>l powr (3/4)\<rceil>) \<ge> k^6 * ?R"
     using \<open>l \<le> k\<close> big Red_5_6 by (auto simp: Big_Red_5_4_def)
-  then have cardX_ge: "card X \<ge> k ^ 6 * ?R"
+  then have cardX_ge: "card X \<ge> k^6 * ?R"
     by (meson le_trans nat_le_linear nonterm termination_condition_def)
   have "-1 / (real k)^5 \<le> - 1 / (real k^6 - 1) + -1 / (real k^6 * ?R)"
-  proof -
-    have [simp]: "real k * (r * real k ^ 5) = r * k^6" for r
-      by (simp add: eval_nat_numeral)
-    show ?thesis
-      using rk61 card_XB mult_left_mono [OF k_le, of "real k ^ 5"]
-      by (simp add: field_split_simps)
-  qed
+      using rk61 card_XB mult_left_mono [OF k_le, of "real k^5"]
+      by (simp add: field_split_simps eval_nat_numeral)
   also have "\<dots> \<le> - ?R / (real k^6 * ?R - ?R) + -1 / (real k^6 * ?R)"
     using card_XB rk61  by (simp add: field_split_simps)
   finally have "-1 / (real k)^5 \<le> - ?R / (real k^6 * ?R - ?R) + -1 / (real k^6 * ?R)" .
   also have "\<dots> \<le> - ?R / (real (card X) - ?R) + -1 / card X"
   proof (intro add_mono divide_left_mono_neg)
-    show "real k ^ 6 * real ?R - real ?R \<le> real (card X) - real ?R"
+    show "real k^6 * real ?R - real ?R \<le> real (card X) - real ?R"
       using cardX_ge of_nat_mono by fastforce
-    show "real k ^ 6 * real ?R \<le> real (card X)"
+    show "real k^6 * real ?R \<le> real (card X)"
       using cardX_ge of_nat_mono by fastforce
   qed (use RNX rk61 kn0 card_XB in auto)
   also have "\<dots> \<le> weight X Y (cvx i) / card X"
@@ -385,14 +380,12 @@ lemma Red_5_7b:
 proof -
   have qh_le_p: "qfun (hgt p - Suc 0) \<le> p"
     by (smt (verit) assms diff_Suc_less hgt_gt0 hgt_less_imp_qfun_less zero_less_iff_neq_zero)
-  have "hgt p > 0"
-    by (simp add: Suc_leI hgt_gt0)
-  then have "alpha (hgt p) = eps k * (1 + eps k) ^ (hgt p - 1) / k"
-    using alpha_eq by blast
+  have "alpha (hgt p) = eps k * (1 + eps k)^(hgt p - 1) / k"
+    using alpha_eq alpha_hgt_eq by blast
   also have "\<dots> = eps k * (qfun (hgt p - 1) - qfun 0 + 1/k)"
     by (simp add: diff_divide_distrib qfun_eq)
   also have "\<dots> \<le> eps k * (p - qfun 0 + 1/k)"
-    by (simp add: eps_ge0 landau_o.R_mult_left_mono qh_le_p)
+    by (simp add: eps_ge0 mult_left_mono qh_le_p)
   finally show ?thesis .
 qed
 
@@ -448,7 +441,8 @@ proof -
     then have "eps k powr -(1/2) * alpha (hgt (pee i)) = eps k powr (1/2) / k"
       using powr_mult_base [of "eps k"] eps_gt0 by (force simp: Red_5_7c mult.commute)
     also have "\<dots> \<le> eps k powr (1/2) * (pee i)"
-      using p_gt_invk by (smt (verit) divide_inverse inverse_eq_divide mult_left_mono powr_ge_pzero)
+      using p_gt_invk 
+      by (smt (verit) divide_inverse inverse_eq_divide mult_left_mono powr_ge_pzero)
     finally have "eps k powr -(1/2) * alpha (hgt (pee i)) \<le> eps k powr (1/2) * (pee i)" .
     then have "(1 - (eps k) powr (1/2)) * pee i * card Y \<le> (pee i - eps k powr -(1/2) * alpha (hgt (pee i))) * card Y"
       by (intro mult_right_mono) (auto simp: algebra_simps)
@@ -553,7 +547,7 @@ proposition Red_5_1:
   shows "red_density NRX NRY \<ge> p - alpha (hgt p)
        \<or> red_density NBX NRY \<ge> p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha (hgt p) \<and> \<beta> > 0"
 proof -
-  have Red_5_4: "weight X Y x \<ge> - real (card X) / (real k) ^ 5"
+  have Red_5_4: "weight X Y x \<ge> - real (card X) / (real k)^5"
     using Big i Red_5_4 by (auto simp: Big_Red_5_1_def x_def X_def Y_def)
   have lA: "(1-\<mu>) * l > 1" and "l\<le>k" and l144: "l powr (1/4) \<ge> 4"
     using Big by (auto simp: Big_Red_5_1_def l_le_k)
@@ -565,7 +559,7 @@ proof -
   have k52: "3 / (1-\<mu>) \<le> k powr (5/2)"
     using Big \<open>l\<le>k\<close> unfolding Big_Red_5_1_def
     by (smt (verit) of_nat_0_le_iff of_nat_mono powr_mono2 zero_le_divide_iff)
-  have RN_le_RN: "k ^ 6 * RN k (m_of l) \<le> RN k (nat \<lceil>l powr (3/4)\<rceil>)"
+  have RN_le_RN: "k^6 * RN k (m_of l) \<le> RN k (nat \<lceil>l powr (3/4)\<rceil>)"
     using Big \<open>l \<le> k\<close> Red_5_6 by (auto simp: Big_Red_5_1_def)
   have l34_ge3: "l powr (3/4) \<ge> 3"
     by (smt (verit, ccfv_SIG) l144 divide_nonneg_nonneg frac_le of_nat_0_le_iff powr_le1 powr_less_cancel)
@@ -670,29 +664,27 @@ proof -
         using \<open>k\<ge>256\<close> X_gt_k by linarith
       then have "2 * card X / real (card X - 1) < 3"
         by (simp add: divide_simps)
-      also have "\<dots> \<le> k ^ 2"
+      also have "\<dots> \<le> k^2"
         using mult_mono [OF \<open>k\<ge>256\<close> \<open>k\<ge>256\<close>] by (simp add: power2_eq_square flip: of_nat_mult)
       also have "\<dots> \<le> eps k * k^3"
         using \<open>k\<ge>256\<close> by (simp add: eps_def flip: powr_numeral powr_add)
-      finally have "(real (2 * card X) / real (card X - 1)) * k^2 < eps k * real (k ^ 3) * k^2"
+      finally have "(real (2 * card X) / real (card X - 1)) * k^2 < eps k * real (k^3) * k^2"
         using \<open>k>0\<close> by (intro mult_strict_right_mono) auto
-      then have "real (2 * card X) / real (card X - 1) * k^2 < eps k * real (k ^ 5)"
+      then have "real (2 * card X) / real (card X - 1) * k^2 < eps k * real (k^5)"
         by (simp add: mult.assoc flip: of_nat_mult)
-      then have "0 < - real (card X) / (real k) ^ 5 + (eps k / k) * real (card X - 1) * (1 / (2 * real k))"
+      then have "0 < - real (card X) / (real k)^5 + (eps k / k) * real (card X - 1) * (1 / (2 * real k))"
         using \<open>k>0\<close> X_gt_k by (simp add: field_simps power2_eq_square)
-      also have "- real (card X) / (real k) ^ 5 + (eps k / k) * real (card X - 1) * (1 / (2 * real k)) 
-               \<le> - real (card X) / (real k) ^ 5 + (eps k / k) * real (card NRX) * (card NRY / card Y)"
+      also have "- real (card X) / (real k)^5 + (eps k / k) * real (card X - 1) * (1 / (2 * real k)) 
+               \<le> - real (card X) / (real k)^5 + (eps k / k) * real (card NRX) * (card NRY / card Y)"
         using Y_NRY \<open>k>0\<close> \<open>card Y \<noteq> 0\<close>
         by (intro add_mono mult_mono) (auto simp: cNRX eps_def divide_simps)
-      also have "\<dots> = - real (card X) / (real k) ^ 5 + (eps k / k) * real (card NRX) * card NRY / card Y"
+      also have "\<dots> = - real (card X) / (real k)^5 + (eps k / k) * real (card NRX) * card NRY / card Y"
         by simp
-      also have "\<dots> \<le> - real (card X) / (real k) ^ 5 + alpha (hgt p) * real (card NRX) * card NRY / card Y"
+      also have "\<dots> \<le> - real (card X) / (real k)^5 + alpha (hgt p) * real (card NRX) * card NRY / card Y"
         using alpha_ge [OF hgt_gt0]
         by (intro add_mono mult_right_mono divide_right_mono) auto
-      also have "\<dots> \<le> weight X Y x + alpha (hgt p) * real (card NRX) * card NRY / real (card Y)"
-        using Red_5_4 by simp
       also have "\<dots> \<le> 0"
-        using empty 15 by auto
+        using empty 15 Red_5_4 by auto
       finally show False
         by simp
     qed
@@ -742,45 +734,42 @@ proof -
         then show "eps k / real k \<le> eps k * p0"
           by (metis divide_inverse eps_ge0 mult_left_mono less_eq_real_def mult_cancel_right1)
       qed
-      then have "eps k * (p - qfun 0 + 1 / real k) \<le> 1"
-        by (simp add: algebra_simps)
       then show ?thesis
-        using Red_5_7b [OF 1] by linarith
+        using Red_5_7b [OF 1] by (simp add: algebra_simps)
     next
       case 2
       show ?thesis
         using Red_5_7c [OF 2] \<open>k\<ge>256\<close> eps_less1 [of k] by simp
     qed
-    have B: "- (3 / (real k ^ 4)) \<le> (-2 / real k ^ 4) - alpha (hgt p) / card X"
+    have B: "- (3 / (real k^4)) \<le> (-2 / real k^4) - alpha (hgt p) / card X"
       using \<open>card X > k^4\<close> \<open>card Y \<noteq> 0\<close> \<open>0 < k\<close> alpha_le_1 by (simp add: algebra_simps frac_le)
-    have "- (3 / (\<beta> * real k ^ 4)) \<le> (-2 / real k ^ 4) / \<beta> - alpha (hgt p) / (\<beta> * card X)"
+    have "- (3 / (\<beta> * real k^4)) \<le> (-2 / real k^4) / \<beta> - alpha (hgt p) / (\<beta> * card X)"
       using \<open>\<beta>>0\<close> divide_right_mono [OF B, of \<beta>] \<open>k>0\<close> by (simp add: field_simps)
-    also have "\<dots> = (- real (card X) / real k ^ 5) / (\<beta> * real (card X)) * (2 * real k) - alpha (hgt p) / (\<beta> * card X)"
-      using \<open>0 < card X\<close> by (simp add: field_split_simps eval_nat_numeral)
-    also have "\<dots> = (- real (card X) / real k ^ 5) * card Y / (\<beta> * real (card X) * (card Y / (2 * real k))) - alpha (hgt p) / (\<beta> * card X)"
-      using \<open>card Y \<noteq> 0\<close> by simp
-    also have "\<dots>  \<le> (- real (card X) / real k ^ 5) * card Y / (\<beta> * real (card X) * card NRY) - alpha (hgt p) / (\<beta> * card X)"
+    also have "\<dots> = (- real (card X) / real k^5) * card Y / (\<beta> * real (card X) * (card Y / (2 * real k))) - alpha (hgt p) / (\<beta> * card X)"
+      using \<open>card Y \<noteq> 0\<close> \<open>0 < card X\<close> 
+      by (simp add: field_split_simps eval_nat_numeral)
+    also have "\<dots>  \<le> (- real (card X) / real k^5) * card Y / (\<beta> * real (card X) * card NRY) - alpha (hgt p) / (\<beta> * card X)"
       using Y_NRY \<open>k>0\<close> \<open>card NRY > 0\<close> \<open>card X > 0\<close> \<open>card Y \<noteq> 0\<close> \<open>\<beta>>0\<close>
       by (intro diff_mono divide_right_mono mult_left_mono divide_left_mono_neg) auto
     also have "\<dots>  \<le> weight X Y x * card Y / (\<beta> * real (card X) * card NRY) - alpha (hgt p) / (\<beta> * card X)"
       using Red_5_4 \<open>k>0\<close> \<open>0 < \<beta>\<close>
       by (intro diff_mono divide_right_mono mult_right_mono) auto
-    finally have "- (3 / (\<beta> * real k ^ 4)) \<le> weight X Y x * card Y / (\<beta> * real (card X) * card NRY) - alpha (hgt p) / (\<beta> * card X)" .
-    then have 17: "p + ((1-\<beta>)/\<beta>) * alpha (hgt p) - 3 / (\<beta> * real k ^ 4) \<le> ?E16"
+    finally have "- (3 / (\<beta> * real k^4)) \<le> weight X Y x * card Y / (\<beta> * real (card X) * card NRY) - alpha (hgt p) / (\<beta> * card X)" .
+    then have 17: "p + ((1-\<beta>)/\<beta>) * alpha (hgt p) - 3 / (\<beta> * real k^4) \<le> ?E16"
       by simp
-    have "3 / real k ^ 4 \<le> (1-\<mu>) * eps k ^ 2 / k"
+    have "3 / real k^4 \<le> (1-\<mu>) * eps k^2 / k"
       using \<open>k>0\<close> \<mu>01 mult_left_mono [OF k52, of k] 
       by (simp add: field_simps eps_def powr_powr powr_mult_base flip: powr_numeral powr_add)
-    also have "\<dots> \<le> (1-\<beta>) * eps k ^ 2 / k"
+    also have "\<dots> \<le> (1-\<beta>) * eps k^2 / k"
       using \<open>\<beta>\<le>\<mu>\<close>
       by (intro divide_right_mono mult_right_mono) auto
     also have "\<dots> \<le> (1-\<beta>) * eps k * alpha (hgt p)"
       using Red_5_7a [of p] eps_ge0 \<open>\<beta>\<le>\<mu>\<close> \<mu>01
       unfolding power2_eq_square divide_inverse mult.assoc
       by (intro mult_mono) auto
-    finally have \<dagger>: "3 / real k ^ 4 \<le> (1-\<beta>) * eps k * alpha (hgt p)" .
-    have "p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha (hgt p) + 3 / (\<beta> * real k ^ 4) \<le> p + ((1-\<beta>)/\<beta>) * alpha (hgt p)"
-      using \<open>0<\<beta>\<close> \<open>k>0\<close> mult_left_mono [OF \<dagger>, of \<beta>] by (simp add: field_simps )
+    finally have \<dagger>: "3 / real k^4 \<le> (1-\<beta>) * eps k * alpha (hgt p)" .
+    have "p + (1 - eps k) * ((1-\<beta>) / \<beta>) * alpha (hgt p) + 3 / (\<beta> * real k^4) \<le> p + ((1-\<beta>)/\<beta>) * alpha (hgt p)"
+      using \<open>0<\<beta>\<close> \<open>k>0\<close> mult_left_mono [OF \<dagger>, of \<beta>] by (simp add: field_simps)
     with 16 17 have "p + (1 - eps k) * ((1 - \<beta>) / \<beta>) * alpha (hgt p) \<le> red_density NBX NRY"
       by linarith
     then show ?thesis
@@ -808,7 +797,7 @@ proof -
   then have "?x \<in> Xseq i"
     by (simp add: choose_central_vx_X cvx_def finite_Xseq)
   then have "central_vertex (Xseq i) (cvx i)"
-    by (metis Xeq choose_central_vx_works cvx_def finite_Xseq local.step non_mb nonterm)
+    by (metis Xeq choose_central_vx_works cvx_def finite_Xseq step non_mb nonterm)
   with Xeq have "card (Neighbours Blue (cvx i) \<inter> Xseq i) \<le> \<mu> * card (Xseq i)"
     by (simp add: central_vertex_def)
   then have \<beta>eq: "card (Neighbours Blue (cvx i) \<inter> Xseq i) = beta i * card (Xseq i)"
@@ -889,7 +878,7 @@ proof
   have "(1 - eps k) * ((1 - beta i) / beta i) * alpha ?h \<le> 1" and beta_gt0: "beta i > 0"
     by linarith+
   with * have "(1 - eps k) * ((1 - beta i) / beta i) * eps k / k \<le> 1"
-    by (smt (verit, ccfv_SIG) divide_le_eq_1 eps_gt0 kn0 mult_le_cancel_left2 mult_le_cancel_left_pos mult_neg_pos of_nat_0_less_iff times_divide_eq_right)
+    by (smt (verit, best) mult.commute eps_ge0 mult_mono mult_nonneg_nonpos of_nat_0_le_iff times_divide_eq_right zero_le_divide_iff)
   then have "(1 - eps k) * ((1 - beta i) / beta i) \<le> k / eps k"
     using beta_ge0 [of i] eps_gt0 [OF kn0] kn0
     by (auto simp: divide_simps mult_less_0_iff mult_of_nat_commute split: if_split_asm)

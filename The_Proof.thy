@@ -305,9 +305,9 @@ proof -
     by simp
   define \<eta>' where "\<eta>' \<equiv> \<eta>/2"
   have \<eta>': "0 < \<eta>'" "\<eta>' \<le> 1/12"
-    using \<eta> by (auto simp add: \<eta>'_def)
+    using \<eta> by (auto simp: \<eta>'_def)
   have "k>0" and big101: "Big_Closer_10_1 (1/101) (nat\<lceil>k/100\<rceil>)" and ok_fun_10_1_le: "3 / (k * ln 2) \<le> \<eta>'"
-    using big by (auto simp add: Big_From_11_1_def \<eta>'_def)
+    using big by (auto simp: Big_From_11_1_def \<eta>'_def)
   interpret No_Cliques where l=k
     using assms unfolding No_Cliques_def No_Cliques_axioms_def
     using Book_Basis_axioms P0_min_axioms by blast

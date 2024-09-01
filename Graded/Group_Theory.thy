@@ -175,7 +175,7 @@ proof qed (auto simp: add_monom add_ac pgrade_def disjoint_family_on_def)
 interpretation gring pgrade "(+)" "(*)" 0 1
   apply unfold_locales
      apply (auto simp: algebra_simps add_monom disjoint_family_on_def mon_i.invertible_def)
-  apply (auto simp:  pgrade_def add_monom )
+  apply (auto simp: pgrade_def add_monom)
   apply (metis ab_group_add_class.ab_left_minus add.commute)
   done
 
@@ -384,13 +384,13 @@ theorem invertible_is_bijective:
   shows "invertible \<alpha> \<longleftrightarrow> bij_betw \<alpha> S S"
 proof -
   from dom interpret map \<alpha> S S by unfold_locales
-  show ?thesis by (auto simp add: bij_betw_iff_has_inverse invertible_def)
+  show ?thesis by (auto simp: bij_betw_iff_has_inverse invertible_def)
 qed
 
 text \<open>p 31, ll 26--27\<close>
 theorem Units_bijective:
   "Units = {\<alpha> \<in> S \<rightarrow>\<^sub>E S. bij_betw \<alpha> S S}"
-  unfolding Units_def by (auto simp add: invertible_is_bijective)
+  unfolding Units_def by (auto simp: invertible_is_bijective)
 
 text \<open>p 31, ll 26--27\<close>
 lemma Units_bij_betwI [intro, simp]:
@@ -833,7 +833,7 @@ theorem image_subgroup:
 proof -
   interpret subgroup G M "(\<cdot>)" \<one> by fact
   interpret image: monoid "\<eta> ` G" "(\<cdot>')" "\<one>'"
-    by unfold_locales (auto simp add: commutes_with_composition commutes_with_unit [symmetric])
+    by unfold_locales (auto simp: commutes_with_composition commutes_with_unit [symmetric])
   show ?thesis
   proof (unfold_locales, auto)
     fix x
@@ -930,7 +930,7 @@ proof (rule bij_betw_imageI)
     by (fastforce intro: inj_onI simp add: Right_Coset_is_orbit right.translation_apply orbit.block_closed)
 next
   show "(inverse x \<cdot> y)\<^sub>R ` (H |\<cdot> x) = H |\<cdot> y"
-    by (force simp add: right.translation_apply associative invertible_right_inverse2)
+    by (force simp: right.translation_apply associative invertible_right_inverse2)
 qed
 
 text \<open>p 52, ll 25--26\<close>
@@ -941,7 +941,7 @@ theorem Right_Cosets_cardinality:
 text \<open>p 52, l 27\<close>
 theorem Right_Coset_unit:
   "H |\<cdot> \<one> = H"
-  by (force simp add: Right_Coset_def)
+  by (force simp: Right_Coset_def)
 
 text \<open>p 52, l 27\<close>
 theorem Right_Coset_cardinality:
@@ -1146,7 +1146,7 @@ proof (rule subgroupI)
   fix k1 and k2
   assume K: "k1 \<in> Class \<one>" "k2 \<in> Class \<one>"
   then have "k1 \<cdot> k2 \<in> Class (k1 \<cdot> k2)" by blast
-  also have "\<dots> = Class k1 [\<cdot>] Class k2" using K by (auto simp add: Class_commutes_with_composition Class_closed)
+  also have "\<dots> = Class k1 [\<cdot>] Class k2" using K by (auto simp: Class_commutes_with_composition Class_closed)
   also have "\<dots> = Class \<one> [\<cdot>] Class \<one>" using K by (metis ClassD Class_eq unit_closed)
   also have "\<dots> = Class \<one>" by simp
   finally show "k1 \<cdot> k2 \<in> Class \<one>" .
@@ -1247,9 +1247,9 @@ proof
   proof
     fix x
     assume x: "x \<in> K |\<cdot> g"
-    then obtain k where "x = k \<cdot> g" and [simp]: "k \<in> K" by (auto simp add: Right_Coset_def)
+    then obtain k where "x = k \<cdot> g" and [simp]: "k \<in> K" by (auto simp: Right_Coset_def)
     then have "x = g \<cdot> (inverse g \<cdot> k \<cdot> g)" by (simp add: associative invertible_right_inverse2)
-    also from normal have "\<dots> \<in> g \<cdot>| K" by (auto simp add: Left_Coset_def)
+    also from normal have "\<dots> \<in> g \<cdot>| K" by (auto simp: Left_Coset_def)
     finally show "x \<in> g \<cdot>| K" .
   qed
 next
@@ -1258,9 +1258,9 @@ next
   proof
     fix x
     assume x: "x \<in> g \<cdot>| K"
-    then obtain k where "x = g \<cdot> k" and [simp]: "k \<in> K" by (auto simp add: Left_Coset_def)
+    then obtain k where "x = g \<cdot> k" and [simp]: "k \<in> K" by (auto simp: Left_Coset_def)
     then have "x = (inverse (inverse g) \<cdot> k \<cdot> inverse g) \<cdot> g" by (simp add: associative del: invertible_right_inverse)
-    also from normal [where g = "inverse g"] have "\<dots> \<in> K |\<cdot> g" by (auto simp add: Right_Coset_def)
+    also from normal [where g = "inverse g"] have "\<dots> \<in> K |\<cdot> g" by (auto simp: Right_Coset_def)
     finally show "x \<in> K |\<cdot> g" .
   qed
 qed

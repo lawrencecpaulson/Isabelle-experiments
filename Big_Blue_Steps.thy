@@ -173,7 +173,7 @@ proof -
   have "((\<sigma>*m) gchoose b) * inverse (m gchoose b) = (\<Prod>i<b. (\<sigma>*m - i) / (real m - real i))"
     using bm by (simp add: gbinomial_prod_rev prod_dividef atLeast0LessThan)
   also have "\<dots> = \<sigma>^b * (\<Prod>i<b. 1 - ((1-\<sigma>)*i) / (\<sigma> * (real m - real i)))"
-    using bm \<sigma>by (induction b) (auto simp: field_simps)
+    using bm \<sigma> by (induction b) (auto simp: field_simps)
   finally show ?thesis .
 qed
 
@@ -761,8 +761,7 @@ proof -
         and cbb: "choose_blue_book (Xseq n, Yseq n, Aseq n, Bseq n) = (S, Xseq (Suc n))" 
         and same: "Aseq (Suc n) = Aseq n" "Yseq (Suc n) = Yseq n"
         using True
-        by (force simp: S_def step_kind_defs next_state_def Aseq_def Bseq_def 
-            split: prod.split if_split_asm)+  
+        by (force simp: S_def step_kind_defs next_state_def split: prod.split if_split_asm)+  
 
       have l14: "l powr (1/4) \<le> card S"
         using Blue_4_1 [OF Xseq_subset_V manyb big]
@@ -840,7 +839,7 @@ next
       by (auto simp: REDS_def)
     have Aeq: "Aseq (Suc n) = insert (choose_central_vx (Xseq n,Yseq n,Aseq n,Bseq n)) (Aseq n)"
       using Suc.prems True 
-      by (auto simp: step_kind_defs Aseq_def Bseq_def next_state_def Let_def split: if_split_asm prod.split)
+      by (auto simp: step_kind_defs next_state_def split: if_split_asm prod.split)
     have "finite (Xseq n)"
       using finite_Xseq by presburger
     then have "choose_central_vx (Xseq n,Yseq n,Aseq n,Bseq n) \<in> Xseq n"
@@ -858,7 +857,7 @@ next
       using less_Suc_eq unfolding REDS_def by blast
     moreover have "Aseq (Suc n) = Aseq n"
       using False
-      by (auto simp: Aseq_def step_kind_defs degree_reg_def next_state_def Let_def split: prod.split)
+      by (auto simp: step_kind_defs degree_reg_def next_state_def split: prod.split)
     ultimately show ?thesis
       using Suc.IH by presburger
   qed
@@ -944,7 +943,7 @@ proof -
           by (meson disjnt_iff)
         then show ?thesis
           using 2 Suc.prems 
-          by (auto simp: step_kind_defs next_state_def step_n Let_def split: if_split_asm)
+          by (auto simp: step_kind_defs next_state_def step_n split: if_split_asm)
       qed
       moreover have "finite B"
         by (metis Suc.prems V_state_stepper finB)

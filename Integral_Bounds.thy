@@ -89,7 +89,7 @@ proof -
       using \<open>a \<le> b\<close> \<open>n \<noteq> 0\<close> 
       apply (clarsimp simp add: j)
       apply (rule order_trans [OF _ integral_const_ge])
-        apply (auto simp add: field_split_simps)
+        apply (auto simp: field_split_simps)
        apply (rule monotone_on_subset [OF ant])
       apply (auto simp: field_split_simps mult_right_mono)
       done

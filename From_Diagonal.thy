@@ -202,7 +202,7 @@ proof -
     have \<beta>: "bigbeta \<ge> 1 / (real k)\<^sup>2"
       using big53 bigbeta_ge_square \<open>l=k\<close> by blast
     then have "(\<mu> / bigbeta) ^ s \<le> (\<mu> * (real k)\<^sup>2) ^ s"
-      using bb_gt0 kn0 \<mu>01 by (intro power_mono) (auto simp add: divide_simps mult.commute)
+      using bb_gt0 kn0 \<mu>01 by (intro power_mono) (auto simp: divide_simps mult.commute)
     also have "\<dots> \<le> (\<mu> * (real k)\<^sup>2) powr (k powr (39/40))"
       using \<mu>01 big\<mu>2 1 by (smt (verit) powr_less_mono powr_one_eq_one powr_realpow)
     also have "\<dots> = 2 powr (log 2 ((\<mu> * (real k)\<^sup>2) powr (k powr (39/40))))"
@@ -301,7 +301,7 @@ proof -
   also have "\<dots> \<le> 2 powr (ok_fun_61 k) * p0 ^ card RS * card Y0"
     using   mult_left_mono [OF 4 ge0 ] by simp
   also have "\<dots> \<le> card (Yseq halted_point)"
-    using Y_6_1 big \<open>l=k\<close> by (auto simp add: RS_def divide_simps split: if_split_asm)
+    using Y_6_1 big \<open>l=k\<close> by (auto simp: RS_def divide_simps split: if_split_asm)
   finally have "2 powr (- real s - real t + ok_fun_61 k - 2) * nV' \<le> card (Yseq halted_point)" .
   moreover
   { assume "card (Yseq halted_point) \<ge> RN k (k-t)"

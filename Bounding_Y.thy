@@ -31,7 +31,7 @@ lemma Y_6_4_DegreeReg:
   assumes "i \<in> Step_class {dreg_step}" 
   shows "pee (Suc i) \<ge> pee i"
   using assms red_density_X_degree_reg_ge [OF Xseq_Yseq_disjnt, of i]
-  by (auto simp: step_kind_defs degree_reg_def pee_def  split: if_split_asm prod.split_asm )
+  by (auto simp: step_kind_defs degree_reg_def pee_def split: if_split_asm prod.split_asm)
 
 lemma Y_6_4_Bblue: 
   assumes i: "i \<in> Step_class {bblue_step}"
@@ -54,7 +54,7 @@ proof -
   have "disjnt X Y"
     using Xseq_Yseq_disjnt X_def Y_def by blast
   obtain fin: "finite X" "finite Y"
-    by (metis V_state_stepper finX finY local.step)
+    by (metis V_state_stepper finX finY step)
   have "X \<noteq> {}" "Y \<noteq> {}"
     using gen_density_def nonterm termination_condition_def by fastforce+
   define i' where "i' = i-1"
@@ -71,11 +71,11 @@ proof -
     using Suci' by (auto simp: X_def Y_def)
   define pm where "pm \<equiv> (pee i' - eps k powr (-1/2) * alpha (hgt (pee i')))"
   have "T \<subseteq> X"
-    using bluebook by (simp add: choose_blue_book_subset fin(1))
+    using bluebook by (simp add: choose_blue_book_subset fin)
   then have T_reds: "\<And>x. x \<in> T \<Longrightarrow> pm * card Y \<le> card (Neighbours Red x \<inter> Y)"
     by (auto simp: Xeq Yeq pm_def X_degree_reg_def pee_def red_dense_def)
   have "good_blue_book X (S,T)"
-    by (meson bluebook choose_blue_book_works fin(1))
+    by (meson bluebook choose_blue_book_works fin)
   then have Tne: False if "card T = 0"
     using \<mu>01 \<open>X \<noteq> {}\<close> fin by (simp add: good_blue_book_def pos_prod_le that)
   have "pm * card T * card Y = (\<Sum>x\<in>T. pm * card Y)"
@@ -100,10 +100,8 @@ corollary Y_6_4_dbooSt:
   assumes i: "i \<in> Step_class {dboost_step}" and big: "Big_Red_5_3 \<mu> l"
   shows "pee (Suc i) \<ge> pee (i-1)"
 proof -
-  have "odd i"
-    using step_odd i by (force simp: Step_class_insert_NO_MATCH)
-  with step_odd i have "i-1 \<in> Step_class {dreg_step}"
-    by (simp add: Step_class_insert_NO_MATCH dreg_before_step)
+  have  "odd i""i-1 \<in> Step_class {dreg_step}"
+    using step_odd i by (auto simp: Step_class_insert_NO_MATCH dreg_before_step)
   then show ?thesis
     using Red_5_3 Y_6_4_DegreeReg assms \<open>odd i\<close> by fastforce
 qed
@@ -111,7 +109,7 @@ qed
 subsection \<open>Towards Lemmas 6.3\<close>
 
 definition "Z_class \<equiv> {i \<in> Step_class {red_step,bblue_step,dboost_step}.
-                                pee (Suc i) < pee (i-1) \<and> pee (i-1) \<le> p0}"
+                            pee (Suc i) < pee (i-1) \<and> pee (i-1) \<le> p0}"
 
 lemma finite_Z_class: "finite (Z_class)"
   using finite_components by (auto simp: Z_class_def Step_class_insert_NO_MATCH)
@@ -144,11 +142,7 @@ proof -
     have "hgt (pee (i-1)) = 1"
     proof -
       have "hgt (pee (i-1)) \<le> 1"
-      proof (intro hgt_Least)
-        show "pee (i-1) \<le> qfun 1"
-          unfolding qfun_eq
-          by (smt (verit) one_le_power pee divide_nonneg_nonneg eps_ge0 of_nat_less_0_iff)
-      qed auto
+        by (smt (verit, del_insts) hgt_Least less_one pee(2) qfun0 qfun_strict_mono)
       then show ?thesis
         by (metis One_nat_def Suc_pred' diff_is_0_eq hgt_gt0)
     qed
@@ -188,9 +182,8 @@ proof -
                        \<le> pee (i-1) - pee i + alpha (hgt (pee i))"
       using Y_6_4_Red by (force simp: \<R>_def)
     have pee_le: "pee (i-1) \<le> pee i"
-      using dreg_before_step Y_6_4_DegreeReg i step_odd
-      apply (simp add: \<R>_def Step_class_insert_NO_MATCH)
-      by (metis odd_Suc_minus_one)
+      using dreg_before_step Y_6_4_DegreeReg[of "i-1"] i step_odd
+      by (simp add: \<R>_def Step_class_insert_NO_MATCH)
     consider (1) "hgt (pee i) = 1" | (2) "hgt (pee i) > 1"
       by (metis hgt_gt0 less_one nat_neq_iff)
     then have "pee (i-1) - pee i + alpha (hgt (pee i)) \<le> eps k / k"
@@ -224,7 +217,7 @@ proof -
     using eps_ge0[of k] assms red_step_finite
     by (simp add: \<R>_def divide_le_cancel mult_le_cancel_right card_mono)
   also have "\<dots> \<le> k * (eps k / k)"
-    using red_step_limit \<R>_def \<mu>01
+    using red_step_limit \<R>_def \<mu>01 
     by (smt (verit, best) divide_nonneg_nonneg eps_ge0 mult_mono nat_less_real_le of_nat_0_le_iff)
   also have "\<dots> \<le> eps k"
     by (simp add: eps_ge0)
@@ -256,11 +249,11 @@ next
   have "eps k \<le> 1/2"
     using \<open>k\<ge>16\<close> by (simp add: eps_eq_sqrt divide_simps real_le_rsqrt)
   moreover have "0 \<le> x \<and> x \<le> 1/2 \<Longrightarrow> x * (1 + x)\<^sup>2 + 1 \<le> (1 + x)\<^sup>2" for x::real
-    by sos  (*Seemingly the ONLY call to sos in the entire development*)
-  ultimately have C: "eps k * (1 + eps k)\<^sup>2 + 1 \<le> (1 + eps k)\<^sup>2"
+    by sos
+  ultimately have \<section>: "eps k * (1 + eps k)\<^sup>2 + 1 \<le> (1 + eps k)\<^sup>2"
     using eps_ge0 by presburger
   have le1: "eps k + 1 / (1 + eps k)\<^sup>2 \<le> 1"
-    using mult_left_mono [OF C, of "inverse ((1 + eps k)\<^sup>2)"]
+    using mult_left_mono [OF \<section>, of "inverse ((1 + eps k)\<^sup>2)"]
     by (simp add: ring_distribs inverse_eq_divide) (smt (verit))
   have 0: "0 \<le> (1 + eps k) ^ (h i - Suc 0)"
     using eps_ge0 by auto
@@ -295,8 +288,7 @@ corollary Y_6_5_dbooSt:
 
 text \<open>this remark near the top of page 19 only holds in the limit\<close>
 lemma "\<forall>\<^sup>\<infinity>k. (1 + eps k) powr (- real (nat \<lfloor>2 * eps k powr (-1/2)\<rfloor>)) \<le> 1 - eps k powr (1/2)"
-  unfolding eps_def
-  by real_asymp
+  unfolding eps_def by real_asymp
 
 end
 
@@ -328,20 +320,20 @@ proof (cases "h > 2*\<kappa> + 1")
   finally have A: "qfun (h-1) - eps k powr (1/2) * (1 + eps k) ^ (h-1) / k < pee (Suc i)" .
   have ek0: "0 < 1 + eps k"
     by (smt (verit, best) eps_ge0)
-  have less_h: "nat \<lfloor>2 * \<kappa>\<rfloor> < h"
+  have less_h: "nat \<lfloor>2*\<kappa>\<rfloor> < h"
     using True \<open>0 < h - 1\<close> by linarith
-  have "qfun (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) = p0 + ((1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) - 1) / k"
+  have "qfun (h - nat \<lfloor>2*\<kappa>\<rfloor> - 1) = p0 + ((1 + eps k) ^ (h - nat \<lfloor>2*\<kappa>\<rfloor> - 1) - 1) / k"
     by (simp add: qfun_eq)
   also have "\<dots> \<le> p0 + ((1 - eps k powr (1/2)) * (1 + eps k) ^ (h-1) - 1) / k"
   proof -
     have ge0: "(1 + eps k) ^ (h-1) \<ge> 0"
       using eps_ge0 by auto
-    have "(1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) = (1 + eps k) ^ (h-1) * (1 + eps k) powr - real(nat \<lfloor>2*\<kappa>\<rfloor>)"
+    have "(1 + eps k) ^ (h - nat \<lfloor>2*\<kappa>\<rfloor> - 1) = (1 + eps k) ^ (h-1) * (1 + eps k) powr - real(nat \<lfloor>2*\<kappa>\<rfloor>)"
       using less_h ek0 by (simp add: algebra_simps flip: powr_realpow powr_add)
     also have "\<dots> \<le> (1 - eps k powr (1/2)) * (1 + eps k) ^ (h-1)"
       using big l_le_k unfolding \<kappa>_def Big_Y_6_5_Bblue_def
       by (metis mult.commute ge0 mult_left_mono)
-    finally have "(1 + eps k) ^ (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1)
+    finally have "(1 + eps k) ^ (h - nat \<lfloor>2*\<kappa>\<rfloor> - 1)
         \<le> (1 - eps k powr (1/2)) * (1 + eps k) ^ (h-1)" .
     then show ?thesis
       by (intro add_left_mono divide_right_mono diff_right_mono) auto
@@ -350,8 +342,8 @@ proof (cases "h > 2*\<kappa> + 1")
     using kn0 eps_ge0 by (simp add: qfun_eq powr_half_sqrt field_simps)
   also have "\<dots> < pee (Suc i)"
     using A by blast
-  finally have "qfun (h - nat \<lfloor>2 * \<kappa>\<rfloor> - 1) < pee (Suc i)" .
-  then have "h - nat \<lfloor>2 * \<kappa>\<rfloor> \<le> hgt (pee (Suc i))"
+  finally have "qfun (h - nat \<lfloor>2*\<kappa>\<rfloor> - 1) < pee (Suc i)" .
+  then have "h - nat \<lfloor>2*\<kappa>\<rfloor> \<le> hgt (pee (Suc i))"
     using hgt_greater by force
   with less_h show ?thesis
     unfolding \<kappa>_def
@@ -629,13 +621,13 @@ next
     then show ?thesis
     proof cases
       case 1
-      then show ?thesis 
-        by (smt (verit, best) "*" eps_ge0 pee_eq_p0 cancel_comm_monoid_add_class.diff_cancel)
+      with * eps_gt0[of k] kn0 show ?thesis 
+        by (simp add: pee_eq_p0)
     next
       case 2
       then have m2: "halted_point-2 \<in> Step_class {red_step,bblue_step,dboost_step}"
         using step_before_dreg[of "halted_point-2"] m1_dreg
-        by (simp add: flip: Suc_diff_le)
+        by (simp flip: Suc_diff_le)
       then obtain j where j: "halted_point-1 = Suc j"
         using 2 not0_implies_Suc by fastforce
       then have "pee (Suc j) \<ge> p0 - 3 * eps k"
@@ -696,29 +688,30 @@ proof -
   define p0m where "p0m \<equiv> p0 - 2 * eps k powr (1/2)"
   have "p0m > 0"
     using big_p0 p0_ge by (simp add: p0m_def)
-  define Step_RS where "Step_RS \<equiv> Step_class {red_step,dboost_step}"
-  define Step_BD where "Step_BD \<equiv> Step_class {bblue_step,dreg_step}"
+  let ?RS = "Step_class {red_step,dboost_step}"
+  let ?BD = " Step_class {bblue_step,dreg_step}"
   have not_halted_below_m: "i \<notin> Step_class {halted}" if "i < halted_point" for i
     using that 
     by (simp add:  halted_point_minimal)
   have BD_card: "card (Yseq i) = card (Yseq (Suc i))"
-    if "i \<in> Step_BD" for i
+    if "i \<in> ?BD" for i
   proof -
     have "Yseq (Suc i) = Yseq i"
       using that
-      by (auto simp: step_kind_defs Step_BD_def next_state_def degree_reg_def split: prod.split if_split_asm)
+      by (auto simp: step_kind_defs next_state_def degree_reg_def split: prod.split if_split_asm)
     with p0_01 kn0 show ?thesis
       by auto
   qed
   have RS_card: "p0m * card (Yseq i) \<le> card (Yseq (Suc i))"
-    if "i \<in> Step_RS" for i
+    if "i \<in> ?RS" for i
   proof -
     have Yeq: "Yseq (Suc i) = Neighbours Red (cvx i) \<inter> Yseq i"
-      using that by (auto simp: step_kind_defs Step_RS_def next_state_def degree_reg_def cvx_def Let_def split: prod.split if_split_asm)
+      using that 
+      by (auto simp: step_kind_defs next_state_def split: prod.split if_split_asm)
     have "odd i"
-      using that step_odd by (auto simp: Step_class_def Step_RS_def)
+      using that step_odd by (auto simp: Step_class_def)
     moreover have i_not_halted: "i \<notin> Step_class {halted}"
-      using that by (auto simp: Step_class_def Step_RS_def)
+      using that by (auto simp: Step_class_def)
     ultimately have iminus1_dreg: "i - 1 \<in> Step_class {dreg_step}"
       by (simp add: dreg_before_step not_halted_odd_RBS)
     have "p0m * card (Yseq i) \<le> (1 - eps k powr (1/2)) * pee (i-1) * card (Yseq i)"
@@ -759,17 +752,17 @@ proof -
     qed
     also have "\<dots> \<le> card (Neighbours Red (cvx i) \<inter> Yseq i)"
       using Red_5_8 [OF iminus1_dreg] cvx_in_Xseq that \<open>odd i\<close> 
-        by (fastforce simp: Step_RS_def)
+        by fastforce
     finally show ?thesis
       by (simp add: Yeq)
   qed
-  define ST where "ST \<equiv> \<lambda>i. Step_RS \<inter> {..<i}"
-  have "ST (Suc i) = (if i \<in> Step_RS then insert i (ST i) else ST i)" for i
+  define ST where "ST \<equiv> \<lambda>i. ?RS \<inter> {..<i}"
+  have "ST (Suc i) = (if i \<in> ?RS then insert i (ST i) else ST i)" for i
     by (auto simp: ST_def less_Suc_eq)
-  then have [simp]: "card (ST (Suc i)) = (if i \<in> Step_RS then Suc (card (ST i)) else card (ST i))" for i
+  then have [simp]: "card (ST (Suc i)) = (if i \<in> ?RS then Suc (card (ST i)) else card (ST i))" for i
     by (simp add: ST_def)
   have STm: "ST halted_point = st"
-    by (auto simp: ST_def st_def Step_RS_def Step_class_def simp flip: halted_point_minimal)
+    by (auto simp: ST_def st_def Step_class_def simp flip: halted_point_minimal)
   have "p0m ^ card (ST i) \<le> (\<Prod>j<i. card (Yseq(Suc j)) / card (Yseq j))" if "i\<le>halted_point"for i
     using that
   proof (induction i)
@@ -780,9 +773,9 @@ proof -
     case (Suc i)
     then have i: "i \<notin> Step_class {halted}"
       by (simp add: not_halted_below_m)
-    consider (RS) "i \<in> Step_RS"
-           | (BD) "i \<in> Step_BD \<and> i \<notin> Step_RS"
-      using i stepkind.exhaust by (auto simp: Step_class_def Step_BD_def Step_RS_def)
+    consider (RS) "i \<in> ?RS"
+           | (BD) "i \<in> ?BD \<and> i \<notin> ?RS"
+      using i stepkind.exhaust by (auto simp: Step_class_def)
     then show ?case
     proof cases
       case RS

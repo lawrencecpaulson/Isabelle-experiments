@@ -99,7 +99,8 @@ proof -
       by (simp add: \<Delta>_def pp_def split: if_split_asm)
   qed
 
-  have sum_pp_aux: "(\<Sum>h=Suc 0..n. pp i h) = (if hgt (pee i) \<le> n then pee i + (\<Sum>h=1..<n. qfun h) else (\<Sum>h=1..n. qfun h))" 
+  have sum_pp_aux: "(\<Sum>h=Suc 0..n. pp i h) 
+                  = (if hgt (pee i) \<le> n then pee i + (\<Sum>h=1..<n. qfun h) else (\<Sum>h=1..n. qfun h))" 
     if "n>0" for n i
     using that
   proof (induction n)
@@ -344,7 +345,7 @@ proof -
       then have \<Delta>\<Delta>_le0: "\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h \<le> 0" if "h\<ge>1" for h
         by (smt (verit, best) One_nat_def \<Delta>\<Delta>_def \<Delta>_def \<open>odd i\<close> odd_Suc_minus_one pp_eq)
       have hge: "hgt (pee (Suc i)) \<ge> hgt (pee (i-1)) - 2 * eps k powr (-1/2)"
-        using bigY65B that Y_6_5_Bblue by (fastforce simp: \<B>_def )
+        using bigY65B that Y_6_5_Bblue by (fastforce simp: \<B>_def)
       have \<Delta>\<Delta>0: "\<Delta>\<Delta> (i-1) h + \<Delta>\<Delta> i h = 0" if "0<h" "h < hgt (pee (i-1)) - 2 * eps k powr (-1/2)" for h
         using \<open>odd i\<close> that hge unfolding \<Delta>\<Delta>_def One_nat_def
         by (smt (verit) of_nat_less_iff odd_Suc_minus_one powr_non_neg pp_less_hgt)
@@ -368,14 +369,16 @@ proof -
         by (simp add: powr_minus divide_simps mult_ac)
       also have "\<dots> \<le> ?R"
       proof -
-        have "(1 + eps k) powr (2 * eps k powr - (1/2)) * (\<Delta>\<Delta> (i - Suc 0) h + \<Delta>\<Delta> i h) / alpha (hgt (pee (i - Suc 0))) \<le> (\<Delta>\<Delta> (i - Suc 0) h + \<Delta>\<Delta> i h) / alpha h"
+        have "(1 + eps k) powr (2 * eps k powr(-1/2)) * (\<Delta>\<Delta> (i - Suc 0) h + \<Delta>\<Delta> i h) / alpha (hgt (pee (i - Suc 0))) 
+           \<le> (\<Delta>\<Delta> (i - Suc 0) h + \<Delta>\<Delta> i h) / alpha h"
           if h: "Suc 0 \<le> h" "h \<le> maxh" for h
-        proof (cases "h < hgt (pee (i-1)) - 2 * eps k powr (-1/2)")
+        proof (cases "h < hgt (pee (i-1)) - 2 * eps k powr(-1/2)")
           case False
-          then have *: "(1 + eps k) powr (2 * eps k powr - (1/2)) / alpha (hgt (pee (i - Suc 0))) \<ge> 1 / alpha h"
+          then have "hgt (pee (i-1)) - 1 \<le> 2 * eps k powr(-1/2) + (h - 1)"
+            using hgt_gt0 by (simp add: nat_less_real_le)
+          then have *: "(1 + eps k) powr (2 * eps k powr(-1/2)) / alpha (hgt (pee (i-1))) \<ge> 1 / alpha h"
             using that eps_gt0[of k] kn0 hgt_gt0
-            apply (simp add: alpha_eq divide_simps flip: powr_realpow powr_add)
-            by (smt (verit) Num.of_nat_simps(3) Suc_pred)
+            by (simp add: alpha_eq divide_simps flip: powr_realpow powr_add)
           show ?thesis
             using mult_left_mono_neg [OF * \<Delta>\<Delta>_le0] that by (simp add: Groups.mult_ac) 
         qed (use h \<Delta>\<Delta>0 in auto)
@@ -400,10 +403,10 @@ proof -
   proof (intro sum_mono)
     fix h
     assume "h \<in> {1..maxh}"
-    have inj_pred: "inj_on (\<lambda>i. i - Suc 0) \<B>"
-      using odd_pos [OF step_odd]   
-      apply (auto simp add: \<B>_def inj_on_def Step_class_insert_NO_MATCH)
-      by (metis Suc_pred)
+    have "\<B> \<subseteq> {0<..}"
+      using odd_pos [OF step_odd] by (auto simp: \<B>_def Step_class_insert_NO_MATCH)
+    with inj_on_diff_nat [of \<B> 1] have inj_pred: "inj_on (\<lambda>i. i - Suc 0) \<B>"
+      by (simp add: Suc_leI subset_eq)
     have "(\<Sum>i\<in>\<B>. \<Delta>\<Delta> (i - Suc 0) h) = (\<Sum>i \<in> (\<lambda>i. i-1) ` \<B>. \<Delta>\<Delta> i h)"
       by (simp add: sum.reindex [OF inj_pred])
     also have "\<dots> \<le> (\<Sum>i\<in>\<D>. \<Delta>\<Delta> i h)"
