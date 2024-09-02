@@ -198,7 +198,7 @@ proof -
     using Far_9_2_conclusion by (simp flip: \<R>_def t_def)
 qed
 
-subsection \<open>Material that needs to be proved OUTSIDE the book locales\<close>
+text \<open>Material that needs to be proved \textbf{outside} the book locales\<close>
 
 lemma (in No_Cliques) Closer_10_2:
   fixes \<gamma>::real
@@ -245,7 +245,7 @@ definition "Big_Closer_10_1 \<equiv> \<lambda>\<gamma>0 l. l\<ge>9 \<and> (\<for
 lemma Big_Closer_10_1_upward: "\<lbrakk>Big_Closer_10_1 \<gamma>0 l; l \<le> k; \<gamma>0 \<le> \<gamma>\<rbrakk> \<Longrightarrow> Big_Closer_10_1 \<gamma> k"
   unfolding Big_Closer_10_1_def Big101c_def by (meson order.trans)
 
-text \<open>The need for @term{\<gamma>0} is unfortunate, but it seems simpler to hide 
+text \<open>The need for $\gamma0$ is unfortunate, but it seems simpler to hide 
   the precise value of this term in the main proof.\<close>
 lemma Big_Closer_10_1:
   fixes \<gamma>0::real

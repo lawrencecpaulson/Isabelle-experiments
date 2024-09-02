@@ -677,7 +677,7 @@ proof -
         using u that unfolding df1_def
         by (intro Transcendental.log_mono) (auto simp: divide_simps)
       moreover have "delta 1 \<le> 0.04"
-        unfolding delta_def by (approximation 20)
+        unfolding delta_def by (approximation 4)
       moreover have "delta u \<le> delta 1"
         using u that by (auto simp: delta_def divide_simps)
       ultimately show ?thesis
@@ -694,7 +694,7 @@ proof -
     using f1 f1f2 f2 by (simp add: monotone_on_def ff_def)
 qed
 
-subsubsection \<open>Claims A.2–A.4\<close>
+subsubsection \<open>Claims A.2--A.4\<close>
 
 text \<open>Called simply @{term x} in the paper, but are you kidding me?\<close>
 definition "x_of \<equiv> \<lambda>y::real. 3*y/5 + 0.5454"
@@ -776,13 +776,13 @@ proof -
       next
         define Num where "Num \<equiv> 3 * log 2 (5/3) / 5 * (ln 2 * (2727 + y' * 8000)) + log 2 ((2727 + y' * 8000) / (y' * 12500)) * (ln 2 * (2727 + y' * 8000)) - 2727"
         have A: "835.81 \<le> 3 * log 2 (5/3) / 5 * ln 2 * 2727"
-          by (approximation 30)
+          by (approximation 25)
         have B: "2451.9 \<le> 3 * log 2 (5/3) / 5 * ln 2 * 8000"
-          by (approximation 30)
+          by (approximation 25)
         have C: "Dg_x y' = Num / (ln 2 * (2727 + y' * 8000))"
           using \<open>y'>0\<close> by (simp add: Dg_x_def Num_def add_divide_distrib diff_divide_distrib)
         have "0 \<le> -1891.19 + log 2 (2727 / 1250) * (ln 2 * (2727))"
-          by (approximation 10)
+          by (approximation 6)
         also have "\<dots> \<le> -1891.19 + 2451.9 * y' + log 2 ((2727 + y' * 8000) / (y' * 12500)) * (ln 2 * (2727 + y' * 8000)) "
           using y' \<open>0 < y'\<close>
           by (intro add_mono mult_mono Transcendental.log_mono frac_le order.refl) auto

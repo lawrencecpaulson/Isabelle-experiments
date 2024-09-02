@@ -1,3 +1,5 @@
+section \<open>Library material to remove for Isabelle2025\<close>
+
 theory General_Extras imports
   "HOL-Analysis.Analysis"  "Landau_Symbols.Landau_More"
 

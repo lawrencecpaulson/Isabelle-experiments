@@ -68,7 +68,7 @@ proof -
     by (simp add: eventually_conj_iff all_imp_conj_distrib)  
 qed
 
-text \<open>Simply to prevent issues about the positioning of the function @{term real}}\<close>
+text \<open>Simply to prevent issues about the positioning of the function @{term real}\<close>
 abbreviation "ratio \<equiv> \<lambda>\<mu> s t. \<mu> * (real s + real t) / real s"
 
 text \<open>the text refers to the actual Ramsey number but I don't see how that could work.

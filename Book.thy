@@ -397,7 +397,7 @@ lemma hgt_mono':
   shows "p < q"
   by (smt (verit) assms hgt_mono leD)
 
-text \<open>Height_upper_bound given just below (5) on page 9.
+text \<open>The upper bound of the height $h(p)$ appears just below (5) on page 9.
   Although we can bound all Heights by monotonicity (since @{term "p\<le>1"}), 
   we need to exhibit a specific $o(k)$ function.\<close>
 lemma height_upper_bound:
@@ -820,7 +820,7 @@ lemma density_boost_valid_state:
   shows "valid_state U'"
   by (meson assms density_boost_RB_state density_boost_V_state density_boost_disjoint_state valid_state_def)
 
-subsection \<open>Steps 2–5 as a function\<close>
+subsection \<open>Execution steps 2--5 as a function\<close>
 
 definition next_state :: "'a config \<Rightarrow> 'a config" where
   "next_state \<equiv> \<lambda>(X,Y,A,B). 

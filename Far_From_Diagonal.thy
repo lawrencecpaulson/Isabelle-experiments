@@ -1102,7 +1102,7 @@ proof -
     using Book_axioms X0_def Y0 \<open>2 \<le> l\<close> that by blast
 qed
 
-subsection \<open>Material that needs to be proved OUTSIDE the book locales\<close>
+text \<open>Material that needs to be proved \textbf{outside} the book locales\<close>
 
 text \<open>As above, for @{term Book'}\<close>
 lemma (in No_Cliques) Basis_imp_Book':
@@ -1518,7 +1518,7 @@ proof (rule ccontr)
   qed
   then have gd_RedU_ge: "UBB.graph_density RedU \<ge> 1 - \<gamma>' - \<eta>" by force
 
-  \<comment>\<open>Bhavik's gamma'_le_gamma_iff\<close>
+  \<comment>\<open>Bhavik's gamma'\_le\_gamma\_iff\<close>
   have \<gamma>'\<gamma>2: "\<gamma>' < \<gamma>\<^sup>2 \<longleftrightarrow> (real k * real l) + (real l * real l) < (real k * real m) + (real l * (real m * 2))"
     using \<open>m < l\<close>
     apply (simp add: \<gamma>'_def \<gamma>_def eval_nat_numeral divide_simps; simp add: algebra_simps)
