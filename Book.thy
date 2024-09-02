@@ -116,18 +116,18 @@ proof -
   proof -
     have KR: "clique K Red" and Kk: "card K = k" and "K\<subseteq>V"
       using that by (auto simp: size_clique_def)
-    with \<theta> have "\<theta>`K \<in> [{..<nV}]\<^bsup>card K\<^esup>"
-      by (smt (verit, ccfv_threshold) bij_betwE bij_betw_nsets finV mem_Collect_eq nsets_def finite_subset)
-    moreover have "f ` [\<theta>`K]\<^bsup>2\<^esup> \<subseteq> {0}"
-    proof (clarsimp elim!: nsets2_E)
-      fix v w
-      assume eq: "\<theta> v \<noteq> \<theta> w" and "v \<in> K" "w \<in> K"
-      then have "\<exists>e\<in>f -` {0} \<inter> [{..<nV}]\<^bsup>2\<^esup>. {v, w} = \<phi> ` e"
-        using KR by (fastforce simp: clique_def Red_def)
-      then show "f {\<theta> v, \<theta> w} = 0"
+    have "f {\<theta> v, \<theta> w} = 0"
+      if eq: "\<theta> v \<noteq> \<theta> w" and "v \<in> K" "w \<in> K" for v w
+    proof -
+      have "\<exists>e\<in>f -` {0} \<inter> [{..<nV}]\<^bsup>2\<^esup>. {v, w} = \<phi> ` e"
+        using that KR by (fastforce simp: clique_def Red_def)
+      then show ?thesis
         using bij_betw_inv_into_left [OF \<phi>]
         by (auto simp: \<theta>_def doubleton_eq_iff insert_commute elim!: nsets2_E)
     qed
+    then have "f ` [\<theta>`K]\<^bsup>2\<^esup> \<subseteq> {0}" by (auto elim!: nsets2_E)
+    moreover have "\<theta>`K \<in> [{..<nV}]\<^bsup>card K\<^esup>"
+      by (smt (verit) \<open>K\<subseteq>V\<close> \<theta> bij_betwE bij_betw_nsets finV mem_Collect_eq nsets_def finite_subset)
     ultimately show False
       using noclique [of 0] Kk
       by (simp add: size_clique_def monochromatic_def)
@@ -136,18 +136,18 @@ proof -
   proof -
     have KB: "clique K Blue" and Kl: "card K = l" and "K\<subseteq>V"
       using that by (auto simp: size_clique_def)
-    then have "\<theta>`K \<in> [{..<nV}]\<^bsup>card K\<^esup>"
-      by (smt (verit, ccfv_threshold) \<theta> bij_betwE bij_betw_nsets finV mem_Collect_eq nsets_def finite_subset)
-    moreover have "f ` [\<theta>`K]\<^bsup>2\<^esup> \<subseteq> {1}"
-    proof (clarsimp elim !: nsets2_E)
-      fix v w
-      assume eq: "\<theta> v \<noteq> \<theta> w" and "v \<in> K" "w \<in> K"
-      then have "\<exists>e\<in>f -` {1} \<inter> [{..<nV}]\<^bsup>2\<^esup>. {v, w} = \<phi> ` e"
-        using KB by (fastforce simp: clique_def Blue_def)
-      then show "f {\<theta> v, \<theta> w} = Suc 0"
+    have "f {\<theta> v, \<theta> w} = 1"
+      if eq: "\<theta> v \<noteq> \<theta> w" and "v \<in> K" "w \<in> K" for v w
+    proof -
+      have "\<exists>e\<in>f -` {1} \<inter> [{..<nV}]\<^bsup>2\<^esup>. {v, w} = \<phi> ` e"
+        using that KB by (fastforce simp: clique_def Blue_def)
+      then show ?thesis
         using bij_betw_inv_into_left [OF \<phi>]
         by (auto simp: \<theta>_def doubleton_eq_iff insert_commute elim!: nsets2_E)
     qed
+    then have "f ` [\<theta>`K]\<^bsup>2\<^esup> \<subseteq> {1}" by (auto elim!: nsets2_E)
+    moreover have "\<theta>`K \<in> [{..<nV}]\<^bsup>card K\<^esup>"
+      by (smt (verit) \<open>K\<subseteq>V\<close> \<theta> bij_betwE bij_betw_nsets finV mem_Collect_eq nsets_def finite_subset)
     ultimately show False
       using noclique [of 1] Kl
       by (simp add: size_clique_def monochromatic_def)

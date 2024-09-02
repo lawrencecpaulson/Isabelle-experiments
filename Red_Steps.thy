@@ -499,19 +499,23 @@ text \<open>establishing the size requirements for 5.1\<close>
 lemma Big_Red_5_1:
   assumes "\<mu>1<1" 
   shows "\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu> \<in> {\<mu>0..\<mu>1} \<longrightarrow> Big_Red_5_1 \<mu> l"
-  using assms Big_Red_5_6 Big_Red_5_4
-  unfolding Big_Red_5_1_def all_imp_conj_distrib eventually_conj_iff
-proof (simp, intro conjI strip eventually_all_geI1)
-  fix l \<mu>
-  assume  "1 < (1 - \<mu>1) * real l" "\<mu> \<le> \<mu>1"
-  then show "1 < (1 - \<mu>) * real l"
-    by (smt (verit, best) mult_right_mono of_nat_0_le_iff)
-next
-  fix l \<mu>
-  assume "3 / (1 - \<mu>1) \<le> real l powr (5/2)" "\<mu> \<le> \<mu>1"
-  then show "3 / (1 - \<mu>) \<le> real l powr (5/2)"
-    by (smt (verit, ccfv_SIG) assms frac_le)
-qed real_asymp+
+proof -
+  have "(\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 1 < (1-\<mu>) * real l)"
+  proof (intro eventually_all_geI1)
+    show "\<And>l \<mu>. \<lbrakk>1 < (1-\<mu>1) * real l; \<mu> \<le> \<mu>1\<rbrakk> \<Longrightarrow> 1 < (1-\<mu>) * l"
+      by (smt (verit, best) mult_right_mono of_nat_0_le_iff)
+  qed (use assms in real_asymp)
+  moreover have "(\<forall>\<^sup>\<infinity>l. \<forall>\<mu>. \<mu>0 \<le> \<mu> \<and> \<mu> \<le> \<mu>1 \<longrightarrow> 3 / (1-\<mu>) \<le> real l powr (5/2))"
+  proof (intro eventually_all_geI1)
+    show "\<And>l \<mu>. \<lbrakk>3 / (1-\<mu>1) \<le> real l powr (5/2); \<mu> \<le> \<mu>1\<rbrakk>
+           \<Longrightarrow> 3 / (1-\<mu>) \<le> real l powr (5/2)"
+      by (smt (verit, ccfv_SIG) assms frac_le)
+  qed (use assms in real_asymp)
+  moreover have "\<forall>\<^sup>\<infinity>l. 4 \<le> real l powr (1 / 4)"
+    by real_asymp
+  ultimately show ?thesis
+  using assms Big_Red_5_6 Big_Red_5_4 by (auto simp: Big_Red_5_1_def all_imp_conj_distrib eventually_conj_iff)
+qed
 
 context Book
 begin

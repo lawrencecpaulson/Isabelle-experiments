@@ -21,7 +21,8 @@ lemma gbinomial_is_prod: "(a gchoose k) = (\<Prod>i<k. (a - of_nat i) / (1 + of_
 lemma smallo_multiples: (*migrated 2024-08-06*)
   assumes f: "f \<in> o(real)" and "k>0"
   shows "(\<lambda>n. f (k * n)) \<in> o(real)"
-proof (clarsimp simp: smallo_def)
+  unfolding smallo_def mem_Collect_eq
+proof (intro strip)
   fix c::real
   assume "c>0"
   then have "c/k > 0"
@@ -34,7 +35,7 @@ proof (clarsimp simp: smallo_def)
     by blast
   with \<open>k>0\<close> have "\<forall>\<^sub>F m in sequentially. \<bar>f (k*m)\<bar> \<le> c/k * (k*m)"
     by (smt (verit, del_insts) One_nat_def Suc_leI eventually_at_top_linorderI mult_1_left mult_le_mono)
-  then show "\<forall>\<^sub>F n in sequentially. \<bar>f (k * n)\<bar> \<le> c * n"
+  then show "\<forall>\<^sub>F n in sequentially. norm (f (k * n)) \<le> c * norm (real n)"
     by eventually_elim (use \<open>k>0\<close> in auto)
 qed
 

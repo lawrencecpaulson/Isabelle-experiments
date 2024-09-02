@@ -57,7 +57,6 @@ axiomatization(*NOT TO IMPORT. Diagonal*)
 lemma log0 [simp]: "log b 0 = 0"(*NOT TO IMPORT*)
   by (simp add: log_def)
 
-thm of_nat_le_iff
 context linordered_nonzero_semiring
 begin (*migrated 2024-07-23*)
     
@@ -137,8 +136,7 @@ end
     by linarith
   
 
-thm log_exp (*RENAME EXISTING LOG_EXP TO log_power. Diagonal*)
-thm log_def
+(*RENAME EXISTING LOG_EXP TO log_power. Diagonal*)
     lemma log_exp [simp]: "log b (exp x) = x / ln b"(*migrated 2024-07-29*)
       by (simp add: log_def)
 
@@ -165,7 +163,7 @@ declare eventually_frequently_const_simps [simp] of_nat_diff [simp]
 lemma mult_ge1_I: "\<lbrakk>x\<ge>1; y\<ge>1\<rbrakk> \<Longrightarrow> x*y \<ge> (1::real)"
   by (smt (verit, best) mult_less_cancel_right2)
 
-thm lift_Suc_mono_le (*Generalising those in Nat*) (*migrated 2024-07-23*)
+ (*Generalising lift_Suc_mono_le in Nat*) (*migrated 2024-07-23*)
 context order
 begin
     

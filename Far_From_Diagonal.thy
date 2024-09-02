@@ -116,9 +116,10 @@ qed
 lemma mono_G:
   defines "G \<equiv> (\<lambda>x::real. Gamma (x + 1) / (x / exp 1) powr x)"
   shows "mono_on {0<..} G"
-proof (clarsimp simp: monotone_on_def)
+  unfolding monotone_on_def
+proof (intro strip)
   fix x y::real
-  assume x: "0 < x" "x \<le> y"
+  assume x: "x \<in> {0<..}" "x \<le> y"
   define GD where "GD \<equiv> \<lambda>u::real. Gamma(u+1) * (Digamma(u+1) - ln(u)) / (u / exp 1) powr u"
   have *: "\<exists>D. (G has_real_derivative D) (at u) \<and> D > 0" if "0 < u" for u 
   proof (intro exI conjI)
@@ -134,7 +135,8 @@ proof (clarsimp simp: monotone_on_def)
 qed
 
 lemma mono_logstir: "mono logstir"
-proof (clarsimp simp: monotone_def)
+  unfolding monotone_on_def
+proof (intro strip)
   fix i j::nat
   assume "i\<le>j"
   show "logstir i \<le> logstir j"

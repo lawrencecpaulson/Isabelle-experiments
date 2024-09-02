@@ -1510,19 +1510,19 @@ proof -
     using powr_eq_iff kn0 one_minus_gt0 by (simp add: le_log_iff)
   also have "\<dots> \<le> (1 / (real k)\<^sup>2) powr card (\<D> \<inter> C') * (1 - 2 * eps k powr (1/4)) ^ card (\<D>\<setminus>C')"
   proof (intro mult_mono powr_mono')
-    have "Suc ` \<D> \<subseteq> \<B> \<union> (\<R> \<union> \<S>) \<union> {halted_point}"
-    proof clarsimp
-      fix i :: nat
-      assume "i \<in> \<D>" "Suc i \<noteq> halted_point" "Suc i \<notin> \<B>" "Suc i \<notin> \<S>"
-      moreover have "Suc i \<notin> \<D>"
+    have "Suc i \<in> \<R>" if "i \<in> \<D>" "Suc i \<noteq> halted_point" "Suc i \<notin> \<B>" "Suc i \<notin> \<S>" for i
+    proof -
+      have "Suc i \<notin> \<D>"
         by (metis \<D>_def \<open>i \<in> \<D>\<close> even_Suc step_even)
       moreover 
       have "stepper_kind i \<noteq> halted"
         using \<D>_def \<open>i \<in> \<D>\<close> Step_class_def by force
       ultimately show "Suc i \<in> \<R>"
-        using halted_point_minimal' halted_point_minimal Step_class_cases Suc_lessI 
+        using that halted_point_minimal' halted_point_minimal Step_class_cases Suc_lessI 
           \<B>_def \<D>_def \<R>_def \<S>_def by blast
     qed
+    then have "Suc ` \<D> \<subseteq> \<B> \<union> (\<R> \<union> \<S>) \<union> {halted_point}"
+      by auto
     then have ifD: "Suc i \<in> \<B> \<or> Suc i \<in> \<R> \<or> Suc i \<in> \<S> \<or> Suc i = halted_point" if "i \<in> \<D>" for i
       using that by force
     then have "card \<D> \<le> card (\<B> \<union> (\<R>\<union>\<S>) \<union> {halted_point})"
