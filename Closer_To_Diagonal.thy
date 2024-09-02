@@ -375,12 +375,7 @@ proof (rule ccontr)
     define V where "V \<equiv> {..<n}"
     define E where "E \<equiv> all_edges V" 
     interpret Book_Basis V E
-    proof
-      show "\<And>e. e \<in> E \<Longrightarrow> e \<subseteq> V"
-        by (simp add: E_def comp_sgraph.wellformed)
-      show "\<And>e. e \<in> E \<Longrightarrow> card e = 2"
-        by (simp add: E_def comp_sgraph.two_edges)
-    qed (use p0_min_101 V_def E_def in auto)
+    proof qed (auto simp: V_def E_def comp_sgraph.wellformed comp_sgraph.two_edges)
     have [simp]: "nV = n"
       by (simp add: V_def)
     then obtain Red Blue

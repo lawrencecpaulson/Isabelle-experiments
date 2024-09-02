@@ -29,6 +29,7 @@ lemma H_ge0:
   unfolding H_def
   by (smt (verit, best) assms mult_minus_left mult_le_0_iff zero_less_log_cancel_iff)
 
+text \<open>Going up, from 0 to 1/2\<close>
 lemma H_half_mono:
   assumes "0\<le>p'" "p'\<le>p" "p \<le> 1/2"
   shows "H p' \<le> H p"
@@ -50,6 +51,7 @@ next
     by (smt (verit) dH DERIV_nonneg_imp_nondecreasing \<open>p'>0\<close> assms le_divide_eq_1_pos)
 qed
 
+text \<open>Going down, from 1/2 to 1\<close>
 lemma H_half_mono':
   assumes "1/2 \<le> p'" "p'\<le>p" "p \<le> 1"
   shows "H p' \<ge> H p"
@@ -119,14 +121,10 @@ lemma ff_le4:
   assumes "x\<le>1" "y\<le>1"
   shows "ff x y \<le> 4"
 proof -
-  have H: "H(1 / (2-x)) \<le> 1"
-    using assms by (intro H_le1) auto
   have "ff x y \<le> f1 x y"
     using assms by (simp add: ff_def f2_def)
-  also have "\<dots> \<le> y + 2"
-    using assms by (simp add: f1_le)
   also have "\<dots> \<le> 4"
-    using assms by simp
+    using assms by (smt (verit) f1_le)
   finally show ?thesis .
 qed
 
@@ -213,7 +211,7 @@ proof -
   have "H (1 / (2-x)) \<le> H (1 / (2-0.99))"
     using x by (intro H_half_mono') (auto simp: divide_simps)
   also have "\<dots> \<le> 0.081"
-    unfolding H_def by (approximation 50)
+    unfolding H_def by (approximation 15)
   finally have B: "H (1 / (2-x)) \<le> 0.081" .
   have "(2-x) * H (1 / (2-x)) \<le> 1.01 * 0.081"
     using mult_mono [OF A B] x
@@ -267,17 +265,15 @@ proof -
     by (simp add: log_mult)
   also have "\<dots> \<le> ((-\<delta>*k + ok_fun_10_1 \<gamma> k) / ln 2 + (k+l) * H(l/(k+l))) / k + x + y"
     using H_12_1
-    by (smt (verit, ccfv_SIG) General_Extras.log_exp divide_right_mono le_add2 of_nat_0_le_iff)
+    by (smt (verit, ccfv_SIG) log_exp divide_right_mono le_add2 of_nat_0_le_iff)
   also have "\<dots> = (-\<delta>*k + ok_fun_10_1 \<gamma> k) / k / ln 2 + (k+l) / k * H(l/(k+l)) + x + y"
     by argo
   also have "\<dots> = -\<delta> / ln 2 + ok_fun_10_1 \<gamma> k / (k * ln 2) + (2-x) * H((1-x)/(2-x)) + x + y"
   proof -
     have "(-\<delta>*k + ok_fun_10_1 \<gamma> k) / k / ln 2 = -\<delta> / ln 2 + ok_fun_10_1 \<gamma> k / (k * ln 2)"
       using \<open>0 < k\<close> by (simp add: divide_simps)
-    moreover have "(k+l) / k * H(l/(k+l)) = (2-x) * H((1-x)/(2-x))"
-      using A B by presburger
-    ultimately show ?thesis
-      by argo
+    with A B show ?thesis
+      by presburger
   qed
   also have "\<dots> = - (log 2 (exp 1) / 40) * (1-x) / (2-x) + ok_fun_10_1 \<gamma> k / (k * ln 2) + (2-x) * H((1-x)/(2-x)) + x + y"
     using A by (force simp: \<delta>_def \<gamma>_def field_simps)
@@ -375,10 +371,8 @@ proof -
     proof -
       have "(2/3) * t \<le> (2/3) * k"
         using \<open>t < k\<close> by simp
-      also have "\<dots> \<le> (3/4 - \<eta>') * k"
+      then show ?thesis
         using 12 \<eta>' by (smt (verit) mult_right_mono of_nat_0_le_iff)
-      finally show ?thesis
-        by simp
     qed
     finally have "s \<le> (3/4 - \<eta>') * k + (2 / (1-\<mu>)) * k powr (-1/20) * k" 
       by simp
@@ -459,10 +453,8 @@ proof -
         ultimately show ?thesis
           using \<eta>' by (auto simp: ff_def)
       qed
-      have "log 2 (Suc nV) / k \<le> FF k x y + (2 - ok_fun_61 k) / k"
-        by (metis DD)
-      also have "\<dots> \<le> ff x y + \<eta>' + (2 - ok_fun_61 k) / k"
-        by (simp add: 122)
+      have "log 2 (Suc nV) / k \<le> ff x y + \<eta>' + (2 - ok_fun_61 k) / k"
+        using "122" DD by linarith
       also have "\<dots> \<le> ff x y + \<eta>' + ok_fun_11_1 \<mu> k / k"
         by (simp add: ok_fun_11_1_def divide_right_mono)
       finally have le_ff: "log 2 (Suc nV) / k \<le> ff x y + \<eta>' + ok_fun_11_1 \<mu> k / k" .
@@ -475,7 +467,7 @@ proof -
       also have "\<dots> \<le> f1 x y + (2 - ok_fun_61 k) / k"
         using x01 y01 FF_le_f1 [of x y] by simp
       also have "\<dots> \<le> 1.9 + (2 - ok_fun_61 k) / k"
-        by (smt (verit) False \<open>y \<le> 3/4\<close> f1_le_19 x01(2) y01(1))
+        using x01 y01 by (smt (verit) False \<open>y \<le> 3/4\<close> f1_le_19)
       also have "\<dots> \<le> ffGG \<mu> x y + \<eta>"
         by (smt (verit) P0_min.intro P0_min.ok_fun_11_1_def \<eta>'(1) \<eta>'_def divide_right_mono ffGG_def field_sum_of_halves of_nat_0_le_iff ok111_le p0_min(1) p0_min(2))
       finally show ?thesis .
@@ -512,12 +504,7 @@ proof -
   define V where "V \<equiv> {..<n}"
   define E where "E \<equiv> all_edges V" 
   interpret Book_Basis V E
-  proof
-    show "\<And>e. e \<in> E \<Longrightarrow> e \<subseteq> V"
-      by (simp add: E_def comp_sgraph.wellformed)
-    show "\<And>e. e \<in> E \<Longrightarrow> card e = 2"
-      by (simp add: E_def comp_sgraph.two_edges)
-  qed (use V_def E_def in auto)
+  proof qed (auto simp: V_def E_def comp_sgraph.wellformed comp_sgraph.two_edges)
 
   have "RN k k \<ge> 3"
     using \<open>k\<ge>3\<close> RN_3plus le_trans by blast 
@@ -973,7 +960,7 @@ proof -
     finally show ?thesis .
   qed
   ultimately have "\<forall>\<^sup>\<infinity>k. log 2 (RN k k) / k \<le> 2-\<delta> + \<eta>"
-    by (meson eventually_mono)
+    by (metis (lifting) eventually_mono)
   then show ?thesis
     by (simp add: \<delta>_def \<eta>_def delta'_def)
 qed
