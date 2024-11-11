@@ -173,7 +173,7 @@ proof -
     by (simp add: \<gamma>_def powr_minus powr_add powr_divide divide_simps)
   also have "\<dots> \<le> (2 powr (logstir (k+l)) / (2 powr (logstir k)  * 2 powr (logstir l)))
                  * (k+l) powr (k+l) / (k powr k * l powr l)"
-    by (smt (verit, del_insts) * divide_right_mono mult_less_0_iff mult_right_mono powr_add powr_diff powr_ge_pzero powr_mono)
+    by (smt (verit, del_insts) * divide_right_mono mult_less_0_iff mult_right_mono powr_add powr_diff powr_ge_zero powr_mono)
   also have "\<dots> = fact(k+l) / (fact k * fact l)"
     using l by (simp add: logfact_eq_stir_times powr_add divide_simps flip: powr_realpow)
   also have "\<dots> = real (k+l choose l)"
@@ -447,7 +447,7 @@ proof -
     unfolding l34_def 
   proof (intro powr_mono powr_mono2 mult_mono ceiling_mono of_nat_mono nat_mono \<open>l \<le> k\<close>)
     show "0 \<le> real_of_int \<lceil>k powr (3/4)\<rceil>"
-      by (meson le_of_int_ceiling order.trans powr_ge_pzero)
+      by (meson le_of_int_ceiling order.trans powr_ge_zero)
   qed (use assms \<section> in auto)
   finally show ?thesis .
 qed

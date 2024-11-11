@@ -648,7 +648,7 @@ proof -
   moreover have "card \<R> < k"
     using red_step_limit \<mu> unfolding \<R>_def by blast
   ultimately have "card (\<S>\<setminus>\<S>\<S>) \<le> (k + 2 * k) * eps k powr (1/4)"
-    by (smt (verit, best) of_nat_add mult_2 mult_right_mono nat_less_real_le ok_fun powr_ge_pzero)
+    by (smt (verit, best) of_nat_add mult_2 mult_right_mono nat_less_real_le ok_fun powr_ge_zero)
   then show ?thesis
     by (simp add: algebra_simps)
 qed
@@ -1494,7 +1494,7 @@ proof -
 
   let ?DC = "\<lambda>k. k powr (3/4) + 7 * eps k powr (1/4) * k + 1"
   have dc_pos: "?DC k > 0" for k
-    by (smt (verit) of_nat_less_0_iff powr_ge_pzero zero_le_mult_iff)
+    by (smt (verit) of_nat_less_0_iff powr_ge_zero zero_le_mult_iff)
   have X_pos: "card (Xseq i) > 0" if "i \<in> \<D>" for i
   proof -
     have "card (Xseq (Suc i)) > 0"
@@ -1550,7 +1550,7 @@ proof -
     have "card (\<D>\<setminus>C') \<le> card \<D>"
       using \<open>finite \<D>\<close> by (simp add: card_mono)
     then show "(1 - 2 * eps k powr (1/4)) ^ (k+l+1) \<le> (1 - 2 * eps k powr (1/4)) ^ card (\<D>\<setminus>C')"
-      by (smt (verit) card_D add_leD2 one_minus_gt0 power_decreasing powr_ge_pzero)
+      by (smt (verit) card_D add_leD2 one_minus_gt0 power_decreasing powr_ge_zero)
   qed (use one_minus_gt0 kn0 in auto)
   also have "\<dots> = (\<Prod>i\<in>\<D>. if i \<in> C' then 1 / real k ^ 2 else 1 - 2 * eps k powr (1/4))"
     by (simp add: kn0 powr_realpow prod.If_cases Diff_eq)

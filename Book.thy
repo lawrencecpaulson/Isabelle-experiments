@@ -519,7 +519,7 @@ proof -
   have "\<And>x. x \<in> X \<Longrightarrow> card (Neighbours Red x \<inter> Y) < p * real (card Y)"
     using assms
     unfolding red_dense_def
-    by (smt (verit) alpha_ge0 mult_right_mono of_nat_0_le_iff powr_ge_pzero zero_le_mult_iff)
+    by (smt (verit) alpha_ge0 mult_right_mono of_nat_0_le_iff powr_ge_zero zero_le_mult_iff)
   with \<open>X\<noteq>{}\<close> show ?thesis
     by (smt (verit) \<open>finite X\<close> of_nat_sum sum_strict_mono mult_of_nat_commute sum_constant)
 qed

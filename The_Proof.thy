@@ -978,14 +978,14 @@ proof
     then have "log 2 (RN k k) \<le> (2-delta') * k"
       by (meson of_nat_0_less_iff pos_divide_le_eq)
     then have "RN k k \<le> 2 powr ((2-delta') * k)"
-      by (smt (verit, best) Transcendental.log_le_iff powr_ge_pzero)
+      by (smt (verit, best) Transcendental.log_le_iff powr_ge_zero)
     then show "RN k k \<le> (2 powr (2-delta')) ^ k"
       by (simp add: mult.commute powr_power)
   qed
   moreover have "2 powr (2-delta') \<le> 4 - ?\<epsilon>"
     unfolding delta'_def by (approximation 25)
   ultimately show "\<forall>\<^sup>\<infinity>k. real (RN k k) \<le> (4-?\<epsilon>) ^ k"
-    by (smt (verit) power_mono powr_ge_pzero eventually_mono)
+    by (smt (verit) power_mono powr_ge_zero eventually_mono)
 qed auto
 
 end

@@ -417,7 +417,7 @@ proposition Blue_4_1:
   shows "\<exists>S T. good_blue_book X (S,T) \<and> card S \<ge> l powr (1/4)"
 proof -
   have lpowr0[simp]: "0 \<le> \<lceil>l powr r\<rceil>" for r
-    by (metis ceiling_mono ceiling_zero powr_ge_pzero)
+    by (metis ceiling_mono ceiling_zero powr_ge_zero)
   define b where "b \<equiv> b_of l"
   define W where "W \<equiv> {x\<in>X. bluish X x}"
   define m where "m \<equiv> m_of l"
