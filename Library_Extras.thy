@@ -1,10 +1,31 @@
 section \<open>Library Extras\<close>
 text \<open>For adding to the repository\<close>
 
-theory Library_Extras imports
-  "HOL-Analysis.Polytope" 
+theory Library_Extras 
+  imports Complex_Main "HOL-Library.Word"
 
 begin
+
+lemma "x < exp (x::real)"
+  using exp_gt_zero ln_less_self by fastforce
+
+lemma "0 < (2::int)"
+  by order
+  by eval
+
+lemma "0 < (2::32 word)"
+  by order
+  by eval
+
+lemma
+   fixes i :: "32 word"
+   assumes "2 \<le> i" "i \<le> 3" "i \<noteq> 2" "i \<noteq> 3"
+   shows "False"
+   using assms
+   apply simp
+   using inc_le order_le_neq_trans by fastforce
+
+   by order
 
 section \<open>Preliminaries\<close>
 

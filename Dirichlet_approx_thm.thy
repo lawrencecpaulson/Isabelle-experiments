@@ -13,8 +13,6 @@ theorem Dirichlet_approx:
   assumes "N > 0" 
   obtains h k where "0 < k" "k \<le> int N" "\<bar>of_int k*\<theta> - of_int h\<bar> < 1/N"
 proof -
-  have lessN: "nat \<lfloor>x * N\<rfloor> < N" if "0 \<le> x" "x < 1" for x::real
-    using that assms floor_less_iff nat_less_iff by fastforce
   define X where "X \<equiv> (\<lambda>k. frac (k*\<theta>)) ` {..N}"
   define Y where "Y \<equiv> (\<lambda>k::nat. {k/N..< Suc k/N}) ` {..<N}"
   have False 
@@ -27,8 +25,10 @@ proof -
     have caY: "card Y \<le> N" "finite Y"
       unfolding Y_def using card_image_le by force+
     define f where "f \<equiv> \<lambda>x::real. let k = nat \<lfloor>x * N\<rfloor> in {k/N ..< Suc k/N}"
-    have "f \<in> X \<rightarrow> Y"
-      by (force simp: f_def Let_def X_def Y_def frac_lt_1 intro!: lessN)
+    have "nat \<lfloor>x * N\<rfloor> < N" if "0 \<le> x" "x < 1" for x::real
+      using that assms floor_less_iff nat_less_iff by fastforce
+    then have "f \<in> X \<rightarrow> Y"
+      by (force simp: f_def Let_def X_def Y_def frac_lt_1)
     then have "\<not> inj_on f X"
       using \<open>finite Y\<close> caX caY card_inj by fastforce
     then obtain x x' where "x\<noteq>x'" "x \<in> X" "x' \<in> X" and eq: "f x = f x'"
@@ -54,7 +54,7 @@ proof -
   proof
     have "frac (b*\<theta>) - frac (a*\<theta>) = ?k*\<theta> - ?h"
       using \<open>a < b\<close> by (simp add: frac_def left_diff_distrib')
-    with * show "\<bar>of_int ?k*\<theta> - ?h\<bar> < 1 / N"
+    with * show "\<bar>of_int ?k*\<theta> - ?h\<bar> < 1/N"
       by (metis of_int_of_nat_eq)
   qed (use * in auto)
 qed
