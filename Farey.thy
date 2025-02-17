@@ -7,8 +7,10 @@ begin
 lemma quotient_of_rat_of_int [simp]: "quotient_of (rat_of_int i) = (i, 1)"
   using Rat.of_int_def quotient_of_int by force
 
-lemma quotient_of_nonzero: "snd (quotient_of r) > 0" "snd (quotient_of r) \<noteq> 0"
-  using quotient_of_denom_pos' [of r] by simp_all
+thm int_div_less_self
+lemma int_div_le_self: 
+  \<open>x div k \<le> x\<close> if \<open>0 < x\<close>  for x k :: int
+  by (metis div_by_1 int_div_less_self less_le_not_le nle_le nonneg1_imp_zdiv_pos_iff order.trans that)
 
 section \<open>Farey Fractions\<close>
 
@@ -24,21 +26,21 @@ lift_definition denom_farey :: "farey \<Rightarrow> int" is "\<lambda>x. snd (qu
 lift_definition farey :: "[int,int] \<Rightarrow> farey" is "\<lambda>a b. max 0 (min 1 (Fract a b))"
   by simp 
 
-lemma num_farey_nonneg [simp]: "num_farey x \<ge> 0"
+lemma num_farey_nonneg: "num_farey x \<ge> 0"
 proof (transfer, goal_cases)
   case (1 x)
   show ?case
     by (cases x) (use 1 in \<open>auto simp: quotient_of_Fract Rat.zero_le_Fract_iff\<close>)
 qed
 
-lemma num_farey_le_denom [simp]: "num_farey x \<le> denom_farey x"
+lemma num_farey_le_denom: "num_farey x \<le> denom_farey x"
 proof (transfer, goal_cases)
   case (1 x)
   show ?case
     by (cases x) (use 1 in \<open>auto simp: quotient_of_Fract Rat.Fract_le_one_iff\<close>)
 qed
 
-lemma denom_farey_pos [simp]: "denom_farey x > 0"
+lemma denom_farey_pos: "denom_farey x > 0"
 proof -
   have "\<And>x. x \<in> {0..1} \<Longrightarrow> 0 < snd (quotient_of x)"
     using quotient_of_denom_pos' by blast
@@ -103,11 +105,24 @@ lemma num_farey_0 [simp]: "num_farey 0 = 0"
   and denom_farey_1 [simp]: "denom_farey 1 = 1"
   by (transfer; simp; fail)+
 
+lemma num_farey_0_iff [simp]: "num_farey x = 0 \<longleftrightarrow> x = 0"
+  by transfer (metis Rat_cases fst_conv normalize_stable quotient_of_Fract rat_number_collapse(1) rat_zero_code)
+
 lemma le_farey_iff: "x \<le> y \<longleftrightarrow> rat_of_farey x \<le> rat_of_farey y"
-  by transfer auto
+  by (simp add: less_eq_farey.rep_eq)
 
 lemma less_farey_iff: "x < y \<longleftrightarrow> rat_of_farey x < rat_of_farey y"
   by transfer auto
+
+lemma denom_farey_le1_cases:
+  assumes "denom_farey x \<le> 1"
+  shows "x = 0 \<or> x = 1"
+proof -
+  consider "num_farey x = 0" | "num_farey x = 1" "denom_farey x = 1"
+    using assms num_farey_le_denom [of x] num_farey_nonneg [of x] by linarith
+  then show ?thesis
+    by (metis denom_farey_1 farey_num_denom_eq num_farey_0_iff num_farey_1)
+qed
 
 lift_definition mediant :: "farey \<Rightarrow> farey \<Rightarrow> farey" is 
   "\<lambda>x y. Rat.Fract (fst (quotient_of x) + fst (quotient_of y)) 
@@ -119,10 +134,11 @@ proof goal_cases
 qed
 
 lemma rat_of_mediant:
-  "rat_of_farey (mediant x y) =
-     of_int (num_farey x + num_farey y) / of_int (denom_farey x + denom_farey y)"
+  "rat_of_farey (mediant x y) = of_int (num_farey x + num_farey y) / of_int (denom_farey x + denom_farey y)"
   by transfer (simp add: Fract_of_int_quotient rat_divide_code)
 
+lemma mediant_eq: "mediant x y = farey (num_farey x + num_farey y) (denom_farey x + denom_farey y)"
+  by (simp add: Farey.rat_of_farey rat_of_mediant)
 
 definition farey_consecutive :: "farey \<Rightarrow> farey \<Rightarrow> bool" where
   "farey_consecutive x y \<longleftrightarrow>
@@ -139,7 +155,7 @@ lemma farey_consecutive_imp_less:
   shows   "x < y"
   using assms
   by (auto simp: farey_consecutive_def less_farey_iff rat_less_code 
-                 rat_of_farey_conv_num_denom rat_divide_code coprime_num_denom_farey)
+                 rat_of_farey_conv_num_denom rat_divide_code coprime_num_denom_farey denom_farey_pos)
 
 fun farey_step :: "nat \<Rightarrow> farey list \<Rightarrow> farey list" where
   "farey_step bd [] = []"
@@ -150,27 +166,38 @@ fun farey_step :: "nat \<Rightarrow> farey list \<Rightarrow> farey list" where
       else x # farey_step bd (y # xs))"
 
 fun fareys :: "nat \<Rightarrow> farey list" where
-  "fareys 0 = [1]"
+  "fareys 0 = []"
 | "fareys (Suc 0) = [0, 1]"
 | "fareys (Suc (Suc n)) = farey_step (Suc (Suc n)) (fareys (Suc n))"
+
+lemma D: "denom_farey (mediant x y) \<le> denom_farey x + denom_farey y"
+  apply transfer
+  subgoal for x y
+    using quotient_of_denom_pos' [of x] quotient_of_denom_pos' [of y]
+    by (simp add: quotient_of_Fract normalize_def Let_def int_div_le_self split: if_splits)
+  done
+
+lemma farey_step_denom_le:
+  assumes "x \<in> set (farey_step bd xs)" "x \<notin> set xs"
+  shows "denom_farey x \<le> bd"
+  using assms
+proof (induction xs rule: farey_step.induct)
+  case (3 bd x y xs)
+  then show ?case
+    using D
+    apply (auto simp: split: if_splits)
+    apply atomize
+    apply safe
+    using order_trans by blast
+qed auto
+
+
+
 
 lemma consecutive_imp_coprime:
   fixes a:: "'a::{algebraic_semidom,comm_ring_1}"
   assumes "b*c - a*d = 1" 
   shows   "coprime (a+c) (b+d)"
-proof (rule coprimeI)
-  fix k 
-  assume k: "k dvd (a+c)" "k dvd (b+d)"
-  moreover have "(b+d)*c = (a+c)*d + 1"
-    using assms by (simp add: algebra_simps)
-  ultimately show "is_unit k"
-    by (metis add_diff_cancel_left' dvd_diff dvd_mult2)
-qed
-
-
-lemma xx:
-  assumes "farey_consecutive x y" 
-  shows   "mediant x y = "
 proof (rule coprimeI)
   fix k 
   assume k: "k dvd (a+c)" "k dvd (b+d)"
@@ -187,7 +214,7 @@ lemma mediant_1:
   apply (clarsimp simp: farey_consecutive_def)
   apply transfer
   subgoal for x y
-    using quotient_of_nonzero [of x] quotient_of_nonzero [of y]
+    using quotient_of_denom_pos' [of x] quotient_of_denom_pos' [of y]
     by (auto simp: quotient_of_Fract normalize_def Let_def consecutive_imp_coprime algebra_simps)
   done
 
@@ -198,7 +225,7 @@ lemma mediant_2:
   apply (clarsimp simp: farey_consecutive_def)
   apply transfer
   subgoal for x y
-    using quotient_of_nonzero [of x] quotient_of_nonzero [of y]
+    using quotient_of_denom_pos' [of x] quotient_of_denom_pos' [of y]
     by (auto simp: quotient_of_Fract normalize_def Let_def consecutive_imp_coprime algebra_simps)
   done
 
@@ -242,6 +269,59 @@ proof
     by (metis add.commute fareys.elims plus_1_eq_Suc subseq_order.lift_Suc_mono_le)
 qed
 
+lemma farey_step_increasing: "set xs \<subseteq> set (farey_step bd xs)"
+  by (induction xs rule: farey_step.induct) auto
+
+lemma fareys_Suc_increasing: "set (fareys n) \<subseteq> set (fareys (Suc n))"
+  using farey_step_increasing by (cases n) auto
+
+lemma fareys_mono: "m\<le>n \<Longrightarrow> set (fareys m) \<subseteq> set (fareys n)"
+  by (meson fareys_Suc_increasing lift_Suc_mono_le)
+
+lemma "x \<in> set (fareys n) \<Longrightarrow> denom_farey x \<le> n"
+proof (induction n rule: fareys.induct)
+  case 1
+  then show ?case
+    by (simp add: denom_farey_pos linorder_not_le)
+next
+  case 2
+  then show ?case
+    using denom_farey_le1_cases by fastforce
+next
+  case (3 n)
+  show ?case
+  proof (cases "x \<in> set (fareys (Suc n))")
+    case True
+    then show ?thesis
+      using "3.IH" by auto
+  next
+    case False
+    then show ?thesis sorry
+  qed
+    apply (auto simp: )
+    defer
+    sorry
+qed
+
+lemma "x \<in> set (fareys n) \<longleftrightarrow> denom_farey x \<le> n"
+proof (induction n rule: fareys.induct)
+  case 1
+  then show ?case
+    by (simp add: denom_farey_pos linorder_not_le)
+next
+  case 2
+  then show ?case
+    using denom_farey_le1_cases by fastforce
+next
+  case (3 n)
+  then show ?case
+    apply (auto simp: )
+    using farey_step_increasing apply blast
+    defer
+    sorry
+qed
+
+
 lemma farey_step_eq_Nil_iff [simp]: "farey_step bd xs = [] \<longleftrightarrow> xs = []"
   by (induction bd xs rule: farey_step.induct) auto
 
@@ -259,7 +339,6 @@ lemma mediant_lies_betw_int:
         "(rat_of_int a + of_int c) / (of_int b + of_int d) < of_int c / of_int d"
     using assms by (simp_all add: field_split_simps)
 
-
 (* Theorem 5.2 *)
 theorem
   fixes x y::farey
@@ -269,8 +348,34 @@ theorem
       quotient_of_div
   by (transfer, metis (no_types, lifting)  of_int_add prod.collapse)+
 
-
-
+lemma
+  assumes "denom_farey x \<le> n"
+  shows "x \<in> set (fareys n)"
+  using assms
+proof (induction n rule: fareys.induct)
+  case 1
+  with denom_farey_pos[of x] show ?case
+    by linarith
+next
+  case Suc: 2
+  then show ?case
+    using denom_farey_le1_cases by fastforce
+next
+  case SS: (3 n)
+  then consider "denom_farey x \<le> int (Suc n)" | "denom_farey x = int (Suc (Suc n))"
+    by linarith
+  then show ?case
+  proof cases
+    case 1
+    with SS show ?thesis
+      apply (auto simp: )
+      sorry
+  next
+    case 2
+    then show ?thesis sorry
+  qed
+    sorry
+qed
 
 (* Theorem 5.3 *)
 
@@ -293,9 +398,9 @@ theorem
   apply transfer
   subgoal for x y n z
     apply (cases x; cases y; cases z)
-    using quotient_of_nonzero [of x] quotient_of_nonzero [of y] quotient_of_nonzero [of z]
+    using quotient_of_denom_pos' [of x] quotient_of_denom_pos' [of y] quotient_of_denom_pos' [of z]
     apply  (auto simp: quotient_of_Fract normalize_def Let_def consecutive_imp_coprime algebra_simps)
-  subgoal for a b c d e f
+    subgoal for a b c d e f
 
   done
 
