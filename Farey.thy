@@ -170,7 +170,7 @@ fun fareys :: "nat \<Rightarrow> farey list" where
 | "fareys (Suc 0) = [0, 1]"
 | "fareys (Suc (Suc n)) = farey_step (Suc (Suc n)) (fareys (Suc n))"
 
-lemma D: "denom_farey (mediant x y) \<le> denom_farey x + denom_farey y"
+lemma denom_mediant: "denom_farey (mediant x y) \<le> denom_farey x + denom_farey y"
   apply transfer
   subgoal for x y
     using quotient_of_denom_pos' [of x] quotient_of_denom_pos' [of y]
@@ -184,15 +184,8 @@ lemma farey_step_denom_le:
 proof (induction xs rule: farey_step.induct)
   case (3 bd x y xs)
   then show ?case
-    using D
-    apply (auto simp: split: if_splits)
-    apply atomize
-    apply safe
-    using order_trans by blast
+    using denom_mediant by (auto intro: order.trans split: if_splits)
 qed auto
-
-
-
 
 lemma consecutive_imp_coprime:
   fixes a:: "'a::{algebraic_semidom,comm_ring_1}"
@@ -278,7 +271,7 @@ lemma fareys_Suc_increasing: "set (fareys n) \<subseteq> set (fareys (Suc n))"
 lemma fareys_mono: "m\<le>n \<Longrightarrow> set (fareys m) \<subseteq> set (fareys n)"
   by (meson fareys_Suc_increasing lift_Suc_mono_le)
 
-lemma "x \<in> set (fareys n) \<Longrightarrow> denom_farey x \<le> n"
+lemma A: "x \<in> set (fareys n) \<Longrightarrow> denom_farey x \<le> n"
 proof (induction n rule: fareys.induct)
   case 1
   then show ?case
@@ -289,36 +282,72 @@ next
     using denom_farey_le1_cases by fastforce
 next
   case (3 n)
+  with farey_step_denom_le show ?case
+      by force
+qed
+
+
+lemma coprime_consecutive_int:
+  fixes a b::int
+  assumes "coprime a b" "a>1" "b>1"
+  obtains x y where "a*x - b*y = 1" "0 < x" "x < b" "0 < y" "y < a"
+proof -
+  obtain u v where 1: "a*u + b*v = 1"
+    by (metis \<open>coprime a b\<close> cong_iff_lin coprime_iff_invertible_int)
+  define k where "k \<equiv> u div b"
+  define x where "x \<equiv> u - k*b"
+  define y where "y \<equiv> -(v + k*a)"
+  show thesis
+  proof
+    show *: "a*x - b*y = 1" 
+      using 1 by (simp add: x_def y_def algebra_simps)
+    have "u \<noteq> k*b" "b>0"
+      using assms "*"  by (auto simp: k_def x_def y_def zmult_eq_neg1_iff) 
+    moreover have "u - k*b \<ge> 0"
+      by (simp add: k_def \<open>b>0\<close> minus_div_mult_eq_mod)
+    ultimately show "x > 0"
+      by (fastforce simp: x_def)
+    show "x < b"
+      by (simp add: \<open>0 < b\<close> k_def minus_div_mult_eq_mod x_def)
+    have "a*x > 1"
+      by (metis \<open>0 < x\<close> \<open>a>1\<close> int_one_le_iff_zero_less less_1_mult linorder_not_less
+          mult.right_neutral nle_le)
+    then have "\<not> b * y \<le> 0"
+      using "*" by linarith
+    then show "y > 0"
+      by (simp add: \<open>0 < b\<close> mult_less_0_iff order_le_less)
+    show "y < a"
+      using "*" \<open>0 < x\<close> \<open>x < b\<close>
+      by (smt (verit, best) \<open>a>1\<close> mult.commute mult_less_le_imp_less)
+  qed
+qed
+
+lemma B: "denom_farey x \<le> int n \<Longrightarrow> x \<in> set (fareys n)"
+proof (induction n arbitrary: x rule: fareys.induct)
+  case 1
+  then show ?case
+    by (metis denom_farey.rep_eq int_ops(1) less_le_not_le quotient_of_denom_pos')
+next
+  case 2
+  then show ?case
+    using denom_farey_le1_cases by fastforce
+next
+  case (3 n x)
   show ?case
   proof (cases "x \<in> set (fareys (Suc n))")
     case True
     then show ?thesis
-      using "3.IH" by auto
+      using fareys_Suc_increasing by blast
   next
     case False
-    then show ?thesis sorry
+    with 3 have "denom_farey x = 2 + int n"
+      by force
+    then show ?thesis
+      using "3"
+      apply (auto simp: )
+apply (auto simp: farey_step)
+      sorry
   qed
-    apply (auto simp: )
-    defer
-    sorry
-qed
-
-lemma "x \<in> set (fareys n) \<longleftrightarrow> denom_farey x \<le> n"
-proof (induction n rule: fareys.induct)
-  case 1
-  then show ?case
-    by (simp add: denom_farey_pos linorder_not_le)
-next
-  case 2
-  then show ?case
-    using denom_farey_le1_cases by fastforce
-next
-  case (3 n)
-  then show ?case
-    apply (auto simp: )
-    using farey_step_increasing apply blast
-    defer
-    sorry
 qed
 
 
