@@ -76,6 +76,17 @@ lemma rat_of_farey: "rat_of_farey x = of_int a / of_int b \<Longrightarrow> x = 
 lemma farey_num_denom_eq [simp]: "farey (num_farey x) (denom_farey x) = x"
   using rat_of_farey rat_of_farey_conv_num_denom by fastforce
 
+lemma farey_eqI:
+  assumes "num_farey x = num_farey y" "denom_farey x = denom_farey y"
+  shows   "x=y"
+  by (metis assms farey_num_denom_eq)
+
+lemma
+  assumes "coprime a b" "0\<le>a" "a<b"
+  shows num_farey_eq [simp]: "num_farey (farey a b) = a"
+  and denom_farey_eq [simp]: "denom_farey (farey a b) = b"
+  using Fract_less_one_iff quotient_of_Fract zero_le_Fract_iff
+  using assms by (transfer, force)+
 
 instantiation farey :: zero
 begin
@@ -187,6 +198,12 @@ proof (induction xs rule: farey_step.induct)
     using denom_mediant by (auto intro: order.trans split: if_splits)
 qed auto
 
+lemma consecutive_imp_both_coprime:
+  fixes a:: "'a::{algebraic_semidom,comm_ring_1}"
+  assumes "b*c - a*d = 1" 
+  shows   "coprime a b" "coprime c d"
+  using mult.commute by (metis assms coprimeI dvd_diff dvd_mult2)+
+
 lemma consecutive_imp_coprime:
   fixes a:: "'a::{algebraic_semidom,comm_ring_1}"
   assumes "b*c - a*d = 1" 
@@ -286,6 +303,12 @@ next
       by force
 qed
 
+(* this result has a proof online: https://en.wikipedia.org/wiki/Bézout%27s_identity*)
+lemma 
+  fixes a b::int
+  assumes "gcd a b = d" and a: "a\<noteq>0" "\<not> a dvd b" and b: "b\<noteq>0" "\<not> b dvd a"
+  obtains x y where "a*x - b*y = 1" "abs x \<le> abs (b div d)" "abs y \<le> abs (a div d)"
+  sorry
 
 lemma coprime_consecutive_int:
   fixes a b::int
@@ -322,6 +345,35 @@ proof -
   qed
 qed
 
+lemma get_consecutive_parents:
+  fixes m n::int
+  assumes "coprime m n" "0<m" "m<n"
+  obtains a b c d where "m = a+c" "n = b+d" "b*c - a*d = 1" "a\<ge>0" "b>0" "c>0" "d>0" "a<b" "c\<le>d"
+proof (cases "m=1")
+  case True
+  show ?thesis
+  proof
+    show "m = 0 + 1" "n = 1 + (n-1)"
+      by (auto simp: True)
+  qed (use True \<open>m<n\<close> in auto)
+next
+  case False
+  then obtain d c where *: "n*c - m*d = 1" "0 < d" "d < n" "0 < c" "c < m"
+    using coprime_consecutive_int [of n m] coprime_commute assms by (smt (verit) coprime_commute)
+  then have **: "n * (c - d) + (n - m) * d = 1"
+    by (metis mult_diff_mult)
+  show ?thesis
+  proof
+    show "c\<le>d"
+      using * ** \<open>m<n\<close> by (smt (verit) mult_le_0_iff)
+    show "(n-d) * c - (m-c) * d = 1"
+      using * by (simp add: algebra_simps)
+    with * \<open>m<n\<close> show "m-c < n-d"
+      by (smt (verit, best) mult_mono)
+  qed (use * in auto)
+qed
+
+
 lemma B: "denom_farey x \<le> int n \<Longrightarrow> x \<in> set (fareys n)"
 proof (induction n arbitrary: x rule: fareys.induct)
   case 1
@@ -340,12 +392,47 @@ next
       using fareys_Suc_increasing by blast
   next
     case False
-    with 3 have "denom_farey x = 2 + int n"
+    with 3 have denx: "denom_farey x = 2 + int n"
       by force
-    then show ?thesis
+    have "x \<noteq> 0" "x \<noteq> 1"
+      using "3.IH" False by auto
+    then have "num_farey x > 0"
+      by (metis num_farey_0_iff num_farey_nonneg order_le_less)
+    then have "num_farey x < denom_farey x"
+      using num_farey_le_denom[of x] \<open>x \<noteq> 1\<close>
+      by (metis Farey.rat_of_farey div_self farey_num_denom_eq of_int_0_eq_iff one_farey.rep_eq order_le_less)
+    then obtain a b c d 
+      where *: "num_farey x = a+c" "denom_farey x = b+d" "b*c - a*d = 1" "a\<ge>0" "b>0" "c>0" "d>0" "a<b" "c\<le>d"
+               and "coprime a b" and "coprime c d"
+      by (metis \<open>0 < num_farey x\<close> coprime_num_denom_farey get_consecutive_parents consecutive_imp_both_coprime)
+    with denx have **: "b \<le> Suc n" "d \<le> Suc n"
+      by linarith+
+    with \<open>a<b\<close> * have ab_in: "farey a b \<in> set (fareys (Suc n))"
+      using "3.IH" \<open>coprime a b\<close> denom_farey_eq by presburger
+    have cd_in: "farey c d \<in> set (fareys (Suc n))"
+    proof (cases "c=d")
+      case True
+      with \<open>c>0\<close> have "farey c d = 1"
+        by (simp add: farey_def one_farey.abs_eq one_le_Fract_iff)
+      then show ?thesis
+        by (simp add: "3.IH")
+    next
+      case False
+      then show ?thesis
+        using "*"(6,9) "**"(2) "3.IH" \<open>coprime c d\<close> by force
+    qed
+    have "c<d"
+      sorry
+    then have "x = mediant (farey a b) (farey c d)"
+      using * ** \<open>coprime a b\<close> \<open>coprime c d\<close> coprime_num_denom_farey [of x]
+      by (intro farey_eqI) (simp_all add: mediant_eq less_imp_le)
+    have "mediant (farey a b) (farey c d) \<in> set (fareys (Suc (Suc n)))"
+
+    sorry
+    show ?thesis
+      using ab_in cd_in
       using "3"
       apply (auto simp: )
-apply (auto simp: farey_step)
       sorry
   qed
 qed
