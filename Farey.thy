@@ -7,6 +7,30 @@ begin
 lemma quotient_of_rat_of_int [simp]: "quotient_of (rat_of_int i) = (i, 1)"
   using Rat.of_int_def quotient_of_int by force
 
+lemma ex_interval_simps [simp]:
+      "(\<exists>x \<in> {..<u}. P x) \<longleftrightarrow> (\<exists>x<u. P x)"
+      "(\<exists>x \<in> {..u}. P x) \<longleftrightarrow> (\<exists>x\<le>u. P x)"
+      "(\<exists>x \<in> {l<..}. P x) \<longleftrightarrow> (\<exists>x>l. P x)"
+      "(\<exists>x \<in> {l..}. P x) \<longleftrightarrow> (\<exists>x\<ge>l. P x)"
+      "(\<exists>x \<in> {l<..<u}. P x) \<longleftrightarrow> (\<exists>x. l<x \<and> x<u \<and> P x)"
+      "(\<exists>x \<in> {l..<u}. P x) \<longleftrightarrow> (\<exists>x. l\<le>x \<and> x<u \<and> P x)"
+      "(\<exists>x \<in> {l<..u}. P x) \<longleftrightarrow> (\<exists>x. l<x \<and> x\<le>u \<and> P x)"
+      "(\<exists>x \<in> {l..u}. P x) \<longleftrightarrow> (\<exists>x. l\<le>x \<and> x\<le>u \<and> P x)"
+  by auto
+
+lemma all_interval_simps [simp]:
+      "(\<forall>x \<in> {..<u}. P x) \<longleftrightarrow> (\<forall>x<u. P x)"
+      "(\<forall>x \<in> {..u}. P x) \<longleftrightarrow> (\<forall>x\<le>u. P x)"
+      "(\<forall>x \<in> {l<..}. P x) \<longleftrightarrow> (\<forall>x>l. P x)"
+      "(\<forall>x \<in> {l..}. P x) \<longleftrightarrow> (\<forall>x\<ge>l. P x)"
+      "(\<forall>x \<in> {l<..<u}. P x) \<longleftrightarrow> (\<forall>x. l<x \<longrightarrow> x<u \<longrightarrow> P x)"
+      "(\<forall>x \<in> {l..<u}. P x) \<longleftrightarrow> (\<forall>x. l\<le>x \<longrightarrow> x<u \<longrightarrow> P x)"
+      "(\<forall>x \<in> {l<..u}. P x) \<longleftrightarrow> (\<forall>x. l<x \<longrightarrow> x\<le>u \<longrightarrow> P x)"
+      "(\<forall>x \<in> {l..u}. P x) \<longleftrightarrow> (\<forall>x. l\<le>x \<longrightarrow> x\<le>u \<longrightarrow> P x)"
+  by auto
+
+
+
 thm int_div_less_self
 lemma int_div_le_self: 
   \<open>x div k \<le> x\<close> if \<open>0 < x\<close>  for x k :: int
@@ -14,142 +38,117 @@ lemma int_div_le_self:
 
 section \<open>Farey Fractions\<close>
 
-typedef farey = "{0..1} :: rat set"
-  morphisms rat_of_farey farey_of_rat
-  by auto
+type_synonym farey = rat
 
-setup_lifting type_definition_farey
+definition num_farey :: "farey \<Rightarrow> int" where "num_farey \<equiv> \<lambda>x. fst (quotient_of x)" 
+definition denom_farey :: "farey \<Rightarrow> int" where "denom_farey \<equiv> \<lambda>x. snd (quotient_of x)" 
 
-lift_definition num_farey :: "farey \<Rightarrow> int" is "\<lambda>x. fst (quotient_of x)" .
-lift_definition denom_farey :: "farey \<Rightarrow> int" is "\<lambda>x. snd (quotient_of x)" .
+definition farey :: "[int,int] \<Rightarrow> farey" where "farey \<equiv> \<lambda>a b. max 0 (min 1 (Fract a b))"
 
-lift_definition farey :: "[int,int] \<Rightarrow> farey" is "\<lambda>a b. max 0 (min 1 (Fract a b))"
-  by simp 
+lemma farey01 [simp]: "0 \<le> farey a b" "farey a b \<le> 1"
+  by (auto simp: min_def max_def farey_def)
 
-lemma num_farey_nonneg: "num_farey x \<ge> 0"
-proof (transfer, goal_cases)
-  case (1 x)
-  show ?case
-    by (cases x) (use 1 in \<open>auto simp: quotient_of_Fract Rat.zero_le_Fract_iff\<close>)
-qed
+lemma num_farey_nonneg: "x \<in> {0..1} \<Longrightarrow> num_farey x \<ge> 0"
+  by (cases x) (simp add: num_farey_def quotient_of_Fract zero_le_Fract_iff)
 
-lemma num_farey_le_denom: "num_farey x \<le> denom_farey x"
-proof (transfer, goal_cases)
-  case (1 x)
-  show ?case
-    by (cases x) (use 1 in \<open>auto simp: quotient_of_Fract Rat.Fract_le_one_iff\<close>)
-qed
+lemma num_farey_le_denom: "x \<in> {0..1} \<Longrightarrow> num_farey x \<le> denom_farey x"
+  by (cases x) (simp add: Fract_le_one_iff denom_farey_def num_farey_def quotient_of_Fract)
 
 lemma denom_farey_pos: "denom_farey x > 0"
-proof -
-  have "\<And>x. x \<in> {0..1} \<Longrightarrow> 0 < snd (quotient_of x)"
-    using quotient_of_denom_pos' by blast
-  then show ?thesis
-    using denom_farey.rep_eq quotient_of_denom_pos' by force
-qed
+  by (simp add: denom_farey_def quotient_of_denom_pos')
 
 lemma coprime_num_denom_farey [intro]: "coprime (num_farey x) (denom_farey x)"
-  by (simp add: denom_farey.rep_eq num_farey.rep_eq quotient_of_coprime)
+  by (simp add: denom_farey_def num_farey_def quotient_of_coprime)
 
 lemma rat_of_farey_conv_num_denom:
-  "rat_of_farey x = rat_of_int (num_farey x) / rat_of_int (denom_farey x)"
-  by (simp add: Rat.of_int_def denom_farey.rep_eq num_farey.rep_eq quotient_of_div
-      surjective_pairing)
+  "x = rat_of_int (num_farey x) / rat_of_int (denom_farey x)"
+  by (simp add: denom_farey_def num_farey_def quotient_of_div)
 
 lemma num_denom_farey_eqI:
-  assumes "rat_of_farey x = of_int a / of_int b" "b > 0" "coprime a b"
+  assumes "x = of_int a / of_int b" "b > 0" "coprime a b"
   shows   "num_farey x = a" "denom_farey x = b"
-proof -
-  have "num_farey x = a \<and> denom_farey x = b"
-    using Fract_of_int_quotient assms denom_farey.rep_eq num_farey.rep_eq quotient_of_Fract by auto
-  thus "num_farey x = a" "denom_farey x = b" by blast+
-qed
+  using Fract_of_int_quotient assms quotient_of_Fract
+  by (auto simp: num_farey_def denom_farey_def)
 
 lemma farey_cases [cases type, case_names farey]:
-  fixes x :: farey
-  obtains a b where "0\<le>a" "a\<le>b" "coprime a b" "rat_of_farey x = of_int a / of_int b"
-  using denom_farey_pos num_farey_le_denom num_farey_nonneg rat_of_farey_conv_num_denom by blast
+  assumes "x \<in> {0..1}"
+  obtains a b where "0\<le>a" "a\<le>b" "coprime a b" "x = Fract a b"
+  by (metis Fract_of_int_quotient Rat_cases assms num_denom_farey_eqI num_farey_le_denom num_farey_nonneg)
 
-lemma rat_of_farey: "rat_of_farey x = of_int a / of_int b \<Longrightarrow> x = farey a b"
-  by transfer (simp add: Fract_of_int_quotient)
+lemma rat_of_farey: "\<lbrakk>x = of_int a / of_int b; x \<in> {0..1}\<rbrakk> \<Longrightarrow> x = farey a b"
+  by (simp add: Fract_of_int_quotient farey_def max_def)
 
-lemma farey_num_denom_eq [simp]: "farey (num_farey x) (denom_farey x) = x"
+lemma farey_num_denom_eq [simp]: "x \<in> {0..1} \<Longrightarrow> farey (num_farey x) (denom_farey x) = x"
   using rat_of_farey rat_of_farey_conv_num_denom by fastforce
 
 lemma farey_eqI:
   assumes "num_farey x = num_farey y" "denom_farey x = denom_farey y"
   shows   "x=y"
-  by (metis assms farey_num_denom_eq)
+  by (metis Rat.of_int_def assms rat_of_farey_conv_num_denom)
 
 lemma
   assumes "coprime a b" "0\<le>a" "a<b"
   shows num_farey_eq [simp]: "num_farey (farey a b) = a"
   and denom_farey_eq [simp]: "denom_farey (farey a b) = b"
   using Fract_less_one_iff quotient_of_Fract zero_le_Fract_iff
-  using assms by (transfer, force)+
+  using assms num_denom_farey_eqI rat_of_farey by force+
 
-instantiation farey :: zero
-begin
-lift_definition zero_farey :: farey is "0 :: rat"
-  by auto
-instance ..
-end
+lemma
+  assumes "0 \<le> a" "a \<le> b" "0<b"
+  shows num_farey: "num_farey (farey a b) = a div (gcd a b)" 
+    and denom_farey: "denom_farey (farey a b) = b div (gcd a b)"
+proof -
+  have "0 \<le> Fract a b" "Fract a b \<le> 1"
+    using assms by (auto simp: Fract_le_one_iff zero_le_Fract_iff)
+  with assms show "num_farey (farey a b) = a div (gcd a b)" "denom_farey (farey a b) = b div (gcd a b)"
+    by (auto simp: num_farey_def denom_farey_def farey_def quotient_of_Fract Rat.normalize_def Let_def)
+qed
 
-instantiation farey :: one
-begin
-lift_definition one_farey :: farey is "1 :: rat"
-  by auto
-instance ..
-end 
-
-instantiation farey :: linorder
-begin
-lift_definition less_eq_farey :: "farey \<Rightarrow> farey \<Rightarrow> bool" is "(\<le>) :: rat \<Rightarrow> _" .
-lift_definition less_farey :: "farey \<Rightarrow> farey \<Rightarrow> bool" is "(<) :: rat \<Rightarrow> _" .
-instance
-  by standard (transfer; linarith; fail)+
-end
+lemma
+  assumes "coprime a b" "0<b"
+  shows num_farey_Fract [simp]: "num_farey (Fract a b) = a"
+  and denom_farey_Fract [simp]: "denom_farey (Fract a b) = b"
+  using Fract_of_int_quotient assms num_denom_farey_eqI by force+
 
 lemma num_farey_0 [simp]: "num_farey 0 = 0"
   and denom_farey_0 [simp]: "denom_farey 0 = 1"
   and num_farey_1 [simp]: "num_farey 1 = 1"
   and denom_farey_1 [simp]: "denom_farey 1 = 1"
-  by (transfer; simp; fail)+
+  by (auto simp: num_farey_def denom_farey_def)
 
 lemma num_farey_0_iff [simp]: "num_farey x = 0 \<longleftrightarrow> x = 0"
-  by transfer (metis Rat_cases fst_conv normalize_stable quotient_of_Fract rat_number_collapse(1) rat_zero_code)
-
-lemma le_farey_iff: "x \<le> y \<longleftrightarrow> rat_of_farey x \<le> rat_of_farey y"
-  by (simp add: less_eq_farey.rep_eq)
-
-lemma less_farey_iff: "x < y \<longleftrightarrow> rat_of_farey x < rat_of_farey y"
-  by transfer auto
+  unfolding num_farey_def
+  by (metis div_0 eq_fst_iff of_int_0 quotient_of_div rat_zero_code)
 
 lemma denom_farey_le1_cases:
-  assumes "denom_farey x \<le> 1"
+  assumes "denom_farey x \<le> 1" "x \<in> {0..1}"
   shows "x = 0 \<or> x = 1"
 proof -
   consider "num_farey x = 0" | "num_farey x = 1" "denom_farey x = 1"
     using assms num_farey_le_denom [of x] num_farey_nonneg [of x] by linarith
   then show ?thesis
-    by (metis denom_farey_1 farey_num_denom_eq num_farey_0_iff num_farey_1)
+    by (metis denom_farey_1 farey_eqI num_farey_0_iff num_farey_1)
 qed
 
-lift_definition mediant :: "farey \<Rightarrow> farey \<Rightarrow> farey" is 
-  "\<lambda>x y. Rat.Fract (fst (quotient_of x) + fst (quotient_of y)) 
-                   (snd (quotient_of x) + snd (quotient_of y))"
-proof goal_cases
-  case (1 x y)
-  show ?case
-    by (cases x; cases y; use 1 Fract_of_int_quotient quotient_of_Fract zero_le_Fract_iff in simp)
+definition mediant :: "farey \<Rightarrow> farey \<Rightarrow> farey" where 
+  "mediant \<equiv> \<lambda>x y. Fract (fst (quotient_of x) + fst (quotient_of y)) 
+                         (snd (quotient_of x) + snd (quotient_of y))"
+
+lemma mediant_eq_Fract:
+  "mediant x y = Fract (num_farey x + num_farey y) (denom_farey x + denom_farey y)"
+  by (simp add: denom_farey_def num_farey_def mediant_def)
+
+lemma mediant_eq_farey:
+  assumes "x \<in> {0..1}" "y \<in> {0..1}"
+  shows "mediant x y = farey (num_farey x + num_farey y) (denom_farey x + denom_farey y)"
+proof -
+  have "0 \<le> num_farey x + num_farey y"
+    using assms num_farey_nonneg by auto
+  moreover have "num_farey x + num_farey y \<le> denom_farey x + denom_farey y"
+    by (meson add_mono assms num_farey_le_denom)
+  ultimately show ?thesis
+    by (simp add: add_pos_pos denom_farey_pos Fract_of_int_quotient rat_of_farey mediant_eq_Fract)
 qed
-
-lemma rat_of_mediant:
-  "rat_of_farey (mediant x y) = of_int (num_farey x + num_farey y) / of_int (denom_farey x + denom_farey y)"
-  by transfer (simp add: Fract_of_int_quotient rat_divide_code)
-
-lemma mediant_eq: "mediant x y = farey (num_farey x + num_farey y) (denom_farey x + denom_farey y)"
-  by (simp add: Farey.rat_of_farey rat_of_mediant)
 
 definition farey_consecutive :: "farey \<Rightarrow> farey \<Rightarrow> bool" where
   "farey_consecutive x y \<longleftrightarrow>
@@ -165,8 +164,11 @@ lemma farey_consecutive_imp_less:
   assumes "farey_consecutive x y"
   shows   "x < y"
   using assms
-  by (auto simp: farey_consecutive_def less_farey_iff rat_less_code 
-                 rat_of_farey_conv_num_denom rat_divide_code coprime_num_denom_farey denom_farey_pos)
+  by (auto simp: farey_consecutive_def rat_less_code denom_farey_def num_farey_def)
+
+lemma denom_mediant: "denom_farey (mediant x y) \<le> denom_farey x + denom_farey y"
+  using quotient_of_denom_pos' [of x] quotient_of_denom_pos' [of y]
+  by (simp add: mediant_eq_Fract denom_farey_def num_farey_def quotient_of_Fract normalize_def Let_def int_div_le_self)
 
 fun farey_step :: "nat \<Rightarrow> farey list \<Rightarrow> farey list" where
   "farey_step bd [] = []"
@@ -175,18 +177,6 @@ fun farey_step :: "nat \<Rightarrow> farey list \<Rightarrow> farey list" where
      (if denom_farey x + denom_farey y \<le> bd
       then x # mediant x y # farey_step bd (y # xs)
       else x # farey_step bd (y # xs))"
-
-fun fareys :: "nat \<Rightarrow> farey list" where
-  "fareys 0 = []"
-| "fareys (Suc 0) = [0, 1]"
-| "fareys (Suc (Suc n)) = farey_step (Suc (Suc n)) (fareys (Suc n))"
-
-lemma denom_mediant: "denom_farey (mediant x y) \<le> denom_farey x + denom_farey y"
-  apply transfer
-  subgoal for x y
-    using quotient_of_denom_pos' [of x] quotient_of_denom_pos' [of y]
-    by (simp add: quotient_of_Fract normalize_def Let_def int_div_le_self split: if_splits)
-  done
 
 lemma farey_step_denom_le:
   assumes "x \<in> set (farey_step bd xs)" "x \<notin> set xs"
@@ -217,30 +207,60 @@ proof (rule coprimeI)
     by (metis add_diff_cancel_left' dvd_diff dvd_mult2)
 qed
 
-lemma mediant_1: 
-  assumes "farey_consecutive x y"
-  shows "farey_consecutive x (mediant x y)"
-  using assms
-  apply (clarsimp simp: farey_consecutive_def)
-  apply transfer
-  subgoal for x y
-    using quotient_of_denom_pos' [of x] quotient_of_denom_pos' [of y]
-    by (auto simp: quotient_of_Fract normalize_def Let_def consecutive_imp_coprime algebra_simps)
-  done
-
-lemma mediant_2: 
-  assumes "farey_consecutive x y"
-  shows "farey_consecutive (mediant x y) y"
-  using assms
-  apply (clarsimp simp: farey_consecutive_def)
-  apply transfer
-  subgoal for x y
-    using quotient_of_denom_pos' [of x] quotient_of_denom_pos' [of y]
-    by (auto simp: quotient_of_Fract normalize_def Let_def consecutive_imp_coprime algebra_simps)
-  done
-
 (* Theorem 5.4 *)
-lemmas farey_consecutive_mediant = mediant_1 mediant_2
+lemma farey_consecutive_mediant: 
+  assumes "farey_consecutive x y"
+  shows "farey_consecutive x (mediant x y)" "farey_consecutive (mediant x y) y"
+  using assms quotient_of_denom_pos' [of x] quotient_of_denom_pos' [of y]
+  unfolding farey_consecutive_def
+  by (auto simp: mediant_eq_Fract denom_farey_def num_farey_def quotient_of_Fract consecutive_imp_coprime algebra_simps)
+
+definition "fareys n \<equiv> sorted_list_of_set {x \<in> {0..1}. denom_farey x \<le> int n}"
+
+lemma farey_set: "{x \<in> {0..1}. denom_farey x \<le> n} = (\<Union>b \<in> {1..n}. \<Union>a \<in> {0..b}. {farey a b})"
+proof -
+  have "\<exists>b \<in> {1..n}. \<exists>a \<in> {0..b}. x = farey a b"
+    if "denom_farey x \<le> n" "x \<in> {0..1}" for x :: farey
+    using that denom_farey_pos int_one_le_iff_zero_less num_farey_le_denom num_farey_nonneg by force
+  moreover have "\<And>b a::int. 0 \<le> b \<Longrightarrow> b div gcd a b \<le> b"
+    by (metis div_0 int_div_le_self nless_le)
+  ultimately show ?thesis
+    by (auto simp: denom_farey) (meson order_trans)
+qed
+
+lemma finite_farey_set: "finite {x \<in> {0..1}. denom_farey x \<le> int n}"
+  unfolding farey_set by blast
+
+
+lemma fareys_0 [simp]: "fareys 0 = []"
+  unfolding fareys_def farey_set
+  by simp
+
+lemma fareys_1 [simp]: "fareys 1 = [0, 1]"
+proof -
+  have "{x \<in> {0..1}. denom_farey x \<le> 1} = {0,1}"
+    using denom_farey_le1_cases by auto
+  then show ?thesis
+    by (simp add: fareys_def)
+qed
+
+lemma fareys_2 [simp]: "fareys 2 = [0, farey 1 2, 1]"
+proof -
+  have \<section>: "denom_farey x \<le> 2 \<longleftrightarrow> denom_farey x = 1 \<or> denom_farey x = 2" for x
+    using denom_farey_pos [of x] by auto
+  have "{x \<in> {0..1}. denom_farey x \<le> 2} = {farey 0 1, farey 1 2, farey 1 1}"
+    apply (auto simp: farey_set \<section>)
+      apply (simp add: Fract_of_int_quotient farey_def)
+      apply (metis atLeastAtMost_iff denom_farey_le1_cases order.refl)
+     apply (metis Fract_of_int_quotient Rat_cases add1_zle_eq atLeastAtMost_iff denom_farey_0 denom_farey_1 int_one_le_iff_zero_less
+        linorder_cases num_denom_farey_eqI(1,2) num_farey_0_iff num_farey_nonneg one_add_one one_le_Fract_iff rat_of_farey
+        verit_comp_simplify1(3))
+    by (simp add: denom_farey)
+  also have "... = {0, 1/2, 1::rat}"
+    by (simp add: farey_def Fract_of_int_quotient)
+  finally show ?thesis
+    by (simp add: fareys_def farey_def Fract_of_int_quotient)
+qed
 
 lemma farey_list_consecutive_step:
   assumes "farey_list_consecutive xs"
@@ -251,6 +271,7 @@ proof (induction xs rule: farey_step.induct)
   then show ?case
     by (cases xs) (force simp: farey_consecutive_mediant)+
 qed auto
+
 
 lemma fareys_consecutive: "farey_list_consecutive (fareys n)"
 proof (induction n rule: fareys.induct)
@@ -288,6 +309,25 @@ lemma fareys_Suc_increasing: "set (fareys n) \<subseteq> set (fareys (Suc n))"
 lemma fareys_mono: "m\<le>n \<Longrightarrow> set (fareys m) \<subseteq> set (fareys n)"
   by (meson fareys_Suc_increasing lift_Suc_mono_le)
 
+lemma farey_step_eq_Nil_iff [simp]: "farey_step bd xs = [] \<longleftrightarrow> xs = []"
+  by (induction bd xs rule: farey_step.induct) auto
+
+lemma hd_farey_step [simp]: "hd (farey_step bd xs) = hd xs"
+  by (induction bd xs rule: farey_step.induct) auto
+
+lemma farey_consecutive_0_1 [simp, intro]: "farey_consecutive 0 1"
+  by (auto simp: farey_consecutive_def)
+
+lemma farey_consecutive_step:
+  assumes "successively farey_consecutive xs"
+  shows   "successively farey_consecutive (farey_step bd xs)"
+  using assms
+  by (induction bd xs rule: farey_step.induct)
+     (auto simp: algebra_simps successively_Cons farey_consecutive_mediant)
+
+lemma farey_consecutive_fareys: "successively farey_consecutive (fareys n)"
+  by (induction n rule: fareys.induct) (auto intro: farey_consecutive_step)
+
 lemma A: "x \<in> set (fareys n) \<Longrightarrow> denom_farey x \<le> n"
 proof (induction n rule: fareys.induct)
   case 1
@@ -302,6 +342,23 @@ next
   with farey_step_denom_le show ?case
       by force
 qed
+
+(* Theorem 5.2 for integers*)
+lemma mediant_lies_betw_int:
+  fixes a b c d::int
+  assumes "rat_of_int a / of_int b < of_int c / of_int d" "b>0" "d>0"
+  shows "rat_of_int a / of_int b < (of_int a + of_int c) / (of_int b + of_int d)" 
+        "(rat_of_int a + of_int c) / (of_int b + of_int d) < of_int c / of_int d"
+    using assms by (simp_all add: field_split_simps)
+
+(* Theorem 5.2 *)
+theorem
+  fixes x y::farey
+  assumes "x < y"
+  shows "x < mediant x y" "mediant x y < y"
+  using assms mediant_lies_betw_int Fract_of_int_quotient quotient_of_denom_pos'
+      quotient_of_div
+  by (transfer, metis (no_types, lifting)  of_int_add prod.collapse)+
 
 (* this result has a proof online: https://en.wikipedia.org/wiki/Bézout%27s_identity*)
 lemma 
@@ -373,6 +430,64 @@ next
   qed (use * in auto)
 qed
 
+(* probably not needed, but interesting nonetheless -- Manuel *)
+lemma length_fareys_Suc: "length (fareys (Suc n)) = length (fareys n) + totient (Suc n)"
+proof (induction n rule: fareys.induct)
+  case 1
+  then show ?case
+    by simp
+next
+  case 2
+  then show ?case
+    using less_Suc_eq_0_disj totient_less by force
+next
+  case (3 n)
+  then show ?case
+    apply (auto simp: )
+    sorry
+qed
+
+lemma length_fareys: "length (fareys n) = 1 + (\<Sum>k=1..n. totient k)"
+proof (induction n rule: fareys.induct)
+  case (3 n)
+  then show ?case 
+    by (auto simp: length_fareys_Suc simp del: fareys.simps)
+qed auto
+
+(* Theorem 5.3 *)
+
+theorem
+  fixes a b c d::int
+  assumes "b>0" 
+    and "0 \<le> a/b"
+    and "a/b < c/d"
+    and "b*c - a*d = 1"
+    and "max b d \<le> n" "n < b+d"
+  shows 
+(* Theorem 5.3 *)
+
+
+
+theorem
+  assumes "farey_consecutive x y"
+  assumes "max (denom_farey x) (denom_farey y) \<le> n"
+  assumes "n < denom_farey x + denom_farey y"
+  assumes "z \<in> {x<..<y}"
+  shows   "denom_farey z > n"
+  using assms
+  apply (simp add: farey_consecutive_def)
+  apply transfer
+  subgoal for x y n z
+    apply (cases x; cases y; cases z)
+    using quotient_of_denom_pos' [of x] quotient_of_denom_pos' [of y] quotient_of_denom_pos' [of z]
+    apply  (auto simp: quotient_of_Fract normalize_def Let_def consecutive_imp_coprime algebra_simps)
+    subgoal for a b c d e f
+
+  done
+
+
+  sorry
+
 
 lemma B: "denom_farey x \<le> int n \<Longrightarrow> x \<in> set (fareys n)"
 proof (induction n arbitrary: x rule: fareys.induct)
@@ -425,7 +540,7 @@ next
       sorry
     then have "x = mediant (farey a b) (farey c d)"
       using * ** \<open>coprime a b\<close> \<open>coprime c d\<close> coprime_num_denom_farey [of x]
-      by (intro farey_eqI) (simp_all add: mediant_eq less_imp_le)
+      by (intro farey_eqI) (simp_all add: mediant_eq_farey less_imp_le)
     have "mediant (farey a b) (farey c d) \<in> set (fareys (Suc (Suc n)))"
 
     sorry
@@ -437,33 +552,7 @@ next
   qed
 qed
 
-
-lemma farey_step_eq_Nil_iff [simp]: "farey_step bd xs = [] \<longleftrightarrow> xs = []"
-  by (induction bd xs rule: farey_step.induct) auto
-
-lemma hd_farey_step [simp]: "hd (farey_step bd xs) = hd xs"
-  by (induction bd xs rule: farey_step.induct) auto
-
-lemma farey_consecutive_0_1 [simp, intro]: "farey_consecutive 0 1"
-  by (auto simp: farey_consecutive_def)
-
-(* Theorem 5.2 for integers*)
-lemma mediant_lies_betw_int:
-  fixes a b c d::int
-  assumes "rat_of_int a / of_int b < of_int c / of_int d" "b>0" "d>0"
-  shows "rat_of_int a / of_int b < (of_int a + of_int c) / (of_int b + of_int d)" 
-        "(rat_of_int a + of_int c) / (of_int b + of_int d) < of_int c / of_int d"
-    using assms by (simp_all add: field_split_simps)
-
-(* Theorem 5.2 *)
-theorem
-  fixes x y::farey
-  assumes "x < y"
-  shows "x < mediant x y" "mediant x y < y"
-  using assms mediant_lies_betw_int Fract_of_int_quotient quotient_of_denom_pos'
-      quotient_of_div
-  by (transfer, metis (no_types, lifting)  of_int_add prod.collapse)+
-
+(*A half-proved reformulation of the result above*)
 lemma
   assumes "denom_farey x \<le> n"
   shows "x \<in> set (fareys n)"
@@ -493,47 +582,8 @@ next
     sorry
 qed
 
-(* Theorem 5.3 *)
-
-theorem
-  fixes a b c d::int
-  assumes "b>0" 
-    and "0 \<le> a/b"
-(* Theorem 5.3 *)
 
 
-
-theorem
-  assumes "farey_consecutive x y"
-  assumes "max (denom_farey x) (denom_farey y) \<le> n"
-  assumes "n < denom_farey x + denom_farey y"
-  assumes "z \<in> {x<..<y}"
-  shows   "denom_farey z > n"
-  using assms
-  apply (simp add: farey_consecutive_def)
-  apply transfer
-  subgoal for x y n z
-    apply (cases x; cases y; cases z)
-    using quotient_of_denom_pos' [of x] quotient_of_denom_pos' [of y] quotient_of_denom_pos' [of z]
-    apply  (auto simp: quotient_of_Fract normalize_def Let_def consecutive_imp_coprime algebra_simps)
-    subgoal for a b c d e f
-
-  done
-
-
-  sorry
-  
-
-
-lemma farey_consecutive_step:
-  assumes "successively farey_consecutive xs"
-  shows   "successively farey_consecutive (farey_step bd xs)"
-  using assms
-  by (induction bd xs rule: farey_step.induct)
-     (auto simp: algebra_simps successively_Cons farey_consecutive_mediant)
-
-lemma farey_consecutive_fareys: "successively farey_consecutive (fareys n)"
-  by (induction n rule: fareys.induct) (auto intro: farey_consecutive_step)
 
 lemma num_mediant [simp]: 
   assumes xy: "x \<in> F" "y \<in> F" and "F = set (fareys n)"
@@ -596,29 +646,10 @@ lemma in_set_fareys:
   shows   "x \<in> set (fareys n)"
   sorry
 
-
-(* probably not needed, but interesting nonetheless -- Manuel *)
-lemma length_fareys_Suc: "length (fareys (Suc n)) = length (fareys n) + totient (Suc n)"
-proof (induction n rule: fareys.induct)
-  case 1
-  then show ?case
-    by simp
-next
-  case 2
-  then show ?case
-    using less_Suc_eq_0_disj totient_less by force
-next
-  case (3 n)
-  then show ?case
-    apply (auto simp: )
-    sorry
-qed
-
-lemma length_fareys: "length (fareys n) = 1 + (\<Sum>k=1..n. totient k)"
-proof (induction n rule: fareys.induct)
-  case (3 n)
-  then show ?case 
-    by (auto simp: length_fareys_Suc simp del: fareys.simps)
-qed auto
+(*NEEDS TO BE A THEOREM NOT A DEFINITION*)
+fun fareys :: "nat \<Rightarrow> farey list" where
+  "fareys 0 = []"
+| "fareys (Suc 0) = [0, 1]"
+| "fareys (Suc (Suc n)) = farey_step (Suc (Suc n)) (fareys (Suc n))"
 
 end
