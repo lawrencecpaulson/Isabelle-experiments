@@ -296,82 +296,27 @@ qed
 lemma farey_set_increasing: "set (fareys n) \<subseteq> set (fareys (Suc n))"
   using farey_set by (force simp: fareys_def)
 
-lemma "set (fareys (Suc n)) = set (fareys n) \<union> {farey a (Suc n)| a. coprime a (n+1) \<and> a \<in> {0..1+int n}}"
+definition fareys_new :: "nat \<Rightarrow> rat set" where
+  "fareys_new n \<equiv> {farey a n| a. coprime a n \<and> a \<in> {0..int n}}"
+
+lemma set_fareys_Suc: "set (fareys (Suc n)) = set (fareys n) \<union> fareys_new (Suc n)"
 proof -
-  have "\<exists>a. farey c d = farey a (1 + int n) \<and> coprime a (1 + int n) \<and> 0 \<le> a \<and> a \<le> 1 + int n"
-    if "coprime c d"
-      and "\<And>b a. b\<le>int n \<Longrightarrow> 1 \<le> b \<Longrightarrow> a\<in>{0..b} \<Longrightarrow> coprime a b \<Longrightarrow> farey c d \<noteq> farey a b"
-      and "1 \<le> d" "d \<le> 1 + int n" "0 \<le> c" "c \<le> d"
+  have "\<exists>b\<ge>1. b \<le> int n \<and> (\<exists>a\<ge>0. a \<le> b \<and> coprime a b \<and> farey c d = farey a b)"
+    if "farey c d \<notin> fareys_new (Suc n)"
+      and "coprime c d" "1 \<le> d" "d \<le> 1 + int n" "0 \<le> c" "c \<le> d"
     for c d
-    by (metis add.commute atLeastAtMost_iff order_le_less that zle_add1_eq_le)
-  moreover have "\<exists>d\<ge>1. d \<le> 1 + int n \<and> (\<exists>c\<ge>0. c \<le> d \<and> coprime c d \<and> farey a (1 + int n) = farey c d)"
-    if "coprime a (1 + int n)" and "0 \<le> a" and "a \<le> 1 + int n" for a
-    using that not_one_le_zero by fastforce
-  ultimately show ?thesis
-    unfolding fareys_def farey_set'
-    apply (auto simp: Bex_def)
-    by auto
-qed
-
-
-
-proof -
-  have "\<exists>a. farey c d = farey a (1 + int n) \<and> coprime a (1 + int n) \<and> 0 \<le> a \<and> a \<le> int n"
-    if "coprime c d"
-      and \<section>: "\<And>b a. b\<le>int n \<Longrightarrow> 1 \<le> b \<Longrightarrow> a\<in>{0..b} \<Longrightarrow> coprime a b \<Longrightarrow> farey c d \<noteq> farey a b"
-      and \<dagger>: "1 \<le> d" "d \<le> 1 + int n" "0 \<le> c" "c \<le> d"
-    for c d
-  proof (cases "d \<le> int n")
+  proof (cases "d = 1 + int n")
     case True
     with that show ?thesis
-      using atLeastAtMost_iff by blast
-  next
-    case False
-    then have "c \<noteq> 1 + int n"
-        sorry
-      then have "c \<le> int n"
-        using that(4,6) by linarith
-  with False show ?thesis
-    by (metis add.commute add1_zle_eq dual_order.antisym leI that(1,4,5))
-      apply (intro conjI)
-      apply simp
-      using that(1) apply blast
-
-      
-      sorry
-  qed
-  moreover have "\<exists>d\<ge>1. d \<le> 1 + int n \<and> (\<exists>c\<ge>0. c \<le> d \<and> coprime c d \<and> farey a (1 + int n) = farey c d)"
-    if "coprime a (1 + int n)" and "0 \<le> a" and "a \<le> int n" for a
-    using that not_one_le_zero by fastforce
+      by (auto simp: fareys_new_def)
+  qed (use that in auto)
+  moreover have "\<exists>d\<ge>1. d \<le> 1 + int n \<and> (\<exists>c\<ge>0. c \<le> d \<and> coprime c d \<and> x = farey c d)"
+    if "x \<in> fareys_new (Suc n)" for x
+    using that int_one_le_iff_zero_less by (force simp add: fareys_new_def)
   ultimately show ?thesis
-  unfolding fareys_def farey_set'
+    unfolding fareys_def farey_set'
     by fastforce
 qed
-
-
-
-
-  defer
-  apply fastforce
-  apply (metis Int_Collect add_increasing atLeastAtMost_iff of_nat_0_le_iff of_nat_Suc order_refl zle_iff_zadd)
-  apply (case_tac "xa = n+1")
-   apply (auto simp: )
-   apply (rule_tac x="xb" in exI)
-   apply (simp add: )
-   defer
-   apply (drule_tac x="xa" in spec)
-apply (auto simp: )
-apply (simp add: )
-  apply (subst set_sorted_list_of_set)
-apply (simp add: )
-apply (intro equalityI subsetI)
-   apply (auto simp: set_sorted_list_of_set)
-apply (subst set_sorted_list_of_set)
-  using farey_set'
-apply (auto simp: fareys_def)
-
-lemma fareys_consecutive: "farey_list_consecutive (fareys n)"
-  apply (auto simp: fareys_def)
 
 
 lemma farey_list_consecutive_step:
