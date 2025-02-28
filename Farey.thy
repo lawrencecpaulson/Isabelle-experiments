@@ -116,6 +116,9 @@ lemma num_farey_0 [simp]: "num_farey 0 = 0"
   and denom_farey_1 [simp]: "denom_farey 1 = 1"
   by (auto simp: num_farey_def denom_farey_def)
 
+lemma num_farey_neq_denom: "denom_farey x \<noteq> 1 \<Longrightarrow> num_farey x \<noteq> denom_farey x"
+  by (metis denom_farey_0 div_0 div_self num_farey_1 rat_of_farey_conv_num_denom)
+
 lemma num_farey_0_iff [simp]: "num_farey x = 0 \<longleftrightarrow> x = 0"
   unfolding num_farey_def
   by (metis div_0 eq_fst_iff of_int_0 quotient_of_div rat_zero_code)
@@ -249,13 +252,20 @@ proof -
   have \<section>: "denom_farey x \<le> 2 \<longleftrightarrow> denom_farey x = 1 \<or> denom_farey x = 2" for x
     using denom_farey_pos [of x] by auto
   have "{x \<in> {0..1}. denom_farey x \<le> 2} = {farey 0 1, farey 1 2, farey 1 1}"
-    apply (auto simp: farey_set \<section>)
-      apply (simp add: Fract_of_int_quotient farey_def)
-      apply (metis atLeastAtMost_iff denom_farey_le1_cases order.refl)
-     apply (metis Fract_of_int_quotient Rat_cases add1_zle_eq atLeastAtMost_iff denom_farey_0 denom_farey_1 int_one_le_iff_zero_less
-        linorder_cases num_denom_farey_eqI(1,2) num_farey_0_iff num_farey_nonneg one_add_one one_le_Fract_iff rat_of_farey
-        verit_comp_simplify1(3))
-    by (simp add: denom_farey)
+  proof -
+    have "x = farey 1 1"
+      if "x \<noteq> farey 0 1" "x \<in> {0..1}" "denom_farey x = 1" for x
+      using that denom_farey_le1_cases order.eq_iff rat_of_farey by auto
+    moreover have False
+      if "x \<noteq> farey 0 1" "x \<noteq> farey 1 2" "denom_farey x = 2" "x \<in> {0..1}" for x
+      using that num_farey_neq_denom 
+      by (metis farey_def farey_num_denom_eq int_one_le_iff_zero_less nle_le num_farey_le_denom num_farey_nonneg one_add_one
+          order_le_less rat_number_collapse(1) zle_add1_eq_le)
+    moreover have "denom_farey (farey 1 1) = 1"
+       by (simp add: Fract_of_int_quotient farey_def)
+    ultimately show ?thesis
+      by (auto simp: farey_set \<section>)
+  qed
   also have "... = {0, 1/2, 1::rat}"
     by (simp add: farey_def Fract_of_int_quotient)
   finally show ?thesis
