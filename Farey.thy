@@ -231,6 +231,27 @@ proof -
     by (auto simp: denom_farey) (meson order_trans)
 qed
 
+lemma farey_set': "{x \<in> {0..1}. denom_farey x \<le> n} = (\<Union>b \<in> {1..n}. \<Union>a \<in> {0..b}. if coprime a b then {farey a b} else {})"
+proof -
+  have "\<exists>aa ba. farey a b = farey aa ba \<and> 0 \<le> aa \<and> aa \<le> ba \<and> 1 \<le> ba \<and> ba \<le> n \<and> coprime aa ba"
+    if "1 \<le> b" and "b \<le> n" and "0 \<le> a" and "a \<le> b" for a b
+  proof -
+    let ?a = "a div gcd a b"
+    let ?b = "b div gcd a b"
+    have "coprime ?a ?b"
+      by (metis div_gcd_coprime not_one_le_zero \<open>b\<ge>1\<close>)
+    moreover have "farey a b = farey ?a ?b"
+      using Fract_coprime farey_def by presburger
+    moreover have "?a \<le> ?b \<and> ?b \<le> n"
+      by (smt (verit, best) gcd_pos_int int_div_le_self that zdiv_mono1)
+    ultimately show ?thesis
+      using that by (metis denom_farey denom_farey_pos div_int_pos_iff gcd_ge_0_int int_one_le_iff_zero_less)
+  qed
+  then show ?thesis
+    unfolding farey_set
+    by (fastforce split: if_splits)
+qed
+
 lemma finite_farey_set: "finite {x \<in> {0..1}. denom_farey x \<le> int n}"
   unfolding farey_set by blast
 
@@ -271,6 +292,87 @@ proof -
   finally show ?thesis
     by (simp add: fareys_def farey_def Fract_of_int_quotient)
 qed
+
+lemma farey_set_increasing: "set (fareys n) \<subseteq> set (fareys (Suc n))"
+  using farey_set by (force simp: fareys_def)
+
+lemma "set (fareys (Suc n)) = set (fareys n) \<union> {farey a (Suc n)| a. coprime a (n+1) \<and> a \<in> {0..1+int n}}"
+proof -
+  have "\<exists>a. farey c d = farey a (1 + int n) \<and> coprime a (1 + int n) \<and> 0 \<le> a \<and> a \<le> 1 + int n"
+    if "coprime c d"
+      and "\<And>b a. b\<le>int n \<Longrightarrow> 1 \<le> b \<Longrightarrow> a\<in>{0..b} \<Longrightarrow> coprime a b \<Longrightarrow> farey c d \<noteq> farey a b"
+      and "1 \<le> d" "d \<le> 1 + int n" "0 \<le> c" "c \<le> d"
+    for c d
+    by (metis add.commute atLeastAtMost_iff order_le_less that zle_add1_eq_le)
+  moreover have "\<exists>d\<ge>1. d \<le> 1 + int n \<and> (\<exists>c\<ge>0. c \<le> d \<and> coprime c d \<and> farey a (1 + int n) = farey c d)"
+    if "coprime a (1 + int n)" and "0 \<le> a" and "a \<le> 1 + int n" for a
+    using that not_one_le_zero by fastforce
+  ultimately show ?thesis
+    unfolding fareys_def farey_set'
+    apply (auto simp: Bex_def)
+    by auto
+qed
+
+
+
+proof -
+  have "\<exists>a. farey c d = farey a (1 + int n) \<and> coprime a (1 + int n) \<and> 0 \<le> a \<and> a \<le> int n"
+    if "coprime c d"
+      and \<section>: "\<And>b a. b\<le>int n \<Longrightarrow> 1 \<le> b \<Longrightarrow> a\<in>{0..b} \<Longrightarrow> coprime a b \<Longrightarrow> farey c d \<noteq> farey a b"
+      and \<dagger>: "1 \<le> d" "d \<le> 1 + int n" "0 \<le> c" "c \<le> d"
+    for c d
+  proof (cases "d \<le> int n")
+    case True
+    with that show ?thesis
+      using atLeastAtMost_iff by blast
+  next
+    case False
+    then have "c \<noteq> 1 + int n"
+        sorry
+      then have "c \<le> int n"
+        using that(4,6) by linarith
+  with False show ?thesis
+    by (metis add.commute add1_zle_eq dual_order.antisym leI that(1,4,5))
+      apply (intro conjI)
+      apply simp
+      using that(1) apply blast
+
+      
+      sorry
+  qed
+  moreover have "\<exists>d\<ge>1. d \<le> 1 + int n \<and> (\<exists>c\<ge>0. c \<le> d \<and> coprime c d \<and> farey a (1 + int n) = farey c d)"
+    if "coprime a (1 + int n)" and "0 \<le> a" and "a \<le> int n" for a
+    using that not_one_le_zero by fastforce
+  ultimately show ?thesis
+  unfolding fareys_def farey_set'
+    by fastforce
+qed
+
+
+
+
+  defer
+  apply fastforce
+  apply (metis Int_Collect add_increasing atLeastAtMost_iff of_nat_0_le_iff of_nat_Suc order_refl zle_iff_zadd)
+  apply (case_tac "xa = n+1")
+   apply (auto simp: )
+   apply (rule_tac x="xb" in exI)
+   apply (simp add: )
+   defer
+   apply (drule_tac x="xa" in spec)
+apply (auto simp: )
+apply (simp add: )
+  apply (subst set_sorted_list_of_set)
+apply (simp add: )
+apply (intro equalityI subsetI)
+   apply (auto simp: set_sorted_list_of_set)
+apply (subst set_sorted_list_of_set)
+  using farey_set'
+apply (auto simp: fareys_def)
+
+lemma fareys_consecutive: "farey_list_consecutive (fareys n)"
+  apply (auto simp: fareys_def)
+
 
 lemma farey_list_consecutive_step:
   assumes "farey_list_consecutive xs"
