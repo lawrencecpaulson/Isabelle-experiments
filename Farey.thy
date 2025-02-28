@@ -299,6 +299,69 @@ lemma farey_set_increasing: "set (fareys n) \<subseteq> set (fareys (Suc n))"
 definition fareys_new :: "nat \<Rightarrow> rat set" where
   "fareys_new n \<equiv> {farey a n| a. coprime a n \<and> a \<in> {0..int n}}"
 
+lemma fareys_new_0 [simp]: "fareys_new 0 = {}"
+  by (auto simp: fareys_new_def)
+
+lemma fareys_new_1 [simp]: "fareys_new 1 = {0,1}"
+proof -
+  have "farey a 1 = 1"
+    if "farey a 1 \<noteq> 0"
+      and "0 \<le> a"
+      and "a \<le> 1"
+    for a :: int
+    using that
+    by (smt (verit, best) One_rat_def Zero_rat_def farey_def le_numeral_extra(3,4) linordered_nonzero_semiring_class.zero_le_one
+        max.absorb2 min.absorb2)
+   moreover have "\<exists>a. farey a 1 = 0 \<and> 0 \<le> a \<and> a \<le> 1"
+    sorry
+  moreover have "\<exists>a. farey a 1 = 1 \<and> 0 \<le> a \<and> a \<le> 1"
+    sorry
+  ultimately show ?thesis
+    by (auto simp: fareys_new_def)
+qed
+  apply (metis Fract_of_int_quotient atLeastAtMost_iff dual_order.refl rat_number_collapse(1) rat_of_farey
+      zero_less_one_class.zero_le_one)
+  by (metis One_rat_def dual_order.refl farey_def linordered_nonzero_semiring_class.zero_le_one max.absorb2 min_def)
+
+lemma C: "inj_on num_farey (fareys_new n)"
+proof (cases "n=1")
+  case True
+  then show ?thesis
+    using fareys_new_1 by auto
+next
+  case False
+  then show ?thesis
+  proof -
+    have "farey a (int n) = farey a' (int n)"
+      if "coprime a (int n)" "0 \<le> a" "a \<le> int n"
+        and "coprime a' (int n)" "0 \<le> a'" "a' \<le> int n"
+        and "num_farey (farey a (int n)) = num_farey (farey a' (int n))"
+      for a a'
+    proof -
+      from that
+      obtain "a < int n" "a' < int n"
+        using False  zless_add1_eq by force+
+      then show ?thesis
+        using that by auto
+    qed
+    with False show ?thesis
+    unfolding fareys_new_def
+    by (auto simp: inj_on_def fareys_new_def)
+  qed
+qed
+ 
+
+lemma "card (fareys_new n) = totient n"
+proof -
+  have "bij_betw num_farey (fareys_new n) (int ` totatives n)"
+    apply (auto simp add: totatives_def bij_betw_def C)
+    apply (auto simp: fareys_new_def image_iff)
+
+    sorry
+  then show ?thesis
+    unfolding totient_def by (metis bij_betw_same_card bij_betw_of_nat)
+qed
+
 lemma set_fareys_Suc: "set (fareys (Suc n)) = set (fareys n) \<union> fareys_new (Suc n)"
 proof -
   have "\<exists>b\<ge>1. b \<le> int n \<and> (\<exists>a\<ge>0. a \<le> b \<and> coprime a b \<and> farey c d = farey a b)"
