@@ -48,6 +48,12 @@ definition farey :: "[int,int] \<Rightarrow> farey" where "farey \<equiv> \<lamb
 lemma farey01 [simp]: "0 \<le> farey a b" "farey a b \<le> 1"
   by (auto simp: min_def max_def farey_def)
 
+lemma farey_0 [simp]: "farey 0 n = 0"
+  by (simp add: farey_def rat_number_collapse)
+
+lemma farey_1 [simp]: "farey 1 1 = 1"
+  by (auto simp: farey_def rat_number_expand)
+
 lemma num_farey_nonneg: "x \<in> {0..1} \<Longrightarrow> num_farey x \<ge> 0"
   by (cases x) (simp add: num_farey_def quotient_of_Fract zero_le_Fract_iff)
 
@@ -296,8 +302,8 @@ qed
 lemma farey_set_increasing: "set (fareys n) \<subseteq> set (fareys (Suc n))"
   using farey_set by (force simp: fareys_def)
 
-definition fareys_new :: "nat \<Rightarrow> rat set" where
-  "fareys_new n \<equiv> {farey a n| a. coprime a n \<and> a \<in> {0..int n}}"
+definition fareys_new :: "int \<Rightarrow> rat set" where
+  "fareys_new n \<equiv> {farey a n| a. coprime a n \<and> a \<in> {0..n}}"
 
 lemma fareys_new_0 [simp]: "fareys_new 0 = {}"
   by (auto simp: fareys_new_def)
@@ -305,25 +311,21 @@ lemma fareys_new_0 [simp]: "fareys_new 0 = {}"
 lemma fareys_new_1 [simp]: "fareys_new 1 = {0,1}"
 proof -
   have "farey a 1 = 1"
-    if "farey a 1 \<noteq> 0"
-      and "0 \<le> a"
-      and "a \<le> 1"
-    for a :: int
-    using that
-    by (smt (verit, best) One_rat_def Zero_rat_def farey_def le_numeral_extra(3,4) linordered_nonzero_semiring_class.zero_le_one
-        max.absorb2 min.absorb2)
+    if a: "farey a 1 \<noteq> 0" "0 \<le> a" "a \<le> 1" for a 
+  proof -
+    consider "a=0" | "a=1" using a by linarith
+    then show ?thesis
+      by (metis farey_0 farey_1 that(1))
+  qed
    moreover have "\<exists>a. farey a 1 = 0 \<and> 0 \<le> a \<and> a \<le> 1"
-    sorry
+     using farey_0 zero_less_one_class.zero_le_one by blast
   moreover have "\<exists>a. farey a 1 = 1 \<and> 0 \<le> a \<and> a \<le> 1"
-    sorry
+    using farey_1 zero_less_one_class.zero_le_one by blast
   ultimately show ?thesis
     by (auto simp: fareys_new_def)
 qed
-  apply (metis Fract_of_int_quotient atLeastAtMost_iff dual_order.refl rat_number_collapse(1) rat_of_farey
-      zero_less_one_class.zero_le_one)
-  by (metis One_rat_def dual_order.refl farey_def linordered_nonzero_semiring_class.zero_le_one max.absorb2 min_def)
 
-lemma C: "inj_on num_farey (fareys_new n)"
+lemma inj_num_farey: "inj_on num_farey (fareys_new n)"
 proof (cases "n=1")
   case True
   then show ?thesis
@@ -332,35 +334,100 @@ next
   case False
   then show ?thesis
   proof -
-    have "farey a (int n) = farey a' (int n)"
-      if "coprime a (int n)" "0 \<le> a" "a \<le> int n"
-        and "coprime a' (int n)" "0 \<le> a'" "a' \<le> int n"
-        and "num_farey (farey a (int n)) = num_farey (farey a' (int n))"
+    have "farey a n = farey a' n"
+      if "coprime a n" "0 \<le> a" "a \<le> n"
+        and "coprime a' n" "0 \<le> a'" "a' \<le> n"
+        and "num_farey (farey a n) = num_farey (farey a' n)"
       for a a'
     proof -
       from that
-      obtain "a < int n" "a' < int n"
-        using False  zless_add1_eq by force+
-      then show ?thesis
-        using that by auto
+      obtain "a < n" "a' < n"
+        using False by force+
+      with that show ?thesis
+        by auto
     qed
     with False show ?thesis
-    unfolding fareys_new_def
-    by (auto simp: inj_on_def fareys_new_def)
+      by (auto simp: inj_on_def fareys_new_def)
   qed
 qed
  
 
-lemma "card (fareys_new n) = totient n"
+lemma card_fareys_new:
+  assumes "n > 1"
+  shows "card (fareys_new (int n)) = totient n"
 proof -
   have "bij_betw num_farey (fareys_new n) (int ` totatives n)"
-    apply (auto simp add: totatives_def bij_betw_def C)
-    apply (auto simp: fareys_new_def image_iff)
-
-    sorry
+  proof -
+    have "\<exists>a>0. a \<le> n \<and> coprime a n \<and> num_farey x = int a"
+      if x: "x \<in> fareys_new n" for x
+    proof -
+      obtain a where a: "x = farey a (int n)" "coprime a (int n)" "0 \<le> a" "a \<le> int n"
+        using x by (auto simp: fareys_new_def)
+      then have "a > 0"
+        using assms less_le_not_le by fastforce
+      moreover have "coprime (nat a) n"
+        by (metis a(2,3) coprime_int_iff nat_0_le)
+      ultimately have "num_farey x = int (nat a)"
+        using a num_farey by auto
+      then show ?thesis
+        using \<open>0 < a\<close> \<open>coprime (nat a) n\<close> a(4) nat_le_iff zero_less_nat_eq by blast
+    qed
+    moreover have "\<exists>x\<in>fareys_new n. int a = num_farey x"
+      if "0 < a" "a \<le> n" "coprime a n" for a 
+    proof -
+      have \<section>: "coprime (int a) (int n)" "0 \<le> (int a)" "(int a) \<le> int n"
+        using that by auto
+      then have "Fract (int a) (int n) = farey (int a) (int n)"
+        using Fract_of_int_quotient assms rat_of_farey by auto
+      with \<section> have "Fract (int a) (int n) \<in> fareys_new n"
+        by (auto simp: fareys_new_def)
+      then have "int a = num_farey (Fract (int a) n)"
+        using \<open>coprime (int a) (int n)\<close> assms by auto
+      then show ?thesis
+        using \<open>Fract (int a) (int n) \<in> fareys_new (int n)\<close> by blast
+    qed
+    ultimately show ?thesis
+      by (auto simp add: totatives_def bij_betw_def inj_num_farey comp_inj_on image_iff)
+  qed
   then show ?thesis
     unfolding totient_def by (metis bij_betw_same_card bij_betw_of_nat)
 qed
+
+lemma disjoint_fareys_Suc: 
+  assumes "n > 0"
+  shows "disjnt (set (fareys n)) (fareys_new (Suc n))"
+proof -
+  have False
+    if \<section>: "0 \<le> a" "a \<le> 1 + int n" "coprime a (1 + int n)"
+      "1 \<le> d" "d \<le> int n"
+      "farey a (1 + int n) = farey c d"
+       "0 \<le> c" "c \<le> d" "coprime c d"
+    for a c d
+  proof (cases "c<d")
+    case True
+    have alen: "a \<le> int n"
+      using nle_le that by fastforce
+    have "d = denom_farey (farey c d)"
+      by (simp add: True that)
+    also have "... = 1 + int n"
+      using alen denom_farey_eq that by fastforce
+    finally show False
+      using that(5) by fastforce
+  next
+    case False
+    with \<open>c \<le> d\<close> have "c=d"by auto
+    with that have "d=1" by force
+    with that have "1 + int n = 1"
+      by (metis abs_of_nonneg coprime_self denom_farey_1 denom_farey_eq farey_1 nless_le
+          zdvd1_eq \<open>c = d\<close>)
+    then show ?thesis
+      using \<open>c = d\<close> \<section> assms by auto
+  qed
+  then show ?thesis
+  unfolding fareys_def farey_set' fareys_new_def disjnt_iff
+    by (auto simp:)
+qed
+
 
 lemma set_fareys_Suc: "set (fareys (Suc n)) = set (fareys n) \<union> fareys_new (Suc n)"
 proof -
@@ -381,6 +448,28 @@ proof -
     by fastforce
 qed
 
+lemma length_fareys_Suc: "length (fareys (Suc n)) = length (fareys n) + totient (Suc n)"
+proof (induction n rule: fareys.induct)
+  case 1
+  then show ?case
+    by simp
+next
+  case 2
+  then show ?case
+    using less_Suc_eq_0_disj totient_less by force
+next
+  case (3 n)
+  then show ?case
+    apply (auto simp: )
+    sorry
+qed
+
+lemma length_fareys: "length (fareys n) = 1 + (\<Sum>k=1..n. totient k)"
+proof (induction n rule: fareys.induct)
+  case (3 n)
+  then show ?case 
+    by (auto simp: length_fareys_Suc simp del: fareys.simps)
+qed auto
 
 lemma farey_list_consecutive_step:
   assumes "farey_list_consecutive xs"
@@ -549,30 +638,6 @@ next
       by (smt (verit, best) mult_mono)
   qed (use * in auto)
 qed
-
-(* probably not needed, but interesting nonetheless -- Manuel *)
-lemma length_fareys_Suc: "length (fareys (Suc n)) = length (fareys n) + totient (Suc n)"
-proof (induction n rule: fareys.induct)
-  case 1
-  then show ?case
-    by simp
-next
-  case 2
-  then show ?case
-    using less_Suc_eq_0_disj totient_less by force
-next
-  case (3 n)
-  then show ?case
-    apply (auto simp: )
-    sorry
-qed
-
-lemma length_fareys: "length (fareys n) = 1 + (\<Sum>k=1..n. totient k)"
-proof (induction n rule: fareys.induct)
-  case (3 n)
-  then show ?case 
-    by (auto simp: length_fareys_Suc simp del: fareys.simps)
-qed auto
 
 (* Theorem 5.3 *)
 
