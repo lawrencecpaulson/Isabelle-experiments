@@ -266,7 +266,7 @@ lemma fareys_0 [simp]: "fareys 0 = []"
   unfolding fareys_def farey_set
   by simp
 
-lemma fareys_1 [simp]: "fareys 1 = [0, 1]"
+lemma fareys_1 [simp]: "fareys (Suc 0) = [0, 1]"
 proof -
   have "{x \<in> {0..1}. denom_farey x \<le> 1} = {0,1}"
     using denom_farey_le1_cases by auto
@@ -351,6 +351,8 @@ next
   qed
 qed
  
+lemma finite_fareys_new [simp]: "finite (fareys_new n)"
+  by (auto simp: fareys_new_def)
 
 lemma card_fareys_new:
   assumes "n > 1"
@@ -395,7 +397,7 @@ qed
 
 lemma disjoint_fareys_Suc: 
   assumes "n > 0"
-  shows "disjnt (set (fareys n)) (fareys_new (Suc n))"
+  shows "disjnt (set (fareys n)) (fareys_new (1 + int n))"
 proof -
   have False
     if \<section>: "0 \<le> a" "a \<le> 1 + int n" "coprime a (1 + int n)"
@@ -425,7 +427,7 @@ proof -
   qed
   then show ?thesis
   unfolding fareys_def farey_set' fareys_new_def disjnt_iff
-    by (auto simp:)
+    by auto
 qed
 
 
@@ -448,27 +450,30 @@ proof -
     by fastforce
 qed
 
-lemma length_fareys_Suc: "length (fareys (Suc n)) = length (fareys n) + totient (Suc n)"
-proof (induction n rule: fareys.induct)
-  case 1
-  then show ?case
-    by simp
-next
-  case 2
-  then show ?case
-    using less_Suc_eq_0_disj totient_less by force
-next
-  case (3 n)
-  then show ?case
-    apply (auto simp: )
-    sorry
+lemma length_fareys_Suc: 
+  assumes "n>0"
+  shows "length (fareys (Suc n)) = length (fareys n) + totient (Suc n)"
+proof -
+  have "length (fareys (Suc n)) = card (set (fareys (Suc n)))"
+    by (metis fareys_def finite_farey_set sorted_list_of_set.sorted_key_list_of_set_unique)
+  also have "... = card (set (fareys n)) + card (fareys_new (int (Suc n)))"
+    using disjoint_fareys_Suc assms by (simp add: set_fareys_Suc card_Un_disjnt)
+  also have "... = card (set (fareys n)) + totient (Suc n)"
+    using assms card_fareys_new by force
+  also have "... = length (fareys n) + totient (Suc n)"
+    using fareys_def finite_farey_set by auto
+  finally show ?thesis .
 qed
 
-lemma length_fareys: "length (fareys n) = 1 + (\<Sum>k=1..n. totient k)"
-proof (induction n rule: fareys.induct)
-  case (3 n)
-  then show ?case 
-    by (auto simp: length_fareys_Suc simp del: fareys.simps)
+lemma length_fareys_1: 
+  shows "length (fareys (Suc 0)) = 1 + totient 1"
+  by simp
+
+lemma length_fareys: "n>0 \<Longrightarrow> length (fareys n) = 1 + (\<Sum>k=1..n. totient k)"
+proof (induction n)
+  case (Suc n)
+  then show ?case
+    by (cases "n=0") (auto simp add: length_fareys_Suc)
 qed auto
 
 lemma farey_list_consecutive_step:
