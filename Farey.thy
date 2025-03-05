@@ -3,6 +3,13 @@ theory Farey
     "HOL-ex.Sketch_and_Explore"
 begin
 
+(* this result has a proof online: https://en.wikipedia.org/wiki/Bézout%27s_identity*)
+lemma 
+  fixes a b::int
+  assumes "gcd a b = d" and a: "a\<noteq>0" "\<not> a dvd b" and b: "b\<noteq>0" "\<not> b dvd a"
+  obtains x y where "a*x - b*y = 1" "abs x \<le> abs (b div d)" "abs y \<le> abs (a div d)"
+  sorry
+
 (*MOVE*)
 lemma quotient_of_rat_of_int [simp]: "quotient_of (rat_of_int i) = (i, 1)"
   using Rat.of_int_def quotient_of_int by force
@@ -28,6 +35,30 @@ lemma all_interval_simps [simp]:
       "(\<forall>x \<in> {l<..u}. P x) \<longleftrightarrow> (\<forall>x. l<x \<longrightarrow> x\<le>u \<longrightarrow> P x)"
       "(\<forall>x \<in> {l..u}. P x) \<longleftrightarrow> (\<forall>x. l\<le>x \<longrightarrow> x\<le>u \<longrightarrow> P x)"
   by auto
+
+lemma sorted_subset_imp_subseq:
+  fixes xs :: "'a::order list"
+  assumes "set xs \<subseteq> set ys" "sorted_wrt (<) xs" "sorted_wrt (\<le>) ys"
+  shows "subseq xs ys"
+  using assms
+proof (induction xs arbitrary: ys)
+  case Nil
+  then show ?case
+    by auto
+next
+  case (Cons x xs)
+  then have "x \<in> set ys"
+    by auto
+  then obtain us vs where \<section>: "ys = us @ [x] @ vs"
+    by (metis append.left_neutral append_eq_Cons_conv split_list) 
+  moreover 
+  have "set xs \<subseteq> set vs"
+    using Cons.prems by (fastforce simp: \<section> sorted_wrt_append)
+  with Cons have "subseq xs vs"
+    by (metis \<section> sorted_wrt.simps(2) sorted_wrt_append)
+  ultimately show ?case
+    by auto
+qed
 
 
 
@@ -261,6 +292,8 @@ qed
 lemma finite_farey_set: "finite {x \<in> {0..1}. denom_farey x \<le> int n}"
   unfolding farey_set by blast
 
+lemma denom_fareys: "x \<in> set (fareys n) \<Longrightarrow> denom_farey x \<le> n"
+  using finite_farey_set by (auto simp: fareys_def)
 
 lemma fareys_0 [simp]: "fareys 0 = []"
   unfolding fareys_def farey_set
@@ -299,7 +332,7 @@ proof -
     by (simp add: fareys_def farey_def Fract_of_int_quotient)
 qed
 
-lemma farey_set_increasing: "set (fareys n) \<subseteq> set (fareys (Suc n))"
+lemma fareys_Suc_increasing: "set (fareys n) \<subseteq> set (fareys (Suc n))"
   using farey_set by (force simp: fareys_def)
 
 definition fareys_new :: "int \<Rightarrow> rat set" where
@@ -476,6 +509,15 @@ proof (induction n)
     by (cases "n=0") (auto simp add: length_fareys_Suc)
 qed auto
 
+lemma strict_sorted_fareys: "sorted_wrt (<) (fareys n)"
+  by (simp add: fareys_def)
+
+lemma subseq_fareys_Suc: "subseq (fareys n) (fareys (Suc n))"
+  by (metis Farey.fareys_Suc_increasing strict_sorted_fareys sorted_subset_imp_subseq strict_sorted_imp_sorted)
+
+lemma monotone_fareys: "monotone (\<le>) subseq fareys"
+  by (simp add: monotoneI subseq_fareys_Suc subseq_order.lift_Suc_mono_le)
+
 lemma farey_list_consecutive_step:
   assumes "farey_list_consecutive xs"
   shows "farey_list_consecutive (farey_step n xs)"
@@ -486,39 +528,8 @@ proof (induction xs rule: farey_step.induct)
     by (cases xs) (force simp: farey_consecutive_mediant)+
 qed auto
 
-
-lemma fareys_consecutive: "farey_list_consecutive (fareys n)"
-proof (induction n rule: fareys.induct)
-  case 2
-  then show ?case
-    by (auto simp: farey_consecutive_def)
-next
-  case (3 n)
-  then show ?case
-    by (simp add: farey_list_consecutive_step)
-qed auto
-
-
-lemma monotone_fareys: "monotone (\<le>) subseq fareys"
-proof
-  fix m n :: nat
-  assume "m \<le> n"
-  have [intro]: "subseq xs (farey_step bd xs)" for xs bd
-    by (induction bd xs rule: farey_step.induct) (auto intro: subseq_Cons')
-  have "subseq (fareys (Suc m)) (fareys (Suc m + n))" for m n
-    by (induction n) (auto intro: subseq_order.trans)
-  moreover have "subseq (fareys 0) (fareys (Suc 0))"
-    by simp
-  ultimately show "subseq (fareys m) (fareys n)"
-    using \<open>m \<le> n\<close>
-    by (metis add.commute fareys.elims plus_1_eq_Suc subseq_order.lift_Suc_mono_le)
-qed
-
 lemma farey_step_increasing: "set xs \<subseteq> set (farey_step bd xs)"
   by (induction xs rule: farey_step.induct) auto
-
-lemma fareys_Suc_increasing: "set (fareys n) \<subseteq> set (fareys (Suc n))"
-  using farey_step_increasing by (cases n) auto
 
 lemma fareys_mono: "m\<le>n \<Longrightarrow> set (fareys m) \<subseteq> set (fareys n)"
   by (meson fareys_Suc_increasing lift_Suc_mono_le)
@@ -539,24 +550,6 @@ lemma farey_consecutive_step:
   by (induction bd xs rule: farey_step.induct)
      (auto simp: algebra_simps successively_Cons farey_consecutive_mediant)
 
-lemma farey_consecutive_fareys: "successively farey_consecutive (fareys n)"
-  by (induction n rule: fareys.induct) (auto intro: farey_consecutive_step)
-
-lemma A: "x \<in> set (fareys n) \<Longrightarrow> denom_farey x \<le> n"
-proof (induction n rule: fareys.induct)
-  case 1
-  then show ?case
-    by (simp add: denom_farey_pos linorder_not_le)
-next
-  case 2
-  then show ?case
-    using denom_farey_le1_cases by fastforce
-next
-  case (3 n)
-  with farey_step_denom_le show ?case
-      by force
-qed
-
 (* Theorem 5.2 for integers*)
 lemma mediant_lies_betw_int:
   fixes a b c d::int
@@ -570,16 +563,8 @@ theorem
   fixes x y::farey
   assumes "x < y"
   shows "x < mediant x y" "mediant x y < y"
-  using assms mediant_lies_betw_int Fract_of_int_quotient quotient_of_denom_pos'
-      quotient_of_div
-  by (transfer, metis (no_types, lifting)  of_int_add prod.collapse)+
-
-(* this result has a proof online: https://en.wikipedia.org/wiki/Bézout%27s_identity*)
-lemma 
-  fixes a b::int
-  assumes "gcd a b = d" and a: "a\<noteq>0" "\<not> a dvd b" and b: "b\<noteq>0" "\<not> b dvd a"
-  obtains x y where "a*x - b*y = 1" "abs x \<le> abs (b div d)" "abs y \<le> abs (a div d)"
-  sorry
+  using assms mediant_lies_betw_int Fract_of_int_quotient
+  by (metis denom_farey_pos mediant_eq_Fract of_int_add rat_of_farey_conv_num_denom)+
 
 lemma coprime_consecutive_int:
   fixes a b::int
@@ -774,6 +759,21 @@ qed
 
 
 
+
+lemma fareys_consecutive: "farey_list_consecutive (fareys n)"
+proof (induction n rule: fareys.induct)
+  case 2
+  then show ?case
+    by (auto simp: farey_consecutive_def)
+next
+  case (3 n)
+  then show ?case
+    by (simp add: farey_list_consecutive_step)
+qed auto
+
+
+lemma farey_consecutive_fareys: "successively farey_consecutive (fareys n)"
+  by (induction n rule: fareys.induct) (auto intro: farey_consecutive_step)
 
 lemma num_mediant [simp]: 
   assumes xy: "x \<in> F" "y \<in> F" and "F = set (fareys n)"
