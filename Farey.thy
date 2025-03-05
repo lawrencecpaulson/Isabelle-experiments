@@ -631,37 +631,47 @@ qed
 
 (* Theorem 5.3 *)
 
-theorem
+theorem consec_subset_fareys:
   fixes a b c d::int
   assumes "b>0" 
-    and "0 \<le> a/b"
-    and "a/b < c/d"
-    and "b*c - a*d = 1"
-    and "max b d \<le> n" "n < b+d"
-  shows 
-(* Theorem 5.3 *)
+    and abcd: "0 \<le> Fract a b" "Fract a b < Fract c d" "Fract c d \<le> 1"
+    and consec: "b*c - a*d = 1"
+    and max: "max b d \<le> n" "n < b+d"
+  shows "subseq [Fract a b, Fract c d] (fareys n)"
+proof (rule ccontr)
+  assume con: "\<not> ?thesis"
+  have "d > 0"
+    using max by force
+  have "coprime a b" "coprime c d"
+    using consec consecutive_imp_both_coprime by blast+
+  with \<open>b > 0\<close> \<open>d > 0\<close> have "denom_farey (Fract a b) = b" "denom_farey (Fract c d) = d"
+    by auto
+  moreover have "b\<le>n" "d\<le>n"
+    using max by auto
+  ultimately have "Fract a b \<in> set (fareys n)" "Fract c d \<in> set (fareys n)"
+    using abcd finite_farey_set by (auto simp: fareys_def)
+  obtain h k where hk: "coprime h k" "Fract a b < Fract h k" "Fract h k < Fract c d" 
+                       "Fract h k \<in> set (fareys n)"  "k>0"
+    using con sorry
+  with \<open>b > 0\<close> \<open>d > 0\<close> have *: "k*a < h*b" "d*h < c*k"
+    by (simp_all add: Fract_of_int_quotient mult.commute divide_simps flip: of_int_mult)
+  have "k \<le> n"
+    using hk denom_fareys by force
+  have "k = (b*c - a*d)*k"
+    by (simp add: consec)
+  also have "... = b*(c*k - d*h) + d*(b*h - a*k)"
+    by (simp add: algebra_simps)
+  finally have "k = b * (c * k - d * h) + d * (b * h - a * k)" .  
+  moreover have "c*k - d*h > 0" "b*h - a*k > 0"
+    using \<open>b > 0\<close> \<open>d > 0\<close> * by (auto simp: mult.commute)
+  ultimately have "k \<ge> b+d"
+    by (smt (verit) \<open>b > 0\<close> \<open>d > 0\<close> mult.commute mult_less_cancel_right2)
+  then show False
+    using \<open>k \<le> int n\<close> max by force
+qed
 
 
 
-theorem
-  assumes "farey_consecutive x y"
-  assumes "max (denom_farey x) (denom_farey y) \<le> n"
-  assumes "n < denom_farey x + denom_farey y"
-  assumes "z \<in> {x<..<y}"
-  shows   "denom_farey z > n"
-  using assms
-  apply (simp add: farey_consecutive_def)
-  apply transfer
-  subgoal for x y n z
-    apply (cases x; cases y; cases z)
-    using quotient_of_denom_pos' [of x] quotient_of_denom_pos' [of y] quotient_of_denom_pos' [of z]
-    apply  (auto simp: quotient_of_Fract normalize_def Let_def consecutive_imp_coprime algebra_simps)
-    subgoal for a b c d e f
-
-  done
-
-
-  sorry
 
 
 lemma B: "denom_farey x \<le> int n \<Longrightarrow> x \<in> set (fareys n)"
