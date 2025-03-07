@@ -230,6 +230,7 @@ proof -
     by (simp add: add_pos_pos denom_farey_pos Fract_of_int_quotient rat_of_farey mediant_eq_Fract)
 qed
 
+
 definition farey_unimodular :: "farey \<Rightarrow> farey \<Rightarrow> bool" where
   "farey_unimodular x y \<longleftrightarrow>
      denom_farey x * num_farey y - num_farey x * denom_farey y = 1"
@@ -250,24 +251,6 @@ lemma farey_unimodular_imp_less:
 lemma denom_mediant: "denom_farey (mediant x y) \<le> denom_farey x + denom_farey y"
   using quotient_of_denom_pos' [of x] quotient_of_denom_pos' [of y]
   by (simp add: mediant_eq_Fract denom_farey_def num_farey_def quotient_of_Fract normalize_def Let_def int_div_le_self)
-
-fun farey_step :: "nat \<Rightarrow> farey list \<Rightarrow> farey list" where
-  "farey_step bd [] = []"
-| "farey_step bd [x] = [x]"
-| "farey_step bd (x # y # xs) =
-     (if denom_farey x + denom_farey y \<le> bd
-      then x # mediant x y # farey_step bd (y # xs)
-      else x # farey_step bd (y # xs))"
-
-lemma farey_step_denom_le:
-  assumes "x \<in> set (farey_step bd xs)" "x \<notin> set xs"
-  shows "denom_farey x \<le> bd"
-  using assms
-proof (induction xs rule: farey_step.induct)
-  case (3 bd x y xs)
-  then show ?case
-    using denom_mediant by (auto intro: order.trans split: if_splits)
-qed auto
 
 lemma unimodular_imp_both_coprime:
   fixes a:: "'a::{algebraic_semidom,comm_ring_1}"
@@ -438,7 +421,7 @@ proof -
     unfolding totient_def by (metis bij_betw_same_card bij_betw_of_nat)
 qed
 
-lemma disjoint_fareys_Suc: 
+lemma disjoint_fareys_plus1: 
   assumes "n > 0"
   shows "disjnt (set (fareys n)) (fareys_new (1 + n))"
 proof -
@@ -472,7 +455,7 @@ proof -
 qed
 
 
-lemma set_fareys_Suc: "set (fareys (1 + n)) = set (fareys n) \<union> fareys_new (1 + n)"
+lemma set_fareys_plus1: "set (fareys (1 + n)) = set (fareys n) \<union> fareys_new (1 + n)"
 proof -
   have "\<exists>b\<ge>1. b \<le> n \<and> (\<exists>a\<ge>0. a \<le> b \<and> coprime a b \<and> Fract c d = Fract a b)"
     if "Fract c d \<notin> fareys_new (1 + n)"
@@ -497,7 +480,7 @@ proof -
   have "length (fareys (1 + int n)) = card (set (fareys (1 + int n)))"
     by (metis fareys_def finite_farey_set sorted_list_of_set.sorted_key_list_of_set_unique)
   also have "... = card (set (fareys n)) + card (fareys_new(1 + int n))"
-    using disjoint_fareys_Suc assms by (simp add: set_fareys_Suc card_Un_disjnt)
+    using disjoint_fareys_plus1 assms by (simp add: set_fareys_plus1 card_Un_disjnt)
   also have "... = card (set (fareys n)) + totient (Suc n)"
     using assms card_fareys_new by force
   also have "... = length (fareys n) + totient (Suc n)"
@@ -539,18 +522,6 @@ lemma monotone_fareys: "monotone (\<le>) subseq fareys"
   using refl_transp_add1_int [OF _ _ subseq_order.reflp_on_le subseq_order.transp_on_le]
   by (metis monotoneI subseq_fareys_1)
 
-lemma farey_step_increasing: "set xs \<subseteq> set (farey_step bd xs)"
-  by (induction xs rule: farey_step.induct) auto
-
-lemma fareys_mono: "m\<le>n \<Longrightarrow> set (fareys m) \<subseteq> set (fareys n)"
-  using fareys_def finite_farey_set by force
-
-lemma farey_step_eq_Nil_iff [simp]: "farey_step bd xs = [] \<longleftrightarrow> xs = []"
-  by (induction bd xs rule: farey_step.induct) auto
-
-lemma hd_farey_step [simp]: "hd (farey_step bd xs) = hd xs"
-  by (induction bd xs rule: farey_step.induct) auto
-
 lemma farey_unimodular_0_1 [simp, intro]: "farey_unimodular 0 1"
   by (auto simp: farey_unimodular_def)
 
@@ -563,14 +534,13 @@ lemma mediant_lies_betw_int:
     using assms by (simp_all add: field_split_simps)
 
 (* Theorem 5.2 *)
-theorem
+theorem mediant_inbetween:
   fixes x y::farey
   assumes "x < y"
   shows "x < mediant x y" "mediant x y < y"
   using assms mediant_lies_betw_int Fract_of_int_quotient
   by (metis denom_farey_pos mediant_eq_Fract of_int_add rat_of_farey_conv_num_denom)+
 
-(*UNUSED*)
 lemma coprime_consecutive_int:
   fixes a b::int
   assumes "coprime a b" "a>1" "b>1"
@@ -606,7 +576,6 @@ proof -
   qed
 qed
 
-(*UNUSED*)
 lemma get_consecutive_parents:
   fixes m n::int
   assumes "coprime m n" "0<m" "m<n"
@@ -636,6 +605,35 @@ next
 qed
 
 (* Theorem 5.3 *)
+
+lemma sorted_two_sublist:
+  fixes x:: "'a::order"
+  assumes "x < y" and sorted: "sorted_wrt (<) l"
+    and "x \<in> set l" "y \<in> set l"
+  shows "sublist [x, y] l \<longleftrightarrow> (\<forall>z \<in> set l. z \<le> x \<or> z \<ge> y)"
+proof -
+  obtain xs us where us: "l = xs @ [x] @ us"
+    by (metis append_Cons append_Nil \<open>x \<in> set l\<close> in_set_conv_decomp_first)
+  with assms have "y \<in> set us"
+    by (fastforce simp add: sorted_wrt_append)
+  then obtain ys zs where yz: "l = xs @ [x] @ ys @ [y] @ zs"
+    using split_list us by fastforce
+  have "sublist [x, y] l \<longleftrightarrow> ys = []"
+    using sorted yz
+    apply (auto simp: sublist_def sorted_wrt_append append_Cons_eq_iff append_eq_Cons_conv)
+     apply (metis (no_types, lifting) append_Cons_eq_iff append_eq_Cons_conv list.set_intros(1) sorted sorted_wrt.simps(2)
+        sorted_wrt_append verit_comp_simplify1(1))
+    by blast
+  also have "... = (\<forall>z \<in> set l. z \<le> x \<or> z \<ge> y)"
+    using sorted yz
+    apply (auto simp: sublist_def sorted_wrt_append append_Cons_eq_iff append_eq_Cons_conv)
+    by (metis UnCI dual_order.strict_iff_not list.set_sel(1))
+  finally show ?thesis .
+qed
+
+lemma sublist_fareys_imp_less: "sublist [x,y] (fareys n) \<Longrightarrow> x < y"
+  by (metis list.set_intros(1) sorted_wrt.simps(2) sorted_wrt_append strict_sorted_fareys sublist_def) 
+
 theorem consec_subset_fareys:
   fixes a b c d::int
   assumes abcd: "0 \<le> Fract a b" "Fract a b < Fract c d" "Fract c d \<le> 1"
@@ -688,7 +686,6 @@ proof (rule ccontr)
     using \<open>k \<le> n\<close> max k by force
 qed
 
-(**)
 lemma farey_unimodular_mediant:
   assumes "farey_unimodular x y"
   shows "farey_unimodular x (mediant x y)" "farey_unimodular (mediant x y) y"
@@ -718,12 +715,13 @@ proof
     by (simp add: consec h_def distrib_left k_def mult.commute)
 qed
 
-(*Theorem 5.5*)
-theorem D:
+(*Theorem 5.5, first part: "Each fraction in F(n+1) which is not in F(n)
+      is the mediant of a pair of consecutive fractions in F(n)"*)
+theorem fareys_new_eq_mediant:
   assumes "x \<in> fareys_new n" "n>1"
   obtains a b c d where 
-    "sublist [Fract a b, Fract c d] (fareys n)" 
-    "x = mediant (Fract a b) (Fract c d)" "coprime a b" "coprime c d" "b>0" "d>0" 
+    "sublist [Fract a b, Fract c d] (fareys (n-1))" 
+    "x = mediant (Fract a b) (Fract c d)" "coprime a b" "coprime c d" "a\<ge>0" "b>0" "c>0" "d>0" 
 proof -
   obtain m where m: "coprime m n" "0 \<le> m" "m \<le> n" "x = Fract m n"
     using assms nless_le zero_less_imp_eq_int by (force simp: fareys_new_def)
@@ -733,58 +731,192 @@ proof -
   with m have "0<m" "m<n"
     using \<open>n>1\<close> of_nat_le_0_iff by fastforce+
   ultimately
-  obtain a b c d where "m = a+c" "n = b+d" "b*c - a*d = 1" "a\<ge>0" "b>0" "c>0" "d>0" "a<b" "c\<le>d"
-    apply-
-    apply (rule get_consecutive_parents)
-apply assumption
-      sorry
-    sorry
+  obtain a b c d where 
+    abcd: "m = a+c" "n = b+d" "b*c - a*d = 1" "a\<ge>0" "b>0" "c>0" "d>0" "a<b" "c\<le>d"
+    by (metis get_consecutive_parents)
+  show thesis
+  proof
+    have "Fract a b < Fract c d"
+      using abcd mult.commute[of b c] by force
+    with consec_subset_fareys
+    show "sublist [Fract a b, Fract c d] (fareys (n-1))"
+      using Fract_le_one_iff abcd zero_le_Fract_iff by auto
+    show "x = mediant (Fract a b) (Fract c d)"
+      using abcd \<open>x = Fract m n\<close> mediant_eq_Fract unimodular_imp_both_coprime by fastforce
+    show "coprime a b" "coprime c d"
+      using \<open>b * c - a * d = 1\<close> unimodular_imp_both_coprime by blast+
+  qed (use abcd in auto)
+qed
+
 
 theorem
-  assumes "sublist [Fract a b, Fract c d] (fareys n)" "b>0" "d>0"
+  assumes "sublist [Fract a b, Fract c d] (fareys (int n))" "b>0" "d>0" "coprime a b" "coprime c d"
   shows  "b*c - a*d = 1"
-  using assms D
+  using assms 
 proof (induction n arbitrary: a b c d)
   case 0
   then show ?case
     by auto
 next
   case (Suc n)
-  { fix a' b' c' d'
-    assume \<section>: "sublist [Fract a' b', Fract c' d'] (fareys n)" "b'>0" "d'>0"
-    then have 1: "b'*c' - a'*d' = 1" "{Fract a' b', Fract c' d'} \<subseteq> set (fareys n)"
-      using Suc.IH set_mono_sublist by fastforce+
-    then have cop: "coprime a' b'" "coprime c' d'"
-      by (meson unimodular_imp_both_coprime)+
-    have "0 \<le> Fract a' b'" "Fract c' d' \<le> 1"
-      using \<open>{Fract a' b', Fract c' d'} \<subseteq> set (fareys n)\<close> fareys_def finite_farey_set
-      by auto
-    moreover have "Fract a' b' < Fract c' d'"
-      using \<section> 1 cop by (simp add: farey_unimodular_def farey_unimodular_imp_less)
-    ultimately
-    have "sublist [Fract a' b', Fract c' d'] (fareys m)"
-      if "max b' d' \<le> m" "m < b' + d'" for m
-      using \<section> 1 consec_subset_fareys that by blast
-  } note * = this
   show ?case
-  proof (cases "b+d \<le> Suc n")
+  proof (cases "n=0")
     case True
-    then show ?thesis      
-      sorry
+    with Suc.prems have "Fract a b = 0" "Fract c d = 1"
+      by (auto simp add: sublist_Cons_right)
+    with Suc.prems obtain "a=0" "b=1" "c=1" "d=1"
+      by (auto simp: Fract_of_int_quotient)
+    then show ?thesis
+      by auto
   next
     case False
-    then show ?thesis
-      using * [of a b c d]
-      sorry
+    have "Fract a b < Fract c d" 
+      and ab: "Fract a b \<in> set (fareys (1 + int n))" and cd: "Fract c d \<in> set (fareys (1 + int n))"
+      using strict_sorted_fareys [of "Suc n"] Suc.prems
+      by (auto simp add: sublist_def sorted_wrt_append)
+    have con: "z \<le> Fract a b \<or> Fract c d \<le> z" if "z \<in> set (fareys (int n))" for z
+    proof -
+      have "z \<in> set (fareys (1 + int n))"
+        using fareys_increasing_1 that by blast
+      with Suc.prems strict_sorted_fareys [of "1 + int n"] show ?thesis
+        by (fastforce simp add: sublist_def sorted_wrt_append)
+    qed
+    show ?thesis
+    proof (cases "Fract a b \<in> set (fareys n) \<and> Fract c d \<in> set (fareys n)")
+      case True
+      then have "sublist [Fract a b, Fract c d] (fareys n)"
+        using con \<open>Fract a b < Fract c d\<close> sorted_two_sublist strict_sorted_fareys by blast
+      then show ?thesis
+        by (simp add: Suc) 
+    next
+      case False
+      have notboth: False if n1: "Fract a b \<in> fareys_new (1+n)" "Fract c d \<in> fareys_new (1+n)"
+      proof -
+        obtain a' b' c' d' where ab_eq:
+          "sublist [Fract a' b', Fract c' d'] (fareys n)" 
+          "Fract a b = mediant (Fract a' b') (Fract c' d')" "coprime a' b'" "coprime c' d'" "a'\<ge>0" "b'>0" "c'>0" "d'>0" 
+          by (smt (verit) \<open>n\<noteq>0\<close> n1 fareys_new_eq_mediant of_nat_Suc of_nat_le_0_iff plus_1_eq_Suc)
+        then have abcd': "Fract a' b' \<in> set (fareys n)" "Fract c' d' \<in> set (fareys n)"
+          by (auto simp: sublist_def)
+        have con': "z \<le> Fract a' b' \<or> Fract c' d' \<le> z" if "z \<in> set (fareys n)" for z
+          by (meson ab_eq(1) abcd' sorted_two_sublist strict_sorted_fareys sublist_fareys_imp_less that)
+        have "Fract a' b' < Fract c' d'"
+          using ab_eq(1) sublist_fareys_imp_less by blast         
+        then obtain A: "Fract a' b' < Fract a b" "Fract a b < Fract c' d'"
+          using ab_eq(2) mediant_inbetween by presburger
+          obtain a'' b'' c'' d'' where cd_eq:
+          "sublist [Fract a'' b'', Fract c'' d''] (fareys n)" 
+          "Fract c d = mediant (Fract a'' b'') (Fract c'' d'')" "coprime a'' b''" "coprime c'' d''" "a''\<ge>0" "b''>0" "c''>0" "d''>0" 
+          by (smt (verit) n1 \<open>n\<noteq>0\<close> fareys_new_eq_mediant of_nat_Suc of_nat_le_0_iff plus_1_eq_Suc)
+        then have abcd'': "Fract a'' b'' \<in> set (fareys n)" "Fract c'' d'' \<in> set (fareys n)"
+          by (auto simp: sublist_def)
+        then have "Fract c'' d'' \<in> set (fareys (1 + int n))"
+          using fareys_increasing_1 by blast
+        have con'': "z \<le> Fract a'' b'' \<or> Fract c'' d'' \<le> z" if "z \<in> set (fareys n)" for z
+            by (meson cd_eq(1) abcd'' sorted_two_sublist strict_sorted_fareys sublist_fareys_imp_less that)
+        have "Fract a'' b'' < Fract c'' d''"
+            using cd_eq(1) sublist_fareys_imp_less by blast
+        then obtain "Fract a'' b'' < Fract c d" "Fract c d < Fract c'' d''"
+            using cd_eq(2) mediant_inbetween by presburger
+        with A show False
+          using con' con'' abcd' abcd'' con \<open>Fract a b < Fract c d\<close>
+          by (metis ab_eq(2) cd_eq(2) dual_order.strict_trans1 not_less_iff_gr_or_eq)
+      qed
+      consider "Fract a b \<in> fareys_new (1+n)" | "Fract c d \<in> fareys_new (1+n)"
+        using False set_fareys_plus1 [of n]
+        by (metis (mono_tags, opaque_lifting) Suc.prems(1) Suc_eq_plus1_left UnE list.set_intros(1) of_nat_Suc set_mono_sublist
+            set_subset_Cons subset_iff)
+      then show ?thesis
+      proof cases
+        case 1
+        then obtain a' b' c' d' where eq:
+          "sublist [Fract a' b', Fract c' d'] (fareys n)" 
+          "Fract a b = mediant (Fract a' b') (Fract c' d')" "coprime a' b'" "coprime c' d'" "a'\<ge>0" "b'>0" "c'>0" "d'>0" 
+          by (smt (verit) \<open>n\<noteq>0\<close> fareys_new_eq_mediant of_nat_Suc of_nat_le_0_iff plus_1_eq_Suc)
+        then have abcd': "Fract a' b' \<in> set (fareys n)" "Fract c' d' \<in> set (fareys n)"
+          by (auto simp: sublist_def)
+        then have "Fract c' d' \<in> set (fareys (1 + int n))"
+          using fareys_increasing_1 by blast
+        have **: "z \<le> Fract a' b' \<or> Fract c' d' \<le> z" if "z \<in> set (fareys n)" for z
+          by (meson eq(1) abcd' sorted_two_sublist strict_sorted_fareys sublist_fareys_imp_less that)
+        have "Fract a' b' < Fract c' d'"
+          using eq(1) sublist_fareys_imp_less by blast
+        then have "Fract a b < Fract c' d'"
+          using eq(2) mediant_inbetween(2) by presburger
+        then have "Fract c' d' \<ge> Fract c d"
+          using con abcd' linorder_not_less by blast
+        moreover have "Fract c' d' \<le> Fract c d" 
+          if "Fract c d \<in> set (fareys n)"
+          by (metis "**" \<open>Fract a b < Fract c d\<close> \<open>Fract a' b' < Fract c' d'\<close> eq(2) dual_order.trans linorder_not_less mediant_inbetween(1)
+              nless_le that)
+        ultimately have "Fract c' d' = Fract c d"
+          using notboth "1" cd set_fareys_plus1 by auto
+        with Suc.prems obtain "c' = c" "d' = d"
+          by (metis \<open>0 < d'\<close> \<open>coprime c' d'\<close> denom_farey_Fract num_farey_Fract)
+        then have 1: "b'*c - a'*d = 1"
+          using Suc.IH Suc.prems(3,5) eq(1,3,6) by blast
+        then obtain "a = a' + c" "b = b' + d"
+          using eq Suc.prems apply (simp add: mediant_eq_Fract)
+          by (metis \<open>c' = c\<close> \<open>d' = d\<close> denom_farey_Fract num_farey_Fract pos_add_strict
+              unimodular_imp_coprime)
+        with 1 show ?thesis
+          by (auto simp: algebra_simps)
+      next
+        case 2
+        then show ?thesis sorry
+      qed
+    qed
   qed
 qed
 
 
 
-  oops
-XXXXXXXXXXXXX
+
+
+
   oops
 
+lemma mediant_inbetween:
+  assumes "x < y"
+  shows   "mediant x y \<in> {x<..<y}"
+proof -
+  have "a * (b + d) < (a + c) * b \<and> (a + c) * d < c * (b + d)"
+    if "a * d < c * b" for a b c d :: int
+    using that by (simp add: int_distrib(1) ring_class.ring_distribs(1))
+  then show ?thesis
+    using assms
+    by (cases x rule: Rat_cases; cases y rule: Rat_cases; simp add: mediant_eq_Fract divide_simps)
+qed
+ 
+fun farey_step :: "nat \<Rightarrow> farey list \<Rightarrow> farey list" where
+  "farey_step bd [] = []"
+| "farey_step bd [x] = [x]"
+| "farey_step bd (x # y # xs) =
+     (if denom_farey x + denom_farey y \<le> bd
+      then x # mediant x y # farey_step bd (y # xs)
+      else x # farey_step bd (y # xs))"
+
+lemma farey_step_denom_le:
+  assumes "x \<in> set (farey_step bd xs)" "x \<notin> set xs"
+  shows "denom_farey x \<le> bd"
+  using assms
+proof (induction xs rule: farey_step.induct)
+  case (3 bd x y xs)
+  then show ?case
+    using denom_mediant by (auto intro: order.trans split: if_splits)
+qed auto
+
+lemma farey_step_increasing: "set xs \<subseteq> set (farey_step bd xs)"
+  by (induction xs rule: farey_step.induct) auto
+
+lemma fareys_mono: "m\<le>n \<Longrightarrow> set (fareys m) \<subseteq> set (fareys n)"
+  using fareys_def finite_farey_set by force
+
+lemma farey_step_eq_Nil_iff [simp]: "farey_step bd xs = [] \<longleftrightarrow> xs = []"
+  by (induction bd xs rule: farey_step.induct) auto
+
+lemma hd_farey_step [simp]: "hd (farey_step bd xs) = hd xs"
+  by (induction bd xs rule: farey_step.induct) auto
 
 lemma farey_list_unimodular_step:
   assumes "farey_list_unimodular xs"
