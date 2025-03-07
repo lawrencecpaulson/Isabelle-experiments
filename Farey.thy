@@ -790,37 +790,35 @@ next
         by (simp add: Suc) 
     next
       case False
-      have notboth: False if n1: "Fract a b \<in> fareys_new (1+n)" "Fract c d \<in> fareys_new (1+n)"
+      have notboth: False if \<section>: "Fract a b \<in> fareys_new (1+n)" "Fract c d \<in> fareys_new (1+n)"
       proof -
-        obtain a' b' c' d' where ab_eq:
-          "sublist [Fract a' b', Fract c' d'] (fareys n)" 
-          "Fract a b = mediant (Fract a' b') (Fract c' d')" "coprime a' b'" "coprime c' d'" "a'\<ge>0" "b'>0" "c'>0" "d'>0" 
-          by (smt (verit) \<open>n\<noteq>0\<close> n1 fareys_new_eq_mediant of_nat_Suc of_nat_le_0_iff plus_1_eq_Suc)
+        obtain a' b' c' d' where eq':
+          "sublist [Fract a' b', Fract c' d'] (fareys n)" "Fract a b = mediant (Fract a' b') (Fract c' d')"
+          by (smt (verit) \<open>n\<noteq>0\<close> \<section> fareys_new_eq_mediant of_nat_Suc of_nat_le_0_iff plus_1_eq_Suc)
         then have abcd': "Fract a' b' \<in> set (fareys n)" "Fract c' d' \<in> set (fareys n)"
           by (auto simp: sublist_def)
         have con': "z \<le> Fract a' b' \<or> Fract c' d' \<le> z" if "z \<in> set (fareys n)" for z
-          by (meson ab_eq(1) abcd' sorted_two_sublist strict_sorted_fareys sublist_fareys_imp_less that)
+          by (meson eq'(1) abcd' sorted_two_sublist strict_sorted_fareys sublist_fareys_imp_less that)
         have "Fract a' b' < Fract c' d'"
-          using ab_eq(1) sublist_fareys_imp_less by blast         
+          using eq'(1) sublist_fareys_imp_less by blast         
         then obtain A: "Fract a' b' < Fract a b" "Fract a b < Fract c' d'"
-          using ab_eq(2) mediant_inbetween by presburger
-          obtain a'' b'' c'' d'' where cd_eq:
-          "sublist [Fract a'' b'', Fract c'' d''] (fareys n)" 
-          "Fract c d = mediant (Fract a'' b'') (Fract c'' d'')" "coprime a'' b''" "coprime c'' d''" "a''\<ge>0" "b''>0" "c''>0" "d''>0" 
-          by (smt (verit) n1 \<open>n\<noteq>0\<close> fareys_new_eq_mediant of_nat_Suc of_nat_le_0_iff plus_1_eq_Suc)
+          using eq'(2) mediant_inbetween by presburger
+          obtain a'' b'' c'' d'' where eq'':
+          "sublist [Fract a'' b'', Fract c'' d''] (fareys n)" "Fract c d = mediant (Fract a'' b'') (Fract c'' d'')"
+          by (smt (verit) \<section> \<open>n\<noteq>0\<close> fareys_new_eq_mediant of_nat_Suc of_nat_le_0_iff plus_1_eq_Suc)
         then have abcd'': "Fract a'' b'' \<in> set (fareys n)" "Fract c'' d'' \<in> set (fareys n)"
           by (auto simp: sublist_def)
         then have "Fract c'' d'' \<in> set (fareys (1 + int n))"
           using fareys_increasing_1 by blast
         have con'': "z \<le> Fract a'' b'' \<or> Fract c'' d'' \<le> z" if "z \<in> set (fareys n)" for z
-            by (meson cd_eq(1) abcd'' sorted_two_sublist strict_sorted_fareys sublist_fareys_imp_less that)
+            by (meson eq''(1) abcd'' sorted_two_sublist strict_sorted_fareys sublist_fareys_imp_less that)
         have "Fract a'' b'' < Fract c'' d''"
-            using cd_eq(1) sublist_fareys_imp_less by blast
+            using eq''(1) sublist_fareys_imp_less by blast
         then obtain "Fract a'' b'' < Fract c d" "Fract c d < Fract c'' d''"
-            using cd_eq(2) mediant_inbetween by presburger
+            using eq''(2) mediant_inbetween by presburger
         with A show False
           using con' con'' abcd' abcd'' con \<open>Fract a b < Fract c d\<close>
-          by (metis ab_eq(2) cd_eq(2) dual_order.strict_trans1 not_less_iff_gr_or_eq)
+          by (metis eq'(2) eq''(2) dual_order.strict_trans1 not_less_iff_gr_or_eq)
       qed
       consider "Fract a b \<in> fareys_new (1+n)" | "Fract c d \<in> fareys_new (1+n)"
         using False set_fareys_plus1 [of n]
@@ -831,39 +829,66 @@ next
         case 1
         then obtain a' b' c' d' where eq:
           "sublist [Fract a' b', Fract c' d'] (fareys n)" 
-          "Fract a b = mediant (Fract a' b') (Fract c' d')" "coprime a' b'" "coprime c' d'" "a'\<ge>0" "b'>0" "c'>0" "d'>0" 
+          "Fract a b = mediant (Fract a' b') (Fract c' d')" "coprime a' b'" "coprime c' d'" "b'>0" "d'>0" 
           by (smt (verit) \<open>n\<noteq>0\<close> fareys_new_eq_mediant of_nat_Suc of_nat_le_0_iff plus_1_eq_Suc)
         then have abcd': "Fract a' b' \<in> set (fareys n)" "Fract c' d' \<in> set (fareys n)"
           by (auto simp: sublist_def)
-        then have "Fract c' d' \<in> set (fareys (1 + int n))"
-          using fareys_increasing_1 by blast
-        have **: "z \<le> Fract a' b' \<or> Fract c' d' \<le> z" if "z \<in> set (fareys n)" for z
+        have con': "z \<le> Fract a' b' \<or> Fract c' d' \<le> z" if "z \<in> set (fareys n)" for z
           by (meson eq(1) abcd' sorted_two_sublist strict_sorted_fareys sublist_fareys_imp_less that)
         have "Fract a' b' < Fract c' d'"
           using eq(1) sublist_fareys_imp_less by blast
         then have "Fract a b < Fract c' d'"
           using eq(2) mediant_inbetween(2) by presburger
-        then have "Fract c' d' \<ge> Fract c d"
+        then have "Fract c d \<le> Fract c' d'"
           using con abcd' linorder_not_less by blast
         moreover have "Fract c' d' \<le> Fract c d" 
           if "Fract c d \<in> set (fareys n)"
-          by (metis "**" \<open>Fract a b < Fract c d\<close> \<open>Fract a' b' < Fract c' d'\<close> eq(2) dual_order.trans linorder_not_less mediant_inbetween(1)
+          by (metis con' \<open>Fract a b < Fract c d\<close> \<open>Fract a' b' < Fract c' d'\<close> eq(2) order.trans linorder_not_less mediant_inbetween(1)
               nless_le that)
         ultimately have "Fract c' d' = Fract c d"
           using notboth "1" cd set_fareys_plus1 by auto
         with Suc.prems obtain "c' = c" "d' = d"
           by (metis \<open>0 < d'\<close> \<open>coprime c' d'\<close> denom_farey_Fract num_farey_Fract)
-        then have 1: "b'*c - a'*d = 1"
-          using Suc.IH Suc.prems(3,5) eq(1,3,6) by blast
+        then have uni: "b'*c - a'*d = 1"
+          using Suc eq by blast
         then obtain "a = a' + c" "b = b' + d"
           using eq Suc.prems apply (simp add: mediant_eq_Fract)
           by (metis \<open>c' = c\<close> \<open>d' = d\<close> denom_farey_Fract num_farey_Fract pos_add_strict
               unimodular_imp_coprime)
-        with 1 show ?thesis
+        with uni show ?thesis
           by (auto simp: algebra_simps)
       next
         case 2
-        then show ?thesis sorry
+        then obtain a' b' c' d' where eq:
+          "sublist [Fract a' b', Fract c' d'] (fareys n)" 
+          "Fract c d = mediant (Fract a' b') (Fract c' d')" "coprime a' b'" "coprime c' d'" "b'>0" "d'>0" 
+          by (smt (verit) \<open>n\<noteq>0\<close> fareys_new_eq_mediant of_nat_Suc of_nat_le_0_iff plus_1_eq_Suc)
+        then have abcd': "Fract a' b' \<in> set (fareys n)" "Fract c' d' \<in> set (fareys n)"
+          by (auto simp: sublist_def)
+        have con': "z \<le> Fract a' b' \<or> Fract c' d' \<le> z" if "z \<in> set (fareys n)" for z
+          by (meson eq(1) abcd' sorted_two_sublist strict_sorted_fareys sublist_fareys_imp_less that)
+        have "Fract a' b' < Fract c' d'"
+          using eq(1) sublist_fareys_imp_less by blast
+        then have "Fract a' b' < Fract c d"
+          using eq(2) mediant_inbetween by presburger
+        then have "Fract a' b' \<le> Fract a b"
+          using con abcd' linorder_not_less by blast
+        moreover have "Fract a b \<le> Fract a' b'" 
+          if "Fract a b \<in> set (fareys n)"
+          by (metis \<open>Fract a b < Fract c d\<close> \<open>Fract a' b' < Fract c' d'\<close> con' order.strict_trans2 eq(2) mediant_inbetween(2)
+              not_less_iff_gr_or_eq that)
+        ultimately have "Fract a' b' = Fract a b"
+          using notboth 2 ab set_fareys_plus1 by auto
+        with Suc.prems obtain "a' = a" "b' = b"
+          by (metis \<open>0 < b'\<close> \<open>coprime a' b'\<close> denom_farey_Fract num_farey_Fract)
+        then have uni: "b*c' - a*d' = 1"
+          using Suc.IH Suc.prems eq by blast
+        then obtain "c = a + c'" "d = b + d'"
+          using eq Suc.prems apply (simp add: mediant_eq_Fract)
+          by (metis \<open>a' = a\<close> \<open>b' = b\<close> denom_farey_Fract num_farey_Fract pos_add_strict
+              unimodular_imp_coprime)
+        with uni show ?thesis
+          by (auto simp: algebra_simps)
       qed
     qed
   qed
