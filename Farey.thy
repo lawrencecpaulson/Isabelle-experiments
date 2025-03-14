@@ -1,18 +1,18 @@
 theory Farey
   imports Complex_Main "HOL-Number_Theory.Totient" "HOL-Library.Sublist"
-    "HOL-ex.Sketch_and_Explore"
 begin
-
-(* this result has a proof online: https://en.wikipedia.org/wiki/Bézout%27s_identity*)
-lemma 
-  fixes a b::int
-  assumes "gcd a b = d" and a: "a\<noteq>0" "\<not> a dvd b" and b: "b\<noteq>0" "\<not> b dvd a"
-  obtains x y where "a*x - b*y = 1" "abs x \<le> abs (b div d)" "abs y \<le> abs (a div d)"
-  sorry
 
 (*MOVE*)
 lemma quotient_of_rat_of_int [simp]: "quotient_of (rat_of_int i) = (i, 1)"
   using Rat.of_int_def quotient_of_int by force
+
+lemma quotient_of_rat_of_nat [simp]: "quotient_of (rat_of_nat i) = (i, 1)"
+  by (metis case_prod_conv of_int_of_nat_eq quotient_of_rat_of_int)
+
+thm int_div_less_self
+lemma int_div_le_self: 
+  \<open>x div k \<le> x\<close> if \<open>0 < x\<close>  for x k :: int
+  by (metis div_by_1 int_div_less_self less_le_not_le nle_le nonneg1_imp_zdiv_pos_iff order.trans that)
 
 lemma transp_add1_int:
   assumes "\<And>n::int. R (f n) (f (1 + n))"
@@ -52,7 +52,7 @@ lemma refl_transp_Suc:
     shows "R (f n) (f n')"
   by (metis assms dual_order.order_iff_strict reflpE transp_Suc)
 
-lemma ex_interval_simps [simp]:
+lemma ex_interval_simps:
       "(\<exists>x \<in> {..<u}. P x) \<longleftrightarrow> (\<exists>x<u. P x)"
       "(\<exists>x \<in> {..u}. P x) \<longleftrightarrow> (\<exists>x\<le>u. P x)"
       "(\<exists>x \<in> {l<..}. P x) \<longleftrightarrow> (\<exists>x>l. P x)"
@@ -63,7 +63,7 @@ lemma ex_interval_simps [simp]:
       "(\<exists>x \<in> {l..u}. P x) \<longleftrightarrow> (\<exists>x. l\<le>x \<and> x\<le>u \<and> P x)"
   by auto
 
-lemma all_interval_simps [simp]:
+lemma all_interval_simps:
       "(\<forall>x \<in> {..<u}. P x) \<longleftrightarrow> (\<forall>x<u. P x)"
       "(\<forall>x \<in> {..u}. P x) \<longleftrightarrow> (\<forall>x\<le>u. P x)"
       "(\<forall>x \<in> {l<..}. P x) \<longleftrightarrow> (\<forall>x>l. P x)"
@@ -98,10 +98,40 @@ next
     by auto
 qed
 
-thm int_div_less_self
-lemma int_div_le_self: 
-  \<open>x div k \<le> x\<close> if \<open>0 < x\<close>  for x k :: int
-  by (metis div_by_1 int_div_less_self less_le_not_le nle_le nonneg1_imp_zdiv_pos_iff order.trans that)
+lemma coprime_unimodular_int:
+  fixes a b::int
+  assumes "coprime a b" "a>1" "b>1"
+  obtains x y where "a*x - b*y = 1" "0 < x" "x < b" "0 < y" "y < a"
+proof -
+  obtain u v where 1: "a*u + b*v = 1"
+    by (metis \<open>coprime a b\<close> cong_iff_lin coprime_iff_invertible_int)
+  define k where "k \<equiv> u div b"
+  define x where "x \<equiv> u - k*b"
+  define y where "y \<equiv> -(v + k*a)"
+  show thesis
+  proof
+    show *: "a*x - b*y = 1" 
+      using 1 by (simp add: x_def y_def algebra_simps)
+    have "u \<noteq> k*b" "b>0"
+      using assms "*"  by (auto simp: k_def x_def y_def zmult_eq_neg1_iff) 
+    moreover have "u - k*b \<ge> 0"
+      by (simp add: k_def \<open>b>0\<close> minus_div_mult_eq_mod)
+    ultimately show "x > 0"
+      by (fastforce simp: x_def)
+    show "x < b"
+      by (simp add: \<open>0 < b\<close> k_def minus_div_mult_eq_mod x_def)
+    have "a*x > 1"
+      by (metis \<open>0 < x\<close> \<open>a>1\<close> int_one_le_iff_zero_less less_1_mult linorder_not_less
+          mult.right_neutral nle_le)
+    then have "\<not> b * y \<le> 0"
+      using "*" by linarith
+    then show "y > 0"
+      by (simp add: \<open>0 < b\<close> mult_less_0_iff order_le_less)
+    show "y < a"
+      using "*" \<open>0 < x\<close> \<open>x < b\<close>
+      by (smt (verit, best) \<open>a>1\<close> mult.commute mult_less_le_imp_less)
+  qed
+qed
 
 section \<open>Farey Fractions\<close>
 
@@ -235,13 +265,6 @@ definition farey_unimodular :: "farey \<Rightarrow> farey \<Rightarrow> bool" wh
   "farey_unimodular x y \<longleftrightarrow>
      denom_farey x * num_farey y - num_farey x * denom_farey y = 1"
 
-(*NEEDED?*)
-fun farey_list_unimodular :: "farey list \<Rightarrow> bool" where
-  "farey_list_unimodular [] = True"
-| "farey_list_unimodular [x] = True"
-| "farey_list_unimodular (x # y # xs) = (farey_unimodular x y \<and> farey_list_unimodular (y # xs))"
-
-
 lemma farey_unimodular_imp_less:
   assumes "farey_unimodular x y"
   shows   "x < y"
@@ -278,7 +301,9 @@ lemma farey_set_UN_farey: "{x \<in> {0..1}. denom_farey x \<le> n} = (\<Union>b 
 proof -
   have "\<exists>b \<in> {1..n}. \<exists>a \<in> {0..b}. x = farey a b"
     if "denom_farey x \<le> n" "x \<in> {0..1}" for x :: farey
-    using that denom_farey_pos int_one_le_iff_zero_less num_farey_le_denom num_farey_nonneg by force
+    unfolding Bex_def
+    using that denom_farey_pos int_one_le_iff_zero_less num_farey_le_denom num_farey_nonneg
+    by fastforce
   moreover have "\<And>b a::int. 0 \<le> b \<Longrightarrow> b div gcd a b \<le> b"
     by (metis div_0 int_div_le_self nless_le)
   ultimately show ?thesis
@@ -501,6 +526,30 @@ proof -
     by (simp add: fareys_def)
 qed
 
+lemma fareys_2 [simp]: "fareys 2 = [0, farey 1 2, 1]"
+proof -
+  have \<section>: "denom_farey x \<le> 2 \<longleftrightarrow> denom_farey x = 1 \<or> denom_farey x = 2" for x
+    using denom_farey_pos [of x] by auto
+  have "{x \<in> {0..1}. denom_farey x \<le> 2} = {farey 0 1, farey 1 2, farey 1 1}"
+  proof -
+    have "x = farey 1 1"
+      if "x \<noteq> farey 0 1" "x \<in> {0..1}" "denom_farey x = 1" for x
+      using that denom_farey_le1_cases order.eq_iff rat_of_farey by auto
+    moreover have False
+      if "x \<noteq> farey 0 1" "x \<noteq> farey 1 2" "denom_farey x = 2" "x \<in> {0..1}" for x
+      using that num_farey_neq_denom
+      by (smt (verit) farey_0 farey_num_denom_eq num_farey_le_denom num_farey_nonneg)
+    moreover have "denom_farey (farey 1 1) = 1"
+       by (simp add: Fract_of_int_quotient farey_def)
+    ultimately show ?thesis
+      by (auto simp: farey_set_UN_farey \<section>)
+  qed
+  also have "... = {0, 1/2, 1::rat}"
+    by (simp add: farey_def Fract_of_int_quotient)
+  finally show ?thesis
+    by (simp add: fareys_def farey_def Fract_of_int_quotient)
+qed
+
 lemma length_fareys_1: 
   shows "length (fareys 1) = 1 + totient 1"
   by simp
@@ -525,7 +574,7 @@ lemma monotone_fareys: "monotone (\<le>) subseq fareys"
 lemma farey_unimodular_0_1 [simp, intro]: "farey_unimodular 0 1"
   by (auto simp: farey_unimodular_def)
 
-(* Theorem 5.2 for integers*)
+text \<open>Theorem 5.2 for integers\<close>
 lemma mediant_lies_betw_int:
   fixes a b c d::int
   assumes "rat_of_int a / of_int b < of_int c / of_int d" "b>0" "d>0"
@@ -533,48 +582,13 @@ lemma mediant_lies_betw_int:
         "(rat_of_int a + of_int c) / (of_int b + of_int d) < of_int c / of_int d"
     using assms by (simp_all add: field_split_simps)
 
-(* Theorem 5.2 *)
+text \<open>Theorem 5.2\<close>
 theorem mediant_inbetween:
   fixes x y::farey
   assumes "x < y"
   shows "x < mediant x y" "mediant x y < y"
   using assms mediant_lies_betw_int Fract_of_int_quotient
   by (metis denom_farey_pos mediant_eq_Fract of_int_add rat_of_farey_conv_num_denom)+
-
-lemma coprime_consecutive_int:
-  fixes a b::int
-  assumes "coprime a b" "a>1" "b>1"
-  obtains x y where "a*x - b*y = 1" "0 < x" "x < b" "0 < y" "y < a"
-proof -
-  obtain u v where 1: "a*u + b*v = 1"
-    by (metis \<open>coprime a b\<close> cong_iff_lin coprime_iff_invertible_int)
-  define k where "k \<equiv> u div b"
-  define x where "x \<equiv> u - k*b"
-  define y where "y \<equiv> -(v + k*a)"
-  show thesis
-  proof
-    show *: "a*x - b*y = 1" 
-      using 1 by (simp add: x_def y_def algebra_simps)
-    have "u \<noteq> k*b" "b>0"
-      using assms "*"  by (auto simp: k_def x_def y_def zmult_eq_neg1_iff) 
-    moreover have "u - k*b \<ge> 0"
-      by (simp add: k_def \<open>b>0\<close> minus_div_mult_eq_mod)
-    ultimately show "x > 0"
-      by (fastforce simp: x_def)
-    show "x < b"
-      by (simp add: \<open>0 < b\<close> k_def minus_div_mult_eq_mod x_def)
-    have "a*x > 1"
-      by (metis \<open>0 < x\<close> \<open>a>1\<close> int_one_le_iff_zero_less less_1_mult linorder_not_less
-          mult.right_neutral nle_le)
-    then have "\<not> b * y \<le> 0"
-      using "*" by linarith
-    then show "y > 0"
-      by (simp add: \<open>0 < b\<close> mult_less_0_iff order_le_less)
-    show "y < a"
-      using "*" \<open>0 < x\<close> \<open>x < b\<close>
-      by (smt (verit, best) \<open>a>1\<close> mult.commute mult_less_le_imp_less)
-  qed
-qed
 
 lemma get_consecutive_parents:
   fixes m n::int
@@ -590,7 +604,8 @@ proof (cases "m=1")
 next
   case False
   then obtain d c where *: "n*c - m*d = 1" "0 < d" "d < n" "0 < c" "c < m"
-    using coprime_consecutive_int [of n m] coprime_commute assms by (smt (verit) coprime_commute)
+    using coprime_unimodular_int
+ [of n m] coprime_commute assms by (smt (verit) coprime_commute)
   then have **: "n * (c - d) + (n - m) * d = 1"
     by (metis mult_diff_mult)
   show ?thesis
@@ -693,7 +708,7 @@ lemma farey_unimodular_mediant:
   unfolding farey_unimodular_def
   by (auto simp: mediant_eq_Fract denom_farey_def num_farey_def quotient_of_Fract unimodular_imp_coprime algebra_simps)
 
-(* Theorem 5.4 *)
+text \<open>Theorem 5.4\<close>
 theorem mediant_unimodular:
   fixes a b c d::int
   assumes abcd: "0 \<le> Fract a b" "Fract a b < Fract c d" "Fract c d \<le> 1"
@@ -715,8 +730,8 @@ proof
     by (simp add: consec h_def distrib_left k_def mult.commute)
 qed
 
-(*Theorem 5.5, first part: "Each fraction in F(n+1) which is not in F(n)
-      is the mediant of a pair of consecutive fractions in F(n)"*)
+text \<open>Theorem 5.5, first part: "Each fraction in @{term"F(n+1)"} which is not in @{term"F(n)"}
+      is the mediant of a pair of consecutive fractions in @{term"F(n)"}\<close>
 theorem fareys_new_eq_mediant:
   assumes "x \<in> fareys_new n" "n>1"
   obtains a b c d where 
@@ -749,7 +764,9 @@ proof -
 qed
 
 
-theorem
+text \<open>Theorem 5.5, second part: "Moreover, if @{term"a/b<c/d"} are consecutive in any @{term"F(n)"},
+then they satisfy the unimodular relation @{term"bc - ad = 1"}.\<close>
+theorem consec_imp_unimodular:
   assumes "sublist [Fract a b, Fract c d] (fareys (int n))" "b>0" "d>0" "coprime a b" "coprime c d"
   shows  "b*c - a*d = 1"
   using assms 
@@ -893,242 +910,5 @@ next
     qed
   qed
 qed
-
-
-
-
-
-
-  oops
-
-lemma mediant_inbetween:
-  assumes "x < y"
-  shows   "mediant x y \<in> {x<..<y}"
-proof -
-  have "a * (b + d) < (a + c) * b \<and> (a + c) * d < c * (b + d)"
-    if "a * d < c * b" for a b c d :: int
-    using that by (simp add: int_distrib(1) ring_class.ring_distribs(1))
-  then show ?thesis
-    using assms
-    by (cases x rule: Rat_cases; cases y rule: Rat_cases; simp add: mediant_eq_Fract divide_simps)
-qed
- 
-fun farey_step :: "nat \<Rightarrow> farey list \<Rightarrow> farey list" where
-  "farey_step bd [] = []"
-| "farey_step bd [x] = [x]"
-| "farey_step bd (x # y # xs) =
-     (if denom_farey x + denom_farey y \<le> bd
-      then x # mediant x y # farey_step bd (y # xs)
-      else x # farey_step bd (y # xs))"
-
-lemma farey_step_denom_le:
-  assumes "x \<in> set (farey_step bd xs)" "x \<notin> set xs"
-  shows "denom_farey x \<le> bd"
-  using assms
-proof (induction xs rule: farey_step.induct)
-  case (3 bd x y xs)
-  then show ?case
-    using denom_mediant by (auto intro: order.trans split: if_splits)
-qed auto
-
-lemma farey_step_increasing: "set xs \<subseteq> set (farey_step bd xs)"
-  by (induction xs rule: farey_step.induct) auto
-
-lemma fareys_mono: "m\<le>n \<Longrightarrow> set (fareys m) \<subseteq> set (fareys n)"
-  using fareys_def finite_farey_set by force
-
-lemma farey_step_eq_Nil_iff [simp]: "farey_step bd xs = [] \<longleftrightarrow> xs = []"
-  by (induction bd xs rule: farey_step.induct) auto
-
-lemma hd_farey_step [simp]: "hd (farey_step bd xs) = hd xs"
-  by (induction bd xs rule: farey_step.induct) auto
-
-lemma farey_list_unimodular_step:
-  assumes "farey_list_unimodular xs"
-  shows "farey_list_unimodular (farey_step n xs)"
-  using assms
-proof (induction xs rule: farey_step.induct)
-  case (3 bd x y xs)
-  then show ?case
-    by (cases xs) (force simp: farey_unimodular_mediant)+
-qed auto
-
-lemma farey_unimodular_step:
-  assumes "successively farey_unimodular xs"
-  shows   "successively farey_unimodular (farey_step bd xs)"
-  using assms
-  by (induction bd xs rule: farey_step.induct)
-     (auto simp: algebra_simps successively_Cons farey_unimodular_mediant)
-
-lemma C: "fareys (Suc (Suc n)) = farey_step (Suc (Suc n)) (fareys (Suc n))"
-  sorry
-
-lemma fareys_2 [simp]: "fareys 2 = [0, farey 1 2, 1]"
-  by (simp add: numeral_2_eq_2 mediant_eq_farey C)
-
-proof -
-  have \<section>: "denom_farey x \<le> 2 \<longleftrightarrow> denom_farey x = 1 \<or> denom_farey x = 2" for x
-    using denom_farey_pos [of x] by auto
-  have "{x \<in> {0..1}. denom_farey x \<le> 2} = {farey 0 1, farey 1 2, farey 1 1}"
-  proof -
-    have "x = farey 1 1"
-      if "x \<noteq> farey 0 1" "x \<in> {0..1}" "denom_farey x = 1" for x
-      using that denom_farey_le1_cases order.eq_iff rat_of_farey by auto
-    moreover have False
-      if "x \<noteq> farey 0 1" "x \<noteq> farey 1 2" "denom_farey x = 2" "x \<in> {0..1}" for x
-      using that num_farey_neq_denom 
-      by (metis farey_def farey_num_denom_eq int_one_le_iff_zero_less nle_le num_farey_le_denom num_farey_nonneg one_add_one
-          order_le_less rat_number_collapse(1) zle_add1_eq_le)
-    moreover have "denom_farey (farey 1 1) = 1"
-       by (simp add: Fract_of_int_quotient farey_def)
-    ultimately show ?thesis
-      by (auto simp: farey_set_UN_farey \<section>)
-  qed
-  also have "... = {0, 1/2, 1::rat}"
-    by (simp add: farey_def Fract_of_int_quotient)
-  finally show ?thesis
-    by (simp add: fareys_def farey_def Fract_of_int_quotient)
-qed
-
-
-
-
-
-lemma "denom_farey x \<le> int n \<Longrightarrow> x \<in> set (fareys n)"
-  using finite_farey_set
-proof (induction n arbitrary: x rule: fareys.induct)
-  case 1
-  then show ?case
-    by (metis denom_farey.rep_eq int_ops(1) less_le_not_le quotient_of_denom_pos')
-next
-  case 2
-  then show ?case
-    using denom_farey_le1_cases by fastforce
-next
-  case (3 n x)
-  show ?case
-  proof (cases "x \<in> set (fareys (Suc n))")
-    case True
-    then show ?thesis
-      using fareys_increasing_1 by blast
-  next
-    case False
-    with 3 have denx: "denom_farey x = 2 + int n"
-      by force
-    have "x \<noteq> 0" "x \<noteq> 1"
-      using "3.IH" False by auto
-    then have "num_farey x > 0"
-      by (metis num_farey_0_iff num_farey_nonneg order_le_less)
-    then have "num_farey x < denom_farey x"
-      using num_farey_le_denom[of x] \<open>x \<noteq> 1\<close>
-      by (metis Farey.rat_of_farey div_self farey_num_denom_eq of_int_0_eq_iff one_farey.rep_eq order_le_less)
-    then obtain a b c d 
-      where *: "num_farey x = a+c" "denom_farey x = b+d" "b*c - a*d = 1" "a\<ge>0" "b>0" "c>0" "d>0" "a<b" "c\<le>d"
-               and "coprime a b" and "coprime c d"
-      by (metis \<open>0 < num_farey x\<close> coprime_num_denom_farey get_consecutive_parents unimodular_imp_both_coprime)
-    with denx have **: "b \<le> Suc n" "d \<le> Suc n"
-      by linarith+
-    with \<open>a<b\<close> * have ab_in: "farey a b \<in> set (fareys (Suc n))"
-      using "3.IH" \<open>coprime a b\<close> denom_farey_eq by presburger
-    have cd_in: "farey c d \<in> set (fareys (Suc n))"
-    proof (cases "c=d")
-      case True
-      with \<open>c>0\<close> have "farey c d = 1"
-        by (simp add: farey_def one_farey.abs_eq one_le_Fract_iff)
-      then show ?thesis
-        by (simp add: "3.IH")
-    next
-      case False
-      then show ?thesis
-        using "*"(6,9) "**"(2) "3.IH" \<open>coprime c d\<close> by force
-    qed
-    have "c<d"
-      sorry
-    then have "x = mediant (farey a b) (farey c d)"
-      using * ** \<open>coprime a b\<close> \<open>coprime c d\<close> coprime_num_denom_farey [of x]
-      by (intro farey_eqI) (simp_all add: mediant_eq_farey less_imp_le)
-    have "mediant (farey a b) (farey c d) \<in> set (fareys (Suc (Suc n)))"
-
-    sorry
-    show ?thesis
-      using ab_in cd_in
-      using "3"
-      apply (auto simp: )
-      sorry
-  qed
-qed
-
-
-
-lemma fareys_consecutive: "farey_list_unimodular (fareys n)"
-proof (induction n rule: fareys.induct)
-  case 2
-  then show ?case
-    by (auto simp: farey_unimodular_def)
-next
-  case (3 n)
-  then show ?case
-    by (simp add: farey_list_unimodular_step)
-qed auto
-
-
-lemma farey_unimodular_fareys: "successively farey_unimodular (fareys n)"
-  by (induction n rule: fareys.induct) (auto intro: farey_unimodular_step)
-
-lemma num_mediant [simp]: 
-  assumes xy: "x \<in> F" "y \<in> F" and "F = set (fareys n)"
-  shows "num_farey (mediant x y) = num_farey x + num_farey y"
-  using xy
-  apply-
-  apply transfer
-
-   apply (auto simp: add_pos_pos quotient_of_Fract quotient_of_denom_pos')
-
-
-proof -
-  have "fst (quotient_of (Rat.Fract (fst (quotient_of x) + fst (quotient_of y))
-                                    (snd (quotient_of x) + snd (quotient_of y)))) =
-               fst (quotient_of x) + fst (quotient_of y)"
-    if  x: "0 \<le> x" "x \<le> 1" and y: "0 \<le> y" "y \<le> 1" for x y::rat
-  proof -
-    have *: "coprime (fst (quotient_of x) + fst (quotient_of y)) (snd (quotient_of x) + snd (quotient_of y))" 
-      if "0 < snd (quotient_of x) + snd (quotient_of y)"
-      using that x y
-      sorry
-    show ?thesis
-      using that * by (simp add: add_pos_pos quotient_of_Fract quotient_of_denom_pos')
-  qed
-  then show ?thesis by transfer auto
-qed
-
-
-lemma denom_mediant [simp]: "denom_farey (mediant x y) = denom_farey x + denom_farey y"
-  apply transfer
-  apply (simp add: Fract_of_int_quotient rat_divide_code split: prod.split)
-  apply (auto simp: )
-  apply (simp add: normalize_def rat_plus_code)
-  apply (auto simp: Let_def rat_plus_code)
-    apply (metis le_add_same_cancel2 less_le not_le quotient_of_nonzero(1))
-   defer
-   apply (meson add_pos_nonneg less_le quotient_of_nonzero(1))
-  sorry
-
-lemma mediant_inbetween:
-  assumes "x < y"
-  shows   "mediant x y \<in> {x<..<y}"
-proof -
-  define a b c d where "a = num_farey x" "b = denom_farey x" "c = num_farey y" "d = denom_farey y"
-  have bd: "b > 0" "d > 0"
-    unfolding a_b_c_d_def by auto
-  note [simp] = a_b_c_d_def [symmetric]
-  show ?thesis using bd assms
-    by (auto simp: less_farey_iff rat_of_farey_conv_num_denom divide_simps)
-       (auto simp: algebra_simps simp flip: of_int_mult)
-qed
-
-lemma in_set_fareys:
-  assumes "denom_farey x \<le> n"
-  shows   "x \<in> set (fareys n)"
-  sorry
 
 end
