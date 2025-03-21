@@ -1,27 +1,31 @@
 theory Farey
-  imports Complex_Main "HOL-Number_Theory.Totient" "HOL-Library.Sublist"
+  imports "HOL-Complex_Analysis.Complex_Analysis" "HOL-Number_Theory.Totient" "HOL-Library.Sublist"
 begin
 
-(*MOVE*)
+subsection \<open>Farey sequences\<close>
+
+(* added to repository 2025-03-20*)
 lemma quotient_of_rat_of_int [simp]: "quotient_of (rat_of_int i) = (i, 1)"
   using Rat.of_int_def quotient_of_int by force
 
-lemma quotient_of_rat_of_nat [simp]: "quotient_of (rat_of_nat i) = (i, 1)"
-  by (metis case_prod_conv of_int_of_nat_eq quotient_of_rat_of_int)
+(* added to repository 2025-03-20*)
+lemma quotient_of_rat_of_nat [simp]: "quotient_of (rat_of_nat i) = (int i, 1)"
+  by (metis of_int_of_nat_eq quotient_of_rat_of_int)
 
-thm int_div_less_self
+(* added to repository 2025-03-20*)
 lemma int_div_le_self: 
   \<open>x div k \<le> x\<close> if \<open>0 < x\<close>  for x k :: int
   by (metis div_by_1 int_div_less_self less_le_not_le nle_le nonneg1_imp_zdiv_pos_iff order.trans that)
 
+(* not clear to do with these transp things*)
 lemma transp_add1_int:
   assumes "\<And>n::int. R (f n) (f (1 + n))"
-      and "n < n'"
-      and "transp R"
-    shows "R (f n) (f n')"
+    and "n < n'"
+    and "transp R"
+  shows "R (f n) (f n')"
 proof -
   have "R (f n) (f (1 + n + int k))" for k
-  by (induction k) (use assms in \<open>auto elim!: transpE\<close>)
+    by (induction k) (use assms in \<open>auto elim!: transpE\<close>)
   then show ?thesis
     by (metis add.commute assms(2) zle_iff_zadd zless_imp_add1_zle)
 qed
@@ -52,28 +56,7 @@ lemma refl_transp_Suc:
     shows "R (f n) (f n')"
   by (metis assms dual_order.order_iff_strict reflpE transp_Suc)
 
-lemma ex_interval_simps:
-      "(\<exists>x \<in> {..<u}. P x) \<longleftrightarrow> (\<exists>x<u. P x)"
-      "(\<exists>x \<in> {..u}. P x) \<longleftrightarrow> (\<exists>x\<le>u. P x)"
-      "(\<exists>x \<in> {l<..}. P x) \<longleftrightarrow> (\<exists>x>l. P x)"
-      "(\<exists>x \<in> {l..}. P x) \<longleftrightarrow> (\<exists>x\<ge>l. P x)"
-      "(\<exists>x \<in> {l<..<u}. P x) \<longleftrightarrow> (\<exists>x. l<x \<and> x<u \<and> P x)"
-      "(\<exists>x \<in> {l..<u}. P x) \<longleftrightarrow> (\<exists>x. l\<le>x \<and> x<u \<and> P x)"
-      "(\<exists>x \<in> {l<..u}. P x) \<longleftrightarrow> (\<exists>x. l<x \<and> x\<le>u \<and> P x)"
-      "(\<exists>x \<in> {l..u}. P x) \<longleftrightarrow> (\<exists>x. l\<le>x \<and> x\<le>u \<and> P x)"
-  by auto
-
-lemma all_interval_simps:
-      "(\<forall>x \<in> {..<u}. P x) \<longleftrightarrow> (\<forall>x<u. P x)"
-      "(\<forall>x \<in> {..u}. P x) \<longleftrightarrow> (\<forall>x\<le>u. P x)"
-      "(\<forall>x \<in> {l<..}. P x) \<longleftrightarrow> (\<forall>x>l. P x)"
-      "(\<forall>x \<in> {l..}. P x) \<longleftrightarrow> (\<forall>x\<ge>l. P x)"
-      "(\<forall>x \<in> {l<..<u}. P x) \<longleftrightarrow> (\<forall>x. l<x \<longrightarrow> x<u \<longrightarrow> P x)"
-      "(\<forall>x \<in> {l..<u}. P x) \<longleftrightarrow> (\<forall>x. l\<le>x \<longrightarrow> x<u \<longrightarrow> P x)"
-      "(\<forall>x \<in> {l<..u}. P x) \<longleftrightarrow> (\<forall>x. l<x \<longrightarrow> x\<le>u \<longrightarrow> P x)"
-      "(\<forall>x \<in> {l..u}. P x) \<longleftrightarrow> (\<forall>x. l\<le>x \<longrightarrow> x\<le>u \<longrightarrow> P x)"
-  by auto
-
+(* added to repository 2025-03-20*)
 lemma sorted_subset_imp_subseq:
   fixes xs :: "'a::order list"
   assumes "set xs \<subseteq> set ys" "sorted_wrt (<) xs" "sorted_wrt (\<le>) ys"
@@ -103,14 +86,14 @@ lemma coprime_unimodular_int:
   assumes "coprime a b" "a>1" "b>1"
   obtains x y where "a*x - b*y = 1" "0 < x" "x < b" "0 < y" "y < a"
 proof -
-  obtain u v where 1: "a*u + b*v = 1"
+  obtain u v where 1: "a * u + b * v = 1"
     by (metis \<open>coprime a b\<close> cong_iff_lin coprime_iff_invertible_int)
   define k where "k \<equiv> u div b"
   define x where "x \<equiv> u - k*b"
   define y where "y \<equiv> -(v + k*a)"
   show thesis
   proof
-    show *: "a*x - b*y = 1" 
+    show *: "a * x - b * y = 1" 
       using 1 by (simp add: x_def y_def algebra_simps)
     have "u \<noteq> k*b" "b>0"
       using assms "*"  by (auto simp: k_def x_def y_def zmult_eq_neg1_iff) 
@@ -574,7 +557,7 @@ lemma monotone_fareys: "monotone (\<le>) subseq fareys"
 lemma farey_unimodular_0_1 [simp, intro]: "farey_unimodular 0 1"
   by (auto simp: farey_unimodular_def)
 
-text \<open>Theorem 5.2 for integers\<close>
+text \<open>Apostol's Theorem 5.2 for integers\<close>
 lemma mediant_lies_betw_int:
   fixes a b c d::int
   assumes "rat_of_int a / of_int b < of_int c / of_int d" "b>0" "d>0"
@@ -582,7 +565,7 @@ lemma mediant_lies_betw_int:
         "(rat_of_int a + of_int c) / (of_int b + of_int d) < of_int c / of_int d"
     using assms by (simp_all add: field_split_simps)
 
-text \<open>Theorem 5.2\<close>
+text \<open>Apostol's Theorem 5.2\<close>
 theorem mediant_inbetween:
   fixes x y::farey
   assumes "x < y"
@@ -619,8 +602,7 @@ next
   qed (use * in auto)
 qed
 
-(* Theorem 5.3 *)
-
+text \<open>Apostol's Theorem 5.3\<close>
 lemma sorted_two_sublist:
   fixes x:: "'a::order"
   assumes "x < y" and sorted: "sorted_wrt (<) l"
@@ -632,17 +614,16 @@ proof -
   with assms have "y \<in> set us"
     by (fastforce simp add: sorted_wrt_append)
   then obtain ys zs where yz: "l = xs @ [x] @ ys @ [y] @ zs"
-    using split_list us by fastforce
+    by (metis split_list us append_Cons append_Nil)
   have "sublist [x, y] l \<longleftrightarrow> ys = []"
     using sorted yz
-    apply (auto simp: sublist_def sorted_wrt_append append_Cons_eq_iff append_eq_Cons_conv)
-     apply (metis (no_types, lifting) append_Cons_eq_iff append_eq_Cons_conv list.set_intros(1) sorted sorted_wrt.simps(2)
-        sorted_wrt_append verit_comp_simplify1(1))
-    by blast
+    apply (simp add: sublist_def sorted_wrt_append)
+    by (metis (mono_tags, opaque_lifting) append_Cons_eq_iff append_Nil assms(2) sorted_wrt.simps(2)
+        sorted_wrt_append less_irrefl)
   also have "... = (\<forall>z \<in> set l. z \<le> x \<or> z \<ge> y)"
     using sorted yz
-    apply (auto simp: sublist_def sorted_wrt_append append_Cons_eq_iff append_eq_Cons_conv)
-    by (metis UnCI dual_order.strict_iff_not list.set_sel(1))
+    apply (simp add: sublist_def sorted_wrt_append)
+    by (metis Un_iff empty_iff less_le_not_le list.exhaust list.set(1) list.set_intros(1))
   finally show ?thesis .
 qed
 
@@ -674,7 +655,7 @@ proof (rule ccontr)
     using abcd cd strict_sorted_fareys [of n]
     by (fastforce simp add: us sorted_wrt_append)
   then obtain ys zs where yz: "fareys n = xs @ [Fract a b] @ ys @ [Fract c d] @ zs"
-    using split_list us by fastforce
+    by (metis split_list us append_Cons append_Nil)
   with con have "ys \<noteq> []"
     by (metis Cons_eq_append_conv sublist_appendI)
   then obtain h k where hk: "coprime h k" "Fract h k \<in> set ys"  "k>0"
@@ -708,7 +689,7 @@ lemma farey_unimodular_mediant:
   unfolding farey_unimodular_def
   by (auto simp: mediant_eq_Fract denom_farey_def num_farey_def quotient_of_Fract unimodular_imp_coprime algebra_simps)
 
-text \<open>Theorem 5.4\<close>
+text \<open>Apostol's Theorem 5.4\<close>
 theorem mediant_unimodular:
   fixes a b c d::int
   assumes abcd: "0 \<le> Fract a b" "Fract a b < Fract c d" "Fract c d \<le> 1"
@@ -730,7 +711,7 @@ proof
     by (simp add: consec h_def distrib_left k_def mult.commute)
 qed
 
-text \<open>Theorem 5.5, first part: "Each fraction in @{term"F(n+1)"} which is not in @{term"F(n)"}
+text \<open>Apostol's Theorem 5.5, first part: "Each fraction in @{term"F(n+1)"} which is not in @{term"F(n)"}
       is the mediant of a pair of consecutive fractions in @{term"F(n)"}\<close>
 theorem fareys_new_eq_mediant:
   assumes "x \<in> fareys_new n" "n>1"
@@ -764,7 +745,7 @@ proof -
 qed
 
 
-text \<open>Theorem 5.5, second part: "Moreover, if @{term"a/b<c/d"} are consecutive in any @{term"F(n)"},
+text \<open>Apostol's Theorem 5.5, second part: "Moreover, if @{term"a/b<c/d"} are consecutive in any @{term"F(n)"},
 then they satisfy the unimodular relation @{term"bc - ad = 1"}.\<close>
 theorem consec_imp_unimodular:
   assumes "sublist [Fract a b, Fract c d] (fareys (int n))" "b>0" "d>0" "coprime a b" "coprime c d"
@@ -909,6 +890,54 @@ next
       qed
     qed
   qed
+qed
+
+subsection \<open>Ford circles\<close>
+
+definition Ford_center :: "rat \<Rightarrow> complex" where
+  "Ford_center r \<equiv> (\<lambda>(h,k). Complex (h/k) (1/(2 * k^2)))(quotient_of r)"
+
+definition Ford_radius :: "rat \<Rightarrow> real" where
+  "Ford_radius r \<equiv> (\<lambda>(h,k). 1/(2 * k^2))(quotient_of r)"
+
+definition Ford_tan :: "[rat,rat] \<Rightarrow> bool" where
+  "Ford_tan r s \<equiv> dist (Ford_center r) (Ford_center s) = Ford_radius r + Ford_radius s"
+
+lemma Im_Ford_center [simp]: "Im (Ford_center r) = Ford_radius r"
+  by (auto simp: Ford_center_def Ford_radius_def split: prod.splits)
+
+lemma Ford_radius_nonneg: "Ford_radius r \<ge> 0"
+  by (simp add: Ford_radius_def split: prod.splits)
+
+lemma two_Ford_tangent:
+  assumes r: "(a,b) = quotient_of r" and s: "(c,d) = quotient_of s"
+  shows "(dist (Ford_center r) (Ford_center s))^2 - (Ford_radius r + Ford_radius s)^2 
+       = ((a*d - b*c)^2 - 1) / (b*d)^2"
+proof -
+  obtain 0: "b > 0" "d > 0"
+    by (metis assms quotient_of_denom_pos)
+  have 1: "dist (Ford_center r) (Ford_center s) ^ 2 = (a/b - c/d)^2 + (1/(2*b^2) - 1/(2*d^2)) ^ 2"
+    using assms by (force simp: Ford_center_def dist_norm complex_norm complex_diff split: prod.splits)
+  have 2: "(Ford_radius r + Ford_radius s) ^ 2 = (1/(2*b^2) + 1/(2*d^2)) ^ 2"
+    using assms by (force simp: Ford_radius_def split: prod.splits)
+  show ?thesis
+    using 0 unfolding 1 2 by (simp add: field_simps eval_nat_numeral)
+qed
+
+text \<open>Apostol's Theorem 5.6\<close>
+lemma two_Ford_tangent_iff:
+  assumes r: "(a,b) = quotient_of r" and s: "(c,d) = quotient_of s"
+  shows "Ford_tan r s \<longleftrightarrow> \<bar>b * c - a * d\<bar> = 1"
+proof -
+  obtain 0: "b > 0" "d > 0"
+    by (metis assms quotient_of_denom_pos)
+  have "Ford_tan r s \<longleftrightarrow> dist (Ford_center r) (Ford_center s) ^ 2 = (Ford_radius r + Ford_radius s) ^ 2"
+    using Ford_radius_nonneg by (simp add: Ford_tan_def)
+  also have "... \<longleftrightarrow> ((a*d - b*c)^2 - 1) / (b*d)^2 = 0"
+    using two_Ford_tangent [OF assms] by (simp add: diff_eq_eq)
+  also have "... \<longleftrightarrow> \<bar>b * c - a * d\<bar> = 1"
+    using 0 by (simp add: abs_square_eq_1 abs_minus_commute flip: of_int_mult of_int_diff)
+  finally show ?thesis .
 qed
 
 end
