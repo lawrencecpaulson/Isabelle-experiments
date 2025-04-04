@@ -2,6 +2,14 @@ theory Farey
   imports "HOL-Complex_Analysis.Complex_Analysis" "HOL-Number_Theory.Totient" "HOL-Library.Sublist"
 begin
 
+thm Complex_mult_complex_of_real
+lemma Complex_divide_complex_of_real: "Complex x y / of_real r = Complex (x/r) (y/r)"
+  by (metis complex_of_real_mult_Complex divide_inverse mult.commute of_real_inverse)
+
+thm legacy_Complex_simps
+lemma cmod_neg_real: "cmod (Complex (-x) y) = cmod (Complex x y)"
+  by (metis complex_cnj complex_minus complex_mod_cnj norm_minus_cancel)
+
 subsection \<open>Farey sequences\<close>
 
 (* added to repository 2025-03-20*)
@@ -895,13 +903,16 @@ qed
 subsection \<open>Ford circles\<close>
 
 definition Ford_center :: "rat \<Rightarrow> complex" where
-  "Ford_center r \<equiv> (\<lambda>(h,k). Complex (h/k) (1/(2 * k^2)))(quotient_of r)"
+  "Ford_center r \<equiv> (\<lambda>(h,k). Complex (h/k) (1/(2 * k^2))) (quotient_of r)"
 
 definition Ford_radius :: "rat \<Rightarrow> real" where
-  "Ford_radius r \<equiv> (\<lambda>(h,k). 1/(2 * k^2))(quotient_of r)"
+  "Ford_radius r \<equiv> (\<lambda>(h,k). 1/(2 * k^2)) (quotient_of r)"
 
 definition Ford_tan :: "[rat,rat] \<Rightarrow> bool" where
   "Ford_tan r s \<equiv> dist (Ford_center r) (Ford_center s) = Ford_radius r + Ford_radius s"
+
+definition Ford_circle :: "rat \<Rightarrow> complex set" where
+  "Ford_circle r \<equiv> sphere (Ford_center r) (Ford_radius r)"
 
 lemma Im_Ford_center [simp]: "Im (Ford_center r) = Ford_radius r"
   by (auto simp: Ford_center_def Ford_radius_def split: prod.splits)
@@ -938,6 +949,103 @@ proof -
   also have "... \<longleftrightarrow> \<bar>b * c - a * d\<bar> = 1"
     using 0 by (simp add: abs_square_eq_1 abs_minus_commute flip: of_int_mult of_int_diff)
   finally show ?thesis .
+qed
+
+text \<open>Also Apostol's Theorem 5.6: Distinct Ford circles do not overlap\<close>
+lemma Ford_no_overlap:
+  assumes "r \<noteq> s"
+  shows "dist (Ford_center r) (Ford_center s) \<ge> Ford_radius r + Ford_radius s"
+proof -
+  obtain a b c d where r: "(a,b) = quotient_of r" and s: "(c,d) = quotient_of s"
+                 and "b>0" "d>0"
+    by (metis quotient_of_denom_pos surj_pair)
+  moreover have "a \<noteq> c \<or> b \<noteq> d"
+    using assms r s quotient_of_inject by force
+  ultimately have "a * d \<noteq> c * b"
+    by (metis Fract_of_int_quotient assms eq_rat(1) less_irrefl quotient_of_div)
+  then have "(a*d - b*c)^2 \<ge> (1::int)"
+    by (simp add: mult.commute int_one_le_iff_zero_less)
+  then have "((a*d - b*c)^2 - 1) / (b*d)^2 \<ge> (0::real)"
+    by (simp add: divide_simps mult_less_0_iff flip: of_int_mult of_int_power)
+  then show ?thesis
+    using two_Ford_tangent [OF r s]
+    by (metis (no_types, lifting) ge_iff_diff_ge_0 of_int_1 of_int_diff of_int_mult 
+              of_int_power power2_le_imp_le zero_le_dist)
+qed
+
+lemma Ford_aux1:
+  assumes "a\<noteq>0"
+  shows "cmod (Complex (b / (a * (a\<^sup>2 + b\<^sup>2))) (1 / (2 * a\<^sup>2) - inverse (a\<^sup>2 + b\<^sup>2))) = 1 / (2 * a\<^sup>2)"
+       (is "cmod ?z = ?r")
+proof -
+  have "(2 * a\<^sup>2) * cmod ?z = cmod ((2 * a\<^sup>2) * ?z)"
+    by (simp add: norm_mult power2_eq_square)
+  also have "... = cmod (Complex (2*a*b / (a\<^sup>2 + b\<^sup>2)) (1 - (2 * a\<^sup>2) / (a\<^sup>2 + b\<^sup>2)))"
+    unfolding complex_of_real_mult_Complex inverse_eq_divide
+    using \<open>a\<noteq>0\<close> by (simp add: power2_eq_square mult.assoc right_diff_distrib)
+  also have "... = cmod (Complex (2*a*b) ((a\<^sup>2 + b\<^sup>2) - (2 * a\<^sup>2)) / (a\<^sup>2 + b\<^sup>2))"
+    unfolding Complex_divide_complex_of_real diff_divide_distrib
+    using assms by force
+  also have "... = cmod (Complex (2*a*b) ((a\<^sup>2 + b\<^sup>2) - (2 * a\<^sup>2))) / (a\<^sup>2 + b\<^sup>2)"
+    by (smt (verit) norm_divide norm_of_real not_sum_power2_lt_zero)
+  also have "... = sqrt ((a\<^sup>2 + b\<^sup>2)^2) / (a\<^sup>2 + b\<^sup>2)"
+    unfolding power2_eq_square complex_norm
+    by (simp add: algebra_simps)
+  also have "... = 1"
+    using assms by auto
+  finally show ?thesis
+    by (metis inverse_eq_divide inverse_unique)
+qed
+
+lemma Ford_aux2:
+  assumes "a\<noteq>0"
+  shows "cmod (Complex (a / (b * (b\<^sup>2 + a\<^sup>2)) - 1 / (a * b)) (1 / (2 * a\<^sup>2) - inverse (b\<^sup>2 + a\<^sup>2))) = 1 / (2 * a\<^sup>2)"
+       (is "cmod ?z = ?r")
+proof -
+  have "a / (b * (b\<^sup>2 + a\<^sup>2)) - 1 / (a * b) = -b / (a * (b\<^sup>2 + a\<^sup>2))"
+    by (simp add: divide_simps power2_eq_square)
+  then have "cmod ?z = cmod (Complex (b / (a * (a\<^sup>2 + b\<^sup>2))) (1 / (2 * a\<^sup>2) - inverse (a\<^sup>2 + b\<^sup>2)))"
+    by (simp add: cmod_neg_real add.commute)
+  also have "... = 1 / (2 * a\<^sup>2)"
+    using Ford_aux1 assms by simp
+  finally show ?thesis .
+qed
+
+text \<open>Apostol's Theorem 5.7\<close>
+theorem three_Ford_tangent:
+  assumes "r1<r" "r<r2"
+    and r1: "(h1,k1) = quotient_of r1" and r: "(h,k) = quotient_of r"
+    and r2: "(h2,k2) = quotient_of r2"
+    and consec1: "k1*h - h1*k = 1"
+    and consec2: "k*h2 - h*k2 = 1"
+  defines "alpha1 \<equiv> Complex (h/k - k1 / of_int(k * (k\<^sup>2 + k1\<^sup>2))) (inverse (of_int (k\<^sup>2 + k1\<^sup>2)))"
+  defines "alpha2 \<equiv> Complex (h/k + k2 / of_int(k * (k\<^sup>2 + k2\<^sup>2))) (inverse (of_int (k\<^sup>2 + k2\<^sup>2)))"
+  obtains "alpha1 \<in> Ford_circle r" "alpha1 \<in> Ford_circle r1"
+          "alpha2 \<in> Ford_circle r" "alpha2 \<in> Ford_circle r2"
+proof
+  obtain "k1 > 0" "k > 0" "k2 > 0"
+    by (metis quotient_of_denom_pos r r1 r2)
+  show "alpha1 \<in> Ford_circle r"
+    using \<open>k > 0\<close>
+    by (simp add: alpha1_def Ford_circle_def Ford_center_def dist_norm complex_diff Ford_aux1 Ford_radius_def flip: r split: prod.splits)
+  have 1: "real_of_int h1 / real_of_int k1 = real_of_int h / real_of_int k - 1 / (k1*k)"
+    using consec1 \<open>k>0\<close> \<open>k1>0\<close>
+    by (simp add: divide_simps) (simp add: algebra_simps flip: of_int_mult of_int_diff)
+  show "alpha1 \<in> Ford_circle r1"
+    using \<open>k>0\<close> \<open>k1>0\<close>
+    apply (simp add: alpha1_def Ford_circle_def Ford_center_def dist_norm complex_diff 1 Ford_radius_def flip: r1 split: prod.splits)
+    apply (simp add: Ford_aux2)
+    done
+  show "alpha2 \<in> Ford_circle r"
+    using \<open>k > 0\<close> Ford_aux1 [of k k2] cmod_neg_real
+    by (simp add: alpha2_def Ford_circle_def Ford_center_def dist_norm complex_diff Ford_aux1 Ford_radius_def flip: r split: prod.splits)
+  have 2: "real_of_int h / real_of_int k = real_of_int h2 / real_of_int k2 - 1 / (k*k2)"
+    using consec2 \<open>k>0\<close> \<open>k2>0\<close>
+    by (simp add: divide_simps) (simp add: algebra_simps flip: of_int_mult of_int_diff)
+  show "alpha2 \<in> Ford_circle r2"
+    using \<open>k>0\<close> \<open>k2>0\<close> Ford_aux2 [of k2 k] cmod_neg_real
+    apply (simp add: alpha2_def Ford_circle_def Ford_center_def dist_norm complex_diff 2 Ford_radius_def flip: r2 split: prod.splits)
+    by (metis minus_diff_eq mult.commute)
 qed
 
 end
