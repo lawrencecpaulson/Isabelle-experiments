@@ -2,6 +2,46 @@ theory Farey
   imports "HOL-Complex_Analysis.Complex_Analysis" "HOL-Number_Theory.Totient" "HOL-Library.Sublist"
 begin
 
+
+(*added to distribution 2024-04-10*)
+lemma sphere_scale:
+  assumes "a \<noteq> 0"
+  shows   "(\<lambda>x. a *\<^sub>R x) ` sphere c r = sphere (a *\<^sub>R c :: 'a :: real_normed_vector) (\<bar>a\<bar> * r)"
+proof -
+  have *: "(\<lambda>x. a *\<^sub>R x) ` sphere c r \<subseteq> sphere (a *\<^sub>R c) (\<bar>a\<bar> * r)" for a r and c :: 'a
+    by (metis (no_types, opaque_lifting) scaleR_right_diff_distrib dist_norm image_subsetI mem_sphere norm_scaleR)
+  have "sphere (a *\<^sub>R c) (\<bar>a\<bar> * r) = (\<lambda>x. a *\<^sub>R x) ` (\<lambda>x. inverse a *\<^sub>R x) ` sphere (a *\<^sub>R c) (\<bar>a\<bar> * r)"
+    unfolding image_image using assms by simp
+  also have "\<dots> \<subseteq> (\<lambda>x. a *\<^sub>R x) ` sphere (inverse a *\<^sub>R (a *\<^sub>R c)) (\<bar>inverse a\<bar> * (\<bar>a\<bar> * r))"
+    using "*" by blast
+  also have "\<dots> = (\<lambda>x. a *\<^sub>R x) ` sphere c r"
+    using assms by (simp add: algebra_simps)
+  finally have "sphere (a *\<^sub>R c) (\<bar>a\<bar> * r) \<subseteq> (\<lambda>x. a *\<^sub>R x) ` sphere c r" .
+  moreover have "(\<lambda>x. a *\<^sub>R x) ` sphere c r \<subseteq> sphere (a *\<^sub>R c) (\<bar>a\<bar> * r)"
+    using "*" by blast
+  ultimately show ?thesis by blast
+qed
+
+(*added to distribution 2024-04-10*)
+lemma sphere_cscale:
+  assumes "a \<noteq> 0"
+  shows   "(\<lambda>x. a * x) ` sphere c r = sphere (a * c :: complex) (cmod a * r)"
+proof -
+  have *: "(\<lambda>x. a * x) ` sphere c r \<subseteq> sphere (a * c) (cmod a * r)" for a r c
+    using dist_mult_left by fastforce
+  have "sphere (a * c) (cmod a * r) = (\<lambda>x. a * x) ` (\<lambda>x. inverse a * x) ` sphere (a * c) (cmod a * r)"
+    by (simp add: image_image inverse_eq_divide)
+  also have "\<dots> \<subseteq> (\<lambda>x. a * x) ` sphere (inverse a * (a * c)) (cmod (inverse a) * (cmod a * r))"
+    using "*" by blast
+  also have "\<dots> = (\<lambda>x. a * x) ` sphere c r"
+    using assms by (simp add: field_simps flip: norm_mult)
+  finally have "sphere (a * c) (cmod a * r) \<subseteq> (\<lambda>x. a * x) ` sphere c r" .
+  moreover have "(\<lambda>x. a * x) ` sphere c r \<subseteq> sphere (a * c) (cmod a * r)"
+    using "*" by blast
+  ultimately show ?thesis by blast
+qed
+
+
 thm Complex_mult_complex_of_real
 lemma Complex_divide_complex_of_real: "Complex x y / of_real r = Complex (x/r) (y/r)"
   by (metis complex_of_real_mult_Complex divide_inverse mult.commute of_real_inverse)
@@ -1047,5 +1087,37 @@ proof
     apply (simp add: alpha2_def Ford_circle_def Ford_center_def dist_norm complex_diff 2 Ford_radius_def flip: r2 split: prod.splits)
     by (metis minus_diff_eq mult.commute)
 qed
+
+definition Radem_trans :: "rat \<Rightarrow> complex \<Rightarrow> complex" where
+  "Radem_trans \<equiv> \<lambda>r \<tau>. let (h,k) = quotient_of r in - \<i> * of_int k ^ 2 * (\<tau> - of_rat r)"
+
+text \<open>Theorem 5.8 first part\<close>
+lemma Radem_trans_image: "Radem_trans r ` Ford_circle r = sphere (of_rat (1/2)) (1/2)"
+proof -
+  obtain h k where r: "quotient_of r = (h,k)" and "k>0" and req: "r = of_int h / of_int k"
+    using quotient_of_denom_pos quotient_of_div by fastforce
+  have "Radem_trans r ` Ford_circle r = ((*) (-\<i> * of_int k ^ 2)) ` (\<lambda>\<tau>. \<tau> - of_rat r) ` Ford_circle r"
+    by (simp add: Radem_trans_def r image_comp)
+  also have "... = ((*) (-\<i> * of_int k ^ 2)) ` sphere (Ford_center r - of_rat r) (Ford_radius r)"
+    by (simp add: Ford_circle_def flip: sphere_translation_subtract)
+  also have "... = sphere (- \<i> * (of_int k)\<^sup>2 * (Ford_center r - r))
+                          (cmod (- \<i> * (of_int k)\<^sup>2) * Ford_radius r)"
+    using \<open>k>0\<close> by (intro sphere_cscale) auto
+  also have "... = sphere (of_rat (1/2)) (1/2)"
+  proof -
+    have "(- \<i> * (of_int k)\<^sup>2 * (Ford_center r - r)) = 1/2"
+      using \<open>k>0\<close>
+      apply (simp add: Ford_center_def r algebra_simps Complex_eq)
+      by (simp add: of_rat_divide req)
+    moreover 
+    have "(cmod (- \<i> * (of_int k)\<^sup>2) * Ford_radius r) = 1/2"
+      using \<open>k>0\<close>
+      by (simp add: norm_mult norm_power Ford_radius_def r)
+    ultimately show ?thesis
+      by (metis of_rat_1 of_rat_divide of_rat_numeral_eq)
+  qed
+  finally show ?thesis .
+qed
+
 
 end
