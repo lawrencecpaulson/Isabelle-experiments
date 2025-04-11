@@ -1051,43 +1051,6 @@ proof -
   finally show ?thesis .
 qed
 
-text \<open>Apostol's Theorem 5.7\<close>
-theorem three_Ford_tangent:
-  assumes "r1<r" "r<r2"
-    and r1: "(h1,k1) = quotient_of r1" and r: "(h,k) = quotient_of r"
-    and r2: "(h2,k2) = quotient_of r2"
-    and consec1: "k1*h - h1*k = 1"
-    and consec2: "k*h2 - h*k2 = 1"
-  defines "alpha1 \<equiv> Complex (h/k - k1 / of_int(k * (k\<^sup>2 + k1\<^sup>2))) (inverse (of_int (k\<^sup>2 + k1\<^sup>2)))"
-  defines "alpha2 \<equiv> Complex (h/k + k2 / of_int(k * (k\<^sup>2 + k2\<^sup>2))) (inverse (of_int (k\<^sup>2 + k2\<^sup>2)))"
-  obtains "alpha1 \<in> Ford_circle r" "alpha1 \<in> Ford_circle r1"
-          "alpha2 \<in> Ford_circle r" "alpha2 \<in> Ford_circle r2"
-proof
-  obtain "k1 > 0" "k > 0" "k2 > 0"
-    by (metis quotient_of_denom_pos r r1 r2)
-  show "alpha1 \<in> Ford_circle r"
-    using \<open>k > 0\<close>
-    by (simp add: alpha1_def Ford_circle_def Ford_center_def dist_norm complex_diff Ford_aux1 Ford_radius_def flip: r split: prod.splits)
-  have 1: "real_of_int h1 / real_of_int k1 = real_of_int h / real_of_int k - 1 / (k1*k)"
-    using consec1 \<open>k>0\<close> \<open>k1>0\<close>
-    by (simp add: divide_simps) (simp add: algebra_simps flip: of_int_mult of_int_diff)
-  show "alpha1 \<in> Ford_circle r1"
-    using \<open>k>0\<close> \<open>k1>0\<close>
-    apply (simp add: alpha1_def Ford_circle_def Ford_center_def dist_norm complex_diff 1 Ford_radius_def flip: r1 split: prod.splits)
-    apply (simp add: Ford_aux2)
-    done
-  show "alpha2 \<in> Ford_circle r"
-    using \<open>k > 0\<close> Ford_aux1 [of k k2] cmod_neg_real
-    by (simp add: alpha2_def Ford_circle_def Ford_center_def dist_norm complex_diff Ford_aux1 Ford_radius_def flip: r split: prod.splits)
-  have 2: "real_of_int h / real_of_int k = real_of_int h2 / real_of_int k2 - 1 / (k*k2)"
-    using consec2 \<open>k>0\<close> \<open>k2>0\<close>
-    by (simp add: divide_simps) (simp add: algebra_simps flip: of_int_mult of_int_diff)
-  show "alpha2 \<in> Ford_circle r2"
-    using \<open>k>0\<close> \<open>k2>0\<close> Ford_aux2 [of k2 k] cmod_neg_real
-    apply (simp add: alpha2_def Ford_circle_def Ford_center_def dist_norm complex_diff 2 Ford_radius_def flip: r2 split: prod.splits)
-    by (metis minus_diff_eq mult.commute)
-qed
-
 definition Radem_trans :: "rat \<Rightarrow> complex \<Rightarrow> complex" where
   "Radem_trans \<equiv> \<lambda>r \<tau>. let (h,k) = quotient_of r in - \<i> * of_int k ^ 2 * (\<tau> - of_rat r)"
 
@@ -1118,6 +1081,92 @@ proof -
   qed
   finally show ?thesis .
 qed
+
+locale three_Ford =
+  fixes r1 r r2 :: rat
+  fixes h1 k1 h k h2 k2::int
+  assumes "r1<r" "r<r2"
+    and r1: "(h1,k1) = quotient_of r1" and r: "(h,k) = quotient_of r"
+    and r2: "(h2,k2) = quotient_of r2"
+    and consec1: "k1*h - h1*k = 1"
+    and consec2: "k*h2 - h*k2 = 1"
+
+begin
+
+lemma k_pos: "k1 > 0" "k > 0" "k2 > 0"
+  using r1 r r2 by (metis quotient_of_denom_pos)+
+
+lemma r1_eq: "r1 = Fract h1 k1"
+  by (metis Rat_cases quotient_of_eq r1)
+
+lemma r_eq: "r = Fract h k"
+  by (metis Rat_cases quotient_of_eq r)
+
+lemma r2_eq: "r2 = Fract h2 k2"
+  by (metis Rat_cases quotient_of_eq r2)
+
+
+definition "alpha1 \<equiv> Complex (h/k - k1 / of_int(k * (k\<^sup>2 + k1\<^sup>2))) (inverse (of_int (k\<^sup>2 + k1\<^sup>2)))"
+definition "alpha2 \<equiv> Complex (h/k + k2 / of_int(k * (k\<^sup>2 + k2\<^sup>2))) (inverse (of_int (k\<^sup>2 + k2\<^sup>2)))"
+
+definition "zed1 \<equiv> Complex (k\<^sup>2) (k*k1) / ((k\<^sup>2 + k1\<^sup>2))"
+definition "zed2 \<equiv> Complex (k\<^sup>2) (- k*k2) / ((k\<^sup>2 + k2\<^sup>2))"
+
+text \<open>Apostol's Theorem 5.7\<close>
+theorem three_Ford_tangent:
+  obtains "alpha1 \<in> Ford_circle r" "alpha1 \<in> Ford_circle r1"
+          "alpha2 \<in> Ford_circle r" "alpha2 \<in> Ford_circle r2"
+proof
+  show "alpha1 \<in> Ford_circle r"
+    using k_pos
+    by (simp add: alpha1_def Ford_circle_def Ford_center_def dist_norm complex_diff Ford_aux1 Ford_radius_def flip: r split: prod.splits)
+  have 1: "real_of_int h1 / real_of_int k1 = real_of_int h / real_of_int k - 1 / (k1*k)"
+    using consec1 k_pos
+    by (simp add: divide_simps) (simp add: algebra_simps flip: of_int_mult of_int_diff)
+  show "alpha1 \<in> Ford_circle r1"
+    using k_pos
+    apply (simp add: alpha1_def Ford_circle_def Ford_center_def dist_norm complex_diff 1 Ford_radius_def flip: r1 split: prod.splits)
+    apply (simp add: Ford_aux2)
+    done
+  show "alpha2 \<in> Ford_circle r"
+    using k_pos Ford_aux1 [of k k2] cmod_neg_real
+    by (simp add: alpha2_def Ford_circle_def Ford_center_def dist_norm complex_diff Ford_aux1 Ford_radius_def flip: r split: prod.splits)
+  have 2: "real_of_int h / real_of_int k = real_of_int h2 / real_of_int k2 - 1 / (k*k2)"
+    using consec2 k_pos
+    by (simp add: divide_simps) (simp add: algebra_simps flip: of_int_mult of_int_diff)
+  show "alpha2 \<in> Ford_circle r2"
+    using k_pos Ford_aux2 [of k2 k] cmod_neg_real
+    apply (simp add: alpha2_def Ford_circle_def Ford_center_def dist_norm complex_diff 2 Ford_radius_def flip: r2 split: prod.splits)
+    by (metis minus_diff_eq mult.commute)
+qed
+
+text \<open>Theorem 5.8 second part, for alpha1\<close>
+theorem Radem_trans_alpha1: "Radem_trans r alpha1 = zed1"
+proof -
+  have "Radem_trans r alpha1 = ((*) (-\<i> * of_int k ^ 2)) ((\<lambda>\<tau>. \<tau> - of_rat r) alpha1)"
+    by (metis Radem_trans_def prod.simps(2) r)
+  also have "... = ((*) (-\<i> * of_int k ^ 2)) (Complex (- k1 / of_int(k * (k\<^sup>2 + k1\<^sup>2))) (inverse (of_int (k\<^sup>2 + k1\<^sup>2))))"
+    using k_pos by (simp add: alpha1_def r_eq of_rat_rat Complex_eq)
+  also have "... = zed1"
+    unfolding complex_eq_iff by (simp add: zed1_def inverse_eq_divide power2_eq_square)
+  finally show ?thesis .
+qed
+
+text \<open>Theorem 5.8 second part, for alpha2\<close>
+theorem Radem_trans_alpha2: "Radem_trans r alpha2 = zed2"
+proof -
+  have "Radem_trans r alpha2 = ((*) (-\<i> * of_int k ^ 2)) ((\<lambda>\<tau>. \<tau> - of_rat r) alpha2)"
+    by (metis Radem_trans_def prod.simps(2) r)
+  also have "... = ((*) (-\<i> * of_int k ^ 2)) (Complex (k2 / of_int(k * (k\<^sup>2 + k2\<^sup>2))) (inverse (of_int (k\<^sup>2 + k2\<^sup>2))))"
+    using k_pos by (simp add: alpha2_def r_eq of_rat_rat Complex_eq)
+  also have "... = zed2"
+    unfolding complex_eq_iff by (simp add: zed2_def inverse_eq_divide power2_eq_square)
+  finally show ?thesis .
+qed
+
+
+
+end
 
 
 end
