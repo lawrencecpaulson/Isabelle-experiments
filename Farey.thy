@@ -2,6 +2,55 @@ theory Farey
   imports "HOL-Complex_Analysis.Complex_Analysis" "HOL-Number_Theory.Totient" "HOL-Library.Sublist"
 begin
 
+lemma sorted_two_sublist:
+  fixes x:: "'a::order"
+  assumes "x < y" and sorted: "sorted_wrt (<) l"
+    and "x \<in> set l" "y \<in> set l"
+  shows "sublist [x, y] l \<longleftrightarrow> (\<forall>z \<in> set l. z \<le> x \<or> z \<ge> y)"
+proof -
+  obtain xs us where us: "l = xs @ [x] @ us"
+    by (metis append_Cons append_Nil \<open>x \<in> set l\<close> in_set_conv_decomp_first)
+  with assms have "y \<in> set us"
+    by (fastforce simp add: sorted_wrt_append)
+  then obtain ys zs where yz: "l = xs @ [x] @ ys @ [y] @ zs"
+    by (metis split_list us append_Cons append_Nil)
+  have "sublist [x, y] l \<longleftrightarrow> ys = []"
+    using sorted yz
+    apply (simp add: sublist_def sorted_wrt_append)
+    by (metis (mono_tags, opaque_lifting) append_Cons_eq_iff append_Nil assms(2) sorted_wrt.simps(2)
+        sorted_wrt_append less_irrefl)
+  also have "... = (\<forall>z \<in> set l. z \<le> x \<or> z \<ge> y)"
+    using sorted yz
+    apply (simp add: sublist_def sorted_wrt_append)
+    by (metis Un_iff empty_iff less_le_not_le list.exhaust list.set(1) list.set_intros(1))
+  finally show ?thesis .
+qed
+
+(*added to distribution 2024-04-11*)
+lemma sum_squared_le_sum_of_squares:
+  fixes f :: "'a \<Rightarrow> real"
+  assumes "finite I"
+  shows "(\<Sum>i\<in>I. f i)\<^sup>2 \<le> (\<Sum>y\<in>I. (f y)\<^sup>2) * card I"
+proof (cases "finite I \<and> I \<noteq> {}")
+  case True
+  then have "(\<Sum>i\<in>I. f i / real (card I))\<^sup>2 \<le> (\<Sum>i\<in>I. (f i)\<^sup>2 / real (card I))"
+    using assms convex_on_sum [OF _ _ convex_power2, where a = "\<lambda>x. 1 / real(card I)" and S=I]
+    by simp
+  then show ?thesis
+    using assms  
+    by (simp add: divide_simps power2_eq_square split: if_split_asm flip: sum_divide_distrib)
+qed auto
+
+(*added to distribution 2024-04-11*)
+lemma sum_squared_le_sum_of_squares_2:
+  "(x+y)/2 \<le> sqrt ((x\<^sup>2 + y\<^sup>2) / 2)"
+proof -
+  have "(x + y)\<^sup>2 / 2^2 \<le> (x\<^sup>2 + y\<^sup>2) / 2"
+    using sum_squared_le_sum_of_squares [of UNIV "\<lambda>b. if b then x else y"]
+    by (simp add: UNIV_bool add.commute)
+  then show ?thesis
+    by (metis power_divide real_le_rsqrt)
+qed
 
 (*added to distribution 2024-04-10*)
 lemma sphere_scale:
@@ -650,30 +699,7 @@ next
   qed (use * in auto)
 qed
 
-text \<open>Apostol's Theorem 5.3\<close>
-lemma sorted_two_sublist:
-  fixes x:: "'a::order"
-  assumes "x < y" and sorted: "sorted_wrt (<) l"
-    and "x \<in> set l" "y \<in> set l"
-  shows "sublist [x, y] l \<longleftrightarrow> (\<forall>z \<in> set l. z \<le> x \<or> z \<ge> y)"
-proof -
-  obtain xs us where us: "l = xs @ [x] @ us"
-    by (metis append_Cons append_Nil \<open>x \<in> set l\<close> in_set_conv_decomp_first)
-  with assms have "y \<in> set us"
-    by (fastforce simp add: sorted_wrt_append)
-  then obtain ys zs where yz: "l = xs @ [x] @ ys @ [y] @ zs"
-    by (metis split_list us append_Cons append_Nil)
-  have "sublist [x, y] l \<longleftrightarrow> ys = []"
-    using sorted yz
-    apply (simp add: sublist_def sorted_wrt_append)
-    by (metis (mono_tags, opaque_lifting) append_Cons_eq_iff append_Nil assms(2) sorted_wrt.simps(2)
-        sorted_wrt_append less_irrefl)
-  also have "... = (\<forall>z \<in> set l. z \<le> x \<or> z \<ge> y)"
-    using sorted yz
-    apply (simp add: sublist_def sorted_wrt_append)
-    by (metis Un_iff empty_iff less_le_not_le list.exhaust list.set(1) list.set_intros(1))
-  finally show ?thesis .
-qed
+subsection \<open>Apostol's Theorem 5.3\<close>
 
 lemma sublist_fareys_imp_less: "sublist [x,y] (fareys n) \<Longrightarrow> x < y"
   by (metis list.set_intros(1) sorted_wrt.simps(2) sorted_wrt_append strict_sorted_fareys sublist_def) 
@@ -791,7 +817,6 @@ proof -
       using \<open>b * c - a * d = 1\<close> unimodular_imp_both_coprime by blast+
   qed (use abcd in auto)
 qed
-
 
 text \<open>Apostol's Theorem 5.5, second part: "Moreover, if @{term"a/b<c/d"} are consecutive in any @{term"F(n)"},
 then they satisfy the unimodular relation @{term"bc - ad = 1"}.\<close>
@@ -939,6 +964,25 @@ next
     qed
   qed
 qed
+
+theorem 
+  assumes "sublist [Fract a b, Fract c d] (fareys (int n))"  "b*c - a*d = 1" "b>0" "d>0"
+  shows  "b+d > n"
+proof (rule ccontr)
+  assume "\<not> int n < b + d"
+  then have "b+d \<le> n"
+    by simp
+  moreover
+  have "coprime a b" "coprime c d"
+    using assms unimodular_imp_both_coprime by blast+
+  ultimately have "mediant (Fract a b) (Fract c d) \<in> set (fareys (int n))"
+    apply (intro denom_fareys_leD)
+    using assms
+     apply (simp add: denom_farey_def mediant_def quotient_of_Fract unimodular_imp_coprime)
+    apply (simp add: unimodular_imp_coprime)
+apply (simp add: fareys_def)
+      sorry
+    oops
 
 subsection \<open>Ford circles\<close>
 
@@ -1113,7 +1157,7 @@ definition "zed1 \<equiv> Complex (k\<^sup>2) (k*k1) / ((k\<^sup>2 + k1\<^sup>2)
 definition "zed2 \<equiv> Complex (k\<^sup>2) (- k*k2) / ((k\<^sup>2 + k2\<^sup>2))"
 
 text \<open>Apostol's Theorem 5.7\<close>
-theorem three_Ford_tangent:
+lemma three_Ford_tangent:
   obtains "alpha1 \<in> Ford_circle r" "alpha1 \<in> Ford_circle r1"
           "alpha2 \<in> Ford_circle r" "alpha2 \<in> Ford_circle r2"
 proof
@@ -1141,7 +1185,7 @@ proof
 qed
 
 text \<open>Theorem 5.8 second part, for alpha1\<close>
-theorem Radem_trans_alpha1: "Radem_trans r alpha1 = zed1"
+lemma Radem_trans_alpha1: "Radem_trans r alpha1 = zed1"
 proof -
   have "Radem_trans r alpha1 = ((*) (-\<i> * of_int k ^ 2)) ((\<lambda>\<tau>. \<tau> - of_rat r) alpha1)"
     by (metis Radem_trans_def prod.simps(2) r)
@@ -1153,7 +1197,7 @@ proof -
 qed
 
 text \<open>Theorem 5.8 second part, for alpha2\<close>
-theorem Radem_trans_alpha2: "Radem_trans r alpha2 = zed2"
+lemma Radem_trans_alpha2: "Radem_trans r alpha2 = zed2"
 proof -
   have "Radem_trans r alpha2 = ((*) (-\<i> * of_int k ^ 2)) ((\<lambda>\<tau>. \<tau> - of_rat r) alpha2)"
     by (metis Radem_trans_def prod.simps(2) r)
@@ -1164,7 +1208,47 @@ proof -
   finally show ?thesis .
 qed
 
+text \<open>Theorem 5.9, for zed1\<close>
+lemma cmod_zed1: "cmod zed1 = k / sqrt (k\<^sup>2 + k1\<^sup>2)"
+proof -
+  have "cmod zed1 ^ 2 = (k^4 + k\<^sup>2 * k1\<^sup>2) / (k\<^sup>2 + k1\<^sup>2)^2"
+    by (simp add: zed1_def cmod_def divide_simps)
+  also have "... = (of_int k) ^ 2 / (k\<^sup>2 + k1\<^sup>2)"
+    by (simp add: eval_nat_numeral divide_simps) argo
+  finally have "cmod zed1 ^ 2 = (of_int k) ^ 2 / (k\<^sup>2 + k1\<^sup>2)" .
+  with k_pos real_sqrt_divide show ?thesis
+    unfolding cmod_def by force
+qed
 
+text \<open>Theorem 5.9, for zed2\<close>
+lemma cmod_zed2: "cmod zed2 = k / sqrt (k\<^sup>2 + k2\<^sup>2)"
+proof -
+  have "cmod zed2 ^ 2 = (k^4 + k\<^sup>2 * k2\<^sup>2) / (k\<^sup>2 + k2\<^sup>2)^2"
+    by (simp add: zed2_def cmod_def divide_simps)
+  also have "... = (of_int k) ^ 2 / (k\<^sup>2 + k2\<^sup>2)"
+    by (simp add: eval_nat_numeral divide_simps) argo
+  finally have "cmod zed2 ^ 2 = (of_int k) ^ 2 / (k\<^sup>2 + k2\<^sup>2)" .
+  with k_pos real_sqrt_divide show ?thesis
+    unfolding cmod_def by force
+qed
+
+lemma
+  assumes "z \<in> sphere (of_rat (1/2)) (1/2)"
+    and N: "k1 \<le> N" "k \<le> N" "k2 \<le> N"
+    and "cmod z \<le> cmod zed1" "cmod z \<le> cmod zed2"
+  shows "cmod z < sqrt 2 * k/N"
+proof -
+  have "(k + k1)/2 \<le> sqrt ((k\<^sup>2 + k1\<^sup>2) / 2)"
+    using sum_squared_le_sum_of_squares_2 by simp
+  have "N / sqrt 2 < (N+1) / sqrt 2"
+    by (simp add: divide_strict_right_mono)
+  also have "... \<le> (k + k1) / sqrt 2"
+    using N k_pos
+    apply (simp add: divide_simps)
+
+    by (simp add: divide_right_mono)
+    sorry
+    sorry
 
 end
 
