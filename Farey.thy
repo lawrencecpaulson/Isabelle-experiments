@@ -1,29 +1,40 @@
+section \<open>Farey Sequences and Ford Circles\<close>
+
 theory Farey
   imports "HOL-Complex_Analysis.Complex_Analysis" "HOL-Number_Theory.Totient" "HOL-Library.Sublist"
+"HOL-ex.Sketch_and_Explore"
 begin
+
+subsection \<open>Library material\<close>
 
 lemma sorted_two_sublist:
   fixes x:: "'a::order"
-  assumes "x < y" and sorted: "sorted_wrt (<) l"
-    and "x \<in> set l" "y \<in> set l"
-  shows "sublist [x, y] l \<longleftrightarrow> (\<forall>z \<in> set l. z \<le> x \<or> z \<ge> y)"
-proof -
-  obtain xs us where us: "l = xs @ [x] @ us"
-    by (metis append_Cons append_Nil \<open>x \<in> set l\<close> in_set_conv_decomp_first)
-  with assms have "y \<in> set us"
+  assumes sorted: "sorted_wrt (<) l"
+  shows "sublist [x, y] l \<longleftrightarrow> x < y \<and> x \<in> set l \<and> y \<in> set l \<and> (\<forall>z \<in> set l. z \<le> x \<or> z \<ge> y)"
+proof (cases "x < y \<and> x \<in> set l \<and> y \<in> set l")
+  case True
+  then obtain xs us where us: "l = xs @ [x] @ us"
+    by (metis append_Cons append_Nil in_set_conv_decomp_first)
+  with True assms have "y \<in> set us"
     by (fastforce simp add: sorted_wrt_append)
   then obtain ys zs where yz: "l = xs @ [x] @ ys @ [y] @ zs"
     by (metis split_list us append_Cons append_Nil)
   have "sublist [x, y] l \<longleftrightarrow> ys = []"
-    using sorted yz
+    using sorted yz 
     apply (simp add: sublist_def sorted_wrt_append)
-    by (metis (mono_tags, opaque_lifting) append_Cons_eq_iff append_Nil assms(2) sorted_wrt.simps(2)
+    by (metis (mono_tags, opaque_lifting) append_Cons_eq_iff append_Nil assms sorted_wrt.simps(2)
         sorted_wrt_append less_irrefl)
-  also have "... = (\<forall>z \<in> set l. z \<le> x \<or> z \<ge> y)"
+  also have "\<dots> = (\<forall>z \<in> set l. z \<le> x \<or> z \<ge> y)"
     using sorted yz
     apply (simp add: sublist_def sorted_wrt_append)
     by (metis Un_iff empty_iff less_le_not_le list.exhaust list.set(1) list.set_intros(1))
-  finally show ?thesis .
+  finally show ?thesis
+    using True by blast 
+next
+  case False
+  then show ?thesis
+    by (metis list.set_intros(1) set_subset_Cons sorted_wrt.simps(2) sorted_wrt_append sublist_def
+        set_mono_sublist sorted subset_iff)
 qed
 
 (*added to distribution 2024-04-11*)
@@ -101,20 +112,20 @@ lemma cmod_neg_real: "cmod (Complex (-x) y) = cmod (Complex x y)"
 
 subsection \<open>Farey sequences\<close>
 
-(* added to repository 2025-03-20*)
+(* added to distribution 2025-03-20*)
 lemma quotient_of_rat_of_int [simp]: "quotient_of (rat_of_int i) = (i, 1)"
   using Rat.of_int_def quotient_of_int by force
 
-(* added to repository 2025-03-20*)
+(* added to distribution 2025-03-20*)
 lemma quotient_of_rat_of_nat [simp]: "quotient_of (rat_of_nat i) = (int i, 1)"
   by (metis of_int_of_nat_eq quotient_of_rat_of_int)
 
-(* added to repository 2025-03-20*)
+(* added to distribution 2025-03-20*)
 lemma int_div_le_self: 
   \<open>x div k \<le> x\<close> if \<open>0 < x\<close>  for x k :: int
   by (metis div_by_1 int_div_less_self less_le_not_le nle_le nonneg1_imp_zdiv_pos_iff order.trans that)
 
-(* not clear to do with these transp things*)
+(* not clear to do with these transp lemmas, any use?*)
 lemma transp_add1_int:
   assumes "\<And>n::int. R (f n) (f (1 + n))"
     and "n < n'"
@@ -153,7 +164,7 @@ lemma refl_transp_Suc:
     shows "R (f n) (f n')"
   by (metis assms dual_order.order_iff_strict reflpE transp_Suc)
 
-(* added to repository 2025-03-20*)
+(* added to distribution 2025-03-20*)
 lemma sorted_subset_imp_subseq:
   fixes xs :: "'a::order list"
   assumes "set xs \<subseteq> set ys" "sorted_wrt (<) xs" "sorted_wrt (\<le>) ys"
@@ -213,7 +224,7 @@ proof -
   qed
 qed
 
-section \<open>Farey Fractions\<close>
+subsection \<open>Farey Fractions\<close>
 
 type_synonym farey = rat
 
@@ -377,6 +388,9 @@ qed
 definition fareys :: "int \<Rightarrow> rat list"
   where "fareys n \<equiv> sorted_list_of_set {x \<in> {0..1}. denom_farey x \<le> n}"
 
+lemma strict_sorted_fareys: "sorted_wrt (<) (fareys n)"
+  by (simp add: fareys_def)
+
 lemma farey_set_UN_farey: "{x \<in> {0..1}. denom_farey x \<le> n} = (\<Union>b \<in> {1..n}. \<Union>a \<in> {0..b}. {farey a b})"
 proof -
   have "\<exists>b \<in> {1..n}. \<exists>a \<in> {0..b}. x = farey a b"
@@ -422,11 +436,14 @@ lemma farey_set_UN_Fract': "{x \<in> {0..1}. denom_farey x \<le> n} = (\<Union>b
 lemma finite_farey_set: "finite {x \<in> {0..1}. denom_farey x \<le> n}"
   unfolding farey_set_UN_farey by blast
 
+lemma denom_in_fareys_iff: "x \<in> set (fareys n) \<longleftrightarrow> denom_farey x \<le> int n \<and> x \<in> {0..1}"
+  using finite_farey_set by (auto simp: fareys_def)
+
 lemma denom_fareys_leI: "x \<in> set (fareys n) \<Longrightarrow> denom_farey x \<le> n"
   using finite_farey_set by (auto simp: fareys_def)
 
 lemma denom_fareys_leD: "\<lbrakk>denom_farey x \<le> int n; x \<in> {0..1}\<rbrakk> \<Longrightarrow> x \<in> set (fareys n)"
-  using finite_farey_set by (auto simp: fareys_def)
+  using denom_in_fareys_iff by blast
 
 lemma fareys_increasing_1: "set (fareys n) \<subseteq> set (fareys (1 + n))"
   using farey_set_UN_farey by (force simp: fareys_def)
@@ -540,7 +557,7 @@ proof -
       using nle_le that by fastforce
     have "d = denom_farey (Fract c d)"
       using that by force
-    also have "... = 1 + n"
+    also have "\<dots> = 1 + n"
       using denom_farey_Fract that by fastforce
     finally show False
       using that(5) by fastforce
@@ -584,11 +601,11 @@ lemma length_fareys_Suc:
 proof -
   have "length (fareys (1 + int n)) = card (set (fareys (1 + int n)))"
     by (metis fareys_def finite_farey_set sorted_list_of_set.sorted_key_list_of_set_unique)
-  also have "... = card (set (fareys n)) + card (fareys_new(1 + int n))"
+  also have "\<dots> = card (set (fareys n)) + card (fareys_new(1 + int n))"
     using disjoint_fareys_plus1 assms by (simp add: set_fareys_plus1 card_Un_disjnt)
-  also have "... = card (set (fareys n)) + totient (Suc n)"
+  also have "\<dots> = card (set (fareys n)) + totient (Suc n)"
     using assms card_fareys_new by force
-  also have "... = length (fareys n) + totient (Suc n)"
+  also have "\<dots> = length (fareys n) + totient (Suc n)"
     using fareys_def finite_farey_set by auto
   finally show ?thesis .
 qed
@@ -624,7 +641,7 @@ proof -
     ultimately show ?thesis
       by (auto simp: farey_set_UN_farey \<section>)
   qed
-  also have "... = {0, 1/2, 1::rat}"
+  also have "\<dots> = {0, 1/2, 1::rat}"
     by (simp add: farey_def Fract_of_int_quotient)
   finally show ?thesis
     by (simp add: fareys_def farey_def Fract_of_int_quotient)
@@ -641,11 +658,8 @@ proof (induction n)
     by (cases "n=0") (auto simp add: length_fareys_Suc)
 qed auto
 
-lemma strict_sorted_fareys: "sorted_wrt (<) (fareys n)"
-  by (simp add: fareys_def)
-
 lemma subseq_fareys_1: "subseq (fareys n) (fareys (1 + n))"
-  by (metis Farey.fareys_increasing_1 strict_sorted_fareys sorted_subset_imp_subseq strict_sorted_imp_sorted)
+  by (metis fareys_increasing_1 strict_sorted_fareys sorted_subset_imp_subseq strict_sorted_imp_sorted)
 
 lemma monotone_fareys: "monotone (\<le>) subseq fareys"
   using refl_transp_add1_int [OF _ _ subseq_order.reflp_on_le subseq_order.transp_on_le]
@@ -670,39 +684,34 @@ theorem mediant_inbetween:
   using assms mediant_lies_betw_int Fract_of_int_quotient
   by (metis denom_farey_pos mediant_eq_Fract of_int_add rat_of_farey_conv_num_denom)+
 
-lemma get_consecutive_parents:
-  fixes m n::int
-  assumes "coprime m n" "0<m" "m<n"
-  obtains a b c d where "m = a+c" "n = b+d" "b*c - a*d = 1" "a\<ge>0" "b>0" "c>0" "d>0" "a<b" "c\<le>d"
-proof (cases "m=1")
-  case True
-  show ?thesis
-  proof
-    show "m = 0 + 1" "n = 1 + (n-1)"
-      by (auto simp: True)
-  qed (use True \<open>m<n\<close> in auto)
-next
-  case False
-  then obtain d c where *: "n*c - m*d = 1" "0 < d" "d < n" "0 < c" "c < m"
-    using coprime_unimodular_int
- [of n m] coprime_commute assms by (smt (verit) coprime_commute)
-  then have **: "n * (c - d) + (n - m) * d = 1"
-    by (metis mult_diff_mult)
-  show ?thesis
-  proof
-    show "c\<le>d"
-      using * ** \<open>m<n\<close> by (smt (verit) mult_le_0_iff)
-    show "(n-d) * c - (m-c) * d = 1"
-      using * by (simp add: algebra_simps)
-    with * \<open>m<n\<close> show "m-c < n-d"
-      by (smt (verit, best) mult_mono)
-  qed (use * in auto)
+lemma sublist_fareysD:
+  assumes "sublist [x,y] (fareys n)"
+  obtains "x \<in> set (fareys n)" "y \<in> set (fareys n)"
+  by (meson assms list.set_intros set_mono_sublist subsetD)
+
+text \<open>Adding the denominators of two consecutive Farey fractions\<close>
+lemma sublist_fareys_add_denoms:
+  fixes a b c d::int
+  defines "x \<equiv> Fract a b"
+  defines "y \<equiv> Fract c d"
+  assumes sub: "sublist [x,y] (fareys (int n))" and "b>0" "d>0" "coprime a b" "coprime c d"
+  shows "b + d > n"
+proof (rule ccontr)
+  have \<section>: "x < y" "\<forall>z \<in> set (fareys n). z \<le> x \<or> z \<ge> y"
+    using sorted_two_sublist strict_sorted_fareys sub by blast+
+  assume "\<not> int n < b + d"
+  with assms have "denom_farey (mediant x y) \<le> int n"
+    by (metis denom_farey_Fract denom_mediant dual_order.trans leI)
+  then have "mediant x y \<in> set (fareys n)"
+    by (metis sub atLeastAtMost_iff denom_in_fareys_iff farey01 mediant_eq_farey
+        sublist_fareysD)
+  moreover have "x < mediant x y" "mediant x y < y"
+    by (simp_all add: mediant_inbetween \<open>x < y\<close>)
+  ultimately show False
+    using \<section> x_def y_def by fastforce
 qed
 
-subsection \<open>Apostol's Theorem 5.3\<close>
-
-lemma sublist_fareys_imp_less: "sublist [x,y] (fareys n) \<Longrightarrow> x < y"
-  by (metis list.set_intros(1) sorted_wrt.simps(2) sorted_wrt_append strict_sorted_fareys sublist_def) 
+subsection \<open>Apostol's Theorems 5.3--5.5\<close>
 
 theorem consec_subset_fareys:
   fixes a b c d::int
@@ -744,7 +753,7 @@ proof (rule ccontr)
     using hk by (metis hk_fareys denom_fareys_leI denom_farey_Fract)
   have "k = (b*c - a*d)*k"
     by (simp add: consec)
-  also have "... = b*(c*k - d*h) + d*(b*h - a*k)"
+  also have "\<dots> = b*(c*k - d*h) + d*(b*h - a*k)"
     by (simp add: algebra_simps)
   finally have k: "k = b * (c * k - d * h) + d * (b * h - a * k)" .  
   moreover have "c*k - d*h \<ge> 1" "b*h - a*k \<ge> 1"
@@ -787,6 +796,36 @@ qed
 
 text \<open>Apostol's Theorem 5.5, first part: "Each fraction in @{term"F(n+1)"} which is not in @{term"F(n)"}
       is the mediant of a pair of consecutive fractions in @{term"F(n)"}\<close>
+
+lemma get_consecutive_parents:
+  fixes m n::int
+  assumes "coprime m n" "0<m" "m<n"
+  obtains a b c d where "m = a+c" "n = b+d" "b*c - a*d = 1" "a\<ge>0" "b>0" "c>0" "d>0" "a<b" "c\<le>d"
+proof (cases "m=1")
+  case True
+  show ?thesis
+  proof
+    show "m = 0 + 1" "n = 1 + (n-1)"
+      by (auto simp: True)
+  qed (use True \<open>m<n\<close> in auto)
+next
+  case False
+  then obtain d c where *: "n*c - m*d = 1" "0 < d" "d < n" "0 < c" "c < m"
+    using coprime_unimodular_int
+ [of n m] coprime_commute assms by (smt (verit) coprime_commute)
+  then have **: "n * (c - d) + (n - m) * d = 1"
+    by (metis mult_diff_mult)
+  show ?thesis
+  proof
+    show "c\<le>d"
+      using * ** \<open>m<n\<close> by (smt (verit) mult_le_0_iff)
+    show "(n-d) * c - (m-c) * d = 1"
+      using * by (simp add: algebra_simps)
+    with * \<open>m<n\<close> show "m-c < n-d"
+      by (smt (verit, best) mult_mono)
+  qed (use * in auto)
+qed
+
 theorem fareys_new_eq_mediant:
   assumes "x \<in> fareys_new n" "n>1"
   obtains a b c d where 
@@ -869,9 +908,9 @@ next
         then have abcd': "Fract a' b' \<in> set (fareys n)" "Fract c' d' \<in> set (fareys n)"
           by (auto simp: sublist_def)
         have con': "z \<le> Fract a' b' \<or> Fract c' d' \<le> z" if "z \<in> set (fareys n)" for z
-          by (meson eq'(1) abcd' sorted_two_sublist strict_sorted_fareys sublist_fareys_imp_less that)
+          by (metis eq'(1) sorted_two_sublist strict_sorted_fareys that)
         have "Fract a' b' < Fract c' d'"
-          using eq'(1) sublist_fareys_imp_less by blast         
+          using eq'(1) sorted_two_sublist [OF strict_sorted_fareys] by blast         
         then obtain A: "Fract a' b' < Fract a b" "Fract a b < Fract c' d'"
           using eq'(2) mediant_inbetween by presburger
           obtain a'' b'' c'' d'' where eq'':
@@ -882,11 +921,9 @@ next
         then have "Fract c'' d'' \<in> set (fareys (1 + int n))"
           using fareys_increasing_1 by blast
         have con'': "z \<le> Fract a'' b'' \<or> Fract c'' d'' \<le> z" if "z \<in> set (fareys n)" for z
-            by (meson eq''(1) abcd'' sorted_two_sublist strict_sorted_fareys sublist_fareys_imp_less that)
-        have "Fract a'' b'' < Fract c'' d''"
-            using eq''(1) sublist_fareys_imp_less by blast
-        then obtain "Fract a'' b'' < Fract c d" "Fract c d < Fract c'' d''"
-            using eq''(2) mediant_inbetween by presburger
+          using sorted_two_sublist [OF strict_sorted_fareys] eq''(1) that by blast
+        then obtain "Fract a'' b'' < Fract c'' d''" "Fract a'' b'' < Fract c d" "Fract c d < Fract c'' d''"
+          by (metis eq'' sorted_two_sublist [OF strict_sorted_fareys] mediant_inbetween)
         with A show False
           using con' con'' abcd' abcd'' con \<open>Fract a b < Fract c d\<close>
           by (metis eq'(2) eq''(2) dual_order.strict_trans1 not_less_iff_gr_or_eq)
@@ -905,11 +942,9 @@ next
         then have abcd': "Fract a' b' \<in> set (fareys n)" "Fract c' d' \<in> set (fareys n)"
           by (auto simp: sublist_def)
         have con': "z \<le> Fract a' b' \<or> Fract c' d' \<le> z" if "z \<in> set (fareys n)" for z
-          by (meson eq(1) abcd' sorted_two_sublist strict_sorted_fareys sublist_fareys_imp_less that)
-        have "Fract a' b' < Fract c' d'"
-          using eq(1) sublist_fareys_imp_less by blast
-        then have "Fract a b < Fract c' d'"
-          using eq(2) mediant_inbetween(2) by presburger
+          using eq(1) sorted_two_sublist strict_sorted_fareys that by blast
+        obtain "Fract a' b' < Fract c' d'" "Fract a b < Fract c' d'"
+          using eq by (simp add: mediant_inbetween(2) sorted_two_sublist strict_sorted_fareys)
         then have "Fract c d \<le> Fract c' d'"
           using con abcd' linorder_not_less by blast
         moreover have "Fract c' d' \<le> Fract c d" 
@@ -937,11 +972,10 @@ next
         then have abcd': "Fract a' b' \<in> set (fareys n)" "Fract c' d' \<in> set (fareys n)"
           by (auto simp: sublist_def)
         have con': "z \<le> Fract a' b' \<or> Fract c' d' \<le> z" if "z \<in> set (fareys n)" for z
-          by (meson eq(1) abcd' sorted_two_sublist strict_sorted_fareys sublist_fareys_imp_less that)
-        have "Fract a' b' < Fract c' d'"
-          using eq(1) sublist_fareys_imp_less by blast
-        then have "Fract a' b' < Fract c d"
-          using eq(2) mediant_inbetween by presburger
+          using eq(1) sorted_two_sublist strict_sorted_fareys that by blast
+        obtain "Fract a' b' < Fract c' d'" "Fract a' b' < Fract c d"
+          using eq mediant_inbetween
+          by (metis sorted_two_sublist strict_sorted_fareys)
         then have "Fract a' b' \<le> Fract a b"
           using con abcd' linorder_not_less by blast
         moreover have "Fract a b \<le> Fract a' b'" 
@@ -964,25 +998,6 @@ next
     qed
   qed
 qed
-
-theorem 
-  assumes "sublist [Fract a b, Fract c d] (fareys (int n))"  "b*c - a*d = 1" "b>0" "d>0"
-  shows  "b+d > n"
-proof (rule ccontr)
-  assume "\<not> int n < b + d"
-  then have "b+d \<le> n"
-    by simp
-  moreover
-  have "coprime a b" "coprime c d"
-    using assms unimodular_imp_both_coprime by blast+
-  ultimately have "mediant (Fract a b) (Fract c d) \<in> set (fareys (int n))"
-    apply (intro denom_fareys_leD)
-    using assms
-     apply (simp add: denom_farey_def mediant_def quotient_of_Fract unimodular_imp_coprime)
-    apply (simp add: unimodular_imp_coprime)
-apply (simp add: fareys_def)
-      sorry
-    oops
 
 subsection \<open>Ford circles\<close>
 
@@ -1028,9 +1043,9 @@ proof -
     by (metis assms quotient_of_denom_pos)
   have "Ford_tan r s \<longleftrightarrow> dist (Ford_center r) (Ford_center s) ^ 2 = (Ford_radius r + Ford_radius s) ^ 2"
     using Ford_radius_nonneg by (simp add: Ford_tan_def)
-  also have "... \<longleftrightarrow> ((a*d - b*c)^2 - 1) / (b*d)^2 = 0"
+  also have "\<dots> \<longleftrightarrow> ((a*d - b*c)^2 - 1) / (b*d)^2 = 0"
     using two_Ford_tangent [OF assms] by (simp add: diff_eq_eq)
-  also have "... \<longleftrightarrow> \<bar>b * c - a * d\<bar> = 1"
+  also have "\<dots> \<longleftrightarrow> \<bar>b * c - a * d\<bar> = 1"
     using 0 by (simp add: abs_square_eq_1 abs_minus_commute flip: of_int_mult of_int_diff)
   finally show ?thesis .
 qed
@@ -1064,18 +1079,18 @@ lemma Ford_aux1:
 proof -
   have "(2 * a\<^sup>2) * cmod ?z = cmod ((2 * a\<^sup>2) * ?z)"
     by (simp add: norm_mult power2_eq_square)
-  also have "... = cmod (Complex (2*a*b / (a\<^sup>2 + b\<^sup>2)) (1 - (2 * a\<^sup>2) / (a\<^sup>2 + b\<^sup>2)))"
+  also have "\<dots> = cmod (Complex (2*a*b / (a\<^sup>2 + b\<^sup>2)) (1 - (2 * a\<^sup>2) / (a\<^sup>2 + b\<^sup>2)))"
     unfolding complex_of_real_mult_Complex inverse_eq_divide
     using \<open>a\<noteq>0\<close> by (simp add: power2_eq_square mult.assoc right_diff_distrib)
-  also have "... = cmod (Complex (2*a*b) ((a\<^sup>2 + b\<^sup>2) - (2 * a\<^sup>2)) / (a\<^sup>2 + b\<^sup>2))"
+  also have "\<dots> = cmod (Complex (2*a*b) ((a\<^sup>2 + b\<^sup>2) - (2 * a\<^sup>2)) / (a\<^sup>2 + b\<^sup>2))"
     unfolding Complex_divide_complex_of_real diff_divide_distrib
     using assms by force
-  also have "... = cmod (Complex (2*a*b) ((a\<^sup>2 + b\<^sup>2) - (2 * a\<^sup>2))) / (a\<^sup>2 + b\<^sup>2)"
+  also have "\<dots> = cmod (Complex (2*a*b) ((a\<^sup>2 + b\<^sup>2) - (2 * a\<^sup>2))) / (a\<^sup>2 + b\<^sup>2)"
     by (smt (verit) norm_divide norm_of_real not_sum_power2_lt_zero)
-  also have "... = sqrt ((a\<^sup>2 + b\<^sup>2)^2) / (a\<^sup>2 + b\<^sup>2)"
+  also have "\<dots> = sqrt ((a\<^sup>2 + b\<^sup>2)^2) / (a\<^sup>2 + b\<^sup>2)"
     unfolding power2_eq_square complex_norm
     by (simp add: algebra_simps)
-  also have "... = 1"
+  also have "\<dots> = 1"
     using assms by auto
   finally show ?thesis
     by (metis inverse_eq_divide inverse_unique)
@@ -1090,7 +1105,7 @@ proof -
     by (simp add: divide_simps power2_eq_square)
   then have "cmod ?z = cmod (Complex (b / (a * (a\<^sup>2 + b\<^sup>2))) (1 / (2 * a\<^sup>2) - inverse (a\<^sup>2 + b\<^sup>2)))"
     by (simp add: cmod_neg_real add.commute)
-  also have "... = 1 / (2 * a\<^sup>2)"
+  also have "\<dots> = 1 / (2 * a\<^sup>2)"
     using Ford_aux1 assms by simp
   finally show ?thesis .
 qed
@@ -1105,12 +1120,12 @@ proof -
     using quotient_of_denom_pos quotient_of_div by fastforce
   have "Radem_trans r ` Ford_circle r = ((*) (-\<i> * of_int k ^ 2)) ` (\<lambda>\<tau>. \<tau> - of_rat r) ` Ford_circle r"
     by (simp add: Radem_trans_def r image_comp)
-  also have "... = ((*) (-\<i> * of_int k ^ 2)) ` sphere (Ford_center r - of_rat r) (Ford_radius r)"
+  also have "\<dots> = ((*) (-\<i> * of_int k ^ 2)) ` sphere (Ford_center r - of_rat r) (Ford_radius r)"
     by (simp add: Ford_circle_def flip: sphere_translation_subtract)
-  also have "... = sphere (- \<i> * (of_int k)\<^sup>2 * (Ford_center r - r))
+  also have "\<dots> = sphere (- \<i> * (of_int k)\<^sup>2 * (Ford_center r - r))
                           (cmod (- \<i> * (of_int k)\<^sup>2) * Ford_radius r)"
     using \<open>k>0\<close> by (intro sphere_cscale) auto
-  also have "... = sphere (of_rat (1/2)) (1/2)"
+  also have "\<dots> = sphere (of_rat (1/2)) (1/2)"
   proof -
     have "(- \<i> * (of_int k)\<^sup>2 * (Ford_center r - r)) = 1/2"
       using \<open>k>0\<close>
@@ -1127,28 +1142,56 @@ proof -
 qed
 
 locale three_Ford =
-  fixes r1 r r2 :: rat
+  fixes N::nat
   fixes h1 k1 h k h2 k2::int
-  assumes "r1<r" "r<r2"
-    and r1: "(h1,k1) = quotient_of r1" and r: "(h,k) = quotient_of r"
-    and r2: "(h2,k2) = quotient_of r2"
-    and consec1: "k1*h - h1*k = 1"
-    and consec2: "k*h2 - h*k2 = 1"
+  assumes sub1: "sublist [Fract h1 k1, Fract h k] (fareys (int N))"
+  assumes sub2: "sublist [Fract h k, Fract h2 k2] (fareys (int N))"
+  assumes coprime: "coprime h1 k1" "coprime h k" "coprime h2 k2"
+  assumes k_pos: "k1 > 0" "k > 0" "k2 > 0"
 
 begin
 
-lemma k_pos: "k1 > 0" "k > 0" "k2 > 0"
-  using r1 r r2 by (metis quotient_of_denom_pos)+
+definition "r1 \<equiv> Fract h1 k1"
+definition "r \<equiv> Fract h k"
+definition "r2 \<equiv> Fract h2 k2"
 
-lemma r1_eq: "r1 = Fract h1 k1"
-  by (metis Rat_cases quotient_of_eq r1)
+lemma N_pos: "N>0"
+  using sub1 gr0I by force
 
-lemma r_eq: "r = Fract h k"
-  by (metis Rat_cases quotient_of_eq r)
+lemma r_eq_quotient:
+  "(h1,k1) = quotient_of r1" "(h,k) = quotient_of r" "(h2,k2) = quotient_of r2"
+  by (simp_all add: coprime k_pos quotient_of_Fract r1_def r_def r2_def)
 
-lemma r2_eq: "r2 = Fract h2 k2"
-  by (metis Rat_cases quotient_of_eq r2)
+lemma r_eq_divide:
+  "r1 = of_int h1 / of_int k1" "r = of_int h / of_int k" "r2 = of_int h2/ of_int k2"
+  by (simp_all add: Fract_of_int_quotient of_rat_divide r1_def r2_def r_def)
 
+lemma collapse_r:
+  "real_of_int h1 / of_int k1 = of_rat r1" 
+  "real_of_int h / of_int k = of_rat r" "real_of_int h2/ of_int k2 = of_rat r2"
+  by (simp_all add: of_rat_divide r_eq_divide)
+
+lemma unimod1: "k1*h - h1*k = 1"
+  and unimod2: "k*h2 - h*k2 = 1"
+  using consec_imp_unimodular coprime k_pos sub1 sub2 by blast+
+
+lemma r_less: "r1 < r" "r < r2"
+  using r1_def r_def r2_def sub1 sub2 sorted_two_sublist [OF strict_sorted_fareys] by auto
+
+lemma r01:
+  obtains "r1 \<in> {0..1}" "r \<in> {0..1}" "r2 \<in> {0..1}"
+  by (metis denom_in_fareys_iff r1_def r2_def r_def sub1 sub2 sublist_fareysD)
+
+lemma atMost_N:
+  obtains "k1 \<le> N" "k \<le> N" "k2 \<le> N"
+  by (metis denom_farey_def denom_in_fareys_iff prod.sel(2) r1_def r2_def r_def r_eq_quotient sub1 sub2
+      sublist_fareysD)
+
+lemma greaterN1: "k1 + k > N"
+  using sublist_fareys_add_denoms coprime k_pos sub1 by blast
+
+lemma greaterN2: "k + k2 > N"
+  using sublist_fareys_add_denoms coprime k_pos sub2 by blast
 
 definition "alpha1 \<equiv> Complex (h/k - k1 / of_int(k * (k\<^sup>2 + k1\<^sup>2))) (inverse (of_int (k\<^sup>2 + k1\<^sup>2)))"
 definition "alpha2 \<equiv> Complex (h/k + k2 / of_int(k * (k\<^sup>2 + k2\<^sup>2))) (inverse (of_int (k\<^sup>2 + k2\<^sup>2)))"
@@ -1162,36 +1205,35 @@ lemma three_Ford_tangent:
           "alpha2 \<in> Ford_circle r" "alpha2 \<in> Ford_circle r2"
 proof
   show "alpha1 \<in> Ford_circle r"
-    using k_pos
-    by (simp add: alpha1_def Ford_circle_def Ford_center_def dist_norm complex_diff Ford_aux1 Ford_radius_def flip: r split: prod.splits)
+    using k_pos Ford_aux1 r_eq_quotient
+    by (force simp: alpha1_def Ford_circle_def Ford_center_def dist_norm complex_diff 
+        Ford_radius_def split: prod.splits)
   have 1: "real_of_int h1 / real_of_int k1 = real_of_int h / real_of_int k - 1 / (k1*k)"
-    using consec1 k_pos
+    using unimod1 k_pos
     by (simp add: divide_simps) (simp add: algebra_simps flip: of_int_mult of_int_diff)
   show "alpha1 \<in> Ford_circle r1"
-    using k_pos
-    apply (simp add: alpha1_def Ford_circle_def Ford_center_def dist_norm complex_diff 1 Ford_radius_def flip: r1 split: prod.splits)
-    apply (simp add: Ford_aux2)
-    done
+    using k_pos Ford_aux2 r_eq_quotient
+    by (force simp: alpha1_def Ford_circle_def Ford_center_def dist_norm complex_diff 1 Ford_radius_def split: prod.splits)
   show "alpha2 \<in> Ford_circle r"
-    using k_pos Ford_aux1 [of k k2] cmod_neg_real
-    by (simp add: alpha2_def Ford_circle_def Ford_center_def dist_norm complex_diff Ford_aux1 Ford_radius_def flip: r split: prod.splits)
+    using k_pos Ford_aux1 [of k k2] cmod_neg_real r_eq_quotient
+    by (force simp add: alpha2_def Ford_circle_def Ford_center_def dist_norm complex_diff Ford_radius_def split: prod.splits)
   have 2: "real_of_int h / real_of_int k = real_of_int h2 / real_of_int k2 - 1 / (k*k2)"
-    using consec2 k_pos
+    using unimod2 k_pos
     by (simp add: divide_simps) (simp add: algebra_simps flip: of_int_mult of_int_diff)
   show "alpha2 \<in> Ford_circle r2"
-    using k_pos Ford_aux2 [of k2 k] cmod_neg_real
-    apply (simp add: alpha2_def Ford_circle_def Ford_center_def dist_norm complex_diff 2 Ford_radius_def flip: r2 split: prod.splits)
-    by (metis minus_diff_eq mult.commute)
+    using k_pos Ford_aux2 [of k2 k] cmod_neg_real r_eq_quotient
+    apply (simp add: alpha2_def Ford_circle_def Ford_center_def dist_norm complex_diff 2 Ford_radius_def split: prod.splits)
+    by (smt (verit) mult.commute prod.sel)
 qed
 
 text \<open>Theorem 5.8 second part, for alpha1\<close>
 lemma Radem_trans_alpha1: "Radem_trans r alpha1 = zed1"
 proof -
   have "Radem_trans r alpha1 = ((*) (-\<i> * of_int k ^ 2)) ((\<lambda>\<tau>. \<tau> - of_rat r) alpha1)"
-    by (metis Radem_trans_def prod.simps(2) r)
-  also have "... = ((*) (-\<i> * of_int k ^ 2)) (Complex (- k1 / of_int(k * (k\<^sup>2 + k1\<^sup>2))) (inverse (of_int (k\<^sup>2 + k1\<^sup>2))))"
-    using k_pos by (simp add: alpha1_def r_eq of_rat_rat Complex_eq)
-  also have "... = zed1"
+    by (metis Radem_trans_def prod.simps(2) r_eq_quotient(2))
+  also have "\<dots> = ((*) (-\<i> * of_int k ^ 2)) (Complex (- k1 / of_int(k * (k\<^sup>2 + k1\<^sup>2))) (inverse (of_int (k\<^sup>2 + k1\<^sup>2))))"
+    using k_pos by (simp add: alpha1_def r_def of_rat_rat Complex_eq)
+  also have "\<dots> = zed1"
     unfolding complex_eq_iff by (simp add: zed1_def inverse_eq_divide power2_eq_square)
   finally show ?thesis .
 qed
@@ -1200,10 +1242,10 @@ text \<open>Theorem 5.8 second part, for alpha2\<close>
 lemma Radem_trans_alpha2: "Radem_trans r alpha2 = zed2"
 proof -
   have "Radem_trans r alpha2 = ((*) (-\<i> * of_int k ^ 2)) ((\<lambda>\<tau>. \<tau> - of_rat r) alpha2)"
-    by (metis Radem_trans_def prod.simps(2) r)
-  also have "... = ((*) (-\<i> * of_int k ^ 2)) (Complex (k2 / of_int(k * (k\<^sup>2 + k2\<^sup>2))) (inverse (of_int (k\<^sup>2 + k2\<^sup>2))))"
-    using k_pos by (simp add: alpha2_def r_eq of_rat_rat Complex_eq)
-  also have "... = zed2"
+    by (metis Radem_trans_def prod.simps(2) r_eq_quotient(2))
+  also have "\<dots> = ((*) (-\<i> * of_int k ^ 2)) (Complex (k2 / of_int(k * (k\<^sup>2 + k2\<^sup>2))) (inverse (of_int (k\<^sup>2 + k2\<^sup>2))))"
+    using k_pos by (simp add: alpha2_def r_def of_rat_rat Complex_eq)
+  also have "\<dots> = zed2"
     unfolding complex_eq_iff by (simp add: zed2_def inverse_eq_divide power2_eq_square)
   finally show ?thesis .
 qed
@@ -1213,7 +1255,7 @@ lemma cmod_zed1: "cmod zed1 = k / sqrt (k\<^sup>2 + k1\<^sup>2)"
 proof -
   have "cmod zed1 ^ 2 = (k^4 + k\<^sup>2 * k1\<^sup>2) / (k\<^sup>2 + k1\<^sup>2)^2"
     by (simp add: zed1_def cmod_def divide_simps)
-  also have "... = (of_int k) ^ 2 / (k\<^sup>2 + k1\<^sup>2)"
+  also have "\<dots> = (of_int k) ^ 2 / (k\<^sup>2 + k1\<^sup>2)"
     by (simp add: eval_nat_numeral divide_simps) argo
   finally have "cmod zed1 ^ 2 = (of_int k) ^ 2 / (k\<^sup>2 + k1\<^sup>2)" .
   with k_pos real_sqrt_divide show ?thesis
@@ -1225,30 +1267,55 @@ lemma cmod_zed2: "cmod zed2 = k / sqrt (k\<^sup>2 + k2\<^sup>2)"
 proof -
   have "cmod zed2 ^ 2 = (k^4 + k\<^sup>2 * k2\<^sup>2) / (k\<^sup>2 + k2\<^sup>2)^2"
     by (simp add: zed2_def cmod_def divide_simps)
-  also have "... = (of_int k) ^ 2 / (k\<^sup>2 + k2\<^sup>2)"
+  also have "\<dots> = (of_int k) ^ 2 / (k\<^sup>2 + k2\<^sup>2)"
     by (simp add: eval_nat_numeral divide_simps) argo
   finally have "cmod zed2 ^ 2 = (of_int k) ^ 2 / (k\<^sup>2 + k2\<^sup>2)" .
   with k_pos real_sqrt_divide show ?thesis
     unfolding cmod_def by force
 qed
 
+text \<open>The last part of theorem 5.9\<close>
 lemma
-  assumes "z \<in> sphere (of_rat (1/2)) (1/2)"
-    and N: "k1 \<le> N" "k \<le> N" "k2 \<le> N"
+  assumes "z \<in> sphere (1/2) (1/2)"
     and "cmod z \<le> cmod zed1" "cmod z \<le> cmod zed2"
   shows "cmod z < sqrt 2 * k/N"
 proof -
-  have "(k + k1)/2 \<le> sqrt ((k\<^sup>2 + k1\<^sup>2) / 2)"
+  have \<section>: "(k + k1)/2 \<le> sqrt ((k\<^sup>2 + k1\<^sup>2) / 2)"
     using sum_squared_le_sum_of_squares_2 by simp
   have "N / sqrt 2 < (N+1) / sqrt 2"
     by (simp add: divide_strict_right_mono)
-  also have "... \<le> (k + k1) / sqrt 2"
-    using N k_pos
-    apply (simp add: divide_simps)
+  also have "\<dots> \<le> (k + k1) / sqrt 2"
+    using atMost_N k_pos greaterN1 by (simp add: divide_simps)
+  also have "\<dots> = (k + k1)/2 * sqrt 2"
+    by (metis nonzero_divide_eq_eq real_div_sqrt times_divide_eq_right zero_le_numeral
+        zero_neq_numeral)
+  also have "\<dots> \<le> sqrt (k\<^sup>2 + k1\<^sup>2)"
+    using \<section> by (simp add: le_divide_eq real_sqrt_divide)
+  finally have 1: "real N / sqrt 2 < sqrt (real_of_int (k\<^sup>2 + k1\<^sup>2))" .
+  with N_pos k_pos not_sum_power2_lt_zero have "cmod zed1 < sqrt 2 * k/N"
+    by (force simp add: cmod_zed1 mult.commute divide_simps)
 
-    by (simp add: divide_right_mono)
-    sorry
-    sorry
+  have \<section>: "(k + k2)/2 \<le> sqrt ((k\<^sup>2 + k2\<^sup>2) / 2)"
+    using sum_squared_le_sum_of_squares_2 by simp
+  have "N / sqrt 2 < (N+1) / sqrt 2"
+    by (simp add: divide_strict_right_mono)
+  also have "\<dots> \<le> (k + k2) / sqrt 2"
+    using atMost_N k_pos greaterN2 by (simp add: divide_simps)
+  also have "\<dots> = (k + k2)/2 * sqrt 2"
+    by (metis nonzero_divide_eq_eq real_div_sqrt times_divide_eq_right zero_le_numeral
+        zero_neq_numeral)
+  also have "\<dots> \<le> sqrt (k\<^sup>2 + k2\<^sup>2)"
+    using \<section> by (simp add: le_divide_eq real_sqrt_divide)
+  finally have 2: "real N / sqrt 2 < sqrt (real_of_int (k\<^sup>2 + k2\<^sup>2))" .
+  with N_pos k_pos not_sum_power2_lt_zero have "cmod zed2 < sqrt 2 * k/N"
+    by (force simp add: cmod_zed2 mult.commute divide_simps)
+  show ?thesis
+    using assms cmod_zed1 cmod_zed2 1 2
+apply (simp add: dist_norm)
+    using \<open>cmod zed2 < sqrt 2 * real_of_int k / real N\<close> by linarith
+qed
+
+
 
 end
 
