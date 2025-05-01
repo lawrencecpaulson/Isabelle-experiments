@@ -1,8 +1,8 @@
 section \<open>Farey Sequences and Ford Circles\<close>
 
 theory Farey
-  imports "HOL-Complex_Analysis.Complex_Analysis" "HOL-Number_Theory.Totient" "HOL-Library.Sublist"
-"HOL-ex.Sketch_and_Explore"
+  imports  "HOL-Analysis.Analysis" "HOL-Number_Theory.Totient" "HOL-Library.Sublist"
+
 begin
 
 subsection \<open>Library material\<close>
@@ -88,7 +88,8 @@ lemma sphere_cscale:
   shows   "(\<lambda>x. a * x) ` sphere c r = sphere (a * c :: complex) (cmod a * r)"
 proof -
   have *: "(\<lambda>x. a * x) ` sphere c r \<subseteq> sphere (a * c) (cmod a * r)" for a r c
-    using dist_mult_left by fastforce
+    by (metis (no_types, lifting) dist_complex_def image_subsetI mem_sphere norm_mult
+    right_diff_distrib')
   have "sphere (a * c) (cmod a * r) = (\<lambda>x. a * x) ` (\<lambda>x. inverse a * x) ` sphere (a * c) (cmod a * r)"
     by (simp add: image_image inverse_eq_divide)
   also have "\<dots> \<subseteq> (\<lambda>x. a * x) ` sphere (inverse a * (a * c)) (cmod (inverse a) * (cmod a * r))"
@@ -1274,50 +1275,42 @@ proof -
     unfolding cmod_def by force
 qed
 
-text \<open>The last part of theorem 5.9\<close>
-lemma
-  assumes "z \<in> sphere (1/2) (1/2)"
-    and "cmod z \<le> cmod zed1" "cmod z \<le> cmod zed2"
-  shows "cmod z < sqrt 2 * k/N"
-proof -
-  have \<section>: "(k + k1)/2 \<le> sqrt ((k\<^sup>2 + k1\<^sup>2) / 2)"
-    using sum_squared_le_sum_of_squares_2 by simp
-  have "N / sqrt 2 < (N+1) / sqrt 2"
-    by (simp add: divide_strict_right_mono)
-  also have "\<dots> \<le> (k + k1) / sqrt 2"
-    using atMost_N k_pos greaterN1 by (simp add: divide_simps)
-  also have "\<dots> = (k + k1)/2 * sqrt 2"
-    by (metis nonzero_divide_eq_eq real_div_sqrt times_divide_eq_right zero_le_numeral
-        zero_neq_numeral)
-  also have "\<dots> \<le> sqrt (k\<^sup>2 + k1\<^sup>2)"
-    using \<section> by (simp add: le_divide_eq real_sqrt_divide)
-  finally have 1: "real N / sqrt 2 < sqrt (real_of_int (k\<^sup>2 + k1\<^sup>2))" .
-  with N_pos k_pos not_sum_power2_lt_zero have "cmod zed1 < sqrt 2 * k/N"
-    by (force simp add: cmod_zed1 mult.commute divide_simps)
 
-  have \<section>: "(k + k2)/2 \<le> sqrt ((k\<^sup>2 + k2\<^sup>2) / 2)"
+text \<open>The last part of theorem 5.9\<close>
+
+lemma RMS_calc:
+  assumes "k' > 0" "k' + k > int N"
+  shows "k / sqrt (k\<^sup>2 + k'\<^sup>2) < sqrt 2 * k/N"
+proof -
+  have \<section>: "(k + k')/2 \<le> sqrt ((k\<^sup>2 + k'\<^sup>2) / 2)"
     using sum_squared_le_sum_of_squares_2 by simp
   have "N / sqrt 2 < (N+1) / sqrt 2"
     by (simp add: divide_strict_right_mono)
-  also have "\<dots> \<le> (k + k2) / sqrt 2"
-    using atMost_N k_pos greaterN2 by (simp add: divide_simps)
-  also have "\<dots> = (k + k2)/2 * sqrt 2"
+  also have "\<dots> \<le> (k + k') / sqrt 2"
+    using assms by (simp add: divide_simps)
+  also have "\<dots> = (k + k')/2 * sqrt 2"
     by (metis nonzero_divide_eq_eq real_div_sqrt times_divide_eq_right zero_le_numeral
         zero_neq_numeral)
-  also have "\<dots> \<le> sqrt (k\<^sup>2 + k2\<^sup>2)"
+  also have "\<dots> \<le> sqrt (k\<^sup>2 + k'\<^sup>2)"
     using \<section> by (simp add: le_divide_eq real_sqrt_divide)
-  finally have 2: "real N / sqrt 2 < sqrt (real_of_int (k\<^sup>2 + k2\<^sup>2))" .
-  with N_pos k_pos not_sum_power2_lt_zero have "cmod zed2 < sqrt 2 * k/N"
-    by (force simp add: cmod_zed2 mult.commute divide_simps)
-  show ?thesis
-    using assms cmod_zed1 cmod_zed2 1 2
-apply (simp add: dist_norm)
-    using \<open>cmod zed2 < sqrt 2 * real_of_int k / real N\<close> by linarith
+  finally have 1: "real N / sqrt 2 < sqrt (real_of_int (k\<^sup>2 + k'\<^sup>2))" .
+  with N_pos k_pos not_sum_power2_lt_zero show ?thesis
+    by (force simp add: cmod_zed1 mult.commute divide_simps)
 qed
 
-
+lemma on_chord_bounded_cmod:
+  assumes "z \<in> closed_segment zed1 zed2"
+  shows "cmod z < sqrt 2 * k/N"
+proof -
+  have "cmod z \<le> max (cmod zed1) (cmod zed2)"
+    using segment_furthest_le [OF assms, of 0] by auto
+  moreover
+  obtain "cmod zed1 < sqrt 2 * k/N" "cmod zed2 < sqrt 2 * k/N"
+    using RMS_calc cmod_zed1 cmod_zed2 greaterN1 greaterN2 k_pos by force
+  ultimately show ?thesis
+    using assms cmod_zed1 cmod_zed2 by linarith
+qed
 
 end
-
 
 end
