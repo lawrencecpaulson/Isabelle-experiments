@@ -1,41 +1,11 @@
 section \<open>Farey Sequences and Ford Circles\<close>
 
-theory Farey
+theory Farey_Ford
   imports  "HOL-Analysis.Analysis" "HOL-Number_Theory.Totient" "HOL-Library.Sublist"
 
 begin
 
 subsection \<open>Library material\<close>
-
-lemma sorted_two_sublist:
-  fixes x:: "'a::order"
-  assumes sorted: "sorted_wrt (<) l"
-  shows "sublist [x, y] l \<longleftrightarrow> x < y \<and> x \<in> set l \<and> y \<in> set l \<and> (\<forall>z \<in> set l. z \<le> x \<or> z \<ge> y)"
-proof (cases "x < y \<and> x \<in> set l \<and> y \<in> set l")
-  case True
-  then obtain xs us where us: "l = xs @ [x] @ us"
-    by (metis append_Cons append_Nil in_set_conv_decomp_first)
-  with True assms have "y \<in> set us"
-    by (fastforce simp add: sorted_wrt_append)
-  then obtain ys zs where yz: "l = xs @ [x] @ ys @ [y] @ zs"
-    by (metis split_list us append_Cons append_Nil)
-  have "sublist [x, y] l \<longleftrightarrow> ys = []"
-    using sorted yz 
-    apply (simp add: sublist_def sorted_wrt_append)
-    by (metis (mono_tags, opaque_lifting) append_Cons_eq_iff append_Nil assms sorted_wrt.simps(2)
-        sorted_wrt_append less_irrefl)
-  also have "\<dots> = (\<forall>z \<in> set l. z \<le> x \<or> z \<ge> y)"
-    using sorted yz
-    apply (simp add: sublist_def sorted_wrt_append)
-    by (metis Un_iff empty_iff less_le_not_le list.exhaust list.set(1) list.set_intros(1))
-  finally show ?thesis
-    using True by blast 
-next
-  case False
-  then show ?thesis
-    by (metis list.set_intros(1) set_subset_Cons sorted_wrt.simps(2) sorted_wrt_append sublist_def
-        set_mono_sublist sorted subset_iff)
-qed
 
 (*added to distribution 2024-04-11*)
 lemma sum_squared_le_sum_of_squares:
@@ -102,16 +72,43 @@ proof -
   ultimately show ?thesis by blast
 qed
 
-
-thm Complex_mult_complex_of_real
+(*added to distribution 2024-05-15*)
 lemma Complex_divide_complex_of_real: "Complex x y / of_real r = Complex (x/r) (y/r)"
   by (metis complex_of_real_mult_Complex divide_inverse mult.commute of_real_inverse)
-
-thm legacy_Complex_simps
 lemma cmod_neg_real: "cmod (Complex (-x) y) = cmod (Complex x y)"
   by (metis complex_cnj complex_minus complex_mod_cnj norm_minus_cancel)
 
 subsection \<open>Farey sequences\<close>
+
+lemma sorted_two_sublist:
+  fixes x:: "'a::order"
+  assumes sorted: "sorted_wrt (<) l"
+  shows "sublist [x, y] l \<longleftrightarrow> x < y \<and> x \<in> set l \<and> y \<in> set l \<and> (\<forall>z \<in> set l. z \<le> x \<or> z \<ge> y)"
+proof (cases "x < y \<and> x \<in> set l \<and> y \<in> set l")
+  case True
+  then obtain xs us where us: "l = xs @ [x] @ us"
+    by (metis append_Cons append_Nil in_set_conv_decomp_first)
+  with True assms have "y \<in> set us"
+    by (fastforce simp add: sorted_wrt_append)
+  then obtain ys zs where yz: "l = xs @ [x] @ ys @ [y] @ zs"
+    by (metis split_list us append_Cons append_Nil)
+  have "sublist [x, y] l \<longleftrightarrow> ys = []"
+    using sorted yz 
+    apply (simp add: sublist_def sorted_wrt_append)
+    by (metis (mono_tags, opaque_lifting) append_Cons_eq_iff append_Nil assms sorted_wrt.simps(2)
+        sorted_wrt_append less_irrefl)
+  also have "\<dots> = (\<forall>z \<in> set l. z \<le> x \<or> z \<ge> y)"
+    using sorted yz
+    apply (simp add: sublist_def sorted_wrt_append)
+    by (metis Un_iff empty_iff less_le_not_le list.exhaust list.set(1) list.set_intros(1))
+  finally show ?thesis
+    using True by blast 
+next
+  case False
+  then show ?thesis
+    by (metis list.set_intros(1) set_subset_Cons sorted_wrt.simps(2) sorted_wrt_append sublist_def
+        set_mono_sublist sorted subset_iff)
+qed
 
 (* added to distribution 2025-03-20*)
 lemma quotient_of_rat_of_int [simp]: "quotient_of (rat_of_int i) = (i, 1)"
@@ -126,7 +123,7 @@ lemma int_div_le_self:
   \<open>x div k \<le> x\<close> if \<open>0 < x\<close>  for x k :: int
   by (metis div_by_1 int_div_less_self less_le_not_le nle_le nonneg1_imp_zdiv_pos_iff order.trans that)
 
-(* not clear to do with these transp lemmas, any use?*)
+(* not clear to do with these transp lemmas, are they of general use?*)
 lemma transp_add1_int:
   assumes "\<And>n::int. R (f n) (f (1 + n))"
     and "n < n'"

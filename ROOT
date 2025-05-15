@@ -1,10 +1,10 @@
 chapter AFP
 
-session Diagonal_Ramsey (AFP) = "HOL-Probability" +
+session Farey_Sequences (AFP) = "HOL-Analysis" +
   options [timeout = 300, document_build = pdflatex]
-  sessions "HOL-Library" Ramsey_Bounds Stirling_Formula
+  sessions "HOL-Library" "HOL-Number_Theory"
   theories
-    The_Proof
+    Farey_Ford
   document_files
     "root.tex"
     "root.bib"
