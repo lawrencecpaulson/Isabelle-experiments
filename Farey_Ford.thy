@@ -5,6 +5,36 @@ theory Farey_Ford
 
 begin
 
+definition Bessel_I :: "'a \<Rightarrow> 'a :: {Gamma,ln} \<Rightarrow> 'a" where
+  "Bessel_I v x = (\<Sum>j. (x/2) powr (v + 2 * of_nat j) / (fact j * Gamma (v + of_nat j + 1)))"
+
+lemma norm_summable_Bessel_I:
+  "summable (\<lambda>j. norm ((x/2) powr (v + 2 * of_nat j) / (fact j * Gamma (v + of_nat j + 1))))"
+apply (rule summable_ratio_test)
+  sorry
+
+
+lemma norm_summable_Bessel_I_int:
+  "summable (\<lambda>j. (x/2) powi (v + 2 * of_nat j) / (fact j * Gamma (v + of_nat j + 1)))"
+apply (rule summable_ratio_test)
+  sorry
+lemma has_sum_Bessel_I:
+  "(\<lambda>j. (x/2) powi (v + 2 * int j) / (fact j * Gamma (of_int v + of_nat j + 1))) sums
+   Bessel_I v x"
+  unfolding Bessel_I_def
+  using summable_sums[OF norm_summable_Bessel_I_int, of x]
+apply (intro summable_sums)
+  using norm_summable_Bessel_I
+  sorry
+
+lemma
+  fixes x :: complex and c :: real and v :: complex and f :: "complex \<Rightarrow> complex"
+  defines "f \<equiv> (\<lambda>t. 2 * pi * (x/2) powr v * exp (t + x\<^sup>2 / (4*t)) / t powr (v+1))"
+  assumes c: "c > 0" and v: "Re v > 0"
+  shows absolutely_integrable_Bessel_I: "(f \<circ> (\<lambda>t. c + \<i> * t)) absolutely_integrable_on UNIV"
+    and has_integral_Bessel_I: "((f \<circ> (\<lambda>t. c + \<i> * t)) has_integral (Bessel_I v x)) UNIV"
+  sorry
+
 subsection \<open>Library material\<close>
 
 (*added to distribution 2024-04-11*)

@@ -1,8 +1,10 @@
 theory Sup_Inf 
-  imports "HOL-Analysis.Analysis"
-
+  imports Complex_Main
+  
 begin
 
+
+value "1232 < (124::nat)"
 
 lemma lim_1_over_real_power:
   assumes "0 < Re s"

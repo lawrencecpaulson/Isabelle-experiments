@@ -1,10 +1,225 @@
 section \<open>Misc experiments\<close>
 
-theory Misc imports
-  "HOL-Analysis.Analysis" "HOL-Decision_Procs.Approximation"  "HOL-Real_Asymp.Real_Asymp" 
+theory Misc 
+  imports "HOL-Analysis.Analysis"   "HOL-Real_Asymp.Real_Asymp" 
  "HOL-ex.Sketch_and_Explore"
    
 begin
+
+context
+  includes lifting_syntax
+
+begin
+
+definition rel_real1 :: "real \<Rightarrow> real^1 \<Rightarrow> bool" where
+  "rel_real1 x y \<equiv> y = vec x"
+
+lemma rel_real1_set: "rel_set rel_real1 x y \<longleftrightarrow> y = vec ` x"
+  by (auto simp: rel_real1_def rel_set_def)
+
+lemma bi_unique_rel_real1 [transfer_rule]:
+  "bi_unique rel_real1"
+  by (simp add: rel_real1_def bi_unique_def)
+
+lemma bi_total_rel_real1 [transfer_rule]: "bi_total rel_real1"
+  unfolding rel_real1_def
+  by (metis (mono_tags, lifting) bi_total_def vector_one_nth)
+
+lemma zero_transfer [transfer_rule]: "rel_real1 0 (0::real^1)"
+  unfolding rel_real1_def by simp
+
+lemma one_transfer [transfer_rule]: "rel_real1 1 (1::real^1)"
+  unfolding rel_real1_def by simp
+
+lemma add_transfer [transfer_rule]:
+  "(rel_real1 ===> rel_real1 ===> rel_real1) (+) (+)"
+  by (simp add: rel_fun_def rel_real1_def vec_add)
+  
+lemma uminus_transfer [transfer_rule]:
+  "(rel_real1 ===> rel_real1) uminus uminus"
+  by (simp add: rel_fun_def rel_real1_def vec_neg)
+
+lemma diff_transfer [transfer_rule]:
+  "(rel_real1 ===> rel_real1 ===> rel_real1) (-) (-)"
+  by (simp add: rel_fun_def rel_real1_def vec_sub)
+
+lemma le_transfer [transfer_rule]:
+  "(rel_real1 ===> rel_real1 ===> (=)) (\<le>) (\<le>)"
+  by (simp add: rel_fun_def rel_real1_def less_eq_vec_def)
+
+lemma less_transfer [transfer_rule]:
+  "(rel_real1 ===> rel_real1 ===> (=)) (<) (<)"
+  by (auto simp: rel_fun_def rel_real1_def less_eq_vec_def less_vec_def)
+
+lemma inf_transfer [transfer_rule]:
+  "(rel_real1 ===> rel_real1 ===> rel_real1) inf inf"
+  by (simp add: rel_fun_def rel_real1_def vec_def inf_vec_def)
+
+lemma sup_transfer [transfer_rule]:
+  "(rel_real1 ===> rel_real1 ===> rel_real1) sup sup"
+  by (simp add: rel_fun_def rel_real1_def vec_def sup_vec_def)
+
+lemma norm_abs_transfer [transfer_rule]:
+  "(rel_real1 ===> (=)) abs norm"
+  by (simp add: rel_fun_def rel_real1_def norm_real)
+
+lemma cbox_transfer [transfer_rule]:
+  "(rel_real1 ===> rel_real1 ===> rel_set rel_real1) atLeastAtMost cbox"
+  unfolding rel_fun_def rel_real1_def rel_set_def Bex_def
+  by (auto simp: mem_box_cart less_eq_vec_def simp flip: interval_cbox)
+
+lemma box_transfer [transfer_rule]:
+  "(rel_real1 ===> rel_real1 ===> rel_set rel_real1) greaterThanLessThan box"
+  unfolding rel_fun_def rel_real1_def rel_set_def Bex_def
+  by (auto simp: mem_box_cart less_eq_vec_def simp flip: interval_cbox)
+
+lemma dist_transfer [transfer_rule]:
+  "(rel_real1 ===> rel_real1 ===> (=)) dist dist"
+  by (simp add: rel_fun_def rel_real1_def dist_norm norm_real)
+
+lemma ball_transfer [transfer_rule]:
+  "(rel_real1 ===> (=) ===> rel_set rel_real1) ball ball"
+  unfolding ball_def 
+  by transfer_prover
+
+lemma cball_transfer [transfer_rule]:
+  "(rel_real1 ===> (=) ===> rel_set rel_real1) cball cball"
+  unfolding cball_def 
+  by transfer_prover
+
+lemma open_transfer [transfer_rule]:
+  "(rel_set rel_real1 ===> (=)) open open"
+  unfolding open_dist dist_norm 
+  by simp transfer_prover
+
+lemma closed_transfer [transfer_rule]:
+  "(rel_set rel_real1 ===> (=)) closed closed"
+  unfolding closed_def 
+  by transfer_prover
+
+lemma nhds_transfer [transfer_rule]:
+  "(rel_real1 ===> rel_filter rel_real1) nhds nhds"
+  unfolding nhds_def
+  by simp transfer_prover
+
+lemma at_within_transfer [transfer_rule]:
+  "(rel_real1 ===> rel_set rel_real1 ===> rel_filter rel_real1) at_within at_within"
+  unfolding at_within_def  
+  by transfer_prover
+
+lemma eventually_parametric [transfer_rule]:
+  "((A ===> (=)) ===> rel_filter A ===> (=)) eventually eventually"
+  unfolding rel_fun_def
+  by(force elim!: rel_filter.cases eventually_rev_mp simp add: eventually_map_filter_on intro: always_eventually)
+
+lemma tendsto_parametric [transfer_rule]:
+  "((B ===> A) ===> A ===> rel_filter B ===> (=)) tendsto tendsto"
+  unfolding filterlim_def
+  using filtermap_parametric nhds_transfer
+  apply (simp add: )
+  by transfer_prover
+  oops
+  tendsto :: "('b \<Rightarrow> 'a) \<Rightarrow> 'a \<Rightarrow> 'b filter \<Rightarrow> bool" 
+
+lemma "i \<ge> 0 \<Longrightarrow> sqrt (of_int i)^2 = i"
+  by simp
+
+lemma "(\<Sum>i \<in> {0..}. sqrt (of_int i)^2) = (\<Sum>i \<in> {0..}. of_int i)"
+  by simp
+
+definition "f \<equiv> \<lambda>i::nat. if prime i then 1 else 0"
+
+lemma "(\<Sum>i \<in> Collect prime. f i) = X"
+apply (simp add: f_def)
+  by simp
+
+
+      
+lemma "((\<lambda>x. sin(x)/x^2 - cos(x)/x) has_integral 1) {0..pi}"
+       (is "(?g has_integral 1) _")
+proof -
+  note zero_ereal_def [simp] one_ereal_def [simp] 
+  define f where "f \<equiv> \<lambda>x::real. - sin x/x"
+  have "(f has_real_derivative ?g x) (at x)"
+    if "0 < ereal x" "ereal x < pi" for x
+    unfolding f_def has_real_derivative_iff_has_vector_derivative [symmetric]
+    apply (rule refl derivative_eq_intros | use that in force)+
+    apply (simp add: divide_simps power2_eq_square)
+    done
+  moreover
+  have "isCont ?g x"
+    if "0 < x" for x using that by force
+  moreover
+  have "?g x \<ge> 0" if "x \<in> {0<..<pi}" for x
+  proof -
+    have "1/4 \<le> x \<and> x \<le> pi \<Longrightarrow> 0 \<le> ?g x" 
+      by (approximation 12 splitting: x=12)
+    moreover have "0 < x \<and> x < 1/4 \<Longrightarrow> 0 \<le> ?g x" 
+      sorry
+    ultimately show ?thesis
+      using linorder_not_le that by auto
+  qed
+
+  moreover
+  have "(f \<longlongrightarrow> -1) (at_right 0)" "(f \<longlongrightarrow> 0) (at_left pi)"
+    unfolding f_def by real_asymp+
+  ultimately have 
+    "set_integrable lborel {0<..<pi} (\<lambda>x::real. ?g x)"
+    "(LBINT x=0..pi. ?g x) = 1"
+    using interval_integral_FTC_nonneg [of 0 pi f ?g]  
+    by (auto simp add: ereal_tendsto_simps1)
+  moreover have "einterval 0 pi = {0<..<pi}"
+    by (auto simp: einterval_def)
+  ultimately 
+  show ?thesis
+    using integral_open_interval_real [of 0 pi ?g]
+    using interval_integral_eq_integral' [of 0 pi ?g]
+    by (simp_all add: has_integral_iff integrable_on_Icc_iff_Ioo set_borel_integral_eq_integral(1))
+qed
+
+
+lemma
+  fixes f :: "real \<Rightarrow> real^'n"
+  assumes "\<And>i::'n. (\<lambda>x. norm (f x $ i)) integrable_on S" 
+  assumes "S \<in> sets lebesgue"
+  shows "(\<lambda>x. norm (f x)) integrable_on S"
+proof -
+  have "\<And>i. (\<lambda>x. f x $ i) integrable_on S"
+    sorry
+  then show ?thesis
+  using absolutely_integrable_on_iff_component [of S f] assms
+    unfolding absolutely_integrable_on_def
+    by blast
+qed
+
+
+definition complex_to_vec :: "complex \<Rightarrow> real^2" where
+  "complex_to_vec z = vector [Re z, Im z]"
+
+lemma has_absolute_integral_change_of_variables_2':
+  fixes f :: "real \<Rightarrow> complex" and g :: "real \<Rightarrow> real"
+  assumes S: "S \<in> sets lebesgue"
+    and der_g: "\<And>x. x \<in> S \<Longrightarrow> (g has_field_derivative g' x) (at x within S)"
+    and inj: "inj_on g S"
+  shows "(\<lambda>x. \<bar>g' x\<bar> *\<^sub>R f(g x)) absolutely_integrable_on S \<and>
+           integral S (\<lambda>x. \<bar>g' x\<bar> *\<^sub>R f(g x)) = b
+     \<longleftrightarrow> f absolutely_integrable_on (g ` S) \<and> integral (g ` S) f = b"
+proof -
+  have "(\<lambda>x. \<bar>g' x\<bar> *\<^sub>R complex_to_vec (f(g x)) :: real ^ 2) absolutely_integrable_on S \<and>
+           integral S (\<lambda>x. \<bar>g' x\<bar> *\<^sub>R complex_to_vec (f(g x))) = (complex_to_vec b :: real ^ 2)
+         \<longleftrightarrow> (\<lambda>x. complex_to_vec (f x) :: real ^ 2) absolutely_integrable_on (g ` S) \<and>
+           integral (g ` S) (\<lambda>x. complex_to_vec (f x)) = (complex_to_vec b :: real ^ 2)"
+    using assms unfolding has_real_derivative_iff_has_vector_derivative
+    by (intro has_absolute_integral_change_of_variables_1 assms) auto
+  thus ?thesis
+    apply (intro conjI iffI)
+
+    by (simp add: absolutely_integrable_on_1_iff integral_on_1_eq)
+qed
+
+
+lemma "(2 + 3 * \<i>) * (2 + 3 * \<i>) / (1 - \<i>) = -17/2 + \<i> * (7 / 2)"
+  by (simp add: algebra_simps Complex_divide legacy_Complex_simps)
 
 lemma "eventually (\<lambda>x::real. 1 - 1/x \<le> ln(x)) (at_right 0)"
   by real_asymp

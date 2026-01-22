@@ -4,6 +4,16 @@ imports "HOL-Library.Multiset"
 
 begin
 
+
+fun decimalDigits :: "nat \<Rightarrow> nat list" where
+  "decimalDigits n = (if n\<le>0 then [] else n mod 10 # decimalDigits (n div 10))"
+
+value "(2::int)^31"
+
+value "decimalDigits (2^29)"
+
+  oops
+
 instantiation list :: (type) minus
 begin
 
@@ -50,3 +60,29 @@ qed
 lemma minus_list_Nil: "xs - xs = []"
   by (metis Multiset.diff_cancel mset_minus mset_zero_iff)
 
+lemma append_minus_cancel: "(xs@ys) - (xs@zs) = ys - zs"
+proof (induction xs)
+  case Nil
+  then show ?case by simp
+next
+  case (Cons a xs)
+  then show ?case
+    by (metis append_Cons minus_Cons_alt remove1.simps(2))
+qed
+
+lemma "(xs@ys) - xs = ys"
+  by (metis append_minus_cancel append_Nil2 minus_Nil)
+
+instantiation list :: (type) monoid_diff
+begin
+
+lemma  "(xs@ys) - zs = (xs-zs) @ (ys - (zs-xs))"
+
+
+
+value "[1..400] - [350..400] "
+
+lemma "[1..100] - [50..100] = [1..49]"
+  by (simp add: upto.simps)
+
+end
