@@ -6,41 +6,7 @@ theory Library_Extras
 
 begin
 
-lemma "x < exp (x::real)"
-  using exp_gt_zero ln_less_self by fastforce
-
-lemma "0 < (2::int)"
-  by order
-  by eval
-
-lemma "0 < (2::32 word)"
-  by order
-  by eval
-
-lemma
-   fixes i :: "32 word"
-   assumes "2 \<le> i" "i \<le> 3" "i \<noteq> 2" "i \<noteq> 3"
-   shows "False"
-   using assms
-   apply simp
-   using inc_le order_le_neq_trans by fastforce
-
-   by order
-
 section \<open>Preliminaries\<close>
-
-lemma Inter_over_Union:
-  "\<Inter> {\<Union> (\<F> x) |x. x \<in> S} = \<Union> {\<Inter> (G ` S) |G. \<forall>x\<in>S. G x \<in> \<F> x}" 
-proof -
-  have "\<And>x. \<forall>s\<in>S. \<exists>X \<in> \<F> s. x \<in> X \<Longrightarrow> \<exists>G. (\<forall>x\<in>S. G x \<in> \<F> x) \<and> (\<forall>s\<in>S. x \<in> G s)"
-    by metis
-  then show ?thesis
-    by (auto simp flip: all_simps ex_simps)
-qed
-
-lemmas closure_Int_convex = convex_closure_inter_two
-
-lemmas span_not_UNIV_orthogonal = span_not_univ_orthogonal
 
 lemma convex_closure_rel_interior_Int:
   assumes "\<And>S. S\<in>\<F> \<Longrightarrow> convex (S :: 'n::euclidean_space set)"
