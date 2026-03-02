@@ -3,7 +3,10 @@
   This file is licensed under the 3-clause BSD license.
 *)
 
-theory Ring_Theory imports Group_Theory begin
+theory Ring_Theory 
+  imports Group_Theory 
+
+begin
 
 no_notation plus (infixl \<open>+\<close> 65)
 no_notation minus (infixl \<open>-\<close> 65)
@@ -17,7 +20,7 @@ subsection \<open>Definition and Elementary Properties\<close>
 
 text \<open>Def 2.1\<close>
 text \<open>p 86, ll 20--28\<close>
-locale ring = additive: abelian_group R "(+)" \<zero> + multiplicative: Monoid R "(\<cdot>)" \<one>
+locale Ring = additive: abelian_group R "(+)" \<zero> + multiplicative: Monoid R "(\<cdot>)" \<one>
   for R and addition (infixl \<open>+\<close> 65) and multiplication (infixl \<open>\<cdot>\<close> 70) and zero (\<open>\<zero>\<close>) and unit (\<open>\<one>\<close>) +
   assumes distributive: "\<lbrakk> a \<in> R; b \<in> R; c \<in> R \<rbrakk> \<Longrightarrow> a \<cdot> (b + c) = a \<cdot> b + a \<cdot> c"
     "\<lbrakk> a \<in> R; b \<in> R; c \<in> R \<rbrakk> \<Longrightarrow> (b + c) \<cdot> a = b \<cdot> a + c \<cdot> a"
@@ -27,14 +30,14 @@ text \<open>p 86, ll 20--28\<close>
 notation additive.inverse (\<open>- _\<close> [66] 65)
 abbreviation subtraction (infixl \<open>-\<close> 65) where "a - b \<equiv> a + (- b)"  (* or, alternatively, a definition *)
 
-end (* ring *)
+end (* Ring *)
 
 text \<open>p 87, ll 10--12\<close>
 locale subring =
-  additive: subgroup S R "(+)" \<zero> + multiplicative: subMonoid S R "(\<cdot>)" \<one>
+  additive: subgroup S R "(+)" \<zero> + multiplicative: submonoid S R "(\<cdot>)" \<one>
   for S and R and addition (infixl \<open>+\<close> 65) and multiplication (infixl \<open>\<cdot>\<close> 70) and zero (\<open>\<zero>\<close>) and unit (\<open>\<one>\<close>)
 
-context ring begin
+context Ring begin
 
 text \<open>p 88, ll 26--28\<close>
 lemma right_zero [simp]:
@@ -78,13 +81,13 @@ proof -
   then show ?thesis by simp
 qed
 
-end (* ring *)
+end (* Ring *)
 
 
 subsection \<open>Ideals, Quotient Rings\<close>
 
 text \<open>p 101, ll 2--5\<close>
-locale ring_congruence = ring +
+locale ring_congruence = Ring +
   additive: group_congruence R "(+)" \<zero> E +
   multiplicative: Monoid_congruence R "(\<cdot>)" \<one> E
   for E
@@ -96,7 +99,7 @@ notation additive.quotient.inverse (\<open>[-] _\<close> [66] 65)
 notation multiplicative.quotient_composition (infixl \<open>[\<cdot>]\<close> 70)
 
 text \<open>p 101, ll 5--11\<close>
-sublocale quotient: ring "R / E" "([+])" "([\<cdot>])" "additive.Class \<zero>" "additive.Class \<one>"
+sublocale quotient: Ring "R / E" "([+])" "([\<cdot>])" "additive.Class \<zero>" "additive.Class \<one>"
   by unfold_locales
     (auto simp: additive.Class_commutes_with_composition additive.associative additive.commutative
      multiplicative.Class_commutes_with_composition distributive elim!: additive.quotient_ClassE)
@@ -105,7 +108,7 @@ end (* ring_congruence *)
 
 text \<open>p 101, ll 12--13\<close>
 locale subgroup_of_additive_group_of_ring =
-  additive: subgroup I R "(+)" \<zero> + ring R "(+)" "(\<cdot>)" \<zero> \<one>
+  additive: subgroup I R "(+)" \<zero> + Ring R "(+)" "(\<cdot>)" \<zero> \<one>
   for I and R and addition (infixl \<open>+\<close> 65) and multiplication (infixl \<open>\<cdot>\<close> 70) and zero (\<open>\<zero>\<close>) and unit (\<open>\<one>\<close>)
 begin
 
@@ -121,7 +124,7 @@ lemma Ring_CongruenceD: "(a, b) \<in> Ring_Congruence \<Longrightarrow> a - b \<
   using Ring_Congruence_def by blast
 
 text \<open>
-  Jacobson's definition of ring congruence deviates from that of group congruence; this complicates
+  Jacobson's definition of Ring congruence deviates from that of group congruence; this complicates
   the proof.
 \<close>
 text \<open>p 101, ll 12--14\<close>
@@ -203,20 +206,20 @@ sublocale ring_congruence where E = Ring_Congruence by unfold_locales rule
 
 end (* ideal *)
 
-context ring begin
+context Ring begin
 
 text \<open>Pulled out of @{locale ideal} to achieve standard notation.\<close>
 text \<open>p 101, ll 24--26\<close>
-abbreviation Quotient_Ring (infixl \<open>'/'/\<close> 75)
+abbreviation Quotient_ring (infixl \<open>'/'/\<close> 75)
   where "S // I \<equiv> S / (subgroup_of_additive_group_of_ring.Ring_Congruence I R (+) \<zero>)"
 
-end (* ring *)
+end (* Ring *)
 
 text \<open>p 101, ll 24--26\<close>
 locale quotient_ring = ideal begin
 
 text \<open>p 101, ll 24--26\<close>
-sublocale quotient: ring "R // I" "([+])" "([\<cdot>])" "additive.Class \<zero>" "additive.Class \<one>" ..
+sublocale quotient: Ring "R // I" "([+])" "([\<cdot>])" "additive.Class \<zero>" "additive.Class \<one>" ..
 
 text \<open>p 101, l 26\<close>
 lemmas Left_Coset = additive.Left_CosetE
@@ -243,7 +246,7 @@ subsection \<open>Homomorphisms of Rings.  Basic Theorems\<close>
 text \<open>Def 2.3\<close>
 text \<open>p 106, ll 7--9\<close>
 locale ring_homomorphism =
-  map \<eta> R R' + source: ring R "(+)" "(\<cdot>)" \<zero> \<one> + target: ring R' "(+')" "(\<cdot>')" "\<zero>'" "\<one>'" +
+  map \<eta> R R' + source: Ring R "(+)" "(\<cdot>)" \<zero> \<one> + target: Ring R' "(+')" "(\<cdot>')" "\<zero>'" "\<one>'" +
   additive: group_homomorphism \<eta> R "(+)" \<zero> R' "(+')" "\<zero>'" +
   multiplicative: Monoid_homomorphism \<eta> R "(\<cdot>)" \<one> R' "(\<cdot>')" "\<one>'"
   for \<eta>
@@ -361,9 +364,23 @@ sublocale ring_epimorphism ..
 text \<open>p 107, l 11\<close>
 lemma inverse_ring_isomorphism:
   "ring_isomorphism (restrict (inv_into R \<eta>) R') R' (+') (\<cdot>') \<zero>' \<one>' R (+) (\<cdot>) \<zero> \<one>"
-  using additive.commutes_with_composition [symmetric] additive.commutes_with_unit
-    multiplicative.commutes_with_composition [symmetric] multiplicative.commutes_with_unit surjective
-  by unfold_locales auto
+proof
+  fix x y
+  assume "x \<in> R'" and "y \<in> R'"
+  then obtain u v where *: "\<eta> u = x" "\<eta> v = y" "u \<in> R" "v \<in> R"
+    using surjective by blast
+  then show "restrict (inv_into R \<eta>) R' (x +' y) = restrict (inv_into R \<eta>) R' x + restrict (inv_into R \<eta>) R' y"
+    by (auto simp flip: additive.commutes_with_composition)
+  show "restrict (inv_into R \<eta>) R' (x \<cdot>' y) = restrict (inv_into R \<eta>) R' x \<cdot> restrict (inv_into R \<eta>) R' y"
+    using * by (auto simp: inv_into_f_eq multiplicative.commutes_with_composition)
+next
+  show "restrict (inv_into R \<eta>) R' \<zero>' = \<zero>"
+    using additive.commutes_with_unit by force
+  show "restrict (inv_into R \<eta>) R' \<one>' = \<one>"
+    using multiplicative.commutes_with_unit by auto
+  show "bij_betw (restrict (inv_into R \<eta>) R') R' R"
+    using bij_betw_inverse by blast
+qed
 
 end (* ring_isomorphsim *)
 
@@ -397,5 +414,76 @@ proof -
 qed
 
 end (* ring_homomorphism *)
+
+
+subsection \<open>Abstract type of rings\<close>
+
+typedef 'a ring = "{(R::'a set, addition, multiplication, zero, unit). Ring R addition multiplication zero unit}"
+  morphisms "dest_ring" "ring"
+proof -
+  have "Ring {undefined} (\<lambda>x y. undefined) (\<lambda>x y. undefined) undefined undefined"
+    apply unfold_locales
+         apply simp
+apply (auto simp: )
+    apply (auto simp: Ring_def)
+  then show ?thesis
+    by blast
+qed
+
+locale Ring = additive: abelian_group R "(+)" \<zero> + multiplicative: Monoid R "(\<cdot>)" \<one>
+  for R and addition (infixl \<open>+\<close> 65) and multiplication (infixl \<open>\<cdot>\<close> 70) and zero (\<open>\<zero>\<close>) and unit (\<open>\<one>\<close>) +
+
+
+declare dest_ring_inverse [simp]
+
+definition mcarrier where "mcarrier m \<equiv> fst (dest_ring m)"
+
+definition mmult where "mmult m \<equiv> fst (snd (dest_ring m))"
+
+definition munit where "munit m \<equiv> snd (snd (dest_ring m))"
+
+lemma ring_is_Ring [iff]: "Ring (mcarrier m) (mmult m) (munit m)"
+  by (metis Product_Type.Collect_case_prodD dest_ring mcarrier_def
+      mem_Collect_eq munit_def mmult_def)
+
+lemma mmult_assoc [simp]:
+  "\<lbrakk> a \<in> mcarrier m; b \<in> mcarrier m; c \<in> mcarrier m \<rbrakk> \<Longrightarrow> mmult m (mmult m a b) c = mmult m a (mmult m b c)"
+  by (meson Ring.associative ring_is_Ring)
+
+lemma m_left_unit: "a \<in> mcarrier m \<Longrightarrow> mmult m (munit m) a = a"
+  by (meson Ring.left_unit ring_is_Ring)
+
+lemma m_right_unit: "a \<in> mcarrier m \<Longrightarrow> mmult m a (munit m) = a"
+  by (meson Ring.right_unit ring_is_Ring)
+
+lemma (in Ring) mcarrier_ring[simp]: 
+  "mcarrier (ring (M, (\<cdot>), \<one>)) = M"
+  by (simp add: mcarrier_def Ring_axioms ring_inverse)
+
+lemma (in Ring) mmult_ring[simp]: 
+  "mmult (ring (M, (\<cdot>), \<one>)) = (\<cdot>)"
+  by (simp add: mmult_def Ring_axioms ring_inverse)
+
+lemma (in Ring) munit_ring[simp]: 
+  "munit (ring (M, (\<cdot>), \<one>)) = \<one>"
+  by (simp add: munit_def Ring_axioms ring_inverse)
+
+lemma ring_collapse [simp]: "ring (mcarrier m, mmult m, munit m) = m"
+  by (simp add: mcarrier_def mmult_def munit_def)
+
+
+text \<open>Allows reference to the current ring space within the locale as a value\<close>
+definition (in Ring) "Self \<equiv> ring (M, (\<cdot>), \<one>)"
+
+lemma (in Ring) mcarrier_Self [simp]: "mcarrier Self = M"
+  by (simp add: Self_def)
+
+lemma (in Ring) mdist_Self [simp]: "mmult Self = (\<cdot>)"
+  by (simp add: Self_def)
+
+lemma (in Ring) munit_Self [simp]: "munit Self = \<one>"
+  by (simp add: Self_def)
+
+
 
 end

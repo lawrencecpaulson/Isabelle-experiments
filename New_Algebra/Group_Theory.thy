@@ -5,8 +5,6 @@
 theory Group_Theory 
   imports Set_Theory 
 
-"HOL-ex.Sketch_and_Explore"
-
 begin
 
 section \<open>Monoids and Groups\<close>
@@ -22,7 +20,7 @@ locale Monoid =
     and right_unit [intro, simp]: "a \<in> M \<Longrightarrow> a \<cdot> \<one> = a"
 
 text \<open>p 29, ll 27--28\<close>
-locale Submonoid = Monoid M "(\<cdot>)" \<one>
+locale submonoid = Monoid M "(\<cdot>)" \<one>
   for N and M and composition (infixl \<open>\<cdot>\<close> 70) and unit (\<open>\<one>\<close>) +
   assumes subset: "N \<subseteq> M"
     and sub_composition_closed: "\<lbrakk> a \<in> N; b \<in> N \<rbrakk> \<Longrightarrow> a \<cdot> b \<in> N"
@@ -38,16 +36,16 @@ text \<open>p 29, ll 32--33\<close>
 sublocale sub: Monoid N "(\<cdot>)" \<one>
 proof qed (auto simp: sub_composition_closed sub_unit_closed)
 
-end (* Submonoid *)
+end (* submonoid *)
 
 text \<open>p 29, ll 33--34\<close>
-theorem Submonoid_transitive:
-  assumes "Submonoid K N composition unit"
-    and "Submonoid N M composition unit"
-  shows "Submonoid K M composition unit"
+theorem submonoid_transitive:
+  assumes "submonoid K N composition unit"
+    and "submonoid N M composition unit"
+  shows "submonoid K M composition unit"
 proof -
-  interpret K: Submonoid K N composition unit by fact
-  interpret M: Submonoid N M composition unit by fact
+  interpret K: submonoid K N composition unit by fact
+  interpret M: submonoid N M composition unit by fact
   show ?thesis by unfold_locales auto
 qed
 
@@ -64,8 +62,8 @@ sublocale transformations \<subseteq> Monoid "S \<rightarrow>\<^sub>E S" "compos
 
 text \<open>@{term N} is a Monoid of transformations of the set @{term S}.\<close>
 text \<open>p 29, ll 34--36\<close>
-locale transformation_Monoid =
-  transformations S + Submonoid M "S \<rightarrow>\<^sub>E S" "compose S" "identity S" for M and S
+locale transformation_monoid =
+  transformations S + submonoid M "S \<rightarrow>\<^sub>E S" "compose S" "identity S" for M and S
 begin
 
 text \<open>p 29, ll 34--36\<close>
@@ -78,7 +76,7 @@ lemma transformation_undefined [intro, simp]:
   "\<lbrakk> \<alpha> \<in> M; x \<notin> S \<rbrakk> \<Longrightarrow> \<alpha> x = undefined"
   by (metis PiE_arb sub)
 
-end (* transformation_Monoid *)
+end (* transformation_monoid *)
 
 
 subsection \<open>Groups of Transformations and Abstract Groups\<close>
@@ -121,7 +119,7 @@ lemma invertible_inverse_closed [intro, simp]:
 text \<open>p 31, l 7\<close>
 lemma inverse_undefined [intro, simp]:
   "u \<notin> M \<Longrightarrow> inverse u = undefined"
-  by (simp add: inverse_def)
+  by (metis (lifting) inverse_def restrict_apply)
 
 text \<open>p 31, l 7\<close>
 lemma invertible_left_inverse [simp]:
@@ -159,30 +157,30 @@ theorem invertible_inverse_inverse [simp]:
 
 end (* Monoid *)
 
-context Submonoid begin
+context submonoid begin
 
-text \<open>Reasoning about @{term invertible} and @{term inverse} in Submonoids.\<close>
+text \<open>Reasoning about @{term invertible} and @{term inverse} in submonoids.\<close>
 
 text \<open>p 31, l 7\<close>
-lemma Submonoid_invertible [intro, simp]:
+lemma submonoid_invertible [intro, simp]:
   "\<lbrakk> sub.invertible u; u \<in> N \<rbrakk> \<Longrightarrow> invertible u"
   using invertibleI by blast
 
 text \<open>p 31, l 7\<close>
-lemma Submonoid_inverse_closed [intro, simp]:
+lemma submonoid_inverse_closed [intro, simp]:
   "\<lbrakk> sub.invertible u; u \<in> N \<rbrakk> \<Longrightarrow> inverse u \<in> N"
   using inverse_equality by auto
 
-end (* Submonoid *)
+end (* submonoid *)
 
 text \<open>Def 1.2\<close>
 text \<open>p 31, ll 9--10\<close>
-locale group =
+locale Group =
   Monoid G "(\<cdot>)" \<one> for G and composition (infixl \<open>\<cdot>\<close> 70) and unit (\<open>\<one>\<close>) +
   assumes invertible [simp, intro]: "u \<in> G \<Longrightarrow> invertible u"
 
 text \<open>p 31, ll 11--12\<close>
-locale subgroup = Submonoid G M "(\<cdot>)" \<one> + sub: group G "(\<cdot>)" \<one>
+locale subgroup = submonoid G M "(\<cdot>)" \<one> + sub: Group G "(\<cdot>)" \<one>
   for G and M and composition (infixl \<open>\<cdot>\<close> 70) and unit (\<open>\<one>\<close>)
 begin
 
@@ -264,7 +262,7 @@ qed (auto simp: Units_def)
 
 text \<open>p 31, ll 21--22\<close>
 theorem group_of_Units [intro, simp]:
-  "group Units (\<cdot>) \<one>"
+  "Group Units (\<cdot>) \<one>"
   ..
 
 text \<open>p 31, l 19\<close>
@@ -328,7 +326,7 @@ text \<open>p 31, ll 28--29\<close>
 abbreviation "Sym \<equiv> Units"
 
 text \<open>p 31, ll 26--28\<close>
-sublocale symmetric: group "Sym" "compose S" "identity S"
+sublocale symmetric: Group "Sym" "compose S" "identity S"
   by (fact group_of_Units)
 
 end (* transformations *)
@@ -363,7 +361,7 @@ locale Monoid_isomorphism =
     and commutes_with_unit: "\<eta> \<one> = \<one>'"
 
 text \<open>p 37, l 10\<close>
-definition isomorphic_as_Monoids (infixl \<open>\<cong>\<^sub>M\<close> 50)
+definition isomorphic_as_monoids (infixl \<open>\<cong>\<^sub>M\<close> 50)
   where "\<M> \<cong>\<^sub>M \<M>' \<longleftrightarrow> (let (M, composition, unit) = \<M>; (M', composition', unit') = \<M>' in
   (\<exists>\<eta>. Monoid_isomorphism \<eta> M composition unit M' composition' unit'))"
 
@@ -396,7 +394,7 @@ context Monoid_isomorphism
 begin
 
 text \<open>p 37, ll 30--33\<close>
-theorem inverse_Monoid_isomorphism:
+theorem inverse_monoid_isomorphism:
   "Monoid_isomorphism (restrict (inv_into M \<eta>) M') M' (\<cdot>') \<one>' M (\<cdot>) \<one>"
 proof -
   have "\<And>x y. \<lbrakk>x \<in> M'; y \<in> M'\<rbrakk>
@@ -411,16 +409,16 @@ end (* Monoid_isomorphism *)
 
 text \<open>We only need that @{term \<eta>} is symmetric.\<close>
 text \<open>p 37, ll 28--29\<close>
-theorem isomorphic_as_Monoids_symmetric:
+theorem isomorphic_as_monoids_symmetric:
   "(M, composition, unit) \<cong>\<^sub>M (M', composition', unit') \<Longrightarrow> (M', composition', unit') \<cong>\<^sub>M (M, composition, unit)"
-  by (simp add: isomorphic_as_Monoids_def) (meson Monoid_isomorphism.inverse_Monoid_isomorphism)
+  by (simp add: isomorphic_as_monoids_def) (meson Monoid_isomorphism.inverse_monoid_isomorphism)
 
 text \<open>p 38, l 4\<close>
-locale left_translations_of_Monoid = Monoid begin
+locale left_translations_of_monoid = Monoid begin
 
 (*
   We take the liberty of omitting "left_" from the name of the translation operation.  The derived
-  transformation Monoid and group won't be qualified with "left" either.  This avoids qualifications
+  transformation Monoid and Group won't be qualified with "left" either.  This avoids qualifications
   such as "left.left_...".  In contexts where left and right translations are used simultaneously,
   notably subgroup_of_group, qualifiers are needed.
 *)
@@ -454,26 +452,27 @@ lemmas Translations_E [elim] = translation_exist [THEN bexE]
 text \<open>p 38, l 10\<close>
 theorem translation_unit_eq [simp]:
   "identity M = (\<one>)\<^sub>L"
-  unfolding translation_def by auto
+  unfolding translation_def
+  by (metis left_unit restrict_apply' restrict_ext unit_closed)
 
 text \<open>p 38, ll 10--11\<close>
 theorem translation_composition_eq [simp]:
   assumes [simp]: "a \<in> M" "b \<in> M"
   shows "compose M (a)\<^sub>L (b)\<^sub>L = (a \<cdot> b)\<^sub>L"
-  unfolding translation_def by rule (simp add: associative compose_def)
+  by (auto simp: associative compose_def translation_def)
 
 (* Activate @{locale Monoid} to simplify subsequent proof. *)
 text \<open>p 38, ll 7--9\<close>
 sublocale transformation: transformations M .
 
 text \<open>p 38, ll 7--9\<close>
-theorem Translations_transformation_Monoid:
-  "transformation_Monoid (translation ` M) M"
+theorem Translations_transformation_monoid:
+  "transformation_monoid (translation ` M) M"
   by unfold_locales auto
 
 text \<open>p 38, ll 7--9\<close>
-sublocale transformation: transformation_Monoid "translation ` M" M
-  by (fact Translations_transformation_Monoid)
+sublocale transformation: transformation_monoid "translation ` M" M
+  by (fact Translations_transformation_monoid)
 
 text \<open>p 38, l 12\<close>
 lemma translation_is_map: "translation \<in> M \<rightarrow>\<^sub>E (translation ` M)"
@@ -499,31 +498,31 @@ qed simp_all
 text \<open>p 38, ll 12--16\<close>
 sublocale Monoid_isomorphism translation M "(\<cdot>)" \<one> "translation ` M" "compose M" "identity M" ..
 
-end (* left_translations_of_Monoid *)
+end (* left_translations_of_monoid *)
 
 context Monoid begin
 
 text \<open>p 38, ll 1--2\<close>
-interpretation left_translations_of_Monoid ..
+interpretation left_translations_of_monoid ..
 
 text \<open>p 38, ll 1--2\<close>
-theorem cayley_Monoid:
-  "\<exists>M' composition' unit'. transformation_Monoid M' M \<and> (M, (\<cdot>), \<one>) \<cong>\<^sub>M (M', composition', unit')"
-  by (simp add: isomorphic_as_Monoids_def) (fast intro: Translations_transformation_Monoid)
+theorem cayley_monoid:
+  "\<exists>M' composition' unit'. transformation_monoid M' M \<and> (M, (\<cdot>), \<one>) \<cong>\<^sub>M (M', composition', unit')"
+  by (simp add: isomorphic_as_monoids_def) (fast intro: Translations_transformation_monoid)
 
 end (* Monoid *)
 
 text \<open>p 38, l 17\<close>
-locale left_translations_of_group = group begin
+locale left_translations_of_group = Group begin
 
 text \<open>p 38, ll 17--18\<close>
-sublocale left_translations_of_Monoid where M = G ..
+sublocale left_translations_of_monoid where M = G ..
 
 text \<open>p 38, ll 17--18\<close>
 notation translation (\<open>'(_')\<^sub>L\<close>)
 
 text \<open>
-  The group of left translations is a subgroup of the symmetric group,
+  The Group of left translations is a subgroup of the symmetric Group,
   hence @{term transformation.sub.invertible}.
 \<close>
 text \<open>p 38, ll 20--22\<close>
@@ -560,7 +559,7 @@ sublocale transformation: transformation_group "translation ` G" G
 
 end (* left_translations_of_group *)
 
-context group begin
+context Group begin
 
 text \<open>p 38, ll 2--3\<close>
 interpretation left_translations_of_group ..
@@ -568,14 +567,14 @@ interpretation left_translations_of_group ..
 text \<open>p 38, ll 2--3\<close>
 theorem cayley_group:
   "\<exists>G' composition' unit'. transformation_group G' G \<and> (G, (\<cdot>), \<one>) \<cong>\<^sub>M (G', composition', unit')"
-  by (simp add: isomorphic_as_Monoids_def) (fast intro: Translations_transformation_group)
+  by (simp add: isomorphic_as_monoids_def) (fast intro: Translations_transformation_group)
 
-end (* group *)
+end (* Group *)
 
 text \<open>Exercise 3\<close>
 
 text \<open>p 39, ll 9--10\<close>
-locale right_translations_of_group = group begin
+locale right_translations_of_group = Group begin
 
 text \<open>p 39, ll 9--10\<close>
 definition translation (\<open>'(_')\<^sub>R\<close>) where "translation = (\<lambda>a \<in> G. \<lambda>x \<in> G. x \<cdot> a)"
@@ -626,13 +625,13 @@ text \<open>p 39, ll 10--11\<close>
 sublocale transformation: transformations G .
 
 text \<open>p 39, ll 10--11\<close>
-lemma Translations_transformation_Monoid:
-  "transformation_Monoid Translations G"
+lemma Translations_transformation_monoid:
+  "transformation_monoid Translations G"
   by unfold_locales auto
 
 text \<open>p 39, ll 10--11\<close>
-sublocale transformation: transformation_Monoid Translations G
-  by (fact Translations_transformation_Monoid)
+sublocale transformation: transformation_monoid Translations G
+  by (fact Translations_transformation_monoid)
 
 text \<open>p 39, ll 10--11\<close>
 lemma translation_invertible [intro, simp]:
@@ -677,7 +676,7 @@ next
 qed auto
 
 text \<open>p 39, ll 10--11\<close>
-theorem translation_inverse_Monoid_isomorphism [intro]:
+theorem translation_inverse_monoid_isomorphism [intro]:
   "Monoid_isomorphism (\<lambda>a\<in>G. transformation.symmetric.inverse (a)\<^sub>R) G (\<cdot>) \<one> Translations (compose G) (identity G)"
   (is "Monoid_isomorphism ?inv _ _ _ _ _ _")
 proof 
@@ -691,7 +690,7 @@ proof
   show "?inv \<one> = identity G"
     using transformation.symmetric.inverse_unit by auto
   show "?inv \<in> G \<rightarrow>\<^sub>E Translations"
-    using transformation.symmetric.Submonoid_inverse_closed
+    using transformation.symmetric.submonoid_inverse_closed
       transformation.symmetric.sub.invertible by auto
 next
   fix x and y
@@ -709,11 +708,11 @@ end (* right_translations_of_group *)
 subsection \<open>Generalized Associativity.  Commutativity\<close>
 
 text \<open>p 40, l 27; p 41, ll 1--2\<close>
-locale commutative_Monoid = Monoid +
+locale commutative_monoid = Monoid +
   assumes commutative: "\<lbrakk> x \<in> M; y \<in> M \<rbrakk> \<Longrightarrow> x \<cdot> y = y \<cdot> x"
   
 text \<open>p 41, l 2\<close>
-locale abelian_group = group + commutative_Monoid G "(\<cdot>)" \<one>
+locale abelian_group = Group + commutative_monoid G "(\<cdot>)" \<one>
 
 
 subsection \<open>Orbits.  Cosets of a Subgroup\<close>
@@ -828,7 +827,7 @@ lemma Left_Coset_memE [elim]:
 end (* coset_notation *)
 
 text \<open>p 52, l 12\<close>
-locale subgroup_of_group = subgroup H G "(\<cdot>)" \<one> + coset_notation "(\<cdot>)" + group G "(\<cdot>)" \<one>
+locale subgroup_of_group = subgroup H G "(\<cdot>)" \<one> + coset_notation "(\<cdot>)" + Group G "(\<cdot>)" \<one>
   for H and G and composition (infixl \<open>\<cdot>\<close> 70) and unit (\<open>\<one>\<close>)
 begin
 
@@ -903,7 +902,6 @@ theorem lagrange:
   assumes "finite G"
   shows "card G = card H * index"
   unfolding index_def
-  sketch (subst card_partition)
 proof (subst card_partition)
   fix c :: "'a set"
   assume "c \<in> orbit.Partition"
@@ -932,7 +930,7 @@ lemma image_of_inverse [intro, simp]:
 
 end (* subgroup *)
 
-context group begin
+context Group begin
 
 (* Does Jacobson show this somewhere? *)
 text \<open>p 53, ll 6--7\<close>
@@ -943,7 +941,7 @@ proof -
   from sub interpret subgroup H G "(\<cdot>)" \<one> .
   interpret inv: Monoid "inverse ` H" "(\<cdot>)" \<one>
     by unfold_locales (auto simp del: subgroup_inverse_equality)
-  interpret inv: group "inverse ` H" "(\<cdot>)" \<one>
+  interpret inv: Group "inverse ` H" "(\<cdot>)" \<one>
     by unfold_locales (force simp del: subgroup_inverse_equality)
   show ?thesis
     by unfold_locales (auto simp del: subgroup_inverse_equality)
@@ -961,7 +959,7 @@ proof -
   ultimately show ?thesis by simp
 qed
 
-end (* group *)
+end (* Group *)
 
 context subgroup_of_group begin
 
@@ -1033,7 +1031,7 @@ sublocale quotient: Monoid "M / E" "([\<cdot>])" "Class \<one>"
 end (* Monoid_congruence *)
 
 text \<open>p 55, ll 16--17\<close>
-locale group_congruence = group + Monoid_congruence where M = G begin
+locale group_congruence = Group + Monoid_congruence where M = G begin
 
 text \<open>p 55, ll 16--17\<close>
 notation quotient_composition (infixl \<open>[\<cdot>]\<close> 70)
@@ -1059,7 +1057,7 @@ theorem Class_commutes_with_inverse:
   by (rule quotient.inverse_equality) (auto simp: Class_right_inverse Class_left_inverse)
 
 text \<open>p 55, l 17\<close>
-sublocale quotient: group "G / E" "([\<cdot>])" "Class \<one>"
+sublocale quotient: Group "G / E" "([\<cdot>])" "Class \<one>"
   by unfold_locales (metis Class_invertible quotient_ClassE)
 
 end (* group_congruence *)
@@ -1288,26 +1286,26 @@ proof -
   then interpret group_congruence where E = Congruence .
   show "Normal = K"
     unfolding Normal_def orbit.Class_def unfolding Congruence_def
-    using invertible_inverse_inverse Submonoid_inverse_closed by fastforce 
+    using invertible_inverse_inverse submonoid_inverse_closed by fastforce 
 qed
 
 end (* normal_subgroup *)  (* deletes translations and orbits, recovers Class for congruence class *)
 
-context group begin
+context Group begin
 
 text \<open>Pulled out of @{locale normal_subgroup} to achieve standard notation.\<close>
 text \<open>p 56, ll 31--32\<close>
 abbreviation Factor_Group (infixl \<open>'/'/\<close> 75)
   where "S // K \<equiv> S / (normal_subgroup.Congruence K G (\<cdot>) \<one>)"
 
-end (* group *)
+end (* Group *)
 
 context normal_subgroup begin
 
 text \<open>p 56, ll 28--29\<close>
 theorem Class_unit_normal_subgroup: "Class \<one> = K"
   unfolding Class_def unfolding Congruence_def
-  using invertible_inverse_inverse Submonoid_inverse_closed by fastforce
+  using invertible_inverse_inverse submonoid_inverse_closed by fastforce
 
 text \<open>p 56, ll 1--2; p 56, l 29\<close>
 theorem Class_is_Left_Coset:
@@ -1412,7 +1410,7 @@ qed (auto simp add: Class_commutes_with_composition)
 text \<open>Fundamental Theorem of Homomorphisms of Monoids\<close>
 
 text \<open>p 61, ll 5, 14--16\<close>
-sublocale Monoid_homomorphism \<subseteq> image: Submonoid "\<eta> ` M" M' "(\<cdot>')" "\<one>'"
+sublocale Monoid_homomorphism \<subseteq> image: submonoid "\<eta> ` M" M' "(\<cdot>')" "\<one>'"
   by unfold_locales (auto simp: commutes_with_composition [symmetric] commutes_with_unit [symmetric])
 
 text \<open>p 61, l 4\<close>
@@ -1463,7 +1461,7 @@ end (* Monoid_homomorphism_fundamental *)
 text \<open>p 62, ll 12--13\<close>
 locale group_homomorphism =
   Monoid_homomorphism \<eta> G "(\<cdot>)" \<one> G' "(\<cdot>')" "\<one>'" +
-  source: group G "(\<cdot>)" \<one> + target: group G' "(\<cdot>')" "\<one>'"
+  source: Group G "(\<cdot>)" \<one> + target: Group G' "(\<cdot>')" "\<one>'"
   for \<eta> and G and composition (infixl \<open>\<cdot>\<close> 70) and unit (\<open>\<one>\<close>)
     and G' and composition' (infixl \<open>\<cdot>''\<close> 70) and unit' (\<open>\<one>''\<close>)
 begin
@@ -1498,7 +1496,7 @@ lemma Ker_memI [intro]: (* loops as a simprule *)
 text \<open>p 62, ll 15--16\<close>
 sublocale kernel: normal_subgroup Ker G
 proof -
-  interpret kernel: Submonoid Ker G
+  interpret kernel: submonoid Ker G
     unfolding Ker_def by unfold_locales (auto simp: commutes_with_composition commutes_with_unit)
   interpret kernel: subgroup Ker G
     by unfold_locales (force intro: source.invertible_right_inverse simp: Ker_image invertible_commutes_with_inverse)
@@ -1756,5 +1754,154 @@ proof -
 qed
 
 end (* group_homomorphism *)
+
+subsection \<open>Dropping from elements of a partition to representatives\<close>
+
+locale class_representatives =
+  fixes A:: "'a set" and P and composition (infixl \<open>\<cdot>\<close> 70) and unit (\<open>\<one>\<close>)
+  assumes P: "partition_on A P"
+  assumes comp: "(\<cdot>) \<in> P \<rightarrow>\<^sub>E P \<rightarrow>\<^sub>E P"
+  assumes unit: "\<one> \<in> P "
+begin
+
+definition the_part :: "'a \<Rightarrow> 'a set" where
+  "the_part x \<equiv> THE X. X \<in> P \<and> x \<in> X"
+
+definition rep_comp :: "'a \<Rightarrow> 'a \<Rightarrow> 'a" where
+  "rep_comp \<equiv> \<lambda>x\<in>A. \<lambda>y\<in>A. some_elem ((the_part x) \<cdot> (the_part y))"
+
+lemma some_elem_typing: "X \<in> P \<Longrightarrow> some_elem X \<in> A"
+  by (metis P UnionI partition_on_def some_elem_nonempty)
+
+lemma the_part_works:
+  assumes "x \<in> A" shows "x \<in> the_part x" "the_part x \<in> P"
+proof -
+  obtain X where X: "x \<in> X" "X \<in> P"
+    using P assms by (metis UnionE partition_on_def)
+  moreover have "Y = X" if "x \<in> Y" "Y \<in> P" for Y
+    using P X
+    by (metis (no_types, lifting) IntI disjoint_def emptyE partition_on_def that)
+  ultimately have "x \<in> the_part x \<and> the_part x \<in> P"
+    by (metis (mono_tags, lifting) theI_unique the_part_def)
+  then show "x \<in> the_part x" "the_part x \<in> P"
+    by auto
+qed
+
+lemma typing: "\<lbrakk>x \<in> A; y \<in> A\<rbrakk> \<Longrightarrow> some_elem (the_part x \<cdot> the_part y) \<in> A"
+  by (metis some_elem_typing PiE_E comp the_part_works(2))
+
+lemma unit_typing: "some_elem \<one> \<in> A"
+  by (simp add: some_elem_typing unit)
+
+lemma rep_comp_typing: "rep_comp \<in> A \<rightarrow>\<^sub>E (A \<rightarrow>\<^sub>E A)"
+  by (simp add: rep_comp_def typing)
+
+lemma the_part_some_elem [simp]:
+  assumes "X \<in> P"
+  shows "the_part (some_elem X) = X"
+proof -
+  have f2: "disjoint P"
+    using P partition_on_def by blast
+  moreover
+  have "X \<noteq> {}"
+    using assms P partition_on_def by blast
+  ultimately show ?thesis
+    using assms by (simp add: pairwise_disjnt_iff some_elem_nonempty the1_equality' the_part_def)
+qed
+
+lemma rep_comp: "\<lbrakk>X \<in> P; Y \<in> P\<rbrakk> \<Longrightarrow> rep_comp (some_elem X) (some_elem Y) = some_elem (X \<cdot> Y)"
+  by (simp add: rep_comp_def some_elem_typing)
+
+lemma Monoid_class_reps:
+  assumes "Monoid P (\<cdot>) \<one>"
+  shows "Monoid (some_elem ` P) rep_comp (some_elem \<one>)"
+proof -
+  interpret Monoid P
+    by (simp add: assms)
+  show ?thesis
+  proof  qed (use rep_comp associative in auto)
+qed
+
+lemma Group_class_reps:
+  assumes "Group P (\<cdot>) \<one>"
+  shows "Group (some_elem ` P) rep_comp (some_elem \<one>)"
+proof -
+  interpret Group P
+    by (simp add: assms)
+  interpret Mr: Monoid "some_elem ` P" rep_comp "some_elem \<one>"
+    by (simp add: Monoid_axioms Monoid_class_reps)
+  have "\<And>x. x \<in> P \<Longrightarrow> Mr.invertible (some_elem x)"
+    by (metis Mr.invertible_def image_eqI invertible invertible_def
+        rep_comp)
+  then show ?thesis
+  proof unfold_locales qed auto
+qed
+
+end
+
+
+subsection \<open>Abstract type of monoids\<close>
+
+lemma trivial_Monoid: "Monoid {undefined} (\<lambda>x y. undefined) undefined"
+  by (auto simp: Monoid_def)
+
+lemma trivial_Monoid_invertible: 
+  "Monoid.invertible {undefined} (\<lambda>x y. undefined) undefined undefined"
+  by (simp add: Monoid.unit_invertible trivial_Monoid)
+
+typedef 'a monoid = "{(M::'a set,f,e). Monoid M f e}"
+  morphisms "dest_monoid" "monoid"
+  using trivial_Monoid  by blast
+
+declare dest_monoid_inverse [simp]
+
+definition mcarrier where "mcarrier m \<equiv> fst (dest_monoid m)"
+
+definition mmult where "mmult m \<equiv> fst (snd (dest_monoid m))"
+
+definition munit where "munit m \<equiv> snd (snd (dest_monoid m))"
+
+lemma monoid_is_Monoid [iff]: "Monoid (mcarrier m) (mmult m) (munit m)"
+  by (metis Product_Type.Collect_case_prodD dest_monoid mcarrier_def
+      mem_Collect_eq munit_def mmult_def)
+
+lemma mmult_assoc [simp]:
+  "\<lbrakk> a \<in> mcarrier m; b \<in> mcarrier m; c \<in> mcarrier m \<rbrakk> \<Longrightarrow> mmult m (mmult m a b) c = mmult m a (mmult m b c)"
+  by (meson Monoid.associative monoid_is_Monoid)
+
+lemma m_left_unit: "a \<in> mcarrier m \<Longrightarrow> mmult m (munit m) a = a"
+  by (meson Monoid.left_unit monoid_is_Monoid)
+
+lemma m_right_unit: "a \<in> mcarrier m \<Longrightarrow> mmult m a (munit m) = a"
+  by (meson Monoid.right_unit monoid_is_Monoid)
+
+lemma (in Monoid) mcarrier_monoid[simp]: 
+  "mcarrier (monoid (M, (\<cdot>), \<one>)) = M"
+  by (simp add: mcarrier_def Monoid_axioms monoid_inverse)
+
+lemma (in Monoid) mmult_monoid[simp]: 
+  "mmult (monoid (M, (\<cdot>), \<one>)) = (\<cdot>)"
+  by (simp add: mmult_def Monoid_axioms monoid_inverse)
+
+lemma (in Monoid) munit_monoid[simp]: 
+  "munit (monoid (M, (\<cdot>), \<one>)) = \<one>"
+  by (simp add: munit_def Monoid_axioms monoid_inverse)
+
+lemma monoid_collapse [simp]: "monoid (mcarrier m, mmult m, munit m) = m"
+  by (simp add: mcarrier_def mmult_def munit_def)
+
+
+text \<open>Allows reference to the current monoid space within the locale as a value\<close>
+definition (in Monoid) "Self \<equiv> monoid (M, (\<cdot>), \<one>)"
+
+lemma (in Monoid) mcarrier_Self [simp]: "mcarrier Self = M"
+  by (simp add: Self_def)
+
+lemma (in Monoid) mdist_Self [simp]: "mmult Self = (\<cdot>)"
+  by (simp add: Self_def)
+
+lemma (in Monoid) munit_Self [simp]: "munit Self = \<one>"
+  by (simp add: Self_def)
+
 
 end
