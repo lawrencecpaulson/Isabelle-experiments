@@ -418,6 +418,13 @@ end (* ring_homomorphism *)
 
 subsection \<open>Abstract type of rings\<close>
 
+lemma trivial_Ring: "Ring {undefined} (\<lambda>x y. undefined) (\<lambda>x y. undefined) undefined undefined"
+  apply (auto simp: Ring_def abelian_group_def)
+
+lemma trivial_Ring_invertible: 
+  "Ring.invertible {undefined} (\<lambda>x y. undefined) undefined undefined"
+  by (simp add: Ring.unit_invertible trivial_Ring)
+
 typedef 'a ring = "{(R::'a set, addition, multiplication, zero, unit). Ring R addition multiplication zero unit}"
   morphisms "dest_ring" "ring"
 proof -
@@ -484,6 +491,11 @@ lemma (in Ring) mdist_Self [simp]: "mmult Self = (\<cdot>)"
 lemma (in Ring) munit_Self [simp]: "munit Self = \<one>"
   by (simp add: Self_def)
 
+locale Ring' = 
+  fixes R R'
 
+ and composition (infixl \<open>\<cdot>\<close> 70) and unit (\<open>\<one>\<close>)
+
+additive: abelian_group R "(+)" \<zero> + multiplicative: Monoid R "(\<cdot>)" \<one>
 
 end
