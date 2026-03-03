@@ -5,6 +5,7 @@
 
 theory Ring_Theory 
   imports Group_Theory 
+"HOL-ex.Sketch_and_Explore"
 
 begin
 
@@ -31,6 +32,12 @@ notation additive.inverse (\<open>- _\<close> [66] 65)
 abbreviation subtraction (infixl \<open>-\<close> 65) where "a - b \<equiv> a + (- b)"  (* or, alternatively, a definition *)
 
 end (* Ring *)
+
+text \<open>Compact version based on the monoid type\<close>
+locale Ring' = 
+  fixes additive multiplicative  
+  assumes eq: "mcarrier additive = mcarrier multiplicative"
+  assumes Ring: "Ring (mcarrier additive) (mmult additive) (mmult multiplicative) (munit additive) (munit multiplicative)" 
 
 text \<open>p 87, ll 10--12\<close>
 locale subring =
@@ -418,84 +425,49 @@ end (* ring_homomorphism *)
 
 subsection \<open>Abstract type of rings\<close>
 
+lemma trivial_Ring': "Ring' trivial_monoid trivial_monoid"
+proof unfold_locales
+qed (simp_all add: Monoid.mcarrier_monoid Monoid.munit_monoid trivial_Monoid
+      trivial_monoid_def Monoid.mmult_monoid trivial_Monoid trivial_Monoid_invertible)
+
 lemma trivial_Ring: "Ring {undefined} (\<lambda>x y. undefined) (\<lambda>x y. undefined) undefined undefined"
-  apply (auto simp: Ring_def abelian_group_def)
-
-lemma trivial_Ring_invertible: 
-  "Ring.invertible {undefined} (\<lambda>x y. undefined) undefined undefined"
-  by (simp add: Ring.unit_invertible trivial_Ring)
-
-typedef 'a ring = "{(R::'a set, addition, multiplication, zero, unit). Ring R addition multiplication zero unit}"
-  morphisms "dest_ring" "ring"
 proof -
-  have "Ring {undefined} (\<lambda>x y. undefined) (\<lambda>x y. undefined) undefined undefined"
-    apply unfold_locales
-         apply simp
-apply (auto simp: )
-    apply (auto simp: Ring_def)
-  then show ?thesis
-    by blast
+  have "commutative_monoid_axioms {undefined} (\<lambda>x y. undefined)"
+    by (simp add: commutative_monoid_axioms.intro)
+  moreover have "Ring_axioms {undefined} (\<lambda>x y. undefined) (\<lambda>x y. undefined)"
+    by (simp add: Ring_axioms.intro)
+  ultimately show ?thesis
+    by (auto simp: Ring_def abelian_group_def commutative_monoid_def trivial_Group trivial_Monoid)
 qed
 
-locale Ring = additive: abelian_group R "(+)" \<zero> + multiplicative: Monoid R "(\<cdot>)" \<one>
-  for R and addition (infixl \<open>+\<close> 65) and multiplication (infixl \<open>\<cdot>\<close> 70) and zero (\<open>\<zero>\<close>) and unit (\<open>\<one>\<close>) +
-
+typedef 'a ring = "{(addition::'a monoid, multiplication). Ring' addition multiplication}"
+  morphisms "dest_ring" "ring"
+  using trivial_Ring' by blast
 
 declare dest_ring_inverse [simp]
 
-definition mcarrier where "mcarrier m \<equiv> fst (dest_ring m)"
+definition "trivial_ring \<equiv> ring (trivial_monoid, trivial_monoid)"
 
-definition mmult where "mmult m \<equiv> fst (snd (dest_ring m))"
+definition radd where "radd m \<equiv> fst (dest_ring m)"
 
-definition munit where "munit m \<equiv> snd (snd (dest_ring m))"
+definition rmult where "rmult m \<equiv> snd (dest_ring m)"
 
-lemma ring_is_Ring [iff]: "Ring (mcarrier m) (mmult m) (munit m)"
-  by (metis Product_Type.Collect_case_prodD dest_ring mcarrier_def
-      mem_Collect_eq munit_def mmult_def)
+definition rcarrier where "rcarrier m \<equiv> mcarrier (radd m)"
 
-lemma mmult_assoc [simp]:
-  "\<lbrakk> a \<in> mcarrier m; b \<in> mcarrier m; c \<in> mcarrier m \<rbrakk> \<Longrightarrow> mmult m (mmult m a b) c = mmult m a (mmult m b c)"
-  by (meson Ring.associative ring_is_Ring)
+lemma ring_is_Ring [iff]: "Ring' (radd m) (rmult m)"
+  by (metis Product_Type.Collect_case_prodD dest_ring radd_def rmult_def)
 
-lemma m_left_unit: "a \<in> mcarrier m \<Longrightarrow> mmult m (munit m) a = a"
-  by (meson Ring.left_unit ring_is_Ring)
-
-lemma m_right_unit: "a \<in> mcarrier m \<Longrightarrow> mmult m a (munit m) = a"
-  by (meson Ring.right_unit ring_is_Ring)
-
-lemma (in Ring) mcarrier_ring[simp]: 
-  "mcarrier (ring (M, (\<cdot>), \<one>)) = M"
-  by (simp add: mcarrier_def Ring_axioms ring_inverse)
-
-lemma (in Ring) mmult_ring[simp]: 
-  "mmult (ring (M, (\<cdot>), \<one>)) = (\<cdot>)"
-  by (simp add: mmult_def Ring_axioms ring_inverse)
-
-lemma (in Ring) munit_ring[simp]: 
-  "munit (ring (M, (\<cdot>), \<one>)) = \<one>"
-  by (simp add: munit_def Ring_axioms ring_inverse)
-
-lemma ring_collapse [simp]: "ring (mcarrier m, mmult m, munit m) = m"
-  by (simp add: mcarrier_def mmult_def munit_def)
+lemma ring_collapse [simp]: "ring (radd r, rmult r) = r"
+  by (simp add: radd_def rmult_def)
 
 
 text \<open>Allows reference to the current ring space within the locale as a value\<close>
-definition (in Ring) "Self \<equiv> ring (M, (\<cdot>), \<one>)"
+definition (in Ring') "Self \<equiv> ring (additive, multiplicative)"
 
-lemma (in Ring) mcarrier_Self [simp]: "mcarrier Self = M"
-  by (simp add: Self_def)
+lemma (in Ring') radd_Self [simp]: "radd Self = additive"
+  by (simp add: Ring'_axioms Self_def radd_def ring_inverse)
 
-lemma (in Ring) mdist_Self [simp]: "mmult Self = (\<cdot>)"
-  by (simp add: Self_def)
-
-lemma (in Ring) munit_Self [simp]: "munit Self = \<one>"
-  by (simp add: Self_def)
-
-locale Ring' = 
-  fixes R R'
-
- and composition (infixl \<open>\<cdot>\<close> 70) and unit (\<open>\<one>\<close>)
-
-additive: abelian_group R "(+)" \<zero> + multiplicative: Monoid R "(\<cdot>)" \<one>
+lemma (in Ring') rmult_Self [simp]: "rmult Self = multiplicative"
+  by (simp add: Ring'_axioms Self_def ring_inverse rmult_def)
 
 end

@@ -1849,11 +1849,17 @@ lemma trivial_Monoid_invertible:
   "Monoid.invertible {undefined} (\<lambda>x y. undefined) undefined undefined"
   by (simp add: Monoid.unit_invertible trivial_Monoid)
 
+lemma trivial_Group: "Group {undefined} (\<lambda>x y. undefined) undefined"
+  by (simp add: Group_axioms_def Group_def trivial_Monoid
+      trivial_Monoid_invertible)
+
 typedef 'a monoid = "{(M::'a set,f,e). Monoid M f e}"
   morphisms "dest_monoid" "monoid"
   using trivial_Monoid  by blast
 
 declare dest_monoid_inverse [simp]
+
+definition "trivial_monoid \<equiv> monoid ({undefined}, (\<lambda>x y. undefined), undefined)"
 
 definition mcarrier where "mcarrier m \<equiv> fst (dest_monoid m)"
 
@@ -1897,7 +1903,7 @@ definition (in Monoid) "Self \<equiv> monoid (M, (\<cdot>), \<one>)"
 lemma (in Monoid) mcarrier_Self [simp]: "mcarrier Self = M"
   by (simp add: Self_def)
 
-lemma (in Monoid) mdist_Self [simp]: "mmult Self = (\<cdot>)"
+lemma (in Monoid) mmult_Self [simp]: "mmult Self = (\<cdot>)"
   by (simp add: Self_def)
 
 lemma (in Monoid) munit_Self [simp]: "munit Self = \<one>"
