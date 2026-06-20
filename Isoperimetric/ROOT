@@ -1,0 +1,12 @@
+session Isoperimetric = "HOL-Analysis" +
+  options [timeout = 600]
+  sessions
+    Fourier
+    Green
+  directories "."
+  theories
+    Bounded_Variation
+    Absolute_Continuity
+    Rectifiable_Path
+    Arc_Length_Reparametrization
+    Isoperimetric
