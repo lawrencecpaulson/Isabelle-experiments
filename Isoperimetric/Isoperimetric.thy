@@ -1322,21 +1322,18 @@ proof -
     unfolding \<phi>_def comp_def
     by (smt (verit, ccfv_SIG) Henstock_Kurzweil_Integration.integral_cong
         Henstock_Kurzweil_Integration.integral_reflect_real)
+  have Re_gp_ai: "(\<lambda>t. Re (g' t)) absolutely_integrable_on {u..v}"
+    using Re_absolutely_integrable_on has_vector_derivative_at_within assms
+    by (metis vder_g absolutely_integrable_absolutely_continuous_derivative)
+  have Im_g_cont: "continuous_on {u..v} (\<lambda>t. Im (g t))"
+    by (simp add: absolutely_continuous_on_imp_continuous assms(3) continuous_on_Im)
+  have Im_g_bdd: "bounded ((\<lambda>t. Im (g t)) ` {u..v})"
+    by (intro compact_imp_bounded compact_continuous_image[OF Im_g_cont compact_Icc])
+  have Im_g_meas: "(\<lambda>t. Im (g t)) \<in> borel_measurable (lebesgue_on {u..v})"
+    using Im_g_cont integrable_continuous_real integrable_imp_measurable by blast
   show "(\<lambda>t. Re (g' t) * Im (g t)) absolutely_integrable_on {u..v}"
-  proof -
-    have Re_gp_ai: "(\<lambda>t. Re (g' t)) absolutely_integrable_on {u..v}"
-      using Re_absolutely_integrable_on has_vector_derivative_at_within assms
-      by (metis vder_g absolutely_integrable_absolutely_continuous_derivative)
-    have Im_g_cont: "continuous_on {u..v} (\<lambda>t. Im (g t))"
-      by (simp add: absolutely_continuous_on_imp_continuous assms(3) continuous_on_Im)
-    have Im_g_bdd: "bounded ((\<lambda>t. Im (g t)) ` {u..v})"
-      by (intro compact_imp_bounded compact_continuous_image[OF Im_g_cont compact_Icc])
-    have Im_g_meas: "(\<lambda>t. Im (g t)) \<in> borel_measurable (lebesgue_on {u..v})"
-      using Im_g_cont integrable_continuous_real integrable_imp_measurable by blast
-    show ?thesis
-      using absolutely_integrable_bounded_measurable_product_real [OF Im_g_meas _ Im_g_bdd Re_gp_ai]
-      by (simp add: mult.commute)
-  qed
+    using absolutely_integrable_bounded_measurable_product_real [OF Im_g_meas _ Im_g_bdd Re_gp_ai]
+    by (simp add: mult.commute)
   have measure_eq: "measure lebesgue {z. \<exists>w \<in> h ` {u..v}. Re w = Re z \<and> 0 \<le> Im z \<and> Im z \<le> Im w} =
                     measure lebesgue {z. \<exists>w \<in> g ` {u..v}. Re w = Re z \<and> Im w \<le> Im z \<and> Im z \<le> 0}"
   proof -
@@ -1443,40 +1440,30 @@ proof -
     \<comment> \<open>Find interior points on each side of $Re = c$\<close>
     obtain p where p: "p \<in> interior S" "Re p < c"
     proof -
-      obtain p0 where p0: "p0 \<in> S" "Re p0 < c" using sides(1) by auto
-      then obtain ps where ps: "\<forall>n. ps n \<in> interior S" "ps \<longlonglongrightarrow> p0"
-        using cl_int closure_sequential by blast
+      obtain p0 ps where p0: "p0 \<in> S" "Re p0 < c" and ps: "\<forall>n. ps n \<in> interior S" "ps \<longlonglongrightarrow> p0"
+        using cl_int closure_sequential sides by blast
       then obtain n where "Re (ps n) < c" using eventually_sequentially
         by (metis LIMSEQ_le_const not_less \<open>Re p0 < c\<close> tendsto_complex_iff)
-      then show thesis using that ps(1) by auto
+      then show thesis using that ps by auto
     qed
     obtain q where q: "q \<in> interior S" "c < Re q"
     proof -
-      obtain q0 where q0: "q0 \<in> S" "c < Re q0" using sides(2) by auto
-      then obtain qs where qs: "\<forall>n. qs n \<in> interior S" "qs \<longlonglongrightarrow> q0"
-        using cl_int closure_sequential by blast
+      obtain q0 qs where q0: "q0 \<in> S" "c < Re q0" and qs: "\<forall>n. qs n \<in> interior S" "qs \<longlonglongrightarrow> q0"
+        using cl_int closure_sequential sides by blast
       then obtain n where "c < Re (qs n)" using eventually_sequentially
         by (metis LIMSEQ_le_const2 not_less \<open>c < Re q0\<close> tendsto_complex_iff)
-      then show thesis using that qs(1) by auto
+      then show thesis using that qs by auto
     qed
     \<comment> \<open>IVT on the segment $\{p..q\} \subseteq \mathit{interior}\ S$\<close>
     have conv_int: "convex (interior S)" using convex_interior assms(1) by auto
     then have seg_sub: "closed_segment p q \<subseteq> interior S"
       using closed_segment_subset p(1) q(1) by auto
-    obtain r where "r \<in> closed_segment p q" "Re r = c"
-    proof -
-      have "1 \<bullet> p \<le> c" using p(2) by simp
-      moreover have "c \<le> 1 \<bullet> q" using q(2) by simp
-      moreover have "p \<in> closed_segment p q" "q \<in> closed_segment p q"
-        by auto
-      ultimately obtain r where "r \<in> closed_segment p q" "1 \<bullet> r = c"
-        using connected_ivt_hyperplane[OF connected_segment] by blast
-      then show thesis using that by auto
-    qed
+    have "1 \<bullet> p \<le> c" "c \<le> 1 \<bullet> q" using p(2) q(2) by auto
+    then obtain r where "r \<in> closed_segment p q" "1 \<bullet> r = c"
+      using connected_ivt_hyperplane[OF connected_segment] by blast
     then show ?thesis
       using T_eq seg_sub by auto
   qed
-
   \<comment> \<open>Apply \<open>convex_affine_rel_frontier_Int\<close>\<close>
   have rf_eq: "rel_frontier (S \<inter> T) = frontier S \<inter> T"
     using convex_affine_rel_frontier_Int[OF assms(1) aff_T int_T] .
@@ -1484,22 +1471,13 @@ proof -
   have ST_ne: "S \<inter> T \<noteq> {}"
     using int_T interior_subset by blast
   have ST_compact: "compact (S \<inter> T)"
-  proof -
-    have "closed T" unfolding T_def by (rule closed_hyperplane)
-    then show ?thesis using assms(2) compact_Int_closed by auto
-  qed
+    by (metis aff_T affine_hull_eq assms(2) closed_affine_hull compact_Int_closed)
   have ST_convex: "convex (S \<inter> T)"
     using assms(1) convex_Int aff_T affine_imp_convex by auto
-  have ST_collinear: "collinear (S \<inter> T)"
-  proof -
-    have "aff_dim T = int (DIM(complex) - 1)"
-      unfolding T_def by (rule aff_dim_hyperplane) simp
-    then have "aff_dim T = 1" by simp
-    moreover have "aff_dim (S \<inter> T) \<le> aff_dim T"
-      by (rule aff_dim_subset) auto
-    ultimately have "aff_dim (S \<inter> T) \<le> 1" by linarith
-    then show ?thesis using collinear_aff_dim by auto
-  qed
+  have "aff_dim T = 1" 
+    unfolding T_def using aff_dim_hyperplane [of "1::complex" c] by simp
+  then have ST_collinear: "collinear (S \<inter> T)"
+    by (metis collinear_aff_dim collinear_subset Int_lower2 int_one_le_iff_zero_less zero_less_one)
   obtain p q where pq: "S \<inter> T = closed_segment p q"
     using compact_convex_collinear_segment[OF ST_ne ST_compact ST_convex ST_collinear] by auto
   \<comment> \<open>The @{term rel_frontier} of a closed segment has at most two elements\<close>
@@ -1514,19 +1492,11 @@ proof -
     also have "\<dots> = closed_segment p q - open_segment p q"
       using rel_interior_closed_segment[of p q] False by simp
     also have "\<dots> = {p, q}"
-    proof -
-      have "closed_segment p q = open_segment p q \<union> {p, q}"
-        by (rule closed_segment_eq_open)
-      moreover have "p \<notin> open_segment p q" "q \<notin> open_segment p q"
-        by (simp_all add: open_segment_def)
-      ultimately show ?thesis by auto
-    qed
+      by (simp add: double_diff segment(1))
     finally show ?thesis using pq by simp
   qed
-  \<comment> \<open>@{term x}, @{term y}, @{term z} all lie in @{term "rel_frontier (S \<inter> T)"} $=$ @{term "frontier S \<inter> T"} $\subseteq \{p, q\}$\<close>
-  have "x \<in> {p, q}" "y \<in> {p, q}" "z \<in> {p, q}"
-    using xyz(1,2,3) xT rf_eq rf_sub by auto
-  then show ?thesis by auto
+  then show ?thesis
+    by (metis IntI insertE rf_eq singletonD subsetD xT xyz)
 qed
 
 
@@ -1546,6 +1516,19 @@ begin
 
 definition "gop \<equiv> cnj \<circ> reversepath g"
 definition "gop' \<equiv> uminus \<circ> cnj \<circ> reversepath g'"
+
+lemma Im_g_cont: "continuous_on {0..1} (\<lambda>t. Im (g t))"
+  by (simp add: absolutely_continuous_on_imp_continuous cont continuous_on_Im)
+
+lemma Im_g_bdd: "bounded ((\<lambda>t. Im (g t)) ` {0..1})"
+  by (intro compact_imp_bounded compact_continuous_image[OF Im_g_cont compact_Icc])
+
+lemma Im_g_meas: "(\<lambda>t. Im (g t)) \<in> borel_measurable (lebesgue_on {0..1})"
+  using Im_g_cont continuous_imp_integrable_real by blast
+
+lemma gp_ai: "g' absolutely_integrable_on {0..1}"
+  using absolutely_integrable_absolutely_continuous_derivative[OF cont U]
+    vder has_vector_derivative_at_within by blast
 
 lemma cnj_rev: "Green gop gop' ((\<lambda>t. 1-t) ` U) (cnj a) (cnj b)"
 proof
@@ -1574,7 +1557,7 @@ proof
   then have "negligible (((+)1) ` uminus ` U)"
     using negligible_translation by blast
   then show "negligible ((-) 1 ` U)"
-    by (smt (verit, best) image_cong image_image)
+    by (simp add: image_subset_iff negligible_subset)
 next
   fix t :: real
   note vder [unfolded has_vector_derivative_def, derivative_intros]
@@ -1590,20 +1573,10 @@ lemma rev: "Green (reversepath g) (uminus \<circ> reversepath g') ((\<lambda>t. 
 proof
   show "simple_path (reversepath g)"
     using g by (simp add: simple_path_def loop_free_reversepath)
-  show "pathstart (reversepath g) = a"
-    using g by (simp add: pathstart_compose)
-  show "pathfinish (reversepath g) = a"
-    using g by (simp add: pathfinish_compose)
-  show "b \<in> path_image (reversepath g)"
-    using b by (simp add: path_image_compose)
-  show "Re a < Re b" "Im a = Im b"
-    using b by auto
   show "dist a b = diameter (path_image (reversepath g))"
     by (simp add: gop_def dab path_image_compose flip: dab)
   show "convex (inside (path_image (reversepath g)))"
-    unfolding gop_def
-    by (metis conv convex_linear_vimage image_cnj_conv_vimage_cnj 
-        inside_cnj_image linear_cnj path_image_compose path_image_reversepath)
+    by (simp add: gop_def conv)
   show "absolutely_continuous_on {0..1} (reversepath g)"
     using cont unfolding gop_def
     by (simp add: absolutely_continuous_on_compose_linear absolutely_continuous_on_reflect linear_cnj
@@ -1613,7 +1586,7 @@ proof
   then have "negligible (((+)1) ` uminus ` U)"
     using negligible_translation by blast
   then show "negligible ((-) 1 ` U)"
-    by (smt (verit, best) image_cong image_image)
+    using Green.U cnj_rev by blast
 next
   fix t :: real
   note vder [unfolded has_vector_derivative_def, derivative_intros]
@@ -1623,28 +1596,11 @@ next
   then show "((reversepath g) has_vector_derivative (uminus \<circ> reversepath g') t) (at t)"
     unfolding gop_def gop'_def has_vector_derivative_def reversepath_o
     by - (rule derivative_eq_intros | simp add: o_def | assumption)+
-qed
-
+qed (use g b in \<open>auto simp: pathstart_compose pathfinish_compose path_image_compose\<close>)
 
 lemma f_abs_int: "(\<lambda>s. Re (g' s) * Im (g s)) absolutely_integrable_on {0..1}"
-proof -
-  have cont_g: "continuous_on {0..1} g"
-    using simple_path_imp_path[OF g(1)] by (simp add: path_def)
-  have Im_g_cont: "continuous_on {0..1} (\<lambda>t. Im (g t))"
-    by (intro continuous_intros cont_g)
-  have Im_g_bdd: "bounded ((\<lambda>t. Im (g t)) ` {0..1})"
-    by (intro compact_imp_bounded compact_continuous_image[OF Im_g_cont compact_Icc])
-  have Im_g_meas: "(\<lambda>t. Im (g t)) \<in> borel_measurable (lebesgue_on {0..1})"
-    using continuous_imp_measurable_on_sets_lebesgue[OF Im_g_cont]
-      atLeastAtMost_borel lborelD
-    by (metis sets_completionI_sets)
-  have gp_ai: "g' absolutely_integrable_on {0..1}"
-    using absolutely_integrable_absolutely_continuous_derivative[OF cont U]
-      vder has_vector_derivative_at_within by blast
-  then show ?thesis
-    using absolutely_integrable_bounded_measurable_product_real[OF Im_g_meas _ Im_g_bdd Re_absolutely_integrable_on]
-    by (simp add: mult.commute)
-qed
+  using absolutely_integrable_bounded_measurable_product_real[OF Im_g_meas _ Im_g_bdd Re_absolutely_integrable_on] gp_ai
+  by (simp add: mult.commute)
 
 lemma arc_inj_on: "inj_on g {u..v}"
   if huv: "0 \<le> u" "v \<le> 1" "u < v" and hne: "u > 0 \<or> v < 1" 
@@ -1655,9 +1611,9 @@ proof (rule inj_onI)
   show "s1 = s2"
   proof (rule ccontr)
     assume neq: "s1 \<noteq> s2"
-    from g(1) have lf: "loop_free g" by (simp add: simple_path_def)
-    have "s1 = s2 \<or> s1 = 0 \<and> s2 = 1 \<or> s1 = 1 \<and> s2 = 0"
-      using eq lf loop_free_def s1_01 s2_01 by blast
+    with g have "s1 = s2 \<or> s1 = 0 \<and> s2 = 1 \<or> s1 = 1 \<and> s2 = 0"
+      unfolding simple_path_def loop_free_def
+      using eq  s1_01 s2_01 by blast
     with neq show False using s1 s2 huv hne by auto
   qed
 qed
@@ -1669,17 +1625,9 @@ lemma arc_Re_inj_on: "inj_on Re (g ` {u..v})"
     and hne: "Re (g u) \<noteq> Re (g v)"
 proof (rule inj_onI)
   fix x y assume "x \<in> g ` {u..v}" "y \<in> g ` {u..v}" "Re x = Re y"
-  then obtain s1 s2 where s1: "s1 \<in> {u..v}" "x = g s1"
-    and s2: "s2 \<in> {u..v}" "y = g s2" by auto
-  then have Re_eq: "Re (g s1) = Re (g s2)" using \<open>Re x = Re y\<close> by simp
-  show "x = y"
-  proof (cases "s1 = s2")
-    case True then show ?thesis using s1 s2 by simp
-  next
-    case False
-    then have "Re (g u) = Re (g v)" using hRe[OF s1(1) s2(1) Re_eq] by auto
-    then show ?thesis using hne by simp
-  qed
+  then obtain s1 s2 where "s1 \<in> {u..v}" "x = g s1" "s2 \<in> {u..v}" "y = g s2" by auto
+  then show "x = y"
+    using \<open>Re x = Re y\<close> that by blast
 qed
 
 lemma Re_inj_upper_gen: 
@@ -1699,17 +1647,10 @@ proof (rule ccontr)
   have frontier_S: "frontier S = path_image g"
     unfolding S_def using frontier_convex_hull_eq_path_image[OF g(1) _ conv] g(2,3) by auto
   have S_int_ne: "interior S \<noteq> {}"
-  proof -
-    have "inside (path_image g) \<noteq> {}"
-      using Jordan_inside_outside[OF g(1)] g(2,3) by auto
-    moreover have "closure (inside (path_image g)) = S"
-      unfolding S_def using convex_hull_eq_closure_inside[OF g(1) _ conv] g(2,3) by auto
-    moreover have "interior (closure (inside (path_image g))) = inside (path_image g)"
-      using convex_interior_closure[OF conv] interior_open
-      using Jordan_inside_outside[OF g(1)] g(2,3) by auto
-    ultimately show ?thesis by auto
-  qed
-    \<comment> \<open>Step 1: At least one of $s_1$, $s_2$ is in the open interval $(0,t)$.\<close>
+    unfolding S_def using g
+    by (simp add: Jordan_inside_outside conv convex_hull_eq_closure_inside convex_interior_closure
+        interior_open)
+      \<comment> \<open>Step 1: At least one of $s_1$, $s_2$ is in the open interval $(0,t)$.\<close>
   have interior_param: "s1 \<in> {0<..<t} \<or> s2 \<in> {0<..<t}"
     using s1t s2t neq not_endpts by auto
       \<comment> \<open>Step 2: $g\,s_1 \neq g\,s_2$ (from injectivity of @{term g} on $\{0..t\}$, which is a proper sub-arc).\<close>
@@ -1717,23 +1658,14 @@ proof (rule ccontr)
     using arc_inj_on[of 0 t] ht by auto
   have g_neq: "g s1 \<noteq> g s2"
     by (meson neq inj_on_def inj_sub s1t s2t)
-    \<comment> \<open>Step 3: Both $g\,s_1$ and $g\,s_2$ are on @{term "frontier S"} $=$ @{term "path_image g"}.\<close>
+      \<comment> \<open>Step 3: Both $g\,s_1$ and $g\,s_2$ are on @{term "frontier S"} $=$ @{term "path_image g"}.\<close>
   have s1_01: "s1 \<in> {0..1}" using s1t ht(2) by auto
   have s2_01: "s2 \<in> {0..1}" using s2t ht(2) by auto
   have gs1_frontier: "g s1 \<in> frontier S"
     using frontier_S s1_01 by (auto simp: path_image_def)
   have gs2_frontier: "g s2 \<in> frontier S"
     using frontier_S s2_01 by (auto simp: path_image_def)
-      \<comment> \<open>Step 4: Find a third distinct point on @{term "frontier S"} with the same real part.
-       Key insight: one of $g(0)=0$ or $g(t)=b$ has a \emph{different} parameter from $s_1$ and $s_2$,
-       and since @{term g} is injective on $\{0..t\}$, it gives a distinct point.
-       But we need it to have the \emph{same} real part --- that is only possible if $Re(g\,s_1) \in \{0, Re\,b\}$.
-       If $Re(g\,s_1) = 0$ then $g\,s_1 = g\,0$ (since $Re(g\,0) = 0$) --- but then $s_1 = 0$ by injectivity.
-       Similarly if $Re(g\,s_1) = Re\,b$ then $s_1 = t$.
-       So we need a different approach: the third point comes from the \emph{other} arc $\{t..1\}$.
-       On the other arc, @{term g} goes from $b$ back to $0$, so $Re$ goes from $Re\,b$ back to $0$.
-       By the IVT (since @{term g} is continuous), for any $c \in (0, Re\,b)$ there exists $s_3 \in \{t..1\}$ with
-       $Re(g\,s_3) = c$. This $s_3$ gives a third point on @{term "frontier S"}.\<close>
+      \<comment> \<open>Step 4: Find a third distinct point on @{term "frontier S"} with the same real part.\<close>
   define c where "c \<equiv> Re (g s1)"
     \<comment> \<open>Step 4a: Show $c \in \{0, Re\,b\}$ forces $s_1$ or $s_2$ to an endpoint, contradicting \<open>not_endpts\<close>.\<close>
   have c_strict: "0 < c \<and> c < Re b"
@@ -1749,23 +1681,19 @@ proof (rule ccontr)
     have diam_eq: "dist 0 b = diameter (path_image g)" using dab a0 by simp
     have dist_0b: "dist 0 b = Re b"
       using Imb Reb cmod_eq_Re by auto
-    \<comment> \<open>Every point on the curve is within distance $Re\,b$ of both $0$ and $b$\<close>
+        \<comment> \<open>Every point on the curve is within distance $Re\,b$ of both $0$ and $b$\<close>
     have d1: "dist (g s1) b \<le> Re b"
       using diameter_bounded_bound[OF bdd gs1_pi b(1)] diam_eq dist_0b by simp
     have d2: "dist 0 (g s1) \<le> Re b"
       using diameter_bounded_bound[OF bdd g0_pi gs1_pi] diam_eq dist_0b by simp
-    \<comment> \<open>Helper: from $\mathit{cmod}\ z \le Re\,b$, derive $(Re\,z)^2 + (Im\,z)^2 \le (Re\,b)^2$\<close>
     have cmod_sq: "(Re z)\<^sup>2 + (Im z)\<^sup>2 \<le> (Re b)\<^sup>2" if "cmod z \<le> Re b" for z
       by (metis cmod_power2 norm_ge_zero power_mono that)
-    \<comment> \<open>Helper: from $\mathit{cmod}\,(z - b) \le Re\,b$, derive $(Re\,z - Re\,b)^2 + (Im\,z)^2 \le (Re\,b)^2$\<close>
     have cmod_sq_b: "(Re z - Re b)\<^sup>2 + (Im z)\<^sup>2 \<le> (Re b)\<^sup>2" if "cmod (z - b) \<le> Re b" for z
       using Imb cmod_sq that by force
-    \<comment> \<open>Helper: injectivity gives $s = 0$ from $g\,s = 0$, and $s = t$ from $g\,s = b$\<close>
     have eq_0: "s = 0" if "g s = 0" "s \<in> {0..t}" for s
       using geq0(1) inj_onD inj_sub that by fastforce
     have eq_t: "s = t" if "g s = b" "s \<in> {0..t}" for s
       using ht(3) inj_on_contraD inj_sub that by fastforce
-    \<comment> \<open>Case $c = 0$: $Re(g\,s_1) = 0$, and $\mathit{dist}\,(g\,s_1)\,b \le Re\,b$ forces $Im(g\,s_1) = 0$, so $g\,s_1 = 0$\<close>
     have "c \<noteq> 0"
     proof
       assume "c = 0"
@@ -1773,65 +1701,43 @@ proof (rule ccontr)
       have "(Re (g s1) - Re b)\<^sup>2 + (Im (g s1))\<^sup>2 \<le> (Re b)\<^sup>2"
         using cmod_sq_b d1 by (simp add: dist_norm)
       then have "(Im (g s1))\<^sup>2 \<le> 0" using Re0 by (simp add: power2_eq_square)
-      then have "g s1 = 0" using Re0 by (auto simp: complex_eq_iff)
-      then have "s1 = 0" using eq_0 s1t by simp
-      moreover have "Re (g s2) = 0" using Re_eq \<open>c = 0\<close> c_def by simp
-      then have "(Re (g s2) - Re b)\<^sup>2 + (Im (g s2))\<^sup>2 \<le> (Re b)\<^sup>2"
+      moreover have "(Re (g s2) - Re b)\<^sup>2 + (Im (g s2))\<^sup>2 \<le> (Re b)\<^sup>2"
         using cmod_sq_b[of "g s2"] diameter_bounded_bound[OF bdd gs2_pi b(1)]
           diam_eq dist_0b by (simp add: dist_norm)
-      then have "(Im (g s2))\<^sup>2 \<le> 0" using \<open>Re (g s2) = 0\<close> by (simp add: power2_eq_square)
-      then have "g s2 = 0" using \<open>Re (g s2) = 0\<close> by (auto simp: complex_eq_iff)
-      then have "s2 = 0" using eq_0 s2t by simp
-      ultimately show False using neq by simp
+      then have "(Im (g s2))\<^sup>2 \<le> 0"
+        using Re0 Re_eq by fastforce
+      ultimately show False using neq
+        by (metis Re_eq complex.collapse g_neq power2_less_eq_zero_iff)
     qed
-    \<comment> \<open>Case $c = Re\,b$: $\mathit{dist}\,0\,(g\,s_1) \le Re\,b$ forces $Im(g\,s_1) = 0$, so $g\,s_1 = b$\<close>
     moreover have "c \<noteq> Re b"
     proof
-      assume "c = Re b"
-      then have ReB: "Re (g s1) = Re b" unfolding c_def by simp
+      assume c: "c = Re b"
       have "(Re (g s1))\<^sup>2 + (Im (g s1))\<^sup>2 \<le> (Re b)\<^sup>2"
         using cmod_sq d2 by (simp add: dist_norm)
-      then have "(Im (g s1))\<^sup>2 \<le> 0" using ReB by (simp add: power2_eq_square)
-      then have "g s1 = b" using ReB Imb by (auto simp: complex_eq_iff)
-      then have "s1 = t" using eq_t s1t by simp
       moreover have "Re (g s2) = Re b" using Re_eq \<open>c = Re b\<close> c_def by simp
       then have "(Re (g s2))\<^sup>2 + (Im (g s2))\<^sup>2 \<le> (Re b)\<^sup>2"
         using cmod_sq[of "g s2"] diameter_bounded_bound[OF bdd g0_pi gs2_pi]
           diam_eq dist_0b by (simp add: dist_norm)
-      then have "(Im (g s2))\<^sup>2 \<le> 0" using \<open>Re (g s2) = Re b\<close> by (simp add: power2_eq_square)
       then have "g s2 = b" using \<open>Re (g s2) = Re b\<close> Imb by (auto simp: complex_eq_iff)
-      then have "s2 = t" using eq_t s2t by simp
-      ultimately show False using neq by simp
+      ultimately show False using neq eq_t s2t g_neq
+        by (simp add: Imb Re_eq complex_eq_iff)
     qed
-    \<comment> \<open>$c$ is bounded: $0 \le c \le Re\,b$ from the diameter bound\<close>
-    moreover have "0 \<le> c"
-    proof -
-      \<comment> \<open>From $\mathit{dist}\,(g\,s_1)\,b \le Re\,b$: $|Re(g\,s_1) - Re\,b| \le \mathit{cmod}\,(g\,s_1 - b) \le Re\,b$\<close>
-      have "\<bar>Re (g s1) - Re b\<bar> \<le> cmod (g s1 - b)"
-        using abs_Re_le_cmod[of "g s1 - b"] by simp
-      also have "\<dots> \<le> Re b" using d1 by (simp add: dist_norm)
-      finally show ?thesis unfolding c_def by linarith
-    qed
-    moreover have "c \<le> Re b"
-      by (smt (verit) c_def complex_Re_le_cmod d2 dist_0_norm)
-    ultimately show ?thesis by linarith
+    ultimately show ?thesis
+      by (smt (verit) abs_Re_le_cmod c_def d1 d2 dist_0_norm dist_norm minus_complex.sel(1))
   qed
-      \<comment> \<open>Step 4b: By the IVT on $\{t..1\}$, find $s_3$ with $Re(g\,s_3) = c$.\<close>
+    \<comment> \<open>Step 4b: By the IVT on $\{t..1\}$, find $s_3$ with $Re(g\,s_3) = c$.\<close>
   have cont_Re_g: "continuous_on {t..1} (Re \<circ> g)"
     using absolutely_continuous_on_imp_continuous assms(2) cont continuous_on_Re
       continuous_on_eq continuous_on_subset by fastforce
   obtain s3 where s3: "s3 \<in> {t..1}" "Re (g s3) = c"
   proof -
-    have img_conn: "connected ((Re \<circ> g) ` {t..1})"
-      by (intro connected_continuous_image cont_Re_g connected_Icc)
-    then have img_iv: "is_interval ((Re \<circ> g) ` {t..1})"
-      using is_interval_connected_1 by auto
-    have "Re (g t) \<in> (Re \<circ> g) ` {t..1}" using ht(1,2) by (auto simp: image_def)
-    then have Regt_in: "Re b \<in> (Re \<circ> g) ` {t..1}" using ht(3) by simp
+    have img_iv: "is_interval ((Re \<circ> g) ` {t..1})"
+      using is_interval_connected_1 connected_continuous_image connected_interval cont_Re_g by blast 
+    have Regt_in: "Re b \<in> (Re \<circ> g) ` {t..1}" using ht(3) \<open>t < 1\<close> by fastforce
     have "Re (g 1) \<in> (Re \<circ> g) ` {t..1}" using ht(2) by (auto simp: image_def)
     then have Re0_in: "0 \<in> (Re \<circ> g) ` {t..1}" using geq0 by simp
-    have "c \<in> (Re \<circ> g) ` {t..1}"
-      using img_iv[unfolded is_interval_1] Regt_in Re0_in c_strict by auto
+    then have "c \<in> (Re \<circ> g) ` {t..1}"
+      using img_iv[unfolded is_interval_1] Regt_in c_strict by auto
     then show ?thesis using that by (auto simp: image_def)
   qed
     \<comment> \<open>Step 4c: $g\,s_3$ is on @{term "frontier S"} and distinct from $g\,s_1$ and $g\,s_2$.\<close>
@@ -1843,7 +1749,7 @@ proof (rule ccontr)
   proof
     assume eq: "g s3 = g s1"
     with loopfr_g have "s3 = s1 \<or> s3 = 0 \<and> s1 = 1 \<or> s3 = 1 \<and> s1 = 0"
-      using eq loop_free_def s1_01 s3_01 by blast
+      using loop_free_def s1_01 s3_01 by blast
     then show False
       using assms(1) c_def c_strict eq geq0(2) ht(3) s3(1) by auto
   qed
@@ -1861,7 +1767,7 @@ proof (rule ccontr)
         zero_complex.sel(1))
   have side_right: "\<exists>q \<in> S. c < Re q"
     by (metis S_def b(1) c_strict hull_inc)
-    \<comment> \<open>Step 6: Apply \<open>frontier_vertical_at_most_two\<close> for the contradiction.\<close>
+      \<comment> \<open>Step 6: Apply \<open>frontier_vertical_at_most_two\<close> for the contradiction.\<close>
   have three_distinct: "g s1 \<noteq> g s2 \<and> g s1 \<noteq> g s3 \<and> g s2 \<noteq> g s3"
     using g_neq gs3_ne_gs1 gs3_ne_gs2 by auto
   have Re_all_c: "Re (g s1) = c" "Re (g s2) = c" "Re (g s3) = c"
@@ -1888,7 +1794,6 @@ proof -
         g hull_inc pathfinish_in_path_image)
   have frontier_eq: "frontier (inside (path_image g)) = path_image g"
     using Jordan_inside_outside g by blast
-
   show ?thesis
   proof
     assume above: "path_image g \<subseteq> {z. 0 \<le> Im z}"
@@ -1897,8 +1802,7 @@ proof -
     then have inside_above: "inside (path_image g) \<subseteq> {z. 0 < Im z}"
     proof -
       have sub: "inside (path_image g) \<subseteq> {z. (0::real) \<le> \<i> \<bullet> z}"
-        using hull_above  closure_subset
-        using conv convex_hull_eq_closure_inside g by auto
+        using hull_above closure_subset conv convex_hull_eq_closure_inside g by auto
       then have "inside (path_image g) \<subseteq> interior {z. (0::real) \<le> \<i> \<bullet> z}"
         using interior_maximal open_inside Jordan_inside_outside g by blast
       also have "\<dots> = {z. 0 < \<i> \<bullet> z}"
@@ -1939,7 +1843,7 @@ proof -
   have lfg: "loop_free g" using g by (simp add: simple_path_def)
   have Reb: "Re b > 0" using b(2) assms by simp
   have Imb: "Im b = 0" using b(3) assms by simp
-    \<comment> \<open>Re-injectivity: on each arc, @{term "Re \<circ> g"} is injective (except at endpoints).
+      \<comment> \<open>Re-injectivity: on each arc, @{term "Re \<circ> g"} is injective (except at endpoints).
        Otherwise \<open>frontier_vertical_at_most_two\<close> gives a contradiction via three points
        on $\mathit{frontier}\,(\mathit{closure}\,(\mathit{inside}))$ with the same real part.\<close>
   have Re_inj_upper: "\<lbrakk>s1 \<in> {0..t}; s2 \<in> {0..t}; Re (g s1) = Re (g s2); s1 \<noteq> s2\<rbrakk>
@@ -1960,445 +1864,364 @@ proof -
        By the change of variables $x = Re(g(s))$ and Re-injectivity, the integral
        $\int_0^t Re(g') \cdot Im(g)\,ds = \int_0^{Re\,b} f_{\mathit{upper}}(x)\,dx \ge 0$
        since $f_{\mathit{upper}} = Im \circ g \circ Re^{-1} \ge 0$ on the upper arc.\<close>
+  interpret Area g g' 0 t U
+  proof
+    show "Re (g 0) \<le> Re (g t)" 
+      using g0 hgt Reb by simp
+    show "absolutely_continuous_on {0..t} g"
+      using absolutely_continuous_on_subset[OF cont] t by auto
+    show "inj_on g {0..t}"
+      using arc_inj_on t less_eq_real_def by presburger
+    then show "inj_on Re (g ` {0..t})"
+      using Reb Re_inj_upper g0 t
+      by (intro arc_Re_inj_on; fastforce simp: assms b(2))
+  qed (use above U vder t in auto)
   have upper_int: "integral {0..t} f \<ge> 0"
-  proof -
-    interpret Area g g' 0 t U
-    proof
-      show "Re (g 0) \<le> Re (g t)" 
-        using g0 hgt Reb by simp
-      show "absolutely_continuous_on {0..t} g"
-        using absolutely_continuous_on_subset[OF cont] t by auto
-      show "inj_on g {0..t}"
-        using arc_inj_on t less_eq_real_def by presburger
-      then show "inj_on Re (g ` {0..t})"
-        using Reb Re_inj_upper g0 t
-        by (intro arc_Re_inj_on; fastforce simp: assms b(2))
-    qed (use above U vder t in auto)
-    show ?thesis
-      unfolding f_def using below_arclet(2) by auto
-  qed
-    \<comment> \<open>Step 3: lower arc integral $\ge 0$ as well.
+    unfolding f_def using below_arclet(2) by auto
+      \<comment> \<open>Step 3: lower arc integral $\ge 0$ as well.
        On $\{t..1\}$, @{term g} goes from $b$ back to $0$ ($Re$ decreasing) with $Im(g) \le 0$.
        By the change of variables $x = Re(g(s))$:
        $\int_t^1 Re(g') \cdot Im(g)\,ds = \int_{Re\,b}^0 f_{\mathit{lower}}(x)\,dx = -\int_0^{Re\,b} f_{\mathit{lower}}(x)\,dx \ge 0$
        since $f_{\mathit{lower}} \le 0$.\<close>
+  have t_le1: "t \<le> 1" using t(2) by linarith
+  have Re_le': "Re (g 1) \<le> Re (g t)" using g1 hgt Reb by simp
+  have ac_sub': "absolutely_continuous_on {t..1} g"
+    using absolutely_continuous_on_subset[OF cont] t by auto
+  have inj_g_lower: "inj_on g {t..1}"
+    using arc_inj_on t(2) less_eq_real_def t by presburger
+  then have inj_Re_lower: "inj_on Re (g ` {t..1})"
+    using Reb Re_inj_lower g1 t
+    by (intro arc_Re_inj_on; fastforce simp: assms b(2))
   have lower_int: "integral {t..1} f \<ge> 0"
-  proof -
-    have t_le1: "t \<le> 1" using t(2) by linarith
-    have Re_le': "Re (g 1) \<le> Re (g t)" using g1 hgt Reb by simp
-    have ac_sub': "absolutely_continuous_on {t..1} g"
-      using absolutely_continuous_on_subset[OF cont] t by auto
-    have inj_g_lower: "inj_on g {t..1}"
-      using arc_inj_on t(2) less_eq_real_def t by presburger
-    then have inj_Re_lower: "inj_on Re (g ` {t..1})"
-      using Reb Re_inj_lower g1 t
-      by (intro arc_Re_inj_on; fastforce simp: assms b(2))
-    have vder_sub': "\<And>s. s \<in> {t..1} - U \<Longrightarrow> (g has_vector_derivative g' s) (at s)"
-      using vder t(1) by auto
-    show ?thesis
-      unfolding f_def
-      using area_above_arclet(2)[OF t_le1 Re_le' ac_sub' below inj_g_lower inj_Re_lower U vder_sub']
-      by auto
-  qed
-    \<comment> \<open>Step 4: total integral $=$ area of the inside.
+    unfolding f_def
+    using vder t(1) area_above_arclet(2)[OF t_le1 Re_le' ac_sub' below inj_g_lower inj_Re_lower U]
+    by auto
+      \<comment> \<open>Step 4: total integral $=$ area of the inside.
        The inside decomposes as the region between the two arcs:
        $\mathit{inside}\,(\mathit{path\_image}\ g) = \{z \mid Re\,z \in (0, Re\,b) \wedge f_{\mathit{lower}}(Re\,z) < Im\,z < f_{\mathit{upper}}(Re\,z)\}$.
        By Fubini, its area $= \int_0^{Re\,b} (f_{\mathit{upper}}(x) - f_{\mathit{lower}}(x))\,dx$,
        and by the change-of-variables computations above, this equals
        @{term "integral {0..t} f + integral {t..1} f"} $=$ @{term "integral {0..1} f"}.\<close>
-  have area_decomp: "measure lebesgue (inside (path_image g)) = integral {0..t} f + integral {t..1} f"
+      \<comment> \<open>Re-derive the integral-equals-measure identities (proved locally in \<open>upper_int\<close>/\<open>lower_int\<close>)\<close>
+  have t_le: "0 \<le> t" using t(1) by linarith
+  have t_le1: "t \<le> 1" using t(2) by linarith
+  have Re_le: "Re (g 0) \<le> Re (g t)" using g0 hgt Reb by simp
+  have Re_le': "Re (g 1) \<le> Re (g t)" using g1 hgt Reb by simp
+  have ac_sub: "absolutely_continuous_on {0..t} g"
+    using absolutely_continuous_on_subset[OF cont] t by auto
+  have ac_sub': "absolutely_continuous_on {t..1} g"
+    using absolutely_continuous_on_subset[OF cont] t by auto
+  have inj_g_upper: "inj_on g {0..t}"
+    using arc_inj_on[of 0 t] t by auto
+  then have inj_Re_upper: "inj_on Re (g ` {0..t})"
+    using Reb Re_inj_upper g0 t
+    by (intro arc_Re_inj_on; fastforce simp: assms b(2))
+  have inj_g_lower: "inj_on g {t..1}"
+    using arc_inj_on[of t 1] t by auto
+  then have inj_Re_lower: "inj_on Re (g ` {t..1})"
+    using Reb Re_inj_lower g1 t
+    by (intro arc_Re_inj_on; fastforce simp: assms b(2))
+  have vder_sub: "\<And>s. s \<in> {0..t} - U \<Longrightarrow> (g has_vector_derivative g' s) (at s)"
+    using vder t(2) by auto
+  have vder_sub': "\<And>s. s \<in> {t..1} - U \<Longrightarrow> (g has_vector_derivative g' s) (at s)"
+    using vder t(1) by auto
+      \<comment> \<open>The integral-equals-measure identities\<close>
+  define Au where "Au \<equiv> {z. \<exists>w \<in> g ` {0..t}. Re w = Re z \<and> 0 \<le> Im z \<and> Im z \<le> Im w}"
+  define Al where "Al \<equiv> {z. \<exists>w \<in> g ` {t..1}. Re w = Re z \<and> Im w \<le> Im z \<and> Im z \<le> 0}"
+  have int_upper: "integral {0..t} f = measure lebesgue Au"
+    using below_arclet(2) unfolding f_def Au_def by auto
+  have int_lower: "integral {t..1} f = measure lebesgue Al"
+    using area_above_arclet(2)[OF t_le1 Re_le' ac_sub' below inj_g_lower inj_Re_lower U vder_sub']
+    unfolding f_def Al_def by blast
+      \<comment> \<open>Step A: @{term Au} and @{term Al} are measurable (compact, hence @{term lmeasurable})\<close>
+  have Au_meas: "Au \<in> lmeasurable"
   proof -
-    \<comment> \<open>Re-derive the integral-equals-measure identities (proved locally in \<open>upper_int\<close>/\<open>lower_int\<close>)\<close>
-    have t_le: "0 \<le> t" using t(1) by linarith
-    have t_le1: "t \<le> 1" using t(2) by linarith
-    have Re_le: "Re (g 0) \<le> Re (g t)" using g0 hgt Reb by simp
-    have Re_le': "Re (g 1) \<le> Re (g t)" using g1 hgt Reb by simp
-    have ac_sub: "absolutely_continuous_on {0..t} g"
-      using absolutely_continuous_on_subset[OF cont] t by auto
-    have ac_sub': "absolutely_continuous_on {t..1} g"
-      using absolutely_continuous_on_subset[OF cont] t by auto
-    have inj_g_upper: "inj_on g {0..t}"
-      using arc_inj_on[of 0 t] t by auto
-    then have inj_Re_upper: "inj_on Re (g ` {0..t})"
-      using Reb Re_inj_upper g0 t
-      by (intro arc_Re_inj_on; fastforce simp: assms b(2))
-    have inj_g_lower: "inj_on g {t..1}"
-      using arc_inj_on[of t 1] t by auto
-    then have inj_Re_lower: "inj_on Re (g ` {t..1})"
-      using Reb Re_inj_lower g1 t
-      by (intro arc_Re_inj_on; fastforce simp: assms b(2))
-    have vder_sub: "\<And>s. s \<in> {0..t} - U \<Longrightarrow> (g has_vector_derivative g' s) (at s)"
-      using vder t(2) by auto
-    have vder_sub': "\<And>s. s \<in> {t..1} - U \<Longrightarrow> (g has_vector_derivative g' s) (at s)"
-      using vder t(1) by auto
-        \<comment> \<open>The integral-equals-measure identities\<close>
-    interpret Area g g' 0 t U
-    proof
-      show "Re (g 0) \<le> Re (g t)" 
-        using g0 hgt Reb by simp
-      show "absolutely_continuous_on {0..t} g"
-        using absolutely_continuous_on_subset[OF cont] t by auto
-      show "inj_on g {0..t}"
-        using arc_inj_on t less_eq_real_def by presburger
-      then show "inj_on Re (g ` {0..t})"
-        using Reb Re_inj_upper g0 t
-        by (intro arc_Re_inj_on; fastforce simp: assms b(2))
-    qed (use above U vder t in auto)
-    define Au where "Au \<equiv> {z. \<exists>w \<in> g ` {0..t}. Re w = Re z \<and> 0 \<le> Im z \<and> Im z \<le> Im w}"
-    define Al where "Al \<equiv> {z. \<exists>w \<in> g ` {t..1}. Re w = Re z \<and> Im w \<le> Im z \<and> Im z \<le> 0}"
-    have int_upper: "integral {0..t} f = measure lebesgue Au"
-      using below_arclet(2) unfolding f_def Au_def by auto
-    have int_lower: "integral {t..1} f = measure lebesgue Al"
-      using area_above_arclet(2)[OF t_le1 Re_le' ac_sub' below inj_g_lower inj_Re_lower U vder_sub']
-      unfolding f_def Al_def by blast
-        \<comment> \<open>Step A: @{term Au} and @{term Al} are measurable (compact, hence @{term lmeasurable})\<close>
-    have Au_meas: "Au \<in> lmeasurable"
-    proof -
-      have cont_g_upper: "continuous_on {0..t} g"
-        using absolutely_continuous_on_imp_continuous[OF ac_sub] is_interval_cc by blast
-      define \<phi> where "\<phi> \<equiv> \<lambda>(s,r). Complex (Re (g s)) (r * Im (g s))"
-      have cont_\<phi>: "continuous_on ({0..t} \<times> {0..1}) \<phi>"
-        unfolding \<phi>_def split_def
-        by (intro continuous_intros continuous_on_compose2[OF cont_g_upper] continuous_on_fst) auto
-      have img: "\<phi> ` ({0..t} \<times> {0..1}) = Au"
-      proof (rule set_eqI)
-        fix z :: complex
-        show "z \<in> \<phi> ` ({0..t} \<times> {0..1}) \<longleftrightarrow> z \<in> Au"
-        proof
-          assume "z \<in> \<phi> ` ({0..t} \<times> {0..1})"
-          then obtain s r where sr: "s \<in> {0..t}" "r \<in> {0..1}" "z = Complex (Re (g s)) (r * Im (g s))"
-            unfolding \<phi>_def by auto
-          have "g s \<in> g ` {0..t}" using sr(1) by auto
-          moreover have Im_ge: "Im (g s) \<ge> 0"
-            using subsetD[OF above imageI[OF sr(1)]] by simp
-          moreover have "Re (g s) = Re z" using sr(3) by simp
-          moreover have "0 \<le> Im z" using sr(3) sr(2) Im_ge
-            by (auto intro: mult_nonneg_nonneg)
-          moreover have "Im z \<le> Im (g s)" using sr(3) sr(2) Im_ge
-            by (auto simp: mult_left_le_one_le)
-          ultimately show "z \<in> Au" unfolding Au_def by auto
-        next
-          assume "z \<in> Au"
-          then obtain w where w: "w \<in> g ` {0..t}" "Re w = Re z" "0 \<le> Im z" "Im z \<le> Im w"
-            unfolding Au_def by auto
-          then obtain s where s: "s \<in> {0..t}" "w = g s" by auto
-          show "z \<in> \<phi> ` ({0..t} \<times> {0..1})"
-          proof (cases "Im w = 0")
-            case True 
-            then have "Im z = 0" using w(3,4) by linarith
-            then have "z = \<phi> (s, 0)" unfolding \<phi>_def using w(2) s(2) by (simp add: complex_eq_iff)
-            then show ?thesis using s(1) by auto
-          next
-            case False
-            define r where "r \<equiv> Im z / Im w"
-            have "Im w > 0" using False w(3,4) by linarith
-            then have "r \<in> {0..1}" unfolding r_def using w(3,4) by (auto simp: field_simps)
-            moreover have "z = \<phi> (s, r)"
-              unfolding \<phi>_def r_def using False w(2) s(2) by (simp add: complex_eq_iff)
-            ultimately show ?thesis using s(1) by auto
-          qed
-        qed
-      qed
-      with compact_Times compact_Icc img compact_continuous_image[OF cont_\<phi>]
-      have "compact Au" by metis
-      then show ?thesis using lmeasurable_compact by blast
-    qed
-    have Al_meas: "Al \<in> lmeasurable" \<comment> \<open>duality\<close>
-    proof -
-      have cont_g_lower: "continuous_on {t..1} g"
-        using absolutely_continuous_on_imp_continuous[OF ac_sub'] is_interval_cc by blast
-      define \<psi> where "\<psi> \<equiv> \<lambda>(s::real, r::real). Complex (Re (g s)) (r * Im (g s))"
-      have cont_\<psi>: "continuous_on ({t..1} \<times> {0..1}) \<psi>"
-        unfolding \<psi>_def split_def
-        by (intro continuous_intros continuous_on_compose2[OF cont_g_lower] continuous_on_fst) auto
-      have img: "\<psi> ` ({t..1} \<times> {0..1}) = Al"
-      proof (rule set_eqI)
-        fix z :: complex
-        show "z \<in> \<psi> ` ({t..1} \<times> {0..1}) \<longleftrightarrow> z \<in> Al"
-        proof
-          assume "z \<in> \<psi> ` ({t..1} \<times> {0..1})"
-          then obtain s r where sr: "s \<in> {t..1}" "r \<in> {0..1}" "z = Complex (Re (g s)) (r * Im (g s))"
-            unfolding \<psi>_def by auto
-          have "g s \<in> g ` {t..1}" using sr(1) by auto
-          moreover have Im_le: "Im (g s) \<le> 0"
-            using subsetD[OF below imageI[OF sr(1)]] by simp
-          moreover have "Re (g s) = Re z" using sr(3) by simp
-          moreover have "Im (g s) \<le> Im z"
-            by (metis atLeastAtMost_iff calculation(2) complex.sel(2) linorder_not_le mult_less_cancel_right2
-                sr(2,3))
-          moreover have "Im z \<le> 0"
-            using sr(3) sr(2) Im_le mult_nonneg_nonpos[of r "Im (g s)"] by simp
-          ultimately show "z \<in> Al" unfolding Al_def
-            by blast
-        next
-          assume "z \<in> Al"
-          then obtain w where w: "w \<in> g ` {t..1}" "Re w = Re z" "Im w \<le> Im z" "Im z \<le> 0"
-            unfolding Al_def by auto
-          then obtain s where s: "s \<in> {t..1}" "w = g s" by auto
-          show "z \<in> \<psi> ` ({t..1} \<times> {0..1})"
-          proof (cases "Im w = 0")
-            case True
-            then have "Im z = 0" using w(3,4) by linarith
-            then have "z = \<psi> (s, 0)" unfolding \<psi>_def using w(2) s(2) by (simp add: complex_eq_iff)
-            then show ?thesis using s(1) by auto
-          next
-            case False
-            define r where "r \<equiv> Im z / Im w"
-            have "Im w < 0" using False w(3,4) by linarith
-            then have "r \<in> {0..1}" unfolding r_def using w(3,4)
-              by (auto simp: field_simps divide_le_eq_1_neg divide_nonneg_neg)
-            moreover have "z = \<psi> (s, r)"
-              unfolding \<psi>_def r_def using False w(2) s(2) by (simp add: complex_eq_iff)
-            ultimately show ?thesis using s(1) by auto
-          qed
-        qed
-      qed
-      have "compact ({t..1} \<times> {0..1::real})" by (intro compact_Times compact_Icc)
-      then have "compact Al" using img compact_continuous_image[OF cont_\<psi>] by simp
-      then show ?thesis using lmeasurable_compact by blast
-    qed
-      \<comment> \<open>Step B+C: @{term "inside (path_image g) \<subseteq> Au \<union> Al"} and @{term "Au \<union> Al \<subseteq> closure (inside (path_image g))"},
-         and the gap $\mathit{closure}\,(\mathit{inside}) \setminus \mathit{inside} = \mathit{path\_image}\ g$ is negligible,
-         so $\mathit{measure}\,(\mathit{inside}) = \mathit{measure}\,(Au \cup Al)$.\<close>
-    have Au_Al_sub_closure: "Au \<union> Al \<subseteq> closure (inside (path_image g))"
-    proof -
-      have ch_eq: "convex hull (path_image g) = closure (inside (path_image g))"
-        using convex_hull_eq_closure_inside[OF g(1) _ conv] g(2,3) by auto
-      have zero_in_ch: "0 \<in> convex hull (path_image g)"
-        using hull_subset[of "path_image g" convex] g0
-        by (auto simp: path_image_def intro!: imageI[of 0])
-      have b_in_ch: "b \<in> convex hull (path_image g)"
-        using hull_subset[of "path_image g" convex] b(1) by auto
-      have real_seg: "closed_segment 0 b \<subseteq> convex hull (path_image g)"
-        using closed_segment_subset_convex_hull[OF zero_in_ch b_in_ch] .
-      have bdd_pi: "bounded (path_image g)"
-        using compact_simple_path_image[OF g(1)] compact_imp_bounded by blast
-          \<comment> \<open>Key fact: every point on the path has $Re \in [0, Re\,b]$\<close>
-      have zero_in_pi: "(0::complex) \<in> path_image g"
-        using g0 by (auto simp: path_image_def intro!: imageI[of 0])
-      have Re_bounds: "0 \<le> Re w \<and> Re w \<le> Re b" if "w \<in> path_image g" for w
-      proof -
-        have d0: "dist w 0 \<le> diameter (path_image g)"
-          using diameter_bounded_bound[OF bdd_pi that zero_in_pi] .
-        have db: "dist w b \<le> diameter (path_image g)"
-          using diameter_bounded_bound[OF bdd_pi that b(1)] .
-        have "diameter (path_image g) = dist 0 b" using dab g0 g1 assms by simp
-        then have diam_eq: "diameter (path_image g) = Re b"
-          using Imb Re_le cmod_eq_Re g0 hgt by auto
-        from d0 have ub: "cmod w \<le> Re b" using diam_eq by (simp add: dist_norm)
-        then have "Re w \<le> Re b"
-          using abs_Re_le_cmod[of w] by linarith
-        from db have "cmod (w - b) \<le> Re b" using diam_eq by (simp add: dist_norm)
-        then have "\<bar>Re w - Re b\<bar> \<le> cmod (w - b)"
-          using abs_Re_le_cmod[of "w - b"] by simp
-        then have "\<bar>Re w - Re b\<bar> \<le> Re b"
-          using \<open>cmod (w - b) \<le> Re b\<close> by linarith
-        then have "Re w \<ge> 0" by linarith
-        show ?thesis using \<open>Re w \<le> Re b\<close> \<open>Re w \<ge> 0\<close> by auto
-      qed
-        \<comment> \<open>Sublemma: @{term "Complex (Re w) 0 \<in> closed_segment 0 b"} for any @{term w} on the path\<close>
-      have real_point_in_seg: "Complex (Re w) 0 \<in> closed_segment 0 b"
-        if "w \<in> path_image g" for w
-      proof -
-        have bds: "0 \<le> Re w" "Re w \<le> Re b" using Re_bounds[OF that] by auto
-        define u where "u \<equiv> Re w / Re b"
-        have "0 \<le> u" "u \<le> 1" unfolding u_def using bds Reb by auto
-        have "Complex (Re w) 0 = (1 - u) *\<^sub>R 0 + u *\<^sub>R b"
-          unfolding u_def using Reb Imb
-          by (simp add: complex_eq_iff scaleR_complex.ctr)
-        then show ?thesis using \<open>0 \<le> u\<close> \<open>u \<le> 1\<close>
-          unfolding closed_segment_def by auto
-      qed
-        \<comment> \<open>Sublemma: any @{term z} between $p = \mathit{Complex}\,(Re\,w)\,0$ and @{term w} is in the convex hull\<close>
-      have in_ch_via_seg: "z \<in> convex hull (path_image g)"
-        if w_pi: "w \<in> path_image g"
-          and Re_eq: "Re w = Re z"
-          and Im_between: "(0 \<le> Im z \<and> Im z \<le> Im w) \<or> (Im w \<le> Im z \<and> Im z \<le> 0)"
-        for z w
-      proof -
-        define p where "p \<equiv> Complex (Re w) 0"
-        have p_in_ch: "p \<in> convex hull (path_image g)"
-          using real_point_in_seg[OF w_pi] real_seg
-          using p_def by blast
-        have w_in_ch: "w \<in> convex hull (path_image g)"
-          using hull_subset[of "path_image g" convex] w_pi by auto
-        show "z \<in> convex hull (path_image g)"
-        proof (cases "Im w = 0")
-          case True
-          then have "Im z = 0" using Im_between by linarith
-          then have "z = p" unfolding p_def using Re_eq by (simp add: complex_eq_iff)
-          then show ?thesis using p_in_ch by auto
-        next
-          case False
-          define u where "u \<equiv> Im z / Im w"
-          have "0 \<le> u" "u \<le> 1" unfolding u_def using Im_between False
-            by (auto simp: field_simps split: if_splits)
-          have "z = (1 - u) *\<^sub>R p + u *\<^sub>R w"
-            unfolding p_def u_def using False Re_eq
-            apply (simp add: complex_eq_iff scaleR_complex.ctr)
-            by argo
-          then have "z \<in> closed_segment p w" using \<open>0 \<le> u\<close> \<open>u \<le> 1\<close>
-            unfolding closed_segment_def by auto
-          then show ?thesis
-            using closed_segment_subset_convex_hull[OF p_in_ch w_in_ch] by auto
-        qed
-      qed
-      have Au_sub: "Au \<subseteq> convex hull (path_image g)"
-      proof (rule subsetI)
-        fix z assume "z \<in> Au"
+    have cont_g_upper: "continuous_on {0..t} g"
+      using absolutely_continuous_on_imp_continuous[OF ac_sub] is_interval_cc by blast
+    define \<phi> where "\<phi> \<equiv> \<lambda>(s,r). Complex (Re (g s)) (r * Im (g s))"
+    have cont_\<phi>: "continuous_on ({0..t} \<times> {0..1}) \<phi>"
+      unfolding \<phi>_def split_def
+      by (intro continuous_intros continuous_on_compose2[OF cont_g_upper] continuous_on_fst) auto
+    have img: "\<phi> ` ({0..t} \<times> {0..1}) = Au"
+    proof (rule set_eqI)
+      fix z :: complex
+      show "z \<in> \<phi> ` ({0..t} \<times> {0..1}) \<longleftrightarrow> z \<in> Au"
+      proof
+        assume "z \<in> \<phi> ` ({0..t} \<times> {0..1})"
+        then obtain s r where sr: "s \<in> {0..t}" "r \<in> {0..1}" "z = Complex (Re (g s)) (r * Im (g s))"
+          unfolding \<phi>_def by auto
+        have "g s \<in> g ` {0..t}" using sr(1) by auto
+        moreover have Im_ge: "Im (g s) \<ge> 0"
+          using subsetD[OF above imageI[OF sr(1)]] by simp
+        ultimately show "z \<in> Au" unfolding Au_def
+          using mult_left_le_one_le sr(2,3) by fastforce
+      next
+        assume "z \<in> Au"
         then obtain w where w: "w \<in> g ` {0..t}" "Re w = Re z" "0 \<le> Im z" "Im z \<le> Im w"
           unfolding Au_def by auto
-        have "w \<in> path_image g" using w(1) t by (auto simp: path_image_def)
-        then show "z \<in> convex hull (path_image g)"
-          using in_ch_via_seg[of w z] w(2,3,4) by auto
+        then obtain s where s: "s \<in> {0..t}" "w = g s" by auto
+        show "z \<in> \<phi> ` ({0..t} \<times> {0..1})"
+        proof (cases "Im w = 0")
+          case True 
+          then have "z = \<phi> (s, 0)" unfolding \<phi>_def using w s(2) by (simp add: complex_eq_iff)
+          then show ?thesis using s(1) by auto
+        next
+          case False
+          define r where "r \<equiv> Im z / Im w"
+          then have "r \<in> {0..1}" unfolding r_def using False w(3,4) by (auto simp: field_simps)
+          moreover have "z = \<phi> (s, r)"
+            unfolding \<phi>_def r_def using False w(2) s(2) by (simp add: complex_eq_iff)
+          ultimately show ?thesis using s(1) by auto
+        qed
       qed
-      have Al_sub: "Al \<subseteq> convex hull (path_image g)"
-      proof (rule subsetI)
-        fix z assume "z \<in> Al"
+    qed
+    with compact_Times compact_Icc img compact_continuous_image[OF cont_\<phi>]
+    show ?thesis using lmeasurable_compact by metis
+  qed
+  have Al_meas: "Al \<in> lmeasurable" \<comment> \<open>duality\<close>
+  proof -
+    have cont_g_lower: "continuous_on {t..1} g"
+      using absolutely_continuous_on_imp_continuous[OF ac_sub'] is_interval_cc by blast
+    define \<psi> where "\<psi> \<equiv> \<lambda>(s::real, r::real). Complex (Re (g s)) (r * Im (g s))"
+    have cont_\<psi>: "continuous_on ({t..1} \<times> {0..1}) \<psi>"
+      unfolding \<psi>_def split_def
+      by (intro continuous_intros continuous_on_compose2[OF cont_g_lower] continuous_on_fst) auto
+    have img: "\<psi> ` ({t..1} \<times> {0..1}) = Al"
+    proof (rule set_eqI)
+      fix z :: complex
+      show "z \<in> \<psi> ` ({t..1} \<times> {0..1}) \<longleftrightarrow> z \<in> Al"
+      proof
+        assume "z \<in> \<psi> ` ({t..1} \<times> {0..1})"
+        then obtain s r where sr: "s \<in> {t..1}" "r \<in> {0..1}" "z = Complex (Re (g s)) (r * Im (g s))"
+          unfolding \<psi>_def by auto
+        have "g s \<in> g ` {t..1}" using sr(1) by auto
+        moreover have Im_le: "Im (g s) \<le> 0"
+          using subsetD[OF below imageI[OF sr(1)]] by simp
+        moreover have "Re (g s) = Re z" using sr(3) by simp
+        moreover have "Im (g s) \<le> Im z"
+          by (metis atLeastAtMost_iff calculation(2) complex.sel(2) linorder_not_le mult_less_cancel_right2
+              sr(2,3))
+        moreover have "Im z \<le> 0"
+          using sr(3) sr(2) Im_le mult_nonneg_nonpos[of r "Im (g s)"] by simp
+        ultimately show "z \<in> Al" unfolding Al_def
+          by blast
+      next
+        assume "z \<in> Al"
         then obtain w where w: "w \<in> g ` {t..1}" "Re w = Re z" "Im w \<le> Im z" "Im z \<le> 0"
           unfolding Al_def by auto
-        have "w \<in> path_image g" using w(1) t by (auto simp: path_image_def)
-        then show "z \<in> convex hull (path_image g)"
-          using in_ch_via_seg[of w z] w(2,3,4) by auto
-      qed
-      show ?thesis using Au_sub Al_sub ch_eq by auto
-    qed
-
-    have inside_sub_Au_Al: "inside (path_image g) \<subseteq> Au \<union> Al"
-    proof (rule subsetI)
-      fix z assume z_in: "z \<in> inside (path_image g)"
-        \<comment> \<open>Set up the convex hull S and its key properties\<close>
-      define S where "S \<equiv> convex hull (path_image g)"
-      have S_convex: "convex S" unfolding S_def by (rule convex_convex_hull)
-      have S_compact: "compact S" unfolding S_def
-        using compact_simple_path_image[OF g(1)] compact_convex_hull by auto
-      have S_bounded: "bounded S" using S_compact compact_imp_bounded by auto
-      have ch_eq: "S = closure (inside (path_image g))"
-        unfolding S_def using convex_hull_eq_closure_inside[OF g(1) _ conv] g(2,3) by auto
-      have frontier_S: "frontier S = path_image g"
-        unfolding S_def using frontier_convex_hull_eq_path_image[OF g(1) _ conv] g(2,3) by auto
-      have inside_eq_int: "inside (path_image g) = interior S"
-        by (metis S_bounded S_convex frontier_S inside_frontier_eq_interior)
-      have S_int_ne: "interior S \<noteq> {}"
-        using z_in inside_eq_int by auto
-      have rel_int_eq: "rel_interior S = interior S"
-        using rel_interior_nonempty_interior[OF S_int_ne] .
-      have rel_fr_eq: "rel_frontier S = frontier S"
-        using rel_frontier_nonempty_interior[OF S_int_ne] .
-      have z_int: "z \<in> interior S" using z_in inside_eq_int by auto
-      have z_rel_int: "z \<in> rel_interior S" using z_int rel_int_eq by simp
-          \<comment> \<open>@{term S} is full-dimensional, so @{term "affine hull S = UNIV"}\<close>
-      have aff_S: "affine hull S = UNIV"
-        by (simp add: S_int_ne affine_hull_nonempty_interior)
-          \<comment> \<open>Case split on the sign of $Im\,z$\<close>
-      show "z \<in> Au \<union> Al"
-      proof (cases "Im z \<ge> 0")
-        case True
-          \<comment> \<open>Shoot a ray upward from @{term z} in direction @{term \<i>}.
-             By \<open>ray_to_rel_frontier\<close>, we hit a point on @{term "frontier S"} $=$ @{term "path_image g"}.\<close>
-        obtain d where d: "d > 0" "z + d *\<^sub>R \<i> \<in> rel_frontier S"
-          by (metis S_bounded complex_i_not_zero ray_to_frontier rel_fr_eq z_int)
-        define w where "w \<equiv> z + d *\<^sub>R \<i>"
-        have w_on_path: "w \<in> path_image g"
-          using d(2) rel_fr_eq frontier_S w_def by auto
-        have Re_w: "Re w = Re z" unfolding w_def by simp
-        have Im_w: "Im w = Im z + d" unfolding w_def by simp
-        have Im_w_pos: "Im w > 0" using True d(1) Im_w by linarith
-            \<comment> \<open>Since $Im\,w > 0$ and the lower arc has $Im \le 0$, @{term w} must be on the upper arc\<close>
-        have w_upper: "w \<in> g ` {0..t}"
-        proof -
-          have "{0..1} = {0..t} \<union> {t..1}" using t_le t_le1 by (auto simp: ivl_disj_un_two_touch)
-          then have "path_image g = g ` {0..t} \<union> g ` {t..1}"
-            unfolding path_image_def by (simp add: image_Un)
-          then have "w \<in> g ` {0..t} \<union> g ` {t..1}" using w_on_path by simp
-          moreover have "w \<notin> g ` {t..1}"
-            using below Im_w_pos by (auto simp: subset_iff)
-          ultimately show ?thesis by blast
+        then obtain s where s: "s \<in> {t..1}" "w = g s" by auto
+        show "z \<in> \<psi> ` ({t..1} \<times> {0..1})"
+        proof (cases "Im w = 0")
+          case True
+          then have "z = \<psi> (s, 0)" unfolding \<psi>_def using w s(2) by (simp add: complex_eq_iff)
+          then show ?thesis using s(1) by auto
+        next
+          case False
+          define r where "r \<equiv> Im z / Im w"
+          then have "r \<in> {0..1}" unfolding r_def using False w(3,4)
+            by (auto simp: field_simps)
+          moreover have "z = \<psi> (s, r)"
+            unfolding \<psi>_def r_def using False w(2) s(2) by (simp add: complex_eq_iff)
+          ultimately show ?thesis using s(1) by auto
         qed
-        have "z \<in> Au"
-          using Au_def Im_w Re_w True d(1) w_upper by auto
-        then show "z \<in> Au \<union> Al" ..
-      next
-        case False
-        then have Im_z_neg: "Im z \<le> 0" by simp
-            \<comment> \<open>Shoot a ray downward from @{term z} in direction @{term "-\<i>"}\<close>
-        obtain d where d: "d > 0" "z + d *\<^sub>R (-\<i>) \<in> frontier S"
-          by (metis S_bounded complex_i_not_zero neg_equal_0_iff_equal ray_to_frontier z_int)
-        have d2: "z - d *\<^sub>R \<i> \<in> rel_frontier S"
-          using d(2) rel_fr_eq by (simp add: real_vector.scale_minus_right)
-        define w where "w \<equiv> z - d *\<^sub>R \<i>"
-        have w_on_path: "w \<in> path_image g"
-          using d2 rel_fr_eq frontier_S w_def by auto
-        have Re_w: "Re w = Re z" unfolding w_def by simp
-        have Im_w: "Im w = Im z - d" unfolding w_def by simp
-        have Im_w_neg: "Im w < 0" using Im_z_neg d(1) Im_w by linarith
-            \<comment> \<open>Since $Im\,w < 0$, @{term w} must be on the lower arc\<close>
-        have w_lower: "w \<in> g ` {t..1}"
-        proof -
-          have "{0..1} = {0..t} \<union> {t..1}" using t_le t_le1 by (auto simp: ivl_disj_un_two_touch)
-          then have "path_image g = g ` {0..t} \<union> g ` {t..1}"
-            unfolding path_image_def by (simp add: image_Un)
-          then have "w \<in> g ` {0..t} \<union> g ` {t..1}" using w_on_path by simp
-          moreover have "w \<notin> g ` {0..t}"
-            using above Im_w_neg by (auto simp: subset_iff)
-          ultimately show ?thesis by blast
-        qed
-        have "z \<in> Al"
-          using Al_def Im_w Im_z_neg Re_w d(1) w_lower by auto
-        then show "z \<in> Au \<union> Al" ..
       qed
     qed
-
-    have inside_eq: "measure lebesgue (inside (path_image g)) = measure lebesgue (Au \<union> Al)"
-    proof -
-      have bdd_inside: "bounded (inside (path_image g))"
-        using Jordan_inside_outside[OF g(1)] g(2,3) by auto
-      have frontier_inside: "frontier (inside (path_image g)) = path_image g"
-        using Jordan_inside_outside[OF g(1)] g(2,3) by auto
-      have neg_frontier: "negligible (frontier (inside (path_image g)))"
-        using negligible_convex_frontier[OF conv] .
-      have inside_meas: "inside (path_image g) \<in> lmeasurable"
-        using measurable_Jordan[OF bdd_inside neg_frontier] .
-      have AuAl_meas: "Au \<union> Al \<in> lmeasurable"
-        using fmeasurable.Un[OF Au_meas Al_meas] .
-          \<comment> \<open>The symmetric difference is contained in @{term "path_image g"}, which is negligible\<close>
-      have "inside (path_image g) \<Delta> (Au \<union> Al) \<subseteq> path_image g"
-        by (metis Au_Al_sub_closure Diff_mono Diff_subset_conv closure_Un_frontier frontier_inside inside_sub_Au_Al
-            le_iff_sup)
-      then have "negligible (inside (path_image g) \<Delta> (Au \<union> Al))"
-        using negligible_subset neg_frontier frontier_inside by auto
-      then show ?thesis
-        using measure_negligible_symdiff[OF inside_meas]
-        by presburger
-    qed
-      \<comment> \<open>Step D: @{term "Au \<inter> Al \<subseteq> {z. Im z = 0}"}, which is negligible in $\mathbb{R}^2$.
-         Therefore $\mathit{measure}\,(Au \cup Al) = \mathit{measure}\,Au + \mathit{measure}\,Al$.\<close>
-    have inter_null: "Au \<inter> Al \<subseteq> {z. Im z = 0}"
-      unfolding Au_def Al_def by auto
-    have "measure lebesgue (Au \<union> Al) = measure lebesgue Au + measure lebesgue Al"
-    proof -
-      have "negligible {z :: complex. Im z = 0}"
-        using negligible_hyperplane[of \<i> 0]
-        by (simp add: complex_inner_i_left)
-      then have "negligible (Au \<inter> Al)"
-        using negligible_subset inter_null by blast
-      then have "measure lebesgue (Au \<inter> Al) = 0"
-        by (rule negligible_imp_measure0)
-      moreover have "measure lebesgue (Au \<union> Al) = measure lebesgue Au + measure lebesgue Al - measure lebesgue (Au \<inter> Al)"
-        using measure_Un3[of Au lebesgue Al] Au_meas Al_meas by auto
-      ultimately show ?thesis by simp
-    qed
-      \<comment> \<open>Combine\<close>
-    show ?thesis
-      using inside_eq \<open>measure lebesgue (Au \<union> Al) = measure lebesgue Au + measure lebesgue Al\<close>
-        int_upper int_lower by simp
+    have "compact ({t..1} \<times> {0..1::real})" by (intro compact_Times compact_Icc)
+    then show ?thesis using lmeasurable_compact img compact_continuous_image[OF cont_\<psi>] by simp
   qed
-    \<comment> \<open>Step 5: Combine\<close>
-  have int_eq: "\<bar>integral {0..1} f\<bar> = measure lebesgue (inside (path_image g))"
-    using split_int area_decomp upper_int lower_int by linarith
+    \<comment> \<open>Step B+C: @{term "inside (path_image g) \<subseteq> Au \<union> Al"} and @{term "Au \<union> Al \<subseteq> closure (inside (path_image g))"},
+         and the gap $\mathit{closure}\,(\mathit{inside}) \setminus \mathit{inside} = \mathit{path\_image}\ g$ is negligible,
+         so $\mathit{measure}\,(\mathit{inside}) = \mathit{measure}\,(Au \cup Al)$.\<close>
+  have ch_eq: "convex hull (path_image g) = closure (inside (path_image g))"
+    using convex_hull_eq_closure_inside[OF g(1) _ conv] g(2,3) by auto
+  have zero_in_ch: "0 \<in> convex hull (path_image g)"
+    using hull_subset[of "path_image g" convex] g0
+    by (auto simp: path_image_def intro!: imageI[of 0])
+  have b_in_ch: "b \<in> convex hull (path_image g)"
+    using hull_subset[of "path_image g" convex] b(1) by auto
+  have real_seg: "closed_segment 0 b \<subseteq> convex hull (path_image g)"
+    using closed_segment_subset_convex_hull[OF zero_in_ch b_in_ch] .
+  have bdd_pi: "bounded (path_image g)"
+    using compact_simple_path_image[OF g(1)] compact_imp_bounded by blast
+  have zero_in_pi: "(0::complex) \<in> path_image g"
+    using g0 by (auto simp: path_image_def intro!: imageI[of 0])
+  have Re_bounds: "0 \<le> Re w \<and> Re w \<le> Re b" if "w \<in> path_image g" for w
+  proof -
+    have d0: "dist w 0 \<le> diameter (path_image g)"
+      using diameter_bounded_bound[OF bdd_pi that zero_in_pi] .
+    have db: "dist w b \<le> diameter (path_image g)"
+      using diameter_bounded_bound[OF bdd_pi that b(1)] .
+    have "diameter (path_image g) = dist 0 b" using dab g0 g1 assms by simp
+    then have diam_eq: "diameter (path_image g) = Re b"
+      using Imb Re_le cmod_eq_Re g0 hgt by auto
+    from d0 have ub: "cmod w \<le> Re b" using diam_eq by (simp add: dist_norm)
+    moreover from db have "cmod (w - b) \<le> Re b" using diam_eq by (simp add: dist_norm)
+    ultimately show ?thesis
+      by (smt (verit, ccfv_SIG) abs_Re_le_cmod minus_complex.sel(1))
+  qed
+    \<comment> \<open>Sublemma: @{term "Complex (Re w) 0 \<in> closed_segment 0 b"} for any @{term w} on the path\<close>
+  have real_point_in_seg: "Complex (Re w) 0 \<in> closed_segment 0 b"
+    if "w \<in> path_image g" for w
+  proof -
+    have bds: "0 \<le> Re w" "Re w \<le> Re b" using Re_bounds[OF that] by auto
+    define u where "u \<equiv> Re w / Re b"
+    have "0 \<le> u" "u \<le> 1" unfolding u_def using bds Reb by auto
+    have "Complex (Re w) 0 = (1 - u) *\<^sub>R 0 + u *\<^sub>R b"
+      unfolding u_def using Reb Imb
+      by (simp add: complex_eq_iff scaleR_complex.ctr)
+    then show ?thesis using \<open>0 \<le> u\<close> \<open>u \<le> 1\<close>
+      unfolding closed_segment_def by auto
+  qed
+    \<comment> \<open>Sublemma: any @{term z} between $p = \mathit{Complex}\,(Re\,w)\,0$ and @{term w} is in the convex hull\<close>
+  have in_ch_via_seg: "z \<in> convex hull (path_image g)"
+    if w_pi: "w \<in> path_image g"
+      and Re_eq: "Re w = Re z"
+      and Im_between: "(0 \<le> Im z \<and> Im z \<le> Im w) \<or> (Im w \<le> Im z \<and> Im z \<le> 0)"
+    for z w
+  proof -
+    define p where "p \<equiv> Complex (Re w) 0"
+    have p_in_ch: "p \<in> convex hull (path_image g)"
+      using real_point_in_seg[OF w_pi] real_seg
+      using p_def by blast
+    have w_in_ch: "w \<in> convex hull (path_image g)"
+      using hull_subset[of "path_image g" convex] w_pi by auto
+    show "z \<in> convex hull (path_image g)"
+    proof (cases "Im w = 0")
+      case True
+      then show ?thesis using p_in_ch complex_eqI that(2,3) w_in_ch by force
+    next
+      case False
+      define u where "u \<equiv> Im z / Im w"
+      have "0 \<le> u" "u \<le> 1" unfolding u_def using Im_between False
+        by (auto simp: field_simps split: if_splits)
+      have "z = (1 - u) *\<^sub>R p + u *\<^sub>R w"
+        unfolding p_def u_def using False Re_eq
+        by (simp add: complex_eq_iff scaleR_complex.ctr) argo
+      then have "z \<in> closed_segment p w" using \<open>0 \<le> u\<close> \<open>u \<le> 1\<close>
+        unfolding closed_segment_def by auto
+      then show ?thesis
+        using closed_segment_subset_convex_hull[OF p_in_ch w_in_ch] by auto
+    qed
+  qed
+  have Au_sub: "Au \<subseteq> convex hull (path_image g)"
+  proof (rule subsetI)
+    fix z assume "z \<in> Au"
+    then obtain w where w: "w \<in> g ` {0..t}" "Re w = Re z" "0 \<le> Im z" "Im z \<le> Im w"
+      unfolding Au_def by auto
+    then show "z \<in> convex hull (path_image g)"
+      using t in_ch_via_seg[of w z] w by (auto simp: path_image_def)
+  qed
+  have "Al \<subseteq> convex hull (path_image g)"
+  proof (rule subsetI)
+    fix z assume "z \<in> Al"
+    then obtain w where "w \<in> g ` {t..1}" and w: "Re w = Re z" "Im w \<le> Im z" "Im z \<le> 0"
+      unfolding Al_def by auto
+    with t have "w \<in> path_image g" by (auto simp: path_image_def)
+    then show "z \<in> convex hull (path_image g)"
+      using in_ch_via_seg[of w z] w by auto
+  qed
+  with Au_sub have Au_Al_sub_closure: "Au \<union> Al \<subseteq> closure (inside (path_image g))"
+    using Au_sub ch_eq by auto
 
-  show ?thesis unfolding Green_concl_def f_def
-    using int_eq f_abs_int unfolding f_def by auto
+  have inside_sub_Au_Al: "inside (path_image g) \<subseteq> Au \<union> Al"
+  proof (rule subsetI)
+    fix z assume z_in: "z \<in> inside (path_image g)"
+      \<comment> \<open>Set up the convex hull S and its key properties\<close>
+    define S where "S \<equiv> convex hull (path_image g)"
+    have S_bounded: "bounded S"
+      by (simp add: S_def bdd_pi bounded_convex_hull)
+    have ch_eq: "S = closure (inside (path_image g))"
+      unfolding S_def using convex_hull_eq_closure_inside[OF g(1) _ conv] g(2,3) by auto
+    have frontier_S: "frontier S = path_image g"
+      unfolding S_def using frontier_convex_hull_eq_path_image[OF g(1) _ conv] g(2,3) by auto
+    have inside_eq_int: "inside (path_image g) = interior S"
+      by (metis S_bounded S_def convex_convex_hull frontier_S inside_frontier_eq_interior)
+    have S_int_ne: "interior S \<noteq> {}"
+      using z_in inside_eq_int by auto
+    have rel_int_eq: "rel_interior S = interior S"
+      using rel_interior_nonempty_interior[OF S_int_ne] .
+    have rel_fr_eq: "rel_frontier S = frontier S"
+      using rel_frontier_nonempty_interior[OF S_int_ne] .
+    have z_int: "z \<in> interior S" using z_in inside_eq_int by auto
+        \<comment> \<open>@{term S} is full-dimensional, so @{term "affine hull S = UNIV"}\<close>
+    show "z \<in> Au \<union> Al"
+    proof (cases "Im z \<ge> 0")
+      case True
+        \<comment> \<open>Shoot a ray upward from @{term z} in direction @{term \<i>}.
+             By \<open>ray_to_rel_frontier\<close>, we hit a point on @{term "frontier S"} $=$ @{term "path_image g"}.\<close>
+      obtain d where d: "d > 0" "z + d *\<^sub>R \<i> \<in> rel_frontier S"
+        by (metis S_bounded complex_i_not_zero ray_to_frontier rel_fr_eq z_int)
+      define w where "w \<equiv> z + d *\<^sub>R \<i>"
+      have w_on_path: "w \<in> path_image g" and Re_w: "Re w = Re z" and Im_w: "Im w = Im z + d"
+        using d(2) rel_fr_eq frontier_S w_def by auto
+      have Im_w_pos: "Im w > 0" using True d(1) Im_w by linarith
+          \<comment> \<open>Since $Im\,w > 0$ and the lower arc has $Im \le 0$, @{term w} must be on the upper arc\<close>
+      have "{0..1} = {0..t} \<union> {t..1}" using t_le t_le1 by (auto simp: ivl_disj_un_two_touch)
+      then have "path_image g = g ` {0..t} \<union> g ` {t..1}"
+        unfolding path_image_def by (simp add: image_Un)
+      moreover have "w \<notin> g ` {t..1}"
+        using below Im_w_pos by (auto simp: subset_iff)
+      ultimately have "z \<in> Au"
+        using Au_def Im_w Re_w True d(1) w_on_path by auto
+      then show "z \<in> Au \<union> Al" ..
+    next
+      case Im_z_neg: False \<comment>\<open>symmetric with the proof above\<close>
+      obtain d where d: "d > 0" "z + d *\<^sub>R (-\<i>) \<in> frontier S"
+        by (metis S_bounded complex_i_not_zero neg_equal_0_iff_equal ray_to_frontier z_int)
+      have d2: "z - d *\<^sub>R \<i> \<in> rel_frontier S"
+        using d(2) rel_fr_eq by (simp add: real_vector.scale_minus_right)
+      define w where "w \<equiv> z - d *\<^sub>R \<i>"
+      have w_on_path: "w \<in> path_image g" and Re_w: "Re w = Re z" and Im_w: "Im w = Im z - d"
+        using d2 rel_fr_eq frontier_S w_def by auto
+      have Im_w_neg: "Im w < 0" using Im_z_neg d(1) Im_w by linarith
+      have "{0..1} = {0..t} \<union> {t..1}" using t_le t_le1 by (auto simp: ivl_disj_un_two_touch)
+      then have "path_image g = g ` {0..t} \<union> g ` {t..1}"
+        unfolding path_image_def by (simp add: image_Un)
+      moreover have "w \<notin> g ` {0..t}"
+        using above Im_w_neg by (auto simp: subset_iff)
+      ultimately 
+      have "z \<in> Al" using Al_def Im_w Im_z_neg Re_w d(1) w_on_path by auto
+      then show "z \<in> Au \<union> Al" ..
+    qed
+  qed
+
+  have inside_eq: "measure lebesgue (inside (path_image g)) = measure lebesgue (Au \<union> Al)"
+  proof -
+    have frontier_inside: "frontier (inside (path_image g)) = path_image g"
+      using Jordan_inside_outside[OF g(1)] g(2,3) by auto
+    have inside_meas: "inside (path_image g) \<in> lmeasurable"
+      by (simp add: bdd_pi bounded_inside conv measurable_convex)
+    have AuAl_meas: "Au \<union> Al \<in> lmeasurable"
+      using fmeasurable.Un[OF Au_meas Al_meas] .
+        \<comment> \<open>The symmetric difference is contained in @{term "path_image g"}, which is negligible\<close>
+    have "inside (path_image g) \<Delta> (Au \<union> Al) \<subseteq> path_image g"
+      by (metis Au_Al_sub_closure Diff_mono Diff_subset_conv closure_Un_frontier frontier_inside inside_sub_Au_Al
+          le_iff_sup)
+    then have "negligible (inside (path_image g) \<Delta> (Au \<union> Al))"
+      by (metis conv frontier_inside negligible_convex_frontier negligible_subset)
+    then show ?thesis
+      using measure_negligible_symdiff[OF inside_meas]
+      by presburger
+  qed
+    \<comment> \<open>Step D: @{term "Au \<inter> Al \<subseteq> {z. Im z = 0}"}, which is negligible in $\mathbb{R}^2$.
+         Therefore $\mathit{measure}\,(Au \cup Al) = \mathit{measure}\,Au + \mathit{measure}\,Al$.\<close>
+  have inter_null: "Au \<inter> Al \<subseteq> {z. Im z = 0}"
+    unfolding Au_def Al_def by auto
+  have "measure lebesgue (Au \<union> Al) = measure lebesgue Au + measure lebesgue Al"
+  proof -
+    have "negligible {z :: complex. Im z = 0}"
+      using negligible_hyperplane[of \<i> 0] by (simp add: complex_inner_i_left)
+    then have "negligible (Au \<inter> Al)"
+      using negligible_subset inter_null by blast
+    moreover have "measure lebesgue (Au \<union> Al) = measure lebesgue Au + measure lebesgue Al - measure lebesgue (Au \<inter> Al)"
+      using measure_Un3[of Au lebesgue Al] Au_meas Al_meas by auto
+    ultimately show ?thesis
+      by (simp add: negligible_imp_measure0)
+  qed
+  then have area_decomp: "measure lebesgue (inside (path_image g)) = integral {0..t} f + integral {t..1} f"
+    using inside_eq int_lower int_upper by presburger
+  then  show ?thesis 
+    using f_abs_int lower_int split_int upper_int by (auto simp: f_def Green_concl_def)
 qed
 
 end
@@ -2421,33 +2244,17 @@ proof -
   have g0: "g 0 = 0" using assms g(2) by (simp add: pathstart_def)
   have g1: "g 1 = 0" using assms g(3) by (simp add: pathfinish_def)
   define f where "f \<equiv> \<lambda>s. Re (g' s) * Im (g s)"
-  have split_case: "Green_concl g g'"
-    if assms: "a = 0"
-      and t: "0 < t" "t < 1"
-      and hgt: "g t = b"
-      and above: "g ` {0..t} \<subseteq> {z. 0 \<le> Im z}"
-      and below: "g ` {t..1} \<subseteq> {z. Im z \<le> 0}"
-    for t :: real
-    using Green_area_zero_A[OF assms t hgt above below] .
   have split_case': "Green_concl g g'"
-    if assms: "a = 0"
-      and t: "0 < t" "t < 1"
-      and hgt: "g t = b"
+    if t: "0 < t" "t < 1" and hgt: "g t = b"
       and below: "g ` {0..t} \<subseteq> {z. Im z \<le> 0}"
       and above: "g ` {t..1} \<subseteq> {z. 0 \<le> Im z}"
     for t :: real
   proof -
     have "Green_concl (reversepath g) (uminus \<circ> reversepath g')"
     proof (intro R.Green_area_zero_A)
-      show "a=0" "0 < 1-t" "1-t < 1"
-        using assms t by auto
-      show "reversepath g (1-t) = b"
-        by (simp add: hgt reversepath_def)
       show "reversepath g ` {0..1-t} \<subseteq> {z. 0 \<le> Im z}"
         using above by (force simp: reversepath_def image_subset_iff)
-      show "reversepath g ` {1-t..1} \<subseteq> {z. Im z \<le> 0}"
-        using below by (force simp: reversepath_def image_subset_iff)
-    qed
+    qed (use assms that in \<open>force simp: image_subset_iff reversepath_def\<close>)+
     moreover have "integral {0..1} (\<lambda>t. Re (reversepath g' t) * Im (reversepath g t)) 
                  = integral {0..1} (\<lambda>t. Re (g' t) * Im (g t))"
       using has_integral_affinity [of f _ 0 1 "-1" 1] f_abs_int
@@ -2457,134 +2264,72 @@ proof -
   qed
 
   have Reb: "Re b > 0" using b(2) assms by simp
-  have Im_a: "Im a = 0" using assms by simp
-  have Im_b: "Im b = 0" using b(3) Im_a by simp
+  have Im_b: "Im b = 0" using b(3) \<open>a=0\<close> by simp
   have path_g: "path g" using g(1) simple_path_imp_path by blast
   have cont_g: "continuous_on {0..1} g"
     using path_g by (simp add: path_def)
   obtain t where t: "g t = b" "0 < t" "t < 1"
-  proof -
-    obtain t where t0: "g t = b" "t \<in> {0..1}"
-      using b by (auto simp: path_image_def)
-    have "0 < t"
-      by (metis atLeastAtMost_iff b(2) g(2) not_le order_eq_iff pathstart_def t0)
-    moreover have "t < 1"
-      by (smt (verit, best) b(2) box_real(2) g(3) mem_box_real(2) pathfinish_def t0)
-    ultimately show thesis using t0 that by blast
-  qed
-  have Re_inj_upper: "\<lbrakk>s1 \<in> {0..t}; s2 \<in> {0..t}; Re (g s1) = Re (g s2); s1 \<noteq> s2\<rbrakk>
-        \<Longrightarrow> (s1 = 0 \<and> s2 = t) \<or> (s1 = t \<and> s2 = 0)" for s1 s2
-    using Re_inj_upper_gen g0 g1 t by presburger
-  have Re_inj_lower: "\<lbrakk>s1 \<in> {t..1}; s2 \<in> {t..1}; Re (g s1) = Re (g s2); s1 \<noteq> s2\<rbrakk>
-        \<Longrightarrow> (s1 = t \<and> s2 = 1) \<or> (s1 = 1 \<and> s2 = t)" for s1 s2
-    using CR.Re_inj_upper_gen[of "1-s1" "1-t" "1-s2"] t g g0 g1 assms
-    by (auto simp add: gop_def reversepath_def)
+    using b Reb g0 g1 by (fastforce simp: path_image_def)
   have "g ` {0..t} \<subseteq> {z. 0 \<le> Im z} \<and> g ` {t..1} \<subseteq> {z. Im z \<le> 0} \<or>
         g ` {0..t} \<subseteq> {z. Im z \<le> 0} \<and> g ` {t..1} \<subseteq> {z. 0 \<le> Im z}"
   proof -
     have "open_segment 0 b \<subseteq> frontier (inside (path_image g)) \<or>
           open_segment 0 b \<subseteq> interior (inside (path_image g))"
     proof (rule convex_open_segment_cases_alt)
-      show "convex (inside (path_image g))"
-        by (simp add: conv)
       show "0 \<in> closure (inside (path_image g))"
         using hull_inc convex_hull_eq_closure_inside
         by (metis assms conv g pathfinish_in_path_image)
       show "b \<in> closure (inside (path_image g))"
         using hull_inc convex_hull_eq_closure_inside
         using R.g(2) b(1) conv g(1,2) by fastforce
-    qed
-    then consider "open_segment 0 b \<subseteq> path_image g" 
-                | "open_segment 0 b \<subseteq> inside (path_image g)"
+    qed (simp add: conv)
+    then consider "open_segment 0 b \<subseteq> path_image g" | "open_segment 0 b \<subseteq> inside (path_image g)"
       by (metis Jordan_inside_outside g interior_subset subset_trans)
     then show ?thesis
     proof cases
       case 1
-      have *: "connectedin euclidean (open_segment 0 b)"
-        by (simp add: convex_connected)
-      with 1 have conn: "connectedin (subtopology euclidean (path_image g))
-                         (open_segment 0 b)"
-        by (simp add: connectedin_subtopology)
+      then have conn: "connectedin (subtopology euclidean (path_image g)) (open_segment 0 b)"
+        by (simp add: connectedin_subtopology convex_connected)
       have pi1: "g ` {0<..<t} \<subseteq> path_image g" and pi2: "g ` {t<..<1} \<subseteq> path_image g"
         using t by (auto simp: path_image_def image_iff)
-      have cl1: "g ` {0<..<t} \<inter> path_image g \<inter> closure (path_image g \<inter> g ` {t<..<1}) = {}"
-      proof -
-        have lf: "loop_free g" using g(1) by (simp add: simple_path_def)
-        have inj: "inj_on g {0<..<1}" using lf loop_free_inj_on by blast
-        have disj: "g ` {0<..<t} \<inter> g ` {t..1} = {}"
-        proof (rule ccontr)
-          assume "\<not> ?thesis"
-          then obtain x y where xy: "x \<in> {0<..<t}" "y \<in> {t..1}" "g x = g y"
-            by blast
-          have x01: "x \<in> {0..1}" using xy(1) t(3) by auto
-          have y01: "y \<in> {0..1}" using xy(2)
-            using t(2) by auto
-          have "x \<noteq> y" using xy(1,2) by auto
-          then have "x = 0 \<and> y = 1 \<or> x = 1 \<and> y = 0"
-            using lf xy(3) x01 y01 unfolding loop_free_def by blast
-          then show False using xy(1,2) by auto
-        qed
-        have closed_img: "closed (g ` {t..1})"
-          using compact_continuous_image[OF continuous_on_subset[OF cont_g]]
-          by (simp add: compact_imp_closed less_eq_real_def t(2))
-        have "closure (g ` {t<..<1}) \<subseteq> g ` {t..1}"
-          using closed_img closure_minimal by (meson closure_minimal image_mono greaterThanLessThan_subseteq_atLeastAtMost_iff order.refl less_imp_le)
-        then have "closure (path_image g \<inter> g ` {t<..<1}) \<subseteq> g ` {t..1}"
-          by (meson Int_lower2 closure_mono dual_order.trans)
-        then show ?thesis using disj by auto
+      have "closed (g ` {t..1})"
+        using compact_continuous_image[OF continuous_on_subset[OF cont_g]]
+        by (simp add: compact_imp_closed less_eq_real_def t(2))
+      then have "closure (g ` {t<..<1}) \<subseteq> g ` {t..1}"
+        by (metis closure_minimal image_mono interior_atLeastAtMost_real interior_subset)
+      then have "closure (path_image g \<inter> g ` {t<..<1}) \<subseteq> g ` {t..1}"
+        by (meson Int_lower2 closure_mono dual_order.trans)
+      then have cl1: "g ` {0<..<t} \<inter> path_image g \<inter> closure (path_image g \<inter> g ` {t<..<1}) = {}"
+        using g t by (fastforce simp: loop_free_def simple_path_def)
+      have closed_img: "closed (g ` {0..t})"
+        using \<open>t < 1\<close> by (simp add: compact_continuous_image compact_imp_closed continuous_on_path path_g)
+      have "closure (g ` {0<..<t}) \<subseteq> g ` {0..t}"
+        by (metis closed_img closure_greaterThanLessThan closure_minimal closure_subset image_mono t)
+      then have "closure (path_image g \<inter> g ` {0<..<t}) \<subseteq> g ` {0..t}"
+        by (meson Int_lower2 closure_mono dual_order.trans)
+      then have cl2: "g ` {t<..<1} \<inter> path_image g \<inter> closure (path_image g \<inter> g ` {0<..<t}) = {}"
+        using g t by (fastforce simp: loop_free_def simple_path_def)
+      have decomp: "path_image g \<subseteq> g ` {0<..<t} \<union> g ` {t<..<1} \<union> {0, b}"
+      proof
+        fix z assume "z \<in> path_image g"
+        then obtain s where s: "s \<in> {0..1}" "g s = z" by (auto simp: path_image_def)
+        then consider "s = 0" | "s \<in> {0<..<t}" | "s = t" | "s \<in> {t<..<1}" | "s = 1"
+          using t by force
+        then show "z \<in> g ` {0<..<t} \<union> g ` {t<..<1} \<union> {0, b}"
+          using \<open>g s = z\<close> t g0 g1 by blast 
       qed
-      have cl2: "g ` {t<..<1} \<inter> path_image g \<inter> closure (path_image g \<inter> g ` {0<..<t}) = {}"
+      have "open_segment 0 b \<inter> {0, b} = {}"
+        unfolding open_segment_def by auto
+      then have sub: "open_segment 0 b \<subseteq> g ` {0<..<t} \<union> g ` {t<..<1}"
+        using 1 decomp by auto
+      have sep: "separatedin (subtopology euclidean (path_image g)) (g ` {0<..<t}) (g ` {t<..<1})"
       proof -
-        have lf: "loop_free g" using g(1) by (simp add: simple_path_def)
-        have disj: "g ` {t<..<1} \<inter> g ` {0..t} = {}"
-        proof (rule ccontr)
-          assume "\<not> ?thesis"
-          then obtain x y where xy: "x \<in> {t<..<1}" "y \<in> {0..t}" "g x = g y"
-            by blast
-          have x01: "x \<in> {0..1}" using xy(1) using t(2) by force
-          have y01: "y \<in> {0..1}" using xy(2) t(3) by auto
-          have "x \<noteq> y" using xy(1,2) by auto
-          then have "x = 0 \<and> y = 1 \<or> x = 1 \<and> y = 0"
-            using lf xy(3) x01 y01 unfolding loop_free_def by blast
-          then show False using xy(1,2) by auto
-        qed
-        have closed_img: "closed (g ` {0..t})"
-          using compact_continuous_image[OF continuous_on_subset[OF cont_g] _]
-          by (meson atLeastatMost_subset_iff compact_imp_closed compact_interval
-              eucl_less_le_not_le order.refl t(3))
-        have "closure (g ` {0<..<t}) \<subseteq> g ` {0..t}"
-          using closed_img closure_minimal by (meson closure_minimal image_mono greaterThanLessThan_subseteq_atLeastAtMost_iff order.refl less_imp_le)
-        then have "closure (path_image g \<inter> g ` {0<..<t}) \<subseteq> g ` {0..t}"
-          by (meson Int_lower2 closure_mono dual_order.trans)
-        then show ?thesis using disj by auto
-      qed
-      have sub: "open_segment 0 b \<subseteq> g ` {0<..<t} \<union> g ` {t<..<1}"
-      proof -
-        have decomp: "path_image g \<subseteq> g ` {0<..<t} \<union> g ` {t<..<1} \<union> {0, b}"
-        proof
-          fix z assume "z \<in> path_image g"
-          then obtain s where s: "s \<in> {0..1}" "g s = z" by (auto simp: path_image_def)
-          then consider "s = 0" | "s \<in> {0<..<t}" | "s = t" | "s \<in> {t<..<1}" | "s = 1"
-            using t by force
-          then show "z \<in> g ` {0<..<t} \<union> g ` {t<..<1} \<union> {0, b}"
-            using \<open>g s = z\<close> t g0 g1 by blast 
-        qed
-        have "open_segment 0 b \<inter> {0, b} = {}"
-          unfolding open_segment_def by auto
-        then show ?thesis using 1 decomp by auto
-      qed
-      have sep: "separatedin (subtopology euclidean (path_image g))
-                              (g ` {0<..<t}) (g ` {t<..<1})"
-      proof -
-        have eq1: "path_image g \<inter> g ` {t<..<1} = g ` {t<..<1}" using pi2 by auto
-        have eq2: "path_image g \<inter> g ` {0<..<t} = g ` {0<..<t}" using pi1 by auto
         have d1: "g ` {0<..<t} \<inter> closure (g ` {t<..<1}) = {}"
-          using cl1 pi1 eq1 by auto
+          by (metis Int_absorb1 Int_commute cl1 pi1 pi2)
         have d2: "g ` {t<..<1} \<inter> closure (g ` {0<..<t}) = {}"
-          using cl2 pi2 eq2 by auto
+          by (metis Int_absorb1 Int_commute cl2 pi1 pi2)
         have "separatedin euclidean (g ` {0<..<t}) (g ` {t<..<1})"
-          unfolding separatedin_def using d1 d2
-          by (simp add: euclidean_closure_of topspace_euclidean)
+          using d1 d2 by (simp add: separatedin_def)
         then show ?thesis
           using pi1 pi2 by (simp add: separatedin_subtopology)
       qed
@@ -2597,23 +2342,19 @@ proof -
       proof (elim disjE)
         assume sub: "closed_segment 0 b \<subseteq> g ` {0..t}"
         have inj: "inj_on g {0..t}" using arc_inj_on[of 0 t] t by auto
-        have "continuous_on {0..t} g"
-          using continuous_on_subset[OF cont_g] t by auto
         then have cont_inv: "continuous_on (g ` {0..t}) (the_inv_into {0..t} g)"
-          using continuous_on_inv_into[OF _ compact_Icc inj] by metis
-        have inv_mem: "the_inv_into {0..t} g z \<in> {0..t}" if "z \<in> closed_segment 0 b" for z
-          using the_inv_into_into[OF inj _ order_refl] sub that by blast
+          by (simp add: continuous_on_inv_into continuous_on_path less_eq_real_def path_g t)
         have eq0: "the_inv_into {0..t} g 0 = 0"
           using the_inv_into_f_f[OF inj, of 0] g0 t by auto
         have eqt: "the_inv_into {0..t} g b = t"
           using the_inv_into_f_f[OF inj, of t] t by auto
         have conn: "connected (the_inv_into {0..t} g ` closed_segment 0 b)"
           by (intro connected_continuous_image continuous_on_subset[OF cont_inv sub]
-                   connected_segment)
+              connected_segment)
         have "0 \<in> the_inv_into {0..t} g ` closed_segment 0 b"
-          using eq0 by (auto intro: rev_image_eqI ends_in_segment)
+          using eq0 by (auto intro: rev_image_eqI)
         moreover have "t \<in> the_inv_into {0..t} g ` closed_segment 0 b"
-          using eqt by (auto intro: rev_image_eqI ends_in_segment)
+          using eqt by (auto intro: rev_image_eqI)
         ultimately have "{0..t} \<subseteq> the_inv_into {0..t} g ` closed_segment 0 b"
           using connected_contains_Icc[OF conn] by auto
         then have "g ` {0..t} \<subseteq> g ` (the_inv_into {0..t} g ` closed_segment 0 b)"
@@ -2624,23 +2365,19 @@ proof -
       next
         assume sub: "closed_segment 0 b \<subseteq> g ` {t..1}"
         have inj: "inj_on g {t..1}" using arc_inj_on[of t 1] t by auto
-        have cont_sub: "continuous_on {t..1} g"
-          using continuous_on_subset[OF cont_g] t by auto
-        have cont_inv: "continuous_on (g ` {t..1}) (the_inv_into {t..1} g)"
-          using continuous_on_inv_into[OF cont_sub compact_Icc inj] .
-        have inv_mem: "the_inv_into {t..1} g z \<in> {t..1}" if "z \<in> closed_segment 0 b" for z
-          using the_inv_into_into[OF inj _ order_refl] sub that by blast
+        then have cont_inv: "continuous_on (g ` {t..1}) (the_inv_into {t..1} g)"
+          by (simp add: continuous_on_inv_into continuous_on_path less_eq_real_def path_g t)
         have eqt: "the_inv_into {t..1} g b = t"
           using the_inv_into_f_f[OF inj, of t] t by auto
         have eq1: "the_inv_into {t..1} g 0 = 1"
           using the_inv_into_f_f[OF inj, of 1] g1 t by auto
         have conn: "connected (the_inv_into {t..1} g ` closed_segment 0 b)"
           by (intro connected_continuous_image continuous_on_subset[OF cont_inv sub]
-                   connected_segment)
+              connected_segment)
         have "t \<in> the_inv_into {t..1} g ` closed_segment 0 b"
-          using eqt by (auto intro: rev_image_eqI ends_in_segment)
+          using eqt by (auto intro: rev_image_eqI)
         moreover have "1 \<in> the_inv_into {t..1} g ` closed_segment 0 b"
-          using eq1 by (auto intro: rev_image_eqI ends_in_segment)
+          using eq1 by (auto intro: rev_image_eqI)
         ultimately have "{t..1} \<subseteq> the_inv_into {t..1} g ` closed_segment 0 b"
           using connected_contains_Icc[OF conn] by auto
         then have "g ` {t..1} \<subseteq> g ` (the_inv_into {t..1} g ` closed_segment 0 b)"
@@ -2649,45 +2386,38 @@ proof -
           using f_the_inv_into_f[OF inj] sub by (auto simp: image_image)
         finally show ?thesis using sub by auto
       qed
-      \<comment> \<open>Use \<open>convex_triple_rel_frontier\<close> to show the inside is on one side of $Im = 0$\<close>
+        \<comment> \<open>Use \<open>convex_triple_rel_frontier\<close> to show the inside is on one side of $Im = 0$\<close>
       have inside_side: "inside (path_image g) \<subseteq> {z. Im z \<le> 0} \<or>
                          inside (path_image g) \<subseteq> {z. 0 \<le> Im z}"
       proof -
         have J: "inside (path_image g) \<noteq> {}" "open (inside (path_image g))"
           "frontier (inside (path_image g)) = path_image g"
           using Jordan_inside_outside g by blast+
-        have intne: "interior (inside (path_image g)) \<noteq> {}"
-          using J(1,2) interior_eq by auto
         have rf_eq: "rel_frontier (inside (path_image g)) = frontier (inside (path_image g))"
-          using rel_frontier_nonempty_interior intne by blast
-        have mid_on: "midpoint 0 b \<in> path_image g"
-          using "1" Reb by force
+          by (simp add: J interior_open rel_frontier_nonempty_interior)
         have rf0: "(0::complex) \<in> rel_frontier (inside (path_image g))"
           using rf_eq J(3) g0 by (auto simp: path_image_def intro!: image_eqI[of _ _ 0])
         have rfb: "b \<in> rel_frontier (inside (path_image g))"
           using rf_eq J(3) b(1) by auto
         have rfm: "midpoint 0 b \<in> rel_frontier (inside (path_image g))"
-          using rf_eq J(3) mid_on by auto
+          using "1" J(3) R.b(2) assms rf_eq by fastforce
         have ne1: "(0::complex) \<noteq> b" using b(2) assms by (auto simp: complex_eq_iff)
         have ne2: "(0::complex) \<noteq> midpoint 0 b"
           using ne1 by (simp add: midpoint_def complex_eq_iff)
         have ne3: "b \<noteq> midpoint 0 b"
           using ne1 by (simp add: midpoint_def complex_eq_iff)
-        have ip1: "\<i> \<bullet> (0::complex) = 0" by (simp add: complex_inner_i_left)
-        have ip2: "\<i> \<bullet> b = 0" using Im_b by (simp add: complex_inner_i_left)
-        have ip3: "\<i> \<bullet> midpoint 0 b = 0"
-          using Im_b by (simp add: midpoint_def complex_inner_i_left)
+        have ip: "\<i> \<bullet> (0::complex) = 0" "\<i> \<bullet> b = 0" "\<i> \<bullet> midpoint 0 b = 0" using Im_b by (auto simp: midpoint_def)
         have "inside (path_image g) \<subseteq> {x. \<i> \<bullet> x \<le> 0} \<or>
               inside (path_image g) \<subseteq> {x. \<i> \<bullet> x \<ge> 0}"
-          using convex_triple_rel_frontier[OF conv rf0 rfb rfm ne1 ne2 ne3 ip1 ip2 ip3] .
-        then show ?thesis by (auto simp: complex_inner_i_left)
+          using convex_triple_rel_frontier[OF conv rf0 rfb rfm ne1 ne2 ne3 ip] .
+        then show ?thesis by auto
       qed
       have pi_sub: "path_image g \<subseteq> closure (inside (path_image g))"
         using hull_subset[of "path_image g" convex] convex_hull_eq_closure_inside[OF g(1)] g(2,3) conv by force
-      \<comment> \<open>The closed segment from $0$ to $b$ has $Im = 0$, so lies in both half-planes.\<close>
+          \<comment> \<open>The closed segment from $0$ to $b$ has $Im = 0$, so lies in both half-planes.\<close>
       have seg_both: "closed_segment 0 b \<subseteq> {z. Im z \<le> 0}" "closed_segment 0 b \<subseteq> {z. 0 \<le> Im z}"
         using Im_b by (auto simp: closed_segment_def)
-      \<comment> \<open>If the inside is contained in a half-plane, then so is @{term "path_image g"} (by closure).\<close>
+          \<comment> \<open>If the inside is contained in a half-plane, then so is @{term "path_image g"} (by closure).\<close>
       have side_le: "inside (path_image g) \<subseteq> {z. Im z \<le> 0} \<Longrightarrow> path_image g \<subseteq> {z. Im z \<le> 0}"
         using pi_sub closure_minimal[OF _ closed_halfspace_le[of \<i> 0, simplified complex_inner_i_left]]
         by auto
@@ -2695,27 +2425,8 @@ proof -
         using pi_sub closure_minimal[OF _ closed_halfspace_ge[of 0 \<i>, simplified complex_inner_i_left]]
         by auto
       from seg_eq inside_side show ?thesis
-      proof (elim disjE)
-        assume eq: "g ` {0..t} = closed_segment 0 b"
-        assume "inside (path_image g) \<subseteq> {z. Im z \<le> 0}"
-        then show ?thesis using side_le seg_both eq t
-          by (auto simp: path_image_def image_subset_iff dest!: subsetD)
-      next
-        assume eq: "g ` {0..t} = closed_segment 0 b"
-        assume "inside (path_image g) \<subseteq> {z. 0 \<le> Im z}"
-        then show ?thesis using side_ge seg_both eq t
-          by (auto simp: path_image_def image_subset_iff dest!: subsetD)
-      next
-        assume eq: "g ` {t..1} = closed_segment 0 b"
-        assume "inside (path_image g) \<subseteq> {z. Im z \<le> 0}"
-        then show ?thesis using side_le seg_both eq t
-          by (auto simp: path_image_def image_subset_iff dest!: subsetD)
-      next
-        assume eq: "g ` {t..1} = closed_segment 0 b"
-        assume "inside (path_image g) \<subseteq> {z. 0 \<le> Im z}"
-        then show ?thesis using side_ge seg_both eq t
-          by (auto simp: path_image_def image_subset_iff dest!: subsetD)
-      qed
+        using side_le side_ge seg_both t unfolding path_image_def image_subset_iff
+        by (elim disjE; simp; blast)
     next
       case seg_inside:2
       have real_on_curve: "z = 0 \<or> z = b" 
@@ -2723,65 +2434,50 @@ proof -
       proof (rule ccontr)
         assume non: "\<not> ?thesis"
           \<comment> \<open>Step 1: Basic setup\<close>
-            \<comment> \<open>Step 2: diameter bounds force @{term z} into @{term "closed_segment 0 b"}.
+          \<comment> \<open>Step 2: diameter bounds force @{term z} into @{term "closed_segment 0 b"}.
        $\mathit{dist}\,0\,z \le \mathit{diam} = Re\,b$ gives $|Re\,z| \le Re\,b$.
        $\mathit{dist}\,z\,b \le \mathit{diam} = Re\,b$ gives $|Re\,z - Re\,b| \le Re\,b$, hence $Re\,z \ge 0$.
        So @{term z} is real with $0 \le Re\,z \le Re\,b$, i.e. @{term "z \<in> closed_segment 0 b"}.\<close>
-
+        have bdd: "bounded (path_image g)"
+          using g(1) bounded_simple_path_image by blast
+        have z0_on: "0 \<in> path_image g"
+          using pathstart_in_path_image[of g] g(2) \<open>a=0\<close> by simp
+        have diam_eq: "diameter (path_image g) = Re b"
+          using dab \<open>a=0\<close> Im_b Reb by (simp add: dist_complex_def cmod_eq_Re)
+        have d1: "dist 0 z \<le> Re b"
+          using diameter_bounded_bound[OF bdd z0_on z_on] diam_eq by simp
+        have d2: "dist z b \<le> Re b"
+          using diameter_bounded_bound[OF bdd z_on b(1)] diam_eq by simp
+        have Re_le: "Re z \<le> Re b"
+          using d1 z_real by (simp add: dist_complex_def cmod_eq_Re)
+        have Re_ge: "Re z \<ge> 0"
+          using d2 z_real Im_b by (simp add: dist_complex_def cmod_eq_Re)
+        have z_eq: "z = of_real (Re z)"
+          using z_real complex_is_Real_iff of_real_Re by metis
+        have b_eq: "b = of_real (Re b)"
+          using Im_b complex_is_Real_iff of_real_Re by metis
         have z_in_seg: "z \<in> closed_segment 0 b"
-        proof -
-          have bdd: "bounded (path_image g)"
-            using g(1) bounded_simple_path_image by blast
-          have z0_on: "0 \<in> path_image g"
-            using pathstart_in_path_image[of g] g(2) \<open>a=0\<close> by simp
-          have diam_eq: "diameter (path_image g) = Re b"
-            using dab \<open>a=0\<close> Im_b Reb by (simp add: dist_complex_def cmod_eq_Re)
-          have d1: "dist 0 z \<le> Re b"
-            using diameter_bounded_bound[OF bdd z0_on z_on] diam_eq by simp
-          have d2: "dist z b \<le> Re b"
-            using diameter_bounded_bound[OF bdd z_on b(1)] diam_eq by simp
-          have Re_le: "Re z \<le> Re b"
-            using d1 z_real by (simp add: dist_complex_def cmod_eq_Re)
-          have Re_ge: "Re z \<ge> 0"
-            using d2 z_real Im_b by (simp add: dist_complex_def cmod_eq_Re minus_complex.sel)
-          have z_eq: "z = of_real (Re z)"
-            using z_real complex_is_Real_iff of_real_Re by metis
-          have b_eq: "b = of_real (Re b)"
-            using Im_b complex_is_Real_iff of_real_Re by metis
-          show ?thesis
-            by (metis Re_ge Re_le Reb atLeastAtMost_iff b_eq closed_segment_eq_real_ivl1
-                less_eq_real_def of_real_0 of_real_closed_segment z_eq)
-        qed
+          by (metis Re_ge Re_le Reb atLeastAtMost_iff b_eq closed_segment_eq_real_ivl1
+              less_eq_real_def of_real_0 of_real_closed_segment z_eq)
           \<comment> \<open>Step 4: @{term z} is on the curve, so @{term "z \<notin> inside (path_image g)"}. Hence @{term "z \<notin> open_segment 0 b"}.
        Combined with @{term "z \<in> closed_segment 0 b"}, we get $z = 0 \vee z = b$.\<close>
         have "z \<notin> inside (path_image g)"
           using inside_no_overlap z_on by blast
-        then have "z \<notin> open_segment 0 b"
-          using seg_inside by blast
         then show False
-          using non z_in_seg by (auto simp: closed_segment_eq_open)
+          using non seg_inside z_in_seg by (auto simp: closed_segment_eq_open)
       qed
-      have Re_inj_upper: "\<lbrakk>s1 \<in> {0..t}; s2 \<in> {0..t}; Re (g s1) = Re (g s2); s1 \<noteq> s2\<rbrakk>
-        \<Longrightarrow> (s1 = 0 \<and> s2 = t) \<or> (s1 = t \<and> s2 = 0)" for s1 s2
-        using Re_inj_upper_gen g0 g1 t by presburger
-      have Re_inj_lower: "\<lbrakk>s1 \<in> {t..1}; s2 \<in> {t..1}; Re (g s1) = Re (g s2); s1 \<noteq> s2\<rbrakk>
-        \<Longrightarrow> (s1 = t \<and> s2 = 1) \<or> (s1 = 1 \<and> s2 = t)" for s1 s2
-        using CR.Re_inj_upper_gen[of "1-s1" "1-t" "1-s2"] t g g0 g1 assms
-        by (auto simp add: gop_def reversepath_def)
-
-        \<comment> \<open>@{term "Im \<circ> g"} doesn't change sign on either arc: if it did, the IVT gives a real point
+\<comment> \<open>@{term "Im \<circ> g"} doesn't change sign on either arc: if it did, the IVT gives a real point
      in the interior of the arc, contradicting \<open>real_on_curve\<close> and injectivity.\<close>
       have no_cross: "(\<forall>s \<in> {u..v}. Im (g s) \<ge> 0) \<or> (\<forall>s \<in> {u..v}. Im (g s) \<le> 0)"
         if huv: "u < v" "{u..v} \<subseteq> {0..1}" and hinj: "inj_on g {u..v}"
           and hend: "Im (g u) = 0" "Im (g v) = 0" for u v
       proof (rule ccontr)
         assume "\<not> ?thesis"
-        then obtain s\<^sub>1 s\<^sub>2 where s1: "s\<^sub>1 \<in> {u..v}" "Im (g s\<^sub>1) > 0"
-          and s2: "s\<^sub>2 \<in> {u..v}" "Im (g s\<^sub>2) < 0"
+        then obtain s\<^sub>1 s\<^sub>2 where s1: "s\<^sub>1 \<in> {u..v}" "Im (g s\<^sub>1) > 0" and s2: "s\<^sub>2 \<in> {u..v}" "Im (g s\<^sub>2) < 0"
           by (meson linorder_not_le)
         have cont_uv: "continuous_on {u..v} g"
           using cont_g continuous_on_subset huv(2) by blast
-        \<comment> \<open>The IVT gives $s \in (u,v)$ with $Im(g\,s) = 0$\<close>
+            \<comment> \<open>The IVT gives $s \in (u,v)$ with $Im(g\,s) = 0$\<close>
         obtain s where s: "s \<in> {u..v}" "Im (g s) = 0" "s \<noteq> u" "s \<noteq> v"
         proof (cases "s\<^sub>1 \<le> s\<^sub>2")
           case True
@@ -2790,9 +2486,7 @@ proof -
               continuous_on_subset[OF cont_uv] s1 s2
             by (force simp: complex_inner_i_right)
           have "s \<in> {u..v}" using hs(1) s1(1) s2(1) by auto
-          moreover have "s \<noteq> u" using hs s1 hend(1) by force
-          moreover have "s \<noteq> v" using hs s2 hend(2) by force
-          ultimately show thesis using that hs(2) by blast
+          then show thesis using that hend s1 s2 hs by fastforce
         next
           case False
           then have le: "s\<^sub>2 \<le> s\<^sub>1" by linarith
@@ -2801,19 +2495,13 @@ proof -
               continuous_on_subset[OF cont_uv] s1 s2
             by (force simp: complex_inner_i_right)
           have "s \<in> {u..v}" using hs(1) s1(1) s2(1) by auto
-          moreover have "s \<noteq> u" using hs s2 hend(1) by force
-          moreover have "s \<noteq> v" using hs s1 hend(2) by force
-          ultimately show thesis using that hs(2) by blast
+          then show thesis using that hend s1 s2 hs by fastforce
         qed
-
-        \<comment> \<open>$g\,s$ is on the path, so @{term "g s \<in> {0, b}"} by \<open>real_on_curve\<close>\<close>
         have "g s \<in> path_image g"
           using s(1) huv(2) by (auto simp: path_image_def subset_iff)
         then have "g s = 0 \<or> g s = b" using real_on_curve s(2) by blast
-        \<comment> \<open>But @{term g} is injective on $\{u..v\}$ and $s \in (u,v)$, so $g\,s \neq g\,u$ and $g\,s \neq g\,v$\<close>
         moreover have "g s \<noteq> g u" "g s \<noteq> g v"
-          using inj_onD[OF hinj] s(1,3,4) by auto
-        \<comment> \<open>Since @{term "{g u, g v} \<subseteq> {0, b}"}, this gives the contradiction\<close>
+          using inj_onD[OF hinj] s by auto
         moreover have "g u \<in> {0, b}" "g v \<in> {0, b}"
           using real_on_curve hend huv by (auto simp: path_image_def subset_iff)
         ultimately show False
@@ -2823,50 +2511,20 @@ proof -
         using no_cross[of 0 t] arc_inj_on[of 0 t] t g0 Im_b by auto
       have no_cross_2: "(\<forall>s \<in> {t..1}. Im (g s) \<ge> 0) \<or> (\<forall>s \<in> {t..1}. Im (g s) \<le> 0)"
         using no_cross[of t 1] arc_inj_on[of t 1] t g1 Im_b by auto
-      \<comment> \<open>Now case-split on the orientation and dispatch to \<open>split_case\<close> or \<open>split_case'\<close>\<close>
-    show ?thesis
-    proof -
-      \<comment> \<open>Eliminate the case where both arcs are on the same side of the real axis.
-       Key idea: if $\mathit{path\_image}\ g \subseteq \{Im\,z \ge 0\}$, then $\mathit{closure}\,(\mathit{inside}) = \mathit{convex\ hull} \subseteq \{Im\,z \ge 0\}$,
-       so $\mathit{inside} \subseteq \{Im\,z > 0\}$ (since the inside is open). But @{term "open_segment 0 b"} $\subseteq \mathit{closure}\,(\mathit{inside})$
-       has $Im = 0$, so it must lie in $\mathit{frontier}\,(\mathit{inside}) = \mathit{path\_image}\ g$.
-       This contradicts \<open>real_on_curve\<close> since @{term "open_segment 0 b"} is infinite.\<close>
-      have inside_ne: "inside (path_image g) \<noteq> {}"
-        using Jordan_inside_outside g by blast
-      have frontier_eq: "frontier (inside (path_image g)) = path_image g"
-        using Jordan_inside_outside g by blast
-      have open_inside: "open (inside (path_image g))"
-        using Jordan_inside_outside g by blast
-      have bounded_inside: "bounded (inside (path_image g))"
-        using Jordan_inside_outside g by blast
-      have closure_eq: "closure (inside (path_image g)) = convex hull (path_image g)"
-        using convex_hull_eq_closure_inside g conv by auto
-      have ab_hull: "a \<in> convex hull (path_image g)" "b \<in> convex hull (path_image g)"
-        using b(1) g(2) pathstart_in_path_image hull_inc by fastforce+
-      have seg_in_closure: "open_segment a b \<subseteq> closure (inside (path_image g))"
-        by (metis ab_hull convex_contains_open_segment convex_convex_hull local.closure_eq)
-      have seg_Im0: "open_segment a b \<subseteq> {z. Im z = 0}"
-        using assms Im_b by (auto simp: in_segment complex_eq_iff)
-      have seg_infinite: "\<not> finite (open_segment a b)"
-        using Reb assms by force
-
       have not_all_above: "\<not> (path_image g \<subseteq> {z. 0 \<le> Im z})"
         using Reb assms not_all_above real_on_curve t Im_b by blast
-
       have not_all_below: "\<not> (path_image g \<subseteq> {z. Im z \<le> 0})"
         using CR.not_all_above using g g0 g1 assms Reb real_on_curve
         by (force simp add: gop_def  path_image_compose)
-          \<comment> \<open>With the elimination, the 4-way case split from \<open>no_cross_1\<close>/\<open>no_cross_2\<close> reduces to two\<close>
       have pi1: "path_image g = g ` {0..t} \<union> g ` {t..1}"
         unfolding path_image_def using t(2,3)
         by (metis image_Un ivl_disj_un_two_touch(4) less_eq_real_def)
       from no_cross_1 no_cross_2 not_all_above not_all_below pi1
       show ?thesis by (auto simp: image_subset_iff)
     qed
-    qed
   qed
   then show ?thesis
-    using assms split_case split_case' t by blast
+    using assms split_case' t Green_area_zero_A by blast
 qed
 
 
@@ -2901,47 +2559,33 @@ proof -
         using has_vector_derivative_shift vder by blast
     qed (use b U in auto)
   qed
+  have ai_translated: "(\<lambda>t. Re (g' t) * Im (((+) (- a) \<circ> g) t)) absolutely_integrable_on {0..1}"
+    using * unfolding Green_concl_def by auto
+  have Ima_ai: "(\<lambda>t. Im a * Re (g' t)) absolutely_integrable_on {0..1}"
+    by (simp add: Re_absolutely_integrable_on gp_ai)
   show ?thesis
     unfolding Green_concl_def
-  proof (intro conjI)
-    show "(\<lambda>t. Re (g' t) * Im (g t)) absolutely_integrable_on {0..1}"
-    proof -
-      have ai_translated: "(\<lambda>t. Re (g' t) * Im (((+) (- a) \<circ> g) t)) absolutely_integrable_on {0..1}"
-        using * unfolding Green_concl_def by auto
-      have gp_ai: "g' absolutely_integrable_on {0..1}"
-        using absolutely_integrable_absolutely_continuous_derivative[OF cont U]
-          vder has_vector_derivative_at_within by blast
-      have Re_gp_ai: "(\<lambda>t. Re (g' t)) absolutely_integrable_on {0..1}"
-        using Re_absolutely_integrable_on gp_ai by blast
-      have Ima_ai: "(\<lambda>t. Im a * Re (g' t)) absolutely_integrable_on {0..1}"
-        using absolutely_integrable_scaleR_left[OF Re_gp_ai, of "Im a"]
-        by (simp add: scaleR_conv_of_real)
-      show ?thesis
-      proof (rule absolutely_integrable_integrable_bound)
-        fix t :: real assume "t \<in> {0..1}"
-        show "norm (Re (g' t) * Im (g t)) \<le> \<bar>Re (g' t) * Im (((+) (- a) \<circ> g) t)\<bar> + \<bar>Im a * Re (g' t)\<bar>"
-          by (simp add: o_def plus_complex.sel uminus_complex.sel real_norm_def algebra_simps)
-      next
-        show "(\<lambda>t. Re (g' t) * Im (g t)) integrable_on {0..1}"
-          using absolutely_integrable_on_def f_abs_int by blast
-        show "(\<lambda>t. \<bar>Re (g' t) * Im (((+) (- a) \<circ> g) t)\<bar> + \<bar>Im a * Re (g' t)\<bar>) integrable_on {0..1}"
-          using ai_translated Ima_ai unfolding absolutely_integrable_on_def
-          by (metis (no_types, lifting)  integrable_cong real_norm_def integrable_add)
-      qed
-    qed
+  proof (intro conjI absolutely_integrable_integrable_bound)
+    fix t :: real assume "t \<in> {0..1}"
+    show "norm (Re (g' t) * Im (g t)) \<le> \<bar>Re (g' t) * Im (((+) (- a) \<circ> g) t)\<bar> + \<bar>Im a * Re (g' t)\<bar>"
+      by (simp add: o_def plus_complex.sel uminus_complex.sel real_norm_def algebra_simps)
+  next
+    show "(\<lambda>t. Re (g' t) * Im (g t)) integrable_on {0..1}"
+      using absolutely_integrable_on_def f_abs_int by blast
+    show "(\<lambda>t. \<bar>Re (g' t) * Im (((+) (- a) \<circ> g) t)\<bar> + \<bar>Im a * Re (g' t)\<bar>) integrable_on {0..1}"
+      using ai_translated Ima_ai unfolding absolutely_integrable_on_def
+      by (metis (no_types, lifting)  integrable_cong real_norm_def integrable_add)
   next
     show "\<bar>integral {0..1} (\<lambda>t. Re (g' t) * Im (g t))\<bar> = Sigma_Algebra.measure lebesgue (inside (path_image g))"
     proof -
       have meas_eq: "measure lebesgue (inside (path_image ((+) (- a) \<circ> g)))
                    = measure lebesgue (inside (path_image g))"
         by (metis path_image_translation inside_translation measure_translation)
-      have int_g': "(g' has_integral 0) {0..1}"
-      proof -
-        have "(g' has_integral (g 1 - g 0)) {0..1}"
-          using fundamental_theorem_of_calculus_absolutely_continuous[OF U _ cont, of g']
-          by (metis le_numeral_extra(1) vder has_vector_derivative_at_within)
-        then show ?thesis using g by (simp add: pathstart_def pathfinish_def)
-      qed
+      have "(g' has_integral (g 1 - g 0)) {0..1}"
+        using fundamental_theorem_of_calculus_absolutely_continuous[OF U _ cont, of g']
+        by (metis zero_le_one vder has_vector_derivative_at_within)
+      then have int_g': "(g' has_integral 0) {0..1}"
+        using g by (simp add: pathstart_def pathfinish_def)
       have Re_has_int: "((\<lambda>t. Re (g' t)) has_integral 0) {0..1}"
         using has_integral_Re[OF int_g'] by simp
       have Ima_has_int: "((\<lambda>t. Im a * Re (g' t)) has_integral 0) {0..1}"
