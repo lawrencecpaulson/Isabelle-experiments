@@ -5,9 +5,6 @@ begin
 
 hide_const (open) Polynomial.content
 
-lemma DD: "(\<lambda>(x, y). (f x, g x y)) ` (A \<times> B) = (\<Union>x\<in>A. ((\<lambda>y. (f x, g x y)) ` B))"
-  by auto
-
 section \<open>Start of the actual isoperimetric inequality\<close>
 
 text \<open>
@@ -1071,7 +1068,7 @@ proof -
   qed
 qed
 
-theorem scaled_Wirtinger_inequality:
+corollary scaled_Wirtinger_inequality:
   fixes f f' :: "real \<Rightarrow> real"
   assumes f': "\<And>x. x \<in> {0..1} \<Longrightarrow> (f' has_integral (f x - f 0)) {0..x}"
     and "f 1 = f 0"
@@ -2628,7 +2625,7 @@ text \<open>The kernel lemma: the isoperimetric inequality for a convex curve th
   diameter along the real axis starting at a point with $Re = 0$.
   This is where the Wirtinger inequality is applied.\<close>
 
-lemma isoperimetric_kernel:
+proposition isoperimetric_kernel:
   fixes g :: "real \<Rightarrow> complex" and L :: real and a b :: complex
   assumes "0 < L"
     and conv_in: "convex (inside (path_image g))"
@@ -2646,31 +2643,27 @@ lemma isoperimetric_kernel:
     and "measure lebesgue (inside (path_image g)) = L\<^sup>2 / (4 * pi) \<Longrightarrow>
       \<exists>c r. path_image g = sphere c r"
 proof -
-  have acont_g: "absolutely_continuous_on {0..1} g"
-    by (rule Lipschitz_imp_absolutely_continuous)
-       (use lipschitz in \<open>auto simp: dist_norm dist_real_def\<close>)
   define S where "S = {x \<in> {0..1}. \<not> g differentiable (at x)}"
-  have negS: "negligible S"
-    unfolding S_def using Lebesgue_differentiation_thm_compact
-    by (metis (full_types) absolutely_continuous_on_imp_has_bounded_variation_on
-        acont_g cbox_interval compact_Icc compact_imp_bounded)
+  have bdd: "bounded (path_image g)"
+    using g bounded_simple_path_image by blast
+  then have "a \<noteq> b"
+    using diameter_eq_0  ab dist_ab g nonempty_simple_path_endless by fastforce
+  have acont_g: "absolutely_continuous_on {0..1} g"
+    by (metis Lipschitz_imp_absolutely_continuous lipschitz dist_norm real_norm_def)
+  then have negS: "negligible S"
+    unfolding S_def using Lebesgue_differentiation_thm g
+    using is_interval_cc rectifiable_path_def by blast
   define g' where "g' = (\<lambda>x. vector_derivative g (at x))"
   have g'_deriv: "\<And>x. x \<in> {0..1} - S \<Longrightarrow> (g has_vector_derivative g' x) (at x)"
     by (simp add: S_def g'_def vector_derivative_works)
-  have g'_int: "g' absolutely_integrable_on {0..t} \<and> integral {0..t} g' = g t - a" 
+  have g'_integral: "g' absolutely_integrable_on {0..1} \<and> (\<forall>x\<in>{0..1}. (g' has_integral g x - g 0) {0..x})"
+    unfolding absolute_integral_absolutely_continuous_derivative_eq
+    by (metis has_vector_derivative_at_within acont_g negS g'_deriv)
+  then have g'_int: "g' absolutely_integrable_on {0..t} \<and> integral {0..t} g' = g t - a" 
     if "t \<in> {0..1::real}" for t
-  proof -
-    have lhs: "g' absolutely_integrable_on {0..1} \<and> (\<forall>x\<in>{0..1}. (g' has_integral g x - g 0) {0..x})"
-      unfolding absolute_integral_absolutely_continuous_derivative_eq
-      by (metis has_vector_derivative_at_within acont_g negS g'_deriv)
-    have "0 \<le> t" "t \<le> 1" using that by auto
-    have abs_int_t: "g' absolutely_integrable_on {0..t}"
-      using absolutely_integrable_on_subinterval[OF conjunct1[OF lhs]] \<open>0 \<le> t\<close> \<open>t \<le> 1\<close> by auto
-    moreover have "integral {0..t} g' = g t - a"
-      using ga by (metis integral_unique lhs pathstart_def that)
-    ultimately show "g' absolutely_integrable_on {0..t} \<and> integral {0..t} g' = g t - a"
-      by auto
-  qed
+    using ga that unfolding pathstart_def
+    by (metis absolutely_integrable_on_subinterval atLeastAtMost_iff atLeastatMost_subset_iff
+        order.refl integral_unique)
   have norm_g'_int: "(\<lambda>x. norm (g' x)) absolutely_integrable_on {0..t} \<and> integral {0..t} (\<lambda>x. norm (g' x)) = L * t"
     if "t \<in> {0..1}" for t
   proof -
@@ -2684,19 +2677,14 @@ proof -
     moreover have "vector_variation {0..t} g = L * t"
       using that \<open>rectifiable_path g\<close> path_length_subpath_eq [of 0 t, symmetric] arc_length
       by (fastforce simp: closed_segment_eq_real_ivl1)
-    moreover have "(\<lambda>x. norm (g' x)) absolutely_integrable_on {0..t}"
-      using g'_int set_integrable_norm that by blast
     ultimately show ?thesis
-      using that by auto
+      using that g'_int set_integrable_norm that by auto
   qed
   have norm_g'_le: "norm (g' x) \<le> L" if "x \<in> {0..1} - S" for x
   proof -
-    from that have x01: "x \<in> {0..1}" and "x \<notin> S" by auto
     have gd: "(g has_vector_derivative g' x) (at x)" using g'_deriv that by auto
     have xlimpt: "x islimpt {0..1::real}"
-      using limpt_of_convex[of "{0..1::real}" x] x01 by auto
-    have gd_within: "(g has_vector_derivative g' x) (at x within {0..1})"
-      using gd has_vector_derivative_at_within by blast
+      using limpt_of_convex[of "{0..1::real}" x] that by auto
     have Ld: "((\<lambda>t. L * t) has_vector_derivative L) (at x within {0..1})"
       using has_vector_derivative_mult_right[OF has_vector_derivative_id] by simp
     have ev: "\<forall>\<^sub>F y in at x within {0..1}. norm (g y - g x) \<le> norm (L * y - L * x)"
@@ -2704,190 +2692,106 @@ proof -
     proof (intro always_eventually allI impI)
       fix y assume "y \<noteq> x" "y \<in> {0..1}"
       have "dist (g y) (g x) \<le> L * dist y x"
-        using lipschitz \<open>y \<in> {0..1}\<close> x01 by auto
+        using lipschitz \<open>y \<in> {0..1}\<close> that by auto
       then have "norm (g y - g x) \<le> L * \<bar>y - x\<bar>"
         by (simp add: dist_norm dist_real_def)
       also have "\<dots> = \<bar>L * (y - x)\<bar>"
         using \<open>0 < L\<close> by (simp add: abs_mult)
       also have "\<dots> = norm (L * y - L * x)"
-        by (simp add: real_norm_def right_diff_distrib)
+        by (simp add: right_diff_distrib)
       finally show "norm (g y - g x) \<le> norm (L * y - L * x)" .
     qed
     show "norm (g' x) \<le> L"
-      using \<open>0 < L\<close> norm_vector_derivatives_le_within [OF gd_within Ld ev] xlimpt
-      by (simp add: trivial_limit_within) 
+      using \<open>0 < L\<close> norm_vector_derivatives_le_within [OF _ Ld ev] xlimpt gd has_vector_derivative_at_within
+      by (force simp add: trivial_limit_within) 
   qed
-
   have norm_g'_sq_int: "(\<lambda>x. (norm (g' x))\<^sup>2) absolutely_integrable_on {0..1}"
   proof (rule measurable_bounded_by_integrable_imp_absolutely_integrable_ae)
     show "(\<lambda>x. (norm (g' x))\<^sup>2) \<in> borel_measurable (lebesgue_on {0..1})"
-    proof -
-      have "g' \<in> borel_measurable (lebesgue_on {0..1})"
-        using absolutely_integrable_imp_borel_measurable[OF conjunct1[OF g'_int[of 1]]]
-        by auto
-      then have "(\<lambda>x. norm (g' x)) \<in> borel_measurable (lebesgue_on {0..1})"
-        using measurable_comp[OF _ borel_measurable_norm] by (simp add: comp_def)
-      then show ?thesis
-        by (rule borel_measurable_power)
-    qed
+      by (simp add: absolutely_integrable_imp_integrable borel_measurable_integrable
+          borel_measurable_power norm_g'_int)
     show "negligible S" by (rule negS)
-    fix x assume "x \<in> {0..1} - S"
-    then have "norm (g' x) \<le> L" using norm_g'_le by auto
-    then have "(norm (g' x))\<^sup>2 \<le> L\<^sup>2"
-      using \<open>0 < L\<close> by (intro power_mono) auto
-    then show "norm ((norm (g' x))\<^sup>2) \<le> L\<^sup>2"
-      by simp
+    show "\<And>x. x \<in> {0..1} - S \<Longrightarrow> norm ((norm (g' x))\<^sup>2) \<le> L\<^sup>2"
+      by (simp add: norm_g'_le power_mono)
   qed auto
-
   have integral_norm_g'_sq: "integral\<^sup>L (lebesgue_on {0..1}) (\<lambda>x. (norm (g' x))\<^sup>2) = L\<^sup>2"
   proof -
-    let ?int01 = "{0..1::real}"
-    have meas01: "?int01 \<in> sets lebesgue" by simp
-    \<comment> \<open>$\mathit{norm}\,(g')$ is integrable on @{term "lebesgue_on {0..1}"}\<close>
     have norm_g'_abs: "(\<lambda>x. norm (g' x)) absolutely_integrable_on {0..1}"
       using norm_g'_int[of 1] by auto
     have norm_g'_leb: "integrable (lebesgue_on {0..1}) (\<lambda>x. norm (g' x))"
-      by (rule absolutely_integrable_imp_integrable[OF norm_g'_abs meas01])
-    \<comment> \<open>Its Lebesgue integral equals @{term L}\<close>
+      by (simp add: absolutely_integrable_imp_integrable norm_g'_abs)
     have int_norm_g': "integral\<^sup>L (lebesgue_on {0..1}) (\<lambda>x. norm (g' x)) = L"
       by (simp add: lebesgue_integral_eq_integral norm_g'_int norm_g'_leb)
-    \<comment> \<open>The constant @{term L} is integrable with integral @{term L}\<close>
-    have const_leb: "integrable (lebesgue_on {0..1}) (\<lambda>x::real. L)"
-      by (simp add: integrable_const_ivl)
     have int_const: "integral\<^sup>L (lebesgue_on {0..1}) (\<lambda>x::real. L) = L"
       using lebesgue_integral_const[of "lebesgue_on {0..1}" L]
       by (simp add: measure_restrict_space)
-    \<comment> \<open>$\mathit{norm}\,(g'\,x) \le L$ a.e.\<close>
     have ae_le: "AE x in lebesgue_on {0..1}. norm (g' x) \<le> L"
     proof -
       have "S \<inter> {0..1} \<in> null_sets (lebesgue_on {0..1})"
         using negS negligible_iff_null_sets null_sets_restrict_space
-        by (metis inf_le2 meas01 null_set_Int2)
+        by (metis atLeastAtMost_borel inf_le2 negligible_Int sets_completionI_sets sets_lborel)
       then have "AE x in lebesgue_on {0..1}. x \<notin> S"
         by (metis AE_not_in Collect_subset S_def inf.orderE)
       then show ?thesis
         using norm_g'_le by (auto elim: eventually_mono)
     qed
-    \<comment> \<open>Therefore $\mathit{norm}\,(g'\,x) = L$ a.e.\<close>
     have ae_eq: "AE x in lebesgue_on {0..1}. norm (g' x) = L"
-      using integral_ineq_eq_0_then_AE[OF ae_le norm_g'_leb const_leb] int_norm_g' int_const
-      by simp
-    \<comment> \<open>Therefore $(\mathit{norm}\,(g'\,x))^2 = L^2$ a.e.\<close>
+      using integral_ineq_eq_0_then_AE[OF ae_le norm_g'_leb] int_norm_g' int_const by simp
     have ae_sq: "AE x in lebesgue_on {0..1}. (norm (g' x))\<^sup>2 = L\<^sup>2"
       using ae_eq by (rule AE_mp) auto
-    \<comment> \<open>Conclude by \<open>integral_cong_AE\<close>\<close>
     have meas_sq: "(\<lambda>x. (norm (g' x))\<^sup>2) \<in> borel_measurable (lebesgue_on {0..1})"
-    proof -
-      have "g' \<in> borel_measurable (lebesgue_on {0..1})"
-        using absolutely_integrable_imp_borel_measurable[OF conjunct1[OF g'_int[of 1]]]
-        by auto
-      then have "(\<lambda>x. norm (g' x)) \<in> borel_measurable (lebesgue_on {0..1})"
-        using measurable_comp[OF _ borel_measurable_norm] by (simp add: comp_def)
-      then show ?thesis by (rule borel_measurable_power)
-    qed
-    have "integral\<^sup>L (lebesgue_on ?int01) (\<lambda>x. (norm (g' x))\<^sup>2) =
-          integral\<^sup>L (lebesgue_on ?int01) (\<lambda>x. L\<^sup>2)"
+        using absolutely_integrable_imp_borel_measurable[OF conjunct1[OF g'_int]]
+              borel_measurable_power norm_g'_leb by blast
+    have "integral\<^sup>L (lebesgue_on {0..1::real}) (\<lambda>x. (norm (g' x))\<^sup>2) =
+          integral\<^sup>L (lebesgue_on {0..1::real}) (\<lambda>x. L\<^sup>2)"
       by (rule integral_cong_AE[OF meas_sq _ ae_sq]) simp
     also have "\<dots> = L\<^sup>2"
-      using lebesgue_integral_const[of "lebesgue_on ?int01" "L\<^sup>2"]
+      using lebesgue_integral_const[of "lebesgue_on {0..1::real}" "L\<^sup>2"]
       by (simp add: measure_restrict_space)
     finally show ?thesis .
   qed
 
   text \<open>Use the Green formula for the area inside the curve.\<close>
+  have "Re a < Re b"
+    by (metis Re_complex_of_real \<open>a \<noteq> b\<close> \<open>Re a = 0\<close> bma diff_zero dist_nz minus_complex.sel(1))
+  moreover have "Im a = Im b"
+    using bma by (simp add: complex_of_real_def complex_eq_iff)
+  ultimately interpret G: Green g g' S a b
+  proof unfold_locales
+  qed (use g ga ab negS dist_ab conv_in acont_g g'_deriv in auto)
   have green_ai: "(\<lambda>t. Re (g' t) * Im (g t)) absolutely_integrable_on {0..1}"
-    and green_area: "\<bar>integral {0..1} (\<lambda>t. Re (g' t) * Im (g t))\<bar> =
-      measure lebesgue (inside (path_image g))"
-  proof -
-    have "Re a < Re b"
-    proof -
-      have "dist a b > 0"
-        using \<open>0 < L\<close> L dist_ab diameter_ge_0 g(1) order_less_le \<comment> \<open>TODO: simplify\<close>
-        by (metis path_image_nonempty Diff_cancel ab(1) assms(7,8) bounded_simple_path_image diameter_eq_0
-            g(2) insert_absorb nonempty_simple_path_endless singletonD)
-      then show ?thesis
-        by (metis Re_complex_of_real assms(14,6) diff_0_right minus_complex.sel(1))
-    qed
-    moreover have "Im a = Im b"
-      using bma by (simp add: complex_of_real_def complex_eq_iff)
-    ultimately interpret G: Green g g' S a b
-    proof unfold_locales
-      show "simple_path g" using g by auto
-      show "pathstart g = a" "pathfinish g = a" using ga by auto
-      show "b \<in> path_image g" using ab by auto
-      show "dist a b = diameter (path_image g)" using dist_ab .
-      show "convex (inside (path_image g))" using conv_in .
-      show "absolutely_continuous_on {0..1} g" using acont_g .
-      show "negligible S" using negS .
-      show "\<And>t. t \<in> {0..1} - S \<Longrightarrow> (g has_vector_derivative g' t) (at t)"
-        using g'_deriv by auto
-    qed auto
-    from G.area_theorem show "(\<lambda>t. Re (g' t) * Im (g t)) absolutely_integrable_on {0..1}"
-      and "\<bar>integral {0..1} (\<lambda>t. Re (g' t) * Im (g t))\<bar> =
-        measure lebesgue (inside (path_image g))"
-      by (metis (full_types))+
-  qed
-
-  obtain sgn :: real where sgn2: "sgn\<^sup>2 = 1"
+    and green_area: "\<bar>integral {0..1} (\<lambda>t. Re (g' t) * Im (g t))\<bar> = measure lebesgue (inside (path_image g))"
+    by (metis (full_types) G.area_theorem)+
+  then have integrable: "(\<lambda>t. Re (g' t) * Im (g t)) integrable_on {0..1}"
+    using absolutely_integrable_on_def by blast
+  obtain sgn where sgn2: "sgn\<^sup>2 = 1"
     and has_int_green: "((\<lambda>t. Re (g' t) * Im (g t)) has_integral
-      (sgn * measure lebesgue (inside (path_image g)))) {0..1}"
-  proof -
-    have integrable: "(\<lambda>t. Re (g' t) * Im (g t)) integrable_on {0..1}"
-      using green_ai absolutely_integrable_on_def by blast
-    show thesis
-    proof (cases "integral {0..1} (\<lambda>t. Re (g' t) * Im (g t)) \<ge> 0")
-      case True
-      then have eq: "integral {0..1} (\<lambda>t. Re (g' t) * Im (g t)) =
-        measure lebesgue (inside (path_image g))"
-        using green_area by (simp add: abs_if split: if_splits)
-      have "((\<lambda>t. Re (g' t) * Im (g t)) has_integral
-        (1 * measure lebesgue (inside (path_image g)))) {0..1}"
-        using integrable eq by (simp add: has_integral_integrable_integral)
-      then show thesis using that[of 1] by simp
-    next
-      case False
-      then have eq: "integral {0..1} (\<lambda>t. Re (g' t) * Im (g t)) =
-        - measure lebesgue (inside (path_image g))"
-        using green_area by (simp add: abs_if split: if_splits)
-      have "((\<lambda>t. Re (g' t) * Im (g t)) has_integral
-        ((-1) * measure lebesgue (inside (path_image g)))) {0..1}"
-        using integrable eq by (simp add: has_integral_integrable_integral)
-      then show thesis using that[of "-1"] by simp
-    qed
-  qed
+                         (sgn * measure lebesgue (inside (path_image g)))) {0..1}"
+    using green_area
+    by (smt (verit) has_integral_iff integrable mult_cancel_right2 mult_minus_left power2_eq_square)
 
-  have has_int_norm_sq: "((\<lambda>x. (norm (g' x))\<^sup>2) has_integral L\<^sup>2) {0..1}"
-  proof -
-    have int_on: "(\<lambda>x. (norm (g' x))\<^sup>2) integrable_on {0..1}"
-      using norm_g'_sq_int absolutely_integrable_on_def by blast
-    have "integral {0..1} (\<lambda>x. (norm (g' x))\<^sup>2) = L\<^sup>2"
-      using integral_norm_g'_sq norm_g'_sq_int
-        lebesgue_integral_eq_integral[of "{0..1}" "\<lambda>x. (norm (g' x))\<^sup>2"]
-        absolutely_integrable_imp_integrable[OF norm_g'_sq_int]
-      by auto
-    then show ?thesis
-      using int_on by (simp add: has_integral_integrable_integral)
-  qed
-
+  have int_on: "(\<lambda>x. (norm (g' x))\<^sup>2) integrable_on {0..1}"
+    using norm_g'_sq_int absolutely_integrable_on_def by blast
+  have "integral {0..1} (\<lambda>x. (norm (g' x))\<^sup>2) = L\<^sup>2"
+    using integral_norm_g'_sq norm_g'_sq_int
+      lebesgue_integral_eq_integral[of "{0..1}" "\<lambda>x. (norm (g' x))\<^sup>2"]
+      absolutely_integrable_imp_integrable[OF norm_g'_sq_int]
+    by auto
+  then have has_int_norm_sq: "((\<lambda>x. (norm (g' x))\<^sup>2) has_integral L\<^sup>2) {0..1}"
+    using int_on by (simp add: has_integral_integrable_integral)
   have has_int_key: "((\<lambda>x. (Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2 +
     (Im (g' x))\<^sup>2 - (2 * pi * Im (g x))\<^sup>2) has_integral
     (L\<^sup>2 - measure lebesgue (inside (path_image g)) * 4 * pi)) {0..1}"
   proof -
     have sgn_sq: "sgn * sgn = 1" using sgn2 by (metis power2_eq_square)
-    have integrand_eq: "\<And>x. (Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2 +
-      (Im (g' x))\<^sup>2 - (2 * pi * Im (g x))\<^sup>2 =
-      (norm (g' x))\<^sup>2 - 4 * pi * sgn * Re (g' x) * Im (g x)"
+    have integrand_eq: "(Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2 + (Im (g' x))\<^sup>2 - (2 * pi * Im (g x))\<^sup>2 =
+      (norm (g' x))\<^sup>2 - 4 * pi * sgn * Re (g' x) * Im (g x)" for x
     proof -
-      fix x
-      have "(Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2 +
-        (Im (g' x))\<^sup>2 - (2 * pi * Im (g x))\<^sup>2 =
-        (Re (g' x))\<^sup>2 + (Im (g' x))\<^sup>2 - 4 * pi * sgn * Re (g' x) * Im (g x)"
+      have "(Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2 + (Im (g' x))\<^sup>2 - (2 * pi * Im (g x))\<^sup>2 =
+            (Re (g' x))\<^sup>2 + (Im (g' x))\<^sup>2 - 4 * pi * sgn * Re (g' x) * Im (g x)"
         using sgn_sq by (simp add: power2_eq_square algebra_simps)
-      also have "\<dots> = (norm (g' x))\<^sup>2 - 4 * pi * sgn * Re (g' x) * Im (g x)"
+      then show ?thesis 
         by (simp add: cmod_power2)
-      finally show "(Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2 +
-        (Im (g' x))\<^sup>2 - (2 * pi * Im (g x))\<^sup>2 =
-        (norm (g' x))\<^sup>2 - 4 * pi * sgn * Re (g' x) * Im (g x)" .
     qed
     have scaled_green: "((\<lambda>t. 4 * pi * sgn * (Re (g' t) * Im (g t))) has_integral
       (4 * pi * sgn * (sgn * measure lebesgue (inside (path_image g))))) {0..1}"
@@ -2898,11 +2802,8 @@ proof -
     have scaled_green': "((\<lambda>t. 4 * pi * sgn * Re (g' t) * Im (g t)) has_integral
       (measure lebesgue (inside (path_image g)) * 4 * pi)) {0..1}"
       using scaled_green unfolding val by (simp add: algebra_simps)
-    have "((\<lambda>x. (norm (g' x))\<^sup>2 - 4 * pi * sgn * Re (g' x) * Im (g x)) has_integral
-      (L\<^sup>2 - measure lebesgue (inside (path_image g)) * 4 * pi)) {0..1}"
-      using has_integral_diff[OF has_int_norm_sq scaled_green'] by (simp add: algebra_simps)
     then show ?thesis
-      by (simp add: integrand_eq)
+      using has_integral_diff[OF has_int_norm_sq scaled_green'] integrand_eq by presburger
   qed
 
   have key: "0 \<le> L\<^sup>2 - measure lebesgue (inside (path_image g)) * 4 * pi \<and>
@@ -2912,15 +2813,7 @@ proof -
     case False
     have Im_g'_has_int: "((\<lambda>t. Im (g' t)) has_integral (Im (g x) - Im (g 0))) {0..x}"
       if "x \<in> {0..1}" for x
-    proof -
-      have "(g' has_integral (g x - a)) {0..x}"
-        by (metis g'_int has_integral_iff set_lebesgue_integral_eq_integral(1)
-            that)
-      then have "((\<lambda>t. Im (g' t)) has_integral Im (g x - a)) {0..x}"
-        by (rule has_integral_Im)
-      then show ?thesis
-        using ga by (simp add: pathstart_def)
-    qed
+      by (metis g'_integral has_integral_Im minus_complex.simps(2) that)
     have Im_g_periodic: "Im (g 1) = Im (g 0)"
       using ga by (simp add: pathstart_def pathfinish_def)
     have Im_g_zero_mean: "((\<lambda>x. Im (g x)) has_integral 0) {0..1}"
@@ -2930,18 +2823,13 @@ proof -
       have "(\<lambda>x. (Im (g' x))\<^sup>2) absolutely_integrable_on {0..1}"
       proof (rule measurable_bounded_by_integrable_imp_absolutely_integrable_ae)
         show "(\<lambda>x. (Im (g' x))\<^sup>2) \<in> borel_measurable (lebesgue_on {0..1})"
-        proof -
-          have "g' \<in> borel_measurable (lebesgue_on {0..1})"
-            using absolutely_integrable_imp_borel_measurable[OF conjunct1[OF g'_int[of 1]]]
-            by auto
-          then show ?thesis
-            using borel_measurable_complex_iff borel_measurable_power by blast
-        qed
+          by (simp add: Im_absolutely_integrable_on absolutely_integrable_imp_borel_measurable
+              borel_measurable_power g'_integral)
         show "negligible S" by (rule negS)
         fix x assume "x \<in> {0..1} - S"
         then have "norm (g' x) \<le> L" using norm_g'_le by auto
         then show "norm ((Im (g' x))\<^sup>2) \<le> L\<^sup>2"
-          by (metis abs_Im_le_cmod landau_omega.R_trans norm_ge_zero norm_power power_mono real_norm_def)
+          by (metis abs_Im_le_cmod order.trans norm_ge_zero norm_power power_mono real_norm_def)
       qed auto
       then show ?thesis
         using absolutely_integrable_on_def by blast
@@ -2952,67 +2840,36 @@ proof -
         \<exists>c a. \<forall>x \<in> {0..1}. Im (g x) = c * sin (2*pi*x - a)"
       using scaled_Wirtinger_inequality[OF Im_g'_has_int Im_g_periodic Im_g_zero_mean Im_g'_sq_int]
       by auto
-    obtain w where "((\<lambda>x. (Im (g' x))\<^sup>2 - (2 * pi * Im (g x))\<^sup>2) has_integral w) {0..1}"
+    obtain w where w: "((\<lambda>x. (Im (g' x))\<^sup>2 - (2 * pi * Im (g x))\<^sup>2) has_integral w) {0..1}"
     proof -
       have sq: "(\<lambda>x. (2 * pi * Im (g x))\<^sup>2) integrable_on {0..1}"
-        using integrable_cmul[OF wirt1, of "(2*pi)\<^sup>2"]
-        by (simp add: power_mult_distrib mult.commute)
+        using integrable_cmul[OF wirt1, of "(2*pi)\<^sup>2"] by (simp add: power_mult_distrib mult.commute)
       with that show ?thesis
         using integrable_diff[OF Im_g'_sq_int sq] by force
     qed
-    have w_nonneg: "0 \<le> w"
-      and w_zero: "w = 0 \<Longrightarrow> \<exists>c a. \<forall>x \<in> {0..1}. Im (g x) = c * sin (2*pi*x - a)"
-    proof -
-      have "((\<lambda>x. (Im (g' x))\<^sup>2 - (2 * pi * Im (g x))\<^sup>2) has_integral w) {0..1}"
-        using \<open>((\<lambda>x. (Im (g' x))\<^sup>2 - (2 * pi * Im (g x))\<^sup>2) has_integral w) {0..1}\<close> .
-      then have w_eq: "w = integral {0..1} (\<lambda>x. (Im (g' x))\<^sup>2) - integral {0..1} (\<lambda>x. (2 * pi * Im (g x))\<^sup>2)"
-      proof -
-        have "w = integral {0..1} (\<lambda>x. (Im (g' x))\<^sup>2 - (2 * pi * Im (g x))\<^sup>2)"
-          using \<open>((\<lambda>x. (Im (g' x))\<^sup>2 - (2 * pi * Im (g x))\<^sup>2) has_integral w) {0..1}\<close>
-          by (simp add: integral_unique)
-        also have "\<dots> = integral {0..1} (\<lambda>x. (Im (g' x))\<^sup>2) - integral {0..1} (\<lambda>x. (2 * pi * Im (g x))\<^sup>2)"
-        proof -
-          have sq: "(\<lambda>x. (2 * pi * Im (g x))\<^sup>2) integrable_on {0..1}"
-            using integrable_cmul[OF wirt1, of "(2*pi)\<^sup>2"]
-            by (simp add: power_mult_distrib mult.commute)
-          show ?thesis
-            using integral_diff[OF Im_g'_sq_int sq] by simp
-        qed
-        finally show ?thesis .
-      qed
-      show "0 \<le> w"
-        using w_eq wirt2 by linarith
-      show "w = 0 \<Longrightarrow> \<exists>c a. \<forall>x \<in> {0..1}. Im (g x) = c * sin (2*pi*x - a)"
-        using w_eq wirt3 by fastforce
-    qed
+    then have "w = integral {0..1} (\<lambda>x. (Im (g' x))\<^sup>2 - (2 * pi * Im (g x))\<^sup>2)"
+      by (simp add: integral_unique)
+    also have "\<dots> = integral {0..1} (\<lambda>x. (Im (g' x))\<^sup>2) - integral {0..1} (\<lambda>x. (2 * pi * Im (g x))\<^sup>2)"
+      using integrable_cmul[OF wirt1, of "(2*pi)\<^sup>2"]
+      by (metis (no_types, lifting) integral_cong integral_diff Im_g'_sq_int power_mult_distrib real_scaleR_def)
+    finally have w_eq: "w = integral {0..1} (\<lambda>x. (Im (g' x))\<^sup>2) - integral {0..1} (\<lambda>x. (2 * pi * Im (g x))\<^sup>2)" .
+    have w_nonneg: "w\<ge>0"
+      using w_eq wirt2 by linarith
+    have w_zero: "w = 0 \<Longrightarrow> \<exists>c a. \<forall>x \<in> {0..1}. Im (g x) = c * sin (2*pi*x - a)"
+      by (simp add: w_eq wirt3)
     define d where "d = L\<^sup>2 - measure lebesgue (inside (path_image g)) * 4 * pi - w"
     have key_eq: "L\<^sup>2 - measure lebesgue (inside (path_image g)) * 4 * pi = d + w"
       unfolding d_def by linarith
 
     have sq_has_int: "((\<lambda>x. (Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2) has_integral d) {0..1}"
-    proof -
-      have "((\<lambda>x. (Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2 + ((Im (g' x))\<^sup>2 - (2 * pi * Im (g x))\<^sup>2)
-        - ((Im (g' x))\<^sup>2 - (2 * pi * Im (g x))\<^sup>2)) has_integral
-        (L\<^sup>2 - measure lebesgue (inside (path_image g)) * 4 * pi - w)) {0..1}"
-        using has_integral_diff[OF has_int_key
-          \<open>((\<lambda>x. (Im (g' x))\<^sup>2 - (2 * pi * Im (g x))\<^sup>2) has_integral w) {0..1}\<close>]
-        by simp
-      then show ?thesis
-        unfolding d_def by simp
-    qed
-    have d_nonneg: "0 \<le> d"
-    proof -
-      have sq_int: "(\<lambda>x. (Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2) integrable_on {0..1}"
-        using has_integral_integrable[OF sq_has_int] .
-      have "0 \<le> integral {0..1} (\<lambda>x. (Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2)"
-        by (rule integral_nonneg[OF sq_int]) (simp add: zero_le_power2)
-      then show "0 \<le> d"
-        using integral_unique[OF sq_has_int] by linarith
-    qed
+      using has_integral_diff[OF has_int_key w] by (simp add: d_def)
+    have "0 \<le> integral {0..1} (\<lambda>x. (Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2)"
+      using integral_nonneg sq_has_int zero_le_power2 by blast
+    then have d_nonneg: "0 \<le> d"
+      using integral_unique[OF sq_has_int] by linarith
     have dw_nonneg: "0 \<le> d + w"
       using d_nonneg w_nonneg by linarith
-    moreover have "\<exists>c r. path_image g = sphere c r" 
-      if "d + w = 0"
+    moreover have "\<exists>c r. path_image g = sphere c r"  if "d + w = 0"
     proof -
       have d0: "d = 0" and w0: "w = 0"
         using that d_nonneg w_nonneg by linarith+
@@ -3020,167 +2877,88 @@ proof -
         using w_zero[OF w0] by blast
       have sq_zero: "((\<lambda>x. (Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2) has_integral 0) {0..1}"
         using sq_has_int d0 by simp
-      have neg_Re: "negligible {x \<in> {0..1}. Re (g' x) - 2 * pi * sgn * Im (g x) \<noteq> 0}"
-      proof -
-        have sq_abs: "(\<lambda>x. (Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2) absolutely_integrable_on {0..1}"
-          using nonnegative_absolutely_integrable_1[OF has_integral_integrable[OF sq_zero]]
-          by (simp add: zero_le_power2)
-        have sq_leb: "integrable (lebesgue_on {0..1}) (\<lambda>x. (Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2)"
-          by (rule absolutely_integrable_imp_integrable[OF sq_abs]) simp
-        have leb_zero: "integral\<^sup>L (lebesgue_on {0..1}) (\<lambda>x. (Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2) = 0"
-          using lebesgue_integral_eq_integral[OF sq_leb] integral_unique[OF sq_zero] by simp
-        have "AE x in lebesgue_on {0..1}. (Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2 = 0"
-          using integral_nonneg_eq_0_iff_AE[OF sq_leb] leb_zero
-          by (simp add: zero_le_power2)
-        then have "AE x in lebesgue_on {0..1}. Re (g' x) - 2 * pi * sgn * Im (g x) = 0"
-          by (rule AE_mp) (auto simp: power2_eq_square)
-        then show ?thesis
-        proof -
-          assume ae: "AE x in lebesgue_on {0..1}. Re (g' x) - 2 * pi * sgn * Im (g x) = 0"
-          from ae[unfolded eventually_ae_filter[of _ "lebesgue_on {0..1}"]]
-          obtain N0 where N0: "N0 \<in> null_sets (lebesgue_on {0..1})"
-            and sub: "{x \<in> space (lebesgue_on {0..1}). Re (g' x) - 2 * pi * sgn * Im (g x) \<noteq> 0} \<subseteq> N0"
-            by auto
-          have "negligible N0"
-          proof -
-            have "{0..1::real} \<in> sets lebesgue" by simp
-            then have "(N0 \<in> null_sets (lebesgue_on {0..1})) = (N0 \<subseteq> {0..1} \<and> N0 \<in> null_sets lebesgue)"
-              using null_sets_restrict_space[of "{0..1}" lebesgue N0] by simp
-            then show ?thesis
-              using N0 negligible_iff_null_sets by auto
-          qed
-
-          moreover have "{x \<in> {0..1}. Re (g' x) - 2 * pi * sgn * Im (g x) \<noteq> 0} \<subseteq> N0"
-            using sub by (auto simp: space_lebesgue_on)
-          ultimately show ?thesis
-            by (meson negligible_subset)
-        qed
-      qed
+      have sq_abs: "(\<lambda>x. (Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2) absolutely_integrable_on {0..1}"
+        using nonnegative_absolutely_integrable_1[OF has_integral_integrable[OF sq_zero]]
+        by (simp add: zero_le_power2)
+      have sq_leb: "integrable (lebesgue_on {0..1}) (\<lambda>x. (Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2)"
+        by (rule absolutely_integrable_imp_integrable[OF sq_abs]) simp
+      have leb_zero: "integral\<^sup>L (lebesgue_on {0..1}) (\<lambda>x. (Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2) = 0"
+        using lebesgue_integral_eq_integral[OF sq_leb] integral_unique[OF sq_zero] by simp
+      have "AE x in lebesgue_on {0..1}. (Re (g' x) - 2 * pi * sgn * Im (g x))\<^sup>2 = 0"
+        using integral_nonneg_eq_0_iff_AE[OF sq_leb] leb_zero by simp
+      then have ae: "AE x in lebesgue_on {0..1}. Re (g' x) - 2 * pi * sgn * Im (g x) = 0"
+        by (rule AE_mp) (auto simp: power2_eq_square)
+      from ae[unfolded eventually_ae_filter[of _ "lebesgue_on {0..1}"]]
+      obtain N0 where N0: "N0 \<in> null_sets (lebesgue_on {0..1})"
+        and sub: "{x \<in> space (lebesgue_on {0..1}). Re (g' x) - 2 * pi * sgn * Im (g x) \<noteq> 0} \<subseteq> N0"
+        by auto
+      have "negligible N0"
+        by (meson N0 fmeasurableD lmeasurable_interval(1) negligible_iff_null_sets null_sets_restrict_space)
+      moreover have "{x \<in> {0..1}. Re (g' x) - 2 * pi * sgn * Im (g x) \<noteq> 0} \<subseteq> N0"
+        using sub by auto
+      ultimately have neg_Re: "negligible {x \<in> {0..1}. Re (g' x) - 2 * pi * sgn * Im (g x) \<noteq> 0}"
+        by (meson negligible_subset)
       have neg_Re': "negligible {x \<in> {0..1}. Re (g' x) - 2 * pi * sgn * C * sin (2*pi*x - A) \<noteq> 0}"
-      proof -
-        have "{x \<in> {0..1}. Re (g' x) - 2 * pi * sgn * C * sin (2*pi*x - A) \<noteq> 0}
-            = {x \<in> {0..1}. Re (g' x) - 2 * pi * sgn * Im (g x) \<noteq> 0}"
-          using CA by auto
-        then show ?thesis using neg_Re by simp
-      qed
-
+        by (smt (verit, best) CA Collect_cong more_arith_simps(11) neg_Re)
       have Re_g: "Re (g x) = - sgn * C * (cos (2*pi*x - A) - cos A)"
         if "x \<in> {0..1}" for x
       proof -
-        have x01: "0 \<le> x" "x \<le> 1" using that by auto
-        \<comment> \<open>Step 1: integral of $Re(g')$ over $\{0..x\}$ is $Re(g\,x)$\<close>
-        have Re_g'_int: "((\<lambda>t. Re (g' t)) has_integral Re (g x)) {0..x}"
-        proof -
-          have "(g' has_integral (g x - a)) {0..x}"
-          proof -
-            have "g' absolutely_integrable_on {0..x}"
-              using g'_int[OF that] by auto
-            moreover have "integral {0..x} g' = g x - a"
-              using g'_int[OF that] by auto
-            ultimately show ?thesis
-              by (metis absolutely_integrable_on_def has_integral_integrable_integral)
-          qed
-          then have "((\<lambda>t. Re (g' t)) has_integral Re (g x - a)) {0..x}"
-            by (rule has_integral_Re)
-          then show ?thesis using \<open>Re a = 0\<close> by simp
-        qed
-        \<comment> \<open>Step 2: integral of $2\pi \cdot \mathit{sgn} \cdot C \cdot \sin(2\pi t - A)$ over $\{0..x\}$\<close>
-        have sin_int: "((\<lambda>t. 2 * pi * sgn * C * sin (2 * pi * t - A)) has_integral
-          (- sgn * C * (cos (2 * pi * x - A) - cos A))) {0..x}"
-        proof -
-          have hvd: "((\<lambda>t. - sgn * C * cos (2 * pi * t - A)) has_vector_derivative
+        have "(g' has_integral (g x - a)) {0..x}"
+          by (metis G.g(2) g'_integral pathstart_def that)
+        then have Re_g'_int: "((\<lambda>t. Re (g' t)) has_integral Re (g x)) {0..x}"
+          using \<open>Re a = 0\<close> by (metis diff_zero has_integral_Re minus_complex.simps(1))
+        have "((\<lambda>t. - sgn * C * cos (2 * pi * t - A)) has_vector_derivative
             2 * pi * sgn * C * sin (2 * pi * t - A)) (at t within {0..x})" for t
-          proof -
-            have "((\<lambda>t. - sgn * C * cos (2 * pi * t - A)) has_real_derivative
-              - sgn * C * (- sin (2 * pi * t - A)) * (2 * pi)) (at t)"
-              by (auto intro!: derivative_eq_intros simp: algebra_simps)
-            then have "((\<lambda>t. - sgn * C * cos (2 * pi * t - A)) has_real_derivative
-              2 * pi * sgn * C * sin (2 * pi * t - A)) (at t)"
-              by (simp add: algebra_simps)
-            then show ?thesis
-              by (simp add: has_real_derivative_iff_has_vector_derivative
-                has_vector_derivative_at_within)
-          qed
-          have "((\<lambda>t. 2 * pi * sgn * C * sin (2 * pi * t - A)) has_integral
+          by (auto intro!: derivative_eq_intros simp: algebra_simps
+              simp flip: has_real_derivative_iff_has_vector_derivative)
+        then have "((\<lambda>t. 2 * pi * sgn * C * sin (2 * pi * t - A)) has_integral
             ((- sgn * C * cos (2 * pi * x - A)) - (- sgn * C * cos (2 * pi * 0 - A)))) {0..x}"
-            using fundamental_theorem_of_calculus[OF \<open>0 \<le> x\<close> hvd] by simp
-          then show ?thesis by (simp add: algebra_simps)
-        qed
-        \<comment> \<open>Step 3: integral of the difference is $Re(g\,x) - (-\mathit{sgn} \cdot C \cdot (\cos(\dots) - \cos A))$\<close>
+          using that fundamental_theorem_of_calculus 
+          by (metis (no_types, lifting) atLeastAtMost_iff)
+        then have sin_int: "((\<lambda>t. 2 * pi * sgn * C * sin (2 * pi * t - A)) has_integral
+          (- sgn * C * (cos (2 * pi * x - A) - cos A))) {0..x}" by (simp add: algebra_simps)
         have diff_int: "((\<lambda>t. Re (g' t) - 2 * pi * sgn * C * sin (2 * pi * t - A)) has_integral
           (Re (g x) - (- sgn * C * (cos (2 * pi * x - A) - cos A)))) {0..x}"
           using has_integral_diff[OF Re_g'_int sin_int] by simp
-        \<comment> \<open>Step 4: the integrand is $0$ a.e. (from @{term neg_Re'}), so the integral is $0$\<close>
+        have neg_sub: "negligible {t \<in> {0..x}. Re (g' t) - 2 * pi * sgn * C * sin (2 * pi * t - A) \<noteq> 0}"
+          by (smt (verit) atLeastAtMost_iff mem_Collect_eq neg_Re' negligible_subset subsetI that)
         have zero_int: "((\<lambda>t. Re (g' t) - 2 * pi * sgn * C * sin (2 * pi * t - A)) has_integral 0) {0..x}"
-        proof -
-          have neg_sub: "negligible {t \<in> {0..x}. Re (g' t) - 2 * pi * sgn * C * sin (2 * pi * t - A) \<noteq> 0}"
-          proof (rule negligible_subset[OF neg_Re'])
-            show "{t \<in> {0..x}. Re (g' t) - 2 * pi * sgn * C * sin (2 * pi * t - A) \<noteq> 0}
-              \<subseteq> {x \<in> {0..1}. Re (g' x) - 2 * pi * sgn * C * sin (2 * pi * x - A) \<noteq> 0}"
-              using x01 by auto
-          qed
-          show ?thesis
-          proof (rule has_integral_spike[OF neg_sub _ has_integral_0])
-            fix t assume "t \<in> {0..x} - {t \<in> {0..x}. Re (g' t) - 2 * pi * sgn * C * sin (2 * pi * t - A) \<noteq> 0}"
-            then show "Re (g' t) - 2 * pi * sgn * C * sin (2 * pi * t - A) = (0::real)"
-              by auto
-          qed
-        qed
-        \<comment> \<open>Step 5: by uniqueness of integrals\<close>
+          by (rule has_integral_spike[OF neg_sub _ has_integral_0]) auto
         show ?thesis
           using has_integral_unique[OF diff_int zero_int] by linarith
       qed
-      \<comment> \<open>Final step: @{term "path_image g = sphere c \<bar>C\<bar>"}\<close>
       define c where "c = Complex (sgn * C * cos A) 0"
       have subset: "path_image g \<subseteq> sphere c \<bar>C\<bar>"
       proof -
         have "cmod (g t - c) = \<bar>C\<bar>" if "t \<in> {0..1}" for t
         proof -
-          have re: "Re (g t) = - sgn * C * (cos (2*pi*t - A) - cos A)"
-            using Re_g[OF that] .
-          have im: "Im (g t) = C * sin (2*pi*t - A)"
-            using CA[OF that] .
           have eq_gt: "g t - c = Complex (- sgn * C * cos (2*pi*t - A)) (C * sin (2*pi*t - A))"
           proof (rule complex_eqI)
             show "Re (g t - c) = Re (Complex (- sgn * C * cos (2*pi*t - A)) (C * sin (2*pi*t - A)))"
-              unfolding c_def using re by (simp add: algebra_simps)
+              unfolding c_def using Re_g[OF that] by (simp add: algebra_simps)
             show "Im (g t - c) = Im (Complex (- sgn * C * cos (2*pi*t - A)) (C * sin (2*pi*t - A)))"
-              unfolding c_def using im by simp
+              unfolding c_def using CA[OF that] by simp
           qed
           have "(cmod (g t - c))\<^sup>2 = (sgn * C * cos (2*pi*t - A))\<^sup>2 + (C * sin (2*pi*t - A))\<^sup>2"
             using eq_gt by (simp add: complex_norm power2_eq_square)
           also have "\<dots> = C\<^sup>2 * (sgn\<^sup>2 * (cos (2*pi*t - A))\<^sup>2 + (sin (2*pi*t - A))\<^sup>2)"
             by (simp add: algebra_simps power2_eq_square)
-          also have "\<dots> = C\<^sup>2 * ((cos (2*pi*t - A))\<^sup>2 + (sin (2*pi*t - A))\<^sup>2)"
-            using sgn2 by simp
-          also have "\<dots> = C\<^sup>2"
-            by (simp add: sin_cos_squared_add3)
           also have "\<dots> = \<bar>C\<bar>\<^sup>2"
-            by (simp add: power2_abs)
+            using sgn2 by (simp add: sin_cos_squared_add3)
           finally show "cmod (g t - c) = \<bar>C\<bar>"
-            by (rule power2_eq_imp_eq) auto
+            using cmod_def by force
         qed
         then show ?thesis
           by (auto simp: path_image_def sphere_def dist_norm norm_minus_commute)
       qed
       have supset: "sphere c \<bar>C\<bar> \<subseteq> path_image g"
       proof (cases "C = 0")
-        case True
-        then have "sphere c \<bar>C\<bar> = {c}" by (simp add: sphere_def dist_self)
-        moreover have "g 0 = c"
-        proof (rule complex_eqI)
-          show "Re (g 0) = Re c"
-            using Re_g[of 0] by (simp add: c_def True)
-          show "Im (g 0) = Im c"
-            using CA[of 0] by (simp add: c_def True)
-        qed
-        moreover have "g 0 \<in> path_image g"
-          by (simp add: path_image_def)
-        ultimately show ?thesis by auto
+        case True then show ?thesis
+          using subset by auto
       next
         case Cne: False
         show ?thesis
-        proof (rule subsetI)
+        proof 
           fix z assume z: "z \<in> sphere c \<bar>C\<bar>"
           then have zc_norm: "cmod (z - c) = \<bar>C\<bar>"
             by (simp add: sphere_def dist_norm norm_minus_commute)
@@ -3195,82 +2973,38 @@ proof -
               using sgn2 by (simp add: add_divide_distrib)
             also have "\<dots> = (cmod (z - c))\<^sup>2 / C\<^sup>2"
               by (simp add: cmod_power2)
-            also have "\<dots> = \<bar>C\<bar>\<^sup>2 / C\<^sup>2"
-              using zc_norm by simp
             also have "\<dots> = 1"
-              using Cne by (simp add: power2_abs)
+              using Cne zc_norm by simp
             finally show ?thesis
-              using norm_ge_zero
-              by (simp add: abs_square_eq_1)
+              using norm_ge_zero by (simp add: abs_square_eq_1)
           qed
-          \<comment> \<open>Get the angle $\theta$\<close>
           obtain \<theta> where \<theta>_bounds: "0 \<le> \<theta>" "\<theta> < 2*pi"
             and \<theta>_eq: "Complex (- Re (z - c) / (sgn * C)) (Im (z - c) / C) = Complex (cos \<theta>) (sin \<theta>)"
             using complex_unimodular_polar[OF unit] by auto
-          have \<theta>_Re: "- Re (z - c) / (sgn * C) = cos \<theta>"
-            and \<theta>_Im: "Im (z - c) / C = sin \<theta>"
+          have \<theta>_Re: "- Re (z - c) / (sgn * C) = cos \<theta>" and \<theta>_Im: "Im (z - c) / C = sin \<theta>"
             using \<theta>_eq by (simp_all add: complex.expand)
-          \<comment> \<open>Find $t \in [0,1]$ with $2\pi t - A \equiv \theta \pmod{2\pi}$\<close>
           define t where "t = frac ((\<theta> + A) / (2 * pi))"
           have t01: "t \<in> {0..1}"
-          proof -
-            have "0 \<le> frac ((\<theta> + A) / (2 * pi))" by (rule frac_ge_0)
-            moreover have "frac ((\<theta> + A) / (2 * pi)) < 1" by (rule frac_lt_1)
-            ultimately show ?thesis unfolding t_def by auto
-          qed
-          have angle_eq: "cos (2*pi*t - A) = cos \<theta>" "sin (2*pi*t - A) = sin \<theta>"
-          proof -
-            have *: "2*pi*t = (\<theta> + A) - of_int \<lfloor>(\<theta> + A) / (2*pi)\<rfloor> * (2*pi)"
-            proof -
-              have "t = (\<theta> + A) / (2*pi) - of_int \<lfloor>(\<theta> + A) / (2*pi)\<rfloor>"
-                unfolding t_def frac_def by simp
-              then have "2*pi*t = 2*pi * ((\<theta> + A) / (2*pi) - of_int \<lfloor>(\<theta> + A) / (2*pi)\<rfloor>)"
-                by simp
-              also have "\<dots> = (\<theta> + A) - of_int \<lfloor>(\<theta> + A) / (2*pi)\<rfloor> * (2*pi)"
-                using pi_gt_zero by (simp add: field_simps)
-              finally show ?thesis .
-            qed
-            have eq: "2*pi*t - A = \<theta> - of_int \<lfloor>(\<theta> + A) / (2*pi)\<rfloor> * (2*pi)"
-              using * by linarith
-            show "cos (2*pi*t - A) = cos \<theta>"
-              unfolding eq
-              by (simp add: cos_diff mult_of_int_commute)
-            show "sin (2*pi*t - A) = sin \<theta>"
-              unfolding eq by (simp add: mult_of_int_commute sin_diff)
-        qed
-          \<comment> \<open>Show $g\,t = z$\<close>
+            using frac_ge_0[of t] frac_lt_1[of t] by (simp add: t_def)
+          have "2*pi*t - A = \<theta> - of_int \<lfloor>(\<theta> + A) / (2*pi)\<rfloor> * (2*pi)"
+            by (simp add: t_def frac_def divide_simps)
+          then have angle_eq: "cos (2*pi*t - A) = cos \<theta>" "sin (2*pi*t - A) = sin \<theta>"
+            by (auto simp: mult_of_int_commute sin_diff cos_diff)
           have "g t = z"
           proof (rule complex_eqI)
+            have "sgn \<noteq> 0" using sgn2 by (metis power2_eq_square mult_zero_left zero_neq_one)
             have "Re (g t) = - sgn * C * (cos (2*pi*t - A) - cos A)"
               using Re_g[OF t01] .
             also have "\<dots> = - sgn * C * cos \<theta> + sgn * C * cos A"
               using angle_eq(1) by (simp add: algebra_simps)
             also have "\<dots> = Re (z - c) + Re c"
-            proof -
-              have "sgn \<noteq> 0" using sgn2 by (metis power2_eq_square mult_zero_left zero_neq_one)
-              then have "Re (z - c) = - sgn * C * cos \<theta>"
-                using \<theta>_Re Cne by (simp add: field_simps)
-              moreover have "Re c = sgn * C * cos A"
-                unfolding c_def by simp
-              ultimately show ?thesis by (simp add: algebra_simps)
-            qed
-            also have "\<dots> = Re z"
-              by simp
-            finally show "Re (g t) = Re z" .
-          next
-            have "Im (g t) = C * sin (2*pi*t - A)"
-              using CA[OF t01] .
-            also have "\<dots> = C * sin \<theta>"
-              using angle_eq(2) by simp
-            also have "\<dots> = Im (z - c)"
-              using \<theta>_Im Cne by (simp add: field_simps)
-            also have "\<dots> = Im z"
-              by (simp add: c_def)
-            finally show "Im (g t) = Im z" .
+              using \<theta>_Re Cne \<open>sgn \<noteq> 0\<close> by (simp add: c_def field_simps)
+            finally show "Re (g t) = Re z" by simp
+            show "Im (g t) = Im z"
+              using CA[OF t01] \<theta>_Im Cne angle_eq(2) c_def by (simp add: nonzero_divide_eq_eq)
           qed
-          moreover have "g t \<in> path_image g"
+          then show "z \<in> path_image g"
             using t01 by (auto simp: path_image_def)
-          ultimately show "z \<in> path_image g" by simp
         qed
       qed
       show ?thesis
@@ -3294,19 +3028,16 @@ qed
 
 text \<open>Reduction lemmas for the reparametrization steps.\<close>
 
-
-lemma isoperimetric_reduce_shift:
+corollary isoperimetric_reduce_shift:
   fixes g :: "real \<Rightarrow> complex"
   assumes "rectifiable_path g" "simple_path g"
     "pathfinish g = pathstart g"
     "convex (inside (path_image g))"
-    "path_length g = L"
-    "a \<in> path_image g"
+    "path_length g = L" "a \<in> path_image g"
   obtains h where "rectifiable_path h" "simple_path h"
     "pathfinish h = pathstart h" "pathstart h = a"
     "convex (inside (path_image h))"
-    "path_length h = L"
-    "path_image h = path_image g"
+    "path_length h = L" "path_image h = path_image g"
 proof -
   obtain t where t: "t \<in> {0..1}" "g t = a"
     using assms(6) by (auto simp: path_image_def)
@@ -3322,11 +3053,9 @@ proof -
     unfolding h_def using pathstart_shiftpath[of t g] t by auto
   moreover have "path_image h = path_image g"
     unfolding h_def using path_image_shiftpath[OF t(1) assms(3)] .
-  moreover have "convex (inside (path_image h))"
-    using assms(4) calculation(5) by simp
   moreover have "path_length h = L"
     unfolding h_def using path_length_shiftpath[OF assms(1) assms(3) t(1)] assms(5) by simp
-  ultimately show thesis using that by blast
+  ultimately show thesis using that assms(4) by presburger
 qed
 
 lemma isoperimetric_reduce_rotate_translate:
