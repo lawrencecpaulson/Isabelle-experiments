@@ -3116,7 +3116,7 @@ proof -
     by (subst (2) rcis_cmod_Arg[symmetric, of "b - a"]) (simp add: rcis_def cis_mult)
   finally have rb_real: "b' = of_real (cmod (b-a))" unfolding b'_def by simp
   show ?thesis
-  proof (rule that[of h a' b'])
+  proof 
     show "rectifiable_path h"
       unfolding h_eq using rect_g1 rectifiable_path_linear_image_eq[OF lin_r inj_r] by simp
     show "simple_path h"
@@ -3153,98 +3153,57 @@ proof -
         unfolding a'_eq b'_def by (simp add: dist_norm norm_r norm_minus_commute)
       then show ?thesis using diam_eq assms(8) by simp
     qed
-    have inside_h: "inside (path_image h) = (*) r ` (+) (-a) ` inside (path_image g)"
-    proof -
-      have "inside (path_image h) = (*) r ` inside (path_image g1)"
-      proof -
-        have "inside ((*) r ` path_image g1) = (*) r ` inside (path_image g1)"
-        proof (rule set_eqI)
-          fix x
-          define y where "y = inverse r * x"
-          then have xy: "x = r * y" using r_ne by simp
-          have bij_r: "bij ((*) r)"
-            unfolding bij_def using lin_r inj_r eucl.linear_inj_imp_surj[OF lin_r inj_r] by blast
-          have compl_img: "(*) r ` (- path_image g1) = - ((*) r ` path_image g1)"
-            using bij_image_Compl_eq[OF bij_r] .
-          have homeo: "homeomorphism (- path_image g1) ((*) r ` (- path_image g1)) ((*) r) ((*) (inverse r))"
-          proof (rule homeomorphismI)
-            show "continuous_on (- path_image g1) ((*) r)"
-              by (intro continuous_intros)
-            show "continuous_on ((*) r ` (- path_image g1)) ((*) (inverse r))"
-              by (intro continuous_intros)
-            show "\<And>x. x \<in> - path_image g1 \<Longrightarrow> (*) (inverse r) (r * x) = x"
-              using r_ne by simp
-            show "\<And>y. y \<in> (*) r ` (- path_image g1) \<Longrightarrow> (*) r (inverse r * y) = y"
-              using r_ne by simp
-            show "(*) r ` (- path_image g1) \<subseteq> (*) r ` (- path_image g1)" by simp
-            show "(*) (inverse r) ` ((*) r ` (- path_image g1)) \<subseteq> - path_image g1"
-              using r_ne apply (auto simp: image_iff)
-              by (metis divide_inverse_commute nonzero_mult_div_cancel_left)
-          qed
-          have cc: "connected_component_set (- ((*) r ` path_image g1)) x =
+    have "inside ((*) r ` path_image g1) = (*) r ` inside (path_image g1)"
+    proof (rule set_eqI)
+      fix x
+      define y where "y = inverse r * x"
+      then have xy: "x = r * y" using r_ne by simp
+      have bij_r: "bij ((*) r)"
+        unfolding bij_def using lin_r inj_r eucl.linear_inj_imp_surj[OF lin_r inj_r] by blast
+      have compl_img: "(*) r ` (- path_image g1) = - ((*) r ` path_image g1)"
+        using bij_image_Compl_eq[OF bij_r] .
+      have homeo: "homeomorphism (- path_image g1) ((*) r ` (- path_image g1)) ((*) r) ((*) (inverse r))"
+      proof (intro continuous_intros homeomorphismI)
+        show "(*) r ` (- path_image g1) \<subseteq> (*) r ` (- path_image g1)" by simp
+        show "(*) (inverse r) ` ((*) r ` (- path_image g1)) \<subseteq> - path_image g1"
+          using r_ne apply (auto simp: image_iff)
+          by (metis divide_inverse_commute nonzero_mult_div_cancel_left)
+      qed (use r_ne in auto)
+      have cc: "connected_component_set (- ((*) r ` path_image g1)) x =
                     (*) r ` connected_component_set (- path_image g1) y"
-          proof (cases "y \<in> path_image g1")
-            case True
-            then have "x \<in> (*) r ` path_image g1" using xy by auto
-            then have "x \<notin> - ((*) r ` path_image g1)" by simp
-            moreover have "y \<notin> - path_image g1" using True by simp
-            ultimately show ?thesis
-              using connected_component_eq_empty by blast
-          next
-            case False
-            then have y_in: "y \<in> - path_image g1" by simp
-            have "connected_component_set ((*) r ` (- path_image g1)) (r * y) =
+      proof (cases "y \<in> path_image g1")
+        case True
+        then have "x \<in> (*) r ` path_image g1"  "y \<notin> - path_image g1" using True xy by auto
+        then show ?thesis
+          using connected_component_eq_empty by blast
+      next
+        case False
+        then have y_in: "y \<in> - path_image g1" by simp
+        have "connected_component_set ((*) r ` (- path_image g1)) (r * y) =
                   (*) r ` connected_component_set (- path_image g1) y"
-              using connected_component_set_homeomorphism[OF homeo y_in] .
-            then show ?thesis using compl_img xy by simp
-          qed
-          have bounded_eq: "bounded ((*) r ` connected_component_set (- path_image g1) y) =
-                           bounded (connected_component_set (- path_image g1) y)"
-            by (simp add: bounded_iff norm_r image_iff)
-          have memb: "(x \<in> (*) r ` path_image g1) = (y \<in> path_image g1)"
-            using xy inj_r by (auto simp: inj_image_mem_iff)
-          show "(x \<in> inside ((*) r ` path_image g1)) = (x \<in> (*) r ` inside (path_image g1))"
-            unfolding inside_def mem_Collect_eq
-          proof
-            assume lhs: "x \<notin> (*) r ` path_image g1 \<and>
-                         bounded (connected_component_set (- (*) r ` path_image g1) x)"
-            have "y \<notin> path_image g1" using lhs memb by simp
-            moreover have "bounded (connected_component_set (- path_image g1) y)"
-              using lhs cc bounded_eq by simp
-            ultimately show "x \<in> (*) r ` {x. x \<notin> path_image g1 \<and>
-                            bounded (connected_component_set (- path_image g1) x)}"
-              using xy by blast
-          next
-            assume rhs: "x \<in> (*) r ` {x. x \<notin> path_image g1 \<and>
-                         bounded (connected_component_set (- path_image g1) x)}"
-            then obtain z where z: "z \<notin> path_image g1"
-              "bounded (connected_component_set (- path_image g1) z)" "x = r * z"
-              by auto
-            then have "z = y" using xy r_ne by (metis mult_left_cancel)
-            then show "x \<notin> (*) r ` path_image g1 \<and>
-                       bounded (connected_component_set (- (*) r ` path_image g1) x)"
-              using z memb cc bounded_eq by simp
-          qed
-        qed
-        then show ?thesis unfolding pi_h .
+          using connected_component_set_homeomorphism[OF homeo y_in] .
+        then show ?thesis using compl_img xy by simp
       qed
-      also have "inside (path_image g1) = (+) (-a) ` inside (path_image g)"
-        unfolding pi_g1 using inside_translation[of "-a" "path_image g"] by simp
-      finally show ?thesis .
+      have "bounded ((*) r ` connected_component_set (- path_image g1) y) =
+            bounded (connected_component_set (- path_image g1) y)"
+        by (simp add: bounded_iff norm_r)
+      then show "(x \<in> inside ((*) r ` path_image g1)) = (x \<in> (*) r ` inside (path_image g1))"
+        using cc xy r_ne by (auto simp: inside_def image_iff)
     qed
+    then  have "inside (path_image h) = (*) r ` inside (path_image g1)" unfolding pi_h .
+    also have "inside (path_image g1) = (+) (-a) ` inside (path_image g)"
+      unfolding pi_g1 using inside_translation[of "-a" "path_image g"] by simp
+    finally have inside_h: "inside (path_image h) = (*) r ` (+) (-a) ` inside (path_image g)" .
     show "convex (inside (path_image h))"
       using inside_h assms(5)
       by (metis convex_linear_image convex_translation_eq lin_r)
     show "measure lebesgue (inside (path_image h)) = measure lebesgue (inside (path_image g))"
     proof -
       have meas_g: "inside (path_image g) \<in> lmeasurable"
-      proof -
-        have "bounded (inside (path_image g))"
-          using Jordan_inside_outside[OF assms(2) assms(3)] by blast
-        then show ?thesis using measurable_convex assms(5) by blast
-      qed
+        using Jordan_inside_outside measurable_convex assms by metis 
       have "measure lebesgue ((*) r ` (+) (-a) ` inside (path_image g)) =
             measure lebesgue ((+) (-a) ` inside (path_image g))"
+        using measure_linear_image[OF lin_r ] meas_g measurable_translation
       proof -
         have meas_t: "(+) (-a) ` inside (path_image g) \<in> lmeasurable"
           using meas_g measurable_translation by blast
@@ -3257,27 +3216,16 @@ proof -
         using measure_translation[of "-a" "inside (path_image g)"] by simp
       finally show ?thesis using inside_h by simp
     qed
-    show "\<And>c0 r0. path_image h = sphere c0 r0 \<Longrightarrow> \<exists>c' r'. path_image g = sphere c' r'"
+    show "\<exists>c' r'. path_image g = sphere c' r'" if "path_image h = sphere c0 r0" for c0 r0
     proof -
-      fix c0 r0 assume sph: "path_image h = sphere c0 r0"
-      then have eq1: "(*) r ` (+) (-a) ` path_image g = sphere c0 r0"
-        unfolding pi_h pi_g1 image_image by (simp add: comp_def)
+      have eq1: "(*) r ` (+) (-a) ` path_image g = sphere c0 r0"
+        using that unfolding pi_h pi_g1 image_image by (simp add: comp_def)
+      have *: "\<And>z. inverse r * (r * z) = z"
+        using r_ne by (metis left_inverse mult.assoc mult_1)
       have eq2: "(+) (-a) ` path_image g = (*) (inverse r) ` sphere c0 r0"
-      proof -
-        have "(*) (inverse r) ` ((*) r ` (+) (-a) ` path_image g) = (+) (-a) ` path_image g"
-        proof -
-          have *: "\<And>z. inverse r * (r * z) = z"
-            using r_ne by (metis left_inverse mult.assoc mult_1)
-          show ?thesis by (auto simp: image_iff *)
-        qed
-        then show ?thesis using eq1 by simp
-      qed
+        by (simp add: * image_image flip: eq1)
       have eq3: "path_image g = (+) a ` (*) (inverse r) ` sphere c0 r0"
-      proof -
-        have "(+) a ` (+) (-a) ` path_image g = path_image g"
-          by (auto simp: image_comp o_def)
-        then show ?thesis using eq2 by simp
-      qed
+        by (auto simp: image_comp o_def simp flip: eq2)
       moreover have "(*) (inverse r) ` sphere c0 r0 = sphere (inverse r * c0) r0"
         by (auto simp: nonzero_norm_inverse r_ne r_norm sphere_cscale)
       moreover have "(+) a ` sphere (inverse r * c0) r0 = sphere (a + inverse r * c0) r0"
