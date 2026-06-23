@@ -3241,7 +3241,7 @@ lemma isoperimetric_reduce_arc_length:
   assumes "rectifiable_path g" "simple_path g"
     "pathfinish g = pathstart g"
     "convex (inside (path_image g))"
-    "path_length g = L" "0 < L"
+    "path_length g = L"
   obtains h where "rectifiable_path h" "simple_path h"
     "pathfinish h = pathstart h" "pathstart h = pathstart g"
     "convex (inside (path_image h))"
@@ -3249,28 +3249,7 @@ lemma isoperimetric_reduce_arc_length:
     "path_image h = path_image g"
     "\<And>t. t \<in> {0..1} \<Longrightarrow> path_length (subpath 0 t h) = L * t"
     "\<And>x y. x \<in> {0..1} \<Longrightarrow> y \<in> {0..1} \<Longrightarrow> dist (h x) (h y) \<le> L * dist x y"
-proof -
-  obtain h where h: "rectifiable_path h" "path_image h = path_image g"
-    "pathstart h = pathstart g" "pathfinish h = pathfinish g"
-    "path_length h = path_length g"
-    "arc g \<Longrightarrow> arc h" "simple_path g \<Longrightarrow> simple_path h"
-    "\<forall>t\<in>{0..1}. path_length (subpath 0 t h) = path_length g * t"
-    "\<forall>x\<in>{0..1}. \<forall>y\<in>{0..1}. dist (h x) (h y) \<le> path_length g * dist x y"
-    using arc_length_reparametrization [OF assms(1)] by metis
-  have "simple_path h" using h(7) assms(2) by auto
-  moreover have "pathfinish h = pathstart h"
-    using h(3,4) assms(3) by simp
-  moreover have "pathstart h = pathstart g" using h(3) .
-  moreover have "convex (inside (path_image h))"
-    using assms(4) h(2) by simp
-  moreover have "path_length h = L" using h(5) assms(5) by simp
-  moreover have "path_image h = path_image g" using h(2) .
-  moreover have "\<And>t. t \<in> {0..1} \<Longrightarrow> path_length (subpath 0 t h) = L * t"
-    using h(8) assms(5) by auto
-  moreover have "\<And>x y. x \<in> {0..1} \<Longrightarrow> y \<in> {0..1} \<Longrightarrow> dist (h x) (h y) \<le> L * dist x y"
-    using h(9) assms(5) by auto
-  ultimately show thesis using that h(1) by blast
-qed
+  by (metis arc_length_reparametrization assms)
 
 lemma isoperimetric_reduce_zero_mean:
   fixes g :: "real \<Rightarrow> complex" and b :: complex
