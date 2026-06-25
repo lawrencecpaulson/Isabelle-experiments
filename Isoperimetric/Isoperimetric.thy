@@ -2627,8 +2627,7 @@ text \<open>The kernel lemma: the isoperimetric inequality for a convex curve th
 
 proposition isoperimetric_kernel:
   fixes g :: "real \<Rightarrow> complex" and L :: real and a b :: complex
-  assumes "0 < L"
-    and conv_in: "convex (inside (path_image g))"
+  assumes conv_in: "convex (inside (path_image g))"
     and ab: "a \<in> path_image g" "b \<in> path_image g"
     and dist_ab: "dist a b = diameter (path_image g)"
     and bma: "b - a = of_real (dist a b)"
@@ -2643,6 +2642,8 @@ proposition isoperimetric_kernel:
     and "measure lebesgue (inside (path_image g)) = L\<^sup>2 / (4 * pi) \<Longrightarrow>
       \<exists>c r. path_image g = sphere c r"
 proof -
+  have Lpos: "0 < L"
+    using L g simple_path_length_pos_lt by blast
   define S where "S = {x \<in> {0..1}. \<not> g differentiable (at x)}"
   have bdd: "bounded (path_image g)"
     using g bounded_simple_path_image by blast
@@ -3277,94 +3278,66 @@ lemma isoperimetric_reduce_zero_mean:
     "(Im \<circ> h has_integral 0) {0..1}"
     "measure lebesgue (inside (path_image h)) = measure lebesgue (inside (path_image g))"
     "\<And>c r. path_image h = sphere c r \<Longrightarrow> \<exists>c' r'. path_image g = sphere c' r'"
-proof -
+proof 
   define c where "c = integral {0..1} (Im \<circ> g)"
   define d where "d = -(\<i> * (of_real c :: complex))"
   define h where "h = (+) d \<circ> g"
   define a' where "a' = pathstart g + d"
   define b' where "b' = b + d"
-  have h_eq: "\<And>t. h t = g t + d" unfolding h_def comp_def by simp
   have pi_h: "path_image h = (+) d ` path_image g"
     unfolding h_def image_comp [symmetric] path_image_compose by simp
-  show ?thesis
-  proof (rule that[of h a' b'])
-    show "rectifiable_path h"
-      unfolding h_def using assms(1) rectifiable_path_translation_eq[of d g] by simp
-    show "simple_path h"
-      unfolding h_def using assms(2) simple_path_translation_eq[of d g] by simp
-    show "pathfinish h = pathstart h"
-      unfolding h_def using assms(3) by (simp add: pathstart_compose pathfinish_compose)
-    show "path_length h = L"
-      unfolding h_def using assms(5) path_length_translation[of d g] by simp
-    show "pathstart h = a'" unfolding h_def a'_def by (simp add: pathstart_compose)
-    show "pathfinish h = a'" unfolding h_def a'_def
-      using assms(3) by (simp add: pathstart_compose pathfinish_compose)
-    show "a' \<in> path_image h"
-      unfolding a'_def using pi_h path_image_def pathstart_def by fastforce
-    show "b' \<in> path_image h"
-      unfolding b'_def using pi_h assms(6) by auto
-    show "b' - a' = of_real (dist a' b')"
-      unfolding a'_def b'_def using assms(8) by (simp add: dist_norm)
-    show "dist a' b' = diameter (path_image h)"
-      using pi_h diameter_translation[of d "path_image g"] assms(7)
-      unfolding a'_def b'_def by (simp add: dist_norm)
-    show "Re a' = 0" unfolding a'_def d_def using assms(9) by simp
-    show "convex (inside (path_image h))"
-      using pi_h inside_translation[of d "path_image g"]
-        convex_translation_eq[of d "inside (path_image g)"] assms(4) by simp
-    show "\<And>t. t \<in> {0..1} \<Longrightarrow> path_length (subpath 0 t h) = L * t"
-    proof -
-      fix t :: real assume "t \<in> {0..1}"
-      have "subpath 0 t h = (+) d \<circ> subpath 0 t g"
-        unfolding h_def subpath_def comp_def by (auto simp: algebra_simps)
-      then have "path_length (subpath 0 t h) = path_length (subpath 0 t g)"
-        using path_length_translation[of d "subpath 0 t g"] by simp
-      also have "\<dots> = L * t" using assms(10) \<open>t \<in> {0..1}\<close> by simp
-      finally show "path_length (subpath 0 t h) = L * t" .
-    qed
-    show "\<And>x y. x \<in> {0..1} \<Longrightarrow> y \<in> {0..1} \<Longrightarrow> dist (h x) (h y) \<le> L * dist x y"
-    proof -
-      fix x y :: real assume "x \<in> {0..1}" "y \<in> {0..1}"
-      have "dist (h x) (h y) = dist (g x) (g y)"
-        unfolding h_eq by (simp add: dist_norm)
-      also have "\<dots> \<le> L * dist x y" using assms(11)[OF \<open>x \<in> {0..1}\<close> \<open>y \<in> {0..1}\<close>] .
-      finally show "dist (h x) (h y) \<le> L * dist x y" .
-    qed
-    show "(Im \<circ> h has_integral 0) {0..1}"
-    proof -
-      have cont_g: "continuous_on {0..1} g"
-        using rectifiable_path_imp_path[OF assms(1)] unfolding path_def .
-      have int_Im_g: "(\<lambda>t. Im (g t)) integrable_on {0..1}"
-        using integrable_continuous_real[OF continuous_on_Im[OF cont_g]] .
-      have Im_h: "\<And>t. Im (h t) = Im (g t) - c"
-        unfolding h_def comp_def d_def by simp
-      have eq: "\<And>t. (Im \<circ> h) t = (\<lambda>t. Im (g t) - c) t"
-        using Im_h unfolding comp_def by simp
-      have int_sub: "(\<lambda>t. Im (g t) - c) integrable_on {0..1}"
-        by (rule integrable_diff[OF int_Im_g integrable_const_ivl])
-      have int_h: "(Im \<circ> h) integrable_on {0..1}"
-        using integrable_spike_finite[OF finite.emptyI _ int_sub] eq by simp
-      have "integral {0..1} (Im \<circ> h) = integral {0..1} (\<lambda>t. Im (g t) - c)"
-        using integral_cong[of "{0..1}" "Im \<circ> h" "\<lambda>t. Im (g t) - c"] eq by simp
-      also have "\<dots> = integral {0..1} (\<lambda>t. Im (g t)) - integral {0..1} (\<lambda>_::real. c::real)"
-        using integral_diff[OF int_Im_g integrable_const_ivl] by simp
-      also have "\<dots> = 0" unfolding c_def comp_def by simp
-      finally show ?thesis using int_h has_integral_iff by blast
-    qed
-    show "measure lebesgue (inside (path_image h)) = measure lebesgue (inside (path_image g))"
-      using pi_h inside_translation[of d "path_image g"]
-        measure_translation[of d "inside (path_image g)"] by simp
-    show "\<And>c0 r. path_image h = sphere c0 r \<Longrightarrow> \<exists>c' r'. path_image g = sphere c' r'"
-    proof -
-      fix c0 r assume "path_image h = sphere c0 r"
-      then have "(+) d ` path_image g = sphere c0 r" using pi_h by simp
-      then have "(+) (- d) ` (+) d ` path_image g = (+) (- d) ` sphere c0 r" by simp
-      then have "path_image g = (+) (- d) ` sphere c0 r"
-        using translation_assoc[of "- d" d "path_image g"] by simp
-      also have "\<dots> = sphere (c0 + (- d)) r"
-        using sphere_translation[of "-d" c0 r] by simp
-      finally show "\<exists>c' r'. path_image g = sphere c' r'" by blast
-    qed
+  show "rectifiable_path h"
+    unfolding h_def using assms(1) rectifiable_path_translation_eq[of d g] by simp
+  show "simple_path h"
+    unfolding h_def using assms(2) simple_path_translation_eq[of d g] by simp
+  show "pathfinish h = pathstart h"
+    unfolding h_def using assms(3) by (simp add: pathstart_compose pathfinish_compose)
+  show "path_length h = L"
+    unfolding h_def using assms(5) path_length_translation[of d g] by simp
+  show "pathstart h = a'" "pathfinish h = a'" unfolding h_def a'_def
+    using assms(3) by (simp_all add: pathstart_compose pathfinish_compose)
+  show "a' \<in> path_image h" "b' \<in> path_image h" "b' - a' = of_real (dist a' b')" "Re a' = 0"
+    using assms pi_h path_image_def pathstart_def by (auto simp: a'_def b'_def d_def dist_norm)
+  show "dist a' b' = diameter (path_image h)"
+    using pi_h diameter_translation[of d "path_image g"] assms(7)
+    unfolding a'_def b'_def by (simp add: dist_norm)
+  show "convex (inside (path_image h))"
+    using pi_h inside_translation[of d "path_image g"]
+      convex_translation_eq[of d "inside (path_image g)"] assms(4) by simp
+  show "\<And>t. t \<in> {0..1} \<Longrightarrow> path_length (subpath 0 t h) = L * t"
+    by (simp add: assms(10) h_def path_length_translation subpath_image)
+  show "\<And>x y. x \<in> {0..1} \<Longrightarrow> y \<in> {0..1} \<Longrightarrow> dist (h x) (h y) \<le> L * dist x y"
+    using assms(11) h_def comp_def by auto
+  show "(Im \<circ> h has_integral 0) {0..1}"
+  proof -
+    have cont_g: "continuous_on {0..1} g"
+      using rectifiable_path_imp_path[OF assms(1)] unfolding path_def .
+    have int_Im_g: "(\<lambda>t. Im (g t)) integrable_on {0..1}"
+      using integrable_continuous_real[OF continuous_on_Im[OF cont_g]] .
+    have Im_h: "\<And>t. Im (h t) = Im (g t) - c"
+      unfolding h_def comp_def d_def by simp
+    have int_sub: "(\<lambda>t. Im (g t) - c) integrable_on {0..1}"
+      by (rule integrable_diff[OF int_Im_g integrable_const_ivl])
+    have int_h: "(Im \<circ> h) integrable_on {0..1}" 
+      by (simp add: Im_h int_sub o_def)
+    have "integral {0..1} (Im \<circ> h) = integral {0..1} (\<lambda>t. Im (g t) - c)"
+      using integral_cong[of "{0..1}" "Im \<circ> h" "\<lambda>t. Im (g t) - c"] by (simp add: Im_h)
+    also have "\<dots> = integral {0..1} (\<lambda>t. Im (g t)) - integral {0..1} (\<lambda>_::real. c::real)"
+      using integral_diff[OF int_Im_g integrable_const_ivl] by simp
+    also have "\<dots> = 0" unfolding c_def comp_def by simp
+    finally show ?thesis using int_h has_integral_iff by blast
+  qed
+  show "measure lebesgue (inside (path_image h)) = measure lebesgue (inside (path_image g))"
+    by (metis inside_translation measure_translation pi_h)
+  show "\<exists>c' r'. path_image g = sphere c' r'" if "path_image h = sphere c0 r" for c0 r
+  proof -
+    have "(+) (- d) ` (+) d ` path_image g = (+) (- d) ` sphere c0 r"
+      using pi_h that by argo
+    then have "path_image g = (+) (- d) ` sphere c0 r"
+      using translation_assoc[of "- d" d "path_image g"] by simp
+    also have "\<dots> = sphere (c0 + (- d)) r"
+      using sphere_translation[of "-d" c0 r] by simp
+    finally show ?thesis by blast
   qed
 qed
 
@@ -3378,8 +3351,6 @@ theorem isoperimetric_theorem_convex:
     and "measure lebesgue (inside (path_image g)) = L\<^sup>2 / (4 * pi) \<Longrightarrow>
       \<exists>a r. path_image g = sphere a r"
 proof -
-  have Lpos: "0 < L"
-    using simple_path_length_pos_lt[OF assms(1,2)] assms(5) by simp
   text \<open>Step 1: obtain diameter endpoints\<close>
   have compact_pi: "compact (path_image g)"
     using compact_simple_path_image[OF assms(2)] .
@@ -3391,11 +3362,9 @@ proof -
   text \<open>Step 2: shift start to diameter endpoint a\<close>
   obtain g1 where g1: "rectifiable_path g1" "simple_path g1"
     "pathfinish g1 = pathstart g1" "pathstart g1 = a"
-    "convex (inside (path_image g1))"
-    "path_length g1 = L" "path_image g1 = path_image g"
-    using isoperimetric_reduce_shift[OF assms(1,2,3,4,5) ab(1)] by metis
-  have ab1: "a \<in> path_image g1" "b \<in> path_image g1"
-    "dist a b = diameter (path_image g1)"
+    "convex (inside (path_image g1))" "path_length g1 = L" "path_image g1 = path_image g"
+    using isoperimetric_reduce_shift[OF assms ab(1)] by metis
+  have ab1: "a \<in> path_image g1" "b \<in> path_image g1" "dist a b = diameter (path_image g1)"
     using ab g1(7) by auto
   have a_ne_b: "a \<noteq> b"
   proof
@@ -3428,7 +3397,7 @@ proof -
     "path_image g3 = path_image g2"
     "\<And>t. t \<in> {0..1} \<Longrightarrow> path_length (subpath 0 t g3) = L * t"
     "\<And>x y. x \<in> {0..1} \<Longrightarrow> y \<in> {0..1} \<Longrightarrow> dist (g3 x) (g3 y) \<le> L * dist x y"
-    using isoperimetric_reduce_arc_length[OF g2(1,2,3,5,6) Lpos] by metis
+    using isoperimetric_reduce_arc_length[OF g2(1,2,3,5,6)] by metis
   have g3_facts: "b2 \<in> path_image g3" "dist (pathstart g3) b2 = diameter (path_image g3)"
     "b2 - pathstart g3 = of_real (dist (pathstart g3) b2)" "Re (pathstart g3) = 0"
     using g2(7,8,9,10) g3(4,7) g2(4) by auto
@@ -3456,26 +3425,9 @@ proof -
     using meas_eq5 g3(5,7) g2(11) by simp
   have sphere_back: "\<And>c r. path_image h = sphere c r \<Longrightarrow>
     \<exists>c' r'. path_image g = sphere c' r'"
-  proof -
-    fix c r assume "path_image h = sphere c r"
-    then obtain c2 r2 where "path_image g2 = sphere c2 r2"
-      using sphere_back5 g3(7) by metis
-    then show "\<exists>c' r'. path_image g = sphere c' r'"
-      using sphere_back2 by auto
-  qed
-  text \<open>Step 6: apply the kernel lemma\<close>
-  have kernel_hyps: "0 < L" "convex (inside (path_image h))"
-    "a' \<in> path_image h" "b' \<in> path_image h"
-    "dist a' b' = diameter (path_image h)"
-    "b' - a' = of_real (dist a' b')"
-    "pathstart h = a'" "pathfinish h = a'"
-    "rectifiable_path h" "simple_path h"
-    "path_length h = L"
-    "Re a' = 0"
-    "(Im \<circ> h has_integral 0) {0..1}"
-    using Lpos h by auto
+    by (metis g3(7) sphere_back2 sphere_back5)
   have ineq_h: "measure lebesgue (inside (path_image h)) \<le> L\<^sup>2 / (4 * pi)"
-    using isoperimetric_kernel(1)[OF kernel_hyps(1-11) h(13,14) kernel_hyps(12,13)] .
+    using isoperimetric_kernel(1) h by blast
   show "measure lebesgue (inside (path_image g)) \<le> L\<^sup>2 / (4 * pi)"
     using ineq_h meas_eq by simp
   show "\<exists>a r. path_image g = sphere a r"
@@ -3484,7 +3436,7 @@ proof -
     have "measure lebesgue (inside (path_image h)) = L\<^sup>2 / (4 * pi)"
       using that meas_eq by simp
     then obtain c r where "path_image h = sphere c r"
-      using isoperimetric_kernel(2)[OF kernel_hyps(1-11) h(13,14) kernel_hyps(12,13)] by auto
+    using isoperimetric_kernel(2) h by blast
     then show ?thesis using sphere_back by auto
   qed
 qed
@@ -3506,7 +3458,6 @@ next
   define f where "f = (\<lambda>x::'a. (b - a) \<bullet> x)"
   define K where "K = (b - a) \<bullet> (b - a)"
   have contf: "continuous_on S f" by (auto simp: f_def continuous_intros)
-  have conn_fS: "connected (f ` S)" using assms(1) contf connected_continuous_image by blast
   have nz: "K > 0" using False by (simp add: K_def inner_gt_zero_iff)
   have fseg: "\<And>u. f ((1-u) *\<^sub>R a + u *\<^sub>R b) = (b - a) \<bullet> a + u * K"
     by (simp add: f_def K_def inner_diff_right algebra_simps inner_diff_left inner_commute)
@@ -3524,8 +3475,8 @@ next
         unfolding closed_segment_eq_real_ivl using nz u(2,3) fa fb fx
         by (auto simp: mult_left_le_one_le)
       have "closed_segment (f a) (f b) \<subseteq> f ` S"
-        using conn_fS assms(3,4) connected_contains_Icc
-        by (metis closed_segment_eq_real_ivl image_eqI)
+        by (simp add: assms closed_segment_eq_real_ivl connected_contains_Icc
+            connected_continuous_image contf)
       then have "f x \<in> f ` S" using mem by blast
       then obtain s where s: "s \<in> S" "f s = f x" by auto
       have "s \<in> closed_segment a b" using s(1) assms(2) by blast
@@ -3578,98 +3529,46 @@ proof (rule ccontr)
     using pathg p(1) by (simp add: closed_path_image path_subpath)
   have cl_h0q: "closed (path_image (subpath 0 q h))"
     using pathh q(1) by (simp add: closed_path_image path_subpath)
-  have openE1: "openin (top_of_set S) E1"
-  proof -
-    have "E1 = S \<inter> (- (path_image (subpath p 1 g) \<union> path_image (subpath q 1 h)))"
-      unfolding E1_def by blast
-    moreover have "open (- (path_image (subpath p 1 g) \<union> path_image (subpath q 1 h)))"
-      using cl_gp1 cl_hq1 by blast
-    ultimately show ?thesis by (simp add: openin_open_Int)
-  qed
-  have openE2: "openin (top_of_set S) E2"
-  proof -
-    have "E2 = S \<inter> (- (path_image (subpath 0 p g) \<union> path_image (subpath 0 q h)))"
-      unfolding E2_def by blast
-    moreover have "open (- (path_image (subpath 0 p g) \<union> path_image (subpath 0 q h)))"
-      using cl_g0p cl_h0q by blast
-    ultimately show ?thesis by (simp add: openin_open_Int)
-  qed
+  have "E1 = S \<inter> (- (path_image (subpath p 1 g) \<union> path_image (subpath q 1 h)))"
+    unfolding E1_def by blast
+  then have openE1: "openin (top_of_set S) E1"
+    using cl_gp1 cl_hq1 by blast
+  have "E2 = S \<inter> (- (path_image (subpath 0 p g) \<union> path_image (subpath 0 q h)))"
+    unfolding E2_def by blast
+  then have openE2: "openin (top_of_set S) E2"
+    using cl_g0p cl_h0q by blast
   have injg: "inj_on g {0..1}" using assms(1) by (simp add: arc_def)
   have injh: "inj_on h {0..1}" using assms(2) by (simp add: arc_def)
-  have p_pos: "p > 0"
-  proof (rule ccontr)
-    assume "\<not> p > 0" then have "p = 0" using p(1) by simp
-    then have "g p = pathstart g" by (simp add: pathstart_def)
-    then show False using gp assms(8) by simp
-  qed
-  have q_pos: "q > 0"
-  proof (rule ccontr)
-    assume "\<not> q > 0" then have "q = 0" using q(1) by simp
-    then have "h q = pathstart h" by (simp add: pathstart_def)
-    then show False using hq assms(8) assms(3) by simp
-  qed
-  have p_lt1: "p < 1"
-  proof (rule ccontr)
-    assume "\<not> p < 1" then have "p = 1" using p(1) by simp
-    then have "g p = pathfinish g" by (simp add: pathfinish_def)
-    then show False using gp assms(9) by simp
-  qed
-  have q_lt1: "q < 1"
-  proof (rule ccontr)
-    assume "\<not> q < 1" then have "q = 1" using q(1) by simp
-    then have "h q = pathfinish h" by (simp add: pathfinish_def)
-    then show False using hq assms(9) assms(4) by simp
-  qed
+  have "p > 0"  "p < 1" "q > 0" "q < 1"
+    using assms p q pg ph by (auto simp: pathstart_def pathfinish_def less_eq_real_def)
   have ne_E1: "pathstart g \<in> E1"
   proof -
     have "g 0 \<notin> g ` {p..1}"
-    proof
-      assume "g 0 \<in> g ` {p..1}"
-      then obtain t where t: "t \<in> {p..1}" "g 0 = g t" by auto
-      have "0 = t" using injg t p(1) p_pos by (force simp: inj_on_def)
-      then show False using t(1) p_pos by simp
-    qed
+      by (smt (verit, del_insts) \<open>0 < p\<close> atLeastAtMost_iff image_iff inj_on_def injg)
     moreover have "g 0 \<notin> h ` {q..1}"
-    proof
-      assume "g 0 \<in> h ` {q..1}"
-      then have "h 0 \<in> h ` {q..1}" using assms(3) by (simp add: pathstart_def)
-      then obtain t where t: "t \<in> {q..1}" "h 0 = h t" by auto
-      have "0 = t" using injh t q(1) q_pos by (force simp: inj_on_def)
-      then show False using t(1) q_pos by simp
-    qed
+      using \<open>0 < q\<close> atLeastAtMost_iff image_iff inj_on_def injh \<open>pathstart g = pathstart h\<close>
+      by (smt (verit) pathstart_def)
     ultimately show ?thesis
       unfolding E1_def using assms(8) img_gp1 img_hq1 by (simp add: pathstart_def)
   qed
   have ne_E2: "pathfinish g \<in> E2"
   proof -
     have "g 1 \<notin> g ` {0..p}"
-    proof
-      assume "g 1 \<in> g ` {0..p}"
-      then obtain t where t: "t \<in> {0..p}" "g 1 = g t" by auto
-      have "1 = t" using injg t p(1) by (force simp: inj_on_def)
-      then show False using t(1) p_lt1 by simp
-    qed
+      by (smt (verit, del_insts) \<open>p < 1\<close> atLeastAtMost_iff image_iff inj_on_def injg)
     moreover have "g 1 \<notin> h ` {0..q}"
-    proof
-      assume "g 1 \<in> h ` {0..q}"
-      then have "h 1 \<in> h ` {0..q}" using assms(4) by (simp add: pathfinish_def)
-      then obtain t where t: "t \<in> {0..q}" "h 1 = h t" by auto
-      have "1 = t" using injh t q(1) by (force simp: inj_on_def)
-      then show False using t(1) q_lt1 by simp
-    qed
-    moreover have "pathfinish g \<in> S" using assms(9) .
+      using \<open>q < 1\<close> atLeastAtMost_iff image_iff inj_on_def injh \<open>pathfinish g = pathfinish h\<close>
+      by (smt (verit) pathfinish_def)
     ultimately show ?thesis
-      unfolding E2_def using img_g0p img_h0q by (simp add: pathfinish_def)
+      unfolding E2_def using img_g0p img_h0q \<open>pathfinish g \<in> S\<close> by (simp add: pathfinish_def)
   qed
   have ps_g: "pathstart g = g 0" by (simp add: pathstart_def)
   have pf_g: "pathfinish g = g 1" by (simp add: pathfinish_def)
-  have cross_gh: "\<And>s t. s \<in> {0..1} \<Longrightarrow> t \<in> {0..1} \<Longrightarrow> g s = h t \<Longrightarrow> g s = g 0 \<or> g s = g 1"
+  have cross_gh: "g s = g 0 \<or> g s = g 1" 
+    if s: "s \<in> {0..1}" and t: "t \<in> {0..1}" and eq: "g s = h t" for s t
   proof -
-    fix s t assume s: "s \<in> {0..1}" and t: "t \<in> {0..1}" and eq: "g s = h t"
     have "g s \<in> path_image g" using s by (auto simp: path_image_def)
     moreover have "g s \<in> path_image h" using t eq by (auto simp: path_image_def)
-    ultimately have "g s \<in> {pathstart g, pathfinish g}" using assms(5) by blast
-    then show "g s = g 0 \<or> g s = g 1" using ps_g pf_g by auto
+    ultimately show "g s = g 0 \<or> g s = g 1" using ps_g pf_g assms(5) by auto
   qed
   have sub_p1: "{p..1} \<subseteq> {0..1}" using p(1) by auto
   have sub_0p: "{0..p} \<subseteq> {0..1}" using p(1) by auto
@@ -3677,9 +3576,9 @@ proof (rule ccontr)
   have sub_0q: "{0..q} \<subseteq> {0..1}" using q(1) by auto
   have gh11: "g 1 = h 1" using assms(4) by (simp add: pathfinish_def)
   have gh00: "g 0 = h 0" using assms(3) by (simp add: pathstart_def)
-  have cover_False: "\<And>x. x \<in> S \<Longrightarrow> x \<in> g ` {p..1} \<union> h ` {q..1} \<Longrightarrow> x \<in> g ` {0..p} \<union> h ` {0..q} \<Longrightarrow> False"
+  have cover_False: "False" 
+    if xS: "x \<in> S" and inR1: "x \<in> g ` {p..1} \<union> h ` {q..1}" and inR2: "x \<in> g ` {0..p} \<union> h ` {0..q}" for x
   proof -
-    fix x assume xS: "x \<in> S" and inR1: "x \<in> g ` {p..1} \<union> h ` {q..1}" and inR2: "x \<in> g ` {0..p} \<union> h ` {0..q}"
     from inR1 consider (g1) "x \<in> g ` {p..1}" | (h1) "x \<in> h ` {q..1}" by auto
     then show False
     proof cases
@@ -3690,25 +3589,15 @@ proof (rule ccontr)
       proof cases
         case a
         then obtain t where t: "t \<in> {0..p}" "x = g t" by auto
-        have "s = t" using injg s t sub_p1 sub_0p s(2) t(2) by (force simp: inj_on_def)
-        then have "s = p" using s(1) t(1) by simp
-        then show False using gp xS s(2) by simp
+        then show False using gp xS s(2)
+          using arcD assms(1) s(1) by fastforce
       next
         case b
         then obtain t where t: "t \<in> {0..q}" "x = h t" by auto
         have eq: "g s = h t" using s(2) t(2) by simp
         have "g s = g 0 \<or> g s = g 1" using cross_gh s(1) sub_p1 t(1) sub_0q eq by blast
-        then show False
-        proof
-          assume "g s = g 0"
-          then have "s = 0" using injg s(1) sub_p1 by (force simp: inj_on_def)
-          then show False using s(1) p_pos by simp
-        next
-          assume "g s = g 1"
-          then have "h t = h 1" using eq gh11 by simp
-          then have "t = 1" using injh t(1) sub_0q by (force simp: inj_on_def)
-          then show False using t(1) q_lt1 by simp
-        qed
+        with that show False
+          by (metis Diff_iff E1_def E2_def img_g0p img_gp1 img_h0q img_hq1 ne_E1 ne_E2 pf_g ps_g s(2))
       qed
     next
       case h1
@@ -3720,49 +3609,25 @@ proof (rule ccontr)
         then obtain t where t: "t \<in> {0..p}" "x = g t" by auto
         have eq: "g t = h s" using s(2) t(2) by simp
         have "g t = g 0 \<or> g t = g 1" using cross_gh t(1) sub_0p s(1) sub_q1 eq by blast
-        then show False
-        proof
-          assume "g t = g 1"
-          then have "t = 1" using injg t(1) sub_0p by (force simp: inj_on_def)
-          then show False using t(1) p_lt1 by simp
-        next
-          assume "g t = g 0"
-          then have "h s = h 0" using eq gh00 by simp
-          then have "s = 0" using injh s(1) sub_q1 by (force simp: inj_on_def)
-          then show False using s(1) q_pos by simp
-        qed
+        with that show False
+          by (metis Diff_iff E1_def E2_def img_g0p img_gp1 img_h0q img_hq1 ne_E1 ne_E2 pf_g ps_g t(2))
       next
         case b
         then obtain t where t: "t \<in> {0..q}" "x = h t" by auto
-        have "s = t" using injh s t sub_q1 sub_0q s(2) t(2) by (force simp: inj_on_def)
-        then have "s = q" using s(1) t(1) by simp
-        then show False using hq xS s(2) by simp
+        then show False using hq xS s(2)
+          by (smt (verit, del_insts) s atLeastAtMost_iff inj_on_def injh) 
       qed
     qed
   qed
   have cover: "S \<subseteq> E1 \<union> E2"
-  proof
-    fix x assume xS: "x \<in> S"
-    show "x \<in> E1 \<union> E2"
-    proof (rule ccontr)
-      assume "x \<notin> E1 \<union> E2"
-      then have "x \<in> g ` {p..1} \<union> h ` {q..1}" and "x \<in> g ` {0..p} \<union> h ` {0..q}"
-        using xS unfolding E1_def E2_def img_gp1 img_hq1 img_g0p img_h0q by auto
-      then show False using cover_False xS by blast
-    qed
-  qed
-  have disjoint: "E1 \<inter> E2 = {}"
-  proof -
-    have "(g ` {p..1} \<union> h ` {q..1}) \<union> (g ` {0..p} \<union> h ` {0..q}) = path_image g \<union> path_image h"
-      using comb_g comb_h by blast
-    moreover have "S \<subseteq> path_image g \<union> path_image h" using assms(7) .
-    ultimately show ?thesis unfolding E1_def E2_def img_gp1 img_hq1 img_g0p img_h0q by blast
-  qed
-  from assms(6) have "\<not> (\<exists>E1 E2. openin (top_of_set S) E1 \<and> openin (top_of_set S) E2 \<and> S \<subseteq> E1 \<union> E2 \<and> E1 \<inter> E2 = {} \<and> E1 \<noteq> {} \<and> E2 \<noteq> {})"
-    by (simp add: connected_openin)
-  moreover have "openin (top_of_set S) E1 \<and> openin (top_of_set S) E2 \<and> S \<subseteq> E1 \<union> E2 \<and> E1 \<inter> E2 = {} \<and> E1 \<noteq> {} \<and> E2 \<noteq> {}"
+    using E1_def E2_def cover_False img_g0p img_gp1 img_h0q img_hq1 by auto
+  have "(g ` {p..1} \<union> h ` {q..1}) \<union> (g ` {0..p} \<union> h ` {0..q}) = path_image g \<union> path_image h"
+    using comb_g comb_h by blast
+  with assms(7) have disjoint: "E1 \<inter> E2 = {}"
+    unfolding E1_def E2_def img_gp1 img_hq1 img_g0p img_h0q by blast
+  have "openin (top_of_set S) E1 \<and> openin (top_of_set S) E2 \<and> S \<subseteq> E1 \<union> E2 \<and> E1 \<inter> E2 = {} \<and> E1 \<noteq> {} \<and> E2 \<noteq> {}"
     using openE1 openE2 cover disjoint ne_E1 ne_E2 by auto
-  ultimately show False by blast
+  with assms(6) connected_openin show False by blast
 qed
 
 text \<open>If two frontier points of a bounded convex $2$-dimensional set are joined by a frontier arc whose
