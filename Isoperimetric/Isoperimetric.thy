@@ -4825,48 +4825,12 @@ theorem isoperimetric_convexification:
     and "convex hull (path_image h) = convex hull (path_image g)"
     and "path_image h = frontier (convex hull (path_image g))"
 proof -
-  \<comment> \<open>Strengthened version, assuming the loop starts on the frontier of its convex hull.
-     (Here used to derive the general statement by shifting the basepoint.)\<close>
-  have *: "\<And>G::real\<Rightarrow>complex. rectifiable_path G \<Longrightarrow> simple_path G \<Longrightarrow> pathfinish G = pathstart G \<Longrightarrow> pathstart G \<in> frontier (convex hull (path_image G)) \<Longrightarrow> (\<exists>h. rectifiable_path h \<and> simple_path h \<and> pathfinish h = pathstart h \<and> path_length h \<le> path_length G \<and> convex hull (path_image h) = convex hull (path_image G) \<and> path_image h = frontier (convex hull (path_image G)))"
-  proof -
-    fix G :: "real \<Rightarrow> complex"
-    assume Grect: "rectifiable_path G" and Gsimple: "simple_path G"
-      and Gloop: "pathfinish G = pathstart G"
-      and Gfr: "pathstart G \<in> frontier (convex hull (path_image G))"
-    \<comment> \<open>WLOG reparametrize @{term G} by arc length, so it becomes @{term "path_length G"}-Lipschitz (unit speed).
-       All relevant quantities (@{term path_image}, @{term path_length}, endpoints, frontier) are preserved.\<close>
-    obtain g' where g': "rectifiable_path g'" "path_image g' = path_image G"
-        "pathstart g' = pathstart G" "pathfinish g' = pathfinish G"
-        "path_length g' = path_length G" "arc G \<Longrightarrow> arc g'" "simple_path G \<Longrightarrow> simple_path g'"
-        "\<forall>t\<in>{0..1}. path_length (subpath 0 t g') = path_length G * t"
-        "\<forall>x\<in>{0..1}. \<forall>y\<in>{0..1}. dist (g' x) (g' y) \<le> path_length G * dist x y"
-      using arc_length_reparametrization[OF Grect] by metis
-    have g'simple: "simple_path g'" using g'(7) Gsimple by simp
-    have g'rect: "rectifiable_path g'" by (rule g'(1))
-    have g'loop: "pathfinish g' = pathstart g'" using g'(3,4) Gloop by simp
-    have g'fr: "pathstart g' \<in> frontier (convex hull (path_image g'))"
-      using g'(3) g'(2) Gfr by simp
-    have g'lip: "\<And>x y. x \<in> {0..1} \<Longrightarrow> y \<in> {0..1} \<Longrightarrow> dist (g' x) (g' y) \<le> path_length G * dist x y"
-      using g'(9) by blast
-    have g'lip': "\<And>x y. x \<in> {0..1} \<Longrightarrow> y \<in> {0..1} \<Longrightarrow> dist (g' x) (g' y) \<le> path_length g' * dist x y"
-      using g'lip g'(5) by simp
-    \<comment> \<open>Reduced subgoal, now also assuming the unit-speed (Lipschitz) bound. This is where the
-       iterated application of \<open>step_lemma\<close> goes (via \<open>convexification_unit_speed\<close>).\<close>
-    have **: "\<And>\<gamma>::real\<Rightarrow>complex. rectifiable_path \<gamma> \<Longrightarrow> simple_path \<gamma> \<Longrightarrow> pathfinish \<gamma> = pathstart \<gamma> \<Longrightarrow> pathstart \<gamma> \<in> frontier (convex hull (path_image \<gamma>)) \<Longrightarrow> (\<And>x y. x \<in> {0..1} \<Longrightarrow> y \<in> {0..1} \<Longrightarrow> dist (\<gamma> x) (\<gamma> y) \<le> path_length \<gamma> * dist x y) \<Longrightarrow> (\<exists>h. rectifiable_path h \<and> simple_path h \<and> pathfinish h = pathstart h \<and> path_length h \<le> path_length \<gamma> \<and> convex hull (path_image h) = convex hull (path_image \<gamma>) \<and> path_image h = frontier (convex hull (path_image \<gamma>)))"
-      using convexification_unit_speed by blast
-    have inst: "\<exists>h. rectifiable_path h \<and> simple_path h \<and> pathfinish h = pathstart h \<and> path_length h \<le> path_length g' \<and> convex hull (path_image h) = convex hull (path_image g') \<and> path_image h = frontier (convex hull (path_image g'))"
-      using **[OF g'rect g'simple g'loop g'fr g'lip'] .
-    show "\<exists>h. rectifiable_path h \<and> simple_path h \<and> pathfinish h = pathstart h \<and> path_length h \<le> path_length G \<and> convex hull (path_image h) = convex hull (path_image G) \<and> path_image h = frontier (convex hull (path_image G))"
-      using inst g'(5) g'(2) by simp
-  qed
   \<comment> \<open>Some point of the loop lies on the frontier (an extreme point of the convex hull).\<close>
   have pathg: "path g" using assms(2) by (rule simple_path_imp_path)
   have cpt: "compact (convex hull path_image g)"
     by (simp add: compact_convex_hull compact_path_image pathg)
-  have ne: "convex hull path_image g \<noteq> {}"
-    by (simp add: path_image_nonempty)
   obtain x where x_ext: "x extreme_point_of (convex hull path_image g)"
-    using extreme_point_exists_convex[OF cpt convex_convex_hull ne] by blast
+    using cpt extreme_point_exists_convex by fastforce
   have x_pig: "x \<in> path_image g" using extreme_point_of_convex_hull[OF x_ext] .
   have x_in: "x \<in> convex hull path_image g" using hull_subset x_pig by (meson subsetD)
   have x_notint: "x \<notin> interior (convex hull path_image g)" using extreme_point_not_in_interior[OF x_ext] .
@@ -4883,14 +4847,18 @@ proof -
   have sp_len: "path_length (shiftpath t g) = path_length g" using assms(1,3) t(1) by (rule path_length_shiftpath)
   have sp_startfr: "pathstart (shiftpath t g) \<in> frontier (convex hull (path_image (shiftpath t g)))"
     using sp_start sp_pi x_fr t(2) by simp
-  have inst: "\<exists>h. rectifiable_path h \<and> simple_path h \<and> pathfinish h = pathstart h \<and> path_length h \<le> path_length (shiftpath t g) \<and> convex hull (path_image h) = convex hull (path_image (shiftpath t g)) \<and> path_image h = frontier (convex hull (path_image (shiftpath t g)))"
-    using *[OF sp_rect sp_simple sp_loop sp_startfr] .
-  from inst obtain h where h: "rectifiable_path h" "simple_path h" "pathfinish h = pathstart h"
-      "path_length h \<le> path_length (shiftpath t g)"
-      "convex hull (path_image h) = convex hull (path_image (shiftpath t g))"
-      "path_image h = frontier (convex hull (path_image (shiftpath t g)))" by blast
+  \<comment> \<open>Strengthened version, assuming the loop starts on the frontier of its convex hull.
+     (Here used to derive the general statement by shifting the basepoint.)\<close>
+  have *: "\<exists>h. rectifiable_path h \<and> simple_path h \<and> pathfinish h = pathstart h \<and> 
+               path_length h \<le> path_length \<gamma> \<and> convex hull (path_image h) = convex hull (path_image \<gamma>) \<and> path_image h = frontier (convex hull (path_image \<gamma>))"
+    if Grect: "rectifiable_path \<gamma>" and Gsimple: "simple_path \<gamma>"
+      and Gloop: "pathfinish \<gamma> = pathstart \<gamma>"
+      and Gfr: "pathstart \<gamma> \<in> frontier (convex hull (path_image \<gamma>))" for \<gamma> :: "real \<Rightarrow> complex"
+    using arc_length_reparametrization[of \<gamma>] convexification_unit_speed 
+    by (smt (verit, best) that)
   show ?thesis
-    using inst sp_len sp_pi that by force
+    using *[OF sp_rect sp_simple sp_loop sp_startfr]
+    by (metis sp_len sp_pi that) 
 qed
 
 theorem isoperimetric_convexification_strict:
